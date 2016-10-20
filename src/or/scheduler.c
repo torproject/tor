@@ -1,11 +1,6 @@
 /* * Copyright (c) 2013-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-/**
- * \file scheduler.c
- * \brief Relay scheduling system
- **/
-
 #include "or.h"
 
 #define TOR_CHANNEL_INTERNAL_ /* For channel_flush_some_cells() */
@@ -32,66 +27,102 @@ static uint32_t sched_q_high_water = 32768;
 
 static uint32_t sched_max_flush_cells = 16;
 
-/*
- * Write scheduling works by keeping track of which channels can
+/**
+ * \file scheduler.c
+ * \brief Channel scheduling system: decides which channels should send and
+ * receive when.
+ *
+ * This module implements a scheduler algorithm, to decide
+ * which channels should send/receive when.
+ *
+ * The earliest versions of Tor approximated a kind of round-robin system among
+ * active connections, but only approximated it.
+ *
+ * Now, write scheduling works by keeping track of which channels can
  * accept cells, and have cells to write.  From the scheduler's perspective,
  * a channel can be in four possible states:
  *
- * 1.) Not open for writes, no cells to send
- *     - Not much to do here, and the channel will have scheduler_state ==
+ * <ol>
+ * <li>
+  *   Not open for writes, no cells to send .
+ *     <ul><li> Not much to do here, and the channel will have scheduler_state ==
  *       SCHED_CHAN_IDLE
- *     - Transitions from:
- *       - Open for writes/has cells by simultaneously draining all circuit
+ *     <li> Transitions from:
+ *       <ul>
+ *       <li>Open for writes/has cells by simultaneously draining all circuit
  *         queues and filling the output buffer.
- *     - Transitions to:
- *       - Not open for writes/has cells by arrival of cells on an attached
+ *       </ul>
+ *     <li> Transitions to:
+ *      <ul>
+ *       <li> Not open for writes/has cells by arrival of cells on an attached
  *         circuit (this would be driven from append_cell_to_circuit_queue())
- *       - Open for writes/no cells by a channel type specific path;
+ *       <li> Open for writes/no cells by a channel type specific path;
  *         driven from connection_or_flushed_some() for channel_tls_t.
+ *      </ul>
+ *    </ul>
  *
- * 2.) Open for writes, no cells to send
- *     - Not much here either; this will be the state an idle but open channel
+ * <li> Open for writes, no cells to send
+ *   <ul>
+ *     <li>Not much here either; this will be the state an idle but open channel
  *       can be expected to settle in.  It will have scheduler_state ==
  *       SCHED_CHAN_WAITING_FOR_CELLS
- *     - Transitions from:
- *       - Not open for writes/no cells by flushing some of the output
+ *     <li> Transitions from:
+ *       <ul>
+ *       <li>Not open for writes/no cells by flushing some of the output
  *         buffer.
- *       - Open for writes/has cells by the scheduler moving cells from
+ *       <li>Open for writes/has cells by the scheduler moving cells from
  *         circuit queues to channel output queue, but not having enough
  *         to fill the output queue.
- *     - Transitions to:
- *       - Open for writes/has cells by arrival of new cells on an attached
+ *       </ul>
+ *     <li> Transitions to:
+ *       <ul>
+ *        <li>Open for writes/has cells by arrival of new cells on an attached
  *         circuit, in append_cell_to_circuit_queue()
+ *       </ul>
+ *     </ul>
  *
- * 3.) Not open for writes, cells to send
- *     - This is the state of a busy circuit limited by output bandwidth;
+ * <li>Not open for writes, cells to send
+ *     <ul>
+ *     <li>This is the state of a busy circuit limited by output bandwidth;
  *       cells have piled up in the circuit queues waiting to be relayed.
  *       The channel will have scheduler_state == SCHED_CHAN_WAITING_TO_WRITE.
- *     - Transitions from:
- *       - Not open for writes/no cells by arrival of cells on an attached
+ *     <li> Transitions from:
+ *       <ul>
+ *       <li>Not open for writes/no cells by arrival of cells on an attached
  *         circuit
- *       - Open for writes/has cells by filling an output buffer without
+ *       <li> Open for writes/has cells by filling an output buffer without
  *         draining all cells from attached circuits
- *    - Transitions to:
- *       - Opens for writes/has cells by draining some of the output buffer
+ *       </ul>
+ *    <li> Transitions to:
+ *       <ul>
+ *       <li>Opens for writes/has cells by draining some of the output buffer
  *         via the connection_or_flushed_some() path (for channel_tls_t).
+ *       </ul>
+ *    </ul>
  *
- * 4.) Open for writes, cells to send
- *     - This connection is ready to relay some cells and waiting for
+ * <li>Open for writes, cells to send
+ *     <ul>
+ *     <li>This connection is ready to relay some cells and waiting for
  *       the scheduler to choose it.  The channel will have scheduler_state ==
  *       SCHED_CHAN_PENDING.
- *     - Transitions from:
- *       - Not open for writes/has cells by the connection_or_flushed_some()
+ *     <li>Transitions from:
+ *       <ul>
+ *       <li> Not open for writes/has cells by the connection_or_flushed_some()
  *         path
- *       - Open for writes/no cells by the append_cell_to_circuit_queue()
+ *       <li> Open for writes/no cells by the append_cell_to_circuit_queue()
  *         path
- *     - Transitions to:
- *       - Not open for writes/no cells by draining all circuit queues and
- *         simultaneously filling the output buffer.
- *       - Not open for writes/has cells by writing enough cells to fill the
+ *       </ul>
+ *     <li> Transitions to:
+ *       <ul>
+ *        <li>Not open for writes/no cells by draining all circuit queues and
+ *          simultaneously filling the output buffer.
+ *        <li>Not open for writes/has cells by writing enough cells to fill the
  *         output buffer
- *       - Open for writes/no cells by draining all attached circuit queues
+ *        <li>Open for writes/no cells by draining all attached circuit queues
  *         without also filling the output buffer
+ *       </ul>
+ *    </ul>
+ * </ol>
  *
  * Other event-driven parts of the code move channels between these scheduling
  * states by calling scheduler functions; the scheduler only runs on open-for-
