@@ -1066,14 +1066,20 @@ needs_exit_circuits(time_t now, int *needs_uptime, int *needs_capacity)
           router_have_consensus_path() == CONSENSUS_PATH_EXIT);
 }
 
+#define SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS 3
+
 /* Return true if we need any more hidden service server circuits.
  * HS servers only need an internal circuit. */
 STATIC int
 needs_hs_server_circuits(int num_uptime_internal)
 {
-  return (num_rend_services() && num_uptime_internal < 3 &&
+  return (num_rend_services() &&
+          num_uptime_internal < SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS &&
           router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
 }
+
+#define SUFFICIENT_INTERNAL_HS_CLIENTS 3
+#define SUFFICIENT_UPTIME_INTERNAL_HS_CLIENTS 2
 
 /* Return true if we need any more hidden service client circuits.
  * HS clients only need an internal circuit. */
@@ -1084,22 +1090,31 @@ needs_hs_client_circuits(time_t now, int *needs_uptime, int *needs_capacity,
   int used_internal_recently = rep_hist_get_predicted_internal(now,
                                                                needs_uptime,
                                                                needs_capacity);
+  int requires_uptime = num_uptime_internal <
+                        SUFFICIENT_UPTIME_INTERNAL_HS_CLIENTS &&
+                        needs_uptime;
+
   return (used_internal_recently &&
-         ((num_uptime_internal<2 && needs_uptime) || num_internal<3) &&
+         (requires_uptime || num_internal < SUFFICIENT_INTERNAL_HS_CLIENTS) &&
           router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
 }
 
 /* Check to see if we still need more circuits to learn
  * a good build timeout. But if we're close to our max number we
  * want, don't do another -- we want to leave a few slots open so
- * we can still build circuits preemptively as needed.
+ * we can still build circuits preemptively as needed. */
+#define CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS 2
+#define CBT_MAX_UNUSED_OPEN_CIRCUITS (MAX_UNUSED_OPEN_CIRCUITS - \
+                                      CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS)
+
+/* Return true if we need more circuits for a good build timeout.
  * XXXX make the assumption that build timeout streams should be
  * created whenever we can build internal circuits. */
 STATIC int
 needs_circuits_for_build(int num)
 {
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
-    if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
+    if (num < CBT_MAX_UNUSED_OPEN_CIRCUITS &&
         ! circuit_build_times_disabled() &&
         circuit_build_times_needs_circuits_now(get_circuit_build_times()))
     {

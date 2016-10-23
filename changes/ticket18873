@@ -3,3 +3,4 @@
       functions.
     - Refactor circuit_predict_and_launch_new for readability and testability.
     - Added unit tests for extracted functions.
+    - Extracted magic numbers in circuituse.c into defined variables.
