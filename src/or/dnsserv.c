@@ -3,10 +3,22 @@
 
 /**
  * \file dnsserv.c
- * \brief Implements client-side DNS proxy server code.  Note:
- * this is the DNS Server code, not the Server DNS code.  Confused?  This code
- * runs on client-side, and acts as a DNS server.  The code in dns.c, on the
- * other hand, runs on Tor servers, and acts as a DNS client.
+ * \brief Implements client-side DNS proxy server code.
+ *
+ * When a user enables the DNSPort configuration option to have their local
+ * Tor client handle DNS requests, this module handles it.  It functions as a
+ * "DNS Server" on the client side, which client applications use.
+ *
+ * Inbound DNS requests are represented as entry_connection_t here (since
+ * that's how Tor represents client-side streams), which are kept associated
+ * with an evdns_server_request structure as exposed by Libevent's
+ * evdns code.
+ *
+ * Upon receiving a DNS request, libevent calls our evdns_server_callback()
+ * function here, which causes this module to create an entry_connection_t
+ * request as appropriate.  Later, when that request is answered,
+ * connection_edge.c calls dnsserv_resolved() so we can finish up and tell the
+ * DNS client.
  **/
 
 #include "or.h"

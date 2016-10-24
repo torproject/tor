@@ -5,8 +5,13 @@
  * \file routerkeys.c
  *
  * \brief Functions and structures to handle generating and maintaining the
- *  set of keypairs necessary to be an OR. (Some of the code in router.c
- *  belongs here.)
+ *  set of keypairs necessary to be an OR.
+ *
+ * The keys handled here now are the Ed25519 keys that Tor relays use to sign
+ * descriptors, authenticate themselves on links, and identify one another
+ * uniquely.  Other keys are maintained in router.c and rendservice.c.
+ *
+ * (TODO: The keys in router.c should go here too.)
  */
 
 #include "or.h"

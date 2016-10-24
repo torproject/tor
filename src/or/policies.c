@@ -6,6 +6,13 @@
 /**
  * \file policies.c
  * \brief Code to parse and use address policies and exit policies.
+ *
+ * We have two key kinds of address policy: full and compressed.  A full
+ * policy is an array of accept/reject patterns, to be applied in order.
+ * A short policy is simply a list of ports.  This module handles both
+ * kinds, including generic functions to apply them to addresses, and
+ * also including code to manage the global policies that we apply to
+ * incoming and outgoing connections.
  **/
 
 #define POLICIES_PRIVATE
