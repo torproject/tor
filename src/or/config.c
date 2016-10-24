@@ -6,7 +6,56 @@
 
 /**
  * \file config.c
- * \brief Code to parse and interpret configuration files.
+ * \brief Code to interpret the user's configuration of Tor.
+ *
+ * This module handles torrc configuration file, including parsing it,
+ * combining it with torrc.defaults and the command line, allowing
+ * user changes to it (via editing and SIGHUP or via the control port),
+ * writing it back to disk (because of SAVECONF from the control port),
+ * and -- most importantly, acting on it.
+ *
+ * The module additionally has some tools for manipulating and
+ * inspecting values that are calculated as a result of the
+ * configured options.
+ *
+ * <h3>How to add  new options</h3>
+ *
+ * To add new items to the torrc, there are a minimum of three places to edit:
+ * <ul>
+ *   <li>The or_options_t structure in or.h, where the options are stored.
+ *   <li>The option_vars_ array below in this module, which configures
+ *       the names of the torrc options, their types, their multiplicities,
+ *       and their mappings to fields in or_options_t.
+ *   <li>The manual in doc/tor.1.txt, to document what the new option
+ *       is, and how it works.
+ * </ul>
+ *
+ * Additionally, you might need to edit these places too:
+ * <ul>
+ *   <li>options_validate() below, in case you want to reject some possible
+ *       values of the new configuration option.
+ *   <li>options_transition_allowed() below, in case you need to
+ *       forbid some or all changes in the option while Tor is
+ *       running.
+ *   <li>options_transition_affects_workers(), in case changes in the option
+ *       might require Tor to relaunch or reconfigure its worker threads.
+ *   <li>options_transition_affects_descriptor(), in case changes in the
+ *       option might require a Tor relay to build and publish a new server
+ *       descriptor.
+ *   <li>options_act() and/or options_act_reversible(), in case there's some
+ *       action that needs to be taken immediately based on the option's
+ *       value.
+ * </ul>
+ *
+ * <h3>Changing the value of an option</h3>
+ *
+ * Because of the SAVECONF command from the control port, it's a bad
+ * idea to change the value of any user-configured option in the
+ * or_options_t.  If you want to sometimes do this anyway, we recommend
+ * that you create a secondary field in or_options_t; that you have the
+ * user option linked only to the secondary field; that you use the
+ * secondary field to initialize the one that Tor actually looks at; and that
+ * you use the one Tor looks as the one that you modify.
  **/
 
 #define CONFIG_PRIVATE

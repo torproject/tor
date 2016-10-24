@@ -1,3 +1,4 @@
+
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
@@ -9,6 +10,16 @@
  *
  * \brief Back-end for parsing and generating key-value files, used to
  *   implement the torrc file format and the state file.
+ *
+ * This module is used by config.c to parse and encode torrc
+ * configuration files, and by statefile.c to parse and encode the
+ * $DATADIR/state file.
+ *
+ * To use this module, its callers provide an instance of
+ * config_format_t to describe the mappings from a set of configuration
+ * options to a number of fields in a C structure.  With this mapping,
+ * the functions here can convert back and forth between the C structure
+ * specified, and a linked list of key-value pairs.
  */
 
 #include "or.h"
