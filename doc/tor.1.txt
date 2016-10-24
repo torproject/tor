@@ -2248,7 +2248,7 @@ on the public Tor network.
 [[AuthDirGuardBWGuarantee]] **AuthDirGuardBWGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     Authoritative directories only. If non-zero, this advertised capacity
     or more is always sufficient to satisfy the bandwidth requirement
-    for the Guard flag. (Default: 250 KBytes)
+    for the Guard flag. (Default: 2 MBytes)
 
 [[AuthDirPinKeys]] **AuthDirPinKeys** **0**|**1**::
     Authoritative directories only. If non-zero, do not allow any relay to
