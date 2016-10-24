@@ -1,0 +1,4 @@
+  o Minor bugfixes (comments):
+    - Change '1' to 'weight_scale' in consensus bw weights calculation
+      comments, as that is reality. Fixes bug 20273. Patch from pastly.
+
