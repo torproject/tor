@@ -26,6 +26,39 @@
 /**
  * \file dirvote.c
  * \brief Functions to compute directory consensus, and schedule voting.
+ *
+ * This module is the center of the consensus-voting based directory
+ * authority system.  With this system, a set of authorities first
+ * publish vote based on their opinions of the network, and then compute
+ * a consensus from those votes.  Each authority signs the consensus,
+ * and clients trust the consensus if enough known authorities have
+ * signed it.
+ *
+ * The code in this module is only invoked on directory authorities.  It's
+ * responsible for:
+ *
+ * <ul>
+ *   <li>Generating this authority's vote networkstatus, based on the
+ *       authority's view of the network as represented in dirserv.c
+ *   <li>Formatting the vote networkstatus objects.
+ *   <li>Generating the microdescriptors that correspond to our own
+ *       vote.
+ *   <li>Sending votes to all the other authorities.
+ *   <li>Trying to fetch missing votes from other authorities.
+ *   <li>Computing the consensus from a set of votes, as well as
+ *       a "detached signature" object for other authorities to fetch.
+ *   <li>Collecting other authorities' signatures on the same consensus,
+ *       until there are enough.
+ *   <li>Publishing the consensus to the reset of the directory system.
+ *   <li>Scheduling all of the above operations.
+ * </ul>
+ *
+ * The main entry points are in dirvote_act(), which handles scheduled
+ * actions; and dirvote_add_vote() and dirvote_add_signatures(), which
+ * handle uploaded and downloaded votes and signatures.
+ *
+ * (See dir-spec.txt from torspec.git for a complete specification of
+ * the directory protocol and voting algorithms.)
  **/
 
 /** A consensus that we have built and are appending signatures to.  Once it's
@@ -1273,7 +1306,17 @@ compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
  * value in a newly allocated string.
  *
  * Note: this function DOES NOT check whether the votes are from
- * recognized authorities.   (dirvote_add_vote does that.) */
+ * recognized authorities.   (dirvote_add_vote does that.)
+ *
+ * <strong>WATCH OUT</strong>: You need to think before you change the
+ * behavior of this function, or of the functions it calls! If some
+ * authorities compute the consensus with a different algorithm than
+ * others, they will not reach the same result, and they will not all
+ * sign the same thing!  If you really need to change the algorithm
+ * here, you should allocate a new "consensus_method" for the new
+ * behavior, and make the new behavior conditional on a new-enough
+ * consensus_method.
+ **/
 char *
 networkstatus_compute_consensus(smartlist_t *votes,
                                 int total_authorities,
