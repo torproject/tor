@@ -984,7 +984,7 @@ rend_service_sos_poison_path(const rend_service_t *service)
   return rend_service_path(service, sos_poison_fname);
 }
 
-/** Return True if hidden services <b>service> has been poisoned by single
+/** Return True if hidden services <b>service</b> has been poisoned by single
  * onion mode. */
 static int
 service_is_single_onion_poisoned(const rend_service_t *service)
