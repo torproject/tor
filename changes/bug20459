@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix ewma_cmp_cmux never considering circuit policies to be different.
+      Introduced in 0.2.6. Fixes bug 20459.
