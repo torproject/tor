@@ -929,7 +929,8 @@ authority_certs_fetch_resource_impl(const char *resource,
                                     const routerstatus_t *rs)
 {
   const or_options_t *options = get_options();
-  int get_via_tor = purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0);
+  int get_via_tor = purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                                            resource);
 
   /* Make sure bridge clients never connect to anything but a bridge */
   if (options->UseBridges) {

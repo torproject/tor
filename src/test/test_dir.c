@@ -3258,7 +3258,7 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
   (void)arg;
 
   tor_capture_bugs_(1);
-  tt_int_op(1, ==, purpose_needs_anonymity(0, 0));
+  tt_int_op(1, ==, purpose_needs_anonymity(0, 0, NULL));
   tt_int_op(1, ==, smartlist_len(tor_get_captured_bug_log_()));
   tor_end_capture_bugs_();
  done: ;
@@ -3269,9 +3269,21 @@ test_dir_purpose_needs_anonymity_returns_true_for_bridges(void *arg)
 {
   (void)arg;
 
-  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE));
+  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE, NULL));
+  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE,
+                                           "foobar"));
   tt_int_op(1, ==, purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
-                                   ROUTER_PURPOSE_BRIDGE));
+                                           ROUTER_PURPOSE_BRIDGE, NULL));
+ done: ;
+}
+
+static void
+test_dir_purpose_needs_anonymity_returns_false_for_own_bridge_desc(void *arg)
+{
+  (void)arg;
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC,
+                                           ROUTER_PURPOSE_BRIDGE,
+                                           "authority.z"));
  done: ;
 }
 
@@ -3282,11 +3294,11 @@ test_dir_purpose_needs_anonymity_returns_true_for_sensitive_purpose(void *arg)
 
   tt_int_op(1, ==, purpose_needs_anonymity(
                     DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
-                    ROUTER_PURPOSE_GENERAL));
+                    ROUTER_PURPOSE_GENERAL, NULL));
   tt_int_op(1, ==, purpose_needs_anonymity(
-                      DIR_PURPOSE_UPLOAD_RENDDESC_V2, 0));
+                    DIR_PURPOSE_UPLOAD_RENDDESC_V2, 0,  NULL));
   tt_int_op(1, ==, purpose_needs_anonymity(
-                      DIR_PURPOSE_FETCH_RENDDESC_V2, 0));
+                    DIR_PURPOSE_FETCH_RENDDESC_V2, 0, NULL));
  done: ;
 }
 
@@ -3296,17 +3308,24 @@ test_dir_purpose_needs_anonymity_ret_false_for_non_sensitive_conn(void *arg)
   (void)arg;
 
   tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_DIR,
-                                           ROUTER_PURPOSE_GENERAL));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_SIGNATURES, 0));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_STATUS_VOTE, 0));
+                                           ROUTER_PURPOSE_GENERAL, NULL));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0, NULL));
+  tt_int_op(0, ==,
+            purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_SIGNATURES, 0, NULL));
+  tt_int_op(0, ==,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL));
   tt_int_op(0, ==, purpose_needs_anonymity(
-                    DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_CONSENSUS, 0));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC, 0));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_EXTRAINFO, 0));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_MICRODESC, 0));
+                    DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0, NULL));
+  tt_int_op(0, ==,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_CONSENSUS, 0, NULL));
+  tt_int_op(0, ==,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0, NULL));
+  tt_int_op(0, ==,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC, 0, NULL));
+  tt_int_op(0, ==,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_EXTRAINFO, 0, NULL));
+  tt_int_op(0, ==,
+            purpose_needs_anonymity(DIR_PURPOSE_FETCH_MICRODESC, 0, NULL));
   done: ;
 }
 
@@ -5512,6 +5531,7 @@ struct testcase_t dir_tests[] = {
   DIR(dirserv_set_routerstatus_testing, 0),
   DIR(http_handling, 0),
   DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
+  DIR(purpose_needs_anonymity_returns_false_for_own_bridge_desc, 0),
   DIR(purpose_needs_anonymity_returns_true_by_default, 0),
   DIR(purpose_needs_anonymity_returns_true_for_sensitive_purpose, 0),
   DIR(purpose_needs_anonymity_ret_false_for_non_sensitive_conn, 0),

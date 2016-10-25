@@ -2434,7 +2434,9 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
      * Otherwise, directory connections are typically one-hop.
      * This matches the earlier check for directory connection path anonymity
      * in directory_initiate_command_rend(). */
-    if (purpose_needs_anonymity(linked_dir_conn_base->purpose, 0)) {
+    if (purpose_needs_anonymity(linked_dir_conn_base->purpose,
+                    TO_DIR_CONN(linked_dir_conn_base)->router_purpose,
+                    TO_DIR_CONN(linked_dir_conn_base)->requested_resource)) {
       assert_circ_anonymity_ok(circ, options);
     }
   } else {

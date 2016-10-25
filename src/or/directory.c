@@ -127,14 +127,23 @@ static void connection_dir_close_consensus_fetches(
  * specifically been configured to be over an anonymous connection,
  * or 3) if the router is a bridge */
 int
-purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
+purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
+                        const char *resource)
 {
   if (get_options()->AllDirActionsPrivate)
     return 1;
 
-  if (router_purpose == ROUTER_PURPOSE_BRIDGE)
+  if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
+    if (dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC
+        && resource && !strcmp(resource, "authority.z")) {
+      /* We are asking a bridge for its own descriptor. That doesn't need
+         anonymity. */
+      return 0;
+    }
+    /* Assume all other bridge stuff needs anonymity. */
     return 1; /* if no circuits yet, this might break bootstrapping, but it's
                * needed to be safe. */
+  }
 
   switch (dir_purpose)
   {
@@ -364,7 +373,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
         log_info(LD_DIR, "Uploading an extrainfo too (length %d)",
                  (int) extrainfo_len);
       }
-      if (purpose_needs_anonymity(dir_purpose, router_purpose)) {
+      if (purpose_needs_anonymity(dir_purpose, router_purpose, NULL)) {
         indirection = DIRIND_ANONYMOUS;
       } else if (!fascist_firewall_allows_dir_server(ds,
                                                      FIREWALL_DIR_CONNECTION,
@@ -458,7 +467,8 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
   int prefer_authority = (directory_fetches_from_authorities(options)
                           || want_authority == DL_WANT_AUTHORITY);
   int require_authority = 0;
-  int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
+  int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose,
+                                            resource);
   dirinfo_type_t type = dir_fetch_type(dir_purpose, router_purpose, resource);
   time_t if_modified_since = 0;
 
@@ -592,7 +602,7 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
                "While fetching directory info, "
                "no running dirservers known. Will try again later. "
                "(purpose %d)", dir_purpose);
-    if (!purpose_needs_anonymity(dir_purpose, router_purpose)) {
+    if (!purpose_needs_anonymity(dir_purpose, router_purpose, resource)) {
       /* remember we tried them all and failed. */
       directory_all_unreachable(time(NULL));
     }
@@ -1142,7 +1152,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
-  if (purpose_needs_anonymity(dir_purpose, router_purpose)) {
+  if (purpose_needs_anonymity(dir_purpose, router_purpose, resource)) {
     tor_assert(anonymized_connection ||
                rend_non_anonymous_mode_enabled(options));
   }
