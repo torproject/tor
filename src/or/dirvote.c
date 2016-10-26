@@ -913,7 +913,7 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
  *
  * It returns true if weights could be computed, false otherwise.
  */
-static int
+int
 networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
                                      int64_t M, int64_t E, int64_t D,
                                      int64_t T, int64_t weight_scale)
@@ -1335,7 +1335,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   smartlist_t *flags;
   const char *flavor_name;
   uint32_t max_unmeasured_bw_kb = DEFAULT_MAX_UNMEASURED_BW_KB;
-  int64_t G=0, M=0, E=0, D=0, T=0; /* For bandwidth weights */
+  int64_t G, M, E, D, T; /* For bandwidth weights */
   const routerstatus_format_type_t rs_format =
     flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
   char *params = NULL;
@@ -1365,6 +1365,16 @@ networkstatus_compute_consensus(smartlist_t *votes,
              "which I don't support.  Maybe I should upgrade!",
              consensus_method);
     consensus_method = MAX_SUPPORTED_CONSENSUS_METHOD;
+  }
+
+  if (consensus_method >= MIN_METHOD_FOR_INIT_BW_WEIGHTS_ONE) {
+    /* It's smarter to initialize these weights to 1, so that later on,
+     * we can't accidentally divide by zero. */
+    G = M = E = D = 1;
+    T = 4;
+  } else {
+    /* ...but originally, they were set to zero. */
+    G = M = E = D = T = 0;
   }
 
   /* Compute medians of time-related things, and figure out how many
