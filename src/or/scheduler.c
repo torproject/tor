@@ -35,8 +35,8 @@ static uint32_t sched_max_flush_cells = 16;
  * This module implements a scheduler algorithm, to decide
  * which channels should send/receive when.
  *
- * The earliest versions of Tor approximated a kind of round-robin system among
- * active connections, but only approximated it.
+ * The earliest versions of Tor approximated a kind of round-robin system
+ * among active connections, but only approximated it.
  *
  * Now, write scheduling works by keeping track of which channels can
  * accept cells, and have cells to write.  From the scheduler's perspective,
@@ -44,9 +44,9 @@ static uint32_t sched_max_flush_cells = 16;
  *
  * <ol>
  * <li>
-  *   Not open for writes, no cells to send .
- *     <ul><li> Not much to do here, and the channel will have scheduler_state ==
- *       SCHED_CHAN_IDLE
+ *   Not open for writes, no cells to send.
+ *     <ul><li> Not much to do here, and the channel will have scheduler_state
+ *       == SCHED_CHAN_IDLE
  *     <li> Transitions from:
  *       <ul>
  *       <li>Open for writes/has cells by simultaneously draining all circuit
@@ -63,9 +63,9 @@ static uint32_t sched_max_flush_cells = 16;
  *
  * <li> Open for writes, no cells to send
  *   <ul>
- *     <li>Not much here either; this will be the state an idle but open channel
- *       can be expected to settle in.  It will have scheduler_state ==
- *       SCHED_CHAN_WAITING_FOR_CELLS
+ *     <li>Not much here either; this will be the state an idle but open
+ *       channel can be expected to settle in.  It will have scheduler_state
+ *       == SCHED_CHAN_WAITING_FOR_CELLS
  *     <li> Transitions from:
  *       <ul>
  *       <li>Not open for writes/no cells by flushing some of the output
