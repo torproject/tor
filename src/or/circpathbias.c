@@ -11,6 +11,14 @@
  * different tor nodes, in an attempt to detect attacks where
  * an attacker deliberately causes circuits to fail until the client
  * choses a path they like.
+ *
+ * This code is currently configured in a warning-only mode, though false
+ * positives appear to be rare in practice.  There is also support for
+ * disabling really bad guards, but it's quite experimental and may have bad
+ * anonymity effects.
+ *
+ * The information here is associated with the entry_guard_t object for
+ * each guard, and stored persistently in the state file.
  */
 
 #include "or.h"

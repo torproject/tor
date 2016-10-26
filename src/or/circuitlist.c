@@ -7,7 +7,48 @@
 /**
  * \file circuitlist.c
  *
- * \brief Manage the global circuit list, and looking up circuits within it.
+ * \brief Manage global structures that list and index circuits, and
+ *   look up circuits within them.
+ *
+ * One of the most frequent operations in Tor occurs every time that
+ * a relay cell arrives on a channel.  When that happens, we need to
+ * find which circuit it is associated with, based on the channel and the
+ * circuit ID in the relay cell.
+ *
+ * To handle that, we maintain a global list of circuits, and a hashtable
+ * mapping [channel,circID] pairs to circuits.  Circuits are added to and
+ * removed from this mapping using circuit_set_p_circid_chan() and
+ * circuit_set_n_circid_chan().  To look up a circuit from this map, most
+ * callers should use circuit_get_by_circid_channel(), though
+ * circuit_get_by_circid_channel_even_if_marked() is appropriate under some
+ * circumstances.
+ *
+ * We also need to allow for the possibility that we have blocked use of a
+ * circuit ID (because we are waiting to send a DESTROY cell), but the
+ * circuit is not there any more.  For that case, we allow placeholder
+ * entries in the table, using channel_mark_circid_unusable().
+ *
+ * To efficiently handle a channel that has just opened, we also maintain a
+ * list of the circuits waiting for channels, so we can attach them as
+ * needed without iterating through the whole list of circuits, using
+ * circuit_get_all_pending_on_channel().
+ *
+ * In this module, we also handle the list of circuits that have been
+ * marked for close elsewhere, and close them as needed.  (We use this
+ * "mark now, close later" pattern here and elsewhere to avoid
+ * unpredictable recursion if we closed every circuit immediately upon
+ * realizing it needed to close.)  See circuit_mark_for_close() for the
+ * mark function, and circuit_close_all_marked() for the close function.
+ *
+ * For hidden services, we need to be able to look up introduction point
+ * circuits and rendezvous circuits by cookie, key, etc.  These are
+ * currently handled with linear searches in
+ * circuit_get_ready_rend_circuit_by_rend_data(),
+ * circuit_get_next_by_pk_and_purpose(), and with hash lookups in
+ * circuit_get_rendezvous() and circuit_get_intro_point().
+ *
+ * This module is also the entry point for our out-of-memory handler
+ * logic, which was originally circuit-focused.
  **/
 #define CIRCUITLIST_PRIVATE
 #include "or.h"
@@ -1539,6 +1580,14 @@ circuit_set_intro_point_digest(or_circuit_t *circ, const uint8_t *digest)
  * cannibalize.
  *
  * If !CIRCLAUNCH_NEED_UPTIME, prefer returning non-uptime circuits.
+ *
+ * To "cannibalize" a circuit means to extend it an extra hop, and use it
+ * for some other purpose than we had originally intended.  We do this when
+ * we want to perform some low-bandwidth task at a specific relay, and we
+ * would like the circuit to complete as soon as possible.  (If we were going
+ * to use a lot of bandwidth, we wouldn't want a circuit with an extra hop.
+ * If we didn't care about circuit completion latency, we would just build
+ * a new circuit.)
  */
 origin_circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,

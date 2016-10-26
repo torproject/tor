@@ -56,6 +56,14 @@ typedef struct entry_guard_t {
   time_t last_attempted; /**< 0 if we can connect to this guard, or the time
                           * at which we last failed to connect to it. */
 
+  /**
+   * @name circpathbias fields
+   *
+   * These fields are used in circpathbias.c to try to detect entry
+   * nodes that are failing circuits at a suspicious frequency.
+   */
+  /**@{*/
+
   double circ_attempts; /**< Number of circuits this guard has "attempted" */
   double circ_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
@@ -71,6 +79,7 @@ typedef struct entry_guard_t {
   double use_attempts; /**< Number of circuits we tried to use with streams */
   double use_successes; /**< Number of successfully used circuits using
                                * this guard as first hop. */
+  /**@}*/
 } entry_guard_t;
 
 entry_guard_t *entry_guard_get_by_id_digest_for_guard_selection(
