@@ -500,7 +500,7 @@ ewma_cmp_cmux(circuitmux_t *cmux_1, circuitmux_policy_data_t *pol_data_1,
   tor_assert(pol_data_2);
 
   p1 = TO_EWMA_POL_DATA(pol_data_1);
-  p2 = TO_EWMA_POL_DATA(pol_data_1);
+  p2 = TO_EWMA_POL_DATA(pol_data_2);
 
   if (p1 != p2) {
     /* Get the head cell_ewma_t from each queue */
