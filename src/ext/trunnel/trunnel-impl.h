@@ -1,4 +1,4 @@
-/* trunnel-impl.h -- copied from Trunnel v1.4.6
+/* trunnel-impl.h -- copied from Trunnel v1.5
  * https://gitweb.torproject.org/trunnel.git
  * You probably shouldn't edit this file.
  */
@@ -17,6 +17,7 @@
 #include "trunnel.h"
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 #if defined(_MSC_VER) && (_MSC_VER < 1600)
 #define uint8_t unsigned char
