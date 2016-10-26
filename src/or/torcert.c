@@ -6,6 +6,23 @@
  *
  * \brief Implementation for ed25519-signed certificates as used in the Tor
  * protocol.
+ *
+ * This certificate format is designed to be simple and compact; it's
+ * documented in tor-spec.txt in the torspec.git repository.  All of the
+ * certificates in this format are signed with an Ed25519 key; the
+ * contents themselves may be another Ed25519 key, a digest of a
+ * RSA key, or some other material.
+ *
+ * In this module there is also support for a crooss-certification of
+ * Ed25519 identities using (older) RSA1024 identities.
+ *
+ * Tor uses other types of certificate too, beyond those described in this
+ * module. Notably, our use of TLS requires us to touch X.509 certificates,
+ * even though sensible people would stay away from those. Our X.509
+ * certificates are represented with tor_x509_cert_t, and implemented in
+ * tortls.c.  We also have a separate certificate type that authorities
+ * use to authenticate their RSA signing keys with their RSA identity keys:
+ * that one is authority_cert_t, and it's mostly handled in routerlist.c.
  */
 
 #include "crypto.h"

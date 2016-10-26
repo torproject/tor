@@ -40,9 +40,38 @@
 
 /**
  * \file directory.c
- * \brief Code to send and fetch directories and router
- * descriptors via HTTP.  Directories use dirserv.c to generate the
- * results; clients use routers.c to parse them.
+ * \brief Code to send and fetch information from directory authorities and
+ * caches via HTTP.
+ *
+ * Directory caches and authorities use dirserv.c to generate the results of a
+ * query and stream them to the connection; clients use routerparse.c to parse
+ * them.
+ *
+ * Every directory request has a dir_connection_t on the client side and on
+ * the server side.  In most cases, the dir_connection_t object is a linked
+ * connection, tunneled through an edge_connection_t so that it can be a
+ * stream on the Tor network.  The only non-tunneled connections are those
+ * that are used to upload material (descriptors and votes) to authorities.
+ * Among tunneled connections, some use one-hop circuits, and others use
+ * multi-hop circuits for anonymity.
+ *
+ * Directory requests are launched by calling
+ * directory_initiate_command_rend() or one of its numerous variants. This
+ * launch the connection, will construct an HTTP request with
+ * directory_send_command(), send the and wait for a response.  The client
+ * later handles the response with connection_dir_client_reached_eof(),
+ * which passes the information received to another part of Tor.
+ *
+ * On the server side, requests are read in directory_handle_command(),
+ * which dispatches first on the request type (GET or POST), and then on
+ * the URL requested. GET requests are processed with a table-based
+ * dispatcher in url_table[].  The process of handling larger GET requests
+ * is complicated because we need to avoid allocating a copy of all the
+ * data to be sent to the client in one huge buffer.  Instead, we spool the
+ * data into the buffer using logic in connection_dirserv_flushed_some() in
+ * dirserv.c.  (TODO: If we extended buf.c to have a zero-copy
+ * reference-based buffer type, we could remove most of that code, at the
+ * cost of a bit more reference counting.)
  **/
 
 /* In-points to directory.c:

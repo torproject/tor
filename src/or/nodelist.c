@@ -10,6 +10,32 @@
  * \brief Structures and functions for tracking what we know about the routers
  *   on the Tor network, and correlating information from networkstatus,
  *   routerinfo, and microdescs.
+ *
+ * The key structure here is node_t: that's the canonical way to refer
+ * to a Tor relay that we might want to build a circuit through.  Every
+ * node_t has either a routerinfo_t, or a routerstatus_t from the current
+ * networkstatus consensus.  If it has a routerstatus_t, it will also
+ * need to have a microdesc_t before you can use it for circuits.
+ *
+ * The nodelist_t is a global singleton that maps identities to node_t
+ * objects.  Access them with the node_get_*() functions.  The nodelist_t
+ * is maintained by calls throughout the codebase
+ *
+ * Generally, other code should not have to reach inside a node_t to
+ * see what information it has.  Instead, you should call one of the
+ * many accessor functions that works on a generic node_t.  If there
+ * isn't one that does what you need, it's better to make such a function,
+ * and then use it.
+ *
+ * For historical reasons, some of the functions that select a node_t
+ * from the list of all usable node_t objects are in the routerlist.c
+ * module, since they originally selected a routerinfo_t. (TODO: They
+ * should move!)
+ *
+ * (TODO: Perhaps someday we should abstract the remaining ways of
+ * talking about a relay to also be node_t instances. Those would be
+ * routerstatus_t as used for directory requests, and dir_server_t as
+ * used for authorities and fallback directories.)
  */
 
 #include "or.h"

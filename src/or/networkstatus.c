@@ -6,8 +6,34 @@
 
 /**
  * \file networkstatus.c
- * \brief Functions and structures for handling network status documents as a
- * client or cache.
+ * \brief Functions and structures for handling networkstatus documents as a
+ * client or as a directory cache.
+ *
+ * A consensus networkstatus object is created by the directory
+ * authorities.  It authenticates a set of network parameters--most
+ * importantly, the list of all the relays in the network.  This list
+ * of relays is represented as an array of routerstatus_t objects.
+ *
+ * There are currently two flavors of consensus.  With the older "NS"
+ * flavor, each relay is associated with a digest of its router
+ * descriptor. Tor instances that use this consensus keep the list of
+ * router descriptors as routerinfo_t objects stored and managed in
+ * routerlist.c.  With the newer "microdesc" flavor, each relay is
+ * associated with a digest of the microdescriptor that the authorities
+ * made for it.  These are stored and managed in microdesc.c. Information
+ * about the router is divided between the the networkstatus and the
+ * microdescriptor according to the general rule that microdescriptors
+ * should hold information that changes much less frequently than the
+ * information in the networkstatus.
+ *
+ * Modern clients use microdescriptor networkstatuses.  Directory caches
+ * need to keep both kinds of networkstatus document, so they can serve them.
+ *
+ * This module manages fetching, holding, storing, updating, and
+ * validating networkstatus objects.  The download-and-validate process
+ * is slightly complicated by the fact that the keys you need to
+ * validate a consensus are stored in the authority certificates, which
+ * you might not have yet when you download the consensus.
  */
 
 #define NETWORKSTATUS_PRIVATE

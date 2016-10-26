@@ -8,6 +8,41 @@
  * \file relay.c
  * \brief Handle relay cell encryption/decryption, plus packaging and
  *    receiving from circuits, plus queuing on circuits.
+ *
+ * This is a core modules that makes Tor work. It's responsible for
+ * dealing with RELAY cells (the ones that travel more than one hop along a
+ * circuit), by:
+ *  <ul>
+ *   <li>constructing relays cells,
+ *   <li>encrypting relay cells,
+ *   <li>decrypting relay cells,
+ *   <li>demultiplexing relay cells as they arrive on a connection,
+ *   <li>queueing relay cells for retransmission,
+ *   <li>or handling relay cells that are for us to receive (as an exit or a
+ *   client).
+ *  </ul>
+ *
+ * RELAY cells are generated throughout the code at the client or relay side,
+ * using relay_send_command_from_edge() or one of the functions like
+ * connection_edge_send_command() that calls it.  Of particular interest is
+ * connection_edge_package_raw_inbuf(), which takes information that has
+ * arrived on an edge connection socket, and packages it as a RELAY_DATA cell
+ * -- this is how information is actually sent across the Tor network.  The
+ * cryptography for these functions is handled deep in
+ * circuit_package_relay_cell(), which either adds a single layer of
+ * encryption (if we're an exit), or multiple layers (if we're the origin of
+ * the circuit).  After construction and encryption, the RELAY cells are
+ * passed to append_cell_to_circuit_queue(), which queues them for
+ * transmission and tells the circuitmux (see circuitmux.c) that the circuit
+ * is waiting to send something.
+ *
+ * Incoming RELAY cells arrive at circuit_receive_relay_cell(), called from
+ * command.c.  There they are decrypted and, if they are for us, are passed to
+ * connection_edge_process_relay_cell(). If they're not for us, they're
+ * re-queued for retransmission again with append_cell_to_circuit_queue().
+ *
+ * The connection_edge_process_relay_cell() function handles all the different
+ * types of relay cells, launching requests or transmitting data as needed.
  **/
 
 #define RELAY_PRIVATE
