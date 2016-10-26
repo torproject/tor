@@ -6,7 +6,25 @@
 
 /**
  * \file circuituse.c
- * \brief Launch the right sort of circuits and attach streams to them.
+ * \brief Launch the right sort of circuits and attach the right streams to
+ * them.
+ *
+ * As distinct from circuitlist.c, which manages lookups to find circuits, and
+ * circuitbuild.c, which handles the logistics of circuit construction, this
+ * module keeps track of which streams can be attached to which circuits (in
+ * circuit_get_best()), and attaches streams to circuits (with
+ * circuit_try_attaching_streams(), connection_ap_handshake_attach_circuit(),
+ * and connection_ap_handshake_attach_chosen_circuit().
+ *
+ * This module also makes sure that we are building circuits for all of the
+ * predicted ports, using circuit_remove_handled_ports(),
+ * circuit_stream_is_being_handled(), and circuit_build_needed_cirs().  It
+ * handles launching circuits for specific targets using
+ * circuit_launch_by_extend_info().
+ *
+ * This is also where we handle expiring circuits that have been around for
+ * too long without actually completing, along with the circuit_build_timeout
+ * logic in circuitstats.c.
  **/
 
 #include "or.h"

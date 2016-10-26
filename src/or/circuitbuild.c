@@ -9,6 +9,20 @@
  *
  * \brief Implements the details of building circuits (by chosing paths,
  * constructing/sending create/extend cells, and so on).
+ *
+ * On the client side, this module handles launching circuits. Circuit
+ * launches are srtarted from circuit_establish_circuit(), called from
+ * circuit_launch_by_extend_info()).  To choose the path the circuit will
+ * take, onion_extend_cpath() calls into a maze of node selection functions.
+ *
+ * Once the circuit is ready to be launched, the first hop is treated as a
+ * special case with circuit_handle_first_hop(), since it might need to open a
+ * channel.  As the channel opens, and later as CREATED and RELAY_EXTENDED
+ * cells arrive, the client will invoke circuit_send_next_onion_skin() to send
+ * CREATE or RELAY_EXTEND cells.
+ *
+ * On the server side, this module also handles the logic of responding to
+ * RELAY_EXTEND requests, using circuit_extend().
  **/
 
 #define CIRCUITBUILD_PRIVATE
