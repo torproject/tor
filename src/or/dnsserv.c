@@ -302,6 +302,10 @@ evdns_get_orig_address(const struct evdns_server_request *req,
   case RESOLVED_TYPE_IPV6:
     type = EVDNS_TYPE_AAAA;
     break;
+  case RESOLVED_TYPE_ERROR:
+  case RESOLVED_TYPE_ERROR_TRANSIENT:
+     /* Addr doesn't matter, since we're not sending it back in the reply.*/
+    return addr;
   default:
     tor_fragile_assert();
     return addr;

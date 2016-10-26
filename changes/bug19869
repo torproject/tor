@@ -1,0 +1,4 @@
+  o Minor bugfixes (DNSPort):
+    - On DNSPort, stop logging a BUG warning on a failed hostname lookup.
+      Fixes bug 19869; bugfix on 0.2.9.1-alpha.
+
