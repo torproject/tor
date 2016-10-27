@@ -812,7 +812,7 @@ test_dir_load_routers(void *arg)
 #define ADD(str)                                                        \
   do {                                                                  \
     tt_int_op(0,OP_EQ,router_get_router_hash(str, strlen(str), buf));      \
-    smartlist_add(wanted, tor_strdup(hex_str(buf, DIGEST_LEN)));        \
+    smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
   } while (0)
 
   MOCK(router_get_dl_status_by_descriptor_digest, mock_router_get_dl_status);
@@ -932,7 +932,7 @@ test_dir_load_extrainfo(void *arg)
 #define ADD(str)                                                        \
   do {                                                                  \
     tt_int_op(0,OP_EQ,router_get_extrainfo_hash(str, strlen(str), buf));   \
-    smartlist_add(wanted, tor_strdup(hex_str(buf, DIGEST_LEN)));        \
+    smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
   } while (0)
 
   mock_ei_insert_list = smartlist_new();

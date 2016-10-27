@@ -501,13 +501,13 @@ test_container_smartlist_pos(void *arg)
   (void) arg;
   smartlist_t *sl = smartlist_new();
 
-  smartlist_add(sl, tor_strdup("This"));
-  smartlist_add(sl, tor_strdup("is"));
-  smartlist_add(sl, tor_strdup("a"));
-  smartlist_add(sl, tor_strdup("test"));
-  smartlist_add(sl, tor_strdup("for"));
-  smartlist_add(sl, tor_strdup("a"));
-  smartlist_add(sl, tor_strdup("function"));
+  smartlist_add_strdup(sl, "This");
+  smartlist_add_strdup(sl, "is");
+  smartlist_add_strdup(sl, "a");
+  smartlist_add_strdup(sl, "test");
+  smartlist_add_strdup(sl, "for");
+  smartlist_add_strdup(sl, "a");
+  smartlist_add_strdup(sl, "function");
 
   /* Test string_pos */
   tt_int_op(smartlist_string_pos(NULL, "Fred"), ==, -1);
@@ -830,7 +830,7 @@ test_container_strmap(void *arg)
   found_keys = smartlist_new();
   while (!strmap_iter_done(iter)) {
     strmap_iter_get(iter,&k,&v);
-    smartlist_add(found_keys, tor_strdup(k));
+    smartlist_add_strdup(found_keys, k);
     tt_ptr_op(v,OP_EQ, strmap_get(map, k));
 
     if (!strcmp(k, "K2")) {

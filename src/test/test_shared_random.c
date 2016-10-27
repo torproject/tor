@@ -348,12 +348,12 @@ test_sr_commit(void *arg)
   /* We'll build a list of values from our commit that our parsing function
    * takes from a vote line and see if we can parse it correctly. */
   {
-    smartlist_add(args, tor_strdup("1"));
-    smartlist_add(args,
-               tor_strdup(crypto_digest_algorithm_get_name(our_commit->alg)));
-    smartlist_add(args, tor_strdup(sr_commit_get_rsa_fpr(our_commit)));
-    smartlist_add(args, tor_strdup(our_commit->encoded_commit));
-    smartlist_add(args, tor_strdup(our_commit->encoded_reveal));
+    smartlist_add_strdup(args, "1");
+    smartlist_add_strdup(args,
+               crypto_digest_algorithm_get_name(our_commit->alg));
+    smartlist_add_strdup(args, sr_commit_get_rsa_fpr(our_commit));
+    smartlist_add_strdup(args, our_commit->encoded_commit);
+    smartlist_add_strdup(args, our_commit->encoded_reveal);
     parsed_commit = sr_parse_commit(args);
     tt_assert(parsed_commit);
     /* That parsed commit should be _EXACTLY_ like our original commit (we

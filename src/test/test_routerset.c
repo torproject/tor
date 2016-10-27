@@ -623,7 +623,7 @@ NS(test_main)(void *arg)
   (void)arg;
 
   tgt = routerset_new();
-  smartlist_add(src->list, tor_strdup("{xx}"));
+  smartlist_add_strdup(src->list, "{xx}");
   routerset_union(tgt, src);
 
   tt_int_op(smartlist_len(tgt->list), OP_NE, 0);
@@ -745,7 +745,7 @@ NS(test_main)(void *arg)
   tt_int_op(is_empty, OP_NE, 0);
 
   set = routerset_new();
-  smartlist_add(set->list, tor_strdup("{xx}"));
+  smartlist_add_strdup(set->list, "{xx}");
   is_empty = routerset_is_empty(set);
   routerset_free(set);
   set = NULL;
@@ -1616,7 +1616,7 @@ NS(test_main)(void *arg)
   NS_MOCK(node_get_by_nickname);
 
   NS(mock_nickname) = "foo";
-  smartlist_add(set->list, tor_strdup(NS(mock_nickname)));
+  smartlist_add_strdup(set->list, NS(mock_nickname));
 
   routerset_get_all_nodes(out, set, NULL, 0);
   out_len = smartlist_len(out);
@@ -1667,7 +1667,7 @@ NS(test_main)(void *arg)
 
   NS(mock_node).is_running = 0;
   NS(mock_nickname) = "foo";
-  smartlist_add(set->list, tor_strdup(NS(mock_nickname)));
+  smartlist_add_strdup(set->list, NS(mock_nickname));
 
   routerset_get_all_nodes(out, set, NULL, 1);
   out_len = smartlist_len(out);
@@ -1766,7 +1766,7 @@ NS(test_main)(void *arg)
 
   NS_MOCK(nodelist_get_list);
 
-  smartlist_add(set->country_names, tor_strdup("{xx}"));
+  smartlist_add_strdup(set->country_names, "{xx}");
   NS(mock_smartlist) = smartlist_new();
 
   routerset_get_all_nodes(out, set, NULL, 1);
@@ -1813,7 +1813,7 @@ NS(test_main)(void *arg)
 
   NS_MOCK(nodelist_get_list);
 
-  smartlist_add(set->country_names, tor_strdup("{xx}"));
+  smartlist_add_strdup(set->country_names, "{xx}");
   NS(mock_smartlist) = smartlist_new();
   NS(mock_node).is_running = 0;
   smartlist_add(NS(mock_smartlist), (void *)&NS(mock_node));
@@ -1985,7 +1985,7 @@ NS(test_main)(void *arg)
   int r;
   (void)arg;
 
-  smartlist_add(b->list, tor_strdup("{xx}"));
+  smartlist_add_strdup(b->list, "{xx}");
   r = routerset_equal(a, b);
   routerset_free(a);
   routerset_free(b);
@@ -2010,9 +2010,9 @@ NS(test_main)(void *arg)
   int r;
   (void)arg;
 
-  smartlist_add(a->list, tor_strdup("{aa}"));
-  smartlist_add(b->list, tor_strdup("{b1}"));
-  smartlist_add(b->list, tor_strdup("{b2}"));
+  smartlist_add_strdup(a->list, "{aa}");
+  smartlist_add_strdup(b->list, "{b1}");
+  smartlist_add_strdup(b->list, "{b2}");
   r = routerset_equal(a, b);
   routerset_free(a);
   routerset_free(b);
@@ -2037,8 +2037,8 @@ NS(test_main)(void *arg)
   int r;
   (void)arg;
 
-  smartlist_add(a->list, tor_strdup("foo"));
-  smartlist_add(b->list, tor_strdup("bar"));
+  smartlist_add_strdup(a->list, "foo");
+  smartlist_add_strdup(b->list, "bar");
   r = routerset_equal(a, b);
   routerset_free(a);
   routerset_free(b);
@@ -2063,8 +2063,8 @@ NS(test_main)(void *arg)
   int r;
   (void)arg;
 
-  smartlist_add(a->list, tor_strdup("foo"));
-  smartlist_add(b->list, tor_strdup("foo"));
+  smartlist_add_strdup(a->list, "foo");
+  smartlist_add_strdup(b->list, "foo");
   r = routerset_equal(a, b);
   routerset_free(a);
   routerset_free(b);
