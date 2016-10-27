@@ -1905,6 +1905,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbe=3000 Wbg=3000 Wbm=10000 Wdb=10000 Web=10000 Wed=3333 Wee=7000 "
     "Weg=3333 Wem=7000 Wgb=10000 Wgd=3333 Wgg=7000 Wgm=7000 Wmb=10000 "
     "Wmd=3333 Wme=3000 Wmg=3000 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 2a E scarce */
@@ -1919,6 +1920,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
     "Wem=10000 Wgb=10000 Wgd=0 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 "
     "Wmg=0 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 2a G scarce */
@@ -1933,6 +1935,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=10000 Weg=0 Wem=10000 "
     "Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 Wmg=0 "
     "Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 2b1 (Wgg=1, Wmd=Wgd) */
@@ -1948,6 +1951,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbe=0 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=2000 Wee=10000 Weg=2000 "
     "Wem=10000 Wgb=10000 Wgd=4000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=4000 "
     "Wme=0 Wmg=0 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 2b2 */
@@ -1963,6 +1967,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=3666 Wee=10000 Weg=3666 "
     "Wem=10000 Wgb=10000 Wgd=5668 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=666 "
     "Wme=0 Wmg=0 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 2b3 */
@@ -1978,6 +1983,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_int_op(ret, OP_EQ, 0);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 3a G scarce */
@@ -1993,6 +1999,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbe=3333 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6667 Weg=0 "
     "Wem=6667 Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 "
     "Wme=3333 Wmg=0 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 3a E scarce */
@@ -2008,6 +2015,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbg=3333 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
     "Wem=10000 Wgb=10000 Wgd=0 Wgg=6667 Wgm=6667 Wmb=10000 Wmd=0 Wme=0 "
     "Wmg=3333 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 3bg */
@@ -2023,6 +2031,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbe=3334 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6666 Weg=0 "
     "Wem=6666 Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 "
     "Wme=3334 Wmg=0 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case 3be */
@@ -2038,6 +2047,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbg=3334 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
     "Wem=10000 Wgb=10000 Wgd=0 Wgg=6666 Wgm=6666 Wmb=10000 Wmd=0 Wme=0 "
     "Wmg=3334 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case from 21 Jul 2013 (3be) */
@@ -2053,6 +2063,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbg=3673 Wbm=10000 Wdb=10000 Web=10000 Wed=8233 Wee=10000 Weg=8233 "
     "Wem=10000 Wgb=10000 Wgd=883 Wgg=6327 Wgm=6327 Wmb=10000 Wmd=883 Wme=0 "
     "Wmg=3673 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case from 04 Oct 2016 (3a E scarce) */
@@ -2068,6 +2079,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbg=4194 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
     "Wem=10000 Wgb=10000 Wgd=0 Wgg=5806 Wgm=5806 Wmb=10000 Wmd=0 Wme=0 "
     "Wmg=4194 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* case from 04 Sep 2013 (2b1) */
@@ -2083,6 +2095,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbe=5938 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=9366 Wee=4061 "
     "Weg=9366 Wem=4061 Wgb=10000 Wgd=317 Wgg=10000 Wgm=10000 Wmb=10000 "
     "Wmd=317 Wme=5938 Wmg=0 Wmm=10000\n");
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_clear(chunks);
 
   /* explicitly test initializing weights to 1*/
@@ -2098,9 +2111,10 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
     "Wbe=0 Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=3333 Wee=10000 Weg=3333 "
     "Wem=10000 Wgb=10000 Wgd=3333 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=3333 "
     "Wme=0 Wmg=0 Wmm=10000\n");
-  smartlist_clear(chunks);
+
  done:
-  return;
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
 }
 
 static authority_cert_t *mock_cert;
