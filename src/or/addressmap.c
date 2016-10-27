@@ -376,29 +376,38 @@ addressmap_rewrite(char *address, size_t maxlen,
   char *addr_orig = tor_strdup(address);
   char *log_addr_orig = NULL;
 
+  /* We use a loop here to limit the total number of rewrites we do,
+   * so that we can't hit an infinite loop. */
   for (rewrites = 0; rewrites < 16; rewrites++) {
     int exact_match = 0;
     log_addr_orig = tor_strdup(escaped_safe_str_client(address));
 
+    /* First check to see if there's an exact match for this address */
     ent = strmap_get(addressmap, address);
 
     if (!ent || !ent->new_address) {
+      /* And if we don't have an exact match, try to check whether
+       * we have a pattern-based match.
+       */
       ent = addressmap_match_superdomains(address);
     } else {
       if (ent->src_wildcard && !ent->dst_wildcard &&
           !strcasecmp(address, ent->new_address)) {
-        /* This is a rule like *.example.com example.com, and we just got
-         * "example.com" */
+        /* This is a rule like "rewrite *.example.com to example.com", and we
+         * just got "example.com". Instead of calling it an infinite loop,
+         * call it complete. */
         goto done;
       }
-
       exact_match = 1;
     }
 
     if (!ent || !ent->new_address) {
+      /* We still have no match at all.  We're done! */
       goto done;
     }
 
+    /* Check wither the flags we were passed tell us not to use this
+     * mapping. */
     switch (ent->source) {
       case ADDRMAPSRC_DNS:
         {
@@ -431,6 +440,8 @@ addressmap_rewrite(char *address, size_t maxlen,
         goto done;
     }
 
+    /* Now fill in the address with the new address. That might be via
+     * appending some new stuff to the end, or via just replacing it. */
     if (ent->dst_wildcard && !exact_match) {
       strlcat(address, ".", maxlen);
       strlcat(address, ent->new_address, maxlen);
@@ -438,6 +449,7 @@ addressmap_rewrite(char *address, size_t maxlen,
       strlcpy(address, ent->new_address, maxlen);
     }
 
+    /* Is this now a .exit address?  If so, remember where we got it.*/
     if (!strcmpend(address, ".exit") &&
         strcmpend(addr_orig, ".exit") &&
         exit_source == ADDRMAPSRC_NONE) {

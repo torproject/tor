@@ -14,7 +14,7 @@
  * module keeps track of which streams can be attached to which circuits (in
  * circuit_get_best()), and attaches streams to circuits (with
  * circuit_try_attaching_streams(), connection_ap_handshake_attach_circuit(),
- * and connection_ap_handshake_attach_chosen_circuit().
+ * and connection_ap_handshake_attach_chosen_circuit() ).
  *
  * This module also makes sure that we are building circuits for all of the
  * predicted ports, using circuit_remove_handled_ports(),
@@ -1876,16 +1876,22 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
             c->state, conn_state_to_string(c->type, c->state));
   }
   tor_assert(ENTRY_TO_CONN(conn)->state == AP_CONN_STATE_CIRCUIT_WAIT);
+
+  /* Will the exit policy of the exit node apply to this stream? */
   check_exit_policy =
       conn->socks_request->command == SOCKS_COMMAND_CONNECT &&
       !conn->use_begindir &&
       !connection_edge_is_rendezvous_stream(ENTRY_TO_EDGE_CONN(conn));
+
+  /* Does this connection want a one-hop circuit? */
   want_onehop = conn->want_onehop;
 
+  /* Do we need a high-uptime circuit? */
   need_uptime = !conn->want_onehop && !conn->use_begindir &&
                 smartlist_contains_int_as_string(options->LongLivedPorts,
                                           conn->socks_request->port);
 
+  /* Do we need an "internal" circuit? */
   if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL)
     need_internal = 1;
   else if (conn->use_begindir || conn->want_onehop)
@@ -1893,21 +1899,31 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
   else
     need_internal = 0;
 
-  circ = circuit_get_best(conn, 1, desired_circuit_purpose,
+  /* We now know what kind of circuit we need.  See if there is an
+   * open circuit that we can use for this stream */
+  circ = circuit_get_best(conn, 1 /* Insist on open circuits */,
+                          desired_circuit_purpose,
                           need_uptime, need_internal);
 
   if (circ) {
+    /* We got a circuit that will work for this stream!  We can return it. */
     *circp = circ;
     return 1; /* we're happy */
   }
 
+  /* Okay, there's no circuit open that will work for this stream. Let's
+   * see if there's an in-progress circuit or if we have to launch one */
+
+  /* Do we know enough directory info to build circuits at all? */
   int have_path = have_enough_path_info(!need_internal);
 
   if (!want_onehop && (!router_have_minimum_dir_info() || !have_path)) {
+    /* If we don't have enough directory information, we can't build
+     * multihop circuits.
+     */
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
       int severity = LOG_NOTICE;
-      /* FFFF if this is a tunneled directory fetch, don't yell
-       * as loudly. the user doesn't even know it's happening. */
+      /* Retry some stuff that might help the connection work. */
       if (entry_list_is_constrained(options) &&
           entries_known_but_down(options)) {
         log_fn(severity, LD_APP|LD_DIR,
@@ -1928,14 +1944,16 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
         routerlist_retry_directory_downloads(time(NULL));
       }
     }
-    /* the stream will be dealt with when router_have_minimum_dir_info becomes
-     * 1, or when all directory attempts fail and directory_all_unreachable()
+    /* Since we didn't have enough directory info, we can't attach now.  The
+     * stream will be dealt with when router_have_minimum_dir_info becomes 1,
+     * or when all directory attempts fail and directory_all_unreachable()
      * kills it.
      */
     return 0;
   }
 
-  /* Do we need to check exit policy? */
+  /* Check whether the exit policy of the chosen exit, or the exit policies
+   * of _all_ nodes, would forbid this node. */
   if (check_exit_policy) {
     if (!conn->chosen_exit_name) {
       struct in_addr in;
@@ -1976,16 +1994,25 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     }
   }
 
-  /* is one already on the way? */
-  circ = circuit_get_best(conn, 0, desired_circuit_purpose,
+  /* Now, check whether there already a circuit on the way that could handle
+   * this stream. This check matches the one above, but this time we
+   * do not require that the circuit will work. */
+  circ = circuit_get_best(conn, 0 /* don't insist on open circuits */,
+                          desired_circuit_purpose,
                           need_uptime, need_internal);
   if (circ)
     log_debug(LD_CIRC, "one on the way!");
+
   if (!circ) {
+    /* No open or in-progress circuit could handle this stream!  We
+     * will have to launch one!
+     */
+
+    /* THe chosen exit node, if there is one. */
     extend_info_t *extend_info=NULL;
-    uint8_t new_circ_purpose;
     const int n_pending = count_pending_general_client_circuits();
 
+    /* Do we have too many pending circuits? */
     if (n_pending >= options->MaxClientCircuitsPending) {
       static ratelim_t delay_limit = RATELIM_INIT(10*60);
       char *m;
@@ -1999,6 +2026,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       return 0;
     }
 
+    /* If this is a hidden service trying to start an introduction point,
+     * handle that case. */
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
       rend_data_t *rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data;
@@ -2036,7 +2065,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                      "Discarding this circuit.", conn->chosen_exit_name);
             return -1;
           }
-        } else {
+        } else  { /* ! (r && node_has_descriptor(r)) */
           log_debug(LD_DIR, "considering %d, %s",
                     want_onehop, conn->chosen_exit_name);
           if (want_onehop && conn->chosen_exit_name[0] == '$') {
@@ -2059,7 +2088,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
             extend_info = extend_info_new(conn->chosen_exit_name+1,
                                           digest, NULL, NULL, &addr,
                                           conn->socks_request->port);
-          } else {
+          } else { /* ! (want_onehop && conn->chosen_exit_name[0] == '$') */
             /* We will need an onion key for the router, and we
              * don't have one. Refuse or relax requirements. */
             log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
@@ -2077,8 +2106,10 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
           }
         }
       }
-    }
+    } /* Done checking for general circutis with chosen exits. */
 
+    /* What purpose do we need to launch this circuit with? */
+    uint8_t new_circ_purpose;
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
       new_circ_purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
     else if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
@@ -2087,6 +2118,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       new_circ_purpose = desired_circuit_purpose;
 
 #ifdef ENABLE_TOR2WEB_MODE
+    /* If tor2Web is on, then hidden service requests should be one-hop.
+     */
     if (options->Tor2webMode &&
         (new_circ_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
          new_circ_purpose == CIRCUIT_PURPOSE_C_INTRODUCING)) {
@@ -2094,6 +2127,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     }
 #endif
 
+    /* Determine what kind of a circuit to launch, and actually launch it. */
     {
       int flags = CIRCLAUNCH_NEED_CAPACITY;
       if (want_onehop) flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
@@ -2104,6 +2138,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     }
 
     extend_info_free(extend_info);
+
+    /* Now trigger things that need to happen when we launch circuits */
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       /* We just caused a circuit to get built because of this stream.
@@ -2128,6 +2164,10 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       }
     }
   } /* endif (!circ) */
+
+  /* We either found a good circuit, or launched a new circuit, or failed to
+   * do so. Report success, and delay. */
+
   if (circ) {
     /* Mark the circuit with the isolation fields for this connection.
      * When the circuit arrives, we'll clear these flags: this is
@@ -2327,7 +2367,9 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
 
   pathbias_count_use_attempt(circ);
 
+  /* Now, actually link the connection. */
   link_apconn_to_circ(conn, circ, cpath);
+
   tor_assert(conn->socks_request);
   if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
     if (!conn->use_begindir)
@@ -2342,12 +2384,11 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
   return 1;
 }
 
-/** Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
- * we don't find one: if conn cannot be handled by any known nodes,
- * warn and return -1 (conn needs to die, and is maybe already marked);
- * else launch new circuit (if necessary) and return 0.
- * Otherwise, associate conn with a safe live circuit, do the
- * right next step, and return 1.
+/** Try to find a safe live circuit for stream <b>conn</b>.  If we find one,
+ * attach the stream, send appropriate cells, and return 1.  Otherwise,
+ * try to launch new circuit(s) for the stream.  If we can launch
+ * circuits, return 0.  Otherwise, if we simply can't proceed with
+ * this stream, return -1. (conn needs to die, and is maybe already marked).
  */
 /* XXXX this function should mark for close whenever it returns -1;
  * its callers shouldn't have to worry about that. */
@@ -2366,6 +2407,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
 
   conn_age = (int)(time(NULL) - base_conn->timestamp_created);
 
+  /* Is this connection so old that we should give up on it? */
   if (conn_age >= get_options()->SocksTimeout) {
     int severity = (tor_addr_is_null(&base_conn->addr) && !base_conn->port) ?
       LOG_INFO : LOG_NOTICE;
@@ -2376,12 +2418,14 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     return -1;
   }
 
+  /* We handle "general" (non-onion) connections much more straightforwardly.
+   */
   if (!connection_edge_is_rendezvous_stream(ENTRY_TO_EDGE_CONN(conn))) {
     /* we're a general conn */
     origin_circuit_t *circ=NULL;
 
     /* Are we linked to a dir conn that aims to fetch a consensus?
-     * We check here because this conn might no longer be needed. */
+     * We check here because the conn might no longer be needed. */
     if (base_conn->linked_conn &&
         base_conn->linked_conn->type == CONN_TYPE_DIR &&
         base_conn->linked_conn->purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
@@ -2399,6 +2443,9 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       }
     }
 
+    /* If we have a chosen exit, we need to use a circuit that's
+     * open to that exit. See what exit we meant, and whether we can use it.
+     */
     if (conn->chosen_exit_name) {
       const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
@@ -2412,6 +2459,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
                "Requested exit point '%s' is not known. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
+          /* If we are allowed to ignore the .exit request, do so */
           conn->chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
           return 0;
@@ -2424,6 +2472,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
                "would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
+          /* If we are allowed to ignore the .exit request, do so */
           conn->chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
           return 0;
@@ -2432,11 +2481,15 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       }
     }
 
-    /* find the circuit that we should use, if there is one. */
+    /* Find the circuit that we should use, if there is one. Otherwise
+     * launch it. */
     retval = circuit_get_open_circ_or_launch(
         conn, CIRCUIT_PURPOSE_C_GENERAL, &circ);
-    if (retval < 1) // XXXX++ if we totally fail, this still returns 0 -RD
+    if (retval < 1) {
+      /* We were either told "-1" (complete failure) or 0 (circuit in
+       * progress); we can't attach this stream yet. */
       return retval;
+    }
 
     log_debug(LD_APP|LD_CIRC,
               "Attaching apconn to circ %u (stream %d sec old).",
@@ -2445,7 +2498,8 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
      * sucking. */
     circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
 
-    /* We have found a suitable circuit for our conn. Hurray. */
+    /* We have found a suitable circuit for our conn. Hurray.  Do
+     * the attachment. */
     return connection_ap_handshake_attach_chosen_circuit(conn, circ, NULL);
 
   } else { /* we're a rendezvous conn */
