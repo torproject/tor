@@ -106,7 +106,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
                                    RELAY_COMMAND_INTRO_ESTABLISHED,
                                    "", 0, NULL)<0) {
     log_info(LD_GENERAL, "Couldn't send INTRO_ESTABLISHED cell.");
-    return -1;
+    goto err_no_close;
   }
 
   /* Now, set up this circuit. */
@@ -122,8 +122,9 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
   log_warn(LD_PROTOCOL, "Rejecting truncated ESTABLISH_INTRO cell.");
   reason = END_CIRC_REASON_TORPROTOCOL;
  err:
-  if (pk) crypto_pk_free(pk);
   circuit_mark_for_close(TO_CIRCUIT(circ), reason);
+ err_no_close:
+  if (pk) crypto_pk_free(pk);
   return -1;
 }
 
@@ -201,13 +202,15 @@ rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
                                    (char*)request, request_len, NULL)) {
     log_warn(LD_GENERAL,
              "Unable to send INTRODUCE2 cell to Tor client.");
-    goto err;
+    /* Stop right now, the circuit has been closed. */
+    return -1;
   }
   /* And send an ack down the client's circuit.  Empty body means succeeded. */
   if (relay_send_command_from_edge(0,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_INTRODUCE_ACK,
                                    NULL,0,NULL)) {
     log_warn(LD_GENERAL, "Unable to send INTRODUCE_ACK cell to Tor client.");
+    /* Stop right now, the circuit has been closed. */
     return -1;
   }
 
@@ -266,6 +269,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
                                    "", 0, NULL)<0) {
     log_warn(LD_PROTOCOL, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
+    /* Stop right now, the circuit has been closed. */
     return -1;
   }
 
@@ -342,7 +346,8 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
     log_warn(LD_GENERAL,
              "Unable to send RENDEZVOUS2 cell to client on circuit %u.",
              (unsigned)rend_circ->p_circ_id);
-    goto err;
+    /* Stop right now, the circuit has been closed. */
+    return -1;
   }
 
   /* Join the circuits. */
