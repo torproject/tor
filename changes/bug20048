@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Implement smartlist_add_strdup() function. Replaces the use of
+      smartlist_add(sl, tor_strdup(str)). Fixes bug 20048. 
+
