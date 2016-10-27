@@ -678,16 +678,16 @@ test_dir_parse_router_list(void *arg)
   routerinfo_t *ri = NULL;
   char d[DIGEST_LEN];
 
-  smartlist_add(chunks, tor_strdup(EX_RI_MINIMAL));     // ri 0
-  smartlist_add(chunks, tor_strdup(EX_RI_BAD_PORTS));   // bad ri 0
-  smartlist_add(chunks, tor_strdup(EX_EI_MAXIMAL));     // ei 0
-  smartlist_add(chunks, tor_strdup(EX_EI_BAD_SIG2));    // bad ei --
-  smartlist_add(chunks, tor_strdup(EX_EI_BAD_NICKNAME));// bad ei 0
-  smartlist_add(chunks, tor_strdup(EX_RI_BAD_SIG1));    // bad ri --
-  smartlist_add(chunks, tor_strdup(EX_EI_BAD_PUBLISHED));  // bad ei 1
-  smartlist_add(chunks, tor_strdup(EX_RI_MAXIMAL));     // ri 1
-  smartlist_add(chunks, tor_strdup(EX_RI_BAD_FAMILY));  // bad ri 1
-  smartlist_add(chunks, tor_strdup(EX_EI_MINIMAL));     // ei 1
+  smartlist_add_strdup(chunks, EX_RI_MINIMAL);     // ri 0
+  smartlist_add_strdup(chunks, EX_RI_BAD_PORTS);   // bad ri 0
+  smartlist_add_strdup(chunks, EX_EI_MAXIMAL);     // ei 0
+  smartlist_add_strdup(chunks, EX_EI_BAD_SIG2);    // bad ei --
+  smartlist_add_strdup(chunks, EX_EI_BAD_NICKNAME);// bad ei 0
+  smartlist_add_strdup(chunks, EX_RI_BAD_SIG1);    // bad ri --
+  smartlist_add_strdup(chunks, EX_EI_BAD_PUBLISHED);  // bad ei 1
+  smartlist_add_strdup(chunks, EX_RI_MAXIMAL);     // ri 1
+  smartlist_add_strdup(chunks, EX_RI_BAD_FAMILY);  // bad ri 1
+  smartlist_add_strdup(chunks, EX_EI_MINIMAL);     // ei 1
 
   list = smartlist_join_strings(chunks, "", 0, NULL);
 
@@ -819,12 +819,12 @@ test_dir_load_routers(void *arg)
 
   update_approx_time(1412510400);
 
-  smartlist_add(chunks, tor_strdup(EX_RI_MINIMAL));
-  smartlist_add(chunks, tor_strdup(EX_RI_BAD_FINGERPRINT));
-  smartlist_add(chunks, tor_strdup(EX_RI_BAD_SIG2));
-  smartlist_add(chunks, tor_strdup(EX_RI_MAXIMAL));
-  smartlist_add(chunks, tor_strdup(EX_RI_BAD_PORTS));
-  smartlist_add(chunks, tor_strdup(EX_RI_BAD_TOKENS));
+  smartlist_add_strdup(chunks, EX_RI_MINIMAL);
+  smartlist_add_strdup(chunks, EX_RI_BAD_FINGERPRINT);
+  smartlist_add_strdup(chunks, EX_RI_BAD_SIG2);
+  smartlist_add_strdup(chunks, EX_RI_MAXIMAL);
+  smartlist_add_strdup(chunks, EX_RI_BAD_PORTS);
+  smartlist_add_strdup(chunks, EX_RI_BAD_TOKENS);
 
   /* not ADDing MINIMIAL */
   ADD(EX_RI_MAXIMAL);
@@ -939,11 +939,11 @@ test_dir_load_extrainfo(void *arg)
   MOCK(router_get_by_extrainfo_digest, mock_get_by_ei_desc_digest);
   MOCK(extrainfo_insert, mock_ei_insert);
 
-  smartlist_add(chunks, tor_strdup(EX_EI_MINIMAL));
-  smartlist_add(chunks, tor_strdup(EX_EI_BAD_NICKNAME));
-  smartlist_add(chunks, tor_strdup(EX_EI_MAXIMAL));
-  smartlist_add(chunks, tor_strdup(EX_EI_BAD_PUBLISHED));
-  smartlist_add(chunks, tor_strdup(EX_EI_BAD_TOKENS));
+  smartlist_add_strdup(chunks, EX_EI_MINIMAL);
+  smartlist_add_strdup(chunks, EX_EI_BAD_NICKNAME);
+  smartlist_add_strdup(chunks, EX_EI_MAXIMAL);
+  smartlist_add_strdup(chunks, EX_EI_BAD_PUBLISHED);
+  smartlist_add_strdup(chunks, EX_EI_BAD_TOKENS);
 
   /* not ADDing MINIMIAL */
   ADD(EX_EI_MAXIMAL);
@@ -5437,9 +5437,9 @@ listdir_mock(const char *dname)
   (void)dname;
 
   l = smartlist_new();
-  smartlist_add(l, tor_strdup("foo"));
-  smartlist_add(l, tor_strdup("bar"));
-  smartlist_add(l, tor_strdup("baz"));
+  smartlist_add_strdup(l, "foo");
+  smartlist_add_strdup(l, "bar");
+  smartlist_add_strdup(l, "baz");
 
   return l;
 }

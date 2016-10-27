@@ -2195,7 +2195,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
              log_warn(LD_CONFIG, "There is a router named \"%s\" in my "
                       "declared family, but that isn't a legal nickname. "
                       "Skipping it.", escaped(name));
-           smartlist_add(warned_nonexistent_family, tor_strdup(name));
+           smartlist_add_strdup(warned_nonexistent_family, name);
          }
          if (is_legal) {
            smartlist_add(ri->declared_family, name);
@@ -2870,7 +2870,7 @@ router_dump_router_to_string(routerinfo_t *router,
 
   /* Write the exit policy to the end of 's'. */
   if (!router->exit_policy || !smartlist_len(router->exit_policy)) {
-    smartlist_add(chunks, tor_strdup("reject *:*\n"));
+    smartlist_add_strdup(chunks, "reject *:*\n");
   } else if (router->exit_policy) {
     char *exit_policy = router_dump_exit_policy_to_string(router,1,0);
 
@@ -2892,12 +2892,12 @@ router_dump_router_to_string(routerinfo_t *router,
 
   if (decide_to_advertise_begindir(options,
                                    router->supports_tunnelled_dir_requests)) {
-    smartlist_add(chunks, tor_strdup("tunnelled-dir-server\n"));
+    smartlist_add_strdup(chunks, "tunnelled-dir-server\n");
   }
 
   /* Sign the descriptor with Ed25519 */
   if (emit_ed_sigs)  {
-    smartlist_add(chunks, tor_strdup("router-sig-ed25519 "));
+    smartlist_add_strdup(chunks, "router-sig-ed25519 ");
     crypto_digest_smartlist_prefix(digest, DIGEST256_LEN,
                                    ED_DESC_SIGNATURE_PREFIX,
                                    chunks, "", DIGEST_SHA256);
@@ -2913,7 +2913,7 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   /* Sign the descriptor with RSA */
-  smartlist_add(chunks, tor_strdup("router-signature\n"));
+  smartlist_add_strdup(chunks, "router-signature\n");
 
   crypto_digest_smartlist(digest, DIGEST_LEN, chunks, "", DIGEST_SHA1);
 
@@ -2928,7 +2928,7 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   /* include a last '\n' */
-  smartlist_add(chunks, tor_strdup("\n"));
+  smartlist_add_strdup(chunks, "\n");
 
   output = smartlist_join_strings(chunks, "", 0, NULL);
 
@@ -3186,13 +3186,13 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   if (should_record_bridge_info(options) && write_stats_to_extrainfo) {
     const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
     if (bridge_stats) {
-      smartlist_add(chunks, tor_strdup(bridge_stats));
+      smartlist_add_strdup(chunks, bridge_stats);
     }
   }
 
   if (emit_ed_sigs) {
     char sha256_digest[DIGEST256_LEN];
-    smartlist_add(chunks, tor_strdup("router-sig-ed25519 "));
+    smartlist_add_strdup(chunks, "router-sig-ed25519 ");
     crypto_digest_smartlist_prefix(sha256_digest, DIGEST256_LEN,
                                    ED_DESC_SIGNATURE_PREFIX,
                                    chunks, "", DIGEST_SHA256);
@@ -3207,7 +3207,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     smartlist_add_asprintf(chunks, "%s\n", buf);
   }
 
-  smartlist_add(chunks, tor_strdup("router-signature\n"));
+  smartlist_add_strdup(chunks, "router-signature\n");
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
   while (strlen(s) > MAX_EXTRAINFO_UPLOAD_SIZE - DIROBJ_MAX_SIG_LEN) {
@@ -3242,7 +3242,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                      "descriptor.");
     goto err;
   }
-  smartlist_add(chunks, tor_strdup(sig));
+  smartlist_add_strdup(chunks, sig);
   tor_free(s);
   s = smartlist_join_strings(chunks, "", 0, NULL);
 

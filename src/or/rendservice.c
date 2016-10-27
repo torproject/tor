@@ -1222,7 +1222,7 @@ rend_services_add_filenames_to_lists(smartlist_t *open_lst,
   SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
     if (s->directory) {
       rend_service_add_filenames_to_list(open_lst, s);
-      smartlist_add(stat_lst, tor_strdup(s->directory));
+      smartlist_add_strdup(stat_lst, s->directory);
     }
   } SMARTLIST_FOREACH_END(s);
 }

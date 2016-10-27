@@ -3576,7 +3576,7 @@ tor_listdir, (const char *dirname))
 #endif
     if (strcmp(name, ".") &&
         strcmp(name, "..")) {
-      smartlist_add(result, tor_strdup(name));
+      smartlist_add_strdup(result, name);
     }
     if (!FindNextFile(handle, &findData)) {
       DWORD err;
@@ -3602,7 +3602,7 @@ tor_listdir, (const char *dirname))
     if (!strcmp(de->d_name, ".") ||
         !strcmp(de->d_name, ".."))
       continue;
-    smartlist_add(result, tor_strdup(de->d_name));
+    smartlist_add_strdup(result, de->d_name);
   }
   closedir(d);
 #endif
@@ -4873,7 +4873,7 @@ get_current_process_environment_variables(void)
 
   char **environ_tmp; /* Not const char ** ? Really? */
   for (environ_tmp = get_environment(); *environ_tmp; ++environ_tmp) {
-    smartlist_add(sl, tor_strdup(*environ_tmp));
+    smartlist_add_strdup(sl, *environ_tmp);
   }
 
   return sl;
@@ -5256,7 +5256,7 @@ tor_get_lines_from_handle, (FILE *handle,
       goto done;
 
     if (!lines) lines = smartlist_new();
-    smartlist_add(lines, tor_strdup(stdout_buf));
+    smartlist_add_strdup(lines, stdout_buf);
   }
 
  done:

@@ -262,12 +262,12 @@ routerset_add_unknown_ccs(routerset_t **setp, int only_if_some_cc_set)
     geoip_get_country("A1") >= 0;
 
   if (add_unknown) {
-    smartlist_add(set->country_names, tor_strdup("??"));
-    smartlist_add(set->list, tor_strdup("{??}"));
+    smartlist_add_strdup(set->country_names, "??");
+    smartlist_add_strdup(set->list, "{??}");
   }
   if (add_a1) {
-    smartlist_add(set->country_names, tor_strdup("a1"));
-    smartlist_add(set->list, tor_strdup("{a1}"));
+    smartlist_add_strdup(set->country_names, "a1");
+    smartlist_add_strdup(set->list, "{a1}");
   }
 
   if (add_unknown || add_a1) {

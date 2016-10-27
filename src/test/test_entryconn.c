@@ -100,7 +100,7 @@ test_entryconn_rewrite_automap_ipv4(void *arg)
   ec3 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  smartlist_add(get_options_mutable()->AutomapHostsSuffixes, tor_strdup("."));
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes, ".");
   parse_virtual_addr_network("127.202.0.0/16", AF_INET, 0, &msg);
 
   /* Automap this on resolve. */
@@ -173,7 +173,7 @@ test_entryconn_rewrite_automap_ipv6(void *arg)
   ec3 = entry_connection_new(CONN_TYPE_AP, AF_INET6);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  smartlist_add(get_options_mutable()->AutomapHostsSuffixes, tor_strdup("."));
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes, ".");
   parse_virtual_addr_network("FE80::/32", AF_INET6, 0, &msg);
 
   /* Automap this on resolve. */
@@ -489,8 +489,8 @@ test_entryconn_rewrite_automap_exit(void *arg)
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
   get_options_mutable()->AllowDotExit = 1;
-  smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
-                tor_strdup(".EXIT"));
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
+                ".EXIT");
   parse_virtual_addr_network("127.1.0.0/16", AF_INET, 0, &msg);
 
   /* Automap this on resolve. */
@@ -574,8 +574,8 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
   get_options_mutable()->AllowDotExit = 1;
-  smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
-                tor_strdup(".onion"));
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
+                ".onion");
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
   config_line_append(&get_options_mutable()->AddressMap,
                      "MapAddress", "foo.onion abcdefghijklmnop.onion");
@@ -709,8 +709,8 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
 {
   char *msg = NULL;
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
-                tor_strdup(".onion"));
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
+                ".onion");
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
   config_line_append(&get_options_mutable()->AddressMap,
                      "MapAddress", "irc.example.com abcdefghijklmnop.onion");
@@ -736,8 +736,8 @@ test_entryconn_rewrite_mapaddress_automap_onion4(void *arg)
 {
   char *msg = NULL;
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
-                tor_strdup(".onion"));
+  smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
+                ".onion");
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
 
   test_entryconn_rewrite_mapaddress_automap_onion_common(arg, 0, 1);

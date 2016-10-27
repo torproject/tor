@@ -830,7 +830,7 @@ set_options(or_options_t *new_val, char **msg)
             tor_free(line);
           }
         } else {
-          smartlist_add(elements, tor_strdup(options_format.vars[i].name));
+          smartlist_add_strdup(elements, options_format.vars[i].name);
           smartlist_add(elements, NULL);
         }
       }
@@ -5384,7 +5384,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
 
     if (smartlist_len(elts) == 0)
-      smartlist_add(elts, tor_strdup("stdout"));
+      smartlist_add_strdup(elts, "stdout");
 
     if (smartlist_len(elts) == 1 &&
         (!strcasecmp(smartlist_get(elts,0), "stdout") ||
@@ -5919,7 +5919,7 @@ get_options_from_transport_options_line(const char *line,const char *transport)
     }
 
     /* add it to the options smartlist */
-    smartlist_add(options, tor_strdup(option));
+    smartlist_add_strdup(options, option);
     log_debug(LD_CONFIG, "Added %s to the list of options", escaped(option));
   } SMARTLIST_FOREACH_END(option);
 

@@ -682,7 +682,7 @@ tor_log_get_logfile_names(smartlist_t *out)
       continue;
     if (lf->filename == NULL)
       continue;
-    smartlist_add(out, tor_strdup(lf->filename));
+    smartlist_add_strdup(out, lf->filename);
   }
 
   UNLOCK_LOGS();

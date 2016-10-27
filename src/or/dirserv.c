@@ -948,7 +948,7 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
       if (!node->is_running)
         *cp++ = '!';
       router_get_verbose_nickname(cp, ri);
-      smartlist_add(rs_entries, tor_strdup(name_buf));
+      smartlist_add_strdup(rs_entries, name_buf);
     } else if (ri->cache_info.published_on >= cutoff) {
       smartlist_add(rs_entries, list_single_server_status(ri,
                                                           node->is_running));
@@ -1948,7 +1948,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                              vrs->status.guardfraction_percentage);
     }
 
-    smartlist_add(chunks, tor_strdup("\n"));
+    smartlist_add_strdup(chunks, "\n");
 
     if (desc) {
       summary = policy_summarize(desc->exit_policy, AF_INET);
@@ -1958,7 +1958,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
 
     if (format == NS_V3_VOTE && vrs) {
       if (tor_mem_is_zero((char*)vrs->ed25519_id, ED25519_PUBKEY_LEN)) {
-        smartlist_add(chunks, tor_strdup("id ed25519 none\n"));
+        smartlist_add_strdup(chunks, "id ed25519 none\n");
       } else {
         char ed_b64[BASE64_DIGEST256_LEN+1];
         digest256_to_base64(ed_b64, (const char*)vrs->ed25519_id);
@@ -2967,7 +2967,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     config_line_t *cl;
     for (cl = get_options()->RecommendedPackages; cl; cl = cl->next) {
       if (validate_recommended_package_line(cl->value))
-        smartlist_add(v3_out->package_lines, tor_strdup(cl->value));
+        smartlist_add_strdup(v3_out->package_lines, cl->value);
     }
   }
 
@@ -2976,9 +2976,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                 "Authority Exit Fast Guard Stable V2Dir Valid HSDir",
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
-    smartlist_add(v3_out->known_flags, tor_strdup("Running"));
+    smartlist_add_strdup(v3_out->known_flags, "Running");
   if (listbadexits)
-    smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
+    smartlist_add_strdup(v3_out->known_flags, "BadExit");
   smartlist_sort_strings(v3_out->known_flags);
 
   if (options->ConsensusParams) {

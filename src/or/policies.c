@@ -2470,9 +2470,9 @@ policy_summarize(smartlist_t *policy, sa_family_t family)
         tor_snprintf(buf, sizeof(buf), "%d-%d", start_prt, AT(i)->prt_max);
 
       if (AT(i)->accepted)
-        smartlist_add(accepts, tor_strdup(buf));
+        smartlist_add_strdup(accepts, buf);
       else
-        smartlist_add(rejects, tor_strdup(buf));
+        smartlist_add_strdup(rejects, buf);
 
       if (last)
         break;
@@ -2653,7 +2653,7 @@ write_short_policy(const short_policy_t *policy)
       smartlist_add_asprintf(sl, "%d-%d", e->min_port, e->max_port);
     }
     if (i < policy->n_entries-1)
-      smartlist_add(sl, tor_strdup(","));
+      smartlist_add_strdup(sl, ",");
   }
   answer = smartlist_join_strings(sl, "", 0, NULL);
   SMARTLIST_FOREACH(sl, char *, a, tor_free(a));

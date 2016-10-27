@@ -942,7 +942,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
       ++body;
   }
 
-  smartlist_add(entries, tor_strdup(""));
+  smartlist_add_strdup(entries, "");
   config = smartlist_join_strings(entries, "\n", 0, NULL);
   SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
   smartlist_free(entries);
@@ -3139,7 +3139,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
     if (!ans) {
       smartlist_add(unrecognized, (char*)q);
     } else {
-      smartlist_add(answers, tor_strdup(q));
+      smartlist_add_strdup(answers, q);
       smartlist_add(answers, ans);
     }
   } SMARTLIST_FOREACH_END(q);
@@ -6045,9 +6045,9 @@ control_event_networkstatus_changed_helper(smartlist_t *statuses,
     return 0;
 
   strs = smartlist_new();
-  smartlist_add(strs, tor_strdup("650+"));
-  smartlist_add(strs, tor_strdup(event_string));
-  smartlist_add(strs, tor_strdup("\r\n"));
+  smartlist_add_strdup(strs, "650+");
+  smartlist_add_strdup(strs, event_string);
+  smartlist_add_strdup(strs, "\r\n");
   SMARTLIST_FOREACH(statuses, const routerstatus_t *, rs,
     {
       s = networkstatus_getinfo_helper_single(rs);

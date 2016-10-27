@@ -880,7 +880,7 @@ geoip_get_transport_history(void)
 
     /* If it's the first time we see this transport, note it. */
     if (val == 1)
-      smartlist_add(transports_used, tor_strdup(transport_name));
+      smartlist_add_strdup(transports_used, transport_name);
 
     log_debug(LD_GENERAL, "Client from '%s' with transport '%s'. "
               "I've now seen %d clients.",

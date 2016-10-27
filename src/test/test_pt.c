@@ -155,9 +155,9 @@ test_pt_get_transport_options(void *arg)
   opt_str = get_transport_options_for_server_proxy(mp);
   tt_ptr_op(opt_str, OP_EQ, NULL);
 
-  smartlist_add(mp->transports_to_launch, tor_strdup("gruyere"));
-  smartlist_add(mp->transports_to_launch, tor_strdup("roquefort"));
-  smartlist_add(mp->transports_to_launch, tor_strdup("stnectaire"));
+  smartlist_add_strdup(mp->transports_to_launch, "gruyere");
+  smartlist_add_strdup(mp->transports_to_launch, "roquefort");
+  smartlist_add_strdup(mp->transports_to_launch, "stnectaire");
 
   tt_assert(options);
 
@@ -305,7 +305,7 @@ tor_get_lines_from_handle_replacement(STDIN_HANDLE *handle,
     smartlist_add_asprintf(retval_sl, "SMETHOD mock%d 127.0.0.1:555%d",
                            times_called, times_called);
   } else {
-    smartlist_add(retval_sl, tor_strdup("SMETHODS DONE"));
+    smartlist_add_strdup(retval_sl, "SMETHODS DONE");
   }
 
   return retval_sl;

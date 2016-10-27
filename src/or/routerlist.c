@@ -1203,7 +1203,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
     int need_plus = 0;
     smartlist_t *fps = smartlist_new();
 
-    smartlist_add(fps, tor_strdup("fp/"));
+    smartlist_add_strdup(fps, "fp/");
 
     SMARTLIST_FOREACH_BEGIN(missing_id_digests, const char *, d) {
       char *fp = NULL;
@@ -1243,7 +1243,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
     int need_plus = 0;
     smartlist_t *fp_pairs = smartlist_new();
 
-    smartlist_add(fp_pairs, tor_strdup("fp-sk/"));
+    smartlist_add_strdup(fp_pairs, "fp-sk/");
 
     SMARTLIST_FOREACH_BEGIN(missing_cert_digests, const fp_pair_t *, d) {
       char *fp_pair = NULL;

@@ -283,11 +283,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       smartlist_add(chunks, rsf);
 
     for (h = vrs->microdesc; h; h = h->next) {
-      smartlist_add(chunks, tor_strdup(h->microdesc_hash_line));
+      smartlist_add_strdup(chunks, h->microdesc_hash_line);
     }
   } SMARTLIST_FOREACH_END(vrs);
 
-  smartlist_add(chunks, tor_strdup("directory-footer\n"));
+  smartlist_add_strdup(chunks, "directory-footer\n");
 
   /* The digest includes everything up through the space after
    * directory-signature.  (Yuck.) */
@@ -1416,7 +1416,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_free(sv); /* elements get freed later. */
       }
       SMARTLIST_FOREACH(v->known_flags, const char *, cp,
-                        smartlist_add(flags, tor_strdup(cp)));
+                        smartlist_add_strdup(flags, cp));
     } SMARTLIST_FOREACH_END(v);
     valid_after = median_time(va_times, n_votes);
     fresh_until = median_time(fu_times, n_votes);
@@ -1449,7 +1449,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(combined_client_versions);
 
     if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING)
-      smartlist_add(flags, tor_strdup("NoEdConsensus"));
+      smartlist_add_strdup(flags, "NoEdConsensus");
 
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
@@ -1513,9 +1513,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                       total_authorities);
   if (smartlist_len(param_list)) {
     params = smartlist_join_strings(param_list, " ", 0, NULL);
-    smartlist_add(chunks, tor_strdup("params "));
+    smartlist_add_strdup(chunks, "params ");
     smartlist_add(chunks, params);
-    smartlist_add(chunks, tor_strdup("\n"));
+    smartlist_add_strdup(chunks, "\n");
   }
 
   if (consensus_method >= MIN_METHOD_FOR_SHARED_RANDOM) {
@@ -2102,10 +2102,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
                     smartlist_join_strings(chosen_flags, " ", 0, NULL));
       /*     Now the version line. */
       if (chosen_version) {
-        smartlist_add(chunks, tor_strdup("\nv "));
-        smartlist_add(chunks, tor_strdup(chosen_version));
+        smartlist_add_strdup(chunks, "\nv ");
+        smartlist_add_strdup(chunks, chosen_version);
       }
-      smartlist_add(chunks, tor_strdup("\n"));
+      smartlist_add_strdup(chunks, "\n");
       if (chosen_protocol_list &&
           consensus_method >= MIN_METHOD_FOR_RS_PROTOCOLS) {
         smartlist_add_asprintf(chunks, "pr %s\n", chosen_protocol_list);
@@ -2158,7 +2158,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   }
 
   /* Mark the directory footer region */
-  smartlist_add(chunks, tor_strdup("directory-footer\n"));
+  smartlist_add_strdup(chunks, "directory-footer\n");
 
   {
     int64_t weight_scale = BW_WEIGHT_SCALE;
@@ -2209,7 +2209,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     const char *algname = crypto_digest_algorithm_get_name(digest_alg);
     char *signature;
 
-    smartlist_add(chunks, tor_strdup("directory-signature "));
+    smartlist_add_strdup(chunks, "directory-signature ");
 
     /* Compute the hash of the chunks. */
     crypto_digest_smartlist(digest, digest_len, chunks, "", digest_alg);
@@ -2236,7 +2236,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_add(chunks, signature);
 
     if (legacy_id_key_digest && legacy_signing_key) {
-      smartlist_add(chunks, tor_strdup("directory-signature "));
+      smartlist_add_strdup(chunks, "directory-signature ");
       base16_encode(fingerprint, sizeof(fingerprint),
                     legacy_id_key_digest, DIGEST_LEN);
       crypto_pk_get_fingerprint(legacy_signing_key,
@@ -2549,7 +2549,7 @@ networkstatus_format_signatures(networkstatus_t *consensus,
       base64_encode(buf, sizeof(buf), sig->signature, sig->signature_len,
                     BASE64_ENCODE_MULTILINE);
       strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
-      smartlist_add(elements, tor_strdup(buf));
+      smartlist_add_strdup(elements, buf);
     } SMARTLIST_FOREACH_END(sig);
   } SMARTLIST_FOREACH_END(v);
 
@@ -3659,8 +3659,8 @@ dirvote_add_signatures(const char *detached_signatures_body,
                        "Queuing it for the next consensus.", source);
     if (!pending_consensus_signature_list)
       pending_consensus_signature_list = smartlist_new();
-    smartlist_add(pending_consensus_signature_list,
-                  tor_strdup(detached_signatures_body));
+    smartlist_add_strdup(pending_consensus_signature_list,
+                  detached_signatures_body);
     *msg = "Signature queued";
     return 0;
   }

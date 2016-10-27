@@ -1750,7 +1750,7 @@ wildcard_increment_answer(const char *id)
         "invalid addresses. Apparently they are hijacking DNS failures. "
         "I'll try to correct for this by treating future occurrences of "
         "\"%s\" as 'not found'.", id, *ip, id);
-      smartlist_add(dns_wildcard_list, tor_strdup(id));
+      smartlist_add_strdup(dns_wildcard_list, id);
     }
     if (!dns_wildcard_notice_given)
       control_event_server_status(LOG_NOTICE, "DNS_HIJACKED");
@@ -1774,7 +1774,7 @@ add_wildcarded_test_address(const char *address)
   n_test_addrs = get_options()->ServerDNSTestAddresses ?
     smartlist_len(get_options()->ServerDNSTestAddresses) : 0;
 
-  smartlist_add(dns_wildcarded_test_address_list, tor_strdup(address));
+  smartlist_add_strdup(dns_wildcarded_test_address_list, address);
   n = smartlist_len(dns_wildcarded_test_address_list);
   if (n > n_test_addrs/2) {
     tor_log(dns_wildcarded_test_address_notice_given ? LOG_INFO : LOG_NOTICE,

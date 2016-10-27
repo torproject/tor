@@ -44,7 +44,7 @@ static void
 add_captured_bug(const char *s)
 {
   --n_bugs_to_capture;
-  smartlist_add(bug_messages, tor_strdup(s));
+  smartlist_add_strdup(bug_messages, s);
 }
 /** Set a callback to be invoked when we get any tor_bug_occurred_
  * invocation. We use this in the unit tests so that a nonfatal

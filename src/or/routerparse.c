@@ -2220,7 +2220,7 @@ router_parse_entry_from_string(const char *s, const char *end,
                  escaped(tok->args[i]));
         goto err;
       }
-      smartlist_add(router->declared_family, tor_strdup(tok->args[i]));
+      smartlist_add_strdup(router->declared_family, tok->args[i]);
     }
   }
 
@@ -3723,9 +3723,9 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     tok = find_opt_by_keyword(tokens, K_CONSENSUS_METHODS);
     if (tok) {
       for (i=0; i < tok->n_args; ++i)
-        smartlist_add(ns->supported_methods, tor_strdup(tok->args[i]));
+        smartlist_add_strdup(ns->supported_methods, tok->args[i]);
     } else {
-      smartlist_add(ns->supported_methods, tor_strdup("1"));
+      smartlist_add_strdup(ns->supported_methods, "1");
     }
   } else {
     tok = find_opt_by_keyword(tokens, K_CONSENSUS_METHOD);
@@ -3807,7 +3807,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     ns->package_lines = smartlist_new();
     if (package_lst) {
       SMARTLIST_FOREACH(package_lst, directory_token_t *, t,
-                    smartlist_add(ns->package_lines, tor_strdup(t->args[0])));
+                    smartlist_add_strdup(ns->package_lines, t->args[0]));
     }
     smartlist_free(package_lst);
   }
@@ -3816,7 +3816,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   ns->known_flags = smartlist_new();
   inorder = 1;
   for (i = 0; i < tok->n_args; ++i) {
-    smartlist_add(ns->known_flags, tor_strdup(tok->args[i]));
+    smartlist_add_strdup(ns->known_flags, tok->args[i]);
     if (i>0 && strcmp(tok->args[i-1], tok->args[i])>= 0) {
       log_warn(LD_DIR, "%s >= %s", tok->args[i-1], tok->args[i]);
       inorder = 0;
@@ -3868,7 +3868,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
       tor_free(last_kwd);
       last_kwd = tor_strndup(tok->args[i], eq_pos);
-      smartlist_add(ns->net_params, tor_strdup(tok->args[i]));
+      smartlist_add_strdup(ns->net_params, tok->args[i]);
     }
     if (!inorder) {
       log_warn(LD_DIR, "params not in order");
@@ -4111,7 +4111,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         log_warn(LD_DIR, "Bad element '%s' in params", escaped(tok->args[i]));
         goto err;
       }
-      smartlist_add(ns->weight_params, tor_strdup(tok->args[i]));
+      smartlist_add_strdup(ns->weight_params, tok->args[i]);
     }
   }
 
@@ -5476,7 +5476,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
                    escaped(tok->args[i]));
           goto next;
         }
-        smartlist_add(md->family, tor_strdup(tok->args[i]));
+        smartlist_add_strdup(md->family, tok->args[i]);
       }
     }
 

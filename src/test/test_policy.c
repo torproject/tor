@@ -525,10 +525,10 @@ test_policies_general(void *arg)
   {
     char *policy_strng = NULL;
     smartlist_t *chunks = smartlist_new();
-    smartlist_add(chunks, tor_strdup("accept "));
+    smartlist_add_strdup(chunks, "accept ");
     for (i=1; i<10000; ++i)
       smartlist_add_asprintf(chunks, "%d,", i);
-    smartlist_add(chunks, tor_strdup("20000"));
+    smartlist_add_strdup(chunks, "20000");
     policy_strng = smartlist_join_strings(chunks, "", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, ch, tor_free(ch));
     smartlist_free(chunks);
@@ -542,9 +542,9 @@ test_policies_general(void *arg)
   for (i=1; i<2000; i+=2) {
     char buf[POLICY_BUF_LEN];
     tor_snprintf(buf, sizeof(buf), "reject *:%d", i);
-    smartlist_add(sm, tor_strdup(buf));
+    smartlist_add_strdup(sm, buf);
   }
-  smartlist_add(sm, tor_strdup("accept *:*"));
+  smartlist_add_strdup(sm, "accept *:*");
   policy_str = smartlist_join_strings(sm, ",", 0, NULL);
   test_policy_summary_helper( policy_str,
     "accept 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,"
