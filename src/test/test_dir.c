@@ -2056,7 +2056,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   E = 980834;
   D = 3385803;
   T = 11305425;
-  tt_int_op(G+M+E+D, OP_EQ, T);
+  tt_i64_op(G+M+E+D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=883 Wbe=0 "
@@ -2072,7 +2072,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   E=1522058;
   D=9273571;
   T=44839415;
-  tt_int_op(G+M+E+D, OP_EQ, T);
+  tt_i64_op(G+M+E+D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
@@ -2088,7 +2088,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   E=2109300;
   D=2469369;
   T=9508858;
-  tt_int_op(G+M+E+D, OP_EQ, T);
+  tt_i64_op(G+M+E+D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=317 "
@@ -2104,7 +2104,7 @@ test_dir_networkstatus_compute_bw_weights_v10(void *arg)
   E=1;
   D=1;
   T=4;
-  tt_int_op(G+M+E+D, OP_EQ, T);
+  tt_i64_op(G+M+E+D, OP_EQ, T);
   ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T,
                                              weight_scale);
   tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=3333 "
