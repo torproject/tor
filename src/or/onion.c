@@ -1170,6 +1170,21 @@ created_cell_format(cell_t *cell_out, const created_cell_t *cell_in)
   return 0;
 }
 
+/** Return true iff we are configured (by torrc or by the networkstatus
+ * parameters) to use Ed25519 identities in our Extend2 cells. */
+static int
+should_include_ed25519_id_extend_cells(const networkstatus_t *ns,
+                                       const or_options_t *options)
+{
+  if (options->ExtendByEd25519ID != -1)
+    return options->ExtendByEd25519ID; /* The user has an opinion. */
+
+  return (int) networkstatus_get_param(ns, "ExtendByEd25519ID",
+                                       0 /* default */,
+                                       0 /* min */,
+                                       1 /*max*/);
+}
+
 /** Format the EXTEND{,2} cell in <b>cell_in</b>, storing its relay payload in
  * <b>payload_out</b>, the number of bytes used in *<b>len_out</b>, and the
  * relay command in *<b>command_out</b>. The <b>payload_out</b> must have

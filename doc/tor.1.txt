@@ -717,6 +717,13 @@ GENERAL OPTIONS
     127.0.0.1 or 10.0.0.1.  This is mostly useful for debugging
     rate-limiting.  (Default: 0)
 
+[[ExtendByEd25519ID]] **ExtendByEd25519ID** **0**|**1**|**auto**::
+    If this option is set to 1, we always try to include a relay's Ed25519 ID
+    when telling the proceeding relay in a circuit to extend to it.
+    If this option is set to 0, we never include Ed25519 IDs when extending
+    circuits.  If the option is set to "default", we obey a
+    parameter in the consensus document. (Default: auto)
+
 CLIENT OPTIONS
 --------------
 

@@ -1043,8 +1043,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     ec.orport_ipv4.port = hop->extend_info->port;
     tor_addr_make_unspec(&ec.orport_ipv6.addr);
     memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
-    /* 15056 Either here or in the onion.c encoding code, we should make an
-     * option to decide whether we declare the ED identity (if we know one) */
+    /* Set the ED25519 identity too -- it will only get included
+     * in the extend2 cell if we're configured to use it, though. */
     memcpy(&ec.ed_pubkey, &hop->extend_info->ed_identity,
            sizeof(ed25519_public_key_t));
 
