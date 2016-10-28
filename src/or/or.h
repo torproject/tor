@@ -1658,6 +1658,8 @@ typedef struct entry_connection_t {
   edge_connection_t edge_;
 
   /** Nickname of planned exit node -- used with .exit support. */
+  /* XXX prop220: we need to make chosen_exit_name able to encode Ed IDs too.
+   * That's logically part of the UI parts for prop220 though. */
   char *chosen_exit_name;
 
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
