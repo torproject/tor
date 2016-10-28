@@ -3173,7 +3173,6 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
                         const char *digest_rcvd,
                         const ed25519_public_key_t *ed_id_rcvd)
 {
-  (void)ed_id_rcvd; // XXXX 15056 use this.
   node_t *node = NULL;
   tor_addr_port_t orport;
   routerinfo_t *ri = NULL;
@@ -3184,7 +3183,23 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
   node = node_get_mutable_by_id(digest_rcvd);
   if (node == NULL || node->ri == NULL)
     return;
+
   ri = node->ri;
+
+  if (ri->cache_info.signing_key_cert) {
+    /* We allow the node to have an ed25519 key if we haven't been told one in
+     * the routerinfo, but if we *HAVE* been told one in the routerinfo, it
+     * needs to match. */
+    const ed25519_public_key_t *expected_id =
+      &ri->cache_info.signing_key_cert->signing_key;
+    tor_assert(!ed25519_public_key_is_zero(expected_id));
+    if (! ed_id_rcvd || ! ed25519_pubkey_eq(ed_id_rcvd, expected_id)) {
+      log_info(LD_DIRSERV, "Router at %s:%d with RSA ID %s "
+               "did not present expected Ed25519 ID.",
+               fmt_addr(addr), or_port, hex_str(digest_rcvd, DIGEST_LEN));
+      return; /* Don't mark it as reachable. */
+    }
+  }
 
   tor_addr_copy(&orport.addr, addr);
   orport.port = or_port;
