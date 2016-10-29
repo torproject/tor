@@ -1571,24 +1571,30 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     tor_addr_t dummy_addr;
     int socks_family = tor_addr_parse(&dummy_addr, socks->address);
     /* family will be -1 for a non-onion hostname that's not an IP */
-    if (socks_family == -1 && !conn->entry_cfg.dns_request) {
-      log_warn(LD_APP, "Refusing to connect to hostname %s "
-               "because Port has NoDNSRequest set.",
-               safe_str_client(socks->address));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
-      return -1;
-    } else if (socks_family == AF_INET && !conn->entry_cfg.ipv4_traffic) {
-      log_warn(LD_APP, "Refusing to connect to IPv4 address %s because "
-               "Port has NoIPv4Traffic set.",
-               safe_str_client(socks->address));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
-      return -1;
-    } else if (socks_family == AF_INET6 && !conn->entry_cfg.ipv6_traffic) {
-      log_warn(LD_APP, "Refusing to connect to IPv6 address %s because "
-               "Port has NoIPv6Traffic set.",
-               safe_str_client(socks->address));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
-      return -1;
+    if (socks_family == -1) {
+      if (!conn->entry_cfg.dns_request) {
+        log_warn(LD_APP, "Refusing to connect to hostname %s "
+                 "because Port has NoDNSRequest set.",
+                 safe_str_client(socks->address));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+        return -1;
+      }
+    } else if (socks_family == AF_INET) {
+      if (!conn->entry_cfg.ipv4_traffic) {
+        log_warn(LD_APP, "Refusing to connect to IPv4 address %s because "
+                 "Port has NoIPv4Traffic set.",
+                 safe_str_client(socks->address));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+        return -1;
+      }
+    } else if (socks_family == AF_INET6) {
+      if (!conn->entry_cfg.ipv6_traffic) {
+        log_warn(LD_APP, "Refusing to connect to IPv6 address %s because "
+                 "Port has NoIPv6Traffic set.",
+                 safe_str_client(socks->address));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+        return -1;
+      }
     } else {
       tor_assert_nonfatal_unreached_once();
     }
