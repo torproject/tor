@@ -1,0 +1,11 @@
+  o Minor bugfixes (relay):
+    - Do not try to parallelize workers more than 16x without the
+      user explicitly configuring us to do so, even if we do detect more than
+      16 CPU cores. Fixes bug 19968; bugfix on
+      0.2.3.1-alpha.
+
+
+  o Minor bugfixes (testing):
+    - Avoid a unit test failure on systems with over 16 detectable
+      CPU cores. Fixes bug 19968; bugfix on
+      0.2.3.1-alpha.
