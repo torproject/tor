@@ -72,6 +72,8 @@ static ssize_t rend_service_parse_intro_for_v3(
     size_t plaintext_len,
     char **err_msg_out);
 
+static int rend_service_check_and_create_private_dir(const rend_service_t *s);
+
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
  */
@@ -1090,6 +1092,10 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
     return -1;
   }
 
+  /* Make sure the directory exists */
+  if (rend_service_check_and_create_private_dir(service) < 0)
+    return -1;
+
   poison_fname = rend_service_sos_poison_path(service);
 
   switch (file_status(poison_fname)) {
@@ -1245,22 +1251,18 @@ rend_service_derive_key_digests(struct rend_service_t *s)
   return 0;
 }
 
-/** Load and/or generate private keys for the hidden service <b>s</b>,
- * possibly including keys for client authorization.  Return 0 on success, -1
- * on failure. */
+/** Make sure that the directory for <b>s</b> is private, creating it
+ * if needed. Return 0 on success, -1 on failure. */
 static int
-rend_service_load_keys(rend_service_t *s)
+rend_service_check_and_create_private_dir(const rend_service_t *s)
 {
-  char *fname = NULL;
-  char buf[128];
   cpd_check_t  check_opts = CPD_CREATE;
-
   if (s->dir_group_readable) {
     check_opts |= CPD_GROUP_READ;
   }
   /* Check/create directory */
   if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
-    goto err;
+    return -1;
   }
 #ifndef _WIN32
   if (s->dir_group_readable) {
@@ -1270,6 +1272,21 @@ rend_service_load_keys(rend_service_t *s)
     }
   }
 #endif
+
+  return 0;
+}
+
+/** Load and/or generate private keys for the hidden service <b>s</b>,
+ * possibly including keys for client authorization.  Return 0 on success, -1
+ * on failure. */
+static int
+rend_service_load_keys(rend_service_t *s)
+{
+  char *fname = NULL;
+  char buf[128];
+
+  if (rend_service_check_and_create_private_dir(s) < 0)
+    goto err;
 
   /* Load key */
   fname = rend_service_path(s, private_key_fname);
