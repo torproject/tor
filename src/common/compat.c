@@ -2818,6 +2818,7 @@ compute_num_cpus(void)
                  "will not autodetect any more than %d, though.  If you "
                  "want to configure more, set NumCPUs in your torrc",
                  num_cpus, MAX_DETECTABLE_CPUS);
+      num_cpus = MAX_DETECTABLE_CPUS;
       /* LCOV_EXCL_STOP */
     }
   }
