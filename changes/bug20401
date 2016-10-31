@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay):
+    - Avoid a small memory leak when informing worker threads about rotated
+      onion keys. Fixes bug 20401; bugfix on 0.2.6.3-alpha.
+

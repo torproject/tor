@@ -168,6 +168,7 @@ update_state_threadfn(void *state_, void *work_)
   server_onion_keys_free(state->onion_keys);
   state->onion_keys = update->onion_keys;
   update->onion_keys = NULL;
+  worker_state_free(update);
   ++state->generation;
   return WQ_RPL_REPLY;
 }
