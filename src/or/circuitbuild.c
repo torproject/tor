@@ -829,11 +829,11 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
   if (extend_info_supports_ntor(ei)) {
     *cell_type_out = CELL_CREATE2;
     *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
-    return;
+  } else {
+    /* XXXX030 Remove support for deciding to use TAP and EXTEND. */
+    *cell_type_out = CELL_CREATE;
+    *handshake_type_out = ONION_HANDSHAKE_TYPE_TAP;
   }
-
-  *cell_type_out = CELL_CREATE;
-  *handshake_type_out = ONION_HANDSHAKE_TYPE_TAP;
 }
 
 /** Decide whether to use a TAP or ntor handshake for extending to <b>ei</b>
