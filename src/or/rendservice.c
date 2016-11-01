@@ -116,12 +116,20 @@ static const char *hostname_fname = "hostname";
 static const char *client_keys_fname = "client_keys";
 static const char *sos_poison_fname = "onion_service_non_anonymous";
 
+/** Tells if onion service <b>s</b> is ephemeral.
+*/
+static unsigned int
+rend_service_is_ephemeral(const struct rend_service_t *s)
+{
+  return (s->directory == NULL);
+}
+
 /** Returns a escaped string representation of the service, <b>s</b>.
  */
 static const char *
 rend_service_escaped_dir(const struct rend_service_t *s)
 {
-  return (s->directory) ? escaped(s->directory) : "[EPHEMERAL]";
+  return rend_service_is_ephemeral(s) ? "[EPHEMERAL]" : escaped(s->directory);
 }
 
 /** A list of rend_service_t's for services run on this OP.
@@ -273,7 +281,7 @@ rend_add_service(rend_service_t *service)
      * lock file.  But this is enough to detect a simple mistake that
      * at least one person has actually made.
      */
-    if (service->directory != NULL) { /* Skip dupe for ephemeral services. */
+    if (!rend_service_is_ephemeral(service)) { /* Skip dupe for ephemeral services. */
       SMARTLIST_FOREACH(rend_service_list, rend_service_t*, ptr,
                         dupe = dupe ||
                                !strcmp(ptr->directory, service->directory));
@@ -868,7 +876,7 @@ rend_service_del_ephemeral(const char *service_id)
              "removal.");
     return -1;
   }
-  if (s->directory) {
+  if (!rend_service_is_ephemeral(s)) {
     log_warn(LD_CONFIG, "Requested non-ephemeral Onion Service for removal.");
     return -1;
   }
@@ -992,7 +1000,7 @@ service_is_single_onion_poisoned(const rend_service_t *service)
   char *poison_fname = NULL;
   file_status_t fstatus;
 
-  if (!service->directory) {
+  if (rend_service_is_ephemeral(service)) {
     return 0;
   }
 
@@ -1078,7 +1086,7 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
   int retval = -1;
   char *poison_fname = NULL;
 
-  if (!service->directory) {
+  if (rend_service_is_ephemeral(service)) {
     log_info(LD_REND, "Ephemeral HS started in non-anonymous mode.");
     return 0;
   }
@@ -1220,7 +1228,7 @@ rend_services_add_filenames_to_lists(smartlist_t *open_lst,
   if (!rend_service_list)
     return;
   SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
-    if (s->directory) {
+    if (!rend_service_is_ephemeral(s)) {
       rend_service_add_filenames_to_list(open_lst, s);
       smartlist_add_strdup(stat_lst, s->directory);
     }
