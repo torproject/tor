@@ -828,7 +828,8 @@ circuit_timeout_want_to_count_circ(origin_circuit_t *circ)
 /** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
  * directly, and set *<b>cell_type_out</b> and *<b>handshake_type_out</b>
  * accordingly.
- * Note that TAP handshakes are only used for direct connections:
+ * Note that TAP handshakes in CREATE cells are only used for direct
+ * connections:
  *  - from Tor2web to intro points not in the client's consensus, and
  *  - from Single Onions to rend points not in the service's consensus.
  * This is checked in onion_populate_cpath. */
@@ -837,58 +838,43 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
                               uint16_t *handshake_type_out,
                               const extend_info_t *ei)
 {
-  /* XXXX030 Remove support for deciding to use TAP. */
+  /* torspec says: In general, clients SHOULD use CREATE whenever they are
+   * using the TAP handshake, and CREATE2 otherwise. */
   if (extend_info_supports_ntor(ei)) {
     *cell_type_out = CELL_CREATE2;
     *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
-    return;
+  } else {
+    /* XXXX030 Remove support for deciding to use TAP and EXTEND. */
+    *cell_type_out = CELL_CREATE;
+    *handshake_type_out = ONION_HANDSHAKE_TYPE_TAP;
   }
-
-  *cell_type_out = CELL_CREATE;
-  *handshake_type_out = ONION_HANDSHAKE_TYPE_TAP;
 }
 
-/** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
- * directly, and set *<b>handshake_type_out</b> accordingly. Decide whether,
- * in extending through <b>node</b> to do so, we should use an EXTEND2 or an
- * EXTEND cell to do so, and set *<b>cell_type_out</b> and
- * *<b>create_cell_type_out</b> accordingly.
- * Note that TAP handshakes are only used for extend handshakes:
+/** Decide whether to use a TAP or ntor handshake for extending to <b>ei</b>
+ * and set *<b>handshake_type_out</b> accordingly. Decide whether we should
+ * use an EXTEND2 or an EXTEND cell to do so, and set *<b>cell_type_out</b>
+ * and *<b>create_cell_type_out</b> accordingly.
+ * Note that TAP handshakes in EXTEND cells are only used:
  *  - from clients to intro points, and
  *  - from hidden services to rend points.
- * This is checked in onion_populate_cpath. */
+ * This is checked in onion_populate_cpath.
+ */
 static void
 circuit_pick_extend_handshake(uint8_t *cell_type_out,
                               uint8_t *create_cell_type_out,
                               uint16_t *handshake_type_out,
-                              const node_t *node_prev,
                               const extend_info_t *ei)
 {
   uint8_t t;
   circuit_pick_create_handshake(&t, handshake_type_out, ei);
 
-  /* XXXX030 Remove support for deciding to use TAP. */
-
-  /* It is an error to extend if there is no previous node. */
-  if (BUG(node_prev == NULL)) {
-    *cell_type_out = RELAY_COMMAND_EXTEND;
-    *create_cell_type_out = CELL_CREATE;
-    return;
-  }
-
-  /* It is an error for a node with a known version to be so old it does not
-   * support ntor. */
-  tor_assert_nonfatal(routerstatus_version_supports_ntor(node_prev->rs, 1));
-
-  /* Assume relays without tor versions or routerstatuses support ntor.
-   * The authorities enforce ntor support, and assuming and failing is better
-   * than allowing a malicious node to perform a protocol downgrade to TAP. */
-  if (*handshake_type_out != ONION_HANDSHAKE_TYPE_TAP &&
-      (node_has_curve25519_onion_key(node_prev) ||
-       (routerstatus_version_supports_ntor(node_prev->rs, 1)))) {
+  /* torspec says: Clients SHOULD use the EXTEND format whenever sending a TAP
+   * handshake... In other cases, clients SHOULD use EXTEND2. */
+  if (*handshake_type_out != ONION_HANDSHAKE_TYPE_TAP) {
     *cell_type_out = RELAY_COMMAND_EXTEND2;
     *create_cell_type_out = CELL_CREATE2;
   } else {
+    /* XXXX030 Remove support for deciding to use TAP and EXTEND. */
     *cell_type_out = RELAY_COMMAND_EXTEND;
     *create_cell_type_out = CELL_CREATE;
   }
@@ -1044,15 +1030,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       return - END_CIRC_REASON_INTERNAL;
     }
 
-    {
-      const node_t *prev_node;
-      prev_node = node_get_by_id(hop->prev->extend_info->identity_digest);
-      circuit_pick_extend_handshake(&ec.cell_type,
-                                    &ec.create_cell.cell_type,
-                                    &ec.create_cell.handshake_type,
-                                    prev_node,
-                                    hop->extend_info);
-    }
+    circuit_pick_extend_handshake(&ec.cell_type,
+                                  &ec.create_cell.cell_type,
+                                  &ec.create_cell.handshake_type,
+                                  hop->extend_info);
 
     tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
     ec.orport_ipv4.port = hop->extend_info->port;
