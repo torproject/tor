@@ -1,0 +1,4 @@
+  o Documentation:
+    - Clarify that setting HiddenServiceNonAnonymousMode requires
+      you to also set "SOCKSPort 0". Fixes bug 20487; bugfix on
+      0.2.9.3-alpha.
