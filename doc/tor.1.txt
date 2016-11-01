@@ -2434,7 +2434,9 @@ The following options are used to configure a hidden service.
 [[HiddenServiceNonAnonymousMode]] **HiddenServiceNonAnonymousMode** **0**|**1**::
     Makes hidden services non-anonymous on this tor instance. Allows the
     non-anonymous HiddenServiceSingleHopMode. Enables direct connections in the
-    server-side hidden service protocol.
+    server-side hidden service protocol.  If you are using this option,
+    you need to disable all client-side services on your Tor instance,
+    including setting SOCKSPort to "0".
     (Default: 0)
 
 TESTING NETWORK OPTIONS
