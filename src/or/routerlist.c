@@ -2344,9 +2344,10 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
       continue;
     if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
       continue;
-    /* Don't choose nodes if we are certain they can't do ntor */
-    if (node->rs && !routerstatus_version_supports_ntor(node->rs, 1))
+    /* Don't choose nodes if we are certain they can't do EXTEND2 cells */
+    if (node->rs && !routerstatus_version_supports_extend2_cells(node->rs, 1))
       continue;
+    /* Don't choose nodes if we are certain they can't do ntor. */
     if ((node->ri || node->md) && !node_has_curve25519_onion_key(node))
       continue;
     /* Choose a node with an OR address that matches the firewall rules */
@@ -5609,13 +5610,14 @@ routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
   return 1;
 }
 
-/* Is rs running a tor version known to support ntor?
+/* Is rs running a tor version known to support EXTEND2 cells?
  * If allow_unknown_versions is true, return true if we can't tell
- * (from a versions line or a protocols line) whether it supports ntor.
+ * (from a versions line or a protocols line) whether it supports extend2
+ * cells.
  * Otherwise, return false if the version is unknown. */
 int
-routerstatus_version_supports_ntor(const routerstatus_t *rs,
-                                   int allow_unknown_versions)
+routerstatus_version_supports_extend2_cells(const routerstatus_t *rs,
+                                            int allow_unknown_versions)
 {
   if (!rs) {
     return allow_unknown_versions;
