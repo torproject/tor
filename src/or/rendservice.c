@@ -286,8 +286,8 @@ rend_add_service(rend_service_t *service)
       }
     }
     smartlist_add(rend_service_list, service);
-    log_debug(LD_REND,"Configuring service with directory \"%s\"",
-              service->directory);
+    log_debug(LD_REND,"Configuring service with directory %s",
+              rend_service_escaped_dir(service));
     for (i = 0; i < smartlist_len(service->ports); ++i) {
       p = smartlist_get(service->ports, i);
       if (!(p->is_unix_addr)) {
@@ -504,7 +504,8 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
       log_info(LD_CONFIG,
                "HiddenServiceAllowUnknownPorts=%d for %s",
-               (int)service->allow_unknown_ports, service->directory);
+               (int)service->allow_unknown_ports,
+               rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key,
                            "HiddenServiceDirGroupReadable")) {
         service->dir_group_readable = (int)tor_parse_long(line->value,
@@ -518,7 +519,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         }
         log_info(LD_CONFIG,
                  "HiddenServiceDirGroupReadable=%d for %s",
-                 service->dir_group_readable, service->directory);
+                 service->dir_group_readable, rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key, "HiddenServiceMaxStreams")) {
       service->max_streams_per_circuit = (int)tor_parse_long(line->value,
                                                     10, 0, 65535, &ok, NULL);
@@ -531,7 +532,7 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
       log_info(LD_CONFIG,
                "HiddenServiceMaxStreams=%d for %s",
-               service->max_streams_per_circuit, service->directory);
+               service->max_streams_per_circuit, rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key, "HiddenServiceMaxStreamsCloseCircuit")) {
       service->max_streams_close_circuit = (int)tor_parse_long(line->value,
                                                         10, 0, 1, &ok, NULL);
@@ -545,7 +546,8 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
       log_info(LD_CONFIG,
                "HiddenServiceMaxStreamsCloseCircuit=%d for %s",
-               (int)service->max_streams_close_circuit, service->directory);
+               (int)service->max_streams_close_circuit,
+               rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key, "HiddenServiceNumIntroductionPoints")) {
       service->n_intro_points_wanted =
         (unsigned int) tor_parse_long(line->value, 10,
@@ -561,7 +563,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         return -1;
       }
       log_info(LD_CONFIG, "HiddenServiceNumIntroductionPoints=%d for %s",
-               service->n_intro_points_wanted, service->directory);
+               service->n_intro_points_wanted, rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
       /* Parse auth type and comma-separated list of client names and add a
        * rend_authorized_client_t for each client to the service's list
@@ -1187,8 +1189,8 @@ rend_service_load_all_keys(const smartlist_t *service_list)
   SMARTLIST_FOREACH_BEGIN(s_list, rend_service_t *, s) {
     if (s->private_key)
       continue;
-    log_info(LD_REND, "Loading hidden-service keys from \"%s\"",
-             s->directory);
+    log_info(LD_REND, "Loading hidden-service keys from %s",
+             rend_service_escaped_dir(s));
 
     if (rend_service_load_keys(s) < 0)
       return -1;
@@ -1266,7 +1268,8 @@ rend_service_load_keys(rend_service_t *s)
   if (s->dir_group_readable) {
     /* Only new dirs created get new opts, also enforce group read. */
     if (chmod(s->directory, 0750)) {
-      log_warn(LD_FS,"Unable to make %s group-readable.", s->directory);
+      log_warn(LD_FS,"Unable to make %s group-readable.",
+      rend_service_escaped_dir(s));
     }
   }
 #endif
@@ -4009,8 +4012,8 @@ rend_service_dump_stats(int severity)
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
-    tor_log(severity, LD_GENERAL, "Service configured in \"%s\":",
-        service->directory);
+    tor_log(severity, LD_GENERAL, "Service configured in %s:",
+            rend_service_escaped_dir(service));
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
       safe_name = safe_str_client(intro->extend_info->nickname);
