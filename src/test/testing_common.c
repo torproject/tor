@@ -240,6 +240,9 @@ free_pregenerated_keys(void)
 static void *
 passthrough_test_setup(const struct testcase_t *testcase)
 {
+  /* Make sure the passthrough doesn't unintentionally fail or skip tests */
+  tor_assert(testcase->setup_data);
+  tor_assert(testcase->setup_data != (void*)TT_SKIP);
   return testcase->setup_data;
 }
 static int
