@@ -464,6 +464,11 @@ rend_config_services(const or_options_t *options, int validate_only)
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
+        if (rend_service_check_private_dir(service, 0) < 0) {
+          rend_service_free(service);
+          return -1;
+        }
+
         if (validate_only)
           rend_service_free(service);
         else
