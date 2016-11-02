@@ -46,7 +46,21 @@ test_circuit_is_available_for_use_ret_false_for_non_general_purpose(void *arg)
   (void)arg;
 
   circuit_t *circ = tor_malloc(sizeof(circuit_t));
-  circ->purpose = CIRCUIT_PURPOSE_OR;
+  circ->purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
+
+  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+
+  done:
+    tor_free(circ);
+}
+
+static void
+test_circuit_is_available_for_use_ret_false_for_non_general_origin(void *arg)
+{
+  (void)arg;
+
+  circuit_t *circ = tor_malloc(sizeof(circuit_t));
+  circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
 
   tt_int_op(0, ==, circuit_is_available_for_use(circ));
 
@@ -233,6 +247,10 @@ struct testcase_t circuituse_tests[] = {
  },
  { "non_general",
    test_circuit_is_available_for_use_ret_false_for_non_general_purpose,
+   TT_FORK, NULL, NULL
+ },
+ { "non_general",
+  test_circuit_is_available_for_use_ret_false_for_non_general_origin,
    TT_FORK, NULL, NULL
  },
  { "origin",
