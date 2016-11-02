@@ -550,20 +550,11 @@ test_single_onion_poisoning(void *arg)
   tt_assert(ret == 0);
 
   /* Create directories for both services */
-
-#ifdef _WIN32
-  ret = mkdir(mock_options->DataDirectory);
+  ret = check_private_dir(mock_options->DataDirectory, CPD_CREATE, NULL);
   tt_assert(ret == 0);
-  ret = mkdir(dir1);
+  ret = check_private_dir(dir1, CPD_CREATE, NULL);
   tt_assert(ret == 0);
-  ret = mkdir(dir2);
-#else
-  ret = mkdir(mock_options->DataDirectory, 0700);
-  tt_assert(ret == 0);
-  ret = mkdir(dir1, 0700);
-  tt_assert(ret == 0);
-  ret = mkdir(dir2, 0700);
-#endif
+  ret = check_private_dir(dir2, CPD_CREATE, NULL);
   tt_assert(ret == 0);
 
   service_1->directory = dir1;
@@ -694,7 +685,7 @@ test_single_onion_poisoning(void *arg)
   tt_assert(ret < 0);
 
  done:
-  /* TODO: should we delete the directories here? */
+  /* The test harness deletes the directories at exit */
   rend_service_free(service_1);
   rend_service_free(service_2);
   smartlist_free(services);
