@@ -72,7 +72,7 @@ static ssize_t rend_service_parse_intro_for_v3(
     size_t plaintext_len,
     char **err_msg_out);
 
-static int rend_service_check_and_create_private_dir(const rend_service_t *s);
+static int rend_service_check_private_dir(const rend_service_t *s, int create);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -674,12 +674,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-    cpd_check_t check_opts = CPD_CHECK_MODE_ONLY|CPD_CHECK;
-    if (service->dir_group_readable) {
-      check_opts |= CPD_GROUP_READ;
-    }
-
-    if (check_private_dir(service->directory, check_opts, options->User) < 0) {
+    if (rend_service_check_private_dir(service, 0) < 0) {
       rend_service_free(service);
       return -1;
     }
@@ -1093,7 +1088,7 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
   }
 
   /* Make sure the directory exists */
-  if (rend_service_check_and_create_private_dir(service) < 0)
+  if (rend_service_check_private_dir(service, 1) < 0)
     return -1;
 
   poison_fname = rend_service_sos_poison_path(service);
@@ -1251,12 +1246,18 @@ rend_service_derive_key_digests(struct rend_service_t *s)
   return 0;
 }
 
-/** Make sure that the directory for <b>s</b> is private, creating it
- * if needed. Return 0 on success, -1 on failure. */
+/** Make sure that the directory for <b>s</b> is private. If <b>create</b> is
+ * true, if it exists, change permissions if needed, otherwise, create it with
+ * the correct permissions. Otherwise, if <b>create</b> is false and the
+ * directory does not exist, check if we think we can create it.
+ * Return 0 on success, -1 on failure. */
 static int
-rend_service_check_and_create_private_dir(const rend_service_t *s)
+rend_service_check_private_dir(const rend_service_t *s, int create)
 {
   cpd_check_t  check_opts = CPD_CREATE;
+  if (!create) {
+    check_opts |= CPD_CHECK_MODE_ONLY;
+  }
   if (s->dir_group_readable) {
     check_opts |= CPD_GROUP_READ;
   }
@@ -1265,7 +1266,7 @@ rend_service_check_and_create_private_dir(const rend_service_t *s)
     return -1;
   }
 #ifndef _WIN32
-  if (s->dir_group_readable) {
+  if (s->dir_group_readable && create) {
     /* Only new dirs created get new opts, also enforce group read. */
     if (chmod(s->directory, 0750)) {
       log_warn(LD_FS,"Unable to make %s group-readable.", s->directory);
@@ -1285,7 +1286,7 @@ rend_service_load_keys(rend_service_t *s)
   char *fname = NULL;
   char buf[128];
 
-  if (rend_service_check_and_create_private_dir(s) < 0)
+  if (rend_service_check_private_dir(s, 1) < 0)
     goto err;
 
   /* Load key */
