@@ -35,15 +35,14 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
   int reason = END_CIRC_REASON_INTERNAL;
 
   log_info(LD_REND,
-           "Received an ESTABLISH_INTRO request on circuit %u",
+           "Received a legacy ESTABLISH_INTRO request on circuit %u",
            (unsigned) circ->p_circ_id);
 
-  if (circ->base_.purpose != CIRCUIT_PURPOSE_OR || circ->base_.n_chan) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-         "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
+  if (!hs_intro_circuit_is_suitable(circ)) {
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
+
   if (request_len < 2+DIGEST_LEN)
     goto truncated;
   /* First 2 bytes: length of asn1-encoded key. */
@@ -105,9 +104,7 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
   }
 
   /* Acknowledge the request. */
-  if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
-                                   RELAY_COMMAND_INTRO_ESTABLISHED,
-                                   "", 0, NULL)<0) {
+  if (hs_intro_send_intro_established_cell(circ) < 0) {
     log_info(LD_GENERAL, "Couldn't send INTRO_ESTABLISHED cell.");
     goto err_no_close;
   }
