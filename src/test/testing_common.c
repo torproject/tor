@@ -125,6 +125,18 @@ get_fname(const char *name)
   return get_fname_suffix(name, NULL);
 }
 
+/** Return a filename with a random suffix, relative to our testing temporary
+ * directory. If name is NULL, return the name of the testing temporary
+ * directory, without any suffix. */
+const char *
+get_fname_rnd(const char *name)
+{
+  char rnd[256], rnd32[256];
+  crypto_rand(rnd, RAND_PATH_BYTES);
+  base32_encode(rnd32, sizeof(rnd32), rnd, RAND_PATH_BYTES);
+  return get_fname_suffix(name, rnd32);
+}
+
 /* Remove a directory and all of its subdirectories */
 static void
 rm_rf(const char *dir)
