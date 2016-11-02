@@ -204,7 +204,15 @@ tor_rename(const char *path_old, const char *path_new)
                 sandbox_intern_string(path_new));
 }
 
-#if defined(HAVE_SYS_MMAN_H) || defined(RUNNING_DOXYGEN)
+/* Some MinGW builds have sys/mman.h, but not the corresponding symbols.
+ * Other configs rename the symbols using macros (including getpagesize).
+ * So check for sys/mman.h and unistd.h, and a getpagesize declaration. */
+#if (defined(HAVE_SYS_MMAN_H) && defined(HAVE_UNISTD_H) && \
+     defined(HAVE_DECL_GETPAGESIZE))
+#define COMPAT_HAS_MMAN_AND_PAGESIZE
+#endif
+
+#if defined(COMPAT_HAS_MMAN_AND_PAGESIZE) || defined(RUNNING_DOXYGEN)
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
  * "empty file". */

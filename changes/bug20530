@@ -1,0 +1,4 @@
+  o Minor Fixes (Windows):
+    - Check for getpagesize before using it to mmap files. This fixes
+      compilation in some MinGW environments. Fixes bug 20530; bugfix on
+      commit bf72878 in tor-0.1.2.1-alpha, reported by "ice".

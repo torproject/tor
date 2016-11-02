@@ -1410,6 +1410,14 @@ AC_CHECK_DECLS([mlockall], , , [
 #include <sys/mman.h>
 #endif])
 
+# Some MinGW environments don't have getpagesize in unistd.h. We don't use
+# AC_CHECK_FUNCS(getpagesize), because other environments rename getpagesize
+# using macros
+AC_CHECK_DECLS([getpagesize], , , [
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif])
+
 # Allow user to specify an alternate syslog facility
 AC_ARG_WITH(syslog-facility,
 AS_HELP_STRING(--with-syslog-facility=LOG, [syslog facility to use (default=LOG_DAEMON)]),
