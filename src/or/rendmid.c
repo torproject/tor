@@ -11,16 +11,19 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "crypto.h"
 #include "relay.h"
 #include "rendmid.h"
 #include "rephist.h"
+#include "hs_circuitmap.h"
+#include "hs_intropoint.h"
 
 /** Respond to an ESTABLISH_INTRO cell by checking the signed data and
  * setting the circuit's purpose and service pk digest.
  */
 int
-rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
-                         size_t request_len)
+rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
+                                size_t request_len)
 {
   crypto_pk_t *pk = NULL;
   char buf[DIGEST_LEN+9];
