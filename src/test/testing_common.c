@@ -102,16 +102,27 @@ setup_directory(void)
   temp_dir_setup_in_pid = getpid();
 }
 
-/** Return a filename relative to our testing temporary directory */
-const char *
-get_fname(const char *name)
+/** Return a filename relative to our testing temporary directory, based on
+ * name and suffix. If name is NULL, return the name of the testing temporary
+ * directory. */
+static const char *
+get_fname_suffix(const char *name, const char *suffix)
 {
   static char buf[1024];
   setup_directory();
   if (!name)
     return temp_dir;
-  tor_snprintf(buf,sizeof(buf),"%s/%s",temp_dir,name);
+  tor_snprintf(buf,sizeof(buf),"%s/%s%s%s",temp_dir,name,suffix ? "_" : "",
+               suffix ? suffix : "");
   return buf;
+}
+
+/** Return a filename relative to our testing temporary directory. If name is
+ * NULL, return the name of the testing temporary directory. */
+const char *
+get_fname(const char *name)
+{
+  return get_fname_suffix(name, NULL);
 }
 
 /* Remove a directory and all of its subdirectories */
