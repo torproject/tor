@@ -1265,15 +1265,6 @@ rend_service_check_private_dir(const rend_service_t *s, int create)
   if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
     return -1;
   }
-#ifndef _WIN32
-  if (s->dir_group_readable && create) {
-    /* Only new dirs created get new opts, also enforce group read. */
-    if (chmod(s->directory, 0750)) {
-      log_warn(LD_FS,"Unable to make %s group-readable.", s->directory);
-    }
-  }
-#endif
-
   return 0;
 }
 
