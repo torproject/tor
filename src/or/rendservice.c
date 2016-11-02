@@ -72,7 +72,9 @@ static ssize_t rend_service_parse_intro_for_v3(
     size_t plaintext_len,
     char **err_msg_out);
 
-static int rend_service_check_private_dir(const rend_service_t *s, int create);
+static int rend_service_check_private_dir(const or_options_t *options,
+                                          const rend_service_t *s,
+                                          int create);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -464,7 +466,7 @@ rend_config_services(const or_options_t *options, int validate_only)
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
-        if (rend_service_check_private_dir(service, 0) < 0) {
+        if (rend_service_check_private_dir(options, service, 0) < 0) {
           rend_service_free(service);
           return -1;
         }
@@ -679,7 +681,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-    if (rend_service_check_private_dir(service, 0) < 0) {
+    if (rend_service_check_private_dir(options, service, 0) < 0) {
       rend_service_free(service);
       return -1;
     }
@@ -1097,7 +1099,7 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
   }
 
   /* Make sure the directory exists */
-  if (rend_service_check_private_dir(service, 1) < 0)
+  if (rend_service_check_private_dir(get_options(), service, 1) < 0)
     return -1;
 
   poison_fname = rend_service_sos_poison_path(service);
@@ -1255,7 +1257,8 @@ rend_service_derive_key_digests(struct rend_service_t *s)
   return 0;
 }
 
-/** Make sure that the directory for <b>s</b> is private.
+/** Make sure that the directory for <b>s</b> is private, using the config in
+ * <b>options</b>.
  * If <b>create</b> is true:
  *  - if the directory exists, change permissions if needed,
  *  - if the directory does not exist, create it with the correct permissions.
@@ -1264,7 +1267,9 @@ rend_service_derive_key_digests(struct rend_service_t *s)
  *  - if the directory does not exist, check if we think we can create it.
  * Return 0 on success, -1 on failure. */
 static int
-rend_service_check_private_dir(const rend_service_t *s, int create)
+rend_service_check_private_dir(const or_options_t *options,
+                               const rend_service_t *s,
+                               int create)
 {
   cpd_check_t  check_opts = CPD_NONE;
   if (create) {
@@ -1277,7 +1282,7 @@ rend_service_check_private_dir(const rend_service_t *s, int create)
     check_opts |= CPD_GROUP_READ;
   }
   /* Check/create directory */
-  if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
+  if (check_private_dir(s->directory, check_opts, options->User) < 0) {
     return -1;
   }
   return 0;
@@ -1292,7 +1297,7 @@ rend_service_load_keys(rend_service_t *s)
   char *fname = NULL;
   char buf[128];
 
-  if (rend_service_check_private_dir(s, 1) < 0)
+  if (rend_service_check_private_dir(get_options(), s, 1) < 0)
     goto err;
 
   /* Load key */
