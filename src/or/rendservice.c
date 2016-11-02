@@ -1246,17 +1246,23 @@ rend_service_derive_key_digests(struct rend_service_t *s)
   return 0;
 }
 
-/** Make sure that the directory for <b>s</b> is private. If <b>create</b> is
- * true, if it exists, change permissions if needed, otherwise, create it with
- * the correct permissions. Otherwise, if <b>create</b> is false and the
- * directory does not exist, check if we think we can create it.
+/** Make sure that the directory for <b>s</b> is private.
+ * If <b>create</b> is true:
+ *  - if the directory exists, change permissions if needed,
+ *  - if the directory does not exist, create it with the correct permissions.
+ * If <b>create</b> is false:
+ *  - if the directory exists, check permissions,
+ *  - if the directory does not exist, check if we think we can create it.
  * Return 0 on success, -1 on failure. */
 static int
 rend_service_check_private_dir(const rend_service_t *s, int create)
 {
-  cpd_check_t  check_opts = CPD_CREATE;
-  if (!create) {
+  cpd_check_t  check_opts = CPD_NONE;
+  if (create) {
+    check_opts |= CPD_CREATE;
+  } else {
     check_opts |= CPD_CHECK_MODE_ONLY;
+    check_opts |= CPD_CHECK;
   }
   if (s->dir_group_readable) {
     check_opts |= CPD_GROUP_READ;
