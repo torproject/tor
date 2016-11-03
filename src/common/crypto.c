@@ -755,14 +755,13 @@ crypto_pk_write_key_to_string_impl(crypto_pk_t *env, char **dest,
   }
 
   BIO_get_mem_ptr(b, &buf);
-  (void)BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
-  BIO_free(b);
 
   *dest = tor_malloc(buf->length+1);
   memcpy(*dest, buf->data, buf->length);
   (*dest)[buf->length] = 0; /* nul terminate it */
   *len = buf->length;
-  BUF_MEM_free(buf);
+
+  BIO_free(b);
 
   return 0;
 }

@@ -429,12 +429,11 @@ key_to_string(EVP_PKEY *key)
   }
 
   BIO_get_mem_ptr(b, &buf);
-  (void) BIO_set_close(b, BIO_NOCLOSE);
-  BIO_free(b);
   result = tor_malloc(buf->length + 1);
   memcpy(result, buf->data, buf->length);
   result[buf->length] = 0;
-  BUF_MEM_free(buf);
+
+  BIO_free(b);
 
   RSA_free(rsa);
   return result;
