@@ -5612,6 +5612,33 @@ test_util_monotonic_time_ratchet(void *arg)
   ;
 }
 
+static void
+test_util_htonll(void *arg)
+{
+  (void)arg;
+#ifdef WORDS_BIGENDIAN
+  const uint64_t res_be = 0x8877665544332211;
+#else
+  const uint64_t res_le = 0x1122334455667788;
+#endif
+
+  tt_u64_op(0, OP_EQ, tor_htonll(0));
+  tt_u64_op(0, OP_EQ, tor_ntohll(0));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_htonll(UINT64_MAX));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_ntohll(UINT64_MAX));
+
+#ifdef WORDS_BIGENDIAN
+  tt_u64_op(res_be, OP_EQ, tor_htonll(0x8877665544332211));
+  tt_u64_op(res_be, OP_EQ, tor_ntohll(0x8877665544332211));
+#else
+  tt_u64_op(res_le, OP_EQ, tor_htonll(0x8877665544332211));
+  tt_u64_op(res_le, OP_EQ, tor_ntohll(0x8877665544332211));
+#endif
+
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -5705,6 +5732,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(calloc_check, 0),
   UTIL_TEST(monotonic_time, 0),
   UTIL_TEST(monotonic_time_ratchet, TT_FORK),
+  UTIL_TEST(htonll, 0),
   END_OF_TESTCASES
 };
 
