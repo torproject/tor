@@ -1,0 +1,10 @@
+  o Major bugfixes (client performance);
+    - Clients now respond to new application stream requests when
+      they arrive, rather than waiting up to one second before starting
+      to handle them. Fixes part of bug 19969; bugfix on 0.2.8.1-alpha.
+
+  o Major bugfixes (clients on flaky network connections);
+    - When Tor leaves standby because of a new application request, open
+      circuits as needed to serve that request. Previously, we would
+      potentially wait a very long time. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.

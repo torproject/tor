@@ -726,6 +726,19 @@ connection_should_read_from_linked_conn(connection_t *conn)
   return 0;
 }
 
+/** If we called event_base_loop() and told it to never stop until it
+ * runs out of events, now we've changed our mind: tell it we want it to
+ * finish. */
+void
+tell_event_loop_to_finish(void)
+{
+  if (!called_loop_once) {
+    struct timeval tv = { 0, 0 };
+    tor_event_base_loopexit(tor_libevent_get_base(), &tv);
+    called_loop_once = 1; /* hack to avoid adding more exit events */
+  }
+}
+
 /** Helper: Tell the main loop to begin reading bytes into <b>conn</b> from
  * its linked connection, if it is not doing so already.  Called by
  * connection_start_reading and connection_start_writing as appropriate. */
@@ -738,14 +751,10 @@ connection_start_reading_from_linked_conn(connection_t *conn)
   if (!conn->active_on_link) {
     conn->active_on_link = 1;
     smartlist_add(active_linked_connection_lst, conn);
-    if (!called_loop_once) {
-      /* This is the first event on the list; we won't be in LOOP_ONCE mode,
-       * so we need to make sure that the event_base_loop() actually exits at
-       * the end of its run through the current connections and lets us
-       * activate read events for linked connections. */
-      struct timeval tv = { 0, 0 };
-      tor_event_base_loopexit(tor_libevent_get_base(), &tv);
-    }
+    /* make sure that the event_base_loop() function exits at
+     * the end of its run through the current connections, so we can
+     * activate read events for linked connections. */
+    tell_event_loop_to_finish();
   } else {
     tor_assert(smartlist_contains(active_linked_connection_lst, conn));
   }
@@ -1514,6 +1523,12 @@ run_scheduled_events(time_t now)
     circuit_build_needed_circs(now);
   } else {
     circuit_expire_old_circs_as_needed(now);
+  }
+
+  if (!net_is_disabled()) {
+    /* This is usually redundant with circuit_build_needed_circs() above,
+     * but it is very fast when there is no work to do. */
+    connection_ap_attach_pending(0);
   }
 
   /* 5. We do housekeeping for each connection... */
