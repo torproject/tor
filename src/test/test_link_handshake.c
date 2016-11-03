@@ -7,8 +7,16 @@
 #define CONNECTION_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define TORTLS_PRIVATE
+
+#include "compat.h"
+
+/* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
+ * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
+DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/x509.h>
 #include <openssl/ssl.h>
+ENABLE_GCC_WARNING(redundant-decls)
+
 #include "or.h"
 #include "config.h"
 #include "connection.h"
