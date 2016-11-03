@@ -1656,8 +1656,8 @@ tor_tls_new(int sock, int isServer)
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
-  result->last_write_count = BIO_number_written(bio);
-  result->last_read_count = BIO_number_read(bio);
+  result->last_write_count = (unsigned long) BIO_number_written(bio);
+  result->last_read_count = (unsigned long) BIO_number_read(bio);
   if (result->last_write_count || result->last_read_count) {
     log_warn(LD_NET, "Newly created BIO has read count %lu, write count %lu",
              result->last_read_count, result->last_write_count);
@@ -2271,7 +2271,7 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
 {
   BIO *wbio, *tmpbio;
   unsigned long r, w;
-  r = BIO_number_read(SSL_get_rbio(tls->ssl));
+  r = (unsigned long) BIO_number_read(SSL_get_rbio(tls->ssl));
   /* We want the number of bytes actually for real written.  Unfortunately,
    * sometimes OpenSSL replaces the wbio on tls->ssl with a buffering bio,
    * which makes the answer turn out wrong.  Let's cope with that.  Note
@@ -2292,7 +2292,7 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
   if (wbio->method == BIO_f_buffer() && (tmpbio = BIO_next(wbio)) != NULL)
     wbio = tmpbio;
 #endif
-  w = BIO_number_written(wbio);
+  w = (unsigned long) BIO_number_written(wbio);
 
   /* We are ok with letting these unsigned ints go "negative" here:
    * If we wrapped around, this should still give us the right answer, unless

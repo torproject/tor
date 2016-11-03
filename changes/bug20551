@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation);
+    - Fix implicit conversion warnings under OpenSSL 1.1.
+      Fixes bug 20551; bugfix on 0.2.1.1-alpha.
