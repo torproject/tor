@@ -1738,7 +1738,7 @@ channel_get_cell_queue_entry_size(channel_t *chan, cell_queue_entry_t *q)
       rv = get_cell_network_size(chan->wide_circ_ids);
       break;
     default:
-      tor_assert(1);
+      tor_assert_nonfatal_unreached_once();
   }
 
   return rv;

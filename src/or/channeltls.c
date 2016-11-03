@@ -601,7 +601,7 @@ channel_tls_get_remote_descr_method(channel_t *chan, int flags)
         break;
       default:
         /* Something's broken in channel.c */
-        tor_assert(1);
+        tor_assert_nonfatal_unreached_once();
     }
   } else {
     strlcpy(buf, "(No connection)", sizeof(buf));
@@ -670,7 +670,7 @@ channel_tls_is_canonical_method(channel_t *chan, int req)
         break;
       default:
         /* This shouldn't happen; channel.c is broken if it does */
-        tor_assert(1);
+        tor_assert_nonfatal_unreached_once();
     }
   }
   /* else return 0 for tlschan->conn == NULL */
