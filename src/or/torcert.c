@@ -603,7 +603,6 @@ or_handshake_certs_ed25519_ok(int severity,
   return 1;
 }
 
-
 /**
  * Check the Ed certificates and/or the RSA certificates, as appropriate.  If
  * we obtained an Ed25519 identity, set *ed_id_out. If we obtained an RSA
@@ -646,5 +645,5 @@ or_handshake_certs_check_both(int severity,
       *rsa_id_out = tor_x509_cert_get_id_digests(certs->id_cert);
     }
   }
-
 }
+

@@ -614,7 +614,6 @@ test_routerkeys_cross_certify_tap(void *args)
   crypto_pk_free(onion_key);
 }
 
-
 static void
 test_routerkeys_rsa_ed_crosscert(void *arg)
 {

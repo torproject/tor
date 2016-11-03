@@ -2544,8 +2544,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     ssize_t len2 = auth1_parse(&tmp, out, len, ctx);
     if (!tmp) {
       /* LCOV_EXCL_START */
-      log_warn(LD_BUG, "Unable to parse signed part of AUTH1 data that we just "
-               "encoded");
+      log_warn(LD_BUG, "Unable to parse signed part of AUTH1 data that "
+               "we just encoded");
       goto err;
       /* LCOV_EXCL_STOP */
     }

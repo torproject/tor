@@ -872,7 +872,6 @@ CERTS_FAIL(server_wrong_labels_1,
              REENCODE();
            })
 
-
 static void
 test_link_handshake_send_authchallenge(void *arg)
 {
@@ -1087,7 +1086,6 @@ AUTHCHALLENGE_FAIL(nonzero_circid,
                    require_failure_message = "It had a nonzero circuit ID";
                    d->cell->circ_id = 1337)
 
-
 static int
 mock_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
 {
@@ -1284,7 +1282,8 @@ test_link_handshake_auth_cell(void *arg)
     uint8_t sig[128];
     uint8_t digest[32];
     tt_int_op(auth1_getlen_sig(auth1), >, 120);
-    auth_pubkey = tor_tls_cert_get_key(d->c2->handshake_state->certs->auth_cert);
+    auth_pubkey = tor_tls_cert_get_key(
+                                d->c2->handshake_state->certs->auth_cert);
     int n = crypto_pk_public_checksig(
               auth_pubkey,
               (char*)sig, sizeof(sig), (char*)auth1_getarray_sig(auth1),

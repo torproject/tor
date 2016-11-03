@@ -1373,10 +1373,6 @@ typedef struct listener_connection_t {
  * authchallenge_type_is_better().
  */
 
-
-
-
-
 /** The length of the part of the AUTHENTICATE cell body that the client and
  * server can generate independently (when using RSA_SHA256_TLSSECRET). It
  * contains everything except the client's timestamp, the client's randomly

@@ -1029,7 +1029,8 @@ should_make_new_ed_keys(const or_options_t *options, const time_t now)
 #undef EXPIRES_SOON
 
 #ifdef TOR_UNIT_TESTS
-/* Helper for unit tests: populate the ed25519 keys without saving or loading */
+/* Helper for unit tests: populate the ed25519 keys without saving or
+ * loading */
 void
 init_mock_ed_keys(const crypto_pk_t *rsa_identity_key)
 {

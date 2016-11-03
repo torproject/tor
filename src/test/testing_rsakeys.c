@@ -543,3 +543,4 @@ init_pregenerated_keys(void)
        crypto_pk_generate_key_with_bits__get_cached);
 #endif
 }
+

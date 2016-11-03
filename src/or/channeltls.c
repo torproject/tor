@@ -1889,7 +1889,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
         tor_cert_t *ed_cert = tor_cert_parse(cert_body, cert_len);
         if (!ed_cert) {
           log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-                 "Received undecodable Ed certificate in CERTS cell from %s:%d",
+                 "Received undecodable Ed certificate "
+                 "in CERTS cell from %s:%d",
                  safe_str(chan->conn->base_.address),
                chan->conn->base_.port);
         } else {
@@ -2310,10 +2311,9 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
   chan->conn->handshake_state->authenticated_rsa = 1;
   chan->conn->handshake_state->digest_received_data = 0;
   {
-    crypto_pk_t *identity_rcvd =
-      tor_tls_cert_get_key(chan->conn->handshake_state->certs->id_cert);
-    const common_digests_t *id_digests =
-      tor_x509_cert_get_id_digests(chan->conn->handshake_state->certs->id_cert);
+    tor_x509_cert_t *id_cert = chan->conn->handshake_state->certs->id_cert;
+    crypto_pk_t *identity_rcvd = tor_tls_cert_get_key(id_cert);
+    const common_digests_t *id_digests = tor_x509_cert_get_id_digests(id_cert);
     const ed25519_public_key_t *ed_identity_received = NULL;
 
     if (! sig_is_rsa) {
