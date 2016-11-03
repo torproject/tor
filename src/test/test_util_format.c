@@ -11,25 +11,14 @@
 
 #define NS_MODULE util_format
 
-#if !defined(HAVE_HTONLL) && !defined(htonll)
-#ifdef WORDS_BIGENDIAN
-#define htonll(x) (x)
-#else
-static uint64_t
-htonll(uint64_t a)
-{
-  return htonl((uint32_t)(a>>32)) | (((uint64_t)htonl((uint32_t)a))<<32);
-}
-#endif
-#endif
-
 static void
 test_util_format_unaligned_accessors(void *ignored)
 {
   (void)ignored;
   char buf[9] = "onionsoup"; // 6f6e696f6e736f7570
 
-  tt_u64_op(get_uint64(buf+1), OP_EQ, htonll(U64_LITERAL(0x6e696f6e736f7570)));
+  tt_u64_op(get_uint64(buf+1), OP_EQ,
+      tor_htonll(U64_LITERAL(0x6e696f6e736f7570)));
   tt_uint_op(get_uint32(buf+1), OP_EQ, htonl(0x6e696f6e));
   tt_uint_op(get_uint16(buf+1), OP_EQ, htons(0x6e69));
   tt_uint_op(get_uint8(buf+1), OP_EQ, 0x6e);
@@ -43,7 +32,7 @@ test_util_format_unaligned_accessors(void *ignored)
   set_uint32(buf+1, htonl(0x78696465));
   tt_mem_op(buf, OP_EQ, "oxidestop", 9);
 
-  set_uint64(buf+1, htonll(U64_LITERAL(0x6266757363617465)));
+  set_uint64(buf+1, tor_htonll(U64_LITERAL(0x6266757363617465)));
   tt_mem_op(buf, OP_EQ, "obfuscate", 9);
  done:
   ;
