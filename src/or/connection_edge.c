@@ -892,6 +892,15 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
 
   untried_pending_connections = 1;
   smartlist_add(pending_entry_connections, entry_conn);
+
+  /* Work-around for bug 19969: we handle pending_entry_connections at
+   * the end of run_main_loop_once(), but in many cases that function will
+   * take a very long time, if ever, to finish its call to event_base_loop().
+   *
+   * So the fix is to tell it right now that it ought to finish its loop at
+   * its next available opportunity.
+   */
+  tell_event_loop_to_finish();
 }
 
 /** Mark <b>entry_conn</b> as no longer waiting for a circuit. */
