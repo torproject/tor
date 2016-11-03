@@ -2247,6 +2247,10 @@ typedef struct routerstatus_t {
    * accept EXTEND2 cells */
   unsigned int supports_extend2_cells:1;
 
+  /** True iff this router has a protocol list that allows it to negotiate
+   * ed25519 identity keys on a link handshake. */
+  unsigned int supports_ed25519_link_handshake:1;
+
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
   unsigned int bw_is_unmeasured:1; /**< This is a consensus entry, with

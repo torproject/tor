@@ -292,7 +292,7 @@ protover_get_supported_protocols(void)
     "HSIntro=3 "
     "HSRend=1-2 "
     "Link=1-4 "
-    "LinkAuth=1 "
+    "LinkAuth=1,3 "
     "Microdesc=1-2 "
     "Relay=1-2";
 }
