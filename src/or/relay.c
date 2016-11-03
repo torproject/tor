@@ -615,6 +615,7 @@ relay_send_command_from_edge_(streamid_t stream_id, circuit_t *circ,
     cell.circ_id = circ->n_circ_id;
     cell_direction = CELL_DIRECTION_OUT;
   } else {
+    tor_assert(! cpath_layer);
     cell.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
     cell_direction = CELL_DIRECTION_IN;
   }
