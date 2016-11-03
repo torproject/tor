@@ -1405,9 +1405,13 @@ test_channel_queue_impossible(void *arg)
 
   /* Let it drain and check that the bad entry is discarded */
   test_chan_accept_cells = 1;
+  tor_capture_bugs_(1);
   channel_change_state(ch, CHANNEL_STATE_OPEN);
   tt_assert(test_cells_written == old_count);
   tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
+
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), ==, 1);
+  tor_end_capture_bugs_();
 
  done:
   free_fake_channel(ch);
