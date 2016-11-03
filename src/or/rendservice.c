@@ -519,7 +519,8 @@ rend_config_services(const or_options_t *options, int validate_only)
         }
         log_info(LD_CONFIG,
                  "HiddenServiceDirGroupReadable=%d for %s",
-                 service->dir_group_readable, rend_service_escaped_dir(service));
+                 service->dir_group_readable,
+                 rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key, "HiddenServiceMaxStreams")) {
       service->max_streams_per_circuit = (int)tor_parse_long(line->value,
                                                     10, 0, 65535, &ok, NULL);
@@ -532,7 +533,8 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
       log_info(LD_CONFIG,
                "HiddenServiceMaxStreams=%d for %s",
-               service->max_streams_per_circuit, rend_service_escaped_dir(service));
+               service->max_streams_per_circuit,
+               rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key, "HiddenServiceMaxStreamsCloseCircuit")) {
       service->max_streams_close_circuit = (int)tor_parse_long(line->value,
                                                         10, 0, 1, &ok, NULL);
@@ -563,7 +565,8 @@ rend_config_services(const or_options_t *options, int validate_only)
         return -1;
       }
       log_info(LD_CONFIG, "HiddenServiceNumIntroductionPoints=%d for %s",
-               service->n_intro_points_wanted, rend_service_escaped_dir(service));
+               service->n_intro_points_wanted,
+               rend_service_escaped_dir(service));
     } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
       /* Parse auth type and comma-separated list of client names and add a
        * rend_authorized_client_t for each client to the service's list
