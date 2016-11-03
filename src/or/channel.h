@@ -489,7 +489,8 @@ int channel_send_destroy(circid_t circ_id, channel_t *chan,
  */
 
 channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
-                            const char *id_digest);
+                            const char *id_digest,
+                            const ed25519_public_key_t *ed_id);
 
 channel_t * channel_get_for_extend(const char *digest,
                                    const tor_addr_t *target_addr,

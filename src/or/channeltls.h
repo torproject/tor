@@ -29,7 +29,8 @@ struct channel_tls_s {
 #endif /* TOR_CHANNEL_INTERNAL_ */
 
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
-                                const char *id_digest);
+                                const char *id_digest,
+                                const ed25519_public_key_t *ed_id);
 channel_listener_t * channel_tls_get_listener(void);
 channel_listener_t * channel_tls_start_listener(void);
 channel_t * channel_tls_handle_incoming(or_connection_t *orconn);

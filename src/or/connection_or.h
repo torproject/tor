@@ -40,7 +40,9 @@ void connection_or_notify_error(or_connection_t *conn,
 MOCK_DECL(or_connection_t *,
           connection_or_connect,
           (const tor_addr_t *addr, uint16_t port,
-           const char *id_digest, channel_tls_t *chan));
+           const char *id_digest,
+           const ed25519_public_key_t *ed_id,
+           channel_tls_t *chan));
 
 void connection_or_close_normally(or_connection_t *orconn, int flush);
 MOCK_DECL(void,connection_or_close_for_error,
@@ -59,10 +61,12 @@ int connection_init_or_handshake_state(or_connection_t *conn,
 void connection_or_init_conn_from_address(or_connection_t *conn,
                                           const tor_addr_t *addr,
                                           uint16_t port,
-                                          const char *id_digest,
+                                          const char *rsa_id_digest,
+                                          const ed25519_public_key_t *ed_id,
                                           int started_here);
 int connection_or_client_learned_peer_id(or_connection_t *conn,
-                                         const uint8_t *peer_id);
+                              const uint8_t *rsa_peer_id,
+                              const ed25519_public_key_t *ed_peer_id);
 time_t connection_or_client_used(or_connection_t *conn);
 MOCK_DECL(int, connection_or_get_num_circuits, (or_connection_t *conn));
 void or_handshake_state_free(or_handshake_state_t *state);
@@ -84,10 +88,14 @@ int connection_or_send_versions(or_connection_t *conn, int v3_plus);
 MOCK_DECL(int,connection_or_send_netinfo,(or_connection_t *conn));
 int connection_or_send_certs_cell(or_connection_t *conn);
 int connection_or_send_auth_challenge_cell(or_connection_t *conn);
-int connection_or_compute_authenticate_cell_body(or_connection_t *conn,
-                                                 uint8_t *out, size_t outlen,
-                                                 crypto_pk_t *signing_key,
-                                                 int server);
+int authchallenge_type_is_supported(uint16_t challenge_type);
+int authchallenge_type_is_better(uint16_t challenge_type_a,
+                                 uint16_t challenge_type_b);
+var_cell_t *connection_or_compute_authenticate_cell_body(or_connection_t *conn,
+                                       const int authtype,
+                                       crypto_pk_t *signing_key,
+                                       const ed25519_keypair_t *ed_signing_key,
+                                       int server);
 MOCK_DECL(int,connection_or_send_authenticate_cell,
           (or_connection_t *conn, int type));
 

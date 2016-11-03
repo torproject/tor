@@ -73,5 +73,10 @@ int write_encrypted_secret_key(const ed25519_secret_key_t *out,
 
 void routerkeys_free_all(void);
 
+#ifdef TOR_UNIT_TESTS
+const ed25519_keypair_t *get_master_identity_keypair(void);
+void init_mock_ed_keys(const crypto_pk_t *rsa_identity_key);
+#endif
+
 #endif
 

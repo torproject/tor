@@ -74,6 +74,8 @@
 
 const char *get_fname(const char *name);
 struct crypto_pk_t *pk_generate(int idx);
+void init_pregenerated_keys(void);
+void free_pregenerated_keys(void);
 
 #define US2_CONCAT_2__(a, b) a ## __ ## b
 #define US_CONCAT_2__(a, b) a ## _ ## b

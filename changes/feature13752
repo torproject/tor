@@ -1,0 +1,4 @@
+  o Minor features (fingerprinting resistence, authentication):
+    - Extend the length of RSA keys used for TLS link authentication to
+      2048 bits. (These weren't used for forward secrecy; for forward
+      secrecy, we used P256.) Closes ticket 13752.

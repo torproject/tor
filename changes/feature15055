@@ -1,0 +1,6 @@
+  o Major features (protocol, Ed25519):
+    - Tor relays now use Ed25519 to prove their Ed25519 identities and
+      Ed25519 to one another, and to clients. This algorithm is faster
+      and more secure than the RSA-based handshake we've been doing until
+      now. Implements the second big part of proposal 220; Closes ticket
+      15055.

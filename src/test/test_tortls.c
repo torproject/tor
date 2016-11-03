@@ -1086,13 +1086,13 @@ test_tortls_check_lifetime(void *ignored)
   time_t now = time(NULL);
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, 0, 0);
+  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), 0, 0);
   tt_int_op(ret, OP_EQ, -1);
 
   tls->ssl = tor_malloc_zero(sizeof(SSL));
   tls->ssl->session = tor_malloc_zero(sizeof(SSL_SESSION));
   tls->ssl->session->peer = validCert;
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, 0, 0);
+  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), 0, 0);
   tt_int_op(ret, OP_EQ, 0);
 
   ASN1_STRING_free(validCert->cert_info->validity->notBefore);
@@ -1100,10 +1100,10 @@ test_tortls_check_lifetime(void *ignored)
   ASN1_STRING_free(validCert->cert_info->validity->notAfter);
   validCert->cert_info->validity->notAfter = ASN1_TIME_set(NULL, now+60);
 
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, 0, -1000);
+  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), 0, -1000);
   tt_int_op(ret, OP_EQ, -1);
 
-  ret = tor_tls_check_lifetime(LOG_WARN, tls, -1000, 0);
+  ret = tor_tls_check_lifetime(LOG_WARN, tls, time(NULL), -1000, 0);
   tt_int_op(ret, OP_EQ, -1);
 
  done:
@@ -2653,18 +2653,18 @@ test_tortls_cert_is_valid(void *ignored)
   tor_x509_cert_t *cert = NULL, *scert = NULL;
 
   scert = tor_malloc_zero(sizeof(tor_x509_cert_t));
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 0);
   tt_int_op(ret, OP_EQ, 0);
 
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 0);
   tt_int_op(ret, OP_EQ, 0);
   tor_free(scert);
   tor_free(cert);
 
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 0);
   tt_int_op(ret, OP_EQ, 1);
 
 #ifndef OPENSSL_OPAQUE
@@ -2675,7 +2675,7 @@ test_tortls_cert_is_valid(void *ignored)
   ASN1_TIME_free(cert->cert->cert_info->validity->notAfter);
   cert->cert->cert_info->validity->notAfter =
     ASN1_TIME_set(NULL, time(NULL)-1000000);
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 0);
   tt_int_op(ret, OP_EQ, 0);
 
   tor_x509_cert_free(cert);
@@ -2684,7 +2684,7 @@ test_tortls_cert_is_valid(void *ignored)
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   X509_PUBKEY_free(cert->cert->cert_info->key);
   cert->cert->cert_info->key = NULL;
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 1);
   tt_int_op(ret, OP_EQ, 0);
 #endif
 
@@ -2695,7 +2695,7 @@ test_tortls_cert_is_valid(void *ignored)
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   /* This doesn't actually change the key in the cert. XXXXXX */
   BN_one(EVP_PKEY_get1_RSA(X509_get_pubkey(cert->cert))->n);
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 1);
   tt_int_op(ret, OP_EQ, 0);
 
   tor_x509_cert_free(cert);
@@ -2704,7 +2704,7 @@ test_tortls_cert_is_valid(void *ignored)
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   /* This doesn't actually change the key in the cert. XXXXXX */
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 1);
   tt_int_op(ret, OP_EQ, 0);
 
   tor_x509_cert_free(cert);
@@ -2713,7 +2713,7 @@ test_tortls_cert_is_valid(void *ignored)
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   /* This doesn't actually change the key in the cert. XXXXXX */
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 0);
   tt_int_op(ret, OP_EQ, 1);
 
   tor_x509_cert_free(cert);
@@ -2723,7 +2723,7 @@ test_tortls_cert_is_valid(void *ignored)
   /* This doesn't actually change the key in the cert. XXXXXX */
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
   X509_get_pubkey(cert->cert)->ameth = NULL;
-  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, time(NULL), 0);
   tt_int_op(ret, OP_EQ, 0);
 #endif
 

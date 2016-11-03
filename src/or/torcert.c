@@ -25,6 +25,8 @@
  * that one is authority_cert_t, and it's mostly handled in routerlist.c.
  */
 
+#include "or.h"
+#include "config.h"
 #include "crypto.h"
 #include "torcert.h"
 #include "ed25519_cert.h"
@@ -154,7 +156,11 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
   cert->encoded_len = len;
 
   memcpy(cert->signed_key.pubkey, parsed->certified_key, 32);
-  cert->valid_until = parsed->exp_field * 3600;
+  const int64_t valid_until_64 = ((int64_t)parsed->exp_field) * 3600;
+  if (valid_until_64 > TIME_MAX)
+    cert->valid_until = TIME_MAX - 1;
+  else
+    cert->valid_until = (time_t) valid_until_64;
   cert->cert_type = parsed->cert_type;
 
   for (unsigned i = 0; i < ed25519_cert_getlen_ext(parsed); ++i) {
@@ -181,11 +187,17 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
 }
 
 /** Fill in <b>checkable_out</b> with the information needed to check
- * the signature on <b>cert</b> with <b>pubkey</b>. */
+ * the signature on <b>cert</b> with <b>pubkey</b>.
+ *
+ * On success, if <b>expiration_out</b> is provided, and it is some time
+ * _after_ the expiration time of this certificate, set it to the
+ * expiration time of this certificate.
+ */
 int
 tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
                            const tor_cert_t *cert,
-                           const ed25519_public_key_t *pubkey)
+                           const ed25519_public_key_t *pubkey,
+                           time_t *expiration_out)
 {
   if (! pubkey) {
     if (cert->signing_key_included)
@@ -202,6 +214,10 @@ tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
   memcpy(checkable_out->signature.sig,
          cert->encoded + signed_len, ED25519_SIG_LEN);
 
+  if (expiration_out) {
+    *expiration_out = MIN(*expiration_out, cert->valid_until);
+  }
+
   return 0;
 }
 
@@ -216,14 +232,15 @@ tor_cert_checksig(tor_cert_t *cert,
 {
   ed25519_checkable_t checkable;
   int okay;
+  time_t expires = TIME_MAX;
 
-  if (now && now > cert->valid_until) {
+  if (tor_cert_get_checkable_sig(&checkable, cert, pubkey, &expires) < 0)
+    return -1;
+
+  if (now && now > expires) {
     cert->cert_expired = 1;
     return -1;
   }
-
-  if (tor_cert_get_checkable_sig(&checkable, cert, pubkey) < 0)
-    return -1;
 
   if (ed25519_checksig_batch(&okay, &checkable, 1) < 0) {
     cert->sig_bad = 1;
@@ -272,6 +289,8 @@ tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
   return tor_cert_eq(cert1, cert2);
 }
 
+#define RSA_ED_CROSSCERT_PREFIX "Tor TLS RSA/Ed25519 cross-certificate"
+
 /** Create new cross-certification object to certify <b>ed_key</b> as the
  * master ed25519 identity key for the RSA identity key <b>rsa_key</b>.
  * Allocates and stores the encoded certificate in *<b>cert</b>, and returns
@@ -296,11 +315,21 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
   ssize_t sz = rsa_ed_crosscert_encode(res, alloc_sz, cc);
   tor_assert(sz > 0 && sz <= alloc_sz);
 
+  crypto_digest_t *d = crypto_digest256_new(DIGEST_SHA256);
+  crypto_digest_add_bytes(d, RSA_ED_CROSSCERT_PREFIX,
+                          strlen(RSA_ED_CROSSCERT_PREFIX));
+
   const int signed_part_len = 32 + 4;
+  crypto_digest_add_bytes(d, (char*)res, signed_part_len);
+
+  uint8_t digest[DIGEST256_LEN];
+  crypto_digest_get_digest(d, (char*)digest, sizeof(digest));
+  crypto_digest_free(d);
+
   int siglen = crypto_pk_private_sign(rsa_key,
                                       (char*)rsa_ed_crosscert_getarray_sig(cc),
                                       rsa_ed_crosscert_getlen_sig(cc),
-                                      (char*)res, signed_part_len);
+                                      (char*)digest, sizeof(digest));
   tor_assert(siglen > 0 && siglen <= (int)crypto_pk_keysize(rsa_key));
   tor_assert(siglen <= UINT8_MAX);
   cc->sig_len = siglen;
@@ -312,3 +341,310 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
   return sz;
 }
 
+/**
+ * Check whether the <b>crosscert_len</b> byte certificate in <b>crosscert</b>
+ * is in fact a correct cross-certification of <b>master_key</b> using
+ * the RSA key <b>rsa_id_key</b>.
+ *
+ * Also reject the certificate if it expired before
+ * <b>reject_if_expired_before</b>.
+ *
+ * Return 0 on success, negative on failure.
+ */
+int
+rsa_ed25519_crosscert_check(const uint8_t *crosscert,
+                            const size_t crosscert_len,
+                            const crypto_pk_t *rsa_id_key,
+                            const ed25519_public_key_t *master_key,
+                            const time_t reject_if_expired_before)
+{
+  rsa_ed_crosscert_t *cc = NULL;
+  int rv;
+
+#define ERR(code, s)                                            \
+  do {                                                          \
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
+           "Received a bad RSA->Ed25519 crosscert: %s",         \
+           (s));                                                \
+    rv = (code);                                                \
+    goto err;                                                   \
+  } while (0)
+
+  if (BUG(crypto_pk_keysize(rsa_id_key) > PK_BYTES))
+    return -1;
+
+  if (BUG(!crosscert))
+    return -1;
+
+  ssize_t parsed_len = rsa_ed_crosscert_parse(&cc, crosscert, crosscert_len);
+  if (parsed_len < 0 || crosscert_len != (size_t)parsed_len) {
+    ERR(-2, "Unparseable or overlong crosscert");
+  }
+
+  if (tor_memneq(rsa_ed_crosscert_getarray_ed_key(cc),
+                 master_key->pubkey,
+                 ED25519_PUBKEY_LEN)) {
+    ERR(-3, "Crosscert did not match Ed25519 key");
+  }
+
+  const uint32_t expiration_date = rsa_ed_crosscert_get_expiration(cc);
+  const uint64_t expiration_time = expiration_date * 3600;
+
+  if (reject_if_expired_before < 0 ||
+      expiration_time < (uint64_t)reject_if_expired_before) {
+    ERR(-4, "Crosscert is expired");
+  }
+
+  const uint8_t *eos = rsa_ed_crosscert_get_end_of_signed(cc);
+  const uint8_t *sig = rsa_ed_crosscert_getarray_sig(cc);
+  const uint8_t siglen = rsa_ed_crosscert_get_sig_len(cc);
+  tor_assert(eos >= crosscert);
+  tor_assert((size_t)(eos - crosscert) <= crosscert_len);
+  tor_assert(siglen == rsa_ed_crosscert_getlen_sig(cc));
+
+  /* Compute the digest */
+  uint8_t digest[DIGEST256_LEN];
+  crypto_digest_t *d = crypto_digest256_new(DIGEST_SHA256);
+  crypto_digest_add_bytes(d, RSA_ED_CROSSCERT_PREFIX,
+                          strlen(RSA_ED_CROSSCERT_PREFIX));
+  crypto_digest_add_bytes(d, (char*)crosscert, eos-crosscert);
+  crypto_digest_get_digest(d, (char*)digest, sizeof(digest));
+  crypto_digest_free(d);
+
+  /* Now check the signature */
+  uint8_t signed_[PK_BYTES];
+  int signed_len = crypto_pk_public_checksig(rsa_id_key,
+                                          (char*)signed_, sizeof(signed_),
+                                          (char*)sig, siglen);
+  if (signed_len < DIGEST256_LEN) {
+    ERR(-5, "Bad signature, or length of signed data not as expected");
+  }
+
+  if (tor_memneq(digest, signed_, DIGEST256_LEN)) {
+    ERR(-6, "The signature was good, but it didn't match the data");
+  }
+
+  rv = 0;
+ err:
+  rsa_ed_crosscert_free(cc);
+  return rv;
+}
+
+/** Construct and return a new empty or_handshake_certs object */
+or_handshake_certs_t *
+or_handshake_certs_new(void)
+{
+  return tor_malloc_zero(sizeof(or_handshake_certs_t));
+}
+
+/** Release all storage held in <b>certs</b> */
+void
+or_handshake_certs_free(or_handshake_certs_t *certs)
+{
+  if (!certs)
+    return;
+
+  tor_x509_cert_free(certs->auth_cert);
+  tor_x509_cert_free(certs->link_cert);
+  tor_x509_cert_free(certs->id_cert);
+
+  tor_cert_free(certs->ed_id_sign);
+  tor_cert_free(certs->ed_sign_link);
+  tor_cert_free(certs->ed_sign_auth);
+  tor_free(certs->ed_rsa_crosscert);
+
+  memwipe(certs, 0xBD, sizeof(*certs));
+  tor_free(certs);
+}
+
+#undef ERR
+#define ERR(s)                                                  \
+  do {                                                          \
+    log_fn(severity, LD_PROTOCOL,                               \
+           "Received a bad CERTS cell: %s",                     \
+           (s));                                                \
+    return 0;                                                   \
+  } while (0)
+
+int
+or_handshake_certs_rsa_ok(int severity,
+                          or_handshake_certs_t *certs,
+                          tor_tls_t *tls,
+                          time_t now)
+{
+  tor_x509_cert_t *link_cert = certs->link_cert;
+  tor_x509_cert_t *auth_cert = certs->auth_cert;
+  tor_x509_cert_t *id_cert = certs->id_cert;
+
+  if (certs->started_here) {
+    if (! (id_cert && link_cert))
+      ERR("The certs we wanted (ID, Link) were missing");
+    if (! tor_tls_cert_matches_key(tls, link_cert))
+      ERR("The link certificate didn't match the TLS public key");
+    if (! tor_tls_cert_is_valid(severity, link_cert, id_cert, now, 0))
+      ERR("The link certificate was not valid");
+    if (! tor_tls_cert_is_valid(severity, id_cert, id_cert, now, 1))
+      ERR("The ID certificate was not valid");
+  } else {
+    if (! (id_cert && auth_cert))
+      ERR("The certs we wanted (ID, Auth) were missing");
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, auth_cert, id_cert, now, 1))
+      ERR("The authentication certificate was not valid");
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, now, 1))
+      ERR("The ID certificate was not valid");
+  }
+
+  return 1;
+}
+
+/** Check all the ed25519 certificates in <b>certs</b> against each other, and
+ * against the peer certificate in <b>tls</b> if appropriate.  On success,
+ * return 0; on failure, return a negative value and warn at level
+ * <b>severity</b> */
+int
+or_handshake_certs_ed25519_ok(int severity,
+                              or_handshake_certs_t *certs,
+                              tor_tls_t *tls,
+                              time_t now)
+{
+  ed25519_checkable_t check[10];
+  unsigned n_checkable = 0;
+  time_t expiration = TIME_MAX;
+
+#define ADDCERT(cert, pk)                                               \
+  do {                                                                  \
+    tor_assert(n_checkable < ARRAY_LENGTH(check));                      \
+    if (tor_cert_get_checkable_sig(&check[n_checkable++], cert, pk,     \
+                                   &expiration) < 0)                    \
+      ERR("Could not get checkable cert.");                             \
+  } while (0)
+
+  if (! certs->ed_id_sign || !certs->ed_id_sign->signing_key_included) {
+    ERR("No Ed25519 signing key");
+  }
+  ADDCERT(certs->ed_id_sign, NULL);
+
+  if (certs->started_here) {
+    if (! certs->ed_sign_link)
+      ERR("No Ed25519 link key");
+    {
+      /* check for a match with the TLS cert. */
+      tor_x509_cert_t *peer_cert = tor_tls_get_peer_cert(tls);
+      if (BUG(!peer_cert)) {
+        /* This is a bug, because if we got to this point, we are a connection
+         * that was initiated here, and we completed a TLS handshake. The
+         * other side *must* have given us a certificate! */
+        ERR("No x509 peer cert"); // LCOV_EXCL_LINE
+      }
+      const common_digests_t *peer_cert_digests =
+        tor_x509_cert_get_cert_digests(peer_cert);
+      int okay = tor_memeq(peer_cert_digests->d[DIGEST_SHA256],
+                           certs->ed_sign_link->signed_key.pubkey,
+                           DIGEST256_LEN);
+      tor_x509_cert_free(peer_cert);
+      if (!okay)
+        ERR("Link certificate does not match TLS certificate");
+    }
+
+    ADDCERT(certs->ed_sign_link, &certs->ed_id_sign->signed_key);
+
+  } else {
+    if (! certs->ed_sign_auth)
+      ERR("No Ed25519 link authentication key");
+    ADDCERT(certs->ed_sign_auth, &certs->ed_id_sign->signed_key);
+  }
+
+  if (expiration < now) {
+    ERR("At least one certificate expired.");
+  }
+
+  /* Okay, we've gotten ready to check all the Ed25519 certificates.
+   * Now, we are going to check the RSA certificate's cross-certification
+   * with the ED certificates.
+   *
+   * FFFF In the future, we might want to make this optional.
+   */
+
+  tor_x509_cert_t *rsa_id_cert = certs->id_cert;
+  if (!rsa_id_cert) {
+    ERR("Missing legacy RSA ID certificate");
+  }
+  if (! tor_tls_cert_is_valid(severity, rsa_id_cert, rsa_id_cert, now, 1)) {
+    ERR("The legacy RSA ID certificate was not valid");
+  }
+  if (! certs->ed_rsa_crosscert) {
+    ERR("Missing RSA->Ed25519 crosscert");
+  }
+  crypto_pk_t *rsa_id_key = tor_tls_cert_get_key(rsa_id_cert);
+  if (!rsa_id_key) {
+    ERR("RSA ID cert had no RSA key");
+  }
+
+  if (rsa_ed25519_crosscert_check(certs->ed_rsa_crosscert,
+                                  certs->ed_rsa_crosscert_len,
+                                  rsa_id_key,
+                                  &certs->ed_id_sign->signing_key,
+                                  now) < 0) {
+    crypto_pk_free(rsa_id_key);
+    ERR("Invalid RSA->Ed25519 crosscert");
+  }
+  crypto_pk_free(rsa_id_key);
+  rsa_id_key = NULL;
+
+  /* FFFF We could save a little time in the client case by queueing
+   * this batch to check it later, along with the signature from the
+   * AUTHENTICATE cell. That will change our data flow a bit, though,
+   * so I say "postpone". */
+
+  if (ed25519_checksig_batch(NULL, check, n_checkable) < 0) {
+    ERR("At least one Ed25519 certificate was badly signed");
+  }
+
+  return 1;
+}
+
+
+/**
+ * Check the Ed certificates and/or the RSA certificates, as appropriate.  If
+ * we obtained an Ed25519 identity, set *ed_id_out. If we obtained an RSA
+ * identity, set *rs_id_out. Otherwise, set them both to NULL.
+ */
+void
+or_handshake_certs_check_both(int severity,
+                              or_handshake_certs_t *certs,
+                              tor_tls_t *tls,
+                              time_t now,
+                              const ed25519_public_key_t **ed_id_out,
+                              const common_digests_t **rsa_id_out)
+{
+  tor_assert(ed_id_out);
+  tor_assert(rsa_id_out);
+
+  *ed_id_out = NULL;
+  *rsa_id_out = NULL;
+
+  if (certs->ed_id_sign) {
+    if (or_handshake_certs_ed25519_ok(severity, certs, tls, now)) {
+      tor_assert(certs->ed_id_sign);
+      tor_assert(certs->id_cert);
+
+      *ed_id_out = &certs->ed_id_sign->signing_key;
+      *rsa_id_out = tor_x509_cert_get_id_digests(certs->id_cert);
+
+      /* If we reached this point, we did not look at any of the
+       * subsidiary RSA certificates, so we'd better just remove them.
+       */
+      tor_x509_cert_free(certs->link_cert);
+      tor_x509_cert_free(certs->auth_cert);
+      certs->link_cert = certs->auth_cert = NULL;
+    }
+    /* We do _not_ fall through here.  If you provided us Ed25519
+     * certificates, we expect to verify them! */
+  } else {
+    /* No ed25519 keys given in the CERTS cell */
+    if (or_handshake_certs_rsa_ok(severity, certs, tls, now)) {
+      *rsa_id_out = tor_x509_cert_get_id_digests(certs->id_cert);
+    }
+  }
+
+}

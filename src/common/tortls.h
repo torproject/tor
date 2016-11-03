@@ -176,6 +176,7 @@ extern uint64_t total_bytes_written_by_tls;
 
 #endif /* endif TORTLS_PRIVATE */
 
+tor_x509_cert_t *tor_x509_cert_dup(const tor_x509_cert_t *cert);
 const char *tor_tls_err_to_string(int err);
 void tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz);
 
@@ -200,7 +201,8 @@ int tor_tls_peer_has_cert(tor_tls_t *tls);
 MOCK_DECL(tor_x509_cert_t *,tor_tls_get_peer_cert,(tor_tls_t *tls));
 int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity);
 int tor_tls_check_lifetime(int severity,
-                           tor_tls_t *tls, int past_tolerance,
+                           tor_tls_t *tls, time_t now,
+                           int past_tolerance,
                            int future_tolerance);
 MOCK_DECL(int, tor_tls_read, (tor_tls_t *tls, char *cp, size_t len));
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
@@ -226,6 +228,11 @@ int tor_tls_used_v1_handshake(tor_tls_t *tls);
 int tor_tls_get_num_server_handshakes(tor_tls_t *tls);
 int tor_tls_server_got_renegotiate(tor_tls_t *tls);
 MOCK_DECL(int,tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out));
+MOCK_DECL(int,tor_tls_export_key_material,(
+                     tor_tls_t *tls, uint8_t *secrets_out,
+                     const uint8_t *context,
+                     size_t context_len,
+                     const char *label));
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
@@ -254,6 +261,7 @@ MOCK_DECL(int,tor_tls_cert_matches_key,(const tor_tls_t *tls,
 int tor_tls_cert_is_valid(int severity,
                           const tor_x509_cert_t *cert,
                           const tor_x509_cert_t *signing_cert,
+                          time_t now,
                           int check_rsa_1024);
 const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 

@@ -1348,13 +1348,34 @@ typedef struct listener_connection_t {
 #define OR_CERT_TYPE_RSA_ED_CROSSCERT 7
 /**@}*/
 
-/** The one currently supported type of AUTHENTICATE cell.  It contains
+/** The first supported type of AUTHENTICATE cell.  It contains
  * a bunch of structures signed with an RSA1024 key.  The signed
  * structures include a HMAC using negotiated TLS secrets, and a digest
  * of all cells sent or received before the AUTHENTICATE cell (including
  * the random server-generated AUTH_CHALLENGE cell).
  */
 #define AUTHTYPE_RSA_SHA256_TLSSECRET 1
+/** As AUTHTYPE_RSA_SHA256_TLSSECRET, but instead of using the
+ * negotiated TLS secrets, uses exported keying material from the TLS
+ * session as described in RFC 5705.
+ *
+ * Not used by today's tors, since everything that supports this
+ * also supports ED25519_SHA3_5705, which is better.
+ **/
+#define AUTHTYPE_RSA_SHA256_RFC5705 2
+/** As AUTHTYPE_RSA_SHA256_RFC5705, but uses an Ed25519 identity key to
+ * authenticate.  */
+#define AUTHTYPE_ED25519_SHA256_RFC5705 3
+/*
+ * NOTE: authchallenge_type_is_better() relies on these AUTHTYPE codes
+ * being sorted in order of preference.  If we someday add one with
+ * a higher numerical value that we don't like as much, we should revise
+ * authchallenge_type_is_better().
+ */
+
+
+
+
 
 /** The length of the part of the AUTHENTICATE cell body that the client and
  * server can generate independently (when using RSA_SHA256_TLSSECRET). It
@@ -1364,6 +1385,34 @@ typedef struct listener_connection_t {
 /** The length of the part of the AUTHENTICATE cell body that the client
  * signs. */
 #define V3_AUTH_BODY_LEN (V3_AUTH_FIXED_PART_LEN + 8 + 16)
+
+/** Structure to hold all the certificates we've received on an OR connection
+ */
+typedef struct or_handshake_certs_t {
+  /** True iff we originated this connection. */
+  int started_here;
+  /** The cert for the 'auth' RSA key that's supposed to sign the AUTHENTICATE
+   * cell. Signed with the RSA identity key. */
+  tor_x509_cert_t *auth_cert;
+  /** The cert for the 'link' RSA key that was used to negotiate the TLS
+   *  connection.  Signed with the RSA identity key. */
+  tor_x509_cert_t *link_cert;
+  /** A self-signed identity certificate: the RSA identity key signed
+   * with itself.  */
+  tor_x509_cert_t *id_cert;
+  /** The Ed25519 signing key, signed with the Ed25519 identity key. */
+  struct tor_cert_st *ed_id_sign;
+  /** A digest of the X509 link certificate for the TLS connection, signed
+   * with the Ed25519 siging key. */
+  struct tor_cert_st *ed_sign_link;
+  /** The Ed25519 authentication key (that's supposed to sign an AUTHENTICATE
+   * cell) , signed with the Ed25519 siging key. */
+  struct tor_cert_st *ed_sign_auth;
+  /** The Ed25519 identity key, crosssigned with the RSA identity key. */
+  uint8_t *ed_rsa_crosscert;
+  /** The length of <b>ed_rsa_crosscert</b> in bytes */
+  size_t ed_rsa_crosscert_len;
+} or_handshake_certs_t;
 
 /** Stores flags and information related to the portion of a v2/v3 Tor OR
  * connection handshake that happens after the TLS handshake is finished.
@@ -1385,6 +1434,8 @@ typedef struct or_handshake_state_t {
 
   /* True iff we've received valid authentication to some identity. */
   unsigned int authenticated : 1;
+  unsigned int authenticated_rsa : 1;
+  unsigned int authenticated_ed25519 : 1;
 
   /* True iff we have sent a netinfo cell */
   unsigned int sent_netinfo : 1;
@@ -1402,9 +1453,12 @@ typedef struct or_handshake_state_t {
   unsigned int digest_received_data : 1;
   /**@}*/
 
-  /** Identity digest that we have received and authenticated for our peer
+  /** Identity RSA digest that we have received and authenticated for our peer
    * on this connection. */
-  uint8_t authenticated_peer_id[DIGEST_LEN];
+  uint8_t authenticated_rsa_peer_id[DIGEST_LEN];
+  /** Identity Ed25519 public key that we have received and authenticated for
+   * our peer on this connection. */
+  ed25519_public_key_t authenticated_ed25519_peer_id;
 
   /** Digests of the cells that we have sent or received as part of a V3
    * handshake.  Used for making and checking AUTHENTICATE cells.
@@ -1417,14 +1471,8 @@ typedef struct or_handshake_state_t {
 
   /** Certificates that a connection initiator sent us in a CERTS cell; we're
    * holding on to them until we get an AUTHENTICATE cell.
-   *
-   * @{
    */
-  /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
-  tor_x509_cert_t *auth_cert;
-  /** A self-signed identity certificate */
-  tor_x509_cert_t *id_cert;
-  /**@}*/
+  or_handshake_certs_t *certs;
 } or_handshake_state_t;
 
 /** Length of Extended ORPort connection identifier. */

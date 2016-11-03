@@ -84,7 +84,10 @@ channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
 {
   channel_t *chan;
 
-  chan = channel_connect(addr, port, id_digest);
+
+  chan = channel_connect(addr, port, id_digest,
+                         NULL // XXXX Ed25519 id.
+                         );
   if (chan) command_setup_channel(chan);
 
   return chan;

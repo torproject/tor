@@ -24,6 +24,7 @@
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"
 
+/* DOCDOC */
 static ssize_t
 do_getpass(const char *prompt, char *buf, size_t buflen,
            int twice, const or_options_t *options)
@@ -90,6 +91,7 @@ do_getpass(const char *prompt, char *buf, size_t buflen,
   return length;
 }
 
+/* DOCDOC */
 int
 read_encrypted_secret_key(ed25519_secret_key_t *out,
                           const char *fname)
@@ -162,6 +164,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
   return r;
 }
 
+/* DOCDOC */
 int
 write_encrypted_secret_key(const ed25519_secret_key_t *key,
                            const char *fname)
@@ -205,6 +208,7 @@ write_encrypted_secret_key(const ed25519_secret_key_t *key,
   return r;
 }
 
+/* DOCDOC */
 static int
 write_secret_key(const ed25519_secret_key_t *key, int encrypted,
                  const char *fname,
@@ -932,7 +936,18 @@ load_ed_keys(const or_options_t *options, time_t now)
   return -1;
 }
 
-/* DOCDOC */
+/**
+ * Retrieve our currently-in-use Ed25519 link certificate and id certificate,
+ * and, if they would expire soon (based on the time <b>now</b>, generate new
+ * certificates (without embedding the public part of the signing key inside).
+ *
+ * The signed_key from the expiring certificate will be used to sign the new
+ * key within newly generated X509 certificate.
+ *
+ * Returns -1 upon error.  Otherwise, returns 0 upon success (either when the
+ * current certificate is still valid, or when a new certificate was
+ * successfully generated).
+ */
 int
 generate_ed_link_cert(const or_options_t *options, time_t now)
 {
@@ -972,6 +987,17 @@ generate_ed_link_cert(const or_options_t *options, time_t now)
 #undef SET_KEY
 #undef SET_CERT
 
+/**
+ * Return 1 if any of the following are true:
+ *
+ *   - if one of our Ed25519 signing, auth, or link certificates would expire
+ *     soon w.r.t. the time <b>now</b>,
+ *   - if we do not currently have a link certificate, or
+ *   - if our cached Ed25519 link certificate is not same as the one we're
+ *     currently using.
+ *
+ * Otherwise, returns 0.
+ */
 int
 should_make_new_ed_keys(const or_options_t *options, const time_t now)
 {
@@ -1002,6 +1028,60 @@ should_make_new_ed_keys(const or_options_t *options, const time_t now)
 
 #undef EXPIRES_SOON
 
+#ifdef TOR_UNIT_TESTS
+/* Helper for unit tests: populate the ed25519 keys without saving or loading */
+void
+init_mock_ed_keys(const crypto_pk_t *rsa_identity_key)
+{
+  routerkeys_free_all();
+
+#define MAKEKEY(k)                                      \
+  k = tor_malloc_zero(sizeof(*k));                      \
+  if (ed25519_keypair_generate(k, 0) < 0) {             \
+    log_warn(LD_BUG, "Couldn't make a keypair");        \
+    goto err;                                           \
+  }
+  MAKEKEY(master_identity_key);
+  MAKEKEY(master_signing_key);
+  MAKEKEY(current_auth_key);
+#define MAKECERT(cert, signing, signed_, type, flags)            \
+  cert = tor_cert_create(signing,                                \
+                         type,                                   \
+                         &signed_->pubkey,                       \
+                         time(NULL), 86400,                      \
+                         flags);                                 \
+  if (!cert) {                                                   \
+    log_warn(LD_BUG, "Couldn't make a %s certificate!", #cert);  \
+    goto err;                                                    \
+  }
+
+  MAKECERT(signing_key_cert,
+           master_identity_key, master_signing_key, CERT_TYPE_ID_SIGNING,
+           CERT_FLAG_INCLUDE_SIGNING_KEY);
+  MAKECERT(auth_key_cert,
+           master_signing_key, current_auth_key, CERT_TYPE_SIGNING_AUTH, 0);
+
+  if (generate_ed_link_cert(get_options(), time(NULL)) < 0) {
+    log_warn(LD_BUG, "Couldn't make link certificate");
+    goto err;
+  }
+
+  rsa_ed_crosscert_len = tor_make_rsa_ed25519_crosscert(
+                                     &master_identity_key->pubkey,
+                                     rsa_identity_key,
+                                     time(NULL)+86400,
+                                     &rsa_ed_crosscert);
+
+  return;
+
+ err:
+  routerkeys_free_all();
+  tor_assert_nonfatal_unreached();
+}
+#undef MAKEKEY
+#undef MAKECERT
+#endif
+
 const ed25519_public_key_t *
 get_master_identity_key(void)
 {
@@ -1009,6 +1089,16 @@ get_master_identity_key(void)
     return NULL;
   return &master_identity_key->pubkey;
 }
+
+#ifdef TOR_UNIT_TESTS
+/* only exists for the unit tests, since otherwise the identity key
+ * should be used to sign nothing but the signing key. */
+const ed25519_keypair_t *
+get_master_identity_keypair(void)
+{
+  return master_identity_key;
+}
+#endif
 
 const ed25519_keypair_t *
 get_master_signing_keypair(void)
@@ -1144,9 +1234,12 @@ routerkeys_free_all(void)
   tor_cert_free(signing_key_cert);
   tor_cert_free(link_cert_cert);
   tor_cert_free(auth_key_cert);
+  tor_free(rsa_ed_crosscert);
 
   master_identity_key = master_signing_key = NULL;
   current_auth_key = NULL;
   signing_key_cert = link_cert_cert = auth_key_cert = NULL;
+  rsa_ed_crosscert = NULL; // redundant
+  rsa_ed_crosscert_len = 0;
 }
 

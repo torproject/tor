@@ -57,8 +57,9 @@ tor_cert_t *tor_cert_parse(const uint8_t *cert, size_t certlen);
 void tor_cert_free(tor_cert_t *cert);
 
 int tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
-                                 const tor_cert_t *out,
-                                 const ed25519_public_key_t *pubkey);
+                               const tor_cert_t *out,
+                               const ed25519_public_key_t *pubkey,
+                               time_t *expiration_out);
 
 int tor_cert_checksig(tor_cert_t *cert,
                       const ed25519_public_key_t *pubkey, time_t now);
@@ -71,6 +72,28 @@ ssize_t tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
                                        const crypto_pk_t *rsa_key,
                                        time_t expires,
                                        uint8_t **cert);
+int rsa_ed25519_crosscert_check(const uint8_t *crosscert,
+                                const size_t crosscert_len,
+                                const crypto_pk_t *rsa_id_key,
+                                const ed25519_public_key_t *master_key,
+                                const time_t reject_if_expired_before);
+
+or_handshake_certs_t *or_handshake_certs_new(void);
+void or_handshake_certs_free(or_handshake_certs_t *certs);
+int or_handshake_certs_rsa_ok(int severity,
+                              or_handshake_certs_t *certs,
+                              tor_tls_t *tls,
+                              time_t now);
+int or_handshake_certs_ed25519_ok(int severity,
+                                  or_handshake_certs_t *certs,
+                                  tor_tls_t *tls,
+                                  time_t now);
+void or_handshake_certs_check_both(int severity,
+                              or_handshake_certs_t *certs,
+                              tor_tls_t *tls,
+                              time_t now,
+                              const ed25519_public_key_t **ed_id_out,
+                              const common_digests_t **rsa_id_out);
 
 #endif
 

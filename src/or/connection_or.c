@@ -49,9 +49,11 @@
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
+#include "routerkeys.h"
 #include "routerlist.h"
 #include "ext_orport.h"
 #include "scheduler.h"
+#include "torcert.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
@@ -143,15 +145,18 @@ connection_or_clear_identity_map(void)
 /** Change conn->identity_digest to digest, and add conn into
  * orconn_digest_map. */
 static void
-connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
+connection_or_set_identity_digest(or_connection_t *conn,
+                                  const char *rsa_digest,
+                                  const ed25519_public_key_t *ed_id)
 {
+  (void) ed_id; // DOCDOC // XXXX not implemented yet.
   or_connection_t *tmp;
   tor_assert(conn);
-  tor_assert(digest);
+  tor_assert(rsa_digest);
 
   if (!orconn_identity_map)
     orconn_identity_map = digestmap_new();
-  if (tor_memeq(conn->identity_digest, digest, DIGEST_LEN))
+  if (tor_memeq(conn->identity_digest, rsa_digest, DIGEST_LEN))
     return;
 
   /* If the identity was set previously, remove the old mapping. */
@@ -161,23 +166,23 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
       channel_clear_identity_digest(TLS_CHAN_TO_BASE(conn->chan));
   }
 
-  memcpy(conn->identity_digest, digest, DIGEST_LEN);
+  memcpy(conn->identity_digest, rsa_digest, DIGEST_LEN);
 
   /* If we're setting the ID to zero, don't add a mapping. */
-  if (tor_digest_is_zero(digest))
+  if (tor_digest_is_zero(rsa_digest))
     return;
 
-  tmp = digestmap_set(orconn_identity_map, digest, conn);
+  tmp = digestmap_set(orconn_identity_map, rsa_digest, conn);
   conn->next_with_same_id = tmp;
 
   /* Deal with channels */
   if (conn->chan)
-    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan), digest);
+    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan), rsa_digest);
 
 #if 1
   /* Testing code to check for bugs in representation. */
   for (; tmp; tmp = tmp->next_with_same_id) {
-    tor_assert(tor_memeq(tmp->identity_digest, digest, DIGEST_LEN));
+    tor_assert(tor_memeq(tmp->identity_digest, rsa_digest, DIGEST_LEN));
     tor_assert(tmp != conn);
   }
 #endif
@@ -875,10 +880,12 @@ void
 connection_or_init_conn_from_address(or_connection_t *conn,
                                      const tor_addr_t *addr, uint16_t port,
                                      const char *id_digest,
+                                     const ed25519_public_key_t *ed_id,
                                      int started_here)
 {
+  (void) ed_id; // not fully used yet.
   const node_t *r = node_get_by_id(id_digest);
-  connection_or_set_identity_digest(conn, id_digest);
+  connection_or_set_identity_digest(conn, id_digest, ed_id);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
 
   conn->base_.port = port;
@@ -1171,8 +1178,11 @@ connection_or_notify_error(or_connection_t *conn,
 
 MOCK_IMPL(or_connection_t *,
 connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
-                        const char *id_digest, channel_tls_t *chan))
+                        const char *id_digest,
+                        const ed25519_public_key_t *ed_id,
+                        channel_tls_t *chan))
 {
+  (void) ed_id; // XXXX not fully used yet.
   or_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;
@@ -1203,7 +1213,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
    */
   conn->chan = chan;
   chan->conn = conn;
-  connection_or_init_conn_from_address(conn, &addr, port, id_digest, 1);
+  connection_or_init_conn_from_address(conn, &addr, port, id_digest, ed_id, 1);
   connection_or_change_state(conn, OR_CONN_STATE_CONNECTING);
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
@@ -1562,7 +1572,9 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
 
   if (started_here)
     return connection_or_client_learned_peer_id(conn,
-                                     (const uint8_t*)digest_rcvd_out);
+                                        (const uint8_t*)digest_rcvd_out,
+                                        NULL // Ed25519 ID
+                                        );
 
   return 0;
 }
@@ -1592,12 +1604,16 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
  */
 int
 connection_or_client_learned_peer_id(or_connection_t *conn,
-                                     const uint8_t *peer_id)
+                                     const uint8_t *rsa_peer_id,
+                                     const ed25519_public_key_t *ed_peer_id)
 {
+  (void) ed_peer_id; // not used yet.
+
   const or_options_t *options = get_options();
 
   if (tor_digest_is_zero(conn->identity_digest)) {
-    connection_or_set_identity_digest(conn, (const char*)peer_id);
+    connection_or_set_identity_digest(conn,
+                                      (const char*)rsa_peer_id, ed_peer_id);
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
@@ -1609,14 +1625,14 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     /* if it's a bridge and we didn't know its identity fingerprint, now
      * we do -- remember it for future attempts. */
     learned_router_identity(&conn->base_.addr, conn->base_.port,
-                            (const char*)peer_id);
+                            (const char*)rsa_peer_id /*, ed_peer_id XXXX */);
   }
 
-  if (tor_memneq(peer_id, conn->identity_digest, DIGEST_LEN)) {
+  if (tor_memneq(rsa_peer_id, conn->identity_digest, DIGEST_LEN)) {
     /* I was aiming for a particular digest. I didn't get it! */
     char seen[HEX_DIGEST_LEN+1];
     char expected[HEX_DIGEST_LEN+1];
-    base16_encode(seen, sizeof(seen), (const char*)peer_id, DIGEST_LEN);
+    base16_encode(seen, sizeof(seen), (const char*)rsa_peer_id, DIGEST_LEN);
     base16_encode(expected, sizeof(expected), conn->identity_digest,
                   DIGEST_LEN);
     const int using_hardcoded_fingerprints =
@@ -1669,7 +1685,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
   }
   if (authdir_mode_tests_reachability(options)) {
     dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
-                            (const char*)peer_id);
+                            (const char*)rsa_peer_id /*, ed_id XXXX */);
   }
 
   return 0;
@@ -1725,7 +1741,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
     connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                         conn->base_.port, digest_rcvd, 0);
+                                         conn->base_.port, digest_rcvd,
+                                         NULL, 0);
     tor_tls_block_renegotiation(conn->tls);
     rep_hist_note_negotiated_link_proto(1, started_here);
     return connection_or_set_state_open(conn);
@@ -1734,7 +1751,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
     connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                         conn->base_.port, digest_rcvd, 0);
+                                         conn->base_.port, digest_rcvd,
+                                         NULL, 0);
     return connection_or_send_versions(conn, 0);
   }
 }
@@ -1773,6 +1791,8 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   s->started_here = started_here ? 1 : 0;
   s->digest_sent_data = 1;
   s->digest_received_data = 1;
+  s->certs = or_handshake_certs_new();
+  s->certs->started_here = s->started_here;
   return 0;
 }
 
@@ -1784,8 +1804,7 @@ or_handshake_state_free(or_handshake_state_t *state)
     return;
   crypto_digest_free(state->digest_sent);
   crypto_digest_free(state->digest_received);
-  tor_x509_cert_free(state->auth_cert);
-  tor_x509_cert_free(state->id_cert);
+  or_handshake_certs_free(state->certs);
   memwipe(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
@@ -2132,55 +2151,169 @@ connection_or_send_netinfo,(or_connection_t *conn))
   return 0;
 }
 
+/** Helper used to add an encoded certs to a cert cell */
+static void
+add_certs_cell_cert_helper(certs_cell_t *certs_cell,
+                           uint8_t cert_type,
+                           const uint8_t *cert_encoded,
+                           size_t cert_len)
+{
+  tor_assert(cert_len <= UINT16_MAX);
+  certs_cell_cert_t *ccc = certs_cell_cert_new();
+  ccc->cert_type = cert_type;
+  ccc->cert_len = cert_len;
+  certs_cell_cert_setlen_body(ccc, cert_len);
+  memcpy(certs_cell_cert_getarray_body(ccc), cert_encoded, cert_len);
+
+  certs_cell_add_certs(certs_cell, ccc);
+}
+
+/** Add an encoded X509 cert (stored as <b>cert_len</b> bytes at
+ * <b>cert_encoded</b>) to the trunnel certs_cell_t object that we are
+ * building in <b>certs_cell</b>.  Set its type field to <b>cert_type</b>. */
+static void
+add_x509_cert(certs_cell_t *certs_cell,
+              uint8_t cert_type,
+              const tor_x509_cert_t *cert)
+{
+  if (NULL == cert)
+    return;
+
+  const uint8_t *cert_encoded = NULL;
+  size_t cert_len;
+  tor_x509_cert_get_der(cert, &cert_encoded, &cert_len);
+
+  add_certs_cell_cert_helper(certs_cell, cert_type, cert_encoded, cert_len);
+}
+
+/** Add an Ed25519 cert from <b>cert</b> to the trunnel certs_cell_t object
+ * that we are building in <b>certs_cell</b>.  Set its type field to
+ * <b>cert_type</b>. */
+static void
+add_ed25519_cert(certs_cell_t *certs_cell,
+                 uint8_t cert_type,
+                 const tor_cert_t *cert)
+{
+  if (NULL == cert)
+    return;
+
+  add_certs_cell_cert_helper(certs_cell, cert_type,
+                             cert->encoded, cert->encoded_len);
+}
+
 /** Send a CERTS cell on the connection <b>conn</b>.  Return 0 on success, -1
  * on failure. */
 int
 connection_or_send_certs_cell(or_connection_t *conn)
 {
   const tor_x509_cert_t *link_cert = NULL, *id_cert = NULL;
-  const uint8_t *link_encoded = NULL, *id_encoded = NULL;
-  size_t link_len, id_len;
   var_cell_t *cell;
-  size_t cell_len;
-  ssize_t pos;
+
+  certs_cell_t *certs_cell = NULL;
 
   tor_assert(conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
 
   if (! conn->handshake_state)
     return -1;
+
   const int conn_in_server_mode = ! conn->handshake_state->started_here;
+
+  /* Get the encoded values of the X509 certificates */
   if (tor_tls_get_my_certs(conn_in_server_mode, &link_cert, &id_cert) < 0)
     return -1;
-  tor_x509_cert_get_der(link_cert, &link_encoded, &link_len);
-  tor_x509_cert_get_der(id_cert, &id_encoded, &id_len);
 
-  cell_len = 1 /* 1 byte: num certs in cell */ +
-             2 * ( 1 + 2 ) /* For each cert: 1 byte for type, 2 for length */ +
-             link_len + id_len;
-  cell = var_cell_new(cell_len);
+  tor_assert(link_cert);
+  tor_assert(id_cert);
+
+  certs_cell = certs_cell_new();
+
+  /* Start adding certs.  First the link cert or auth1024 cert. */
+  if (conn_in_server_mode) {
+    add_x509_cert(certs_cell,
+                  OR_CERT_TYPE_TLS_LINK, link_cert);
+  } else {
+    add_x509_cert(certs_cell,
+                  OR_CERT_TYPE_AUTH_1024, link_cert);
+  }
+
+  /* Next the RSA->RSA ID cert */
+  add_x509_cert(certs_cell,
+                OR_CERT_TYPE_ID_1024, id_cert);
+
+  /* Next the Ed25519 certs */
+  add_ed25519_cert(certs_cell,
+                   CERTTYPE_ED_ID_SIGN,
+                   get_master_signing_key_cert());
+  if (conn_in_server_mode) {
+    add_ed25519_cert(certs_cell,
+                     CERTTYPE_ED_SIGN_LINK,
+                     get_current_link_cert_cert());
+  } else {
+    add_ed25519_cert(certs_cell,
+                     CERTTYPE_ED_SIGN_AUTH,
+                     get_current_auth_key_cert());
+  }
+
+  /* And finally the crosscert. */
+  {
+    const uint8_t *crosscert=NULL;
+    size_t crosscert_len;
+    get_master_rsa_crosscert(&crosscert, &crosscert_len);
+    if (crosscert) {
+      add_certs_cell_cert_helper(certs_cell,
+                               CERTTYPE_RSA1024_ID_EDID,
+                               crosscert, crosscert_len);
+    }
+  }
+
+  /* We've added all the certs; make the cell. */
+  certs_cell->n_certs = certs_cell_getlen_certs(certs_cell);
+
+  ssize_t alloc_len = certs_cell_encoded_len(certs_cell);
+  tor_assert(alloc_len >= 0 && alloc_len <= UINT16_MAX);
+  cell = var_cell_new(alloc_len);
   cell->command = CELL_CERTS;
-  cell->payload[0] = 2;
-  pos = 1;
-
-  if (conn_in_server_mode)
-    cell->payload[pos] = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
-  else
-    cell->payload[pos] = OR_CERT_TYPE_AUTH_1024; /* client authentication */
-  set_uint16(&cell->payload[pos+1], htons(link_len));
-  memcpy(&cell->payload[pos+3], link_encoded, link_len);
-  pos += 3 + link_len;
-
-  cell->payload[pos] = OR_CERT_TYPE_ID_1024; /* ID cert */
-  set_uint16(&cell->payload[pos+1], htons(id_len));
-  memcpy(&cell->payload[pos+3], id_encoded, id_len);
-  pos += 3 + id_len;
-
-  tor_assert(pos == (int)cell_len); /* Otherwise we just smashed the heap */
+  ssize_t enc_len = certs_cell_encode(cell->payload, alloc_len, certs_cell);
+  tor_assert(enc_len > 0 && enc_len <= alloc_len);
+  cell->payload_len = enc_len;
 
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
+  certs_cell_free(certs_cell);
 
   return 0;
+}
+
+/** Return true iff <b>challenge_type</b> is an AUTHCHALLENGE type that
+ * we can send and receive. */
+int
+authchallenge_type_is_supported(uint16_t challenge_type)
+{
+  switch (challenge_type) {
+     case AUTHTYPE_RSA_SHA256_TLSSECRET:
+     case AUTHTYPE_ED25519_SHA256_RFC5705:
+       return 1;
+     case AUTHTYPE_RSA_SHA256_RFC5705:
+     default:
+       return 0;
+  }
+}
+
+/** Return true iff <b>challenge_type_a</b> is one that we would rather
+ * use than <b>challenge_type_b</b>. */
+int
+authchallenge_type_is_better(uint16_t challenge_type_a,
+                             uint16_t challenge_type_b)
+{
+  /* Any supported type is better than an unsupported one;
+   * all unsupported types are equally bad. */
+  if (!authchallenge_type_is_supported(challenge_type_a))
+    return 0;
+  if (!authchallenge_type_is_supported(challenge_type_b))
+    return 1;
+  /* It happens that types are superior in numerically ascending order.
+   * If that ever changes, this must change too. */
+  return (challenge_type_a > challenge_type_b);
 }
 
 /** Send an AUTH_CHALLENGE cell on the connection <b>conn</b>. Return 0
@@ -2197,17 +2330,26 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 
   auth_challenge_cell_t *ac = auth_challenge_cell_new();
 
+  tor_assert(sizeof(ac->challenge) == 32);
   crypto_rand((char*)ac->challenge, sizeof(ac->challenge));
 
   auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
+  /* Disabled, because everything that supports this method also supports
+   * the much-superior ED25519_SHA256_RFC5705 */
+  /* auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_RFC5705); */
+  auth_challenge_cell_add_methods(ac, AUTHTYPE_ED25519_SHA256_RFC5705);
   auth_challenge_cell_set_n_methods(ac,
                                     auth_challenge_cell_getlen_methods(ac));
 
   cell = var_cell_new(auth_challenge_cell_encoded_len(ac));
   ssize_t len = auth_challenge_cell_encode(cell->payload, cell->payload_len,
                                            ac);
-  if (len != cell->payload_len)
+  if (len != cell->payload_len) {
+    /* LCOV_EXCL_START */
+    log_warn(LD_BUG, "Encoded auth challenge cell length not as expected");
     goto done;
+    /* LCOV_EXCL_STOP */
+  }
   cell->command = CELL_AUTH_CHALLENGE;
 
   connection_or_write_var_cell_to_buf(cell, conn);
@@ -2221,8 +2363,8 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 }
 
 /** Compute the main body of an AUTHENTICATE cell that a client can use
- * to authenticate itself on a v3 handshake for <b>conn</b>.  Write it to the
- * <b>outlen</b>-byte buffer at <b>out</b>.
+ * to authenticate itself on a v3 handshake for <b>conn</b>.  Return it
+ * in a var_cell_t.
  *
  * If <b>server</b> is true, only calculate the first
  * V3_AUTH_FIXED_PART_LEN bytes -- the part of the authenticator that's
@@ -2238,24 +2380,44 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
  *
  * Return the length of the cell body on success, and -1 on failure.
  */
-int
+var_cell_t *
 connection_or_compute_authenticate_cell_body(or_connection_t *conn,
-                                             uint8_t *out, size_t outlen,
+                                             const int authtype,
                                              crypto_pk_t *signing_key,
-                                             int server)
+                                      const ed25519_keypair_t *ed_signing_key,
+                                      int server)
 {
   auth1_t *auth = NULL;
   auth_ctx_t *ctx = auth_ctx_new();
-  int result;
+  var_cell_t *result = NULL;
+  int old_tlssecrets_algorithm = 0;
+  const char *authtype_str = NULL;
+
+  int is_ed = 0;
 
   /* assert state is reasonable XXXX */
-
-  ctx->is_ed = 0;
+  switch (authtype) {
+  case AUTHTYPE_RSA_SHA256_TLSSECRET:
+    authtype_str = "AUTH0001";
+    old_tlssecrets_algorithm = 1;
+    break;
+  case AUTHTYPE_RSA_SHA256_RFC5705:
+    authtype_str = "AUTH0002";
+    break;
+  case AUTHTYPE_ED25519_SHA256_RFC5705:
+    authtype_str = "AUTH0003";
+    is_ed = 1;
+    break;
+  default:
+    tor_assert(0);
+    break;
+  }
 
   auth = auth1_new();
+  ctx->is_ed = is_ed;
 
   /* Type: 8 bytes. */
-  memcpy(auth1_getarray_type(auth), "AUTH0001", 8);
+  memcpy(auth1_getarray_type(auth), authtype_str, 8);
 
   {
     const tor_x509_cert_t *id_cert=NULL, *link_cert=NULL;
@@ -2265,7 +2427,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
       goto err;
     my_digests = tor_x509_cert_get_id_digests(id_cert);
     their_digests =
-      tor_x509_cert_get_id_digests(conn->handshake_state->id_cert);
+      tor_x509_cert_get_id_digests(conn->handshake_state->certs->id_cert);
     tor_assert(my_digests);
     tor_assert(their_digests);
     my_id = (uint8_t*)my_digests->d[DIGEST_SHA256];
@@ -2279,6 +2441,22 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
     /* Server ID digest: 32 octets. */
     memcpy(auth->sid, server_id, 32);
+  }
+
+  if (is_ed) {
+    const ed25519_public_key_t *my_ed_id, *their_ed_id;
+    if (!conn->handshake_state->certs->ed_id_sign) {
+      log_warn(LD_OR, "Ed authenticate without Ed ID cert from peer.");
+      goto err;
+    }
+    my_ed_id = get_master_identity_key();
+    their_ed_id = &conn->handshake_state->certs->ed_id_sign->signing_key;
+
+    const uint8_t *cid_ed = (server ? their_ed_id : my_ed_id)->pubkey;
+    const uint8_t *sid_ed = (server ? my_ed_id : their_ed_id)->pubkey;
+
+    memcpy(auth->u1_cid_ed, cid_ed, ED25519_PUBKEY_LEN);
+    memcpy(auth->u1_sid_ed, sid_ed, ED25519_PUBKEY_LEN);
   }
 
   {
@@ -2309,7 +2487,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
       cert = freecert;
     }
     if (!cert) {
-      log_warn(LD_OR, "Unable to find cert when making AUTH1 data.");
+      log_warn(LD_OR, "Unable to find cert when making %s data.",
+               authtype_str);
       goto err;
     }
 
@@ -2321,36 +2500,79 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   }
 
   /* HMAC of clientrandom and serverrandom using master key : 32 octets */
-  tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets);
+  if (old_tlssecrets_algorithm) {
+    tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets);
+  } else {
+    char label[128];
+    tor_snprintf(label, sizeof(label),
+                 "EXPORTER FOR TOR TLS CLIENT BINDING %s", authtype_str);
+    tor_tls_export_key_material(conn->tls, auth->tlssecrets,
+                                auth->cid, sizeof(auth->cid),
+                                label);
+  }
 
   /* 8 octets were reserved for the current time, but we're trying to get out
    * of the habit of sending time around willynilly.  Fortunately, nothing
    * checks it.  That's followed by 16 bytes of nonce. */
   crypto_rand((char*)auth->rand, 24);
 
+  ssize_t maxlen = auth1_encoded_len(auth, ctx);
+  if (ed_signing_key && is_ed) {
+    maxlen += ED25519_SIG_LEN;
+  } else if (signing_key && !is_ed) {
+    maxlen += crypto_pk_keysize(signing_key);
+  }
+
+  const int AUTH_CELL_HEADER_LEN = 4; /* 2 bytes of type, 2 bytes of length */
+  result = var_cell_new(AUTH_CELL_HEADER_LEN + maxlen);
+  uint8_t *const out = result->payload + AUTH_CELL_HEADER_LEN;
+  const size_t outlen = maxlen;
   ssize_t len;
+
+  result->command = CELL_AUTHENTICATE;
+  set_uint16(result->payload, htons(authtype));
+
   if ((len = auth1_encode(out, outlen, auth, ctx)) < 0) {
-    log_warn(LD_OR, "Unable to encode signed part of AUTH1 data.");
+    /* LCOV_EXCL_START */
+    log_warn(LD_BUG, "Unable to encode signed part of AUTH1 data.");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
 
   if (server) {
     auth1_t *tmp = NULL;
     ssize_t len2 = auth1_parse(&tmp, out, len, ctx);
     if (!tmp) {
-      log_warn(LD_OR, "Unable to parse signed part of AUTH1 data.");
+      /* LCOV_EXCL_START */
+      log_warn(LD_BUG, "Unable to parse signed part of AUTH1 data that we just "
+               "encoded");
       goto err;
+      /* LCOV_EXCL_STOP */
     }
-    result = (int) (tmp->end_of_fixed_part - out);
+    result->payload_len = (tmp->end_of_signed - result->payload);
+
     auth1_free(tmp);
     if (len2 != len) {
-      log_warn(LD_OR, "Mismatched length when re-parsing AUTH1 data.");
+      /* LCOV_EXCL_START */
+      log_warn(LD_BUG, "Mismatched length when re-parsing AUTH1 data.");
       goto err;
+      /* LCOV_EXCL_STOP */
     }
     goto done;
   }
 
-  if (signing_key) {
+  if (ed_signing_key && is_ed) {
+    ed25519_signature_t sig;
+    if (ed25519_sign(&sig, out, len, ed_signing_key) < 0) {
+      /* LCOV_EXCL_START */
+      log_warn(LD_BUG, "Unable to sign ed25519 authentication data");
+      goto err;
+      /* LCOV_EXCL_STOP */
+    }
+    auth1_setlen_sig(auth, ED25519_SIG_LEN);
+    memcpy(auth1_getarray_sig(auth), sig.sig, ED25519_SIG_LEN);
+
+  } else if (signing_key && !is_ed) {
     auth1_setlen_sig(auth, crypto_pk_keysize(signing_key));
 
     char d[32];
@@ -2365,18 +2587,24 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     }
 
     auth1_setlen_sig(auth, siglen);
-
-    len = auth1_encode(out, outlen, auth, ctx);
-    if (len < 0) {
-      log_warn(LD_OR, "Unable to encode signed AUTH1 data.");
-      goto err;
-    }
   }
-  result = (int) len;
+
+  len = auth1_encode(out, outlen, auth, ctx);
+  if (len < 0) {
+    /* LCOV_EXCL_START */
+    log_warn(LD_BUG, "Unable to encode signed AUTH1 data.");
+    goto err;
+    /* LCOV_EXCL_STOP */
+  }
+  tor_assert(len + AUTH_CELL_HEADER_LEN <= result->payload_len);
+  result->payload_len = len + AUTH_CELL_HEADER_LEN;
+  set_uint16(result->payload+2, htons(len));
+
   goto done;
 
  err:
-  result = -1;
+  var_cell_free(result);
+  result = NULL;
  done:
   auth1_free(auth);
   auth_ctx_free(ctx);
@@ -2390,44 +2618,29 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
 {
   var_cell_t *cell;
   crypto_pk_t *pk = tor_tls_get_my_client_auth_key();
-  int authlen;
-  size_t cell_maxlen;
   /* XXXX make sure we're actually supposed to send this! */
 
   if (!pk) {
     log_warn(LD_BUG, "Can't compute authenticate cell: no client auth key");
     return -1;
   }
-  if (authtype != AUTHTYPE_RSA_SHA256_TLSSECRET) {
+  if (! authchallenge_type_is_supported(authtype)) {
     log_warn(LD_BUG, "Tried to send authenticate cell with unknown "
              "authentication type %d", authtype);
     return -1;
   }
 
-  cell_maxlen = 4 + /* overhead */
-    V3_AUTH_BODY_LEN + /* Authentication body */
-    crypto_pk_keysize(pk) + /* Max signature length */
-    16 /* add a few extra bytes just in case. */;
-
-  cell = var_cell_new(cell_maxlen);
-  cell->command = CELL_AUTHENTICATE;
-  set_uint16(cell->payload, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
-  /* skip over length ; we don't know that yet. */
-
-  authlen = connection_or_compute_authenticate_cell_body(conn,
-                                                         cell->payload+4,
-                                                         cell_maxlen-4,
-                                                         pk,
-                                                         0 /* not server */);
-  if (authlen < 0) {
+  cell = connection_or_compute_authenticate_cell_body(conn,
+                                                 authtype,
+                                                 pk,
+                                                 get_current_auth_keypair(),
+                                                 0 /* not server */);
+  if (! cell) {
+    /* LCOV_EXCL_START */
     log_warn(LD_BUG, "Unable to compute authenticate cell!");
-    var_cell_free(cell);
     return -1;
+    /* LCOV_EXCL_STOP */
   }
-  tor_assert(authlen + 4 <= cell->payload_len);
-  set_uint16(cell->payload+2, htons(authlen));
-  cell->payload_len = authlen + 4;
-
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
 

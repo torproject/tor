@@ -32,6 +32,7 @@ static or_connection_t * tlschan_connection_or_connect_mock(
     const tor_addr_t *addr,
     uint16_t port,
     const char *digest,
+    const ed25519_public_key_t *ed_id,
     channel_tls_t *tlschan);
 static int tlschan_is_local_addr_mock(const tor_addr_t *addr);
 
@@ -70,7 +71,7 @@ test_channeltls_create(void *arg)
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
 
   /* Try connecting */
-  ch = channel_tls_connect(&test_addr, 567, test_digest);
+  ch = channel_tls_connect(&test_addr, 567, test_digest, NULL);
   tt_assert(ch != NULL);
 
  done:
@@ -119,7 +120,7 @@ test_channeltls_num_bytes_queued(void *arg)
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
 
   /* Try connecting */
-  ch = channel_tls_connect(&test_addr, 567, test_digest);
+  ch = channel_tls_connect(&test_addr, 567, test_digest, NULL);
   tt_assert(ch != NULL);
 
   /*
@@ -204,7 +205,7 @@ test_channeltls_overhead_estimate(void *arg)
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
 
   /* Try connecting */
-  ch = channel_tls_connect(&test_addr, 567, test_digest);
+  ch = channel_tls_connect(&test_addr, 567, test_digest, NULL);
   tt_assert(ch != NULL);
 
   /* First case: silly low ratios should get clamped to 1.0 */
@@ -266,9 +267,11 @@ static or_connection_t *
 tlschan_connection_or_connect_mock(const tor_addr_t *addr,
                                    uint16_t port,
                                    const char *digest,
+                                   const ed25519_public_key_t *ed_id,
                                    channel_tls_t *tlschan)
 {
   or_connection_t *result = NULL;
+  (void) ed_id; // XXXX Not yet used.
 
   tt_assert(addr != NULL);
   tt_assert(port != 0);
