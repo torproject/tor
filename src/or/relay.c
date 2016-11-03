@@ -610,14 +610,13 @@ relay_send_command_from_edge_(streamid_t stream_id, circuit_t *circ,
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_RELAY;
-  if (cpath_layer) {
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    tor_assert(cpath_layer);
     cell.circ_id = circ->n_circ_id;
     cell_direction = CELL_DIRECTION_OUT;
-  } else if (! CIRCUIT_IS_ORIGIN(circ)) {
+  } else {
     cell.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
     cell_direction = CELL_DIRECTION_IN;
-  } else {
-    return -1;
   }
 
   memset(&rh, 0, sizeof(rh));

@@ -3066,8 +3066,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     log_info(LD_GENERAL,
              "Couldn't send introduction request for service %s on circuit %u",
              serviceid, (unsigned)circuit->base_.n_circ_id);
-    reason = END_CIRC_REASON_INTERNAL;
-    goto err;
+    goto done;
   }
 
   /* We've attempted to use this circuit */
@@ -3229,8 +3228,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
                                    buf, REND_COOKIE_LEN+DH_KEY_LEN+DIGEST_LEN,
                                    circuit->cpath->prev)<0) {
     log_warn(LD_GENERAL, "Couldn't send RENDEZVOUS1 cell.");
-    reason = END_CIRC_REASON_INTERNAL;
-    goto err;
+    goto done;
   }
 
   crypto_dh_free(hop->rend_dh_handshake_state);
