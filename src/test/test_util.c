@@ -5616,14 +5616,23 @@ static void
 test_util_htonll(void *arg)
 {
   (void)arg;
-  const uint64_t n = 0x1122334455667788;
+#ifdef WORDS_BIGENDIAN
+  const uint64_t res_be = 0x8877665544332211;
+#else
+  const uint64_t res_le = 0x1122334455667788;
+#endif
+
+  tt_u64_op(0, OP_EQ, tor_htonll(0));
+  tt_u64_op(0, OP_EQ, tor_ntohll(0));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_htonll(UINT64_MAX));
+  tt_u64_op(UINT64_MAX, OP_EQ, tor_ntohll(UINT64_MAX));
 
 #ifdef WORDS_BIGENDIAN
-  tt_u64_op(tor_htonll(n), OP_EQ, n);
-  tt_u64_op(tor_ntohll(0x8877665544332211), OP_EQ, 0x8877665544332211);
+  tt_u64_op(res_be, OP_EQ, tor_htonll(0x8877665544332211));
+  tt_u64_op(res_be, OP_EQ, tor_ntohll(0x8877665544332211));
 #else
-  tt_u64_op(tor_htonll(n), OP_EQ, 0x8877665544332211);
-  tt_u64_op(tor_ntohll(0x8877665544332211), OP_EQ, n);
+  tt_u64_op(res_le, OP_EQ, tor_htonll(0x8877665544332211));
+  tt_u64_op(res_le, OP_EQ, tor_ntohll(0x8877665544332211));
 #endif
 
  done:
