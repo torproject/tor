@@ -195,6 +195,8 @@ test_directory(void *arg)
     /* Cleanup our entire cache. */
     oom_size = hs_cache_handle_oom(time(NULL), 1);
     tt_int_op(oom_size, >=, 1);
+    hs_descriptor_free(desc_zero_lifetime);
+    tor_free(desc_zero_lifetime_str);
   }
 
   /* Throw junk at it. */
@@ -236,6 +238,7 @@ test_directory(void *arg)
 
  done:
   hs_descriptor_free(desc1);
+  tor_free(desc1_str);
 }
 
 static void
