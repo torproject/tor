@@ -218,6 +218,7 @@ rend_service_free_all(void)
 
 /** Validate <b>service</b> and add it to rend_service_list if possible.
  * Return 0 on success.  On failure, free <b>service</b> and return -1.
+ * Takes ownership of <b>service</b>.
  */
 static int
 rend_add_service(rend_service_t *service)
@@ -444,6 +445,34 @@ rend_service_port_config_free(rend_service_port_config_t *p)
   tor_free(p);
 }
 
+/* Check the directory for <b>service</b>, and add the service to the global
+ * list if <b>validate_only</b> is false.
+ * If <b>validate_only</b> is true, free the service.
+ * If <b>service</b> is NULL, ignore it, and return 0.
+ * Returns 0 on success, and -1 on failure.
+ * Takes ownership of <b>service</b>.
+ */
+static int
+rend_service_check_dir_and_add(const or_options_t *options,
+                               rend_service_t *service,
+                               int validate_only)
+{
+  if (service) { /* register the one we just finished parsing */
+    if (rend_service_check_private_dir(options, service, !validate_only)
+        < 0) {
+      rend_service_free(service);
+      return -1;
+    }
+
+    if (validate_only)
+      rend_service_free(service);
+    else
+      rend_add_service(service);
+  }
+
+  return 0;
+}
+
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
  * HiddenServicePort in <b>options</b>.  Return 0 on success and -1 on
  * failure.  (If <b>validate_only</b> is set, parse, warn and return as
@@ -465,17 +494,12 @@ rend_config_services(const or_options_t *options, int validate_only)
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      if (service) { /* register the one we just finished parsing */
-        if (rend_service_check_private_dir(options, service, !validate_only)
-            < 0) {
-          rend_service_free(service);
+      /* register the service we just finished parsing
+       * this code registers every service except the last one parsed,
+       * which is registered below the loop */
+      if (rend_service_check_dir_and_add(options, service, !validate_only)
+          < 0) {
           return -1;
-        }
-
-        if (validate_only)
-          rend_service_free(service);
-        else
-          rend_add_service(service);
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
@@ -681,17 +705,12 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
     }
   }
-  if (service) {
-    if (rend_service_check_private_dir(options, service, !validate_only) < 0) {
-      rend_service_free(service);
-      return -1;
-    }
-
-    if (validate_only) {
-      rend_service_free(service);
-    } else {
-      rend_add_service(service);
-    }
+  /* register the final service after we have finished parsing all services
+   * this code only registers the last service, other services are registered
+   * within the loop */
+  if (rend_service_check_dir_and_add(options, service, !validate_only)
+      < 0) {
+    return -1;
   }
 
   /* If this is a reload and there were hidden services configured before,
