@@ -270,7 +270,7 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
     char *key_str, b64_cert[256];
     ssize_t cert_len;
     size_t key_str_len;
-    uint8_t *cert_data;
+    uint8_t *cert_data = NULL;
 
     /* Create cross certification cert. */
     cert_len = tor_make_rsa_ed25519_crosscert(&sig_key->pubkey,
@@ -284,9 +284,11 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
     /* Encode cross cert. */
     if (base64_encode(b64_cert, sizeof(b64_cert), (const char *) cert_data,
                       cert_len, BASE64_ENCODE_MULTILINE) < 0) {
+      tor_free(cert_data);
       log_warn(LD_REND, "Unable to encode legacy crosscert.");
       goto err;
     }
+    tor_free(cert_data);
     /* Convert the encryption key to a string. */
     if (crypto_pk_write_public_key_to_string(ip->enc_key.legacy, &key_str,
                                              &key_str_len) < 0) {

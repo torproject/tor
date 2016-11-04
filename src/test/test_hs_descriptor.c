@@ -498,6 +498,7 @@ test_decode_descriptor(void *arg)
   char *encoded = NULL;
   hs_descriptor_t *desc = helper_build_hs_desc(0);
   hs_descriptor_t *decoded = NULL;
+  hs_descriptor_t *desc_no_ip = NULL;
 
   (void) arg;
 
@@ -517,7 +518,7 @@ test_decode_descriptor(void *arg)
 
   /* Decode a descriptor with _no_ introduction points. */
   {
-    hs_descriptor_t *desc_no_ip = helper_build_hs_desc(1);
+    desc_no_ip = helper_build_hs_desc(1);
     tt_assert(desc_no_ip);
     tor_free(encoded);
     ret = hs_desc_encode_descriptor(desc_no_ip, &encoded);
@@ -531,6 +532,7 @@ test_decode_descriptor(void *arg)
 
  done:
   hs_descriptor_free(desc);
+  hs_descriptor_free(desc_no_ip);
   hs_descriptor_free(decoded);
   tor_free(encoded);
 }
