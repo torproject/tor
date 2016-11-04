@@ -295,7 +295,6 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
 
   /* The dir conn we are going to simulate */
   dir_connection_t *conn = NULL;
-  tor_addr_t mock_tor_addr;
 
   /* First extract the blinded public key that we are going to use in our
      query, and then build the actual query string. */
@@ -309,7 +308,8 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
   }
 
   /* Simulate an HTTP GET request to the HSDir */
-  conn = dir_connection_new(tor_addr_family(&mock_tor_addr));
+  conn = dir_connection_new(AF_INET);
+  tor_addr_from_ipv4h(&conn->base_.addr, 0x7f000001);
   TO_CONN(conn)->linked = 1;/* Pretend the conn is encrypted :) */
   retval = directory_handle_command_get(conn, hsdir_query_str,
                                         NULL, 0);
