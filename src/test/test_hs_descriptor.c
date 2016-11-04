@@ -102,7 +102,7 @@ helper_build_hs_desc(unsigned int no_ip)
   /* Setup encrypted data section. */
   desc->encrypted_data.create2_ntor = 1;
   desc->encrypted_data.auth_types = smartlist_new();
-  smartlist_add(desc->encrypted_data.auth_types, strdup("ed25519"));
+  smartlist_add(desc->encrypted_data.auth_types, tor_strdup("ed25519"));
   desc->encrypted_data.intro_points = smartlist_new();
   if (!no_ip) {
     /* Add four intro points. */
@@ -294,7 +294,7 @@ test_cert_encoding(void *arg)
 
  done:
   tor_cert_free(cert);
-  free(encoded);
+  tor_free(encoded);
 }
 
 /* Test the descriptor padding. */
@@ -1054,7 +1054,8 @@ test_validate_cert(void *arg)
   tor_cert_free(cert);
 
   /* Try a cert without including the signing key. */
-  cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY, &kp.pubkey, now, 3600, 0);
+  cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY, &kp.pubkey, now,
+                         3600, 0);
   tt_assert(cert);
   /* Test with a bad type. */
   ret = cert_is_valid(cert, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");

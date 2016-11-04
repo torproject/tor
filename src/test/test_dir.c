@@ -5761,7 +5761,7 @@ test_dir_post_parsing(void *arg)
     version = parse_hs_version_from_post("/tor/hs/42/publish", prefix, &end);
     tt_int_op(version, OP_EQ, 42);
     tt_str_op(end, OP_EQ, "/publish");
-    version = parse_hs_version_from_post("/tor/hs/18163/publish", prefix, &end);
+    version = parse_hs_version_from_post("/tor/hs/18163/publish",prefix, &end);
     tt_int_op(version, OP_EQ, 18163);
     tt_str_op(end, OP_EQ, "/publish");
     version = parse_hs_version_from_post("JUNKJUNKJUNK", prefix, &end);

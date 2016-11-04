@@ -382,3 +382,4 @@ hs_cache_free_all(void)
   digest256map_free(hs_cache_v3_dir, cache_dir_desc_free_);
   hs_cache_v3_dir = NULL;
 }
+

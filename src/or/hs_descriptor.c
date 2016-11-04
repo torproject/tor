@@ -314,7 +314,8 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
                                                 &ip->enc_key.curve25519)) {
       goto err;
     }
-    tor_cert_t *cross_cert = tor_cert_create(&curve_kp, CERT_TYPE_CROSS_HS_IP_KEYS,
+    tor_cert_t *cross_cert = tor_cert_create(&curve_kp,
+                                             CERT_TYPE_CROSS_HS_IP_KEYS,
                                              &sig_key->pubkey, now,
                                              HS_DESC_CERT_LIFETIME,
                                              CERT_FLAG_INCLUDE_SIGNING_KEY);

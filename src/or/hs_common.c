@@ -278,3 +278,4 @@ hs_v3_protocol_is_enabled(void)
    * it's enabled if the parameter is not found. */
   return networkstatus_get_param(NULL, "EnableOnionServicesV3", 1, 0, 1);
 }
+

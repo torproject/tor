@@ -174,7 +174,7 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
         (!edge_conn->rend_data && origin_circ->rend_data) ||
         (edge_conn->rend_data && origin_circ->rend_data &&
          rend_cmp_service_ids(rend_data_get_address(edge_conn->rend_data),
-                              rend_data_get_address(origin_circ->rend_data)))) {
+                            rend_data_get_address(origin_circ->rend_data)))) {
       /* this circ is not for this conn */
       return 0;
     }

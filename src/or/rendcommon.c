@@ -1028,4 +1028,3 @@ rend_circuit_pk_digest_eq(const origin_circuit_t *ocirc,
   return 1;
 }
 
-
