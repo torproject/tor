@@ -470,7 +470,7 @@ test_link_specifier(void *arg)
   }
 
  done:
-  return;
+  smartlist_free(link_specifiers);
 }
 
 static void

@@ -235,7 +235,7 @@ test_directory(void *arg)
   }
 
  done:
-  ;
+  hs_descriptor_free(desc1);
 }
 
 static void
@@ -432,6 +432,10 @@ test_hsdir_revision_counter_check(void *arg)
 
     /* Check that the revision counter is correct */
     tt_int_op(received_desc->plaintext_data.revision_counter, ==, 1312);
+
+    hs_descriptor_free(received_desc);
+    received_desc = NULL;
+    tor_free(received_desc_str);
   }
 
   /* Increment the revision counter and try again. Should work. */
