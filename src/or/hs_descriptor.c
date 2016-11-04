@@ -1290,10 +1290,10 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
     }
     if (rsa_ed25519_crosscert_check((const uint8_t *) tok->object_body,
           tok->object_size, ip->enc_key.legacy,
-          &desc->plaintext_data.signing_key_cert->signing_key,
+          &desc->plaintext_data.signing_key_cert->signed_key,
           approx_time()-86400)) {
-      log_warn(LD_REND, "Unable to cross certify the introduction point "
-                        "legacy encryption key.");
+      log_warn(LD_REND, "Unable to check cross-certification on the "
+                        "introduction point legacy encryption key.");
       goto err;
     }
     break;
