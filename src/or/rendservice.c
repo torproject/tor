@@ -17,6 +17,7 @@
 #include "config.h"
 #include "control.h"
 #include "directory.h"
+#include "hs_common.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -761,8 +762,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         int keep_it = 0;
         tor_assert(oc->rend_data);
         SMARTLIST_FOREACH(surviving_services, rend_service_t *, ptr, {
-          if (tor_memeq(ptr->pk_digest, oc->rend_data->rend_pk_digest,
-                      DIGEST_LEN)) {
+          if (rend_circuit_pk_digest_eq(oc, (uint8_t *) ptr->pk_digest)) {
             keep_it = 1;
             break;
           }
@@ -772,7 +772,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         log_info(LD_REND, "Closing intro point %s for service %s.",
                  safe_str_client(extend_info_describe(
                                             oc->build_state->chosen_exit)),
-                 oc->rend_data->onion_address);
+                 rend_data_get_address(oc->rend_data));
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         /* XXXX Is there another reason we should use here? */
       }
@@ -899,12 +899,13 @@ rend_service_del_ephemeral(const char *service_id)
          circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
       origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
       tor_assert(oc->rend_data);
-      if (!tor_memeq(s->pk_digest, oc->rend_data->rend_pk_digest, DIGEST_LEN))
+      if (!rend_circuit_pk_digest_eq(oc, (uint8_t *) s->pk_digest)) {
         continue;
+      }
       log_debug(LD_REND, "Closing intro point %s for service %s.",
                 safe_str_client(extend_info_describe(
                                           oc->build_state->chosen_exit)),
-                oc->rend_data->onion_address);
+                rend_data_get_address(oc->rend_data));
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     }
   } SMARTLIST_FOREACH_END(circ);
@@ -1649,7 +1650,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   const or_options_t *options = get_options();
   char *err_msg = NULL;
   int err_msg_severity = LOG_WARN;
-  const char *stage_descr = NULL;
+  const char *stage_descr = NULL, *rend_pk_digest;
   int reason = END_CIRC_REASON_TORPROTOCOL;
   /* Service/circuit/key stuff we can learn before parsing */
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
@@ -1683,14 +1684,15 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
 
   assert_circ_anonymity_ok(circuit, options);
   tor_assert(circuit->rend_data);
+  /* XXX: This is version 2 specific (only one supported). */
+  rend_pk_digest = (char *) rend_data_get_pk_digest(circuit->rend_data, NULL);
 
   /* We'll use this in a bazillion log messages */
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
+                rend_pk_digest, REND_SERVICE_ID_LEN);
 
   /* look up service depending on circuit. */
-  service =
-    rend_service_get_by_pk_digest(circuit->rend_data->rend_pk_digest);
+  service = rend_service_get_by_pk_digest(rend_pk_digest);
   if (!service) {
     log_warn(LD_BUG,
              "Internal error: Got an INTRODUCE2 cell on an intro "
@@ -1913,8 +1915,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   /* Fill in the circuit's state. */
 
   launched->rend_data =
-    rend_data_service_create(service->service_id,
-                             circuit->rend_data->rend_pk_digest,
+    rend_data_service_create(service->service_id, rend_pk_digest,
                              parsed_req->rc, service->auth_type);
 
   launched->build_state->service_pending_final_cpath_ref =
@@ -2948,9 +2949,9 @@ count_intro_point_circuits(const rend_service_t *service)
          circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
       origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
       if (oc->rend_data &&
-          !rend_cmp_service_ids(service->service_id,
-                                oc->rend_data->onion_address))
+          rend_circuit_pk_digest_eq(oc, (uint8_t *) service->pk_digest)) {
         num_ipos++;
+      }
     }
   }
   SMARTLIST_FOREACH_END(circ);
@@ -2970,17 +2971,19 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   char auth[DIGEST_LEN + 9];
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int reason = END_CIRC_REASON_TORPROTOCOL;
+  const char *rend_pk_digest;
 
   tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   assert_circ_anonymity_ok(circuit, get_options());
   tor_assert(circuit->cpath);
   tor_assert(circuit->rend_data);
+  /* XXX: This is version 2 specific (only on supported). */
+  rend_pk_digest = (char *) rend_data_get_pk_digest(circuit->rend_data, NULL);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
+                rend_pk_digest, REND_SERVICE_ID_LEN);
 
-  service = rend_service_get_by_pk_digest(
-                circuit->rend_data->rend_pk_digest);
+  service = rend_service_get_by_pk_digest(rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %u.",
              safe_str_client(serviceid), (unsigned)circuit->base_.n_circ_id);
@@ -3021,9 +3024,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
       circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_C_GENERAL);
 
       {
-        rend_data_t *rend_data = circuit->rend_data;
+        rend_data_free(circuit->rend_data);
         circuit->rend_data = NULL;
-        rend_data_free(rend_data);
       }
       {
         crypto_pk_t *intro_key = circuit->intro_key;
@@ -3106,15 +3108,17 @@ rend_service_intro_established(origin_circuit_t *circuit,
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   (void) request;
   (void) request_len;
+  tor_assert(circuit->rend_data);
+  /* XXX: This is version 2 specific (only supported one for now). */
+  const char *rend_pk_digest =
+    (char *) rend_data_get_pk_digest(circuit->rend_data, NULL);
 
   if (circuit->base_.purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     log_warn(LD_PROTOCOL,
              "received INTRO_ESTABLISHED cell on non-intro circuit.");
     goto err;
   }
-  tor_assert(circuit->rend_data);
-  service = rend_service_get_by_pk_digest(
-                circuit->rend_data->rend_pk_digest);
+  service = rend_service_get_by_pk_digest(rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unknown service on introduction circuit %u.",
              (unsigned)circuit->base_.n_circ_id);
@@ -3137,7 +3141,7 @@ rend_service_intro_established(origin_circuit_t *circuit,
   circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_S_INTRO);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32 + 1,
-                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
+                rend_pk_digest, REND_SERVICE_ID_LEN);
   log_info(LD_REND,
            "Received INTRO_ESTABLISHED cell on circuit %u for service %s",
            (unsigned)circuit->base_.n_circ_id, serviceid);
@@ -3164,12 +3168,18 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   char hexcookie[9];
   int reason;
+  const char *rend_cookie, *rend_pk_digest;
 
   tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   tor_assert(circuit->cpath);
   tor_assert(circuit->build_state);
   assert_circ_anonymity_ok(circuit, get_options());
   tor_assert(circuit->rend_data);
+
+  /* XXX: This is version 2 specific (only one supported). */
+  rend_pk_digest = (char *) rend_data_get_pk_digest(circuit->rend_data,
+                                                    NULL);
+  rend_cookie = circuit->rend_data->rend_cookie;
 
   /* Declare the circuit dirty to avoid reuse, and for path-bias */
   if (!circuit->base_.timestamp_dirty)
@@ -3180,9 +3190,9 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
 
   hop = circuit->build_state->service_pending_final_cpath_ref->cpath;
 
-  base16_encode(hexcookie,9,circuit->rend_data->rend_cookie,4);
+  base16_encode(hexcookie,9, rend_cookie,4);
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
+                rend_pk_digest, REND_SERVICE_ID_LEN);
 
   log_info(LD_REND,
            "Done building circuit %u to rendezvous with "
@@ -3211,8 +3221,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   circuit->build_state->pending_final_cpath = hop;
   circuit->build_state->service_pending_final_cpath_ref->cpath = NULL;
 
-  service = rend_service_get_by_pk_digest(
-                circuit->rend_data->rend_pk_digest);
+  service = rend_service_get_by_pk_digest(rend_pk_digest);
   if (!service) {
     log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
              "rendezvous circuit.");
@@ -3221,7 +3230,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   }
 
   /* All we need to do is send a RELAY_RENDEZVOUS1 cell... */
-  memcpy(buf, circuit->rend_data->rend_cookie, REND_COOKIE_LEN);
+  memcpy(buf, rend_cookie, REND_COOKIE_LEN);
   if (crypto_dh_get_public(hop->rend_dh_handshake_state,
                            buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
     log_warn(LD_GENERAL,"Couldn't get DH public key.");
@@ -3284,8 +3293,8 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
   origin_circuit_t *circ = NULL;
 
   tor_assert(intro);
-  while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
-                                                  CIRCUIT_PURPOSE_S_INTRO))) {
+  while ((circ = circuit_get_next_by_pk_and_purpose(circ,
+                         (uint8_t *) pk_digest, CIRCUIT_PURPOSE_S_INTRO))) {
     if (tor_memeq(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
         circ->rend_data) {
@@ -3294,8 +3303,9 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
   }
 
   circ = NULL;
-  while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
-                                        CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
+  while ((circ = circuit_get_next_by_pk_and_purpose(circ,
+                         (uint8_t *) pk_digest,
+                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     if (tor_memeq(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
         circ->rend_data) {
@@ -3334,7 +3344,7 @@ find_intro_point(origin_circuit_t *circ)
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
              TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
   tor_assert(circ->rend_data);
-  serviceid = circ->rend_data->onion_address;
+  serviceid = rend_data_get_address(circ->rend_data);
 
   SMARTLIST_FOREACH(rend_service_list, rend_service_t *, s,
     if (tor_memeq(s->service_id, serviceid, REND_SERVICE_ID_LEN_BASE32)) {
@@ -3719,10 +3729,13 @@ void
 rend_service_desc_has_uploaded(const rend_data_t *rend_data)
 {
   rend_service_t *service;
+  const char *onion_address;
 
   tor_assert(rend_data);
 
-  service = rend_service_get_by_service_id(rend_data->onion_address);
+  onion_address = rend_data_get_address(rend_data);
+
+  service = rend_service_get_by_service_id(onion_address);
   if (service == NULL) {
     return;
   }
@@ -4109,14 +4122,16 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   smartlist_t *matching_ports;
   rend_service_port_config_t *chosen_port;
   unsigned int warn_once = 0;
+  const char *rend_pk_digest;
 
   tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   tor_assert(circ->rend_data);
   log_debug(LD_REND,"beginning to hunt for addr/port");
+  /* XXX: This is version 2 specific (only one supported). */
+  rend_pk_digest = (char *) rend_data_get_pk_digest(circ->rend_data, NULL);
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circ->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
-  service = rend_service_get_by_pk_digest(
-                circ->rend_data->rend_pk_digest);
+                rend_pk_digest, REND_SERVICE_ID_LEN);
+  service = rend_service_get_by_pk_digest(rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
              "rendezvous circuit %u; closing.",

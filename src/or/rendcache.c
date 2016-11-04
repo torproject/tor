@@ -86,7 +86,7 @@ rend_cache_get_total_allocation(void)
 }
 
 /** Decrement the total bytes attributed to the rendezvous cache by n. */
-STATIC void
+void
 rend_cache_decrement_allocation(size_t n)
 {
   static int have_underflowed = 0;
@@ -103,7 +103,7 @@ rend_cache_decrement_allocation(size_t n)
 }
 
 /** Increase the total bytes attributed to the rendezvous cache by n. */
-STATIC void
+void
 rend_cache_increment_allocation(size_t n)
 {
   static int have_overflowed = 0;
@@ -462,45 +462,36 @@ rend_cache_intro_failure_note(rend_intro_point_failure_t failure,
 }
 
 /** Remove all old v2 descriptors and those for which this hidden service
- * directory is not responsible for any more.
- *
- * If at all possible, remove at least <b>force_remove</b> bytes of data.
- */
-void
-rend_cache_clean_v2_descs_as_dir(time_t now, size_t force_remove)
+ * directory is not responsible for any more. The cutoff is the time limit for
+ * which we want to keep the cache entry. In other words, any entry created
+ * before will be removed. */
+size_t
+rend_cache_clean_v2_descs_as_dir(time_t cutoff)
 {
   digestmap_iter_t *iter;
-  time_t cutoff = now - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
-  const int LAST_SERVED_CUTOFF_STEP = 1800;
-  time_t last_served_cutoff = cutoff;
   size_t bytes_removed = 0;
-  do {
-    for (iter = digestmap_iter_init(rend_cache_v2_dir);
-         !digestmap_iter_done(iter); ) {
-      const char *key;
-      void *val;
-      rend_cache_entry_t *ent;
-      digestmap_iter_get(iter, &key, &val);
-      ent = val;
-      if (ent->parsed->timestamp < cutoff ||
-          ent->last_served < last_served_cutoff) {
-        char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-        base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
-        log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
-                 safe_str_client(key_base32));
-        bytes_removed += rend_cache_entry_allocation(ent);
-        iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
-        rend_cache_entry_free(ent);
-      } else {
-        iter = digestmap_iter_next(rend_cache_v2_dir, iter);
-      }
-    }
 
-    /* In case we didn't remove enough bytes, advance the cutoff a little. */
-    last_served_cutoff += LAST_SERVED_CUTOFF_STEP;
-    if (last_served_cutoff > now)
-      break;
-  } while (bytes_removed < force_remove);
+  for (iter = digestmap_iter_init(rend_cache_v2_dir);
+       !digestmap_iter_done(iter); ) {
+    const char *key;
+    void *val;
+    rend_cache_entry_t *ent;
+    digestmap_iter_get(iter, &key, &val);
+    ent = val;
+    if (ent->parsed->timestamp < cutoff) {
+      char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+      base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
+      log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
+               safe_str_client(key_base32));
+      bytes_removed += rend_cache_entry_allocation(ent);
+      iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
+      rend_cache_entry_free(ent);
+    } else {
+      iter = digestmap_iter_next(rend_cache_v2_dir, iter);
+    }
+  }
+
+  return bytes_removed;
 }
 
 /** Lookup in the client cache the given service ID <b>query</b> for
@@ -849,6 +840,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   char want_desc_id[DIGEST_LEN];
   rend_cache_entry_t *e;
   int retval = -1;
+  rend_data_v2_t *rend_data = TO_REND_DATA_V2(rend_query);
+
   tor_assert(rend_cache);
   tor_assert(desc);
   tor_assert(desc_id_base32);
@@ -874,11 +867,11 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     log_warn(LD_REND, "Couldn't compute service ID.");
     goto err;
   }
-  if (rend_query->onion_address[0] != '\0' &&
-      strcmp(rend_query->onion_address, service_id)) {
+  if (rend_data->onion_address[0] != '\0' &&
+      strcmp(rend_data->onion_address, service_id)) {
     log_warn(LD_REND, "Received service descriptor for service ID %s; "
              "expected descriptor for service ID %s.",
-             service_id, safe_str(rend_query->onion_address));
+             service_id, safe_str(rend_data->onion_address));
     goto err;
   }
   if (tor_memneq(desc_id, want_desc_id, DIGEST_LEN)) {
@@ -890,14 +883,14 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   /* Decode/decrypt introduction points. */
   if (intro_content && intro_size > 0) {
     int n_intro_points;
-    if (rend_query->auth_type != REND_NO_AUTH &&
-        !tor_mem_is_zero(rend_query->descriptor_cookie,
-                         sizeof(rend_query->descriptor_cookie))) {
+    if (rend_data->auth_type != REND_NO_AUTH &&
+        !tor_mem_is_zero(rend_data->descriptor_cookie,
+                         sizeof(rend_data->descriptor_cookie))) {
       char *ipos_decrypted = NULL;
       size_t ipos_decrypted_size;
       if (rend_decrypt_introduction_points(&ipos_decrypted,
                                            &ipos_decrypted_size,
-                                           rend_query->descriptor_cookie,
+                                           rend_data->descriptor_cookie,
                                            intro_content,
                                            intro_size) < 0) {
         log_warn(LD_REND, "Failed to decrypt introduction points. We are "

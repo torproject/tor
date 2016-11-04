@@ -40,6 +40,7 @@
 #include "connection_edge.h"
 #include "control.h"
 #include "entrynodes.h"
+#include "hs_common.h"
 #include "nodelist.h"
 #include "networkstatus.h"
 #include "policies.h"
@@ -172,8 +173,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
     if ((edge_conn->rend_data && !origin_circ->rend_data) ||
         (!edge_conn->rend_data && origin_circ->rend_data) ||
         (edge_conn->rend_data && origin_circ->rend_data &&
-         rend_cmp_service_ids(edge_conn->rend_data->onion_address,
-                              origin_circ->rend_data->onion_address))) {
+         rend_cmp_service_ids(rend_data_get_address(edge_conn->rend_data),
+                              rend_data_get_address(origin_circ->rend_data)))) {
       /* this circ is not for this conn */
       return 0;
     }
@@ -2036,7 +2037,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       if (!extend_info) {
         log_info(LD_REND,
                  "No intro points for '%s': re-fetching service descriptor.",
-                 safe_str_client(rend_data->onion_address));
+                 safe_str_client(rend_data_get_address(rend_data)));
         rend_client_refetch_v2_renddesc(rend_data);
         connection_ap_mark_as_non_pending_circuit(conn);
         ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_RENDDESC_WAIT;
@@ -2044,7 +2045,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       }
       log_info(LD_REND,"Chose %s as intro point for '%s'.",
                extend_info_describe(extend_info),
-               safe_str_client(rend_data->onion_address));
+               safe_str_client(rend_data_get_address(rend_data)));
     }
 
     /* If we have specified a particular exit node for our

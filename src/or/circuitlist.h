@@ -45,7 +45,7 @@ origin_circuit_t *circuit_get_by_global_id(uint32_t id);
 origin_circuit_t *circuit_get_ready_rend_circ_by_rend_data(
   const rend_data_t *rend_data);
 origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
-                                         const char *digest, uint8_t purpose);
+                                         const uint8_t *digest, uint8_t purpose);
 or_circuit_t *circuit_get_rendezvous(const uint8_t *cookie);
 or_circuit_t *circuit_get_intro_point(const uint8_t *digest);
 void circuit_set_rendezvous_cookie(or_circuit_t *circ, const uint8_t *cookie);

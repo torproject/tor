@@ -53,10 +53,17 @@ typedef enum {
   REND_CACHE_TYPE_SERVICE = 2,
 } rend_cache_type_t;
 
+/* Return maximum lifetime in seconds of a cache entry. */
+static inline time_t
+rend_cache_max_entry_lifetime(void)
+{
+  return REND_CACHE_MAX_AGE + REND_CACHE_MAX_SKEW;
+}
+
 void rend_cache_init(void);
 void rend_cache_clean(time_t now, rend_cache_type_t cache_type);
 void rend_cache_failure_clean(time_t now);
-void rend_cache_clean_v2_descs_as_dir(time_t now, size_t min_to_remove);
+size_t rend_cache_clean_v2_descs_as_dir(time_t cutoff);
 void rend_cache_purge(void);
 void rend_cache_free_all(void);
 int rend_cache_lookup_entry(const char *query, int version,
@@ -77,6 +84,8 @@ void rend_cache_intro_failure_note(rend_intro_point_failure_t failure,
                                    const uint8_t *identity,
                                    const char *service_id);
 void rend_cache_failure_purge(void);
+void rend_cache_decrement_allocation(size_t n);
+void rend_cache_increment_allocation(size_t n);
 
 #ifdef RENDCACHE_PRIVATE
 
@@ -89,8 +98,6 @@ STATIC int cache_failure_intro_lookup(const uint8_t *identity,
                                       const char *service_id,
                                       rend_cache_failure_intro_t
                                       **intro_entry);
-STATIC void rend_cache_decrement_allocation(size_t n);
-STATIC void rend_cache_increment_allocation(size_t n);
 STATIC rend_cache_failure_intro_t *rend_cache_failure_intro_entry_new(
                                       rend_intro_point_failure_t failure);
 STATIC rend_cache_failure_t *rend_cache_failure_entry_new(void);

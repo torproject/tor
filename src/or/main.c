@@ -73,6 +73,7 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "hs_cache.h"
 #include "keypin.h"
 #include "main.h"
 #include "microdesc.h"
@@ -1748,7 +1749,7 @@ clean_caches_callback(time_t now, const or_options_t *options)
   rep_history_clean(now - options->RephistTrackTime);
   rend_cache_clean(now, REND_CACHE_TYPE_CLIENT);
   rend_cache_clean(now, REND_CACHE_TYPE_SERVICE);
-  rend_cache_clean_v2_descs_as_dir(now, 0);
+  hs_cache_clean_as_dir(now);
   microdesc_cache_rebuild(NULL, 0);
 #define CLEAN_CACHES_INTERVAL (30*60)
   return CLEAN_CACHES_INTERVAL;
@@ -3094,6 +3095,7 @@ tor_free_all(int postfork)
   rend_service_free_all();
   rend_cache_free_all();
   rend_service_authorization_free_all();
+  hs_cache_free_all();
   rep_hist_free_all();
   dns_free_all();
   clear_pending_onions();

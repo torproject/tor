@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define DIRECTORY_PRIVATE
+
 #include "or.h"
 #include "backtrace.h"
 #include "buffers.h"
@@ -16,6 +18,8 @@
 #include "dirvote.h"
 #include "entrynodes.h"
 #include "geoip.h"
+#include "hs_cache.h"
+#include "hs_common.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -2385,10 +2389,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                          conn->identity_digest, \
                                          reason) )
     #define SEND_HS_DESC_FAILED_CONTENT() ( \
-      control_event_hs_descriptor_content(conn->rend_data->onion_address, \
-                                          conn->requested_resource, \
-                                          conn->identity_digest, \
-                                          NULL) )
+  control_event_hs_descriptor_content(rend_data_get_address(conn->rend_data), \
+                                      conn->requested_resource,         \
+                                      conn->identity_digest,            \
+                                      NULL) )
     tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
@@ -2461,7 +2465,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     #define SEND_HS_DESC_UPLOAD_FAILED_EVENT(reason) ( \
       control_event_hs_descriptor_upload_failed( \
         conn->identity_digest, \
-        conn->rend_data->onion_address, \
+        rend_data_get_address(conn->rend_data), \
         reason) )
     log_info(LD_REND,"Uploaded rendezvous descriptor (status %d "
              "(%s))",
@@ -2475,7 +2479,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "Uploading rendezvous descriptor: finished with status "
                  "200 (%s)", escaped(reason));
         control_event_hs_descriptor_uploaded(conn->identity_digest,
-                                             conn->rend_data->onion_address);
+                                    rend_data_get_address(conn->rend_data));
         rend_service_desc_has_uploaded(conn->rend_data);
         break;
       case 400:
@@ -2586,7 +2590,8 @@ connection_dir_about_to_close(dir_connection_t *dir_conn)
    * refetching is unnecessary.) */
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
       dir_conn->rend_data &&
-      strlen(dir_conn->rend_data->onion_address) == REND_SERVICE_ID_LEN_BASE32)
+      strlen(rend_data_get_address(dir_conn->rend_data)) ==
+             REND_SERVICE_ID_LEN_BASE32)
     rend_client_refetch_v2_renddesc(dir_conn->rend_data);
 }
 
@@ -2806,8 +2811,8 @@ static int handle_get_descriptor(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_keys(dir_connection_t *conn,
                                 const get_handler_args_t *args);
-static int handle_get_rendezvous2(dir_connection_t *conn,
-                                const get_handler_args_t *args);
+static int handle_get_hs_descriptor_v2(dir_connection_t *conn,
+                                       const get_handler_args_t *args);
 static int handle_get_robots(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_networkstatus_bridges(dir_connection_t *conn,
@@ -2823,7 +2828,8 @@ static const url_table_ent_t url_table[] = {
   { "/tor/server/", 1, handle_get_descriptor },
   { "/tor/extra/", 1, handle_get_descriptor },
   { "/tor/keys/", 1, handle_get_keys },
-  { "/tor/rendezvous2/", 1, handle_get_rendezvous2 },
+  { "/tor/rendezvous2/", 1, handle_get_hs_descriptor_v2 },
+  { "/tor/hs/3/", 1, handle_get_hs_descriptor_v3 },
   { "/tor/robots.txt", 0, handle_get_robots },
   { "/tor/networkstatus-bridges", 0, handle_get_networkstatus_bridges },
   { NULL, 0, NULL },
@@ -3391,7 +3397,8 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
 /** Helper function for GET /tor/rendezvous2/
  */
 static int
-handle_get_rendezvous2(dir_connection_t *conn, const get_handler_args_t *args)
+handle_get_hs_descriptor_v2(dir_connection_t *conn,
+                            const get_handler_args_t *args)
 {
   const char *url = args->url;
   if (connection_dir_is_encrypted(conn)) {
@@ -3421,6 +3428,50 @@ handle_get_rendezvous2(dir_connection_t *conn, const get_handler_args_t *args)
     /* Not encrypted! */
     write_http_status_line(conn, 404, "Not found");
   }
+ done:
+  return 0;
+}
+
+/** Helper function for GET /tor/hs/3/<z>. Only for version 3.
+ */
+STATIC int
+handle_get_hs_descriptor_v3(dir_connection_t *conn,
+                            const get_handler_args_t *args)
+{
+  int retval;
+  const char *desc_str = NULL;
+  const char *pubkey_str = NULL;
+  const char *url = args->url;
+
+  /* Don't serve v3 descriptors if next gen onion service is disabled. */
+  if (!hs_v3_protocol_is_enabled()) {
+    /* 404 is used for an unrecognized URL so send back the same. */
+    write_http_status_line(conn, 404, "Not found");
+    goto done;
+  }
+
+  /* Reject unencrypted dir connections */
+  if (!connection_dir_is_encrypted(conn)) {
+    write_http_status_line(conn, 404, "Not found");
+    goto done;
+  }
+
+  /* After the path prefix follows the base64 encoded blinded pubkey which we
+   * use to get the descriptor from the cache. Skip the prefix and get the
+   * pubkey. */
+  tor_assert(!strcmpstart(url, "/tor/hs/3/"));
+  pubkey_str = url + strlen("/tor/hs/3/");
+  retval = hs_cache_lookup_as_dir(HS_VERSION_THREE,
+                                  pubkey_str, &desc_str);
+  if (retval < 0) {
+    write_http_status_line(conn, 404, "Not found");
+    goto done;
+  }
+
+  /* Found requested descriptor! Pass it to this nice client. */
+  write_http_response_header(conn, strlen(desc_str), 0, 0);
+  connection_write_to_buf(desc_str, strlen(desc_str), TO_CONN(conn));
+
  done:
   return 0;
 }
@@ -3480,6 +3531,90 @@ handle_get_robots(dir_connection_t *conn, const get_handler_args_t *args)
   return 0;
 }
 
+/* Given the <b>url</b> from a POST request, try to extract the version number
+ * using the provided <b>prefix</b>. The version should be after the prefix and
+ * ending with the seperator "/". For instance:
+ *      /tor/hs/3/publish
+ *
+ * On success, <b>end_pos</b> points to the position right after the version
+ * was found. On error, it is set to NULL.
+ *
+ * Return version on success else negative value. */
+STATIC int
+parse_hs_version_from_post(const char *url, const char *prefix,
+                           const char **end_pos)
+{
+  int ok;
+  unsigned long version;
+  const char *start;
+  char *end = NULL;
+
+  tor_assert(url);
+  tor_assert(prefix);
+  tor_assert(end_pos);
+
+  /* Check if the prefix does start the url. */
+  if (strcmpstart(url, prefix)) {
+    goto err;
+  }
+  /* Move pointer to the end of the prefix string. */
+  start = url + strlen(prefix);
+  /* Try this to be the HS version and if we are still at the separator, next
+   * will be move to the right value. */
+  version = tor_parse_long(start, 10, 0, INT_MAX, &ok, &end);
+  if (!ok) {
+    goto err;
+  }
+
+  *end_pos = end;
+  return (int) version;
+ err:
+  *end_pos = NULL;
+  return -1;
+}
+
+/* Handle the POST request for a hidden service descripror. The request is in
+ * <b>url</b>, the body of the request is in <b>body</b>. Return 200 on success
+ * else return 400 indicating a bad request. */
+STATIC int
+handle_post_hs_descriptor(const char *url, const char *body)
+{
+  int version;
+  const char *end_pos;
+
+  tor_assert(url);
+  tor_assert(body);
+
+  version = parse_hs_version_from_post(url, "/tor/hs/", &end_pos);
+  if (version < 0) {
+    goto err;
+  }
+
+  /* We have a valid version number, now make sure it's a publish request. Use
+   * the end position just after the version and check for the command. */
+  if (strcmpstart(end_pos, "/publish")) {
+    goto err;
+  }
+
+  switch (version) {
+  case HS_VERSION_THREE:
+    if (hs_cache_store_as_dir(body) < 0) {
+      goto err;
+    }
+    log_info(LD_REND, "Publish request for HS descriptor handled "
+                      "successfully.");
+    break;
+  default:
+    /* Unsupported version, return a bad request. */
+    goto err;
+  }
+
+  return 200;
+ err:
+  /* Bad request. */
+  return 400;
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP POST
  * request.  Look for an uploaded server descriptor or rendezvous
  * service descriptor.  On finding one, process it and write a
@@ -3521,6 +3656,28 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 200, "Service descriptor (v2) stored");
       log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
     }
+    goto done;
+  }
+
+  /* Handle HS descriptor publish request. */
+  /* XXX: This should be disabled with a consensus param until we want to
+   * the prop224 be deployed and thus use. */
+  if (connection_dir_is_encrypted(conn) && !strcmpstart(url, "/tor/hs/")) {
+    const char *msg = "HS descriptor stored successfully.";
+    /* Don't accept v3 and onward publish request if next gen onion service is
+     * disabled. */
+    if (!hs_v3_protocol_is_enabled()) {
+      /* 404 is used for an unrecognized URL so send back the same. */
+      write_http_status_line(conn, 404, "Not found");
+      goto done;
+    }
+
+    /* We most probably have a publish request for an HS descriptor. */
+    int code = handle_post_hs_descriptor(url, body);
+    if (code != 200) {
+      msg = "Invalid HS descriptor. Rejected.";
+    }
+    write_http_status_line(conn, code, msg);
     goto done;
   }
 

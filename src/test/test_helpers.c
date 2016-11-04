@@ -12,6 +12,7 @@
 
 #include "routerlist.h"
 #include "nodelist.h"
+#include "buffers.h"
 
 #include "test.h"
 #include "test_helpers.h"
@@ -90,5 +91,17 @@ helper_setup_fake_routerlist(void)
 
  done:
   UNMOCK(router_descriptor_is_older_than);
+}
+
+void
+connection_write_to_buf_mock(const char *string, size_t len,
+                             connection_t *conn, int zlib)
+{
+  (void) zlib;
+
+  tor_assert(string);
+  tor_assert(conn);
+
+  write_to_buf(string, len, conn->outbuf);
 }
 

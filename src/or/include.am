@@ -48,6 +48,9 @@ LIBTOR_A_SOURCES = \
 	src/or/entrynodes.c				\
 	src/or/ext_orport.c				\
 	src/or/hibernate.c				\
+	src/or/hs_cache.c				\
+	src/or/hs_common.c				\
+	src/or/hs_descriptor.c				\
 	src/or/keypin.c					\
 	src/or/main.c					\
 	src/or/microdesc.c				\
@@ -59,6 +62,7 @@ LIBTOR_A_SOURCES = \
 	src/or/shared_random.c			\
 	src/or/shared_random_state.c		\
 	src/or/transports.c				\
+	src/or/parsecommon.c			\
 	src/or/periodic.c				\
 	src/or/protover.c				\
 	src/or/policies.c				\
@@ -157,6 +161,9 @@ ORHEADERS = \
 	src/or/geoip.h					\
 	src/or/entrynodes.h				\
 	src/or/hibernate.h				\
+	src/or/hs_cache.h				\
+	src/or/hs_common.h				\
+	src/or/hs_descriptor.h				\
 	src/or/keypin.h					\
 	src/or/main.h					\
 	src/or/microdesc.h				\
@@ -171,6 +178,7 @@ ORHEADERS = \
 	src/or/shared_random.h			\
 	src/or/shared_random_state.h		\
 	src/or/transports.h				\
+	src/or/parsecommon.h			\
 	src/or/periodic.h				\
 	src/or/policies.h				\
 	src/or/protover.h				\

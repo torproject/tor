@@ -10,6 +10,7 @@
 #include "test.h"
 
 #include "connection.h"
+#include "hs_common.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -265,13 +266,9 @@ test_conn_get_rend_setup(const struct testcase_t *tc)
   rend_cache_init();
 
   /* TODO: use directory_initiate_command_rend() to do this - maybe? */
-  conn->rend_data = tor_malloc_zero(sizeof(rend_data_t));
   tor_assert(strlen(TEST_CONN_REND_ADDR) == REND_SERVICE_ID_LEN_BASE32);
-  memcpy(conn->rend_data->onion_address,
-         TEST_CONN_REND_ADDR,
-         REND_SERVICE_ID_LEN_BASE32+1);
-  conn->rend_data->hsdirs_fp = smartlist_new();
-
+  conn->rend_data = rend_data_client_create(TEST_CONN_REND_ADDR, NULL, NULL,
+                                            REND_NO_AUTH);
   assert_connection_ok(&conn->base_, time(NULL));
   return conn;
 
@@ -551,7 +548,8 @@ test_conn_get_rend(void *arg)
   tt_assert(connection_get_by_type_state_rendquery(
                                             conn->base_.type,
                                             conn->base_.state,
-                                            conn->rend_data->onion_address)
+                                            rend_data_get_address(
+                                                      conn->rend_data))
             == TO_CONN(conn));
   tt_assert(connection_get_by_type_state_rendquery(
                                             TEST_CONN_TYPE,

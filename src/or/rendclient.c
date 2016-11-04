@@ -16,6 +16,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "directory.h"
+#include "hs_common.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -104,7 +105,7 @@ rend_client_reextend_intro_circuit(origin_circuit_t *circ)
   if (!extend_info) {
     log_warn(LD_REND,
              "No usable introduction points left for %s. Closing.",
-             safe_str_client(circ->rend_data->onion_address));
+             safe_str_client(rend_data_get_address(circ->rend_data)));
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return -1;
   }
@@ -144,18 +145,19 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   off_t dh_offset;
   crypto_pk_t *intro_key = NULL;
   int status = 0;
+  const char *onion_address;
 
   tor_assert(introcirc->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->base_.purpose == CIRCUIT_PURPOSE_C_REND_READY);
   tor_assert(introcirc->rend_data);
   tor_assert(rendcirc->rend_data);
-  tor_assert(!rend_cmp_service_ids(introcirc->rend_data->onion_address,
-                                   rendcirc->rend_data->onion_address));
+  tor_assert(!rend_cmp_service_ids(rend_data_get_address(introcirc->rend_data),
+                                  rend_data_get_address(rendcirc->rend_data)));
   assert_circ_anonymity_ok(introcirc, options);
   assert_circ_anonymity_ok(rendcirc, options);
+  onion_address = rend_data_get_address(introcirc->rend_data);
 
-  r = rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
-                              &entry);
+  r = rend_cache_lookup_entry(onion_address, -1, &entry);
   /* An invalid onion address is not possible else we have a big issue. */
   tor_assert(r != -EINVAL);
   if (r < 0 || !rend_client_any_intro_points_usable(entry)) {
@@ -164,14 +166,13 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     log_info(LD_REND,
              "query %s didn't have valid rend desc in cache. "
              "Refetching descriptor.",
-             safe_str_client(introcirc->rend_data->onion_address));
+             safe_str_client(onion_address));
     rend_client_refetch_v2_renddesc(introcirc->rend_data);
     {
       connection_t *conn;
 
       while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
-                       AP_CONN_STATE_CIRCUIT_WAIT,
-                       introcirc->rend_data->onion_address))) {
+                       AP_CONN_STATE_CIRCUIT_WAIT, onion_address))) {
         connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
       }
@@ -195,7 +196,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     log_info(LD_REND, "Could not find intro key for %s at %s; we "
              "have a v2 rend desc with %d intro points. "
              "Trying a different intro point...",
-             safe_str_client(introcirc->rend_data->onion_address),
+             safe_str_client(onion_address),
              safe_str_client(extend_info_describe(
                                    introcirc->build_state->chosen_exit)),
              smartlist_len(entry->parsed->intro_nodes));
@@ -235,11 +236,12 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   /* If version is 3, write (optional) auth data and timestamp. */
   if (entry->parsed->protocols & (1<<3)) {
     tmp[0] = 3; /* version 3 of the cell format */
-    tmp[1] = (uint8_t)introcirc->rend_data->auth_type; /* auth type, if any */
+    /* auth type, if any */
+    tmp[1] = (uint8_t) TO_REND_DATA_V2(introcirc->rend_data)->auth_type;
     v3_shift = 1;
-    if (introcirc->rend_data->auth_type != REND_NO_AUTH) {
+    if (tmp[1] != REND_NO_AUTH) {
       set_uint16(tmp+2, htons(REND_DESC_COOKIE_LEN));
-      memcpy(tmp+4, introcirc->rend_data->descriptor_cookie,
+      memcpy(tmp+4, TO_REND_DATA_V2(introcirc->rend_data)->descriptor_cookie,
              REND_DESC_COOKIE_LEN);
       v3_shift += 2+REND_DESC_COOKIE_LEN;
     }
@@ -359,7 +361,7 @@ rend_client_rendcirc_has_opened(origin_circuit_t *circ)
  * Called to close other intro circuits we launched in parallel.
  */
 static void
-rend_client_close_other_intros(const char *onion_address)
+rend_client_close_other_intros(const uint8_t *rend_pk_digest)
 {
   /* abort parallel intro circs, if any */
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, c) {
@@ -368,8 +370,7 @@ rend_client_close_other_intros(const char *onion_address)
         !c->marked_for_close && CIRCUIT_IS_ORIGIN(c)) {
       origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(c);
       if (oc->rend_data &&
-          !rend_cmp_service_ids(onion_address,
-                                oc->rend_data->onion_address)) {
+          rend_circuit_pk_digest_eq(oc, rend_pk_digest)) {
         log_info(LD_REND|LD_CIRC, "Closing introduction circuit %d that we "
                  "built in parallel (Purpose %d).", oc->global_identifier,
                  c->purpose);
@@ -431,7 +432,8 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
 
     /* close any other intros launched in parallel */
-    rend_client_close_other_intros(circ->rend_data->onion_address);
+    rend_client_close_other_intros(rend_data_get_pk_digest(circ->rend_data,
+                                                           NULL));
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_INTRODUCING);
@@ -440,7 +442,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
      * If none remain, refetch the service descriptor.
      */
     log_info(LD_REND, "Got nack for %s from %s...",
-        safe_str_client(circ->rend_data->onion_address),
+        safe_str_client(rend_data_get_address(circ->rend_data)),
         safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
     if (rend_client_report_intro_point_failure(circ->build_state->chosen_exit,
                                              circ->rend_data,
@@ -694,13 +696,15 @@ pick_hsdir(const char *desc_id, const char *desc_id_base32)
  * in the case that no hidden service directory is left to ask for the
  * descriptor, return 0, and in case of a failure -1.  */
 static int
-directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
+directory_get_from_hs_dir(const char *desc_id,
+                          const rend_data_t *rend_query,
                           routerstatus_t *rs_hsdir)
 {
   routerstatus_t *hs_dir = rs_hsdir;
   char *hsdir_fp;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
+  const rend_data_v2_t *rend_data;
 #ifdef ENABLE_TOR2WEB_MODE
   const int tor2web_mode = get_options()->Tor2webMode;
   const int how_to_fetch = tor2web_mode ? DIRIND_ONEHOP : DIRIND_ANONYMOUS;
@@ -709,6 +713,8 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
 #endif
 
   tor_assert(desc_id);
+  tor_assert(rend_query);
+  rend_data = TO_REND_DATA_V2(rend_query);
 
   base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 desc_id, DIGEST_LEN);
@@ -731,10 +737,11 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
   /* Encode descriptor cookie for logging purposes. Also, if the cookie is
    * malformed, no fetch is triggered thus this needs to be done before the
    * fetch request. */
-  if (rend_query->auth_type != REND_NO_AUTH) {
+  if (rend_data->auth_type != REND_NO_AUTH) {
     if (base64_encode(descriptor_cookie_base64,
                       sizeof(descriptor_cookie_base64),
-                      rend_query->descriptor_cookie, REND_DESC_COOKIE_LEN,
+                      rend_data->descriptor_cookie,
+                      REND_DESC_COOKIE_LEN,
                       0)<0) {
       log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
       return 0;
@@ -760,9 +767,9 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
                     "service '%s' with descriptor ID '%s', auth type %d, "
                     "and descriptor cookie '%s' to hidden service "
                     "directory %s",
-           rend_query->onion_address, desc_id_base32,
-           rend_query->auth_type,
-           (rend_query->auth_type == REND_NO_AUTH ? "[none]" :
+           rend_data->onion_address, desc_id_base32,
+           rend_data->auth_type,
+           (rend_data->auth_type == REND_NO_AUTH ? "[none]" :
             escaped_safe_str_client(descriptor_cookie_base64)),
            routerstatus_describe(hs_dir));
   control_event_hs_descriptor_requested(rend_query,
@@ -777,8 +784,8 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
  * On success, 1 is returned. If no hidden service is left to ask, return 0.
  * On error, -1 is returned. */
 static int
-fetch_v2_desc_by_descid(const char *desc_id, const rend_data_t *rend_query,
-                        smartlist_t *hsdirs)
+fetch_v2_desc_by_descid(const char *desc_id,
+                        const rend_data_t *rend_query, smartlist_t *hsdirs)
 {
   int ret;
 
@@ -811,13 +818,12 @@ fetch_v2_desc_by_descid(const char *desc_id, const rend_data_t *rend_query,
  * On success, 1 is returned. If no hidden service is left to ask, return 0.
  * On error, -1 is returned. */
 static int
-fetch_v2_desc_by_addr(rend_data_t *query, smartlist_t *hsdirs)
+fetch_v2_desc_by_addr(rend_data_t *rend_query, smartlist_t *hsdirs)
 {
   char descriptor_id[DIGEST_LEN];
   int replicas_left_to_try[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS];
   int i, tries_left, ret;
-
-  tor_assert(query);
+  rend_data_v2_t *rend_data = TO_REND_DATA_V2(rend_query);
 
   /* Randomly iterate over the replicas until a descriptor can be fetched
    * from one of the consecutive nodes, or no options are left. */
@@ -831,9 +837,10 @@ fetch_v2_desc_by_addr(rend_data_t *query, smartlist_t *hsdirs)
     int chosen_replica = replicas_left_to_try[rand_val];
     replicas_left_to_try[rand_val] = replicas_left_to_try[--tries_left];
 
-    ret = rend_compute_v2_desc_id(descriptor_id, query->onion_address,
-                                  query->auth_type == REND_STEALTH_AUTH ?
-                                  query->descriptor_cookie : NULL,
+    ret = rend_compute_v2_desc_id(descriptor_id,
+                                  rend_data->onion_address,
+                                  rend_data->auth_type == REND_STEALTH_AUTH ?
+                                    rend_data->descriptor_cookie : NULL,
                                   time(NULL), chosen_replica);
     if (ret < 0) {
       /* Normally, on failure the descriptor_id is untouched but let's be
@@ -841,18 +848,18 @@ fetch_v2_desc_by_addr(rend_data_t *query, smartlist_t *hsdirs)
       goto end;
     }
 
-    if (tor_memcmp(descriptor_id, query->descriptor_id[chosen_replica],
+    if (tor_memcmp(descriptor_id, rend_data->descriptor_id[chosen_replica],
                    sizeof(descriptor_id)) != 0) {
       /* Not equal from what we currently have so purge the last hid serv
        * request cache and update the descriptor ID with the new value. */
       purge_hid_serv_from_last_hid_serv_requests(
-                                        query->descriptor_id[chosen_replica]);
-      memcpy(query->descriptor_id[chosen_replica], descriptor_id,
-             sizeof(query->descriptor_id[chosen_replica]));
+                                     rend_data->descriptor_id[chosen_replica]);
+      memcpy(rend_data->descriptor_id[chosen_replica], descriptor_id,
+             sizeof(rend_data->descriptor_id[chosen_replica]));
     }
 
     /* Trigger the fetch with the computed descriptor ID. */
-    ret = fetch_v2_desc_by_descid(descriptor_id, query, hsdirs);
+    ret = fetch_v2_desc_by_descid(descriptor_id, rend_query, hsdirs);
     if (ret != 0) {
       /* Either on success or failure, as long as we tried a fetch we are
        * done here. */
@@ -880,16 +887,23 @@ int
 rend_client_fetch_v2_desc(rend_data_t *query, smartlist_t *hsdirs)
 {
   int ret;
+  rend_data_v2_t *rend_data;
+  const char *onion_address;
 
   tor_assert(query);
+
+  /* Get the version 2 data structure of the query. */
+  rend_data = TO_REND_DATA_V2(query);
+  onion_address = rend_data_get_address(query);
 
   /* Depending on what's available in the rend data query object, we will
    * trigger a fetch by HS address or using a descriptor ID. */
 
-  if (query->onion_address[0] != '\0') {
+  if (onion_address[0] != '\0') {
     ret = fetch_v2_desc_by_addr(query, hsdirs);
-  } else if (!tor_digest_is_zero(query->desc_id_fetch)) {
-    ret = fetch_v2_desc_by_descid(query->desc_id_fetch, query, hsdirs);
+  } else if (!tor_digest_is_zero(rend_data->desc_id_fetch)) {
+    ret = fetch_v2_desc_by_descid(rend_data->desc_id_fetch, query,
+                                  hsdirs);
   } else {
     /* Query data is invalid. */
     ret = -1;
@@ -907,10 +921,11 @@ void
 rend_client_refetch_v2_renddesc(rend_data_t *rend_query)
 {
   rend_cache_entry_t *e = NULL;
+  const char *onion_address = rend_data_get_address(rend_query);
 
   tor_assert(rend_query);
   /* Before fetching, check if we already have a usable descriptor here. */
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) == 0 &&
+  if (rend_cache_lookup_entry(onion_address, -1, &e) == 0 &&
       rend_client_any_intro_points_usable(e)) {
     log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
                       "already have a usable descriptor here. Not fetching.");
@@ -923,7 +938,7 @@ rend_client_refetch_v2_renddesc(rend_data_t *rend_query)
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
-            safe_str_client(rend_query->onion_address));
+            safe_str_client(onion_address));
 
   rend_client_fetch_v2_desc(rend_query, NULL);
   /* We don't need to look the error code because either on failure or
@@ -959,7 +974,7 @@ rend_client_cancel_descriptor_fetches(void)
       } else {
         log_debug(LD_REND, "Marking for close dir conn fetching "
                   "rendezvous descriptor for service %s",
-                  safe_str(rd->onion_address));
+                  safe_str(rend_data_get_address(rd)));
       }
       connection_mark_for_close(conn);
     }
@@ -989,25 +1004,26 @@ rend_client_cancel_descriptor_fetches(void)
  */
 int
 rend_client_report_intro_point_failure(extend_info_t *failed_intro,
-                                       rend_data_t *rend_query,
+                                       rend_data_t *rend_data,
                                        unsigned int failure_type)
 {
   int i, r;
   rend_cache_entry_t *ent;
   connection_t *conn;
+  const char *onion_address = rend_data_get_address(rend_data);
 
-  r = rend_cache_lookup_entry(rend_query->onion_address, -1, &ent);
+  r = rend_cache_lookup_entry(onion_address, -1, &ent);
   if (r < 0) {
     /* Either invalid onion address or cache entry not found. */
     switch (-r) {
     case EINVAL:
       log_warn(LD_BUG, "Malformed service ID %s.",
-          escaped_safe_str_client(rend_query->onion_address));
+               escaped_safe_str_client(onion_address));
       return -1;
     case ENOENT:
       log_info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
-          escaped_safe_str_client(rend_query->onion_address));
-      rend_client_refetch_v2_renddesc(rend_query);
+               escaped_safe_str_client(onion_address));
+      rend_client_refetch_v2_renddesc(rend_data);
       return 0;
     default:
       log_warn(LD_BUG, "Unknown cache lookup returned code: %d", r);
@@ -1031,7 +1047,7 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
       case INTRO_POINT_FAILURE_GENERIC:
         rend_cache_intro_failure_note(failure_type,
                                       (uint8_t *)failed_intro->identity_digest,
-                                      rend_query->onion_address);
+                                      onion_address);
         rend_intro_point_free(intro);
         smartlist_del(ent->parsed->intro_nodes, i);
         break;
@@ -1049,8 +1065,7 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
           if (zap_intro_point) {
             rend_cache_intro_failure_note(
                 failure_type,
-                (uint8_t *) failed_intro->identity_digest,
-                rend_query->onion_address);
+                (uint8_t *) failed_intro->identity_digest, onion_address);
             rend_intro_point_free(intro);
             smartlist_del(ent->parsed->intro_nodes, i);
           }
@@ -1064,14 +1079,14 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
   if (! rend_client_any_intro_points_usable(ent)) {
     log_info(LD_REND,
              "No more intro points remain for %s. Re-fetching descriptor.",
-             escaped_safe_str_client(rend_query->onion_address));
-    rend_client_refetch_v2_renddesc(rend_query);
+             escaped_safe_str_client(onion_address));
+    rend_client_refetch_v2_renddesc(rend_data);
 
     /* move all pending streams back to renddesc_wait */
     /* NOTE: We can now do this faster, if we use pending_entry_connections */
     while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                    AP_CONN_STATE_CIRCUIT_WAIT,
-                                   rend_query->onion_address))) {
+                                   onion_address))) {
       connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
     }
@@ -1080,7 +1095,7 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
   }
   log_info(LD_REND,"%d options left for %s.",
            smartlist_len(ent->parsed->intro_nodes),
-           escaped_safe_str_client(rend_query->onion_address));
+           escaped_safe_str_client(onion_address));
   return 1;
 }
 
@@ -1221,10 +1236,11 @@ rend_client_desc_trynow(const char *query)
     rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data;
     if (!rend_data)
       continue;
-    if (rend_cmp_service_ids(query, rend_data->onion_address))
+    const char *onion_address = rend_data_get_address(rend_data);
+    if (rend_cmp_service_ids(query, onion_address))
       continue;
     assert_connection_ok(base_conn, now);
-    if (rend_cache_lookup_entry(rend_data->onion_address, -1,
+    if (rend_cache_lookup_entry(onion_address, -1,
                                 &entry) == 0 &&
         rend_client_any_intro_points_usable(entry)) {
       /* either this fetch worked, or it failed but there was a
@@ -1259,11 +1275,12 @@ rend_client_note_connection_attempt_ended(const rend_data_t *rend_data)
 {
   unsigned int have_onion = 0;
   rend_cache_entry_t *cache_entry = NULL;
+  const char *onion_address = rend_data_get_address(rend_data);
+  rend_data_v2_t *rend_data_v2 = TO_REND_DATA_V2(rend_data);
 
-  if (*rend_data->onion_address != '\0') {
+  if (onion_address[0] != '\0') {
     /* Ignore return value; we find an entry, or we don't. */
-    (void) rend_cache_lookup_entry(rend_data->onion_address, -1,
-                                   &cache_entry);
+    (void) rend_cache_lookup_entry(onion_address, -1, &cache_entry);
     have_onion = 1;
   }
 
@@ -1277,17 +1294,17 @@ rend_client_note_connection_attempt_ended(const rend_data_t *rend_data)
   /* Remove the HS's entries in last_hid_serv_requests. */
   if (have_onion) {
     unsigned int replica;
-    for (replica = 0; replica < ARRAY_LENGTH(rend_data->descriptor_id);
+    for (replica = 0; replica < ARRAY_LENGTH(rend_data_v2->descriptor_id);
          replica++) {
-      const char *desc_id = rend_data->descriptor_id[replica];
+      const char *desc_id = rend_data_v2->descriptor_id[replica];
       purge_hid_serv_from_last_hid_serv_requests(desc_id);
     }
     log_info(LD_REND, "Connection attempt for %s has ended; "
              "cleaning up temporary state.",
-             safe_str_client(rend_data->onion_address));
+             safe_str_client(onion_address));
   } else {
     /* We only have an ID for a fetch. Probably used by HSFETCH. */
-    purge_hid_serv_from_last_hid_serv_requests(rend_data->desc_id_fetch);
+    purge_hid_serv_from_last_hid_serv_requests(rend_data_v2->desc_id_fetch);
   }
 }
 
@@ -1301,12 +1318,13 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
   int ret;
   extend_info_t *result;
   rend_cache_entry_t *entry;
+  const char *onion_address = rend_data_get_address(rend_query);
 
-  ret = rend_cache_lookup_entry(rend_query->onion_address, -1, &entry);
+  ret = rend_cache_lookup_entry(onion_address, -1, &entry);
   if (ret < 0 || !rend_client_any_intro_points_usable(entry)) {
     log_warn(LD_REND,
              "Query '%s' didn't have valid rend desc in cache. Failing.",
-             safe_str_client(rend_query->onion_address));
+             safe_str_client(onion_address));
     /* XXX: Should we refetch the descriptor here if the IPs are not usable
      * anymore ?. */
     return NULL;
