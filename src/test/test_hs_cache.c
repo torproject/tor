@@ -132,7 +132,7 @@ test_directory(void *arg)
 {
   int ret;
   size_t oom_size;
-  char *desc1_str;
+  char *desc1_str=NULL;
   const char *desc_out;
   hs_descriptor_t *desc1;
 
@@ -434,7 +434,7 @@ test_hsdir_revision_counter_check(void *arg)
     tt_assert(received_desc);
 
     /* Check that the revision counter is correct */
-    tt_int_op(received_desc->plaintext_data.revision_counter, ==, 1312);
+    tt_u64_op(received_desc->plaintext_data.revision_counter, ==, 1312);
 
     hs_descriptor_free(received_desc);
     received_desc = NULL;
@@ -465,7 +465,7 @@ test_hsdir_revision_counter_check(void *arg)
     tt_assert(received_desc);
 
     /* Check that the revision counter is the latest */
-    tt_int_op(received_desc->plaintext_data.revision_counter, ==, 1313);
+    tt_u64_op(received_desc->plaintext_data.revision_counter, ==, 1313);
   }
 
  done:
