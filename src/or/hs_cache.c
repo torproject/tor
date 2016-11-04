@@ -379,6 +379,6 @@ hs_cache_init(void)
 void
 hs_cache_free_all(void)
 {
-  tor_assert(hs_cache_v3_dir);
   digest256map_free(hs_cache_v3_dir, cache_dir_desc_free_);
+  hs_cache_v3_dir = NULL;
 }
