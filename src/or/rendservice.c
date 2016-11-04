@@ -450,27 +450,34 @@ rend_service_port_config_free(rend_service_port_config_t *p)
  * If <b>validate_only</b> is true, free the service.
  * If <b>service</b> is NULL, ignore it, and return 0.
  * Returns 0 on success, and -1 on failure.
- * Takes ownership of <b>service</b>.
+ * Takes ownership of <b>service</b>, either freeing it, or adding it to the
+ * global service list.
  */
 static int
 rend_service_check_dir_and_add(const or_options_t *options,
                                rend_service_t *service,
                                int validate_only)
 {
-  if (service) { /* register the one we just finished parsing */
-    if (rend_service_check_private_dir(options, service, !validate_only)
-        < 0) {
-      rend_service_free(service);
-      return -1;
-    }
-
-    if (validate_only)
-      rend_service_free(service);
-    else
-      rend_add_service(service);
+  if (!service) {
+    /* It is ok for a service to be NULL, this means there are no services */
+    return 0;
   }
 
-  return 0;
+  if (rend_service_check_private_dir(options, service, !validate_only)
+      < 0) {
+    rend_service_free(service);
+    return -1;
+  }
+
+  if (validate_only) {
+    rend_service_free(service);
+    return 0;
+  } else {
+    /* rend_add_service takes ownership, either adding or freeing the service
+     */
+    rend_add_service(service);
+    return 0;
+  }
 }
 
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
