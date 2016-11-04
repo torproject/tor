@@ -306,7 +306,7 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
   }
   case HS_DESC_KEY_TYPE_CURVE25519:
   {
-    int signbit;
+    int signbit, ret;
     char *encoded_cert, key_fp_b64[CURVE25519_BASE64_PADDED_LEN + 1];
     ed25519_keypair_t curve_kp;
 
@@ -323,11 +323,11 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
     if (!cross_cert) {
       goto err;
     }
-    if (encode_cert(cross_cert, &encoded_cert)) {
-      tor_cert_free(cross_cert);
+    ret = encode_cert(cross_cert, &encoded_cert);
+    tor_cert_free(cross_cert);
+    if (ret) {
       goto err;
     }
-    tor_cert_free(cross_cert);
     if (curve25519_public_to_base64(key_fp_b64,
                                     &ip->enc_key.curve25519.pubkey) < 0) {
       tor_free(encoded_cert);
