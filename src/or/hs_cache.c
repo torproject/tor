@@ -131,8 +131,8 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
      * remove the entry we currently have from our cache so we can then
      * store the new one. */
     remove_v3_desc_as_dir(cache_entry);
-    cache_dir_desc_free(cache_entry);
     rend_cache_decrement_allocation(cache_get_entry_size(cache_entry));
+    cache_dir_desc_free(cache_entry);
   }
   /* Store the descriptor we just got. We are sure here that either we
    * don't have the entry or we have a newer descriptor and the old one
