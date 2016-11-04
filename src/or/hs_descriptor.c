@@ -481,8 +481,7 @@ build_secret_key_iv_mac(const hs_descriptor_t *desc,
 }
 
 /* Using a key, salt and encrypted payload, build a MAC and put it in mac_out.
- * The length of the mac key and salt must be fixed and if not, you can't rely
- * on the result to be a valid MAC. We use SHA3-256 for the MAC computation.
+ * We use SHA3-256 for the MAC computation.
  * This function can't fail. */
 static void
 build_mac(const uint8_t *mac_key, size_t mac_key_len,
@@ -492,6 +491,9 @@ build_mac(const uint8_t *mac_key, size_t mac_key_len,
 {
   crypto_digest_t *digest;
 
+  const uint64_t mac_len_netorder = tor_htonll(mac_key_len);
+  const uint64_t salt_len_netorder = tor_htonll(salt_len);
+
   tor_assert(mac_key);
   tor_assert(salt);
   tor_assert(encrypted);
@@ -500,7 +502,10 @@ build_mac(const uint8_t *mac_key, size_t mac_key_len,
   digest = crypto_digest256_new(DIGEST_SHA3_256);
   /* As specified in section 2.5 of proposal 224, first add the mac key
    * then add the salt first and then the encrypted section. */
+
+  crypto_digest_add_bytes(digest, (const char *) &mac_len_netorder, 8);
   crypto_digest_add_bytes(digest, (const char *) mac_key, mac_key_len);
+  crypto_digest_add_bytes(digest, (const char *) &salt_len_netorder, 8);
   crypto_digest_add_bytes(digest, (const char *) salt, salt_len);
   crypto_digest_add_bytes(digest, (const char *) encrypted, encrypted_len);
   crypto_digest_get_digest(digest, (char *) mac_out, mac_len);
