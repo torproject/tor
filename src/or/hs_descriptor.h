@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 
+#include "or.h"
 #include "address.h"
 #include "container.h"
 #include "crypto.h"

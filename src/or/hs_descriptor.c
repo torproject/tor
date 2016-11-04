@@ -834,20 +834,6 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
 
 /* === DECODING === */
 
-/* XXX: Stub until this function is upstream. */
-static int
-rsa_ed25519_crosscert_check(const uint8_t *crosscert,
-                            const size_t crosscert_len,
-                            const crypto_pk_t *rsa_id_key,
-                            const ed25519_public_key_t *master_key)
-{
-  (void) crosscert;
-  (void) crosscert_len;
-  (void) rsa_id_key;
-  (void) master_key;
-  return 0;
-}
-
 /* Given an encoded string of the link specifiers, return a newly allocated
  * list of decoded link specifiers. Return NULL on error. */
 STATIC smartlist_t *
@@ -1304,7 +1290,8 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
     }
     if (rsa_ed25519_crosscert_check((const uint8_t *) tok->object_body,
           tok->object_size, ip->enc_key.legacy,
-          &desc->plaintext_data.signing_key_cert->signing_key)) {
+          &desc->plaintext_data.signing_key_cert->signing_key,
+          approx_time()-86400)) {
       log_warn(LD_REND, "Unable to cross certify the introduction point "
                         "legacy encryption key.");
       goto err;
