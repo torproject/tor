@@ -972,6 +972,7 @@ test_decode_plaintext(void *arg)
     char *plaintext;
     tor_asprintf(&plaintext, template, "3", bad_value, "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
+    tor_free(plaintext);
     tt_int_op(ret, OP_EQ, -1);
   }
 
@@ -980,6 +981,7 @@ test_decode_plaintext(void *arg)
     char *plaintext;
     tor_asprintf(&plaintext, template, "3", "7181615", "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
+    tor_free(plaintext);
     tt_int_op(ret, OP_EQ, -1);
   }
 
@@ -988,6 +990,7 @@ test_decode_plaintext(void *arg)
     char *plaintext;
     tor_asprintf(&plaintext, template, "3", "180", "42", bad_value);
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
+    tor_free(plaintext);
     tt_int_op(ret, OP_EQ, -1);
   }
 
@@ -996,6 +999,7 @@ test_decode_plaintext(void *arg)
     char *plaintext;
     tor_asprintf(&plaintext, template, "3", "180", bad_value, "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
+    tor_free(plaintext);
     tt_int_op(ret, OP_EQ, -1);
   }
 
