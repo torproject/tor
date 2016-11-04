@@ -6,6 +6,7 @@
  * \brief Test hidden service caches.
  */
 
+#define CONNECTION_PRIVATE
 #define HS_CACHE_PRIVATE
 
 #include "ed25519_cert.h"
@@ -322,10 +323,13 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
 
     fetch_from_buf_http(TO_CONN(conn)->outbuf, &headers, MAX_HEADERS_SIZE,
                         &received_desc, &body_used, 10000, 0);
+    tor_free(headers);
   }
 
  done:
   tor_free(hsdir_query_str);
+  if (conn)
+    connection_free_(TO_CONN(conn));
 
   return received_desc;
 }
@@ -373,6 +377,7 @@ test_upload_and_download_hs_desc(void *arg)
  done:
   tor_free(received_desc_str);
   tor_free(published_desc_str);
+  hs_descriptor_free(published_desc);
 }
 
 /* Test that HSDirs reject outdated descriptors based on their revision

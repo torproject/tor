@@ -324,8 +324,10 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
       goto err;
     }
     if (encode_cert(cross_cert, &encoded_cert)) {
+      tor_cert_free(cross_cert);
       goto err;
     }
+    tor_cert_free(cross_cert);
     if (curve25519_public_to_base64(key_fp_b64,
                                     &ip->enc_key.curve25519.pubkey) < 0) {
       tor_free(encoded_cert);
