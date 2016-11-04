@@ -77,7 +77,7 @@ static token_rule_t hs_desc_intro_point_v3_token_table[] = {
 };
 
 /* Free a descriptor intro point object. */
-static void
+STATIC void
 desc_intro_point_free(hs_desc_intro_point_t *ip)
 {
   if (!ip) {

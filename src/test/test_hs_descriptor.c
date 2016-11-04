@@ -593,7 +593,7 @@ test_decode_intro_point(void *arg)
   int ret;
   char *encoded_ip = NULL;
   size_t len_out;
-  hs_desc_intro_point_t *ip;
+  hs_desc_intro_point_t *ip = NULL;
   hs_descriptor_t *desc = NULL;
 
   (void) arg;
@@ -673,6 +673,8 @@ test_decode_intro_point(void *arg)
     const char *junk = "this is not a descriptor";
     ip = decode_introduction_point(desc, junk);
     tt_assert(!ip);
+    desc_intro_point_free(ip);
+    ip = NULL;
   }
 
   /* Invalid link specifiers. */
@@ -689,6 +691,8 @@ test_decode_intro_point(void *arg)
     tt_assert(!ip);
     tor_free(encoded_ip);
     smartlist_free(lines);
+    desc_intro_point_free(ip);
+    ip = NULL;
   }
 
   /* Invalid auth key type. */
@@ -803,6 +807,7 @@ test_decode_intro_point(void *arg)
 
  done:
   hs_descriptor_free(desc);
+  desc_intro_point_free(ip);
 }
 
 const char encrypted_desc_portion[] = "create2-formats 2\n"
@@ -1027,6 +1032,7 @@ test_validate_cert(void *arg)
   int ret;
   time_t now = time(NULL);
   ed25519_keypair_t kp;
+  tor_cert_t *cert = NULL;
 
   (void) arg;
 
@@ -1034,7 +1040,7 @@ test_validate_cert(void *arg)
   tt_int_op(ret, ==, 0);
 
   /* Cert of type CERT_TYPE_AUTH_HS_IP_KEY. */
-  tor_cert_t *cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY,
+  cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY,
                                      &kp.pubkey, now, 3600,
                                      CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(cert);
@@ -1062,7 +1068,7 @@ test_validate_cert(void *arg)
   tt_int_op(ret, OP_EQ, 0);
 
  done:
-  ;
+  tor_cert_free(cert);
 }
 
 static void

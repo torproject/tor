@@ -232,7 +232,7 @@ STATIC int cert_is_valid(tor_cert_t *cert, uint8_t type,
 STATIC int desc_sig_is_valid(const char *b64_sig,
                              const ed25519_keypair_t *signing_kp,
                              const char *encoded_desc, size_t encoded_len);
-
+STATIC void desc_intro_point_free(hs_desc_intro_point_t *ip);
 #endif /* HS_DESCRIPTOR_PRIVATE */
 
 #endif /* TOR_HS_DESCRIPTOR_H */
