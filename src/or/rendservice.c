@@ -286,7 +286,7 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
 
   if (service->max_streams_per_circuit < 0) {
     log_warn(LD_CONFIG, "Hidden service (%s) configured with negative max "
-                        "streams per circuit; ignoring.",
+                        "streams per circuit.",
              rend_service_escaped_dir(service));
     rend_service_free(service);
     return -1;
@@ -295,7 +295,7 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
   if (service->max_streams_close_circuit < 0 ||
       service->max_streams_close_circuit > 1) {
     log_warn(LD_CONFIG, "Hidden service (%s) configured with invalid "
-                        "max streams handling; ignoring.",
+                        "max streams handling.",
              rend_service_escaped_dir(service));
     rend_service_free(service);
     return -1;
@@ -305,15 +305,14 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
       (!service->clients ||
        smartlist_len(service->clients) == 0)) {
     log_warn(LD_CONFIG, "Hidden service (%s) with client authorization but no "
-                        "clients; ignoring.",
+                        "clients.",
              rend_service_escaped_dir(service));
     rend_service_free(service);
     return -1;
   }
 
   if (!service->ports || !smartlist_len(service->ports)) {
-    log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured; "
-             "ignoring.",
+    log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured.",
              rend_service_escaped_dir(service));
     rend_service_free(service);
     return -1;
@@ -341,13 +340,12 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
                                !strcmp(ptr->directory, service->directory));
       if (dupe) {
         log_warn(LD_REND, "Another hidden service is already configured for "
-                 "directory %s, ignoring.",
+                 "directory %s.",
                  rend_service_escaped_dir(service));
         rend_service_free(service);
         return -1;
       }
     }
-    smartlist_add(s_list, service);
     log_debug(LD_REND,"Configuring service with directory %s",
               rend_service_escaped_dir(service));
     for (i = 0; i < smartlist_len(service->ports); ++i) {
@@ -363,14 +361,16 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
                   "Service maps port %d to socket at \"%s\"",
                   p->virtual_port, p->unix_addr);
 #else
-        log_debug(LD_REND,
-                  "Service maps port %d to an AF_UNIX socket, but we "
-                  "have no AF_UNIX support on this platform.  This is "
-                  "probably a bug.",
-                  p->virtual_port);
+        log_warn(LD_BUG,
+                 "Service maps port %d to an AF_UNIX socket, but we "
+                 "have no AF_UNIX support on this platform.  This is "
+                 "probably a bug.",
+                 p->virtual_port);
+        return -1;
 #endif /* defined(HAVE_SYS_UN_H) */
       }
     }
+    smartlist_add(s_list, service);
     return 0;
   }
   /* NOTREACHED */
@@ -538,9 +538,7 @@ rend_service_check_dir_and_add(smartlist_t *service_list,
     if (BUG(!s_list)) {
       return -1;
     }
-    /* Ignore service failures until 030 */
-    rend_add_service(s_list, service);
-    return 0;
+    return rend_add_service(s_list, service);
   }
 }
 

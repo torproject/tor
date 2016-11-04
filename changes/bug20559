@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden services):
+    - Stop ignoring misconfigured hidden services. Instead, refuse to start
+      tor until the misconfigurations have been corrected.
+      Fixes bug 20559; bugfix on multiple commits in 0.2.7.1-alpha and earlier.
