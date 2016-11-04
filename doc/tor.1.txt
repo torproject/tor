@@ -2896,6 +2896,10 @@ __HiddenServiceDirectory__**/client_keys**::
     Authorization data for a hidden service that is only accessible by
     authorized clients.
 
+__HiddenServiceDirectory__**/onion_service_non_anonymous**::
+    This file is present if a hidden service key was created in
+    **HiddenServiceNonAnonymousMode**.
+
 SEE ALSO
 --------
 **torsocks**(1), **torify**(1) +
