@@ -987,6 +987,7 @@ test_decode_plaintext(void *arg)
     tt_int_op(HS_DESC_MAX_LEN, <, big);
     char *plaintext = tor_malloc_zero(big);
     memset(plaintext, 'a', big);
+    plaintext[big - 1] = '\0';
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
     tt_int_op(ret, OP_EQ, -1);
