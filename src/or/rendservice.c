@@ -466,7 +466,8 @@ rend_config_services(const or_options_t *options, int validate_only)
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
-        if (rend_service_check_private_dir(options, service, 0) < 0) {
+        if (rend_service_check_private_dir(options, service, !validate_only)
+            < 0) {
           rend_service_free(service);
           return -1;
         }
@@ -681,7 +682,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-    if (rend_service_check_private_dir(options, service, 0) < 0) {
+    if (rend_service_check_private_dir(options, service, !validate_only) < 0) {
       rend_service_free(service);
       return -1;
     }
@@ -1098,8 +1099,8 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
     return -1;
   }
 
-  /* Make sure the directory exists */
-  if (rend_service_check_private_dir(get_options(), service, 1) < 0)
+  /* Make sure the directory was created in options_act */
+  if (BUG(rend_service_check_private_dir(get_options(), service, 0) < 0))
     return -1;
 
   poison_fname = rend_service_sos_poison_path(service);
@@ -1297,7 +1298,8 @@ rend_service_load_keys(rend_service_t *s)
   char *fname = NULL;
   char buf[128];
 
-  if (rend_service_check_private_dir(get_options(), s, 1) < 0)
+  /* Make sure the directory was created in options_act */
+  if (BUG(rend_service_check_private_dir(get_options(), s, 0) < 0))
     goto err;
 
   /* Load key */
