@@ -142,7 +142,7 @@ helper_compare_hs_desc(const hs_descriptor_t *desc1,
   tt_mem_op(desc1->plaintext_data.blinded_kp.pubkey.pubkey, OP_EQ,
             desc2->plaintext_data.blinded_kp.pubkey.pubkey,
             ED25519_PUBKEY_LEN);
-  tt_uint_op(desc1->plaintext_data.revision_counter, ==,
+  tt_u64_op(desc1->plaintext_data.revision_counter, ==,
              desc2->plaintext_data.revision_counter);
 
   /* NOTE: We can't compare the encrypted blob because when encoding the
@@ -812,7 +812,7 @@ test_decode_intro_point(void *arg)
   desc_intro_point_free(ip);
 }
 
-const char encrypted_desc_portion[] = "create2-formats 2\n"
+static const char encrypted_desc_portion[] = "create2-formats 2\n"
   "authentication-required ed25519\n"
   "introduction-point AQAGAQIDBCMp\n"
   "auth-key\n"
@@ -1056,7 +1056,7 @@ static void
 test_desc_signature(void *arg)
 {
   int ret;
-  char *data, *desc;
+  char *data = NULL, *desc = NULL;
   char sig_b64[ED25519_SIG_BASE64_LEN + 1];
   ed25519_keypair_t kp;
   ed25519_signature_t sig;

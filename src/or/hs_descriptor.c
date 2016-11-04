@@ -1057,7 +1057,7 @@ encrypted_data_length_is_valid(size_t len)
   if (len < HS_DESC_ENCRYPTED_MIN_LEN) {
     log_warn(LD_REND, "Length of descriptor's encrypted data is too small. "
                       "Got %lu but minimum value is %d",
-             len, HS_DESC_ENCRYPTED_MIN_LEN);
+             (unsigned long)len, HS_DESC_ENCRYPTED_MIN_LEN);
     goto err;
   }
 
@@ -1069,7 +1069,7 @@ encrypted_data_length_is_valid(size_t len)
   if (len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE) {
     log_warn(LD_REND, "Length of descriptor's encrypted data is invalid. "
                       "Got %lu which is not a multiple of %d.",
-             len, HS_DESC_PLAINTEXT_PADDING_MULTIPLE);
+             (unsigned long) len, HS_DESC_PLAINTEXT_PADDING_MULTIPLE);
     goto err;
   }
 
@@ -1121,7 +1121,7 @@ desc_decrypt_data_v3(const hs_descriptor_t *desc, char **decrypted_out)
     if (desc_mac_size != DIGEST256_LEN) {
       log_warn(LD_REND, "Service descriptor MAC length of encrypted data "
                         "is invalid (%lu, expected %u)",
-               desc_mac_size, DIGEST256_LEN);
+               (unsigned long) desc_mac_size, DIGEST256_LEN);
       goto err;
     }
   }
@@ -1419,7 +1419,7 @@ desc_sig_is_valid(const char *b64_sig, const ed25519_keypair_t *signing_kp,
   if (strlen(b64_sig) != ED25519_SIG_BASE64_LEN) {
     log_warn(LD_REND, "Service descriptor has an invalid signature length."
                       "Exptected %d but got %lu",
-             ED25519_SIG_BASE64_LEN, strlen(b64_sig));
+             ED25519_SIG_BASE64_LEN, (unsigned long) strlen(b64_sig));
     goto err;
   }
 
@@ -1733,7 +1733,7 @@ hs_desc_decode_plaintext(const char *encoded,
   encoded_len = strlen(encoded);
   if (encoded_len >= HS_DESC_MAX_LEN) {
     log_warn(LD_REND, "Service descriptor is too big (%lu bytes)",
-             encoded_len);
+             (unsigned long) encoded_len);
     goto err;
   }
 
