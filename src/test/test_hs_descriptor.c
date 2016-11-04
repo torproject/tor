@@ -913,32 +913,6 @@ test_decode_multiple_intro_points(void *arg)
 }
 
 static void
-test_free_objects(void *arg)
-{
-  (void) arg;
-
-  {
-    const char u[] = { 'U', 'U', 'U', 'U' };
-    hs_desc_plaintext_data_t *data = tor_malloc_zero(sizeof(*data));
-    /* Set a memory marker so we know if the data was properly wiped. */
-    memset(&data->version, 'U', sizeof(data->version));
-    hs_desc_plaintext_data_free(data);
-    tt_mem_op(&data->version, OP_NE, u, sizeof(u));
-  }
-
-  {
-    hs_desc_encrypted_data_t *data = tor_malloc_zero(sizeof(*data));
-    /* Set a memory marker so we know if the data was properly wiped. */
-    data->create2_ntor = 1;
-    hs_desc_encrypted_data_free(data);
-    tt_int_op(data->create2_ntor, OP_NE, 1);
-  }
-
- done:
-  ;
-}
-
-static void
 test_decode_plaintext(void *arg)
 {
   int ret;
@@ -1132,8 +1106,6 @@ struct testcase_t hs_descriptor[] = {
 
   /* Misc. */
   { "version", test_supported_version, TT_FORK,
-    NULL, NULL },
-  { "free_objects", test_free_objects, TT_FORK,
     NULL, NULL },
   { "validate_cert", test_validate_cert, TT_FORK,
     NULL, NULL },
