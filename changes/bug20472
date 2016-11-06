@@ -1,5 +1,0 @@
-  o Minor bugfixes (circuits):
-    - Remove a BUG warning in circuit_pick_extend_handshake. Instead, assume
-      all nodes support EXTEND2. Use ntor whenever a key is available.
-      Fixes bug 20472; bugfix on 0.2.9.3-alpha.
-
