@@ -1,4 +1,49 @@
-Changes in version 0.2.9.5-rc - 2016-1?-??
+Changes in version 0.2.9.5-alpha - 2016-11-07
+  Tor 0.2.9.5alpha fixes numerous bugs discovered in the previous alpha
+  version. We believe one or two probably remain, and we encourage
+  everyone to test this release.
+
+  o Major bugfixes (client performance):
+    - Clients now respond to new application stream requests immediately
+      when they arrive, rather than waiting up to one second before
+      starting to handle them. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Major bugfixes (client reliability):
+    - When Tor leaves standby because of a new application request, open
+      circuits as needed to serve that request. Previously, we would
+      potentially wait a very long time. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (client, logging):
+    - Remove a BUG warning in circuit_pick_extend_handshake(). Instead,
+      assume all nodes support EXTEND2. Use ntor whenever a key is
+      available. Fixes bug 20472; bugfix on 0.2.9.3-alpha.
+    - On DNSPort, stop logging a BUG warning on a failed hostname
+      lookup. Fixes bug 19869; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (compilation):
+    - Fix implicit conversion warnings under OpenSSL 1.1. Fixes bug
+      20551; bugfix on 0.2.1.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Work around a memory leak in OpenSSL 1.1 when encoding public
+      keys. Fixes bug 20553; bugfix on 0.0.2pre8.
+    - Avoid a small memory leak when informing worker threads about
+      rotated onion keys. Fixes bug 20401; bugfix on 0.2.6.3-alpha.
+    - Do not try to parallelize workers more than 16x without the user
+      explicitly configuring us to do so, even if we do detect more than
+      16 CPU cores. Fixes bug 19968; bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Avoid a unit test failure on systems with over 16 detectable CPU
+      cores. Fixes bug 19968; bugfix on 0.2.3.1-alpha.
+
+  o Documentation:
+    - Clarify that setting HiddenServiceNonAnonymousMode requires you to
+      also set "SOCKSPort 0". Fixes bug 20487; bugfix on 0.2.9.3-alpha.
+    - Module-level documentation for several more modules. Closes
+      tickets 19287 and 19290.
 
 
 Changes in version 0.2.8.9 - 2016-10-17
