@@ -3991,7 +3991,7 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
   if (dls->increment_on == DL_SCHED_INCREMENT_FAILURE) {
     /* this schedule should retry on failure, and not launch any concurrent
      attempts */
-    log_info(LD_BUG, "Tried to launch an attempt-based connection on a "
+    log_warn(LD_BUG, "Tried to launch an attempt-based connection on a "
              "failure-based schedule.");
     return TIME_MAX;
   }
