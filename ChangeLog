@@ -1,5 +1,5 @@
 Changes in version 0.2.9.5-alpha - 2016-11-07
-  Tor 0.2.9.5alpha fixes numerous bugs discovered in the previous alpha
+  Tor 0.2.9.5-alpha fixes numerous bugs discovered in the previous alpha
   version. We believe one or two probably remain, and we encourage
   everyone to test this release.
 
@@ -43,7 +43,7 @@ Changes in version 0.2.9.5-alpha - 2016-11-07
   o Minor bugfixes (client directory scheduling):
     - Treat "relay too busy to answer request" as a failed request and a
       reason to back off on our retry frequency. This is safe now that
-      exponential backups retry indefinitely, and avoids a bug where we
+      exponential backoffs retry indefinitely, and avoids a bug where we
       would reset our download schedule erroneously. Fixes bug 20593;
       bugfix on 0.2.9.1-alpha.
 
@@ -57,7 +57,7 @@ Changes in version 0.2.9.5-alpha - 2016-11-07
   o Minor bugfixes (hidden services):
     - When configuring hidden services, check every hidden service
       directory's permissions. Previously, we only checked the last
-      hidden service. Fixes bug 20529; bugfix on 13942 commit 85bfad1
+      hidden service. Fixes bug 20529; bugfix the work to fix 13942
       in 0.2.6.2-alpha.
 
   o Minor bugfixes (portability):
