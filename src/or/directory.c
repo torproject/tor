@@ -3796,11 +3796,15 @@ next_random_exponential_delay(int delay, int max_delay)
 
   /* How much are we willing to add to the delay? */
   int max_increment;
+  const int multiplier = 4; /* no more than quintuple. */
 
-  if (delay)
-    max_increment = delay * 4; /* no more than quintuple. */
-  else
+  if (delay && delay < (INT_MAX-1) / multiplier) {
+    max_increment = delay * multiplier;
+  } else if (delay) {
+    max_increment = INT_MAX-1;
+  } else {
     max_increment = 1; /* we're always willing to slow down a little. */
+  }
 
   /* the + 1 here is so that we include the end of the interval */
   int increment = crypto_rand_int(max_increment+1);
