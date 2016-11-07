@@ -501,7 +501,7 @@ static config_var_t option_vars_[] = {
    * When clients have authorities and fallbacks available, they use these
    * schedules: (we stagger the times to avoid thundering herds) */
   V(ClientBootstrapConsensusAuthorityDownloadSchedule, CSV_INTERVAL,
-    "10, 11, 3600, 10800, 25200, 54000, 111600, 262800" /* 3 days + 1 hour */),
+    "6, 11, 3600, 10800, 25200, 54000, 111600, 262800" /* 3 days + 1 hour */),
   V(ClientBootstrapConsensusFallbackDownloadSchedule, CSV_INTERVAL,
     "0, 1, 4, 11, 3600, 10800, 25200, 54000, 111600, 262800"),
   /* When clients only have authorities available, they use this schedule: */
@@ -512,7 +512,7 @@ static config_var_t option_vars_[] = {
    * blackholed. Clients will try 3 directories simultaneously.
    * (Relays never use simultaneous connections.) */
   V(ClientBootstrapConsensusMaxInProgressTries, UINT, "3"),
-  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "3600, 900, 900, 3600"),
+  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "1200, 900, 900, 3600"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "10 minutes"),
   V(TestingDirConnectionMaxStall, INTERVAL, "5 minutes"),
   V(TestingConsensusMaxDownloadTries, UINT, "8"),

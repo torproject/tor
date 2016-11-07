@@ -3798,7 +3798,7 @@ next_random_exponential_delay(int delay, int max_delay)
   int max_increment;
 
   if (delay)
-    max_increment = delay; /* no more than double. */
+    max_increment = delay * 4; /* no more than quintuple. */
   else
     max_increment = 1; /* we're always willing to slow down a little. */
 
