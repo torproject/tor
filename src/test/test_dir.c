@@ -3626,8 +3626,8 @@ test_dir_download_status_random_backoff(void *arg)
     tt_int_op(increment, OP_GE, min_delay);
     tt_int_op(increment, OP_LE, max_delay);
     tt_int_op(increment, OP_GE, old_increment);
-    /* We at most double, and maybe add one */
-    tt_int_op(increment, OP_LE, 2 * old_increment + 1);
+    /* We at most quadruple, and maybe add one */
+    tt_int_op(increment, OP_LE, 4 * old_increment + 1);
 
     /* Advance */
     current_time += increment;
@@ -3732,14 +3732,14 @@ test_dir_download_status_increment(void *arg)
                                      current_time + delay1 + 10,
                                      0) == 0);
 
-  /* Check that failure increments don't happen on 503 for clients, but that
-   * attempt increments do. */
+  /* Check that failure increments do happen on 503 for clients, and
+   * attempt increments do too. */
   mock_get_options_calls = 0;
   next_at = download_status_increment_failure(&dls_failure, 503, "test", 0,
                                               current_time);
-  tt_assert(next_at == current_time + delay1);
-  tt_assert(download_status_get_n_failures(&dls_failure) == 1);
-  tt_assert(download_status_get_n_attempts(&dls_failure) == 2);
+  tt_i64_op(next_at, ==, current_time + delay2);
+  tt_int_op(download_status_get_n_failures(&dls_failure), ==, 2);
+  tt_int_op(download_status_get_n_attempts(&dls_failure), ==, 2);
   tt_assert(mock_get_options_calls >= 1);
 
   /* Check that failure increments do happen on 503 for servers */
@@ -3747,7 +3747,7 @@ test_dir_download_status_increment(void *arg)
   next_at = download_status_increment_failure(&dls_failure, 503, "test", 1,
                                               current_time);
   tt_assert(next_at == current_time + delay2);
-  tt_assert(download_status_get_n_failures(&dls_failure) == 2);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 3);
   tt_assert(download_status_get_n_attempts(&dls_failure) == 3);
   tt_assert(mock_get_options_calls >= 1);
 
@@ -3756,7 +3756,7 @@ test_dir_download_status_increment(void *arg)
   next_at = download_status_increment_failure(&dls_failure, 404, "test", 0,
                                               current_time);
   tt_assert(next_at == current_time + delay2);
-  tt_assert(download_status_get_n_failures(&dls_failure) == 3);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 4);
   tt_assert(download_status_get_n_attempts(&dls_failure) == 4);
   tt_assert(mock_get_options_calls >= 1);
 
@@ -3918,8 +3918,13 @@ test_dir_download_status_increment(void *arg)
   /* Check that attempt increments don't happen on failure-based schedules,
    * and that the attempt is set at the end of time */
   mock_get_options_calls = 0;
+  setup_full_capture_of_logs(LOG_WARN);
   next_at = download_status_increment_attempt(&dls_failure, "test",
                                               current_time);
+  expect_single_log_msg_containing(
+    "Tried to launch an attempt-based connection on a failure-based "
+    "schedule.");
+  teardown_capture_of_logs();
   tt_assert(next_at == TIME_MAX);
   tt_assert(download_status_get_n_failures(&dls_failure) == 0);
   tt_assert(download_status_get_n_attempts(&dls_failure) == 0);
@@ -3931,6 +3936,7 @@ test_dir_download_status_increment(void *arg)
   UNMOCK(get_options);
   mock_options = NULL;
   mock_get_options_calls = 0;
+  teardown_capture_of_logs();
 }
 
 static void
