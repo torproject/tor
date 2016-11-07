@@ -12,7 +12,8 @@
  * on the supported protocol versions for each relay, and also vote on the
  * which protocols you should have to support in order to be on the Tor
  * network. All Tor instances use these required/recommended protocol versions
- * to
+ * to tell what level of support for recent protocols each relay has, and
+ * to decide whether they should be running given their current protocols.
  *
  * The main advantage of these protocol versions numbers over using Tor
  * version numbers is that they allow different implementations of the Tor
