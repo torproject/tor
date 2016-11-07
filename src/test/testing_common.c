@@ -102,16 +102,39 @@ setup_directory(void)
   temp_dir_setup_in_pid = getpid();
 }
 
-/** Return a filename relative to our testing temporary directory */
-const char *
-get_fname(const char *name)
+/** Return a filename relative to our testing temporary directory, based on
+ * name and suffix. If name is NULL, return the name of the testing temporary
+ * directory. */
+static const char *
+get_fname_suffix(const char *name, const char *suffix)
 {
   static char buf[1024];
   setup_directory();
   if (!name)
     return temp_dir;
-  tor_snprintf(buf,sizeof(buf),"%s/%s",temp_dir,name);
+  tor_snprintf(buf,sizeof(buf),"%s/%s%s%s",temp_dir,name,suffix ? "_" : "",
+               suffix ? suffix : "");
   return buf;
+}
+
+/** Return a filename relative to our testing temporary directory. If name is
+ * NULL, return the name of the testing temporary directory. */
+const char *
+get_fname(const char *name)
+{
+  return get_fname_suffix(name, NULL);
+}
+
+/** Return a filename with a random suffix, relative to our testing temporary
+ * directory. If name is NULL, return the name of the testing temporary
+ * directory, without any suffix. */
+const char *
+get_fname_rnd(const char *name)
+{
+  char rnd[256], rnd32[256];
+  crypto_rand(rnd, RAND_PATH_BYTES);
+  base32_encode(rnd32, sizeof(rnd32), rnd, RAND_PATH_BYTES);
+  return get_fname_suffix(name, rnd32);
 }
 
 /* Remove a directory and all of its subdirectories */
@@ -217,6 +240,9 @@ free_pregenerated_keys(void)
 static void *
 passthrough_test_setup(const struct testcase_t *testcase)
 {
+  /* Make sure the passthrough doesn't unintentionally fail or skip tests */
+  tor_assert(testcase->setup_data);
+  tor_assert(testcase->setup_data != (void*)TT_SKIP);
   return testcase->setup_data;
 }
 static int
