@@ -28,7 +28,7 @@ new Tor release:
 
    Is make check-spaces happy?
 
-   Does 'make distcheck' compain?
+   Does 'make distcheck' complain?
 
    How about 'make test-stem' and 'make test-network'?
 
