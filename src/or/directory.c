@@ -3876,9 +3876,9 @@ download_status_schedule_get_delay(download_status_t *dls,
    * non-negative allows us to safely do the wrapping check below. */
   tor_assert(delay >= 0);
 
-  /* Avoid now+delay overflowing INT_MAX, by comparing with a subtraction
+  /* Avoid now+delay overflowing TIME_MAX, by comparing with a subtraction
    * that won't overflow (since delay is non-negative). */
-  if (delay < INT_MAX && now <= INT_MAX - delay) {
+  if (delay < INT_MAX && now <= TIME_MAX - delay) {
     dls->next_attempt_at = now+delay;
   } else {
     dls->next_attempt_at = TIME_MAX;
