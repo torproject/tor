@@ -264,18 +264,3 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
     tor_assert(0);
   }
 }
-
-/* Return true iff the Onion Services protocol version 3 is enabled. This only
- * considers the consensus parameter. If the parameter is not found, the
- * default is that it's enabled. */
-int
-hs_v3_protocol_is_enabled(void)
-{
-  /* This consensus param controls if the the onion services version 3 is
-   * enabled or not which is the first version of the next generation
-   * (proposal 224). If this option is set to 0, the tor daemon won't support
-   * the protocol as either a relay, directory, service or client. By default,
-   * it's enabled if the parameter is not found. */
-  return networkstatus_get_param(NULL, "EnableOnionServicesV3", 1, 0, 1);
-}
-
