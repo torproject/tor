@@ -1,0 +1,6 @@
+  o Major features (onion service)
+    - Tor relays now support the HSDir version 3 protocol meaning they can
+      store and serve v3 descriptors. This is part of the next generation
+      onion service work detailled in proposal 224. The tor daemon also
+      contains all the necessary code to encode and decode a v3 descriptor but
+      it's currently only used by the directory subsystem. Closes #17238.
