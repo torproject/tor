@@ -784,7 +784,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
 
   /* Build the encrypted data section. */
   {
-    char *enc_b64_blob;
+    char *enc_b64_blob=NULL;
     if (encode_encrypted_data(desc, &enc_b64_blob) < 0) {
       goto err;
     }
