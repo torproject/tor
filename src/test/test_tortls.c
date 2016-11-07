@@ -834,9 +834,9 @@ test_tortls_classify_client_ciphers(void *ignored)
 
   sk_SSL_CIPHER_zero(ciphers);
 
-  one = get_cipher_by_name("ECDH-RSA-AES256-GCM-SHA384");
+  one = get_cipher_by_name("ECDHE-RSA-AES256-GCM-SHA384");
   one->id = 0x00ff;
-  two = get_cipher_by_name("ECDH-RSA-AES128-GCM-SHA256");
+  two = get_cipher_by_name("ECDHE-RSA-AES128-GCM-SHA256");
   two->id = 0x0000;
   sk_SSL_CIPHER_push(ciphers, one);
   tls->client_cipher_list_type = 0;
@@ -906,7 +906,7 @@ test_tortls_client_is_using_v2_ciphers(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
 
   ciphers = sk_SSL_CIPHER_new_null();
-  SSL_CIPHER *one = get_cipher_by_name("ECDH-RSA-AES256-GCM-SHA384");
+  SSL_CIPHER *one = get_cipher_by_name("ECDHE-RSA-AES256-GCM-SHA384");
   one->id = 0x00ff;
   sk_SSL_CIPHER_push(ciphers, one);
   sess->ciphers = ciphers;
@@ -1551,7 +1551,7 @@ test_tortls_session_secret_cb(void *ignored)
   tor_tls_session_secret_cb(tls->ssl, NULL, NULL, NULL, NULL, NULL);
   tt_assert(!tls->ssl->tls_session_secret_cb);
 
-  one = get_cipher_by_name("ECDH-RSA-AES256-GCM-SHA384");
+  one = get_cipher_by_name("ECDHE-RSA-AES256-GCM-SHA384");
   one->id = 0x00ff;
   ciphers = sk_SSL_CIPHER_new_null();
   sk_SSL_CIPHER_push(ciphers, one);
