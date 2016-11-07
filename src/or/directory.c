@@ -3796,7 +3796,7 @@ next_random_exponential_delay(int delay, int max_delay)
 
   /* How much are we willing to add to the delay? */
   int max_increment;
-  const int multiplier = 4; /* no more than quintuple. */
+  const int multiplier = 3; /* no more than quadruple the previous delay */
 
   if (delay && delay < (INT_MAX-1) / multiplier) {
     max_increment = delay * multiplier;
