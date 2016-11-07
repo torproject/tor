@@ -3933,15 +3933,16 @@ time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
 {
+  (void) status_code; // XXXX no longer used.
+  (void) server; // XXXX no longer used.
   int increment = -1;
   int min_delay = 0, max_delay = INT_MAX;
 
   tor_assert(dls);
 
-  /* only count the failure if it's permanent, or we're a server */
-  if (status_code != 503 || server) {
-    if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1)
-      ++dls->n_download_failures;
+  /* count the failure */
+  if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1) {
+    ++dls->n_download_failures;
   }
 
   if (dls->increment_on == DL_SCHED_INCREMENT_FAILURE) {
