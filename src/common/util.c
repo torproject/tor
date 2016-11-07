@@ -2191,11 +2191,13 @@ file_status(const char *fname)
   }
 }
 
-/** Check whether <b>dirname</b> exists and is private.  If yes return 0.  If
- * it does not exist, and <b>check</b>&CPD_CREATE is set, try to create it
- * and return 0 on success. If it does not exist, and
- * <b>check</b>&CPD_CHECK, and we think we can create it, return 0.  Else
- * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
+/** Check whether <b>dirname</b> exists and is private.  If yes return 0.
+ * If <b>dirname</b> does not exist:
+ *  - if <b>check</b>&CPD_CREATE, try to create it and return 0 on success.
+ *  - if <b>check</b>&CPD_CHECK, and we think we can create it, return 0.
+ *  - if <b>check</b>&CPD_CHECK is false, and the directory exists, return 0.
+ *  - otherwise, return -1.
+ * If CPD_GROUP_OK is set, then it's okay if the directory
  * is group-readable, but in all cases we create the directory mode 0700.
  * If CPD_GROUP_READ is set, existing directory behaves as CPD_GROUP_OK and
  * if the directory is created it will use mode 0750 with group read

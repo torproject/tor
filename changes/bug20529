@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden services):
+    - When configuring hidden services, check every hidden service directory's
+      permissions. Previously, we only checked the last hidden service.
+      Fixes bug 20529; bugfix on 13942 commit 85bfad1 in 0.2.6.2-alpha.
