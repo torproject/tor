@@ -73,7 +73,14 @@
  * gives us, and the best possible counter-mode implementation, and combine
  * them.
  */
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_NOPATCH(1,0,1) &&               \
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_NOPATCH(1,1,0)
+
+/* With newer OpenSSL versions, the older fallback modes don't compile.  So
+ * don't use them, even if we lack specific acceleration. */
+
+#define USE_EVP_AES_CTR
+
+#elif OPENSSL_VERSION_NUMBER >= OPENSSL_V_NOPATCH(1,0,1) &&               \
   (defined(__i386) || defined(__i386__) || defined(_M_IX86) ||          \
    defined(__x86_64) || defined(__x86_64__) ||                          \
    defined(_M_AMD64) || defined(_M_X64) || defined(__INTEL__))          \
