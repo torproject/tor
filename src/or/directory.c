@@ -4055,7 +4055,7 @@ download_status_schedule_get_delay(download_status_t *dls,
       delay = *(int *)smartlist_get(schedule, smartlist_len(schedule) - 1);
   } else if (dls->backoff == DL_SCHED_RANDOM_EXPONENTIAL) {
     /* Check if we missed a reset somehow */
-    if (dls->last_backoff_position > dls_schedule_position) {
+    IF_BUG_ONCE(dls->last_backoff_position > dls_schedule_position) {
       dls->last_backoff_position = 0;
       dls->last_delay_used = 0;
     }
