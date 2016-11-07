@@ -1,0 +1,6 @@
+  o Minor bugfixes (client directory scheduling):
+    - Treat "relay too busy to answer request" as a failed request and a
+      reason to back off on our retry frequency. This is safe now that
+      exponential backups retry indefinitely, and avoids a bug where we would
+      reset our download schedule erroneously.
+      Fixes bug 20593; bugfix on 0.2.9.1-alpha.
