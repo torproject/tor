@@ -114,9 +114,15 @@ static inline int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
 {
-  int under_failure_limit = (dls->n_download_failures <= max_failures
-                             && dls->n_download_attempts <= max_failures);
-  return (under_failure_limit && dls->next_attempt_at <= now);
+  if (dls->backoff == DL_SCHED_DETERMINISTIC) {
+    /* Deterministic schedules can hit an endpoint; exponential backoff
+     * schedules just wait longer and longer. */
+    int under_failure_limit = (dls->n_download_failures <= max_failures
+                               && dls->n_download_attempts <= max_failures);
+    if (!under_failure_limit)
+      return 0;
+  }
+  return dls->next_attempt_at <= now;
 }
 
 static void download_status_mark_impossible(download_status_t *dl);

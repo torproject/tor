@@ -1,0 +1,6 @@
+
+  o Minor bugfixes (download timing):
+    - When determining when to download a directory object, handle times
+      after 2038 if the operating system supports that.  (Someday this will be
+      important!)  Fixes bug 20587; bugfix on 0.2.8.1-alpha.
+

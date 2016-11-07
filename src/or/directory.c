@@ -3971,7 +3971,10 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
   const smartlist_t *schedule = find_dl_schedule(dls, options);
   tor_assert(schedule != NULL && smartlist_len(schedule) >= 2);
   *min = *((int *)(smartlist_get(schedule, 0)));
-  *max = *((int *)((smartlist_get(schedule, smartlist_len(schedule) - 1))));
+  if (dls->backoff == DL_SCHED_DETERMINISTIC)
+    *max = *((int *)((smartlist_get(schedule, smartlist_len(schedule) - 1))));
+  else
+    *max = INT_MAX;
 }
 
 /** Advance one delay step.  The algorithm is to use the previous delay to
@@ -4077,9 +4080,9 @@ download_status_schedule_get_delay(download_status_t *dls,
    * non-negative allows us to safely do the wrapping check below. */
   tor_assert(delay >= 0);
 
-  /* Avoid now+delay overflowing INT_MAX, by comparing with a subtraction
+  /* Avoid now+delay overflowing TIME_MAX, by comparing with a subtraction
    * that won't overflow (since delay is non-negative). */
-  if (delay < INT_MAX && now <= INT_MAX - delay) {
+  if (delay < INT_MAX && now <= TIME_MAX - delay) {
     dls->next_attempt_at = now+delay;
   } else {
     dls->next_attempt_at = TIME_MAX;
@@ -4192,7 +4195,7 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
   if (dls->increment_on == DL_SCHED_INCREMENT_FAILURE) {
     /* this schedule should retry on failure, and not launch any concurrent
      attempts */
-    log_info(LD_BUG, "Tried to launch an attempt-based connection on a "
+    log_warn(LD_BUG, "Tried to launch an attempt-based connection on a "
              "failure-based schedule.");
     return TIME_MAX;
   }
