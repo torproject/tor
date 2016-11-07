@@ -3796,14 +3796,21 @@ next_random_exponential_delay(int delay, int max_delay)
 
   /* How much are we willing to add to the delay? */
   int max_increment;
+  const int multiplier = 3; /* no more than quadruple the previous delay */
 
-  if (delay)
-    max_increment = delay; /* no more than double. */
-  else
-    max_increment = 1; /* we're always willing to slow down a little. */
+  if (delay && delay < (INT_MAX-1) / multiplier) {
+    max_increment = delay * multiplier;
+  } else if (delay) {
+    max_increment = INT_MAX-1;
+  } else {
+    max_increment = 1;
+  }
 
-  /* the + 1 here is so that we include the end of the interval */
-  int increment = crypto_rand_int(max_increment+1);
+  if (BUG(max_increment < 1))
+    max_increment = 1;
+
+  /* the + 1 here is so that we always wait longer than last time. */
+  int increment = crypto_rand_int(max_increment)+1;
 
   if (increment < max_delay - delay)
     return delay + increment;
@@ -3933,15 +3940,16 @@ time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
 {
+  (void) status_code; // XXXX no longer used.
+  (void) server; // XXXX no longer used.
   int increment = -1;
   int min_delay = 0, max_delay = INT_MAX;
 
   tor_assert(dls);
 
-  /* only count the failure if it's permanent, or we're a server */
-  if (status_code != 503 || server) {
-    if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1)
-      ++dls->n_download_failures;
+  /* count the failure */
+  if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1) {
+    ++dls->n_download_failures;
   }
 
   if (dls->increment_on == DL_SCHED_INCREMENT_FAILURE) {
