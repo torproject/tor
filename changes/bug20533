@@ -1,0 +1,7 @@
+  o Minor bugfixes (consensus downloads):
+    - If a consensus expires while we are waiting for certificates to download,
+      stop waiting for certificates.
+    - If we stop waiting for certificates less than a minute after we started
+      downloading them, do not consider the certificate download failure a
+      separate failure.
+      Fixes bug 20533; bugfix on commit e0204f21 in 0.2.0.9-alpha.

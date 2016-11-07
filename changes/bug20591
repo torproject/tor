@@ -1,0 +1,3 @@
+  o Minor bugfixes (relay bootstrap):
+    - Ensure relays don't make multiple connections during bootstrap.
+      Fixes bug 20591; bugfix on 0.2.8.1-alpha.

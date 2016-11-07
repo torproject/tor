@@ -1,0 +1,6 @@
+  o Major bugfixes (download scheduling):
+    - When using an exponential backoff schedule, do not give up on
+      dowloading just because we have failed a bunch of times.  Since
+      each delay is longer than the last, retrying indefinitely won't
+      hurt. Fixes bug 20536; bugfix on 0.2.9.1-alpha.
+

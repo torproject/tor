@@ -1,0 +1,6 @@
+  o Minor bugfixes (directory download scheduling):
+    - Remove the maximum delay on exponential-backoff scheduling.
+      Since we now allow an infinite number of failures (see ticket
+      20536), we must now allow the time to grow longer on each failure.
+      Fixes bug 20534; bugfix on 0.2.9.1-alpha.
+
