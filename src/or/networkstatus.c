@@ -815,9 +815,15 @@ we_want_to_fetch_flavor(const or_options_t *options, int flavor)
  * fetching certs before we check whether there is a better one? */
 #define DELAY_WHILE_FETCHING_CERTS (20*60)
 
+/** What is the minimum time we need to have waited fetching certs, before we
+ * increment the consensus download schedule on failure? */
+#define MIN_DELAY_FOR_FETCH_CERT_STATUS_FAILURE (1*60)
+
 /* Check if a downloaded consensus flavor should still wait for certificates
- * to download now.
- * If so, return 1. If not, fail dls and return 0. */
+ * to download now. If we decide not to wait, check if enough time has passed
+ * to consider the certificate download failure a separate failure. If so,
+ * fail dls.
+ * If waiting for certificates to download, return 1. If not, return 0. */
 static int
 check_consensus_waiting_for_certs(int flavor, time_t now,
                                   download_status_t *dls)
@@ -831,11 +837,14 @@ check_consensus_waiting_for_certs(int flavor, time_t now,
   waiting = &consensus_waiting_for_certs[flavor];
   if (waiting->consensus) {
     /* XXXX make sure this doesn't delay sane downloads. */
-    if (waiting->set_at + DELAY_WHILE_FETCHING_CERTS > now) {
+    if (waiting->set_at + DELAY_WHILE_FETCHING_CERTS > now &&
+        waiting->consensus->valid_until > now) {
       return 1;
     } else {
       if (!waiting->dl_failed) {
-        download_status_failed(dls, 0);
+        if (waiting->set_at + MIN_DELAY_FOR_FETCH_CERT_STATUS_FAILURE > now) {
+          download_status_failed(dls, 0);
+        }
         waiting->dl_failed=1;
       }
     }
@@ -880,7 +889,7 @@ update_consensus_networkstatus_downloads(time_t now)
     resource = networkstatus_get_flavor_name(i);
 
     /* Check if we already have enough connections in progress */
-    if (we_are_bootstrapping) {
+    if (we_are_bootstrapping && use_multi_conn) {
       max_in_progress_conns =
         options->ClientBootstrapConsensusMaxInProgressTries;
     }
