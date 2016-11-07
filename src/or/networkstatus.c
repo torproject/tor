@@ -880,7 +880,7 @@ update_consensus_networkstatus_downloads(time_t now)
     resource = networkstatus_get_flavor_name(i);
 
     /* Check if we already have enough connections in progress */
-    if (we_are_bootstrapping) {
+    if (we_are_bootstrapping && use_multi_conn) {
       max_in_progress_conns =
         options->ClientBootstrapConsensusMaxInProgressTries;
     }
