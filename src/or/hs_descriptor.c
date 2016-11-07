@@ -541,8 +541,9 @@ build_encrypted(const uint8_t *key, const uint8_t *iv, const char *plaintext,
   tor_assert(plaintext);
   tor_assert(encrypted_out);
 
-  /* This creates a cipher for AES128. It can't fail. */
-  cipher = crypto_cipher_new_with_iv((const char *) key, (const char *) iv);
+  /* This creates a cipher for AES. It can't fail. */
+  cipher = crypto_cipher_new_with_iv_and_bits(key, iv,
+                                              HS_DESC_ENCRYPTED_BIT_SIZE);
   /* This can't fail. */
   encrypted_len = build_plaintext_padding(plaintext, plaintext_len,
                                           &padded_plaintext);
@@ -573,7 +574,7 @@ encrypt_descriptor_data(const hs_descriptor_t *desc, const char *plaintext,
   size_t encrypted_len, final_blob_len, offset = 0;
   uint8_t *encrypted;
   uint8_t salt[HS_DESC_ENCRYPTED_SALT_LEN];
-  uint8_t secret_key[CIPHER_KEY_LEN], secret_iv[CIPHER_IV_LEN];
+  uint8_t secret_key[HS_DESC_ENCRYPTED_KEY_LEN], secret_iv[CIPHER_IV_LEN];
   uint8_t mac_key[DIGEST256_LEN], mac[DIGEST256_LEN];
 
   tor_assert(desc);
@@ -1058,7 +1059,7 @@ static size_t
 desc_decrypt_data_v3(const hs_descriptor_t *desc, char **decrypted_out)
 {
   uint8_t *decrypted = NULL;
-  uint8_t secret_key[CIPHER_KEY_LEN], secret_iv[CIPHER_IV_LEN];
+  uint8_t secret_key[HS_DESC_ENCRYPTED_KEY_LEN], secret_iv[CIPHER_IV_LEN];
   uint8_t mac_key[DIGEST256_LEN], our_mac[DIGEST256_LEN];
   const uint8_t *salt, *encrypted, *desc_mac;
   size_t encrypted_len, result_len = 0;
@@ -1118,8 +1119,9 @@ desc_decrypt_data_v3(const hs_descriptor_t *desc, char **decrypted_out)
     /* Decrypt. Here we are assured that the encrypted length is valid for
      * decryption. */
     crypto_cipher_t *cipher;
-    cipher = crypto_cipher_new_with_iv((const char *) secret_key,
-                                       (const char *) secret_iv);
+
+    cipher = crypto_cipher_new_with_iv_and_bits(secret_key, secret_iv,
+                                                HS_DESC_ENCRYPTED_BIT_SIZE);
     /* Extra byte for the NUL terminated byte. */
     decrypted = tor_malloc_zero(encrypted_len + 1);
     crypto_cipher_decrypt(cipher, (char *) decrypted,

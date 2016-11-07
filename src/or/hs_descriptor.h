@@ -40,7 +40,7 @@
 /* Length of the KDF output value which is the length of the secret key,
  * the secret IV and MAC key length which is the length of H() output. */
 #define HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN \
-  CIPHER_KEY_LEN + CIPHER_IV_LEN + DIGEST256_LEN
+  CIPHER256_KEY_LEN + CIPHER_IV_LEN + DIGEST256_LEN
 /* We need to pad the plaintext version of the encrypted data section before
  * encryption and it has to be a multiple of this value. */
 #define HS_DESC_PLAINTEXT_PADDING_MULTIPLE 128
@@ -59,6 +59,12 @@
  * the fields are version specific so the only required field, as a generic
  * view of a descriptor, is 1 that is the version field. */
 #define HS_DESC_PLAINTEXT_MIN_FIELDS 1
+
+/* Key length for the descriptor symmetric encryption. As specified in the
+ * protocol, we use AES-256 for the encrypted section of the descriptor. The
+ * following is the length in bytes and the bit size. */
+#define HS_DESC_ENCRYPTED_KEY_LEN CIPHER256_KEY_LEN
+#define HS_DESC_ENCRYPTED_BIT_SIZE (HS_DESC_ENCRYPTED_KEY_LEN * 8)
 
 /* Type of authentication in the descriptor. */
 typedef enum {

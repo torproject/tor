@@ -59,10 +59,12 @@
 #define DIGEST256_LEN 32
 /** Length of the output of our 64-bit optimized message digests (SHA512). */
 #define DIGEST512_LEN 64
-/** Length of our symmetric cipher's keys. */
+/** Length of our symmetric cipher's keys of 128-bit. */
 #define CIPHER_KEY_LEN 16
-/** Length of our symmetric cipher's IV. */
+/** Length of our symmetric cipher's IV of 128-bit. */
 #define CIPHER_IV_LEN 16
+/** Length of our symmetric cipher's keys of 256-bit. */
+#define CIPHER256_KEY_LEN 32
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)
 /** Length of our DH keys. */
