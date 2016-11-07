@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Use ECDHE ciphers instead of ECDH in tortls tests. LibreSSL has
-      removed the ECDH ciphers which caused the tests to fail on
-      platforms which use it. Fixes bug 20460; bugfix on 0.2.8.1-alpha.
