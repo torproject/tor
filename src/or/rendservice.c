@@ -72,6 +72,10 @@ static ssize_t rend_service_parse_intro_for_v3(
     size_t plaintext_len,
     char **err_msg_out);
 
+static int rend_service_check_private_dir(const or_options_t *options,
+                                          const rend_service_t *s,
+                                          int create);
+
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
  */
@@ -462,6 +466,11 @@ rend_config_services(const or_options_t *options, int validate_only)
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
+        if (rend_service_check_private_dir(options, service, 0) < 0) {
+          rend_service_free(service);
+          return -1;
+        }
+
         if (validate_only)
           rend_service_free(service);
         else
@@ -672,12 +681,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-    cpd_check_t check_opts = CPD_CHECK_MODE_ONLY|CPD_CHECK;
-    if (service->dir_group_readable) {
-      check_opts |= CPD_GROUP_READ;
-    }
-
-    if (check_private_dir(service->directory, check_opts, options->User) < 0) {
+    if (rend_service_check_private_dir(options, service, 0) < 0) {
       rend_service_free(service);
       return -1;
     }
@@ -1001,7 +1005,9 @@ service_is_single_onion_poisoned(const rend_service_t *service)
   fstatus = file_status(poison_fname);
   tor_free(poison_fname);
 
-  /* If this fname is occupied, the hidden service has been poisoned. */
+  /* If this fname is occupied, the hidden service has been poisoned.
+   * fstatus can be FN_ERROR if the service directory does not exist, in that
+   * case, there is obviously no private key. */
   if (fstatus == FN_FILE || fstatus == FN_EMPTY) {
     return 1;
   }
@@ -1017,7 +1023,9 @@ rend_service_private_key_exists(const rend_service_t *service)
   char *private_key_path = rend_service_path(service, private_key_fname);
   const file_status_t private_key_status = file_status(private_key_path);
   tor_free(private_key_path);
-  /* Only non-empty regular private key files could have been used before. */
+  /* Only non-empty regular private key files could have been used before.
+   * fstatus can be FN_ERROR if the service directory does not exist, in that
+   * case, there is obviously no private key. */
   return private_key_status == FN_FILE;
 }
 
@@ -1089,6 +1097,10 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
              "the private key was created.");
     return -1;
   }
+
+  /* Make sure the directory exists */
+  if (rend_service_check_private_dir(get_options(), service, 1) < 0)
+    return -1;
 
   poison_fname = rend_service_sos_poison_path(service);
 
@@ -1245,6 +1257,37 @@ rend_service_derive_key_digests(struct rend_service_t *s)
   return 0;
 }
 
+/** Make sure that the directory for <b>s</b> is private, using the config in
+ * <b>options</b>.
+ * If <b>create</b> is true:
+ *  - if the directory exists, change permissions if needed,
+ *  - if the directory does not exist, create it with the correct permissions.
+ * If <b>create</b> is false:
+ *  - if the directory exists, check permissions,
+ *  - if the directory does not exist, check if we think we can create it.
+ * Return 0 on success, -1 on failure. */
+static int
+rend_service_check_private_dir(const or_options_t *options,
+                               const rend_service_t *s,
+                               int create)
+{
+  cpd_check_t  check_opts = CPD_NONE;
+  if (create) {
+    check_opts |= CPD_CREATE;
+  } else {
+    check_opts |= CPD_CHECK_MODE_ONLY;
+    check_opts |= CPD_CHECK;
+  }
+  if (s->dir_group_readable) {
+    check_opts |= CPD_GROUP_READ;
+  }
+  /* Check/create directory */
+  if (check_private_dir(s->directory, check_opts, options->User) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
 /** Load and/or generate private keys for the hidden service <b>s</b>,
  * possibly including keys for client authorization.  Return 0 on success, -1
  * on failure. */
@@ -1253,23 +1296,9 @@ rend_service_load_keys(rend_service_t *s)
 {
   char *fname = NULL;
   char buf[128];
-  cpd_check_t  check_opts = CPD_CREATE;
 
-  if (s->dir_group_readable) {
-    check_opts |= CPD_GROUP_READ;
-  }
-  /* Check/create directory */
-  if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
+  if (rend_service_check_private_dir(get_options(), s, 1) < 0)
     goto err;
-  }
-#ifndef _WIN32
-  if (s->dir_group_readable) {
-    /* Only new dirs created get new opts, also enforce group read. */
-    if (chmod(s->directory, 0750)) {
-      log_warn(LD_FS,"Unable to make %s group-readable.", s->directory);
-    }
-  }
-#endif
 
   /* Load key */
   fname = rend_service_path(s, private_key_fname);

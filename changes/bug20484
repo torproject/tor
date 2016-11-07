@@ -1,0 +1,5 @@
+  o Minor bugfixes (single onion services):
+    - Start correctly when creating a single onion service in a
+      directory that did not previously exist. Fixes bug 20484; bugfix on
+      0.2.9.3-alpha.
+

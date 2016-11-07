@@ -518,6 +518,11 @@ mock_get_options(void)
   return mock_options;
 }
 
+/* arg can't be 0 (the test fails) or 2 (the test is skipped) */
+#define CREATE_HS_DIR_NONE ((intptr_t)0x04)
+#define CREATE_HS_DIR1     ((intptr_t)0x08)
+#define CREATE_HS_DIR2     ((intptr_t)0x10)
+
 /* Test that single onion poisoning works. */
 static void
 test_single_onion_poisoning(void *arg)
@@ -528,14 +533,14 @@ test_single_onion_poisoning(void *arg)
   MOCK(get_options, mock_get_options);
 
   int ret = -1;
-  mock_options->DataDirectory = tor_strdup(get_fname("test_data_dir"));
+  intptr_t create_dir_mask = (intptr_t)arg;
+  /* Get directories with a random suffix so we can repeat the tests */
+  mock_options->DataDirectory = tor_strdup(get_fname_rnd("test_data_dir"));
   rend_service_t *service_1 = tor_malloc_zero(sizeof(rend_service_t));
-  char *dir1 = tor_strdup(get_fname("test_hs_dir1"));
+  char *dir1 = tor_strdup(get_fname_rnd("test_hs_dir1"));
   rend_service_t *service_2 = tor_malloc_zero(sizeof(rend_service_t));
-  char *dir2 = tor_strdup(get_fname("test_hs_dir2"));
+  char *dir2 = tor_strdup(get_fname_rnd("test_hs_dir2"));
   smartlist_t *services = smartlist_new();
-
-  (void) arg;
 
   /* No services, no problem! */
   mock_options->HiddenServiceSingleHopMode = 0;
@@ -549,22 +554,20 @@ test_single_onion_poisoning(void *arg)
   ret = rend_service_list_verify_single_onion_poison(services, mock_options);
   tt_assert(ret == 0);
 
-  /* Create directories for both services */
-
-#ifdef _WIN32
-  ret = mkdir(mock_options->DataDirectory);
+  /* Create the data directory, and, if the correct bit in arg is set,
+   * create a directory for that service.
+   * The data directory is required for the lockfile, which is used when
+   * loading keys. */
+  ret = check_private_dir(mock_options->DataDirectory, CPD_CREATE, NULL);
   tt_assert(ret == 0);
-  ret = mkdir(dir1);
-  tt_assert(ret == 0);
-  ret = mkdir(dir2);
-#else
-  ret = mkdir(mock_options->DataDirectory, 0700);
-  tt_assert(ret == 0);
-  ret = mkdir(dir1, 0700);
-  tt_assert(ret == 0);
-  ret = mkdir(dir2, 0700);
-#endif
-  tt_assert(ret == 0);
+  if (create_dir_mask & CREATE_HS_DIR1) {
+    ret = check_private_dir(dir1, CPD_CREATE, NULL);
+    tt_assert(ret == 0);
+  }
+  if (create_dir_mask & CREATE_HS_DIR2) {
+    ret = check_private_dir(dir2, CPD_CREATE, NULL);
+    tt_assert(ret == 0);
+  }
 
   service_1->directory = dir1;
   service_2->directory = dir2;
@@ -694,7 +697,7 @@ test_single_onion_poisoning(void *arg)
   tt_assert(ret < 0);
 
  done:
-  /* TODO: should we delete the directories here? */
+  /* The test harness deletes the directories at exit */
   rend_service_free(service_1);
   rend_service_free(service_2);
   smartlist_free(services);
@@ -716,8 +719,14 @@ struct testcase_t hs_tests[] = {
     NULL, NULL },
   { "hs_auth_cookies", test_hs_auth_cookies, TT_FORK,
     NULL, NULL },
-  { "single_onion_poisoning", test_single_onion_poisoning, TT_FORK,
-    NULL, NULL },
+  { "single_onion_poisoning_create_dir_none", test_single_onion_poisoning,
+    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR_NONE) },
+  { "single_onion_poisoning_create_dir1", test_single_onion_poisoning,
+    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR1) },
+  { "single_onion_poisoning_create_dir2", test_single_onion_poisoning,
+    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR2) },
+  { "single_onion_poisoning_create_dir_both", test_single_onion_poisoning,
+    TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR1 | CREATE_HS_DIR2) },
   END_OF_TESTCASES
 };
 
