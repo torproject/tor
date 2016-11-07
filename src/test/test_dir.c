@@ -3626,8 +3626,8 @@ test_dir_download_status_random_backoff(void *arg)
     tt_int_op(increment, OP_GE, min_delay);
     tt_int_op(increment, OP_LE, max_delay);
     tt_int_op(increment, OP_GE, old_increment);
-    /* We at most double, and maybe add one */
-    tt_int_op(increment, OP_LE, 2 * old_increment + 1);
+    /* We at most quadruple, and maybe add one */
+    tt_int_op(increment, OP_LE, 4 * old_increment + 1);
 
     /* Advance */
     current_time += increment;
