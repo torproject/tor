@@ -3803,11 +3803,14 @@ next_random_exponential_delay(int delay, int max_delay)
   } else if (delay) {
     max_increment = INT_MAX-1;
   } else {
-    max_increment = 1; /* we're always willing to slow down a little. */
+    max_increment = 1;
   }
 
-  /* the + 1 here is so that we include the end of the interval */
-  int increment = crypto_rand_int(max_increment+1);
+  if (BUG(max_increment < 1))
+    max_increment = 1;
+
+  /* the + 1 here is so that we always wait longer than last time. */
+  int increment = crypto_rand_int(max_increment)+1;
 
   if (increment < max_delay - delay)
     return delay + increment;
