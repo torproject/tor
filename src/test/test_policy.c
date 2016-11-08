@@ -258,14 +258,16 @@ test_policies_general(void *arg)
   tt_assert(!cmp_addr_policies(policy2, policy2));
   tt_assert(!cmp_addr_policies(NULL, NULL));
 
-  tt_assert(!policy_is_reject_star(policy2, AF_INET));
-  tt_assert(policy_is_reject_star(policy, AF_INET));
-  tt_assert(policy_is_reject_star(policy10, AF_INET));
-  tt_assert(!policy_is_reject_star(policy10, AF_INET6));
-  tt_assert(policy_is_reject_star(policy11, AF_INET));
-  tt_assert(policy_is_reject_star(policy11, AF_INET6));
-  tt_assert(policy_is_reject_star(NULL, AF_INET));
-  tt_assert(policy_is_reject_star(NULL, AF_INET6));
+  tt_assert(!policy_is_reject_star(policy2, AF_INET, 1));
+  tt_assert(policy_is_reject_star(policy, AF_INET, 1));
+  tt_assert(policy_is_reject_star(policy10, AF_INET, 1));
+  tt_assert(!policy_is_reject_star(policy10, AF_INET6, 1));
+  tt_assert(policy_is_reject_star(policy11, AF_INET, 1));
+  tt_assert(policy_is_reject_star(policy11, AF_INET6, 1));
+  tt_assert(policy_is_reject_star(NULL, AF_INET, 1));
+  tt_assert(policy_is_reject_star(NULL, AF_INET6, 1));
+  tt_assert(!policy_is_reject_star(NULL, AF_INET, 0));
+  tt_assert(!policy_is_reject_star(NULL, AF_INET6, 0));
 
   addr_policy_list_free(policy);
   policy = NULL;

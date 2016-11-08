@@ -2158,8 +2158,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
                                             &ri->exit_policy);
   }
   ri->policy_is_reject_star =
-    policy_is_reject_star(ri->exit_policy, AF_INET) &&
-    policy_is_reject_star(ri->exit_policy, AF_INET6);
+    policy_is_reject_star(ri->exit_policy, AF_INET, 1) &&
+    policy_is_reject_star(ri->exit_policy, AF_INET6, 1);
 
   if (options->IPv6Exit) {
     char *p_tmp = policy_summarize(ri->exit_policy, AF_INET6);

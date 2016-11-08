@@ -274,28 +274,22 @@ parse_reachable_addresses(void)
 
   /* We ignore ReachableAddresses for relays */
   if (!server_mode(options)) {
-    if ((reachable_or_addr_policy
-         && policy_is_reject_star(reachable_or_addr_policy, AF_UNSPEC))
-        || (reachable_dir_addr_policy
-            && policy_is_reject_star(reachable_dir_addr_policy, AF_UNSPEC))) {
+    if (policy_is_reject_star(reachable_or_addr_policy, AF_UNSPEC, 0)
+        || policy_is_reject_star(reachable_dir_addr_policy, AF_UNSPEC,0)) {
       log_warn(LD_CONFIG, "Tor cannot connect to the Internet if "
                "ReachableAddresses, ReachableORAddresses, or "
                "ReachableDirAddresses reject all addresses. Please accept "
                "some addresses in these options.");
     } else if (options->ClientUseIPv4 == 1
-       && ((reachable_or_addr_policy
-            && policy_is_reject_star(reachable_or_addr_policy, AF_INET))
-        || (reachable_dir_addr_policy
-            && policy_is_reject_star(reachable_dir_addr_policy, AF_INET)))) {
+       && (policy_is_reject_star(reachable_or_addr_policy, AF_INET, 0)
+           || policy_is_reject_star(reachable_dir_addr_policy, AF_INET, 0))) {
           log_warn(LD_CONFIG, "You have set ClientUseIPv4 1, but "
                    "ReachableAddresses, ReachableORAddresses, or "
                    "ReachableDirAddresses reject all IPv4 addresses. "
                    "Tor will not connect using IPv4.");
     } else if (fascist_firewall_use_ipv6(options)
-       && ((reachable_or_addr_policy
-            && policy_is_reject_star(reachable_or_addr_policy, AF_INET6))
-        || (reachable_dir_addr_policy
-            && policy_is_reject_star(reachable_dir_addr_policy, AF_INET6)))) {
+       && (policy_is_reject_star(reachable_or_addr_policy, AF_INET6, 0)
+         || policy_is_reject_star(reachable_dir_addr_policy, AF_INET6, 0))) {
           log_warn(LD_CONFIG, "You have configured tor to use IPv6 "
                    "(ClientUseIPv6 1 or UseBridges 1), but "
                    "ReachableAddresses, ReachableORAddresses, or "
@@ -1084,8 +1078,8 @@ validate_addr_policies(const or_options_t *options, char **msg)
 
   const int exitrelay_setting_is_auto = options->ExitRelay == -1;
   const int policy_accepts_something =
-    ! (policy_is_reject_star(addr_policy, AF_INET) &&
-       policy_is_reject_star(addr_policy, AF_INET6));
+    ! (policy_is_reject_star(addr_policy, AF_INET, 1) &&
+       policy_is_reject_star(addr_policy, AF_INET6, 1));
 
   if (server_mode(options) &&
       ! warned_about_exitrelay &&
@@ -2156,13 +2150,16 @@ exit_policy_is_general_exit(smartlist_t *policy)
 }
 
 /** Return false if <b>policy</b> might permit access to some addr:port;
- * otherwise if we are certain it rejects everything, return true. */
+ * otherwise if we are certain it rejects everything, return true. If no
+ * part of <b>policy</b> matches, return <b>default_reject</b>.
+ * NULL policies are allowed, and treated as empty. */
 int
-policy_is_reject_star(const smartlist_t *policy, sa_family_t family)
+policy_is_reject_star(const smartlist_t *policy, sa_family_t family,
+                      int default_reject)
 {
-  if (!policy) /*XXXX disallow NULL policies? */
-    return 1;
-  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, p) {
+  if (!policy)
+    return default_reject;
+  SMARTLIST_FOREACH_BEGIN(policy, const addr_policy_t *, p) {
     if (p->policy_type == ADDR_POLICY_ACCEPT &&
         (tor_addr_family(&p->addr) == family ||
          tor_addr_family(&p->addr) == AF_UNSPEC)) {
@@ -2175,7 +2172,7 @@ policy_is_reject_star(const smartlist_t *policy, sa_family_t family)
       return 1;
     }
   } SMARTLIST_FOREACH_END(p);
-  return 1;
+  return default_reject;
 }
 
 /** Write a single address policy to the buf_len byte buffer at buf.  Return
