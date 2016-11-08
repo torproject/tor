@@ -3796,7 +3796,12 @@ next_random_exponential_delay(int delay, int max_delay)
 
   /* How much are we willing to add to the delay? */
   int max_increment;
-  const int multiplier = 3; /* no more than quadruple the previous delay */
+  int multiplier = 3; /* no more than quadruple the previous delay */
+  if (get_options()->TestingTorNetwork) {
+    /* Decrease the multiplier in testing networks. This reduces the variance,
+     * so that bootstrap is more reliable. */
+    multiplier = 2; /* no more than triple the previous delay */
+  }
 
   if (delay && delay < (INT_MAX-1) / multiplier) {
     max_increment = delay * multiplier;
