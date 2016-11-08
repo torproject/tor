@@ -35,6 +35,9 @@ Changes in version 0.2.9.5-alpha - 2016-11-08
     - When determining when to download a directory object, handle times
       after 2038 if the operating system supports them. (Someday this
       will be important!) Fixes bug 20587; bugfix on 0.2.8.1-alpha.
+    - When using exponential backoff in test networks, use a lower
+      exponent, so the delays do not vary as much. This helps test
+      networks bootstrap consistently. Fixes bug 20597; bugfix on 20499.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the November 3 2016 Maxmind GeoLite2
