@@ -102,6 +102,7 @@ helper_build_hs_desc(unsigned int no_ip)
   /* Setup encrypted data section. */
   desc->encrypted_data.create2_ntor = 1;
   desc->encrypted_data.auth_types = smartlist_new();
+  desc->encrypted_data.single_onion_service = 1;
   smartlist_add(desc->encrypted_data.auth_types, tor_strdup("ed25519"));
   desc->encrypted_data.intro_points = smartlist_new();
   if (!no_ip) {
