@@ -1924,7 +1924,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if (policy_is_reject_star(router->exit_policy, AF_INET) &&
+  if (policy_is_reject_star(router->exit_policy, AF_INET, 1) &&
       (!router->ipv6_exit_policy ||
        short_policy_is_reject_star(router->ipv6_exit_policy)))
     router->policy_is_reject_star = 1;
