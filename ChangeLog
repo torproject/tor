@@ -1,4 +1,107 @@
-Changes in version 0.2.9.5-rc - 2016-1?-??
+Changes in version 0.3.0.1-alpha - 2016-??-??
+
+
+Changes in version 0.2.9.5-alpha - 2016-11-08
+  Tor 0.2.9.5-alpha fixes numerous bugs discovered in the previous alpha
+  version. We believe one or two probably remain, and we encourage
+  everyone to test this release.
+
+  o Major bugfixes (client performance):
+    - Clients now respond to new application stream requests immediately
+      when they arrive, rather than waiting up to one second before
+      starting to handle them. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Major bugfixes (client reliability):
+    - When Tor leaves standby because of a new application request, open
+      circuits as needed to serve that request. Previously, we would
+      potentially wait a very long time. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Major bugfixes (download scheduling):
+    - When using an exponential backoff schedule, do not give up on
+      downloading just because we have failed a bunch of times. Since
+      each delay is longer than the last, retrying indefinitely won't
+      hurt. Fixes bug 20536; bugfix on 0.2.9.1-alpha.
+    - If a consensus expires while we are waiting for certificates to
+      download, stop waiting for certificates.
+    - If we stop waiting for certificates less than a minute after we
+      started downloading them, do not consider the certificate download
+      failure a separate failure. Fixes bug 20533; bugfix
+      on 0.2.0.9-alpha.
+    - Remove the maximum delay on exponential-backoff scheduling. Since
+      we now allow an infinite number of failures (see ticket 20536), we
+      must now allow the time to grow longer on each failure. Fixes part
+      of bug 20534; bugfix on 0.2.9.1-alpha.
+    - Make our initial download delays closer to those from 0.2.8. Fixes
+      another part of bug 20534; bugfix on 0.2.9.1-alpha.
+    - When determining when to download a directory object, handle times
+      after 2038 if the operating system supports them. (Someday this
+      will be important!) Fixes bug 20587; bugfix on 0.2.8.1-alpha.
+    - When using exponential backoff in test networks, use a lower
+      exponent, so the delays do not vary as much. This helps test
+      networks bootstrap consistently. Fixes bug 20597; bugfix on 20499.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the November 3 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (client directory scheduling):
+    - Treat "relay too busy to answer request" as a failed request and a
+      reason to back off on our retry frequency. This is safe now that
+      exponential backoffs retry indefinitely, and avoids a bug where we
+      would reset our download schedule erroneously. Fixes bug 20593;
+      bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (client, logging):
+    - Remove a BUG warning in circuit_pick_extend_handshake(). Instead,
+      assume all nodes support EXTEND2. Use ntor whenever a key is
+      available. Fixes bug 20472; bugfix on 0.2.9.3-alpha.
+    - On DNSPort, stop logging a BUG warning on a failed hostname
+      lookup. Fixes bug 19869; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (hidden services):
+    - When configuring hidden services, check every hidden service
+      directory's permissions. Previously, we only checked the last
+      hidden service. Fixes bug 20529; bugfix the work to fix 13942
+      in 0.2.6.2-alpha.
+
+  o Minor bugfixes (portability):
+    - Fix compilation with OpenSSL 1.1 and less commonly-used CPU
+      architectures. Closes ticket 20588.
+    - Use ECDHE ciphers instead of ECDH in tortls tests. LibreSSL has
+      removed the ECDH ciphers which caused the tests to fail on
+      platforms which use it. Fixes bug 20460; bugfix on 0.2.8.1-alpha.
+    - Fix implicit conversion warnings under OpenSSL 1.1. Fixes bug
+      20551; bugfix on 0.2.1.1-alpha.
+
+  o Minor bugfixes (relay bootstrap):
+    - Ensure relays don't make multiple connections during bootstrap.
+      Fixes bug 20591; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Work around a memory leak in OpenSSL 1.1 when encoding public
+      keys. Fixes bug 20553; bugfix on 0.0.2pre8.
+    - Avoid a small memory leak when informing worker threads about
+      rotated onion keys. Fixes bug 20401; bugfix on 0.2.6.3-alpha.
+    - Do not try to parallelize workers more than 16x without the user
+      explicitly configuring us to do so, even if we do detect more than
+      16 CPU cores. Fixes bug 19968; bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes (single onion services):
+    - Start correctly when creating a single onion service in a
+      directory that did not previously exist. Fixes bug 20484; bugfix
+      on 0.2.9.3-alpha.
+
+  o Minor bugfixes (testing):
+    - Avoid a unit test failure on systems with over 16 detectable CPU
+      cores. Fixes bug 19968; bugfix on 0.2.3.1-alpha.
+
+  o Documentation:
+    - Clarify that setting HiddenServiceNonAnonymousMode requires you to
+      also set "SOCKSPort 0". Fixes bug 20487; bugfix on 0.2.9.3-alpha.
+    - Module-level documentation for several more modules. Closes
+      tickets 19287 and 19290.
 
 
 Changes in version 0.2.8.9 - 2016-10-17
