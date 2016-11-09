@@ -788,6 +788,8 @@ static time_t last_expired_clientside_circuits = 0;
  * As a diagnostic for bug 8387, log information about how many one-hop
  * circuits we have around that have been there for at least <b>age</b>
  * seconds. Log a few of them.
+ * Ignores Single Onion Service intro and Tor2web redezvous circuits, they are
+ * expected to be long-term one-hop circuits.
  */
 void
 circuit_log_ancient_one_hop_circuits(int age)
@@ -804,6 +806,19 @@ circuit_log_ancient_one_hop_circuits(int age)
     if (! CIRCUIT_IS_ORIGIN(circ))
       continue;
     if (circ->timestamp_created.tv_sec >= cutoff)
+      continue;
+    /* Single Onion Services deliberately make long term one-hop intro
+     * connections. We only ignore active intro point connections, if we take
+     * a long time establishing, that's worth logging. */
+    if (rend_service_allow_non_anonymous_connection(options) &&
+        circ->purpose == CIRCUIT_PURPOSE_S_INTRO)
+      continue;
+    /* Tor2web deliberately makes long term one-hop rend connections,
+     * particularly when Tor2webRendezvousPoints is used. We only ignore
+     * active rend point connections, if we take a long time to rendezvous,
+     * that's worth logging. */
+    if (rend_client_allow_non_anonymous_connection(options) &&
+        circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
       continue;
     ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
 
