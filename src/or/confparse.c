@@ -1224,6 +1224,8 @@ static struct unit_table_t memory_units[] = {
   { "gbits",     1<<27 },
   { "gbit",      1<<27 },
   { "tb",        U64_LITERAL(1)<<40 },
+  { "tbyte",     U64_LITERAL(1)<<40 },
+  { "tbytes",    U64_LITERAL(1)<<40 },
   { "terabyte",  U64_LITERAL(1)<<40 },
   { "terabytes", U64_LITERAL(1)<<40 },
   { "terabits",  U64_LITERAL(1)<<37 },

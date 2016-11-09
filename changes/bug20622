@@ -1,0 +1,8 @@
+  o Minor bugfixes (configuration):
+    - Support "TByte" and "TBytes" units in options given in bytes.
+      "TB", "terabyte(s)", "TBit(s)" and "terabit(s)" were already
+      supported. Fixes bug 20622; bugfix on 0.2.0.14-alpha.
+
+  o Minor bugfixes (documentation):
+    - Include the "TBits" unit in Tor's man page. Fixes part of bug
+      20622; bugfix on tor-0.2.5.1-alpha.

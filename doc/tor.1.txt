@@ -176,7 +176,7 @@ forward slash (/) in the configuration file and on the command line.
 GENERAL OPTIONS
 ---------------
 
-[[BandwidthRate]] **BandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[BandwidthRate]] **BandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     A token bucket limits the average incoming bandwidth usage on this node
     to the specified number of bytes per second, and the average outgoing
     bandwidth usage to that same value.  If you want to run a relay in the
@@ -195,35 +195,35 @@ GENERAL OPTIONS
     To avoid confusion, we recommend writing "bytes" or "bits" explicitly,
     since it's easy to forget that "B" means bytes, not bits.
 
-[[BandwidthBurst]] **BandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[BandwidthBurst]] **BandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Limit the maximum token bucket size (also known as the burst) to the given
     number of bytes in each direction. (Default: 1 GByte)
 
-[[MaxAdvertisedBandwidth]] **MaxAdvertisedBandwidth** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[MaxAdvertisedBandwidth]] **MaxAdvertisedBandwidth** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If set, we will not advertise more than this amount of bandwidth for our
     BandwidthRate. Server operators who want to reduce the number of clients
     who ask to build circuits through them (since this is proportional to
     advertised bandwidth rate) can thus reduce the CPU demands on their server
     without impacting network performance.
 
-[[RelayBandwidthRate]] **RelayBandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[RelayBandwidthRate]] **RelayBandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If not 0, a separate token bucket limits the average incoming bandwidth
     usage for \_relayed traffic_ on this node to the specified number of bytes
     per second, and the average outgoing bandwidth usage to that same value.
     Relayed traffic currently is calculated to include answers to directory
     requests, but that may change in future versions. (Default: 0)
 
-[[RelayBandwidthBurst]] **RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[RelayBandwidthBurst]] **RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If not 0, limit the maximum token bucket size (also known as the burst) for
     \_relayed traffic_ to the given number of bytes in each direction.
     (Default: 0)
 
-[[PerConnBWRate]] **PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[PerConnBWRate]] **PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If set, do separate rate limiting for each connection from a non-relay.
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
 
-[[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If set, do separate rate limiting for each connection from a non-relay.
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
@@ -608,7 +608,7 @@ GENERAL OPTIONS
     message currently has at least one domain; most currently have exactly
     one.  This doesn't affect controller log messages. (Default: 0)
 
-[[MaxUnparseableDescSizeToLog]] **MaxUnparseableDescSizeToLog** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+[[MaxUnparseableDescSizeToLog]] **MaxUnparseableDescSizeToLog** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**::
     Unparseable descriptors (e.g. for votes, consensuses, routers) are logged
     in separate files by hash, up to the specified size in total.  Note that
     only files logged during the lifetime of this Tor process count toward the
@@ -1867,7 +1867,7 @@ is non-zero):
     to 0 will disable the heartbeat. Otherwise, it must be at least 30
     minutes. (Default: 6 hours)
 
-[[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**|**TBytes**::
+[[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Limits the max number of bytes sent and received within a set time period
     using a given calculation rule (see: AccountingStart, AccountingRule).
     Useful if you need to stay under a specific bandwidth. By default, the
@@ -2240,12 +2240,12 @@ on the public Tor network.
     Authoritative directories only. Like AuthDirMaxServersPerAddr, but applies
     to addresses shared with directory authorities. (Default: 5)
 
-[[AuthDirFastGuarantee]] **AuthDirFastGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[AuthDirFastGuarantee]] **AuthDirFastGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Authoritative directories only. If non-zero, always vote the
     Fast flag for any relay advertising this amount of capacity or
     more. (Default: 100 KBytes)
 
-[[AuthDirGuardBWGuarantee]] **AuthDirGuardBWGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[AuthDirGuardBWGuarantee]] **AuthDirGuardBWGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Authoritative directories only. If non-zero, this advertised capacity
     or more is always sufficient to satisfy the bandwidth requirement
     for the Guard flag. (Default: 2 MBytes)
@@ -2523,7 +2523,7 @@ The following options are used for running a testing Tor network.
     time. Changing this requires that **TestingTorNetwork** is set. (Default:
     10 minutes)
 
-[[TestingMinFastFlagThreshold]] **TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[TestingMinFastFlagThreshold]] **TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Minimum value for the Fast flag.  Overrides the ordinary minimum taken
     from the consensus when TestingTorNetwork is set. (Default: 0.)
 
@@ -2643,7 +2643,7 @@ The following options are used for running a testing Tor network.
     events.  Changing this requires that **TestingTorNetwork** is set.
     (Default: 0)
 
-[[TestingMinExitFlagThreshold]] **TestingMinExitFlagThreshold**  __N__ **KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+[[TestingMinExitFlagThreshold]] **TestingMinExitFlagThreshold**  __N__ **KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Sets a lower-bound for assigning an exit flag when running as an
     authority on a testing network. Overrides the usual default lower bound
     of 4 KB. (Default: 0)
