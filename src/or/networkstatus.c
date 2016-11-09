@@ -1342,6 +1342,24 @@ networkstatus_get_live_consensus,(time_t now))
     return NULL;
 }
 
+/** Determine if <b>consensus</b> is valid or expired recently enough that
+ * we can still use it.
+ *
+ * Return 1 if the consensus is reasonably live, or 0 if it is too old.
+ */
+int
+networkstatus_consensus_reasonably_live(networkstatus_t *consensus, time_t now)
+{
+#define REASONABLY_LIVE_TIME (24*60*60)
+  if (BUG(!consensus))
+    return 0;
+
+  if (now <= consensus->valid_until + REASONABLY_LIVE_TIME)
+    return 1;
+
+  return 0;
+}
+
 /* XXXX remove this in favor of get_live_consensus. But actually,
  * leave something like it for bridge users, who need to not totally
  * lose if they spend a while fetching a new consensus. */
@@ -1350,12 +1368,11 @@ networkstatus_get_live_consensus,(time_t now))
 networkstatus_t *
 networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 {
-#define REASONABLY_LIVE_TIME (24*60*60)
   networkstatus_t *consensus =
     networkstatus_get_latest_consensus_by_flavor(flavor);
   if (consensus &&
       consensus->valid_after <= now &&
-      now <= consensus->valid_until+REASONABLY_LIVE_TIME)
+      networkstatus_consensus_reasonably_live(consensus, now))
     return consensus;
   else
     return NULL;

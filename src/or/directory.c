@@ -2939,6 +2939,28 @@ handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
   return 0;
 }
 
+/** Warn that the consensus <b>v</b> of type <b>flavor</b> is too old and will
+ * not be served to clients. Rate-limit the warning to avoid logging an entry
+ * on every request.
+ */
+static void
+warn_consensus_is_too_old(networkstatus_t *v, const char *flavor, time_t now)
+{
+#define TOO_OLD_WARNING_INTERVAL (60*60)
+  static ratelim_t warned = RATELIM_INIT(TOO_OLD_WARNING_INTERVAL);
+  char timestamp[ISO_TIME_LEN+1];
+  char *dupes;
+
+  if ((dupes = rate_limit_log(&warned, now))) {
+    format_local_iso_time(timestamp, v->valid_until);
+    log_warn(LD_DIRSERV, "Our %s%sconsensus is too old, so we will not "
+             "serve it to clients. It was valid until %s local time and we "
+             "continued to serve it for up to 24 hours after it expired.%s",
+             flavor ? flavor : "", flavor ? " " : "", timestamp, dupes);
+    tor_free(dupes);
+  }
+}
+
 /** Helper function for GET /tor/status-vote/current/consensus
  */
 static int
@@ -2982,6 +3004,15 @@ handle_get_current_consensus(dir_connection_t *conn,
       }
 
       v = networkstatus_get_latest_consensus_by_flavor(flav);
+
+      if (v && !networkstatus_consensus_reasonably_live(v, now)) {
+        write_http_status_line(conn, 404, "Consensus is too old");
+        warn_consensus_is_too_old(v, flavor, now);
+        smartlist_free(dir_fps);
+        geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
+        tor_free(flavor);
+        goto done;
+      }
 
       if (v && want_fps &&
           !client_likes_consensus(v, want_fps)) {
