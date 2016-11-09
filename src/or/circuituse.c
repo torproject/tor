@@ -797,6 +797,7 @@ circuit_log_ancient_one_hop_circuits(int age)
   time_t cutoff = now - age;
   int n_found = 0;
   smartlist_t *log_these = smartlist_new();
+  const or_options_t *options = get_options();
 
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     const origin_circuit_t *ocirc;
@@ -839,7 +840,7 @@ circuit_log_ancient_one_hop_circuits(int age)
 
       tor_asprintf(&dirty, "Dirty since %s (%ld seconds vs %ld-second cutoff)",
                    dirty_since, (long)(now - circ->timestamp_dirty),
-                   (long) get_options()->MaxCircuitDirtiness);
+                   (long) options->MaxCircuitDirtiness);
     } else {
       dirty = tor_strdup("Not marked dirty");
     }
