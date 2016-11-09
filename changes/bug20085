@@ -1,0 +1,4 @@
+  o Documentation:
+    - Correct the minimum bandwidth value in torrc.sample, and queue a
+      corresponding change for torrc.minimal. Closes ticket 20085.
+
