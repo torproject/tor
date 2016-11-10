@@ -28,6 +28,7 @@ int ed25519_public_from_base64(ed25519_public_key_t *pkey,
                                const char *input);
 int ed25519_public_to_base64(char *output,
                              const ed25519_public_key_t *pkey);
+const char *ed25519_fmt(const ed25519_public_key_t *pkey);
 
 /* XXXX move these to crypto_format.h */
 #define ED25519_SIG_BASE64_LEN 86
