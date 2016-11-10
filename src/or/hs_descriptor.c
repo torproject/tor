@@ -134,6 +134,7 @@ desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
   memwipe(desc, 0, sizeof(*desc));
 }
 
+/* === ENCODING === */
 
 /* Encode the given link specifier objects into a newly allocated string.
  * This can't fail so caller can always assume a valid string being
