@@ -1180,7 +1180,9 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   if (ed25519_public_key_is_zero(&ec.ed_pubkey)) {
     const node_t *node = node_get_by_id((const char*)ec.node_id);
     const ed25519_public_key_t *node_ed_id = NULL;
-    if (node && (node_ed_id = node_get_ed25519_id(node))) {
+    if (node &&
+        node_supports_ed25519_link_authentication(node) &&
+        (node_ed_id = node_get_ed25519_id(node))) {
       memcpy(ec.ed_pubkey.pubkey, node_ed_id->pubkey, ED25519_PUBKEY_LEN);
     }
   }
@@ -2450,7 +2452,18 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
     return NULL;
   }
 
-  const ed25519_public_key_t *ed_pubkey = node_get_ed25519_id(node);
+  const ed25519_public_key_t *ed_pubkey = NULL;
+
+  /* Don't send the ed25519 pubkey unless the target node actually supports
+   * authenticating with it. */
+  if (node_supports_ed25519_link_authentication(node)) {
+    log_info(LD_CIRC, "Including Ed25519 ID for %s", node_describe(node));
+    ed_pubkey = node_get_ed25519_id(node);
+  } else if (node_get_ed25519_id(node)) {
+    log_info(LD_CIRC, "Not including the ed25519 ID for %s, since it won't "
+             " be able to authenticate it.",
+             node_describe(node));
+  }
 
   if (valid_addr && node->ri)
     return extend_info_new(node->ri->nickname,

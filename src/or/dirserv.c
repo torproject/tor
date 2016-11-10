@@ -3259,11 +3259,18 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   channel_t *chan = NULL;
   node_t *node = NULL;
   tor_addr_t router_addr;
+  const ed25519_public_key_t *ed_id_key;
   (void) now;
 
   tor_assert(router);
   node = node_get_mutable_by_id(router->cache_info.identity_digest);
   tor_assert(node);
+
+  if (node_supports_ed25519_link_authentication(node)) {
+    ed_id_key = &router->cache_info.signing_key_cert->signing_key;
+  } else {
+    ed_id_key = NULL;
+  }
 
   /* IPv4. */
   log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
@@ -3271,8 +3278,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   tor_addr_from_ipv4h(&router_addr, router->addr);
   chan = channel_tls_connect(&router_addr, router->or_port,
                              router->cache_info.identity_digest,
-                             NULL // XXXX Ed25519 ID.
-                             );
+                             ed_id_key);
   if (chan) command_setup_channel(chan);
 
   /* Possible IPv6. */
@@ -3285,8 +3291,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
               router->ipv6_orport);
     chan = channel_tls_connect(&router->ipv6_addr, router->ipv6_orport,
                                router->cache_info.identity_digest,
-                               NULL // XXXX Ed25519 ID.
-                               );
+                               ed_id_key);
     if (chan) command_setup_channel(chan);
   }
 }

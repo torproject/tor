@@ -1547,8 +1547,24 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                      const ed25519_public_key_t *ed_peer_id)
 {
   const or_options_t *options = get_options();
+  channel_tls_t *chan_tls = conn->chan;
+  channel_t *chan = channel_tls_to_base(chan_tls);
+  tor_assert(chan);
 
-  if (tor_digest_is_zero(conn->identity_digest)) {
+  const int expected_rsa_key =
+    ! tor_digest_is_zero(conn->identity_digest);
+  const int expected_ed_key =
+    ! ed25519_public_key_is_zero(&chan->ed25519_identity);
+
+  log_info(LD_HANDSHAKE, "learned peer id for %p (%s): %s, %s",
+           conn,
+           safe_str_client(conn->base_.address),
+           hex_str((const char*)rsa_peer_id, DIGEST_LEN),
+           ed25519_fmt(ed_peer_id));
+
+  if (! expected_rsa_key && ! expected_ed_key) {
+    log_info(LD_HANDSHAKE, "(we had no ID in mind when we made this "
+             "connection.");
     connection_or_set_identity_digest(conn,
                                       (const char*)rsa_peer_id, ed_peer_id);
     tor_free(conn->nickname);
@@ -1565,13 +1581,35 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                             (const char*)rsa_peer_id, ed_peer_id);
   }
 
-  if (tor_memneq(rsa_peer_id, conn->identity_digest, DIGEST_LEN)) {
+  const int rsa_mismatch = expected_rsa_key &&
+    tor_memneq(rsa_peer_id, conn->identity_digest, DIGEST_LEN);
+  /* It only counts as an ed25519 mismatch if we wanted an ed25519 identity
+   * and didn't get it. It's okay if we get one that we didn't ask for. */
+  const int ed25519_mismatch =
+    expected_ed_key &&
+    (ed_peer_id == NULL ||
+     ! ed25519_pubkey_eq(&chan->ed25519_identity, ed_peer_id));
+
+  if (rsa_mismatch || ed25519_mismatch) {
     /* I was aiming for a particular digest. I didn't get it! */
-    char seen[HEX_DIGEST_LEN+1];
-    char expected[HEX_DIGEST_LEN+1];
-    base16_encode(seen, sizeof(seen), (const char*)rsa_peer_id, DIGEST_LEN);
-    base16_encode(expected, sizeof(expected), conn->identity_digest,
+    char seen_rsa[HEX_DIGEST_LEN+1];
+    char expected_rsa[HEX_DIGEST_LEN+1];
+    char seen_ed[ED25519_BASE64_LEN+1];
+    char expected_ed[ED25519_BASE64_LEN+1];
+    base16_encode(seen_rsa, sizeof(seen_rsa),
+                  (const char*)rsa_peer_id, DIGEST_LEN);
+    base16_encode(expected_rsa, sizeof(expected_rsa), conn->identity_digest,
                   DIGEST_LEN);
+    if (ed_peer_id) {
+      ed25519_public_to_base64(seen_ed, ed_peer_id);
+    } else {
+      strlcpy(seen_ed, "no ed25519 key", sizeof(seen_ed));
+    }
+    if (! ed25519_public_key_is_zero(&chan->ed25519_identity)) {
+      ed25519_public_to_base64(expected_ed, &chan->ed25519_identity);
+    } else {
+      strlcpy(expected_ed, "no ed25519 key", sizeof(expected_ed));
+    }
     const int using_hardcoded_fingerprints =
       !networkstatus_get_reasonably_live_consensus(time(NULL),
                                                    usable_consensus_flavor());
@@ -1606,9 +1644,11 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     }
 
     log_fn(severity, LD_HANDSHAKE,
-           "Tried connecting to router at %s:%d, but identity key was not "
-           "as expected: wanted %s but got %s.%s",
-           conn->base_.address, conn->base_.port, expected, seen, extra_log);
+           "Tried connecting to router at %s:%d, but RSA identity key was not "
+           "as expected: wanted %s + %s but got %s + %s.%s",
+           conn->base_.address, conn->base_.port,
+           expected_rsa, expected_ed, seen_rsa, seen_ed, extra_log);
+
     entry_guard_register_connect_status(conn->identity_digest, 0, 1,
                                         time(NULL));
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
@@ -1621,7 +1661,12 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     return -1;
   }
 
-  /* XXXX 15056 -- use the Ed25519 key */
+  if (!expected_ed_key && ed_peer_id) {
+    log_info(LD_HANDSHAKE, "(we had no Ed25519 ID in mind when we made this "
+             "connection.");
+    connection_or_set_identity_digest(conn,
+                                      (const char*)rsa_peer_id, ed_peer_id);
+  }
 
   if (authdir_mode_tests_reachability(options)) {
     dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
