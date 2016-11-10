@@ -24,6 +24,8 @@ int relay_send_command_from_edge_(streamid_t stream_id, circuit_t *circ,
                                uint8_t relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer,
                                const char *filename, int lineno);
+/* Indicates to relay_send_command_from_edge() that it is a control cell. */
+#define CONTROL_CELL_ID 0
 #define relay_send_command_from_edge(stream_id, circ, relay_command, payload, \
                                      payload_len, cpath_layer)          \
   relay_send_command_from_edge_((stream_id), (circ), (relay_command),   \
