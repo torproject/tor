@@ -4577,6 +4577,11 @@ typedef struct {
   /** Autobool: Should we include Ed25519 identities in extend2 cells?
    * If -1, we should do whatever the consensus parameter says. */
   int ExtendByEd25519ID;
+
+  /** Bool (default: 1): When testing routerinfos as a directory authority,
+   * do we enforce Ed25519 identity match? */
+  /* NOTE: remove this option someday. */
+  int AuthDirTestEd25519LinkKeys;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
