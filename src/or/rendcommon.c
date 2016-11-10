@@ -771,7 +771,7 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
       break;
     case RELAY_COMMAND_INTRODUCE1:
       if (or_circ)
-        r = rend_mid_introduce(or_circ,payload,length);
+        r = hs_intro_received_introduce1(or_circ,payload,length);
       break;
     case RELAY_COMMAND_INTRODUCE2:
       if (origin_circ)
