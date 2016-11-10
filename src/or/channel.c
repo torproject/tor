@@ -1468,7 +1468,6 @@ channel_clear_identity_digest(channel_t *chan)
  * This function sets the identity digest of the remote endpoint for a
  * channel; this is intended for use by the lower layer.
  */
-
 void
 channel_set_identity_digest(channel_t *chan,
                             const char *identity_digest,
@@ -1513,6 +1512,8 @@ channel_set_identity_digest(channel_t *chan,
   }
   if (ed_identity) {
     memcpy(&chan->ed25519_identity, ed_identity, sizeof(*ed_identity));
+  } else {
+    memset(&chan->ed25519_identity, 0, sizeof(*ed_identity));
   }
 
   /* Put it in the digest map if we should */
