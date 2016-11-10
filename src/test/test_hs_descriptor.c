@@ -813,106 +813,6 @@ test_decode_intro_point(void *arg)
   desc_intro_point_free(ip);
 }
 
-static const char encrypted_desc_portion[] = "create2-formats 2\n"
-  "authentication-required ed25519\n"
-  "introduction-point AQAGAQIDBCMp\n"
-  "auth-key\n"
-  "-----BEGIN ED25519 CERT-----\n"
-  "AQkABmRZASMANx4sbMyDd4i+MciVUw29vPQ/nOFrLwUdTGEBXSXrAQAgBABo2zfd\n"
-  "wyqAdzSeaIzH1TUcV3u8nAG2YhNCRw2/2vVWuD6Z4Fn0aNHnh1FONNkbismC9t1X\n"
-  "Rf07hdZkVYEbOaPsHnFwhJULVSUo8YYuL19jghRjwMqPGeGfD4iuQqdo3QA=\n"
-  "-----END ED25519 CERT-----\n"
-  "enc-key ntor xo2n5anLMoyIMuhcKSLdVZISyISBW8j1vXRbpdbK+lU=\n"
-  "enc-key-certification\n"
-  "-----BEGIN ED25519 CERT-----\n"
-  "AQsABmRZATUYQypFY7pr8FpmV61pcqUylt5fEr/QLfavfcwbzlA7AQAgBADSI5Ie\n"
-  "Ekdy+qeHngLmz6Gr7fQ5xvilhxB91UDIjwRfP0ufoVF+HalsyXKskYvcYhH67+lw\n"
-  "D947flCHzeJyfAT38jO/Cw42qM7H+SObBMcsTB93J0lPNBy4OHosH9ybtwA=\n"
-  "-----END ED25519 CERT-----\n"
-  "introduction-point AQESJgAAAAAAAAAAAAAAAAAAASMp\n"
-  "auth-key\n"
-  "-----BEGIN ED25519 CERT-----\n"
-  "AQkABmRZAVdPeZyzfCyUDC1fnYyom8eOS2O1opzTytEU7dlOf9brAQAgBABo2zfd\n"
-  "wyqAdzSeaIzH1TUcV3u8nAG2YhNCRw2/2vVWuHVSGTrO1EM6Eu1jyOw/qtSS6Exf\n"
-  "omV417y8uK2gHQ+1FWqg/KaogELYzDG6pcj2NkziovnIfET0W7nZB85YjwQ=\n"
-  "-----END ED25519 CERT-----\n"
-  "enc-key ntor MbxzxI1K+zcl7e+wysLK96UZWwFEJQqI0G7b0muRXx4=\n"
-  "enc-key-certification\n"
-  "-----BEGIN ED25519 CERT-----\n"
-  "AQsABmRZATUYQypFY7pr8FpmV61pcqUylt5fEr/QLfavfcwbzlA7AQAgBADimELh\n"
-  "lLZvy/LjXnCdpvaVRhiGBeIRAGIDGz1SY/zD6BAnpDL420ha2TdvdGsg8cgfTcJZ\n"
-  "g84x85+zhuh8kkdgt7bOmjOXLlButDCfTarMgCfy6pSI/hUckk+j5Q43uws=\n"
-  "-----END ED25519 CERT-----\n"
-  "introduction-point AQIUMDI5OUYyNjhGQ0E5RDU1Q0QxNTc=\n"
-  "auth-key\n"
-  "-----BEGIN ED25519 CERT-----\n"
-  "AQkABmRZASnpBjHsw0Gpvi+KNlW4ouXegIsUBHMvJN1CQHDTLdfnAQAgBABo2zfd\n"
-  "wyqAdzSeaIzH1TUcV3u8nAG2YhNCRw2/2vVWuOlbHs8s8LAeEb36urVKTJ5exgss\n"
-  "V+ylIwHSWF0qanCnnTnDyNg/3YRUo0AZr0d/CoiNV+XsGE4Vuho/TBVC+wY=\n"
-  "-----END ED25519 CERT-----\n"
-  "enc-key legacy\n"
-  "-----BEGIN RSA PUBLIC KEY-----\n"
-  "MIGJAoGBALttUA1paMCQiuIZeCp26REztziej5dN0o6/kTU//ItT4MGxTfmnLmcq\n"
-  "WpvK4jdX1h2OlDCZmtA7sb0HOkjELgrDU0ATVwOaeG+3icSddmQyaeT8+cxQEktj\n"
-  "SXMQ+iJDxJIIWFPmLmWWQHqb4IRfl021l3iTErhtZKBz37JNK7E/AgMBAAE=\n"
-  "-----END RSA PUBLIC KEY-----\n"
-  "enc-key-certification\n"
-  "-----BEGIN CROSSCERT-----\n"
-  "NRhDKkVjumvwWmZXrWlypTKW3l8Sv9At9q99zBvOUDsABmRZgBROMZr2Mhj8H8zd\n"
-  "xbU6ZvDUwD9xkptNHq0W04CyWb8p0y56y89y2kBF6RrSrVBJCyaHyph6Bmi5z0Lc\n"
-  "f4jjakRlHwB7oYqSo7l8EE9DGE0rEat3hNhN+tBIAJL5gKOL4dgfD5gMi51zzSFl\n"
-  "epv8idTwhqZ/sxRMUIQrb9AB8sOD\n"
-  "-----END CROSSCERT-----\n"
-  "introduction-point AQIUMDI5OUYyNjhGQ0E5RDU1Q0QxNTc=\n"
-  "auth-key\n"
-  "-----BEGIN ED25519 CERT-----\n"
-  "AQkABmRZAdBFQcE23cIoCMFTycnQ1st2752vdjGME+QPMTTxvqZhAQAgBABo2zfd\n"
-  "wyqAdzSeaIzH1TUcV3u8nAG2YhNCRw2/2vVWuOGXGPnb3g9J8aSyN7jYs71ET0wC\n"
-  "TlDLcXCgAMnKA6of/a4QceFfAFsCnI3qCd8YUo5NYCMh2d5mtFpLK41Wpwo=\n"
-  "-----END ED25519 CERT-----\n"
-  "enc-key legacy\n"
-  "-----BEGIN RSA PUBLIC KEY-----\n"
-  "MIGJAoGBALuyEVMz4GwZ8LnBYxLZDHNg1DHUZJZNmE7HsQDcM/FYeZ1LjYLe/K8s\n"
-  "BFzgFmjMU1ondIWGWpRCLYcZxQMZaSU0ObdezDwelTkHo/u7K2fQTLmI9EofcsK0\n"
-  "4OkY6eo8BFtXXoQJhAw5WatRpzah2sGqMPXs2jr7Ku4Pd8JuRd35AgMBAAE=\n"
-  "-----END RSA PUBLIC KEY-----\n"
-  "enc-key-certification\n"
-  "-----BEGIN CROSSCERT-----\n"
-  "NRhDKkVjumvwWmZXrWlypTKW3l8Sv9At9q99zBvOUDsABmRZgGwpo67ybC7skFYk\n"
-  "JjvqcbrKg8Fwrvue9yF66p1O90fqziVsvpKGcsr3tcIJHtNsrWVRDpyFwnc1wlVE\n"
-  "O7rHftF4GUsKaoz3wxxmb0YyyYVQvLpH0Y6lFIvw8nGurnsMefQWLcxuEX7xZOPl\n"
-  "VAlVp+XtJE1ZNQ62hpnNgBDi1ikJ\n"
-  "-----END CROSSCERT-----";
-
-static void
-test_decode_multiple_intro_points(void *arg)
-{
-  int ret;
-  hs_descriptor_t *desc = NULL;
-
-  /* XXXX test is broken! Assumes that signing key is as hardcoded in
-   * crosscert code above. */
-  if (1)
-    tt_skip();
-
-  (void) arg;
-
-  {
-    /* Build a descriptor with no intro points. */
-    desc = helper_build_hs_desc(1);
-    tt_assert(desc);
-  }
-
-  ret = decode_intro_points(desc, &desc->encrypted_data,
-                            encrypted_desc_portion);
-  tt_int_op(ret, ==, 0);
-
-  tt_int_op(smartlist_len(desc->encrypted_data.intro_points), ==, 4);
-
- done:
-  ;
-}
-
 static void
 test_decode_plaintext(void *arg)
 {
@@ -1103,8 +1003,6 @@ struct testcase_t hs_descriptor[] = {
   { "encrypted_data_len", test_encrypted_data_len, TT_FORK,
     NULL, NULL },
   { "decode_intro_point", test_decode_intro_point, TT_FORK,
-    NULL, NULL },
-  { "decode_multiple_intro_points", test_decode_multiple_intro_points, TT_FORK,
     NULL, NULL },
   { "decode_plaintext", test_decode_plaintext, TT_FORK,
     NULL, NULL },
