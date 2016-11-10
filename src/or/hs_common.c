@@ -135,7 +135,9 @@ compute_desc_id(rend_data_t *rend_data)
 
 /* Allocate and initialize a rend_data_t object for a service using the
  * provided arguments. All arguments are optional (can be NULL), except from
- * <b>onion_address</b> which MUST be set.
+ * <b>onion_address</b> which MUST be set. The <b>pk_digest</b> is the hash of
+ * the service private key. The <b>cookie</b> is the rendezvous cookie and
+ * <b>auth_type</b> is which authentiation this service is configured with.
  *
  * Return a valid rend_data_t pointer. This only returns a version 2 object of
  * rend_data_t. */
@@ -163,10 +165,11 @@ rend_data_service_create(const char *onion_address, const char *pk_digest,
   return rend_data;
 }
 
-/* Allocate and initialize a rend_data_t object for a client request using
- * the given arguments.  Either an onion address or a descriptor ID is
- * needed. Both can be given but only the onion address will be used to make
- * the descriptor fetch.
+/* Allocate and initialize a rend_data_t object for a client request using the
+ * given arguments. Either an onion address or a descriptor ID is needed. Both
+ * can be given but in this case only the onion address will be used to make
+ * the descriptor fetch. The <b>cookie</b> is the rendezvous cookie and
+ * <b>auth_type</b> is which authentiation the service is configured with.
  *
  * Return a valid rend_data_t pointer or NULL on error meaning the
  * descriptor IDs couldn't be computed from the given data. */
