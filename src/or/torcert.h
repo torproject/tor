@@ -98,5 +98,7 @@ void or_handshake_certs_check_both(int severity,
                               const ed25519_public_key_t **ed_id_out,
                               const common_digests_t **rsa_id_out);
 
+int tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out);
+
 #endif
 

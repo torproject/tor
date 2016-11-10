@@ -254,7 +254,7 @@ test_cert_encoding(void *arg)
   tt_assert(cert);
 
   /* Test the certificate encoding function. */
-  ret = encode_cert(cert, &encoded);
+  ret = tor_cert_encode_ed22519(cert, &encoded);
   tt_int_op(ret, ==, 0);
 
   /* Validated the certificate string. */
