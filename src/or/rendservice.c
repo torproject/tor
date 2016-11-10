@@ -371,14 +371,12 @@ rend_service_parse_port_config(const char *string, const char *sep,
   smartlist_split_string(sl, string, sep,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
   if (smartlist_len(sl) < 1 || BUG(smartlist_len(sl) > 2)) {
-    if (err_msg_out)
-      err_msg = tor_strdup("Bad syntax in hidden service port configuration.");
+    err_msg = tor_strdup("Bad syntax in hidden service port configuration.");
     goto err;
   }
   virtport = (int)tor_parse_long(smartlist_get(sl,0), 10, 1, 65535, NULL,NULL);
   if (!virtport) {
-    if (err_msg_out)
-      tor_asprintf(&err_msg, "Missing or invalid port %s in hidden service "
+    tor_asprintf(&err_msg, "Missing or invalid port %s in hidden service "
                    "port configuration", escaped(smartlist_get(sl,0)));
 
     goto err;
@@ -406,10 +404,8 @@ rend_service_parse_port_config(const char *string, const char *sep,
     } else if (strchr(addrport, ':') || strchr(addrport, '.')) {
       /* else try it as an IP:port pair if it has a : or . in it */
       if (tor_addr_port_lookup(addrport, &addr, &p)<0) {
-        if (err_msg_out)
-          err_msg = tor_strdup("Unparseable address in hidden service port "
-                               "configuration.");
-
+        err_msg = tor_strdup("Unparseable address in hidden service port "
+                             "configuration.");
         goto err;
       }
       realport = p?p:virtport;
@@ -417,11 +413,9 @@ rend_service_parse_port_config(const char *string, const char *sep,
       /* No addr:port, no addr -- must be port. */
       realport = (int)tor_parse_long(addrport, 10, 1, 65535, NULL, NULL);
       if (!realport) {
-        if (err_msg_out)
-          tor_asprintf(&err_msg, "Unparseable or out-of-range port %s in "
-                       "hidden service port configuration.",
-                       escaped(addrport));
-
+        tor_asprintf(&err_msg, "Unparseable or out-of-range port %s in "
+                     "hidden service port configuration.",
+                     escaped(addrport));
         goto err;
       }
       tor_addr_from_ipv4h(&addr, 0x7F000001u); /* Default to 127.0.0.1 */
@@ -440,7 +434,11 @@ rend_service_parse_port_config(const char *string, const char *sep,
 
  err:
   tor_free(addrport);
-  if (err_msg_out) *err_msg_out = err_msg;
+  if (err_msg_out != NULL) {
+    *err_msg_out = err_msg;
+  } else {
+    tor_free(err_msg);
+  }
   SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
   smartlist_free(sl);
 
