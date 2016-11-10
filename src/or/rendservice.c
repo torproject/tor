@@ -344,9 +344,9 @@ rend_service_port_config_new(const char *socket_path)
   return conf;
 }
 
-/** Parses a real-port to virtual-port mapping separated by the provided
- * separator and returns a new rend_service_port_config_t, or NULL and an
- * optional error string on failure.
+/** Parses a virtual-port to real-port/socket mapping separated by
+ * the provided separator and returns a new rend_service_port_config_t,
+ * or NULL and an optional error string on failure.
  *
  * The format is: VirtualPort SEP (IP|RealPort|IP:RealPort|'socket':path)?
  *
