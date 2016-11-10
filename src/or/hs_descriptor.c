@@ -26,6 +26,7 @@
 /* Constant string value for the encrypted part of the descriptor. */
 #define str_create2_formats "create2-formats"
 #define str_auth_required "authentication-required"
+#define str_single_onion "single-onion-service"
 #define str_intro_point "introduction-point"
 #define str_ip_auth_key "auth-key"
 #define str_ip_enc_key "enc-key"
@@ -63,6 +64,7 @@ static token_rule_t hs_desc_v3_token_table[] = {
 static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   T1_START(str_create2_formats, R3_CREATE2_FORMATS, CONCAT_ARGS, NO_OBJ),
   T01(str_auth_required, R3_AUTHENTICATION_REQUIRED, ARGS, NO_OBJ),
+  T01(str_single_onion, R3_SINGLE_ONION_SERVICE, ARGS, NO_OBJ),
   END_OF_TABLE
 };
 
@@ -691,6 +693,10 @@ encode_encrypted_data(const hs_descriptor_t *desc,
                                          0, NULL);
       smartlist_add_asprintf(lines, "%s %s\n", str_auth_required, buf);
       tor_free(buf);
+    }
+
+    if (desc->encrypted_data.single_onion_service) {
+      smartlist_add_asprintf(lines, "%s\n", str_single_onion);
     }
   }
 
@@ -1613,6 +1619,13 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
       goto err;
     }
   }
+
+  /* Is this service a single onion service? */
+  tok = find_opt_by_keyword(tokens, R3_SINGLE_ONION_SERVICE);
+  if (tok) {
+    desc_encrypted_out->single_onion_service = 1;
+  }
+
   /* Initialize the descriptor's introduction point list before we start
    * decoding. Having 0 intro point is valid. Then decode them all. */
   desc_encrypted_out->intro_points = smartlist_new();

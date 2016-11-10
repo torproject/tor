@@ -128,6 +128,9 @@ typedef struct hs_desc_encrypted_data_t {
    * in order to contact the service. Contains NULL terminated strings. */
   smartlist_t *auth_types;
 
+  /* Is this descriptor a single onion service? */
+  unsigned int single_onion_service : 1;
+
   /* A list of intro points. Contains hs_desc_intro_point_t objects. */
   smartlist_t *intro_points;
 } hs_desc_encrypted_data_t;
