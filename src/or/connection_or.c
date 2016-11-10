@@ -105,20 +105,51 @@ connection_or_clear_identity_map(void)
 }
 
 /** Change conn->identity_digest to digest, and add conn into
- * orconn_digest_map. */
+ * the appropriate digest maps.
+ *
+ * NOTE that this function only allows two kinds of transitions: from
+ * unset identity to set identity, and from idempotent re-settings
+ * of the same identity.  It's not allowed to clear an identity or to
+ * change an identity.  Return 0 on success, and -1 if the transition
+ * is not allowed.
+ **/
 static void
 connection_or_set_identity_digest(or_connection_t *conn,
                                   const char *rsa_digest,
                                   const ed25519_public_key_t *ed_id)
 {
+  channel_t *chan = NULL;
   tor_assert(conn);
   tor_assert(rsa_digest);
 
-  if (tor_memeq(conn->identity_digest, rsa_digest, DIGEST_LEN))
+  if (conn->chan)
+    chan = TLS_CHAN_TO_BASE(conn->chan);
+
+  log_info(LD_HANDSHAKE, "Set identity digest for %p (%s): %s %s.",
+           conn,
+           escaped_safe_str(conn->base_.address),
+           hex_str(rsa_digest, DIGEST_LEN),
+           ed25519_fmt(ed_id));
+  log_info(LD_HANDSHAKE, "   (Previously: %s %s)",
+           hex_str(conn->identity_digest, DIGEST_LEN),
+           chan ? ed25519_fmt(&chan->ed25519_identity) : "<null>");
+
+  const int rsa_id_was_set = ! tor_digest_is_zero(conn->identity_digest);
+  const int ed_id_was_set =
+    chan && !ed25519_public_key_is_zero(&chan->ed25519_identity);
+  const int rsa_changed =
+    tor_memneq(conn->identity_digest, rsa_digest, DIGEST_LEN);
+  const int ed_changed = ed_id_was_set &&
+    (!ed_id || !ed25519_pubkey_eq(ed_id, &chan->ed25519_identity));
+
+  tor_assert(!rsa_changed || !rsa_id_was_set);
+  tor_assert(!ed_changed || !ed_id_was_set);
+
+  if (!rsa_changed && !ed_changed)
     return;
 
   /* If the identity was set previously, remove the old mapping. */
-  if (! tor_digest_is_zero(conn->identity_digest)) {
+  if (rsa_id_was_set) {
     connection_or_clear_identity(conn);
     if (conn->chan)
       channel_clear_identity_digest(TLS_CHAN_TO_BASE(conn->chan));
@@ -126,8 +157,9 @@ connection_or_set_identity_digest(or_connection_t *conn,
 
   memcpy(conn->identity_digest, rsa_digest, DIGEST_LEN);
 
-  /* If we're setting the ID to zero, don't add a mapping. */
-  if (tor_digest_is_zero(rsa_digest))
+  /* If we're initializing the IDs to zero, don't add a mapping yet. */
+  if (tor_digest_is_zero(rsa_digest) &&
+      (!ed_id || ed25519_public_key_is_zero(ed_id)))
     return;
 
   /* Deal with channels */
