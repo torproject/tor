@@ -1,0 +1,4 @@
+  o Minor features (ed25519 link handshake):
+    - Advertise support for the ed25519 link handshake using the
+      subprotocol-versions mechanism, so that clients can tell which
+      relays can identity themselves by Ed25519 ID.
