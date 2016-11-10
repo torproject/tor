@@ -831,6 +831,12 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                                      const ed25519_public_key_t *ed_id,
                                      int started_here)
 {
+  log_debug(LD_HANDSHAKE, "init conn from address %s: %s, %s (%d)",
+            fmt_addr(addr),
+            hex_str((const char*)id_digest, DIGEST_LEN),
+            ed25519_fmt(ed_id),
+            started_here);
+
   const node_t *r = node_get_by_id(id_digest);
   connection_or_set_identity_digest(conn, id_digest, ed_id);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
@@ -1510,6 +1516,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   if (started_here) {
     /* A TLS handshake can't teach us an Ed25519 ID, so we set it to NULL
      * here. */
+    log_debug(LD_HANDSHAKE, "Calling client_learned_peer_id from "
+              "check_valid_tls_handshake");
     return connection_or_client_learned_peer_id(conn,
                                         (const uint8_t*)digest_rcvd_out,
                                         NULL);
