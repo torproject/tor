@@ -966,9 +966,9 @@ connection_or_mark_bad_for_new_circs(or_connection_t *or_conn)
 void
 connection_or_group_set_badness_(smartlist_t *group, int force)
 {
-  /* XXXX this should be entirely about channels, not OR connections.  15056*/
-  /* XXXX Look at Ed25519 ids too! 15056 */
-  
+  /* XXXX this function should be entirely about channels, not OR
+   * XXXX connections. */
+
   or_connection_t *best = NULL;
   int n_old = 0, n_inprogress = 0, n_canonical = 0, n_other = 0;
   time_t now = time(NULL);

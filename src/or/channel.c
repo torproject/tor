@@ -4551,18 +4551,45 @@ channel_set_circid_type,(channel_t *chan,
 static void
 channel_rsa_id_group_set_badness(struct channel_list_s *lst, int force)
 {
+  /*XXXX This function should really be about channels. 15056 */
   channel_t *chan;
 
-  smartlist_t *or_conns = smartlist_new();
+  /* First, get a minimal list of the ed25519 identites */
+  smartlist_t *ed_identities = smartlist_new();
   TOR_LIST_FOREACH(chan, lst, next_with_same_id) {
-    channel_tls_t *chantls = BASE_CHAN_TO_TLS(chan);
-    or_connection_t *orconn = chantls->conn;
-    if (orconn)
-      smartlist_add(or_conns, orconn);
+    uint8_t *id_copy =
+      tor_memdup(&chan->ed25519_identity.pubkey, DIGEST256_LEN);
+    smartlist_add(ed_identities, id_copy);
   }
-  /*XXXX This function should really be about channels. 15056 */
-  connection_or_group_set_badness_(or_conns, force);
+  smartlist_sort_digests256(ed_identities);
+  smartlist_uniq_digests256(ed_identities);
+
+  /* Now, for each Ed identity, build a smartlist and find the best entry on
+   * it.  */
+  smartlist_t *or_conns = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(ed_identities, const uint8_t *, ed_id) {
+    TOR_LIST_FOREACH(chan, lst, next_with_same_id) {
+      channel_tls_t *chantls = BASE_CHAN_TO_TLS(chan);
+      if (tor_memneq(ed_id, &chan->ed25519_identity.pubkey, DIGEST256_LEN))
+        continue;
+      or_connection_t *orconn = chantls->conn;
+      if (orconn) {
+        tor_assert(orconn->chan == chantls);
+        smartlist_add(or_conns, orconn);
+      }
+    }
+
+    connection_or_group_set_badness_(or_conns, force);
+    smartlist_clear(or_conns);
+  } SMARTLIST_FOREACH_END(ed_id);
+
+  /* XXXX 15056 we may want to do something special with connections that have
+   * no set Ed25519 identity! */
+
   smartlist_free(or_conns);
+
+  SMARTLIST_FOREACH(ed_identities, uint8_t *, ed_id, tor_free(ed_id));
+  smartlist_free(ed_identities);
 }
 
 /** Go through all the channels (or if <b>digest</b> is non-NULL, just
