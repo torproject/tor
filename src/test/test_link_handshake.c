@@ -117,6 +117,9 @@ test_link_handshake_certs_ok(void *arg)
   crypto_pk_t *key1 = NULL, *key2 = NULL;
   const int with_ed = !strcmp((const char *)arg, "Ed25519");
 
+  tor_addr_from_ipv4h(&c1->base_.addr, 0x7f000001);
+  tor_addr_from_ipv4h(&c2->base_.addr, 0x7f000001);
+
   scheduler_init();
 
   MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
@@ -354,6 +357,7 @@ recv_certs_setup(const struct testcase_t *test)
   d->chan = tor_malloc_zero(sizeof(*d->chan));
   d->c->chan = d->chan;
   d->c->base_.address = tor_strdup("HaveAnAddress");
+  tor_addr_from_ipv4h(&d->c->base_.addr, 0x801f0127);
   d->c->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   d->chan->conn = d->c;
   tt_int_op(connection_init_or_handshake_state(d->c, 1), ==, 0);

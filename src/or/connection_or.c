@@ -75,6 +75,9 @@ static void connection_or_mark_bad_for_new_circs(or_connection_t *or_conn);
 
 static void connection_or_change_state(or_connection_t *conn, uint8_t state);
 
+static void connection_or_check_canonicity(or_connection_t *conn,
+                                           int started_here);
+
 /**************************************************************/
 
 /** Global map between Extended ORPort identifiers and OR
@@ -869,13 +872,38 @@ connection_or_init_conn_from_address(or_connection_t *conn,
             ed25519_fmt(ed_id),
             started_here);
 
-  const node_t *r = node_get_by_id(id_digest);
   connection_or_set_identity_digest(conn, id_digest, ed_id);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
 
   conn->base_.port = port;
   tor_addr_copy(&conn->base_.addr, addr);
   tor_addr_copy(&conn->real_addr, addr);
+
+  connection_or_check_canonicity(conn, started_here);
+}
+
+/** Check whether the identity of <b>conn</b> matches a known node.  If it
+ * does, check whether the address of conn matches the expected address, and
+ * update the connection's is_canonical flag, nickname, and address fields as
+ * appropriate. */
+static void
+connection_or_check_canonicity(or_connection_t *conn, int started_here)
+{
+  const char *id_digest = conn->identity_digest;
+  const ed25519_public_key_t *ed_id = NULL;
+  const tor_addr_t *addr = &conn->real_addr;
+  if (conn->chan)
+    ed_id = & TLS_CHAN_TO_BASE(conn->chan)->ed25519_identity;
+
+  const node_t *r = node_get_by_id(id_digest);
+  if (r &&
+      node_supports_ed25519_link_authentication(r) &&
+      ! node_ed25519_id_matches(r, ed_id)) {
+    /* If this node is capable of proving an ed25519 ID,
+     * we can't call this a canonical connection unless both IDs match. */
+     r = NULL;
+  }
+
   if (r) {
     tor_addr_port_t node_ap;
     node_get_pref_orport(r, &node_ap);
@@ -897,10 +925,12 @@ connection_or_init_conn_from_address(or_connection_t *conn,
       tor_addr_copy(&conn->base_.addr, &node_ap.addr);
       conn->base_.port = node_ap.port;
     }
+    tor_free(conn->nickname);
     conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->base_.address);
     conn->base_.address = tor_addr_to_str_dup(&node_ap.addr);
   } else {
+    tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
     base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
@@ -1589,6 +1619,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
   const or_options_t *options = get_options();
   channel_tls_t *chan_tls = conn->chan;
   channel_t *chan = channel_tls_to_base(chan_tls);
+  int changed_identity = 0;
   tor_assert(chan);
 
   const int expected_rsa_key =
@@ -1619,6 +1650,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
      * we do -- remember it for future attempts. */
     learned_router_identity(&conn->base_.addr, conn->base_.port,
                             (const char*)rsa_peer_id, ed_peer_id);
+    changed_identity = 1;
   }
 
   const int rsa_mismatch = expected_rsa_key &&
@@ -1706,6 +1738,13 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
              "connection.");
     connection_or_set_identity_digest(conn,
                                       (const char*)rsa_peer_id, ed_peer_id);
+    changed_identity = 1;
+  }
+
+  if (changed_identity) {
+    /* If we learned an identity for this connection, then we might have
+     * just discovered it to be canonical. */
+    connection_or_check_canonicity(conn, conn->handshake_state->started_here);
   }
 
   if (authdir_mode_tests_reachability(options)) {
