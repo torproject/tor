@@ -671,6 +671,18 @@ node_get_ed25519_id(const node_t *node)
   return NULL;
 }
 
+/** Return true iff this node's Ed25519 identity matches <b>id</b>.
+ * (An absent Ed25519 identity matches NULL or zero.) */
+int
+node_ed25519_id_matches(const node_t *node, const ed25519_public_key_t *id)
+{
+  const ed25519_public_key_t *node_id = node_get_ed25519_id(node);
+  if (node_id == NULL || ed25519_public_key_is_zero(node_id)) {
+    return id == NULL || ed25519_public_key_is_zero(id);
+  } else {
+    return id && ed25519_pubkey_eq(node_id, id);
+  }
+}
 
 /** Return true iff <b>node</b> supports authenticating itself
  * by ed25519 ID during the link handshake in a way that we can understand
