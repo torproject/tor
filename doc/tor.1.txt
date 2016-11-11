@@ -2427,8 +2427,9 @@ The following options are used to configure a hidden service.
     servers with different IP addresses.
 
     HiddenServiceSingleHopMode requires HiddenServiceNonAnonymousMode to be set
-    to 1. Since a Single Onion is non-anonymous, you can not to run an
-    anonymous SOCKSPort on the same tor instance as a Single Onion service.
+    to 1. Since a Single Onion service is non-anonymous, you can not configure
+    a SOCKSPort on a tor instance that is running in
+    **HiddenServiceSingleHopMode**.
     (Default: 0)
 
 [[HiddenServiceNonAnonymousMode]] **HiddenServiceNonAnonymousMode** **0**|**1**::
