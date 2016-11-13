@@ -182,6 +182,7 @@ static config_var_t option_vars_[] = {
   V(BridgePassword,              STRING,   NULL),
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
+  V(BridgeDistribution,          STRING,   NULL),
   V(CellStatistics,              BOOL,     "0"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
   V(CircuitBuildTimeout,         INTERVAL, "0"),
@@ -3346,6 +3347,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->DirPort_set = 0;
   }
 
+  if (options->BridgeDistribution && !options->BridgeRelay) {
+    REJECT("You have set BridgeDistribution, yet you didn't set BridgeRelay!");
+  }
+
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
                         "least 0 seconds. Changing to 0.");
@@ -4497,6 +4502,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       get_effective_bwburst(old_options) !=
         get_effective_bwburst(new_options) ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
+      !opt_streq(old_options->BridgeDistribution,
+                 new_options->BridgeDistribution) ||
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
       old_options->AccountingMax != new_options->AccountingMax ||

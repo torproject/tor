@@ -3638,6 +3638,10 @@ typedef struct {
   int BridgeAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that aggregates bridge descriptors? */
 
+  /** If set on a bridge relay, it will include this value on a new
+   * "bridge-distribution-request" line in its bridge descriptor. */
+  char *BridgeDistribution;
+
   /** If set on a bridge authority, it will answer requests on its dirport
    * for bridge statuses -- but only if the requests use this password. */
   char *BridgePassword;

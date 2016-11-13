@@ -2867,6 +2867,14 @@ router_dump_router_to_string(routerinfo_t *router,
     smartlist_add_asprintf(chunks, "contact %s\n", ci);
   }
 
+  if (options->BridgeRelay && options->BridgeDistribution &&
+      strlen(options->BridgeDistribution)) {
+    const char *bd = options->BridgeDistribution;
+    if (strchr(bd, '\n') || strchr(bd, '\r'))
+      bd = escaped(bd);
+    smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n", bd);
+  }
+
   if (router->onion_curve25519_pkey) {
     char kbuf[128];
     base64_encode(kbuf, sizeof(kbuf),
