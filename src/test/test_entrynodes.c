@@ -859,6 +859,236 @@ test_entry_guard_describe(void *arg)
   ;
 }
 
+static void
+test_entry_guard_randomize_time(void *arg)
+{
+  const time_t now = 1479153573;
+  const int delay = 86400;
+  const int N = 1000;
+  (void)arg;
+
+  time_t t;
+  int i;
+  for (i = 0; i < N; ++i) {
+    t = randomize_time(now, delay);
+    tt_int_op(t, OP_LE, now);
+    tt_int_op(t, OP_GE, now-delay);
+  }
+
+  /* now try the corner cases */
+  for (i = 0; i < N; ++i) {
+    t = randomize_time(100, delay);
+    tt_int_op(t, OP_GE, 1);
+    tt_int_op(t, OP_LE, 100);
+
+    t = randomize_time(0, delay);
+    tt_int_op(t, OP_EQ, 1);
+  }
+
+ done:
+  ;
+}
+
+static void
+test_entry_guard_encode_for_state_minimal(void *arg)
+{
+  (void) arg;
+  entry_guard_t *eg = tor_malloc_zero(sizeof(entry_guard_t));
+
+  memcpy(eg->identity, "plurpyflurpyslurpydo", DIGEST_LEN);
+  eg->sampled_on_date = 1479081600;
+  eg->confirmed_idx = -1;
+
+  char *s = NULL;
+  s = entry_guard_encode_for_state(eg);
+
+  tt_str_op(s, OP_EQ,
+            "rsa_id=706C75727079666C75727079736C75727079646F "
+            "sampled_on=2016-11-14T00:00:00 "
+            "listed=0");
+
+ done:
+  entry_guard_free(eg);
+  tor_free(s);
+}
+
+static void
+test_entry_guard_encode_for_state_maximal(void *arg)
+{
+  (void) arg;
+  entry_guard_t *eg = tor_malloc_zero(sizeof(entry_guard_t));
+
+  strlcpy(eg->nickname, "Fred", sizeof(eg->nickname));
+  memcpy(eg->identity, "plurpyflurpyslurpydo", DIGEST_LEN);
+  eg->sampled_on_date = 1479081600;
+  eg->sampled_by_version = tor_strdup("1.2.3");
+  eg->unlisted_since_date = 1479081645;
+  eg->currently_listed = 1;
+  eg->confirmed_on_date = 1479081690;
+  eg->confirmed_idx = 333;
+  eg->extra_state_fields = tor_strdup("and the green grass grew all around");
+
+  char *s = NULL;
+  s = entry_guard_encode_for_state(eg);
+
+  tt_str_op(s, OP_EQ,
+            "rsa_id=706C75727079666C75727079736C75727079646F "
+            "nickname=Fred "
+            "sampled_on=2016-11-14T00:00:00 "
+            "sampled_by=1.2.3 "
+            "unlisted_since=2016-11-14T00:00:45 "
+            "listed=1 "
+            "confirmed_on=2016-11-14T00:01:30 "
+            "confirmed_idx=333 "
+            "and the green grass grew all around");
+
+ done:
+  entry_guard_free(eg);
+  tor_free(s);
+}
+
+static void
+test_entry_guard_parse_from_state_minimal(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp = NULL;
+  entry_guard_t *eg = NULL;
+  time_t t = approx_time();
+
+  eg = entry_guard_parse_from_state(
+                 "rsa_id=596f75206d6179206e656564206120686f626279");
+  tt_assert(eg);
+
+  test_mem_op_hex(eg->identity, OP_EQ,
+                  "596f75206d6179206e656564206120686f626279");
+  tt_str_op(eg->nickname, OP_EQ, "$596F75206D6179206E656564206120686F626279");
+  tt_i64_op(eg->sampled_on_date, OP_GE, t);
+  tt_i64_op(eg->sampled_on_date, OP_LE, t+86400);
+  tt_i64_op(eg->unlisted_since_date, OP_EQ, 0);
+  tt_ptr_op(eg->sampled_by_version, OP_EQ, NULL);
+  tt_int_op(eg->currently_listed, OP_EQ, 0);
+  tt_i64_op(eg->confirmed_on_date, OP_EQ, 0);
+  tt_int_op(eg->confirmed_idx, OP_EQ, -1);
+
+  tt_int_op(eg->last_tried_to_connect, OP_EQ, 0);
+  tt_int_op(eg->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+
+ done:
+  entry_guard_free(eg);
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
+test_entry_guard_parse_from_state_maximal(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp = NULL;
+  entry_guard_t *eg = NULL;
+
+  eg = entry_guard_parse_from_state(
+            "rsa_id=706C75727079666C75727079736C75727079646F "
+            "nickname=Fred "
+            "sampled_on=2016-11-14T00:00:00 "
+            "sampled_by=1.2.3 "
+            "unlisted_since=2016-11-14T00:00:45 "
+            "listed=1 "
+            "confirmed_on=2016-11-14T00:01:30 "
+            "confirmed_idx=333 "
+            "and the green grass grew all around "
+            "rsa_id=all,around");
+  tt_assert(eg);
+
+  test_mem_op_hex(eg->identity, OP_EQ,
+                  "706C75727079666C75727079736C75727079646F");
+  tt_str_op(eg->nickname, OP_EQ, "Fred");
+  tt_i64_op(eg->sampled_on_date, OP_EQ, 1479081600);
+  tt_i64_op(eg->unlisted_since_date, OP_EQ, 1479081645);
+  tt_str_op(eg->sampled_by_version, OP_EQ, "1.2.3");
+  tt_int_op(eg->currently_listed, OP_EQ, 1);
+  tt_i64_op(eg->confirmed_on_date, OP_EQ, 1479081690);
+  tt_int_op(eg->confirmed_idx, OP_EQ, 333);
+  tt_str_op(eg->extra_state_fields, OP_EQ,
+            "and the green grass grew all around rsa_id=all,around");
+
+  tt_int_op(eg->last_tried_to_connect, OP_EQ, 0);
+  tt_int_op(eg->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+
+ done:
+  entry_guard_free(eg);
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
+test_entry_guard_parse_from_state_failure(void *arg)
+{
+  (void)arg;
+  entry_guard_t *eg = NULL;
+
+  /* no RSA ID. */
+  eg = entry_guard_parse_from_state("nickname=Fred");
+  tt_assert(! eg);
+
+  /* Bad RSA ID: bad character. */
+  eg = entry_guard_parse_from_state(
+                 "rsa_id=596f75206d6179206e656564206120686f62627q");
+  tt_assert(! eg);
+
+  /* Bad RSA ID: too long.*/
+  eg = entry_guard_parse_from_state(
+                 "rsa_id=596f75206d6179206e656564206120686f6262703");
+  tt_assert(! eg);
+
+  /* Bad RSA ID: too short.*/
+  eg = entry_guard_parse_from_state(
+                 "rsa_id=596f75206d6179206e65656420612");
+  tt_assert(! eg);
+
+ done:
+  entry_guard_free(eg);
+}
+
+static void
+test_entry_guard_parse_from_state_partial_failure(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp = NULL;
+  entry_guard_t *eg = NULL;
+  time_t t = approx_time();
+
+  eg = entry_guard_parse_from_state(
+            "rsa_id=706C75727079666C75727079736C75727079646F "
+            "nickname=FredIsANodeWithAStrangeNicknameThatIsTooLong "
+            "sampled_on=2016-11-14T00:00:99 "
+            "sampled_by=1.2.3 stuff in the middle "
+            "unlisted_since=2016-xx-14T00:00:45 "
+            "listed=0 "
+            "confirmed_on=2016-11-14T00:01:30zz "
+            "confirmed_idx=idx "
+            "and the green grass grew all around "
+            "rsa_id=all,around");
+  tt_assert(eg);
+
+  test_mem_op_hex(eg->identity, OP_EQ,
+                  "706C75727079666C75727079736C75727079646F");
+  tt_str_op(eg->nickname, OP_EQ, "FredIsANodeWithAStrangeNicknameThatIsTooL");
+  tt_i64_op(eg->sampled_on_date, OP_EQ, t);
+  tt_i64_op(eg->unlisted_since_date, OP_EQ, 0);
+  tt_str_op(eg->sampled_by_version, OP_EQ, "1.2.3");
+  tt_int_op(eg->currently_listed, OP_EQ, 0);
+  tt_i64_op(eg->confirmed_on_date, OP_EQ, 0);
+  tt_int_op(eg->confirmed_idx, OP_EQ, -1);
+  tt_str_op(eg->extra_state_fields, OP_EQ,
+            "stuff in the middle and the green grass grew all around "
+            "rsa_id=all,around");
+
+  tt_int_op(eg->last_tried_to_connect, OP_EQ, 0);
+  tt_int_op(eg->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+
+ done:
+  entry_guard_free(eg);
+  tor_free(mem_op_hex_tmp);
+}
+
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
@@ -893,6 +1123,19 @@ struct testcase_t entrynodes_tests[] = {
     test_node_preferred_orport,
     0, NULL, NULL },
   { "entry_guard_describe", test_entry_guard_describe, 0, NULL, NULL },
+  { "randomize_time", test_entry_guard_randomize_time, 0, NULL, NULL },
+  { "encode_for_state_minimal",
+    test_entry_guard_encode_for_state_minimal, 0, NULL, NULL },
+  { "encode_for_state_maximal",
+    test_entry_guard_encode_for_state_maximal, 0, NULL, NULL },
+  { "parse_from_state_minimal",
+    test_entry_guard_parse_from_state_minimal, 0, NULL, NULL },
+  { "parse_from_state_maximal",
+    test_entry_guard_parse_from_state_maximal, 0, NULL, NULL },
+  { "parse_from_state_failure",
+    test_entry_guard_parse_from_state_failure, 0, NULL, NULL },
+  { "parse_from_state_partial_failure",
+    test_entry_guard_parse_from_state_partial_failure, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

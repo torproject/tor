@@ -63,7 +63,7 @@ typedef struct guard_pathbias_t {
  * use a node_t, since we want to remember these even when we
  * don't have any directory info. */
 struct entry_guard_t {
-  char nickname[MAX_NICKNAME_LEN+1];
+  char nickname[MAX_HEX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
   ed25519_public_key_t ed_id;
 
@@ -71,7 +71,7 @@ struct entry_guard_t {
 
   /* Persistent fields, present for all sampled guards. */
   time_t sampled_on_date;
-  time_t unlisted_since_date;
+  time_t unlisted_since_date; // can be zero
   char *sampled_by_version;
   unsigned currently_listed : 1;
 
@@ -93,6 +93,9 @@ struct entry_guard_t {
   unsigned is_filtered_guard : 1;
   unsigned is_usable_filtered_guard : 1;
 
+  /** This string holds any fields that we are maintaining because
+   * we saw them in the state, even if we don't understand them. */
+  char *extra_state_fields;
   /**
    * @name legacy guard selection algorithm fields
    *
@@ -152,6 +155,13 @@ const char *entry_guard_describe(const entry_guard_t *guard);
 guard_pathbias_t *entry_guard_get_pathbias_state(entry_guard_t *guard);
 
 #ifdef ENTRYNODES_PRIVATE
+STATIC time_t randomize_time(time_t now, time_t max_backdate);
+STATIC void entry_guard_add_to_sample(guard_selection_t *gs,
+                                      node_t *node);
+STATIC char *entry_guard_encode_for_state(entry_guard_t *guard);
+STATIC entry_guard_t *entry_guard_parse_from_state(const char *s);
+STATIC void entry_guard_free(entry_guard_t *e);
+
 STATIC const node_t *add_an_entry_guard(guard_selection_t *gs,
                                         const node_t *chosen,
                                         int reset_status, int prepend,
