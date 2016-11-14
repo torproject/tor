@@ -21,9 +21,6 @@
  * each guard, and stored persistently in the state file.
  */
 
-/* XXXX prop271 I would like to remove this. */
-#define ENTRYNODES_EXPOSE_STRUCT
-
 #include "or.h"
 #include "channel.h"
 #include "circpathbias.h"
@@ -54,18 +51,20 @@ static int entry_guard_inc_circ_attempt_count(entry_guard_t *guard);
 static int
 entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
 {
+  guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
   entry_guards_changed();
 
   pathbias_measure_close_rate(guard);
 
-  if (guard->pb.path_bias_disabled)
+  if (pb->path_bias_disabled)
     return -1;
 
   pathbias_scale_close_rates(guard);
-  guard->pb.circ_attempts++;
+  pb->circ_attempts++;
 
   log_info(LD_CIRC, "Got success count %f/%f for guard %s",
-           guard->pb.circ_successes, guard->pb.circ_attempts,
+           pb->circ_successes, pb->circ_attempts,
            entry_guard_describe(guard));
   return 0;
 }
@@ -516,13 +515,15 @@ pathbias_count_build_success(origin_circuit_t *circ)
     }
 
     if (guard) {
+      guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
       if (circ->path_state == PATH_STATE_BUILD_ATTEMPTED) {
         circ->path_state = PATH_STATE_BUILD_SUCCEEDED;
-        guard->pb.circ_successes++;
+        pb->circ_successes++;
         entry_guards_changed();
 
         log_info(LD_CIRC, "Got success count %f/%f for guard %s",
-                 guard->pb.circ_successes, guard->pb.circ_attempts,
+                 pb->circ_successes, pb->circ_attempts,
                  entry_guard_describe(guard));
       } else {
         if ((rate_msg = rate_limit_log(&success_notice_limit,
@@ -538,10 +539,10 @@ pathbias_count_build_success(origin_circuit_t *circ)
         }
       }
 
-      if (guard->pb.circ_attempts < guard->pb.circ_successes) {
+      if (pb->circ_attempts < pb->circ_successes) {
         log_notice(LD_BUG, "Unexpectedly high successes counts (%f/%f) "
                  "for guard %s",
-                 guard->pb.circ_successes, guard->pb.circ_attempts,
+                 pb->circ_successes, pb->circ_attempts,
                  entry_guard_describe(guard));
       }
     /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
@@ -585,8 +586,6 @@ pathbias_count_build_success(origin_circuit_t *circ)
 void
 pathbias_count_use_attempt(origin_circuit_t *circ)
 {
-  entry_guard_t *guard;
-
   if (!pathbias_should_count(circ)) {
     return;
   }
@@ -599,18 +598,20 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
         circuit_purpose_to_string(circ->base_.purpose),
         circuit_state_to_string(circ->base_.state));
   } else if (circ->path_state < PATH_STATE_USE_ATTEMPTED) {
-    guard = entry_guard_get_by_id_digest(
+    entry_guard_t *guard = entry_guard_get_by_id_digest(
                 circ->cpath->extend_info->identity_digest);
     if (guard) {
+      guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
       pathbias_measure_use_rate(guard);
       pathbias_scale_use_rates(guard);
-      guard->pb.use_attempts++;
+      pb->use_attempts++;
       entry_guards_changed();
 
       log_debug(LD_CIRC,
                "Marked circuit %d (%f/%f) as used for guard %s.",
                circ->global_identifier,
-               guard->pb.use_successes, guard->pb.use_attempts,
+               pb->use_successes, pb->use_attempts,
                entry_guard_describe(guard));
     }
 
@@ -713,20 +714,22 @@ pathbias_count_use_success(origin_circuit_t *circ)
     guard = entry_guard_get_by_id_digest(
                 circ->cpath->extend_info->identity_digest);
     if (guard) {
-      guard->pb.use_successes++;
+      guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
+      pb->use_successes++;
       entry_guards_changed();
 
-      if (guard->pb.use_attempts < guard->pb.use_successes) {
+      if (pb->use_attempts < pb->use_successes) {
         log_notice(LD_BUG, "Unexpectedly high use successes counts (%f/%f) "
                  "for guard %s",
-                 guard->pb.use_successes, guard->pb.use_attempts,
+                 pb->use_successes, pb->use_attempts,
                  entry_guard_describe(guard));
       }
 
       log_debug(LD_CIRC,
                 "Marked circuit %d (%f/%f) as used successfully for guard %s",
-                circ->global_identifier, guard->pb.use_successes,
-                guard->pb.use_attempts,
+                circ->global_identifier, pb->use_successes,
+                pb->use_attempts,
                 entry_guard_describe(guard));
     }
   }
@@ -1028,9 +1031,11 @@ pathbias_count_successful_close(origin_circuit_t *circ)
   }
 
   if (guard) {
+    guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
     /* In the long run: circuit_success ~= successful_circuit_close +
      *                                     circ_failure + stream_failure */
-    guard->pb.successful_circuits_closed++;
+    pb->successful_circuits_closed++;
     entry_guards_changed();
   } else if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
    /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
@@ -1067,7 +1072,9 @@ pathbias_count_collapse(origin_circuit_t *circ)
   }
 
   if (guard) {
-    guard->pb.collapsed_circuits++;
+    guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
+    pb->collapsed_circuits++;
     entry_guards_changed();
   } else if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
    /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
@@ -1100,7 +1107,9 @@ pathbias_count_use_failed(origin_circuit_t *circ)
   }
 
   if (guard) {
-    guard->pb.unusable_circuits++;
+    guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
+    pb->unusable_circuits++;
     entry_guards_changed();
   } else if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
    /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
@@ -1143,7 +1152,9 @@ pathbias_count_timeout(origin_circuit_t *circ)
   }
 
   if (guard) {
-    guard->pb.timeouts++;
+    guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
+    pb->timeouts++;
     entry_guards_changed();
   }
 }
@@ -1199,7 +1210,9 @@ pathbias_count_circs_in_states(entry_guard_t *guard,
 double
 pathbias_get_close_success_count(entry_guard_t *guard)
 {
-  return guard->pb.successful_circuits_closed +
+  guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
+  return pb->successful_circuits_closed +
          pathbias_count_circs_in_states(guard,
                        PATH_STATE_BUILD_SUCCEEDED,
                        PATH_STATE_USE_SUCCEEDED);
@@ -1215,7 +1228,9 @@ pathbias_get_close_success_count(entry_guard_t *guard)
 double
 pathbias_get_use_success_count(entry_guard_t *guard)
 {
-  return guard->pb.use_successes +
+  guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+
+  return pb->use_successes +
          pathbias_count_circs_in_states(guard,
                        PATH_STATE_USE_ATTEMPTED,
                        PATH_STATE_USE_SUCCEEDED);
@@ -1233,16 +1248,17 @@ static void
 pathbias_measure_use_rate(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
+  guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
 
-  if (guard->pb.use_attempts > pathbias_get_min_use(options)) {
+  if (pb->use_attempts > pathbias_get_min_use(options)) {
     /* Note: We rely on the < comparison here to allow us to set a 0
      * rate and disable the feature entirely. If refactoring, don't
      * change to <= */
-    if (pathbias_get_use_success_count(guard)/guard->pb.use_attempts
+    if (pathbias_get_use_success_count(guard)/pb->use_attempts
         < pathbias_get_extreme_use_rate(options)) {
       /* Dropping is currently disabled by default. */
       if (pathbias_get_dropguards(options)) {
-        if (!guard->pb.path_bias_disabled) {
+        if (!pb->path_bias_disabled) {
           log_warn(LD_CIRC,
                  "Your Guard %s is failing to carry an extremely large "
                  "amount of stream on its circuits. "
@@ -1254,20 +1270,20 @@ pathbias_measure_use_rate(entry_guard_t *guard)
                  "For reference, your timeout cutoff is %ld seconds.",
                  entry_guard_describe(guard),
                  tor_lround(pathbias_get_use_success_count(guard)),
-                 tor_lround(guard->pb.use_attempts),
+                 tor_lround(pb->use_attempts),
                  tor_lround(pathbias_get_close_success_count(guard)),
-                 tor_lround(guard->pb.circ_attempts),
-                 tor_lround(guard->pb.circ_successes),
-                 tor_lround(guard->pb.unusable_circuits),
-                 tor_lround(guard->pb.collapsed_circuits),
-                 tor_lround(guard->pb.timeouts),
+                 tor_lround(pb->circ_attempts),
+                 tor_lround(pb->circ_successes),
+                 tor_lround(pb->unusable_circuits),
+                 tor_lround(pb->collapsed_circuits),
+                 tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
-          guard->pb.path_bias_disabled = 1;
+          pb->path_bias_disabled = 1;
           entry_guard_mark_bad(guard);
           return;
         }
-      } else if (!guard->pb.path_bias_use_extreme) {
-        guard->pb.path_bias_use_extreme = 1;
+      } else if (!pb->path_bias_use_extreme) {
+        pb->path_bias_use_extreme = 1;
         log_warn(LD_CIRC,
                  "Your Guard %s is failing to carry an extremely large "
                  "amount of streams on its circuits. "
@@ -1279,19 +1295,19 @@ pathbias_measure_use_rate(entry_guard_t *guard)
                  "For reference, your timeout cutoff is %ld seconds.",
                  entry_guard_describe(guard),
                  tor_lround(pathbias_get_use_success_count(guard)),
-                 tor_lround(guard->pb.use_attempts),
+                 tor_lround(pb->use_attempts),
                  tor_lround(pathbias_get_close_success_count(guard)),
-                 tor_lround(guard->pb.circ_attempts),
-                 tor_lround(guard->pb.circ_successes),
-                 tor_lround(guard->pb.unusable_circuits),
-                 tor_lround(guard->pb.collapsed_circuits),
-                 tor_lround(guard->pb.timeouts),
+                 tor_lround(pb->circ_attempts),
+                 tor_lround(pb->circ_successes),
+                 tor_lround(pb->unusable_circuits),
+                 tor_lround(pb->collapsed_circuits),
+                 tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
       }
-    } else if (pathbias_get_use_success_count(guard)/guard->pb.use_attempts
+    } else if (pathbias_get_use_success_count(guard)/pb->use_attempts
                < pathbias_get_notice_use_rate(options)) {
-      if (!guard->pb.path_bias_use_noticed) {
-        guard->pb.path_bias_use_noticed = 1;
+      if (!pb->path_bias_use_noticed) {
+        pb->path_bias_use_noticed = 1;
         log_notice(LD_CIRC,
                  "Your Guard %s is failing to carry more streams on its "
                  "circuits than usual. "
@@ -1303,13 +1319,13 @@ pathbias_measure_use_rate(entry_guard_t *guard)
                  "For reference, your timeout cutoff is %ld seconds.",
                  entry_guard_describe(guard),
                  tor_lround(pathbias_get_use_success_count(guard)),
-                 tor_lround(guard->pb.use_attempts),
+                 tor_lround(pb->use_attempts),
                  tor_lround(pathbias_get_close_success_count(guard)),
-                 tor_lround(guard->pb.circ_attempts),
-                 tor_lround(guard->pb.circ_successes),
-                 tor_lround(guard->pb.unusable_circuits),
-                 tor_lround(guard->pb.collapsed_circuits),
-                 tor_lround(guard->pb.timeouts),
+                 tor_lround(pb->circ_attempts),
+                 tor_lround(pb->circ_successes),
+                 tor_lround(pb->unusable_circuits),
+                 tor_lround(pb->collapsed_circuits),
+                 tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
       }
     }
@@ -1338,16 +1354,17 @@ static void
 pathbias_measure_close_rate(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
-
-  if (guard->pb.circ_attempts > pathbias_get_min_circs(options)) {
+  guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
+  
+  if (pb->circ_attempts > pathbias_get_min_circs(options)) {
     /* Note: We rely on the < comparison here to allow us to set a 0
      * rate and disable the feature entirely. If refactoring, don't
      * change to <= */
-    if (pathbias_get_close_success_count(guard)/guard->pb.circ_attempts
+    if (pathbias_get_close_success_count(guard)/pb->circ_attempts
         < pathbias_get_extreme_rate(options)) {
       /* Dropping is currently disabled by default. */
       if (pathbias_get_dropguards(options)) {
-        if (!guard->pb.path_bias_disabled) {
+        if (!pb->path_bias_disabled) {
           log_warn(LD_CIRC,
                  "Your Guard %s is failing an extremely large "
                  "amount of circuits. "
@@ -1359,20 +1376,20 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  "For reference, your timeout cutoff is %ld seconds.",
                  entry_guard_describe(guard),
                  tor_lround(pathbias_get_close_success_count(guard)),
-                 tor_lround(guard->pb.circ_attempts),
+                 tor_lround(pb->circ_attempts),
                  tor_lround(pathbias_get_use_success_count(guard)),
-                 tor_lround(guard->pb.use_attempts),
-                 tor_lround(guard->pb.circ_successes),
-                 tor_lround(guard->pb.unusable_circuits),
-                 tor_lround(guard->pb.collapsed_circuits),
-                 tor_lround(guard->pb.timeouts),
+                 tor_lround(pb->use_attempts),
+                 tor_lround(pb->circ_successes),
+                 tor_lround(pb->unusable_circuits),
+                 tor_lround(pb->collapsed_circuits),
+                 tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
-          guard->pb.path_bias_disabled = 1;
+          pb->path_bias_disabled = 1;
           entry_guard_mark_bad(guard);
           return;
         }
-      } else if (!guard->pb.path_bias_extreme) {
-        guard->pb.path_bias_extreme = 1;
+      } else if (!pb->path_bias_extreme) {
+        pb->path_bias_extreme = 1;
         log_warn(LD_CIRC,
                  "Your Guard %s is failing an extremely large "
                  "amount of circuits. "
@@ -1384,19 +1401,19 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  "For reference, your timeout cutoff is %ld seconds.",
                  entry_guard_describe(guard),
                  tor_lround(pathbias_get_close_success_count(guard)),
-                 tor_lround(guard->pb.circ_attempts),
+                 tor_lround(pb->circ_attempts),
                  tor_lround(pathbias_get_use_success_count(guard)),
-                 tor_lround(guard->pb.use_attempts),
-                 tor_lround(guard->pb.circ_successes),
-                 tor_lround(guard->pb.unusable_circuits),
-                 tor_lround(guard->pb.collapsed_circuits),
-                 tor_lround(guard->pb.timeouts),
+                 tor_lround(pb->use_attempts),
+                 tor_lround(pb->circ_successes),
+                 tor_lround(pb->unusable_circuits),
+                 tor_lround(pb->collapsed_circuits),
+                 tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
       }
-    } else if (pathbias_get_close_success_count(guard)/guard->pb.circ_attempts
+    } else if (pathbias_get_close_success_count(guard)/pb->circ_attempts
                 < pathbias_get_warn_rate(options)) {
-      if (!guard->pb.path_bias_warned) {
-        guard->pb.path_bias_warned = 1;
+      if (!pb->path_bias_warned) {
+        pb->path_bias_warned = 1;
         log_warn(LD_CIRC,
                  "Your Guard %s is failing a very large "
                  "amount of circuits. "
@@ -1409,19 +1426,19 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  "For reference, your timeout cutoff is %ld seconds.",
                  entry_guard_describe(guard),
                  tor_lround(pathbias_get_close_success_count(guard)),
-                 tor_lround(guard->pb.circ_attempts),
+                 tor_lround(pb->circ_attempts),
                  tor_lround(pathbias_get_use_success_count(guard)),
-                 tor_lround(guard->pb.use_attempts),
-                 tor_lround(guard->pb.circ_successes),
-                 tor_lround(guard->pb.unusable_circuits),
-                 tor_lround(guard->pb.collapsed_circuits),
-                 tor_lround(guard->pb.timeouts),
+                 tor_lround(pb->use_attempts),
+                 tor_lround(pb->circ_successes),
+                 tor_lround(pb->unusable_circuits),
+                 tor_lround(pb->collapsed_circuits),
+                 tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
       }
-    } else if (pathbias_get_close_success_count(guard)/guard->pb.circ_attempts
+    } else if (pathbias_get_close_success_count(guard)/pb->circ_attempts
                < pathbias_get_notice_rate(options)) {
-      if (!guard->pb.path_bias_noticed) {
-        guard->pb.path_bias_noticed = 1;
+      if (!pb->path_bias_noticed) {
+        pb->path_bias_noticed = 1;
         log_notice(LD_CIRC,
                  "Your Guard %s is failing more circuits than "
                  "usual. "
@@ -1432,13 +1449,13 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  "For reference, your timeout cutoff is %ld seconds.",
                  entry_guard_describe(guard),
                  tor_lround(pathbias_get_close_success_count(guard)),
-                 tor_lround(guard->pb.circ_attempts),
+                 tor_lround(pb->circ_attempts),
                  tor_lround(pathbias_get_use_success_count(guard)),
-                 tor_lround(guard->pb.use_attempts),
-                 tor_lround(guard->pb.circ_successes),
-                 tor_lround(guard->pb.unusable_circuits),
-                 tor_lround(guard->pb.collapsed_circuits),
-                 tor_lround(guard->pb.timeouts),
+                 tor_lround(pb->use_attempts),
+                 tor_lround(pb->circ_successes),
+                 tor_lround(pb->unusable_circuits),
+                 tor_lround(pb->collapsed_circuits),
+                 tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
       }
     }
@@ -1458,9 +1475,10 @@ static void
 pathbias_scale_close_rates(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
+  guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
 
   /* If we get a ton of circuits, just scale everything down */
-  if (guard->pb.circ_attempts > pathbias_get_scale_threshold(options)) {
+  if (pb->circ_attempts > pathbias_get_scale_threshold(options)) {
     double scale_ratio = pathbias_get_scale_ratio(options);
     int opened_attempts = pathbias_count_circs_in_states(guard,
             PATH_STATE_BUILD_ATTEMPTED, PATH_STATE_BUILD_ATTEMPTED);
@@ -1468,36 +1486,36 @@ pathbias_scale_close_rates(entry_guard_t *guard)
                         PATH_STATE_BUILD_SUCCEEDED,
                         PATH_STATE_USE_FAILED);
     /* Verify that the counts are sane before and after scaling */
-    int counts_are_sane = (guard->pb.circ_attempts >= guard->pb.circ_successes);
+    int counts_are_sane = (pb->circ_attempts >= pb->circ_successes);
 
-    guard->pb.circ_attempts -= (opened_attempts+opened_built);
-    guard->pb.circ_successes -= opened_built;
+    pb->circ_attempts -= (opened_attempts+opened_built);
+    pb->circ_successes -= opened_built;
 
-    guard->pb.circ_attempts *= scale_ratio;
-    guard->pb.circ_successes *= scale_ratio;
-    guard->pb.timeouts *= scale_ratio;
-    guard->pb.successful_circuits_closed *= scale_ratio;
-    guard->pb.collapsed_circuits *= scale_ratio;
-    guard->pb.unusable_circuits *= scale_ratio;
+    pb->circ_attempts *= scale_ratio;
+    pb->circ_successes *= scale_ratio;
+    pb->timeouts *= scale_ratio;
+    pb->successful_circuits_closed *= scale_ratio;
+    pb->collapsed_circuits *= scale_ratio;
+    pb->unusable_circuits *= scale_ratio;
 
-    guard->pb.circ_attempts += (opened_attempts+opened_built);
-    guard->pb.circ_successes += opened_built;
+    pb->circ_attempts += (opened_attempts+opened_built);
+    pb->circ_successes += opened_built;
 
     entry_guards_changed();
 
     log_info(LD_CIRC,
              "Scaled pathbias counts to (%f,%f)/%f (%d/%d open) for guard "
              "%s",
-             guard->pb.circ_successes, guard->pb.successful_circuits_closed,
-             guard->pb.circ_attempts, opened_built, opened_attempts,
+             pb->circ_successes, pb->successful_circuits_closed,
+             pb->circ_attempts, opened_built, opened_attempts,
              entry_guard_describe(guard));
 
     /* Have the counts just become invalid by this scaling attempt? */
-    if (counts_are_sane && guard->pb.circ_attempts < guard->pb.circ_successes) {
+    if (counts_are_sane && pb->circ_attempts < pb->circ_successes) {
       log_notice(LD_BUG,
                "Scaling has mangled pathbias counts to %f/%f (%d/%d open) "
                "for guard %s",
-               guard->pb.circ_successes, guard->pb.circ_attempts, opened_built,
+               pb->circ_successes, pb->circ_attempts, opened_built,
                opened_attempts,
                entry_guard_describe(guard));
     }
@@ -1517,33 +1535,34 @@ void
 pathbias_scale_use_rates(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
+  guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
 
   /* If we get a ton of circuits, just scale everything down */
-  if (guard->pb.use_attempts > pathbias_get_scale_use_threshold(options)) {
+  if (pb->use_attempts > pathbias_get_scale_use_threshold(options)) {
     double scale_ratio = pathbias_get_scale_ratio(options);
     int opened_attempts = pathbias_count_circs_in_states(guard,
             PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_SUCCEEDED);
     /* Verify that the counts are sane before and after scaling */
-    int counts_are_sane = (guard->pb.use_attempts >= guard->pb.use_successes);
+    int counts_are_sane = (pb->use_attempts >= pb->use_successes);
 
-    guard->pb.use_attempts -= opened_attempts;
+    pb->use_attempts -= opened_attempts;
 
-    guard->pb.use_attempts *= scale_ratio;
-    guard->pb.use_successes *= scale_ratio;
+    pb->use_attempts *= scale_ratio;
+    pb->use_successes *= scale_ratio;
 
-    guard->pb.use_attempts += opened_attempts;
+    pb->use_attempts += opened_attempts;
 
     log_info(LD_CIRC,
            "Scaled pathbias use counts to %f/%f (%d open) for guard %s",
-           guard->pb.use_successes, guard->pb.use_attempts, opened_attempts,
+           pb->use_successes, pb->use_attempts, opened_attempts,
            entry_guard_describe(guard));
 
     /* Have the counts just become invalid by this scaling attempt? */
-    if (counts_are_sane && guard->pb.use_attempts < guard->pb.use_successes) {
+    if (counts_are_sane && pb->use_attempts < pb->use_successes) {
       log_notice(LD_BUG,
                "Scaling has mangled pathbias usage counts to %f/%f "
                "(%d open) for guard %s",
-               guard->pb.circ_successes, guard->pb.circ_attempts,
+               pb->circ_successes, pb->circ_attempts,
                opened_attempts, entry_guard_describe(guard));
     }
 

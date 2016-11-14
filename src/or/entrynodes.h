@@ -53,7 +53,7 @@ typedef struct guard_pathbias_t {
                                * this guard as first hop. */
 } guard_pathbias_t;
 
-#if defined(ENTRYNODES_PRIVATE) || defined(ENTRYNODES_EXPOSE_STRUCT)
+#if defined(ENTRYNODES_PRIVATE)
 /** An entry_guard_t represents our information about a chosen long-term
  * first hop, known as a "helper" node in the literature. We can't just
  * use a node_t, since we want to remember these even when we
@@ -106,6 +106,7 @@ const node_t *entry_guard_find_node(const entry_guard_t *guard);
 void entry_guard_mark_bad(entry_guard_t *guard);
 const char *entry_guard_get_rsa_id_digest(const entry_guard_t *guard);
 const char *entry_guard_describe(const entry_guard_t *guard);
+guard_pathbias_t *entry_guard_get_pathbias_state(entry_guard_t *guard);
 
 #ifdef ENTRYNODES_PRIVATE
 STATIC const node_t *add_an_entry_guard(guard_selection_t *gs,

@@ -184,6 +184,13 @@ entry_guard_get_rsa_id_digest(const entry_guard_t *guard)
   return guard->identity;
 }
 
+/** Return the pathbias state associated with <b>guard</b>. */
+guard_pathbias_t *
+entry_guard_get_pathbias_state(entry_guard_t *guard)
+{
+  return &guard->pb;
+}
+
 /** Check whether the entry guard <b>e</b> is usable, given the directory
  * authorities' opinion about the router (stored in <b>ri</b>) and the user's
  * configuration (in <b>options</b>). Set <b>e</b>->bad_since
