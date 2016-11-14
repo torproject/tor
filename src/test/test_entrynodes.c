@@ -477,12 +477,12 @@ test_entry_guards_parse_state_simple(void *arg)
     /* The rest should be unset */
     tt_assert(!e->unreachable_since);
     tt_assert(!e->can_retry);
-    tt_assert(!e->path_bias_noticed);
-    tt_assert(!e->path_bias_warned);
-    tt_assert(!e->path_bias_extreme);
-    tt_assert(!e->path_bias_disabled);
-    tt_assert(!e->path_bias_use_noticed);
-    tt_assert(!e->path_bias_use_extreme);
+    tt_assert(!e->pb.path_bias_noticed);
+    tt_assert(!e->pb.path_bias_warned);
+    tt_assert(!e->pb.path_bias_extreme);
+    tt_assert(!e->pb.path_bias_disabled);
+    tt_assert(!e->pb.path_bias_use_noticed);
+    tt_assert(!e->pb.path_bias_use_extreme);
     tt_assert(!e->last_attempted);
   }
 
@@ -563,13 +563,13 @@ test_entry_guards_parse_state_pathbias(void *arg)
     tt_assert(!e->can_retry);
 
     /* XXX tt_double_op doesn't support equality. Cast to int for now. */
-    tt_int_op((int)e->circ_attempts, OP_EQ, (int)circ_attempts);
-    tt_int_op((int)e->circ_successes, OP_EQ, (int)circ_successes);
-    tt_int_op((int)e->successful_circuits_closed, OP_EQ,
+    tt_int_op((int)e->pb.circ_attempts, OP_EQ, (int)circ_attempts);
+    tt_int_op((int)e->pb.circ_successes, OP_EQ, (int)circ_successes);
+    tt_int_op((int)e->pb.successful_circuits_closed, OP_EQ,
               (int)successful_closed);
-    tt_int_op((int)e->timeouts, OP_EQ, (int)timeouts);
-    tt_int_op((int)e->collapsed_circuits, OP_EQ, (int)collapsed);
-    tt_int_op((int)e->unusable_circuits, OP_EQ, (int)unusable);
+    tt_int_op((int)e->pb.timeouts, OP_EQ, (int)timeouts);
+    tt_int_op((int)e->pb.collapsed_circuits, OP_EQ, (int)collapsed);
+    tt_int_op((int)e->pb.unusable_circuits, OP_EQ, (int)unusable);
   }
 
  done:

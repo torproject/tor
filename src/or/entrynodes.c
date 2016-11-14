@@ -192,7 +192,7 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
   /* We only care about OR connection connectivity for entry guards. */
   else if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
     *reason = "unreachable by config";
-  else if (e->path_bias_disabled)
+  else if (e->pb.path_bias_disabled)
     *reason = "path-biased";
 
   if (*reason && ! e->bad_since) {
@@ -297,7 +297,7 @@ entry_is_live(const entry_guard_t *e, entry_is_live_flags_t flags,
 
   tor_assert(msg);
 
-  if (e->path_bias_disabled) {
+  if (e->pb.path_bias_disabled) {
     *msg = "path-biased";
     return NULL;
   }
@@ -748,7 +748,7 @@ remove_dead_entry_guards(guard_selection_t *gs, time_t now)
   for (i = 0; i < smartlist_len(gs->chosen_entry_guards); ) {
     entry_guard_t *entry = smartlist_get(gs->chosen_entry_guards, i);
     if (entry->bad_since &&
-        ! entry->path_bias_disabled &&
+        ! entry->pb.path_bias_disabled &&
         entry->bad_since + ENTRY_GUARD_REMOVE_AFTER < now) {
 
       base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
@@ -1534,22 +1534,22 @@ entry_guards_parse_state_for_guard_selection(
         success_cnt = use_cnt;
       }
 
-      node->use_attempts = use_cnt;
-      node->use_successes = success_cnt;
+      node->pb.use_attempts = use_cnt;
+      node->pb.use_successes = success_cnt;
 
       log_info(LD_GENERAL, "Read %f/%f path use bias for node %s",
-               node->use_successes, node->use_attempts, node->nickname);
+               node->pb.use_successes, node->pb.use_attempts, node->nickname);
 
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
-      if (pathbias_get_use_success_count(node)/node->use_attempts
+      if (pathbias_get_use_success_count(node)/node->pb.use_attempts
             < pathbias_get_extreme_use_rate(options) &&
           pathbias_get_dropguards(options)) {
-        node->path_bias_disabled = 1;
+        node->pb.path_bias_disabled = 1;
         log_info(LD_GENERAL,
                  "Path use bias is too high (%f/%f); disabling node %s",
-                 node->circ_successes, node->circ_attempts, node->nickname);
+                 node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
       }
     } else if (!strcasecmp(line->key, "EntryGuardPathBias")) {
       const or_options_t *options = get_options();
@@ -1599,26 +1599,26 @@ entry_guards_parse_state_for_guard_selection(
         success_cnt = hop_cnt;
       }
 
-      node->circ_attempts = hop_cnt;
-      node->circ_successes = success_cnt;
+      node->pb.circ_attempts = hop_cnt;
+      node->pb.circ_successes = success_cnt;
 
-      node->successful_circuits_closed = successful_closed;
-      node->timeouts = timeouts;
-      node->collapsed_circuits = collapsed;
-      node->unusable_circuits = unusable;
+      node->pb.successful_circuits_closed = successful_closed;
+      node->pb.timeouts = timeouts;
+      node->pb.collapsed_circuits = collapsed;
+      node->pb.unusable_circuits = unusable;
 
       log_info(LD_GENERAL, "Read %f/%f path bias for node %s",
-               node->circ_successes, node->circ_attempts, node->nickname);
+               node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
-      if (pathbias_get_close_success_count(node)/node->circ_attempts
+      if (pathbias_get_close_success_count(node)/node->pb.circ_attempts
             < pathbias_get_extreme_rate(options) &&
           pathbias_get_dropguards(options)) {
-        node->path_bias_disabled = 1;
+        node->pb.path_bias_disabled = 1;
         log_info(LD_GENERAL,
                  "Path bias is too high (%f/%f); disabling node %s",
-                 node->circ_successes, node->circ_attempts, node->nickname);
+                 node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
       }
 
     } else {
@@ -1644,7 +1644,7 @@ entry_guards_parse_state_for_guard_selection(
          e->chosen_by_version = tor_strdup(state_version);
        }
      }
-     if (e->path_bias_disabled && !e->bad_since)
+     if (e->pb.path_bias_disabled && !e->bad_since)
        e->bad_since = time(NULL);
     }
   SMARTLIST_FOREACH_END(e);
@@ -1788,25 +1788,25 @@ entry_guards_update_state(or_state_t *state)
                      d, e->chosen_by_version, t);
         next = &(line->next);
       }
-      if (e->circ_attempts > 0) {
+      if (e->pb.circ_attempts > 0) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardPathBias");
         /* In the long run: circuit_success ~= successful_circuit_close +
          *                                     collapsed_circuits +
          *                                     unusable_circuits */
         tor_asprintf(&line->value, "%f %f %f %f %f %f",
-                     e->circ_attempts, e->circ_successes,
+                     e->pb.circ_attempts, e->pb.circ_successes,
                      pathbias_get_close_success_count(e),
-                     e->collapsed_circuits,
-                     e->unusable_circuits, e->timeouts);
+                     e->pb.collapsed_circuits,
+                     e->pb.unusable_circuits, e->pb.timeouts);
         next = &(line->next);
       }
-      if (e->use_attempts > 0) {
+      if (e->pb.use_attempts > 0) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardPathUseBias");
 
         tor_asprintf(&line->value, "%f %f",
-                     e->use_attempts,
+                     e->pb.use_attempts,
                      pathbias_get_use_success_count(e));
         next = &(line->next);
       }

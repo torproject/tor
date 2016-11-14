@@ -18,22 +18,11 @@ typedef struct guard_selection_s guard_selection_t;
 /* Forward declare for entry_guard_t; the real declaration is private. */
 typedef struct entry_guard_t entry_guard_t;
 
-#if defined(ENTRYNODES_PRIVATE) || defined(ENTRYNODES_EXPOSE_STRUCT)
-/** An entry_guard_t represents our information about a chosen long-term
- * first hop, known as a "helper" node in the literature. We can't just
- * use a node_t, since we want to remember these even when we
- * don't have any directory info. */
-struct entry_guard_t {
-  char nickname[MAX_NICKNAME_LEN+1];
-  char identity[DIGEST_LEN];
-  time_t chosen_on_date; /**< Approximately when was this guard added?
-                          * "0" if we don't know. */
-  char *chosen_by_version; /**< What tor version added this guard? NULL
-                            * if we don't know. */
-  unsigned int made_contact : 1; /**< 0 if we have never connected to this
-                                  * router, 1 if we have. */
-  unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
-                               * in spite of having it marked as unreachable?*/
+/* Information about a guard's pathbias status.
+ * These fields are used in circpathbias.c to try to detect entry
+ * nodes that are failing circuits at a suspicious frequency.
+ */
+typedef struct guard_pathbias_t {
   unsigned int path_bias_noticed : 1; /**< Did we alert the user about path
                                        * bias for this node already? */
   unsigned int path_bias_warned : 1; /**< Did we alert the user about path bias
@@ -46,23 +35,6 @@ struct entry_guard_t {
                                        * use bias for this node already? */
   unsigned int path_bias_use_extreme : 1; /**< Did we alert the user about path
                                        * use bias for this node already? */
-  unsigned int is_dir_cache : 1; /**< Is this node a directory cache? */
-  time_t bad_since; /**< 0 if this guard is currently usable, or the time at
-                      * which it was observed to become (according to the
-                      * directory or the user configuration) unusable. */
-  time_t unreachable_since; /**< 0 if we can connect to this guard, or the
-                             * time at which we first noticed we couldn't
-                             * connect to it. */
-  time_t last_attempted; /**< 0 if we can connect to this guard, or the time
-                          * at which we last failed to connect to it. */
-
-  /**
-   * @name circpathbias fields
-   *
-   * These fields are used in circpathbias.c to try to detect entry
-   * nodes that are failing circuits at a suspicious frequency.
-   */
-  /**@{*/
 
   double circ_attempts; /**< Number of circuits this guard has "attempted" */
   double circ_successes; /**< Number of successfully built circuits using
@@ -79,7 +51,36 @@ struct entry_guard_t {
   double use_attempts; /**< Number of circuits we tried to use with streams */
   double use_successes; /**< Number of successfully used circuits using
                                * this guard as first hop. */
-  /**@}*/
+} guard_pathbias_t;
+
+#if defined(ENTRYNODES_PRIVATE) || defined(ENTRYNODES_EXPOSE_STRUCT)
+/** An entry_guard_t represents our information about a chosen long-term
+ * first hop, known as a "helper" node in the literature. We can't just
+ * use a node_t, since we want to remember these even when we
+ * don't have any directory info. */
+struct entry_guard_t {
+  char nickname[MAX_NICKNAME_LEN+1];
+  char identity[DIGEST_LEN];
+  time_t chosen_on_date; /**< Approximately when was this guard added?
+                          * "0" if we don't know. */
+  char *chosen_by_version; /**< What tor version added this guard? NULL
+                            * if we don't know. */
+  unsigned int made_contact : 1; /**< 0 if we have never connected to this
+                                  * router, 1 if we have. */
+  unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
+                               * in spite of having it marked as unreachable?*/
+  unsigned int is_dir_cache : 1; /**< Is this node a directory cache? */
+  time_t bad_since; /**< 0 if this guard is currently usable, or the time at
+                      * which it was observed to become (according to the
+                      * directory or the user configuration) unusable. */
+  time_t unreachable_since; /**< 0 if we can connect to this guard, or the
+                             * time at which we first noticed we couldn't
+                             * connect to it. */
+  time_t last_attempted; /**< 0 if we can connect to this guard, or the time
+                          * at which we last failed to connect to it. */
+
+  /** Path bias information for this guard. */
+  guard_pathbias_t pb;
 };
 #endif
 
