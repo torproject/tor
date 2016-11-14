@@ -1355,7 +1355,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
   guard_pathbias_t *pb = entry_guard_get_pathbias_state(guard);
-  
+
   if (pb->circ_attempts > pathbias_get_min_circs(options)) {
     /* Note: We rely on the < comparison here to allow us to set a 0
      * rate and disable the feature entirely. If refactoring, don't

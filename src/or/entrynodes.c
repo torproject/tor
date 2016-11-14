@@ -1583,7 +1583,8 @@ entry_guards_parse_state_for_guard_selection(
         node->pb.path_bias_disabled = 1;
         log_info(LD_GENERAL,
                  "Path use bias is too high (%f/%f); disabling node %s",
-                 node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
+                 node->pb.circ_successes, node->pb.circ_attempts,
+                 node->nickname);
       }
     } else if (!strcasecmp(line->key, "EntryGuardPathBias")) {
       const or_options_t *options = get_options();
@@ -1642,7 +1643,8 @@ entry_guards_parse_state_for_guard_selection(
       node->pb.unusable_circuits = unusable;
 
       log_info(LD_GENERAL, "Read %f/%f path bias for node %s",
-               node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
+               node->pb.circ_successes, node->pb.circ_attempts,
+               node->nickname);
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
@@ -1652,7 +1654,8 @@ entry_guards_parse_state_for_guard_selection(
         node->pb.path_bias_disabled = 1;
         log_info(LD_GENERAL,
                  "Path bias is too high (%f/%f); disabling node %s",
-                 node->pb.circ_successes, node->pb.circ_attempts, node->nickname);
+                 node->pb.circ_successes, node->pb.circ_attempts,
+                 node->nickname);
       }
 
     } else {
