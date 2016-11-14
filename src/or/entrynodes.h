@@ -12,18 +12,18 @@
 #ifndef TOR_ENTRYNODES_H
 #define TOR_ENTRYNODES_H
 
-#if 1
-/* XXXX NM I would prefer that all of this stuff be private to
- * entrynodes.c. */
-
 /* Forward declare for guard_selection_t; entrynodes.c has the real struct */
 typedef struct guard_selection_s guard_selection_t;
 
+/* Forward declare for entry_guard_t; the real declaration is private. */
+typedef struct entry_guard_t entry_guard_t;
+
+#if defined(ENTRYNODES_PRIVATE) || defined(ENTRYNODES_EXPOSE_STRUCT)
 /** An entry_guard_t represents our information about a chosen long-term
  * first hop, known as a "helper" node in the literature. We can't just
  * use a node_t, since we want to remember these even when we
  * don't have any directory info. */
-typedef struct entry_guard_t {
+struct entry_guard_t {
   char nickname[MAX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
   time_t chosen_on_date; /**< Approximately when was this guard added?
@@ -80,8 +80,12 @@ typedef struct entry_guard_t {
   double use_successes; /**< Number of successfully used circuits using
                                * this guard as first hop. */
   /**@}*/
-} entry_guard_t;
+};
+#endif
 
+#if 1
+/* XXXX NM I would prefer that all of this stuff be private to
+ * entrynodes.c. */
 entry_guard_t *entry_guard_get_by_id_digest_for_guard_selection(
     guard_selection_t *gs, const char *digest);
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
@@ -97,6 +101,8 @@ int num_live_entry_guards_for_guard_selection(
 int num_live_entry_guards(int for_directory);
 
 #endif
+
+const node_t *entry_guard_find_node(const entry_guard_t *guard);
 
 #ifdef ENTRYNODES_PRIVATE
 STATIC const node_t *add_an_entry_guard(guard_selection_t *gs,

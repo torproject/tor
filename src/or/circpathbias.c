@@ -21,6 +21,9 @@
  * each guard, and stored persistently in the state file.
  */
 
+/* XXXX prop271 I would like to remove this. */
+#define ENTRYNODES_EXPOSE_STRUCT
+
 #include "or.h"
 #include "channel.h"
 #include "circpathbias.h"

@@ -2238,7 +2238,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
      )) {
     SMARTLIST_FOREACH(get_entry_guards(), const entry_guard_t *, entry,
       {
-        if ((node = node_get_by_id(entry->identity))) {
+        if ((node = entry_guard_find_node(entry))) {
           nodelist_add_node_and_family(excluded, node);
         }
       });

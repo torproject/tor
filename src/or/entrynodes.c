@@ -405,6 +405,15 @@ entry_guard_get_by_id_digest_for_guard_selection(guard_selection_t *gs,
   return NULL;
 }
 
+/** Return the node_t associated with a single entry_guard_t. May
+ * return NULL if the guard is not currently in the consensus. */
+const node_t *
+entry_guard_find_node(const entry_guard_t *guard)
+{
+  tor_assert(guard);
+  return node_get_by_id(guard->identity);
+}
+
 /** If <b>digest</b> matches the identity of any node in the
  * entry_guards list for the default guard selection state,
  return that node. Else return NULL. */
