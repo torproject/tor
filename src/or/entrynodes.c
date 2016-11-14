@@ -1502,7 +1502,7 @@ entry_guards_parse_state_for_guard_selection(
                "EntryGuardDownSince/UnlistedSince without EntryGuard");
         break;
       }
-      if (parse_iso_time_(line->value, &when, 0)<0) {
+      if (parse_iso_time_(line->value, &when, 0, 0)<0) {
         *msg = tor_strdup("Unable to parse entry nodes: "
                           "Bad time in EntryGuardDownSince/UnlistedSince");
         break;

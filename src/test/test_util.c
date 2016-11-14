@@ -1059,6 +1059,23 @@ test_util_time(void *arg)
   tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-04 00:48:22.100", &t_res));
   tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-04 00:48:22XYZ", &t_res));
 
+  /* but... that _is_ acceptable if we aren't being strict. */
+  t_res = 0;
+  i = parse_iso_time_("2004-08-04 00:48:22XYZ", &t_res, 0, 0);
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(t_res,OP_EQ, (time_t)1091580502UL);
+
+  /* try nospace variant. */
+  t_res = 0;
+  i = parse_iso_time_nospace("2004-08-04T00:48:22", &t_res);
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(t_res,OP_EQ, (time_t)1091580502UL);
+
+  tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-04T00:48:22", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time_nospace("2004-08-04 00:48:22", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-04x00:48:22", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time_nospace("2004-08-04x00:48:22", &t_res));
+
   /* Test tor_gettimeofday */
 
   end.tv_sec = 4;
