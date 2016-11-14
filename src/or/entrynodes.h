@@ -18,6 +18,10 @@ typedef struct guard_selection_s guard_selection_t;
 /* Forward declare for entry_guard_t; the real declaration is private. */
 typedef struct entry_guard_t entry_guard_t;
 
+#define GUARD_REACHABLE_NO    0
+#define GUARD_REACHABLE_YES   1
+#define GUARD_REACHABLE_MAYBE 2
+
 /* Information about a guard's pathbias status.
  * These fields are used in circpathbias.c to try to detect entry
  * nodes that are failing circuits at a suspicious frequency.
@@ -61,6 +65,43 @@ typedef struct guard_pathbias_t {
 struct entry_guard_t {
   char nickname[MAX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
+  ed25519_public_key_t ed_id;
+
+  /* XXXX prop271 DOCDOC document all these fields better */
+
+  /* Persistent fields, present for all sampled guards. */
+  time_t sampled_on_date;
+  time_t unlisted_since_date;
+  char *sampled_by_version;
+  unsigned currently_listed : 1;
+
+  /* Persistent fields, for confirmed guards. */
+  time_t confirmed_on_date; /* 0 if not confirmed */
+  int confirmed_idx; /* -1 if not confirmed; otherwise the order that this
+                      * item should occur in the CONFIRMED_GUARDS ordered
+                      * list */
+
+  /* ==== Non-persistent fields. */
+  /* == These are used by sampled guards */
+  time_t last_tried_to_connect;
+  unsigned is_reachable : 2; /* One of GUARD_REACHABLE_{NO,YES,MAYBE} */
+  unsigned is_pending : 1;
+  time_t failing_since;
+
+  /* These determine presence in filtered guards and usable-filtered-guards
+   * respectively. */
+  unsigned is_filtered_guard : 1;
+  unsigned is_usable_filtered_guard : 1;
+
+  /**
+   * @name legacy guard selection algorithm fields
+   *
+   * These are used and maintained by the legacy (pre-prop271) entry guard
+   * algorithm.  Most of them we will remove as prop271 gets implemented.
+   * The rest we'll migrate over, if they are 100% semantically identical to
+   * their prop271 equivalents. XXXXprop271
+   */
+  /**@{*/
   time_t chosen_on_date; /**< Approximately when was this guard added?
                           * "0" if we don't know. */
   char *chosen_by_version; /**< What tor version added this guard? NULL
@@ -78,6 +119,8 @@ struct entry_guard_t {
                              * connect to it. */
   time_t last_attempted; /**< 0 if we can connect to this guard, or the time
                           * at which we last failed to connect to it. */
+
+  /**}@*/
 
   /** Path bias information for this guard. */
   guard_pathbias_t pb;

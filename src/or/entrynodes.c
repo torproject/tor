@@ -683,6 +683,7 @@ entry_guard_free(entry_guard_t *e)
   if (!e)
     return;
   tor_free(e->chosen_by_version);
+  tor_free(e->sampled_by_version);
   tor_free(e);
 }
 
