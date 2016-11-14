@@ -843,6 +843,22 @@ test_node_preferred_orport(void *arg)
   UNMOCK(get_options);
 }
 
+static void
+test_entry_guard_describe(void *arg)
+{
+  (void)arg;
+  entry_guard_t g;
+  memset(&g, 0, sizeof(g));
+  strlcpy(g.nickname, "okefenokee", sizeof(g.nickname));
+  memcpy(g.identity, "theforestprimeval---", DIGEST_LEN);
+
+  tt_str_op(entry_guard_describe(&g), OP_EQ,
+            "okefenokee ($746865666F726573747072696D6576616C2D2D2D)");
+
+ done:
+  ;
+}
+
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
@@ -876,6 +892,7 @@ struct testcase_t entrynodes_tests[] = {
   { "node_preferred_orport",
     test_node_preferred_orport,
     0, NULL, NULL },
+  { "entry_guard_describe", test_entry_guard_describe, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

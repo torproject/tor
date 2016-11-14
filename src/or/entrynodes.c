@@ -157,6 +157,26 @@ get_entry_guards(void)
   return get_entry_guards_for_guard_selection(get_guard_selection_info());
 }
 
+/** Helper: mark an entry guard as not usable. */
+void
+entry_guard_mark_bad(entry_guard_t *guard)
+{
+  guard->bad_since = approx_time();
+  entry_guards_changed();
+}
+
+/** Return a statically allocated human-readable description of <b>guard</b>
+ */
+const char *
+entry_guard_describe(const entry_guard_t *guard)
+{
+  static char buf[256];
+  tor_snprintf(buf, sizeof(buf),
+               "%s ($%s)",
+               guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+  return buf;
+}
+
 /** Check whether the entry guard <b>e</b> is usable, given the directory
  * authorities' opinion about the router (stored in <b>ri</b>) and the user's
  * configuration (in <b>options</b>). Set <b>e</b>->bad_since

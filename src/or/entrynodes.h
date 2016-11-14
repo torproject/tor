@@ -100,10 +100,11 @@ int num_live_entry_guards_for_guard_selection(
     guard_selection_t *gs,
     int for_directory);
 int num_live_entry_guards(int for_directory);
-
 #endif
 
 const node_t *entry_guard_find_node(const entry_guard_t *guard);
+void entry_guard_mark_bad(entry_guard_t *guard);
+const char *entry_guard_describe(const entry_guard_t *guard);
 
 #ifdef ENTRYNODES_PRIVATE
 STATIC const node_t *add_an_entry_guard(guard_selection_t *gs,
