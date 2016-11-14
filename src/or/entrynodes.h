@@ -104,6 +104,7 @@ int num_live_entry_guards(int for_directory);
 
 const node_t *entry_guard_find_node(const entry_guard_t *guard);
 void entry_guard_mark_bad(entry_guard_t *guard);
+const char *entry_guard_get_rsa_id_digest(const entry_guard_t *guard);
 const char *entry_guard_describe(const entry_guard_t *guard);
 
 #ifdef ENTRYNODES_PRIVATE

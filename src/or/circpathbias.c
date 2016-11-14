@@ -1175,7 +1175,7 @@ pathbias_count_circs_in_states(entry_guard_t *guard,
     if (ocirc->path_state >= from &&
         ocirc->path_state <= to &&
         pathbias_should_count(ocirc) &&
-        fast_memeq(guard->identity,
+        fast_memeq(entry_guard_get_rsa_id_digest(guard),
                    ocirc->cpath->extend_info->identity_digest,
                    DIGEST_LEN)) {
       log_debug(LD_CIRC, "Found opened circuit %d in path_state %s",

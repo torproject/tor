@@ -177,6 +177,13 @@ entry_guard_describe(const entry_guard_t *guard)
   return buf;
 }
 
+/** Return <b>guard</b>'s 20-byte RSA identity digest */
+const char *
+entry_guard_get_rsa_id_digest(const entry_guard_t *guard)
+{
+  return guard->identity;
+}
+
 /** Check whether the entry guard <b>e</b> is usable, given the directory
  * authorities' opinion about the router (stored in <b>ri</b>) and the user's
  * configuration (in <b>options</b>). Set <b>e</b>->bad_since
