@@ -38,7 +38,7 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
            "Received a legacy ESTABLISH_INTRO request on circuit %u",
            (unsigned) circ->p_circ_id);
 
-  if (!hs_intro_circuit_is_suitable(circ)) {
+  if (!hs_intro_circuit_is_suitable_for_establish_intro(circ)) {
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }

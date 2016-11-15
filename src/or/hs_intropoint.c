@@ -215,7 +215,7 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
            circ->p_circ_id);
 
   /* Check that the circuit is in shape to become an intro point */
-  if (!hs_intro_circuit_is_suitable(circ)) {
+  if (!hs_intro_circuit_is_suitable_for_establish_intro(circ)) {
     goto err;
   }
 
@@ -286,7 +286,7 @@ circuit_is_suitable_intro_point(const or_circuit_t *circ,
 
 /* Return True if circuit is suitable for becoming an intro circuit. */
 int
-hs_intro_circuit_is_suitable(const or_circuit_t *circ)
+hs_intro_circuit_is_suitable_for_establish_intro(const or_circuit_t *circ)
 {
   return circuit_is_suitable_intro_point(circ, "ESTABLISH_INTRO");
 }
