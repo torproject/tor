@@ -151,6 +151,26 @@ should_apply_guardfraction(const networkstatus_t *ns)
 }
 /**@}*/
 
+/**
+ * @name Parameters for new (prop271) entry guard algorithm.
+ */
+/* XXXX prop271 some of these should be networkstatus parameters */
+#define MIN_SAMPLE_THRESHOLD 15
+#define MAX_SAMPLE_THRESHOLD 50
+#define GUARD_LIFETIME_DAYS 120
+#define REMOVE_UNLISTED_GUARDS_AFTER_DAYS 20
+#define MIN_FILTERED_SAMPLE_SIZE 20
+#define N_PRIMARY_GUARDS 3
+#define PRIMARY_GUARDS_RETRY_SCHEDULE /* XXX prop271 */
+#define OTHER_GUARDS_RETRY_SCHEDULE /* XXX prop271 */
+#define INTERNET_LIKELY_DOWN_INTERVAL (10*60)
+#define NONPRIMARY_GUARD_CONNECT_TIMEOUT 15
+#define NONPRIMARY_GUARD_IDLE_TIMEOUT (10*60)
+#define MEANINGFUL_RESTRICTION_FRAC 0.2
+#define EXTREME_RESTRICTION_FRAC 0.01
+#define GUARD_CONFIRMED_MIN_LIFETIME_DAYS 60
+/**}@*/
+
 /** Allocate a new guard_selection_t */
 
 static guard_selection_t *
@@ -254,12 +274,11 @@ randomize_time(time_t now, time_t max_backdate)
 /**
  * DOCDOC
  */
-STATIC void
+ATTR_UNUSED STATIC void
 entry_guard_add_to_sample(guard_selection_t *gs,
                           node_t *node)
 {
-  (void) entry_guard_add_to_sample; // XXXX prop271 remove -- unused
-  const int GUARD_LIFETIME = 90 * 86400; // xxxx prop271
+  const int GUARD_LIFETIME = GUARD_LIFETIME_DAYS * 86400;
   tor_assert(gs);
   tor_assert(node);
 
@@ -296,7 +315,7 @@ entry_guard_add_to_sample(guard_selection_t *gs,
  * Return a newly allocated string for encoding the persistent parts of
  * <b>guard</b> to the state file.
  */
-STATIC char *
+ATTR_UNUSED STATIC char *
 entry_guard_encode_for_state(entry_guard_t *guard)
 {
   /*
@@ -356,7 +375,7 @@ entry_guard_encode_for_state(entry_guard_t *guard)
  * (if possible) and return an entry_guard_t object for it.  Return NULL
  * on complete failure.
  */
-STATIC entry_guard_t *
+ATTR_UNUSED STATIC entry_guard_t *
 entry_guard_parse_from_state(const char *s)
 {
   /* Unrecognized entries get put in here. */
@@ -1776,9 +1795,6 @@ entry_guards_parse_state_for_guard_selection(
   const char *state_version = state->TorVersion;
   digestmap_t *added_by = digestmap_new();
 
-  if (0) entry_guard_parse_from_state(NULL); // XXXX prop271 remove -- unused
-  if (0) entry_guard_add_to_sample(NULL, NULL); // XXXX prop271 remove
-
   tor_assert(gs != NULL);
 
   *msg = NULL;
@@ -2103,8 +2119,6 @@ entry_guards_update_state(or_state_t *state)
 {
   config_line_t **next, *line;
   guard_selection_t *gs = get_guard_selection_info();
-
-  if (0) entry_guard_encode_for_state(NULL); // XXXX prop271 remove -- unused
 
   tor_assert(gs != NULL);
   tor_assert(gs->chosen_entry_guards != NULL);

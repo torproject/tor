@@ -111,10 +111,6 @@ int32_t networkstatus_get_param(const networkstatus_t *ns,
                                 const char *param_name,
                                 int32_t default_val, int32_t min_val,
                                 int32_t max_val);
-int32_t networkstatus_get_param(const networkstatus_t *ns,
-                                const char *param_name,
-                                int32_t default_val, int32_t min_val,
-                                int32_t max_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer,
                                  const char **errmsg);
