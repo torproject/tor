@@ -81,6 +81,12 @@ static const node_t *choose_random_entry_impl(guard_selection_t *gs,
                                               int *n_options_out);
 static guard_selection_t * guard_selection_new(void);
 
+/**
+ * @name Constants for old (pre-prop271) guard selection algorithm.
+ */
+
+/**@{*/
+
 /* Default number of entry guards in the case where the NumEntryGuards
  * consensus parameter is not set */
 #define DEFAULT_N_GUARDS 1
@@ -88,6 +94,62 @@ static guard_selection_t * guard_selection_new(void);
  * consensus parameter is set). */
 #define MIN_N_GUARDS 1
 #define MAX_N_GUARDS 10
+/** Largest amount that we'll backdate chosen_on_date */
+#define CHOSEN_ON_DATE_SLOP (30*86400)
+/** How long (in seconds) do we allow an entry guard to be nonfunctional,
+ * unlisted, excluded, or otherwise nonusable before we give up on it? */
+#define ENTRY_GUARD_REMOVE_AFTER (30*24*60*60)
+/**}@*/
+
+/**
+ * @name Networkstatus parameters for old (pre-prop271) guard selection
+ */
+/**@}*/
+/** Choose how many entry guards or directory guards we'll use. If
+ * <b>for_directory</b> is true, we return how many directory guards to
+ * use; else we return how many entry guards to use. */
+STATIC int
+decide_num_guards(const or_options_t *options, int for_directory)
+{
+  if (for_directory) {
+    int answer;
+    if (options->NumDirectoryGuards != 0)
+      return options->NumDirectoryGuards;
+    answer = networkstatus_get_param(NULL, "NumDirectoryGuards", 0, 0, 10);
+    if (answer) /* non-zero means use the consensus value */
+      return answer;
+  }
+
+  if (options->NumEntryGuards)
+    return options->NumEntryGuards;
+
+  /* Use the value from the consensus, or 3 if no guidance. */
+  return networkstatus_get_param(NULL, "NumEntryGuards", DEFAULT_N_GUARDS,
+                                 MIN_N_GUARDS, MAX_N_GUARDS);
+}
+
+/** Return 0 if we should apply guardfraction information found in the
+ *  consensus. A specific consensus can be specified with the
+ *  <b>ns</b> argument, if NULL the most recent one will be picked.*/
+int
+should_apply_guardfraction(const networkstatus_t *ns)
+{
+  /* We need to check the corresponding torrc option and the consensus
+   * parameter if we need to. */
+  const or_options_t *options = get_options();
+
+  /* If UseGuardFraction is 'auto' then check the same-named consensus
+   * parameter. If the consensus parameter is not present, default to
+   * "off". */
+  if (options->UseGuardFraction == -1) {
+    return networkstatus_get_param(ns, "UseGuardFraction",
+                                   0, /* default to "off" */
+                                   0, 1);
+  }
+
+  return options->UseGuardFraction;
+}
+/**@}*/
 
 /** Allocate a new guard_selection_t */
 
@@ -795,9 +857,6 @@ control_event_guard_deferred(void)
 #endif
 }
 
-/** Largest amount that we'll backdate chosen_on_date */
-#define CHOSEN_ON_DATE_SLOP (30*86400)
-
 /** Add a new (preferably stable and fast) router to our chosen_entry_guards
  * list for the supplied guard selection. Return a pointer to the router if
  * we succeed, or NULL if we can't find any more suitable entries.
@@ -903,27 +962,30 @@ add_bridge_as_entry_guard(guard_selection_t *gs,
   add_an_entry_guard(gs, chosen, 1, 1, 0, 0);
 }
 
-/** Choose how many entry guards or directory guards we'll use. If
- * <b>for_directory</b> is true, we return how many directory guards to
- * use; else we return how many entry guards to use. */
-STATIC int
-decide_num_guards(const or_options_t *options, int for_directory)
+/**
+ * Return the minimum lifetime of working entry guard, in seconds,
+ * as given in the consensus networkstatus.  (Plus CHOSEN_ON_DATE_SLOP,
+ * so that we can do the chosen_on_date randomization while achieving the
+ * desired minimum lifetime.)
+ */
+static int32_t
+guards_get_lifetime(void)
 {
-  if (for_directory) {
-    int answer;
-    if (options->NumDirectoryGuards != 0)
-      return options->NumDirectoryGuards;
-    answer = networkstatus_get_param(NULL, "NumDirectoryGuards", 0, 0, 10);
-    if (answer) /* non-zero means use the consensus value */
-      return answer;
+  const or_options_t *options = get_options();
+#define DFLT_GUARD_LIFETIME (86400 * 60)   /* Two months. */
+#define MIN_GUARD_LIFETIME  (86400 * 30)   /* One months. */
+#define MAX_GUARD_LIFETIME  (86400 * 1826) /* Five years. */
+
+  if (options->GuardLifetime >= 1) {
+    return CLAMP(MIN_GUARD_LIFETIME,
+                 options->GuardLifetime,
+                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
   }
 
-  if (options->NumEntryGuards)
-    return options->NumEntryGuards;
-
-  /* Use the value from the consensus, or 3 if no guidance. */
-  return networkstatus_get_param(NULL, "NumEntryGuards", DEFAULT_N_GUARDS,
-                                 MIN_N_GUARDS, MAX_N_GUARDS);
+  return networkstatus_get_param(NULL, "GuardLifetime",
+                                 DFLT_GUARD_LIFETIME,
+                                 MIN_GUARD_LIFETIME,
+                                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
 }
 
 /** If the use of entry guards is configured, choose more entry guards
@@ -950,10 +1012,6 @@ pick_entry_guards(guard_selection_t *gs,
     entry_guards_changed_for_guard_selection(gs);
 }
 
-/** How long (in seconds) do we allow an entry guard to be nonfunctional,
- * unlisted, excluded, or otherwise nonusable before we give up on it? */
-#define ENTRY_GUARD_REMOVE_AFTER (30*24*60*60)
-
 /** Release all storage held by <b>e</b>. */
 STATIC void
 entry_guard_free(entry_guard_t *e)
@@ -964,32 +1022,6 @@ entry_guard_free(entry_guard_t *e)
   tor_free(e->sampled_by_version);
   tor_free(e->extra_state_fields);
   tor_free(e);
-}
-
-/**
- * Return the minimum lifetime of working entry guard, in seconds,
- * as given in the consensus networkstatus.  (Plus CHOSEN_ON_DATE_SLOP,
- * so that we can do the chosen_on_date randomization while achieving the
- * desired minimum lifetime.)
- */
-static int32_t
-guards_get_lifetime(void)
-{
-  const or_options_t *options = get_options();
-#define DFLT_GUARD_LIFETIME (86400 * 60)   /* Two months. */
-#define MIN_GUARD_LIFETIME  (86400 * 30)   /* One months. */
-#define MAX_GUARD_LIFETIME  (86400 * 1826) /* Five years. */
-
-  if (options->GuardLifetime >= 1) {
-    return CLAMP(MIN_GUARD_LIFETIME,
-                 options->GuardLifetime,
-                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
-  }
-
-  return networkstatus_get_param(NULL, "GuardLifetime",
-                                 DFLT_GUARD_LIFETIME,
-                                 MIN_GUARD_LIFETIME,
-                                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
 }
 
 /** Remove from a guard selection context any entry guard which was selected
@@ -2219,28 +2251,6 @@ getinfo_helper_entry_guards(control_connection_t *conn,
     smartlist_free(sl);
   }
   return 0;
-}
-
-/** Return 0 if we should apply guardfraction information found in the
- *  consensus. A specific consensus can be specified with the
- *  <b>ns</b> argument, if NULL the most recent one will be picked.*/
-int
-should_apply_guardfraction(const networkstatus_t *ns)
-{
-  /* We need to check the corresponding torrc option and the consensus
-   * parameter if we need to. */
-  const or_options_t *options = get_options();
-
-  /* If UseGuardFraction is 'auto' then check the same-named consensus
-   * parameter. If the consensus parameter is not present, default to
-   * "off". */
-  if (options->UseGuardFraction == -1) {
-    return networkstatus_get_param(ns, "UseGuardFraction",
-                                   0, /* default to "off" */
-                                   0, 1);
-  }
-
-  return options->UseGuardFraction;
 }
 
 /* Given the original bandwidth of a guard and its guardfraction,
