@@ -221,40 +221,10 @@ int is_node_used_as_guard_for_guard_selection(guard_selection_t *gs,
                                               const node_t *node);
 MOCK_DECL(int, is_node_used_as_guard, (const node_t *node));
 
-void mark_bridge_list(void);
-void sweep_bridge_list(void);
-
-int addr_is_a_configured_bridge(const tor_addr_t *addr, uint16_t port,
-                                const char *digest);
-int extend_info_is_a_configured_bridge(const extend_info_t *ei);
-int routerinfo_is_a_configured_bridge(const routerinfo_t *ri);
-int node_is_a_configured_bridge(const node_t *node);
-void learned_router_identity(const tor_addr_t *addr, uint16_t port,
-                             const char *digest);
-struct bridge_line_t;
-void bridge_add_from_config(struct bridge_line_t *bridge_line);
-void retry_bridge_descriptor_fetch_directly(const char *digest);
-void fetch_bridge_descriptors(const or_options_t *options, time_t now);
-void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);
-int any_bridge_descriptors_known(void);
 int entries_known_but_down(const or_options_t *options);
 void entries_retry_all(const or_options_t *options);
 
-const smartlist_t *get_socks_args_by_bridge_addrport(const tor_addr_t *addr,
-                                                     uint16_t port);
-
-int any_bridges_dont_support_microdescriptors(void);
-
 void entry_guards_free_all(void);
-
-const char *find_transport_name_by_bridge_addrport(const tor_addr_t *addr,
-                                                   uint16_t port);
-struct transport_t;
-int get_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
-                                      const struct transport_t **transport);
-
-MOCK_DECL(int, transport_is_needed, (const char *transport_name));
-int validate_pluggable_transports_config(void);
 
 double pathbias_get_close_success_count(entry_guard_t *guard);
 double pathbias_get_use_success_count(entry_guard_t *guard);
@@ -274,10 +244,6 @@ void
 guard_get_guardfraction_bandwidth(guardfraction_bandwidth_t *guardfraction_bw,
                                   int orig_bandwidth,
                                   uint32_t guardfraction_percentage);
-
-MOCK_DECL(smartlist_t *, list_bridge_identities, (void));
-MOCK_DECL(download_status_t *, get_bridge_dl_status_by_id,
-          (const char *digest));
 
 #endif
 

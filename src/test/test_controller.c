@@ -3,6 +3,7 @@
 
 #define CONTROL_PRIVATE
 #include "or.h"
+#include "bridges.h"
 #include "control.h"
 #include "entrynodes.h"
 #include "networkstatus.h"

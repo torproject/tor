@@ -7,6 +7,7 @@
 
 #include "or.h"
 #include "backtrace.h"
+#include "bridges.h"
 #include "buffers.h"
 #include "circuitbuild.h"
 #include "config.h"

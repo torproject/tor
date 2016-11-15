@@ -29,6 +29,7 @@
 
 #include "or.h"
 #include "addressmap.h"
+#include "bridges.h"
 #include "channel.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"

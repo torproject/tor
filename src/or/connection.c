@@ -56,6 +56,7 @@
 
 #define CONNECTION_PRIVATE
 #include "or.h"
+#include "bridges.h"
 #include "buffers.h"
 /*
  * Define this so we get channel internal functions, since we're implementing

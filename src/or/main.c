@@ -50,6 +50,7 @@
 #include "or.h"
 #include "addressmap.h"
 #include "backtrace.h"
+#include "bridges.h"
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"
@@ -3114,6 +3115,7 @@ tor_free_all(int postfork)
   control_free_all();
   sandbox_free_getaddrinfo_cache();
   protover_free_all();
+  bridges_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

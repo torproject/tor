@@ -38,6 +38,7 @@
 
 #define NETWORKSTATUS_PRIVATE
 #include "or.h"
+#include "bridges.h"
 #include "channel.h"
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"

@@ -21,6 +21,7 @@
  * This module also implements the client side of the v3 Tor link handshake,
  **/
 #include "or.h"
+#include "bridges.h"
 #include "buffers.h"
 /*
  * Define this so we get channel internal functions, since we're implementing

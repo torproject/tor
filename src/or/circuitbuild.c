@@ -28,6 +28,7 @@
 #define CIRCUITBUILD_PRIVATE
 
 #include "or.h"
+#include "bridges.h"
 #include "channel.h"
 #include "circpathbias.h"
 #define CIRCUITBUILD_PRIVATE

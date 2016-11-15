@@ -36,6 +36,7 @@
 
 #include "or.h"
 #include "addressmap.h"
+#include "bridges.h"
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"

@@ -93,6 +93,7 @@
 #define ROUTERLIST_PRIVATE
 #include "or.h"
 #include "backtrace.h"
+#include "bridges.h"
 #include "crypto_ed25519.h"
 #include "circuitstats.h"
 #include "config.h"

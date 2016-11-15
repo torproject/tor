@@ -91,13 +91,13 @@
 
 #define PT_PRIVATE
 #include "or.h"
+#include "bridges.h"
 #include "config.h"
 #include "circuitbuild.h"
 #include "transports.h"
 #include "util.h"
 #include "router.h"
 #include "statefile.h"
-#include "entrynodes.h"
 #include "connection_or.h"
 #include "ext_orport.h"
 #include "control.h"
