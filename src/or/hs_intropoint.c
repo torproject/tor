@@ -58,7 +58,7 @@ get_auth_key_from_cell(ed25519_public_key_t *auth_key_out,
   default:
     /* Getting here is really bad as it means we got a unknown cell type from
      * this file where every call has an hardcoded value. */
-    tor_assert(0);
+    tor_assert(0); /* LCOV_EXCL_LINE */
   }
   tor_assert(key_array);
   tor_assert(auth_key_len == sizeof(auth_key_out->pubkey));
@@ -371,7 +371,7 @@ send_introduce_ack_cell(or_circuit_t *circ, hs_intro_ack_status_t status)
 
 /* Validate a parsed INTRODUCE1 <b>cell</b>. Return 0 if valid or else a
  * negative value for an invalid cell that should be NACKed. */
-static int
+STATIC int
 validate_introduce1_parsed_cell(const hs_cell_introduce1_t *cell)
 {
   size_t legacy_key_id_len;
@@ -420,7 +420,7 @@ validate_introduce1_parsed_cell(const hs_cell_introduce1_t *cell)
  * everything went well, or -1 if an error occured. This function is in charge
  * of sending back an INTRODUCE_ACK cell and will close client_circ on error.
  */
-static int
+STATIC int
 handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
                   size_t request_len)
 {
@@ -476,10 +476,12 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(service_circ),
                                    RELAY_COMMAND_INTRODUCE2,
                                    (char *) request, request_len, NULL)) {
+    /* LCOV_EXCL_START */
     log_warn(LD_REND, "Unable to send INTRODUCE2 cell to the service.");
     /* Inform the client that we can't relay the cell. */
     status = HS_INTRO_ACK_STATUS_CANT_RELAY;
     goto send_ack;
+    /* LCOV_EXCL_STOP */
   }
 
   /* Success! Send an INTRODUCE_ACK success status onto the client circuit. */
@@ -489,10 +491,12 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
  send_ack:
   /* Send the INTRODUCE_ACK cell to the client with a specific status. */
   if (send_introduce_ack_cell(client_circ, status) < 0) {
+    /* LCOV_EXCL_START */
     log_warn(LD_REND, "Unable to send an INTRODUCE ACK status %d to client.",
              status);
     /* Circuit has been closed on failure of transmission. */
     goto done;
+    /* LCOV_EXCL_STOP */
   }
   if (status != HS_INTRO_ACK_STATUS_SUCCESS) {
     /* We just sent a NACK that is a non success status code so close the
@@ -507,7 +511,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
 
 /* Identify if the encoded cell we just received is a legacy one or not. The
  * <b>request</b> should be at least DIGEST_LEN bytes long. */
-static int
+STATIC int
 introduce1_cell_is_legacy(const uint8_t *request)
 {
   tor_assert(request);
@@ -524,7 +528,7 @@ introduce1_cell_is_legacy(const uint8_t *request)
 
 /* Return true iff the circuit <b>circ</b> is suitable for receiving an
  * INTRODUCE1 cell. */
-static int
+STATIC int
 circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
 {
   tor_assert(circ);
