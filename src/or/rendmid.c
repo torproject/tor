@@ -133,8 +133,8 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
  * INTRODUCE2 cell.
  */
 int
-rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
-                   size_t request_len)
+rend_mid_introduce_legacy(or_circuit_t *circ, const uint8_t *request,
+                          size_t request_len)
 {
   or_circuit_t *intro_circ;
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];

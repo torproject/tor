@@ -577,7 +577,7 @@ hs_intro_received_introduce1(or_circuit_t *circ, const uint8_t *request,
   /* We are sure here to have at least DIGEST_LEN bytes. */
   if (introduce1_cell_is_legacy(request)) {
     /* Handle a legacy cell. */
-    ret = rend_mid_introduce(circ, request, request_len);
+    ret = rend_mid_introduce_legacy(circ, request, request_len);
   } else {
     /* Handle a non legacy cell. */
     ret = handle_introduce1(circ, request, request_len);
