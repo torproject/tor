@@ -893,6 +893,16 @@ add_an_entry_guard(guard_selection_t *gs,
   return node;
 }
 
+/** Entry point for bridges.c to add a bridge as guard.
+ *
+ * XXXX prop271 refactor.*/
+void
+add_bridge_as_entry_guard(guard_selection_t *gs,
+                          const node_t *chosen)
+{
+  add_an_entry_guard(gs, chosen, 1, 1, 0, 0);
+}
+
 /** Choose how many entry guards or directory guards we'll use. If
  * <b>for_directory</b> is true, we return how many directory guards to
  * use; else we return how many entry guards to use. */
@@ -1488,6 +1498,19 @@ choose_random_dirguard(dirinfo_type_t type)
 {
   return choose_random_entry_impl(get_guard_selection_info(),
                                   NULL, 1, type, NULL);
+}
+
+/** Return the number of bridges that have descriptors that are marked with
+ * purpose 'bridge' and are running.
+ */
+int
+num_bridges_usable(void)
+{
+  int n_options = 0;
+  tor_assert(get_options()->UseBridges);
+  (void) choose_random_entry_impl(get_guard_selection_info(),
+                                  NULL, 0, 0, &n_options);
+  return n_options;
 }
 
 /** Filter <b>all_entry_guards</b> for usable entry guards and put them

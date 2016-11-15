@@ -52,7 +52,6 @@ typedef struct {
 } bridge_info_t;
 
 static void bridge_free(bridge_info_t *bridge);
-static int num_bridges_usable(void);
 
 /** A list of configured bridges. Whenever we actually get a descriptor
  * for one, we add it as an entry guard.  Note that the order of bridges
@@ -719,7 +718,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
                    fmt_and_decorate_addr(&bridge->addr),
                    (int) bridge->port);
       }
-      add_an_entry_guard(get_guard_selection_info(), node, 1, 1, 0, 0);
+      add_bridge_as_entry_guard(get_guard_selection_info(), node);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
@@ -745,19 +744,6 @@ any_bridge_descriptors_known(void)
 {
   tor_assert(get_options()->UseBridges);
   return choose_random_entry(NULL) != NULL;
-}
-
-/** Return the number of bridges that have descriptors that are marked with
- * purpose 'bridge' and are running.
- */
-static int
-num_bridges_usable(void)
-{
-  int n_options = 0;
-  tor_assert(get_options()->UseBridges);
-  (void) choose_random_entry_impl(get_guard_selection_info(),
-                                  NULL, 0, 0, &n_options);
-  return n_options;
 }
 
 /** Return a smartlist containing all bridge identity digests */

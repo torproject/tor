@@ -154,6 +154,11 @@ const char *entry_guard_get_rsa_id_digest(const entry_guard_t *guard);
 const char *entry_guard_describe(const entry_guard_t *guard);
 guard_pathbias_t *entry_guard_get_pathbias_state(entry_guard_t *guard);
 
+/* Used by bridges.c only. */
+void add_bridge_as_entry_guard(guard_selection_t *gs,
+                               const node_t *chosen);
+int num_bridges_usable(void);
+
 #ifdef ENTRYNODES_PRIVATE
 STATIC time_t randomize_time(time_t now, time_t max_backdate);
 STATIC void entry_guard_add_to_sample(guard_selection_t *gs,
