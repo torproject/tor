@@ -1033,7 +1033,8 @@ directory_fetches_from_authorities(const or_options_t *options)
     return 1;
   if (options->BridgeRelay == 1)
     return 0;
-  if (server_mode(options) && router_pick_published_address(options, &addr)<0)
+  if (server_mode(options) &&
+      router_pick_published_address(options, &addr, 0) < 0)
     return 1; /* we don't know our IP address; ask an authority. */
   refuseunknown = ! router_my_exit_policy_is_reject_star() &&
     should_refuse_unknown_exits(options);
