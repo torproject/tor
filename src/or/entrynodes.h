@@ -18,10 +18,6 @@ typedef struct guard_selection_s guard_selection_t;
 /* Forward declare for entry_guard_t; the real declaration is private. */
 typedef struct entry_guard_t entry_guard_t;
 
-#define GUARD_REACHABLE_NO    0
-#define GUARD_REACHABLE_YES   1
-#define GUARD_REACHABLE_MAYBE 2
-
 /* Information about a guard's pathbias status.
  * These fields are used in circpathbias.c to try to detect entry
  * nodes that are failing circuits at a suspicious frequency.
@@ -58,6 +54,17 @@ typedef struct guard_pathbias_t {
 } guard_pathbias_t;
 
 #if defined(ENTRYNODES_PRIVATE)
+/**
+ * @name values for entry_guard_t.is_reachable.
+ *
+ * See entry_guard_t.is_reachable for more information.
+ */
+/**@{*/
+#define GUARD_REACHABLE_NO    0
+#define GUARD_REACHABLE_YES   1
+#define GUARD_REACHABLE_MAYBE 2
+/**@}*/
+
 /** An entry_guard_t represents our information about a chosen long-term
  * first hop, known as a "helper" node in the literature. We can't just
  * use a node_t, since we want to remember these even when we
@@ -67,35 +74,80 @@ struct entry_guard_t {
   char identity[DIGEST_LEN];
   ed25519_public_key_t ed_id;
 
-  /* XXXX prop271 DOCDOC document all these fields better */
+  /**
+   * @name new guard selection algorithm fields.
+   *
+   * Only the new (prop271) algorithm uses these.  For a more full
+   * description of the algorithm, see the module documentation for
+   * entrynodes.c
+   */
+  /**@{*/
 
-  /* Persistent fields, present for all sampled guards. */
+  /* == Persistent fields, present for all sampled guards. */
+  /** When was this guard added to the sample? */
   time_t sampled_on_date;
+  /** Since what date has this guard been "unlisted"?  A guard counts as
+   * unlisted if we have a live consensus that does not include it, or
+   * if we have a live consensus that does not include it as a usable
+   * guard.  This field is zero when the guard is listed. */
   time_t unlisted_since_date; // can be zero
+  /** What version of Tor added this guard to the sample? */
   char *sampled_by_version;
+  /** Is this guard listed right now? If this is set, then
+   * unlisted_since_date should be set too. */
   unsigned currently_listed : 1;
 
-  /* Persistent fields, for confirmed guards. */
+  /* == Persistent fields, for confirmed guards only */
+  /** When was this guard confirmed? (That is, when did we first use it
+   * successfully and decide to keep it?) This field is zero if this is not a
+   * confirmed guard. */
   time_t confirmed_on_date; /* 0 if not confirmed */
+  /**
+   * In what order was this guard confirmed? Guards with lower indices
+   * appear earlier on the confirmed list.  If the confirmed list is compacted,
+   * this field corresponds to the index of this guard on the confirmed list.
+   *
+   * This field is set to -1 if this guard is not confirmed.
+   */
   int confirmed_idx; /* -1 if not confirmed; otherwise the order that this
                       * item should occur in the CONFIRMED_GUARDS ordered
                       * list */
 
   /* ==== Non-persistent fields. */
   /* == These are used by sampled guards */
+  /** When did we last decide to try using this guard for a circuit? 0 for
+   * "not since we started up." */
   time_t last_tried_to_connect;
-  unsigned is_reachable : 2; /* One of GUARD_REACHABLE_{NO,YES,MAYBE} */
+  /** How reachable do we consider this guard to be? One of
+   * GUARD_REACHABLE_NO, GUARD_REACHABLE_YES, or GUARD_REACHABLE_MAYBE. */
+  unsigned is_reachable : 2;
+  /** Boolean: true iff this guard is pending. A pending guard is one
+   * that we have an in-progress circuit through, and which we do not plan
+   * to try again until it either succeeds or fails. Primary guards can
+   * never be pending. */
   unsigned is_pending : 1;
+  /** When did we get the earliest connection failure for this guard?
+   * We clear this field on a successful connect.  We do _not_ clear it
+   * when we mark the guard as "MAYBE" reachable.
+   */
   time_t failing_since;
 
-  /* These determine presence in filtered guards and usable-filtered-guards
-   * respectively. */
+  /* == Set inclusion flags. */
+  /** If true, this guard is in the filtered set.  The filtered set includes
+   * all sampled guards that our configuration allows us to use. */
   unsigned is_filtered_guard : 1;
+  /** If true, this guard is in the usable filtered set. The usable filtered
+   * set includes all filtered guards that are not believed to be
+   * unreachable. (That is, those for which is_reachable is not
+   * GUARD_REACHABLE_NO) */
   unsigned is_usable_filtered_guard : 1;
+  unsigned is_primary:1;
 
   /** This string holds any fields that we are maintaining because
    * we saw them in the state, even if we don't understand them. */
   char *extra_state_fields;
+  /**@}*/
+
   /**
    * @name legacy guard selection algorithm fields
    *
@@ -127,6 +179,85 @@ struct entry_guard_t {
 
   /** Path bias information for this guard. */
   guard_pathbias_t pb;
+};
+
+/**
+ * All of the the context for guard selection on a particular client.
+ *
+ * (XXXX prop271 this paragraph below is not actually implemented yet.)
+ * We maintain multiple guard selection contexts for a client, depending
+ * aspects on its current configuration -- whether an extremely
+ * restrictive EntryNodes is used, whether UseBridges is enabled, and so
+ * on.)
+ *
+ * See the module documentation for entrynodes.c for more information
+ * about guard selection algorithms.
+ */
+struct guard_selection_s {
+  /**
+   * A value of 1 means that guard_selection_t structures have changed
+   * and those changes need to be flushed to disk.
+   *
+   * XXX prop271 we don't know how to flush multiple guard contexts to
+   * disk yet; fix that as soon as any way to change the default exists,
+   * or at least make sure this gets set on change.
+   */
+  int dirty;
+
+  /**
+   * A list of the sampled entry guards, as entry_guard_t structures.
+   * Not in any particular order.  When we 'sample' a guard, we are
+   * noting it as a possible guard to pick in the future. The use of
+   * sampling here prevents us from being forced by an attacker to try
+   * every guard on the network. This list is persistent.
+   */
+  smartlist_t *sampled_entry_guards;
+
+  /**
+   * Ordered list (from highest to lowest priority) of guards that we
+   * have successfully contacted and decided to use. Every member of
+   * this list is a member of sampled_entry_guards. Every member should
+   * have confirmed_on_date set, and have confirmed_idx greater than
+   * any earlier member of the list.
+   *
+   * This list is persistent. It is a subset of the elements in
+   * sampled_entry_guards, and its pointers point to elements of
+   * sampled_entry_guards.
+   */
+  smartlist_t *confirmed_entry_guards;
+
+  /**
+   * Ordered list (from highest to lowest priority) of guards that we
+   * are willing to use the most happily.  These guards may or may not
+   * yet be confirmed yet.  If we can use one of these guards, we are
+   * probably not on a network that is trying to restrict our guard
+   * choices.
+   *
+   * This list is a subset of the elements in
+   * sampled_entry_guards, and its pointers point to elements of
+   * sampled_entry_guards.
+   */
+  smartlist_t *primary_entry_guards;
+
+  /** When did we last successfully build a circuit or use a circuit? */
+  time_t last_time_on_internet;
+
+  /** What confirmed_idx value should the next-added member of
+   * confirmed_entry_guards receive? */
+  int next_confirmed_idx;
+
+  /**
+   * A list of our chosen entry guards, as entry_guard_t structures; this
+   * preserves the pre-Prop271 behavior.
+   */
+  smartlist_t *chosen_entry_guards;
+
+  /**
+   * When we try to choose an entry guard, should we parse and add
+   * config's EntryNodes first?  This was formerly a global.  This
+   * preserves the pre-Prop271 behavior.
+   */
+  int should_add_entry_nodes;
 };
 #endif
 
@@ -160,12 +291,127 @@ void add_bridge_as_entry_guard(guard_selection_t *gs,
 int num_bridges_usable(void);
 
 #ifdef ENTRYNODES_PRIVATE
-STATIC time_t randomize_time(time_t now, time_t max_backdate);
-STATIC void entry_guard_add_to_sample(guard_selection_t *gs,
-                                      node_t *node);
+/**
+ * @name Parameters for the new (prop271) entry guard algorithm.
+ */
+/* XXXX prop271 some of these should be networkstatus parameters */
+/**@{*/
+/**
+ * We never let our sampled guard set grow larger than this fraction
+ * of the guards on the network.
+ */
+#define MAX_SAMPLE_THRESHOLD 0.30
+/**
+ * We always try to make our sample contain at least this many guards.
+ *
+ * XXXX prop271 There was a MIN_SAMPLE_THRESHOLD in the proposal, but I
+ * removed it in favor of MIN_FILTERED_SAMPLE_SIZE. -NM
+ */
+#define MIN_FILTERED_SAMPLE_SIZE 20
+/**
+ * If a guard is unlisted for this many days in a row, we remove it.
+ */
+#define REMOVE_UNLISTED_GUARDS_AFTER_DAYS 20
+/**
+ * We remove unconfirmed guards from the sample after this many days,
+ * regardless of whether they are listed or unlisted.
+ */
+#define GUARD_LIFETIME_DAYS 120
+/**
+ * We remove confirmed guards from the sample if they were sampled
+ * GUARD_LIFETIME_DAYS ago and confirmed this many days ago.
+ */
+#define GUARD_CONFIRMED_MIN_LIFETIME_DAYS 60
+/**
+ * How many guards do we try to keep on our primary guard list?
+ */
+#define N_PRIMARY_GUARDS 3
+/**
+ * If we haven't successfully built or used a circuit in this long, then
+ * consider that the internet is probably down.
+ */
+#define INTERNET_LIKELY_DOWN_INTERVAL (10*60)
+/**
+ * DOCDOC. not yet used; see prop271.
+ */
+#define NONPRIMARY_GUARD_CONNECT_TIMEOUT 15
+/**
+ * DOCDOC. not yet used; see prop271.
+ */
+#define NONPRIMARY_GUARD_IDLE_TIMEOUT (10*60)
+/**
+ * DOCDOC. not yet used; see prop271.
+ */
+#define MEANINGFUL_RESTRICTION_FRAC 0.2
+/**
+ * DOCDOC. not yet used. see prop271.
+ */
+#define EXTREME_RESTRICTION_FRAC 0.01
+/**@}*/
+
+// ---------- XXXX these functions and definitions are post-prop271.
+STATIC guard_selection_t *guard_selection_new(void);
+STATIC void guard_selection_free(guard_selection_t *gs);
+STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
+                                                const uint8_t *rsa_id);
+
+MOCK_DECL(STATIC time_t, randomize_time, (time_t now, time_t max_backdate));
+STATIC entry_guard_t *entry_guard_add_to_sample(guard_selection_t *gs,
+                                                const node_t *node);
+STATIC entry_guard_t *entry_guards_expand_sample(guard_selection_t *gs);
 STATIC char *entry_guard_encode_for_state(entry_guard_t *guard);
 STATIC entry_guard_t *entry_guard_parse_from_state(const char *s);
 STATIC void entry_guard_free(entry_guard_t *e);
+STATIC void entry_guards_update_filtered_sets(guard_selection_t *gs);
+/**
+ * @name Flags for sample_reachable_filtered_entry_guards()
+ */
+/**@{*/
+#define SAMPLE_EXCLUDE_CONFIRMED   (1u<<0)
+#define SAMPLE_EXCLUDE_PRIMARY     (1u<<1)
+#define SAMPLE_EXCLUDE_PENDING     (1u<<2)
+/**@}*/
+STATIC entry_guard_t *sample_reachable_filtered_entry_guards(
+                                    guard_selection_t *gs,
+                                    unsigned flags);
+STATIC void entry_guard_consider_retry(entry_guard_t *guard);
+STATIC void make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard);
+STATIC void entry_guards_update_confirmed(guard_selection_t *gs);
+STATIC void entry_guards_update_primary(guard_selection_t *gs);
+STATIC int num_reachable_filtered_guards(guard_selection_t *gs);
+STATIC void sampled_guards_update_from_consensus(guard_selection_t *gs);
+/**
+ * @name Possible guard-states for a circuit.
+ */
+/**@{*/
+/** State for a circuit that can (so far as the guard subsystem is
+ * concerned) be used for actual traffic as soon as it is successfully
+ * opened. */
+#define GUARD_CIRC_STATE_USABLE_ON_COMPLETION 1
+/** State for an non-open circuit that we shouldn't use for actual
+ * traffic, when it completes, unless other circuits to preferable
+ * guards fail. */
+#define GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD 2
+/** State for an open circuit that we shouldn't use for actual traffic
+ * unless other circuits to preferable guards fail. */
+#define GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD 3
+/** State for a circuit that can (so far as the guard subsystem is
+ * concerned) be used for actual traffic. */
+#define GUARD_CIRC_STATE_COMPLETE 4
+/**@}*/
+STATIC void entry_guards_note_guard_failure(guard_selection_t *gs,
+                                            entry_guard_t *guard);
+STATIC entry_guard_t *select_entry_guard_for_circuit(guard_selection_t *gs,
+                                                     unsigned *state_out);
+STATIC void mark_primary_guards_maybe_reachable(guard_selection_t *gs);
+STATIC unsigned entry_guards_note_guard_success(guard_selection_t *gs,
+                                                entry_guard_t *guard,
+                                                unsigned old_state);
+STATIC int entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b);
+
+void entry_guards_DUMMY_ENTRY_POINT(void);
+
+// ---------- XXXX this stuff is pre-prop271.
 
 STATIC const node_t *add_an_entry_guard(guard_selection_t *gs,
                                         const node_t *chosen,

@@ -10,9 +10,11 @@
 #include "or.h"
 #include "test.h"
 
+#include "bridges.h"
 #include "config.h"
 #include "entrynodes.h"
 #include "nodelist.h"
+#include "networkstatus.h"
 #include "policies.h"
 #include "routerlist.h"
 #include "routerparse.h"
@@ -21,6 +23,7 @@
 #include "util.h"
 
 #include "test_helpers.h"
+#include "log_test_helpers.h"
 
 /* TODO:
  * choose_random_entry() test with state set.
@@ -70,6 +73,120 @@ fake_network_setup(const struct testcase_t *testcase)
 
   /* Return anything but NULL (it's interpreted as test fail) */
   return dummy_state;
+}
+
+static networkstatus_t *dummy_consensus = NULL;
+
+static smartlist_t *big_fake_net_nodes = NULL;
+
+static smartlist_t *
+bfn_mock_nodelist_get_list(void)
+{
+  return big_fake_net_nodes;
+}
+
+static networkstatus_t *
+bfn_mock_networkstatus_get_live_consensus(time_t now)
+{
+  (void)now;
+  return dummy_consensus;
+}
+
+static const node_t *
+bfn_mock_node_get_by_id(const char *id)
+{
+  SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n,
+                    if (fast_memeq(n->identity, id, 20))
+                      return n);
+
+  return NULL;
+}
+
+/* Unittest cleanup function: Cleanup the fake network. */
+static int
+big_fake_network_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void) testcase;
+  (void) ptr;
+
+  if (big_fake_net_nodes) {
+    SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
+      tor_free(n->rs);
+      tor_free(n->md);
+      tor_free(n);
+    });
+    smartlist_free(big_fake_net_nodes);
+  }
+
+  UNMOCK(nodelist_get_list);
+  UNMOCK(node_get_by_id);
+  UNMOCK(get_or_state);
+  UNMOCK(networkstatus_get_live_consensus);
+  or_state_free(dummy_state);
+  dummy_state = NULL;
+  tor_free(dummy_consensus);
+
+  return 1; /* NOP */
+}
+
+/* Unittest setup function: Setup a fake network. */
+static void *
+big_fake_network_setup(const struct testcase_t *testcase)
+{
+  int i;
+
+  /* These are minimal node_t objects that only contain the aspects of node_t
+   * that we need for entrynodes.c. */
+  const int N_NODES = 271;
+
+  big_fake_net_nodes = smartlist_new();
+  for (i = 0; i < N_NODES; ++i) {
+    node_t *n = tor_malloc_zero(sizeof(node_t));
+    n->md = tor_malloc_zero(sizeof(microdesc_t));
+
+    crypto_rand(n->identity, sizeof(n->identity));
+    n->rs = tor_malloc_zero(sizeof(routerstatus_t));
+
+    memcpy(n->rs->identity_digest, n->identity, DIGEST_LEN);
+
+    n->is_running = n->is_valid = n->is_fast = n->is_stable = 1;
+
+    n->rs->addr = 0x04020202;
+    n->rs->or_port = 1234;
+    n->rs->is_v2_dir = 1;
+    n->rs->has_bandwidth = 1;
+    n->rs->bandwidth_kb = 30;
+
+    /* Call half of the nodes a possible guard. */
+    if (i % 2 == 0) {
+      n->is_possible_guard = 1;
+      n->rs->guardfraction_percentage = 100;
+      n->rs->has_guardfraction = 1;
+    }
+
+    smartlist_add(big_fake_net_nodes, n);
+  }
+
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
+  dummy_consensus->valid_after = approx_time() - 3600;
+  dummy_consensus->valid_until = approx_time() + 3600;
+
+  MOCK(nodelist_get_list, bfn_mock_nodelist_get_list);
+  MOCK(node_get_by_id, bfn_mock_node_get_by_id);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+  MOCK(networkstatus_get_live_consensus,
+       bfn_mock_networkstatus_get_live_consensus);
+  /* Return anything but NULL (it's interpreted as test fail) */
+  return (void*)testcase;
+}
+
+static time_t
+mock_randomize_time_no_randomization(time_t a, time_t b)
+{
+  (void) b;
+  return a;
 }
 
 static or_options_t mocked_options;
@@ -1089,9 +1206,971 @@ test_entry_guard_parse_from_state_partial_failure(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+static void
+test_entry_guard_add_single_guard(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+
+  /* 1: Add a single guard to the sample. */
+  node_t *n1 = smartlist_get(big_fake_net_nodes, 0);
+  time_t now = approx_time();
+  tt_assert(n1->is_possible_guard == 1);
+  entry_guard_t *g1 = entry_guard_add_to_sample(gs, n1);
+  tt_assert(g1);
+
+  /* Make sure its fields look right. */
+  tt_mem_op(n1->identity, OP_EQ, g1->identity, DIGEST_LEN);
+  tt_i64_op(g1->sampled_on_date, OP_GE, now - 12*86400);
+  tt_i64_op(g1->sampled_on_date, OP_LE, now);
+  tt_str_op(g1->sampled_by_version, OP_EQ, VERSION);
+  tt_assert(g1->currently_listed == 1);
+  tt_i64_op(g1->confirmed_on_date, OP_EQ, 0);
+  tt_int_op(g1->confirmed_idx, OP_EQ, -1);
+  tt_int_op(g1->last_tried_to_connect, OP_EQ, 0);
+  tt_uint_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+  tt_i64_op(g1->failing_since, OP_EQ, 0);
+  tt_assert(g1->is_filtered_guard == 1);
+  tt_assert(g1->is_usable_filtered_guard == 1);
+  tt_assert(g1->is_primary == 0);
+  tt_assert(g1->extra_state_fields == NULL);
+
+  /* Make sure it got added. */
+  tt_int_op(1, OP_EQ, smartlist_len(gs->sampled_entry_guards));
+  tt_ptr_op(g1, OP_EQ, smartlist_get(gs->sampled_entry_guards, 0));
+  tt_ptr_op(g1, OP_EQ, get_sampled_guard_with_id(gs, (uint8_t*)n1->identity));
+  const uint8_t bad_id[20] = {0};
+  tt_ptr_op(NULL, OP_EQ, get_sampled_guard_with_id(gs, bad_id));
+
+ done:
+  guard_selection_free(gs);
+}
+
+static void
+test_entry_guard_node_filter(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+  bridge_line_t *bl = NULL;
+
+  /* Initialize a bunch of node objects that are all guards. */
+  const int NUM = 7;
+  node_t *n[NUM];
+  entry_guard_t *g[NUM];
+  int i;
+  for (i=0; i < NUM; ++i) {
+    n[i] = smartlist_get(big_fake_net_nodes, i*2); // even ones are guards.
+    g[i] = entry_guard_add_to_sample(gs, n[i]);
+
+    // everything starts out filtered-in
+    tt_assert(g[i]->is_filtered_guard == 1);
+    tt_assert(g[i]->is_usable_filtered_guard == 1);
+  }
+  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, NUM);
+
+  /* Make sure refiltering doesn't hurt */
+  entry_guards_update_filtered_sets(gs);
+  for (i = 0; i < NUM; ++i) {
+    tt_assert(g[i]->is_filtered_guard == 1);
+    tt_assert(g[i]->is_usable_filtered_guard == 1);
+  }
+  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, NUM);
+
+  /* Now start doing things to make the guards get filtered out, 1 by 1. */
+
+  /* 0: Not listed. */
+  g[0]->currently_listed = 0;
+
+  /* 1: path bias says this guard is maybe eeeevil. */
+  g[1]->pb.path_bias_disabled = 1;
+
+  /* 2: Unreachable address. */
+  n[2]->rs->addr = 0;
+
+  /* 3: ExcludeNodes */
+  n[3]->rs->addr = 0x90902020;
+  routerset_free(get_options_mutable()->ExcludeNodes);
+  get_options_mutable()->ExcludeNodes = routerset_new();
+  routerset_parse(get_options_mutable()->ExcludeNodes, "144.144.0.0/16", "");
+
+  /* 4: Bridge. */
+  sweep_bridge_list();
+  bl = tor_malloc_zero(sizeof(bridge_line_t));
+  tor_addr_from_ipv4h(&bl->addr, n[4]->rs->addr);
+  bl->port = n[4]->rs->or_port;
+  memcpy(bl->digest, n[4]->identity, 20);
+  bridge_add_from_config(bl);
+  bl = NULL; // prevent free.
+
+  /* 5: Unreachable. This stays in the filter, but isn't in usable-filtered */
+  g[5]->last_tried_to_connect = approx_time(); // prevent retry.
+  g[5]->is_reachable = GUARD_REACHABLE_NO;
+
+  /* 6: no change. */
+
+  /* Now refilter and inspect. */
+  entry_guards_update_filtered_sets(gs);
+  for (i = 0; i < NUM; ++i) {
+    tt_assert(g[i]->is_filtered_guard == (i == 5 || i == 6));
+    tt_assert(g[i]->is_usable_filtered_guard == (i == 6));
+  }
+  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, 1);
+
+ done:
+  guard_selection_free(gs);
+  tor_free(bl);
+}
+
+static void
+test_entry_guard_expand_sample(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+  digestmap_t *node_by_id = digestmap_new();
+
+  entry_guard_t *guard = entry_guards_expand_sample(gs);
+  tt_assert(guard); // the last guard returned.
+
+  // Every sampled guard here should be filtered and reachable for now.
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ,
+            num_reachable_filtered_guards(gs));
+
+  /* Make sure we got the right number. */
+  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+            num_reachable_filtered_guards(gs));
+
+  // Make sure everything we got was from our fake node list, and everything
+  // was unique.
+  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, g) {
+    const node_t *n = bfn_mock_node_get_by_id(g->identity);
+    tt_assert(n);
+    tt_ptr_op(NULL, OP_EQ, digestmap_get(node_by_id, g->identity));
+    digestmap_set(node_by_id, g->identity, (void*) n);
+    int idx = smartlist_pos(big_fake_net_nodes, n);
+    // The even ones are the guards; make sure we got guards.
+    tt_int_op(idx & 1, OP_EQ, 0);
+  } SMARTLIST_FOREACH_END(g);
+
+  // Nothing became unusable/unfiltered, so a subsequent expand should
+  // make no changes.
+  guard = entry_guards_expand_sample(gs);
+  tt_assert(! guard); // no guard was added.
+  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+            num_reachable_filtered_guards(gs));
+
+  // Make a few guards unreachable.
+  guard = smartlist_get(gs->sampled_entry_guards, 0);
+  guard->is_usable_filtered_guard = 0;
+  guard = smartlist_get(gs->sampled_entry_guards, 1);
+  guard->is_usable_filtered_guard = 0;
+  guard = smartlist_get(gs->sampled_entry_guards, 2);
+  guard->is_usable_filtered_guard = 0;
+  tt_int_op(MIN_FILTERED_SAMPLE_SIZE - 3, OP_EQ,
+            num_reachable_filtered_guards(gs));
+
+  // This time, expanding the sample will add some more guards.
+  guard = entry_guards_expand_sample(gs);
+  tt_assert(guard); // no guard was added.
+  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+            num_reachable_filtered_guards(gs));
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ,
+            num_reachable_filtered_guards(gs)+3);
+
+  // Still idempotent.
+  guard = entry_guards_expand_sample(gs);
+  tt_assert(! guard); // no guard was added.
+  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+            num_reachable_filtered_guards(gs));
+
+  // Now, do a nasty trick: tell the filter to exclude 31/32 of the guards.
+  // This will cause the sample size to get reeeeally huge, while the
+  // filtered sample size grows only slowly.
+  routerset_free(get_options_mutable()->ExcludeNodes);
+  get_options_mutable()->ExcludeNodes = routerset_new();
+  routerset_parse(get_options_mutable()->ExcludeNodes, "144.144.0.0/16", "");
+  SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
+    if (n_sl_idx % 64 != 0) {
+      n->rs->addr = 0x90903030;
+    }
+  });
+  entry_guards_update_filtered_sets(gs);
+
+  // Surely (p ~ 1-2**-60), one of our guards has been excluded.
+  tt_int_op(num_reachable_filtered_guards(gs), OP_LT,
+            MIN_FILTERED_SAMPLE_SIZE);
+
+  // Try to regenerate the guards.
+  guard = entry_guards_expand_sample(gs);
+  tt_assert(guard); // no guard was added.
+
+  /* this time, it's possible that we didn't add enough sampled guards. */
+  tt_int_op(num_reachable_filtered_guards(gs), OP_LE,
+            MIN_FILTERED_SAMPLE_SIZE);
+  /* but we definitely didn't exceed the sample maximum. */
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_LE,
+            (int)((271 / 2) * .3));
+
+ done:
+  guard_selection_free(gs);
+  digestmap_free(node_by_id, NULL);
+}
+
+static void
+test_entry_guard_expand_sample_small_net(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+
+  /* Fun corner case: not enough guards to make up our whole sample size. */
+  SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
+    if (n_sl_idx >= 40) {
+      tor_free(n->rs);
+      tor_free(n->md);
+      tor_free(n);
+      SMARTLIST_DEL_CURRENT(big_fake_net_nodes, n);
+    } else {
+      n->rs->addr = 0; // make the filter reject this.
+    }
+  });
+
+  entry_guard_t *guard = entry_guards_expand_sample(gs);
+  tt_assert(guard); // the last guard returned -- some guard was added.
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_GT, 0);
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_LT, 10);
+  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, 0);
+ done:
+  guard_selection_free(gs);
+}
+
+static void
+test_entry_guard_update_from_consensus_status(void *arg)
+{
+  /* Here we're going to have some nodes become un-guardy, and say we got a
+   * new consensus. This should cause those nodes to get detected as
+   * unreachable. */
+
+  (void)arg;
+  int i;
+  time_t start = approx_time();
+  guard_selection_t *gs = guard_selection_new();
+  networkstatus_t *ns_tmp = NULL;
+
+  /* Don't randomly backdate stuff; it will make correctness harder to check.*/
+  MOCK(randomize_time, mock_randomize_time_no_randomization);
+
+  /* First, sample some guards. */
+  entry_guards_expand_sample(gs);
+  int n_sampled_pre = smartlist_len(gs->sampled_entry_guards);
+  int n_filtered_pre = num_reachable_filtered_guards(gs);
+  tt_i64_op(n_sampled_pre, OP_EQ, n_filtered_pre);
+  tt_i64_op(n_sampled_pre, OP_GT, 10);
+
+  /* At this point, it should be a no-op to do this: */
+  sampled_guards_update_from_consensus(gs);
+
+  /* Now let's make some of our guards become unlisted.  The easiest way to
+   * do that would be to take away their guard flag. */
+  for (i = 0; i < 5; ++i) {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    n->is_possible_guard = 0;
+  }
+
+  update_approx_time(start + 30);
+  {
+    /* try this with no live networkstatus. Nothing should happen! */
+    ns_tmp = dummy_consensus;
+    dummy_consensus = NULL;
+    sampled_guards_update_from_consensus(gs);
+    tt_i64_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre);
+    tt_i64_op(num_reachable_filtered_guards(gs), OP_EQ, n_filtered_pre);
+    /* put the networkstatus back. */
+    dummy_consensus = ns_tmp;
+    ns_tmp = NULL;
+  }
+
+  /* Now those guards should become unlisted, and drop off the filter, but
+   * stay in the sample. */
+  update_approx_time(start + 60);
+  sampled_guards_update_from_consensus(gs);
+
+  tt_i64_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre);
+  tt_i64_op(num_reachable_filtered_guards(gs), OP_EQ, n_filtered_pre - 5);
+  for (i = 0; i < 5; ++i) {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    tt_assert(! g->currently_listed);
+    tt_i64_op(g->unlisted_since_date, OP_EQ, start+60);
+  }
+  for (i = 5; i < n_sampled_pre; ++i) {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    tt_assert(g->currently_listed);
+    tt_i64_op(g->unlisted_since_date, OP_EQ, 0);
+  }
+
+  /* Now re-list one, and remove one completely. */
+  {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 0);
+    node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    n->is_possible_guard = 1;
+  }
+  {
+    /* try removing the node, to make sure we don't crash on an absent node
+     */
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 5);
+    node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    smartlist_remove(big_fake_net_nodes, n);
+    tor_free(n->rs);
+    tor_free(n->md);
+    tor_free(n);
+  }
+  update_approx_time(start + 300);
+  sampled_guards_update_from_consensus(gs);
+
+  /* guards 1..5 are now unlisted; 0,6,7.. are listed. */
+  tt_i64_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre);
+  for (i = 1; i < 6; ++i) {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    tt_assert(! g->currently_listed);
+    if (i == 5)
+      tt_i64_op(g->unlisted_since_date, OP_EQ, start+300);
+    else
+      tt_i64_op(g->unlisted_since_date, OP_EQ, start+60);
+  }
+  for (i = 0; i < n_sampled_pre; i = (!i) ? 6 : i+1) { /* 0,6,7,8, ... */
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    tt_assert(g->currently_listed);
+    tt_i64_op(g->unlisted_since_date, OP_EQ, 0);
+  }
+
+ done:
+  tor_free(ns_tmp); /* in case we couldn't put it back */
+  guard_selection_free(gs);
+  UNMOCK(randomize_time);
+}
+
+static void
+test_entry_guard_update_from_consensus_repair(void *arg)
+{
+  /* Here we'll make sure that our code to repair the unlisted-since
+   * times is correct. */
+
+  (void)arg;
+  int i;
+  time_t start = approx_time();
+  guard_selection_t *gs = guard_selection_new();
+
+  /* Don't randomly backdate stuff; it will make correctness harder to check.*/
+  MOCK(randomize_time, mock_randomize_time_no_randomization);
+
+  /* First, sample some guards. */
+  entry_guards_expand_sample(gs);
+  int n_sampled_pre = smartlist_len(gs->sampled_entry_guards);
+  int n_filtered_pre = num_reachable_filtered_guards(gs);
+  tt_i64_op(n_sampled_pre, OP_EQ, n_filtered_pre);
+  tt_i64_op(n_sampled_pre, OP_GT, 10);
+
+  /* Now corrupt the list a bit.  Call some unlisted-since-never, and some
+   * listed-and-unlisted-since-a-time. */
+  update_approx_time(start + 300);
+  for (i = 0; i < 3; ++i) {
+    /* these will get a date. */
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    n->is_possible_guard = 0;
+    g->currently_listed = 0;
+  }
+  for (i = 3; i < 6; ++i) {
+    /* these will become listed. */
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    g->unlisted_since_date = start+100;
+  }
+  setup_full_capture_of_logs(LOG_WARN);
+  sampled_guards_update_from_consensus(gs);
+  expect_log_msg_containing(
+             "was listed, but with unlisted_since_date set");
+  expect_log_msg_containing(
+             "was unlisted, but with unlisted_since_date unset");
+  teardown_capture_of_logs();
+
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre);
+  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, n_filtered_pre - 3);
+  for (i = 3; i < n_sampled_pre; ++i) {
+    /* these will become listed. */
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
+    if (i < 3) {
+      tt_assert(! g->currently_listed);
+      tt_i64_op(g->unlisted_since_date, OP_EQ, start+300);
+    } else {
+      tt_assert(g->currently_listed);
+      tt_i64_op(g->unlisted_since_date, OP_EQ, 0);
+    }
+  }
+
+ done:
+  teardown_capture_of_logs();
+  guard_selection_free(gs);
+  UNMOCK(randomize_time);
+}
+
+static void
+test_entry_guard_update_from_consensus_remove(void *arg)
+{
+  /* Now let's check the logic responsible for removing guards from the
+   * sample entirely. */
+
+  (void)arg;
+  //int i;
+  guard_selection_t *gs = guard_selection_new();
+  smartlist_t *keep_ids = smartlist_new();
+  smartlist_t *remove_ids = smartlist_new();
+
+  /* Don't randomly backdate stuff; it will make correctness harder to check.*/
+  MOCK(randomize_time, mock_randomize_time_no_randomization);
+
+  /* First, sample some guards. */
+  entry_guards_expand_sample(gs);
+  int n_sampled_pre = smartlist_len(gs->sampled_entry_guards);
+  int n_filtered_pre = num_reachable_filtered_guards(gs);
+  tt_i64_op(n_sampled_pre, OP_EQ, n_filtered_pre);
+  tt_i64_op(n_sampled_pre, OP_GT, 10);
+
+  const time_t one_day_ago = approx_time() - 1*24*60*60;
+  const time_t one_year_ago = approx_time() - 365*24*60*60;
+  const time_t two_years_ago = approx_time() - 2*365*24*60*60;
+  /* 0: unlisted for a day. (keep this) */
+  {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 0);
+    node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    n->is_possible_guard = 0;
+    g->currently_listed = 0;
+    g->unlisted_since_date = one_day_ago;
+    smartlist_add(keep_ids, tor_memdup(g->identity, 20));
+  }
+  /* 1: unlisted for a year. (remove this) */
+  {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 1);
+    node_t *n = (node_t*) bfn_mock_node_get_by_id(g->identity);
+    n->is_possible_guard = 0;
+    g->currently_listed = 0;
+    g->unlisted_since_date = one_year_ago;
+    smartlist_add(remove_ids, tor_memdup(g->identity, 20));
+  }
+  /* 2: added a day ago, never confirmed. (keep this) */
+  {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 2);
+    g->sampled_on_date = one_day_ago;
+    smartlist_add(keep_ids, tor_memdup(g->identity, 20));
+  }
+  /* 3: added a year ago, never confirmed. (remove this) */
+  {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 3);
+    g->sampled_on_date = one_year_ago;
+    smartlist_add(remove_ids, tor_memdup(g->identity, 20));
+  }
+  /* 4: added two year ago, confirmed yesterday, primary. (keep this.) */
+  {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 4);
+    g->sampled_on_date = one_year_ago;
+    g->confirmed_on_date = one_day_ago;
+    g->confirmed_idx = 0;
+    g->is_primary = 1;
+    smartlist_add(gs->confirmed_entry_guards, g);
+    smartlist_add(gs->primary_entry_guards, g);
+    smartlist_add(keep_ids, tor_memdup(g->identity, 20));
+  }
+  /* 5: added two years ago, confirmed a year ago, primary. (remove this) */
+  {
+    entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, 5);
+    g->sampled_on_date = two_years_ago;
+    g->confirmed_on_date = one_year_ago;
+    g->confirmed_idx = 1;
+    g->is_primary = 1;
+    smartlist_add(gs->confirmed_entry_guards, g);
+    smartlist_add(gs->primary_entry_guards, g);
+    smartlist_add(remove_ids, tor_memdup(g->identity, 20));
+  }
+
+  sampled_guards_update_from_consensus(gs);
+
+  /* Did we remove the right ones? */
+  SMARTLIST_FOREACH(keep_ids, uint8_t *, id, {
+      tt_assert(get_sampled_guard_with_id(gs, id) != NULL);
+  });
+  SMARTLIST_FOREACH(remove_ids, uint8_t *, id, {
+    tt_want(get_sampled_guard_with_id(gs, id) == NULL);
+  });
+
+  /* Did we remove the right number? */
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre - 3);
+
+ done:
+  guard_selection_free(gs);
+  UNMOCK(randomize_time);
+  SMARTLIST_FOREACH(keep_ids, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(remove_ids, char *, cp, tor_free(cp));
+  smartlist_free(keep_ids);
+  smartlist_free(remove_ids);
+}
+
+static void
+test_entry_guard_confirming_guards(void *arg)
+{
+  (void)arg;
+  /* Now let's check the logic responsible for manipulating the list
+   * of confirmed guards */
+  guard_selection_t *gs = guard_selection_new();
+  MOCK(randomize_time, mock_randomize_time_no_randomization);
+
+  /* Create the sample. */
+  entry_guards_expand_sample(gs);
+
+  /* Confirm a few  guards. */
+  time_t start = approx_time();
+  entry_guard_t *g1 = smartlist_get(gs->sampled_entry_guards, 0);
+  entry_guard_t *g2 = smartlist_get(gs->sampled_entry_guards, 1);
+  entry_guard_t *g3 = smartlist_get(gs->sampled_entry_guards, 8);
+  make_guard_confirmed(gs, g2);
+  update_approx_time(start + 10);
+  make_guard_confirmed(gs, g1);
+  make_guard_confirmed(gs, g3);
+
+  /* Were the correct dates and indices fed in? */
+  tt_int_op(g1->confirmed_idx, OP_EQ, 1);
+  tt_int_op(g2->confirmed_idx, OP_EQ, 0);
+  tt_int_op(g3->confirmed_idx, OP_EQ, 2);
+  tt_i64_op(g1->confirmed_on_date, OP_EQ, start+10);
+  tt_i64_op(g2->confirmed_on_date, OP_EQ, start);
+  tt_i64_op(g3->confirmed_on_date, OP_EQ, start+10);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 0), OP_EQ, g2);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 1), OP_EQ, g1);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 2), OP_EQ, g3);
+
+  /* Now make sure we can regenerate the confirmed_entry_guards list. */
+  smartlist_clear(gs->confirmed_entry_guards);
+  g2->confirmed_idx = 0;
+  g1->confirmed_idx = 10;
+  g3->confirmed_idx = 100;
+  entry_guards_update_confirmed(gs);
+  tt_int_op(g1->confirmed_idx, OP_EQ, 1);
+  tt_int_op(g2->confirmed_idx, OP_EQ, 0);
+  tt_int_op(g3->confirmed_idx, OP_EQ, 2);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 0), OP_EQ, g2);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 1), OP_EQ, g1);
+  tt_ptr_op(smartlist_get(gs->confirmed_entry_guards, 2), OP_EQ, g3);
+
+  /* Now make sure we can regenerate the confirmed_entry_guards list if
+   * the indices are messed up. */
+  g1->confirmed_idx = g2->confirmed_idx = g3->confirmed_idx = 999;
+  smartlist_clear(gs->confirmed_entry_guards);
+  entry_guards_update_confirmed(gs);
+  tt_int_op(g1->confirmed_idx, OP_GE, 0);
+  tt_int_op(g2->confirmed_idx, OP_GE, 0);
+  tt_int_op(g3->confirmed_idx, OP_GE, 0);
+  tt_int_op(g1->confirmed_idx, OP_LE, 2);
+  tt_int_op(g2->confirmed_idx, OP_LE, 2);
+  tt_int_op(g3->confirmed_idx, OP_LE, 2);
+  g1 = smartlist_get(gs->confirmed_entry_guards, 0);
+  g2 = smartlist_get(gs->confirmed_entry_guards, 1);
+  g3 = smartlist_get(gs->confirmed_entry_guards, 2);
+  tt_int_op(g1->confirmed_idx, OP_EQ, 0);
+  tt_int_op(g2->confirmed_idx, OP_EQ, 1);
+  tt_int_op(g3->confirmed_idx, OP_EQ, 2);
+  tt_assert(g1 != g2);
+  tt_assert(g1 != g3);
+  tt_assert(g2 != g3);
+
+ done:
+  UNMOCK(randomize_time);
+  guard_selection_free(gs);
+}
+
+static void
+test_entry_guard_sample_reachable_filtered(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+  entry_guards_expand_sample(gs);
+  const int N = 10000;
+  bitarray_t *selected = NULL;
+  int i, j;
+
+  /* We've got a sampled list now; let's make one non-usable-filtered; some
+   * confirmed, some primary, some pending.
+   */
+  int n_guards = smartlist_len(gs->sampled_entry_guards);
+  tt_int_op(n_guards, OP_GT, 10);
+  entry_guard_t *g;
+  g = smartlist_get(gs->sampled_entry_guards, 0);
+  g->is_pending = 1;
+  g = smartlist_get(gs->sampled_entry_guards, 1);
+  make_guard_confirmed(gs, g);
+  g = smartlist_get(gs->sampled_entry_guards, 2);
+  g->is_primary = 1;
+  g = smartlist_get(gs->sampled_entry_guards, 3);
+  g->pb.path_bias_disabled = 1;
+
+  entry_guards_update_filtered_sets(gs);
+  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, n_guards - 1);
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_guards);
+
+  // +1 since the one we made disabled will make  another one get added.
+  ++n_guards;
+
+  /* Try a bunch of selections. */
+  const struct {
+    int flag; int idx;
+  } tests[] = {
+    { 0, -1 },
+    { SAMPLE_EXCLUDE_CONFIRMED, 1 },
+    { SAMPLE_EXCLUDE_PRIMARY, 2 },
+    { SAMPLE_EXCLUDE_PENDING, 0 },
+    { -1, -1},
+  };
+
+  for (j = 0; tests[j].flag >= 0; ++j) {
+    selected = bitarray_init_zero(n_guards);
+    const int excluded_flags = tests[j].flag;
+    const int excluded_idx = tests[j].idx;
+    for (i = 0; i < N; ++i) {
+      g = sample_reachable_filtered_entry_guards(gs, excluded_flags);
+      tor_assert(g);
+      int pos = smartlist_pos(gs->sampled_entry_guards, g);
+      tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_guards);
+      tt_int_op(pos, OP_GE, 0);
+      tt_int_op(pos, OP_LT, n_guards);
+      bitarray_set(selected, pos);
+    }
+    for (i = 0; i < n_guards; ++i) {
+      const int should_be_set = (i != excluded_idx &&
+                                 i != 3); // filtered out.
+      tt_int_op(!!bitarray_is_set(selected, i), OP_EQ, should_be_set);
+    }
+    bitarray_free(selected);
+    selected = NULL;
+  }
+
+ done:
+  guard_selection_free(gs);
+  bitarray_free(selected);
+}
+
+static void
+test_entry_guard_sample_reachable_filtered_empty(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+  /* What if we try to sample from a set of 0? */
+  SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n,
+                    n->is_possible_guard = 0);
+
+  entry_guard_t *g = sample_reachable_filtered_entry_guards(gs, 0);
+  tt_ptr_op(g, OP_EQ, NULL);
+
+ done:
+  guard_selection_free(gs);
+}
+
+static void
+test_entry_guard_retry_unreachable(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+
+  entry_guards_expand_sample(gs);
+  /* Let's say that we have two guards, and they're down.
+   */
+  time_t start = approx_time();;
+  entry_guard_t *g1 = smartlist_get(gs->sampled_entry_guards, 0);
+  entry_guard_t *g2 = smartlist_get(gs->sampled_entry_guards, 1);
+  entry_guard_t *g3 = smartlist_get(gs->sampled_entry_guards, 2);
+  g1->is_reachable = GUARD_REACHABLE_NO;
+  g2->is_reachable = GUARD_REACHABLE_NO;
+  g1->is_primary = 1;
+  g1->failing_since = g2->failing_since = start;
+  g1->last_tried_to_connect = g2->last_tried_to_connect = start;
+
+  /* Wait 5 minutes.  Nothing will get retried. */
+  update_approx_time(start + 5 * 60);
+  entry_guard_consider_retry(g1);
+  entry_guard_consider_retry(g2);
+  entry_guard_consider_retry(g3); // just to make sure this doesn't crash.
+  tt_int_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
+  tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
+  tt_int_op(g3->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+
+  /* After 30 min, the primary one gets retried */
+  update_approx_time(start + 35 * 60);
+  entry_guard_consider_retry(g1);
+  entry_guard_consider_retry(g2);
+  tt_int_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+  tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
+
+  g1->is_reachable = GUARD_REACHABLE_NO;
+  g1->last_tried_to_connect = start + 35*60;
+
+  /* After 1 hour, we'll retry the nonprimary one. */
+  update_approx_time(start + 61 * 60);
+  entry_guard_consider_retry(g1);
+  entry_guard_consider_retry(g2);
+  tt_int_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
+  tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+
+  g2->is_reachable = GUARD_REACHABLE_NO;
+  g2->last_tried_to_connect = start + 61*60;
+
+  /* And then the primary one again. */
+  update_approx_time(start + 66 * 60);
+  entry_guard_consider_retry(g1);
+  entry_guard_consider_retry(g2);
+  tt_int_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+  tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
+
+ done:
+  guard_selection_free(gs);
+}
+
+static void
+test_entry_guard_manage_primary(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+  smartlist_t *prev_guards = smartlist_new();
+
+  /* If no guards are confirmed, we should pick a few reachable guards and
+   * call them all primary. But not confirmed.*/
+  entry_guards_update_primary(gs);
+  int n_primary = smartlist_len(gs->primary_entry_guards);
+  tt_int_op(n_primary, OP_GE, 1);
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, g, {
+    tt_assert(g->is_primary);
+    tt_assert(g->confirmed_idx == -1);
+  });
+
+  /* Calling it a second time should leave the guards unchanged. */
+  smartlist_add_all(prev_guards, gs->primary_entry_guards);
+  entry_guards_update_primary(gs);
+  tt_int_op(smartlist_len(gs->primary_entry_guards), OP_EQ, n_primary);
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, g, {
+    tt_ptr_op(g, OP_EQ, smartlist_get(prev_guards, g_sl_idx));
+  });
+
+  /* If we have one confirmed guard, that guards becomes the first primary
+   * guard, and the other primary guards get kept. */
+
+  /* find a non-primary guard... */
+  entry_guard_t *confirmed = NULL;
+  SMARTLIST_FOREACH(gs->sampled_entry_guards, entry_guard_t *, g, {
+    if (! g->is_primary) {
+      confirmed = g;
+      break;
+    }
+  });
+  tt_assert(confirmed);
+  /* make it confirmed. */
+  make_guard_confirmed(gs, confirmed);
+  /* update the list... */
+  smartlist_clear(prev_guards);
+  smartlist_add_all(prev_guards, gs->primary_entry_guards);
+  entry_guards_update_primary(gs);
+
+  /*  and see what's primary now! */
+  tt_int_op(smartlist_len(gs->primary_entry_guards), OP_EQ, n_primary);
+  tt_ptr_op(smartlist_get(gs->primary_entry_guards, 0), OP_EQ, confirmed);
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, g, {
+    tt_assert(g->is_primary);
+    if (g_sl_idx == 0)
+      continue;
+    tt_ptr_op(g, OP_EQ, smartlist_get(prev_guards, g_sl_idx - 1));
+  });
+  {
+    entry_guard_t *prev_last_guard = smartlist_get(prev_guards, n_primary-1);
+    tt_assert(! prev_last_guard->is_primary);
+  }
+
+  /* Calling it a fourth time should leave the guards unchanged. */
+  smartlist_clear(prev_guards);
+  smartlist_add_all(prev_guards, gs->primary_entry_guards);
+  entry_guards_update_primary(gs);
+  tt_int_op(smartlist_len(gs->primary_entry_guards), OP_EQ, n_primary);
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, g, {
+    tt_ptr_op(g, OP_EQ, smartlist_get(prev_guards, g_sl_idx));
+  });
+
+ done:
+  guard_selection_free(gs);
+  smartlist_free(prev_guards);
+}
+
+static void
+test_entry_guard_select_for_circuit_no_confirmed(void *arg)
+{
+  /* Simpler cases: no gaurds are confirmed yet. */
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new();
+
+  /* simple starting configuration */
+  entry_guards_update_primary(gs);
+  unsigned state = 9999;
+
+  entry_guard_t *g = select_entry_guard_for_circuit(gs, &state);
+
+  tt_assert(g);
+  tt_assert(g->is_primary);
+  tt_int_op(g->confirmed_idx, OP_EQ, -1);
+  tt_assert(g->is_pending == 0); // primary implies non-pending.
+  tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  tt_i64_op(g->last_tried_to_connect, OP_EQ, approx_time());
+
+  // If we do that again, we should get the same guard.
+  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, &state);
+  tt_ptr_op(g2, OP_EQ, g);
+
+  // if we mark that guard down, we should get a different primary guard.
+  // auto-retry it.
+  g->is_reachable = GUARD_REACHABLE_NO;
+  g->unreachable_since = approx_time() - 10;
+  g->last_tried_to_connect = approx_time() - 10;
+  state = 9999;
+  g2 = select_entry_guard_for_circuit(gs, &state);
+  tt_ptr_op(g2, OP_NE, g);
+  tt_assert(g2);
+  tt_assert(g2->is_primary);
+  tt_int_op(g2->confirmed_idx, OP_EQ, -1);
+  tt_assert(g2->is_pending == 0); // primary implies non-pending.
+  tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
+
+  // If we say that the first primary guard was last tried a long time ago, we
+  // should get an automatic retry on it.
+  g->unreachable_since = approx_time() - 72*60*60;
+  g->last_tried_to_connect = approx_time() - 72*60*60;
+  state = 9999;
+  g2 = select_entry_guard_for_circuit(gs, &state);
+  tt_ptr_op(g2, OP_EQ, g);
+  tt_assert(g2);
+  tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
+  tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+
+  // And if we mark ALL the primary guards down, we should get another guard
+  // at random.
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, guard, {
+    guard->is_reachable = GUARD_REACHABLE_NO;
+    guard->last_tried_to_connect = approx_time() - 5;
+    guard->unreachable_since = approx_time() - 30;
+  });
+  state = 9999;
+  g2 = select_entry_guard_for_circuit(gs, &state);
+  tt_assert(g2);
+  tt_assert(!g2->is_primary);
+  tt_int_op(g2->confirmed_idx, OP_EQ, -1);
+  tt_assert(g2->is_pending == 1);
+  tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+  tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
+  tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+
+  // As a bonus, maybe we should be retrying the primary guards. Let's say so.
+  mark_primary_guards_maybe_reachable(gs);
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, guard, {
+    tt_int_op(guard->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+    tt_assert(guard->is_usable_filtered_guard == 1);
+    // no change to these fields.
+    tt_i64_op(guard->last_tried_to_connect, OP_EQ, approx_time() - 5);
+    tt_i64_op(guard->unreachable_since, OP_EQ, approx_time() - 30);
+  });
+
+ done:
+  guard_selection_free(gs);
+}
+
+static void
+test_entry_guard_select_for_circuit_confirmed(void *arg)
+{
+  /* Case 2: if all the primary guards are down, and there are more confirmed
+     guards, we use a confirmed guard. */
+  (void)arg;
+  int i;
+  guard_selection_t *gs = guard_selection_new();
+  const int N_CONFIRMED = 10;
+
+  /* slightly more complicated simple starting configuration */
+  entry_guards_update_primary(gs);
+  for (i = 0; i < N_CONFIRMED; ++i) {
+    entry_guard_t *guard = smartlist_get(gs->sampled_entry_guards, i);
+    make_guard_confirmed(gs, guard);
+  }
+  entry_guards_update_primary(gs); // rebuild the primary list.
+
+  unsigned state = 9999;
+
+  // As above, this gives us a primary guard.
+  entry_guard_t *g = select_entry_guard_for_circuit(gs, &state);
+  tt_assert(g);
+  tt_assert(g->is_primary);
+  tt_int_op(g->confirmed_idx, OP_EQ, 0);
+  tt_assert(g->is_pending == 0); // primary implies non-pending.
+  tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  tt_i64_op(g->last_tried_to_connect, OP_EQ, approx_time());
+  tt_ptr_op(g, OP_EQ, smartlist_get(gs->primary_entry_guards, 0));
+
+  // But if we mark all the primary guards down...
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, guard, {
+    guard->last_tried_to_connect = approx_time();
+    entry_guards_note_guard_failure(gs, guard);
+  });
+
+  // ... we should get a confirmed guard.
+  state = 9999;
+  g = select_entry_guard_for_circuit(gs, &state);
+  tt_assert(g);
+  tt_assert(! g->is_primary);
+  tt_int_op(g->confirmed_idx, OP_EQ, smartlist_len(gs->primary_entry_guards));
+  tt_assert(g->is_pending);
+  tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+  tt_i64_op(g->last_tried_to_connect, OP_EQ, approx_time());
+
+  // And if we try again, we should get a different confirmed guard, since
+  // that one is pending.
+  state = 9999;
+  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, &state);
+  tt_assert(g2);
+  tt_assert(! g2->is_primary);
+  tt_ptr_op(g2, OP_NE, g);
+  tt_int_op(g2->confirmed_idx, OP_EQ,
+            smartlist_len(gs->primary_entry_guards)+1);
+  tt_assert(g2->is_pending);
+  tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+  tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
+
+  // If we make every confirmed guard become pending then we start poking
+  // other guards.
+  const int n_remaining_confirmed =
+    N_CONFIRMED - 2 - smartlist_len(gs->primary_entry_guards);
+  for (i = 0; i < n_remaining_confirmed; ++i) {
+    g = select_entry_guard_for_circuit(gs, &state);
+    tt_int_op(g->confirmed_idx, OP_GE, 0);
+    tt_assert(g);
+  }
+  state = 9999;
+  g = select_entry_guard_for_circuit(gs, &state);
+  tt_assert(g);
+  tt_assert(g->is_pending);
+  tt_int_op(g->confirmed_idx, OP_EQ, -1);
+
+ done:
+  guard_selection_free(gs);
+}
+
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
+
+static const struct testcase_setup_t big_fake_network = {
+  big_fake_network_setup, big_fake_network_cleanup
+};
+
+#define BFN_TEST(name) \
+  { #name, test_entry_guard_ ## name, TT_FORK, &big_fake_network, NULL }
 
 struct testcase_t entrynodes_tests[] = {
   { "entry_is_time_to_retry", test_entry_is_time_to_retry,
@@ -1136,6 +2215,20 @@ struct testcase_t entrynodes_tests[] = {
     test_entry_guard_parse_from_state_failure, 0, NULL, NULL },
   { "parse_from_state_partial_failure",
     test_entry_guard_parse_from_state_partial_failure, 0, NULL, NULL },
+  BFN_TEST(add_single_guard),
+  BFN_TEST(node_filter),
+  BFN_TEST(expand_sample),
+  BFN_TEST(expand_sample_small_net),
+  BFN_TEST(update_from_consensus_status),
+  BFN_TEST(update_from_consensus_repair),
+  BFN_TEST(update_from_consensus_remove),
+  BFN_TEST(confirming_guards),
+  BFN_TEST(sample_reachable_filtered),
+  BFN_TEST(sample_reachable_filtered_empty),
+  BFN_TEST(retry_unreachable),
+  BFN_TEST(manage_primary),
+  BFN_TEST(select_for_circuit_no_confirmed),
+  BFN_TEST(select_for_circuit_confirmed),
   END_OF_TESTCASES
 };
 
