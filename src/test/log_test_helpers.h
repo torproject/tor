@@ -49,22 +49,22 @@ void mock_dump_saved_logs(void);
 #define expect_log_msg_containing_either(str1, str2)                    \
   assert_log_predicate(mock_saved_log_has_message_containing(str1) ||   \
                        mock_saved_log_has_message_containing(str2),     \
-                "expected log to contain " # str1 " or " # str2);
+                       "expected log to contain " # str1 " or " # str2);
 
-#define expect_log_msg_containing_either3(str1, str2, str3)              \
-  assert_log_predicate3(mock_saved_log_has_message_containing(str1) ||   \
-                       (mock_saved_log_has_message_containing(str2) ||   \
-                        mock_saved_log_has_message_containing(str3),     \
-                "expected log to contain " # str1 " or " # str2 " or " # str3);
+#define expect_log_msg_containing_either3(str1, str2, str3)             \
+  assert_log_predicate(mock_saved_log_has_message_containing(str1) ||   \
+                       mock_saved_log_has_message_containing(str2) ||   \
+                       mock_saved_log_has_message_containing(str3),     \
+                       "expected log to contain " # str1 " or " # str2  \
+                       " or " # str3);
 
-#define expect_log_msg_containing_either4(str1, str2, str3, str4)        \
-  assert_log_predicate4(mock_saved_log_has_message_containing(str1) ||   \
-                       (mock_saved_log_has_message_containing(str2) ||   \
-                       (mock_saved_log_has_message_containing(str3) ||   \
-                        mock_saved_log_has_message_containing(str4),     \
-                "expected log to contain " # str1 " or " # str2 " or " # str3 " or " # str4);
-
-
+#define expect_log_msg_containing_either4(str1, str2, str3, str4)       \
+  assert_log_predicate(mock_saved_log_has_message_containing(str1) ||   \
+                       mock_saved_log_has_message_containing(str2) ||   \
+                       mock_saved_log_has_message_containing(str3) ||   \
+                       mock_saved_log_has_message_containing(str4),     \
+                       "expected log to contain " # str1 " or " # str2  \
+                       " or " # str3 " or " # str4);
 
 #define expect_single_log_msg(str) \
   do {                                                                  \
