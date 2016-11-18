@@ -119,6 +119,10 @@ typedef struct rend_service_t {
 
 STATIC void rend_service_free(rend_service_t *service);
 STATIC char *rend_service_sos_poison_path(const rend_service_t *service);
+STATIC int rend_service_check_dir_and_add(smartlist_t *service_list,
+                                          const or_options_t *options,
+                                          rend_service_t *service,
+                                          int validate_only);
 
 #endif
 

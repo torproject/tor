@@ -571,8 +571,28 @@ test_single_onion_poisoning(void *arg)
 
   service_1->directory = dir1;
   service_2->directory = dir2;
+  /* The services own the directory pointers now */
   dir1 = dir2 = NULL;
-  smartlist_add(services, service_1);
+  /* Add port to service 1 */
+  service_1->ports = smartlist_new();
+  service_2->ports = smartlist_new();
+  char *err_msg = NULL;
+  rend_service_port_config_t *port1 = rend_service_parse_port_config("80", " ",
+                                                                     &err_msg);
+  tt_assert(port1);
+  tt_assert(!err_msg);
+  smartlist_add(service_1->ports, port1);
+
+  rend_service_port_config_t *port2 = rend_service_parse_port_config("90", " ",
+                                                                     &err_msg);
+  /* Add port to service 2 */
+  tt_assert(port2);
+  tt_assert(!err_msg);
+  smartlist_add(service_2->ports, port2);
+
+  /* Add the first service */
+  ret = rend_service_check_dir_and_add(services, mock_options, service_1, 0);
+  tt_assert(ret == 0);
   /* But don't add the second service yet. */
 
   /* Service directories, but no previous keys, no problem! */
@@ -636,7 +656,7 @@ test_single_onion_poisoning(void *arg)
   tt_assert(ret == 0);
 
   /* Now add the second service: it has no key and no poison file */
-  smartlist_add(services, service_2);
+  ret = rend_service_check_dir_and_add(services, mock_options, service_2, 0);
 
   /* A new service, and an existing poisoned service. Not ok. */
   mock_options->HiddenServiceSingleHopMode = 0;
@@ -698,13 +718,11 @@ test_single_onion_poisoning(void *arg)
 
  done:
   /* The test harness deletes the directories at exit */
+  smartlist_free(services);
   rend_service_free(service_1);
   rend_service_free(service_2);
-  smartlist_free(services);
   UNMOCK(get_options);
   tor_free(mock_options->DataDirectory);
-  tor_free(dir1);
-  tor_free(dir2);
 }
 
 struct testcase_t hs_tests[] = {
