@@ -2601,19 +2601,20 @@ finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
 
   if (file_data->rename_on_close) {
     tor_assert(file_data->tempname && file_data->filename);
+    if (!abort_write) {
+      tor_assert(strcmp(file_data->filename, file_data->tempname));
+      if (replace_file(file_data->tempname, file_data->filename)) {
+        log_warn(LD_FS, "Error replacing \"%s\": %s", file_data->filename,
+                 strerror(errno));
+        abort_write = r = -1;
+      }
+    }
     if (abort_write) {
       int res = unlink(file_data->tempname);
       if (res != 0) {
         /* We couldn't unlink and we'll leave a mess behind */
         log_warn(LD_FS, "Failed to unlink %s: %s",
                  file_data->tempname, strerror(errno));
-        r = -1;
-      }
-    } else {
-      tor_assert(strcmp(file_data->filename, file_data->tempname));
-      if (replace_file(file_data->tempname, file_data->filename)) {
-        log_warn(LD_FS, "Error replacing \"%s\": %s", file_data->filename,
-                 strerror(errno));
         r = -1;
       }
     }

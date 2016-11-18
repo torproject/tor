@@ -1,0 +1,5 @@
+  o Minor bugfix (util)
+    - When finishing writing a file to disk, if we were about to replace the
+      file with the temporary file created before and we fail to replace it,
+      remove the temporary file so it doesn't stay on disk. Closes #20646;
+      bugfix on tor-0.2.0.7-alpha; Patch by fk.
