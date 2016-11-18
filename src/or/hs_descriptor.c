@@ -1394,15 +1394,10 @@ decode_intro_points(const hs_descriptor_t *desc,
   retval = 0;
 
  err:
-  if (chunked_desc) {
-    SMARTLIST_FOREACH(chunked_desc, char *, a, tor_free(a));
-    smartlist_free(chunked_desc);
-  }
-  if (intro_points) {
-    SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
-    smartlist_free(intro_points);
-  }
-
+  SMARTLIST_FOREACH(chunked_desc, char *, a, tor_free(a));
+  smartlist_free(chunked_desc);
+  SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
+  smartlist_free(intro_points);
   return retval;
 }
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
