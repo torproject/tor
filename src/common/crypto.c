@@ -1506,7 +1506,7 @@ crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out)
   if (crypto_pk_get_digest(pk, digest)) {
     return -1;
   }
-  if (crypto_digest(hashed_digest, digest, DIGEST_LEN)) {
+  if (crypto_digest(hashed_digest, digest, DIGEST_LEN) < 0) {
     return -1;
   }
   base16_encode(fp_out, FINGERPRINT_LEN + 1, hashed_digest, DIGEST_LEN);
@@ -1700,14 +1700,16 @@ crypto_cipher_decrypt_with_iv(const char *key,
 
 /** Compute the SHA1 digest of the <b>len</b> bytes on data stored in
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
- * Return 0 on success, 1 on failure.
+ * Return 0 on success, -1 on failure.
  */
 int
 crypto_digest(char *digest, const char *m, size_t len)
 {
   tor_assert(m);
   tor_assert(digest);
-  return (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+  if(SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL)
+    return -1;
+  return 0;
 }
 
 /** Compute a 256-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
@@ -2628,7 +2630,7 @@ crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
   for (cp = key_out, i=0; cp < key_out+key_out_len;
        ++i, cp += DIGEST_LEN) {
     tmp[key_in_len] = i;
-    if (crypto_digest((char*)digest, (const char *)tmp, key_in_len+1))
+    if (crypto_digest((char*)digest, (const char *)tmp, key_in_len+1) < 0)
       goto exit;
     memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len-(cp-key_out)));
   }

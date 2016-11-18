@@ -3084,7 +3084,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   len += 2;
   memcpy(auth, circuit->cpath->prev->rend_circ_nonce, DIGEST_LEN);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
-  if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
+  if (crypto_digest(buf+len, auth, DIGEST_LEN+9) < 0)
     goto err;
   len += 20;
   note_crypto_pk_op(REND_SERVER);
