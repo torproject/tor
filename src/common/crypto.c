@@ -1714,7 +1714,7 @@ crypto_digest(char *digest, const char *m, size_t len)
 
 /** Compute a 256-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
  * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN256-byte result
- * into <b>digest</b>.  Return 0 on success, 1 on failure. */
+ * into <b>digest</b>.  Return 0 on success, -1 on failure. */
 int
 crypto_digest256(char *digest, const char *m, size_t len,
                  digest_algorithm_t algorithm)
@@ -1722,11 +1722,17 @@ crypto_digest256(char *digest, const char *m, size_t len,
   tor_assert(m);
   tor_assert(digest);
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
+
+  int ret = 0;
   if (algorithm == DIGEST_SHA256)
-    return (SHA256((const uint8_t*)m,len,(uint8_t*)digest) == NULL);
+    ret = (SHA256((const uint8_t*)m,len,(uint8_t*)digest) != NULL);
   else
-    return (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
-            == -1);
+    ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
+           > -1);
+
+  if (!ret)
+    return -1;
+  return 0;
 }
 
 /** Compute a 512-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
