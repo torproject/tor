@@ -263,6 +263,8 @@ entry_guard_get_pathbias_state(entry_guard_t *guard)
   return &guard->pb;
 }
 
+HANDLE_IMPL(entry_guard, entry_guard_t, ATTR_UNUSED STATIC)
+
 /** Return an interval betweeen 'now' and 'max_backdate' seconds in the past,
  * chosen uniformly at random.  We use this before recording persistent
  * dates, so that we aren't leaking exactly when we recorded it.
@@ -1249,6 +1251,186 @@ entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b)
 }
 
 /**
+ * Release all storage held in <b>state</b>.
+ */
+void
+circuit_guard_state_free(circuit_guard_state_t *state)
+{
+  /* XXXX prop271 -- do we want to inline this structure? */
+  if (!state)
+    return;
+  entry_guard_handle_free(state->guard);
+  tor_free(state);
+}
+
+/**
+ * Pick a suitable entry guard for a circuit in, and place that guard
+ * in *<b>chosen_node_out</b>. Set *<b>guard_state_out</b> to an opaque
+ * state object that will record whether the circuit is ready to be used
+ * or not. Return 0 on success; on failure, return -1.
+ */
+int
+entry_guard_pick_for_circuit(guard_selection_t *gs,
+                             const node_t **chosen_node_out,
+                             circuit_guard_state_t **guard_state_out)
+{
+  tor_assert(gs);
+  tor_assert(chosen_node_out);
+  tor_assert(guard_state_out);
+  *chosen_node_out = NULL;
+  *guard_state_out = NULL;
+
+  unsigned state = 0;
+  entry_guard_t *guard = select_entry_guard_for_circuit(gs, &state);
+  if (! guard)
+    return -1;
+  if (BUG(state == 0))
+    return -1;
+  const node_t *node = node_get_by_id(guard->identity);
+  // XXXX prop271 check Ed ID.
+  if (! node)
+    return -1;
+
+  *chosen_node_out = node;
+  *guard_state_out = tor_malloc_zero(sizeof(circuit_guard_state_t));
+  (*guard_state_out)->guard = entry_guard_handle_new(guard);
+  (*guard_state_out)->state = state;
+  (*guard_state_out)->state_set_at = approx_time();
+
+  return 0;
+}
+
+/**
+ * Called by the circuit building module when a circuit has succeeded:
+ * informs the guards code that the guard in *<b>guard_state_p</b> is
+ * working, and advances the state of the guard module.  On a -1 return
+ * value, the circuit is broken and should not be used.  On a 1 return
+ * value, the circuit is ready to use.  On a 0 return value, the circuit
+ * should not be used until we find out whether preferred guards will
+ * work for us.
+ *
+ * XXXXX prop271 tristates are ugly; reconsider that interface.
+ */
+int
+entry_guard_succeeded(guard_selection_t *gs,
+                      circuit_guard_state_t **guard_state_p)
+{
+  if (BUG(*guard_state_p == NULL))
+    return -1;
+
+  entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
+  if (! guard)
+    return -1;
+
+  unsigned newstate =
+    entry_guards_note_guard_success(gs, guard, (*guard_state_p)->state);
+
+  (*guard_state_p)->state = newstate;
+  (*guard_state_p)->state_set_at = approx_time();
+
+  if (newstate == GUARD_CIRC_STATE_COMPLETE) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * Called by the circuit building module when a circuit has succeeded:
+ * informs the guards code that the guard in *<b>guard_state_p</b> is
+ * not working, and advances the state of the guard module. Return -1 on
+ * bug or inconsistency; 0 on success.
+ */
+int
+entry_guard_failed(guard_selection_t *gs,
+                   circuit_guard_state_t **guard_state_p)
+{
+  if (BUG(*guard_state_p == NULL))
+    return -1;
+
+  entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
+  if (! guard)
+    return -1;
+
+  entry_guards_note_guard_failure(gs, guard);
+
+  (*guard_state_p)->state = GUARD_CIRC_STATE_DEAD;
+  (*guard_state_p)->state_set_at = approx_time();
+
+  return 0;
+}
+
+/**
+ * Return true iff every primary guard in <b>gs</b> is believed to
+ * be unreachable.
+ */
+static int
+entry_guards_all_primary_guards_are_down(guard_selection_t *gs)
+{
+  /* XXXXX prop271 do we have to call entry_guards_update_primary() ?? */
+  tor_assert(gs);
+  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+    entry_guard_consider_retry(guard);
+    if (guard->is_reachable != GUARD_REACHABLE_NO)
+      return 0;
+  } SMARTLIST_FOREACH_END(guard);
+  return 1;
+}
+
+/**
+ * Look at all of the origin_circuit_t * objects in <b>all_circuits</b>,
+ * and see if any of them that were previously not ready to use for
+ * guard-related reasons are now ready to use. Place those circuits
+ * in <b>newly_complete_out</b>, and mark them COMPLETE.
+ *
+ * Return 1 if we upgraded any circuits, and 0 otherwise.
+ */
+int
+entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
+                                      smartlist_t *all_circuits,
+                                      smartlist_t *newly_complete_out)
+{
+  tor_assert(gs);
+  tor_assert(all_circuits);
+  tor_assert(newly_complete_out);
+
+  if (! entry_guards_all_primary_guards_are_down(gs)) {
+    /* We only upgrade a waiting circuit if the primary guards are all
+     * down. */
+    return 0;
+  }
+
+  /* XXXX finish implementing. prop271 */
+
+  /* "If any circuit is <waiting_for_better_guard>, and every currently
+      {is_pending} circuit whose guard has higher priority has been
+      in state <usable_if_no_better_guard> for at least
+      {NONPRIMARY_GUARD_CONNECT_TIMEOUT} seconds, and all primary
+      guards have reachable status of <no>, then call that circuit
+      <complete>."
+  */
+
+  /* "If any circuit is <complete>, then do not use any
+      <waiting_for_better_guard> or <usable_if_no_better_guard> circuits
+      circuits whose guards have lower priority.  (Time them out
+      after a {NONPRIMARY_GUARD_IDLE_TIMEOUT} seconds.)"
+  */
+  return 0;
+}
+
+/**
+ * Update all derived pieces of the guard selection state in <b>gs</b>.
+ */
+void
+entry_guards_update_all(guard_selection_t *gs)
+{
+  sampled_guards_update_from_consensus(gs);
+  entry_guards_update_filtered_sets(gs);
+  entry_guards_update_confirmed(gs);
+  entry_guards_update_primary(gs);
+}
+
+/**
  * Return a newly allocated string for encoding the persistent parts of
  * <b>guard</b> to the state file.
  */
@@ -1487,19 +1669,10 @@ __attribute__((noreturn)) void
 entry_guards_DUMMY_ENTRY_POINT(void)
 {
   // prop271 XXXXX kludge; remove this
-  sampled_guards_update_from_consensus(NULL);
-  sample_reachable_filtered_entry_guards(NULL, 0);
-  entry_guards_update_confirmed(NULL);
-  entry_guards_update_primary(NULL);
-  select_entry_guard_for_circuit(NULL, NULL);
-  entry_guards_note_guard_failure(NULL, NULL);
-  entry_guards_note_guard_success(NULL, NULL, 0);
-  entry_guard_has_higher_priority(NULL, NULL);
-  entry_guard_encode_for_state(NULL);
-  entry_guard_parse_from_state(NULL);
-  compare_guards_by_confirmed_idx(NULL, NULL);
-  entry_guards_update_filtered_sets(NULL);
-  tor_assert(0);
+   entry_guard_has_higher_priority(NULL, NULL);
+   entry_guard_encode_for_state(NULL);
+   entry_guard_parse_from_state(NULL);
+   tor_assert(0);
 }
 
 /* XXXXX ----------------------------------------------- */
@@ -2050,6 +2223,7 @@ entry_guard_free(entry_guard_t *e)
 {
   if (!e)
     return;
+  entry_guard_handles_clear(e);
   tor_free(e->chosen_by_version);
   tor_free(e->sampled_by_version);
   tor_free(e->extra_state_fields);

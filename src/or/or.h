@@ -3148,6 +3148,11 @@ typedef struct origin_circuit_t {
   /** Holds all rendezvous data on either client or service side. */
   rend_data_t *rend_data;
 
+  /** Holds the data that the entry guard system uses to track the
+   * status of the guard this circuit is using, and thereby to determine
+   * whether this circuit can be used. */
+  struct circuit_guard_state_t *guard_state;
+
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */
   unsigned int remaining_relay_early_cells : 4;

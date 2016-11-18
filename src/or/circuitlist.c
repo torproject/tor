@@ -63,6 +63,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "entrynodes.h"
 #include "main.h"
 #include "hs_common.h"
 #include "networkstatus.h"
@@ -834,6 +835,7 @@ circuit_free(circuit_t *circ)
         cpath_ref_decref(ocirc->build_state->service_pending_final_cpath_ref);
     }
     tor_free(ocirc->build_state);
+    circuit_guard_state_free(ocirc->guard_state);
 
     circuit_clear_cpath(ocirc);
 

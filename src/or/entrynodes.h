@@ -12,11 +12,17 @@
 #ifndef TOR_ENTRYNODES_H
 #define TOR_ENTRYNODES_H
 
+#include "handles.h"
+
 /* Forward declare for guard_selection_t; entrynodes.c has the real struct */
 typedef struct guard_selection_s guard_selection_t;
 
 /* Forward declare for entry_guard_t; the real declaration is private. */
 typedef struct entry_guard_t entry_guard_t;
+
+/* Forward declaration for circuit_guard_state_t; the real declaration is
+   private. */
+typedef struct circuit_guard_state_t circuit_guard_state_t;
 
 /* Information about a guard's pathbias status.
  * These fields are used in circpathbias.c to try to detect entry
@@ -70,6 +76,8 @@ typedef struct guard_pathbias_t {
  * use a node_t, since we want to remember these even when we
  * don't have any directory info. */
 struct entry_guard_t {
+  HANDLE_ENTRY(entry_guard, entry_guard_t);
+
   char nickname[MAX_HEX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
   ed25519_public_key_t ed_id;
@@ -259,6 +267,20 @@ struct guard_selection_s {
    */
   int should_add_entry_nodes;
 };
+
+struct entry_guard_handle_t;
+
+/**
+ * Per-circuit state to track whether we'll be able to use the circuit.
+ */
+struct circuit_guard_state_t {
+  /** Handle to the entry guard object for this circuit. */
+  struct entry_guard_handle_t *guard;
+  /** The time at which <b>state</b> last changed. */
+  time_t state_set_at;
+  /** One of GUARD_CIRC_STATE_* */
+  uint8_t state;
+};
 #endif
 
 #if 1
@@ -284,6 +306,19 @@ void entry_guard_mark_bad(entry_guard_t *guard);
 const char *entry_guard_get_rsa_id_digest(const entry_guard_t *guard);
 const char *entry_guard_describe(const entry_guard_t *guard);
 guard_pathbias_t *entry_guard_get_pathbias_state(entry_guard_t *guard);
+
+void circuit_guard_state_free(circuit_guard_state_t *state);
+int entry_guard_pick_for_circuit(guard_selection_t *gs,
+                                 const node_t **chosen_node_out,
+                                 circuit_guard_state_t **guard_state_out);
+int entry_guard_succeeded(guard_selection_t *gs,
+                          circuit_guard_state_t **guard_state_p);
+int entry_guard_failed(guard_selection_t *gs,
+                       circuit_guard_state_t **guard_state_p);
+void entry_guards_update_all(guard_selection_t *gs);
+int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
+                                          smartlist_t *all_circuits,
+                                          smartlist_t *newly_complete_out);
 
 /* Used by bridges.c only. */
 void add_bridge_as_entry_guard(guard_selection_t *gs,
@@ -350,6 +385,7 @@ int num_bridges_usable(void);
 /**@}*/
 
 // ---------- XXXX these functions and definitions are post-prop271.
+HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
 STATIC guard_selection_t *guard_selection_new(void);
 STATIC void guard_selection_free(guard_selection_t *gs);
 STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
@@ -398,6 +434,8 @@ STATIC void sampled_guards_update_from_consensus(guard_selection_t *gs);
 /** State for a circuit that can (so far as the guard subsystem is
  * concerned) be used for actual traffic. */
 #define GUARD_CIRC_STATE_COMPLETE 4
+/** State for a circuit that is unusable, and will not become usable. */
+#define GUARD_CIRC_STATE_DEAD 5
 /**@}*/
 STATIC void entry_guards_note_guard_failure(guard_selection_t *gs,
                                             entry_guard_t *guard);

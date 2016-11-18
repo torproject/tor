@@ -519,6 +519,13 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit_ei, int flags)
   return circ;
 }
 
+/** Return the guard state associated with <b>circ</b>, which may be NULL. */
+circuit_guard_state_t *
+origin_circuit_get_guard_state(origin_circuit_t *circ)
+{
+  return circ->guard_state;
+}
+
 /** Start establishing the first hop of our circuit. Figure out what
  * OR we should connect to, and if necessary start the connection to
  * it. If we're already connected, then send the 'create' cell.
