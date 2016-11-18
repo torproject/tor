@@ -79,6 +79,10 @@ static int rend_service_check_private_dir(const or_options_t *options,
 static int rend_service_check_private_dir_impl(const or_options_t *options,
                                                const rend_service_t *s,
                                                int create);
+static const smartlist_t* rend_get_service_list(
+                                  const smartlist_t* substitute_service_list);
+static smartlist_t* rend_get_service_list_mutable(
+                                  smartlist_t* substitute_service_list);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -124,8 +128,44 @@ static const char *hostname_fname = "hostname";
 static const char *client_keys_fname = "client_keys";
 static const char *sos_poison_fname = "onion_service_non_anonymous";
 
+/** A list of rend_service_t's for services run on this OP.
+ */
+static smartlist_t *rend_service_list = NULL;
+
+/* Like rend_get_service_list_mutable, but returns a read-only list. */
+static const smartlist_t*
+rend_get_service_list(const smartlist_t* substitute_service_list)
+{
+  /* It is safe to cast away the const here, because
+   * rend_get_service_list_mutable does not actually modify the list */
+  return rend_get_service_list_mutable((smartlist_t*)substitute_service_list);
+}
+
+/* Return a mutable list of hidden services.
+ * If substitute_service_list is not NULL, return it.
+ * Otherwise, check if the global rend_service_list is non-NULL, and if so,
+ * return it.
+ * Otherwise, return NULL.
+ * */
+static smartlist_t*
+rend_get_service_list_mutable(smartlist_t* substitute_service_list)
+{
+  if (substitute_service_list) {
+    return substitute_service_list;
+  }
+
+  /* If no special service list is provided, then just use the global one. */
+
+  if (BUG(!rend_service_list)) {
+    /* No global HS list, which is a programmer error. */
+    return NULL;
+  }
+
+  return rend_service_list;
+}
+
 /** Tells if onion service <b>s</b> is ephemeral.
-*/
+ */
 static unsigned int
 rend_service_is_ephemeral(const struct rend_service_t *s)
 {
@@ -139,10 +179,6 @@ rend_service_escaped_dir(const struct rend_service_t *s)
 {
   return rend_service_is_ephemeral(s) ? "[EPHEMERAL]" : escaped(s->directory);
 }
-
-/** A list of rend_service_t's for services run on this OP.
- */
-static smartlist_t *rend_service_list = NULL;
 
 /** Return the number of rendezvous services we have configured. */
 int
@@ -239,17 +275,10 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
   int i;
   rend_service_port_config_t *p;
 
-  smartlist_t *s_list;
-  /* If no special service list is provided, then just use the global one. */
-  if (!service_list) {
-    if (BUG(!rend_service_list)) {
-      /* No global HS list, which is a failure. */
-      return -1;
-    }
-
-    s_list = rend_service_list;
-  } else {
-    s_list = service_list;
+  /* Use service_list for unit tests */
+  smartlist_t *s_list = rend_get_service_list_mutable(service_list);
+  if (BUG(!s_list)) {
+    return -1;
   }
 
   service->intro_nodes = smartlist_new();
@@ -502,18 +531,7 @@ rend_service_check_dir_and_add(smartlist_t *service_list,
     return 0;
   } else {
     /* Use service_list for unit tests */
-    smartlist_t *s_list = NULL;
-    /* If no special service list is provided, then just use the global one. */
-    if (!service_list) {
-      if (BUG(!rend_service_list)) {
-        /* No global HS list, which is a failure, because we plan on adding to
-         * it */
-        return -1;
-      }
-      s_list = rend_service_list;
-    } else {
-      s_list = service_list;
-    }
+    smartlist_t *s_list = rend_get_service_list_mutable(service_list);
     /* s_list can not be NULL here - if both service_list and rend_service_list
      * are NULL, and validate_only is false, we exit earlier in the function
      */
@@ -1261,15 +1279,10 @@ rend_service_poison_new_single_onion_dir(const rend_service_t *s,
 int
 rend_service_load_all_keys(const smartlist_t *service_list)
 {
-  const smartlist_t *s_list = NULL;
-  /* If no special service list is provided, then just use the global one. */
-  if (!service_list) {
-    if (BUG(!rend_service_list)) {
-      return -1;
-    }
-    s_list = rend_service_list;
-  } else {
-    s_list = service_list;
+  /* Use service_list for unit tests */
+  const smartlist_t *s_list = rend_get_service_list(service_list);
+  if (BUG(!s_list)) {
+    return -1;
   }
 
   SMARTLIST_FOREACH_BEGIN(s_list, rend_service_t *, s) {
