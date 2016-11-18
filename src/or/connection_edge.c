@@ -1627,11 +1627,9 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       }
       tor_assert(!automap);
       rep_hist_note_used_resolve(now); /* help predict this next time */
-    }
+    } else if (socks->command == SOCKS_COMMAND_CONNECT) {
+      /* Now see if this is a connect request that we can reject immediately */
 
-    /* Now see if this is a connect request that we can reject immediately */
-    if (socks->command == SOCKS_COMMAND_CONNECT) {
-      /* Special handling for attempts to connect */
       tor_assert(!automap);
       /* Don't allow connections to port 0. */
       if (socks->port == 0) {
@@ -1771,7 +1769,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       rep_hist_note_used_resolve(now); /* help predict this next time */
       /* no extra processing needed */
     } else {
-      /* We should only be doing CONNECT or RESOLVE! */
+      /* We should only be doing CONNECT, RESOLVE, or RESOLVE_PTR! */
       tor_fragile_assert();
     }
 
