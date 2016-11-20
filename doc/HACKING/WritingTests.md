@@ -48,7 +48,7 @@ isolation, you just run `./src/test/test-memwipe`.
 To run tests within the unit test programs, you can specify the name
 of the test.  The string ".." can be used as a wildcard at the end of the
 test name.  For example, to run all the cell format tests, enter
-`./src/test/test cellfmt/..`.  To run
+`./src/test/test cellfmt/..`.
 
 Many tests that need to mess with global state run in forked subprocesses in
 order to keep from contaminating one another.  But when debugging a failing test,
