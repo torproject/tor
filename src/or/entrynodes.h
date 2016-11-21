@@ -283,6 +283,13 @@ struct circuit_guard_state_t {
 };
 #endif
 
+/* Common entry points for old and new guard code */
+void guards_update_all(void);
+const node_t *guards_choose_guard(cpath_build_state_t *state,
+                                  circuit_guard_state_t **guard_state_out);
+const node_t *guards_choose_dirguard(dirinfo_type_t info,
+                                     circuit_guard_state_t **guard_state_out);
+
 #if 1
 /* XXXX NM I would prefer that all of this stuff be private to
  * entrynodes.c. */
@@ -313,12 +320,15 @@ int entry_guard_pick_for_circuit(guard_selection_t *gs,
                                  circuit_guard_state_t **guard_state_out);
 int entry_guard_succeeded(guard_selection_t *gs,
                           circuit_guard_state_t **guard_state_p);
-int entry_guard_failed(guard_selection_t *gs,
+void entry_guard_failed(guard_selection_t *gs,
                        circuit_guard_state_t **guard_state_p);
+void entry_guard_chan_failed(guard_selection_t *gs,
+                            channel_t *chan);
 void entry_guards_update_all(guard_selection_t *gs);
 int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
                                           smartlist_t *all_circuits,
                                           smartlist_t *newly_complete_out);
+void entry_guards_note_internet_connectivity(guard_selection_t *gs);
 
 /* Used by bridges.c only. */
 void add_bridge_as_entry_guard(guard_selection_t *gs,

@@ -1039,6 +1039,14 @@ entry_guard_consider_retry(entry_guard_t *guard)
   }
 }
 
+/** Tell the entry guards subsystem that we have confirmed that as of
+ * just now, we're on the internet. */
+void
+entry_guards_note_internet_connectivity(guard_selection_t *gs)
+{
+  gs->last_time_on_internet = approx_time();
+}
+
 /**
  * Get a guard for use with a circuit.  Prefer to pick a running primary
  * guard; then a non-pending running filtered confirmed guard; then a
