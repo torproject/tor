@@ -1705,7 +1705,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
   } else if (!strcmp(question, "address")) {
     uint32_t addr;
-    if (router_pick_published_address(get_options(), &addr) < 0) {
+    if (router_pick_published_address(get_options(), &addr, 0) < 0) {
       *errmsg = "Address unknown";
       return -1;
     }

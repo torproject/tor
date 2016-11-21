@@ -1611,7 +1611,7 @@ pt_get_extra_info_descriptor_string(void)
       uint32_t external_ip_address = 0;
       if (tor_addr_is_null(&t->addr) &&
           router_pick_published_address(get_options(),
-                                        &external_ip_address) >= 0) {
+                                        &external_ip_address, 0) >= 0) {
         tor_addr_t addr;
         tor_addr_from_ipv4h(&addr, external_ip_address);
         addrport = fmt_addrport(&addr, t->port);

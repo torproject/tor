@@ -3480,10 +3480,12 @@ test_config_default_dir_servers(void *arg)
 static int mock_router_pick_published_address_result = 0;
 
 static int
-mock_router_pick_published_address(const or_options_t *options, uint32_t *addr)
+mock_router_pick_published_address(const or_options_t *options,
+                                   uint32_t *addr, int cache_only)
 {
   (void)options;
   (void)addr;
+  (void)cache_only;
   return mock_router_pick_published_address_result;
 }
 

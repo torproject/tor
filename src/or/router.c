@@ -1961,23 +1961,34 @@ static int router_guess_address_from_dir_headers(uint32_t *guess);
 /** Make a current best guess at our address, either because
  * it's configured in torrc, or because we've learned it from
  * dirserver headers. Place the answer in *<b>addr</b> and return
- * 0 on success, else return -1 if we have no guess. */
+ * 0 on success, else return -1 if we have no guess.
+ *
+ * If <b>cache_only</b> is true, just return any cached answers, and
+ * don't try to get any new answers.
+ */
 MOCK_IMPL(int,
-router_pick_published_address,(const or_options_t *options, uint32_t *addr))
+router_pick_published_address,(const or_options_t *options, uint32_t *addr,
+                               int cache_only))
 {
+  /* First, check the cached output from resolve_my_address(). */
   *addr = get_last_resolved_addr();
-  if (!*addr &&
-      resolve_my_address(LOG_INFO, options, addr, NULL, NULL) < 0) {
-    log_info(LD_CONFIG, "Could not determine our address locally. "
-             "Checking if directory headers provide any hints.");
-    if (router_guess_address_from_dir_headers(addr) < 0) {
-      log_info(LD_CONFIG, "No hints from directory headers either. "
-               "Will try again later.");
-      return -1;
+  if (*addr)
+    return 0;
+
+  /* Second, consider doing a resolve attempt right here. */
+  if (!cache_only) {
+    if (resolve_my_address(LOG_INFO, options, addr, NULL, NULL) >= 0) {
+      log_info(LD_CONFIG,"Success: chose address '%s'.", fmt_addr32(*addr));
+      return 0;
     }
   }
-  log_info(LD_CONFIG,"Success: chose address '%s'.", fmt_addr32(*addr));
-  return 0;
+
+  /* Third, check the cached output from router_new_address_suggestion(). */
+  if (router_guess_address_from_dir_headers(addr) >= 0)
+    return 0;
+
+  /* We have no useful cached answers. Return failure. */
+  return -1;
 }
 
 /* Like router_check_descriptor_address_consistency, but specifically for the
@@ -2074,7 +2085,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   int hibernating = we_are_hibernating();
   const or_options_t *options = get_options();
 
-  if (router_pick_published_address(options, &addr) < 0) {
+  if (router_pick_published_address(options, &addr, 0) < 0) {
     log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
     return -1;
   }
@@ -2323,7 +2334,7 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (router_pick_published_address(options, &addr) < 0 ||
+  if (router_pick_published_address(options, &addr, 0) < 0 ||
       router_get_advertised_or_port(options) == 0) {
     /* Stop trying to rebuild our descriptor every second. We'll
      * learn that it's time to try again when ip_address_changed()
