@@ -307,6 +307,10 @@ static config_var_t option_vars_[] = {
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(FallbackDir,                 LINELIST, NULL),
+  /* XXXX prop271 -- this has an ugly name to remind us to remove it. */
+  VAR("UseDeprecatedGuardAlgorithm_",        BOOL,
+      UseDeprecatedGuardAlgorithm, "0"),
+
   V(UseDefaultFallbackDirs,      BOOL,     "1"),
 
   OBSOLETE("FallbackNetworkstatusFile"),
@@ -4486,6 +4490,13 @@ options_transition_allowed(const or_options_t *old,
       !new_val->DisableDebuggerAttachment) {
     *msg = tor_strdup("While Tor is running, disabling "
                       "DisableDebuggerAttachment is not allowed.");
+    return -1;
+  }
+
+  if (old->UseDeprecatedGuardAlgorithm !=
+      new_val->UseDeprecatedGuardAlgorithm) {
+    *msg = tor_strdup("While Tor is running, changing "
+                      "UseDeprecatedGuardAlgorithm is not allowed.");
     return -1;
   }
 

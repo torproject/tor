@@ -212,6 +212,7 @@ test_choose_random_entry_no_guards(void *arg)
   memset(&mocked_options, 0, sizeof(mocked_options));
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientPreferIPv6ORPort = 0;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   /* Try to pick an entry even though none of our routers are guards. */
   chosen_entry = choose_random_entry(NULL);
@@ -236,6 +237,7 @@ test_choose_random_entry_no_guards(void *arg)
   memset(&mocked_options, 0, sizeof(mocked_options));
   mocked_options.ClientUseIPv4 = 0;
   mocked_options.ClientPreferIPv6ORPort = 0;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   chosen_entry = choose_random_entry(NULL);
 
@@ -248,6 +250,7 @@ test_choose_random_entry_no_guards(void *arg)
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientUseIPv6 = 1;
   mocked_options.ClientPreferIPv6ORPort = 1;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   chosen_entry = choose_random_entry(NULL);
   tt_assert(chosen_entry);
@@ -257,6 +260,7 @@ test_choose_random_entry_no_guards(void *arg)
   memset(&mocked_options, 0, sizeof(mocked_options));
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientPreferIPv6ORPort = -1;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   chosen_entry = choose_random_entry(NULL);
   tt_assert(chosen_entry);
@@ -295,6 +299,7 @@ test_choose_random_entry_one_possible_guard(void *arg)
   memset(&mocked_options, 0, sizeof(mocked_options));
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientPreferIPv6ORPort = 0;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   /* Pick an entry. Make sure we pick the node we marked as guard. */
   chosen_entry = choose_random_entry(NULL);
@@ -315,6 +320,7 @@ test_choose_random_entry_one_possible_guard(void *arg)
   memset(&mocked_options, 0, sizeof(mocked_options));
   mocked_options.ClientUseIPv4 = 0;
   mocked_options.ClientPreferIPv6ORPort = 0;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   chosen_entry = choose_random_entry(NULL);
 
@@ -327,6 +333,7 @@ test_choose_random_entry_one_possible_guard(void *arg)
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientUseIPv6 = 1;
   mocked_options.ClientPreferIPv6ORPort = 1;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   chosen_entry = choose_random_entry(NULL);
 
@@ -339,6 +346,7 @@ test_choose_random_entry_one_possible_guard(void *arg)
   memset(&mocked_options, 0, sizeof(mocked_options));
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientPreferIPv6ORPort = -1;
+  mocked_options.UseDeprecatedGuardAlgorithm = 1;
 
   chosen_entry = choose_random_entry(NULL);
 
@@ -701,6 +709,7 @@ static void
 test_entry_guards_set_from_config(void *arg)
 {
   or_options_t *options = get_options_mutable();
+  options->UseDeprecatedGuardAlgorithm = 1;
   guard_selection_t *gs = get_guard_selection_info();
   const smartlist_t *all_entry_guards =
     get_entry_guards_for_guard_selection(gs);
@@ -2177,7 +2186,7 @@ struct testcase_t entrynodes_tests[] = {
     TT_FORK, NULL, NULL },
   { "choose_random_entry_no_guards", test_choose_random_entry_no_guards,
     TT_FORK, &fake_network, NULL },
-  { "choose_random_entry_one_possibleguard",
+  { "choose_random_entry_one_possible_guard",
     test_choose_random_entry_one_possible_guard,
     TT_FORK, &fake_network, NULL },
   { "populate_live_entry_guards_1guard",

@@ -1315,6 +1315,9 @@ int
 entry_guard_succeeded(guard_selection_t *gs,
                       circuit_guard_state_t **guard_state_p)
 {
+  if (get_options()->UseDeprecatedGuardAlgorithm)
+    return 1;
+
   if (BUG(*guard_state_p == NULL))
     return -1;
 
@@ -1345,6 +1348,9 @@ int
 entry_guard_failed(guard_selection_t *gs,
                    circuit_guard_state_t **guard_state_p)
 {
+  if (get_options()->UseDeprecatedGuardAlgorithm)
+    return;
+
   if (BUG(*guard_state_p == NULL))
     return -1;
 
@@ -2490,6 +2496,9 @@ entry_guards_compute_status_for_guard_selection(guard_selection_t *gs,
   if ((!gs) || !(gs->chosen_entry_guards))
     return;
 
+  if (!get_options()->UseDeprecatedGuardAlgorithm)
+    return;
+
   if (options->EntryNodes) /* reshuffle the entry guard list if needed */
     entry_nodes_should_be_added();
 
@@ -2579,6 +2588,10 @@ entry_guard_register_connect_status_for_guard_selection(
   char buf[HEX_DIGEST_LEN+1];
 
   if (!(gs) || !(gs->chosen_entry_guards)) {
+    return 0;
+  }
+
+  if (! get_options()->UseDeprecatedGuardAlgorithm) {
     return 0;
   }
 
@@ -2842,6 +2855,8 @@ entry_list_is_constrained(const or_options_t *options)
 const node_t *
 choose_random_entry(cpath_build_state_t *state)
 {
+  tor_assert(get_options()->UseDeprecatedGuardAlgorithm);
+
   return choose_random_entry_impl(get_guard_selection_info(),
                                   state, 0, NO_DIRINFO, NULL);
 }
@@ -2851,6 +2866,8 @@ choose_random_entry(cpath_build_state_t *state)
 const node_t *
 choose_random_dirguard(dirinfo_type_t type)
 {
+  tor_assert(get_options()->UseDeprecatedGuardAlgorithm);
+
   return choose_random_entry_impl(get_guard_selection_info(),
                                   NULL, 1, type, NULL);
 }
@@ -2861,6 +2878,8 @@ choose_random_dirguard(dirinfo_type_t type)
 int
 num_bridges_usable(void)
 {
+  tor_assert(get_options()->UseDeprecatedGuardAlgorithm);
+
   int n_options = 0;
   tor_assert(get_options()->UseBridges);
   (void) choose_random_entry_impl(get_guard_selection_info(),
