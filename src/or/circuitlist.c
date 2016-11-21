@@ -439,7 +439,13 @@ circuit_set_state(circuit_t *circ, uint8_t state)
     /* add to waiting-circuit list. */
     smartlist_add(circuits_pending_chans, circ);
   }
-  if (state == CIRCUIT_STATE_OPEN)
+  if (circ->state == CIRCUIT_STATE_GUARD_WAIT) {
+    smartlist_remove(circuits_pending_other_guards, circ);
+  }
+  if (state == CIRCUIT_STATE_GUARD_WAIT) {
+    smartlist_add(circuits_pending_other_guards, circ);
+  }
+  if (state == CIRCUIT_STATE_GUARD_WAIT || state == CIRCUIT_STATE_OPEN)
     tor_assert(!circ->n_chan_create_cell);
   circ->state = state;
 }
@@ -542,6 +548,8 @@ circuit_state_to_string(int state)
     case CIRCUIT_STATE_BUILDING: return "doing handshakes";
     case CIRCUIT_STATE_ONIONSKIN_PENDING: return "processing the onion";
     case CIRCUIT_STATE_CHAN_WAIT: return "connecting to server";
+    case CIRCUIT_STATE_GUARD_WAIT: return "waiting to see how other "
+      "guards perform";
     case CIRCUIT_STATE_OPEN: return "open";
     default:
       log_warn(LD_BUG, "Unknown circuit state %d", state);
@@ -1868,7 +1876,8 @@ circuit_about_to_free(circuit_t *circ)
    * module then.  If it isn't OPEN, we send it there now to remember which
    * links worked and which didn't.
    */
-  if (circ->state != CIRCUIT_STATE_OPEN) {
+  if (circ->state != CIRCUIT_STATE_OPEN &&
+      circ->state != CIRCUIT_STATE_GUARD_WAIT) {
     if (CIRCUIT_IS_ORIGIN(circ)) {
       origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
       circuit_build_failed(ocirc); /* take actions if necessary */
@@ -1881,7 +1890,9 @@ circuit_about_to_free(circuit_t *circ)
   }
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_status(TO_ORIGIN_CIRCUIT(circ),
-     (circ->state == CIRCUIT_STATE_OPEN)?CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED,
+     (circ->state == CIRCUIT_STATE_OPEN ||
+      circ->state == CIRCUIT_STATE_GUARD_WAIT) ?
+                                 CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED,
      orig_reason);
   }
 
@@ -2403,7 +2414,8 @@ assert_circuit_ok(const circuit_t *c)
 
   tor_assert(c->deliver_window >= 0);
   tor_assert(c->package_window >= 0);
-  if (c->state == CIRCUIT_STATE_OPEN) {
+  if (c->state == CIRCUIT_STATE_OPEN ||
+      c->state == CIRCUIT_STATE_GUARD_WAIT) {
     tor_assert(!c->n_chan_create_cell);
     if (or_circ) {
       tor_assert(or_circ->n_crypto);

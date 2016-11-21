@@ -2596,6 +2596,8 @@ getinfo_helper_events(control_connection_t *control_conn,
 
       if (circ->base_.state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
+      else if (circ->base_.state == CIRCUIT_STATE_GUARD_WAIT)
+        state = "GUARD_WAIT"; // XXXX prop271 must specify this.
       else if (circ->cpath)
         state = "EXTENDED";
       else
@@ -3379,7 +3381,8 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
   } else {
-    if (circ->base_.state == CIRCUIT_STATE_OPEN) {
+    if (circ->base_.state == CIRCUIT_STATE_OPEN ||
+        circ->base_.state == CIRCUIT_STATE_GUARD_WAIT) {
       int err_reason = 0;
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
       if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {

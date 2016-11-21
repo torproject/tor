@@ -438,8 +438,12 @@ typedef enum {
 /** Circuit state: I'd like to deliver a create, but my n_chan is still
  * connecting. */
 #define CIRCUIT_STATE_CHAN_WAIT 2
+/** Circuit state: the circuit is open but we don't want to actually use it
+ * until we find out if a better guard will be available.
+ */
+#define CIRCUIT_STATE_GUARD_WAIT 3
 /** Circuit state: onionskin(s) processed, ready to send/receive cells. */
-#define CIRCUIT_STATE_OPEN 3
+#define CIRCUIT_STATE_OPEN 4
 
 #define CIRCUIT_PURPOSE_MIN_ 1
 
