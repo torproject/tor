@@ -1033,12 +1033,15 @@ circuit_is_available_for_use(const circuit_t *circ)
   const origin_circuit_t *origin_circ;
   cpath_build_state_t *build_state;
 
+  if (!CIRCUIT_IS_ORIGIN(circ))
+    return 0; /* We first filter out only origin circuits before doing the
+                 following checks. */
   if (circ->marked_for_close)
     return 0; /* Don't mess with marked circs */
   if (circ->timestamp_dirty)
     return 0; /* Only count clean circs */
   if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
-    return 0; /* Only pay attention to general purpose circuits.
+    return 0; /* We only pay attention to general purpose circuits.
                  General purpose circuits are always origin circuits. */
 
   origin_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
