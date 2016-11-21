@@ -108,6 +108,8 @@ connection_write_to_buf_mock(const char *string, size_t len,
   write_to_buf(string, len, conn->outbuf);
 }
 
+/* Set up a fake origin circuit with the specified number of cells,
+ * Return a pointer to the newly-created dummy circuit */
 circuit_t *
 dummy_origin_circuit_new(int n_cells)
 {
