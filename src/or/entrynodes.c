@@ -124,6 +124,7 @@
 #include "bridges.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "circuitstats.h"
 #include "config.h"
 #include "confparse.h"
@@ -1371,7 +1372,30 @@ entry_guard_failed(guard_selection_t *gs,
   (*guard_state_p)->state = GUARD_CIRC_STATE_DEAD;
   (*guard_state_p)->state_set_at = approx_time();
 
-  return 0;
+/**
+ * Run the entry_guard_failed() function on every circuit that is
+ * pending on <b>chan</b>.
+ */
+void
+entry_guard_chan_failed(guard_selection_t *gs,
+                        channel_t *chan)
+{
+  tor_assert(gs);
+  if (!chan)
+    return;
+  if (get_options()->UseDeprecatedGuardAlgorithm)
+    return;
+
+  smartlist_t *pending = smartlist_new();
+  circuit_get_all_pending_on_channel(pending, chan);
+  SMARTLIST_FOREACH_BEGIN(pending, circuit_t *, circ) {
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+
+    origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    entry_guard_failed(gs, &origin_circ->guard_state);
+  } SMARTLIST_FOREACH_END(circ);
+  smartlist_free(pending);
 }
 
 /**
