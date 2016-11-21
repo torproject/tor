@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - For relays that don't know their own address, avoid attempting
+      a local hostname resolve for each descriptor we download. Also cut
+      down on the number of "Success: chose address 'x.x.x.x'" log lines.
+      Fixes bugs 20423 and 20610; bugfix on 0.2.8.1-alpha.
+
