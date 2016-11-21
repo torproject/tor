@@ -1786,6 +1786,10 @@ typedef struct dir_connection_t {
   /** What rendezvous service are we querying for? */
   rend_data_t *rend_data;
 
+  /** If this is a one-hop connection, tracks the state of the directory guard
+   * for this connection (if any). */
+  struct circuit_guard_state_t *guard_state;
+
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
 

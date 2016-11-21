@@ -128,7 +128,8 @@ static void directory_initiate_command_rend(
                                           const char *payload,
                                           size_t payload_len,
                                           time_t if_modified_since,
-                                          const rend_data_t *rend_query);
+                                          const rend_data_t *rend_query,
+                                          circuit_guard_state_t *guard_state);
 
 static void connection_dir_close_consensus_fetches(
                    dir_connection_t *except_this_one, const char *resource);
@@ -422,7 +423,8 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
       directory_initiate_command_routerstatus(rs, dir_purpose,
                                               router_purpose,
                                               indirection,
-                                              NULL, payload, upload_len, 0);
+                                              NULL, payload, upload_len, 0,
+                                              NULL);
   } SMARTLIST_FOREACH_END(ds);
   if (!found) {
     char *s = authdir_type_to_string(type);
@@ -458,7 +460,8 @@ should_use_directory_guards(const or_options_t *options)
  * information of type <b>type</b>, and return its routerstatus. */
 static const routerstatus_t *
 directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
-                                 uint8_t dir_purpose)
+                                 uint8_t dir_purpose,
+                                 circuit_guard_state_t **guard_state_out)
 {
   const routerstatus_t *rs = NULL;
   const or_options_t *options = get_options();
@@ -467,7 +470,7 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
     log_warn(LD_BUG, "Called when we have UseBridges set.");
 
   if (should_use_directory_guards(options)) {
-    const node_t *node = choose_random_dirguard(type);
+    const node_t *node = guards_choose_dirguard(type, guard_state_out);
     if (node)
       rs = node->rs;
   } else {
@@ -548,6 +551,7 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
   if (!options->FetchServerDescriptors)
     return;
 
+  circuit_guard_state_t *guard_state = NULL;
   if (!get_via_tor) {
     if (options->UseBridges && !(type & BRIDGE_DIRINFO)) {
       /* We want to ask a running bridge for which we have a descriptor.
@@ -556,6 +560,7 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
        * sort of dir fetch we'll be doing, so it won't return a bridge
        * that can't answer our question.
        */
+      // XXXX prop271 update this for bridge support.
       const node_t *node = choose_random_dirguard(type);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
@@ -605,9 +610,9 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
         }
       }
       if (!rs && !(type & BRIDGE_DIRINFO)) {
-        /* */
         rs = directory_pick_generic_dirserver(type, pds_flags,
-                                              dir_purpose);
+                                              dir_purpose,
+                                              &guard_state);
         if (!rs)
           get_via_tor = 1; /* last resort: try routing it via Tor */
       }
@@ -630,7 +635,8 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
                                             router_purpose,
                                             indirection,
                                             resource, NULL, 0,
-                                            if_modified_since);
+                                            if_modified_since,
+                                            guard_state);
   } else {
     log_notice(LD_DIR,
                "While fetching directory info, "
@@ -664,7 +670,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
       rs = &ds->fake_status;
       directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
                                               DIRIND_ONEHOP, resource, NULL,
-                                              0, 0);
+                                              0, 0, NULL);
   } SMARTLIST_FOREACH_END(ds);
 }
 
@@ -775,7 +781,8 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                              const char *payload,
                                              size_t payload_len,
                                              time_t if_modified_since,
-                                             const rend_data_t *rend_query)
+                                             const rend_data_t *rend_query,
+                                           circuit_guard_state_t *guard_state)
 {
   const or_options_t *options = get_options();
   const node_t *node;
@@ -830,7 +837,8 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                   dir_purpose, router_purpose,
                                   indirection, resource,
                                   payload, payload_len, if_modified_since,
-                                  rend_query);
+                                  rend_query,
+                                  guard_state);
 }
 
 /** Launch a new connection to the directory server <b>status</b> to
@@ -855,13 +863,15 @@ MOCK_IMPL(void, directory_initiate_command_routerstatus,
                  const char *resource,
                  const char *payload,
                  size_t payload_len,
-                 time_t if_modified_since))
+                 time_t if_modified_since,
+                 circuit_guard_state_t *guard_state))
 {
   directory_initiate_command_routerstatus_rend(status, dir_purpose,
                                           router_purpose,
                                           indirection, resource,
                                           payload, payload_len,
-                                          if_modified_since, NULL);
+                                          if_modified_since, NULL,
+                                          guard_state);
 }
 
 /** Return true iff <b>conn</b> is the client side of a directory connection
@@ -889,6 +899,11 @@ directory_conn_is_self_reachability_test(dir_connection_t *conn)
 static void
 connection_dir_request_failed(dir_connection_t *conn)
 {
+  if (conn->guard_state) {
+    /* We haven't seen a success on this guard state, so consider it to have
+     * failed. */
+    entry_guard_failed(get_guard_selection_info(), &conn->guard_state);
+  }
   if (directory_conn_is_self_reachability_test(conn)) {
     return; /* this was a test fetch. don't retry. */
   }
@@ -1136,7 +1151,7 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
                              digest, dir_purpose,
                              router_purpose, indirection,
                              resource, payload, payload_len,
-                             if_modified_since, NULL);
+                             if_modified_since, NULL, NULL);
 }
 
 /** Same as directory_initiate_command(), but accepts rendezvous data to
@@ -1151,7 +1166,8 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
                                 const char *resource,
                                 const char *payload, size_t payload_len,
                                 time_t if_modified_since,
-                                const rend_data_t *rend_query)
+                                const rend_data_t *rend_query,
+                                circuit_guard_state_t *guard_state)
 {
   tor_assert(or_addr_port);
   tor_assert(dir_addr_port);
@@ -1246,10 +1262,16 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   if (!anonymized_connection && !use_begindir) {
     /* then we want to connect to dirport directly */
+    // XXXX prop271 I think that we never use guards in this case.
 
     if (options->HTTPProxy) {
       tor_addr_copy(&addr, &options->HTTPProxyAddr);
       port = options->HTTPProxyPort;
+    }
+
+    // In this case we should not have picked a directory guard.
+    if (BUG(guard_state)) {
+      entry_guard_cancel(get_guard_selection_info(), &guard_state);
     }
 
     switch (connection_connect(TO_CONN(conn), conn->base_.address, &addr,
@@ -1287,6 +1309,14 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
       rep_hist_note_used_internal(time(NULL), 0, 1);
     else if (anonymized_connection && !use_begindir)
       rep_hist_note_used_port(time(NULL), conn->base_.port);
+
+    // In this case we should not have a directory guard; we'll
+    // get a regular guard later when we build the circuit.
+    if (BUG(anonymized_connection && guard_state)) {
+      entry_guard_cancel(get_guard_selection_info(), &guard_state);
+    }
+
+    conn->guard_state = guard_state;
 
     /* make an AP connection
      * populate it and add it at the right state
@@ -2539,6 +2569,22 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   size_t max_size;
   tor_assert(conn);
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
+
+  if (conn->guard_state) {
+    /* we count the connection as successful once we can read from it.  We do
+     * not, however, delay use of the circuit here, since it's just for a
+     * one-hop directory request. */
+    /* XXXXprop271 note that this will not do the right thing for other
+     * waiting circuits that would be triggered by this circuit becoming
+     * complete/usable. But that's ok, I think.
+     */
+    /* XXXXprop271 should we count this as only a partial success somehow?
+    */
+    entry_guard_succeeded(get_guard_selection_info(),
+                          &conn->guard_state);
+    circuit_guard_state_free(conn->guard_state);
+    conn->guard_state = NULL;
+  }
 
   /* Directory clients write, then read data until they receive EOF;
    * directory servers read data until they get an HTTP command, then

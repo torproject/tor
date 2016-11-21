@@ -634,6 +634,7 @@ connection_free_(connection_t *conn)
 
     cached_dir_decref(dir_conn->cached_dir);
     rend_data_free(dir_conn->rend_data);
+    circuit_guard_state_free(dir_conn->guard_state);
   }
 
   if (SOCKET_OK(conn->s)) {

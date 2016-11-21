@@ -49,7 +49,8 @@ MOCK_DECL(void, directory_initiate_command_routerstatus,
                  const char *resource,
                  const char *payload,
                  size_t payload_len,
-                 time_t if_modified_since));
+                 time_t if_modified_since,
+                 struct circuit_guard_state_t *guard_state));
 
 void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                                   uint8_t dir_purpose,
@@ -59,7 +60,8 @@ void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                                   const char *payload,
                                                   size_t payload_len,
                                                   time_t if_modified_since,
-                                                const rend_data_t *rend_query);
+                                    const rend_data_t *rend_query,
+                                    struct circuit_guard_state_t *guard_state);
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         compress_method_t *compression, char **response);

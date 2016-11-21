@@ -1633,6 +1633,8 @@ circuit_build_failed(origin_circuit_t *circ)
                "Our circuit died before the first hop with no connection");
     }
     if (n_chan_id && !already_marked) {
+      entry_guard_failed(get_guard_selection_info(), &circ->guard_state);
+      /* XXXX prop271 -- old API */
       entry_guard_register_connect_status(n_chan_id, 0, 1, time(NULL));
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */

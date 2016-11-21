@@ -89,7 +89,7 @@
  * [x] Whenever a guard becomes reachable or maybe-reachable, if its filtered
  * flag is set, set its usable_filtered flag.
  *
- * [ ] Whenever we get a new consensus, call update_from_consensus(). (LATER.)
+ * [x] Whenever we get a new consensus, call update_from_consensus(). (LATER.)
  *
  * [ ] Whenever the configuration changes in a relevant way, update the
  * filtered/usable flags. (LATER.)
@@ -1203,8 +1203,6 @@ entry_guards_note_guard_success(guard_selection_t *gs,
     if (last_time_on_internet + INTERNET_LIKELY_DOWN_INTERVAL
         < approx_time()) {
       mark_primary_guards_maybe_reachable(gs);
-    } else {
-      // update_waiting_circuits(gs); // XXXX prop271 write this function.
     }
   }
 
@@ -1475,7 +1473,7 @@ circ_state_has_higher_priority(origin_circuit_t *a,
  */
 int
 entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
-                                      smartlist_t *all_circuits,
+                                      const smartlist_t *all_circuits,
                                       smartlist_t *newly_complete_out)
 {
   tor_assert(gs);
@@ -2274,7 +2272,7 @@ add_an_entry_guard(guard_selection_t *gs,
       return NULL;
     }
   } else if (!for_directory) {
-    node = choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+    node = choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL, NULL);
     if (!node)
       return NULL;
   } else {
@@ -3777,6 +3775,58 @@ entries_retry_all(const or_options_t *options)
 {
   tor_assert(entry_list_is_constrained(options));
   entries_retry_helper(options, 1);
+}
+
+/** Helper: Update the status of all entry guards, in whatever algorithm
+    is used. */
+void
+guards_update_all(void)
+{
+  if (get_options()->UseDeprecatedGuardAlgorithm) {
+    entry_guards_compute_status(get_options(), approx_time());
+  } else {
+    entry_guards_update_all(get_guard_selection_info());
+  }
+}
+
+/** Helper: pick a guard for a circuit, with whatever algorithm is
+    used. */
+const node_t *
+guards_choose_guard(cpath_build_state_t *state,
+                   circuit_guard_state_t **guard_state_out)
+{
+  if (get_options()->UseDeprecatedGuardAlgorithm) {
+    return choose_random_entry(state);
+  } else {
+    // XXXX prop271 we need to look at the chosen exit node if any, and
+    // not duplicate it.
+    const node_t *r = NULL;
+    if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     &r,
+                                     guard_state_out) < 0) {
+      tor_assert(r == NULL);
+    }
+    return r;
+  }
+}
+
+/** Helper: pick a directory guard, with whatever algorithm is used. */
+const node_t *
+guards_choose_dirguard(dirinfo_type_t info,
+                      circuit_guard_state_t **guard_state_out)
+{
+  if (get_options()->UseDeprecatedGuardAlgorithm) {
+    return choose_random_dirguard(info);
+  } else {
+    // XXXX prop271 look at info?
+    const node_t *r = NULL;
+    if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     &r,
+                                     guard_state_out) < 0) {
+      tor_assert(r == NULL);
+    }
+    return r;
+  }
 }
 
 /** Free one guard selection context */

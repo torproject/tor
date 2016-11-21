@@ -971,7 +971,7 @@ authority_certs_fetch_resource_impl(const char *resource,
     directory_initiate_command_routerstatus(rs,
                                             DIR_PURPOSE_FETCH_CERTIFICATE,
                                             0, indirection, resource, NULL,
-                                            0, 0);
+                                            0, 0, NULL);
     return;
   }
 
@@ -4946,7 +4946,7 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
     directory_initiate_command_routerstatus(source, purpose,
                                             ROUTER_PURPOSE_GENERAL,
                                             DIRIND_ONEHOP,
-                                            resource, NULL, 0, 0);
+                                            resource, NULL, 0, 0, NULL);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,
                                  pds_flags, DL_WANT_ANY_DIRSERVER);

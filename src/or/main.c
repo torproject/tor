@@ -979,7 +979,7 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 
     /* if we have enough dir info, then update our guard status with
      * whatever we just learned. */
-    entry_guards_compute_status(options, now);
+    guards_update_all();
     /* Don't even bother trying to get extrainfo until the rest of our
      * directory info is up-to-date */
     if (options->DownloadExtraInfo)
@@ -1375,6 +1375,9 @@ run_scheduled_events(time_t now)
 
   /* 0c. If we've deferred log messages for the controller, handle them now */
   flush_pending_log_callbacks();
+
+  /* Maybe enough time elapsed for us to reconsider a circuit. */
+  circuit_upgrade_circuits_from_guard_wait();
 
   if (options->UseBridges && !options->DisableNetwork) {
     fetch_bridge_descriptors(options, now);

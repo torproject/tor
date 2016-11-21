@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "entrynodes.h"
 #include "hibernate.h"
 #include "memarea.h"
 #include "networkstatus.h"
@@ -4397,7 +4398,8 @@ directory_initiate_command_routerstatus, (const routerstatus_t *status,
                                           const char *resource,
                                           const char *payload,
                                           size_t payload_len,
-                                          time_t if_modified_since));
+                                          time_t if_modified_since,
+                                          circuit_guard_state_t *guardstate));
 
 static void
 test_dir_should_not_init_request_to_ourselves(void *data)
@@ -4504,7 +4506,8 @@ NS(directory_initiate_command_routerstatus)(const routerstatus_t *status,
                                             const char *resource,
                                             const char *payload,
                                             size_t payload_len,
-                                            time_t if_modified_since)
+                                            time_t if_modified_since,
+                                            circuit_guard_state_t *guardstate)
 {
   (void)status;
   (void)dir_purpose;
@@ -4514,6 +4517,7 @@ NS(directory_initiate_command_routerstatus)(const routerstatus_t *status,
   (void)payload;
   (void)payload_len;
   (void)if_modified_since;
+  (void)guardstate;
   CALLED(directory_initiate_command_routerstatus)++;
 }
 

@@ -724,6 +724,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
                  from_cache ? "cached" : "fresh", router_describe(ri));
       /* set entry->made_contact so if it goes down we don't drop it from
        * our entry node list */
+      // XXXX prop271 use new interface here when we hit bridges?
       entry_guard_register_connect_status(ri->cache_info.identity_digest,
                                           1, 0, now);
       if (first) {
@@ -743,6 +744,7 @@ int
 any_bridge_descriptors_known(void)
 {
   tor_assert(get_options()->UseBridges);
+  // XXXX prop271 this needs to get fixed. -- bridges
   return choose_random_entry(NULL) != NULL;
 }
 

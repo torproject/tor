@@ -64,8 +64,12 @@ int extend_info_has_preferred_onion_key(const extend_info_t* ei);
 const node_t *build_state_get_exit_node(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
+struct circuit_guard_state_t;
+
 const node_t *choose_good_entry_server(uint8_t purpose,
-                                       cpath_build_state_t *state);
+                           cpath_build_state_t *state,
+                           struct circuit_guard_state_t **guard_state_out);
+void circuit_upgrade_circuits_from_guard_wait(void);
 
 #ifdef CIRCUITBUILD_PRIVATE
 STATIC circid_t get_unique_circ_id_by_chan(channel_t *chan);

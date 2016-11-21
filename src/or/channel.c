@@ -2538,6 +2538,7 @@ channel_do_open_actions(channel_t *chan)
   if (started_here) {
     circuit_build_times_network_is_live(get_circuit_build_times_mutable());
     rep_hist_note_connect_succeeded(chan->identity_digest, now);
+    // XXXX prop271 this call is no longer useful with the new algorithm.
     if (entry_guard_register_connect_status(
           chan->identity_digest, 1, 0, now) < 0) {
       /* Close any circuits pending on this channel. We leave it in state

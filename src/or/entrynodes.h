@@ -328,7 +328,7 @@ void entry_guard_chan_failed(guard_selection_t *gs,
                             channel_t *chan);
 void entry_guards_update_all(guard_selection_t *gs);
 int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
-                                          smartlist_t *all_circuits,
+                                          const smartlist_t *all_circuits,
                                           smartlist_t *newly_complete_out);
 void entry_guards_note_internet_connectivity(guard_selection_t *gs);
 

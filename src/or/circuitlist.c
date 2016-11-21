@@ -92,6 +92,10 @@ static smartlist_t *global_origin_circuit_list = NULL;
 /** A list of all the circuits in CIRCUIT_STATE_CHAN_WAIT. */
 static smartlist_t *circuits_pending_chans = NULL;
 
+/** List of all the (origin) circuits whose state is
+ * CIRCUIT_STATE_GUARD_WAIT. */
+static smartlist_t *circuits_pending_other_guards = NULL;
+
 /** A list of all the circuits that have been marked with
  * circuit_mark_for_close and which are waiting for circuit_about_to_free. */
 static smartlist_t *circuits_pending_close = NULL;
@@ -433,8 +437,10 @@ circuit_set_state(circuit_t *circ, uint8_t state)
   tor_assert(circ);
   if (state == circ->state)
     return;
-  if (!circuits_pending_chans)
+  if (PREDICT_UNLIKELY(!circuits_pending_chans))
     circuits_pending_chans = smartlist_new();
+  if (PREDICT_UNLIKELY(!circuits_pending_other_guards))
+    circuits_pending_other_guards = smartlist_new();
   if (circ->state == CIRCUIT_STATE_CHAN_WAIT) {
     /* remove from waiting-circuit list. */
     smartlist_remove(circuits_pending_chans, circ);
@@ -1021,6 +1027,9 @@ circuit_free_all(void)
 
   smartlist_free(circuits_pending_close);
   circuits_pending_close = NULL;
+
+  smartlist_free(circuits_pending_other_guards);
+  circuits_pending_other_guards = NULL;
 
   {
     chan_circid_circuit_map_t **elt, **next, *c;
@@ -1719,6 +1728,37 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   }
   SMARTLIST_FOREACH_END(circ_);
   return best;
+}
+
+/**
+ * Check whether any of the origin circuits that are waiting to see if
+ * their guard is good enough to use can be upgraded to "ready". If so,
+ * return a new smartlist containing them. Otherwise return NULL.
+ */
+smartlist_t *
+circuit_find_circuits_to_upgrade_from_guard_wait(void)
+{
+  /* Only if some circuit is actually waiting on an upgrade should we
+   * run the algorithm. */
+  if (! circuits_pending_other_guards ||
+      smartlist_len(circuits_pending_other_guards)==0)
+    return NULL;
+  /* Only if we have some origin circuiuts should we run the algorithm.
+   */
+  if (!global_origin_circuit_list)
+    return NULL;
+
+  /* Okay; we can pass our circuit list to entrynodes.c.*/
+  smartlist_t *result = smartlist_new();
+  int r = entry_guards_upgrade_waiting_circuits(get_guard_selection_info(),
+                                                global_origin_circuit_list,
+                                                result);
+  if (r && smartlist_len(result)) {
+    return result;
+  } else {
+    smartlist_free(result);
+    return NULL;
+  }
 }
 
 /** Return the number of hops in circuit's path. If circ has no entries,
