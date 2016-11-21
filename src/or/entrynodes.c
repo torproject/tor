@@ -1350,10 +1350,9 @@ entry_guard_succeeded(guard_selection_t *gs,
 /**
  * Called by the circuit building module when a circuit has succeeded:
  * informs the guards code that the guard in *<b>guard_state_p</b> is
- * not working, and advances the state of the guard module. Return -1 on
- * bug or inconsistency; 0 on success.
+ * not working, and advances the state of the guard module.
  */
-int
+void
 entry_guard_failed(guard_selection_t *gs,
                    circuit_guard_state_t **guard_state_p)
 {
@@ -1361,16 +1360,17 @@ entry_guard_failed(guard_selection_t *gs,
     return;
 
   if (BUG(*guard_state_p == NULL))
-    return -1;
+    return;
 
   entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
   if (! guard)
-    return -1;
+    return;
 
   entry_guards_note_guard_failure(gs, guard);
 
   (*guard_state_p)->state = GUARD_CIRC_STATE_DEAD;
   (*guard_state_p)->state_set_at = approx_time();
+}
 
 /**
  * Run the entry_guard_failed() function on every circuit that is
