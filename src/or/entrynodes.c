@@ -1377,6 +1377,33 @@ entry_guards_all_primary_guards_are_down(guard_selection_t *gs)
   return 1;
 }
 
+/** Wrapper for entry_guard_has_higher_priority that compares the
+ * guard-priorities of a pair of circuits. */
+static int
+circ_state_has_higher_priority(origin_circuit_t *a,
+                               origin_circuit_t *b)
+{
+  circuit_guard_state_t *state_a = origin_circuit_get_guard_state(a);
+  circuit_guard_state_t *state_b = origin_circuit_get_guard_state(b);
+
+  tor_assert(state_a);
+  tor_assert(state_b);
+
+  entry_guard_t *guard_a = entry_guard_handle_get(state_a->guard);
+  entry_guard_t *guard_b = entry_guard_handle_get(state_b->guard);
+
+  if (! guard_a) {
+    /* Unknown guard -- never higher priority. */
+    return 0;
+  } else if (! guard_b) {
+    /* Known guard -- higher priority than any unknown guard. */
+    return 1;
+  } else {
+    /* Both known -- compare.*/
+    return entry_guard_has_higher_priority(guard_a, guard_b);
+  }
+}
+
 /**
  * Look at all of the origin_circuit_t * objects in <b>all_circuits</b>,
  * and see if any of them that were previously not ready to use for
@@ -1397,25 +1424,116 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   if (! entry_guards_all_primary_guards_are_down(gs)) {
     /* We only upgrade a waiting circuit if the primary guards are all
      * down. */
+    log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits, "
+              "but not all primary guards were definitely down.");
     return 0;
   }
 
-  /* XXXX finish implementing. prop271 */
+  int n_waiting = 0;
+  int n_complete = 0;
+  origin_circuit_t *best_waiting_circuit = NULL;
+  origin_circuit_t *best_complete_circuit = NULL;
+  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+    circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
+    if (state == NULL)
+      continue;
+
+    if (state->state == GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD) {
+      ++n_waiting;
+      if (! best_waiting_circuit ||
+          circ_state_has_higher_priority(circ, best_waiting_circuit)) {
+        best_waiting_circuit = circ;
+      }
+    } else if (state->state == GUARD_CIRC_STATE_COMPLETE) {
+      ++n_complete;
+      if (! best_complete_circuit ||
+          circ_state_has_higher_priority(circ, best_complete_circuit)) {
+        best_complete_circuit = circ;
+      }
+    }
+  } SMARTLIST_FOREACH_END(circ);
+
+  if (! best_waiting_circuit) {
+    log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits, "
+              "but didn't find any.");
+    return 0;
+  }
+
+  if (best_complete_circuit) {
+    if (circ_state_has_higher_priority(best_complete_circuit,
+                                       best_waiting_circuit)) {
+      /* "If any circuit is <complete>, then do not use any
+         <waiting_for_better_guard> or <usable_if_no_better_guard> circuits
+         circuits whose guards have lower priority." */
+      log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
+                "%d complete and %d guard-stalled. At least one complete "
+                "circuit had higher priority, so not upgrading.",
+                n_complete, n_waiting);
+
+      /* XXXX prop271 implement: "(Time them out after a
+         {NONPRIMARY_GUARD_IDLE_TIMEOUT} seconds.)"
+      */
+      return 0;
+    }
+  }
 
   /* "If any circuit is <waiting_for_better_guard>, and every currently
-      {is_pending} circuit whose guard has higher priority has been
-      in state <usable_if_no_better_guard> for at least
-      {NONPRIMARY_GUARD_CONNECT_TIMEOUT} seconds, and all primary
-      guards have reachable status of <no>, then call that circuit
-      <complete>."
-  */
+     {is_pending} circuit whose guard has higher priority has been in
+     state <usable_if_no_better_guard> for at least
+     {NONPRIMARY_GUARD_CONNECT_TIMEOUT} seconds, and all primary guards
+     have reachable status of <no>, then call that circuit <complete>."
 
-  /* "If any circuit is <complete>, then do not use any
-      <waiting_for_better_guard> or <usable_if_no_better_guard> circuits
-      circuits whose guards have lower priority.  (Time them out
-      after a {NONPRIMARY_GUARD_IDLE_TIMEOUT} seconds.)"
+     XXXX --- prop271 deviation. there's no such thing in the spec as
+     an {is_pending circuit}; fix the spec.
   */
-  return 0;
+  int n_blockers_found = 0;
+  const time_t state_set_at_cutoff =
+    approx_time() - NONPRIMARY_GUARD_CONNECT_TIMEOUT;
+  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+    circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
+    if (state == NULL)
+      continue;
+    if (state->state != GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD)
+      continue;
+    if (state->state_set_at > state_set_at_cutoff &&
+        circ_state_has_higher_priority(circ, best_waiting_circuit))
+      ++n_blockers_found;
+  } SMARTLIST_FOREACH_END(circ);
+
+  if (n_blockers_found) {
+    log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
+              "%d guard-stalled, but %d pending circuit(s) had higher "
+              "guard priority, so not upgrading.",
+              n_waiting, n_blockers_found);
+    return 0;
+  }
+
+  /* Okay. We have a best waiting circuit, and we aren't waiting for
+     anything better.  Add all circuits with that priority to the
+     list, and call them COMPLETE. */
+  int n_succeeded = 0;
+  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+    circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
+    if (state == NULL)
+      continue;
+    if (state->state != GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD)
+      continue;
+    if (circ_state_has_higher_priority(best_waiting_circuit, circ))
+      continue;
+
+    state->state = GUARD_CIRC_STATE_COMPLETE;
+    state->state_set_at = approx_time();
+    smartlist_add(newly_complete_out, circ);
+    ++n_succeeded;
+  } SMARTLIST_FOREACH_END(circ);
+
+  log_info(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
+           "%d guard-stalled, %d complete. %d of the guard-stalled "
+           "circuit(s) had high enough priority to upgrade.",
+           n_waiting, n_complete, n_succeeded);
+
+  tor_assert_nonfatal(n_succeeded >= 1);
+  return 1;
 }
 
 /**
@@ -1669,7 +1787,6 @@ __attribute__((noreturn)) void
 entry_guards_DUMMY_ENTRY_POINT(void)
 {
   // prop271 XXXXX kludge; remove this
-   entry_guard_has_higher_priority(NULL, NULL);
    entry_guard_encode_for_state(NULL);
    entry_guard_parse_from_state(NULL);
    tor_assert(0);
