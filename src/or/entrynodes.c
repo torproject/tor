@@ -2351,6 +2351,11 @@ entry_guard_get_by_id_digest_for_guard_selection(guard_selection_t *gs,
 {
   tor_assert(gs != NULL);
 
+  SMARTLIST_FOREACH(gs->sampled_entry_guards, entry_guard_t *, entry,
+                    if (tor_memeq(digest, entry->identity, DIGEST_LEN))
+                      return entry;
+                   );
+
   SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, entry,
                     if (tor_memeq(digest, entry->identity, DIGEST_LEN))
                       return entry;
