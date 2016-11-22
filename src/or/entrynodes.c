@@ -1347,6 +1347,29 @@ entry_guard_succeeded(guard_selection_t *gs,
   }
 }
 
+/** Cancel the selection of *<b>guard_state_p</b> without declaring
+ * success or failure. It is safe to call this function if success or
+ * failure _has_ already been declared. */
+void
+entry_guard_cancel(guard_selection_t *gs,
+                   circuit_guard_state_t **guard_state_p)
+{
+  (void) gs;
+  if (get_options()->UseDeprecatedGuardAlgorithm)
+    return;
+  if (BUG(*guard_state_p == NULL))
+    return;
+  entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
+  if (! guard)
+    return;
+
+  /* XXXX prop271 -- last_tried_to_connect_at will be erroneous here, but this
+   * function will only get called in "bug" cases anyway. */
+  guard->is_pending = 0;
+  circuit_guard_state_free(*guard_state_p);
+  *guard_state_p = NULL;
+}
+
 /**
  * Called by the circuit building module when a circuit has succeeded:
  * informs the guards code that the guard in *<b>guard_state_p</b> is

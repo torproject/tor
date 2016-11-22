@@ -322,6 +322,8 @@ int entry_guard_succeeded(guard_selection_t *gs,
                           circuit_guard_state_t **guard_state_p);
 void entry_guard_failed(guard_selection_t *gs,
                        circuit_guard_state_t **guard_state_p);
+void entry_guard_cancel(guard_selection_t *gs,
+                        circuit_guard_state_t **guard_state_p);
 void entry_guard_chan_failed(guard_selection_t *gs,
                             channel_t *chan);
 void entry_guards_update_all(guard_selection_t *gs);
