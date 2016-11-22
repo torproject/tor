@@ -3157,6 +3157,10 @@ typedef struct origin_circuit_t {
    * whether this circuit can be used. */
   struct circuit_guard_state_t *guard_state;
 
+  /** Index into global_origin_circuit_list for this circuit. -1 if not
+   * present. */
+  int global_origin_circuit_list_idx;
+
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */
   unsigned int remaining_relay_early_cells : 4;

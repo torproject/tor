@@ -85,6 +85,10 @@
 /** A global list of all circuits at this hop. */
 static smartlist_t *global_circuitlist = NULL;
 
+/** A global list of all origin circuits. Every element of this is also
+ * an element of global_circuitlist. */
+static smartlist_t *global_origin_circuit_list = NULL;
+
 /** A list of all the circuits in CIRCUIT_STATE_CHAN_WAIT. */
 static smartlist_t *circuits_pending_chans = NULL;
 
@@ -523,6 +527,19 @@ circuit_close_all_marked(void)
     }
     circ->global_circuitlist_idx = -1;
 
+    /* Remove it from the origin circuit list, if appropriate. */
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+      int origin_idx = origin_circ->global_origin_circuit_list_idx;
+      smartlist_del(global_origin_circuit_list, origin_idx);
+      if (origin_idx < smartlist_len(global_origin_circuit_list)) {
+        origin_circuit_t *replacement =
+          smartlist_get(global_origin_circuit_list, origin_idx);
+        replacement->global_origin_circuit_list_idx = origin_idx;
+      }
+      origin_circ->global_origin_circuit_list_idx = -1;
+    }
+
     circuit_about_to_free(circ);
     circuit_free(circ);
   } SMARTLIST_FOREACH_END(circ);
@@ -780,6 +797,13 @@ origin_circuit_new(void)
 
   init_circuit_base(TO_CIRCUIT(circ));
 
+  /* Add to origin-list. */
+  if (!global_origin_circuit_list)
+    global_origin_circuit_list = smartlist_new();
+  smartlist_add(global_origin_circuit_list, circ);
+  circ->global_origin_circuit_list_idx =
+    smartlist_len(global_origin_circuit_list) - 1;
+
   circuit_build_times_update_last_circ(get_circuit_build_times_mutable());
 
   return circ;
@@ -837,6 +861,18 @@ circuit_free(circuit_t *circ)
     mem = ocirc;
     memlen = sizeof(origin_circuit_t);
     tor_assert(circ->magic == ORIGIN_CIRCUIT_MAGIC);
+
+    if (ocirc->global_origin_circuit_list_idx != -1) {
+      int idx = ocirc->global_origin_circuit_list_idx;
+      origin_circuit_t *c2 = smartlist_get(global_origin_circuit_list, idx);
+      tor_assert(c2 == ocirc);
+      smartlist_del(global_origin_circuit_list, idx);
+      if (idx < smartlist_len(global_origin_circuit_list)) {
+        c2 = smartlist_get(global_origin_circuit_list, idx);
+        c2->global_origin_circuit_list_idx = idx;
+      }
+    }
+
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
         circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);
@@ -976,6 +1012,9 @@ circuit_free_all(void)
 
   smartlist_free(lst);
   global_circuitlist = NULL;
+
+  smartlist_free(global_origin_circuit_list);
+  global_origin_circuit_list = NULL;
 
   smartlist_free(circuits_pending_chans);
   circuits_pending_chans = NULL;
