@@ -156,6 +156,8 @@ static const node_t *choose_random_entry_impl(guard_selection_t *gs,
 static void entry_guard_set_filtered_flags(const or_options_t *options,
                                            guard_selection_t *gs,
                                            entry_guard_t *guard);
+static void pathbias_check_use_success_count(entry_guard_t *guard);
+static void pathbias_check_close_success_count(entry_guard_t *guard);
 
 /** Return 0 if we should apply guardfraction information found in the
  *  consensus. A specific consensus can be specified with the
@@ -1694,6 +1696,30 @@ entry_guard_encode_for_state(entry_guard_t *guard)
     smartlist_add_asprintf(result, "confirmed_idx=%d", guard->confirmed_idx);
   }
 
+  const double EPSILON = 1.0e-6;
+
+  /* Make a copy of the pathbias object, since we will want to update
+     some of them */
+  guard_pathbias_t *pb = tor_memdup(&guard->pb, sizeof(*pb));
+  pb->use_successes = pathbias_get_use_success_count(guard);
+  pb->successful_circuits_closed = pathbias_get_close_success_count(guard);
+
+  #define PB_FIELD(field) do {                                          \
+      if (pb->field >= EPSILON) {                                       \
+        smartlist_add_asprintf(result, "pb_" #field "=%f", pb->field);  \
+      }                                                                 \
+    } while (0)
+  PB_FIELD(use_attempts);
+  PB_FIELD(use_successes);
+  PB_FIELD(circ_attempts);
+  PB_FIELD(circ_successes);
+  PB_FIELD(successful_circuits_closed);
+  PB_FIELD(collapsed_circuits);
+  PB_FIELD(unusable_circuits);
+  PB_FIELD(timeouts);
+  tor_free(pb);
+#undef PB_FIELD
+
   if (guard->extra_state_fields)
     smartlist_add_strdup(result, guard->extra_state_fields);
 
@@ -1726,21 +1752,42 @@ entry_guard_parse_from_state(const char *s)
   char *confirmed_on = NULL;
   char *confirmed_idx = NULL;
 
+  // pathbias
+  char *pb_use_attempts = NULL;
+  char *pb_use_successes = NULL;
+  char *pb_circ_attempts = NULL;
+  char *pb_circ_successes = NULL;
+  char *pb_successful_circuits_closed = NULL;
+  char *pb_collapsed_circuits = NULL;
+  char *pb_unusable_circuits = NULL;
+  char *pb_timeouts = NULL;
+
   /* Split up the entries.  Put the ones we know about in strings and the
    * rest in "extra". */
   {
     smartlist_t *entries = smartlist_new();
 
     strmap_t *vals = strmap_new(); // Maps keyword to location
-    strmap_set(vals, "in", &in);
-    strmap_set(vals, "rsa_id", &rsa_id);
-    strmap_set(vals, "nickname", &nickname);
-    strmap_set(vals, "sampled_on", &sampled_on);
-    strmap_set(vals, "sampled_by", &sampled_by);
-    strmap_set(vals, "unlisted_since", &unlisted_since);
-    strmap_set(vals, "listed", &listed);
-    strmap_set(vals, "confirmed_on", &confirmed_on);
-    strmap_set(vals, "confirmed_idx", &confirmed_idx);
+#define FIELD(f) \
+    strmap_set(vals, #f, &f);
+    FIELD(in);
+    FIELD(rsa_id);
+    FIELD(nickname);
+    FIELD(sampled_on);
+    FIELD(sampled_by);
+    FIELD(unlisted_since);
+    FIELD(listed);
+    FIELD(confirmed_on);
+    FIELD(confirmed_idx);
+    FIELD(pb_use_attempts);
+    FIELD(pb_use_successes);
+    FIELD(pb_circ_attempts);
+    FIELD(pb_circ_successes);
+    FIELD(pb_successful_circuits_closed);
+    FIELD(pb_collapsed_circuits);
+    FIELD(pb_unusable_circuits);
+    FIELD(pb_timeouts);
+#undef FIELD
 
     smartlist_split_string(entries, s, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -1848,7 +1895,7 @@ entry_guard_parse_from_state(const char *s)
     int ok=1;
     long idx = tor_parse_long(confirmed_idx, 10, 0, INT_MAX, &ok, NULL);
     if (! ok) {
-      log_warn(LD_CIRC, "Guard has invalid confirmed_idx %s",
+      log_warn(LD_GUARD, "Guard has invalid confirmed_idx %s",
                escaped(confirmed_idx));
     } else {
       guard->confirmed_idx = (int)idx;
@@ -1863,7 +1910,34 @@ entry_guard_parse_from_state(const char *s)
   /* initialize non-persistent fields */
   guard->is_reachable = GUARD_REACHABLE_MAYBE;
 
-  /* XXXX prop271 Update everything on this guard. */
+#define PB_FIELD(field)                                                 \
+  do {                                                                  \
+    if (pb_ ## field) {                                                 \
+      int ok = 1;                                                       \
+      double r = tor_parse_double(pb_ ## field, 0.0, 1e9, &ok, NULL);   \
+      if (! ok) {                                                       \
+        log_warn(LD_CIRC, "Guard has invalid pb_%s %s",                 \
+                 #field, pb_ ## field);                                 \
+      } else {                                                          \
+        guard->pb.field = r;                                            \
+      }                                                                 \
+    }                                                                   \
+  } while (0)
+  PB_FIELD(use_attempts);
+  PB_FIELD(use_successes);
+  PB_FIELD(circ_attempts);
+  PB_FIELD(circ_successes);
+  PB_FIELD(successful_circuits_closed);
+  PB_FIELD(collapsed_circuits);
+  PB_FIELD(unusable_circuits);
+  PB_FIELD(timeouts);
+#undef PB_FIELD
+
+  pathbias_check_use_success_count(guard);
+  pathbias_check_close_success_count(guard);
+
+  /* We update everything on this guard later, after we've parsed
+   * everything.  */
 
   goto done;
 
@@ -1882,6 +1956,15 @@ entry_guard_parse_from_state(const char *s)
   tor_free(listed);
   tor_free(confirmed_on);
   tor_free(confirmed_idx);
+  tor_free(pb_use_attempts);
+  tor_free(pb_use_successes);
+  tor_free(pb_circ_attempts);
+  tor_free(pb_circ_successes);
+  tor_free(pb_successful_circuits_closed);
+  tor_free(pb_collapsed_circuits);
+  tor_free(pb_unusable_circuits);
+  tor_free(pb_timeouts);
+
   SMARTLIST_FOREACH(extra, char *, cp, tor_free(cp));
   smartlist_free(extra);
 
@@ -1912,8 +1995,6 @@ entry_guards_update_guards_in_state(or_state_t *state)
     gs->dirty = 0;
   } SMARTLIST_FOREACH_END(gs);
 
-  /* XXXXX prop271 circuitpathbias */
-
   config_free_lines(state->Guard);
   state->Guard = lines;
 }
@@ -1926,7 +2007,6 @@ entry_guards_update_guards_in_state(or_state_t *state)
 static int
 entry_guards_load_guards_from_state(or_state_t *state, int set)
 {
-  /* XXXXX prop271 circuitpathbias */
   const config_line_t *line = state->Guard;
   int n_errors = 0;
 
@@ -3282,6 +3362,42 @@ choose_random_entry_impl(guard_selection_t *gs,
   return node;
 }
 
+static void
+pathbias_check_use_success_count(entry_guard_t *node)
+{
+  const or_options_t *options = get_options();
+  /* Note: We rely on the < comparison here to allow us to set a 0
+   * rate and disable the feature entirely. If refactoring, don't
+   * change to <= */
+  if (pathbias_get_use_success_count(node)/node->pb.use_attempts
+      < pathbias_get_extreme_use_rate(options) &&
+      pathbias_get_dropguards(options)) {
+    node->pb.path_bias_disabled = 1;
+    log_info(LD_GENERAL,
+             "Path use bias is too high (%f/%f); disabling node %s",
+             node->pb.circ_successes, node->pb.circ_attempts,
+             node->nickname);
+  }
+}
+
+static void
+pathbias_check_close_success_count(entry_guard_t *node)
+{
+  const or_options_t *options = get_options();
+  /* Note: We rely on the < comparison here to allow us to set a 0
+   * rate and disable the feature entirely. If refactoring, don't
+   * change to <= */
+  if (pathbias_get_close_success_count(node)/node->pb.circ_attempts
+      < pathbias_get_extreme_rate(options) &&
+      pathbias_get_dropguards(options)) {
+    node->pb.path_bias_disabled = 1;
+    log_info(LD_GENERAL,
+             "Path bias is too high (%f/%f); disabling node %s",
+             node->pb.circ_successes, node->pb.circ_attempts,
+             node->nickname);
+  }
+}
+
 /** Parse <b>state</b> and learn about the entry guards it describes.
  * If <b>set</b> is true, and there are no errors, replace the guard
  * list in the provided guard selection context with what we find.
@@ -3386,7 +3502,6 @@ entry_guards_parse_state_for_guard_selection(
       }
       digestmap_set(added_by, d, tor_strdup(line->value+HEX_DIGEST_LEN+1));
     } else if (!strcasecmp(line->key, "EntryGuardPathUseBias")) {
-      const or_options_t *options = get_options();
       double use_cnt, success_cnt;
 
       if (!node) {
@@ -3423,20 +3538,9 @@ entry_guards_parse_state_for_guard_selection(
       log_info(LD_GENERAL, "Read %f/%f path use bias for node %s",
                node->pb.use_successes, node->pb.use_attempts, node->nickname);
 
-      /* Note: We rely on the < comparison here to allow us to set a 0
-       * rate and disable the feature entirely. If refactoring, don't
-       * change to <= */
-      if (pathbias_get_use_success_count(node)/node->pb.use_attempts
-            < pathbias_get_extreme_use_rate(options) &&
-          pathbias_get_dropguards(options)) {
-        node->pb.path_bias_disabled = 1;
-        log_info(LD_GENERAL,
-                 "Path use bias is too high (%f/%f); disabling node %s",
-                 node->pb.circ_successes, node->pb.circ_attempts,
-                 node->nickname);
-      }
+      pathbias_check_use_success_count(node);
+
     } else if (!strcasecmp(line->key, "EntryGuardPathBias")) {
-      const or_options_t *options = get_options();
       double hop_cnt, success_cnt, timeouts, collapsed, successful_closed,
                unusable;
 
@@ -3494,19 +3598,8 @@ entry_guards_parse_state_for_guard_selection(
       log_info(LD_GENERAL, "Read %f/%f path bias for node %s",
                node->pb.circ_successes, node->pb.circ_attempts,
                node->nickname);
-      /* Note: We rely on the < comparison here to allow us to set a 0
-       * rate and disable the feature entirely. If refactoring, don't
-       * change to <= */
-      if (pathbias_get_close_success_count(node)/node->pb.circ_attempts
-            < pathbias_get_extreme_rate(options) &&
-          pathbias_get_dropguards(options)) {
-        node->pb.path_bias_disabled = 1;
-        log_info(LD_GENERAL,
-                 "Path bias is too high (%f/%f); disabling node %s",
-                 node->pb.circ_successes, node->pb.circ_attempts,
-                 node->nickname);
-      }
 
+      pathbias_check_close_success_count(node);
     } else {
       log_warn(LD_BUG, "Unexpected key %s", line->key);
     }
