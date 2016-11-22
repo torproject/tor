@@ -1067,6 +1067,7 @@ needs_exit_circuits(time_t now, int *needs_uptime, int *needs_capacity)
           router_have_consensus_path() == CONSENSUS_PATH_EXIT);
 }
 
+/* Hidden services need at least this many internal circuits */
 #define SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS 3
 
 /* Return true if we need any more hidden service server circuits.
@@ -1079,7 +1080,11 @@ needs_hs_server_circuits(int num_uptime_internal)
           router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
 }
 
+/* We need at least this many internal circuits for hidden service clients */
 #define SUFFICIENT_INTERNAL_HS_CLIENTS 3
+
+/* We need at least this much uptime for internal circuits for hidden service
+ * clients */
 #define SUFFICIENT_UPTIME_INTERNAL_HS_CLIENTS 2
 
 /* Return true if we need any more hidden service client circuits.
@@ -1100,11 +1105,13 @@ needs_hs_client_circuits(time_t now, int *needs_uptime, int *needs_capacity,
           router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
 }
 
-/* Check to see if we still need more circuits to learn
- * a good build timeout. But if we're close to our max number we
- * want, don't do another -- we want to leave a few slots open so
- * we can still build circuits preemptively as needed. */
+/* The minimum number of open slots we should keep in order to preemptively
+ * build circuits. */
 #define CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS 2
+
+/* Check to see if we need more circuits to have a good build timeout. However,
+ * leave a couple slots open so that we can still build circuits preemptively
+ * as needed. */
 #define CBT_MAX_UNUSED_OPEN_CIRCUITS (MAX_UNUSED_OPEN_CIRCUITS - \
                                       CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS)
 
