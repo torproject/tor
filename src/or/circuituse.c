@@ -1123,9 +1123,8 @@ needs_circuits_for_build(int num)
 {
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
     if (num < CBT_MAX_UNUSED_OPEN_CIRCUITS &&
-        ! circuit_build_times_disabled() &&
-        circuit_build_times_needs_circuits_now(get_circuit_build_times()))
-    {
+        !circuit_build_times_disabled() &&
+        circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
       return 1;
     }
   }
