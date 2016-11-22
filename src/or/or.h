@@ -4618,8 +4618,11 @@ typedef struct {
   uint64_t AccountingBytesAtSoftLimit;
   uint64_t AccountingExpectedUsage;
 
-  /** A list of Entry Guard-related configuration lines. */
+  /** A list of Entry Guard-related configuration lines. (pre-prop271) */
   config_line_t *EntryGuards;
+
+  /** A list of guard-related configuration lines. (post-prop271) */
+  config_line_t *Guard;
 
   config_line_t *TransportProxies;
 

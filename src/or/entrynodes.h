@@ -121,6 +121,11 @@ struct entry_guard_t {
                       * item should occur in the CONFIRMED_GUARDS ordered
                       * list */
 
+  /**
+   * Which selection does this guard belong to?
+   */
+  char *selection_name;
+
   /* ==== Non-persistent fields. */
   /* == These are used by sampled guards */
   /** When did we last decide to try using this guard for a circuit? 0 for
@@ -202,6 +207,11 @@ struct entry_guard_t {
  * about guard selection algorithms.
  */
 struct guard_selection_s {
+  /**
+   * The name for this guard-selection object. (Must not contain spaces).
+   */
+  char *name;
+
   /**
    * A value of 1 means that guard_selection_t structures have changed
    * and those changes need to be flushed to disk.
@@ -398,7 +408,7 @@ int num_bridges_usable(void);
 
 // ---------- XXXX these functions and definitions are post-prop271.
 HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
-STATIC guard_selection_t *guard_selection_new(void);
+STATIC guard_selection_t *guard_selection_new(const char *name);
 STATIC void guard_selection_free(guard_selection_t *gs);
 STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
                                                 const uint8_t *rsa_id);
@@ -458,8 +468,6 @@ STATIC unsigned entry_guards_note_guard_success(guard_selection_t *gs,
                                                 entry_guard_t *guard,
                                                 unsigned old_state);
 STATIC int entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b);
-
-void entry_guards_DUMMY_ENTRY_POINT(void);
 
 // ---------- XXXX this stuff is pre-prop271.
 

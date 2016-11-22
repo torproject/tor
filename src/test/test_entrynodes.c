@@ -528,6 +528,8 @@ state_lines_free(smartlist_t *entry_guard_lines)
 static void
 test_entry_guards_parse_state_simple(void *arg)
 {
+  or_options_t *options = get_options_mutable();
+  options->UseDeprecatedGuardAlgorithm = 1;
   or_state_t *state = or_state_new();
   const smartlist_t *all_entry_guards = get_entry_guards();
   smartlist_t *entry_state_lines = smartlist_new();
@@ -622,6 +624,8 @@ test_entry_guards_parse_state_simple(void *arg)
 static void
 test_entry_guards_parse_state_pathbias(void *arg)
 {
+  or_options_t *options = get_options_mutable();
+  options->UseDeprecatedGuardAlgorithm = 1;
   or_state_t *state = or_state_new();
   const smartlist_t *all_entry_guards = get_entry_guards();
   char *msg = NULL;
@@ -1021,6 +1025,7 @@ test_entry_guard_encode_for_state_minimal(void *arg)
   (void) arg;
   entry_guard_t *eg = tor_malloc_zero(sizeof(entry_guard_t));
 
+  eg->selection_name = tor_strdup("wubwub");
   memcpy(eg->identity, "plurpyflurpyslurpydo", DIGEST_LEN);
   eg->sampled_on_date = 1479081600;
   eg->confirmed_idx = -1;
@@ -1029,6 +1034,7 @@ test_entry_guard_encode_for_state_minimal(void *arg)
   s = entry_guard_encode_for_state(eg);
 
   tt_str_op(s, OP_EQ,
+            "in=wubwub "
             "rsa_id=706C75727079666C75727079736C75727079646F "
             "sampled_on=2016-11-14T00:00:00 "
             "listed=0");
@@ -1045,6 +1051,7 @@ test_entry_guard_encode_for_state_maximal(void *arg)
   entry_guard_t *eg = tor_malloc_zero(sizeof(entry_guard_t));
 
   strlcpy(eg->nickname, "Fred", sizeof(eg->nickname));
+  eg->selection_name = tor_strdup("default");
   memcpy(eg->identity, "plurpyflurpyslurpydo", DIGEST_LEN);
   eg->sampled_on_date = 1479081600;
   eg->sampled_by_version = tor_strdup("1.2.3");
@@ -1058,6 +1065,7 @@ test_entry_guard_encode_for_state_maximal(void *arg)
   s = entry_guard_encode_for_state(eg);
 
   tt_str_op(s, OP_EQ,
+            "in=default "
             "rsa_id=706C75727079666C75727079736C75727079646F "
             "nickname=Fred "
             "sampled_on=2016-11-14T00:00:00 "
@@ -1082,9 +1090,11 @@ test_entry_guard_parse_from_state_minimal(void *arg)
   time_t t = approx_time();
 
   eg = entry_guard_parse_from_state(
+                 "in=default_plus "
                  "rsa_id=596f75206d6179206e656564206120686f626279");
   tt_assert(eg);
 
+  tt_str_op(eg->selection_name, OP_EQ, "default_plus");
   test_mem_op_hex(eg->identity, OP_EQ,
                   "596f75206d6179206e656564206120686f626279");
   tt_str_op(eg->nickname, OP_EQ, "$596F75206D6179206E656564206120686F626279");
@@ -1112,6 +1122,7 @@ test_entry_guard_parse_from_state_maximal(void *arg)
   entry_guard_t *eg = NULL;
 
   eg = entry_guard_parse_from_state(
+            "in=fred "
             "rsa_id=706C75727079666C75727079736C75727079646F "
             "nickname=Fred "
             "sampled_on=2016-11-14T00:00:00 "
@@ -1150,22 +1161,30 @@ test_entry_guard_parse_from_state_failure(void *arg)
   (void)arg;
   entry_guard_t *eg = NULL;
 
+  /* no selection */
+  eg = entry_guard_parse_from_state(
+                 "rsa_id=596f75206d6179206e656564206120686f626270");
+  tt_assert(! eg);
+
   /* no RSA ID. */
-  eg = entry_guard_parse_from_state("nickname=Fred");
+  eg = entry_guard_parse_from_state("in=default nickname=Fred");
   tt_assert(! eg);
 
   /* Bad RSA ID: bad character. */
   eg = entry_guard_parse_from_state(
+                 "in=default "
                  "rsa_id=596f75206d6179206e656564206120686f62627q");
   tt_assert(! eg);
 
   /* Bad RSA ID: too long.*/
   eg = entry_guard_parse_from_state(
+                 "in=default "
                  "rsa_id=596f75206d6179206e656564206120686f6262703");
   tt_assert(! eg);
 
   /* Bad RSA ID: too short.*/
   eg = entry_guard_parse_from_state(
+                 "in=default "
                  "rsa_id=596f75206d6179206e65656420612");
   tt_assert(! eg);
 
@@ -1182,6 +1201,7 @@ test_entry_guard_parse_from_state_partial_failure(void *arg)
   time_t t = approx_time();
 
   eg = entry_guard_parse_from_state(
+            "in=default "
             "rsa_id=706C75727079666C75727079736C75727079646F "
             "nickname=FredIsANodeWithAStrangeNicknameThatIsTooLong "
             "sampled_on=2016-11-14T00:00:99 "
@@ -1219,7 +1239,7 @@ static void
 test_entry_guard_add_single_guard(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
 
   /* 1: Add a single guard to the sample. */
   node_t *n1 = smartlist_get(big_fake_net_nodes, 0);
@@ -1259,7 +1279,7 @@ static void
 test_entry_guard_node_filter(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   bridge_line_t *bl = NULL;
 
   /* Initialize a bunch of node objects that are all guards. */
@@ -1334,7 +1354,7 @@ static void
 test_entry_guard_expand_sample(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   digestmap_t *node_by_id = digestmap_new();
 
   entry_guard_t *guard = entry_guards_expand_sample(gs);
@@ -1428,7 +1448,7 @@ static void
 test_entry_guard_expand_sample_small_net(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
 
   /* Fun corner case: not enough guards to make up our whole sample size. */
   SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
@@ -1461,7 +1481,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
   (void)arg;
   int i;
   time_t start = approx_time();
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   networkstatus_t *ns_tmp = NULL;
 
   /* Don't randomly backdate stuff; it will make correctness harder to check.*/
@@ -1566,7 +1586,7 @@ test_entry_guard_update_from_consensus_repair(void *arg)
   (void)arg;
   int i;
   time_t start = approx_time();
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
 
   /* Don't randomly backdate stuff; it will make correctness harder to check.*/
   MOCK(randomize_time, mock_randomize_time_no_randomization);
@@ -1629,7 +1649,7 @@ test_entry_guard_update_from_consensus_remove(void *arg)
 
   (void)arg;
   //int i;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   smartlist_t *keep_ids = smartlist_new();
   smartlist_t *remove_ids = smartlist_new();
 
@@ -1727,7 +1747,7 @@ test_entry_guard_confirming_guards(void *arg)
   (void)arg;
   /* Now let's check the logic responsible for manipulating the list
    * of confirmed guards */
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   MOCK(randomize_time, mock_randomize_time_no_randomization);
 
   /* Create the sample. */
@@ -1797,7 +1817,7 @@ static void
 test_entry_guard_sample_reachable_filtered(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   entry_guards_expand_sample(gs);
   const int N = 10000;
   bitarray_t *selected = NULL;
@@ -1867,7 +1887,7 @@ static void
 test_entry_guard_sample_reachable_filtered_empty(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   /* What if we try to sample from a set of 0? */
   SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n,
                     n->is_possible_guard = 0);
@@ -1883,7 +1903,7 @@ static void
 test_entry_guard_retry_unreachable(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
 
   entry_guards_expand_sample(gs);
   /* Let's say that we have two guards, and they're down.
@@ -1942,7 +1962,7 @@ static void
 test_entry_guard_manage_primary(void *arg)
 {
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   smartlist_t *prev_guards = smartlist_new();
 
   /* If no guards are confirmed, we should pick a few reachable guards and
@@ -2015,7 +2035,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
 {
   /* Simpler cases: no gaurds are confirmed yet. */
   (void)arg;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
 
   /* simple starting configuration */
   entry_guards_update_primary(gs);
@@ -2099,7 +2119,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
      guards, we use a confirmed guard. */
   (void)arg;
   int i;
-  guard_selection_t *gs = guard_selection_new();
+  guard_selection_t *gs = guard_selection_new("default");
   const int N_CONFIRMED = 10;
 
   /* slightly more complicated simple starting configuration */

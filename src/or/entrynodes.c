@@ -179,20 +179,53 @@ should_apply_guardfraction(const networkstatus_t *ns)
   return options->UseGuardFraction;
 }
 
-/** Allocate and return a new guard_selection_t */
-
+/**
+ * Allocate and return a new guard_selection_t, with the name <b>name</b>.
+ */
 STATIC guard_selection_t *
-guard_selection_new(void)
+guard_selection_new(const char *name)
 {
   guard_selection_t *gs;
 
   gs = tor_malloc_zero(sizeof(*gs));
+  gs->name = tor_strdup(name);
   gs->chosen_entry_guards = smartlist_new();
   gs->sampled_entry_guards = smartlist_new();
   gs->confirmed_entry_guards = smartlist_new();
   gs->primary_entry_guards = smartlist_new();
 
   return gs;
+}
+
+/**
+ * Return the guard selection called <b>name</b>. If there is none, and
+ * <b>create_if_absent</b> is true, then create and return it.  If there
+ * is none, and <b>create_if_absent</b> is false, then return NULL.
+ */
+static guard_selection_t *
+get_guard_selection_by_name(const char *name, int create_if_absent)
+{
+  if (!guard_contexts) {
+    guard_contexts = smartlist_new();
+  }
+  SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+    if (!strcmp(gs->name, name))
+      return gs;
+  } SMARTLIST_FOREACH_END(gs);
+
+  if (! create_if_absent)
+    return NULL;
+
+  guard_selection_t *new_selection = guard_selection_new(name);
+  smartlist_add(guard_contexts, new_selection);
+
+  const char *default_name = get_options()->UseDeprecatedGuardAlgorithm ?
+    "legacy" : "default";
+
+  if (!strcmp(name, default_name))
+    curr_guard_context = new_selection;
+
+  return new_selection;
 }
 
 /** Get current default guard_selection_t, creating it if necessary */
@@ -204,7 +237,9 @@ get_guard_selection_info(void)
   }
 
   if (!curr_guard_context) {
-    curr_guard_context = guard_selection_new();
+    const char *name = get_options()->UseDeprecatedGuardAlgorithm ?
+      "legacy" : "default";
+    curr_guard_context = guard_selection_new(name);
     smartlist_add(guard_contexts, curr_guard_context);
   }
 
@@ -355,6 +390,7 @@ entry_guard_add_to_sample(guard_selection_t *gs,
   entry_guard_t *guard = tor_malloc_zero(sizeof(entry_guard_t));
 
   /* persistent fields */
+  guard->selection_name = tor_strdup(gs->name);
   memcpy(guard->identity, node->identity, DIGEST_LEN);
   strlcpy(guard->nickname, node_get_nickname(node), sizeof(guard->nickname));
   guard->sampled_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
@@ -691,8 +727,9 @@ entry_guard_passes_filter(const or_options_t *options, guard_selection_t *gs,
     return 0;
 
   const node_t *node = node_get_by_id(guard->identity);
-  if (BUG(node == NULL)) {
-    // should be impossible, since currently_listed was true.
+  if (node == NULL) {
+    // This can happen when currently_listed is true, and we're not updating
+    // it because we don't have a live consensus.
     return 0;
   }
 
@@ -1627,6 +1664,7 @@ entry_guard_encode_for_state(entry_guard_t *guard)
 
   tor_assert(guard);
 
+  smartlist_add_asprintf(result, "in=%s", guard->selection_name);
   smartlist_add_asprintf(result, "rsa_id=%s",
                          hex_str(guard->identity, DIGEST_LEN));
   if (strlen(guard->nickname)) {
@@ -1678,6 +1716,7 @@ entry_guard_parse_from_state(const char *s)
   smartlist_t *extra = smartlist_new();
 
   /* These fields get parsed from the string. */
+  char *in = NULL;
   char *rsa_id = NULL;
   char *nickname = NULL;
   char *sampled_on = NULL;
@@ -1693,6 +1732,7 @@ entry_guard_parse_from_state(const char *s)
     smartlist_t *entries = smartlist_new();
 
     strmap_t *vals = strmap_new(); // Maps keyword to location
+    strmap_set(vals, "in", &in);
     strmap_set(vals, "rsa_id", &rsa_id);
     strmap_set(vals, "nickname", &nickname);
     strmap_set(vals, "sampled_on", &sampled_on);
@@ -1730,6 +1770,14 @@ entry_guard_parse_from_state(const char *s)
   }
 
   entry_guard_t *guard = tor_malloc_zero(sizeof(entry_guard_t));
+
+  if (in == NULL) {
+    log_warn(LD_CIRC, "Guard missing 'in' field");
+    goto err;
+  }
+
+  guard->selection_name = in;
+  in = NULL;
 
   if (rsa_id == NULL) {
     log_warn(LD_CIRC, "Guard missing RSA ID field");
@@ -1825,6 +1873,7 @@ entry_guard_parse_from_state(const char *s)
   guard = NULL;
 
  done:
+  tor_free(in);
   tor_free(rsa_id);
   tor_free(nickname);
   tor_free(sampled_on);
@@ -1839,16 +1888,95 @@ entry_guard_parse_from_state(const char *s)
   return guard;
 }
 
-/* XXXXprop271 This is a dummy function added for now so that all of the
- *  new guard code will be counted as reachable. It should get removed.
+/**
+ * Replace the Guards entries in <b>state</b> with a list of all our
+ * non-legacy sampled guards.
  */
-__attribute__((noreturn)) void
-entry_guards_DUMMY_ENTRY_POINT(void)
+static void
+entry_guards_update_guards_in_state(or_state_t *state)
 {
-  // prop271 XXXXX kludge; remove this
-   entry_guard_encode_for_state(NULL);
-   entry_guard_parse_from_state(NULL);
-   tor_assert(0);
+  if (!guard_contexts)
+    return;
+  config_line_t *lines = NULL;
+  config_line_t **nextline = &lines;
+
+  SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+    if (!strcmp(gs->name, "legacy"))
+      continue; /* This is encoded differently. */
+    SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+      *nextline = tor_malloc_zero(sizeof(config_line_t));
+      (*nextline)->key = tor_strdup("Guard");
+      (*nextline)->value = entry_guard_encode_for_state(guard);
+      nextline = &(*nextline)->next;
+    } SMARTLIST_FOREACH_END(guard);
+    gs->dirty = 0;
+  } SMARTLIST_FOREACH_END(gs);
+
+  /* XXXXX prop271 circuitpathbias */
+
+  config_free_lines(state->Guard);
+  state->Guard = lines;
+}
+
+/**
+ * Replace our non-legacy sampled guards from the Guards entries in
+ * <b>state</b>. Return 0 on success, -1 on failure. (If <b>set</b> is
+ * true, replace nothing -- only check whether replacing would work.)
+ */
+static int
+entry_guards_load_guards_from_state(or_state_t *state, int set)
+{
+  /* XXXXX prop271 circuitpathbias */
+  const config_line_t *line = state->Guard;
+  int n_errors = 0;
+
+  if (!guard_contexts)
+    guard_contexts = smartlist_new();
+
+  /* Wipe all our existing guard info. (we shouldn't have any, but
+   * let's be safe.) */
+  if (set) {
+    SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+      if (!strcmp(gs->name, "legacy"))
+        continue;
+      guard_selection_free(gs);
+      if (curr_guard_context == gs)
+        curr_guard_context = NULL;
+      SMARTLIST_DEL_CURRENT(guard_contexts, gs);
+    } SMARTLIST_FOREACH_END(gs);
+  }
+
+  for ( ; line != NULL; line = line->next) {
+    entry_guard_t *guard = entry_guard_parse_from_state(line->value);
+    if (guard == NULL) {
+      ++n_errors;
+      continue;
+    }
+    tor_assert(guard->selection_name);
+    if (!strcmp(guard->selection_name, "legacy")) {
+      ++n_errors;
+      entry_guard_free(guard);
+      continue;
+    }
+
+    if (set) {
+      guard_selection_t *gs;
+      gs = get_guard_selection_by_name(guard->selection_name, 1);
+      tor_assert(gs);
+      smartlist_add(gs->sampled_entry_guards, guard);
+    } else {
+      entry_guard_free(guard);
+    }
+  }
+
+  if (set) {
+    SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+      if (!strcmp(gs->name, "legacy"))
+        continue;
+      entry_guards_update_all(gs);
+    } SMARTLIST_FOREACH_END(gs);
+  }
+  return n_errors ? -1 : 0;
 }
 
 /* XXXXX ----------------------------------------------- */
@@ -2403,6 +2531,7 @@ entry_guard_free(entry_guard_t *e)
   tor_free(e->chosen_by_version);
   tor_free(e->sampled_by_version);
   tor_free(e->extra_state_fields);
+  tor_free(e->selection_name);
   tor_free(e);
 }
 
@@ -3436,9 +3565,19 @@ entry_guards_parse_state_for_guard_selection(
 int
 entry_guards_parse_state(or_state_t *state, int set, char **msg)
 {
-  return entry_guards_parse_state_for_guard_selection(
-      get_guard_selection_info(),
+  int r1 = entry_guards_load_guards_from_state(state, set);
+
+  int r2 = entry_guards_parse_state_for_guard_selection(
+      get_guard_selection_by_name("legacy", 1),
       state, set, msg);
+
+  if (r1 < 0 || r2 < 0) {
+    if (msg && *msg == NULL) {
+      *msg = tor_strdup("parsing error"); //xxxx prop271 should we try harder?
+    }
+    return -1;
+  }
+  return 0;
 }
 
 /** How long will we let a change in our guard nodes stay un-saved
@@ -3466,7 +3605,9 @@ entry_guards_changed_for_guard_selection(guard_selection_t *gs)
   else
     when = time(NULL) + FAST_GUARD_STATE_FLUSH_TIME;
 
-  /* or_state_save() will call entry_guards_update_state(). */
+  /* or_state_save() will call entry_guards_update_state() and
+     entry_guards_update_guards_in_state()
+  */
   or_state_mark_dirty(get_or_state(), when);
 }
 
@@ -3494,11 +3635,14 @@ void
 entry_guards_update_state(or_state_t *state)
 {
   config_line_t **next, *line;
-  guard_selection_t *gs = get_guard_selection_info();
 
-  tor_assert(gs != NULL);
+  // Handles all non-legacy guard info.
+  entry_guards_update_guards_in_state(state);
+
+  guard_selection_t *gs = get_guard_selection_by_name("legacy", 0);
+  if (!gs)
+    return; // nothign to save.
   tor_assert(gs->chosen_entry_guards != NULL);
-
   if (!gs->dirty)
     return;
 
@@ -3834,6 +3978,8 @@ STATIC void
 guard_selection_free(guard_selection_t *gs)
 {
   if (!gs) return;
+
+  tor_free(gs->name);
 
   if (gs->chosen_entry_guards) {
     SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, e,
