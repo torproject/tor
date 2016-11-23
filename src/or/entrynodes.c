@@ -539,7 +539,9 @@ remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
       found_guard = smartlist_get(gs->confirmed_entry_guards,
                                   guard->confirmed_idx);
     if (BUG(guard != found_guard)) {
+      // LCOV_EXCL_START
       smartlist_remove_keeporder(gs->confirmed_entry_guards, guard);
+      // LCOV_EXCL_STOP
     } else {
       smartlist_del_keeporder(gs->confirmed_entry_guards,
                               guard->confirmed_idx);
@@ -548,7 +550,9 @@ remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
     guard->confirmed_on_date = 0;
   } else {
     if (BUG(smartlist_contains(gs->confirmed_entry_guards, guard))) {
+      // LCOV_EXCL_START
       smartlist_remove_keeporder(gs->confirmed_entry_guards, guard);
+      // LCOV_EXCL_STOP
     }
   }
 }
@@ -903,10 +907,10 @@ STATIC void
 make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
 {
   if (BUG(guard->confirmed_on_date && guard->confirmed_idx >= 0))
-    return;
+    return; // LCOV_EXCL_LINE
 
   if (BUG(smartlist_contains(gs->confirmed_entry_guards, guard)))
-    return;
+    return; // LCOV_EXCL_LINE
 
   const int GUARD_LIFETIME = GUARD_LIFETIME_DAYS * 86400;
   guard->confirmed_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
