@@ -79,9 +79,6 @@
  **/
 /* DOCDOC -- expand this.
  *
- * XXXX prop271 -- make sure we check all of these properties everywhere we
- * should.
- *
  * Information invariants:
  *
  * [x] whenever a guard becomes unreachable, clear its usable_filtered flag.
@@ -100,11 +97,11 @@
  * [x] Whenever we remove a guard from the sample, remove it from the primary
  * and confirmed lists.
  *
- * [ ] When we make a guard confirmed, update the primary list.
+ * [x] When we make a guard confirmed, update the primary list.
  *
- * [ ] When we make a guard filtered or unfiltered, update the primary list.
+ * [x] When we make a guard filtered or unfiltered, update the primary list.
  *
- * [ ] When we are about to pick a guard, make sure that the primary list is
+ * [x] When we are about to pick a guard, make sure that the primary list is
  * full.
  *
  * [x] Before calling sample_reachable_filtered_entry_guards(), make sure
@@ -682,9 +679,12 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   } SMARTLIST_FOREACH_END(guard);
 
   if (n_changes) {
-    /* Regnerate other things. XXXXXX prop271 */
-    // XXXX prop271 rebuild confirmed list.
+    gs->primary_guards_up_to_date = 0;
     entry_guards_update_filtered_sets(gs);
+    /* We don't need to rebuild the confirmed list right here -- we may have
+     * removed confirmed guards above, but we can't have added any new
+     * confirmed guards.
+     */
     entry_guards_changed_for_guard_selection(gs);
   }
 }
@@ -749,6 +749,7 @@ entry_guard_set_filtered_flags(const or_options_t *options,
                                guard_selection_t *gs,
                                entry_guard_t *guard)
 {
+  unsigned was_filtered = guard->is_filtered_guard;
   guard->is_filtered_guard = 0;
   guard->is_usable_filtered_guard = 0;
 
@@ -763,6 +764,11 @@ entry_guard_set_filtered_flags(const or_options_t *options,
   log_debug(LD_GUARD, "Updated sampled guard %s: filtered=%d; "
             "reachable_filtered=%d.", entry_guard_describe(guard),
             guard->is_filtered_guard, guard->is_usable_filtered_guard);
+
+  if (!bool_eq(was_filtered, guard->is_filtered_guard)) {
+    /* This guard might now be primary or nonprimary. */
+    gs->primary_guards_up_to_date = 0;
+  }
 }
 
 /**
@@ -795,6 +801,7 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
   const unsigned exclude_confirmed = flags & SAMPLE_EXCLUDE_CONFIRMED;
   const unsigned exclude_primary = flags & SAMPLE_EXCLUDE_PRIMARY;
   const unsigned exclude_pending = flags & SAMPLE_EXCLUDE_PENDING;
+  const unsigned no_update_primary = flags & SAMPLE_NO_UPDATE_PRIMARY;
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
@@ -809,6 +816,9 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
     log_info(LD_GUARD, "  (That isn't enough. Trying to expand the sample.)");
     entry_guards_expand_sample(gs);
   }
+
+  if (exclude_primary && !gs->primary_guards_up_to_date && !no_update_primary)
+    entry_guards_update_primary(gs);
 
   /* Build the set of reachable filtered guards. */
   smartlist_t *reachable_filtered_sample = smartlist_new();
@@ -908,23 +918,33 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
   guard->confirmed_idx = gs->next_confirmed_idx++;
   smartlist_add(gs->confirmed_entry_guards, guard);
 
+  // This confirmed guard might kick something else out of the primary
+  // guards.
+  gs->primary_guards_up_to_date = 0;
+
   entry_guards_changed_for_guard_selection(gs);
 }
 
 /**
  * Recalculate the list of primary guards (the ones we'd prefer to use) from
  * the filtered sample and the confirmed list.
- *
- * XXXXX prop271 are calling this enough ???
  */
 STATIC void
 entry_guards_update_primary(guard_selection_t *gs)
 {
   tor_assert(gs);
 
+  // prevent recursion. Recursion is potentially very bad here.
+  static int running = 0;
+  tor_assert(!running);
+  running = 1;
+
   smartlist_t *new_primary_guards = smartlist_new();
   smartlist_t *old_primary_guards = smartlist_new();
   smartlist_add_all(old_primary_guards, gs->primary_entry_guards);
+
+  /* Set this flag now, to prevent the calls below from recursing. */
+  gs->primary_guards_up_to_date = 1;
 
   /* First, can we fill it up with confirmed guards? */
   SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards, entry_guard_t *, guard) {
@@ -964,7 +984,8 @@ entry_guards_update_primary(guard_selection_t *gs)
   while (smartlist_len(new_primary_guards) < N_PRIMARY_GUARDS) {
     entry_guard_t *guard = sample_reachable_filtered_entry_guards(gs,
                                             SAMPLE_EXCLUDE_CONFIRMED|
-                                            SAMPLE_EXCLUDE_PRIMARY);
+                                            SAMPLE_EXCLUDE_PRIMARY|
+                                            SAMPLE_NO_UPDATE_PRIMARY);
     if (!guard)
       break;
     guard->is_primary = 1;
@@ -1007,6 +1028,8 @@ entry_guards_update_primary(guard_selection_t *gs)
   smartlist_free(old_primary_guards);
   smartlist_free(gs->primary_entry_guards);
   gs->primary_entry_guards = new_primary_guards;
+  gs->primary_guards_up_to_date = 1;
+  running = 0;
 }
 
 /**
@@ -1104,6 +1127,9 @@ select_entry_guard_for_circuit(guard_selection_t *gs, unsigned *state_out)
   tor_assert(gs);
   tor_assert(state_out);
 
+  if (!gs->primary_guards_up_to_date)
+    entry_guards_update_primary(gs);
+
   /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of
       <maybe> or <yes>, return the first such guard." */
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
@@ -1191,6 +1217,9 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
 STATIC void
 mark_primary_guards_maybe_reachable(guard_selection_t *gs)
 {
+  if (!gs->primary_guards_up_to_date)
+    entry_guards_update_primary(gs);
+
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
     if (guard->is_reachable != GUARD_REACHABLE_NO)
       continue;
@@ -1230,7 +1259,6 @@ entry_guards_note_guard_success(guard_selection_t *gs,
     guard->is_usable_filtered_guard = 1;
 
   if (guard->confirmed_idx < 0) {
-    // XXXX prop271 XXXX update primary guards, since we confirmed something?
     make_guard_confirmed(gs, guard);
   }
 
@@ -1247,9 +1275,6 @@ entry_guards_note_guard_success(guard_selection_t *gs,
       mark_primary_guards_maybe_reachable(gs);
     }
   }
-
-  // XXXX prop271 XXXX update primary guards, since we confirmed something?
-  // XXXX prop261 XXXX if so, here or above?
 
   log_info(LD_GUARD, "Recorded success for %s%sguard %s",
            guard->is_primary?"primary ":"",
@@ -1468,8 +1493,9 @@ entry_guard_chan_failed(guard_selection_t *gs,
 static int
 entry_guards_all_primary_guards_are_down(guard_selection_t *gs)
 {
-  /* XXXXX prop271 do we have to call entry_guards_update_primary() ?? */
   tor_assert(gs);
+  if (!gs->primary_guards_up_to_date)
+    entry_guards_update_primary(gs);
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
     if (guard->is_reachable != GUARD_REACHABLE_NO)

@@ -1839,6 +1839,7 @@ test_entry_guard_sample_reachable_filtered(void *arg)
   g->pb.path_bias_disabled = 1;
 
   entry_guards_update_filtered_sets(gs);
+  gs->primary_guards_up_to_date = 1;
   tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, n_guards - 1);
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_guards);
 
@@ -1851,7 +1852,7 @@ test_entry_guard_sample_reachable_filtered(void *arg)
   } tests[] = {
     { 0, -1 },
     { SAMPLE_EXCLUDE_CONFIRMED, 1 },
-    { SAMPLE_EXCLUDE_PRIMARY, 2 },
+    { SAMPLE_EXCLUDE_PRIMARY|SAMPLE_NO_UPDATE_PRIMARY, 2 },
     { SAMPLE_EXCLUDE_PENDING, 0 },
     { -1, -1},
   };

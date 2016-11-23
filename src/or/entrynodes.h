@@ -223,6 +223,13 @@ struct guard_selection_s {
   int dirty;
 
   /**
+   * A value of 1 means that primary_entry_guards is up-to-date; 0
+   * means we need to recalculate it before using primary_entry_guards
+   * or the is_primary flag on any guard.
+   */
+  int primary_guards_up_to_date;
+
+  /**
    * A list of the sampled entry guards, as entry_guard_t structures.
    * Not in any particular order.  When we 'sample' a guard, we are
    * noting it as a possible guard to pick in the future. The use of
@@ -428,6 +435,7 @@ STATIC void entry_guards_update_filtered_sets(guard_selection_t *gs);
 #define SAMPLE_EXCLUDE_CONFIRMED   (1u<<0)
 #define SAMPLE_EXCLUDE_PRIMARY     (1u<<1)
 #define SAMPLE_EXCLUDE_PENDING     (1u<<2)
+#define SAMPLE_NO_UPDATE_PRIMARY   (1u<<3)
 /**@}*/
 STATIC entry_guard_t *sample_reachable_filtered_entry_guards(
                                     guard_selection_t *gs,
