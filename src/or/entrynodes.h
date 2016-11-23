@@ -416,6 +416,8 @@ int num_bridges_usable(void);
 // ---------- XXXX these functions and definitions are post-prop271.
 HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
 STATIC guard_selection_t *guard_selection_new(const char *name);
+STATIC guard_selection_t *get_guard_selection_by_name(
+                                    const char *name, int create_if_absent);
 STATIC void guard_selection_free(guard_selection_t *gs);
 STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
                                                 const uint8_t *rsa_id);

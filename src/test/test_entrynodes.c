@@ -1236,6 +1236,52 @@ test_entry_guard_parse_from_state_partial_failure(void *arg)
 }
 
 static void
+test_entry_guard_get_guard_selection_by_name(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs1, *gs2, *gs3;
+
+  gs1 = get_guard_selection_by_name("unlikely", 0);
+  tt_assert(gs1 == NULL);
+  gs1 = get_guard_selection_by_name("unlikely", 1);
+  tt_assert(gs1 != NULL);
+  gs2 = get_guard_selection_by_name("unlikely", 1);
+  tt_assert(gs2 == gs1);
+  gs2 = get_guard_selection_by_name("unlikely", 0);
+  tt_assert(gs2 == gs1);
+
+  gs2 = get_guard_selection_by_name("implausible", 0);
+  tt_assert(gs2 == NULL);
+  gs2 = get_guard_selection_by_name("implausible", 1);
+  tt_assert(gs2 != NULL);
+  tt_assert(gs2 != gs1);
+  gs3 = get_guard_selection_by_name("implausible", 0);
+  tt_assert(gs3 == gs2);
+
+  gs3 = get_guard_selection_by_name("default", 0);
+  tt_assert(gs3 == NULL);
+  gs3 = get_guard_selection_by_name("default", 1);
+  tt_assert(gs3 != NULL);
+  tt_assert(gs3 != gs2);
+  tt_assert(gs3 != gs1);
+  tt_assert(gs3 == get_guard_selection_info());
+
+#if 0
+  or_options_t *options = get_options_mutable();
+  options->UseDeprecatedGuardAlgorithm = 1;
+  gs4 = get_guard_selection_info();
+  tt_assert(gs4 != gs3);
+  tt_assert(gs4 == get_guard_selection_by_name("legacy", 1));
+
+  options->UseDeprecatedGuardAlgorithm = 0;
+  tt_assert(gs3 == get_guard_selection_info());
+#endif
+
+ done:
+  entry_guards_free_all();
+}
+
+static void
 test_entry_guard_add_single_guard(void *arg)
 {
   (void)arg;
@@ -2245,6 +2291,8 @@ struct testcase_t entrynodes_tests[] = {
     test_entry_guard_parse_from_state_failure, 0, NULL, NULL },
   { "parse_from_state_partial_failure",
     test_entry_guard_parse_from_state_partial_failure, 0, NULL, NULL },
+  { "get_guard_selection_by_name",
+    test_entry_guard_get_guard_selection_by_name, TT_FORK, NULL, NULL },
   BFN_TEST(add_single_guard),
   BFN_TEST(node_filter),
   BFN_TEST(expand_sample),

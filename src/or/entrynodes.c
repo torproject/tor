@@ -201,7 +201,7 @@ guard_selection_new(const char *name)
  * <b>create_if_absent</b> is true, then create and return it.  If there
  * is none, and <b>create_if_absent</b> is false, then return NULL.
  */
-static guard_selection_t *
+STATIC guard_selection_t *
 get_guard_selection_by_name(const char *name, int create_if_absent)
 {
   if (!guard_contexts) {
