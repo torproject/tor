@@ -5,6 +5,7 @@ import sys
 import copy
 import cPickle
 import os
+import random
 
 class Parser:
   def __init__(self):
@@ -54,7 +55,7 @@ def transitive_closure(g):
     passno = 0
     changed = True
     g = copy.deepcopy(g)
-    import random
+    #import random
     while changed:
       passno += 1
       changed = False
@@ -71,7 +72,7 @@ def transitive_closure(g):
             g[k].update( newset )
             changed = True
 
-      print
+      #print
 
     return g
 
