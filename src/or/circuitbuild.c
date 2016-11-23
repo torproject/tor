@@ -965,7 +965,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     if (!hop) {
       /* done building the circuit. whew. */
       int r;
-      if (! circ->guard_state) {
+      if (get_options()->UseDeprecatedGuardAlgorithm) {
+        // The circuit is usable; we already marked the guard as okay.
+        r = 1;
+      } else if (! circ->guard_state) {
         if (circuit_get_cpath_len(circ) != 1) {
           log_warn(LD_BUG, "%d-hop circuit %p with purpose %d has no "
                    "guard state",
