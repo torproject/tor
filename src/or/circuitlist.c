@@ -885,6 +885,11 @@ circuit_free(circuit_t *circ)
         cpath_ref_decref(ocirc->build_state->service_pending_final_cpath_ref);
     }
     tor_free(ocirc->build_state);
+
+    /* Cancel before freeing, if we haven't already succeeded or failed. */
+    if (ocirc->guard_state) {
+      entry_guard_cancel(get_guard_selection_info(), &ocirc->guard_state);
+    }
     circuit_guard_state_free(ocirc->guard_state);
 
     circuit_clear_cpath(ocirc);
