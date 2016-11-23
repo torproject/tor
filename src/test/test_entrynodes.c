@@ -1391,6 +1391,20 @@ test_entry_guard_node_filter(void *arg)
   }
   tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, 1);
 
+  /* Now make sure we have no live consensus, and no nodes.  Nothing should
+   * pass the filter any more. */
+  tor_free(dummy_consensus);
+  dummy_consensus = NULL;
+  SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, node, {
+    memset(node->identity, 0xff, 20);
+  });
+  entry_guards_update_filtered_sets(gs);
+  for (i = 0; i < NUM; ++i) {
+    tt_assert(g[i]->is_filtered_guard == 0);
+    tt_assert(g[i]->is_usable_filtered_guard == 0);
+  }
+  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, 0);
+
  done:
   guard_selection_free(gs);
   tor_free(bl);
