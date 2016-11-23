@@ -979,7 +979,10 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 
     /* if we have enough dir info, then update our guard status with
      * whatever we just learned. */
-    guards_update_all();
+    int invalidate_circs = guards_update_all();
+    // This shouldn't be able to occur at this point.
+    tor_assert_nonfatal(! invalidate_circs);
+
     /* Don't even bother trying to get extrainfo until the rest of our
      * directory info is up-to-date */
     if (options->DownloadExtraInfo)

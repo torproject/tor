@@ -91,7 +91,7 @@
  *
  * [x] Whenever we get a new consensus, call update_from_consensus(). (LATER.)
  *
- * [ ] Whenever the configuration changes in a relevant way, update the
+ * [x] Whenever the configuration changes in a relevant way, update the
  * filtered/usable flags. (LATER.)
  *
  * [x] Whenever we add a guard to the sample, make sure its filtered/usable
@@ -696,6 +696,9 @@ static int
 node_passes_guard_filter(const or_options_t *options, guard_selection_t *gs,
                          const node_t *node)
 {
+  /* NOTE: Make sure that this function stays in sync with
+   * options_transition_affects_entry_guards */
+
   (void)gs;
   if (routerset_contains_node(options->ExcludeNodes, node))
     return 0;
@@ -1636,14 +1639,16 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
 
 /**
  * Update all derived pieces of the guard selection state in <b>gs</b>.
+ * Return true iff we should stop using all previously generated circuits.
  */
-void
+int
 entry_guards_update_all(guard_selection_t *gs)
 {
   sampled_guards_update_from_consensus(gs);
   entry_guards_update_filtered_sets(gs);
   entry_guards_update_confirmed(gs);
   entry_guards_update_primary(gs);
+  return 0;
 }
 
 /**
@@ -4020,14 +4025,16 @@ entries_retry_all(const or_options_t *options)
 }
 
 /** Helper: Update the status of all entry guards, in whatever algorithm
-    is used. */
-void
+ * is used. Return true if we should stop using all previously generated
+ * circuits. */
+int
 guards_update_all(void)
 {
   if (get_options()->UseDeprecatedGuardAlgorithm) {
     entry_guards_compute_status(get_options(), approx_time());
+    return 0;
   } else {
-    entry_guards_update_all(get_guard_selection_info());
+    return entry_guards_update_all(get_guard_selection_info());
   }
 }
 

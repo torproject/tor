@@ -294,7 +294,7 @@ struct circuit_guard_state_t {
 #endif
 
 /* Common entry points for old and new guard code */
-void guards_update_all(void);
+int guards_update_all(void);
 const node_t *guards_choose_guard(cpath_build_state_t *state,
                                   circuit_guard_state_t **guard_state_out);
 const node_t *guards_choose_dirguard(dirinfo_type_t info,
@@ -336,7 +336,7 @@ void entry_guard_cancel(guard_selection_t *gs,
                         circuit_guard_state_t **guard_state_p);
 void entry_guard_chan_failed(guard_selection_t *gs,
                             channel_t *chan);
-void entry_guards_update_all(guard_selection_t *gs);
+int entry_guards_update_all(guard_selection_t *gs);
 int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
                                           const smartlist_t *all_circuits,
                                           smartlist_t *newly_complete_out);
