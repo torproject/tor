@@ -145,6 +145,10 @@
 static smartlist_t *guard_contexts = NULL;
 static guard_selection_t *curr_guard_context = NULL;
 
+/** A value of 1 means that at least one context has changed,
+ * and those changes need to be flushed to disk. */
+static int entry_guards_dirty = 0;
+
 static const node_t *choose_random_entry_impl(guard_selection_t *gs,
                                               cpath_build_state_t *state,
                                               int for_directory,
@@ -2027,7 +2031,6 @@ entry_guards_update_guards_in_state(or_state_t *state)
       (*nextline)->value = entry_guard_encode_for_state(guard);
       nextline = &(*nextline)->next;
     } SMARTLIST_FOREACH_END(guard);
-    gs->dirty = 0;
   } SMARTLIST_FOREACH_END(gs);
 
   config_free_lines(state->Guard);
@@ -3685,11 +3688,11 @@ entry_guards_parse_state_for_guard_selection(
       smartlist_free(gs->chosen_entry_guards);
     }
     gs->chosen_entry_guards = new_entry_guards;
-    gs->dirty = 0;
+
     /* XXX hand new_entry_guards to this func, and move it up a
      * few lines, so we don't have to re-dirty it */
     if (remove_obsolete_entry_guards(gs, now))
-      gs->dirty = 1;
+      entry_guards_dirty = 1;
   }
   digestmap_free(added_by, tor_free_);
   return *msg ? -1 : 0;
@@ -3704,11 +3707,15 @@ entry_guards_parse_state_for_guard_selection(
 int
 entry_guards_parse_state(or_state_t *state, int set, char **msg)
 {
+  entry_guards_dirty = 0;
+
   int r1 = entry_guards_load_guards_from_state(state, set);
 
   int r2 = entry_guards_parse_state_for_guard_selection(
       get_guard_selection_by_name("legacy", 1),
       state, set, msg);
+
+  entry_guards_dirty = 0;
 
   if (r1 < 0 || r2 < 0) {
     if (msg && *msg == NULL) {
@@ -3737,7 +3744,7 @@ entry_guards_changed_for_guard_selection(guard_selection_t *gs)
 
   tor_assert(gs != NULL);
 
-  gs->dirty = 1;
+  entry_guards_dirty = 1;
 
   if (get_options()->AvoidDiskWrites)
     when = time(NULL) + SLOW_GUARD_STATE_FLUSH_TIME;
@@ -3764,26 +3771,23 @@ entry_guards_changed(void)
  * Otherwise, free the EntryGuards piece of <b>state</b> and create
  * a new one out of the global entry_guards list, and then mark
  * <b>state</b> dirty so it will get saved to disk.
- *
- * XXX this should get totally redesigned around storing multiple
- * entry guard contexts.  For the initial refactor we'll just
- * always use the current default.  Fix it as soon as we actually
- * have any way that default can change.
  */
 void
 entry_guards_update_state(or_state_t *state)
 {
   config_line_t **next, *line;
 
+  entry_guards_dirty = 0;
+
   // Handles all non-legacy guard info.
   entry_guards_update_guards_in_state(state);
+
+  entry_guards_dirty = 0;
 
   guard_selection_t *gs = get_guard_selection_by_name("legacy", 0);
   if (!gs)
     return; // nothign to save.
   tor_assert(gs->chosen_entry_guards != NULL);
-  if (!gs->dirty)
-    return;
 
   config_free_lines(state->EntryGuards);
   next = &state->EntryGuards;
@@ -3854,7 +3858,7 @@ entry_guards_update_state(or_state_t *state)
   } SMARTLIST_FOREACH_END(e);
   if (!get_options()->AvoidDiskWrites)
     or_state_mark_dirty(get_or_state(), 0);
-  gs->dirty = 0;
+  entry_guards_dirty = 0;
 }
 
 /** If <b>question</b> is the string "entry-guards", then dump

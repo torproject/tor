@@ -213,16 +213,6 @@ struct guard_selection_s {
   char *name;
 
   /**
-   * A value of 1 means that guard_selection_t structures have changed
-   * and those changes need to be flushed to disk.
-   *
-   * XXX prop271 we don't know how to flush multiple guard contexts to
-   * disk yet; fix that as soon as any way to change the default exists,
-   * or at least make sure this gets set on change.
-   */
-  int dirty;
-
-  /**
    * A value of 1 means that primary_entry_guards is up-to-date; 0
    * means we need to recalculate it before using primary_entry_guards
    * or the is_primary flag on any guard.
