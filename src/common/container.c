@@ -132,6 +132,24 @@ smartlist_remove(smartlist_t *sl, const void *element)
     }
 }
 
+/** As <b>smartlist_remove</b>, but do not change the order of
+ * any elements not removed */
+void
+smartlist_remove_keeporder(smartlist_t *sl, const void *element)
+{
+  int i, j, num_used_orig = sl->num_used;
+  if (element == NULL)
+    return;
+
+  for (i=j=0; j < num_used_orig; ++j) {
+    if (sl->list[j] == element) {
+      --sl->num_used;
+    } else {
+      sl->list[i++] = sl->list[j];
+    }
+  }
+}
+
 /** If <b>sl</b> is nonempty, remove and return the final element.  Otherwise,
  * return NULL. */
 void *
