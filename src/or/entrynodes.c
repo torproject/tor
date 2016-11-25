@@ -1605,9 +1605,6 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
                 "circuit had higher priority, so not upgrading.",
                 n_complete, n_waiting);
 
-      /* XXXX prop271 implement: "(Time them out after a
-         {NONPRIMARY_GUARD_IDLE_TIMEOUT} seconds.)"
-      */
       return 0;
     }
   }
@@ -1669,6 +1666,21 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
 
   tor_assert_nonfatal(n_succeeded >= 1);
   return 1;
+}
+
+/**
+ * Return true iff the circuit whose state is <b>guard_state</b> should
+ * expire.
+ */
+int
+entry_guard_state_should_expire(circuit_guard_state_t *guard_state)
+{
+  if (guard_state == NULL)
+    return 0;
+  const time_t expire_if_waiting_since =
+    approx_time() - NONPRIMARY_GUARD_IDLE_TIMEOUT;
+  return (guard_state->state == GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD
+          && guard_state->state_set_at < expire_if_waiting_since);
 }
 
 /**

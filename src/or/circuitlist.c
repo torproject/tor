@@ -553,12 +553,22 @@ circuit_close_all_marked(void)
   smartlist_clear(circuits_pending_close);
 }
 
-/** Return the head of the global linked list of circuits. */
+/** Return a pointer to the global list of circuits. */
 MOCK_IMPL(smartlist_t *,
 circuit_get_global_list,(void))
 {
   if (NULL == global_circuitlist)
     global_circuitlist = smartlist_new();
+  return global_circuitlist;
+}
+
+/** */
+/** Return a pointer to the global list of origin circuits. */
+smartlist_t *
+circuit_get_global_origin_circuit_list(void)
+{
+  if (NULL == global_origin_circuit_list)
+    global_origin_circuit_list = smartlist_new();
   return global_circuitlist;
 }
 

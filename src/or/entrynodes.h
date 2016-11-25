@@ -337,6 +337,7 @@ int entry_guards_update_all(guard_selection_t *gs);
 int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
                                           const smartlist_t *all_circuits,
                                           smartlist_t *newly_complete_out);
+int entry_guard_state_should_expire(circuit_guard_state_t *guard_state);
 void entry_guards_note_internet_connectivity(guard_selection_t *gs);
 
 /* Used by bridges.c only. */

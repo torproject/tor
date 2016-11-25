@@ -13,6 +13,7 @@
 #define TOR_CIRCUITUSE_H
 
 void circuit_expire_building(void);
+void circuit_expire_waiting_for_better_guard(void);
 void circuit_remove_handled_ports(smartlist_t *needed_ports);
 int circuit_stream_is_being_handled(entry_connection_t *conn, uint16_t port,
                                     int min);

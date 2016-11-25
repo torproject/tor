@@ -800,6 +800,25 @@ circuit_expire_building(void)
   } SMARTLIST_FOREACH_END(victim);
 }
 
+/**
+ * Mark for close all circuits that start here, that were built through a
+ * guard we weren't sure if we wanted to use, and that have been waiting
+ * around for way too long.
+ */
+void
+circuit_expire_waiting_for_better_guard(void)
+{
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_origin_circuit_list(),
+                          origin_circuit_t *, circ) {
+    if (TO_CIRCUIT(circ)->marked_for_close)
+      continue;
+    if (circ->guard_state == NULL)
+      continue;
+    if (entry_guard_state_should_expire(circ->guard_state))
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NONE);
+  } SMARTLIST_FOREACH_END(circ);
+}
+
 /** For debugging #8387: track when we last called
  * circuit_expire_old_circuits_clientside. */
 static time_t last_expired_clientside_circuits = 0;
