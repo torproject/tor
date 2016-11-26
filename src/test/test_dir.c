@@ -1494,6 +1494,15 @@ test_dir_param_voting(void *arg)
   tt_int_op(-8,OP_EQ, networkstatus_get_param(&vote4, "ab", -12, -100, -8));
   tt_int_op(0,OP_EQ, networkstatus_get_param(&vote4, "foobar", 0, -100, 8));
 
+  tt_int_op(100,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, -1, "x-yz", 50, 0, 300));
+  tt_int_op(30,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, 30, "x-yz", 50, 0, 300));
+  tt_int_op(0,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, -101, "foobar", 0, -100, 8));
+  tt_int_op(-99,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, -99, "foobar", 0, -100, 8));
+
   smartlist_add(votes, &vote1);
 
   /* Do the first tests without adding all the other votes, for

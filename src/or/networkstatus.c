@@ -2304,6 +2304,25 @@ networkstatus_get_param(const networkstatus_t *ns, const char *param_name,
 }
 
 /**
+ * As networkstatus_get_param(), but check torrc_value before checking the
+ * consensus. If torrc_value is in-range, then return it instead of the
+ * value from the consensus.
+ */
+int32_t
+networkstatus_get_overridable_param(const networkstatus_t *ns,
+                                    int32_t torrc_value,
+                                    const char *param_name,
+                                    int32_t default_val,
+                                    int32_t min_val, int32_t max_val)
+{
+  if (torrc_value >= min_val && torrc_value <= max_val)
+    return torrc_value;
+  else
+    return networkstatus_get_param(
+                         ns, param_name, default_val, min_val, max_val);
+}
+
+/**
  * Retrieve the consensus parameter that governs the
  * fixed-point precision of our network balancing 'bandwidth-weights'
  * (which are themselves integer consensus values). We divide them
