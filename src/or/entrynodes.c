@@ -324,6 +324,118 @@ randomize_time,(time_t now, time_t max_backdate))
 }
 
 /**
+ * @name parameters for networkstatus algorithm
+ *
+ * These parameters are taken from the consensus; some are overrideable in
+ * the torrc.
+ */
+/**@{*/
+/**
+ * We never let our sampled guard set grow larger than this fraction
+ * of the guards on the network.
+ */
+STATIC double
+get_max_sample_threshold(void)
+{
+  int32_t pct =
+    networkstatus_get_param(NULL, "guard-max-sample-threshold-percent",
+                            DFLT_MAX_SAMPLE_THRESHOLD_PERCENT,
+                            1, 100);
+  return pct / 100.0;
+}
+/**
+ * We always try to make our sample contain at least this many guards.
+ *
+ * XXXX prop271 There was a MIN_SAMPLE_THRESHOLD in the proposal, but I
+ * removed it in favor of MIN_FILTERED_SAMPLE_SIZE. -NM
+ */
+STATIC int
+get_min_filtered_sample_size(void)
+{
+  return networkstatus_get_param(NULL, "guard-min-filtered-sample-size",
+                                 DFLT_MIN_FILTERED_SAMPLE_SIZE,
+                                 1, INT32_MAX);
+}
+/**
+ * If a guard is unlisted for this many days in a row, we remove it.
+ */
+STATIC int
+get_remove_unlisted_guards_after_days(void)
+{
+  return networkstatus_get_param(NULL,
+                                 "guard-remove-unlisted-guards-after-days",
+                                 DFLT_REMOVE_UNLISTED_GUARDS_AFTER_DAYS,
+                                 1, 365*10);
+}
+/**
+ * We remove unconfirmed guards from the sample after this many days,
+ * regardless of whether they are listed or unlisted.
+ */
+STATIC int
+get_guard_lifetime_days(void)
+{
+  return networkstatus_get_param(NULL,
+                                 "guard-lifetime-days",
+                                 DFLT_GUARD_LIFETIME_DAYS, 1, 365*10);
+}
+/**
+ * We remove confirmed guards from the sample if they were sampled
+ * GUARD_LIFETIME_DAYS ago and confirmed this many days ago.
+ */
+STATIC int
+get_guard_confirmed_min_lifetime_days(void)
+{
+  return networkstatus_get_param(NULL, "guard-confirmed-min-lifetime-days",
+                                 DFLT_GUARD_CONFIRMED_MIN_LIFETIME_DAYS,
+                                 1, 365*10);
+}
+/**
+ * How many guards do we try to keep on our primary guard list?
+ */
+STATIC int
+get_n_primary_guards(void)
+{
+  return networkstatus_get_param(NULL, "guard-n-primary-guards",
+                                 DFLT_N_PRIMARY_GUARDS, 1, INT32_MAX);
+}
+/**
+ * If we haven't successfully built or used a circuit in this long, then
+ * consider that the internet is probably down.
+ */
+STATIC int
+get_internet_likely_down_interval(void)
+{
+  return networkstatus_get_param(NULL, "guard-internet-likely-down-interval",
+                                 DFLT_INTERNET_LIKELY_DOWN_INTERVAL,
+                                 1, INT32_MAX);
+}
+/**
+ * If we're trying to connect to a nonprimary guard for at least this
+ * many seconds, and we haven't gotten the connection to work, we will treat
+ * lower-priority guards as usable.
+ */
+STATIC int
+get_nonprimary_guard_connect_timeout(void)
+{
+  return networkstatus_get_param(NULL,
+                                 "guard-nonprimary-guard-connect-timeout",
+                                 DFLT_NONPRIMARY_GUARD_CONNECT_TIMEOUT,
+                                 1, INT32_MAX);
+}
+/**
+ * If a circuit has been sitting around in 'waiting for better guard' state
+ * for at least this long, we'll expire it.
+ */
+STATIC int
+get_nonprimary_guard_idle_timeout(void)
+{
+  return networkstatus_get_param(NULL,
+                                 "guard-nonprimary-guard-idle-timeout",
+                                 (10*60), 1, INT32_MAX);
+}
+/**@}*/
+
+/**
  * Return true iff <b>node</b> has all the flags needed for us to consider it
  * a possible guard when sampling guards.
  */
@@ -377,7 +489,7 @@ STATIC entry_guard_t *
 entry_guard_add_to_sample(guard_selection_t *gs,
                           const node_t *node)
 {
-  const int GUARD_LIFETIME = GUARD_LIFETIME_DAYS * 86400;
+  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
   tor_assert(gs);
   tor_assert(node);
 
@@ -470,8 +582,8 @@ entry_guards_expand_sample(guard_selection_t *gs)
   if (! smartlist_len(eligible_guards))
     goto done;
 
-  const int max_sample = (int)(n_guards * MAX_SAMPLE_THRESHOLD);
-  const int min_filtered_sample = MIN_FILTERED_SAMPLE_SIZE;
+  const int max_sample = (int)(n_guards * get_max_sample_threshold());
+  const int min_filtered_sample = get_min_filtered_sample_size();
 
   log_info(LD_GUARD, "Expanding the sample guard set. We have %d guards "
            "in the sample, and %d eligible guards to extend it with.",
@@ -570,7 +682,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 {
   tor_assert(gs);
   const int REMOVE_UNLISTED_GUARDS_AFTER =
-    (REMOVE_UNLISTED_GUARDS_AFTER_DAYS * 86400);
+    (get_remove_unlisted_guards_after_days() * 86400);
   const int unlisted_since_slop = REMOVE_UNLISTED_GUARDS_AFTER / 5;
 
   // It's important to use only a live consensus here; we don't want to
@@ -637,9 +749,9 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   const time_t remove_if_unlisted_since =
     approx_time() - REMOVE_UNLISTED_GUARDS_AFTER;
   const time_t maybe_remove_if_sampled_before =
-    approx_time() - (GUARD_LIFETIME_DAYS * 86400);
+    approx_time() - (get_guard_lifetime_days() * 86400);
   const time_t remove_if_confirmed_before =
-    approx_time() - (GUARD_CONFIRMED_MIN_LIFETIME_DAYS * 86400);
+    approx_time() - (get_guard_confirmed_min_lifetime_days() * 86400);
 
   /* Then: remove the ones that have been junk for too long */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
@@ -656,7 +768,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
       */
       log_info(LD_GUARD, "Removing sampled guard %s: it has been unlisted "
                "for over %d days", entry_guard_describe(guard),
-               REMOVE_UNLISTED_GUARDS_AFTER_DAYS);
+               get_remove_unlisted_guards_after_days());
       remove = 1;
     } else if (guard->sampled_on_date < maybe_remove_if_sampled_before) {
       /* We have a live consensus, and {ADDED_ON_DATE} is over
@@ -668,13 +780,14 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, but never confirmed.",
                  entry_guard_describe(guard),
-                 GUARD_LIFETIME_DAYS);
+                 get_guard_lifetime_days());
       } else if (guard->confirmed_on_date < remove_if_confirmed_before) {
         remove = 1;
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, and confirmed over %d days ago.",
                  entry_guard_describe(guard),
-                 GUARD_LIFETIME_DAYS, GUARD_CONFIRMED_MIN_LIFETIME_DAYS);
+                 get_guard_lifetime_days(),
+                 get_guard_confirmed_min_lifetime_days());
       }
     }
 
@@ -820,7 +933,8 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
   log_info(LD_GUARD, "Trying to sample a reachable guard: We know of %d "
            "in the USABLE_FILTERED set.", n_reachable_filtered);
 
-  if (n_reachable_filtered < MIN_FILTERED_SAMPLE_SIZE) {
+  const int min_filtered_sample = get_min_filtered_sample_size();
+  if (n_reachable_filtered < min_filtered_sample) {
     log_info(LD_GUARD, "  (That isn't enough. Trying to expand the sample.)");
     entry_guards_expand_sample(gs);
   }
@@ -916,7 +1030,7 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
   if (BUG(smartlist_contains(gs->confirmed_entry_guards, guard)))
     return; // LCOV_EXCL_LINE
 
-  const int GUARD_LIFETIME = GUARD_LIFETIME_DAYS * 86400;
+  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
   guard->confirmed_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
 
   log_info(LD_GUARD, "Marking %s as a confirmed guard (index %d)",
@@ -946,6 +1060,8 @@ entry_guards_update_primary(guard_selection_t *gs)
   static int running = 0;
   tor_assert(!running);
   running = 1;
+
+  const int N_PRIMARY_GUARDS = get_n_primary_guards();
 
   smartlist_t *new_primary_guards = smartlist_new();
   smartlist_t *old_primary_guards = smartlist_new();
@@ -1278,7 +1394,7 @@ entry_guards_note_guard_success(guard_selection_t *gs,
                old_state == GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
     new_state = GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD;
 
-    if (last_time_on_internet + INTERNET_LIKELY_DOWN_INTERVAL
+    if (last_time_on_internet + get_internet_likely_down_interval()
         < approx_time()) {
       mark_primary_guards_maybe_reachable(gs);
     }
@@ -1620,7 +1736,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   */
   int n_blockers_found = 0;
   const time_t state_set_at_cutoff =
-    approx_time() - NONPRIMARY_GUARD_CONNECT_TIMEOUT;
+    approx_time() - get_nonprimary_guard_connect_timeout();
   SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if (state == NULL)
@@ -1678,7 +1794,7 @@ entry_guard_state_should_expire(circuit_guard_state_t *guard_state)
   if (guard_state == NULL)
     return 0;
   const time_t expire_if_waiting_since =
-    approx_time() - NONPRIMARY_GUARD_IDLE_TIMEOUT;
+    approx_time() - get_nonprimary_guard_idle_timeout();
   return (guard_state->state == GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD
           && guard_state->state_set_at < expire_if_waiting_since);
 }

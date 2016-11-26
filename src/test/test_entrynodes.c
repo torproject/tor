@@ -1425,7 +1425,7 @@ test_entry_guard_expand_sample(void *arg)
             num_reachable_filtered_guards(gs));
 
   /* Make sure we got the right number. */
-  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+  tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
             num_reachable_filtered_guards(gs));
 
   // Make sure everything we got was from our fake node list, and everything
@@ -1444,7 +1444,7 @@ test_entry_guard_expand_sample(void *arg)
   // make no changes.
   guard = entry_guards_expand_sample(gs);
   tt_assert(! guard); // no guard was added.
-  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+  tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
             num_reachable_filtered_guards(gs));
 
   // Make a few guards unreachable.
@@ -1454,13 +1454,13 @@ test_entry_guard_expand_sample(void *arg)
   guard->is_usable_filtered_guard = 0;
   guard = smartlist_get(gs->sampled_entry_guards, 2);
   guard->is_usable_filtered_guard = 0;
-  tt_int_op(MIN_FILTERED_SAMPLE_SIZE - 3, OP_EQ,
+  tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE - 3, OP_EQ,
             num_reachable_filtered_guards(gs));
 
   // This time, expanding the sample will add some more guards.
   guard = entry_guards_expand_sample(gs);
   tt_assert(guard); // no guard was added.
-  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+  tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
             num_reachable_filtered_guards(gs));
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ,
             num_reachable_filtered_guards(gs)+3);
@@ -1468,7 +1468,7 @@ test_entry_guard_expand_sample(void *arg)
   // Still idempotent.
   guard = entry_guards_expand_sample(gs);
   tt_assert(! guard); // no guard was added.
-  tt_int_op(MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
+  tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
             num_reachable_filtered_guards(gs));
 
   // Now, do a nasty trick: tell the filter to exclude 31/32 of the guards.
@@ -1486,7 +1486,7 @@ test_entry_guard_expand_sample(void *arg)
 
   // Surely (p ~ 1-2**-60), one of our guards has been excluded.
   tt_int_op(num_reachable_filtered_guards(gs), OP_LT,
-            MIN_FILTERED_SAMPLE_SIZE);
+            DFLT_MIN_FILTERED_SAMPLE_SIZE);
 
   // Try to regenerate the guards.
   guard = entry_guards_expand_sample(gs);
@@ -1494,7 +1494,7 @@ test_entry_guard_expand_sample(void *arg)
 
   /* this time, it's possible that we didn't add enough sampled guards. */
   tt_int_op(num_reachable_filtered_guards(gs), OP_LE,
-            MIN_FILTERED_SAMPLE_SIZE);
+            DFLT_MIN_FILTERED_SAMPLE_SIZE);
   /* but we definitely didn't exceed the sample maximum. */
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_LE,
             (int)((271 / 2) * .3));

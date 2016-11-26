@@ -347,62 +347,75 @@ int num_bridges_usable(void);
 
 #ifdef ENTRYNODES_PRIVATE
 /**
- * @name Parameters for the new (prop271) entry guard algorithm.
+ * @name Default values for the parameters for the new (prop271) entry guard
+ * algorithm.
  */
-/* XXXX prop271 some of these should be networkstatus parameters */
 /**@{*/
 /**
- * We never let our sampled guard set grow larger than this fraction
+ * We never let our sampled guard set grow larger than this percentage
  * of the guards on the network.
  */
-#define MAX_SAMPLE_THRESHOLD 0.30
+#define DFLT_MAX_SAMPLE_THRESHOLD_PERCENT 30
 /**
  * We always try to make our sample contain at least this many guards.
  *
  * XXXX prop271 There was a MIN_SAMPLE_THRESHOLD in the proposal, but I
  * removed it in favor of MIN_FILTERED_SAMPLE_SIZE. -NM
  */
-#define MIN_FILTERED_SAMPLE_SIZE 20
+#define DFLT_MIN_FILTERED_SAMPLE_SIZE 20
 /**
  * If a guard is unlisted for this many days in a row, we remove it.
  */
-#define REMOVE_UNLISTED_GUARDS_AFTER_DAYS 20
+#define DFLT_REMOVE_UNLISTED_GUARDS_AFTER_DAYS 20
 /**
  * We remove unconfirmed guards from the sample after this many days,
  * regardless of whether they are listed or unlisted.
  */
-#define GUARD_LIFETIME_DAYS 120
+#define DFLT_GUARD_LIFETIME_DAYS 120
 /**
  * We remove confirmed guards from the sample if they were sampled
  * GUARD_LIFETIME_DAYS ago and confirmed this many days ago.
  */
-#define GUARD_CONFIRMED_MIN_LIFETIME_DAYS 60
+#define DFLT_GUARD_CONFIRMED_MIN_LIFETIME_DAYS 60
 /**
  * How many guards do we try to keep on our primary guard list?
  */
-#define N_PRIMARY_GUARDS 3
+#define DFLT_N_PRIMARY_GUARDS 3
 /**
  * If we haven't successfully built or used a circuit in this long, then
  * consider that the internet is probably down.
  */
-#define INTERNET_LIKELY_DOWN_INTERVAL (10*60)
+#define DFLT_INTERNET_LIKELY_DOWN_INTERVAL (10*60)
+/**
+ * If we're trying to connect to a nonprimary guard for at least this
+ * many seconds, and we haven't gotten the connection to work, we will treat
+ * lower-priority guards as usable.
+ */
+#define DFLT_NONPRIMARY_GUARD_CONNECT_TIMEOUT 15
+/**
+ * If a circuit has been sitting around in 'waiting for better guard' state
+ * for at least this long, we'll expire it.
+ */
+#define DLFT_NONPRIMARY_GUARD_IDLE_TIMEOUT (10*60)
 /**
  * DOCDOC. not yet used; see prop271.
  */
-#define NONPRIMARY_GUARD_CONNECT_TIMEOUT 15
-/**
- * DOCDOC. not yet used; see prop271.
- */
-#define NONPRIMARY_GUARD_IDLE_TIMEOUT (10*60)
-/**
- * DOCDOC. not yet used; see prop271.
- */
-#define MEANINGFUL_RESTRICTION_FRAC 0.2
+#define DFLT_MEANINGFUL_RESTRICTION_FRAC 0.2
 /**
  * DOCDOC. not yet used. see prop271.
  */
-#define EXTREME_RESTRICTION_FRAC 0.01
+#define DFLT_EXTREME_RESTRICTION_FRAC 0.01
 /**@}*/
+
+STATIC double get_max_sample_threshold(void);
+STATIC int get_min_filtered_sample_size(void);
+STATIC int get_remove_unlisted_guards_after_days(void);
+STATIC int get_guard_lifetime_days(void);
+STATIC int get_guard_confirmed_min_lifetime_days(void);
+STATIC int get_n_primary_guards(void);
+STATIC int get_internet_likely_down_interval(void);
+STATIC int get_nonprimary_guard_connect_timeout(void);
+STATIC int get_nonprimary_guard_idle_timeout(void);
 
 // ---------- XXXX these functions and definitions are post-prop271.
 HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
