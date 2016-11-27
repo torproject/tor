@@ -2558,6 +2558,359 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   circuit_guard_state_free(guard2);
 }
 
+static void
+test_entry_guard_select_and_cancel(void *arg)
+{
+  (void) arg;
+  const int N_PRIMARY = DFLT_N_PRIMARY_GUARDS;
+  int i,r;
+  const node_t *node = NULL;
+  circuit_guard_state_t *guard;
+  guard_selection_t *gs = guard_selection_new("default");
+  entry_guard_t *g;
+
+  /* Once more, we mark all the primary guards down. */
+  entry_guards_note_internet_connectivity(gs);
+  for (i = 0; i < N_PRIMARY; ++i) {
+    r = entry_guard_pick_for_circuit(gs, &node, &guard);
+    tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+    g = entry_guard_handle_get(guard->guard);
+    tt_int_op(g->is_primary, OP_EQ, 1);
+    tt_int_op(g->is_pending, OP_EQ, 0);
+    make_guard_confirmed(gs, g);
+    entry_guard_failed(gs, &guard);
+    circuit_guard_state_free(guard);
+    guard = NULL;
+    node = NULL;
+  }
+
+  tt_assert(entry_guards_all_primary_guards_are_down(gs));
+
+  /* Now get another guard we could try... */
+  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  tt_assert(node);
+  tt_assert(guard);
+  tt_assert(r == 0);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+  g = entry_guard_handle_get(guard->guard);
+  tt_int_op(g->is_primary, OP_EQ, 0);
+  tt_int_op(g->is_pending, OP_EQ, 1);
+
+  /* Whoops! We should never have asked for this guard. Cancel the request! */
+  entry_guard_cancel(gs, &guard);
+  tt_assert(guard == NULL);
+  tt_int_op(g->is_primary, OP_EQ, 0);
+  tt_int_op(g->is_pending, OP_EQ, 0);
+
+ done:
+  guard_selection_free(gs);
+  circuit_guard_state_free(guard);
+}
+
+/* Unit test setup function: Create a fake network, and set everything up
+ * for testing the upgrade-a-waiting-circuit code. */
+typedef struct {
+  guard_selection_t *gs;
+  time_t start;
+  circuit_guard_state_t *guard1_state;
+  circuit_guard_state_t *guard2_state;
+  entry_guard_t *guard1;
+  entry_guard_t *guard2;
+  origin_circuit_t *circ1;
+  origin_circuit_t *circ2;
+  smartlist_t *all_origin_circuits;
+} upgrade_circuits_data_t;
+static void *
+upgrade_circuits_setup(const struct testcase_t *testcase)
+{
+  upgrade_circuits_data_t *data = tor_malloc_zero(sizeof(*data));
+  guard_selection_t *gs = data->gs = guard_selection_new("default");
+  circuit_guard_state_t *guard;
+  const node_t *node;
+  entry_guard_t *g;
+  int i;
+  const int N_PRIMARY = DFLT_N_PRIMARY_GUARDS;
+  const char *argument = testcase->setup_data;
+  const int make_circ1_succeed = strstr(argument, "c1-done") != NULL;
+  const int make_circ2_succeed = strstr(argument, "c2-done") != NULL;
+
+  big_fake_network_setup(testcase);
+
+  /* We're going to set things up in a state where a circuit will be ready to
+   * be upgraded.  Each test can make a single change (or not) that should
+   * block the upgrade.
+   */
+
+  /* First, make all the primary guards confirmed, and down. */
+  data->start = approx_time();
+  entry_guards_note_internet_connectivity(gs);
+  for (i = 0; i < N_PRIMARY; ++i) {
+    entry_guard_pick_for_circuit(gs, &node, &guard);
+    g = entry_guard_handle_get(guard->guard);
+    make_guard_confirmed(gs, g);
+    entry_guard_failed(gs, &guard);
+    circuit_guard_state_free(guard);
+  }
+
+  /* Grab another couple of guards */
+  data->all_origin_circuits = smartlist_new();
+
+  update_approx_time(data->start + 27);
+  entry_guard_pick_for_circuit(gs, &node, &data->guard1_state);
+  origin_circuit_t *circ;
+  data->circ1 = circ = origin_circuit_new();
+  circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  circ->guard_state = data->guard1_state;
+  smartlist_add(data->all_origin_circuits, circ);
+
+  update_approx_time(data->start + 30);
+  entry_guard_pick_for_circuit(gs, &node, &data->guard2_state);
+  data->circ2 = circ = origin_circuit_new();
+  circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  circ->guard_state = data->guard2_state;
+  smartlist_add(data->all_origin_circuits, circ);
+
+  data->guard1 = entry_guard_handle_get(data->guard1_state->guard);
+  data->guard2 = entry_guard_handle_get(data->guard2_state->guard);
+  tor_assert(data->guard1 != data->guard2);
+  tor_assert(data->guard1_state->state ==
+             GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+  tor_assert(data->guard2_state->state ==
+             GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+
+  int r;
+  update_approx_time(data->start + 32);
+  if (make_circ1_succeed) {
+    r = entry_guard_succeeded(gs, &data->guard1_state);
+    tor_assert(r == 0);
+    tor_assert(data->guard1_state->state ==
+               GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
+  }
+  update_approx_time(data->start + 33);
+  if (make_circ2_succeed) {
+    r = entry_guard_succeeded(gs, &data->guard2_state);
+    tor_assert(r == 0);
+    tor_assert(data->guard2_state->state ==
+               GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
+  }
+
+  return data;
+}
+static int
+upgrade_circuits_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  upgrade_circuits_data_t *data = ptr;
+  // circuit_guard_state_free(data->guard1_state); // held in circ1
+  // circuit_guard_state_free(data->guard2_state); // held in circ2
+  guard_selection_free(data->gs);
+  smartlist_free(data->all_origin_circuits);
+  circuit_free(TO_CIRCUIT(data->circ1));
+  circuit_free(TO_CIRCUIT(data->circ2));
+  tor_free(data);
+  return big_fake_network_cleanup(testcase, ptr);
+}
+
+static void
+test_entry_guard_upgrade_a_circuit(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+
+  /* This is the easy case: we have no COMPLETED circuits, all the
+   * primary guards are down, we have two WAITING circuits: one will
+   * get upgraded to COMPLETED!  (The one that started first.)
+   */
+  /*     XXXX prop271 -- perhaps the one that started first should
+   *      also wind up in confirmed_entry_guards earlier?
+   */
+
+  smartlist_t *result = smartlist_new();
+  int r;
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_len(result), OP_EQ, 1);
+  origin_circuit_t *oc = smartlist_get(result, 0);
+
+  /* circ1 was started first, so we'll get told to ugrade it... */
+  tt_ptr_op(oc, OP_EQ, data->circ1);
+
+  /* And the guard state should be complete */
+  tt_ptr_op(data->guard1_state, OP_NE, NULL);
+  tt_int_op(data->guard1_state->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
+
+ done:
+  smartlist_free(result);
+}
+
+static void
+test_entry_guard_upgrade_blocked_by_live_primary_guards(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+
+  /* If any primary guards might be up, we can't upgrade any waiting
+   * circuits.
+   */
+  mark_primary_guards_maybe_reachable(data->gs);
+
+  smartlist_t *result = smartlist_new();
+  int r;
+  setup_capture_of_logs(LOG_DEBUG);
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(result), OP_EQ, 0);
+  expect_log_msg_containing("not all primary guards were definitely down.");
+
+ done:
+  teardown_capture_of_logs();
+  smartlist_free(result);
+}
+
+static void
+test_entry_guard_upgrade_blocked_by_lack_of_waiting_circuits(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+
+  /* If no circuits are waiting, we can't upgrade anything.  (The test
+   * setup in this case was told not to make any of the circuits "waiting".)
+   */
+  smartlist_t *result = smartlist_new();
+  int r;
+  setup_capture_of_logs(LOG_DEBUG);
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(result), OP_EQ, 0);
+  expect_log_msg_containing("Considered upgrading guard-stalled circuits, "
+                            "but didn't find any.");
+
+ done:
+  teardown_capture_of_logs();
+  smartlist_free(result);
+}
+
+static void
+test_entry_guard_upgrade_blocked_by_better_circ_complete(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+
+  /* We'll run through the logic of upgrade_a_circuit below...
+   * and then try again to make sure that circ2 isn't also upgraded.
+   */
+
+  smartlist_t *result = smartlist_new();
+  int r;
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_len(result), OP_EQ, 1);
+  origin_circuit_t *oc = smartlist_get(result, 0);
+  tt_ptr_op(oc, OP_EQ, data->circ1);
+  tt_ptr_op(data->guard1_state, OP_NE, NULL);
+  tt_int_op(data->guard1_state->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
+
+  /* Now, try again. Make sure that circ2 isn't upgraded. */
+  smartlist_clear(result);
+  setup_capture_of_logs(LOG_DEBUG);
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(result), OP_EQ, 0);
+  expect_log_msg_containing("At least one complete circuit had higher "
+                            "priority, so not upgrading.");
+
+ done:
+  teardown_capture_of_logs();
+  smartlist_free(result);
+}
+
+static void
+test_entry_guard_upgrade_not_blocked_by_worse_circ_complete(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+  smartlist_t *result = smartlist_new();
+  /* here we manually make circ2 COMPLETE, and make sure that circ1
+   * gets made complete anyway, since guard1 has higher priority
+   */
+  update_approx_time(data->start + 300);
+  data->guard2_state->state = GUARD_CIRC_STATE_COMPLETE;
+  data->guard2_state->state_set_at = approx_time();
+  update_approx_time(data->start + 301);
+
+  /* Now, try again. Make sure that circ1 is approved. */
+  int r;
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_len(result), OP_EQ, 1);
+  origin_circuit_t *oc = smartlist_get(result, 0);
+  tt_ptr_op(oc, OP_EQ, data->circ1);
+
+ done:
+  smartlist_free(result);
+}
+
+static void
+test_entry_guard_upgrade_blocked_by_better_circ_pending(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+
+  /* circ2 is done, but circ1 is still pending. Since circ1 is better,
+   * we won't upgrade circ2. */
+
+  /* XXXX Prop271 -- this is a kludge.  I'm making sure circ1 _is_ better,
+   * by messing with the guards' confirmed_idx */
+  make_guard_confirmed(data->gs, data->guard1);
+  {
+    int tmp;
+    tmp = data->guard1->confirmed_idx;
+    data->guard1->confirmed_idx = data->guard2->confirmed_idx;
+    data->guard2->confirmed_idx = tmp;
+  }
+
+  smartlist_t *result = smartlist_new();
+  setup_capture_of_logs(LOG_DEBUG);
+  int r;
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(result), OP_EQ, 0);
+  expect_log_msg_containing("but 1 pending circuit(s) had higher guard "
+                            "priority, so not upgrading.");
+
+ done:
+  teardown_capture_of_logs();
+  smartlist_free(result);
+}
+
+static void
+test_entry_guard_upgrade_not_blocked_by_worse_circ_pending(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+
+  /* circ1 is done, but circ2 is still pending. Since circ1 is better,
+   * we will upgrade it. */
+  smartlist_t *result = smartlist_new();
+  int r;
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_len(result), OP_EQ, 1);
+  origin_circuit_t *oc = smartlist_get(result, 0);
+  tt_ptr_op(oc, OP_EQ, data->circ1);
+
+ done:
+  smartlist_free(result);
+}
+
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
@@ -2566,8 +2919,16 @@ static const struct testcase_setup_t big_fake_network = {
   big_fake_network_setup, big_fake_network_cleanup
 };
 
+static const struct testcase_setup_t upgrade_circuits = {
+  upgrade_circuits_setup, upgrade_circuits_cleanup
+};
+
 #define BFN_TEST(name) \
   { #name, test_entry_guard_ ## name, TT_FORK, &big_fake_network, NULL }
+
+#define UPGRADE_TEST(name, arg)                                         \
+  { #name, test_entry_guard_ ## name, TT_FORK, &upgrade_circuits,       \
+      (void*)(arg) }
 
 struct testcase_t entrynodes_tests[] = {
   { "entry_is_time_to_retry", test_entry_is_time_to_retry,
@@ -2632,6 +2993,16 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(select_for_circuit_highlevel_primary),
   BFN_TEST(select_for_circuit_highlevel_confirm_other),
   BFN_TEST(select_for_circuit_highlevel_primary_retry),
+  BFN_TEST(select_and_cancel),
+
+  UPGRADE_TEST(upgrade_a_circuit, "c1-done c2-done"),
+  UPGRADE_TEST(upgrade_blocked_by_live_primary_guards, "c1-done c2-done"),
+  UPGRADE_TEST(upgrade_blocked_by_lack_of_waiting_circuits, ""),
+  UPGRADE_TEST(upgrade_blocked_by_better_circ_complete, "c1-done c2-done"),
+  UPGRADE_TEST(upgrade_not_blocked_by_worse_circ_complete, "c1-done c2-done"),
+  UPGRADE_TEST(upgrade_blocked_by_better_circ_pending, "c2-done"),
+  UPGRADE_TEST(upgrade_not_blocked_by_worse_circ_pending, "c1-done"),
+
   END_OF_TESTCASES
 };
 
