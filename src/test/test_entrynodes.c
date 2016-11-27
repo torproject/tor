@@ -2094,6 +2094,54 @@ test_entry_guard_manage_primary(void *arg)
 }
 
 static void
+test_entry_guard_guard_preferred(void *arg)
+{
+  (void) arg;
+  entry_guard_t *g1 = tor_malloc_zero(sizeof(entry_guard_t));
+  entry_guard_t *g2 = tor_malloc_zero(sizeof(entry_guard_t));
+
+  g1->confirmed_idx = g2->confirmed_idx = -1;
+  g1->last_tried_to_connect = approx_time();
+  g2->last_tried_to_connect = approx_time();
+
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g1, g1));
+
+  /* Neither is pending; priorities equal. */
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g2, g1));
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g1, g2));
+
+  /* If one is pending, the pending one has higher priority */
+  g1->is_pending = 1;
+  tt_int_op(1, OP_EQ, entry_guard_has_higher_priority(g1, g2));
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g2, g1));
+
+  /* If both are pending, and last_tried_to_connect is equal:
+     priorities equal */
+  g2->is_pending = 1;
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g2, g1));
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g1, g2));
+
+  /* One had a connection that startied earlier: it has higher priority. */
+  g2->last_tried_to_connect -= 10;
+  tt_int_op(1, OP_EQ, entry_guard_has_higher_priority(g2, g1));
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g1, g2));
+
+  /* Now, say that g1 is confirmed. It will get higher priority. */
+  g1->confirmed_idx = 5;
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g2, g1));
+  tt_int_op(1, OP_EQ, entry_guard_has_higher_priority(g1, g2));
+
+  /* But if g2 was confirmed first, it will get priority */
+  g2->confirmed_idx = 2;
+  tt_int_op(1, OP_EQ, entry_guard_has_higher_priority(g2, g1));
+  tt_int_op(0, OP_EQ, entry_guard_has_higher_priority(g1, g2));
+
+ done:
+  tor_free(g1);
+  tor_free(g2);
+}
+
+static void
 test_entry_guard_select_for_circuit_no_confirmed(void *arg)
 {
   /* Simpler cases: no gaurds are confirmed yet. */
@@ -2578,6 +2626,7 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(sample_reachable_filtered_empty),
   BFN_TEST(retry_unreachable),
   BFN_TEST(manage_primary),
+  { "guard_preferred", test_entry_guard_guard_preferred, TT_FORK, NULL, NULL },
   BFN_TEST(select_for_circuit_no_confirmed),
   BFN_TEST(select_for_circuit_confirmed),
   BFN_TEST(select_for_circuit_highlevel_primary),
