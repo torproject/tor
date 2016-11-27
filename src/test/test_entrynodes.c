@@ -3,6 +3,7 @@
 
 #include "orconfig.h"
 
+#define CIRCUITLIST_PRIVATE
 #define STATEFILE_PRIVATE
 #define ENTRYNODES_PRIVATE
 #define ROUTERLIST_PRIVATE
@@ -11,6 +12,7 @@
 #include "test.h"
 
 #include "bridges.h"
+#include "circuitlist.h"
 #include "config.h"
 #include "entrynodes.h"
 #include "nodelist.h"
@@ -2251,6 +2253,263 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   guard_selection_free(gs);
 }
 
+static void
+test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
+{
+  /* Play around with selecting primary guards for circuits and markign
+   * them up and down */
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new("default");
+
+  time_t start = approx_time();
+
+  const node_t *node = NULL;
+  circuit_guard_state_t *guard = NULL;
+  entry_guard_t *g;
+  /*
+   * Make sure that the pick-for-circuit API basically works.  We'll get
+   * a primary guard, so it'll be usable on completion.
+   */
+  int r = entry_guard_pick_for_circuit(gs, &node, &guard);
+
+  tt_assert(r == 0);
+  tt_assert(node);
+  tt_assert(guard);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  g = entry_guard_handle_get(guard->guard);
+  tt_assert(g);
+  tt_mem_op(g->identity, OP_EQ, node->identity, DIGEST_LEN);
+  tt_int_op(g->is_primary, OP_EQ, 1);
+  tt_i64_op(g->last_tried_to_connect, OP_EQ, start);
+  tt_int_op(g->confirmed_idx, OP_EQ, -1);
+
+  /* Call that circuit successful. */
+  update_approx_time(start+15);
+  r = entry_guard_succeeded(gs, &guard);
+  tt_int_op(r, OP_EQ, 1); /* We can use it now. */
+  tt_assert(guard);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
+  g = entry_guard_handle_get(guard->guard);
+  tt_assert(g);
+  tt_int_op(g->is_reachable, OP_EQ, GUARD_REACHABLE_YES);
+  tt_int_op(g->confirmed_idx, OP_EQ, 0);
+
+  circuit_guard_state_free(guard);
+  guard = NULL;
+  node = NULL;
+  g = NULL;
+
+  /* Try again. We'll also get a primary guard this time. (The same one,
+     in fact.)  But this time, we'll say the connection has failed. */
+  update_approx_time(start+35);
+  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  tt_assert(r == 0);
+  tt_assert(node);
+  tt_assert(guard);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  tt_i64_op(guard->state_set_at, OP_EQ, start+35);
+  g = entry_guard_handle_get(guard->guard);
+  tt_assert(g);
+  tt_mem_op(g->identity, OP_EQ, node->identity, DIGEST_LEN);
+  tt_int_op(g->is_primary, OP_EQ, 1);
+  tt_i64_op(g->last_tried_to_connect, OP_EQ, start+35);
+  tt_int_op(g->confirmed_idx, OP_EQ, 0); // same one.
+
+  /* It's failed!  What will happen to our poor guard? */
+  update_approx_time(start+45);
+  entry_guard_failed(gs, &guard);
+  tt_assert(guard);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_DEAD);
+  tt_i64_op(guard->state_set_at, OP_EQ, start+45);
+  g = entry_guard_handle_get(guard->guard);
+  tt_assert(g);
+  tt_int_op(g->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
+  tt_i64_op(g->failing_since, OP_EQ, start+45);
+  tt_int_op(g->confirmed_idx, OP_EQ, 0); // still confirmed.
+
+  circuit_guard_state_free(guard);
+  guard = NULL;
+  node = NULL;
+  entry_guard_t *g_prev = g;
+  g = NULL;
+
+  /* Now try a third time. Since the other one is down, we'll get a different
+   * (still primary) guard.
+   */
+  update_approx_time(start+60);
+  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  tt_assert(r == 0);
+  tt_assert(node);
+  tt_assert(guard);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  g = entry_guard_handle_get(guard->guard);
+  tt_assert(g);
+  tt_ptr_op(g, OP_NE, g_prev);
+  tt_mem_op(g->identity, OP_EQ, node->identity, DIGEST_LEN);
+  tt_mem_op(g->identity, OP_NE, g_prev->identity, DIGEST_LEN);
+  tt_int_op(g->is_primary, OP_EQ, 1);
+  tt_i64_op(g->last_tried_to_connect, OP_EQ, start+60);
+  tt_int_op(g->confirmed_idx, OP_EQ, -1); // not confirmd now.
+
+  /* Call this one up; watch it get confirmed. */
+  update_approx_time(start+90);
+  r = entry_guard_succeeded(gs, &guard);
+  tt_int_op(r, OP_EQ, 1); /* We can use it now. */
+  tt_assert(guard);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
+  g = entry_guard_handle_get(guard->guard);
+  tt_assert(g);
+  tt_int_op(g->is_reachable, OP_EQ, GUARD_REACHABLE_YES);
+  tt_int_op(g->confirmed_idx, OP_EQ, 1);
+
+ done:
+  guard_selection_free(gs);
+  circuit_guard_state_free(guard);
+}
+
+static void
+test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
+{
+  (void) arg;
+  const int N_PRIMARY = DFLT_N_PRIMARY_GUARDS;
+
+  /* At the start, we have no confirmed guards.  We'll mark the primary guards
+   * down, then confirm something else.  As soon as we do, it should become
+   * primary, and we should get it next time. */
+
+  time_t start = approx_time();
+  guard_selection_t *gs = guard_selection_new("default");
+  circuit_guard_state_t *guard = NULL;
+  int i, r;
+  const node_t *node = NULL;
+
+  /* Declare that we're on the internet. */
+  entry_guards_note_internet_connectivity(gs);
+
+  /* Primary guards are down! */
+  for (i = 0; i < N_PRIMARY; ++i) {
+    r = entry_guard_pick_for_circuit(gs, &node, &guard);
+    tt_assert(node);
+    tt_assert(guard);
+    tt_assert(r == 0);
+    tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+    entry_guard_failed(gs, &guard);
+    circuit_guard_state_free(guard);
+    guard = NULL;
+    node = NULL;
+  }
+
+  /* Next guard should be non-primary. */
+  node = NULL;
+  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  tt_assert(node);
+  tt_assert(guard);
+  tt_assert(r == 0);
+  entry_guard_t *g = entry_guard_handle_get(guard->guard);
+  tt_assert(g);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+  tt_int_op(g->confirmed_idx, OP_EQ, -1);
+  tt_int_op(g->is_primary, OP_EQ, 0);
+  tt_int_op(g->is_pending, OP_EQ, 1);
+  (void)start;
+
+  r = entry_guard_succeeded(gs, &guard);
+  /* We're on the internet (by fiat), so this guard will get called "confirmed"
+   * and should immediately become primary.
+   * XXXX prop271 -- I don't like that behavior, but it's what is specified
+   */
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
+  tt_assert(r == 1);
+  tt_int_op(g->confirmed_idx, OP_EQ, 0);
+  tt_int_op(g->is_primary, OP_EQ, 1);
+  tt_int_op(g->is_pending, OP_EQ, 0);
+
+ done:
+  guard_selection_free(gs);
+  circuit_guard_state_free(guard);
+}
+
+static void
+test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
+{
+  (void) arg;
+  const int N_PRIMARY = DFLT_N_PRIMARY_GUARDS;
+
+  /* At the start, we have no confirmed guards.  We'll mark the primary guards
+   * down, then confirm something else.  As soon as we do, it should become
+   * primary, and we should get it next time. */
+
+  time_t start = approx_time();
+  guard_selection_t *gs = guard_selection_new("default");
+  circuit_guard_state_t *guard = NULL, *guard2 = NULL;
+  int i, r;
+  const node_t *node = NULL;
+  entry_guard_t *g;
+
+  /* Declare that we're on the internet. */
+  entry_guards_note_internet_connectivity(gs);
+
+  /* Make primary guards confirmed (so they won't be superseded by a later
+   * guard), then mark them down. */
+  for (i = 0; i < N_PRIMARY; ++i) {
+    r = entry_guard_pick_for_circuit(gs, &node, &guard);
+    tt_assert(node);
+    tt_assert(guard);
+    tt_assert(r == 0);
+    tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+    g = entry_guard_handle_get(guard->guard);
+    make_guard_confirmed(gs, g);
+    tt_int_op(g->is_primary, OP_EQ, 1);
+    entry_guard_failed(gs, &guard);
+    circuit_guard_state_free(guard);
+    tt_int_op(g->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
+    guard = NULL;
+    node = NULL;
+  }
+
+  /* Get another guard that we might try. */
+  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  tt_assert(node);
+  tt_assert(guard);
+  tt_assert(r == 0);
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
+  g = entry_guard_handle_get(guard->guard);
+  tt_int_op(g->is_primary, OP_EQ, 0);
+
+  tt_assert(entry_guards_all_primary_guards_are_down(gs));
+
+  /* And an hour has passed ... */
+  update_approx_time(start + 3600);
+
+  /* Say that guard has succeeded! */
+  r = entry_guard_succeeded(gs, &guard);
+  tt_int_op(r, OP_EQ, 0); // can't use it yet.
+  tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
+  g = entry_guard_handle_get(guard->guard);
+
+  /* The primary guards should have been marked up! */
+  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, pg, {
+    tt_int_op(pg->is_primary, OP_EQ, 1);
+    tt_ptr_op(g, OP_NE, pg);
+    tt_int_op(pg->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
+  });
+
+  /* Have a circuit to a primary guard succeed. */
+  r = entry_guard_pick_for_circuit(gs, &node, &guard2);
+  tt_assert(r == 0);
+  tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
+  r = entry_guard_succeeded(gs, &guard2);
+  tt_assert(r == 1);
+  tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
+
+  tt_assert(! entry_guards_all_primary_guards_are_down(gs));
+
+ done:
+  guard_selection_free(gs);
+  circuit_guard_state_free(guard);
+  circuit_guard_state_free(guard2);
+}
+
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
@@ -2321,6 +2580,9 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(manage_primary),
   BFN_TEST(select_for_circuit_no_confirmed),
   BFN_TEST(select_for_circuit_confirmed),
+  BFN_TEST(select_for_circuit_highlevel_primary),
+  BFN_TEST(select_for_circuit_highlevel_confirm_other),
+  BFN_TEST(select_for_circuit_highlevel_primary_retry),
   END_OF_TESTCASES
 };
 

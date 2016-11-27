@@ -1628,7 +1628,7 @@ entry_guard_chan_failed(guard_selection_t *gs,
  * Return true iff every primary guard in <b>gs</b> is believed to
  * be unreachable.
  */
-static int
+STATIC int
 entry_guards_all_primary_guards_are_down(guard_selection_t *gs)
 {
   tor_assert(gs);

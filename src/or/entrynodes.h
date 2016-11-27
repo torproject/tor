@@ -434,6 +434,7 @@ STATIC char *entry_guard_encode_for_state(entry_guard_t *guard);
 STATIC entry_guard_t *entry_guard_parse_from_state(const char *s);
 STATIC void entry_guard_free(entry_guard_t *e);
 STATIC void entry_guards_update_filtered_sets(guard_selection_t *gs);
+STATIC int entry_guards_all_primary_guards_are_down(guard_selection_t *gs);
 /**
  * @name Flags for sample_reachable_filtered_entry_guards()
  */
