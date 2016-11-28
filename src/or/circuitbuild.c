@@ -976,8 +976,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         }
         r = 1;
       } else {
-        r = entry_guard_succeeded(get_guard_selection_info(),
-                                  &circ->guard_state);
+        r = entry_guard_succeeded(&circ->guard_state);
       }
       const int is_usable_for_streams = (r == 1);
       if (r == 1) {

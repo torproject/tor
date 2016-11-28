@@ -636,7 +636,7 @@ connection_free_(connection_t *conn)
     rend_data_free(dir_conn->rend_data);
     if (dir_conn->guard_state) {
       /* Cancel before freeing, if it's still there. */
-      entry_guard_cancel(get_guard_selection_info(), &dir_conn->guard_state);
+      entry_guard_cancel(&dir_conn->guard_state);
     }
     circuit_guard_state_free(dir_conn->guard_state);
   }

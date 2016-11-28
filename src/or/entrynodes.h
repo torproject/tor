@@ -351,14 +351,10 @@ void circuit_guard_state_free(circuit_guard_state_t *state);
 int entry_guard_pick_for_circuit(guard_selection_t *gs,
                                  const node_t **chosen_node_out,
                                  circuit_guard_state_t **guard_state_out);
-int entry_guard_succeeded(guard_selection_t *gs,
-                          circuit_guard_state_t **guard_state_p);
-void entry_guard_failed(guard_selection_t *gs,
-                       circuit_guard_state_t **guard_state_p);
-void entry_guard_cancel(guard_selection_t *gs,
-                        circuit_guard_state_t **guard_state_p);
-void entry_guard_chan_failed(guard_selection_t *gs,
-                            channel_t *chan);
+int entry_guard_succeeded(circuit_guard_state_t **guard_state_p);
+void entry_guard_failed(circuit_guard_state_t **guard_state_p);
+void entry_guard_cancel(circuit_guard_state_t **guard_state_p);
+void entry_guard_chan_failed(channel_t *chan);
 int entry_guards_update_all(guard_selection_t *gs);
 int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
                                           const smartlist_t *all_circuits,

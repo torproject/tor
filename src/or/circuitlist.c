@@ -898,7 +898,7 @@ circuit_free(circuit_t *circ)
 
     /* Cancel before freeing, if we haven't already succeeded or failed. */
     if (ocirc->guard_state) {
-      entry_guard_cancel(get_guard_selection_info(), &ocirc->guard_state);
+      entry_guard_cancel(&ocirc->guard_state);
     }
     circuit_guard_state_free(ocirc->guard_state);
 

@@ -1653,7 +1653,7 @@ circuit_build_failed(origin_circuit_t *circ)
     }
     if (n_chan_id && !already_marked) {
       if (circ->guard_state)
-        entry_guard_failed(get_guard_selection_info(), &circ->guard_state);
+        entry_guard_failed(&circ->guard_state);
       /* XXXX prop271 -- old API */
       entry_guard_register_connect_status(n_chan_id, 0, 1, time(NULL));
       /* if there are any one-hop streams waiting on this circuit, fail

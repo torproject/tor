@@ -1731,8 +1731,7 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
  * XXXXX prop271 tristates are ugly; reconsider that interface.
  */
 int
-entry_guard_succeeded(guard_selection_t *gs,
-                      circuit_guard_state_t **guard_state_p)
+entry_guard_succeeded(circuit_guard_state_t **guard_state_p)
 {
   if (get_options()->UseDeprecatedGuardAlgorithm)
     return 1;
@@ -1741,13 +1740,12 @@ entry_guard_succeeded(guard_selection_t *gs,
     return -1;
 
   entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
-  if (! guard)
+  if (! guard || BUG(guard->in_selection == NULL))
     return -1;
 
-  tor_assert(gs == guard->in_selection); // XXXX prop271 remove argument
-
   unsigned newstate =
-    entry_guards_note_guard_success(gs, guard, (*guard_state_p)->state);
+    entry_guards_note_guard_success(guard->in_selection, guard,
+                                    (*guard_state_p)->state);
 
   (*guard_state_p)->state = newstate;
   (*guard_state_p)->state_set_at = approx_time();
@@ -1763,10 +1761,8 @@ entry_guard_succeeded(guard_selection_t *gs,
  * success or failure. It is safe to call this function if success or
  * failure _has_ already been declared. */
 void
-entry_guard_cancel(guard_selection_t *gs,
-                   circuit_guard_state_t **guard_state_p)
+entry_guard_cancel(circuit_guard_state_t **guard_state_p)
 {
-  (void) gs;
   if (get_options()->UseDeprecatedGuardAlgorithm)
     return;
   if (BUG(*guard_state_p == NULL))
@@ -1774,8 +1770,6 @@ entry_guard_cancel(guard_selection_t *gs,
   entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
   if (! guard)
     return;
-
-  tor_assert(gs == guard->in_selection); // XXXX prop271 remove argument
 
   /* XXXX prop271 -- last_tried_to_connect_at will be erroneous here, but this
    * function will only get called in "bug" cases anyway. */
@@ -1790,8 +1784,7 @@ entry_guard_cancel(guard_selection_t *gs,
  * not working, and advances the state of the guard module.
  */
 void
-entry_guard_failed(guard_selection_t *gs,
-                   circuit_guard_state_t **guard_state_p)
+entry_guard_failed(circuit_guard_state_t **guard_state_p)
 {
   if (get_options()->UseDeprecatedGuardAlgorithm)
     return;
@@ -1800,12 +1793,10 @@ entry_guard_failed(guard_selection_t *gs,
     return;
 
   entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
-  if (! guard)
+  if (! guard || BUG(guard->in_selection == NULL))
     return;
 
-  tor_assert(gs == guard->in_selection); // XXXX prop271 remove argument
-
-  entry_guards_note_guard_failure(gs, guard);
+  entry_guards_note_guard_failure(guard->in_selection, guard);
 
   (*guard_state_p)->state = GUARD_CIRC_STATE_DEAD;
   (*guard_state_p)->state_set_at = approx_time();
@@ -1816,10 +1807,8 @@ entry_guard_failed(guard_selection_t *gs,
  * pending on <b>chan</b>.
  */
 void
-entry_guard_chan_failed(guard_selection_t *gs,
-                        channel_t *chan)
+entry_guard_chan_failed(channel_t *chan)
 {
-  tor_assert(gs);
   if (!chan)
     return;
   if (get_options()->UseDeprecatedGuardAlgorithm)
@@ -1832,7 +1821,7 @@ entry_guard_chan_failed(guard_selection_t *gs,
       continue;
 
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    entry_guard_failed(gs, &origin_circ->guard_state);
+    entry_guard_failed(&origin_circ->guard_state);
   } SMARTLIST_FOREACH_END(circ);
   smartlist_free(pending);
 }

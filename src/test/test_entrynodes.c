@@ -2333,7 +2333,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
 
   /* Call that circuit successful. */
   update_approx_time(start+15);
-  r = entry_guard_succeeded(gs, &guard);
+  r = entry_guard_succeeded(&guard);
   tt_int_op(r, OP_EQ, 1); /* We can use it now. */
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
@@ -2365,7 +2365,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
 
   /* It's failed!  What will happen to our poor guard? */
   update_approx_time(start+45);
-  entry_guard_failed(gs, &guard);
+  entry_guard_failed(&guard);
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_DEAD);
   tt_i64_op(guard->state_set_at, OP_EQ, start+45);
@@ -2401,7 +2401,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
 
   /* Call this one up; watch it get confirmed. */
   update_approx_time(start+90);
-  r = entry_guard_succeeded(gs, &guard);
+  r = entry_guard_succeeded(&guard);
   tt_int_op(r, OP_EQ, 1); /* We can use it now. */
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
@@ -2441,7 +2441,7 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
     tt_assert(guard);
     tt_assert(r == 0);
     tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
-    entry_guard_failed(gs, &guard);
+    entry_guard_failed(&guard);
     circuit_guard_state_free(guard);
     guard = NULL;
     node = NULL;
@@ -2461,7 +2461,7 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
   tt_int_op(g->is_pending, OP_EQ, 1);
   (void)start;
 
-  r = entry_guard_succeeded(gs, &guard);
+  r = entry_guard_succeeded(&guard);
   /* We're on the internet (by fiat), so this guard will get called "confirmed"
    * and should immediately become primary.
    * XXXX prop271 -- I don't like that behavior, but it's what is specified
@@ -2508,7 +2508,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
     g = entry_guard_handle_get(guard->guard);
     make_guard_confirmed(gs, g);
     tt_int_op(g->is_primary, OP_EQ, 1);
-    entry_guard_failed(gs, &guard);
+    entry_guard_failed(&guard);
     circuit_guard_state_free(guard);
     tt_int_op(g->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
     guard = NULL;
@@ -2530,7 +2530,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   update_approx_time(start + 3600);
 
   /* Say that guard has succeeded! */
-  r = entry_guard_succeeded(gs, &guard);
+  r = entry_guard_succeeded(&guard);
   tt_int_op(r, OP_EQ, 0); // can't use it yet.
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
   g = entry_guard_handle_get(guard->guard);
@@ -2546,7 +2546,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   r = entry_guard_pick_for_circuit(gs, &node, &guard2);
   tt_assert(r == 0);
   tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
-  r = entry_guard_succeeded(gs, &guard2);
+  r = entry_guard_succeeded(&guard2);
   tt_assert(r == 1);
   tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
 
@@ -2578,7 +2578,7 @@ test_entry_guard_select_and_cancel(void *arg)
     tt_int_op(g->is_primary, OP_EQ, 1);
     tt_int_op(g->is_pending, OP_EQ, 0);
     make_guard_confirmed(gs, g);
-    entry_guard_failed(gs, &guard);
+    entry_guard_failed(&guard);
     circuit_guard_state_free(guard);
     guard = NULL;
     node = NULL;
@@ -2597,7 +2597,7 @@ test_entry_guard_select_and_cancel(void *arg)
   tt_int_op(g->is_pending, OP_EQ, 1);
 
   /* Whoops! We should never have asked for this guard. Cancel the request! */
-  entry_guard_cancel(gs, &guard);
+  entry_guard_cancel(&guard);
   tt_assert(guard == NULL);
   tt_int_op(g->is_primary, OP_EQ, 0);
   tt_int_op(g->is_pending, OP_EQ, 0);
@@ -2649,7 +2649,7 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
     entry_guard_pick_for_circuit(gs, &node, &guard);
     g = entry_guard_handle_get(guard->guard);
     make_guard_confirmed(gs, g);
-    entry_guard_failed(gs, &guard);
+    entry_guard_failed(&guard);
     circuit_guard_state_free(guard);
   }
 
@@ -2682,14 +2682,14 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   int r;
   update_approx_time(data->start + 32);
   if (make_circ1_succeed) {
-    r = entry_guard_succeeded(gs, &data->guard1_state);
+    r = entry_guard_succeeded(&data->guard1_state);
     tor_assert(r == 0);
     tor_assert(data->guard1_state->state ==
                GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
   }
   update_approx_time(data->start + 33);
   if (make_circ2_succeed) {
-    r = entry_guard_succeeded(gs, &data->guard2_state);
+    r = entry_guard_succeeded(&data->guard2_state);
     tor_assert(r == 0);
     tor_assert(data->guard2_state->state ==
                GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);

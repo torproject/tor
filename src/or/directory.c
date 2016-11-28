@@ -902,7 +902,7 @@ connection_dir_request_failed(dir_connection_t *conn)
   if (conn->guard_state) {
     /* We haven't seen a success on this guard state, so consider it to have
      * failed. */
-    entry_guard_failed(get_guard_selection_info(), &conn->guard_state);
+    entry_guard_failed(&conn->guard_state);
   }
   if (directory_conn_is_self_reachability_test(conn)) {
     return; /* this was a test fetch. don't retry. */
@@ -1271,7 +1271,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
     // In this case we should not have picked a directory guard.
     if (BUG(guard_state)) {
-      entry_guard_cancel(get_guard_selection_info(), &guard_state);
+      entry_guard_cancel(&guard_state);
     }
 
     switch (connection_connect(TO_CONN(conn), conn->base_.address, &addr,
@@ -1313,7 +1313,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
     // In this case we should not have a directory guard; we'll
     // get a regular guard later when we build the circuit.
     if (BUG(anonymized_connection && guard_state)) {
-      entry_guard_cancel(get_guard_selection_info(), &guard_state);
+      entry_guard_cancel(&guard_state);
     }
 
     conn->guard_state = guard_state;
@@ -2580,8 +2580,7 @@ connection_dir_process_inbuf(dir_connection_t *conn)
      */
     /* XXXXprop271 should we count this as only a partial success somehow?
     */
-    entry_guard_succeeded(get_guard_selection_info(),
-                          &conn->guard_state);
+    entry_guard_succeeded(&conn->guard_state);
     circuit_guard_state_free(conn->guard_state);
     conn->guard_state = NULL;
   }
