@@ -4536,13 +4536,6 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
-  if (old->UseDeprecatedGuardAlgorithm !=
-      new_val->UseDeprecatedGuardAlgorithm) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "UseDeprecatedGuardAlgorithm is not allowed.");
-    return -1;
-  }
-
   if (sandbox_is_active()) {
 #define SB_NOCHANGE_STR(opt)                                            \
     do {                                                                \

@@ -159,6 +159,10 @@ static void entry_guard_set_filtered_flags(const or_options_t *options,
                                            entry_guard_t *guard);
 static void pathbias_check_use_success_count(entry_guard_t *guard);
 static void pathbias_check_close_success_count(entry_guard_t *guard);
+static int node_is_possible_guard(guard_selection_t *gs, const node_t *node);
+static int node_passes_guard_filter(const or_options_t *options,
+                                    guard_selection_t *gs,
+                                    const node_t *node);
 
 /** Return 0 if we should apply guardfraction information found in the
  *  consensus. A specific consensus can be specified with the
@@ -186,12 +190,25 @@ should_apply_guardfraction(const networkstatus_t *ns)
  * Allocate and return a new guard_selection_t, with the name <b>name</b>.
  */
 STATIC guard_selection_t *
-guard_selection_new(const char *name)
+guard_selection_new(const char *name,
+                    guard_selection_type_t type)
 {
   guard_selection_t *gs;
 
+  if (type == GS_TYPE_INFER) {
+    if (!strcmp(name, "legacy"))
+      type = GS_TYPE_LEGACY;
+    else if (!strcmp(name, "bridges"))
+      type = GS_TYPE_BRIDGE;
+    else if (!strcmp(name, "restricted"))
+      type = GS_TYPE_RESTRICTED;
+    else
+      type = GS_TYPE_NORMAL;
+  }
+
   gs = tor_malloc_zero(sizeof(*gs));
   gs->name = tor_strdup(name);
+  gs->type = type;
   gs->chosen_entry_guards = smartlist_new();
   gs->sampled_entry_guards = smartlist_new();
   gs->confirmed_entry_guards = smartlist_new();
@@ -206,7 +223,9 @@ guard_selection_new(const char *name)
  * is none, and <b>create_if_absent</b> is false, then return NULL.
  */
 STATIC guard_selection_t *
-get_guard_selection_by_name(const char *name, int create_if_absent)
+get_guard_selection_by_name(const char *name,
+                            guard_selection_type_t type,
+                            int create_if_absent)
 {
   if (!guard_contexts) {
     guard_contexts = smartlist_new();
@@ -219,31 +238,42 @@ get_guard_selection_by_name(const char *name, int create_if_absent)
   if (! create_if_absent)
     return NULL;
 
-  guard_selection_t *new_selection = guard_selection_new(name);
+  log_debug(LD_GUARD, "Creating a guard selection called %s", name);
+  guard_selection_t *new_selection = guard_selection_new(name, type);
   smartlist_add(guard_contexts, new_selection);
 
-  const char *default_name = get_options()->UseDeprecatedGuardAlgorithm ?
-    "legacy" : "default";
-
-  if (!strcmp(name, default_name))
-    curr_guard_context = new_selection;
-
   return new_selection;
+}
+
+/**
+ * Allocate the first guard context that we're planning to use,
+ * and make it the current context.
+ */
+static void
+create_initial_guard_context(void)
+{
+  tor_assert(! curr_guard_context);
+  if (!guard_contexts) {
+    guard_contexts = smartlist_new();
+  }
+  guard_selection_type_t type = GS_TYPE_INFER;
+  const char *name = choose_guard_selection(
+                             get_options(),
+                             networkstatus_get_live_consensus(approx_time()),
+                             NULL,
+                             &type);
+  tor_assert(name); // "name" can only be NULL if we had an old name.
+  tor_assert(type != GS_TYPE_INFER);
+  log_notice(LD_GUARD, "Starting with guard context \"%s\"", name);
+  curr_guard_context = get_guard_selection_by_name_and_type(name, type);
 }
 
 /** Get current default guard_selection_t, creating it if necessary */
 guard_selection_t *
 get_guard_selection_info(void)
 {
-  if (!guard_contexts) {
-    guard_contexts = smartlist_new();
-  }
-
   if (!curr_guard_context) {
-    const char *name = get_options()->UseDeprecatedGuardAlgorithm ?
-      "legacy" : "default";
-    curr_guard_context = guard_selection_new(name);
-    smartlist_add(guard_contexts, curr_guard_context);
+    create_initial_guard_context();
   }
 
   return curr_guard_context;
@@ -431,9 +461,183 @@ get_nonprimary_guard_idle_timeout(void)
 {
   return networkstatus_get_param(NULL,
                                  "guard-nonprimary-guard-idle-timeout",
-                                 (10*60), 1, INT32_MAX);
+                                 DFLT_NONPRIMARY_GUARD_IDLE_TIMEOUT,
+                                 1, INT32_MAX);
+}
+/**
+ * If our configuration retains fewer than this fraction of guards from the
+ * torrc, we are in a restricted setting.
+ */
+STATIC double
+get_meaningful_restriction_threshold(void)
+{
+  int32_t pct = networkstatus_get_param(NULL,
+                                        "guard-meaningful-restriction-percent",
+                                        DFLT_MEANINGFUL_RESTRICTION_PERCENT,
+                                        1, INT32_MAX);
+  return pct / 100.0;
+}
+/**
+ * If our configuration retains fewer than this fraction of guards from the
+ * torrc, we are in an extremely restricted setting, and should warn.
+ */
+STATIC double
+get_extreme_restriction_threshold(void)
+{
+  int32_t pct = networkstatus_get_param(NULL,
+                                        "guard-extreme-restriction-percent",
+                                        DFLT_EXTREME_RESTRICTION_PERCENT,
+                                        1, INT32_MAX);
+  return pct / 100.0;
 }
 /**@}*/
+
+/**
+ * Given our options and our list of nodes, return the name of the
+ * guard selection that we should use.  Return NULL for "use the
+ * same selection you were using before.
+ */
+STATIC const char *
+choose_guard_selection(const or_options_t *options,
+                       const networkstatus_t *live_ns,
+                       const char *old_selection,
+                       guard_selection_type_t *type_out)
+{
+  tor_assert(options);
+  tor_assert(type_out);
+  if (options->UseDeprecatedGuardAlgorithm) {
+    *type_out = GS_TYPE_LEGACY;
+    return "legacy";
+  }
+
+  if (options->UseBridges) {
+    *type_out = GS_TYPE_BRIDGE;
+    return "bridges";
+  }
+
+  if (! live_ns) {
+    /* without a networkstatus, we can't tell any more than that. */
+    *type_out = GS_TYPE_NORMAL;
+    return "default";
+  }
+
+  const smartlist_t *nodes = nodelist_get_list();
+  int n_guards = 0, n_passing_filter = 0;
+  SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
+    if (node_is_possible_guard(NULL, node)) {
+      ++n_guards;
+      if (node_passes_guard_filter(options, NULL, node)) {
+        ++n_passing_filter;
+      }
+    }
+  } SMARTLIST_FOREACH_END(node);
+
+  /* XXXX prop271 spec deviation -- separate 'high' and 'low' thresholds
+   *  to prevent flapping */
+  const int meaningful_threshold_high =
+    (int)(n_guards * get_meaningful_restriction_threshold() * 1.05);
+  const int meaningful_threshold_mid =
+    (int)(n_guards * get_meaningful_restriction_threshold());
+  const int meaningful_threshold_low =
+    (int)(n_guards * get_meaningful_restriction_threshold() * .95);
+  const int extreme_threshold =
+    (int)(n_guards * get_extreme_restriction_threshold());
+
+  /*
+    If we have no previous selection, then we're "restricted" iff we are
+    below the meaningful restriction threshold.  That's easy enough.
+
+    But if we _do_ have a previous selection, we make it a little
+    "sticky": we only move from "restricted" to "default" when we find
+    that we're above the threshold plus 5%, and we only move from
+    "default" to "restricted" when we're below the threshold minus 5%.
+    That should prevent us from flapping back and forth if we happen to
+    be hovering very close to the default.
+
+    The extreme threshold is for warning only.
+  */
+
+  static int have_warned_extreme_threshold = 0;
+  if (n_passing_filter < extreme_threshold &&
+      ! have_warned_extreme_threshold) {
+    have_warned_extreme_threshold = 1;
+    const double exclude_frac =
+      (n_guards - n_passing_filter) / (double)n_guards;
+    log_warn(LD_GUARD, "Your configuration excludes %d%% of all possible "
+             "guards. That's likely to make you stand out from the "
+             "rest of the world.", (int)(exclude_frac * 100));
+  }
+
+  /* Easy case: no previous selection */
+  if (old_selection == NULL) {
+    if (n_passing_filter >= meaningful_threshold_mid) {
+      *type_out = GS_TYPE_NORMAL;
+      return "default";
+    } else {
+      *type_out = GS_TYPE_RESTRICTED;
+      return "restricted";
+    }
+  }
+
+  /* Trickier case: we do have a previous selection */
+  if (n_passing_filter >= meaningful_threshold_high) {
+    *type_out = GS_TYPE_NORMAL;
+    return "default";
+  } else if (n_passing_filter < meaningful_threshold_low) {
+    *type_out = GS_TYPE_RESTRICTED;
+    return "restricted";
+  } else {
+    return NULL;
+  }
+}
+
+/**
+ * Check whether we should switch from our current guard selection to a
+ * different one.  If so, switch and return 1.  Return 0 otherwise.
+ *
+ * On a 1 return, the caller should mark all currently live circuits
+ * unusable for new streams.
+ */
+int
+update_guard_selection_choice(const or_options_t *options)
+{
+  if (!curr_guard_context) {
+    create_initial_guard_context();
+    return 1;
+  }
+
+  const char *cur_name = curr_guard_context->name;
+  guard_selection_type_t type = GS_TYPE_INFER;
+  const char *new_name = choose_guard_selection(
+                             options,
+                             networkstatus_get_live_consensus(approx_time()),
+                             cur_name,
+                             &type);
+  tor_assert(new_name);
+  tor_assert(type != GS_TYPE_INFER);
+
+  if (! strcmp(cur_name, new_name)) {
+    log_debug(LD_GUARD,
+              "Staying with guard context \"%s\" (no change)", new_name);
+    return 0; // No change
+  }
+
+  log_notice(LD_GUARD, "Switching to guard context \"%s\" (was using \"%s\")",
+             new_name, cur_name);
+  guard_selection_t *new_guard_context;
+  new_guard_context = get_guard_selection_by_name(new_name, type, 1);
+  tor_assert(new_guard_context);
+  tor_assert(new_guard_context != curr_guard_context);
+  curr_guard_context = new_guard_context;
+
+  /*
+    Be sure to call:
+    circuit_mark_all_unused_circs();
+    circuit_mark_all_dirty_circs_as_unusable();
+  */
+
+  return 1;
+}
 
 /**
  * Return true iff <b>node</b> has all the flags needed for us to consider it
@@ -446,7 +650,7 @@ node_is_possible_guard(guard_selection_t *gs, const node_t *node)
    * holds. */
 
   /* XXXX -- prop271 spec deviation. We require node_is_dir() here. */
-  (void)gs;
+  (void)gs; /* Remove this argument */
   tor_assert(node);
   return (node->is_possible_guard &&
           node->is_stable &&
@@ -552,7 +756,7 @@ entry_guards_expand_sample(guard_selection_t *gs)
   int n_sampled = smartlist_len(gs->sampled_entry_guards);
   entry_guard_t *added_guard = NULL;
 
-  smartlist_t *nodes = nodelist_get_list();
+  const smartlist_t *nodes = nodelist_get_list();
   /* Construct eligible_guards as GUARDS - SAMPLED_GUARDS */
   smartlist_t *eligible_guards = smartlist_new();
   int n_guards = 0; // total size of "GUARDS"
@@ -565,13 +769,13 @@ entry_guards_expand_sample(guard_selection_t *gs)
       digestset_add(sampled_guard_ids, guard->identity);
     } SMARTLIST_FOREACH_END(guard);
 
-    SMARTLIST_FOREACH_BEGIN(nodes, node_t *, node) {
+    SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
       if (! node_is_possible_guard(gs, node))
         continue;
       ++n_guards;
       if (digestset_contains(sampled_guard_ids, node->identity))
         continue;
-      smartlist_add(eligible_guards, node);
+      smartlist_add(eligible_guards, (node_t*)node);
     } SMARTLIST_FOREACH_END(node);
 
     /* Now we can free that bloom filter. */
@@ -817,6 +1021,8 @@ static int
 node_passes_guard_filter(const or_options_t *options, guard_selection_t *gs,
                          const node_t *node)
 {
+  /* XXXX prop271 remote the gs option; it is unused, and sometimes NULL. */
+
   /* NOTE: Make sure that this function stays in sync with
    * options_transition_affects_entry_guards */
 
@@ -2221,7 +2427,8 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
 
     if (set) {
       guard_selection_t *gs;
-      gs = get_guard_selection_by_name(guard->selection_name, 1);
+      gs = get_guard_selection_by_name(guard->selection_name,
+                                       GS_TYPE_INFER, 1);
       tor_assert(gs);
       smartlist_add(gs->sampled_entry_guards, guard);
     } else {
@@ -3854,7 +4061,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
   int r1 = entry_guards_load_guards_from_state(state, set);
 
   int r2 = entry_guards_parse_state_for_guard_selection(
-      get_guard_selection_by_name("legacy", 1),
+      get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 1),
       state, set, msg);
 
   entry_guards_dirty = 0;
@@ -3926,7 +4133,8 @@ entry_guards_update_state(or_state_t *state)
 
   entry_guards_dirty = 0;
 
-  guard_selection_t *gs = get_guard_selection_by_name("legacy", 0);
+  guard_selection_t *gs;
+  gs = get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 0);
   if (!gs)
     return; // nothign to save.
   tor_assert(gs->chosen_entry_guards != NULL);
@@ -4212,12 +4420,20 @@ entries_retry_all(const or_options_t *options)
 int
 guards_update_all(void)
 {
-  if (get_options()->UseDeprecatedGuardAlgorithm) {
+  int mark_circuits = 0;
+  if (update_guard_selection_choice(get_options()))
+    mark_circuits = 1;
+
+  tor_assert(curr_guard_context);
+
+  if (curr_guard_context->type == GS_TYPE_LEGACY) {
     entry_guards_compute_status(get_options(), approx_time());
-    return 0;
   } else {
-    return entry_guards_update_all(get_guard_selection_info());
+    if (entry_guards_update_all(get_guard_selection_info()))
+      mark_circuits = 1;
   }
+
+  return mark_circuits;
 }
 
 /** Helper: pick a guard for a circuit, with whatever algorithm is

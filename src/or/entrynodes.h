@@ -195,6 +195,26 @@ struct entry_guard_t {
 };
 
 /**
+ * Possible rules for a guard selection to follow
+ */
+typedef enum guard_selection_type_t {
+  /** Infer the type of this selection from its name. */
+  GS_TYPE_INFER=0,
+  /** Use the normal guard selection algorithm, taking our sample from the
+   * complete list of guards in the consensus. */
+  GS_TYPE_NORMAL=1,
+  /** Use the normal guard selection algorithm, taking our sample from the
+   * configured bridges, and allowing it to grow as large as all the configured
+   * bridges */
+  GS_TYPE_BRIDGE,
+  /** Use the normal guard selection algorithm, taking our sample from the
+   * set of filtered nodes. */
+  GS_TYPE_RESTRICTED,
+  /** Use the legacy (pre-prop271) guard selection algorithm and fields */
+  GS_TYPE_LEGACY,
+} guard_selection_type_t;
+
+/**
  * All of the the context for guard selection on a particular client.
  *
  * (XXXX prop271 this paragraph below is not actually implemented yet.)
@@ -211,6 +231,11 @@ struct guard_selection_s {
    * The name for this guard-selection object. (Must not contain spaces).
    */
   char *name;
+
+  /**
+   * What rules does this guard-selection object follow?
+   */
+  guard_selection_type_t type;
 
   /**
    * A value of 1 means that primary_entry_guards is up-to-date; 0
@@ -340,6 +365,8 @@ int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
 int entry_guard_state_should_expire(circuit_guard_state_t *guard_state);
 void entry_guards_note_internet_connectivity(guard_selection_t *gs);
 
+int update_guard_selection_choice(const or_options_t *options);
+
 /* Used by bridges.c only. */
 void add_bridge_as_entry_guard(guard_selection_t *gs,
                                const node_t *chosen);
@@ -396,15 +423,17 @@ int num_bridges_usable(void);
  * If a circuit has been sitting around in 'waiting for better guard' state
  * for at least this long, we'll expire it.
  */
-#define DLFT_NONPRIMARY_GUARD_IDLE_TIMEOUT (10*60)
+#define DFLT_NONPRIMARY_GUARD_IDLE_TIMEOUT (10*60)
 /**
- * DOCDOC. not yet used; see prop271.
+ * If our configuration retains fewer than this fraction of guards from the
+ * torrc, we are in a restricted setting.
  */
-#define DFLT_MEANINGFUL_RESTRICTION_FRAC 0.2
+#define DFLT_MEANINGFUL_RESTRICTION_PERCENT 20
 /**
- * DOCDOC. not yet used. see prop271.
+ * If our configuration retains fewer than this fraction of guards from the
+ * torrc, we are in an extremely restricted setting, and should warn.
  */
-#define DFLT_EXTREME_RESTRICTION_FRAC 0.01
+#define DFLT_EXTREME_RESTRICTION_PERCENT 1
 /**@}*/
 
 STATIC double get_max_sample_threshold(void);
@@ -416,13 +445,20 @@ STATIC int get_n_primary_guards(void);
 STATIC int get_internet_likely_down_interval(void);
 STATIC int get_nonprimary_guard_connect_timeout(void);
 STATIC int get_nonprimary_guard_idle_timeout(void);
+STATIC double get_meaningful_restriction_threshold(void);
+STATIC double get_extreme_restriction_threshold(void);
 
 // ---------- XXXX these functions and definitions are post-prop271.
 HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
-STATIC guard_selection_t *guard_selection_new(const char *name);
+STATIC guard_selection_t *guard_selection_new(const char *name,
+                                              guard_selection_type_t type);
 STATIC guard_selection_t *get_guard_selection_by_name(
-                                    const char *name, int create_if_absent);
+          const char *name, guard_selection_type_t type, int create_if_absent);
 STATIC void guard_selection_free(guard_selection_t *gs);
+STATIC const char *choose_guard_selection(const or_options_t *options,
+                                          const networkstatus_t *ns,
+                                          const char *old_selection,
+                                          guard_selection_type_t *type_out);
 STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
                                                 const uint8_t *rsa_id);
 
