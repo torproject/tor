@@ -34,7 +34,7 @@
  * they become able to read or write register the fact with the event main
  * loop by calling connection_watch_events(), connection_start_reading(), or
  * connection_start_writing().  When they no longer want to read or write,
- * they call connection_stop_reading() or connection_start_writing().
+ * they call connection_stop_reading() or connection_stop_writing().
  *
  * To queue data to be written on a connection, call
  * connection_write_to_buf().  When data arrives, the

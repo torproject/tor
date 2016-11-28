@@ -1760,7 +1760,7 @@ typedef struct dir_connection_t {
  /** Which 'resource' did we ask the directory for? This is typically the part
   * of the URL string that defines, relative to the directory conn purpose,
   * what thing we want.  For example, in router descriptor downloads by
-  * descriptor digest, it contains "d/", then one ore more +-separated
+  * descriptor digest, it contains "d/", then one or more +-separated
   * fingerprints.
   **/
   char *requested_resource;

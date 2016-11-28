@@ -486,7 +486,7 @@ connection_check_event(connection_t *conn, struct event *ev)
      */
     bad = ev != NULL;
   } else {
-    /* Everytyhing else should have an underlying socket, or a linked
+    /* Everything else should have an underlying socket, or a linked
      * connection (which is also tracked with a read_event/write_event pair).
      */
     bad = ev == NULL;
@@ -1656,8 +1656,7 @@ static int
 check_expired_networkstatus_callback(time_t now, const or_options_t *options)
 {
   (void)options;
-  /* 1f. Check whether our networkstatus has expired.
-   */
+  /* Check whether our networkstatus has expired. */
   networkstatus_t *ns = networkstatus_get_latest_consensus();
   /*XXXX RD: This value needs to be the same as REASONABLY_LIVE_TIME in
    * networkstatus_get_reasonably_live_consensus(), but that value is way
@@ -1769,7 +1768,7 @@ clean_caches_callback(time_t now, const or_options_t *options)
 
 /**
  * Periodic callback: Clean the cache of failed hidden service lookups
- * frequently frequently.
+ * frequently.
  */
 static int
 rend_cache_failure_clean_callback(time_t now, const or_options_t *options)
