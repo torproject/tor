@@ -722,6 +722,7 @@ entry_guard_add_to_sample(guard_selection_t *gs,
   guard->is_reachable = GUARD_REACHABLE_MAYBE;
 
   smartlist_add(gs->sampled_entry_guards, guard);
+  guard->in_selection = gs;
   entry_guard_set_filtered_flags(get_options(), gs, guard);
   entry_guards_changed_for_guard_selection(gs);
   return guard;
@@ -1743,6 +1744,8 @@ entry_guard_succeeded(guard_selection_t *gs,
   if (! guard)
     return -1;
 
+  tor_assert(gs == guard->in_selection); // XXXX prop271 remove argument
+
   unsigned newstate =
     entry_guards_note_guard_success(gs, guard, (*guard_state_p)->state);
 
@@ -1772,6 +1775,8 @@ entry_guard_cancel(guard_selection_t *gs,
   if (! guard)
     return;
 
+  tor_assert(gs == guard->in_selection); // XXXX prop271 remove argument
+
   /* XXXX prop271 -- last_tried_to_connect_at will be erroneous here, but this
    * function will only get called in "bug" cases anyway. */
   guard->is_pending = 0;
@@ -1797,6 +1802,8 @@ entry_guard_failed(guard_selection_t *gs,
   entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
   if (! guard)
     return;
+
+  tor_assert(gs == guard->in_selection); // XXXX prop271 remove argument
 
   entry_guards_note_guard_failure(gs, guard);
 
@@ -1876,7 +1883,7 @@ circ_state_has_higher_priority(origin_circuit_t *a,
 }
 
 /**
- * Look at all of the origin_circuit_t * objects in <b>all_circuits</b>,
+ * Look at all of the origin_circuit_t * objects in <b>all_circuits_in</b>,
  * and see if any of them that were previously not ready to use for
  * guard-related reasons are now ready to use. Place those circuits
  * in <b>newly_complete_out</b>, and mark them COMPLETE.
@@ -1885,11 +1892,11 @@ circ_state_has_higher_priority(origin_circuit_t *a,
  */
 int
 entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
-                                      const smartlist_t *all_circuits,
+                                      const smartlist_t *all_circuits_in,
                                       smartlist_t *newly_complete_out)
 {
   tor_assert(gs);
-  tor_assert(all_circuits);
+  tor_assert(all_circuits_in);
   tor_assert(newly_complete_out);
 
   if (! entry_guards_all_primary_guards_are_down(gs)) {
@@ -1904,9 +1911,23 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   int n_complete = 0;
   origin_circuit_t *best_waiting_circuit = NULL;
   origin_circuit_t *best_complete_circuit = NULL;
-  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+  smartlist_t *all_circuits = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(all_circuits_in, origin_circuit_t *, circ) {
+    // We filter out circuits that aren't ours, or which we can't
+    // reason about.
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if (state == NULL)
+      continue;
+    entry_guard_t *guard = entry_guard_handle_get(state->guard);
+    if (!guard || guard->in_selection != gs)
+      continue;
+
+    smartlist_add(all_circuits, circ);
+  } SMARTLIST_FOREACH_END(circ);
+
+  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+    circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
+    if BUG((state == NULL))
       continue;
 
     if (state->state == GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD) {
@@ -1927,7 +1948,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   if (! best_waiting_circuit) {
     log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits, "
               "but didn't find any.");
-    return 0;
+    goto no_change;
   }
 
   if (best_complete_circuit) {
@@ -1940,8 +1961,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
                 "%d complete and %d guard-stalled. At least one complete "
                 "circuit had higher priority, so not upgrading.",
                 n_complete, n_waiting);
-
-      return 0;
+      goto no_change;
     }
   }
 
@@ -1959,7 +1979,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     approx_time() - get_nonprimary_guard_connect_timeout();
   SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
-    if (state == NULL)
+    if (BUG(state == NULL))
       continue;
     if (state->state != GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD)
       continue;
@@ -1973,7 +1993,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
               "%d guard-stalled, but %d pending circuit(s) had higher "
               "guard priority, so not upgrading.",
               n_waiting, n_blockers_found);
-    return 0;
+    goto no_change;
   }
 
   /* Okay. We have a best waiting circuit, and we aren't waiting for
@@ -1982,7 +2002,7 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   int n_succeeded = 0;
   SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
-    if (state == NULL)
+    if (BUG(state == NULL))
       continue;
     if (state->state != GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD)
       continue;
@@ -2001,7 +2021,12 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
            n_waiting, n_complete, n_succeeded);
 
   tor_assert_nonfatal(n_succeeded >= 1);
+  smartlist_free(all_circuits);
   return 1;
+
+ no_change:
+  smartlist_free(all_circuits);
+  return 0;
 }
 
 /**
@@ -2431,6 +2456,7 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
                                        GS_TYPE_INFER, 1);
       tor_assert(gs);
       smartlist_add(gs->sampled_entry_guards, guard);
+      guard->in_selection = gs;
     } else {
       entry_guard_free(guard);
     }
@@ -2925,6 +2951,7 @@ add_an_entry_guard(guard_selection_t *gs,
     smartlist_insert(gs->chosen_entry_guards, 0, entry);
   else
     smartlist_add(gs->chosen_entry_guards, entry);
+  entry->in_selection = gs;
 
   control_event_guard(entry->nickname, entry->identity, "NEW");
   control_event_guard_deferred();
@@ -3127,6 +3154,7 @@ remove_all_entry_guards_for_guard_selection(guard_selection_t *gs)
 void
 remove_all_entry_guards(void)
 {
+  // XXXX prop271 this function shouldn't exist, in the new order.
   remove_all_entry_guards_for_guard_selection(get_guard_selection_info());
 }
 
@@ -4037,6 +4065,8 @@ entry_guards_parse_state_for_guard_selection(
       smartlist_free(gs->chosen_entry_guards);
     }
     gs->chosen_entry_guards = new_entry_guards;
+    SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e,
+                      e->in_selection = gs);
 
     /* XXX hand new_entry_guards to this func, and move it up a
      * few lines, so we don't have to re-dirty it */
@@ -4429,7 +4459,7 @@ guards_update_all(void)
   if (curr_guard_context->type == GS_TYPE_LEGACY) {
     entry_guards_compute_status(get_options(), approx_time());
   } else {
-    if (entry_guards_update_all(get_guard_selection_info()))
+    if (entry_guards_update_all(curr_guard_context))
       mark_circuits = 1;
   }
 

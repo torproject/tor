@@ -125,6 +125,7 @@ struct entry_guard_t {
    * Which selection does this guard belong to?
    */
   char *selection_name;
+  guard_selection_t *in_selection;
 
   /* ==== Non-persistent fields. */
   /* == These are used by sampled guards */
