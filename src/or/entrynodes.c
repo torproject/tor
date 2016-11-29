@@ -802,12 +802,10 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
  * Add an entry guard to the "bridges" guard selection sample, with
  * information taken from <b>bridge</b>. Return that entry guard.
  */
-entry_guard_t *
-entry_guard_add_bridge_to_sample(const bridge_info_t *bridge)
+static entry_guard_t *
+entry_guard_add_bridge_to_sample(guard_selection_t *gs,
+                                 const bridge_info_t *bridge)
 {
-  guard_selection_t *gs = get_guard_selection_by_name("bridges",
-                                                      GS_TYPE_BRIDGE,
-                                                      1);
   const uint8_t *id_digest = bridge_get_rsa_id_digest(bridge);
   const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
 
@@ -896,24 +894,34 @@ num_reachable_filtered_guards(guard_selection_t *gs)
 }
 
 /**
- * Add new guards to the sampled guards in <b>gs</b> until there are
- * enough usable filtered guards, but never grow the sample beyond its
- * maximum size.  Return the last guard added, or NULL if none were
- * added.
+ * Return a smartlist of the all the guards that are not currently
+ * members of the sample (GUARDS - SAMPLED_GUARDS).  The elements of
+ * this list are node_t pointers in the non-bridge case, and
+ * bridge_info_t pointers in the bridge case.  Set *<b>n_guards_out/b>
+ * to the number of guards that we found in GUARDS, including those
+ * that were already sampled.
  */
-STATIC entry_guard_t *
-entry_guards_expand_sample(guard_selection_t *gs)
+static smartlist_t *
+get_eligible_guards(guard_selection_t *gs,
+                    int *n_guards_out)
 {
-  tor_assert(gs);
-  int n_sampled = smartlist_len(gs->sampled_entry_guards);
-  entry_guard_t *added_guard = NULL;
-
-  const smartlist_t *nodes = nodelist_get_list();
   /* Construct eligible_guards as GUARDS - SAMPLED_GUARDS */
   smartlist_t *eligible_guards = smartlist_new();
   int n_guards = 0; // total size of "GUARDS"
-  int n_usable_filtered_guards = num_reachable_filtered_guards(gs);
-  {
+
+  if (gs->type == GS_TYPE_BRIDGE) {
+    const smartlist_t *bridges = bridge_list_get();
+    SMARTLIST_FOREACH_BEGIN(bridges, bridge_info_t *, bridge) {
+      ++n_guards;
+      if (NULL != get_sampled_guard_for_bridge(gs, bridge)) {
+        continue;
+      }
+      smartlist_add(eligible_guards, bridge);
+    } SMARTLIST_FOREACH_END(bridge);
+  } else {
+    const smartlist_t *nodes = nodelist_get_list();
+    const int n_sampled = smartlist_len(gs->sampled_entry_guards);
+
     /* Build a bloom filter of our current guards: let's keep this O(N). */
     digestset_t *sampled_guard_ids = digestset_new(n_sampled);
     SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, const entry_guard_t *,
@@ -934,11 +942,58 @@ entry_guards_expand_sample(guard_selection_t *gs)
     digestset_free(sampled_guard_ids);
   }
 
-  /* Is there at least one guard we haven't sampled? */
-  if (! smartlist_len(eligible_guards))
-    goto done;
+  *n_guards_out = n_guards;
+  return eligible_guards;
+}
 
-  const int max_sample = (int)(n_guards * get_max_sample_threshold());
+/** Helper: given a smartlist of either bridge_info_t (if gs->type is
+ * GS_TYPE_BRIDGE) or node_t (otherwise), pick one that can be a guard,
+ * add it as a guard, remove it from the list, and return a new
+ * entry_guard_t.  Return NULL on failure. */
+static entry_guard_t *
+select_and_add_guard_item_for_sample(guard_selection_t *gs,
+                                     smartlist_t *eligible_guards)
+{
+  entry_guard_t *added_guard;
+  if (gs->type == GS_TYPE_BRIDGE) {
+    const bridge_info_t *bridge = smartlist_choose(eligible_guards);
+    if (BUG(!bridge))
+      return NULL; // LCOV_EXCL_LINE
+    smartlist_remove(eligible_guards, bridge);
+    added_guard = entry_guard_add_bridge_to_sample(gs, bridge);
+  } else {
+    const node_t *node =
+      node_sl_choose_by_bandwidth(eligible_guards, WEIGHT_FOR_GUARD);
+    if (BUG(!node))
+      return NULL; // LCOV_EXCL_LINE
+    smartlist_remove(eligible_guards, node);
+    added_guard = entry_guard_add_to_sample(gs, node);
+  }
+
+  return added_guard;
+}
+
+/**
+ * Add new guards to the sampled guards in <b>gs</b> until there are
+ * enough usable filtered guards, but never grow the sample beyond its
+ * maximum size.  Return the last guard added, or NULL if none were
+ * added.
+ */
+STATIC entry_guard_t *
+entry_guards_expand_sample(guard_selection_t *gs)
+{
+  tor_assert(gs);
+  int n_sampled = smartlist_len(gs->sampled_entry_guards);
+  entry_guard_t *added_guard = NULL;
+  int n_usable_filtered_guards = num_reachable_filtered_guards(gs);
+  int n_guards = 0;
+  smartlist_t *eligible_guards = get_eligible_guards(gs, &n_guards);
+
+  const int using_bridges = (gs->type == GS_TYPE_BRIDGE);
+
+  /* XXXX prop271 spec deviation with bridges, max_sample is "all of them" */
+  const int max_sample = using_bridges ? n_guards :
+    (int)(n_guards * get_max_sample_threshold());
   const int min_filtered_sample = get_min_filtered_sample_size();
 
   log_info(LD_GUARD, "Expanding the sample guard set. We have %d guards "
@@ -967,12 +1022,7 @@ entry_guards_expand_sample(guard_selection_t *gs)
     }
 
     /* Otherwise we can add at least one new guard. */
-    const node_t *node =
-      node_sl_choose_by_bandwidth(eligible_guards, WEIGHT_FOR_GUARD);
-    if (BUG(! node))
-      goto done; // LCOV_EXCL_LINE -- should be impossible.
-
-    added_guard = entry_guard_add_to_sample(gs, node);
+    added_guard = select_and_add_guard_item_for_sample(gs, eligible_guards);
     if (!added_guard)
       goto done; // LCOV_EXCL_LINE -- only fails on BUG.
 
@@ -980,8 +1030,6 @@ entry_guards_expand_sample(guard_selection_t *gs)
 
     if (added_guard->is_usable_filtered_guard)
       ++n_usable_filtered_guards;
-
-    smartlist_remove(eligible_guards, node);
   }
 
  done:
@@ -1029,6 +1077,21 @@ remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
   }
 }
 
+/** Return true iff <b>guard</b> is currently "listed" -- that is, it
+ * appears in the consensus, or as a configured bridge (as
+ * appropriate) */
+static int
+entry_guard_is_listed(guard_selection_t *gs, const entry_guard_t *guard)
+{
+  if (gs->type == GS_TYPE_BRIDGE) {
+    return NULL != get_bridge_info_for_guard(guard);
+  } else {
+    const node_t *node = node_get_by_id(guard->identity);
+
+    return node && node_is_possible_guard(gs, node);
+  }
+}
+
 /**
  * Update the status of all sampled guards based on the arrival of a
  * new consensus networkstatus document.  This will include marking
@@ -1059,11 +1122,8 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
   /* First: Update listed/unlisted. */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
-    /* XXXX prop271 handle bridges right?  */
     /* XXXX prop271 check ed ID too */
-    const node_t *node = node_get_by_id(guard->identity);
-
-    const unsigned is_listed = node && node_is_possible_guard(gs, node);
+    const int is_listed = entry_guard_is_listed(gs, guard);
 
     if (is_listed && ! guard->currently_listed) {
       ++n_changes;
@@ -1113,8 +1173,6 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
   /* Then: remove the ones that have been junk for too long */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
-    /* XXXX prop271 handle bridges right?  */
-
     int remove = 0;
 
     if (guard->currently_listed == 0 &&
@@ -1180,20 +1238,48 @@ node_passes_guard_filter(const or_options_t *options, guard_selection_t *gs,
   /* NOTE: Make sure that this function stays in sync with
    * options_transition_affects_entry_guards */
 
+  tor_assert(! options->UseBridges);
+
   (void)gs;
   if (routerset_contains_node(options->ExcludeNodes, node))
     return 0;
 
   /* XXXX -- prop271 spec deviation -- add entrynodes to spec. */
   if (options->EntryNodes &&
-      !options->UseBridges &&
       !routerset_contains_node(options->EntryNodes, node))
     return 0;
 
   if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
     return 0;
 
-  if (bool_neq(options->UseBridges, node_is_a_configured_bridge(node)))
+  if (node_is_a_configured_bridge(node))
+    return 0;
+
+  return 1;
+}
+
+/** Helper: Return true iff <b>bridge</b> passes our configuration
+ * filter-- if it is a relay that we are configured to be able to
+ * connect to. */
+static int
+bridge_passes_guard_filter(const or_options_t *options,
+                           const bridge_info_t *bridge)
+{
+  tor_assert(options->UseBridges);
+  tor_assert(bridge);
+  if (!bridge)
+    return 0;
+
+  if (routerset_contains_bridge(options->ExcludeNodes, bridge))
+    return 0;
+
+  /* Ignore entrynodes */
+  const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
+
+  if (!fascist_firewall_allows_address_addr(&addrport->addr,
+                                            addrport->port,
+                                            FIREWALL_OR_CONNECTION,
+                                            0, 0))
     return 0;
 
   return 1;
@@ -1212,14 +1298,21 @@ entry_guard_passes_filter(const or_options_t *options, guard_selection_t *gs,
   if (guard->pb.path_bias_disabled)
     return 0;
 
-  const node_t *node = node_get_by_id(guard->identity);
-  if (node == NULL) {
-    // This can happen when currently_listed is true, and we're not updating
-    // it because we don't have a live consensus.
-    return 0;
-  }
+  if (gs->type == GS_TYPE_BRIDGE) {
+    const bridge_info_t *bridge = get_bridge_info_for_guard(guard);
+    if (bridge == NULL)
+      return 0;
+    return bridge_passes_guard_filter(options, bridge);
+  } else {
+    const node_t *node = node_get_by_id(guard->identity);
+    if (node == NULL) {
+      // This can happen when currently_listed is true, and we're not updating
+      // it because we don't have a live consensus.
+      return 0;
+    }
 
-  return node_passes_guard_filter(options, gs, node);
+    return node_passes_guard_filter(options, gs, node);
+  }
 }
 
 /**
@@ -3126,7 +3219,7 @@ add_an_entry_guard(guard_selection_t *gs,
 
 /** Entry point for bridges.c to add a bridge as guard.
  *
- * XXXX prop271 refactor.*/
+ * XXXX prop271 refactor, bridge.*/
 void
 add_bridge_as_entry_guard(guard_selection_t *gs,
                           const node_t *chosen)
