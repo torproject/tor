@@ -159,9 +159,8 @@ static void entry_guard_set_filtered_flags(const or_options_t *options,
                                            entry_guard_t *guard);
 static void pathbias_check_use_success_count(entry_guard_t *guard);
 static void pathbias_check_close_success_count(entry_guard_t *guard);
-static int node_is_possible_guard(guard_selection_t *gs, const node_t *node);
+static int node_is_possible_guard(const node_t *node);
 static int node_passes_guard_filter(const or_options_t *options,
-                                    guard_selection_t *gs,
                                     const node_t *node);
 static entry_guard_t *entry_guard_add_to_sample_impl(guard_selection_t *gs,
                                const uint8_t *rsa_id_digest,
@@ -530,9 +529,9 @@ choose_guard_selection(const or_options_t *options,
   const smartlist_t *nodes = nodelist_get_list();
   int n_guards = 0, n_passing_filter = 0;
   SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
-    if (node_is_possible_guard(NULL, node)) {
+    if (node_is_possible_guard(node)) {
       ++n_guards;
-      if (node_passes_guard_filter(options, NULL, node)) {
+      if (node_passes_guard_filter(options, node)) {
         ++n_passing_filter;
       }
     }
@@ -650,13 +649,12 @@ update_guard_selection_choice(const or_options_t *options)
  * a possible guard when sampling guards.
  */
 static int
-node_is_possible_guard(guard_selection_t *gs, const node_t *node)
+node_is_possible_guard(const node_t *node)
 {
   /* The "GUARDS" set is all nodes in the nodelist for which this predicate
    * holds. */
 
   /* XXXX -- prop271 spec deviation. We require node_is_dir() here. */
-  (void)gs; /* Remove this argument */
   tor_assert(node);
   return (node->is_possible_guard &&
           node->is_stable &&
@@ -930,7 +928,7 @@ get_eligible_guards(guard_selection_t *gs,
     } SMARTLIST_FOREACH_END(guard);
 
     SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
-      if (! node_is_possible_guard(gs, node))
+      if (! node_is_possible_guard(node))
         continue;
       ++n_guards;
       if (digestset_contains(sampled_guard_ids, node->identity))
@@ -1088,7 +1086,7 @@ entry_guard_is_listed(guard_selection_t *gs, const entry_guard_t *guard)
   } else {
     const node_t *node = node_get_by_id(guard->identity);
 
-    return node && node_is_possible_guard(gs, node);
+    return node && node_is_possible_guard(node);
   }
 }
 
@@ -1231,12 +1229,9 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
  * Return true iff <b>node</b> is a Tor relay that we are configured to
  * be able to connect to. */
 static int
-node_passes_guard_filter(const or_options_t *options, guard_selection_t *gs,
+node_passes_guard_filter(const or_options_t *options,
                          const node_t *node)
 {
-  /* XXXX prop271 remote the gs option; it is unused, and sometimes NULL. */
-  (void)gs;
-
   /* NOTE: Make sure that this function stays in sync with
    * options_transition_affects_entry_guards */
   if (routerset_contains_node(options->ExcludeNodes, node))
@@ -1308,7 +1303,7 @@ entry_guard_passes_filter(const or_options_t *options, guard_selection_t *gs,
       return 0;
     }
 
-    return node_passes_guard_filter(options, gs, node);
+    return node_passes_guard_filter(options, node);
   }
 }
 
