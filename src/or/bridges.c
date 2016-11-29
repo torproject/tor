@@ -179,7 +179,7 @@ get_configured_bridge_by_orports_digest(const char *digest,
  * bridge with no known digest whose address matches <b>addr</b>:<b>port</b>,
  * return that bridge.  Else return NULL. If <b>digest</b> is NULL, check for
  * address/port matches only. */
-static bridge_info_t *
+bridge_info_t *
 get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
                                           uint16_t port,
                                           const char *digest)
@@ -416,28 +416,12 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   smartlist_add(bridge_list, b);
 }
 
-/** Return true iff <b>routerset</b> contains the bridge <b>bridge</b>. */
-static int
-routerset_contains_bridge(const routerset_t *routerset,
-                          const bridge_info_t *bridge)
-{
-  int result;
-  extend_info_t *extinfo;
-  tor_assert(bridge);
-  if (!routerset)
-    return 0;
-
-  extinfo = extend_info_new(
-         NULL, bridge->identity, NULL, NULL, &bridge->addr, bridge->port);
-  result = routerset_contains_extendinfo(routerset, extinfo);
-  extend_info_free(extinfo);
-  return result;
-}
-
 /** If <b>digest</b> is one of our known bridges, return it. */
-static bridge_info_t *
+bridge_info_t *
 find_bridge_by_digest(const char *digest)
 {
+  if (! bridge_list)
+    return NULL;
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
       if (tor_memeq(bridge->identity, digest, DIGEST_LEN))

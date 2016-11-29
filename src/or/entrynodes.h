@@ -563,10 +563,6 @@ void remove_all_entry_guards_for_guard_selection(guard_selection_t *gs);
 void remove_all_entry_guards(void);
 
 struct bridge_info_t;
-// XXXX prop271 should this be a public API?
-entry_guard_t *entry_guard_add_bridge_to_sample(
-                                    const struct bridge_info_t *bridge);
-
 void entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
                                          const uint8_t *rsa_id_digest);
 

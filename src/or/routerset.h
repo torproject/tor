@@ -26,8 +26,11 @@ int routerset_contains_routerstatus(const routerset_t *set,
                                     country_t country);
 int routerset_contains_extendinfo(const routerset_t *set,
                                   const extend_info_t *ei);
-
+struct bridge_info_t;
+int routerset_contains_bridge(const routerset_t *set,
+                              const struct bridge_info_t *bridge);
 int routerset_contains_node(const routerset_t *set, const node_t *node);
+
 void routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
                              const routerset_t *excludeset,
                              int running_only);

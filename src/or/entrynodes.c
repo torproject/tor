@@ -167,6 +167,8 @@ static entry_guard_t *entry_guard_add_to_sample_impl(guard_selection_t *gs,
                                const uint8_t *rsa_id_digest,
                                const char *nickname,
                                const tor_addr_port_t *bridge_addrport);
+static entry_guard_t *get_sampled_guard_by_bridge_addr(guard_selection_t *gs,
+                                              const tor_addr_port_t *addrport);
 
 /** Return 0 if we should apply guardfraction information found in the
  *  consensus. A specific consensus can be specified with the
@@ -679,6 +681,46 @@ get_sampled_guard_with_id(guard_selection_t *gs,
   return NULL;
 }
 
+/** If <b>gs</b> contains a sampled entry guard matching <b>bridge</b>,
+ * return that guard. Otherwise return NULL. */
+static entry_guard_t *
+get_sampled_guard_for_bridge(guard_selection_t *gs,
+                             const bridge_info_t *bridge)
+{
+  const uint8_t *id = bridge_get_rsa_id_digest(bridge);
+  const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
+  entry_guard_t *guard;
+  if (id) {
+    guard = get_sampled_guard_with_id(gs, id);
+    if (guard)
+      return guard;
+  }
+  if (BUG(!addrport))
+    return NULL; // LCOV_EXCL_LINE
+  guard = get_sampled_guard_by_bridge_addr(gs, addrport);
+  if (! guard || (id && tor_memneq(id, guard->identity, DIGEST_LEN)))
+    return NULL;
+  else
+    return guard;
+}
+
+/** If we know a bridge_info_t matching <b>guard</b>, return that
+ * bridge.  Otherwise return NULL. */
+static bridge_info_t *
+get_bridge_info_for_guard(const entry_guard_t *guard)
+{
+  if (! tor_digest_is_zero(guard->identity)) {
+    bridge_info_t *bridge = find_bridge_by_digest(guard->identity);
+    if (bridge)
+      return bridge;
+  }
+  if (BUG(guard->bridge_addr == NULL))
+    return NULL;
+  return get_configured_bridge_by_addr_port_digest(&guard->bridge_addr->addr,
+                                                     guard->bridge_addr->port,
+                                                     NULL);
+}
+
 /**
  * Return true iff we have a sampled guard with the RSA identity digest
  * <b>rsa_id</b>. */
@@ -779,8 +821,8 @@ entry_guard_add_bridge_to_sample(const bridge_info_t *bridge)
  * or NULL if none exists.
 */
 static entry_guard_t *
-entry_guard_get_by_bridge_addr(guard_selection_t *gs,
-                               const tor_addr_port_t *addrport)
+get_sampled_guard_by_bridge_addr(guard_selection_t *gs,
+                                 const tor_addr_port_t *addrport)
 {
   if (! gs)
     return NULL;
@@ -806,7 +848,7 @@ entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
   if (!gs)
     return;
 
-  entry_guard_t *g = entry_guard_get_by_bridge_addr(gs, addrport);
+  entry_guard_t *g = get_sampled_guard_by_bridge_addr(gs, addrport);
   if (!g)
     return;
 
