@@ -891,6 +891,23 @@ num_reachable_filtered_guards(guard_selection_t *gs)
   return n_reachable_filtered_guards;
 }
 
+/** Return the actual maximum size for the sample in <b>gs</b>,
+ * given that we know about <b>n_guards</b> total. */
+static int
+get_max_sample_size(guard_selection_t *gs,
+                    int n_guards)
+{
+  const int using_bridges = (gs->type == GS_TYPE_BRIDGE);
+
+  /* XXXX prop271 spec deviation with bridges, max_sample is "all of them" */
+  if (using_bridges)
+    return n_guards;
+  else if (n_guards < 20) // XXXX prop271 spec deviation
+    return n_guards;
+  else
+    return (int)(n_guards * get_max_sample_threshold());
+}
+
 /**
  * Return a smartlist of the all the guards that are not currently
  * members of the sample (GUARDS - SAMPLED_GUARDS).  The elements of
@@ -987,11 +1004,7 @@ entry_guards_expand_sample(guard_selection_t *gs)
   int n_guards = 0;
   smartlist_t *eligible_guards = get_eligible_guards(gs, &n_guards);
 
-  const int using_bridges = (gs->type == GS_TYPE_BRIDGE);
-
-  /* XXXX prop271 spec deviation with bridges, max_sample is "all of them" */
-  const int max_sample = using_bridges ? n_guards :
-    (int)(n_guards * get_max_sample_threshold());
+  const int max_sample = get_max_sample_size(gs, n_guards);
   const int min_filtered_sample = get_min_filtered_sample_size();
 
   log_info(LD_GUARD, "Expanding the sample guard set. We have %d guards "
