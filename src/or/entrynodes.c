@@ -898,14 +898,17 @@ get_max_sample_size(guard_selection_t *gs,
                     int n_guards)
 {
   const int using_bridges = (gs->type == GS_TYPE_BRIDGE);
+  const int min_sample = get_min_filtered_sample_size();
 
   /* XXXX prop271 spec deviation with bridges, max_sample is "all of them" */
   if (using_bridges)
     return n_guards;
-  else if (n_guards < 20) // XXXX prop271 spec deviation
-    return n_guards;
+
+  const int max_sample = (int)(n_guards * get_max_sample_threshold());
+  if (max_sample < min_sample) // XXXX prop271 spec deviation
+    return min_sample;
   else
-    return (int)(n_guards * get_max_sample_threshold());
+    return max_sample;
 }
 
 /**
