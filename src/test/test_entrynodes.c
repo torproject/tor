@@ -1276,18 +1276,18 @@ test_entry_guard_get_guard_selection_by_name(void *arg)
   tt_assert(gs3 != NULL);
   tt_assert(gs3 != gs2);
   tt_assert(gs3 != gs1);
-  // XXXX prop271 re-enable this. tt_assert(gs3 == get_guard_selection_info());
+  tt_assert(gs3 == get_guard_selection_info());
 
-#if 0
   or_options_t *options = get_options_mutable();
   options->UseDeprecatedGuardAlgorithm = 1;
-  gs4 = get_guard_selection_info();
+  update_guard_selection_choice(options);
+  guard_selection_t *gs4 = get_guard_selection_info();
   tt_assert(gs4 != gs3);
-  tt_assert(gs4 == get_guard_selection_by_name("legacy", 1));
+  tt_assert(gs4 == get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 1));
 
   options->UseDeprecatedGuardAlgorithm = 0;
+  update_guard_selection_choice(options);
   tt_assert(gs3 == get_guard_selection_info());
-#endif
 
  done:
   entry_guards_free_all();
