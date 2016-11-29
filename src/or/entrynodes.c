@@ -381,8 +381,8 @@ get_max_sample_threshold(void)
 /**
  * We always try to make our sample contain at least this many guards.
  *
- * XXXX prop271 There was a MIN_SAMPLE_THRESHOLD in the proposal, but I
- * removed it in favor of MIN_FILTERED_SAMPLE_SIZE. -NM
+ * XXXX prop271 spec deviation There was a MIN_SAMPLE_THRESHOLD in the
+ * proposal, but I removed it in favor of MIN_FILTERED_SAMPLE_SIZE. -NM
  */
 STATIC int
 get_min_filtered_sample_size(void)
