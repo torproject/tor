@@ -2324,6 +2324,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
   const node_t *node = NULL;
   circuit_guard_state_t *guard = NULL;
   entry_guard_t *g;
+  guard_usable_t u;
   /*
    * Make sure that the pick-for-circuit API basically works.  We'll get
    * a primary guard, so it'll be usable on completion.
@@ -2343,8 +2344,8 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
 
   /* Call that circuit successful. */
   update_approx_time(start+15);
-  r = entry_guard_succeeded(&guard);
-  tt_int_op(r, OP_EQ, 1); /* We can use it now. */
+  u = entry_guard_succeeded(&guard);
+  tt_int_op(u, OP_EQ, GUARD_USABLE_NOW); /* We can use it now. */
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
   g = entry_guard_handle_get(guard->guard);
@@ -2411,8 +2412,8 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
 
   /* Call this one up; watch it get confirmed. */
   update_approx_time(start+90);
-  r = entry_guard_succeeded(&guard);
-  tt_int_op(r, OP_EQ, 1); /* We can use it now. */
+  u = entry_guard_succeeded(&guard);
+  tt_int_op(u, OP_EQ, GUARD_USABLE_NOW);
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
   g = entry_guard_handle_get(guard->guard);
@@ -2440,6 +2441,7 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
   circuit_guard_state_t *guard = NULL;
   int i, r;
   const node_t *node = NULL;
+  guard_usable_t u;
 
   /* Declare that we're on the internet. */
   entry_guards_note_internet_connectivity(gs);
@@ -2471,13 +2473,13 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
   tt_int_op(g->is_pending, OP_EQ, 1);
   (void)start;
 
-  r = entry_guard_succeeded(&guard);
+  u = entry_guard_succeeded(&guard);
   /* We're on the internet (by fiat), so this guard will get called "confirmed"
    * and should immediately become primary.
    * XXXX prop271 -- I don't like that behavior, but it's what is specified
    */
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
-  tt_assert(r == 1);
+  tt_assert(u == GUARD_USABLE_NOW);
   tt_int_op(g->confirmed_idx, OP_EQ, 0);
   tt_int_op(g->is_primary, OP_EQ, 1);
   tt_int_op(g->is_pending, OP_EQ, 0);
@@ -2503,6 +2505,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   int i, r;
   const node_t *node = NULL;
   entry_guard_t *g;
+  guard_usable_t u;
 
   /* Declare that we're on the internet. */
   entry_guards_note_internet_connectivity(gs);
@@ -2540,8 +2543,8 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   update_approx_time(start + 3600);
 
   /* Say that guard has succeeded! */
-  r = entry_guard_succeeded(&guard);
-  tt_int_op(r, OP_EQ, 0); // can't use it yet.
+  u = entry_guard_succeeded(&guard);
+  tt_int_op(u, OP_EQ, GUARD_MAYBE_USABLE_LATER);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
   g = entry_guard_handle_get(guard->guard);
 
@@ -2556,8 +2559,8 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   r = entry_guard_pick_for_circuit(gs, &node, &guard2);
   tt_assert(r == 0);
   tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
-  r = entry_guard_succeeded(&guard2);
-  tt_assert(r == 1);
+  u = entry_guard_succeeded(&guard2);
+  tt_assert(u == GUARD_USABLE_NOW);
   tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
 
   tt_assert(! entry_guards_all_primary_guards_are_down(gs));
@@ -2689,18 +2692,18 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   tor_assert(data->guard2_state->state ==
              GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
 
-  int r;
+  guard_usable_t r;
   update_approx_time(data->start + 32);
   if (make_circ1_succeed) {
     r = entry_guard_succeeded(&data->guard1_state);
-    tor_assert(r == 0);
+    tor_assert(r == GUARD_MAYBE_USABLE_LATER);
     tor_assert(data->guard1_state->state ==
                GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
   }
   update_approx_time(data->start + 33);
   if (make_circ2_succeed) {
     r = entry_guard_succeeded(&data->guard2_state);
-    tor_assert(r == 0);
+    tor_assert(r == GUARD_MAYBE_USABLE_LATER);
     tor_assert(data->guard2_state->state ==
                GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD);
   }

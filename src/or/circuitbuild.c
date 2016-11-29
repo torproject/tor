@@ -964,28 +964,29 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     memset(&ec, 0, sizeof(ec));
     if (!hop) {
       /* done building the circuit. whew. */
-      int r;
+      guard_usable_t r;
       if (get_options()->UseDeprecatedGuardAlgorithm) {
         // The circuit is usable; we already marked the guard as okay.
-        r = 1;
+        r = GUARD_USABLE_NOW;
       } else if (! circ->guard_state) {
         if (circuit_get_cpath_len(circ) != 1) {
           log_warn(LD_BUG, "%d-hop circuit %p with purpose %d has no "
                    "guard state",
                    circuit_get_cpath_len(circ), circ, circ->base_.purpose);
         }
-        r = 1;
+        r = GUARD_USABLE_NOW;
       } else {
         r = entry_guard_succeeded(&circ->guard_state);
       }
-      const int is_usable_for_streams = (r == 1);
-      if (r == 1) {
+      const int is_usable_for_streams = (r == GUARD_USABLE_NOW);
+      if (r == GUARD_USABLE_NOW) {
         circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-      } else if (r == 0) {
+      } else if (r == GUARD_MAYBE_USABLE_LATER) {
         // XXXX prop271 we might want to probe for whether this
         // XXXX one is ready even before the next second rolls over.
         circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_GUARD_WAIT);
       } else {
+        tor_assert_nonfatal(r == GUARD_USABLE_NEVER);
         return - END_CIRC_REASON_INTERNAL;
       }
 

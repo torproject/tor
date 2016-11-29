@@ -1965,28 +1965,26 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
 }
 
 /**
- * Called by the circuit building module when a circuit has succeeded:
- * informs the guards code that the guard in *<b>guard_state_p</b> is
- * working, and advances the state of the guard module.  On a -1 return
- * value, the circuit is broken and should not be used.  On a 1 return
- * value, the circuit is ready to use.  On a 0 return value, the circuit
- * should not be used until we find out whether preferred guards will
- * work for us.
- *
- * XXXXX prop271 tristates are ugly; reconsider that interface.
+ * Called by the circuit building module when a circuit has succeeded: informs
+ * the guards code that the guard in *<b>guard_state_p</b> is working, and
+ * advances the state of the guard module.  On a GUARD_USABLE_NEVER return
+ * value, the circuit is broken and should not be used.  On a GUARD_USABLE_NOW
+ * return value, the circuit is ready to use.  On a GUARD_MAYBE_USABLE_LATER
+ * return value, the circuit should not be used until we find out whether
+ * preferred guards will work for us.
  */
-int
+guard_usable_t
 entry_guard_succeeded(circuit_guard_state_t **guard_state_p)
 {
   if (get_options()->UseDeprecatedGuardAlgorithm)
-    return 1;
+    return GUARD_USABLE_NOW;
 
   if (BUG(*guard_state_p == NULL))
-    return -1;
+    return GUARD_USABLE_NEVER;
 
   entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
   if (! guard || BUG(guard->in_selection == NULL))
-    return -1;
+    return GUARD_USABLE_NEVER;
 
   unsigned newstate =
     entry_guards_note_guard_success(guard->in_selection, guard,
@@ -1996,9 +1994,9 @@ entry_guard_succeeded(circuit_guard_state_t **guard_state_p)
   (*guard_state_p)->state_set_at = approx_time();
 
   if (newstate == GUARD_CIRC_STATE_COMPLETE) {
-    return 1;
+    return GUARD_USABLE_NOW;
   } else {
-    return 0;
+    return GUARD_MAYBE_USABLE_LATER;
   }
 }
 

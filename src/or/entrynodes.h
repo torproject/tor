@@ -359,7 +359,12 @@ void circuit_guard_state_free(circuit_guard_state_t *state);
 int entry_guard_pick_for_circuit(guard_selection_t *gs,
                                  const node_t **chosen_node_out,
                                  circuit_guard_state_t **guard_state_out);
-int entry_guard_succeeded(circuit_guard_state_t **guard_state_p);
+typedef enum {
+  GUARD_USABLE_NEVER = -1,
+  GUARD_MAYBE_USABLE_LATER = 0,
+  GUARD_USABLE_NOW = 1,
+} guard_usable_t;
+guard_usable_t entry_guard_succeeded(circuit_guard_state_t **guard_state_p);
 void entry_guard_failed(circuit_guard_state_t **guard_state_p);
 void entry_guard_cancel(circuit_guard_state_t **guard_state_p);
 void entry_guard_chan_failed(channel_t *chan);
