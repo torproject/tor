@@ -28,7 +28,9 @@
 /** Information about a configured bridge. Currently this just matches the
  * ones in the torrc file, but one day we may be able to learn about new
  * bridges on our own, and remember them in the state file. */
-typedef struct {
+struct bridge_info_t {
+  /** Address and port of the bridge, as configured by the user.*/
+  tor_addr_port_t addrport_configured;
   /** Address of the bridge. */
   tor_addr_t addr;
   /** TLS port for the bridge. */
@@ -49,7 +51,7 @@ typedef struct {
   /** A smartlist of k=v values to be passed to the SOCKS proxy, if
       transports are used for this bridge. */
   smartlist_t *socks_args;
-} bridge_info_t;
+};
 
 static void bridge_free(bridge_info_t *bridge);
 
@@ -109,6 +111,40 @@ bridge_free(bridge_info_t *bridge)
   }
 
   tor_free(bridge);
+}
+
+/** Return a list of all the configured bridges, as bridge_info_t pointers. */
+const smartlist_t *
+bridge_list_get(void)
+{
+  if (!bridge_list)
+    bridge_list = smartlist_new();
+  return bridge_list;
+}
+
+/**
+ * Given a <b>bridge</b>, return a pointer to its RSA identity digest, or
+ * NULL if we don't know one for it.
+ */
+const uint8_t *
+bridge_get_rsa_id_digest(const bridge_info_t *bridge)
+{
+  tor_assert(bridge);
+  if (tor_digest_is_zero(bridge->identity))
+    return NULL;
+  else
+    return (const uint8_t *) bridge->identity;
+}
+
+/**
+ * Given a <b>bridge</b>, return a pointer to its configured addr:port
+ * combination.
+ */
+const tor_addr_port_t *
+bridge_get_addr_port(const bridge_info_t *bridge)
+{
+  tor_assert(bridge);
+  return &bridge->addrport_configured;
 }
 
 /** If we have a bridge configured whose digest matches <b>digest</b>, or a
@@ -243,6 +279,7 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
                hex_str(digest, DIGEST_LEN), fmt_addrport(addr, port),
                transport_info ? transport_info : "");
     tor_free(transport_info);
+    // XXXX prop271 here. we will need to update the guard info too.
   }
 }
 
@@ -361,6 +398,8 @@ bridge_add_from_config(bridge_line_t *bridge_line)
                            bridge_line->transport_name);
 
   b = tor_malloc_zero(sizeof(bridge_info_t));
+  tor_addr_copy(&b->addrport_configured.addr, &bridge_line->addr);
+  b->addrport_configured.port = bridge_line->port;
   tor_addr_copy(&b->addr, &bridge_line->addr);
   b->port = bridge_line->port;
   memcpy(b->identity, bridge_line->digest, DIGEST_LEN);
@@ -718,6 +757,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
                    fmt_and_decorate_addr(&bridge->addr),
                    (int) bridge->port);
       }
+      // XXXX prop271 here we will need to update the guard info too.
       add_bridge_as_entry_guard(get_guard_selection_info(), node);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,

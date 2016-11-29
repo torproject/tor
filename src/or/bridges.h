@@ -14,8 +14,14 @@
 
 struct bridge_line_t;
 
+/* Opaque handle to a configured bridge */
+typedef struct bridge_info_t bridge_info_t;
+
 void mark_bridge_list(void);
 void sweep_bridge_list(void);
+const smartlist_t *bridge_list_get(void);
+const uint8_t *bridge_get_rsa_id_digest(const bridge_info_t *bridge);
+const tor_addr_port_t * bridge_get_addr_port(const bridge_info_t *bridge);
 
 int addr_is_a_configured_bridge(const tor_addr_t *addr, uint16_t port,
                                 const char *digest);

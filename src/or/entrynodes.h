@@ -125,7 +125,9 @@ struct entry_guard_t {
    * Which selection does this guard belong to?
    */
   char *selection_name;
-  guard_selection_t *in_selection;
+
+  /** Bridges only: address of the bridge. */
+  tor_addr_port_t *bridge_addr;
 
   /* ==== Non-persistent fields. */
   /* == These are used by sampled guards */
@@ -140,6 +142,9 @@ struct entry_guard_t {
    * to try again until it either succeeds or fails. Primary guards can
    * never be pending. */
   unsigned is_pending : 1;
+  /** If true, don't write this guard to disk. (Used for bridges with unknown
+   * identities) */
+  unsigned is_persistent : 1;
   /** When did we get the earliest connection failure for this guard?
    * We clear this field on a successful connect.  We do _not_ clear it
    * when we mark the guard as "MAYBE" reachable.
@@ -160,6 +165,9 @@ struct entry_guard_t {
   /** This string holds any fields that we are maintaining because
    * we saw them in the state, even if we don't understand them. */
   char *extra_state_fields;
+
+  /** Backpointer to the guard selection that this guard belongs to. */
+  guard_selection_t *in_selection;
   /**@}*/
 
   /**
@@ -553,6 +561,14 @@ STATIC int entry_is_time_to_retry(const entry_guard_t *e, time_t now);
 
 void remove_all_entry_guards_for_guard_selection(guard_selection_t *gs);
 void remove_all_entry_guards(void);
+
+struct bridge_info_t;
+// XXXX prop271 should this be a public API?
+entry_guard_t *entry_guard_add_bridge_to_sample(
+                                    const struct bridge_info_t *bridge);
+
+void entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
+                                         const uint8_t *rsa_id_digest);
 
 void entry_guards_compute_status_for_guard_selection(
     guard_selection_t *gs, const or_options_t *options, time_t now);

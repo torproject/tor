@@ -163,6 +163,10 @@ static int node_is_possible_guard(guard_selection_t *gs, const node_t *node);
 static int node_passes_guard_filter(const or_options_t *options,
                                     guard_selection_t *gs,
                                     const node_t *node);
+static entry_guard_t *entry_guard_add_to_sample_impl(guard_selection_t *gs,
+                               const uint8_t *rsa_id_digest,
+                               const char *nickname,
+                               const tor_addr_port_t *bridge_addrport);
 
 /** Return 0 if we should apply guardfraction information found in the
  *  consensus. A specific consensus can be specified with the
@@ -693,25 +697,47 @@ STATIC entry_guard_t *
 entry_guard_add_to_sample(guard_selection_t *gs,
                           const node_t *node)
 {
-  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
-  tor_assert(gs);
-  tor_assert(node);
-
   log_info(LD_GUARD, "Adding %s as to the entry guard sample set.",
            node_describe(node));
+
+  return entry_guard_add_to_sample_impl(gs,
+                                        (const uint8_t*)node->identity,
+                                        node_get_nickname(node),
+                                        NULL);
+}
+
+/**
+ * Backend: adds a new sampled guard to <b>gs</b>, with given identity,
+ * nickname, and ORPort.  rsa_id_digest and bridge_addrport are
+ * optional, but we need one of them. nickname is optional.
+ */
+static entry_guard_t *
+entry_guard_add_to_sample_impl(guard_selection_t *gs,
+                               const uint8_t *rsa_id_digest,
+                               const char *nickname,
+                               const tor_addr_port_t *bridge_addrport)
+{
+  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
+  tor_assert(gs);
 
   // XXXX prop271 take ed25519 identity here too.
 
   /* make sure that the guard is not already sampled. */
-  if (BUG(have_sampled_guard_with_id(gs, (uint8_t*)node->identity)))
+  if (rsa_id_digest && BUG(have_sampled_guard_with_id(gs, rsa_id_digest)))
+    return NULL; // LCOV_EXCL_LINE
+  /* Make sure we can actually identify the guard. */
+  if (BUG(!rsa_id_digest && !bridge_addrport))
     return NULL; // LCOV_EXCL_LINE
 
   entry_guard_t *guard = tor_malloc_zero(sizeof(entry_guard_t));
 
   /* persistent fields */
+  guard->is_persistent = (rsa_id_digest != NULL);
   guard->selection_name = tor_strdup(gs->name);
-  memcpy(guard->identity, node->identity, DIGEST_LEN);
-  strlcpy(guard->nickname, node_get_nickname(node), sizeof(guard->nickname));
+  if (rsa_id_digest)
+    memcpy(guard->identity, rsa_id_digest, DIGEST_LEN);
+  if (nickname)
+    strlcpy(guard->nickname, nickname, sizeof(guard->nickname));
   guard->sampled_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
   tor_free(guard->sampled_by_version);
   guard->sampled_by_version = tor_strdup(VERSION);
@@ -720,12 +746,95 @@ entry_guard_add_to_sample(guard_selection_t *gs,
 
   /* non-persistent fields */
   guard->is_reachable = GUARD_REACHABLE_MAYBE;
+  if (bridge_addrport)
+    guard->bridge_addr = tor_memdup(bridge_addrport, sizeof(*bridge_addrport));
 
   smartlist_add(gs->sampled_entry_guards, guard);
   guard->in_selection = gs;
   entry_guard_set_filtered_flags(get_options(), gs, guard);
   entry_guards_changed_for_guard_selection(gs);
   return guard;
+}
+
+/**
+ * Add an entry guard to the "bridges" guard selection sample, with
+ * information taken from <b>bridge</b>. Return that entry guard.
+ */
+entry_guard_t *
+entry_guard_add_bridge_to_sample(const bridge_info_t *bridge)
+{
+  guard_selection_t *gs = get_guard_selection_by_name("bridges",
+                                                      GS_TYPE_BRIDGE,
+                                                      1);
+  const uint8_t *id_digest = bridge_get_rsa_id_digest(bridge);
+  const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
+
+  tor_assert(addrport);
+
+  return entry_guard_add_to_sample_impl(gs, id_digest, NULL, addrport);
+}
+
+/**
+ * Return the entry_guard_t in <b>gs</b> whose address is <b>addrport</b>,
+ * or NULL if none exists.
+*/
+static entry_guard_t *
+entry_guard_get_by_bridge_addr(guard_selection_t *gs,
+                               const tor_addr_port_t *addrport)
+{
+  if (! gs)
+    return NULL;
+  if (BUG(!addrport))
+    return NULL;
+  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, g) {
+    if (g->bridge_addr && tor_addr_port_eq(addrport, g->bridge_addr))
+      return g;
+  } SMARTLIST_FOREACH_END(g);
+  return NULL;
+}
+
+/** Update the guard subsystem's knowledge of the identity of the bridge
+ * at <b>addrport</b>.  Idempotent.
+ */
+void
+entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
+                                    const uint8_t *rsa_id_digest)
+{
+  guard_selection_t *gs = get_guard_selection_by_name("bridges",
+                                                      GS_TYPE_BRIDGE,
+                                                      0);
+  if (!gs)
+    return;
+
+  entry_guard_t *g = entry_guard_get_by_bridge_addr(gs, addrport);
+  if (!g)
+    return;
+
+  int make_persistent = 0;
+
+  if (tor_digest_is_zero(g->identity)) {
+    memcpy(g->identity, rsa_id_digest, DIGEST_LEN);
+    make_persistent = 1;
+  } else if (tor_memeq(g->identity, rsa_id_digest, DIGEST_LEN)) {
+    /* Nothing to see here; we learned something we already knew. */
+    if (BUG(! g->is_persistent))
+      make_persistent = 1;
+  } else {
+    char old_id[HEX_DIGEST_LEN+1];
+    base16_encode(old_id, sizeof(old_id), g->identity, sizeof(g->identity));
+    log_warn(LD_BUG, "We 'learned' an identity %s for a bridge at %s:%d, but "
+             "we already knew a different one (%s). Ignoring the new info as "
+             "possibly bogus.",
+             hex_str((const char *)rsa_id_digest, DIGEST_LEN),
+             fmt_and_decorate_addr(&addrport->addr), addrport->port,
+             old_id);
+    return; // redundant, but let's be clear: we're not making this persistent.
+  }
+
+  if (make_persistent) {
+    g->is_persistent = 1;
+    entry_guards_changed_for_guard_selection(gs);
+  }
 }
 
 /**
@@ -892,14 +1001,16 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
   // It's important to use only a live consensus here; we don't want to
   // make changes based on anything expired or old.
-  networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
+  if (gs->type != GS_TYPE_BRIDGE) {
+    networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
 
-  log_info(LD_GUARD, "Updating sampled guard status based on received "
-           "consensus.");
+    log_info(LD_GUARD, "Updating sampled guard status based on received "
+             "consensus.");
 
-  if (! ns || ns->valid_until < approx_time()) {
-    log_info(LD_GUARD, "Hey, that consensus isn't still valid. Ignoring.");
-    return;
+    if (! ns || ns->valid_until < approx_time()) {
+      log_info(LD_GUARD, "Hey, there wasn't a valid consensus. Ignoring");
+      return;
+    }
   }
 
   int n_changes = 0;
@@ -2070,6 +2181,11 @@ entry_guard_encode_for_state(entry_guard_t *guard)
   smartlist_add_asprintf(result, "in=%s", guard->selection_name);
   smartlist_add_asprintf(result, "rsa_id=%s",
                          hex_str(guard->identity, DIGEST_LEN));
+  if (guard->bridge_addr) {
+    smartlist_add_asprintf(result, "bridge_addr=%s:%d",
+                           fmt_and_decorate_addr(&guard->bridge_addr->addr),
+                           guard->bridge_addr->port);
+  }
   if (strlen(guard->nickname)) {
     smartlist_add_asprintf(result, "nickname=%s", guard->nickname);
   }
@@ -2152,6 +2268,7 @@ entry_guard_parse_from_state(const char *s)
   char *listed  = NULL;
   char *confirmed_on = NULL;
   char *confirmed_idx = NULL;
+  char *bridge_addr = NULL;
 
   // pathbias
   char *pb_use_attempts = NULL;
@@ -2180,6 +2297,7 @@ entry_guard_parse_from_state(const char *s)
     FIELD(listed);
     FIELD(confirmed_on);
     FIELD(confirmed_idx);
+    FIELD(bridge_addr);
     FIELD(pb_use_attempts);
     FIELD(pb_use_successes);
     FIELD(pb_circ_attempts);
@@ -2218,6 +2336,7 @@ entry_guard_parse_from_state(const char *s)
   }
 
   entry_guard_t *guard = tor_malloc_zero(sizeof(entry_guard_t));
+  guard->is_persistent = 1;
 
   if (in == NULL) {
     log_warn(LD_CIRC, "Guard missing 'in' field");
@@ -2245,6 +2364,16 @@ entry_guard_parse_from_state(const char *s)
     guard->nickname[0]='$';
     base16_encode(guard->nickname+1, sizeof(guard->nickname)-1,
                   guard->identity, DIGEST_LEN);
+  }
+
+  if (bridge_addr) {
+    tor_addr_port_t res;
+    memset(&res, 0, sizeof(res));
+    int r = tor_addr_port_parse(LOG_WARN, bridge_addr,
+                                &res.addr, &res.port, -1);
+    if (r == 0)
+      guard->bridge_addr = tor_memdup(&res, sizeof(res));
+    /* On error, we already warned. */
   }
 
   /* Process the various time fields. */
@@ -2357,6 +2486,7 @@ entry_guard_parse_from_state(const char *s)
   tor_free(listed);
   tor_free(confirmed_on);
   tor_free(confirmed_idx);
+  tor_free(bridge_addr);
   tor_free(pb_use_attempts);
   tor_free(pb_use_successes);
   tor_free(pb_circ_attempts);
@@ -2388,6 +2518,8 @@ entry_guards_update_guards_in_state(or_state_t *state)
     if (!strcmp(gs->name, "legacy"))
       continue; /* This is encoded differently. */
     SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+      if (guard->is_persistent == 0)
+        continue;
       *nextline = tor_malloc_zero(sizeof(config_line_t));
       (*nextline)->key = tor_strdup("Guard");
       (*nextline)->value = entry_guard_encode_for_state(guard);
@@ -2908,6 +3040,7 @@ add_an_entry_guard(guard_selection_t *gs,
     return NULL;
   }
   entry = tor_malloc_zero(sizeof(entry_guard_t));
+  entry->is_persistent = 1;
   log_info(LD_CIRC, "Chose %s as new entry guard.",
            node_describe(node));
   strlcpy(entry->nickname, node_get_nickname(node), sizeof(entry->nickname));
@@ -3020,6 +3153,7 @@ entry_guard_free(entry_guard_t *e)
   tor_free(e->sampled_by_version);
   tor_free(e->extra_state_fields);
   tor_free(e->selection_name);
+  tor_free(e->bridge_addr);
   tor_free(e);
 }
 
@@ -3840,6 +3974,7 @@ entry_guards_parse_state_for_guard_selection(
       node = tor_malloc_zero(sizeof(entry_guard_t));
       /* all entry guards on disk have been contacted */
       node->made_contact = 1;
+      node->is_persistent = 1;
       smartlist_add(new_entry_guards, node);
       smartlist_split_string(args, line->value, " ",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);

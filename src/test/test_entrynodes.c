@@ -1055,6 +1055,9 @@ test_entry_guard_encode_for_state_maximal(void *arg)
   strlcpy(eg->nickname, "Fred", sizeof(eg->nickname));
   eg->selection_name = tor_strdup("default");
   memcpy(eg->identity, "plurpyflurpyslurpydo", DIGEST_LEN);
+  eg->bridge_addr = tor_malloc_zero(sizeof(tor_addr_port_t));
+  tor_addr_from_ipv4h(&eg->bridge_addr->addr, 0x08080404);
+  eg->bridge_addr->port = 9999;
   eg->sampled_on_date = 1479081600;
   eg->sampled_by_version = tor_strdup("1.2.3");
   eg->unlisted_since_date = 1479081645;
@@ -1069,6 +1072,7 @@ test_entry_guard_encode_for_state_maximal(void *arg)
   tt_str_op(s, OP_EQ,
             "in=default "
             "rsa_id=706C75727079666C75727079736C75727079646F "
+            "bridge_addr=8.8.4.4:9999 "
             "nickname=Fred "
             "sampled_on=2016-11-14T00:00:00 "
             "sampled_by=1.2.3 "
@@ -1100,6 +1104,7 @@ test_entry_guard_parse_from_state_minimal(void *arg)
   test_mem_op_hex(eg->identity, OP_EQ,
                   "596f75206d6179206e656564206120686f626279");
   tt_str_op(eg->nickname, OP_EQ, "$596F75206D6179206E656564206120686F626279");
+  tt_ptr_op(eg->bridge_addr, OP_EQ, NULL);
   tt_i64_op(eg->sampled_on_date, OP_GE, t);
   tt_i64_op(eg->sampled_on_date, OP_LE, t+86400);
   tt_i64_op(eg->unlisted_since_date, OP_EQ, 0);
@@ -1126,6 +1131,7 @@ test_entry_guard_parse_from_state_maximal(void *arg)
   eg = entry_guard_parse_from_state(
             "in=fred "
             "rsa_id=706C75727079666C75727079736C75727079646F "
+            "bridge_addr=[1::3]:9999 "
             "nickname=Fred "
             "sampled_on=2016-11-14T00:00:00 "
             "sampled_by=1.2.3 "
@@ -1139,6 +1145,8 @@ test_entry_guard_parse_from_state_maximal(void *arg)
 
   test_mem_op_hex(eg->identity, OP_EQ,
                   "706C75727079666C75727079736C75727079646F");
+  tt_str_op(fmt_addr(&eg->bridge_addr->addr), OP_EQ, "1::3");
+  tt_int_op(eg->bridge_addr->port, OP_EQ, 9999);
   tt_str_op(eg->nickname, OP_EQ, "Fred");
   tt_i64_op(eg->sampled_on_date, OP_EQ, 1479081600);
   tt_i64_op(eg->unlisted_since_date, OP_EQ, 1479081645);
@@ -1205,6 +1213,7 @@ test_entry_guard_parse_from_state_partial_failure(void *arg)
   eg = entry_guard_parse_from_state(
             "in=default "
             "rsa_id=706C75727079666C75727079736C75727079646F "
+            "bridge_addr=1.2.3.3.4:5 "
             "nickname=FredIsANodeWithAStrangeNicknameThatIsTooLong "
             "sampled_on=2016-11-14T00:00:99 "
             "sampled_by=1.2.3 stuff in the middle "
@@ -1219,6 +1228,7 @@ test_entry_guard_parse_from_state_partial_failure(void *arg)
   test_mem_op_hex(eg->identity, OP_EQ,
                   "706C75727079666C75727079736C75727079646F");
   tt_str_op(eg->nickname, OP_EQ, "FredIsANodeWithAStrangeNicknameThatIsTooL");
+  tt_ptr_op(eg->bridge_addr, OP_EQ, NULL);
   tt_i64_op(eg->sampled_on_date, OP_EQ, t);
   tt_i64_op(eg->unlisted_since_date, OP_EQ, 0);
   tt_str_op(eg->sampled_by_version, OP_EQ, "1.2.3");
