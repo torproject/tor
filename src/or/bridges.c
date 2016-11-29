@@ -279,7 +279,8 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
                hex_str(digest, DIGEST_LEN), fmt_addrport(addr, port),
                transport_info ? transport_info : "");
     tor_free(transport_info);
-    // XXXX prop271 here. we will need to update the guard info too.
+    entry_guard_learned_bridge_identity(&bridge->addrport_configured,
+                                        (const uint8_t *)digest);
   }
 }
 
@@ -741,16 +742,21 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
                    fmt_and_decorate_addr(&bridge->addr),
                    (int) bridge->port);
       }
-      // XXXX prop271 here we will need to update the guard info too.
-      add_bridge_as_entry_guard(get_guard_selection_info(), node);
+      if (get_options()->UseDeprecatedGuardAlgorithm) {
+        add_bridge_as_entry_guard(get_guard_selection_info(), node);
+      } else {
+        entry_guard_learned_bridge_identity(&bridge->addrport_configured,
+                               (const uint8_t*)ri->cache_info.identity_digest);
+      }
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
       /* set entry->made_contact so if it goes down we don't drop it from
        * our entry node list */
-      // XXXX prop271 use new interface here when we hit bridges?
-      entry_guard_register_connect_status(ri->cache_info.identity_digest,
-                                          1, 0, now);
+      if (get_options()->UseDeprecatedGuardAlgorithm) {
+        entry_guard_register_connect_status(ri->cache_info.identity_digest,
+                                            1, 0, now);
+      }
       if (first) {
         routerlist_retry_directory_downloads(now);
       }
@@ -768,8 +774,20 @@ int
 any_bridge_descriptors_known(void)
 {
   tor_assert(get_options()->UseBridges);
-  // XXXX prop271 this needs to get fixed. -- bridges
-  return choose_random_entry(NULL) != NULL;
+
+  if (!bridge_list)
+    return 0;
+
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
+    const node_t *node;
+    if (!tor_digest_is_zero(bridge->identity) &&
+        (node = node_get_by_id(bridge->identity)) != NULL &&
+        node->ri) {
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(bridge);
+
+  return 0;
 }
 
 /** Return a smartlist containing all bridge identity digests */

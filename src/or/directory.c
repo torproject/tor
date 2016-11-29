@@ -560,26 +560,35 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
        * sort of dir fetch we'll be doing, so it won't return a bridge
        * that can't answer our question.
        */
-      // XXXX prop271 update this for bridge support.
-      const node_t *node = choose_random_dirguard(type);
+      const node_t *node = guards_choose_dirguard(type,
+                                                  &guard_state);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
         routerinfo_t *ri = node->ri;
         /* clients always make OR connections to bridges */
         tor_addr_port_t or_ap;
+        tor_addr_port_t nil_dir_ap;
         /* we are willing to use a non-preferred address if we need to */
         fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0,
                                              &or_ap);
-        directory_initiate_command(&or_ap.addr, or_ap.port,
-                                   NULL, 0, /*no dirport*/
-                                   ri->cache_info.identity_digest,
-                                   dir_purpose,
-                                   router_purpose,
-                                   DIRIND_ONEHOP,
-                                   resource, NULL, 0, if_modified_since);
-      } else
+        tor_addr_make_null(&nil_dir_ap.addr, AF_INET);
+        nil_dir_ap.port = 0;
+        directory_initiate_command_rend(&or_ap,
+                                        &nil_dir_ap,
+                                        ri->cache_info.identity_digest,
+                                        dir_purpose,
+                                        router_purpose,
+                                        DIRIND_ONEHOP,
+                                        resource, NULL, 0, if_modified_since,
+                                        NULL, guard_state);
+      } else {
+        if (guard_state) {
+          entry_guard_cancel(&guard_state);
+        }
         log_notice(LD_DIR, "Ignoring directory request, since no bridge "
                            "nodes are available yet.");
+      }
+
       return;
     } else {
       if (prefer_authority || (type & BRIDGE_DIRINFO)) {

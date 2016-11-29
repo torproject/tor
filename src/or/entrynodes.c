@@ -271,7 +271,7 @@ create_initial_guard_context(void)
   tor_assert(name); // "name" can only be NULL if we had an old name.
   tor_assert(type != GS_TYPE_INFER);
   log_notice(LD_GUARD, "Starting with guard context \"%s\"", name);
-  curr_guard_context = get_guard_selection_by_name_and_type(name, type);
+  curr_guard_context = get_guard_selection_by_name(name, type, 1);
 }
 
 /** Get current default guard_selection_t, creating it if necessary */
@@ -1234,13 +1234,10 @@ node_passes_guard_filter(const or_options_t *options, guard_selection_t *gs,
                          const node_t *node)
 {
   /* XXXX prop271 remote the gs option; it is unused, and sometimes NULL. */
+  (void)gs;
 
   /* NOTE: Make sure that this function stays in sync with
    * options_transition_affects_entry_guards */
-
-  tor_assert(! options->UseBridges);
-
-  (void)gs;
   if (routerset_contains_node(options->ExcludeNodes, node))
     return 0;
 
@@ -1265,7 +1262,6 @@ static int
 bridge_passes_guard_filter(const or_options_t *options,
                            const bridge_info_t *bridge)
 {
-  tor_assert(options->UseBridges);
   tor_assert(bridge);
   if (!bridge)
     return 0;
@@ -1765,7 +1761,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs, unsigned *state_out)
 
 /**
  * Note that we failed to connect to or build circuits through <b>guard</b>.
- * Use with a guard returned by select_entry_guards_for_circuit().
+ * Use with a guard returned by select_entry_guard_for_circuit().
  */
 STATIC void
 entry_guards_note_guard_failure(guard_selection_t *gs,
@@ -3818,12 +3814,30 @@ choose_random_dirguard(dirinfo_type_t type)
 int
 num_bridges_usable(void)
 {
-  tor_assert(get_options()->UseDeprecatedGuardAlgorithm);
-
   int n_options = 0;
-  tor_assert(get_options()->UseBridges);
-  (void) choose_random_entry_impl(get_guard_selection_info(),
-                                  NULL, 0, 0, &n_options);
+
+  if (get_options()->UseDeprecatedGuardAlgorithm) {
+
+    tor_assert(get_options()->UseBridges);
+    (void) choose_random_entry_impl(get_guard_selection_info(),
+                                    NULL, 0, 0, &n_options);
+  } else {
+    /* XXXX prop271 Is this quite right? */
+    tor_assert(get_options()->UseBridges);
+    guard_selection_t *gs  = get_guard_selection_info();
+    tor_assert(gs->type == GS_TYPE_BRIDGE);
+
+    SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+      if (guard->is_reachable == GUARD_REACHABLE_NO)
+        continue;
+      if (tor_digest_is_zero(guard->identity))
+        continue;
+      const node_t *node = node_get_by_id(guard->identity);
+      if (node && node->ri)
+        ++n_options;
+    } SMARTLIST_FOREACH_END(guard);
+  }
+
   return n_options;
 }
 
