@@ -1099,6 +1099,7 @@ entry_guard_is_listed(guard_selection_t *gs, const entry_guard_t *guard)
 STATIC void
 sampled_guards_update_from_consensus(guard_selection_t *gs)
 {
+  /*XXXX prop271 consider splitting this function up. */
   tor_assert(gs);
   const int REMOVE_UNLISTED_GUARDS_AFTER =
     (get_remove_unlisted_guards_after_days() * 86400);
@@ -1503,6 +1504,7 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
 STATIC void
 entry_guards_update_primary(guard_selection_t *gs)
 {
+  /*XXXX prop271 consider splitting this function up. */
   tor_assert(gs);
 
   // prevent recursion. Recursion is potentially very bad here.
@@ -1697,6 +1699,7 @@ entry_guards_note_internet_connectivity(guard_selection_t *gs)
 STATIC entry_guard_t *
 select_entry_guard_for_circuit(guard_selection_t *gs, unsigned *state_out)
 {
+  /*XXXX prop271 consider splitting this function up. */
   tor_assert(gs);
   tor_assert(state_out);
 
