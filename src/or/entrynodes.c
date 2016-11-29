@@ -1928,7 +1928,6 @@ entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b)
 void
 circuit_guard_state_free(circuit_guard_state_t *state)
 {
-  /* XXXX prop271 -- do we want to inline this structure? */
   if (!state)
     return;
   entry_guard_handle_free(state->guard);

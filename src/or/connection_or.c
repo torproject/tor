@@ -735,8 +735,9 @@ connection_or_about_to_close(or_connection_t *or_conn)
       const or_options_t *options = get_options();
       connection_or_note_state_when_broken(or_conn);
       rep_hist_note_connect_failed(or_conn->identity_digest, now);
+      /* Tell the new guard API about the channel failure */
       entry_guard_chan_failed(TLS_CHAN_TO_BASE(or_conn->chan));
-      /* XXXX prop271 -- old API */
+      /* Tell the old guard API about the channel failure */
       entry_guard_register_connect_status(or_conn->identity_digest,0,
                                           !options->HTTPSProxy, now);
       if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
@@ -1675,8 +1676,9 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
            "Tried connecting to router at %s:%d, but identity key was not "
            "as expected: wanted %s but got %s.%s",
            conn->base_.address, conn->base_.port, expected, seen, extra_log);
+    /* Tell the new guard API about the channel failure */
     entry_guard_chan_failed(TLS_CHAN_TO_BASE(conn->chan));
-    /* XXXX prop271 old API */
+    /* Tell the old guard API about the channel failure */
     entry_guard_register_connect_status(conn->identity_digest, 0, 1,
                                         time(NULL));
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,

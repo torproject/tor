@@ -226,7 +226,6 @@ typedef enum guard_selection_type_t {
 /**
  * All of the the context for guard selection on a particular client.
  *
- * (XXXX prop271 this paragraph below is not actually implemented yet.)
  * We maintain multiple guard selection contexts for a client, depending
  * aspects on its current configuration -- whether an extremely
  * restrictive EntryNodes is used, whether UseBridges is enabled, and so
