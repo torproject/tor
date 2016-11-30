@@ -2214,8 +2214,8 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
 
   int n_waiting = 0;
   int n_complete = 0;
+  int n_complete_blocking = 0;
   origin_circuit_t *best_waiting_circuit = NULL;
-  origin_circuit_t *best_complete_circuit = NULL;
   smartlist_t *all_circuits = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(all_circuits_in, origin_circuit_t *, circ) {
     // We filter out circuits that aren't ours, or which we can't
@@ -2241,12 +2241,6 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
           circ_state_has_higher_priority(circ, NULL, best_waiting_circuit)) {
         best_waiting_circuit = circ;
       }
-    } else if (state->state == GUARD_CIRC_STATE_COMPLETE) {
-      ++n_complete;
-      if (! best_complete_circuit ||
-          circ_state_has_higher_priority(circ, NULL, best_complete_circuit)) {
-        best_complete_circuit = circ;
-      }
     }
   } SMARTLIST_FOREACH_END(circ);
 
@@ -2262,19 +2256,28 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   const entry_guard_restriction_t *rst_on_best_waiting =
     origin_circuit_get_guard_state(best_waiting_circuit)->restrictions;
 
-  if (best_complete_circuit) {
-    if (circ_state_has_higher_priority(best_complete_circuit,
-                                       rst_on_best_waiting,
-                                       best_waiting_circuit)) {
-      /* "If any circuit is <complete>, then do not use any
-         <waiting_for_better_guard> or <usable_if_no_better_guard> circuits
-         circuits whose guards have lower priority." */
-      log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
-                "%d complete and %d guard-stalled. At least one complete "
-                "circuit had higher priority, so not upgrading.",
-                n_complete, n_waiting);
-      goto no_change;
-    }
+  /* First look at the complete circuits: Do any block this circuit? */
+  SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+    circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
+    if BUG((state == NULL))
+      continue;
+    if (state->state != GUARD_CIRC_STATE_COMPLETE)
+      continue;
+    ++n_complete;
+    if (circ_state_has_higher_priority(circ, rst_on_best_waiting,
+                                       best_waiting_circuit))
+      ++n_complete_blocking;
+  } SMARTLIST_FOREACH_END(circ);
+
+  if (n_complete_blocking) {
+    /* "If any circuit is <complete>, then do not use any
+       <waiting_for_better_guard> or <usable_if_no_better_guard> circuits
+       circuits whose guards have lower priority." */
+    log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
+              "%d complete and %d guard-stalled. At least one complete "
+              "circuit had higher priority, so not upgrading.",
+              n_complete, n_waiting);
+    goto no_change;
   }
 
   /* "If any circuit is <waiting_for_better_guard>, and every currently
