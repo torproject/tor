@@ -168,6 +168,8 @@ static entry_guard_t *entry_guard_add_to_sample_impl(guard_selection_t *gs,
                                const tor_addr_port_t *bridge_addrport);
 static entry_guard_t *get_sampled_guard_by_bridge_addr(guard_selection_t *gs,
                                               const tor_addr_port_t *addrport);
+static int entry_guard_obeys_restriction(const entry_guard_t *guard,
+                                         const entry_guard_restriction_t *rst);
 
 /** Return 0 if we should apply guardfraction information found in the
  *  consensus. A specific consensus can be specified with the
@@ -878,13 +880,20 @@ entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
 /**
  * Return the number of sampled guards in <b>gs</b> that are "filtered"
  * (that is, we're willing to connect to them) and that are "usable"
- * (that is, either "reachable" or "maybe reachable"). */
+ * (that is, either "reachable" or "maybe reachable").
+ *
+ * If a restriction is provided in <b>rst</b>, do not count any guards that
+ * violate it.
+ */
 STATIC int
-num_reachable_filtered_guards(guard_selection_t *gs)
+num_reachable_filtered_guards(guard_selection_t *gs,
+                              const entry_guard_restriction_t *rst)
 {
   int n_reachable_filtered_guards = 0;
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
+    if (! entry_guard_obeys_restriction(guard, rst))
+      continue;
     if (guard->is_usable_filtered_guard)
       ++n_reachable_filtered_guards;
   } SMARTLIST_FOREACH_END(guard);
@@ -1003,7 +1012,7 @@ entry_guards_expand_sample(guard_selection_t *gs)
   tor_assert(gs);
   int n_sampled = smartlist_len(gs->sampled_entry_guards);
   entry_guard_t *added_guard = NULL;
-  int n_usable_filtered_guards = num_reachable_filtered_guards(gs);
+  int n_usable_filtered_guards = num_reachable_filtered_guards(gs, NULL);
   int n_guards = 0;
   smartlist_t *eligible_guards = get_eligible_guards(gs, &n_guards);
 
@@ -1324,6 +1333,22 @@ entry_guard_passes_filter(const or_options_t *options, guard_selection_t *gs,
 }
 
 /**
+ * Return true iff <b>guard</b> obeys the restrictions defined in <b>rst</b>.
+ * (If <b>rst</b> is NULL, there are no restrictions.)
+ */
+static int
+entry_guard_obeys_restriction(const entry_guard_t *guard,
+                              const entry_guard_restriction_t *rst)
+{
+  tor_assert(guard);
+  if (! rst)
+    return 1; // No restriction?  No problem.
+
+  // Only one kind of restriction exists right now
+  return tor_memneq(guard->identity, rst->exclude_id, DIGEST_LEN);
+}
+
+/**
  * Update the <b>is_filtered_guard</b> and <b>is_usable_filtered_guard</b>
  * flags on <b>guard</b>. */
 void
@@ -1373,9 +1398,13 @@ entry_guards_update_filtered_sets(guard_selection_t *gs)
  *
  * Make sure that the sample is big enough, and that all the filter flags
  * are set correctly, before calling this function.
+ *
+ * If a restriction is provided in <b>rst</b>, do not return any guards that
+ * violate it.
  **/
 STATIC entry_guard_t *
 sample_reachable_filtered_entry_guards(guard_selection_t *gs,
+                                       const entry_guard_restriction_t *rst,
                                        unsigned flags)
 {
   tor_assert(gs);
@@ -1389,7 +1418,7 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
     entry_guard_consider_retry(guard);
   } SMARTLIST_FOREACH_END(guard);
 
-  const int n_reachable_filtered = num_reachable_filtered_guards(gs);
+  const int n_reachable_filtered = num_reachable_filtered_guards(gs, rst);
 
   log_info(LD_GUARD, "Trying to sample a reachable guard: We know of %d "
            "in the USABLE_FILTERED set.", n_reachable_filtered);
@@ -1407,6 +1436,8 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
   smartlist_t *reachable_filtered_sample = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);// redundant, but cheap.
+    if (! entry_guard_obeys_restriction(guard, rst))
+      continue;
     if (! guard->is_usable_filtered_guard)
       continue;
     if (exclude_confirmed && guard->confirmed_idx >= 0)
@@ -1568,7 +1599,7 @@ entry_guards_update_primary(guard_selection_t *gs)
 
   /* Finally, fill out the list with sampled guards. */
   while (smartlist_len(new_primary_guards) < N_PRIMARY_GUARDS) {
-    entry_guard_t *guard = sample_reachable_filtered_entry_guards(gs,
+    entry_guard_t *guard = sample_reachable_filtered_entry_guards(gs, NULL,
                                             SAMPLE_EXCLUDE_CONFIRMED|
                                             SAMPLE_EXCLUDE_PRIMARY|
                                             SAMPLE_NO_UPDATE_PRIMARY);
@@ -1708,7 +1739,9 @@ entry_guards_note_internet_connectivity(guard_selection_t *gs)
  * of the circuit.
  */
 STATIC entry_guard_t *
-select_entry_guard_for_circuit(guard_selection_t *gs, unsigned *state_out)
+select_entry_guard_for_circuit(guard_selection_t *gs,
+                               const entry_guard_restriction_t *rst,
+                               unsigned *state_out)
 {
   /*XXXX prop271 consider splitting this function up. */
   tor_assert(gs);
@@ -1721,6 +1754,8 @@ select_entry_guard_for_circuit(guard_selection_t *gs, unsigned *state_out)
       <maybe> or <yes>, return the first such guard." */
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
+    if (! entry_guard_obeys_restriction(guard, rst))
+      continue;
     if (guard->is_reachable != GUARD_REACHABLE_NO) {
       *state_out = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
       guard->last_tried_to_connect = approx_time();
@@ -1737,6 +1772,8 @@ select_entry_guard_for_circuit(guard_selection_t *gs, unsigned *state_out)
   SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards, entry_guard_t *, guard) {
     if (guard->is_primary)
       continue; /* we already considered this one. */
+    if (! entry_guard_obeys_restriction(guard, rst))
+      continue;
     entry_guard_consider_retry(guard);
     if (guard->is_usable_filtered_guard && ! guard->is_pending) {
       guard->is_pending = 1;
@@ -1755,6 +1792,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs, unsigned *state_out)
   {
     entry_guard_t *guard;
     guard = sample_reachable_filtered_entry_guards(gs,
+                                                   rst,
                                                    SAMPLE_EXCLUDE_CONFIRMED |
                                                    SAMPLE_EXCLUDE_PRIMARY |
                                                    SAMPLE_EXCLUDE_PENDING);
@@ -1925,6 +1963,13 @@ entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b)
   }
 }
 
+/** Release all storage held in <b>restriction</b> */
+static void
+entry_guard_restriction_free(entry_guard_restriction_t *rst)
+{
+  tor_free(rst);
+}
+
 /**
  * Release all storage held in <b>state</b>.
  */
@@ -1933,6 +1978,7 @@ circuit_guard_state_free(circuit_guard_state_t *state)
 {
   if (!state)
     return;
+  entry_guard_restriction_free(state->restrictions);
   entry_guard_handle_free(state->guard);
   tor_free(state);
 }
@@ -1942,9 +1988,14 @@ circuit_guard_state_free(circuit_guard_state_t *state)
  * in *<b>chosen_node_out</b>. Set *<b>guard_state_out</b> to an opaque
  * state object that will record whether the circuit is ready to be used
  * or not. Return 0 on success; on failure, return -1.
+ *
+ * If a restriction is provided in <b>rst</b>, do not return any guards that
+ * violate it, and remember that restriction in <b>guard_state_out</b> for
+ * later use. (Takes ownership of the <b>rst</b> object.)
  */
 int
 entry_guard_pick_for_circuit(guard_selection_t *gs,
+                             entry_guard_restriction_t *rst,
                              const node_t **chosen_node_out,
                              circuit_guard_state_t **guard_state_out)
 {
@@ -1955,23 +2006,27 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   *guard_state_out = NULL;
 
   unsigned state = 0;
-  entry_guard_t *guard = select_entry_guard_for_circuit(gs, &state);
+  entry_guard_t *guard = select_entry_guard_for_circuit(gs, rst, &state);
   if (! guard)
-    return -1;
+    goto fail;
   if (BUG(state == 0))
-    return -1;
+    goto fail;
   const node_t *node = node_get_by_id(guard->identity);
   // XXXX prop271 check Ed ID.
   if (! node)
-    return -1;
+    goto fail;
 
   *chosen_node_out = node;
   *guard_state_out = tor_malloc_zero(sizeof(circuit_guard_state_t));
   (*guard_state_out)->guard = entry_guard_handle_new(guard);
   (*guard_state_out)->state = state;
   (*guard_state_out)->state_set_at = approx_time();
+  (*guard_state_out)->restrictions = rst;
 
   return 0;
+ fail:
+  entry_guard_restriction_free(rst);
+  return -1;
 }
 
 /**
@@ -2098,9 +2153,14 @@ entry_guards_all_primary_guards_are_down(guard_selection_t *gs)
 }
 
 /** Wrapper for entry_guard_has_higher_priority that compares the
- * guard-priorities of a pair of circuits. */
+ * guard-priorities of a pair of circuits.
+ *
+ * If a restriction is provided in <b>rst</b>, then do not consider
+ * <b>a</b> to have higher priority if it violates the restriction.
+ */
 static int
 circ_state_has_higher_priority(origin_circuit_t *a,
+                               const entry_guard_restriction_t *rst,
                                origin_circuit_t *b)
 {
   circuit_guard_state_t *state_a = origin_circuit_get_guard_state(a);
@@ -2118,6 +2178,9 @@ circ_state_has_higher_priority(origin_circuit_t *a,
   } else if (! guard_b) {
     /* Known guard -- higher priority than any unknown guard. */
     return 1;
+  } else  if (! entry_guard_obeys_restriction(guard_a, rst)) {
+    /* Restriction violated; guard_a cannot have higher priority. */
+    return 0;
   } else {
     /* Both known -- compare.*/
     return entry_guard_has_higher_priority(guard_a, guard_b);
@@ -2175,13 +2238,13 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     if (state->state == GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD) {
       ++n_waiting;
       if (! best_waiting_circuit ||
-          circ_state_has_higher_priority(circ, best_waiting_circuit)) {
+          circ_state_has_higher_priority(circ, NULL, best_waiting_circuit)) {
         best_waiting_circuit = circ;
       }
     } else if (state->state == GUARD_CIRC_STATE_COMPLETE) {
       ++n_complete;
       if (! best_complete_circuit ||
-          circ_state_has_higher_priority(circ, best_complete_circuit)) {
+          circ_state_has_higher_priority(circ, NULL, best_complete_circuit)) {
         best_complete_circuit = circ;
       }
     }
@@ -2193,8 +2256,15 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     goto no_change;
   }
 
+  /* We'll need to keep track of what restrictions were used when picking this
+   * circuit, so that we don't allow any circuit without those restrictions to
+   * block it. */
+  const entry_guard_restriction_t *rst_on_best_waiting =
+    origin_circuit_get_guard_state(best_waiting_circuit)->restrictions;
+
   if (best_complete_circuit) {
     if (circ_state_has_higher_priority(best_complete_circuit,
+                                       rst_on_best_waiting,
                                        best_waiting_circuit)) {
       /* "If any circuit is <complete>, then do not use any
          <waiting_for_better_guard> or <usable_if_no_better_guard> circuits
@@ -2225,8 +2295,10 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
       continue;
     if (state->state != GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD)
       continue;
-    if (state->state_set_at > state_set_at_cutoff &&
-        circ_state_has_higher_priority(circ, best_waiting_circuit))
+    if (state->state_set_at <= state_set_at_cutoff)
+      continue;
+    if (circ_state_has_higher_priority(circ, rst_on_best_waiting,
+                                       best_waiting_circuit))
       ++n_blockers_found;
   } SMARTLIST_FOREACH_END(circ);
 
@@ -2246,9 +2318,14 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if (BUG(state == NULL))
       continue;
+    if (circ != best_waiting_circuit && rst_on_best_waiting) {
+      /* Can't upgrade other circ with same priority as best; might
+         be blocked. */
+      continue;
+    }
     if (state->state != GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD)
       continue;
-    if (circ_state_has_higher_priority(best_waiting_circuit, circ))
+    if (circ_state_has_higher_priority(best_waiting_circuit, NULL, circ))
       continue;
 
     state->state = GUARD_CIRC_STATE_COMPLETE;
@@ -4759,10 +4836,18 @@ guards_choose_guard(cpath_build_state_t *state,
   if (get_options()->UseDeprecatedGuardAlgorithm) {
     return choose_random_entry(state);
   } else {
-    // XXXX prop271 we need to look at the chosen exit node if any, and
-    // not duplicate it.
     const node_t *r = NULL;
+    const uint8_t *exit_id = NULL;
+    entry_guard_restriction_t *rst = NULL;
+    // XXXX prop271 spec deviation -- use of restriction here.
+    if (state && (exit_id = build_state_get_exit_rsa_id(state))) {
+      /* We're building to a targeted exit node, so that node can't be
+       * chosen as our guard for this circuit. */
+      rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
+      memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
+    }
     if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     rst,
                                      &r,
                                      guard_state_out) < 0) {
       tor_assert(r == NULL);
@@ -4788,6 +4873,7 @@ guards_choose_dirguard(dirinfo_type_t info,
      * microdescriptors. -NM */
     const node_t *r = NULL;
     if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     NULL,
                                      &r,
                                      guard_state_out) < 0) {
       tor_assert(r == NULL);

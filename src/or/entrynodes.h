@@ -24,6 +24,10 @@ typedef struct entry_guard_t entry_guard_t;
    private. */
 typedef struct circuit_guard_state_t circuit_guard_state_t;
 
+/* Forward declaration for entry_guard_restriction_t; the real declaration is
+   private. */
+typedef struct entry_guard_restriction_t entry_guard_restriction_t;
+
 /* Information about a guard's pathbias status.
  * These fields are used in circpathbias.c to try to detect entry
  * nodes that are failing circuits at a suspicious frequency.
@@ -311,6 +315,24 @@ struct guard_selection_s {
 struct entry_guard_handle_t;
 
 /**
+ * A restriction to remember which entry guards are off-limits for a given
+ * circuit.
+ *
+ * Right now, we only use restrictions to block a single guard from being
+ * selected; this mechanism is designed to be more extensible in the future,
+ * however.
+ *
+ * Note: This mechanism is NOT for recording which guards are never to be
+ * used: only which guards cannot be used on <em>one particular circuit</em>.
+ */
+struct entry_guard_restriction_t {
+  /**
+   * The guard's RSA identity digest must not equal this.
+   */
+  uint8_t exclude_id[DIGEST_LEN];
+};
+
+/**
  * Per-circuit state to track whether we'll be able to use the circuit.
  */
 struct circuit_guard_state_t {
@@ -320,6 +342,14 @@ struct circuit_guard_state_t {
   time_t state_set_at;
   /** One of GUARD_CIRC_STATE_* */
   uint8_t state;
+
+  /**
+   * A set of restrictions that were placed on this guard when we selected it
+   * for this particular circuit.  We need to remember the restrictions here,
+   * since any guard that breaks these restrictions will not block this
+   * circuit from becoming COMPLETE.
+   */
+  entry_guard_restriction_t *restrictions;
 };
 #endif
 
@@ -356,6 +386,7 @@ guard_pathbias_t *entry_guard_get_pathbias_state(entry_guard_t *guard);
 
 void circuit_guard_state_free(circuit_guard_state_t *state);
 int entry_guard_pick_for_circuit(guard_selection_t *gs,
+                                 entry_guard_restriction_t *rst,
                                  const node_t **chosen_node_out,
                                  circuit_guard_state_t **guard_state_out);
 typedef enum {
@@ -491,12 +522,14 @@ STATIC int entry_guards_all_primary_guards_are_down(guard_selection_t *gs);
 /**@}*/
 STATIC entry_guard_t *sample_reachable_filtered_entry_guards(
                                     guard_selection_t *gs,
+                                    const entry_guard_restriction_t *rst,
                                     unsigned flags);
 STATIC void entry_guard_consider_retry(entry_guard_t *guard);
 STATIC void make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard);
 STATIC void entry_guards_update_confirmed(guard_selection_t *gs);
 STATIC void entry_guards_update_primary(guard_selection_t *gs);
-STATIC int num_reachable_filtered_guards(guard_selection_t *gs);
+STATIC int num_reachable_filtered_guards(guard_selection_t *gs,
+                                         const entry_guard_restriction_t *rst);
 STATIC void sampled_guards_update_from_consensus(guard_selection_t *gs);
 /**
  * @name Possible guard-states for a circuit.
@@ -522,7 +555,8 @@ STATIC void sampled_guards_update_from_consensus(guard_selection_t *gs);
 STATIC void entry_guards_note_guard_failure(guard_selection_t *gs,
                                             entry_guard_t *guard);
 STATIC entry_guard_t *select_entry_guard_for_circuit(guard_selection_t *gs,
-                                                     unsigned *state_out);
+                                          const entry_guard_restriction_t *rst,
+                                          unsigned *state_out);
 STATIC void mark_primary_guards_maybe_reachable(guard_selection_t *gs);
 STATIC unsigned entry_guards_note_guard_success(guard_selection_t *gs,
                                                 entry_guard_t *guard,

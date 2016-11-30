@@ -1353,7 +1353,7 @@ test_entry_guard_node_filter(void *arg)
     tt_assert(g[i]->is_filtered_guard == 1);
     tt_assert(g[i]->is_usable_filtered_guard == 1);
   }
-  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, NUM);
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, NUM);
 
   /* Make sure refiltering doesn't hurt */
   entry_guards_update_filtered_sets(gs);
@@ -1361,7 +1361,7 @@ test_entry_guard_node_filter(void *arg)
     tt_assert(g[i]->is_filtered_guard == 1);
     tt_assert(g[i]->is_usable_filtered_guard == 1);
   }
-  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, NUM);
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, NUM);
 
   /* Now start doing things to make the guards get filtered out, 1 by 1. */
 
@@ -1401,7 +1401,7 @@ test_entry_guard_node_filter(void *arg)
     tt_assert(g[i]->is_filtered_guard == (i == 5 || i == 6));
     tt_assert(g[i]->is_usable_filtered_guard == (i == 6));
   }
-  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, 1);
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, 1);
 
   /* Now make sure we have no live consensus, and no nodes.  Nothing should
    * pass the filter any more. */
@@ -1415,7 +1415,7 @@ test_entry_guard_node_filter(void *arg)
     tt_assert(g[i]->is_filtered_guard == 0);
     tt_assert(g[i]->is_usable_filtered_guard == 0);
   }
-  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, 0);
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, 0);
 
  done:
   guard_selection_free(gs);
@@ -1434,11 +1434,11 @@ test_entry_guard_expand_sample(void *arg)
 
   // Every sampled guard here should be filtered and reachable for now.
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ,
-            num_reachable_filtered_guards(gs));
+            num_reachable_filtered_guards(gs, NULL));
 
   /* Make sure we got the right number. */
   tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
-            num_reachable_filtered_guards(gs));
+            num_reachable_filtered_guards(gs, NULL));
 
   // Make sure everything we got was from our fake node list, and everything
   // was unique.
@@ -1457,7 +1457,7 @@ test_entry_guard_expand_sample(void *arg)
   guard = entry_guards_expand_sample(gs);
   tt_assert(! guard); // no guard was added.
   tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
-            num_reachable_filtered_guards(gs));
+            num_reachable_filtered_guards(gs, NULL));
 
   // Make a few guards unreachable.
   guard = smartlist_get(gs->sampled_entry_guards, 0);
@@ -1467,21 +1467,21 @@ test_entry_guard_expand_sample(void *arg)
   guard = smartlist_get(gs->sampled_entry_guards, 2);
   guard->is_usable_filtered_guard = 0;
   tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE - 3, OP_EQ,
-            num_reachable_filtered_guards(gs));
+            num_reachable_filtered_guards(gs, NULL));
 
   // This time, expanding the sample will add some more guards.
   guard = entry_guards_expand_sample(gs);
   tt_assert(guard); // no guard was added.
   tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
-            num_reachable_filtered_guards(gs));
+            num_reachable_filtered_guards(gs, NULL));
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ,
-            num_reachable_filtered_guards(gs)+3);
+            num_reachable_filtered_guards(gs, NULL)+3);
 
   // Still idempotent.
   guard = entry_guards_expand_sample(gs);
   tt_assert(! guard); // no guard was added.
   tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
-            num_reachable_filtered_guards(gs));
+            num_reachable_filtered_guards(gs, NULL));
 
   // Now, do a nasty trick: tell the filter to exclude 31/32 of the guards.
   // This will cause the sample size to get reeeeally huge, while the
@@ -1497,7 +1497,7 @@ test_entry_guard_expand_sample(void *arg)
   entry_guards_update_filtered_sets(gs);
 
   // Surely (p ~ 1-2**-60), one of our guards has been excluded.
-  tt_int_op(num_reachable_filtered_guards(gs), OP_LT,
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_LT,
             DFLT_MIN_FILTERED_SAMPLE_SIZE);
 
   // Try to regenerate the guards.
@@ -1505,7 +1505,7 @@ test_entry_guard_expand_sample(void *arg)
   tt_assert(guard); // no guard was added.
 
   /* this time, it's possible that we didn't add enough sampled guards. */
-  tt_int_op(num_reachable_filtered_guards(gs), OP_LE,
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_LE,
             DFLT_MIN_FILTERED_SAMPLE_SIZE);
   /* but we definitely didn't exceed the sample maximum. */
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_LE,
@@ -1538,7 +1538,7 @@ test_entry_guard_expand_sample_small_net(void *arg)
   tt_assert(guard); // the last guard returned -- some guard was added.
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_GT, 0);
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_LT, 10);
-  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, 0);
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, 0);
  done:
   guard_selection_free(gs);
 }
@@ -1562,7 +1562,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
   /* First, sample some guards. */
   entry_guards_expand_sample(gs);
   int n_sampled_pre = smartlist_len(gs->sampled_entry_guards);
-  int n_filtered_pre = num_reachable_filtered_guards(gs);
+  int n_filtered_pre = num_reachable_filtered_guards(gs, NULL);
   tt_i64_op(n_sampled_pre, OP_EQ, n_filtered_pre);
   tt_i64_op(n_sampled_pre, OP_GT, 10);
 
@@ -1584,7 +1584,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
     dummy_consensus = NULL;
     sampled_guards_update_from_consensus(gs);
     tt_i64_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre);
-    tt_i64_op(num_reachable_filtered_guards(gs), OP_EQ, n_filtered_pre);
+    tt_i64_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, n_filtered_pre);
     /* put the networkstatus back. */
     dummy_consensus = ns_tmp;
     ns_tmp = NULL;
@@ -1596,7 +1596,7 @@ test_entry_guard_update_from_consensus_status(void *arg)
   sampled_guards_update_from_consensus(gs);
 
   tt_i64_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre);
-  tt_i64_op(num_reachable_filtered_guards(gs), OP_EQ, n_filtered_pre - 5);
+  tt_i64_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, n_filtered_pre-5);
   for (i = 0; i < 5; ++i) {
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
     tt_assert(! g->currently_listed);
@@ -1666,7 +1666,7 @@ test_entry_guard_update_from_consensus_repair(void *arg)
   /* First, sample some guards. */
   entry_guards_expand_sample(gs);
   int n_sampled_pre = smartlist_len(gs->sampled_entry_guards);
-  int n_filtered_pre = num_reachable_filtered_guards(gs);
+  int n_filtered_pre = num_reachable_filtered_guards(gs, NULL);
   tt_i64_op(n_sampled_pre, OP_EQ, n_filtered_pre);
   tt_i64_op(n_sampled_pre, OP_GT, 10);
 
@@ -1694,7 +1694,7 @@ test_entry_guard_update_from_consensus_repair(void *arg)
   teardown_capture_of_logs();
 
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_sampled_pre);
-  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, n_filtered_pre - 3);
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, n_filtered_pre-3);
   for (i = 3; i < n_sampled_pre; ++i) {
     /* these will become listed. */
     entry_guard_t *g = smartlist_get(gs->sampled_entry_guards, i);
@@ -1731,7 +1731,7 @@ test_entry_guard_update_from_consensus_remove(void *arg)
   /* First, sample some guards. */
   entry_guards_expand_sample(gs);
   int n_sampled_pre = smartlist_len(gs->sampled_entry_guards);
-  int n_filtered_pre = num_reachable_filtered_guards(gs);
+  int n_filtered_pre = num_reachable_filtered_guards(gs, NULL);
   tt_i64_op(n_sampled_pre, OP_EQ, n_filtered_pre);
   tt_i64_op(n_sampled_pre, OP_GT, 10);
 
@@ -1912,7 +1912,7 @@ test_entry_guard_sample_reachable_filtered(void *arg)
 
   entry_guards_update_filtered_sets(gs);
   gs->primary_guards_up_to_date = 1;
-  tt_int_op(num_reachable_filtered_guards(gs), OP_EQ, n_guards - 1);
+  tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, n_guards - 1);
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_guards);
 
   // +1 since the one we made disabled will make  another one get added.
@@ -1934,7 +1934,7 @@ test_entry_guard_sample_reachable_filtered(void *arg)
     const int excluded_flags = tests[j].flag;
     const int excluded_idx = tests[j].idx;
     for (i = 0; i < N; ++i) {
-      g = sample_reachable_filtered_entry_guards(gs, excluded_flags);
+      g = sample_reachable_filtered_entry_guards(gs, NULL, excluded_flags);
       tor_assert(g);
       int pos = smartlist_pos(gs->sampled_entry_guards, g);
       tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, n_guards);
@@ -1965,7 +1965,7 @@ test_entry_guard_sample_reachable_filtered_empty(void *arg)
   SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n,
                     n->is_possible_guard = 0);
 
-  entry_guard_t *g = sample_reachable_filtered_entry_guards(gs, 0);
+  entry_guard_t *g = sample_reachable_filtered_entry_guards(gs, NULL, 0);
   tt_ptr_op(g, OP_EQ, NULL);
 
  done:
@@ -2162,7 +2162,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   entry_guards_update_primary(gs);
   unsigned state = 9999;
 
-  entry_guard_t *g = select_entry_guard_for_circuit(gs, &state);
+  entry_guard_t *g = select_entry_guard_for_circuit(gs, NULL, &state);
 
   tt_assert(g);
   tt_assert(g->is_primary);
@@ -2172,7 +2172,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   tt_i64_op(g->last_tried_to_connect, OP_EQ, approx_time());
 
   // If we do that again, we should get the same guard.
-  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, &state);
+  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_ptr_op(g2, OP_EQ, g);
 
   // if we mark that guard down, we should get a different primary guard.
@@ -2181,7 +2181,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   g->unreachable_since = approx_time() - 10;
   g->last_tried_to_connect = approx_time() - 10;
   state = 9999;
-  g2 = select_entry_guard_for_circuit(gs, &state);
+  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_ptr_op(g2, OP_NE, g);
   tt_assert(g2);
   tt_assert(g2->is_primary);
@@ -2195,7 +2195,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   g->unreachable_since = approx_time() - 72*60*60;
   g->last_tried_to_connect = approx_time() - 72*60*60;
   state = 9999;
-  g2 = select_entry_guard_for_circuit(gs, &state);
+  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_ptr_op(g2, OP_EQ, g);
   tt_assert(g2);
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
@@ -2210,7 +2210,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
     guard->unreachable_since = approx_time() - 30;
   });
   state = 9999;
-  g2 = select_entry_guard_for_circuit(gs, &state);
+  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_assert(g2);
   tt_assert(!g2->is_primary);
   tt_int_op(g2->confirmed_idx, OP_EQ, -1);
@@ -2254,7 +2254,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   unsigned state = 9999;
 
   // As above, this gives us a primary guard.
-  entry_guard_t *g = select_entry_guard_for_circuit(gs, &state);
+  entry_guard_t *g = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_assert(g);
   tt_assert(g->is_primary);
   tt_int_op(g->confirmed_idx, OP_EQ, 0);
@@ -2271,7 +2271,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
 
   // ... we should get a confirmed guard.
   state = 9999;
-  g = select_entry_guard_for_circuit(gs, &state);
+  g = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_assert(g);
   tt_assert(! g->is_primary);
   tt_int_op(g->confirmed_idx, OP_EQ, smartlist_len(gs->primary_entry_guards));
@@ -2282,7 +2282,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   // And if we try again, we should get a different confirmed guard, since
   // that one is pending.
   state = 9999;
-  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, &state);
+  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_assert(g2);
   tt_assert(! g2->is_primary);
   tt_ptr_op(g2, OP_NE, g);
@@ -2297,12 +2297,12 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   const int n_remaining_confirmed =
     N_CONFIRMED - 2 - smartlist_len(gs->primary_entry_guards);
   for (i = 0; i < n_remaining_confirmed; ++i) {
-    g = select_entry_guard_for_circuit(gs, &state);
+    g = select_entry_guard_for_circuit(gs, NULL, &state);
     tt_int_op(g->confirmed_idx, OP_GE, 0);
     tt_assert(g);
   }
   state = 9999;
-  g = select_entry_guard_for_circuit(gs, &state);
+  g = select_entry_guard_for_circuit(gs, NULL, &state);
   tt_assert(g);
   tt_assert(g->is_pending);
   tt_int_op(g->confirmed_idx, OP_EQ, -1);
@@ -2329,7 +2329,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
    * Make sure that the pick-for-circuit API basically works.  We'll get
    * a primary guard, so it'll be usable on completion.
    */
-  int r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  int r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
 
   tt_assert(r == 0);
   tt_assert(node);
@@ -2361,7 +2361,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
   /* Try again. We'll also get a primary guard this time. (The same one,
      in fact.)  But this time, we'll say the connection has failed. */
   update_approx_time(start+35);
-  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
   tt_assert(r == 0);
   tt_assert(node);
   tt_assert(guard);
@@ -2396,7 +2396,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
    * (still primary) guard.
    */
   update_approx_time(start+60);
-  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
   tt_assert(r == 0);
   tt_assert(node);
   tt_assert(guard);
@@ -2448,7 +2448,7 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
 
   /* Primary guards are down! */
   for (i = 0; i < N_PRIMARY; ++i) {
-    r = entry_guard_pick_for_circuit(gs, &node, &guard);
+    r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
     tt_assert(node);
     tt_assert(guard);
     tt_assert(r == 0);
@@ -2461,7 +2461,7 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
 
   /* Next guard should be non-primary. */
   node = NULL;
-  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
   tt_assert(node);
   tt_assert(guard);
   tt_assert(r == 0);
@@ -2513,7 +2513,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   /* Make primary guards confirmed (so they won't be superseded by a later
    * guard), then mark them down. */
   for (i = 0; i < N_PRIMARY; ++i) {
-    r = entry_guard_pick_for_circuit(gs, &node, &guard);
+    r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
     tt_assert(node);
     tt_assert(guard);
     tt_assert(r == 0);
@@ -2529,7 +2529,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   }
 
   /* Get another guard that we might try. */
-  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
   tt_assert(node);
   tt_assert(guard);
   tt_assert(r == 0);
@@ -2556,7 +2556,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   });
 
   /* Have a circuit to a primary guard succeed. */
-  r = entry_guard_pick_for_circuit(gs, &node, &guard2);
+  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard2);
   tt_assert(r == 0);
   tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
   u = entry_guard_succeeded(&guard2);
@@ -2585,7 +2585,7 @@ test_entry_guard_select_and_cancel(void *arg)
   /* Once more, we mark all the primary guards down. */
   entry_guards_note_internet_connectivity(gs);
   for (i = 0; i < N_PRIMARY; ++i) {
-    r = entry_guard_pick_for_circuit(gs, &node, &guard);
+    r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
     tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
     g = entry_guard_handle_get(guard->guard);
     tt_int_op(g->is_primary, OP_EQ, 1);
@@ -2600,7 +2600,7 @@ test_entry_guard_select_and_cancel(void *arg)
   tt_assert(entry_guards_all_primary_guards_are_down(gs));
 
   /* Now get another guard we could try... */
-  r = entry_guard_pick_for_circuit(gs, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
   tt_assert(node);
   tt_assert(guard);
   tt_assert(r == 0);
@@ -2659,7 +2659,7 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   data->start = approx_time();
   entry_guards_note_internet_connectivity(gs);
   for (i = 0; i < N_PRIMARY; ++i) {
-    entry_guard_pick_for_circuit(gs, &node, &guard);
+    entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
     g = entry_guard_handle_get(guard->guard);
     make_guard_confirmed(gs, g);
     entry_guard_failed(&guard);
@@ -2670,7 +2670,7 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   data->all_origin_circuits = smartlist_new();
 
   update_approx_time(data->start + 27);
-  entry_guard_pick_for_circuit(gs, &node, &data->guard1_state);
+  entry_guard_pick_for_circuit(gs, NULL, &node, &data->guard1_state);
   origin_circuit_t *circ;
   data->circ1 = circ = origin_circuit_new();
   circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -2678,7 +2678,7 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   smartlist_add(data->all_origin_circuits, circ);
 
   update_approx_time(data->start + 30);
-  entry_guard_pick_for_circuit(gs, &node, &data->guard2_state);
+  entry_guard_pick_for_circuit(gs, NULL, &node, &data->guard2_state);
   data->circ2 = circ = origin_circuit_new();
   circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
   circ->guard_state = data->guard2_state;

@@ -2515,8 +2515,8 @@ extend_info_dup(extend_info_t *info)
   return newinfo;
 }
 
-/** Return the routerinfo_t for the chosen exit router in <b>state</b>.
- * If there is no chosen exit, or if we don't know the routerinfo_t for
+/** Return the node_t for the chosen exit router in <b>state</b>.
+ * If there is no chosen exit, or if we don't know the node_t for
  * the chosen exit, return NULL.
  */
 const node_t *
@@ -2525,6 +2525,17 @@ build_state_get_exit_node(cpath_build_state_t *state)
   if (!state || !state->chosen_exit)
     return NULL;
   return node_get_by_id(state->chosen_exit->identity_digest);
+}
+
+/** Return the RSA ID digest for the chosen exit router in <b>state</b>.
+ * If there is no chosen exit, return NULL.
+ */
+const uint8_t *
+build_state_get_exit_rsa_id(cpath_build_state_t *state)
+{
+  if (!state || !state->chosen_exit)
+    return NULL;
+  return (const uint8_t *) state->chosen_exit->identity_digest;
 }
 
 /** Return the nickname for the chosen exit router in <b>state</b>. If
