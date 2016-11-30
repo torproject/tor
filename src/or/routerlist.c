@@ -3896,7 +3896,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                router_describe(router));
       *msg = "Router descriptor is not referenced by any network-status.";
 
-      /* Only journal this desc if we'll be serving it. */
+      /* Only journal this desc if we want to keep old descriptors */
       if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
                                       &routerlist->desc_store);
@@ -4526,13 +4526,14 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   smartlist_free(extrainfo_list);
 }
 
-/** Return true iff any networkstatus includes a descriptor whose digest
- * is that of <b>desc</b>. */
+/** Return true iff the latest ns-flavored consensus includes a descriptor
+ * whose digest is that of <b>desc</b>. */
 static int
 signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 {
   const routerstatus_t *rs;
-  networkstatus_t *consensus = networkstatus_get_latest_consensus();
+  networkstatus_t *consensus = networkstatus_get_latest_consensus_by_flavor(
+                                                                      FLAV_NS);
 
   if (consensus) {
     rs = networkstatus_vote_find_entry(consensus, desc->identity_digest);
