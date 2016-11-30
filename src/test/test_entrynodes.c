@@ -1528,6 +1528,48 @@ test_entry_guard_get_guard_selection_by_name(void *arg)
 }
 
 static void
+test_entry_guard_choose_selection_initial(void *arg)
+{
+  /* Tests for picking our initial guard selection (based on having had
+   * no previous selection */
+  (void)arg;
+  guard_selection_type_t type = GS_TYPE_INFER;
+  const char *name = choose_guard_selection(get_options(),
+                                            dummy_consensus, NULL, &type);
+  tt_str_op(name, OP_EQ, "default");
+  tt_int_op(type, OP_EQ, GS_TYPE_NORMAL);
+
+  /* If we're using bridges, we get the bridge selection. */
+  get_options_mutable()->UseBridges = 1;
+  name = choose_guard_selection(get_options(),
+                                dummy_consensus, NULL, &type);
+  tt_str_op(name, OP_EQ, "bridges");
+  tt_int_op(type, OP_EQ, GS_TYPE_BRIDGE);
+  get_options_mutable()->UseBridges = 0;
+
+  /* If we're using legacy guards, we get the legacy selection */
+  get_options_mutable()->UseDeprecatedGuardAlgorithm = 1;
+  name = choose_guard_selection(get_options(),
+                                dummy_consensus, NULL, &type);
+  tt_str_op(name, OP_EQ, "legacy");
+  tt_int_op(type, OP_EQ, GS_TYPE_LEGACY);
+  get_options_mutable()->UseDeprecatedGuardAlgorithm = 0;
+
+  /* If we discard >99% of our guards, though, we should be in the restricted
+   * set. */
+  tt_assert(get_options_mutable()->EntryNodes == NULL);
+  get_options_mutable()->EntryNodes = routerset_new();
+  routerset_parse(get_options_mutable()->EntryNodes, "1.0.0.0/8", "foo");
+  name = choose_guard_selection(get_options(),
+                                dummy_consensus, NULL, &type);
+  tt_str_op(name, OP_EQ, "restricted");
+  tt_int_op(type, OP_EQ, GS_TYPE_RESTRICTED);
+
+ done:
+  ;
+}
+
+static void
 test_entry_guard_add_single_guard(void *arg)
 {
   (void)arg;
@@ -3360,6 +3402,7 @@ struct testcase_t entrynodes_tests[] = {
     test_entry_guard_parse_from_state_broken, TT_FORK, NULL, NULL },
   { "get_guard_selection_by_name",
     test_entry_guard_get_guard_selection_by_name, TT_FORK, NULL, NULL },
+  BFN_TEST(choose_selection_initial),
   BFN_TEST(add_single_guard),
   BFN_TEST(node_filter),
   BFN_TEST(expand_sample),
