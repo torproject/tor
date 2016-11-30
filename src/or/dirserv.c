@@ -1078,11 +1078,14 @@ directory_caches_unknown_auth_certs(const or_options_t *options)
   return dir_server_mode(options) || options->BridgeRelay;
 }
 
-/** Return 1 if we want to keep descriptors, networkstatuses, etc around.
+/** Return 1 if we want to fetch and serve descriptors, networkstatuses, etc
  * Else return 0.
  * Check options->DirPort_set and directory_permits_begindir_requests()
  * to see if we are willing to serve these directory documents to others via
  * the DirPort and begindir-over-ORPort, respectively.
+ *
+ * To check if we should fetch documents, use we_want_to_fetch_flavor and
+ * we_want_to_fetch_unknown_auth_certs instead of this function.
  */
 int
 directory_caches_dir_info(const or_options_t *options)

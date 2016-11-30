@@ -814,8 +814,11 @@ networkstatus_nickname_is_unnamed(const char *nickname)
 #define NONAUTHORITY_NS_CACHE_INTERVAL (60*60)
 
 /** Return true iff, given the options listed in <b>options</b>, <b>flavor</b>
- *  is the flavor of a consensus networkstatus that we would like to fetch. */
-static int
+ *  is the flavor of a consensus networkstatus that we would like to fetch.
+ *
+ * For certificate fetches, use we_want_to_fetch_unknown_auth_certs, and
+ * for serving fetched documents, use directory_caches_dir_info. */
+int
 we_want_to_fetch_flavor(const or_options_t *options, int flavor)
 {
   if (flavor < 0 || flavor > N_CONSENSUS_FLAVORS) {
@@ -1728,9 +1731,9 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (flav != usable_consensus_flavor() &&
-      !directory_caches_dir_info(options)) {
-    /* This consensus is totally boring to us: we won't use it, and we won't
-     * serve it.  Drop it. */
+      !we_want_to_fetch_flavor(options, flav)) {
+    /* This consensus is totally boring to us: we won't use it, we didn't want
+     * it, and we won't serve it.  Drop it. */
     goto done;
   }
 
@@ -1932,7 +1935,7 @@ networkstatus_set_current_consensus(const char *consensus,
       download_status_failed(&consensus_dl_status[flav], 0);
   }
 
-  if (directory_caches_dir_info(options)) {
+  if (we_want_to_fetch_flavor(options, flav)) {
     dirserv_set_cached_consensus_networkstatus(consensus,
                                                flavor,
                                                &c->digests,
