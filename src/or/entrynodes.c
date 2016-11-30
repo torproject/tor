@@ -194,14 +194,13 @@ should_apply_guardfraction(const networkstatus_t *ns)
 }
 
 /**
- * Allocate and return a new guard_selection_t, with the name <b>name</b>.
+ * Try to determine the correct type for a selection named "name",
+ * if <b>type</b> is GS_TYPE_INFER.
  */
-STATIC guard_selection_t *
-guard_selection_new(const char *name,
-                    guard_selection_type_t type)
+STATIC guard_selection_type_t
+guard_selection_infer_type(guard_selection_type_t type,
+                           const char *name)
 {
-  guard_selection_t *gs;
-
   if (type == GS_TYPE_INFER) {
     if (!strcmp(name, "legacy"))
       type = GS_TYPE_LEGACY;
@@ -212,6 +211,19 @@ guard_selection_new(const char *name,
     else
       type = GS_TYPE_NORMAL;
   }
+  return type;
+}
+
+/**
+ * Allocate and return a new guard_selection_t, with the name <b>name</b>.
+ */
+STATIC guard_selection_t *
+guard_selection_new(const char *name,
+                    guard_selection_type_t type)
+{
+  guard_selection_t *gs;
+
+  type = guard_selection_infer_type(type, name);
 
   gs = tor_malloc_zero(sizeof(*gs));
   gs->name = tor_strdup(name);
