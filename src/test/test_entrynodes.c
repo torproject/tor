@@ -3079,6 +3079,45 @@ test_entry_guard_upgrade_blocked_by_better_circ_complete(void *arg)
 }
 
 static void
+test_entry_guard_upgrade_not_blocked_by_restricted_circ_complete(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+
+  /* Once more, let circ1 become complete. But this time, we'll claim
+   * that circ2 was restricted to not use the same guard as circ1. */
+  data->guard2_state->restrictions =
+    tor_malloc_zero(sizeof(entry_guard_restriction_t));
+  memcpy(data->guard2_state->restrictions->exclude_id,
+         data->guard1->identity, DIGEST_LEN);
+
+  smartlist_t *result = smartlist_new();
+  int r;
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_len(result), OP_EQ, 1);
+  origin_circuit_t *oc = smartlist_get(result, 0);
+  tt_ptr_op(oc, OP_EQ, data->circ1);
+  tt_ptr_op(data->guard1_state, OP_NE, NULL);
+  tt_int_op(data->guard1_state->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
+
+  /* Now, we try again. Since circ2 has a restriction that circ1 doesn't obey,
+   * circ2 _is_ eligible for upgrade. */
+  smartlist_clear(result);
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_len(result), OP_EQ, 1);
+  origin_circuit_t *oc2 = smartlist_get(result, 0);
+  tt_ptr_op(oc2, OP_EQ, data->circ2);
+
+ done:
+  smartlist_free(result);
+}
+
+static void
 test_entry_guard_upgrade_not_blocked_by_worse_circ_complete(void *arg)
 {
   upgrade_circuits_data_t *data = arg;
@@ -3136,6 +3175,43 @@ test_entry_guard_upgrade_blocked_by_better_circ_pending(void *arg)
 
  done:
   teardown_capture_of_logs();
+  smartlist_free(result);
+}
+
+static void
+test_entry_guard_upgrade_not_blocked_by_restricted_circ_pending(void *arg)
+{
+  upgrade_circuits_data_t *data = arg;
+  /* circ2 is done, but circ1 is still pending. But when there is a
+     restriction on circ2 that circ1 can't satisfy, circ1 can't block
+     circ2. */
+
+  /* XXXX Prop271 -- this is a kludge.  I'm making sure circ1 _is_ better,
+   * by messing with the guards' confirmed_idx */
+  make_guard_confirmed(data->gs, data->guard1);
+  {
+    int tmp;
+    tmp = data->guard1->confirmed_idx;
+    data->guard1->confirmed_idx = data->guard2->confirmed_idx;
+    data->guard2->confirmed_idx = tmp;
+  }
+
+  data->guard2_state->restrictions =
+    tor_malloc_zero(sizeof(entry_guard_restriction_t));
+  memcpy(data->guard2_state->restrictions->exclude_id,
+         data->guard1->identity, DIGEST_LEN);
+
+  smartlist_t *result = smartlist_new();
+  int r;
+  r = entry_guards_upgrade_waiting_circuits(data->gs,
+                                            data->all_origin_circuits,
+                                            result);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_len(result), OP_EQ, 1);
+  origin_circuit_t *oc = smartlist_get(result, 0);
+  tt_ptr_op(oc, OP_EQ, data->circ2);
+
+ done:
   smartlist_free(result);
 }
 
@@ -3283,8 +3359,12 @@ struct testcase_t entrynodes_tests[] = {
   UPGRADE_TEST(upgrade_blocked_by_live_primary_guards, "c1-done c2-done"),
   UPGRADE_TEST(upgrade_blocked_by_lack_of_waiting_circuits, ""),
   UPGRADE_TEST(upgrade_blocked_by_better_circ_complete, "c1-done c2-done"),
+  UPGRADE_TEST(upgrade_not_blocked_by_restricted_circ_complete,
+               "c1-done c2-done"),
   UPGRADE_TEST(upgrade_not_blocked_by_worse_circ_complete, "c1-done c2-done"),
   UPGRADE_TEST(upgrade_blocked_by_better_circ_pending, "c2-done"),
+  UPGRADE_TEST(upgrade_not_blocked_by_restricted_circ_pending,
+               "c2-done"),
   UPGRADE_TEST(upgrade_not_blocked_by_worse_circ_pending, "c1-done"),
   { "should_expire_waiting", test_enty_guard_should_expire_waiting, TT_FORK,
     NULL, NULL },
