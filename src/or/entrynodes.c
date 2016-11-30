@@ -2420,7 +2420,7 @@ entry_guard_encode_for_state(entry_guard_t *guard)
                            fmt_and_decorate_addr(&guard->bridge_addr->addr),
                            guard->bridge_addr->port);
   }
-  if (strlen(guard->nickname)) {
+  if (strlen(guard->nickname) && is_legal_nickname(guard->nickname)) {
     smartlist_add_asprintf(result, "nickname=%s", guard->nickname);
   }
 
