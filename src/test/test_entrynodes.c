@@ -1524,7 +1524,7 @@ test_entry_guard_expand_sample_small_net(void *arg)
 
   /* Fun corner case: not enough guards to make up our whole sample size. */
   SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
-    if (n_sl_idx >= 40) {
+    if (n_sl_idx >= 15) {
       tor_free(n->rs);
       tor_free(n->md);
       tor_free(n);
@@ -1536,8 +1536,9 @@ test_entry_guard_expand_sample_small_net(void *arg)
 
   entry_guard_t *guard = entry_guards_expand_sample(gs);
   tt_assert(guard); // the last guard returned -- some guard was added.
-  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_GT, 0);
-  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_LT, 10);
+  // half the nodes are guards, so we have 8 guards left.  The set
+  // is small, so we sampled everything.
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, 8);
   tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, 0);
  done:
   guard_selection_free(gs);
