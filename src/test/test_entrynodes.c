@@ -14,6 +14,7 @@
 #include "bridges.h"
 #include "circuitlist.h"
 #include "config.h"
+#include "confparse.h"
 #include "entrynodes.h"
 #include "nodelist.h"
 #include "networkstatus.h"
@@ -1245,6 +1246,239 @@ test_entry_guard_parse_from_state_partial_failure(void *arg)
  done:
   entry_guard_free(eg);
   tor_free(mem_op_hex_tmp);
+}
+
+static int
+mock_entry_guard_is_listed(guard_selection_t *gs, const entry_guard_t *guard)
+{
+  (void)gs;
+  (void)guard;
+  return 1;
+}
+
+static void
+test_entry_guard_parse_from_state_full(void *arg)
+{
+  (void)arg;
+  /* Here's a state I made while testing.  The identities and locations for
+   * the bridges are redacted. */
+  const char STATE[] =
+  "Guard in=default rsa_id=214F44BD5B638E8C817D47FF7C97397790BF0345 "
+    "nickname=TotallyNinja sampled_on=2016-11-12T19:32:49 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1\n"
+  "Guard in=default rsa_id=052900AB0EA3ED54BAB84AE8A99E74E8693CE2B2 "
+    "nickname=5OfNovember sampled_on=2016-11-20T04:32:05 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1 confirmed_on=2016-11-22T08:13:28 confirmed_idx=0 "
+    "pb_circ_attempts=4.000000 pb_circ_successes=2.000000 "
+    "pb_successful_circuits_closed=2.000000\n"
+  "Guard in=default rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
+    "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1 confirmed_on=2016-11-24T08:45:30 confirmed_idx=4 "
+    "pb_circ_attempts=5.000000 pb_circ_successes=5.000000 "
+    "pb_successful_circuits_closed=5.000000\n"
+  "Guard in=wobblesome rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
+    "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1\n"
+  "Guard in=default rsa_id=E9025AD60D86875D5F11548D536CC6AF60F0EF5E "
+    "nickname=maibrunn sampled_on=2016-11-25T22:36:38 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1\n"
+  "Guard in=default rsa_id=DCD30B90BA3A792DA75DC54A327EF353FB84C38E "
+    "nickname=Unnamed sampled_on=2016-11-25T14:34:00 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1\n"
+  "Guard in=bridges rsa_id=8FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF2E "
+    "bridge_addr=24.1.1.1:443 sampled_on=2016-11-25T06:44:14 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1 "
+    "confirmed_on=2016-11-29T10:36:06 confirmed_idx=0 "
+    "pb_circ_attempts=8.000000 pb_circ_successes=8.000000 "
+    "pb_successful_circuits_closed=13.000000\n"
+  "Guard in=bridges rsa_id=5800000000000000000000000000000000000000 "
+    "bridge_addr=37.218.246.143:28366 "
+    "sampled_on=2016-11-18T15:07:34 sampled_by=0.3.0.0-alpha-dev listed=1\n";
+
+  config_line_t *lines = NULL;
+  or_state_t *state = tor_malloc_zero(sizeof(or_state_t));
+  int r = config_get_lines(STATE, &lines, 0);
+  char *msg = NULL;
+  smartlist_t *text = smartlist_new();
+  char *joined = NULL;
+
+  MOCK(entry_guard_is_listed, mock_entry_guard_is_listed);
+
+  dummy_state = state;
+  MOCK(get_or_state,
+       get_or_state_replacement);
+
+  tt_assert(r == 0);
+  tt_assert(lines);
+
+  state->Guard = lines;
+
+  /* Try it first without setting the result. */
+  r = entry_guards_parse_state(state, 0, &msg);
+  tt_assert(r == 0);
+  guard_selection_t *gs_br =
+    get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
+  tt_assert(!gs_br);
+
+  r = entry_guards_parse_state(state, 1, &msg);
+  tt_assert(r == 0);
+  gs_br = get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
+  guard_selection_t *gs_df =
+    get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
+  guard_selection_t *gs_wb =
+    get_guard_selection_by_name("wobblesome", GS_TYPE_NORMAL, 0);
+
+  tt_assert(gs_br);
+  tt_assert(gs_df);
+  tt_assert(gs_wb);
+
+  tt_int_op(smartlist_len(gs_df->sampled_entry_guards), OP_EQ, 5);
+  tt_int_op(smartlist_len(gs_br->sampled_entry_guards), OP_EQ, 2);
+  tt_int_op(smartlist_len(gs_wb->sampled_entry_guards), OP_EQ, 1);
+
+  /* Try again; make sure it doesn't double-add the guards. */
+  r = entry_guards_parse_state(state, 1, &msg);
+  tt_assert(r == 0);
+  gs_br = get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
+  gs_df = get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
+  tt_assert(gs_br);
+  tt_assert(gs_df);
+  tt_int_op(smartlist_len(gs_df->sampled_entry_guards), OP_EQ, 5);
+  tt_int_op(smartlist_len(gs_br->sampled_entry_guards), OP_EQ, 2);
+
+  /* Re-encode; it should be the same... almost. */
+  {
+    /* (Make a guard nonpersistent first) */
+    entry_guard_t *g = smartlist_get(gs_df->sampled_entry_guards, 0);
+    g->is_persistent = 0;
+  }
+  config_free_lines(lines);
+  lines = state->Guard = NULL; // to prevent double-free.
+  entry_guards_update_state(state);
+  tt_assert(state->Guard);
+  lines = state->Guard;
+
+  config_line_t *ln;
+  for (ln = lines; ln; ln = ln->next) {
+    smartlist_add_asprintf(text, "%s %s\n",ln->key, ln->value);
+  }
+  joined = smartlist_join_strings(text, "", 0, NULL);
+  tt_str_op(joined, OP_EQ,
+  "Guard in=default rsa_id=052900AB0EA3ED54BAB84AE8A99E74E8693CE2B2 "
+    "nickname=5OfNovember sampled_on=2016-11-20T04:32:05 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1 confirmed_on=2016-11-22T08:13:28 confirmed_idx=0 "
+    "pb_circ_attempts=4.000000 pb_circ_successes=2.000000 "
+    "pb_successful_circuits_closed=2.000000\n"
+  "Guard in=default rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
+    "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1 confirmed_on=2016-11-24T08:45:30 confirmed_idx=1 "
+    "pb_circ_attempts=5.000000 pb_circ_successes=5.000000 "
+    "pb_successful_circuits_closed=5.000000\n"
+  "Guard in=default rsa_id=E9025AD60D86875D5F11548D536CC6AF60F0EF5E "
+    "nickname=maibrunn sampled_on=2016-11-25T22:36:38 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1\n"
+  "Guard in=default rsa_id=DCD30B90BA3A792DA75DC54A327EF353FB84C38E "
+    "nickname=Unnamed sampled_on=2016-11-25T14:34:00 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1\n"
+  "Guard in=wobblesome rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
+    "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1\n"
+  "Guard in=bridges rsa_id=8FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF2E "
+    "bridge_addr=24.1.1.1:443 sampled_on=2016-11-25T06:44:14 "
+    "sampled_by=0.3.0.0-alpha-dev listed=1 "
+    "confirmed_on=2016-11-29T10:36:06 confirmed_idx=0 "
+    "pb_circ_attempts=8.000000 pb_circ_successes=8.000000 "
+    "pb_successful_circuits_closed=13.000000\n"
+  "Guard in=bridges rsa_id=5800000000000000000000000000000000000000 "
+    "bridge_addr=37.218.246.143:28366 "
+    "sampled_on=2016-11-18T15:07:34 sampled_by=0.3.0.0-alpha-dev listed=1\n");
+
+ done:
+  config_free_lines(lines);
+  tor_free(state);
+  tor_free(msg);
+  UNMOCK(get_or_state);
+  UNMOCK(entry_guard_is_listed);
+  SMARTLIST_FOREACH(text, char *, cp, tor_free(cp));
+  smartlist_free(text);
+  tor_free(joined);
+}
+
+static void
+test_entry_guard_parse_from_state_broken(void *arg)
+{
+  (void)arg;
+  /* Here's a variation on the previous state. Every line but the first is
+   * busted somehow. */
+  const char STATE[] =
+  /* Okay. */
+  "Guard in=default rsa_id=214F44BD5B638E8C817D47FF7C97397790BF0345 "
+    "nickname=TotallyNinja sampled_on=2016-11-12T19:32:49 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1\n"
+  /* No selection listed. */
+  "Guard rsa_id=052900AB0EA3ED54BAB84AE8A99E74E8693CE2B2 "
+    "nickname=5OfNovember sampled_on=2016-11-20T04:32:05 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1 confirmed_on=2016-11-22T08:13:28 confirmed_idx=0 "
+    "pb_circ_attempts=4.000000 pb_circ_successes=2.000000 "
+    "pb_successful_circuits_closed=2.000000\n"
+  /* Selection is "legacy"!! */
+  "Guard in=legacy rsa_id=7B700C0C207EBD0002E00F499BE265519AC3C25A "
+    "nickname=dc6jgk11 sampled_on=2016-11-28T11:50:13 "
+    "sampled_by=0.3.0.0-alpha-dev "
+    "listed=1 confirmed_on=2016-11-24T08:45:30 confirmed_idx=4 "
+    "pb_circ_attempts=5.000000 pb_circ_successes=5.000000 "
+    "pb_successful_circuits_closed=5.000000\n";
+
+  config_line_t *lines = NULL;
+  or_state_t *state = tor_malloc_zero(sizeof(or_state_t));
+  int r = config_get_lines(STATE, &lines, 0);
+  char *msg = NULL;
+
+  dummy_state = state;
+  MOCK(get_or_state,
+       get_or_state_replacement);
+
+  tt_assert(r == 0);
+  tt_assert(lines);
+
+  state->Guard = lines;
+
+  /* First, no-set case. we should get an error. */
+  r = entry_guards_parse_state(state, 0, &msg);
+  tt_int_op(r, OP_LT, 0);
+  tt_ptr_op(msg, OP_NE, NULL);
+  /* And we shouldn't have made anything. */
+  guard_selection_t *gs_df =
+    get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
+  tt_assert(gs_df == NULL);
+  tor_free(msg);
+
+  /* Now see about the set case (which shouldn't happen IRL) */
+  r = entry_guards_parse_state(state, 1, &msg);
+  tt_int_op(r, OP_LT, 0);
+  tt_ptr_op(msg, OP_NE, NULL);
+  gs_df = get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
+  tt_assert(gs_df != NULL);
+  tt_int_op(smartlist_len(gs_df->sampled_entry_guards), OP_EQ, 1);
+  guard_selection_t *gs_legacy =
+    get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 0);
+  tt_assert(gs_legacy != NULL);
+  tt_int_op(smartlist_len(gs_legacy->chosen_entry_guards), OP_EQ, 0);
+
+ done:
+  config_free_lines(lines);
+  tor_free(state);
+  tor_free(msg);
+  UNMOCK(get_or_state);
 }
 
 static void
@@ -3019,6 +3253,10 @@ struct testcase_t entrynodes_tests[] = {
     test_entry_guard_parse_from_state_failure, 0, NULL, NULL },
   { "parse_from_state_partial_failure",
     test_entry_guard_parse_from_state_partial_failure, 0, NULL, NULL },
+  { "parse_from_state_full",
+    test_entry_guard_parse_from_state_full, TT_FORK, NULL, NULL },
+  { "parse_from_state_broken",
+    test_entry_guard_parse_from_state_broken, TT_FORK, NULL, NULL },
   { "get_guard_selection_by_name",
     test_entry_guard_get_guard_selection_by_name, TT_FORK, NULL, NULL },
   BFN_TEST(add_single_guard),

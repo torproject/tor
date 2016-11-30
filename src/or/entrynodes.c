@@ -1115,8 +1115,8 @@ remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
 /** Return true iff <b>guard</b> is currently "listed" -- that is, it
  * appears in the consensus, or as a configured bridge (as
  * appropriate) */
-static int
-entry_guard_is_listed(guard_selection_t *gs, const entry_guard_t *guard)
+MOCK_IMPL(STATIC int,
+entry_guard_is_listed,(guard_selection_t *gs, const entry_guard_t *guard))
 {
   if (gs->type == GS_TYPE_BRIDGE) {
     return NULL != get_bridge_info_for_guard(guard);
