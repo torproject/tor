@@ -1665,7 +1665,7 @@ entry_guards_update_primary(guard_selection_t *gs)
  * Return the number of seconds after the last attempt at which we should
  * retry a guard that has been failing since <b>failing_since</b>.
  */
-static unsigned
+static int
 get_retry_schedule(time_t failing_since, time_t now,
                    int is_primary)
 {
@@ -1712,7 +1712,7 @@ entry_guard_consider_retry(entry_guard_t *guard)
     return; /* No retry needed. */
 
   const time_t now = approx_time();
-  const unsigned delay =
+  const int delay =
     get_retry_schedule(guard->failing_since, now, guard->is_primary);
   const time_t last_attempt = guard->last_tried_to_connect;
 
