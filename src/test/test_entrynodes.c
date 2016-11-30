@@ -2464,6 +2464,19 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
     tt_i64_op(guard->unreachable_since, OP_EQ, approx_time() - 30);
   });
 
+  /* Let's try again and we should get the first primary guard again */
+  g = select_entry_guard_for_circuit(gs, NULL, &state);
+  tt_ptr_op(g, OP_EQ, smartlist_get(gs->primary_entry_guards, 0));
+  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
+  tt_ptr_op(g2, OP_EQ, g);
+
+  /* But if we impose a restriction, we don't get the same guard */
+  entry_guard_restriction_t rst;
+  memset(&rst, 0, sizeof(rst));
+  memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
+  g2 = select_entry_guard_for_circuit(gs, &rst, &state);
+  tt_ptr_op(g2, OP_NE, g);
+
  done:
   guard_selection_free(gs);
 }
@@ -2527,10 +2540,22 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
   tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
 
+  // If we say that the next confirmed guard in order is excluded, we get
+  // The one AFTER that.
+  g = smartlist_get(gs->confirmed_entry_guards,
+                     smartlist_len(gs->primary_entry_guards)+2);
+  entry_guard_restriction_t rst;
+  memset(&rst, 0, sizeof(rst));
+  memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
+  g2 = select_entry_guard_for_circuit(gs, &rst, &state);
+  tt_ptr_op(g2, OP_NE, g);
+  tt_int_op(g2->confirmed_idx, OP_EQ,
+            smartlist_len(gs->primary_entry_guards)+3);
+
   // If we make every confirmed guard become pending then we start poking
   // other guards.
   const int n_remaining_confirmed =
-    N_CONFIRMED - 2 - smartlist_len(gs->primary_entry_guards);
+    N_CONFIRMED - 3 - smartlist_len(gs->primary_entry_guards);
   for (i = 0; i < n_remaining_confirmed; ++i) {
     g = select_entry_guard_for_circuit(gs, NULL, &state);
     tt_int_op(g->confirmed_idx, OP_GE, 0);
