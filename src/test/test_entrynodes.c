@@ -2926,6 +2926,37 @@ test_entry_guard_upgrade_not_blocked_by_worse_circ_pending(void *arg)
   smartlist_free(result);
 }
 
+static void
+test_enty_guard_should_expire_waiting(void *arg)
+{
+  (void)arg;
+  circuit_guard_state_t *fake_state = tor_malloc_zero(sizeof(*fake_state));
+  /* We'll leave "guard" unset -- it won't matter here. */
+
+  /* No state? Can't expire. */
+  tt_assert(! entry_guard_state_should_expire(NULL));
+
+  /* Let's try one that expires. */
+  fake_state->state = GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD;
+  fake_state->state_set_at =
+    approx_time() - DFLT_NONPRIMARY_GUARD_IDLE_TIMEOUT - 1;
+
+  tt_assert(entry_guard_state_should_expire(fake_state));
+
+  /* But it wouldn't expire if we changed the state. */
+  fake_state->state = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
+  tt_assert(! entry_guard_state_should_expire(fake_state));
+
+  /* And it wouldn't have expired a few seconds ago. */
+  fake_state->state = GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD;
+  fake_state->state_set_at =
+    approx_time() - DFLT_NONPRIMARY_GUARD_IDLE_TIMEOUT + 5;
+  tt_assert(! entry_guard_state_should_expire(fake_state));
+
+ done:
+  tor_free(fake_state);
+}
+
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
@@ -3017,6 +3048,8 @@ struct testcase_t entrynodes_tests[] = {
   UPGRADE_TEST(upgrade_not_blocked_by_worse_circ_complete, "c1-done c2-done"),
   UPGRADE_TEST(upgrade_blocked_by_better_circ_pending, "c2-done"),
   UPGRADE_TEST(upgrade_not_blocked_by_worse_circ_pending, "c1-done"),
+  { "should_expire_waiting", test_enty_guard_should_expire_waiting, TT_FORK,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };
