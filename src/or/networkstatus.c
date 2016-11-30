@@ -840,6 +840,29 @@ we_want_to_fetch_flavor(const or_options_t *options, int flavor)
   return flavor == usable_consensus_flavor();
 }
 
+/** Return true iff, given the options listed in <b>options</b>, we would like
+ * to fetch and store unknown authority certificates.
+ *
+ * For consensus and descriptor fetches, use we_want_to_fetch_flavor, and
+ * for serving fetched certificates, use directory_caches_unknown_auth_certs.
+ */
+int
+we_want_to_fetch_unknown_auth_certs(const or_options_t *options)
+{
+  if (authdir_mode_v3(options) ||
+      directory_caches_unknown_auth_certs((options))) {
+    /* We want to serve all certs to others, regardless if we would use
+     * them ourselves. */
+    return 1;
+  }
+  if (options->FetchUselessDescriptors) {
+    /* Unknown certificates are definitely useless. */
+    return 1;
+  }
+  /* Otherwise, don't fetch unknown certificates. */
+  return 0;
+}
+
 /** How long will we hang onto a possibly live consensus for which we're
  * fetching certs before we check whether there is a better one? */
 #define DELAY_WHILE_FETCHING_CERTS (20*60)

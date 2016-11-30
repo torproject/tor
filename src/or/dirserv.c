@@ -1069,8 +1069,10 @@ directory_fetches_dir_info_later(const or_options_t *options)
   return options->UseBridges != 0;
 }
 
-/** Return true iff we want to fetch and keep certificates for authorities
+/** Return true iff we want to serve certificates for authorities
  * that we don't acknowledge as authorities ourself.
+ * Use we_want_to_fetch_unknown_auth_certs to check if we want to fetch
+ * and keep these certificates.
  */
 int
 directory_caches_unknown_auth_certs(const or_options_t *options)

@@ -586,7 +586,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
                "signing key %s", from_store ? "cached" : "downloaded",
                ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
     } else {
-      int adding = directory_caches_unknown_auth_certs(get_options());
+      int adding = we_want_to_fetch_unknown_auth_certs(get_options());
       log_info(LD_DIR, "%s %s certificate for unrecognized directory "
                "authority with signing key %s",
                adding ? "Adding" : "Not adding",
@@ -1012,7 +1012,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
   char *resource = NULL;
   cert_list_t *cl;
   const or_options_t *options = get_options();
-  const int cache = directory_caches_unknown_auth_certs(options);
+  const int keep_unknown = we_want_to_fetch_unknown_auth_certs(options);
   fp_pair_t *fp_tmp = NULL;
   char id_digest_str[2*DIGEST_LEN+1];
   char sk_digest_str[2*DIGEST_LEN+1];
@@ -1084,9 +1084,10 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
       if (!smartlist_len(voter->sigs))
         continue; /* This authority never signed this consensus, so don't
                    * go looking for a cert with key digest 0000000000. */
-      if (!cache &&
+      if (!keep_unknown &&
           !trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
-        continue; /* We are not a cache, and we don't know this authority.*/
+        continue; /* We don't want unknown certs, and we don't know this
+                   * authority.*/
 
       /*
        * If we don't know *any* cert for this authority, and a download by ID

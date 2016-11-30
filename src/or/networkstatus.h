@@ -67,6 +67,7 @@ const routerstatus_t *router_get_consensus_status_by_nickname(
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
 int networkstatus_nickname_is_unnamed(const char *nickname);
 int we_want_to_fetch_flavor(const or_options_t *options, int flavor);
+int we_want_to_fetch_unknown_auth_certs(const or_options_t *options);
 void networkstatus_consensus_download_failed(int status_code,
                                              const char *flavname);
 void update_consensus_networkstatus_fetch_time(time_t now);
