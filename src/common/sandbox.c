@@ -1486,13 +1486,14 @@ sandbox_add_addrinfo(const char *name)
 void
 sandbox_free_getaddrinfo_cache(void)
 {
-  cached_getaddrinfo_item_t **next, **item;
+  cached_getaddrinfo_item_t **next, **item, *this;
 
   for (item = HT_START(getaddrinfo_cache, &getaddrinfo_cache);
        item;
        item = next) {
+    this = *item;
     next = HT_NEXT_RMV(getaddrinfo_cache, &getaddrinfo_cache, item);
-    cached_getaddrinfo_item_free(*item);
+    cached_getaddrinfo_item_free(this);
   }
 
   HT_CLEAR(getaddrinfo_cache, &getaddrinfo_cache);
