@@ -743,7 +743,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   if (need_new_signing_key) {
     log_notice(LD_OR, "It looks like I need to generate and sign a new "
                "medium-term signing key, because %s. To do that, I "
-               "need to load the permanent master identity key. "
+               "need to load%s the permanent master identity key. "
                "If the master identity key was not moved or encrypted "
                "with a passphrase, this will be done automatically and "
                "no further action is required. Otherwise, provide the "
