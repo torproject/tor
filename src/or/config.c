@@ -1778,25 +1778,6 @@ options_act(const or_options_t *old_options)
 
   monitor_owning_controller_process(options->OwningControllerProcess);
 
-  /* We must create new keys after we poison the directories, because our
-   * poisoning code checks for existing keys, and refuses to modify their
-   * directories. */
-
-  /* If we use non-anonymous single onion services, make sure we poison any
-     new hidden service directories, so that we never accidentally launch the
-     non-anonymous hidden services thinking they are anonymous. */
-  if (running_tor && rend_service_non_anonymous_mode_enabled(options)) {
-    if (options->RendConfigLines && !num_rend_services()) {
-      log_warn(LD_BUG,"Error: hidden services configured, but not parsed.");
-      return -1;
-    }
-    if (rend_service_poison_new_single_onion_dirs(NULL) < 0) {
-      log_warn(LD_GENERAL,"Failed to mark new hidden services as non-anonymous"
-               ".");
-      return -1;
-    }
-  }
-
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_all_keys(NULL)<0) {
     log_warn(LD_GENERAL,"Error loading rendezvous service keys");
@@ -2938,21 +2919,6 @@ options_validate_single_onion(or_options_t *options, char **msg)
                "HiddenServiceSingleHopMode is enabled; disabling "
                "UseEntryGuards.");
     options->UseEntryGuards = 0;
-  }
-
-  /* Check if existing hidden service keys were created in a different
-   * single onion service mode, and refuse to launch if they
-   * have. We'll poison new keys in options_act() just before we create them.
-   */
-  if (rend_service_list_verify_single_onion_poison(NULL, options) < 0) {
-    log_warn(LD_GENERAL, "We are configured with "
-             "HiddenServiceNonAnonymousMode %d, but one or more hidden "
-             "service keys were created in %s mode. This is not allowed.",
-             rend_service_non_anonymous_mode_enabled(options) ? 1 : 0,
-             rend_service_non_anonymous_mode_enabled(options) ?
-             "an anonymous" : "a non-anonymous"
-             );
-    return -1;
   }
 
   return 0;
