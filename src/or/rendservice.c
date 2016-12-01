@@ -75,6 +75,9 @@ static ssize_t rend_service_parse_intro_for_v3(
 static int rend_service_check_private_dir(const or_options_t *options,
                                           const rend_service_t *s,
                                           int create);
+static int rend_service_check_private_dir_impl(const or_options_t *options,
+                                               const rend_service_t *s,
+                                               int create);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -216,14 +219,29 @@ rend_service_free_all(void)
   rend_service_list = NULL;
 }
 
-/** Validate <b>service</b> and add it to rend_service_list if possible.
+/** Validate <b>service</b> and add it to <b>service_list</b>, or to
+ * the global rend_service_list if <b>service_list</b> is NULL.
  * Return 0 on success.  On failure, free <b>service</b> and return -1.
+ * Takes ownership of <b>service</b>.
  */
 static int
-rend_add_service(rend_service_t *service)
+rend_add_service(smartlist_t *service_list, rend_service_t *service)
 {
   int i;
   rend_service_port_config_t *p;
+
+  smartlist_t *s_list;
+  /* If no special service list is provided, then just use the global one. */
+  if (!service_list) {
+    if (BUG(!rend_service_list)) {
+      /* No global HS list, which is a failure. */
+      return -1;
+    }
+
+    s_list = rend_service_list;
+  } else {
+    s_list = service_list;
+  }
 
   service->intro_nodes = smartlist_new();
   service->expiring_nodes = smartlist_new();
@@ -246,7 +264,8 @@ rend_add_service(rend_service_t *service)
   }
 
   if (service->auth_type != REND_NO_AUTH &&
-      smartlist_len(service->clients) == 0) {
+      (!service->clients ||
+       smartlist_len(service->clients) == 0)) {
     log_warn(LD_CONFIG, "Hidden service (%s) with client authorization but no "
                         "clients; ignoring.",
              rend_service_escaped_dir(service));
@@ -254,7 +273,7 @@ rend_add_service(rend_service_t *service)
     return -1;
   }
 
-  if (!smartlist_len(service->ports)) {
+  if (!service->ports || !smartlist_len(service->ports)) {
     log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured; "
              "ignoring.",
              rend_service_escaped_dir(service));
@@ -277,8 +296,9 @@ rend_add_service(rend_service_t *service)
      * lock file.  But this is enough to detect a simple mistake that
      * at least one person has actually made.
      */
-    if (service->directory != NULL) { /* Skip dupe for ephemeral services. */
-      SMARTLIST_FOREACH(rend_service_list, rend_service_t*, ptr,
+    if (service->directory != NULL) {
+      /* Skip dupe for ephemeral services. */
+      SMARTLIST_FOREACH(s_list, rend_service_t*, ptr,
                         dupe = dupe ||
                                !strcmp(ptr->directory, service->directory));
       if (dupe) {
@@ -289,7 +309,7 @@ rend_add_service(rend_service_t *service)
         return -1;
       }
     }
-    smartlist_add(rend_service_list, service);
+    smartlist_add(s_list, service);
     log_debug(LD_REND,"Configuring service with directory \"%s\"",
               service->directory);
     for (i = 0; i < smartlist_len(service->ports); ++i) {
@@ -444,6 +464,61 @@ rend_service_port_config_free(rend_service_port_config_t *p)
   tor_free(p);
 }
 
+/* Check the directory for <b>service</b>, and add the service to
+ * <b>service_list</b>, or to the global list if <b>service_list</b> is NULL.
+ * Only add the service to the list if <b>validate_only</b> is false.
+ * If <b>validate_only</b> is true, free the service.
+ * If <b>service</b> is NULL, ignore it, and return 0.
+ * Returns 0 on success, and -1 on failure.
+ * Takes ownership of <b>service</b>, either freeing it, or adding it to the
+ * global service list.
+ */
+STATIC int
+rend_service_check_dir_and_add(smartlist_t *service_list,
+                               const or_options_t *options,
+                               rend_service_t *service,
+                               int validate_only)
+{
+  if (!service) {
+    /* It is ok for a service to be NULL, this means there are no services */
+    return 0;
+  }
+
+  if (rend_service_check_private_dir(options, service, !validate_only)
+      < 0) {
+    rend_service_free(service);
+    return -1;
+  }
+
+  if (validate_only) {
+    rend_service_free(service);
+    return 0;
+  } else {
+    /* Use service_list for unit tests */
+    smartlist_t *s_list = NULL;
+    /* If no special service list is provided, then just use the global one. */
+    if (!service_list) {
+      if (BUG(!rend_service_list)) {
+        /* No global HS list, which is a failure, because we plan on adding to
+         * it */
+        return -1;
+      }
+      s_list = rend_service_list;
+    } else {
+      s_list = service_list;
+    }
+    /* s_list can not be NULL here - if both service_list and rend_service_list
+     * are NULL, and validate_only is false, we exit earlier in the function
+     */
+    if (BUG(!s_list)) {
+      return -1;
+    }
+    /* Ignore service failures until 030 */
+    rend_add_service(s_list, service);
+    return 0;
+  }
+}
+
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
  * HiddenServicePort in <b>options</b>.  Return 0 on success and -1 on
  * failure.  (If <b>validate_only</b> is set, parse, warn and return as
@@ -465,16 +540,12 @@ rend_config_services(const or_options_t *options, int validate_only)
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      if (service) { /* register the one we just finished parsing */
-        if (rend_service_check_private_dir(options, service, 0) < 0) {
-          rend_service_free(service);
+      /* register the service we just finished parsing
+       * this code registers every service except the last one parsed,
+       * which is registered below the loop */
+      if (rend_service_check_dir_and_add(NULL, options, service,
+                                         validate_only) < 0) {
           return -1;
-        }
-
-        if (validate_only)
-          rend_service_free(service);
-        else
-          rend_add_service(service);
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
@@ -680,17 +751,12 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
     }
   }
-  if (service) {
-    if (rend_service_check_private_dir(options, service, 0) < 0) {
-      rend_service_free(service);
-      return -1;
-    }
-
-    if (validate_only) {
-      rend_service_free(service);
-    } else {
-      rend_add_service(service);
-    }
+  /* register the final service after we have finished parsing all services
+   * this code only registers the last service, other services are registered
+   * within the loop. It is ok for this service to be NULL, it is ignored. */
+  if (rend_service_check_dir_and_add(NULL, options, service,
+                                     validate_only) < 0) {
+    return -1;
   }
 
   /* If this is a reload and there were hidden services configured before,
@@ -847,7 +913,7 @@ rend_service_add_ephemeral(crypto_pk_t *pk,
   }
 
   /* Initialize the service. */
-  if (rend_add_service(s)) {
+  if (rend_add_service(NULL, s)) {
     return RSAE_INTERNAL;
   }
   *service_id_out = tor_strdup(s->service_id);
@@ -996,6 +1062,11 @@ service_is_single_onion_poisoned(const rend_service_t *service)
   char *poison_fname = NULL;
   file_status_t fstatus;
 
+  /* Passing a NULL service is a bug */
+  if (BUG(!service)) {
+    return 0;
+  }
+
   if (!service->directory) {
     return 0;
   }
@@ -1029,58 +1100,64 @@ rend_service_private_key_exists(const rend_service_t *service)
   return private_key_status == FN_FILE;
 }
 
-/** Check the single onion service poison state of all existing hidden service
- * directories:
- * - If each service is poisoned, and we are in Single Onion Mode,
+/** Check the single onion service poison state of the directory for s:
+ * - If the service is poisoned, and we are in Single Onion Mode,
  *   return 0,
- * - If each service is not poisoned, and we are not in Single Onion Mode,
+ * - If the service is not poisoned, and we are not in Single Onion Mode,
  *   return 0,
- * - Otherwise, the poison state is invalid, and a service that was created in
- *   one mode is being used in the other, return -1.
- * Hidden service directories without keys are not checked for consistency.
- * When their keys are created, they will be poisoned (if needed).
- * If a <b>service_list</b> is provided, treat it
- * as the list of hidden services (used in unittests). */
-int
-rend_service_list_verify_single_onion_poison(const smartlist_t *service_list,
-                                             const or_options_t *options)
+ * - Otherwise, the poison state is invalid: the service was created in one
+ *   mode, and is being used in the other, return -1.
+ * Hidden service directories without keys are always considered consistent.
+ * They will be poisoned after their directory is created (if needed). */
+STATIC int
+rend_service_verify_single_onion_poison(const rend_service_t* s,
+                                        const or_options_t* options)
 {
-  const smartlist_t *s_list;
-  /* If no special service list is provided, then just use the global one. */
-  if (!service_list) {
-    if (!rend_service_list) { /* No global HS list. Nothing to see here. */
-      return 0;
-    }
-
-    s_list = rend_service_list;
-  } else {
-    s_list = service_list;
+  /* Passing a NULL service is a bug */
+  if (BUG(!s)) {
+    return -1;
   }
 
-  int consistent = 1;
-  SMARTLIST_FOREACH_BEGIN(s_list, const rend_service_t *, s) {
-    if (service_is_single_onion_poisoned(s) !=
-        rend_service_non_anonymous_mode_enabled(options) &&
-        rend_service_private_key_exists(s)) {
-      consistent = 0;
-    }
-  } SMARTLIST_FOREACH_END(s);
+  /* Ephemeral services are checked at ADD_ONION time */
+  if (!s->directory) {
+    return 0;
+  }
 
-  return consistent ? 0 : -1;
+  /* Services without keys are always ok - their keys will only ever be used
+   * in the current mode */
+  if (!rend_service_private_key_exists(s)) {
+    return 0;
+  }
+
+  /* The key has been used before in a different mode */
+  if (service_is_single_onion_poisoned(s) !=
+      rend_service_non_anonymous_mode_enabled(options)) {
+    return -1;
+  }
+
+  /* The key exists and is consistent with the current mode */
+  return 0;
 }
 
-/*** Helper for rend_service_poison_new_single_onion_dirs(). Add a file to
- * this hidden service directory that marks it as a single onion service.
- * Tor must be in single onion mode before calling this function.
+/*** Helper for rend_service_poison_new_single_onion_dir(). Add a file to
+ * the hidden service directory for s that marks it as a single onion service.
+ * Tor must be in single onion mode before calling this function, and the
+ * service directory must already have been created.
  * Returns 0 when a directory is successfully poisoned, or if it is already
  * poisoned. Returns -1 on a failure to read the directory or write the poison
  * file, or if there is an existing private key file in the directory. (The
  * service should have been poisoned when the key was created.) */
 static int
-poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
+poison_new_single_onion_hidden_service_dir_impl(const rend_service_t *service,
+                                                const or_options_t* options)
 {
+  /* Passing a NULL service is a bug */
+  if (BUG(!service)) {
+    return -1;
+  }
+
   /* We must only poison directories if we're in Single Onion mode */
-  tor_assert(rend_service_non_anonymous_mode_enabled(get_options()));
+  tor_assert(rend_service_non_anonymous_mode_enabled(options));
 
   int fd;
   int retval = -1;
@@ -1098,8 +1175,8 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
     return -1;
   }
 
-  /* Make sure the directory exists */
-  if (rend_service_check_private_dir(get_options(), service, 1) < 0)
+  /* Make sure the directory was created before calling this function. */
+  if (BUG(rend_service_check_private_dir_impl(options, service, 0) < 0))
     return -1;
 
   poison_fname = rend_service_sos_poison_path(service);
@@ -1136,44 +1213,29 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
   return retval;
 }
 
-/** We just got launched in Single Onion Mode. That's a non-anoymous
- * mode for hidden services; hence we should mark all new hidden service
- * directories appropriately so that they are never launched as
- * location-private hidden services again. (New directories don't have private
- * key files.)
- * If a <b>service_list</b> is provided, treat it as the list of hidden
- * services (used in unittests).
+/** We just got launched in Single Onion Mode. That's a non-anoymous mode for
+ * hidden services. If s is new, we should mark its hidden service
+ * directory appropriately so that it is never launched as a location-private
+ * hidden service. (New directories don't have private key files.)
  * Return 0 on success, -1 on fail. */
-int
-rend_service_poison_new_single_onion_dirs(const smartlist_t *service_list)
+STATIC int
+rend_service_poison_new_single_onion_dir(const rend_service_t *s,
+                                         const or_options_t* options)
 {
-  /* We must only poison directories if we're in Single Onion mode */
-  tor_assert(rend_service_non_anonymous_mode_enabled(get_options()));
-
-  const smartlist_t *s_list;
-  /* If no special service list is provided, then just use the global one. */
-  if (!service_list) {
-    if (!rend_service_list) { /* No global HS list. Nothing to see here. */
-      return 0;
-    }
-
-    s_list = rend_service_list;
-  } else {
-    s_list = service_list;
+  /* Passing a NULL service is a bug */
+  if (BUG(!s)) {
+    return -1;
   }
 
-  SMARTLIST_FOREACH_BEGIN(s_list, const rend_service_t *, s) {
-    if (!rend_service_private_key_exists(s)) {
-      if (poison_new_single_onion_hidden_service_dir(s) < 0) {
-        return -1;
-      }
-    }
-  } SMARTLIST_FOREACH_END(s);
+  /* We must only poison directories if we're in Single Onion mode */
+  tor_assert(rend_service_non_anonymous_mode_enabled(options));
 
-  /* The keys for these services are linked to the server IP address */
-  log_notice(LD_REND, "The configured onion service directories have been "
-             "used in single onion mode. They can not be used for anonymous "
-             "hidden services.");
+  if (!rend_service_private_key_exists(s)) {
+    if (poison_new_single_onion_hidden_service_dir_impl(s, options)
+        < 0) {
+      return -1;
+    }
+  }
 
   return 0;
 }
@@ -1187,10 +1249,12 @@ rend_service_poison_new_single_onion_dirs(const smartlist_t *service_list)
 int
 rend_service_load_all_keys(const smartlist_t *service_list)
 {
-  const smartlist_t *s_list;
+  const smartlist_t *s_list = NULL;
   /* If no special service list is provided, then just use the global one. */
   if (!service_list) {
-    tor_assert(rend_service_list);
+    if (BUG(!rend_service_list)) {
+      return -1;
+    }
     s_list = rend_service_list;
   } else {
     s_list = service_list;
@@ -1257,6 +1321,32 @@ rend_service_derive_key_digests(struct rend_service_t *s)
   return 0;
 }
 
+/* Implements the directory check from rend_service_check_private_dir,
+ * without doing the single onion poison checks. */
+static int
+rend_service_check_private_dir_impl(const or_options_t *options,
+                                    const rend_service_t *s,
+                                    int create)
+{
+  cpd_check_t  check_opts = CPD_NONE;
+  if (create) {
+    check_opts |= CPD_CREATE;
+  } else {
+    check_opts |= CPD_CHECK_MODE_ONLY;
+    check_opts |= CPD_CHECK;
+  }
+  if (s->dir_group_readable) {
+    check_opts |= CPD_GROUP_READ;
+  }
+  /* Check/create directory */
+  if (check_private_dir(s->directory, check_opts, options->User) < 0) {
+    log_warn(LD_REND, "Checking service directory %s failed.", s->directory);
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Make sure that the directory for <b>s</b> is private, using the config in
  * <b>options</b>.
  * If <b>create</b> is true:
@@ -1271,20 +1361,58 @@ rend_service_check_private_dir(const or_options_t *options,
                                const rend_service_t *s,
                                int create)
 {
-  cpd_check_t  check_opts = CPD_NONE;
-  if (create) {
-    check_opts |= CPD_CREATE;
-  } else {
-    check_opts |= CPD_CHECK_MODE_ONLY;
-    check_opts |= CPD_CHECK;
-  }
-  if (s->dir_group_readable) {
-    check_opts |= CPD_GROUP_READ;
-  }
-  /* Check/create directory */
-  if (check_private_dir(s->directory, check_opts, options->User) < 0) {
+  /* Passing a NULL service is a bug */
+  if (BUG(!s)) {
     return -1;
   }
+
+  /* Check/create directory */
+  if (rend_service_check_private_dir_impl(options, s, create) < 0) {
+    return -1;
+  }
+
+  /* Check if the hidden service key exists, and was created in a different
+   * single onion service mode, and refuse to launch if it has.
+   * This is safe to call even when create is false, as it ignores missing
+   * keys and directories: they are always valid.
+   */
+  if (rend_service_verify_single_onion_poison(s, options) < 0) {
+    /* We can't use s->service_id here, as the key may not have been loaded */
+    log_warn(LD_GENERAL, "We are configured with "
+             "HiddenServiceNonAnonymousMode %d, but the hidden "
+             "service key in directory %s was created in %s mode. "
+             "This is not allowed.",
+             rend_service_non_anonymous_mode_enabled(options) ? 1 : 0,
+             rend_service_escaped_dir(s),
+             rend_service_non_anonymous_mode_enabled(options) ?
+             "an anonymous" : "a non-anonymous"
+             );
+    return -1;
+  }
+
+  /* Poison new single onion directories immediately after they are created,
+   * so that we never accidentally launch non-anonymous hidden services
+   * thinking they are anonymous. Any keys created later will end up with the
+   * correct poisoning state.
+   */
+  if (create && rend_service_non_anonymous_mode_enabled(options)) {
+    static int logged_warning = 0;
+
+    if (rend_service_poison_new_single_onion_dir(s, options) < 0) {
+      log_warn(LD_GENERAL,"Failed to mark new hidden services as non-anonymous"
+               ".");
+      return -1;
+    }
+
+    if (!logged_warning) {
+      /* The keys for these services are linked to the server IP address */
+      log_notice(LD_REND, "The configured onion service directories have been "
+                 "used in single onion mode. They can not be used for "
+                 "anonymous hidden services.");
+      logged_warning = 1;
+    }
+  }
+
   return 0;
 }
 
@@ -1297,7 +1425,9 @@ rend_service_load_keys(rend_service_t *s)
   char *fname = NULL;
   char buf[128];
 
-  if (rend_service_check_private_dir(get_options(), s, 1) < 0)
+  /* Make sure the directory was created and single onion poisoning was
+   * checked before calling this function */
+  if (BUG(rend_service_check_private_dir(get_options(), s, 0) < 0))
     goto err;
 
   /* Load key */
