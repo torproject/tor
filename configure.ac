@@ -379,14 +379,12 @@ AC_CHECK_FUNCS(
         accept4 \
         backtrace \
         backtrace_symbols_fd \
-        clock_gettime \
 	eventfd \
 	explicit_bzero \
 	timingsafe_memcmp \
         flock \
         ftime \
         getaddrinfo \
-        getentropy \
         getifaddrs \
         getpass \
         getrlimit \
@@ -423,6 +421,34 @@ AC_CHECK_FUNCS(
         vasprintf \
 	_vscprintf
 )
+
+# Apple messed up when they added two functions functions in Sierra: they
+# forgot to decorate them with appropriate AVAILABLE_MAC_OS_VERSION
+# checks. So we should only probe for those functions if we are sure that we
+# are not targetting OSX 10.11 or earlier.
+AC_MSG_CHECKING([for a pre-Sierra OSX build target])
+AC_TRY_COMPILE([
+#ifdef __APPLE__
+#  include <AvailabilityMacros.h>
+#  ifndef MAC_OS_VERSION_10_12
+#    define MAC_OS_VERSION_10_12 101200
+#  endif
+#  if defined(MAC_OS_X_VERSION_MIN_REQUIRED)
+#    if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_VERSION_10_12
+#      error "Running on Mac OSX 10.11 or earlier"
+#    endif
+#  endif
+#endif
+], [],
+   [on_macos_pre_10_12=no ; AC_MSG_RESULT([no])],
+   [on_macos_pre_10_12=yes; AC_MSG_RESULT([yes])])
+
+if test "$on_macos_pre_10_12" = "no"; then
+  AC_CHECK_FUNCS(
+        clock_gettime \
+        getentropy \
+  )
+fi
 
 if test "$bwin32" != "true"; then
   AC_CHECK_HEADERS(pthread.h)
