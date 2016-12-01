@@ -216,7 +216,6 @@ size_t hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data);
 #ifdef HS_DESCRIPTOR_PRIVATE
 
 /* Encoding. */
-STATIC int encode_cert(const tor_cert_t *cert, char **cert_str_out);
 STATIC char *encode_link_specifiers(const smartlist_t *specs);
 STATIC size_t build_plaintext_padding(const char *plaintext,
                                       size_t plaintext_len,

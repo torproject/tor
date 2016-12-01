@@ -648,3 +648,44 @@ or_handshake_certs_check_both(int severity,
   }
 }
 
+/* === ENCODING === */
+
+/* Encode the ed25519 certificate <b>cert</b> and put the newly allocated
+ * string in <b>cert_str_out</b>. Return 0 on success else a negative value. */
+int
+tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out)
+{
+  int ret = -1;
+  char *ed_cert_b64 = NULL;
+  size_t ed_cert_b64_len;
+
+  tor_assert(cert);
+  tor_assert(cert_str_out);
+
+  /* Get the encoded size and add the NUL byte. */
+  ed_cert_b64_len = base64_encode_size(cert->encoded_len,
+                                       BASE64_ENCODE_MULTILINE) + 1;
+  ed_cert_b64 = tor_malloc_zero(ed_cert_b64_len);
+
+  /* Base64 encode the encoded certificate. */
+  if (base64_encode(ed_cert_b64, ed_cert_b64_len,
+                    (const char *) cert->encoded, cert->encoded_len,
+                    BASE64_ENCODE_MULTILINE) < 0) {
+    log_err(LD_BUG, "Couldn't base64-encode ed22519 cert!");
+    goto err;
+  }
+
+  /* Put everything together in a NUL terminated string. */
+  tor_asprintf(cert_str_out,
+               "-----BEGIN ED25519 CERT-----\n"
+               "%s"
+               "-----END ED25519 CERT-----",
+               ed_cert_b64);
+  /* Success! */
+  ret = 0;
+
+ err:
+  tor_free(ed_cert_b64);
+  return ret;
+}
+

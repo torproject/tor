@@ -15,6 +15,7 @@
 #include "ed25519_cert.h" /* Trunnel interface. */
 #include "parsecommon.h"
 #include "rendcache.h"
+#include "torcert.h" /* tor_cert_encode_ed22519() */
 
 /* Constant string value used for the descriptor format. */
 #define str_hs_desc "hs-descriptor"
@@ -134,45 +135,6 @@ desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
 }
 
 /* === ENCODING === */
-
-/* Encode the ed25519 certificate <b>cert</b> and put the newly allocated
- * string in <b>cert_str_out</b>. Return 0 on success else a negative value. */
-STATIC int
-encode_cert(const tor_cert_t *cert, char **cert_str_out)
-{
-  int ret = -1;
-  char *ed_cert_b64 = NULL;
-  size_t ed_cert_b64_len;
-
-  tor_assert(cert);
-  tor_assert(cert_str_out);
-
-  /* Get the encoded size and add the NUL byte. */
-  ed_cert_b64_len = base64_encode_size(cert->encoded_len,
-                                       BASE64_ENCODE_MULTILINE) + 1;
-  ed_cert_b64 = tor_malloc_zero(ed_cert_b64_len);
-
-  /* Base64 encode the encoded certificate. */
-  if (base64_encode(ed_cert_b64, ed_cert_b64_len,
-                    (const char *) cert->encoded, cert->encoded_len,
-                    BASE64_ENCODE_MULTILINE) < 0) {
-    log_err(LD_BUG, "Couldn't base64-encode descriptor signing key cert!");
-    goto err;
-  }
-
-  /* Put everything together in a NUL terminated string. */
-  tor_asprintf(cert_str_out,
-               "-----BEGIN ED25519 CERT-----\n"
-               "%s"
-               "-----END ED25519 CERT-----",
-               ed_cert_b64);
-  /* Success! */
-  ret = 0;
-
- err:
-  tor_free(ed_cert_b64);
-  return ret;
-}
 
 /* Encode the given link specifier objects into a newly allocated string.
  * This can't fail so caller can always assume a valid string being
@@ -327,7 +289,7 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
     if (!cross_cert) {
       goto err;
     }
-    ret = encode_cert(cross_cert, &encoded_cert);
+    ret = tor_cert_encode_ed22519(cross_cert, &encoded_cert);
     tor_cert_free(cross_cert);
     if (ret) {
       goto err;
@@ -375,7 +337,7 @@ encode_intro_point(const ed25519_keypair_t *sig_key,
   /* Authentication key encoding. */
   {
     char *encoded_cert;
-    if (encode_cert(ip->auth_key_cert, &encoded_cert) < 0) {
+    if (tor_cert_encode_ed22519(ip->auth_key_cert, &encoded_cert) < 0) {
       goto err;
     }
     smartlist_add_asprintf(lines, "%s\n%s", str_ip_auth_key, encoded_cert);
@@ -769,7 +731,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
               "(%d)", (int) desc->plaintext_data.signing_key_cert->cert_type);
       goto err;
     }
-    if (encode_cert(desc->plaintext_data.signing_key_cert,
+    if (tor_cert_encode_ed22519(desc->plaintext_data.signing_key_cert,
                     &encoded_cert) < 0) {
       /* The function will print error logs. */
       goto err;
