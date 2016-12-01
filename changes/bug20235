@@ -1,0 +1,4 @@
+  o Minor features (compatibility):
+    - Work around a bug in the OSX 10.12 SDK that would prevent us
+      from successfully targetting earlier versions of OSX.
+      Resolves ticket 20235.
