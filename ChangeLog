@@ -1,4 +1,4 @@
-Changes in version 0.2.8.10 - 2016-12-0?
+Changes in version 0.2.8.10 - 2016-12-02
   Tor 0.2.8.10 backports a fix for a bug that would sometimes make clients
   unusable after they left stanbdy mode. It also backports fixes for
   a few portability issues and a small but problematic memory leak.
