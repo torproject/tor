@@ -1069,8 +1069,10 @@ directory_fetches_dir_info_later(const or_options_t *options)
   return options->UseBridges != 0;
 }
 
-/** Return true iff we want to fetch and keep certificates for authorities
+/** Return true iff we want to serve certificates for authorities
  * that we don't acknowledge as authorities ourself.
+ * Use we_want_to_fetch_unknown_auth_certs to check if we want to fetch
+ * and keep these certificates.
  */
 int
 directory_caches_unknown_auth_certs(const or_options_t *options)
@@ -1078,11 +1080,14 @@ directory_caches_unknown_auth_certs(const or_options_t *options)
   return dir_server_mode(options) || options->BridgeRelay;
 }
 
-/** Return 1 if we want to keep descriptors, networkstatuses, etc around.
+/** Return 1 if we want to fetch and serve descriptors, networkstatuses, etc
  * Else return 0.
  * Check options->DirPort_set and directory_permits_begindir_requests()
  * to see if we are willing to serve these directory documents to others via
  * the DirPort and begindir-over-ORPort, respectively.
+ *
+ * To check if we should fetch documents, use we_want_to_fetch_flavor and
+ * we_want_to_fetch_unknown_auth_certs instead of this function.
  */
 int
 directory_caches_dir_info(const or_options_t *options)

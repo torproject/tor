@@ -586,7 +586,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
                "signing key %s", from_store ? "cached" : "downloaded",
                ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
     } else {
-      int adding = directory_caches_unknown_auth_certs(get_options());
+      int adding = we_want_to_fetch_unknown_auth_certs(get_options());
       log_info(LD_DIR, "%s %s certificate for unrecognized directory "
                "authority with signing key %s",
                adding ? "Adding" : "Not adding",
@@ -1012,7 +1012,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
   char *resource = NULL;
   cert_list_t *cl;
   const or_options_t *options = get_options();
-  const int cache = directory_caches_unknown_auth_certs(options);
+  const int keep_unknown = we_want_to_fetch_unknown_auth_certs(options);
   fp_pair_t *fp_tmp = NULL;
   char id_digest_str[2*DIGEST_LEN+1];
   char sk_digest_str[2*DIGEST_LEN+1];
@@ -1084,9 +1084,10 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
       if (!smartlist_len(voter->sigs))
         continue; /* This authority never signed this consensus, so don't
                    * go looking for a cert with key digest 0000000000. */
-      if (!cache &&
+      if (!keep_unknown &&
           !trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
-        continue; /* We are not a cache, and we don't know this authority.*/
+        continue; /* We don't want unknown certs, and we don't know this
+                   * authority.*/
 
       /*
        * If we don't know *any* cert for this authority, and a download by ID
@@ -3895,7 +3896,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                router_describe(router));
       *msg = "Router descriptor is not referenced by any network-status.";
 
-      /* Only journal this desc if we'll be serving it. */
+      /* Only journal this desc if we want to keep old descriptors */
       if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
                                       &routerlist->desc_store);
@@ -4525,13 +4526,14 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   smartlist_free(extrainfo_list);
 }
 
-/** Return true iff any networkstatus includes a descriptor whose digest
- * is that of <b>desc</b>. */
+/** Return true iff the latest ns-flavored consensus includes a descriptor
+ * whose digest is that of <b>desc</b>. */
 static int
 signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 {
   const routerstatus_t *rs;
-  networkstatus_t *consensus = networkstatus_get_latest_consensus();
+  networkstatus_t *consensus = networkstatus_get_latest_consensus_by_flavor(
+                                                                      FLAV_NS);
 
   if (consensus) {
     rs = networkstatus_vote_find_entry(consensus, desc->identity_digest);
@@ -5154,7 +5156,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         ++n_would_reject;
         continue; /* We would throw it out immediately. */
       }
-      if (!directory_caches_dir_info(options) &&
+      if (!we_want_to_fetch_flavor(options, consensus->flavor) &&
           !client_would_use_router(rs, now, options)) {
         ++n_wouldnt_use;
         continue; /* We would never use it ourself. */
