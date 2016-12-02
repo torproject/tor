@@ -767,10 +767,10 @@ test_single_onion_poisoning(void *arg)
   tt_assert(ret == 0);
 
  done:
+  /* The test harness deletes the directories at exit */
   tor_free(poison_path);
   tor_free(dir1);
   tor_free(dir2);
-  /* The test harness deletes the directories at exit */
   smartlist_free(services);
   rend_service_free(service_1);
   rend_service_free(service_2);
