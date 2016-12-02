@@ -366,6 +366,7 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
                  "have no AF_UNIX support on this platform.  This is "
                  "probably a bug.",
                  p->virtual_port);
+        rend_service_free(service);
         return -1;
 #endif /* defined(HAVE_SYS_UN_H) */
       }
