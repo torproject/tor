@@ -688,6 +688,7 @@ test_single_onion_poisoning(void *arg)
 
   /* Now add the second service: it has no key and no poison file */
   ret = rend_service_check_dir_and_add(services, mock_options, service_2, 0);
+  tt_assert(ret == 0);
 
   /* A new service, and an existing poisoned service. Not ok. */
   mock_options->HiddenServiceSingleHopMode = 0;
