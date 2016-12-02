@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden services):
+    - Stop ignoring duplicate hidden services when validating: this could
+      lead to a crash when those services were created.
+      Fixes bug 20860; bugfix on 20559; not in any released version of tor.

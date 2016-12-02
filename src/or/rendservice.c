@@ -275,8 +275,11 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
   int i;
   rend_service_port_config_t *p;
 
-  /* Use service_list for unit tests */
+  tor_assert(service);
+
   smartlist_t *s_list = rend_get_service_list_mutable(service_list);
+  /* We must have a service list, even if it's a temporary one, so we can
+   * check for duplicate services */
   if (BUG(!s_list)) {
     return -1;
   }
@@ -333,6 +336,7 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
      * lock file.  But this is enough to detect a simple mistake that
      * at least one person has actually made.
      */
+    tor_assert(s_list);
     if (!rend_service_is_ephemeral(service)) {
       /* Skip dupe for ephemeral services. */
       SMARTLIST_FOREACH(s_list, rend_service_t*, ptr,
@@ -371,6 +375,8 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
 #endif /* defined(HAVE_SYS_UN_H) */
       }
     }
+    /* The service passed all the checks */
+    tor_assert(s_list);
     smartlist_add(s_list, service);
     return 0;
   }
@@ -527,20 +533,13 @@ rend_service_check_dir_and_add(smartlist_t *service_list,
     return -1;
   }
 
-  if (validate_only) {
-    rend_service_free(service);
-    return 0;
-  } else {
-    /* Use service_list for unit tests */
-    smartlist_t *s_list = rend_get_service_list_mutable(service_list);
-    /* s_list can not be NULL here - if both service_list and rend_service_list
-     * are NULL, and validate_only is false, we exit earlier in the function
-     */
-    if (BUG(!s_list)) {
-      return -1;
-    }
-    return rend_add_service(s_list, service);
+  smartlist_t *s_list = rend_get_service_list_mutable(service_list);
+  /* We must have a service list, even if it's a temporary one, so we can
+   * check for duplicate services */
+  if (BUG(!s_list)) {
+    return -1;
   }
+  return rend_add_service(s_list, service);
 }
 
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
@@ -555,19 +554,19 @@ rend_config_services(const or_options_t *options, int validate_only)
   rend_service_t *service = NULL;
   rend_service_port_config_t *portcfg;
   smartlist_t *old_service_list = NULL;
+  smartlist_t *temp_service_list = NULL;
   int ok = 0;
 
-  if (!validate_only) {
-    old_service_list = rend_service_list;
-    rend_service_list = smartlist_new();
-  }
+  /* Use a temporary service list, so that we can check the new services'
+   * consistency with each other */
+  temp_service_list = smartlist_new();
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       /* register the service we just finished parsing
        * this code registers every service except the last one parsed,
        * which is registered below the loop */
-      if (rend_service_check_dir_and_add(NULL, options, service,
+      if (rend_service_check_dir_and_add(temp_service_list, options, service,
                                          validate_only) < 0) {
           return -1;
       }
@@ -783,10 +782,26 @@ rend_config_services(const or_options_t *options, int validate_only)
   /* register the final service after we have finished parsing all services
    * this code only registers the last service, other services are registered
    * within the loop. It is ok for this service to be NULL, it is ignored. */
-  if (rend_service_check_dir_and_add(NULL, options, service,
+  if (rend_service_check_dir_and_add(temp_service_list, options, service,
                                      validate_only) < 0) {
     return -1;
   }
+
+  /* Free the newly added services if validating */
+  if (validate_only) {
+    SMARTLIST_FOREACH(temp_service_list, rend_service_t *, ptr,
+                      rend_service_free(ptr));
+    smartlist_free(temp_service_list);
+    temp_service_list = NULL;
+    return 0;
+  }
+
+  /* Otherwise, use the newly added services as the new service list
+   * Since we have now replaced the global service list, from this point on we
+   * must succeed, or die trying. */
+  old_service_list = rend_service_list;
+  rend_service_list = temp_service_list;
+  temp_service_list = NULL;
 
   /* If this is a reload and there were hidden services configured before,
    * keep the introduction points that are still needed and close the
