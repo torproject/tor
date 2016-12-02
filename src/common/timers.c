@@ -255,6 +255,20 @@ timer_set_cb(tor_timer_t *t, timer_cb_fn_t cb, void *arg)
 }
 
 /**
+ * Set *<b>cb_out</b> (if provided) to this timer's callback function,
+ * and *<b>arg_out</b> (if provided) to this timer's callback argument.
+ */
+void
+timer_get_cb(const tor_timer_t *t,
+             timer_cb_fn_t *cb_out, void **arg_out)
+{
+  if (cb_out)
+    *cb_out = t->callback.cb;
+  if (arg_out)
+    *arg_out = t->callback.arg;
+}
+
+/**
  * Schedule the timer t to fire at the current time plus a delay of
  * <b>delay</b> microseconds.  All times are relative to monotime_get().
  */
