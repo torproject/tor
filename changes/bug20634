@@ -1,3 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - Stop spurious failures in the local interface address discovery unit
-      tests. Fixes bug 20634; bugfix on 0.2.8.1-alpha; patch by Neel Chauhan.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (test networks, exponential backoff):
-    - When using exponential backoff in test networks, use a lower exponent,
-      so the delays do not vary as much. This helps test networks bootstrap
-      consistently. Fixes bug 20597; bugfix on 20499; not in any released
-      version of tor.

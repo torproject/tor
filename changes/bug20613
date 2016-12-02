@@ -1,6 +1,0 @@
-  o Minor bugfixes (single onion services, Tor2web):
-    - Stop logging long-term one-hop circuits deliberately created by single
-      onion services and Tor2web. These log messages are intended to diagnose
-      issue 8387, which relates to circuits hanging around forever for no
-      reason.
-      Fixes bug 20613; bugfix on 0.2.9.1-alpha. Reported by "pastly".
