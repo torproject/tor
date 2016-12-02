@@ -1,18 +1,18 @@
 Changes in version 0.2.8.10 - 2016-12-02
   Tor 0.2.8.10 backports a fix for a bug that would sometimes make clients
-  unusable after they left stanbdy mode. It also backports fixes for
+  unusable after they left standby mode. It also backports fixes for
   a few portability issues and a small but problematic memory leak.
-
-  o Major bugfixes (client performance, backport from 0.2.9.5-alpha):
-    - Clients now respond to new application stream requests immediately
-      when they arrive, rather than waiting up to one second before
-      starting to handle them. Fixes part of bug 19969; bugfix
-      on 0.2.8.1-alpha.
 
   o Major bugfixes (client reliability, backport from 0.2.9.5-alpha):
     - When Tor leaves standby because of a new application request, open
       circuits as needed to serve that request. Previously, we would
       potentially wait a very long time. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Major bugfixes (client performance, backport from 0.2.9.5-alpha):
+    - Clients now respond to new application stream requests immediately
+      when they arrive, rather than waiting up to one second before
+      starting to handle them. Fixes part of bug 19969; bugfix
       on 0.2.8.1-alpha.
 
   o Minor bugfixes (portability, backport from 0.2.9.6-rc):
