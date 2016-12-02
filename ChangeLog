@@ -6,9 +6,10 @@ Changes in version 0.2.9.6-rc - 2016-12-02
 
   o Major bugfixes (relay, resolver, logging):
     - For relays that don't know their own address, avoid attempting a
-      local hostname resolve for each descriptor we download. This will
-      cut down on the number of "Success: chose address 'x.x.x.x'" log
-      lines. Fixes bugs 20423 and 20610; bugfix on 0.2.8.1-alpha.
+      local hostname resolve for each descriptor we download. This
+      will cut down on the number of "Success: chose address 'x.x.x.x'"
+      log lines, and also avoid confusing clock jumps if the resolver
+      is slow. Fixes bugs 20423 and 20610; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (client, fascistfirewall):
     - Avoid spurious warnings when ReachableAddresses or FascistFirewall
