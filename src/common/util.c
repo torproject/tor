@@ -2270,10 +2270,14 @@ check_private_dir,(const char *dirname, cpd_check_t check,
        * permissions on the directory will be checked again below.*/
       fd = open(sandbox_intern_string(dirname), O_NOFOLLOW);
 
-      if (fd == -1)
+      if (fd == -1) {
+        log_warn(LD_FS, "Could not reopen recently created directory %s: %s",
+                 dirname,
+                 strerror(errno));
         return -1;
-      else
+      } else {
         close(fd);
+      }
 
     } else if (!(check & CPD_CHECK)) {
       log_warn(LD_FS, "Directory %s does not exist.", dirname);
