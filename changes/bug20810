@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay)
+    - When computing old Tor protocol line version in protover, we were
+      looking at 0.2.7.5 twice instead of a specific case for 0.2.9.1-alpha.
+      Bugfix on tor-0.2.9.4-alpha.

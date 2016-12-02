@@ -697,7 +697,7 @@ protover_compute_for_old_tor(const char *version)
   if (tor_version_as_new_as(version,
                             FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS)) {
     return "";
-  } else if (tor_version_as_new_as(version, "0.2.7.5")) {
+  } else if (tor_version_as_new_as(version, "0.2.9.1-alpha")) {
     /* 0.2.9.1-alpha HSRend=2 */
     return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 "
       "Link=1-4 LinkAuth=1 "
