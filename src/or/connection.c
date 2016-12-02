@@ -1595,16 +1595,19 @@ connection_handle_listener_read(connection_t *conn, int new_type)
 
     /* remember the remote address */
     tor_addr_copy(&newconn->addr, &addr);
-    newconn->port = port;
-    newconn->address = tor_addr_to_str_dup(&addr);
+    if (new_type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
+      newconn->port = 0;
+      newconn->address = tor_strdup(conn->address);
+    } else {
+      newconn->port = port;
+      newconn->address = tor_addr_to_str_dup(&addr);
+    }
 
     if (new_type == CONN_TYPE_AP && conn->socket_family != AF_UNIX) {
       log_info(LD_NET, "New SOCKS connection opened from %s.",
                fmt_and_decorate_addr(&addr));
     }
     if (new_type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
-      newconn->port = 0;
-      newconn->address = tor_strdup(conn->address);
       log_info(LD_NET, "New SOCKS AF_UNIX connection opened");
     }
     if (new_type == CONN_TYPE_CONTROL) {
