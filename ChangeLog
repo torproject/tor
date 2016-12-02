@@ -1,6 +1,88 @@
 Changes in version 0.3.0.1-alpha - 2016-??-??
 
 
+Changes in version 0.2.8.10 - 2016-12-02
+  Tor 0.2.8.10 backports a fix for a bug that would sometimes make clients
+  unusable after they left standby mode. It also backports fixes for
+  a few portability issues and a small but problematic memory leak.
+
+  o Major bugfixes (client reliability, backport from 0.2.9.5-alpha):
+    - When Tor leaves standby because of a new application request, open
+      circuits as needed to serve that request. Previously, we would
+      potentially wait a very long time. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Major bugfixes (client performance, backport from 0.2.9.5-alpha):
+    - Clients now respond to new application stream requests immediately
+      when they arrive, rather than waiting up to one second before
+      starting to handle them. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (portability, backport from 0.2.9.6-rc):
+    - Work around a bug in the OSX 10.12 SDK that would prevent us from
+      successfully targeting earlier versions of OSX. Resolves
+      ticket 20235.
+
+  o Minor bugfixes (portability, backport from 0.2.9.5-alpha):
+    - Fix implicit conversion warnings under OpenSSL 1.1. Fixes bug
+      20551; bugfix on 0.2.1.1-alpha.
+
+  o Minor bugfixes (relay, backport from 0.2.9.5-alpha):
+    - Work around a memory leak in OpenSSL 1.1 when encoding public
+      keys. Fixes bug 20553; bugfix on 0.0.2pre8.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the November 3 2016 Maxmind GeoLite2
+      Country database.
+
+Changes in version 0.2.9.6-rc - 2016-12-02
+  Tor 0.2.9.6-rc fixes a few remaining bugs found in the previous alpha
+  version. We hope that it will be ready to become stable soon, and we
+  encourage everyone to test this release. If no showstopper bugs are
+  found here, the next 0.2.9 release will be stable.
+
+  o Major bugfixes (relay, resolver, logging):
+    - For relays that don't know their own address, avoid attempting a
+      local hostname resolve for each descriptor we download. This
+      will cut down on the number of "Success: chose address 'x.x.x.x'"
+      log lines, and also avoid confusing clock jumps if the resolver
+      is slow. Fixes bugs 20423 and 20610; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (client, fascistfirewall):
+    - Avoid spurious warnings when ReachableAddresses or FascistFirewall
+      is set. Fixes bug 20306; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (hidden services):
+    - Stop ignoring the anonymity status of saved keys for hidden
+      services and single onion services when first starting tor.
+      Instead, refuse to start tor if any hidden service key has been
+      used in a different hidden service anonymity mode. Fixes bug
+      20638; bugfix on 17178 in 0.2.9.3-alpha; reported by ahf.
+
+  o Minor bugfixes (portability):
+    - Work around a bug in the OSX 10.12 SDK that would prevent us from
+      successfully targeting earlier versions of OSX. Resolves
+      ticket 20235.
+    - Run correctly when built on Windows build environments that
+      require _vcsprintf(). Fixes bug 20560; bugfix on 0.2.2.11-alpha.
+
+  o Minor bugfixes (single onion services, Tor2web):
+    - Stop complaining about long-term one-hop circuits deliberately
+      created by single onion services and Tor2web. These log messages
+      are intended to diagnose issue 8387, which relates to circuits
+      hanging around forever for no reason. Fixes bug 20613; bugfix on
+      0.2.9.1-alpha. Reported by "pastly".
+
+  o Minor bugfixes (unit tests):
+    - Stop spurious failures in the local interface address discovery
+      unit tests. Fixes bug 20634; bugfix on 0.2.8.1-alpha; patch by
+      Neel Chauhan.
+
+  o Documentation:
+    - Correct the minimum bandwidth value in torrc.sample, and queue a
+      corresponding change for torrc.minimal. Closes ticket 20085.
+
+
 Changes in version 0.2.9.5-alpha - 2016-11-08
   Tor 0.2.9.5-alpha fixes numerous bugs discovered in the previous alpha
   version. We believe one or two probably remain, and we encourage

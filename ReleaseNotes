@@ -2,6 +2,41 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.8.10 - 2016-12-02
+  Tor 0.2.8.10 backports a fix for a bug that would sometimes make clients
+  unusable after they left standby mode. It also backports fixes for
+  a few portability issues and a small but problematic memory leak.
+
+  o Major bugfixes (client reliability, backport from 0.2.9.5-alpha):
+    - When Tor leaves standby because of a new application request, open
+      circuits as needed to serve that request. Previously, we would
+      potentially wait a very long time. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Major bugfixes (client performance, backport from 0.2.9.5-alpha):
+    - Clients now respond to new application stream requests immediately
+      when they arrive, rather than waiting up to one second before
+      starting to handle them. Fixes part of bug 19969; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (portability, backport from 0.2.9.6-rc):
+    - Work around a bug in the OSX 10.12 SDK that would prevent us from
+      successfully targeting earlier versions of OSX. Resolves
+      ticket 20235.
+
+  o Minor bugfixes (portability, backport from 0.2.9.5-alpha):
+    - Fix implicit conversion warnings under OpenSSL 1.1. Fixes bug
+      20551; bugfix on 0.2.1.1-alpha.
+
+  o Minor bugfixes (relay, backport from 0.2.9.5-alpha):
+    - Work around a memory leak in OpenSSL 1.1 when encoding public
+      keys. Fixes bug 20553; bugfix on 0.0.2pre8.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the November 3 2016 Maxmind GeoLite2
+      Country database.
+
+
 Changes in version 0.2.8.9 - 2016-10-17
   Tor 0.2.8.9 backports a fix for a security hole in previous versions
   of Tor that would allow a remote attacker to crash a Tor client,
