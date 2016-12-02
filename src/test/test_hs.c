@@ -541,6 +541,7 @@ test_single_onion_poisoning(void *arg)
   rend_service_t *service_2 = tor_malloc_zero(sizeof(rend_service_t));
   char *dir2 = tor_strdup(get_fname_rnd("test_hs_dir2"));
   smartlist_t *services = smartlist_new();
+  char *poison_path = NULL;
 
   /* No services, no service to verify, no problem! */
   mock_options->HiddenServiceSingleHopMode = 0;
@@ -706,9 +707,9 @@ test_single_onion_poisoning(void *arg)
 
   /* Now remove the poisoning from the first service, and we have the opposite
    * problem. */
-  char *poison_path = rend_service_sos_poison_path(service_1);
+  poison_path = rend_service_sos_poison_path(service_1);
+  tt_assert(poison_path);
   ret = unlink(poison_path);
-  tor_free(poison_path);
   tt_assert(ret == 0);
 
   /* Unpoisoned service directories with previous keys are ok, as are empty
@@ -765,6 +766,7 @@ test_single_onion_poisoning(void *arg)
   tt_assert(ret == 0);
 
  done:
+  tor_free(poison_path);
   tor_free(dir1);
   tor_free(dir2);
   /* The test harness deletes the directories at exit */
