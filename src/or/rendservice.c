@@ -145,7 +145,7 @@ rend_get_service_list(const smartlist_t* substitute_service_list)
  * If substitute_service_list is not NULL, return it.
  * Otherwise, check if the global rend_service_list is non-NULL, and if so,
  * return it.
- * Otherwise, return NULL.
+ * Otherwise, log a BUG message and return NULL.
  * */
 static smartlist_t*
 rend_get_service_list_mutable(smartlist_t* substitute_service_list)
