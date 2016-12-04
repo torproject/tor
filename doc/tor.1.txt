@@ -1414,7 +1414,8 @@ The following options are useful only for clients (that is, if
     If true, Tor does not try to fulfill requests to connect to an internal
     address (like 127.0.0.1 or 192.168.0.1) __unless a exit node is
     specifically requested__ (for example, via a .exit hostname, or a
-    controller request).  (Default: 1)
+    controller request).  If true, multicast DNS hostnames for machines on the
+    local network (of the form *.local) are also rejected.  (Default: 1)
 
 [[DownloadExtraInfo]] **DownloadExtraInfo** **0**|**1**::
     If true, Tor downloads and caches "extra-info" documents. These documents
