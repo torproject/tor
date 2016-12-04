@@ -88,6 +88,12 @@ OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
 CONTACT_COUNT = True if OUTPUT_CANDIDATES else False
 CONTACT_BLACKLIST_COUNT = True if OUTPUT_CANDIDATES else False
 
+# How the list should be sorted:
+# fingerprint: is useful for stable diffs of fallback lists
+# measured_bandwidth: is useful when pruning the list based on bandwidth
+# contact: is useful for contacting operators once the list has been pruned
+OUTPUT_SORT_FIELD = 'contact' if OUTPUT_CANDIDATES else 'fingerprint'
+
 ## OnionOO Settings
 
 ONIONOO = 'https://onionoo.torproject.org/'
@@ -1304,10 +1310,9 @@ class CandidateList(dict):
     self.fallbacks.sort(key=lambda f: f._data['measured_bandwidth'],
                         reverse=True)
 
-  # sort fallbacks by their fingerprint, lowest to highest
-  # this is useful for stable diffs of fallback lists
-  def sort_fallbacks_by_fingerprint(self):
-    self.fallbacks.sort(key=lambda f: f._fpr)
+  # sort fallbacks by the data field data_field, lowest to highest
+  def sort_fallbacks_by(self, data_field):
+    self.fallbacks.sort(key=lambda f: f._data[data_field])
 
   @staticmethod
   def load_relaylist(file_name):
@@ -1992,12 +1997,14 @@ def list_fallbacks():
   for s in fetch_source_list():
     print describe_fetch_source(s)
 
+  # sort the list differently depending on why we've created it:
   # if we're outputting the final fallback list, sort by fingerprint
   # this makes diffs much more stable
-  # otherwise, leave sorted by bandwidth, which allows operators to be
-  # contacted in priority order
-  if not OUTPUT_CANDIDATES:
-    candidates.sort_fallbacks_by_fingerprint()
+  # otherwise, if we're trying to find a bandwidth cutoff, or we want to
+  # contact operators in priority order, sort by bandwidth (not yet
+  # implemented)
+  # otherwise, if we're contacting operators, sort by contact
+  candidates.sort_fallbacks_by(OUTPUT_SORT_FIELD)
 
   for x in candidates.fallbacks:
     print x.fallbackdir_line(candidates.fallbacks, prefilter_fallbacks)
