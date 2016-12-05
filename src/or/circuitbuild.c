@@ -1045,8 +1045,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
     /* Set the ED25519 identity too -- it will only get included
      * in the extend2 cell if we're configured to use it, though. */
-    memcpy(&ec.ed_pubkey, &hop->extend_info->ed_identity,
-           sizeof(ed25519_public_key_t));
+    ed25519_pubkey_copy(&ec.ed_pubkey, &hop->extend_info->ed_identity);
 
     len = onion_skin_create(ec.create_cell.handshake_type,
                             hop->extend_info,
@@ -1183,7 +1182,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     if (node &&
         node_supports_ed25519_link_authentication(node) &&
         (node_ed_id = node_get_ed25519_id(node))) {
-      memcpy(ec.ed_pubkey.pubkey, node_ed_id->pubkey, ED25519_PUBKEY_LEN);
+      ed25519_pubkey_copy(&ec.ed_pubkey, node_ed_id);
     }
   }
 

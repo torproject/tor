@@ -628,6 +628,18 @@ ed25519_pubkey_eq(const ed25519_public_key_t *key1,
   return tor_memeq(key1->pubkey, key2->pubkey, ED25519_PUBKEY_LEN);
 }
 
+/**
+ * Set <b>dest</b> to contain the same key as <b>src</b>.
+ */
+void
+ed25519_pubkey_copy(ed25519_public_key_t *dest,
+                    const ed25519_public_key_t *src)
+{
+  tor_assert(dest);
+  tor_assert(src);
+  memcpy(dest, src, sizeof(ed25519_public_key_t));
+}
+
 /** Check whether the given Ed25519 implementation seems to be working.
  * If so, return 0; otherwise return -1. */
 static int

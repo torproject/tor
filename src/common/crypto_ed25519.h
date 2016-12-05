@@ -121,6 +121,9 @@ void ed25519_keypair_free(ed25519_keypair_t *kp);
 
 int ed25519_pubkey_eq(const ed25519_public_key_t *key1,
                       const ed25519_public_key_t *key2);
+void ed25519_pubkey_copy(ed25519_public_key_t *dest,
+                         const ed25519_public_key_t *src);
+
 
 void ed25519_set_impl_params(int use_donna);
 void ed25519_init(void);
