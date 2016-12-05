@@ -66,27 +66,27 @@ helper_build_intro_point(const ed25519_keypair_t *blinded_kp,
 /* Return a valid hs_descriptor_t object. */
 static hs_descriptor_t *
 helper_build_hs_desc(uint64_t revision_counter, uint32_t lifetime,
-                     ed25519_keypair_t *blinded_kp)
+                     ed25519_public_key_t *signing_pubkey)
 {
   int ret;
+  ed25519_keypair_t blinded_kp;
   hs_descriptor_t *descp = NULL, *desc = tor_malloc_zero(sizeof(*desc));
 
   desc->plaintext_data.version = HS_DESC_SUPPORTED_FORMAT_VERSION_MAX;
-  ret = ed25519_keypair_generate(&desc->plaintext_data.signing_kp, 0);
+
+  /* Copy only the public key into the descriptor. */
+  memcpy(&desc->plaintext_data.signing_pubkey, signing_pubkey,
+         sizeof(ed25519_public_key_t));
+
+  ret = ed25519_keypair_generate(&blinded_kp, 0);
   tt_int_op(ret, ==, 0);
-  if (blinded_kp) {
-    memcpy(&desc->plaintext_data.blinded_kp, blinded_kp,
-           sizeof(ed25519_keypair_t));
-  } else {
-    ret = ed25519_keypair_generate(&desc->plaintext_data.blinded_kp, 0);
-    tt_int_op(ret, ==, 0);
-  }
+  /* Copy only the public key into the descriptor. */
+  memcpy(&desc->plaintext_data.blinded_pubkey, &blinded_kp.pubkey,
+         sizeof(ed25519_public_key_t));
 
   desc->plaintext_data.signing_key_cert =
-    tor_cert_create(&desc->plaintext_data.blinded_kp,
-                    CERT_TYPE_SIGNING_HS_DESC,
-                    &desc->plaintext_data.signing_kp.pubkey, time(NULL),
-                    3600, CERT_FLAG_INCLUDE_SIGNING_KEY);
+    tor_cert_create(&blinded_kp, CERT_TYPE_SIGNING_HS_DESC, signing_pubkey,
+                    time(NULL), 3600, CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(desc->plaintext_data.signing_key_cert);
   desc->plaintext_data.revision_counter = revision_counter;
   desc->plaintext_data.lifetime_sec = lifetime;
@@ -98,8 +98,7 @@ helper_build_hs_desc(uint64_t revision_counter, uint32_t lifetime,
   desc->encrypted_data.intro_points = smartlist_new();
   /* Add an intro point. */
   smartlist_add(desc->encrypted_data.intro_points,
-                helper_build_intro_point(&desc->plaintext_data.blinded_kp,
-                                         "1.2.3.4"));
+                helper_build_intro_point(&blinded_kp, "1.2.3.4"));
 
   descp = desc;
  done:
@@ -109,12 +108,11 @@ helper_build_hs_desc(uint64_t revision_counter, uint32_t lifetime,
 /* Static variable used to encoded the HSDir query. */
 static char query_b64[256];
 
-/* Build an HSDir query using a ed25519 keypair. */
+/* Build an HSDir query using a ed25519 public key. */
 static const char *
 helper_get_hsdir_query(const hs_descriptor_t *desc)
 {
-  ed25519_public_to_base64(query_b64,
-                           &desc->plaintext_data.blinded_kp.pubkey);
+  ed25519_public_to_base64(query_b64, &desc->plaintext_data.blinded_pubkey);
   return query_b64;
 }
 
@@ -132,17 +130,20 @@ test_directory(void *arg)
 {
   int ret;
   size_t oom_size;
-  char *desc1_str=NULL;
+  char *desc1_str = NULL;
   const char *desc_out;
-  hs_descriptor_t *desc1;
+  ed25519_keypair_t signing_kp1;
+  hs_descriptor_t *desc1 = NULL;
 
   (void) arg;
 
   init_test();
   /* Generate a valid descriptor with normal values. */
-  desc1 = helper_build_hs_desc(42, 3 * 60 * 60, NULL);
+  ret = ed25519_keypair_generate(&signing_kp1, 0);
+  tt_int_op(ret, ==, 0);
+  desc1 = helper_build_hs_desc(42, 3 * 60 * 60, &signing_kp1.pubkey);
   tt_assert(desc1);
-  ret = hs_desc_encode_descriptor(desc1, &desc1_str);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &desc1_str);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Very first basic test, should be able to be stored, survive a
@@ -170,10 +171,14 @@ test_directory(void *arg)
 
   /* Store two descriptors and remove the expiring one only. */
   {
-    hs_descriptor_t *desc_zero_lifetime = helper_build_hs_desc(1, 0, NULL);
+    ed25519_keypair_t signing_kp_zero;
+    ret = ed25519_keypair_generate(&signing_kp_zero, 0);
+    tt_int_op(ret, ==, 0);
+    hs_descriptor_t *desc_zero_lifetime;
+    desc_zero_lifetime = helper_build_hs_desc(1, 0, &signing_kp_zero.pubkey);
     tt_assert(desc_zero_lifetime);
     char *desc_zero_lifetime_str;
-    ret = hs_desc_encode_descriptor(desc_zero_lifetime,
+    ret = hs_desc_encode_descriptor(desc_zero_lifetime, &signing_kp_zero,
                                     &desc_zero_lifetime_str);
     tt_int_op(ret, OP_EQ, 0);
 
@@ -225,7 +230,7 @@ test_directory(void *arg)
     tt_int_op(ret, OP_EQ, 1);
     /* Bump revision counter. */
     desc1->plaintext_data.revision_counter++;
-    ret = hs_desc_encode_descriptor(desc1, &new_desc_str);
+    ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &new_desc_str);
     tt_int_op(ret, OP_EQ, 0);
     ret = hs_cache_store_as_dir(new_desc_str);
     tt_int_op(ret, OP_EQ, 0);
@@ -248,15 +253,18 @@ test_clean_as_dir(void *arg)
   char *desc1_str = NULL;
   time_t now = time(NULL);
   hs_descriptor_t *desc1 = NULL;
+  ed25519_keypair_t signing_kp1;
 
   (void) arg;
 
   init_test();
 
   /* Generate a valid descriptor with values. */
-  desc1 = helper_build_hs_desc(42, 3 * 60 * 60, NULL);
+  ret = ed25519_keypair_generate(&signing_kp1, 0);
+  tt_int_op(ret, ==, 0);
+  desc1 = helper_build_hs_desc(42, 3 * 60 * 60, &signing_kp1.pubkey);
   tt_assert(desc1);
-  ret = hs_desc_encode_descriptor(desc1, &desc1_str);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &desc1_str);
   tt_int_op(ret, OP_EQ, 0);
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
@@ -343,7 +351,7 @@ static void
 test_upload_and_download_hs_desc(void *arg)
 {
   int retval;
-  hs_descriptor_t *published_desc;
+  hs_descriptor_t *published_desc = NULL;
 
   char *published_desc_str = NULL;
   char *received_desc_str = NULL;
@@ -355,9 +363,13 @@ test_upload_and_download_hs_desc(void *arg)
 
   /* Generate a valid descriptor with normal values. */
   {
-    published_desc = helper_build_hs_desc(42, 3 * 60 * 60, NULL);
+    ed25519_keypair_t signing_kp;
+    retval = ed25519_keypair_generate(&signing_kp, 0);
+    tt_int_op(retval, ==, 0);
+    published_desc = helper_build_hs_desc(42, 3 * 60 * 60, &signing_kp.pubkey);
     tt_assert(published_desc);
-    retval = hs_desc_encode_descriptor(published_desc, &published_desc_str);
+    retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
+                                       &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
   }
 
@@ -370,7 +382,7 @@ test_upload_and_download_hs_desc(void *arg)
   /* Simulate a fetch of the previously published descriptor */
   {
     const ed25519_public_key_t *blinded_key;
-    blinded_key = &published_desc->plaintext_data.blinded_kp.pubkey;
+    blinded_key = &published_desc->plaintext_data.blinded_pubkey;
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
   }
 
@@ -391,7 +403,9 @@ test_hsdir_revision_counter_check(void *arg)
 {
   int retval;
 
-  hs_descriptor_t *published_desc;
+  ed25519_keypair_t signing_kp;
+
+  hs_descriptor_t *published_desc = NULL;
   char *published_desc_str = NULL;
 
   char *received_desc_str = NULL;
@@ -404,9 +418,13 @@ test_hsdir_revision_counter_check(void *arg)
 
   /* Generate a valid descriptor with normal values. */
   {
-    published_desc = helper_build_hs_desc(1312, 3 * 60 * 60, NULL);
+    retval = ed25519_keypair_generate(&signing_kp, 0);
+    tt_int_op(retval, ==, 0);
+    published_desc = helper_build_hs_desc(1312, 3 * 60 * 60,
+                                          &signing_kp.pubkey);
     tt_assert(published_desc);
-    retval = hs_desc_encode_descriptor(published_desc, &published_desc_str);
+    retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
+                                       &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
   }
 
@@ -426,7 +444,7 @@ test_hsdir_revision_counter_check(void *arg)
   {
     const ed25519_public_key_t *blinded_key;
 
-    blinded_key = &published_desc->plaintext_data.blinded_kp.pubkey;
+    blinded_key = &published_desc->plaintext_data.blinded_pubkey;
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,NULL, &received_desc);
@@ -445,7 +463,8 @@ test_hsdir_revision_counter_check(void *arg)
   {
     published_desc->plaintext_data.revision_counter = 1313;
     tor_free(published_desc_str);
-    retval = hs_desc_encode_descriptor(published_desc, &published_desc_str);
+    retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
+                                       &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
 
     retval = handle_post_hs_descriptor("/tor/hs/3/publish",published_desc_str);
@@ -457,7 +476,7 @@ test_hsdir_revision_counter_check(void *arg)
   {
     const ed25519_public_key_t *blinded_key;
 
-    blinded_key = &published_desc->plaintext_data.blinded_kp.pubkey;
+    blinded_key = &published_desc->plaintext_data.blinded_pubkey;
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
     retval = hs_desc_decode_descriptor(received_desc_str,NULL, &received_desc);

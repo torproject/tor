@@ -219,7 +219,7 @@ encode_link_specifiers(const smartlist_t *specs)
 /* Encode an introduction point encryption key and return a newly allocated
  * string with it. On failure, return NULL. */
 static char *
-encode_enc_key(const ed25519_keypair_t *sig_key,
+encode_enc_key(const ed25519_public_key_t *sig_key,
                const hs_desc_intro_point_t *ip)
 {
   char *encoded = NULL;
@@ -237,8 +237,7 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
     uint8_t *cert_data = NULL;
 
     /* Create cross certification cert. */
-    cert_len = tor_make_rsa_ed25519_crosscert(&sig_key->pubkey,
-                                              ip->enc_key.legacy,
+    cert_len = tor_make_rsa_ed25519_crosscert(sig_key, ip->enc_key.legacy,
                                               now + HS_DESC_CERT_LIFETIME,
                                               &cert_data);
     if (cert_len < 0) {
@@ -282,7 +281,7 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
     }
     tor_cert_t *cross_cert = tor_cert_create(&curve_kp,
                                              CERT_TYPE_CROSS_HS_IP_KEYS,
-                                             &sig_key->pubkey, now,
+                                             sig_key, now,
                                              HS_DESC_CERT_LIFETIME,
                                              CERT_FLAG_INCLUDE_SIGNING_KEY);
     memwipe(&curve_kp, 0, sizeof(curve_kp));
@@ -318,7 +317,7 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
 /* Encode an introduction point object and return a newly allocated string
  * with it. On failure, return NULL. */
 static char *
-encode_intro_point(const ed25519_keypair_t *sig_key,
+encode_intro_point(const ed25519_public_key_t *sig_key,
                    const hs_desc_intro_point_t *ip)
 {
   char *encoded_ip = NULL;
@@ -377,9 +376,9 @@ build_secret_input(const hs_descriptor_t *desc, uint8_t *dst, size_t dstlen)
 
   /* XXX use the destination length as the memcpy length */
   /* Copy blinded public key. */
-  memcpy(dst, desc->plaintext_data.blinded_kp.pubkey.pubkey,
-         sizeof(desc->plaintext_data.blinded_kp.pubkey.pubkey));
-  offset += sizeof(desc->plaintext_data.blinded_kp.pubkey.pubkey);
+  memcpy(dst, desc->plaintext_data.blinded_pubkey.pubkey,
+         sizeof(desc->plaintext_data.blinded_pubkey.pubkey));
+  offset += sizeof(desc->plaintext_data.blinded_pubkey.pubkey);
   /* Copy subcredential. */
   memcpy(dst + offset, desc->subcredential, sizeof(desc->subcredential));
   offset += sizeof(desc->subcredential);
@@ -665,7 +664,7 @@ encode_encrypted_data(const hs_descriptor_t *desc,
   /* Build the introduction point(s) section. */
   SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                           const hs_desc_intro_point_t *, ip) {
-    char *encoded_ip = encode_intro_point(&desc->plaintext_data.signing_kp,
+    char *encoded_ip = encode_intro_point(&desc->plaintext_data.signing_pubkey,
                                           ip);
     if (encoded_ip == NULL) {
       log_err(LD_BUG, "HS desc intro point is malformed.");
@@ -710,7 +709,8 @@ encode_encrypted_data(const hs_descriptor_t *desc,
  * newly allocated string of the encoded descriptor. On error, -1 is returned
  * and encoded_out is untouched. */
 static int
-desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
+desc_encode_v3(const hs_descriptor_t *desc,
+               const ed25519_keypair_t *signing_kp, char **encoded_out)
 {
   int ret = -1;
   char *encoded_str = NULL;
@@ -718,6 +718,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
   smartlist_t *lines = smartlist_new();
 
   tor_assert(desc);
+  tor_assert(signing_kp);
   tor_assert(encoded_out);
   tor_assert(desc->plaintext_data.version == 3);
 
@@ -732,7 +733,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
       goto err;
     }
     if (tor_cert_encode_ed22519(desc->plaintext_data.signing_key_cert,
-                    &encoded_cert) < 0) {
+                                &encoded_cert) < 0) {
       /* The function will print error logs. */
       goto err;
     }
@@ -775,8 +776,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
     char ed_sig_b64[ED25519_SIG_BASE64_LEN + 1];
     if (ed25519_sign_prefixed(&sig,
                               (const uint8_t *) encoded_str, encoded_len,
-                              str_desc_sig_prefix,
-                              &desc->plaintext_data.signing_kp) < 0) {
+                              str_desc_sig_prefix, signing_kp) < 0) {
       log_warn(LD_BUG, "Can't sign encoded HS descriptor!");
       tor_free(encoded_str);
       goto err;
@@ -1365,7 +1365,8 @@ decode_intro_points(const hs_descriptor_t *desc,
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
  * descriptor in encoded_desc validates the descriptor content. */
 STATIC int
-desc_sig_is_valid(const char *b64_sig, const ed25519_keypair_t *signing_kp,
+desc_sig_is_valid(const char *b64_sig,
+                  const ed25519_public_key_t *signing_pubkey,
                   const char *encoded_desc, size_t encoded_len)
 {
   int ret = 0;
@@ -1373,7 +1374,7 @@ desc_sig_is_valid(const char *b64_sig, const ed25519_keypair_t *signing_kp,
   const char *sig_start;
 
   tor_assert(b64_sig);
-  tor_assert(signing_kp);
+  tor_assert(signing_pubkey);
   tor_assert(encoded_desc);
   /* Verifying nothing won't end well :). */
   tor_assert(encoded_len > 0);
@@ -1408,7 +1409,7 @@ desc_sig_is_valid(const char *b64_sig, const ed25519_keypair_t *signing_kp,
                                 (const uint8_t *) encoded_desc,
                                 sig_start - encoded_desc,
                                 str_desc_sig_prefix,
-                                &signing_kp->pubkey) != 0) {
+                                signing_pubkey) != 0) {
     log_warn(LD_REND, "Invalid signature on service descriptor");
     goto err;
   }
@@ -1474,10 +1475,10 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
     goto err;
   }
 
-  /* Copy the public keys into signing_kp and blinded_kp */
-  memcpy(&desc->signing_kp.pubkey, &desc->signing_key_cert->signed_key,
+  /* Copy the public keys into signing_pubkey and blinded_pubkey */
+  memcpy(&desc->signing_pubkey, &desc->signing_key_cert->signed_key,
          sizeof(ed25519_public_key_t));
-  memcpy(&desc->blinded_kp.pubkey, &desc->signing_key_cert->signing_key,
+  memcpy(&desc->blinded_pubkey, &desc->signing_key_cert->signing_key,
          sizeof(ed25519_public_key_t));
 
   /* Extract revision counter value. */
@@ -1511,7 +1512,7 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
   tok = find_by_keyword(tokens, R3_SIGNATURE);
   tor_assert(tok->n_args == 1);
   /* First arg here is the actual encoded signature. */
-  if (!desc_sig_is_valid(tok->args[0], &desc->signing_kp,
+  if (!desc_sig_is_valid(tok->args[0], &desc->signing_pubkey,
                          encoded_desc, encoded_len)) {
     goto err;
   }
@@ -1806,41 +1807,46 @@ hs_desc_decode_descriptor(const char *encoded,
   return ret;
 }
 
-/* Table of encode function version specific. The function are indexed by the
+/* Table of encode function version specific. The functions are indexed by the
  * version number so v3 callback is at index 3 in the array. */
 static int
   (*encode_handlers[])(
       const hs_descriptor_t *desc,
+      const ed25519_keypair_t *signing_kp,
       char **encoded_out) =
 {
   /* v0 */ NULL, /* v1 */ NULL, /* v2 */ NULL,
   desc_encode_v3,
 };
 
-/* Encode the given descriptor desc. On success, encoded_out points to a newly
- * allocated NUL terminated string that contains the encoded descriptor as a
- * string.
+/* Encode the given descriptor desc including signing with the given key pair
+ * signing_kp. On success, encoded_out points to a newly allocated NUL
+ * terminated string that contains the encoded descriptor as a string.
  *
  * Return 0 on success and encoded_out is a valid pointer. On error, -1 is
  * returned and encoded_out is set to NULL. */
 int
-hs_desc_encode_descriptor(const hs_descriptor_t *desc, char **encoded_out)
+hs_desc_encode_descriptor(const hs_descriptor_t *desc,
+                          const ed25519_keypair_t *signing_kp,
+                          char **encoded_out)
 {
   int ret = -1;
+  uint32_t version;
 
   tor_assert(desc);
   tor_assert(encoded_out);
 
   /* Make sure we support the version of the descriptor format. */
-  if (!hs_desc_is_supported_version(desc->plaintext_data.version)) {
+  version = desc->plaintext_data.version;
+  if (!hs_desc_is_supported_version(version)) {
     goto err;
   }
   /* Extra precaution. Having no handler for the supported version should
    * never happened else we forgot to add it but we bumped the version. */
-  tor_assert(ARRAY_LENGTH(encode_handlers) >= desc->plaintext_data.version);
-  tor_assert(encode_handlers[desc->plaintext_data.version]);
+  tor_assert(ARRAY_LENGTH(encode_handlers) >= version);
+  tor_assert(encode_handlers[version]);
 
-  ret = encode_handlers[desc->plaintext_data.version](desc, encoded_out);
+  ret = encode_handlers[version](desc, signing_kp, encoded_out);
   if (ret < 0) {
     goto err;
   }

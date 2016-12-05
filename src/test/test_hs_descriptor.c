@@ -77,24 +77,28 @@ helper_build_intro_point(const ed25519_keypair_t *blinded_kp, time_t now,
 /* Return a valid hs_descriptor_t object. If no_ip is set, no introduction
  * points are added. */
 static hs_descriptor_t *
-helper_build_hs_desc(unsigned int no_ip)
+helper_build_hs_desc(unsigned int no_ip, ed25519_public_key_t *signing_pubkey)
 {
   int ret;
   time_t now = time(NULL);
+  ed25519_keypair_t blinded_kp;
   hs_descriptor_t *descp = NULL, *desc = tor_malloc_zero(sizeof(*desc));
 
   desc->plaintext_data.version = HS_DESC_SUPPORTED_FORMAT_VERSION_MAX;
-  ret = ed25519_keypair_generate(&desc->plaintext_data.signing_kp, 0);
+
+  /* Copy only the public key into the descriptor. */
+  memcpy(&desc->plaintext_data.signing_pubkey, signing_pubkey,
+         sizeof(ed25519_public_key_t));
+
+  ret = ed25519_keypair_generate(&blinded_kp, 0);
   tt_int_op(ret, ==, 0);
-  ret = ed25519_keypair_generate(&desc->plaintext_data.blinded_kp, 0);
-  tt_int_op(ret, ==, 0);
+  /* Copy only the public key into the descriptor. */
+  memcpy(&desc->plaintext_data.blinded_pubkey, &blinded_kp.pubkey,
+         sizeof(ed25519_public_key_t));
 
   desc->plaintext_data.signing_key_cert =
-    tor_cert_create(&desc->plaintext_data.blinded_kp,
-                    CERT_TYPE_SIGNING_HS_DESC,
-                    &desc->plaintext_data.signing_kp.pubkey, now,
-                    3600,
-                    CERT_FLAG_INCLUDE_SIGNING_KEY);
+    tor_cert_create(&blinded_kp, CERT_TYPE_SIGNING_HS_DESC, signing_pubkey,
+                    now, 3600, CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(desc->plaintext_data.signing_key_cert);
   desc->plaintext_data.revision_counter = 42;
   desc->plaintext_data.lifetime_sec = 3 * 60 * 60;
@@ -108,17 +112,13 @@ helper_build_hs_desc(unsigned int no_ip)
   if (!no_ip) {
     /* Add four intro points. */
     smartlist_add(desc->encrypted_data.intro_points,
-                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
-                                           "1.2.3.4", 0));
+                helper_build_intro_point(&blinded_kp, now, "1.2.3.4", 0));
     smartlist_add(desc->encrypted_data.intro_points,
-                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
-                                           "[2600::1]", 0));
+                helper_build_intro_point(&blinded_kp, now, "[2600::1]", 0));
     smartlist_add(desc->encrypted_data.intro_points,
-                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
-                                           "3.2.1.4", 1));
+                helper_build_intro_point(&blinded_kp, now, "3.2.1.4", 1));
     smartlist_add(desc->encrypted_data.intro_points,
-                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
-                                           "", 1));
+                helper_build_intro_point(&blinded_kp, now, "", 1));
   }
 
   descp = desc;
@@ -138,11 +138,11 @@ helper_compare_hs_desc(const hs_descriptor_t *desc1,
              desc2->plaintext_data.lifetime_sec);
   tt_assert(tor_cert_eq(desc1->plaintext_data.signing_key_cert,
                         desc2->plaintext_data.signing_key_cert));
-  tt_mem_op(desc1->plaintext_data.signing_kp.pubkey.pubkey, OP_EQ,
-            desc2->plaintext_data.signing_kp.pubkey.pubkey,
+  tt_mem_op(desc1->plaintext_data.signing_pubkey.pubkey, OP_EQ,
+            desc2->plaintext_data.signing_pubkey.pubkey,
             ED25519_PUBKEY_LEN);
-  tt_mem_op(desc1->plaintext_data.blinded_kp.pubkey.pubkey, OP_EQ,
-            desc2->plaintext_data.blinded_kp.pubkey.pubkey,
+  tt_mem_op(desc1->plaintext_data.blinded_pubkey.pubkey, OP_EQ,
+            desc2->plaintext_data.blinded_pubkey.pubkey,
             ED25519_PUBKEY_LEN);
   tt_u64_op(desc1->plaintext_data.revision_counter, ==,
              desc2->plaintext_data.revision_counter);
@@ -481,11 +481,15 @@ test_encode_descriptor(void *arg)
 {
   int ret;
   char *encoded = NULL;
-  hs_descriptor_t *desc = helper_build_hs_desc(0);
+  ed25519_keypair_t signing_kp;
+  hs_descriptor_t *desc = NULL;
 
   (void) arg;
 
-  ret = hs_desc_encode_descriptor(desc, &encoded);
+  ret = ed25519_keypair_generate(&signing_kp, 0);
+  tt_int_op(ret, ==, 0);
+  desc = helper_build_hs_desc(0, &signing_kp.pubkey);
+  ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
   tt_int_op(ret, ==, 0);
   tt_assert(encoded);
 
@@ -499,17 +503,22 @@ test_decode_descriptor(void *arg)
 {
   int ret;
   char *encoded = NULL;
-  hs_descriptor_t *desc = helper_build_hs_desc(0);
+  ed25519_keypair_t signing_kp;
+  hs_descriptor_t *desc = NULL;
   hs_descriptor_t *decoded = NULL;
   hs_descriptor_t *desc_no_ip = NULL;
 
   (void) arg;
 
+  ret = ed25519_keypair_generate(&signing_kp, 0);
+  tt_int_op(ret, ==, 0);
+  desc = helper_build_hs_desc(0, &signing_kp.pubkey);
+
   /* Give some bad stuff to the decoding function. */
   ret = hs_desc_decode_descriptor("hladfjlkjadf", NULL, &decoded);
   tt_int_op(ret, OP_EQ, -1);
 
-  ret = hs_desc_encode_descriptor(desc, &encoded);
+  ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
   tt_int_op(ret, ==, 0);
   tt_assert(encoded);
 
@@ -521,10 +530,13 @@ test_decode_descriptor(void *arg)
 
   /* Decode a descriptor with _no_ introduction points. */
   {
-    desc_no_ip = helper_build_hs_desc(1);
+    ed25519_keypair_t signing_kp_no_ip;
+    ret = ed25519_keypair_generate(&signing_kp_no_ip, 0);
+    tt_int_op(ret, ==, 0);
+    desc_no_ip = helper_build_hs_desc(1, &signing_kp_no_ip.pubkey);
     tt_assert(desc_no_ip);
     tor_free(encoded);
-    ret = hs_desc_encode_descriptor(desc_no_ip, &encoded);
+    ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip, &encoded);
     tt_int_op(ret, ==, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
@@ -599,6 +611,7 @@ test_decode_intro_point(void *arg)
   char *encoded_ip = NULL;
   size_t len_out;
   hs_desc_intro_point_t *ip = NULL;
+  ed25519_keypair_t signing_kp;
   hs_descriptor_t *desc = NULL;
 
   (void) arg;
@@ -647,7 +660,9 @@ test_decode_intro_point(void *arg)
   /* Start by testing the "decode all intro points" function. */
   {
     char *line;
-    desc = helper_build_hs_desc(0);
+    ret = ed25519_keypair_generate(&signing_kp, 0);
+    tt_int_op(ret, ==, 0);
+    desc = helper_build_hs_desc(0, &signing_kp.pubkey);
     tt_assert(desc);
     /* Only try to decode an incomplete introduction point section. */
     tor_asprintf(&line, "\n%s", intro_point);
@@ -674,7 +689,9 @@ test_decode_intro_point(void *arg)
   /* Try to decode a junk string. */
   {
     hs_descriptor_free(desc);
-    desc = helper_build_hs_desc(0);
+    ret = ed25519_keypair_generate(&signing_kp, 0);
+    tt_int_op(ret, ==, 0);
+    desc = helper_build_hs_desc(0, &signing_kp.pubkey);
     const char *junk = "this is not a descriptor";
     ip = decode_introduction_point(desc, junk);
     tt_assert(!ip);
@@ -977,10 +994,10 @@ test_desc_signature(void *arg)
   tt_int_op(ret, ==, 0);
   /* Build the descriptor that should be valid. */
   tor_asprintf(&desc, "%ssignature %s\n", data, sig_b64);
-  ret = desc_sig_is_valid(sig_b64, &kp, desc, strlen(desc));
+  ret = desc_sig_is_valid(sig_b64, &kp.pubkey, desc, strlen(desc));
   tt_int_op(ret, ==, 1);
   /* Junk signature. */
-  ret = desc_sig_is_valid("JUNK", &kp, desc, strlen(desc));
+  ret = desc_sig_is_valid("JUNK", &kp.pubkey, desc, strlen(desc));
   tt_int_op(ret, ==, 0);
 
  done:

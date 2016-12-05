@@ -86,7 +86,7 @@ cache_dir_desc_new(const char *desc)
   }
 
   /* The blinded pubkey is the indexed key. */
-  dir_desc->key = dir_desc->plaintext_data->blinded_kp.pubkey.pubkey;
+  dir_desc->key = dir_desc->plaintext_data->blinded_pubkey.pubkey;
   dir_desc->created_ts = time(NULL);
   return dir_desc;
 
