@@ -1,0 +1,4 @@
+  o Minor bugfixes (unit tests, hidden services):
+    - Remove a double-free in the single onion service unit test. Stop
+      ignoring a return value. Make future changes less error-prone.
+      Fixes bug 20864; bugfix on 0.2.9.6-rc.
