@@ -715,7 +715,7 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
    * filename.
    */
   if (crypto_digest256((char *)content_digest, desc, (size_t) st.st_size,
-                       DIGEST_SHA256) != 0) {
+                       DIGEST_SHA256) < 0) {
     /* Weird, but okay */
     log_info(LD_DIR,
              "Unable to hash content of %s from unparseable descriptors "
@@ -879,7 +879,7 @@ dump_desc(const char *desc, const char *type)
   /* Get the hash for logging purposes anyway */
   len = strlen(desc);
   if (crypto_digest256((char *)digest_sha256, desc, len,
-                       DIGEST_SHA256) != 0) {
+                       DIGEST_SHA256) < 0) {
     log_info(LD_DIR,
              "Unable to parse descriptor of type %s, and unable to even hash"
              " it!", type);
