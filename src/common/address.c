@@ -2100,7 +2100,8 @@ get_interface_address,(int severity, uint32_t *addr))
 }
 
 /** Return true if we can tell that <b>name</b> is a canonical name for the
- * loopback address. */
+ * loopback address.  Return true also for *.local hostnames, which are
+ * multicast DNS names for hosts on the local network. */
 int
 tor_addr_hostname_is_local(const char *name)
 {
