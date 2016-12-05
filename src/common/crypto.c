@@ -1506,7 +1506,7 @@ crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out)
   if (crypto_pk_get_digest(pk, digest)) {
     return -1;
   }
-  if (crypto_digest(hashed_digest, digest, DIGEST_LEN)) {
+  if (crypto_digest(hashed_digest, digest, DIGEST_LEN) < 0) {
     return -1;
   }
   base16_encode(fp_out, FINGERPRINT_LEN + 1, hashed_digest, DIGEST_LEN);
@@ -1700,19 +1700,21 @@ crypto_cipher_decrypt_with_iv(const char *key,
 
 /** Compute the SHA1 digest of the <b>len</b> bytes on data stored in
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
- * Return 0 on success, 1 on failure.
+ * Return 0 on success, -1 on failure.
  */
 int
 crypto_digest(char *digest, const char *m, size_t len)
 {
   tor_assert(m);
   tor_assert(digest);
-  return (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+  if(SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL)
+    return -1;
+  return 0;
 }
 
 /** Compute a 256-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
  * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN256-byte result
- * into <b>digest</b>.  Return 0 on success, 1 on failure. */
+ * into <b>digest</b>.  Return 0 on success, -1 on failure. */
 int
 crypto_digest256(char *digest, const char *m, size_t len,
                  digest_algorithm_t algorithm)
@@ -1720,16 +1722,22 @@ crypto_digest256(char *digest, const char *m, size_t len,
   tor_assert(m);
   tor_assert(digest);
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
+
+  int ret = 0;
   if (algorithm == DIGEST_SHA256)
-    return (SHA256((const uint8_t*)m,len,(uint8_t*)digest) == NULL);
+    ret = (SHA256((const uint8_t*)m,len,(uint8_t*)digest) != NULL);
   else
-    return (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
-            == -1);
+    ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
+           > -1);
+
+  if (!ret)
+    return -1;
+  return 0;
 }
 
 /** Compute a 512-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
  * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN512-byte result
- * into <b>digest</b>.  Return 0 on success, 1 on failure. */
+ * into <b>digest</b>.  Return 0 on success, -1 on failure. */
 int
 crypto_digest512(char *digest, const char *m, size_t len,
                  digest_algorithm_t algorithm)
@@ -1737,12 +1745,18 @@ crypto_digest512(char *digest, const char *m, size_t len,
   tor_assert(m);
   tor_assert(digest);
   tor_assert(algorithm == DIGEST_SHA512 || algorithm == DIGEST_SHA3_512);
+
+  int ret = 0;
   if (algorithm == DIGEST_SHA512)
-    return (SHA512((const unsigned char*)m,len,(unsigned char*)digest)
-            == NULL);
+    ret = (SHA512((const unsigned char*)m,len,(unsigned char*)digest)
+           != NULL);
   else
-    return (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len)
-            == -1);
+    ret = (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len)
+           > -1);
+
+  if (!ret)
+    return -1;
+  return 0;
 }
 
 /** Set the common_digests_t in <b>ds_out</b> to contain every digest on the
@@ -2628,7 +2642,7 @@ crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
   for (cp = key_out, i=0; cp < key_out+key_out_len;
        ++i, cp += DIGEST_LEN) {
     tmp[key_in_len] = i;
-    if (crypto_digest((char*)digest, (const char *)tmp, key_in_len+1))
+    if (crypto_digest((char*)digest, (const char *)tmp, key_in_len+1) < 0)
       goto exit;
     memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len-(cp-key_out)));
   }

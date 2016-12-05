@@ -192,7 +192,7 @@ verify_commit_and_reveal(const sr_commit_t *commit)
     /* Use the invariant length since the encoded reveal variable has an
      * extra byte for the NUL terminated byte. */
     if (crypto_digest256(received_hashed_reveal, commit->encoded_reveal,
-                         SR_REVEAL_BASE64_LEN, commit->alg)) {
+                         SR_REVEAL_BASE64_LEN, commit->alg) < 0) {
       /* Unable to digest the reveal blob, this is unlikely. */
       goto invalid;
     }
@@ -932,7 +932,7 @@ sr_generate_our_commit(time_t timestamp, const authority_cert_t *my_rsa_cert)
   /* The invariant length is used here since the encoded reveal variable
    * has an extra byte added for the NULL terminated byte. */
   if (crypto_digest256(commit->hashed_reveal, commit->encoded_reveal,
-                       SR_REVEAL_BASE64_LEN, commit->alg)) {
+                       SR_REVEAL_BASE64_LEN, commit->alg) < 0) {
     goto error;
   }
 
@@ -1012,7 +1012,7 @@ sr_compute_srv(void)
     SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
     smartlist_free(chunks);
     if (crypto_digest256(hashed_reveals, reveals, strlen(reveals),
-                         SR_DIGEST_ALG)) {
+                         SR_DIGEST_ALG) < 0) {
       goto end;
     }
     current_srv = generate_srv(hashed_reveals, reveal_num,

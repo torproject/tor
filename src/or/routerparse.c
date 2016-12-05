@@ -4536,12 +4536,12 @@ router_get_hash_impl(const char *s, size_t s_len, char *digest,
     return -1;
 
   if (alg == DIGEST_SHA1) {
-    if (crypto_digest(digest, start, end-start)) {
+    if (crypto_digest(digest, start, end-start) < 0) {
       log_warn(LD_BUG,"couldn't compute digest");
       return -1;
     }
   } else {
-    if (crypto_digest256(digest, start, end-start, alg)) {
+    if (crypto_digest256(digest, start, end-start, alg) < 0) {
       log_warn(LD_BUG,"couldn't compute digest");
       return -1;
     }
