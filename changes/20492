@@ -1,0 +1,4 @@
+  o Minor bugfix (build):
+    - The current Git revision when building from a local repository is now
+      detected correctly when using git worktrees.  Fixes bug 20492; bugfix on
+      0.2.3.9-alpha.
