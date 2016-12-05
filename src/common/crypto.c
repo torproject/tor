@@ -1707,7 +1707,7 @@ crypto_digest(char *digest, const char *m, size_t len)
 {
   tor_assert(m);
   tor_assert(digest);
-  if(SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL)
+  if (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL)
     return -1;
   return 0;
 }
