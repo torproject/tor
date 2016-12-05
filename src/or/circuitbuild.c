@@ -1508,9 +1508,9 @@ circuit_get_unhandled_ports(time_t now)
  * If we're returning 0, set need_uptime and need_capacity to
  * indicate any requirements that the unhandled ports have.
  */
-int
-circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
-                                    int *need_capacity)
+MOCK_IMPL(int,
+circuit_all_predicted_ports_handled, (time_t now, int *need_uptime,
+                                      int *need_capacity))
 {
   int i, enough;
   uint16_t *port;

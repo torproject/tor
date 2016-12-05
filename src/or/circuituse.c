@@ -1022,8 +1022,117 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
 /** Don't keep more than this many unused open circuits around. */
 #define MAX_UNUSED_OPEN_CIRCUITS 14
 
-/** Figure out how many circuits we have open that are clean. Make
- * sure it's enough for all the upcoming behaviors we predict we'll have.
+/* Return true if a circuit is available for use, meaning that it is open,
+ * clean, usable for new multi-hop connections, and a general purpose origin
+ * circuit.
+ * Accept any kind of circuit, return false if the above conditions are not
+ * met. */
+STATIC int
+circuit_is_available_for_use(const circuit_t *circ)
+{
+  const origin_circuit_t *origin_circ;
+  cpath_build_state_t *build_state;
+
+  if (!CIRCUIT_IS_ORIGIN(circ))
+    return 0; /* We first filter out only origin circuits before doing the
+                 following checks. */
+  if (circ->marked_for_close)
+    return 0; /* Don't mess with marked circs */
+  if (circ->timestamp_dirty)
+    return 0; /* Only count clean circs */
+  if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
+    return 0; /* We only pay attention to general purpose circuits.
+                 General purpose circuits are always origin circuits. */
+
+  origin_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
+  if (origin_circ->unusable_for_new_conns)
+    return 0;
+
+  build_state = origin_circ->build_state;
+  if (build_state->onehop_tunnel)
+    return 0;
+
+  return 1;
+}
+
+/* Return true if we need any more exit circuits.
+ * needs_uptime and needs_capacity are set only if we need more exit circuits.
+ * Check if we know of a port that's been requested recently and no circuit
+ * is currently available that can handle it. */
+STATIC int
+needs_exit_circuits(time_t now, int *needs_uptime, int *needs_capacity)
+{
+  return (!circuit_all_predicted_ports_handled(now, needs_uptime,
+                                               needs_capacity) &&
+          router_have_consensus_path() == CONSENSUS_PATH_EXIT);
+}
+
+/* Hidden services need at least this many internal circuits */
+#define SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS 3
+
+/* Return true if we need any more hidden service server circuits.
+ * HS servers only need an internal circuit. */
+STATIC int
+needs_hs_server_circuits(int num_uptime_internal)
+{
+  return (num_rend_services() &&
+          num_uptime_internal < SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS &&
+          router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
+}
+
+/* We need at least this many internal circuits for hidden service clients */
+#define SUFFICIENT_INTERNAL_HS_CLIENTS 3
+
+/* We need at least this much uptime for internal circuits for hidden service
+ * clients */
+#define SUFFICIENT_UPTIME_INTERNAL_HS_CLIENTS 2
+
+/* Return true if we need any more hidden service client circuits.
+ * HS clients only need an internal circuit. */
+STATIC int
+needs_hs_client_circuits(time_t now, int *needs_uptime, int *needs_capacity,
+    int num_internal, int num_uptime_internal)
+{
+  int used_internal_recently = rep_hist_get_predicted_internal(now,
+                                                               needs_uptime,
+                                                               needs_capacity);
+  int requires_uptime = num_uptime_internal <
+                        SUFFICIENT_UPTIME_INTERNAL_HS_CLIENTS &&
+                        needs_uptime;
+
+  return (used_internal_recently &&
+         (requires_uptime || num_internal < SUFFICIENT_INTERNAL_HS_CLIENTS) &&
+          router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
+}
+
+/* The minimum number of open slots we should keep in order to preemptively
+ * build circuits. */
+#define CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS 2
+
+/* Check to see if we need more circuits to have a good build timeout. However,
+ * leave a couple slots open so that we can still build circuits preemptively
+ * as needed. */
+#define CBT_MAX_UNUSED_OPEN_CIRCUITS (MAX_UNUSED_OPEN_CIRCUITS - \
+                                      CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS)
+
+/* Return true if we need more circuits for a good build timeout.
+ * XXXX make the assumption that build timeout streams should be
+ * created whenever we can build internal circuits. */
+STATIC int
+needs_circuits_for_build(int num)
+{
+  if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
+    if (num < CBT_MAX_UNUSED_OPEN_CIRCUITS &&
+        !circuit_build_times_disabled() &&
+        circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/** Determine how many circuits we have open that are clean,
+ * Make sure it's enough for all the upcoming behaviors we predict we'll have.
  * But put an upper bound on the total number of circuits.
  */
 static void
@@ -1035,25 +1144,14 @@ circuit_predict_and_launch_new(void)
   time_t now = time(NULL);
   int flags = 0;
 
-  /* First, count how many of each type of circuit we have already. */
+  /* Count how many of each type of circuit we currently have. */
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
-    cpath_build_state_t *build_state;
-    origin_circuit_t *origin_circ;
-    if (!CIRCUIT_IS_ORIGIN(circ))
+    if (!circuit_is_available_for_use(circ))
       continue;
-    if (circ->marked_for_close)
-      continue; /* don't mess with marked circs */
-    if (circ->timestamp_dirty)
-      continue; /* only count clean circs */
-    if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
-      continue; /* only pay attention to general-purpose circs */
-    origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    if (origin_circ->unusable_for_new_conns)
-      continue;
-    build_state = origin_circ->build_state;
-    if (build_state->onehop_tunnel)
-      continue;
+
     num++;
+
+    cpath_build_state_t *build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
     if (build_state->is_internal)
       num_internal++;
     if (build_state->need_uptime && build_state->is_internal)
@@ -1063,19 +1161,14 @@ circuit_predict_and_launch_new(void)
 
   /* If that's enough, then stop now. */
   if (num >= MAX_UNUSED_OPEN_CIRCUITS)
-    return; /* we already have many, making more probably will hurt */
+    return;
 
-  /* Second, see if we need any more exit circuits. */
-  /* check if we know of a port that's been requested recently
-   * and no circuit is currently available that can handle it.
-   * Exits (obviously) require an exit circuit. */
-  if (!circuit_all_predicted_ports_handled(now, &port_needs_uptime,
-                                           &port_needs_capacity)
-      && router_have_consensus_path() == CONSENSUS_PATH_EXIT) {
+  if (needs_exit_circuits(now, &port_needs_uptime, &port_needs_capacity)) {
     if (port_needs_uptime)
       flags |= CIRCLAUNCH_NEED_UPTIME;
     if (port_needs_capacity)
       flags |= CIRCLAUNCH_NEED_CAPACITY;
+
     log_info(LD_CIRC,
              "Have %d clean circs (%d internal), need another exit circ.",
              num, num_internal);
@@ -1083,12 +1176,10 @@ circuit_predict_and_launch_new(void)
     return;
   }
 
-  /* Third, see if we need any more hidden service (server) circuits.
-   * HS servers only need an internal circuit. */
-  if (num_rend_services() && num_uptime_internal < 3
-      && router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
+  if (needs_hs_server_circuits(num_uptime_internal)) {
     flags = (CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_NEED_UPTIME |
              CIRCLAUNCH_IS_INTERNAL);
+
     log_info(LD_CIRC,
              "Have %d clean circs (%d internal), need another internal "
              "circ for my hidden service.",
@@ -1097,18 +1188,16 @@ circuit_predict_and_launch_new(void)
     return;
   }
 
-  /* Fourth, see if we need any more hidden service (client) circuits.
-   * HS clients only need an internal circuit. */
-  if (rep_hist_get_predicted_internal(now, &hidserv_needs_uptime,
-                                      &hidserv_needs_capacity) &&
-      ((num_uptime_internal<2 && hidserv_needs_uptime) ||
-        num_internal<3)
-        && router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
+  if (needs_hs_client_circuits(now, &hidserv_needs_uptime,
+                               &hidserv_needs_capacity,
+                               num_internal, num_uptime_internal))
+  {
     if (hidserv_needs_uptime)
       flags |= CIRCLAUNCH_NEED_UPTIME;
     if (hidserv_needs_capacity)
       flags |= CIRCLAUNCH_NEED_CAPACITY;
     flags |= CIRCLAUNCH_IS_INTERNAL;
+
     log_info(LD_CIRC,
              "Have %d clean circs (%d uptime-internal, %d internal), need"
              " another hidden service circ.",
@@ -1117,26 +1206,17 @@ circuit_predict_and_launch_new(void)
     return;
   }
 
-  /* Finally, check to see if we still need more circuits to learn
-   * a good build timeout. But if we're close to our max number we
-   * want, don't do another -- we want to leave a few slots open so
-   * we can still build circuits preemptively as needed.
-   * XXXX make the assumption that build timeout streams should be
-   * created whenever we can build internal circuits. */
-  if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
-    if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
-        ! circuit_build_times_disabled() &&
-        circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
-      flags = CIRCLAUNCH_NEED_CAPACITY;
-      /* if there are no exits in the consensus, make timeout
-       * circuits internal */
-      if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL)
-        flags |= CIRCLAUNCH_IS_INTERNAL;
+  if (needs_circuits_for_build(num)) {
+    flags = CIRCLAUNCH_NEED_CAPACITY;
+    /* if there are no exits in the consensus, make timeout
+     * circuits internal */
+    if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL)
+      flags |= CIRCLAUNCH_IS_INTERNAL;
+
       log_info(LD_CIRC,
                "Have %d clean circs need another buildtime test circ.", num);
       circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
       return;
-    }
   }
 }
 

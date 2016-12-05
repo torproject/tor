@@ -59,5 +59,25 @@ int hostname_in_track_host_exits(const or_options_t *options,
                                  const char *address);
 void mark_circuit_unusable_for_new_conns(origin_circuit_t *circ);
 
+#ifdef TOR_UNIT_TESTS
+/* Used only by circuituse.c and test_circuituse.c */
+
+STATIC int circuit_is_available_for_use(const circuit_t *circ);
+
+STATIC int needs_exit_circuits(time_t now,
+                               int *port_needs_uptime,
+                               int *port_needs_capacity);
+STATIC int needs_hs_server_circuits(int num_uptime_internal);
+
+STATIC int needs_hs_client_circuits(time_t now,
+                                    int *needs_uptime,
+                                    int *needs_capacity,
+                                    int num_internal,
+                                    int num_uptime_internal);
+
+STATIC int needs_circuits_for_build(int num);
+
+#endif
+
 #endif
 
