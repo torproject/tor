@@ -1319,10 +1319,8 @@ parse_log_severity_config(const char **cfg_ptr,
     if (got_an_unqualified_range > 1)
       return -1;
 
-    space = strchr(cfg, ' ');
+    space = find_whitespace(cfg);
     dash = strchr(cfg, '-');
-    if (!space)
-      space = strchr(cfg, '\0');
     if (dash && dash < space) {
       sev_lo = tor_strndup(cfg, dash-cfg);
       sev_hi = tor_strndup(dash+1, space-(dash+1));
