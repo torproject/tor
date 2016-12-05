@@ -88,6 +88,15 @@
 
 #include "keccak-tiny/keccak-tiny.h"
 
+#ifdef __APPLE__
+/* Apple messed up their getentropy definitions in Sierra.  It's not insecure
+ * or anything (as far as I know) but it makes compatible builds hard.  0.2.9
+ * contains the necessary tricks to do it right: in 0.2.8, we're just using
+ * this blunt instrument.
+ */
+#undef HAVE_GETENTROPY
+#endif
+
 #ifdef ANDROID
 /* Android's OpenSSL seems to have removed all of its Engine support. */
 #define DISABLE_ENGINES

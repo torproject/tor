@@ -1,0 +1,7 @@
+  o Minor bugfixes (portability):
+    - Avoid compilation errors when building on OSX Sierra. Sierra began
+      to support the getentropy() API, but created a few problems in
+      doing so. Tor 0.2.9 has a more thorough set of workarounds; in
+      0.2.8, we are just using the /dev/urandom interface. Fixes
+      bug 20865. Bugfix on 0.2.8.1-alpha.
+
