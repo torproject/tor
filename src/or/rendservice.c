@@ -824,7 +824,7 @@ rend_config_services(const or_options_t *options, int validate_only)
      *    will NOT have their intro point closed.
      */
     SMARTLIST_FOREACH(old_service_list, rend_service_t *, old, {
-      if (!old->directory) {
+      if (rend_service_is_ephemeral(old)) {
         SMARTLIST_DEL_CURRENT(old_service_list, old);
         smartlist_add(surviving_services, old);
         smartlist_add(rend_service_list, old);
@@ -836,15 +836,20 @@ rend_config_services(const or_options_t *options, int validate_only)
      * probably ok? */
     SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, new) {
       SMARTLIST_FOREACH_BEGIN(old_service_list, rend_service_t *, old) {
-        if (new->directory && old->directory &&
-            !strcmp(old->directory, new->directory)) {
-          smartlist_add_all(new->intro_nodes, old->intro_nodes);
-          smartlist_clear(old->intro_nodes);
-          smartlist_add_all(new->expiring_nodes, old->expiring_nodes);
-          smartlist_clear(old->expiring_nodes);
-          smartlist_add(surviving_services, old);
-          break;
+        if (BUG(rend_service_is_ephemeral(new)) ||
+            BUG(rend_service_is_ephemeral(old))) {
+          continue;
         }
+        if (BUG(!new->directory) || BUG(!old->directory) ||
+            strcmp(old->directory, new->directory)) {
+          continue;
+        }
+        smartlist_add_all(new->intro_nodes, old->intro_nodes);
+        smartlist_clear(old->intro_nodes);
+        smartlist_add_all(new->expiring_nodes, old->expiring_nodes);
+        smartlist_clear(old->expiring_nodes);
+        smartlist_add(surviving_services, old);
+        break;
       } SMARTLIST_FOREACH_END(old);
     } SMARTLIST_FOREACH_END(new);
 
@@ -1163,8 +1168,13 @@ rend_service_verify_single_onion_poison(const rend_service_t* s,
   }
 
   /* Ephemeral services are checked at ADD_ONION time */
-  if (!s->directory) {
-    return 0;
+  if (BUG(rend_service_is_ephemeral(s))) {
+    return -1;
+  }
+
+  /* Service is expected to have a directory */
+  if (BUG(!s->directory)) {
+    return -1;
   }
 
   /* Services without keys are always ok - their keys will only ever be used
@@ -1257,7 +1267,7 @@ poison_new_single_onion_hidden_service_dir_impl(const rend_service_t *service,
   return retval;
 }
 
-/** We just got launched in Single Onion Mode. That's a non-anoymous mode for
+/** We just got launched in Single Onion Mode. That's a non-anonymous mode for
  * hidden services. If s is new, we should mark its hidden service
  * directory appropriately so that it is never launched as a location-private
  * hidden service. (New directories don't have private key files.)
@@ -1273,6 +1283,16 @@ rend_service_poison_new_single_onion_dir(const rend_service_t *s,
 
   /* We must only poison directories if we're in Single Onion mode */
   tor_assert(rend_service_non_anonymous_mode_enabled(options));
+
+  /* Ephemeral services aren't allowed in non-anonymous mode */
+  if (BUG(rend_service_is_ephemeral(s))) {
+    return -1;
+  }
+
+  /* Service is expected to have a directory */
+  if (BUG(!s->directory)) {
+    return -1;
+  }
 
   if (!rend_service_private_key_exists(s)) {
     if (poison_new_single_onion_hidden_service_dir_impl(s, options)
