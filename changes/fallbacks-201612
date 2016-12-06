@@ -13,6 +13,9 @@
       tor-0.2.8.2-alpha.
     - Make it easier to change the output sort order of fallbacks.
       Closes ticket 20822.
+    - Exclude relays affected by 20499 from the fallback list. Exclude known
+      affected versions, and any relay that delivers a stale consensus.
+      Closes ticket 20539.
   o Minor bugfix (fallback directories):
     - Stop failing when OUTPUT_COMMENTS is True in updateFallbackDirs.py.
       Closes ticket 20877; bugfix on commit 9998343 in tor-0.2.8.3-alpha.
