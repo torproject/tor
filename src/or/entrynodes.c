@@ -341,7 +341,8 @@ entry_guard_describe(const entry_guard_t *guard)
   static char buf[256];
   tor_snprintf(buf, sizeof(buf),
                "%s ($%s)",
-               guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+               guard->nickname ? guard->nickname : "[bridge]",
+               hex_str(guard->identity, DIGEST_LEN));
   return buf;
 }
 
@@ -527,7 +528,7 @@ get_extreme_restriction_threshold(void)
 STATIC const char *
 choose_guard_selection(const or_options_t *options,
                        const networkstatus_t *live_ns,
-                       const char *old_selection,
+                       const guard_selection_t *old_selection,
                        guard_selection_type_t *type_out)
 {
   tor_assert(options);
@@ -607,7 +608,11 @@ choose_guard_selection(const or_options_t *options,
     }
   }
 
-  /* Trickier case: we do have a previous selection */
+  /* Trickier case: we do have a previous guard selection context. */
+  tor_assert(old_selection);
+
+  /* Use high and low thresholds to decide guard selection, and if we fall in
+     the middle then keep the current guard selection context. */
   if (n_passing_filter >= meaningful_threshold_high) {
     *type_out = GS_TYPE_NORMAL;
     return "default";
@@ -615,7 +620,9 @@ choose_guard_selection(const or_options_t *options,
     *type_out = GS_TYPE_RESTRICTED;
     return "restricted";
   } else {
-    return NULL;
+    /* we are in the middle: maintain previous guard selection */
+    *type_out = old_selection->type;
+    return old_selection->name;
   }
 }
 
@@ -634,16 +641,16 @@ update_guard_selection_choice(const or_options_t *options)
     return 1;
   }
 
-  const char *cur_name = curr_guard_context->name;
   guard_selection_type_t type = GS_TYPE_INFER;
   const char *new_name = choose_guard_selection(
                              options,
                              networkstatus_get_live_consensus(approx_time()),
-                             cur_name,
+                             curr_guard_context,
                              &type);
   tor_assert(new_name);
   tor_assert(type != GS_TYPE_INFER);
 
+  const char *cur_name = curr_guard_context->name;
   if (! strcmp(cur_name, new_name)) {
     log_debug(LD_GUARD,
               "Staying with guard context \"%s\" (no change)", new_name);

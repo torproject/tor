@@ -519,9 +519,9 @@ STATIC void guard_selection_free(guard_selection_t *gs);
 MOCK_DECL(STATIC int, entry_guard_is_listed,
           (guard_selection_t *gs, const entry_guard_t *guard));
 STATIC const char *choose_guard_selection(const or_options_t *options,
-                                          const networkstatus_t *ns,
-                                          const char *old_selection,
-                                          guard_selection_type_t *type_out);
+                                        const networkstatus_t *ns,
+                                        const guard_selection_t *old_selection,
+                                        guard_selection_type_t *type_out);
 STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
                                                 const uint8_t *rsa_id);
 
