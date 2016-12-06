@@ -402,11 +402,14 @@ int entry_guard_pick_for_circuit(guard_selection_t *gs,
                                  entry_guard_restriction_t *rst,
                                  const node_t **chosen_node_out,
                                  circuit_guard_state_t **guard_state_out);
+
+/* We just connected to an entry guard. What should we do with the circuit? */
 typedef enum {
-  GUARD_USABLE_NEVER = -1,
-  GUARD_MAYBE_USABLE_LATER = 0,
-  GUARD_USABLE_NOW = 1,
+  GUARD_USABLE_NEVER = -1, /* Never use the circuit */
+  GUARD_MAYBE_USABLE_LATER = 0, /* Keep it. We might use it in the future */
+  GUARD_USABLE_NOW = 1, /* Use it right now */
 } guard_usable_t;
+
 guard_usable_t entry_guard_succeeded(circuit_guard_state_t **guard_state_p);
 void entry_guard_failed(circuit_guard_state_t **guard_state_p);
 void entry_guard_cancel(circuit_guard_state_t **guard_state_p);

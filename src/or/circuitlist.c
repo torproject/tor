@@ -562,7 +562,6 @@ circuit_get_global_list,(void))
   return global_circuitlist;
 }
 
-/** */
 /** Return a pointer to the global list of origin circuits. */
 smartlist_t *
 circuit_get_global_origin_circuit_list(void)
@@ -1758,17 +1757,17 @@ circuit_find_circuits_to_upgrade_from_guard_wait(void)
   if (! circuits_pending_other_guards ||
       smartlist_len(circuits_pending_other_guards)==0)
     return NULL;
-  /* Only if we have some origin circuiuts should we run the algorithm.
-   */
+  /* Only if we have some origin circuits should we run the algorithm. */
   if (!global_origin_circuit_list)
     return NULL;
 
   /* Okay; we can pass our circuit list to entrynodes.c.*/
   smartlist_t *result = smartlist_new();
-  int r = entry_guards_upgrade_waiting_circuits(get_guard_selection_info(),
-                                                global_origin_circuit_list,
-                                                result);
-  if (r && smartlist_len(result)) {
+  int circuits_upgraded  = entry_guards_upgrade_waiting_circuits(
+                                                 get_guard_selection_info(),
+                                                 global_origin_circuit_list,
+                                                 result);
+  if (circuits_upgraded && smartlist_len(result)) {
     return result;
   } else {
     smartlist_free(result);

@@ -142,7 +142,9 @@
 #include "transports.h"
 #include "statefile.h"
 
+/** A list of existing guard selection contexts. */
 static smartlist_t *guard_contexts = NULL;
+/** The currently enabled guard selection context. */
 static guard_selection_t *curr_guard_context = NULL;
 
 /** A value of 1 means that at least one context has changed,
@@ -593,7 +595,8 @@ choose_guard_selection(const or_options_t *options,
              "rest of the world.", (int)(exclude_frac * 100));
   }
 
-  /* Easy case: no previous selection */
+  /* Easy case: no previous selection. Just check if we are in restricted or
+     normal guard selection. */
   if (old_selection == NULL) {
     if (n_passing_filter >= meaningful_threshold_mid) {
       *type_out = GS_TYPE_NORMAL;
@@ -768,8 +771,9 @@ entry_guard_add_to_sample(guard_selection_t *gs,
 
 /**
  * Backend: adds a new sampled guard to <b>gs</b>, with given identity,
- * nickname, and ORPort.  rsa_id_digest and bridge_addrport are
- * optional, but we need one of them. nickname is optional.
+ * nickname, and ORPort.  rsa_id_digest and bridge_addrport are optional, but
+ * we need one of them. nickname is optional. The caller is responsible for
+ * maintaining the size limit of the SAMPLED_GUARDS set.
  */
 static entry_guard_t *
 entry_guard_add_to_sample_impl(guard_selection_t *gs,
@@ -2171,7 +2175,8 @@ entry_guards_all_primary_guards_are_down(guard_selection_t *gs)
 }
 
 /** Wrapper for entry_guard_has_higher_priority that compares the
- * guard-priorities of a pair of circuits.
+ * guard-priorities of a pair of circuits. Return 1 if <b>a</b> has higher
+ * priority than <b>b</b>.
  *
  * If a restriction is provided in <b>rst</b>, then do not consider
  * <b>a</b> to have higher priority if it violates the restriction.
@@ -4180,6 +4185,8 @@ choose_random_entry_impl(guard_selection_t *gs,
 }
 #endif
 
+/** Check the pathbias use success count of <b>node</b> and disable it if it
+ *  goes over our thresholds. */
 static void
 pathbias_check_use_success_count(entry_guard_t *node)
 {
@@ -4201,6 +4208,8 @@ pathbias_check_use_success_count(entry_guard_t *node)
   }
 }
 
+/** Check the pathbias close count of <b>node</b> and disable it if it goes
+ *  over our thresholds. */
 static void
 pathbias_check_close_success_count(entry_guard_t *node)
 {
