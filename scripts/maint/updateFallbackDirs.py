@@ -501,6 +501,8 @@ class Candidate(object):
     if (not 'effective_family' in details
         or details['effective_family'] is None):
       details['effective_family'] = []
+    if not 'platform' in details:
+      details['platform'] = None
     details['last_changed_address_or_port'] = parse_ts(
                                       details['last_changed_address_or_port'])
     self._data = details
@@ -515,6 +517,7 @@ class Candidate(object):
     self._compute_ipv6addr()
     if not self.has_ipv6():
       logging.debug("Failed to get an ipv6 address for %s."%(self._fpr,))
+    self._compute_version()
 
   def _stable_sort_or_addresses(self):
     # replace self._data['or_addresses'] with a stable ordering,
@@ -626,6 +629,59 @@ class Candidate(object):
         self.ipv6addr = ipaddr
         self.ipv6orport = int(port)
         return
+
+  def _compute_version(self):
+    # parse the version out of the platform string
+    # The platform looks like: "Tor 0.2.7.6 on Linux"
+    self._data['version'] = None
+    if self._data['platform'] is None:
+      return
+    # be tolerant of weird whitespacing, use a whitespace split
+    tokens = self._data['platform'].split()
+    for token in tokens:
+      vnums = token.split('.')
+      # if it's at least a.b.c.d, with potentially an -alpha-dev, -alpha, -rc
+      if (len(vnums) >= 4 and vnums[0].isdigit() and vnums[1].isdigit() and
+          vnums[2].isdigit()):
+        self._data['version'] = token
+        return
+
+  # From #20509
+  # bug #20499 affects versions from 0.2.9.1-alpha-dev to 0.2.9.4-alpha-dev
+  # and version 0.3.0.0-alpha-dev
+  # Exhaustive lists are hard to get wrong
+  STALE_CONSENSUS_VERSIONS = ['0.2.9.1-alpha-dev',
+                              '0.2.9.2-alpha',
+                              '0.2.9.2-alpha-dev',
+                              '0.2.9.3-alpha',
+                              '0.2.9.3-alpha-dev',
+                              '0.2.9.4-alpha',
+                              '0.2.9.4-alpha-dev',
+                              '0.3.0.0-alpha-dev'
+                              ]
+
+  def is_valid_version(self):
+    # call _compute_version before calling this
+    # is the version of the relay a version we want as a fallback?
+    # checks both recommended versions and bug #20499 / #20509
+    #
+    # if the relay doesn't have a recommended version field, exclude the relay
+    if not self._data.has_key('recommended_version'):
+      logging.info('%s not a candidate: no recommended_version field',
+                   self._fpr)
+      return False
+    if not self._data['recommended_version']:
+      logging.info('%s not a candidate: version not recommended', self._fpr)
+      return False
+    # if the relay doesn't have version field, exclude the relay
+    if not self._data.has_key('version'):
+      logging.info('%s not a candidate: no version field', self._fpr)
+      return False
+    if self._data['version'] in Candidate.STALE_CONSENSUS_VERSIONS:
+      logging.warning('%s not a candidate: version delivers stale consensuses',
+                      self._fpr)
+      return False
+    return True
 
   @staticmethod
   def _extract_generic_history(history, which='unknown'):
@@ -794,10 +850,8 @@ class Candidate(object):
       logging.info('%s not a candidate: badexit avg too high (%lf)',
                    self._fpr, self._badexit)
       return False
-    # if the relay doesn't report a version, also exclude the relay
-    if (not self._data.has_key('recommended_version')
-        or not self._data['recommended_version']):
-      logging.info('%s not a candidate: version not recommended', self._fpr)
+    # this function logs a message depending on which check fails
+    if not self.is_valid_version():
       return False
     if self._guard < CUTOFF_GUARD:
       logging.info('%s not a candidate: guard avg too low (%lf)',
@@ -1264,7 +1318,8 @@ class CandidateList(dict):
     d = fetch('details',
         fields=('fingerprint,nickname,contact,last_changed_address_or_port,' +
                 'consensus_weight,advertised_bandwidth,or_addresses,' +
-                'dir_address,recommended_version,flags,effective_family'))
+                'dir_address,recommended_version,flags,effective_family,' +
+                'platform'))
     logging.debug('Loading details document done.')
 
     if not 'relays' in d: raise Exception("No relays found in document.")
