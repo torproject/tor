@@ -38,7 +38,8 @@ import dateutil.parser
 #from bson import json_util
 import copy
 
-from stem.descriptor.remote import DescriptorDownloader
+from stem.descriptor import DocumentHandler
+from stem.descriptor.remote import get_consensus
 
 import logging
 # INFO tells you why each relay was included or excluded
@@ -79,6 +80,9 @@ PERFORM_IPV4_DIRPORT_CHECKS = False if OUTPUT_CANDIDATES else True
 # So it's best left at False until #18394 is implemented
 # Don't check ~1000 candidates when OUTPUT_CANDIDATES is True
 PERFORM_IPV6_DIRPORT_CHECKS = False if OUTPUT_CANDIDATES else False
+
+# Clients have been using microdesc consensuses by default for a while now
+DOWNLOAD_MICRODESC_CONSENSUS = True
 
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
@@ -1120,25 +1124,30 @@ class Candidate(object):
         return True
     return False
 
-  # report how long it takes to download a consensus from dirip:dirport
+  # log how long it takes to download a consensus from dirip:dirport
+  # returns True if the download failed, False if it succeeded within max_time
   @staticmethod
   def fallback_consensus_download_speed(dirip, dirport, nickname, max_time):
     download_failed = False
-    downloader = DescriptorDownloader()
     start = datetime.datetime.utcnow()
     # some directory mirrors respond to requests in ways that hang python
     # sockets, which is why we log this line here
-    logging.info('Initiating consensus download from %s (%s:%d).', nickname,
-                 dirip, dirport)
+    logging.info('Initiating %sconsensus download from %s (%s:%d).',
+                 'microdesc ' if DOWNLOAD_MICRODESC_CONSENSUS else '',
+                 nickname, dirip, dirport)
     # there appears to be about 1 second of overhead when comparing stem's
     # internal trace time and the elapsed time calculated here
     TIMEOUT_SLOP = 1.0
     try:
-      downloader.get_consensus(endpoints = [(dirip, dirport)],
-                               timeout = (max_time + TIMEOUT_SLOP),
-                               validate = True,
-                               retries = 0,
-                               fall_back_to_authority = False).run()
+      consensus = get_consensus(
+                              endpoints = [(dirip, dirport)],
+                              timeout = (max_time + TIMEOUT_SLOP),
+                              validate = True,
+                              retries = 0,
+                              fall_back_to_authority = False,
+                              document_handler = DocumentHandler.BARE_DOCUMENT,
+                              microdescriptor = DOWNLOAD_MICRODESC_CONSENSUS
+                                ).run()[0]
     except Exception, stem_error:
       logging.info('Unable to retrieve a consensus from %s: %s', nickname,
                     stem_error)
@@ -1146,8 +1155,17 @@ class Candidate(object):
       level = logging.WARNING
       download_failed = True
     elapsed = (datetime.datetime.utcnow() - start).total_seconds()
-    if elapsed > max_time:
+    if download_failed:
+      # keep the error failure status
+      pass
+    elif elapsed > max_time:
       status = 'too slow'
+      level = logging.WARNING
+      download_failed = True
+    elif datetime.datetime.utcnow() > consensus.valid_until:
+      time_since_expiry = (datetime.datetime.utcnow() -
+                           consensus.valid_until).total_seconds()
+      status = 'outdated consensus, expired %ds ago'%(int(time_since_expiry))
       level = logging.WARNING
       download_failed = True
     else:
