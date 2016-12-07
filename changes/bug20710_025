@@ -1,0 +1,4 @@
+  o Minor bugfixes (memory leak, use-after-free, linux seccomp2 sandbox):
+    - Fix a memory leak and use-after-free error when removing entries
+      from the sandbox's getaddrinfo() cache. Fixes bug 20710; bugfix on
+      0.2.5.5-alpha. Patch from "cypherpunks".
