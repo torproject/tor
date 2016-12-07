@@ -1,0 +1,4 @@
+  o Minor bugfixes (download scheduling)
+    - Resolve a "bug" warning when considering a download schedule whose
+      delay had approached INT_MAX. Fixes 20875; bugfix on 0.2.9.5-alpha.
+

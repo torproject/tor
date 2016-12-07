@@ -3988,10 +3988,12 @@ STATIC int
 next_random_exponential_delay(int delay, int max_delay)
 {
   /* Check preconditions */
+  if (BUG(max_delay < 0))
+    max_delay = 0;
   if (BUG(delay > max_delay))
     delay = max_delay;
-  if (BUG(delay == INT_MAX))
-    delay -= 1; /* prevent overflow */
+  if (delay == INT_MAX)
+    return INT_MAX; /* prevent overflow */
   if (BUG(delay < 0))
     delay = 0;
 
