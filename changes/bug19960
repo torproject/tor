@@ -1,0 +1,4 @@
+  o Minor bugfixes (netbsd, unit tests):
+    - Stop expecting NetBSD unit tests to report success for ipfw;
+      on NetBSD, it's only pf that's supported.
+      Part of a fix for bug 19960; bugfix on 0.2.9.5-alpha.

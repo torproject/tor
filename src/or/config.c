@@ -3004,7 +3004,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     } else if (!strcasecmp(options->TransProxyType, "ipfw")) {
 #ifndef KERNEL_MAY_SUPPORT_IPFW
       /* Earlier versions of OS X have ipfw */
-      REJECT("ipfw is a FreeBSD-specific"
+      REJECT("ipfw is a FreeBSD-specific "
              "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_IPFW;
