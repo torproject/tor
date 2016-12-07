@@ -16,6 +16,12 @@
     - Exclude relays affected by 20499 from the fallback list. Exclude known
       affected versions, and any relay that delivers a stale consensus.
       Closes ticket 20539.
+    - Require fallbacks to have flags for 90% of the time (weighted decaying
+      average), rather than 95%. This allows at least 73% of clients to
+      bootstrap in the first 5 seconds without contacting an authority.
+      Part of ticket 18828.
+    - Display the fingerprint when downloading consensuses from fallbacks.
+      Closes ticket 20908.
   o Minor bugfix (fallback directories):
     - Stop failing when OUTPUT_COMMENTS is True in updateFallbackDirs.py.
       Closes ticket 20877; bugfix on commit 9998343 in tor-0.2.8.3-alpha.

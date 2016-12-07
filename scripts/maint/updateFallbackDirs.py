@@ -1127,14 +1127,15 @@ class Candidate(object):
   # log how long it takes to download a consensus from dirip:dirport
   # returns True if the download failed, False if it succeeded within max_time
   @staticmethod
-  def fallback_consensus_download_speed(dirip, dirport, nickname, max_time):
+  def fallback_consensus_download_speed(dirip, dirport, nickname, fingerprint,
+                                        max_time):
     download_failed = False
     start = datetime.datetime.utcnow()
     # some directory mirrors respond to requests in ways that hang python
     # sockets, which is why we log this line here
-    logging.info('Initiating %sconsensus download from %s (%s:%d).',
+    logging.info('Initiating %sconsensus download from %s (%s:%d) %s.',
                  'microdesc ' if DOWNLOAD_MICRODESC_CONSENSUS else '',
-                 nickname, dirip, dirport)
+                 nickname, dirip, dirport, fingerprint)
     # there appears to be about 1 second of overhead when comparing stem's
     # internal trace time and the elapsed time calculated here
     TIMEOUT_SLOP = 1.0
@@ -1171,9 +1172,9 @@ class Candidate(object):
     else:
       status = 'ok'
       level = logging.DEBUG
-    logging.log(level, 'Consensus download: %0.1fs %s from %s (%s:%d), ' +
+    logging.log(level, 'Consensus download: %0.1fs %s from %s (%s:%d) %s, ' +
                  'max download time %0.1fs.', elapsed, status, nickname,
-                 dirip, dirport, max_time)
+                 dirip, dirport, fingerprint, max_time)
     return download_failed
 
   # does this fallback download the consensus fast enough?
@@ -1185,12 +1186,14 @@ class Candidate(object):
       ipv4_failed = Candidate.fallback_consensus_download_speed(self.dirip,
                                                 self.dirport,
                                                 self._data['nickname'],
+                                                self._fpr,
                                                 CONSENSUS_DOWNLOAD_SPEED_MAX)
     if self.has_ipv6() and PERFORM_IPV6_DIRPORT_CHECKS:
       # Clients assume the IPv6 DirPort is the same as the IPv4 DirPort
       ipv6_failed = Candidate.fallback_consensus_download_speed(self.ipv6addr,
                                                 self.dirport,
                                                 self._data['nickname'],
+                                                self._fpr,
                                                 CONSENSUS_DOWNLOAD_SPEED_MAX)
     return ((not ipv4_failed) and (not ipv6_failed))
 
