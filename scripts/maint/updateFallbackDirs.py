@@ -170,8 +170,8 @@ FALLBACK_PROPORTION_OF_GUARDS = None if OUTPUT_CANDIDATES else _FB_POG
 
 # Limit the number of fallbacks (eliminating lowest by advertised bandwidth)
 MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 200
-# Emit a C #error if the number of fallbacks is more than 10% below MAX
-MIN_FALLBACK_COUNT = 0 if OUTPUT_CANDIDATES else MAX_FALLBACK_COUNT*0.9
+# Emit a C #error if the number of fallbacks is less than expected
+MIN_FALLBACK_COUNT = 0 if OUTPUT_CANDIDATES else MAX_FALLBACK_COUNT*0.75
 
 # The maximum number of fallbacks on the same address, contact, or family
 # With 200 fallbacks, this means each operator can see 1% of client bootstraps
