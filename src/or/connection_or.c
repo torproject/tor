@@ -1588,9 +1588,10 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
 
 /** Called when we (as a connection initiator) have definitively,
  * authenticatedly, learned that ID of the Tor instance on the other
- * side of <b>conn</b> is <b>peer_id</b>.  For v1 and v2 handshakes,
+ * side of <b>conn</b> is <b>rsa_peer_id</b> and optionally <b>ed_peer_id</b>.
+ * For v1 and v2 handshakes,
  * this is right after we get a certificate chain in a TLS handshake
- * or renegotiation.  For v3 handshakes, this is right after we get a
+ * or renegotiation.  For v3+ handshakes, this is right after we get a
  * certificate chain in a CERTS cell.
  *
  * If we did not know the ID before, record the one we got.
