@@ -1,0 +1,5 @@
+  o Minor bugfixes (unit tests):
+    - Fix tolerances in unit tests for monotonic time comparisons between
+      nanoseconds and microseconds. Previously, we accepted a 10 us
+      difference only, which is not realistic on every platform's
+      clock_gettime(). Fixes bug 19974; bugfix on 0.2.9.1-alpha.
