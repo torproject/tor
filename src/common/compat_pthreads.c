@@ -21,6 +21,11 @@
 #include "torlog.h"
 #include "util.h"
 
+#ifdef __APPLE__
+#undef CLOCK_MONOTONIC
+#undef HAVE_CLOCK_GETTIME
+#endif
+
 /** Wraps a void (*)(void*) function and its argument so we can
  * invoke them in a way pthreads would expect.
  */
