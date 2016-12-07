@@ -3501,10 +3501,15 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
   (void)arg;
 
   tor_capture_bugs_(1);
+  setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(1, ==, purpose_needs_anonymity(0, 0, NULL));
   tt_int_op(1, ==, smartlist_len(tor_get_captured_bug_log_()));
+  expect_single_log_msg_containing("Called with dir_purpose=0");
+
   tor_end_capture_bugs_();
- done: ;
+ done:
+  tor_end_capture_bugs_();
+  teardown_capture_of_logs();
 }
 
 static void
