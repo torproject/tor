@@ -2277,6 +2277,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
      * family. */
     nodelist_add_node_and_family(excluded, node);
   }
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   /* and exclude current entry guards and their families,
    * unless we're in a test network, and excluding guards
    * would exclude all nodes (i.e. we're in an incredibly small tor network,
@@ -2295,6 +2296,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
         }
       });
   }
+#endif
 
   if (state) {
     if (state->need_uptime)

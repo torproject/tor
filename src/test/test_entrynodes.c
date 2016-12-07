@@ -45,6 +45,7 @@ get_or_state_replacement(void)
   return dummy_state;
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /* Unittest cleanup function: Cleanup the fake network. */
 static int
 fake_network_cleanup(const struct testcase_t *testcase, void *ptr)
@@ -77,6 +78,7 @@ fake_network_setup(const struct testcase_t *testcase)
   /* Return anything but NULL (it's interpreted as test fail) */
   return dummy_state;
 }
+#endif
 
 static networkstatus_t *dummy_consensus = NULL;
 
@@ -200,6 +202,7 @@ mock_get_options(void)
   return &mocked_options;
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Test choose_random_entry() with none of our routers being guard nodes. */
 static void
 test_choose_random_entry_no_guards(void *arg)
@@ -888,6 +891,7 @@ test_entry_is_live(void *arg)
  done:
   ; /* XXX */
 }
+#endif
 
 #define TEST_IPV4_ADDR "123.45.67.89"
 #define TEST_IPV6_ADDR "[1234:5678:90ab:cdef::]"
@@ -1471,8 +1475,12 @@ test_entry_guard_parse_from_state_broken(void *arg)
   tt_int_op(smartlist_len(gs_df->sampled_entry_guards), OP_EQ, 1);
   guard_selection_t *gs_legacy =
     get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 0);
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   tt_assert(gs_legacy != NULL);
   tt_int_op(smartlist_len(gs_legacy->chosen_entry_guards), OP_EQ, 0);
+#else
+  tt_assert(gs_legacy == NULL);
+#endif
 
  done:
   config_free_lines(lines);
@@ -2455,7 +2463,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   // if we mark that guard down, we should get a different primary guard.
   // auto-retry it.
   g->is_reachable = GUARD_REACHABLE_NO;
-  g->unreachable_since = approx_time() - 10;
+  g->failing_since = approx_time() - 10;
   g->last_tried_to_connect = approx_time() - 10;
   state = 9999;
   g2 = select_entry_guard_for_circuit(gs, NULL, &state);
@@ -2469,7 +2477,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
 
   // If we say that the first primary guard was last tried a long time ago, we
   // should get an automatic retry on it.
-  g->unreachable_since = approx_time() - 72*60*60;
+  g->failing_since = approx_time() - 72*60*60;
   g->last_tried_to_connect = approx_time() - 72*60*60;
   state = 9999;
   g2 = select_entry_guard_for_circuit(gs, NULL, &state);
@@ -2484,7 +2492,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, guard, {
     guard->is_reachable = GUARD_REACHABLE_NO;
     guard->last_tried_to_connect = approx_time() - 5;
-    guard->unreachable_since = approx_time() - 30;
+    guard->failing_since = approx_time() - 30;
   });
   state = 9999;
   g2 = select_entry_guard_for_circuit(gs, NULL, &state);
@@ -2503,7 +2511,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
     tt_assert(guard->is_usable_filtered_guard == 1);
     // no change to these fields.
     tt_i64_op(guard->last_tried_to_connect, OP_EQ, approx_time() - 5);
-    tt_i64_op(guard->unreachable_since, OP_EQ, approx_time() - 30);
+    tt_i64_op(guard->failing_since, OP_EQ, approx_time() - 30);
   });
 
   /* Let's try again and we should get the first primary guard again */
@@ -3334,9 +3342,11 @@ test_enty_guard_should_expire_waiting(void *arg)
   tor_free(fake_state);
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
+#endif
 
 static const struct testcase_setup_t big_fake_network = {
   big_fake_network_setup, big_fake_network_cleanup
@@ -3354,6 +3364,7 @@ static const struct testcase_setup_t upgrade_circuits = {
       (void*)(arg) }
 
 struct testcase_t entrynodes_tests[] = {
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   { "entry_is_time_to_retry", test_entry_is_time_to_retry,
     TT_FORK, NULL, NULL },
   { "choose_random_entry_no_guards", test_choose_random_entry_no_guards,
@@ -3379,6 +3390,7 @@ struct testcase_t entrynodes_tests[] = {
   { "entry_is_live",
     test_entry_is_live,
     TT_FORK, &fake_network, NULL },
+#endif
   { "node_preferred_orport",
     test_node_preferred_orport,
     0, NULL, NULL },

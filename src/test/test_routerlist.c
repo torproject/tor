@@ -204,6 +204,7 @@ mock_usable_consensus_flavor(void)
   return mock_usable_consensus_flavor_value;
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 static smartlist_t *mock_is_guard_list = NULL;
 
 static int
@@ -250,6 +251,7 @@ clear_mock_guard_list(void)
     mock_is_guard_list = NULL;
   }
 }
+#endif
 
 static void
 test_router_pick_directory_server_impl(void *arg)
@@ -271,7 +273,9 @@ test_router_pick_directory_server_impl(void *arg)
   (void)arg;
 
   MOCK(usable_consensus_flavor, mock_usable_consensus_flavor);
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   MOCK(is_node_used_as_guard, mock_is_node_used_as_guard);
+#endif
 
   /* With no consensus, we must be bootstrapping, regardless of time or flavor
    */
@@ -384,6 +388,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->is_valid = 1;
   node_router3->is_valid = 1;
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   flags |= PDS_FOR_GUARD;
   mark_node_used_as_guard(node_router1);
   mark_node_used_as_guard(node_router2);
@@ -397,8 +402,10 @@ test_router_pick_directory_server_impl(void *arg)
   rs = NULL;
   mark_node_unused_as_guard(node_router2);
   mark_node_unused_as_guard(node_router3);
+#endif
 
   /* One not valid, one guard. This should leave one remaining */
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   node_router1->is_valid = 0;
   mark_node_used_as_guard(node_router2);
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
@@ -407,6 +414,7 @@ test_router_pick_directory_server_impl(void *arg)
   rs = NULL;
   node_router1->is_valid = 1;
   mark_node_unused_as_guard(node_router2);
+#endif
 
   /* Manipulate overloaded */
 
@@ -469,8 +477,10 @@ test_router_pick_directory_server_impl(void *arg)
 
  done:
   UNMOCK(usable_consensus_flavor);
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   UNMOCK(is_node_used_as_guard);
   clear_mock_guard_list();
+#endif
 
   if (router1_id)
     tor_free(router1_id);

@@ -149,11 +149,13 @@ static guard_selection_t *curr_guard_context = NULL;
  * and those changes need to be flushed to disk. */
 static int entry_guards_dirty = 0;
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 static const node_t *choose_random_entry_impl(guard_selection_t *gs,
                                               cpath_build_state_t *state,
                                               int for_directory,
                                               dirinfo_type_t dirtype,
                                               int *n_options_out);
+#endif
 static void entry_guard_set_filtered_flags(const or_options_t *options,
                                            guard_selection_t *gs,
                                            entry_guard_t *guard);
@@ -228,7 +230,9 @@ guard_selection_new(const char *name,
   gs = tor_malloc_zero(sizeof(*gs));
   gs->name = tor_strdup(name);
   gs->type = type;
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   gs->chosen_entry_guards = smartlist_new();
+#endif
   gs->sampled_entry_guards = smartlist_new();
   gs->confirmed_entry_guards = smartlist_new();
   gs->primary_entry_guards = smartlist_new();
@@ -298,6 +302,7 @@ get_guard_selection_info(void)
   return curr_guard_context;
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Return the list of entry guards for a guard_selection_t, creating it
  * if necessary. */
 const smartlist_t *
@@ -324,6 +329,7 @@ entry_guard_mark_bad(entry_guard_t *guard)
   guard->bad_since = approx_time();
   entry_guards_changed();
 }
+#endif
 
 /** Return a statically allocated human-readable description of <b>guard</b>
  */
@@ -2831,6 +2837,7 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
 /* XXXXX prop271 ----- end of new-for-prop271 code ----- */
 /* XXXXX ----------------------------------------------- */
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /**
  * @name Constants for old (pre-prop271) guard selection algorithm.
  */
@@ -3109,6 +3116,7 @@ num_live_entry_guards(int for_directory)
   return num_live_entry_guards_for_guard_selection(
       get_guard_selection_info(), for_directory);
 }
+#endif
 
 /** If <b>digest</b> matches the identity of any node in the
  * entry_guards list for the provided guard selection state,
@@ -3123,11 +3131,12 @@ entry_guard_get_by_id_digest_for_guard_selection(guard_selection_t *gs,
                     if (tor_memeq(digest, entry->identity, DIGEST_LEN))
                       return entry;
                    );
-
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, entry,
                     if (tor_memeq(digest, entry->identity, DIGEST_LEN))
                       return entry;
                    );
+#endif
   return NULL;
 }
 
@@ -3150,6 +3159,7 @@ entry_guard_get_by_id_digest(const char *digest)
       get_guard_selection_info(), digest);
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Dump a description of our list of entry guards in the given guard
  * selection context to the log at level <b>severity</b>. */
 static void
@@ -3375,6 +3385,7 @@ pick_entry_guards(guard_selection_t *gs,
   if (changed)
     entry_guards_changed_for_guard_selection(gs);
 }
+#endif
 
 /** Release all storage held by <b>e</b>. */
 STATIC void
@@ -3383,7 +3394,9 @@ entry_guard_free(entry_guard_t *e)
   if (!e)
     return;
   entry_guard_handles_clear(e);
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   tor_free(e->chosen_by_version);
+#endif
   tor_free(e->sampled_by_version);
   tor_free(e->extra_state_fields);
   tor_free(e->selection_name);
@@ -3391,6 +3404,7 @@ entry_guard_free(entry_guard_t *e)
   tor_free(e);
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Remove from a guard selection context any entry guard which was selected
  * by an unknown version of Tor, or which was selected by a version of Tor
  * that's known to select entry guards badly, or which was selected more 2
@@ -3869,6 +3883,7 @@ entry_guards_set_from_config(guard_selection_t *gs,
   smartlist_free(old_entry_guards_not_on_list);
   entry_guards_changed_for_guard_selection(gs);
 }
+#endif
 
 /** Return 0 if we're fine adding arbitrary routers out of the
  * directory to our entry guard list, or return 1 if we have a
@@ -3877,6 +3892,7 @@ entry_guards_set_from_config(guard_selection_t *gs,
 int
 entry_list_is_constrained(const or_options_t *options)
 {
+  // XXXX prop271 look at the current selection.
   if (options->EntryNodes)
     return 1;
   if (options->UseBridges)
@@ -3884,6 +3900,7 @@ entry_list_is_constrained(const or_options_t *options)
   return 0;
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Pick a live (up and listed) entry guard from entry_guards. If
  * <b>state</b> is non-NULL, this is for a specific circuit --
  * make sure not to pick this circuit's exit or any node in the
@@ -3910,6 +3927,7 @@ choose_random_dirguard(dirinfo_type_t type)
   return choose_random_entry_impl(get_guard_selection_info(),
                                   NULL, 1, type, NULL);
 }
+#endif
 
 /** Return the number of bridges that have descriptors that are marked with
  * purpose 'bridge' and are running.
@@ -3920,10 +3938,13 @@ num_bridges_usable(void)
   int n_options = 0;
 
   if (get_options()->UseDeprecatedGuardAlgorithm) {
-
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     tor_assert(get_options()->UseBridges);
     (void) choose_random_entry_impl(get_guard_selection_info(),
                                     NULL, 0, 0, &n_options);
+#else
+    tor_assert_nonfatal_unreached();
+#endif
   } else {
     /* XXXX prop271 Is this quite right? */
     tor_assert(get_options()->UseBridges);
@@ -3944,6 +3965,7 @@ num_bridges_usable(void)
   return n_options;
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Filter <b>all_entry_guards</b> for usable entry guards and put them
  * in <b>live_entry_guards</b>. We filter based on whether the node is
  * currently alive, and on whether it satisfies the restrictions
@@ -4156,6 +4178,7 @@ choose_random_entry_impl(guard_selection_t *gs,
   smartlist_free(live_entry_guards);
   return node;
 }
+#endif
 
 static void
 pathbias_check_use_success_count(entry_guard_t *node)
@@ -4199,6 +4222,7 @@ pathbias_check_close_success_count(entry_guard_t *node)
   }
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Parse <b>state</b> and learn about the entry guards it describes.
  * If <b>set</b> is true, and there are no errors, replace the guard
  * list in the provided guard selection context with what we find.
@@ -4452,6 +4476,7 @@ entry_guards_parse_state_for_guard_selection(
   digestmap_free(added_by, tor_free_);
   return *msg ? -1 : 0;
 }
+#endif
 
 /** Parse <b>state</b> and learn about the entry guards it describes.
  * If <b>set</b> is true, and there are no errors, replace the guard
@@ -4466,9 +4491,13 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
 
   int r1 = entry_guards_load_guards_from_state(state, set);
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   int r2 = entry_guards_parse_state_for_guard_selection(
       get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 1),
       state, set, msg);
+#else
+   int r2 = 0;
+#endif
 
   entry_guards_dirty = 0;
 
@@ -4530,14 +4559,15 @@ entry_guards_changed(void)
 void
 entry_guards_update_state(or_state_t *state)
 {
-  config_line_t **next, *line;
-
   entry_guards_dirty = 0;
 
   // Handles all non-legacy guard info.
   entry_guards_update_guards_in_state(state);
 
   entry_guards_dirty = 0;
+
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+  config_line_t **next, *line;
 
   guard_selection_t *gs;
   gs = get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 0);
@@ -4612,6 +4642,7 @@ entry_guards_update_state(or_state_t *state)
       }
 
   } SMARTLIST_FOREACH_END(e);
+#endif
   if (!get_options()->AvoidDiskWrites)
     or_state_mark_dirty(get_or_state(), 0);
   entry_guards_dirty = 0;
@@ -4634,11 +4665,18 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   guard_selection_t *gs = get_guard_selection_info();
 
   tor_assert(gs != NULL);
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   tor_assert(gs->chosen_entry_guards != NULL);
+#else
+  // XXXX
+  (void)question;
+  (void)answer;
+#endif
 
   (void) conn;
   (void) errmsg;
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
     smartlist_t *sl = smartlist_new();
@@ -4683,6 +4721,7 @@ getinfo_helper_entry_guards(control_connection_t *conn,
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
   }
+#endif
   return 0;
 }
 
@@ -4721,6 +4760,7 @@ guard_get_guardfraction_bandwidth(guardfraction_bandwidth_t *guardfraction_bw,
   guardfraction_bw->non_guard_bw = orig_bandwidth - (int) guard_bw;
 }
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 /** Returns true iff the node is used as a guard in the specified guard
  * context */
 int
@@ -4819,6 +4859,7 @@ entries_retry_all(const or_options_t *options)
   tor_assert(entry_list_is_constrained(options));
   entries_retry_helper(options, 1);
 }
+#endif
 
 /** Helper: Update the status of all entry guards, in whatever algorithm
  * is used. Return true if we should stop using all previously generated
@@ -4833,7 +4874,11 @@ guards_update_all(void)
   tor_assert(curr_guard_context);
 
   if (curr_guard_context->type == GS_TYPE_LEGACY) {
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     entry_guards_compute_status(get_options(), approx_time());
+#else
+    tor_assert_nonfatal_unreached();
+#endif
   } else {
     if (entry_guards_update_all(curr_guard_context))
       mark_circuits = 1;
@@ -4849,7 +4894,12 @@ guards_choose_guard(cpath_build_state_t *state,
                    circuit_guard_state_t **guard_state_out)
 {
   if (get_options()->UseDeprecatedGuardAlgorithm) {
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     return choose_random_entry(state);
+#else
+    tor_assert_nonfatal_unreached();
+    return NULL;
+#endif
   } else {
     const node_t *r = NULL;
     const uint8_t *exit_id = NULL;
@@ -4877,7 +4927,13 @@ guards_choose_dirguard(dirinfo_type_t info,
                       circuit_guard_state_t **guard_state_out)
 {
   if (get_options()->UseDeprecatedGuardAlgorithm) {
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     return choose_random_dirguard(info);
+#else
+    (void)info;
+    tor_assert_nonfatal_unreached();
+    return NULL;
+#endif
   } else {
     /* XXXX prop271 We don't need to look at the dirinfo_type_t here,
      * apparently. If you look at the old implementation, and you follow info
@@ -4897,6 +4953,31 @@ guards_choose_dirguard(dirinfo_type_t info,
   }
 }
 
+/**
+ * If we're running with a constrained guard set, then maybe mark our guards
+ * usable.  Return 1 if we do; 0 if we don't.
+ */
+int
+guards_retry_optimistic(const or_options_t *options)
+{
+  if (! entry_list_is_constrained(options))
+    return 0;
+
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+  if (options->UseDeprecatedGuardAlgorithm) {
+    if (entries_known_but_down(options)) {
+      entries_retry_all(options);
+      return 1;
+    }
+  }
+#endif
+
+  // XXXX prop271 -- is this correct?
+  mark_primary_guards_maybe_reachable(get_guard_selection_info());
+
+  return 1;
+}
+
 /** Free one guard selection context */
 STATIC void
 guard_selection_free(guard_selection_t *gs)
@@ -4905,12 +4986,14 @@ guard_selection_free(guard_selection_t *gs)
 
   tor_free(gs->name);
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   if (gs->chosen_entry_guards) {
     SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, e,
                       entry_guard_free(e));
     smartlist_free(gs->chosen_entry_guards);
     gs->chosen_entry_guards = NULL;
   }
+#endif
 
   if (gs->sampled_entry_guards) {
     SMARTLIST_FOREACH(gs->sampled_entry_guards, entry_guard_t *, e,

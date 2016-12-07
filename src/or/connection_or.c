@@ -737,9 +737,11 @@ connection_or_about_to_close(or_connection_t *or_conn)
       rep_hist_note_connect_failed(or_conn->identity_digest, now);
       /* Tell the new guard API about the channel failure */
       entry_guard_chan_failed(TLS_CHAN_TO_BASE(or_conn->chan));
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
       /* Tell the old guard API about the channel failure */
       entry_guard_register_connect_status(or_conn->identity_digest,0,
                                           !options->HTTPSProxy, now);
+#endif
       if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
         int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
@@ -1678,9 +1680,11 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
            conn->base_.address, conn->base_.port, expected, seen, extra_log);
     /* Tell the new guard API about the channel failure */
     entry_guard_chan_failed(TLS_CHAN_TO_BASE(conn->chan));
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     /* Tell the old guard API about the channel failure */
     entry_guard_register_connect_status(conn->identity_digest, 0, 1,
                                         time(NULL));
+#endif
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
                                  END_OR_CONN_REASON_OR_IDENTITY);
     if (!authdir_mode_tests_reachability(options))

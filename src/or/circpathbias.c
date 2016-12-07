@@ -1279,7 +1279,10 @@ pathbias_measure_use_rate(entry_guard_t *guard)
                  tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
           pb->path_bias_disabled = 1;
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+          // XXXX
           entry_guard_mark_bad(guard);
+#endif
           return;
         }
       } else if (!pb->path_bias_use_extreme) {
@@ -1385,7 +1388,10 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  tor_lround(pb->timeouts),
                  tor_lround(get_circuit_build_close_time_ms()/1000));
           pb->path_bias_disabled = 1;
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+          // XXXX
           entry_guard_mark_bad(guard);
+#endif
           return;
         }
       } else if (!pb->path_bias_extreme) {
