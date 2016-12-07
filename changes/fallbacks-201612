@@ -21,6 +21,8 @@
       Part of ticket 18828.
     - Display the fingerprint when downloading consensuses from fallbacks.
       Closes ticket 20908.
+    - Allow 3 fallbacks per operator. (This is safe now we are choosing 200
+      fallbacks.) Closes ticket 20912.
   o Minor bugfix (fallback directories):
     - Stop failing when OUTPUT_COMMENTS is True in updateFallbackDirs.py.
       Closes ticket 20877; bugfix on commit 9998343 in tor-0.2.8.3-alpha.

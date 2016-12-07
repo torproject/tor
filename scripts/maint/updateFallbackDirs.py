@@ -173,6 +173,15 @@ MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 200
 # Emit a C #error if the number of fallbacks is more than 10% below MAX
 MIN_FALLBACK_COUNT = 0 if OUTPUT_CANDIDATES else MAX_FALLBACK_COUNT*0.9
 
+# The maximum number of fallbacks on the same address, contact, or family
+# With 200 fallbacks, this means each operator can see 1% of client bootstraps
+# (The directory authorities used to see ~12% of client bootstraps each.)
+MAX_FALLBACKS_PER_IP = 1
+MAX_FALLBACKS_PER_IPV4 = MAX_FALLBACKS_PER_IP
+MAX_FALLBACKS_PER_IPV6 = MAX_FALLBACKS_PER_IP
+MAX_FALLBACKS_PER_CONTACT = 3
+MAX_FALLBACKS_PER_FAMILY = 3
+
 ## Fallback Bandwidth Requirements
 
 # Any fallback with the Exit flag has its bandwidth multipled by this fraction
@@ -1561,49 +1570,85 @@ class CandidateList(dict):
     else:
       return None
 
-  # does exclusion_list contain attribute?
+  # return a new bag suitable for storing attributes
+  @staticmethod
+  def attribute_new():
+    return dict()
+
+  # get the count of attribute in attribute_bag
+  # if attribute is None or the empty string, return 0
+  @staticmethod
+  def attribute_count(attribute, attribute_bag):
+    if attribute is None or attribute == '':
+      return 0
+    if attribute not in attribute_bag:
+      return 0
+    return attribute_bag[attribute]
+
+  # does attribute_bag contain more than max_count instances of attribute?
   # if so, return False
   # if not, return True
-  # if attribute is None or the empty string, always return True
+  # if attribute is None or the empty string, or max_count is invalid,
+  # always return True
   @staticmethod
-  def allow(attribute, exclusion_list):
-    if attribute is None or attribute == '':
+  def attribute_allow(attribute, attribute_bag, max_count=1):
+    if attribute is None or attribute == '' or max_count <= 0:
       return True
-    elif attribute in exclusion_list:
+    elif CandidateList.attribute_count(attribute, attribute_bag) >= max_count:
       return False
     else:
       return True
 
-  # make sure there is only one fallback per IPv4 address, and per IPv6 address
+  # add attribute to attribute_bag, incrementing the count if it is already
+  # present
+  # if attribute is None or the empty string, or count is invalid,
+  # do nothing
+  @staticmethod
+  def attribute_add(attribute, attribute_bag, count=1):
+    if attribute is None or attribute == '' or count <= 0:
+      pass
+    attribute_bag.setdefault(attribute, 0)
+    attribute_bag[attribute] += count
+
+  # make sure there are only MAX_FALLBACKS_PER_IP fallbacks per IPv4 address,
+  # and per IPv6 address
   # there is only one IPv4 address on each fallback: the IPv4 DirPort address
   # (we choose the IPv4 ORPort which is on the same IPv4 as the DirPort)
   # there is at most one IPv6 address on each fallback: the IPv6 ORPort address
   # we try to match the IPv4 ORPort, but will use any IPv6 address if needed
-  # (clients assume the IPv6 DirPort is the same as the IPv4 DirPort, but
-  # typically only use the IPv6 ORPort)
+  # (clients only use the IPv6 ORPort)
   # if there is no IPv6 address, only the IPv4 address is checked
   # return the number of candidates we excluded
   def limit_fallbacks_same_ip(self):
     ip_limit_fallbacks = []
-    ip_list = []
+    ip_list = CandidateList.attribute_new()
     for f in self.fallbacks:
-      if (CandidateList.allow(f.dirip, ip_list)
-          and CandidateList.allow(f.ipv6addr, ip_list)):
+      if (CandidateList.attribute_allow(f.dirip, ip_list,
+                                        MAX_FALLBACKS_PER_IPV4)
+          and CandidateList.attribute_allow(f.ipv6addr, ip_list,
+                                            MAX_FALLBACKS_PER_IPV6)):
         ip_limit_fallbacks.append(f)
-        ip_list.append(f.dirip)
+        CandidateList.attribute_add(f.dirip, ip_list)
         if f.has_ipv6():
-          ip_list.append(f.ipv6addr)
-      elif not CandidateList.allow(f.dirip, ip_list):
-        logging.info('Eliminated %s: already have fallback on IPv4 %s'%(
-                                                          f._fpr, f.dirip))
-      elif f.has_ipv6() and not CandidateList.allow(f.ipv6addr, ip_list):
-        logging.info('Eliminated %s: already have fallback on IPv6 %s'%(
-                                                          f._fpr, f.ipv6addr))
+          CandidateList.attribute_add(f.ipv6addr, ip_list)
+      elif not CandidateList.attribute_allow(f.dirip, ip_list,
+                                             MAX_FALLBACKS_PER_IPV4):
+        logging.info('Eliminated %s: already have %d fallback(s) on IPv4 %s'
+                     %(f._fpr, CandidateList.attribute_count(f.dirip, ip_list),
+                       f.dirip))
+      elif (f.has_ipv6() and
+            not CandidateList.attribute_allow(f.ipv6addr, ip_list,
+                                              MAX_FALLBACKS_PER_IPV6)):
+        logging.info('Eliminated %s: already have %d fallback(s) on IPv6 %s'
+                     %(f._fpr, CandidateList.attribute_count(f.ipv6addr,
+                                                             ip_list),
+                       f.ipv6addr))
     original_count = len(self.fallbacks)
     self.fallbacks = ip_limit_fallbacks
     return original_count - len(self.fallbacks)
 
-  # make sure there is only one fallback per ContactInfo
+  # make sure there are only MAX_FALLBACKS_PER_CONTACT fallbacks for each
+  # ContactInfo
   # if there is no ContactInfo, allow the fallback
   # this check can be gamed by providing no ContactInfo, or by setting the
   # ContactInfo to match another fallback
@@ -1611,37 +1656,45 @@ class CandidateList(dict):
   # go down at similar times, its usefulness outweighs the risk
   def limit_fallbacks_same_contact(self):
     contact_limit_fallbacks = []
-    contact_list = []
+    contact_list = CandidateList.attribute_new()
     for f in self.fallbacks:
-      if CandidateList.allow(f._data['contact'], contact_list):
+      if CandidateList.attribute_allow(f._data['contact'], contact_list,
+                                       MAX_FALLBACKS_PER_CONTACT):
         contact_limit_fallbacks.append(f)
-        contact_list.append(f._data['contact'])
+        CandidateList.attribute_add(f._data['contact'], contact_list)
       else:
-        logging.info(('Eliminated %s: already have fallback on ' +
-                       'ContactInfo %s')%(f._fpr, f._data['contact']))
+        logging.info(
+          'Eliminated %s: already have %d fallback(s) on ContactInfo %s'
+          %(f._fpr, CandidateList.attribute_count(f._data['contact'],
+                                                  contact_list),
+            f._data['contact']))
     original_count = len(self.fallbacks)
     self.fallbacks = contact_limit_fallbacks
     return original_count - len(self.fallbacks)
 
-  # make sure there is only one fallback per effective family
+  # make sure there are only MAX_FALLBACKS_PER_FAMILY fallbacks per effective
+  # family
   # if there is no family, allow the fallback
-  # this check can't be gamed, because we use effective family, which ensures
-  # mutual family declarations
+  # we use effective family, which ensures mutual family declarations
+  # but the check can be gamed by not declaring a family at all
   # if any indirect families exist, the result depends on the order in which
   # fallbacks are sorted in the list
   def limit_fallbacks_same_family(self):
     family_limit_fallbacks = []
-    fingerprint_list = []
+    fingerprint_list = CandidateList.attribute_new()
     for f in self.fallbacks:
-      if CandidateList.allow(f._fpr, fingerprint_list):
+      if CandidateList.attribute_allow(f._fpr, fingerprint_list,
+                                       MAX_FALLBACKS_PER_FAMILY):
         family_limit_fallbacks.append(f)
-        fingerprint_list.append(f._fpr)
-        fingerprint_list.extend(f._data['effective_family'])
+        CandidateList.attribute_add(f._fpr, fingerprint_list)
+        for family_fingerprint in f._data['effective_family']:
+          CandidateList.attribute_add(family_fingerprint, fingerprint_list)
       else:
-        # technically, we already have a fallback with this fallback in its
-        # effective family
-        logging.info('Eliminated %s: already have fallback in effective ' +
-                      'family'%(f._fpr))
+        # we already have a fallback with this fallback in its effective
+        # family
+        logging.info(
+          'Eliminated %s: already have %d fallback(s) in effective family'
+          %(f._fpr, CandidateList.attribute_count(f._fpr, fingerprint_list)))
     original_count = len(self.fallbacks)
     self.fallbacks = family_limit_fallbacks
     return original_count - len(self.fallbacks)
