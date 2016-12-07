@@ -23,6 +23,8 @@
       Closes ticket 20908.
     - Allow 3 fallbacks per operator. (This is safe now we are choosing 200
       fallbacks.) Closes ticket 20912.
+    - Reduce the minimum fallback bandwidth to 1 MByte/s.
+      Part of #18828.
   o Minor bugfix (fallback directories):
     - Stop failing when OUTPUT_COMMENTS is True in updateFallbackDirs.py.
       Closes ticket 20877; bugfix on commit 9998343 in tor-0.2.8.3-alpha.

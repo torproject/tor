@@ -191,12 +191,12 @@ MAX_FALLBACKS_PER_FAMILY = 3
 EXIT_BANDWIDTH_FRACTION = 1.0
 
 # If a single fallback's bandwidth is too low, it's pointless adding it
-# We expect fallbacks to handle an extra 30 kilobytes per second of traffic
+# We expect fallbacks to handle an extra 10 kilobytes per second of traffic
 # Make sure they can support a hundred times the expected extra load
 # (Use 102.4 to make it come out nicely in MByte/s)
 # We convert this to a consensus weight before applying the filter,
 # because all the bandwidth amounts are specified by the relay
-MIN_BANDWIDTH = 102.4 * 30.0 * 1024.0
+MIN_BANDWIDTH = 102.4 * 10.0 * 1024.0
 
 # Clients will time out after 30 seconds trying to download a consensus
 # So allow fallback directories half that to deliver a consensus
