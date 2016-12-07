@@ -1,3 +1,0 @@
-  o Minor bugfixes (portability):
-    - Fix compilation with OpenSSL 1.1 and less commonly-used
-      CPU architectures. Closes ticket 20588.
