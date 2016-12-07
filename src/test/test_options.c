@@ -1076,21 +1076,27 @@ test_options_validate__transproxy(void *ignored)
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_assert(!msg);
+  if (msg) {
+    TT_DIE(("Expected NULL but got '%s'", msg));
+  }
 #endif
 #if defined(__FreeBSD_kernel__) || defined( DARWIN )  || defined(__NetBSD__)
   tdata = get_options_test_data("TransProxyType ipfw\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_assert(!msg);
+  if (msg) {
+    TT_DIE(("Expected NULL but got '%s'", msg));
+  }
 #endif
 #if defined(__OpenBSD__)
   tdata = get_options_test_data("TransProxyType pf-divert\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_assert(!msg);
+  if (msg) {
+    TT_DIE(("Expected NULL but got '%s'", msg));
+  }
 #endif
 
   // Assert that a test has run for some TransProxyType
