@@ -1157,12 +1157,13 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   if (gs->type != GS_TYPE_BRIDGE) {
     networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
 
-    log_info(LD_GUARD, "Updating sampled guard status based on received "
-             "consensus.");
-
-    if (! ns || ns->valid_until < approx_time()) {
-      log_info(LD_GUARD, "Hey, there wasn't a valid consensus. Ignoring");
+    if (! ns) {
+      log_info(LD_GUARD, "No live consensus; can't update "
+               "sampled entry guards.");
       return;
+    } else {
+      log_info(LD_GUARD, "Updating sampled guard status based on received "
+               "consensus.");
     }
   }
 
