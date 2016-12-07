@@ -879,6 +879,7 @@ extend_cell_from_extend1_cell_body(extend_cell_t *cell_out,
                                    const extend1_cell_body_t *cell)
 {
   tor_assert(cell_out);
+  tor_assert(cell);
   memset(cell_out, 0, sizeof(*cell_out));
   tor_addr_make_unspec(&cell_out->orport_ipv4.addr);
   tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
@@ -908,6 +909,7 @@ create_cell_from_create2_cell_body(create_cell_t *cell_out,
                                    const create2_cell_body_t *cell)
 {
   tor_assert(cell_out);
+  tor_assert(cell);
   memset(cell_out, 0, sizeof(create_cell_t));
   if (BUG(cell->handshake_len > sizeof(cell_out->onionskin))) {
     /* This should be impossible because there just isn't enough room in the
@@ -930,6 +932,7 @@ extend_cell_from_extend2_cell_body(extend_cell_t *cell_out,
                                    const extend2_cell_body_t *cell)
 {
   tor_assert(cell_out);
+  tor_assert(cell);
   int found_ipv4 = 0, found_ipv6 = 0, found_rsa_id = 0, found_ed_id = 0;
   memset(cell_out, 0, sizeof(*cell_out));
   tor_addr_make_unspec(&cell_out->orport_ipv4.addr);
@@ -988,6 +991,9 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
                   const uint8_t *payload, size_t payload_length)
 {
 
+  tor_assert(cell_out);
+  tor_assert(payload);
+
   if (payload_length > RELAY_PAYLOAD_SIZE)
     return -1;
 
@@ -1033,6 +1039,7 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
 static int
 check_extended_cell(const extended_cell_t *cell)
 {
+  tor_assert(cell);
   if (cell->created_cell.cell_type == CELL_CREATED) {
     if (cell->cell_type != RELAY_COMMAND_EXTENDED)
       return -1;
@@ -1054,6 +1061,9 @@ extended_cell_parse(extended_cell_t *cell_out,
                     const uint8_t command, const uint8_t *payload,
                     size_t payload_len)
 {
+  tor_assert(cell_out);
+  tor_assert(payload);
+
   memset(cell_out, 0, sizeof(*cell_out));
   if (payload_len > RELAY_PAYLOAD_SIZE)
     return -1;
