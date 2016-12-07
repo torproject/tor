@@ -5,10 +5,11 @@
       updateFallbackDirs.py.
       Closes ticket 20878.
     - Require fallback directories to have the same address and port for
-      6 months. (We expect to regenerate the fallback list each major Tor
-      release.) Relays whose OnionOO stability timer is reset on restart by
-      bug 18050 should upgrade to Tor 0.2.8.7 or later, which has a fix for
-      this issue.
+      4 months. (4 months is a tradeoff between the expected time between
+      major Tor releases, which is 6 months, and the number of relays with
+      enough stability.) Relays whose OnionOO stability timer is reset on
+      restart by bug 18050 should upgrade to Tor 0.2.8.7 or later, which has
+      a fix for this issue.
       Closes ticket 20880; removes short-term fix in e220214 in
       tor-0.2.8.2-alpha.
     - Make it easier to change the output sort order of fallbacks.
