@@ -630,8 +630,9 @@ choose_guard_selection(const or_options_t *options,
  * Check whether we should switch from our current guard selection to a
  * different one.  If so, switch and return 1.  Return 0 otherwise.
  *
- * On a 1 return, the caller should mark all currently live circuits
- * unusable for new streams.
+ * On a 1 return, the caller should mark all currently live circuits unusable
+ * for new streams, by calling circuit_mark_all_unused_circs() and
+ * circuit_mark_all_dirty_circs_as_unusable().
  */
 int
 update_guard_selection_choice(const or_options_t *options)
@@ -664,12 +665,6 @@ update_guard_selection_choice(const or_options_t *options)
   tor_assert(new_guard_context);
   tor_assert(new_guard_context != curr_guard_context);
   curr_guard_context = new_guard_context;
-
-  /*
-    Be sure to call:
-    circuit_mark_all_unused_circs();
-    circuit_mark_all_dirty_circs_as_unusable();
-  */
 
   return 1;
 }
@@ -4879,7 +4874,9 @@ entries_retry_all(const or_options_t *options)
 
 /** Helper: Update the status of all entry guards, in whatever algorithm
  * is used. Return true if we should stop using all previously generated
- * circuits. */
+ * circuits, by calling circuit_mark_all_unused_circs() and
+ * circuit_mark_all_dirty_circs_as_unusable().
+ */
 int
 guards_update_all(void)
 {
