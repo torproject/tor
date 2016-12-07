@@ -153,8 +153,8 @@ connection_or_set_identity_digest(or_connection_t *conn,
   /* If the identity was set previously, remove the old mapping. */
   if (rsa_id_was_set) {
     connection_or_clear_identity(conn);
-    if (conn->chan)
-      channel_clear_identity_digest(TLS_CHAN_TO_BASE(conn->chan));
+    if (chan)
+      channel_clear_identity_digest(chan);
   }
 
   memcpy(conn->identity_digest, rsa_digest, DIGEST_LEN);
@@ -165,9 +165,8 @@ connection_or_set_identity_digest(or_connection_t *conn,
     return;
 
   /* Deal with channels */
-  if (conn->chan)
-    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan),
-                                rsa_digest, ed_id);
+  if (chan)
+    channel_set_identity_digest(chan, rsa_digest, ed_id);
 }
 
 /** Remove the Extended ORPort identifier of <b>conn</b> from the
