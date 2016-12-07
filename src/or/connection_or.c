@@ -101,8 +101,7 @@ connection_or_clear_identity_map(void)
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
     if (conn->type == CONN_TYPE_OR) {
-      or_connection_t *or_conn = TO_OR_CONN(conn);
-      memset(or_conn->identity_digest, 0, DIGEST_LEN);
+      connection_or_clear_identity(TO_OR_CONN(conn));
     }
   });
 }
