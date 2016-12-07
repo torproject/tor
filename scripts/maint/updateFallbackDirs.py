@@ -147,9 +147,9 @@ MAX_LIST_FILE_SIZE = 1024 * 1024
 ADDRESS_AND_PORT_STABLE_DAYS = 7
 # What time-weighted-fraction of these flags must FallbackDirs
 # Equal or Exceed?
-CUTOFF_RUNNING = .95
-CUTOFF_V2DIR = .95
-CUTOFF_GUARD = .95
+CUTOFF_RUNNING = .90
+CUTOFF_V2DIR = .90
+CUTOFF_GUARD = .90
 # What time-weighted-fraction of these flags must FallbackDirs
 # Equal or Fall Under?
 # .00 means no bad exits
