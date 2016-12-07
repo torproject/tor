@@ -25,6 +25,10 @@
       fallbacks.) Closes ticket 20912.
     - Reduce the minimum fallback bandwidth to 1 MByte/s.
       Part of #18828.
-  o Minor bugfix (fallback directories):
+  o Minor bugfixes (fallback directories):
     - Stop failing when OUTPUT_COMMENTS is True in updateFallbackDirs.py.
       Closes ticket 20877; bugfix on commit 9998343 in tor-0.2.8.3-alpha.
+    - Avoid checking fallback candidates' DirPorts if they are down in
+      OnionOO. When a relay operator has multiple relays, this prioritises
+      relays that are up over relays that are down.
+      Closes ticket #20926; bugfix on 0.2.8.3-alpha.

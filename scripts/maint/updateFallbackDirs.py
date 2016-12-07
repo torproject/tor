@@ -81,6 +81,10 @@ PERFORM_IPV4_DIRPORT_CHECKS = False if OUTPUT_CANDIDATES else True
 # Don't check ~1000 candidates when OUTPUT_CANDIDATES is True
 PERFORM_IPV6_DIRPORT_CHECKS = False if OUTPUT_CANDIDATES else False
 
+# Must relays be running now?
+MUST_BE_RUNNING_NOW = (PERFORM_IPV4_DIRPORT_CHECKS
+                       or PERFORM_IPV6_DIRPORT_CHECKS)
+
 # Clients have been using microdesc consensuses by default for a while now
 DOWNLOAD_MICRODESC_CONSENSUS = True
 
@@ -145,6 +149,8 @@ MAX_LIST_FILE_SIZE = 1024 * 1024
 # Affected relays should upgrade to Tor 0.2.8.7 or later, which has a fix
 # for this issue.
 ADDRESS_AND_PORT_STABLE_DAYS = 7
+# We ignore relays that have been down for more than this period
+MAX_DOWNTIME_DAYS = 0 if MUST_BE_RUNNING_NOW else 7
 # What time-weighted-fraction of these flags must FallbackDirs
 # Equal or Exceed?
 CUTOFF_RUNNING = .90
@@ -387,8 +393,8 @@ def onionoo_fetch(what, **kwargs):
   params = kwargs
   params['type'] = 'relay'
   #params['limit'] = 10
-  params['first_seen_days'] = '%d-'%(ADDRESS_AND_PORT_STABLE_DAYS,)
-  params['last_seen_days'] = '-7'
+  params['first_seen_days'] = '%d-'%(ADDRESS_AND_PORT_STABLE_DAYS)
+  params['last_seen_days'] = '-%d'%(MAX_DOWNTIME_DAYS)
   params['flag'] = 'V2Dir'
   url = ONIONOO + what + '?' + urllib.urlencode(params)
 
@@ -843,9 +849,7 @@ class Candidate(object):
       self._badexit = self._avg_generic_history(badexit) / ONIONOO_SCALE_ONE
 
   def is_candidate(self):
-    must_be_running_now = (PERFORM_IPV4_DIRPORT_CHECKS
-                           or PERFORM_IPV6_DIRPORT_CHECKS)
-    if (must_be_running_now and not self.is_running()):
+    if (MUST_BE_RUNNING_NOW and not self.is_running()):
       logging.info('%s not a candidate: not running now, unable to check ' +
                    'DirPort consensus download', self._fpr)
       return False
