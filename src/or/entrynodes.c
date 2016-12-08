@@ -1795,6 +1795,9 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
+  int num_entry_guards = 1;
+  smartlist_t *usable_primary_guards = smartlist_new();
+
   /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of
       <maybe> or <yes>, return the first such guard." */
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
@@ -1804,11 +1807,20 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
     if (guard->is_reachable != GUARD_REACHABLE_NO) {
       *state_out = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
       guard->last_tried_to_connect = approx_time();
-      log_info(LD_GUARD, "Selected primary guard %s for circuit.",
-               entry_guard_describe(guard));
-      return guard;
+      smartlist_add(usable_primary_guards, guard);
+      if (smartlist_len(usable_primary_guards) >= num_entry_guards)
+        break;
     }
   } SMARTLIST_FOREACH_END(guard);
+
+  if (smartlist_len(usable_primary_guards)) {
+    entry_guard_t *guard = smartlist_choose(usable_primary_guards);
+    smartlist_free(usable_primary_guards);
+    log_info(LD_GUARD, "Selected primary guard %s for circuit.",
+             entry_guard_describe(guard));
+    return guard;
+  }
+  smartlist_free(usable_primary_guards);
 
   /* "Otherwise, if the ordered intersection of {CONFIRMED_GUARDS}
       and {USABLE_FILTERED_GUARDS} is nonempty, return the first
