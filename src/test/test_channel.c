@@ -1772,7 +1772,7 @@ static void
 test_channel_id_map(void *arg)
 {
   (void)arg;
-  const int N_CHAN = 6;
+#define N_CHAN 6
   char rsa_id[N_CHAN][DIGEST_LEN];
   ed25519_public_key_t *ed_id[N_CHAN];
   channel_t *chan[N_CHAN];
@@ -1871,6 +1871,7 @@ test_channel_id_map(void *arg)
     free_fake_channel(chan[i]);
     tor_free(ed_id[i]);
   }
+#undef N_CHAN
 }
 
 struct testcase_t channel_tests[] = {
