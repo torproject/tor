@@ -471,8 +471,30 @@ get_guard_confirmed_min_lifetime(void)
 STATIC int
 get_n_primary_guards(void)
 {
-  return networkstatus_get_param(NULL, "guard-n-primary-guards",
+  const int n = get_options()->NumEntryGuards;
+  if (n > 5) {
+    return n + n / 2;
+  } else if (n > 1) {
+    return n * 2;
+  }
+
+  return networkstatus_get_param(NULL,
+                                 "guard-n-primary-guards",
                                  DFLT_N_PRIMARY_GUARDS, 1, INT32_MAX);
+}
+/**
+ * Return the number of the live primary guards we should look at when
+ * making a circuit.
+ */
+STATIC int
+get_n_primary_guards_to_use(void)
+{
+  if (get_options()->NumEntryGuards > 1) {
+    return get_options()->NumEntryGuards;
+  }
+  return networkstatus_get_param(NULL,
+                                 "guard-n-primary-guards-to-use",
+                                 DFLT_N_PRIMARY_GUARDS_TO_USE, 1, INT32_MAX);
 }
 /**
  * If we haven't successfully built or used a circuit in this long, then
@@ -1795,7 +1817,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
-  int num_entry_guards = 1;
+  int num_entry_guards = get_n_primary_guards_to_use();
   smartlist_t *usable_primary_guards = smartlist_new();
 
   /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of

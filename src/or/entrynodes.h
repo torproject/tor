@@ -472,6 +472,11 @@ int num_bridges_usable(void);
  */
 #define DFLT_N_PRIMARY_GUARDS 3
 /**
+ * Of the live guards on the primary guard list, how many do we consider when
+ * choosing a guard to use?
+ */
+#define DFLT_N_PRIMARY_GUARDS_TO_USE 1
+/**
  * If we haven't successfully built or used a circuit in this long, then
  * consider that the internet is probably down.
  */
@@ -506,6 +511,7 @@ STATIC int get_remove_unlisted_guards_after_days(void);
 STATIC int get_guard_lifetime(void);
 STATIC int get_guard_confirmed_min_lifetime(void);
 STATIC int get_n_primary_guards(void);
+STATIC int get_n_primary_guards_to_use(void);
 STATIC int get_internet_likely_down_interval(void);
 STATIC int get_nonprimary_guard_connect_timeout(void);
 STATIC int get_nonprimary_guard_idle_timeout(void);
