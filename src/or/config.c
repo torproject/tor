@@ -495,7 +495,7 @@ static config_var_t option_vars_[] = {
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
   VAR("UseEntryGuards",          BOOL,     UseEntryGuards_option, "1"),
-  V(UseEntryGuardsAsDirGuards,   BOOL,     "1"),
+  OBSOLETE("UseEntryGuardsAsDirGuards"),
   V(UseGuardFraction,            AUTOBOOL, "auto"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   OBSOLETE("UseNTorHandshake"),
