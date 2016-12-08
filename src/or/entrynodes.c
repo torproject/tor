@@ -440,22 +440,30 @@ get_remove_unlisted_guards_after_days(void)
  * regardless of whether they are listed or unlisted.
  */
 STATIC int
-get_guard_lifetime_days(void)
+get_guard_lifetime(void)
 {
-  return networkstatus_get_param(NULL,
+  if (get_options()->GuardLifetime >= 86400)
+    return get_options()->GuardLifetime;
+  int32_t days;
+  days = networkstatus_get_param(NULL,
                                  "guard-lifetime-days",
                                  DFLT_GUARD_LIFETIME_DAYS, 1, 365*10);
+  return days * 86400;
 }
 /**
  * We remove confirmed guards from the sample if they were sampled
  * GUARD_LIFETIME_DAYS ago and confirmed this many days ago.
  */
 STATIC int
-get_guard_confirmed_min_lifetime_days(void)
+get_guard_confirmed_min_lifetime(void)
 {
-  return networkstatus_get_param(NULL, "guard-confirmed-min-lifetime-days",
+  if (get_options()->GuardLifetime >= 86400)
+    return get_options()->GuardLifetime;
+  int32_t days;
+  days = networkstatus_get_param(NULL, "guard-confirmed-min-lifetime-days",
                                  DFLT_GUARD_CONFIRMED_MIN_LIFETIME_DAYS,
                                  1, 365*10);
+  return days * 86400;
 }
 /**
  * How many guards do we try to keep on our primary guard list?
@@ -793,7 +801,7 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
                                const char *nickname,
                                const tor_addr_port_t *bridge_addrport)
 {
-  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
+  const int GUARD_LIFETIME = get_guard_lifetime();
   tor_assert(gs);
 
   // XXXX prop271 take ed25519 identity here too.
@@ -1228,9 +1236,9 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   const time_t remove_if_unlisted_since =
     approx_time() - REMOVE_UNLISTED_GUARDS_AFTER;
   const time_t maybe_remove_if_sampled_before =
-    approx_time() - (get_guard_lifetime_days() * 86400);
+    approx_time() - get_guard_lifetime();
   const time_t remove_if_confirmed_before =
-    approx_time() - (get_guard_confirmed_min_lifetime_days() * 86400);
+    approx_time() - get_guard_confirmed_min_lifetime();
 
   /* Then: remove the ones that have been junk for too long */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
@@ -1257,14 +1265,14 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, but never confirmed.",
                  entry_guard_describe(guard),
-                 get_guard_lifetime_days());
+                 get_guard_lifetime() / 86400);
       } else if (guard->confirmed_on_date < remove_if_confirmed_before) {
         remove = 1;
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, and confirmed over %d days ago.",
                  entry_guard_describe(guard),
-                 get_guard_lifetime_days(),
-                 get_guard_confirmed_min_lifetime_days());
+                 get_guard_lifetime() / 86400,
+                 get_guard_confirmed_min_lifetime() / 86400);
       }
     }
 
@@ -1559,7 +1567,7 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
   if (BUG(smartlist_contains(gs->confirmed_entry_guards, guard)))
     return; // LCOV_EXCL_LINE
 
-  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
+  const int GUARD_LIFETIME = get_guard_lifetime();
   guard->confirmed_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
 
   log_info(LD_GUARD, "Marking %s as a confirmed guard (index %d)",
