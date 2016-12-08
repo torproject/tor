@@ -1,4 +1,4 @@
-Changes in version 0.2.8.11 - 2016-12-??
+Changes in version 0.2.8.11 - 2016-12-08
   Tor 0.2.8.11 backports fixes for additional portability issues that
   could prevent Tor from building correctly on OSX Sierra, or with
   OpenSSL 1.1. Affected users should upgrade; others can safely stay

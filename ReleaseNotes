@@ -2,6 +2,25 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.8.11 - 2016-12-08
+  Tor 0.2.8.11 backports fixes for additional portability issues that
+  could prevent Tor from building correctly on OSX Sierra, or with
+  OpenSSL 1.1. Affected users should upgrade; others can safely stay
+  with 0.2.8.10.
+
+  o Minor bugfixes (portability):
+    - Avoid compilation errors when building on OSX Sierra. Sierra began
+      to support the getentropy() and clock_gettime() APIs, but created
+      a few problems in doing so. Tor 0.2.9 has a more thorough set of
+      workarounds; in 0.2.8, we are just using the /dev/urandom and mach
+      monotonic time interfaces. Fixes bug 20865. Bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (portability, backport from 0.2.9.5-alpha):
+    - Fix compilation with OpenSSL 1.1 and less commonly-used CPU
+      architectures. Closes ticket 20588.
+
+
 Changes in version 0.2.8.10 - 2016-12-02
   Tor 0.2.8.10 backports a fix for a bug that would sometimes make clients
   unusable after they left standby mode. It also backports fixes for
