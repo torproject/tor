@@ -1071,7 +1071,7 @@ test_options_validate__transproxy(void *ignored)
   free_options_test_data(tdata);
   tdata = NULL;
 
-#if defined(linux)
+#if defined(__linux__)
   tdata = get_options_test_data("TransProxyType tproxy\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1079,8 +1079,7 @@ test_options_validate__transproxy(void *ignored)
   if (msg) {
     TT_DIE(("Expected NULL but got '%s'", msg));
   }
-#endif
-#ifdef KERNEL_MAY_SUPPORT_IPFW
+#elif defined(KERNEL_MAY_SUPPORT_IPFW)
   tdata = get_options_test_data("TransProxyType ipfw\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1088,8 +1087,7 @@ test_options_validate__transproxy(void *ignored)
   if (msg) {
     TT_DIE(("Expected NULL but got '%s'", msg));
   }
-#endif
-#if defined(__OpenBSD__)
+#elif defined(__OpenBSD__)
   tdata = get_options_test_data("TransProxyType pf-divert\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1097,8 +1095,7 @@ test_options_validate__transproxy(void *ignored)
   if (msg) {
     TT_DIE(("Expected NULL but got '%s'", msg));
   }
-#endif
-#if defined(__NetBSD__)
+#elif defined(__NetBSD__)
   tdata = get_options_test_data("TransProxyType default\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
