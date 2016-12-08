@@ -1,4 +1,4 @@
-/* trunnel.c -- copied from Trunnel v1.5
+/* trunnel.c -- copied from Trunnel v1.5.1
  * https://gitweb.torproject.org/trunnel.git
  * You probably shouldn't edit this file.
  */
