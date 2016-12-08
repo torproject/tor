@@ -1927,25 +1927,31 @@ entry_guards_note_guard_success(guard_selection_t *gs,
   }
 
   unsigned new_state;
-  if (old_state == GUARD_CIRC_STATE_USABLE_ON_COMPLETION) {
-    new_state = GUARD_CIRC_STATE_COMPLETE;
-  } else {
-    tor_assert_nonfatal(
-               old_state == GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
-
-    if (guard->is_primary) {
-      /* XXXX prop271 -- I don't actually like this logic. It seems to make us
-       * a little more susceptible to evil-ISP attacks.  The mitigations I'm
-       * thinking of, however, aren't local to this point, so I'll leave it
-       * alone. */
-      /* This guard may have become primary by virtue of being confirmed.
-        If so, the circuit for it is now complete.
-      */
+  switch (old_state) {
+    case GUARD_CIRC_STATE_COMPLETE:
+    case GUARD_CIRC_STATE_USABLE_ON_COMPLETION:
       new_state = GUARD_CIRC_STATE_COMPLETE;
-    } else {
-      new_state = GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD;
-    }
+      break;
+    default:
+      tor_assert_nonfatal_unreached();
+      /* Fall through. */
+    case GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD:
+      if (guard->is_primary) {
+        /* XXXX prop271 -- I don't actually like this logic. It seems to make
+         * us a little more susceptible to evil-ISP attacks.  The mitigations
+         * I'm thinking of, however, aren't local to this point, so I'll leave
+         * it alone. */
+        /* This guard may have become primary by virtue of being confirmed.
+         * If so, the circuit for it is now complete.
+         */
+        new_state = GUARD_CIRC_STATE_COMPLETE;
+      } else {
+        new_state = GUARD_CIRC_STATE_WAITING_FOR_BETTER_GUARD;
+      }
+      break;
+  }
 
+  if (! guard->is_primary) {
     if (last_time_on_internet + get_internet_likely_down_interval()
         < approx_time()) {
       mark_primary_guards_maybe_reachable(gs);
