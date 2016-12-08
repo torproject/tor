@@ -402,6 +402,16 @@ get_max_sample_threshold(void)
   return pct / 100.0;
 }
 /**
+ * We never let our sampled guard set grow larger than this number.
+ */
+STATIC int
+get_max_sample_size_absolute(void)
+{
+  return (int) networkstatus_get_param(NULL, "guard-max-sample-size",
+                                       DFLT_MAX_SAMPLE_SIZE,
+                                       1, INT32_MAX);
+}
+/**
  * We always try to make our sample contain at least this many guards.
  *
  * XXXX prop271 spec deviation There was a MIN_SAMPLE_THRESHOLD in the
@@ -937,7 +947,9 @@ get_max_sample_size(guard_selection_t *gs,
   if (using_bridges)
     return n_guards;
 
-  const int max_sample = (int)(n_guards * get_max_sample_threshold());
+  const int max_sample_by_pct = (int)(n_guards * get_max_sample_threshold());
+  const int max_sample_absolute = get_max_sample_size_absolute();
+  const int max_sample = MIN(max_sample_by_pct, max_sample_absolute);
   if (max_sample < min_sample) // XXXX prop271 spec deviation
     return min_sample;
   else

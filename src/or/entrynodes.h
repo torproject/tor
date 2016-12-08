@@ -440,7 +440,12 @@ int num_bridges_usable(void);
  * We never let our sampled guard set grow larger than this percentage
  * of the guards on the network.
  */
-#define DFLT_MAX_SAMPLE_THRESHOLD_PERCENT 30
+#define DFLT_MAX_SAMPLE_THRESHOLD_PERCENT 20
+/**
+ * We never let our sampled guard set grow larger than this number of
+ * guards.
+ */
+#define DFLT_MAX_SAMPLE_SIZE 60
 /**
  * We always try to make our sample contain at least this many guards.
  *
@@ -495,6 +500,7 @@ int num_bridges_usable(void);
 /**@}*/
 
 STATIC double get_max_sample_threshold(void);
+STATIC int get_max_sample_size_absolute(void);
 STATIC int get_min_filtered_sample_size(void);
 STATIC int get_remove_unlisted_guards_after_days(void);
 STATIC int get_guard_lifetime_days(void);
