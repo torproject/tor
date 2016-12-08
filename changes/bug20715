@@ -1,0 +1,4 @@
+  o Minor bugfixes (memory leak)
+    - When moving a signed descriptor object from a source to an existing
+      destination, free the allocated memory inside that destination object.
+      Bugfix on tor-0.2.8.3-alpha; Closes #20715.
