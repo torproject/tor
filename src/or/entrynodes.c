@@ -3252,6 +3252,42 @@ guards_choose_guard(cpath_build_state_t *state,
   return r;
 }
 
+/** Remove all currently listed entry guards for a given guard selection
+ * context.  This frees and replaces <b>gs</b>, so don't use <b>gs</b>
+ * after calling this function. */
+void
+remove_all_entry_guards_for_guard_selection(guard_selection_t *gs)
+{
+  // This function shouldn't exist. XXXX
+  tor_assert(gs != NULL);
+  char *old_name = tor_strdup(gs->name);
+  guard_selection_type_t old_type = gs->type;
+
+  SMARTLIST_FOREACH(gs->sampled_entry_guards, entry_guard_t *, entry, {
+    control_event_guard(entry->nickname, entry->identity, "DROPPED");
+  });
+
+  if (gs == curr_guard_context) {
+    curr_guard_context = NULL;
+  }
+
+  smartlist_remove(guard_contexts, gs);
+  guard_selection_free(gs);
+
+  gs = get_guard_selection_by_name(old_name, old_type, 1);
+  entry_guards_changed_for_guard_selection(gs);
+  tor_free(old_name);
+}
+
+/** Remove all currently listed entry guards. So new ones will be chosen. */
+void
+remove_all_entry_guards(void)
+{
+  // XXXX prop271 this function shouldn't exist, in the new order.
+  // This function shouldn't exist.
+  remove_all_entry_guards_for_guard_selection(get_guard_selection_info());
+}
+
 /** Helper: pick a directory guard, with whatever algorithm is used. */
 const node_t *
 guards_choose_dirguard(circuit_guard_state_t **guard_state_out)

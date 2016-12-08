@@ -4064,17 +4064,20 @@ handle_control_dropguards(control_connection_t *conn,
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
 
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+  static int have_warned = 0;
+  if (! have_warned) {
+    log_warn(LD_CONTROL, "DROPGUARDS is dangerous; make sure you understand "
+             "the risks before using it. It may be removed in a future "
+             "version of Tor.");
+    have_warned = 1;
+  }
+
   if (smartlist_len(args)) {
     connection_printf_to_buf(conn, "512 Too many arguments to DROPGUARDS\r\n");
   } else {
     remove_all_entry_guards();
     send_control_done(conn);
   }
-#else
-  // XXXX
-  connection_printf_to_buf(conn, "512 not supported\r\n");
-#endif
 
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);

@@ -170,7 +170,8 @@ struct entry_guard_t {
    * we saw them in the state, even if we don't understand them. */
   char *extra_state_fields;
 
-  /** Backpointer to the guard selection that this guard belongs to. */
+  /** Backpointer to the guard selection that this guard belongs to.
+   * The entry_guard_t must never outlive its guard_selection. */
   guard_selection_t *in_selection;
   /**@}*/
 
@@ -547,6 +548,9 @@ STATIC unsigned entry_guards_note_guard_success(guard_selection_t *gs,
 STATIC int entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b);
 STATIC char *getinfo_helper_format_single_entry_guard(const entry_guard_t *e);
 #endif
+
+void remove_all_entry_guards_for_guard_selection(guard_selection_t *gs);
+void remove_all_entry_guards(void);
 
 struct bridge_info_t;
 void entry_guard_learned_bridge_identity(const tor_addr_port_t *addrport,
