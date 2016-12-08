@@ -715,7 +715,6 @@ node_get_rsa_id_digest(const node_t *node)
   return (const uint8_t*)node->identity;
 }
 
-
 /** Return the nickname of <b>node</b>, or NULL if we can't find one. */
 const char *
 node_get_nickname(const node_t *node)
