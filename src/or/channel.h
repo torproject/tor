@@ -153,16 +153,32 @@ struct channel_s {
   int (*write_var_cell)(channel_t *, var_cell_t *);
 
   /**
-   * Hash of the public RSA key for the other side's identity key, or
-   * zeroes if the other side hasn't shown us a valid identity key.
+   * Hash of the public RSA key for the other side's RSA identity key -- or
+   * zeroes if we don't have an RSA identity in mind for the other side, and
+   * it hasn't shown us one.
+   *
+   * Note that this is the RSA identity that we hope the other side has -- not
+   * necessarily its true identity.  Don't believe this identity unless
+   * authentication has happened.
    */
   char identity_digest[DIGEST_LEN];
+  /**
+   * Ed25519 key for the other side of this channel -- or zeroes if we don't
+   * have an Ed25519 identity in mind for the other side, and it hasn't shown
+   * us one.
+   *
+   * Note that this is the identity that we hope the other side has -- not
+   * necessarily its true identity.  Don't believe this identity unless
+   * authentication has happened.
+   */
+  ed25519_public_key_t ed25519_identity;
+
   /** Nickname of the OR on the other side, or NULL if none. */
   char *nickname;
 
   /**
-   * Linked list of channels with the same identity digest, for the
-   * digest->channel map
+   * Linked list of channels with the same RSA identity digest, for use with
+   * the digest->channel map
    */
   TOR_LIST_ENTRY(channel_s) next_with_same_id;
 
@@ -427,7 +443,8 @@ void channel_mark_incoming(channel_t *chan);
 void channel_mark_outgoing(channel_t *chan);
 void channel_mark_remote(channel_t *chan);
 void channel_set_identity_digest(channel_t *chan,
-                                 const char *identity_digest);
+                                 const char *identity_digest,
+                                 const ed25519_public_key_t *ed_identity);
 void channel_set_remote_end(channel_t *chan,
                             const char *identity_digest,
                             const char *nickname);
@@ -489,10 +506,11 @@ int channel_send_destroy(circid_t circ_id, channel_t *chan,
  */
 
 channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
-                            const char *id_digest,
+                            const char *rsa_id_digest,
                             const ed25519_public_key_t *ed_id);
 
-channel_t * channel_get_for_extend(const char *digest,
+channel_t * channel_get_for_extend(const char *rsa_id_digest,
+                                   const ed25519_public_key_t *ed_id,
                                    const tor_addr_t *target_addr,
                                    const char **msg_out,
                                    int *launch_out);
@@ -506,11 +524,13 @@ int channel_is_better(time_t now,
  */
 
 channel_t * channel_find_by_global_id(uint64_t global_identifier);
-channel_t * channel_find_by_remote_digest(const char *identity_digest);
+channel_t * channel_find_by_remote_identity(const char *rsa_id_digest,
+                                            const ed25519_public_key_t *ed_id);
 
 /** For things returned by channel_find_by_remote_digest(), walk the list.
+ * The RSA key will match for all returned elements; the Ed25519 key might not.
  */
-channel_t * channel_next_with_digest(channel_t *chan);
+channel_t * channel_next_with_rsa_identity(channel_t *chan);
 
 /*
  * Helper macros to lookup state of given channel.
@@ -581,6 +601,8 @@ void channel_listener_dump_statistics(channel_listener_t *chan_l,
                                       int severity);
 void channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
                                                 int severity);
+
+void channel_update_bad_for_new_circs(const char *digest, int force);
 
 /* Flow control queries */
 uint64_t channel_get_global_queue_estimate(void);

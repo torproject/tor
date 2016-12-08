@@ -1581,8 +1581,6 @@ typedef struct or_connection_t {
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
 
-  struct or_connection_t *next_with_same_id; /**< Next connection with same
-                                              * identity digest as this one. */
   /** Last emptied read token bucket in msec since midnight; only used if
    * TB_EMPTY events are enabled. */
   uint32_t read_emptied_time;
@@ -1660,6 +1658,8 @@ typedef struct entry_connection_t {
   edge_connection_t edge_;
 
   /** Nickname of planned exit node -- used with .exit support. */
+  /* XXX prop220: we need to make chosen_exit_name able to encode Ed IDs too.
+   * That's logically part of the UI parts for prop220 though. */
   char *chosen_exit_name;
 
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
@@ -2710,7 +2710,10 @@ typedef struct {
 typedef struct extend_info_t {
   char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for
                                           * display. */
-  char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
+  /** Hash of this router's RSA identity key. */
+  char identity_digest[DIGEST_LEN];
+  /** Ed25519 identity for this router, if any. */
+  ed25519_public_key_t ed_identity;
   uint16_t port; /**< OR port. */
   tor_addr_t addr; /**< IP address. */
   crypto_pk_t *onion_key; /**< Current onionskin key. */
@@ -4570,6 +4573,15 @@ typedef struct {
 
   /** If 1, we skip all OOS checks. */
   int DisableOOSCheck;
+
+  /** Autobool: Should we include Ed25519 identities in extend2 cells?
+   * If -1, we should do whatever the consensus parameter says. */
+  int ExtendByEd25519ID;
+
+  /** Bool (default: 1): When testing routerinfos as a directory authority,
+   * do we enforce Ed25519 identity match? */
+  /* NOTE: remove this option someday. */
+  int AuthDirTestEd25519LinkKeys;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

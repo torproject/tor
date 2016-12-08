@@ -49,10 +49,12 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "protover.h"
 #include "rendservice.h"
 #include "router.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "torcert.h"
 
 #include <string.h>
 
@@ -645,6 +647,74 @@ node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
     return choice;
   }
 }
+
+/** Return the Ed25519 identity key for the provided node, or NULL if it
+ * doesn't have one. */
+const ed25519_public_key_t *
+node_get_ed25519_id(const node_t *node)
+{
+  if (node->ri) {
+    if (node->ri->cache_info.signing_key_cert) {
+      const ed25519_public_key_t *pk =
+        &node->ri->cache_info.signing_key_cert->signing_key;
+      if (BUG(ed25519_public_key_is_zero(pk)))
+        goto try_the_md;
+      return pk;
+    }
+  }
+ try_the_md:
+  if (node->md) {
+    if (node->md->ed25519_identity_pkey) {
+      return node->md->ed25519_identity_pkey;
+    }
+  }
+  return NULL;
+}
+
+/** Return true iff this node's Ed25519 identity matches <b>id</b>.
+ * (An absent Ed25519 identity matches NULL or zero.) */
+int
+node_ed25519_id_matches(const node_t *node, const ed25519_public_key_t *id)
+{
+  const ed25519_public_key_t *node_id = node_get_ed25519_id(node);
+  if (node_id == NULL || ed25519_public_key_is_zero(node_id)) {
+    return id == NULL || ed25519_public_key_is_zero(id);
+  } else {
+    return id && ed25519_pubkey_eq(node_id, id);
+  }
+}
+
+/** Return true iff <b>node</b> supports authenticating itself
+ * by ed25519 ID during the link handshake in a way that we can understand
+ * when we probe it. */
+int
+node_supports_ed25519_link_authentication(const node_t *node)
+{
+  /* XXXX Oh hm. What if some day in the future there are link handshake
+   * versions that aren't 3 but which are ed25519 */
+  if (! node_get_ed25519_id(node))
+    return 0;
+  if (node->ri) {
+    const char *protos = node->ri->protocol_list;
+    if (protos == NULL)
+      return 0;
+    return protocol_list_supports_protocol(protos, PRT_LINKAUTH, 3);
+  }
+  if (node->rs) {
+    return node->rs->supports_ed25519_link_handshake;
+  }
+  tor_assert_nonfatal_unreached_once();
+  return 0;
+}
+
+/** Return the RSA ID key's SHA1 digest for the provided node. */
+const uint8_t *
+node_get_rsa_id_digest(const node_t *node)
+{
+  tor_assert(node);
+  return (const uint8_t*)node->identity;
+}
+
 
 /** Return the nickname of <b>node</b>, or NULL if we can't find one. */
 const char *

@@ -73,7 +73,8 @@ int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                             const char **msg);
 void dirserv_orconn_tls_done(const tor_addr_t *addr,
                              uint16_t or_port,
-                             const char *digest_rcvd);
+                             const char *digest_rcvd,
+                             const ed25519_public_key_t *ed_id_rcvd);
 int dirserv_should_launch_reachability_test(const routerinfo_t *ri,
                                             const routerinfo_t *ri_old);
 void dirserv_single_reachability_test(time_t now, routerinfo_t *router);

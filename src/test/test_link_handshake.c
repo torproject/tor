@@ -117,6 +117,9 @@ test_link_handshake_certs_ok(void *arg)
   crypto_pk_t *key1 = NULL, *key2 = NULL;
   const int with_ed = !strcmp((const char *)arg, "Ed25519");
 
+  tor_addr_from_ipv4h(&c1->base_.addr, 0x7f000001);
+  tor_addr_from_ipv4h(&c2->base_.addr, 0x7f000001);
+
   scheduler_init();
 
   MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
@@ -323,7 +326,7 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
   if (d) {
     tor_free(d->cell);
     certs_cell_free(d->ccell);
-    connection_or_remove_from_identity_map(d->c);
+    connection_or_clear_identity(d->c);
     connection_free_(TO_CONN(d->c));
     circuitmux_free(d->chan->base_.cmux);
     tor_free(d->chan);
@@ -354,6 +357,7 @@ recv_certs_setup(const struct testcase_t *test)
   d->chan = tor_malloc_zero(sizeof(*d->chan));
   d->c->chan = d->chan;
   d->c->base_.address = tor_strdup("HaveAnAddress");
+  tor_addr_from_ipv4h(&d->c->base_.addr, 0x801f0127);
   d->c->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   d->chan->conn = d->c;
   tt_int_op(connection_init_or_handshake_state(d->c, 1), ==, 0);
@@ -1133,8 +1137,8 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
   authenticate_data_t *d = arg;
   if (d) {
     tor_free(d->cell);
-    connection_or_remove_from_identity_map(d->c1);
-    connection_or_remove_from_identity_map(d->c2);
+    connection_or_clear_identity(d->c1);
+    connection_or_clear_identity(d->c2);
     connection_free_(TO_CONN(d->c1));
     connection_free_(TO_CONN(d->c2));
     circuitmux_free(d->chan2->base_.cmux);

@@ -305,6 +305,7 @@ static config_var_t option_vars_[] = {
   V(ExtORPortCookieAuthFile,     STRING,   NULL),
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
+  V(ExtendByEd25519ID,           AUTOBOOL, "auto"),
   V(FallbackDir,                 LINELIST, NULL),
   V(UseDefaultFallbackDirs,      BOOL,     "1"),
 
@@ -497,6 +498,7 @@ static config_var_t option_vars_[] = {
   V(User,                        STRING,   NULL),
   OBSOLETE("UserspaceIOCPBuffers"),
   V(AuthDirSharedRandomness,     BOOL,     "1"),
+  V(AuthDirTestEd25519LinkKeys,  BOOL,     "1"),
   OBSOLETE("V1AuthoritativeDirectory"),
   OBSOLETE("V2AuthoritativeDirectory"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),

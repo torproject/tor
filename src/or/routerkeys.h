@@ -45,6 +45,8 @@ const struct tor_cert_st *get_current_auth_key_cert(void);
 void get_master_rsa_crosscert(const uint8_t **cert_out,
                               size_t *size_out);
 
+int router_ed25519_id_is_me(const ed25519_public_key_t *id);
+
 struct tor_cert_st *make_ntor_onion_key_crosscert(
                                   const curve25519_keypair_t *onion_key,
                                   const ed25519_public_key_t *master_id_key,

@@ -63,8 +63,9 @@
 #include "transports.h"
 
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
-                                               uint16_t port,
-                                               const char *id_digest);
+                                            uint16_t port,
+                                            const char *id_digest,
+                                            const ed25519_public_key_t *ed_id);
 static int circuit_deliver_create_cell(circuit_t *circ,
                                        const create_cell_t *create_cell,
                                        int relayed);
@@ -80,13 +81,12 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
  */
 static channel_t *
 channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
-                            const char *id_digest)
+                            const char *id_digest,
+                            const ed25519_public_key_t *ed_id)
 {
   channel_t *chan;
 
-  chan = channel_connect(addr, port, id_digest,
-                         NULL // XXXX Ed25519 id.
-                         );
+  chan = channel_connect(addr, port, id_digest, ed_id);
   if (chan) command_setup_channel(chan);
 
   return chan;
@@ -556,6 +556,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
                          firsthop->extend_info->port));
 
   n_chan = channel_get_for_extend(firsthop->extend_info->identity_digest,
+                                  &firsthop->extend_info->ed_identity,
                                   &firsthop->extend_info->addr,
                                   &msg,
                                   &should_launch);
@@ -573,7 +574,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
       n_chan = channel_connect_for_circuit(
           &firsthop->extend_info->addr,
           firsthop->extend_info->port,
-          firsthop->extend_info->identity_digest);
+          firsthop->extend_info->identity_digest,
+          &firsthop->extend_info->ed_identity);
       if (!n_chan) { /* connect failed, forget the whole thing */
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -END_CIRC_REASON_CONNECTFAILED;
@@ -1041,6 +1043,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     ec.orport_ipv4.port = hop->extend_info->port;
     tor_addr_make_unspec(&ec.orport_ipv6.addr);
     memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
+    /* Set the ED25519 identity too -- it will only get included
+     * in the extend2 cell if we're configured to use it, though. */
+    ed25519_pubkey_copy(&ec.ed_pubkey, &hop->extend_info->ed_identity);
 
     len = onion_skin_create(ec.create_cell.handshake_type,
                             hop->extend_info,
@@ -1169,6 +1174,18 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
+  /* Fill in ed_pubkey if it was not provided and we can infer it from
+   * our networkstatus */
+  if (ed25519_public_key_is_zero(&ec.ed_pubkey)) {
+    const node_t *node = node_get_by_id((const char*)ec.node_id);
+    const ed25519_public_key_t *node_ed_id = NULL;
+    if (node &&
+        node_supports_ed25519_link_authentication(node) &&
+        (node_ed_id = node_get_ed25519_id(node))) {
+      ed25519_pubkey_copy(&ec.ed_pubkey, node_ed_id);
+    }
+  }
+
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
    * assist circular-path attacks. */
@@ -1180,7 +1197,17 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
+  /* Check the previous hop Ed25519 ID too */
+  if (! ed25519_public_key_is_zero(&ec.ed_pubkey) &&
+      ed25519_pubkey_eq(&ec.ed_pubkey,
+                        &TO_OR_CIRCUIT(circ)->p_chan->ed25519_identity)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend back to the previous hop "
+           "(by Ed25519 ID).");
+  }
+
   n_chan = channel_get_for_extend((const char*)ec.node_id,
+                                  &ec.ed_pubkey,
                                   &ec.orport_ipv4.addr,
                                   &msg,
                                   &should_launch);
@@ -1192,8 +1219,9 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
     circ->n_hop = extend_info_new(NULL /*nickname*/,
                                   (const char*)ec.node_id,
-                                  NULL /*onion_key*/,
-                                  NULL /*curve25519_key*/,
+                                  &ec.ed_pubkey,
+                                  NULL, /*onion_key*/
+                                  NULL, /*curve25519_key*/
                                   &ec.orport_ipv4.addr,
                                   ec.orport_ipv4.port);
 
@@ -1206,7 +1234,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
       /* we should try to open a connection */
       n_chan = channel_connect_for_circuit(&ec.orport_ipv4.addr,
                                            ec.orport_ipv4.port,
-                                           (const char*)ec.node_id);
+                                           (const char*)ec.node_id,
+                                           &ec.ed_pubkey);
       if (!n_chan) {
         log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
@@ -2356,19 +2385,23 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 
 /** Allocate a new extend_info object based on the various arguments. */
 extend_info_t *
-extend_info_new(const char *nickname, const char *digest,
+extend_info_new(const char *nickname,
+                const char *rsa_id_digest,
+                const ed25519_public_key_t *ed_id,
                 crypto_pk_t *onion_key,
-                const curve25519_public_key_t *curve25519_key,
+                const curve25519_public_key_t *ntor_key,
                 const tor_addr_t *addr, uint16_t port)
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
-  memcpy(info->identity_digest, digest, DIGEST_LEN);
+  memcpy(info->identity_digest, rsa_id_digest, DIGEST_LEN);
+  if (ed_id && !ed25519_public_key_is_zero(ed_id))
+    memcpy(&info->ed_identity, ed_id, sizeof(ed25519_public_key_t));
   if (nickname)
     strlcpy(info->nickname, nickname, sizeof(info->nickname));
   if (onion_key)
     info->onion_key = crypto_pk_dup_key(onion_key);
-  if (curve25519_key)
-    memcpy(&info->curve25519_onion_key, curve25519_key,
+  if (ntor_key)
+    memcpy(&info->curve25519_onion_key, ntor_key,
            sizeof(curve25519_public_key_t));
   tor_addr_copy(&info->addr, addr);
   info->port = port;
@@ -2418,20 +2451,35 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
     return NULL;
   }
 
+  const ed25519_public_key_t *ed_pubkey = NULL;
+
+  /* Don't send the ed25519 pubkey unless the target node actually supports
+   * authenticating with it. */
+  if (node_supports_ed25519_link_authentication(node)) {
+    log_info(LD_CIRC, "Including Ed25519 ID for %s", node_describe(node));
+    ed_pubkey = node_get_ed25519_id(node);
+  } else if (node_get_ed25519_id(node)) {
+    log_info(LD_CIRC, "Not including the ed25519 ID for %s, since it won't "
+             " be able to authenticate it.",
+             node_describe(node));
+  }
+
   if (valid_addr && node->ri)
     return extend_info_new(node->ri->nickname,
-                             node->identity,
-                             node->ri->onion_pkey,
-                             node->ri->onion_curve25519_pkey,
-                             &ap.addr,
-                             ap.port);
+                           node->identity,
+                           ed_pubkey,
+                           node->ri->onion_pkey,
+                           node->ri->onion_curve25519_pkey,
+                           &ap.addr,
+                           ap.port);
   else if (valid_addr && node->rs && node->md)
     return extend_info_new(node->rs->nickname,
-                             node->identity,
-                             node->md->onion_pkey,
-                             node->md->onion_curve25519_pkey,
-                             &ap.addr,
-                             ap.port);
+                           node->identity,
+                           ed_pubkey,
+                           node->md->onion_pkey,
+                           node->md->onion_curve25519_pkey,
+                           &ap.addr,
+                           ap.port);
   else
     return NULL;
 }

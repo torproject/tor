@@ -174,7 +174,6 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                     const char *id_digest,
                     const ed25519_public_key_t *ed_id)
 {
-  (void) ed_id; // XXXX not fully used yet
   channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
   channel_t *chan = &(tlschan->base_);
 
@@ -1652,9 +1651,10 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
         connection_or_init_conn_from_address(chan->conn,
                   &(chan->conn->base_.addr),
                   chan->conn->base_.port,
+                  /* zero, checked above */
                   (const char*)(chan->conn->handshake_state->
                                 authenticated_rsa_peer_id),
-                  NULL, // XXXX Ed key
+                  NULL, /* Ed25519 ID: Also checked as zero */
                   0);
       }
     }
@@ -1993,12 +1993,15 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
              checked_ed_id, sizeof(ed25519_public_key_t));
     }
 
+    log_debug(LD_HANDSHAKE, "calling client_learned_peer_id from "
+              "process_certs_cell");
+
     if (connection_or_client_learned_peer_id(chan->conn,
                   chan->conn->handshake_state->authenticated_rsa_peer_id,
                   checked_ed_id) < 0)
       ERR("Problem setting or checking peer id");
 
-    log_info(LD_OR,
+    log_info(LD_HANDSHAKE,
              "Got some good certificates from %s:%d: Authenticated it with "
              "RSA%s",
              safe_str(chan->conn->base_.address), chan->conn->base_.port,
@@ -2334,6 +2337,13 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
                chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
     crypto_pk_free(identity_rcvd);
 
+    log_debug(LD_HANDSHAKE,
+              "Calling connection_or_init_conn_from_address for %s "
+              " from %s, with%s ed25519 id.",
+              safe_str(chan->conn->base_.address),
+              __func__,
+              ed_identity_received ? "" : "out");
+
     connection_or_init_conn_from_address(chan->conn,
                   &(chan->conn->base_.addr),
                   chan->conn->base_.port,
@@ -2342,7 +2352,7 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
                   ed_identity_received,
                   0);
 
-    log_info(LD_OR,
+    log_debug(LD_HANDSHAKE,
              "Got an AUTHENTICATE cell from %s:%d, type %d: Looks good.",
              safe_str(chan->conn->base_.address),
              chan->conn->base_.port,

@@ -161,6 +161,22 @@ curve25519_public_from_base64(curve25519_public_key_t *pkey,
   }
 }
 
+/** For convenience: Convert <b>pkey</b> to a statically allocated base64
+ * string and return it. Not threadsafe. Subsequent calls invalidate
+ * previous returns. */
+const char *
+ed25519_fmt(const ed25519_public_key_t *pkey)
+{
+  static char formatted[ED25519_BASE64_LEN+1];
+  if (pkey) {
+    int r = ed25519_public_to_base64(formatted, pkey);
+    tor_assert(!r);
+  } else {
+    strlcpy(formatted, "<null>", sizeof(formatted));
+  }
+  return formatted;
+}
+
 /** Try to decode the string <b>input</b> into an ed25519 public key. On
  * success, store the value in <b>pkey</b> and return 0. Otherwise return
  * -1. */

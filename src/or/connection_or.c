@@ -75,56 +75,25 @@ static void connection_or_mark_bad_for_new_circs(or_connection_t *or_conn);
 
 static void connection_or_change_state(or_connection_t *conn, uint8_t state);
 
-/**************************************************************/
+static void connection_or_check_canonicity(or_connection_t *conn,
+                                           int started_here);
 
-/** Map from identity digest of connected OR or desired OR to a connection_t
- * with that identity digest.  If there is more than one such connection_t,
- * they form a linked list, with next_with_same_id as the next pointer. */
-static digestmap_t *orconn_identity_map = NULL;
+/**************************************************************/
 
 /** Global map between Extended ORPort identifiers and OR
  *  connections. */
 static digestmap_t *orconn_ext_or_id_map = NULL;
 
-/** If conn is listed in orconn_identity_map, remove it, and clear
- * conn->identity_digest.  Otherwise do nothing. */
+/** Clear clear conn->identity_digest and update other data
+ * structures as appropriate.*/
 void
-connection_or_remove_from_identity_map(or_connection_t *conn)
+connection_or_clear_identity(or_connection_t *conn)
 {
-  or_connection_t *tmp;
   tor_assert(conn);
-  if (!orconn_identity_map)
-    return;
-  tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
-  if (!tmp) {
-    if (!tor_digest_is_zero(conn->identity_digest)) {
-      log_warn(LD_BUG, "Didn't find connection '%s' on identity map when "
-               "trying to remove it.",
-               conn->nickname ? conn->nickname : "NULL");
-    }
-    return;
-  }
-  if (conn == tmp) {
-    if (conn->next_with_same_id)
-      digestmap_set(orconn_identity_map, conn->identity_digest,
-                    conn->next_with_same_id);
-    else
-      digestmap_remove(orconn_identity_map, conn->identity_digest);
-  } else {
-    while (tmp->next_with_same_id) {
-      if (tmp->next_with_same_id == conn) {
-        tmp->next_with_same_id = conn->next_with_same_id;
-        break;
-      }
-      tmp = tmp->next_with_same_id;
-    }
-  }
   memset(conn->identity_digest, 0, DIGEST_LEN);
-  conn->next_with_same_id = NULL;
 }
 
-/** Remove all entries from the identity-to-orconn map, and clear
- * all identities in OR conns.*/
+/** Clear all identities in OR conns.*/
 void
 connection_or_clear_identity_map(void)
 {
@@ -132,60 +101,72 @@ connection_or_clear_identity_map(void)
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
     if (conn->type == CONN_TYPE_OR) {
-      or_connection_t *or_conn = TO_OR_CONN(conn);
-      memset(or_conn->identity_digest, 0, DIGEST_LEN);
-      or_conn->next_with_same_id = NULL;
+      connection_or_clear_identity(TO_OR_CONN(conn));
     }
   });
-
-  digestmap_free(orconn_identity_map, NULL);
-  orconn_identity_map = NULL;
 }
 
 /** Change conn->identity_digest to digest, and add conn into
- * orconn_digest_map. */
+ * the appropriate digest maps.
+ *
+ * NOTE that this function only allows two kinds of transitions: from
+ * unset identity to set identity, and from idempotent re-settings
+ * of the same identity.  It's not allowed to clear an identity or to
+ * change an identity.  Return 0 on success, and -1 if the transition
+ * is not allowed.
+ **/
 static void
 connection_or_set_identity_digest(or_connection_t *conn,
                                   const char *rsa_digest,
                                   const ed25519_public_key_t *ed_id)
 {
-  (void) ed_id; // DOCDOC // XXXX not implemented yet.
-  or_connection_t *tmp;
+  channel_t *chan = NULL;
   tor_assert(conn);
   tor_assert(rsa_digest);
 
-  if (!orconn_identity_map)
-    orconn_identity_map = digestmap_new();
-  if (tor_memeq(conn->identity_digest, rsa_digest, DIGEST_LEN))
+  if (conn->chan)
+    chan = TLS_CHAN_TO_BASE(conn->chan);
+
+  log_info(LD_HANDSHAKE, "Set identity digest for %p (%s): %s %s.",
+           conn,
+           escaped_safe_str(conn->base_.address),
+           hex_str(rsa_digest, DIGEST_LEN),
+           ed25519_fmt(ed_id));
+  log_info(LD_HANDSHAKE, "   (Previously: %s %s)",
+           hex_str(conn->identity_digest, DIGEST_LEN),
+           chan ? ed25519_fmt(&chan->ed25519_identity) : "<null>");
+
+  const int rsa_id_was_set = ! tor_digest_is_zero(conn->identity_digest);
+  const int ed_id_was_set =
+    chan && !ed25519_public_key_is_zero(&chan->ed25519_identity);
+  const int rsa_changed =
+    tor_memneq(conn->identity_digest, rsa_digest, DIGEST_LEN);
+  const int ed_changed = ed_id_was_set &&
+    (!ed_id || !ed25519_pubkey_eq(ed_id, &chan->ed25519_identity));
+
+  tor_assert(!rsa_changed || !rsa_id_was_set);
+  tor_assert(!ed_changed || !ed_id_was_set);
+
+  if (!rsa_changed && !ed_changed)
     return;
 
   /* If the identity was set previously, remove the old mapping. */
-  if (! tor_digest_is_zero(conn->identity_digest)) {
-    connection_or_remove_from_identity_map(conn);
-    if (conn->chan)
-      channel_clear_identity_digest(TLS_CHAN_TO_BASE(conn->chan));
+  if (rsa_id_was_set) {
+    connection_or_clear_identity(conn);
+    if (chan)
+      channel_clear_identity_digest(chan);
   }
 
   memcpy(conn->identity_digest, rsa_digest, DIGEST_LEN);
 
-  /* If we're setting the ID to zero, don't add a mapping. */
-  if (tor_digest_is_zero(rsa_digest))
+  /* If we're initializing the IDs to zero, don't add a mapping yet. */
+  if (tor_digest_is_zero(rsa_digest) &&
+      (!ed_id || ed25519_public_key_is_zero(ed_id)))
     return;
 
-  tmp = digestmap_set(orconn_identity_map, rsa_digest, conn);
-  conn->next_with_same_id = tmp;
-
   /* Deal with channels */
-  if (conn->chan)
-    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan), rsa_digest);
-
-#if 1
-  /* Testing code to check for bugs in representation. */
-  for (; tmp; tmp = tmp->next_with_same_id) {
-    tor_assert(tor_memeq(tmp->identity_digest, rsa_digest, DIGEST_LEN));
-    tor_assert(tmp != conn);
-  }
-#endif
+  if (chan)
+    channel_set_identity_digest(chan, rsa_digest, ed_id);
 }
 
 /** Remove the Extended ORPort identifier of <b>conn</b> from the
@@ -883,14 +864,44 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                                      const ed25519_public_key_t *ed_id,
                                      int started_here)
 {
-  (void) ed_id; // not fully used yet.
-  const node_t *r = node_get_by_id(id_digest);
+  log_debug(LD_HANDSHAKE, "init conn from address %s: %s, %s (%d)",
+            fmt_addr(addr),
+            hex_str((const char*)id_digest, DIGEST_LEN),
+            ed25519_fmt(ed_id),
+            started_here);
+
   connection_or_set_identity_digest(conn, id_digest, ed_id);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
 
   conn->base_.port = port;
   tor_addr_copy(&conn->base_.addr, addr);
   tor_addr_copy(&conn->real_addr, addr);
+
+  connection_or_check_canonicity(conn, started_here);
+}
+
+/** Check whether the identity of <b>conn</b> matches a known node.  If it
+ * does, check whether the address of conn matches the expected address, and
+ * update the connection's is_canonical flag, nickname, and address fields as
+ * appropriate. */
+static void
+connection_or_check_canonicity(or_connection_t *conn, int started_here)
+{
+  const char *id_digest = conn->identity_digest;
+  const ed25519_public_key_t *ed_id = NULL;
+  const tor_addr_t *addr = &conn->real_addr;
+  if (conn->chan)
+    ed_id = & TLS_CHAN_TO_BASE(conn->chan)->ed25519_identity;
+
+  const node_t *r = node_get_by_id(id_digest);
+  if (r &&
+      node_supports_ed25519_link_authentication(r) &&
+      ! node_ed25519_id_matches(r, ed_id)) {
+    /* If this node is capable of proving an ed25519 ID,
+     * we can't call this a canonical connection unless both IDs match. */
+     r = NULL;
+  }
+
   if (r) {
     tor_addr_port_t node_ap;
     node_get_pref_orport(r, &node_ap);
@@ -912,10 +923,12 @@ connection_or_init_conn_from_address(or_connection_t *conn,
       tor_addr_copy(&conn->base_.addr, &node_ap.addr);
       conn->base_.port = node_ap.port;
     }
+    tor_free(conn->nickname);
     conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->base_.address);
     conn->base_.address = tor_addr_to_str_dup(&node_ap.addr);
   } else {
+    tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
     base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
@@ -961,7 +974,7 @@ connection_or_mark_bad_for_new_circs(or_connection_t *or_conn)
  * too old for new circuits? */
 #define TIME_BEFORE_OR_CONN_IS_TOO_OLD (60*60*24*7)
 
-/** Given the head of the linked list for all the or_connections with a given
+/** Given a list of all the or_connections with a given
  * identity, set elements of that list as is_bad_for_new_circs as
  * appropriate. Helper for connection_or_set_bad_connections().
  *
@@ -978,16 +991,19 @@ connection_or_mark_bad_for_new_circs(or_connection_t *or_conn)
  * See channel_is_better() in channel.c for our idea of what makes one OR
  * connection better than another.
  */
-static void
-connection_or_group_set_badness(or_connection_t *head, int force)
+void
+connection_or_group_set_badness_(smartlist_t *group, int force)
 {
-  or_connection_t *or_conn = NULL, *best = NULL;
+  /* XXXX this function should be entirely about channels, not OR
+   * XXXX connections. */
+
+  or_connection_t *best = NULL;
   int n_old = 0, n_inprogress = 0, n_canonical = 0, n_other = 0;
   time_t now = time(NULL);
 
   /* Pass 1: expire everything that's old, and see what the status of
    * everything else is. */
-  for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
+  SMARTLIST_FOREACH_BEGIN(group, or_connection_t *, or_conn) {
     if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn))
       continue;
@@ -1011,11 +1027,11 @@ connection_or_group_set_badness(or_connection_t *head, int force)
     } else {
       ++n_other;
     }
-  }
+  } SMARTLIST_FOREACH_END(or_conn);
 
   /* Pass 2: We know how about how good the best connection is.
    * expire everything that's worse, and find the very best if we can. */
-  for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
+  SMARTLIST_FOREACH_BEGIN(group, or_connection_t *, or_conn) {
     if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn))
       continue; /* This one doesn't need to be marked bad. */
@@ -1042,7 +1058,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
                           0)) {
       best = or_conn;
     }
-  }
+  } SMARTLIST_FOREACH_END(or_conn);
 
   if (!best)
     return;
@@ -1061,7 +1077,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
    *   0.1.2.x dies out, the first case will go away, and the second one is
    *   "mostly harmless", so a fix can wait until somebody is bored.
    */
-  for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
+  SMARTLIST_FOREACH_BEGIN(group, or_connection_t *, or_conn) {
     if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn) ||
         or_conn->base_.state != OR_CONN_STATE_OPEN)
@@ -1095,24 +1111,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
         connection_or_mark_bad_for_new_circs(or_conn);
       }
     }
-  }
-}
-
-/** Go through all the OR connections (or if <b>digest</b> is non-NULL, just
- * the OR connections with that digest), and set the is_bad_for_new_circs
- * flag based on the rules in connection_or_group_set_badness() (or just
- * always set it if <b>force</b> is true).
- */
-void
-connection_or_set_bad_connections(const char *digest, int force)
-{
-  if (!orconn_identity_map)
-    return;
-
-  DIGESTMAP_FOREACH(orconn_identity_map, identity, or_connection_t *, conn) {
-    if (!digest || tor_memeq(digest, conn->identity_digest, DIGEST_LEN))
-      connection_or_group_set_badness(conn, force);
-  } DIGESTMAP_FOREACH_END;
+  } SMARTLIST_FOREACH_END(or_conn);
 }
 
 /** <b>conn</b> is in the 'connecting' state, and it failed to complete
@@ -1182,7 +1181,6 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
                         const ed25519_public_key_t *ed_id,
                         channel_tls_t *chan))
 {
-  (void) ed_id; // XXXX not fully used yet.
   or_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;
@@ -1199,6 +1197,11 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
 
   if (server_mode(options) && router_digest_is_me(id_digest)) {
     log_info(LD_PROTOCOL,"Client asked me to connect to myself. Refusing.");
+    return NULL;
+  }
+  if (server_mode(options) && router_ed25519_id_is_me(ed_id)) {
+    log_info(LD_PROTOCOL,"Client asked me to connect to myself by Ed25519 "
+             "identity. Refusing.");
     return NULL;
   }
 
@@ -1570,20 +1573,25 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
 
   crypto_pk_free(identity_rcvd);
 
-  if (started_here)
+  if (started_here) {
+    /* A TLS handshake can't teach us an Ed25519 ID, so we set it to NULL
+     * here. */
+    log_debug(LD_HANDSHAKE, "Calling client_learned_peer_id from "
+              "check_valid_tls_handshake");
     return connection_or_client_learned_peer_id(conn,
                                         (const uint8_t*)digest_rcvd_out,
-                                        NULL // Ed25519 ID
-                                        );
+                                        NULL);
+  }
 
   return 0;
 }
 
 /** Called when we (as a connection initiator) have definitively,
  * authenticatedly, learned that ID of the Tor instance on the other
- * side of <b>conn</b> is <b>peer_id</b>.  For v1 and v2 handshakes,
+ * side of <b>conn</b> is <b>rsa_peer_id</b> and optionally <b>ed_peer_id</b>.
+ * For v1 and v2 handshakes,
  * this is right after we get a certificate chain in a TLS handshake
- * or renegotiation.  For v3 handshakes, this is right after we get a
+ * or renegotiation.  For v3+ handshakes, this is right after we get a
  * certificate chain in a CERTS cell.
  *
  * If we did not know the ID before, record the one we got.
@@ -1607,11 +1615,26 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                      const uint8_t *rsa_peer_id,
                                      const ed25519_public_key_t *ed_peer_id)
 {
-  (void) ed_peer_id; // not used yet.
-
   const or_options_t *options = get_options();
+  channel_tls_t *chan_tls = conn->chan;
+  channel_t *chan = channel_tls_to_base(chan_tls);
+  int changed_identity = 0;
+  tor_assert(chan);
 
-  if (tor_digest_is_zero(conn->identity_digest)) {
+  const int expected_rsa_key =
+    ! tor_digest_is_zero(conn->identity_digest);
+  const int expected_ed_key =
+    ! ed25519_public_key_is_zero(&chan->ed25519_identity);
+
+  log_info(LD_HANDSHAKE, "learned peer id for %p (%s): %s, %s",
+           conn,
+           safe_str_client(conn->base_.address),
+           hex_str((const char*)rsa_peer_id, DIGEST_LEN),
+           ed25519_fmt(ed_peer_id));
+
+  if (! expected_rsa_key && ! expected_ed_key) {
+    log_info(LD_HANDSHAKE, "(we had no ID in mind when we made this "
+             "connection.");
     connection_or_set_identity_digest(conn,
                                       (const char*)rsa_peer_id, ed_peer_id);
     tor_free(conn->nickname);
@@ -1625,16 +1648,39 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     /* if it's a bridge and we didn't know its identity fingerprint, now
      * we do -- remember it for future attempts. */
     learned_router_identity(&conn->base_.addr, conn->base_.port,
-                            (const char*)rsa_peer_id /*, ed_peer_id XXXX */);
+                            (const char*)rsa_peer_id, ed_peer_id);
+    changed_identity = 1;
   }
 
-  if (tor_memneq(rsa_peer_id, conn->identity_digest, DIGEST_LEN)) {
+  const int rsa_mismatch = expected_rsa_key &&
+    tor_memneq(rsa_peer_id, conn->identity_digest, DIGEST_LEN);
+  /* It only counts as an ed25519 mismatch if we wanted an ed25519 identity
+   * and didn't get it. It's okay if we get one that we didn't ask for. */
+  const int ed25519_mismatch =
+    expected_ed_key &&
+    (ed_peer_id == NULL ||
+     ! ed25519_pubkey_eq(&chan->ed25519_identity, ed_peer_id));
+
+  if (rsa_mismatch || ed25519_mismatch) {
     /* I was aiming for a particular digest. I didn't get it! */
-    char seen[HEX_DIGEST_LEN+1];
-    char expected[HEX_DIGEST_LEN+1];
-    base16_encode(seen, sizeof(seen), (const char*)rsa_peer_id, DIGEST_LEN);
-    base16_encode(expected, sizeof(expected), conn->identity_digest,
+    char seen_rsa[HEX_DIGEST_LEN+1];
+    char expected_rsa[HEX_DIGEST_LEN+1];
+    char seen_ed[ED25519_BASE64_LEN+1];
+    char expected_ed[ED25519_BASE64_LEN+1];
+    base16_encode(seen_rsa, sizeof(seen_rsa),
+                  (const char*)rsa_peer_id, DIGEST_LEN);
+    base16_encode(expected_rsa, sizeof(expected_rsa), conn->identity_digest,
                   DIGEST_LEN);
+    if (ed_peer_id) {
+      ed25519_public_to_base64(seen_ed, ed_peer_id);
+    } else {
+      strlcpy(seen_ed, "no ed25519 key", sizeof(seen_ed));
+    }
+    if (! ed25519_public_key_is_zero(&chan->ed25519_identity)) {
+      ed25519_public_to_base64(expected_ed, &chan->ed25519_identity);
+    } else {
+      strlcpy(expected_ed, "no ed25519 key", sizeof(expected_ed));
+    }
     const int using_hardcoded_fingerprints =
       !networkstatus_get_reasonably_live_consensus(time(NULL),
                                                    usable_consensus_flavor());
@@ -1669,9 +1715,11 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     }
 
     log_fn(severity, LD_HANDSHAKE,
-           "Tried connecting to router at %s:%d, but identity key was not "
-           "as expected: wanted %s but got %s.%s",
-           conn->base_.address, conn->base_.port, expected, seen, extra_log);
+           "Tried connecting to router at %s:%d, but RSA identity key was not "
+           "as expected: wanted %s + %s but got %s + %s.%s",
+           conn->base_.address, conn->base_.port,
+           expected_rsa, expected_ed, seen_rsa, seen_ed, extra_log);
+
     entry_guard_register_connect_status(conn->identity_digest, 0, 1,
                                         time(NULL));
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
@@ -1683,9 +1731,24 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                 conn);
     return -1;
   }
+
+  if (!expected_ed_key && ed_peer_id) {
+    log_info(LD_HANDSHAKE, "(we had no Ed25519 ID in mind when we made this "
+             "connection.");
+    connection_or_set_identity_digest(conn,
+                                      (const char*)rsa_peer_id, ed_peer_id);
+    changed_identity = 1;
+  }
+
+  if (changed_identity) {
+    /* If we learned an identity for this connection, then we might have
+     * just discovered it to be canonical. */
+    connection_or_check_canonicity(conn, conn->handshake_state->started_here);
+  }
+
   if (authdir_mode_tests_reachability(options)) {
     dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
-                            (const char*)rsa_peer_id /*, ed_id XXXX */);
+                            (const char*)rsa_peer_id, ed_peer_id);
   }
 
   return 0;

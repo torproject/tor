@@ -3176,7 +3176,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 void
 dirserv_orconn_tls_done(const tor_addr_t *addr,
                         uint16_t or_port,
-                        const char *digest_rcvd)
+                        const char *digest_rcvd,
+                        const ed25519_public_key_t *ed_id_rcvd)
 {
   node_t *node = NULL;
   tor_addr_port_t orport;
@@ -3188,7 +3189,24 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
   node = node_get_mutable_by_id(digest_rcvd);
   if (node == NULL || node->ri == NULL)
     return;
+
   ri = node->ri;
+
+  if (get_options()->AuthDirTestEd25519LinkKeys &&
+      ri->cache_info.signing_key_cert) {
+    /* We allow the node to have an ed25519 key if we haven't been told one in
+     * the routerinfo, but if we *HAVE* been told one in the routerinfo, it
+     * needs to match. */
+    const ed25519_public_key_t *expected_id =
+      &ri->cache_info.signing_key_cert->signing_key;
+    tor_assert(!ed25519_public_key_is_zero(expected_id));
+    if (! ed_id_rcvd || ! ed25519_pubkey_eq(ed_id_rcvd, expected_id)) {
+      log_info(LD_DIRSERV, "Router at %s:%d with RSA ID %s "
+               "did not present expected Ed25519 ID.",
+               fmt_addr(addr), or_port, hex_str(digest_rcvd, DIGEST_LEN));
+      return; /* Don't mark it as reachable. */
+    }
+  }
 
   tor_addr_copy(&orport.addr, addr);
   orport.port = or_port;
@@ -3245,14 +3263,23 @@ dirserv_should_launch_reachability_test(const routerinfo_t *ri,
 void
 dirserv_single_reachability_test(time_t now, routerinfo_t *router)
 {
+  const or_options_t *options = get_options();
   channel_t *chan = NULL;
   node_t *node = NULL;
   tor_addr_t router_addr;
+  const ed25519_public_key_t *ed_id_key;
   (void) now;
 
   tor_assert(router);
   node = node_get_mutable_by_id(router->cache_info.identity_digest);
   tor_assert(node);
+
+  if (options->AuthDirTestEd25519LinkKeys &&
+      node_supports_ed25519_link_authentication(node)) {
+    ed_id_key = &router->cache_info.signing_key_cert->signing_key;
+  } else {
+    ed_id_key = NULL;
+  }
 
   /* IPv4. */
   log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
@@ -3260,8 +3287,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   tor_addr_from_ipv4h(&router_addr, router->addr);
   chan = channel_tls_connect(&router_addr, router->or_port,
                              router->cache_info.identity_digest,
-                             NULL // XXXX Ed25519 ID.
-                             );
+                             ed_id_key);
   if (chan) command_setup_channel(chan);
 
   /* Possible IPv6. */
@@ -3274,8 +3300,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
               router->ipv6_orport);
     chan = channel_tls_connect(&router->ipv6_addr, router->ipv6_orport,
                                router->cache_info.identity_digest,
-                               NULL // XXXX Ed25519 ID.
-                               );
+                               ed_id_key);
     if (chan) command_setup_channel(chan);
   }
 }

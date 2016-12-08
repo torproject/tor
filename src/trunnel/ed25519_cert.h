@@ -14,6 +14,15 @@
 #define LS_IPV6 1
 #define LS_LEGACY_ID 2
 #define LS_ED25519_ID 3
+#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_CREATE2_CELL_BODY)
+struct create2_cell_body_st {
+  uint16_t handshake_type;
+  uint16_t handshake_len;
+  TRUNNEL_DYNARRAY_HEAD(, uint8_t) handshake_data;
+  uint8_t trunnel_error_code_;
+};
+#endif
+typedef struct create2_cell_body_st create2_cell_body_t;
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_ED25519_CERT_EXTENSION)
 struct ed25519_cert_extension_st {
   uint16_t ext_length;
@@ -25,6 +34,16 @@ struct ed25519_cert_extension_st {
 };
 #endif
 typedef struct ed25519_cert_extension_st ed25519_cert_extension_t;
+#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_EXTEND1_CELL_BODY)
+struct extend1_cell_body_st {
+  uint32_t ipv4addr;
+  uint16_t port;
+  uint8_t onionskin[186];
+  uint8_t identity[20];
+  uint8_t trunnel_error_code_;
+};
+#endif
+typedef struct extend1_cell_body_st extend1_cell_body_t;
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_LINK_SPECIFIER)
 struct link_specifier_st {
   uint8_t ls_type;
@@ -54,6 +73,15 @@ struct ed25519_cert_st {
 };
 #endif
 typedef struct ed25519_cert_st ed25519_cert_t;
+#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_EXTEND2_CELL_BODY)
+struct extend2_cell_body_st {
+  uint8_t n_spec;
+  TRUNNEL_DYNARRAY_HEAD(, struct link_specifier_st *) ls;
+  struct create2_cell_body_st *create2;
+  uint8_t trunnel_error_code_;
+};
+#endif
+typedef struct extend2_cell_body_st extend2_cell_body_t;
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_LINK_SPECIFIER_LIST)
 struct link_specifier_list_st {
   uint8_t n_spec;
@@ -62,6 +90,95 @@ struct link_specifier_list_st {
 };
 #endif
 typedef struct link_specifier_list_st link_specifier_list_t;
+/** Return a newly allocated create2_cell_body with all elements set
+ * to zero.
+ */
+create2_cell_body_t *create2_cell_body_new(void);
+/** Release all storage held by the create2_cell_body in 'victim'. (Do
+ * nothing if 'victim' is NULL.)
+ */
+void create2_cell_body_free(create2_cell_body_t *victim);
+/** Try to parse a create2_cell_body from the buffer in 'input', using
+ * up to 'len_in' bytes from the input buffer. On success, return the
+ * number of bytes consumed and set *output to the newly allocated
+ * create2_cell_body_t. On failure, return -2 if the input appears
+ * truncated, and -1 if the input is otherwise invalid.
+ */
+ssize_t create2_cell_body_parse(create2_cell_body_t **output, const uint8_t *input, const size_t len_in);
+/** Return the number of bytes we expect to need to encode the
+ * create2_cell_body in 'obj'. On failure, return a negative value.
+ * Note that this value may be an overestimate, and can even be an
+ * underestimate for certain unencodeable objects.
+ */
+ssize_t create2_cell_body_encoded_len(const create2_cell_body_t *obj);
+/** Try to encode the create2_cell_body from 'input' into the buffer
+ * at 'output', using up to 'avail' bytes of the output buffer. On
+ * success, return the number of bytes used. On failure, return -2 if
+ * the buffer was not long enough, and -1 if the input was invalid.
+ */
+ssize_t create2_cell_body_encode(uint8_t *output, size_t avail, const create2_cell_body_t *input);
+/** Check whether the internal state of the create2_cell_body in 'obj'
+ * is consistent. Return NULL if it is, and a short message if it is
+ * not.
+ */
+const char *create2_cell_body_check(const create2_cell_body_t *obj);
+/** Clear any errors that were set on the object 'obj' by its setter
+ * functions. Return true iff errors were cleared.
+ */
+int create2_cell_body_clear_errors(create2_cell_body_t *obj);
+/** Return the value of the handshake_type field of the
+ * create2_cell_body_t in 'inp'
+ */
+uint16_t create2_cell_body_get_handshake_type(create2_cell_body_t *inp);
+/** Set the value of the handshake_type field of the
+ * create2_cell_body_t in 'inp' to 'val'. Return 0 on success; return
+ * -1 and set the error code on 'inp' on failure.
+ */
+int create2_cell_body_set_handshake_type(create2_cell_body_t *inp, uint16_t val);
+/** Return the value of the handshake_len field of the
+ * create2_cell_body_t in 'inp'
+ */
+uint16_t create2_cell_body_get_handshake_len(create2_cell_body_t *inp);
+/** Set the value of the handshake_len field of the
+ * create2_cell_body_t in 'inp' to 'val'. Return 0 on success; return
+ * -1 and set the error code on 'inp' on failure.
+ */
+int create2_cell_body_set_handshake_len(create2_cell_body_t *inp, uint16_t val);
+/** Return the length of the dynamic array holding the handshake_data
+ * field of the create2_cell_body_t in 'inp'.
+ */
+size_t create2_cell_body_getlen_handshake_data(const create2_cell_body_t *inp);
+/** Return the element at position 'idx' of the dynamic array field
+ * handshake_data of the create2_cell_body_t in 'inp'.
+ */
+uint8_t create2_cell_body_get_handshake_data(create2_cell_body_t *inp, size_t idx);
+/** As create2_cell_body_get_handshake_data, but take and return a
+ * const pointer
+ */
+uint8_t create2_cell_body_getconst_handshake_data(const create2_cell_body_t *inp, size_t idx);
+/** Change the element at position 'idx' of the dynamic array field
+ * handshake_data of the create2_cell_body_t in 'inp', so that it will
+ * hold the value 'elt'.
+ */
+int create2_cell_body_set_handshake_data(create2_cell_body_t *inp, size_t idx, uint8_t elt);
+/** Append a new element 'elt' to the dynamic array field
+ * handshake_data of the create2_cell_body_t in 'inp'.
+ */
+int create2_cell_body_add_handshake_data(create2_cell_body_t *inp, uint8_t elt);
+/** Return a pointer to the variable-length array field handshake_data
+ * of 'inp'.
+ */
+uint8_t * create2_cell_body_getarray_handshake_data(create2_cell_body_t *inp);
+/** As create2_cell_body_get_handshake_data, but take and return a
+ * const pointer
+ */
+const uint8_t  * create2_cell_body_getconstarray_handshake_data(const create2_cell_body_t *inp);
+/** Change the length of the variable-length array field
+ * handshake_data of 'inp' to 'newlen'.Fill extra elements with 0.
+ * Return 0 on success; return -1 and set the error code on 'inp' on
+ * failure.
+ */
+int create2_cell_body_setlen_handshake_data(create2_cell_body_t *inp, size_t newlen);
 /** Return a newly allocated ed25519_cert_extension with all elements
  * set to zero.
  */
@@ -184,6 +301,109 @@ const uint8_t  * ed25519_cert_extension_getconstarray_un_unparsed(const ed25519_
  * success; return -1 and set the error code on 'inp' on failure.
  */
 int ed25519_cert_extension_setlen_un_unparsed(ed25519_cert_extension_t *inp, size_t newlen);
+/** Return a newly allocated extend1_cell_body with all elements set
+ * to zero.
+ */
+extend1_cell_body_t *extend1_cell_body_new(void);
+/** Release all storage held by the extend1_cell_body in 'victim'. (Do
+ * nothing if 'victim' is NULL.)
+ */
+void extend1_cell_body_free(extend1_cell_body_t *victim);
+/** Try to parse a extend1_cell_body from the buffer in 'input', using
+ * up to 'len_in' bytes from the input buffer. On success, return the
+ * number of bytes consumed and set *output to the newly allocated
+ * extend1_cell_body_t. On failure, return -2 if the input appears
+ * truncated, and -1 if the input is otherwise invalid.
+ */
+ssize_t extend1_cell_body_parse(extend1_cell_body_t **output, const uint8_t *input, const size_t len_in);
+/** Return the number of bytes we expect to need to encode the
+ * extend1_cell_body in 'obj'. On failure, return a negative value.
+ * Note that this value may be an overestimate, and can even be an
+ * underestimate for certain unencodeable objects.
+ */
+ssize_t extend1_cell_body_encoded_len(const extend1_cell_body_t *obj);
+/** Try to encode the extend1_cell_body from 'input' into the buffer
+ * at 'output', using up to 'avail' bytes of the output buffer. On
+ * success, return the number of bytes used. On failure, return -2 if
+ * the buffer was not long enough, and -1 if the input was invalid.
+ */
+ssize_t extend1_cell_body_encode(uint8_t *output, size_t avail, const extend1_cell_body_t *input);
+/** Check whether the internal state of the extend1_cell_body in 'obj'
+ * is consistent. Return NULL if it is, and a short message if it is
+ * not.
+ */
+const char *extend1_cell_body_check(const extend1_cell_body_t *obj);
+/** Clear any errors that were set on the object 'obj' by its setter
+ * functions. Return true iff errors were cleared.
+ */
+int extend1_cell_body_clear_errors(extend1_cell_body_t *obj);
+/** Return the value of the ipv4addr field of the extend1_cell_body_t
+ * in 'inp'
+ */
+uint32_t extend1_cell_body_get_ipv4addr(extend1_cell_body_t *inp);
+/** Set the value of the ipv4addr field of the extend1_cell_body_t in
+ * 'inp' to 'val'. Return 0 on success; return -1 and set the error
+ * code on 'inp' on failure.
+ */
+int extend1_cell_body_set_ipv4addr(extend1_cell_body_t *inp, uint32_t val);
+/** Return the value of the port field of the extend1_cell_body_t in
+ * 'inp'
+ */
+uint16_t extend1_cell_body_get_port(extend1_cell_body_t *inp);
+/** Set the value of the port field of the extend1_cell_body_t in
+ * 'inp' to 'val'. Return 0 on success; return -1 and set the error
+ * code on 'inp' on failure.
+ */
+int extend1_cell_body_set_port(extend1_cell_body_t *inp, uint16_t val);
+/** Return the (constant) length of the array holding the onionskin
+ * field of the extend1_cell_body_t in 'inp'.
+ */
+size_t extend1_cell_body_getlen_onionskin(const extend1_cell_body_t *inp);
+/** Return the element at position 'idx' of the fixed array field
+ * onionskin of the extend1_cell_body_t in 'inp'.
+ */
+uint8_t extend1_cell_body_get_onionskin(extend1_cell_body_t *inp, size_t idx);
+/** As extend1_cell_body_get_onionskin, but take and return a const
+ * pointer
+ */
+uint8_t extend1_cell_body_getconst_onionskin(const extend1_cell_body_t *inp, size_t idx);
+/** Change the element at position 'idx' of the fixed array field
+ * onionskin of the extend1_cell_body_t in 'inp', so that it will hold
+ * the value 'elt'.
+ */
+int extend1_cell_body_set_onionskin(extend1_cell_body_t *inp, size_t idx, uint8_t elt);
+/** Return a pointer to the 186-element array field onionskin of
+ * 'inp'.
+ */
+uint8_t * extend1_cell_body_getarray_onionskin(extend1_cell_body_t *inp);
+/** As extend1_cell_body_get_onionskin, but take and return a const
+ * pointer
+ */
+const uint8_t  * extend1_cell_body_getconstarray_onionskin(const extend1_cell_body_t *inp);
+/** Return the (constant) length of the array holding the identity
+ * field of the extend1_cell_body_t in 'inp'.
+ */
+size_t extend1_cell_body_getlen_identity(const extend1_cell_body_t *inp);
+/** Return the element at position 'idx' of the fixed array field
+ * identity of the extend1_cell_body_t in 'inp'.
+ */
+uint8_t extend1_cell_body_get_identity(extend1_cell_body_t *inp, size_t idx);
+/** As extend1_cell_body_get_identity, but take and return a const
+ * pointer
+ */
+uint8_t extend1_cell_body_getconst_identity(const extend1_cell_body_t *inp, size_t idx);
+/** Change the element at position 'idx' of the fixed array field
+ * identity of the extend1_cell_body_t in 'inp', so that it will hold
+ * the value 'elt'.
+ */
+int extend1_cell_body_set_identity(extend1_cell_body_t *inp, size_t idx, uint8_t elt);
+/** Return a pointer to the 20-element array field identity of 'inp'.
+ */
+uint8_t * extend1_cell_body_getarray_identity(extend1_cell_body_t *inp);
+/** As extend1_cell_body_get_identity, but take and return a const
+ * pointer
+ */
+const uint8_t  * extend1_cell_body_getconstarray_identity(const extend1_cell_body_t *inp);
 /** Return a newly allocated link_specifier with all elements set to
  * zero.
  */
@@ -536,6 +756,104 @@ uint8_t * ed25519_cert_getarray_signature(ed25519_cert_t *inp);
 /** As ed25519_cert_get_signature, but take and return a const pointer
  */
 const uint8_t  * ed25519_cert_getconstarray_signature(const ed25519_cert_t *inp);
+/** Return a newly allocated extend2_cell_body with all elements set
+ * to zero.
+ */
+extend2_cell_body_t *extend2_cell_body_new(void);
+/** Release all storage held by the extend2_cell_body in 'victim'. (Do
+ * nothing if 'victim' is NULL.)
+ */
+void extend2_cell_body_free(extend2_cell_body_t *victim);
+/** Try to parse a extend2_cell_body from the buffer in 'input', using
+ * up to 'len_in' bytes from the input buffer. On success, return the
+ * number of bytes consumed and set *output to the newly allocated
+ * extend2_cell_body_t. On failure, return -2 if the input appears
+ * truncated, and -1 if the input is otherwise invalid.
+ */
+ssize_t extend2_cell_body_parse(extend2_cell_body_t **output, const uint8_t *input, const size_t len_in);
+/** Return the number of bytes we expect to need to encode the
+ * extend2_cell_body in 'obj'. On failure, return a negative value.
+ * Note that this value may be an overestimate, and can even be an
+ * underestimate for certain unencodeable objects.
+ */
+ssize_t extend2_cell_body_encoded_len(const extend2_cell_body_t *obj);
+/** Try to encode the extend2_cell_body from 'input' into the buffer
+ * at 'output', using up to 'avail' bytes of the output buffer. On
+ * success, return the number of bytes used. On failure, return -2 if
+ * the buffer was not long enough, and -1 if the input was invalid.
+ */
+ssize_t extend2_cell_body_encode(uint8_t *output, size_t avail, const extend2_cell_body_t *input);
+/** Check whether the internal state of the extend2_cell_body in 'obj'
+ * is consistent. Return NULL if it is, and a short message if it is
+ * not.
+ */
+const char *extend2_cell_body_check(const extend2_cell_body_t *obj);
+/** Clear any errors that were set on the object 'obj' by its setter
+ * functions. Return true iff errors were cleared.
+ */
+int extend2_cell_body_clear_errors(extend2_cell_body_t *obj);
+/** Return the value of the n_spec field of the extend2_cell_body_t in
+ * 'inp'
+ */
+uint8_t extend2_cell_body_get_n_spec(extend2_cell_body_t *inp);
+/** Set the value of the n_spec field of the extend2_cell_body_t in
+ * 'inp' to 'val'. Return 0 on success; return -1 and set the error
+ * code on 'inp' on failure.
+ */
+int extend2_cell_body_set_n_spec(extend2_cell_body_t *inp, uint8_t val);
+/** Return the length of the dynamic array holding the ls field of the
+ * extend2_cell_body_t in 'inp'.
+ */
+size_t extend2_cell_body_getlen_ls(const extend2_cell_body_t *inp);
+/** Return the element at position 'idx' of the dynamic array field ls
+ * of the extend2_cell_body_t in 'inp'.
+ */
+struct link_specifier_st * extend2_cell_body_get_ls(extend2_cell_body_t *inp, size_t idx);
+/** As extend2_cell_body_get_ls, but take and return a const pointer
+ */
+ const struct link_specifier_st * extend2_cell_body_getconst_ls(const extend2_cell_body_t *inp, size_t idx);
+/** Change the element at position 'idx' of the dynamic array field ls
+ * of the extend2_cell_body_t in 'inp', so that it will hold the value
+ * 'elt'. Free the previous value, if any.
+ */
+int extend2_cell_body_set_ls(extend2_cell_body_t *inp, size_t idx, struct link_specifier_st * elt);
+/** As extend2_cell_body_set_ls, but does not free the previous value.
+ */
+int extend2_cell_body_set0_ls(extend2_cell_body_t *inp, size_t idx, struct link_specifier_st * elt);
+/** Append a new element 'elt' to the dynamic array field ls of the
+ * extend2_cell_body_t in 'inp'.
+ */
+int extend2_cell_body_add_ls(extend2_cell_body_t *inp, struct link_specifier_st * elt);
+/** Return a pointer to the variable-length array field ls of 'inp'.
+ */
+struct link_specifier_st * * extend2_cell_body_getarray_ls(extend2_cell_body_t *inp);
+/** As extend2_cell_body_get_ls, but take and return a const pointer
+ */
+const struct link_specifier_st *  const  * extend2_cell_body_getconstarray_ls(const extend2_cell_body_t *inp);
+/** Change the length of the variable-length array field ls of 'inp'
+ * to 'newlen'.Fill extra elements with NULL; free removed elements.
+ * Return 0 on success; return -1 and set the error code on 'inp' on
+ * failure.
+ */
+int extend2_cell_body_setlen_ls(extend2_cell_body_t *inp, size_t newlen);
+/** Return the value of the create2 field of the extend2_cell_body_t
+ * in 'inp'
+ */
+struct create2_cell_body_st * extend2_cell_body_get_create2(extend2_cell_body_t *inp);
+/** As extend2_cell_body_get_create2, but take and return a const
+ * pointer
+ */
+const struct create2_cell_body_st * extend2_cell_body_getconst_create2(const extend2_cell_body_t *inp);
+/** Set the value of the create2 field of the extend2_cell_body_t in
+ * 'inp' to 'val'. Free the old value if any. Steals the referenceto
+ * 'val'.Return 0 on success; return -1 and set the error code on
+ * 'inp' on failure.
+ */
+int extend2_cell_body_set_create2(extend2_cell_body_t *inp, struct create2_cell_body_st *val);
+/** As extend2_cell_body_set_create2, but does not free the previous
+ * value.
+ */
+int extend2_cell_body_set0_create2(extend2_cell_body_t *inp, struct create2_cell_body_st *val);
 /** Return a newly allocated link_specifier_list with all elements set
  * to zero.
  */

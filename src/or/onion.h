@@ -85,6 +85,8 @@ typedef struct extend_cell_t {
   tor_addr_port_t orport_ipv6;
   /** Identity fingerprint of the node we're conecting to.*/
   uint8_t node_id[DIGEST_LEN];
+  /** Ed25519 public identity key. Zero if not set. */
+  ed25519_public_key_t ed_pubkey;
   /** The "create cell" embedded in this extend cell. Note that unlike the
    * create cells we generate ourself, this once can have a handshake type we
    * don't recognize. */

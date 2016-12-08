@@ -719,6 +719,13 @@ GENERAL OPTIONS
     127.0.0.1 or 10.0.0.1.  This is mostly useful for debugging
     rate-limiting.  (Default: 0)
 
+[[ExtendByEd25519ID]] **ExtendByEd25519ID** **0**|**1**|**auto**::
+    If this option is set to 1, we always try to include a relay's Ed25519 ID
+    when telling the proceeding relay in a circuit to extend to it.
+    If this option is set to 0, we never include Ed25519 IDs when extending
+    circuits.  If the option is set to "default", we obey a
+    parameter in the consensus document. (Default: auto)
+
 CLIENT OPTIONS
 --------------
 
@@ -2265,6 +2272,13 @@ on the public Tor network.
     If zero, the authority won't participate in the protocol. If non-zero
     (default), the flag "shared-rand-participate" is added to the authority
     vote indicating participation in the protocol. (Default: 1)
+
+[[AuthDirTestEd25519LinkKeys]] **AuthDirTestEd25519LinkKeys**  **0**|**1**::
+    Authoritative directories only. If this option is set to 0, then we treat
+    relays as "Running" if their RSA key is correct when we probe them,
+    regardless of their Ed25519 key. We should only ever set this option to 0
+    if there is some major bug in Ed25519 link authentication that causes us
+    to label all the relays as not Running.  (Default: 1)
 
 [[BridgePassword]] **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to

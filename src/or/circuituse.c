@@ -2168,6 +2168,10 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
           if (want_onehop && conn->chosen_exit_name[0] == '$') {
             /* We're asking for a one-hop circuit to a router that
              * we don't have a routerinfo about. Make up an extend_info. */
+            /* XXX prop220: we need to make chosen_exit_name able to
+             * encode both key formats. This is not absolutely critical
+             * since this is just for one-hop circuits, but we should
+             * still get it done */
             char digest[DIGEST_LEN];
             char *hexdigest = conn->chosen_exit_name+1;
             tor_addr_t addr;
@@ -2182,9 +2186,12 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                        escaped_safe_str_client(conn->socks_request->address));
               return -1;
             }
+            /* XXXX prop220 add a workaround for ed25519 ID below*/
             extend_info = extend_info_new(conn->chosen_exit_name+1,
-                                          digest, NULL, NULL, &addr,
-                                          conn->socks_request->port);
+                                          digest,
+                                          NULL, /* Ed25519 ID */
+                                          NULL, NULL, /* onion keys */
+                                          &addr, conn->socks_request->port);
           } else { /* ! (want_onehop && conn->chosen_exit_name[0] == '$') */
             /* We will need an onion key for the router, and we
              * don't have one. Refuse or relax requirements. */

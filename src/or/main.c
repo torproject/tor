@@ -362,7 +362,7 @@ connection_unlink(connection_t *conn)
   }
   if (conn->type == CONN_TYPE_OR) {
     if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest))
-      connection_or_remove_from_identity_map(TO_OR_CONN(conn));
+      connection_or_clear_identity(TO_OR_CONN(conn));
     /* connection_unlink() can only get called if the connection
      * was already on the closeable list, and it got there by
      * connection_mark_for_close(), which was called from
@@ -1426,7 +1426,7 @@ run_scheduled_events(time_t now)
   }
 
   /* 5. We do housekeeping for each connection... */
-  connection_or_set_bad_connections(NULL, 0);
+  channel_update_bad_for_new_circs(NULL, 0);
   int i;
   for (i=0;i<smartlist_len(connection_array);i++) {
     run_connection_housekeeping(i, now);

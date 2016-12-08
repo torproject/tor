@@ -23,40 +23,6 @@ struct ed25519_cert_extension {
   };
 }
 
-/*
-struct cert_revocation {
-  u8 prefix[8];
-  u8 version IN [1];
-  u8 keytype;
-  u8 identity_key[32];
-  u8 revoked_key[32];
-  u64 published;
-  u8 n_extensions;
-  struct cert_extension ext[n_extensions];
-  u8 signature[64];
-}
-
-struct crosscert_ed_rsa {
-  u8 ed_key[32];
-  u32 expiration_date;
-  u8 signature[128];
-}
-
-struct auth02_cell {
-  u8 type[8];
-  u8 cid[32];
-  u8 sid[32];
-  u8 cid_ed[32];
-  u8 sid_ed[32];
-  u8 slog[32];
-  u8 clog[32];
-  u8 scert[32];
-  u8 tlssecrets[32];
-  u8 rand[24];
-  u8 sig[64];
-}
-*/
-
 const LS_IPV4 = 0x00;
 const LS_IPV6 = 0x01;
 const LS_LEGACY_ID = 0x02;
@@ -78,4 +44,23 @@ struct link_specifier {
 struct link_specifier_list {
   u8 n_spec;
   struct link_specifier spec[n_spec];
+}
+
+struct extend1_cell_body {
+  u32 ipv4addr;
+  u16 port;
+  u8 onionskin[186];
+  u8 identity[20];
+}
+
+struct create2_cell_body {
+  u16 handshake_type;
+  u16 handshake_len;
+  u8 handshake_data[handshake_len];
+}
+
+struct extend2_cell_body {
+  u8 n_spec;
+  struct link_specifier ls[n_spec];
+  struct create2_cell_body create2;
 }

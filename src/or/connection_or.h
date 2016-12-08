@@ -12,14 +12,13 @@
 #ifndef TOR_CONNECTION_OR_H
 #define TOR_CONNECTION_OR_H
 
-void connection_or_remove_from_identity_map(or_connection_t *conn);
+void connection_or_clear_identity(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
 void clear_broken_connection_map(int disable);
 or_connection_t *connection_or_get_for_extend(const char *digest,
                                               const tor_addr_t *target_addr,
                                               const char **msg_out,
                                               int *launch_out);
-void connection_or_set_bad_connections(const char *digest, int force);
 
 void connection_or_block_renegotiation(or_connection_t *conn);
 int connection_or_reached_eof(or_connection_t *conn);
@@ -110,6 +109,8 @@ void var_cell_free(var_cell_t *cell);
 
 /* DOCDOC */
 #define MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS 4
+
+void connection_or_group_set_badness_(smartlist_t *group, int force);
 
 #endif
 
