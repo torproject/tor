@@ -610,7 +610,8 @@ STATIC unsigned entry_guards_note_guard_success(guard_selection_t *gs,
                                                 entry_guard_t *guard,
                                                 unsigned old_state);
 STATIC int entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b);
-
+STATIC char *getinfo_helper_format_single_entry_guard(const entry_guard_t *e,
+                                                      int is_legacy);
 #ifdef ENABLE_LEGACY_GUARD_ALGORITHM
 // ---------- XXXX this stuff is pre-prop271.
 

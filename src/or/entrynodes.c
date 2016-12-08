@@ -4746,6 +4746,78 @@ entry_guards_update_state(or_state_t *state)
   entry_guards_dirty = 0;
 }
 
+/**
+ * Format a single entry guard in the format expected by the controller.
+ * Return a newly allocated string.
+ */
+STATIC char *
+getinfo_helper_format_single_entry_guard(const entry_guard_t *e,
+                                         int legacy_guard)
+{
+  const char *status = NULL;
+  time_t when = 0;
+  const node_t *node;
+  char tbuf[ISO_TIME_LEN+1];
+  char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
+
+  if (legacy_guard) {
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+    if (!e->made_contact) {
+      status = "never-connected";
+    } else if (e->bad_since) {
+      when = e->bad_since;
+      status = "unusable";
+    } else if (e->unreachable_since) {
+      when = e->unreachable_since;
+      status = "down";
+    } else {
+      status = "up";
+    }
+#else
+    tor_assert_nonfatal_unreached();
+    status = "BUG";
+#endif
+  } else {
+    /* modern case.  This is going to be a bit tricky, since the status
+     * codes above weren't really intended for prop271 guards.
+     *
+     * XXXX use a more appropriate format for exporting this information
+     */
+    if (e->confirmed_idx < 0) {
+      status = "never-connected";
+    } else if (! e->currently_listed) {
+      when = e->unlisted_since_date;
+      status = "unusable";
+    } else if (! e->is_filtered_guard) {
+      status = "unusable";
+    } else if (e->is_reachable == GUARD_REACHABLE_NO) {
+      when = e->failing_since;
+      status = "down";
+    } else {
+      status = "up";
+    }
+  }
+
+  node = entry_guard_find_node(e);
+  if (node) {
+    node_get_verbose_nickname(node, nbuf);
+  } else {
+    nbuf[0] = '$';
+    base16_encode(nbuf+1, sizeof(nbuf)-1, e->identity, DIGEST_LEN);
+    /* e->nickname field is not very reliable if we don't know about
+     * this router any longer; don't include it. */
+  }
+
+  char *result = NULL;
+  if (when) {
+    format_iso_time(tbuf, when);
+    tor_asprintf(&result, "%s %s %s\n", nbuf, status, tbuf);
+  } else {
+    tor_asprintf(&result, "%s %s\n", nbuf, status);
+  }
+  return result;
+}
+
 /** If <b>question</b> is the string "entry-guards", then dump
  * to *<b>answer</b> a newly allocated string describing all of
  * the nodes in the global entry_guards list. See control-spec.txt
@@ -4765,61 +4837,38 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   tor_assert(gs != NULL);
 #ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   tor_assert(gs->chosen_entry_guards != NULL);
-#else
-  // XXXX
-  (void)question;
-  (void)answer;
 #endif
 
   (void) conn;
   (void) errmsg;
 
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
+    const smartlist_t *guards;
+    int legacy_mode;
+    if (gs->type == GS_TYPE_LEGACY) {
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+      guards = gs->chosen_entry_guards;
+      legacy_mode = 1;
+#else
+      tor_assert_nonfatal_unreached();
+      return 0;
+#endif
+    } else {
+      guards = gs->sampled_entry_guards;
+      legacy_mode = 0;
+    }
+
     smartlist_t *sl = smartlist_new();
-    char tbuf[ISO_TIME_LEN+1];
-    char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
 
-    SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
-        const char *status = NULL;
-        time_t when = 0;
-        const node_t *node;
-
-        if (!e->made_contact) {
-          status = "never-connected";
-        } else if (e->bad_since) {
-          when = e->bad_since;
-          status = "unusable";
-        } else if (e->unreachable_since) {
-          when = e->unreachable_since;
-          status = "down";
-        } else {
-          status = "up";
-        }
-
-        node = node_get_by_id(e->identity);
-        if (node) {
-          node_get_verbose_nickname(node, nbuf);
-        } else {
-          nbuf[0] = '$';
-          base16_encode(nbuf+1, sizeof(nbuf)-1, e->identity, DIGEST_LEN);
-          /* e->nickname field is not very reliable if we don't know about
-           * this router any longer; don't include it. */
-        }
-
-        if (when) {
-          format_iso_time(tbuf, when);
-          smartlist_add_asprintf(sl, "%s %s %s\n", nbuf, status, tbuf);
-        } else {
-          smartlist_add_asprintf(sl, "%s %s\n", nbuf, status);
-        }
+    SMARTLIST_FOREACH_BEGIN(guards, const entry_guard_t *, e) {
+      char *cp = getinfo_helper_format_single_entry_guard(e, legacy_mode);
+      smartlist_add(sl, cp);
     } SMARTLIST_FOREACH_END(e);
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
   }
-#endif
   return 0;
 }
 
