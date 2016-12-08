@@ -1050,7 +1050,7 @@ test_options_validate__transproxy(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
 
 #ifndef KERNEL_MAY_SUPPORT_IPFW
-  tt_str_op(msg, OP_EQ, "ipfw is a FreeBSD-specificand OS X/Darwin-specific "
+  tt_str_op(msg, OP_EQ, "ipfw is a FreeBSD-specific and OS X/Darwin-specific "
             "feature.");
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_IPFW);
@@ -1080,7 +1080,7 @@ test_options_validate__transproxy(void *ignored)
     TT_DIE(("Expected NULL but got '%s'", msg));
   }
 #endif
-#if defined(__FreeBSD_kernel__) || defined( DARWIN )  || defined(__NetBSD__)
+#ifdef KERNEL_MAY_SUPPORT_IPFW
   tdata = get_options_test_data("TransProxyType ipfw\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1091,6 +1091,15 @@ test_options_validate__transproxy(void *ignored)
 #endif
 #if defined(__OpenBSD__)
   tdata = get_options_test_data("TransProxyType pf-divert\n"
+                                "TransPort 127.0.0.1:123\n");
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  if (msg) {
+    TT_DIE(("Expected NULL but got '%s'", msg));
+  }
+#endif
+#if defined(__NetBSD__)
+  tdata = get_options_test_data("TransProxyType default\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
