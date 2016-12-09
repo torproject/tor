@@ -865,7 +865,9 @@ connection_ap_attach_pending(int retry)
       continue;
     }
     if (conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
-      log_warn(LD_BUG, "%p is no longer in circuit_wait. Its current state "
+      // XXXX 030 -- this is downgraded in 0.2.9, since we apparently
+      // XXXX are running into it in practice.  It's harmless.
+      log_info(LD_BUG, "%p is no longer in circuit_wait. Its current state "
                "is %s. Why is it on pending_entry_connections?",
                entry_conn,
                conn_state_to_string(conn->type, conn->state));
