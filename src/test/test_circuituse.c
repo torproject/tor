@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define CIRCUITLIST_PRIVATE
+
 #include "or.h"
 #include "test.h"
 #include "test_helpers.h"
@@ -93,7 +95,7 @@ test_circuit_is_available_for_use_ret_false_unusable_for_new_conns(void *arg)
   tt_int_op(0, ==, circuit_is_available_for_use(circ));
 
   done:
-    tor_free(circ);
+    circuit_free(circ);
 }
 
 static void
@@ -103,13 +105,13 @@ test_circuit_is_available_for_use_returns_false_for_onehop_tunnel(void *arg)
 
   circuit_t *circ = dummy_origin_circuit_new(30);
   origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
-  oc->build_state = tor_malloc(sizeof(cpath_build_state_t));
+  oc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   oc->build_state->onehop_tunnel = 1;
 
   tt_int_op(0, ==, circuit_is_available_for_use(circ));
 
   done:
-    tor_free(circ);
+    circuit_free(circ);
 }
 
 static void
@@ -119,13 +121,13 @@ test_circuit_is_available_for_use_returns_true_for_clean_circuit(void *arg)
 
   circuit_t *circ = dummy_origin_circuit_new(30);
   origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
-  oc->build_state = tor_malloc(sizeof(cpath_build_state_t));
+  oc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   oc->build_state->onehop_tunnel = 0;
 
   tt_int_op(1, ==, circuit_is_available_for_use(circ));
 
   done:
-    tor_free(circ);
+    circuit_free(circ);
 }
 
 static int
