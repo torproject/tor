@@ -3237,6 +3237,17 @@ signed_descriptor_free(signed_descriptor_t *sd)
   tor_free(sd);
 }
 
+/** Reset the given signed descriptor <b>sd</b> by freeing the allocated
+ * memory inside the object and by zeroing its content. */
+static void
+signed_descriptor_reset(signed_descriptor_t *sd)
+{
+  tor_assert(sd);
+  tor_free(sd->signed_descriptor_body);
+  tor_cert_free(sd->signing_key_cert);
+  memset(sd, 0, sizeof(*sd));
+}
+
 /** Copy src into dest, and steal all references inside src so that when
  * we free src, we don't mess up dest. */
 static void
@@ -3244,6 +3255,8 @@ signed_descriptor_move(signed_descriptor_t *dest,
                        signed_descriptor_t *src)
 {
   tor_assert(dest != src);
+  /* Cleanup destination object before overwriting it.*/
+  signed_descriptor_reset(dest);
   memcpy(dest, src, sizeof(signed_descriptor_t));
   src->signed_descriptor_body = NULL;
   src->signing_key_cert = NULL;
