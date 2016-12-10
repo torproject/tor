@@ -2598,7 +2598,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     log_debug(LD_APP|LD_CIRC,
               "Attaching apconn to circ %u (stream %d sec old).",
               (unsigned)circ->base_.n_circ_id, conn_age);
-    /* print the circ's path, so people can figure out which circs are
+    /* print the circ's path, so clients can figure out which circs are
      * sucking. */
     circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
 

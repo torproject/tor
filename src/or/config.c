@@ -1899,7 +1899,7 @@ options_act(const or_options_t *old_options)
       addressmap_clear_invalid_automaps(options);
 
 /* How long should we delay counting bridge stats after becoming a bridge?
- * We use this so we don't count people who used our bridge thinking it is
+ * We use this so we don't count clients who used our bridge thinking it is
  * a relay. If you change this, don't forget to change the log message
  * below. It's 4 hours (the time it takes to stop being used by clients)
  * plus some extra time for clock skew. */

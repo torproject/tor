@@ -1102,7 +1102,7 @@ directory_caches_dir_info(const or_options_t *options)
     should_refuse_unknown_exits(options);
 }
 
-/** Return 1 if we want to allow remote people to ask us directory
+/** Return 1 if we want to allow remote clients to ask us directory
  * requests via the "begin_dir" interface, which doesn't require
  * having any separate port open. */
 int
@@ -2236,8 +2236,8 @@ dirserv_set_routerstatus_testing(routerstatus_t *rs)
 }
 
 /** Routerstatus <b>rs</b> is part of a group of routers that are on
- * too narrow an IP-space. Clear out its flags: we don't want people
- * using it.
+ * too narrow an IP-space. Clear out its flags since we don't want it be used
+ * because of its Sybil-like appearance.
  */
 static void
 clear_status_flags_on_sybil(routerstatus_t *rs)
