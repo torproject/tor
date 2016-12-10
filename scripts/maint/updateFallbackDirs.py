@@ -88,6 +88,19 @@ MUST_BE_RUNNING_NOW = (PERFORM_IPV4_DIRPORT_CHECKS
 # Clients have been using microdesc consensuses by default for a while now
 DOWNLOAD_MICRODESC_CONSENSUS = True
 
+# If a relay delivers an expired consensus, if it expired less than this many
+# seconds ago, we still allow the relay. This should never be less than -90,
+# as all directory mirrors should have downloaded a consensus 90 minutes
+# before it expires. It should never be more than 24 hours, because clients
+# reject consensuses that are older than REASONABLY_LIVE_TIME.
+# For the consensus expiry check to be accurate, the machine running this
+# script needs an accurate clock.
+# We use 24 hours to compensate for #20909, where relays on 0.2.9.5-alpha and
+# 0.3.0.0-alpha-dev and later deliver stale consensuses, but typically recover
+# after ~12 hours.
+# We should make this lower when #20909 is fixed, see #20942.
+CONSENSUS_EXPIRY_TOLERANCE = 24*60*60
+
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
 
@@ -1146,7 +1159,6 @@ class Candidate(object):
   def fallback_consensus_download_speed(dirip, dirport, nickname, fingerprint,
                                         max_time):
     download_failed = False
-    start = datetime.datetime.utcnow()
     # some directory mirrors respond to requests in ways that hang python
     # sockets, which is why we log this line here
     logging.info('Initiating %sconsensus download from %s (%s:%d) %s.',
@@ -1155,6 +1167,7 @@ class Candidate(object):
     # there appears to be about 1 second of overhead when comparing stem's
     # internal trace time and the elapsed time calculated here
     TIMEOUT_SLOP = 1.0
+    start = datetime.datetime.utcnow()
     try:
       consensus = get_consensus(
                               endpoints = [(dirip, dirport)],
@@ -1165,26 +1178,32 @@ class Candidate(object):
                               document_handler = DocumentHandler.BARE_DOCUMENT,
                               microdescriptor = DOWNLOAD_MICRODESC_CONSENSUS
                                 ).run()[0]
+      end = datetime.datetime.utcnow()
+      time_since_expiry = (end - consensus.valid_until).total_seconds()
     except Exception, stem_error:
+      end = datetime.datetime.utcnow()
       logging.info('Unable to retrieve a consensus from %s: %s', nickname,
                     stem_error)
       status = 'error: "%s"' % (stem_error)
       level = logging.WARNING
       download_failed = True
-    elapsed = (datetime.datetime.utcnow() - start).total_seconds()
+    elapsed = (end - start).total_seconds()
     if download_failed:
-      # keep the error failure status
+      # keep the error failure status, and avoid using the variables
       pass
     elif elapsed > max_time:
       status = 'too slow'
       level = logging.WARNING
       download_failed = True
-    elif datetime.datetime.utcnow() > consensus.valid_until:
-      time_since_expiry = (datetime.datetime.utcnow() -
-                           consensus.valid_until).total_seconds()
+    elif (time_since_expiry > 0):
       status = 'outdated consensus, expired %ds ago'%(int(time_since_expiry))
-      level = logging.WARNING
-      download_failed = True
+      if time_since_expiry <= CONSENSUS_EXPIRY_TOLERANCE:
+        status += ', tolerating up to %ds'%(CONSENSUS_EXPIRY_TOLERANCE)
+        level = logging.INFO
+      else:
+        status += ', invalid'
+        level = logging.WARNING
+        download_failed = True
     else:
       status = 'ok'
       level = logging.DEBUG
