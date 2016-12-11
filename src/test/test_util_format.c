@@ -202,6 +202,9 @@ test_util_format_base64_decode(void *ignored)
   res = base64_decode(dst, SIZE_T_CEILING+1, src, 10);
   tt_int_op(res, OP_EQ, -1);
 
+  res = base64_decode(dst, 1, real_src, SIZE_MAX/3+1);
+  tt_int_op(res, OP_EQ, -1);
+
   const char *s = "T3BhIG11bmRv";
   res = base64_decode(dst, 9, s, strlen(s));
   tt_int_op(res, OP_EQ, 9);

@@ -398,7 +398,7 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
    * Number of bytes required to hold all bits == (srclen*6)/8.
    * Yes, we want to round down: anything that hangs over the end of a
    * byte is padding. */
-  if (destlen < (srclen*3)/4)
+  if (!size_mul_check(srclen, 3) || destlen < (srclen*3)/4)
     return -1;
   if (destlen > SIZE_T_CEILING)
     return -1;

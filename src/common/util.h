@@ -553,9 +553,7 @@ STATIC int format_helper_exit_status(unsigned char child_state,
 
 #endif
 
-#ifdef TOR_UNIT_TESTS
-int size_mul_check__(const size_t x, const size_t y);
-#endif
+int size_mul_check(const size_t x, const size_t y);
 
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
 

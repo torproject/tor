@@ -5479,26 +5479,26 @@ test_util_calloc_check(void *arg)
 {
   (void) arg;
   /* Easy cases that are good. */
-  tt_assert(size_mul_check__(0,0));
-  tt_assert(size_mul_check__(0,100));
-  tt_assert(size_mul_check__(100,0));
-  tt_assert(size_mul_check__(100,100));
+  tt_assert(size_mul_check(0,0));
+  tt_assert(size_mul_check(0,100));
+  tt_assert(size_mul_check(100,0));
+  tt_assert(size_mul_check(100,100));
 
   /* Harder cases that are still good. */
-  tt_assert(size_mul_check__(SIZE_MAX, 1));
-  tt_assert(size_mul_check__(1, SIZE_MAX));
-  tt_assert(size_mul_check__(SIZE_MAX / 10, 9));
-  tt_assert(size_mul_check__(11, SIZE_MAX / 12));
+  tt_assert(size_mul_check(SIZE_MAX, 1));
+  tt_assert(size_mul_check(1, SIZE_MAX));
+  tt_assert(size_mul_check(SIZE_MAX / 10, 9));
+  tt_assert(size_mul_check(11, SIZE_MAX / 12));
   const size_t sqrt_size_max_p1 = ((size_t)1) << (sizeof(size_t) * 4);
-  tt_assert(size_mul_check__(sqrt_size_max_p1, sqrt_size_max_p1 - 1));
+  tt_assert(size_mul_check(sqrt_size_max_p1, sqrt_size_max_p1 - 1));
 
   /* Cases that overflow */
-  tt_assert(! size_mul_check__(SIZE_MAX, 2));
-  tt_assert(! size_mul_check__(2, SIZE_MAX));
-  tt_assert(! size_mul_check__(SIZE_MAX / 10, 11));
-  tt_assert(! size_mul_check__(11, SIZE_MAX / 10));
-  tt_assert(! size_mul_check__(SIZE_MAX / 8, 9));
-  tt_assert(! size_mul_check__(sqrt_size_max_p1, sqrt_size_max_p1));
+  tt_assert(! size_mul_check(SIZE_MAX, 2));
+  tt_assert(! size_mul_check(2, SIZE_MAX));
+  tt_assert(! size_mul_check(SIZE_MAX / 10, 11));
+  tt_assert(! size_mul_check(11, SIZE_MAX / 10));
+  tt_assert(! size_mul_check(SIZE_MAX / 8, 9));
+  tt_assert(! size_mul_check(sqrt_size_max_p1, sqrt_size_max_p1));
 
  done:
   ;
