@@ -862,37 +862,42 @@ class Candidate(object):
       self._badexit = self._avg_generic_history(badexit) / ONIONOO_SCALE_ONE
 
   def is_candidate(self):
-    if (MUST_BE_RUNNING_NOW and not self.is_running()):
-      logging.info('%s not a candidate: not running now, unable to check ' +
-                   'DirPort consensus download', self._fpr)
-      return False
-    if (self._data['last_changed_address_or_port'] >
-        self.CUTOFF_ADDRESS_AND_PORT_STABLE):
-      logging.info('%s not a candidate: changed address/port recently (%s)',
-                   self._fpr, self._data['last_changed_address_or_port'])
-      return False
-    if self._running < CUTOFF_RUNNING:
-      logging.info('%s not a candidate: running avg too low (%lf)',
-                   self._fpr, self._running)
-      return False
-    if self._v2dir < CUTOFF_V2DIR:
-      logging.info('%s not a candidate: v2dir avg too low (%lf)',
-                   self._fpr, self._v2dir)
-      return False
-    if self._badexit is not None and self._badexit > PERMITTED_BADEXIT:
-      logging.info('%s not a candidate: badexit avg too high (%lf)',
-                   self._fpr, self._badexit)
-      return False
-    # this function logs a message depending on which check fails
-    if not self.is_valid_version():
-      return False
-    if self._guard < CUTOFF_GUARD:
-      logging.info('%s not a candidate: guard avg too low (%lf)',
-                   self._fpr, self._guard)
-      return False
-    if (not self._data.has_key('consensus_weight')
-        or self._data['consensus_weight'] < 1):
-      logging.info('%s not a candidate: consensus weight invalid', self._fpr)
+    try:
+      if (MUST_BE_RUNNING_NOW and not self.is_running()):
+        logging.info('%s not a candidate: not running now, unable to check ' +
+                     'DirPort consensus download', self._fpr)
+        return False
+      if (self._data['last_changed_address_or_port'] >
+          self.CUTOFF_ADDRESS_AND_PORT_STABLE):
+        logging.info('%s not a candidate: changed address/port recently (%s)',
+                     self._fpr, self._data['last_changed_address_or_port'])
+        return False
+      if self._running < CUTOFF_RUNNING:
+        logging.info('%s not a candidate: running avg too low (%lf)',
+                     self._fpr, self._running)
+        return False
+      if self._v2dir < CUTOFF_V2DIR:
+        logging.info('%s not a candidate: v2dir avg too low (%lf)',
+                     self._fpr, self._v2dir)
+        return False
+      if self._badexit is not None and self._badexit > PERMITTED_BADEXIT:
+        logging.info('%s not a candidate: badexit avg too high (%lf)',
+                     self._fpr, self._badexit)
+        return False
+      # this function logs a message depending on which check fails
+      if not self.is_valid_version():
+        return False
+      if self._guard < CUTOFF_GUARD:
+        logging.info('%s not a candidate: guard avg too low (%lf)',
+                     self._fpr, self._guard)
+        return False
+      if (not self._data.has_key('consensus_weight')
+          or self._data['consensus_weight'] < 1):
+        logging.info('%s not a candidate: consensus weight invalid', self._fpr)
+        return False
+    except BaseException as e:
+      logging.warning("Exception %s when checking if fallback is a candidate",
+                      str(e))
       return False
     return True
 

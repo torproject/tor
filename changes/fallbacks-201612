@@ -33,3 +33,5 @@
       OnionOO. When a relay operator has multiple relays, this prioritises
       relays that are up over relays that are down.
       Closes ticket #20926; bugfix on 0.2.8.3-alpha.
+    - Stop failing when a relay has no uptime data in updateFallbackDirs.py.
+      Closes ticket 20945; bugfix on tor-0.2.8.1-alpha.
