@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging):
-    - Downgrade a harmless log message about the pending_entry_connections
-      list from "warn" to "info". Mitigates bug 19926.
