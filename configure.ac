@@ -430,11 +430,11 @@ AC_MSG_CHECKING([for a pre-Sierra OSX build target])
 AC_TRY_COMPILE([
 #ifdef __APPLE__
 #  include <AvailabilityMacros.h>
-#  ifndef MAC_OS_VERSION_10_12
-#    define MAC_OS_VERSION_10_12 101200
+#  ifndef MAC_OS_X_VERSION_10_12
+#    define MAC_OS_X_VERSION_10_12 101200
 #  endif
 #  if defined(MAC_OS_X_VERSION_MIN_REQUIRED)
-#    if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_VERSION_10_12
+#    if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_12
 #      error "Running on Mac OSX 10.11 or earlier"
 #    endif
 #  endif
