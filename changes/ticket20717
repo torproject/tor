@@ -1,4 +1,3 @@
   o Code simplification and refactoring:
-    - Refactors the hashing API to return negative values for errors as is done
-      as a standard throughout the codebase.
-    - Refactors calling functions to expect negative values for errors.
+    - Refactor the hashing API to return negative values for errors, as is done
+      as throughout the codebase. Closes ticket 20717.
