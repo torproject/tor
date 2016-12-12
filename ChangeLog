@@ -1,6 +1,62 @@
 Changes in version 0.3.0.1-alpha - 2016-??-??
 
 
+Changes in version 0.2.9.7-rc - 2016-12-12
+  Tor 0.2.9.7-rc fixes a few small bugs remaining in Tor 0.2.9.6-rc,
+  including a few that had prevented tests from passing on
+  some platforms.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the December 7 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfix (build):
+    - The current Git revision when building from a local repository is
+      now detected correctly when using git worktrees. Fixes bug 20492;
+      bugfix on 0.2.3.9-alpha.
+
+  o Minor bugfixes (directory authority):
+    - When computing old Tor protocol line version in protover, we were
+      looking at 0.2.7.5 twice instead of a specific case for
+      0.2.9.1-alpha. Fixes bug 20810; bugfix on tor-0.2.9.4-alpha.
+
+  o Minor bugfixes (download scheduling):
+    - Resolve a "bug" warning when considering a download schedule whose
+      delay had approached INT_MAX. Fixes 20875; bugfix on 0.2.9.5-alpha.
+
+  o Minor bugfixes (logging):
+    - Downgrade a harmless log message about the
+      pending_entry_connections list from "warn" to "info". Mitigates
+      bug 19926.
+
+  o Minor bugfixes (memory leak):
+    - Fix a small memory leak when receiving AF_UNIX connections on a
+      SocksPort. Fixes bug 20716; bugfix on 0.2.6.3-alpha.
+    - When moving a signed descriptor object from a source to an
+      existing destination, free the allocated memory inside that
+      destination object. Fixes bug 20715; bugfix on tor-0.2.8.3-alpha.
+
+  o Minor bugfixes (memory leak, use-after-free, linux seccomp2 sandbox):
+    - Fix a memory leak and use-after-free error when removing entries
+      from the sandbox's getaddrinfo() cache. Fixes bug 20710; bugfix on
+      0.2.5.5-alpha. Patch from "cypherpunks".
+
+  o Minor bugfixes (portability):
+    - Use the correct spelling of MAC_OS_X_VERSION_10_12 on configure.ac
+      Fixes bug 20935; bugfix on 0.2.9.6-rc.
+
+  o Minor bugfixes (unit tests):
+    - Stop expecting NetBSD unit tests to report success for ipfw. Part
+      of a fix for bug 19960; bugfix on 0.2.9.5-alpha.
+    - Fix tolerances in unit tests for monotonic time comparisons
+      between nanoseconds and microseconds. Previously, we accepted a 10
+      us difference only, which is not realistic on every platform's
+      clock_gettime(). Fixes bug 19974; bugfix on 0.2.9.1-alpha.
+    - Remove a double-free in the single onion service unit test. Stop
+      ignoring a return value. Make future changes less error-prone.
+      Fixes bug 20864; bugfix on 0.2.9.6-rc.
+
+
 Changes in version 0.2.8.11 - 2016-12-08
   Tor 0.2.8.11 backports fixes for additional portability issues that
   could prevent Tor from building correctly on OSX Sierra, or with
