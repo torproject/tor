@@ -2895,9 +2895,9 @@ static const url_table_ent_t url_table[] = {
  * conn-\>outbuf.  If the request is unrecognized, send a 404.
  * Return 0 if we handled this successfully, or -1 if we need to close
  * the connection. */
-STATIC int
-directory_handle_command_get(dir_connection_t *conn, const char *headers,
-                             const char *req_body, size_t req_body_len)
+MOCK_IMPL(STATIC int,
+directory_handle_command_get,(dir_connection_t *conn, const char *headers,
+                              const char *req_body, size_t req_body_len))
 {
   char *url, *url_mem, *header;
   time_t if_modified_since = 0;
@@ -3705,9 +3705,9 @@ handle_post_hs_descriptor(const char *url, const char *body)
  * service descriptor.  On finding one, process it and write a
  * response into conn-\>outbuf.  If the request is unrecognized, send a
  * 400.  Always return 0. */
-static int
-directory_handle_command_post(dir_connection_t *conn, const char *headers,
-                              const char *body, size_t body_len)
+MOCK_IMPL(STATIC int,
+directory_handle_command_post,(dir_connection_t *conn, const char *headers,
+                               const char *body, size_t body_len))
 {
   char *url = NULL;
   const or_options_t *options = get_options();
