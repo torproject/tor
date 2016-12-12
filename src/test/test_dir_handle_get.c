@@ -30,6 +30,7 @@
 #include "dirserv.h"
 #include "torgzip.h"
 #include "dirvote.h"
+#include "log_test_helpers.h"
 
 #ifdef _WIN32
 /* For mkdir() */
@@ -53,6 +54,7 @@ ENABLE_GCC_WARNING(overlength-strings)
 #define NOT_FOUND "HTTP/1.0 404 Not found\r\n\r\n"
 #define BAD_REQUEST "HTTP/1.0 400 Bad request\r\n\r\n"
 #define SERVER_BUSY "HTTP/1.0 503 Directory busy, try again later\r\n\r\n"
+#define TOO_OLD "HTTP/1.0 404 Consensus is too old\r\n\r\n"
 #define NOT_ENOUGH_CONSENSUS_SIGNATURES "HTTP/1.0 404 " \
   "Consensus not signed by sufficient number of requested authorities\r\n\r\n"
 
@@ -1617,6 +1619,7 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_enough_sigs(void* d)
   mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
   mock_ns_val->flavor = FLAV_NS;
   mock_ns_val->voters = smartlist_new();
+  mock_ns_val->valid_until = time(NULL);
 
   /* init mock */
   init_mock_options();
@@ -1693,6 +1696,62 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_found(void* data)
     connection_free_(TO_CONN(conn));
     tor_free(header);
     tor_free(stats);
+    or_options_free(mock_options); mock_options = NULL;
+}
+
+static void
+test_dir_handle_get_status_vote_current_consensus_too_old(void *data)
+{
+  dir_connection_t *conn = NULL;
+  char *header = NULL;
+  (void)data;
+
+  mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
+  mock_ns_val->flavor = FLAV_MICRODESC;
+  mock_ns_val->valid_until = time(NULL) - (60 * 60 * 24) - 1;
+
+  init_mock_options();
+  MOCK(get_options, mock_get_options);
+  MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
+  MOCK(networkstatus_get_latest_consensus_by_flavor, mock_ns_get_by_flavor);
+
+  conn = new_dir_conn();
+
+  setup_capture_of_logs(LOG_WARN);
+
+  tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
+    GET("/tor/status-vote/current/consensus-microdesc"), NULL, 0));
+
+  fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
+                      NULL, NULL, 1, 0);
+  tt_assert(header);
+  tt_str_op(TOO_OLD, OP_EQ, header);
+
+  expect_log_msg_containing("too old");
+
+  tor_free(header);
+  teardown_capture_of_logs();
+
+  setup_capture_of_logs(LOG_WARN);
+
+  tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
+    GET("/tor/status-vote/current/consensus"), NULL, 0));
+
+  fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
+                      NULL, NULL, 1, 0);
+  tt_assert(header);
+  tt_str_op(TOO_OLD, OP_EQ, header);
+
+  expect_no_log_entry();
+
+  done:
+    teardown_capture_of_logs();
+    UNMOCK(networkstatus_get_latest_consensus_by_flavor);
+    UNMOCK(connection_write_to_buf_impl_);
+    UNMOCK(get_options);
+    connection_free_(TO_CONN(conn));
+    tor_free(header);
+    tor_free(mock_ns_val);
     or_options_free(mock_options); mock_options = NULL;
 }
 
@@ -2481,6 +2540,7 @@ struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(status_vote_next_authority, 0),
   DIR_HANDLE_CMD(status_vote_current_consensus_ns_not_enough_sigs, 0),
   DIR_HANDLE_CMD(status_vote_current_consensus_ns_not_found, 0),
+  DIR_HANDLE_CMD(status_vote_current_consensus_too_old, 0),
   DIR_HANDLE_CMD(status_vote_current_consensus_ns_busy, 0),
   DIR_HANDLE_CMD(status_vote_current_consensus_ns, 0),
   DIR_HANDLE_CMD(status_vote_current_d_not_found, 0),

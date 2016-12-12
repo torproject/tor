@@ -1,0 +1,3 @@
+  o Minor feature:
+    - Relays and bridges will now refuse to serve the consensus they have if
+      they know it is too old for a client to use. Closes ticket 20511.
