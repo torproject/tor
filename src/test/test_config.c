@@ -4946,3 +4946,4 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(parse_log_severity, 0),
   END_OF_TESTCASES
 };
+
