@@ -98,7 +98,7 @@ new Tor release:
    to a release-0.2.x branch, manually commit the changelogs to the later
    git branches too.
 
-3.  If you're doing the first stable release in a series, you need to
+3. If you're doing the first stable release in a series, you need to
    create a ReleaseNotes for the series as a whole.  To get started
    there, copy all of the Changelog entries from the series into a new
    file, and run `./scripts/maint/sortChanges.py` on it.  That will
@@ -164,12 +164,15 @@ new Tor release:
     0.2.2.23-alpha" (or whatever the version is), and we select the date as
     the date in the ChangeLog.
 
-5. Wait up to a day or two (for a development release), or until most
-    packages are up (for a stable release), and mail the release blurb and
-    changelog to tor-talk or tor-announce.
+5. Mail the release blurb and ChangeLog to tor-talk (development release) or
+   tor-announce (stable).
 
-   (We might be moving to faster announcements, but don't announce until
-   the website is at least updated.)
+   Post the changelog on the the blog as well. You can generate a
+   blog-formatted version of the changelog with the -B option to
+   format-changelog.
+
+   When you post, include an estimate of when the next TorBrowser releases
+   will come out that include this Tor release.
 
 
 === V. Aftermath and cleanup
@@ -182,4 +185,5 @@ new Tor release:
 
 2. Forward-port the ChangeLog (and ReleaseNotes if appropriate).
 
+3. Keep an eye on the blog post, to moderate comments and answer questions.
 
