@@ -17,7 +17,7 @@
 #ifdef TOR_UNIT_TESTS
 
 STATIC hs_cell_establish_intro_t *
-generate_establish_intro_cell(const char *circuit_key_material,
+generate_establish_intro_cell(const uint8_t *circuit_key_material,
                               size_t circuit_key_material_len);
 
 STATIC ssize_t

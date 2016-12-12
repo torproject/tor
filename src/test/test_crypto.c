@@ -1147,28 +1147,34 @@ test_crypto_mac_sha3(void *arg)
   const char msg[] = "i am in a library somewhere using my computer";
   const char key[] = "i'm from the past talking to the future.";
 
-  char hmac_test[DIGEST256_LEN];
+  uint8_t hmac_test[DIGEST256_LEN];
   char hmac_manual[DIGEST256_LEN];
 
   (void) arg;
 
   /* First let's use our nice HMAC-SHA3 function */
   crypto_mac_sha3_256(hmac_test, sizeof(hmac_test),
-                      key, strlen(key),
-                      msg, strlen(msg));
+                      (uint8_t *) key, strlen(key),
+                      (uint8_t *) msg, strlen(msg));
 
-  /* Now let's try a manual H(k || m) construction */
+  /* Now let's try a manual H(len(k) || k || m) construction */
   {
-    char *key_msg_concat = NULL;
+    char *key_msg_concat = NULL, *all = NULL;
     int result;
+    const uint64_t key_len_netorder = tor_htonll(strlen(key));
+    size_t all_len;
 
     tor_asprintf(&key_msg_concat, "%s%s", key, msg);
+    all_len = sizeof(key_len_netorder) + strlen(key_msg_concat);
+    all = tor_malloc_zero(all_len);
+    memcpy(all, &key_len_netorder, sizeof(key_len_netorder));
+    memcpy(all + sizeof(key_len_netorder), key_msg_concat,
+           strlen(key_msg_concat));
 
-    result = crypto_digest256(hmac_manual,
-                              key_msg_concat, strlen(key_msg_concat),
-                              DIGEST_SHA3_256);
-    tt_int_op(result, ==, 0);
+    result = crypto_digest256(hmac_manual, all, all_len, DIGEST_SHA3_256);
     tor_free(key_msg_concat);
+    tor_free(all);
+    tt_int_op(result, ==, 0);
   }
 
   /* Now compare the two results */

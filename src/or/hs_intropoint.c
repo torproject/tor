@@ -42,7 +42,7 @@ get_auth_key_from_establish_intro_cell(ed25519_public_key_t *auth_key_out,
  *  given <b>circuit_key_material</b>. Return 0 on success else -1 on error. */
 STATIC int
 verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
-                            const char *circuit_key_material,
+                            const uint8_t *circuit_key_material,
                             size_t circuit_key_material_len)
 {
   /* We only reach this function if the first byte of the cell is 0x02 which
@@ -62,7 +62,7 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
     return -1;
   }
 
-  const char *msg = (char*) cell->start_cell;
+  const uint8_t *msg = cell->start_cell;
 
   /* Verify the sig */
   {
@@ -79,7 +79,7 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
     ed25519_public_key_t auth_key;
     get_auth_key_from_establish_intro_cell(&auth_key, cell);
 
-    const size_t sig_msg_len = (char*) (cell->end_sig_fields) - msg;
+    const size_t sig_msg_len = cell->end_sig_fields - msg;
     int sig_mismatch = ed25519_checksig_prefixed(&sig_struct,
                                                  (uint8_t*) msg, sig_msg_len,
                                                  ESTABLISH_INTRO_SIG_PREFIX,
@@ -92,11 +92,11 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
 
   /* Verify the MAC */
   {
-    const size_t auth_msg_len = (char*) (cell->end_mac_fields) - msg;
-    char mac[DIGEST256_LEN];
+    const size_t auth_msg_len = cell->end_mac_fields - msg;
+    uint8_t mac[DIGEST256_LEN];
     crypto_mac_sha3_256(mac, sizeof(mac),
-                         circuit_key_material, circuit_key_material_len,
-                         msg, auth_msg_len);
+                        circuit_key_material, circuit_key_material_len,
+                        msg, auth_msg_len);
     if (tor_memneq(mac, cell->handshake_mac, sizeof(mac))) {
       log_warn(LD_PROTOCOL, "ESTABLISH_INTRO handshake_auth not as expected");
       return -1;
@@ -198,8 +198,8 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   }
 
   cell_ok = verify_establish_intro_cell(parsed_cell,
-                                       circ->rend_circ_nonce,
-                                       sizeof(circ->rend_circ_nonce));
+                                        (uint8_t *) circ->rend_circ_nonce,
+                                        sizeof(circ->rend_circ_nonce));
   if (cell_ok < 0) {
     log_warn(LD_PROTOCOL, "Failed to verify ESTABLISH_INTRO cell.");
     goto err;

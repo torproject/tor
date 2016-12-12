@@ -28,7 +28,7 @@ int hs_intro_circuit_is_suitable(const or_circuit_t *circ);
 
 STATIC int
 verify_establish_intro_cell(const hs_cell_establish_intro_t *out,
-                            const char *circuit_key_material,
+                            const uint8_t *circuit_key_material,
                             size_t circuit_key_material_len);
 
 STATIC void

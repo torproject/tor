@@ -24,12 +24,12 @@ test_gen_establish_intro_cell(void *arg)
 {
   (void) arg;
   int retval;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
   uint8_t buf[RELAY_PAYLOAD_SIZE];
   hs_cell_establish_intro_t *cell_out = NULL;
   hs_cell_establish_intro_t *cell_in = NULL;
 
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
@@ -79,11 +79,11 @@ test_gen_establish_intro_cell_bad(void *arg)
 {
   (void) arg;
   hs_cell_establish_intro_t *cell = NULL;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   MOCK(ed25519_sign_prefixed, mock_ed25519_sign_prefixed);
 
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
 
   setup_full_capture_of_logs(LOG_WARN);
   /* Easiest way to make that function fail is to mock the

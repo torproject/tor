@@ -44,12 +44,12 @@ test_establish_intro_wrong_purpose(void *arg)
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   (void)arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
   memcpy(intro_circ->rend_circ_nonce, circuit_key_material, DIGEST_LEN);
 
   /* Set a bad circuit purpose!! :) */
@@ -75,7 +75,8 @@ test_establish_intro_wrong_purpose(void *arg)
 
 /* Prepare a circuit for accepting an ESTABLISH_INTRO cell */
 static void
-helper_prepare_circ_for_intro(or_circuit_t *circ, char *circuit_key_material)
+helper_prepare_circ_for_intro(or_circuit_t *circ,
+                              uint8_t *circuit_key_material)
 {
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
@@ -88,12 +89,12 @@ test_establish_intro_wrong_keytype(void *arg)
 {
   int retval;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   (void)arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
   helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
 
   /* Receive the cell. Should fail. */
@@ -113,12 +114,12 @@ test_establish_intro_wrong_keytype2(void *arg)
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   (void)arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
   helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
@@ -152,12 +153,12 @@ test_establish_intro_wrong_sig(void *arg)
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   (void)arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
   helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
@@ -190,12 +191,12 @@ helper_establish_intro_v3(or_circuit_t *intro_circ)
   hs_cell_establish_intro_t *establish_intro_cell = NULL;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   tt_assert(intro_circ);
 
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
   helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
@@ -224,12 +225,12 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   int retval;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  char circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   tt_assert(intro_circ);
 
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
-  crypto_rand(circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
   helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
 
   /* Send legacy establish_intro */
@@ -238,7 +239,7 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   /* Use old circuit_key_material why not */
   cell_len = encode_establish_intro_cell_legacy((char*)cell_body,
                                                 key1,
-                                                circuit_key_material);
+                                                (char *) circuit_key_material);
   tt_int_op(cell_len, >, 0);
 
   /* Receive legacy establish_intro */

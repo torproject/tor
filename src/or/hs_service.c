@@ -60,7 +60,7 @@ set_cell_extensions(hs_cell_establish_intro_t *cell)
  *  returned cell is allocated on the heap and it's the responsibility of the
  *  caller to free it. */
 STATIC hs_cell_establish_intro_t *
-generate_establish_intro_cell(const char *circuit_key_material,
+generate_establish_intro_cell(const uint8_t *circuit_key_material,
                               size_t circuit_key_material_len)
 {
   hs_cell_establish_intro_t *cell = NULL;
@@ -109,7 +109,7 @@ generate_establish_intro_cell(const char *circuit_key_material,
     /* To calculate HANDSHAKE_AUTH, we dump the cell in bytes, and then derive
        the MAC from it. */
     uint8_t cell_bytes_tmp[RELAY_PAYLOAD_SIZE] = {0};
-    char mac[TRUNNEL_SHA3_256_LEN];
+    uint8_t mac[TRUNNEL_SHA3_256_LEN];
 
     encoded_len = hs_cell_establish_intro_encode(cell_bytes_tmp,
                                                  sizeof(cell_bytes_tmp),
@@ -125,7 +125,7 @@ generate_establish_intro_cell(const char *circuit_key_material,
     /* Calculate MAC of all fields before HANDSHAKE_AUTH */
     crypto_mac_sha3_256(mac, sizeof(mac),
                         circuit_key_material, circuit_key_material_len,
-                        (const char*)cell_bytes_tmp,
+                        cell_bytes_tmp,
                         encoded_len - (ED25519_SIG_LEN + 2 + TRUNNEL_SHA3_256_LEN));
     /* Write the MAC to the cell */
     uint8_t *handshake_ptr =
