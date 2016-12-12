@@ -579,8 +579,8 @@ test_single_onion_poisoning(void *arg)
     tt_assert(ret == 0);
   }
 
-  service_1->directory = tor_strdup(dir1);
-  service_2->directory = tor_strdup(dir2);
+  service_1->directory = dir1;
+  service_2->directory = dir2;
   /* The services own the directory pointers now */
   dir1 = dir2 = NULL;
   /* Add port to service 1 */
