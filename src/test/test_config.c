@@ -4890,6 +4890,33 @@ test_config_parse_port_config__ports__server_options(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
 }
 
+static void
+test_config_parse_log_severity(void *data)
+{
+  int ret;
+  const char *severity_log_lines[] = {
+    "debug file /tmp/debug.log",
+    "debug\tfile /tmp/debug.log",
+    "[handshake]debug [~net,~mm]info notice stdout",
+    "[handshake]debug\t[~net,~mm]info\tnotice\tstdout",
+    NULL
+  };
+  int i;
+  log_severity_list_t *severity;
+
+  (void) data;
+
+  severity = tor_malloc(sizeof(log_severity_list_t));
+  for (i = 0; severity_log_lines[i]; i++) {
+    memset(severity, 0, sizeof(log_severity_list_t));
+    ret = parse_log_severity_config(&severity_log_lines[i], severity);
+    tt_int_op(ret, OP_EQ, 0);
+  }
+
+ done:
+  tor_free(severity);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -4916,6 +4943,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(parse_port_config__ports__no_ports_given, 0),
   CONFIG_TEST(parse_port_config__ports__server_options, 0),
   CONFIG_TEST(parse_port_config__ports__ports_given, 0),
+  CONFIG_TEST(parse_log_severity, 0),
   END_OF_TESTCASES
 };
-
