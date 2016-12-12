@@ -130,6 +130,7 @@ static void
 helper_compare_hs_desc(const hs_descriptor_t *desc1,
                        const hs_descriptor_t *desc2)
 {
+  char *addr1 = NULL, *addr2 = NULL;
   /* Plaintext data section. */
   tt_int_op(desc1->plaintext_data.version, OP_EQ,
             desc2->plaintext_data.version);
@@ -204,8 +205,8 @@ helper_compare_hs_desc(const hs_descriptor_t *desc1,
         case LS_IPV4:
         case LS_IPV6:
         {
-          char *addr1 = tor_addr_to_str_dup(&ls1->u.ap.addr),
-               *addr2 = tor_addr_to_str_dup(&ls2->u.ap.addr);
+          addr1 = tor_addr_to_str_dup(&ls1->u.ap.addr);
+          addr2 = tor_addr_to_str_dup(&ls2->u.ap.addr);
           tt_str_op(addr1, OP_EQ, addr2);
           tor_free(addr1);
           tor_free(addr2);
@@ -225,7 +226,8 @@ helper_compare_hs_desc(const hs_descriptor_t *desc1,
   }
 
  done:
-  ;
+  tor_free(addr1);
+  tor_free(addr2);
 }
 
 /* Test certificate encoding put in a descriptor. */
