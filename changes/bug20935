@@ -1,0 +1,3 @@
+  o Minor bugfixes (portability):
+    - Use the correct spelling of MAC_OS_X_VERSION_10_12 on configure.ac
+      Fixes bug 20935; bugfix on 0.2.9.6-rc.
