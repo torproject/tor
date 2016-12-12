@@ -1431,7 +1431,7 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
 
 #define MAX_TIMEOUT ((int32_t) (INT32_MAX/2))
   /* Check to see if this has happened before. If so, double the timeout
-   * to give people on abysmally bad network connections a shot at access */
+   * to give clients on abysmally bad network connections a shot at access */
   if (cbt->timeout_ms >= circuit_build_times_get_initial_timeout()) {
     if (cbt->timeout_ms > MAX_TIMEOUT || cbt->close_ms > MAX_TIMEOUT) {
       log_warn(LD_CIRC, "Insanely large circuit build timeout value. "

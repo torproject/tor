@@ -4496,7 +4496,7 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
                         ei->cache_info.identity_digest,
                       DIGEST_LEN);
         smartlist_string_remove(requested_fingerprints, fp);
-        /* We silently let people stuff us with extrainfos we didn't ask for,
+        /* We silently let relays stuff us with extrainfos we didn't ask for,
          * so long as we would have wanted them anyway.  Since we always fetch
          * all the extrainfos we want, and we never actually act on them
          * inside Tor, this should be harmless. */

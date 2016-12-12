@@ -424,8 +424,8 @@ configure_accounting(time_t now)
     if (-0.50 <= delta && delta <= 0.50) {
       /* The start of the period is now a little later or earlier than we
        * remembered.  That's fine; we might lose some bytes we could otherwise
-       * have written, but better to err on the side of obeying people's
-       * accounting settings. */
+       * have written, but better to err on the side of obeying accounting
+       * settings. */
       log_info(LD_ACCT, "Accounting interval moved by %.02f%%; "
                "that's fine.", delta*100);
       interval_end_time = start_of_accounting_period_after(now);
@@ -896,7 +896,7 @@ hibernate_go_dormant(time_t now)
   log_notice(LD_ACCT,"Going dormant. Blowing away remaining connections.");
 
   /* Close all OR/AP/exit conns. Leave dir conns because we still want
-   * to be able to upload server descriptors so people know we're still
+   * to be able to upload server descriptors so clients know we're still
    * running, and download directories so we can detect if we're obsolete.
    * Leave control conns because we still want to be controllable.
    */

@@ -284,7 +284,7 @@ dnsserv_reject_request(entry_connection_t *conn)
 }
 
 /** Look up the original name that corresponds to 'addr' in req.  We use this
- * to preserve case in order to facilitate people using 0x20-hacks to avoid
+ * to preserve case in order to facilitate clients using 0x20-hacks to avoid
  * DNS poisoning. */
 static const char *
 evdns_get_orig_address(const struct evdns_server_request *req,

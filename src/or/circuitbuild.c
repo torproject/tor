@@ -1164,7 +1164,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   /* Check if they asked us for 0000..0000. We support using
    * an empty fingerprint for the first hop (e.g. for a bridge relay),
-   * but we don't want to let people send us extend cells for empty
+   * but we don't want to let clients send us extend cells for empty
    * fingerprints -- a) because it opens the user up to a mitm attack,
    * and b) because it lets an attacker force the relay to hold open a
    * new TLS connection for each extend request. */

@@ -3883,7 +3883,7 @@ typedef struct {
   uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing
                             * to use in a second? */
   uint64_t MaxAdvertisedBandwidth; /**< How much bandwidth are we willing to
-                                    * tell people we have? */
+                                    * tell other nodes we have? */
   uint64_t RelayBandwidthRate; /**< How much bandwidth, on average, are we
                                  * willing to use for all relayed conns? */
   uint64_t RelayBandwidthBurst; /**< How much bandwidth, at maximum, will we
