@@ -2447,7 +2447,8 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   entry_guards_update_primary(gs);
   unsigned state = 9999;
 
-  entry_guard_t *g = select_entry_guard_for_circuit(gs, NULL, &state);
+  entry_guard_t *g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC,
+                                                    NULL, &state);
 
   tt_assert(g);
   tt_assert(g->is_primary);
@@ -2457,7 +2458,8 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   tt_i64_op(g->last_tried_to_connect, OP_EQ, approx_time());
 
   // If we do that again, we should get the same guard.
-  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, NULL, &state);
+  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC,
+                                                     NULL, &state);
   tt_ptr_op(g2, OP_EQ, g);
 
   // if we mark that guard down, we should get a different primary guard.
@@ -2466,7 +2468,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   g->failing_since = approx_time() - 10;
   g->last_tried_to_connect = approx_time() - 10;
   state = 9999;
-  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_ptr_op(g2, OP_NE, g);
   tt_assert(g2);
   tt_assert(g2->is_primary);
@@ -2480,7 +2482,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   g->failing_since = approx_time() - 72*60*60;
   g->last_tried_to_connect = approx_time() - 72*60*60;
   state = 9999;
-  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_ptr_op(g2, OP_EQ, g);
   tt_assert(g2);
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
@@ -2495,7 +2497,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
     guard->failing_since = approx_time() - 30;
   });
   state = 9999;
-  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_assert(g2);
   tt_assert(!g2->is_primary);
   tt_int_op(g2->confirmed_idx, OP_EQ, -1);
@@ -2515,16 +2517,16 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   });
 
   /* Let's try again and we should get the first primary guard again */
-  g = select_entry_guard_for_circuit(gs, NULL, &state);
+  g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_ptr_op(g, OP_EQ, smartlist_get(gs->primary_entry_guards, 0));
-  g2 = select_entry_guard_for_circuit(gs, NULL, &state);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_ptr_op(g2, OP_EQ, g);
 
   /* But if we impose a restriction, we don't get the same guard */
   entry_guard_restriction_t rst;
   memset(&rst, 0, sizeof(rst));
   memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
-  g2 = select_entry_guard_for_circuit(gs, &rst, &state);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, &rst, &state);
   tt_ptr_op(g2, OP_NE, g);
 
  done:
@@ -2552,7 +2554,8 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   unsigned state = 9999;
 
   // As above, this gives us a primary guard.
-  entry_guard_t *g = select_entry_guard_for_circuit(gs, NULL, &state);
+  entry_guard_t *g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC,
+                                                    NULL, &state);
   tt_assert(g);
   tt_assert(g->is_primary);
   tt_int_op(g->confirmed_idx, OP_EQ, 0);
@@ -2569,7 +2572,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
 
   // ... we should get a confirmed guard.
   state = 9999;
-  g = select_entry_guard_for_circuit(gs, NULL, &state);
+  g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_assert(g);
   tt_assert(! g->is_primary);
   tt_int_op(g->confirmed_idx, OP_EQ, smartlist_len(gs->primary_entry_guards));
@@ -2580,7 +2583,8 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   // And if we try again, we should get a different confirmed guard, since
   // that one is pending.
   state = 9999;
-  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, NULL, &state);
+  entry_guard_t *g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC,
+                                                     NULL, &state);
   tt_assert(g2);
   tt_assert(! g2->is_primary);
   tt_ptr_op(g2, OP_NE, g);
@@ -2597,7 +2601,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   entry_guard_restriction_t rst;
   memset(&rst, 0, sizeof(rst));
   memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
-  g2 = select_entry_guard_for_circuit(gs, &rst, &state);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, &rst, &state);
   tt_ptr_op(g2, OP_NE, g);
   tt_int_op(g2->confirmed_idx, OP_EQ,
             smartlist_len(gs->primary_entry_guards)+3);
@@ -2607,12 +2611,12 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   const int n_remaining_confirmed =
     N_CONFIRMED - 3 - smartlist_len(gs->primary_entry_guards);
   for (i = 0; i < n_remaining_confirmed; ++i) {
-    g = select_entry_guard_for_circuit(gs, NULL, &state);
+    g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
     tt_int_op(g->confirmed_idx, OP_GE, 0);
     tt_assert(g);
   }
   state = 9999;
-  g = select_entry_guard_for_circuit(gs, NULL, &state);
+  g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_assert(g);
   tt_assert(g->is_pending);
   tt_int_op(g->confirmed_idx, OP_EQ, -1);
@@ -2639,7 +2643,8 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
    * Make sure that the pick-for-circuit API basically works.  We'll get
    * a primary guard, so it'll be usable on completion.
    */
-  int r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+  int r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                       &node, &guard);
 
   tt_assert(r == 0);
   tt_assert(node);
@@ -2671,7 +2676,8 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
   /* Try again. We'll also get a primary guard this time. (The same one,
      in fact.)  But this time, we'll say the connection has failed. */
   update_approx_time(start+35);
-  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                   &node, &guard);
   tt_assert(r == 0);
   tt_assert(node);
   tt_assert(guard);
@@ -2706,7 +2712,8 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
    * (still primary) guard.
    */
   update_approx_time(start+60);
-  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                   &node, &guard);
   tt_assert(r == 0);
   tt_assert(node);
   tt_assert(guard);
@@ -2758,7 +2765,8 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
 
   /* Primary guards are down! */
   for (i = 0; i < N_PRIMARY; ++i) {
-    r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+    r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                     &node, &guard);
     tt_assert(node);
     tt_assert(guard);
     tt_assert(r == 0);
@@ -2771,7 +2779,8 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
 
   /* Next guard should be non-primary. */
   node = NULL;
-  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                   &node, &guard);
   tt_assert(node);
   tt_assert(guard);
   tt_assert(r == 0);
@@ -2823,7 +2832,8 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   /* Make primary guards confirmed (so they won't be superseded by a later
    * guard), then mark them down. */
   for (i = 0; i < N_PRIMARY; ++i) {
-    r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+    r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                     &node, &guard);
     tt_assert(node);
     tt_assert(guard);
     tt_assert(r == 0);
@@ -2839,7 +2849,8 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   }
 
   /* Get another guard that we might try. */
-  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                   &node, &guard);
   tt_assert(node);
   tt_assert(guard);
   tt_assert(r == 0);
@@ -2866,7 +2877,8 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   });
 
   /* Have a circuit to a primary guard succeed. */
-  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard2);
+  r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                   &node, &guard2);
   tt_assert(r == 0);
   tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
   u = entry_guard_succeeded(&guard2);
@@ -2895,7 +2907,8 @@ test_entry_guard_select_and_cancel(void *arg)
   /* Once more, we mark all the primary guards down. */
   entry_guards_note_internet_connectivity(gs);
   for (i = 0; i < N_PRIMARY; ++i) {
-    r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+    r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                     &node, &guard);
     tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
     g = entry_guard_handle_get(guard->guard);
     tt_int_op(g->is_primary, OP_EQ, 1);
@@ -2910,7 +2923,8 @@ test_entry_guard_select_and_cancel(void *arg)
   tt_assert(entry_guards_all_primary_guards_are_down(gs));
 
   /* Now get another guard we could try... */
-  r = entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+  r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                   &node, &guard);
   tt_assert(node);
   tt_assert(guard);
   tt_assert(r == 0);
@@ -2969,7 +2983,7 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   data->start = approx_time();
   entry_guards_note_internet_connectivity(gs);
   for (i = 0; i < N_PRIMARY; ++i) {
-    entry_guard_pick_for_circuit(gs, NULL, &node, &guard);
+    entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &node, &guard);
     g = entry_guard_handle_get(guard->guard);
     make_guard_confirmed(gs, g);
     entry_guard_failed(&guard);
@@ -2980,7 +2994,8 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   data->all_origin_circuits = smartlist_new();
 
   update_approx_time(data->start + 27);
-  entry_guard_pick_for_circuit(gs, NULL, &node, &data->guard1_state);
+  entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                               &node, &data->guard1_state);
   origin_circuit_t *circ;
   data->circ1 = circ = origin_circuit_new();
   circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -2988,7 +3003,8 @@ upgrade_circuits_setup(const struct testcase_t *testcase)
   smartlist_add(data->all_origin_circuits, circ);
 
   update_approx_time(data->start + 30);
-  entry_guard_pick_for_circuit(gs, NULL, &node, &data->guard2_state);
+  entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                               &node, &data->guard2_state);
   data->circ2 = circ = origin_circuit_new();
   circ->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
   circ->guard_state = data->guard2_state;

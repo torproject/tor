@@ -397,8 +397,16 @@ const char *entry_guard_get_rsa_id_digest(const entry_guard_t *guard);
 const char *entry_guard_describe(const entry_guard_t *guard);
 guard_pathbias_t *entry_guard_get_pathbias_state(entry_guard_t *guard);
 
+/** Enum to specify how we're going to use a given guard, when we're picking
+ * one for immediate use. */
+typedef enum {
+  GUARD_USAGE_TRAFFIC = 0,
+  GUARD_USAGE_DIRGUARD = 1
+} guard_usage_t;
+
 void circuit_guard_state_free(circuit_guard_state_t *state);
 int entry_guard_pick_for_circuit(guard_selection_t *gs,
+                                 guard_usage_t usage,
                                  entry_guard_restriction_t *rst,
                                  const node_t **chosen_node_out,
                                  circuit_guard_state_t **guard_state_out);
@@ -477,6 +485,10 @@ int num_bridges_usable(void);
  */
 #define DFLT_N_PRIMARY_GUARDS_TO_USE 1
 /**
+ * As DFLT_N_PRIMARY_GUARDS, but for choosing which directory guard to use.
+ */
+#define DFLT_N_PRIMARY_DIR_GUARDS_TO_USE 3
+/**
  * If we haven't successfully built or used a circuit in this long, then
  * consider that the internet is probably down.
  */
@@ -511,7 +523,7 @@ STATIC int get_remove_unlisted_guards_after_days(void);
 STATIC int get_guard_lifetime(void);
 STATIC int get_guard_confirmed_min_lifetime(void);
 STATIC int get_n_primary_guards(void);
-STATIC int get_n_primary_guards_to_use(void);
+STATIC int get_n_primary_guards_to_use(guard_usage_t usage);
 STATIC int get_internet_likely_down_interval(void);
 STATIC int get_nonprimary_guard_connect_timeout(void);
 STATIC int get_nonprimary_guard_idle_timeout(void);
@@ -590,6 +602,7 @@ STATIC void sampled_guards_update_from_consensus(guard_selection_t *gs);
 STATIC void entry_guards_note_guard_failure(guard_selection_t *gs,
                                             entry_guard_t *guard);
 STATIC entry_guard_t *select_entry_guard_for_circuit(guard_selection_t *gs,
+                                          guard_usage_t usage,
                                           const entry_guard_restriction_t *rst,
                                           unsigned *state_out);
 STATIC void mark_primary_guards_maybe_reachable(guard_selection_t *gs);

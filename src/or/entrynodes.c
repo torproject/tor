@@ -472,10 +472,11 @@ STATIC int
 get_n_primary_guards(void)
 {
   const int n = get_options()->NumEntryGuards;
+  const int n_dir = get_options()->NumDirectoryGuards;
   if (n > 5) {
-    return n + n / 2;
-  } else if (n > 1) {
-    return n * 2;
+    return MAX(n_dir, n + n / 2);
+  } else if (n >= 1) {
+    return MAX(n_dir, n * 2);
   }
 
   return networkstatus_get_param(NULL,
@@ -487,14 +488,25 @@ get_n_primary_guards(void)
  * making a circuit.
  */
 STATIC int
-get_n_primary_guards_to_use(void)
+get_n_primary_guards_to_use(guard_usage_t usage)
 {
-  if (get_options()->NumEntryGuards > 1) {
-    return get_options()->NumEntryGuards;
+  int configured;
+  const char *param_name;
+  int param_default;
+  if (usage == GUARD_USAGE_DIRGUARD) {
+    configured = get_options()->NumDirectoryGuards;
+    param_name = "guard-n-primary-dir-guards-to-use";
+    param_default = DFLT_N_PRIMARY_DIR_GUARDS_TO_USE;
+  } else {
+    configured = get_options()->NumEntryGuards;
+    param_name = "guard-n-primary-guards-to-use";
+    param_default = DFLT_N_PRIMARY_GUARDS_TO_USE;
+  }
+  if (configured >= 1) {
+    return configured;
   }
   return networkstatus_get_param(NULL,
-                                 "guard-n-primary-guards-to-use",
-                                 DFLT_N_PRIMARY_GUARDS_TO_USE, 1, INT32_MAX);
+                                 param_name, param_default, 1, INT32_MAX);
 }
 /**
  * If we haven't successfully built or used a circuit in this long, then
@@ -1807,6 +1819,7 @@ entry_guards_note_internet_connectivity(guard_selection_t *gs)
  */
 STATIC entry_guard_t *
 select_entry_guard_for_circuit(guard_selection_t *gs,
+                               guard_usage_t usage,
                                const entry_guard_restriction_t *rst,
                                unsigned *state_out)
 {
@@ -1817,7 +1830,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
-  int num_entry_guards = get_n_primary_guards_to_use();
+  int num_entry_guards = get_n_primary_guards_to_use(usage);
   smartlist_t *usable_primary_guards = smartlist_new();
 
   /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of
@@ -2080,6 +2093,7 @@ circuit_guard_state_free(circuit_guard_state_t *state)
  */
 int
 entry_guard_pick_for_circuit(guard_selection_t *gs,
+                             guard_usage_t usage,
                              entry_guard_restriction_t *rst,
                              const node_t **chosen_node_out,
                              circuit_guard_state_t **guard_state_out)
@@ -2091,7 +2105,8 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   *guard_state_out = NULL;
 
   unsigned state = 0;
-  entry_guard_t *guard = select_entry_guard_for_circuit(gs, rst, &state);
+  entry_guard_t *guard =
+    select_entry_guard_for_circuit(gs, usage, rst, &state);
   if (! guard)
     goto fail;
   if (BUG(state == 0))
@@ -4986,6 +5001,7 @@ guards_choose_guard(cpath_build_state_t *state,
       memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
     }
     if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     GUARD_USAGE_TRAFFIC,
                                      rst,
                                      &r,
                                      guard_state_out) < 0) {
@@ -5018,6 +5034,7 @@ guards_choose_dirguard(dirinfo_type_t info,
      * microdescriptors. -NM */
     const node_t *r = NULL;
     if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     GUARD_USAGE_DIRGUARD,
                                      NULL,
                                      &r,
                                      guard_state_out) < 0) {
