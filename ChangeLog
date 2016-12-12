@@ -1,4 +1,4 @@
-Changes in version 0.2.9.7-rc - 2016-12-1?
+Changes in version 0.2.9.7-rc - 2016-12-12
   Tor 0.2.9.7-rc fixes a few small bugs remaining in Tor 0.2.9.6-rc,
   including a few that had prevented tests from passing on
   some platforms.
