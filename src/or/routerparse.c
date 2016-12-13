@@ -370,8 +370,7 @@ static int router_get_hashes_impl(const char *s, size_t s_len,
                                   char end_char);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 
-#define CST_CHECK_AUTHORITY   (1<<0)
-#define CST_NO_CHECK_OBJTYPE  (1<<1)
+#define CST_NO_CHECK_OBJTYPE  (1<<0)
 static int check_signature_token(const char *digest,
                                  ssize_t digest_len,
                                  directory_token_t *tok,
@@ -1173,28 +1172,9 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   return ret;
 }
 
-/** Return true iff <b>key</b> is allowed to sign directories.
- */
-static int
-dir_signing_key_is_trusted(crypto_pk_t *key)
-{
-  char digest[DIGEST_LEN];
-  if (!key) return 0;
-  if (crypto_pk_get_digest(key, digest) < 0) {
-    log_warn(LD_DIR, "Error computing dir-signing-key digest");
-    return 0;
-  }
-  if (!router_digest_is_trusted_dir(digest)) {
-    log_warn(LD_DIR, "Listed dir-signing-key is not trusted");
-    return 0;
-  }
-  return 1;
-}
-
 /** Check whether the object body of the token in <b>tok</b> has a good
- * signature for <b>digest</b> using key <b>pkey</b>.  If
- * <b>CST_CHECK_AUTHORITY</b> is set, make sure that <b>pkey</b> is the key of
- * a directory authority.  If <b>CST_NO_CHECK_OBJTYPE</b> is set, do not check
+ * signature for <b>digest</b> using key <b>pkey</b>.
+ * If <b>CST_NO_CHECK_OBJTYPE</b> is set, do not check
  * the object type of the signature object. Use <b>doctype</b> as the type of
  * the document when generating log messages.  Return 0 on success, negative
  * on failure.
@@ -1209,19 +1189,12 @@ check_signature_token(const char *digest,
 {
   char *signed_digest;
   size_t keysize;
-  const int check_authority = (flags & CST_CHECK_AUTHORITY);
   const int check_objtype = ! (flags & CST_NO_CHECK_OBJTYPE);
 
   tor_assert(pkey);
   tor_assert(tok);
   tor_assert(digest);
   tor_assert(doctype);
-
-  if (check_authority && !dir_signing_key_is_trusted(pkey)) {
-    log_warn(LD_DIR, "Key on %s did not come from an authority; rejecting",
-             doctype);
-    return -1;
-  }
 
   if (check_objtype) {
     if (strcmp(tok->object_type, "SIGNATURE")) {
