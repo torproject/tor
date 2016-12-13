@@ -86,7 +86,6 @@ int router_digest_is_trusted_dir_type(const char *digest,
 #define router_digest_is_trusted_dir(d) \
   router_digest_is_trusted_dir_type((d), NO_DIRINFO)
 
-int router_addr_is_trusted_dir(uint32_t addr);
 int hexdigest_to_digest(const char *hexdigest, char *digest);
 const routerinfo_t *router_get_by_id_digest(const char *digest);
 routerinfo_t *router_get_mutable_by_digest(const char *digest);

@@ -2246,10 +2246,6 @@ on the public Tor network.
     list as acceptable on a single IP address. Set this to "0" for "no limit".
     (Default: 2)
 
-[[AuthDirMaxServersPerAuthAddr]] **AuthDirMaxServersPerAuthAddr** __NUM__::
-    Authoritative directories only. Like AuthDirMaxServersPerAddr, but applies
-    to addresses shared with directory authorities. (Default: 5)
-
 [[AuthDirFastGuarantee]] **AuthDirFastGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Authoritative directories only. If non-zero, always vote the
     Fast flag for any relay advertising this amount of capacity or
