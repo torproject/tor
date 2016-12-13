@@ -2265,7 +2265,7 @@ on the public Tor network.
     publish a descriptor if any other relay has reserved its <Ed25519,RSA>
     identity keypair. In all cases, Tor records every keypair it accepts
     in a journal if it is new, or if it differs from the most recently
-    accepted pinning for one of the keys it contains. (Default: 0)
+    accepted pinning for one of the keys it contains. (Default: 1)
 
 [[AuthDirSharedRandomness]] **AuthDirSharedRandomness** **0**|**1**::
     Authoritative directories only. Switch for the shared random protocol.

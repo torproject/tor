@@ -1,0 +1,4 @@
+  o Minor features (directory authority, security):
+    - The default for AuthDirPinKeys is now 1: directory authorities will
+      reject relays where the RSA identity key matches a previously seen
+      value, but the Ed25519 key has changed. Closes ticket 18319.
