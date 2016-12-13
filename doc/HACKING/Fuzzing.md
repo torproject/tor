@@ -42,6 +42,7 @@ To Run:
   ../afl/afl-fuzz -i src/test/fuzz/fuzz_dir_testcase -o src/test/fuzz/fuzz_dir_findings -m <asan-memory-limit> -- src/test/fuzz_dir
 
 AFL has a multi-core mode, check the documentation for details.
+You might find the included fuzz-multi.sh script useful for this.
 
 macOS (OS X) requires slightly more preparation, including:
 * using afl-clang (or afl-clang-fast from the llvm directory)
