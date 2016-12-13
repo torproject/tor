@@ -1728,9 +1728,9 @@ count_usable_descriptors(int *num_present, int *num_usable,
  * If **<b>status_out</b> is present, allocate a new string and print the
  * available percentages of guard, middle, and exit nodes to it, noting
  * whether there are exits in the consensus.
- * If there are no guards in the consensus,
- * we treat the exit fraction as 100%.
- */
+ * If there are no exits in the consensus, we treat the exit fraction as 100%,
+ * but set router_have_consensus_path() so that we can only build internal
+ * paths. */
 static double
 compute_frac_paths_available(const networkstatus_t *consensus,
                              const or_options_t *options, time_t now,
