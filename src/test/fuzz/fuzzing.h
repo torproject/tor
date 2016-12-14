@@ -5,4 +5,6 @@ int fuzz_init(void);
 int fuzz_cleanup(void);
 int fuzz_main(const uint8_t *data, size_t sz);
 
+void disable_signature_checking(void);
+
 #endif /* FUZZING_H */
