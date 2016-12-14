@@ -16,26 +16,6 @@
 
 #include "fuzzing.h"
 
-static int mock_get_options_calls = 0;
-static or_options_t *mock_options = NULL;
-
-static void
-reset_options(or_options_t *options, int *get_options_calls)
-{
-  memset(options, 0, sizeof(or_options_t));
-  options->TestingTorNetwork = 1;
-
-  *get_options_calls = 0;
-}
-
-static const or_options_t*
-mock_get_options(void)
-{
-  ++mock_get_options_calls;
-  tor_assert(mock_options);
-  return mock_options;
-}
-
 static void
 mock_connection_write_to_buf_impl_(const char *string, size_t len,
                                    connection_t *conn, int zlib)
@@ -44,23 +24,73 @@ mock_connection_write_to_buf_impl_(const char *string, size_t len,
             zlib ? "Compressed " : "", len, conn, string);
 }
 
+static int
+mock_directory_handle_command_get(dir_connection_t *conn,
+                                      const char *headers,
+                                      const char *body,
+                                      size_t body_len)
+{
+  (void)conn;
+
+  log_debug(LD_GENERAL, "Method:\nGET\n");
+
+  if (headers) {
+    log_debug(LD_GENERAL, "Header-Length:\n%zu\n", strlen(headers));
+    log_debug(LD_GENERAL, "Headers:\n%s\n", headers);
+
+  }
+
+  log_debug(LD_GENERAL, "Body-Length:\n%zu\n", body_len);
+  if (body) {
+    log_debug(LD_GENERAL, "Body:\n%s\n", body);
+  }
+
+  /* Always tell the caller we succeeded */
+  return 0;
+}
+
+static int
+mock_directory_handle_command_post(dir_connection_t *conn,
+                                       const char *headers,
+                                       const char *body,
+                                       size_t body_len)
+{
+  (void)conn;
+
+  log_debug(LD_GENERAL, "Method:\nPOST\n");
+
+  if (headers) {
+    log_debug(LD_GENERAL, "Header-Length:\n%zu\n", strlen(headers));
+    log_debug(LD_GENERAL, "Headers:\n%s\n", headers);
+  }
+
+  log_debug(LD_GENERAL, "Body-Length:\n%zu\n", body_len);
+  if (body) {
+    log_debug(LD_GENERAL, "Body:\n%s\n", body);
+  }
+
+  /* Always tell the caller we succeeded */
+  return 0;
+}
+
 int
 fuzz_init(void)
 {
-  mock_options = tor_malloc(sizeof(or_options_t));
-  reset_options(mock_options, &mock_get_options_calls);
-  MOCK(get_options, mock_get_options);
   /* Set up fake response handler */
   MOCK(connection_write_to_buf_impl_, mock_connection_write_to_buf_impl_);
+  /* Set up the fake handler functions */
+  MOCK(directory_handle_command_get, mock_directory_handle_command_get);
+  MOCK(directory_handle_command_post, mock_directory_handle_command_post);
+
   return 0;
 }
 
 int
 fuzz_cleanup(void)
 {
-  tor_free(mock_options);
-  UNMOCK(get_options);
   UNMOCK(connection_write_to_buf_impl_);
+  UNMOCK(directory_handle_command_get);
+  UNMOCK(directory_handle_command_post);
   return 0;
 }
 

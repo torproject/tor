@@ -10,6 +10,13 @@
 extern const char tor_git_revision[];
 const char tor_git_revision[] = "";
 
+static or_options_t *mock_options = NULL;
+static const or_options_t *
+mock_get_options(void)
+{
+  return mock_options;
+}
+
 static int
 mock_crypto_pk_public_checksig__nocheck(const crypto_pk_t *env, char *to,
                                         size_t tolen,
@@ -116,6 +123,10 @@ main(int argc, char **argv)
   init_logging(1);
   configure_backtrace_handler(get_version());
 
+  /* set up the options. */
+  mock_options = tor_malloc(sizeof(or_options_t));
+  MOCK(get_options, mock_get_options);
+
   for (int i = 1; i < argc; ++i) {
     if (!strcmp(argv[i], "--warn")) {
       loglevel = LOG_WARN;
@@ -156,6 +167,9 @@ main(int argc, char **argv)
 
   if (fuzz_cleanup() < 0)
     abort();
+
+  tor_free(mock_options);
+  UNMOCK(get_options);
   return 0;
 }
 
