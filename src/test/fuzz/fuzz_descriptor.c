@@ -1,3 +1,5 @@
+/* Copyright (c) 2016, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 #define ROUTERPARSE_PRIVATE
 #include "or.h"
 #include "routerparse.h"

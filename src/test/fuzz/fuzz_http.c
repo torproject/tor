@@ -37,7 +37,6 @@ mock_directory_handle_command_get(dir_connection_t *conn,
   if (headers) {
     log_debug(LD_GENERAL, "Header-Length:\n%zu\n", strlen(headers));
     log_debug(LD_GENERAL, "Headers:\n%s\n", headers);
-
   }
 
   log_debug(LD_GENERAL, "Body-Length:\n%zu\n", body_len);
@@ -130,3 +129,4 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 
   return 0;
 }
+

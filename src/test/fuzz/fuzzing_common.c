@@ -1,3 +1,5 @@
+/* Copyright (c) 2016, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 #define CRYPTO_ED25519_PRIVATE
 #include "orconfig.h"
 #include "or.h"
@@ -78,7 +80,6 @@ mock_ed25519_impl_spot_check__nocheck(void)
   return 0;
 }
 
-
 void
 disable_signature_checking(void)
 {
@@ -93,7 +94,8 @@ disable_signature_checking(void)
 
 #ifdef LLVM_FUZZ
 int
-LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
+{
   static int initialized = 0;
   if (!initialized) {
     if (fuzz_init() < 0)

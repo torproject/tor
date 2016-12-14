@@ -190,6 +190,7 @@ if USE_PERL
 		$(top_srcdir)/src/common/*.[ch] \
 		$(top_srcdir)/src/or/*.[ch] \
 		$(top_srcdir)/src/test/*.[ch] \
+		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]
 endif
 
