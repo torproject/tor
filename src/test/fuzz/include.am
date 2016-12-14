@@ -39,8 +39,17 @@ src_test_fuzz_fuzz_http_CFLAGS = $(FUZZING_CFLAGS)
 src_test_fuzz_fuzz_http_LDFLAGS = $(FUZZING_LDFLAG)
 src_test_fuzz_fuzz_http_LDADD = $(FUZZING_LIBS)
 
+src_test_fuzz_fuzz_extrainfo_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_extrainfo.c
+src_test_fuzz_fuzz_extrainfo_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_extrainfo_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_extrainfo_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_extrainfo_LDADD = $(FUZZING_LIBS)
+
 FUZZERS = \
 	src/test/fuzz/fuzz-descriptor \
+	src/test/fuzz/fuzz-extrainfo \
 	src/test/fuzz/fuzz-http
 
 # The fuzzers aren't built by default right now. That should change.
