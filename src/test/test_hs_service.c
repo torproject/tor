@@ -23,7 +23,7 @@ static void
 test_gen_establish_intro_cell(void *arg)
 {
   (void) arg;
-  int retval;
+  ssize_t retval;
   uint8_t circuit_key_material[DIGEST_LEN] = {0};
   uint8_t buf[RELAY_PAYLOAD_SIZE];
   hs_cell_establish_intro_t *cell_out = NULL;
