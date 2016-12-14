@@ -104,7 +104,10 @@ main(int argc, char **argv)
   size_t size;
 
   tor_threads_init();
-  init_logging(1);
+  {
+    struct sipkey sipkey = { 1337, 7331 };
+    siphash_set_global_key(&sipkey);
+  }
 
   /* Disable logging by default to speed up fuzzing. */
   int loglevel = LOG_ERR;
