@@ -1107,10 +1107,10 @@ crypto_pk_private_decrypt(crypto_pk_t *env, char *to,
  * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
  * at least the length of the modulus of <b>env</b>.
  */
-int
-crypto_pk_public_checksig(const crypto_pk_t *env, char *to,
-                          size_t tolen,
-                          const char *from, size_t fromlen)
+MOCK_IMPL(int,
+crypto_pk_public_checksig,(const crypto_pk_t *env, char *to,
+                           size_t tolen,
+                           const char *from, size_t fromlen))
 {
   int r;
   tor_assert(env);
@@ -1134,9 +1134,10 @@ crypto_pk_public_checksig(const crypto_pk_t *env, char *to,
  * in <b>env</b>. Return 0 if <b>sig</b> is a correct signature for
  * SHA1(data).  Else return -1.
  */
-int
-crypto_pk_public_checksig_digest(crypto_pk_t *env, const char *data,
-                               size_t datalen, const char *sig, size_t siglen)
+MOCK_IMPL(int,
+crypto_pk_public_checksig_digest,(crypto_pk_t *env, const char *data,
+                                  size_t datalen, const char *sig,
+                                  size_t siglen))
 {
   char digest[DIGEST_LEN];
   char *buf;

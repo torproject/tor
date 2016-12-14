@@ -863,8 +863,8 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
  * type *<b>type</b> to file $DATADIR/unparseable-desc. Do not write more
  * than one descriptor to disk per minute. If there is already such a
  * file in the data directory, overwrite it. */
-STATIC void
-dump_desc(const char *desc, const char *type)
+MOCK_IMPL(STATIC void,
+dump_desc,(const char *desc, const char *type))
 {
   tor_assert(desc);
   tor_assert(type);
@@ -4508,13 +4508,24 @@ router_get_hash_impl(const char *s, size_t s_len, char *digest,
                                   &start,&end)<0)
     return -1;
 
+  return router_compute_hash_final(digest, start, end-start, alg);
+}
+
+/** Compute the digest of the <b>len</b>-byte directory object at
+ * <b>start</b>, using <b>alg</b>. Store the result in <b>digest</b>, which
+ * must be long enough to hold it. */
+MOCK_IMPL(STATIC int,
+router_compute_hash_final,(char *digest,
+                           const char *start, size_t len,
+                           digest_algorithm_t alg))
+{
   if (alg == DIGEST_SHA1) {
-    if (crypto_digest(digest, start, end-start) < 0) {
+    if (crypto_digest(digest, start, len) < 0) {
       log_warn(LD_BUG,"couldn't compute digest");
       return -1;
     }
   } else {
-    if (crypto_digest256(digest, start, end-start, alg) < 0) {
+    if (crypto_digest256(digest, start, len, alg) < 0) {
       log_warn(LD_BUG,"couldn't compute digest");
       return -1;
     }

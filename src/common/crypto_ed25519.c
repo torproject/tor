@@ -15,6 +15,7 @@
  * keys to and from the corresponding Curve25519 keys.
  */
 
+#define CRYPTO_ED25519_PRIVATE
 #include "orconfig.h"
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -34,7 +35,6 @@
 #include <openssl/sha.h>
 
 static void pick_ed25519_impl(void);
-static int ed25519_impl_spot_check(void);
 
 /** An Ed25519 implementation, as a set of function pointers. */
 typedef struct {
@@ -308,10 +308,10 @@ ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
  *
  * Return 0 if the signature is valid; -1 if it isn't.
  */
-int
-ed25519_checksig(const ed25519_signature_t *signature,
-                 const uint8_t *msg, size_t len,
-                 const ed25519_public_key_t *pubkey)
+MOCK_IMPL(int,
+ed25519_checksig,(const ed25519_signature_t *signature,
+                  const uint8_t *msg, size_t len,
+                  const ed25519_public_key_t *pubkey))
 {
   return
     get_ed_impl()->open(signature->sig, msg, len, pubkey->pubkey) < 0 ? -1 : 0;
@@ -354,10 +354,10 @@ ed25519_checksig_prefixed(const ed25519_signature_t *signature,
  * was valid. Otherwise return -N, where N is the number of invalid
  * signatures.
  */
-int
-ed25519_checksig_batch(int *okay_out,
-                       const ed25519_checkable_t *checkable,
-                       int n_checkable)
+MOCK_IMPL(int,
+ed25519_checksig_batch,(int *okay_out,
+                        const ed25519_checkable_t *checkable,
+                        int n_checkable))
 {
   int i, res;
   const ed25519_impl_t *impl = get_ed_impl();
@@ -642,8 +642,8 @@ ed25519_pubkey_copy(ed25519_public_key_t *dest,
 
 /** Check whether the given Ed25519 implementation seems to be working.
  * If so, return 0; otherwise return -1. */
-static int
-ed25519_impl_spot_check(void)
+MOCK_IMPL(STATIC int,
+ed25519_impl_spot_check,(void))
 {
   static const uint8_t alicesk[32] = {
     0xc5,0xaa,0x8d,0xf4,0x3f,0x9f,0x83,0x7b,
