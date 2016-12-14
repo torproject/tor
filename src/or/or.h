@@ -80,6 +80,7 @@
 #include "crypto_ed25519.h"
 #include "tor_queue.h"
 #include "util_format.h"
+#include "hs_circuitmap.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
@@ -3355,7 +3356,12 @@ typedef struct or_circuit_t {
    * is not marked for close. */
   struct or_circuit_t *rend_splice;
 
-  struct or_circuit_rendinfo_s *rendinfo;
+  /** If set, points to an HS token that this circuit might be carrying.
+   *  Used by the HS circuitmap.  */
+  hs_token_t *hs_token;
+  /** Hashtable node: used to look up the circuit by its HS token using the HS
+      circuitmap. */
+  HT_ENTRY(or_circuit_t) hs_circuitmap_node;
 
   /** Stores KH for the handshake. */
   char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
@@ -3390,24 +3396,10 @@ typedef struct or_circuit_t {
   uint32_t max_middle_cells;
 } or_circuit_t;
 
-typedef struct or_circuit_rendinfo_s {
-
 #if REND_COOKIE_LEN != DIGEST_LEN
 #error "The REND_TOKEN_LEN macro assumes REND_COOKIE_LEN == DIGEST_LEN"
 #endif
 #define REND_TOKEN_LEN DIGEST_LEN
-
-  /** A hash of location-hidden service's PK if purpose is INTRO_POINT, or a
-   * rendezvous cookie if purpose is REND_POINT_WAITING. Filled with zeroes
-   * otherwise.
-   */
-  char rend_token[REND_TOKEN_LEN];
-
-  /** True if this is a rendezvous point circuit; false if this is an
-   * introduction point. */
-  unsigned is_rend_circ;
-
-} or_circuit_rendinfo_t;
 
 /** Convert a circuit subtype to a circuit_t. */
 #define TO_CIRCUIT(x)  (&((x)->base_))

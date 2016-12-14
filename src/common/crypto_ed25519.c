@@ -275,11 +275,11 @@ ed25519_sign(ed25519_signature_t *signature_out,
  * Like ed25519_sign(), but also prefix <b>msg</b> with <b>prefix_str</b>
  * before signing. <b>prefix_str</b> must be a NUL-terminated string.
  */
-int
-ed25519_sign_prefixed(ed25519_signature_t *signature_out,
-                      const uint8_t *msg, size_t msg_len,
-                      const char *prefix_str,
-                      const ed25519_keypair_t *keypair)
+MOCK_IMPL(int,
+ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
+                       const uint8_t *msg, size_t msg_len,
+                       const char *prefix_str,
+                       const ed25519_keypair_t *keypair))
 {
   int retval;
   size_t prefixed_msg_len;

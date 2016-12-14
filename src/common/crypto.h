@@ -255,6 +255,10 @@ void crypto_digest_assign(crypto_digest_t *into,
 void crypto_hmac_sha256(char *hmac_out,
                         const char *key, size_t key_len,
                         const char *msg, size_t msg_len);
+void crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
+                         const uint8_t *key, size_t key_len,
+                         const uint8_t *msg, size_t msg_len);
+
 crypto_xof_t *crypto_xof_new(void);
 void crypto_xof_add_bytes(crypto_xof_t *xof, const uint8_t *data, size_t len);
 void crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len);

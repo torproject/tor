@@ -17,6 +17,12 @@
 /* Version 3 of the protocol (prop224). */
 #define HS_VERSION_THREE 3
 
+/* Denotes ed25519 authentication key on ESTABLISH_INTRO cell. */
+#define AUTH_KEY_ED25519 0x02
+
+/* String prefix for the signature of ESTABLISH_INTRO */
+#define ESTABLISH_INTRO_SIG_PREFIX "Tor establish-intro cell v1"
+
 void rend_data_free(rend_data_t *data);
 rend_data_t *rend_data_dup(const rend_data_t *data);
 rend_data_t *rend_data_client_create(const char *onion_address,
@@ -36,4 +42,3 @@ const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
 int hs_v3_protocol_is_enabled(void);
 
 #endif /* TOR_HS_COMMON_H */
-

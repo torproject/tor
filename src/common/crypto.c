@@ -2123,6 +2123,35 @@ crypto_hmac_sha256(char *hmac_out,
   tor_assert(rv);
 }
 
+/** Compute a MAC using SHA3-256 of <b>msg_len</b> bytes in <b>msg</b> using a
+ * <b>key</b> of length <b>key_len</b> and a <b>salt</b> of length
+ * <b>salt_len</b>. Store the result of <b>len_out</b> bytes in in
+ * <b>mac_out</b>. This function can't fail. */
+void
+crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
+                    const uint8_t *key, size_t key_len,
+                    const uint8_t *msg, size_t msg_len)
+{
+  crypto_digest_t *digest;
+
+  const uint64_t key_len_netorder = tor_htonll(key_len);
+
+  tor_assert(mac_out);
+  tor_assert(key);
+  tor_assert(msg);
+
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+
+  /* Order matters here that is any subsystem using this function should
+   * expect this very precise ordering in the MAC construction. */
+  crypto_digest_add_bytes(digest, (const char *) &key_len_netorder,
+                          sizeof(key_len_netorder));
+  crypto_digest_add_bytes(digest, (const char *) key, key_len);
+  crypto_digest_add_bytes(digest, (const char *) msg, msg_len);
+  crypto_digest_get_digest(digest, (char *) mac_out, len_out);
+  crypto_digest_free(digest);
+}
+
 /** Internal state for a eXtendable-Output Function (XOF). */
 struct crypto_xof_t {
   keccak_state s;

@@ -1135,6 +1135,54 @@ test_crypto_sha3_xof(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+/* Test our MAC-SHA3 function. There are not actually any MAC-SHA3 test
+ * vectors out there for our H(len(k) || k || m) construction. Hence what we
+ * are gonna do is test our crypto_mac_sha3_256() function against manually
+ * doing H(len(k) || k||m).  If in the future the Keccak group decides to
+ * standarize an MAC construction and make test vectors, we should
+ * incorporate them here. */
+static void
+test_crypto_mac_sha3(void *arg)
+{
+  const char msg[] = "i am in a library somewhere using my computer";
+  const char key[] = "i'm from the past talking to the future.";
+
+  uint8_t hmac_test[DIGEST256_LEN];
+  char hmac_manual[DIGEST256_LEN];
+
+  (void) arg;
+
+  /* First let's use our nice HMAC-SHA3 function */
+  crypto_mac_sha3_256(hmac_test, sizeof(hmac_test),
+                      (uint8_t *) key, strlen(key),
+                      (uint8_t *) msg, strlen(msg));
+
+  /* Now let's try a manual H(len(k) || k || m) construction */
+  {
+    char *key_msg_concat = NULL, *all = NULL;
+    int result;
+    const uint64_t key_len_netorder = tor_htonll(strlen(key));
+    size_t all_len;
+
+    tor_asprintf(&key_msg_concat, "%s%s", key, msg);
+    all_len = sizeof(key_len_netorder) + strlen(key_msg_concat);
+    all = tor_malloc_zero(all_len);
+    memcpy(all, &key_len_netorder, sizeof(key_len_netorder));
+    memcpy(all + sizeof(key_len_netorder), key_msg_concat,
+           strlen(key_msg_concat));
+
+    result = crypto_digest256(hmac_manual, all, all_len, DIGEST_SHA3_256);
+    tor_free(key_msg_concat);
+    tor_free(all);
+    tt_int_op(result, ==, 0);
+  }
+
+  /* Now compare the two results */
+  tt_mem_op(hmac_test, OP_EQ, hmac_manual, DIGEST256_LEN);
+
+ done: ;
+}
+
 /** Run unit tests for our public key crypto functions */
 static void
 test_crypto_pk(void *arg)
@@ -2918,6 +2966,7 @@ struct testcase_t crypto_tests[] = {
   { "digest_names", test_crypto_digest_names, 0, NULL, NULL },
   { "sha3", test_crypto_sha3, TT_FORK, NULL, NULL},
   { "sha3_xof", test_crypto_sha3_xof, TT_FORK, NULL, NULL},
+  { "mac_sha3", test_crypto_mac_sha3, TT_FORK, NULL, NULL},
   CRYPTO_LEGACY(dh),
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &passthrough_setup,
     (void*)"aes" },

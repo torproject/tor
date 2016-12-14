@@ -16,6 +16,7 @@
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendmid.h"
+#include "hs_intropoint.h"
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
@@ -762,7 +763,7 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
   switch (command) {
     case RELAY_COMMAND_ESTABLISH_INTRO:
       if (or_circ)
-        r = rend_mid_establish_intro(or_circ,payload,length);
+        r = hs_intro_received_establish_intro(or_circ,payload,length);
       break;
     case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
       if (or_circ)
