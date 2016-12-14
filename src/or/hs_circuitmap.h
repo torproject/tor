@@ -12,23 +12,23 @@
 typedef HT_HEAD(hs_circuitmap_ht, or_circuit_t) hs_circuitmap_ht;
 
 typedef struct hs_token_s hs_token_t;
-typedef struct or_circuit_t or_circuit_t;
+struct or_circuit_t;
 
 /** Public HS circuitmap API: */
 
-or_circuit_t *hs_circuitmap_get_rend_circ(const uint8_t *cookie);
-or_circuit_t *
-hs_circuitmap_get_intro_circ_v3(const ed25519_public_key_t *auth_key);
-or_circuit_t *hs_circuitmap_get_intro_circ_v2(const uint8_t *digest);
+struct or_circuit_t *hs_circuitmap_get_rend_circ(const uint8_t *cookie);
+struct or_circuit_t *hs_circuitmap_get_intro_circ_v3(
+                                        const ed25519_public_key_t *auth_key);
+struct or_circuit_t *hs_circuitmap_get_intro_circ_v2(const uint8_t *digest);
 
-void hs_circuitmap_register_rend_circ(or_circuit_t *circ,
+void hs_circuitmap_register_rend_circ(struct or_circuit_t *circ,
                                       const uint8_t *cookie);
-void hs_circuitmap_register_intro_circ_v2(or_circuit_t *circ,
+void hs_circuitmap_register_intro_circ_v2(struct or_circuit_t *circ,
                                           const uint8_t *digest);
-void hs_circuitmap_register_intro_circ_v3(or_circuit_t *circ,
+void hs_circuitmap_register_intro_circ_v3(struct or_circuit_t *circ,
                                          const ed25519_public_key_t *auth_key);
 
-void hs_circuitmap_remove_circuit(or_circuit_t *circ);
+void hs_circuitmap_remove_circuit(struct or_circuit_t *circ);
 
 void hs_circuitmap_init(void);
 void hs_circuitmap_free_all(void);
