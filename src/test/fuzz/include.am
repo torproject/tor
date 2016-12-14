@@ -21,7 +21,7 @@ FUZZING_LIBS = \
 
 
 noinst_HEADERS += \
-	src/test/fuzz/fuzzing_boilerplate.h
+	src/test/fuzz/fuzzing.h
 
 src_test_fuzz_fuzz_descriptor_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \

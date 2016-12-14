@@ -12,6 +12,12 @@ fuzz_init(void)
 }
 
 int
+fuzz_cleanup(void)
+{
+  return 0;
+}
+
+int
 fuzz_main(const uint8_t *data, size_t sz)
 {
   routerinfo_t *ri;
