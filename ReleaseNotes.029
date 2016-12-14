@@ -1,6 +1,8 @@
 [This is a draft for the 0.2.9.x release notes.  It should get folded
 into the ReleaseNotes file before stable.]
 
+[These are changes since 0.2.8.11]
+
 
   o Required libraries:
     - When building with OpenSSL, Tor now requires version 1.0.1 or
@@ -61,16 +63,6 @@ into the ReleaseNotes file before stable.]
       "DisableOOSCheck 0", but watch out: it might close some sockets
       you would rather have it keep.) Closes ticket 18640.
 
-  o Major features (security fixes):
-    - Prevent a class of security bugs caused by treating the contents
-      of a buffer chunk as if they were a NUL-terminated string. At
-      least one such bug seems to be present in all currently used
-      versions of Tor, and would allow an attacker to remotely crash
-      most Tor instances, especially those compiled with extra compiler
-      hardening. With this defense in place, such bugs can't crash Tor,
-      though we should still fix them as they occur. Closes ticket
-      20384 (TROVE-2016-10-001).
-
   o Major features (single-hop "hidden" services):
     - Add experimental HiddenServiceSingleHopMode and
       HiddenServiceNonAnonymousMode options. When both are set to 1,
@@ -109,32 +101,6 @@ into the ReleaseNotes file before stable.]
       point cicruits use the TAP key supplied by the protocol, to avoid
       epistemic attacks. Fixes bug 19163; bugfix on 0.2.4.18-rc.
 
-  o Major bugfixes (client performance):
-    - Clients now respond to new application stream requests immediately
-      when they arrive, rather than waiting up to one second before
-      starting to handle them. Fixes part of bug 19969; bugfix
-      on 0.2.8.1-alpha.
-
-  o Major bugfixes (client reliability):
-    - When Tor leaves standby because of a new application request, open
-      circuits as needed to serve that request. Previously, we would
-      potentially wait a very long time. Fixes part of bug 19969; bugfix
-      on 0.2.8.1-alpha.
-
-  o Major bugfixes (client, security, also in 0.2.8.7):
-    - Only use the ReachableAddresses option to restrict the first hop
-      in a path. In earlier versions of 0.2.8.x, it would apply to
-      every hop in the path, with a possible degradation in anonymity
-      for anyone using an uncommon ReachableAddress setting. Fixes bug
-      19973; bugfix on 0.2.8.2-alpha.
-
-  o Major bugfixes (crash, also in 0.2.8.8):
-    - Fix a complicated crash bug that could affect Tor clients
-      configured to use bridges when replacing a networkstatus consensus
-      in which one of their bridges was mentioned. OpenBSD users saw
-      more crashes here, but all platforms were potentially affected.
-      Fixes bug 20103; bugfix on 0.2.8.2-alpha.
-
   o Major bugfixes (directory downloads):
     - Avoid resetting download status for consensuses hourly, since we
       already have another, smarter retry mechanism. Fixes bug 8625;
@@ -172,25 +138,12 @@ into the ReleaseNotes file before stable.]
       could use to distinguish clients by consensus version. Fixes bug
       20012; bugfix on 0.2.4.8-alpha. Patch by teor.
 
-  o Major bugfixes (relay, OOM handler, also in 0.2.8.8):
-    - Fix a timing-dependent assertion failure that could occur when we
-      tried to flush from a circuit after having freed its cells because
-      of an out-of-memory condition. Fixes bug 20203; bugfix on
-      0.2.8.1-alpha. Thanks to "cypherpunks" for help diagnosing
-      this one.
-
   o Major bugfixes (relay, resolver, logging):
     - For relays that don't know their own address, avoid attempting a
       local hostname resolve for each descriptor we download. This
       will cut down on the number of "Success: chose address 'x.x.x.x'"
       log lines, and also avoid confusing clock jumps if the resolver
       is slow. Fixes bugs 20423 and 20610; bugfix on 0.2.8.1-alpha.
-
-  o Minor feature (fallback directories):
-    - Remove broken entries from the hard-coded fallback directory list.
-      Closes ticket 20190; patch by teor.
-    - Remove broken fallbacks from the hard-coded fallback directory
-      list. Closes ticket 20190; patch by teor.
 
   o Minor feature (port flags):
     - Add new flags to the *Port options to finer control over which
@@ -256,20 +209,6 @@ into the ReleaseNotes file before stable.]
       disk earlier in the consensus process, so we have a record of the
       votes even if we abort the consensus process. Resolves
       ticket 19036.
-
-  o Minor features (geoip):
-    - Update geoip and geoip6 to the August 2 2016 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the December 7 2016 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the November 3 2016 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the October 4 2016 Maxmind GeoLite2
-      Country database.
-
-  o Minor features (geoip, also in 0.2.8.8):
-    - Update geoip and geoip6 to the September 6 2016 Maxmind GeoLite2
-      Country database.
 
   o Minor features (hidden service):
     - Stop being so strict about the payload length of "rendezvous1"
@@ -450,11 +389,6 @@ into the ReleaseNotes file before stable.]
       (Previously, we included only a subset, because of the way we
       detected them.) Fixes bug 19216; bugfix on 0.2.0.1-alpha.
 
-  o Minor bugfixes (compilation, also in 0.2.8.7):
-    - Remove an inappropriate "inline" in tortls.c that was causing
-      warnings on older versions of GCC. Fixes bug 19903; bugfix
-      on 0.2.8.1-alpha.
-
   o Minor bugfixes (compilation, OpenBSD):
     - Detect Libevent2 functions correctly on systems that provide
       libevent2, but where libevent1 is linked with -levent. Fixes bug
@@ -500,11 +434,6 @@ into the ReleaseNotes file before stable.]
     - When deleting an ephemeral hidden service, close its intro points
       even if they are not completely open. Fixes bug 18604; bugfix
       on 0.2.7.1-alpha.
-
-  o Minor bugfixes (fallback directories, also in 0.2.8.7):
-    - Avoid logging a NULL string pointer when loading fallback
-      directory information. Fixes bug 19947; bugfix on 0.2.4.7-alpha
-      and 0.2.8.1-alpha. Report and patch by "rubiate".
 
   o Minor bugfixes (getpass):
     - Defensively fix a non-triggerable heap corruption at do_getpass()
@@ -600,18 +529,11 @@ into the ReleaseNotes file before stable.]
       alpha. Patch by teor.
 
   o Minor bugfixes (portability):
-    - Fix compilation with OpenSSL 1.1 and less commonly-used CPU
-      architectures. Closes ticket 20588.
-    - Fix implicit conversion warnings under OpenSSL 1.1. Fixes bug
-      20551; bugfix on 0.2.1.1-alpha.
     - Run correctly when built on Windows build environments that
       require _vcsprintf(). Fixes bug 20560; bugfix on 0.2.2.11-alpha.
     - Use ECDHE ciphers instead of ECDH in tortls tests. LibreSSL has
       removed the ECDH ciphers which caused the tests to fail on
       platforms which use it. Fixes bug 20460; bugfix on 0.2.8.1-alpha.
-    - Work around a bug in the OSX 10.12 SDK that would prevent us from
-      successfully targeting earlier versions of OSX. Resolves
-      ticket 20235.
 
   o Minor bugfixes (relay bootstrap):
     - Ensure relays don't make multiple connections during bootstrap.
@@ -623,8 +545,6 @@ into the ReleaseNotes file before stable.]
     - Do not try to parallelize workers more than 16x without the user
       explicitly configuring us to do so, even if we do detect more than
       16 CPU cores. Fixes bug 19968; bugfix on 0.2.3.1-alpha.
-    - Work around a memory leak in OpenSSL 1.1 when encoding public
-      keys. Fixes bug 20553; bugfix on 0.0.2pre8.
 
   o Minor bugfixes (testing):
     - Allow clients to retry HSDirs much faster in test networks. Fixes
@@ -698,10 +618,6 @@ into the ReleaseNotes file before stable.]
       ControlListenAddress, DNSListenAddress, DirListenAddress,
       NATDListenAddress, ORListenAddress, SocksListenAddress,
       and TransListenAddress.
-
-  o Directory authority changes (also in 0.2.8.7):
-    - The "Tonga" bridge authority has been retired; the new bridge
-      authority is "Bifroest". Closes tickets 19728 and 19690.
 
   o Documentation:
     - Add module-level internal documentation for 36 C files that
