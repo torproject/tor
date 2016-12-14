@@ -320,9 +320,9 @@ hs_circuitmap_init(void)
 void
 hs_circuitmap_free_all(void)
 {
-  tor_assert(the_hs_circuitmap);
-
-  HT_CLEAR(hs_circuitmap_ht, the_hs_circuitmap);
-  tor_free(the_hs_circuitmap);
+  if (the_hs_circuitmap) {
+    HT_CLEAR(hs_circuitmap_ht, the_hs_circuitmap);
+    tor_free(the_hs_circuitmap);
+  }
 }
 
