@@ -3,6 +3,11 @@
 To run the fuzzing test cases in a deterministic fashion, use:
   make fuzz
 
+  [I've turned this off for now. - NM]
+
+To build the fuzzing harness binaries, use:
+  make fuzzers
+
 == Guided Fuzzing with AFL
 
 There is no HTTPS, hash, or signature for American Fuzzy Lop's source code, so
@@ -22,7 +27,7 @@ To Find The ASAN Memory Limit: (64-bit only)
 On 64-bit platforms, afl needs to know how much memory ASAN uses.
 Or, you can configure tor without --enable-expensive-hardening, then use
   make fuzz
-to run the generated test cases through an ASAN-enabled fuzz_dir.
+to run the generated test cases through an ASAN-enabled fuzz-http.
 Read afl/docs/notes_for_asan.txt for more details.
 
   Download recidivm from http://jwilk.net/software/recidivm
@@ -36,10 +41,14 @@ Read afl/docs/notes_for_asan.txt for more details.
   (Normally, recidivm would output a figure automatically, but in some cases,
   the fuzzing harness will hang when the memory limit is too small.)
 
+You could also just say "none" instead of the memory limit below, if you
+don't care about memory limits.
+
+
 To Run:
-  mkdir -p src/test/fuzz/fuzz_dir_testcase src/test/fuzz/fuzz_dir_findings
-  echo "dummy" > src/test/fuzz/fuzz_dir_testcase/minimal.case
-  ../afl/afl-fuzz -i src/test/fuzz/fuzz_dir_testcase -o src/test/fuzz/fuzz_dir_findings -m <asan-memory-limit> -- src/test/fuzz_dir
+  mkdir -p src/test/fuzz/fuzz_http_findings
+  ../afl/afl-fuzz -i src/test/fuzz/data/http -x src/test/fuzz/dict/http -o src/test/fuzz/fuzz_http_findings -m <asan-memory-limit> -- src/test/fuzz_dir
+
 
 AFL has a multi-core mode, check the documentation for details.
 You might find the included fuzz-multi.sh script useful for this.
@@ -48,19 +57,12 @@ macOS (OS X) requires slightly more preparation, including:
 * using afl-clang (or afl-clang-fast from the llvm directory)
 * disabling external crash reporting (AFL will guide you through this step)
 
-AFL may also benefit from using dictionary files for text-based inputs: these
-can be placed in src/test/fuzz/fuzz_dir_dictionary/.
-
-Multiple dictionaries can be used with AFL, you should choose a combination of
-dictionaries that targets the code you are fuzzing.
-
 == Writing Tor fuzzers
 
-A tor fuzzing harness should:
-* read input from standard input (many fuzzing frameworks also accept file
-  names)
-* parse that input
-* produce results on standard output (this assists in diagnosing errors)
+A tor fuzzing harness should have:
+* a fuzz_init() function to set up any necessary global state.
+* a fuzz_main() function to receive input and pass it to a parser.
+* a fuzz_cleanup() function to clear global state.
 
 Most fuzzing frameworks will produce many invalid inputs - a tor fuzzing
 harness should rejecting invalid inputs without crashing or behaving badly.
@@ -78,8 +80,8 @@ Check if a hang is reproducible before reporting it. Sometimes, processing
 valid inputs may take a second or so, particularly with the fuzzer and
 sanitizers enabled.
 
-To see what fuzz_dir is doing with a test case, call it like this:
-  src/test/fuzz_dir --debug < /path/to/test.case
+To see what fuzz-http is doing with a test case, call it like this:
+  src/test/fuzz/fuzz-http --debug < /path/to/test.case
 
 (Logging is disabled while fuzzing to increase fuzzing speed.)
 
