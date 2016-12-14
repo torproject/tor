@@ -106,7 +106,6 @@ struct testcase_t hs_service_tests[] = {
   { "gen_establish_intro_cell_bad", test_gen_establish_intro_cell_bad, TT_FORK,
     NULL, NULL },
 
-
   END_OF_TESTCASES
 };
 

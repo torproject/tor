@@ -16,8 +16,9 @@ enum hs_intro_auth_key_type {
   HS_INTRO_AUTH_KEY_TYPE_ED25519 = 0x02,
 };
 
-int hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
-                                size_t request_len);
+int hs_intro_received_establish_intro(or_circuit_t *circ,
+                                      const uint8_t *request,
+                                      size_t request_len);
 
 MOCK_DECL(int, hs_intro_send_intro_established_cell,(or_circuit_t *circ));
 
@@ -38,3 +39,4 @@ get_auth_key_from_establish_intro_cell(ed25519_public_key_t *auth_key_out,
 #endif /* HS_INTROPOINT_PRIVATE */
 
 #endif /* TOR_HS_INTRO_H */
+

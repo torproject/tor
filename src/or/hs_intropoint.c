@@ -232,7 +232,6 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   return retval;
 }
 
-
 /* Return True if circuit is suitable for becoming an intro circuit. */
 int
 hs_intro_circuit_is_suitable(const or_circuit_t *circ)
@@ -286,3 +285,4 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
 }
+

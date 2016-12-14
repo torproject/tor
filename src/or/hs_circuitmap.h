@@ -67,3 +67,4 @@ hs_circuitmap_ht *get_hs_circuitmap(void);
 #endif /* TOR_UNIT_TESTS */
 
 #endif /* TOR_HS_CIRCUITMAP_H */
+

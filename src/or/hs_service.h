@@ -29,3 +29,4 @@ get_establish_intro_payload(uint8_t *buf, size_t buf_len,
 #endif /* HS_SERVICE_PRIVATE */
 
 #endif /* TOR_HS_SERVICE_H */
+

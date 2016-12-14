@@ -126,7 +126,8 @@ generate_establish_intro_cell(const uint8_t *circuit_key_material,
     crypto_mac_sha3_256(mac, sizeof(mac),
                         circuit_key_material, circuit_key_material_len,
                         cell_bytes_tmp,
-                        encoded_len - (ED25519_SIG_LEN + 2 + TRUNNEL_SHA3_256_LEN));
+                        encoded_len -
+                          (ED25519_SIG_LEN + 2 + TRUNNEL_SHA3_256_LEN));
     /* Write the MAC to the cell */
     uint8_t *handshake_ptr =
       hs_cell_establish_intro_getarray_handshake_mac(cell);
@@ -173,3 +174,4 @@ generate_establish_intro_cell(const uint8_t *circuit_key_material,
 }
 
 #endif /* TOR_UNIT_TESTS */
+

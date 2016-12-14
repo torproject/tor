@@ -42,3 +42,4 @@ const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
 int hs_v3_protocol_is_enabled(void);
 
 #endif /* TOR_HS_COMMON_H */
+
