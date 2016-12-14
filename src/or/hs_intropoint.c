@@ -11,6 +11,7 @@
 #include "or.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "config.h"
 #include "relay.h"
 #include "rendmid.h"
 #include "rephist.h"
@@ -70,7 +71,8 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
     const uint8_t *sig_array = hs_cell_establish_intro_getconstarray_sig(cell);
 
     if (hs_cell_establish_intro_getlen_sig(cell) != sizeof(sig_struct.sig)) {
-      log_warn(LD_PROTOCOL, "ESTABLISH_INTRO sig len is invalid");
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "ESTABLISH_INTRO sig len is invalid");
       return -1;
     }
     /* We are now sure that sig_len is of the right size. */
@@ -85,7 +87,8 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
                                                  ESTABLISH_INTRO_SIG_PREFIX,
                                                  &auth_key);
     if (sig_mismatch) {
-      log_warn(LD_PROTOCOL, "ESTABLISH_INTRO signature not as expected");
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "ESTABLISH_INTRO signature not as expected");
       return -1;
     }
   }
@@ -98,7 +101,8 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
                         circuit_key_material, circuit_key_material_len,
                         msg, auth_msg_len);
     if (tor_memneq(mac, cell->handshake_mac, sizeof(mac))) {
-      log_warn(LD_PROTOCOL, "ESTABLISH_INTRO handshake_auth not as expected");
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "ESTABLISH_INTRO handshake_auth not as expected");
       return -1;
     }
   }
@@ -192,8 +196,9 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   ssize_t parsing_result = hs_cell_establish_intro_parse(&parsed_cell,
                                                          request, request_len);
   if (parsing_result < 0) {
-    log_warn(LD_PROTOCOL, "Rejecting %s ESTABLISH_INTRO cell.",
-             parsing_result == -1 ? "invalid" : "truncated");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Rejecting %s ESTABLISH_INTRO cell.",
+           parsing_result == -1 ? "invalid" : "truncated");
     goto err;
   }
 
@@ -201,7 +206,8 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
                                         (uint8_t *) circ->rend_circ_nonce,
                                         sizeof(circ->rend_circ_nonce));
   if (cell_ok < 0) {
-    log_warn(LD_PROTOCOL, "Failed to verify ESTABLISH_INTRO cell.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Failed to verify ESTABLISH_INTRO cell.");
     goto err;
   }
 
@@ -233,12 +239,14 @@ hs_intro_circuit_is_suitable(const or_circuit_t *circ)
 {
   /* Basic circuit state sanity checks. */
   if (circ->base_.purpose != CIRCUIT_PURPOSE_OR) {
-    log_warn(LD_PROTOCOL, "Rejecting ESTABLISH_INTRO on non-OR circuit.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Rejecting ESTABLISH_INTRO on non-OR circuit.");
     return 0;
   }
 
   if (circ->base_.n_chan) {
-    log_warn(LD_PROTOCOL, "Rejecting ESTABLISH_INTRO on non-edge circuit.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Rejecting ESTABLISH_INTRO on non-edge circuit.");
     return 0;
   }
 
@@ -255,7 +263,7 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
   tor_assert(request);
 
   if (request_len == 0) {
-    log_warn(LD_PROTOCOL, "Empty ESTABLISH_INTRO cell.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Empty ESTABLISH_INTRO cell.");
     goto err;
   }
 
@@ -269,7 +277,8 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
     case HS_INTRO_AUTH_KEY_TYPE_ED25519:
       return handle_establish_intro(circ, request, request_len);
     default:
-      log_warn(LD_PROTOCOL, "Unrecognized AUTH_KEY_TYPE %u.", first_byte);
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Unrecognized AUTH_KEY_TYPE %u.", first_byte);
       goto err;
   }
 
