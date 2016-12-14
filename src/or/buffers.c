@@ -281,6 +281,7 @@ buf_pullup(buf_t *buf, size_t bytes)
 }
 
 #ifdef TOR_UNIT_TESTS
+/* Return the data from the first chunk of buf in cp, and its length in sz. */
 void
 buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz)
 {
@@ -291,6 +292,53 @@ buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz)
     *cp = buf->head->data;
     *sz = buf->head->datalen;
   }
+}
+
+/* Write sz bytes from cp into a newly allocated buffer buf.
+ * Returns NULL when passed a NULL cp or zero sz.
+ * Asserts on failure: only for use in unit tests.
+ * buf must be freed using buf_free(). */
+buf_t *
+buf_new_with_data(const char *cp, size_t sz)
+{
+  /* Validate arguments */
+  if (!cp || sz <= 0) {
+    return NULL;
+  }
+
+  tor_assert(sz < SSIZE_T_CEILING);
+
+  /* Allocate a buffer */
+  buf_t *buf = buf_new_with_capacity(sz);
+  tor_assert(buf);
+  assert_buf_ok(buf);
+  tor_assert(!buf->head);
+
+  /* Allocate a chunk that is sz bytes long */
+  buf->head = chunk_new_with_alloc_size(CHUNK_ALLOC_SIZE(sz));
+  buf->tail = buf->head;
+  tor_assert(buf->head);
+  assert_buf_ok(buf);
+  tor_assert(buf_allocation(buf) >= sz);
+
+  /* Copy the data and size the buffers */
+  tor_assert(sz <= buf_slack(buf));
+  tor_assert(sz <= CHUNK_REMAINING_CAPACITY(buf->head));
+  memcpy(&buf->head->mem[0], cp, sz);
+  buf->datalen = sz;
+  buf->head->datalen = sz;
+  buf->head->data = &buf->head->mem[0];
+  assert_buf_ok(buf);
+
+  /* Make sure everything is large enough */
+  tor_assert(buf_allocation(buf) >= sz);
+  tor_assert(buf_allocation(buf) >= buf_datalen(buf) + buf_slack(buf));
+  /* Does the buffer implementation allocate more than the requested size?
+   * (for example, by rounding up). If so, these checks will fail. */
+  tor_assert(buf_datalen(buf) == sz);
+  tor_assert(buf_slack(buf) == 0);
+
+  return buf;
 }
 #endif
 
