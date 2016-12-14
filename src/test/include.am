@@ -8,7 +8,9 @@ TESTS_ENVIRONMENT = \
 	export builddir="$(builddir)"; \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)";
 
-TESTSCRIPTS = src/test/test_zero_length_keys.sh \
+TESTSCRIPTS = \
+	src/test/fuzz_static_testcases.sh \
+	src/test/test_zero_length_keys.sh \
 	src/test/test_workqueue_cancel.sh \
 	src/test/test_workqueue_efd.sh \
 	src/test/test_workqueue_efd2.sh \

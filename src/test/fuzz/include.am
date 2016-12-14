@@ -52,6 +52,7 @@ FUZZERS = \
 	src/test/fuzz/fuzz-extrainfo \
 	src/test/fuzz/fuzz-http
 
-# The fuzzers aren't built by default right now. That should change.
-EXTRA_PROGRAMS += $(FUZZERS)
+noinst_PROGRAMS += $(FUZZERS)
 fuzzers: $(FUZZERS)
+
+
