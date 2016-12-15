@@ -158,12 +158,16 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   // Test incorrect descriptor ID
   rend_cache_init();
   mock_rend_query = mock_rend_data(service_id);
-  desc_id_base32[0]++;
+  char orig = desc_id_base32[0];
+  if (desc_id_base32[0] == 'a')
+    desc_id_base32[0] = 'b';
+  else
+    desc_id_base32[0] = 'a';
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
   tt_int_op(ret, OP_EQ, -1);
-  desc_id_base32[0]--;
+  desc_id_base32[0] = orig;
   rend_cache_free_all();
 
   // Test too old descriptor
