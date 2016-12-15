@@ -94,11 +94,6 @@ uptime-*.json
 /doc/tor.html
 /doc/tor.html.in
 /doc/tor.1.xml
-/doc/tor-fw-helper.1
-/doc/tor-fw-helper.1.in
-/doc/tor-fw-helper.html
-/doc/tor-fw-helper.html.in
-/doc/tor-fw-helper.1.xml
 /doc/tor-gencert.1
 /doc/tor-gencert.1.in
 /doc/tor-gencert.html
@@ -213,12 +208,6 @@ uptime-*.json
 # /src/trunnel/
 /src/trunnel/libor-trunnel-testing.a
 /src/trunnel/libor-trunnel.a
-
-# /src/tools/tor-fw-helper/
-/src/tools/tor-fw-helper/tor-fw-helper
-/src/tools/tor-fw-helper/tor-fw-helper.exe
-/src/tools/tor-fw-helper/Makefile
-/src/tools/tor-fw-helper/Makefile.in
 
 # /src/win32/
 /src/win32/Makefile
