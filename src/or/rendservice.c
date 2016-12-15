@@ -556,6 +556,7 @@ rend_config_services(const or_options_t *options, int validate_only)
   smartlist_t *old_service_list = NULL;
   smartlist_t *temp_service_list = NULL;
   int ok = 0;
+  int rv = -1;
 
   /* Use a temporary service list, so that we can check the new services'
    * consistency with each other */
@@ -568,7 +569,8 @@ rend_config_services(const or_options_t *options, int validate_only)
        * which is registered below the loop */
       if (rend_service_check_dir_and_add(temp_service_list, options, service,
                                          validate_only) < 0) {
-          return -1;
+        service = NULL;
+        goto free_and_return;
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
@@ -580,8 +582,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     if (!service) {
       log_warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
                line->key);
-      rend_service_free(service);
-      return -1;
+      goto free_and_return;
     }
     if (!strcasecmp(line->key, "HiddenServicePort")) {
       char *err_msg = NULL;
@@ -590,8 +591,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         if (err_msg)
           log_warn(LD_CONFIG, "%s", err_msg);
         tor_free(err_msg);
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
       tor_assert(!err_msg);
       smartlist_add(service->ports, portcfg);
@@ -602,8 +602,8 @@ rend_config_services(const or_options_t *options, int validate_only)
         log_warn(LD_CONFIG,
                  "HiddenServiceAllowUnknownPorts should be 0 or 1, not %s",
                  line->value);
-        rend_service_free(service);
-        return -1;
+        smartlist_free(temp_service_list);
+        goto free_and_return;
       }
       log_info(LD_CONFIG,
                "HiddenServiceAllowUnknownPorts=%d for %s",
@@ -617,8 +617,7 @@ rend_config_services(const or_options_t *options, int validate_only)
             log_warn(LD_CONFIG,
                      "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
                      line->value);
-            rend_service_free(service);
-            return -1;
+            goto free_and_return;
         }
         log_info(LD_CONFIG,
                  "HiddenServiceDirGroupReadable=%d for %s",
@@ -631,8 +630,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         log_warn(LD_CONFIG,
                  "HiddenServiceMaxStreams should be between 0 and %d, not %s",
                  65535, line->value);
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
       log_info(LD_CONFIG,
                "HiddenServiceMaxStreams=%d for %s",
@@ -646,8 +644,7 @@ rend_config_services(const or_options_t *options, int validate_only)
                  "HiddenServiceMaxStreamsCloseCircuit should be 0 or 1, "
                  "not %s",
                  line->value);
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
       log_info(LD_CONFIG,
                "HiddenServiceMaxStreamsCloseCircuit=%d for %s",
@@ -664,8 +661,7 @@ rend_config_services(const or_options_t *options, int validate_only)
                  "should be between %d and %d, not %s",
                  NUM_INTRO_POINTS_DEFAULT, NUM_INTRO_POINTS_MAX,
                  line->value);
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
       log_info(LD_CONFIG, "HiddenServiceNumIntroductionPoints=%d for %s",
                service->n_intro_points_wanted,
@@ -680,8 +676,7 @@ rend_config_services(const or_options_t *options, int validate_only)
       if (service->auth_type != REND_NO_AUTH) {
         log_warn(LD_CONFIG, "Got multiple HiddenServiceAuthorizeClient "
                  "lines for a single service.");
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
       type_names_split = smartlist_new();
       smartlist_split_string(type_names_split, line->value, " ", 0, 2);
@@ -689,9 +684,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         log_warn(LD_BUG, "HiddenServiceAuthorizeClient has no value. This "
                          "should have been prevented when parsing the "
                          "configuration.");
-        smartlist_free(type_names_split);
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
       authname = smartlist_get(type_names_split, 0);
       if (!strcasecmp(authname, "basic")) {
@@ -705,8 +698,7 @@ rend_config_services(const or_options_t *options, int validate_only)
                  (char *) smartlist_get(type_names_split, 0));
         SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
         smartlist_free(type_names_split);
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
       service->clients = smartlist_new();
       if (smartlist_len(type_names_split) < 2) {
@@ -743,8 +735,7 @@ rend_config_services(const or_options_t *options, int validate_only)
                    client_name, REND_CLIENTNAME_MAX_LEN);
           SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
           smartlist_free(clients);
-          rend_service_free(service);
-          return -1;
+          goto free_and_return;
         }
         client = tor_malloc_zero(sizeof(rend_authorized_client_t));
         client->client_name = tor_strdup(client_name);
@@ -766,16 +757,14 @@ rend_config_services(const or_options_t *options, int validate_only)
                  smartlist_len(service->clients),
                  service->auth_type == REND_BASIC_AUTH ? 512 : 16,
                  service->auth_type == REND_BASIC_AUTH ? "basic" : "stealth");
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
     } else {
       tor_assert(!strcasecmp(line->key, "HiddenServiceVersion"));
       if (strcmp(line->value, "2")) {
         log_warn(LD_CONFIG,
                  "The only supported HiddenServiceVersion is 2.");
-        rend_service_free(service);
-        return -1;
+        goto free_and_return;
       }
     }
   }
@@ -784,16 +773,15 @@ rend_config_services(const or_options_t *options, int validate_only)
    * within the loop. It is ok for this service to be NULL, it is ignored. */
   if (rend_service_check_dir_and_add(temp_service_list, options, service,
                                      validate_only) < 0) {
-    return -1;
+    service = NULL;
+    goto free_and_return;
   }
+  service = NULL;
 
   /* Free the newly added services if validating */
   if (validate_only) {
-    SMARTLIST_FOREACH(temp_service_list, rend_service_t *, ptr,
-                      rend_service_free(ptr));
-    smartlist_free(temp_service_list);
-    temp_service_list = NULL;
-    return 0;
+    rv = 0;
+    goto free_and_return;
   }
 
   /* Otherwise, use the newly added services as the new service list
@@ -889,6 +877,12 @@ rend_config_services(const or_options_t *options, int validate_only)
   }
 
   return 0;
+ free_and_return:
+  rend_service_free(service);
+  SMARTLIST_FOREACH(temp_service_list, rend_service_t *, ptr,
+                    rend_service_free(ptr));
+  smartlist_free(temp_service_list);
+  return rv;
 }
 
 /** Add the ephemeral service <b>pk</b>/<b>ports</b> if possible, using
