@@ -195,7 +195,9 @@ AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-AC_PATH_PROG([PERL], [perl])
+AC_ARG_VAR([PERL], [path to Perl binary])
+AC_CHECK_PROGS([PERL], [perl])
+AM_CONDITIONAL(USE_PERL, [test "x$ac_cv_prog_PERL" != "x"])
 
 dnl autoconf 2.59 appears not to support AC_PROG_SED
 AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
