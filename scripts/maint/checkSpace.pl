@@ -1,16 +1,18 @@
 #!/usr/bin/perl -w
 
+my $C = 0;
+
 if ($ARGV[0] =~ /^-/) {
-    $lang = shift @ARGV;
+    my $lang = shift @ARGV;
     $C = ($lang eq '-C');
-#    $TXT = ($lang eq '-txt');
 }
 
-for $fn (@ARGV) {
+for my $fn (@ARGV) {
     open(F, "$fn");
-    $lastnil = 0;
-    $lastline = "";
-    $incomment = 0;
+    my $lastnil = 0;
+    my $lastline = "";
+    my $incomment = 0;
+    my $in_func_head = 0;
     while (<F>) {
         ## Warn about windows-style newlines.
         #    (We insist on lines that end with a single LF character, not
