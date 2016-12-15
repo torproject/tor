@@ -82,6 +82,8 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
+check-local: check-spaces
+
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
 		echo '$$CHUTNEY_PATH was not set.'; \
