@@ -3,6 +3,12 @@
 use strict;
 use warnings;
 
+my $found = 0;
+sub msg {
+  $found = 1;
+  print "$_[0]";
+}
+
 my $C = 0;
 
 if ($ARGV[0] =~ /^-/) {
@@ -189,3 +195,5 @@ for my $fn (@ARGV) {
     }
     close(F);
 }
+
+exit $found;
