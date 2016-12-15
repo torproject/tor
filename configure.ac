@@ -171,10 +171,7 @@ AC_ARG_ENABLE(libscrypt,
      AS_HELP_STRING(--disable-libscrypt, [do not attempt to use libscrypt]))
 
 dnl check for the correct "ar" when cross-compiling
-AN_MAKEVAR([AR], [AC_PROG_AR])
-AN_PROGRAM([ar], [AC_PROG_AR])
-AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL([AR], [ar], [ar])])
-AC_PROG_AR
+AM_PROG_AR
 
 dnl Check whether the above macro has settled for a simply named tool even
 dnl though we're cross compiling. We must do this before running AC_PROG_CC,
