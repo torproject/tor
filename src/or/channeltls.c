@@ -49,6 +49,7 @@
 #include "connection.h"
 #include "connection_or.h"
 #include "control.h"
+#include "entrynodes.h"
 #include "link_handshake.h"
 #include "relay.h"
 #include "rephist.h"
@@ -1094,6 +1095,10 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_cell(conn, conn->handshake_state, cell, 1);
 
+  /* We note that we're on the internet whenever we read a cell. This is
+   * a fast operation. */
+  entry_guards_note_internet_connectivity(get_guard_selection_info());
+
   switch (cell->command) {
     case CELL_PADDING:
       ++stats_n_padding_cells_processed;
@@ -1271,6 +1276,10 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
              (int)(TLS_CHAN_TO_BASE(chan)->state));
       return;
   }
+
+  /* We note that we're on the internet whenever we read a cell. This is
+   * a fast operation. */
+  entry_guards_note_internet_connectivity(get_guard_selection_info());
 
   /* Now handle the cell */
 

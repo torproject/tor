@@ -28,6 +28,7 @@
 #define CIRCUITBUILD_PRIVATE
 
 #include "or.h"
+#include "bridges.h"
 #include "channel.h"
 #include "circpathbias.h"
 #define CIRCUITBUILD_PRIVATE
@@ -518,6 +519,13 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit_ei, int flags)
   return circ;
 }
 
+/** Return the guard state associated with <b>circ</b>, which may be NULL. */
+circuit_guard_state_t *
+origin_circuit_get_guard_state(origin_circuit_t *circ)
+{
+  return circ->guard_state;
+}
+
 /** Start establishing the first hop of our circuit. Figure out what
  * OR we should connect to, and if necessary start the connection to
  * it. If we're already connected, then send the 'create' cell.
@@ -958,7 +966,38 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     memset(&ec, 0, sizeof(ec));
     if (!hop) {
       /* done building the circuit. whew. */
-      circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
+      guard_usable_t r;
+      if (get_options()->UseDeprecatedGuardAlgorithm) {
+        // The circuit is usable; we already marked the guard as okay.
+        r = GUARD_USABLE_NOW;
+      } else if (! circ->guard_state) {
+        if (circuit_get_cpath_len(circ) != 1) {
+          log_warn(LD_BUG, "%d-hop circuit %p with purpose %d has no "
+                   "guard state",
+                   circuit_get_cpath_len(circ), circ, circ->base_.purpose);
+        }
+        r = GUARD_USABLE_NOW;
+      } else {
+        r = entry_guard_succeeded(&circ->guard_state);
+      }
+      const int is_usable_for_streams = (r == GUARD_USABLE_NOW);
+      if (r == GUARD_USABLE_NOW) {
+        circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
+      } else if (r == GUARD_MAYBE_USABLE_LATER) {
+        // XXXX prop271 we might want to probe for whether this
+        // XXXX one is ready even before the next second rolls over.
+        circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_GUARD_WAIT);
+      } else {
+        tor_assert_nonfatal(r == GUARD_USABLE_NEVER);
+        return - END_CIRC_REASON_INTERNAL;
+      }
+
+      /* XXXX prop271 -- the rest of this branch needs careful thought!
+       * Some of the things here need to happen when a circuit becomes
+       * mechanically open; some need to happen when it is actually usable.
+       * I think I got them right, but more checking would be wise. -NM
+       */
+
       if (circuit_timeout_want_to_count_circ(circ)) {
         struct timeval end;
         long timediff;
@@ -1000,7 +1039,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
 
       pathbias_count_build_success(circ);
       circuit_rep_hist_note_result(circ);
-      circuit_has_opened(circ); /* do other actions as necessary */
+      if (is_usable_for_streams)
+        circuit_has_opened(circ); /* do other actions as necessary */
 
       if (!have_completed_a_circuit() && !circ->build_state->onehop_tunnel) {
         const or_options_t *options = get_options();
@@ -2227,9 +2267,20 @@ choose_good_middle_server(uint8_t purpose,
  *
  * If <b>state</b> is NULL, we're choosing a router to serve as an entry
  * guard, not for any particular circuit.
+ *
+ * Set *<b>guard_state_out</b> to information about the guard that
+ * we're selecting, which we'll use later to remember whether the
+ * guard worked or not.
+ *
+ * XXXX prop271 this function is used in four ways: picking out guards for
+ *   the old (pre-prop271) guard algorithm; picking out guards for circuits;
+ *   picking out guards for testing circuits on non-bridgees;
+ *   picking out entries when entry guards are disabled.  These options
+ *   should be disentangled.
  */
 const node_t *
-choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
+choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
+                         circuit_guard_state_t **guard_state_out)
 {
   const node_t *choice;
   smartlist_t *excluded;
@@ -2244,7 +2295,8 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
     /* This request is for an entry server to use for a regular circuit,
      * and we use entry guard nodes.  Just return one of the guard nodes.  */
-    return choose_random_entry(state);
+    tor_assert(guard_state_out);
+    return guards_choose_guard(state, guard_state_out);
   }
 
   excluded = smartlist_new();
@@ -2254,6 +2306,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
      * family. */
     nodelist_add_node_and_family(excluded, node);
   }
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   /* and exclude current entry guards and their families,
    * unless we're in a test network, and excluding guards
    * would exclude all nodes (i.e. we're in an incredibly small tor network,
@@ -2267,11 +2320,12 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
      )) {
     SMARTLIST_FOREACH(get_entry_guards(), const entry_guard_t *, entry,
       {
-        if ((node = node_get_by_id(entry->identity))) {
+        if ((node = entry_guard_find_node(entry))) {
           nodelist_add_node_and_family(excluded, node);
         }
       });
   }
+#endif
 
   if (state) {
     if (state->need_uptime)
@@ -2327,7 +2381,8 @@ onion_extend_cpath(origin_circuit_t *circ)
   if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     info = extend_info_dup(state->chosen_exit);
   } else if (cur_len == 0) { /* picking first node */
-    const node_t *r = choose_good_entry_server(purpose, state);
+    const node_t *r = choose_good_entry_server(purpose, state,
+                                               &circ->guard_state);
     if (r) {
       /* If we're a client, use the preferred address rather than the
          primary address, for potentially connecting to an IPv6 OR
@@ -2510,8 +2565,8 @@ extend_info_dup(extend_info_t *info)
   return newinfo;
 }
 
-/** Return the routerinfo_t for the chosen exit router in <b>state</b>.
- * If there is no chosen exit, or if we don't know the routerinfo_t for
+/** Return the node_t for the chosen exit router in <b>state</b>.
+ * If there is no chosen exit, or if we don't know the node_t for
  * the chosen exit, return NULL.
  */
 const node_t *
@@ -2520,6 +2575,17 @@ build_state_get_exit_node(cpath_build_state_t *state)
   if (!state || !state->chosen_exit)
     return NULL;
   return node_get_by_id(state->chosen_exit->identity_digest);
+}
+
+/** Return the RSA ID digest for the chosen exit router in <b>state</b>.
+ * If there is no chosen exit, return NULL.
+ */
+const uint8_t *
+build_state_get_exit_rsa_id(cpath_build_state_t *state)
+{
+  if (!state || !state->chosen_exit)
+    return NULL;
+  return (const uint8_t *) state->chosen_exit->identity_digest;
 }
 
 /** Return the nickname for the chosen exit router in <b>state</b>. If
@@ -2612,5 +2678,28 @@ extend_info_has_preferred_onion_key(const extend_info_t* ei)
 {
   tor_assert(ei);
   return extend_info_supports_ntor(ei);
+}
+
+/** Find the circuits that are waiting to find out whether their guards are
+ * usable, and if any are ready to become usable, mark them open and try
+ * attaching streams as appropriate. */
+void
+circuit_upgrade_circuits_from_guard_wait(void)
+{
+  smartlist_t *to_upgrade =
+    circuit_find_circuits_to_upgrade_from_guard_wait();
+
+  if (to_upgrade == NULL)
+    return;
+
+  log_info(LD_GUARD, "Upgrading %d circuits from 'waiting for better guard' "
+           "to 'open'.", smartlist_len(to_upgrade));
+
+  SMARTLIST_FOREACH_BEGIN(to_upgrade, origin_circuit_t *, circ) {
+    circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
+    circuit_has_opened(circ);
+  } SMARTLIST_FOREACH_END(circ);
+
+  smartlist_free(to_upgrade);
 }
 

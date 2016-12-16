@@ -21,6 +21,8 @@ origin_circuit_t *origin_circuit_init(uint8_t purpose, int flags);
 origin_circuit_t *circuit_establish_circuit(uint8_t purpose,
                                             extend_info_t *exit,
                                             int flags);
+struct circuit_guard_state_t *origin_circuit_get_guard_state(
+                                            origin_circuit_t *circ);
 int circuit_handle_first_hop(origin_circuit_t *circ);
 void circuit_n_chan_done(channel_t *chan, int status,
                          int close_origin_circuits);
@@ -62,11 +64,16 @@ int extend_info_supports_ntor(const extend_info_t* ei);
 int circuit_can_use_tap(const origin_circuit_t *circ);
 int circuit_has_usable_onion_key(const origin_circuit_t *circ);
 int extend_info_has_preferred_onion_key(const extend_info_t* ei);
+const uint8_t *build_state_get_exit_rsa_id(cpath_build_state_t *state);
 const node_t *build_state_get_exit_node(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
+struct circuit_guard_state_t;
+
 const node_t *choose_good_entry_server(uint8_t purpose,
-                                       cpath_build_state_t *state);
+                           cpath_build_state_t *state,
+                           struct circuit_guard_state_t **guard_state_out);
+void circuit_upgrade_circuits_from_guard_wait(void);
 
 #ifdef CIRCUITBUILD_PRIVATE
 STATIC circid_t get_unique_circ_id_by_chan(channel_t *chan);

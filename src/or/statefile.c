@@ -102,6 +102,8 @@ static config_var_t state_vars_[] = {
   V(BWHistoryDirWriteValues,          CSV,      ""),
   V(BWHistoryDirWriteMaxima,          CSV,      ""),
 
+  V(Guard,                            LINELIST, NULL),
+
   V(TorVersion,                       STRING,   NULL),
 
   V(LastRotatedOnionKey,              ISOTIME,  NULL),

@@ -11,6 +11,7 @@
 #include "or.h"
 #include "address.h"
 #include "addressmap.h"
+#include "bridges.h"
 #include "circuitmux_ewma.h"
 #include "circuitbuild.h"
 #include "config.h"

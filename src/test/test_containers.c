@@ -882,6 +882,46 @@ test_container_strmap(void *arg)
   tor_free(v105);
 }
 
+static void
+test_container_smartlist_remove(void *arg)
+{
+  (void) arg;
+  int array[5];
+  smartlist_t *sl = smartlist_new();
+  int i,j;
+
+  for (j=0; j < 2; ++j)
+    for (i=0; i < 5; ++i)
+      smartlist_add(sl, &array[i]);
+
+  smartlist_remove(sl, &array[0]);
+  smartlist_remove(sl, &array[3]);
+  smartlist_remove(sl, &array[4]);
+  tt_assert(! smartlist_contains(sl, &array[0]));
+  tt_assert(smartlist_contains(sl, &array[1]));
+  tt_assert(smartlist_contains(sl, &array[2]));
+  tt_assert(! smartlist_contains(sl, &array[3]));
+  tt_assert(! smartlist_contains(sl, &array[4]));
+  tt_int_op(smartlist_len(sl), OP_EQ, 4);
+
+  smartlist_clear(sl);
+  for (j=0; j < 2; ++j)
+    for (i=0; i < 5; ++i)
+      smartlist_add(sl, &array[i]);
+
+  smartlist_remove_keeporder(sl, &array[0]);
+  smartlist_remove_keeporder(sl, &array[3]);
+  smartlist_remove_keeporder(sl, &array[4]);
+  tt_int_op(smartlist_len(sl), OP_EQ, 4);
+  tt_ptr_op(smartlist_get(sl, 0), OP_EQ, &array[1]);
+  tt_ptr_op(smartlist_get(sl, 1), OP_EQ, &array[2]);
+  tt_ptr_op(smartlist_get(sl, 2), OP_EQ, &array[1]);
+  tt_ptr_op(smartlist_get(sl, 3), OP_EQ, &array[2]);
+
+ done:
+  smartlist_free(sl);
+}
+
 /** Run unit tests for getting the median of a list. */
 static void
 test_container_order_functions(void *arg)
@@ -1239,6 +1279,7 @@ struct testcase_t container_tests[] = {
   CONTAINER_LEGACY(smartlist_digests),
   CONTAINER_LEGACY(smartlist_join),
   CONTAINER_LEGACY(smartlist_pos),
+  CONTAINER(smartlist_remove, 0),
   CONTAINER(smartlist_ints_eq, 0),
   CONTAINER_LEGACY(bitarray),
   CONTAINER_LEGACY(digestset),

@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "entrynodes.h"
 #include "hibernate.h"
 #include "memarea.h"
 #include "networkstatus.h"
@@ -1492,6 +1493,15 @@ test_dir_param_voting(void *arg)
   tt_int_op(80,OP_EQ, networkstatus_get_param(&vote4, "ab", 12, 0, 80));
   tt_int_op(-8,OP_EQ, networkstatus_get_param(&vote4, "ab", -12, -100, -8));
   tt_int_op(0,OP_EQ, networkstatus_get_param(&vote4, "foobar", 0, -100, 8));
+
+  tt_int_op(100,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, -1, "x-yz", 50, 0, 300));
+  tt_int_op(30,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, 30, "x-yz", 50, 0, 300));
+  tt_int_op(0,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, -101, "foobar", 0, -100, 8));
+  tt_int_op(-99,OP_EQ, networkstatus_get_overridable_param(
+                                        &vote4, -99, "foobar", 0, -100, 8));
 
   smartlist_add(votes, &vote1);
 
@@ -4402,7 +4412,8 @@ directory_initiate_command_routerstatus, (const routerstatus_t *status,
                                           const char *resource,
                                           const char *payload,
                                           size_t payload_len,
-                                          time_t if_modified_since));
+                                          time_t if_modified_since,
+                                          circuit_guard_state_t *guardstate));
 
 static void
 test_dir_should_not_init_request_to_ourselves(void *data)
@@ -4509,7 +4520,8 @@ NS(directory_initiate_command_routerstatus)(const routerstatus_t *status,
                                             const char *resource,
                                             const char *payload,
                                             size_t payload_len,
-                                            time_t if_modified_since)
+                                            time_t if_modified_since,
+                                            circuit_guard_state_t *guardstate)
 {
   (void)status;
   (void)dir_purpose;
@@ -4519,6 +4531,7 @@ NS(directory_initiate_command_routerstatus)(const routerstatus_t *status,
   (void)payload;
   (void)payload_len;
   (void)if_modified_since;
+  (void)guardstate;
   CALLED(directory_initiate_command_routerstatus)++;
 }
 

@@ -762,7 +762,7 @@ directory_get_from_hs_dir(const char *desc_id,
                                           how_to_fetch,
                                           desc_id_base32,
                                           NULL, 0, 0,
-                                          rend_query);
+                                          rend_query, NULL);
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
                     "service '%s' with descriptor ID '%s', auth type %d, "
                     "and descriptor cookie '%s' to hidden service "

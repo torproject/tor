@@ -36,6 +36,7 @@
 
 #include "or.h"
 #include "addressmap.h"
+#include "bridges.h"
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"
@@ -2595,6 +2596,8 @@ getinfo_helper_events(control_connection_t *control_conn,
 
       if (circ->base_.state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
+      else if (circ->base_.state == CIRCUIT_STATE_GUARD_WAIT)
+        state = "GUARD_WAIT"; // XXXX prop271 spec deviation-- specify this.
       else if (circ->cpath)
         state = "EXTENDED";
       else
@@ -3378,7 +3381,8 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
   } else {
-    if (circ->base_.state == CIRCUIT_STATE_OPEN) {
+    if (circ->base_.state == CIRCUIT_STATE_OPEN ||
+        circ->base_.state == CIRCUIT_STATE_GUARD_WAIT) {
       int err_reason = 0;
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
       if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
@@ -4037,12 +4041,17 @@ handle_control_dropguards(control_connection_t *conn,
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
 
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   if (smartlist_len(args)) {
     connection_printf_to_buf(conn, "512 Too many arguments to DROPGUARDS\r\n");
   } else {
     remove_all_entry_guards();
     send_control_done(conn);
   }
+#else
+  // XXXX
+  connection_printf_to_buf(conn, "512 not supported\r\n");
+#endif
 
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);

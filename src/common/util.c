@@ -1803,17 +1803,26 @@ format_iso_time_nospace_usec(char *buf, const struct timeval *tv)
 /** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
  * parse it and store its value in *<b>t</b>.  Return 0 on success, -1 on
  * failure.  Ignore extraneous stuff in <b>cp</b> after the end of the time
- * string, unless <b>strict</b> is set. */
+ * string, unless <b>strict</b> is set. If <b>nospace</b> is set,
+ * expect the YYYY-MM-DDTHH:MM:SS format. */
 int
-parse_iso_time_(const char *cp, time_t *t, int strict)
+parse_iso_time_(const char *cp, time_t *t, int strict, int nospace)
 {
   struct tm st_tm;
   unsigned int year=0, month=0, day=0, hour=0, minute=0, second=0;
   int n_fields;
-  char extra_char;
-  n_fields = tor_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u%c", &year, &month,
-                        &day, &hour, &minute, &second, &extra_char);
-  if (strict ? (n_fields != 6) : (n_fields < 6)) {
+  char extra_char, separator_char;
+  n_fields = tor_sscanf(cp, "%u-%2u-%2u%c%2u:%2u:%2u%c",
+                        &year, &month, &day,
+                        &separator_char,
+                        &hour, &minute, &second, &extra_char);
+  if (strict ? (n_fields != 7) : (n_fields < 7)) {
+    char *esc = esc_for_log(cp);
+    log_warn(LD_GENERAL, "ISO time %s was unparseable", esc);
+    tor_free(esc);
+    return -1;
+  }
+  if (separator_char != (nospace ? 'T' : ' ')) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "ISO time %s was unparseable", esc);
     tor_free(esc);
@@ -1855,7 +1864,16 @@ parse_iso_time_(const char *cp, time_t *t, int strict)
 int
 parse_iso_time(const char *cp, time_t *t)
 {
-  return parse_iso_time_(cp, t, 1);
+  return parse_iso_time_(cp, t, 1, 0);
+}
+
+/**
+ * As parse_iso_time, but parses a time encoded by format_iso_time_nospace().
+ */
+int
+parse_iso_time_nospace(const char *cp, time_t *t)
+{
+  return parse_iso_time_(cp, t, 1, 1);
 }
 
 /** Given a <b>date</b> in one of the three formats allowed by HTTP (ugh),

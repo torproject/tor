@@ -60,6 +60,7 @@
 
 #define CONFIG_PRIVATE
 #include "or.h"
+#include "bridges.h"
 #include "compat.h"
 #include "addressmap.h"
 #include "channel.h"
@@ -307,6 +308,10 @@ static config_var_t option_vars_[] = {
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(ExtendByEd25519ID,           AUTOBOOL, "auto"),
   V(FallbackDir,                 LINELIST, NULL),
+  /* XXXX prop271 -- this has an ugly name to remind us to remove it. */
+  VAR("UseDeprecatedGuardAlgorithm_",        BOOL,
+      UseDeprecatedGuardAlgorithm, "0"),
+
   V(UseDefaultFallbackDirs,      BOOL,     "1"),
 
   OBSOLETE("FallbackNetworkstatusFile"),
@@ -1557,6 +1562,36 @@ options_transition_requires_fresh_tls_context(const or_options_t *old_options,
   return 0;
 }
 
+/**
+ * Return true if changing the configuration from <b>old</b> to <b>new</b>
+ * affects the guard susbsystem.
+ */
+static int
+options_transition_affects_guards(const or_options_t *old,
+                                  const or_options_t *new)
+{
+  /* NOTE: Make sure this function stays in sync with
+   * entry_guards_set_filtered_flags */
+
+  tor_assert(old);
+  tor_assert(new);
+
+  return
+    (old->UseEntryGuards != new->UseEntryGuards ||
+     old->UseDeprecatedGuardAlgorithm != new->UseDeprecatedGuardAlgorithm ||
+     old->UseBridges != new->UseBridges ||
+     old->UseEntryGuards != new->UseEntryGuards ||
+     old->ClientUseIPv4 != new->ClientUseIPv4 ||
+     old->ClientUseIPv6 != new->ClientUseIPv6 ||
+     old->FascistFirewall != new->FascistFirewall ||
+     !routerset_equal(old->ExcludeNodes, new->ExcludeNodes) ||
+     !routerset_equal(old->EntryNodes, new->EntryNodes) ||
+     !smartlist_strings_eq(old->FirewallPorts, new->FirewallPorts) ||
+     !config_lines_eq(old->Bridges, new->Bridges) ||
+     !config_lines_eq(old->ReachableORAddresses, new->ReachableORAddresses) ||
+     !config_lines_eq(old->ReachableDirAddresses, new->ReachableDirAddresses));
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -1576,6 +1611,8 @@ options_act(const or_options_t *old_options)
   const int transition_affects_workers =
     old_options && options_transition_affects_workers(old_options, options);
   int old_ewma_enabled;
+  const int transition_affects_guards =
+    old_options && options_transition_affects_guards(old_options, options);
 
   /* disable ptrace and later, other basic debugging techniques */
   {
@@ -1852,6 +1889,7 @@ options_act(const or_options_t *old_options)
   if (old_options) {
     int revise_trackexithosts = 0;
     int revise_automap_entries = 0;
+    int abandon_circuits = 0;
     if ((options->UseEntryGuards && !old_options->UseEntryGuards) ||
         options->UseBridges != old_options->UseBridges ||
         (options->UseBridges &&
@@ -1868,6 +1906,16 @@ options_act(const or_options_t *old_options)
                "Changed to using entry guards or bridges, or changed "
                "preferred or excluded node lists. "
                "Abandoning previous circuits.");
+      abandon_circuits = 1;
+    }
+
+    if (transition_affects_guards) {
+      if (guards_update_all()) {
+        abandon_circuits = 1;
+      }
+    }
+
+    if (abandon_circuits) {
       circuit_mark_all_unused_circs();
       circuit_mark_all_dirty_circs_as_unusable();
       revise_trackexithosts = 1;
@@ -2050,11 +2098,13 @@ options_act(const or_options_t *old_options)
     rep_hist_desc_stats_term();
 
   /* Check if we need to parse and add the EntryNodes config option. */
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
   if (options->EntryNodes &&
       (!old_options ||
        !routerset_equal(old_options->EntryNodes,options->EntryNodes) ||
        !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)))
     entry_nodes_should_be_added();
+#endif
 
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.
@@ -2958,6 +3008,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   options->UseEntryGuards = options->UseEntryGuards_option;
 
   warn_about_relative_paths(options);
+
+#ifndef ENABLE_LEGACY_GUARD_ALGORITHM
+  if (options->UseDeprecatedGuardAlgorithm) {
+    log_warn(LD_CONFIG, "DeprecatedGuardAlgorithm not supported.");
+    return -1;
+  }
+#endif
 
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||

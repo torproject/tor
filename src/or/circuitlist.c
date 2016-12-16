@@ -63,8 +63,9 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
-#include "hs_circuitmap.h"
+#include "entrynodes.h"
 #include "main.h"
+#include "hs_circuitmap.h"
 #include "hs_common.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -85,8 +86,16 @@
 /** A global list of all circuits at this hop. */
 static smartlist_t *global_circuitlist = NULL;
 
+/** A global list of all origin circuits. Every element of this is also
+ * an element of global_circuitlist. */
+static smartlist_t *global_origin_circuit_list = NULL;
+
 /** A list of all the circuits in CIRCUIT_STATE_CHAN_WAIT. */
 static smartlist_t *circuits_pending_chans = NULL;
+
+/** List of all the (origin) circuits whose state is
+ * CIRCUIT_STATE_GUARD_WAIT. */
+static smartlist_t *circuits_pending_other_guards = NULL;
 
 /** A list of all the circuits that have been marked with
  * circuit_mark_for_close and which are waiting for circuit_about_to_free. */
@@ -426,8 +435,10 @@ circuit_set_state(circuit_t *circ, uint8_t state)
   tor_assert(circ);
   if (state == circ->state)
     return;
-  if (!circuits_pending_chans)
+  if (PREDICT_UNLIKELY(!circuits_pending_chans))
     circuits_pending_chans = smartlist_new();
+  if (PREDICT_UNLIKELY(!circuits_pending_other_guards))
+    circuits_pending_other_guards = smartlist_new();
   if (circ->state == CIRCUIT_STATE_CHAN_WAIT) {
     /* remove from waiting-circuit list. */
     smartlist_remove(circuits_pending_chans, circ);
@@ -436,7 +447,13 @@ circuit_set_state(circuit_t *circ, uint8_t state)
     /* add to waiting-circuit list. */
     smartlist_add(circuits_pending_chans, circ);
   }
-  if (state == CIRCUIT_STATE_OPEN)
+  if (circ->state == CIRCUIT_STATE_GUARD_WAIT) {
+    smartlist_remove(circuits_pending_other_guards, circ);
+  }
+  if (state == CIRCUIT_STATE_GUARD_WAIT) {
+    smartlist_add(circuits_pending_other_guards, circ);
+  }
+  if (state == CIRCUIT_STATE_GUARD_WAIT || state == CIRCUIT_STATE_OPEN)
     tor_assert(!circ->n_chan_create_cell);
   circ->state = state;
 }
@@ -514,6 +531,19 @@ circuit_close_all_marked(void)
     }
     circ->global_circuitlist_idx = -1;
 
+    /* Remove it from the origin circuit list, if appropriate. */
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+      int origin_idx = origin_circ->global_origin_circuit_list_idx;
+      smartlist_del(global_origin_circuit_list, origin_idx);
+      if (origin_idx < smartlist_len(global_origin_circuit_list)) {
+        origin_circuit_t *replacement =
+          smartlist_get(global_origin_circuit_list, origin_idx);
+        replacement->global_origin_circuit_list_idx = origin_idx;
+      }
+      origin_circ->global_origin_circuit_list_idx = -1;
+    }
+
     circuit_about_to_free(circ);
     circuit_free(circ);
   } SMARTLIST_FOREACH_END(circ);
@@ -521,12 +551,21 @@ circuit_close_all_marked(void)
   smartlist_clear(circuits_pending_close);
 }
 
-/** Return the head of the global linked list of circuits. */
+/** Return a pointer to the global list of circuits. */
 MOCK_IMPL(smartlist_t *,
 circuit_get_global_list,(void))
 {
   if (NULL == global_circuitlist)
     global_circuitlist = smartlist_new();
+  return global_circuitlist;
+}
+
+/** Return a pointer to the global list of origin circuits. */
+smartlist_t *
+circuit_get_global_origin_circuit_list(void)
+{
+  if (NULL == global_origin_circuit_list)
+    global_origin_circuit_list = smartlist_new();
   return global_circuitlist;
 }
 
@@ -539,6 +578,8 @@ circuit_state_to_string(int state)
     case CIRCUIT_STATE_BUILDING: return "doing handshakes";
     case CIRCUIT_STATE_ONIONSKIN_PENDING: return "processing the onion";
     case CIRCUIT_STATE_CHAN_WAIT: return "connecting to server";
+    case CIRCUIT_STATE_GUARD_WAIT: return "waiting to see how other "
+      "guards perform";
     case CIRCUIT_STATE_OPEN: return "open";
     default:
       log_warn(LD_BUG, "Unknown circuit state %d", state);
@@ -769,6 +810,13 @@ origin_circuit_new(void)
 
   init_circuit_base(TO_CIRCUIT(circ));
 
+  /* Add to origin-list. */
+  if (!global_origin_circuit_list)
+    global_origin_circuit_list = smartlist_new();
+  smartlist_add(global_origin_circuit_list, circ);
+  circ->global_origin_circuit_list_idx =
+    smartlist_len(global_origin_circuit_list) - 1;
+
   circuit_build_times_update_last_circ(get_circuit_build_times_mutable());
 
   return circ;
@@ -826,12 +874,30 @@ circuit_free(circuit_t *circ)
     mem = ocirc;
     memlen = sizeof(origin_circuit_t);
     tor_assert(circ->magic == ORIGIN_CIRCUIT_MAGIC);
+
+    if (ocirc->global_origin_circuit_list_idx != -1) {
+      int idx = ocirc->global_origin_circuit_list_idx;
+      origin_circuit_t *c2 = smartlist_get(global_origin_circuit_list, idx);
+      tor_assert(c2 == ocirc);
+      smartlist_del(global_origin_circuit_list, idx);
+      if (idx < smartlist_len(global_origin_circuit_list)) {
+        c2 = smartlist_get(global_origin_circuit_list, idx);
+        c2->global_origin_circuit_list_idx = idx;
+      }
+    }
+
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
         circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);
         cpath_ref_decref(ocirc->build_state->service_pending_final_cpath_ref);
     }
     tor_free(ocirc->build_state);
+
+    /* Cancel before freeing, if we haven't already succeeded or failed. */
+    if (ocirc->guard_state) {
+      entry_guard_cancel(&ocirc->guard_state);
+    }
+    circuit_guard_state_free(ocirc->guard_state);
 
     circuit_clear_cpath(ocirc);
 
@@ -967,11 +1033,17 @@ circuit_free_all(void)
   smartlist_free(lst);
   global_circuitlist = NULL;
 
+  smartlist_free(global_origin_circuit_list);
+  global_origin_circuit_list = NULL;
+
   smartlist_free(circuits_pending_chans);
   circuits_pending_chans = NULL;
 
   smartlist_free(circuits_pending_close);
   circuits_pending_close = NULL;
+
+  smartlist_free(circuits_pending_other_guards);
+  circuits_pending_other_guards = NULL;
 
   {
     chan_circid_circuit_map_t **elt, **next, *c;
@@ -1501,6 +1573,37 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   return best;
 }
 
+/**
+ * Check whether any of the origin circuits that are waiting to see if
+ * their guard is good enough to use can be upgraded to "ready". If so,
+ * return a new smartlist containing them. Otherwise return NULL.
+ */
+smartlist_t *
+circuit_find_circuits_to_upgrade_from_guard_wait(void)
+{
+  /* Only if some circuit is actually waiting on an upgrade should we
+   * run the algorithm. */
+  if (! circuits_pending_other_guards ||
+      smartlist_len(circuits_pending_other_guards)==0)
+    return NULL;
+  /* Only if we have some origin circuits should we run the algorithm. */
+  if (!global_origin_circuit_list)
+    return NULL;
+
+  /* Okay; we can pass our circuit list to entrynodes.c.*/
+  smartlist_t *result = smartlist_new();
+  int circuits_upgraded  = entry_guards_upgrade_waiting_circuits(
+                                                 get_guard_selection_info(),
+                                                 global_origin_circuit_list,
+                                                 result);
+  if (circuits_upgraded && smartlist_len(result)) {
+    return result;
+  } else {
+    smartlist_free(result);
+    return NULL;
+  }
+}
+
 /** Return the number of hops in circuit's path. If circ has no entries,
  * or is NULL, returns 0. */
 int
@@ -1695,7 +1798,8 @@ circuit_about_to_free(circuit_t *circ)
    * module then.  If it isn't OPEN, we send it there now to remember which
    * links worked and which didn't.
    */
-  if (circ->state != CIRCUIT_STATE_OPEN) {
+  if (circ->state != CIRCUIT_STATE_OPEN &&
+      circ->state != CIRCUIT_STATE_GUARD_WAIT) {
     if (CIRCUIT_IS_ORIGIN(circ)) {
       origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
       circuit_build_failed(ocirc); /* take actions if necessary */
@@ -1708,7 +1812,9 @@ circuit_about_to_free(circuit_t *circ)
   }
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_status(TO_ORIGIN_CIRCUIT(circ),
-     (circ->state == CIRCUIT_STATE_OPEN)?CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED,
+     (circ->state == CIRCUIT_STATE_OPEN ||
+      circ->state == CIRCUIT_STATE_GUARD_WAIT) ?
+                                 CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED,
      orig_reason);
   }
 
@@ -2230,7 +2336,8 @@ assert_circuit_ok(const circuit_t *c)
 
   tor_assert(c->deliver_window >= 0);
   tor_assert(c->package_window >= 0);
-  if (c->state == CIRCUIT_STATE_OPEN) {
+  if (c->state == CIRCUIT_STATE_OPEN ||
+      c->state == CIRCUIT_STATE_GUARD_WAIT) {
     tor_assert(!c->n_chan_create_cell);
     if (or_circ) {
       tor_assert(or_circ->n_crypto);

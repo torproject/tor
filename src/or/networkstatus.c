@@ -38,6 +38,7 @@
 
 #define NETWORKSTATUS_PRIVATE
 #include "or.h"
+#include "bridges.h"
 #include "channel.h"
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
@@ -2343,6 +2344,25 @@ networkstatus_get_param(const networkstatus_t *ns, const char *param_name,
 
   return get_net_param_from_list(ns->net_params, param_name,
                                  default_val, min_val, max_val);
+}
+
+/**
+ * As networkstatus_get_param(), but check torrc_value before checking the
+ * consensus. If torrc_value is in-range, then return it instead of the
+ * value from the consensus.
+ */
+int32_t
+networkstatus_get_overridable_param(const networkstatus_t *ns,
+                                    int32_t torrc_value,
+                                    const char *param_name,
+                                    int32_t default_val,
+                                    int32_t min_val, int32_t max_val)
+{
+  if (torrc_value >= min_val && torrc_value <= max_val)
+    return torrc_value;
+  else
+    return networkstatus_get_param(
+                         ns, param_name, default_val, min_val, max_val);
 }
 
 /**

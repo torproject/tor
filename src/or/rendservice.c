@@ -3658,7 +3658,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                                                    DIRIND_ANONYMOUS, NULL,
                                                    desc->desc_str,
                                                    strlen(desc->desc_str),
-                                                   0, rend_data);
+                                                   0, rend_data, NULL);
       rend_data_free(rend_data);
       base32_encode(desc_id_base32, sizeof(desc_id_base32),
                     desc->desc_id, DIGEST_LEN);

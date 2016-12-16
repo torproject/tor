@@ -439,8 +439,12 @@ typedef enum {
 /** Circuit state: I'd like to deliver a create, but my n_chan is still
  * connecting. */
 #define CIRCUIT_STATE_CHAN_WAIT 2
+/** Circuit state: the circuit is open but we don't want to actually use it
+ * until we find out if a better guard will be available.
+ */
+#define CIRCUIT_STATE_GUARD_WAIT 3
 /** Circuit state: onionskin(s) processed, ready to send/receive cells. */
-#define CIRCUIT_STATE_OPEN 3
+#define CIRCUIT_STATE_OPEN 4
 
 #define CIRCUIT_PURPOSE_MIN_ 1
 
@@ -1782,6 +1786,10 @@ typedef struct dir_connection_t {
 
   /** What rendezvous service are we querying for? */
   rend_data_t *rend_data;
+
+  /** If this is a one-hop connection, tracks the state of the directory guard
+   * for this connection (if any). */
+  struct circuit_guard_state_t *guard_state;
 
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
@@ -3151,6 +3159,15 @@ typedef struct origin_circuit_t {
 
   /** Holds all rendezvous data on either client or service side. */
   rend_data_t *rend_data;
+
+  /** Holds the data that the entry guard system uses to track the
+   * status of the guard this circuit is using, and thereby to determine
+   * whether this circuit can be used. */
+  struct circuit_guard_state_t *guard_state;
+
+  /** Index into global_origin_circuit_list for this circuit. -1 if not
+   * present. */
+  int global_origin_circuit_list_idx;
 
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */
@@ -4571,6 +4588,14 @@ typedef struct {
    * do we enforce Ed25519 identity match? */
   /* NOTE: remove this option someday. */
   int AuthDirTestEd25519LinkKeys;
+
+  /** If 1, we use the old (pre-prop271) guard selection algorithm.
+   *
+   * XXXX prop271 This option is only here as a stopgap while we're
+   * XXXX tuning and debugging the new (post-prop271) algorithm.  Eventually
+   * we should remove it entirely.
+   */
+  int UseDeprecatedGuardAlgorithm;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -4594,8 +4619,11 @@ typedef struct {
   uint64_t AccountingBytesAtSoftLimit;
   uint64_t AccountingExpectedUsage;
 
-  /** A list of Entry Guard-related configuration lines. */
+  /** A list of Entry Guard-related configuration lines. (pre-prop271) */
   config_line_t *EntryGuards;
+
+  /** A list of guard-related configuration lines. (post-prop271) */
+  config_line_t *Guard;
 
   config_line_t *TransportProxies;
 

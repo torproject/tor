@@ -2122,3 +2122,11 @@ tor_addr_port_new(const tor_addr_t *addr, uint16_t port)
   return ap;
 }
 
+/** Return true iff <a>a</b> and <b>b</b> are the same address and port */
+int
+tor_addr_port_eq(const tor_addr_port_t *a,
+                 const tor_addr_port_t *b)
+{
+  return tor_addr_eq(&a->addr, &b->addr) && a->port == b->port;
+}
+

@@ -28,6 +28,7 @@
 #define ROUTERSET_PRIVATE
 
 #include "or.h"
+#include "bridges.h"
 #include "geoip.h"
 #include "nodelist.h"
 #include "policies.h"
@@ -332,6 +333,18 @@ routerset_contains_node(const routerset_t *set, const node_t *node)
     return routerset_contains_router(set, node->ri, node->country);
   else
     return 0;
+}
+
+/** Return true iff <b>routerset</b> contains the bridge <b>bridge</b>. */
+int
+routerset_contains_bridge(const routerset_t *set, const bridge_info_t *bridge)
+{
+  const char *id = (const char*)bridge_get_rsa_id_digest(bridge);
+  const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
+
+  tor_assert(addrport);
+  return routerset_contains(set, &addrport->addr, addrport->port,
+                            NULL, id, -1);
 }
 
 /** Add every known node_t that is a member of <b>routerset</b> to

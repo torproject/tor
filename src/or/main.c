@@ -50,6 +50,7 @@
 #include "or.h"
 #include "addressmap.h"
 #include "backtrace.h"
+#include "bridges.h"
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"
@@ -979,7 +980,13 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 
     /* if we have enough dir info, then update our guard status with
      * whatever we just learned. */
-    entry_guards_compute_status(options, now);
+    int invalidate_circs = guards_update_all();
+
+    if (invalidate_circs) {
+      circuit_mark_all_unused_circs();
+      circuit_mark_all_dirty_circs_as_unusable();
+    }
+
     /* Don't even bother trying to get extrainfo until the rest of our
      * directory info is up-to-date */
     if (options->DownloadExtraInfo)
@@ -1376,6 +1383,9 @@ run_scheduled_events(time_t now)
   /* 0c. If we've deferred log messages for the controller, handle them now */
   flush_pending_log_callbacks();
 
+  /* Maybe enough time elapsed for us to reconsider a circuit. */
+  circuit_upgrade_circuits_from_guard_wait();
+
   if (options->UseBridges && !options->DisableNetwork) {
     fetch_bridge_descriptors(options, now);
   }
@@ -1396,6 +1406,7 @@ run_scheduled_events(time_t now)
   /* (If our circuit build timeout can ever become lower than a second (which
    * it can't, currently), we should do this more often.) */
   circuit_expire_building();
+  circuit_expire_waiting_for_better_guard();
 
   /* 3b. Also look at pending streams and prune the ones that 'began'
    *     a long time ago but haven't gotten a 'connected' yet.
@@ -3119,6 +3130,7 @@ tor_free_all(int postfork)
   control_free_all();
   sandbox_free_getaddrinfo_cache();
   protover_free_all();
+  bridges_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

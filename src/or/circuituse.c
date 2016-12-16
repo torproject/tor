@@ -29,6 +29,7 @@
 
 #include "or.h"
 #include "addressmap.h"
+#include "bridges.h"
 #include "channel.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
@@ -549,16 +550,14 @@ circuit_expire_building(void)
                                       == CPATH_STATE_OPEN;
           log_info(LD_CIRC,
                  "No circuits are opened. Relaxing timeout for circuit %d "
-                 "(a %s %d-hop circuit in state %s with channel state %s). "
-                 "%d guards are live.",
+                 "(a %s %d-hop circuit in state %s with channel state %s).",
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                  circuit_purpose_to_string(victim->purpose),
                  TO_ORIGIN_CIRCUIT(victim)->build_state ?
                    TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
                    -1,
                  circuit_state_to_string(victim->state),
-                 channel_state_to_string(victim->n_chan->state),
-                 num_live_entry_guards(0));
+                 channel_state_to_string(victim->n_chan->state));
 
           /* We count the timeout here for CBT, because technically this
            * was a timeout, and the timeout value needs to reset if we
@@ -576,7 +575,7 @@ circuit_expire_building(void)
                  "No circuits are opened. Relaxed timeout for circuit %d "
                  "(a %s %d-hop circuit in state %s with channel state %s) to "
                  "%ldms. However, it appears the circuit has timed out "
-                 "anyway. %d guards are live.",
+                 "anyway.",
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                  circuit_purpose_to_string(victim->purpose),
                  TO_ORIGIN_CIRCUIT(victim)->build_state ?
@@ -584,8 +583,7 @@ circuit_expire_building(void)
                    -1,
                  circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
-                 (long)build_close_ms,
-                 num_live_entry_guards(0));
+                 (long)build_close_ms);
       }
     }
 
@@ -797,6 +795,25 @@ circuit_expire_building(void)
 
     pathbias_count_timeout(TO_ORIGIN_CIRCUIT(victim));
   } SMARTLIST_FOREACH_END(victim);
+}
+
+/**
+ * Mark for close all circuits that start here, that were built through a
+ * guard we weren't sure if we wanted to use, and that have been waiting
+ * around for way too long.
+ */
+void
+circuit_expire_waiting_for_better_guard(void)
+{
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_origin_circuit_list(),
+                          origin_circuit_t *, circ) {
+    if (TO_CIRCUIT(circ)->marked_for_close)
+      continue;
+    if (circ->guard_state == NULL)
+      continue;
+    if (entry_guard_state_should_expire(circ->guard_state))
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NONE);
+  } SMARTLIST_FOREACH_END(circ);
 }
 
 /** For debugging #8387: track when we last called
@@ -1712,7 +1729,13 @@ circuit_build_failed(origin_circuit_t *circ)
                "Our circuit died before the first hop with no connection");
     }
     if (n_chan_id && !already_marked) {
+      /* New guard API: we failed. */
+      if (circ->guard_state)
+        entry_guard_failed(&circ->guard_state);
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
+      /* Old guard API: we failed. */
       entry_guard_register_connect_status(n_chan_id, 0, 1, time(NULL));
+#endif
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
       connection_ap_fail_onehop(n_chan_id, circ->build_state);
@@ -2022,7 +2045,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       int severity = LOG_NOTICE;
       /* Retry some stuff that might help the connection work. */
       if (entry_list_is_constrained(options) &&
-          entries_known_but_down(options)) {
+          guards_retry_optimistic(options)) {
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't %s. "
                "Optimistically trying known %s again.",
@@ -2030,7 +2053,6 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                "used client functionality lately" :
                "received a consensus with exits",
                options->UseBridges ? "bridges" : "entrynodes");
-        entries_retry_all(options);
       } else if (!options->UseBridges || any_bridge_descriptors_known()) {
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't %s. "

@@ -5123,7 +5123,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
    * descriptor. */
   tok = find_by_keyword(tokens, R_PUBLICATION_TIME);
   tor_assert(tok->n_args == 1);
-  if (parse_iso_time_(tok->args[0], &result->timestamp, strict_time_fmt) < 0) {
+  if (parse_iso_time_(tok->args[0], &result->timestamp,
+                      strict_time_fmt, 0) < 0) {
     log_warn(LD_REND, "Invalid publication time: '%s'", tok->args[0]);
     goto err;
   }

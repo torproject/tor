@@ -56,6 +56,7 @@
 
 #define CONNECTION_PRIVATE
 #include "or.h"
+#include "bridges.h"
 #include "buffers.h"
 /*
  * Define this so we get channel internal functions, since we're implementing
@@ -633,6 +634,11 @@ connection_free_(connection_t *conn)
 
     cached_dir_decref(dir_conn->cached_dir);
     rend_data_free(dir_conn->rend_data);
+    if (dir_conn->guard_state) {
+      /* Cancel before freeing, if it's still there. */
+      entry_guard_cancel(&dir_conn->guard_state);
+    }
+    circuit_guard_state_free(dir_conn->guard_state);
   }
 
   if (SOCKET_OK(conn->s)) {

@@ -93,6 +93,7 @@
 #define ROUTERLIST_PRIVATE
 #include "or.h"
 #include "backtrace.h"
+#include "bridges.h"
 #include "crypto_ed25519.h"
 #include "circuitstats.h"
 #include "config.h"
@@ -970,7 +971,7 @@ authority_certs_fetch_resource_impl(const char *resource,
     directory_initiate_command_routerstatus(rs,
                                             DIR_PURPOSE_FETCH_CERTIFICATE,
                                             0, indirection, resource, NULL,
-                                            0, 0);
+                                            0, 0, NULL);
     return;
   }
 
@@ -2003,6 +2004,10 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   int try_excluding = 1, n_excluded = 0, n_busy = 0;
   int try_ip_pref = 1;
 
+#ifndef ENABLE_LEGACY_GUARD_ALGORITHM
+  tor_assert_nonfatal(! for_guard);
+#endif
+
   if (!consensus)
     return NULL;
 
@@ -2038,10 +2043,12 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
     if ((type & EXTRAINFO_DIRINFO) &&
         !router_supports_extrainfo(node->identity, is_trusted_extrainfo))
       continue;
+#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     /* Don't make the same node a guard twice */
      if (for_guard && is_node_used_as_guard(node)) {
        continue;
      }
+#endif
     /* Ensure that a directory guard is actually a guard node. */
     if (for_guard && !node->is_possible_guard) {
       continue;
@@ -4946,7 +4953,7 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
     directory_initiate_command_routerstatus(source, purpose,
                                             ROUTER_PURPOSE_GENERAL,
                                             DIRIND_ONEHOP,
-                                            resource, NULL, 0, 0);
+                                            resource, NULL, 0, 0, NULL);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,
                                  pds_flags, DL_WANT_ANY_DIRSERVER);
