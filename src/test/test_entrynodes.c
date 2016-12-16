@@ -2293,7 +2293,7 @@ test_entry_guard_retry_unreachable(void *arg)
   tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
 
   g1->is_reachable = GUARD_REACHABLE_NO;
-  g1->last_tried_to_connect = start + 35*60;
+  g1->last_tried_to_connect = start + 55*60;
 
   /* After 1 hour, we'll retry the nonprimary one. */
   update_approx_time(start + 61 * 60);
