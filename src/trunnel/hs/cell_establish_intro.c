@@ -231,6 +231,11 @@ hs_cell_establish_intro_getconstarray_handshake_mac(const hs_cell_establish_intr
 {
   return (const uint8_t  *)hs_cell_establish_intro_getarray_handshake_mac((hs_cell_establish_intro_t*)inp);
 }
+const uint8_t *
+hs_cell_establish_intro_get_end_sig_fields(const hs_cell_establish_intro_t *inp)
+{
+  return inp->end_sig_fields;
+}
 uint16_t
 hs_cell_establish_intro_get_sig_len(const hs_cell_establish_intro_t *inp)
 {
@@ -241,11 +246,6 @@ hs_cell_establish_intro_set_sig_len(hs_cell_establish_intro_t *inp, uint16_t val
 {
   inp->sig_len = val;
   return 0;
-}
-const uint8_t *
-hs_cell_establish_intro_get_end_sig_fields(const hs_cell_establish_intro_t *inp)
-{
-  return inp->end_sig_fields;
 }
 size_t
 hs_cell_establish_intro_getlen_sig(const hs_cell_establish_intro_t *inp)
@@ -518,12 +518,12 @@ hs_cell_establish_intro_parse_into(hs_cell_establish_intro_t *obj, const uint8_t
   CHECK_REMAINING(TRUNNEL_SHA3_256_LEN, truncated);
   memcpy(obj->handshake_mac, ptr, TRUNNEL_SHA3_256_LEN);
   remaining -= TRUNNEL_SHA3_256_LEN; ptr += TRUNNEL_SHA3_256_LEN;
+  obj->end_sig_fields = ptr;
 
   /* Parse u16 sig_len */
   CHECK_REMAINING(2, truncated);
   obj->sig_len = trunnel_ntohs(trunnel_get_uint16(ptr));
   remaining -= 2; ptr += 2;
-  obj->end_sig_fields = ptr;
 
   /* Parse u8 sig[sig_len] */
   CHECK_REMAINING(obj->sig_len, truncated);

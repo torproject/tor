@@ -19,8 +19,8 @@ struct hs_cell_establish_intro_st {
   struct cell_extension_st *extensions;
   const uint8_t *end_mac_fields;
   uint8_t handshake_mac[TRUNNEL_SHA3_256_LEN];
-  uint16_t sig_len;
   const uint8_t *end_sig_fields;
+  uint16_t sig_len;
   TRUNNEL_DYNARRAY_HEAD(, uint8_t) sig;
   uint8_t trunnel_error_code_;
 };
@@ -170,6 +170,9 @@ uint8_t * hs_cell_establish_intro_getarray_handshake_mac(hs_cell_establish_intro
  * a const pointer
  */
 const uint8_t  * hs_cell_establish_intro_getconstarray_handshake_mac(const hs_cell_establish_intro_t *inp);
+/** Return the position for end_sig_fields when we parsed this object
+ */
+const uint8_t * hs_cell_establish_intro_get_end_sig_fields(const hs_cell_establish_intro_t *inp);
 /** Return the value of the sig_len field of the
  * hs_cell_establish_intro_t in 'inp'
  */
@@ -179,9 +182,6 @@ uint16_t hs_cell_establish_intro_get_sig_len(const hs_cell_establish_intro_t *in
  * return -1 and set the error code on 'inp' on failure.
  */
 int hs_cell_establish_intro_set_sig_len(hs_cell_establish_intro_t *inp, uint16_t val);
-/** Return the position for end_sig_fields when we parsed this object
- */
-const uint8_t * hs_cell_establish_intro_get_end_sig_fields(const hs_cell_establish_intro_t *inp);
 /** Return the length of the dynamic array holding the sig field of
  * the hs_cell_establish_intro_t in 'inp'.
  */
