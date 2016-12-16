@@ -1625,7 +1625,7 @@ test_entry_guard_node_filter(void *arg)
   bridge_line_t *bl = NULL;
 
   /* Initialize a bunch of node objects that are all guards. */
-  const int NUM = 7;
+#define NUM 7
   node_t *n[NUM];
   entry_guard_t *g[NUM];
   int i;
@@ -1704,6 +1704,7 @@ test_entry_guard_node_filter(void *arg)
  done:
   guard_selection_free(gs);
   tor_free(bl);
+#undef NUM
 }
 
 static void
