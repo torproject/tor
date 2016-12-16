@@ -2390,6 +2390,15 @@ make_path_absolute(char *fname)
 #endif
 }
 
+#ifndef HAVE__NSGETENVIRON
+#ifndef HAVE_EXTERN_ENVIRON_DECLARED
+/* Some platforms declare environ under some circumstances, others don't. */
+#ifndef RUNNING_DOXYGEN
+extern char **environ;
+#endif
+#endif
+#endif
+
 /** Return the current environment. This is a portable replacement for
  * 'environ'. */
 char **

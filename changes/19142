@@ -1,3 +1,0 @@
-  o Removed features:
-    - We no longer attempt to build on systems where 'environ' is not
-      declared in the C headers. Closes ticket 19142.
