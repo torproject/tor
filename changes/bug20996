@@ -1,0 +1,9 @@
+  o Minor bugfixes (IPv6):
+    - Make IP6-using clients try harder to find an IPv6 directory server.
+      Fixes bug 20999; bugfix on 77a9de0 from 17840 in 0.2.8.2-alpha.
+    - When IPv6 addresses have not been downloaded, use hard-coded address
+      info for authorities, fallbacks, and configured bridges.
+      (When IPv6-only clients receive a microdesc consensus, it has no IPv6
+      addresses, so they can't use it until microdescs are downloaded.)
+      This allows IPv6-only clients to use microdescriptors.
+      Fixes bug 20996; bugfix on b167e82 from 19608 in 0.2.8.5-alpha.
