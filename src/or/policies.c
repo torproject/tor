@@ -317,10 +317,8 @@ firewall_is_fascist_impl(void)
   const or_options_t *options = get_options();
   /* Assume every non-bridge relay has an IPv4 address.
    * Clients which use bridges may only know the IPv6 address of their
-   * bridge. */
-  return (options->ClientUseIPv4 == 0
-          || (!fascist_firewall_use_ipv6(options)
-              && options->UseBridges == 1));
+   * bridge, but they will connect regardless of the ClientUseIPv6 setting. */
+  return options->ClientUseIPv4 == 0;
 }
 
 /** Return true iff the firewall options, including ClientUseIPv4 0 and
