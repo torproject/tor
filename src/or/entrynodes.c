@@ -1287,7 +1287,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
   /* Then: remove the ones that have been junk for too long */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
-    int remove = 0;
+    int rmv = 0;
 
     if (guard->currently_listed == 0 &&
         guard->unlisted_since_date < remove_if_unlisted_since) {
@@ -1299,20 +1299,20 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
       log_info(LD_GUARD, "Removing sampled guard %s: it has been unlisted "
                "for over %d days", entry_guard_describe(guard),
                get_remove_unlisted_guards_after_days());
-      remove = 1;
+      rmv = 1;
     } else if (guard->sampled_on_date < maybe_remove_if_sampled_before) {
       /* We have a live consensus, and {ADDED_ON_DATE} is over
         {GUARD_LIFETIME} ago, *and* {CONFIRMED_ON_DATE} is either
         "never", or over {GUARD_CONFIRMED_MIN_LIFETIME} ago.
       */
       if (guard->confirmed_on_date == 0) {
-        remove = 1;
+        rmv = 1;
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, but never confirmed.",
                  entry_guard_describe(guard),
                  get_guard_lifetime() / 86400);
       } else if (guard->confirmed_on_date < remove_if_confirmed_before) {
-        remove = 1;
+        rmv = 1;
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, and confirmed over %d days ago.",
                  entry_guard_describe(guard),
@@ -1321,7 +1321,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
       }
     }
 
-    if (remove) {
+    if (rmv) {
       ++n_changes;
       SMARTLIST_DEL_CURRENT(gs->sampled_entry_guards, guard);
       remove_guard_from_confirmed_and_primary_lists(gs, guard);
