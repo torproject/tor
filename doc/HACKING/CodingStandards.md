@@ -93,6 +93,10 @@ What needs a changes file?
    rewrites.  Anything about which somebody might plausibly wonder "when
    did that happen, and/or why did we do that" 6 months down the line.
 
+What does not need a changes file?
+
+   * Bugfixes for code that hasn't shipped in any released version of Tor
+
 Why use changes files instead of Git commit messages?
 
    * Git commit messages are written for developers, not users, and they
