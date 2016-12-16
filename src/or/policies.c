@@ -297,8 +297,8 @@ parse_reachable_addresses(void)
     } else if (fascist_firewall_use_ipv6(options)
        && (policy_is_reject_star(reachable_or_addr_policy, AF_INET6, 0)
          || policy_is_reject_star(reachable_dir_addr_policy, AF_INET6, 0))) {
-          log_warn(LD_CONFIG, "You have configured tor to use IPv6 "
-                   "(ClientUseIPv6 1 or UseBridges 1), but "
+          log_warn(LD_CONFIG, "You have configured tor to use or prefer IPv6 "
+                   "(or UseBridges 1), but "
                    "ReachableAddresses, ReachableORAddresses, or "
                    "ReachableDirAddresses reject all IPv6 addresses. "
                    "Tor will not connect using IPv6.");
@@ -426,6 +426,9 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
 }
 
 /** Is this client configured to use IPv6?
+ * Returns true if the client might use IPv6 for some of its connections
+ * (including dual-stack and IPv6-only clients), and false if it will never
+ * use IPv6 for any connections.
  * Use node_ipv6_or/dir_preferred() when checking a specific node and OR/Dir
  * port: it supports bridge client per-node IPv6 preferences.
  */
@@ -433,9 +436,11 @@ int
 fascist_firewall_use_ipv6(const or_options_t *options)
 {
   /* Clients use IPv6 if it's set, or they use bridges, or they don't use
-   * IPv4 */
-  return (options->ClientUseIPv6 == 1 || options->UseBridges == 1
-          || options->ClientUseIPv4 == 0);
+   * IPv4, or they prefer it.
+   * ClientPreferIPv6DirPort is deprecated, but check it anyway. */
+  return (options->ClientUseIPv6 == 1 || options->ClientUseIPv4 == 0 ||
+          options->ClientPreferIPv6ORPort == 1 ||
+          options->ClientPreferIPv6DirPort == 1 || options->UseBridges == 1);
 }
 
 /** Do we prefer to connect to IPv6, ignoring ClientPreferIPv6ORPort and
