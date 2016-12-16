@@ -31,7 +31,7 @@ typedef struct entry_guard_restriction_t entry_guard_restriction_t;
 /*
   XXXX Prop271 undefine this in order to disable all legacy guard functions.
 */
-#define ENABLE_LEGACY_GUARD_ALGORITHM
+// #define ENABLE_LEGACY_GUARD_ALGORITHM
 
 /* Information about a guard's pathbias status.
  * These fields are used in circpathbias.c to try to detect entry
