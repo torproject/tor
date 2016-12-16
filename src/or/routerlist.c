@@ -948,7 +948,7 @@ authority_certs_fetch_resource_impl(const char *resource,
 
   /* If we've just downloaded a consensus from a bridge, re-use that
    * bridge */
-  if (options->UseBridges && node && !get_via_tor) {
+  if (options->UseBridges && node && node->ri && !get_via_tor) {
     /* clients always make OR connections to bridges */
     tor_addr_port_t or_ap;
     /* we are willing to use a non-preferred address if we need to */
