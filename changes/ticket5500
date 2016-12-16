@@ -1,0 +1,3 @@
+  o Testing:
+    - Perform the coding style checks when running the tests and fail when
+      coding style violations are found. Closes ticket 5500.
