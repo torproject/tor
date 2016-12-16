@@ -1792,8 +1792,9 @@ test_entry_guard_expand_sample(void *arg)
   tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_LE,
             DFLT_MIN_FILTERED_SAMPLE_SIZE);
   /* but we definitely didn't exceed the sample maximum. */
+  const int n_guards = 271 / 2;
   tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_LE,
-            (int)((271 / 2) * .3));
+            (int)(n_guards * .3));
 
  done:
   guard_selection_free(gs);
@@ -2909,6 +2910,7 @@ test_entry_guard_select_and_cancel(void *arg)
   for (i = 0; i < N_PRIMARY; ++i) {
     r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
                                      &node, &guard);
+    tt_int_op(r, OP_EQ, 0);
     tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
     g = entry_guard_handle_get(guard->guard);
     tt_int_op(g->is_primary, OP_EQ, 1);
@@ -3047,7 +3049,7 @@ upgrade_circuits_cleanup(const struct testcase_t *testcase, void *ptr)
   circuit_free(TO_CIRCUIT(data->circ1));
   circuit_free(TO_CIRCUIT(data->circ2));
   tor_free(data);
-  return big_fake_network_cleanup(testcase, ptr);
+  return big_fake_network_cleanup(testcase, NULL);
 }
 
 static void
