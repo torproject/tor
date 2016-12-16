@@ -965,7 +965,8 @@ get_max_sample_size(guard_selection_t *gs,
  * that were already sampled.
  */
 static smartlist_t *
-get_eligible_guards(guard_selection_t *gs,
+get_eligible_guards(const or_options_t *options,
+                    guard_selection_t *gs,
                     int *n_guards_out)
 {
   /* Construct eligible_guards as GUARDS - SAMPLED_GUARDS */
@@ -995,6 +996,14 @@ get_eligible_guards(guard_selection_t *gs,
     SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
       if (! node_is_possible_guard(node))
         continue;
+      if (gs->type == GS_TYPE_RESTRICTED) {
+        /* In restricted mode, we apply the filter BEFORE sampling, so
+         * that we are sampling from the nodes that we might actually
+         * select. If we sampled first, we might wind up with a sample
+         * that didn't include any EntryNodes at all. */
+        if (! node_passes_guard_filter(options, node))
+          continue;
+      }
       ++n_guards;
       if (digestset_contains(sampled_guard_ids, node->identity))
         continue;
@@ -1046,11 +1055,12 @@ STATIC entry_guard_t *
 entry_guards_expand_sample(guard_selection_t *gs)
 {
   tor_assert(gs);
+  const or_options_t *options = get_options();
   int n_sampled = smartlist_len(gs->sampled_entry_guards);
   entry_guard_t *added_guard = NULL;
   int n_usable_filtered_guards = num_reachable_filtered_guards(gs, NULL);
   int n_guards = 0;
-  smartlist_t *eligible_guards = get_eligible_guards(gs, &n_guards);
+  smartlist_t *eligible_guards = get_eligible_guards(options, gs, &n_guards);
 
   const int max_sample = get_max_sample_size(gs, n_guards);
   const int min_filtered_sample = get_min_filtered_sample_size();
