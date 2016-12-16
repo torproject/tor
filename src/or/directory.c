@@ -442,10 +442,9 @@ should_use_directory_guards(const or_options_t *options)
   /* Public (non-bridge) servers never use directory guards. */
   if (public_server_mode(options))
     return 0;
-  /* If guards are disabled, or directory guards are disabled, we can't
-   * use directory guards.
+  /* If guards are disabled, we can't use directory guards.
    */
-  if (!options->UseEntryGuards || !options->UseEntryGuardsAsDirGuards)
+  if (!options->UseEntryGuards)
     return 0;
   /* If we're configured to fetch directory info aggressively or of a
    * nonstandard type, don't use directory guards. */

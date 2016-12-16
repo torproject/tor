@@ -440,22 +440,30 @@ get_remove_unlisted_guards_after_days(void)
  * regardless of whether they are listed or unlisted.
  */
 STATIC int
-get_guard_lifetime_days(void)
+get_guard_lifetime(void)
 {
-  return networkstatus_get_param(NULL,
+  if (get_options()->GuardLifetime >= 86400)
+    return get_options()->GuardLifetime;
+  int32_t days;
+  days = networkstatus_get_param(NULL,
                                  "guard-lifetime-days",
                                  DFLT_GUARD_LIFETIME_DAYS, 1, 365*10);
+  return days * 86400;
 }
 /**
  * We remove confirmed guards from the sample if they were sampled
  * GUARD_LIFETIME_DAYS ago and confirmed this many days ago.
  */
 STATIC int
-get_guard_confirmed_min_lifetime_days(void)
+get_guard_confirmed_min_lifetime(void)
 {
-  return networkstatus_get_param(NULL, "guard-confirmed-min-lifetime-days",
+  if (get_options()->GuardLifetime >= 86400)
+    return get_options()->GuardLifetime;
+  int32_t days;
+  days = networkstatus_get_param(NULL, "guard-confirmed-min-lifetime-days",
                                  DFLT_GUARD_CONFIRMED_MIN_LIFETIME_DAYS,
                                  1, 365*10);
+  return days * 86400;
 }
 /**
  * How many guards do we try to keep on our primary guard list?
@@ -463,8 +471,42 @@ get_guard_confirmed_min_lifetime_days(void)
 STATIC int
 get_n_primary_guards(void)
 {
-  return networkstatus_get_param(NULL, "guard-n-primary-guards",
+  const int n = get_options()->NumEntryGuards;
+  const int n_dir = get_options()->NumDirectoryGuards;
+  if (n > 5) {
+    return MAX(n_dir, n + n / 2);
+  } else if (n >= 1) {
+    return MAX(n_dir, n * 2);
+  }
+
+  return networkstatus_get_param(NULL,
+                                 "guard-n-primary-guards",
                                  DFLT_N_PRIMARY_GUARDS, 1, INT32_MAX);
+}
+/**
+ * Return the number of the live primary guards we should look at when
+ * making a circuit.
+ */
+STATIC int
+get_n_primary_guards_to_use(guard_usage_t usage)
+{
+  int configured;
+  const char *param_name;
+  int param_default;
+  if (usage == GUARD_USAGE_DIRGUARD) {
+    configured = get_options()->NumDirectoryGuards;
+    param_name = "guard-n-primary-dir-guards-to-use";
+    param_default = DFLT_N_PRIMARY_DIR_GUARDS_TO_USE;
+  } else {
+    configured = get_options()->NumEntryGuards;
+    param_name = "guard-n-primary-guards-to-use";
+    param_default = DFLT_N_PRIMARY_GUARDS_TO_USE;
+  }
+  if (configured >= 1) {
+    return configured;
+  }
+  return networkstatus_get_param(NULL,
+                                 param_name, param_default, 1, INT32_MAX);
 }
 /**
  * If we haven't successfully built or used a circuit in this long, then
@@ -793,7 +835,7 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
                                const char *nickname,
                                const tor_addr_port_t *bridge_addrport)
 {
-  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
+  const int GUARD_LIFETIME = get_guard_lifetime();
   tor_assert(gs);
 
   // XXXX prop271 take ed25519 identity here too.
@@ -1238,9 +1280,9 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
   const time_t remove_if_unlisted_since =
     approx_time() - REMOVE_UNLISTED_GUARDS_AFTER;
   const time_t maybe_remove_if_sampled_before =
-    approx_time() - (get_guard_lifetime_days() * 86400);
+    approx_time() - get_guard_lifetime();
   const time_t remove_if_confirmed_before =
-    approx_time() - (get_guard_confirmed_min_lifetime_days() * 86400);
+    approx_time() - get_guard_confirmed_min_lifetime();
 
   /* Then: remove the ones that have been junk for too long */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
@@ -1267,14 +1309,14 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, but never confirmed.",
                  entry_guard_describe(guard),
-                 get_guard_lifetime_days());
+                 get_guard_lifetime() / 86400);
       } else if (guard->confirmed_on_date < remove_if_confirmed_before) {
         remove = 1;
         log_info(LD_GUARD, "Removing sampled guard %s: it was sampled "
                  "over %d days ago, and confirmed over %d days ago.",
                  entry_guard_describe(guard),
-                 get_guard_lifetime_days(),
-                 get_guard_confirmed_min_lifetime_days());
+                 get_guard_lifetime() / 86400,
+                 get_guard_confirmed_min_lifetime() / 86400);
       }
     }
 
@@ -1569,7 +1611,7 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
   if (BUG(smartlist_contains(gs->confirmed_entry_guards, guard)))
     return; // LCOV_EXCL_LINE
 
-  const int GUARD_LIFETIME = get_guard_lifetime_days() * 86400;
+  const int GUARD_LIFETIME = get_guard_lifetime();
   guard->confirmed_on_date = randomize_time(approx_time(), GUARD_LIFETIME/10);
 
   log_info(LD_GUARD, "Marking %s as a confirmed guard (index %d)",
@@ -1787,6 +1829,7 @@ entry_guards_note_internet_connectivity(guard_selection_t *gs)
  */
 STATIC entry_guard_t *
 select_entry_guard_for_circuit(guard_selection_t *gs,
+                               guard_usage_t usage,
                                const entry_guard_restriction_t *rst,
                                unsigned *state_out)
 {
@@ -1797,6 +1840,9 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
+  int num_entry_guards = get_n_primary_guards_to_use(usage);
+  smartlist_t *usable_primary_guards = smartlist_new();
+
   /* "If any entry in PRIMARY_GUARDS has {is_reachable} status of
       <maybe> or <yes>, return the first such guard." */
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
@@ -1806,11 +1852,20 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
     if (guard->is_reachable != GUARD_REACHABLE_NO) {
       *state_out = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
       guard->last_tried_to_connect = approx_time();
-      log_info(LD_GUARD, "Selected primary guard %s for circuit.",
-               entry_guard_describe(guard));
-      return guard;
+      smartlist_add(usable_primary_guards, guard);
+      if (smartlist_len(usable_primary_guards) >= num_entry_guards)
+        break;
     }
   } SMARTLIST_FOREACH_END(guard);
+
+  if (smartlist_len(usable_primary_guards)) {
+    entry_guard_t *guard = smartlist_choose(usable_primary_guards);
+    smartlist_free(usable_primary_guards);
+    log_info(LD_GUARD, "Selected primary guard %s for circuit.",
+             entry_guard_describe(guard));
+    return guard;
+  }
+  smartlist_free(usable_primary_guards);
 
   /* "Otherwise, if the ordered intersection of {CONFIRMED_GUARDS}
       and {USABLE_FILTERED_GUARDS} is nonempty, return the first
@@ -2048,6 +2103,7 @@ circuit_guard_state_free(circuit_guard_state_t *state)
  */
 int
 entry_guard_pick_for_circuit(guard_selection_t *gs,
+                             guard_usage_t usage,
                              entry_guard_restriction_t *rst,
                              const node_t **chosen_node_out,
                              circuit_guard_state_t **guard_state_out)
@@ -2059,7 +2115,8 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   *guard_state_out = NULL;
 
   unsigned state = 0;
-  entry_guard_t *guard = select_entry_guard_for_circuit(gs, rst, &state);
+  entry_guard_t *guard =
+    select_entry_guard_for_circuit(gs, usage, rst, &state);
   if (! guard)
     goto fail;
   if (BUG(state == 0))
@@ -4954,6 +5011,7 @@ guards_choose_guard(cpath_build_state_t *state,
       memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
     }
     if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     GUARD_USAGE_TRAFFIC,
                                      rst,
                                      &r,
                                      guard_state_out) < 0) {
@@ -4986,6 +5044,7 @@ guards_choose_dirguard(dirinfo_type_t info,
      * microdescriptors. -NM */
     const node_t *r = NULL;
     if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                     GUARD_USAGE_DIRGUARD,
                                      NULL,
                                      &r,
                                      guard_state_out) < 0) {

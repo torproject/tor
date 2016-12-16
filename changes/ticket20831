@@ -1,0 +1,6 @@
+  o Removed features:
+    - The UseDirectoryGuards torrc options is
+      no longer present: all users that use entry guards will also use
+      directory guards. Related to proposal 271; implements part of
+      ticket 20831.
+

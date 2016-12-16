@@ -4359,7 +4359,6 @@ test_dir_should_use_directory_guards(void *data)
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
   tt_int_op(CALLED(public_server_mode), OP_EQ, 1);
 
-  options->UseEntryGuardsAsDirGuards = 1;
   options->UseEntryGuards = 1;
   options->DownloadExtraInfo = 0;
   options->FetchDirInfoEarly = 0;
@@ -4373,29 +4372,24 @@ test_dir_should_use_directory_guards(void *data)
   tt_int_op(CALLED(public_server_mode), OP_EQ, 3);
   options->UseEntryGuards = 1;
 
-  options->UseEntryGuardsAsDirGuards = 0;
-  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 4);
-  options->UseEntryGuardsAsDirGuards = 1;
-
   options->DownloadExtraInfo = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 5);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 4);
   options->DownloadExtraInfo = 0;
 
   options->FetchDirInfoEarly = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 6);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 5);
   options->FetchDirInfoEarly = 0;
 
   options->FetchDirInfoExtraEarly = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 7);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 6);
   options->FetchDirInfoExtraEarly = 0;
 
   options->FetchUselessDescriptors = 1;
   tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
-  tt_int_op(CALLED(public_server_mode), OP_EQ, 8);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 7);
   options->FetchUselessDescriptors = 0;
 
   done:
