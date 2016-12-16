@@ -3305,23 +3305,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall or FirewallPorts or ClientUseIPv4 0.");
 
-  /* We check if Reachable*Addresses blocks all addresses in
-   * parse_reachable_addresses(). */
-
-#define WARN_PLEASE_USE_IPV6_LOG_MSG \
-        "ClientPreferIPv6%sPort 1 is ignored unless tor is using IPv6. " \
-        "Please set ClientUseIPv6 1, ClientUseIPv4 0, or configure bridges."
-
-  if (!fascist_firewall_use_ipv6(options)
-      && options->ClientPreferIPv6ORPort == 1)
-    log_warn(LD_CONFIG, WARN_PLEASE_USE_IPV6_LOG_MSG, "OR");
-
-  if (!fascist_firewall_use_ipv6(options)
-      && options->ClientPreferIPv6DirPort == 1)
-    log_warn(LD_CONFIG, WARN_PLEASE_USE_IPV6_LOG_MSG, "Dir");
-
-#undef WARN_PLEASE_USE_IPV6_LOG_MSG
-
   if (options->UseBridges &&
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "

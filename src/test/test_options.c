@@ -1794,14 +1794,6 @@ test_options_validate__reachable_addresses(void *ignored)
 
   /* Test IPv4-only clients setting IPv6 preferences */
 
-#define WARN_PLEASE_USE_IPV6_OR_LOG_MSG \
-        "ClientPreferIPv6ORPort 1 is ignored unless tor is using IPv6. " \
-        "Please set ClientUseIPv6 1, ClientUseIPv4 0, or configure bridges.\n"
-
-#define WARN_PLEASE_USE_IPV6_DIR_LOG_MSG \
-        "ClientPreferIPv6DirPort 1 is ignored unless tor is using IPv6. " \
-        "Please set ClientUseIPv6 1, ClientUseIPv4 0, or configure bridges.\n"
-
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "ClientUseIPv4 1\n"
@@ -1811,7 +1803,6 @@ test_options_validate__reachable_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg(WARN_PLEASE_USE_IPV6_OR_LOG_MSG);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1823,7 +1814,6 @@ test_options_validate__reachable_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg(WARN_PLEASE_USE_IPV6_DIR_LOG_MSG);
   tor_free(msg);
 
   /* Now test an IPv4/IPv6 client setting IPv6 preferences */
