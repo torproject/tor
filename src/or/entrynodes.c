@@ -638,7 +638,8 @@ choose_guard_selection(const or_options_t *options,
   */
 
   static int have_warned_extreme_threshold = 0;
-  if (n_passing_filter < extreme_threshold &&
+  if (n_guards &&
+      n_passing_filter < extreme_threshold &&
       ! have_warned_extreme_threshold) {
     have_warned_extreme_threshold = 1;
     const double exclude_frac =
