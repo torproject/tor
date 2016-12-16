@@ -87,7 +87,7 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
 
     const size_t sig_msg_len = cell->end_sig_fields - msg;
     int sig_mismatch = ed25519_checksig_prefixed(&sig_struct,
-                                                 (uint8_t*) msg, sig_msg_len,
+                                                 msg, sig_msg_len,
                                                  ESTABLISH_INTRO_SIG_PREFIX,
                                                  &auth_key);
     if (sig_mismatch) {
