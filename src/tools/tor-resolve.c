@@ -355,7 +355,7 @@ main(int argc, char **argv)
     usage();
 
   if (!strcmp(arg[0],"--version")) {
-    printf("Tor version %s\n",VERSION);
+    printf("Tor %s\n",VERSION);
     return 0;
   }
   while (n_args && *arg[0] == '-') {

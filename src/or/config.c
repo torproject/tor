@@ -4888,12 +4888,12 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   if (config_line_find(cmdline_only_options, "--version")) {
-    printf("Tor version %s\n", get_version());
+    printf("Tor %s\n", get_version());
     exit(0);
   }
 
   if (config_line_find(cmdline_only_options, "--library-versions")) {
-    printf("Tor version %s\n", get_version());
+    printf("Tor %s\n", get_version());
     printf("Library versions\tCompiled\t\tRuntime\n");
     printf("Libevent\t\t%-15s\t\t%s\n",
                       tor_libevent_get_header_version_str(),
