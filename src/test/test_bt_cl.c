@@ -19,14 +19,12 @@ static int crashtype = 0;
 
 #ifdef __GNUC__
 #define NOINLINE __attribute__((noinline))
-#define NORETURN __attribute__((noreturn))
 #endif
 
 int crash(int x) NOINLINE;
 int oh_what(int x) NOINLINE;
 int a_tangled_web(int x) NOINLINE;
 int we_weave(int x) NOINLINE;
-static void abort_handler(int s) NORETURN;
 
 #ifdef HAVE_CFLAG_WNULL_DEREFERENCE
 DISABLE_GCC_WARNING(null-dereference)
@@ -76,13 +74,6 @@ we_weave(int x)
   return a_tangled_web(x) + a_tangled_web(x+1);
 }
 
-static void
-abort_handler(int s)
-{
-  (void)s;
-  exit(0);
-}
-
 int
 main(int argc, char **argv)
 {
@@ -119,8 +110,6 @@ main(int argc, char **argv)
   tor_log_update_sigsafe_err_fds();
 
   configure_backtrace_handler(NULL);
-
-  signal(SIGABRT, abort_handler);
 
   printf("%d\n", we_weave(2));
 
