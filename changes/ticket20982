@@ -1,5 +1,0 @@
-  o Minor bugfixes (client):
-    - Conform to the GNU Coding Standards section 4.7.1 which states
-      that the output of the version option consists of the program name
-      and its version number without prefixes. Fixes bug 20982; bugfix
-      on 0.0.2pre24.
