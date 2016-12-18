@@ -1542,7 +1542,7 @@ sandbox_getaddrinfo(const char *name, const char *servname,
     return err;
   }
 
-  /* Otherwise, the sanbox is on.  If we have an item, yield its cached
+  /* Otherwise, the sandbox is on.  If we have an item, yield its cached
      result. */
   if (item) {
     *res = item->res;

@@ -2127,7 +2127,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
      * will have to launch one!
      */
 
-    /* THe chosen exit node, if there is one. */
+    /* The chosen exit node, if there is one. */
     extend_info_t *extend_info=NULL;
     const int n_pending = count_pending_general_client_circuits();
 

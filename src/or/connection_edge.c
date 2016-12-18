@@ -1638,7 +1638,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         return -1;
       }
       /* You can't make connections to internal addresses, by default.
-       * Exceptions are begindir requests (where the address is meaningless,
+       * Exceptions are begindir requests (where the address is meaningless),
        * or cases where you've hand-configured a particular exit, thereby
        * making the local address meaningful. */
       if (options->ClientRejectInternalAddresses &&

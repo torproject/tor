@@ -2430,8 +2430,8 @@ using_default_dir_authorities(const or_options_t *options)
  * Fail if one or more of the following is true:
  *   - DNS name in <b>options-\>Address</b> cannot be resolved.
  *   - <b>options-\>Address</b> is a local host address.
- *   - Attempt to getting local hostname fails.
- *   - Attempt to getting network interface address fails.
+ *   - Attempt at getting local hostname fails.
+ *   - Attempt at getting network interface address fails.
  *
  * Return 0 if all is well, or -1 if we can't find a suitable
  * public IP address.
@@ -2811,7 +2811,7 @@ compute_publishserverdescriptor(or_options_t *options)
 #define MIN_REND_POST_PERIOD (10*60)
 #define MIN_REND_POST_PERIOD_TESTING (5)
 
-/** Higest allowable value for PredictedPortsRelevanceTime; if this is
+/** Highest allowable value for PredictedPortsRelevanceTime; if this is
  * too high, our selection of exits will decrease for an extended
  * period of time to an uncomfortable level .*/
 #define MAX_PREDICTED_CIRCS_RELEVANCE (60*60)
@@ -2954,12 +2954,12 @@ options_validate_single_onion(or_options_t *options, char **msg)
     REJECT("Non-anonymous (Tor2web) mode is incompatible with using Tor as a "
            "hidden service. Please remove all HiddenServiceDir lines, or use "
            "a version of tor compiled without --enable-tor2web-mode, or use "
-           " HiddenServiceNonAnonymousMode.");
+           "HiddenServiceNonAnonymousMode.");
   }
 
   if (rend_service_allow_non_anonymous_connection(options)
       && options->UseEntryGuards) {
-    /* Single Onion services only use entry guards when uploading descriptors,
+    /* Single Onion services only use entry guards when uploading descriptors;
      * all other connections are one-hop. Further, Single Onions causes the
      * hidden service code to do things which break the path bias
      * detector, and it's far easier to turn off entry guards (and
@@ -3002,7 +3002,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   *msg = NULL;
 
   /* Set UseEntryGuards from the configured value, before we check it below.
-   * We change UseEntryGuards whenn it's incompatible with other options,
+   * We change UseEntryGuards when it's incompatible with other options,
    * but leave UseEntryGuards_option with the original value.
    * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
   options->UseEntryGuards = options->UseEntryGuards_option;

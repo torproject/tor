@@ -4533,7 +4533,7 @@ typedef struct {
    * XXXX Eventually, the default will be 0. */
   int ExitRelay;
 
-  /** For how long (seconds) do we declare our singning keys to be valid? */
+  /** For how long (seconds) do we declare our signing keys to be valid? */
   int SigningKeyLifetime;
   /** For how long (seconds) do we declare our link keys to be valid? */
   int TestingLinkCertLifetime;

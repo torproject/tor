@@ -3209,7 +3209,7 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
     if (!authdir_mode_bridge(get_options()) ||
         ri->purpose == ROUTER_PURPOSE_BRIDGE) {
       char addrstr[TOR_ADDR_BUF_LEN];
-      /* This is a bridge or we're not a bridge authorititative --
+      /* This is a bridge or we're not a bridge authority --
          mark it as reachable.  */
       log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
                router_describe(ri),
