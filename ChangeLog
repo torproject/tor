@@ -18,7 +18,7 @@ Changes in version 0.2.9.7-rc - 2016-12-12
   o Minor bugfixes (directory authority):
     - When computing old Tor protocol line version in protover, we were
       looking at 0.2.7.5 twice instead of a specific case for
-      0.2.9.1-alpha. Fixes bug 20810; bugfix on tor-0.2.9.4-alpha.
+      0.2.9.1-alpha. Fixes bug 20810; bugfix on 0.2.9.4-alpha.
 
   o Minor bugfixes (download scheduling):
     - Resolve a "bug" warning when considering a download schedule whose
@@ -34,7 +34,7 @@ Changes in version 0.2.9.7-rc - 2016-12-12
       SocksPort. Fixes bug 20716; bugfix on 0.2.6.3-alpha.
     - When moving a signed descriptor object from a source to an
       existing destination, free the allocated memory inside that
-      destination object. Fixes bug 20715; bugfix on tor-0.2.8.3-alpha.
+      destination object. Fixes bug 20715; bugfix on 0.2.8.3-alpha.
 
   o Minor bugfixes (memory leak, use-after-free, linux seccomp2 sandbox):
     - Fix a memory leak and use-after-free error when removing entries
@@ -383,7 +383,7 @@ Changes in version 0.2.9.4-alpha - 2016-10-17
   o Minor bugfixes (getpass):
     - Defensively fix a non-triggerable heap corruption at do_getpass()
       to protect ourselves from mistakes in the future. Fixes bug
-      #19223; bugfix on 0.2.7.3-rc. Bug found by Guido Vranken, patch
+      19223; bugfix on 0.2.7.3-rc. Bug found by Guido Vranken, patch
       by nherring.
 
   o Minor bugfixes (hidden service):
@@ -573,7 +573,7 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
     - Document the default PathsNeededToBuildCircuits value that's used
       by clients when the directory authorities don't set
       min_paths_for_circs_pct. Fixes bug 20117; bugfix on 02c320916e02
-      in tor-0.2.4.10-alpha. Patch by teor, reported by Jesse V.
+      in 0.2.4.10-alpha. Patch by teor, reported by Jesse V.
     - Fix manual for the User option: it takes a username, not a UID.
       Fixes bug 19122; bugfix on 0.0.2pre16 (the first version to have
       a manpage!).
@@ -612,12 +612,12 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
 
   o Minor bugfixes (options):
     - Check the consistency of UseEntryGuards and EntryNodes more
-      reliably. Fixes bug 20074; bugfix on tor- 0.2.4.12-alpha. Patch
+      reliably. Fixes bug 20074; bugfix on 0.2.4.12-alpha. Patch
       by teor.
     - Stop changing the configured value of UseEntryGuards on
       authorities and Tor2web clients. Fixes bug 20074; bugfix on
-      commits 51fc6799 in tor-0.1.1.16-rc and acda1735 in tor-0.2.4.3-
-      alpha. Patch by teor.
+      commits 51fc6799 in 0.1.1.16-rc and acda1735 in 0.2.4.3-alpha.
+      Patch by teor.
 
   o Minor bugfixes (Tor2web):
     - Prevent Tor2web clients running hidden services, these services
@@ -1138,7 +1138,7 @@ Changes in version 0.2.8.5-rc - 2016-07-07
   o Major bugfixes (heartbeat):
     - Fix a regression that would crash Tor when the periodic
       "heartbeat" log messages were disabled. Fixes bug 19454; bugfix on
-      tor-0.2.8.1-alpha. Reported by "kubaku".
+      0.2.8.1-alpha. Reported by "kubaku".
 
   o Minor features (build):
     - Tor now again builds with the recent OpenSSL 1.1 development
@@ -1285,7 +1285,7 @@ Changes in version 0.2.8.3-alpha - 2016-05-26
 
   o Major bugfixes (testing):
     - Fix a bug that would block 'make test-network-all' on systems where
-      IPv6 packets were lost. Fixes bug 19008; bugfix on tor-0.2.7.3-rc.
+      IPv6 packets were lost. Fixes bug 19008; bugfix on 0.2.7.3-rc.
     - Avoid "WSANOTINITIALISED" warnings in the unit tests. Fixes bug 18668;
       bugfix on 0.2.8.1-alpha.
 
