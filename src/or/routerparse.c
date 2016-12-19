@@ -1172,6 +1172,12 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   return ret;
 }
 
+MOCK_IMPL(STATIC int,
+signed_digest_equals, (const uint8_t *d1, const uint8_t *d2, size_t len))
+{
+  return tor_memeq(d1, d2, len);
+}
+
 /** Check whether the object body of the token in <b>tok</b> has a good
  * signature for <b>digest</b> using key <b>pkey</b>.
  * If <b>CST_NO_CHECK_OBJTYPE</b> is set, do not check
@@ -1214,7 +1220,8 @@ check_signature_token(const char *digest,
   }
   //  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
   //            hex_str(signed_digest,4));
-  if (tor_memneq(digest, signed_digest, digest_len)) {
+  if (! signed_digest_equals((const uint8_t *)digest,
+                             (const uint8_t *)signed_digest, digest_len)) {
     log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
     tor_free(signed_digest);
     return -1;
