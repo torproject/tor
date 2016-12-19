@@ -34,7 +34,8 @@ EXTRA_DIST+= \
 	LICENSE						\
 	Makefile.nmake					\
 	README						\
-	ReleaseNotes
+	ReleaseNotes					\
+	scripts/maint/checkSpace.pl
 
 ## This tells etags how to find mockable function definitions.
 AM_ETAGSFLAGS=--regex='{c}/MOCK_IMPL([^,]+,\W*\([a-zA-Z0-9_]+\)\W*,/\1/s'
