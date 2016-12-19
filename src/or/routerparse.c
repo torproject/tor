@@ -4122,7 +4122,7 @@ get_next_token(memarea_t *area,
 
   if (tok->tp == ERR_) {
     /* No keyword matched; call it an "K_opt" or "A_unrecognized" */
-    if (**s == '@')
+    if (*s < eol && **s == '@')
       tok->tp = A_UNKNOWN_;
     else
       tok->tp = K_OPT;
@@ -5171,7 +5171,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
         crypto_cipher_free(cipher);
 
         len = ipos_encrypted_size - 2 - client_entries_len - CIPHER_IV_LEN;
-        dec = tor_malloc(len);
+        dec = tor_malloc_zero(len + 1);
         declen = crypto_cipher_decrypt_with_iv(session_key, dec, len,
             ipos_encrypted + 2 + client_entries_len,
             ipos_encrypted_size - 2 - client_entries_len);
@@ -5203,7 +5203,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
                         "small.");
       return -1;
     }
-    dec = tor_malloc_zero(ipos_encrypted_size - CIPHER_IV_LEN - 1);
+    dec = tor_malloc_zero(ipos_encrypted_size - CIPHER_IV_LEN - 1 + 1);
 
     declen = crypto_cipher_decrypt_with_iv(descriptor_cookie, dec,
                                            ipos_encrypted_size -

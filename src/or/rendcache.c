@@ -915,7 +915,9 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     if (n_intro_points <= 0) {
       log_warn(LD_REND, "Failed to parse introduction points. Either the "
                "service has published a corrupt descriptor or you have "
-               "provided invalid authorization data.");
+               "provided invalid authorization data, or (maybe!) the "
+               "server is deliberately serving broken data in an attempt "
+               "to crash you with bug 21018.");
       goto err;
     } else if (n_intro_points > MAX_INTRO_POINTS) {
       log_warn(LD_REND, "Found too many introduction points on a hidden "
