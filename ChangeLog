@@ -1,4 +1,4 @@
-Changes in version 0.3.0.1-alpha - 2016-12-??
+Changes in version 0.3.0.1-alpha - 2016-12-19
   Tor 0.3.0.1-alpha is the first alpha release in the 0.3.0 development
   series. It strengthens Tor's link and circuit handshakes by
   identifying relays by their Ed25519 keys, improves the algorithm that
@@ -20,12 +20,11 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
     - Relays can now handle v3 ESTABLISH_INTRO cells as specified by
       prop224 aka "Next Generation Hidden Services". Service and clients
       don't use this functionality yet. Closes ticket 19043. Based on
-      initial code by
-      Alec Heifetz.
-    - Tor relays now support the HSDir version 3 protocol, so that they can
-      can store and serve v3 descriptors. This is part of the next-
-      generation onion service work detailled in proposal 224.
-      Closes ticket 17238.
+      initial code by Alec Heifetz.
+    - Tor relays now support the HSDir version 3 protocol, so that they
+      can can store and serve v3 descriptors. This is part of the next-
+      generation onion service work detailled in proposal 224. Closes
+      ticket 17238.
 
   o Major features (protocol, ed25519 identity keys):
     - Tor relays now use Ed25519 to prove their Ed25519 identities and
@@ -59,8 +58,9 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
       Ivan Markin.
 
   o Minor features (diagnostic, directory client):
-    - Warn when we find an unexpected inconsistency in directory download
-      status objects. Prevents some negative consequences of bug 20593.
+    - Warn when we find an unexpected inconsistency in directory
+      download status objects. Prevents some negative consequences of
+      bug 20593.
 
   o Minor features (directory authority):
     - Add a new authority-only AuthDirTestEd25519LinkKeys option (on by
@@ -181,14 +181,14 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
     - Change '1' to 'weight_scale' in consensus bw weights calculation
       comments, as that is reality. Closes ticket 20273. Patch
       from pastly.
-    - Correct the value for AuthDirGuardBWGuarantee in the manpage,
-      from 250 KBytes to 2 MBytes.
-      Fixes bug 20435; bugfix on tor-0.2.5.6-alpha.
+    - Correct the value for AuthDirGuardBWGuarantee in the manpage, from
+      250 KBytes to 2 MBytes. Fixes bug 20435; bugfix
+      on tor-0.2.5.6-alpha.
     - Stop the man page from incorrectly stating that HiddenServiceDir
       must already exist. Fixes 20486.
-    - Clarify that when ClientRejectInternalAddresses is enabled
-      (which is the default), multicast DNS hostnames for machines on
-      the local network (of the form *.local) are also rejected. Closes
+    - Clarify that when ClientRejectInternalAddresses is enabled (which
+      is the default), multicast DNS hostnames for machines on the local
+      network (of the form *.local) are also rejected. Closes
       ticket 17070.
 
   o Removed features:
@@ -196,9 +196,9 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
       limit for relays running on a single IP applies to authority IP
       addresses as well as to non-authority IP addresses. Closes
       ticket 20960.
-    - The UseDirectoryGuards torrc option no longer exists: all
-      users that use entry guards will also use directory guards.
-      Related to proposal 271; implements part of ticket 20831.
+    - The UseDirectoryGuards torrc option no longer exists: all users
+      that use entry guards will also use directory guards. Related to
+      proposal 271; implements part of ticket 20831.
 
   o Testing:
     - New unit tests for tor_htonll(). Closes ticket 19563. Patch
