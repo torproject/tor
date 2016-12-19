@@ -23,6 +23,14 @@ FUZZING_LIBS = \
 noinst_HEADERS += \
 	src/test/fuzz/fuzzing.h
 
+src_test_fuzz_fuzz_consensus_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_consensus.c
+src_test_fuzz_fuzz_consensus_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_consensus_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_consensus_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_consensus_LDADD = $(FUZZING_LIBS)
+
 src_test_fuzz_fuzz_descriptor_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \
 	src/test/fuzz/fuzz_descriptor.c
@@ -38,6 +46,22 @@ src_test_fuzz_fuzz_http_CPPFLAGS = $(FUZZING_CPPFLAGS)
 src_test_fuzz_fuzz_http_CFLAGS = $(FUZZING_CFLAGS)
 src_test_fuzz_fuzz_http_LDFLAGS = $(FUZZING_LDFLAG)
 src_test_fuzz_fuzz_http_LDADD = $(FUZZING_LIBS)
+
+src_test_fuzz_fuzz_hsdescv2_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_hsdescv2.c
+src_test_fuzz_fuzz_hsdescv2_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_hsdescv2_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_hsdescv2_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_hsdescv2_LDADD = $(FUZZING_LIBS)
+
+src_test_fuzz_fuzz_iptsv2_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_iptsv2.c
+src_test_fuzz_fuzz_iptsv2_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_iptsv2_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_iptsv2_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_iptsv2_LDADD = $(FUZZING_LIBS)
 
 src_test_fuzz_fuzz_extrainfo_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \
@@ -56,13 +80,84 @@ src_test_fuzz_fuzz_microdesc_LDFLAGS = $(FUZZING_LDFLAG)
 src_test_fuzz_fuzz_microdesc_LDADD = $(FUZZING_LIBS)
 
 FUZZERS = \
+	src/test/fuzz/fuzz-consensus \
 	src/test/fuzz/fuzz-descriptor \
 	src/test/fuzz/fuzz-extrainfo \
 	src/test/fuzz/fuzz-http \
+	src/test/fuzz/fuzz-hsdescv2 \
+	src/test/fuzz/fuzz-iptsv2 \
 	src/test/fuzz/fuzz-microdesc
 
-noinst_PROGRAMS += $(FUZZERS)
-fuzzers: $(FUZZERS)
+LIBFUZZER = /home/nickm/build/libfuzz/libFuzzer.a
+LIBFUZZER_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
+LIBFUZZER_CFLAGS = $(FUZZING_CFLAGS)
+LIBFUZZER_LDFLAG = $(FUZZING_LDFLAG)
+LIBFUZZER_LIBS = $(FUZZING_LIBS) $(LIBFUZZER) -lstdc++
 
+if LIBFUZZER_ENABLED
+src_test_fuzz_lf_fuzz_consensus_SOURCES = \
+	$(src_test_fuzz_fuzz_consensus_SOURCES)
+src_test_fuzz_lf_fuzz_consensus_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_consensus_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_consensus_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_consensus_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_descriptor_SOURCES = \
+	$(src_test_fuzz_fuzz_descriptor_SOURCES)
+src_test_fuzz_lf_fuzz_descriptor_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_descriptor_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_descriptor_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_descriptor_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_extrainfo_SOURCES = \
+	$(src_test_fuzz_fuzz_extrainfo_SOURCES)
+src_test_fuzz_lf_fuzz_extrainfo_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_extrainfo_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_extrainfo_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_extrainfo_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_http_SOURCES = \
+	$(src_test_fuzz_fuzz_http_SOURCES)
+src_test_fuzz_lf_fuzz_http_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_http_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_http_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_http_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_hsdescv2_SOURCES = \
+	$(src_test_fuzz_fuzz_hsdescv2_SOURCES)
+src_test_fuzz_lf_fuzz_hsdescv2_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_hsdescv2_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_hsdescv2_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_hsdescv2_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_iptsv2_SOURCES = \
+	$(src_test_fuzz_fuzz_iptsv2_SOURCES)
+src_test_fuzz_lf_fuzz_iptsv2_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_iptsv2_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_iptsv2_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_iptsv2_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_microdesc_SOURCES = \
+	$(src_test_fuzz_fuzz_microdesc_SOURCES)
+src_test_fuzz_lf_fuzz_microdesc_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_microdesc_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_microdesc_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_microdesc_LDADD = $(LIBFUZZER_LIBS)
+
+LIBFUZZER_FUZZERS = \
+	src/test/fuzz/lf-fuzz-consensus \
+	src/test/fuzz/lf-fuzz-descriptor \
+	src/test/fuzz/lf-fuzz-extrainfo \
+	src/test/fuzz/lf-fuzz-http \
+	src/test/fuzz/lf-fuzz-hsdescv2 \
+	src/test/fuzz/lf-fuzz-iptsv2 \
+	src/test/fuzz/lf-fuzz-microdesc
+
+else
+LIBFUZZER_FUZZERS =
+endif
+
+noinst_PROGRAMS += $(FUZZERS) $(LIBFUZZER_FUZZERS)
+fuzzers: $(FUZZERS) $(LIBFUZZER_FUZZERS)
 
 

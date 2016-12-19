@@ -198,6 +198,7 @@ uptime-*.json
 
 # /src/test/fuzz
 /src/test/fuzz/fuzz-*
+/src/test/fuzz/lf-fuzz-*
 
 # /src/tools/
 /src/tools/tor-checkkey

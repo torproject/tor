@@ -92,14 +92,38 @@ disable_signature_checking(void)
   MOCK(ed25519_impl_spot_check, mock_ed25519_impl_spot_check__nocheck);
 }
 
+static void
+global_init(void)
+{
+  tor_threads_init();
+  {
+    struct sipkey sipkey = { 1337, 7331 };
+    siphash_set_global_key(&sipkey);
+  }
+
+  /* Initialise logging first */
+  init_logging(1);
+  configure_backtrace_handler(get_version());
+
+  /* set up the options. */
+  mock_options = tor_malloc(sizeof(or_options_t));
+  MOCK(get_options, mock_get_options);
+
+  /* Make BUG() and nonfatal asserts crash */
+  tor_set_failed_assertion_callback(abort);
+}
+
 #ifdef LLVM_FUZZ
+int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size);
 int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
   static int initialized = 0;
   if (!initialized) {
+    global_init();
     if (fuzz_init() < 0)
       abort();
+    initialized = 1;
   }
 
   return fuzz_main(Data, Size);
@@ -112,22 +136,10 @@ main(int argc, char **argv)
 {
   size_t size;
 
-  tor_threads_init();
-  {
-    struct sipkey sipkey = { 1337, 7331 };
-    siphash_set_global_key(&sipkey);
-  }
+  global_init();
 
   /* Disable logging by default to speed up fuzzing. */
   int loglevel = LOG_ERR;
-
-  /* Initialise logging first */
-  init_logging(1);
-  configure_backtrace_handler(get_version());
-
-  /* set up the options. */
-  mock_options = tor_malloc(sizeof(or_options_t));
-  MOCK(get_options, mock_get_options);
 
   for (int i = 1; i < argc; ++i) {
     if (!strcmp(argv[i], "--warn")) {
@@ -150,9 +162,6 @@ main(int argc, char **argv)
     add_stream_log(&s, "", fileno(stdout));
   }
 
-  /* Make BUG() and nonfatal asserts crash */
-  tor_set_failed_assertion_callback(abort);
-
   if (fuzz_init() < 0)
     abort();
 
@@ -164,8 +173,10 @@ main(int argc, char **argv)
 #define MAX_FUZZ_SIZE (128*1024)
   char *input = read_file_to_str_until_eof(0, MAX_FUZZ_SIZE, &size);
   tor_assert(input);
-  fuzz_main((const uint8_t*)input, size);
+  char *raw = tor_memdup(input, size); /* Because input is nul-terminated */
   tor_free(input);
+  fuzz_main((const uint8_t*)raw, size);
+  tor_free(raw);
 
   if (fuzz_cleanup() < 0)
     abort();

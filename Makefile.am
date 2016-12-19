@@ -55,6 +55,10 @@ TEST_CPPFLAGS=-DTOR_UNIT_TESTS
 TEST_NETWORK_FLAGS=--hs-multi-client 1
 endif
 
+if LIBFUZZER_ENABLED
+TEST_CFLAGS += -fsanitize-coverage=edge -fsanitize-coverage=trace-cmp
+endif
+
 TEST_NETWORK_ALL_LOG_DIR=$(top_builddir)/test_network_log
 TEST_NETWORK_ALL_DRIVER_FLAGS=--color-tests yes
 
