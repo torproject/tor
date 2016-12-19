@@ -1,9 +1,8 @@
 [This is a draft for the 0.2.9.x release notes.  It should get folded
 into the ReleaseNotes file before stable.]
 
-[These are changes since 0.2.8.11]
-
-  Tor 0.2.9.8 is the first stable release of Tor 0.2.9.
+Changes in version 0.2.9.8 - 2016-12-19
+  Tor 0.2.9.8 is the first stable release of the Tor 0.2.9 series.
 
   The Tor 0.2.9 series makes mandatory a number of security features
   that were formerly optional. It includes support for a new
@@ -15,8 +14,15 @@ into the ReleaseNotes file before stable.]
   scheme for improved compatibility with other implementations of the
   Tor protocol.
 
-  And of course, there are other bugfixes and improvements, listed
-  here. Below are listed the changes since Tor 0.2.8.11.
+  And of course, there numerous other bugfixes and improvements.
+
+  This release also includes a fix for a medium-severity issue (bug
+  21018 below) where Tor clients could crash when attempting to visit
+  a hostile hidden service. Clients are recommended to upgrade as
+  packages become available for their systems.
+
+  Below are listed the changes since Tor 0.2.8.11.  For a list of
+  changes since 0.2.9.7-rc, see the ChangeLog file.
 
   o New system requirements:
     - When building with OpenSSL, Tor now requires version 1.0.1 or
