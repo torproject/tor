@@ -1,6 +1,78 @@
 Changes in version 0.3.0.1-alpha - 2016-??-??
 
 
+Changes in version 0.2.8.12 - 2016-12-19
+  Tor 0.2.8.12 backports a fix for a medium-severity issue (bug 21018
+  below) where Tor clients could crash when attempting to visit a
+  hostile hidden service. Clients are recommended to upgrade as packages
+  become available for their systems.
+
+  It also includes an updated list of fallback directories, backported
+  from 0.2.9.
+
+  Now that the Tor 0.2.9 series is stable, only major bugfixes will be
+  backported to 0.2.8 in the future.
+
+  o Major bugfixes (parsing, security, backported from 0.2.9.8):
+    - Fix a bug in parsing that could cause clients to read a single
+      byte past the end of an allocated region. This bug could be used
+      to cause hardened clients (built with --enable-expensive-hardening)
+      to crash if they tried to visit a hostile hidden service. Non-
+      hardened clients are only affected depending on the details of
+      their platform's memory allocator. Fixes bug 21018; bugfix on
+      0.2.0.8-alpha. Found by using libFuzzer. Also tracked as TROVE-
+      2016-12-002 and as CVE-2016-1254.
+
+  o Minor features (fallback directory list, backported from 0.2.9.8):
+    - Replace the 81 remaining fallbacks of the 100 originally
+      introduced in Tor 0.2.8.3-alpha in March 2016, with a list of 177
+      fallbacks (123 new, 54 existing, 27 removed) generated in December
+      2016. Resolves ticket 20170.
+
+  o Minor features (geoip, backported from 0.2.9.7-rc):
+    - Update geoip and geoip6 to the December 7 2016 Maxmind GeoLite2
+      Country database.
+
+
+Changes in version 0.2.9.8 - 2016-12-19
+  Tor 0.2.9.8 is the first stable release of the Tor 0.2.9 series.
+
+  The Tor 0.2.9 series makes mandatory a number of security features
+  that were formerly optional. It includes support for a new shared-
+  randomness protocol that will form the basis for next generation
+  hidden services, includes a single-hop hidden service mode for
+  optimizing .onion services that don't actually want to be hidden,
+  tries harder not to overload the directory authorities with excessive
+  downloads, and supports a better protocol versioning scheme for
+  improved compatibility with other implementations of the Tor protocol.
+
+  And of course, there are numerous other bugfixes and improvements.
+
+  This release also includes a fix for a medium-severity issue (bug
+  21018 below) where Tor clients could crash when attempting to visit a
+  hostile hidden service. Clients are recommended to upgrade as packages
+  become available for their systems.
+
+  Below are the changes since 0.2.9.7-rc. For a list of all changes
+  since 0.2.8, see the ReleaseNotes file.
+
+  o Major bugfixes (parsing, security):
+    - Fix a bug in parsing that could cause clients to read a single
+      byte past the end of an allocated region. This bug could be used
+      to cause hardened clients (built with --enable-expensive-hardening)
+      to crash if they tried to visit a hostile hidden service. Non-
+      hardened clients are only affected depending on the details of
+      their platform's memory allocator. Fixes bug 21018; bugfix on
+      0.2.0.8-alpha. Found by using libFuzzer. Also tracked as TROVE-
+      2016-12-002 and as CVE-2016-1254.
+
+  o Minor features (fallback directory list):
+    - Replace the 81 remaining fallbacks of the 100 originally
+      introduced in Tor 0.2.8.3-alpha in March 2016, with a list of 177
+      fallbacks (123 new, 54 existing, 27 removed) generated in December
+      2016. Resolves ticket 20170.
+
+
 Changes in version 0.2.9.7-rc - 2016-12-12
   Tor 0.2.9.7-rc fixes a few small bugs remaining in Tor 0.2.9.6-rc,
   including a few that had prevented tests from passing on
