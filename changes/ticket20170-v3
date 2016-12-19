@@ -1,0 +1,5 @@
+  o Minor features (fallback directory list):
+    - Replace the 81 remaining fallbacks of the 100 originally introduced
+      in Tor 0.2.8.3-alpha in March 2016, with a list of 177 fallbacks
+      (123 new, 54 existing, 27 removed) generated in December 2016.
+      Resolves ticket 20170.
