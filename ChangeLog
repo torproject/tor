@@ -9,6 +9,13 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
 
   Below are the changes since 0.2.9.8.
 
+  o Major features (guard selection algorithm):
+    - Tor's guard selection algorithm has been redesigned from the
+      ground up, to better support unreliable networks and restrictive
+      sets of entry nodes, and to better resist guard-capture attacks by
+      hostile local networks. Implements proposal 271; closes
+      ticket 19877.
+
   o Major features (next-generation hidden services):
     - Relays can now handle v3 ESTABLISH_INTRO cells as specified by
       prop224 aka "Next Generation Hidden Services". Service and clients
@@ -82,12 +89,6 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
   o Minor features (infrastructure):
     - Implement smartlist_add_strdup() function. Replaces the use of
       smartlist_add(sl, tor_strdup(str)). Closes ticket 20048.
-
-  o Minor features (unit tests):
-    - Add tests for networkstatus_compute_bw_weights_v10.
-    - Add unit tests circuit_predict_and_launch_new.
-    - Extract dummy_origin_circuit_new so it can be used by other
-      test functions.
 
   o Minor bugfix (configuration):
     - Accept non-space whitespace characters after the severity level in
@@ -218,6 +219,10 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
       from "overcaffeinated".
     - Perform the coding style checks when running the tests and fail
       when coding style violations are found. Closes ticket 5500.
+    - Add tests for networkstatus_compute_bw_weights_v10.
+    - Add unit tests circuit_predict_and_launch_new.
+    - Extract dummy_origin_circuit_new so it can be used by other
+      test functions.
 
 
 Changes in version 0.2.8.12 - 2016-12-19
