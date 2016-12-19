@@ -3,7 +3,6 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.8.12 - 2016-12-19
-
   Tor 0.2.8.12 backports a fix for a medium-severity issue (bug 21018
   below) where Tor clients could crash when attempting to visit a
   hostile hidden service. Clients are recommended to upgrade as packages
