@@ -21,14 +21,14 @@ Changes in version 0.3.0.1-alpha - 2016-12-19
       prop224 aka "Next Generation Hidden Services". Service and clients
       don't use this functionality yet. Closes ticket 19043. Based on
       initial code by Alec Heifetz.
-    - Tor relays now support the HSDir version 3 protocol, so that they
-      can can store and serve v3 descriptors. This is part of the next-
+    - Relays now support the HSDir version 3 protocol, so that they can
+      can store and serve v3 descriptors. This is part of the next-
       generation onion service work detailled in proposal 224. Closes
       ticket 17238.
 
   o Major features (protocol, ed25519 identity keys):
-    - Tor relays now use Ed25519 to prove their Ed25519 identities and
-      to one another, and to clients. This algorithm is faster and more
+    - Relays now use Ed25519 to prove their Ed25519 identities and to
+      one another, and to clients. This algorithm is faster and more
       secure than the RSA-based handshake we've been doing until now.
       Implements the second big part of proposal 220; Closes
       ticket 15055.
@@ -46,11 +46,10 @@ Changes in version 0.3.0.1-alpha - 2016-12-19
       of ticket 15056; part of proposal 220.
 
   o Major bugfixes (scheduler):
-    - Fix an issue where the ewma_cmp_cmux() function would never
-      consider circuit policies to be different. This bug caused the
-      channel scheduler to behave more or less randomly, rather than
-      preferring channels with higher-priority circuits. Fixes bug
-      20459; bugfix on 0.2.6.2-alpha.
+    - Actually compare circuit policies in ewma_cmp_cmux(). This bug
+      caused the channel scheduler to behave more or less randomly,
+      rather than preferring channels with higher-priority circuits.
+      Fixes bug 20459; bugfix on 0.2.6.2-alpha.
 
   o Minor features (controller):
     - When HSFETCH arguments cannot be parsed, say "Invalid argument"
