@@ -1,0 +1,11 @@
+  o Major bugfixes (parsing, security):
+
+    - Fix a bug in parsing that could cause clients to read a single
+      byte past the end of an allocated region. This bug could be
+      used to cause hardened clients (built with
+      --enable-expensive-hardening) to crash if they tried to visit
+      a hostile hidden service.  Non-hardened clients are only
+      affected depending on the details of their platform's memory
+      allocator. Fixes bug 21018; bugfix on 0.2.0.8-alpha. Found by
+      using libFuzzer. Also tracked as TROVE-2016-12-002 and as
+      CVE-2016-1254.

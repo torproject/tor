@@ -326,7 +326,7 @@ get_next_token(memarea_t *area,
 
   if (tok->tp == ERR_) {
     /* No keyword matched; call it an "K_opt" or "A_unrecognized" */
-    if (**s == '@')
+    if (*s < eol && **s == '@')
       tok->tp = A_UNKNOWN_;
     else
       tok->tp = K_OPT;
