@@ -75,6 +75,8 @@ def lintfile(fname):
         elif not re.search('[fF]ixes ([a-z ]*)bug (\d+); bugfix on ',
                            contents):
             warn("bugfix incant is not semicoloned")
+        elif re.search('tor-([0-9]+)', contents):
+            warn("do not prefix versions with 'tor-'")
 
 
 if __name__ == '__main__':
