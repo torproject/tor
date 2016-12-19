@@ -1,3 +1,0 @@
-  o Documentation (Onion Services):
-     - tor's man page incorrectly states that HiddenServiceDir must already
-       exist. This is not true. Fixes 20486.

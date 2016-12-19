@@ -1,4 +1,0 @@
-  o Minor bugfixes (client):
-    - When clients that use bridges start up with a cached consensus
-      on disk, they were ignoring it and downloading a new one. Now they
-      use the cached one. Fixes bug 20269; bugfix on 0.2.3.12-alpha.

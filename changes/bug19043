@@ -1,5 +1,0 @@
-  o Major features (hidden services):
-    - Relays can now handle v3 ESTABLISH_INTRO cells as specified by prop224
-      aka "Next Generation Hidden Services". Service and clients don't yet use
-      this code functionnality. It marks another step towards prop224
-      deployment. Resolves ticket 19043. Initial code by Alec Heifetz.

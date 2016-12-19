@@ -1,4 +1,0 @@
-  o Documentation (SOCKS connections):
-    - Clarify that when `ClientRejectInternalAddresses` is enabled (which is the
-      default), multicast DNS hostnames for machines on the local network (of
-      the form *.local) are also rejected.  Closes ticket 17070.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (directory downloads):
-    - Download all consensus flavors, descriptors, and authority certificates
-      when FetchUselessDescriptors is set, regardless of whether tor is a
-      directory cache or not.
-      Fixes bug 20667; bugfix on all recent tor versions.

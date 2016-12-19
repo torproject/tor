@@ -1,3 +1,0 @@
-  o Testing:
-    - New unit tests for tor_htonll(). Closes ticket 19563. Patch from
-      "overcaffeinated".

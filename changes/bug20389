@@ -1,4 +1,0 @@
-  o Minor features (controller):
-    - When HSFETCH arguments cannot be parsed, say "Invalid argument"
-      rather than "unrecognized." Closes ticket 20389; patch from
-      Ivan Markin.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (Windows):
-    - Check for getpagesize before using it to mmap files. This fixes
-      compilation in some MinGW environments. Fixes bug 20530; bugfix on
-      0.1.2.1-alpha. Reported by "ice".

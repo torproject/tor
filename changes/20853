@@ -1,4 +1,0 @@
-  o Minor bugfix (hidden services):
-    - Change ephemeral service checks in `rendservice.c` to use the new
-      `rend_service_is_ephemeral` helper function.  Fixes bug 20853; bugfix on
-      bug 20526; not in any released version of Tor.

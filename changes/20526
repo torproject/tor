@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-     - Introduce rend_service_is_ephemeral() that tells if given onion
-       service is ephemeral. Replace unclear NULL-checkings for service
-       directory with this function.
-       Closes ticket 20526.

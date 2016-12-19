@@ -1,4 +1,0 @@
-  o Minor features (infrastructure):
-    - Implement smartlist_add_strdup() function. Replaces the use of
-      smartlist_add(sl, tor_strdup(str)). Closes ticket 20048.
-

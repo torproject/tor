@@ -1,6 +1,0 @@
-  o Major bugfixes (scheduler):
-    - Fix an issue where the ewma_cmp_cmux() function would never consider
-      circuit policies to be different.  This bug caused the channel scheduler
-      to behave more or less randomly, rather than preferring channels with
-      higher-priority circuits.
-      Fixes bug 20459; bugfix on 0.2.6.2-alpha.

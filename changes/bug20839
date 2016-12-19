@@ -1,5 +1,0 @@
-  o Minor bugfixes (descriptors):
-    - Correctly recognise downloaded full descriptors as valid, even when
-      using microdescriptors as circuits. This affects clients with
-      FetchUselessDescriptors set, and may affect directory authorities.
-      Fixes bug 20839; bugfix on commit 6083276 in 0.2.3.2-alpha.

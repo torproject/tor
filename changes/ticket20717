@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor the hashing API to return negative values for errors, as is done
-      as throughout the codebase. Closes ticket 20717.

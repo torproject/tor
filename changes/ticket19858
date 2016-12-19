@@ -1,4 +1,0 @@
-  o Code simplification and refactoring (guards):
-    - Abolish all global guard context in entrynodes.c; replace with new
-      guard_selection_t structure as preparation for proposal 271.  Closes
-      ticket 19858.

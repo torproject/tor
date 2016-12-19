@@ -1,5 +1,0 @@
-  o Removed features:
-    - The AuthDirMaxServersPerAuthAddr option no longer exists: The same
-      limit for relays running on a single IP applies to authority IP
-      addresses as well as to non-authority IP addresses.  Closes ticket
-      20960.

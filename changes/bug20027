@@ -1,3 +1,0 @@
-  o Minor bugfixes (ed25519 certificates):
-    - Correctly interpret ed25519 certificates that would expire some
-      time after 19 Jan 2038. Fixes bug 20027; bugfix on 0.2.7.2-alpha.

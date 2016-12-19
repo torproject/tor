@@ -1,5 +1,0 @@
-  o Minor bugfixes (directory system):
-    - Bridges and relays now use microdescriptors (like clients do)
-      rather than old-style router descriptors. Now bridges will blend in
-      with clients in terms of the circuits they build. Fixes bug 6769;
-      bugfix on 0.2.3.2-alpha.

@@ -1,4 +1,0 @@
-  o Documentation (man page):
-    - Set the default value from 250 KBytes to 2 MBytes for
-      AuthDirGuardBWGuarantee in the man page which is what the code is using;
-      Fixes bug 20435; bugfix on tor-0.2.5.6-alpha.

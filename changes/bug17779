@@ -1,6 +1,0 @@
-  o Minor bugfixes (leak at exit):
-    - Fix a small harmless memory leak at exit of the previously unused
-      RSA->Ed identity cross-certificate. Fixes bug 17779; bugfix on
-      0.2.7.2-alpha.
-
-

@@ -1,3 +1,0 @@
-  o Minor bugfix (configuration):
-    - Accept non-space whitespace characters after the severity level in the
-      `Log` option.  Fixes bug 19965; bugfix on 0.2.1.1-alpha.
