@@ -185,7 +185,7 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
       from 250 KBytes to 2 MBytes.
       Fixes bug 20435; bugfix on tor-0.2.5.6-alpha.
     - Stop the man page from incorrectly stating that HiddenServiceDir
-      must already exist.. Fixes 20486.
+      must already exist. Fixes 20486.
     - Clarify that when ClientRejectInternalAddresses is enabled
       (which is the default), multicast DNS hostnames for machines on
       the local network (of the form *.local) are also rejected. Closes
