@@ -19,15 +19,13 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
   o Major features (next-generation hidden services):
     - Relays can now handle v3 ESTABLISH_INTRO cells as specified by
       prop224 aka "Next Generation Hidden Services". Service and clients
-      don't yet use this code functionnality. It marks another step
-      towards prop224 deployment. Resolves ticket 19043. Initial code by
+      don't use this functionality yet. Closes ticket 19043. Based on
+      initial code by
       Alec Heifetz.
-    - Tor relays now support the HSDir version 3 protocol meaning they
-      can store and serve v3 descriptors. This is part of the next
-      generation onion service work detailled in proposal 224. The tor
-      daemon also contains all the necessary code to encode and decode a
-      v3 descriptor but it's currently only used by the directory
-      subsystem. Closes ticket 17238.
+    - Tor relays now support the HSDir version 3 protocol, so that they can
+      can store and serve v3 descriptors. This is part of the next-
+      generation onion service work detailled in proposal 224.
+      Closes ticket 17238.
 
   o Major features (protocol, ed25519 identity keys):
     - Tor relays now use Ed25519 to prove their Ed25519 identities and
@@ -61,7 +59,7 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
       Ivan Markin.
 
   o Minor features (diagnostic, directory client):
-    - Warn if we find an unexpected inconsistency in directory download
+    - Warn when we find an unexpected inconsistency in directory download
       status objects. Prevents some negative consequences of bug 20593.
 
   o Minor features (directory authority):
@@ -90,27 +88,14 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
     - Implement smartlist_add_strdup() function. Replaces the use of
       smartlist_add(sl, tor_strdup(str)). Closes ticket 20048.
 
-  o Minor bugfix (configuration):
-    - Accept non-space whitespace characters after the severity level in
-      the `Log` option. Fixes bug 19965; bugfix on 0.2.1.1-alpha.
-
-  o Minor bugfix (hidden services):
-    - Change ephemeral service checks in `rendservice.c` to use the new
-      `rend_service_is_ephemeral` helper function. Fixes bug 20853;
-      bugfix on bug 20526; not in any released version of Tor.
-
-  o Minor bugfix (util):
-    - When finishing writing a file to disk, if we were about to replace
-      the file with the temporary file created before and we fail to
-      replace it, remove the temporary file so it doesn't stay on disk.
-      Fixes bug 20646; bugfix on tor-0.2.0.7-alpha. Patch by fk.
-
   o Minor bugfixes (client):
     - When clients that use bridges start up with a cached consensus on
       disk, they were ignoring it and downloading a new one. Now they
       use the cached one. Fixes bug 20269; bugfix on 0.2.3.12-alpha.
 
   o Minor bugfixes (configuration):
+    - Accept non-space whitespace characters after the severity level in
+      the `Log` option. Fixes bug 19965; bugfix on 0.2.1.1-alpha.
     - Support "TByte" and "TBytes" units in options given in bytes.
       "TB", "terabyte(s)", "TBit(s)" and "terabit(s)" were already
       supported. Fixes bug 20622; bugfix on 0.2.0.14-alpha.
@@ -125,15 +110,13 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
     - Correctly recognise downloaded full descriptors as valid, even
       when using microdescriptors as circuits. This affects clients with
       FetchUselessDescriptors set, and may affect directory authorities.
-      Fixes bug 20839; bugfix on commit 6083276 in 0.2.3.2-alpha.
+      Fixes bug 20839; bugfix on 0.2.3.2-alpha.
 
-  o Minor bugfixes (directory downloads):
+  o Minor bugfixes (directory system):
     - Download all consensus flavors, descriptors, and authority
       certificates when FetchUselessDescriptors is set, regardless of
       whether tor is a directory cache or not. Fixes bug 20667; bugfix
       on all recent tor versions.
-
-  o Minor bugfixes (directory system):
     - Bridges and relays now use microdescriptors (like clients do)
       rather than old-style router descriptors. Now bridges will blend
       in with clients in terms of the circuits they build. Fixes bug
@@ -144,9 +127,6 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
       time after 19 Jan 2038. Fixes bug 20027; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (hidden services):
-    - Stop ignoring duplicate hidden services when validating: this
-      could lead to a crash when those services were created. Fixes bug
-      20860; bugfix on 20559; not in any released version of tor.
     - Stop ignoring misconfigured hidden services. Instead, refuse to
       start tor until the misconfigurations have been corrected. Fixes
       bug 20559; bugfix on multiple commits in 0.2.7.1-alpha
@@ -156,6 +136,12 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
     - Fix a small harmless memory leak at exit of the previously unused
       RSA->Ed identity cross-certificate. Fixes bug 17779; bugfix
       on 0.2.7.2-alpha.
+
+  o Minor bugfixes (util):
+    - When finishing writing a file to disk, if we were about to replace
+      the file with the temporary file created before and we fail to
+      replace it, remove the temporary file so it doesn't stay on disk.
+      Fixes bug 20646; bugfix on tor-0.2.0.7-alpha. Patch by fk.
 
   o Minor bugfixes (Windows):
     - Check for getpagesize before using it to mmap files. This fixes
@@ -195,12 +181,12 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
     - Change '1' to 'weight_scale' in consensus bw weights calculation
       comments, as that is reality. Closes ticket 20273. Patch
       from pastly.
-    - Set the default value from 250 KBytes to 2 MBytes for
-      AuthDirGuardBWGuarantee in the man page which is what the code is
-      using; Fixes bug 20435; bugfix on tor-0.2.5.6-alpha.
-    - Stop the man page from ncorrectly stating that HiddenServiceDir
-      must already exist. This is not true. Fixes 20486.
-    - Clarify that when `ClientRejectInternalAddresses` is enabled
+    - Correct the value for AuthDirGuardBWGuarantee in the manpage,
+      from 250 KBytes to 2 MBytes.
+      Fixes bug 20435; bugfix on tor-0.2.5.6-alpha.
+    - Stop the man page from incorrectly stating that HiddenServiceDir
+      must already exist.. Fixes 20486.
+    - Clarify that when ClientRejectInternalAddresses is enabled
       (which is the default), multicast DNS hostnames for machines on
       the local network (of the form *.local) are also rejected. Closes
       ticket 17070.
@@ -210,7 +196,7 @@ Changes in version 0.3.0.1-alpha - 2016-12-??
       limit for relays running on a single IP applies to authority IP
       addresses as well as to non-authority IP addresses. Closes
       ticket 20960.
-    - The UseDirectoryGuards torrc options is no longer present: all
+    - The UseDirectoryGuards torrc option no longer exists: all
       users that use entry guards will also use directory guards.
       Related to proposal 271; implements part of ticket 20831.
 
