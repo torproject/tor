@@ -1,0 +1,37 @@
+  o Minor features (fallback directories):
+    - Select 200 fallback directories for each release.
+      Closes ticket 20881.
+    - Provide bandwidth and consensus weight for each candidate fallback in
+      updateFallbackDirs.py.
+      Closes ticket 20878.
+    - Require fallback directories to have the same address and port for
+      7 dayss. (Due to the number of relays with enough stability.) Relays
+      whose OnionOO stability timer is reset on restart by bug 18050 should
+      upgrade to Tor 0.2.8.7 or later, which has a fix for this issue.
+      Closes ticket 20880; maintains short-term fix in e220214 in
+      tor-0.2.8.2-alpha.
+    - Make it easier to change the output sort order of fallbacks.
+      Closes ticket 20822.
+    - Exclude relays affected by 20499 from the fallback list. Exclude known
+      affected versions, and any relay that delivers a stale consensus, as
+      long as that consensus expired more than 24 hours ago.
+      Closes ticket 20539.
+    - Require fallbacks to have flags for 90% of the time (weighted decaying
+      average), rather than 95%. This allows at least 73% of clients to
+      bootstrap in the first 5 seconds without contacting an authority.
+      Part of ticket 18828.
+    - Display the fingerprint when downloading consensuses from fallbacks.
+      Closes ticket 20908.
+    - Allow 3 fallbacks per operator. (This is safe now we are choosing 200
+      fallbacks.) Closes ticket 20912.
+    - Reduce the minimum fallback bandwidth to 1 MByte/s.
+      Part of #18828.
+  o Minor bugfixes (fallback directories):
+    - Stop failing when OUTPUT_COMMENTS is True in updateFallbackDirs.py.
+      Closes ticket 20877; bugfix on commit 9998343 in tor-0.2.8.3-alpha.
+    - Avoid checking fallback candidates' DirPorts if they are down in
+      OnionOO. When a relay operator has multiple relays, this prioritises
+      relays that are up over relays that are down.
+      Closes ticket #20926; bugfix on 0.2.8.3-alpha.
+    - Stop failing when a relay has no uptime data in updateFallbackDirs.py.
+      Closes ticket 20945; bugfix on tor-0.2.8.1-alpha.
