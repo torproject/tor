@@ -21,7 +21,7 @@
 #define str_hs_desc "hs-descriptor"
 #define str_desc_cert "descriptor-signing-key-cert"
 #define str_rev_counter "revision-counter"
-#define str_encrypted "encrypted"
+#define str_superencrypted "superencrypted"
 #define str_signature "signature"
 #define str_lifetime "descriptor-lifetime"
 /* Constant string value for the encrypted part of the descriptor. */
@@ -35,7 +35,7 @@
 #define str_intro_point_start "\n" str_intro_point " "
 /* Constant string value for the construction to encrypt the encrypted data
  * section. */
-#define str_enc_hsdir_data "hsdir-encrypted-data"
+#define str_enc_hsdir_data "hsdir-superencrypted-data"
 /* Prefix required to compute/verify HS desc signatures */
 #define str_desc_sig_prefix "Tor onion service descriptor sig v3"
 
@@ -56,7 +56,7 @@ static token_rule_t hs_desc_v3_token_table[] = {
   T1(str_lifetime, R3_DESC_LIFETIME, EQ(1), NO_OBJ),
   T1(str_desc_cert, R3_DESC_SIGNING_CERT, NO_ARGS, NEED_OBJ),
   T1(str_rev_counter, R3_REVISION_COUNTER, EQ(1), NO_OBJ),
-  T1(str_encrypted, R3_ENCRYPTED, NO_ARGS, NEED_OBJ),
+  T1(str_superencrypted, R3_SUPERENCRYPTED, NO_ARGS, NEED_OBJ),
   T1_END(str_signature, R3_SIGNATURE, EQ(1), NO_OBJ),
   END_OF_TABLE
 };
@@ -750,7 +750,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
                            desc->plaintext_data.revision_counter);
   }
 
-  /* Build the encrypted data section. */
+  /* Build the superencrypted data section. */
   {
     char *enc_b64_blob=NULL;
     if (encode_encrypted_data(desc, &enc_b64_blob) < 0) {
@@ -761,7 +761,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
                            "-----BEGIN MESSAGE-----\n"
                            "%s"
                            "-----END MESSAGE-----",
-                           str_encrypted, enc_b64_blob);
+                           str_superencrypted, enc_b64_blob);
     tor_free(enc_b64_blob);
   }
 
@@ -1491,7 +1491,7 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
   }
 
   /* Extract the encrypted data section. */
-  tok = find_by_keyword(tokens, R3_ENCRYPTED);
+  tok = find_by_keyword(tokens, R3_SUPERENCRYPTED);
   tor_assert(tok->object_body);
   if (strcmp(tok->object_type, "MESSAGE") != 0) {
     log_warn(LD_REND, "Service descriptor encrypted data section is invalid");
