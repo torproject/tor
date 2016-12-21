@@ -4,7 +4,6 @@ Coding conventions for Tor
 tl;dr:
 
    - Run configure with `--enable-fatal-warnings`
-   - Run `make check-spaces` to catch whitespace errors
    - Document your functions
    - Write unit tests
    - Run `make test-full` to test against all unit and integration tests.
@@ -24,7 +23,6 @@ preference)
 Did you remember...
 
    - To build your code while configured with `--enable-fatal-warnings`?
-   - To run `make check-spaces` on your code?
    - To run `make check-docs` to see whether all new options are on
      the manpage?
    - To write unit tests, as possible?
