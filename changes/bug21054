@@ -1,0 +1,5 @@
+  o Minor bugfixes (hidden service):
+    - Fix the config reload pruning of old vs new services so it actually
+      works when both ephemeral and non ephemeral services were configured
+      which lead to a BUG() stacktrace. Close #21054; Bugfix on
+      tor-0.3.0.1-alpha.
