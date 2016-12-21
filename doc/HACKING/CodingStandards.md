@@ -8,6 +8,7 @@ tl;dr:
    - Document your functions
    - Write unit tests
    - Run `make test-full` to test against all unit and integration tests.
+   - Run `make distcheck` to ensure the distribution works
    - Add a file in `changes` for your branch.
 
 Patch checklist
@@ -29,6 +30,7 @@ Did you remember...
    - To write unit tests, as possible?
    - To run `make test-full` to test against all unit and integration tests (or
      `make test-full-online` if you have a working connection to the internet)?
+   - To test that the distribution will actually work via `make distcheck`?
    - To base your code on the appropriate branch?
    - To include a file in the `changes` directory as appropriate?
 
