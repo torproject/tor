@@ -132,6 +132,9 @@ STATIC int rend_service_poison_new_single_onion_dir(
 STATIC ssize_t encode_establish_intro_cell_legacy(char *cell_body_out,
                                                   crypto_pk_t *intro_key,
                                                   char *rend_circ_nonce);
+STATIC void prune_services_on_reload(smartlist_t *old_service_list,
+                                     smartlist_t *new_service_list);
+
 #endif
 
 int num_rend_services(void);

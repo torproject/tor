@@ -545,7 +545,7 @@ rend_service_check_dir_and_add(smartlist_t *service_list,
 /* If this is a reload and there were hidden services configured before,
  * keep the introduction points that are still needed and close the
  * other ones. */
-static void
+STATIC void
 prune_services_on_reload(smartlist_t *old_service_list,
                          smartlist_t *new_service_list)
 {

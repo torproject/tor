@@ -787,6 +787,126 @@ test_single_onion_poisoning(void *arg)
   tor_free(mock_options->DataDirectory);
 }
 
+static rend_service_t *
+helper_create_rend_service(const char *path)
+{
+  rend_service_t *s = tor_malloc_zero(sizeof(rend_service_t));
+  s->ports = smartlist_new();
+  s->intro_nodes = smartlist_new();
+  s->expiring_nodes = smartlist_new();
+  if (path) {
+    s->directory = tor_strdup(path);
+  }
+  return s;
+}
+
+static void
+test_prune_services_on_reload(void *arg)
+{
+  smartlist_t *new = smartlist_new(), *old = smartlist_new();
+  /* Non ephemeral service. */
+  rend_service_t *s1 = helper_create_rend_service("SomePath");
+  /* Create a non ephemeral service with the _same_ path as so we can test the
+   * transfer of introduction point between the same services on reload. */
+  rend_service_t *s2 = helper_create_rend_service(s1->directory);
+  /* Ephemeral service (directory is NULL). */
+  rend_service_t *e1 = helper_create_rend_service(NULL);
+  rend_service_t *e2 = helper_create_rend_service(NULL);
+
+  (void) arg;
+
+  {
+    /* Add both services to the old list. */
+    smartlist_add(old, s1);
+    smartlist_add(old, e1);
+    /* Only put the non ephemeral in the new list. */
+    smartlist_add(new, s1);
+    prune_services_on_reload(old, new);
+    /* We expect that the ephemeral one is in the new list but removed from
+     * the old one. */
+    tt_int_op(smartlist_len(old), OP_EQ, 1);
+    tt_assert(smartlist_get(old, 0) == s1);
+    tt_int_op(smartlist_len(new), OP_EQ, 2);
+    tt_assert(smartlist_get(new, 0) == s1);
+    tt_assert(smartlist_get(new, 1) == e1);
+    /* Cleanup for next test. */
+    smartlist_clear(new);
+    smartlist_clear(old);
+  }
+
+  {
+    /* This test will make sure that only the ephemeral service is kept if the
+     * new list is empty. The old list should contain only the non ephemeral
+     * one. */
+    smartlist_add(old, s1);
+    smartlist_add(old, e1);
+    prune_services_on_reload(old, new);
+    tt_int_op(smartlist_len(old), OP_EQ, 1);
+    tt_assert(smartlist_get(old, 0) == s1);
+    tt_int_op(smartlist_len(new), OP_EQ, 1);
+    tt_assert(smartlist_get(new, 0) == e1);
+    /* Cleanup for next test. */
+    smartlist_clear(new);
+    smartlist_clear(old);
+  }
+
+  {
+    /* This test makes sure that the new list stays the same even from the old
+     * list being completely different. */
+    smartlist_add(new, s1);
+    smartlist_add(new, e1);
+    prune_services_on_reload(old, new);
+    tt_int_op(smartlist_len(old), OP_EQ, 0);
+    tt_int_op(smartlist_len(new), OP_EQ, 2);
+    tt_assert(smartlist_get(new, 0) == s1);
+    tt_assert(smartlist_get(new, 1) == e1);
+    /* Cleanup for next test. */
+    smartlist_clear(new);
+  }
+
+  {
+    rend_intro_point_t ip1;
+    /* This IP should be found in the s2 service after pruning. */
+    smartlist_add(s1->intro_nodes, &ip1);
+    /* Setup our list. */
+    smartlist_add(old, s1);
+    smartlist_add(new, s2);
+    prune_services_on_reload(old, new);
+    tt_int_op(smartlist_len(old), OP_EQ, 1);
+    /* Intro nodes have been moved to the s2 in theory so it must be empty. */
+    tt_int_op(smartlist_len(s1->intro_nodes), OP_EQ, 0);
+    tt_int_op(smartlist_len(new), OP_EQ, 1);
+    rend_service_t *elem = smartlist_get(new, 0);
+    tt_assert(elem);
+    tt_assert(elem == s2);
+    tt_int_op(smartlist_len(elem->intro_nodes), OP_EQ, 1);
+    tt_assert(smartlist_get(elem->intro_nodes, 0) == &ip1);
+    smartlist_clear(s1->intro_nodes);
+    smartlist_clear(s2->intro_nodes);
+    /* Cleanup for next test. */
+    smartlist_clear(new);
+    smartlist_clear(old);
+  }
+
+  {
+    /* Test two ephemeral services. */
+    smartlist_add(old, e1);
+    smartlist_add(old, e2);
+    prune_services_on_reload(old, new);
+    /* Check if they've all been transfered. */
+    tt_int_op(smartlist_len(old), OP_EQ, 0);
+    tt_int_op(smartlist_len(new), OP_EQ, 2);
+  }
+
+ done:
+  rend_service_free(s1);
+  rend_service_free(s2);
+  rend_service_free(e1);
+  rend_service_free(e2);
+  smartlist_free(new);
+  smartlist_free(old);
+}
+
 struct testcase_t hs_tests[] = {
   { "hs_rend_data", test_hs_rend_data, TT_FORK,
     NULL, NULL },
@@ -807,6 +927,9 @@ struct testcase_t hs_tests[] = {
     TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR2) },
   { "single_onion_poisoning_create_dir_both", test_single_onion_poisoning,
     TT_FORK, &passthrough_setup, (void*)(CREATE_HS_DIR1 | CREATE_HS_DIR2) },
+  { "prune_services_on_reload", test_prune_services_on_reload, TT_FORK,
+    NULL, NULL },
+
   END_OF_TESTCASES
 };
 
