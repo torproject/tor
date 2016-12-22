@@ -23,6 +23,10 @@
 /* String prefix for the signature of ESTABLISH_INTRO */
 #define ESTABLISH_INTRO_SIG_PREFIX "Tor establish-intro cell v1"
 
+int hs_check_service_private_dir(const char *username, const char *path,
+                                 unsigned int dir_group_readable,
+                                 unsigned int create);
+
 void rend_data_free(rend_data_t *data);
 rend_data_t *rend_data_dup(const rend_data_t *data);
 rend_data_t *rend_data_client_create(const char *onion_address,

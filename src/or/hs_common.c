@@ -16,6 +16,40 @@
 #include "hs_common.h"
 #include "rendcommon.h"
 
+/* Make sure that the directory for <b>service</b> is private, using the config
+ * <b>username</b>.
+ * If <b>create</b> is true:
+ *  - if the directory exists, change permissions if needed,
+ *  - if the directory does not exist, create it with the correct permissions.
+ * If <b>create</b> is false:
+ *  - if the directory exists, check permissions,
+ *  - if the directory does not exist, check if we think we can create it.
+ * Return 0 on success, -1 on failure. */
+int
+hs_check_service_private_dir(const char *username, const char *path,
+                             unsigned int dir_group_readable,
+                             unsigned int create)
+{
+  cpd_check_t check_opts = CPD_NONE;
+
+  tor_assert(path);
+
+  if (create) {
+    check_opts |= CPD_CREATE;
+  } else {
+    check_opts |= CPD_CHECK_MODE_ONLY;
+    check_opts |= CPD_CHECK;
+  }
+  if (dir_group_readable) {
+    check_opts |= CPD_GROUP_READ;
+  }
+  /* Check/create directory */
+  if (check_private_dir(path, check_opts, username) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
 /* Create a new rend_data_t for a specific given <b>version</b>.
  * Return a pointer to the newly allocated data structure. */
 static rend_data_t *

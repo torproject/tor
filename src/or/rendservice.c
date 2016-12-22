@@ -76,9 +76,6 @@ static ssize_t rend_service_parse_intro_for_v3(
 static int rend_service_check_private_dir(const or_options_t *options,
                                           const rend_service_t *s,
                                           int create);
-static int rend_service_check_private_dir_impl(const or_options_t *options,
-                                               const rend_service_t *s,
-                                               int create);
 static const smartlist_t* rend_get_service_list(
                                   const smartlist_t* substitute_service_list);
 static smartlist_t* rend_get_service_list_mutable(
@@ -1294,7 +1291,8 @@ poison_new_single_onion_hidden_service_dir_impl(const rend_service_t *service,
   }
 
   /* Make sure the directory was created before calling this function. */
-  if (BUG(rend_service_check_private_dir_impl(options, service, 0) < 0))
+  if (BUG(hs_check_service_private_dir(options->User, service->directory,
+                                       service->dir_group_readable, 0) < 0))
     return -1;
 
   poison_fname = rend_service_sos_poison_path(service);
@@ -1444,32 +1442,6 @@ rend_service_derive_key_digests(struct rend_service_t *s)
   return 0;
 }
 
-/* Implements the directory check from rend_service_check_private_dir,
- * without doing the single onion poison checks. */
-static int
-rend_service_check_private_dir_impl(const or_options_t *options,
-                                    const rend_service_t *s,
-                                    int create)
-{
-  cpd_check_t  check_opts = CPD_NONE;
-  if (create) {
-    check_opts |= CPD_CREATE;
-  } else {
-    check_opts |= CPD_CHECK_MODE_ONLY;
-    check_opts |= CPD_CHECK;
-  }
-  if (s->dir_group_readable) {
-    check_opts |= CPD_GROUP_READ;
-  }
-  /* Check/create directory */
-  if (check_private_dir(s->directory, check_opts, options->User) < 0) {
-    log_warn(LD_REND, "Checking service directory %s failed.", s->directory);
-    return -1;
-  }
-
-  return 0;
-}
-
 /** Make sure that the directory for <b>s</b> is private, using the config in
  * <b>options</b>.
  * If <b>create</b> is true:
@@ -1490,7 +1462,8 @@ rend_service_check_private_dir(const or_options_t *options,
   }
 
   /* Check/create directory */
-  if (rend_service_check_private_dir_impl(options, s, create) < 0) {
+  if (hs_check_service_private_dir(options->User, s->directory,
+                                   s->dir_group_readable, create) < 0) {
     return -1;
   }
 
