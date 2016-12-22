@@ -17,9 +17,6 @@
 /* Version 3 of the protocol (prop224). */
 #define HS_VERSION_THREE 3
 
-/* Denotes ed25519 authentication key on ESTABLISH_INTRO cell. */
-#define AUTH_KEY_ED25519 0x02
-
 /* String prefix for the signature of ESTABLISH_INTRO */
 #define ESTABLISH_INTRO_SIG_PREFIX "Tor establish-intro cell v1"
 

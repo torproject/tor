@@ -12,6 +12,7 @@
 #include "circuitlist.h"
 #include "circpathbias.h"
 
+#include "hs_intropoint.h"
 #include "hs_service.h"
 #include "hs_common.h"
 
@@ -75,7 +76,8 @@ generate_establish_intro_cell(const uint8_t *circuit_key_material,
   cell = hs_cell_establish_intro_new();
 
   /* Set AUTH_KEY_TYPE: 2 means ed25519 */
-  hs_cell_establish_intro_set_auth_key_type(cell, AUTH_KEY_ED25519);
+  hs_cell_establish_intro_set_auth_key_type(cell,
+                                            HS_INTRO_AUTH_KEY_TYPE_ED25519);
 
   /* Set AUTH_KEY_LEN field */
   /* Must also set byte-length of AUTH_KEY to match */
