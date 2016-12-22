@@ -17,6 +17,26 @@
 /* Version 3 of the protocol (prop224). */
 #define HS_VERSION_THREE 3
 
+/** Try to maintain this many intro points per service by default. */
+#define NUM_INTRO_POINTS_DEFAULT 3
+/** Maximum number of intro points per service. */
+#define NUM_INTRO_POINTS_MAX 10
+/** Number of extra intro points we launch if our set of intro nodes is empty.
+ * See proposal 155, section 4. */
+#define NUM_INTRO_POINTS_EXTRA 2
+
+/** If we can't build our intro circuits, don't retry for this long. */
+#define INTRO_CIRC_RETRY_PERIOD (60*5)
+/** Don't try to build more than this many circuits before giving up for a
+ * while.*/
+#define MAX_INTRO_CIRCS_PER_PERIOD 10
+/** How many times will a hidden service operator attempt to connect to a
+ * requested rendezvous point before giving up? */
+#define MAX_REND_FAILURES 1
+/** How many seconds should we spend trying to connect to a requested
+ * rendezvous point before giving up? */
+#define MAX_REND_TIMEOUT 30
+
 /* String prefix for the signature of ESTABLISH_INTRO */
 #define ESTABLISH_INTRO_SIG_PREFIX "Tor establish-intro cell v1"
 

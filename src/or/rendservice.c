@@ -98,23 +98,6 @@ struct rend_service_port_config_s {
   char unix_addr[FLEXIBLE_ARRAY_MEMBER];
 };
 
-/** Try to maintain this many intro points per service by default. */
-#define NUM_INTRO_POINTS_DEFAULT 3
-/** Maximum number of intro points per service. */
-#define NUM_INTRO_POINTS_MAX 10
-/** Number of extra intro points we launch if our set of intro nodes is
- * empty. See proposal 155, section 4. */
-#define NUM_INTRO_POINTS_EXTRA 2
-
-/** If we can't build our intro circuits, don't retry for this long. */
-#define INTRO_CIRC_RETRY_PERIOD (60*5)
-/** How many times will a hidden service operator attempt to connect to
- * a requested rendezvous point before giving up? */
-#define MAX_REND_FAILURES 1
-/** How many seconds should we spend trying to connect to a requested
- * rendezvous point before giving up? */
-#define MAX_REND_TIMEOUT 30
-
 /* Hidden service directory file names:
  * new file names should be added to rend_service_add_filenames_to_list()
  * for sandboxing purposes. */
