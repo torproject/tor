@@ -1,0 +1,6 @@
+  o Minor bugfixes (portability):
+    - Avoid crashing when Tor is built using headers that contain
+      CLOCK_MONOTONIC_COARSE, but then tries to run on an older kernel
+      without CLOCK_MONOTONIC_COARSE. Fixes bug 21035; bugfix on
+      0.2.9.1-alpha.
+
