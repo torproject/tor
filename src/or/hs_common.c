@@ -267,3 +267,4 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
     tor_assert(0);
   }
 }
+
