@@ -3528,13 +3528,6 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
   const char *pubkey_str = NULL;
   const char *url = args->url;
 
-  /* Don't serve v3 descriptors if next gen onion service is disabled. */
-  if (!hs_v3_protocol_is_enabled()) {
-    /* 404 is used for an unrecognized URL so send back the same. */
-    write_http_status_line(conn, 404, "Not found");
-    goto done;
-  }
-
   /* Reject unencrypted dir connections */
   if (!connection_dir_is_encrypted(conn)) {
     write_http_status_line(conn, 404, "Not found");
@@ -3749,13 +3742,6 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
    * the prop224 be deployed and thus use. */
   if (connection_dir_is_encrypted(conn) && !strcmpstart(url, "/tor/hs/")) {
     const char *msg = "HS descriptor stored successfully.";
-    /* Don't accept v3 and onward publish request if next gen onion service is
-     * disabled. */
-    if (!hs_v3_protocol_is_enabled()) {
-      /* 404 is used for an unrecognized URL so send back the same. */
-      write_http_status_line(conn, 404, "Not found");
-      goto done;
-    }
 
     /* We most probably have a publish request for an HS descriptor. */
     int code = handle_post_hs_descriptor(url, body);
