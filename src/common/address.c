@@ -159,6 +159,8 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
   tor_assert(a);
   tor_assert(sa);
 
+  /* This memset is redundant; leaving it in to avoid any future accidents,
+     however. */
   memset(a, 0, sizeof(*a));
 
   if (sa->sa_family == AF_INET) {
