@@ -26,9 +26,9 @@ struct hs_cell_establish_intro {
   u8 handshake_mac[TRUNNEL_SHA3_256_LEN];
 
   /* Signature */
-  u16 sig_len;
   /* Indicate the end of the handshake authentication data. */
   @ptr end_sig_fields;
+  u16 sig_len;
   u8 sig[sig_len];
 };
 

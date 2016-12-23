@@ -152,8 +152,9 @@ generate_establish_intro_cell(const uint8_t *circuit_key_material,
     tor_assert(encoded_len > ED25519_SIG_LEN);
 
     if (ed25519_sign_prefixed(&sig,
-                              (uint8_t*) cell_bytes_tmp,
-                              encoded_len - ED25519_SIG_LEN,
+                              cell_bytes_tmp,
+                              encoded_len -
+                                (ED25519_SIG_LEN + sizeof(cell->sig_len)),
                               ESTABLISH_INTRO_SIG_PREFIX,
                               &key_struct)) {
       log_warn(LD_BUG, "Unable to gen signature for ESTABLISH_INTRO cell.");

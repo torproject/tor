@@ -70,7 +70,11 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
     ed25519_signature_t sig_struct;
     const uint8_t *sig_array = hs_cell_establish_intro_getconstarray_sig(cell);
 
-    if (hs_cell_establish_intro_getlen_sig(cell) != sizeof(sig_struct.sig)) {
+    /* Make sure the signature length is of the right size. For EXTRA safety,
+     * we check both the size of the array and the length which must be the
+     * same. Safety first!*/
+    if (hs_cell_establish_intro_getlen_sig(cell) != sizeof(sig_struct.sig) ||
+        hs_cell_establish_intro_get_sig_len(cell) != sizeof(sig_struct.sig)) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "ESTABLISH_INTRO sig len is invalid");
       return -1;
@@ -83,7 +87,7 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
 
     const size_t sig_msg_len = cell->end_sig_fields - msg;
     int sig_mismatch = ed25519_checksig_prefixed(&sig_struct,
-                                                 (uint8_t*) msg, sig_msg_len,
+                                                 msg, sig_msg_len,
                                                  ESTABLISH_INTRO_SIG_PREFIX,
                                                  &auth_key);
     if (sig_mismatch) {
