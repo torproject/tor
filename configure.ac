@@ -170,8 +170,15 @@ AC_ARG_ENABLE(seccomp,
 AC_ARG_ENABLE(libscrypt,
      AS_HELP_STRING(--disable-libscrypt, [do not attempt to use libscrypt]))
 
-dnl check for the correct "ar" when cross-compiling
-AM_PROG_AR
+dnl check for the correct "ar" when cross-compiling.
+dnl   (AM_PROG_AR was new in automake 1.11.2, which we do not yet require,
+dnl    so kludge up a replacement for the case where it isn't there yet.)
+m4_ifdef([AM_PROG_AR],
+         [AM_PROG_AR],
+         [AN_MAKEVAR([AR], [AC_PROG_AR])
+          AN_PROGRAM([ar], [AC_PROG_AR])
+          AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL([AR], [ar], [:])])
+          AC_PROG_AR])
 
 dnl Check whether the above macro has settled for a simply named tool even
 dnl though we're cross compiling. We must do this before running AC_PROG_CC,
