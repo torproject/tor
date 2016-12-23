@@ -148,13 +148,13 @@ typedef struct hs_desc_plaintext_data_t {
    * replica which is signed by the blinded public key for that replica. */
   tor_cert_t *signing_key_cert;
 
-  /* Signing keypair which is used to sign the descriptor. Same public key
+  /* Signing public key which is used to sign the descriptor. Same public key
    * as in the signing key certificate. */
-  ed25519_keypair_t signing_kp;
+  ed25519_public_key_t signing_pubkey;
 
-  /* Blinded keypair used for this descriptor derived from the master
+  /* Blinded public key used for this descriptor derived from the master
    * identity key and generated for a specific replica number. */
-  ed25519_keypair_t blinded_kp;
+  ed25519_public_key_t blinded_pubkey;
 
   /* Revision counter is incremented at each upload, regardless of whether
    * the descriptor has changed. This avoids leaking whether the descriptor
@@ -201,6 +201,7 @@ void hs_desc_plaintext_data_free(hs_desc_plaintext_data_t *desc);
 void hs_desc_encrypted_data_free(hs_desc_encrypted_data_t *desc);
 
 int hs_desc_encode_descriptor(const hs_descriptor_t *desc,
+                              const ed25519_keypair_t *signing_kp,
                               char **encoded_out);
 
 int hs_desc_decode_descriptor(const char *encoded,
@@ -232,7 +233,7 @@ STATIC int encrypted_data_length_is_valid(size_t len);
 STATIC int cert_is_valid(tor_cert_t *cert, uint8_t type,
                          const char *log_obj_type);
 STATIC int desc_sig_is_valid(const char *b64_sig,
-                             const ed25519_keypair_t *signing_kp,
+                             const ed25519_public_key_t *signing_pubkey,
                              const char *encoded_desc, size_t encoded_len);
 STATIC void desc_intro_point_free(hs_desc_intro_point_t *ip);
 #endif /* HS_DESCRIPTOR_PRIVATE */
