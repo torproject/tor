@@ -15,6 +15,7 @@
 #include "config.h"
 #include "hs_common.h"
 #include "hs_descriptor.h"
+#include "networkstatus.h"
 #include "rendcache.h"
 
 /* Directory descriptor cache. Map indexed by blinded key. */
@@ -364,6 +365,18 @@ hs_cache_handle_oom(time_t now, size_t min_remove_bytes)
   } while (bytes_removed < min_remove_bytes);
 
   return bytes_removed;
+}
+
+/**
+ * Return the maximum size of an HS descriptor we are willing to accept as an
+ * HSDir.
+ */
+unsigned int
+hs_cache_get_max_descriptor_size(void)
+{
+  return (unsigned) networkstatus_get_param(NULL,
+                                            "HSV3MaxDescriptorSize",
+                                            HS_DESC_MAX_LEN, 1, INT32_MAX);
 }
 
 /* Initialize the hidden service cache subsystem. */

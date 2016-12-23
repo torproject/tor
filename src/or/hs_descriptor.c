@@ -15,6 +15,7 @@
 #include "ed25519_cert.h" /* Trunnel interface. */
 #include "parsecommon.h"
 #include "rendcache.h"
+#include "hs_cache.h"
 #include "torcert.h" /* tor_cert_encode_ed22519() */
 
 /* Constant string value used for the descriptor format. */
@@ -1700,8 +1701,9 @@ hs_desc_decode_plaintext(const char *encoded,
   tor_assert(encoded);
   tor_assert(plaintext);
 
+  /* Check that descriptor is within size limits. */
   encoded_len = strlen(encoded);
-  if (encoded_len >= HS_DESC_MAX_LEN) {
+  if (encoded_len >= hs_cache_get_max_descriptor_size()) {
     log_warn(LD_REND, "Service descriptor is too big (%lu bytes)",
              (unsigned long) encoded_len);
     goto err;
