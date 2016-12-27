@@ -689,6 +689,7 @@ test_decode_intro_point(void *arg)
   /* Try to decode a junk string. */
   {
     hs_descriptor_free(desc);
+    desc = NULL;
     ret = ed25519_keypair_generate(&signing_kp, 0);
     tt_int_op(ret, ==, 0);
     desc = helper_build_hs_desc(0, &signing_kp.pubkey);
