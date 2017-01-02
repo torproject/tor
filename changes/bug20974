@@ -1,0 +1,5 @@
+  o Minor bugfixes (guards, bootstrapping):
+    - When connecting to a directory guard during bootstrap, do not
+      mark the guard as successful until we receive a good-looking
+      directory response from it. Fixes bug 20974; bugfix on 0.3.0.1-alpha.
+
