@@ -1150,6 +1150,7 @@ The following options are useful only for clients (that is, if
         authentication" when IsolateSOCKSAuth is disabled, or when this
         option is set.
 
+[[SocksPortFlagsMisc]]::
     Flags are processed left to right. If flags conflict, the last flag on the
     line is used, and all earlier flags are ignored. No error is issued for
     conflicting flags.
@@ -1334,7 +1335,7 @@ The following options are useful only for clients (that is, if
 
 [[TransProxyType]] **TransProxyType** **default**|**TPROXY**|**ipfw**|**pf-divert**::
     TransProxyType may only be enabled when there is transparent proxy listener
-    enabled.
+    enabled. +
  +
     Set this to "TPROXY" if you wish to be able to use the TPROXY Linux module
     to transparently proxy connections that are configured using the TransPort
@@ -1342,19 +1343,19 @@ The following options are useful only for clients (that is, if
     for all addresses, even when the TransListenAddress is configured for an
     internal address. Detailed information on how to configure the TPROXY
     feature can be found in the Linux kernel source tree in the file
-    Documentation/networking/tproxy.txt.
+    Documentation/networking/tproxy.txt. +
  +
-    Set this option to "ipfw" to use the FreeBSD ipfw interface.
+    Set this option to "ipfw" to use the FreeBSD ipfw interface. +
  +
     On *BSD operating systems when using pf, set this to "pf-divert" to take
     advantage of +divert-to+ rules, which do not modify the packets like
     +rdr-to+ rules do. Detailed information on how to configure pf to use
     +divert-to+ rules can be found in the pf.conf(5) manual page. On OpenBSD,
     +divert-to+ is available to use on versions greater than or equal to
-    OpenBSD 4.4.
+    OpenBSD 4.4. +
  +
     Set this to "default", or leave it unconfigured, to use regular IPTables
-    on Linux, or to use pf +rdr-to+ rules on *BSD systems.
+    on Linux, or to use pf +rdr-to+ rules on *BSD systems. +
  +
     (Default: "default".)
 
@@ -1462,11 +1463,11 @@ The following options are useful only for clients (that is, if
     (Example:
     Tor2webRendezvousPoints Fastyfasty, ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
  +
-    This feature can only be used if Tor2webMode is also enabled.
+    This feature can only be used if Tor2webMode is also enabled. +
  +
     ExcludeNodes have higher priority than Tor2webRendezvousPoints,
     which means that nodes specified in ExcludeNodes will not be
-    picked as RPs.
+    picked as RPs. +
  +
     If no nodes in Tor2webRendezvousPoints are currently available for
     use, Tor will choose a random node when building HS circuits.
@@ -1494,7 +1495,7 @@ The following options are useful only for clients (that is, if
     These options override the default behavior of Tor's (**currently
     experimental**) path bias detection algorithm. To try to find broken or
     misbehaving guard nodes, Tor looks for nodes where more than a certain
-    fraction of circuits through that guard fail to get built.
+    fraction of circuits through that guard fail to get built. +
  +
     The PathBiasCircThreshold option controls how many circuits we need to build
     through a guard before we make these checks.  The PathBiasNoticeRate,
@@ -1520,14 +1521,14 @@ The following options are useful only for clients (that is, if
 
 [[PathBiasScaleUseThreshold]] **PathBiasScaleUseThreshold** __NUM__::
     Similar to the above options, these options override the default behavior
-    of Tor's (**currently experimental**) path use bias detection algorithm.
+    of Tor's (**currently experimental**) path use bias detection algorithm. +
  +
     Where as the path bias parameters govern thresholds for successfully
     building circuits, these four path use bias parameters govern thresholds
     only for circuit usage. Circuits which receive no stream usage
     are not counted by this detection algorithm. A used circuit is considered
     successful if it is capable of carrying streams or otherwise receiving
-    well-formed responses to RELAY cells.
+    well-formed responses to RELAY cells. +
  +
     By default, or if a negative value is provided for one of these options,
     Tor uses reasonable defaults from the networkstatus consensus document.
@@ -1661,7 +1662,7 @@ is non-zero):
     Tells Tor whether to run as an exit relay.  If Tor is running as a
     non-bridge server, and ExitRelay is set to 1, then Tor allows traffic to
     exit according to the ExitPolicy option (or the default ExitPolicy if
-    none is specified).
+    none is specified). +
  +
     If ExitRelay is set to 0, no traffic is allowed to
     exit, and the ExitPolicy option is ignored. +
@@ -1739,6 +1740,7 @@ is non-zero):
        reject *:6881-6999
        accept *:*
 
+[[ExitPolicyDefault]]::
     Since the default exit policy uses accept/reject *, it applies to both
     IPv4 and IPv6 addresses.
 
@@ -1775,7 +1777,7 @@ is non-zero):
     that they are in the same \'family', Tor clients will not use them in the
     same circuit. (Each server only needs to list the other servers in its
     family; it doesn't need to list itself, but it won't hurt.) Do not list
-    any bridge relay as it would compromise its concealment.
+    any bridge relay as it would compromise its concealment. +
  +
     When listing a node, it's better to list it by fingerprint than by
     nickname: fingerprints are more reliable.
@@ -1793,26 +1795,27 @@ is non-zero):
     Advertise this port to listen for connections from Tor clients and
     servers.  This option is required to be a Tor server.
     Set it to "auto" to have Tor pick a port for you. Set it to 0 to not
-    run an ORPort at all. This option can occur more than once. (Default: 0)
-+
+    run an ORPort at all. This option can occur more than once. (Default: 0) +
+ +
     Tor recognizes these flags on each ORPort:
-    **NoAdvertise**::
+    **NoAdvertise**;;
         By default, we bind to a port and tell our users about it. If
         NoAdvertise is specified, we don't advertise, but listen anyway.  This
         can be useful if the port everybody will be connecting to (for
         example, one that's opened on our firewall) is somewhere else.
-    **NoListen**::
+    **NoListen**;;
         By default, we bind to a port and tell our users about it. If
         NoListen is specified, we don't bind, but advertise anyway.  This
         can be useful if something else  (for example, a firewall's port
         forwarding configuration) is causing connections to reach us.
-    **IPv4Only**::
+    **IPv4Only**;;
         If the address is absent, or resolves to both an IPv4 and an IPv6
         address, only listen to the IPv4 address.
-    **IPv6Only**::
+    **IPv6Only**;;
         If the address is absent, or resolves to both an IPv4 and an IPv6
         address, only listen to the IPv6 address.
-+
+
+[[ORPortFlagsExclusive]]::
     For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
     IPv4Only and IPv6Only are mutually exclusive.
 
@@ -1820,8 +1823,8 @@ is non-zero):
     Bind to this IP address to listen for connections from Tor clients and
     servers. If you specify a port, bind to this port rather than the one
     specified in ORPort. (Default: 0.0.0.0) This directive can be specified
-    multiple times to bind to multiple addresses/ports.
-+
+    multiple times to bind to multiple addresses/ports. +
+ +
     This option is deprecated; you can get the same behavior with ORPort now
     that it supports NoAdvertise and explicit addresses.
 
@@ -1840,7 +1843,7 @@ is non-zero):
 [[PublishServerDescriptor]] **PublishServerDescriptor** **0**|**1**|**v3**|**bridge**,**...**::
     This option specifies which descriptors Tor will publish when acting as
     a relay. You can
-    choose multiple arguments, separated by commas.
+    choose multiple arguments, separated by commas. +
  +
     If this option is set to 0, Tor will not publish its
     descriptors to any directories. (This is useful if you're testing
@@ -2095,16 +2098,16 @@ if DirPort is non-zero):
     If this option is nonzero, advertise the directory service on this port.
     Set it to "auto" to have Tor pick a port for you.  This option can occur
     more than once, but only one advertised DirPort is supported: all
-    but one DirPort must have the **NoAdvertise** flag set. (Default: 0)
-+
+    but one DirPort must have the **NoAdvertise** flag set. (Default: 0) +
+ +
     The same flags are supported here as are supported by ORPort.
 
 [[DirListenAddress]] **DirListenAddress** __IP__[:__PORT__]::
     Bind the directory service to this address. If you specify a port, bind to
     this port rather than the one specified in DirPort.  (Default: 0.0.0.0)
     This directive can be specified multiple times  to bind to multiple
-    addresses/ports.
-+
+    addresses/ports. +
+ +
     This option is deprecated; you can get the same behavior with DirPort now
     that it supports NoAdvertise and explicit addresses.
 
@@ -2199,7 +2202,7 @@ on the public Tor network.
 [[AuthDirBadExit]] **AuthDirBadExit** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
     will be listed as bad exits in any network status document this authority
-    publishes, if **AuthDirListBadExits** is set.
+    publishes, if **AuthDirListBadExits** is set. +
  +
     (The address pattern syntax here and in the options below
     is the same as for exit policies, except that you don't need to say
@@ -2420,16 +2423,16 @@ The following options are used to configure a hidden service.
     Single Onion Service. One-hop circuits make Single Onion servers easily
     locatable, but clients remain location-anonymous. However, the fact that a
     client is accessing a Single Onion rather than a Hidden Service may be
-    statistically distinguishable.
-
+    statistically distinguishable. +
+ +
     **WARNING:** Once a hidden service directory has been used by a tor
     instance in HiddenServiceSingleHopMode, it can **NEVER** be used again for
     a hidden service. It is best practice to create a new hidden service
     directory, key, and address for each new Single Onion Service and Hidden
     Service. It is not possible to run Single Onion Services and Hidden
     Services from the same tor instance: they should be run on different
-    servers with different IP addresses.
-
+    servers with different IP addresses. +
+ +
     HiddenServiceSingleHopMode requires HiddenServiceNonAnonymousMode to be set
     to 1. Since a Single Onion service is non-anonymous, you can not configure
     a SOCKSPort on a tor instance that is running in
@@ -2587,7 +2590,7 @@ The following options are used for running a testing Tor network.
     A list of identity fingerprints, country codes, and
     address patterns of nodes to vote Exit for regardless of their
     uptime, bandwidth, or exit policy. See the **ExcludeNodes**
-    option for more information on how to specify nodes.
+    option for more information on how to specify nodes. +
  +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set. See the **ExcludeNodes** option for more
@@ -2596,7 +2599,7 @@ The following options are used for running a testing Tor network.
 [[TestingDirAuthVoteExitIsStrict]] **TestingDirAuthVoteExitIsStrict** **0**|**1** ::
     If True (1), a node will never receive the Exit flag unless it is specified
     in the **TestingDirAuthVoteExit** list, regardless of its uptime, bandwidth,
-    or exit policy.
+    or exit policy. +
  +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
@@ -2605,14 +2608,14 @@ The following options are used for running a testing Tor network.
     A list of identity fingerprints and country codes and
     address patterns of nodes to vote Guard for regardless of their
     uptime and bandwidth. See the **ExcludeNodes** option for more
-    information on how to specify nodes.
+    information on how to specify nodes. +
  +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
 
 [[TestingDirAuthVoteGuardIsStrict]] **TestingDirAuthVoteGuardIsStrict** **0**|**1** ::
     If True (1), a node will never receive the Guard flag unless it is specified
-    in the **TestingDirAuthVoteGuard** list, regardless of its uptime and bandwidth.
+    in the **TestingDirAuthVoteGuard** list, regardless of its uptime and bandwidth. +
  +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
@@ -2621,14 +2624,14 @@ The following options are used for running a testing Tor network.
     A list of identity fingerprints and country codes and
     address patterns of nodes to vote HSDir for regardless of their
     uptime and DirPort. See the **ExcludeNodes** option for more
-    information on how to specify nodes.
+    information on how to specify nodes. +
  +
     In order for this option to have any effect, **TestingTorNetwork**
     must be set.
 
 [[TestingDirAuthVoteHSDirIsStrict]] **TestingDirAuthVoteHSDirIsStrict** **0**|**1** ::
     If True (1), a node will never receive the HSDir flag unless it is specified
-    in the **TestingDirAuthVoteHSDir** list, regardless of its uptime and DirPort.
+    in the **TestingDirAuthVoteHSDir** list, regardless of its uptime and DirPort. +
  +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
