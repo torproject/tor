@@ -5313,35 +5313,35 @@ addressmap_register_auto(const char *from, const char *to,
   int from_wildcard = 0, to_wildcard = 0;
 
   *msg = "whoops, forgot the error message";
-  if (1) {
-    if (!strcmp(to, "*") || !strcmp(from, "*")) {
-      *msg = "can't remap from or to *";
-      return -1;
-    }
-    /* Detect asterisks in expressions of type: '*.example.com' */
-    if (!strncmp(from,"*.",2)) {
-      from += 2;
-      from_wildcard = 1;
-    }
-    if (!strncmp(to,"*.",2)) {
-      to += 2;
-      to_wildcard = 1;
-    }
 
-    if (to_wildcard && !from_wildcard) {
-      *msg =  "can only use wildcard (i.e. '*.') if 'from' address "
-        "uses wildcard also";
-      return -1;
-    }
-
-    if (address_is_invalid_destination(to, 1)) {
-      *msg = "destination is invalid";
-      return -1;
-    }
-
-    addressmap_register(from, tor_strdup(to), expires, addrmap_source,
-                        from_wildcard, to_wildcard);
+  if (!strcmp(to, "*") || !strcmp(from, "*")) {
+    *msg = "can't remap from or to *";
+    return -1;
   }
+  /* Detect asterisks in expressions of type: '*.example.com' */
+  if (!strncmp(from,"*.",2)) {
+    from += 2;
+    from_wildcard = 1;
+  }
+  if (!strncmp(to,"*.",2)) {
+    to += 2;
+    to_wildcard = 1;
+  }
+
+  if (to_wildcard && !from_wildcard) {
+    *msg =  "can only use wildcard (i.e. '*.') if 'from' address "
+      "uses wildcard also";
+    return -1;
+  }
+
+  if (address_is_invalid_destination(to, 1)) {
+    *msg = "destination is invalid";
+    return -1;
+  }
+
+  addressmap_register(from, tor_strdup(to), expires, addrmap_source,
+                      from_wildcard, to_wildcard);
+
   return 0;
 }
 

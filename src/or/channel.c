@@ -2318,122 +2318,120 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
       free_q = 0;
       handed_off = 0;
 
-      if (1) {
-        /* Figure out how big it is for statistical purposes */
-        cell_size = channel_get_cell_queue_entry_size(chan, q);
-        /*
-         * Okay, we have a good queue entry, try to give it to the lower
-         * layer.
-         */
-        switch (q->type) {
-          case CELL_QUEUE_FIXED:
-            if (q->u.fixed.cell) {
-              if (chan->write_cell(chan,
-                    q->u.fixed.cell)) {
-                ++flushed;
-                channel_timestamp_xmit(chan);
-                ++(chan->n_cells_xmitted);
-                chan->n_bytes_xmitted += cell_size;
-                free_q = 1;
-                handed_off = 1;
-              }
-              /* Else couldn't write it; leave it on the queue */
-            } else {
-              /* This shouldn't happen */
-              log_info(LD_CHANNEL,
-                       "Saw broken cell queue entry of type CELL_QUEUE_FIXED "
-                       "with no cell on channel %p "
-                       "(global ID " U64_FORMAT ").",
-                       chan, U64_PRINTF_ARG(chan->global_identifier));
-              /* Throw it away */
-              free_q = 1;
-              handed_off = 0;
-            }
-            break;
-         case CELL_QUEUE_PACKED:
-            if (q->u.packed.packed_cell) {
-              if (chan->write_packed_cell(chan,
-                    q->u.packed.packed_cell)) {
-                ++flushed;
-                channel_timestamp_xmit(chan);
-                ++(chan->n_cells_xmitted);
-                chan->n_bytes_xmitted += cell_size;
-                free_q = 1;
-                handed_off = 1;
-              }
-              /* Else couldn't write it; leave it on the queue */
-            } else {
-              /* This shouldn't happen */
-              log_info(LD_CHANNEL,
-                       "Saw broken cell queue entry of type CELL_QUEUE_PACKED "
-                       "with no cell on channel %p "
-                       "(global ID " U64_FORMAT ").",
-                       chan, U64_PRINTF_ARG(chan->global_identifier));
-              /* Throw it away */
-              free_q = 1;
-              handed_off = 0;
-            }
-            break;
-         case CELL_QUEUE_VAR:
-            if (q->u.var.var_cell) {
-              if (chan->write_var_cell(chan,
-                    q->u.var.var_cell)) {
-                ++flushed;
-                channel_timestamp_xmit(chan);
-                ++(chan->n_cells_xmitted);
-                chan->n_bytes_xmitted += cell_size;
-                free_q = 1;
-                handed_off = 1;
-              }
-              /* Else couldn't write it; leave it on the queue */
-            } else {
-              /* This shouldn't happen */
-              log_info(LD_CHANNEL,
-                       "Saw broken cell queue entry of type CELL_QUEUE_VAR "
-                       "with no cell on channel %p "
-                       "(global ID " U64_FORMAT ").",
-                       chan, U64_PRINTF_ARG(chan->global_identifier));
-              /* Throw it away */
-              free_q = 1;
-              handed_off = 0;
-            }
-            break;
-          default:
-            /* Unknown type, log and free it */
-            log_info(LD_CHANNEL,
-                     "Saw an unknown cell queue entry type %d on channel %p "
-                     "(global ID " U64_FORMAT "; ignoring it."
-                     "  Someone should fix this.",
-                     q->type, chan, U64_PRINTF_ARG(chan->global_identifier));
+      /* Figure out how big it is for statistical purposes */
+      cell_size = channel_get_cell_queue_entry_size(chan, q);
+      /*
+       * Okay, we have a good queue entry, try to give it to the lower
+       * layer.
+       */
+      switch (q->type) {
+      case CELL_QUEUE_FIXED:
+        if (q->u.fixed.cell) {
+          if (chan->write_cell(chan,
+                               q->u.fixed.cell)) {
+            ++flushed;
+            channel_timestamp_xmit(chan);
+            ++(chan->n_cells_xmitted);
+            chan->n_bytes_xmitted += cell_size;
             free_q = 1;
-            handed_off = 0;
-        }
-
-        /*
-         * if free_q is set, we used it and should remove the queue entry;
-         * we have to do the free down here so TOR_SIMPLEQ_REMOVE_HEAD isn't
-         * accessing freed memory
-         */
-        if (free_q) {
-          TOR_SIMPLEQ_REMOVE_HEAD(&chan->outgoing_queue, next);
-          /*
-           * ...and we handed a cell off to the lower layer, so we should
-           * update the counters.
-           */
-          ++n_channel_cells_passed_to_lower_layer;
-          --n_channel_cells_in_queues;
-          n_channel_bytes_passed_to_lower_layer += cell_size;
-          n_channel_bytes_in_queues -= cell_size;
-          channel_assert_counter_consistency();
-          /* Update the channel's queue size too */
-          chan->bytes_in_queue -= cell_size;
-          /* Finally, free q */
-          cell_queue_entry_free(q, handed_off);
-          q = NULL;
+            handed_off = 1;
+          }
+          /* Else couldn't write it; leave it on the queue */
         } else {
-          /* No cell removed from list, so we can't go on any further */
-          break;
+          /* This shouldn't happen */
+          log_info(LD_CHANNEL,
+                   "Saw broken cell queue entry of type CELL_QUEUE_FIXED "
+                   "with no cell on channel %p "
+                   "(global ID " U64_FORMAT ").",
+                   chan, U64_PRINTF_ARG(chan->global_identifier));
+          /* Throw it away */
+          free_q = 1;
+          handed_off = 0;
         }
+        break;
+      case CELL_QUEUE_PACKED:
+        if (q->u.packed.packed_cell) {
+          if (chan->write_packed_cell(chan,
+                                      q->u.packed.packed_cell)) {
+            ++flushed;
+            channel_timestamp_xmit(chan);
+            ++(chan->n_cells_xmitted);
+            chan->n_bytes_xmitted += cell_size;
+            free_q = 1;
+            handed_off = 1;
+          }
+          /* Else couldn't write it; leave it on the queue */
+        } else {
+          /* This shouldn't happen */
+          log_info(LD_CHANNEL,
+                   "Saw broken cell queue entry of type CELL_QUEUE_PACKED "
+                   "with no cell on channel %p "
+                   "(global ID " U64_FORMAT ").",
+                   chan, U64_PRINTF_ARG(chan->global_identifier));
+          /* Throw it away */
+          free_q = 1;
+          handed_off = 0;
+        }
+        break;
+      case CELL_QUEUE_VAR:
+        if (q->u.var.var_cell) {
+          if (chan->write_var_cell(chan,
+                                   q->u.var.var_cell)) {
+            ++flushed;
+            channel_timestamp_xmit(chan);
+            ++(chan->n_cells_xmitted);
+            chan->n_bytes_xmitted += cell_size;
+            free_q = 1;
+            handed_off = 1;
+          }
+          /* Else couldn't write it; leave it on the queue */
+        } else {
+          /* This shouldn't happen */
+          log_info(LD_CHANNEL,
+                   "Saw broken cell queue entry of type CELL_QUEUE_VAR "
+                   "with no cell on channel %p "
+                   "(global ID " U64_FORMAT ").",
+                   chan, U64_PRINTF_ARG(chan->global_identifier));
+          /* Throw it away */
+          free_q = 1;
+          handed_off = 0;
+        }
+        break;
+      default:
+        /* Unknown type, log and free it */
+        log_info(LD_CHANNEL,
+                 "Saw an unknown cell queue entry type %d on channel %p "
+                 "(global ID " U64_FORMAT "; ignoring it."
+                 "  Someone should fix this.",
+                 q->type, chan, U64_PRINTF_ARG(chan->global_identifier));
+        free_q = 1;
+        handed_off = 0;
+      }
+
+      /*
+       * if free_q is set, we used it and should remove the queue entry;
+       * we have to do the free down here so TOR_SIMPLEQ_REMOVE_HEAD isn't
+       * accessing freed memory
+       */
+      if (free_q) {
+        TOR_SIMPLEQ_REMOVE_HEAD(&chan->outgoing_queue, next);
+        /*
+         * ...and we handed a cell off to the lower layer, so we should
+         * update the counters.
+         */
+        ++n_channel_cells_passed_to_lower_layer;
+        --n_channel_cells_in_queues;
+        n_channel_bytes_passed_to_lower_layer += cell_size;
+        n_channel_bytes_in_queues -= cell_size;
+        channel_assert_counter_consistency();
+        /* Update the channel's queue size too */
+        chan->bytes_in_queue -= cell_size;
+        /* Finally, free q */
+        cell_queue_entry_free(q, handed_off);
+        q = NULL;
+      } else {
+        /* No cell removed from list, so we can't go on any further */
+        break;
       }
     }
   }
