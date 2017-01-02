@@ -2430,9 +2430,10 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
           /* Finally, free q */
           cell_queue_entry_free(q, handed_off);
           q = NULL;
+        } else {
+          /* No cell removed from list, so we can't go on any further */
+          break;
         }
-        /* No cell removed from list, so we can't go on any further */
-        else break;
       }
     }
   }
