@@ -1,0 +1,6 @@
+  o Minor bugfixes (unit tests):
+    - Allow the unit tests to pass even when DNS lookups of bogus
+      addresses do not fail as expected. Fixes bug 20862 and 20863;
+      bugfix on unit tests introduced in 0.2.8.1-alpha through
+      0.2.9.4-alpha.
+

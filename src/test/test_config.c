@@ -46,6 +46,8 @@
 #include "transports.h"
 #include "util.h"
 
+#include "test_helpers.h"
+
 static void
 test_config_addressmap(void *arg)
 {
@@ -4701,8 +4703,10 @@ test_config_parse_port_config__ports__ports_given(void *data)
   // Test failure when asked to parse an invalid address followed by auto
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
   config_port_invalid = mock_config_line("DNSPort", "invalidstuff!!:auto");
+  MOCK(tor_addr_lookup, mock_tor_addr_lookup__fail_on_bad_addrs);
   ret = parse_port_config(NULL, config_port_invalid, NULL, "DNS", 0,
                           "127.0.0.46", 0, 0);
+  UNMOCK(tor_addr_lookup);
   tt_int_op(ret, OP_EQ, -1);
 
   // Test success with parsing both an address and a real port

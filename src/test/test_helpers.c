@@ -128,3 +128,18 @@ dummy_origin_circuit_new(int n_cells)
   return TO_CIRCUIT(circ);
 }
 
+/** Mock-replacement. As tor_addr_lookup, but always fails on any
+ * address containing a !.  This is necessary for running the unit tests
+ * on networks where DNS hijackers think it's helpful to give answers
+ * for things like 1.2.3.4.5 or "invalidstuff!!"
+ */
+int
+mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
+                                        uint16_t family, tor_addr_t *out)
+{
+  if (name && strchr(name, '!')) {
+    return -1;
+  }
+  return tor_addr_lookup__real(name, family, out);
+}
+

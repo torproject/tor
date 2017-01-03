@@ -18,6 +18,7 @@
 #include "sandbox.h"
 #include "memarea.h"
 #include "policies.h"
+#include "test_helpers.h"
 
 #define NS_MODULE test_options
 
@@ -648,18 +649,21 @@ test_options_validate__authdir(void *ignored)
   int ret;
   char *msg;
   setup_capture_of_logs(LOG_INFO);
+  // XXXX But it _can_ exist, if you're DNS-hijacked.
   options_test_data_t *tdata = get_options_test_data(
                                  "AuthoritativeDirectory 1\n"
-                                 "Address this.should.not_exist.example.org");
+                                 "Address this.should.not!exist!.example.org");
 
   sandbox_disable_getaddrinfo_cache();
 
+  MOCK(tor_addr_lookup, mock_tor_addr_lookup__fail_on_bad_addrs);
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  UNMOCK(tor_addr_lookup);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Failed to resolve/guess local address. See logs for"
             " details.");
   expect_log_msg("Could not resolve local Address "
-            "'this.should.not_exist.example.org'. Failing.\n");
+            "'this.should.not!exist!.example.org'. Failing.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3037,6 +3041,7 @@ test_options_validate__proxy(void *ignored)
   options_test_data_t *tdata = NULL;
   sandbox_disable_getaddrinfo_cache();
   setup_capture_of_logs(LOG_WARN);
+  MOCK(tor_addr_lookup, mock_tor_addr_lookup__fail_on_bad_addrs);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
@@ -3057,6 +3062,7 @@ test_options_validate__proxy(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
+
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "HttpProxy not_so_valid!\n"
                                 );
@@ -3357,6 +3363,7 @@ test_options_validate__proxy(void *ignored)
   policies_free_all();
   // sandbox_free_getaddrinfo_cache();
   tor_free(msg);
+  UNMOCK(tor_addr_lookup);
 }
 
 static void

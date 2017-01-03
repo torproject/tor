@@ -17,6 +17,9 @@ void helper_setup_fake_routerlist(void);
 void connection_write_to_buf_mock(const char *string, size_t len,
                                   connection_t *conn, int zlib);
 
+int mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
+                                            uint16_t family, tor_addr_t *out);
+
 extern const char TEST_DESCRIPTORS[];
 
 #endif
