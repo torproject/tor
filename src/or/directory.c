@@ -1245,9 +1245,9 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   if (!port || tor_addr_is_null(&addr)) {
     static int logged_backtrace = 0;
     log_warn(LD_DIR,
-             "Cannot make an outgoing %sconnection without %sPort.",
+             "Cannot make an outgoing %sconnection without a remote %sPort.",
              use_begindir ? "begindir " : "",
-             use_begindir ? "an OR" : "a Dir");
+             use_begindir ? "OR" : "Dir");
     if (!logged_backtrace) {
       log_backtrace(LOG_INFO, LD_BUG, "Address came from");
       logged_backtrace = 1;
