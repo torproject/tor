@@ -190,7 +190,8 @@ tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
  */
 #define TOR_ADDR_BUF_LEN 48
 
-int tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out);
+MOCK_DECL(int, tor_addr_lookup,(const char *name, uint16_t family,
+                                tor_addr_t *addr_out));
 char *tor_addr_to_str_dup(const tor_addr_t *addr) ATTR_MALLOC;
 
 /** Wrapper function of fmt_addr_impl(). It does not decorate IPv6

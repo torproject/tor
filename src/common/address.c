@@ -237,8 +237,8 @@ tor_addr_make_null(tor_addr_t *a, sa_family_t family)
  *
  * Return 0 on success, -1 on failure; 1 on transient failure.
  */
-int
-tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
+MOCK_IMPL(int,
+tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
 {
   /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
    * something.
