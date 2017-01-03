@@ -1,0 +1,4 @@
+  o Minor bugfixes (documentation):
+    - Update the tor manual page to document every option that can not be
+      changed while tor is running. Fixes bug 21122; bugfix on multiple tor
+      versions.
