@@ -649,7 +649,6 @@ test_options_validate__authdir(void *ignored)
   int ret;
   char *msg;
   setup_capture_of_logs(LOG_INFO);
-  // XXXX But it _can_ exist, if you're DNS-hijacked.
   options_test_data_t *tdata = get_options_test_data(
                                  "AuthoritativeDirectory 1\n"
                                  "Address this.should.not!exist!.example.org");
