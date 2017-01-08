@@ -284,7 +284,7 @@ circuit_is_suitable_intro_point(const or_circuit_t *circ,
   return 1;
 }
 
-/* Return True if circuit is suitable for becoming an intro circuit. */
+/* Return True if circuit is suitable for being service-side intro circuit. */
 int
 hs_intro_circuit_is_suitable_for_establish_intro(const or_circuit_t *circ)
 {
@@ -446,7 +446,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
     goto send_ack;
   }
 
-  /* Once parsed, validate the cell expected format once parsed. */
+  /* Once parsed validate the cell format. */
   if (validate_introduce1_parsed_cell(parsed_cell) < 0) {
     /* Inform client that the INTRODUCE1 has bad format. */
     status = HS_INTRO_ACK_STATUS_BAD_FORMAT;
@@ -476,12 +476,10 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(service_circ),
                                    RELAY_COMMAND_INTRODUCE2,
                                    (char *) request, request_len, NULL)) {
-    /* LCOV_EXCL_START */
     log_warn(LD_REND, "Unable to send INTRODUCE2 cell to the service.");
     /* Inform the client that we can't relay the cell. */
     status = HS_INTRO_ACK_STATUS_CANT_RELAY;
     goto send_ack;
-    /* LCOV_EXCL_STOP */
   }
 
   /* Success! Send an INTRODUCE_ACK success status onto the client circuit. */
@@ -489,14 +487,12 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   ret = 0;
 
  send_ack:
-  /* Send the INTRODUCE_ACK cell to the client with a specific status. */
+  /* Send INTRODUCE_ACK or INTRODUCE_NACK to client */
   if (send_introduce_ack_cell(client_circ, status) < 0) {
-    /* LCOV_EXCL_START */
     log_warn(LD_REND, "Unable to send an INTRODUCE ACK status %d to client.",
              status);
     /* Circuit has been closed on failure of transmission. */
     goto done;
-    /* LCOV_EXCL_STOP */
   }
   if (status != HS_INTRO_ACK_STATUS_SUCCESS) {
     /* We just sent a NACK that is a non success status code so close the
@@ -533,7 +529,7 @@ circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
 {
   tor_assert(circ);
 
-  /* First of all, do we have a valid circuit to be an introduction point? */
+  /* Is this circuit an intro point circuit? */
   if (!circuit_is_suitable_intro_point(circ, "INTRODUCE1")) {
     return 0;
   }
