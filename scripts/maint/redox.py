@@ -56,7 +56,7 @@ import re
 import sys
 
 KINDS = [ "type", "field", "typedef", "define", "function", "variable",
-          "enumeration" ]
+          "enumeration", "eval" ]
 
 NODOC_LINE_RE = re.compile(r'^([^:]+):(\d+): (\w+): (.*) is not documented\.$')
 
@@ -148,12 +148,13 @@ def checkf(fn, errs):
        of tuples of things that want DOCDOC comments.  Each tuple has:
        the line number where the comment goes; the kind of thing; its name.
     """
+    comments = []
     for skip in SKIP_FILES:
         if fn.endswith(skip):
             print "Skipping",fn
             return
 
-    comments = []
+    #comments = []
     lines = [ None ]
     try:
         lines.extend( open(fn, 'r').readlines() )
