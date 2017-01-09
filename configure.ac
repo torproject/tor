@@ -50,7 +50,9 @@ AC_ARG_ENABLE(asserts-in-tests,
 AC_ARG_ENABLE(system-torrc,
    AS_HELP_STRING(--disable-system-torrc, [don't look for a system-wide torrc file]))
 AC_ARG_ENABLE(libfuzzer,
-   AS_HELP_STRING(--libfuzzer, [build extra fuzzers based on 'libfuzzer']))
+   AS_HELP_STRING(--enable-libfuzzer, [build extra fuzzers based on 'libfuzzer']))
+AC_ARG_ENABLE(oss-fuzz,
+   AS_HELP_STRING(--enable-oss-fuzz, [build extra fuzzers based on 'oss-fuzz' environment]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -60,6 +62,7 @@ AM_CONDITIONAL(UNITTESTS_ENABLED, test "x$enable_unittests" != "xno")
 AM_CONDITIONAL(COVERAGE_ENABLED, test "x$enable_coverage" = "xyes")
 AM_CONDITIONAL(DISABLE_ASSERTS_IN_UNIT_TESTS, test "x$enable_asserts_in_tests" = "xno")
 AM_CONDITIONAL(LIBFUZZER_ENABLED, test "x$enable_libfuzzer" = "xyes")
+AM_CONDITIONAL(OSS_FUZZ_ENABLED, test "x$enable_oss_fuzz" = "xyes")
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";

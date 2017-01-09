@@ -56,7 +56,8 @@ TEST_NETWORK_FLAGS=--hs-multi-client 1
 endif
 
 if LIBFUZZER_ENABLED
-TEST_CFLAGS += -fsanitize-coverage=edge -fsanitize-coverage=trace-cmp
+TEST_CFLAGS += -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div
+# not "edge"
 endif
 
 TEST_NETWORK_ALL_LOG_DIR=$(top_builddir)/test_network_log
