@@ -3711,11 +3711,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     if (ns->type != NS_TYPE_CONSENSUS) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       if (routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens, ns,
-                                               rs, 0, 0))
+                                               rs, 0, 0)) {
         smartlist_add(ns->routerstatus_list, rs);
-      else {
-        tor_free(rs->version);
-        tor_free(rs);
+      } else {
+        vote_routerstatus_free(rs);
       }
     } else {
       routerstatus_t *rs;
