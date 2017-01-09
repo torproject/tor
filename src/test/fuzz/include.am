@@ -19,6 +19,15 @@ FUZZING_LIBS = \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@
 
+oss-fuzz-prereqs:
+	src/or/libtor-testing.a \
+	src/common/libor-crypto-testing.a \
+	$(LIBKECCAK_TINY) \
+	$(LIBDONNA) \
+	src/common/libor-testing.a \
+	src/common/libor-ctime-testing.a \
+	src/common/libor-event-testing.a \
+	src/trunnel/libor-trunnel-testing.a
 
 noinst_HEADERS += \
 	src/test/fuzz/fuzzing.h
@@ -214,10 +223,10 @@ src_test_fuzz_oss_fuzz_microdesc_a_SOURCES = \
 src_test_fuzz_oss_fuzz_microdesc_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
 src_test_fuzz_oss_fuzz_microdesc_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_vrs_a_a_SOURCES = \
+src_test_fuzz_oss_fuzz_vrs_a_SOURCES = \
 	$(src_test_fuzz_fuzz_vrs_SOURCES)
-src_test_fuzz_oss_fuzz_vrs_a_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_vrs_a_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_oss_fuzz_vrs_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
+src_test_fuzz_oss_fuzz_vrs_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
 
 OSS_FUZZ_FUZZERS = \
 	src/test/fuzz/oss-fuzz-consensus.a \
@@ -234,6 +243,6 @@ endif
 
 noinst_PROGRAMS += $(FUZZERS) $(LIBFUZZER_FUZZERS)
 noinst_LIBRARIES += $(OSS_FUZZ_FUZZERS)
-oss-fuzz-fuzzers: $(OSS_FUZZ_FUZZERS)
+oss-fuzz-fuzzers:  oss-fuzz-prereqs $(OSS_FUZZ_FUZZERS)
 fuzzers: $(FUZZERS) $(LIBFUZZER_FUZZERS)
 
