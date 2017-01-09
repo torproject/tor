@@ -185,64 +185,64 @@ LIBFUZZER_FUZZERS =
 endif
 
 if OSS_FUZZ_ENABLED
-OSS_FUZZ_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
-OSS_FUZZ_CFLAGS = $(FUZZING_CFLAGS)
+LIBOSS_FUZZ_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
+LIBOSS_FUZZ_CFLAGS = $(FUZZING_CFLAGS)
 
-src_test_fuzz_oss_fuzz_consensus_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_consensus_a_SOURCES = \
 	$(src_test_fuzz_fuzz_consensus_SOURCES)
-src_test_fuzz_oss_fuzz_consensus_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_consensus_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_consensus_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_consensus_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_descriptor_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_descriptor_a_SOURCES = \
 	$(src_test_fuzz_fuzz_descriptor_SOURCES)
-src_test_fuzz_oss_fuzz_descriptor_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_descriptor_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_descriptor_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_descriptor_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_extrainfo_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_extrainfo_a_SOURCES = \
 	$(src_test_fuzz_fuzz_extrainfo_SOURCES)
-src_test_fuzz_oss_fuzz_extrainfo_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_extrainfo_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_extrainfo_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_extrainfo_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_http_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_http_a_SOURCES = \
 	$(src_test_fuzz_fuzz_http_SOURCES)
-src_test_fuzz_oss_fuzz_http_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_http_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_http_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_http_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_hsdescv2_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_hsdescv2_a_SOURCES = \
 	$(src_test_fuzz_fuzz_hsdescv2_SOURCES)
-src_test_fuzz_oss_fuzz_hsdescv2_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_hsdescv2_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_hsdescv2_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_hsdescv2_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_iptsv2_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_iptsv2_a_SOURCES = \
 	$(src_test_fuzz_fuzz_iptsv2_SOURCES)
-src_test_fuzz_oss_fuzz_iptsv2_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_iptsv2_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_iptsv2_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_iptsv2_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_microdesc_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_microdesc_a_SOURCES = \
 	$(src_test_fuzz_fuzz_microdesc_SOURCES)
-src_test_fuzz_oss_fuzz_microdesc_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_microdesc_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_microdesc_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_microdesc_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-src_test_fuzz_oss_fuzz_vrs_a_SOURCES = \
+src_test_fuzz_liboss_fuzz_vrs_a_SOURCES = \
 	$(src_test_fuzz_fuzz_vrs_SOURCES)
-src_test_fuzz_oss_fuzz_vrs_a_CPPFLAGS = $(OSS_FUZZ_CPPFLAGS)
-src_test_fuzz_oss_fuzz_vrs_a_CFLAGS = $(OSS_FUZZ_CFLAGS)
+src_test_fuzz_liboss_fuzz_vrs_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_vrs_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-OSS_FUZZ_FUZZERS = \
-	src/test/fuzz/oss-fuzz-consensus.a \
-	src/test/fuzz/oss-fuzz-descriptor.a \
-	src/test/fuzz/oss-fuzz-extrainfo.a \
-	src/test/fuzz/oss-fuzz-http.a \
-	src/test/fuzz/oss-fuzz-hsdescv2.a \
-	src/test/fuzz/oss-fuzz-iptsv2.a \
-	src/test/fuzz/oss-fuzz-microdesc.a \
-	src/test/fuzz/oss-fuzz-vrs.a
+LIBOSS_FUZZ_FUZZERS = \
+	src/test/fuzz/liboss-fuzz-consensus.a \
+	src/test/fuzz/liboss-fuzz-descriptor.a \
+	src/test/fuzz/liboss-fuzz-extrainfo.a \
+	src/test/fuzz/liboss-fuzz-http.a \
+	src/test/fuzz/liboss-fuzz-hsdescv2.a \
+	src/test/fuzz/liboss-fuzz-iptsv2.a \
+	src/test/fuzz/liboss-fuzz-microdesc.a \
+	src/test/fuzz/liboss-fuzz-vrs.a
 else
-OSS_FUZZ_FUZZERS =
+LIBOSS_FUZZ_FUZZERS =
 endif
 
 noinst_PROGRAMS += $(FUZZERS) $(LIBFUZZER_FUZZERS)
 noinst_LIBRARIES += $(OSS_FUZZ_FUZZERS)
-oss-fuzz-fuzzers:  oss-fuzz-prereqs $(OSS_FUZZ_FUZZERS)
+oss-fuzz-fuzzers:  oss-fuzz-prereqs $(SS_FUZZ_FUZZERS)
 fuzzers: $(FUZZERS) $(LIBFUZZER_FUZZERS)
 
