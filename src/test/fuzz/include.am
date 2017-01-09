@@ -19,7 +19,7 @@ FUZZING_LIBS = \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@
 
-oss-fuzz-prereqs:
+oss-fuzz-prereqs: \
 	src/or/libtor-testing.a \
 	src/common/libor-crypto-testing.a \
 	$(LIBKECCAK_TINY) \
