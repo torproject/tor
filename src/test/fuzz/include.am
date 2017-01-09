@@ -228,7 +228,7 @@ src_test_fuzz_liboss_fuzz_vrs_a_SOURCES = \
 src_test_fuzz_liboss_fuzz_vrs_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
 src_test_fuzz_liboss_fuzz_vrs_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
-LIBOSS_FUZZ_FUZZERS = \
+OSS_FUZZ_FUZZERS = \
 	src/test/fuzz/liboss-fuzz-consensus.a \
 	src/test/fuzz/liboss-fuzz-descriptor.a \
 	src/test/fuzz/liboss-fuzz-extrainfo.a \
@@ -238,11 +238,11 @@ LIBOSS_FUZZ_FUZZERS = \
 	src/test/fuzz/liboss-fuzz-microdesc.a \
 	src/test/fuzz/liboss-fuzz-vrs.a
 else
-LIBOSS_FUZZ_FUZZERS =
+OSS_FUZZ_FUZZERS =
 endif
 
 noinst_PROGRAMS += $(FUZZERS) $(LIBFUZZER_FUZZERS)
 noinst_LIBRARIES += $(OSS_FUZZ_FUZZERS)
-oss-fuzz-fuzzers:  oss-fuzz-prereqs $(SS_FUZZ_FUZZERS)
+oss-fuzz-fuzzers:  oss-fuzz-prereqs $(OSS_FUZZ_FUZZERS)
 fuzzers: $(FUZZERS) $(LIBFUZZER_FUZZERS)
 
