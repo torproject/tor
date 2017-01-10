@@ -4717,11 +4717,13 @@ microdescs_parse_from_string(const char *s, const char *eos,
         if (!strcmp(t->args[0], "ed25519")) {
           if (md->ed25519_identity_pkey) {
             log_warn(LD_DIR, "Extra ed25519 key in microdesc");
+            smartlist_free(id_lines);
             goto next;
           }
           ed25519_public_key_t k;
           if (ed25519_public_from_base64(&k, t->args[1])<0) {
             log_warn(LD_DIR, "Bogus ed25519 key in microdesc");
+            smartlist_free(id_lines);
             goto next;
           }
           md->ed25519_identity_pkey = tor_memdup(&k, sizeof(k));
