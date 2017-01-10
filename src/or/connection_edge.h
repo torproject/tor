@@ -60,7 +60,7 @@ void connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);
 void connection_exit_connect(edge_connection_t *conn);
-int connection_edge_is_rendezvous_stream(edge_connection_t *conn);
+int connection_edge_is_rendezvous_stream(const edge_connection_t *conn);
 int connection_ap_can_use_exit(const entry_connection_t *conn,
                                const node_t *exit);
 void connection_ap_expire_beginning(void);
