@@ -71,6 +71,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "shared_random.h"
 
 #ifndef _WIN32
 #include <pwd.h>
@@ -2870,6 +2871,26 @@ getinfo_helper_liveness(control_connection_t *control_conn,
   return 0;
 }
 
+/** Implementation helper for GETINFO: answers queries about shared random
+ * value. */
+static int
+getinfo_helper_sr(control_connection_t *control_conn,
+                  const char *question, char **answer,
+                  const char **errmsg)
+{
+  (void) control_conn;
+  (void) errmsg;
+
+  if (!strcmp(question, "sr/current")) {
+    *answer = sr_get_current_for_control();
+  } else if(!strcmp(question, "sr/previous")) {
+    *answer = sr_get_previous_for_control();
+  }
+  /* Else statement here is unrecognized key so do nothing. */
+
+  return 0;
+}
+
 /** Callback function for GETINFO: on a given control connection, try to
  * answer the question <b>q</b> and store the newly-allocated answer in
  * *<b>a</b>. If an internal error occurs, return -1 and optionally set
@@ -3062,6 +3083,8 @@ static const getinfo_item_t getinfo_items[] = {
        "Onion services owned by the current control connection."),
   ITEM("onions/detached", onions,
        "Onion services detached from the control connection."),
+  ITEM("sr/current", sr, "Get current shared random value."),
+  ITEM("sr/previous", sr, "Get previous shared random value."),
   { NULL, NULL, NULL, 0 }
 };
 

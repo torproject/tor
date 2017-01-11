@@ -502,6 +502,20 @@ get_vote_line_from_commit(const sr_commit_t *commit, sr_phase_t phase)
   return vote_line;
 }
 
+/* Convert a given srv object to a string for the control port. This doesn't
+ * fail and the srv object MUST be valid. */
+static char *
+srv_to_control_string(const sr_srv_t *srv)
+{
+  char *srv_str;
+  char srv_hash_encoded[SR_SRV_VALUE_BASE64_LEN + 1];
+  tor_assert(srv);
+
+  sr_srv_encode(srv_hash_encoded, sizeof(srv_hash_encoded), srv);
+  tor_asprintf(&srv_str, "%s", srv_hash_encoded);
+  return srv_str;
+}
+
 /* Return a heap allocated string that contains the given <b>srv</b> string
  * representation formatted for a networkstatus document using the
  * <b>key</b> as the start of the line. This doesn't return NULL. */
@@ -1346,6 +1360,38 @@ sr_save_and_cleanup(void)
 {
   sr_state_save();
   sr_cleanup();
+}
+
+/* Return the current SRV string representation for the control port. Return a
+ * newly allocated string on success containing the value else "" if not found
+ * or if we don't have a valid consensus yet. */
+char *
+sr_get_current_for_control(void)
+{
+  char *srv_str;
+  const networkstatus_t *c = networkstatus_get_latest_consensus();
+  if (c && c->sr_info.current_srv) {
+    srv_str = srv_to_control_string(c->sr_info.current_srv);
+  } else {
+    srv_str = tor_strdup("");
+  }
+  return srv_str;
+}
+
+/* Return the previous SRV string representation for the control port. Return
+ * a newly allocated string on success containing the value else "" if not
+ * found or if we don't have a valid consensus yet. */
+char *
+sr_get_previous_for_control(void)
+{
+  char *srv_str;
+  const networkstatus_t *c = networkstatus_get_latest_consensus();
+  if (c && c->sr_info.previous_srv) {
+    srv_str = srv_to_control_string(c->sr_info.previous_srv);
+  } else {
+    srv_str = tor_strdup("");
+  }
+  return srv_str;
 }
 
 #ifdef TOR_UNIT_TESTS

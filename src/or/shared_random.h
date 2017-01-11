@@ -129,6 +129,10 @@ const char *sr_commit_get_rsa_fpr(const sr_commit_t *commit)
 void sr_compute_srv(void);
 sr_commit_t *sr_generate_our_commit(time_t timestamp,
                                     const authority_cert_t *my_rsa_cert);
+
+char *sr_get_current_for_control(void);
+char *sr_get_previous_for_control(void);
+
 #ifdef SHARED_RANDOM_PRIVATE
 
 /* Encode */
