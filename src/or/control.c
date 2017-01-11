@@ -2883,7 +2883,7 @@ getinfo_helper_sr(control_connection_t *control_conn,
 
   if (!strcmp(question, "sr/current")) {
     *answer = sr_get_current_for_control();
-  } else if(!strcmp(question, "sr/previous")) {
+  } else if (!strcmp(question, "sr/previous")) {
     *answer = sr_get_previous_for_control();
   }
   /* Else statement here is unrecognized key so do nothing. */
