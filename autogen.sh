@@ -1,12 +1,12 @@
 #!/bin/sh
 
 if [ -x "`which autoreconf 2>/dev/null`" ] ; then
-  opt="-if"
+  opt="-i -f -W all,error"
 
   for i in $@; do
     case "$i" in
       -v)
-        opt=$opt"v"
+        opt="${opt} -v"
         ;;
     esac
   done

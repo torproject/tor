@@ -11,7 +11,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # "foreign" means we don't follow GNU package layout standards
 # "1.11" means we require automake version 1.11 or newer
 # "subdir-objects" means put .o files in the same directory as the .c files
-AM_INIT_AUTOMAKE([foreign 1.11 subdir-objects])
+AM_INIT_AUTOMAKE([foreign 1.11 subdir-objects -Wall -Werror])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
@@ -170,11 +170,15 @@ AC_ARG_ENABLE(seccomp,
 AC_ARG_ENABLE(libscrypt,
      AS_HELP_STRING(--disable-libscrypt, [do not attempt to use libscrypt]))
 
-dnl check for the correct "ar" when cross-compiling
-AN_MAKEVAR([AR], [AC_PROG_AR])
-AN_PROGRAM([ar], [AC_PROG_AR])
-AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL([AR], [ar], [ar])])
-AC_PROG_AR
+dnl check for the correct "ar" when cross-compiling.
+dnl   (AM_PROG_AR was new in automake 1.11.2, which we do not yet require,
+dnl    so kludge up a replacement for the case where it isn't there yet.)
+m4_ifdef([AM_PROG_AR],
+         [AM_PROG_AR],
+         [AN_MAKEVAR([AR], [AC_PROG_AR])
+          AN_PROGRAM([ar], [AC_PROG_AR])
+          AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL([AR], [ar], [:])])
+          AC_PROG_AR])
 
 dnl Check whether the above macro has settled for a simply named tool even
 dnl though we're cross compiling. We must do this before running AC_PROG_CC,
@@ -194,13 +198,11 @@ AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
+AC_PROG_SED
 
 AC_ARG_VAR([PERL], [path to Perl binary])
 AC_CHECK_PROGS([PERL], [perl])
 AM_CONDITIONAL(USE_PERL, [test "x$ac_cv_prog_PERL" != "x"])
-
-dnl autoconf 2.59 appears not to support AC_PROG_SED
-AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
 
 dnl check for asciidoc and a2x
 AC_PATH_PROG([ASCIIDOC], [asciidoc], none)
@@ -426,7 +428,7 @@ AC_CHECK_FUNCS(
 # checks. So we should only probe for those functions if we are sure that we
 # are not targetting OSX 10.11 or earlier.
 AC_MSG_CHECKING([for a pre-Sierra OSX build target])
-AC_TRY_COMPILE([
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #ifdef __APPLE__
 #  include <AvailabilityMacros.h>
 #  ifndef MAC_OS_X_VERSION_10_12
@@ -438,7 +440,7 @@ AC_TRY_COMPILE([
 #    endif
 #  endif
 #endif
-], [],
+]], [[]])],
    [on_macos_pre_10_12=no ; AC_MSG_RESULT([no])],
    [on_macos_pre_10_12=yes; AC_MSG_RESULT([yes])])
 
@@ -638,16 +640,16 @@ LIBS="$TOR_OPENSSL_LIBS $LIBS"
 LDFLAGS="$TOR_LDFLAGS_openssl $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_openssl $CPPFLAGS"
 
-AC_TRY_COMPILE([
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
 #if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x1000100fL
 #error "too old"
 #endif
-   ], [],
+   ]], [[]])],
    [ : ],
-   [ AC_ERROR([OpenSSL is too old. We require 1.0.1 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
+   [ AC_MSG_ERROR([OpenSSL is too old. We require 1.0.1 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
 
-AC_TRY_COMPILE([
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 #if defined(OPENSSL_NO_EC) || defined(OPENSSL_NO_ECDH) || defined(OPENSSL_NO_ECDSA)
@@ -656,9 +658,9 @@ AC_TRY_COMPILE([
 #if !defined(NID_X9_62_prime256v1) || !defined(NID_secp224r1)
 #error "curves unavailable"
 #endif
-   ], [],
+   ]], [[]])],
    [ : ],
-   [ AC_ERROR([OpenSSL is built without full ECC support, including curves P256 and P224. You can specify a path to one with ECC support with --with-openssl-dir.]) ])
+   [ AC_MSG_ERROR([OpenSSL is built without full ECC support, including curves P256 and P224. You can specify a path to one with ECC support with --with-openssl-dir.]) ])
 
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
@@ -1463,9 +1465,9 @@ AC_CHECK_FUNC(gethostbyname_r, [
   AC_MSG_CHECKING([how many arguments gethostbyname_r() wants])
   OLD_CFLAGS=$CFLAGS
   CFLAGS="$CFLAGS $MY_CPPFLAGS $MY_THREAD_CPPFLAGS $MY_CFLAGS"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <netdb.h>
-  ], [[
+  ]], [[
     char *cp1, *cp2;
     struct hostent *h1, *h2;
     int i1, i2;
@@ -1476,27 +1478,27 @@ AC_CHECK_FUNC(gethostbyname_r, [
      [Define this if gethostbyname_r takes 6 arguments])
     AC_MSG_RESULT(6)
   ], [
-    AC_TRY_COMPILE([
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <netdb.h>
-    ], [
+    ]], [[
       char *cp1, *cp2;
       struct hostent *h1;
       int i1, i2;
       (void)gethostbyname_r(cp1,h1,cp2,i1,&i2);
-    ], [
+    ]])], [
       AC_DEFINE(HAVE_GETHOSTBYNAME_R)
       AC_DEFINE(HAVE_GETHOSTBYNAME_R_5_ARG, 1,
         [Define this if gethostbyname_r takes 5 arguments])
       AC_MSG_RESULT(5)
    ], [
-      AC_TRY_COMPILE([
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <netdb.h>
-     ], [
+     ]], [[
        char *cp1;
        struct hostent *h1;
        struct hostent_data hd;
        (void) gethostbyname_r(cp1,h1,&hd);
-     ], [
+     ]])], [
        AC_DEFINE(HAVE_GETHOSTBYNAME_R)
        AC_DEFINE(HAVE_GETHOSTBYNAME_R_3_ARG, 1,
          [Define this if gethostbyname_r takes 3 arguments])
