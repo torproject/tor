@@ -1826,43 +1826,24 @@ router_is_already_dir_fetching(const tor_addr_port_t *ap, int serverdesc,
   return 0;
 }
 
-/* Check if we already have a directory fetch from ds, for serverdesc
- * (including extrainfo) or microdesc documents.
+/* Check if we already have a directory fetch from the ipv4 or ipv6
+ * router, for serverdesc (including extrainfo) or microdesc documents.
  * If so, return 1, if not, return 0.
  */
 static int
-router_is_already_dir_fetching_ds(const dir_server_t *ds,
-                                  int serverdesc,
-                                  int microdesc)
+router_is_already_dir_fetching_(uint32_t ipv4_addr,
+                                const tor_addr_t *ipv6_addr,
+                                uint16_t dir_port,
+                                int serverdesc,
+                                int microdesc)
 {
   tor_addr_port_t ipv4_dir_ap, ipv6_dir_ap;
 
   /* Assume IPv6 DirPort is the same as IPv4 DirPort */
-  tor_addr_from_ipv4h(&ipv4_dir_ap.addr, ds->addr);
-  ipv4_dir_ap.port = ds->dir_port;
-  tor_addr_copy(&ipv6_dir_ap.addr, &ds->ipv6_addr);
-  ipv6_dir_ap.port = ds->dir_port;
-
-  return (router_is_already_dir_fetching(&ipv4_dir_ap, serverdesc, microdesc)
-       || router_is_already_dir_fetching(&ipv6_dir_ap, serverdesc, microdesc));
-}
-
-/* Check if we already have a directory fetch from rs, for serverdesc
- * (including extrainfo) or microdesc documents.
- * If so, return 1, if not, return 0.
- */
-static int
-router_is_already_dir_fetching_rs(const routerstatus_t *rs,
-                                  int serverdesc,
-                                  int microdesc)
-{
-  tor_addr_port_t ipv4_dir_ap, ipv6_dir_ap;
-
-  /* Assume IPv6 DirPort is the same as IPv4 DirPort */
-  tor_addr_from_ipv4h(&ipv4_dir_ap.addr, rs->addr);
-  ipv4_dir_ap.port = rs->dir_port;
-  tor_addr_copy(&ipv6_dir_ap.addr, &rs->ipv6_addr);
-  ipv6_dir_ap.port = rs->dir_port;
+  tor_addr_from_ipv4h(&ipv4_dir_ap.addr, ipv4_addr);
+  ipv4_dir_ap.port = dir_port;
+  tor_addr_copy(&ipv6_dir_ap.addr, ipv6_addr);
+  ipv6_dir_ap.port = dir_port;
 
   return (router_is_already_dir_fetching(&ipv4_dir_ap, serverdesc, microdesc)
        || router_is_already_dir_fetching(&ipv6_dir_ap, serverdesc, microdesc));
@@ -2060,9 +2041,11 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
       continue;
     }
 
-    if (router_is_already_dir_fetching_rs(status,
-                                          no_serverdesc_fetching,
-                                          no_microdesc_fetching)) {
+    if (router_is_already_dir_fetching_(status->addr,
+                                        &status->ipv6_addr,
+                                        status->dir_port,
+                                        no_serverdesc_fetching,
+                                        no_microdesc_fetching)) {
       ++n_busy;
       continue;
     }
@@ -2213,8 +2196,11 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
         continue;
       }
 
-      if (router_is_already_dir_fetching_ds(d, no_serverdesc_fetching,
-                                            no_microdesc_fetching)) {
+      if (router_is_already_dir_fetching_(d->addr,
+                                          &d->ipv6_addr,
+                                          d->dir_port,
+                                          no_serverdesc_fetching,
+                                          no_microdesc_fetching)) {
         ++n_busy;
         continue;
       }
