@@ -1967,6 +1967,21 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             escaped(reason),
             conn->base_.purpose);
 
+  if (conn->guard_state) {
+    /* we count the connection as successful once we can read from it.  We do
+     * not, however, delay use of the circuit here, since it's just for a
+     * one-hop directory request. */
+    /* XXXXprop271 note that this will not do the right thing for other
+     * waiting circuits that would be triggered by this circuit becoming
+     * complete/usable. But that's ok, I think.
+     */
+    /* XXXXprop271 should we count this as only a partial success somehow?
+    */
+    entry_guard_succeeded(&conn->guard_state);
+    circuit_guard_state_free(conn->guard_state);
+    conn->guard_state = NULL;
+  }
+
   /* now check if it's got any hints for us about our IP address. */
   if (conn->dirconn_direct) {
     char *guess = http_get_header(headers, X_ADDRESS_HEADER);
@@ -2577,21 +2592,6 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   size_t max_size;
   tor_assert(conn);
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
-
-  if (conn->guard_state) {
-    /* we count the connection as successful once we can read from it.  We do
-     * not, however, delay use of the circuit here, since it's just for a
-     * one-hop directory request. */
-    /* XXXXprop271 note that this will not do the right thing for other
-     * waiting circuits that would be triggered by this circuit becoming
-     * complete/usable. But that's ok, I think.
-     */
-    /* XXXXprop271 should we count this as only a partial success somehow?
-    */
-    entry_guard_succeeded(&conn->guard_state);
-    circuit_guard_state_free(conn->guard_state);
-    conn->guard_state = NULL;
-  }
 
   /* Directory clients write, then read data until they receive EOF;
    * directory servers read data until they get an HTTP command, then
