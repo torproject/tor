@@ -7858,7 +7858,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_CSV: type = "CommaList"; break;
         case CONFIG_TYPE_CSV_INTERVAL: type = "TimeIntervalCommaList"; break;
         case CONFIG_TYPE_LINELIST: type = "LineList"; break;
-        case CONFIG_TYPE_LINELIST_S: type = "Dependant"; break;
+        case CONFIG_TYPE_LINELIST_S: type = "Dependent"; break;
         case CONFIG_TYPE_LINELIST_V: type = "Virtual"; break;
         default:
         case CONFIG_TYPE_OBSOLETE:
