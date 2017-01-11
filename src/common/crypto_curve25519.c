@@ -80,7 +80,7 @@ curve25519_impl(uint8_t *output, const uint8_t *secret,
 /**
  * Helper function: Multiply the scalar "secret" by the Curve25519
  * basepoint (X=9), and store the result in "output".  Return 0 on
- * success, -1 on false.
+ * success, -1 on failure.
  */
 STATIC int
 curve25519_basepoint_impl(uint8_t *output, const uint8_t *secret)
