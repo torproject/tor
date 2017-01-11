@@ -107,7 +107,7 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
   dir_conn.base_.inbuf = buf_new_with_data((char*)stdin_buf, data_size);
   if (!dir_conn.base_.inbuf) {
     log_debug(LD_GENERAL, "Zero-Length-Input\n");
-    return 0;
+    goto done;
   }
 
   /* Parse the headers */
@@ -122,6 +122,7 @@ fuzz_main(const uint8_t *stdin_buf, size_t data_size)
 
   log_debug(LD_GENERAL, "Result:\n%d\n", rv);
 
+ done:
   /* Reset. */
   tor_free(dir_conn.base_.address);
   buf_free(dir_conn.base_.inbuf);
