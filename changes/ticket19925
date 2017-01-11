@@ -1,0 +1,3 @@
+  o Minor features (controller):
+    - Add GETINFO sr/current and sr/previous keys, to expose shared-
+      random values to the controller. Closes ticket 19925.
