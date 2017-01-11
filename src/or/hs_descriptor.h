@@ -54,7 +54,7 @@
   HS_DESC_ENCRYPTED_SALT_LEN + \
   HS_DESC_PLAINTEXT_PADDING_MULTIPLE + DIGEST256_LEN
 /* Maximum length in bytes of a full hidden service descriptor. */
-#define HS_DESC_MAX_LEN 32768 // XXX justify
+#define HS_DESC_MAX_LEN 50000 /* 50kb max size */
 /* The minimum amount of fields a descriptor should contain. The parsing of
  * the fields are version specific so the only required field, as a generic
  * view of a descriptor, is 1 that is the version field. */

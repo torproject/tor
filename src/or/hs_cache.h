@@ -44,6 +44,8 @@ void hs_cache_free_all(void);
 void hs_cache_clean_as_dir(time_t now);
 size_t hs_cache_handle_oom(time_t now, size_t min_remove_bytes);
 
+unsigned int hs_cache_get_max_descriptor_size(void);
+
 /* Store and Lookup function. They are version agnostic that is depending on
  * the requested version of the descriptor, it will be re-routed to the
  * right function. */
