@@ -390,7 +390,8 @@ GENERAL OPTIONS
     file readable by the default GID. (Default: 0)
 
 [[DataDirectory]] **DataDirectory** __DIR__::
-    Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
+    Store working data in DIR. Can not be changed while tor is running.
+    (Default: @LOCALSTATEDIR@/lib/tor)
 
 [[DataDirectoryGroupReadable]] **DataDirectoryGroupReadable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read the
@@ -464,7 +465,8 @@ GENERAL OPTIONS
     not supported. We believe that this feature works on modern Gnu/Linux
     distributions, and that it should work on *BSD systems (untested). This
     option requires that you start your Tor as root, and you should use the
-    **User** option to properly reduce Tor's privileges. (Default: 0)
+    **User** option to properly reduce Tor's privileges.
+    Can not be changed while tor is running. (Default: 0)
 
 [[DisableDebuggerAttachment]] **DisableDebuggerAttachment** **0**|**1**::
    If set to 1, Tor will attempt to prevent basic debugging attachment attempts
@@ -539,7 +541,20 @@ GENERAL OPTIONS
 [[Sandbox]] **Sandbox** **0**|**1**::
     If set to 1, Tor will run securely through the use of a syscall sandbox.
     Otherwise the sandbox will be disabled. The option is currently an
-    experimental feature. (Default: 0)
+    experimental feature. Can not be changed while tor is running.
+
+    When the Sandbox is 1, the following options can not be changed when tor
+    is running:
+    Address
+    ConnLimit
+    CookieAuthFile
+    DirPortFrontPage
+    ExtORPortCookieAuthFile
+    Logs
+    ServerDNSResolvConfFile
+    Tor must remain in client or server mode (some changes to ClientOnly and
+    ORPort are not allowed).
+    (Default: 0)
 
 [[Socks4Proxy]] **Socks4Proxy** __host__[:__port__]::
     Tor will make all OR connections through the SOCKS 4 proxy at host:port
@@ -627,7 +642,7 @@ GENERAL OPTIONS
 
 [[PidFile]] **PidFile** __FILE__::
     On startup, write our PID to FILE. On clean shutdown, remove
-    FILE.
+    FILE. Can not be changed while tor is running.
 
 [[ProtocolWarnings]] **ProtocolWarnings** **0**|**1**::
     If 1, Tor will log with severity \'warn' various cases of other parties not
@@ -643,6 +658,7 @@ GENERAL OPTIONS
 [[RunAsDaemon]] **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect
     on Windows; instead you should use the --service command-line option.
+    Can not be changed while tor is running.
     (Default: 0)
 
 [[LogTimeGranularity]] **LogTimeGranularity** __NUM__::
@@ -659,7 +675,8 @@ GENERAL OPTIONS
 
 [[SyslogIdentityTag]] **SyslogIdentityTag** __tag__::
     When logging to syslog, adds a tag to the syslog identity such that
-    log entries are marked with "Tor-__tag__".  (Default: none)
+    log entries are marked with "Tor-__tag__". Can not be changed while tor is
+    running. (Default: none)
 
 [[SafeLogging]] **SafeLogging** **0**|**1**|**relay**::
     Tor can scrub potentially sensitive strings from log messages (e.g.
@@ -674,6 +691,7 @@ GENERAL OPTIONS
 
 [[User]] **User** __Username__::
     On startup, setuid to this user and setgid to their primary group.
+    Can not be changed while tor is running.
 
 [[KeepBindCapabilities]] **KeepBindCapabilities** **0**|**1**|**auto**::
     On Linux, when we are started as root and we switch our identity using
@@ -681,20 +699,23 @@ GENERAL OPTIONS
     try to retain our ability to bind to low ports.  If this value is 1, we
     try to keep the capability; if it is 0 we do not; and if it is **auto**,
     we keep the capability only if we are configured to listen on a low port.
+    Can not be changed while tor is running.
     (Default: auto.)
 
 [[HardwareAccel]] **HardwareAccel** **0**|**1**::
     If non-zero, try to use built-in (static) crypto hardware acceleration when
-    available. (Default: 0)
+    available. Can not be changed while tor is running. (Default: 0)
 
 [[AccelName]] **AccelName** __NAME__::
     When using OpenSSL hardware crypto acceleration attempt to load the dynamic
     engine of this name. This must be used for any dynamic hardware engine.
-    Names can be verified with the openssl engine command.
+    Names can be verified with the openssl engine command. Can not be changed
+    while tor is running.
 
 [[AccelDir]] **AccelDir** __DIR__::
     Specify this option if using dynamic hardware acceleration and the engine
     implementation library resides somewhere other than the OpenSSL default.
+    Can not be changed while tor is running.
 
 [[AvoidDiskWrites]] **AvoidDiskWrites** **0**|**1**::
     If non-zero, try to write to disk less frequently than we would otherwise.
@@ -1181,7 +1202,8 @@ The following options are useful only for clients (that is, if
     NUM must be between 1 and 1000, inclusive.  Note that the configured
     bandwidth limits are still expressed in bytes per second: this
     option only affects the frequency with which Tor checks to see whether
-    previously exhausted connections may read again. (Default: 100 msec)
+    previously exhausted connections may read again.
+    Can not be changed while tor is running. (Default: 100 msec)
 
 [[TrackHostExits]] **TrackHostExits** __host__,__.domain__,__...__::
     For each value in the comma separated list, Tor will track recent
@@ -2436,7 +2458,7 @@ The following options are used to configure a hidden service.
     HiddenServiceSingleHopMode requires HiddenServiceNonAnonymousMode to be set
     to 1. Since a Single Onion service is non-anonymous, you can not configure
     a SOCKSPort on a tor instance that is running in
-    **HiddenServiceSingleHopMode**.
+    **HiddenServiceSingleHopMode**. Can not be changed while tor is running.
     (Default: 0)
 
 [[HiddenServiceNonAnonymousMode]] **HiddenServiceNonAnonymousMode** **0**|**1**::
@@ -2444,8 +2466,8 @@ The following options are used to configure a hidden service.
     non-anonymous HiddenServiceSingleHopMode. Enables direct connections in the
     server-side hidden service protocol.  If you are using this option,
     you need to disable all client-side services on your Tor instance,
-    including setting SOCKSPort to "0".
-    (Default: 0)
+    including setting SOCKSPort to "0". Can not be changed while tor is
+    running. (Default: 0)
 
 TESTING NETWORK OPTIONS
 -----------------------
