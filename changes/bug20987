@@ -1,0 +1,3 @@
+  o Minor bugfixes (memory leaks):
+    - Fix a memory leak when configuring hidden services. Fixes bug 20987;
+      bugfix on 0.3.0.1-alpha.
