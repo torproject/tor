@@ -333,7 +333,8 @@ fixed_get_uname(void)
   "VirtualAddrNetworkIPv4 127.192.0.0/10\n"                             \
   "VirtualAddrNetworkIPv6 [FE80::]/10\n"                                \
   "SchedulerHighWaterMark__ 42\n"                                       \
-  "SchedulerLowWaterMark__ 10\n"
+  "SchedulerLowWaterMark__ 10\n"                                        \
+  "UseEntryGuards 1\n"
 
 typedef struct {
   or_options_t *old_opt;
@@ -1932,6 +1933,19 @@ test_options_validate__use_bridges(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ,
             "If you set UseBridges, you must specify at least one bridge.");
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "UseBridges 1\n"
+                                "Bridge 10.0.0.1\n"
+                                "UseEntryGuards 0\n"
+                                );
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ,
+            "Setting UseBridges requires also setting UseEntryGuards.");
   tor_free(msg);
 
   free_options_test_data(tdata);

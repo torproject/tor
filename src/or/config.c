@@ -3372,6 +3372,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && options->EntryNodes)
     REJECT("You cannot set both UseBridges and EntryNodes.");
 
+  /* If we have UseBridges as 1 and UseEntryGuards as 0, we end up bypassing
+   * the use of bridges */
+  if (options->UseBridges && !options->UseEntryGuards)
+    REJECT("Setting UseBridges requires also setting UseEntryGuards.");
+
   options->MaxMemInQueues =
     compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
                                    server_mode(options));
