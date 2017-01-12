@@ -106,9 +106,12 @@ static const char *hostname_fname = "hostname";
 static const char *client_keys_fname = "client_keys";
 static const char *sos_poison_fname = "onion_service_non_anonymous";
 
-/** A list of rend_service_t's for services run on this OP.
- */
+/** A list of rend_service_t's for services run on this OP. */
 static smartlist_t *rend_service_list = NULL;
+/** A list of rend_service_t's for services run on this OP which is used as a
+ * staging area before they are put in the main list in order to prune dying
+ * service on config reload. */
+static smartlist_t *rend_service_staging_list = NULL;
 
 /* Like rend_get_service_list_mutable, but returns a read-only list. */
 static const smartlist_t*
@@ -520,18 +523,34 @@ rend_service_check_dir_and_add(smartlist_t *service_list,
   return rend_add_service(s_list, service);
 }
 
-/* If this is a reload and there were hidden services configured before,
- * keep the introduction points that are still needed and close the
- * other ones. */
+/* Helper: Actual implementation of the pruning on reload which we've
+ * decoupled in order to make the unit test workeable without ugly hacks.
+ * Furthermore, this function does NOT free any memory but will nullify the
+ * temporary list pointer whatever happens. */
 STATIC void
-prune_services_on_reload(smartlist_t *old_service_list,
-                         smartlist_t *new_service_list)
+rend_service_prune_list_impl_(void)
 {
   origin_circuit_t *ocirc = NULL;
-  smartlist_t *surviving_services = NULL;
+  smartlist_t *surviving_services, *old_service_list, *new_service_list;
 
-  tor_assert(old_service_list);
-  tor_assert(new_service_list);
+  /* When pruning our current service list, we must have a staging list that
+   * contains what we want to check else it's a code flow error. */
+  tor_assert(rend_service_staging_list);
+
+  /* We are about to prune the current list of its dead service so set the
+   * semantic for that list to be the "old" one. */
+  old_service_list = rend_service_list;
+  /* The staging list is now the "new" list so set this semantic. */
+  new_service_list = rend_service_staging_list;
+  /* After this, whatever happens, we'll use our new list. */
+  rend_service_list = new_service_list;
+  /* Finally, nullify the staging list pointer as we don't need it anymore
+   * and it needs to be NULL before the next reload. */
+  rend_service_staging_list = NULL;
+  /* Nothing to prune if we have no service list so stop right away. */
+  if (!old_service_list) {
+    return;
+  }
 
   /* This contains all _existing_ services that survives the relaod that is
    * that haven't been removed from the configuration. The difference between
@@ -609,6 +628,27 @@ prune_services_on_reload(smartlist_t *old_service_list,
   smartlist_free(surviving_services);
 }
 
+/* Try to prune our main service list using the temporary one that we just
+ * loaded and parsed successfully. The pruning process decides which onion
+ * services to keep and which to discard after a reload. */
+void
+rend_service_prune_list(void)
+{
+  smartlist_t *old_service_list = rend_service_list;
+  /* Don't try to prune anything if we have no staging list. */
+  if (!rend_service_staging_list) {
+    return;
+  }
+  rend_service_prune_list_impl_();
+  if (old_service_list) {
+    /* Every remaining service in the old list have been removed from the
+     * configuration so clean them up safely. */
+    SMARTLIST_FOREACH(old_service_list, rend_service_t *, s,
+                      rend_service_free(s));
+    smartlist_free(old_service_list);
+  }
+}
+
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
  * HiddenServicePort in <b>options</b>.  Return 0 on success and -1 on
  * failure.  (If <b>validate_only</b> is set, parse, warn and return as
@@ -620,22 +660,22 @@ rend_config_services(const or_options_t *options, int validate_only)
   config_line_t *line;
   rend_service_t *service = NULL;
   rend_service_port_config_t *portcfg;
-  smartlist_t *old_service_list = NULL;
-  smartlist_t *temp_service_list = NULL;
   int ok = 0;
   int rv = -1;
 
-  /* Use a temporary service list, so that we can check the new services'
-   * consistency with each other */
-  temp_service_list = smartlist_new();
+  /* Use the staging service list so that we can check then do the pruning
+   * process using the main list at the end. */
+  if (rend_service_staging_list == NULL) {
+    rend_service_staging_list = smartlist_new();
+  }
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       /* register the service we just finished parsing
        * this code registers every service except the last one parsed,
        * which is registered below the loop */
-      if (rend_service_check_dir_and_add(temp_service_list, options, service,
-                                         validate_only) < 0) {
+      if (rend_service_check_dir_and_add(rend_service_staging_list, options,
+                                         service, validate_only) < 0) {
         service = NULL;
         goto free_and_return;
       }
@@ -835,8 +875,8 @@ rend_config_services(const or_options_t *options, int validate_only)
   /* register the final service after we have finished parsing all services
    * this code only registers the last service, other services are registered
    * within the loop. It is ok for this service to be NULL, it is ignored. */
-  if (rend_service_check_dir_and_add(temp_service_list, options, service,
-                                     validate_only) < 0) {
+  if (rend_service_check_dir_and_add(rend_service_staging_list, options,
+                                     service, validate_only) < 0) {
     service = NULL;
     goto free_and_return;
   }
@@ -848,31 +888,19 @@ rend_config_services(const or_options_t *options, int validate_only)
     goto free_and_return;
   }
 
-  /* Otherwise, use the newly added services as the new service list
-   * Since we have now replaced the global service list, from this point on we
-   * must succeed, or die trying. */
-  old_service_list = rend_service_list;
-  rend_service_list = temp_service_list;
-  temp_service_list = NULL;
-
-  /* If this is a reload and there were hidden services configured before,
-   * keep the introduction points that are still needed and close the
-   * other ones. */
-  if (old_service_list && !validate_only) {
-    prune_services_on_reload(old_service_list, rend_service_list);
-    /* Every remaining service in the old list have been removed from the
-     * configuration so clean them up safely. */
-    SMARTLIST_FOREACH(old_service_list, rend_service_t *, s,
-                      rend_service_free(s));
-    smartlist_free(old_service_list);
-  }
+  /* This could be a reload of configuration so try to prune the main list
+   * using the staging one. And we know we are not in validate mode here.
+   * After this, the main and staging list will point to the right place and
+   * be in a quiescent usable state. */
+  rend_service_prune_list();
 
   return 0;
  free_and_return:
   rend_service_free(service);
-  SMARTLIST_FOREACH(temp_service_list, rend_service_t *, ptr,
+  SMARTLIST_FOREACH(rend_service_staging_list, rend_service_t *, ptr,
                     rend_service_free(ptr));
-  smartlist_free(temp_service_list);
+  smartlist_free(rend_service_staging_list);
+  rend_service_staging_list = NULL;
   return rv;
 }
 
@@ -4550,4 +4578,20 @@ rend_service_non_anonymous_mode_enabled(const or_options_t *options)
   tor_assert(rend_service_non_anonymous_mode_consistent(options));
   return options->HiddenServiceNonAnonymousMode ? 1 : 0;
 }
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC void
+set_rend_service_list(smartlist_t *new_list)
+{
+  rend_service_list = new_list;
+}
+
+STATIC void
+set_rend_rend_service_staging_list(smartlist_t *new_list)
+{
+  rend_service_staging_list = new_list;
+}
+
+#endif /* TOR_UNIT_TESTS */
 

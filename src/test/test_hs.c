@@ -821,7 +821,9 @@ test_prune_services_on_reload(void *arg)
     smartlist_add(old, e1);
     /* Only put the non ephemeral in the new list. */
     smartlist_add(new, s1);
-    prune_services_on_reload(old, new);
+    set_rend_service_list(old);
+    set_rend_rend_service_staging_list(new);
+    rend_service_prune_list_impl_();
     /* We expect that the ephemeral one is in the new list but removed from
      * the old one. */
     tt_int_op(smartlist_len(old), OP_EQ, 1);
@@ -840,7 +842,9 @@ test_prune_services_on_reload(void *arg)
      * one. */
     smartlist_add(old, s1);
     smartlist_add(old, e1);
-    prune_services_on_reload(old, new);
+    set_rend_service_list(old);
+    set_rend_rend_service_staging_list(new);
+    rend_service_prune_list_impl_();
     tt_int_op(smartlist_len(old), OP_EQ, 1);
     tt_assert(smartlist_get(old, 0) == s1);
     tt_int_op(smartlist_len(new), OP_EQ, 1);
@@ -855,7 +859,9 @@ test_prune_services_on_reload(void *arg)
      * list being completely different. */
     smartlist_add(new, s1);
     smartlist_add(new, e1);
-    prune_services_on_reload(old, new);
+    set_rend_service_list(old);
+    set_rend_rend_service_staging_list(new);
+    rend_service_prune_list_impl_();
     tt_int_op(smartlist_len(old), OP_EQ, 0);
     tt_int_op(smartlist_len(new), OP_EQ, 2);
     tt_assert(smartlist_get(new, 0) == s1);
@@ -871,7 +877,9 @@ test_prune_services_on_reload(void *arg)
     /* Setup our list. */
     smartlist_add(old, s1);
     smartlist_add(new, s2);
-    prune_services_on_reload(old, new);
+    set_rend_service_list(old);
+    set_rend_rend_service_staging_list(new);
+    rend_service_prune_list_impl_();
     tt_int_op(smartlist_len(old), OP_EQ, 1);
     /* Intro nodes have been moved to the s2 in theory so it must be empty. */
     tt_int_op(smartlist_len(s1->intro_nodes), OP_EQ, 0);
@@ -892,7 +900,9 @@ test_prune_services_on_reload(void *arg)
     /* Test two ephemeral services. */
     smartlist_add(old, e1);
     smartlist_add(old, e2);
-    prune_services_on_reload(old, new);
+    set_rend_service_list(old);
+    set_rend_rend_service_staging_list(new);
+    rend_service_prune_list_impl_();
     /* Check if they've all been transfered. */
     tt_int_op(smartlist_len(old), OP_EQ, 0);
     tt_int_op(smartlist_len(new), OP_EQ, 2);
