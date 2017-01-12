@@ -1935,6 +1935,21 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
     }                                                                         \
   STMT_END
 
+/* Common code used in the loop within router_pick_directory_server_impl and
+ * router_pick_trusteddirserver_impl.
+ *
+ * Check if the given <b>identity</b> supports extrainfo. If not, skip further
+ * checks.
+ */
+#define SKIP_MISSING_TRUSTED_EXTRAINFO(type, identity)                        \
+  STMT_BEGIN                                                                  \
+    int is_trusted_extrainfo = router_digest_is_trusted_dir_type(             \
+                               (identity), EXTRAINFO_DIRINFO);                \
+    if (((type) & EXTRAINFO_DIRINFO) &&                                       \
+        !router_supports_extrainfo((identity), is_trusted_extrainfo))         \
+      continue;                                                               \
+  STMT_END
+
 /* When iterating through the routerlist, can OR address/port preference
  * and reachability checks be skipped?
  */
@@ -2007,7 +2022,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
-    int is_trusted, is_trusted_extrainfo;
+    int is_trusted;
     int is_overloaded;
     const routerstatus_t *status = node->rs;
     const country_t country = node->country;
@@ -2018,12 +2033,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
-    is_trusted = router_digest_is_trusted_dir(node->identity);
-    is_trusted_extrainfo = router_digest_is_trusted_dir_type(
-                           node->identity, EXTRAINFO_DIRINFO);
-    if ((type & EXTRAINFO_DIRINFO) &&
-        !router_supports_extrainfo(node->identity, is_trusted_extrainfo))
-      continue;
+
+    SKIP_MISSING_TRUSTED_EXTRAINFO(type, node->identity);
+
 #ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     /* Don't make the same node a guard twice */
      if (for_guard && is_node_used_as_guard(node)) {
@@ -2051,6 +2063,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
     }
 
     is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
+    is_trusted = router_digest_is_trusted_dir(node->identity);
 
     /* Clients use IPv6 addresses if the server has one and the client
      * prefers IPv6.
@@ -2182,11 +2195,9 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
       if (!d->is_running) continue;
       if ((type & d->type) == 0)
         continue;
-      int is_trusted_extrainfo = router_digest_is_trusted_dir_type(
-                                 d->digest, EXTRAINFO_DIRINFO);
-      if ((type & EXTRAINFO_DIRINFO) &&
-          !router_supports_extrainfo(d->digest, is_trusted_extrainfo))
-        continue;
+
+      SKIP_MISSING_TRUSTED_EXTRAINFO(type, d->digest);
+
       if (requireother && me && router_digest_is_me(d->digest))
         continue;
       if (try_excluding &&
