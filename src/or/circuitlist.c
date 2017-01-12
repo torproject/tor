@@ -591,7 +591,7 @@ circuit_get_global_origin_circuit_list(void)
 {
   if (NULL == global_origin_circuit_list)
     global_origin_circuit_list = smartlist_new();
-  return global_circuitlist;
+  return global_origin_circuit_list;
 }
 
 /** Function to make circ-\>state human-readable */
