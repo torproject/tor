@@ -165,7 +165,7 @@ test_establish_intro_wrong_mac(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                                       sizeof(circuit_key_material));
+                                                sizeof(circuit_key_material));
   tt_assert(establish_intro_cell);
   /* Mangle one byte of the MAC. */
   uint8_t *handshake_ptr =
@@ -236,7 +236,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                                       sizeof(circuit_key_material));
+                                               sizeof(circuit_key_material));
   tt_assert(establish_intro_cell);
   /* Mangle the auth key length. */
   hs_cell_establish_intro_set_auth_key_len(establish_intro_cell,
@@ -281,7 +281,7 @@ test_establish_intro_wrong_sig_len(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                                       sizeof(circuit_key_material));
+                                               sizeof(circuit_key_material));
   tt_assert(establish_intro_cell);
   /* Mangle the signature length. */
   hs_cell_establish_intro_set_sig_len(establish_intro_cell, bad_sig_len);
