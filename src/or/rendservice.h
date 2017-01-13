@@ -143,9 +143,9 @@ STATIC void rend_service_prune_list_impl_(void);
 int num_rend_services(void);
 int rend_config_service(const config_line_t *line_,
                         const or_options_t *options,
-                        int validate_only,
                         hs_service_t *hs_service);
 void rend_service_prune_list(void);
+void rend_service_free_staging_list(void);
 int rend_service_load_all_keys(const smartlist_t *service_list);
 void rend_services_add_filenames_to_lists(smartlist_t *open_lst,
                                           smartlist_t *stat_lst);

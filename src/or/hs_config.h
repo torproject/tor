@@ -11,6 +11,8 @@
 
 #include "or.h"
 
+/* Max value for HiddenServiceMaxStreams */
+#define HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT 65535
 /* Maximum number of intro points per version 3 services. */
 #define HS_CONFIG_V3_MAX_INTRO_POINTS 20
 

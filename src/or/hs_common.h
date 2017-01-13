@@ -22,7 +22,7 @@
 
 /** Try to maintain this many intro points per service by default. */
 #define NUM_INTRO_POINTS_DEFAULT 3
-/** Maximum number of intro points per service. */
+/** Maximum number of intro points per generic and version 2 service. */
 #define NUM_INTRO_POINTS_MAX 10
 /** Number of extra intro points we launch if our set of intro nodes is empty.
  * See proposal 155, section 4. */

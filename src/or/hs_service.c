@@ -7,17 +7,126 @@
  **/
 
 #include "or.h"
+#include "circuitlist.h"
+#include "config.h"
 #include "relay.h"
 #include "rendservice.h"
-#include "circuitlist.h"
-#include "circpathbias.h"
+#include "router.h"
 
+#include "hs_common.h"
+#include "hs_config.h"
 #include "hs_intropoint.h"
 #include "hs_service.h"
-#include "hs_common.h"
 
 #include "hs/cell_establish_intro.h"
 #include "hs/cell_common.h"
+
+/* Staging list of service object. When configuring service, we add them to
+ * this list considered a staging area and they will get added to our global
+ * map once the keys have been loaded. These two steps are seperated because
+ * loading keys requires that we are an actual running tor process. */
+static smartlist_t *hs_service_staging_list;
+
+/* Helper: Function to compare two objects in the service map. Return 1 if the
+ * two service have the same master public identity key. */
+static inline int
+hs_service_ht_eq(const hs_service_t *first, const hs_service_t *second)
+{
+  tor_assert(first);
+  tor_assert(second);
+  /* Simple key compare. */
+  return ed25519_pubkey_eq(&first->keys.identity_pk,
+                           &second->keys.identity_pk);
+}
+
+/* Helper: Function for the service hash table code below. The key used is the
+ * master public identity key which is ultimately the onion address. */
+static inline unsigned int
+hs_service_ht_hash(const hs_service_t *service)
+{
+  tor_assert(service);
+  return (unsigned int) siphash24g(service->keys.identity_pk.pubkey,
+                                   sizeof(service->keys.identity_pk.pubkey));
+}
+
+/* For the service global hash map, we define a specific type for it which
+ * will make it safe to use and specific to some controlled parameters such as
+ * the hashing function and how to compare services. */
+typedef HT_HEAD(hs_service_ht, hs_service_t) hs_service_ht;
+
+/* This is _the_ global hash map of hidden services which indexed the service
+ * contained in it by master public identity key which is roughly the onion
+ * address of the service. */
+static struct hs_service_ht *hs_service_map;
+
+/* Register the service hash table. */
+HT_PROTOTYPE(hs_service_ht,      /* Name of hashtable. */
+             hs_service_t,       /* Object contained in the map. */
+             hs_service_node,    /* The name of the HT_ENTRY member. */
+             hs_service_ht_hash, /* Hashing function. */
+             hs_service_ht_eq)   /* Compare function for objects. */
+
+HT_GENERATE2(hs_service_ht, hs_service_t, hs_service_node,
+             hs_service_ht_hash, hs_service_ht_eq,
+             0.6, tor_reallocarray, tor_free_)
+
+/* Query the given service map with a public key and return a service object
+ * if found else NULL. It is also possible to set a directory path in the
+ * search query. If pk is NULL, then it will be set to zero indicating the
+ * hash table to compare the directory path instead. */
+static hs_service_t *
+find_service(hs_service_ht *map, const ed25519_public_key_t *pk)
+{
+  hs_service_t dummy_service = {0};
+  tor_assert(map);
+  tor_assert(pk);
+  ed25519_pubkey_copy(&dummy_service.keys.identity_pk, pk);
+  return HT_FIND(hs_service_ht, map, &dummy_service);
+}
+
+/* Register the given service in the given map. If the service already exists
+ * in the map, -1 is returned. On success, 0 is returned and the service
+ * ownership has been transfered to the global map. */
+static int
+register_service(hs_service_ht *map, hs_service_t *service)
+{
+  tor_assert(map);
+  tor_assert(service);
+  tor_assert(!ed25519_public_key_is_zero(&service->keys.identity_pk));
+
+  if (find_service(map, &service->keys.identity_pk)) {
+    /* Existing service with the same key. Do not register it. */
+    return -1;
+  }
+  /* Taking ownership of the object at this point. */
+  HT_INSERT(hs_service_ht, map, service);
+  return 0;
+}
+
+/* Remove a given service from the given map. If service is NULL or the
+ * service key is unset, return gracefully. */
+static void
+remove_service(hs_service_ht *map, hs_service_t *service)
+{
+  hs_service_t *elm;
+
+  tor_assert(map);
+
+  /* Ignore if no service or key is zero. */
+  if (BUG(service == NULL) ||
+      BUG(ed25519_public_key_is_zero(&service->keys.identity_pk))) {
+    return;
+  }
+
+  elm = HT_REMOVE(hs_service_ht, map, service);
+  if (elm) {
+    tor_assert(elm == service);
+  } else {
+    log_warn(LD_BUG, "Could not find service in the global map "
+                     "while removing service %s",
+             escaped(service->config.directory_path));
+  }
+}
 
 /* Set the default values for a service configuration object <b>c</b>. */
 static void
@@ -35,6 +144,239 @@ set_service_default_config(hs_service_config_t *c,
   c->is_single_onion = 0;
   c->dir_group_readable = 0;
   c->is_ephemeral = 0;
+}
+
+/* Helper: Function that needs to return 1 for the HT for each loop which
+ * frees every service in an hash map. */
+static int
+ht_free_service_(struct hs_service_t *service, void *data)
+{
+  (void) data;
+  hs_service_free(service);
+  /* This function MUST return 1 so the given object is then removed from the
+   * service map leading to this free of the object being safe. */
+  return 1;
+}
+
+/* Free every service that can be found in the global map. Once done, clear
+ * and free the global map. */
+static void
+service_free_all(void)
+{
+  if (hs_service_map == NULL) {
+    return;
+  }
+  /* The free helper function returns 1 so this is safe. */
+  hs_service_ht_HT_FOREACH_FN(hs_service_map, ht_free_service_, NULL);
+  HT_CLEAR(hs_service_ht, hs_service_map);
+  tor_free(hs_service_map);
+  hs_service_map = NULL;
+  /* Cleanup staging list. */
+  SMARTLIST_FOREACH(hs_service_staging_list, hs_service_t *, s,
+                    hs_service_free(s));
+  smartlist_free(hs_service_staging_list);
+  hs_service_staging_list = NULL;
+}
+
+/* Close all rendezvous circuits for the given service. */
+static void
+close_service_rp_circuits(hs_service_t *service)
+{
+  tor_assert(service);
+  /* XXX: To implement. */
+  return;
+}
+
+/* Close the circuit(s) for the given map of introduction points. */
+static void
+close_intro_circuits(hs_service_intropoints_t *intro_points)
+{
+  tor_assert(intro_points);
+
+  DIGEST256MAP_FOREACH(intro_points->map, key,
+                       const hs_service_intro_point_t *, ip) {
+    origin_circuit_t *ocirc =
+      hs_circuitmap_get_intro_circ_v3_service_side(
+                                      &ip->auth_key_kp.pubkey);
+    if (ocirc) {
+      hs_circuitmap_remove_circuit(TO_CIRCUIT(ocirc));
+      /* Reason is FINISHED because service has been removed and thus the
+       * circuit is considered old/uneeded. */
+      circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
+    }
+  } DIGEST256MAP_FOREACH_END;
+}
+
+/* Close all introduction circuits for the given service. */
+static void
+close_service_intro_circuits(hs_service_t *service)
+{
+  tor_assert(service);
+
+  if (service->desc_current) {
+    close_intro_circuits(&service->desc_current->intro_points);
+  }
+  if (service->desc_next) {
+    close_intro_circuits(&service->desc_next->intro_points);
+  }
+}
+
+/* Close any circuits related to the given service. */
+static void
+close_service_circuits(hs_service_t *service)
+{
+  tor_assert(service);
+
+  /* Only support for version >= 3. */
+  if (BUG(service->version < HS_VERSION_THREE)) {
+    return;
+  }
+  /* Close intro points. */
+  close_service_intro_circuits(service);
+  /* Close rendezvous points. */
+  close_service_rp_circuits(service);
+}
+
+/* Move introduction points from the src descriptor to the dst descriptor. The
+ * destination service intropoints are wiped out if any before moving. */
+static void
+move_descriptor_intro_points(hs_service_descriptor_t *src,
+                             hs_service_descriptor_t *dst)
+{
+  tor_assert(src);
+  tor_assert(dst);
+
+  /* XXX: Free dst introduction points. */
+  dst->intro_points.map = src->intro_points.map;
+  /* Nullify the source. */
+  src->intro_points.map = NULL;
+}
+
+/* Move introduction points from the src service to the dst service. The
+ * destination service intropoints are wiped out if any before moving. */
+static void
+move_intro_points(hs_service_t *src, hs_service_t *dst)
+{
+  tor_assert(src);
+  tor_assert(dst);
+
+  /* Cleanup destination. */
+  if (src->desc_current && dst->desc_current) {
+    move_descriptor_intro_points(src->desc_current, dst->desc_current);
+  }
+  if (src->desc_next && dst->desc_next) {
+    move_descriptor_intro_points(src->desc_next, dst->desc_next);
+  }
+}
+
+/* Move every ephemeral services from the src service map to the dst service
+ * map. It is possible that a service can't be register to the dst map which
+ * won't stop the process of moving them all but will trigger a log warn. */
+static void
+move_ephemeral_services(hs_service_ht *src, hs_service_ht *dst)
+{
+  hs_service_t **iter, **next;
+
+  tor_assert(src);
+  tor_assert(dst);
+
+  /* Iterate over the map to find ephemeral service and move them to the other
+   * map. We loop using this method to have a safe removal process. */
+  for (iter = HT_START(hs_service_ht, src); iter != NULL; iter = next) {
+    hs_service_t *s = *iter;
+    if (!s->config.is_ephemeral) {
+      /* Yeah, we are in a very manual loop :). */
+      next = HT_NEXT(hs_service_ht, src, iter);
+      continue;
+    }
+    /* Remove service from map and then register to it to the other map.
+     * Reminder that "*iter" and "s" are the same thing. */
+    next = HT_NEXT_RMV(hs_service_ht, src, iter);
+    if (register_service(dst, s) < 0) {
+      log_warn(LD_BUG, "Ephemeral service key is already being used. "
+                       "Skipping.");
+    }
+  }
+}
+
+/* Register services that are in the list. Once this function returns, the
+ * global service map will be set with the right content and all non surviving
+ * services will be cleaned up. */
+void
+hs_service_register_services(smartlist_t *new_service_list)
+{
+  struct hs_service_ht *new_service_map;
+  hs_service_t *s, **iter;
+
+  tor_assert(new_service_list);
+
+  /* We'll save us some allocation and computing time. */
+  if (smartlist_len(new_service_list) == 0) {
+    return;
+  }
+
+  /* Allocate a new map that will replace the current one. */
+  new_service_map = tor_malloc_zero(sizeof(*new_service_map));
+  HT_INIT(hs_service_ht, new_service_map);
+
+  /* First step is to transfer all ephemeral services from the current global
+   * map to the new one we are constructing. We do not prune ephemeral
+   * services as the only way to kill them is by deleting it from the control
+   * port or stopping the tor daemon. */
+  move_ephemeral_services(hs_service_map, new_service_map);
+
+  SMARTLIST_FOREACH_BEGIN(new_service_list, hs_service_t *, snew) {
+    /* Check if that service is already in our global map and if so, we'll
+     * transfer the intro points to it. */
+    s = find_service(hs_service_map, &snew->keys.identity_pk);
+    if (s) {
+      /* Pass ownership of intro points from s (the current service) to snew
+       * (the newly configured one). */
+      move_intro_points(s, snew);
+      /* Remove the service from the global map because after this, we need to
+       * go over the remaining service in that map that aren't surviving the
+       * reload to close their circuits. */
+      remove_service(hs_service_map, s);
+    }
+    /* Great, this service is now ready to be added to our new map. */
+    if (BUG(register_service(new_service_map, snew) < 0)) {
+      /* This should never happen because prior to registration, we validate
+       * every service against the entire set. Not being able to register a
+       * service means we failed to validate correctly. In that case, don't
+       * break tor and ignore the service but tell user. */
+      log_warn(LD_BUG, "Unable to register service with directory %s",
+               snew->config.directory_path);
+      SMARTLIST_DEL_CURRENT(new_service_list, snew);
+      hs_service_free(snew);
+    }
+  } SMARTLIST_FOREACH_END(snew);
+
+  /* Close any circuits associated with the non surviving services. Every
+   * service in the current global map are roaming. */
+  HT_FOREACH(iter, hs_service_ht, hs_service_map) {
+    close_service_circuits(*iter);
+  }
+
+  /* Time to make the switch. We'll wipe the current list and switch. */
+  service_free_all();
+  hs_service_map = new_service_map;
+}
+
+/* Put all service object in the given service list. After this, the caller
+ * looses ownership of every elements in the list and responsible to free the
+ * list pointer. */
+void
+hs_service_stage_services(const smartlist_t *service_list)
+{
+  tor_assert(service_list);
+  /* This list is freed at registration time but this function can be called
+   * multiple time. */
+  if (hs_service_staging_list == NULL) {
+    hs_service_staging_list = smartlist_new();
+  }
+  /* Add all service object to our staging list. Caller is responsible for
+   * freeing the service_list. */
+  smartlist_add_all(hs_service_staging_list, service_list);
 }
 
 /* Allocate and initilize a service object. The service configuration will
@@ -101,14 +443,22 @@ hs_service_free(hs_service_t *service)
 void
 hs_service_init(void)
 {
-  return;
+  /* Should never be called twice. */
+  tor_assert(!hs_service_map);
+  tor_assert(!hs_service_staging_list);
+
+  hs_service_map = tor_malloc_zero(sizeof(struct hs_service_ht));
+  HT_INIT(hs_service_ht, hs_service_map);
+
+  hs_service_staging_list = smartlist_new();
 }
 
-/* Release all global the storage of hidden service subsystem. */
+/* Release all global storage of the hidden service subsystem. */
 void
 hs_service_free_all(void)
 {
   rend_service_free_all();
+  service_free_all();
 }
 
 /* XXX We don't currently use these functions, apart from generating unittest

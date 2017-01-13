@@ -11,9 +11,10 @@
 
 #include "crypto_curve25519.h"
 #include "crypto_ed25519.h"
+#include "replaycache.h"
+
 #include "hs_descriptor.h"
 #include "hs_intropoint.h"
-#include "replaycache.h"
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
@@ -171,6 +172,10 @@ typedef struct hs_service_t {
   /* Protocol version of the service. Specified by HiddenServiceVersion. */
   uint32_t version;
 
+  /* Hashtable node: use to look up the service by its master public identity
+   * key in the service global map. */
+  HT_ENTRY(hs_service_t) hs_service_node;
+
   /* Service state which contains various flags and counters. */
   hs_service_state_t state;
 
@@ -192,12 +197,16 @@ typedef struct hs_service_t {
 
 /* API */
 
-int hs_service_config_all(const or_options_t *options, int validate_only);
+/* Global initializer and cleanup function. */
 void hs_service_init(void);
 void hs_service_free_all(void);
 
-void hs_service_free(hs_service_t *service);
+/* Service new/free functions. */
 hs_service_t *hs_service_new(const or_options_t *options);
+void hs_service_free(hs_service_t *service);
+
+void hs_service_register_services(smartlist_t *new_service_list);
+void hs_service_stage_services(const smartlist_t *service_list);
 
 /* These functions are only used by unit tests and we need to expose them else
  * hs_service.o ends up with no symbols in libor.a which makes clang throw a

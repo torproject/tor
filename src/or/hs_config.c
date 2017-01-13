@@ -31,20 +31,171 @@
 #include "hs_service.h"
 #include "rendservice.h"
 
-/* Configuration handler for a version 3 service. Return 0 on success else a
- * negative value. */
+/* Using the given list of services, stage them into our global state. Every
+ * service version are handled. This function can remove entries in the given
+ * service_list.
+ *
+ * Staging a service means that we take all services in service_list and we
+ * put them in the staging list (global) which acts as a temporary list that
+ * is used by the service loading key process. In other words, staging a
+ * service puts it in a list to be considered when loading the keys and then
+ * moved to the main global list. */
+static void
+stage_services(smartlist_t *service_list)
+{
+  tor_assert(service_list);
+
+  /* This is v2 specific. Trigger service pruning which will make sure the
+   * just configured services end up in the main global list. It should only
+   * be done in non validation mode because v2 subsystem handles service
+   * object differently. */
+  rend_service_prune_list();
+
+  /* Cleanup v2 service from the list, we don't need those object anymore
+   * because we validated them all against the others and we want to stage
+   * only >= v3 service. And remember, v2 has a different object type which is
+   * shadow copied from an hs_service_t type. */
+  SMARTLIST_FOREACH_BEGIN(service_list, hs_service_t *, s) {
+    if (s->version == HS_VERSION_TWO) {
+      SMARTLIST_DEL_CURRENT(service_list, s);
+      hs_service_free(s);
+    }
+  } SMARTLIST_FOREACH_END(s);
+
+  /* This is >= v3 specific. Using the newly configured service list, stage
+   * them into our global state. Every object ownership is lost after. */
+  hs_service_stage_services(service_list);
+}
+
+/* Validate the given service against all service in the given list. If the
+ * service is ephemeral, this function ignores it. Services with the same
+ * directory path aren't allowed and will return an error. If a duplicate is
+ * found, 1 is returned else 0 if none found. */
 static int
-config_service_v3(const config_line_t *line,
-                  const or_options_t *options, int validate_only,
+service_is_duplicate_in_list(const smartlist_t *service_list,
+                             const hs_service_t *service)
+{
+  int ret = 0;
+
+  tor_assert(service_list);
+  tor_assert(service);
+
+  /* Ephemeral service don't have a directory configured so no need to check
+   * for a service in the list having the same path. */
+  if (service->config.is_ephemeral) {
+    goto end;
+  }
+
+  /* XXX: Validate if we have any service that has the given service dir path.
+   * This has two problems:
+   *
+   * a) It's O(n^2), but the same comment from the bottom of
+   *    rend_config_services() should apply.
+   *
+   * b) We only compare directory paths as strings, so we can't
+   *    detect two distinct paths that specify the same directory
+   *    (which can arise from symlinks, case-insensitivity, bind
+   *    mounts, etc.).
+   *
+   * It also can't detect that two separate Tor instances are trying
+   * to use the same HiddenServiceDir; for that, we would need a
+   * lock file.  But this is enough to detect a simple mistake that
+   * at least one person has actually made. */
+  SMARTLIST_FOREACH_BEGIN(service_list, const hs_service_t *, s) {
+    if (!strcmp(s->config.directory_path, service->config.directory_path)) {
+      log_warn(LD_REND, "Another hidden service is already configured "
+                        "for directory %s",
+               escaped(service->config.directory_path));
+      ret = 1;
+      goto end;
+    }
+  } SMARTLIST_FOREACH_END(s);
+
+ end:
+  return ret;
+}
+
+/* Validate service configuration. This is used when loading the configuration
+ * and once we've setup a service object, it's config object is passed to this
+ * function for further validation. This does not validate service key
+ * material. Return 0 if valid else -1 if invalid. */
+static int
+config_validate_service(const hs_service_config_t *config)
+{
+  tor_assert(config);
+
+  /* Amount of ports validation. */
+  if (!config->ports || smartlist_len(config->ports) == 0) {
+    log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured.",
+             escaped(config->directory_path));
+    goto invalid;
+  }
+
+  /* Valid. */
+  return 0;
+ invalid:
+  return -1;
+}
+
+/* Configuration handler for a version 3 service. The line_ must be pointing
+ * to the directive directly after a HiddenServiceDir. That way, when hitting
+ * the next HiddenServiceDir line or reaching the end of the list of lines, we
+ * know that we have to stop looking for more options. The given service
+ * object must be already allocated and passed through
+ * config_generic_service() prior to calling this function.
+ *
+ * Return 0 on success else a negative value. */
+static int
+config_service_v3(const config_line_t *line_,
+                  const or_options_t *options,
                   hs_service_t *service)
 {
-  (void) line;
-  (void) service;
-  (void) validate_only;
   (void) options;
-  /* XXX: Configure a v3 service with specific options. */
-  /* XXX: Add service to v3 list and pruning on reload. */
+  const config_line_t *line;
+  hs_service_config_t *config;
+
+  tor_assert(service);
+
+  config = &service->config;
+
+  for (line = line_; line; line = line->next) {
+    if (!strcasecmp(line->key, "HiddenServiceDir")) {
+      /* We just hit the next hidden service, stop right now. */
+      break;
+    }
+    /* Number of introduction points. */
+    if (!strcasecmp(line->key, "HiddenServiceNumIntroductionPoints")) {
+      int ok = 0;
+      config->num_intro_points =
+        (unsigned int) tor_parse_ulong(line->value, 10,
+                                       NUM_INTRO_POINTS_DEFAULT,
+                                       HS_CONFIG_V3_MAX_INTRO_POINTS,
+                                       &ok, NULL);
+      if (!ok) {
+        log_warn(LD_CONFIG, "HiddenServiceNumIntroductionPoints "
+                 "should be between %d and %d, not %s",
+                 NUM_INTRO_POINTS_DEFAULT, HS_CONFIG_V3_MAX_INTRO_POINTS,
+                 line->value);
+        goto err;
+      }
+      log_info(LD_CONFIG, "HiddenServiceNumIntroductionPoints=%d for %s",
+               config->num_intro_points, escaped(config->directory_path));
+      continue;
+    }
+  }
+
+  /* We do not load the key material for the service at this stage. This is
+   * done later once tor can confirm that it is in a running state. */
+
+  /* We are about to return a fully configured service so do one last pass of
+   * validation at it. */
+  if (config_validate_service(config) < 0) {
+    goto err;
+  }
+
   return 0;
+ err:
+  return -1;
 }
 
 /* Configure a service using the given options in line_ and options. This is
@@ -98,7 +249,7 @@ config_generic_service(const config_line_t *line_,
     /* Version of the service. */
     if (!strcasecmp(line->key, "HiddenServiceVersion")) {
       service->version = (uint32_t) tor_parse_ulong(line->value,
-                                                    10, HS_VERSION_TWO,
+                                                    10, HS_VERSION_MIN,
                                                     HS_VERSION_MAX,
                                                     &ok, NULL);
       if (!ok) {
@@ -164,13 +315,13 @@ config_generic_service(const config_line_t *line_,
     }
     /* Maximum streams per circuit. */
     if (!strcasecmp(line->key, "HiddenServiceMaxStreams")) {
-      config->max_streams_per_rdv_circuit = tor_parse_uint64(line->value,
-                                                             10, 0, 65535,
-                                                             &ok, NULL);
+      config->max_streams_per_rdv_circuit =
+        tor_parse_uint64(line->value, 10, 0,
+                         HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT, &ok, NULL);
       if (!ok) {
         log_warn(LD_CONFIG,
                  "HiddenServiceMaxStreams should be between 0 and %d, not %s",
-                 65535, line->value);
+                 HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT, line->value);
         goto err;
       }
       log_info(LD_CONFIG,
@@ -197,12 +348,6 @@ config_generic_service(const config_line_t *line_,
     }
   }
 
-  /* Check permission on service directory. */
-  if (hs_check_service_private_dir(options->User, config->directory_path,
-                                   config->dir_group_readable, 0) < 0) {
-    goto err;
-  }
-
   /* Check if we are configured in non anonymous mode and single hop mode
    * meaning every service become single onion. */
   if (rend_service_allow_non_anonymous_connection(options) &&
@@ -220,7 +365,6 @@ config_generic_service(const config_line_t *line_,
 static int
   (*config_service_handlers[])(const config_line_t *line,
                                const or_options_t *options,
-                               int validate_only,
                                hs_service_t *service) =
 {
   NULL, /* v0 */
@@ -229,64 +373,124 @@ static int
   config_service_v3, /* v3 */
 };
 
+/* Configure a service using the given line and options. This function will
+ * call the corresponding version handler and validate the service against the
+ * other one. On success, add the service to the given list and return 0. On
+ * error, nothing is added to the list and a negative value is returned. */
+static int
+config_service(const config_line_t *line, const or_options_t *options,
+               smartlist_t *service_list)
+{
+  hs_service_t *service = NULL;
+
+  tor_assert(line);
+  tor_assert(options);
+  tor_assert(service_list);
+
+  /* We have a new hidden service. */
+  service = hs_service_new(options);
+  /* We'll configure that service as a generic one and then pass it to the
+   * specific handler according to the configured version number. */
+  if (config_generic_service(line, options, service) < 0) {
+    goto err;
+  }
+  tor_assert(service->version <= HS_VERSION_MAX);
+  /* Check permission on service directory that was just parsed. And this must
+   * be done regardless of the service version. Do not ask for the directory
+   * to be created, this is done when the keys are loaded because we could be
+   * in validation mode right now. */
+  if (hs_check_service_private_dir(options->User,
+                                   service->config.directory_path,
+                                   service->config.dir_group_readable,
+                                   0) < 0) {
+    goto err;
+  }
+  /* The handler is in charge of specific options for a version. We start
+   * after this service directory line so once we hit another directory
+   * line, the handler knows that it has to stop. */
+  if (config_service_handlers[service->version](line->next, options,
+                                                service) < 0) {
+    goto err;
+  }
+  /* We'll check if this service can be kept depending on the others
+   * configured previously. */
+  if (service_is_duplicate_in_list(service_list, service)) {
+    goto err;
+  }
+  /* Passes, add it to the given list. */
+  smartlist_add(service_list, service);
+  return 0;
+
+ err:
+  hs_service_free(service);
+  return -1;
+}
+
 /* From a set of <b>options</b>, setup every hidden service found. Return 0 on
  * success or -1 on failure. If <b>validate_only</b> is set, parse, warn and
  * return as normal, but don't actually change the configured services. */
 int
 hs_config_service_all(const or_options_t *options, int validate_only)
 {
-  int dir_option_seen = 0;
-  hs_service_t *service = NULL;
+  int dir_option_seen = 0, ret = -1;
   const config_line_t *line;
+  smartlist_t *new_service_list = NULL;
 
   tor_assert(options);
 
+  /* Newly configured service are put in that list which is then used for
+   * validation and staging for >= v3. */
+  new_service_list = smartlist_new();
+
   for (line = options->RendConfigLines; line; line = line->next) {
-    if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      /* We have a new hidden service. */
-      service = hs_service_new(options);
-      /* We'll configure that service as a generic one and then pass it to the
-       * specific handler according to the configured version number. */
-      if (config_generic_service(line, options, service) < 0) {
+    /* Ignore all directives that aren't the start of a service. */
+    if (strcasecmp(line->key, "HiddenServiceDir")) {
+      if (!dir_option_seen) {
+        log_warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
+                 line->key);
         goto err;
       }
-      tor_assert(service->version <= HS_VERSION_MAX);
-      /* The handler is in charge of specific options for a version. We start
-       * after this service directory line so once we hit another directory
-       * line, the handler knows that it has to stop. */
-      if (config_service_handlers[service->version](line->next, options,
-                                                    validate_only,
-                                                    service) < 0) {
-        goto err;
-      }
-      /* Whatever happens, on success we loose the ownership of the service
-       * object so we nullify the pointer to be safe. */
-      service = NULL;
-      /* Flag that we've seen a directory directive and we'll use that to make
-       * sure that the torrc options ordering are actually valid. */
-      dir_option_seen = 1;
       continue;
     }
-    /* The first line must be a directory option else tor is misconfigured. */
-    if (!dir_option_seen) {
-      log_warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
-               line->key);
+    /* Flag that we've seen a directory directive and we'll use it to make
+     * sure that the torrc options ordering is actually valid. */
+    dir_option_seen = 1;
+
+    /* Try to configure this service now. On success, it will be added to the
+     * list and validated against the service in that same list. */
+    if (config_service(line, options, new_service_list) < 0) {
       goto err;
     }
   }
 
+  /* In non validation mode, we'll stage those services we just successfully
+   * configured. Service ownership is transfered from the list to the global
+   * state. If any service is invalid, it will be removed from the list and
+   * freed. All versions are handled in that function. */
   if (!validate_only) {
-    /* Trigger service pruning which will make sure the just configured
-     * services end up in the main global list. This is v2 specific. */
-    rend_service_prune_list();
-    /* XXX: Need the v3 one. */
+    stage_services(new_service_list);
+  } else {
+    /* We've just validated that we were able to build a clean working list of
+     * services. We don't need those objects anymore. */
+    SMARTLIST_FOREACH(new_service_list, hs_service_t *, s,
+                      hs_service_free(s));
+    /* For the v2 subsystem, the configuration handler adds the service object
+     * to the staging list and it is transferred in the main list through the
+     * prunning process. In validation mode, we thus have to purge the staging
+     * list so it's not kept in memory as valid service. */
+    rend_service_free_staging_list();
   }
 
-  /* Success. */
-  return 0;
+  /* Success. Note that the service list has no ownership of its content. */
+  ret = 0;
+  goto end;
+
  err:
-  hs_service_free(service);
-  /* Tor main should call the free all function. */
-  return -1;
+  SMARTLIST_FOREACH(new_service_list, hs_service_t *, s, hs_service_free(s));
+
+ end:
+  smartlist_free(new_service_list);
+  /* Tor main should call the free all function on error. */
+  return ret;
 }
 
