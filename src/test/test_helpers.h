@@ -24,6 +24,7 @@ int mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
 
 connection_t *test_conn_get_connection(uint8_t state,
                                        uint8_t type, uint8_t purpose);
+or_options_t *helper_parse_options(const char *conf);
 
 extern const char TEST_DESCRIPTORS[];
 
