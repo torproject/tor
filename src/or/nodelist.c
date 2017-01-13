@@ -1126,6 +1126,9 @@ node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
   node_assert_ok(node);
   tor_assert(ap_out);
 
+  /* Check ri first, because rewrite_node_address_for_bridge() updates
+   * node->ri with the configured bridge address. */
+
   RETURN_IPV4_AP(node->ri, or_port, ap_out);
   RETURN_IPV4_AP(node->rs, or_port, ap_out);
   /* Microdescriptors only have an IPv6 address */
@@ -1156,9 +1159,11 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
   node_assert_ok(node);
   tor_assert(ap_out);
 
-  /* Prefer routerstatus over microdesc for consistency with the
-   * fascist_firewall_* functions. Also check if the address or port are valid,
-   * and try another alternative if they are not. */
+  /* Check ri first, because rewrite_node_address_for_bridge() updates
+   * node->ri with the configured bridge address.
+   * Prefer rs over md for consistency with the fascist_firewall_* functions.
+   * Check if the address or port are valid, and try another alternative
+   * if they are not. */
 
   if (node->ri && tor_addr_port_is_valid(&node->ri->ipv6_addr,
                                          node->ri->ipv6_orport, 0)) {
@@ -1218,6 +1223,9 @@ node_get_prim_dirport(const node_t *node, tor_addr_port_t *ap_out)
   node_assert_ok(node);
   tor_assert(ap_out);
 
+  /* Check ri first, because rewrite_node_address_for_bridge() updates
+   * node->ri with the configured bridge address. */
+
   RETURN_IPV4_AP(node->ri, dir_port, ap_out);
   RETURN_IPV4_AP(node->rs, dir_port, ap_out);
   /* Microdescriptors only have an IPv6 address */
@@ -1250,8 +1258,11 @@ node_get_pref_ipv6_dirport(const node_t *node, tor_addr_port_t *ap_out)
   node_assert_ok(node);
   tor_assert(ap_out);
 
-  /* Check if the address or port are valid, and try another alternative if
-   * they are not. Note that microdescriptors have no dir_port. */
+  /* Check ri first, because rewrite_node_address_for_bridge() updates
+   * node->ri with the configured bridge address.
+   * Prefer rs over md for consistency with the fascist_firewall_* functions.
+   * Check if the address or port are valid, and try another alternative
+   * if they are not. */
 
   /* Assume IPv4 and IPv6 dirports are the same */
   if (node->ri && tor_addr_port_is_valid(&node->ri->ipv6_addr,
