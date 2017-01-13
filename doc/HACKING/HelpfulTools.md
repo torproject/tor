@@ -173,25 +173,25 @@ Here are some basic instructions
    * `opcontrol --dump;`
    * `opreport -l that_dir/*`
  - Profit
- 
+
 Profiling Tor with perf
 -----------------------
 
 This works with a running Tor, and requires root.
- 
+
 1. Decide how long you want to profile for. Start with (say) 30 seconds. If that
    works, try again with longer times.
 
 2. Find the PID of your running tor process.
 
 3. Run `perf record --call-graph dwarf -p <PID> sleep <SECONDS>`
-    
+
    (You may need to do this as root.)
-      
+
    You might need to add `-e cpu-clock` as an option to the perf record line
    above, if you are on an older CPU without access to hardware profiling
    events, or in a VM, or something.
-   
+
 4. Now you have a perf.data file. Have a look at it with `perf report
    --no-children --sort symbol,dso` or `perf report --no-children --sort
    symbol,dso --stdio --header`. How does it look?
@@ -220,7 +220,7 @@ performance! See the gperftools manual for more info, but basically:
 
 2. Run `env CPUPROFILE=/tmp/profile src/or/tor -f <path/torrc>`. The profile file
    is not written to until Tor finishes execuction.
-   
+
 3. Run `pprof src/or/tor /tm/profile` to start the REPL.
 
 Generating and analyzing a callgraph
