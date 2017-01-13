@@ -1192,7 +1192,7 @@ Changes in version 0.2.8.6 - 2016-08-02
 
   o Minor bugfixes (build):
     - Avoid spurious failures from configure files related to calling
-      exit(0) in TOR_SEARCH_LIBRARY. Fixes bug 18625; bugfix on
+      exit(0) in TOR_SEARCH_LIBRARY. Fixes bug 18626; bugfix on
       0.2.0.1-alpha. Patch from "cypherpunks".
     - Do not link the unit tests against both the testing and non-
       testing versions of the static libraries. Fixes bug 18490; bugfix
