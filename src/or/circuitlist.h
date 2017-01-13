@@ -47,6 +47,7 @@ origin_circuit_t *circuit_get_ready_rend_circ_by_rend_data(
   const rend_data_t *rend_data);
 origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
                                      const uint8_t *digest, uint8_t purpose);
+origin_circuit_t *circuit_get_next_service_intro_circ(origin_circuit_t *start);
 origin_circuit_t *circuit_find_to_cannibalize(uint8_t purpose,
                                               extend_info_t *info, int flags);
 void circuit_mark_all_unused_circs(void);

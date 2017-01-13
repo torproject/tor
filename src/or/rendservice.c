@@ -542,6 +542,95 @@ rend_service_check_dir_and_add(smartlist_t *service_list,
   return rend_add_service(s_list, service);
 }
 
+/* If this is a reload and there were hidden services configured before,
+ * keep the introduction points that are still needed and close the
+ * other ones. */
+STATIC void
+prune_services_on_reload(smartlist_t *old_service_list,
+                         smartlist_t *new_service_list)
+{
+  origin_circuit_t *ocirc = NULL;
+  smartlist_t *surviving_services = NULL;
+
+  tor_assert(old_service_list);
+  tor_assert(new_service_list);
+
+  /* This contains all _existing_ services that survives the relaod that is
+   * that haven't been removed from the configuration. The difference between
+   * this list and the new service list is that the new list can possibly
+   * contain newly configured service that have no introduction points opened
+   * yet nor key material loaded or generated. */
+  surviving_services = smartlist_new();
+
+  /* Preserve the existing ephemeral services.
+   *
+   * This is the ephemeral service equivalent of the "Copy introduction
+   * points to new services" block, except there's no copy required since
+   * the service structure isn't regenerated.
+   *
+   * After this is done, all ephemeral services will be:
+   *  * Removed from old_service_list, so the equivalent non-ephemeral code
+   *    will not attempt to preserve them.
+   *  * Added to the new_service_list (that previously only had the
+   *    services listed in the configuration).
+   *  * Added to surviving_services, which is the list of services that
+   *    will NOT have their intro point closed.
+   */
+  SMARTLIST_FOREACH_BEGIN(old_service_list, rend_service_t *, old) {
+    if (rend_service_is_ephemeral(old)) {
+      SMARTLIST_DEL_CURRENT(old_service_list, old);
+      smartlist_add(surviving_services, old);
+      smartlist_add(new_service_list, old);
+    }
+  } SMARTLIST_FOREACH_END(old);
+
+  /* Copy introduction points to new services. This is O(n^2), but it's only
+   * called on reconfigure, so it's ok performance wise. */
+  SMARTLIST_FOREACH_BEGIN(new_service_list, rend_service_t *, new) {
+    SMARTLIST_FOREACH_BEGIN(old_service_list, rend_service_t *, old) {
+      /* Skip ephemeral services as we only want to copy introduction points
+       * from current services to newly configured one that already exists.
+       * The same directory means it's the same service. */
+      if (rend_service_is_ephemeral(new) || rend_service_is_ephemeral(old) ||
+          strcmp(old->directory, new->directory)) {
+        continue;
+      }
+      smartlist_add_all(new->intro_nodes, old->intro_nodes);
+      smartlist_clear(old->intro_nodes);
+      smartlist_add_all(new->expiring_nodes, old->expiring_nodes);
+      smartlist_clear(old->expiring_nodes);
+      /* This regular service will survive the closing IPs step after. */
+      smartlist_add(surviving_services, old);
+      break;
+    } SMARTLIST_FOREACH_END(old);
+  } SMARTLIST_FOREACH_END(new);
+
+  /* For every service introduction circuit we can find, see if we have a
+   * matching surviving configured service. If not, close the circuit. */
+  while ((ocirc = circuit_get_next_service_intro_circ(ocirc))) {
+    int keep_it = 0;
+    tor_assert(ocirc->rend_data);
+    SMARTLIST_FOREACH_BEGIN(surviving_services, const rend_service_t *, s) {
+      if (rend_circuit_pk_digest_eq(ocirc, (uint8_t *) s->pk_digest)) {
+        /* Keep this circuit as we have a matching configured service. */
+        keep_it = 1;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(s);
+    if (keep_it) {
+      continue;
+    }
+    log_info(LD_REND, "Closing intro point %s for service %s.",
+             safe_str_client(extend_info_describe(
+                                        ocirc->build_state->chosen_exit)),
+             safe_str_client(rend_data_get_address(ocirc->rend_data)));
+    /* Reason is FINISHED because service has been removed and thus the
+     * circuit is considered old/uneeded. */
+    circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
+  }
+  smartlist_free(surviving_services);
+}
+
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
  * HiddenServicePort in <b>options</b>.  Return 0 on success and -1 on
  * failure.  (If <b>validate_only</b> is set, parse, warn and return as
@@ -795,84 +884,11 @@ rend_config_services(const or_options_t *options, int validate_only)
    * keep the introduction points that are still needed and close the
    * other ones. */
   if (old_service_list && !validate_only) {
-    smartlist_t *surviving_services = smartlist_new();
-
-    /* Preserve the existing ephemeral services.
-     *
-     * This is the ephemeral service equivalent of the "Copy introduction
-     * points to new services" block, except there's no copy required since
-     * the service structure isn't regenerated.
-     *
-     * After this is done, all ephemeral services will be:
-     *  * Removed from old_service_list, so the equivalent non-ephemeral code
-     *    will not attempt to preserve them.
-     *  * Added to the new rend_service_list (that previously only had the
-     *    services listed in the configuration).
-     *  * Added to surviving_services, which is the list of services that
-     *    will NOT have their intro point closed.
-     */
-    SMARTLIST_FOREACH(old_service_list, rend_service_t *, old, {
-      if (rend_service_is_ephemeral(old)) {
-        SMARTLIST_DEL_CURRENT(old_service_list, old);
-        smartlist_add(surviving_services, old);
-        smartlist_add(rend_service_list, old);
-      }
-    });
-
-    /* Copy introduction points to new services. */
-    /* XXXX This is O(n^2), but it's only called on reconfigure, so it's
-     * probably ok? */
-    SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, new) {
-      SMARTLIST_FOREACH_BEGIN(old_service_list, rend_service_t *, old) {
-        if (BUG(rend_service_is_ephemeral(new)) ||
-            BUG(rend_service_is_ephemeral(old))) {
-          continue;
-        }
-        if (BUG(!new->directory) || BUG(!old->directory) ||
-            strcmp(old->directory, new->directory)) {
-          continue;
-        }
-        smartlist_add_all(new->intro_nodes, old->intro_nodes);
-        smartlist_clear(old->intro_nodes);
-        smartlist_add_all(new->expiring_nodes, old->expiring_nodes);
-        smartlist_clear(old->expiring_nodes);
-        smartlist_add(surviving_services, old);
-        break;
-      } SMARTLIST_FOREACH_END(old);
-    } SMARTLIST_FOREACH_END(new);
-
-    /* Close introduction circuits of services we don't serve anymore. */
-    /* XXXX it would be nicer if we had a nicer abstraction to use here,
-     * so we could just iterate over the list of services to close, but
-     * once again, this isn't critical-path code. */
-    SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
-      if (!circ->marked_for_close &&
-          circ->state == CIRCUIT_STATE_OPEN &&
-          (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-           circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
-        origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
-        int keep_it = 0;
-        tor_assert(oc->rend_data);
-        SMARTLIST_FOREACH(surviving_services, rend_service_t *, ptr, {
-          if (rend_circuit_pk_digest_eq(oc, (uint8_t *) ptr->pk_digest)) {
-            keep_it = 1;
-            break;
-          }
-        });
-        if (keep_it)
-          continue;
-        log_info(LD_REND, "Closing intro point %s for service %s.",
-                 safe_str_client(extend_info_describe(
-                                            oc->build_state->chosen_exit)),
-                 rend_data_get_address(oc->rend_data));
-        circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
-        /* XXXX Is there another reason we should use here? */
-      }
-    }
-    SMARTLIST_FOREACH_END(circ);
-    smartlist_free(surviving_services);
-    SMARTLIST_FOREACH(old_service_list, rend_service_t *, ptr,
-                      rend_service_free(ptr));
+    prune_services_on_reload(old_service_list, rend_service_list);
+    /* Every remaining service in the old list have been removed from the
+     * configuration so clean them up safely. */
+    SMARTLIST_FOREACH(old_service_list, rend_service_t *, s,
+                      rend_service_free(s));
     smartlist_free(old_service_list);
   }
 
