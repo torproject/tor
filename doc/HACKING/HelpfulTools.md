@@ -142,6 +142,12 @@ run `make test-network`.
 We also have scripts to run integration tests using Stem.  To try them, set
 `STEM_SOURCE_DIR` to your Stem source directory, and run `test-stem`.
 
+Profiling Tor
+-------------
+
+Ongoing notes about Tor profiling can be found at
+https://pad.riseup.net/p/profiling-tor
+
 Profiling Tor with oprofile
 ---------------------------
 
@@ -167,6 +173,55 @@ Here are some basic instructions
    * `opcontrol --dump;`
    * `opreport -l that_dir/*`
  - Profit
+ 
+Profiling Tor with perf
+-----------------------
+
+This works with a running Tor, and requires root.
+ 
+1. Decide how long you want to profile for. Start with (say) 30 seconds. If that
+   works, try again with longer times.
+
+2. Find the PID of your running tor process.
+
+3. Run `perf record --call-graph dwarf -p <PID> sleep <SECONDS>`
+    
+   (You may need to do this as root.)
+      
+   You might need to add `-e cpu-clock` as an option to the perf record line
+   above, if you are on an older CPU without access to hardware profiling
+   events, or in a VM, or something.
+   
+4. Now you have a perf.data file. Have a look at it with `perf report
+   --no-children --sort symbol,dso` or `perf report --no-children --sort
+   symbol,dso --stdio --header`. How does it look?
+
+5a. Once you have a nice big perf.data file, you can compress it, encrypt it,
+    and send it to your favorite Tor developers.
+
+5b. Or maybe you'd rather not send a nice big perf.data file. Who knows what's
+    in that!? It's kinda scary. To generate a less scary file, you can use `perf
+    report -g > <FILENAME>.out`. Then you can compress that and put it somewhere
+    public.
+
+Profiling Tor with gperftools aka Google-performance-tools
+----------------------------------------------------------
+
+This should work on nearly any unixy system. It doesn't seem to be compatible
+with RunAsDaemon though.
+
+Beforehand, install google-perftools.
+
+1. You need to rebuild Tor, hack the linking steps to add `-lprofiler` to the
+   libs. You can do this by adding `LIBS=-lprofiler` when you call `./configure`.
+
+Now you can run Tor with profiling enabled, and use the pprof utility to look at
+performance! See the gperftools manual for more info, but basically:
+
+2. Run `env CPUPROFILE=/tmp/profile src/or/tor -f <path/torrc>`. The profile file
+   is not written to until Tor finishes execuction.
+   
+3. Run `pprof src/or/tor /tm/profile` to start the REPL.
 
 Generating and analyzing a callgraph
 ------------------------------------
