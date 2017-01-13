@@ -1854,7 +1854,7 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       testing versions of the static libraries. Fixes bug 18490; bugfix
       on 0.2.7.1-alpha.
     - Avoid spurious failures from configure files related to calling
-      exit(0) in TOR_SEARCH_LIBRARY. Fixes bug 18625; bugfix on
+      exit(0) in TOR_SEARCH_LIBRARY. Fixes bug 18626; bugfix on
       0.2.0.1-alpha. Patch from "cypherpunks".
     - Silence spurious clang-scan warnings in the ed25519_donna code by
       explicitly initializing some objects. Fixes bug 18384; bugfix on
