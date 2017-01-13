@@ -329,6 +329,33 @@ relay_send_end_cell_from_edge(streamid_t stream_id, circuit_t *circ,
                                       payload, 1, cpath_layer);
 }
 
+/* If the connection <b>conn</b> is attempting to connect to an external
+ * destination that is an hidden service and the reason is a connection
+ * refused or timeout, log it so the operator can take appropriate actions.
+ * The log statement is a rate limited warning. */
+static void
+warn_if_hs_unreachable(const edge_connection_t *conn, uint8_t reason)
+{
+  tor_assert(conn);
+
+  if (conn->base_.type == CONN_TYPE_EXIT &&
+      connection_edge_is_rendezvous_stream(conn) &&
+      (reason == END_STREAM_REASON_CONNECTREFUSED ||
+       reason == END_STREAM_REASON_TIMEOUT)) {
+#define WARN_FAILED_HS_CONNECTION 300
+    static ratelim_t warn_limit = RATELIM_INIT(WARN_FAILED_HS_CONNECTION);
+    char *m;
+    if ((m = rate_limit_log(&warn_limit, approx_time()))) {
+      log_warn(LD_EDGE, "Onion service connection to %s failed (%s)",
+               (conn->base_.socket_family == AF_UNIX) ?
+               safe_str(conn->base_.address) :
+               safe_str(fmt_addrport(&conn->base_.addr, conn->base_.port)),
+               stream_end_reason_to_string(reason));
+      tor_free(m);
+    }
+  }
+}
+
 /** Send a relay end cell from stream <b>conn</b> down conn's circuit, and
  * remember that we've done so.  If this is not a client connection, set the
  * relay end cell's reason for closing as <b>reason</b>.
@@ -386,6 +413,9 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
               conn->base_.s);
     connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
+    /* We'll log warn if the connection was an hidden service and couldn't be
+     * made because the service wasn't available. */
+    warn_if_hs_unreachable(conn, control_reason);
   } else {
     log_debug(LD_EDGE,"No circ to send end on conn "
               "(fd "TOR_SOCKET_T_FORMAT").",
@@ -3521,7 +3551,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
  * it is a general stream.
  */
 int
-connection_edge_is_rendezvous_stream(edge_connection_t *conn)
+connection_edge_is_rendezvous_stream(const edge_connection_t *conn)
 {
   tor_assert(conn);
   if (conn->rend_data)
