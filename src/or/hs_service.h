@@ -192,6 +192,12 @@ typedef struct hs_service_t {
 
 /* API */
 
+int hs_service_config_all(const or_options_t *options, int validate_only);
+void hs_service_free_all(void);
+
+void hs_service_free(hs_service_t *service);
+hs_service_t *hs_service_new(const or_options_t *options);
+
 /* These functions are only used by unit tests and we need to expose them else
  * hs_service.o ends up with no symbols in libor.a which makes clang throw a
  * warning at compile time. See #21825. */

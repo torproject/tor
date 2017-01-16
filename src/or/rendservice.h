@@ -13,6 +13,7 @@
 #define TOR_RENDSERVICE_H
 
 #include "or.h"
+#include "hs_service.h"
 
 typedef struct rend_intro_cell_s rend_intro_cell_t;
 typedef struct rend_service_port_config_s rend_service_port_config_t;
@@ -119,10 +120,6 @@ typedef struct rend_service_t {
 
 STATIC void rend_service_free(rend_service_t *service);
 STATIC char *rend_service_sos_poison_path(const rend_service_t *service);
-STATIC int rend_service_check_dir_and_add(smartlist_t *service_list,
-                                          const or_options_t *options,
-                                          rend_service_t *service,
-                                          int validate_only);
 STATIC int rend_service_verify_single_onion_poison(
                                                   const rend_service_t *s,
                                                   const or_options_t *options);
@@ -144,7 +141,10 @@ STATIC void rend_service_prune_list_impl_(void);
 #endif /* RENDSERVICE_PRIVATE */
 
 int num_rend_services(void);
-int rend_config_services(const or_options_t *options, int validate_only);
+int rend_config_service(const config_line_t *line_,
+                        const or_options_t *options,
+                        int validate_only,
+                        hs_service_t *hs_service);
 void rend_service_prune_list(void);
 int rend_service_load_all_keys(const smartlist_t *service_list);
 void rend_services_add_filenames_to_lists(smartlist_t *open_lst,

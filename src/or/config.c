@@ -91,6 +91,7 @@
 #include "relay.h"
 #include "rendclient.h"
 #include "rendservice.h"
+#include "hs_config.h"
 #include "rephist.h"
 #include "router.h"
 #include "sandbox.h"
@@ -1681,7 +1682,7 @@ options_act(const or_options_t *old_options)
     sweep_bridge_list();
   }
 
-  if (running_tor && rend_config_services(options, 0)<0) {
+  if (running_tor && hs_config_service_all(options, 0)<0) {
     log_warn(LD_BUG,
        "Previously validated hidden services line could not be added!");
     return -1;
@@ -4009,7 +4010,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     COMPLAIN("V3AuthVotingInterval does not divide evenly into 24 hours.");
   }
 
-  if (rend_config_services(options, 1) < 0)
+  if (hs_config_service_all(options, 1) < 0)
     REJECT("Failed to configure rendezvous options. See logs for details.");
 
   /* Parse client-side authorization for hidden services. */

@@ -19,6 +19,91 @@
 #include "hs/cell_establish_intro.h"
 #include "hs/cell_common.h"
 
+/* Set the default values for a service configuration object <b>c</b>. */
+static void
+set_service_default_config(hs_service_config_t *c,
+                           const or_options_t *options)
+{
+  tor_assert(c);
+  c->ports = smartlist_new();
+  c->directory_path = NULL;
+  c->descriptor_post_period = options->RendPostPeriod;
+  c->max_streams_per_rdv_circuit = 0;
+  c->max_streams_close_circuit = 0;
+  c->num_intro_points = NUM_INTRO_POINTS_DEFAULT;
+  c->allow_unknown_ports = 0;
+  c->is_single_onion = 0;
+  c->dir_group_readable = 0;
+  c->is_ephemeral = 0;
+}
+
+/* Allocate and initilize a service object. The service configuration will
+ * contain the default values. Return the newly allocated object pointer. This
+ * function can't fail. */
+hs_service_t *
+hs_service_new(const or_options_t *options)
+{
+  hs_service_t *service = tor_malloc_zero(sizeof(hs_service_t));
+  /* Set default configuration value. */
+  set_service_default_config(&service->config, options);
+  /* Set the default service version. */
+  service->version = HS_SERVICE_DEFAULT_VERSION;
+  return service;
+}
+
+/* Free the given <b>service</b> object and all its content. This function
+ * also takes care of wiping service keys from memory. It is safe to pass a
+ * NULL pointer. */
+void
+hs_service_free(hs_service_t *service)
+{
+  if (service == NULL) {
+    return;
+  }
+
+  /* Free descriptors. */
+  if (service->desc_current) {
+    hs_descriptor_free(service->desc_current->desc);
+    /* Wipe keys. */
+    memwipe(&service->desc_current->signing_kp, 0,
+            sizeof(service->desc_current->signing_kp));
+    memwipe(&service->desc_current->blinded_kp, 0,
+            sizeof(service->desc_current->blinded_kp));
+    /* XXX: Free intro points. */
+    tor_free(service->desc_current);
+  }
+  if (service->desc_next) {
+    hs_descriptor_free(service->desc_next->desc);
+    /* Wipe keys. */
+    memwipe(&service->desc_next->signing_kp, 0,
+            sizeof(service->desc_next->signing_kp));
+    memwipe(&service->desc_next->blinded_kp, 0,
+            sizeof(service->desc_next->blinded_kp));
+    /* XXX: Free intro points. */
+    tor_free(service->desc_next);
+  }
+
+  /* Free service configuration. */
+  tor_free(service->config.directory_path);
+  if (service->config.ports) {
+    SMARTLIST_FOREACH(service->config.ports, rend_service_port_config_t *, p,
+                      rend_service_port_config_free(p););
+    smartlist_free(service->config.ports);
+  }
+
+  /* Wipe service keys. */
+  memwipe(&service->keys.identity_sk, 0, sizeof(service->keys.identity_sk));
+
+  tor_free(service);
+}
+
+/* Release all global the storage of hidden service subsystem. */
+void
+hs_service_free_all(void)
+{
+  rend_service_free_all();
+}
+
 /* XXX We don't currently use these functions, apart from generating unittest
    data. When we start implementing the service-side support for prop224 we
    should revisit these functions and use them. */

@@ -16,6 +16,9 @@
 #define HS_VERSION_TWO 2
 /* Version 3 of the protocol (prop224). */
 #define HS_VERSION_THREE 3
+/* Earliest and latest version we support. */
+#define HS_VERSION_MIN HS_VERSION_TWO
+#define HS_VERSION_MAX HS_VERSION_THREE
 
 /** Try to maintain this many intro points per service by default. */
 #define NUM_INTRO_POINTS_DEFAULT 3

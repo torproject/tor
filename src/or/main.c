@@ -3216,7 +3216,7 @@ tor_free_all(int postfork)
   networkstatus_free_all();
   addressmap_free_all();
   dirserv_free_all();
-  rend_service_free_all();
+  hs_service_free_all();
   rend_cache_free_all();
   rend_service_authorization_free_all();
   hs_cache_free_all();
