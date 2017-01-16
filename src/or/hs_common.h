@@ -58,6 +58,9 @@ typedef enum {
   HS_AUTH_KEY_TYPE_ED25519 = 2,
 } hs_auth_key_type_t;
 
+void hs_init(void);
+void hs_free_all(void);
+
 int hs_check_service_private_dir(const char *username, const char *path,
                                  unsigned int dir_group_readable,
                                  unsigned int create);

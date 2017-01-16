@@ -97,6 +97,13 @@ hs_service_free(hs_service_t *service)
   tor_free(service);
 }
 
+/* Initialize the service HS subsystem. */
+void
+hs_service_init(void)
+{
+  return;
+}
+
 /* Release all global the storage of hidden service subsystem. */
 void
 hs_service_free_all(void)

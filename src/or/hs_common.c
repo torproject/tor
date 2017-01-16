@@ -15,7 +15,9 @@
 
 #include "config.h"
 #include "networkstatus.h"
+#include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_service.h"
 #include "rendcommon.h"
 
 /* Make sure that the directory for <b>service</b> is private, using the config
@@ -342,5 +344,25 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
     /* We should always have a supported version. */
     tor_assert(0);
   }
+}
+
+/* Initialize the entire HS subsytem. This is called in tor_init() before any
+ * torrc options are loaded. Only for >= v3. */
+void
+hs_init(void)
+{
+  hs_circuitmap_init();
+  hs_service_init();
+  hs_cache_init();
+}
+
+/* Release and cleanup all memory of the HS subsystem (all version). This is
+ * called by tor_free_all(). */
+void
+hs_free_all(void)
+{
+  hs_circuitmap_free_all();
+  hs_service_free_all();
+  hs_cache_free_all();
 }
 

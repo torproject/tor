@@ -2499,9 +2499,6 @@ do_main_loop(void)
     }
   }
 
-  /* Initialize relay-side HS circuitmap */
-  hs_circuitmap_init();
-
   /* set up once-a-second callback. */
   if (! second_timer) {
     struct timeval one_second;
@@ -3014,9 +3011,10 @@ tor_init(int argc, char *argv[])
   rep_hist_init();
   /* Initialize the service cache. */
   rend_cache_init();
-  hs_cache_init();
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
                       * cheap. */
+  /* Initialize the HS subsystem. */
+  hs_init();
 
   {
   /* We search for the "quiet" option first, since it decides whether we
@@ -3216,10 +3214,8 @@ tor_free_all(int postfork)
   networkstatus_free_all();
   addressmap_free_all();
   dirserv_free_all();
-  hs_service_free_all();
   rend_cache_free_all();
   rend_service_authorization_free_all();
-  hs_cache_free_all();
   rep_hist_free_all();
   dns_free_all();
   clear_pending_onions();
@@ -3232,7 +3228,6 @@ tor_free_all(int postfork)
   connection_edge_free_all();
   scheduler_free_all();
   nodelist_free_all();
-  hs_circuitmap_free_all();
   microdesc_free_all();
   routerparse_free_all();
   ext_orport_free_all();
@@ -3241,6 +3236,7 @@ tor_free_all(int postfork)
   protover_free_all();
   bridges_free_all();
   consdiffmgr_free_all();
+  hs_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

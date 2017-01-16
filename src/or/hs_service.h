@@ -193,6 +193,7 @@ typedef struct hs_service_t {
 /* API */
 
 int hs_service_config_all(const or_options_t *options, int validate_only);
+void hs_service_init(void);
 void hs_service_free_all(void);
 
 void hs_service_free(hs_service_t *service);
