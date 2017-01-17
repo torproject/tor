@@ -1900,7 +1900,9 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
                                                    SAMPLE_EXCLUDE_PRIMARY |
                                                    SAMPLE_EXCLUDE_PENDING);
     if (guard == NULL) {
-      log_info(LD_GUARD, "Absolutely no sampled guards were available.");
+      log_info(LD_GUARD, "Absolutely no sampled guards were available. "
+               "Marking all guards for retry and starting from top again.");
+      mark_all_guards_maybe_reachable(gs);
       return NULL;
     }
     guard->is_pending = 1;
@@ -1937,6 +1939,21 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
            entry_guard_describe(guard));
 }
 
+/* Mark <b>guard</b> as maybe reachable again. */
+static void
+mark_guard_maybe_reachable(entry_guard_t *guard)
+{
+  if (guard->is_reachable != GUARD_REACHABLE_NO) {
+    return;
+  }
+
+  /* Note that we do not clear failing_since: this guard is now only
+   * _maybe-reachable_. */
+  guard->is_reachable = GUARD_REACHABLE_MAYBE;
+  if (guard->is_filtered_guard)
+    guard->is_usable_filtered_guard = 1;
+}
+
 /**
  * Called when the network comes up after having seemed to be down for
  * a while: Mark the primary guards as maybe-reachable so that we'll
@@ -1945,19 +1962,25 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
 STATIC void
 mark_primary_guards_maybe_reachable(guard_selection_t *gs)
 {
+  tor_assert(gs);
+
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
-    if (guard->is_reachable != GUARD_REACHABLE_NO)
-      continue;
+    mark_guard_maybe_reachable(guard);
+  } SMARTLIST_FOREACH_END(guard);
+}
 
-    /* Note that we do not clear failing_since: this guard is now only
-     * _maybe-reachable_. */
-    guard->is_reachable = GUARD_REACHABLE_MAYBE;
-    if (guard->is_filtered_guard)
-      guard->is_usable_filtered_guard = 1;
+/* Called when we exhaust all guards in our sampled set: Marks all guards as
+ * maybe-reachable so that we 'll try them again. */
+static void
+mark_all_guards_maybe_reachable(guard_selection_t *gs)
+{
+  tor_assert(gs);
 
+  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+    mark_guard_maybe_reachable(guard);
   } SMARTLIST_FOREACH_END(guard);
 }
 
