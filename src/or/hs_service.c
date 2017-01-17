@@ -6,6 +6,8 @@
  * \brief Implement next generation hidden service functionality
  **/
 
+#define HS_SERVICE_PRIVATE
+
 #include "or.h"
 #include "circuitlist.h"
 #include "config.h"
@@ -785,4 +787,22 @@ generate_establish_intro_cell(const uint8_t *circuit_key_material,
   trn_cell_establish_intro_free(cell);
   return NULL;
 }
+
+#ifdef TOR_UNIT_TESTS
+
+/* Return the global service map size. Only used by unit test. */
+STATIC unsigned int
+get_hs_service_map_size(void)
+{
+  return HT_SIZE(hs_service_map);
+}
+
+/* Return the staging list size. Only used by unit test. */
+STATIC int
+get_hs_service_staging_list_size(void)
+{
+  return smartlist_len(hs_service_staging_list);
+}
+
+#endif /* TOR_UNIT_TESTS */
 

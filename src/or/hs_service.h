@@ -224,5 +224,16 @@ ssize_t
 get_establish_intro_payload(uint8_t *buf, size_t buf_len,
                             const trn_cell_establish_intro_t *cell);
 
+#ifdef HS_SERVICE_PRIVATE
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC unsigned int get_hs_service_map_size(void);
+STATIC int get_hs_service_staging_list_size(void);
+
+#endif /* TOR_UNIT_TESTS */
+
+#endif /* HS_SERVICE_PRIVATE */
+
 #endif /* TOR_HS_SERVICE_H */
 
