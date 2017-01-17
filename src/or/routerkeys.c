@@ -785,8 +785,11 @@ load_ed_keys(const or_options_t *options, time_t now)
     if (options->command == CMD_KEYGEN)
       flags |= INIT_ED_KEY_TRY_ENCRYPTED;
 
-    /* Check the key directory */
-    if (check_private_dir(options->DataDirectory, CPD_CREATE, options->User)) {
+    /* Check/Create the key directory */
+    cpd_check_t cpd_opts = CPD_CREATE;
+    if (options->DataDirectoryGroupReadable)
+      cpd_opts |= CPD_GROUP_READ;
+    if (check_private_dir(options->DataDirectory, cpd_opts, options->User)) {
       log_err(LD_OR, "Can't create/check datadirectory %s",
               options->DataDirectory);
       goto err;
