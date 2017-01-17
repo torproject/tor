@@ -691,7 +691,6 @@ rend_config_services(const or_options_t *options, int validate_only)
         log_warn(LD_CONFIG,
                  "HiddenServiceAllowUnknownPorts should be 0 or 1, not %s",
                  line->value);
-        smartlist_free(temp_service_list);
         goto free_and_return;
       }
       log_info(LD_CONFIG,
