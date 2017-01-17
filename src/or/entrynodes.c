@@ -570,6 +570,52 @@ get_extreme_restriction_threshold(void)
                                         1, INT32_MAX);
   return pct / 100.0;
 }
+
+/* Mark <b>guard</b> as maybe reachable again. */
+static void
+mark_guard_maybe_reachable(entry_guard_t *guard)
+{
+  if (guard->is_reachable != GUARD_REACHABLE_NO) {
+    return;
+  }
+
+  /* Note that we do not clear failing_since: this guard is now only
+   * _maybe-reachable_. */
+  guard->is_reachable = GUARD_REACHABLE_MAYBE;
+  if (guard->is_filtered_guard)
+    guard->is_usable_filtered_guard = 1;
+}
+
+/**
+ * Called when the network comes up after having seemed to be down for
+ * a while: Mark the primary guards as maybe-reachable so that we'll
+ * try them again.
+ */
+STATIC void
+mark_primary_guards_maybe_reachable(guard_selection_t *gs)
+{
+  tor_assert(gs);
+
+  if (!gs->primary_guards_up_to_date)
+    entry_guards_update_primary(gs);
+
+  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+    mark_guard_maybe_reachable(guard);
+  } SMARTLIST_FOREACH_END(guard);
+}
+
+/* Called when we exhaust all guards in our sampled set: Marks all guards as
+   maybe-reachable so that we 'll try them again. */
+static void
+mark_all_guards_maybe_reachable(guard_selection_t *gs)
+{
+  tor_assert(gs);
+
+  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+    mark_guard_maybe_reachable(guard);
+  } SMARTLIST_FOREACH_END(guard);
+}
+
 /**@}*/
 
 /**
@@ -1937,51 +1983,6 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
            guard->is_primary?"primary ":"",
            guard->confirmed_idx>=0?"confirmed ":"",
            entry_guard_describe(guard));
-}
-
-/* Mark <b>guard</b> as maybe reachable again. */
-static void
-mark_guard_maybe_reachable(entry_guard_t *guard)
-{
-  if (guard->is_reachable != GUARD_REACHABLE_NO) {
-    return;
-  }
-
-  /* Note that we do not clear failing_since: this guard is now only
-   * _maybe-reachable_. */
-  guard->is_reachable = GUARD_REACHABLE_MAYBE;
-  if (guard->is_filtered_guard)
-    guard->is_usable_filtered_guard = 1;
-}
-
-/**
- * Called when the network comes up after having seemed to be down for
- * a while: Mark the primary guards as maybe-reachable so that we'll
- * try them again.
- */
-STATIC void
-mark_primary_guards_maybe_reachable(guard_selection_t *gs)
-{
-  tor_assert(gs);
-
-  if (!gs->primary_guards_up_to_date)
-    entry_guards_update_primary(gs);
-
-  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
-    mark_guard_maybe_reachable(guard);
-  } SMARTLIST_FOREACH_END(guard);
-}
-
-/* Called when we exhaust all guards in our sampled set: Marks all guards as
- * maybe-reachable so that we 'll try them again. */
-static void
-mark_all_guards_maybe_reachable(guard_selection_t *gs)
-{
-  tor_assert(gs);
-
-  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
-    mark_guard_maybe_reachable(guard);
-  } SMARTLIST_FOREACH_END(guard);
 }
 
 /**
