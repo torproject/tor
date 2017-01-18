@@ -44,7 +44,8 @@ mock_send_intro_established_cell(or_circuit_t *circ)
 static int
 mock_relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
                                   uint8_t relay_command, const char *payload,
-                                  size_t payload_len, crypt_path_t *cpath_layer,
+                                  size_t payload_len,
+                                  crypt_path_t *cpath_layer,
                                   const char *filename, int lineno)
 {
   (void) stream_id;
@@ -763,12 +764,14 @@ test_received_introduce1_handling(void *arg)
     size_t request_len = hs_cell_introduce1_encoded_len(cell);
     tt_size_op(request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len);
-    ssize_t encoded_len = hs_cell_introduce1_encode(request, request_len, cell);
+    ssize_t encoded_len =
+      hs_cell_introduce1_encode(request, request_len, cell);
     tt_size_op(encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
     or_circuit_t *service_circ = helper_create_intro_circuit();
-    circuit_change_purpose(TO_CIRCUIT(service_circ), CIRCUIT_PURPOSE_INTRO_POINT);
+    circuit_change_purpose(TO_CIRCUIT(service_circ),
+                           CIRCUIT_PURPOSE_INTRO_POINT);
     /* Register the circuit in the map for the auth key of the cell. */
     ed25519_public_key_t auth_key;
     const uint8_t *cell_auth_key =
@@ -792,12 +795,14 @@ test_received_introduce1_handling(void *arg)
     size_t request_len = hs_cell_introduce1_encoded_len(cell) + 256;
     tt_size_op(request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len + 256);
-    ssize_t encoded_len = hs_cell_introduce1_encode(request, request_len, cell);
+    ssize_t encoded_len =
+      hs_cell_introduce1_encode(request, request_len, cell);
     tt_size_op(encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
     or_circuit_t *service_circ = helper_create_intro_circuit();
-    circuit_change_purpose(TO_CIRCUIT(service_circ), CIRCUIT_PURPOSE_INTRO_POINT);
+    circuit_change_purpose(TO_CIRCUIT(service_circ),
+                           CIRCUIT_PURPOSE_INTRO_POINT);
     /* Register the circuit in the map for the auth key of the cell. */
     uint8_t token[REND_TOKEN_LEN];
     memcpy(token, legacy_key_id, sizeof(token));

@@ -592,3 +592,4 @@ hs_intro_received_introduce1(or_circuit_t *circ, const uint8_t *request,
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
 }
+
