@@ -3123,7 +3123,6 @@ getinfo_helper_format_single_entry_guard(const entry_guard_t *e)
     status = "up";
   }
 
-
   node = entry_guard_find_node(e);
   if (node) {
     node_get_verbose_nickname(node, nbuf);
@@ -3266,17 +3265,8 @@ guards_choose_guard(cpath_build_state_t *state,
 
 /** Helper: pick a directory guard, with whatever algorithm is used. */
 const node_t *
-guards_choose_dirguard(dirinfo_type_t info,
-                      circuit_guard_state_t **guard_state_out)
+guards_choose_dirguard(circuit_guard_state_t **guard_state_out)
 {
-  /* XXXX prop271 We don't need to look at the dirinfo_type_t here,
-   * apparently. If you look at the old implementation, and you follow info
-   * downwards through choose_random_dirguard(), into
-   * choose_random_entry_impl(), into populate_live_entry_guards()... you
-   * find out that it isn't even used, and hasn't been since 0.2.7.1-alpha,
-   * when we realized that every Tor on the network would support
-   * microdescriptors. -NM */
-  (void) info;
   const node_t *r = NULL;
   if (entry_guard_pick_for_circuit(get_guard_selection_info(),
                                    GUARD_USAGE_DIRGUARD,
