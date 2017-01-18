@@ -967,10 +967,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     if (!hop) {
       /* done building the circuit. whew. */
       guard_usable_t r;
-      if (get_options()->UseDeprecatedGuardAlgorithm) {
-        // The circuit is usable; we already marked the guard as okay.
-        r = GUARD_USABLE_NOW;
-      } else if (! circ->guard_state) {
+      if (! circ->guard_state) {
         if (circuit_get_cpath_len(circ) != 1 &&
             circ->base_.purpose != CIRCUIT_PURPOSE_TESTING &&
             get_options()->UseEntryGuards) {

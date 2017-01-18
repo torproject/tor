@@ -789,17 +789,6 @@ test_entry_guard_get_guard_selection_by_name(void *arg)
   tt_assert(gs3 != gs1);
   tt_assert(gs3 == get_guard_selection_info());
 
-  or_options_t *options = get_options_mutable();
-  options->UseDeprecatedGuardAlgorithm = 1;
-  update_guard_selection_choice(options);
-  guard_selection_t *gs4 = get_guard_selection_info();
-  tt_assert(gs4 != gs3);
-  tt_assert(gs4 == get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 1));
-
-  options->UseDeprecatedGuardAlgorithm = 0;
-  update_guard_selection_choice(options);
-  tt_assert(gs3 == get_guard_selection_info());
-
  done:
   entry_guards_free_all();
 }
@@ -823,14 +812,6 @@ test_entry_guard_choose_selection_initial(void *arg)
   tt_str_op(name, OP_EQ, "bridges");
   tt_int_op(type, OP_EQ, GS_TYPE_BRIDGE);
   get_options_mutable()->UseBridges = 0;
-
-  /* If we're using legacy guards, we get the legacy selection */
-  get_options_mutable()->UseDeprecatedGuardAlgorithm = 1;
-  name = choose_guard_selection(get_options(),
-                                dummy_consensus, NULL, &type);
-  tt_str_op(name, OP_EQ, "legacy");
-  tt_int_op(type, OP_EQ, GS_TYPE_LEGACY);
-  get_options_mutable()->UseDeprecatedGuardAlgorithm = 0;
 
   /* If we discard >99% of our guards, though, we should be in the restricted
    * set. */

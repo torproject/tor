@@ -546,10 +546,6 @@ choose_guard_selection(const or_options_t *options,
 {
   tor_assert(options);
   tor_assert(type_out);
-  if (options->UseDeprecatedGuardAlgorithm) {
-    *type_out = GS_TYPE_LEGACY;
-    return "legacy";
-  }
 
   if (options->UseBridges) {
     *type_out = GS_TYPE_BRIDGE;
@@ -2113,9 +2109,6 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
 guard_usable_t
 entry_guard_succeeded(circuit_guard_state_t **guard_state_p)
 {
-  if (get_options()->UseDeprecatedGuardAlgorithm)
-    return GUARD_USABLE_NOW;
-
   if (BUG(*guard_state_p == NULL))
     return GUARD_USABLE_NEVER;
 
@@ -2143,8 +2136,6 @@ entry_guard_succeeded(circuit_guard_state_t **guard_state_p)
 void
 entry_guard_cancel(circuit_guard_state_t **guard_state_p)
 {
-  if (get_options()->UseDeprecatedGuardAlgorithm)
-    return;
   if (BUG(*guard_state_p == NULL))
     return;
   entry_guard_t *guard = entry_guard_handle_get((*guard_state_p)->guard);
@@ -2166,9 +2157,6 @@ entry_guard_cancel(circuit_guard_state_t **guard_state_p)
 void
 entry_guard_failed(circuit_guard_state_t **guard_state_p)
 {
-  if (get_options()->UseDeprecatedGuardAlgorithm)
-    return;
-
   if (BUG(*guard_state_p == NULL))
     return;
 
@@ -2190,8 +2178,6 @@ void
 entry_guard_chan_failed(channel_t *chan)
 {
   if (!chan)
-    return;
-  if (get_options()->UseDeprecatedGuardAlgorithm)
     return;
 
   smartlist_t *pending = smartlist_new();
@@ -3278,10 +3264,7 @@ const node_t *
 guards_choose_guard(cpath_build_state_t *state,
                    circuit_guard_state_t **guard_state_out)
 {
-  if (get_options()->UseDeprecatedGuardAlgorithm) {
-    tor_assert_nonfatal_unreached();
-    return NULL;
-  } else {
+  if (1) {
     const node_t *r = NULL;
     const uint8_t *exit_id = NULL;
     entry_guard_restriction_t *rst = NULL;
@@ -3308,11 +3291,7 @@ const node_t *
 guards_choose_dirguard(dirinfo_type_t info,
                       circuit_guard_state_t **guard_state_out)
 {
-  if (get_options()->UseDeprecatedGuardAlgorithm) {
-    (void)info;
-    tor_assert_nonfatal_unreached();
-    return NULL;
-  } else {
+  if (1) {
     /* XXXX prop271 We don't need to look at the dirinfo_type_t here,
      * apparently. If you look at the old implementation, and you follow info
      * downwards through choose_random_dirguard(), into
@@ -3320,6 +3299,7 @@ guards_choose_dirguard(dirinfo_type_t info,
      * find out that it isn't even used, and hasn't been since 0.2.7.1-alpha,
      * when we realized that every Tor on the network would support
      * microdescriptors. -NM */
+    (void) info;
     const node_t *r = NULL;
     if (entry_guard_pick_for_circuit(get_guard_selection_info(),
                                      GUARD_USAGE_DIRGUARD,

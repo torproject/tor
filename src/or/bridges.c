@@ -761,20 +761,13 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
                    fmt_and_decorate_addr(&bridge->addr),
                    (int) bridge->port);
       }
-      if (get_options()->UseDeprecatedGuardAlgorithm) {
-        tor_assert_nonfatal_unreached();
-      } else {
-        entry_guard_learned_bridge_identity(&bridge->addrport_configured,
-                               (const uint8_t*)ri->cache_info.identity_digest);
-      }
+      entry_guard_learned_bridge_identity(&bridge->addrport_configured,
+                              (const uint8_t*)ri->cache_info.identity_digest);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
       /* set entry->made_contact so if it goes down we don't drop it from
        * our entry node list */
-      if (get_options()->UseDeprecatedGuardAlgorithm) {
-        tor_assert_nonfatal_unreached();
-      }
       if (first) {
         routerlist_retry_directory_downloads(now);
       }

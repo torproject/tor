@@ -308,9 +308,6 @@ static config_var_t option_vars_[] = {
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(ExtendByEd25519ID,           AUTOBOOL, "auto"),
   V(FallbackDir,                 LINELIST, NULL),
-  /* XXXX prop271 -- this has an ugly name to remind us to remove it. */
-  VAR("UseDeprecatedGuardAlgorithm_",        BOOL,
-      UseDeprecatedGuardAlgorithm, "0"),
 
   V(UseDefaultFallbackDirs,      BOOL,     "1"),
 
@@ -1578,7 +1575,6 @@ options_transition_affects_guards(const or_options_t *old,
 
   return
     (old->UseEntryGuards != new->UseEntryGuards ||
-     old->UseDeprecatedGuardAlgorithm != new->UseDeprecatedGuardAlgorithm ||
      old->UseBridges != new->UseBridges ||
      old->UseEntryGuards != new->UseEntryGuards ||
      old->ClientUseIPv4 != new->ClientUseIPv4 ||

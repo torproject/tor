@@ -4574,14 +4574,6 @@ typedef struct {
    * do we enforce Ed25519 identity match? */
   /* NOTE: remove this option someday. */
   int AuthDirTestEd25519LinkKeys;
-
-  /** If 1, we use the old (pre-prop271) guard selection algorithm.
-   *
-   * XXXX prop271 This option is only here as a stopgap while we're
-   * XXXX tuning and debugging the new (post-prop271) algorithm.  Eventually
-   * we should remove it entirely.
-   */
-  int UseDeprecatedGuardAlgorithm;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
