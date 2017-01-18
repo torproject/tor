@@ -5328,10 +5328,6 @@ typedef struct dir_server_t {
  */
 #define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
 
-/** This node is to be chosen as a directory guard, so don't choose any
- * node that's currently a guard. */
-#define PDS_FOR_GUARD (1<<5)
-
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/
 typedef enum bandwidth_weight_rule_t {
