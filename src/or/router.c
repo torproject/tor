@@ -849,7 +849,12 @@ init_keys(void)
   if (init_keys_common() < 0)
     return -1;
   /* Make sure DataDirectory exists, and is private. */
-  if (check_private_dir(options->DataDirectory, CPD_CREATE, options->User)) {
+  cpd_check_t cpd_opts = CPD_CREATE;
+  if (options->DataDirectoryGroupReadable)
+    cpd_opts |= CPD_GROUP_READ;
+  if (check_private_dir(options->DataDirectory, cpd_opts, options->User)) {
+    log_err(LD_OR, "Can't create/check datadirectory %s",
+            options->DataDirectory);
     return -1;
   }
   /* Check the key directory. */
