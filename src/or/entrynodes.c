@@ -2944,22 +2944,20 @@ num_bridges_usable(void)
 {
   int n_options = 0;
 
-  if (1) {
-    /* XXXX prop271 Is this quite right? */
-    tor_assert(get_options()->UseBridges);
-    guard_selection_t *gs  = get_guard_selection_info();
-    tor_assert(gs->type == GS_TYPE_BRIDGE);
+  /* XXXX prop271 Is this quite right? */
+  tor_assert(get_options()->UseBridges);
+  guard_selection_t *gs  = get_guard_selection_info();
+  tor_assert(gs->type == GS_TYPE_BRIDGE);
 
-    SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
-      if (guard->is_reachable == GUARD_REACHABLE_NO)
-        continue;
-      if (tor_digest_is_zero(guard->identity))
-        continue;
-      const node_t *node = node_get_by_id(guard->identity);
-      if (node && node->ri)
-        ++n_options;
-    } SMARTLIST_FOREACH_END(guard);
-  }
+  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+    if (guard->is_reachable == GUARD_REACHABLE_NO)
+      continue;
+    if (tor_digest_is_zero(guard->identity))
+      continue;
+    const node_t *node = node_get_by_id(guard->identity);
+    if (node && node->ri)
+      ++n_options;
+  } SMARTLIST_FOREACH_END(guard);
 
   return n_options;
 }
@@ -3106,26 +3104,25 @@ getinfo_helper_format_single_entry_guard(const entry_guard_t *e)
   char tbuf[ISO_TIME_LEN+1];
   char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
 
-  if (1) {
-    /* modern case.  This is going to be a bit tricky, since the status
-     * codes above weren't really intended for prop271 guards.
-     *
-     * XXXX use a more appropriate format for exporting this information
-     */
-    if (e->confirmed_idx < 0) {
-      status = "never-connected";
-    } else if (! e->currently_listed) {
-      when = e->unlisted_since_date;
-      status = "unusable";
-    } else if (! e->is_filtered_guard) {
-      status = "unusable";
-    } else if (e->is_reachable == GUARD_REACHABLE_NO) {
-      when = e->failing_since;
-      status = "down";
-    } else {
-      status = "up";
-    }
+  /* This is going to be a bit tricky, since the status
+   * codes weren't really intended for prop271 guards.
+   *
+   * XXXX use a more appropriate format for exporting this information
+   */
+  if (e->confirmed_idx < 0) {
+    status = "never-connected";
+  } else if (! e->currently_listed) {
+    when = e->unlisted_since_date;
+    status = "unusable";
+  } else if (! e->is_filtered_guard) {
+    status = "unusable";
+  } else if (e->is_reachable == GUARD_REACHABLE_NO) {
+    when = e->failing_since;
+    status = "down";
+  } else {
+    status = "up";
   }
+
 
   node = entry_guard_find_node(e);
   if (node) {
@@ -3247,26 +3244,24 @@ const node_t *
 guards_choose_guard(cpath_build_state_t *state,
                    circuit_guard_state_t **guard_state_out)
 {
-  if (1) {
-    const node_t *r = NULL;
-    const uint8_t *exit_id = NULL;
-    entry_guard_restriction_t *rst = NULL;
-    // XXXX prop271 spec deviation -- use of restriction here.
-    if (state && (exit_id = build_state_get_exit_rsa_id(state))) {
-      /* We're building to a targeted exit node, so that node can't be
-       * chosen as our guard for this circuit. */
-      rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
-      memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
-    }
-    if (entry_guard_pick_for_circuit(get_guard_selection_info(),
-                                     GUARD_USAGE_TRAFFIC,
-                                     rst,
-                                     &r,
-                                     guard_state_out) < 0) {
-      tor_assert(r == NULL);
-    }
-    return r;
+  const node_t *r = NULL;
+  const uint8_t *exit_id = NULL;
+  entry_guard_restriction_t *rst = NULL;
+  // XXXX prop271 spec deviation -- use of restriction here.
+  if (state && (exit_id = build_state_get_exit_rsa_id(state))) {
+    /* We're building to a targeted exit node, so that node can't be
+     * chosen as our guard for this circuit. */
+    rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
+    memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
   }
+  if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                   GUARD_USAGE_TRAFFIC,
+                                   rst,
+                                   &r,
+                                   guard_state_out) < 0) {
+    tor_assert(r == NULL);
+  }
+  return r;
 }
 
 /** Helper: pick a directory guard, with whatever algorithm is used. */
@@ -3274,25 +3269,23 @@ const node_t *
 guards_choose_dirguard(dirinfo_type_t info,
                       circuit_guard_state_t **guard_state_out)
 {
-  if (1) {
-    /* XXXX prop271 We don't need to look at the dirinfo_type_t here,
-     * apparently. If you look at the old implementation, and you follow info
-     * downwards through choose_random_dirguard(), into
-     * choose_random_entry_impl(), into populate_live_entry_guards()... you
-     * find out that it isn't even used, and hasn't been since 0.2.7.1-alpha,
-     * when we realized that every Tor on the network would support
-     * microdescriptors. -NM */
-    (void) info;
-    const node_t *r = NULL;
-    if (entry_guard_pick_for_circuit(get_guard_selection_info(),
-                                     GUARD_USAGE_DIRGUARD,
-                                     NULL,
-                                     &r,
-                                     guard_state_out) < 0) {
-      tor_assert(r == NULL);
-    }
-    return r;
+  /* XXXX prop271 We don't need to look at the dirinfo_type_t here,
+   * apparently. If you look at the old implementation, and you follow info
+   * downwards through choose_random_dirguard(), into
+   * choose_random_entry_impl(), into populate_live_entry_guards()... you
+   * find out that it isn't even used, and hasn't been since 0.2.7.1-alpha,
+   * when we realized that every Tor on the network would support
+   * microdescriptors. -NM */
+  (void) info;
+  const node_t *r = NULL;
+  if (entry_guard_pick_for_circuit(get_guard_selection_info(),
+                                   GUARD_USAGE_DIRGUARD,
+                                   NULL,
+                                   &r,
+                                   guard_state_out) < 0) {
+    tor_assert(r == NULL);
   }
+  return r;
 }
 
 /**
