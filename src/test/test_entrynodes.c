@@ -747,9 +747,6 @@ test_entry_guard_parse_from_state_broken(void *arg)
   gs_df = get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
   tt_assert(gs_df != NULL);
   tt_int_op(smartlist_len(gs_df->sampled_entry_guards), OP_EQ, 1);
-  guard_selection_t *gs_legacy =
-    get_guard_selection_by_name("legacy", GS_TYPE_LEGACY, 0);
-  tt_assert(gs_legacy == NULL);
 
  done:
   config_free_lines(lines);

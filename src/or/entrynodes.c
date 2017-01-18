@@ -199,9 +199,7 @@ guard_selection_infer_type(guard_selection_type_t type,
                            const char *name)
 {
   if (type == GS_TYPE_INFER) {
-    if (!strcmp(name, "legacy"))
-      type = GS_TYPE_LEGACY;
-    else if (!strcmp(name, "bridges"))
+    if (!strcmp(name, "bridges"))
       type = GS_TYPE_BRIDGE;
     else if (!strcmp(name, "restricted"))
       type = GS_TYPE_RESTRICTED;
@@ -3100,8 +3098,7 @@ entry_guards_update_state(or_state_t *state)
  * Return a newly allocated string.
  */
 STATIC char *
-getinfo_helper_format_single_entry_guard(const entry_guard_t *e,
-                                         int legacy_guard)
+getinfo_helper_format_single_entry_guard(const entry_guard_t *e)
 {
   const char *status = NULL;
   time_t when = 0;
@@ -3109,10 +3106,7 @@ getinfo_helper_format_single_entry_guard(const entry_guard_t *e,
   char tbuf[ISO_TIME_LEN+1];
   char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
 
-  if (legacy_guard) {
-    tor_assert_nonfatal_unreached();
-    status = "BUG";
-  } else {
+  if (1) {
     /* modern case.  This is going to be a bit tricky, since the status
      * codes above weren't really intended for prop271 guards.
      *
@@ -3177,19 +3171,12 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
     const smartlist_t *guards;
-    int legacy_mode;
-    if (gs->type == GS_TYPE_LEGACY) {
-      tor_assert_nonfatal_unreached();
-      return 0;
-    } else {
-      guards = gs->sampled_entry_guards;
-      legacy_mode = 0;
-    }
+    guards = gs->sampled_entry_guards;
 
     smartlist_t *sl = smartlist_new();
 
     SMARTLIST_FOREACH_BEGIN(guards, const entry_guard_t *, e) {
-      char *cp = getinfo_helper_format_single_entry_guard(e, legacy_mode);
+      char *cp = getinfo_helper_format_single_entry_guard(e);
       smartlist_add(sl, cp);
     } SMARTLIST_FOREACH_END(e);
     *answer = smartlist_join_strings(sl, "", 0, NULL);
@@ -3248,12 +3235,8 @@ guards_update_all(void)
 
   tor_assert(curr_guard_context);
 
-  if (curr_guard_context->type == GS_TYPE_LEGACY) {
-    tor_assert_nonfatal_unreached();
-  } else {
-    if (entry_guards_update_all(curr_guard_context))
-      mark_circuits = 1;
-  }
+  if (entry_guards_update_all(curr_guard_context))
+    mark_circuits = 1;
 
   return mark_circuits;
 }
