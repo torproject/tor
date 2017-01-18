@@ -1148,6 +1148,11 @@ config_dump(const config_format_t *fmt, const void *default_options,
       config_get_assigned_option(fmt, options, fmt->vars[i].name, 1);
 
     for (; line; line = line->next) {
+      if (!strcmpstart(line->key, "__")) {
+        /* This check detects "hidden" variables inside LINELIST_V structures.
+         */
+        continue;
+      }
       smartlist_add_asprintf(elements, "%s%s %s\n",
                    comment_option ? "# " : "",
                    line->key, line->value);
