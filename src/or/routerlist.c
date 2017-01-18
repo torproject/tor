@@ -1826,43 +1826,24 @@ router_is_already_dir_fetching(const tor_addr_port_t *ap, int serverdesc,
   return 0;
 }
 
-/* Check if we already have a directory fetch from ds, for serverdesc
- * (including extrainfo) or microdesc documents.
+/* Check if we already have a directory fetch from the ipv4 or ipv6
+ * router, for serverdesc (including extrainfo) or microdesc documents.
  * If so, return 1, if not, return 0.
  */
 static int
-router_is_already_dir_fetching_ds(const dir_server_t *ds,
-                                  int serverdesc,
-                                  int microdesc)
+router_is_already_dir_fetching_(uint32_t ipv4_addr,
+                                const tor_addr_t *ipv6_addr,
+                                uint16_t dir_port,
+                                int serverdesc,
+                                int microdesc)
 {
   tor_addr_port_t ipv4_dir_ap, ipv6_dir_ap;
 
   /* Assume IPv6 DirPort is the same as IPv4 DirPort */
-  tor_addr_from_ipv4h(&ipv4_dir_ap.addr, ds->addr);
-  ipv4_dir_ap.port = ds->dir_port;
-  tor_addr_copy(&ipv6_dir_ap.addr, &ds->ipv6_addr);
-  ipv6_dir_ap.port = ds->dir_port;
-
-  return (router_is_already_dir_fetching(&ipv4_dir_ap, serverdesc, microdesc)
-       || router_is_already_dir_fetching(&ipv6_dir_ap, serverdesc, microdesc));
-}
-
-/* Check if we already have a directory fetch from rs, for serverdesc
- * (including extrainfo) or microdesc documents.
- * If so, return 1, if not, return 0.
- */
-static int
-router_is_already_dir_fetching_rs(const routerstatus_t *rs,
-                                  int serverdesc,
-                                  int microdesc)
-{
-  tor_addr_port_t ipv4_dir_ap, ipv6_dir_ap;
-
-  /* Assume IPv6 DirPort is the same as IPv4 DirPort */
-  tor_addr_from_ipv4h(&ipv4_dir_ap.addr, rs->addr);
-  ipv4_dir_ap.port = rs->dir_port;
-  tor_addr_copy(&ipv6_dir_ap.addr, &rs->ipv6_addr);
-  ipv6_dir_ap.port = rs->dir_port;
+  tor_addr_from_ipv4h(&ipv4_dir_ap.addr, ipv4_addr);
+  ipv4_dir_ap.port = dir_port;
+  tor_addr_copy(&ipv6_dir_ap.addr, ipv6_addr);
+  ipv6_dir_ap.port = dir_port;
 
   return (router_is_already_dir_fetching(&ipv4_dir_ap, serverdesc, microdesc)
        || router_is_already_dir_fetching(&ipv6_dir_ap, serverdesc, microdesc));
@@ -1954,6 +1935,21 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
     }                                                                         \
   STMT_END
 
+/* Common code used in the loop within router_pick_directory_server_impl and
+ * router_pick_trusteddirserver_impl.
+ *
+ * Check if the given <b>identity</b> supports extrainfo. If not, skip further
+ * checks.
+ */
+#define SKIP_MISSING_TRUSTED_EXTRAINFO(type, identity)                        \
+  STMT_BEGIN                                                                  \
+    int is_trusted_extrainfo = router_digest_is_trusted_dir_type(             \
+                               (identity), EXTRAINFO_DIRINFO);                \
+    if (((type) & EXTRAINFO_DIRINFO) &&                                       \
+        !router_supports_extrainfo((identity), is_trusted_extrainfo))         \
+      continue;                                                               \
+  STMT_END
+
 /* When iterating through the routerlist, can OR address/port preference
  * and reachability checks be skipped?
  */
@@ -2026,7 +2022,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
-    int is_trusted, is_trusted_extrainfo;
+    int is_trusted;
     int is_overloaded;
     const routerstatus_t *status = node->rs;
     const country_t country = node->country;
@@ -2037,12 +2033,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
-    is_trusted = router_digest_is_trusted_dir(node->identity);
-    is_trusted_extrainfo = router_digest_is_trusted_dir_type(
-                           node->identity, EXTRAINFO_DIRINFO);
-    if ((type & EXTRAINFO_DIRINFO) &&
-        !router_supports_extrainfo(node->identity, is_trusted_extrainfo))
-      continue;
+
+    SKIP_MISSING_TRUSTED_EXTRAINFO(type, node->identity);
+
 #ifdef ENABLE_LEGACY_GUARD_ALGORITHM
     /* Don't make the same node a guard twice */
      if (for_guard && is_node_used_as_guard(node)) {
@@ -2060,14 +2053,17 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
       continue;
     }
 
-    if (router_is_already_dir_fetching_rs(status,
-                                          no_serverdesc_fetching,
-                                          no_microdesc_fetching)) {
+    if (router_is_already_dir_fetching_(status->addr,
+                                        &status->ipv6_addr,
+                                        status->dir_port,
+                                        no_serverdesc_fetching,
+                                        no_microdesc_fetching)) {
       ++n_busy;
       continue;
     }
 
     is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
+    is_trusted = router_digest_is_trusted_dir(node->identity);
 
     /* Clients use IPv6 addresses if the server has one and the client
      * prefers IPv6.
@@ -2199,11 +2195,9 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
       if (!d->is_running) continue;
       if ((type & d->type) == 0)
         continue;
-      int is_trusted_extrainfo = router_digest_is_trusted_dir_type(
-                                 d->digest, EXTRAINFO_DIRINFO);
-      if ((type & EXTRAINFO_DIRINFO) &&
-          !router_supports_extrainfo(d->digest, is_trusted_extrainfo))
-        continue;
+
+      SKIP_MISSING_TRUSTED_EXTRAINFO(type, d->digest);
+
       if (requireother && me && router_digest_is_me(d->digest))
         continue;
       if (try_excluding &&
@@ -2213,8 +2207,11 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
         continue;
       }
 
-      if (router_is_already_dir_fetching_ds(d, no_serverdesc_fetching,
-                                            no_microdesc_fetching)) {
+      if (router_is_already_dir_fetching_(d->addr,
+                                          &d->ipv6_addr,
+                                          d->dir_port,
+                                          no_serverdesc_fetching,
+                                          no_microdesc_fetching)) {
         ++n_busy;
         continue;
       }
