@@ -1858,6 +1858,9 @@ circuit_about_to_free(circuit_t *circ)
     if (circuits_pending_chans)
       smartlist_remove(circuits_pending_chans, circ);
   }
+  if (circuits_pending_other_guards) {
+    smartlist_remove(circuits_pending_other_guards, circ);
+  }
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_status(TO_ORIGIN_CIRCUIT(circ),
      (circ->state == CIRCUIT_STATE_OPEN ||
