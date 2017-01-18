@@ -741,14 +741,12 @@ rend_config_services(const or_options_t *options, int validate_only)
     } else if (!strcasecmp(line->key, "HiddenServiceNumIntroductionPoints")) {
       service->n_intro_points_wanted =
         (unsigned int) tor_parse_long(line->value, 10,
-                                      NUM_INTRO_POINTS_DEFAULT,
-                                      NUM_INTRO_POINTS_MAX, &ok, NULL);
+                                      0, NUM_INTRO_POINTS_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_CONFIG,
                  "HiddenServiceNumIntroductionPoints "
                  "should be between %d and %d, not %s",
-                 NUM_INTRO_POINTS_DEFAULT, NUM_INTRO_POINTS_MAX,
-                 line->value);
+                 0, NUM_INTRO_POINTS_MAX, line->value);
         goto free_and_return;
       }
       log_info(LD_CONFIG, "HiddenServiceNumIntroductionPoints=%d for %s",
