@@ -38,7 +38,7 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
            "Received a legacy ESTABLISH_INTRO request on circuit %u",
            (unsigned) circ->p_circ_id);
 
-  if (!hs_intro_circuit_is_suitable(circ)) {
+  if (!hs_intro_circuit_is_suitable_for_establish_intro(circ)) {
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
@@ -133,8 +133,8 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
  * INTRODUCE2 cell.
  */
 int
-rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
-                   size_t request_len)
+rend_mid_introduce_legacy(or_circuit_t *circ, const uint8_t *request,
+                          size_t request_len)
 {
   or_circuit_t *intro_circ;
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
@@ -143,26 +143,10 @@ rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
   log_info(LD_REND, "Received an INTRODUCE1 request on circuit %u",
            (unsigned)circ->p_circ_id);
 
-  if (circ->base_.purpose != CIRCUIT_PURPOSE_OR || circ->base_.n_chan) {
-    log_warn(LD_PROTOCOL,
-             "Rejecting INTRODUCE1 on non-OR or non-edge circuit %u.",
-             (unsigned)circ->p_circ_id);
-    goto err;
-  }
-
-  /* We have already done an introduction on this circuit but we just
-     received a request for another one. We block it since this might
-     be an attempt to DoS a hidden service (#15515). */
-  if (circ->already_received_introduce1) {
-    log_fn(LOG_PROTOCOL_WARN, LD_REND,
-           "Blocking multiple introductions on the same circuit. "
-           "Someone might be trying to attack a hidden service through "
-           "this relay.");
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    return -1;
-  }
-
-  circ->already_received_introduce1 = 1;
+  /* At this point, we know that the circuit is valid for an INTRODUCE1
+   * because the validation has been made before calling this function. */
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_OR);
+  tor_assert(!circ->base_.n_chan);
 
   /* We could change this to MAX_HEX_NICKNAME_LEN now that 0.0.9.x is
    * obsolete; however, there isn't much reason to do so, and we're going

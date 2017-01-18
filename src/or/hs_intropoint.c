@@ -9,6 +9,7 @@
 #define HS_INTROPOINT_PRIVATE
 
 #include "or.h"
+#include "config.h"
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
@@ -16,27 +17,52 @@
 #include "rendmid.h"
 #include "rephist.h"
 
-#include "hs/cell_establish_intro.h"
+/* Trunnel */
+#include "ed25519_cert.h"
 #include "hs/cell_common.h"
+#include "hs/cell_establish_intro.h"
+#include "hs/cell_introduce1.h"
+
 #include "hs_circuitmap.h"
 #include "hs_intropoint.h"
 #include "hs_common.h"
 
-/** Extract the authentication key from an ESTABLISH_INTRO <b>cell</b> and
- *  place it in <b>auth_key_out</b>. */
+/** Extract the authentication key from an ESTABLISH_INTRO or INTRODUCE1 using
+ * the given <b>cell_type</b> from <b>cell</b> and place it in
+ * <b>auth_key_out</b>. */
 STATIC void
-get_auth_key_from_establish_intro_cell(ed25519_public_key_t *auth_key_out,
-                                       const hs_cell_establish_intro_t *cell)
+get_auth_key_from_cell(ed25519_public_key_t *auth_key_out,
+                       unsigned int cell_type, const void *cell)
 {
+  size_t auth_key_len;
+  const uint8_t *key_array;
+
   tor_assert(auth_key_out);
+  tor_assert(cell);
 
-  const uint8_t *key_array =
-    hs_cell_establish_intro_getconstarray_auth_key(cell);
+  switch (cell_type) {
+  case RELAY_COMMAND_ESTABLISH_INTRO:
+  {
+    const hs_cell_establish_intro_t *c_cell = cell;
+    key_array = hs_cell_establish_intro_getconstarray_auth_key(c_cell);
+    auth_key_len = hs_cell_establish_intro_getlen_auth_key(c_cell);
+    break;
+  }
+  case RELAY_COMMAND_INTRODUCE1:
+  {
+    const hs_cell_introduce1_t *c_cell = cell;
+    key_array = hs_cell_introduce1_getconstarray_auth_key(cell);
+    auth_key_len = hs_cell_introduce1_getlen_auth_key(c_cell);
+    break;
+  }
+  default:
+    /* Getting here is really bad as it means we got a unknown cell type from
+     * this file where every call has an hardcoded value. */
+    tor_assert(0); /* LCOV_EXCL_LINE */
+  }
   tor_assert(key_array);
-  tor_assert(hs_cell_establish_intro_getlen_auth_key(cell) ==
-             sizeof(auth_key_out->pubkey));
-
-  memcpy(auth_key_out->pubkey, key_array, cell->auth_key_len);
+  tor_assert(auth_key_len == sizeof(auth_key_out->pubkey));
+  memcpy(auth_key_out->pubkey, key_array, auth_key_len);
 }
 
 /** We received an ESTABLISH_INTRO <b>cell</b>. Verify its signature and MAC,
@@ -83,7 +109,7 @@ verify_establish_intro_cell(const hs_cell_establish_intro_t *cell,
     memcpy(sig_struct.sig, sig_array, cell->sig_len);
 
     ed25519_public_key_t auth_key;
-    get_auth_key_from_establish_intro_cell(&auth_key, cell);
+    get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO, cell);
 
     const size_t sig_msg_len = cell->end_sig_fields - msg;
     int sig_mismatch = ed25519_checksig_prefixed(&sig_struct,
@@ -158,7 +184,8 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
 {
   /* Get the auth key of this intro point */
   ed25519_public_key_t auth_key;
-  get_auth_key_from_establish_intro_cell(&auth_key, parsed_cell);
+  get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
+                         parsed_cell);
 
   /* Then notify the hidden service that the intro point is established by
      sending an INTRO_ESTABLISHED cell */
@@ -192,7 +219,7 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
            circ->p_circ_id);
 
   /* Check that the circuit is in shape to become an intro point */
-  if (!hs_intro_circuit_is_suitable(circ)) {
+  if (!hs_intro_circuit_is_suitable_for_establish_intro(circ)) {
     goto err;
   }
 
@@ -236,24 +263,36 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   return retval;
 }
 
-/* Return True if circuit is suitable for becoming an intro circuit. */
-int
-hs_intro_circuit_is_suitable(const or_circuit_t *circ)
+/* Return True if circuit is suitable for being an intro circuit. */
+static int
+circuit_is_suitable_intro_point(const or_circuit_t *circ,
+                                const char *log_cell_type_str)
 {
+  tor_assert(circ);
+  tor_assert(log_cell_type_str);
+
   /* Basic circuit state sanity checks. */
   if (circ->base_.purpose != CIRCUIT_PURPOSE_OR) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Rejecting ESTABLISH_INTRO on non-OR circuit.");
+           "Rejecting %s on non-OR circuit.", log_cell_type_str);
     return 0;
   }
 
   if (circ->base_.n_chan) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Rejecting ESTABLISH_INTRO on non-edge circuit.");
+           "Rejecting %s on non-edge circuit.", log_cell_type_str);
     return 0;
   }
 
+  /* Suitable. */
   return 1;
+}
+
+/* Return True if circuit is suitable for being service-side intro circuit. */
+int
+hs_intro_circuit_is_suitable_for_establish_intro(const or_circuit_t *circ)
+{
+  return circuit_is_suitable_intro_point(circ, "ESTABLISH_INTRO");
 }
 
 /* We just received an ESTABLISH_INTRO cell in <b>circ</b>. Figure out of it's
@@ -290,3 +329,266 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
   return -1;
 }
 
+/* Send an INTRODUCE_ACK cell onto the circuit <b>circ</b> with the status
+ * value in <b>status</b>. Depending on the status, it can be ACK or a NACK.
+ * Return 0 on success else a negative value on error which will close the
+ * circuit. */
+static int
+send_introduce_ack_cell(or_circuit_t *circ, hs_intro_ack_status_t status)
+{
+  int ret = -1;
+  uint8_t *encoded_cell = NULL;
+  ssize_t encoded_len, result_len;
+  hs_cell_introduce_ack_t *cell;
+  cell_extension_t *ext;
+
+  tor_assert(circ);
+
+  /* Setup the INTRODUCE_ACK cell. We have no extensions so the N_EXTENSIONS
+   * field is set to 0 by default with a new object. */
+  cell = hs_cell_introduce_ack_new();
+  ret = hs_cell_introduce_ack_set_status(cell, status);
+  /* We have no cell extensions in an INTRODUCE_ACK cell. */
+  ext = cell_extension_new();
+  cell_extension_set_num(ext, 0);
+  hs_cell_introduce_ack_set_extensions(cell, ext);
+  /* A wrong status is a very bad code flow error as this value is controlled
+   * by the code in this file and not an external input. This means we use a
+   * code that is not known by the trunnel ABI. */
+  tor_assert(ret == 0);
+  /* Encode the payload. We should never fail to get the encoded length. */
+  encoded_len = hs_cell_introduce_ack_encoded_len(cell);
+  tor_assert(encoded_len > 0);
+  encoded_cell = tor_malloc_zero(encoded_len);
+  result_len = hs_cell_introduce_ack_encode(encoded_cell, encoded_len, cell);
+  tor_assert(encoded_len == result_len);
+
+  ret = relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
+                                     RELAY_COMMAND_INTRODUCE_ACK,
+                                     (char *) encoded_cell, encoded_len,
+                                     NULL);
+  /* On failure, the above function will close the circuit. */
+  hs_cell_introduce_ack_free(cell);
+  tor_free(encoded_cell);
+  return ret;
+}
+
+/* Validate a parsed INTRODUCE1 <b>cell</b>. Return 0 if valid or else a
+ * negative value for an invalid cell that should be NACKed. */
+STATIC int
+validate_introduce1_parsed_cell(const hs_cell_introduce1_t *cell)
+{
+  size_t legacy_key_id_len;
+  const uint8_t *legacy_key_id;
+
+  tor_assert(cell);
+
+  /* This code path SHOULD NEVER be reached if the cell is a legacy type so
+   * safety net here. The legacy ID must be zeroes in this case. */
+  legacy_key_id_len = hs_cell_introduce1_getlen_legacy_key_id(cell);
+  legacy_key_id = hs_cell_introduce1_getconstarray_legacy_key_id(cell);
+  if (BUG(!tor_mem_is_zero((char *) legacy_key_id, legacy_key_id_len))) {
+    goto invalid;
+  }
+
+  /* The auth key of an INTRODUCE1 should be of type ed25519 thus leading to a
+   * known fixed length as well. */
+  if (hs_cell_introduce1_get_auth_key_type(cell) !=
+      HS_INTRO_AUTH_KEY_TYPE_ED25519) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Rejecting invalid INTRODUCE1 cell auth key type. "
+           "Responding with NACK.");
+    goto invalid;
+  }
+  if (hs_cell_introduce1_get_auth_key_len(cell) != ED25519_PUBKEY_LEN ||
+      hs_cell_introduce1_getlen_auth_key(cell) != ED25519_PUBKEY_LEN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Rejecting invalid INTRODUCE1 cell auth key length. "
+           "Responding with NACK.");
+    goto invalid;
+  }
+  if (hs_cell_introduce1_getlen_encrypted(cell) == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Rejecting invalid INTRODUCE1 cell encrypted length. "
+           "Responding with NACK.");
+    goto invalid;
+  }
+
+  return 0;
+ invalid:
+  return -1;
+}
+
+/* We just received a non legacy INTRODUCE1 cell on <b>client_circ</b> with
+ * the payload in <b>request</b> of size <b>request_len</b>. Return 0 if
+ * everything went well, or -1 if an error occured. This function is in charge
+ * of sending back an INTRODUCE_ACK cell and will close client_circ on error.
+ */
+STATIC int
+handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
+                  size_t request_len)
+{
+  int ret = -1;
+  or_circuit_t *service_circ;
+  hs_cell_introduce1_t *parsed_cell;
+  hs_intro_ack_status_t status = HS_INTRO_ACK_STATUS_SUCCESS;
+
+  tor_assert(client_circ);
+  tor_assert(request);
+
+  /* Parse cell. Note that we can only parse the non encrypted section for
+   * which we'll use the authentication key to find the service introduction
+   * circuit and relay the cell on it. */
+  ssize_t cell_size = hs_cell_introduce1_parse(&parsed_cell, request,
+                                               request_len);
+  if (cell_size < 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Rejecting %s INTRODUCE1 cell. Responding with NACK.",
+           cell_size == -1 ? "invalid" : "truncated");
+    /* Inform client that the INTRODUCE1 has a bad format. */
+    status = HS_INTRO_ACK_STATUS_BAD_FORMAT;
+    goto send_ack;
+  }
+
+  /* Once parsed validate the cell format. */
+  if (validate_introduce1_parsed_cell(parsed_cell) < 0) {
+    /* Inform client that the INTRODUCE1 has bad format. */
+    status = HS_INTRO_ACK_STATUS_BAD_FORMAT;
+    goto send_ack;
+  }
+
+  /* Find introduction circuit through our circuit map. */
+  {
+    ed25519_public_key_t auth_key;
+    get_auth_key_from_cell(&auth_key, RELAY_COMMAND_INTRODUCE1, parsed_cell);
+    service_circ = hs_circuitmap_get_intro_circ_v3(&auth_key);
+    if (service_circ == NULL) {
+      char b64_key[ED25519_BASE64_LEN + 1];
+      ed25519_public_to_base64(b64_key, &auth_key);
+      log_info(LD_REND, "No intro circuit found for INTRODUCE1 cell "
+                        "with auth key %s from circuit %" PRIu32 ". "
+                        "Responding with NACK.",
+               safe_str(b64_key), client_circ->p_circ_id);
+      /* Inform the client that we don't know the requested service ID. */
+      status = HS_INTRO_ACK_STATUS_UNKNOWN_ID;
+      goto send_ack;
+    }
+  }
+
+  /* Relay the cell to the service on its intro circuit with an INTRODUCE2
+   * cell which is the same exact payload. */
+  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(service_circ),
+                                   RELAY_COMMAND_INTRODUCE2,
+                                   (char *) request, request_len, NULL)) {
+    log_warn(LD_REND, "Unable to send INTRODUCE2 cell to the service.");
+    /* Inform the client that we can't relay the cell. */
+    status = HS_INTRO_ACK_STATUS_CANT_RELAY;
+    goto send_ack;
+  }
+
+  /* Success! Send an INTRODUCE_ACK success status onto the client circuit. */
+  status = HS_INTRO_ACK_STATUS_SUCCESS;
+  ret = 0;
+
+ send_ack:
+  /* Send INTRODUCE_ACK or INTRODUCE_NACK to client */
+  if (send_introduce_ack_cell(client_circ, status) < 0) {
+    log_warn(LD_REND, "Unable to send an INTRODUCE ACK status %d to client.",
+             status);
+    /* Circuit has been closed on failure of transmission. */
+    goto done;
+  }
+  if (status != HS_INTRO_ACK_STATUS_SUCCESS) {
+    /* We just sent a NACK that is a non success status code so close the
+     * circuit because it's not useful to keep it open. Remember, a client can
+     * only send one INTRODUCE1 cell on a circuit. */
+    circuit_mark_for_close(TO_CIRCUIT(client_circ), END_CIRC_REASON_INTERNAL);
+  }
+ done:
+  hs_cell_introduce1_free(parsed_cell);
+  return ret;
+}
+
+/* Identify if the encoded cell we just received is a legacy one or not. The
+ * <b>request</b> should be at least DIGEST_LEN bytes long. */
+STATIC int
+introduce1_cell_is_legacy(const uint8_t *request)
+{
+  tor_assert(request);
+
+  /* If the first 20 bytes of the cell (DIGEST_LEN) are NOT zeroes, it
+   * indicates a legacy cell (v2). */
+  if (!tor_mem_is_zero((const char *) request, DIGEST_LEN)) {
+    /* Legacy cell. */
+    return 1;
+  }
+  /* Not a legacy cell. */
+  return 0;
+}
+
+/* Return true iff the circuit <b>circ</b> is suitable for receiving an
+ * INTRODUCE1 cell. */
+STATIC int
+circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* Is this circuit an intro point circuit? */
+  if (!circuit_is_suitable_intro_point(circ, "INTRODUCE1")) {
+    return 0;
+  }
+
+  if (circ->already_received_introduce1) {
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Blocking multiple introductions on the same circuit. "
+           "Someone might be trying to attack a hidden service through "
+           "this relay.");
+    return 0;
+  }
+
+  return 1;
+}
+
+/* We just received an INTRODUCE1 cell on <b>circ</b>. Figure out which type
+ * it is and pass it to the appropriate handler. Return 0 on success else a
+ * negative value and the circuit is closed. */
+int
+hs_intro_received_introduce1(or_circuit_t *circ, const uint8_t *request,
+                             size_t request_len)
+{
+  int ret;
+
+  tor_assert(circ);
+  tor_assert(request);
+
+  /* A cell that can't hold a DIGEST_LEN is invalid as we need to check if
+   * it's a legacy cell or not using the first DIGEST_LEN bytes. */
+  if (request_len < DIGEST_LEN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Invalid INTRODUCE1 cell length.");
+    goto err;
+  }
+
+  /* Make sure we have a circuit that can have an INTRODUCE1 cell on it. */
+  if (!circuit_is_suitable_for_introduce1(circ)) {
+    /* We do not send a NACK because the circuit is not suitable for any kind
+     * of response or transmission as it's a violation of the protocol. */
+    goto err;
+  }
+  /* Mark the circuit that we got this cell. None are allowed after this as a
+   * DoS mitigation since one circuit with one client can hammer a service. */
+  circ->already_received_introduce1 = 1;
+
+  /* We are sure here to have at least DIGEST_LEN bytes. */
+  if (introduce1_cell_is_legacy(request)) {
+    /* Handle a legacy cell. */
+    ret = rend_mid_introduce_legacy(circ, request, request_len);
+  } else {
+    /* Handle a non legacy cell. */
+    ret = handle_introduce1(circ, request, request_len);
+  }
+  return ret;
+
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+  return -1;
+}
