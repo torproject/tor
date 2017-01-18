@@ -4350,8 +4350,8 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
 }
 
 /* If we have less than 300 MB suggest disabling dircache */
-#define DIRCACHE_MIN_MEM 300
-#define DIRCACHE_MIN_MB_MEM (DIRCACHE_MIN_MEM*ONE_MEGABYTE)
+#define DIRCACHE_MIN_MEM_MB 300
+#define DIRCACHE_MIN_MEM_BYTES (DIRCACHE_MIN_MEM_MB*ONE_MEGABYTE)
 #define STRINGIFY(val) #val
 
 /** Create a warning message for emitting if we are a dircache but may not have
@@ -4371,21 +4371,21 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
     }
   }
   if (options->DirCache) {
-    if (total_mem < DIRCACHE_MIN_MB_MEM) {
+    if (total_mem < DIRCACHE_MIN_MEM_BYTES) {
       if (options->BridgeRelay) {
         *msg = tor_strdup("Running a Bridge with less than "
-                      STRINGIFY(DIRCACHE_MIN_MEM) " MB of memory is not "
+                      STRINGIFY(DIRCACHE_MIN_MEM_MB) " MB of memory is not "
                       "recommended.");
       } else {
         *msg = tor_strdup("Being a directory cache (default) with less than "
-                      STRINGIFY(DIRCACHE_MIN_MEM) " MB of memory is not "
+                      STRINGIFY(DIRCACHE_MIN_MEM_MB) " MB of memory is not "
                       "recommended and may consume most of the available "
                       "resources, consider disabling this functionality by "
                       "setting the DirCache option to 0.");
       }
     }
   } else {
-    if (total_mem >= DIRCACHE_MIN_MB_MEM) {
+    if (total_mem >= DIRCACHE_MIN_MEM_BYTES) {
       *msg = tor_strdup("DirCache is disabled and we are configured as a "
                "relay. This may disqualify us from becoming a guard in the "
                "future.");
