@@ -133,8 +133,17 @@ static config_abbrev_t option_abbrevs_[] = {
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
 
-#define VPORT(member)                                   \
-  VAR(#member, LINELIST, member ## _lines, NULL)
+/**
+ * Macro to declare *Port options.  Each one comes in three entries.
+ * For example, most users should use "SocksPort" to configure the
+ * socks port, but TorBrowser wants to use __SocksPort so that it
+ * isn't stored by SAVECONF.  The SocksPortLines virtual option is
+ * used to query both options from the controller.
+ */
+#define VPORT(member)                                           \
+  VAR(#member "Lines", LINELIST_V, member ## _lines, NULL),     \
+  VAR(#member, LINELIST_S, member ## _lines, NULL),             \
+  VAR("__" #member, LINELIST_S, member ## _lines, NULL)
 
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
