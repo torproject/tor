@@ -120,7 +120,7 @@ bench_onion_TAP(void)
   uint64_t start, end;
   char os[TAP_ONIONSKIN_CHALLENGE_LEN];
   char or[TAP_ONIONSKIN_REPLY_LEN];
-  crypto_dh_t *dh_out;
+  crypto_dh_t *dh_out = NULL;
 
   key = crypto_pk_new();
   key2 = crypto_pk_new();
@@ -175,6 +175,7 @@ bench_onion_TAP(void)
          NANOCOUNT(start, end, iters)/1e3);
 
  done:
+  crypto_dh_free(dh_out);
   crypto_pk_free(key);
   crypto_pk_free(key2);
 }
