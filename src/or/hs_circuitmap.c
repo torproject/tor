@@ -25,8 +25,8 @@ static struct hs_circuitmap_ht *the_hs_circuitmap = NULL;
 /* This is a helper function used by the hash table code (HT_). It returns 1 if
  * two circuits have the same HS token. */
 static int
-hs_circuits_have_same_token(const or_circuit_t *first_circuit,
-                            const or_circuit_t *second_circuit)
+hs_circuits_have_same_token(const circuit_t *first_circuit,
+                            const circuit_t *second_circuit)
 {
   const hs_token_t *first_token;
   const hs_token_t *second_token;
@@ -57,7 +57,7 @@ hs_circuits_have_same_token(const or_circuit_t *first_circuit,
 /* This is a helper function for the hash table code (HT_). It hashes a circuit
  * HS token into an unsigned int for use as a key by the hash table routines.*/
 static inline unsigned int
-hs_circuit_hash_token(const or_circuit_t *circuit)
+hs_circuit_hash_token(const circuit_t *circuit)
 {
   tor_assert(circuit->hs_token);
 
@@ -67,11 +67,11 @@ hs_circuit_hash_token(const or_circuit_t *circuit)
 
 /* Register the circuitmap hash table */
 HT_PROTOTYPE(hs_circuitmap_ht, // The name of the hashtable struct
-             or_circuit_t,    // The name of the element struct,
+             circuit_t,    // The name of the element struct,
              hs_circuitmap_node,        // The name of HT_ENTRY member
              hs_circuit_hash_token, hs_circuits_have_same_token)
 
-HT_GENERATE2(hs_circuitmap_ht, or_circuit_t, hs_circuitmap_node,
+HT_GENERATE2(hs_circuitmap_ht, circuit_t, hs_circuitmap_node,
              hs_circuit_hash_token, hs_circuits_have_same_token,
              0.6, tor_reallocarray, tor_free_)
 
@@ -116,13 +116,13 @@ hs_token_free(hs_token_t *hs_token)
 }
 
 /** Return the circuit from the circuitmap with token <b>search_token</b>. */
-static or_circuit_t *
+static circuit_t *
 get_circuit_with_token(hs_token_t *search_token)
 {
   tor_assert(the_hs_circuitmap);
 
   /* We use a dummy circuit object for the hash table search routine. */
-  or_circuit_t search_circ;
+  circuit_t search_circ;
   search_circ.hs_token = search_token;
   return HT_FIND(hs_circuitmap_ht, the_hs_circuitmap, &search_circ);
 }
@@ -130,7 +130,7 @@ get_circuit_with_token(hs_token_t *search_token)
 /* Helper function that registers <b>circ</b> with <b>token</b> on the HS
    circuitmap. This function steals reference of <b>token</b>. */
 static void
-hs_circuitmap_register_impl(or_circuit_t *circ, hs_token_t *token)
+hs_circuitmap_register_impl(circuit_t *circ, hs_token_t *token)
 {
   tor_assert(circ);
   tor_assert(token);
@@ -145,13 +145,12 @@ hs_circuitmap_register_impl(or_circuit_t *circ, hs_token_t *token)
      take precedence over old ones, so that HSes and clients and reestablish
      killed circuits without changing the HS token. */
   {
-    or_circuit_t *found_circ;
+    circuit_t *found_circ;
     found_circ = get_circuit_with_token(token);
     if (found_circ) {
       hs_circuitmap_remove_circuit(found_circ);
-      if (!found_circ->base_.marked_for_close) {
-        circuit_mark_for_close(TO_CIRCUIT(found_circ),
-                               END_CIRC_REASON_FINISHED);
+      if (!found_circ->marked_for_close) {
+        circuit_mark_for_close(found_circ, END_CIRC_REASON_FINISHED);
       }
     }
   }
@@ -165,7 +164,7 @@ hs_circuitmap_register_impl(or_circuit_t *circ, hs_token_t *token)
  *  circuitmap. Use the HS <b>token</b> as the key to the hash table.  If
  *  <b>token</b> is not set, clear the circuit of any HS tokens. */
 static void
-hs_circuitmap_register_circuit(or_circuit_t *circ,
+hs_circuitmap_register_circuit(circuit_t *circ,
                                hs_token_type_t type, size_t token_len,
                                const uint8_t *token)
 {
@@ -182,13 +181,13 @@ hs_circuitmap_register_circuit(or_circuit_t *circ,
  * Only returns a circuit with purpose equal to the <b>wanted_circ_purpose</b>
  * parameter and if it is NOT marked for close. Return NULL if no such circuit
  * is found. */
-static or_circuit_t *
+static circuit_t *
 hs_circuitmap_get_circuit(hs_token_type_t type,
                           size_t token_len,
                           const uint8_t *token,
                           uint8_t wanted_circ_purpose)
 {
-  or_circuit_t *found_circ = NULL;
+  circuit_t *found_circ = NULL;
 
   tor_assert(the_hs_circuitmap);
 
@@ -202,8 +201,8 @@ hs_circuitmap_get_circuit(hs_token_type_t type,
 
   /* Check that the circuit is useful to us */
   if (!found_circ ||
-      found_circ->base_.purpose != wanted_circ_purpose ||
-      found_circ->base_.marked_for_close) {
+      found_circ->purpose != wanted_circ_purpose ||
+      found_circ->marked_for_close) {
     return NULL;
   }
 
@@ -217,11 +216,18 @@ hs_circuitmap_get_circuit(hs_token_type_t type,
 or_circuit_t *
 hs_circuitmap_get_intro_circ_v3(const ed25519_public_key_t *auth_key)
 {
+  circuit_t *circ;
   tor_assert(auth_key);
 
-  return hs_circuitmap_get_circuit(HS_TOKEN_INTRO_V3,
+  circ = hs_circuitmap_get_circuit(HS_TOKEN_INTRO_V3,
                                    ED25519_PUBKEY_LEN, auth_key->pubkey,
                                    CIRCUIT_PURPOSE_INTRO_POINT);
+  if (!circ) {
+    return NULL;
+  }
+
+  tor_assert(CIRCUIT_IS_ORCIRC(circ));
+  return TO_OR_CIRCUIT(circ);
 }
 
 /* Public function: Return v2 introduction circuit with <b>digest</b>. Return
@@ -229,11 +235,18 @@ hs_circuitmap_get_intro_circ_v3(const ed25519_public_key_t *auth_key)
 or_circuit_t *
 hs_circuitmap_get_intro_circ_v2(const uint8_t *digest)
 {
+  circuit_t *circ;
   tor_assert(digest);
 
-  return hs_circuitmap_get_circuit(HS_TOKEN_INTRO_V2,
+  circ = hs_circuitmap_get_circuit(HS_TOKEN_INTRO_V2,
                                    REND_TOKEN_LEN, digest,
                                    CIRCUIT_PURPOSE_INTRO_POINT);
+  if (!circ) {
+    return NULL;
+  }
+
+  tor_assert(CIRCUIT_IS_ORCIRC(circ));
+  return TO_OR_CIRCUIT(circ);
 }
 
 /* Public function: Return rendezvous circuit with rendezvous
@@ -241,11 +254,18 @@ hs_circuitmap_get_intro_circ_v2(const uint8_t *digest)
 or_circuit_t *
 hs_circuitmap_get_rend_circ(const uint8_t *cookie)
 {
+  circuit_t *circ;
   tor_assert(cookie);
 
-  return hs_circuitmap_get_circuit(HS_TOKEN_REND,
+  circ = hs_circuitmap_get_circuit(HS_TOKEN_REND,
                                    REND_TOKEN_LEN, cookie,
                                    CIRCUIT_PURPOSE_REND_POINT_WAITING);
+  if (!circ) {
+    return NULL;
+  }
+
+  tor_assert(CIRCUIT_IS_ORCIRC(circ));
+  return TO_OR_CIRCUIT(circ);
 }
 
 /* Public function: Register rendezvous circuit with key <b>cookie</b> to the
@@ -253,7 +273,7 @@ hs_circuitmap_get_rend_circ(const uint8_t *cookie)
 void
 hs_circuitmap_register_rend_circ(or_circuit_t *circ, const uint8_t *cookie)
 {
-  hs_circuitmap_register_circuit(circ,
+  hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
                                  HS_TOKEN_REND,
                                  REND_TOKEN_LEN, cookie);
 }
@@ -263,7 +283,7 @@ hs_circuitmap_register_rend_circ(or_circuit_t *circ, const uint8_t *cookie)
 void
 hs_circuitmap_register_intro_circ_v2(or_circuit_t *circ, const uint8_t *digest)
 {
-  hs_circuitmap_register_circuit(circ,
+  hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
                                  HS_TOKEN_INTRO_V2,
                                  REND_TOKEN_LEN, digest);
 }
@@ -274,7 +294,7 @@ void
 hs_circuitmap_register_intro_circ_v3(or_circuit_t *circ,
                                      const ed25519_public_key_t *auth_key)
 {
-  hs_circuitmap_register_circuit(circ,
+  hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
                                  HS_TOKEN_INTRO_V3,
                                  ED25519_PUBKEY_LEN, auth_key->pubkey);
 }
@@ -282,7 +302,7 @@ hs_circuitmap_register_intro_circ_v3(or_circuit_t *circ,
 /** Remove this circuit from the HS circuitmap. Clear its HS token, and remove
  *  it from the hashtable. */
 void
-hs_circuitmap_remove_circuit(or_circuit_t *circ)
+hs_circuitmap_remove_circuit(circuit_t *circ)
 {
   tor_assert(the_hs_circuitmap);
 
@@ -291,14 +311,14 @@ hs_circuitmap_remove_circuit(or_circuit_t *circ)
   }
 
   /* Remove circ from circuitmap */
-  or_circuit_t *tmp;
+  circuit_t *tmp;
   tmp = HT_REMOVE(hs_circuitmap_ht, the_hs_circuitmap, circ);
   /* ... and ensure the removal was successful. */
   if (tmp) {
     tor_assert(tmp == circ);
   } else {
     log_warn(LD_BUG, "Could not find circuit (%u) in circuitmap.",
-             circ->p_circ_id);
+             circ->n_circ_id);
   }
 
   /* Clear token from circ */

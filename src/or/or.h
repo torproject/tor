@@ -3064,6 +3064,13 @@ typedef struct circuit_t {
    * circuit's queues; used only if CELL_STATS events are enabled and
    * cleared after being sent to control port. */
   smartlist_t *testing_cell_stats;
+
+  /** If set, points to an HS token that this circuit might be carrying.
+   *  Used by the HS circuitmap.  */
+  hs_token_t *hs_token;
+  /** Hashtable node: used to look up the circuit by its HS token using the HS
+      circuitmap. */
+  HT_ENTRY(circuit_t) hs_circuitmap_node;
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -3372,13 +3379,6 @@ typedef struct or_circuit_t {
   /** Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
    * is not marked for close. */
   struct or_circuit_t *rend_splice;
-
-  /** If set, points to an HS token that this circuit might be carrying.
-   *  Used by the HS circuitmap.  */
-  hs_token_t *hs_token;
-  /** Hashtable node: used to look up the circuit by its HS token using the HS
-      circuitmap. */
-  HT_ENTRY(or_circuit_t) hs_circuitmap_node;
 
   /** Stores KH for the handshake. */
   char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */

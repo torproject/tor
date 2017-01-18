@@ -9,7 +9,7 @@
 #ifndef TOR_HS_CIRCUITMAP_H
 #define TOR_HS_CIRCUITMAP_H
 
-typedef HT_HEAD(hs_circuitmap_ht, or_circuit_t) hs_circuitmap_ht;
+typedef HT_HEAD(hs_circuitmap_ht, circuit_t) hs_circuitmap_ht;
 
 typedef struct hs_token_s hs_token_t;
 struct or_circuit_t;
@@ -28,7 +28,7 @@ void hs_circuitmap_register_intro_circ_v2(struct or_circuit_t *circ,
 void hs_circuitmap_register_intro_circ_v3(struct or_circuit_t *circ,
                                          const ed25519_public_key_t *auth_key);
 
-void hs_circuitmap_remove_circuit(struct or_circuit_t *circ);
+void hs_circuitmap_remove_circuit(struct circuit_t *circ);
 
 void hs_circuitmap_init(void);
 void hs_circuitmap_free_all(void);

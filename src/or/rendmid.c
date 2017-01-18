@@ -342,7 +342,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_REND_ESTABLISHED);
   circuit_change_purpose(TO_CIRCUIT(rend_circ),
                          CIRCUIT_PURPOSE_REND_ESTABLISHED);
-  hs_circuitmap_remove_circuit(circ);
+  hs_circuitmap_remove_circuit(TO_CIRCUIT(circ));
 
   rend_circ->rend_splice = circ;
   circ->rend_splice = rend_circ;
