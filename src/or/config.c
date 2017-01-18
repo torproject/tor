@@ -2097,15 +2097,6 @@ options_act(const or_options_t *old_options)
       !options->BridgeAuthoritativeDir)
     rep_hist_desc_stats_term();
 
-  /* Check if we need to parse and add the EntryNodes config option. */
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
-  if (options->EntryNodes &&
-      (!old_options ||
-       !routerset_equal(old_options->EntryNodes,options->EntryNodes) ||
-       !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)))
-    entry_nodes_should_be_added();
-#endif
-
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.
    */
@@ -3008,13 +2999,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   options->UseEntryGuards = options->UseEntryGuards_option;
 
   warn_about_relative_paths(options);
-
-#ifndef ENABLE_LEGACY_GUARD_ALGORITHM
-  if (options->UseDeprecatedGuardAlgorithm) {
-    log_warn(LD_CONFIG, "DeprecatedGuardAlgorithm not supported.");
-    return -1;
-  }
-#endif
 
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||

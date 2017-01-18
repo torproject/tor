@@ -1999,10 +1999,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   const int for_guard = (flags & PDS_FOR_GUARD);
   int try_excluding = 1, n_excluded = 0, n_busy = 0;
   int try_ip_pref = 1;
-
-#ifndef ENABLE_LEGACY_GUARD_ALGORITHM
-  tor_assert_nonfatal(! for_guard);
-#endif
+  tor_assert_nonfatal(! for_guard); // XXXX prop271
 
   if (!consensus)
     return NULL;
@@ -2036,12 +2033,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
     SKIP_MISSING_TRUSTED_EXTRAINFO(type, node->identity);
 
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
-    /* Don't make the same node a guard twice */
-     if (for_guard && is_node_used_as_guard(node)) {
-       continue;
-     }
-#endif
     /* Ensure that a directory guard is actually a guard node. */
     if (for_guard && !node->is_possible_guard) {
       continue;
