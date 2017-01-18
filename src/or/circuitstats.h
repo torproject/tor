@@ -17,7 +17,7 @@ circuit_build_times_t *get_circuit_build_times_mutable(void);
 double get_circuit_build_close_time_ms(void);
 double get_circuit_build_timeout_ms(void);
 
-int circuit_build_times_disabled(void);
+int circuit_build_times_disabled(const or_options_t *options);
 int circuit_build_times_enough_to_compute(const circuit_build_times_t *cbt);
 void circuit_build_times_update_state(const circuit_build_times_t *cbt,
                                       or_state_t *state);

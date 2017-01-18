@@ -105,12 +105,11 @@ get_circuit_build_timeout_ms(void)
  *  6. If we are configured in Single Onion mode
  */
 int
-circuit_build_times_disabled(void)
+circuit_build_times_disabled(const or_options_t *options)
 {
   if (unit_tests) {
     return 0;
   } else {
-    const or_options_t *options = get_options();
     int consensus_disabled = networkstatus_get_param(NULL, "cbtdisabled",
                                                      0, 0, 1);
     int config_disabled = !options->LearnCircuitBuildTimeout;
@@ -417,7 +416,7 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
    * update if we aren't.
    */
 
-  if (!circuit_build_times_disabled()) {
+  if (!circuit_build_times_disabled(get_options())) {
     num = circuit_build_times_recent_circuit_count(ns);
 
     if (num > 0) {
@@ -493,14 +492,15 @@ static double
 circuit_build_times_get_initial_timeout(void)
 {
   double timeout;
+  const or_options_t *options = get_options();
 
   /*
    * Check if we have LearnCircuitBuildTimeout, and if we don't,
    * always use CircuitBuildTimeout, no questions asked.
    */
-  if (!unit_tests && get_options()->CircuitBuildTimeout) {
-    timeout = get_options()->CircuitBuildTimeout*1000;
-    if (!circuit_build_times_disabled() &&
+  if (!unit_tests && options->CircuitBuildTimeout) {
+    timeout = options->CircuitBuildTimeout*1000;
+    if (!circuit_build_times_disabled(options) &&
         timeout < circuit_build_times_min_timeout()) {
       log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %ds",
                circuit_build_times_min_timeout()/1000);
@@ -542,7 +542,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
    * Check if we really are using adaptive timeouts, and don't keep
    * track of this stuff if not.
    */
-  if (!circuit_build_times_disabled()) {
+  if (!circuit_build_times_disabled(get_options())) {
     cbt->liveness.num_recent_circs =
       circuit_build_times_recent_circuit_count(NULL);
     cbt->liveness.timeouts_after_firsthop =
@@ -906,7 +906,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   int err = 0;
   circuit_build_times_init(cbt);
 
-  if (circuit_build_times_disabled()) {
+  if (circuit_build_times_disabled(get_options())) {
     return 0;
   }
 
@@ -1507,7 +1507,7 @@ circuit_build_times_count_close(circuit_build_times_t *cbt,
                                 int did_onehop,
                                 time_t start_time)
 {
-  if (circuit_build_times_disabled()) {
+  if (circuit_build_times_disabled(get_options())) {
     cbt->close_ms = cbt->timeout_ms
                   = circuit_build_times_get_initial_timeout();
     return 0;
@@ -1538,7 +1538,7 @@ void
 circuit_build_times_count_timeout(circuit_build_times_t *cbt,
                                   int did_onehop)
 {
-  if (circuit_build_times_disabled()) {
+  if (circuit_build_times_disabled(get_options())) {
     cbt->close_ms = cbt->timeout_ms
                   = circuit_build_times_get_initial_timeout();
     return;
@@ -1612,7 +1612,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
   /*
    * Just return if we aren't using adaptive timeouts
    */
-  if (circuit_build_times_disabled())
+  if (circuit_build_times_disabled(get_options()))
     return;
 
   if (!circuit_build_times_set_timeout_worker(cbt))

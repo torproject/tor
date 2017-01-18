@@ -1140,7 +1140,7 @@ needs_circuits_for_build(int num)
 {
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
     if (num < CBT_MAX_UNUSED_OPEN_CIRCUITS &&
-        !circuit_build_times_disabled() &&
+        !circuit_build_times_disabled(get_options()) &&
         circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
       return 1;
     }
@@ -1400,7 +1400,7 @@ circuit_expire_old_circuits_clientside(void)
   cutoff = now;
   last_expired_clientside_circuits = now.tv_sec;
 
-  if (! circuit_build_times_disabled() &&
+  if (! circuit_build_times_disabled(get_options()) &&
       circuit_build_times_needs_circuits(get_circuit_build_times())) {
     /* Circuits should be shorter lived if we need more of them
      * for learning a good build timeout */

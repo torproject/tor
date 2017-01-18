@@ -1017,7 +1017,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
                               "Assuming clock jump. Purpose %d (%s)", timediff,
                      circ->base_.purpose,
                      circuit_purpose_to_string(circ->base_.purpose));
-        } else if (!circuit_build_times_disabled()) {
+        } else if (!circuit_build_times_disabled(get_options())) {
           /* Only count circuit times if the network is live */
           if (circuit_build_times_network_check_live(
               get_circuit_build_times())) {
