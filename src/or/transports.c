@@ -480,7 +480,6 @@ proxy_needs_restart(const managed_proxy_t *mp)
  *  preparations and then flag its state so that it will be relaunched
  *  in the next tick. */
 static void
-
 proxy_prepare_for_restart(managed_proxy_t *mp)
 {
   transport_t *t_tmp = NULL;
