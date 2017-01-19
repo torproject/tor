@@ -761,7 +761,7 @@ test_received_introduce1_handling(void *arg)
   /* Valid case. */
   {
     cell = helper_create_introduce1_cell();
-    size_t request_len = hs_cell_introduce1_encoded_len(cell);
+    ssize_t request_len = hs_cell_introduce1_encoded_len(cell);
     tt_size_op(request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len);
     ssize_t encoded_len =
