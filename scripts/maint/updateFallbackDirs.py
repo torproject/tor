@@ -708,15 +708,15 @@ class Candidate(object):
     #
     # if the relay doesn't have a recommended version field, exclude the relay
     if not self._data.has_key('recommended_version'):
-      logging.info('%s not a candidate: no recommended_version field',
+      log_excluded('%s not a candidate: no recommended_version field',
                    self._fpr)
       return False
     if not self._data['recommended_version']:
-      logging.info('%s not a candidate: version not recommended', self._fpr)
+      log_excluded('%s not a candidate: version not recommended', self._fpr)
       return False
     # if the relay doesn't have version field, exclude the relay
     if not self._data.has_key('version'):
-      logging.info('%s not a candidate: no version field', self._fpr)
+      log_excluded('%s not a candidate: no version field', self._fpr)
       return False
     if self._data['version'] in Candidate.STALE_CONSENSUS_VERSIONS:
       logging.warning('%s not a candidate: version delivers stale consensuses',
@@ -870,36 +870,36 @@ class Candidate(object):
   def is_candidate(self):
     try:
       if (MUST_BE_RUNNING_NOW and not self.is_running()):
-        logging.info('%s not a candidate: not running now, unable to check ' +
+        log_excluded('%s not a candidate: not running now, unable to check ' +
                      'DirPort consensus download', self._fpr)
         return False
       if (self._data['last_changed_address_or_port'] >
           self.CUTOFF_ADDRESS_AND_PORT_STABLE):
-        logging.info('%s not a candidate: changed address/port recently (%s)',
+        log_excluded('%s not a candidate: changed address/port recently (%s)',
                      self._fpr, self._data['last_changed_address_or_port'])
         return False
       if self._running < CUTOFF_RUNNING:
-        logging.info('%s not a candidate: running avg too low (%lf)',
+        log_excluded('%s not a candidate: running avg too low (%lf)',
                      self._fpr, self._running)
         return False
       if self._v2dir < CUTOFF_V2DIR:
-        logging.info('%s not a candidate: v2dir avg too low (%lf)',
+        log_excluded('%s not a candidate: v2dir avg too low (%lf)',
                      self._fpr, self._v2dir)
         return False
       if self._badexit is not None and self._badexit > PERMITTED_BADEXIT:
-        logging.info('%s not a candidate: badexit avg too high (%lf)',
+        log_excluded('%s not a candidate: badexit avg too high (%lf)',
                      self._fpr, self._badexit)
         return False
       # this function logs a message depending on which check fails
       if not self.is_valid_version():
         return False
       if self._guard < CUTOFF_GUARD:
-        logging.info('%s not a candidate: guard avg too low (%lf)',
+        log_excluded('%s not a candidate: guard avg too low (%lf)',
                      self._fpr, self._guard)
         return False
       if (not self._data.has_key('consensus_weight')
           or self._data['consensus_weight'] < 1):
-        logging.info('%s not a candidate: consensus weight invalid', self._fpr)
+        log_excluded('%s not a candidate: consensus weight invalid', self._fpr)
         return False
     except BaseException as e:
       logging.warning("Exception %s when checking if fallback is a candidate",
@@ -980,26 +980,26 @@ class Candidate(object):
       for key in entry:
         value = entry[key]
         if key == 'id' and value == self._fpr:
-          logging.info('%s is in the blacklist: fingerprint matches',
+          log_excluded('%s is in the blacklist: fingerprint matches',
                        self._fpr)
           return True
         if key == 'ipv4' and value == self.dirip:
           # if the dirport is present, check it too
           if entry.has_key('dirport'):
             if int(entry['dirport']) == self.dirport:
-              logging.info('%s is in the blacklist: IPv4 (%s) and ' +
+              log_excluded('%s is in the blacklist: IPv4 (%s) and ' +
                            'DirPort (%d) match', self._fpr, self.dirip,
                            self.dirport)
               return True
           # if the orport is present, check it too
           elif entry.has_key('orport'):
             if int(entry['orport']) == self.orport:
-              logging.info('%s is in the blacklist: IPv4 (%s) and ' +
+              log_excluded('%s is in the blacklist: IPv4 (%s) and ' +
                            'ORPort (%d) match', self._fpr, self.dirip,
                            self.orport)
               return True
           else:
-            logging.info('%s is in the blacklist: IPv4 (%s) matches, and ' +
+            log_excluded('%s is in the blacklist: IPv4 (%s) matches, and ' +
                          'entry has no DirPort or ORPort', self._fpr,
                          self.dirip)
             return True
@@ -1013,19 +1013,19 @@ class Candidate(object):
             # if the dirport is present, check it too
             if entry.has_key('dirport'):
               if int(entry['dirport']) == self.dirport:
-                logging.info('%s is in the blacklist: IPv6 (%s) and ' +
+                log_excluded('%s is in the blacklist: IPv6 (%s) and ' +
                              'DirPort (%d) match', self._fpr, ipv6,
                              self.dirport)
                 return True
             # we've already checked the ORPort, it's part of entry['ipv6']
             else:
-              logging.info('%s is in the blacklist: IPv6 (%s) matches, and' +
+              log_excluded('%s is in the blacklist: IPv6 (%s) matches, and' +
                            'entry has no DirPort', self._fpr, ipv6)
               return True
         elif (key == 'ipv6' or self.has_ipv6()):
           # only log if the fingerprint matches but the IPv6 doesn't
           if entry.has_key('id') and entry['id'] == self._fpr:
-            logging.info('%s skipping IPv6 blacklist comparison: relay ' +
+            log_excluded('%s skipping IPv6 blacklist comparison: relay ' +
                          'has%s IPv6%s, but entry has%s IPv6%s', self._fpr,
                          '' if self.has_ipv6() else ' no',
                          (' (' + ipv6 + ')') if self.has_ipv6() else  '',
@@ -1193,7 +1193,7 @@ class Candidate(object):
       time_since_expiry = (end - consensus.valid_until).total_seconds()
     except Exception, stem_error:
       end = datetime.datetime.utcnow()
-      logging.info('Unable to retrieve a consensus from %s: %s', nickname,
+      log_excluded('Unable to retrieve a consensus from %s: %s', nickname,
                     stem_error)
       status = 'error: "%s"' % (stem_error)
       level = logging.WARNING
@@ -1520,7 +1520,7 @@ class CandidateList(dict):
       elif in_blacklist:
         # exclude
         excluded_count += 1
-        logging.info('Excluding %s: in blacklist.', f._fpr)
+        log_excluded('Excluding %s: in blacklist.', f._fpr)
       else:
         if INCLUDE_UNLISTED_ENTRIES:
           # include
@@ -1528,7 +1528,7 @@ class CandidateList(dict):
         else:
           # exclude
           excluded_count += 1
-          logging.info('Excluding %s: in neither blacklist nor whitelist.',
+          log_excluded('Excluding %s: in neither blacklist nor whitelist.',
                        f._fpr)
     self.fallbacks = filtered_fallbacks
     return excluded_count
@@ -1564,7 +1564,7 @@ class CandidateList(dict):
         # the bandwidth we log here is limited by the relay's consensus weight
         # as well as its adverttised bandwidth. See set_measured_bandwidth
         # for details
-        logging.info('%s not a candidate: bandwidth %.1fMByte/s too low, ' +
+        log_excluded('%s not a candidate: bandwidth %.1fMByte/s too low, ' +
                      'must be at least %.1fMByte/s', f._fpr,
                      f._data['measured_bandwidth']/(1024.0*1024.0),
                      MIN_BANDWIDTH/(1024.0*1024.0))
@@ -1668,13 +1668,13 @@ class CandidateList(dict):
           CandidateList.attribute_add(f.ipv6addr, ip_list)
       elif not CandidateList.attribute_allow(f.dirip, ip_list,
                                              MAX_FALLBACKS_PER_IPV4):
-        logging.info('Eliminated %s: already have %d fallback(s) on IPv4 %s'
+        log_excluded('Eliminated %s: already have %d fallback(s) on IPv4 %s'
                      %(f._fpr, CandidateList.attribute_count(f.dirip, ip_list),
                        f.dirip))
       elif (f.has_ipv6() and
             not CandidateList.attribute_allow(f.ipv6addr, ip_list,
                                               MAX_FALLBACKS_PER_IPV6)):
-        logging.info('Eliminated %s: already have %d fallback(s) on IPv6 %s'
+        log_excluded('Eliminated %s: already have %d fallback(s) on IPv6 %s'
                      %(f._fpr, CandidateList.attribute_count(f.ipv6addr,
                                                              ip_list),
                        f.ipv6addr))
@@ -1698,7 +1698,7 @@ class CandidateList(dict):
         contact_limit_fallbacks.append(f)
         CandidateList.attribute_add(f._data['contact'], contact_list)
       else:
-        logging.info(
+        log_excluded(
           'Eliminated %s: already have %d fallback(s) on ContactInfo %s'
           %(f._fpr, CandidateList.attribute_count(f._data['contact'],
                                                   contact_list),
@@ -1727,7 +1727,7 @@ class CandidateList(dict):
       else:
         # we already have a fallback with this fallback in its effective
         # family
-        logging.info(
+        log_excluded(
           'Eliminated %s: already have %d fallback(s) in effective family'
           %(f._fpr, CandidateList.attribute_count(f._fpr, fingerprint_list)))
     original_count = len(self.fallbacks)
@@ -2101,6 +2101,12 @@ def get_command():
     return sys.argv[1]
   else:
     return None
+
+def log_excluded(msg, *args):
+  if get_command() == 'check_existing':
+    logging.warning(msg, *args)
+  else:
+    logging.info(msg, *args)
 
 def list_fallbacks(whitelist, blacklist):
   """ Fetches required onionoo documents and evaluates the
