@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # Usage: scripts/maint/updateFallbackDirs.py > src/or/fallback_dirs.inc
+#        scripts/maint/updateFallbackDirs.py check_existing
 #
 # This script should be run from a stable, reliable network connection,
 # with no other network activity (and not over tor).
