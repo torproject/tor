@@ -13,20 +13,46 @@ typedef HT_HEAD(hs_circuitmap_ht, circuit_t) hs_circuitmap_ht;
 
 typedef struct hs_token_s hs_token_t;
 struct or_circuit_t;
+struct origin_circuit_t;
 
 /** Public HS circuitmap API: */
 
-struct or_circuit_t *hs_circuitmap_get_rend_circ(const uint8_t *cookie);
-struct or_circuit_t *hs_circuitmap_get_intro_circ_v3(
-                                        const ed25519_public_key_t *auth_key);
-struct or_circuit_t *hs_circuitmap_get_intro_circ_v2(const uint8_t *digest);
+/** Public relay-side API: */
 
-void hs_circuitmap_register_rend_circ(struct or_circuit_t *circ,
-                                      const uint8_t *cookie);
-void hs_circuitmap_register_intro_circ_v2(struct or_circuit_t *circ,
-                                          const uint8_t *digest);
-void hs_circuitmap_register_intro_circ_v3(struct or_circuit_t *circ,
+struct or_circuit_t *
+hs_circuitmap_get_intro_circ_v3_relay_side(const
+                                           ed25519_public_key_t *auth_key);
+struct or_circuit_t *
+hs_circuitmap_get_intro_circ_v2_relay_side(const uint8_t *digest);
+struct or_circuit_t *
+hs_circuitmap_get_rend_circ_relay_side(const uint8_t *cookie);
+
+void hs_circuitmap_register_rend_circ_relay_side(struct or_circuit_t *circ,
+                                                 const uint8_t *cookie);
+void hs_circuitmap_register_intro_circ_v2_relay_side(struct or_circuit_t *circ,
+                                                     const uint8_t *digest);
+void hs_circuitmap_register_intro_circ_v3_relay_side(struct or_circuit_t *circ,
                                          const ed25519_public_key_t *auth_key);
+
+/** Public service-side API: */
+
+struct origin_circuit_t *
+hs_circuitmap_get_intro_circ_v3_service_side(const
+                                             ed25519_public_key_t *auth_key);
+struct origin_circuit_t *
+hs_circuitmap_get_intro_circ_v2_service_side(const uint8_t *digest);
+struct origin_circuit_t *
+hs_circuitmap_get_rend_circ_service_side(const uint8_t *cookie);
+
+void hs_circuitmap_register_intro_circ_v2_service_side(
+                                        struct origin_circuit_t *circ,
+                                        const uint8_t *digest);
+void hs_circuitmap_register_intro_circ_v3_service_side(
+                                        struct origin_circuit_t *circ,
+                                        const ed25519_public_key_t *auth_key);
+void hs_circuitmap_register_rend_circ_service_side(
+                                        struct origin_circuit_t *circ,
+                                        const uint8_t *cookie);
 
 void hs_circuitmap_remove_circuit(struct circuit_t *circ);
 
@@ -37,12 +63,19 @@ void hs_circuitmap_free_all(void);
 
 /** Represents the type of HS token. */
 typedef enum {
-  /** A rendezvous cookie (128bit)*/
-  HS_TOKEN_REND,
-  /** A v2 introduction point pubkey (160bit) */
-  HS_TOKEN_INTRO_V2,
-  /** A v3 introduction point pubkey (256bit) */
-  HS_TOKEN_INTRO_V3,
+  /** A rendezvous cookie on a relay (128bit)*/
+  HS_TOKEN_REND_RELAY_SIDE,
+  /** A v2 introduction point pubkey on a relay (160bit) */
+  HS_TOKEN_INTRO_V2_RELAY_SIDE,
+  /** A v3 introduction point pubkey on a relay (256bit) */
+  HS_TOKEN_INTRO_V3_RELAY_SIDE,
+
+  /** A rendezvous cookie on a hidden service (128bit)*/
+  HS_TOKEN_REND_SERVICE_SIDE,
+  /** A v2 introduction point pubkey on a hidden service (160bit) */
+  HS_TOKEN_INTRO_V2_SERVICE_SIDE,
+  /** A v3 introduction point pubkey on a hidden service (256bit) */
+  HS_TOKEN_INTRO_V3_SERVICE_SIDE,
 } hs_token_type_t;
 
 /** Represents a token used in the HS protocol. Each such token maps to a

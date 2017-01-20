@@ -532,7 +532,7 @@ test_intro_point_registration(void *arg)
     tt_assert(the_hs_circuitmap);
     tt_int_op(0, ==, HT_SIZE(the_hs_circuitmap));
     /* Do a circuitmap query in any case */
-    returned_intro_circ = hs_circuitmap_get_intro_circ_v3(&auth_key);
+    returned_intro_circ =hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     tt_ptr_op(returned_intro_circ, ==, NULL);
   }
 
@@ -548,7 +548,7 @@ test_intro_point_registration(void *arg)
     tt_int_op(1, ==, HT_SIZE(the_hs_circuitmap));
     get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
                            establish_intro_cell);
-    returned_intro_circ = hs_circuitmap_get_intro_circ_v3(&auth_key);
+    returned_intro_circ = hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     tt_ptr_op(intro_circ, ==, returned_intro_circ);
   }
 
@@ -569,7 +569,8 @@ test_intro_point_registration(void *arg)
     /* Check that the new element is our legacy intro circuit. */
     retval = crypto_pk_get_digest(legacy_auth_key, key_digest);
     tt_int_op(retval, ==, 0);
-    returned_intro_circ= hs_circuitmap_get_intro_circ_v2((uint8_t*)key_digest);
+    returned_intro_circ =
+      hs_circuitmap_get_intro_circ_v2_relay_side((uint8_t*)key_digest);
     tt_ptr_op(legacy_intro_circ, ==, returned_intro_circ);
   }
 
@@ -790,7 +791,7 @@ test_received_introduce1_handling(void *arg)
     const uint8_t *cell_auth_key =
       hs_cell_introduce1_getconstarray_auth_key(cell);
     memcpy(auth_key.pubkey, cell_auth_key, ED25519_PUBKEY_LEN);
-    hs_circuitmap_register_intro_circ_v3(service_circ, &auth_key);
+    hs_circuitmap_register_intro_circ_v3_relay_side(service_circ, &auth_key);
     ret = hs_intro_received_introduce1(circ, request, request_len);
     circuit_free(TO_CIRCUIT(circ));
     circuit_free(TO_CIRCUIT(service_circ));
@@ -819,7 +820,7 @@ test_received_introduce1_handling(void *arg)
     /* Register the circuit in the map for the auth key of the cell. */
     uint8_t token[REND_TOKEN_LEN];
     memcpy(token, legacy_key_id, sizeof(token));
-    hs_circuitmap_register_intro_circ_v2(service_circ, token);
+    hs_circuitmap_register_intro_circ_v2_relay_side(service_circ, token);
     ret = hs_intro_received_introduce1(circ, request, request_len);
     circuit_free(TO_CIRCUIT(circ));
     circuit_free(TO_CIRCUIT(service_circ));

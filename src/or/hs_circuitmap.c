@@ -4,8 +4,9 @@
 /**
  * \file hs_circuitmap.c
  *
- * \brief Manage the hidden service circuitmap: A hash table that maps binary
- *  tokens to introduction and rendezvous circuits.
+ * \brief Hidden service circuitmap: A hash table that maps binary tokens to
+ *  introduction and rendezvous circuits; it's used both by relays acting as
+ *  intro points and rendezvous points, and also by hidden services themselves.
  **/
 
 #define HS_CIRCUITMAP_PRIVATE
@@ -177,15 +178,17 @@ hs_circuitmap_register_circuit(circuit_t *circ,
   hs_circuitmap_register_impl(circ, hs_token);
 }
 
-/* Query circuitmap for circuit with <b>token</b> of size <b>token_len</b>.
- * Only returns a circuit with purpose equal to the <b>wanted_circ_purpose</b>
- * parameter and if it is NOT marked for close. Return NULL if no such circuit
- * is found. */
+/* Helper function for hs_circuitmap_get_origin_circuit() and
+ * hs_circuitmap_get_or_circuit(). Because only circuit_t are indexed in the
+ * circuitmap, this function returns object type so the specialized functions
+ * using this helper can upcast it to the right type.
+ *
+ * Return NULL if not such circuit is found. */
 static circuit_t *
-hs_circuitmap_get_circuit(hs_token_type_t type,
-                          size_t token_len,
-                          const uint8_t *token,
-                          uint8_t wanted_circ_purpose)
+hs_circuitmap_get_circuit_impl(hs_token_type_t type,
+                               size_t token_len,
+                               const uint8_t *token,
+                               uint8_t wanted_circ_purpose)
 {
   circuit_t *found_circ = NULL;
 
@@ -209,98 +212,237 @@ hs_circuitmap_get_circuit(hs_token_type_t type,
   return found_circ;
 }
 
+/* Helper function: Query circuitmap for origin circuit with <b>token</b> of
+ * size <b>token_len</b> and <b>type</b>.  Only returns a circuit with purpose
+ * equal to the <b>wanted_circ_purpose</b> parameter and if it is NOT marked
+ * for close. Return NULL if no such circuit is found. */
+static origin_circuit_t *
+hs_circuitmap_get_origin_circuit(hs_token_type_t type,
+                                 size_t token_len,
+                                 const uint8_t *token,
+                                 uint8_t wanted_circ_purpose)
+{
+  circuit_t *circ;
+  tor_assert(token);
+  tor_assert(CIRCUIT_PURPOSE_IS_ORIGIN(wanted_circ_purpose));
+
+  circ = hs_circuitmap_get_circuit_impl(type, token_len, token,
+                                        wanted_circ_purpose);
+  if (!circ) {
+    return NULL;
+  }
+
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  return TO_ORIGIN_CIRCUIT(circ);
+}
+
+/* Helper function: Query circuitmap for OR circuit with <b>token</b> of size
+ * <b>token_len</b> and <b>type</b>.  Only returns a circuit with purpose equal
+ * to the <b>wanted_circ_purpose</b> parameter and if it is NOT marked for
+ * close. Return NULL if no such circuit is found. */
+static or_circuit_t *
+hs_circuitmap_get_or_circuit(hs_token_type_t type,
+                             size_t token_len,
+                             const uint8_t *token,
+                             uint8_t wanted_circ_purpose)
+{
+  circuit_t *circ;
+  tor_assert(token);
+  tor_assert(!CIRCUIT_PURPOSE_IS_ORIGIN(wanted_circ_purpose));
+
+  circ = hs_circuitmap_get_circuit_impl(type, token_len, token,
+                                        wanted_circ_purpose);
+  if (!circ) {
+    return NULL;
+  }
+
+  tor_assert(CIRCUIT_IS_ORCIRC(circ));
+  return TO_OR_CIRCUIT(circ);
+}
+
 /************** Public circuitmap API ****************************************/
 
-/* Public function: Return v3 introduction circuit with <b>auth_key</b>. Return
- * NULL if no such circuit is found in the circuitmap. */
+/**** Public relay-side getters: */
+
+/* Public function: Return a v3 introduction circuit to this relay with
+ * <b>auth_key</b>. Return NULL if no such circuit is found in the
+ * circuitmap. */
 or_circuit_t *
-hs_circuitmap_get_intro_circ_v3(const ed25519_public_key_t *auth_key)
+hs_circuitmap_get_intro_circ_v3_relay_side(
+                                          const ed25519_public_key_t *auth_key)
 {
-  circuit_t *circ;
-  tor_assert(auth_key);
-
-  circ = hs_circuitmap_get_circuit(HS_TOKEN_INTRO_V3,
-                                   ED25519_PUBKEY_LEN, auth_key->pubkey,
-                                   CIRCUIT_PURPOSE_INTRO_POINT);
-  if (!circ) {
-    return NULL;
-  }
-
-  tor_assert(CIRCUIT_IS_ORCIRC(circ));
-  return TO_OR_CIRCUIT(circ);
+  return hs_circuitmap_get_or_circuit(HS_TOKEN_INTRO_V3_RELAY_SIDE,
+                                      ED25519_PUBKEY_LEN, auth_key->pubkey,
+                                      CIRCUIT_PURPOSE_INTRO_POINT);
 }
 
-/* Public function: Return v2 introduction circuit with <b>digest</b>. Return
- * NULL if no such circuit is found in the circuitmap. */
+/* Public function: Return v2 introduction circuit to this relay with
+ * <b>digest</b>. Return NULL if no such circuit is found in the circuitmap. */
 or_circuit_t *
-hs_circuitmap_get_intro_circ_v2(const uint8_t *digest)
+hs_circuitmap_get_intro_circ_v2_relay_side(const uint8_t *digest)
 {
-  circuit_t *circ;
-  tor_assert(digest);
-
-  circ = hs_circuitmap_get_circuit(HS_TOKEN_INTRO_V2,
-                                   REND_TOKEN_LEN, digest,
-                                   CIRCUIT_PURPOSE_INTRO_POINT);
-  if (!circ) {
-    return NULL;
-  }
-
-  tor_assert(CIRCUIT_IS_ORCIRC(circ));
-  return TO_OR_CIRCUIT(circ);
+  return hs_circuitmap_get_or_circuit(HS_TOKEN_INTRO_V2_RELAY_SIDE,
+                                      REND_TOKEN_LEN, digest,
+                                      CIRCUIT_PURPOSE_INTRO_POINT);
 }
 
-/* Public function: Return rendezvous circuit with rendezvous
+/* Public function: Return rendezvous circuit to this relay with rendezvous
  * <b>cookie</b>. Return NULL if no such circuit is found in the circuitmap. */
 or_circuit_t *
-hs_circuitmap_get_rend_circ(const uint8_t *cookie)
+hs_circuitmap_get_rend_circ_relay_side(const uint8_t *cookie)
 {
-  circuit_t *circ;
-  tor_assert(cookie);
-
-  circ = hs_circuitmap_get_circuit(HS_TOKEN_REND,
-                                   REND_TOKEN_LEN, cookie,
-                                   CIRCUIT_PURPOSE_REND_POINT_WAITING);
-  if (!circ) {
-    return NULL;
-  }
-
-  tor_assert(CIRCUIT_IS_ORCIRC(circ));
-  return TO_OR_CIRCUIT(circ);
+  return hs_circuitmap_get_or_circuit(HS_TOKEN_REND_RELAY_SIDE,
+                                      REND_TOKEN_LEN, cookie,
+                                      CIRCUIT_PURPOSE_REND_POINT_WAITING);
 }
+
+/** Public relay-side setters: */
 
 /* Public function: Register rendezvous circuit with key <b>cookie</b> to the
  * circuitmap. */
 void
-hs_circuitmap_register_rend_circ(or_circuit_t *circ, const uint8_t *cookie)
+hs_circuitmap_register_rend_circ_relay_side(or_circuit_t *circ,
+                                            const uint8_t *cookie)
 {
   hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
-                                 HS_TOKEN_REND,
+                                 HS_TOKEN_REND_RELAY_SIDE,
                                  REND_TOKEN_LEN, cookie);
 }
-
 /* Public function: Register v2 intro circuit with key <b>digest</b> to the
  * circuitmap. */
 void
-hs_circuitmap_register_intro_circ_v2(or_circuit_t *circ, const uint8_t *digest)
+hs_circuitmap_register_intro_circ_v2_relay_side(or_circuit_t *circ,
+                                                const uint8_t *digest)
 {
   hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
-                                 HS_TOKEN_INTRO_V2,
+                                 HS_TOKEN_INTRO_V2_RELAY_SIDE,
                                  REND_TOKEN_LEN, digest);
 }
 
 /* Public function: Register v3 intro circuit with key <b>auth_key</b> to the
  * circuitmap. */
 void
-hs_circuitmap_register_intro_circ_v3(or_circuit_t *circ,
-                                     const ed25519_public_key_t *auth_key)
+hs_circuitmap_register_intro_circ_v3_relay_side(or_circuit_t *circ,
+                                          const ed25519_public_key_t *auth_key)
 {
   hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
-                                 HS_TOKEN_INTRO_V3,
+                                 HS_TOKEN_INTRO_V3_RELAY_SIDE,
                                  ED25519_PUBKEY_LEN, auth_key->pubkey);
 }
 
-/** Remove this circuit from the HS circuitmap. Clear its HS token, and remove
- *  it from the hashtable. */
+/**** Public servide-side getters: */
+
+/* Public function: Return v3 introduction circuit with <b>auth_key</b>
+ * originating from this hidden service. Return NULL if no such circuit is
+ * found in the circuitmap. */
+origin_circuit_t *
+hs_circuitmap_get_intro_circ_v3_service_side(const
+                                             ed25519_public_key_t *auth_key)
+{
+  origin_circuit_t *circ = NULL;
+
+  /* Check first for established intro circuits */
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_INTRO_V3_SERVICE_SIDE,
+                                          ED25519_PUBKEY_LEN, auth_key->pubkey,
+                                          CIRCUIT_PURPOSE_S_INTRO);
+  if (circ) {
+    return circ;
+  }
+
+  /* ...if nothing found, check for pending intro circs */
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_INTRO_V3_SERVICE_SIDE,
+                                          ED25519_PUBKEY_LEN, auth_key->pubkey,
+                                          CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+
+  return circ;
+}
+
+/* Public function: Return v2 introduction circuit originating from this hidden
+ * service with <b>digest</b>. Return NULL if no such circuit is found in the
+ * circuitmap. */
+origin_circuit_t *
+hs_circuitmap_get_intro_circ_v2_service_side(const uint8_t *digest)
+{
+  origin_circuit_t *circ = NULL;
+
+  /* Check first for established intro circuits */
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_INTRO_V2_SERVICE_SIDE,
+                                          REND_TOKEN_LEN, digest,
+                                          CIRCUIT_PURPOSE_S_INTRO);
+  if (circ) {
+    return circ;
+  }
+
+  /* ...if nothing found, check for pending intro circs */
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_INTRO_V2_SERVICE_SIDE,
+                                          REND_TOKEN_LEN, digest,
+                                          CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+
+  return circ;
+}
+
+/* Public function: Return rendezvous circuit originating from this hidden
+ * service with rendezvous <b>cookie</b>. Return NULL if no such circuit is
+ * found in the circuitmap. */
+origin_circuit_t *
+hs_circuitmap_get_rend_circ_service_side(const uint8_t *cookie)
+{
+  origin_circuit_t *circ = NULL;
+
+  /* Try to check if we have a connecting circuit. */
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_REND_SERVICE_SIDE,
+                                          REND_TOKEN_LEN, cookie,
+                                          CIRCUIT_PURPOSE_S_CONNECT_REND);
+  if (circ) {
+    return circ;
+  }
+
+  /* Then try for connected circuit. */
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_REND_SERVICE_SIDE,
+                                          REND_TOKEN_LEN, cookie,
+                                          CIRCUIT_PURPOSE_S_REND_JOINED);
+  return circ;
+}
+
+/**** Public servide-side setters: */
+
+/* Public function: Register v2 intro circuit with key <b>digest</b> to the
+ * circuitmap. */
+void
+hs_circuitmap_register_intro_circ_v2_service_side(origin_circuit_t *circ,
+                                                  const uint8_t *digest)
+{
+  hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
+                                 HS_TOKEN_INTRO_V2_SERVICE_SIDE,
+                                 REND_TOKEN_LEN, digest);
+}
+
+/* Public function: Register v3 intro circuit with key <b>auth_key</b> to the
+ * circuitmap. */
+void
+hs_circuitmap_register_intro_circ_v3_service_side(origin_circuit_t *circ,
+                                          const ed25519_public_key_t *auth_key)
+{
+  hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
+                                 HS_TOKEN_INTRO_V3_SERVICE_SIDE,
+                                 ED25519_PUBKEY_LEN, auth_key->pubkey);
+}
+
+/* Public function: Register rendezvous circuit with key <b>cookie</b> to the
+ * circuitmap. */
+void
+hs_circuitmap_register_rend_circ_service_side(origin_circuit_t *circ,
+                                              const uint8_t *cookie)
+{
+  hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
+                                 HS_TOKEN_REND_SERVICE_SIDE,
+                                 REND_TOKEN_LEN, cookie);
+}
+
+/**** Misc public functions: */
+
+/** Public function: Remove this circuit from the HS circuitmap. Clear its HS
+ *  token, and remove it from the hashtable. */
 void
 hs_circuitmap_remove_circuit(circuit_t *circ)
 {
@@ -326,7 +468,7 @@ hs_circuitmap_remove_circuit(circuit_t *circ)
   circ->hs_token = NULL;
 }
 
-/* Initialize the global HS circuitmap. */
+/* Public function: Initialize the global HS circuitmap. */
 void
 hs_circuitmap_init(void)
 {
@@ -336,7 +478,7 @@ hs_circuitmap_init(void)
   HT_INIT(hs_circuitmap_ht, the_hs_circuitmap);
 }
 
-/* Free all memory allocated by the global HS circuitmap. */
+/* Public function: Free all memory allocated by the global HS circuitmap. */
 void
 hs_circuitmap_free_all(void)
 {
