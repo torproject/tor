@@ -37,17 +37,13 @@ import dateutil.parser
 # bson_lazy provides bson
 #from bson import json_util
 import copy
+import re
 
 from stem.descriptor import DocumentHandler
 from stem.descriptor.remote import get_consensus
 
 import logging
-# INFO tells you why each relay was included or excluded
-# WARN tells you about potential misconfigurations and relay detail changes
-logging.basicConfig(level=logging.WARNING)
 logging.root.name = ''
-# INFO tells you about each consensus download attempt
-logging.getLogger('stem').setLevel(logging.WARNING)
 
 HAVE_IPADDRESS = False
 try:
@@ -148,6 +144,7 @@ BLACKLIST_EXCLUDES_WHITELIST_ENTRIES = True
 
 WHITELIST_FILE_NAME = 'scripts/maint/fallback.whitelist'
 BLACKLIST_FILE_NAME = 'scripts/maint/fallback.blacklist'
+FALLBACK_FILE_NAME  = 'src/or/fallback_dirs.inc'
 
 # The number of bytes we'll read from a filter file before giving up
 MAX_LIST_FILE_SIZE = 1024 * 1024
@@ -367,6 +364,15 @@ def read_from_file(file_name, max_len):
                   error.strerror)
                  )
   return None
+
+def parse_fallback_file(file_name):
+  file_data = read_from_file(file_name, MAX_LIST_FILE_SIZE)
+  file_data = cleanse_unprintable(file_data)
+  file_data = remove_bad_chars(file_data, '\n"\0')
+  file_data = re.sub('/\*.*?\*/', '', file_data)
+  file_data = file_data.replace(',', '\n')
+  file_data = file_data.replace(' weight=10', '')
+  return file_data
 
 def load_possibly_compressed_response_json(response):
     if response.info().get('Content-Encoding') == 'gzip':
@@ -1431,7 +1437,7 @@ class CandidateList(dict):
     self.fallbacks.sort(key=lambda f: f._data[data_field])
 
   @staticmethod
-  def load_relaylist(file_name):
+  def load_relaylist(file_obj):
     """ Read each line in the file, and parse it like a FallbackDir line:
         an IPv4 address and optional port:
           <IPv4 address>:<port>
@@ -1446,8 +1452,9 @@ class CandidateList(dict):
         (of string -> string key/value pairs),
         and these dictionaries are placed in an array.
         comments start with # and are ignored """
+    file_data = file_obj['data']
+    file_name = file_obj['name']
     relaylist = []
-    file_data = read_from_file(file_name, MAX_LIST_FILE_SIZE)
     if file_data is None:
       return relaylist
     for line in file_data.split('\n'):
@@ -1488,12 +1495,12 @@ class CandidateList(dict):
     return relaylist
 
   # apply the fallback whitelist and blacklist
-  def apply_filter_lists(self):
+  def apply_filter_lists(self, whitelist_obj, blacklist_obj):
     excluded_count = 0
     logging.debug('Applying whitelist and blacklist.')
     # parse the whitelist and blacklist
-    whitelist = self.load_relaylist(WHITELIST_FILE_NAME)
-    blacklist = self.load_relaylist(BLACKLIST_FILE_NAME)
+    whitelist = self.load_relaylist(whitelist_obj)
+    blacklist = self.load_relaylist(blacklist_obj)
     filtered_fallbacks = []
     for f in self.fallbacks:
       in_whitelist = f.is_in_whitelist(whitelist)
@@ -2064,9 +2071,38 @@ class CandidateList(dict):
       s += 'or setting INCLUDE_UNLISTED_ENTRIES = True.'
     return s
 
-## Main Function
+def process_existing():
+  logging.basicConfig(level=logging.INFO)
+  logging.getLogger('stem').setLevel(logging.INFO)
+  whitelist = {'data': parse_fallback_file(FALLBACK_FILE_NAME),
+               'name': FALLBACK_FILE_NAME}
+  blacklist = {'data': read_from_file(BLACKLIST_FILE_NAME, MAX_LIST_FILE_SIZE),
+               'name': BLACKLIST_FILE_NAME}
+  list_fallbacks(whitelist, blacklist)
 
-def list_fallbacks():
+def process_default():
+  logging.basicConfig(level=logging.WARNING)
+  logging.getLogger('stem').setLevel(logging.WARNING)
+  whitelist = {'data': read_from_file(WHITELIST_FILE_NAME, MAX_LIST_FILE_SIZE),
+               'name': WHITELIST_FILE_NAME}
+  blacklist = {'data': read_from_file(BLACKLIST_FILE_NAME, MAX_LIST_FILE_SIZE),
+               'name': BLACKLIST_FILE_NAME}
+  list_fallbacks(whitelist, blacklist)
+
+## Main Function
+def main():
+  if get_command() == 'check_existing':
+    process_existing()
+  else:
+    process_default()
+
+def get_command():
+  if len(sys.argv) == 2:
+    return sys.argv[1]
+  else:
+    return None
+
+def list_fallbacks(whitelist, blacklist):
   """ Fetches required onionoo documents and evaluates the
       fallback directory criteria for each of the relays """
 
@@ -2099,7 +2135,7 @@ def list_fallbacks():
   # warning that the details have changed from those in the whitelist.
   # instead, there will be an info-level log during the eligibility check.
   initial_count = len(candidates.fallbacks)
-  excluded_count = candidates.apply_filter_lists()
+  excluded_count = candidates.apply_filter_lists(whitelist, blacklist)
   print candidates.summarise_filters(initial_count, excluded_count)
   eligible_count = len(candidates.fallbacks)
 
@@ -2170,4 +2206,4 @@ def list_fallbacks():
     print x.fallbackdir_line(candidates.fallbacks, prefilter_fallbacks)
 
 if __name__ == "__main__":
-  list_fallbacks()
+  main()
