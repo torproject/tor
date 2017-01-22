@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (hidden service directories):
     - Relays are now willing act as v3 hidden service directories,
       regardless of the EnableOnionServicvesV3 parameter. Implements
       ticket 19899.

@@ -1,4 +1,4 @@
-  o Minor bugfixex (config):
+  o Minor bugfixes (config):
     - Don't assert when trying to get the options list when
       LearnCircuitBuildTimeout is set to 0 and we are actually currently
-      parsing the options. Fixes #21062; bugfix on tor-0.2.9.3-alpha.
+      parsing the options. Fixes bug 21062; bugfix on 0.2.9.3-alpha.

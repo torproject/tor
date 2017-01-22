@@ -1,5 +1,5 @@
   o Minor bugfixes (hidden service):
     - Restrict the number of introduction point from 0 to the maximum allowed
       instead of the default value to the maximum. That was stopping operators
-      from using less than 3 introduction points. Closes #21033; bugfix on
-      tor-0.2.7.2-alpha.
+      from using less than 3 introduction points. Fixes bug 21033; bugfix on
+      0.2.7.2-alpha.
