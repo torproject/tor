@@ -175,7 +175,7 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
     - Fix a memory leak when configuring hidden services. Fixes bug
       20987; bugfix on 0.3.0.1-alpha.
 
-  o Minor bugfixes (portability, also in 0.2.9.9x):
+  o Minor bugfixes (portability, also in 0.2.9.9):
     - Avoid crashing when Tor is built using headers that contain
       CLOCK_MONOTONIC_COARSE, but then tries to run on an older kernel
       without CLOCK_MONOTONIC_COARSE. Fixes bug 21035; bugfix
