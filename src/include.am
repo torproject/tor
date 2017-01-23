@@ -7,3 +7,4 @@ include src/tools/include.am
 include src/win32/include.am
 include src/config/include.am
 include src/test/fuzz/include.am
+include src/trace/include.am

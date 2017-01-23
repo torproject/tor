@@ -1,0 +1,5 @@
+  o Minor features (testing):
+    - Add general tracing instrumentation to Tor. For now, this subsystem is
+      not being used by any part of the code, it is for future use or external
+      testing that is not part of the upstream code base. Any tracing
+      framework needs to be enabled at compile time. Closes #13802.
