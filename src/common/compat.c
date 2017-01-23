@@ -258,6 +258,12 @@ tor_mmap_file(const char *filename)
   page_size = getpagesize();
   size += (size%page_size) ? page_size-(size%page_size) : 0;
 
+  if (st.st_size > SSIZE_T_CEILING || size < st.st_size) {
+    log_warn(LD_FS, "File \"%s\" is too large. Ignoring.",filename);
+    errno = EFBIG;
+    close(fd);
+    return NULL;
+  }
   if (!size) {
     /* Zero-length file. If we call mmap on it, it will succeed but
      * return NULL, and bad things will happen. So just fail. */

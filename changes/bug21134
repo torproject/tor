@@ -1,0 +1,5 @@
+  o Minor bugfixes (portability):
+    - Do not silently truncate content of files if they are larger
+      than SIZE_MAX bytes. This issue could occur on 32 bit systems
+      with large file support and files which are larger than 4 GB.
+      Fixes bug 21134; bugfix on 0.3.0.1-alpha.
