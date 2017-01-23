@@ -1,18 +1,22 @@
 Changes in version 0.3.0.2-alpha - 2017-01-23
-  Blurb here. Lorax ipsum gruvvulus thneed amet, snergelly once-ler
-  lerkim, sed do barbaloot tempor gluppitus ut labore et truffula magna
-  aliqua. Ut enim ad grickle-grass veniam, quis miff-muffered ga-zumpco
-  laboris nisi ut cruffulus ex ea schloppity consequat. Duis aute
-  snarggle in swomeeswans in voluptate axe-hacker esse rippulus crummii
-  eu moof nulla snuvv.
+  Tor 0.3.0.2-alpha improves how exit relays and clients handle DNS
+  time-to-live values, makes directory authorities enforce the 1-to-1
+  mapping of relay RSA identity keys to ED25519 identity keys, fixes a
+  client-side onion service reachability bug, does better at selecting
+  the set of fallback directories, and more.
 
   o Major features (security):
     - Change the algorithm used to decide DNS TTLs on client and server
       side, to better resist DNS-based correlation attacks like the
       DefecTor attack of Greschbach, Pulls, Roberts, Winter, and
-      Feamster). Now relays only return one of two possible DNS TTL
+      Feamster. Now relays only return one of two possible DNS TTL
       values, and clients are willing to believe DNS TTL values up to 3
       hours long. Closes ticket 19769.
+
+  o Major features (directory authority, security):
+    - The default for AuthDirPinKeys is now 1: directory authorities
+      will reject relays where the RSA identity key matches a previously
+      seen value, but the Ed25519 key has changed. Closes ticket 18319.
 
   o Major bugfixes (client, guard, crash):
     - In circuit_get_global_origin_list(), return the actual list of
@@ -25,10 +29,10 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
     - Fix a client-side onion service reachability bug, where multiple
       socks requests to an onion service (or a single slow request) could
       cause us to mistakenly mark some of the service's introduction
-      points as failed, and we cache that failure so eventually we
-      run out and can't reach the service. Also resolves a mysterious
-      "Remote server sent bogus reason code 65021" log warning. The bug
-      was introduced in task 17218, where we tried to remember the circuit
+      points as failed, and we cache that failure so eventually we run
+      out and can't reach the service. Also resolves a mysterious "Remote
+      server sent bogus reason code 65021" log warning. The bug was
+      introduced in ticket 17218, where we tried to remember the circuit
       end reason as a uint16_t, which mangled negative values. Partially
       fixes bug 21056 and fixes bug 20307; bugfix on 0.2.8.1-alpha.
 
@@ -36,38 +40,30 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
     - Fix a bug that prevented exit nodes from caching DNS records for
       more than 60 seconds. Fixes bug 19025; bugfix on 0.2.4.7-alpha.
 
-  o Minor features (directory authority, security):
-    - The default for AuthDirPinKeys is now 1: directory authorities
-      will reject relays where the RSA identity key matches a previously
-      seen value, but the Ed25519 key has changed. Closes ticket 18319.
-
   o Minor features (controller):
-    - Add GETINFO sr/current and sr/previous keys, to expose shared-
-      random values to the controller. Closes ticket 19925.
+    - Add "GETINFO sr/current" and "GETINFO sr/previous" keys, to
+      expose shared-random values to the controller. Closes ticket 19925.
 
   o Minor features (entry guards):
     - Add UseEntryGuards to TEST_OPTIONS_DEFAULT_VALUES in order to not
-      break regresson tests.
-    - Require UseEntryGuards when UseBridges is set in order to make
+      break regression tests.
+    - Require UseEntryGuards when UseBridges is set, in order to make
       sure bridges aren't bypassed. Resolves ticket 20502.
 
   o Minor features (fallback directories):
-    - Allow 3 fallbacks per operator. (This is safe now we are choosing
-      200 fallbacks.) Closes ticket 20912.
-    - Display the fingerprint when downloading consensuses from
-      fallbacks. Closes ticket 20908.
-    - Exclude relays affected by 20499 from the fallback list. Exclude
-      known affected versions, and any relay that delivers a stale
-      consensus, as long as that consensus expired more than 24 hours
-      ago. Closes ticket 20539.
-    - Make it easier to change the output sort order of fallbacks.
-      Closes ticket 20822.
-    - Provide bandwidth and consensus weight for each candidate fallback
-      in updateFallbackDirs.py. Closes ticket 20878.
+    - Select 200 fallback directories for each release. Closes
+      ticket 20881.
+    - Allow 3 fallback relays per operator, which is safe now that we are
+      choosing 200 fallback relays. Closes ticket 20912.
+    - Exclude relays affected by bug 20499 from the fallback list. Exclude
+      relays from the fallback list if they are running versions known to
+      be affected by bug 20499, or if in our tests they deliver a stale
+      consensus (i.e. one that expired more than 24 hours ago). Closes
+      ticket 20539.
     - Reduce the minimum fallback bandwidth to 1 MByte/s. Part of
       ticket 18828.
     - Require fallback directories to have the same address and port for
-      7 dayss. (Due to the number of relays with enough stability.)
+      7 days (now that we have enough relays with this stability).
       Relays whose OnionOO stability timer is reset on restart by bug
       18050 should upgrade to Tor 0.2.8.7 or later, which has a fix for
       this issue. Closes ticket 20880; maintains short-term fix
@@ -76,35 +72,39 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       decaying average), rather than 95%. This allows at least 73% of
       clients to bootstrap in the first 5 seconds without contacting an
       authority. Part of ticket 18828.
-    - Select 200 fallback directories for each release. Closes
-      ticket 20881.
+    - Annotate updateFallbackDirs.py with the bandwidth and consensus
+      weight for each candidate fallback. Closes ticket 20878.
+    - Make it easier to change the output sort order of fallbacks.
+      Closes ticket 20822.
+    - Display the relay fingerprint when downloading consensuses from
+      fallbacks. Closes ticket 20908.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the January 4 2017 Maxmind GeoLite2
       Country database.
 
-  o Minor features (hidden service directories):
-    - Relays are now willing act as v3 hidden service directories,
-      regardless of the EnableOnionServicvesV3 parameter. Implements
-      ticket 19899.
+  o Minor features (next-gen onion service directories):
+    - Remove the "EnableOnionServicesV3" consensus parameter that we
+      introduced in 0.3.0.1-alpha: relays are now always willing to act
+      as v3 onion service directories. Resolves ticket 19899.
 
   o Minor features (linting):
     - Enhance the changes file linter to warn on Tor versions that are
-      prefixed with 'tor-'. Closes ticket 21096.
+      prefixed with "tor-". Closes ticket 21096.
 
   o Minor features (logging):
     - In several places, describe unset ed25519 keys as "<unset>",
-      rather than "AAAAAAAA...AAA". Closes ticket 21037.
+      rather than the scary "AAAAAAAA...AAA". Closes ticket 21037.
 
   o Minor bugfix (control protocol):
     - The reply to a "GETINFO config/names" request via the control
       protocol now spells the type "Dependent" correctly. This is a
-      breaking change in the control protocol. (It seems to be ignored
-      by the most common known clients.) Fixes bug 18146; bugfix
-      on 0.1.1.4-alpha.
+      breaking change in the control protocol. (The field seems to be
+      ignored by the most common known controllers.) Fixes bug 18146;
+      bugfix on 0.1.1.4-alpha.
 
   o Minor bugfixes (bug resilience):
-    - Fix an (unreachable) size_t overflow in base64_decode(). Fixes bug
+    - Fix an unreachable size_t overflow in base64_decode(). Fixes bug
       19222; bugfix on 0.2.0.9-alpha. Found by Guido Vranken; fixed by
       Hans Jerry Illikainen.
 
@@ -123,9 +123,10 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       installed. Fixes bug 21051; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (config):
-    - Don't assert when trying to get the options list when
-      LearnCircuitBuildTimeout is set to 0 and we are actually currently
-      parsing the options. Fixes bug 21062; bugfix on 0.2.9.3-alpha.
+    - Don't assert on startup when trying to get the options list and
+      LearnCircuitBuildTimeout is set to 0: we are currently parsing
+      the options so of course they aren't ready yet. Fixes bug 21062;
+      bugfix on 0.2.9.3-alpha.
 
   o Minor bugfixes (controller):
     - Make the GETINFO interface for inquiring about entry guards
@@ -133,50 +134,45 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       on 0.3.0.1-alpha.
 
   o Minor bugfixes (dead code):
-    - Remove a rendundant check for PidFile changes at runtime in
+    - Remove a redundant check for PidFile changes at runtime in
       options_transition_allowed(): this check is already performed
       regardless of whether the sandbox is active. Fixes bug 21123;
-      bugfix on commit 2ae47d3 in 0.2.5.4-alpha.
+      bugfix on 0.2.5.4-alpha.
 
   o Minor bugfixes (documentation):
     - Update the tor manual page to document every option that can not
-      be changed while tor is running. Fixes bug 21122; bugfix on
-      multiple tor versions.
+      be changed while tor is running. Fixes bug 21122.
 
   o Minor bugfixes (fallback directories):
+    - Stop failing when a relay has no uptime data in
+      updateFallbackDirs.py. Fixes bug 20945; bugfix on 0.2.8.1-alpha.
     - Avoid checking fallback candidates' DirPorts if they are down in
       OnionOO. When a relay operator has multiple relays, this
-      prioritises relays that are up over relays that are down. Fixes
+      prioritizes relays that are up over relays that are down. Fixes
       bug 20926; bugfix on 0.2.8.3-alpha.
     - Stop failing when OUTPUT_COMMENTS is True in updateFallbackDirs.py.
       Fixes bug 20877; bugfix on 0.2.8.3-alpha.
-    - Stop failing when a relay has no uptime data in
-      updateFallbackDirs.py. Fixes bug 20945; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (guards, bootstrapping):
     - When connecting to a directory guard during bootstrap, do not mark
       the guard as successful until we receive a good-looking directory
       response from it. Fixes bug 20974; bugfix on 0.3.0.1-alpha.
 
-  o Minor bugfixes (hidden service):
+  o Minor bugfixes (onion services):
     - Fix the config reload pruning of old vs new services so it
-      actually works when both ephemeral and non ephemeral services were
-      configured which lead to a BUG() stacktrace. Fixes bug 21054;
-      bugfix on 0.3.0.1-alpha.
-    - Restrict the number of introduction point from 0 to the maximum
-      allowed instead of the default value to the maximum. That was
-      stopping operators from using less than 3 introduction points.
-      Fixes bug 21033; bugfix on 0.2.7.2-alpha.
+      actually works when both ephemeral and non-ephemeral services are
+      configured. Fixes bug 21054; bugfix on 0.3.0.1-alpha.
+    - Allow the number of introduction points to be as low as 0, rather
+      than as low as 3. Fixes bug 21033; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (IPv6):
-    - Make IP6-using clients try harder to find an IPv6 directory server.
-      Fixes bug 20999; bugfix on 77a9de0 from 17840 in 0.2.8.2-alpha.
-    - When IPv6 addresses have not been downloaded, use hard-coded
-      address info for authorities, fallbacks, and configured bridges.
-      (When IPv6-only clients receive a microdesc consensus, it has no
-      IPv6 addresses, so they can't use it until microdescs are
-      downloaded.) This allows IPv6-only clients to use microdescriptors.
-      Fixes bug 20996; bugfix on b167e82 from 19608 in 0.2.8.5-alpha.
+    - Make IPv6-using clients try harder to find an IPv6 directory server.
+      Fixes bug 20999; bugfix on 0.2.8.2-alpha.
+    - When IPv6 addresses have not been downloaded yet (microdesc
+      consensus documents don't list relay IPv6 addresses), use hard-coded
+      addresses for authorities, fallbacks, and configured bridges. Now
+      IPv6-only clients can use microdescriptors. Fixes bug 20996;
+      bugfix on b167e82 from 19608 in 0.2.8.5-alpha.
 
   o Minor bugfixes (memory leaks):
     - Fix a memory leak when configuring hidden services. Fixes bug
@@ -190,8 +186,8 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
 
   o Minor bugfixes (relay):
     - Honor DataDirectoryGroupReadable when tor is a relay. Previously,
-      the initialization of the keys would reset the DataDirectory to
-      0700 instead of 0750 if DataeDirectoryGroupReadable was set to 1.
+      initializing the keys would reset the DataDirectory to 0700
+      instead of 0750 even if DataDirectoryGroupReadable was set to 1.
       Fixes bug 19953; bugfix on 0.0.2pre16. Patch by "redfish".
 
   o Minor bugfixes (testing):
@@ -200,9 +196,8 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
 
   o Minor bugfixes (unit tests):
     - Allow the unit tests to pass even when DNS lookups of bogus
-      addresses do not fail as expected. Fixes bug 20862 and 20863;
-      bugfix on unit tests introduced in 0.2.8.1-alpha
-      through 0.2.9.4-alpha.
+      addresses do not fail as expected. Fixes bug 20862 and 20863; bugfix
+      on unit tests introduced in 0.2.8.1-alpha through 0.2.9.4-alpha.
 
   o Code simplification and refactoring:
     - Refactor code to manipulate global_origin_circuit_list into
@@ -213,7 +208,7 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       blocks were incorrectly appearing. Closes ticket 20885.
 
   o Documentation (man page):
-    - Clarify a number of options in tor.1 and add some min/max values
+    - Clarify many options in tor.1 and add some min/max values
       for HiddenService options. Closes ticket 21058.
 
 
