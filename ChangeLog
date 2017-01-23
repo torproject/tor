@@ -27,22 +27,23 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
 
   o Major bugfixes (client, onion service):
     - Fix a client-side onion service reachability bug, where multiple
-      socks requests to an onion service (or a single slow request) could
-      cause us to mistakenly mark some of the service's introduction
-      points as failed, and we cache that failure so eventually we run
-      out and can't reach the service. Also resolves a mysterious "Remote
-      server sent bogus reason code 65021" log warning. The bug was
-      introduced in ticket 17218, where we tried to remember the circuit
-      end reason as a uint16_t, which mangled negative values. Partially
-      fixes bug 21056 and fixes bug 20307; bugfix on 0.2.8.1-alpha.
+      socks requests to an onion service (or a single slow request)
+      could cause us to mistakenly mark some of the service's
+      introduction points as failed, and we cache that failure so
+      eventually we run out and can't reach the service. Also resolves a
+      mysterious "Remote server sent bogus reason code 65021" log
+      warning. The bug was introduced in ticket 17218, where we tried to
+      remember the circuit end reason as a uint16_t, which mangled
+      negative values. Partially fixes bug 21056 and fixes bug 20307;
+      bugfix on 0.2.8.1-alpha.
 
   o Major bugfixes (DNS):
     - Fix a bug that prevented exit nodes from caching DNS records for
       more than 60 seconds. Fixes bug 19025; bugfix on 0.2.4.7-alpha.
 
   o Minor features (controller):
-    - Add "GETINFO sr/current" and "GETINFO sr/previous" keys, to
-      expose shared-random values to the controller. Closes ticket 19925.
+    - Add "GETINFO sr/current" and "GETINFO sr/previous" keys, to expose
+      shared-random values to the controller. Closes ticket 19925.
 
   o Minor features (entry guards):
     - Add UseEntryGuards to TEST_OPTIONS_DEFAULT_VALUES in order to not
@@ -53,13 +54,13 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
   o Minor features (fallback directories):
     - Select 200 fallback directories for each release. Closes
       ticket 20881.
-    - Allow 3 fallback relays per operator, which is safe now that we are
-      choosing 200 fallback relays. Closes ticket 20912.
-    - Exclude relays affected by bug 20499 from the fallback list. Exclude
-      relays from the fallback list if they are running versions known to
-      be affected by bug 20499, or if in our tests they deliver a stale
-      consensus (i.e. one that expired more than 24 hours ago). Closes
-      ticket 20539.
+    - Allow 3 fallback relays per operator, which is safe now that we
+      are choosing 200 fallback relays. Closes ticket 20912.
+    - Exclude relays affected by bug 20499 from the fallback list.
+      Exclude relays from the fallback list if they are running versions
+      known to be affected by bug 20499, or if in our tests they deliver
+      a stale consensus (i.e. one that expired more than 24 hours ago).
+      Closes ticket 20539.
     - Reduce the minimum fallback bandwidth to 1 MByte/s. Part of
       ticket 18828.
     - Require fallback directories to have the same address and port for
@@ -124,8 +125,8 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
 
   o Minor bugfixes (config):
     - Don't assert on startup when trying to get the options list and
-      LearnCircuitBuildTimeout is set to 0: we are currently parsing
-      the options so of course they aren't ready yet. Fixes bug 21062;
+      LearnCircuitBuildTimeout is set to 0: we are currently parsing the
+      options so of course they aren't ready yet. Fixes bug 21062;
       bugfix on 0.2.9.3-alpha.
 
   o Minor bugfixes (controller):
@@ -166,13 +167,13 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       than as low as 3. Fixes bug 21033; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (IPv6):
-    - Make IPv6-using clients try harder to find an IPv6 directory server.
-      Fixes bug 20999; bugfix on 0.2.8.2-alpha.
+    - Make IPv6-using clients try harder to find an IPv6 directory
+      server. Fixes bug 20999; bugfix on 0.2.8.2-alpha.
     - When IPv6 addresses have not been downloaded yet (microdesc
-      consensus documents don't list relay IPv6 addresses), use hard-coded
-      addresses for authorities, fallbacks, and configured bridges. Now
-      IPv6-only clients can use microdescriptors. Fixes bug 20996;
-      bugfix on b167e82 from 19608 in 0.2.8.5-alpha.
+      consensus documents don't list relay IPv6 addresses), use hard-
+      coded addresses for authorities, fallbacks, and configured
+      bridges. Now IPv6-only clients can use microdescriptors. Fixes bug
+      20996; bugfix on b167e82 from 19608 in 0.2.8.5-alpha.
 
   o Minor bugfixes (memory leaks):
     - Fix a memory leak when configuring hidden services. Fixes bug
@@ -196,8 +197,9 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
 
   o Minor bugfixes (unit tests):
     - Allow the unit tests to pass even when DNS lookups of bogus
-      addresses do not fail as expected. Fixes bug 20862 and 20863; bugfix
-      on unit tests introduced in 0.2.8.1-alpha through 0.2.9.4-alpha.
+      addresses do not fail as expected. Fixes bug 20862 and 20863;
+      bugfix on unit tests introduced in 0.2.8.1-alpha
+      through 0.2.9.4-alpha.
 
   o Code simplification and refactoring:
     - Refactor code to manipulate global_origin_circuit_list into
@@ -208,8 +210,8 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       blocks were incorrectly appearing. Closes ticket 20885.
 
   o Documentation (man page):
-    - Clarify many options in tor.1 and add some min/max values
-      for HiddenService options. Closes ticket 21058.
+    - Clarify many options in tor.1 and add some min/max values for
+      HiddenService options. Closes ticket 21058.
 
 
 Changes in version 0.3.0.1-alpha - 2016-12-19
