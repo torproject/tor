@@ -1,3 +1,0 @@
-  o Documentation (formatting):
-    - Clean up formatting of tor.1 man page and HTML doc, where <pre> blocks
-      were incorrectly appearing.  Closes ticket 20885.

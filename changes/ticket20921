@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor code to manipulate global_origin_circuit_list into separate
-      functions. Closes ticket 20921.
-

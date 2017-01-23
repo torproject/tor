@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - Fix the config reload pruning of old vs new services so it actually
-      works when both ephemeral and non ephemeral services were configured
-      which lead to a BUG() stacktrace. Fixes bug 21054; bugfix on
-      0.3.0.1-alpha.

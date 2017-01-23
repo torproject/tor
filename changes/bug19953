@@ -1,6 +1,0 @@
-  o Minor bugfixes (relay):
-    - Honor DataDirectoryGroupReadable when tor is a relay. Previously, the
-      initialization of the keys would reset the DataDirectory to 0700 instead
-      of 0750 if DataeDirectoryGroupReadable was set to 1. Fixes bug 19953;
-      bugfix on 0.0.2pre16.
-      Patch by "redfish".

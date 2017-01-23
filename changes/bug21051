@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix Libevent detection on platforms without Libevent 1 headers
-      installed. Fixes bug 21051; bugfix on 0.2.9.1-alpha.

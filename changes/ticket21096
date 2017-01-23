@@ -1,3 +1,0 @@
-  o Minor features (linting):
-    - Enhance the changes file linter to warn on Tor versions that are
-      prefixed with 'tor-'. Closes ticket 21096.

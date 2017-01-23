@@ -1,6 +1,0 @@
-  o Major bugfixes (client, guard, crash):
-    - In circuit_get_global_origin_list(), return the actual list of
-      origin circuits. The previous version of this code returned
-      the list of all the circuits, and could have caused strange bugs,
-      including possible crashes.  Fixes bug 21118; bugfix on 0.3.0.1-alpha.
-

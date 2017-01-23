@@ -1,4 +1,0 @@
-  o Minor bugfixes (client, guards):
-    - Fix bug where Tor would think that there are circuits waiting for better
-      guards even though those circuits have been freed. Fixes bug 21142;
-      bugfix on 0.3.0.1-alpha.

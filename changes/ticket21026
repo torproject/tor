@@ -1,3 +1,0 @@
-  o Minor bugfixes (testing):
-    - Remove undefined behavior from the backtrace generator by removing
-      its signal handler. Fixes bug 21026; bugfix on 0.2.5.2-alpha.

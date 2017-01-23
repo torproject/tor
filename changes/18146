@@ -1,5 +1,0 @@
-  o Minor bugfix (control protocol):
-    - The reply to a "GETINFO config/names" request via the control protocol
-      now spells the type "Dependent" correctly.  This is a breaking change in
-      the control protocol.  (It seems to be ignored by the most common known
-      clients.)  Fixes bug 18146; bugfix on 0.1.1.4-alpha.

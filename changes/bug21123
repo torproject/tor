@@ -1,5 +1,0 @@
-  o Minor bugfixes (dead code):
-    - Remove a rendundant check for PidFile changes at runtime in
-      options_transition_allowed(): this check is already performed regardless
-      of whether the sandbox is active. Fixes bug 21123; bugfix on commit
-      2ae47d3 in 0.2.5.4-alpha.

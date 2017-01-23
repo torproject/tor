@@ -1,4 +1,0 @@
-  o Minor bugfixes (bug resilience):
-    - Fix an (unreachable) size_t overflow in base64_decode(). Fixes bug
-      19222; bugfix on 0.2.0.9-alpha.  Found by Guido Vranken; fixed by
-      Hans Jerry Illikainen.

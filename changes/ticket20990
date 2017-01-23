@@ -1,4 +1,0 @@
-  o Minor bugfixes (build):
-    - Replace obsolete Autoconf macros with their modern equivalent and
-      prevent similar issues in the future. Fixes bug 20990; bugfix on
-      0.1.0.1-rc.

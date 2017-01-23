@@ -1,3 +1,0 @@
-  o Documentation (man page):
-    - Clarify a number of options in tor.1 and add some min/max values for
-      HiddenService options. Closes ticket 21058.

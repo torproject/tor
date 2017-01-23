@@ -1,5 +1,0 @@
-  o Minor bugfixes (controller):
-    - Make the GETINFO interface for inquiring about entry guards
-      support the new guards backend. Fixes bug 20823; bugfix on
-      0.3.0.1-alpha.
-

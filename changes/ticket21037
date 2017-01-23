@@ -1,4 +1,0 @@
-  o Minor features (logging):
-    - In several places, describe unset ed25519 keys as "<unset>", rather
-      than "AAAAAAAA...AAA". Closes ticket 21037.
-

@@ -1,5 +1,0 @@
-  o Minor features (entry guards):
-    - Require UseEntryGuards when UseBridges is set in order to make sure
-      bridges aren't bypassed. Resolves ticket 20502.
-    - Add UseEntryGuards to TEST_OPTIONS_DEFAULT_VALUES in order to not break
-      regresson tests.
