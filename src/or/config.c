@@ -183,8 +183,17 @@ static config_abbrev_t option_abbrevs_[] = {
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
 
-#define VPORT(member,conftype,initvalue)                                    \
-  VAR(#member, conftype, member ## _lines, initvalue)
+/**
+ * Macro to declare *Port options.  Each one comes in three entries.
+ * For example, most users should use "SocksPort" to configure the
+ * socks port, but TorBrowser wants to use __SocksPort so that it
+ * isn't stored by SAVECONF.  The SocksPortLines virtual option is
+ * used to query both options from the controller.
+ */
+#define VPORT(member)                                           \
+  VAR(#member "Lines", LINELIST_V, member ## _lines, NULL),     \
+  VAR(#member, LINELIST_S, member ## _lines, NULL),             \
+  VAR("__" #member, LINELIST_S, member ## _lines, NULL)
 
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
@@ -253,7 +262,7 @@ static config_var_t option_vars_[] = {
   V(ConstrainedSockSize,         MEMUNIT,  "8192"),
   V(ContactInfo,                 STRING,   NULL),
   V(ControlListenAddress,        LINELIST, NULL),
-  VPORT(ControlPort,                 LINELIST, NULL),
+  VPORT(ControlPort),
   V(ControlPortFileGroupReadable,BOOL,     "0"),
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
@@ -271,7 +280,7 @@ static config_var_t option_vars_[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
   V(DirListenAddress,            LINELIST, NULL),
   V(DirPolicy,                   LINELIST, NULL),
-  VPORT(DirPort,                     LINELIST, NULL),
+  VPORT(DirPort),
   V(DirPortFrontPage,            FILENAME, NULL),
   VAR("DirReqStatistics",        BOOL,     DirReqStatistics_option, "1"),
   VAR("DirAuthority",            LINELIST, DirAuthorities, NULL),
@@ -282,7 +291,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DisableIOCP"),
   OBSOLETE("DisableV2DirectoryInfo_"),
   OBSOLETE("DynamicDHGroups"),
-  VPORT(DNSPort,                     LINELIST, NULL),
+  VPORT(DNSPort),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(TestingEnableConnBwEvent,    BOOL,     "0"),
@@ -302,7 +311,7 @@ static config_var_t option_vars_[] = {
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
   V(ExitRelay,                   AUTOBOOL, "auto"),
-  VPORT(ExtORPort,               LINELIST, NULL),
+  VPORT(ExtORPort),
   V(ExtORPortCookieAuthFile,     STRING,   NULL),
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
@@ -393,7 +402,7 @@ static config_var_t option_vars_[] = {
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
   V(NATDListenAddress,           LINELIST, NULL),
-  VPORT(NATDPort,                    LINELIST, NULL),
+  VPORT(NATDPort),
   V(Nickname,                    STRING,   NULL),
   V(PredictedPortsRelevanceTime,  INTERVAL, "1 hour"),
   V(WarnUnsafeSocks,              BOOL,     "1"),
@@ -403,7 +412,7 @@ static config_var_t option_vars_[] = {
   V(NumEntryGuards,              UINT,     "0"),
   V(OfflineMasterKey,            BOOL,     "0"),
   V(ORListenAddress,             LINELIST, NULL),
-  VPORT(ORPort,                      LINELIST, NULL),
+  VPORT(ORPort),
   V(OutboundBindAddress,         LINELIST,   NULL),
 
   OBSOLETE("PathBiasDisableRate"),
@@ -475,7 +484,7 @@ static config_var_t option_vars_[] = {
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
-  VPORT(SocksPort,                   LINELIST, NULL),
+  VPORT(SocksPort),
   V(SocksTimeout,                INTERVAL, "2 minutes"),
   V(SSLKeyLifetime,              INTERVAL, "0"),
   OBSOLETE("StrictEntryNodes"),
@@ -490,7 +499,7 @@ static config_var_t option_vars_[] = {
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   V(TransListenAddress,          LINELIST, NULL),
-  VPORT(TransPort,                   LINELIST, NULL),
+  VPORT(TransPort),
   V(TransProxyType,              STRING,   "default"),
   OBSOLETE("TunnelDirConns"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),

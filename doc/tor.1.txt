@@ -2698,6 +2698,19 @@ The following options are used for running a testing Tor network.
     we replace it and issue a new key?
     (Default: 3 hours for link and auth; 1 day for signing.)
 
+NON-PERSISTENT OPTIONS
+----------------------
+
+These options are not saved to the torrc file by the "SAVECONF" controller
+command.  Other options of this type are documented in control-spec.txt,
+section 5.4. End-users should mostly ignore them.
+
+[[UnderscorePorts]] **\_\_ControlPort**, **\_\_DirPort**, **\_\_DNSPort**, **\_\_ExtORPort**, **\_\_NATDPort**, **\_\_ORPort**, **\_\_SocksPort**, **\_\_TransPort**::
+    These underscore-prefixed options are variants of the regular Port
+    options.  They behave the same, except they are not saved to the
+    torrc file by the controller's SAVECONF command.
+
+
 SIGNALS
 -------
 
