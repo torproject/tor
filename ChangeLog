@@ -21,6 +21,17 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       including possible crashes. Fixes bug 21118; bugfix
       on 0.3.0.1-alpha.
 
+  o Major bugfixes (client, onion service):
+    - Fix a client-side onion service reachability bug, where multiple
+      socks requests to an onion service (or a single slow request) could
+      cause us to mistakenly mark some of the service's introduction
+      points as failed, and we cache that failure so eventually we
+      run out and can't reach the service. Also resolves a mysterious
+      "Remote server sent bogus reason code 65021" log warning. The bug
+      was introduced in task 17218, where we tried to remember the circuit
+      end reason as a uint16_t, which mangled negative values. Partially
+      fixes bug 21056 and fixes bug 20307; bugfix on 0.2.8.1-alpha.
+
   o Major bugfixes (DNS):
     - Fix a bug that prevented exit nodes from caching DNS records for
       more than 60 seconds. Fixes bug 19025; bugfix on 0.2.4.7-alpha.
@@ -101,15 +112,6 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
     - Replace obsolete Autoconf macros with their modern equivalent and
       prevent similar issues in the future. Fixes bug 20990; bugfix
       on 0.1.0.1-rc.
-
-  o Minor bugfixes (circuit, hidden service):
-    - When closing a circuit, the reason for doing so was assigned from
-      an int value to a uint16_t which is quite a problem for negative
-      values that are our internal reasons (ex:
-      END_CIRC_REASON_IP_NOW_REDUNDANT). On the HS side, this was
-      causing introduction points to be flagged as unusable because the
-      reason wasn't the right one due to the bad conversion. Partially
-      fixes bug 21056 and fixes bug 20307; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (client, guards):
     - Fix bug where Tor would think that there are circuits waiting for
