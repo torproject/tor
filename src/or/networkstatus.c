@@ -243,7 +243,7 @@ router_reload_consensus_networkstatus(void)
 }
 
 /** Free all storage held by the vote_routerstatus object <b>rs</b>. */
-STATIC void
+void
 vote_routerstatus_free(vote_routerstatus_t *rs)
 {
   vote_microdesc_hash_t *h, *next;

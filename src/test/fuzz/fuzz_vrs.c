@@ -45,7 +45,8 @@ fuzz_cleanup(void)
 int
 fuzz_main(const uint8_t *data, size_t sz)
 {
-  char *str = tor_memdup_nulterm(data, sz), *s;
+  char *str = tor_memdup_nulterm(data, sz);
+  const char *s;
   routerstatus_t *rs_ns = NULL, *rs_md = NULL, *rs_vote = NULL;
   vote_routerstatus_t *vrs = tor_malloc_zero(sizeof(*vrs));
   smartlist_t *tokens = smartlist_new();
