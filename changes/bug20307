@@ -1,0 +1,7 @@
+  o Minor bugfixes (circuit, hidden service)
+    - When closing a circuit, the reason for doing so was assigned from an int
+      value to a uint16_t which is quite a problem for negative values that are
+      our internal reasons (ex: END_CIRC_REASON_IP_NOW_REDUNDANT). On the HS
+      side, this was causing introduction points to be flagged as unusable
+      because the reason wasn't the right one due to the bad conversion.
+      Partially fixes bug 21056 and fixes bug 20307; Bugfix on 0.2.8.1-alpha.
