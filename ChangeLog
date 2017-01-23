@@ -25,7 +25,7 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
       including possible crashes. Fixes bug 21118; bugfix
       on 0.3.0.1-alpha.
 
-  o Major bugfixes (client, onion service):
+  o Major bugfixes (client, onion service, also in 0.2.9.9):
     - Fix a client-side onion service reachability bug, where multiple
       socks requests to an onion service (or a single slow request)
       could cause us to mistakenly mark some of the service's
@@ -80,7 +80,7 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
     - Display the relay fingerprint when downloading consensuses from
       fallbacks. Closes ticket 20908.
 
-  o Minor features (geoip):
+  o Minor features (geoip, also in 0.2.9.9):
     - Update geoip and geoip6 to the January 4 2017 Maxmind GeoLite2
       Country database.
 
@@ -118,10 +118,6 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
     - Fix bug where Tor would think that there are circuits waiting for
       better guards even though those circuits have been freed. Fixes
       bug 21142; bugfix on 0.3.0.1-alpha.
-
-  o Minor bugfixes (compilation):
-    - Fix Libevent detection on platforms without Libevent 1 headers
-      installed. Fixes bug 21051; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (config):
     - Don't assert on startup when trying to get the options list and
@@ -179,11 +175,13 @@ Changes in version 0.3.0.2-alpha - 2017-01-23
     - Fix a memory leak when configuring hidden services. Fixes bug
       20987; bugfix on 0.3.0.1-alpha.
 
-  o Minor bugfixes (portability):
+  o Minor bugfixes (portability, also in 0.2.9.9x):
     - Avoid crashing when Tor is built using headers that contain
       CLOCK_MONOTONIC_COARSE, but then tries to run on an older kernel
       without CLOCK_MONOTONIC_COARSE. Fixes bug 21035; bugfix
       on 0.2.9.1-alpha.
+    - Fix Libevent detection on platforms without Libevent 1 headers
+      installed. Fixes bug 21051; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (relay):
     - Honor DataDirectoryGroupReadable when tor is a relay. Previously,
