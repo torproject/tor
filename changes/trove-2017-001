@@ -1,0 +1,8 @@
+  o Major bugfixes (security):
+    - Downgrade the "-ftrapv" option from "always on" to "only on when
+      --enable-expensive-hardening is provided."  This hardening option, like
+      others, can turn survivable bugs into crashes--and having it on by
+      default made a (relatively harmless) integer overflow bug into a
+      denial-of-service bug. Fixes bug 21278 (TROVE-2017-001); bugfix on
+      0.2.9.1-alpha.
+
