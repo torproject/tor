@@ -2194,6 +2194,35 @@ test_entry_guard_select_and_cancel(void *arg)
   circuit_guard_state_free(guard);
 }
 
+static void
+test_entry_guard_drop_guards(void *arg)
+{
+  (void) arg;
+  int r;
+  const node_t *node = NULL;
+  circuit_guard_state_t *guard;
+  guard_selection_t *gs = get_guard_selection_info();
+
+  // Pick a guard, to get things set up.
+  r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
+                                   &node, &guard);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_GE,
+            DFLT_MIN_FILTERED_SAMPLE_SIZE);
+  tt_ptr_op(gs, OP_EQ, get_guard_selection_info());
+
+  // Drop all the guards!  (This is a bad idea....)
+  remove_all_entry_guards_for_guard_selection(gs);
+  gs = get_guard_selection_info();
+  tt_int_op(smartlist_len(gs->sampled_entry_guards), OP_EQ, 0);
+  tt_int_op(smartlist_len(gs->primary_entry_guards), OP_EQ, 0);
+  tt_int_op(smartlist_len(gs->confirmed_entry_guards), OP_EQ, 0);
+
+ done:
+  circuit_guard_state_free(guard);
+  guard_selection_free(gs);
+}
+
 /* Unit test setup function: Create a fake network, and set everything up
  * for testing the upgrade-a-waiting-circuit code. */
 typedef struct {
@@ -2667,6 +2696,7 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(select_for_circuit_highlevel_confirm_other),
   BFN_TEST(select_for_circuit_highlevel_primary_retry),
   BFN_TEST(select_and_cancel),
+  BFN_TEST(drop_guards),
 
   UPGRADE_TEST(upgrade_a_circuit, "c1-done c2-done"),
   UPGRADE_TEST(upgrade_blocked_by_live_primary_guards, "c1-done c2-done"),
