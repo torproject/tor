@@ -585,6 +585,12 @@ static const char UNRESTRICTED_SERVER_CIPHER_LIST[] =
 #ifdef TLS1_TXT_DHE_RSA_WITH_AES_128_GCM_SHA256
        TLS1_TXT_DHE_RSA_WITH_AES_128_GCM_SHA256 ":"
 #endif
+#ifdef TLS1_TXT_DHE_RSA_WITH_AES_256_CCM
+       TLS1_TXT_DHE_RSA_WITH_AES_256_CCM ":"
+#endif
+#ifdef TLS1_TXT_DHE_RSA_WITH_AES_128_CCM
+       TLS1_TXT_DHE_RSA_WITH_AES_128_CCM ":"
+#endif
 #ifdef TLS1_TXT_DHE_RSA_WITH_AES_256_SHA256
        TLS1_TXT_DHE_RSA_WITH_AES_256_SHA256 ":"
 #endif
@@ -594,8 +600,14 @@ static const char UNRESTRICTED_SERVER_CIPHER_LIST[] =
        /* Required */
        TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"
        /* Required */
-       TLS1_TXT_DHE_RSA_WITH_AES_128_SHA
-       ;
+       TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"
+#ifdef TLS1_TXT_ECDHE_RSA_WITH_CHACHA20_POLY1305
+       TLS1_TXT_ECDHE_RSA_WITH_CHACHA20_POLY1305 ":"
+#endif
+#ifdef TLS1_TXT_DHE_RSA_WITH_CHACHA20_POLY1305
+       TLS1_TXT_DHE_RSA_WITH_CHACHA20_POLY1305
+#endif
+  ;
 
 /* Note: to set up your own private testing network with link crypto
  * disabled, set your Tors' cipher list to
