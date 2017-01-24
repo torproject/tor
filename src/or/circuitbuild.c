@@ -967,10 +967,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     if (!hop) {
       /* done building the circuit. whew. */
       guard_usable_t r;
-      if (get_options()->UseDeprecatedGuardAlgorithm) {
-        // The circuit is usable; we already marked the guard as okay.
-        r = GUARD_USABLE_NOW;
-      } else if (! circ->guard_state) {
+      if (! circ->guard_state) {
         if (circuit_get_cpath_len(circ) != 1 &&
             circ->base_.purpose != CIRCUIT_PURPOSE_TESTING &&
             get_options()->UseEntryGuards) {
@@ -2308,26 +2305,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
      * family. */
     nodelist_add_node_and_family(excluded, node);
   }
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
-  /* and exclude current entry guards and their families,
-   * unless we're in a test network, and excluding guards
-   * would exclude all nodes (i.e. we're in an incredibly small tor network,
-   * or we're using TestingAuthVoteGuard *).
-   * This is an incomplete fix, but is no worse than the previous behaviour,
-   * and only applies to minimal, testing tor networks
-   * (so it's no less secure) */
-  if (options->UseEntryGuards
-      && (!options->TestingTorNetwork ||
-         smartlist_len(nodelist_get_list()) > smartlist_len(get_entry_guards())
-     )) {
-    SMARTLIST_FOREACH(get_entry_guards(), const entry_guard_t *, entry,
-      {
-        if ((node = entry_guard_find_node(entry))) {
-          nodelist_add_node_and_family(excluded, node);
-        }
-      });
-  }
-#endif
 
   if (state) {
     if (state->need_uptime)

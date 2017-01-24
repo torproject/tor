@@ -317,9 +317,6 @@ static config_var_t option_vars_[] = {
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(ExtendByEd25519ID,           AUTOBOOL, "auto"),
   V(FallbackDir,                 LINELIST, NULL),
-  /* XXXX prop271 -- this has an ugly name to remind us to remove it. */
-  VAR("UseDeprecatedGuardAlgorithm_",        BOOL,
-      UseDeprecatedGuardAlgorithm, "0"),
 
   V(UseDefaultFallbackDirs,      BOOL,     "1"),
 
@@ -1587,7 +1584,6 @@ options_transition_affects_guards(const or_options_t *old,
 
   return
     (old->UseEntryGuards != new->UseEntryGuards ||
-     old->UseDeprecatedGuardAlgorithm != new->UseDeprecatedGuardAlgorithm ||
      old->UseBridges != new->UseBridges ||
      old->UseEntryGuards != new->UseEntryGuards ||
      old->ClientUseIPv4 != new->ClientUseIPv4 ||
@@ -2105,15 +2101,6 @@ options_act(const or_options_t *old_options)
   if (old_options && old_options->BridgeAuthoritativeDir &&
       !options->BridgeAuthoritativeDir)
     rep_hist_desc_stats_term();
-
-  /* Check if we need to parse and add the EntryNodes config option. */
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
-  if (options->EntryNodes &&
-      (!old_options ||
-       !routerset_equal(old_options->EntryNodes,options->EntryNodes) ||
-       !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)))
-    entry_nodes_should_be_added();
-#endif
 
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.
@@ -3017,13 +3004,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   options->UseEntryGuards = options->UseEntryGuards_option;
 
   warn_about_relative_paths(options);
-
-#ifndef ENABLE_LEGACY_GUARD_ALGORITHM
-  if (options->UseDeprecatedGuardAlgorithm) {
-    log_warn(LD_CONFIG, "DeprecatedGuardAlgorithm not supported.");
-    return -1;
-  }
-#endif
 
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||

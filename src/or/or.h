@@ -4574,14 +4574,6 @@ typedef struct {
    * do we enforce Ed25519 identity match? */
   /* NOTE: remove this option someday. */
   int AuthDirTestEd25519LinkKeys;
-
-  /** If 1, we use the old (pre-prop271) guard selection algorithm.
-   *
-   * XXXX prop271 This option is only here as a stopgap while we're
-   * XXXX tuning and debugging the new (post-prop271) algorithm.  Eventually
-   * we should remove it entirely.
-   */
-  int UseDeprecatedGuardAlgorithm;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -5335,10 +5327,6 @@ typedef struct dir_server_t {
  * Passed to router_pick_directory_server (et al)
  */
 #define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
-
-/** This node is to be chosen as a directory guard, so don't choose any
- * node that's currently a guard. */
-#define PDS_FOR_GUARD (1<<5)
 
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/

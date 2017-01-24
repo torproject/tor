@@ -1732,10 +1732,6 @@ circuit_build_failed(origin_circuit_t *circ)
       /* New guard API: we failed. */
       if (circ->guard_state)
         entry_guard_failed(&circ->guard_state);
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
-      /* Old guard API: we failed. */
-      entry_guard_register_connect_status(n_chan_id, 0, 1, time(NULL));
-#endif
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
       connection_ap_fail_onehop(n_chan_id, circ->build_state);

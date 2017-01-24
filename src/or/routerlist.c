@@ -1996,13 +1996,8 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   const int no_microdesc_fetching = (flags & PDS_NO_EXISTING_MICRODESC_FETCH);
-  const int for_guard = (flags & PDS_FOR_GUARD);
   int try_excluding = 1, n_excluded = 0, n_busy = 0;
   int try_ip_pref = 1;
-
-#ifndef ENABLE_LEGACY_GUARD_ALGORITHM
-  tor_assert_nonfatal(! for_guard);
-#endif
 
   if (!consensus)
     return NULL;
@@ -2036,16 +2031,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
     SKIP_MISSING_TRUSTED_EXTRAINFO(type, node->identity);
 
-#ifdef ENABLE_LEGACY_GUARD_ALGORITHM
-    /* Don't make the same node a guard twice */
-     if (for_guard && is_node_used_as_guard(node)) {
-       continue;
-     }
-#endif
-    /* Ensure that a directory guard is actually a guard node. */
-    if (for_guard && !node->is_possible_guard) {
-      continue;
-    }
     if (try_excluding &&
         routerset_contains_routerstatus(options->ExcludeNodes, status,
                                         country)) {
