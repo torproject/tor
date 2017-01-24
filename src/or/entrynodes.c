@@ -11,11 +11,6 @@
  * Entry nodes can be guards (for general use) or bridges (for censorship
  * circumvention).
  *
- * XXXX prop271 This module is in flux, since I'm currently in the middle of
- * implementation proposal 271.  The module documentation here will describe
- * the new algorithm and data structures; the old ones should get removed as
- * proposal 271 is completed.
- *
  * In general, we use entry guards to prevent traffic-sampling attacks:
  * if we chose every circuit independently, an adversary controlling
  * some fraction of paths on the network would observe a sample of every
@@ -2782,8 +2777,8 @@ entry_guard_parse_from_state(const char *s)
 }
 
 /**
- * Replace the Guards entries in <b>state</b> with a list of all our
- * non-legacy sampled guards.
+ * Replace the Guards entries in <b>state</b> with a list of all our sampled
+ * guards.
  */
 static void
 entry_guards_update_guards_in_state(or_state_t *state)
@@ -2794,8 +2789,6 @@ entry_guards_update_guards_in_state(or_state_t *state)
   config_line_t **nextline = &lines;
 
   SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
-    if (!strcmp(gs->name, "legacy"))
-      continue; /* This is encoded differently. */
     SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
       if (guard->is_persistent == 0)
         continue;
@@ -2811,9 +2804,9 @@ entry_guards_update_guards_in_state(or_state_t *state)
 }
 
 /**
- * Replace our non-legacy sampled guards from the Guards entries in
- * <b>state</b>. Return 0 on success, -1 on failure. (If <b>set</b> is
- * true, replace nothing -- only check whether replacing would work.)
+ * Replace our sampled guards from the Guards entries in <b>state</b>. Return 0
+ * on success, -1 on failure. (If <b>set</b> is true, replace nothing -- only
+ * check whether replacing would work.)
  */
 static int
 entry_guards_load_guards_from_state(or_state_t *state, int set)
@@ -2828,8 +2821,6 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
    * let's be safe.) */
   if (set) {
     SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
-      if (!strcmp(gs->name, "legacy"))
-        continue;
       guard_selection_free(gs);
       if (curr_guard_context == gs)
         curr_guard_context = NULL;
@@ -2864,8 +2855,6 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
 
   if (set) {
     SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
-      if (!strcmp(gs->name, "legacy"))
-        continue;
       entry_guards_update_all(gs);
     } SMARTLIST_FOREACH_END(gs);
   }
@@ -3081,7 +3070,7 @@ entry_guards_update_state(or_state_t *state)
 {
   entry_guards_dirty = 0;
 
-  // Handles all non-legacy guard info.
+  // Handles all guard info.
   entry_guards_update_guards_in_state(state);
 
   entry_guards_dirty = 0;
