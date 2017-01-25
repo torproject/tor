@@ -258,7 +258,7 @@ tor_mmap_file(const char *filename)
   page_size = getpagesize();
   size += (size%page_size) ? page_size-(size%page_size) : 0;
 
-  if (st.st_size > SSIZE_T_CEILING || size < st.st_size) {
+  if (st.st_size > SSIZE_T_CEILING || (off_t)size < st.st_size) {
     log_warn(LD_FS, "File \"%s\" is too large. Ignoring.",filename);
     errno = EFBIG;
     close(fd);
