@@ -7929,8 +7929,7 @@ static int
 verify_and_store_outbound_address(sa_family_t family, tor_addr_t *addr,
        outbound_addr_t type, or_options_t *options, int validate_only)
 {
-  if (type<0 || type>=OUTBOUND_ADDR_MAX
-      || (family!=AF_INET && family!=AF_INET6)) {
+  if (type>=OUTBOUND_ADDR_MAX || (family!=AF_INET && family!=AF_INET6)) {
     return -1;
   }
   int fam_index=0;
