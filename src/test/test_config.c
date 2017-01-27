@@ -4129,6 +4129,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
   config_port_invalid = mock_config_line("SOCKSPort",
                                          "unix:/tmp/foo/bar NoIPv4Traffic "
+                                         "NoIPv6Traffic "
                                          "NoOnionTraffic");
   ret = parse_port_config(NULL, config_port_invalid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
@@ -4150,6 +4151,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
   config_port_valid = mock_config_line("DNSPort", "127.0.0.1:80 "
+                                       "NoIPv6Traffic "
                                        "NoIPv4Traffic NoOnionTraffic");
   ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
                           CONN_TYPE_AP_DNS_LISTENER, NULL, 0,
@@ -4165,6 +4167,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   // Test failure if we have DNS but no ipv4 and no ipv6
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
   config_port_invalid = mock_config_line("SOCKSPort",
+                                         "NoIPv6Traffic "
                                          "unix:/tmp/foo/bar NoIPv4Traffic");
   ret = parse_port_config(NULL, config_port_invalid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
@@ -4177,6 +4180,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
   config_port_valid = mock_config_line("SOCKSPort", "unix:/tmp/foo/bar "
+                                       "NoIPv6Traffic "
                                        "NoDNSRequest NoIPv4Traffic");
   ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
@@ -4198,6 +4202,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
   config_port_valid = mock_config_line("SOCKSPort", "unix:\"/tmp/foo/ bar\" "
+                                       "NoIPv6Traffic "
                                        "NoDNSRequest NoIPv4Traffic");
   ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
@@ -4219,6 +4224,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
   config_port_valid = mock_config_line("SOCKSPort", "unix:\"/tmp/foo/ bar "
+                                       "NoIPv6Traffic "
                                        "NoDNSRequest NoIPv4Traffic");
   ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
@@ -4230,6 +4236,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
   config_port_valid = mock_config_line("SOCKSPort", "unix:\"\" "
+                                       "NoIPv6Traffic "
                                        "NoDNSRequest NoIPv4Traffic");
   ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
@@ -4604,7 +4611,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 1);
-  tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 1);
 
   // Test failure for a SessionGroup argument with invalid value
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
