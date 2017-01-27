@@ -20,7 +20,6 @@ BAD_STUFF = [ "_DES_40_", "MD5", "_RC4_", "_DES_64_",
 MANDATORY = [
     "TLS1_TXT_DHE_RSA_WITH_AES_256_SHA",
     "TLS1_TXT_DHE_RSA_WITH_AES_128_SHA",
-    "SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA",
 ]
 
 def find_ciphers(filename):
@@ -112,18 +111,21 @@ for fname in sys.argv[1:]:
 
 ALL_CIPHERS.sort(key=Ciphersuite.sort_key)
 
+indent = " "*7
+
 for c in ALL_CIPHERS:
     if c is ALL_CIPHERS[-1]:
-        colon = ';'
+        colon = ''
     else:
         colon = ' ":"'
 
     if c.name in MANDATORY:
-        print "       /* Required */"
-        print '       %s%s'%(c.name,colon)
+        print "%s/* Required */"%indent
+        print '%s%s%s'%(indent,c.name,colon)
     else:
         print "#ifdef %s"%c.name
-        print '       %s%s'%(c.name,colon)
+        print '%s%s%s'%(indent,c.name,colon)
         print "#endif"
 
+print '%s;'%indent
 
