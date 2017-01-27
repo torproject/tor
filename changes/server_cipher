@@ -1,0 +1,3 @@
+  o Minor features (ciphersuite choices):
+    - Allow servers to accept a wider range of ciphersuites, including
+      chacha20-poly1305 and AES-CCM. Closes the other part of 15426.
