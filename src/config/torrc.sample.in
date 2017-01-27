@@ -95,7 +95,12 @@
 
 ## If you have multiple network interfaces, you can specify one for
 ## outgoing traffic to use.
-# OutboundBindAddress 10.0.0.5
+## OutboundBindAddressExit will be used for all exit traffic, while
+## OutboundBindAddressOR will be used for all other connections.
+## If you do not wish to differentiate, use OutboundBindAddress to
+## specify the same address for both in a single line.
+#OutboundBindAddressExit 10.0.0.4
+#OutboundBindAddressOR 10.0.0.5
 
 ## A handle for your relay, so people don't have to refer to it by key.
 ## Nicknames must be between 1 and 19 characters inclusive, and must

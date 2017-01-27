@@ -2019,10 +2019,10 @@ policies_copy_ipv4h_to_smartlist(smartlist_t *addr_list, uint32_t ipv4h_addr)
   }
 }
 
-/** Helper function that adds copies of
- * or_options->OutboundBindAddressIPv[4|6]_ to a smartlist as tor_addr_t *, as
- * long as or_options is non-NULL, and the addresses are not
- * tor_addr_is_null(), by passing them to policies_add_addr_to_smartlist.
+/** Helper function that adds copies of or_options->OutboundBindAddresses
+ * to a smartlist as tor_addr_t *, as long as or_options is non-NULL, and
+ * the addresses are not tor_addr_is_null(), by passing them to
+ * policies_add_addr_to_smartlist.
  *
  * The caller is responsible for freeing all the tor_addr_t* in the smartlist.
  */
@@ -2031,10 +2031,14 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
                                               const or_options_t *or_options)
 {
   if (or_options) {
-    policies_copy_addr_to_smartlist(addr_list,
-                                    &or_options->OutboundBindAddressIPv4_);
-    policies_copy_addr_to_smartlist(addr_list,
-                                    &or_options->OutboundBindAddressIPv6_);
+    for (int i=0;i<OUTBOUND_ADDR_MAX;i++) {
+      for (int j=0;j<2;j++) {
+        if (!tor_addr_is_null(&or_options->OutboundBindAddresses[i][j])) {
+          policies_copy_addr_to_smartlist(addr_list,
+                          &or_options->OutboundBindAddresses[i][j]);
+        }
+      }
+    }
   }
 }
 
@@ -2051,10 +2055,10 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
  *  - if ipv6_local_address is non-NULL, and not the null tor_addr_t, add it
  *    to the list of configured addresses.
  * If <b>or_options->ExitPolicyRejectLocalInterfaces</b> is true:
- *  - if or_options->OutboundBindAddressIPv4_ is not the null tor_addr_t, add
- *    it to the list of configured addresses.
- *  - if or_options->OutboundBindAddressIPv6_ is not the null tor_addr_t, add
- *    it to the list of configured addresses.
+ *  - if or_options->OutboundBindAddresses[][0] (=IPv4) is not the null
+ *    tor_addr_t, add it to the list of configured addresses.
+ *  - if or_options->OutboundBindAddresses[][1] (=IPv6) is not the null
+ *    tor_addr_t, add it to the list of configured addresses.
  *
  * If <b>or_options->BridgeRelay</b> is false, append entries of default
  * Tor exit policy into <b>result</b> smartlist.

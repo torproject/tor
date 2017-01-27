@@ -134,6 +134,8 @@ static int connection_read_https_proxy_response(connection_t *conn);
 static void connection_send_socks5_connect(connection_t *conn);
 static const char *proxy_type_to_string(int proxy_type);
 static int get_proxy_type(void);
+const tor_addr_t *conn_get_outbound_address(sa_family_t family,
+                  const or_options_t *options, unsigned int conn_type);
 
 /** The last addresses that our network interface seemed to have been
  * binding to.  We use this as one way to detect when our IP changes.
@@ -1771,7 +1773,7 @@ connection_connect_sockaddr,(connection_t *conn,
 
   /*
    * We've got the socket open; give the OOS handler a chance to check
-   * against configuured maximum socket number, but tell it no exhaustion
+   * against configured maximum socket number, but tell it no exhaustion
    * failure.
    */
   connection_check_oos(get_n_open_sockets(), 0);
@@ -1890,6 +1892,47 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
   }
 }
 
+/** Retrieve the outbound address depending on the protocol (IPv4 or IPv6)
+ * and the connection type (relay, exit, ...)
+ * Return a socket address or NULL in case nothing is configured.
+ **/
+const tor_addr_t *
+conn_get_outbound_address(sa_family_t family,
+             const or_options_t *options, unsigned int conn_type)
+{
+  const tor_addr_t *ext_addr = NULL;
+
+  int fam_index=0;
+  if (family==AF_INET6) {
+    fam_index=1;
+  }
+  // If an exit connection, use the exit address (if present)
+  if (conn_type == CONN_TYPE_EXIT) {
+    if (!tor_addr_is_null(
+        &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT][fam_index])) {
+      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT]
+                 [fam_index];
+    } else if (!tor_addr_is_null(
+                 &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+                 [fam_index])) {
+      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+                 [fam_index];
+    }
+  } else { // All non-exit connections
+    if (!tor_addr_is_null(
+           &options->OutboundBindAddresses[OUTBOUND_ADDR_OR][fam_index])) {
+      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_OR]
+                 [fam_index];
+    } else if (!tor_addr_is_null(
+                 &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+                 [fam_index])) {
+      ext_addr = &options->OutboundBindAddresses[OUTBOUND_ADDR_EXIT_AND_OR]
+                 [fam_index];
+    }
+  }
+  return ext_addr;
+}
+
 /** Take conn, make a nonblocking socket; try to connect to
  * addr:port (port arrives in *host order*). If fail, return -1 and if
  * applicable put your best guess about errno into *<b>socket_error</b>.
@@ -1911,26 +1954,15 @@ connection_connect(connection_t *conn, const char *address,
   struct sockaddr *bind_addr = NULL;
   struct sockaddr *dest_addr;
   int dest_addr_len, bind_addr_len = 0;
-  const or_options_t *options = get_options();
-  int protocol_family;
 
   /* Log if we didn't stick to ClientUseIPv4/6 or ClientPreferIPv6OR/DirPort
    */
   connection_connect_log_client_use_ip_version(conn);
 
-  if (tor_addr_family(addr) == AF_INET6)
-    protocol_family = PF_INET6;
-  else
-    protocol_family = PF_INET;
-
   if (!tor_addr_is_loopback(addr)) {
     const tor_addr_t *ext_addr = NULL;
-    if (protocol_family == AF_INET &&
-        !tor_addr_is_null(&options->OutboundBindAddressIPv4_))
-      ext_addr = &options->OutboundBindAddressIPv4_;
-    else if (protocol_family == AF_INET6 &&
-             !tor_addr_is_null(&options->OutboundBindAddressIPv6_))
-      ext_addr = &options->OutboundBindAddressIPv6_;
+    ext_addr = conn_get_outbound_address(tor_addr_family(addr), get_options(),
+                                         conn->type);
     if (ext_addr) {
       memset(&bind_addr_ss, 0, sizeof(bind_addr_ss));
       bind_addr_len = tor_addr_to_sockaddr(ext_addr, 0,
