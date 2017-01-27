@@ -1902,10 +1902,18 @@ conn_get_outbound_address(sa_family_t family,
 {
   const tor_addr_t *ext_addr = NULL;
 
-  int fam_index=0;
-  if (family==AF_INET6) {
-    fam_index=1;
+  int fam_index;
+  switch (family) {
+    case AF_INET:
+      fam_index = 0;
+      break;
+    case AF_INET6:
+      fam_index = 1;
+      break;
+    default:
+      return NULL;
   }
+
   // If an exit connection, use the exit address (if present)
   if (conn_type == CONN_TYPE_EXIT) {
     if (!tor_addr_is_null(
