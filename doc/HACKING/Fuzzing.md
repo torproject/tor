@@ -1,12 +1,53 @@
 = Fuzzing Tor
 
+== The simple version (no fuzzing, only tests)
+
+Check out fuzzing-corpora, and set TOR_FUZZ_CORPORA to point to the place
+where you checked it out.
+
 To run the fuzzing test cases in a deterministic fashion, use:
   make fuzz
 
-  [I've turned this off for now. - NM]
 
-To build the fuzzing harness binaries, use:
-  make fuzzers
+== Different kinds of fuzzing
+
+Right now we support three different kinds of fuzzer.
+
+First, there's American Fuzzy Lop (AFL), a fuzzer that works by forking
+a target binary and passing it lots of different inputs on stdin.  It's the
+trickiest one to set up, so I'll be describing it more below.
+
+Second, there's libFuzzer, a llvm-based fuzzer that you link in as a library,
+and it runs a target function over and over.  To use this one, you'll need to
+have a reasonably recent clang and libfuzzer installed.  At that point, you
+just build with --enable-expensive-hardening and --enable-libfuzzer.  That
+will produce a set of binaries in src/test/fuzz/lf-fuzz-* .  These programs
+take as input a series of directories full of fuzzing examples.  For more
+information on libfuzzer, see http://llvm.org/docs/LibFuzzer.html
+
+Third, there's Google's OSS-Fuzz infrastructure, which expects to get all of
+its.  For more on this, see https://github.com/google/oss-fuzz and the
+projects/tor subdirectory.  You'll need to mess around with Docker a bit to
+test this one out; it's meant to run on Google's infrastructure.
+
+In all cases, you'll need some starting examples to give the fuzzer when it
+starts out.  There's a set in the "fuzzing-corpora" git repository.  Try
+setting TOR_FUZZ_CORPORA to point to a checkout of that repository
+
+== Writing Tor fuzzers
+
+A tor fuzzing harness should have:
+* a fuzz_init() function to set up any necessary global state.
+* a fuzz_main() function to receive input and pass it to a parser.
+* a fuzz_cleanup() function to clear global state.
+
+Most fuzzing frameworks will produce many invalid inputs - a tor fuzzing
+harness should rejecting invalid inputs without crashing or behaving badly.
+
+But the fuzzing harness should crash if tor fails an assertion, triggers a
+bug, or accesses memory it shouldn't. This helps fuzzing frameworks detect
+"interesting" cases.
+
 
 == Guided Fuzzing with AFL
 
@@ -47,7 +88,7 @@ don't care about memory limits.
 
 To Run:
   mkdir -p src/test/fuzz/fuzz_http_findings
-  ../afl/afl-fuzz -i src/test/fuzz/data/http -x src/test/fuzz/dict/http -o src/test/fuzz/fuzz_http_findings -m <asan-memory-limit> -- src/test/fuzz_dir
+  ../afl/afl-fuzz -i ${TOR_FUZZ_CORPORA}/http -o src/test/fuzz/fuzz_http_findings -m <asan-memory-limit> -- src/test/fuzz_dir
 
 
 AFL has a multi-core mode, check the documentation for details.
@@ -56,20 +97,6 @@ You might find the included fuzz-multi.sh script useful for this.
 macOS (OS X) requires slightly more preparation, including:
 * using afl-clang (or afl-clang-fast from the llvm directory)
 * disabling external crash reporting (AFL will guide you through this step)
-
-== Writing Tor fuzzers
-
-A tor fuzzing harness should have:
-* a fuzz_init() function to set up any necessary global state.
-* a fuzz_main() function to receive input and pass it to a parser.
-* a fuzz_cleanup() function to clear global state.
-
-Most fuzzing frameworks will produce many invalid inputs - a tor fuzzing
-harness should rejecting invalid inputs without crashing or behaving badly.
-
-But the fuzzing harness should crash if tor fails an assertion, triggers a
-bug, or accesses memory it shouldn't. This helps fuzzing frameworks detect
-"interesting" cases.
 
 == Triaging Issues
 
