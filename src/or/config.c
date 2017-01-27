@@ -411,6 +411,8 @@ static config_var_t option_vars_[] = {
   V(ORListenAddress,             LINELIST, NULL),
   VPORT(ORPort),
   V(OutboundBindAddress,         LINELIST,   NULL),
+  V(OutboundBindAddressOR,       LINELIST,   NULL),
+  V(OutboundBindAddressExit,     LINELIST,   NULL),
 
   OBSOLETE("PathBiasDisableRate"),
   V(PathBiasCircThreshold,       INT,      "-1"),
@@ -7917,57 +7919,80 @@ getinfo_helper_config(control_connection_t *conn,
   return 0;
 }
 
+/* Check whether an address has already been set against the options
+ * depending on address family and destination type. Any exsting
+ * value will lead to a fail, even if it is the same value. If not
+ * set and not only validating, copy it into this location too.
+ * Returns 0 on success or -1 if this address is already set.
+ */
+static int
+verify_and_store_outbound_address(sa_family_t family, tor_addr_t *addr,
+       outbound_addr_t type, or_options_t *options, int validate_only)
+{
+  if (type>=OUTBOUND_ADDR_MAX || (family!=AF_INET && family!=AF_INET6)) {
+    return -1;
+  }
+  int fam_index=0;
+  if (family==AF_INET6) {
+    fam_index=1;
+  }
+  tor_addr_t *dest=&options->OutboundBindAddresses[type][fam_index];
+  if (!tor_addr_is_null(dest)) {
+    return -1;
+  }
+  if (!validate_only) {
+    tor_addr_copy(dest, addr);
+  }
+  return 0;
+}
+
+/* Parse a list of address lines for a specific destination type.
+ * Will store them into the options if not validate_only. If a
+ * problem occurs, a suitable error message is store in msg.
+ * Returns 0 on success or -1 if any address is already set.
+ */
+static int
+parse_outbound_address_lines(const config_line_t *lines, outbound_addr_t type,
+           or_options_t *options, int validate_only, char **msg)
+{
+  tor_addr_t addr;
+  sa_family_t family;
+  while (lines) {
+    family = tor_addr_parse(&addr, lines->value);
+    if (verify_and_store_outbound_address(family, &addr, type,
+                                 options, validate_only)) {
+      if (msg)
+        tor_asprintf(msg, "Multiple%s%s outbound bind addresses "
+                     "configured: %s",
+                     family==AF_INET?" IPv4":(family==AF_INET6?" IPv6":""),
+                     type==OUTBOUND_ADDR_OR?" OR":
+                     (type==OUTBOUND_ADDR_EXIT?" exit":""), lines->value);
+      return -1;
+    }
+    lines = lines->next;
+  }
+  return 0;
+}
+
 /** Parse outbound bind address option lines. If <b>validate_only</b>
- * is not 0 update OutboundBindAddressIPv4_ and
- * OutboundBindAddressIPv6_ in <b>options</b>. On failure, set
- * <b>msg</b> (if provided) to a newly allocated string containing a
- * description of the problem and return -1. */
+ * is not 0 update OutboundBindAddresses in <b>options</b>.
+ * Only one address can be set for any of these values.
+ * On failure, set <b>msg</b> (if provided) to a newly allocated string
+ * containing a description of the problem and return -1.
+ */
 static int
 parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
 {
-  const config_line_t *lines = options->OutboundBindAddress;
-  int found_v4 = 0, found_v6 = 0;
-
   if (!validate_only) {
-    memset(&options->OutboundBindAddressIPv4_, 0,
-           sizeof(options->OutboundBindAddressIPv4_));
-    memset(&options->OutboundBindAddressIPv6_, 0,
-           sizeof(options->OutboundBindAddressIPv6_));
+    memset(&options->OutboundBindAddresses, 0,
+           sizeof(options->OutboundBindAddresses));
   }
-  while (lines) {
-    tor_addr_t addr, *dst_addr = NULL;
-    int af = tor_addr_parse(&addr, lines->value);
-    switch (af) {
-    case AF_INET:
-      if (found_v4) {
-        if (msg)
-          tor_asprintf(msg, "Multiple IPv4 outbound bind addresses "
-                       "configured: %s", lines->value);
-        return -1;
-      }
-      found_v4 = 1;
-      dst_addr = &options->OutboundBindAddressIPv4_;
-      break;
-    case AF_INET6:
-      if (found_v6) {
-        if (msg)
-          tor_asprintf(msg, "Multiple IPv6 outbound bind addresses "
-                       "configured: %s", lines->value);
-        return -1;
-      }
-      found_v6 = 1;
-      dst_addr = &options->OutboundBindAddressIPv6_;
-      break;
-    default:
-      if (msg)
-        tor_asprintf(msg, "Outbound bind address '%s' didn't parse.",
-                     lines->value);
-      return -1;
-    }
-    if (!validate_only)
-      tor_addr_copy(dst_addr, &addr);
-    lines = lines->next;
-  }
+  parse_outbound_address_lines(options->OutboundBindAddress,
+                      OUTBOUND_ADDR_EXIT_AND_OR, options, validate_only, msg);
+  parse_outbound_address_lines(options->OutboundBindAddressOR,
+                      OUTBOUND_ADDR_OR, options, validate_only, msg);
+  parse_outbound_address_lines(options->OutboundBindAddressExit,
+                      OUTBOUND_ADDR_EXIT, options, validate_only, msg);
   return 0;
 }
 

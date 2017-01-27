@@ -3545,6 +3545,12 @@ typedef struct routerset_t routerset_t;
  * to pick its own port. */
 #define CFG_AUTO_PORT 0xc4005e
 
+/** Enumeration of outbound address configuration types:
+ * Exit-only, OR-only, or both */
+typedef enum {OUTBOUND_ADDR_EXIT, OUTBOUND_ADDR_OR,
+              OUTBOUND_ADDR_EXIT_AND_OR,
+              OUTBOUND_ADDR_MAX} outbound_addr_t;
+
 /** Configuration options for a Tor process. */
 typedef struct {
   uint32_t magic_;
@@ -3628,10 +3634,14 @@ typedef struct {
   config_line_t *ControlListenAddress;
   /** Local address to bind outbound sockets */
   config_line_t *OutboundBindAddress;
-  /** IPv4 address derived from OutboundBindAddress. */
-  tor_addr_t OutboundBindAddressIPv4_;
-  /** IPv6 address derived from OutboundBindAddress. */
-  tor_addr_t OutboundBindAddressIPv6_;
+  /** Local address to bind outbound relay sockets */
+  config_line_t *OutboundBindAddressOR;
+  /** Local address to bind outbound exit sockets */
+  config_line_t *OutboundBindAddressExit;
+  /** Addresses derived from the various OutboundBindAddress lines.
+   * [][0] is IPv4, [][1] is IPv6
+   */
+  tor_addr_t OutboundBindAddresses[OUTBOUND_ADDR_MAX][2];
   /** Directory server only: which versions of
    * Tor should we tell users to run? */
   config_line_t *RecommendedVersions;

@@ -1,0 +1,2 @@
+- Minor features:
+    - Allow separation of exit and relay traffic to different source IP addresses (Ticket #17975). Written by Michael Sonntag.
