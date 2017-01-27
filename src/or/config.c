@@ -358,7 +358,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceMaxStreams",LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceMaxStreamsCloseCircuit",LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceNumIntroductionPoints", LINELIST_S, RendConfigLines, NULL),
-  V(HiddenServiceStatistics,     BOOL,     "1"),
+  VAR("HiddenServiceStatistics", BOOL,     HiddenServiceStatistics_option, "1"),
   V(HidServAuth,                 LINELIST, NULL),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
@@ -2004,6 +2004,8 @@ options_act(const or_options_t *old_options)
   /* Only collect directory-request statistics on relays and bridges. */
   options->DirReqStatistics = options->DirReqStatistics_option &&
     server_mode(options);
+  options->HiddenServiceStatistics =
+    options->HiddenServiceStatistics_option && server_mode(options);
 
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
@@ -2018,7 +2020,6 @@ options_act(const or_options_t *old_options)
       options->CellStatistics = 0;
       options->EntryStatistics = 0;
       options->ConnDirectionStatistics = 0;
-      options->HiddenServiceStatistics = 0;
       options->ExitPortStatistics = 0;
     }
 
