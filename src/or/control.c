@@ -2824,12 +2824,13 @@ getinfo_helper_events(control_connection_t *control_conn,
 
 /** Implementation helper for GETINFO: knows how to enumerate hidden services
  * created via the control port. */
-static int
+STATIC int
 getinfo_helper_onions(control_connection_t *control_conn,
                       const char *question, char **answer,
                       const char **errmsg)
 {
   smartlist_t *onion_list = NULL;
+  (void) errmsg;  /* no errors from this method */
 
   if (control_conn && !strcmp(question, "onions/current")) {
     onion_list = control_conn->ephemeral_onion_services;
@@ -2839,13 +2840,13 @@ getinfo_helper_onions(control_connection_t *control_conn,
     return 0;
   }
   if (!onion_list || smartlist_len(onion_list) == 0) {
-    if (errmsg) {
-        *errmsg = "No onion services of the specified type.";
+    if (answer) {
+      *answer = tor_strdup("");
     }
-    return -1;
-  }
-  if (answer) {
+  } else {
+    if (answer) {
       *answer = smartlist_join_strings(onion_list, "\r\n", 0, NULL);
+    }
   }
 
   return 0;
