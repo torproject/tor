@@ -2598,7 +2598,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       if (circ->base_.state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
       else if (circ->base_.state == CIRCUIT_STATE_GUARD_WAIT)
-        state = "GUARD_WAIT"; // XXXX prop271 spec deviation-- specify this.
+        state = "GUARD_WAIT";
       else if (circ->cpath)
         state = "EXTENDED";
       else
