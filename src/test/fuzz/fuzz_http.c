@@ -20,8 +20,8 @@ static void
 mock_connection_write_to_buf_impl_(const char *string, size_t len,
                                    connection_t *conn, int zlib)
 {
-  log_debug(LD_GENERAL, "%sResponse:\n%zu\nConnection: %p\n%s\n",
-            zlib ? "Compressed " : "", len, conn, string);
+  log_debug(LD_GENERAL, "%sResponse:\n%u\nConnection: %p\n%s\n",
+            zlib ? "Compressed " : "", (unsigned)len, conn, string);
 }
 
 static int
@@ -35,11 +35,11 @@ mock_directory_handle_command_get(dir_connection_t *conn,
   log_debug(LD_GENERAL, "Method:\nGET\n");
 
   if (headers) {
-    log_debug(LD_GENERAL, "Header-Length:\n%zu\n", strlen(headers));
+    log_debug(LD_GENERAL, "Header-Length:\n%u\n", (unsigned)strlen(headers));
     log_debug(LD_GENERAL, "Headers:\n%s\n", headers);
   }
 
-  log_debug(LD_GENERAL, "Body-Length:\n%zu\n", body_len);
+  log_debug(LD_GENERAL, "Body-Length:\n%u\n", (unsigned)body_len);
   if (body) {
     log_debug(LD_GENERAL, "Body:\n%s\n", body);
   }
@@ -59,11 +59,11 @@ mock_directory_handle_command_post(dir_connection_t *conn,
   log_debug(LD_GENERAL, "Method:\nPOST\n");
 
   if (headers) {
-    log_debug(LD_GENERAL, "Header-Length:\n%zu\n", strlen(headers));
+    log_debug(LD_GENERAL, "Header-Length:\n%u\n", (unsigned)strlen(headers));
     log_debug(LD_GENERAL, "Headers:\n%s\n", headers);
   }
 
-  log_debug(LD_GENERAL, "Body-Length:\n%zu\n", body_len);
+  log_debug(LD_GENERAL, "Body-Length:\n%u\n", (unsigned)body_len);
   if (body) {
     log_debug(LD_GENERAL, "Body:\n%s\n", body);
   }
