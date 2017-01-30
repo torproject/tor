@@ -863,8 +863,8 @@ dump_desc_populate_fifo_from_directory(const char *dirname)
  * type *<b>type</b> to file $DATADIR/unparseable-desc. Do not write more
  * than one descriptor to disk per minute. If there is already such a
  * file in the data directory, overwrite it. */
-STATIC void
-dump_desc(const char *desc, const char *type)
+MOCK_IMPL(STATIC void,
+dump_desc,(const char *desc, const char *type))
 {
   tor_assert(desc);
   tor_assert(type);
@@ -1172,6 +1172,12 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   return ret;
 }
 
+MOCK_IMPL(STATIC int,
+signed_digest_equals, (const uint8_t *d1, const uint8_t *d2, size_t len))
+{
+  return tor_memeq(d1, d2, len);
+}
+
 /** Check whether the object body of the token in <b>tok</b> has a good
  * signature for <b>digest</b> using key <b>pkey</b>.
  * If <b>CST_NO_CHECK_OBJTYPE</b> is set, do not check
@@ -1214,7 +1220,8 @@ check_signature_token(const char *digest,
   }
   //  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
   //            hex_str(signed_digest,4));
-  if (tor_memneq(digest, signed_digest, digest_len)) {
+  if (! signed_digest_equals((const uint8_t *)digest,
+                             (const uint8_t *)signed_digest, digest_len)) {
     log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
     tor_free(signed_digest);
     return -1;
@@ -3704,11 +3711,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     if (ns->type != NS_TYPE_CONSENSUS) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       if (routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens, ns,
-                                               rs, 0, 0))
+                                               rs, 0, 0)) {
         smartlist_add(ns->routerstatus_list, rs);
-      else {
-        tor_free(rs->version);
-        tor_free(rs);
+      } else {
+        vote_routerstatus_free(rs);
       }
     } else {
       routerstatus_t *rs;
@@ -4508,13 +4514,24 @@ router_get_hash_impl(const char *s, size_t s_len, char *digest,
                                   &start,&end)<0)
     return -1;
 
+  return router_compute_hash_final(digest, start, end-start, alg);
+}
+
+/** Compute the digest of the <b>len</b>-byte directory object at
+ * <b>start</b>, using <b>alg</b>. Store the result in <b>digest</b>, which
+ * must be long enough to hold it. */
+MOCK_IMPL(STATIC int,
+router_compute_hash_final,(char *digest,
+                           const char *start, size_t len,
+                           digest_algorithm_t alg))
+{
   if (alg == DIGEST_SHA1) {
-    if (crypto_digest(digest, start, end-start) < 0) {
+    if (crypto_digest(digest, start, len) < 0) {
       log_warn(LD_BUG,"couldn't compute digest");
       return -1;
     }
   } else {
-    if (crypto_digest256(digest, start, end-start, alg) < 0) {
+    if (crypto_digest256(digest, start, len, alg) < 0) {
       log_warn(LD_BUG,"couldn't compute digest");
       return -1;
     }
@@ -4700,11 +4717,13 @@ microdescs_parse_from_string(const char *s, const char *eos,
         if (!strcmp(t->args[0], "ed25519")) {
           if (md->ed25519_identity_pkey) {
             log_warn(LD_DIR, "Extra ed25519 key in microdesc");
+            smartlist_free(id_lines);
             goto next;
           }
           ed25519_public_key_t k;
           if (ed25519_public_from_base64(&k, t->args[1])<0) {
             log_warn(LD_DIR, "Bogus ed25519 key in microdesc");
+            smartlist_free(id_lines);
             goto next;
           }
           md->ed25519_identity_pkey = tor_memdup(&k, sizeof(k));

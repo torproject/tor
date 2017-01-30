@@ -1210,12 +1210,12 @@ make_tap_onion_key_crosscert(const crypto_pk_t *onion_key,
 
 /** Check whether an RSA-TAP cross-certification is correct. Return 0 if it
  * is, -1 if it isn't. */
-int
-check_tap_onion_key_crosscert(const uint8_t *crosscert,
-                              int crosscert_len,
-                              const crypto_pk_t *onion_pkey,
-                              const ed25519_public_key_t *master_id_pkey,
-                              const uint8_t *rsa_id_digest)
+MOCK_IMPL(int,
+check_tap_onion_key_crosscert,(const uint8_t *crosscert,
+                               int crosscert_len,
+                               const crypto_pk_t *onion_pkey,
+                               const ed25519_public_key_t *master_id_pkey,
+                               const uint8_t *rsa_id_digest))
 {
   uint8_t *cc = tor_malloc(crypto_pk_keysize(onion_pkey));
   int cc_len =

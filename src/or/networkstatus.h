@@ -132,8 +132,9 @@ document_signature_t *document_signature_dup(const document_signature_t *sig);
 void networkstatus_free_all(void);
 int networkstatus_get_weight_scale_param(networkstatus_t *ns);
 
+void vote_routerstatus_free(vote_routerstatus_t *rs);
+
 #ifdef NETWORKSTATUS_PRIVATE
-STATIC void vote_routerstatus_free(vote_routerstatus_t *rs);
 #ifdef TOR_UNIT_TESTS
 STATIC int networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
                                                 const char *flavor);

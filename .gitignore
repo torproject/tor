@@ -192,6 +192,10 @@ uptime-*.json
 /src/test/test-timers.exe
 /src/test/test_workqueue.exe
 
+# /src/test/fuzz
+/src/test/fuzz/fuzz-*
+/src/test/fuzz/lf-fuzz-*
+
 # /src/tools/
 /src/tools/tor-checkkey
 /src/tools/tor-resolve

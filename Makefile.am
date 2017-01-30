@@ -9,6 +9,7 @@ noinst_LIBRARIES=
 EXTRA_DIST=
 noinst_HEADERS=
 bin_PROGRAMS=
+EXTRA_PROGRAMS=
 CLEANFILES=
 TESTS=
 noinst_PROGRAMS=
@@ -52,6 +53,11 @@ else
 TEST_CFLAGS=
 TEST_CPPFLAGS=-DTOR_UNIT_TESTS
 TEST_NETWORK_FLAGS=--hs-multi-client 1
+endif
+
+if LIBFUZZER_ENABLED
+TEST_CFLAGS += -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div
+# not "edge"
 endif
 
 TEST_NETWORK_ALL_LOG_DIR=$(top_builddir)/test_network_log
@@ -189,6 +195,7 @@ if USE_PERL
 		$(top_srcdir)/src/common/*.[ch] \
 		$(top_srcdir)/src/or/*.[ch] \
 		$(top_srcdir)/src/test/*.[ch] \
+		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]
 endif
 

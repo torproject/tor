@@ -180,10 +180,12 @@ int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
 int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen,
                               int padding, int warnOnFailure);
-int crypto_pk_public_checksig(const crypto_pk_t *env, char *to, size_t tolen,
-                              const char *from, size_t fromlen);
-int crypto_pk_public_checksig_digest(crypto_pk_t *env, const char *data,
-                               size_t datalen, const char *sig, size_t siglen);
+MOCK_DECL(int, crypto_pk_public_checksig,(const crypto_pk_t *env,
+                                          char *to, size_t tolen,
+                                          const char *from, size_t fromlen));
+MOCK_DECL(int, crypto_pk_public_checksig_digest,(crypto_pk_t *env,
+                                         const char *data, size_t datalen,
+                                         const char *sig, size_t siglen));
 int crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                            const char *from, size_t fromlen);
 int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,

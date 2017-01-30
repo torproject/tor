@@ -14,6 +14,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#define DIRECTORY_PRIVATE
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
@@ -99,7 +100,6 @@ static void directory_send_command(dir_connection_t *conn,
                              int purpose, int direct, const char *resource,
                              const char *payload, size_t payload_len,
                              time_t if_modified_since);
-static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
@@ -2894,9 +2894,9 @@ static const url_table_ent_t url_table[] = {
  * conn-\>outbuf.  If the request is unrecognized, send a 404.
  * Return 0 if we handled this successfully, or -1 if we need to close
  * the connection. */
-STATIC int
-directory_handle_command_get(dir_connection_t *conn, const char *headers,
-                             const char *req_body, size_t req_body_len)
+MOCK_IMPL(STATIC int,
+directory_handle_command_get,(dir_connection_t *conn, const char *headers,
+                              const char *req_body, size_t req_body_len))
 {
   char *url, *url_mem, *header;
   time_t if_modified_since = 0;
@@ -3693,9 +3693,9 @@ handle_post_hs_descriptor(const char *url, const char *body)
  * service descriptor.  On finding one, process it and write a
  * response into conn-\>outbuf.  If the request is unrecognized, send a
  * 400.  Always return 0. */
-static int
-directory_handle_command_post(dir_connection_t *conn, const char *headers,
-                              const char *body, size_t body_len)
+MOCK_IMPL(STATIC int,
+directory_handle_command_post,(dir_connection_t *conn, const char *headers,
+                               const char *body, size_t body_len))
 {
   char *url = NULL;
   const or_options_t *options = get_options();
@@ -3827,7 +3827,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
  * from the inbuf, try to process it; otherwise, leave it on the
  * buffer.  Return a 0 on success, or -1 on error.
  */
-static int
+STATIC int
 directory_handle_command(dir_connection_t *conn)
 {
   char *headers=NULL, *body=NULL;
