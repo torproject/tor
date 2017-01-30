@@ -88,7 +88,7 @@ don't care about memory limits.
 
 To Run:
   mkdir -p src/test/fuzz/fuzz_http_findings
-  ../afl/afl-fuzz -i ${TOR_FUZZ_CORPORA}/http -o src/test/fuzz/fuzz_http_findings -m <asan-memory-limit> -- src/test/fuzz_dir
+  ../afl/afl-fuzz -i ${TOR_FUZZ_CORPORA}/http -o src/test/fuzz/fuzz_http_findings -m <asan-memory-limit> -- src/test/fuzz/fuzz-http
 
 
 AFL has a multi-core mode, check the documentation for details.
