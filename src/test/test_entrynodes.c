@@ -2044,7 +2044,6 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
   u = entry_guard_succeeded(&guard);
   /* We're on the internet (by fiat), so this guard will get called "confirmed"
    * and should immediately become primary.
-   * XXXX prop271 -- I don't like that behavior, but it's what is specified
    */
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_COMPLETE);
   tt_assert(u == GUARD_USABLE_NOW);
@@ -2337,9 +2336,6 @@ test_entry_guard_upgrade_a_circuit(void *arg)
   /* This is the easy case: we have no COMPLETED circuits, all the
    * primary guards are down, we have two WAITING circuits: one will
    * get upgraded to COMPLETED!  (The one that started first.)
-   */
-  /*     XXXX prop271 -- perhaps the one that started first should
-   *      also wind up in confirmed_entry_guards earlier?
    */
 
   smartlist_t *result = smartlist_new();
