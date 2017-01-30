@@ -52,6 +52,30 @@
 /* The time period rotation offset as seen in prop224 section [TIME-PERIODS] */
 #define HS_TIME_PERIOD_ROTATION_OFFSET (12 * 60) /* minutes */
 
+/* Prefix of the onion address checksum. */
+#define HS_SERVICE_ADDR_CHECKSUM_PREFIX ".onion checksum"
+/* Length of the checksum prefix minus the NUL terminated byte. */
+#define HS_SERVICE_ADDR_CHECKSUM_PREFIX_LEN \
+  (sizeof(HS_SERVICE_ADDR_CHECKSUM_PREFIX) - 1)
+/* Length of the resulting checksum of the address. The construction of this
+ * checksum looks like:
+ *   CHECKSUM = ".onion checksum" || PUBKEY || VERSION
+ * where VERSION is 1 byte. This is pre-hashing. */
+#define HS_SERVICE_ADDR_CHECKSUM_INPUT_LEN \
+  (HS_SERVICE_ADDR_CHECKSUM_PREFIX_LEN + ED25519_PUBKEY_LEN + sizeof(uint8_t))
+/* The amount of bytes we use from the address checksum. */
+#define HS_SERVICE_ADDR_CHECKSUM_LEN_USED 2
+/* Length of the binary encoded service address which is of course before the
+ * base32 encoding. Construction is:
+ *    PUBKEY || CHECKSUM || VERSION
+ * with 1 byte VERSION and 2 bytes CHECKSUM. The following is 35 bytes. */
+#define HS_SERVICE_ADDR_LEN \
+  (ED25519_PUBKEY_LEN + HS_SERVICE_ADDR_CHECKSUM_LEN_USED + sizeof(uint8_t))
+/* Length of 'y' portion of 'y.onion' URL. This is base32 encoded and the
+ * length ends up to 56 bytes (not counting the terminated NUL byte.) */
+#define HS_SERVICE_ADDR_LEN_BASE32 \
+  (CEIL_DIV(HS_SERVICE_ADDR_LEN * 8, 5))
+
 /* Type of authentication key used by an introduction point. */
 typedef enum {
   HS_AUTH_KEY_TYPE_LEGACY  = 1,
@@ -64,6 +88,11 @@ void hs_free_all(void);
 int hs_check_service_private_dir(const char *username, const char *path,
                                  unsigned int dir_group_readable,
                                  unsigned int create);
+void hs_build_address(const ed25519_public_key_t *key, uint8_t version,
+                      char *addr_out);
+int hs_address_is_valid(const char *address);
+int hs_parse_address(const char *address, ed25519_public_key_t *key_out,
+                     char *checksum_out, uint8_t *version_out);
 
 void rend_data_free(rend_data_t *data);
 rend_data_t *rend_data_dup(const rend_data_t *data);

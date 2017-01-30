@@ -207,6 +207,85 @@ test_hs_ntor(void *arg)
   tt_mem_op(client_hs_ntor_rend_cell_keys.ntor_key_seed, OP_EQ,
             service_hs_ntor_rend_cell_keys.ntor_key_seed,
             DIGEST256_LEN);
+ done:
+  ;
+}
+
+static void
+test_validate_address(void *arg)
+{
+  int ret;
+
+  (void) arg;
+
+  /* Address too short and too long. */
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_address_is_valid("blah");
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg_containing("has an invalid length");
+  teardown_capture_of_logs();
+
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_address_is_valid(
+           "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnadb");
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg_containing("has an invalid length");
+  teardown_capture_of_logs();
+
+  /* Invalid checksum (taken from prop224) */
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_address_is_valid(
+           "l5satjgud6gucryazcyvyvhuxhr74u6ygigiuyixe3a6ysis67ororad");
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg_containing("invalid checksum");
+  teardown_capture_of_logs();
+
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_address_is_valid(
+           "btojiu7nu5y5iwut64eufevogqdw4wmqzugnoluw232r4t3ecsfv37ad");
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg_containing("invalid checksum");
+  teardown_capture_of_logs();
+
+  /* Non base32 decodable string. */
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_address_is_valid(
+           "????????????????????????????????????????????????????????");
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg_containing("can't be decoded");
+  teardown_capture_of_logs();
+
+  /* Valid address. */
+  ret = hs_address_is_valid(
+           "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad");
+  tt_int_op(ret, OP_EQ, 1);
+
+ done:
+  ;
+}
+
+static void
+test_build_address(void *arg)
+{
+  int ret;
+  char onion_addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+  ed25519_public_key_t pubkey;
+
+  (void) arg;
+
+  /* The following has been created with hs_build_address.py script that
+   * follows proposal 224 specification to build an onion address. */
+  static const char *test_addr =
+    "ijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbezhid";
+
+  /* Let's try to build the same onion address that the script can do. Key is
+   * a long set of very random \x42 :). */
+  memset(&pubkey, '\x42', sizeof(pubkey));
+  hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
+  tt_str_op(test_addr, OP_EQ, onion_addr);
+  /* Validate that address. */
+  ret = hs_address_is_valid(onion_addr);
+  tt_int_op(ret, OP_EQ, 1);
 
  done:
   ;
@@ -325,6 +404,10 @@ struct testcase_t hs_service_tests[] = {
   { "time_period", test_time_period, TT_FORK,
     NULL, NULL },
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
+    NULL, NULL },
+  { "build_address", test_build_address, TT_FORK,
+    NULL, NULL },
+  { "validate_address", test_validate_address, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES
