@@ -367,9 +367,6 @@ get_max_sample_size_absolute(void)
 }
 /**
  * We always try to make our sample contain at least this many guards.
- *
- * XXXX prop271 spec deviation There was a MIN_SAMPLE_THRESHOLD in the
- * proposal, but I removed it in favor of MIN_FILTERED_SAMPLE_SIZE. -NM
  */
 STATIC int
 get_min_filtered_sample_size(void)
@@ -562,8 +559,8 @@ choose_guard_selection(const or_options_t *options,
     }
   } SMARTLIST_FOREACH_END(node);
 
-  /* XXXX prop271 spec deviation -- separate 'high' and 'low' thresholds
-   *  to prevent flapping */
+  /* We use separate 'high' and 'low' thresholds here to prevent flapping
+   * back and forth */
   const int meaningful_threshold_high =
     (int)(n_guards * get_meaningful_restriction_threshold() * 1.05);
   const int meaningful_threshold_mid =
@@ -682,7 +679,6 @@ node_is_possible_guard(const node_t *node)
   /* The "GUARDS" set is all nodes in the nodelist for which this predicate
    * holds. */
 
-  /* XXXX -- prop271 spec deviation. We require node_is_dir() here. */
   tor_assert(node);
   return (node->is_possible_guard &&
           node->is_stable &&
@@ -936,14 +932,14 @@ get_max_sample_size(guard_selection_t *gs,
   const int using_bridges = (gs->type == GS_TYPE_BRIDGE);
   const int min_sample = get_min_filtered_sample_size();
 
-  /* XXXX prop271 spec deviation with bridges, max_sample is "all of them" */
+  /* With bridges, max_sample is "all of them" */
   if (using_bridges)
     return n_guards;
 
   const int max_sample_by_pct = (int)(n_guards * get_max_sample_threshold());
   const int max_sample_absolute = get_max_sample_size_absolute();
   const int max_sample = MIN(max_sample_by_pct, max_sample_absolute);
-  if (max_sample < min_sample) // XXXX prop271 spec deviation
+  if (max_sample < min_sample)
     return min_sample;
   else
     return max_sample;
@@ -1302,7 +1298,6 @@ node_passes_guard_filter(const or_options_t *options,
   if (routerset_contains_node(options->ExcludeNodes, node))
     return 0;
 
-  /* XXXX -- prop271 spec deviation -- add entrynodes to spec. */
   if (options->EntryNodes &&
       !routerset_contains_node(options->EntryNodes, node))
     return 0;
@@ -2310,6 +2305,13 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
 
   /* First look at the complete circuits: Do any block this circuit? */
   SMARTLIST_FOREACH_BEGIN(all_circuits, origin_circuit_t *, circ) {
+    /* "C2 "blocks" C1 if:
+        * C2 obeys all the restrictions that C1 had to obey, AND
+        * C2 has higher priority than C1, AND
+        * Either C2 is <complete>, or C2 is <waiting_for_better_guard>,
+          or C2 has been <usable_if_no_better_guard> for no more than
+          {NONPRIMARY_GUARD_CONNECT_TIMEOUT} seconds."
+    */
     circuit_guard_state_t *state = origin_circuit_get_guard_state(circ);
     if BUG((state == NULL))
       continue;
@@ -2322,9 +2324,6 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
   } SMARTLIST_FOREACH_END(circ);
 
   if (n_complete_blocking) {
-    /* "If any circuit is <complete>, then do not use any
-       <waiting_for_better_guard> or <usable_if_no_better_guard> circuits
-       circuits whose guards have lower priority." */
     log_debug(LD_GUARD, "Considered upgrading guard-stalled circuits: found "
               "%d complete and %d guard-stalled. At least one complete "
               "circuit had higher priority, so not upgrading.",
@@ -2332,14 +2331,10 @@ entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
     goto no_change;
   }
 
-  /* "If any circuit is <waiting_for_better_guard>, and every currently
-     {is_pending} circuit whose guard has higher priority has been in
-     state <usable_if_no_better_guard> for at least
-     {NONPRIMARY_GUARD_CONNECT_TIMEOUT} seconds, and all primary guards
-     have reachable status of <no>, then call that circuit <complete>."
-
-     XXXX --- prop271 deviation. there's no such thing in the spec as
-     an {is_pending circuit}; fix the spec.
+  /* " * If any circuit C1 is <waiting_for_better_guard>, AND:
+          * All primary guards have reachable status of <no>.
+          * There is no circuit C2 that "blocks" C1.
+         Then, upgrade C1 to <complete>.""
   */
   int n_blockers_found = 0;
   const time_t state_set_at_cutoff =
@@ -2687,7 +2682,6 @@ entry_guard_parse_from_state(const char *s)
   /* Take sampled_by_version verbatim. */
   guard->sampled_by_version = sampled_by;
   sampled_by = NULL; /* prevent free */
-  // XXXX -- prop271 spec deviation -- we do not require sampled_by_version
 
   /* Listed is a boolean */
   if (listed && strcmp(listed, "0"))
@@ -3235,10 +3229,10 @@ guards_choose_guard(cpath_build_state_t *state,
   const node_t *r = NULL;
   const uint8_t *exit_id = NULL;
   entry_guard_restriction_t *rst = NULL;
-  // XXXX prop271 spec deviation -- use of restriction here.
   if (state && (exit_id = build_state_get_exit_rsa_id(state))) {
     /* We're building to a targeted exit node, so that node can't be
-     * chosen as our guard for this circuit. */
+     * chosen as our guard for this circuit.  Remember that fact in a
+     * restriction. */
     rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
     memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
   }
