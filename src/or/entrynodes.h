@@ -392,9 +392,6 @@ int num_bridges_usable(void);
 #define DFLT_MAX_SAMPLE_SIZE 60
 /**
  * We always try to make our sample contain at least this many guards.
- *
- * XXXX prop271 There was a MIN_SAMPLE_THRESHOLD in the proposal, but I
- * removed it in favor of MIN_FILTERED_SAMPLE_SIZE. -NM
  */
 #define DFLT_MIN_FILTERED_SAMPLE_SIZE 20
 /**
@@ -466,7 +463,6 @@ STATIC int get_nonprimary_guard_idle_timeout(void);
 STATIC double get_meaningful_restriction_threshold(void);
 STATIC double get_extreme_restriction_threshold(void);
 
-// ---------- XXXX these functions and definitions are post-prop271.
 HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
 STATIC guard_selection_type_t guard_selection_infer_type(
                            guard_selection_type_t type_in,
