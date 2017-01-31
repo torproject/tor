@@ -3443,6 +3443,7 @@ tor_main(int argc, char *argv[])
   update_approx_time(time(NULL));
   tor_threads_init();
   init_logging(0);
+  monotime_init();
 #ifdef USE_DMALLOC
   {
     /* Instruct OpenSSL to use our internal wrappers for malloc,
@@ -3475,8 +3476,6 @@ tor_main(int argc, char *argv[])
         (char*) sandbox_intern_string("/dev/urandom"));
 #endif
   }
-
-  monotime_init();
 
   switch (get_options()->command) {
   case CMD_RUN_TOR:
