@@ -185,6 +185,16 @@ should_apply_guardfraction(const networkstatus_t *ns)
   return options->UseGuardFraction;
 }
 
+/** Return true iff we know a descriptor for <b>guard</b> */
+static int
+guard_has_descriptor(const entry_guard_t *guard)
+{
+  const node_t *node = node_get_by_id(guard->identity);
+  if (!node)
+    return 0;
+  return node_has_descriptor(node);
+}
+
 /**
  * Try to determine the correct type for a selection named "name",
  * if <b>type</b> is GS_TYPE_INFER.
@@ -1447,6 +1457,7 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
   const unsigned exclude_primary = flags & SAMPLE_EXCLUDE_PRIMARY;
   const unsigned exclude_pending = flags & SAMPLE_EXCLUDE_PENDING;
   const unsigned no_update_primary = flags & SAMPLE_NO_UPDATE_PRIMARY;
+  const unsigned need_descriptor = flags & SAMPLE_EXCLUDE_NO_DESCRIPTOR;
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
@@ -1479,6 +1490,8 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
     if (exclude_primary && guard->is_primary)
       continue;
     if (exclude_pending && guard->is_pending)
+      continue;
+    if (need_descriptor && !guard_has_descriptor(guard))
       continue;
     smartlist_add(reachable_filtered_sample, guard);
   } SMARTLIST_FOREACH_END(guard);
@@ -1777,6 +1790,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
                                const entry_guard_restriction_t *rst,
                                unsigned *state_out)
 {
+  const int need_descriptor = (usage == GUARD_USAGE_TRAFFIC);
   tor_assert(gs);
   tor_assert(state_out);
 
@@ -1793,6 +1807,9 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
     if (! entry_guard_obeys_restriction(guard, rst))
       continue;
     if (guard->is_reachable != GUARD_REACHABLE_NO) {
+      if (need_descriptor && BUG(!guard_has_descriptor(guard))) {
+        continue;
+      }
       *state_out = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
       guard->last_tried_to_connect = approx_time();
       smartlist_add(usable_primary_guards, guard);
@@ -1821,6 +1838,8 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
       continue;
     entry_guard_consider_retry(guard);
     if (guard->is_usable_filtered_guard && ! guard->is_pending) {
+      if (need_descriptor && !guard_has_descriptor(guard))
+        continue; /* not a bug */
       guard->is_pending = 1;
       guard->last_tried_to_connect = approx_time();
       *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
@@ -1836,11 +1855,15 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
       random from {USABLE_FILTERED_GUARDS}." */
   {
     entry_guard_t *guard;
+    unsigned flags = 0;
+    if (need_descriptor)
+      flags |= SAMPLE_EXCLUDE_NO_DESCRIPTOR;
     guard = sample_reachable_filtered_entry_guards(gs,
                                                    rst,
                                                    SAMPLE_EXCLUDE_CONFIRMED |
                                                    SAMPLE_EXCLUDE_PRIMARY |
-                                                   SAMPLE_EXCLUDE_PENDING);
+                                                   SAMPLE_EXCLUDE_PENDING |
+                                                   flags);
     if (guard == NULL) {
       log_info(LD_GUARD, "Absolutely no sampled guards were available.");
       return NULL;

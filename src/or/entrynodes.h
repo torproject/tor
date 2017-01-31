@@ -498,6 +498,7 @@ STATIC int entry_guards_all_primary_guards_are_down(guard_selection_t *gs);
 #define SAMPLE_EXCLUDE_PRIMARY     (1u<<1)
 #define SAMPLE_EXCLUDE_PENDING     (1u<<2)
 #define SAMPLE_NO_UPDATE_PRIMARY   (1u<<3)
+#define SAMPLE_EXCLUDE_NO_DESCRIPTOR (1u<<4)
 /**@}*/
 STATIC entry_guard_t *sample_reachable_filtered_entry_guards(
                                     guard_selection_t *gs,
