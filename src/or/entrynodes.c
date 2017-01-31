@@ -3335,6 +3335,43 @@ guards_retry_optimistic(const or_options_t *options)
   return 1;
 }
 
+/**
+ * Return true iff we know enough directory information to construct
+ * circuits through all of the primary guards we'd currently use.
+ */
+int
+guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
+{
+  if (!gs->primary_guards_up_to_date)
+    entry_guards_update_primary(gs);
+
+  const int num_primary = get_n_primary_guards_to_use(GUARD_USAGE_TRAFFIC);
+  int n_missing_descriptors = 0;
+  int n_considered = 0;
+
+  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+    entry_guard_consider_retry(guard);
+    if (guard->is_reachable == GUARD_REACHABLE_NO)
+      continue;
+    n_considered++;
+    if (!guard_has_descriptor(guard))
+      n_missing_descriptors++;
+    if (n_considered >= num_primary)
+      break;
+  } SMARTLIST_FOREACH_END(guard);
+
+  return n_missing_descriptors == 0;
+}
+
+/** As guard_selection_have_enough_dir_info_to_build_circuits, but uses
+ * the default guard selection. */
+int
+entry_guards_have_enough_dir_info_to_build_circuits(void)
+{
+  return guard_selection_have_enough_dir_info_to_build_circuits(
+                                        get_guard_selection_info());
+}
+
 /** Free one guard selection context */
 STATIC void
 guard_selection_free(guard_selection_t *gs)
