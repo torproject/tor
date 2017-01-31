@@ -31,6 +31,8 @@ static int config_parse_msec_interval(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void config_reset(const config_format_t *fmt, void *options,
                          const config_var_t *var, int use_defaults);
+static config_line_t *config_lines_dup_and_filter(const config_line_t *inp,
+                                                  const char *key);
 
 /** Allocate an empty configuration object of a given format type. */
 void *
@@ -635,9 +637,22 @@ config_value_needs_escape(const char *value)
 config_line_t *
 config_lines_dup(const config_line_t *inp)
 {
+  return config_lines_dup_and_filter(inp, NULL);
+}
+
+/** Return a newly allocated deep copy of the lines in <b>inp</b>,
+ * but only the ones that match <b>key</b>. */
+static config_line_t *
+config_lines_dup_and_filter(const config_line_t *inp,
+                            const char *key)
+{
   config_line_t *result = NULL;
   config_line_t **next_out = &result;
   while (inp) {
+    if (key && strcasecmpstart(inp->key, key)) {
+      inp = inp->next;
+      continue;
+    }
     *next_out = tor_malloc_zero(sizeof(config_line_t));
     (*next_out)->key = tor_strdup(inp->key);
     (*next_out)->value = tor_strdup(inp->value);
@@ -764,11 +779,10 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       tor_free(result);
       return NULL;
     case CONFIG_TYPE_LINELIST_S:
-      log_warn(LD_CONFIG,
-               "Can't return context-sensitive '%s' on its own", key);
-      tor_free(result->key);
       tor_free(result);
-      return NULL;
+      result = config_lines_dup_and_filter(*(const config_line_t **)value,
+                                           key);
+      break;
     case CONFIG_TYPE_LINELIST:
     case CONFIG_TYPE_LINELIST_V:
       tor_free(result->key);
