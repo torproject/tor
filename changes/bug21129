@@ -1,0 +1,4 @@
+  o Minor bugfixes (client, entry guards):
+    - Fix a spurious bug warning (with backtrace) when removing an
+      expired entry guard.  Fixes bug 21129; bugfix on 0.3.0.1-alpha.
+
