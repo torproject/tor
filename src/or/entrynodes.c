@@ -2068,6 +2068,8 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   // XXXX prop271 check Ed ID.
   if (! node)
     goto fail;
+  if (BUG(usage != GUARD_USAGE_DIRGUARD && !node_has_descriptor(node)))
+    goto fail;
 
   *chosen_node_out = node;
   *guard_state_out = tor_malloc_zero(sizeof(circuit_guard_state_t));
