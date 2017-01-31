@@ -2232,13 +2232,17 @@ dirserv_set_routerstatus_testing(routerstatus_t *rs)
 /** Routerstatus <b>rs</b> is part of a group of routers that are on
  * too narrow an IP-space. Clear out its flags since we don't want it be used
  * because of its Sybil-like appearance.
+ *
+ * Leave its BadExit flag alone though, since if we think it's a bad exit,
+ * we want to vote that way in case all the other authorities are voting
+ * Running and Exit.
  */
 static void
 clear_status_flags_on_sybil(routerstatus_t *rs)
 {
   rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
     rs->is_flagged_running = rs->is_named = rs->is_valid =
-    rs->is_hs_dir = rs->is_possible_guard = rs->is_bad_exit = 0;
+    rs->is_hs_dir = rs->is_v2_dir = rs->is_possible_guard = 0;
   /* FFFF we might want some mechanism to check later on if we
    * missed zeroing any flags: it's easy to add a new flag but
    * forget to add it to this clause. */
