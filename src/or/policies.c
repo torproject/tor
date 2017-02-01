@@ -2624,8 +2624,7 @@ parse_short_policy(const char *summary)
   return result;
 }
 
-/** Write <b>policy</b> back out into a string. Used only for unit tests
- * currently. */
+/** Write <b>policy</b> back out into a string. */
 char *
 write_short_policy(const short_policy_t *policy)
 {
