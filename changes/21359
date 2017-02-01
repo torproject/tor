@@ -1,0 +1,8 @@
+  o Testing
+    - tortls tests now use an autoconf check to determine if OpenSSL
+      structures are opaque, instead of an explicit version check.
+      See ticket 21359.
+
+  o Minor bugfixes (compilation)
+    - Support building with recent LibreSSL code that uses opaque
+      structures. Closes ticket 21359.
