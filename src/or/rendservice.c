@@ -3227,6 +3227,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   rend_service_t *service;
   char buf[RELAY_PAYLOAD_SIZE];
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
+  unsigned int expiring_nodes_len, num_ip_circuits, valid_ip_circuits = 0;
   int reason = END_CIRC_REASON_TORPROTOCOL;
   const char *rend_pk_digest;
 
@@ -3248,13 +3249,22 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     goto err;
   }
 
+  /* Take the current amount of expiring nodes and the current amount of IP
+   * circuits and compute how many valid IP circuits we have. */
+  expiring_nodes_len = (unsigned int) smartlist_len(service->expiring_nodes);
+  num_ip_circuits = count_intro_point_circuits(service);
+  /* Let's avoid an underflow. The valid_ip_circuits is initialized to 0 in
+   * case this condition turns out false because it means that all circuits
+   * are expiring so we need to keep this circuit. */
+  if (num_ip_circuits > expiring_nodes_len) {
+    valid_ip_circuits = num_ip_circuits - expiring_nodes_len;
+  }
+
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit or close it, depending.
-   * Substract the amount of expiring nodes here since the circuits are
+   * Substract the amount of expiring nodes here because the circuits are
    * still opened. */
-  if ((count_intro_point_circuits(service) -
-       smartlist_len(service->expiring_nodes)) >
-      service->n_intro_points_wanted) {
+  if (valid_ip_circuits > service->n_intro_points_wanted) {
     const or_options_t *options = get_options();
     /* Remove the intro point associated with this circuit, it's being
      * repurposed or closed thus cleanup memory. */
