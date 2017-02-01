@@ -1,0 +1,8 @@
+
+  o Minor features (portability, compilationc)
+    - Support building with recent LibreSSL code that uses opaque
+      structures. Closes ticket 21359.
+    - Autoconf now check to determine if OpenSSL
+      structures are opaque, instead of explicitly checking for
+      OpenSSL version numbers. 
+      Part of ticket 21359.

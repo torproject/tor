@@ -684,6 +684,11 @@ AC_CHECK_FUNCS([ \
 dnl Check if OpenSSL has scrypt implementation.
 AC_CHECK_FUNCS([ EVP_PBE_scrypt ])
 
+dnl Check if OpenSSL structures are opaque
+AC_CHECK_MEMBERS([SSL.state], , ,
+[#include <openssl/ssl.h>
+])
+
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
 CPPFLAGS="$save_CPPFLAGS"
