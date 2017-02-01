@@ -13,6 +13,7 @@
 #include "crypto_ed25519.h"
 #include "replaycache.h"
 
+#include "hs_common.h"
 #include "hs_descriptor.h"
 #include "hs_intropoint.h"
 
@@ -172,6 +173,10 @@ typedef struct hs_service_t {
   /* Protocol version of the service. Specified by HiddenServiceVersion. */
   uint32_t version;
 
+  /* Onion address base32 encoded and NUL terminated. We keep it for logging
+   * purposes so we don't have to build it everytime. */
+  char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+
   /* Hashtable node: use to look up the service by its master public identity
    * key in the service global map. */
   HT_ENTRY(hs_service_t) hs_service_node;
@@ -205,8 +210,8 @@ void hs_service_free_all(void);
 hs_service_t *hs_service_new(const or_options_t *options);
 void hs_service_free(hs_service_t *service);
 
-void hs_service_register_services(smartlist_t *new_service_list);
 void hs_service_stage_services(const smartlist_t *service_list);
+int hs_service_load_all_keys(void);
 
 /* These functions are only used by unit tests and we need to expose them else
  * hs_service.o ends up with no symbols in libor.a which makes clang throw a

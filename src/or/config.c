@@ -1799,7 +1799,7 @@ options_act(const or_options_t *old_options)
   monitor_owning_controller_process(options->OwningControllerProcess);
 
   /* reload keys as needed for rendezvous services. */
-  if (rend_service_load_all_keys(NULL)<0) {
+  if (hs_service_load_all_keys() < 0) {
     log_warn(LD_GENERAL,"Error loading rendezvous service keys");
     return -1;
   }

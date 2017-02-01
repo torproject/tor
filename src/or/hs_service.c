@@ -12,6 +12,7 @@
 #include "relay.h"
 #include "rendservice.h"
 #include "router.h"
+#include "routerkeys.h"
 
 #include "hs_common.h"
 #include "hs_config.h"
@@ -20,6 +21,11 @@
 
 #include "hs/cell_establish_intro.h"
 #include "hs/cell_common.h"
+
+/* Onion service directory file names. */
+static const char *fname_keyfile_prefix = "hs_ed25519";
+static const char *fname_hostname = "hostname";
+static const char *address_tld = "onion";
 
 /* Staging list of service object. When configuring service, we add them to
  * this list considered a staging area and they will get added to our global
@@ -163,19 +169,21 @@ ht_free_service_(struct hs_service_t *service, void *data)
 static void
 service_free_all(void)
 {
-  if (hs_service_map == NULL) {
-    return;
+  if (hs_service_map) {
+    /* The free helper function returns 1 so this is safe. */
+    hs_service_ht_HT_FOREACH_FN(hs_service_map, ht_free_service_, NULL);
+    HT_CLEAR(hs_service_ht, hs_service_map);
+    tor_free(hs_service_map);
+    hs_service_map = NULL;
   }
-  /* The free helper function returns 1 so this is safe. */
-  hs_service_ht_HT_FOREACH_FN(hs_service_map, ht_free_service_, NULL);
-  HT_CLEAR(hs_service_ht, hs_service_map);
-  tor_free(hs_service_map);
-  hs_service_map = NULL;
-  /* Cleanup staging list. */
-  SMARTLIST_FOREACH(hs_service_staging_list, hs_service_t *, s,
-                    hs_service_free(s));
-  smartlist_free(hs_service_staging_list);
-  hs_service_staging_list = NULL;
+
+  if (hs_service_staging_list) {
+    /* Cleanup staging list. */
+    SMARTLIST_FOREACH(hs_service_staging_list, hs_service_t *, s,
+                      hs_service_free(s));
+    smartlist_free(hs_service_staging_list);
+    hs_service_staging_list = NULL;
+  }
 }
 
 /* Close all rendezvous circuits for the given service. */
@@ -299,19 +307,29 @@ move_ephemeral_services(hs_service_ht *src, hs_service_ht *dst)
   }
 }
 
-/* Register services that are in the list. Once this function returns, the
- * global service map will be set with the right content and all non surviving
- * services will be cleaned up. */
-void
-hs_service_register_services(smartlist_t *new_service_list)
+/* Return a const string of the directory path escaped. If this is an
+ * ephemeral service, it returns "[EPHEMERAL]". This can only be called from
+ * the main thread because escaped() uses a static variable. */
+static const char *
+service_escaped_dir(const hs_service_t *s)
+{
+  return (s->config.is_ephemeral) ? "[EPHEMERAL]" :
+                                    escaped(s->config.directory_path);
+}
+
+/* Register services that are in the staging list. Once this function returns,
+ * the global service map will be set with the right content and all non
+ * surviving services will be cleaned up. */
+static void
+register_all_services(void)
 {
   struct hs_service_ht *new_service_map;
   hs_service_t *s, **iter;
 
-  tor_assert(new_service_list);
+  tor_assert(hs_service_staging_list);
 
   /* We'll save us some allocation and computing time. */
-  if (smartlist_len(new_service_list) == 0) {
+  if (smartlist_len(hs_service_staging_list) == 0) {
     return;
   }
 
@@ -325,7 +343,7 @@ hs_service_register_services(smartlist_t *new_service_list)
    * port or stopping the tor daemon. */
   move_ephemeral_services(hs_service_map, new_service_map);
 
-  SMARTLIST_FOREACH_BEGIN(new_service_list, hs_service_t *, snew) {
+  SMARTLIST_FOREACH_BEGIN(hs_service_staging_list, hs_service_t *, snew) {
     /* Check if that service is already in our global map and if so, we'll
      * transfer the intro points to it. */
     s = find_service(hs_service_map, &snew->keys.identity_pk);
@@ -345,8 +363,8 @@ hs_service_register_services(smartlist_t *new_service_list)
        * service means we failed to validate correctly. In that case, don't
        * break tor and ignore the service but tell user. */
       log_warn(LD_BUG, "Unable to register service with directory %s",
-               snew->config.directory_path);
-      SMARTLIST_DEL_CURRENT(new_service_list, snew);
+               service_escaped_dir(snew));
+      SMARTLIST_DEL_CURRENT(hs_service_staging_list, snew);
       hs_service_free(snew);
     }
   } SMARTLIST_FOREACH_END(snew);
@@ -357,9 +375,160 @@ hs_service_register_services(smartlist_t *new_service_list)
     close_service_circuits(*iter);
   }
 
-  /* Time to make the switch. We'll wipe the current list and switch. */
+  /* Time to make the switch. We'll clear the staging list because its content
+   * has now changed ownership to the map. */
+  smartlist_clear(hs_service_staging_list);
   service_free_all();
   hs_service_map = new_service_map;
+}
+
+/* Write the onion address of a given service to the given filename fname_ in
+ * the service directory. Return 0 on success else -1 on error. */
+static int
+write_address_to_file(const hs_service_t *service, const char *fname_)
+{
+  int ret = -1;
+  char *fname = NULL;
+  /* Length of an address plus the sizeof the address tld (onion) which counts
+   * the NUL terminated byte so we keep it for the "." and the newline. */
+  char buf[HS_SERVICE_ADDR_LEN_BASE32 + sizeof(address_tld) + 1];
+
+  tor_assert(service);
+  tor_assert(fname_);
+
+  /* Construct the full address with the onion tld and write the hostname file
+   * to disk. */
+  tor_snprintf(buf, sizeof(buf), "%s.%s\n", service->onion_address,
+               address_tld);
+  /* Notice here that we use the given "fname_". */
+  fname = hs_path_from_filename(service->config.directory_path, fname_);
+  if (write_str_to_file(fname, buf, 0) < 0) {
+    log_warn(LD_REND, "Could not write onion address to hostname file %s",
+             escaped(fname));
+    goto end;
+  }
+
+#ifndef _WIN32
+  if (service->config.dir_group_readable) {
+    /* Mode to 0640. */
+    if (chmod(fname, S_IRUSR | S_IWUSR | S_IRGRP) < 0) {
+      log_warn(LD_FS, "Unable to make onion service hostname file %s "
+                      "group-readable.", escaped(fname));
+    }
+  }
+#endif /* _WIN32 */
+
+  /* Success. */
+  ret = 0;
+ end:
+  tor_free(fname);
+  return ret;
+}
+
+/* Load and/or generate private keys for the given service. On success, the
+ * hostname file will be written to disk along with the master private key iff
+ * the service is not configured for offline keys. Return 0 on success else -1
+ * on failure. */
+static int
+load_service_keys(hs_service_t *service)
+{
+  int ret = -1;
+  char *fname = NULL;
+  ed25519_keypair_t *kp;
+  const hs_service_config_t *config;
+
+  tor_assert(service);
+
+  config = &service->config;
+
+  /* Create and fix permission on service directory. We are about to write
+   * files to that directory so make sure it exists and has the right
+   * permissions. We do this here because at this stage we know that Tor is
+   * actually running and the service we have has been validated. */
+  if (BUG(hs_check_service_private_dir(get_options()->User,
+                                       config->directory_path,
+                                       config->dir_group_readable, 1) < 0)) {
+    goto end;
+  }
+
+  /* Try to load the keys from file or generate it if not found. */
+  fname = hs_path_from_filename(config->directory_path, fname_keyfile_prefix);
+  /* Don't ask for key creation, we want to know if we were able to load it or
+   * we had to generate it. Better logging! */
+  kp = ed_key_init_from_file(fname, 0, LOG_INFO, NULL, 0, 0, 0, NULL);
+  if (!kp) {
+    log_info(LD_REND, "Unable to load keys from %s. Generating it...", fname);
+    /* We'll now try to generate the keys and for it we want the strongest
+     * randomness for it. The keypair will be written in different files. */
+    uint32_t key_flags = INIT_ED_KEY_CREATE | INIT_ED_KEY_EXTRA_STRONG |
+                         INIT_ED_KEY_SPLIT;
+    kp = ed_key_init_from_file(fname, key_flags, LOG_WARN, NULL, 0, 0, 0,
+                               NULL);
+    if (!kp) {
+      log_warn(LD_REND, "Unable to generate keys and save in %s.", fname);
+      goto end;
+    }
+  }
+
+  /* Copy loaded or generated keys to service object. */
+  ed25519_pubkey_copy(&service->keys.identity_pk, &kp->pubkey);
+  memcpy(&service->keys.identity_sk, &kp->seckey,
+         sizeof(service->keys.identity_sk));
+  /* This does a proper memory wipe. */
+  ed25519_keypair_free(kp);
+
+  /* Build onion address from the newly loaded keys. */
+  tor_assert(service->version <= UINT8_MAX);
+  hs_build_address(&service->keys.identity_pk, (uint8_t) service->version,
+                   service->onion_address);
+
+  /* Write onion address to hostname file. */
+  if (write_address_to_file(service, fname_hostname) < 0) {
+    goto end;
+  }
+
+  /* Succes. */
+  ret = 0;
+ end:
+  tor_free(fname);
+  return ret;
+}
+
+/* Load and/or generate keys for all onion services including the client
+ * authorization if any. Return 0 on success, -1 on failure. */
+int
+hs_service_load_all_keys(void)
+{
+  /* Load v2 service keys if we have v2. */
+  if (num_rend_services() != 0) {
+    if (rend_service_load_all_keys(NULL) < 0) {
+      goto err;
+    }
+  }
+
+  /* Load or/and generate them for v3+. */
+  SMARTLIST_FOREACH_BEGIN(hs_service_staging_list, hs_service_t *, service) {
+    /* Ignore ephemeral service, they already have their keys set. */
+    if (service->config.is_ephemeral) {
+      continue;
+    }
+    log_info(LD_REND, "Loading v3 onion service keys from %s",
+             service_escaped_dir(service));
+    if (load_service_keys(service) < 0) {
+      goto err;
+    }
+    /* XXX: Load/Generate client authorization keys. (#20700) */
+  } SMARTLIST_FOREACH_END(service);
+
+  /* Final step, the staging list contains service in a quiescent state that
+   * is ready to be used. Register them to the global map. Once this is over,
+   * the staging list will be cleaned up. */
+  register_all_services();
+
+  /* All keys have been loaded successfully. */
+  return 0;
+ err:
+  return -1;
 }
 
 /* Put all service object in the given service list. After this, the caller

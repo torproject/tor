@@ -20,6 +20,20 @@
 #include "hs_service.h"
 #include "rendcommon.h"
 
+/* Allocate and return a string containing the path to filename in directory.
+ * This function will never return NULL. The caller must free this path. */
+char *
+hs_path_from_filename(const char *directory, const char *filename)
+{
+  char *file_path = NULL;
+
+  tor_assert(directory);
+  tor_assert(filename);
+
+  tor_asprintf(&file_path, "%s%s%s", directory, PATH_SEPARATOR, filename);
+  return file_path;
+}
+
 /* Make sure that the directory for <b>service</b> is private, using the config
  * <b>username</b>.
  * If <b>create</b> is true:
