@@ -482,6 +482,7 @@ STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
                                                 const uint8_t *rsa_id);
 
 MOCK_DECL(STATIC time_t, randomize_time, (time_t now, time_t max_backdate));
+
 STATIC entry_guard_t *entry_guard_add_to_sample(guard_selection_t *gs,
                                                 const node_t *node);
 STATIC entry_guard_t *entry_guards_expand_sample(guard_selection_t *gs);
@@ -498,6 +499,7 @@ STATIC int entry_guards_all_primary_guards_are_down(guard_selection_t *gs);
 #define SAMPLE_EXCLUDE_PRIMARY     (1u<<1)
 #define SAMPLE_EXCLUDE_PENDING     (1u<<2)
 #define SAMPLE_NO_UPDATE_PRIMARY   (1u<<3)
+#define SAMPLE_EXCLUDE_NO_DESCRIPTOR (1u<<4)
 /**@}*/
 STATIC entry_guard_t *sample_reachable_filtered_entry_guards(
                                     guard_selection_t *gs,
@@ -564,6 +566,10 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
 
 int entries_known_but_down(const or_options_t *options);
 void entries_retry_all(const or_options_t *options);
+
+int guard_selection_have_enough_dir_info_to_build_circuits(
+                                                    guard_selection_t *gs);
+int entry_guards_have_enough_dir_info_to_build_circuits(void);
 
 void entry_guards_free_all(void);
 

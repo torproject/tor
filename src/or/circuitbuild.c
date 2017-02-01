@@ -2369,7 +2369,7 @@ onion_extend_cpath(origin_circuit_t *circ)
       int client = (server_mode(get_options()) == 0);
       info = extend_info_from_node(r, client);
       /* Clients can fail to find an allowed address */
-      tor_assert(info || client);
+      tor_assert_nonfatal(info || client);
     }
   } else {
     const node_t *r =

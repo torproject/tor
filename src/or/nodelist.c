@@ -43,6 +43,7 @@
 #include "config.h"
 #include "control.h"
 #include "dirserv.h"
+#include "entrynodes.h"
 #include "geoip.h"
 #include "main.h"
 #include "microdesc.h"
@@ -1990,6 +1991,13 @@ update_router_have_minimum_dir_info(void)
   }
 
   using_md = consensus->flavor == FLAV_MICRODESC;
+
+  if (! entry_guards_have_enough_dir_info_to_build_circuits()) {
+    strlcpy(dir_info_status, "We're missing descriptors for some of our "
+            "primary entry guards", sizeof(dir_info_status));
+    res = 0;
+    goto done;
+  }
 
   /* Check fraction of available paths */
   {

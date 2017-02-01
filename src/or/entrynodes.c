@@ -185,6 +185,16 @@ should_apply_guardfraction(const networkstatus_t *ns)
   return options->UseGuardFraction;
 }
 
+/** Return true iff we know a descriptor for <b>guard</b> */
+static int
+guard_has_descriptor(const entry_guard_t *guard)
+{
+  const node_t *node = node_get_by_id(guard->identity);
+  if (!node)
+    return 0;
+  return node_has_descriptor(node);
+}
+
 /**
  * Try to determine the correct type for a selection named "name",
  * if <b>type</b> is GS_TYPE_INFER.
@@ -1436,6 +1446,7 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
   const unsigned exclude_primary = flags & SAMPLE_EXCLUDE_PRIMARY;
   const unsigned exclude_pending = flags & SAMPLE_EXCLUDE_PENDING;
   const unsigned no_update_primary = flags & SAMPLE_NO_UPDATE_PRIMARY;
+  const unsigned need_descriptor = flags & SAMPLE_EXCLUDE_NO_DESCRIPTOR;
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
@@ -1468,6 +1479,8 @@ sample_reachable_filtered_entry_guards(guard_selection_t *gs,
     if (exclude_primary && guard->is_primary)
       continue;
     if (exclude_pending && guard->is_pending)
+      continue;
+    if (need_descriptor && !guard_has_descriptor(guard))
       continue;
     smartlist_add(reachable_filtered_sample, guard);
   } SMARTLIST_FOREACH_END(guard);
@@ -1766,6 +1779,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
                                const entry_guard_restriction_t *rst,
                                unsigned *state_out)
 {
+  const int need_descriptor = (usage == GUARD_USAGE_TRAFFIC);
   tor_assert(gs);
   tor_assert(state_out);
 
@@ -1782,6 +1796,9 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
     if (! entry_guard_obeys_restriction(guard, rst))
       continue;
     if (guard->is_reachable != GUARD_REACHABLE_NO) {
+      if (need_descriptor && BUG(!guard_has_descriptor(guard))) {
+        continue;
+      }
       *state_out = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
       guard->last_tried_to_connect = approx_time();
       smartlist_add(usable_primary_guards, guard);
@@ -1810,6 +1827,8 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
       continue;
     entry_guard_consider_retry(guard);
     if (guard->is_usable_filtered_guard && ! guard->is_pending) {
+      if (need_descriptor && !guard_has_descriptor(guard))
+        continue; /* not a bug */
       guard->is_pending = 1;
       guard->last_tried_to_connect = approx_time();
       *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
@@ -1825,11 +1844,15 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
       random from {USABLE_FILTERED_GUARDS}." */
   {
     entry_guard_t *guard;
+    unsigned flags = 0;
+    if (need_descriptor)
+      flags |= SAMPLE_EXCLUDE_NO_DESCRIPTOR;
     guard = sample_reachable_filtered_entry_guards(gs,
                                                    rst,
                                                    SAMPLE_EXCLUDE_CONFIRMED |
                                                    SAMPLE_EXCLUDE_PRIMARY |
-                                                   SAMPLE_EXCLUDE_PENDING);
+                                                   SAMPLE_EXCLUDE_PENDING |
+                                                   flags);
     if (guard == NULL) {
       log_info(LD_GUARD, "Absolutely no sampled guards were available.");
       return NULL;
@@ -2056,6 +2079,8 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   const node_t *node = node_get_by_id(guard->identity);
   // XXXX prop271 check Ed ID.
   if (! node)
+    goto fail;
+  if (BUG(usage != GUARD_USAGE_DIRGUARD && !node_has_descriptor(node)))
     goto fail;
 
   *chosen_node_out = node;
@@ -3301,6 +3326,43 @@ guards_retry_optimistic(const or_options_t *options)
   mark_primary_guards_maybe_reachable(get_guard_selection_info());
 
   return 1;
+}
+
+/**
+ * Return true iff we know enough directory information to construct
+ * circuits through all of the primary guards we'd currently use.
+ */
+int
+guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
+{
+  if (!gs->primary_guards_up_to_date)
+    entry_guards_update_primary(gs);
+
+  const int num_primary = get_n_primary_guards_to_use(GUARD_USAGE_TRAFFIC);
+  int n_missing_descriptors = 0;
+  int n_considered = 0;
+
+  SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
+    entry_guard_consider_retry(guard);
+    if (guard->is_reachable == GUARD_REACHABLE_NO)
+      continue;
+    n_considered++;
+    if (!guard_has_descriptor(guard))
+      n_missing_descriptors++;
+    if (n_considered >= num_primary)
+      break;
+  } SMARTLIST_FOREACH_END(guard);
+
+  return n_missing_descriptors == 0;
+}
+
+/** As guard_selection_have_enough_dir_info_to_build_circuits, but uses
+ * the default guard selection. */
+int
+entry_guards_have_enough_dir_info_to_build_circuits(void)
+{
+  return guard_selection_have_enough_dir_info_to_build_circuits(
+                                        get_guard_selection_info());
 }
 
 /** Free one guard selection context */
