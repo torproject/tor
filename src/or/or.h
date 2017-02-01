@@ -4168,6 +4168,10 @@ typedef struct {
 
   /** If true, the user wants us to collect statistics as hidden service
    * directory, introduction point, or rendezvous point. */
+  int HiddenServiceStatistics_option;
+  /** Internal variable to remember whether we're actually acting on
+   * HiddenServiceStatistics_option -- yes if it's set and we're a server,
+   * else no. */
   int HiddenServiceStatistics;
 
   /** If true, include statistics file contents in extra-info documents. */
