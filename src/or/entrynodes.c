@@ -1112,18 +1112,7 @@ remove_guard_from_confirmed_and_primary_lists(guard_selection_t *gs,
   }
 
   if (guard->confirmed_idx >= 0) {
-    entry_guard_t *found_guard = NULL;
-    if (guard->confirmed_idx < smartlist_len(gs->confirmed_entry_guards))
-      found_guard = smartlist_get(gs->confirmed_entry_guards,
-                                  guard->confirmed_idx);
-    if (BUG(guard != found_guard)) {
-      // LCOV_EXCL_START
-      smartlist_remove_keeporder(gs->confirmed_entry_guards, guard);
-      // LCOV_EXCL_STOP
-    } else {
-      smartlist_del_keeporder(gs->confirmed_entry_guards,
-                              guard->confirmed_idx);
-    }
+    smartlist_remove_keeporder(gs->confirmed_entry_guards, guard);
     guard->confirmed_idx = -1;
     guard->confirmed_on_date = 0;
   } else {
