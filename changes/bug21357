@@ -1,0 +1,7 @@
+  o Major bugfixes (IPv6 Exits):
+    - Stop rejecting all IPv6 traffic on Exits whose exit policy rejects IPv6
+      addresses. Instead, only reject a port over IPv6 if the exit policy
+      rejects that port on more than an IPv6 /16 of addresses. This bug was
+      made worse by 17027 in 0.2.8.1-alpha, which rejects a relay's own IPv6
+      address by default.
+      Fixes bug 21357; bugfix on commit 004f3f4e53 in 0.2.4.7-alpha.
