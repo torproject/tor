@@ -4072,17 +4072,17 @@ rend_consider_services_intro_points(void)
     /* Avoid mismatched signed comparaison below. */
     intro_nodes_len = (unsigned int) smartlist_len(service->intro_nodes);
 
-    /* Quiescent state, no node expiring and we have more or the amount of
-     * wanted node for this service. Proceed to the next service. Could be
-     * more because we launch two preemptive circuits if our intro nodes
-     * list is empty. */
-    if (smartlist_len(service->expiring_nodes) == 0 &&
-        intro_nodes_len >= service->n_intro_points_wanted) {
+    /* Quiescent state, we have more or the equal amount of wanted node for
+     * this service. Proceed to the next service. We can have more nodes
+     * because we launch extra preemptive circuits if our intro nodes list was
+     * originally empty for performance reasons. */
+    if (intro_nodes_len >= service->n_intro_points_wanted) {
       continue;
     }
 
-    /* Number of intro points we want to open which is the wanted amount
-     * minus the current amount of valid nodes. */
+    /* Number of intro points we want to open which is the wanted amount minus
+     * the current amount of valid nodes. We know that this won't underflow
+     * because of the check above. */
     n_intro_points_to_open = service->n_intro_points_wanted - intro_nodes_len;
     if (intro_nodes_len == 0) {
       /* We want to end up with n_intro_points_wanted intro points, but if
