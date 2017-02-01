@@ -1,0 +1,6 @@
+  o Minor bugfix (logging);
+    - Don't recommend to use Tor2web in non anonymous mode. In that mode, we
+      disable client functionalities and recommending Tor2web as a solution is
+      a bad idea because in that case client loses all anonymity. Tor2web
+      should really only be used in very specific cases and with users
+      *knowing* what they do. Fixes #21294; bugfix on tor-0.2.9.3-alpha.
