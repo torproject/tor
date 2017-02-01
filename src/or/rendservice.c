@@ -3907,6 +3907,19 @@ remove_invalid_intro_points(rend_service_t *service,
 {
   tor_assert(service);
 
+  /* Remove any expired nodes that doesn't have a circuit. */
+  SMARTLIST_FOREACH_BEGIN(service->expiring_nodes, rend_intro_point_t *,
+                          intro) {
+    origin_circuit_t *intro_circ =
+      find_intro_circuit(intro, service->pk_digest);
+    if (intro_circ) {
+      continue;
+    }
+    /* No more circuit, cleanup the into point object. */
+    SMARTLIST_DEL_CURRENT(service->expiring_nodes, intro);
+    rend_intro_point_free(intro);
+  } SMARTLIST_FOREACH_END(intro);
+
   SMARTLIST_FOREACH_BEGIN(service->intro_nodes, rend_intro_point_t *,
                           intro) {
     /* Find the introduction point node object. */
