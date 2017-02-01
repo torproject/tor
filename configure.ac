@@ -145,8 +145,14 @@ dnl Others suggest '/gs /safeseh /nxcompat /dynamicbase' for non-gcc on Windows
 AC_ARG_ENABLE(gcc-hardening,
     AS_HELP_STRING(--disable-gcc-hardening, [disable compiler security checks]))
 
+dnl Deprecated --enable-expensive-hardening but keep it for now for backward compat.
 AC_ARG_ENABLE(expensive-hardening,
-    AS_HELP_STRING(--enable-expensive-hardening, [enable more expensive compiler hardening; makes Tor slower]))
+    AS_HELP_STRING(--enable-expensive-hardening, [enable more fragile and expensive compiler hardening; makes Tor slower]))
+AC_ARG_ENABLE(fragile-hardening,
+    AS_HELP_STRING(--enable-fragile-hardening, [enable more fragile and expensive compiler hardening; makes Tor slower]))
+if test "x$enable_expensive_hardening" = "xyes" || test "x$enable_fragile_hardening" = "xyes"; then
+  fragile_hardening="yes"
+fi
 
 dnl Linker hardening options
 dnl Currently these options are ELF specific - you can't use this with MacOSX
@@ -777,14 +783,14 @@ m4_ifdef([AS_VAR_IF],[
     TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, also_link, CFLAGS_FWRAPV="-fwrapv", true)
 fi
 
-if test "x$enable_expensive_hardening" = "xyes"; then
+if test "$fragile_hardening" = "yes"; then
     TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, also_link, CFLAGS_FTRAPV="-ftrapv", true)
    if test "$tor_cv_cflags__ftrapv" = "yes" && test "$tor_can_link__ftrapv" != "yes"; then
       AC_MSG_WARN([The compiler supports -ftrapv, but for some reason I was not able to link with -ftrapv. Are you missing run-time support? Run-time hardening will not work as well as it should.])
    fi
 
    if test "$tor_cv_cflags__ftrapv" != "yes"; then
-     AC_MSG_ERROR([You requested expensive hardening, but the compiler does not seem to support -ftrapv.])
+     AC_MSG_ERROR([You requested fragile hardening, but the compiler does not seem to support -ftrapv.])
    fi
 
    TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], also_link, CFLAGS_ASAN="-fsanitize=address", true)
@@ -866,7 +872,7 @@ saved_CFLAGS="$CFLAGS"
 TOR_CHECK_CFLAGS(-fomit-frame-pointer)
 F_OMIT_FRAME_POINTER=''
 if test "$saved_CFLAGS" != "$CFLAGS"; then
-  if test "x$enable_expensive_hardening" != "xyes"; then
+  if test "$fragile_hardening" = "yes"; then
     F_OMIT_FRAME_POINTER='-fomit-frame-pointer'
   fi
 fi
@@ -1963,6 +1969,21 @@ if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then
       exit 1;
     fi
   done
+fi
+
+if test "$fragile_hardening" = "yes"; then
+  AC_MSG_WARN([
+
+============
+Warning!  Building Tor with --enable-fragile-hardening (also known as
+--enable-expensive-hardening) makes some kinds of attacks harder, but makes
+other kinds of attacks easier. A Tor instance build with this option will be
+somewhat less vulnerable to remote code execution, arithmetic overflow, or
+out-of-bounds read/writes... but at the cost of becoming more vulnerable to
+denial of service attacks. For more information, see
+https://trac.torproject.org/projects/tor/wiki/doc/TorFragileHardening
+============
+  ])
 fi
 
 AC_OUTPUT
