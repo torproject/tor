@@ -1,0 +1,5 @@
+  o Minor bugfixes (client, entry guards):
+    - Fix a bug warning (with backtrace) when we fail a channel
+      that circuits to fallback directories on it. Fixes bug 21128;
+      bugfix on 0.3.0.1-alpha.
+

@@ -2172,7 +2172,11 @@ entry_guard_chan_failed(channel_t *chan)
       continue;
 
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    entry_guard_failed(&origin_circ->guard_state);
+    if (origin_circ->guard_state) {
+      /* We might have no guard state if we didn't use a guard on this
+       * circuit (eg it's for a fallback directory). */
+      entry_guard_failed(&origin_circ->guard_state);
+    }
   } SMARTLIST_FOREACH_END(circ);
   smartlist_free(pending);
 }
