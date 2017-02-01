@@ -594,13 +594,51 @@ test_policies_general(void *arg)
   /* short policy with configured netblocks */
   test_policy_summary_helper("reject 149.56.0.0/16,"
                              "reject6 2607:5300::/32,"
+                             "reject6 2608:5300::/64,"
+                             "reject6 2609:5300::/96,"
+                             "accept *:80,"
+                             "accept *:443,"
+                             "reject *:*",
+                             "accept 80,443");
+  /* short policy with large netblocks that do not count as a rejection */
+  test_policy_summary_helper("reject 148.0.0.0/7,"
+                             "reject6 2600::/16,"
                              "accept *:80,"
                              "accept *:443,"
                              "reject *:*",
                              "accept 80,443");
   /* short policy with large netblocks that count as a rejection */
-  test_policy_summary_helper("reject 149.0.0.0/6,"
-                             "reject6 2600::/6,"
+  test_policy_summary_helper("reject 148.0.0.0/6,"
+                             "reject6 2600::/15,"
+                             "accept *:80,"
+                             "accept *:443,"
+                             "reject *:*",
+                             "reject 1-65535");
+  /* short policy with huge netblocks that count as a rejection */
+  test_policy_summary_helper("reject 128.0.0.0/1,"
+                             "reject6 8000::/1,"
+                             "accept *:80,"
+                             "accept *:443,"
+                             "reject *:*",
+                             "reject 1-65535");
+  /* short policy which blocks everything using netblocks */
+  test_policy_summary_helper("reject 0.0.0.0/0,"
+                             "reject6 ::/0,"
+                             "accept *:80,"
+                             "accept *:443,"
+                             "reject *:*",
+                             "reject 1-65535");
+  /* short policy which has repeated redundant netblocks */
+  test_policy_summary_helper("reject 0.0.0.0/0,"
+                             "reject 0.0.0.0/0,"
+                             "reject 0.0.0.0/0,"
+                             "reject 0.0.0.0/0,"
+                             "reject 0.0.0.0/0,"
+                             "reject6 ::/0,"
+                             "reject6 ::/0,"
+                             "reject6 ::/0,"
+                             "reject6 ::/0,"
+                             "reject6 ::/0,"
                              "accept *:80,"
                              "accept *:443,"
                              "reject *:*",

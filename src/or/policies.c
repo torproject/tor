@@ -2300,15 +2300,24 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
 #define AT(x) ((policy_summary_item_t*)smartlist_get(summary, x))
 
 #define IPV4_BITS                (32)
+/* Every IPv4 address is counted as one rejection */
+#define REJECT_CUTOFF_SCALE_IPV4 (0)
 /* Ports are rejected in an IPv4 summary if they are rejected in more than two
  * IPv4 /8 address blocks */
 #define REJECT_CUTOFF_COUNT_IPV4 (U64_LITERAL(1) << \
-                                  (IPV4_BITS - 7))
+                                  (IPV4_BITS - REJECT_CUTOFF_SCALE_IPV4 - 7))
 
 #define IPV6_BITS                (128)
-/* Ports are rejected in an IPv6 summary if they are rejected in at least one
- * IPv6 /64. */
-#define REJECT_CUTOFF_COUNT_IPV6 (UINT64_MAX)
+/* IPv6 /64s are counted as one rejection, anything smaller is ignored */
+#define REJECT_CUTOFF_SCALE_IPV6 (64)
+/* Ports are rejected in an IPv6 summary if they are rejected in more than one
+ * IPv6 /16 address block.
+ * This is rougly equivalent to the IPv4 cutoff, as only five IPv6 /12s (and
+ * some scattered smaller blocks) have been allocated to the RIRs.
+ * Network providers are typically allocated one or more IPv6 /32s.
+ */
+#define REJECT_CUTOFF_COUNT_IPV6 (U64_LITERAL(1) << \
+                                  (IPV6_BITS - REJECT_CUTOFF_SCALE_IPV6 - 16))
 
 /** Split an exit policy summary so that prt_min and prt_max
  * fall at exactly the start and end of an item respectively.
@@ -2381,14 +2390,28 @@ policy_summary_reject(smartlist_t *summary,
   int addrbits = (family == AF_INET) ? IPV4_BITS : IPV6_BITS;
   tor_assert_nonfatal_once(addrbits >= maskbits);
 
+  /* We divide IPv6 address counts by (1 << scale) to keep them in a uint64_t
+   */
+  int scale = ((family == AF_INET) ?
+               REJECT_CUTOFF_SCALE_IPV4 :
+               REJECT_CUTOFF_SCALE_IPV6);
+
+  tor_assert_nonfatal_once(addrbits >= scale);
+  if (maskbits > (addrbits - scale)) {
+    tor_assert_nonfatal_once(family == AF_INET6);
+    /* The address range is so small, we'd need billions of them to reach the
+     * rejection limit. So we ignore this range in the reject count. */
+    return;
+  }
+
   uint64_t count = 0;
-  if (addrbits - maskbits >= 64) {
+  if (addrbits - scale - maskbits >= 64) {
     tor_assert_nonfatal_once(family == AF_INET6);
     /* The address range is so large, it's an automatic rejection for all ports
      * in the range. */
     count = UINT64_MAX;
   } else {
-    count = (U64_LITERAL(1) << (addrbits - maskbits));
+    count = (U64_LITERAL(1) << (addrbits - scale - maskbits));
   }
   tor_assert_nonfatal_once(count > 0);
   while (i < smartlist_len(summary) &&
