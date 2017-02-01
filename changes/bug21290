@@ -1,0 +1,7 @@
+  o Minor bugfixes (configure, autoconf):
+    - Rename the configure option --enable-expensive-hardening to
+      --enable-fragile-hardening. TROVE-2017-001 was triggerable only through
+      the expensive hardening which is making the tor daemon abort when the
+      issue is detected. Thus, it makes tor more at risk of remote crashes but
+      safer against RCE or heartbleed bug category. Fixes bug 21290; bugfix on
+      tor-0.2.5.4-alpha.
