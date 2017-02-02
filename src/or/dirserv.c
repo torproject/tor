@@ -3191,6 +3191,7 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
   ri = node->ri;
 
   if (get_options()->AuthDirTestEd25519LinkKeys &&
+      node_supports_ed25519_link_authentication(node) &&
       ri->cache_info.signing_key_cert) {
     /* We allow the node to have an ed25519 key if we haven't been told one in
      * the routerinfo, but if we *HAVE* been told one in the routerinfo, it

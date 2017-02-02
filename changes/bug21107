@@ -1,0 +1,6 @@
+  o Major bugfixes (directory authority):
+    - When deciding whether we have just found a router to be reachable,
+      do not penalize it for not having performed an Ed25519 link handshake
+      if it does not claim to support an Ed25519 handshake. Previously,
+      we would treat such relays as non-running.
+      Fixes bug 21107; bugfix on 0.2.3.1-alpha.
