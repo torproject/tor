@@ -146,8 +146,11 @@ test_establish_intro_wrong_purpose(void *arg)
                                          establish_intro_cell);
   tt_int_op(cell_len, >, 0);
 
-  /* Receive the cell */
+  /* Receive the cell. Should fail. */
+  setup_full_capture_of_logs(LOG_INFO);
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
+  expect_log_msg_containing("Rejecting ESTABLISH_INTRO on non-OR circuit.");
+  teardown_capture_of_logs();
   tt_int_op(retval, ==, -1);
 
  done:
@@ -180,7 +183,10 @@ test_establish_intro_wrong_keytype(void *arg)
   helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
 
   /* Receive the cell. Should fail. */
+  setup_full_capture_of_logs(LOG_INFO);
   retval = hs_intro_received_establish_intro(intro_circ, (uint8_t*)"", 0);
+  expect_log_msg_containing("Empty ESTABLISH_INTRO cell.");
+  teardown_capture_of_logs();
   tt_int_op(retval, ==, -1);
 
  done:
@@ -217,7 +223,10 @@ test_establish_intro_wrong_keytype2(void *arg)
   cell_body[0] = 42;
 
   /* Receive the cell. Should fail. */
+  setup_full_capture_of_logs(LOG_INFO);
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
+  expect_log_msg_containing("Unrecognized AUTH_KEY_TYPE 42.");
+  teardown_capture_of_logs();
   tt_int_op(retval, ==, -1);
 
  done:
@@ -413,7 +422,10 @@ test_establish_intro_wrong_sig(void *arg)
   cell_body[cell_len-1]++;
 
   /* Receive the cell. Should fail. */
+  setup_full_capture_of_logs(LOG_INFO);
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
+  expect_log_msg_containing("Failed to verify ESTABLISH_INTRO cell.");
+  teardown_capture_of_logs();
   tt_int_op(retval, ==, -1);
 
  done:
