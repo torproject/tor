@@ -2942,8 +2942,7 @@ options_validate_single_onion(or_options_t *options, char **msg)
       !options->Tor2webMode) {
     REJECT("HiddenServiceNonAnonymousMode is incompatible with using Tor as "
            "an anonymous client. Please set Socks/Trans/NATD/DNSPort to 0, or "
-           "HiddenServiceNonAnonymousMode to 0, or use the non-anonymous "
-           "Tor2webMode.");
+           "revert HiddenServiceNonAnonymousMode to 0.");
   }
 
   /* If you run a hidden service in non-anonymous mode, the hidden service
