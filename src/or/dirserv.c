@@ -3263,13 +3263,13 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
 {
   const or_options_t *options = get_options();
   channel_t *chan = NULL;
-  node_t *node = NULL;
+  const node_t *node = NULL;
   tor_addr_t router_addr;
   const ed25519_public_key_t *ed_id_key;
   (void) now;
 
   tor_assert(router);
-  node = node_get_mutable_by_id(router->cache_info.identity_digest);
+  node = node_get_by_id(router->cache_info.identity_digest);
   tor_assert(node);
 
   if (options->AuthDirTestEd25519LinkKeys &&
