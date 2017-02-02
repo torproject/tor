@@ -1,0 +1,4 @@
+  o Minor bugfixes (Windows services):
+    - Be sure to initialize the monotonic time subsystem before using it,
+      even when running as an NT service.
+      Fixes bug 21356; bugfix on 0.2.9.1-alpha.
