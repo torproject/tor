@@ -68,8 +68,7 @@
 
 /* Type of authentication in the descriptor. */
 typedef enum {
-  HS_DESC_AUTH_PASSWORD = 1,
-  HS_DESC_AUTH_ED25519  = 2,
+  HS_DESC_AUTH_ED25519 = 1
 } hs_desc_auth_type_t;
 
 /* Type of encryption key in the descriptor. */
@@ -132,7 +131,7 @@ typedef struct hs_desc_encrypted_data_t {
 
   /* A list of authentication types that a client must at least support one
    * in order to contact the service. Contains NULL terminated strings. */
-  smartlist_t *auth_types;
+  smartlist_t *intro_auth_types;
 
   /* Is this descriptor a single onion service? */
   unsigned int single_onion_service : 1;

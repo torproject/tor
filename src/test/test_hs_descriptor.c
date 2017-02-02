@@ -105,9 +105,9 @@ helper_build_hs_desc(unsigned int no_ip, ed25519_public_key_t *signing_pubkey)
 
   /* Setup encrypted data section. */
   desc->encrypted_data.create2_ntor = 1;
-  desc->encrypted_data.auth_types = smartlist_new();
+  desc->encrypted_data.intro_auth_types = smartlist_new();
   desc->encrypted_data.single_onion_service = 1;
-  smartlist_add(desc->encrypted_data.auth_types, tor_strdup("ed25519"));
+  smartlist_add(desc->encrypted_data.intro_auth_types, tor_strdup("ed25519"));
   desc->encrypted_data.intro_points = smartlist_new();
   if (!no_ip) {
     /* Add four intro points. */
@@ -157,14 +157,17 @@ helper_compare_hs_desc(const hs_descriptor_t *desc1,
              desc2->encrypted_data.create2_ntor);
 
   /* Authentication type. */
-  tt_int_op(!!desc1->encrypted_data.auth_types, ==,
-            !!desc2->encrypted_data.auth_types);
-  if (desc1->encrypted_data.auth_types && desc2->encrypted_data.auth_types) {
-    tt_int_op(smartlist_len(desc1->encrypted_data.auth_types), ==,
-              smartlist_len(desc2->encrypted_data.auth_types));
-    for (int i = 0; i < smartlist_len(desc1->encrypted_data.auth_types); i++) {
-      tt_str_op(smartlist_get(desc1->encrypted_data.auth_types, i), OP_EQ,
-                smartlist_get(desc2->encrypted_data.auth_types, i));
+  tt_int_op(!!desc1->encrypted_data.intro_auth_types, ==,
+            !!desc2->encrypted_data.intro_auth_types);
+  if (desc1->encrypted_data.intro_auth_types &&
+      desc2->encrypted_data.intro_auth_types) {
+    tt_int_op(smartlist_len(desc1->encrypted_data.intro_auth_types), ==,
+              smartlist_len(desc2->encrypted_data.intro_auth_types));
+    for (int i = 0;
+         i < smartlist_len(desc1->encrypted_data.intro_auth_types);
+         i++) {
+      tt_str_op(smartlist_get(desc1->encrypted_data.intro_auth_types, i),OP_EQ,
+                smartlist_get(desc2->encrypted_data.intro_auth_types, i));
     }
   }
 

@@ -27,7 +27,7 @@
 #define str_lifetime "descriptor-lifetime"
 /* Constant string value for the encrypted part of the descriptor. */
 #define str_create2_formats "create2-formats"
-#define str_auth_required "authentication-required"
+#define str_intro_auth_required "intro-auth-required"
 #define str_single_onion "single-onion-service"
 #define str_intro_point "introduction-point"
 #define str_ip_auth_key "auth-key"
@@ -44,8 +44,7 @@
 static const struct {
   hs_desc_auth_type_t type;
   const char *identifier;
-} auth_types[] = {
-  { HS_DESC_AUTH_PASSWORD, "password" },
+} intro_auth_types[] = {
   { HS_DESC_AUTH_ED25519, "ed25519" },
   /* Indicate end of array. */
   { 0, NULL }
@@ -65,7 +64,7 @@ static token_rule_t hs_desc_v3_token_table[] = {
 /* Descriptor ruleset for the encrypted section. */
 static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   T1_START(str_create2_formats, R3_CREATE2_FORMATS, CONCAT_ARGS, NO_OBJ),
-  T01(str_auth_required, R3_AUTHENTICATION_REQUIRED, ARGS, NO_OBJ),
+  T01(str_intro_auth_required, R3_INTRO_AUTH_REQUIRED, ARGS, NO_OBJ),
   T01(str_single_onion, R3_SINGLE_ONION_SERVICE, ARGS, NO_OBJ),
   END_OF_TABLE
 };
@@ -123,9 +122,9 @@ desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
     return;
   }
 
-  if (desc->auth_types) {
-    SMARTLIST_FOREACH(desc->auth_types, char *, a, tor_free(a));
-    smartlist_free(desc->auth_types);
+  if (desc->intro_auth_types) {
+    SMARTLIST_FOREACH(desc->intro_auth_types, char *, a, tor_free(a));
+    smartlist_free(desc->intro_auth_types);
   }
   if (desc->intro_points) {
     SMARTLIST_FOREACH(desc->intro_points, hs_desc_intro_point_t *, ip,
@@ -649,12 +648,12 @@ encode_encrypted_data(const hs_descriptor_t *desc,
     smartlist_add_asprintf(lines, "%s %d\n", str_create2_formats,
                            ONION_HANDSHAKE_TYPE_NTOR);
 
-    if (desc->encrypted_data.auth_types &&
-        smartlist_len(desc->encrypted_data.auth_types)) {
+    if (desc->encrypted_data.intro_auth_types &&
+        smartlist_len(desc->encrypted_data.intro_auth_types)) {
       /* Put the authentication-required line. */
-      char *buf = smartlist_join_strings(desc->encrypted_data.auth_types, " ",
-                                         0, NULL);
-      smartlist_add_asprintf(lines, "%s %s\n", str_auth_required, buf);
+      char *buf = smartlist_join_strings(desc->encrypted_data.intro_auth_types,
+                                         " ", 0, NULL);
+      smartlist_add_asprintf(lines, "%s %s\n", str_intro_auth_required, buf);
       tor_free(buf);
     }
 
@@ -894,14 +893,14 @@ decode_auth_type(hs_desc_encrypted_data_t *desc, const char *list)
   tor_assert(desc);
   tor_assert(list);
 
-  desc->auth_types = smartlist_new();
-  smartlist_split_string(desc->auth_types, list, " ", 0, 0);
+  desc->intro_auth_types = smartlist_new();
+  smartlist_split_string(desc->intro_auth_types, list, " ", 0, 0);
 
   /* Validate the types that we at least know about one. */
-  SMARTLIST_FOREACH_BEGIN(desc->auth_types, const char *, auth) {
-    for (int idx = 0; auth_types[idx].identifier; idx++) {
-      if (!strncmp(auth, auth_types[idx].identifier,
-                   strlen(auth_types[idx].identifier))) {
+  SMARTLIST_FOREACH_BEGIN(desc->intro_auth_types, const char *, auth) {
+    for (int idx = 0; intro_auth_types[idx].identifier; idx++) {
+      if (!strncmp(auth, intro_auth_types[idx].identifier,
+                   strlen(intro_auth_types[idx].identifier))) {
         match = 1;
         break;
       }
@@ -1572,7 +1571,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
   }
 
   /* Authentication type. It's optional but only once. */
-  tok = find_opt_by_keyword(tokens, R3_AUTHENTICATION_REQUIRED);
+  tok = find_opt_by_keyword(tokens, R3_INTRO_AUTH_REQUIRED);
   if (tok) {
     if (!decode_auth_type(desc_encrypted_out, tok->args[0])) {
       log_warn(LD_REND, "Service descriptor authentication type has "
