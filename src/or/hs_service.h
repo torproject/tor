@@ -200,6 +200,11 @@ typedef struct hs_service_t {
 
 } hs_service_t;
 
+/* For the service global hash map, we define a specific type for it which
+ * will make it safe to use and specific to some controlled parameters such as
+ * the hashing function and how to compare services. */
+typedef HT_HEAD(hs_service_ht, hs_service_t) hs_service_ht;
+
 /* API */
 
 /* Global initializer and cleanup function. */
@@ -228,8 +233,17 @@ get_establish_intro_payload(uint8_t *buf, size_t buf_len,
 
 #ifdef TOR_UNIT_TESTS
 
+/* Useful getters for unit tests. */
 STATIC unsigned int get_hs_service_map_size(void);
 STATIC int get_hs_service_staging_list_size(void);
+STATIC hs_service_ht *get_hs_service_map(void);
+STATIC hs_service_t *get_first_service(void);
+
+/* Service accessors. */
+STATIC hs_service_t *find_service(hs_service_ht *map,
+                                  const ed25519_public_key_t *pk);
+STATIC void remove_service(hs_service_ht *map, hs_service_t *service);
+STATIC int register_service(hs_service_ht *map, hs_service_t *service);
 
 #endif /* TOR_UNIT_TESTS */
 

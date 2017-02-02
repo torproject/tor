@@ -57,11 +57,6 @@ hs_service_ht_hash(const hs_service_t *service)
                                    sizeof(service->keys.identity_pk.pubkey));
 }
 
-/* For the service global hash map, we define a specific type for it which
- * will make it safe to use and specific to some controlled parameters such as
- * the hashing function and how to compare services. */
-typedef HT_HEAD(hs_service_ht, hs_service_t) hs_service_ht;
-
 /* This is _the_ global hash map of hidden services which indexed the service
  * contained in it by master public identity key which is roughly the onion
  * address of the service. */
@@ -82,7 +77,7 @@ HT_GENERATE2(hs_service_ht, hs_service_t, hs_service_node,
  * if found else NULL. It is also possible to set a directory path in the
  * search query. If pk is NULL, then it will be set to zero indicating the
  * hash table to compare the directory path instead. */
-static hs_service_t *
+STATIC hs_service_t *
 find_service(hs_service_ht *map, const ed25519_public_key_t *pk)
 {
   hs_service_t dummy_service = {0};
@@ -95,7 +90,7 @@ find_service(hs_service_ht *map, const ed25519_public_key_t *pk)
 /* Register the given service in the given map. If the service already exists
  * in the map, -1 is returned. On success, 0 is returned and the service
  * ownership has been transfered to the global map. */
-static int
+STATIC int
 register_service(hs_service_ht *map, hs_service_t *service)
 {
   tor_assert(map);
@@ -113,7 +108,7 @@ register_service(hs_service_ht *map, hs_service_t *service)
 
 /* Remove a given service from the given map. If service is NULL or the
  * service key is unset, return gracefully. */
-static void
+STATIC void
 remove_service(hs_service_ht *map, hs_service_t *service)
 {
   hs_service_t *elm;
@@ -802,6 +797,22 @@ STATIC int
 get_hs_service_staging_list_size(void)
 {
   return smartlist_len(hs_service_staging_list);
+}
+
+STATIC hs_service_ht *
+get_hs_service_map(void)
+{
+  return hs_service_map;
+}
+
+STATIC hs_service_t *
+get_first_service(void)
+{
+  hs_service_t **obj = HT_START(hs_service_ht, hs_service_map);
+  if (obj == NULL) {
+    return NULL;
+  }
+  return *obj;
 }
 
 #endif /* TOR_UNIT_TESTS */
