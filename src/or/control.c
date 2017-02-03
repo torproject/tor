@@ -3377,7 +3377,8 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   SMARTLIST_FOREACH(nodes, const node_t *, node,
   {
     extend_info_t *info = extend_info_from_node(node, first_node);
-    if (first_node && !info) {
+    if (!info) {
+      tor_assert_nonfatal(first_node);
       log_warn(LD_CONTROL,
                "controller tried to connect to a node that doesn't have any "
                "addresses that are allowed by the firewall configuration; "
@@ -3385,10 +3386,6 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       circuit_mark_for_close(TO_CIRCUIT(circ), -END_CIRC_REASON_CONNECTFAILED);
       connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
       goto done;
-    } else {
-      /* True, since node_has_descriptor(node) == true and we are extending
-       * to the node's primary address */
-      tor_assert(info);
     }
     circuit_append_new_exit(circ, info);
     extend_info_free(info);

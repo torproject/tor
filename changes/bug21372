@@ -1,0 +1,4 @@
+  o Minor bugfixes (client):
+    - Always recover from failures in extend_info_from_node(),
+      in an attempt to prevent any recurrence of bug 21242.
+      Fixes bug 21372; bugfix on 0.2.3.1-alpha.
