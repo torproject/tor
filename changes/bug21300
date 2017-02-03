@@ -1,6 +1,0 @@
-  o Minor features (controller):
-    - The GETCONF command can now query options that may only be meaningful
-      in context-sensitive lists. This allows the controller to query
-      the mixed SocksPort/__SocksPort style options introduced in
-      feature 20956. Implements ticket 21300.
-

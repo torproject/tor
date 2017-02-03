@@ -1,6 +1,0 @@
-  o Minor features (configuration, controller):
-    - Each of the *Port options, such as SocksPort, ORPort, ControlPort,
-      and so on, now comes with a __*Port variant that will not be
-      saved to the torrc file by the controller's SAVECONF command.
-      This change allows TorBrowser to set up a single-use domain socket
-      for each time it launches Tor. Closes ticket 20956.

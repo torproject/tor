@@ -1,4 +1,0 @@
-  o Minor bugfixes (client, guards):
-    - Fix a bug of the new guard algorithm where tor could stall for up to 10
-      minutes before retrying a guard after a long period of no network.
-      Fixes bug 21052; bugfix on 0.3.0.1-alpha.

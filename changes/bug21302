@@ -1,8 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - Two possible underflow which would ultimately lead to creating a lot of
-      introduction points circuits and closing them in a non stop loop. Fixes
-      bug 21302; bugfix on 0.2.7.2-alpha.
-    - Cleanup expiring intro point nodes if no circuit is associated to it
-      anymore. It was causing, rarely, the service to not open enough
-      introduction points circuit in the case we had dead expiring nodes.;
-      bugfix on 0.2.7.2-alpha.

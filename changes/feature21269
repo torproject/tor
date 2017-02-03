@@ -1,3 +1,0 @@
-  o Minor feature (client):
-    - Enable IPv6 traffic by default on the SocksPort. To disable this, a user
-      will have to specify "NoIPv6Traffic". Closes ticket 21269.

@@ -1,4 +1,0 @@
-  o Minor feature (fallback scripts):
-    - Add a check_existing mode to updateFallbackDirs.py, which checks if
-      fallbacks in the hard-coded list are working. Closes ticket 20174.
-      Patch by haxxpop.

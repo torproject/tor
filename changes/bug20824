@@ -1,3 +1,0 @@
-  o Minor bugfixes (controller):
-    - Restore the (deprecated) DROPGUARDS controller command.
-      Fixes bug 20824; bugfix on 0.3.0.1-alpha.

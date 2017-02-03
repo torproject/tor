@@ -1,3 +1,140 @@
+Changes in version 0.3.0.3-alpha - 2017-02-03
+  BLURB BLURB BLURB.
+
+  o Major bugfixes (directory authority):
+    - During voting, when marking a node as a probable sybil, do not
+      clear its BadExit flag: sybils can still be bad in other ways
+      too. (We still clear the other flags.) Fixes bug 21108; bugfix
+      on 0.2.0.13-alpha.
+    - When deciding whether we have just found a router to be reachable,
+      do not penalize it for not having performed an Ed25519 link
+      handshake if it does not claim to support an Ed25519 handshake.
+      Previously, we would treat such relays as non-running. Fixes bug
+      21107; bugfix on 0.2.3.1-alpha.
+
+  o Major bugfixes (entry guards):
+    - Stop trying to build circuits through entry guards for which we
+      have no descriptor yet. Also, stop crashing if we *do*
+      accidentally try to build a circuit in such a state. Fixes bug
+      21242; bugfix on 0.3.0.1-alpha.
+
+  o Major bugfixes (IPv6 Exits):
+    - Stop rejecting all IPv6 traffic on Exits whose exit policy rejects
+      IPv6 addresses. Instead, only reject a port over IPv6 if the exit
+      policy rejects that port on more than an IPv6 /16 of addresses.
+      This bug was made worse by 17027 in 0.2.8.1-alpha, which rejects a
+      relay's own IPv6 address by default. Fixes bug 21357; bugfix on
+      commit 004f3f4e53 in 0.2.4.7-alpha.
+
+  o Minor feature (client):
+    - Enable IPv6 traffic by default on the SocksPort. To disable this,
+      a user will have to specify "NoIPv6Traffic". Closes ticket 21269.
+
+  o Minor feature (fallback scripts):
+    - Add a check_existing mode to updateFallbackDirs.py, which checks
+      if fallbacks in the hard-coded list are working. Closes ticket
+      20174. Patch by haxxpop.
+
+  o Minor features (ciphersuite selection):
+    - Allow servers to accept a wider range of ciphersuites, including
+      chacha20-poly1305 and AES-CCM. Closes the other part of 15426.
+    - Clients now advertise a list of ciphersuites closer to the ones
+      preferred by Firefox. Closes ticket 15426.
+
+  o Minor features (controller, configuration):
+    - Each of the *Port options, such as SocksPort, ORPort, ControlPort,
+      and so on, now comes with a __*Port variant that will not be saved
+      to the torrc file by the controller's SAVECONF command. This
+      change allows TorBrowser to set up a single-use domain socket for
+      each time it launches Tor. Closes ticket 20956.
+    - The GETCONF command can now query options that may only be
+      meaningful in context-sensitive lists. This allows the controller
+      to query the mixed SocksPort/__SocksPort style options introduced
+      in feature 20956. Implements ticket 21300.
+
+  o Minor features (portability, compilation):
+    - Autoconf now check to determine if OpenSSL structures are opaque,
+      instead of explicitly checking for OpenSSL version numbers. Part
+      of ticket 21359.
+    - Support building with recent LibreSSL code that uses opaque
+      structures. Closes ticket 21359.
+
+  o Minor features (relay):
+    - Allow separation of exit and relay traffic to different source IP
+      addresses. Closes ticket 17975. Written by Michael Sonntag.
+
+  o Minor bugfix (logging):
+    - Don't recommend the use of Tor2web in non anonymous mode. In that
+      mode, we disable client functionalities and recommending Tor2web
+      as a solution is a bad idea because in that case client loses all
+      anonymity. Tor2web should really only be used in very specific
+      cases and with users *knowing* what they do. Fixes bug 21294;
+      bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (client):
+    - Always recover from failures in extend_info_from_node(), in an
+      attempt to prevent any recurrence of bug 21242. Fixes bug 21372;
+      bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes (client, entry guards):
+    - Fix a bug warning (with backtrace) when we fail a channel that
+      circuits to fallback directories on it. Fixes bug 21128; bugfix
+      on 0.3.0.1-alpha.
+    - Fix a spurious bug warning (with backtrace) when removing an
+      expired entry guard. Fixes bug 21129; bugfix on 0.3.0.1-alpha.
+    - Fix a bug of the new guard algorithm where tor could stall for up
+      to 10 minutes before retrying a guard after a long period of no
+      network. Fixes bug 21052; bugfix on 0.3.0.1-alpha.
+    - Do not try to build circuits until we have descriptors for our
+      primary entry guards. Related to fix for bug 21242.
+
+  o Minor bugfixes (configure, autoconf):
+    - Rename the configure option --enable-expensive-hardening to
+      --enable-fragile-hardening. TROVE-2017-001 was triggerable only
+      through the expensive hardening which is making the tor daemon
+      abort when the issue is detected. Thus, it makes tor more at risk
+      of remote crashes but safer against RCE or heartbleed bug
+      category. Fixes bug 21290; bugfix on 0.2.5.4-alpha.
+
+  o Minor bugfixes (controller):
+    - Restore the (deprecated) DROPGUARDS controller command. Fixes bug
+      20824; bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (hidden service):
+    - Cleanup expiring intro point nodes if no circuit is associated to
+      it anymore. It was causing, rarely, the service to not open enough
+      introduction points circuit in the case we had dead expiring
+      nodes.; bugfix on 0.2.7.2-alpha.
+    - Stop modifying the value of our torrc option
+      HiddenServiceStatistics just because we're not a bridge or relay.
+      Use an internal value for what tor should use and keep the torrc
+      option intact. Fixes bug 21150; bugfix on 0.2.6.2-alpha.
+    - Two possible underflow which would ultimately lead to creating a
+      lot of introduction points circuits and closing them in a non stop
+      loop. Fixes bug 21302; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (portability):
+    - Use "OpenBSD" pre-defined compiler macro instead of "OPENBSD" or
+      "__OpenBSD__". It is supported by OpenBSD itself and also most
+      OpenBSD variants like Bitrig. Fixes bug 20980; bugfix
+      on 0.1.2.1-alpha.
+    - Do not silently truncate content of files if they are larger than
+      SIZE_MAX bytes. This issue could occur on 32 bit systems with
+      large file support and files which are larger than 4 GB. Fixes bug
+      21134; bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (tor-resolve):
+    - The tor-resolve command line tool now rejects hostnames over 255
+      characters in length. Previously, it would silently truncate them,
+      which could lead to bugs. Fixes bug 21280; bugfix on 0.0.9pre5.
+      Patch by "junglefowl".
+
+  o Minor bugfixes (Windows services):
+    - Be sure to initialize the monotonic time subsystem before using
+      it, even when running as an NT service. Fixes bug 21356; bugfix
+      on 0.2.9.1-alpha.
+
+
 Changes in version 0.3.0.2-alpha - 2017-01-23
   Tor 0.3.0.2-alpha fixes a denial-of-service bug where an attacker could
   cause relays and clients to crash, even if they were not built with

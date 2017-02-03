@@ -1,3 +1,0 @@
-  o Minor features (relay):
-    - Allow separation of exit and relay traffic to different source IP
-      addresses. Closes ticket 17975. Written by Michael Sonntag.
