@@ -2110,7 +2110,8 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
       return -1;
     }
     exit_ei = extend_info_from_node(node, 0);
-    tor_assert(exit_ei);
+    if (BUG(exit_ei == NULL))
+      return -1;
   }
   state->chosen_exit = exit_ei;
   return 0;
@@ -2376,7 +2377,7 @@ onion_extend_cpath(origin_circuit_t *circ)
       choose_good_middle_server(purpose, state, circ->cpath, cur_len);
     if (r) {
       info = extend_info_from_node(r, 0);
-      tor_assert(info);
+      tor_assert_nonfatal(info);
     }
   }
 

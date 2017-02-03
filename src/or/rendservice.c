@@ -4162,6 +4162,9 @@ rend_consider_services_intro_points(void)
        * even if we are a single onion service and intend to connect to it
        * directly ourselves. */
       intro->extend_info = extend_info_from_node(node, 0);
+      if (BUG(intro->extend_info == NULL)) {
+        break;
+      }
       intro->intro_key = crypto_pk_new();
       const int fail = crypto_pk_generate_key(intro->intro_key);
       tor_assert(!fail);
