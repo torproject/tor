@@ -58,6 +58,7 @@
 #include "hs_descriptor.h"
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "ed25519_cert.h" /* Trunnel interface. */
 #include "parsecommon.h"
 #include "rendcache.h"
@@ -360,6 +361,14 @@ encode_link_specifiers(const smartlist_t *specs)
       uint8_t *legacy_id_array = link_specifier_getarray_un_legacy_id(ls);
       memcpy(legacy_id_array, spec->u.legacy_id, legacy_id_len);
       link_specifier_set_ls_len(ls, legacy_id_len);
+      break;
+    }
+    case LS_ED25519_ID:
+    {
+      size_t ed25519_id_len = link_specifier_getlen_un_ed25519_id(ls);
+      uint8_t *ed25519_id_array = link_specifier_getarray_un_ed25519_id(ls);
+      memcpy(ed25519_id_array, spec->u.ed25519_id, ed25519_id_len);
+      link_specifier_set_ls_len(ls, ed25519_id_len);
       break;
     }
     default:
@@ -1142,6 +1151,15 @@ decode_link_specifiers(const char *encoded)
                  sizeof(hs_spec->u.legacy_id));
       memcpy(hs_spec->u.legacy_id, link_specifier_getarray_un_legacy_id(ls),
              sizeof(hs_spec->u.legacy_id));
+      break;
+    case LS_ED25519_ID:
+      /* Both are known at compile time so let's make sure they are the same
+       * else we can copy memory out of bound. */
+      tor_assert(link_specifier_getlen_un_ed25519_id(ls) ==
+                 sizeof(hs_spec->u.ed25519_id));
+      memcpy(hs_spec->u.ed25519_id,
+             link_specifier_getconstarray_un_ed25519_id(ls),
+             sizeof(hs_spec->u.ed25519_id));
       break;
     default:
       goto err;
@@ -2398,7 +2416,7 @@ hs_desc_intro_point_free(hs_desc_intro_point_t *ip)
   }
   if (ip->link_specifiers) {
     SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *,
-                      ls, tor_free(ls));
+                      ls, hs_desc_link_specifier_free(ls));
     smartlist_free(ip->link_specifiers);
   }
   tor_cert_free(ip->auth_key_cert);
@@ -2406,5 +2424,75 @@ hs_desc_intro_point_free(hs_desc_intro_point_t *ip)
   crypto_pk_free(ip->legacy.key);
   tor_free(ip->legacy.cert.encoded);
   tor_free(ip);
+}
+
+/* Free the given descriptor link specifier. */
+void
+hs_desc_link_specifier_free(hs_desc_link_specifier_t *ls)
+{
+  if (ls == NULL) {
+    return;
+  }
+  tor_free(ls);
+}
+
+/* Return a newly allocated descriptor link specifier using the given extend
+ * info and requested type. Return NULL on error. */
+hs_desc_link_specifier_t *
+hs_desc_link_specifier_new(const extend_info_t *info, uint8_t type)
+{
+  hs_desc_link_specifier_t *ls = NULL;
+
+  tor_assert(info);
+
+  ls = tor_malloc_zero(sizeof(*ls));
+  ls->type = type;
+  switch (ls->type) {
+  case LS_IPV4:
+    if (info->addr.family != AF_INET) {
+      goto err;
+    }
+    tor_addr_copy(&ls->u.ap.addr, &info->addr);
+    ls->u.ap.port = info->port;
+    break;
+  case LS_IPV6:
+    if (info->addr.family != AF_INET6) {
+      goto err;
+    }
+    tor_addr_copy(&ls->u.ap.addr, &info->addr);
+    ls->u.ap.port = info->port;
+    break;
+  case LS_LEGACY_ID:
+    memcpy(ls->u.legacy_id, info->identity_digest, sizeof(ls->u.legacy_id));
+    break;
+  case LS_ED25519_ID:
+    memcpy(ls->u.ed25519_id, info->ed_identity.pubkey,
+           sizeof(ls->u.ed25519_id));
+    break;
+  default:
+    /* Unknown type is code flow error. */
+    tor_assert(0);
+  }
+
+  return ls;
+ err:
+  tor_free(ls);
+  return NULL;
+}
+
+/* From the given descriptor, remove and free every introduction point. */
+void
+hs_descriptor_free_intro_points(hs_descriptor_t *desc)
+{
+  smartlist_t *ips;
+
+  tor_assert(desc);
+
+  ips = desc->encrypted_data.intro_points;
+  if (ips) {
+    SMARTLIST_FOREACH(ips, hs_desc_intro_point_t *,
+                      ip, hs_desc_intro_point_free(ip));
+    smartlist_clear(ips);
+  }
 }
 

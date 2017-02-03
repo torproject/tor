@@ -3983,10 +3983,9 @@ rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted)
  * This is called once a second by the main loop.
  */
 void
-rend_consider_services_intro_points(void)
+rend_consider_services_intro_points(time_t now)
 {
   int i;
-  time_t now;
   const or_options_t *options = get_options();
   /* Are we in single onion mode? */
   const int allow_direct = rend_service_allow_non_anonymous_connection(
@@ -4003,7 +4002,6 @@ rend_consider_services_intro_points(void)
 
   exclude_nodes = smartlist_new();
   retry_nodes = smartlist_new();
-  now = time(NULL);
 
   SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, service) {
     int r;

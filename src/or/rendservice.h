@@ -149,7 +149,7 @@ void rend_service_free_staging_list(void);
 int rend_service_load_all_keys(const smartlist_t *service_list);
 void rend_services_add_filenames_to_lists(smartlist_t *open_lst,
                                           smartlist_t *stat_lst);
-void rend_consider_services_intro_points(void);
+void rend_consider_services_intro_points(time_t now);
 void rend_consider_services_upload(time_t now);
 void rend_hsdir_routers_changed(void);
 void rend_consider_descriptor_republication(void);

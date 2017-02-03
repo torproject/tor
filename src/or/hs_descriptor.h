@@ -23,6 +23,9 @@
 /* The latest descriptor format version we support. */
 #define HS_DESC_SUPPORTED_FORMAT_VERSION_MAX 3
 
+/* Default lifetime of a descriptor in seconds. The valus is set at 3 hours
+ * which is 180 minutes or 10800 seconds. */
+#define HS_DESC_DEFAULT_LIFETIME (3 * 60 * 60)
 /* Maximum lifetime of a descriptor in seconds. The value is set at 12 hours
  * which is 720 minutes or 43200 seconds. */
 #define HS_DESC_MAX_LIFETIME (12 * 60 * 60)
@@ -65,12 +68,14 @@ typedef struct hs_desc_link_specifier_t {
    * specification. */
   uint8_t type;
 
-  /* It's either an address/port or a legacy identity fingerprint. */
+  /* It must be one of these types, can't be more than one. */
   union {
     /* IP address and port of the relay use to extend. */
     tor_addr_port_t ap;
     /* Legacy identity. A 20-byte SHA1 identity fingerprint. */
     uint8_t legacy_id[DIGEST_LEN];
+    /* ed25519 identity. A 32-byte key. */
+    uint8_t ed25519_id[ED25519_PUBKEY_LEN];
   } u;
 } hs_desc_link_specifier_t;
 
@@ -200,6 +205,11 @@ hs_desc_is_supported_version(uint32_t version)
 void hs_descriptor_free(hs_descriptor_t *desc);
 void hs_desc_plaintext_data_free(hs_desc_plaintext_data_t *desc);
 void hs_desc_encrypted_data_free(hs_desc_encrypted_data_t *desc);
+
+void hs_desc_link_specifier_free(hs_desc_link_specifier_t *ls);
+hs_desc_link_specifier_t *hs_desc_link_specifier_new(
+                                  const extend_info_t *info, uint8_t type);
+void hs_descriptor_free_intro_points(hs_descriptor_t *desc);
 
 int hs_desc_encode_descriptor(const hs_descriptor_t *desc,
                               const ed25519_keypair_t *signing_kp,

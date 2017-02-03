@@ -38,8 +38,12 @@ typedef struct hs_service_intro_point_t {
    * which is published in the descriptor. */
   ed25519_keypair_t auth_key_kp;
 
-  /* Encryption private key. */
-  curve25519_secret_key_t enc_key_sk;
+  /* Encryption keypair for the "ntor" type. */
+  curve25519_keypair_t enc_key_kp;
+
+  /* Legacy key if that intro point doesn't support v3. This should be used if
+   * the base object legacy flag is set. */
+  crypto_pk_t *legacy_key;
 
   /* Amount of INTRODUCE2 cell accepted from this intro point. */
   uint64_t introduce2_count;

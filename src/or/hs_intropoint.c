@@ -24,6 +24,7 @@
 #include "hs/cell_introduce1.h"
 
 #include "hs_circuitmap.h"
+#include "hs_descriptor.h"
 #include "hs_intropoint.h"
 #include "hs_common.h"
 
@@ -592,5 +593,18 @@ hs_intro_received_introduce1(or_circuit_t *circ, const uint8_t *request,
  err:
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
+}
+
+/* Free the given intropoint object ip. */
+void
+hs_intro_free_content(hs_intropoint_t *ip)
+{
+  if (ip == NULL) {
+    return;
+  }
+  tor_cert_free(ip->auth_key_cert);
+  SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *, ls,
+                    hs_desc_link_specifier_free(ls));
+  smartlist_free(ip->link_specifiers);
 }
 
