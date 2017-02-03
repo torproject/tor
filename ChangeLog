@@ -19,7 +19,7 @@ Changes in version 0.3.0.3-alpha - 2017-02-03
       do not penalize it for not having performed an Ed25519 link
       handshake if it does not claim to support an Ed25519 handshake.
       Previously, we would treat such relays as non-running. Fixes bug
-      21107; bugfix on 0.2.3.1-alpha.
+      21107; bugfix on 0.3.0.1-alpha.
 
   o Major bugfixes (entry guards):
     - Stop trying to build circuits through entry guards for which we
@@ -77,7 +77,7 @@ Changes in version 0.3.0.3-alpha - 2017-02-03
   o Minor bugfix (logging):
     - Don't recommend the use of Tor2web in non-anonymous mode.
       Recommending Tor2web is a bad idea because the client loses all
-      anonymity. Tor2web shouldy only be used in specific cases by users
+      anonymity. Tor2web should only be used in specific cases by users
       who *know* and understand the issues. Fixes bug 21294; bugfix
       on 0.2.9.3-alpha.
 
@@ -121,7 +121,7 @@ Changes in version 0.3.0.3-alpha - 2017-02-03
       value the user set (or didn't set). Fixes bug 21150; bugfix
       on 0.2.6.2-alpha.
     - Two possible underflow which would ultimately lead to creating a
-      lot of introduction points circuits and closing them in a non stop
+      lot of introduction point circuits and closing them in a non stop
       loop. Fixes bug 21302; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (portability):
@@ -130,9 +130,9 @@ Changes in version 0.3.0.3-alpha - 2017-02-03
       variants (such as Bitrig). Fixes bug 20980; bugfix
       on 0.1.2.1-alpha.
     - When mapping a file of length greater than SIZE_MAX, do not
-      silently its contents. This issue could occur on 32 bit systems
-      with large file support and files which are larger than 4 GB.
-      Fixes bug 21134; bugfix on 0.3.0.1-alpha.
+      silently truncate its contents. This issue could occur on 32 bit
+      systems with large file support and files which are larger than 4
+      GB. Fixes bug 21134; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (tor-resolve):
     - The tor-resolve command line tool now rejects hostnames over 255
