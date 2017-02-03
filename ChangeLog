@@ -11,7 +11,7 @@ Changes in version 0.3.0.3-alpha - 2017-02-03
   test this release.
 
   o Major bugfixes (directory authority):
-    - During voting, when marking a node as a probable sybil, do not
+    - During voting, when marking a relay as a probable sybil, do not
       clear its BadExit flag: sybils can still be bad in other ways
       too. (We still clear the other flags.) Fixes bug 21108; bugfix
       on 0.2.0.13-alpha.
@@ -47,7 +47,7 @@ Changes in version 0.3.0.3-alpha - 2017-02-03
   o Minor features (ciphersuite selection):
     - Clients now advertise a list of ciphersuites closer to the ones
       preferred by Firefox. Closes part of ticket 15426.
-    - Allow servers to accept a wider range of ciphersuites, including
+    - Allow relays to accept a wider range of ciphersuites, including
       chacha20-poly1305 and AES-CCM. Closes the other part of 15426.
 
   o Minor features (controller, configuration):
@@ -114,15 +114,15 @@ Changes in version 0.3.0.3-alpha - 2017-02-03
   o Minor bugfixes (hidden service):
     - Clean up the code for expiring intro points with no associated
       circuits. It was causing, rarely, a service with some expiring
-      nodes to not open enough introduction points. Fixes part of bug
-      21302; bugfix on 0.2.7.2-alpha.
+      introduction points to not open enough additional introduction
+      points. Fixes part of bug 21302; bugfix on 0.2.7.2-alpha.
     - Stop setting the torrc option HiddenServiceStatistics to "0" just
       because we're not a bridge or relay. Instead, we preserve whatever
       value the user set (or didn't set). Fixes bug 21150; bugfix
       on 0.2.6.2-alpha.
-    - Two possible underflow which would ultimately lead to creating a
-      lot of introduction point circuits and closing them in a non stop
-      loop. Fixes bug 21302; bugfix on 0.2.7.2-alpha.
+    - Resolve two possible underflows which could lead to creating and
+      closing a lot of introduction point circuits in a non-stop loop.
+      Fixes bug 21302; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (portability):
     - Use "OpenBSD" compiler macro instead of "OPENBSD" or "__OpenBSD__".
