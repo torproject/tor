@@ -3227,6 +3227,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   rend_service_t *service;
   char buf[RELAY_PAYLOAD_SIZE];
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
+  unsigned int expiring_nodes_len, num_ip_circuits, valid_ip_circuits = 0;
   int reason = END_CIRC_REASON_TORPROTOCOL;
   const char *rend_pk_digest;
 
@@ -3248,13 +3249,22 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     goto err;
   }
 
+  /* Take the current amount of expiring nodes and the current amount of IP
+   * circuits and compute how many valid IP circuits we have. */
+  expiring_nodes_len = (unsigned int) smartlist_len(service->expiring_nodes);
+  num_ip_circuits = count_intro_point_circuits(service);
+  /* Let's avoid an underflow. The valid_ip_circuits is initialized to 0 in
+   * case this condition turns out false because it means that all circuits
+   * are expiring so we need to keep this circuit. */
+  if (num_ip_circuits > expiring_nodes_len) {
+    valid_ip_circuits = num_ip_circuits - expiring_nodes_len;
+  }
+
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit or close it, depending.
-   * Substract the amount of expiring nodes here since the circuits are
+   * Substract the amount of expiring nodes here because the circuits are
    * still opened. */
-  if ((count_intro_point_circuits(service) -
-       smartlist_len(service->expiring_nodes)) >
-      service->n_intro_points_wanted) {
+  if (valid_ip_circuits > service->n_intro_points_wanted) {
     const or_options_t *options = get_options();
     /* Remove the intro point associated with this circuit, it's being
      * repurposed or closed thus cleanup memory. */
@@ -3897,6 +3907,19 @@ remove_invalid_intro_points(rend_service_t *service,
 {
   tor_assert(service);
 
+  /* Remove any expired nodes that doesn't have a circuit. */
+  SMARTLIST_FOREACH_BEGIN(service->expiring_nodes, rend_intro_point_t *,
+                          intro) {
+    origin_circuit_t *intro_circ =
+      find_intro_circuit(intro, service->pk_digest);
+    if (intro_circ) {
+      continue;
+    }
+    /* No more circuit, cleanup the into point object. */
+    SMARTLIST_DEL_CURRENT(service->expiring_nodes, intro);
+    rend_intro_point_free(intro);
+  } SMARTLIST_FOREACH_END(intro);
+
   SMARTLIST_FOREACH_BEGIN(service->intro_nodes, rend_intro_point_t *,
                           intro) {
     /* Find the introduction point node object. */
@@ -4072,17 +4095,17 @@ rend_consider_services_intro_points(void)
     /* Avoid mismatched signed comparaison below. */
     intro_nodes_len = (unsigned int) smartlist_len(service->intro_nodes);
 
-    /* Quiescent state, no node expiring and we have more or the amount of
-     * wanted node for this service. Proceed to the next service. Could be
-     * more because we launch two preemptive circuits if our intro nodes
-     * list is empty. */
-    if (smartlist_len(service->expiring_nodes) == 0 &&
-        intro_nodes_len >= service->n_intro_points_wanted) {
+    /* Quiescent state, we have more or the equal amount of wanted node for
+     * this service. Proceed to the next service. We can have more nodes
+     * because we launch extra preemptive circuits if our intro nodes list was
+     * originally empty for performance reasons. */
+    if (intro_nodes_len >= service->n_intro_points_wanted) {
       continue;
     }
 
-    /* Number of intro points we want to open which is the wanted amount
-     * minus the current amount of valid nodes. */
+    /* Number of intro points we want to open which is the wanted amount minus
+     * the current amount of valid nodes. We know that this won't underflow
+     * because of the check above. */
     n_intro_points_to_open = service->n_intro_points_wanted - intro_nodes_len;
     if (intro_nodes_len == 0) {
       /* We want to end up with n_intro_points_wanted intro points, but if
