@@ -1150,10 +1150,6 @@ if test "x$linux_netfilter_ipv6_ip6_tables" = "x1"; then
 fi
 if test "x$transparent_ok" = "x1"; then
   AC_DEFINE(USE_TRANSPARENT, 1, "Define to enable transparent proxy support")
-  case "$host" in
-    *-*-openbsd* | *-*-bitrig*)
-      AC_DEFINE(OPENBSD, 1, "Define to handle pf on OpenBSD properly") ;;
-  esac
 else
   AC_MSG_NOTICE([Transparent proxy support enabled, but missing headers.])
 fi

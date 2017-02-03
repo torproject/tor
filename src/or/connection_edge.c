@@ -1959,7 +1959,7 @@ get_pf_socket(void)
   if (pf_socket >= 0)
     return pf_socket;
 
-#ifdef OPENBSD
+#if defined(OpenBSD)
   /* only works on OpenBSD */
   pf = tor_open_cloexec("/dev/pf", O_RDONLY, 0);
 #else

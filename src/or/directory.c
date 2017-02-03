@@ -39,7 +39,7 @@
 #include "shared_random.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
-#ifndef OPENBSD
+#if !defined(OpenBSD)
 #include <malloc.h>
 #endif
 #endif

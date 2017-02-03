@@ -76,7 +76,7 @@ clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx)
 #ifdef PC_FROM_UCONTEXT
 #if defined(__linux__)
   const size_t n = 1;
-#elif defined(__darwin__) || defined(__APPLE__) || defined(__OpenBSD__) \
+#elif defined(__darwin__) || defined(__APPLE__) || defined(OpenBSD) \
   || defined(__FreeBSD__)
   const size_t n = 2;
 #else

@@ -206,7 +206,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   }
  done:
   *out_len = stream->total_out;
-#ifdef OPENBSD
+#if defined(OpenBSD)
   /* "Hey Rocky!  Watch me change an unsigned field to a signed field in a
    *    third-party API!"
    * "Oh, that trick will just make people do unsafe casts to the unsigned
