@@ -1,5 +1,4 @@
-
-  o Minor features (portability, compilationc)
+  o Minor features (portability, compilation):
     - Support building with recent LibreSSL code that uses opaque
       structures. Closes ticket 21359.
     - Autoconf now check to determine if OpenSSL

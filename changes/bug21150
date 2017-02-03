@@ -1,5 +1,5 @@
-  o Minor bugfixes (config, hidden service): 
+  o Minor bugfixes (config, hidden service):
     - Stop modifying the value of our torrc option HiddenServiceStatistics
       just because we're not a bridge or relay. Use an internal value for what
       tor should use and keep the torrc option intact. Fixes bug 21150; bugfix
-      on tor-0.2.6.2-alpha.
+      on 0.2.6.2-alpha.
