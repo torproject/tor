@@ -11,6 +11,7 @@
 #include "or.h"
 #include "circuitlist.h"
 #include "config.h"
+#include "nodelist.h"
 #include "relay.h"
 #include "rendservice.h"
 #include "router.h"
@@ -23,6 +24,15 @@
 
 #include "hs/cell_establish_intro.h"
 #include "hs/cell_common.h"
+
+/* Helper macro. Iterate over every service in the global map. The var is the
+ * name of the service pointer. */
+#define FOR_EACH_SERVICE_BEGIN(var)                          \
+    STMT_BEGIN                                               \
+    hs_service_t **var##_iter, *var;                         \
+    HT_FOREACH(var##_iter, hs_service_ht, hs_service_map) {  \
+      var = *var##_iter;
+#define FOR_EACH_SERVICE_END } STMT_END ;
 
 /* Onion service directory file names. */
 static const char *fname_keyfile_prefix = "hs_ed25519";
@@ -510,6 +520,78 @@ load_service_keys(hs_service_t *service)
   return ret;
 }
 
+/* Scheduled event run from the main loop. Make sure all our services are up
+ * to date and ready for the other scheduled events. This includes looking at
+ * the introduction points status and descriptor rotation time. */
+static void
+run_housekeeping_event(time_t now)
+{
+  (void) now;
+}
+
+/* Scheduled event run from the main loop. Make sure all descriptors are up to
+ * date. Once this returns, each service descriptor needs to be considered for
+ * new introduction circuits and then for upload. */
+static void
+run_build_descriptor_event(time_t now)
+{
+  (void) now;
+  /* For v2 services, this step happens in the upload event. */
+
+  /* Run v3+ events. */
+  FOR_EACH_SERVICE_BEGIN(service) {
+    /* XXX: Actually build descriptors. */
+    (void) service;
+  } FOR_EACH_SERVICE_END;
+}
+
+/* Scheduled event run from the main loop. Make sure we have all the circuits
+ * we need for each service. */
+static void
+run_build_circuit_event(time_t now)
+{
+  (void) now;
+
+  /* Make sure we can actually have enough information to build internal
+   * circuits as required by services. */
+  if (router_have_consensus_path() == CONSENSUS_PATH_UNKNOWN) {
+    return;
+  }
+
+  /* Run v2 check. */
+  if (num_rend_services() > 0) {
+    rend_consider_services_intro_points();
+  }
+  /* Run v3+ check. */
+  FOR_EACH_SERVICE_BEGIN(service) {
+    /* XXX: Check every service for validity of circuits. */
+    (void) service;
+  } FOR_EACH_SERVICE_END;
+}
+
+/* Scheduled event run from the main loop. Try to upload the descriptor for
+ * each service. */
+static void
+run_upload_descriptor_event(time_t now)
+{
+  /* v2 services use the same function for descriptor creation and upload so
+   * we do everything here because the intro circuits were checked before. */
+  if (num_rend_services() > 0) {
+    rend_consider_services_upload(now);
+    rend_consider_descriptor_republication();
+  }
+
+  /* Run v3+ check. */
+  FOR_EACH_SERVICE_BEGIN(service) {
+    /* XXX: Upload if needed the descriptor(s). Update next upload time. */
+    (void) service;
+  } FOR_EACH_SERVICE_END;
+}
+
+/* ========== */
+/* Public API */
+/* ========== */
+
 /* Load and/or generate keys for all onion services including the client
  * authorization if any. Return 0 on success, -1 on failure. */
 int
@@ -617,6 +699,29 @@ hs_service_free(hs_service_t *service)
   memwipe(&service->keys.identity_sk, 0, sizeof(service->keys.identity_sk));
 
   tor_free(service);
+}
+
+/* Periodic callback. Entry point from the main loop to the HS service
+ * subsystem. This is call every second. This is skipped if tor can't build a
+ * circuit or the network is disabled. */
+void
+hs_service_run_scheduled_events(time_t now)
+{
+  /* First thing we'll do here is to make sure our services are in a
+   * quiescent state for the scheduled events. */
+  run_housekeeping_event(now);
+
+  /* Order matters here. We first make sure the descriptor object for each
+   * service contains the latest data. Once done, we check if we need to open
+   * new introduction circuit. Finally, we try to upload the descriptor for
+   * each service. */
+
+  /* Make sure descriptors are up to date. */
+  run_build_descriptor_event(now);
+  /* Make sure services have enough circuits. */
+  run_build_circuit_event(now);
+  /* Upload the descriptors if needed/possible. */
+  run_upload_descriptor_event(now);
 }
 
 /* Initialize the service HS subsystem. */

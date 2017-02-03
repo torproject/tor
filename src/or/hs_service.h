@@ -223,6 +223,8 @@ void hs_service_free(hs_service_t *service);
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
 
+void hs_service_run_scheduled_events(time_t now);
+
 /* These functions are only used by unit tests and we need to expose them else
  * hs_service.o ends up with no symbols in libor.a which makes clang throw a
  * warning at compile time. See #21825. */
