@@ -20,6 +20,14 @@
 #include "hs_service.h"
 #include "rendcommon.h"
 
+/* Ed25519 Basepoint value. Taken from section 5 of
+ * https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03 */
+static const char *str_ed25519_basepoint =
+  "(15112221349535400772501151409588531511"
+  "454012693041857206046113283949847762202, "
+  "463168356949264781694283940034751631413"
+  "07993866256225615783033603165251855960)";
+
 /* Allocate and return a string containing the path to filename in directory.
  * This function will never return NULL. The caller must free this path. */
 char *
@@ -83,8 +91,8 @@ get_time_period_length(void)
 }
 
 /** Get the HS time period number at time <b>now</b> */
-STATIC uint64_t
-get_time_period_num(time_t now)
+uint64_t
+hs_get_time_period_num(time_t now)
 {
   uint64_t time_period_num;
   uint64_t time_period_length = get_time_period_length();
@@ -105,7 +113,7 @@ get_time_period_num(time_t now)
 uint64_t
 hs_get_next_time_period_num(time_t now)
 {
-  return get_time_period_num(now) + 1;
+  return hs_get_time_period_num(now) + 1;
 }
 
 /* Create a new rend_data_t for a specific given <b>version</b>.
@@ -360,6 +368,56 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
   }
 }
 
+/* When creating a blinded key, we need a parameter which construction is as
+ * follow: H(pubkey | [secret] | ed25519-basepoint | nonce).
+ *
+ * The nonce has a pre-defined format which uses the time period number
+ * period_num and the start of the period in second start_time_period.
+ *
+ * The secret of size secret_len is optional meaning that it can be NULL and
+ * thus will be ignored for the param construction.
+ *
+ * The result is put in param_out. */
+static void
+build_blinded_key_param(const ed25519_public_key_t *pubkey,
+                        const uint8_t *secret, size_t secret_len,
+                        uint64_t period_num, uint64_t start_time_period,
+                        uint8_t *param_out)
+{
+  size_t offset = 0;
+  uint8_t nonce[HS_KEYBLIND_NONCE_LEN];
+  crypto_digest_t *digest;
+
+  tor_assert(pubkey);
+  tor_assert(param_out);
+
+  /* Create the nonce N. The construction is as follow:
+   *    N = "key-blind" || INT_8(period_num) || INT_8(start_period_sec) */
+  memcpy(nonce, HS_KEYBLIND_NONCE_PREFIX, HS_KEYBLIND_NONCE_PREFIX_LEN);
+  offset += HS_KEYBLIND_NONCE_PREFIX_LEN;
+  set_uint64(nonce + offset, period_num);
+  offset += sizeof(uint64_t);
+  set_uint64(nonce + offset, start_time_period);
+  offset += sizeof(uint64_t);
+  tor_assert(offset == HS_KEYBLIND_NONCE_LEN);
+
+  /* Generate the parameter h and the construction is as follow:
+   *    h = H(pubkey | [secret] | ed25519-basepoint | nonce) */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, (char *) pubkey, ED25519_PUBKEY_LEN);
+  /* Optional secret. */
+  if (secret) {
+    crypto_digest_add_bytes(digest, (char *) secret, secret_len);
+  }
+  crypto_digest_add_bytes(digest, str_ed25519_basepoint,
+                          strlen(str_ed25519_basepoint));
+  crypto_digest_add_bytes(digest, (char *) nonce, sizeof(nonce));
+
+  /* Extract digest and put it in the param. */
+  crypto_digest_get_digest(digest, (char *) param_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+}
+
 /* Using an ed25519 public key and version to build the checksum of an
  * address. Put in checksum_out. Format is:
  *    SHA3-256(".onion checksum" || PUBKEY || VERSION)
@@ -557,6 +615,52 @@ hs_link_specifier_dup(const link_specifier_t *lspec)
            link_specifier_getlen_un_unrecognized(dup));
   }
   return dup;
+}
+
+/* From a given ed25519 public key pk and an optional secret, compute a
+ * blinded public key and put it in blinded_pk_out. This is only useful to
+ * the client side because the client only has access to the identity public
+ * key of the service. */
+void
+hs_build_blinded_pubkey(const ed25519_public_key_t *pk,
+                        const uint8_t *secret, size_t secret_len,
+                        uint64_t time_period_num,
+                        ed25519_public_key_t *blinded_pk_out)
+{
+  /* Our blinding key API requires a 32 bytes parameter. */
+  uint8_t param[DIGEST256_LEN];
+
+  tor_assert(pk);
+  tor_assert(blinded_pk_out);
+  tor_assert(!tor_mem_is_zero((char *) pk, ED25519_PUBKEY_LEN));
+
+  build_blinded_key_param(pk, secret, secret_len,
+                          time_period_num, get_time_period_length(), param);
+  ed25519_public_blind(blinded_pk_out, pk, param);
+}
+
+/* From a given ed25519 keypair kp and an optional secret, compute a blinded
+ * keypair for the current time period and put it in blinded_kp_out. This is
+ * only useful by the service side because the client doesn't have access to
+ * the identity secret key. */
+void
+hs_build_blinded_keypair(const ed25519_keypair_t *kp,
+                         const uint8_t *secret, size_t secret_len,
+                         uint64_t time_period_num,
+                         ed25519_keypair_t *blinded_kp_out)
+{
+  /* Our blinding key API requires a 32 bytes parameter. */
+  uint8_t param[DIGEST256_LEN];
+
+  tor_assert(kp);
+  tor_assert(blinded_kp_out);
+  /* Extra safety. A zeroed key is bad. */
+  tor_assert(!tor_mem_is_zero((char *) &kp->pubkey, ED25519_PUBKEY_LEN));
+  tor_assert(!tor_mem_is_zero((char *) &kp->seckey, ED25519_SECKEY_LEN));
+
+  build_blinded_key_param(&kp->pubkey, secret, secret_len,
+                          time_period_num, get_time_period_length(), param);
+  ed25519_keypair_blind(blinded_kp_out, kp, param);
 }
 
 /* Initialize the entire HS subsytem. This is called in tor_init() before any

@@ -330,18 +330,18 @@ test_time_period(void *arg)
   tt_int_op(retval, ==, 0);
 
   /* Check that the time period number is right */
-  tn = get_time_period_num(fake_time);
+  tn = hs_get_time_period_num(fake_time);
   tt_u64_op(tn, ==, 16903);
 
   /* Increase current time to 11:59:59 UTC and check that the time period
      number is still the same */
   fake_time += 3599;
-  tn = get_time_period_num(fake_time);
+  tn = hs_get_time_period_num(fake_time);
   tt_u64_op(tn, ==, 16903);
 
   /* Now take time to 12:00:00 UTC and check that the time period rotated */
   fake_time += 1;
-  tn = get_time_period_num(fake_time);
+  tn = hs_get_time_period_num(fake_time);
   tt_u64_op(tn, ==, 16904);
 
   /* Now also check our hs_get_next_time_period_num() function */
