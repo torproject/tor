@@ -166,11 +166,11 @@ typedef struct hs_desc_plaintext_data_t {
    * has changed. Spec specifies this as a 8 bytes positive integer. */
   uint64_t revision_counter;
 
-  /* Decoding only: The base64-decoded encrypted blob from the descriptor */
-  uint8_t *encrypted_blob;
+  /* Decoding only: The b64-decoded superencrypted blob from the descriptor */
+  uint8_t *superencrypted_blob;
 
-  /* Decoding only: Size of the encrypted_blob */
-  size_t encrypted_blob_size;
+  /* Decoding only: Size of the superencrypted_blob */
+  size_t superencrypted_blob_size;
 } hs_desc_plaintext_data_t;
 
 /* Service descriptor in its decoded form. */

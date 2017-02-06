@@ -106,8 +106,8 @@ desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
     return;
   }
 
-  if (desc->encrypted_blob) {
-    tor_free(desc->encrypted_blob);
+  if (desc->superencrypted_blob) {
+    tor_free(desc->superencrypted_blob);
   }
   tor_cert_free(desc->signing_key_cert);
 
@@ -1066,27 +1066,27 @@ desc_decrypt_data_v3(const hs_descriptor_t *desc, char **decrypted_out)
 
   tor_assert(decrypted_out);
   tor_assert(desc);
-  tor_assert(desc->plaintext_data.encrypted_blob);
+  tor_assert(desc->plaintext_data.superencrypted_blob);
 
   /* Construction is as follow: SALT | ENCRYPTED_DATA | MAC */
   if (!encrypted_data_length_is_valid(
-                desc->plaintext_data.encrypted_blob_size)) {
+                desc->plaintext_data.superencrypted_blob_size)) {
     goto err;
   }
 
   /* Start of the blob thus the salt. */
-  salt = desc->plaintext_data.encrypted_blob;
+  salt = desc->plaintext_data.superencrypted_blob;
   /* Next is the encrypted data. */
-  encrypted = desc->plaintext_data.encrypted_blob +
+  encrypted = desc->plaintext_data.superencrypted_blob +
     HS_DESC_ENCRYPTED_SALT_LEN;
-  encrypted_len = desc->plaintext_data.encrypted_blob_size -
+  encrypted_len = desc->plaintext_data.superencrypted_blob_size -
     (HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN);
 
   /* At the very end is the MAC. Make sure it's of the right size. */
   {
     desc_mac = encrypted + encrypted_len;
-    size_t desc_mac_size = desc->plaintext_data.encrypted_blob_size -
-                           (desc_mac - desc->plaintext_data.encrypted_blob);
+    size_t desc_mac_size = desc->plaintext_data.superencrypted_blob_size -
+                           (desc_mac - desc->plaintext_data.superencrypted_blob);
     if (desc_mac_size != DIGEST256_LEN) {
       log_warn(LD_REND, "Service descriptor MAC length of encrypted data "
                         "is invalid (%lu, expected %u)",
@@ -1507,8 +1507,8 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
 
   /* Copy the encrypted blob to the descriptor object so we can handle it
    * latter if needed. */
-  desc->encrypted_blob = tor_memdup(tok->object_body, tok->object_size);
-  desc->encrypted_blob_size = tok->object_size;
+  desc->superencrypted_blob = tor_memdup(tok->object_body, tok->object_size);
+  desc->superencrypted_blob_size = tok->object_size;
 
   /* Extract signature and verify it. */
   tok = find_by_keyword(tokens, R3_SIGNATURE);
@@ -1653,7 +1653,7 @@ hs_desc_decode_encrypted(const hs_descriptor_t *desc,
   /* Calling this function without an encrypted blob to parse is a code flow
    * error. The plaintext parsing should never succeed in the first place
    * without an encrypted section. */
-  tor_assert(desc->plaintext_data.encrypted_blob);
+  tor_assert(desc->plaintext_data.superencrypted_blob);
   /* Let's make sure we have a supported version as well. By correctly parsing
    * the plaintext, this should not fail. */
   if (BUG(!hs_desc_is_supported_version(version))) {
@@ -1905,6 +1905,6 @@ hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data)
 {
   tor_assert(data);
   return (sizeof(*data) + sizeof(*data->signing_key_cert) +
-          data->encrypted_blob_size);
+          data->superencrypted_blob_size);
 }
 
