@@ -2972,6 +2972,7 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 /**
  * Destroy the <b>sz</b> bytes of data stored at <b>mem</b>, setting them to
  * the value <b>byte</b>.
+ * If <b>mem</b> is NULL or <b>sz</b> is zero, nothing happens.
  *
  * This function is preferable to memset, since many compilers will happily
  * optimize out memset() when they can convince themselves that the data being
@@ -2989,6 +2990,15 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 void
 memwipe(void *mem, uint8_t byte, size_t sz)
 {
+  if (sz == 0) {
+    return;
+  }
+  /* If sz is nonzero, then mem must not be NULL. */
+  tor_assert(mem != NULL);
+
+  /* Data this large is likely to be an underflow. */
+  tor_assert(sz < SIZE_T_CEILING);
+
   /* Because whole-program-optimization exists, we may not be able to just
    * have this function call "memset".  A smart compiler could inline it, then
    * eliminate dead memsets, and declare itself to be clever. */

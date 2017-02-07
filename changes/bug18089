@@ -1,0 +1,6 @@
+  o Minor fixes (security):
+    - Make memwipe() do nothing when passed a NULL pointer
+      or zero size. Check size argument to memwipe() for underflow.
+      Closes bug #18089. Reported by "gk", patch by "teor".
+      Bugfix on 0.2.3.25 and 0.2.4.6-alpha (#7352),
+      commit 49dd5ef3 on 7 Nov 2012.
