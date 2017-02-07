@@ -555,8 +555,10 @@ crypto_pk_generate_key_with_bits(crypto_pk_t *env, int bits)
 {
   tor_assert(env);
 
-  if (env->key)
+  if (env->key) {
     RSA_free(env->key);
+    env->key = NULL;
+  }
 
   {
     BIGNUM *e = BN_new();
