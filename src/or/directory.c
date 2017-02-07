@@ -2119,7 +2119,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       networkstatus_consensus_download_failed(status_code, flavname);
       return -1;
     }
-    log_info(LD_DIR,"Received consensus directory (size %d) from server "
+    log_info(LD_DIR,"Received consensus directory (body size %d) from server "
              "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
     if ((r=networkstatus_set_current_consensus(body, flavname, 0,
                                                conn->identity_digest))<0) {
@@ -2158,7 +2158,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    log_info(LD_DIR,"Received authority certificates (size %d) from server "
+    log_info(LD_DIR,"Received authority certificates (body size %d) from server "
              "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
 
     /*
@@ -2194,7 +2194,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
     const char *msg;
     int st;
-    log_info(LD_DIR,"Got votes (size %d) from server %s:%d",
+    log_info(LD_DIR,"Got votes (body size %d) from server %s:%d",
              (int)body_len, conn->base_.address, conn->base_.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
@@ -2214,7 +2214,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
     const char *msg = NULL;
-    log_info(LD_DIR,"Got detached signatures (size %d) from server %s:%d",
+    log_info(LD_DIR,"Got detached signatures (body size %d) from server %s:%d",
              (int)body_len, conn->base_.address, conn->base_.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
@@ -2238,7 +2238,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     int n_asked_for = 0;
     int descriptor_digests = conn->requested_resource &&
                              !strcmpstart(conn->requested_resource,"d/");
-    log_info(LD_DIR,"Received %s (size %d) from server '%s:%d'",
+    log_info(LD_DIR,"Received %s (body size %d) from server '%s:%d'",
              was_ei ? "extra server info" : "server info",
              (int)body_len, conn->base_.address, conn->base_.port);
     if (conn->requested_resource &&
@@ -2316,7 +2316,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC) {
     smartlist_t *which = NULL;
     log_info(LD_DIR,"Received answer to microdescriptor request (status %d, "
-             "size %d) from server '%s:%d'",
+             "body size %d) from server '%s:%d'",
              status_code, (int)body_len, conn->base_.address,
              conn->base_.port);
     tor_assert(conn->requested_resource &&
@@ -2468,7 +2468,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                       conn->identity_digest,            \
                                       NULL) )
     tor_assert(conn->rend_data);
-    log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
+    log_info(LD_REND,"Received rendezvous descriptor (body size %d, status %d "
              "(%s))",
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
@@ -3742,7 +3742,7 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
   if (connection_dir_is_encrypted(conn) &&
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
     if (rend_cache_store_v2_desc_as_dir(body) < 0) {
-      log_warn(LD_REND, "Rejected v2 rend descriptor (length %d) from %s.",
+      log_warn(LD_REND, "Rejected v2 rend descriptor (body size %d) from %s.",
                (int)body_len, conn->base_.address);
       write_http_status_line(conn, 400,
                              "Invalid v2 service descriptor rejected");
