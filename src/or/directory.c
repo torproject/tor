@@ -14,6 +14,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "compat.h"
 #define DIRECTORY_PRIVATE
 #include "directory.h"
 #include "dirserv.h"
@@ -1469,7 +1470,9 @@ directory_send_command(dir_connection_t *conn,
   char decorated_address[128];
   smartlist_t *headers = smartlist_new();
   char *url;
+  size_t url_len;
   char request[8192];
+  size_t request_len, total_request_len = 0;
   const char *httpcommand = NULL;
 
   tor_assert(conn);
@@ -1615,8 +1618,14 @@ directory_send_command(dir_connection_t *conn,
   }
 
   tor_snprintf(request, sizeof(request), "%s %s", httpcommand, proxystring);
-  connection_write_to_buf(request, strlen(request), TO_CONN(conn));
-  connection_write_to_buf(url, strlen(url), TO_CONN(conn));
+
+  request_len = strlen(request);
+  total_request_len += request_len;
+  connection_write_to_buf(request, request_len, TO_CONN(conn));
+
+  url_len = strlen(url);
+  total_request_len += url_len;
+  connection_write_to_buf(url, url_len, TO_CONN(conn));
   tor_free(url);
 
   if (!strcmp(httpcommand, "POST") || payload) {
@@ -1631,15 +1640,27 @@ directory_send_command(dir_connection_t *conn,
     tor_free(header);
   }
 
-  connection_write_to_buf(request, strlen(request), TO_CONN(conn));
+  request_len = strlen(request);
+  total_request_len += request_len;
+  connection_write_to_buf(request, request_len, TO_CONN(conn));
 
   if (payload) {
     /* then send the payload afterwards too */
     connection_write_to_buf(payload, payload_len, TO_CONN(conn));
+    total_request_len += payload_len;
   }
 
   SMARTLIST_FOREACH(headers, char *, h, tor_free(h));
   smartlist_free(headers);
+
+  log_debug(LD_DIR,
+            "Sent request to directory server '%s:%d': "
+            "(purpose: %d, request size: " U64_FORMAT ", "
+            "payload size: " U64_FORMAT ")",
+            conn->base_.address, conn->base_.port,
+            conn->base_.purpose,
+            U64_PRINTF_ARG(total_request_len),
+            U64_PRINTF_ARG(payload ? payload_len : 0));
 }
 
 /** Parse an HTTP request string <b>headers</b> of the form
