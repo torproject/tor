@@ -1,0 +1,7 @@
+  o Major bugfixes (key management):
+    - If OpenSSL fails to generate an RSA key, do not retain a dangling pointer
+      to the previous (uninitialized) key value. The impact here should be
+      limited to a difficult-to-trigger crash, if OpenSSL is running an
+      engine that makes key generation failures possible, or if OpenSSL runs
+      out of memory. Fixes bug 19152; bugfix on 0.2.1.10-alpha. Found by
+      Yuan Jochen Kang, Suman Jana, and Baishakhi Ray.
