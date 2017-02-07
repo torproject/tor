@@ -1,0 +1,5 @@
+  o Minor bugfixes (tor-resolve):
+    - The tor-resolve command line tool now rejects hostnames over 255
+      characters in length. Previously, it would silently truncate
+      them, which could lead to bugs. Fixes bug 21280; bugfix on 0.0.9pre5.
+      Patch by "junglefowl".
