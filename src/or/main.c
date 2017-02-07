@@ -539,7 +539,7 @@ connection_check_event(connection_t *conn, struct event *ev)
              conn->marked_for_close_file ? conn->marked_for_close_file : "-",
              conn->marked_for_close
              );
-    log_backtrace(LOG_WARN, LD_BUG, "Backtrace attached.");
+    //log_backtrace(LOG_WARN, LD_BUG, "Backtrace attached.");
     return -1;
   }
   return 0;
