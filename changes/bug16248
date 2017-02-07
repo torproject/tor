@@ -1,0 +1,8 @@
+  o Major bugfixes (dns proxy mode, crash):
+    - Avoid crashing when running as a DNS proxy. Closes bug 16248; bugfix on
+      0.2.0.1-alpha. Patch from 'cypherpunks'.
+
+  o Minor features (bug-resistance):
+    - Make Tor survive errors involving connections without a corresponding
+      event object. Previously we'd fail with an assertion; now we produce a
+      log message. Related to bug 16248.
