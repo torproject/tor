@@ -22,6 +22,9 @@
 #define EXIT_POLICY_REJECT_PRIVATE           (1 << 1)
 #define EXIT_POLICY_ADD_DEFAULT              (1 << 2)
 #define EXIT_POLICY_REJECT_LOCAL_INTERFACES  (1 << 3)
+#define EXIT_POLICY_OPTION_MAX             EXIT_POLICY_REJECT_LOCAL_INTERFACES
+/* All options set: used for unit testing */
+#define EXIT_POLICY_OPTION_ALL             ((EXIT_POLICY_OPTION_MAX << 1) - 1)
 
 typedef enum firewall_connection_t {
   FIREWALL_OR_CONNECTION      = 0,
