@@ -1954,6 +1954,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
   time_t now = time(NULL);
   int src_code;
+  size_t received_bytes;
+
+  received_bytes = connection_get_inbuf_len(TO_CONN(conn));
 
   switch (connection_fetch_from_buf_http(TO_CONN(conn),
                               &headers, MAX_HEADERS_SIZE,
@@ -1982,10 +1985,13 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   log_debug(LD_DIR,
             "Received response from directory server '%s:%d': %d %s "
-            "(purpose: %d)",
+            "(purpose: %d, response size: " U64_FORMAT ", "
+            "compression: %d)",
             conn->base_.address, conn->base_.port, status_code,
             escaped(reason),
-            conn->base_.purpose);
+            conn->base_.purpose,
+            U64_PRINTF_ARG(received_bytes),
+            compression);
 
   if (conn->guard_state) {
     /* we count the connection as successful once we can read from it.  We do
