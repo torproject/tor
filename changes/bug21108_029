@@ -1,0 +1,6 @@
+  o Major bugfixes (directory authority):
+    - During voting, when marking a node as a probable sybil, do not
+      clear its BadExit flag: sybils can still be bad in other ways
+      too. (We still clear the other flags.) Fixes bug 21108; bugfix
+      on 0.2.0.13-alpha.
+
