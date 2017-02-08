@@ -4,6 +4,52 @@
 /**
  * \file hs_descriptor.c
  * \brief Handle hidden service descriptor encoding/decoding.
+ *
+ * \details
+ * Here is a graphical depiction of an HS descriptor and its layers:
+ *
+ *      +------------------------------------------------------+
+ *      |DESCRIPTOR HEADER:                                    |
+ *      |  hs-descriptor 3                                     |
+ *      |  descriptor-lifetime 180                             |
+ *      |  ...                                                 |
+ *      |  superencrypted                                      |
+ *      |+---------------------------------------------------+ |
+ *      ||SUPERENCRYPTED LAYER (aka OUTER ENCRYPTED LAYER):  | |
+ *      ||  desc-auth-type x25519                            | |
+ *      ||  desc-auth-ephemeral-key                          | |
+ *      ||  auth-client                                      | |
+ *      ||  auth-client                                      | |
+ *      ||  ...                                              | |
+ *      ||  encrypted                                        | |
+ *      ||+-------------------------------------------------+| |
+ *      |||ENCRYPTED LAYER (aka INNER ENCRYPTED LAYER):     || |
+ *      |||  create2-formats                                || |
+ *      |||  intro-auth-required                            || |
+ *      |||  introduction-point                             || |
+ *      |||  introduction-point                             || |
+ *      |||  ...                                            || |
+ *      ||+-------------------------------------------------+| |
+ *      |+---------------------------------------------------+ |
+ *      +------------------------------------------------------+
+ *
+ * The DESCRIPTOR HEADER section is completely unencrypted and contains generic
+ * descriptor metadata.
+ *
+ * The SUPERENCRYPTED LAYER section is the first layer of encryption, and it's
+ * encrypted using the blinded public key of the hidden service to protect
+ * against entities who don't know its onion address. The clients of the hidden
+ * service know its onion address and blinded public key, whereas third-parties
+ * (like HSDirs) don't know it (except if it's a public hidden service).
+ *
+ * The ENCRYPTED LAYER section is the second layer of encryption, and it's
+ * encrypted using the client authorization key material (if those exist). When
+ * client authorization is enabled, this second layer of encryption protects
+ * the descriptor content from unauthorized entities. If client authorization
+ * is disabled, this second layer of encryption does not provide any extra
+ * security but is still present. The plaintext of this layer contains all the
+ * information required to connect to the hidden service like its list of
+ * introduction points.
  **/
 
 /* For unit tests.*/
@@ -23,6 +69,7 @@
 #define str_desc_cert "descriptor-signing-key-cert"
 #define str_rev_counter "revision-counter"
 #define str_superencrypted "superencrypted"
+#define str_encrypted "encrypted"
 #define str_signature "signature"
 #define str_lifetime "descriptor-lifetime"
 /* Constant string value for the encrypted part of the descriptor. */
@@ -36,9 +83,14 @@
 #define str_intro_point_start "\n" str_intro_point " "
 /* Constant string value for the construction to encrypt the encrypted data
  * section. */
-#define str_enc_hsdir_data "hsdir-superencrypted-data"
+#define str_enc_const_superencryption "hsdir-superencrypted-data"
+#define str_enc_const_encryption "hsdir-encrypted-data"
 /* Prefix required to compute/verify HS desc signatures */
 #define str_desc_sig_prefix "Tor onion service descriptor sig v3"
+#define str_desc_auth_type "desc-auth-type"
+#define str_desc_auth_key "desc-auth-ephemeral-key"
+#define str_desc_auth_client "auth-client"
+#define str_encrypted "encrypted"
 
 /* Authentication supported types. */
 static const struct {
@@ -393,7 +445,8 @@ build_secret_input(const hs_descriptor_t *desc, uint8_t *dst, size_t dstlen)
 static void
 build_kdf_key(const hs_descriptor_t *desc,
               const uint8_t *salt, size_t salt_len,
-              uint8_t *key_out, size_t key_out_len)
+              uint8_t *key_out, size_t key_out_len,
+              int is_superencrypted_layer)
 {
   uint8_t secret_input[HS_DESC_ENCRYPTED_SECRET_INPUT_LEN];
   crypto_xof_t *xof;
@@ -409,8 +462,16 @@ build_kdf_key(const hs_descriptor_t *desc,
   /* Feed our KDF. [SHAKE it like a polaroid picture --Yawning]. */
   crypto_xof_add_bytes(xof, secret_input, sizeof(secret_input));
   crypto_xof_add_bytes(xof, salt, salt_len);
-  crypto_xof_add_bytes(xof, (const uint8_t *) str_enc_hsdir_data,
-                       strlen(str_enc_hsdir_data));
+
+  /* Feed in the right string constant based on the desc layer */
+  if (is_superencrypted_layer) {
+    crypto_xof_add_bytes(xof, (const uint8_t *) str_enc_const_superencryption,
+                         strlen(str_enc_const_superencryption));
+  } else {
+    crypto_xof_add_bytes(xof, (const uint8_t *) str_enc_const_encryption,
+                         strlen(str_enc_const_encryption));
+  }
+
   /* Eat from our KDF. */
   crypto_xof_squeeze_bytes(xof, key_out, key_out_len);
   crypto_xof_free(xof);
@@ -425,7 +486,8 @@ build_secret_key_iv_mac(const hs_descriptor_t *desc,
                         const uint8_t *salt, size_t salt_len,
                         uint8_t *key_out, size_t key_len,
                         uint8_t *iv_out, size_t iv_len,
-                        uint8_t *mac_out, size_t mac_len)
+                        uint8_t *mac_out, size_t mac_len,
+                        int is_superencrypted_layer)
 {
   size_t offset = 0;
   uint8_t kdf_key[HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN];
@@ -436,7 +498,8 @@ build_secret_key_iv_mac(const hs_descriptor_t *desc,
   tor_assert(iv_out);
   tor_assert(mac_out);
 
-  build_kdf_key(desc, salt, salt_len, kdf_key, sizeof(kdf_key));
+  build_kdf_key(desc, salt, salt_len, kdf_key, sizeof(kdf_key),
+                is_superencrypted_layer);
   /* Copy the bytes we need for both the secret key and IV. */
   memcpy(key_out, kdf_key, key_len);
   offset += key_len;
@@ -529,7 +592,8 @@ build_plaintext_padding(const char *plaintext, size_t plaintext_len,
  * data. Return size of the encrypted data buffer. */
 static size_t
 build_encrypted(const uint8_t *key, const uint8_t *iv, const char *plaintext,
-                size_t plaintext_len, uint8_t **encrypted_out)
+                size_t plaintext_len, uint8_t **encrypted_out,
+                int is_superencrypted_layer)
 {
   size_t encrypted_len;
   uint8_t *padded_plaintext, *encrypted;
@@ -540,15 +604,21 @@ build_encrypted(const uint8_t *key, const uint8_t *iv, const char *plaintext,
   tor_assert(plaintext);
   tor_assert(encrypted_out);
 
+  /* If we are encrypting the middle layer of the descriptor, we need to first
+     pad the plaintext */
+  if (is_superencrypted_layer) {
+    encrypted_len = build_plaintext_padding(plaintext, plaintext_len,
+                                            &padded_plaintext);
+    /* Extra precautions that we have a valid padding length. */
+    tor_assert(!(encrypted_len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE));
+  } else { /* No padding required for inner layers */
+    padded_plaintext = tor_memdup(plaintext, plaintext_len);
+    encrypted_len = plaintext_len;
+  }
+
   /* This creates a cipher for AES. It can't fail. */
   cipher = crypto_cipher_new_with_iv_and_bits(key, iv,
                                               HS_DESC_ENCRYPTED_BIT_SIZE);
-  /* This can't fail. */
-  encrypted_len = build_plaintext_padding(plaintext, plaintext_len,
-                                          &padded_plaintext);
-  /* Extra precautions that we have a valie padding length. */
-  tor_assert(encrypted_len <= HS_DESC_PADDED_PLAINTEXT_MAX_LEN);
-  tor_assert(!(encrypted_len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE));
   /* We use a stream cipher so the encrypted length will be the same as the
    * plaintext padded length. */
   encrypted = tor_malloc_zero(encrypted_len);
@@ -562,12 +632,13 @@ build_encrypted(const uint8_t *key, const uint8_t *iv, const char *plaintext,
   return encrypted_len;
 }
 
-/* Encrypt the given plaintext buffer and using the descriptor to get the
+/* Encrypt the given <b>plaintext</b> buffer using <b>desc</b> to get the
  * keys. Set encrypted_out with the encrypted data and return the length of
- * it. */
+ * it. <b>is_superencrypted_layer</b> is set if this is the outer encrypted
+ * layer of the descriptor. */
 static size_t
 encrypt_descriptor_data(const hs_descriptor_t *desc, const char *plaintext,
-             char **encrypted_out)
+                        char **encrypted_out, int is_superencrypted_layer)
 {
   char *final_blob;
   size_t encrypted_len, final_blob_len, offset = 0;
@@ -588,11 +659,13 @@ encrypt_descriptor_data(const hs_descriptor_t *desc, const char *plaintext,
   build_secret_key_iv_mac(desc, salt, sizeof(salt),
                           secret_key, sizeof(secret_key),
                           secret_iv, sizeof(secret_iv),
-                          mac_key, sizeof(mac_key));
+                          mac_key, sizeof(mac_key),
+                          is_superencrypted_layer);
 
   /* Build the encrypted part that is do the actual encryption. */
   encrypted_len = build_encrypted(secret_key, secret_iv, plaintext,
-                                  strlen(plaintext), &encrypted);
+                                  strlen(plaintext), &encrypted,
+                                  is_superencrypted_layer);
   memwipe(secret_key, 0, sizeof(secret_key));
   memwipe(secret_iv, 0, sizeof(secret_iv));
   /* This construction is specified in section 2.5 of proposal 224. */
