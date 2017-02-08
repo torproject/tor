@@ -228,6 +228,8 @@ STATIC int desc_sig_is_valid(const char *b64_sig,
                              const ed25519_public_key_t *signing_pubkey,
                              const char *encoded_desc, size_t encoded_len);
 STATIC void desc_intro_point_free(hs_desc_intro_point_t *ip);
+STATIC size_t decode_superencrypted(const char *message, size_t message_len,
+                                   uint8_t **encrypted_out);
 #endif /* HS_DESCRIPTOR_PRIVATE */
 
 #endif /* TOR_HS_DESCRIPTOR_H */
