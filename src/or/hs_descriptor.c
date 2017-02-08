@@ -195,6 +195,135 @@ desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
   memwipe(desc, 0, sizeof(*desc));
 }
 
+/* Using a key, salt and encrypted payload, build a MAC and put it in mac_out.
+ * We use SHA3-256 for the MAC computation.
+ * This function can't fail. */
+static void
+build_mac(const uint8_t *mac_key, size_t mac_key_len,
+          const uint8_t *salt, size_t salt_len,
+          const uint8_t *encrypted, size_t encrypted_len,
+          uint8_t *mac_out, size_t mac_len)
+{
+  crypto_digest_t *digest;
+
+  const uint64_t mac_len_netorder = tor_htonll(mac_key_len);
+  const uint64_t salt_len_netorder = tor_htonll(salt_len);
+
+  tor_assert(mac_key);
+  tor_assert(salt);
+  tor_assert(encrypted);
+  tor_assert(mac_out);
+
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  /* As specified in section 2.5 of proposal 224, first add the mac key
+   * then add the salt first and then the encrypted section. */
+
+  crypto_digest_add_bytes(digest, (const char *) &mac_len_netorder, 8);
+  crypto_digest_add_bytes(digest, (const char *) mac_key, mac_key_len);
+  crypto_digest_add_bytes(digest, (const char *) &salt_len_netorder, 8);
+  crypto_digest_add_bytes(digest, (const char *) salt, salt_len);
+  crypto_digest_add_bytes(digest, (const char *) encrypted, encrypted_len);
+  crypto_digest_get_digest(digest, (char *) mac_out, mac_len);
+  crypto_digest_free(digest);
+}
+
+/* Using a given decriptor object, build the secret input needed for the
+ * KDF and put it in the dst pointer which is an already allocated buffer
+ * of size dstlen. */
+static void
+build_secret_input(const hs_descriptor_t *desc, uint8_t *dst, size_t dstlen)
+{
+  size_t offset = 0;
+
+  tor_assert(desc);
+  tor_assert(dst);
+  tor_assert(HS_DESC_ENCRYPTED_SECRET_INPUT_LEN <= dstlen);
+
+  /* XXX use the destination length as the memcpy length */
+  /* Copy blinded public key. */
+  memcpy(dst, desc->plaintext_data.blinded_pubkey.pubkey,
+         sizeof(desc->plaintext_data.blinded_pubkey.pubkey));
+  offset += sizeof(desc->plaintext_data.blinded_pubkey.pubkey);
+  /* Copy subcredential. */
+  memcpy(dst + offset, desc->subcredential, sizeof(desc->subcredential));
+  offset += sizeof(desc->subcredential);
+  /* Copy revision counter value. */
+  set_uint64(dst + offset, tor_ntohll(desc->plaintext_data.revision_counter));
+  offset += sizeof(uint64_t);
+  tor_assert(HS_DESC_ENCRYPTED_SECRET_INPUT_LEN == offset);
+}
+
+/* Do the KDF construction and put the resulting data in key_out which is of
+ * key_out_len length. It uses SHAKE-256 as specified in the spec. */
+static void
+build_kdf_key(const hs_descriptor_t *desc,
+              const uint8_t *salt, size_t salt_len,
+              uint8_t *key_out, size_t key_out_len,
+              int is_superencrypted_layer)
+{
+  uint8_t secret_input[HS_DESC_ENCRYPTED_SECRET_INPUT_LEN];
+  crypto_xof_t *xof;
+
+  tor_assert(desc);
+  tor_assert(salt);
+  tor_assert(key_out);
+
+  /* Build the secret input for the KDF computation. */
+  build_secret_input(desc, secret_input, sizeof(secret_input));
+
+  xof = crypto_xof_new();
+  /* Feed our KDF. [SHAKE it like a polaroid picture --Yawning]. */
+  crypto_xof_add_bytes(xof, secret_input, sizeof(secret_input));
+  crypto_xof_add_bytes(xof, salt, salt_len);
+
+  /* Feed in the right string constant based on the desc layer */
+  if (is_superencrypted_layer) {
+    crypto_xof_add_bytes(xof, (const uint8_t *) str_enc_const_superencryption,
+                         strlen(str_enc_const_superencryption));
+  } else {
+    crypto_xof_add_bytes(xof, (const uint8_t *) str_enc_const_encryption,
+                         strlen(str_enc_const_encryption));
+  }
+
+  /* Eat from our KDF. */
+  crypto_xof_squeeze_bytes(xof, key_out, key_out_len);
+  crypto_xof_free(xof);
+  memwipe(secret_input,  0, sizeof(secret_input));
+}
+
+/* Using the given descriptor and salt, run it through our KDF function and
+ * then extract a secret key in key_out, the IV in iv_out and MAC in mac_out.
+ * This function can't fail. */
+static void
+build_secret_key_iv_mac(const hs_descriptor_t *desc,
+                        const uint8_t *salt, size_t salt_len,
+                        uint8_t *key_out, size_t key_len,
+                        uint8_t *iv_out, size_t iv_len,
+                        uint8_t *mac_out, size_t mac_len,
+                        int is_superencrypted_layer)
+{
+  size_t offset = 0;
+  uint8_t kdf_key[HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN];
+
+  tor_assert(desc);
+  tor_assert(salt);
+  tor_assert(key_out);
+  tor_assert(iv_out);
+  tor_assert(mac_out);
+
+  build_kdf_key(desc, salt, salt_len, kdf_key, sizeof(kdf_key),
+                is_superencrypted_layer);
+  /* Copy the bytes we need for both the secret key and IV. */
+  memcpy(key_out, kdf_key, key_len);
+  offset += key_len;
+  memcpy(iv_out, kdf_key + offset, iv_len);
+  offset += iv_len;
+  memcpy(mac_out, kdf_key + offset, mac_len);
+  /* Extra precaution to make sure we are not out of bound. */
+  tor_assert((offset + mac_len) == sizeof(kdf_key));
+  memwipe(kdf_key, 0, sizeof(kdf_key));
+}
+
 /* === ENCODING === */
 
 /* Encode the given link specifier objects into a newly allocated string.
@@ -421,135 +550,6 @@ encode_intro_point(const ed25519_public_key_t *sig_key,
   SMARTLIST_FOREACH(lines, char *, l, tor_free(l));
   smartlist_free(lines);
   return encoded_ip;
-}
-
-/* Using a given decriptor object, build the secret input needed for the
- * KDF and put it in the dst pointer which is an already allocated buffer
- * of size dstlen. */
-static void
-build_secret_input(const hs_descriptor_t *desc, uint8_t *dst, size_t dstlen)
-{
-  size_t offset = 0;
-
-  tor_assert(desc);
-  tor_assert(dst);
-  tor_assert(HS_DESC_ENCRYPTED_SECRET_INPUT_LEN <= dstlen);
-
-  /* XXX use the destination length as the memcpy length */
-  /* Copy blinded public key. */
-  memcpy(dst, desc->plaintext_data.blinded_pubkey.pubkey,
-         sizeof(desc->plaintext_data.blinded_pubkey.pubkey));
-  offset += sizeof(desc->plaintext_data.blinded_pubkey.pubkey);
-  /* Copy subcredential. */
-  memcpy(dst + offset, desc->subcredential, sizeof(desc->subcredential));
-  offset += sizeof(desc->subcredential);
-  /* Copy revision counter value. */
-  set_uint64(dst + offset, tor_ntohll(desc->plaintext_data.revision_counter));
-  offset += sizeof(uint64_t);
-  tor_assert(HS_DESC_ENCRYPTED_SECRET_INPUT_LEN == offset);
-}
-
-/* Do the KDF construction and put the resulting data in key_out which is of
- * key_out_len length. It uses SHAKE-256 as specified in the spec. */
-static void
-build_kdf_key(const hs_descriptor_t *desc,
-              const uint8_t *salt, size_t salt_len,
-              uint8_t *key_out, size_t key_out_len,
-              int is_superencrypted_layer)
-{
-  uint8_t secret_input[HS_DESC_ENCRYPTED_SECRET_INPUT_LEN];
-  crypto_xof_t *xof;
-
-  tor_assert(desc);
-  tor_assert(salt);
-  tor_assert(key_out);
-
-  /* Build the secret input for the KDF computation. */
-  build_secret_input(desc, secret_input, sizeof(secret_input));
-
-  xof = crypto_xof_new();
-  /* Feed our KDF. [SHAKE it like a polaroid picture --Yawning]. */
-  crypto_xof_add_bytes(xof, secret_input, sizeof(secret_input));
-  crypto_xof_add_bytes(xof, salt, salt_len);
-
-  /* Feed in the right string constant based on the desc layer */
-  if (is_superencrypted_layer) {
-    crypto_xof_add_bytes(xof, (const uint8_t *) str_enc_const_superencryption,
-                         strlen(str_enc_const_superencryption));
-  } else {
-    crypto_xof_add_bytes(xof, (const uint8_t *) str_enc_const_encryption,
-                         strlen(str_enc_const_encryption));
-  }
-
-  /* Eat from our KDF. */
-  crypto_xof_squeeze_bytes(xof, key_out, key_out_len);
-  crypto_xof_free(xof);
-  memwipe(secret_input,  0, sizeof(secret_input));
-}
-
-/* Using the given descriptor and salt, run it through our KDF function and
- * then extract a secret key in key_out, the IV in iv_out and MAC in mac_out.
- * This function can't fail. */
-static void
-build_secret_key_iv_mac(const hs_descriptor_t *desc,
-                        const uint8_t *salt, size_t salt_len,
-                        uint8_t *key_out, size_t key_len,
-                        uint8_t *iv_out, size_t iv_len,
-                        uint8_t *mac_out, size_t mac_len,
-                        int is_superencrypted_layer)
-{
-  size_t offset = 0;
-  uint8_t kdf_key[HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN];
-
-  tor_assert(desc);
-  tor_assert(salt);
-  tor_assert(key_out);
-  tor_assert(iv_out);
-  tor_assert(mac_out);
-
-  build_kdf_key(desc, salt, salt_len, kdf_key, sizeof(kdf_key),
-                is_superencrypted_layer);
-  /* Copy the bytes we need for both the secret key and IV. */
-  memcpy(key_out, kdf_key, key_len);
-  offset += key_len;
-  memcpy(iv_out, kdf_key + offset, iv_len);
-  offset += iv_len;
-  memcpy(mac_out, kdf_key + offset, mac_len);
-  /* Extra precaution to make sure we are not out of bound. */
-  tor_assert((offset + mac_len) == sizeof(kdf_key));
-  memwipe(kdf_key, 0, sizeof(kdf_key));
-}
-
-/* Using a key, salt and encrypted payload, build a MAC and put it in mac_out.
- * We use SHA3-256 for the MAC computation.
- * This function can't fail. */
-static void
-build_mac(const uint8_t *mac_key, size_t mac_key_len,
-          const uint8_t *salt, size_t salt_len,
-          const uint8_t *encrypted, size_t encrypted_len,
-          uint8_t *mac_out, size_t mac_len)
-{
-  crypto_digest_t *digest;
-
-  const uint64_t mac_len_netorder = tor_htonll(mac_key_len);
-  const uint64_t salt_len_netorder = tor_htonll(salt_len);
-
-  tor_assert(mac_key);
-  tor_assert(salt);
-  tor_assert(encrypted);
-  tor_assert(mac_out);
-
-  digest = crypto_digest256_new(DIGEST_SHA3_256);
-  /* As specified in section 2.5 of proposal 224, first add the mac key
-   * then add the salt first and then the encrypted section. */
-
-  crypto_digest_add_bytes(digest, (const char *) &mac_len_netorder, 8);
-  crypto_digest_add_bytes(digest, (const char *) mac_key, mac_key_len);
-  crypto_digest_add_bytes(digest, (const char *) &salt_len_netorder, 8);
-  crypto_digest_add_bytes(digest, (const char *) salt, salt_len);
-  crypto_digest_add_bytes(digest, (const char *) encrypted, encrypted_len);
-  crypto_digest_get_digest(digest, (char *) mac_out, mac_len);
-  crypto_digest_free(digest);
 }
 
 /* Given a source length, return the new size including padding for the
