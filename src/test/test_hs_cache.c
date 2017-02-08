@@ -333,7 +333,7 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
     size_t body_used = 0;
 
     fetch_from_buf_http(TO_CONN(conn)->outbuf, &headers, MAX_HEADERS_SIZE,
-                        &received_desc, &body_used, 10000, 0);
+                        &received_desc, &body_used, HS_DESC_MAX_LEN, 0);
     tor_free(headers);
   }
 
