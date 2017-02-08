@@ -41,24 +41,11 @@
  * the secret IV and MAC key length which is the length of H() output. */
 #define HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN \
   CIPHER256_KEY_LEN + CIPHER_IV_LEN + DIGEST256_LEN
-/* We need to pad the plaintext version of the encrypted data section before
- * encryption and it has to be a multiple of this value. */
-#define HS_DESC_PLAINTEXT_PADDING_MULTIPLE 128
-/* XXX: Let's make sure this makes sense as an upper limit for the padded
- * plaintext section. Then we should enforce it as now only an assert will be
- * triggered if we are above it. */
-/* Once padded, this is the maximum length in bytes for the plaintext. */
-#define HS_DESC_PADDED_PLAINTEXT_MAX_LEN 8192
-/* Minimum length in bytes of the encrypted portion of the descriptor. */
-#define HS_DESC_ENCRYPTED_MIN_LEN \
-  HS_DESC_ENCRYPTED_SALT_LEN + \
-  HS_DESC_PLAINTEXT_PADDING_MULTIPLE + DIGEST256_LEN
+/* Pad plaintext of superencrypted data section before encryption so that its
+ * length is a multiple of this value. */
+#define HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE 10000
 /* Maximum length in bytes of a full hidden service descriptor. */
 #define HS_DESC_MAX_LEN 50000 /* 50kb max size */
-/* The minimum amount of fields a descriptor should contain. The parsing of
- * the fields are version specific so the only required field, as a generic
- * view of a descriptor, is 1 that is the version field. */
-#define HS_DESC_PLAINTEXT_MIN_FIELDS 1
 
 /* Key length for the descriptor symmetric encryption. As specified in the
  * protocol, we use AES-256 for the encrypted section of the descriptor. The

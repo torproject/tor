@@ -554,8 +554,8 @@ compute_padded_plaintext_length(size_t plaintext_len)
   tor_assert(plaintext_len <=
              (SIZE_T_CEILING - HS_DESC_PLAINTEXT_PADDING_MULTIPLE));
 
-  /* Get the extra length we need to add. For example, if srclen is 234 bytes,
-   * this will expand to (2 * 128) == 256 thus an extra 22 bytes. */
+  /* Get the extra length we need to add. For example, if srclen is 10200
+   * bytes, this will expand to (2 * 10k) == 20k thus an extra 9800 bytes. */
   plaintext_padded_len = CEIL_DIV(plaintext_len,
                                   HS_DESC_PLAINTEXT_PADDING_MULTIPLE) *
                          HS_DESC_PLAINTEXT_PADDING_MULTIPLE;
@@ -697,20 +697,89 @@ encrypt_descriptor_data(const hs_descriptor_t *desc, const char *plaintext,
   return final_blob_len;
 }
 
-/* Take care of encoding the encrypted data section and then encrypting it
- * with the descriptor's key. A newly allocated NUL terminated string pointer
- * containing the encrypted encoded blob is put in encrypted_blob_out. Return
- * 0 on success else a negative value. */
-static int
-encode_encrypted_data(const hs_descriptor_t *desc,
-                      char **encrypted_blob_out)
+/* Create and return a string containing a fake client-auth entry. It's the
+ * responsibility of the caller to free the returned string. This function will
+ * never fail. */
+static char *
+get_fake_auth_client_str(void)
 {
-  int ret = -1;
-  char *encoded_str, *encrypted_blob;
-  smartlist_t *lines = smartlist_new();
+  char *auth_client_str = NULL;
+  /* We are gonna fill these arrays with fake base64 data. They are all double
+   * the size of their binary representation to fit the base64 overhead. */
+  char client_id_b64[8*2];
+  char iv_b64[16*2];
+  char encrypted_cookie_b64[16*2];
+  int retval;
 
-  tor_assert(desc);
-  tor_assert(encrypted_blob_out);
+  /* This is a macro to fill a field with random data and then base64 it. */
+#define FILL_WITH_FAKE_DATA_AND_BASE64(field) STMT_BEGIN         \
+  crypto_rand((char *)field, sizeof(field));                     \
+  retval = base64_encode_nopad(field##_b64, sizeof(field##_b64), \
+                               field, sizeof(field));            \
+  tor_assert(retval > 0);                                        \
+  STMT_END
+
+  { /* Get those fakes! */
+    uint8_t client_id[8]; /* fake client-id */
+    uint8_t iv[16]; /* fake IV (initialization vector) */
+    uint8_t encrypted_cookie[16]; /* fake encrypted cookie */
+
+    FILL_WITH_FAKE_DATA_AND_BASE64(client_id);
+    FILL_WITH_FAKE_DATA_AND_BASE64(iv);
+    FILL_WITH_FAKE_DATA_AND_BASE64(encrypted_cookie);
+  }
+
+  /* Build the final string */
+  tor_asprintf(&auth_client_str, "%s %s %s %s", str_desc_auth_client,
+               client_id_b64, iv_b64, encrypted_cookie_b64);
+
+#undef FILL_WITH_FAKE_DATA_AND_BASE64
+
+  return auth_client_str;
+}
+
+/** How many lines of "client-auth" we want in our descriptors; fake or not. */
+#define CLIENT_AUTH_ENTRIES_BLOCK_SIZE 16
+
+/** Create the "client-auth" part of the descriptor and return a
+ *  newly-allocated string with it. It's the responsibility of the caller to
+ *  free the returned string. */
+static char *
+get_fake_auth_client_lines(void)
+{
+  /* XXX: Client authorization is still not implemented, so all this function
+     does is make fake clients */
+  int i = 0;
+  smartlist_t *auth_client_lines = smartlist_new();
+  char *auth_client_lines_str = NULL;
+
+  /* Make a line for each fake client */
+  const int num_fake_clients = CLIENT_AUTH_ENTRIES_BLOCK_SIZE;
+  for (i = 0; i < num_fake_clients; i++) {
+    char *auth_client_str = get_fake_auth_client_str();
+    tor_assert(auth_client_str);
+    smartlist_add(auth_client_lines, auth_client_str);
+  }
+
+  /* Join all lines together to form final string */
+  auth_client_lines_str = smartlist_join_strings(auth_client_lines,
+                                                 "\n", 1, NULL);
+  /* Cleanup the mess */
+  SMARTLIST_FOREACH(auth_client_lines, char *, a, tor_free(a));
+  smartlist_free(auth_client_lines);
+
+  return auth_client_lines_str;
+}
+
+/* Create the inner layer of the descriptor (which includes the intro points,
+ * etc.). Return a newly-allocated string with the layer plaintext, or NULL if
+ * an error occured. It's the responsibility of the caller to free the returned
+ * string. */
+static char *
+get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
+{
+  char *encoded_str = NULL;
+  smartlist_t *lines = smartlist_new();
 
   /* Build the start of the section prior to the introduction points. */
   {
@@ -751,31 +820,159 @@ encode_encrypted_data(const hs_descriptor_t *desc,
    * then encrypt it. */
   encoded_str = smartlist_join_strings(lines, "", 0, NULL);
 
-  /* Encrypt the section into an encrypted blob that we'll base64 encode
-   * before returning it. */
-  {
-    char *enc_b64;
-    ssize_t enc_b64_len, ret_len, enc_len;
+ err:
+  SMARTLIST_FOREACH(lines, char *, l, tor_free(l));
+  smartlist_free(lines);
 
-    enc_len = encrypt_descriptor_data(desc, encoded_str, &encrypted_blob);
-    tor_free(encoded_str);
-    /* Get the encoded size plus a NUL terminating byte. */
-    enc_b64_len = base64_encode_size(enc_len, BASE64_ENCODE_MULTILINE) + 1;
-    enc_b64 = tor_malloc_zero(enc_b64_len);
-    /* Base64 the encrypted blob before returning it. */
-    ret_len = base64_encode(enc_b64, enc_b64_len, encrypted_blob, enc_len,
-                            BASE64_ENCODE_MULTILINE);
-    /* Return length doesn't count the NUL byte. */
-    tor_assert(ret_len == (enc_b64_len - 1));
-    tor_free(encrypted_blob);
-    *encrypted_blob_out = enc_b64;
+  return encoded_str;
+}
+
+/* Create the middle layer of the descriptor, which includes the client auth
+ * data and the encrypted inner layer (provided as a base64 string at
+ * <b>layer2_b64_ciphertext</b>). Return a newly-allocated string with the
+ * layer plaintext, or NULL if an error occured. It's the responsibility of the
+ * caller to free the returned string. */
+static char *
+get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
+                                    const char *layer2_b64_ciphertext)
+{
+  char *layer1_str = NULL;
+  smartlist_t *lines = smartlist_new();
+
+  /* XXX: Disclaimer: This function generates only _fake_ client auth
+   * data. Real client auth is not yet implemented, but client auth data MUST
+   * always be present in descriptors. In the future this function will be
+   * refactored to use real client auth data if they exist (#20700). */
+  (void) *desc;
+
+  /* Specify auth type */
+  smartlist_add_asprintf(lines, "%s %s\n", str_desc_auth_type, "x25519");
+
+  {  /* Create fake ephemeral x25519 key */
+    char fake_key_base64[CURVE25519_BASE64_PADDED_LEN + 1];
+    curve25519_keypair_t fake_x25519_keypair;
+    if (curve25519_keypair_generate(&fake_x25519_keypair, 0) < 0) {
+      goto done;
+    }
+    if (curve25519_public_to_base64(fake_key_base64,
+                                    &fake_x25519_keypair.pubkey) < 0) {
+      goto done;
+    }
+    smartlist_add_asprintf(lines, "%s %s\n",
+                           str_desc_auth_key, fake_key_base64);
+    /* No need to memwipe any of these fake keys. They will go unused. */
   }
+
+  {  /* Create fake auth-client lines. */
+    char *auth_client_lines = get_fake_auth_client_lines();
+    tor_assert(auth_client_lines);
+    smartlist_add(lines, auth_client_lines);
+  }
+
+  /* create encrypted section */
+  {
+    smartlist_add_asprintf(lines,
+                           "%s\n"
+                           "-----BEGIN MESSAGE-----\n"
+                           "%s"
+                           "-----END MESSAGE-----",
+                           str_encrypted, layer2_b64_ciphertext);
+  }
+
+  layer1_str = smartlist_join_strings(lines, "", 0, NULL);
+
+ done:
+  SMARTLIST_FOREACH(lines, char *, a, tor_free(a));
+  smartlist_free(lines);
+
+  return layer1_str;
+}
+
+/* Encrypt <b>encoded_str</b> into an encrypted blob and then base64 it before
+ * returning it. <b>desc</b> is provided to derive the encryption
+ * keys. <b>is_superencrypted_layer</b> is set if <b>encoded_str</b> is the
+ * middle (superencrypted) layer of the descriptor. It's the responsibility of
+ * the caller to free the returned string. */
+static char *
+encrypt_desc_data_and_base64(const hs_descriptor_t *desc,
+                             const char *encoded_str,
+                             int is_superencrypted_layer)
+{
+  char *enc_b64;
+  ssize_t enc_b64_len, ret_len, enc_len;
+  char *encrypted_blob = NULL;
+
+  enc_len = encrypt_descriptor_data(desc, encoded_str, &encrypted_blob,
+                                    is_superencrypted_layer);
+  /* Get the encoded size plus a NUL terminating byte. */
+  enc_b64_len = base64_encode_size(enc_len, BASE64_ENCODE_MULTILINE) + 1;
+  enc_b64 = tor_malloc_zero(enc_b64_len);
+  /* Base64 the encrypted blob before returning it. */
+  ret_len = base64_encode(enc_b64, enc_b64_len, encrypted_blob, enc_len,
+                          BASE64_ENCODE_MULTILINE);
+  /* Return length doesn't count the NUL byte. */
+  tor_assert(ret_len == (enc_b64_len - 1));
+  tor_free(encrypted_blob);
+
+  return enc_b64;
+}
+
+/* Generate and encode the superencrypted portion of <b>desc</b>. This also
+ * involves generating the encrypted portion of the descriptor, and performing
+ * the superencryption. A newly allocated NUL-terminated string pointer
+ * containing the encrypted encoded blob is put in encrypted_blob_out. Return 0
+ * on success else a negative value. */
+static int
+encode_superencrypted_data(const hs_descriptor_t *desc,
+                           char **encrypted_blob_out)
+{
+  int ret = -1;
+  char *layer2_str = NULL;
+  char *layer2_b64_ciphertext = NULL;
+  char *layer1_str = NULL;
+  char *layer1_b64_ciphertext = NULL;
+
+  tor_assert(desc);
+  tor_assert(encrypted_blob_out);
+
+  /* Func logic: We first create the inner layer of the descriptor (layer2).
+   * We then encrypt it and use it to create the middle layer of the descriptor
+   * (layer1).  Finally we superencrypt the middle layer and return it to our
+   * caller. */
+
+  /* Create inner descriptor layer */
+  layer2_str = get_inner_encrypted_layer_plaintext(desc);
+  if (!layer2_str) {
+    goto err;
+  }
+
+  /* Encrypt and b64 the inner layer */
+  layer2_b64_ciphertext = encrypt_desc_data_and_base64(desc, layer2_str, 0);
+  if (!layer2_b64_ciphertext) {
+    goto err;
+  }
+
+  /* Now create middle descriptor layer given the inner layer */
+  layer1_str = get_outer_encrypted_layer_plaintext(desc,layer2_b64_ciphertext);
+  if (!layer1_str) {
+    goto err;
+  }
+
+  /* Encrypt and base64 the middle layer */
+  layer1_b64_ciphertext = encrypt_desc_data_and_base64(desc, layer1_str, 1);
+  if (!layer1_b64_ciphertext) {
+    goto err;
+  }
+
   /* Success! */
   ret = 0;
 
  err:
-  SMARTLIST_FOREACH(lines, char *, l, tor_free(l));
-  smartlist_free(lines);
+  tor_free(layer1_str);
+  tor_free(layer2_str);
+  tor_free(layer2_b64_ciphertext);
+
+  *encrypted_blob_out = layer1_b64_ciphertext;
   return ret;
 }
 
@@ -828,7 +1025,7 @@ desc_encode_v3(const hs_descriptor_t *desc,
   /* Build the superencrypted data section. */
   {
     char *enc_b64_blob=NULL;
-    if (encode_encrypted_data(desc, &enc_b64_blob) < 0) {
+    if (encode_superencrypted_data(desc, &enc_b64_blob) < 0) {
       goto err;
     }
     smartlist_add_asprintf(lines,
@@ -867,6 +1064,13 @@ desc_encode_v3(const hs_descriptor_t *desc,
   tor_free(encoded_str);
   encoded_str = smartlist_join_strings(lines, "\n", 1, NULL);
   *encoded_out = encoded_str;
+
+  if (strlen(encoded_str) >= hs_cache_get_max_descriptor_size()) {
+    log_warn(LD_GENERAL, "We just made an HS descriptor that's too big (%d)."
+             "Failing.", (int)strlen(encoded_str));
+    tor_free(encoded_str);
+    goto err;
+  }
 
   /* XXX: Trigger a control port event. */
 
@@ -1095,29 +1299,14 @@ cert_parse_and_validate(tor_cert_t **cert_out, const char *data,
 STATIC int
 encrypted_data_length_is_valid(size_t len)
 {
-  /* Check for the minimum length possible. */
-  if (len < HS_DESC_ENCRYPTED_MIN_LEN) {
+  /* Make sure there is enough data for the salt and the mac. The equality is
+     there to ensure that there is at least one byte of encrypted data. */
+  if (len <= HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN) {
     log_warn(LD_REND, "Length of descriptor's encrypted data is too small. "
                       "Got %lu but minimum value is %d",
-             (unsigned long)len, HS_DESC_ENCRYPTED_MIN_LEN);
+             (unsigned long)len, HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN);
     goto err;
   }
-
-  /* Encrypted data has the salt and MAC concatenated to it so remove those
-   * from the validation calculation. */
-  len -= HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN;
-
-  /* Check that it's aligned on the block size of the crypto algorithm. */
-  if (len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE) {
-    log_warn(LD_REND, "Length of descriptor's encrypted data is invalid. "
-                      "Got %lu which is not a multiple of %d.",
-             (unsigned long) len, HS_DESC_PLAINTEXT_PADDING_MULTIPLE);
-    goto err;
-  }
-
-  /* XXX: Check maximum size. Will strongly depends on the maximum intro point
-   * allowed we decide on and probably if they will all have to use the legacy
-   * key which is bigger than the ed25519 key. */
 
   return 1;
  err:
