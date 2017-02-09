@@ -841,7 +841,7 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
   const int GUARD_LIFETIME = get_guard_lifetime();
   tor_assert(gs);
 
-  // XXXX prop271 take ed25519 identity here too.
+  // XXXX #20827 take ed25519 identity here too.
 
   /* make sure that the guard is not already sampled. */
   if (rsa_id_digest && BUG(have_sampled_guard_with_id(gs, rsa_id_digest)))
@@ -1226,7 +1226,7 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
   /* First: Update listed/unlisted. */
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
-    /* XXXX prop271 check ed ID too */
+    /* XXXX #20827 check ed ID too */
     const int is_listed = entry_guard_is_listed(gs, guard);
 
     if (is_listed && ! guard->currently_listed) {
@@ -2101,7 +2101,7 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
   if (BUG(state == 0))
     goto fail;
   const node_t *node = node_get_by_id(guard->identity);
-  // XXXX prop271 check Ed ID.
+  // XXXX #20827 check Ed ID.
   if (! node)
     goto fail;
   if (BUG(usage != GUARD_USAGE_DIRGUARD && !node_has_descriptor(node)))
