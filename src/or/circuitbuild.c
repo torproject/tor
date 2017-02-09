@@ -991,7 +991,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         return - END_CIRC_REASON_INTERNAL;
       }
 
-      /* XXXX prop271 -- the rest of this branch needs careful thought!
+      /* XXXX #21422 -- the rest of this branch needs careful thought!
        * Some of the things here need to happen when a circuit becomes
        * mechanically open; some need to happen when it is actually usable.
        * I think I got them right, but more checking would be wise. -NM
