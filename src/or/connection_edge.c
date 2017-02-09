@@ -29,7 +29,7 @@
  *   <li>DNS lookup streams, created on the exit side in response to
  *     a RELAY_RESOLVE cell from a client.
  *   <li>Tunneled directory streams, created on the directory cache side
- *     in response to a RELAY_BEGINDIR cell.  These streams attach directly
+ *     in response to a RELAY_BEGIN_DIR cell.  These streams attach directly
  *     to a dir_connection_t object without ever using TCP.
  *   </ul>
  *
@@ -1762,7 +1762,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         conn->entry_cfg.ipv6_traffic = 0;
 
       /* Still handling CONNECT. Now, check for exit enclaves.  (Which we
-       * don't do on BEGINDIR, or when there is a chosen exit.)
+       * don't do on BEGIN_DIR, or when there is a chosen exit.)
        *
        * TODO: Should we remove this?  Exit enclaves are nutty and don't
        * work very well
@@ -2995,7 +2995,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
   return;
 }
 
-/** Read a RELAY_BEGIN or RELAY_BEGINDIR cell from <b>cell</b>, decode it, and
+/** Read a RELAY_BEGIN or RELAY_BEGIN_DIR cell from <b>cell</b>, decode it, and
  * place the result in <b>bcell</b>.  On success return 0; on failure return
  * <0 and set *<b>end_reason_out</b> to the end reason we should send back to
  * the client.
