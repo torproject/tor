@@ -2046,7 +2046,7 @@ entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b)
       return 0;
 
     /* Neither is pending: priorities are equal. */
-    return 0; // XXXX prop271 return a tristate instead?
+    return 0;
   }
 }
 
