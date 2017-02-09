@@ -2271,12 +2271,6 @@ choose_good_middle_server(uint8_t purpose,
  * Set *<b>guard_state_out</b> to information about the guard that
  * we're selecting, which we'll use later to remember whether the
  * guard worked or not.
- *
- * XXXX prop271 this function is used in four ways: picking out guards for
- *   the old (pre-prop271) guard algorithm; picking out guards for circuits;
- *   picking out guards for testing circuits on non-bridgees;
- *   picking out entries when entry guards are disabled.  These options
- *   should be disentangled.
  */
 const node_t *
 choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
