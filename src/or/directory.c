@@ -1973,8 +1973,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      * waiting circuits that would be triggered by this circuit becoming
      * complete/usable. But that's ok, I think.
      */
-    /* XXXXprop271 should we count this as only a partial success somehow?
-    */
     entry_guard_succeeded(&conn->guard_state);
     circuit_guard_state_free(conn->guard_state);
     conn->guard_state = NULL;
