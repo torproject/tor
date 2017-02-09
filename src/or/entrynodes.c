@@ -3044,7 +3044,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
 
   if (r1 < 0) {
     if (msg && *msg == NULL) {
-      *msg = tor_strdup("parsing error")
+      *msg = tor_strdup("parsing error");
     }
     return -1;
   }
