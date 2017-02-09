@@ -1981,7 +1981,7 @@ entry_guards_note_guard_success(guard_selection_t *gs,
       /* Fall through. */
     case GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD:
       if (guard->is_primary) {
-        /* XXXX prop271 -- I don't actually like this logic. It seems to make
+        /* XXXX #20832 -- I don't actually like this logic. It seems to make
          * us a little more susceptible to evil-ISP attacks.  The mitigations
          * I'm thinking of, however, aren't local to this point, so I'll leave
          * it alone. */
@@ -2950,7 +2950,7 @@ entry_guard_free(entry_guard_t *e)
 int
 entry_list_is_constrained(const or_options_t *options)
 {
-  // XXXX prop271 look at the current selection.
+  // XXXX #21425 look at the current selection.
   if (options->EntryNodes)
     return 1;
   if (options->UseBridges)
@@ -2966,7 +2966,6 @@ num_bridges_usable(void)
 {
   int n_options = 0;
 
-  /* XXXX prop271 Is this quite right? */
   tor_assert(get_options()->UseBridges);
   guard_selection_t *gs  = get_guard_selection_info();
   tor_assert(gs->type == GS_TYPE_BRIDGE);
@@ -3045,7 +3044,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
 
   if (r1 < 0) {
     if (msg && *msg == NULL) {
-      *msg = tor_strdup("parsing error"); //xxxx prop271 should we try harder?
+      *msg = tor_strdup("parsing error")
     }
     return -1;
   }
@@ -3312,12 +3311,14 @@ remove_all_entry_guards_for_guard_selection(guard_selection_t *gs)
   tor_free(old_name);
 }
 
-/** Remove all currently listed entry guards. So new ones will be chosen. */
+/** Remove all currently listed entry guards, so new ones will be chosen.
+ *
+ * XXXX This function shouldn't exist -- it's meant to support the DROPGUARDS
+ * command, which is deprecated.
+ */
 void
 remove_all_entry_guards(void)
 {
-  // XXXX prop271 this function shouldn't exist, in the new order.
-  // This function shouldn't exist.
   remove_all_entry_guards_for_guard_selection(get_guard_selection_info());
 }
 
