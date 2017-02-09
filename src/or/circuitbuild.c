@@ -983,8 +983,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       if (r == GUARD_USABLE_NOW) {
         circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
       } else if (r == GUARD_MAYBE_USABLE_LATER) {
-        // XXXX prop271 we might want to probe for whether this
-        // XXXX one is ready even before the next second rolls over.
+        // Wait till either a better guard succeeds, or till
+        // all better guards fail.
         circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_GUARD_WAIT);
       } else {
         tor_assert_nonfatal(r == GUARD_USABLE_NEVER);
