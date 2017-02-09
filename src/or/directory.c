@@ -1269,7 +1269,6 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   if (!anonymized_connection && !use_begindir) {
     /* then we want to connect to dirport directly */
-    // XXXX prop271 I think that we never use guards in this case.
 
     if (options->HTTPProxy) {
       tor_addr_copy(&addr, &options->HTTPProxyAddr);
