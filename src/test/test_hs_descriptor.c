@@ -410,7 +410,7 @@ test_decode_invalid_intro_point(void *arg)
   const char *enc_key =
     "enc-key ntor bpZKLsuhxP6woDQ3yVyjm5gUKSk7RjfAijT2qrzbQk0=";
   const char *enc_key_cert =
-    "enc-key-certification\n"
+    "enc-key-cert\n"
     "-----BEGIN ED25519 CERT-----\n"
     "AQsACOhZAUpNvCZ1aJaaR49lS6MCdsVkhVGVrRqoj0Y2T4SzroAtAQAgBABFOcGg\n"
     "lbTt1DF5nKTE/gU3Fr8ZtlCIOhu1A+F5LM7fqCUupfesg0KTHwyIZOYQbJuM5/he\n"

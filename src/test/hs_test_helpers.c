@@ -51,15 +51,36 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
   tt_assert(ip->auth_key_cert);
 
   if (legacy) {
-    ip->enc_key.legacy = crypto_pk_new();
-    ip->enc_key_type = HS_DESC_KEY_TYPE_LEGACY;
-    tt_assert(ip->enc_key.legacy);
-    ret = crypto_pk_generate_key(ip->enc_key.legacy);
+    ip->legacy.key = crypto_pk_new();
+    tt_assert(ip->legacy.key);
+    ret = crypto_pk_generate_key(ip->legacy.key);
     tt_int_op(ret, ==, 0);
-  } else {
-    ret = curve25519_keypair_generate(&ip->enc_key.curve25519, 0);
+    ssize_t cert_len = tor_make_rsa_ed25519_crosscert(
+                                    &signing_kp->pubkey, ip->legacy.key,
+                                    now + HS_DESC_CERT_LIFETIME,
+                                    &ip->legacy.cert.encoded);
+    tt_assert(ip->legacy.cert.encoded);
+    tt_u64_op(cert_len, OP_GT, 0);
+    ip->legacy.cert.len = cert_len;
+  }
+
+  /* Encryption key. */
+  {
+    int signbit;
+    curve25519_keypair_t curve25519_kp;
+    ed25519_keypair_t ed25519_kp;
+    tor_cert_t *cross_cert;
+
+    ret = curve25519_keypair_generate(&curve25519_kp, 0);
     tt_int_op(ret, ==, 0);
-    ip->enc_key_type = HS_DESC_KEY_TYPE_CURVE25519;
+    ed25519_keypair_from_curve25519_keypair(&ed25519_kp, &signbit,
+                                            &curve25519_kp);
+    cross_cert = tor_cert_create(signing_kp, CERT_TYPE_CROSS_HS_IP_KEYS,
+                                 &ed25519_kp.pubkey, time(NULL),
+                                 HS_DESC_CERT_LIFETIME,
+                                 CERT_FLAG_INCLUDE_SIGNING_KEY);
+    tt_assert(cross_cert);
+    ip->enc_key_cert = cross_cert;
   }
 
   intro_point = ip;
@@ -192,19 +213,11 @@ hs_helper_desc_equal(const hs_descriptor_t *desc1,
                             *ip2 = smartlist_get(desc2->encrypted_data
                                                  .intro_points, i);
       tt_assert(tor_cert_eq(ip1->auth_key_cert, ip2->auth_key_cert));
-      tt_int_op(ip1->enc_key_type, OP_EQ, ip2->enc_key_type);
-      tt_assert(ip1->enc_key_type == HS_DESC_KEY_TYPE_LEGACY ||
-                ip1->enc_key_type == HS_DESC_KEY_TYPE_CURVE25519);
-      switch (ip1->enc_key_type) {
-        case HS_DESC_KEY_TYPE_LEGACY:
-          tt_int_op(crypto_pk_cmp_keys(ip1->enc_key.legacy,
-                                       ip2->enc_key.legacy), OP_EQ, 0);
-          break;
-        case HS_DESC_KEY_TYPE_CURVE25519:
-          tt_mem_op(ip1->enc_key.curve25519.pubkey.public_key, OP_EQ,
-                    ip2->enc_key.curve25519.pubkey.public_key,
-                    CURVE25519_PUBKEY_LEN);
-          break;
+      if (ip1->legacy.key) {
+        tt_int_op(crypto_pk_cmp_keys(ip1->legacy.key, ip2->legacy.key),
+                  OP_EQ, 0);
+      } else {
+        tt_mem_op(&ip1->enc_key, OP_EQ, &ip2->enc_key, CURVE25519_PUBKEY_LEN);
       }
 
       tt_int_op(smartlist_len(ip1->link_specifiers), ==,

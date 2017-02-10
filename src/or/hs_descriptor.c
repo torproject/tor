@@ -79,7 +79,9 @@
 #define str_intro_point "introduction-point"
 #define str_ip_auth_key "auth-key"
 #define str_ip_enc_key "enc-key"
-#define str_ip_enc_key_cert "enc-key-certification"
+#define str_ip_enc_key_cert "enc-key-cert"
+#define str_ip_legacy_key "legacy-key"
+#define str_ip_legacy_key_cert "legacy-key-cert"
 #define str_intro_point_start "\n" str_intro_point " "
 /* Constant string value for the construction to encrypt the encrypted data
  * section. */
@@ -134,9 +136,10 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
 static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   T1_START(str_intro_point, R3_INTRODUCTION_POINT, EQ(1), NO_OBJ),
   T1(str_ip_auth_key, R3_INTRO_AUTH_KEY, NO_ARGS, NEED_OBJ),
-  T1(str_ip_enc_key, R3_INTRO_ENC_KEY, ARGS, OBJ_OK),
-  T1_END(str_ip_enc_key_cert, R3_INTRO_ENC_KEY_CERTIFICATION,
-         NO_ARGS, NEED_OBJ),
+  T1(str_ip_enc_key, R3_INTRO_ENC_KEY, GE(2), OBJ_OK),
+  T1(str_ip_enc_key_cert, R3_INTRO_ENC_KEY_CERT, ARGS, OBJ_OK),
+  T01(str_ip_legacy_key, R3_INTRO_LEGACY_KEY, ARGS, NEED_KEY_1024),
+  T01(str_ip_legacy_key_cert, R3_INTRO_LEGACY_KEY_CERT, ARGS, OBJ_OK),
   END_OF_TABLE
 };
 
@@ -153,8 +156,12 @@ desc_intro_point_free(hs_desc_intro_point_t *ip)
     smartlist_free(ip->link_specifiers);
   }
   tor_cert_free(ip->auth_key_cert);
-  if (ip->enc_key_type == HS_DESC_KEY_TYPE_LEGACY) {
-    crypto_pk_free(ip->enc_key.legacy);
+  tor_cert_free(ip->enc_key_cert);
+  if (ip->legacy.key) {
+    crypto_pk_free(ip->legacy.key);
+  }
+  if (ip->legacy.cert.encoded) {
+    tor_free(ip->legacy.cert.encoded);
   }
   tor_free(ip);
 }
@@ -406,101 +413,68 @@ encode_link_specifiers(const smartlist_t *specs)
   return encoded_b64;
 }
 
-/* Encode an introduction point encryption key and return a newly allocated
- * string with it. On failure, return NULL. */
+/* Encode an introduction point legacy key and certificate. Return a newly
+ * allocated string with it. On failure, return NULL. */
 static char *
-encode_enc_key(const ed25519_public_key_t *sig_key,
-               const hs_desc_intro_point_t *ip)
+encode_legacy_key(const hs_desc_intro_point_t *ip)
 {
-  char *encoded = NULL;
-  time_t now = time(NULL);
+  char *key_str, b64_cert[256], *encoded = NULL;
+  size_t key_str_len;
 
-  tor_assert(sig_key);
   tor_assert(ip);
 
-  switch (ip->enc_key_type) {
-  case HS_DESC_KEY_TYPE_LEGACY:
-  {
-    char *key_str, b64_cert[256];
-    ssize_t cert_len;
-    size_t key_str_len;
-    uint8_t *cert_data = NULL;
-
-    /* Create cross certification cert. */
-    cert_len = tor_make_rsa_ed25519_crosscert(sig_key, ip->enc_key.legacy,
-                                              now + HS_DESC_CERT_LIFETIME,
-                                              &cert_data);
-    if (cert_len < 0) {
-      log_warn(LD_REND, "Unable to create legacy crosscert.");
-      goto err;
-    }
-    /* Encode cross cert. */
-    if (base64_encode(b64_cert, sizeof(b64_cert), (const char *) cert_data,
-                      cert_len, BASE64_ENCODE_MULTILINE) < 0) {
-      tor_free(cert_data);
-      log_warn(LD_REND, "Unable to encode legacy crosscert.");
-      goto err;
-    }
-    tor_free(cert_data);
-    /* Convert the encryption key to a string. */
-    if (crypto_pk_write_public_key_to_string(ip->enc_key.legacy, &key_str,
-                                             &key_str_len) < 0) {
-      log_warn(LD_REND, "Unable to encode legacy encryption key.");
-      goto err;
-    }
-    tor_asprintf(&encoded,
-                 "%s legacy\n%s"  /* Newline is added by the call above. */
-                 "%s\n"
-                 "-----BEGIN CROSSCERT-----\n"
-                 "%s"
-                 "-----END CROSSCERT-----",
-                 str_ip_enc_key, key_str,
-                 str_ip_enc_key_cert, b64_cert);
-    tor_free(key_str);
-    break;
+  /* Encode cross cert. */
+  if (base64_encode(b64_cert, sizeof(b64_cert),
+                    (const char *) ip->legacy.cert.encoded,
+                    ip->legacy.cert.len, BASE64_ENCODE_MULTILINE) < 0) {
+    log_warn(LD_REND, "Unable to encode legacy crosscert.");
+    goto done;
   }
-  case HS_DESC_KEY_TYPE_CURVE25519:
-  {
-    int signbit, ret;
-    char *encoded_cert, key_fp_b64[CURVE25519_BASE64_PADDED_LEN + 1];
-    ed25519_keypair_t curve_kp;
-
-    if (ed25519_keypair_from_curve25519_keypair(&curve_kp, &signbit,
-                                                &ip->enc_key.curve25519)) {
-      goto err;
-    }
-    tor_cert_t *cross_cert = tor_cert_create(&curve_kp,
-                                             CERT_TYPE_CROSS_HS_IP_KEYS,
-                                             sig_key, now,
-                                             HS_DESC_CERT_LIFETIME,
-                                             CERT_FLAG_INCLUDE_SIGNING_KEY);
-    memwipe(&curve_kp, 0, sizeof(curve_kp));
-    if (!cross_cert) {
-      goto err;
-    }
-    ret = tor_cert_encode_ed22519(cross_cert, &encoded_cert);
-    tor_cert_free(cross_cert);
-    if (ret) {
-      goto err;
-    }
-    if (curve25519_public_to_base64(key_fp_b64,
-                                    &ip->enc_key.curve25519.pubkey) < 0) {
-      tor_free(encoded_cert);
-      goto err;
-    }
-    tor_asprintf(&encoded,
-                 "%s ntor %s\n"
-                 "%s\n%s",
-                 str_ip_enc_key, key_fp_b64,
-                 str_ip_enc_key_cert, encoded_cert);
-    tor_free(encoded_cert);
-    break;
+  /* Convert the encryption key to PEM format NUL terminated. */
+  if (crypto_pk_write_public_key_to_string(ip->legacy.key, &key_str,
+                                           &key_str_len) < 0) {
+    log_warn(LD_REND, "Unable to encode legacy encryption key.");
+    goto done;
   }
-  default:
-    tor_assert(0);
-  }
+  tor_asprintf(&encoded,
+               "%s \n%s"  /* Newline is added by the call above. */
+               "%s\n"
+               "-----BEGIN CROSSCERT-----\n"
+               "%s"
+               "-----END CROSSCERT-----",
+               str_ip_legacy_key, key_str,
+               str_ip_legacy_key_cert, b64_cert);
+  tor_free(key_str);
 
- err:
+ done:
+  return encoded;
+}
+
+/* Encode an introduction point encryption key and certificate. Return a newly
+ * allocated string with it. On failure, return NULL. */
+static char *
+encode_enc_key(const hs_desc_intro_point_t *ip)
+{
+  char *encoded = NULL, *encoded_cert;
+  char key_b64[CURVE25519_BASE64_PADDED_LEN + 1];
+
+  tor_assert(ip);
+
+  /* Base64 encode the encryption key for the "enc-key" field. */
+  if (curve25519_public_to_base64(key_b64, &ip->enc_key) < 0) {
+    goto done;
+  }
+  if (tor_cert_encode_ed22519(ip->enc_key_cert, &encoded_cert) < 0) {
+    goto done;
+  }
+  tor_asprintf(&encoded,
+               "%s ntor %s\n"
+               "%s\n%s",
+               str_ip_enc_key, key_b64,
+               str_ip_enc_key_cert, encoded_cert);
+  tor_free(encoded_cert);
+
+ done:
   return encoded;
 }
 
@@ -535,12 +509,24 @@ encode_intro_point(const ed25519_public_key_t *sig_key,
 
   /* Encryption key encoding. */
   {
-    char *encoded_enc_key = encode_enc_key(sig_key, ip);
+    char *encoded_enc_key = encode_enc_key(ip);
     if (encoded_enc_key == NULL) {
       goto err;
     }
     smartlist_add_asprintf(lines, "%s", encoded_enc_key);
     tor_free(encoded_enc_key);
+  }
+
+  /* Legacy key if any. */
+  if (ip->legacy.key != NULL) {
+    /* Strong requirement else the IP creation was badly done. */
+    tor_assert(ip->legacy.cert.encoded);
+    char *encoded_legacy_key = encode_legacy_key(ip);
+    if (encoded_legacy_key == NULL) {
+      goto err;
+    }
+    smartlist_add_asprintf(lines, "%s", encoded_legacy_key);
+    tor_free(encoded_legacy_key);
   }
 
   /* Join them all in one blob of text. */
@@ -1581,6 +1567,64 @@ desc_decrypt_all(const hs_descriptor_t *desc, char **decrypted_out)
   return decrypted_len;
 }
 
+/* Given the token tok for an intro point legacy key, the list of tokens, the
+ * introduction point ip being decoded and the descriptor desc from which it
+ * comes from, decode the legacy key and set the intro point object. Return 0
+ * on success else -1 on failure. */
+static int
+decode_intro_legacy_key(const directory_token_t *tok,
+                        smartlist_t *tokens,
+                        hs_desc_intro_point_t *ip,
+                        const hs_descriptor_t *desc)
+{
+  tor_assert(tok);
+  tor_assert(tokens);
+  tor_assert(ip);
+  tor_assert(desc);
+
+  if (!crypto_pk_public_exponent_ok(tok->key)) {
+    log_warn(LD_REND, "Introduction point legacy key is invalid");
+    goto err;
+  }
+  ip->legacy.key = crypto_pk_dup_key(tok->key);
+  /* Extract the legacy cross certification cert which MUST be present if we
+   * have a legacy key. */
+  tok = find_opt_by_keyword(tokens, R3_INTRO_LEGACY_KEY_CERT);
+  if (!tok) {
+    log_warn(LD_REND, "Introduction point legacy key cert is missing");
+    goto err;
+  }
+  tor_assert(tok->object_body);
+  if (strcmp(tok->object_type, "CROSSCERT")) {
+    /* Info level because this might be an unknown field that we should
+     * ignore. */
+    log_info(LD_REND, "Introduction point legacy encryption key "
+                      "cross-certification has an unknown format.");
+    goto err;
+  }
+  /* Keep a copy of the certificate. */
+  ip->legacy.cert.encoded = tor_memdup(tok->object_body, tok->object_size);
+  ip->legacy.cert.len = tok->object_size;
+  /* The check on the expiration date is for the entire lifetime of a
+   * certificate which is 24 hours. However, a descriptor has a maximum
+   * lifetime of 12 hours meaning we have a 12h difference between the two
+   * which ultimately accomodate the clock skewed client. */
+  if (rsa_ed25519_crosscert_check(ip->legacy.cert.encoded,
+                                  ip->legacy.cert.len, ip->legacy.key,
+                                  &desc->plaintext_data.signing_pubkey,
+                                  approx_time() - HS_DESC_CERT_LIFETIME)) {
+    log_warn(LD_REND, "Unable to check cross-certification on the "
+                      "introduction point legacy encryption key.");
+    ip->cross_certified = 0;
+    goto err;
+  }
+
+  /* Success. */
+  return 0;
+ err:
+  return -1;
+}
+
 /* Given the start of a section and the end of it, decode a single
  * introduction point from that section. Return a newly allocated introduction
  * point object containing the decoded data. Return NULL if the section can't
@@ -1591,7 +1635,6 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   hs_desc_intro_point_t *ip = NULL;
   memarea_t *area = NULL;
   smartlist_t *tokens = NULL;
-  tor_cert_t *cross_cert = NULL;
   const directory_token_t *tok;
 
   tor_assert(desc);
@@ -1625,84 +1668,67 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
     log_warn(LD_REND, "Unexpected object type for introduction auth key");
     goto err;
   }
-
   /* Parse cert and do some validation. */
   if (cert_parse_and_validate(&ip->auth_key_cert, tok->object_body,
                               tok->object_size, CERT_TYPE_AUTH_HS_IP_KEY,
                               "introduction point auth-key") < 0) {
     goto err;
   }
+  /* Validate authentication certificate with descriptor signing key. */
+  if (tor_cert_checksig(ip->auth_key_cert,
+                        &desc->plaintext_data.signing_pubkey, 0) < 0) {
+    log_warn(LD_REND, "Invalid authentication key signature");
+    goto err;
+  }
 
-  /* Exactly one "enc-key" ... */
+  /* Exactly one "enc-key" SP "ntor" SP key NL */
   tok = find_by_keyword(tokens, R3_INTRO_ENC_KEY);
   if (!strcmp(tok->args[0], "ntor")) {
-    /* "enc-key" SP "ntor" SP key NL */
-    if (tok->n_args != 2 || tok->object_body) {
-      log_warn(LD_REND, "Introduction point ntor encryption key is invalid");
-      goto err;
-    }
+    /* This field is using GE(2) so for possible forward compatibility, we
+     * accept more fields but must be at least 2. */
+    tor_assert(tok->n_args >= 2);
 
-    if (curve25519_public_from_base64(&ip->enc_key.curve25519.pubkey,
-                                      tok->args[1]) < 0) {
-      log_warn(LD_REND, "Introduction point ntor encryption key is invalid");
+    if (curve25519_public_from_base64(&ip->enc_key, tok->args[1]) < 0) {
+      log_warn(LD_REND, "Introduction point ntor enc-key is invalid");
       goto err;
     }
-    ip->enc_key_type = HS_DESC_KEY_TYPE_CURVE25519;
-  } else if (!strcmp(tok->args[0], "legacy")) {
-    /* "enc-key" SP "legacy" NL key NL */
-    if (!tok->key) {
-      log_warn(LD_REND, "Introduction point legacy encryption key is "
-               "invalid");
-      goto err;
-    }
-    ip->enc_key.legacy = crypto_pk_dup_key(tok->key);
-    ip->enc_key_type = HS_DESC_KEY_TYPE_LEGACY;
   } else {
     /* Unknown key type so we can't use that introduction point. */
     log_warn(LD_REND, "Introduction point encryption key is unrecognized.");
     goto err;
   }
 
-  /* "enc-key-certification" NL certificate NL */
-  tok = find_by_keyword(tokens, R3_INTRO_ENC_KEY_CERTIFICATION);
+  /* Exactly once "enc-key-cert" NL certificate NL */
+  tok = find_by_keyword(tokens, R3_INTRO_ENC_KEY_CERT);
   tor_assert(tok->object_body);
   /* Do the cross certification. */
-  switch (ip->enc_key_type) {
-  case HS_DESC_KEY_TYPE_CURVE25519:
-  {
-    if (strcmp(tok->object_type, "ED25519 CERT")) {
+  if (strcmp(tok->object_type, "ED25519 CERT")) {
       log_warn(LD_REND, "Introduction point ntor encryption key "
                         "cross-certification has an unknown format.");
       goto err;
-    }
-    if (cert_parse_and_validate(&cross_cert, tok->object_body,
-                       tok->object_size, CERT_TYPE_CROSS_HS_IP_KEYS,
-                       "introduction point enc-key-certification") < 0) {
-      goto err;
-    }
-    break;
   }
-  case HS_DESC_KEY_TYPE_LEGACY:
-    if (strcmp(tok->object_type, "CROSSCERT")) {
-      log_warn(LD_REND, "Introduction point legacy encryption key "
-                        "cross-certification has an unknown format.");
-      goto err;
-    }
-    if (rsa_ed25519_crosscert_check((const uint8_t *) tok->object_body,
-          tok->object_size, ip->enc_key.legacy,
-          &desc->plaintext_data.signing_key_cert->signed_key,
-          approx_time()-86400)) {
-      log_warn(LD_REND, "Unable to check cross-certification on the "
-                        "introduction point legacy encryption key.");
-      goto err;
-    }
-    break;
-  default:
-    tor_assert(0);
-    break;
+  if (cert_parse_and_validate(&ip->enc_key_cert, tok->object_body,
+                              tok->object_size, CERT_TYPE_CROSS_HS_IP_KEYS,
+                              "introduction point enc-key-cert") < 0) {
+    goto err;
+  }
+  if (tor_cert_checksig(ip->enc_key_cert,
+                        &desc->plaintext_data.signing_pubkey, 0) < 0) {
+    log_warn(LD_REND, "Invalid encryption key signature");
+    goto err;
   }
   /* It is successfully cross certified. Flag the object. */
   ip->cross_certified = 1;
+
+  /* Do we have a "legacy-key" SP key NL ?*/
+  tok = find_opt_by_keyword(tokens, R3_INTRO_LEGACY_KEY);
+  if (tok) {
+    if (decode_intro_legacy_key(tok, tokens, ip, desc) < 0) {
+      goto err;
+    }
+  }
+
+  /* Introduction point has been parsed successfully. */
   goto done;
 
  err:
@@ -1710,7 +1736,6 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   ip = NULL;
 
  done:
-  tor_cert_free(cross_cert);
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);
   if (area) {
