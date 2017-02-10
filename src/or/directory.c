@@ -1078,11 +1078,10 @@ directory_must_use_begindir(const or_options_t *options)
 static int
 directory_command_should_use_begindir(const or_options_t *options,
                                       const tor_addr_t *addr,
-                                      int or_port, uint8_t router_purpose,
+                                      int or_port,
                                       dir_indirection_t indirection,
                                       const char **reason)
 {
-  (void) router_purpose;
   tor_assert(reason);
   *reason = NULL;
 
@@ -1190,8 +1189,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
    * send our directory request)? */
   const int use_begindir = directory_command_should_use_begindir(options,
                                      &or_addr_port->addr, or_addr_port->port,
-                                     router_purpose, indirection,
-                                     &begindir_reason);
+                                     indirection, &begindir_reason);
   /* Will the connection go via a three-hop Tor circuit? Note that this
    * is separate from whether it will use_begindir. */
   const int anonymized_connection = dirind_is_anon(indirection);
