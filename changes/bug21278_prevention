@@ -1,0 +1,4 @@
+  o Minor features (directory authority):
+    - Directory authorities now reject descriptors that claim to be
+      malformed versions of Tor. Helps prevent exploitation of bug 21278.
+      
