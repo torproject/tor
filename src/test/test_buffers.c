@@ -765,6 +765,49 @@ test_buffers_chunk_size(void *arg)
   ;
 }
 
+static void
+test_buffers_find_contentlen(void *arg)
+{
+  static const struct {
+    const char *headers;
+    int r;
+    int contentlen;
+  } results[] = {
+    { "Blah blah\r\nContent-Length: 1\r\n\r\n", 1, 1 },
+    { "Blah blah\r\n\r\n", 0, 0 }, /* no content-len */
+    { "Blah blah Content-Length: 1\r\n", 0, 0 }, /* no content-len. */
+    { "Blah blah\r\nContent-Length: 100000\r\n", 1, 100000},
+    { "Blah blah\r\nContent-Length: 1000000000000000000000000\r\n", -1, 0},
+    { "Blah blah\r\nContent-Length: 0\r\n", 1, 0},
+    { "Blah blah\r\nContent-Length: -1\r\n", -1, 0},
+    { "Blah blah\r\nContent-Length: 1x\r\n", -1, 0},
+    { "Blah blah\r\nContent-Length: 1 x\r\n", -1, 0},
+    { "Blah blah\r\nContent-Length: 1 \r\n", 1, 1},
+    { "Blah blah\r\nContent-Length:  \r\n", -1, 0},
+    { "Blah blah\r\nContent-Length: ", -1, 0},
+    { "Blah blah\r\nContent-Length: 5050", -1, 0},
+    { NULL, 0, 0 }
+  };
+  int i;
+
+  (void)arg;
+
+  for (i = 0; results[i].headers; ++i) {
+    int r;
+    size_t sz;
+    size_t headerlen = strlen(results[i].headers);
+    char * tmp = tor_memdup(results[i].headers, headerlen);/* ensure no eos */
+    sz = 999; /* to ensure it gets set */
+    r = buf_http_find_content_length(tmp, headerlen, &sz);
+    tor_free(tmp);
+    log_debug(LD_DIR, "%d: %s", i, escaped(results[i].headers));
+    tt_int_op(r, ==, results[i].r);
+    tt_int_op(sz, ==, results[i].contentlen);
+  }
+ done:
+  ;
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
@@ -780,6 +823,7 @@ struct testcase_t buffer_tests[] = {
   { "tls_read_mocked", test_buffers_tls_read_mocked, 0,
     NULL, NULL },
   { "chunk_size", test_buffers_chunk_size, 0, NULL, NULL },
+  { "find_contentlen", test_buffers_find_contentlen, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
