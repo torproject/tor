@@ -53,6 +53,8 @@ AC_ARG_ENABLE(libfuzzer,
    AS_HELP_STRING(--enable-libfuzzer, [build extra fuzzers based on 'libfuzzer']))
 AC_ARG_ENABLE(oss-fuzz,
    AS_HELP_STRING(--enable-oss-fuzz, [build extra fuzzers based on 'oss-fuzz' environment]))
+AC_ARG_ENABLE(memory-sentinels,
+   AS_HELP_STRING(--disable-memory-sentinels, [disable code that tries to prevent some kinds of memory access bugs. For fuzzing only.]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -74,6 +76,11 @@ fi
 if test "$enable_system_torrc" = "no"; then
   AC_DEFINE(DISABLE_SYSTEM_TORRC, 1,
             [Defined if we're not going to look for a torrc in SYSCONF])
+fi
+
+if test "$enable_memory_sentinels" = "no"; then
+  AC_DEFINE(DISABLE_MEMORY_SENTINELS, 1,
+           [Defined if we're turning off memory safety code to look for bugs])
 fi
 
 AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")

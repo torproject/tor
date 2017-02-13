@@ -3339,6 +3339,13 @@ test_util_memarea(void *arg)
   void *malloced_ptr = NULL;
   int i;
 
+#ifdef DISABLE_MEMORY_SENTINELS
+  /* If memory sentinels are disabled, this whole module is just an alias for
+     malloc(), which is free to lay out memory most any way it wants. */
+  if (1)
+    tt_skip();
+#endif
+
   (void)arg;
   tt_assert(area);
 
