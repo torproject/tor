@@ -732,6 +732,16 @@ connection_edge_send_command(edge_connection_t *fromconn,
     return -1;
   }
 
+#ifdef MEASUREMENTS_21206
+  /* Keep track of the number of RELAY_DATA cells sent for directory
+   * connections. */
+  connection_t *linked_conn = TO_CONN(fromconn)->linked_conn;
+
+  if (linked_conn && linked_conn->type == CONN_TYPE_DIR) {
+    ++(TO_DIR_CONN(linked_conn)->data_cells_sent);
+  }
+#endif
+
   return relay_send_command_from_edge(fromconn->stream_id, circ,
                                       relay_command, payload,
                                       payload_len, cpath_layer);
@@ -1584,6 +1594,16 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       stats_n_data_bytes_received += rh.length;
       connection_write_to_buf((char*)(cell->payload + RELAY_HEADER_SIZE),
                               rh.length, TO_CONN(conn));
+
+#ifdef MEASUREMENTS_21206
+      /* Count number of RELAY_DATA cells received on a linked directory
+       * connection. */
+      connection_t *linked_conn = TO_CONN(conn)->linked_conn;
+
+      if (linked_conn && linked_conn->type == CONN_TYPE_DIR) {
+        ++(TO_DIR_CONN(linked_conn)->data_cells_received);
+      }
+#endif
 
       if (!optimistic_data) {
         /* Only send a SENDME if we're not getting optimistic data; otherwise

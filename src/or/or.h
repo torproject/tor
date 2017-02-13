@@ -1786,6 +1786,14 @@ typedef struct dir_connection_t {
    * that's going away and being used on channels instead.  The dirserver still
    * needs this for the incoming side, so it's moved here. */
   uint64_t dirreq_id;
+
+#ifdef MEASUREMENTS_21206
+  /** Number of RELAY_DATA cells received. */
+  uint32_t data_cells_received;
+
+  /** Number of RELAY_DATA cells sent. */
+  uint32_t data_cells_sent;
+#endif
 } dir_connection_t;
 
 /** Subtype of connection_t for an connection to a controller. */

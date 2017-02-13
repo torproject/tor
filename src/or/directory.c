@@ -1983,12 +1983,17 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   log_debug(LD_DIR,
             "Received response from directory server '%s:%d': %d %s "
-            "(purpose: %d, response size: " U64_FORMAT ", "
-            "compression: %d)",
+            "(purpose: %d, response size: " U64_FORMAT
+#ifdef MEASUREMENTS_21206
+            ", data cells received: %d, data cells sent: %d"
+#endif
+            ", compression: %d)",
             conn->base_.address, conn->base_.port, status_code,
-            escaped(reason),
-            conn->base_.purpose,
+            escaped(reason), conn->base_.purpose,
             U64_PRINTF_ARG(received_bytes),
+#ifdef MEASUREMENTS_21206
+            conn->data_cells_received, conn->data_cells_sent,
+#endif
             compression);
 
   if (conn->guard_state) {
