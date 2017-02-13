@@ -663,6 +663,34 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
   ed25519_keypair_blind(blinded_kp_out, kp, param);
 }
 
+/* Return true if overlap mode is active given the date in consensus. If
+ * consensus is NULL, then we use the latest live consensus we can find. */
+int
+hs_overlap_mode_is_active(const networkstatus_t *consensus, time_t now)
+{
+  struct tm valid_after_tm;
+
+  if (!consensus) {
+    consensus = networkstatus_get_live_consensus(now);
+    if (!consensus) {
+      return 0;
+    }
+  }
+
+  /* XXX: Futur commits will change this to a slot system so it can be
+   * fine tuned better for testing networks in terms of timings. */
+
+  /* From the spec: "Specifically, when a hidden service fetches a consensus
+   * with "valid-after" between 00:00UTC and 12:00UTC, it goes into
+   * "descriptor overlap" mode." */
+  tor_gmtime_r(&consensus->valid_after, &valid_after_tm);
+  if (valid_after_tm.tm_hour > 0 && valid_after_tm.tm_hour < 12) {
+    return 1;
+  }
+
+  return 0;
+}
+
 /* Initialize the entire HS subsytem. This is called in tor_init() before any
  * torrc options are loaded. Only for >= v3. */
 void

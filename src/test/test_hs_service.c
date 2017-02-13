@@ -553,6 +553,53 @@ test_access_service(void *arg)
   hs_free_all();
 }
 
+/** Test that our HS overlap period functions work properly. */
+static void
+test_desc_overlap_period(void *arg)
+{
+  (void) arg;
+  int retval;
+  time_t now = time(NULL);
+  networkstatus_t *dummy_consensus = NULL;
+
+  /* First try with a consensus inside the overlap period */
+  dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
+  retval = parse_rfc1123_time("Wed, 13 Apr 2016 10:00:00 UTC",
+                              &dummy_consensus->valid_after);
+  tt_int_op(retval, ==, 0);
+
+  retval = hs_overlap_mode_is_active(dummy_consensus, now);
+  tt_int_op(retval, ==, 1);
+
+  /* Now increase the valid_after so that it goes to 11:00:00 UTC. Overlap
+     period is still active. */
+  dummy_consensus->valid_after += 3600;
+  retval = hs_overlap_mode_is_active(dummy_consensus, now);
+  tt_int_op(retval, ==, 1);
+
+  /* Now increase the valid_after so that it goes to 11:59:59 UTC. Overlap
+     period is still active. */
+  dummy_consensus->valid_after += 3599;
+  retval = hs_overlap_mode_is_active(dummy_consensus, now);
+  tt_int_op(retval, ==, 1);
+
+  /* Now increase the valid_after so that it drifts to noon, and check that
+     overlap mode is not active anymore. */
+  dummy_consensus->valid_after += 1;
+  retval = hs_overlap_mode_is_active(dummy_consensus, now);
+  tt_int_op(retval, ==, 0);
+
+  /* Check that overlap mode is also inactive at 23:59:59 UTC */
+  retval = parse_rfc1123_time("Wed, 13 Apr 2016 23:59:59 UTC",
+                              &dummy_consensus->valid_after);
+  tt_int_op(retval, ==, 0);
+  retval = hs_overlap_mode_is_active(dummy_consensus, now);
+  tt_int_op(retval, ==, 0);
+
+ done:
+  tor_free(dummy_consensus);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "gen_establish_intro_cell", test_gen_establish_intro_cell, TT_FORK,
     NULL, NULL },
@@ -571,6 +618,8 @@ struct testcase_t hs_service_tests[] = {
   { "load_keys", test_load_keys, TT_FORK,
     NULL, NULL },
   { "access_service", test_access_service, TT_FORK,
+    NULL, NULL },
+  { "desc_overlap_period", test_desc_overlap_period, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

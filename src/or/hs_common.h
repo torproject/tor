@@ -144,6 +144,8 @@ uint64_t hs_get_next_time_period_num(time_t now);
 
 link_specifier_t *hs_link_specifier_dup(const link_specifier_t *lspec);
 
+int hs_overlap_mode_is_active(const networkstatus_t *consensus, time_t now);
+
 #ifdef HS_COMMON_PRIVATE
 
 #ifdef TOR_UNIT_TESTS

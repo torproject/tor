@@ -9,8 +9,10 @@
 #define HS_SERVICE_PRIVATE
 
 #include "or.h"
+#include "circpathbias.h"
 #include "circuitlist.h"
 #include "config.h"
+#include "networkstatus.h"
 #include "nodelist.h"
 #include "relay.h"
 #include "rendservice.h"
