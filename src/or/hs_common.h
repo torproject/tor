@@ -40,6 +40,15 @@
 /* String prefix for the signature of ESTABLISH_INTRO */
 #define ESTABLISH_INTRO_SIG_PREFIX "Tor establish-intro cell v1"
 
+/* The default HS time period length */
+#define HS_TIME_PERIOD_LENGTH_DEFAULT 1440 /* 1440 minutes == one day */
+/* The minimum time period length as seen in prop224 section [TIME-PERIODS] */
+#define HS_TIME_PERIOD_LENGTH_MIN 30 /* minutes */
+/* The minimum time period length as seen in prop224 section [TIME-PERIODS] */
+#define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes */
+/* The time period rotation offset as seen in prop224 section [TIME-PERIODS] */
+#define HS_TIME_PERIOD_ROTATION_OFFSET (12 * 60) /* minutes */
+
 int hs_check_service_private_dir(const char *username, const char *path,
                                  unsigned int dir_group_readable,
                                  unsigned int create);
@@ -59,6 +68,19 @@ const char *rend_data_get_desc_id(const rend_data_t *rend_data,
                                   uint8_t replica, size_t *len_out);
 const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
                                        size_t *len_out);
+
+uint64_t hs_get_next_time_period_num(time_t now);
+
+#ifdef HS_COMMON_PRIVATE
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC uint64_t get_time_period_length(void);
+STATIC uint64_t get_time_period_num(time_t now);
+
+#endif /* TOR_UNIT_TESTS */
+
+#endif /* HS_COMMON_PRIVATE */
 
 #endif /* TOR_HS_COMMON_H */
 
