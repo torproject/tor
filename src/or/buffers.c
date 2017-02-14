@@ -1091,13 +1091,13 @@ buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
 }
 
 /**
- * Scan the HTTP headers in the <b>headerlen</b>-byte string at
+ * Scan the HTTP headers in the <b>headerlen</b>-byte memory range at
  * <b>headers</b>, looking for a "Content-Length" header.  Try to set
  * *<b>result_out</b> to the numeric value of that header if possible.
  * Return -1 if the header was malformed, 0 if it was missing, and 1 if
  * it was present and well-formed.
  */
-/* STATIC */ int
+STATIC int
 buf_http_find_content_length(const char *headers, size_t headerlen,
                              size_t *result_out)
 {

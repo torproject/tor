@@ -98,7 +98,7 @@ struct buf_t {
 #endif
 
 #ifdef BUFFERS_PRIVATE
-int buf_http_find_content_length(const char *headers, size_t headerlen,
+STATIC int buf_http_find_content_length(const char *headers, size_t headerlen,
                                         size_t *result_out);
 #endif
 
