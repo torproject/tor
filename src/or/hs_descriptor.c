@@ -1439,6 +1439,7 @@ superencrypted_auth_data_is_valid(smartlist_t *tokens)
     tok = find_by_keyword(tokens, R3_DESC_AUTH_TYPE);
     tor_assert(tok->n_args >= 1);
     if (strcmp(tok->args[0], "x25519")) {
+      log_warn(LD_DIR, "Unrecognized desc auth type");
       return 0;
     }
   }
@@ -1485,6 +1486,7 @@ decode_superencrypted(const char *message, size_t message_len,
 
   /* Do some rudimentary validation of the authentication data */
   if (!superencrypted_auth_data_is_valid(tokens)) {
+    log_warn(LD_REND, "Invalid auth data");
     goto err;
   }
 
