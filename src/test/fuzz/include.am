@@ -246,5 +246,5 @@ noinst_LIBRARIES += $(OSS_FUZZ_FUZZERS)
 oss-fuzz-fuzzers:  oss-fuzz-prereqs $(OSS_FUZZ_FUZZERS)
 fuzzers: $(FUZZERS) $(LIBFUZZER_FUZZERS)
 
-fuzz: $(FUZZERS)
+test-fuzz-corpora: $(FUZZERS)
 	$(top_srcdir)/src/test/fuzz_static_testcases.sh
