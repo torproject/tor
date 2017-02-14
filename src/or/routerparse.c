@@ -5512,9 +5512,14 @@ microdescs_parse_from_string(const char *s, const char *eos,
   return result;
 }
 
-/** Parse the Tor version of the platform string <b>platform</b>,
- * and compare it to the version in <b>cutoff</b>. Return 1 if
- * the router is at least as new as the cutoff, else return 0.
+/** Extract a Tor version from a <b>platform</b> line from a router
+ * descriptor, and place the result in <b>router_version</b>.
+ *
+ * Return 1 on success, -1 on parsing failure, and 0 if the
+ * platform line does not indicate some version of Tor.
+ *
+ * If <b>strict</b> is non-zero, finding any weird version components
+ * (like negative numbers) counts as a parsing failure.
  */
 int
 tor_version_parse_platform(const char *platform,
@@ -5552,6 +5557,7 @@ tor_version_parse_platform(const char *platform,
       return -1;
     }
   }
+
   return 1;
 }
 
