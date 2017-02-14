@@ -2901,13 +2901,7 @@ entry_guard_t *
 entry_guard_get_by_id_digest_for_guard_selection(guard_selection_t *gs,
                                                  const char *digest)
 {
-  tor_assert(gs != NULL);
-
-  SMARTLIST_FOREACH(gs->sampled_entry_guards, entry_guard_t *, entry,
-                    if (tor_memeq(digest, entry->identity, DIGEST_LEN))
-                      return entry;
-                   );
-  return NULL;
+  return get_sampled_guard_with_id(gs, (const uint8_t*)digest);
 }
 
 /** Return the node_t associated with a single entry_guard_t. May
