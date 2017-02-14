@@ -1,0 +1,7 @@
+  o Minor bugfixes (fallbacks):
+    - Make sure fallback directory mirrors have the same address, port, and
+      relay identity key for at least 30 days before they are selected.
+      Partial fix to 20913, bugfix on 0.2.8.1-alpha.
+    - Decrease the guard flag average required to be a fallback. This allows
+      us to keep relays that have their guard flag removed when they restart.
+      Partial fix to 20913, bugfix on 0.2.8.1-alpha.
