@@ -199,6 +199,33 @@ get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
   return NULL;
 }
 
+/**
+ * As get_configured_bridge_by_addr_port, but require that the
+ * address match <b>addr</b>:<b>port</b>, and that the ID digest match
+ * <b>digest</b>.  (The other function will ignore the address if the
+ * digest matches.)
+ */
+bridge_info_t *
+get_configured_bridge_by_exact_addr_port_digest(const tor_addr_t *addr,
+                                                uint16_t port,
+                                                const char *digest)
+{
+  if (!bridge_list)
+    return NULL;
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
+    if (!tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
+        bridge->port == port) {
+
+      if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
+        return bridge;
+      else if (!digest)
+        return bridge;
+    }
+
+  } SMARTLIST_FOREACH_END(bridge);
+  return NULL;
+}
+
 /** If we have a bridge configured whose digest matches <b>digest</b>, or a
  * bridge with no known digest whose address matches <b>addr</b>:<b>port</b>,
  * return 1.  Else return 0. If <b>digest</b> is NULL, check for

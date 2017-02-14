@@ -768,11 +768,6 @@ get_sampled_guard_for_bridge(guard_selection_t *gs,
   const uint8_t *id = bridge_get_rsa_id_digest(bridge);
   const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
   entry_guard_t *guard;
-  if (id) {
-    guard = get_sampled_guard_with_id(gs, id);
-    if (guard)
-      return guard;
-  }
   if (BUG(!addrport))
     return NULL; // LCOV_EXCL_LINE
   guard = get_sampled_guard_by_bridge_addr(gs, addrport);
@@ -787,16 +782,17 @@ get_sampled_guard_for_bridge(guard_selection_t *gs,
 static bridge_info_t *
 get_bridge_info_for_guard(const entry_guard_t *guard)
 {
+  const uint8_t *identity = NULL;
   if (! tor_digest_is_zero(guard->identity)) {
-    bridge_info_t *bridge = find_bridge_by_digest(guard->identity);
-    if (bridge)
-      return bridge;
+    identity = (const uint8_t *)guard->identity;
   }
   if (BUG(guard->bridge_addr == NULL))
     return NULL;
-  return get_configured_bridge_by_addr_port_digest(&guard->bridge_addr->addr,
-                                                     guard->bridge_addr->port,
-                                                     NULL);
+
+  return get_configured_bridge_by_exact_addr_port_digest(
+                                                 &guard->bridge_addr->addr,
+                                                 guard->bridge_addr->port,
+                                                 (const char*)identity);
 }
 
 /**
@@ -819,6 +815,10 @@ entry_guard_add_to_sample(guard_selection_t *gs,
 {
   log_info(LD_GUARD, "Adding %s as to the entry guard sample set.",
            node_describe(node));
+
+  /* make sure that the guard is not already sampled. */
+  if (BUG(have_sampled_guard_with_id(gs, (const uint8_t*)node->identity)))
+    return NULL; // LCOV_EXCL_LINE
 
   return entry_guard_add_to_sample_impl(gs,
                                         (const uint8_t*)node->identity,
@@ -843,9 +843,6 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
 
   // XXXX #20827 take ed25519 identity here too.
 
-  /* make sure that the guard is not already sampled. */
-  if (rsa_id_digest && BUG(have_sampled_guard_with_id(gs, rsa_id_digest)))
-    return NULL; // LCOV_EXCL_LINE
   /* Make sure we can actually identify the guard. */
   if (BUG(!rsa_id_digest && !bridge_addrport))
     return NULL; // LCOV_EXCL_LINE
@@ -889,6 +886,10 @@ entry_guard_add_bridge_to_sample(guard_selection_t *gs,
   const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
 
   tor_assert(addrport);
+
+  /* make sure that the guard is not already sampled. */
+  if (BUG(get_sampled_guard_for_bridge(gs, bridge)))
+    return NULL; // LCOV_EXCL_LINE
 
   return entry_guard_add_to_sample_impl(gs, id_digest, NULL, addrport);
 }
