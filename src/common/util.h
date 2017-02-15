@@ -186,6 +186,7 @@ void tor_strlower(char *s) ATTR_NONNULL((1));
 void tor_strupper(char *s) ATTR_NONNULL((1));
 int tor_strisprint(const char *s) ATTR_NONNULL((1));
 int tor_strisnonupper(const char *s) ATTR_NONNULL((1));
+int tor_strisspace(const char *s);
 int strcmp_opt(const char *s1, const char *s2);
 int strcmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
 int strcmp_len(const char *s1, const char *s2, size_t len) ATTR_NONNULL((1,2));

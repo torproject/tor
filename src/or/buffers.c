@@ -1138,6 +1138,52 @@ buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
   return -1;
 }
 
+/**
+ * Scan the HTTP headers in the <b>headerlen</b>-byte memory range at
+ * <b>headers</b>, looking for a "Content-Length" header.  Try to set
+ * *<b>result_out</b> to the numeric value of that header if possible.
+ * Return -1 if the header was malformed, 0 if it was missing, and 1 if
+ * it was present and well-formed.
+ */
+STATIC int
+buf_http_find_content_length(const char *headers, size_t headerlen,
+                             size_t *result_out)
+{
+  const char *p, *newline;
+  char *len_str, *eos=NULL;
+  size_t remaining, result;
+  int ok;
+  *result_out = 0; /* The caller shouldn't look at this unless the
+                    * return value is 1, but let's prevent confusion */
+
+#define CONTENT_LENGTH "\r\nContent-Length: "
+  p = (char*) tor_memstr(headers, headerlen, CONTENT_LENGTH);
+  if (p == NULL)
+    return 0;
+
+  tor_assert(p >= headers && p < headers+headerlen);
+  remaining = (headers+headerlen)-p;
+  p += strlen(CONTENT_LENGTH);
+  remaining -= strlen(CONTENT_LENGTH);
+
+  newline = memchr(p, '\n', remaining);
+  if (newline == NULL)
+    return -1;
+
+  len_str = tor_memdup_nulterm(p, newline-p);
+  /* We limit the size to INT_MAX because other parts of the buffer.c
+   * code don't like buffers to be any bigger than that. */
+  result = (size_t) tor_parse_uint64(len_str, 10, 0, INT_MAX, &ok, &eos);
+  if (eos && !tor_strisspace(eos)) {
+    ok = 0;
+  } else {
+    *result_out = result;
+  }
+  tor_free(len_str);
+
+  return ok ? 1 : -1;
+}
+
 /** There is a (possibly incomplete) http statement on <b>buf</b>, of the
  * form "\%s\\r\\n\\r\\n\%s", headers, body. (body may contain NULs.)
  * If a) the headers include a Content-Length field and all bytes in
@@ -1163,9 +1209,10 @@ fetch_from_buf_http(buf_t *buf,
                     char **body_out, size_t *body_used, size_t max_bodylen,
                     int force_complete)
 {
-  char *headers, *p;
-  size_t headerlen, bodylen, contentlen;
+  char *headers;
+  size_t headerlen, bodylen, contentlen=0;
   int crlf_offset;
+  int r;
 
   check();
   if (!buf->head)
@@ -1201,17 +1248,12 @@ fetch_from_buf_http(buf_t *buf,
     return -1;
   }
 
-#define CONTENT_LENGTH "\r\nContent-Length: "
-  p = (char*) tor_memstr(headers, headerlen, CONTENT_LENGTH);
-  if (p) {
-    int i;
-    i = atoi(p+strlen(CONTENT_LENGTH));
-    if (i < 0) {
-      log_warn(LD_PROTOCOL, "Content-Length is less than zero; it looks like "
-               "someone is trying to crash us.");
-      return -1;
-    }
-    contentlen = i;
+  r = buf_http_find_content_length(headers, headerlen, &contentlen);
+  if (r == -1) {
+    log_warn(LD_PROTOCOL, "Content-Length is bogus; maybe "
+             "someone is trying to crash us.");
+    return -1;
+  } else if (r == 1) {
     /* if content-length is malformed, then our body length is 0. fine. */
     log_debug(LD_HTTP,"Got a contentlen of %d.",(int)contentlen);
     if (bodylen < contentlen) {
@@ -1224,7 +1266,11 @@ fetch_from_buf_http(buf_t *buf,
       bodylen = contentlen;
       log_debug(LD_HTTP,"bodylen reduced to %d.",(int)bodylen);
     }
+  } else {
+    tor_assert(r == 0);
+    /* Leave bodylen alone */
   }
+
   /* all happy. copy into the appropriate places, and return 1 */
   if (headers_out) {
     *headers_out = tor_malloc(headerlen+1);

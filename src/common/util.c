@@ -704,6 +704,19 @@ tor_strisnonupper(const char *s)
   return 1;
 }
 
+/** Return true iff every character in <b>s</b> is whitespace space; else
+ * return false. */
+int
+tor_strisspace(const char *s)
+{
+  while (*s) {
+    if (!TOR_ISSPACE(*s))
+      return 0;
+    s++;
+  }
+  return 1;
+}
+
 /** As strcmp, except that either string may be NULL.  The NULL string is
  * considered to be before any non-NULL string. */
 int

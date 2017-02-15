@@ -1,0 +1,9 @@
+  o Major bugfixes (HTTP, parsing):
+    - When parsing a malformed content-length field from an HTTP message,
+      do not read off the end of the buffer. This bug was a potential
+      remote denial-of-service attack against Tor clients and relays.
+      A workaround was released in October 2016, which prevents this
+      bug from crashing Tor. This is a fix for the underlying issue,
+      which should no longer matter (if you applied the earlier patch).
+      Fixes bug 20894; bugfix on 0.2.0.16-alpha. Bug found by fuzzing
+      using AFL (http://lcamtuf.coredump.cx/afl/).

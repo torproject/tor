@@ -9,6 +9,7 @@
 #define CONTROL_PRIVATE
 #define UTIL_PRIVATE
 #include "or.h"
+#include "buffers.h"
 #include "config.h"
 #include "control.h"
 #include "test.h"
