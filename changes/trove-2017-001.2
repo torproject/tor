@@ -1,0 +1,8 @@
+  o Major bugfixes (parsing):
+    - Fix an integer underflow bug when comparing malformed Tor versions.
+      This bug is harmless, except when Tor has been built with
+      --enable-expensive-hardening, which would turn it into a crash;
+      or on Tor 0.2.9.1-alpha through Tor 0.2.9.8, which were built with
+      -ftrapv by default.
+      Part of TROVE-2017-001. Fixes bug 21278; bugfix on
+      0.0.8pre1. Found by OSS-Fuzz.
