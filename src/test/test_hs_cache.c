@@ -361,6 +361,15 @@ test_upload_and_download_hs_desc(void *arg)
   /* Initialize HSDir cache subsystem */
   init_test();
 
+  /* Test a descriptor not found in the directory cache. */
+  {
+    ed25519_public_key_t blinded_key;
+    memset(&blinded_key.pubkey, 'A', sizeof(blinded_key.pubkey));
+    received_desc_str = helper_fetch_desc_from_hsdir(&blinded_key);
+    tt_int_op(strlen(received_desc_str), OP_EQ, 0);
+    tor_free(received_desc_str);
+  }
+
   /* Generate a valid descriptor with normal values. */
   {
     ed25519_keypair_t signing_kp;
@@ -388,6 +397,15 @@ test_upload_and_download_hs_desc(void *arg)
 
   /* Verify we received the exact same descriptor we published earlier */
   tt_str_op(received_desc_str, OP_EQ, published_desc_str);
+  tor_free(received_desc_str);
+
+  /* With a valid descriptor in the directory cache, try again an invalid. */
+  {
+    ed25519_public_key_t blinded_key;
+    memset(&blinded_key.pubkey, 'A', sizeof(blinded_key.pubkey));
+    received_desc_str = helper_fetch_desc_from_hsdir(&blinded_key);
+    tt_int_op(strlen(received_desc_str), OP_EQ, 0);
+  }
 
  done:
   tor_free(received_desc_str);

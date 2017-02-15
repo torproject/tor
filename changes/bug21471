@@ -1,0 +1,5 @@
+  o Major bugfixes (hidden service directory v3):
+    - When a descriptor lookup was done and it was not found in the directory
+      cache, it would crash on a NULL pointer instead of returning the 404
+      code back to the client like it was suppose to. Fixes bug 21471.;
+      bugfixes on tor-0.3.0.1-alpha.

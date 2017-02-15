@@ -3533,7 +3533,7 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
   pubkey_str = url + strlen("/tor/hs/3/");
   retval = hs_cache_lookup_as_dir(HS_VERSION_THREE,
                                   pubkey_str, &desc_str);
-  if (retval < 0) {
+  if (retval <= 0 || desc_str == NULL) {
     write_http_status_line(conn, 404, "Not found");
     goto done;
   }
