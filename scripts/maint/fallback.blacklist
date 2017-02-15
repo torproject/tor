@@ -255,3 +255,6 @@ id=9C8A123081EFBE022EF795630F447839DDFDDDEC
 
 # Email sent directly to teor, verified using relay contact info
 104.243.35.196:9030 orport=9001 id=FA3415659444AE006E7E9E5375E82F29700CFDFD
+
+# Relay changed IPv4 address, operator uncontactable
+138.201.130.32:9030 orport=9001 id=52AEA31188331F421B2EDB494DB65CD181E5B257
