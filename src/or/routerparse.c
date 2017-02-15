@@ -4894,7 +4894,7 @@ tor_version_parse(const char *s, tor_version_t *out)
 
 #define NUMBER(m)                               \
   do {                                          \
-    out->m = (int)tor_parse_uint64(val, 10, 0, INT32_MAX, &ok, &eos); \
+    out->m = (int)tor_parse_uint64(cp, 10, 0, INT32_MAX, &ok, &eos);    \
     if (!ok)                                    \
       return -1;                                \
     if (!eos || eos == cp)                      \
