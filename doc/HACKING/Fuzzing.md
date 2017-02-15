@@ -6,7 +6,10 @@ Check out fuzzing-corpora, and set TOR_FUZZ_CORPORA to point to the place
 where you checked it out.
 
 To run the fuzzing test cases in a deterministic fashion, use:
-  make fuzz
+      make test-fuzz-corpora
+
+This won't actually fuzz Tor!  It will just run all the fuzz binaries
+on our existing set of testcases for the fuzzer.
 
 
 == Different kinds of fuzzing

@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Rename "make fuzz" to "make test-fuzz-corpora", since it doesn't
+      actually fuzz anything. Fixes bug 21447; bugfix on 0.3.0.3-alpha.
+
