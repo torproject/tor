@@ -4878,6 +4878,7 @@ tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL;
   const char *cp=NULL;
+  int ok = 1;
   /* Format is:
    *   "Tor " ? NUM dot NUM [ dot NUM [ ( pre | rc | dot ) NUM ] ] [ - tag ]
    */
@@ -4893,7 +4894,9 @@ tor_version_parse(const char *s, tor_version_t *out)
 
 #define NUMBER(m)                               \
   do {                                          \
-    out->m = (int)strtol(cp, &eos, 10);         \
+    out->m = (int)tor_parse_uint64(val, 10, 0, INT32_MAX, &ok, &eos); \
+    if (!ok)                                    \
+      return -1;                                \
     if (!eos || eos == cp)                      \
       return -1;                                \
     cp = eos;                                   \
