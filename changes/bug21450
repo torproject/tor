@@ -1,0 +1,4 @@
+  o Minor bugfixes (voting consistency):
+    - Reject version numbers with components that exceed INT32_MAX.
+      Otherwise 32-bit and 64-bit platforms would behave inconsistently.
+      Fixes bug 21450; bugfix on 0.0.8pre1.
