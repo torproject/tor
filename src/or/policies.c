@@ -1248,48 +1248,48 @@ policies_parse_from_options(const or_options_t *options)
   return ret;
 }
 
-/** Compare two provided address policy items, and return -1, 0, or 1
+/** Compare two provided address policy items, and renturn -1, 0, or 1
  * if the first is less than, equal to, or greater than the second. */
 static int
-cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
+single_addr_policy_eq(const addr_policy_t *a, const addr_policy_t *b)
 {
   int r;
-  if ((r=((int)a->policy_type - (int)b->policy_type)))
-    return r;
-  if ((r=((int)a->is_private - (int)b->is_private)))
-    return r;
+#define CMP_FIELD(field) do {                   \
+    if (a->field != b->field) {                 \
+      return 0;                                 \
+    }                                           \
+  } while (0)
+  CMP_FIELD(policy_type);
+  CMP_FIELD(is_private);
   /* refcnt and is_canonical are irrelevant to equality,
    * they are hash table implementation details */
   if ((r=tor_addr_compare(&a->addr, &b->addr, CMP_EXACT)))
-    return r;
-  if ((r=((int)a->maskbits - (int)b->maskbits)))
-    return r;
-  if ((r=((int)a->prt_min - (int)b->prt_min)))
-    return r;
-  if ((r=((int)a->prt_max - (int)b->prt_max)))
-    return r;
-  return 0;
+    return 0;
+  CMP_FIELD(maskbits);
+  CMP_FIELD(prt_min);
+  CMP_FIELD(prt_max);
+#undef CMP_FIELD
+  return 1;
 }
 
-/** Like cmp_single_addr_policy() above, but looks at the
- * whole set of policies in each case. */
+/** As single_addr_policy_eq, but compare every element of two policies.
+ */
 int
-cmp_addr_policies(smartlist_t *a, smartlist_t *b)
+addr_policies_eq(const smartlist_t *a, const smartlist_t *b)
 {
-  int r, i;
+  int i;
   int len_a = a ? smartlist_len(a) : 0;
   int len_b = b ? smartlist_len(b) : 0;
 
-  for (i = 0; i < len_a && i < len_b; ++i) {
-    if ((r = cmp_single_addr_policy(smartlist_get(a, i), smartlist_get(b, i))))
-      return r;
-  }
-  if (i == len_a && i == len_b)
+  if (len_a != len_b)
     return 0;
-  if (i < len_a)
-    return -1;
-  else
-    return 1;
+
+  for (i = 0; i < len_a; ++i) {
+    if (! single_addr_policy_eq(smartlist_get(a, i), smartlist_get(b, i)))
+      return 0;
+  }
+
+  return 1;
 }
 
 /** Node in hashtable used to store address policy entries. */
@@ -1305,7 +1305,7 @@ static HT_HEAD(policy_map, policy_map_ent_t) policy_root = HT_INITIALIZER();
 static inline int
 policy_eq(policy_map_ent_t *a, policy_map_ent_t *b)
 {
-  return cmp_single_addr_policy(a->policy, b->policy) == 0;
+  return single_addr_policy_eq(a->policy, b->policy);
 }
 
 /** Return a hashcode for <b>ent</b> */
@@ -1356,7 +1356,7 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
     HT_INSERT(policy_map, &policy_root, found);
   }
 
-  tor_assert(!cmp_single_addr_policy(found->policy, e));
+  tor_assert(single_addr_policy_eq(found->policy, e));
   ++found->policy->refcnt;
   return found->policy;
 }

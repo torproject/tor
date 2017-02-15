@@ -304,10 +304,10 @@ test_policies_general(void *arg)
   tt_assert(!exit_policy_is_general_exit(policy10));
   tt_assert(!exit_policy_is_general_exit(policy11));
 
-  tt_assert(cmp_addr_policies(policy, policy2));
-  tt_assert(cmp_addr_policies(policy, NULL));
-  tt_assert(!cmp_addr_policies(policy2, policy2));
-  tt_assert(!cmp_addr_policies(NULL, NULL));
+  tt_assert(!addr_policies_eq(policy, policy2));
+  tt_assert(!addr_policies_eq(policy, NULL));
+  tt_assert(addr_policies_eq(policy2, policy2));
+  tt_assert(addr_policies_eq(NULL, NULL));
 
   tt_assert(!policy_is_reject_star(policy2, AF_INET, 1));
   tt_assert(policy_is_reject_star(policy, AF_INET, 1));
