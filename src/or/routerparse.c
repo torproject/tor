@@ -5512,6 +5512,55 @@ microdescs_parse_from_string(const char *s, const char *eos,
   return result;
 }
 
+/** Extract a Tor version from a <b>platform</b> line from a router
+ * descriptor, and place the result in <b>router_version</b>.
+ *
+ * Return 1 on success, -1 on parsing failure, and 0 if the
+ * platform line does not indicate some version of Tor.
+ *
+ * If <b>strict</b> is non-zero, finding any weird version components
+ * (like negative numbers) counts as a parsing failure.
+ */
+int
+tor_version_parse_platform(const char *platform,
+                           tor_version_t *router_version,
+                           int strict)
+{
+  char tmp[128];
+  char *s, *s2, *start;
+
+  if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; say 0. */
+    return 0;
+
+  start = (char *)eat_whitespace(platform+3);
+  if (!*start) return -1;
+  s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
+  s2 = (char*)eat_whitespace(s);
+  if (!strcmpstart(s2, "(r") || !strcmpstart(s2, "(git-"))
+    s = (char*)find_whitespace(s2);
+
+  if ((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
+    return -1;
+  strlcpy(tmp, start, s-start+1);
+
+  if (tor_version_parse(tmp, router_version)<0) {
+    log_info(LD_DIR,"Router version '%s' unparseable.",tmp);
+    return -1;
+  }
+
+  if (strict) {
+    if (router_version->major < 0 ||
+        router_version->minor < 0 ||
+        router_version->minor < 0 ||
+        router_version->patchlevel < 0 ||
+        router_version->svn_revision < 0) {
+      return -1;
+    }
+  }
+
+  return 1;
+}
+
 /** Parse the Tor version of the platform string <b>platform</b>,
  * and compare it to the version in <b>cutoff</b>. Return 1 if
  * the router is at least as new as the cutoff, else return 0.
@@ -5520,32 +5569,21 @@ int
 tor_version_as_new_as(const char *platform, const char *cutoff)
 {
   tor_version_t cutoff_version, router_version;
-  char *s, *s2, *start;
-  char tmp[128];
-
+  int r;
   tor_assert(platform);
 
   if (tor_version_parse(cutoff, &cutoff_version)<0) {
     log_warn(LD_BUG,"cutoff version '%s' unparseable.",cutoff);
     return 0;
   }
-  if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
+
+  r = tor_version_parse_platform(platform, &router_version, 0);
+  if (r == 0) {
+    /* nonstandard Tor; be safe and say yes */
     return 1;
-
-  start = (char *)eat_whitespace(platform+3);
-  if (!*start) return 0;
-  s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
-  s2 = (char*)eat_whitespace(s);
-  if (!strcmpstart(s2, "(r") || !strcmpstart(s2, "(git-"))
-    s = (char*)find_whitespace(s2);
-
-  if ((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
-    return 0;
-  strlcpy(tmp, start, s-start+1);
-
-  if (tor_version_parse(tmp, &router_version)<0) {
-    log_info(LD_DIR,"Router version '%s' unparseable.",tmp);
-    return 1; /* be safe and say yes */
+  } else if (r < 0) {
+    /* unparseable version; be safe and say yes. */
+    return 1;
   }
 
   /* Here's why we don't need to do any special handling for svn revisions:
