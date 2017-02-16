@@ -262,6 +262,11 @@ STATIC crypto_pk_t *add_onion_helper_keyarg(const char *arg, int discard_pk,
 STATIC rend_authorized_client_t *
 add_onion_helper_clientauth(const char *arg, int *created, char **err_msg_out);
 
+STATIC int getinfo_helper_onions(
+    control_connection_t *control_conn,
+    const char *question,
+    char **answer,
+    const char **errmsg);
 STATIC void getinfo_helper_downloads_networkstatus(
     const char *flavor,
     download_status_t **dl_to_emit,

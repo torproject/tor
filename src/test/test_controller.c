@@ -109,6 +109,44 @@ test_add_onion_helper_keyarg(void *arg)
 }
 
 static void
+test_getinfo_helper_onion(void *arg)
+{
+  (void)arg;
+  control_connection_t dummy;
+  /* Get results out */
+  char *answer = NULL;
+  const char *errmsg = NULL;
+  char *service_id = NULL;
+  int rt = 0;
+
+  dummy.ephemeral_onion_services = NULL;
+
+  /* successfully get an empty answer */
+  rt = getinfo_helper_onions(&dummy, "onions/current", &answer, &errmsg);
+  tt_assert(rt == 0);
+  tt_str_op(answer, OP_EQ, "");
+  tor_free(answer);
+
+  /* successfully get an empty answer */
+  rt = getinfo_helper_onions(&dummy, "onions/detached", &answer, &errmsg);
+  tt_assert(rt == 0);
+  tt_str_op(answer, OP_EQ, "");
+  tor_free(answer);
+
+  /* get an answer for one onion service */
+  service_id = tor_strdup("dummy_onion_id");
+  dummy.ephemeral_onion_services = smartlist_new();
+  smartlist_add(dummy.ephemeral_onion_services, service_id);
+  rt = getinfo_helper_onions(&dummy, "onions/current", &answer, &errmsg);
+  tt_assert(rt == 0);
+  tt_str_op(answer, OP_EQ, "dummy_onion_id");
+
+ done:
+  tor_free(answer);
+  tor_free(service_id);
+}
+
+static void
 test_rend_service_parse_port_config(void *arg)
 {
   const char *sep = ",";
@@ -1332,6 +1370,7 @@ test_download_status_bridge(void *arg)
 
 struct testcase_t controller_tests[] = {
   { "add_onion_helper_keyarg", test_add_onion_helper_keyarg, 0, NULL, NULL },
+  { "getinfo_helper_onion", test_getinfo_helper_onion, 0, NULL, NULL },
   { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
     NULL, NULL },
   { "add_onion_helper_clientauth", test_add_onion_helper_clientauth, 0, NULL,
