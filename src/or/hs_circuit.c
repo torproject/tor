@@ -10,10 +10,17 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "rephist.h"
+#include "router.h"
 
 #include "hs_circuit.h"
 #include "hs_ident.h"
 #include "hs_ntor.h"
+#include "hs_service.h"
+
+/* Trunnel. */
+#include "hs/cell_common.h"
+#include "hs/cell_establish_intro.h"
 
 /* A circuit is about to become an e2e rendezvous circuit. Check
  * <b>circ_purpose</b> and ensure that it's properly set. Return true iff
@@ -165,6 +172,98 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   if (!is_service_side) {
     circuit_try_attaching_streams(circ);
   }
+}
+
+/* For a given circuit and a service introduction point object, register the
+ * intro circuit to the circuitmap. This supports legacy intro point. */
+static void
+register_intro_circ(const hs_service_intro_point_t *ip,
+                    origin_circuit_t *circ)
+{
+  tor_assert(ip);
+  tor_assert(circ);
+
+  if (ip->base.is_only_legacy) {
+    uint8_t digest[DIGEST_LEN];
+    if (BUG(crypto_pk_get_digest(ip->legacy_key, (char *) digest) < 0)) {
+      return;
+    }
+    hs_circuitmap_register_intro_circ_v2_service_side(circ, digest);
+  } else {
+    hs_circuitmap_register_intro_circ_v3_service_side(circ,
+                                         &ip->auth_key_kp.pubkey);
+  }
+}
+
+/* From a given service and service intro point, create an introduction point
+ * circuit identifier. This can't fail. */
+static hs_ident_circuit_t *
+create_intro_circuit_identifier(const hs_service_t *service,
+                                const hs_service_intro_point_t *ip)
+{
+  hs_ident_circuit_t *ident;
+
+  tor_assert(service);
+  tor_assert(ip);
+
+  ident = hs_ident_circuit_new(&service->keys.identity_pk,
+                               HS_IDENT_CIRCUIT_INTRO);
+  ed25519_pubkey_copy(&ident->intro_auth_pk, &ip->auth_key_kp.pubkey);
+
+  return ident;
+}
+
+/* For a given service and a service intro point, launch a circuit to the
+ * extend info ei. If the service is a single onion, a one-hop circuit will be
+ * requested. Return 0 if the circuit was successfully launched and tagged
+ * with the correct identifier. On error, a negative value is returned. */
+int
+hs_circ_launch_intro_point(hs_service_t *service,
+                           const hs_service_intro_point_t *ip,
+                           extend_info_t *ei, time_t now)
+{
+  /* Standard flags for introduction circuit. */
+  int ret = -1, circ_flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+  origin_circuit_t *circ;
+
+  tor_assert(service);
+  tor_assert(ip);
+  tor_assert(ei);
+
+  /* Update circuit flags in case of a single onion service that requires a
+   * direct connection. */
+  if (service->config.is_single_onion) {
+    circ_flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
+  }
+
+  log_info(LD_REND, "Launching a circuit to intro point %s for service %s.",
+           safe_str_client(extend_info_describe(ei)),
+           safe_str_client(service->onion_address));
+
+  /* Note down that we are about to use an internal circuit. */
+  rep_hist_note_used_internal(now, circ_flags & CIRCLAUNCH_NEED_UPTIME,
+                              circ_flags & CIRCLAUNCH_NEED_CAPACITY);
+
+  /* Note down the launch for the retry period. Even if the circuit fails to
+   * be launched, we still want to respect the retry period to avoid stress on
+   * the circuit subsystem. */
+  service->state.num_intro_circ_launched++;
+  circ = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
+                                       ei, circ_flags);
+  if (circ == NULL) {
+    goto end;
+  }
+
+  /* Setup the circuit identifier and attach it to it. */
+  circ->hs_ident = create_intro_circuit_identifier(service, ip);
+  tor_assert(circ->hs_ident);
+  /* Register circuit in the global circuitmap. */
+  register_intro_circ(ip, circ);
+
+  /* Success. */
+  ret = 0;
+ end:
+  return ret;
 }
 
 /* Circuit <b>circ</b> just finished the rend ntor key exchange. Use the key

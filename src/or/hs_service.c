@@ -13,6 +13,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "config.h"
+#include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "relay.h"
@@ -21,6 +22,7 @@
 #include "routerkeys.h"
 #include "routerlist.h"
 
+#include "hs_circuit.h"
 #include "hs_common.h"
 #include "hs_config.h"
 #include "hs_circuit.h"
@@ -383,6 +385,35 @@ get_node_from_intro_point(const hs_service_intro_point_t *ip)
   tor_assert(ls);
   /* XXX In the future, we want to only use the ed25519 ID (#22173). */
   return node_get_by_id((const char *) ls->u.legacy_id);
+}
+
+/* Given a service intro point, return the extend_info_t for it. This can
+ * return NULL if the node can't be found for the intro point or the extend
+ * info can't be created for the found node. If direct_conn is set, the extend
+ * info is validated on if we can connect directly. */
+static extend_info_t *
+get_extend_info_from_intro_point(const hs_service_intro_point_t *ip,
+                                 unsigned int direct_conn)
+{
+  extend_info_t *info = NULL;
+  const node_t *node;
+
+  tor_assert(ip);
+
+  node = get_node_from_intro_point(ip);
+  if (node == NULL) {
+    /* This can happen if the relay serving as intro point has been removed
+     * from the consensus. In that case, the intro point will be removed from
+     * the descriptor during the scheduled events. */
+    goto end;
+  }
+
+  /* In the case of a direct connection (single onion service), it is possible
+   * our firewall policy won't allow it so this can return a NULL value. */
+  info = extend_info_from_node(node, direct_conn);
+
+ end:
+  return info;
 }
 
 /* Return an introduction point circuit matching the given intro point object.
@@ -1425,14 +1456,149 @@ run_build_descriptor_event(time_t now)
   update_all_descriptors(now);
 }
 
+/* For the given service, launch any intro point circuits that could be
+ * needed. This considers every descriptor of the service. */
+static void
+launch_intro_point_circuits(hs_service_t *service, time_t now)
+{
+  tor_assert(service);
+
+  /* For both descriptors, try to launch any missing introduction point
+   * circuits using the current map. */
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    /* Keep a ref on if we need a direct connection. We use this often. */
+    unsigned int direct_conn = service->config.is_single_onion;
+
+    DIGEST256MAP_FOREACH_MODIFY(desc->intro_points.map, key,
+                                hs_service_intro_point_t *, ip) {
+      extend_info_t *ei;
+
+      /* Skip the intro point that already has an existing circuit
+       * (established or not). */
+      if (get_intro_circuit(ip)) {
+        continue;
+      }
+
+      ei = get_extend_info_from_intro_point(ip, direct_conn);
+      if (ei == NULL) {
+        if (!direct_conn) {
+          /* In case of a multi-hop connection, it should never happen that we
+           * can't get the extend info from the node. Avoid connection and
+           * remove intro point from descriptor in order to recover from this
+           * potential bug. */
+          tor_assert_nonfatal(ei);
+        }
+        MAP_DEL_CURRENT(key);
+        service_intro_point_free(ip);
+        continue;
+      }
+
+      /* Launch a circuit to the intro point. */
+      ip->circuit_retries++;
+      if (hs_circ_launch_intro_point(service, ip, ei, now) < 0) {
+        log_warn(LD_REND, "Unable to launch intro circuit to node %s "
+                          "for service %s.",
+                 safe_str_client(extend_info_describe(ei)),
+                 safe_str_client(service->onion_address));
+        /* Intro point will be retried if possible after this. */
+      }
+      extend_info_free(ei);
+    } DIGEST256MAP_FOREACH_END;
+  } FOR_EACH_DESCRIPTOR_END;
+}
+
+/* Don't try to build more than this many circuits before giving up for a
+ * while. Dynamically calculated based on the configured number of intro
+ * points for the given service and how many descriptor exists. The default
+ * use case of 3 introduction points and two descriptors will allow 28
+ * circuits for a retry period (((3 + 2) + (3 * 3)) * 2). */
+static unsigned int
+get_max_intro_circ_per_period(const hs_service_t *service)
+{
+  unsigned int count = 0;
+  unsigned int multiplier = 0;
+  unsigned int num_wanted_ip;
+
+  tor_assert(service);
+  tor_assert(service->config.num_intro_points <=
+             HS_CONFIG_V3_MAX_INTRO_POINTS);
+
+  num_wanted_ip = service->config.num_intro_points;
+
+  /* The calculation is as follow. We have a number of intro points that we
+   * want configured as a torrc option (num_intro_points). We then add an
+   * extra value so we can launch multiple circuits at once and pick the
+   * quickest ones. For instance, we want 3 intros, we add 2 extra so we'll
+   * pick 5 intros and launch 5 circuits. */
+  count += (num_wanted_ip + NUM_INTRO_POINTS_EXTRA);
+
+  /* Then we add the number of retries that is possible to do for each intro
+   * point. If we want 3 intros, we'll allow 3 times the number of possible
+   * retry. */
+  count += (num_wanted_ip * MAX_INTRO_POINT_CIRCUIT_RETRIES);
+
+  /* Then, we multiply by a factor of 2 if we have both descriptor or 0 if we
+   * have none.  */
+  multiplier += (service->desc_current) ? 1 : 0;
+  multiplier += (service->desc_next) ? 1 : 0;
+
+  return (count * multiplier);
+}
+
+/* For the given service, return 1 if the service is allowed to launch more
+ * introduction circuits else 0 if the maximum has been reached for the retry
+ * period of INTRO_CIRC_RETRY_PERIOD. */
+static int
+can_service_launch_intro_circuit(hs_service_t *service, time_t now)
+{
+  tor_assert(service);
+
+  /* Consider the intro circuit retry period of the service. */
+  if (now > (service->state.intro_circ_retry_started_time +
+             INTRO_CIRC_RETRY_PERIOD)) {
+    service->state.intro_circ_retry_started_time = now;
+    service->state.num_intro_circ_launched = 0;
+    goto allow;
+  }
+  /* Check if we can still launch more circuits in this period. */
+  if (service->state.num_intro_circ_launched <=
+      get_max_intro_circ_per_period(service)) {
+    goto allow;
+  }
+
+  /* Rate limit log that we've reached our circuit creation limit. */
+  {
+    char *msg;
+    time_t elapsed_time = now - service->state.intro_circ_retry_started_time;
+    static ratelim_t rlimit = RATELIM_INIT(INTRO_CIRC_RETRY_PERIOD);
+    if ((msg = rate_limit_log(&rlimit, now))) {
+      log_info(LD_REND, "Hidden service %s exceeded its circuit launch limit "
+                        "of %u per %d seconds. It launched %u circuits in "
+                        "the last %ld seconds. Will retry in %ld seconds.",
+               safe_str_client(service->onion_address),
+               get_max_intro_circ_per_period(service),
+               INTRO_CIRC_RETRY_PERIOD,
+               service->state.num_intro_circ_launched, elapsed_time,
+               INTRO_CIRC_RETRY_PERIOD - elapsed_time);
+      tor_free(msg);
+    }
+  }
+
+  /* Not allow. */
+  return 0;
+ allow:
+  return 1;
+}
+
 /* Scheduled event run from the main loop. Make sure we have all the circuits
  * we need for each service. */
 static void
 run_build_circuit_event(time_t now)
 {
-  /* Make sure we can actually have enough information to build internal
-   * circuits as required by services. */
-  if (router_have_consensus_path() == CONSENSUS_PATH_UNKNOWN) {
+  /* Make sure we can actually have enough information or able to build
+   * internal circuits as required by services. */
+  if (router_have_consensus_path() == CONSENSUS_PATH_UNKNOWN ||
+      !have_completed_a_circuit()) {
     return;
   }
 
@@ -1443,10 +1609,14 @@ run_build_circuit_event(time_t now)
 
   /* Run v3+ check. */
   FOR_EACH_SERVICE_BEGIN(service) {
-    /* XXX: Check every service for validity of circuits. */
-    /* XXX: Make sure we have a retry period so we don't stress circuit
-     * creation. */
-    (void) service;
+    /* For introduction circuit, we need to make sure we don't stress too much
+     * circuit creation so make sure this service is respecting that limit. */
+    if (can_service_launch_intro_circuit(service, now)) {
+      /* Launch intro point circuits if needed. */
+      launch_intro_point_circuits(service, now);
+      /* Once the circuits have opened, we'll make sure to update the
+       * descriptor intro point list and cleanup any extraneous. */
+    }
   } FOR_EACH_SERVICE_END;
 }
 

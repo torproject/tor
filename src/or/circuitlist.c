@@ -65,6 +65,7 @@
 #include "control.h"
 #include "entrynodes.h"
 #include "main.h"
+#include "hs_circuit.h"
 #include "hs_circuitmap.h"
 #include "hs_common.h"
 #include "hs_ident.h"

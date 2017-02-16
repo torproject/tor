@@ -10,6 +10,15 @@
 #define TOR_HS_CIRCUIT_H
 
 #include "or.h"
+#include "crypto.h"
+#include "crypto_ed25519.h"
+
+#include "hs_service.h"
+
+/* Circuit API. */
+int hs_circ_launch_intro_point(hs_service_t *service,
+                               const hs_service_intro_point_t *ip,
+                               extend_info_t *ei, time_t now);
 
 /* e2e circuit API. */
 
