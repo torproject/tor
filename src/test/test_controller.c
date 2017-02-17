@@ -144,6 +144,7 @@ test_getinfo_helper_onion(void *arg)
  done:
   tor_free(answer);
   tor_free(service_id);
+  smartlist_free(dummy.ephemeral_onion_services);
 }
 
 static void
