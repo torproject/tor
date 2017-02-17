@@ -5551,7 +5551,7 @@ tor_version_parse_platform(const char *platform,
   if (strict) {
     if (router_version->major < 0 ||
         router_version->minor < 0 ||
-        router_version->minor < 0 ||
+        router_version->micro < 0 ||
         router_version->patchlevel < 0 ||
         router_version->svn_revision < 0) {
       return -1;
