@@ -1587,7 +1587,6 @@ options_transition_affects_guards(const or_options_t *old,
   return
     (old->UseEntryGuards != new->UseEntryGuards ||
      old->UseBridges != new->UseBridges ||
-     old->UseEntryGuards != new->UseEntryGuards ||
      old->ClientUseIPv4 != new->ClientUseIPv4 ||
      old->ClientUseIPv6 != new->ClientUseIPv6 ||
      old->FascistFirewall != new->FascistFirewall ||
