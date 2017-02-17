@@ -1,0 +1,5 @@
+  o Minor bugfixes (correctness):
+    - Remove a redundant check for the UseEntryGuards option from the
+      options_transition_affects_guards() function. Fixes bug 21492;
+      bugfix on 0.3.0.1-alpha.
+
