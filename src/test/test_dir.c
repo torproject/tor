@@ -1123,6 +1123,16 @@ test_dir_versions(void *arg)
   tt_int_op(-1, OP_EQ, tor_version_parse("0.-1.0", &ver1));
   tt_int_op(-1, OP_EQ, tor_version_parse("0.-2147483648.0", &ver1));
   tt_int_op(-1, OP_EQ, tor_version_parse("0.-4294967295.0", &ver1));
+  /* In #21507, we reject version components with non-numeric prefixes */
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("+1.0.0", &ver1));
+  /* use the list in isspace() */
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\t0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\n0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\v0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\f0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\r0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0. 0.0", &ver1));
 
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
