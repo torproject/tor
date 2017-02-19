@@ -1107,6 +1107,18 @@ test_dir_versions(void *arg)
   tt_int_op(9, OP_EQ, ver1.patchlevel);
   tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
   tt_str_op("dev", OP_EQ, ver1.status_tag);
+  /* In #21450, we fixed an inconsistency in parsing versions > INT32_MAX
+   * between i386 and x86_64, as we used tor_parse_long, and then cast to int
+   */
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2147483647.0", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2147483647, OP_EQ, ver1.minor);
+  tt_int_op(0, OP_EQ, ver1.micro);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("", OP_EQ, ver1.status_tag);
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.2147483648.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.4294967295.0", &ver1));
 
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
