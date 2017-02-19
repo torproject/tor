@@ -1,0 +1,5 @@
+  o Minor enhancements (unit tests):
+    - Improve version parsing tests: add tests for typical version components,
+      add tests for invalid versions, including numeric range and non-numeric
+      prefixes.
+      Unit tests 21278, 21450, and 21507. Partially implements 21470.
