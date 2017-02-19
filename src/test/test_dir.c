@@ -1165,6 +1165,33 @@ test_dir_versions(void *arg)
                                    "Tor 0.2.1.0-dev (r99)"));
   tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.1",
                                    "Tor 0.2.1.0-dev (r99)"));
+  /* And git revisions */
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-56788a2489127072)",
+                                        "Tor 0.2.9.9 (git-56788a2489127072)"));
+  /* a git revision is newer than no git revision */
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-56788a2489127072)",
+                                        "Tor 0.2.9.9"));
+  /* a longer git revision is newer than a shorter git revision
+   * this should be true if they prefix-match, but if they don't, they are
+   * incomparable, because hashes aren't ordered (but we compare their bytes
+   * anyway) */
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                  "Tor 0.2.9.9 (git-56788a2489127072d513cf4baf35a8ff475f3c7b)",
+                  "Tor 0.2.9.9 (git-56788a2489127072)"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-0102)",
+                                        "Tor 0.2.9.9 (git-03)"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-0102)",
+                                        "Tor 0.2.9.9 (git-00)"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2.9.9 (git-01)",
+                                           "Tor 0.2.9.9 (git-00)"));
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2.9.9 (git-00)",
+                                           "Tor 0.2.9.9 (git-01)"));
 
   /* Now try git revisions */
   tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00ff)", &ver1));
@@ -1174,9 +1201,22 @@ test_dir_versions(void *arg)
   tt_int_op(7,OP_EQ, ver1.patchlevel);
   tt_int_op(3,OP_EQ, ver1.git_tag_len);
   tt_mem_op(ver1.git_tag,OP_EQ, "\xff\x00\xff", 3);
+  /* reject bad hex digits */
   tt_int_op(-1,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00xx)", &ver1));
+  /* reject odd hex digit count */
   tt_int_op(-1,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00fff)", &ver1));
+  /* ignore "git " */
   tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git ff00fff)", &ver1));
+  /* standard length is 16 hex digits */
+  tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git-0010203040506070)",
+                                       &ver1));
+  /* length limit is 40 hex digits */
+  tt_int_op(0,OP_EQ, tor_version_parse(
+                     "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f10111213)",
+                     &ver1));
+  tt_int_op(-1,OP_EQ, tor_version_parse(
+                    "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f1011121314)",
+                    &ver1));
  done:
   ;
 }
