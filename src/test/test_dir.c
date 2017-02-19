@@ -1064,6 +1064,7 @@ test_dir_versions(void *arg)
   tt_int_op(0, OP_EQ, ver1.patchlevel);
   tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
   tt_str_op("alpha", OP_EQ, ver1.status_tag);
+  /* Go through the full set of status tags */
   tt_int_op(0, OP_EQ, tor_version_parse("2.1.700-alpha", &ver1));
   tt_int_op(2, OP_EQ, ver1.major);
   tt_int_op(1, OP_EQ, ver1.minor);
@@ -1078,6 +1079,34 @@ test_dir_versions(void *arg)
   tt_int_op(0, OP_EQ, ver1.patchlevel);
   tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
   tt_str_op("alpha-dev", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.5-rc", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(5, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("rc", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.6-rc-dev", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(6, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("rc-dev", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.8", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(8, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.9-dev", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(9, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("dev", OP_EQ, ver1.status_tag);
 
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
@@ -1097,6 +1126,7 @@ test_dir_versions(void *arg)
   test_v_i_o(VS_RECOMMENDED, "0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8");
   test_v_i_o(VS_OLD, "0.0.5.0", "0.0.5.1-cvs");
   test_v_i_o(VS_NEW_IN_SERIES, "0.0.5.1-cvs", "0.0.5, 0.0.6");
+  test_v_i_o(VS_NEW, "0.2.9.9-dev", "0.2.9.9");
   /* Not on list, but newer than any in same series. */
   test_v_i_o(VS_NEW_IN_SERIES, "0.1.0.3",
              "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
