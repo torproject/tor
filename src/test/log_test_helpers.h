@@ -71,14 +71,14 @@ void mock_dump_saved_logs(void);
                                                                         \
     assert_log_predicate(mock_saved_log_has_message_containing(str) &&  \
                          mock_saved_log_n_entries() == 1,               \
-                  "expected log to contain exactly 1 message: " # str); \
+                  "expected log to contain exactly 1 message " # str); \
   } while (0);
 
 #define expect_single_log_msg_containing(str) \
   do {                                                                  \
     assert_log_predicate(mock_saved_log_has_message_containing(str)&&   \
                          mock_saved_log_n_entries() == 1 ,              \
-            "expected log to contain 1 message, containing" # str);     \
+            "expected log to contain 1 message, containing " # str);     \
   } while (0);
 
 #define expect_no_log_msg(str) \
