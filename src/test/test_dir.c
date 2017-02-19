@@ -1119,6 +1119,10 @@ test_dir_versions(void *arg)
   tt_str_op("", OP_EQ, ver1.status_tag);
   tt_int_op(-1, OP_EQ, tor_version_parse("0.2147483648.0", &ver1));
   tt_int_op(-1, OP_EQ, tor_version_parse("0.4294967295.0", &ver1));
+  /* In #21278, we reject negative version components */
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-1.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-2147483648.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-4294967295.0", &ver1));
 
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
@@ -1204,6 +1208,43 @@ test_dir_versions(void *arg)
   tt_int_op(0,OP_EQ, tor_version_as_new_as(
                                            "Tor 0.2.9.9 (git-00)",
                                            "Tor 0.2.9.9 (git-01)"));
+  /* In #21278, we comapre without integer overflows.
+   * But since #21450 limits version components to [0, INT32_MAX], it is no
+   * longer possible to cause an integer overflow in tor_version_compare() */
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.0.0.0",
+                                           "Tor 2147483647.0.0.0"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                           "Tor 2147483647.0.0.0",
+                                           "Tor 0.0.0.0"));
+  /* These versions used to cause an overflow, now they don't parse
+   * (and authorities reject their descriptors), and log a BUG message */
+  setup_full_capture_of_logs(LOG_WARN);
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.0.0.0",
+                                           "Tor 0.-2147483648.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2147483647.0.0",
+                                           "Tor 0.-1.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2147483647.0.0",
+                                           "Tor 0.-2147483648.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                           "Tor 4294967295.0.0.0",
+                                           "Tor 0.0.0.0"));
+  expect_no_log_entry();
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.4294967295.0.0",
+                                           "Tor 0.-4294967295.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  teardown_capture_of_logs();
 
   /* Now try git revisions */
   tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00ff)", &ver1));
@@ -1230,7 +1271,7 @@ test_dir_versions(void *arg)
                     "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f1011121314)",
                     &ver1));
  done:
-  ;
+  teardown_capture_of_logs();
 }
 
 /** Run unit tests for directory fp_pair functions. */
