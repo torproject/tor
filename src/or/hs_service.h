@@ -103,6 +103,9 @@ typedef struct hs_service_descriptor_t {
    * hs_service_intropoints_t object indexed by authentication key (the RSA
    * key if the node is legacy). */
   hs_service_intropoints_t intro_points;
+
+  /* The time period number this descriptor has been created for. */
+  uint64_t time_period_num;
 } hs_service_descriptor_t;
 
 /* Service key material. */
@@ -228,6 +231,7 @@ void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
 
 void hs_service_run_scheduled_events(time_t now);
+void hs_service_circuit_has_opened(origin_circuit_t *circ);
 
 /* These functions are only used by unit tests and we need to expose them else
  * hs_service.o ends up with no symbols in libor.a which makes clang throw a

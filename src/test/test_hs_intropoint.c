@@ -488,10 +488,10 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   key1 = pk_generate(0);
 
   /* Use old circuit_key_material why not */
-  cell_len = encode_establish_intro_cell_legacy((char*)cell_body,
-                                                sizeof(cell_body),
-                                                key1,
-                                                (char *) circuit_key_material);
+  cell_len = rend_service_encode_establish_intro_cell(
+                                           (char*)cell_body,
+                                           sizeof(cell_body), key1,
+                                           (char *) circuit_key_material);
   tt_int_op(cell_len, >, 0);
 
   /* Receive legacy establish_intro */

@@ -3116,10 +3116,11 @@ count_intro_point_circuits(const rend_service_t *service)
    crypto material. On success, fill <b>cell_body_out</b> and return the number
    of bytes written. On fail, return -1.
  */
-STATIC ssize_t
-encode_establish_intro_cell_legacy(char *cell_body_out,
-                                 size_t cell_body_out_len,
-                                 crypto_pk_t *intro_key, char *rend_circ_nonce)
+ssize_t
+rend_service_encode_establish_intro_cell(char *cell_body_out,
+                                         size_t cell_body_out_len,
+                                         crypto_pk_t *intro_key,
+                                         const char *rend_circ_nonce)
 {
   int retval = -1;
   int r;
@@ -3256,7 +3257,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   /* Send the ESTABLISH_INTRO cell */
   {
     ssize_t len;
-    len = encode_establish_intro_cell_legacy(buf, sizeof(buf),
+    len = rend_service_encode_establish_intro_cell(buf, sizeof(buf),
                                       circuit->intro_key,
                                       circuit->cpath->prev->rend_circ_nonce);
     if (len < 0) {

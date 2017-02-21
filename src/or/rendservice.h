@@ -126,10 +126,6 @@ STATIC int rend_service_verify_single_onion_poison(
 STATIC int rend_service_poison_new_single_onion_dir(
                                                   const rend_service_t *s,
                                                   const or_options_t* options);
-STATIC ssize_t encode_establish_intro_cell_legacy(char *cell_body_out,
-                                                  size_t cell_body_out_len,
-                                                  crypto_pk_t *intro_key,
-                                                  char *rend_circ_nonce);
 #ifdef TOR_UNIT_TESTS
 
 STATIC void set_rend_service_list(smartlist_t *new_list);
@@ -172,6 +168,10 @@ rend_intro_cell_t * rend_service_begin_parse_intro(const uint8_t *request,
                                                    char **err_msg_out);
 int rend_service_parse_intro_plaintext(rend_intro_cell_t *intro,
                                        char **err_msg_out);
+ssize_t rend_service_encode_establish_intro_cell(char *cell_body_out,
+                                                 size_t cell_body_out_len,
+                                                 crypto_pk_t *intro_key,
+                                                 const char *rend_circ_nonce);
 int rend_service_validate_intro_late(const rend_intro_cell_t *intro,
                                      char **err_msg_out);
 void rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc);

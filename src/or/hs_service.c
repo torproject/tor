@@ -12,6 +12,7 @@
 #include "circpathbias.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "circuituse.h"
 #include "config.h"
 #include "main.h"
 #include "networkstatus.h"
@@ -338,13 +339,72 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
 static void
 service_intro_point_add(digest256map_t *map, hs_service_intro_point_t *ip)
 {
-  uint8_t key[DIGEST256_LEN] = {0};
-
   tor_assert(map);
   tor_assert(ip);
 
-  memcpy(key, ip->auth_key_kp.pubkey.pubkey, sizeof(key));
-  digest256map_set(map, key, ip);
+  digest256map_set(map, ip->auth_key_kp.pubkey.pubkey, ip);
+}
+
+/* For a given service, remove the intro point from that service which will
+ * look in both descriptors. */
+static void
+service_intro_point_remove(const hs_service_t *service,
+                           const hs_service_intro_point_t *ip)
+{
+  tor_assert(service);
+  tor_assert(ip);
+
+  /* Trying all descriptors. */
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    /* We'll try to remove the descriptor on both descriptors which is not
+     * very expensive to do instead of doing loopup + remove. */
+    digest256map_remove(desc->intro_points.map,
+                        ip->auth_key_kp.pubkey.pubkey);
+  } FOR_EACH_DESCRIPTOR_END;
+}
+
+/* For a given service and authentication key, return the intro point or NULL
+ * if not found. This will check both descriptors in the service. */
+static hs_service_intro_point_t *
+service_intro_point_find(const hs_service_t *service,
+                         const ed25519_public_key_t *auth_key)
+{
+  hs_service_intro_point_t *ip = NULL;
+
+  tor_assert(service);
+  tor_assert(auth_key);
+
+  /* Trying all descriptors. */
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    if ((ip = digest256map_get(desc->intro_points.map,
+                               auth_key->pubkey)) != NULL) {
+      break;
+    }
+  } FOR_EACH_DESCRIPTOR_END;
+
+  return ip;
+}
+
+/* For a given service and intro point, return the descriptor for which the
+ * intro point is assigned to. NULL is returned if not found. */
+static hs_service_descriptor_t *
+service_desc_find_by_intro(const hs_service_t *service,
+                           const hs_service_intro_point_t *ip)
+{
+  hs_service_descriptor_t *descp = NULL;
+
+  tor_assert(service);
+  tor_assert(ip);
+
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    if (digest256map_get(desc->intro_points.map,
+                         ip->auth_key_kp.pubkey.pubkey)) {
+      descp = desc;
+      break;
+    }
+  } FOR_EACH_DESCRIPTOR_END;
+
+  return descp;
 }
 
 /* From a given intro point, return the first link specifier of type
@@ -790,7 +850,6 @@ service_descriptor_new(void)
   return sdesc;
 }
 
-#if 0
 /* Copy the descriptor link specifier object from src to dst. */
 static void
 link_specifier_copy(hs_desc_link_specifier_t *dst,
@@ -915,8 +974,6 @@ build_desc_intro_points(const hs_service_t *service,
     smartlist_add(encrypted->intro_points, desc_ip);
   } DIGEST256MAP_FOREACH_END;
 }
-
-#endif /* build_desc_intro_points is disabled because not used */
 
 /* Populate the descriptor encrypted section fomr the given service object.
  * This will generate a valid list of introduction points that can be used
@@ -1635,13 +1692,104 @@ run_upload_descriptor_event(time_t now)
   /* Run v3+ check. */
   FOR_EACH_SERVICE_BEGIN(service) {
     /* XXX: Upload if needed the descriptor(s). Update next upload time. */
-    (void) service;
+    /* XXX: Build the descriptor intro points list with
+     * build_desc_intro_points() once we have enough circuit opened. */
+    build_desc_intro_points(service, NULL, now);
   } FOR_EACH_SERVICE_END;
+}
+
+/* Called when the introduction point circuit is done building and ready to be
+ * used. */
+static void
+service_intro_circ_has_opened(origin_circuit_t *circ)
+{
+  int close_reason;
+  hs_service_t *service;
+  hs_service_intro_point_t *ip;
+  hs_service_descriptor_t *desc = NULL;
+
+  tor_assert(circ);
+  tor_assert(circ->cpath);
+  /* Getting here means this is a v3 intro circuit. */
+  tor_assert(circ->hs_ident);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+
+  /* Get service object from the circuit identifier. */
+  service = find_service(hs_service_map, &circ->hs_ident->identity_pk);
+  if (service == NULL) {
+    log_warn(LD_REND, "Unknown service identity key %s on the introduction "
+                      "circuit %u. Can't find onion service.",
+             safe_str_client(ed25519_fmt(&circ->hs_ident->identity_pk)),
+             TO_CIRCUIT(circ)->n_circ_id);
+    close_reason = END_CIRC_REASON_NOSUCHSERVICE;
+    goto err;
+  }
+
+  /* From the service object, get the intro point object of that circuit. The
+   * following will query both descriptors intro points list. */
+  ip = service_intro_point_find(service, &circ->hs_ident->intro_auth_pk);
+  if (ip == NULL) {
+    log_warn(LD_REND, "Unknown authentication key on the introduction "
+                      "circuit %u for service %s",
+             TO_CIRCUIT(circ)->n_circ_id,
+             safe_str_client(service->onion_address));
+    /* Closing this circuit because we don't recognize the key. */
+    close_reason = END_CIRC_REASON_NOSUCHSERVICE;
+    goto err;
+  }
+  /* We can't have an IP object without a descriptor. */
+  desc = service_desc_find_by_intro(service, ip);
+  tor_assert(desc);
+
+  if (hs_circ_service_intro_has_opened(service, ip, desc, circ)) {
+    /* Getting here means that the circuit has been re-purposed because we
+     * have enough intro circuit opened. Remove the IP from the service. */
+    service_intro_point_remove(service, ip);
+    service_intro_point_free(ip);
+  }
+
+  goto done;
+
+ err:
+  /* Close circuit, we can't use it. */
+  circuit_mark_for_close(TO_CIRCUIT(circ), close_reason);
+ done:
+  return;
+}
+
+static void
+service_rendezvous_circ_has_opened(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  /* XXX: Implement rendezvous support. */
 }
 
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Called when any kind of hidden service circuit is done building thus
+ * opened. This is the entry point from the circuit subsystem. */
+void
+hs_service_circuit_has_opened(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
+   * identifier hs_ident. Can't be both. */
+  switch (TO_CIRCUIT(circ)->purpose) {
+  case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+    (circ->hs_ident) ? service_intro_circ_has_opened(circ) :
+                       rend_service_intro_has_opened(circ);
+    break;
+  case CIRCUIT_PURPOSE_S_CONNECT_REND:
+    (circ->hs_ident) ? service_rendezvous_circ_has_opened(circ) :
+                       rend_service_rendezvous_has_opened(circ);
+    break;
+  default:
+    tor_assert(0);
+  }
+}
 
 /* Load and/or generate keys for all onion services including the client
  * authorization if any. Return 0 on success, -1 on failure. */
