@@ -1096,8 +1096,9 @@ run_connection_housekeeping(int i, time_t now)
   } else if (!have_any_circuits &&
              now - or_conn->idle_timeout >=
                                          chan->timestamp_last_had_circuits) {
-    log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-             "[no circuits for %d; timeout %d; %scanonical].",
+    log_info(LD_OR,"Expiring non-used OR connection "U64_FORMAT" to fd %d "
+             "(%s:%d) [no circuits for %d; timeout %d; %scanonical].",
+             U64_PRINTF_ARG(chan->global_identifier),
              (int)conn->s, conn->address, conn->port,
              (int)(now - chan->timestamp_last_had_circuits),
              or_conn->idle_timeout,
@@ -3018,6 +3019,9 @@ tor_init(int argc, char *argv[])
 
   /* The options are now initialised */
   const or_options_t *options = get_options();
+
+  /* Initialize predicted ports list after loading options */
+  predicted_ports_init();
 
 #ifndef _WIN32
   if (geteuid()==0)

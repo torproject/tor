@@ -359,6 +359,7 @@ test_channelpadding_consensus(void *arg)
    *    consensus defaults
    * 4. Relay-to-relay padding can be enabled/disabled in consensus
    * 5. Can enable/disable padding before actually using a connection
+   * 6. Can we control circ and TLS conn lifetime from the consensus?
    */
   channel_t *chan;
   routerstatus_t *relay = tor_malloc_zero(sizeof(routerstatus_t));
@@ -490,6 +491,43 @@ test_channelpadding_consensus(void *arg)
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
   tt_assert(!chan->pending_padding_callback);
+
+  /* Test 6: Can we control circ and TLS conn lifetime from the consensus? */
+  val = channelpadding_get_channel_idle_timeout(NULL, 0);
+  tt_int_op(val, OP_GE, 180);
+  tt_int_op(val, OP_LE, 180+90);
+  val = channelpadding_get_channel_idle_timeout(chan, 0);
+  tt_int_op(val, OP_GE, 180);
+  tt_int_op(val, OP_LE, 180+90);
+  options->ReducedConnectionPadding = 1;
+  val = channelpadding_get_channel_idle_timeout(chan, 0);
+  tt_int_op(val, OP_GE, 180/2);
+  tt_int_op(val, OP_LE, (180+90)/2);
+
+  options->ReducedConnectionPadding = 0;
+  options->ORPort_set = 1;
+  smartlist_add(current_md_consensus->net_params,
+                (void*)"nf_conntimeout_relays=600");
+  val = channelpadding_get_channel_idle_timeout(chan, 1);
+  tt_int_op(val, OP_GE, 450);
+  tt_int_op(val, OP_LE, 750);
+
+  val = channelpadding_get_circuits_available_timeout();
+  tt_int_op(val, OP_GE, 30*60);
+  tt_int_op(val, OP_LE, 30*60*2);
+
+  options->ReducedConnectionPadding = 1;
+  smartlist_add(current_md_consensus->net_params,
+                (void*)"nf_conntimeout_clients=600");
+  val = channelpadding_get_circuits_available_timeout();
+  tt_int_op(val, OP_GE, 600/2);
+  tt_int_op(val, OP_LE, 600*2/2);
+
+  options->ReducedConnectionPadding = 0;
+  options->CircuitsAvailableTimeout = 24*60*60;
+  val = channelpadding_get_circuits_available_timeout();
+  tt_int_op(val, OP_GE, 24*60*60);
+  tt_int_op(val, OP_LE, 24*60*60*2);
 
  done:
   free_fake_channeltls((channel_tls_t*)chan);

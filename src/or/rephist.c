@@ -84,12 +84,13 @@
 #include "router.h"
 #include "routerlist.h"
 #include "ht.h"
+#include "channelpadding.h"
 
 #include "channelpadding.h"
 #include "connection_or.h"
 
 static void bw_arrays_init(void);
-static void predicted_ports_init(void);
+static void predicted_ports_alloc(void);
 
 /** Total number of bytes currently allocated in fields used by rephist.c. */
 uint64_t rephist_total_alloc=0;
@@ -305,7 +306,7 @@ rep_hist_init(void)
 {
   history_map = digestmap_new();
   bw_arrays_init();
-  predicted_ports_init();
+  predicted_ports_alloc();
 }
 
 /** Helper: note that we are no longer connected to the router with history
@@ -1799,6 +1800,36 @@ typedef struct predicted_port_t {
 
 /** A list of port numbers that have been used recently. */
 static smartlist_t *predicted_ports_list=NULL;
+/** How long do we keep predicting circuits? */
+static int prediction_timeout=0;
+/** When was the last time we added a prediction entry (HS or port) */
+static time_t last_prediction_add_time=0;
+
+/**
+ * How much time left until we stop predicting circuits?
+ */
+int
+predicted_ports_prediction_time_remaining(time_t now)
+{
+  time_t idle_delta = now - last_prediction_add_time;
+
+  /* Protect against overflow of return value. This can happen if the clock
+   * jumps backwards in time. Update the last prediction time (aka last
+   * active time) to prevent it. This update is preferable to using monotonic
+   * time because it prevents clock jumps into the past from simply causing
+   * very long idle timeouts while the monotonic time stands still. */
+  if (last_prediction_add_time > now) {
+    last_prediction_add_time = now;
+    idle_delta = 0;
+  }
+
+  /* Protect against underflow of the return value. This can happen for very
+   * large periods of inactivity/system sleep. */
+  if (idle_delta > prediction_timeout)
+    return 0;
+
+  return prediction_timeout - idle_delta;
+}
 
 /** We just got an application request for a connection with
  * port <b>port</b>. Remember it for the future, so we can keep
@@ -1808,21 +1839,40 @@ static void
 add_predicted_port(time_t now, uint16_t port)
 {
   predicted_port_t *pp = tor_malloc(sizeof(predicted_port_t));
+
+  //  If the list is empty, re-randomize predicted ports lifetime
+  if (!any_predicted_circuits(now)) {
+    prediction_timeout = channelpadding_get_circuits_available_timeout();
+  }
+
+  last_prediction_add_time = now;
+
+  log_info(LD_CIRC,
+          "New port prediction added. Will continue predictive circ building "
+          "for %d more seconds.",
+          predicted_ports_prediction_time_remaining(now));
+
   pp->port = port;
   pp->time = now;
   rephist_total_alloc += sizeof(*pp);
   smartlist_add(predicted_ports_list, pp);
 }
 
-/** Initialize whatever memory and structs are needed for predicting
+/**
+ * Allocate whatever memory and structs are needed for predicting
  * which ports will be used. Also seed it with port 80, so we'll build
  * circuits on start-up.
  */
 static void
-predicted_ports_init(void)
+predicted_ports_alloc(void)
 {
   predicted_ports_list = smartlist_new();
-  add_predicted_port(time(NULL), 80); /* add one to kickstart us */
+}
+
+void
+predicted_ports_init(void)
+{
+  add_predicted_port(time(NULL), 443); // Add a port to get us started
 }
 
 /** Free whatever memory is needed for predicting which ports will
@@ -1853,6 +1903,12 @@ rep_hist_note_used_port(time_t now, uint16_t port)
   SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
     if (pp->port == port) {
       pp->time = now;
+
+      last_prediction_add_time = now;
+      log_info(LD_CIRC,
+               "New port prediction added. Will continue predictive circ "
+               "building for %d more seconds.",
+               predicted_ports_prediction_time_remaining(now));
       return;
     }
   } SMARTLIST_FOREACH_END(pp);
@@ -1869,8 +1925,8 @@ rep_hist_get_predicted_ports(time_t now)
   int predicted_circs_relevance_time;
   smartlist_t *out = smartlist_new();
   tor_assert(predicted_ports_list);
-  // XXX: Change this if ReducedConnectionPadding is set.
-  predicted_circs_relevance_time = get_options()->PredictedPortsRelevanceTime;
+
+  predicted_circs_relevance_time = prediction_timeout;
 
   /* clean out obsolete entries */
   SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
@@ -1930,6 +1986,18 @@ static time_t predicted_internal_capacity_time = 0;
 void
 rep_hist_note_used_internal(time_t now, int need_uptime, int need_capacity)
 {
+  // If the list is empty, re-randomize predicted ports lifetime
+  if (!any_predicted_circuits(now)) {
+    prediction_timeout = channelpadding_get_circuits_available_timeout();
+  }
+
+  last_prediction_add_time = now;
+
+  log_info(LD_CIRC,
+          "New port prediction added. Will continue predictive circ building "
+          "for %d more seconds.",
+          predicted_ports_prediction_time_remaining(now));
+
   predicted_internal_time = now;
   if (need_uptime)
     predicted_internal_uptime_time = now;
@@ -1943,7 +2011,8 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                 int *need_capacity)
 {
   int predicted_circs_relevance_time;
-  predicted_circs_relevance_time = get_options()->PredictedPortsRelevanceTime;
+
+  predicted_circs_relevance_time = prediction_timeout;
 
   if (!predicted_internal_time) { /* initialize it */
     predicted_internal_time = now;
@@ -1965,7 +2034,7 @@ int
 any_predicted_circuits(time_t now)
 {
   int predicted_circs_relevance_time;
-  predicted_circs_relevance_time = get_options()->PredictedPortsRelevanceTime;
+  predicted_circs_relevance_time = prediction_timeout;
 
   return smartlist_len(predicted_ports_list) ||
          predicted_internal_time + predicted_circs_relevance_time >= now;

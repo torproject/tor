@@ -666,8 +666,8 @@ GENERAL OPTIONS
 [[PredictedPortsRelevanceTime]] **PredictedPortsRelevanceTime** __NUM__::
     Set how long, after the client has made an anonymized connection to a
     given port, we will try to make sure that we build circuits to
-    exits that support that port. The maximum value for this option is 1
-    hour. (Default: 1 hour)
+    exits that support that port. This option is deprecated. Please use
+    CircuitsAvailableTimeout instead.
 
 [[RunAsDaemon]] **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect
@@ -809,13 +809,19 @@ The following options are useful only for clients (that is, if
     LearnCircuitBuildTimeout is 0, this value is the only value used.
     (Default: 60 seconds)
 
+[[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
+    Tor will attempt to keep at least one open, unused circuit available for
+    this amount of time. This option governs how long idle circuits are kept
+    open, as well as the amount of time Tor will keep a circuit open to each
+    of the recently used ports. This way when the Tor client is entirely
+    idle, it can expire all of its circuits, and then expire its TLS
+    connections. Note that the actual timeout value is uniformly randomized
+    from the specified value to twice that amount. (Default: 30 minutes;
+    Max: 24 hours)
+
 [[CircuitIdleTimeout]] **CircuitIdleTimeout** __NUM__::
     If we have kept a clean (never used) circuit around for NUM seconds, then
-    close it. This way when the Tor client is entirely idle, it can expire all
-    of its circuits, and then expire its TLS connections. Also, if we end up
-    making a circuit that is not useful for exiting any of the requests we're
-    receiving, it won't forever take up a slot in the circuit list. (Default: 1
-    hour)
+    close it. This option is deprecated. Use CircuitsAvailableTimeout instead.
 
 [[CircuitStreamTimeout]] **CircuitStreamTimeout** __NUM__::
     If non-zero, this option overrides our internal timeout schedule for how

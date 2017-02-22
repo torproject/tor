@@ -1383,11 +1383,6 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
   tor_fragile_assert();
 }
 
-/** If we haven't yet decided on a good timeout value for circuit
- * building, we close idles circuits aggressively so we can get more
- * data points. */
-#define IDLE_TIMEOUT_WHILE_LEARNING (10*60)
-
 /** Find each circuit that has been unused for too long, or dirty
  * for too long and has no streams on it: mark it for close.
  */
@@ -1397,21 +1392,15 @@ circuit_expire_old_circuits_clientside(void)
   struct timeval cutoff, now;
 
   tor_gettimeofday(&now);
-  cutoff = now;
   last_expired_clientside_circuits = now.tv_sec;
-
-  if (! circuit_build_times_disabled(get_options()) &&
-      circuit_build_times_needs_circuits(get_circuit_build_times())) {
-    /* Circuits should be shorter lived if we need more of them
-     * for learning a good build timeout */
-    cutoff.tv_sec -= IDLE_TIMEOUT_WHILE_LEARNING;
-  } else {
-    cutoff.tv_sec -= get_options()->CircuitIdleTimeout;
-  }
 
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (circ->marked_for_close || !CIRCUIT_IS_ORIGIN(circ))
       continue;
+
+    cutoff = now;
+    cutoff.tv_sec -= TO_ORIGIN_CIRCUIT(circ)->circuit_idle_timeout;
+
     /* If the circuit has been dirty for too long, and there are no streams
      * on it, mark it for close.
      */
@@ -1437,8 +1426,10 @@ circuit_expire_old_circuits_clientside(void)
                 (circ->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
                 circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
                 circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
-          log_debug(LD_CIRC,
-                    "Closing circuit that has been unused for %ld msec.",
+          log_info(LD_CIRC,
+                    "Closing circuit "U64_FORMAT
+                    " that has been unused for %ld msec.",
+                    U64_PRINTF_ARG(TO_ORIGIN_CIRCUIT(circ)->global_identifier),
                     tv_mdiff(&circ->timestamp_began, &now));
           circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {

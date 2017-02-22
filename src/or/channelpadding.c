@@ -447,6 +447,111 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
 }
 
 /**
+ * Returns a randomized value for channel idle timeout in seconds.
+ * The channel idle timeout governs how quickly we close a channel
+ * after its last circuit has disappeared.
+ *
+ * There are three classes of channels:
+ *  1. Client+non-canonical. These live for 3-4.5 minutes
+ *  2. relay to relay. These live for 45-75 min by default
+ *  3. Reduced padding clients. These live for 1.5-2.25 minutes.
+ *
+ * Also allows the default relay-to-relay value to be controlled by the
+ * consensus.
+ */
+unsigned int
+channelpadding_get_channel_idle_timeout(const channel_t *chan,
+                                        int is_canonical)
+{
+  const or_options_t *options = get_options();
+  unsigned int timeout;
+
+  /* Non-canonical and client channels only last for 3-4.5 min when idle */
+  if (!is_canonical || !public_server_mode(options) ||
+      chan->is_client ||
+      !connection_or_digest_is_known_relay(chan->identity_digest)) {
+#define CONNTIMEOUT_CLIENTS_BASE 180 // 3 to 4.5 min
+    timeout = CONNTIMEOUT_CLIENTS_BASE
+        + crypto_rand_int(CONNTIMEOUT_CLIENTS_BASE/2);
+  } else { // Canonical relay-to-relay channels
+    // 45..75min or consensus +/- 25%
+#define CONNTIMEOUT_RELAYS_DFLT (60*60) // 1 hour
+#define CONNTIMEOUT_RELAYS_MIN 60
+#define CONNTIMEOUT_RELAYS_MAX (7*24*60*60) // 1 week
+    timeout = networkstatus_get_param(NULL, "nf_conntimeout_relays",
+        CONNTIMEOUT_RELAYS_DFLT,
+        CONNTIMEOUT_RELAYS_MIN,
+        CONNTIMEOUT_RELAYS_MAX);
+
+    timeout = 3*timeout/4 + crypto_rand_int(timeout/2);
+  }
+
+  /* If ReducedConnectionPadding is set, we want to halve the duration of
+   * the channel idle timeout, since reducing the additional time that
+   * a channel stays open will reduce the total overhead for making
+   * new channels. This reduction in overhead/channel expense
+   * is important for mobile users. The option cannot be set by relays.
+   *
+   * We also don't reduce any values for timeout that the user explicitly
+   * set.
+   */
+  if (options->ReducedConnectionPadding
+          && !options->CircuitsAvailableTimeout) {
+    timeout /= 2;
+  }
+
+  return timeout;
+}
+
+/**
+ * This function controls how long we keep idle circuits open,
+ * and how long we build predicted circuits. This behavior is under
+ * the control of channelpadding because circuit availability is the
+ * dominant factor in channel lifespan, which influences total padding
+ * overhead.
+ *
+ * Returns a randomized number of seconds in a range from
+ * CircuitsAvailableTimeout to 2*CircuitsAvailableTimeout. This value is halved
+ * if ReducedConnectionPadding is set. The default value of
+ * CircuitsAvailableTimeout can be controlled by the consensus.
+ */
+int
+channelpadding_get_circuits_available_timeout(void)
+{
+  const or_options_t *options = get_options();
+  int timeout = options->CircuitsAvailableTimeout;
+
+  if (!timeout) {
+#define CIRCTIMEOUT_CLIENTS_DFLT (30*60) // 30 minutes
+#define CIRCTIMEOUT_CLIENTS_MIN 60
+#define CIRCTIMEOUT_CLIENTS_MAX (24*60*60) // 24 hours
+    timeout = networkstatus_get_param(NULL, "nf_conntimeout_clients",
+        CIRCTIMEOUT_CLIENTS_DFLT,
+        CIRCTIMEOUT_CLIENTS_MIN,
+        CIRCTIMEOUT_CLIENTS_MAX);
+
+    /* If ReducedConnectionPadding is set, we want to halve the duration of
+     * the channel idle timeout, since reducing the additional time that
+     * a channel stays open will reduce the total overhead for making
+     * new connections. This reduction in overhead/connection expense
+     * is important for mobile users. The option cannot be set by relays.
+     *
+     * We also don't reduce any values for timeout that the user explicitly
+     * set.
+     */
+    if (options->ReducedConnectionPadding) {
+      // half the value to 15..30min by default
+      timeout /= 2;
+    }
+  }
+
+  // 30..60min by default
+  timeout = timeout + crypto_rand_int(timeout);
+
+  return timeout;
+}
+
+/**
  * Calling this function on a channel causes it to tell the other side
  * not to send padding, and disables sending padding from this side as well.
  */

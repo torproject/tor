@@ -304,9 +304,12 @@ main(int c, const char **v)
     tor_free(errmsg);
     return 1;
   }
+
   tor_set_failed_assertion_callback(an_assertion_failed);
 
   init_pregenerated_keys();
+
+  predicted_ports_init();
 
   atexit(remove_directory);
 

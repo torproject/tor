@@ -78,6 +78,7 @@
 #include "rephist.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "channelpadding.h"
 
 #include "ht.h"
 
@@ -814,6 +815,11 @@ init_circuit_base(circuit_t *circ)
   circ->global_circuitlist_idx = smartlist_len(circuit_get_global_list()) - 1;
 }
 
+/** If we haven't yet decided on a good timeout value for circuit
+ * building, we close idle circuits aggressively so we can get more
+ * data points. */
+#define IDLE_TIMEOUT_WHILE_LEARNING (1*60)
+
 /** Allocate space for a new circuit, initializing with <b>p_circ_id</b>
  * and <b>p_conn</b>. Add it to the global circuit list.
  */
@@ -840,6 +846,41 @@ origin_circuit_new(void)
   circuit_add_to_origin_circuit_list(circ);
 
   circuit_build_times_update_last_circ(get_circuit_build_times_mutable());
+
+  if (! circuit_build_times_disabled(get_options()) &&
+      circuit_build_times_needs_circuits(get_circuit_build_times())) {
+    /* Circuits should be shorter lived if we need more of them
+     * for learning a good build timeout */
+    circ->circuit_idle_timeout = IDLE_TIMEOUT_WHILE_LEARNING;
+  } else {
+    // This should always be larger than the current port prediction time
+    // remaining, or else we'll end up with the case where a circuit times out
+    // and another one is built, effectively doubling the timeout window.
+    //
+    // We also randomize it by up to 5% more (ie 5% of 0 to 3600 seconds,
+    // depending on how much circuit prediction time is remaining) so that
+    // we don't close a bunch of unused circuits all at the same time.
+    int prediction_time_remaining =
+      predicted_ports_prediction_time_remaining(time(NULL));
+    circ->circuit_idle_timeout = prediction_time_remaining+1+
+        crypto_rand_int(1+prediction_time_remaining/20);
+
+    if (circ->circuit_idle_timeout <= 0) {
+      log_warn(LD_BUG,
+               "Circuit chose a negative idle timeout of %d based on "
+               "%d seconds of predictive building remaining.",
+               circ->circuit_idle_timeout,
+               prediction_time_remaining);
+      circ->circuit_idle_timeout = IDLE_TIMEOUT_WHILE_LEARNING;
+    }
+
+    log_info(LD_CIRC,
+              "Circuit " U64_FORMAT " chose an idle timeout of %d based on "
+              "%d seconds of predictive building remaining.",
+              U64_PRINTF_ARG(circ->global_identifier),
+              circ->circuit_idle_timeout,
+              prediction_time_remaining);
+  }
 
   return circ;
 }
