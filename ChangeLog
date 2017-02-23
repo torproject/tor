@@ -76,6 +76,10 @@ Changes in version 0.2.7.7 - 2017-03-??
       0.2.1.10-alpha. Found by Yuan Jochen Kang, Suman Jana, and
       Baishakhi Ray.
 
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
+      Country database.
+
   o Major bugfixes (parsing, also in 0.3.0.4-rc):
     - Fix an integer underflow bug when comparing malformed Tor versions.
       This bug is harmless, except when Tor has been built with
