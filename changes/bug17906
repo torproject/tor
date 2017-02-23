@@ -1,4 +1,0 @@
-  o Minor features (authorities):
-    - Update the V3 identity key for dannenberg, it was changed on
-      18 November 2015.
-      Closes task #17906. Patch by "teor".
