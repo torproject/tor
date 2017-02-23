@@ -6,7 +6,7 @@ Changes in version 0.2.9.10 - 2017-03-??
 
   The Tor 0.2.9.x release series is now marked as a long-term-support
   series.  We intend to backport security fixes to 0.2.9.x until at
-  least March of 2020.
+  least January of 2020.
 
   o Major bugfixes (directory authority, 0.3.0.3-alpha):
     - During voting, when marking a relay as a probable sybil, do not
