@@ -6,7 +6,7 @@ Changes in version 0.2.4.28 - 2017-03-??
 
   Note that support for Tor 0.2.4.x is ending soon: we will not issue
   any fixes for the Tor 0.2.4.x series after 1 August 2017.  If you need
-  a Tor release series with long-term support, we recomment Tor 0.2.9.x.
+  a Tor release series with long-term support, we recommend Tor 0.2.9.x.
 
   o Directory authority changes (backport from 0.2.8.5-rc):
     - Urras is no longer a directory authority. Closes ticket 19271.
