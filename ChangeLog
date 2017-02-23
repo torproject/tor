@@ -5,7 +5,7 @@ Changes in version 0.2.5.13 - 2017-03-??
   release series.
 
   Note that support for Tor 0.2.5.x is ending next year: we will not issue
-  any fixes for the Tor 0.2.5.x series after 1 August 2018.  If you need
+  any fixes for the Tor 0.2.5.x series after 1 May 2018.  If you need
   a Tor release series with longer-term support, we recommend Tor 0.2.9.x.
 
   o Directory authority changes (backport from 0.2.8.5-rc):
