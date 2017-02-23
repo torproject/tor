@@ -1,4 +1,0 @@
-  o Minor features (DoS-resistance):
-    - Make it harder for attackers to overwhelm hidden services with
-      introductions, by blocking multiple introduction requests on the
-      same circuit. Resolves ticket #15515.
