@@ -4,7 +4,7 @@ Changes in version 0.2.6.11 - 2017-03-??
   this release, if for some reason they cannot upgrade to a later
   release series.
 
-  Note that support for Tor 0.2.6.x is ending next year: we will not issue
+  Note that support for Tor 0.2.6.x is ending this year: we will not issue
   any fixes for the Tor 0.2.6.x series after 1 August 2017.  If you need
   a Tor release series with longer-term support, we recommend Tor 0.2.9.x.
 
