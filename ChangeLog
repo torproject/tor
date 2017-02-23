@@ -1,5 +1,5 @@
 Changes in version 0.2.8.13 - 2017-03-??
-  Tor 0.2.8.13 backports a security fixes from later Tor
+  Tor 0.2.8.13 backports a security fix from later Tor
   releases.  Anybody running Tor 0.2.8.12 or earlier should upgrade to this
   this release, if for some reason they cannot upgrade to a later
   release series, and if they build Tor with the --enable-expensive-hardening
