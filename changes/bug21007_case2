@@ -1,0 +1,4 @@
+  o Minor bugfixes (guards):
+    - Don't warn about a missing guard state on timeout-measurement
+      circuits: they aren't supposed to be using guards. Fixes an
+      instance of bug 21007; bugfix on 0.3.0.1-alpha.
