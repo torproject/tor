@@ -3175,8 +3175,8 @@ count_intro_point_circuits(const rend_service_t *service)
  */
 STATIC ssize_t
 encode_establish_intro_cell_legacy(char *cell_body_out,
-                                   size_t cell_body_out_len,
-                                   crypto_pk_t *intro_key, char *rend_circ_nonce)
+                                 size_t cell_body_out_len,
+                                 crypto_pk_t *intro_key, char *rend_circ_nonce)
 {
   int retval = -1;
   int r;
