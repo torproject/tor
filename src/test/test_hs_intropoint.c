@@ -489,6 +489,7 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
 
   /* Use old circuit_key_material why not */
   cell_len = encode_establish_intro_cell_legacy((char*)cell_body,
+                                                sizeof(cell_body),
                                                 key1,
                                                 (char *) circuit_key_material);
   tt_int_op(cell_len, >, 0);
