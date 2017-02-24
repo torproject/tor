@@ -558,18 +558,17 @@ static size_t
 compute_padded_plaintext_length(size_t plaintext_len)
 {
   size_t plaintext_padded_len;
+  const int padding_block_length = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE;
 
   /* Make sure we won't overflow. */
-  tor_assert(plaintext_len <=
-             (SIZE_T_CEILING - HS_DESC_PLAINTEXT_PADDING_MULTIPLE));
+  tor_assert(plaintext_len <= (SIZE_T_CEILING - padding_block_length));
 
   /* Get the extra length we need to add. For example, if srclen is 10200
    * bytes, this will expand to (2 * 10k) == 20k thus an extra 9800 bytes. */
-  plaintext_padded_len = CEIL_DIV(plaintext_len,
-                                  HS_DESC_PLAINTEXT_PADDING_MULTIPLE) *
-                         HS_DESC_PLAINTEXT_PADDING_MULTIPLE;
+  plaintext_padded_len = CEIL_DIV(plaintext_len, padding_block_length) *
+                         padding_block_length;
   /* Can never be extra careful. Make sure we are _really_ padded. */
-  tor_assert(!(plaintext_padded_len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE));
+  tor_assert(!(plaintext_padded_len % padding_block_length));
   return plaintext_padded_len;
 }
 
@@ -619,7 +618,7 @@ build_encrypted(const uint8_t *key, const uint8_t *iv, const char *plaintext,
     encrypted_len = build_plaintext_padding(plaintext, plaintext_len,
                                             &padded_plaintext);
     /* Extra precautions that we have a valid padding length. */
-    tor_assert(!(encrypted_len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE));
+    tor_assert(!(encrypted_len % HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE));
   } else { /* No padding required for inner layers */
     padded_plaintext = tor_memdup(plaintext, plaintext_len);
     encrypted_len = plaintext_len;

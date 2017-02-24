@@ -317,13 +317,13 @@ test_descriptor_padding(void *arg)
 /* Example: if l = 129, the ceiled division gives 2 and then multiplied by 128
  * to give 256. With l = 127, ceiled division gives 1 then times 128. */
 #define PADDING_EXPECTED_LEN(l) \
-  CEIL_DIV(l, HS_DESC_PLAINTEXT_PADDING_MULTIPLE) * \
-  HS_DESC_PLAINTEXT_PADDING_MULTIPLE
+  CEIL_DIV(l, HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE) * \
+  HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE
 
   (void) arg;
 
   { /* test #1: no padding */
-    plaintext_len = HS_DESC_PLAINTEXT_PADDING_MULTIPLE;
+    plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE;
     plaintext = tor_malloc(plaintext_len);
     padded_len = build_plaintext_padding(plaintext, plaintext_len,
                                          &padded_plaintext);
@@ -339,7 +339,7 @@ test_descriptor_padding(void *arg)
   }
 
   { /* test #2: one byte padding? */
-    plaintext_len = HS_DESC_PLAINTEXT_PADDING_MULTIPLE - 1;
+    plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE - 1;
     plaintext = tor_malloc(plaintext_len);
     padded_plaintext = NULL;
     padded_len = build_plaintext_padding(plaintext, plaintext_len,
@@ -356,7 +356,7 @@ test_descriptor_padding(void *arg)
   }
 
   { /* test #3: Lots more bytes of padding? */
-    plaintext_len = HS_DESC_PLAINTEXT_PADDING_MULTIPLE + 1;
+    plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE + 1;
     plaintext = tor_malloc(plaintext_len);
     padded_plaintext = NULL;
     padded_len = build_plaintext_padding(plaintext, plaintext_len,
