@@ -3174,8 +3174,9 @@ count_intro_point_circuits(const rend_service_t *service)
    of bytes written. On fail, return -1.
  */
 STATIC ssize_t
-encode_establish_intro_cell_legacy(char *cell_body_out, crypto_pk_t *intro_key,
-                                   char *rend_circ_nonce)
+encode_establish_intro_cell_legacy(char *cell_body_out,
+                                   size_t cell_body_out_len,
+                                   crypto_pk_t *intro_key, char *rend_circ_nonce)
 {
   int retval = -1;
   int r;
@@ -3202,7 +3203,7 @@ encode_establish_intro_cell_legacy(char *cell_body_out, crypto_pk_t *intro_key,
   len += 20;
   note_crypto_pk_op(REND_SERVER);
   r = crypto_pk_private_sign_digest(intro_key, cell_body_out+len,
-                                    sizeof(cell_body_out)-len,
+                                    cell_body_out_len - len,
                                     cell_body_out, len);
   if (r<0) {
     log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");
@@ -3313,8 +3314,9 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   /* Send the ESTABLISH_INTRO cell */
   {
     ssize_t len;
-    len = encode_establish_intro_cell_legacy(buf, circuit->intro_key,
-                                        circuit->cpath->prev->rend_circ_nonce);
+    len = encode_establish_intro_cell_legacy(buf, sizeof(buf),
+                                      circuit->intro_key,
+                                      circuit->cpath->prev->rend_circ_nonce);
     if (len < 0) {
       reason = END_CIRC_REASON_INTERNAL;
       goto err;

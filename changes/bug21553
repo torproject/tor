@@ -1,0 +1,7 @@
+  o Minor bugfixes (hidden service):
+    - When encoding a legacy ESTABLISH_INTRO cell, we were using the sizeof()
+      on a pointer instead of real size of the destination buffer leading to
+      an overflow passing an enormous value to the signing digest function.
+      Fortunately, that value was only used to make sure the destination
+      buffer length was big enough for the key size and in this case it was.
+      Fixes bug 21553; bugfix on tor-0.3.0.1-alpha.
