@@ -182,7 +182,7 @@ if [ "$NETWORK_DRY_RUN" = true ]; then
 fi
 
 cd "$CHUTNEY_PATH"
-./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 2
+./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 3
 
 # Sleep some, waiting for the network to bootstrap.
 # TODO: Add chutney command 'bootstrap-status' and use that instead.
