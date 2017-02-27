@@ -2164,8 +2164,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    log_info(LD_DIR,"Received authority certificates (body size %d) from server "
-             "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
+    log_info(LD_DIR,"Received authority certificates (body size %d) from "
+             "server '%s:%d'",
+             (int)body_len, conn->base_.address, conn->base_.port);
 
     /*
      * Tell trusted_dirs_load_certs_from_string() whether it was by fp
