@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # Please do not modify this script, it has been moved to chutney/tools
 
@@ -178,7 +178,8 @@ export CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 # And finish up if we're doing a dry run
 if [ "$NETWORK_DRY_RUN" = true ]; then
     # we can't exit here, it breaks argument processing
-    return
+    # this only works in bash: return semantics are shell-specific
+    return 2>/dev/null || exit
 fi
 
 cd "$CHUTNEY_PATH"
