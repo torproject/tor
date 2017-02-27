@@ -1,0 +1,3 @@
+  o Minor bugfixes (certificate expiration time):
+    - Avoid using link certificates that don't become valid till
+      some time in the future.  Fixes bug 21420; bugfix on 0.2.4.11-alpha
