@@ -1066,6 +1066,7 @@ directory_must_use_begindir(const or_options_t *options)
 
 /** Evaluate the situation and decide if we should use an encrypted
  * "begindir-style" connection for this directory request.
+ * 0) If there is no DirPort, yes.
  * 1) If or_port is 0, or it's a direct conn and or_port is firewalled
  *    or we're a dir mirror, no.
  * 2) If we prefer to avoid begindir conns, and we're not fetching or
@@ -1076,15 +1077,22 @@ directory_must_use_begindir(const or_options_t *options)
  */
 static int
 directory_command_should_use_begindir(const or_options_t *options,
-                                      const tor_addr_t *addr,
-                                      int or_port, uint8_t router_purpose,
+                                      const tor_addr_t *or_addr, int or_port,
+                                      const tor_addr_t *dir_addr, int dir_port,
+                                      uint8_t router_purpose,
                                       dir_indirection_t indirection,
                                       const char **reason)
 {
   (void) router_purpose;
+  (void) dir_addr;
   tor_assert(reason);
   *reason = NULL;
 
+  /* Reasons why we must use begindir */
+  if (!dir_port) {
+    *reason = "(using begindir - directory with no DirPort)";
+    return 1; /* We don't know a DirPort -- must begindir. */
+  }
   /* Reasons why we can't possibly use begindir */
   if (!or_port) {
     *reason = "directory with unknown ORPort";
@@ -1097,7 +1105,7 @@ directory_command_should_use_begindir(const or_options_t *options,
   }
   if (indirection == DIRIND_ONEHOP) {
     /* We're firewalled and want a direct OR connection */
-    if (!fascist_firewall_allows_address_addr(addr, or_port,
+    if (!fascist_firewall_allows_address_addr(or_addr, or_port,
                                               FIREWALL_OR_CONNECTION, 0, 0)) {
       *reason = "ORPort not reachable";
       return 0;
@@ -1189,6 +1197,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
    * send our directory request)? */
   const int use_begindir = directory_command_should_use_begindir(options,
                                      &or_addr_port->addr, or_addr_port->port,
+                                     &dir_addr_port->addr, dir_addr_port->port,
                                      router_purpose, indirection,
                                      &begindir_reason);
   /* Will the connection go via a three-hop Tor circuit? Note that this
@@ -1235,9 +1244,9 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   if (!port || tor_addr_is_null(&addr)) {
     static int logged_backtrace = 0;
     log_warn(LD_DIR,
-             "Cannot make an outgoing %sconnection without %sPort.",
+             "Cannot make an outgoing %sconnection without a remote %sPort.",
              use_begindir ? "begindir " : "",
-             use_begindir ? "an OR" : "a Dir");
+             use_begindir ? "OR" : "Dir");
     if (!logged_backtrace) {
       log_backtrace(LOG_INFO, LD_BUG, "Address came from");
       logged_backtrace = 1;
