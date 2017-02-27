@@ -1,0 +1,3 @@
+  o Minor features (reliability, crash):
+    - Try better to detect problems in buffers where they might grow (or
+      think they have grown) over 2 GB in size. Diagnostic for bug 21369.
