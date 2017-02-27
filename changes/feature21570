@@ -1,0 +1,5 @@
+  o Minor features (testing):
+    - During 'make test-network-all', if tor logs any warnings, ask chutney
+      to output them. Requires a recent version of chutney with the 21572
+      patch.
+      Implements 21570.
