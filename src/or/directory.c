@@ -14,6 +14,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "compat.h"
 #define DIRECTORY_PRIVATE
 #include "directory.h"
 #include "dirserv.h"
@@ -1077,11 +1078,10 @@ directory_must_use_begindir(const or_options_t *options)
 static int
 directory_command_should_use_begindir(const or_options_t *options,
                                       const tor_addr_t *addr,
-                                      int or_port, uint8_t router_purpose,
+                                      int or_port,
                                       dir_indirection_t indirection,
                                       const char **reason)
 {
-  (void) router_purpose;
   tor_assert(reason);
   *reason = NULL;
 
@@ -1189,8 +1189,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
    * send our directory request)? */
   const int use_begindir = directory_command_should_use_begindir(options,
                                      &or_addr_port->addr, or_addr_port->port,
-                                     router_purpose, indirection,
-                                     &begindir_reason);
+                                     indirection, &begindir_reason);
   /* Will the connection go via a three-hop Tor circuit? Note that this
    * is separate from whether it will use_begindir. */
   const int anonymized_connection = dirind_is_anon(indirection);
@@ -1468,7 +1467,9 @@ directory_send_command(dir_connection_t *conn,
   char decorated_address[128];
   smartlist_t *headers = smartlist_new();
   char *url;
+  size_t url_len;
   char request[8192];
+  size_t request_len, total_request_len = 0;
   const char *httpcommand = NULL;
 
   tor_assert(conn);
@@ -1614,8 +1615,14 @@ directory_send_command(dir_connection_t *conn,
   }
 
   tor_snprintf(request, sizeof(request), "%s %s", httpcommand, proxystring);
-  connection_write_to_buf(request, strlen(request), TO_CONN(conn));
-  connection_write_to_buf(url, strlen(url), TO_CONN(conn));
+
+  request_len = strlen(request);
+  total_request_len += request_len;
+  connection_write_to_buf(request, request_len, TO_CONN(conn));
+
+  url_len = strlen(url);
+  total_request_len += url_len;
+  connection_write_to_buf(url, url_len, TO_CONN(conn));
   tor_free(url);
 
   if (!strcmp(httpcommand, "POST") || payload) {
@@ -1630,15 +1637,27 @@ directory_send_command(dir_connection_t *conn,
     tor_free(header);
   }
 
-  connection_write_to_buf(request, strlen(request), TO_CONN(conn));
+  request_len = strlen(request);
+  total_request_len += request_len;
+  connection_write_to_buf(request, request_len, TO_CONN(conn));
 
   if (payload) {
     /* then send the payload afterwards too */
     connection_write_to_buf(payload, payload_len, TO_CONN(conn));
+    total_request_len += payload_len;
   }
 
   SMARTLIST_FOREACH(headers, char *, h, tor_free(h));
   smartlist_free(headers);
+
+  log_debug(LD_DIR,
+            "Sent request to directory server '%s:%d': "
+            "(purpose: %d, request size: " U64_FORMAT ", "
+            "payload size: " U64_FORMAT ")",
+            conn->base_.address, conn->base_.port,
+            conn->base_.purpose,
+            U64_PRINTF_ARG(total_request_len),
+            U64_PRINTF_ARG(payload ? payload_len : 0));
 }
 
 /** Parse an HTTP request string <b>headers</b> of the form
@@ -1932,6 +1951,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
   time_t now = time(NULL);
   int src_code;
+  size_t received_bytes;
+
+  received_bytes = connection_get_inbuf_len(TO_CONN(conn));
 
   switch (connection_fetch_from_buf_http(TO_CONN(conn),
                               &headers, MAX_HEADERS_SIZE,
@@ -1960,10 +1982,18 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   log_debug(LD_DIR,
             "Received response from directory server '%s:%d': %d %s "
-            "(purpose: %d)",
+            "(purpose: %d, response size: " U64_FORMAT
+#ifdef MEASUREMENTS_21206
+            ", data cells received: %d, data cells sent: %d"
+#endif
+            ", compression: %d)",
             conn->base_.address, conn->base_.port, status_code,
-            escaped(reason),
-            conn->base_.purpose);
+            escaped(reason), conn->base_.purpose,
+            U64_PRINTF_ARG(received_bytes),
+#ifdef MEASUREMENTS_21206
+            conn->data_cells_received, conn->data_cells_sent,
+#endif
+            compression);
 
   if (conn->guard_state) {
     /* we count the connection as successful once we can read from it.  We do
@@ -2095,7 +2125,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       networkstatus_consensus_download_failed(status_code, flavname);
       return -1;
     }
-    log_info(LD_DIR,"Received consensus directory (size %d) from server "
+    log_info(LD_DIR,"Received consensus directory (body size %d) from server "
              "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
     if ((r=networkstatus_set_current_consensus(body, flavname, 0,
                                                conn->identity_digest))<0) {
@@ -2134,7 +2164,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    log_info(LD_DIR,"Received authority certificates (size %d) from server "
+    log_info(LD_DIR,"Received authority certificates (body size %d) from server "
              "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
 
     /*
@@ -2170,7 +2200,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
     const char *msg;
     int st;
-    log_info(LD_DIR,"Got votes (size %d) from server %s:%d",
+    log_info(LD_DIR,"Got votes (body size %d) from server %s:%d",
              (int)body_len, conn->base_.address, conn->base_.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
@@ -2190,7 +2220,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
     const char *msg = NULL;
-    log_info(LD_DIR,"Got detached signatures (size %d) from server %s:%d",
+    log_info(LD_DIR,"Got detached signatures (body size %d) from server %s:%d",
              (int)body_len, conn->base_.address, conn->base_.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
@@ -2214,7 +2244,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     int n_asked_for = 0;
     int descriptor_digests = conn->requested_resource &&
                              !strcmpstart(conn->requested_resource,"d/");
-    log_info(LD_DIR,"Received %s (size %d) from server '%s:%d'",
+    log_info(LD_DIR,"Received %s (body size %d) from server '%s:%d'",
              was_ei ? "extra server info" : "server info",
              (int)body_len, conn->base_.address, conn->base_.port);
     if (conn->requested_resource &&
@@ -2292,7 +2322,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC) {
     smartlist_t *which = NULL;
     log_info(LD_DIR,"Received answer to microdescriptor request (status %d, "
-             "size %d) from server '%s:%d'",
+             "body size %d) from server '%s:%d'",
              status_code, (int)body_len, conn->base_.address,
              conn->base_.port);
     tor_assert(conn->requested_resource &&
@@ -2444,7 +2474,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                       conn->identity_digest,            \
                                       NULL) )
     tor_assert(conn->rend_data);
-    log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
+    log_info(LD_REND,"Received rendezvous descriptor (body size %d, status %d "
              "(%s))",
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
@@ -3718,7 +3748,7 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
   if (connection_dir_is_encrypted(conn) &&
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
     if (rend_cache_store_v2_desc_as_dir(body) < 0) {
-      log_warn(LD_REND, "Rejected v2 rend descriptor (length %d) from %s.",
+      log_warn(LD_REND, "Rejected v2 rend descriptor (body size %d) from %s.",
                (int)body_len, conn->base_.address);
       write_http_status_line(conn, 400,
                              "Invalid v2 service descriptor rejected");
