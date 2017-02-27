@@ -3986,6 +3986,7 @@ test_util_fgets_eagain(void *ptr)
   tt_ptr_op(retptr, OP_EQ, buf);
   tt_str_op(buf, OP_EQ, "B\n");
   errno = 0;
+  memset(buf, '\0', sizeof(buf));
 
   /* Send in a full line */
   retlen = write(test_pipe[1], "CD\n", 3);
@@ -3995,6 +3996,7 @@ test_util_fgets_eagain(void *ptr)
   tt_ptr_op(retptr, OP_EQ, buf);
   tt_str_op(buf, OP_EQ, "CD\n");
   errno = 0;
+  memset(buf, '\0', sizeof(buf));
 
   /* Send in a partial line */
   retlen = write(test_pipe[1], "E", 1);
@@ -4013,6 +4015,7 @@ test_util_fgets_eagain(void *ptr)
   tt_ptr_op(retptr, OP_EQ, buf);
   tt_str_op(buf, OP_EQ, "F\n");
   errno = 0;
+  memset(buf, '\0', sizeof(buf));
 
   /* Send in a full line and close */
   retlen = write(test_pipe[1], "GH", 2);
@@ -4036,6 +4039,7 @@ test_util_fgets_eagain(void *ptr)
 
   /* Check that buf is unchanged according to C99 and C11 */
   tt_str_op(buf, OP_EQ, "GH");
+  memset(buf, '\0', sizeof(buf));
 
  done:
   if (test_stream != NULL)
