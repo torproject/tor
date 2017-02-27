@@ -12,6 +12,9 @@
 #include "util.h"
 #include "compat.h"
 #include "torlog.h"
+#include "container.h"
+
+#ifndef DISABLE_MEMORY_SENTINELS
 
 /** If true, we try to detect any attempts to write beyond the length of a
  * memarea. */
@@ -303,4 +306,92 @@ memarea_assert_ok(memarea_t *area)
           (char*) realign_pointer(chunk->U_MEM+chunk->mem_size));
   }
 }
+
+#else
+
+struct memarea_t {
+  smartlist_t *pieces;
+};
+
+memarea_t *
+memarea_new(void)
+{
+  memarea_t *ma = tor_malloc_zero(sizeof(memarea_t));
+  ma->pieces = smartlist_new();
+  return ma;
+}
+void
+memarea_drop_all(memarea_t *area)
+{
+  memarea_clear(area);
+  smartlist_free(area->pieces);
+  tor_free(area);
+}
+void
+memarea_clear(memarea_t *area)
+{
+  SMARTLIST_FOREACH(area->pieces, void *, p, tor_free_(p));
+  smartlist_clear(area->pieces);
+}
+int
+memarea_owns_ptr(const memarea_t *area, const void *ptr)
+{
+  SMARTLIST_FOREACH(area->pieces, const void *, p, if (ptr == p) return 1;);
+  return 0;
+}
+
+void *
+memarea_alloc(memarea_t *area, size_t sz)
+{
+  void *result = tor_malloc(sz);
+  smartlist_add(area->pieces, result);
+  return result;
+}
+
+void *
+memarea_alloc_zero(memarea_t *area, size_t sz)
+{
+  void *result = tor_malloc_zero(sz);
+  smartlist_add(area->pieces, result);
+  return result;
+}
+void *
+memarea_memdup(memarea_t *area, const void *s, size_t n)
+{
+  void *r = memarea_alloc(area, n);
+  memcpy(r, s, n);
+  return r;
+}
+char *
+memarea_strdup(memarea_t *area, const char *s)
+{
+  size_t n = strlen(s);
+  char *r = memarea_alloc(area, n+1);
+  memcpy(r, s, n);
+  r[n] = 0;
+  return r;
+}
+char *
+memarea_strndup(memarea_t *area, const char *s, size_t n)
+{
+  size_t ln = strnlen(s, n);
+  char *r = memarea_alloc(area, ln+1);
+  memcpy(r, s, ln);
+  r[ln] = 0;
+  return r;
+}
+void
+memarea_get_stats(memarea_t *area,
+                  size_t *allocated_out, size_t *used_out)
+{
+  (void)area;
+  *allocated_out = *used_out = 128;
+}
+void
+memarea_assert_ok(memarea_t *area)
+{
+  (void)area;
+}
+
+#endif
 

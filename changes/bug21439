@@ -1,0 +1,7 @@
+  o Minor features (testing):
+    - Add a "--disable-memory-sentinels" feature to help with fuzzing.
+      When Tor is compiled with this option, we disable a number of
+      redundant memory-safety failsafes that are intended to stop
+      bugs from becoming security issues. This makes it easier to hunt
+      for bugs that would be security issues without the failsafes
+      turned on. Closes ticket 21439.

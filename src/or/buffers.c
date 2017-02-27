@@ -83,7 +83,11 @@ static int parse_socks_client(const uint8_t *data, size_t datalen,
 #define CHUNK_HEADER_LEN STRUCT_OFFSET(chunk_t, mem[0])
 
 /* We leave this many NUL bytes at the end of the buffer. */
+#ifdef DISABLE_MEMORY_SENTINELS
+#define SENTINEL_LEN 0
+#else
 #define SENTINEL_LEN 4
+#endif
 
 /* Header size plus NUL bytes at the end */
 #define CHUNK_OVERHEAD (CHUNK_HEADER_LEN + SENTINEL_LEN)
@@ -97,18 +101,22 @@ static int parse_socks_client(const uint8_t *data, size_t datalen,
 
 #define DEBUG_SENTINEL
 
-#ifdef DEBUG_SENTINEL
+#if defined(DEBUG_SENTINEL) && !defined(DISABLE_MEMORY_SENTINELS)
 #define DBG_S(s) s
 #else
 #define DBG_S(s) (void)0
 #endif
 
+#ifdef DISABLE_MEMORY_SENTINELS
+#define CHUNK_SET_SENTINEL(chunk, alloclen) STMT_NIL
+#else
 #define CHUNK_SET_SENTINEL(chunk, alloclen) do {                        \
     uint8_t *a = (uint8_t*) &(chunk)->mem[(chunk)->memlen];             \
     DBG_S(uint8_t *b = &((uint8_t*)(chunk))[(alloclen)-SENTINEL_LEN]);  \
     DBG_S(tor_assert(a == b));                                          \
     memset(a,0,SENTINEL_LEN);                                           \
   } while (0)
+#endif
 
 /** Return the next character in <b>chunk</b> onto which data can be appended.
  * If the chunk is full, this might be off the end of chunk->mem. */
