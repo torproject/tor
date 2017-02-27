@@ -483,8 +483,22 @@ MOCK_IMPL(STATIC X509 *,
    * then we might pick a time where we're about to expire. Lastly, be
    * sure to start on a day boundary. */
   time_t now = time(NULL);
-  start_time = crypto_rand_time_range(now - cert_lifetime, now) + 2*24*3600;
-  start_time -= start_time % (24*3600);
+  /* Our certificate lifetime will be cert_lifetime no matter what, but if we
+   * start cert_lifetime in the past, we'll have 0 real lifetime.  instead we
+   * start up to (cert_lifetime - min_real_lifetime - start_granularity) in
+   * the past. */
+  const time_t min_real_lifetime = 24*3600;
+  const time_t start_granularity = 24*3600;
+  time_t earliest_start_time = now - cert_lifetime + min_real_lifetime
+    + start_granularity;
+  /* Don't actually start in the future! */
+  if (earliest_start_time >= now)
+    earliest_start_time = now - 1;
+  start_time = crypto_rand_time_range(earliest_start_time, now);
+  /* Round the start time back to the start of a day. */
+  start_time -= start_time % start_granularity;
+
+  end_time = start_time + cert_lifetime;
 
   tor_assert(rsa);
   tor_assert(cname);
@@ -518,7 +532,6 @@ MOCK_IMPL(STATIC X509 *,
 
   if (!X509_time_adj(X509_get_notBefore(x509),0,&start_time))
     goto error;
-  end_time = start_time + cert_lifetime;
   if (!X509_time_adj(X509_get_notAfter(x509),0,&end_time))
     goto error;
   if (!X509_set_pubkey(x509, pkey))
