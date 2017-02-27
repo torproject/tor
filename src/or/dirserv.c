@@ -3658,8 +3658,14 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
   if (bytes < 8192)
     bytes = 8192;
   remaining = conn->cached_dir->dir_z_len - conn->cached_dir_offset;
-  if (bytes > remaining)
+  if (BUG(remaining < 0)) {
+    remaining = 0;
+  }
+  if (bytes > remaining) {
     bytes = (ssize_t) remaining;
+    if (BUG(bytes < 0))
+      return -1;
+  }
 
   if (conn->zlib_state) {
     connection_write_to_buf_zlib(
@@ -3670,7 +3676,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
                             bytes, TO_CONN(conn));
   }
   conn->cached_dir_offset += bytes;
-  if (conn->cached_dir_offset == (int)conn->cached_dir->dir_z_len) {
+  if (conn->cached_dir_offset >= (off_t)conn->cached_dir->dir_z_len) {
     /* We just wrote the last one; finish up. */
     connection_dirserv_finish_spooling(conn);
     cached_dir_decref(conn->cached_dir);

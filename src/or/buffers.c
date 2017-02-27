@@ -610,6 +610,11 @@ read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
   tor_assert(reached_eof);
   tor_assert(SOCKET_OK(s));
 
+  if (BUG(buf->datalen >= INT_MAX))
+    return -1;
+  if (BUG(buf->datalen >= INT_MAX - at_most))
+    return -1;
+
   while (at_most > total_read) {
     size_t readlen = at_most - total_read;
     chunk_t *chunk;
@@ -666,6 +671,11 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
   check_no_tls_errors();
 
   check();
+
+  if (BUG(buf->datalen >= INT_MAX))
+    return -1;
+  if (BUG(buf->datalen >= INT_MAX - at_most))
+    return -1;
 
   while (at_most > total_read) {
     size_t readlen = at_most - total_read;
@@ -861,6 +871,11 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
     return (int)buf->datalen;
   check();
 
+  if (BUG(buf->datalen >= INT_MAX))
+    return -1;
+  if (BUG(buf->datalen >= INT_MAX - string_len))
+    return -1;
+
   while (string_len) {
     size_t copy;
     if (!buf->tail || !CHUNK_REMAINING_CAPACITY(buf->tail))
@@ -1010,6 +1025,12 @@ move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
   /* We can do way better here, but this doesn't turn up in any profiles. */
   char b[4096];
   size_t cp, len;
+
+  if (BUG(buf_out->datalen >= INT_MAX))
+    return -1;
+  if (BUG(buf_out->datalen >= INT_MAX - *buf_flushlen))
+    return -1;
+
   len = *buf_flushlen;
   if (len > buf_in->datalen)
     len = buf_in->datalen;
