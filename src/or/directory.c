@@ -1980,7 +1980,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
   if (!reason) reason = tor_strdup("[no reason given]");
 
-  log_debug(LD_DIR,
+  tor_log(LOG_DEBUG, LD_DIR,
             "Received response from directory server '%s:%d': %d %s "
             "(purpose: %d, response size: " U64_FORMAT
 #ifdef MEASUREMENTS_21206
