@@ -1,0 +1,3 @@
+  o Documentation:
+    - Small fixes to the fuzzing documentation. Closes ticket
+      21472.
