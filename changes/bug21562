@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Use bash in src/test/test-network.sh. This ensures we reliably call
+      chutney's newer tools/test-network.sh when available.
+      Fixes bug 21562; bugfix on tor-0.2.9.1-alpha.
