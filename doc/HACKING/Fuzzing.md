@@ -64,14 +64,14 @@ To Build:
   make
   cd ../tor
   PATH=$PATH:../afl/ CC="../afl/afl-gcc" ./configure --enable-expensive-hardening
-  AFL_HARDEN=1 make clean fuzz
+  AFL_HARDEN=1 make clean fuzzers
 
 To Find The ASAN Memory Limit: (64-bit only)
 
-On 64-bit platforms, afl needs to know how much memory ASAN uses.
-Or, you can configure tor without --enable-expensive-hardening, then use
-  make fuzz
-to run the generated test cases through an ASAN-enabled fuzz-http.
+On 64-bit platforms, afl needs to know how much memory ASAN uses,
+because ASAN tends to allocate a ridiculous amount of virtual memory,
+and then not actually use it.
+
 Read afl/docs/notes_for_asan.txt for more details.
 
   Download recidivm from http://jwilk.net/software/recidivm
@@ -80,7 +80,7 @@ Read afl/docs/notes_for_asan.txt for more details.
   tar xvzf recidivm*.tar.gz
   cd recidivm*
   make
-  /path/to/recidivm -v src/test/fuzz_dir
+  /path/to/recidivm -v src/test/fuzz/fuzz-http
   Use the final "ok" figure as the input to -m when calling afl-fuzz
   (Normally, recidivm would output a figure automatically, but in some cases,
   the fuzzing harness will hang when the memory limit is too small.)
