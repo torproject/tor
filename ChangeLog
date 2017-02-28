@@ -20,68 +20,6 @@ Changes in version 0.2.5.13 - 2017-03-??
       it was changed on 18 November 2015. Closes task 17906. Patch
       by "teor".
 
-  o Minor bugfixes (hidden service, backport from 0.2.7.1-alpha):
-    - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells on
-      a client authorized hidden service. Fixes bug 15823; bugfix
-      on 0.2.1.6-alpha.
-
-  o Major bugfixes (dns proxy mode, crash, backport from 0.2.8.2-alpha):
-    - Avoid crashing when running as a DNS proxy. Fixes bug 16248;
-      bugfix on 0.2.0.1-alpha. Patch from "cypherpunks".
-
-  o Minor features (bug-resistance, backport from 0.2.8.2-alpha):
-    - Make Tor survive errors involving connections without a
-      corresponding event object. Previously we'd fail with an
-      assertion; now we produce a log message. Related to bug 16248.
-
-  o Minor bugfixes (crypto error-handling, backport from 0.2.7.2-alpha):
-    - Check for failures from crypto_early_init, and refuse to continue.
-      A previous typo meant that we could keep going with an
-      uninitialized crypto library, and would have OpenSSL initialize
-      its own PRNG. Fixes bug 16360; bugfix on 0.2.5.2-alpha, introduced
-      when implementing ticket 4900. Patch by "teor".
-
-  o Major bugfixes (security, correctness, backport from 0.2.7.4-rc):
-    - Fix an error that could cause us to read 4 bytes before the
-      beginning of an openssl string. This bug could be used to cause
-      Tor to crash on systems with unusual malloc implementations, or
-      systems with unusual hardening installed. Fixes bug 17404; bugfix
-      on 0.2.3.6-alpha.
-
-  o Major bugfixes (guard selection, backport from 0.2.7.6):
-    - Actually look at the Guard flag when selecting a new directory
-      guard. When we implemented the directory guard design, we
-      accidentally started treating all relays as if they have the Guard
-      flag during guard selection, leading to weaker anonymity and worse
-      performance. Fixes bug 17772; bugfix on 0.2.4.8-alpha. Discovered
-      by Mohsen Imani.
-
-  o Minor bugfixes (compilation, backport from 0.2.7.6)
-    - Fix a compilation warning with Clang 3.6: Do not check the
-      presence of an address which can never be NULL. Fixes bug 17781.
-
-  o Minor features (geoip):
-    - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
-      Country database.
-
-  o Minor features (security, memory erasure, backport from 0.2.8.1-alpha):
-    - Make memwipe() do nothing when passed a NULL pointer or buffer of
-      zero size. Check size argument to memwipe() for underflow. Fixes
-      bug 18089; bugfix on 0.2.3.25 and 0.2.4.6-alpha. Reported by "gk",
-      patch by "teor".
-
-  o Major bugfixes (security, pointers, backport from 0.2.8.2-alpha):
-    - Avoid a difficult-to-trigger heap corruption attack when extending
-      a smartlist to contain over 16GB of pointers. Fixes bug 18162;
-      bugfix on 0.1.1.11-alpha, which fixed a related bug incompletely.
-      Reported by Guido Vranken.
-
-  o Major bugfixes (security, client, DNS proxy, backport from 0.2.8.3-alpha):
-    - Stop a crash that could occur when a client running with DNSPort
-      received a query with multiple address types, and the first
-      address type was not supported. Found and fixed by Scott Dial.
-      Fixes bug 18710; bugfix on 0.2.5.4-alpha.
-
   o Major features (security fixes, backport from 0.2.9.4-alpha):
     - Prevent a class of security bugs caused by treating the contents
       of a buffer chunk as if they were a NUL-terminated string. At
@@ -102,6 +40,37 @@ Changes in version 0.2.5.13 - 2017-03-??
       0.2.0.8-alpha. Found by using libFuzzer. Also tracked as TROVE-
       2016-12-002 and as CVE-2016-1254.
 
+  o Major bugfixes (security, client, DNS proxy, backport from 0.2.8.3-alpha):
+    - Stop a crash that could occur when a client running with DNSPort
+      received a query with multiple address types, and the first
+      address type was not supported. Found and fixed by Scott Dial.
+      Fixes bug 18710; bugfix on 0.2.5.4-alpha.
+
+  o Major bugfixes (security, correctness, backport from 0.2.7.4-rc):
+    - Fix an error that could cause us to read 4 bytes before the
+      beginning of an openssl string. This bug could be used to cause
+      Tor to crash on systems with unusual malloc implementations, or
+      systems with unusual hardening installed. Fixes bug 17404; bugfix
+      on 0.2.3.6-alpha.
+
+  o Major bugfixes (security, pointers, backport from 0.2.8.2-alpha):
+    - Avoid a difficult-to-trigger heap corruption attack when extending
+      a smartlist to contain over 16GB of pointers. Fixes bug 18162;
+      bugfix on 0.1.1.11-alpha, which fixed a related bug incompletely.
+      Reported by Guido Vranken.
+
+  o Major bugfixes (dns proxy mode, crash, backport from 0.2.8.2-alpha):
+    - Avoid crashing when running as a DNS proxy. Fixes bug 16248;
+      bugfix on 0.2.0.1-alpha. Patch from "cypherpunks".
+
+  o Major bugfixes (guard selection, backport from 0.2.7.6):
+    - Actually look at the Guard flag when selecting a new directory
+      guard. When we implemented the directory guard design, we
+      accidentally started treating all relays as if they have the Guard
+      flag during guard selection, leading to weaker anonymity and worse
+      performance. Fixes bug 17772; bugfix on 0.2.4.8-alpha. Discovered
+      by Mohsen Imani.
+
   o Major bugfixes (key management, backport from 0.2.8.3-alpha):
     - If OpenSSL fails to generate an RSA key, do not retain a dangling
       pointer to the previous (uninitialized) key value. The impact here
@@ -119,6 +88,36 @@ Changes in version 0.2.5.13 - 2017-03-??
       it was harmless. Part of TROVE-2017-001. Fixes bug 21278; bugfix
       on 0.0.8pre1. Found by OSS-Fuzz.
 
+  o Minor features (security, memory erasure, backport from 0.2.8.1-alpha):
+    - Make memwipe() do nothing when passed a NULL pointer or buffer of
+      zero size. Check size argument to memwipe() for underflow. Fixes
+      bug 18089; bugfix on 0.2.3.25 and 0.2.4.6-alpha. Reported by "gk",
+      patch by "teor".
+
+  o Minor features (bug-resistance, backport from 0.2.8.2-alpha):
+    - Make Tor survive errors involving connections without a
+      corresponding event object. Previously we'd fail with an
+      assertion; now we produce a log message. Related to bug 16248.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation, backport from 0.2.7.6):
+    - Fix a compilation warning with Clang 3.6: Do not check the
+      presence of an address which can never be NULL. Fixes bug 17781.
+
+  o Minor bugfixes (crypto error-handling, backport from 0.2.7.2-alpha):
+    - Check for failures from crypto_early_init, and refuse to continue.
+      A previous typo meant that we could keep going with an
+      uninitialized crypto library, and would have OpenSSL initialize
+      its own PRNG. Fixes bug 16360; bugfix on 0.2.5.2-alpha, introduced
+      when implementing ticket 4900. Patch by "teor".
+
+  o Minor bugfixes (hidden service, backport from 0.2.7.1-alpha):
+    - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells on
+      a client authorized hidden service. Fixes bug 15823; bugfix
+      on 0.2.1.6-alpha.
 
 
 Changes in version 0.2.5.12 - 2015-04-06
