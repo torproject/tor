@@ -205,6 +205,8 @@ def head_score(s):
         score = -300
     elif lw.startswith("deprecated version"):
         score = -200
+    elif lw.startswith("directory auth"):
+        score = -150
     elif (('new' in lw and 'requirement' in lw) or
           ('new' in lw and 'dependenc' in lw) or
           ('build' in lw and 'requirement' in lw) or
