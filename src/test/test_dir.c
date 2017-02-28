@@ -1065,6 +1065,7 @@ test_dir_versions(void *arg)
   tt_int_op(0, OP_EQ, ver1.patchlevel);
   tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
   tt_str_op("alpha", OP_EQ, ver1.status_tag);
+  /* Go through the full set of status tags */
   tt_int_op(0, OP_EQ, tor_version_parse("2.1.700-alpha", &ver1));
   tt_int_op(2, OP_EQ, ver1.major);
   tt_int_op(1, OP_EQ, ver1.minor);
@@ -1079,6 +1080,60 @@ test_dir_versions(void *arg)
   tt_int_op(0, OP_EQ, ver1.patchlevel);
   tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
   tt_str_op("alpha-dev", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.5-rc", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(5, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("rc", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.6-rc-dev", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(6, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("rc-dev", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.8", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(8, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2.9.9-dev", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2, OP_EQ, ver1.minor);
+  tt_int_op(9, OP_EQ, ver1.micro);
+  tt_int_op(9, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("dev", OP_EQ, ver1.status_tag);
+  /* In #21450, we fixed an inconsistency in parsing versions > INT32_MAX
+   * between i386 and x86_64, as we used tor_parse_long, and then cast to int
+   */
+  tt_int_op(0, OP_EQ, tor_version_parse("0.2147483647.0", &ver1));
+  tt_int_op(0, OP_EQ, ver1.major);
+  tt_int_op(2147483647, OP_EQ, ver1.minor);
+  tt_int_op(0, OP_EQ, ver1.micro);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("", OP_EQ, ver1.status_tag);
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.2147483648.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.4294967295.0", &ver1));
+  /* In #21278, we reject negative version components */
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-1.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-2147483648.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-4294967295.0", &ver1));
+  /* In #21507, we reject version components with non-numeric prefixes */
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.-0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("+1.0.0", &ver1));
+  /* use the list in isspace() */
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\t0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\n0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\v0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\f0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0.\r0.0", &ver1));
+  tt_int_op(-1, OP_EQ, tor_version_parse("0. 0.0", &ver1));
 
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
@@ -1098,6 +1153,7 @@ test_dir_versions(void *arg)
   test_v_i_o(VS_RECOMMENDED, "0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8");
   test_v_i_o(VS_OLD, "0.0.5.0", "0.0.5.1-cvs");
   test_v_i_o(VS_NEW_IN_SERIES, "0.0.5.1-cvs", "0.0.5, 0.0.6");
+  test_v_i_o(VS_NEW, "0.2.9.9-dev", "0.2.9.9");
   /* Not on list, but newer than any in same series. */
   test_v_i_o(VS_NEW_IN_SERIES, "0.1.0.3",
              "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
@@ -1136,6 +1192,70 @@ test_dir_versions(void *arg)
                                    "Tor 0.2.1.0-dev (r99)"));
   tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.1",
                                    "Tor 0.2.1.0-dev (r99)"));
+  /* And git revisions */
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-56788a2489127072)",
+                                        "Tor 0.2.9.9 (git-56788a2489127072)"));
+  /* a git revision is newer than no git revision */
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-56788a2489127072)",
+                                        "Tor 0.2.9.9"));
+  /* a longer git revision is newer than a shorter git revision
+   * this should be true if they prefix-match, but if they don't, they are
+   * incomparable, because hashes aren't ordered (but we compare their bytes
+   * anyway) */
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                  "Tor 0.2.9.9 (git-56788a2489127072d513cf4baf35a8ff475f3c7b)",
+                  "Tor 0.2.9.9 (git-56788a2489127072)"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-0102)",
+                                        "Tor 0.2.9.9 (git-03)"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                        "Tor 0.2.9.9 (git-0102)",
+                                        "Tor 0.2.9.9 (git-00)"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2.9.9 (git-01)",
+                                           "Tor 0.2.9.9 (git-00)"));
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2.9.9 (git-00)",
+                                           "Tor 0.2.9.9 (git-01)"));
+  /* In #21278, we comapre without integer overflows.
+   * But since #21450 limits version components to [0, INT32_MAX], it is no
+   * longer possible to cause an integer overflow in tor_version_compare() */
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.0.0.0",
+                                           "Tor 2147483647.0.0.0"));
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                           "Tor 2147483647.0.0.0",
+                                           "Tor 0.0.0.0"));
+  /* These versions used to cause an overflow, now they don't parse
+   * (and authorities reject their descriptors), and log a BUG message */
+  setup_full_capture_of_logs(LOG_WARN);
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.0.0.0",
+                                           "Tor 0.-2147483648.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2147483647.0.0",
+                                           "Tor 0.-1.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.2147483647.0.0",
+                                           "Tor 0.-2147483648.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                           "Tor 4294967295.0.0.0",
+                                           "Tor 0.0.0.0"));
+  expect_no_log_entry();
+  tt_int_op(0,OP_EQ, tor_version_as_new_as(
+                                           "Tor 0.4294967295.0.0",
+                                           "Tor 0.-4294967295.0.0"));
+  expect_single_log_msg_containing("unparseable");
+  mock_clean_saved_logs();
+  teardown_capture_of_logs();
 
   /* Now try git revisions */
   tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00ff)", &ver1));
@@ -1145,11 +1265,24 @@ test_dir_versions(void *arg)
   tt_int_op(7,OP_EQ, ver1.patchlevel);
   tt_int_op(3,OP_EQ, ver1.git_tag_len);
   tt_mem_op(ver1.git_tag,OP_EQ, "\xff\x00\xff", 3);
+  /* reject bad hex digits */
   tt_int_op(-1,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00xx)", &ver1));
+  /* reject odd hex digit count */
   tt_int_op(-1,OP_EQ, tor_version_parse("0.5.6.7 (git-ff00fff)", &ver1));
+  /* ignore "git " */
   tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git ff00fff)", &ver1));
+  /* standard length is 16 hex digits */
+  tt_int_op(0,OP_EQ, tor_version_parse("0.5.6.7 (git-0010203040506070)",
+                                       &ver1));
+  /* length limit is 40 hex digits */
+  tt_int_op(0,OP_EQ, tor_version_parse(
+                     "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f10111213)",
+                     &ver1));
+  tt_int_op(-1,OP_EQ, tor_version_parse(
+                    "0.5.6.7 (git-000102030405060708090a0b0c0d0e0f1011121314)",
+                    &ver1));
  done:
-  ;
+  teardown_capture_of_logs();
 }
 
 /** Run unit tests for directory fp_pair functions. */
