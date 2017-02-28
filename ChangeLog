@@ -38,16 +38,16 @@ Changes in version 0.2.9.10 - 2017-03-??
       Otherwise 32-bit and 64-bit platforms would behave inconsistently.
       Fixes bug 21450; bugfix on 0.0.8pre1.
 
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
+      Country database.
+
   o Minor features (portability, compilation, backport from 0.3.0.3-alpha):
     - Autoconf now checks to determine if OpenSSL structures are opaque,
       instead of explicitly checking for OpenSSL version numbers. Part
       of ticket 21359.
     - Support building with recent LibreSSL code that uses opaque
       structures. Closes ticket 21359.
-
-  o Minor features (geoip):
-    - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
-      Country database.
 
   o Minor bugfixes (code correctness, also in 0.3.0.4-rc):
     - Repair a couple of (unreachable or harmless) cases of the risky
