@@ -1,5 +1,5 @@
 Changes in version 0.2.9.10 - 2017-03-??
-  Tor 0.2.9.10 backports a security fix from later Tor releass.
+  Tor 0.2.9.10 backports a security fix from later Tor release.
 
   Tor 0.2.9.10 also includes fixes for some major issues affecting
   directory authorities, LibreSSL compatibility, and IPv6 correctness.
@@ -23,17 +23,20 @@ Changes in version 0.2.9.10 - 2017-03-??
       21357; bugfix on commit 004f3f4e53 in 0.2.4.7-alpha.
 
   o Major bugfixes (parsing, also in 0.3.0.4-rc):
-    - Fix an integer underflow bug when comparing malformed Tor versions.
-      This bug is harmless, except when Tor has been built with
-      --enable-expensive-hardening, which would turn it into a crash;
-      or on Tor 0.2.9.1-alpha through Tor 0.2.9.8, which were built with
-      -ftrapv by default.
-      Part of TROVE-2017-001. Fixes bug 21278; bugfix on
-      0.0.8pre1. Found by OSS-Fuzz.
+    - Fix an integer underflow bug when comparing malformed Tor
+      versions. This bug could crash Tor when built with
+      --enable-expensive-hardening, or on Tor 0.2.9.1-alpha through Tor
+      0.2.9.8, which were built with -ftrapv by default. In other cases
+      it was harmless. Part of TROVE-2017-001. Fixes bug 21278; bugfix
+      on 0.0.8pre1. Found by OSS-Fuzz.
 
-  o Minor features (directory authority, also in 0.3.0.4-rc):
+  o Minor features (directory authorities, also in 0.3.0.4-rc):
     - Directory authorities now reject descriptors that claim to be
-      malformed versions of Tor. Helps prevent exploitation of bug 21278.
+      malformed versions of Tor. Helps prevent exploitation of
+      bug 21278.
+    - Reject version numbers with components that exceed INT32_MAX.
+      Otherwise 32-bit and 64-bit platforms would behave inconsistently.
+      Fixes bug 21450; bugfix on 0.0.8pre1.
 
   o Minor features (portability, compilation, backport from 0.3.0.3-alpha):
     - Autoconf now checks to determine if OpenSSL structures are opaque,
@@ -55,11 +58,6 @@ Changes in version 0.2.9.10 - 2017-03-??
       characters in length. Previously, it would silently truncate them,
       which could lead to bugs. Fixes bug 21280; bugfix on 0.0.9pre5.
       Patch by "junglefowl".
-
-  o Minor bugfixes (voting consistency, also in 0.3.0.4-rc):
-    - Reject version numbers with components that exceed INT32_MAX.
-      Otherwise 32-bit and 64-bit platforms would behave inconsistently.
-      Fixes bug 21450; bugfix on 0.0.8pre1.
 
 
 Changes in version 0.2.9.9 - 2017-01-23
