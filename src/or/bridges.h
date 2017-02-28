@@ -27,6 +27,10 @@ bridge_info_t *get_configured_bridge_by_addr_port_digest(
                                           const tor_addr_t *addr,
                                           uint16_t port,
                                           const char *digest);
+bridge_info_t *get_configured_bridge_by_exact_addr_port_digest(
+                                          const tor_addr_t *addr,
+                                          uint16_t port,
+                                          const char *digest);
 
 int addr_is_a_configured_bridge(const tor_addr_t *addr, uint16_t port,
                                 const char *digest);

@@ -1,0 +1,8 @@
+  o Major bugfixes (bridges):
+
+    - When the same bridge is configured multiple times at different
+      address:port combinations (but with the same identity), treat
+      those bridge instances as separate guards. This allows clients to
+      configure the same bridge with multiple pluggable transports, once
+      again. Fixes bug 21027; bugfix on 0.3.0.1-alpha.
+
