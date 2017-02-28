@@ -1,11 +1,11 @@
 Changes in version 0.3.0.4-rc - 2017-03-??
-  Tor 0.3.0.4-rc fixes some remaining bugs, large and small, in the 0.3.0
-  release series, and introduces a few reliability features to keep them
-  from coming back.
+  Tor 0.3.0.4-rc fixes some remaining bugs, large and small, in the
+  0.3.0 release series, and introduces a few reliability features to
+  keep them from coming back.
 
-  This is the first release candidate in the Tor 0.3.0 series.
-  If we find no new bugs or regressions here, the first stable 0.2.8
-  release will be identical to it.
+  This is the first release candidate in the Tor 0.3.0 series. If we
+  find no new bugs or regressions here, the first stable 0.2.8 release
+  will be identical to it.
 
   o Major bugfixes (bridges):
     - When the same bridge is configured multiple times at different
@@ -15,29 +15,28 @@ Changes in version 0.3.0.4-rc - 2017-03-??
       again. Fixes bug 21027; bugfix on 0.3.0.1-alpha.
 
   o Major bugfixes (hidden service directory v3):
-    - When a descriptor lookup was done and it was not found in the directory
-      cache, it would crash on a NULL pointer instead of returning the 404
-      code back to the client like it was suppose to. Fixes bug 21471;
-      bugfixes on tor-0.3.0.1-alpha.
+    - When a descriptor lookup was done and it was not found in the
+      directory cache, it would crash on a NULL pointer instead of
+      returning the 404 code back to the client like it was suppose to.
+      Fixes bug 21471; bugfixes on tor-0.3.0.1-alpha.
 
   o Major bugfixes (HTTP, parsing):
-    - When parsing a malformed content-length field from an HTTP message,
-      do not read off the end of the buffer. This bug was a potential
-      remote denial-of-service attack against Tor clients and relays.
-      A workaround was released in October 2016, which prevents this
-      bug from crashing Tor. This is a fix for the underlying issue,
-      which should no longer matter (if you applied the earlier patch).
-      Fixes bug 20894; bugfix on 0.2.0.16-alpha. Bug found by fuzzing
-      using AFL (http://lcamtuf.coredump.cx/afl/).
+    - When parsing a malformed content-length field from an HTTP
+      message, do not read off the end of the buffer. This bug was a
+      potential remote denial-of-service attack against Tor clients and
+      relays. A workaround was released in October 2016, which prevents
+      this bug from crashing Tor. This is a fix for the underlying
+      issue, which should no longer matter (if you applied the earlier
+      patch). Fixes bug 20894; bugfix on 0.2.0.16-alpha. Bug found by
+      fuzzing using AFL (http://lcamtuf.coredump.cx/afl/).
 
   o Major bugfixes (parsing):
-    - Fix an integer underflow bug when comparing malformed Tor versions.
-      This bug is harmless, except when Tor has been built with
-      --enable-expensive-hardening, which would turn it into a crash;
-      or on Tor 0.2.9.1-alpha through Tor 0.2.9.8, which were built with
-      -ftrapv by default.
-      Part of TROVE-2017-001. Fixes bug 21278; bugfix on
-      0.0.8pre1. Found by OSS-Fuzz.
+    - Fix an integer underflow bug when comparing malformed Tor
+      versions. This bug is harmless, except when Tor has been built
+      with --enable-expensive-hardening, which would turn it into a
+      crash; or on Tor 0.2.9.1-alpha through Tor 0.2.9.8, which were
+      built with -ftrapv by default. Part of TROVE-2017-001. Fixes bug
+      21278; bugfix on 0.0.8pre1. Found by OSS-Fuzz.
 
   o Minor feature (protover):
     - Add new protocol version for proposal 224. HSIntro now advertises
@@ -45,7 +44,8 @@ Changes in version 0.3.0.4-rc - 2017-03-??
 
   o Minor features (directory authority):
     - Directory authorities now reject descriptors that claim to be
-      malformed versions of Tor. Helps prevent exploitation of bug 21278.
+      malformed versions of Tor. Helps prevent exploitation of
+      bug 21278.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
@@ -53,17 +53,17 @@ Changes in version 0.3.0.4-rc - 2017-03-??
 
   o Minor features (reliability, crash):
     - Try better to detect problems in buffers where they might grow (or
-      think they have grown) over 2 GB in size. Diagnostic for bug 21369.
+      think they have grown) over 2 GB in size. Diagnostic for
+      bug 21369.
 
   o Minor features (testing):
-    - During 'make test-network-all', if tor logs any warnings, ask chutney
-      to output them. Requires a recent version of chutney with the 21572
-      patch.
-      Implements 21570.
+    - During 'make test-network-all', if tor logs any warnings, ask
+      chutney to output them. Requires a recent version of chutney with
+      the 21572 patch. Implements 21570.
 
   o Minor bugfixes (certificate expiration time):
-    - Avoid using link certificates that don't become valid till
-      some time in the future.  Fixes bug 21420; bugfix on 0.2.4.11-alpha
+    - Avoid using link certificates that don't become valid till some
+      time in the future. Fixes bug 21420; bugfix on 0.2.4.11-alpha
 
   o Minor bugfixes (code correctness):
     - Repair a couple of (unreachable or harmless) cases of the risky
@@ -75,12 +75,12 @@ Changes in version 0.3.0.4-rc - 2017-03-??
       bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (directory mirrors):
-    - Allow relays to use directory mirrors without a DirPort: these relays
-      need to be contacted over their ORPorts using a begindir connection.
-      Fixes bug 20711; bugfix on 0.2.8.2-alpha.
-    - Clarify the message logged when a remote relay is unexpectedly missing
-      an ORPort or DirPort: users were confusing this with a local port.
-      Fixes bug 20711; bugfix on 0.2.8.2-alpha.
+    - Allow relays to use directory mirrors without a DirPort: these
+      relays need to be contacted over their ORPorts using a begindir
+      connection. Fixes bug 20711; bugfix on 0.2.8.2-alpha.
+    - Clarify the message logged when a remote relay is unexpectedly
+      missing an ORPort or DirPort: users were confusing this with a
+      local port. Fixes bug 20711; bugfix on 0.2.8.2-alpha.
 
   o Minor bugfixes (guards):
     - Don't warn about a missing guard state on timeout-measurement
@@ -88,21 +88,22 @@ Changes in version 0.3.0.4-rc - 2017-03-??
       instance of bug 21007; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (hidden service):
-    - When encoding a legacy ESTABLISH_INTRO cell, we were using the sizeof()
-      on a pointer instead of real size of the destination buffer leading to
-      an overflow passing an enormous value to the signing digest function.
-      Fortunately, that value was only used to make sure the destination
-      buffer length was big enough for the key size and in this case it was.
-      Fixes bug 21553; bugfix on 0.3.0.1-alpha.
+    - When encoding a legacy ESTABLISH_INTRO cell, we were using the
+      sizeof() on a pointer instead of real size of the destination
+      buffer leading to an overflow passing an enormous value to the
+      signing digest function. Fortunately, that value was only used to
+      make sure the destination buffer length was big enough for the key
+      size and in this case it was. Fixes bug 21553; bugfix
+      on 0.3.0.1-alpha.
 
   o Minor bugfixes (testing):
-    - Fix Raspbian build missing socket errno in test util. Fixes bug 21116;
-      bugfix on tor-0.2.8.2. Patch by "hein".
+    - Fix Raspbian build missing socket errno in test util. Fixes bug
+      21116; bugfix on tor-0.2.8.2. Patch by "hein".
     - Rename "make fuzz" to "make test-fuzz-corpora", since it doesn't
       actually fuzz anything. Fixes bug 21447; bugfix on 0.3.0.3-alpha.
-    - Use bash in src/test/test-network.sh. This ensures we reliably call
-      chutney's newer tools/test-network.sh when available.
-      Fixes bug 21562; bugfix on 0.2.9.1-alpha.
+    - Use bash in src/test/test-network.sh. This ensures we reliably
+      call chutney's newer tools/test-network.sh when available. Fixes
+      bug 21562; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (voting consistency):
     - Reject version numbers with components that exceed INT32_MAX.
@@ -110,8 +111,7 @@ Changes in version 0.3.0.4-rc - 2017-03-??
       Fixes bug 21450; bugfix on 0.0.8pre1.
 
   o Documentation:
-    - Small fixes to the fuzzing documentation. Closes ticket
-      21472.
+    - Small fixes to the fuzzing documentation. Closes ticket 21472.
 
 
 Changes in version 0.3.0.3-alpha - 2017-02-03
