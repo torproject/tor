@@ -4,8 +4,8 @@ Changes in version 0.3.0.4-rc - 2017-03-??
   keep them from coming back.
 
   This is the first release candidate in the Tor 0.3.0 series. If we
-  find no new bugs or regressions here, the first stable 0.2.8 release
-  will be identical to it.
+  find no new bugs or regressions here, the first stable 0.3.0 release
+  will be nearly identical to it.
 
   o Major bugfixes (bridges):
     - When the same bridge is configured multiple times at different
@@ -32,11 +32,11 @@ Changes in version 0.3.0.4-rc - 2017-03-??
 
   o Major bugfixes (parsing):
     - Fix an integer underflow bug when comparing malformed Tor
-      versions. This bug is harmless, except when Tor has been built
-      with --enable-expensive-hardening, which would turn it into a
-      crash; or on Tor 0.2.9.1-alpha through Tor 0.2.9.8, which were
-      built with -ftrapv by default. Part of TROVE-2017-001. Fixes bug
-      21278; bugfix on 0.0.8pre1. Found by OSS-Fuzz.
+      versions. This bug could crash Tor when built with
+      --enable-expensive-hardening, or on Tor 0.2.9.1-alpha through Tor
+      0.2.9.8, which were built with -ftrapv by default. In other cases
+      it was harmless. Part of TROVE-2017-001. Fixes bug 21278; bugfix
+      on 0.0.8pre1. Found by OSS-Fuzz.
 
   o Minor feature (protover):
     - Add new protocol version for proposal 224. HSIntro now advertises
