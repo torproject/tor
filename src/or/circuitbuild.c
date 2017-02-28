@@ -892,6 +892,27 @@ circuit_pick_extend_handshake(uint8_t *cell_type_out,
   }
 }
 
+/**
+ * Return true iff <b>purpose</b> is a purpose for a circuit which is
+ * allowed to have no guard configured, even if the circuit is multihop
+ * and guards are enabled.
+ */
+static int
+circuit_purpose_may_omit_guard(int purpose)
+{
+  switch (purpose) {
+    case CIRCUIT_PURPOSE_TESTING:
+    case CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT:
+      /* Testing circuits may omit guards because they're measuring
+       * liveness or performance, and don't want guards to interfere. */
+      return 1;
+    default:
+      /* All other multihop circuits should use guards if guards are
+       * enabled. */
+      return 0;
+  }
+}
+
 /** This is the backbone function for building circuits.
  *
  * If circ's first hop is closed, then we need to build a create
@@ -969,7 +990,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       guard_usable_t r;
       if (! circ->guard_state) {
         if (circuit_get_cpath_len(circ) != 1 &&
-            circ->base_.purpose != CIRCUIT_PURPOSE_TESTING &&
+            ! circuit_purpose_may_omit_guard(circ->base_.purpose) &&
             get_options()->UseEntryGuards) {
           log_warn(LD_BUG, "%d-hop circuit %p with purpose %d has no "
                    "guard state",
