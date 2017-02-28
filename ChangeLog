@@ -10,14 +10,13 @@ Changes in version 0.2.8.13 - 2017-03-??
   a Tor release series with longer-term support, we recommend Tor 0.2.9.x.
 
 
-  o Major bugfixes (parsing, also in 0.3.0.4-rc):
-    - Fix an integer underflow bug when comparing malformed Tor versions.
-      This bug is harmless, except when Tor has been built with
-      --enable-expensive-hardening, which would turn it into a crash;
-      or on Tor 0.2.9.1-alpha through Tor 0.2.9.8, which were built with
-      -ftrapv by default.
-      Part of TROVE-2017-001. Fixes bug 21278; bugfix on
-      0.0.8pre1. Found by OSS-Fuzz.
+  o Major bugfixes (parsing, backported from 0.3.0.4-rc):
+    - Fix an integer underflow bug when comparing malformed Tor
+      versions. This bug could crash Tor when built with
+      --enable-expensive-hardening, or on Tor 0.2.9.1-alpha through Tor
+      0.2.9.8, which were built with -ftrapv by default. In other cases
+      it was harmless. Part of TROVE-2017-001. Fixes bug 21278; bugfix
+      on 0.0.8pre1. Found by OSS-Fuzz.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
