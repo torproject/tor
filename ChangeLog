@@ -9,7 +9,6 @@ Changes in version 0.2.8.13 - 2017-03-??
   any fixes for the Tor 0.2.8.x series after 1 Jan 2018.  If you need
   a Tor release series with longer-term support, we recommend Tor 0.2.9.x.
 
-
   o Major bugfixes (parsing, backported from 0.3.0.4-rc):
     - Fix an integer underflow bug when comparing malformed Tor
       versions. This bug could crash Tor when built with
