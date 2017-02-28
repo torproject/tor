@@ -819,7 +819,7 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
   }
   if (options->FastFirstHopPK == -1) {
     /* option is "auto", so look at the consensus. */
-    return networkstatus_get_param(NULL, "usecreatefast", 1, 0, 1);
+    return networkstatus_get_param(NULL, "usecreatefast", 0, 0, 1);
   }
 
   return options->FastFirstHopPK;
