@@ -74,10 +74,10 @@ Changes in version 0.3.0.4-rc - 2017-03-??
   o Minor bugfixes (directory mirrors):
     - Allow relays to use directory mirrors without a DirPort: these
       relays need to be contacted over their ORPorts using a begindir
-      connection. Fixes bug 20711; bugfix on 0.2.8.2-alpha.
+      connection. Fixes one case of bug 20711; bugfix on 0.2.8.2-alpha.
     - Clarify the message logged when a remote relay is unexpectedly
       missing an ORPort or DirPort: users were confusing this with a
-      local port. Fixes bug 20711; bugfix on 0.2.8.2-alpha.
+      local port. Fixes another case of bug 20711; bugfix on 0.2.8.2-alpha.
 
   o Minor bugfixes (guards):
     - Don't warn about a missing guard state on timeout-measurement
