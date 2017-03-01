@@ -1,9 +1,19 @@
-#! /bin/bash
+#! /bin/sh
+
+# use bash if it is available, as this script doesn't work well in non-bash sh
+# this will be fixed in #19699
+# there is no simple, portable way of checking the name of the shell, so we
+# exec bash even when sh is bash
+if [ -x /bin/bash -a "$USING_BASH" != true ]; then
+    # only do this once
+    export USING_BASH=true
+    exec /bin/bash "$0" "$@"
+fi
 
 # Please do not modify this script, it has been moved to chutney/tools
 
-export ECHO=${ECHO:-"echo"}
-export ECHO_N=${ECHO_N:-"/bin/echo -n"}
+export ECHO="${ECHO:-echo}"
+export ECHO_N="${ECHO_N:-/bin/echo -n}"
 
 # Output is prefixed with the name of the script
 myname=$(basename $0)
@@ -21,6 +31,8 @@ if [ "$TEST_NETWORK_RECURSING" != true ]; then
     # can be removed, because this script will find chutney, then pass all
     # arguments to chutney's test-network.sh
     export TEST_NETWORK_RECURSING=true
+    # passing arguments to a sourced script only works in bash
+    # this will be fixed in #19699
     . "$0" --dry-run "$@"
 
     # Call the chutney version of this script, if it exists, and we can find it
@@ -179,6 +191,7 @@ export CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 if [ "$NETWORK_DRY_RUN" = true ]; then
     # we can't exit here, it breaks argument processing
     # this only works in bash: return semantics are shell-specific
+    # this will be fixed in #19699
     return 2>/dev/null || exit
 fi
 
