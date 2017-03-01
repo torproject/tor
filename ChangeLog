@@ -1,7 +1,8 @@
 Changes in version 0.2.9.10 - 2017-03-01
-  Tor 0.2.9.10 backports a security fix from later Tor release.  It also
-  includes fixes for some major issues affecting directory authorities,
-  LibreSSL compatibility, and IPv6 correctness.
+  Tor 0.2.9.10 backports a security fix for users who build Tor with
+  the --enable-expensive-hardening option. It also includes fixes for
+  some major issues affecting directory authorities, LibreSSL
+  compatibility, and IPv6 correctness.
 
   The Tor 0.2.9.x release series is now marked as a long-term-support
   series.  We intend to backport security fixes to 0.2.9.x until at
