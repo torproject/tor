@@ -1,4 +1,4 @@
-Changes in version 0.3.0.4-rc - 2017-03-??
+Changes in version 0.3.0.4-rc - 2017-03-01
   Tor 0.3.0.4-rc fixes some remaining bugs, large and small, in the
   0.3.0 release series, and introduces a few reliability features to
   keep them from coming back.
