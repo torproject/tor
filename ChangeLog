@@ -77,15 +77,16 @@ Changes in version 0.3.0.4-rc - 2017-03-??
       connection. Fixes one case of bug 20711; bugfix on 0.2.8.2-alpha.
     - Clarify the message logged when a remote relay is unexpectedly
       missing an ORPort or DirPort: users were confusing this with a
-      local port. Fixes another case of bug 20711; bugfix on 0.2.8.2-alpha.
+      local port. Fixes another case of bug 20711; bugfix
+      on 0.2.8.2-alpha.
 
   o Minor bugfixes (guards):
     - Don't warn about a missing guard state on timeout-measurement
       circuits: they aren't supposed to be using guards. Fixes an
       instance of bug 21007; bugfix on 0.3.0.1-alpha.
-    - Silence a BUG() warning when attempting to use a guard whose descriptor
-      we don't know, and make this scenario less likely to happen. Fixes bug
-      21415; bugfix on 0.3.0.1-alpha.
+    - Silence a BUG() warning when attempting to use a guard whose
+      descriptor we don't know, and make this scenario less likely to
+      happen. Fixes bug 21415; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (hidden service):
     - Pass correct buffer length when encoding legacy ESTABLISH_INTRO
