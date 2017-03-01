@@ -3365,7 +3365,14 @@ guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
    * guards in our list, since these are the guards that we typically use for
    * circuits. */
   num_primary_to_check = get_n_primary_guards_to_use(GUARD_USAGE_TRAFFIC);
-  num_primary_to_check++;
+  /*
+    We had added this to try to guarantee that we'd not normally try a guard
+    without a descriptor, even if we didn't use the first guard.  But it led
+    to problems with the chutney bridges+ipv6-min test.  A better solution is
+    needed.
+
+    num_primary_to_check++;
+  */
 
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
