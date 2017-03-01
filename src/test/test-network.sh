@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 # use bash if it is available, as this script doesn't work well in non-bash sh
 # this will be fixed in #19699
