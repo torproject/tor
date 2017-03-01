@@ -1843,7 +1843,7 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
     if (! entry_guard_obeys_restriction(guard, rst))
       continue;
     if (guard->is_reachable != GUARD_REACHABLE_NO) {
-      if (need_descriptor && BUG(!guard_has_descriptor(guard))) {
+      if (need_descriptor && !guard_has_descriptor(guard)) {
         continue;
       }
       *state_out = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
@@ -3357,9 +3357,15 @@ guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
-  const int num_primary = get_n_primary_guards_to_use(GUARD_USAGE_TRAFFIC);
   int n_missing_descriptors = 0;
   int n_considered = 0;
+  int num_primary_to_check;
+
+  /* We want to check for the descriptor of at least the first two primary
+   * guards in our list, since these are the guards that we typically use for
+   * circuits. */
+  num_primary_to_check = get_n_primary_guards_to_use(GUARD_USAGE_TRAFFIC);
+  num_primary_to_check++;
 
   SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards, entry_guard_t *, guard) {
     entry_guard_consider_retry(guard);
@@ -3368,7 +3374,7 @@ guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
     n_considered++;
     if (!guard_has_descriptor(guard))
       n_missing_descriptors++;
-    if (n_considered >= num_primary)
+    if (n_considered >= num_primary_to_check)
       break;
   } SMARTLIST_FOREACH_END(guard);
 
