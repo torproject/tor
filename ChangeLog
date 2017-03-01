@@ -83,6 +83,9 @@ Changes in version 0.3.0.4-rc - 2017-03-??
     - Don't warn about a missing guard state on timeout-measurement
       circuits: they aren't supposed to be using guards. Fixes an
       instance of bug 21007; bugfix on 0.3.0.1-alpha.
+    - Silence a BUG() warning when attempting to use a guard whose descriptor
+      we don't know, and make this scenario less likely to happen. Fixes bug
+      21415; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (hidden service):
     - Pass correct buffer length when encoding legacy ESTABLISH_INTRO
