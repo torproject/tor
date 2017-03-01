@@ -1,3 +1,0 @@
-  o Minor bugfixes (test):
-    - Fix Raspbian build missing socket errno in test util. Fixes bug 21116;
-      bugfix on tor-0.2.8.2. Patch by "hein".
