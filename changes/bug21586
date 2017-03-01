@@ -1,0 +1,4 @@
+  o Minor bugfix (directory authority):
+    - Prevent the shared randomness subsystem from asserting when initialized
+      by a bridge authority with an incomplete configuration file. Fixes bug
+      #21856; bugfix on 0.2.9.8.
