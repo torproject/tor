@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing):
+    - Restore support for test-network.sh on BSD and other systems without
+      bash. (But use bash if it's available.) This is a workaround until we
+      remove bash-specific code in 19699.
+      Fixes bug 21581; bugfix on 21562, not in any released version of tor.
