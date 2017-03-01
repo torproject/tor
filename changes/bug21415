@@ -1,0 +1,4 @@
+  o Minor bugfix (entry guards):
+    - Silence a BUG() warning when attempting to use a guard whose descriptor
+      we don't know and make this scenario more unlikely to happen. Fixes bug
+      21415; bugfix on 0.3.0.1-alpha.
