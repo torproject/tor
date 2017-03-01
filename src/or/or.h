@@ -1543,10 +1543,6 @@ typedef struct or_connection_t {
    * NETINFO cell listed the address we're connected to as recognized. */
   unsigned int is_canonical:1;
 
-  /** True iff we have decided that the other end of this connection
-   * is a client.  Connections with this flag set should never be used
-   * to satisfy an EXTEND request.  */
-  unsigned int is_connection_with_client:1;
   /** True iff this is an outgoing connection. */
   unsigned int is_outgoing:1;
   unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
