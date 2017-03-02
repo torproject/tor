@@ -218,7 +218,7 @@ get_configured_bridge_by_exact_addr_port_digest(const tor_addr_t *addr,
 
       if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
         return bridge;
-      else if (!digest)
+      else if (!digest || tor_digest_is_zero(bridge->identity))
         return bridge;
     }
 
@@ -297,7 +297,7 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
   (void)ed_id;
   int learned = 0;
   bridge_info_t *bridge =
-    get_configured_bridge_by_addr_port_digest(addr, port, digest);
+    get_configured_bridge_by_exact_addr_port_digest(addr, port, digest);
   if (bridge && tor_digest_is_zero(bridge->identity)) {
     memcpy(bridge->identity, digest, DIGEST_LEN);
     learned = 1;
