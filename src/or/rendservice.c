@@ -3930,6 +3930,10 @@ rend_consider_services_intro_points(void)
     smartlist_clear(exclude_nodes);
     smartlist_clear(retry_nodes);
 
+    /* Cleanup the invalid intro points and save the node objects, if any,
+     * in the exclude_nodes and retry_nodes lists. */
+    remove_invalid_intro_points(service, exclude_nodes, retry_nodes, now);
+
     /* This retry period is important here so we don't stress circuit
      * creation. */
     if (now > service->intro_period_started + INTRO_CIRC_RETRY_PERIOD) {
@@ -3939,13 +3943,9 @@ rend_consider_services_intro_points(void)
     } else if (service->n_intro_circuits_launched >=
                MAX_INTRO_CIRCS_PER_PERIOD) {
       /* We have failed too many times in this period; wait for the next
-       * one before we try again. */
+       * one before we try to initiate any more connections. */
       continue;
     }
-
-    /* Cleanup the invalid intro points and save the node objects, if apply,
-     * in the exclude_nodes and retry_nodes list. */
-    remove_invalid_intro_points(service, exclude_nodes, retry_nodes, now);
 
     /* Let's try to rebuild circuit on the nodes we want to retry on. */
     SMARTLIST_FOREACH_BEGIN(retry_nodes, rend_intro_point_t *, intro) {

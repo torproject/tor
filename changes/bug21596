@@ -1,0 +1,5 @@
+  o Minor bugfixes (hidden services):
+    - Make hidden services check for failed intro point connections, even when
+      they have exceeded their intro point creation limit. Fixes bug 21596;
+      bugfix on commit d67bf8b2f23 in Tor 0.2.7.2-alpha. Reported by
+      alecmuffett.
