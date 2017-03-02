@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden services):
+    - Simplify hidden service descriptor creation by using an existing flag
+      to check if an introduction point is established.
+      Fixes bug 21599; bugfix on 0.2.7.2-alpha.
