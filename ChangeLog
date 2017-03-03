@@ -1,4 +1,4 @@
-Changes in version 0.2.7.7 - 2017-03-??
+Changes in version 0.2.7.7 - 2017-03-03
   Tor 0.2.7.7 backports a number of security fixes from later Tor
   releases.  Anybody running Tor 0.2.7.6 or earlier should upgrade to
   this release, if for some reason they cannot upgrade to a later
