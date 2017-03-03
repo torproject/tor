@@ -1,4 +1,4 @@
-Changes in version 0.2.4.28 - 2017-03-??
+Changes in version 0.2.4.28 - 2017-03-03
   Tor 0.2.4.28 backports a number of security fixes from later Tor
   releases.  Anybody running Tor 0.2.4.27 or earlier should upgrade to
   this release, if for some reason they cannot upgrade to a later
