@@ -83,6 +83,7 @@ static const smartlist_t* rend_get_service_list(
                                   const smartlist_t* substitute_service_list);
 static smartlist_t* rend_get_service_list_mutable(
                                   smartlist_t* substitute_service_list);
+static int rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -1023,6 +1024,45 @@ rend_service_del_ephemeral(const char *service_id)
   log_debug(LD_CONFIG, "Removed ephemeral Onion Service: %s", service_id);
 
   return 0;
+}
+
+/* There can be 1 second's delay due to second_elapsed_callback, and perhaps
+ * another few seconds due to blocking calls. */
+#define INTRO_CIRC_RETRY_PERIOD_SLOP 10
+
+/** Log information about the intro point creation rate and current intro
+ * points for service, upgrading the log level from min_severity to warn if
+ * we have stopped launching new intro point circuits. */
+static void
+rend_log_intro_limit(const rend_service_t *service, int min_severity)
+{
+  int exceeded_limit = (service->n_intro_circuits_launched >=
+                        rend_max_intro_circs_per_period(
+                                              service->n_intro_points_wanted));
+  int severity = min_severity;
+  /* We stopped creating circuits */
+  if (exceeded_limit) {
+    severity = LOG_WARN;
+  }
+  time_t intro_period_elapsed = time(NULL) - service->intro_period_started;
+  tor_assert_nonfatal(intro_period_elapsed >= 0);
+  /* We delayed resuming circuits longer than expected */
+  int exceeded_elapsed = (intro_period_elapsed > INTRO_CIRC_RETRY_PERIOD +
+                          INTRO_CIRC_RETRY_PERIOD_SLOP);
+  if (exceeded_elapsed) {
+    severity = LOG_WARN;
+  }
+  log_fn(severity, LD_REND, "Hidden service %s %s %d intro points in the last "
+         "%d seconds%s. Intro circuit launches are limited to %d per %d "
+         "seconds.",
+         service->service_id,
+         exceeded_limit ? "exceeded launch limit with" : "launched",
+         service->n_intro_circuits_launched,
+         (int)intro_period_elapsed,
+         exceeded_elapsed ? " (delayed)" : "",
+         rend_max_intro_circs_per_period(service->n_intro_points_wanted),
+         INTRO_CIRC_RETRY_PERIOD);
+  rend_service_dump_stats(severity);
 }
 
 /** Replace the old value of <b>service</b>-\>desc with one that reflects
