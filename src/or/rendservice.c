@@ -4136,8 +4136,12 @@ rend_consider_services_intro_points(void)
 
     /* This retry period is important here so we don't stress circuit
      * creation. */
+
     if (now > service->intro_period_started + INTRO_CIRC_RETRY_PERIOD) {
-      /* One period has elapsed; we can try building circuits again. */
+      /* One period has elapsed:
+       *  - if we stopped, we can try building circuits again,
+       *  - if we haven't, we reset the circuit creation counts. */
+      rend_log_intro_limit(service, LOG_INFO);
       service->intro_period_started = now;
       service->n_intro_circuits_launched = 0;
     } else if (service->n_intro_circuits_launched >=
@@ -4145,6 +4149,7 @@ rend_consider_services_intro_points(void)
                                       service->n_intro_points_wanted)) {
       /* We have failed too many times in this period; wait for the next
        * one before we try to initiate any more connections. */
+      rend_log_intro_limit(service, LOG_WARN);
       continue;
     }
 
