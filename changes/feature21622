@@ -1,0 +1,8 @@
+  o Minor feature (hidden services):
+    - Log a message when a hidden service reaches its introduction point
+      circuit limit, and when that limit is reset.
+      Follow up to ticket 21594, closes ticket 21622.
+    - Add more information to the message logged when a hidden service
+      descriptor has fewer introduction points than specified in
+      HiddenServiceNumIntroductionPoints.
+      Follow up to tickets 21598 and 21599, closes ticket 21622.
