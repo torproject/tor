@@ -1134,7 +1134,8 @@ rend_service_update_descriptor(rend_service_t *service)
            "descriptor was updated with %d instead.",
            service->service_id,
            service->n_intro_points_wanted, have_intro);
-    rend_service_dump_stats(severity);
+    /* Now log an informative message about how we might have got here. */
+    rend_log_intro_limit(service, severity);
   }
 }
 
