@@ -1080,6 +1080,25 @@ rend_service_update_descriptor(rend_service_t *service)
       intro_svc->time_published = time(NULL);
     }
   }
+
+  /* Check that we have the right number of intro points */
+  unsigned int have_intro = (unsigned int)smartlist_len(d->intro_nodes);
+  if (have_intro != service->n_intro_points_wanted) {
+    int severity;
+    /* Getting less than we wanted or more than we're allowed is serious */
+    if (have_intro < service->n_intro_points_wanted ||
+        have_intro > NUM_INTRO_POINTS_MAX) {
+      severity = LOG_WARN;
+    } else {
+      /* Getting more than we wanted is weird, but less of a problem */
+      severity = LOG_NOTICE;
+    }
+    log_fn(severity, LD_REND, "Hidden service %s wanted %d intro points, but "
+           "descriptor was updated with %d instead.",
+           service->service_id,
+           service->n_intro_points_wanted, have_intro);
+    rend_service_dump_stats(severity);
+  }
 }
 
 /* Allocate and return a string containing the path to file_name in
