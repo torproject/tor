@@ -2030,6 +2030,9 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
    * parse that's covered by the hash. */
   int can_dl_again = 0;
 
+  if (BUG(s == NULL))
+    return NULL;
+
   if (!end) {
     end = s + strlen(s);
   }
