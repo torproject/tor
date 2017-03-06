@@ -3972,47 +3972,50 @@ test_util_fgets_eagain(void *ptr)
   /* Send in a partial line */
   retlen = write(test_pipe[1], "A", 1);
   tt_int_op(retlen, OP_EQ, 1);
-  retptr = fgets(buf, sizeof(buf), test_stream);
+  retptr = tor_fgets(buf, sizeof(buf), test_stream);
   tt_int_op(errno, OP_EQ, EAGAIN);
-  tt_ptr_op(retptr, OP_EQ, buf);
+  tt_ptr_op(retptr, OP_EQ, NULL);
   tt_str_op(buf, OP_EQ, "A");
   errno = 0;
 
   /* Send in the rest */
   retlen = write(test_pipe[1], "B\n", 2);
   tt_int_op(retlen, OP_EQ, 2);
-  retptr = fgets(buf, sizeof(buf), test_stream);
+  retptr = tor_fgets(buf, sizeof(buf), test_stream);
   tt_int_op(errno, OP_EQ, 0);
   tt_ptr_op(retptr, OP_EQ, buf);
   tt_str_op(buf, OP_EQ, "B\n");
   errno = 0;
+  memset(buf, '\0', sizeof(buf));
 
   /* Send in a full line */
   retlen = write(test_pipe[1], "CD\n", 3);
   tt_int_op(retlen, OP_EQ, 3);
-  retptr = fgets(buf, sizeof(buf), test_stream);
+  retptr = tor_fgets(buf, sizeof(buf), test_stream);
   tt_int_op(errno, OP_EQ, 0);
   tt_ptr_op(retptr, OP_EQ, buf);
   tt_str_op(buf, OP_EQ, "CD\n");
   errno = 0;
+  memset(buf, '\0', sizeof(buf));
 
   /* Send in a partial line */
   retlen = write(test_pipe[1], "E", 1);
   tt_int_op(retlen, OP_EQ, 1);
-  retptr = fgets(buf, sizeof(buf), test_stream);
+  retptr = tor_fgets(buf, sizeof(buf), test_stream);
   tt_int_op(errno, OP_EQ, EAGAIN);
-  tt_ptr_op(retptr, OP_EQ, buf);
+  tt_ptr_op(retptr, OP_EQ, NULL);
   tt_str_op(buf, OP_EQ, "E");
   errno = 0;
 
   /* Send in the rest */
   retlen = write(test_pipe[1], "F\n", 2);
   tt_int_op(retlen, OP_EQ, 2);
-  retptr = fgets(buf, sizeof(buf), test_stream);
+  retptr = tor_fgets(buf, sizeof(buf), test_stream);
   tt_int_op(errno, OP_EQ, 0);
   tt_ptr_op(retptr, OP_EQ, buf);
   tt_str_op(buf, OP_EQ, "F\n");
   errno = 0;
+  memset(buf, '\0', sizeof(buf));
 
   /* Send in a full line and close */
   retlen = write(test_pipe[1], "GH", 2);
@@ -4020,14 +4023,14 @@ test_util_fgets_eagain(void *ptr)
   retval = close(test_pipe[1]);
   tt_int_op(retval, OP_EQ, 0);
   test_pipe[1] = -1;
-  retptr = fgets(buf, sizeof(buf), test_stream);
+  retptr = tor_fgets(buf, sizeof(buf), test_stream);
   tt_int_op(errno, OP_EQ, 0);
   tt_ptr_op(retptr, OP_EQ, buf);
   tt_str_op(buf, OP_EQ, "GH");
   errno = 0;
 
   /* Check for EOF */
-  retptr = fgets(buf, sizeof(buf), test_stream);
+  retptr = tor_fgets(buf, sizeof(buf), test_stream);
   tt_int_op(errno, OP_EQ, 0);
   tt_ptr_op(retptr, OP_EQ, NULL);
   retval = feof(test_stream);
@@ -4036,6 +4039,7 @@ test_util_fgets_eagain(void *ptr)
 
   /* Check that buf is unchanged according to C99 and C11 */
   tt_str_op(buf, OP_EQ, "GH");
+  memset(buf, '\0', sizeof(buf));
 
  done:
   if (test_stream != NULL)

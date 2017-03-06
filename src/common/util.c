@@ -5020,7 +5020,7 @@ tor_read_all_handle(FILE *h, char *buf, size_t count,
 
   while (numread != count) {
     /* Use fgets because that is what we use in log_from_pipe() */
-    retval = fgets(buf+numread, (int)(count-numread), h);
+    retval = tor_fgets(buf+numread, (int)(count-numread), h);
     if (NULL == retval) {
       if (feof(h)) {
         log_debug(LD_GENERAL, "fgets() reached end of file");
@@ -5355,7 +5355,7 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
 
   tor_assert(count <= INT_MAX);
 
-  retval = fgets(buf_out, (int)count, stream);
+  retval = tor_fgets(buf_out, (int)count, stream);
 
   if (!retval) {
     if (feof(stream)) {
