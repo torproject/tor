@@ -1240,8 +1240,8 @@ circuit_predict_and_launch_new(void)
 /** Build a new test circuit every 5 minutes */
 #define TESTING_CIRCUIT_INTERVAL 300
 
-/** This function is called once a second, if router_have_min_dir_info() is
- * true. Its job is to make sure all services we offer have enough circuits
+/** This function is called once a second, if router_have_minimum_dir_info()
+ * is true. Its job is to make sure all services we offer have enough circuits
  * available. Some services just want enough circuits for current tasks,
  * whereas others want a minimum set of idle circuits hanging around.
  */
