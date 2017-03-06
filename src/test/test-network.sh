@@ -1,119 +1,45 @@
 #!/bin/sh
 
-# use bash if it is available, as this script doesn't work well in non-bash sh
-# this will be fixed in #19699
-# there is no simple, portable way of checking the name of the shell, so we
-# exec bash even when sh is bash
-if [ -x /bin/bash -a "$USING_BASH" != true ]; then
-    # only do this once
-    export USING_BASH=true
-    exec /bin/bash "$0" "$@"
+# This script calls the equivalent script in chutney/tools
+
+# If we already know CHUTNEY_PATH, don't bother with argument parsing
+TEST_NETWORK="$CHUTNEY_PATH/tools/test-network.sh"
+# Call the chutney version of this script, if it exists, and we can find it
+if [ -d "$CHUTNEY_PATH" -a -x "$TEST_NETWORK" ]; then
+    # we can't produce any output, because we might be --quiet
+    # this preserves arguments with spaces correctly
+    exec "$TEST_NETWORK" "$@"
 fi
 
-# Please do not modify this script, it has been moved to chutney/tools
+# We need to go looking for CHUTNEY_PATH
 
-export ECHO="${ECHO:-echo}"
-export ECHO_N="${ECHO_N:-/bin/echo -n}"
-
+# Do we output anything at all?
+ECHO="${ECHO:-echo}"
 # Output is prefixed with the name of the script
 myname=$(basename $0)
 
+# Save the arguments before we destroy them
+# This might not preserve arguments with spaces in them
+ORIGINAL_ARGS="$@"
+
 # We need to find CHUTNEY_PATH, so that we can call the version of this script
-# in chutney/tools. And we want to pass any arguments to that script as well.
-# So we source this script, which processes its arguments to find CHUTNEY_PATH.
-
-# Avoid recursively sourcing this script, and don't call the chutney version
-# while recursing, either
-if [ "$TEST_NETWORK_RECURSING" != true ]; then
-    # Process the arguments into environmental variables with this script
-    # to make sure $CHUTNEY_PATH is set
-    # When we switch to using test-network.sh in chutney/tools, --dry-run
-    # can be removed, because this script will find chutney, then pass all
-    # arguments to chutney's test-network.sh
-    export TEST_NETWORK_RECURSING=true
-    # passing arguments to a sourced script only works in bash
-    # this will be fixed in #19699
-    . "$0" --dry-run "$@"
-
-    # Call the chutney version of this script, if it exists, and we can find it
-    if [ -d "$CHUTNEY_PATH" -a -x "$CHUTNEY_PATH/tools/test-network.sh" ]; then
-        unset NETWORK_DRY_RUN
-        $ECHO "$myname: Calling newer chutney script \
-$CHUTNEY_PATH/tools/test-network.sh"
-        "$CHUTNEY_PATH/tools/test-network.sh" "$@"
-        exit $?
-    else
-        $ECHO "$myname: This script has moved to chutney/tools."
-        $ECHO "$myname: Please update your chutney using 'git pull'."
-        # When we switch to using test-network.sh in chutney/tools, we should
-        # exit with a very loud failure here
-        $ECHO "$myname: Falling back to the old tor version of the script."
-    fi
-fi
-
+# in chutney/tools with the same arguments. We also need to respect --quiet.
 until [ -z "$1" ]
 do
   case "$1" in
     --chutney-path)
-      export CHUTNEY_PATH="$2"
+      CHUTNEY_PATH="$2"
       shift
     ;;
     --tor-path)
-      export TOR_DIR="$2"
+      TOR_DIR="$2"
       shift
     ;;
-    # When we switch to using test-network.sh in chutney/tools, only the
-    # --chutney-path and --tor-path arguments need to be processed by this
-    # script, everything else can be handled by chutney's test-network.sh
-    --flavor|--flavour|--network-flavor|--network-flavour)
-      export NETWORK_FLAVOUR="$2"
-      shift
-    ;;
-    --delay|--sleep|--bootstrap-time|--time)
-      export BOOTSTRAP_TIME="$2"
-      shift
-    ;;
-    # Environmental variables used by chutney verify performance tests
-    # Send this many bytes per client connection (10 KBytes)
-    --data|--data-bytes|--data-byte|--bytes|--byte)
-      export CHUTNEY_DATA_BYTES="$2"
-      shift
-    ;;
-    # Make this many connections per client (1)
-    # Note: If you create 7 or more connections to a hidden service from
-    # a single Tor 0.2.7 client, you'll likely get a verification failure due
-    # to #15937. This is fixed in 0.2.8.
-    --connections|--connection|--connection-count|--count)
-      export CHUTNEY_CONNECTIONS="$2"
-      shift
-    ;;
-    # Make each client connect to each HS (0)
-    # 0 means a single client connects to each HS
-    # 1 means every client connects to every HS
-    --hs-multi-client|--hs-multi-clients|--hs-client|--hs-clients)
-      export CHUTNEY_HS_MULTI_CLIENT="$2"
-      shift
-      ;;
-    --coverage)
-      export USE_COVERAGE_BINARY=true
-      ;;
-    --dry-run)
-      # process arguments, but don't call any other scripts
-      export NETWORK_DRY_RUN=true
-      ;;
     --quiet)
-      export ECHO=true
-      export ECHO_N=true
-      ;;
+      ECHO=true
+    ;;
     *)
-      $ECHO "$myname: Sorry, I don't know what to do with '$1'."
-      $ECHO "$myname: Maybe chutney's test-network.sh understands '$1'."
-      $ECHO "$myname: Please update your chutney using 'git pull', and set \
-\$CHUTNEY_PATH"
-      # continue processing arguments during a dry run
-      if [ "$NETWORK_DRY_RUN" != true ]; then
-          exit 2
-      fi
+      # maybe chutney's test-network.sh can handle it
     ;;
   esac
   shift
@@ -122,7 +48,7 @@ done
 # optional: $TOR_DIR is the tor build directory
 # it's used to find the location of tor binaries
 # if it's not set:
-#  - set it ro $BUILDDIR, or
+#  - set it to $BUILDDIR, or
 #  - if $PWD looks like a tor build directory, set it to $PWD, or
 #  - unset $TOR_DIR, and let chutney fall back to finding tor binaries in $PATH
 if [ ! -d "$TOR_DIR" ]; then
@@ -130,12 +56,12 @@ if [ ! -d "$TOR_DIR" ]; then
         # Choose the build directory
         # But only if it looks like one
         $ECHO "$myname: \$TOR_DIR not set, trying \$BUILDDIR"
-        export TOR_DIR="$BUILDDIR"
+        TOR_DIR="$BUILDDIR"
     elif [ -d "$PWD/src/or" -a -d "$PWD/src/tools" ]; then
         # Guess the tor directory is the current directory
         # But only if it looks like one
         $ECHO "$myname: \$TOR_DIR not set, trying \$PWD"
-        export TOR_DIR="$PWD"
+        TOR_DIR="$PWD"
     else
         $ECHO "$myname: no \$TOR_DIR, chutney will use \$PATH for tor binaries"
         unset TOR_DIR
@@ -150,14 +76,12 @@ fi
 if [ ! -d "$CHUTNEY_PATH" -o ! -x "$CHUTNEY_PATH/chutney" ]; then
     if [ -x "$PWD/chutney" ]; then
         $ECHO "$myname: \$CHUTNEY_PATH not valid, trying \$PWD"
-        export CHUTNEY_PATH="$PWD"
+        CHUTNEY_PATH="$PWD"
     elif [ -d "$TOR_DIR" -a -d "$TOR_DIR/../chutney" -a \
            -x "$TOR_DIR/../chutney/chutney" ]; then
         $ECHO "$myname: \$CHUTNEY_PATH not valid, trying \$TOR_DIR/../chutney"
-        export CHUTNEY_PATH="$TOR_DIR/../chutney"
+        CHUTNEY_PATH="$TOR_DIR/../chutney"
     else
-        # TODO: work out how to package and install chutney,
-        # so users can find it in $PATH
         $ECHO "$myname: missing 'chutney' in \$CHUTNEY_PATH ($CHUTNEY_PATH)"
         $ECHO "$myname: Get chutney: git clone https://git.torproject.org/\
 chutney.git"
@@ -168,46 +92,17 @@ CHUTNEY_PATH=\`pwd\`/chutney"
     fi
 fi
 
-# When we switch to using test-network.sh in chutney/tools, this comment and
-# everything below it can be removed
-
-# For picking up the right tor binaries.
-# If these varibles aren't set, chutney looks for tor binaries in $PATH
-if [ -d "$TOR_DIR" ]; then
-    tor_name=tor
-    tor_gencert_name=tor-gencert
-    if [ "$USE_COVERAGE_BINARY" = true ]; then
-        tor_name=tor-cov
-    fi
-    export CHUTNEY_TOR="${TOR_DIR}/src/or/${tor_name}"
-    export CHUTNEY_TOR_GENCERT="${TOR_DIR}/src/tools/${tor_gencert_name}"
+TEST_NETWORK="$CHUTNEY_PATH/tools/test-network.sh"
+# Call the chutney version of this script, if it exists, and we can find it
+if [ -d "$CHUTNEY_PATH" -a -x "$TEST_NETWORK" ]; then
+    $ECHO "$myname: Calling newer chutney script $TEST_NETWORK"
+    # this may fail if some arguments have spaces in them
+    # if so, set CHUTNEY_PATH before calling test-network.sh, and spaces
+    # will be handled correctly
+    exec "$TEST_NETWORK" $ORIGINAL_ARGS
+else
+    $ECHO "$myname: Could not find tools/test-network.sh in CHUTNEY_PATH."
+    $ECHO "$myname: Please update your chutney using 'git pull'."
+    # We have failed to do what the user asked
+    exit 1
 fi
-
-# Set the variables for the chutney network flavour
-export NETWORK_FLAVOUR=${NETWORK_FLAVOUR:-"bridges+hs"}
-export CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
-
-# And finish up if we're doing a dry run
-if [ "$NETWORK_DRY_RUN" = true ]; then
-    # we can't exit here, it breaks argument processing
-    # this only works in bash: return semantics are shell-specific
-    # this will be fixed in #19699
-    return 2>/dev/null || exit
-fi
-
-cd "$CHUTNEY_PATH"
-./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 3
-
-# Sleep some, waiting for the network to bootstrap.
-# TODO: Add chutney command 'bootstrap-status' and use that instead.
-BOOTSTRAP_TIME=${BOOTSTRAP_TIME:-35}
-$ECHO_N "$myname: sleeping for $BOOTSTRAP_TIME seconds"
-n=$BOOTSTRAP_TIME; while [ $n -gt 0 ]; do
-    sleep 1; n=$(expr $n - 1); $ECHO_N .
-done; $ECHO ""
-./chutney verify $CHUTNEY_NETWORK
-VERIFY_EXIT_STATUS=$?
-# work around a bug/feature in make -j2 (or more)
-# where make hangs if any child processes are still alive
-./chutney stop $CHUTNEY_NETWORK
-exit $VERIFY_EXIT_STATUS
