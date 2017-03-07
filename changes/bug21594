@@ -1,0 +1,5 @@
+  o Minor bugfixes (hidden services):
+    - Make hidden services with 8 to 10 introduction points check for failed
+      circuits immediately after startup. Previously, they would wait for 5
+      minutes before performing their first checks. Fixes bug 21594; bugfix on
+      commit 190aac0eab9 in Tor 0.2.3.9-alpha. Reported by alecmuffett.

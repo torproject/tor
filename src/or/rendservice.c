@@ -110,9 +110,6 @@ struct rend_service_port_config_s {
 
 /** If we can't build our intro circuits, don't retry for this long. */
 #define INTRO_CIRC_RETRY_PERIOD (60*5)
-/** Don't try to build more than this many circuits before giving up
- * for a while.*/
-#define MAX_INTRO_CIRCS_PER_PERIOD 10
 /** How many times will a hidden service operator attempt to connect to
  * a requested rendezvous point before giving up? */
 #define MAX_REND_FAILURES 1
@@ -4017,6 +4014,18 @@ rend_service_desc_has_uploaded(const rend_data_t *rend_data)
   } SMARTLIST_FOREACH_END(intro);
 }
 
+/** Don't try to build more than this many circuits before giving up
+ * for a while. Dynamically calculated based on the configured number of
+ * introduction points for the service, n_intro_points_wanted. */
+static int
+rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted)
+{
+  /* Allow all but one of the initial connections to fail and be
+   * retried. (If all fail, we *want* to wait, because something is broken.) */
+  tor_assert(n_intro_points_wanted <= NUM_INTRO_POINTS_MAX);
+  return (int)(2*n_intro_points_wanted + NUM_INTRO_POINTS_EXTRA);
+}
+
 /** For every service, check how many intro points it currently has, and:
  *  - Invalidate introdution points based on specific criteria, see
  *  remove_invalid_intro_points comments.
@@ -4068,7 +4077,8 @@ rend_consider_services_intro_points(void)
       service->intro_period_started = now;
       service->n_intro_circuits_launched = 0;
     } else if (service->n_intro_circuits_launched >=
-               MAX_INTRO_CIRCS_PER_PERIOD) {
+               rend_max_intro_circs_per_period(
+                                      service->n_intro_points_wanted)) {
       /* We have failed too many times in this period; wait for the next
        * one before we try again. */
       continue;
