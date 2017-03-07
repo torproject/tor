@@ -954,7 +954,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
         digests1->d[DIGEST_SHA256], DIGEST256_LEN);
     base16_encode(e_hex_digest1, HEX_DIGEST256_LEN+1,
         e_cons1_hash, DIGEST256_LEN);
-    log_warn(LD_CONSDIFF, "Expected: %s Found: %s\n",
+    log_warn(LD_CONSDIFF, "Expected: %s; found: %s",
              hex_digest1, e_hex_digest1);
     goto error_cleanup;
   }
@@ -999,7 +999,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
         cons2_digests.d[DIGEST_SHA256], DIGEST256_LEN);
     base16_encode(e_hex_digest2, HEX_DIGEST256_LEN+1,
         e_cons2_hash, DIGEST256_LEN);
-    log_warn(LD_CONSDIFF, "Expected: %s Found: %s\n",
+    log_warn(LD_CONSDIFF, "Expected: %s; found: %s",
              hex_digest2, e_hex_digest2);
     goto error_cleanup;
   }
