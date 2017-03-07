@@ -11,13 +11,6 @@
 #include "routerparse.h"
 #include "log_test_helpers.h"
 
-#ifndef OP_EQ
-#define OP_EQ ==
-#endif
-#ifndef OP_NE
-#define OP_NE !=
-#endif
-
 static void
 test_consdiff_smartlist_slice(void *arg)
 {
@@ -525,7 +518,7 @@ test_consdiff_gen_ed_diff(void *arg)
   smartlist_clear(cons2);
 
   diff = gen_ed_diff(cons1, cons2);
-  tt_ptr_op(NULL, !=, diff);
+  tt_ptr_op(NULL, OP_NE, diff);
   tt_int_op(0, OP_EQ, smartlist_len(diff));
   smartlist_free(diff);
 
