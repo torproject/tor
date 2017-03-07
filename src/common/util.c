@@ -5010,7 +5010,7 @@ tor_read_all_handle(FILE *h, char *buf, size_t count,
                     int *eof)
 {
   size_t numread = 0;
-  char *retval;
+  ssize_t result;
 
   if (eof)
     *eof = 0;
@@ -5019,33 +5019,27 @@ tor_read_all_handle(FILE *h, char *buf, size_t count,
     return -1;
 
   while (numread != count) {
-    /* Use fgets because that is what we use in log_from_pipe() */
-    retval = tor_fgets(buf+numread, (int)(count-numread), h);
-    if (NULL == retval) {
-      if (feof(h)) {
-        log_debug(LD_GENERAL, "fgets() reached end of file");
-        if (eof)
-          *eof = 1;
+    result = read(fileno(h), buf+numread, count-numread);
+
+    if (result == 0) {
+      log_debug(LD_GENERAL, "read() reached end of file");
+      if (eof)
+        *eof = 1;
+      break;
+    } else if (result < 0 && errno == EAGAIN) {
+      if (process)
+        continue;
+      else
         break;
-      } else {
-        if (EAGAIN == errno) {
-          if (process)
-            continue;
-          else
-            break;
-        } else {
-          log_warn(LD_GENERAL, "fgets() from handle failed: %s",
-                   strerror(errno));
-          return -1;
-        }
-      }
+    } else if (result < 0) {
+      log_warn(LD_GENERAL, "read() failed: %s", strerror(errno));
+      return -1;
     }
-    tor_assert(retval != NULL);
-    tor_assert(strlen(retval) + numread <= count);
-    numread += strlen(retval);
+
+    numread += result;
   }
 
-  log_debug(LD_GENERAL, "fgets() read %d bytes from handle", (int)numread);
+  log_debug(LD_GENERAL, "read() read %d bytes from handle", (int)numread);
   return (ssize_t)numread;
 }
 #endif
