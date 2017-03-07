@@ -1046,24 +1046,28 @@ consdiff_apply_diff(const smartlist_t *cons1,
 }
 
 /**
- * Helper: For every NL-terminated line in <b>s</b>, add a copy of that line
+ * Helper: For every NL-terminated line in <b>s</b>, add that line
  * (without trailing newline) to <b>out</b>.  Return -1 if there are any
  * non-NL terminated lines; 0 otherwise.
  *
- * Unlike smartlist_split_string, this function avoids ambiguity on its
+ * Modifies <b>s</b> in place: don't do anything with <b>s</b> after you're
+ * done here, besides freeing it.
+ *
+ * Unlike tor_split_lines, this function avoids ambiguity on its
  * handling of a final line that isn't NL-terminated.
  */
 static int
-consensus_split_lines(smartlist_t *out, const char *s)
+consensus_split_lines(smartlist_t *out, char *s)
 {
   /* XXXX If we used string slices, we could avoid a bunch of copies here. */
   while (*s) {
-    const char *eol = strchr(s, '\n');
+    char *eol = strchr(s, '\n');
     if (!eol) {
       /* File doesn't end with newline. */
       return -1;
     }
-    smartlist_add(out, tor_strndup(s, eol-s));
+    *eol = 0;
+    smartlist_add(out, s);
     s = eol+1;
   }
   return 0;
@@ -1110,20 +1114,22 @@ consensus_diff_generate(const char *cons1,
   if (BUG(r1 < 0 || r2 < 0))
     return NULL; // LCOV_EXCL_LINE
 
+  char *cons1_copy = tor_strdup(cons1);
+  char *cons2_copy = tor_strdup(cons2);
   lines1 = smartlist_new();
   lines2 = smartlist_new();
-  if (consensus_split_lines(lines1, cons1) < 0)
+  if (consensus_split_lines(lines1, cons1_copy) < 0)
     goto done;
-  if (consensus_split_lines(lines2, cons2) < 0)
+  if (consensus_split_lines(lines2, cons2_copy) < 0)
     goto done;
 
   result_lines = consdiff_gen_diff(lines1, lines2, &d1, &d2);
 
  done:
-  SMARTLIST_FOREACH(lines1, char *, cp, tor_free(cp));
   smartlist_free(lines1);
-  SMARTLIST_FOREACH(lines2, char *, cp, tor_free(cp));
   smartlist_free(lines2);
+  tor_free(cons1_copy);
+  tor_free(cons2_copy);
 
   if (result_lines) {
     result = consensus_join_lines(result_lines);
@@ -1149,20 +1155,22 @@ consensus_diff_apply(const char *consensus,
   if (BUG(r1 < 0))
     return NULL; // LCOV_EXCL_LINE
 
+  char *cons_copy = tor_strdup(consensus);
+  char *diff_copy = tor_strdup(diff);
   lines1 = smartlist_new();
   lines2 = smartlist_new();
-  if (consensus_split_lines(lines1, consensus) < 0)
+  if (consensus_split_lines(lines1, cons_copy) < 0)
     goto done;
-  if (consensus_split_lines(lines2, diff) < 0)
+  if (consensus_split_lines(lines2, diff_copy) < 0)
     goto done;
 
   result = consdiff_apply_diff(lines1, lines2, &d1);
 
  done:
-  SMARTLIST_FOREACH(lines1, char *, cp, tor_free(cp));
   smartlist_free(lines1);
-  SMARTLIST_FOREACH(lines2, char *, cp, tor_free(cp));
   smartlist_free(lines2);
+  tor_free(cons_copy);
+  tor_free(diff_copy);
 
   return result;
 }
