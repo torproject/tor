@@ -801,20 +801,24 @@ consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
   /* See that the script actually produces what we want. */
   smartlist_t *ed_cons2 = apply_ed_diff(cons1, ed_diff);
   if (!ed_cons2) {
-    log_warn(LD_CONSDIFF, "Refusing to generate consensus diff because "
+    /* LCOV_EXCL_START -- impossible if diff generation is correct */
+    log_warn(LD_BUG|LD_CONSDIFF, "Refusing to generate consensus diff because "
         "the generated ed diff could not be tested to successfully generate "
         "the target consensus.");
     goto error_cleanup;
+    /* LCOV_EXCL_STOP */
   }
 
   int cons2_eq = smartlist_strings_eq(cons2, ed_cons2);
   SMARTLIST_FOREACH(ed_cons2, char*, line, tor_free(line));
   smartlist_free(ed_cons2);
   if (!cons2_eq) {
-    log_warn(LD_CONSDIFF, "Refusing to generate consensus diff because "
+    /* LCOV_EXCL_START -- impossible if diff generation is correct. */
+    log_warn(LD_BUG|LD_CONSDIFF, "Refusing to generate consensus diff because "
         "the generated ed diff did not generate the target consensus "
         "successfully when tested.");
     goto error_cleanup;
+    /* LCOV_EXCL_STOP */
   }
 
   char cons1_hash_hex[HEX_DIGEST256_LEN+1];
@@ -832,7 +836,7 @@ consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
   smartlist_free(ed_diff);
   return result;
 
-  error_cleanup:
+ error_cleanup:
 
   if (ed_diff) {
     smartlist_free(ed_diff);
