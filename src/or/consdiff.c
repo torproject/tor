@@ -39,9 +39,12 @@
 static const char* ns_diff_version = "network-status-diff-version 1";
 static const char* hash_token = "hash";
 
-STATIC int
-consensus_compute_digest(const char *cons,
-                         consensus_digest_t *digest_out)
+static char *consensus_join_lines(const smartlist_t *inp);
+
+/** DOCDOC */
+MOCK_IMPL(STATIC int,
+consensus_compute_digest,(const char *cons,
+                          consensus_digest_t *digest_out))
 {
   int r = crypto_digest256((char*)digest_out->sha3_256,
                            cons, strlen(cons), DIGEST_SHA3_256);
@@ -987,7 +990,7 @@ consdiff_apply_diff(const smartlist_t *cons1,
     goto error_cleanup;
   }
 
-  cons2_str = smartlist_join_strings(cons2, "\n", 1, NULL);
+  cons2_str = consensus_join_lines(cons2);
 
   consensus_digest_t cons2_digests;
   if (consensus_compute_digest(cons2_str, &cons2_digests) < 0) {
@@ -1027,5 +1030,112 @@ consdiff_apply_diff(const smartlist_t *cons1,
   }
 
   return cons2_str;
+}
+
+/**DOCDOC*/
+static int
+consensus_split_lines(smartlist_t *out, const char *s)
+{
+  /* XXXX If we used string slices, we could avoid a bunch of copies here. */
+  while (*s) {
+    const char *eol = strchr(s, '\n');
+    if (!eol) {
+      /* File doesn't end with newline. */
+      return -1;
+    }
+    smartlist_add(out, tor_strndup(s, eol-s));
+    s = eol+1;
+  }
+  return 0;
+}
+
+/** DOCDOC */
+static char *
+consensus_join_lines(const smartlist_t *inp)
+{
+  size_t n = 0;
+  SMARTLIST_FOREACH(inp, const char *, cp, n += strlen(cp) + 1);
+  n += 1;
+  char *result = tor_malloc(n);
+  char *out = result;
+  SMARTLIST_FOREACH_BEGIN(inp, const char *, cp) {
+    size_t len = strlen(cp);
+    memcpy(out, cp, len);
+    out += len;
+    *out++ = '\n';
+  } SMARTLIST_FOREACH_END(cp);
+  *out++ = '\0';
+  tor_assert(out == result+n);
+  return result;
+}
+
+/**DOCDOC */
+char *
+consensus_diff_generate(const char *cons1,
+                        const char *cons2)
+{
+  consensus_digest_t d1, d2;
+  smartlist_t *lines1 = NULL, *lines2 = NULL, *result_lines = NULL;
+  int r1, r2;
+  char *result = NULL;
+
+  r1 = consensus_compute_digest(cons1, &d1);
+  r2 = consensus_compute_digest(cons2, &d2);
+  if (BUG(r1 < 0 || r2 < 0))
+    return NULL; // LCOV_EXCL_LINE
+
+  lines1 = smartlist_new();
+  lines2 = smartlist_new();
+  if (consensus_split_lines(lines1, cons1) < 0)
+    goto done;
+  if (consensus_split_lines(lines2, cons2) < 0)
+    goto done;
+
+  result_lines = consdiff_gen_diff(lines1, lines2, &d1, &d2);
+
+ done:
+  SMARTLIST_FOREACH(lines1, char *, cp, tor_free(cp));
+  smartlist_free(lines1);
+  SMARTLIST_FOREACH(lines2, char *, cp, tor_free(cp));
+  smartlist_free(lines2);
+
+  if (result_lines) {
+    result = consensus_join_lines(result_lines);
+    SMARTLIST_FOREACH(result_lines, char *, cp, tor_free(cp));
+    smartlist_free(result_lines);
+  }
+  return result;
+}
+
+/** DOCDOC */
+char *
+consensus_diff_apply(const char *consensus,
+                     const char *diff)
+{
+  consensus_digest_t d1;
+  smartlist_t *lines1 = NULL, *lines2 = NULL;
+  int r1;
+  char *result = NULL;
+
+  r1 = consensus_compute_digest(consensus, &d1);
+  if (BUG(r1 < 0))
+    return NULL; // LCOV_EXCL_LINE
+
+  lines1 = smartlist_new();
+  lines2 = smartlist_new();
+  if (consensus_split_lines(lines1, consensus) < 0)
+    goto done;
+  if (consensus_split_lines(lines2, diff) < 0)
+    goto done;
+
+  result = consdiff_apply_diff(lines1, lines2, &d1);
+
+ done:
+  SMARTLIST_FOREACH(lines1, char *, cp, tor_free(cp));
+  smartlist_free(lines1);
+  SMARTLIST_FOREACH(lines2, char *, cp, tor_free(cp));
+  smartlist_free(lines2);
+
+  return result;
 }
 

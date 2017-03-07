@@ -7,21 +7,27 @@
 
 #include "or.h"
 
+char *consensus_diff_generate(const char *cons1,
+                              const char *cons2);
+char *consensus_diff_apply(const char *consensus,
+                           const char *diff);
+
+#ifdef CONSDIFF_PRIVATE
 typedef struct consensus_digest_t {
   uint8_t sha3_256[DIGEST256_LEN];
 } consensus_digest_t;
 
-smartlist_t *consdiff_gen_diff(const smartlist_t *cons1,
-                               const smartlist_t *cons2,
-                               const consensus_digest_t *digests1,
-                               const consensus_digest_t *digests2);
-char *consdiff_apply_diff(const smartlist_t *cons1, const smartlist_t *diff,
-                          const consensus_digest_t *digests1);
-int consdiff_get_digests(const smartlist_t *diff,
-                         char *digest1_out,
-                         char *digest2_out);
+STATIC smartlist_t *consdiff_gen_diff(const smartlist_t *cons1,
+                                      const smartlist_t *cons2,
+                                      const consensus_digest_t *digests1,
+                                      const consensus_digest_t *digests2);
+STATIC char *consdiff_apply_diff(const smartlist_t *cons1,
+                                 const smartlist_t *diff,
+                                 const consensus_digest_t *digests1);
+STATIC int consdiff_get_digests(const smartlist_t *diff,
+                                char *digest1_out,
+                                char *digest2_out);
 
-#ifdef CONSDIFF_PRIVATE
 /** Data structure to define a slice of a smarltist. */
 typedef struct smartlist_slice_t {
   /**
