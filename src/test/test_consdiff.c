@@ -449,6 +449,25 @@ test_consdiff_gen_ed_diff(void *arg)
          "because the target consensus doesn't have its router entries sorted "
          "properly.");
 
+  /* Same as the two above, but with the reversed thing immediately after a
+     match. (The code handles this differently) */
+  smartlist_del(cons1, 0);
+  smartlist_add(cons1, (char*)"r name aaaaaaaaaaaaaaaaaaaaaaaaaaa etc");
+
+  mock_clean_saved_logs();
+  diff = gen_ed_diff(cons1, cons2);
+  tt_ptr_op(NULL, OP_EQ, diff);
+  expect_single_log_msg_containing("Refusing to generate consensus diff "
+         "because the base consensus doesn't have its router entries sorted "
+         "properly.");
+
+  mock_clean_saved_logs();
+  diff = gen_ed_diff(cons2, cons1);
+  tt_ptr_op(NULL, OP_EQ, diff);
+  expect_single_log_msg_containing("Refusing to generate consensus diff "
+         "because the target consensus doesn't have its router entries sorted "
+         "properly.");
+
   /* Identity hashes are repeated, return NULL. */
   smartlist_clear(cons1);
 
