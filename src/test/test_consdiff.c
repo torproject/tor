@@ -2,10 +2,13 @@
  * Copyright (c) 2014, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define CONSDIFF_PRIVATE
+
 #include "or.h"
 #include "test.h"
 
-#include "consdiff.c"
+#include "consdiff.h"
+#include "routerparse.h"
 
 #ifndef OP_EQ
 #define OP_EQ ==

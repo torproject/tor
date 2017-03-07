@@ -7,16 +7,45 @@
 
 #include "or.h"
 
-smartlist_t *
-consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
+smartlist_t *consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
                   common_digests_t *digests1, common_digests_t *digests2);
-char *
-consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
+char *consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
                     common_digests_t *digests1);
-int
-consdiff_get_digests(smartlist_t *diff,
+int consdiff_get_digests(smartlist_t *diff,
                      char *digest1, char *digest1_hex,
                      char *digest2, char *digest2_hex);
+
+#ifdef CONSDIFF_PRIVATE
+/** Data structure to define a slice of a smarltist. */
+typedef struct smartlist_slice_t {
+  /**
+   * Smartlist that this slice is made from.
+   * References the whole original smartlist that the slice was made out of.
+   * */
+  smartlist_t *list;
+  /** Starting position of the slice in the smartlist. */
+  int offset;
+  /** Length of the slice, i.e. the number of elements it holds. */
+  int len;
+} smartlist_slice_t;
+STATIC smartlist_t *gen_ed_diff(smartlist_t *cons1, smartlist_t *cons2);
+STATIC smartlist_t *apply_ed_diff(smartlist_t *cons1, smartlist_t *diff);
+STATIC void calc_changes(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
+                         bitarray_t *changed1, bitarray_t *changed2);
+STATIC smartlist_slice_t *smartlist_slice(smartlist_t *list,
+                                          int start, int end);
+STATIC int next_router(smartlist_t *cons, int cur);
+STATIC int *lcs_lengths(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
+                        int direction);
+STATIC void trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2);
+STATIC int base64cmp(const char *hash1, const char *hash2);
+STATIC const char *get_id_hash(const char *r_line);
+STATIC int is_valid_router_entry(const char *line);
+STATIC int smartlist_slice_string_pos(smartlist_slice_t *slice,
+                                      const char *string);
+STATIC void set_changed(bitarray_t *changed1, bitarray_t *changed2,
+                        smartlist_slice_t *slice1, smartlist_slice_t *slice2);
+#endif
 
 #endif
 

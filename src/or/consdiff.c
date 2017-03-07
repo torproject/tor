@@ -30,6 +30,8 @@
  * comments.
  **/
 
+#define CONSDIFF_PRIVATE
+
 #include "or.h"
 #include "consdiff.h"
 #include "routerparse.h"
@@ -37,25 +39,12 @@
 static const char* ns_diff_version = "network-status-diff-version 1";
 static const char* hash_token = "hash";
 
-/** Data structure to define a slice of a smarltist. */
-typedef struct {
-  /**
-   * Smartlist that this slice is made from.
-   * References the whole original smartlist that the slice was made out of.
-   * */
-  smartlist_t *list;
-  /** Starting position of the slice in the smartlist. */
-  int offset;
-  /** Length of the slice, i.e. the number of elements it holds. */
-  int len;
-} smartlist_slice_t;
-
 /** Create (allocate) a new slice from a smartlist. Assumes that the start
  * and the end indexes are within the bounds of the initial smartlist. The end
  * element is not part of the resulting slice. If end is -1, the slice is to
  * reach the end of the smartlist.
  */
-static smartlist_slice_t *
+STATIC smartlist_slice_t *
 smartlist_slice(smartlist_t *list, int start, int end)
 {
   int list_len = smartlist_len(list);
@@ -80,7 +69,7 @@ smartlist_slice(smartlist_t *list, int start, int end)
  * The length of the resulting integer array is that of the second slice plus
  * one.
  */
-static int *
+STATIC int *
 lcs_lengths(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
             int direction)
 {
@@ -128,7 +117,7 @@ lcs_lengths(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
 /** Helper: Trim any number of lines that are equally at the start or the end
  * of both slices.
  */
-static void
+STATIC void
 trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2)
 {
   while (slice1->len>0 && slice2->len>0) {
@@ -159,7 +148,7 @@ trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2)
 
 /** Like smartlist_string_pos, but limited to the bounds of the slice.
  */
-static int
+STATIC int
 smartlist_slice_string_pos(smartlist_slice_t *slice, const char *string)
 {
   int end = slice->offset + slice->len;
@@ -177,7 +166,7 @@ smartlist_slice_string_pos(smartlist_slice_t *slice, const char *string)
  * present in the other slice will be set to changed in their bool array.
  * The two changed bool arrays are passed in the same order as the slices.
  */
-static void
+STATIC void
 set_changed(bitarray_t *changed1, bitarray_t *changed2,
             smartlist_slice_t *slice1, smartlist_slice_t *slice2)
 {
@@ -239,7 +228,7 @@ optimal_column_to_split(smartlist_slice_t *top, smartlist_slice_t *bot,
  * the optimal column at which to split the second smartlist so that we are
  * finding the smallest diff possible.
  */
-static void
+STATIC void
 calc_changes(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
              bitarray_t *changed1, bitarray_t *changed2)
 {
@@ -303,7 +292,7 @@ static const uint8_t base64_compare_table[256] = {
 /** Helper: Get the identity hash from a router line, assuming that the line
  * at least appears to be a router line and thus starts with "r ".
  */
-static const char *
+STATIC const char *
 get_id_hash(const char *r_line)
 {
   r_line += strlen("r ");
@@ -334,7 +323,7 @@ get_id_hash(const char *r_line)
 /** Helper: Check that a line is a valid router entry. We must at least be
  * able to fetch a proper identity hash from it for it to be valid.
  */
-static int
+STATIC int
 is_valid_router_entry(const char *line)
 {
   if (strcmpstart(line, "r ") != 0) {
@@ -348,7 +337,7 @@ is_valid_router_entry(const char *line)
  * line within the bounds of the consensus. The only exception is when we
  * don't want to skip the first line, in which case cur will be -1.
  */
-static int
+STATIC int
 next_router(smartlist_t *cons, int cur)
 {
   int len = smartlist_len(cons);
@@ -371,7 +360,7 @@ next_router(smartlist_t *cons, int cur)
 /** Helper: compare two base64-encoded identity hashes which may be of
  * different lengths. Comparison ends when the first non-base64 char is found.
  */
-static int
+STATIC int
 base64cmp(const char *hash1, const char *hash2)
 {
   /* NULL is always lower, useful for last_hash which starts at NULL. */
@@ -432,7 +421,7 @@ base64cmp(const char *hash1, const char *hash2)
  *   cons2_sl = smartlist_slice(cons2, 0, -1);
  *   calc_changes(cons1_sl, cons2_sl, changed1, changed2);
  */
-static smartlist_t *
+STATIC smartlist_t *
 gen_ed_diff(smartlist_t *cons1, smartlist_t *cons2)
 {
   int len1 = smartlist_len(cons1);
@@ -658,7 +647,7 @@ gen_ed_diff(smartlist_t *cons1, smartlist_t *cons2)
  * line-based smartlist. Will return NULL if the ed diff is not properly
  * formatted.
  */
-static smartlist_t *
+STATIC smartlist_t *
 apply_ed_diff(smartlist_t *cons1, smartlist_t *diff)
 {
   int diff_len = smartlist_len(diff);
