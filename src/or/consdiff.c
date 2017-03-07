@@ -670,15 +670,15 @@ apply_ed_diff(smartlist_t *cons1, smartlist_t *diff)
     if (*endptr1 == ',') {
         end = (int)strtol(endptr1+1, &endptr2, 10);
         if (endptr2 == endptr1+1) {
-          goto error_cleanup;
           log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
               "an ed command was missing a range end line number.");
+          goto error_cleanup;
         }
         /* Incoherent range. */
         if (end <= start) {
-          goto error_cleanup;
           log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
               "an invalid range was found in an ed command.");
+          goto error_cleanup;
         }
 
     /* We'll take <n1> as <n1>,<n1> for simplicity. */
@@ -690,6 +690,12 @@ apply_ed_diff(smartlist_t *cons1, smartlist_t *diff)
     if (end > j) {
       log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
           "its commands are not properly sorted in reverse order.");
+      goto error_cleanup;
+    }
+
+    if (*endptr2 == '\0') {
+      log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
+               "a line with no ed command was found");
       goto error_cleanup;
     }
 
