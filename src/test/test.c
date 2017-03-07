@@ -1194,6 +1194,7 @@ struct testgroup_t testgroups[] = {
   { "compat/libevent/", compat_libevent_tests },
   { "config/", config_tests },
   { "connection/", connection_tests },
+  { "consdiff/", consdiff_tests },
   { "container/", container_tests },
   { "control/", controller_tests },
   { "control/event/", controller_event_tests },
