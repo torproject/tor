@@ -703,6 +703,17 @@ test_consdiff_apply_ed_diff(void *arg)
 
   smartlist_clear(diff);
 
+  /* Now it it inserts something, but has no terminator. */
+  smartlist_add(diff, (char*)"0a");
+  smartlist_add(diff, (char*)"hello");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("lines to be inserted that don't end with "
+                                   "a \".\".");
+
+  smartlist_clear(diff);
+
   /* Test appending text, 'a'. */
   smartlist_split_string(diff, "3a:U:O:.:0a:V:.", ":", 0, 0);
   cons2 = apply_ed_diff(cons1, diff);
@@ -964,7 +975,22 @@ test_consdiff_apply_diff(void *arg)
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_log_msg_containing("resulting consensus doesn't match the "
-                            "digest as found")
+                            "digest as found");
+
+  /* Resulting consensus digest cannot be computed */
+  smartlist_clear(diff);
+  smartlist_add(diff, (char*)"network-status-diff-version 1");
+  smartlist_add(diff, (char*)"hash"
+      /* sha256 of cons1. */
+      " C2199B6827514F39ED9B3F2E2E73735C6C5468FD636240BB454C526220DE702A"
+      /* bogus sha256. */
+      " 3333333333333333333333333333333333333333333333333333333333333333");
+  smartlist_add(diff, (char*)"1,2d"); // remove starting line
+  mock_clean_saved_logs();
+  cons2 = consdiff_apply_diff(cons1, diff, &digests1);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_log_msg_containing("Could not compute digests of the consensus "
+                            "resulting from applying a consensus diff.");
 
   /* Very simple test, only to see that nothing errors. */
   smartlist_clear(diff);
