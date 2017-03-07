@@ -742,7 +742,7 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
     }
 
     /* Add unchanged lines. */
-    for (; j > end; --j) {
+    for (; j && j > end; --j) {
       const char *cons_line = smartlist_get(cons1, j-1);
       smartlist_add(cons2, tor_strdup(cons_line));
     }
