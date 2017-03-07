@@ -41,7 +41,10 @@ static const char* hash_token = "hash";
 
 static char *consensus_join_lines(const smartlist_t *inp);
 
-/** DOCDOC */
+/** Compute the digest of <b>cons</b>, and store the result in
+ * <b>digest_out</b>. Return 0 on success, -1 on failure. */
+/* This is a separate, mockable function so that we can override it when
+ * fuzzing. */
 MOCK_IMPL(STATIC int,
 consensus_compute_digest,(const char *cons,
                           consensus_digest_t *digest_out))
@@ -51,7 +54,9 @@ consensus_compute_digest,(const char *cons,
   return r;
 }
 
-/** DOCDOC */
+/** Return true iff <b>d1</b> and <b>d2</b> contain the same digest */
+/* This is a separate, mockable function so that we can override it when
+ * fuzzing. */
 MOCK_IMPL(STATIC int,
 consensus_digest_eq,(const uint8_t *d1,
                      const uint8_t *d2))
@@ -1040,7 +1045,14 @@ consdiff_apply_diff(const smartlist_t *cons1,
   return cons2_str;
 }
 
-/**DOCDOC*/
+/**
+ * Helper: For every NL-terminated line in <b>s</b>, add a copy of that line
+ * (without trailing newline) to <b>out</b>.  Return -1 if there are any
+ * non-NL terminated lines; 0 otherwise.
+ *
+ * Unlike smartlist_split_string, this function avoids ambiguity on its
+ * handling of a final line that isn't NL-terminated.
+ */
 static int
 consensus_split_lines(smartlist_t *out, const char *s)
 {
@@ -1057,7 +1069,11 @@ consensus_split_lines(smartlist_t *out, const char *s)
   return 0;
 }
 
-/** DOCDOC */
+/** Given a list of lines, return a newly allocated string containing
+ * all of the lines, terminated with NL, concatenated.
+ *
+ * Unlike smartlist_join_strings(), avoids lossy operations on empty
+ * lists.  */
 static char *
 consensus_join_lines(const smartlist_t *inp)
 {
@@ -1077,7 +1093,9 @@ consensus_join_lines(const smartlist_t *inp)
   return result;
 }
 
-/**DOCDOC */
+/** Given two consensus documents, try to compute a diff between them.  On
+ * success, retun a newly allocated string containing that diff.  On failure,
+ * return NULL. */
 char *
 consensus_diff_generate(const char *cons1,
                         const char *cons2)
@@ -1115,7 +1133,9 @@ consensus_diff_generate(const char *cons1,
   return result;
 }
 
-/** DOCDOC */
+/** Given a consensus document and a diff, try to apply the diff to the
+ * consensus.  On success return a newly allocated string containing the new
+ * consensus.  On failure, return NULL. */
 char *
 consensus_diff_apply(const char *consensus,
                      const char *diff)
