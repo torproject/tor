@@ -12,8 +12,8 @@ smartlist_t *consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
 char *consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
                     common_digests_t *digests1);
 int consdiff_get_digests(smartlist_t *diff,
-                     char *digest1, char *digest1_hex,
-                     char *digest2, char *digest2_hex);
+                         char *digest1_out,
+                         char *digest2_out);
 
 #ifdef CONSDIFF_PRIVATE
 /** Data structure to define a slice of a smarltist. */

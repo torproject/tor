@@ -846,14 +846,13 @@ consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
 }
 
 /** Fetch the digest of the base consensus in the consensus diff, encoded in
- * base16 as found in the diff itself. digest1 and digest2 must be of length
- * DIGEST256_LEN or larger if not NULL. digest1_hex and digest2_hex must be of
- * length HEX_DIGEST256_LEN or larger if not NULL.
+ * base16 as found in the diff itself. digest1_out and digest2_out must be of
+ * length DIGEST256_LEN or larger if not NULL.
  */
 int
 consdiff_get_digests(smartlist_t *diff,
-                     char *digest1, char *digest1_hex,
-                     char *digest2, char *digest2_hex)
+                     char *digest1_out,
+                     char *digest2_out)
 {
   smartlist_t *hash_words = NULL;
   const char *format;
@@ -897,13 +896,6 @@ consdiff_get_digests(smartlist_t *diff,
     goto error_cleanup;
   }
 
-  if (digest1_hex) {
-    strlcpy(digest1_hex, cons1_hash_hex, HEX_DIGEST256_LEN+1);
-  }
-  if (digest2_hex) {
-    strlcpy(digest2_hex, cons2_hash_hex, HEX_DIGEST256_LEN+1);
-  }
-
   if (base16_decode(cons1_hash, DIGEST256_LEN,
           cons1_hash_hex, HEX_DIGEST256_LEN) != DIGEST256_LEN ||
       base16_decode(cons2_hash, DIGEST256_LEN,
@@ -913,11 +905,11 @@ consdiff_get_digests(smartlist_t *diff,
     goto error_cleanup;
   }
 
-  if (digest1) {
-    memcpy(digest1, cons1_hash, DIGEST256_LEN);
+  if (digest1_out) {
+    memcpy(digest1_out, cons1_hash, DIGEST256_LEN);
   }
-  if (digest2) {
-    memcpy(digest2, cons2_hash, DIGEST256_LEN);
+  if (digest2_out) {
+    memcpy(digest2_out, cons2_hash, DIGEST256_LEN);
   }
 
   SMARTLIST_FOREACH(hash_words, char *, cp, tor_free(cp));
@@ -947,8 +939,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
   char e_cons1_hash[DIGEST256_LEN];
   char e_cons2_hash[DIGEST256_LEN];
 
-  if (consdiff_get_digests(diff,
-        e_cons1_hash, NULL, e_cons2_hash, NULL) != 0) {
+  if (consdiff_get_digests(diff, e_cons1_hash, e_cons2_hash) != 0) {
     goto error_cleanup;
   }
 
