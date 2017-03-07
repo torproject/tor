@@ -879,7 +879,7 @@ consdiff_get_digests(smartlist_t *diff,
   if (smartlist_len(hash_words) != 3 ||
       strcmp(smartlist_get(hash_words, 0), hash_token)) {
     log_info(LD_CONSDIFF, "The provided consensus diff does not include "
-        "the necessary sha256 digests.");
+        "the necessary digests.");
     goto error_cleanup;
   }
 
@@ -893,7 +893,7 @@ consdiff_get_digests(smartlist_t *diff,
   if (strlen(cons1_hash_hex) != HEX_DIGEST256_LEN ||
       strlen(cons2_hash_hex) != HEX_DIGEST256_LEN) {
     log_info(LD_CONSDIFF, "The provided consensus diff includes "
-        "base16-encoded sha256 digests of incorrect size.");
+        "base16-encoded digests of incorrect size.");
     goto error_cleanup;
   }
 
@@ -909,7 +909,7 @@ consdiff_get_digests(smartlist_t *diff,
       base16_decode(cons2_hash, DIGEST256_LEN,
           cons2_hash_hex, HEX_DIGEST256_LEN) != DIGEST256_LEN) {
     log_info(LD_CONSDIFF, "The provided consensus diff includes "
-        "malformed sha256 digests.");
+        "malformed digests.");
     goto error_cleanup;
   }
 
@@ -958,7 +958,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
     char hex_digest1[HEX_DIGEST256_LEN+1];
     char e_hex_digest1[HEX_DIGEST256_LEN+1];
     log_warn(LD_CONSDIFF, "Refusing to apply consensus diff because "
-        "the base consensus doesn't match its own digest as found in "
+        "the base consensus doesn't match the digest as found in "
         "the consensus diff header.");
     base16_encode(hex_digest1, HEX_DIGEST256_LEN+1,
         digests1->d[DIGEST_SHA256], DIGEST256_LEN);
@@ -973,6 +973,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
   /* To avoid copying memory or iterating over all the elements, make a
    * read-only smartlist without the two header lines.
    */
+  /* XXXX prop140 abstraction violation; never do this. */
   smartlist_t *ed_diff = tor_malloc(sizeof(smartlist_t));
   ed_diff->list = diff->list+2;
   ed_diff->num_used = diff->num_used-2;
@@ -999,7 +1000,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
   if (fast_memneq(cons2_digests.d[DIGEST_SHA256], e_cons2_hash,
                   DIGEST256_LEN)) {
     log_warn(LD_CONSDIFF, "Refusing to apply consensus diff because "
-        "the resulting consensus doesn't match its own digest as found in "
+        "the resulting consensus doesn't match the digest as found in "
         "the consensus diff header.");
     char hex_digest2[HEX_DIGEST256_LEN+1];
     char e_hex_digest2[HEX_DIGEST256_LEN+1];

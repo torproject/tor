@@ -856,6 +856,7 @@ test_consdiff_apply_diff(void *arg)
   (void)arg;
   cons1 = smartlist_new();
   diff = smartlist_new();
+  setup_capture_of_logs(LOG_INFO);
 
   cons1_str = tor_strdup(
       "header\nnetwork-status-version foo\n"
@@ -870,33 +871,44 @@ test_consdiff_apply_diff(void *arg)
   /* diff doesn't have enough lines. */
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("too short")
 
   /* first line doesn't match format-version string. */
   smartlist_add(diff, (char*)"foo-bar");
   smartlist_add(diff, (char*)"header-line");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("format is not known")
 
   /* The first word of the second header line is not "hash". */
   smartlist_clear(diff);
   smartlist_add(diff, (char*)"network-status-diff-version 1");
   smartlist_add(diff, (char*)"word a b");
+  smartlist_add(diff, (char*)"x");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("does not include the necessary digests")
 
   /* Wrong number of words after "hash". */
   smartlist_clear(diff);
   smartlist_add(diff, (char*)"network-status-diff-version 1");
   smartlist_add(diff, (char*)"hash a b c");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("does not include the necessary digests")
 
   /* base16 sha256 digests do not have the expected length. */
   smartlist_clear(diff);
   smartlist_add(diff, (char*)"network-status-diff-version 1");
   smartlist_add(diff, (char*)"hash aaa bbb");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("includes base16-encoded digests of "
+                                   "incorrect size")
 
   /* base16 sha256 digests contain non-base16 characters. */
   smartlist_clear(diff);
@@ -904,8 +916,10 @@ test_consdiff_apply_diff(void *arg)
   smartlist_add(diff, (char*)"hash"
       " ????????????????????????????????????????????????????????????????"
       " ----------------------------------------------------------------");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("includes malformed digests")
 
   /* Invalid ed diff.
    * As tested in apply_ed_diff, but check that apply_diff does return NULL if
@@ -918,8 +932,11 @@ test_consdiff_apply_diff(void *arg)
       /* sha256 of cons2. */
       " 635D34593020C08E5ECD865F9986E29D50028EFA62843766A8197AD228A7F6AA");
   smartlist_add(diff, (char*)"foobar");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("because an ed command was missing a line "
+                                   "number")
 
   /* Base consensus doesn't match its digest as found in the diff. */
   smartlist_clear(diff);
@@ -929,8 +946,11 @@ test_consdiff_apply_diff(void *arg)
       " 3333333333333333333333333333333333333333333333333333333333333333"
       /* sha256 of cons2. */
       " 635D34593020C08E5ECD865F9986E29D50028EFA62843766A8197AD228A7F6AA");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_log_msg_containing("base consensus doesn't match the digest "
+                            "as found");
 
   /* Resulting consensus doesn't match its digest as found in the diff. */
   smartlist_clear(diff);
@@ -940,8 +960,11 @@ test_consdiff_apply_diff(void *arg)
       " C2199B6827514F39ED9B3F2E2E73735C6C5468FD636240BB454C526220DE702A"
       /* bogus sha256. */
       " 3333333333333333333333333333333333333333333333333333333333333333");
+  mock_clean_saved_logs();
   cons2 = consdiff_apply_diff(cons1, diff, &digests1);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_log_msg_containing("resulting consensus doesn't match the "
+                            "digest as found")
 
   /* Very simple test, only to see that nothing errors. */
   smartlist_clear(diff);
@@ -988,6 +1011,7 @@ test_consdiff_apply_diff(void *arg)
   smartlist_clear(diff);
 
  done:
+  teardown_capture_of_logs();
   tor_free(cons1_str);
   smartlist_free(cons1);
   smartlist_free(diff);
