@@ -832,14 +832,18 @@ consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
   smartlist_t *result = smartlist_new();
   smartlist_add_asprintf(result, "%s", ns_diff_version);
   smartlist_add_asprintf(result, "%s %s %s", hash_token,
-      cons1_hash_hex, cons2_hash_hex); smartlist_add_all(result, ed_diff);
+      cons1_hash_hex, cons2_hash_hex);
+  smartlist_add_all(result, ed_diff);
   smartlist_free(ed_diff);
   return result;
 
  error_cleanup:
 
   if (ed_diff) {
+    /* LCOV_EXCL_START -- ed_diff is NULL except in unreachable cases above */
+    SMARTLIST_FOREACH(ed_diff, char *, cp, tor_free(cp));
     smartlist_free(ed_diff);
+    /* LCOV_EXCL_STOP */
   }
 
   return NULL;
