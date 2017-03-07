@@ -62,8 +62,13 @@ STATIC int smartlist_slice_string_pos(const smartlist_slice_t *slice,
 STATIC void set_changed(bitarray_t *changed1, bitarray_t *changed2,
                         const smartlist_slice_t *slice1,
                         const smartlist_slice_t *slice2);
-STATIC int consensus_compute_digest(const char *cons,
-                                    consensus_digest_t *digest_out);
+
+MOCK_DECL(STATIC int,
+          consensus_compute_digest,(const char *cons,
+                                    consensus_digest_t *digest_out));
+MOCK_DECL(STATIC int,
+          consensus_digest_eq,(const uint8_t *d1,
+                               const uint8_t *d2));
 #endif
 
 #endif

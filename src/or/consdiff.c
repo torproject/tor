@@ -51,6 +51,14 @@ consensus_compute_digest,(const char *cons,
   return r;
 }
 
+/** DOCDOC */
+MOCK_IMPL(STATIC int,
+consensus_digest_eq,(const uint8_t *d1,
+                     const uint8_t *d2))
+{
+  return fast_memeq(d1, d2, DIGEST256_LEN);
+}
+
 /** Create (allocate) a new slice from a smartlist. Assumes that the start
  * and the end indexes are within the bounds of the initial smartlist. The end
  * element is not part of the resulting slice. If end is -1, the slice is to
@@ -965,8 +973,8 @@ consdiff_apply_diff(const smartlist_t *cons1,
   }
 
   /* See that the consensus that was given to us matches its hash. */
-  if (fast_memneq(digests1->sha3_256, e_cons1_hash,
-                  DIGEST256_LEN)) {
+  if (!consensus_digest_eq(digests1->sha3_256,
+                           (const uint8_t*)e_cons1_hash)) {
     char hex_digest1[HEX_DIGEST256_LEN+1];
     char e_hex_digest1[HEX_DIGEST256_LEN+1];
     log_warn(LD_CONSDIFF, "Refusing to apply consensus diff because "
@@ -1002,8 +1010,8 @@ consdiff_apply_diff(const smartlist_t *cons1,
   }
 
   /* See that the resulting consensus matches its hash. */
-  if (fast_memneq(cons2_digests.sha3_256, e_cons2_hash,
-                  DIGEST256_LEN)) {
+  if (!consensus_digest_eq(cons2_digests.sha3_256,
+                           (const uint8_t*)e_cons2_hash)) {
     log_warn(LD_CONSDIFF, "Refusing to apply consensus diff because "
         "the resulting consensus doesn't match the digest as found in "
         "the consensus diff header.");
