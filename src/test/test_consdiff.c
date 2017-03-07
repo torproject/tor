@@ -409,6 +409,10 @@ test_consdiff_base64cmp(void *arg)
   tt_int_op(1, OP_EQ, strcmp("afoo", "Afoo"));
   tt_int_op(1, OP_EQ, base64cmp("afoo", "Afoo"));
 
+  /* Different lengths */
+  tt_int_op(-1, OP_EQ, base64cmp("afoo", "afooo"));
+  tt_int_op(1, OP_EQ, base64cmp("afooo", "afoo"));
+
  done:
   ;
 }
