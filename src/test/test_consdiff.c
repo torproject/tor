@@ -9,6 +9,7 @@
 
 #include "consdiff.h"
 #include "routerparse.h"
+#include "log_test_helpers.h"
 
 #ifndef OP_EQ
 #define OP_EQ ==
@@ -422,6 +423,10 @@ test_consdiff_gen_ed_diff(void *arg)
 {
   smartlist_t *cons1=NULL, *cons2=NULL, *diff=NULL;
   int i;
+  int free_cons_entries = 0;/* 1 if the cons1 and cons2 contents are
+                             * heap-allocated */
+  setup_capture_of_logs(LOG_WARN);
+
   (void)arg;
   cons1 = smartlist_new();
   cons2 = smartlist_new();
@@ -439,10 +444,17 @@ test_consdiff_gen_ed_diff(void *arg)
 
   diff = gen_ed_diff(cons1, cons2);
   tt_ptr_op(NULL, OP_EQ, diff);
+  expect_single_log_msg_containing("Refusing to generate consensus diff "
+         "because the base consensus doesn't have its router entries sorted "
+         "properly.");
 
   /* Same, but now with the second consensus. */
+  mock_clean_saved_logs();
   diff = gen_ed_diff(cons2, cons1);
   tt_ptr_op(NULL, OP_EQ, diff);
+  expect_single_log_msg_containing("Refusing to generate consensus diff "
+         "because the target consensus doesn't have its router entries sorted "
+         "properly.");
 
   /* Identity hashes are repeated, return NULL. */
   smartlist_clear(cons1);
@@ -452,8 +464,12 @@ test_consdiff_gen_ed_diff(void *arg)
   smartlist_add(cons1, (char*)"r name bbbbbbbbbbbbbbbbbbbbbbbbbbb etc");
   smartlist_add(cons1, (char*)"bar");
 
+  mock_clean_saved_logs();
   diff = gen_ed_diff(cons1, cons2);
   tt_ptr_op(NULL, OP_EQ, diff);
+  expect_single_log_msg_containing("Refusing to generate consensus diff "
+         "because the base consensus doesn't have its router entries sorted "
+         "properly.");
 
   /* We have to add a line that is just a dot, return NULL. */
   smartlist_clear(cons1);
@@ -466,8 +482,11 @@ test_consdiff_gen_ed_diff(void *arg)
   smartlist_add(cons2, (char*)".");
   smartlist_add(cons2, (char*)"foo2");
 
+  mock_clean_saved_logs();
   diff = gen_ed_diff(cons1, cons2);
   tt_ptr_op(NULL, OP_EQ, diff);
+  expect_single_log_msg_containing("Cannot generate consensus diff "
+         "because one of the lines to be added is \".\".");
 
 #define MAX_LINE_COUNT (10000)
   /* Too many lines to be fed to the quadratic-time function. */
@@ -477,8 +496,11 @@ test_consdiff_gen_ed_diff(void *arg)
   for (i=0; i < MAX_LINE_COUNT; ++i) smartlist_add(cons1, (char*)"a");
   for (i=0; i < MAX_LINE_COUNT; ++i) smartlist_add(cons1, (char*)"b");
 
+  mock_clean_saved_logs();
   diff = gen_ed_diff(cons1, cons2);
   tt_ptr_op(NULL, OP_EQ, diff);
+  expect_single_log_msg_containing("Refusing to generate consensus diff "
+         "because we found too few common router ids.");
 
   /* We have dot lines, but they don't interfere with the script format. */
   smartlist_clear(cons1);
@@ -560,6 +582,7 @@ test_consdiff_gen_ed_diff(void *arg)
   smartlist_clear(cons2);
   smartlist_split_string(cons1, "A:B:C:D:E", ":", 0, 0);
   smartlist_split_string(cons2, "A:C:O:E:U", ":", 0, 0);
+  free_cons_entries = 1;
   diff = gen_ed_diff(cons1, cons2);
   tt_ptr_op(NULL, OP_NE, diff);
   tt_int_op(7, OP_EQ, smartlist_len(diff));
@@ -574,8 +597,11 @@ test_consdiff_gen_ed_diff(void *arg)
   /* TODO: small real use-cases, i.e. consensuses. */
 
  done:
-  if (cons1) SMARTLIST_FOREACH(cons1, char*, line, tor_free(line));
-  if (cons2) SMARTLIST_FOREACH(cons2, char*, line, tor_free(line));
+  teardown_capture_of_logs();
+  if (free_cons_entries) {
+    if (cons1) SMARTLIST_FOREACH(cons1, char*, line, tor_free(line));
+    if (cons2) SMARTLIST_FOREACH(cons2, char*, line, tor_free(line));
+  }
   smartlist_free(cons1);
   smartlist_free(cons2);
   if (diff) SMARTLIST_FOREACH(diff, char*, line, tor_free(line));
