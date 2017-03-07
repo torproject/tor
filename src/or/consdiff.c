@@ -859,7 +859,7 @@ consdiff_get_digests(smartlist_t *diff,
   const char *format;
   char cons1_hash[DIGEST256_LEN], cons2_hash[DIGEST256_LEN];
   char *cons1_hash_hex, *cons2_hash_hex;
-  if (smartlist_len(diff) < 3) {
+  if (smartlist_len(diff) < 2) {
     log_info(LD_CONSDIFF, "The provided consensus diff is too short.");
     goto error_cleanup;
   }
@@ -986,8 +986,6 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
   }
 
   cons2_str = smartlist_join_strings(cons2, "\n", 1, NULL);
-  SMARTLIST_FOREACH(cons2, char *, cp, tor_free(cp));
-  smartlist_free(cons2);
 
   common_digests_t cons2_digests;
   if (router_get_networkstatus_v3_hashes(cons2_str,
@@ -1014,18 +1012,17 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
     goto error_cleanup;
   }
 
-  return cons2_str;
+  goto done;
 
-  error_cleanup:
+ error_cleanup:
+  tor_free(cons2_str); /* Sets it to NULL */
 
+ done:
   if (cons2) {
     SMARTLIST_FOREACH(cons2, char *, cp, tor_free(cp));
     smartlist_free(cons2);
   }
-  if (cons2_str) {
-    tor_free(cons2_str);
-  }
 
-  return NULL;
+  return cons2_str;
 }
 
