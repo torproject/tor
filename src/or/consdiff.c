@@ -654,18 +654,19 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
   return NULL;
 }
 
-/** Apply the ed diff to the consensus and return a new consensus, also as a
- * line-based smartlist. Will return NULL if the ed diff is not properly
- * formatted.
+/** Apply the ed diff, starting at <b>diff_starting_line</b>, to the consensus
+ * and return a new consensus, also as a line-based smartlist. Will return
+ * NULL if the ed diff is not properly formatted.
  */
 STATIC smartlist_t *
-apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff)
+apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
+              int diff_starting_line)
 {
   int diff_len = smartlist_len(diff);
   int j = smartlist_len(cons1);
   smartlist_t *cons2 = smartlist_new();
 
-  for (int i=0; i<diff_len; ++i) {
+  for (int i=diff_starting_line; i<diff_len; ++i) {
     const char *diff_line = smartlist_get(diff, i);
     char *endptr1, *endptr2;
 
@@ -811,7 +812,7 @@ consdiff_gen_diff(const smartlist_t *cons1, const smartlist_t *cons2,
   }
 
   /* See that the script actually produces what we want. */
-  smartlist_t *ed_cons2 = apply_ed_diff(cons1, ed_diff);
+  smartlist_t *ed_cons2 = apply_ed_diff(cons1, ed_diff, 0);
   if (!ed_cons2) {
     /* LCOV_EXCL_START -- impossible if diff generation is correct */
     log_warn(LD_BUG|LD_CONSDIFF, "Refusing to generate consensus diff because "
@@ -978,16 +979,8 @@ consdiff_apply_diff(const smartlist_t *cons1,
   }
 
   /* Grab the ed diff and calculate the resulting consensus. */
-  /* To avoid copying memory or iterating over all the elements, make a
-   * read-only smartlist without the two header lines.
-   */
-  /* XXXX prop140 abstraction violation; never do this. */
-  smartlist_t *ed_diff = tor_malloc(sizeof(smartlist_t));
-  ed_diff->list = diff->list+2;
-  ed_diff->num_used = diff->num_used-2;
-  ed_diff->capacity = diff->capacity-2;
-  cons2 = apply_ed_diff(cons1, ed_diff);
-  tor_free(ed_diff);
+  /* Skip the first two lines. */
+  cons2 = apply_ed_diff(cons1, diff, 2);
 
   /* ed diff could not be applied - reason already logged by apply_ed_diff. */
   if (!cons2) {

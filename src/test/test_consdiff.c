@@ -632,7 +632,7 @@ test_consdiff_apply_ed_diff(void *arg)
 
   /* Command without range. */
   smartlist_add(diff, (char*)"a");
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   smartlist_clear(diff);
   expect_single_log_msg_containing("an ed command was missing a line number");
@@ -640,7 +640,7 @@ test_consdiff_apply_ed_diff(void *arg)
   /* Range without command. */
   smartlist_add(diff, (char*)"1");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("a line with no ed command was found");
 
@@ -649,7 +649,7 @@ test_consdiff_apply_ed_diff(void *arg)
   /* Range without end. */
   smartlist_add(diff, (char*)"1,");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("an ed command was missing a range "
                                    "end line number.");
@@ -659,7 +659,7 @@ test_consdiff_apply_ed_diff(void *arg)
   /* Incoherent ranges. */
   smartlist_add(diff, (char*)"1,1");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("an invalid range was found");
 
@@ -667,7 +667,7 @@ test_consdiff_apply_ed_diff(void *arg)
 
   smartlist_add(diff, (char*)"3,2");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("an invalid range was found");
 
@@ -677,7 +677,7 @@ test_consdiff_apply_ed_diff(void *arg)
   smartlist_add(diff, (char*)"1d");
   smartlist_add(diff, (char*)"3d");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("its commands are not properly sorted");
 
@@ -686,7 +686,7 @@ test_consdiff_apply_ed_diff(void *arg)
   /* Script contains unrecognised commands longer than one char. */
   smartlist_add(diff, (char*)"1foo");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("an ed command longer than one char was "
                                    "found");
@@ -696,7 +696,7 @@ test_consdiff_apply_ed_diff(void *arg)
   /* Script contains unrecognised commands. */
   smartlist_add(diff, (char*)"1e");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("an unrecognised ed command was found");
 
@@ -706,7 +706,7 @@ test_consdiff_apply_ed_diff(void *arg)
    * isn't. */
   smartlist_add(diff, (char*)"0a");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("it has an ed command that tries to "
                                    "insert zero lines.");
@@ -714,7 +714,7 @@ test_consdiff_apply_ed_diff(void *arg)
   /* Now it is followed by a ".", but it inserts zero lines. */
   smartlist_add(diff, (char*)".");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("it has an ed command that tries to "
                                    "insert zero lines.");
@@ -725,7 +725,7 @@ test_consdiff_apply_ed_diff(void *arg)
   smartlist_add(diff, (char*)"0a");
   smartlist_add(diff, (char*)"hello");
   mock_clean_saved_logs();
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_single_log_msg_containing("lines to be inserted that don't end with "
                                    "a \".\".");
@@ -734,7 +734,7 @@ test_consdiff_apply_ed_diff(void *arg)
 
   /* Test appending text, 'a'. */
   smartlist_split_string(diff, "3a:U:O:.:0a:V:.", ":", 0, 0);
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_NE, cons2);
   tt_int_op(8, OP_EQ, smartlist_len(cons2));
   tt_str_op("V", OP_EQ, smartlist_get(cons2, 0));
@@ -753,7 +753,7 @@ test_consdiff_apply_ed_diff(void *arg)
 
   /* Test deleting text, 'd'. */
   smartlist_split_string(diff, "4d:1,2d", ":", 0, 0);
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_NE, cons2);
   tt_int_op(2, OP_EQ, smartlist_len(cons2));
   tt_str_op("C", OP_EQ, smartlist_get(cons2, 0));
@@ -766,7 +766,7 @@ test_consdiff_apply_ed_diff(void *arg)
 
   /* Test changing text, 'c'. */
   smartlist_split_string(diff, "4c:T:X:.:1, 2c:M:.", ":", 0, 0);
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_NE, cons2);
   tt_int_op(5, OP_EQ, smartlist_len(cons2));
   tt_str_op("M", OP_EQ, smartlist_get(cons2, 0));
@@ -782,7 +782,7 @@ test_consdiff_apply_ed_diff(void *arg)
 
   /* Test 'a', 'd' and 'c' together. */
   smartlist_split_string(diff, "4c:T:X:.:2d:0a:M:.", ":", 0, 0);
-  cons2 = apply_ed_diff(cons1, diff);
+  cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_NE, cons2);
   tt_int_op(6, OP_EQ, smartlist_len(cons2));
   tt_str_op("M", OP_EQ, smartlist_get(cons2, 0));

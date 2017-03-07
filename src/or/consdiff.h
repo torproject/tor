@@ -37,7 +37,8 @@ typedef struct smartlist_slice_t {
 STATIC smartlist_t *gen_ed_diff(const smartlist_t *cons1,
                                 const smartlist_t *cons2);
 STATIC smartlist_t *apply_ed_diff(const smartlist_t *cons1,
-                                  const smartlist_t *diff);
+                                  const smartlist_t *diff,
+                                  int start_line);
 STATIC void calc_changes(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
                          bitarray_t *changed1, bitarray_t *changed2);
 STATIC smartlist_slice_t *smartlist_slice(const smartlist_t *list,
