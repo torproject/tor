@@ -608,6 +608,7 @@ test_consdiff_apply_ed_diff(void *arg)
   (void)arg;
   cons1 = smartlist_new();
   diff = smartlist_new();
+  setup_capture_of_logs(LOG_WARN);
 
   smartlist_split_string(cons1, "A:B:C:D:E", ":", 0, 0);
 
@@ -615,68 +616,90 @@ test_consdiff_apply_ed_diff(void *arg)
   smartlist_add(diff, (char*)"a");
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
-
   smartlist_clear(diff);
+  expect_single_log_msg_containing("an ed command was missing a line number");
 
   /* Range without command. */
   smartlist_add(diff, (char*)"1");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("a line with no ed command was found");
 
   smartlist_clear(diff);
 
   /* Range without end. */
   smartlist_add(diff, (char*)"1,");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an ed command was missing a range "
+                                   "end line number.");
 
   smartlist_clear(diff);
 
   /* Incoherent ranges. */
   smartlist_add(diff, (char*)"1,1");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an invalid range was found");
 
   smartlist_clear(diff);
 
   smartlist_add(diff, (char*)"3,2");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an invalid range was found");
 
   smartlist_clear(diff);
 
   /* Script is not in reverse order. */
   smartlist_add(diff, (char*)"1d");
   smartlist_add(diff, (char*)"3d");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("its commands are not properly sorted");
 
   smartlist_clear(diff);
 
   /* Script contains unrecognised commands longer than one char. */
   smartlist_add(diff, (char*)"1foo");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an ed command longer than one char was "
+                                   "found");
 
   smartlist_clear(diff);
 
   /* Script contains unrecognised commands. */
   smartlist_add(diff, (char*)"1e");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an unrecognised ed command was found");
 
   smartlist_clear(diff);
 
   /* Command that should be followed by at least one line and a ".", but
    * isn't. */
   smartlist_add(diff, (char*)"0a");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("it has an ed command that tries to "
+                                   "insert zero lines.");
 
   /* Now it is followed by a ".", but it inserts zero lines. */
   smartlist_add(diff, (char*)".");
+  mock_clean_saved_logs();
   cons2 = apply_ed_diff(cons1, diff);
   tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("it has an ed command that tries to "
+                                   "insert zero lines.");
 
   smartlist_clear(diff);
 
@@ -741,6 +764,7 @@ test_consdiff_apply_ed_diff(void *arg)
   tt_str_op("E", OP_EQ, smartlist_get(cons2, 5));
 
  done:
+  teardown_capture_of_logs();
   if (cons1) SMARTLIST_FOREACH(cons1, char*, line, tor_free(line));
   if (cons2) SMARTLIST_FOREACH(cons2, char*, line, tor_free(line));
   smartlist_free(cons1);
