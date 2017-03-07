@@ -235,6 +235,9 @@ void hs_service_circuit_has_opened(origin_circuit_t *circ);
 int hs_service_receive_intro_established(origin_circuit_t *circ,
                                          const uint8_t *payload,
                                          size_t payload_len);
+int hs_service_receive_introduce2(origin_circuit_t *circ,
+                                  const uint8_t *payload,
+                                  size_t payload_len);
 
 /* These functions are only used by unit tests and we need to expose them else
  * hs_service.o ends up with no symbols in libor.a which makes clang throw a

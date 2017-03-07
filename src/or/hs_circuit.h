@@ -23,6 +23,9 @@ int hs_circ_service_intro_has_opened(hs_service_t *service,
 int hs_circ_launch_intro_point(hs_service_t *service,
                                const hs_service_intro_point_t *ip,
                                extend_info_t *ei, time_t now);
+int hs_circ_launch_rendezvous_point(const hs_service_t *service,
+                                    const curve25519_public_key_t *onion_key,
+                                    const uint8_t *rendezvous_cookie);
 
 /* Cell API. */
 void hs_circ_send_establish_intro(const hs_service_t *service,
@@ -33,6 +36,11 @@ int hs_circ_handle_intro_established(const hs_service_t *service,
                                      origin_circuit_t *circ,
                                      const uint8_t *payload,
                                      size_t payload_len);
+int hs_circ_handle_introduce2(const hs_service_t *service,
+                              const origin_circuit_t *circ,
+                              hs_service_intro_point_t *ip,
+                              const uint8_t *subcredential,
+                              const uint8_t *payload, size_t payload_len);
 
 /* e2e circuit API. */
 

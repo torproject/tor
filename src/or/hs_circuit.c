@@ -312,6 +312,18 @@ send_establish_intro(const hs_service_t *service,
 /* Public API */
 /* ========== */
 
+int
+hs_circ_launch_rendezvous_point(const hs_service_t *service,
+                                const curve25519_public_key_t *onion_key,
+                                const uint8_t *rendezvous_cookie)
+{
+  tor_assert(service);
+  tor_assert(onion_key);
+  tor_assert(rendezvous_cookie);
+  /* XXX: Implement rendezvous launch support. */
+  return 0;
+}
+
 /* For a given service and a service intro point, launch a circuit to the
  * extend info ei. If the service is a single onion, a one-hop circuit will be
  * requested. Return 0 if the circuit was successfully launched and tagged
@@ -465,6 +477,60 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   ret = 0;
 
  done:
+  return ret;
+}
+
+/* Handle an INTRODUCE2 unparsed payload of payload_len for the given circuit
+ * and service. This cell is associated with the intro point object ip and the
+ * subcredential. Return 0 on success else a negative value. */
+int
+hs_circ_handle_introduce2(const hs_service_t *service,
+                          const origin_circuit_t *circ,
+                          hs_service_intro_point_t *ip,
+                          const uint8_t *subcredential,
+                          const uint8_t *payload, size_t payload_len)
+{
+  int ret = -1;
+  hs_cell_introduce2_data_t data;
+
+  tor_assert(service);
+  tor_assert(circ);
+  tor_assert(ip);
+  tor_assert(subcredential);
+  tor_assert(payload);
+
+  /* Populate the data structure with everything we need for the cell to be
+   * parsed, decrypted and key material computed correctly. */
+  data.auth_pk = &ip->auth_key_kp.pubkey;
+  data.enc_kp = &ip->enc_key_kp;
+  data.subcredential = subcredential;
+  data.payload = payload;
+  data.payload_len = payload_len;
+  data.link_specifiers = smartlist_new();
+
+  if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
+    goto done;
+  }
+
+  /* At this point, we just confirmed that the full INTRODUCE2 cell is valid
+   * so increment our counter that we've seen one on this intro point. */
+  ip->introduce2_count++;
+
+  /* Launch rendezvous circuit with the onion key and rend cookie. */
+  ret = hs_circ_launch_rendezvous_point(service, &data.onion_pk,
+                                        data.rendezvous_cookie);
+  if (ret < 0) {
+    goto done;
+  }
+
+  /* Success. */
+  ret = 0;
+
+ done:
+  SMARTLIST_FOREACH(data.link_specifiers, link_specifier_t *, lspec,
+                    link_specifier_free(lspec));
+  smartlist_free(data.link_specifiers);
+  memwipe(&data, 0, sizeof(data));
   return ret;
 }
 

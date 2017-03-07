@@ -34,8 +34,8 @@
 
 /* Trunnel */
 #include "ed25519_cert.h"
-#include "hs/cell_establish_intro.h"
 #include "hs/cell_common.h"
+#include "hs/cell_establish_intro.h"
 
 /* Helper macro. Iterate over every service in the global map. The var is the
  * name of the service pointer. */
@@ -1845,9 +1845,84 @@ service_handle_intro_established(origin_circuit_t *circ,
   return -1;
 }
 
+/* Handle an INTRODUCE2 cell arriving on the given introduction circuit.
+ * Return 0 on success else a negative value. */
+static int
+service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
+                          size_t payload_len)
+{
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL;
+  hs_service_descriptor_t *desc = NULL;
+
+  tor_assert(circ);
+  tor_assert(payload);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
+
+  /* We'll need every object associated with this circuit. */
+  get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
+
+  /* Get service object from the circuit identifier. */
+  if (service == NULL) {
+    log_warn(LD_BUG, "Unknown service identity key %s when handling "
+                     "an INTRODUCE2 cell on circuit %u",
+             safe_str_client(ed25519_fmt(&circ->hs_ident->identity_pk)),
+             TO_CIRCUIT(circ)->n_circ_id);
+    goto err;
+  }
+  if (ip == NULL) {
+    /* We don't recognize the key. */
+    log_warn(LD_BUG, "Unknown introduction auth key when handling "
+                     "an INTRODUCE2 cell on circuit %u for service %s",
+             TO_CIRCUIT(circ)->n_circ_id,
+             safe_str_client(service->onion_address));
+    goto err;
+  }
+  /* If we have an IP object, we MUST have a descriptor object. */
+  tor_assert(desc);
+
+  /* XXX: Handle legacy IP connection. */
+
+  if (hs_circ_handle_introduce2(service, circ, ip, desc->desc->subcredential,
+                                payload, payload_len) < 0) {
+    goto err;
+  }
+
+  return 0;
+ err:
+  return -1;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Called when we get an INTRODUCE2 cell on the circ. Respond to the cell and
+ * launch a circuit to the rendezvous point. */
+int
+hs_service_receive_introduce2(origin_circuit_t *circ, const uint8_t *payload,
+                              size_t payload_len)
+{
+  int ret = -1;
+
+  tor_assert(circ);
+  tor_assert(payload);
+
+  /* Do some initial validation and logging before we parse the cell */
+  if (TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_S_INTRO) {
+    log_warn(LD_PROTOCOL, "Received an INTRODUCE2 cell on a "
+                          "non introduction circuit of purpose %d",
+             TO_CIRCUIT(circ)->purpose);
+    goto done;
+  }
+
+  ret = (circ->hs_ident) ? service_handle_introduce2(circ, payload,
+                                                     payload_len) :
+                           rend_service_receive_introduction(circ, payload,
+                                                             payload_len);
+ done:
+  return ret;
+}
 
 /* Called when we get an INTRO_ESTABLISHED cell. Mark the circuit as an
  * established introduction point. Return 0 on success else a negative value
