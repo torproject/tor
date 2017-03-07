@@ -54,7 +54,7 @@ consensus_compute_digest(const char *cons,
  * reach the end of the smartlist.
  */
 STATIC smartlist_slice_t *
-smartlist_slice(smartlist_t *list, int start, int end)
+smartlist_slice(const smartlist_t *list, int start, int end)
 {
   int list_len = smartlist_len(list);
   tor_assert(start >= 0);
@@ -79,7 +79,7 @@ smartlist_slice(smartlist_t *list, int start, int end)
  * one.
  */
 STATIC int *
-lcs_lengths(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
+lcs_lengths(const smartlist_slice_t *slice1, const smartlist_slice_t *slice2,
             int direction)
 {
   size_t a_size = sizeof(int) * (slice2->len+1);
@@ -158,7 +158,7 @@ trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2)
 /** Like smartlist_string_pos, but limited to the bounds of the slice.
  */
 STATIC int
-smartlist_slice_string_pos(smartlist_slice_t *slice, const char *string)
+smartlist_slice_string_pos(const smartlist_slice_t *slice, const char *string)
 {
   int end = slice->offset + slice->len;
   for (int i = slice->offset; i < end; ++i) {
@@ -177,7 +177,7 @@ smartlist_slice_string_pos(smartlist_slice_t *slice, const char *string)
  */
 STATIC void
 set_changed(bitarray_t *changed1, bitarray_t *changed2,
-            smartlist_slice_t *slice1, smartlist_slice_t *slice2)
+            const smartlist_slice_t *slice1, const smartlist_slice_t *slice2)
 {
   int toskip = -1;
   tor_assert(slice1->len == 0 || slice1->len == 1);
@@ -205,8 +205,9 @@ set_changed(bitarray_t *changed1, bitarray_t *changed2,
  * subsequence.
  */
 static int
-optimal_column_to_split(smartlist_slice_t *top, smartlist_slice_t *bot,
-                        smartlist_slice_t *slice2)
+optimal_column_to_split(const smartlist_slice_t *top,
+                        const smartlist_slice_t *bot,
+                        const smartlist_slice_t *slice2)
 {
   int *lens_top = lcs_lengths(top, slice2, 1);
   int *lens_bot = lcs_lengths(bot, slice2, -1);
@@ -238,7 +239,8 @@ optimal_column_to_split(smartlist_slice_t *top, smartlist_slice_t *bot,
  * finding the smallest diff possible.
  */
 STATIC void
-calc_changes(smartlist_slice_t *slice1, smartlist_slice_t *slice2,
+calc_changes(smartlist_slice_t *slice1,
+             smartlist_slice_t *slice2,
              bitarray_t *changed1, bitarray_t *changed2)
 {
   trim_slices(slice1, slice2);
@@ -347,7 +349,7 @@ is_valid_router_entry(const char *line)
  * don't want to skip the first line, in which case cur will be -1.
  */
 STATIC int
-next_router(smartlist_t *cons, int cur)
+next_router(const smartlist_t *cons, int cur)
 {
   int len = smartlist_len(cons);
   tor_assert(cur >= -1 && cur < len);
@@ -431,7 +433,7 @@ base64cmp(const char *hash1, const char *hash2)
  *   calc_changes(cons1_sl, cons2_sl, changed1, changed2);
  */
 STATIC smartlist_t *
-gen_ed_diff(smartlist_t *cons1, smartlist_t *cons2)
+gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
 {
   int len1 = smartlist_len(cons1);
   int len2 = smartlist_len(cons2);
@@ -657,7 +659,7 @@ gen_ed_diff(smartlist_t *cons1, smartlist_t *cons2)
  * formatted.
  */
 STATIC smartlist_t *
-apply_ed_diff(smartlist_t *cons1, smartlist_t *diff)
+apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff)
 {
   int diff_len = smartlist_len(diff);
   int j = smartlist_len(cons1);
@@ -798,8 +800,9 @@ apply_ed_diff(smartlist_t *cons1, smartlist_t *diff)
  * up to the caller to free their resources.
  */
 smartlist_t *
-consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
-                  consensus_digest_t *digests1, consensus_digest_t *digests2)
+consdiff_gen_diff(const smartlist_t *cons1, const smartlist_t *cons2,
+                  const consensus_digest_t *digests1,
+                  const consensus_digest_t *digests2)
 {
   smartlist_t *ed_diff = gen_ed_diff(cons1, cons2);
   /* ed diff could not be generated - reason already logged by gen_ed_diff. */
@@ -863,7 +866,7 @@ consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
  * length DIGEST256_LEN or larger if not NULL.
  */
 int
-consdiff_get_digests(smartlist_t *diff,
+consdiff_get_digests(const smartlist_t *diff,
                      char *digest1_out,
                      char *digest2_out)
 {
@@ -944,8 +947,9 @@ consdiff_get_digests(smartlist_t *diff,
  * any way, so it's up to the caller to free their resources.
  */
 char *
-consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
-                    consensus_digest_t *digests1)
+consdiff_apply_diff(const smartlist_t *cons1,
+                    const smartlist_t *diff,
+                    const consensus_digest_t *digests1)
 {
   smartlist_t *cons2 = NULL;
   char *cons2_str = NULL;
