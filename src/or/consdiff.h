@@ -7,10 +7,14 @@
 
 #include "or.h"
 
+typedef struct consensus_digest_t {
+  uint8_t sha3_256[DIGEST256_LEN];
+} consensus_digest_t;
+
 smartlist_t *consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
-                  common_digests_t *digests1, common_digests_t *digests2);
+                  consensus_digest_t *digests1, consensus_digest_t *digests2);
 char *consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
-                    common_digests_t *digests1);
+                    consensus_digest_t *digests1);
 int consdiff_get_digests(smartlist_t *diff,
                          char *digest1_out,
                          char *digest2_out);
@@ -45,6 +49,8 @@ STATIC int smartlist_slice_string_pos(smartlist_slice_t *slice,
                                       const char *string);
 STATIC void set_changed(bitarray_t *changed1, bitarray_t *changed2,
                         smartlist_slice_t *slice1, smartlist_slice_t *slice2);
+STATIC int consensus_compute_digest(const char *cons,
+                                    consensus_digest_t *digest_out);
 #endif
 
 #endif

@@ -39,6 +39,15 @@
 static const char* ns_diff_version = "network-status-diff-version 1";
 static const char* hash_token = "hash";
 
+STATIC int
+consensus_compute_digest(const char *cons,
+                         consensus_digest_t *digest_out)
+{
+  int r = crypto_digest256((char*)digest_out->sha3_256,
+                           cons, strlen(cons), DIGEST_SHA3_256);
+  return r;
+}
+
 /** Create (allocate) a new slice from a smartlist. Assumes that the start
  * and the end indexes are within the bounds of the initial smartlist. The end
  * element is not part of the resulting slice. If end is -1, the slice is to
@@ -790,7 +799,7 @@ apply_ed_diff(smartlist_t *cons1, smartlist_t *diff)
  */
 smartlist_t *
 consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
-                  common_digests_t *digests1, common_digests_t *digests2)
+                  consensus_digest_t *digests1, consensus_digest_t *digests2)
 {
   smartlist_t *ed_diff = gen_ed_diff(cons1, cons2);
   /* ed diff could not be generated - reason already logged by gen_ed_diff. */
@@ -824,9 +833,9 @@ consdiff_gen_diff(smartlist_t *cons1, smartlist_t *cons2,
   char cons1_hash_hex[HEX_DIGEST256_LEN+1];
   char cons2_hash_hex[HEX_DIGEST256_LEN+1];
   base16_encode(cons1_hash_hex, HEX_DIGEST256_LEN+1,
-      digests1->d[DIGEST_SHA256], DIGEST256_LEN);
+                (const char*)digests1->sha3_256, DIGEST256_LEN);
   base16_encode(cons2_hash_hex, HEX_DIGEST256_LEN+1,
-      digests2->d[DIGEST_SHA256], DIGEST256_LEN);
+                (const char*)digests2->sha3_256, DIGEST256_LEN);
 
   /* Create the resulting consensus diff. */
   smartlist_t *result = smartlist_new();
@@ -874,7 +883,7 @@ consdiff_get_digests(smartlist_t *diff,
     goto error_cleanup;
   }
 
-  /* Grab the SHA256 base16 hashes. */
+  /* Grab the base16 digests. */
   hash_words = smartlist_new();
   smartlist_split_string(hash_words, smartlist_get(diff, 1), " ", 0, 0);
 
@@ -889,7 +898,7 @@ consdiff_get_digests(smartlist_t *diff,
   /* Expected hashes as found in the consensus diff header. They must be of
    * length HEX_DIGEST256_LEN, normally 64 hexadecimal characters.
    * If any of the decodings fail, error to make sure that the hashes are
-   * proper base16-encoded SHA256 digests.
+   * proper base16-encoded digests.
    */
   cons1_hash_hex = smartlist_get(hash_words, 1);
   cons2_hash_hex = smartlist_get(hash_words, 2);
@@ -936,7 +945,7 @@ consdiff_get_digests(smartlist_t *diff,
  */
 char *
 consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
-                    common_digests_t *digests1)
+                    consensus_digest_t *digests1)
 {
   smartlist_t *cons2 = NULL;
   char *cons2_str = NULL;
@@ -948,7 +957,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
   }
 
   /* See that the consensus that was given to us matches its hash. */
-  if (fast_memneq(digests1->d[DIGEST_SHA256], e_cons1_hash,
+  if (fast_memneq(digests1->sha3_256, e_cons1_hash,
                   DIGEST256_LEN)) {
     char hex_digest1[HEX_DIGEST256_LEN+1];
     char e_hex_digest1[HEX_DIGEST256_LEN+1];
@@ -956,9 +965,9 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
         "the base consensus doesn't match the digest as found in "
         "the consensus diff header.");
     base16_encode(hex_digest1, HEX_DIGEST256_LEN+1,
-        digests1->d[DIGEST_SHA256], DIGEST256_LEN);
+                  (const char *)digests1->sha3_256, DIGEST256_LEN);
     base16_encode(e_hex_digest1, HEX_DIGEST256_LEN+1,
-        e_cons1_hash, DIGEST256_LEN);
+                  e_cons1_hash, DIGEST256_LEN);
     log_warn(LD_CONSDIFF, "Expected: %s; found: %s",
              hex_digest1, e_hex_digest1);
     goto error_cleanup;
@@ -983,16 +992,17 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
 
   cons2_str = smartlist_join_strings(cons2, "\n", 1, NULL);
 
-  common_digests_t cons2_digests;
-  if (router_get_networkstatus_v3_hashes(cons2_str,
-                                         &cons2_digests)<0) {
+  consensus_digest_t cons2_digests;
+  if (consensus_compute_digest(cons2_str, &cons2_digests) < 0) {
+    /* LCOV_EXCL_START -- digest can't fail */
     log_warn(LD_CONSDIFF, "Could not compute digests of the consensus "
         "resulting from applying a consensus diff.");
     goto error_cleanup;
+    /* LCOV_EXCL_STOP */
   }
 
   /* See that the resulting consensus matches its hash. */
-  if (fast_memneq(cons2_digests.d[DIGEST_SHA256], e_cons2_hash,
+  if (fast_memneq(cons2_digests.sha3_256, e_cons2_hash,
                   DIGEST256_LEN)) {
     log_warn(LD_CONSDIFF, "Refusing to apply consensus diff because "
         "the resulting consensus doesn't match the digest as found in "
@@ -1000,7 +1010,7 @@ consdiff_apply_diff(smartlist_t *cons1, smartlist_t *diff,
     char hex_digest2[HEX_DIGEST256_LEN+1];
     char e_hex_digest2[HEX_DIGEST256_LEN+1];
     base16_encode(hex_digest2, HEX_DIGEST256_LEN+1,
-        cons2_digests.d[DIGEST_SHA256], DIGEST256_LEN);
+        (const char *)cons2_digests.sha3_256, DIGEST256_LEN);
     base16_encode(e_hex_digest2, HEX_DIGEST256_LEN+1,
         e_cons2_hash, DIGEST256_LEN);
     log_warn(LD_CONSDIFF, "Expected: %s; found: %s",
