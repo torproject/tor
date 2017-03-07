@@ -161,3 +161,25 @@ hs_cell_build_establish_intro(const char *circ_nonce,
   return cell_len;
 }
 
+/* Parse the INTRO_ESTABLISHED cell in the payload of size payload_len. If we
+ * are successful at parsing it, return the length of the parsed cell else a
+ * negative value on error. */
+ssize_t
+hs_cell_parse_intro_established(const uint8_t *payload, size_t payload_len)
+{
+  ssize_t ret;
+  trn_cell_intro_established_t *cell = NULL;
+
+  tor_assert(payload);
+
+  /* Try to parse the payload into a cell making sure we do actually have a
+   * valid cell. */
+  ret = trn_cell_intro_established_parse(&cell, payload, payload_len);
+  if (ret >= 0) {
+    /* On success, we do not keep the cell, we just notify the caller that it
+     * was successfully parsed. */
+    trn_cell_intro_established_free(cell);
+  }
+  return ret;
+}
+

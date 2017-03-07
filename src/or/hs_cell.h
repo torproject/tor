@@ -15,5 +15,8 @@ ssize_t hs_cell_build_establish_intro(const char *circ_nonce,
                                       const hs_service_intro_point_t *ip,
                                       uint8_t *cell_out);
 
+ssize_t hs_cell_parse_intro_established(const uint8_t *payload,
+                                        size_t payload_len);
+
 #endif /* TOR_HS_CELL_H */
 

@@ -28,6 +28,11 @@ int hs_circ_launch_intro_point(hs_service_t *service,
 void hs_circ_send_establish_intro(const hs_service_t *service,
                                   hs_service_intro_point_t *ip,
                                   origin_circuit_t *circ);
+int hs_circ_handle_intro_established(const hs_service_t *service,
+                                     const hs_service_intro_point_t *ip,
+                                     origin_circuit_t *circ,
+                                     const uint8_t *payload,
+                                     size_t payload_len);
 
 /* e2e circuit API. */
 

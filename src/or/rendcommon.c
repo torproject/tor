@@ -793,7 +793,7 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
       break;
     case RELAY_COMMAND_INTRO_ESTABLISHED:
       if (origin_circ)
-        r = rend_service_intro_established(origin_circ,payload,length);
+        r = hs_service_receive_intro_established(origin_circ,payload,length);
       break;
     case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
       if (origin_circ)

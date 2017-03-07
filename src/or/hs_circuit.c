@@ -428,6 +428,46 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
   return ret;
 }
 
+/* Handle an INTRO_ESTABLISHED cell payload of length payload_len arriving on
+ * the given introduction circuit circ. The service is only used for logging
+ * purposes. Return 0 on success else a negative value. */
+int
+hs_circ_handle_intro_established(const hs_service_t *service,
+                                 const hs_service_intro_point_t *ip,
+                                 origin_circuit_t *circ,
+                                 const uint8_t *payload, size_t payload_len)
+{
+  int ret = -1;
+
+  tor_assert(service);
+  tor_assert(ip);
+  tor_assert(circ);
+  tor_assert(payload);
+
+  /* Try to parse the payload into a cell making sure we do actually have a
+   * valid cell. For a legacy node, it's an empty payload so as long as we
+   * have the cell, we are good. */
+  if (!ip->base.is_only_legacy &&
+      hs_cell_parse_intro_established(payload, payload_len) < 0) {
+    log_warn(LD_REND, "Unable to parse the INTRO_ESTABLISHED cell on "
+                      "circuit %u for service %s",
+             TO_CIRCUIT(circ)->n_circ_id,
+             safe_str_client(service->onion_address));
+    goto done;
+  }
+
+  /* Switch the purpose to a fully working intro point. */
+  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_S_INTRO);
+  /* Getting a valid INTRODUCE_ESTABLISHED means we've successfully used the
+   * circuit so update our pathbias subsystem. */
+  pathbias_mark_use_success(circ);
+  /* Success. */
+  ret = 0;
+
+ done:
+  return ret;
+}
+
 /* Circuit <b>circ</b> just finished the rend ntor key exchange. Use the key
  * exchange output material at <b>ntor_key_seed</b> and setup <b>circ</b> to
  * serve as a rendezvous end-to-end circuit between the client and the
@@ -435,7 +475,7 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
  * and the other side is the client.
  *
  * Return 0 if the operation went well; in case of error return -1. */
-  int
+int
 hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
                                const uint8_t *ntor_key_seed, size_t seed_len,
                                int is_service_side)

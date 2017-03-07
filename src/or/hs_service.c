@@ -1725,14 +1725,8 @@ service_intro_circ_has_opened(origin_circuit_t *circ)
     goto err;
   }
 
-  /* From the service object, get the intro point object of that circuit. The
-   * following will query both descriptors intro points list. */
   ip = service_intro_point_find(service, &circ->hs_ident->intro_auth_pk);
   if (ip == NULL) {
-    log_warn(LD_REND, "Unknown authentication key on the introduction "
-                      "circuit %u for service %s",
-             TO_CIRCUIT(circ)->n_circ_id,
-             safe_str_client(service->onion_address));
     /* Closing this circuit because we don't recognize the key. */
     close_reason = END_CIRC_REASON_NOSUCHSERVICE;
     goto err;
@@ -1764,9 +1758,102 @@ service_rendezvous_circ_has_opened(origin_circuit_t *circ)
   /* XXX: Implement rendezvous support. */
 }
 
+/* Handle an INTRO_ESTABLISHED cell arriving on the given introduction
+ * circuit. Return 0 on success else a negative value. */
+static int
+service_handle_intro_established(origin_circuit_t *circ,
+                                 const uint8_t *payload,
+                                 size_t payload_len)
+{
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL;
+
+  tor_assert(circ);
+  tor_assert(payload);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+
+  /* Get service object from the circuit identifier. */
+  service = find_service(hs_service_map, &circ->hs_ident->identity_pk);
+  if (service == NULL) {
+    log_warn(LD_REND, "Unknown service identity key %s on the introduction "
+             "circuit %u. Can't find onion service.",
+             safe_str_client(ed25519_fmt(&circ->hs_ident->identity_pk)),
+             TO_CIRCUIT(circ)->n_circ_id);
+    goto err;
+  }
+
+  /* From the service object, get the intro point object of that circuit. The
+   * following will query both descriptors intro points list. */
+  ip = service_intro_point_find(service, &circ->hs_ident->intro_auth_pk);
+  if (ip == NULL) {
+    /* We don't recognize the key. */
+    log_warn(LD_REND, "Introduction circuit established without an intro "
+                      "point object on circuit %u for service %s",
+             TO_CIRCUIT(circ)->n_circ_id,
+             safe_str_client(service->onion_address));
+    goto err;
+  }
+
+  /* Try to parse the payload into a cell making sure we do actually have a
+   * valid cell. On success, the ip object is updated. */
+  if (hs_circ_handle_intro_established(service, ip, circ, payload,
+                                       payload_len) < 0) {
+    goto err;
+  }
+
+  /* Flag that we have an established circuit for this intro point. This value
+   * is what indicates the upload scheduled event if we are ready to build the
+   * intro point into the descriptor and upload. */
+  ip->circuit_established = 1;
+
+  log_info(LD_REND, "Successfully received an INTRO_ESTABLISHED cell "
+                    "on circuit %u for service %s",
+           TO_CIRCUIT(circ)->n_circ_id,
+           safe_str_client(service->onion_address));
+  return 0;
+
+ err:
+  return -1;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Called when we get an INTRO_ESTABLISHED cell. Mark the circuit as an
+ * established introduction point. Return 0 on success else a negative value
+ * and the circuit is closed. */
+int
+hs_service_receive_intro_established(origin_circuit_t *circ,
+                                     const uint8_t *payload,
+                                     size_t payload_len)
+{
+  int ret = -1;
+
+  tor_assert(circ);
+  tor_assert(payload);
+
+  if (TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+    log_warn(LD_PROTOCOL, "Received an INTRO_ESTABLISHED cell on a "
+                          "non introduction circuit of purpose %d",
+             TO_CIRCUIT(circ)->purpose);
+    goto err;
+  }
+
+  /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
+   * identifier hs_ident. Can't be both. */
+  ret = (circ->hs_ident) ? service_handle_intro_established(circ, payload,
+                                                            payload_len) :
+                           rend_service_intro_established(circ, payload,
+                                                          payload_len);
+  if (ret < 0) {
+    goto err;
+  }
+  return 0;
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+  return -1;
+}
 
 /* Called when any kind of hidden service circuit is done building thus
  * opened. This is the entry point from the circuit subsystem. */
