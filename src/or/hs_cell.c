@@ -363,7 +363,6 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   uint8_t *decrypted = NULL;
   size_t encrypted_section_len;
   const uint8_t *encrypted_section;
-  curve25519_public_key_t client_pk;
   trn_cell_introduce1_t *cell = NULL;
   trn_cell_introduce_encrypted_t *enc_cell = NULL;
   hs_ntor_intro_cell_keys_t *intro_keys = NULL;
@@ -404,7 +403,8 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   /* Build the key material out of the key material found in the cell. */
   intro_keys = get_introduce2_key_material(data->auth_pk, data->enc_kp,
                                            data->subcredential,
-                                           encrypted_section, &client_pk);
+                                           encrypted_section,
+                                           &data->client_pk);
   if (intro_keys == NULL) {
     log_info(LD_REND, "Invalid INTRODUCE2 encrypted data. Unable to "
                       "compute key material on circuit %u for service %s",
@@ -490,7 +490,6 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   log_info(LD_REND, "Valid INTRODUCE2 cell. Launching rendezvous circuit.");
 
  done:
-  memwipe(&client_pk, 0, sizeof(client_pk));
   if (intro_keys) {
     memwipe(intro_keys, 0, sizeof(hs_ntor_intro_cell_keys_t));
     tor_free(intro_keys);

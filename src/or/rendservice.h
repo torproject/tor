@@ -16,7 +16,6 @@
 #include "hs_service.h"
 
 typedef struct rend_intro_cell_s rend_intro_cell_t;
-typedef struct rend_service_port_config_s rend_service_port_config_t;
 
 #ifdef RENDSERVICE_PRIVATE
 

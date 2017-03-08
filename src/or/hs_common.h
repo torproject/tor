@@ -107,6 +107,21 @@ typedef enum {
   HS_AUTH_KEY_TYPE_ED25519 = 2,
 } hs_auth_key_type_t;
 
+/* Represents the mapping from a virtual port of a rendezvous service to a
+ * real port on some IP. */
+typedef struct rend_service_port_config_t {
+  /* The incoming HS virtual port we're mapping */
+  uint16_t virtual_port;
+  /* Is this an AF_UNIX port? */
+  unsigned int is_unix_addr:1;
+  /* The outgoing TCP port to use, if !is_unix_addr */
+  uint16_t real_port;
+  /* The outgoing IPv4 or IPv6 address to use, if !is_unix_addr */
+  tor_addr_t real_addr;
+  /* The socket path to connect to, if is_unix_addr */
+  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
+} rend_service_port_config_t;
+
 void hs_init(void);
 void hs_free_all(void);
 
@@ -128,6 +143,7 @@ void hs_build_blinded_keypair(const ed25519_keypair_t *kp,
                               const uint8_t *secret, size_t secret_len,
                               uint64_t time_period_num,
                               ed25519_keypair_t *kp_out);
+int hs_service_requires_uptime_circ(const smartlist_t *ports);
 
 void rend_data_free(rend_data_t *data);
 rend_data_t *rend_data_dup(const rend_data_t *data);

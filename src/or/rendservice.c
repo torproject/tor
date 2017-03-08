@@ -83,22 +83,6 @@ static smartlist_t* rend_get_service_list_mutable(
                                   smartlist_t* substitute_service_list);
 static int rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted);
 
-/** Represents the mapping from a virtual port of a rendezvous service to
- * a real port on some IP.
- */
-struct rend_service_port_config_s {
-  /* The incoming HS virtual port we're mapping */
-  uint16_t virtual_port;
-  /* Is this an AF_UNIX port? */
-  unsigned int is_unix_addr:1;
-  /* The outgoing TCP port to use, if !is_unix_addr */
-  uint16_t real_port;
-  /* The outgoing IPv4 or IPv6 address to use, if !is_unix_addr */
-  tor_addr_t real_addr;
-  /* The socket path to connect to, if is_unix_addr */
-  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
-};
-
 /* Hidden service directory file names:
  * new file names should be added to rend_service_add_filenames_to_list()
  * for sandboxing purposes. */
@@ -1694,24 +1678,6 @@ rend_service_get_by_service_id(const char *id)
   return NULL;
 }
 
-/** Return 1 if any virtual port in <b>service</b> wants a circuit
- * to have good uptime. Else return 0.
- */
-static int
-rend_service_requires_uptime(rend_service_t *service)
-{
-  int i;
-  rend_service_port_config_t *p;
-
-  for (i=0; i < smartlist_len(service->ports); ++i) {
-    p = smartlist_get(service->ports, i);
-    if (smartlist_contains_int_as_string(get_options()->LongLivedPorts,
-                                  p->virtual_port))
-      return 1;
-  }
-  return 0;
-}
-
 /** Check client authorization of a given <b>descriptor_cookie</b> of
  * length <b>cookie_len</b> for <b>service</b>. Return 1 for success
  * and 0 for failure. */
@@ -2029,7 +1995,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
     goto err;
   }
 
-  circ_needs_uptime = rend_service_requires_uptime(service);
+  circ_needs_uptime = hs_service_requires_uptime_circ(service->ports);
 
   /* help predict this next time */
   rep_hist_note_used_internal(now, circ_needs_uptime, 1);

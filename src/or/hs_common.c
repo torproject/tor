@@ -19,6 +19,7 @@
 #include "hs_common.h"
 #include "hs_service.h"
 #include "rendcommon.h"
+#include "rendservice.h"
 
 /* Ed25519 Basepoint value. Taken from section 5 of
  * https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03 */
@@ -724,7 +725,22 @@ hs_overlap_mode_is_active(const networkstatus_t *consensus, time_t now)
   if (valid_after_tm.tm_hour > 0 && valid_after_tm.tm_hour < 12) {
     return 1;
   }
+  return 0;
+}
 
+/* Return 1 if any virtual port in ports needs a circuit with good uptime.
+ * Else return 0. */
+int
+hs_service_requires_uptime_circ(const smartlist_t *ports)
+{
+  tor_assert(ports);
+
+  SMARTLIST_FOREACH_BEGIN(ports, rend_service_port_config_t *, p) {
+    if (smartlist_contains_int_as_string(get_options()->LongLivedPorts,
+                                         p->virtual_port)) {
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(p);
   return 0;
 }
 
