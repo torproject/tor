@@ -284,13 +284,13 @@ test_pt_get_extrainfo_string(void *arg)
 }
 
 #ifdef _WIN32
-#define STDIN_HANDLE HANDLE
+#define STDIN_HANDLE HANDLE*
 #else
-#define STDIN_HANDLE FILE
+#define STDIN_HANDLE int
 #endif
 
 static smartlist_t *
-tor_get_lines_from_handle_replacement(STDIN_HANDLE *handle,
+tor_get_lines_from_handle_replacement(STDIN_HANDLE handle,
                                       enum stream_status *stream_status_out)
 {
   static int times_called = 0;

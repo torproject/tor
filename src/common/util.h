@@ -322,7 +322,7 @@ enum stream_status {
 
 const char *stream_status_to_string(enum stream_status stream_status);
 
-enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);
+enum stream_status get_string_from_pipe(int fd, char *buf, size_t count);
 
 MOCK_DECL(int,tor_unlink,(const char *pathname));
 
@@ -463,9 +463,6 @@ struct process_handle_t {
   int stdin_pipe;
   int stdout_pipe;
   int stderr_pipe;
-  FILE *stdin_handle;
-  FILE *stdout_handle;
-  FILE *stderr_handle;
   pid_t pid;
   /** If the process has not given us a SIGCHLD yet, this has the
    * waitpid_callback_t that gets invoked once it has. Otherwise this
@@ -488,7 +485,7 @@ int tor_split_lines(struct smartlist_t *sl, char *buf, int len);
 ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count,
                             const process_handle_t *process);
 #else
-ssize_t tor_read_all_handle(FILE *h, char *buf, size_t count,
+ssize_t tor_read_all_handle(int fd, char *buf, size_t count,
                             const process_handle_t *process,
                             int *eof);
 #endif
@@ -502,7 +499,7 @@ int tor_process_get_pid(process_handle_t *process_handle);
 #ifdef _WIN32
 HANDLE tor_process_get_stdout_pipe(process_handle_t *process_handle);
 #else
-FILE *tor_process_get_stdout_pipe(process_handle_t *process_handle);
+int tor_process_get_stdout_pipe(process_handle_t *process_handle);
 #endif
 
 #ifdef _WIN32
@@ -511,7 +508,7 @@ tor_get_lines_from_handle,(HANDLE *handle,
                            enum stream_status *stream_status));
 #else
 MOCK_DECL(struct smartlist_t *,
-tor_get_lines_from_handle,(FILE *handle,
+tor_get_lines_from_handle,(int fd,
                            enum stream_status *stream_status));
 #endif
 

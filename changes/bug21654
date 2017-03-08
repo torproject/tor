@@ -1,0 +1,4 @@
+  o Code simplifications and refactoring
+    - Use unbuffered I/O for utility functions around the process_handle_t
+      type. This fixes unit test failures reported on OpenBSD and FreeBSD.
+      Fixes bug 21654.
