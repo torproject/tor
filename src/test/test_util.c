@@ -4049,7 +4049,123 @@ test_util_fgets_eagain(void *ptr)
   if (test_pipe[1] != -1)
     close(test_pipe[1]);
 }
-#endif
+
+static void
+test_util_string_from_pipe(void *ptr)
+{
+  int test_pipe[2] = {-1, -1};
+  int retval = 0;
+  enum stream_status status = IO_STREAM_TERM;
+  ssize_t retlen;
+  char buf[4] = { 0 };
+
+  (void)ptr;
+
+  errno = 0;
+
+  /* Set up a pipe to test on */
+  retval = pipe(test_pipe);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Send in a string. */
+  retlen = write(test_pipe[1], "ABC", 3);
+  tt_int_op(retlen, OP_EQ, 3);
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "ABC");
+  errno = 0;
+
+  /* Send in a string that contains a nul. */
+  retlen = write(test_pipe[1], "AB\0", 3);
+  tt_int_op(retlen, OP_EQ, 3);
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "AB");
+  errno = 0;
+
+  /* Send in a string that contains a nul only. */
+  retlen = write(test_pipe[1], "\0", 1);
+  tt_int_op(retlen, OP_EQ, 1);
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "");
+  errno = 0;
+
+  /* Send in a string that contains a trailing newline. */
+  retlen = write(test_pipe[1], "AB\n", 3);
+  tt_int_op(retlen, OP_EQ, 3);
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "AB");
+  errno = 0;
+
+  /* Send in a string that contains a newline only. */
+  retlen = write(test_pipe[1], "\n", 1);
+  tt_int_op(retlen, OP_EQ, 1);
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "");
+  errno = 0;
+
+  /* Send in a string and check that we nul terminate return values. */
+  retlen = write(test_pipe[1], "AAA", 3);
+  tt_int_op(retlen, OP_EQ, 3);
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "AAA");
+  tt_mem_op(buf, OP_EQ, "AAA\0", sizeof(buf));
+  errno = 0;
+
+  retlen = write(test_pipe[1], "B", 1);
+  tt_int_op(retlen, OP_EQ, 1);
+
+  memset(buf, '\xff', sizeof(buf));
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "B");
+  tt_mem_op(buf, OP_EQ, "B\0\xff\xff", sizeof(buf));
+  errno = 0;
+
+  /* Send in a line and close */
+  retlen = write(test_pipe[1], "AB", 2);
+  tt_int_op(retlen, OP_EQ, 2);
+  retval = close(test_pipe[1]);
+  tt_int_op(retval, OP_EQ, 0);
+  test_pipe[1] = -1;
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "AB");
+  errno = 0;
+
+  /* Check for EOF */
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_CLOSED);
+  errno = 0;
+
+ done:
+  if (test_pipe[0] != -1)
+    close(test_pipe[0]);
+  if (test_pipe[1] != -1)
+    close(test_pipe[1]);
+}
+
+#endif // _WIN32
 
 /**
  * Test for format_hex_number_sigsafe()
@@ -5724,6 +5840,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST_WIN_ONLY(load_win_lib, 0),
   UTIL_TEST_NO_WIN(exit_status, 0),
   UTIL_TEST_NO_WIN(fgets_eagain, 0),
+  UTIL_TEST_NO_WIN(string_from_pipe, 0),
   UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(format_dec_number, 0),
   UTIL_TEST(join_win_cmdline, 0),
