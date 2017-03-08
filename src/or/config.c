@@ -2815,7 +2815,7 @@ compute_publishserverdescriptor(or_options_t *options)
 #define MAX_PREDICTED_CIRCS_RELEVANCE (60*60)
 
 /** Highest allowable value for RendPostPeriod. */
-#define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
+#define MAX_DIR_PERIOD ((7*24*60*60)/2)
 
 /** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
