@@ -2118,7 +2118,7 @@ read_all(tor_socket_t fd, char *buf, size_t count, int isSocket)
     return -1;
   }
 
-  while (numread != count) {
+  while (numread < count) {
     if (isSocket)
       result = tor_socket_recv(fd, buf+numread, count-numread, 0);
     else
@@ -4943,7 +4943,7 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count,
   if (count > SIZE_T_CEILING || count > SSIZE_MAX)
     return -1;
 
-  while (numread != count) {
+  while (numread < count) {
     /* Check if there is anything to read */
     retval = PeekNamedPipe(h, NULL, 0, NULL, &byte_count, NULL);
     if (!retval) {
@@ -5009,7 +5009,7 @@ tor_read_all_handle(int fd, char *buf, size_t count,
   if (count > SIZE_T_CEILING || count > SSIZE_MAX)
     return -1;
 
-  while (numread != count) {
+  while (numread < count) {
     result = read(fd, buf+numread, count-numread);
 
     if (result == 0) {
