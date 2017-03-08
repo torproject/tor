@@ -2701,7 +2701,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
     return -1;
   }
 
-  if (!tor_fgets(line, sizeof(line), fp)
+  if (!fgets(line, sizeof(line), fp)
           || !strlen(line) || line[strlen(line)-1] != '\n') {
     log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
              escaped(line));
@@ -2731,7 +2731,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
 
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
-    if (tor_fgets(line, sizeof(line), fp) && strlen(line)) {
+    if (fgets(line, sizeof(line), fp) && strlen(line)) {
       if (measured_bw_line_parse(&parsed_line, line) != -1) {
         /* Also cache the line for dirserv_get_bandwidth_for_router() */
         dirserv_cache_measured_bw(&parsed_line, file_time);

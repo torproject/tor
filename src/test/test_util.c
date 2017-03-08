@@ -3940,116 +3940,6 @@ test_util_exit_status(void *ptr)
 #endif
 
 #ifndef _WIN32
-/* Check that fgets with a non-blocking pipe returns partial lines and sets
- * EAGAIN, returns full lines and sets no error, and returns NULL on EOF and
- * sets no error */
-static void
-test_util_fgets_eagain(void *ptr)
-{
-  int test_pipe[2] = {-1, -1};
-  int retval;
-  ssize_t retlen;
-  char *retptr;
-  FILE *test_stream = NULL;
-  char buf[4] = { 0 };
-
-  (void)ptr;
-
-  errno = 0;
-
-  /* Set up a pipe to test on */
-  retval = pipe(test_pipe);
-  tt_int_op(retval, OP_EQ, 0);
-
-  /* Set up the read-end to be non-blocking */
-  retval = fcntl(test_pipe[0], F_SETFL, O_NONBLOCK);
-  tt_int_op(retval, OP_EQ, 0);
-
-  /* Open it as a stdio stream */
-  test_stream = fdopen(test_pipe[0], "r");
-  tt_ptr_op(test_stream, OP_NE, NULL);
-
-  /* Send in a partial line */
-  retlen = write(test_pipe[1], "A", 1);
-  tt_int_op(retlen, OP_EQ, 1);
-  retptr = tor_fgets(buf, sizeof(buf), test_stream);
-  tt_int_op(errno, OP_EQ, EAGAIN);
-  tt_ptr_op(retptr, OP_EQ, NULL);
-  tt_str_op(buf, OP_EQ, "A");
-  errno = 0;
-
-  /* Send in the rest */
-  retlen = write(test_pipe[1], "B\n", 2);
-  tt_int_op(retlen, OP_EQ, 2);
-  retptr = tor_fgets(buf, sizeof(buf), test_stream);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_ptr_op(retptr, OP_EQ, buf);
-  tt_str_op(buf, OP_EQ, "B\n");
-  errno = 0;
-  memset(buf, '\0', sizeof(buf));
-
-  /* Send in a full line */
-  retlen = write(test_pipe[1], "CD\n", 3);
-  tt_int_op(retlen, OP_EQ, 3);
-  retptr = tor_fgets(buf, sizeof(buf), test_stream);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_ptr_op(retptr, OP_EQ, buf);
-  tt_str_op(buf, OP_EQ, "CD\n");
-  errno = 0;
-  memset(buf, '\0', sizeof(buf));
-
-  /* Send in a partial line */
-  retlen = write(test_pipe[1], "E", 1);
-  tt_int_op(retlen, OP_EQ, 1);
-  retptr = tor_fgets(buf, sizeof(buf), test_stream);
-  tt_int_op(errno, OP_EQ, EAGAIN);
-  tt_ptr_op(retptr, OP_EQ, NULL);
-  tt_str_op(buf, OP_EQ, "E");
-  errno = 0;
-
-  /* Send in the rest */
-  retlen = write(test_pipe[1], "F\n", 2);
-  tt_int_op(retlen, OP_EQ, 2);
-  retptr = tor_fgets(buf, sizeof(buf), test_stream);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_ptr_op(retptr, OP_EQ, buf);
-  tt_str_op(buf, OP_EQ, "F\n");
-  errno = 0;
-  memset(buf, '\0', sizeof(buf));
-
-  /* Send in a full line and close */
-  retlen = write(test_pipe[1], "GH", 2);
-  tt_int_op(retlen, OP_EQ, 2);
-  retval = close(test_pipe[1]);
-  tt_int_op(retval, OP_EQ, 0);
-  test_pipe[1] = -1;
-  retptr = tor_fgets(buf, sizeof(buf), test_stream);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_ptr_op(retptr, OP_EQ, buf);
-  tt_str_op(buf, OP_EQ, "GH");
-  errno = 0;
-
-  /* Check for EOF */
-  retptr = tor_fgets(buf, sizeof(buf), test_stream);
-  tt_int_op(errno, OP_EQ, 0);
-  tt_ptr_op(retptr, OP_EQ, NULL);
-  retval = feof(test_stream);
-  tt_int_op(retval, OP_NE, 0);
-  errno = 0;
-
-  /* Check that buf is unchanged according to C99 and C11 */
-  tt_str_op(buf, OP_EQ, "GH");
-  memset(buf, '\0', sizeof(buf));
-
- done:
-  if (test_stream != NULL)
-    fclose(test_stream);
-  if (test_pipe[0] != -1)
-    close(test_pipe[0]);
-  if (test_pipe[1] != -1)
-    close(test_pipe[1]);
-}
-
 static void
 test_util_string_from_pipe(void *ptr)
 {
@@ -5839,7 +5729,6 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(num_cpus, 0),
   UTIL_TEST_WIN_ONLY(load_win_lib, 0),
   UTIL_TEST_NO_WIN(exit_status, 0),
-  UTIL_TEST_NO_WIN(fgets_eagain, 0),
   UTIL_TEST_NO_WIN(string_from_pipe, 0),
   UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(format_dec_number, 0),
