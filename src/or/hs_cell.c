@@ -18,6 +18,7 @@
 #include "hs/cell_common.h"
 #include "hs/cell_establish_intro.h"
 #include "hs/cell_introduce1.h"
+#include "hs/cell_rendezvous.h"
 
 /* Compute the MAC of an INTRODUCE cell in mac_out. The encoded_cell param is
  * the cell content up to the ENCRYPTED section of length encoded_cell_len.
@@ -498,5 +499,39 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   trn_cell_introduce1_free(cell);
   trn_cell_introduce_encrypted_free(enc_cell);
   return ret;
+}
+
+/* Build a RENDEZVOUS1 cell with the given rendezvous cookie and handshake
+ * info. The encoded cell is put in cell_out and the length of the data is
+ * returned. This can't fail. */
+ssize_t
+hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
+                          size_t rendezvous_cookie_len,
+                          const uint8_t *rendezvous_handshake_info,
+                          size_t rendezvous_handshake_info_len,
+                          uint8_t *cell_out)
+{
+  ssize_t cell_len;
+  trn_cell_rendezvous1_t *cell;
+
+  tor_assert(rendezvous_cookie);
+  tor_assert(rendezvous_handshake_info);
+  tor_assert(cell_out);
+
+  cell = trn_cell_rendezvous1_new();
+  /* Set the RENDEZVOUS_COOKIE. */
+  memcpy(trn_cell_rendezvous1_getarray_rendezvous_cookie(cell),
+         rendezvous_cookie, rendezvous_cookie_len);
+  /* Set the HANDSHAKE_INFO. */
+  trn_cell_rendezvous1_setlen_handshake_info(cell,
+                                            rendezvous_handshake_info_len);
+  memcpy(trn_cell_rendezvous1_getarray_handshake_info(cell),
+         rendezvous_handshake_info, rendezvous_handshake_info_len);
+  /* Encoding. */
+  cell_len = trn_cell_rendezvous1_encode(cell_out, RELAY_PAYLOAD_SIZE, cell);
+  tor_assert(cell_len > 0);
+
+  trn_cell_rendezvous1_free(cell);
+  return cell_len;
 }
 

@@ -47,10 +47,17 @@ typedef struct hs_cell_introduce2_data_t {
   smartlist_t *link_specifiers;
 } hs_cell_introduce2_data_t;
 
+/* Build cell API. */
 ssize_t hs_cell_build_establish_intro(const char *circ_nonce,
                                       const hs_service_intro_point_t *ip,
                                       uint8_t *cell_out);
+ssize_t hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
+                                  size_t rendezvous_cookie_len,
+                                  const uint8_t *rendezvous_handshake_info,
+                                  size_t rendezvous_handshake_info_len,
+                                  uint8_t *cell_out);
 
+/* Parse cell API. */
 ssize_t hs_cell_parse_intro_established(const uint8_t *payload,
                                         size_t payload_len);
 ssize_t hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,

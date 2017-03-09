@@ -685,6 +685,63 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
   return ret;
 }
 
+/* Called when a service rendezvous point circuit is done building. Given the
+ * service and the circuit, this function will send a RENDEZVOUS1 cell on the
+ * circuit using the information in the circuit identifier. If the cell can't
+ * be sent, the circuit is closed. */
+void
+hs_circ_service_rp_has_opened(const hs_service_t *service,
+                              origin_circuit_t *circ)
+{
+  size_t payload_len;
+  uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
+
+  tor_assert(service);
+  tor_assert(circ);
+  tor_assert(circ->hs_ident);
+
+  /* Some useful logging. */
+  log_info(LD_REND, "Rendezvous circuit %u has opened with cookie %s "
+                    "for service %s",
+           TO_CIRCUIT(circ)->n_circ_id,
+           hex_str((const char *) circ->hs_ident->rendezvous_cookie,
+                   REND_COOKIE_LEN),
+           safe_str_client(service->onion_address));
+  circuit_log_path(LOG_INFO, LD_REND, circ);
+
+  /* This can't fail. */
+  payload_len = hs_cell_build_rendezvous1(
+                        circ->hs_ident->rendezvous_cookie,
+                        sizeof(circ->hs_ident->rendezvous_cookie),
+                        circ->hs_ident->rendezvous_handshake_info,
+                        sizeof(circ->hs_ident->rendezvous_handshake_info),
+                        payload);
+
+  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
+                                   RELAY_COMMAND_RENDEZVOUS1,
+                                   (const char *) payload, payload_len,
+                                   circ->cpath->prev) < 0) {
+    /* On error, circuit is closed. */
+    log_warn(LD_REND, "Unable to send RENDEZVOUS1 cell on circuit %u "
+                      "for service %s",
+             TO_CIRCUIT(circ)->n_circ_id,
+             safe_str_client(service->onion_address));
+    goto done;
+  }
+
+  /* Setup end-to-end rendezvous circuit between the client and us. */
+  if (hs_circuit_setup_e2e_rend_circ(circ,
+                       circ->hs_ident->rendezvous_ntor_key_seed,
+                       sizeof(circ->hs_ident->rendezvous_ntor_key_seed),
+                       1) < 0) {
+    log_warn(LD_GENERAL, "Failed to setup circ");
+    goto done;
+  }
+
+ done:
+  memwipe(payload, 0, sizeof(payload));
+}
+
 /* Handle an INTRO_ESTABLISHED cell payload of length payload_len arriving on
  * the given introduction circuit circ. The service is only used for logging
  * purposes. Return 0 on success else a negative value. */

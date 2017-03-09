@@ -1782,11 +1782,44 @@ service_intro_circ_has_opened(origin_circuit_t *circ)
   return;
 }
 
+/* Called when a rendezvous circuit is done building and ready to be used. */
 static void
 service_rendezvous_circ_has_opened(origin_circuit_t *circ)
 {
+  hs_service_t *service = NULL;
+
   tor_assert(circ);
-  /* XXX: Implement rendezvous support. */
+  tor_assert(circ->cpath);
+  /* Getting here means this is a v3 intro circuit. */
+  tor_assert(circ->hs_ident);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+
+  /* Declare the circuit dirty to avoid reuse, and for path-bias */
+  if (!TO_CIRCUIT(circ)->timestamp_dirty)
+    TO_CIRCUIT(circ)->timestamp_dirty = time(NULL);
+  pathbias_count_use_attempt(circ);
+
+  /* Get the corresponding service and intro point. */
+  get_objects_from_ident(circ->hs_ident, &service, NULL, NULL);
+  if (service == NULL) {
+    log_warn(LD_REND, "Unknown service identity key %s on the rendezvous "
+                      "circuit %u with cookie %s. Can't find onion service.",
+             safe_str_client(ed25519_fmt(&circ->hs_ident->identity_pk)),
+             TO_CIRCUIT(circ)->n_circ_id,
+             hex_str((const char *) circ->hs_ident->rendezvous_cookie,
+                     REND_COOKIE_LEN));
+    goto err;
+  }
+
+  /* If the cell can't be sent, the circuit will be closed within this
+   * function. */
+  hs_circ_service_rp_has_opened(service, circ);
+  goto done;
+
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NOSUCHSERVICE);
+ done:
+  return;
 }
 
 /* Handle an INTRO_ESTABLISHED cell arriving on the given introduction
