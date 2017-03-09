@@ -3476,45 +3476,6 @@ tor_getpass(const char *prompt, char *output, size_t buflen)
 #endif
 }
 
-/** Read at most one less than the number of characters specified by
- * <b>size</b> from the given <b>stream</b> and store it in <b>str</b>.
- *
- * Reading stops when a newline character is found or at EOF or error. If any
- * characters are read and there's no error, a trailing NUL byte is appended to
- * the end of <b>str</b>.
- *
- * Upon successful completion, this function returns a pointer to the string
- * <b>str</b>. If EOF occurs before any characters are read the function will
- * return NULL and the content of <b>str</b> is unchanged. Upon error, the
- * function returns NULL and the caller must check for error using foef(3) and
- * ferror(3).
- */
-char *
-tor_fgets(char *str, int size, FILE *stream)
-{
-  char *ret;
-
-  /* Reset errno before our call to fgets(3) to avoid a situation where the
-   * caller is calling us again because we just returned NULL and errno ==
-   * EAGAIN, but when they call us again we will always return NULL because the
-   * error flag on the file handler remains set and errno is set to EAGAIN.
-   */
-  errno = 0;
-
-  ret = fgets(str, size, stream);
-
-  /* FreeBSD, OpenBSD, Linux (glibc), and Linux (musl) seem to disagree about
-   * what to do in the given situation. We check if the stream has been flagged
-   * with an error-bit and return NULL in that situation if errno is also set
-   * to EAGAIN.
-   */
-  if (ferror(stream) && errno == EAGAIN) {
-    return NULL;
-  }
-
-  return ret;
-}
-
 /** Return the amount of free disk space we have permission to use, in
  * bytes. Return -1 if the amount of free space can't be determined. */
 int64_t

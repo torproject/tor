@@ -242,7 +242,7 @@ test_util_spawn_background_partial_read_impl(int exit_early)
 #else
     /* Check that we didn't read the end of file last time */
     tt_assert(!eof);
-    pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
+    pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL, &eof);
 #endif
     log_info(LD_GENERAL, "tor_read_all_handle() returned %d", (int)pos);
@@ -273,7 +273,7 @@ test_util_spawn_background_partial_read_impl(int exit_early)
 #else
   if (!eof) {
     /* We should have got all the data, but maybe not the EOF flag */
-    pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
+    pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                               sizeof(stdout_buf) - 1,
                               process_handle, &eof);
     tt_int_op(0,OP_EQ, pos);

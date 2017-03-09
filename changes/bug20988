@@ -1,4 +1,0 @@
-  o Minor bugfixes (portability):
-    - Add Tor compatibility function for fgets(3) due to inconsistency of
-      returned values in different supported C libraries. This fixes unit test
-      failures reported on FreeBSD. Fixes bug 20988.

@@ -346,7 +346,7 @@ geoip_load_file(sa_family_t family, const char *filename)
              (family == AF_INET) ? "IPv4" : "IPv6", filename);
   while (!feof(f)) {
     char buf[512];
-    if (tor_fgets(buf, (int)sizeof(buf), f) == NULL)
+    if (fgets(buf, (int)sizeof(buf), f) == NULL)
       break;
     crypto_digest_add_bytes(geoip_digest_env, buf, strlen(buf));
     /* FFFF track full country name. */
