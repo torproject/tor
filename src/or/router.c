@@ -708,6 +708,22 @@ get_onion_key_lifetime(void)
   return get_onion_key_rotation_days_()*24*60*60;
 }
 
+/** Get the grace period of an onion key in seconds. This value is defined by
+ * the network consesus parameter "onion-key-grace-period-days", but the value
+ * is converted to seconds.
+ */
+int
+get_onion_key_grace_period(void)
+{
+  int grace_period;
+  grace_period = networkstatus_get_param(NULL,
+                                         "onion-key-grace-period-days",
+                                         DEFAULT_ONION_KEY_GRACE_PERIOD_DAYS,
+                                         MIN_ONION_KEY_GRACE_PERIOD_DAYS,
+                                         get_onion_key_rotation_days_());
+  return grace_period*24*60*60;
+}
+
 /** Set up Tor's TLS contexts, based on our configuration and keys. Return 0
  * on success, and -1 on failure. */
 int

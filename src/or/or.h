@@ -156,6 +156,14 @@
 /** Default lifetime for an onion key in days. */
 #define DEFAULT_ONION_KEY_LIFETIME_DAYS (28)
 
+/** Minimum grace period for acceptance of an onion key in days.
+ * The maximum value is defined in proposal #274 as being the current network
+ * consensus parameter for "onion-key-rotation-days". */
+#define MIN_ONION_KEY_GRACE_PERIOD_DAYS (1)
+
+/** Default grace period for acceptance of an onion key in days. */
+#define DEFAULT_ONION_KEY_GRACE_PERIOD_DAYS (7)
+
 /** How often do we rotate TLS contexts? */
 #define MAX_SSL_KEY_LIFETIME_INTERNAL (2*60*60)
 
