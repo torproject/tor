@@ -814,6 +814,9 @@ directory_remove_invalid(void)
  * Allocate and return a description of the status of the server <b>desc</b>,
  * for use in a v1-style router-status line.  The server is listed
  * as running iff <b>is_live</b> is true.
+ *
+ * This is deprecated: it's only used for controllers that want outputs in
+ * the old format.
  */
 static char *
 list_single_server_status(const routerinfo_t *desc, int is_live)
@@ -926,6 +929,9 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
  * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
  *
  * If for_controller is true, include the routers with very old descriptors.
+ *
+ * This is deprecated: it's only used for controllers that want outputs in
+ * the old format.
  */
 int
 list_server_status_v1(smartlist_t *routers, char **router_status_out,

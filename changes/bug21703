@@ -1,0 +1,4 @@
+  o Minor features (controller):
+    - Warn the first time that a controller requests data in the
+      long-deprecated 'GETINFO network-status' format. Closes ticket 21703.
+
