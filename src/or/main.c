@@ -1161,6 +1161,7 @@ static int periodic_events_initialized = 0;
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
 CALLBACK(rotate_onion_key);
+CALLBACK(check_onion_keys_expiry_time);
 CALLBACK(check_ed_keys);
 CALLBACK(launch_descriptor_fetches);
 CALLBACK(rotate_x509_certificate);
@@ -1192,6 +1193,7 @@ CALLBACK(heartbeat);
 
 static periodic_event_item_t periodic_events[] = {
   CALLBACK(rotate_onion_key),
+  CALLBACK(check_onion_keys_expiry_time),
   CALLBACK(check_ed_keys),
   CALLBACK(launch_descriptor_fetches),
   CALLBACK(rotate_x509_certificate),
@@ -1496,6 +1498,33 @@ rotate_onion_key_callback(time_t now, const or_options_t *options)
       router_upload_dir_desc_to_dirservers(0);
     return onion_key_lifetime;
   }
+  return PERIODIC_EVENT_NO_UPDATE;
+}
+
+/* Period callback: Check if our old onion keys are still valid after the
+ * period of time defined by the consensus parameter
+ * "onion-key-grace-period-days", otherwise expire them by setting them to
+ * NULL.
+ */
+static int
+check_onion_keys_expiry_time_callback(time_t now, const or_options_t *options)
+{
+  if (server_mode(options)) {
+    int onion_key_grace_period = get_onion_key_grace_period();
+    time_t expiry_time = get_onion_key_set_at()+onion_key_grace_period;
+
+    if (expiry_time > now) {
+      return safe_timer_diff(now, expiry_time);
+    }
+
+    log_info(LD_GENERAL, "Expiring old onion keys.");
+
+    expire_old_onion_keys();
+    cpuworkers_rotate_keyinfo();
+
+    return onion_key_grace_period;
+  }
+
   return PERIODIC_EVENT_NO_UPDATE;
 }
 

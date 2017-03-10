@@ -148,6 +148,51 @@ dup_onion_keys(crypto_pk_t **key, crypto_pk_t **last)
   tor_mutex_release(key_lock);
 }
 
+/** Expire our old set of onion keys. This is done by setting
+ * last_curve25519_onion_key and lastonionkey to all zero's and NULL
+ * respectively.
+ *
+ * This function does not perform any grace period checks for the old onion
+ * keys.
+ */
+void
+expire_old_onion_keys(void)
+{
+  char *fname = NULL;
+
+  tor_mutex_acquire(key_lock);
+
+  /* Free lastonionkey and set it to NULL. */
+  if (lastonionkey) {
+    crypto_pk_free(lastonionkey);
+    lastonionkey = NULL;
+  }
+
+  /* We zero out the keypair. See the tor_mem_is_zero() check made in
+   * construct_ntor_key_map() below. */
+  memset(&last_curve25519_onion_key, 0, sizeof(last_curve25519_onion_key));
+
+  tor_mutex_release(key_lock);
+
+  fname = get_datadir_fname2("keys", "secret_onion_key.old");
+  if (file_status(fname) == FN_FILE) {
+    if (tor_unlink(fname) != 0) {
+      log_warn(LD_FS, "Couldn't unlink old onion key file %s: %s",
+               fname, strerror(errno));
+    }
+  }
+  tor_free(fname);
+
+  fname = get_datadir_fname2("keys", "secret_onion_key_ntor.old");
+  if (file_status(fname) == FN_FILE) {
+    if (tor_unlink(fname) != 0) {
+      log_warn(LD_FS, "Couldn't unlink old ntor onion key file %s: %s",
+               fname, strerror(errno));
+    }
+  }
+  tor_free(fname);
+}
+
 /** Return the current secret onion key for the ntor handshake. Must only
  * be called from the main thread. */
 static const curve25519_keypair_t *
