@@ -227,6 +227,7 @@ extern struct testcase_t routerkeys_tests[];
 extern struct testcase_t routerlist_tests[];
 extern struct testcase_t routerset_tests[];
 extern struct testcase_t scheduler_tests[];
+extern struct testcase_t storagedir_tests[];
 extern struct testcase_t socks_tests[];
 extern struct testcase_t status_tests[];
 extern struct testcase_t thread_tests[];

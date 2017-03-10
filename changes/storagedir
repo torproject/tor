@@ -1,0 +1,5 @@
+  o Minor features (infrastructure, seccomp2 sandbox):
+    - We now have a document storage backend compatible with the Linux
+      seccomp2 sandbox. The long-term plan is to use this backend for
+      consensus documents and for storing unparseable directory
+      material.  Closes ticket 21645.
