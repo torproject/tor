@@ -31,6 +31,7 @@ void rotate_onion_key(void);
 crypto_pk_t *init_key_from_file(const char *fname, int generate,
                                     int severity, int log_greeting);
 void v3_authority_check_key_expiry(void);
+int get_onion_key_lifetime(void);
 
 di_digest256_map_t *construct_ntor_key_map(void);
 void ntor_key_map_free(di_digest256_map_t *map);

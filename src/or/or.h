@@ -147,8 +147,15 @@
 /** Maximum size of a single extrainfo document, as above. */
 #define MAX_EXTRAINFO_UPLOAD_SIZE 50000
 
-/** How often do we rotate onion keys? */
-#define MIN_ONION_KEY_LIFETIME (7*24*60*60)
+/** Minimum lifetime for an onion key in days. */
+#define MIN_ONION_KEY_LIFETIME_DAYS (1)
+
+/** Maximum lifetime for an onion key in days. */
+#define MAX_ONION_KEY_LIFETIME_DAYS (90)
+
+/** Default lifetime for an onion key in days. */
+#define DEFAULT_ONION_KEY_LIFETIME_DAYS (28)
+
 /** How often do we rotate TLS contexts? */
 #define MAX_SSL_KEY_LIFETIME_INTERNAL (2*60*60)
 

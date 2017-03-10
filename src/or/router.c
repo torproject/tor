@@ -683,6 +683,31 @@ v3_authority_check_key_expiry(void)
   last_warned = now;
 }
 
+/** Get the lifetime of an onion key in days. This value is defined by the
+ * network consesus parameter "onion-key-rotation-days". Always returns a value
+ * between <b>MIN_ONION_KEY_LIFETIME_DAYS</b> and
+ * <b>MAX_ONION_KEY_LIFETIME_DAYS</b>.
+ */
+static int
+get_onion_key_rotation_days_(void)
+{
+  return networkstatus_get_param(NULL,
+                                 "onion-key-rotation-days",
+                                 DEFAULT_ONION_KEY_LIFETIME_DAYS,
+                                 MIN_ONION_KEY_LIFETIME_DAYS,
+                                 MAX_ONION_KEY_LIFETIME_DAYS);
+}
+
+/** Get the current lifetime of an onion key in seconds. This value is defined
+ * by the network consesus parameter "onion-key-rotation-days", but the value
+ * is converted to seconds.
+ */
+int
+get_onion_key_lifetime(void)
+{
+  return get_onion_key_rotation_days_()*24*60*60;
+}
+
 /** Set up Tor's TLS contexts, based on our configuration and keys. Return 0
  * on success, and -1 on failure. */
 int
@@ -928,7 +953,7 @@ init_keys(void)
       /* We have no LastRotatedOnionKey set; either we just created the key
        * or it's a holdover from 0.1.2.4-alpha-dev or earlier.  In either case,
        * start the clock ticking now so that we will eventually rotate it even
-       * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
+       * if we don't stay up for the full lifetime of an onion key. */
       state->LastRotatedOnionKey = onionkey_set_at = now;
       or_state_mark_dirty(state, options->AvoidDiskWrites ?
                                    time(NULL)+3600 : 0);
@@ -2760,7 +2785,7 @@ router_dump_router_to_string(routerinfo_t *router,
       make_ntor_onion_key_crosscert(ntor_keypair,
                          &router->cache_info.signing_key_cert->signing_key,
                          router->cache_info.published_on,
-                         MIN_ONION_KEY_LIFETIME, &sign);
+                         get_onion_key_lifetime(), &sign);
     if (!cert) {
       log_warn(LD_BUG,"make_ntor_onion_key_crosscert failed!");
       goto err;
