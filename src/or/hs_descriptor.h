@@ -41,24 +41,11 @@
  * the secret IV and MAC key length which is the length of H() output. */
 #define HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN \
   CIPHER256_KEY_LEN + CIPHER_IV_LEN + DIGEST256_LEN
-/* We need to pad the plaintext version of the encrypted data section before
- * encryption and it has to be a multiple of this value. */
-#define HS_DESC_PLAINTEXT_PADDING_MULTIPLE 128
-/* XXX: Let's make sure this makes sense as an upper limit for the padded
- * plaintext section. Then we should enforce it as now only an assert will be
- * triggered if we are above it. */
-/* Once padded, this is the maximum length in bytes for the plaintext. */
-#define HS_DESC_PADDED_PLAINTEXT_MAX_LEN 8192
-/* Minimum length in bytes of the encrypted portion of the descriptor. */
-#define HS_DESC_ENCRYPTED_MIN_LEN \
-  HS_DESC_ENCRYPTED_SALT_LEN + \
-  HS_DESC_PLAINTEXT_PADDING_MULTIPLE + DIGEST256_LEN
+/* Pad plaintext of superencrypted data section before encryption so that its
+ * length is a multiple of this value. */
+#define HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE 10000
 /* Maximum length in bytes of a full hidden service descriptor. */
 #define HS_DESC_MAX_LEN 50000 /* 50kb max size */
-/* The minimum amount of fields a descriptor should contain. The parsing of
- * the fields are version specific so the only required field, as a generic
- * view of a descriptor, is 1 that is the version field. */
-#define HS_DESC_PLAINTEXT_MIN_FIELDS 1
 
 /* Key length for the descriptor symmetric encryption. As specified in the
  * protocol, we use AES-256 for the encrypted section of the descriptor. The
@@ -68,8 +55,7 @@
 
 /* Type of authentication in the descriptor. */
 typedef enum {
-  HS_DESC_AUTH_PASSWORD = 1,
-  HS_DESC_AUTH_ED25519  = 2,
+  HS_DESC_AUTH_ED25519 = 1
 } hs_desc_auth_type_t;
 
 /* Type of encryption key in the descriptor. */
@@ -132,7 +118,7 @@ typedef struct hs_desc_encrypted_data_t {
 
   /* A list of authentication types that a client must at least support one
    * in order to contact the service. Contains NULL terminated strings. */
-  smartlist_t *auth_types;
+  smartlist_t *intro_auth_types;
 
   /* Is this descriptor a single onion service? */
   unsigned int single_onion_service : 1;
@@ -167,11 +153,11 @@ typedef struct hs_desc_plaintext_data_t {
    * has changed. Spec specifies this as a 8 bytes positive integer. */
   uint64_t revision_counter;
 
-  /* Decoding only: The base64-decoded encrypted blob from the descriptor */
-  uint8_t *encrypted_blob;
+  /* Decoding only: The b64-decoded superencrypted blob from the descriptor */
+  uint8_t *superencrypted_blob;
 
-  /* Decoding only: Size of the encrypted_blob */
-  size_t encrypted_blob_size;
+  /* Decoding only: Size of the superencrypted_blob */
+  size_t superencrypted_blob_size;
 } hs_desc_plaintext_data_t;
 
 /* Service descriptor in its decoded form. */
@@ -242,6 +228,8 @@ STATIC int desc_sig_is_valid(const char *b64_sig,
                              const ed25519_public_key_t *signing_pubkey,
                              const char *encoded_desc, size_t encoded_len);
 STATIC void desc_intro_point_free(hs_desc_intro_point_t *ip);
+STATIC size_t decode_superencrypted(const char *message, size_t message_len,
+                                   uint8_t **encrypted_out);
 #endif /* HS_DESCRIPTOR_PRIVATE */
 
 #endif /* TOR_HS_DESCRIPTOR_H */

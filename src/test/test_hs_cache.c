@@ -93,8 +93,8 @@ helper_build_hs_desc(uint64_t revision_counter, uint32_t lifetime,
 
   /* Setup encrypted data section. */
   desc->encrypted_data.create2_ntor = 1;
-  desc->encrypted_data.auth_types = smartlist_new();
-  smartlist_add(desc->encrypted_data.auth_types, tor_strdup("ed25519"));
+  desc->encrypted_data.intro_auth_types = smartlist_new();
+  smartlist_add(desc->encrypted_data.intro_auth_types, tor_strdup("ed25519"));
   desc->encrypted_data.intro_points = smartlist_new();
   /* Add an intro point. */
   smartlist_add(desc->encrypted_data.intro_points,
@@ -333,7 +333,7 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
     size_t body_used = 0;
 
     fetch_from_buf_http(TO_CONN(conn)->outbuf, &headers, MAX_HEADERS_SIZE,
-                        &received_desc, &body_used, 10000, 0);
+                        &received_desc, &body_used, HS_DESC_MAX_LEN, 0);
     tor_free(headers);
   }
 

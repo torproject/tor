@@ -15,6 +15,9 @@
 #include "test.h"
 #include "torcert.h"
 
+#include "test_helpers.h"
+#include "log_test_helpers.h"
+
 static hs_desc_intro_point_t *
 helper_build_intro_point(const ed25519_keypair_t *blinded_kp, time_t now,
                          const char *addr, int legacy)
@@ -105,9 +108,9 @@ helper_build_hs_desc(unsigned int no_ip, ed25519_public_key_t *signing_pubkey)
 
   /* Setup encrypted data section. */
   desc->encrypted_data.create2_ntor = 1;
-  desc->encrypted_data.auth_types = smartlist_new();
+  desc->encrypted_data.intro_auth_types = smartlist_new();
   desc->encrypted_data.single_onion_service = 1;
-  smartlist_add(desc->encrypted_data.auth_types, tor_strdup("ed25519"));
+  smartlist_add(desc->encrypted_data.intro_auth_types, tor_strdup("ed25519"));
   desc->encrypted_data.intro_points = smartlist_new();
   if (!no_ip) {
     /* Add four intro points. */
@@ -157,14 +160,17 @@ helper_compare_hs_desc(const hs_descriptor_t *desc1,
              desc2->encrypted_data.create2_ntor);
 
   /* Authentication type. */
-  tt_int_op(!!desc1->encrypted_data.auth_types, ==,
-            !!desc2->encrypted_data.auth_types);
-  if (desc1->encrypted_data.auth_types && desc2->encrypted_data.auth_types) {
-    tt_int_op(smartlist_len(desc1->encrypted_data.auth_types), ==,
-              smartlist_len(desc2->encrypted_data.auth_types));
-    for (int i = 0; i < smartlist_len(desc1->encrypted_data.auth_types); i++) {
-      tt_str_op(smartlist_get(desc1->encrypted_data.auth_types, i), OP_EQ,
-                smartlist_get(desc2->encrypted_data.auth_types, i));
+  tt_int_op(!!desc1->encrypted_data.intro_auth_types, ==,
+            !!desc2->encrypted_data.intro_auth_types);
+  if (desc1->encrypted_data.intro_auth_types &&
+      desc2->encrypted_data.intro_auth_types) {
+    tt_int_op(smartlist_len(desc1->encrypted_data.intro_auth_types), ==,
+              smartlist_len(desc2->encrypted_data.intro_auth_types));
+    for (int i = 0;
+         i < smartlist_len(desc1->encrypted_data.intro_auth_types);
+         i++) {
+      tt_str_op(smartlist_get(desc1->encrypted_data.intro_auth_types, i),OP_EQ,
+                smartlist_get(desc2->encrypted_data.intro_auth_types, i));
     }
   }
 
@@ -311,13 +317,13 @@ test_descriptor_padding(void *arg)
 /* Example: if l = 129, the ceiled division gives 2 and then multiplied by 128
  * to give 256. With l = 127, ceiled division gives 1 then times 128. */
 #define PADDING_EXPECTED_LEN(l) \
-  CEIL_DIV(l, HS_DESC_PLAINTEXT_PADDING_MULTIPLE) * \
-  HS_DESC_PLAINTEXT_PADDING_MULTIPLE
+  CEIL_DIV(l, HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE) * \
+  HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE
 
   (void) arg;
 
   { /* test #1: no padding */
-    plaintext_len = HS_DESC_PLAINTEXT_PADDING_MULTIPLE;
+    plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE;
     plaintext = tor_malloc(plaintext_len);
     padded_len = build_plaintext_padding(plaintext, plaintext_len,
                                          &padded_plaintext);
@@ -333,7 +339,7 @@ test_descriptor_padding(void *arg)
   }
 
   { /* test #2: one byte padding? */
-    plaintext_len = HS_DESC_PLAINTEXT_PADDING_MULTIPLE - 1;
+    plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE - 1;
     plaintext = tor_malloc(plaintext_len);
     padded_plaintext = NULL;
     padded_len = build_plaintext_padding(plaintext, plaintext_len,
@@ -350,7 +356,7 @@ test_descriptor_padding(void *arg)
   }
 
   { /* test #3: Lots more bytes of padding? */
-    plaintext_len = HS_DESC_PLAINTEXT_PADDING_MULTIPLE + 1;
+    plaintext_len = HS_DESC_SUPERENC_PLAINTEXT_PAD_MULTIPLE + 1;
     plaintext = tor_malloc(plaintext_len);
     padded_plaintext = NULL;
     padded_len = build_plaintext_padding(plaintext, plaintext_len,
@@ -587,18 +593,10 @@ test_encrypted_data_len(void *arg)
   /* No length, error. */
   ret = encrypted_data_length_is_valid(0);
   tt_int_op(ret, OP_EQ, 0);
-  /* Not a multiple of our encryption algorithm (thus no padding). It's
-   * suppose to be aligned on HS_DESC_PLAINTEXT_PADDING_MULTIPLE. */
-  value = HS_DESC_PLAINTEXT_PADDING_MULTIPLE * 10 - 1;
-  ret = encrypted_data_length_is_valid(value);
-  tt_int_op(ret, OP_EQ, 0);
   /* Valid value. */
-  value = HS_DESC_PADDED_PLAINTEXT_MAX_LEN + HS_DESC_ENCRYPTED_SALT_LEN +
-          DIGEST256_LEN;
+  value = HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN + 1;
   ret = encrypted_data_length_is_valid(value);
   tt_int_op(ret, OP_EQ, 1);
-
-  /* XXX: Test maximum possible size. */
 
  done:
   ;
@@ -1006,6 +1004,103 @@ test_desc_signature(void *arg)
   tor_free(data);
 }
 
+/* bad desc auth type */
+const char bad_superencrypted_text1[] = "desc-auth-type scoobysnack\n"
+  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
+  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
+  "encrypted\n"
+  "-----BEGIN MESSAGE-----\n"
+  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
+  "BiYWQgYXQgYWxs\n"
+  "-----END MESSAGE-----\n";
+
+/* bad ephemeral key */
+const char bad_superencrypted_text2[] = "desc-auth-type x25519\n"
+  "desc-auth-ephemeral-key differentalphabet\n"
+  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
+  "encrypted\n"
+  "-----BEGIN MESSAGE-----\n"
+  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
+  "BiYWQgYXQgYWxs\n"
+  "-----END MESSAGE-----\n";
+
+/* bad encrypted msg */
+const char bad_superencrypted_text3[] = "desc-auth-type x25519\n"
+  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
+  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
+  "encrypted\n"
+  "-----BEGIN MESSAGE-----\n"
+  "SO SMALL NOT GOOD\n"
+  "-----END MESSAGE-----\n";
+
+const char correct_superencrypted_text[] = "desc-auth-type x25519\n"
+  "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
+  "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
+  "auth-client Od09Qu636Qo /PKLzqewAdS/+0+vZC+MvQ dpw4NFo13zDnuPz45rxrOg\n"
+  "auth-client JRr840iGYN0 8s8cxYqF7Lx23+NducC4Qg zAafl4wPLURkuEjJreZq1g\n"
+  "encrypted\n"
+  "-----BEGIN MESSAGE-----\n"
+  "YmVpbmcgb24gbW91bnRhaW5zLCB0aGlua2luZyBhYm91dCBjb21wdXRlcnMsIGlzIG5vdC"
+  "BiYWQgYXQgYWxs\n"
+  "-----END MESSAGE-----\n";
+
+const char correct_encrypted_plaintext[] = "being on mountains, "
+  "thinking about computers, is not bad at all";
+
+static void
+test_parse_hs_desc_superencrypted(void *arg)
+{
+  (void) arg;
+  int retval;
+  uint8_t *encrypted_out = NULL;
+
+  {
+    setup_full_capture_of_logs(LOG_WARN);
+    retval = decode_superencrypted(bad_superencrypted_text1,
+                                   strlen(bad_superencrypted_text1),
+                                   &encrypted_out);
+    tt_int_op(retval, ==, 0);
+    tt_assert(!encrypted_out);
+    expect_log_msg_containing("Unrecognized desc auth type");
+    teardown_capture_of_logs();
+  }
+
+  {
+    setup_full_capture_of_logs(LOG_WARN);
+    retval = decode_superencrypted(bad_superencrypted_text2,
+                                   strlen(bad_superencrypted_text2),
+                                   &encrypted_out);
+    tt_int_op(retval, ==, 0);
+    tt_assert(!encrypted_out);
+    expect_log_msg_containing("Bogus desc auth key in HS desc");
+    teardown_capture_of_logs();
+  }
+
+  {
+    setup_full_capture_of_logs(LOG_WARN);
+    retval = decode_superencrypted(bad_superencrypted_text3,
+                                   strlen(bad_superencrypted_text3),
+                                   &encrypted_out);
+    tt_int_op(retval, ==, 0);
+    tt_assert(!encrypted_out);
+    expect_log_msg_containing("Length of descriptor\'s encrypted data "
+                              "is too small.");
+    teardown_capture_of_logs();
+  }
+
+  /* Now finally the good one */
+  retval = decode_superencrypted(correct_superencrypted_text,
+                                 strlen(correct_superencrypted_text),
+                                 &encrypted_out);
+
+  tt_int_op(retval, ==, strlen(correct_encrypted_plaintext));
+  tt_mem_op(encrypted_out, OP_EQ, correct_encrypted_plaintext,
+            strlen(correct_encrypted_plaintext));
+
+ done:
+  tor_free(encrypted_out);
+}
+
 struct testcase_t hs_descriptor[] = {
   /* Encoding tests. */
   { "cert_encoding", test_cert_encoding, TT_FORK,
@@ -1034,6 +1129,9 @@ struct testcase_t hs_descriptor[] = {
     NULL, NULL },
   { "desc_signature", test_desc_signature, TT_FORK,
     NULL, NULL },
+
+  { "parse_hs_desc_superencrypted", test_parse_hs_desc_superencrypted,
+    TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };
