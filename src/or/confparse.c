@@ -779,6 +779,7 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       tor_free(result);
       return NULL;
     case CONFIG_TYPE_LINELIST_S:
+      tor_free(result->key);
       tor_free(result);
       result = config_lines_dup_and_filter(*(const config_line_t **)value,
                                            key);
