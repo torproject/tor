@@ -804,18 +804,6 @@ microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache, const char *d)
   return md;
 }
 
-/** Return the mean size of decriptors added to <b>cache</b> since it was last
- * cleared.  Used to estimate the size of large downloads. */
-size_t
-microdesc_average_size(microdesc_cache_t *cache)
-{
-  if (!cache)
-    cache = get_microdesc_cache();
-  if (!cache->n_seen)
-    return 512;
-  return (size_t)(cache->total_len_seen / cache->n_seen);
-}
-
 /** Return a smartlist of all the sha256 digest of the microdescriptors that
  * are listed in <b>ns</b> but not present in <b>cache</b>. Returns pointers
  * to internals of <b>ns</b>; you should not free the members of the resulting

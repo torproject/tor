@@ -32,6 +32,53 @@
 /** Maximum allowable length of a version line in a networkstatus. */
 #define MAX_V_LINE_LEN 128
 
+/** Ways to convert a spoolable_resource_t to a bunch of bytes. */
+typedef enum dir_spool_source_t {
+    DIR_SPOOL_SERVER_BY_DIGEST=1, DIR_SPOOL_SERVER_BY_FP,
+    DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
+    DIR_SPOOL_MICRODESC,
+    DIR_SPOOL_NETWORKSTATUS,
+} dir_spool_source_t;
+#define dir_spool_source_bitfield_t ENUM_BF(dir_spool_source_t)
+
+/** Object to remember the identity of an object that we are spooling,
+ * or about to spool, in response to a directory request.
+ *
+ * (Why do we spool?  Because some directory responses are very large,
+ * and we don't want to just shove the complete answer into the output
+ * buffer: that would take a ridiculous amount of RAM.)
+ *
+ * If the spooled resource is relatively small (like microdescriptors,
+ * descriptors, etc), we look them up by ID as needed, and add the whole
+ * thing onto the output buffer at once.  If the spooled reseource is
+ * big (like networkstatus documents), we reference-count it, and add it
+ * a few K at a time.
+ */
+typedef struct spooled_resource_t {
+  /**
+   * If true, we add the entire object to the outbuf.  If false,
+   * we spool the object a few K at a time.
+   */
+  unsigned spool_eagerly : 1;
+  /**
+   * Tells us what kind of object to get, and how to look it up.
+   */
+  dir_spool_source_bitfield_t spool_source : 7;
+  /**
+   * Tells us the specific object to spool.
+   */
+  uint8_t digest[DIGEST256_LEN];
+  /**
+   * A large object that we're spooling. Holds a reference count.  Only
+   * used when spool_eagerly is false.
+   */
+  struct cached_dir_t *cached_dir_ref;
+  /**
+   * The current offset into cached_dir. Only used when spool_eagerly is
+   * false */
+  off_t cached_dir_offset;
+} spooled_resource_t;
+
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 
 int dirserv_add_own_fingerprint(crypto_pk_t *pk);
@@ -65,10 +112,10 @@ void dirserv_set_cached_consensus_networkstatus(const char *consensus,
                                               const common_digests_t *digests,
                                               time_t published);
 void dirserv_clear_old_networkstatuses(time_t cutoff);
-int dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
-                                        const char **msg,
-                                        int for_unencrypted_conn,
-                                        int is_extrainfo);
+int dirserv_get_routerdesc_spool(smartlist_t *spools_out, const char *key,
+                                 dir_spool_source_t source,
+                                 int conn_is_encrytped,
+                                 const char **msg_out);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                             const char **msg);
 void dirserv_orconn_tls_done(const tor_addr_t *addr,
@@ -89,13 +136,6 @@ void dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                       uint32_t authstatus);
 
 int dirserv_would_reject_router(const routerstatus_t *rs);
-int dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff);
-int dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src);
-int dirserv_have_any_microdesc(const smartlist_t *fps);
-size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
-                                  int compressed);
-size_t dirserv_estimate_microdesc_size(const smartlist_t *fps, int compressed);
-
 char *routerstatus_format_entry(
                               const routerstatus_t *rs,
                               const char *version,
@@ -140,6 +180,18 @@ int dirserv_read_measured_bandwidths(const char *from_file,
 
 int dirserv_read_guardfraction_file(const char *fname,
                                  smartlist_t *vote_routerstatuses);
+
+spooled_resource_t *spooled_resource_new(dir_spool_source_t source,
+                                         const uint8_t *digest,
+                                         size_t digestlen);
+void spooled_resource_free(spooled_resource_t *spooled);
+void dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
+                                                 time_t cutoff,
+                                                 int compression,
+                                                 uint64_t *size_out,
+                                                 int *n_expired_out);
+void dirserv_spool_sort(dir_connection_t *conn);
+void dir_conn_clear_spool(dir_connection_t *conn);
 
 #endif
 

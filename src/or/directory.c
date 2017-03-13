@@ -1368,7 +1368,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 /** Return true iff anything we say on <b>conn</b> is being encrypted before
  * we send it to the client/server. */
 int
-connection_dir_is_encrypted(dir_connection_t *conn)
+connection_dir_is_encrypted(const dir_connection_t *conn)
 {
   /* Right now it's sufficient to see if conn is or has been linked, since
    * the only thing it could be linked to is an edge connection on a
@@ -3061,10 +3061,10 @@ handle_get_current_consensus(dir_connection_t *conn,
   const char *url = args->url;
   const int compressed = args->compressed;
   const time_t if_modified_since = args->if_modified_since;
+  int clear_spool = 0;
 
   {
     /* v3 network status fetch. */
-    smartlist_t *dir_fps = smartlist_new();
     long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
     networkstatus_t *v;
@@ -3098,7 +3098,6 @@ handle_get_current_consensus(dir_connection_t *conn,
     if (v && !networkstatus_consensus_reasonably_live(v, now)) {
       write_http_status_line(conn, 404, "Consensus is too old");
       warn_consensus_is_too_old(v, flavor, now);
-      smartlist_free(dir_fps);
       geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
       tor_free(flavor);
       goto done;
@@ -3108,51 +3107,54 @@ handle_get_current_consensus(dir_connection_t *conn,
         !client_likes_consensus(v, want_fps)) {
       write_http_status_line(conn, 404, "Consensus not signed by sufficient "
                              "number of requested authorities");
-      smartlist_free(dir_fps);
       geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
       tor_free(flavor);
       goto done;
     }
 
+    conn->spool = smartlist_new();
+    clear_spool = 1;
     {
-      char *fp = tor_malloc_zero(DIGEST_LEN);
+      spooled_resource_t *spooled;
       if (flavor)
-        strlcpy(fp, flavor, DIGEST_LEN);
+        spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
+                                       (uint8_t*)flavor, strlen(flavor));
+      else
+        spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
+                                       NULL, 0);
       tor_free(flavor);
-      smartlist_add(dir_fps, fp);
+      smartlist_add(conn->spool, spooled);
     }
     lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
 
-    if (!smartlist_len(dir_fps)) { /* we failed to create/cache cp */
+    if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");
-      smartlist_free(dir_fps);
       geoip_note_ns_response(GEOIP_REJECT_UNAVAILABLE);
       goto done;
     }
 
-    if (!dirserv_remove_old_statuses(dir_fps, if_modified_since)) {
+    size_t size_guess = 0;
+    int n_expired = 0;
+    dirserv_spool_remove_missing_and_guess_size(conn, if_modified_since,
+                                                compressed,
+                                                &size_guess,
+                                                &n_expired);
+
+    if (!smartlist_len(conn->spool) && !n_expired) {
       write_http_status_line(conn, 404, "Not found");
-      SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
-      smartlist_free(dir_fps);
       geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
       goto done;
-    } else if (!smartlist_len(dir_fps)) {
+    } else if (!smartlist_len(conn->spool)) {
       write_http_status_line(conn, 304, "Not modified");
-      SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
-      smartlist_free(dir_fps);
       geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
       goto done;
     }
 
-    size_t dlen = dirserv_estimate_data_size(dir_fps, 0, compressed);
-    if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
+    if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
       log_debug(LD_DIRSERV,
                "Client asked for network status lists, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");
-      SMARTLIST_FOREACH(dir_fps, char *, fp, tor_free(fp));
-      smartlist_free(dir_fps);
-
       geoip_note_ns_response(GEOIP_REJECT_BUSY);
       goto done;
     }
@@ -3166,25 +3168,27 @@ handle_get_current_consensus(dir_connection_t *conn,
       /* Note that a request for a network status has started, so that we
        * can measure the download time later on. */
       if (conn->dirreq_id)
-        geoip_start_dirreq(conn->dirreq_id, dlen, DIRREQ_TUNNELED);
+        geoip_start_dirreq(conn->dirreq_id, size_guess, DIRREQ_TUNNELED);
       else
-        geoip_start_dirreq(TO_CONN(conn)->global_identifier, dlen,
+        geoip_start_dirreq(TO_CONN(conn)->global_identifier, size_guess,
                            DIRREQ_DIRECT);
     }
 
+    clear_spool = 0;
     write_http_response_header(conn, -1, compressed,
-                               smartlist_len(dir_fps) == 1 ? lifetime : 0);
-    conn->fingerprint_stack = dir_fps;
+                               smartlist_len(conn->spool) == 1 ? lifetime : 0);
     if (! compressed)
       conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
 
     /* Prime the connection with some data. */
-    conn->dir_spool_src = DIR_SPOOL_NETWORKSTATUS;
     connection_dirserv_flushed_some(conn);
     goto done;
   }
 
  done:
+  if (clear_spool) {
+    dir_conn_clear_spool(conn);
+  }
   return 0;
 }
 
@@ -3302,43 +3306,45 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
   const int compressed = args->compressed;
+  int clear_spool = 1;
   {
-    smartlist_t *fps = smartlist_new();
+    conn->spool = smartlist_new();
 
-    dir_split_resource_into_fingerprints(url+strlen("/tor/micro/d/"),
-                                      fps, NULL,
+    dir_split_resource_into_spoolable(url+strlen("/tor/micro/d/"),
+                                      DIR_SPOOL_MICRODESC,
+                                      conn->spool, NULL,
                                       DSR_DIGEST256|DSR_BASE64|DSR_SORT_UNIQ);
 
-    if (!dirserv_have_any_microdesc(fps)) {
+    size_t size_guess = 0;
+    dirserv_spool_remove_missing_and_guess_size(conn, 0, compressed,
+                                                &size_guess, NULL);
+    if (smartlist_len(conn->spool) == 0) {
       write_http_status_line(conn, 404, "Not found");
-      SMARTLIST_FOREACH(fps, char *, fp, tor_free(fp));
-      smartlist_free(fps);
       goto done;
     }
-    size_t dlen = dirserv_estimate_microdesc_size(fps, compressed);
-    if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
+    if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
       log_info(LD_DIRSERV,
                "Client asked for server descriptors, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");
-      SMARTLIST_FOREACH(fps, char *, fp, tor_free(fp));
-      smartlist_free(fps);
       goto done;
     }
 
+    clear_spool = 0;
     write_http_response_header(conn, -1, compressed, MICRODESC_CACHE_LIFETIME);
-    conn->dir_spool_src = DIR_SPOOL_MICRODESC;
-    conn->fingerprint_stack = fps;
 
     if (compressed)
       conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
-                                      choose_compression_level(dlen));
+                                      choose_compression_level(size_guess));
 
     connection_dirserv_flushed_some(conn);
     goto done;
   }
 
  done:
+  if (clear_spool) {
+    dir_conn_clear_spool(conn);
+  }
   return 0;
 }
 
@@ -3350,69 +3356,88 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
   const char *url = args->url;
   const int compressed = args->compressed;
   const or_options_t *options = get_options();
+  int clear_spool = 1;
   if (!strcmpstart(url,"/tor/server/") ||
       (!options->BridgeAuthoritativeDir &&
        !options->BridgeRelay && !strcmpstart(url,"/tor/extra/"))) {
-    size_t dlen;
     int res;
-    const char *msg;
+    const char *msg = NULL;
     int cache_lifetime = 0;
     int is_extra = !strcmpstart(url,"/tor/extra/");
     url += is_extra ? strlen("/tor/extra/") : strlen("/tor/server/");
-    conn->fingerprint_stack = smartlist_new();
-    res = dirserv_get_routerdesc_fingerprints(conn->fingerprint_stack, url,
-                                          &msg,
-                                          !connection_dir_is_encrypted(conn),
-                                          is_extra);
-
-    if (!strcmpstart(url, "fp/")) {
-      if (smartlist_len(conn->fingerprint_stack) == 1)
-        cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
-    } else if (!strcmpstart(url, "authority")) {
-      cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
-    } else if (!strcmpstart(url, "all")) {
-      cache_lifetime = FULL_DIR_CACHE_LIFETIME;
-    } else if (!strcmpstart(url, "d/")) {
-      if (smartlist_len(conn->fingerprint_stack) == 1)
-        cache_lifetime = ROUTERDESC_BY_DIGEST_CACHE_LIFETIME;
-    }
-    if (!strcmpstart(url, "d/"))
-      conn->dir_spool_src =
+    dir_spool_source_t source;
+    time_t publish_cutoff = 0;
+    if (!strcmpstart(url, "d/")) {
+      source =
         is_extra ? DIR_SPOOL_EXTRA_BY_DIGEST : DIR_SPOOL_SERVER_BY_DIGEST;
-    else
-      conn->dir_spool_src =
+    } else {
+      source =
         is_extra ? DIR_SPOOL_EXTRA_BY_FP : DIR_SPOOL_SERVER_BY_FP;
-
-    if (!dirserv_have_any_serverdesc(conn->fingerprint_stack,
-                                     conn->dir_spool_src)) {
-      res = -1;
-      msg = "Not found";
+      /* We only want to apply a publish cutoff when we're requesting
+       * resources by fingerprint. */
+      publish_cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
     }
 
-    if (res < 0)
+    conn->spool = smartlist_new();
+    res = dirserv_get_routerdesc_spool(conn->spool, url,
+                                       source,
+                                       connection_dir_is_encrypted(conn),
+                                       &msg);
+
+    if (!strcmpstart(url, "all")) {
+      cache_lifetime = FULL_DIR_CACHE_LIFETIME;
+    } else if (smartlist_len(conn->spool) == 1) {
+      cache_lifetime = ROUTERDESC_BY_DIGEST_CACHE_LIFETIME;
+    }
+
+    size_t size_guess = 0;
+    int n_expired = 0;
+    dirserv_spool_remove_missing_and_guess_size(conn, publish_cutoff,
+                                                compressed, &size_guess,
+                                                &n_expired);
+
+    /* If we are the bridge authority and the descriptor is a bridge
+     * descriptor, remember that we served this descriptor for desc stats. */
+    /* XXXX it's a bit of a kludge to have this here. */
+    if (get_options()->BridgeAuthoritativeDir &&
+        source == DIR_SPOOL_SERVER_BY_FP) {
+      SMARTLIST_FOREACH_BEGIN(conn->spool, spooled_resource_t *, spooled) {
+        const routerinfo_t *router =
+          router_get_by_id_digest((const char *)spooled->digest);
+        /* router can be NULL here when the bridge auth is asked for its own
+         * descriptor. */
+        if (router && router->purpose == ROUTER_PURPOSE_BRIDGE)
+          rep_hist_note_desc_served(router->cache_info.identity_digest);
+      } SMARTLIST_FOREACH_END(spooled);
+    }
+
+    if (res < 0 || size_guess == 0 || smartlist_len(conn->spool) == 0) {
+      if (msg == NULL)
+        msg = "Not found";
       write_http_status_line(conn, 404, msg);
-    else {
-      dlen = dirserv_estimate_data_size(conn->fingerprint_stack,
-                                        1, compressed);
-      if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
+    } else {
+      if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
         log_info(LD_DIRSERV,
                  "Client asked for server descriptors, but we've been "
                  "writing too many bytes lately. Sending 503 Dir busy.");
         write_http_status_line(conn, 503, "Directory busy, try again later");
-        conn->dir_spool_src = DIR_SPOOL_NONE;
+        dir_conn_clear_spool(conn);
         goto done;
       }
       write_http_response_header(conn, -1, compressed, cache_lifetime);
       if (compressed)
         conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
-                                        choose_compression_level(dlen));
+                                        choose_compression_level(size_guess));
+      clear_spool = 0;
       /* Prime the connection with some data. */
       connection_dirserv_flushed_some(conn);
     }
     goto done;
   }
  done:
- return 0;
+  if (clear_spool)
+    dir_conn_clear_spool(conn);
+  return 0;
 }
 
 /** Helper function for GET /tor/keys/...
@@ -3936,7 +3961,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
       conn->base_.state = DIR_CONN_STATE_CLIENT_READING;
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
-      if (conn->dir_spool_src != DIR_SPOOL_NONE) {
+      if (conn->spool) {
         log_warn(LD_BUG, "Emptied a dirserv buffer, but it's still spooling!");
         connection_mark_for_close(TO_CONN(conn));
       } else {
@@ -4617,5 +4642,36 @@ dir_split_resource_into_fingerprints(const char *resource,
   smartlist_add_all(fp_out, fp_tmp);
   smartlist_free(fp_tmp);
   return 0;
+}
+
+/** As dir_split_resource_into_fingerprints, but instead fills
+ * <b>spool_out</b> with a list of spoolable_resource_t for the resource
+ * identified through <b>source</b>. */
+int
+dir_split_resource_into_spoolable(const char *resource,
+                                  dir_spool_source_t source,
+                                  smartlist_t *spool_out,
+                                  int *compressed_out,
+                                  int flags)
+{
+  smartlist_t *fingerprints = smartlist_new();
+
+  tor_assert(flags & (DSR_HEX|DSR_BASE64));
+  const size_t digest_len =
+    (flags & DSR_DIGEST256) ? DIGEST256_LEN : DIGEST_LEN;
+
+  int r = dir_split_resource_into_fingerprints(resource, fingerprints,
+                                               compressed_out, flags);
+  /* This is not a very efficient implementation XXXX */
+  SMARTLIST_FOREACH_BEGIN(fingerprints, uint8_t *, digest) {
+    spooled_resource_t *spooled =
+      spooled_resource_new(source, digest, digest_len);
+    if (spooled)
+      smartlist_add(spool_out, spooled);
+    tor_free(digest);
+  } SMARTLIST_FOREACH_END(digest);
+
+  smartlist_free(fingerprints);
+  return r;
 }
 

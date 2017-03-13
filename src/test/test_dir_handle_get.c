@@ -743,7 +743,7 @@ test_dir_handle_get_server_descriptors_not_found(void* data)
                       NULL, NULL, 1, 0);
 
   tt_str_op(NOT_FOUND, OP_EQ, header);
-  tt_int_op(conn->dir_spool_src, OP_EQ, DIR_SPOOL_SERVER_BY_FP);
+  tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
     UNMOCK(connection_write_to_buf_impl_);
@@ -773,6 +773,7 @@ test_dir_handle_get_server_descriptors_all(void* data)
   tt_int_op(smartlist_len(our_routerlist->routers), OP_GE, 1);
   mock_routerinfo = smartlist_get(our_routerlist->routers, 0);
   set_server_identity_key(mock_routerinfo->identity_pkey);
+  mock_routerinfo->cache_info.published_on = time(NULL);
 
   /* Treat "all" requests as if they were unencrypted */
   mock_routerinfo->cache_info.send_unencrypted = 1;
@@ -787,7 +788,7 @@ test_dir_handle_get_server_descriptors_all(void* data)
   //which is smaller than that by annotation_len bytes
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
                       &body, &body_used,
-                      mock_routerinfo->cache_info.signed_descriptor_len+1, 0);
+                      1024*1024, 0);
 
   tt_assert(header);
   tt_assert(body);
@@ -803,7 +804,7 @@ test_dir_handle_get_server_descriptors_all(void* data)
 
   tt_str_op(body, OP_EQ, mock_routerinfo->cache_info.signed_descriptor_body +
                          mock_routerinfo->cache_info.annotations_len);
-  tt_int_op(conn->dir_spool_src, OP_EQ, DIR_SPOOL_NONE);
+  tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
     NS_UNMOCK(router_get_my_routerinfo);
@@ -882,6 +883,7 @@ test_dir_handle_get_server_descriptors_authority(void* data)
   mock_routerinfo->cache_info.signed_descriptor_len =
     strlen(TEST_DESCRIPTOR) - annotation_len;;
   mock_routerinfo->cache_info.annotations_len = annotation_len;
+  mock_routerinfo->cache_info.published_on = time(NULL);
 
   conn = new_dir_conn();
 
@@ -904,7 +906,7 @@ test_dir_handle_get_server_descriptors_authority(void* data)
   tt_int_op(body_used, OP_EQ, strlen(body));
 
   tt_str_op(body, OP_EQ, TEST_DESCRIPTOR + annotation_len);
-  tt_int_op(conn->dir_spool_src, OP_EQ, DIR_SPOOL_NONE);
+  tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
     NS_UNMOCK(router_get_my_routerinfo);
@@ -946,6 +948,7 @@ test_dir_handle_get_server_descriptors_fp(void* data)
   mock_routerinfo->cache_info.signed_descriptor_len =
     strlen(TEST_DESCRIPTOR) - annotation_len;
   mock_routerinfo->cache_info.annotations_len = annotation_len;
+  mock_routerinfo->cache_info.published_on = time(NULL);
 
   conn = new_dir_conn();
 
@@ -975,7 +978,7 @@ test_dir_handle_get_server_descriptors_fp(void* data)
   tt_int_op(body_used, OP_EQ, strlen(body));
 
   tt_str_op(body, OP_EQ, TEST_DESCRIPTOR + annotation_len);
-  tt_int_op(conn->dir_spool_src, OP_EQ, DIR_SPOOL_NONE);
+  tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
     NS_UNMOCK(router_get_my_routerinfo);
@@ -1041,7 +1044,7 @@ test_dir_handle_get_server_descriptors_d(void* data)
 
   tt_str_op(body, OP_EQ, router->cache_info.signed_descriptor_body +
                          router->cache_info.annotations_len);
-  tt_int_op(conn->dir_spool_src, OP_EQ, DIR_SPOOL_NONE);
+  tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
     UNMOCK(connection_write_to_buf_impl_);
@@ -1096,7 +1099,7 @@ test_dir_handle_get_server_descriptors_busy(void* data)
   tt_assert(header);
   tt_str_op(SERVER_BUSY, OP_EQ, header);
 
-  tt_int_op(conn->dir_spool_src, OP_EQ, DIR_SPOOL_NONE);
+  tt_ptr_op(conn->spool, OP_EQ, NULL);
 
   done:
     UNMOCK(get_options);

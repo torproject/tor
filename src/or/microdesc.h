@@ -32,8 +32,6 @@ void microdesc_cache_clear(microdesc_cache_t *cache);
 microdesc_t *microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache,
                                                  const char *d);
 
-size_t microdesc_average_size(microdesc_cache_t *cache);
-
 smartlist_t *microdesc_list_missing_digest256(networkstatus_t *ns,
                                               microdesc_cache_t *cache,
                                               int downloadable_only,

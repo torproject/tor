@@ -66,7 +66,7 @@ void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
 int parse_http_response(const char *headers, int *code, time_t *date,
                         compress_method_t *compression, char **response);
 
-int connection_dir_is_encrypted(dir_connection_t *conn);
+int connection_dir_is_encrypted(const dir_connection_t *conn);
 int connection_dir_reached_eof(dir_connection_t *conn);
 int connection_dir_process_inbuf(dir_connection_t *conn);
 int connection_dir_finished_flushing(dir_connection_t *conn);
@@ -88,7 +88,12 @@ void directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
 int dir_split_resource_into_fingerprints(const char *resource,
                                      smartlist_t *fp_out, int *compressed_out,
                                      int flags);
-
+enum dir_spool_source_t;
+int dir_split_resource_into_spoolable(const char *resource,
+                                      enum dir_spool_source_t source,
+                                      smartlist_t *spool_out,
+                                      int *compressed_out,
+                                      int flags);
 int dir_split_resource_into_fingerprint_pairs(const char *res,
                                               smartlist_t *pairs_out);
 char *directory_dump_request_log(void);
