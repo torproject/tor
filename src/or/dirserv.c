@@ -3754,8 +3754,6 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
       return connection_dirserv_add_servers_to_outbuf(conn);
     case DIR_SPOOL_MICRODESC:
       return connection_dirserv_add_microdescs_to_outbuf(conn);
-    case DIR_SPOOL_CACHED_DIR:
-      return connection_dirserv_add_dir_bytes_to_outbuf(conn);
     case DIR_SPOOL_NETWORKSTATUS:
       return connection_dirserv_add_networkstatus_bytes_to_outbuf(conn);
     case DIR_SPOOL_NONE:

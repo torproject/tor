@@ -1735,7 +1735,7 @@ typedef struct entry_connection_t {
 typedef enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
     DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
-    DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS,
+    DIR_SPOOL_NETWORKSTATUS,
     DIR_SPOOL_MICRODESC, /* NOTE: if we add another entry, add another bit. */
 } dir_spool_source_t;
 #define dir_spool_source_bitfield_t ENUM_BF(dir_spool_source_t)
