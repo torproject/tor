@@ -28,18 +28,55 @@
  * and will send small couples of slices to calc_changes, keeping the running
  * time near-linear. This is explained in more detail in the gen_ed_diff
  * comments.
+ *
+ * The allocation strategy tries to save time and memory by avoiding needless
+ * copies.  Instead of actually splitting the inputs into separate strings, we
+ * allocate cdline_t objects, each of which represents a line in the original
+ * object or in the output.  We use memarea_t allocators to manage the
+ * temporary memory we use when generating or applying diffs.
  **/
 
 #define CONSDIFF_PRIVATE
 
 #include "or.h"
 #include "consdiff.h"
+#include "memarea.h"
 #include "routerparse.h"
 
 static const char* ns_diff_version = "network-status-diff-version 1";
 static const char* hash_token = "hash";
 
 static char *consensus_join_lines(const smartlist_t *inp);
+
+/** Return true iff a and b have the same contents. */
+STATIC int
+lines_eq(const cdline_t *a, const cdline_t *b)
+{
+  return a->len == b->len && fast_memeq(a->s, b->s, a->len);
+}
+
+/** Return true iff a has the same contents as the nul-terminated string b. */
+STATIC int
+line_str_eq(const cdline_t *a, const char *b)
+{
+  const size_t len = strlen(b);
+  tor_assert(len <= UINT32_MAX);
+  cdline_t bline = { b, (uint32_t)len };
+  return lines_eq(a, &bline);
+}
+
+/** Add a cdline_t to <b>lst</b> holding as its contents the nul-terminated
+ * string s.  Use the provided memory area for storage. */
+STATIC void
+smartlist_add_linecpy(smartlist_t *lst, memarea_t *area, const char *s)
+{
+  size_t len = strlen(s);
+  const char *ss = memarea_memdup(area, s, len);
+  cdline_t *line = memarea_alloc(area, sizeof(cdline_t));
+  line->s = ss;
+  line->len = (uint32_t)len;
+  smartlist_add(lst, line);
+}
 
 /** Compute the digest of <b>cons</b>, and store the result in
  * <b>digest_out</b>. Return 0 on success, -1 on failure. */
@@ -114,7 +151,7 @@ lcs_lengths(const smartlist_slice_t *slice1, const smartlist_slice_t *slice2,
 
   for (int i = 0; i < slice1->len; ++i, si+=direction) {
 
-    const char *line1 = smartlist_get(slice1->list, si);
+    const cdline_t *line1 = smartlist_get(slice1->list, si);
     /* Store the last results. */
     memcpy(prev, result, a_size);
 
@@ -125,8 +162,8 @@ lcs_lengths(const smartlist_slice_t *slice1, const smartlist_slice_t *slice2,
 
     for (int j = 0; j < slice2->len; ++j, sj+=direction) {
 
-      const char *line2 = smartlist_get(slice2->list, sj);
-      if (!strcmp(line1, line2)) {
+      const cdline_t *line2 = smartlist_get(slice2->list, sj);
+      if (lines_eq(line1, line2)) {
         /* If the lines are equal, the lcs is one line longer. */
         result[j + 1] = prev[j] + 1;
       } else {
@@ -146,9 +183,9 @@ STATIC void
 trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2)
 {
   while (slice1->len>0 && slice2->len>0) {
-    const char *line1 = smartlist_get(slice1->list, slice1->offset);
-    const char *line2 = smartlist_get(slice2->list, slice2->offset);
-    if (strcmp(line1, line2)) {
+    const cdline_t *line1 = smartlist_get(slice1->list, slice1->offset);
+    const cdline_t *line2 = smartlist_get(slice2->list, slice2->offset);
+    if (!lines_eq(line1, line2)) {
       break;
     }
     slice1->offset++; slice1->len--;
@@ -159,9 +196,9 @@ trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2)
   int i2 = (slice2->offset+slice2->len)-1;
 
   while (slice1->len>0 && slice2->len>0) {
-    const char *line1 = smartlist_get(slice1->list, i1);
-    const char *line2 = smartlist_get(slice2->list, i2);
-    if (strcmp(line1, line2)) {
+    const cdline_t *line1 = smartlist_get(slice1->list, i1);
+    const cdline_t *line2 = smartlist_get(slice2->list, i2);
+    if (!lines_eq(line1, line2)) {
       break;
     }
     i1--;
@@ -171,15 +208,17 @@ trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2)
   }
 }
 
-/** Like smartlist_string_pos, but limited to the bounds of the slice.
+/** Like smartlist_string_pos, but uses a cdline_t, and is restricted to the
+ * bounds of the slice.
  */
 STATIC int
-smartlist_slice_string_pos(const smartlist_slice_t *slice, const char *string)
+smartlist_slice_string_pos(const smartlist_slice_t *slice,
+                           const cdline_t *string)
 {
   int end = slice->offset + slice->len;
   for (int i = slice->offset; i < end; ++i) {
-    const char *el = smartlist_get(slice->list, i);
-    if (!strcmp(el, string)) {
+    const cdline_t *el = smartlist_get(slice->list, i);
+    if (lines_eq(el, string)) {
       return i;
     }
   }
@@ -199,7 +238,7 @@ set_changed(bitarray_t *changed1, bitarray_t *changed2,
   tor_assert(slice1->len == 0 || slice1->len == 1);
 
   if (slice1->len == 1) {
-    const char *line_common = smartlist_get(slice1->list, slice1->offset);
+    const cdline_t *line_common = smartlist_get(slice1->list, slice1->offset);
     toskip = smartlist_slice_string_pos(slice2, line_common);
     if (toskip == -1) {
       bitarray_set(changed1, slice1->offset);
@@ -318,16 +357,20 @@ static const uint8_t base64_compare_table[256] = {
 
 /** Helper: Get the identity hash from a router line, assuming that the line
  * at least appears to be a router line and thus starts with "r ".
+ *
+ * If an identity hash is found, store it (without decoding it) in
+ * <b>hash_out</b>, and return 0.  On failure, return -1.
  */
-STATIC const char *
-get_id_hash(const char *r_line)
+STATIC int
+get_id_hash(const cdline_t *line, cdline_t *hash_out)
 {
-  r_line += strlen("r ");
+  if (line->len < 2)
+    return -1;
 
   /* Skip the router name. */
-  const char *hash = strchr(r_line, ' ');
+  const char *hash = memchr(line->s + 2, ' ', line->len - 2);
   if (!hash) {
-    return NULL;
+    return -1;
   }
 
   hash++;
@@ -335,28 +378,34 @@ get_id_hash(const char *r_line)
   /* Stop when the first non-base64 character is found. Use unsigned chars to
    * avoid negative indexes causing crashes.
    */
-  while (base64_compare_table[*((unsigned char*)hash_end)] != X) {
+  while (base64_compare_table[*((unsigned char*)hash_end)] != X &&
+         hash_end < line->s + line->len) {
     hash_end++;
   }
 
   /* Empty hash. */
   if (hash_end == hash) {
-    return NULL;
+    return -1;
   }
 
-  return hash;
+  hash_out->s = hash;
+  /* Always true because lines are limited to this length */
+  tor_assert(hash_end - hash <= UINT32_MAX);
+  hash_out->len = (uint32_t)(hash_end - hash);
+
+  return 0;
 }
 
 /** Helper: Check that a line is a valid router entry. We must at least be
  * able to fetch a proper identity hash from it for it to be valid.
  */
 STATIC int
-is_valid_router_entry(const char *line)
+is_valid_router_entry(const cdline_t *line)
 {
-  if (strcmpstart(line, "r ") != 0) {
+  if (line->len < 2 || fast_memneq(line->s, "r ", 2))
     return 0;
-  }
-  return (get_id_hash(line) != NULL);
+  cdline_t tmp;
+  return (get_id_hash(line, &tmp) == 0);
 }
 
 /** Helper: Find the next router line starting at the current position.
@@ -374,7 +423,7 @@ next_router(const smartlist_t *cons, int cur)
     return len;
   }
 
-  const char *line = smartlist_get(cons, cur);
+  const cdline_t *line = smartlist_get(cons, cur);
   while (!is_valid_router_entry(line)) {
     if (++cur >= len) {
       return len;
@@ -384,26 +433,28 @@ next_router(const smartlist_t *cons, int cur)
   return cur;
 }
 
-/** Helper: compare two base64-encoded identity hashes which may be of
+/** Helper: compare two base64-encoded identity hashes, which may be of
  * different lengths. Comparison ends when the first non-base64 char is found.
  */
 STATIC int
-base64cmp(const char *hash1, const char *hash2)
+base64cmp(const cdline_t *hash1, const cdline_t *hash2)
 {
   /* NULL is always lower, useful for last_hash which starts at NULL. */
-  if (!hash1 && !hash2) {
+  if (!hash1->s && !hash2->s) {
     return 0;
   }
-  if (!hash1) {
+  if (!hash1->s) {
     return -1;
   }
-  if (!hash2) {
+  if (!hash2->s) {
     return 1;
   }
 
   /* Don't index with a char; char may be signed. */
-  const unsigned char *a = (unsigned char*)hash1;
-  const unsigned char *b = (unsigned char*)hash2;
+  const unsigned char *a = (unsigned char*)hash1->s;
+  const unsigned char *b = (unsigned char*)hash2->s;
+  const unsigned char *a_end = a + hash1->len;
+  const unsigned char *b_end = b + hash2->len;
   while (1) {
     uint8_t av = base64_compare_table[*a];
     uint8_t bv = base64_compare_table[*b];
@@ -427,6 +478,15 @@ base64cmp(const char *hash1, const char *hash2)
     } else {
       a++;
       b++;
+      if (a == a_end) {
+        if (b == b_end) {
+          return 0;
+        } else {
+          return -1;
+        }
+      } else if (b == b_end) {
+        return 1;
+      }
     }
   }
 }
@@ -435,6 +495,9 @@ base64cmp(const char *hash1, const char *hash2)
  * smartlists. Will return NULL if the diff could not be generated, which can
  * happen if any lines the script had to add matched "." or if the routers
  * were not properly ordered.
+ *
+ * All cdline_t objects in the resulting object are either references to lines
+ * in one of the inputs, or are newly allocated lines in the provided memarea.
  *
  * This implementation is consensus-specific. To generate an ed diff for any
  * given input in quadratic time, you can replace all the code until the
@@ -449,7 +512,8 @@ base64cmp(const char *hash1, const char *hash2)
  *   calc_changes(cons1_sl, cons2_sl, changed1, changed2);
  */
 STATIC smartlist_t *
-gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
+gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
+            memarea_t *area)
 {
   int len1 = smartlist_len(cons1);
   int len2 = smartlist_len(cons2);
@@ -463,12 +527,9 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
   int i1=-1, i2=-1;
   int start1=0, start2=0;
 
-  const char *hash1 = NULL;
-  const char *hash2 = NULL;
-
   /* To check that hashes are ordered properly */
-  const char *last_hash1 = NULL;
-  const char *last_hash2 = NULL;
+  cdline_t hash1 = { NULL, 0 }, hash2 =  { NULL, 0 };
+  cdline_t last_hash1 = { NULL, 0 }, last_hash2 = { NULL, 0 };
 
   /* i1 and i2 are initialized at the first line of each consensus. They never
    * reach past len1 and len2 respectively, since next_router doesn't let that
@@ -485,9 +546,9 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
     if (i1 < len1) {
       i1 = next_router(cons1, i1);
       if (i1 != len1) {
-        last_hash1 = hash1;
-        hash1 = get_id_hash(smartlist_get(cons1, i1));
-        if (base64cmp(hash1, last_hash1) <= 0) {
+        memcpy(&last_hash1, &hash1, sizeof(cdline_t));
+        if (get_id_hash(smartlist_get(cons1, i1), &hash1) < 0 ||
+            base64cmp(&hash1, &last_hash1) <= 0) {
           log_warn(LD_CONSDIFF, "Refusing to generate consensus diff because "
               "the base consensus doesn't have its router entries "
               "sorted properly.");
@@ -499,9 +560,9 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
     if (i2 < len2) {
       i2 = next_router(cons2, i2);
       if (i2 != len2) {
-        last_hash2 = hash2;
-        hash2 = get_id_hash(smartlist_get(cons2, i2));
-        if (base64cmp(hash2, last_hash2) <= 0) {
+        memcpy(&last_hash2, &hash2, sizeof(cdline_t));
+        if (get_id_hash(smartlist_get(cons2, i2), &hash2) < 0 ||
+            base64cmp(&hash2, &last_hash2) <= 0) {
           log_warn(LD_CONSDIFF, "Refusing to generate consensus diff because "
               "the target consensus doesn't have its router entries "
               "sorted properly.");
@@ -525,7 +586,7 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
        * consensus has already reached the end, both are extended to their
        * respecting ends since we are done.
        */
-      int cmp = base64cmp(hash1, hash2);
+      int cmp = base64cmp(&hash1, &hash2);
       while (cmp != 0) {
         if (i1 < len1 && cmp < 0) {
           i1 = next_router(cons1, i1);
@@ -536,9 +597,9 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
             i2 = len2;
             break;
           }
-          last_hash1 = hash1;
-          hash1 = get_id_hash(smartlist_get(cons1, i1));
-          if (base64cmp(hash1, last_hash1) <= 0) {
+          memcpy(&last_hash1, &hash1, sizeof(cdline_t));
+          if (get_id_hash(smartlist_get(cons1, i1), &hash1) < 0 ||
+              base64cmp(&hash1, &last_hash1) <= 0) {
             log_warn(LD_CONSDIFF, "Refusing to generate consensus diff "
                 "because the base consensus doesn't have its router entries "
                 "sorted properly.");
@@ -553,9 +614,9 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
             i1 = len1;
             break;
           }
-          last_hash2 = hash2;
-          hash2 = get_id_hash(smartlist_get(cons2, i2));
-          if (base64cmp(hash2, last_hash2) <= 0) {
+          memcpy(&last_hash2, &hash2, sizeof(cdline_t));
+          if (get_id_hash(smartlist_get(cons2, i2), &hash2) < 0 ||
+              base64cmp(&hash2, &last_hash2) <= 0) {
             log_warn(LD_CONSDIFF, "Refusing to generate consensus diff "
                 "because the target consensus doesn't have its router entries "
                 "sorted properly.");
@@ -566,7 +627,7 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
           i2 = len2;
           break;
         }
-        cmp = base64cmp(hash1, hash2);
+        cmp = base64cmp(&hash1, &hash2);
       }
     }
 
@@ -595,6 +656,7 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
    * each chunk of changes.
    */
   i1=len1-1, i2=len2-1;
+  char buf[128];
   while (i1 > 0 || i2 > 0) {
 
     int start1x, start2x, end1, end2, added, deleted;
@@ -626,31 +688,36 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
 
     if (added == 0) {
       if (deleted == 1) {
-        smartlist_add_asprintf(result, "%id", start1x+1);
+        tor_snprintf(buf, sizeof(buf), "%id", start1x+1);
+        smartlist_add_linecpy(result, area, buf);
       } else {
-        smartlist_add_asprintf(result, "%i,%id", start1x+1, start1x+deleted);
+        tor_snprintf(buf, sizeof(buf), "%i,%id", start1x+1, start1x+deleted);
+        smartlist_add_linecpy(result, area, buf);
       }
 
     } else {
       int i;
       if (deleted == 0) {
-        smartlist_add_asprintf(result, "%ia", start1x);
+        tor_snprintf(buf, sizeof(buf), "%ia", start1x);
+        smartlist_add_linecpy(result, area, buf);
       } else if (deleted == 1) {
-        smartlist_add_asprintf(result, "%ic", start1x+1);
+        tor_snprintf(buf, sizeof(buf), "%ic", start1x+1);
+        smartlist_add_linecpy(result, area, buf);
       } else {
-        smartlist_add_asprintf(result, "%i,%ic", start1x+1, start1x+deleted);
+        tor_snprintf(buf, sizeof(buf), "%i,%ic", start1x+1, start1x+deleted);
+        smartlist_add_linecpy(result, area, buf);
       }
 
       for (i = start2x; i <= end2; ++i) {
-        const char *line = smartlist_get(cons2, i);
-        if (!strcmp(line, ".")) {
+        cdline_t *line = smartlist_get(cons2, i);
+        if (line_str_eq(line, ".")) {
           log_warn(LD_CONSDIFF, "Cannot generate consensus diff because "
               "one of the lines to be added is \".\".");
           goto error_cleanup;
         }
-        smartlist_add(result, tor_strdup(line));
+        smartlist_add(result, line);
       }
-      smartlist_add_asprintf(result, ".");
+      smartlist_add_linecpy(result, area, ".");
     }
   }
 
@@ -664,7 +731,6 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
   bitarray_free(changed1);
   bitarray_free(changed2);
 
-  SMARTLIST_FOREACH(result, char*, line, tor_free(line));
   smartlist_free(result);
 
   return NULL;
@@ -673,6 +739,9 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2)
 /** Apply the ed diff, starting at <b>diff_starting_line</b>, to the consensus
  * and return a new consensus, also as a line-based smartlist. Will return
  * NULL if the ed diff is not properly formatted.
+ *
+ * All cdline_t objects in the resulting object are references to lines
+ * in one of the inputs; nothing is copied.
  */
 STATIC smartlist_t *
 apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
@@ -683,9 +752,17 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
   smartlist_t *cons2 = smartlist_new();
 
   for (int i=diff_starting_line; i<diff_len; ++i) {
-    const char *diff_line = smartlist_get(diff, i);
+    const cdline_t *diff_cdline = smartlist_get(diff, i);
+    char diff_line[128];
     char *endptr1, *endptr2;
 
+    if (diff_cdline->len > sizeof(diff_line) - 1) {
+      log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
+               "an ed command was far too long");
+      goto error_cleanup;
+    }
+    memcpy(diff_line, diff_cdline->s, diff_cdline->len);
+    diff_line[diff_cdline->len] = 0;
     int start = (int)strtol(diff_line, &endptr1, 10);
     int end;
     if (endptr1 == diff_line) {
@@ -748,8 +825,8 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
 
     /* Add unchanged lines. */
     for (; j && j > end; --j) {
-      const char *cons_line = smartlist_get(cons1, j-1);
-      smartlist_add(cons2, tor_strdup(cons_line));
+      cdline_t *cons_line = smartlist_get(cons1, j-1);
+      smartlist_add(cons2, cons_line);
     }
 
     /* Ignore removed lines. */
@@ -767,7 +844,7 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
 
       i++; /* Skip the line with the range and command. */
       while (i < diff_len) {
-        if (!strcmp(smartlist_get(diff, i), ".")) {
+        if (line_str_eq(smartlist_get(diff, i), ".")) {
           break;
         }
         if (++i == diff_len) {
@@ -787,16 +864,16 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
       }
 
       while (added_i > added_end) {
-        const char *added_line = smartlist_get(diff, added_i--);
-        smartlist_add(cons2, tor_strdup(added_line));
+        cdline_t *added_line = smartlist_get(diff, added_i--);
+        smartlist_add(cons2, added_line);
       }
     }
   }
 
   /* Add remaining unchanged lines. */
   for (; j > 0; --j) {
-    const char *cons_line = smartlist_get(cons1, j-1);
-    smartlist_add(cons2, tor_strdup(cons_line));
+    cdline_t *cons_line = smartlist_get(cons1, j-1);
+    smartlist_add(cons2, cons_line);
   }
 
   /* Reverse the whole thing since we did it from the end. */
@@ -805,7 +882,6 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
 
   error_cleanup:
 
-  SMARTLIST_FOREACH(cons2, char*, line, tor_free(line));
   smartlist_free(cons2);
 
   return NULL;
@@ -817,11 +893,13 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
  * up to the caller to free their resources.
  */
 smartlist_t *
-consdiff_gen_diff(const smartlist_t *cons1, const smartlist_t *cons2,
+consdiff_gen_diff(const smartlist_t *cons1,
+                  const smartlist_t *cons2,
                   const consensus_digest_t *digests1,
-                  const consensus_digest_t *digests2)
+                  const consensus_digest_t *digests2,
+                  memarea_t *area)
 {
-  smartlist_t *ed_diff = gen_ed_diff(cons1, cons2);
+  smartlist_t *ed_diff = gen_ed_diff(cons1, cons2, area);
   /* ed diff could not be generated - reason already logged by gen_ed_diff. */
   if (!ed_diff) {
     goto error_cleanup;
@@ -838,8 +916,18 @@ consdiff_gen_diff(const smartlist_t *cons1, const smartlist_t *cons2,
     /* LCOV_EXCL_STOP */
   }
 
-  int cons2_eq = smartlist_strings_eq(cons2, ed_cons2);
-  SMARTLIST_FOREACH(ed_cons2, char*, line, tor_free(line));
+  int cons2_eq = 1;
+  if (smartlist_len(cons2) == smartlist_len(ed_cons2)) {
+    SMARTLIST_FOREACH_BEGIN(cons2, const cdline_t *, line1) {
+      const cdline_t *line2 = smartlist_get(ed_cons2, line1_sl_idx);
+      if (! lines_eq(line1, line2) ) {
+        cons2_eq = 0;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(line1);
+  } else {
+    cons2_eq = 0;
+  }
   smartlist_free(ed_cons2);
   if (!cons2_eq) {
     /* LCOV_EXCL_START -- impossible if diff generation is correct. */
@@ -858,10 +946,13 @@ consdiff_gen_diff(const smartlist_t *cons1, const smartlist_t *cons2,
                 (const char*)digests2->sha3_256, DIGEST256_LEN);
 
   /* Create the resulting consensus diff. */
+  char buf[160];
   smartlist_t *result = smartlist_new();
-  smartlist_add_asprintf(result, "%s", ns_diff_version);
-  smartlist_add_asprintf(result, "%s %s %s", hash_token,
+  tor_snprintf(buf, sizeof(buf), "%s", ns_diff_version);
+  smartlist_add_linecpy(result, area, buf);
+  tor_snprintf(buf, sizeof(buf), "%s %s %s", hash_token,
       cons1_hash_hex, cons2_hash_hex);
+  smartlist_add_linecpy(result, area, buf);
   smartlist_add_all(result, ed_diff);
   smartlist_free(ed_diff);
   return result;
@@ -870,7 +961,6 @@ consdiff_gen_diff(const smartlist_t *cons1, const smartlist_t *cons2,
 
   if (ed_diff) {
     /* LCOV_EXCL_START -- ed_diff is NULL except in unreachable cases above */
-    SMARTLIST_FOREACH(ed_diff, char *, cp, tor_free(cp));
     smartlist_free(ed_diff);
     /* LCOV_EXCL_STOP */
   }
@@ -888,7 +978,7 @@ consdiff_get_digests(const smartlist_t *diff,
                      char *digest2_out)
 {
   smartlist_t *hash_words = NULL;
-  const char *format;
+  const cdline_t *format;
   char cons1_hash[DIGEST256_LEN], cons2_hash[DIGEST256_LEN];
   char *cons1_hash_hex, *cons2_hash_hex;
   if (smartlist_len(diff) < 2) {
@@ -898,14 +988,19 @@ consdiff_get_digests(const smartlist_t *diff,
 
   /* Check that it's the format and version we know. */
   format = smartlist_get(diff, 0);
-  if (strcmp(format, ns_diff_version)) {
+  if (!line_str_eq(format, ns_diff_version)) {
     log_warn(LD_CONSDIFF, "The provided consensus diff format is not known.");
     goto error_cleanup;
   }
 
   /* Grab the base16 digests. */
   hash_words = smartlist_new();
-  smartlist_split_string(hash_words, smartlist_get(diff, 1), " ", 0, 0);
+  {
+    const cdline_t *line2 = smartlist_get(diff, 1);
+    char *h = tor_memdup_nulterm(line2->s, line2->len);
+    smartlist_split_string(hash_words, h, " ", 0, 0);
+    tor_free(h);
+  }
 
   /* There have to be three words, the first of which must be hash_token. */
   if (smartlist_len(hash_words) != 3 ||
@@ -1038,7 +1133,6 @@ consdiff_apply_diff(const smartlist_t *cons1,
 
  done:
   if (cons2) {
-    SMARTLIST_FOREACH(cons2, char *, cp, tor_free(cp));
     smartlist_free(cons2);
   }
 
@@ -1046,34 +1140,40 @@ consdiff_apply_diff(const smartlist_t *cons1,
 }
 
 /**
- * Helper: For every NL-terminated line in <b>s</b>, add that line
- * (without trailing newline) to <b>out</b>.  Return -1 if there are any
- * non-NL terminated lines; 0 otherwise.
- *
- * Modifies <b>s</b> in place: don't do anything with <b>s</b> after you're
- * done here, besides freeing it.
+ * Helper: For every NL-terminated line in <b>s</b>, add a cdline referring to
+ * that line (without trailing newline) to <b>out</b>.  Return -1 if there are
+ * any non-NL terminated lines; 0 otherwise.
  *
  * Unlike tor_split_lines, this function avoids ambiguity on its
  * handling of a final line that isn't NL-terminated.
+ *
+ * All cdline_t objects are allocated in the provided memarea.  Strings
+ * are not copied: if <b>s</b> changes or becomes invalid, then all
+ * generated cdlines will become invalid.
  */
-static int
-consensus_split_lines(smartlist_t *out, char *s)
+STATIC int
+consensus_split_lines(smartlist_t *out, const char *s, memarea_t *area)
 {
-  /* XXXX If we used string slices, we could avoid a bunch of copies here. */
   while (*s) {
-    char *eol = strchr(s, '\n');
+    const char *eol = strchr(s, '\n');
     if (!eol) {
       /* File doesn't end with newline. */
       return -1;
     }
-    *eol = 0;
-    smartlist_add(out, s);
+    if (eol - s > UINT32_MAX) {
+      /* Line is far too long. */
+      return -1;
+    }
+    cdline_t *line = memarea_alloc(area, sizeof(cdline_t));
+    line->s = s;
+    line->len = (uint32_t)(eol - s);
+    smartlist_add(out, line);
     s = eol+1;
   }
   return 0;
 }
 
-/** Given a list of lines, return a newly allocated string containing
+/** Given a list of cdline_t, return a newly allocated string containing
  * all of the lines, terminated with NL, concatenated.
  *
  * Unlike smartlist_join_strings(), avoids lossy operations on empty
@@ -1082,16 +1182,15 @@ static char *
 consensus_join_lines(const smartlist_t *inp)
 {
   size_t n = 0;
-  SMARTLIST_FOREACH(inp, const char *, cp, n += strlen(cp) + 1);
+  SMARTLIST_FOREACH(inp, const cdline_t *, cdline, n += cdline->len + 1);
   n += 1;
   char *result = tor_malloc(n);
   char *out = result;
-  SMARTLIST_FOREACH_BEGIN(inp, const char *, cp) {
-    size_t len = strlen(cp);
-    memcpy(out, cp, len);
-    out += len;
+  SMARTLIST_FOREACH_BEGIN(inp, const cdline_t *, cdline) {
+    memcpy(out, cdline->s, cdline->len);
+    out += cdline->len;
     *out++ = '\n';
-  } SMARTLIST_FOREACH_END(cp);
+  } SMARTLIST_FOREACH_END(cdline);
   *out++ = '\0';
   tor_assert(out == result+n);
   return result;
@@ -1114,28 +1213,26 @@ consensus_diff_generate(const char *cons1,
   if (BUG(r1 < 0 || r2 < 0))
     return NULL; // LCOV_EXCL_LINE
 
-  char *cons1_copy = tor_strdup(cons1);
-  char *cons2_copy = tor_strdup(cons2);
+  memarea_t *area = memarea_new();
   lines1 = smartlist_new();
   lines2 = smartlist_new();
-  if (consensus_split_lines(lines1, cons1_copy) < 0)
+  if (consensus_split_lines(lines1, cons1, area) < 0)
     goto done;
-  if (consensus_split_lines(lines2, cons2_copy) < 0)
+  if (consensus_split_lines(lines2, cons2, area) < 0)
     goto done;
 
-  result_lines = consdiff_gen_diff(lines1, lines2, &d1, &d2);
+  result_lines = consdiff_gen_diff(lines1, lines2, &d1, &d2, area);
 
  done:
-  smartlist_free(lines1);
-  smartlist_free(lines2);
-  tor_free(cons1_copy);
-  tor_free(cons2_copy);
-
   if (result_lines) {
     result = consensus_join_lines(result_lines);
-    SMARTLIST_FOREACH(result_lines, char *, cp, tor_free(cp));
     smartlist_free(result_lines);
   }
+
+  memarea_drop_all(area);
+  smartlist_free(lines1);
+  smartlist_free(lines2);
+
   return result;
 }
 
@@ -1150,18 +1247,17 @@ consensus_diff_apply(const char *consensus,
   smartlist_t *lines1 = NULL, *lines2 = NULL;
   int r1;
   char *result = NULL;
+  memarea_t *area = memarea_new();
 
   r1 = consensus_compute_digest(consensus, &d1);
   if (BUG(r1 < 0))
     return NULL; // LCOV_EXCL_LINE
 
-  char *cons_copy = tor_strdup(consensus);
-  char *diff_copy = tor_strdup(diff);
   lines1 = smartlist_new();
   lines2 = smartlist_new();
-  if (consensus_split_lines(lines1, cons_copy) < 0)
+  if (consensus_split_lines(lines1, consensus, area) < 0)
     goto done;
-  if (consensus_split_lines(lines2, diff_copy) < 0)
+  if (consensus_split_lines(lines2, diff, area) < 0)
     goto done;
 
   result = consdiff_apply_diff(lines1, lines2, &d1);
@@ -1169,8 +1265,7 @@ consensus_diff_apply(const char *consensus,
  done:
   smartlist_free(lines1);
   smartlist_free(lines2);
-  tor_free(cons_copy);
-  tor_free(diff_copy);
+  memarea_drop_all(area);
 
   return result;
 }

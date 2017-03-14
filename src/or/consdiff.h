@@ -13,6 +13,16 @@ char *consensus_diff_apply(const char *consensus,
                            const char *diff);
 
 #ifdef CONSDIFF_PRIVATE
+struct memarea_t;
+
+/** Line type used for constructing consensus diffs.  Each of these lines
+ * refers to a chunk of memory allocated elsewhere, and is not necessarily
+ * NUL-terminated: this helps us avoid copies and save memory. */
+typedef struct cdline_t {
+  const char *s;
+  uint32_t len;
+} cdline_t;
+
 typedef struct consensus_digest_t {
   uint8_t sha3_256[DIGEST256_LEN];
 } consensus_digest_t;
@@ -20,7 +30,8 @@ typedef struct consensus_digest_t {
 STATIC smartlist_t *consdiff_gen_diff(const smartlist_t *cons1,
                                       const smartlist_t *cons2,
                                       const consensus_digest_t *digests1,
-                                      const consensus_digest_t *digests2);
+                                      const consensus_digest_t *digests2,
+                                      struct memarea_t *area);
 STATIC char *consdiff_apply_diff(const smartlist_t *cons1,
                                  const smartlist_t *diff,
                                  const consensus_digest_t *digests1);
@@ -41,7 +52,8 @@ typedef struct smartlist_slice_t {
   int len;
 } smartlist_slice_t;
 STATIC smartlist_t *gen_ed_diff(const smartlist_t *cons1,
-                                const smartlist_t *cons2);
+                                const smartlist_t *cons2,
+                                struct memarea_t *area);
 STATIC smartlist_t *apply_ed_diff(const smartlist_t *cons1,
                                   const smartlist_t *diff,
                                   int start_line);
@@ -54,14 +66,20 @@ STATIC int *lcs_lengths(const smartlist_slice_t *slice1,
                         const smartlist_slice_t *slice2,
                         int direction);
 STATIC void trim_slices(smartlist_slice_t *slice1, smartlist_slice_t *slice2);
-STATIC int base64cmp(const char *hash1, const char *hash2);
-STATIC const char *get_id_hash(const char *r_line);
-STATIC int is_valid_router_entry(const char *line);
+STATIC int base64cmp(const cdline_t *hash1, const cdline_t *hash2);
+STATIC int get_id_hash(const cdline_t *line, cdline_t *hash_out);
+STATIC int is_valid_router_entry(const cdline_t *line);
 STATIC int smartlist_slice_string_pos(const smartlist_slice_t *slice,
-                                      const char *string);
+                                      const cdline_t *string);
 STATIC void set_changed(bitarray_t *changed1, bitarray_t *changed2,
                         const smartlist_slice_t *slice1,
                         const smartlist_slice_t *slice2);
+STATIC int consensus_split_lines(smartlist_t *out, const char *s,
+                                 struct memarea_t *area);
+STATIC void smartlist_add_linecpy(smartlist_t *lst, struct memarea_t *area,
+                                  const char *s);
+STATIC int lines_eq(const cdline_t *a, const cdline_t *b);
+STATIC int line_str_eq(const cdline_t *a, const char *b);
 
 MOCK_DECL(STATIC int,
           consensus_compute_digest,(const char *cons,
