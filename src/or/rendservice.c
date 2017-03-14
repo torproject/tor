@@ -83,6 +83,7 @@ static const smartlist_t* rend_get_service_list(
                                   const smartlist_t* substitute_service_list);
 static smartlist_t* rend_get_service_list_mutable(
                                   smartlist_t* substitute_service_list);
+static int rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -1025,6 +1026,45 @@ rend_service_del_ephemeral(const char *service_id)
   return 0;
 }
 
+/* There can be 1 second's delay due to second_elapsed_callback, and perhaps
+ * another few seconds due to blocking calls. */
+#define INTRO_CIRC_RETRY_PERIOD_SLOP 10
+
+/** Log information about the intro point creation rate and current intro
+ * points for service, upgrading the log level from min_severity to warn if
+ * we have stopped launching new intro point circuits. */
+static void
+rend_log_intro_limit(const rend_service_t *service, int min_severity)
+{
+  int exceeded_limit = (service->n_intro_circuits_launched >=
+                        rend_max_intro_circs_per_period(
+                                              service->n_intro_points_wanted));
+  int severity = min_severity;
+  /* We stopped creating circuits */
+  if (exceeded_limit) {
+    severity = LOG_WARN;
+  }
+  time_t intro_period_elapsed = time(NULL) - service->intro_period_started;
+  tor_assert_nonfatal(intro_period_elapsed >= 0);
+  /* We delayed resuming circuits longer than expected */
+  int exceeded_elapsed = (intro_period_elapsed > INTRO_CIRC_RETRY_PERIOD +
+                          INTRO_CIRC_RETRY_PERIOD_SLOP);
+  if (exceeded_elapsed) {
+    severity = LOG_WARN;
+  }
+  log_fn(severity, LD_REND, "Hidden service %s %s %d intro points in the last "
+         "%d seconds%s. Intro circuit launches are limited to %d per %d "
+         "seconds.",
+         service->service_id,
+         exceeded_limit ? "exceeded launch limit with" : "launched",
+         service->n_intro_circuits_launched,
+         (int)intro_period_elapsed,
+         exceeded_elapsed ? " (delayed)" : "",
+         rend_max_intro_circs_per_period(service->n_intro_points_wanted),
+         INTRO_CIRC_RETRY_PERIOD);
+  rend_service_dump_stats(severity);
+}
+
 /** Replace the old value of <b>service</b>-\>desc with one that reflects
  * the other fields in service.
  */
@@ -1094,7 +1134,8 @@ rend_service_update_descriptor(rend_service_t *service)
            "descriptor was updated with %d instead.",
            service->service_id,
            service->n_intro_points_wanted, have_intro);
-    rend_service_dump_stats(severity);
+    /* Now log an informative message about how we might have got here. */
+    rend_log_intro_limit(service, severity);
   }
 }
 
@@ -4095,8 +4136,12 @@ rend_consider_services_intro_points(void)
 
     /* This retry period is important here so we don't stress circuit
      * creation. */
+
     if (now > service->intro_period_started + INTRO_CIRC_RETRY_PERIOD) {
-      /* One period has elapsed; we can try building circuits again. */
+      /* One period has elapsed:
+       *  - if we stopped, we can try building circuits again,
+       *  - if we haven't, we reset the circuit creation counts. */
+      rend_log_intro_limit(service, LOG_INFO);
       service->intro_period_started = now;
       service->n_intro_circuits_launched = 0;
     } else if (service->n_intro_circuits_launched >=
@@ -4104,6 +4149,7 @@ rend_consider_services_intro_points(void)
                                       service->n_intro_points_wanted)) {
       /* We have failed too many times in this period; wait for the next
        * one before we try to initiate any more connections. */
+      rend_log_intro_limit(service, LOG_WARN);
       continue;
     }
 
