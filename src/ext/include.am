@@ -5,6 +5,7 @@ EXTRA_DIST += src/ext/README
 
 EXTHEADERS = \
   src/ext/ht.h		\
+  src/ext/byteorder.h   \
   src/ext/tinytest.h	\
   src/ext/tor_readpassphrase.h \
   src/ext/strlcat.c	\
