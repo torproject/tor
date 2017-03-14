@@ -179,6 +179,7 @@ uptime-*.json
 /src/test/test-child
 /src/test/test-memwipe
 /src/test/test-ntor-cl
+/src/test/test-hs-ntor-cl
 /src/test/test-switch-id
 /src/test/test-timers
 /src/test/test_workqueue
@@ -187,6 +188,7 @@ uptime-*.json
 /src/test/test-bt-cl.exe
 /src/test/test-child.exe
 /src/test/test-ntor-cl.exe
+/src/test/test-hs-ntor-cl.exe
 /src/test/test-memwipe.exe
 /src/test/test-switch-id.exe
 /src/test/test-timers.exe
