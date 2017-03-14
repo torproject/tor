@@ -4,9 +4,10 @@ Coding conventions for Tor
 tl;dr:
 
    - Run configure with `--enable-fatal-warnings`
-   - Run `make check-spaces` to catch whitespace errors
    - Document your functions
    - Write unit tests
+   - Run `make test-full` to test against all unit and integration tests.
+   - Run `make distcheck` to ensure the distribution works
    - Add a file in `changes` for your branch.
 
 Patch checklist
@@ -22,10 +23,12 @@ preference)
 Did you remember...
 
    - To build your code while configured with `--enable-fatal-warnings`?
-   - To run `make check-spaces` on your code?
    - To run `make check-docs` to see whether all new options are on
      the manpage?
    - To write unit tests, as possible?
+   - To run `make test-full` to test against all unit and integration tests (or
+     `make test-full-online` if you have a working connection to the internet)?
+   - To test that the distribution will actually work via `make distcheck`?
    - To base your code on the appropriate branch?
    - To include a file in the `changes` directory as appropriate?
 
