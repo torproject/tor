@@ -1505,8 +1505,9 @@ decode_superencrypted(const char *message, size_t message_len,
 
     /* Copy the encrypted blob to the descriptor object so we can handle it
      * latter if needed. */
+    tor_assert(tok->object_size <= INT_MAX);
     *encrypted_out = tor_memdup(tok->object_body, tok->object_size);
-    retval = tok->object_size;
+    retval = (int) tok->object_size;
   }
 
  err:

@@ -1005,7 +1005,7 @@ test_desc_signature(void *arg)
 }
 
 /* bad desc auth type */
-const char bad_superencrypted_text1[] = "desc-auth-type scoobysnack\n"
+static const char bad_superencrypted_text1[] = "desc-auth-type scoobysnack\n"
   "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
   "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
   "encrypted\n"
@@ -1015,7 +1015,7 @@ const char bad_superencrypted_text1[] = "desc-auth-type scoobysnack\n"
   "-----END MESSAGE-----\n";
 
 /* bad ephemeral key */
-const char bad_superencrypted_text2[] = "desc-auth-type x25519\n"
+static const char bad_superencrypted_text2[] = "desc-auth-type x25519\n"
   "desc-auth-ephemeral-key differentalphabet\n"
   "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
   "encrypted\n"
@@ -1025,7 +1025,7 @@ const char bad_superencrypted_text2[] = "desc-auth-type x25519\n"
   "-----END MESSAGE-----\n";
 
 /* bad encrypted msg */
-const char bad_superencrypted_text3[] = "desc-auth-type x25519\n"
+static const char bad_superencrypted_text3[] = "desc-auth-type x25519\n"
   "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
   "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
   "encrypted\n"
@@ -1033,7 +1033,7 @@ const char bad_superencrypted_text3[] = "desc-auth-type x25519\n"
   "SO SMALL NOT GOOD\n"
   "-----END MESSAGE-----\n";
 
-const char correct_superencrypted_text[] = "desc-auth-type x25519\n"
+static const char correct_superencrypted_text[] = "desc-auth-type x25519\n"
   "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
   "auth-client oiNrQB8WwKo S5D02W7vKgiWIMygrBl8RQ FB//SfOBmLEx1kViEWWL1g\n"
   "auth-client Od09Qu636Qo /PKLzqewAdS/+0+vZC+MvQ dpw4NFo13zDnuPz45rxrOg\n"
@@ -1044,14 +1044,14 @@ const char correct_superencrypted_text[] = "desc-auth-type x25519\n"
   "BiYWQgYXQgYWxs\n"
   "-----END MESSAGE-----\n";
 
-const char correct_encrypted_plaintext[] = "being on mountains, "
+static const char correct_encrypted_plaintext[] = "being on mountains, "
   "thinking about computers, is not bad at all";
 
 static void
 test_parse_hs_desc_superencrypted(void *arg)
 {
   (void) arg;
-  int retval;
+  size_t retval;
   uint8_t *encrypted_out = NULL;
 
   {
@@ -1059,7 +1059,7 @@ test_parse_hs_desc_superencrypted(void *arg)
     retval = decode_superencrypted(bad_superencrypted_text1,
                                    strlen(bad_superencrypted_text1),
                                    &encrypted_out);
-    tt_int_op(retval, ==, 0);
+    tt_u64_op(retval, ==, 0);
     tt_assert(!encrypted_out);
     expect_log_msg_containing("Unrecognized desc auth type");
     teardown_capture_of_logs();
@@ -1070,7 +1070,7 @@ test_parse_hs_desc_superencrypted(void *arg)
     retval = decode_superencrypted(bad_superencrypted_text2,
                                    strlen(bad_superencrypted_text2),
                                    &encrypted_out);
-    tt_int_op(retval, ==, 0);
+    tt_u64_op(retval, ==, 0);
     tt_assert(!encrypted_out);
     expect_log_msg_containing("Bogus desc auth key in HS desc");
     teardown_capture_of_logs();
@@ -1081,7 +1081,7 @@ test_parse_hs_desc_superencrypted(void *arg)
     retval = decode_superencrypted(bad_superencrypted_text3,
                                    strlen(bad_superencrypted_text3),
                                    &encrypted_out);
-    tt_int_op(retval, ==, 0);
+    tt_u64_op(retval, ==, 0);
     tt_assert(!encrypted_out);
     expect_log_msg_containing("Length of descriptor\'s encrypted data "
                               "is too small.");
@@ -1093,7 +1093,7 @@ test_parse_hs_desc_superencrypted(void *arg)
                                  strlen(correct_superencrypted_text),
                                  &encrypted_out);
 
-  tt_int_op(retval, ==, strlen(correct_encrypted_plaintext));
+  tt_u64_op(retval, ==, strlen(correct_encrypted_plaintext));
   tt_mem_op(encrypted_out, OP_EQ, correct_encrypted_plaintext,
             strlen(correct_encrypted_plaintext));
 
