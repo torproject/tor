@@ -185,6 +185,9 @@ GENERAL OPTIONS
     course, more is better; we recommend at least 250 KBytes (2 mbits) if
     possible.  (Default: 1 GByte) +
  +
+    Note that this option, and other bandwidth-limiting options, apply to TCP
+    data only: They do not count TCP headers or DNS traffic. +
+ +
     With this option, and in other options that take arguments in bytes,
     KBytes, and so on, other formats are also supported. Notably, "KBytes" can
     also be written as "kilobytes" or "kb"; "MBytes" can be written as
