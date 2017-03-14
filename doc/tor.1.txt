@@ -2121,8 +2121,9 @@ is non-zero):
 DIRECTORY SERVER OPTIONS
 ------------------------
 
-The following options are useful only for directory servers (that is,
-if DirPort is non-zero):
+The following options are useful only for directory servers. (Relays with
+enough bandwidth automatically become directory servers; see DirCache for
+details.)
 
 [[DirPortFrontPage]] **DirPortFrontPage** __FILENAME__::
     When this option is set, it takes an HTML file and publishes it as "/" on
