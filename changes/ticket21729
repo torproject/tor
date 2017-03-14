@@ -1,0 +1,7 @@
+  o Minor features (logging):
+    - Log files are no longer created world-readable by default.
+      (Previously, most distributors would store the logs in a
+      non-world-readable location to prevent inappropriate access. This
+      change is an extra precaution.)  Closes ticket 21729; patch from
+      toralf.
+

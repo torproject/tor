@@ -1086,7 +1086,7 @@ add_file_log(const log_severity_list_t *severity, const char *filename,
   int open_flags = O_WRONLY|O_CREAT;
   open_flags |= truncate_log ? O_TRUNC : O_APPEND;
 
-  fd = tor_open_cloexec(filename, open_flags, 0644);
+  fd = tor_open_cloexec(filename, open_flags, 0640);
   if (fd<0)
     return -1;
   if (tor_fd_seekend(fd)<0) {
