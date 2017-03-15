@@ -308,7 +308,6 @@ calc_changes(smartlist_slice_t *slice1,
 
   /* Keep on splitting the slices in two. */
   } else {
-
     smartlist_slice_t *top, *bot, *left, *right;
 
     /* Split the first slice in half. */
@@ -696,7 +695,6 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
         tor_snprintf(buf, sizeof(buf), "%i,%id", start1x+1, start1x+deleted);
         smartlist_add_linecpy(result, area, buf);
       }
-
     } else {
       int i;
       if (deleted == 0) {
