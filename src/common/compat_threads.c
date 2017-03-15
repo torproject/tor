@@ -94,51 +94,73 @@ in_main_thread(void)
 }
 
 #if defined(HAVE_EVENTFD) || defined(HAVE_PIPE)
-/* As write(), but retry on EINTR */
+/* As write(), but retry on EINTR, and return the negative error code on
+ * error. */
 static int
 write_ni(int fd, const void *buf, size_t n)
 {
   int r;
  again:
   r = (int) write(fd, buf, n);
-  if (r < 0 && errno == EINTR)
-    goto again;
+  if (r < 0) {
+    if (errno == EINTR)
+      goto again;
+    else
+      return -errno;
+  }
   return r;
 }
-/* As read(), but retry on EINTR */
+/* As read(), but retry on EINTR, and return the negative error code on error.
+ */
 static int
 read_ni(int fd, void *buf, size_t n)
 {
   int r;
  again:
   r = (int) read(fd, buf, n);
-  if (r < 0 && errno == EINTR)
-    goto again;
+  if (r < 0) {
+    if (errno == EINTR)
+      goto again;
+    else
+      return -errno;
+  }
   return r;
 }
 #endif
 
-/** As send(), but retry on EINTR. */
+/** As send(), but retry on EINTR, and return the negative error code on
+ * error. */
 static int
 send_ni(int fd, const void *buf, size_t n, int flags)
 {
   int r;
  again:
   r = (int) send(fd, buf, n, flags);
-  if (r < 0 && ERRNO_IS_EINTR(tor_socket_errno(fd)))
-    goto again;
+  if (r < 0) {
+    int error = tor_socket_errno(fd);
+    if (ERRNO_IS_EINTR(error))
+      goto again;
+    else
+      return -error;
+  }
   return r;
 }
 
-/** As recv(), but retry on EINTR. */
+/** As recv(), but retry on EINTR, and return the negative error code on
+ * error. */
 static int
 recv_ni(int fd, void *buf, size_t n, int flags)
 {
   int r;
  again:
   r = (int) recv(fd, buf, n, flags);
-  if (r < 0 && ERRNO_IS_EINTR(tor_socket_errno(fd)))
-    goto again;
+  if (r < 0) {
+    int error = tor_socket_errno(fd);
+    if (ERRNO_IS_EINTR(error))
+      goto again;
+    else
+      return -error;
+  }
   return r;
 }
 
@@ -149,7 +171,7 @@ eventfd_alert(int fd)
 {
   uint64_t u = 1;
   int r = write_ni(fd, (void*)&u, sizeof(u));
-  if (r < 0 && errno != EAGAIN)
+  if (r < 0 && -r != EAGAIN)
     return -1;
   return 0;
 }
@@ -160,8 +182,8 @@ eventfd_drain(int fd)
 {
   uint64_t u = 0;
   int r = read_ni(fd, (void*)&u, sizeof(u));
-  if (r < 0 && errno != EAGAIN)
-    return -1;
+  if (r < 0 && -r != EAGAIN)
+    return r;
   return 0;
 }
 #endif
@@ -172,8 +194,8 @@ static int
 pipe_alert(int fd)
 {
   ssize_t r = write_ni(fd, "x", 1);
-  if (r < 0 && errno != EAGAIN)
-    return -1;
+  if (r < 0 && -r != EAGAIN)
+    return r;
   return 0;
 }
 
@@ -188,7 +210,7 @@ pipe_drain(int fd)
     r = read_ni(fd, buf, sizeof(buf));
   } while (r > 0);
   if (r < 0 && errno != EAGAIN)
-    return -1;
+    return -errno;
   /* A value of r = 0 means EOF on the fd so successfully drained. */
   return 0;
 }
@@ -200,13 +222,13 @@ static int
 sock_alert(tor_socket_t fd)
 {
   ssize_t r = send_ni(fd, "x", 1, 0);
-  if (r < 0 && !ERRNO_IS_EAGAIN(tor_socket_errno(fd)))
-    return -1;
+  if (r < 0 && !ERRNO_IS_EAGAIN(-r))
+    return r;
   return 0;
 }
 
 /** Drain all the input from a socket <b>fd</b>, and ignore it.  Return 0 on
- * success, -1 on error. */
+ * success, -errno on error. */
 static int
 sock_drain(tor_socket_t fd)
 {
@@ -215,8 +237,8 @@ sock_drain(tor_socket_t fd)
   do {
     r = recv_ni(fd, buf, sizeof(buf), 0);
   } while (r > 0);
-  if (r < 0 && !ERRNO_IS_EAGAIN(tor_socket_errno(fd)))
-    return -1;
+  if (r < 0 && !ERRNO_IS_EAGAIN(-r))
+    return r;
   /* A value of r = 0 means EOF on the fd so successfully drained. */
   return 0;
 }
