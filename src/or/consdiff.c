@@ -333,9 +333,10 @@ calc_changes(smartlist_slice_t *slice1,
 }
 
 /* This table is from crypto.c. The SP and PAD defines are different. */
-#define X 255
-#define SP X
-#define PAD X
+#define NOT_VALID_BASE64 255
+#define X NOT_VALID_BASE64
+#define SP NOT_VALID_BASE64
+#define PAD NOT_VALID_BASE64
 static const uint8_t base64_compare_table[256] = {
   X, X, X, X, X, X, X, X, X, SP, SP, SP, X, SP, X, X,
   X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
@@ -378,7 +379,8 @@ get_id_hash(const cdline_t *line, cdline_t *hash_out)
   /* Stop when the first non-base64 character is found. Use unsigned chars to
    * avoid negative indexes causing crashes.
    */
-  while (base64_compare_table[*((unsigned char*)hash_end)] != X &&
+  while (base64_compare_table[*((unsigned char*)hash_end)]
+           != NOT_VALID_BASE64 &&
          hash_end < line->s + line->len) {
     hash_end++;
   }
@@ -458,15 +460,15 @@ base64cmp(const cdline_t *hash1, const cdline_t *hash2)
   while (1) {
     uint8_t av = base64_compare_table[*a];
     uint8_t bv = base64_compare_table[*b];
-    if (av == X) {
-      if (bv == X) {
+    if (av == NOT_VALID_BASE64) {
+      if (bv == NOT_VALID_BASE64) {
         /* Both ended with exactly the same characters. */
         return 0;
       } else {
         /* hash2 goes on longer than hash1 and thus hash1 is lower. */
         return -1;
       }
-    } else if (bv == X) {
+    } else if (bv == NOT_VALID_BASE64) {
       /* hash1 goes on longer than hash2 and thus hash1 is greater. */
       return 1;
     } else if (av < bv) {
