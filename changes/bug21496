@@ -1,0 +1,4 @@
+  o Minor features (safety):
+    - Add an explict check to extrainfo_parse_entry_from_string() for NULL
+      inputs. We don't believe this can actually happen, but it may help
+      silence a warning from the Clang analyzer. Closes ticket 21496.
