@@ -510,12 +510,13 @@ replyqueue_get_socket(replyqueue_t *rq)
 void
 replyqueue_process(replyqueue_t *queue)
 {
-  if (queue->alert.drain_fn(queue->alert.read_fd) < 0) {
+  int r = queue->alert.drain_fn(queue->alert.read_fd);
+  if (r < 0) {
     //LCOV_EXCL_START
     static ratelim_t warn_limit = RATELIM_INIT(7200);
     log_fn_ratelim(&warn_limit, LOG_WARN, LD_GENERAL,
                  "Failure from drain_fd: %s",
-                 tor_socket_strerror(tor_socket_errno(queue->alert.read_fd)));
+                   tor_socket_strerror(-r));
     //LCOV_EXCL_STOP
   }
 
