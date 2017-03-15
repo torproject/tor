@@ -1139,6 +1139,9 @@ consdiff_apply_diff(const smartlist_t *cons1,
   return cons2_str;
 }
 
+/** Any consensus line longer than this means that the input is invalid. */
+#define CONSENSUS_LINE_MAX_LEN (1<<20)
+
 /**
  * Helper: For every NL-terminated line in <b>s</b>, add a cdline referring to
  * that line (without trailing newline) to <b>out</b>.  Return -1 if there are
@@ -1160,7 +1163,7 @@ consensus_split_lines(smartlist_t *out, const char *s, memarea_t *area)
       /* File doesn't end with newline. */
       return -1;
     }
-    if (eol - s > UINT32_MAX) {
+    if (eol - s > CONSENSUS_LINE_MAX_LEN) {
       /* Line is far too long. */
       return -1;
     }
