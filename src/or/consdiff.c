@@ -726,7 +726,7 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
 
   return result;
 
-  error_cleanup:
+ error_cleanup:
 
   bitarray_free(changed1);
   bitarray_free(changed2);
@@ -880,7 +880,7 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
   smartlist_reverse(cons2);
   return cons2;
 
-  error_cleanup:
+ error_cleanup:
 
   smartlist_free(cons2);
 
@@ -1044,7 +1044,7 @@ consdiff_get_digests(const smartlist_t *diff,
   smartlist_free(hash_words);
   return 0;
 
-  error_cleanup:
+ error_cleanup:
 
   if (hash_words) {
     SMARTLIST_FOREACH(hash_words, char *, cp, tor_free(cp));
