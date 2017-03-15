@@ -1,4 +1,4 @@
-/* Copyright 2016, The Tor Project, Inc. */
+/* Copyright 2016-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
