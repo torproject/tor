@@ -195,7 +195,7 @@ pipe_alert(int fd)
 {
   ssize_t r = write_ni(fd, "x", 1);
   if (r < 0 && -r != EAGAIN)
-    return r;
+    return (int)r;
   return 0;
 }
 
@@ -223,7 +223,7 @@ sock_alert(tor_socket_t fd)
 {
   ssize_t r = send_ni(fd, "x", 1, 0);
   if (r < 0 && !ERRNO_IS_EAGAIN(-r))
-    return r;
+    return (int)r;
   return 0;
 }
 
@@ -238,7 +238,7 @@ sock_drain(tor_socket_t fd)
     r = recv_ni(fd, buf, sizeof(buf), 0);
   } while (r > 0);
   if (r < 0 && !ERRNO_IS_EAGAIN(-r))
-    return r;
+    return (int)r;
   /* A value of r = 0 means EOF on the fd so successfully drained. */
   return 0;
 }
