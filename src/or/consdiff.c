@@ -391,7 +391,8 @@ get_id_hash(const cdline_t *line, cdline_t *hash_out)
 
   hash_out->s = hash;
   /* Always true because lines are limited to this length */
-  tor_assert(hash_end - hash <= UINT32_MAX);
+  tor_assert(hash_end >= hash);
+  tor_assert((size_t)(hash_end - hash) <= UINT32_MAX);
   hash_out->len = (uint32_t)(hash_end - hash);
 
   return 0;
