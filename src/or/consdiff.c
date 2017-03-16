@@ -748,6 +748,23 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
   return NULL;
 }
 
+/* Helper: Read a base-10 number between 0 and INT32_MAX from <b>s</b> and
+ * store it in <b>num_out</b>.  Advance <b>s</b> to the characer immediately
+ * after the number.  Return 0 on success, -1 on failure. */
+static int
+get_linenum(const char **s, int *num_out)
+{
+  int ok;
+  char *next;
+  *num_out = (int) tor_parse_long(*s, 10, 0, INT32_MAX, &ok, &next);
+  if (ok && next) {
+    *s = next;
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
 /** Apply the ed diff, starting at <b>diff_starting_line</b>, to the consensus
  * and return a new consensus, also as a line-based smartlist. Will return
  * NULL if the ed diff is not properly formatted.
@@ -766,42 +783,39 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
   for (int i=diff_starting_line; i<diff_len; ++i) {
     const cdline_t *diff_cdline = smartlist_get(diff, i);
     char diff_line[128];
-    char *endptr1, *endptr2;
 
     if (diff_cdline->len > sizeof(diff_line) - 1) {
       log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
                "an ed command was far too long");
       goto error_cleanup;
     }
+    /* Copy the line to make it nul-terminated. */
     memcpy(diff_line, diff_cdline->s, diff_cdline->len);
     diff_line[diff_cdline->len] = 0;
-    int start = (int)strtol(diff_line, &endptr1, 10);
-    int end;
-    if (endptr1 == diff_line) {
+    const char *ptr = diff_line;
+    int start = 0, end = 0;
+    if (get_linenum(&ptr, &start) < 0) {
       log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
-          "an ed command was missing a line number.");
+               "an ed command was missing a line number.");
       goto error_cleanup;
     }
-
-    /* Two-item range */
-    if (*endptr1 == ',') {
-        end = (int)strtol(endptr1+1, &endptr2, 10);
-        if (endptr2 == endptr1+1) {
-          log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
-              "an ed command was missing a range end line number.");
-          goto error_cleanup;
-        }
-        /* Incoherent range. */
-        if (end <= start) {
-          log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
-              "an invalid range was found in an ed command.");
-          goto error_cleanup;
-        }
-
-    /* We'll take <n1> as <n1>,<n1> for simplicity. */
+    if (*ptr == ',') {
+      /* Two-item range */
+      ++ptr;
+      if (get_linenum(&ptr, &end) < 0) {
+        log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
+                 "an ed command was missing a range end line number.");
+        goto error_cleanup;
+      }
+      /* Incoherent range. */
+      if (end <= start) {
+        log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
+                 "an invalid range was found in an ed command.");
+        goto error_cleanup;
+      }
     } else {
-        endptr2 = endptr1;
-        end = start;
+      /* We'll take <n1> as <n1>,<n1> for simplicity. */
+      end = start;
     }
 
     if (end > j) {
@@ -810,19 +824,19 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
       goto error_cleanup;
     }
 
-    if (*endptr2 == '\0') {
+    if (*ptr == '\0') {
       log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
                "a line with no ed command was found");
       goto error_cleanup;
     }
 
-    if (*(endptr2+1) != '\0') {
+    if (*(ptr+1) != '\0') {
       log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
           "an ed command longer than one char was found.");
       goto error_cleanup;
     }
 
-    char action = *endptr2;
+    char action = *ptr;
 
     switch (action) {
       case 'a':
