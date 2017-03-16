@@ -36,6 +36,7 @@ LIBTOR_A_SOURCES = \
 	src/or/connection.c				\
 	src/or/connection_edge.c			\
 	src/or/connection_or.c				\
+	src/or/consdiff.c				\
 	src/or/control.c				\
 	src/or/cpuworker.c				\
 	src/or/dircollate.c				\
@@ -151,6 +152,7 @@ ORHEADERS = \
 	src/or/connection.h				\
 	src/or/connection_edge.h			\
 	src/or/connection_or.h				\
+	src/or/consdiff.h				\
 	src/or/control.h				\
 	src/or/cpuworker.h				\
 	src/or/dircollate.h				\

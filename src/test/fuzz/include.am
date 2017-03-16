@@ -48,6 +48,22 @@ src_test_fuzz_fuzz_descriptor_CFLAGS = $(FUZZING_CFLAGS)
 src_test_fuzz_fuzz_descriptor_LDFLAGS = $(FUZZING_LDFLAG)
 src_test_fuzz_fuzz_descriptor_LDADD = $(FUZZING_LIBS)
 
+src_test_fuzz_fuzz_diff_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_diff.c
+src_test_fuzz_fuzz_diff_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_diff_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_diff_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_diff_LDADD = $(FUZZING_LIBS)
+
+src_test_fuzz_fuzz_diff_apply_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_diff_apply.c
+src_test_fuzz_fuzz_diff_apply_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_diff_apply_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_diff_apply_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_diff_apply_LDADD = $(FUZZING_LIBS)
+
 src_test_fuzz_fuzz_http_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \
 	src/test/fuzz/fuzz_http.c
@@ -99,13 +115,14 @@ src_test_fuzz_fuzz_vrs_LDADD = $(FUZZING_LIBS)
 FUZZERS = \
 	src/test/fuzz/fuzz-consensus \
 	src/test/fuzz/fuzz-descriptor \
+	src/test/fuzz/fuzz-diff \
+	src/test/fuzz/fuzz-diff-apply \
 	src/test/fuzz/fuzz-extrainfo \
 	src/test/fuzz/fuzz-http \
 	src/test/fuzz/fuzz-hsdescv2 \
 	src/test/fuzz/fuzz-iptsv2 \
 	src/test/fuzz/fuzz-microdesc \
 	src/test/fuzz/fuzz-vrs
-
 
 LIBFUZZER = /home/nickm/build/libfuzz/libFuzzer.a
 LIBFUZZER_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
@@ -127,6 +144,20 @@ src_test_fuzz_lf_fuzz_descriptor_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
 src_test_fuzz_lf_fuzz_descriptor_CFLAGS = $(LIBFUZZER_CFLAGS)
 src_test_fuzz_lf_fuzz_descriptor_LDFLAGS = $(LIBFUZZER_LDFLAG)
 src_test_fuzz_lf_fuzz_descriptor_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_diff_SOURCES = \
+	$(src_test_fuzz_fuzz_diff_SOURCES)
+src_test_fuzz_lf_fuzz_diff_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_diff_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_diff_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_diff_LDADD = $(LIBFUZZER_LIBS)
+
+src_test_fuzz_lf_fuzz_diff_apply_SOURCES = \
+	$(src_test_fuzz_fuzz_diff_apply_SOURCES)
+src_test_fuzz_lf_fuzz_diff_apply_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_diff_apply_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_diff_apply_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_diff_apply_LDADD = $(LIBFUZZER_LIBS)
 
 src_test_fuzz_lf_fuzz_extrainfo_SOURCES = \
 	$(src_test_fuzz_fuzz_extrainfo_SOURCES)
@@ -172,6 +203,8 @@ src_test_fuzz_lf_fuzz_vrs_LDADD = $(LIBFUZZER_LIBS)
 
 LIBFUZZER_FUZZERS = \
 	src/test/fuzz/lf-fuzz-consensus \
+	src/test/fuzz/lf-fuzz-diff \
+	src/test/fuzz/lf-fuzz-diff-apply \
 	src/test/fuzz/lf-fuzz-descriptor \
 	src/test/fuzz/lf-fuzz-extrainfo \
 	src/test/fuzz/lf-fuzz-http \
@@ -197,6 +230,16 @@ src_test_fuzz_liboss_fuzz_descriptor_a_SOURCES = \
 	$(src_test_fuzz_fuzz_descriptor_SOURCES)
 src_test_fuzz_liboss_fuzz_descriptor_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
 src_test_fuzz_liboss_fuzz_descriptor_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
+
+src_test_fuzz_liboss_fuzz_diff_a_SOURCES = \
+	$(src_test_fuzz_fuzz_diff_SOURCES)
+src_test_fuzz_liboss_fuzz_diff_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_diff_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
+
+src_test_fuzz_liboss_fuzz_diff_apply_a_SOURCES = \
+	$(src_test_fuzz_fuzz_diff_apply_SOURCES)
+src_test_fuzz_liboss_fuzz_diff_apply_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_diff_apply_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
 src_test_fuzz_liboss_fuzz_extrainfo_a_SOURCES = \
 	$(src_test_fuzz_fuzz_extrainfo_SOURCES)
@@ -231,6 +274,8 @@ src_test_fuzz_liboss_fuzz_vrs_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 OSS_FUZZ_FUZZERS = \
 	src/test/fuzz/liboss-fuzz-consensus.a \
 	src/test/fuzz/liboss-fuzz-descriptor.a \
+	src/test/fuzz/liboss-fuzz-diff.a \
+	src/test/fuzz/liboss-fuzz-diff-apply.a \
 	src/test/fuzz/liboss-fuzz-extrainfo.a \
 	src/test/fuzz/liboss-fuzz-http.a \
 	src/test/fuzz/liboss-fuzz-hsdescv2.a \

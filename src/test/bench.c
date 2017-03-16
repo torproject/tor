@@ -28,6 +28,7 @@ const char tor_git_revision[] = "";
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
 #include "crypto_ed25519.h"
+#include "consdiff.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
@@ -673,6 +674,27 @@ main(int argc, const char **argv)
   or_options_t *options;
 
   tor_threads_init();
+
+  if (argc == 4 && !strcmp(argv[1], "diff")) {
+    init_logging(1);
+    const int N = 200;
+    char *f1 = read_file_to_str(argv[2], RFTS_BIN, NULL);
+    char *f2 = read_file_to_str(argv[3], RFTS_BIN, NULL);
+    if (! f1 || ! f2) {
+      perror("X");
+      return 1;
+    }
+    for (i = 0; i < N; ++i) {
+      char *diff = consensus_diff_generate(f1, f2);
+      tor_free(diff);
+    }
+    char *diff = consensus_diff_generate(f1, f2);
+    printf("%s", diff);
+    tor_free(f1);
+    tor_free(f2);
+    tor_free(diff);
+    return 0;
+  }
 
   for (i = 1; i < argc; ++i) {
     if (!strcmp(argv[i], "--list")) {
