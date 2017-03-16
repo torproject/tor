@@ -1,0 +1,5 @@
+  o Major features (internals):
+    - Add an ed diff/patch backend, optimized for consensus documents.
+      This backend will be the basis of our consensus diff implementation.
+      Most of the work here was done 
+      by Daniel Martí. Closes ticket 21643.
