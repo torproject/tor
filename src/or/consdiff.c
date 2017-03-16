@@ -492,6 +492,46 @@ base64cmp(const cdline_t *hash1, const cdline_t *hash2)
   }
 }
 
+/** Structure used to remember the previous and current identity hash of
+ * the "r " lines in a consensus, to enforce well-ordering. */
+typedef struct router_id_iterator_t {
+  cdline_t last_hash;
+  cdline_t hash;
+} router_id_iterator_t;
+
+/**
+ * Initializer for a router_id_iterator_t.
+ */
+#define ROUTER_ID_ITERATOR_INIT { { NULL, 0 }, { NULL, 0 } }
+
+/** Given an index *<b>idxp</b> into the consensus at <b>cons</b>, advance
+ * the index to the next router line ("r ...") in the consensus, or to
+ * an index one after the end of the list if there is no such line.
+ *
+ * Use <b>iter</b> to record the hash of the found router line, if any,
+ * and to enforce ordering on the hashes.  If the hashes are mis-ordered,
+ * return -1.  Else, return 0.
+ **/
+static int
+find_next_router_line(const smartlist_t *cons,
+                      const char *consname,
+                      int *idxp,
+                      router_id_iterator_t *iter)
+{
+  *idxp = next_router(cons, *idxp);
+  if (*idxp < smartlist_len(cons)) {
+    memcpy(&iter->last_hash, &iter->hash, sizeof(cdline_t));
+    if (get_id_hash(smartlist_get(cons, *idxp), &iter->hash) < 0 ||
+        base64cmp(&iter->hash, &iter->last_hash) <= 0) {
+      log_warn(LD_CONSDIFF, "Refusing to generate consensus diff because "
+               "the %s consensus doesn't have its router entries sorted "
+               "properly.", consname);
+      return -1;
+    }
+  }
+  return 0;
+}
+
 /** Generate an ed diff as a smartlist from two consensuses, also given as
  * smartlists. Will return NULL if the diff could not be generated, which can
  * happen if any lines the script had to add matched "." or if the routers
@@ -529,8 +569,8 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
   int start1=0, start2=0;
 
   /* To check that hashes are ordered properly */
-  cdline_t hash1 = { NULL, 0 }, hash2 =  { NULL, 0 };
-  cdline_t last_hash1 = { NULL, 0 }, last_hash2 = { NULL, 0 };
+  router_id_iterator_t iter1 = ROUTER_ID_ITERATOR_INIT;
+  router_id_iterator_t iter2 = ROUTER_ID_ITERATOR_INIT;
 
   /* i1 and i2 are initialized at the first line of each consensus. They never
    * reach past len1 and len2 respectively, since next_router doesn't let that
@@ -545,30 +585,14 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
      * yet at the end.
      */
     if (i1 < len1) {
-      i1 = next_router(cons1, i1);
-      if (i1 != len1) {
-        memcpy(&last_hash1, &hash1, sizeof(cdline_t));
-        if (get_id_hash(smartlist_get(cons1, i1), &hash1) < 0 ||
-            base64cmp(&hash1, &last_hash1) <= 0) {
-          log_warn(LD_CONSDIFF, "Refusing to generate consensus diff because "
-              "the base consensus doesn't have its router entries "
-              "sorted properly.");
-          goto error_cleanup;
-        }
+      if (find_next_router_line(cons1, "base", &i1, &iter1) < 0) {
+        goto error_cleanup;
       }
     }
 
     if (i2 < len2) {
-      i2 = next_router(cons2, i2);
-      if (i2 != len2) {
-        memcpy(&last_hash2, &hash2, sizeof(cdline_t));
-        if (get_id_hash(smartlist_get(cons2, i2), &hash2) < 0 ||
-            base64cmp(&hash2, &last_hash2) <= 0) {
-          log_warn(LD_CONSDIFF, "Refusing to generate consensus diff because "
-              "the target consensus doesn't have its router entries "
-              "sorted properly.");
-          goto error_cleanup;
-        }
+      if (find_next_router_line(cons2, "target", &i2, &iter2) < 0) {
+        goto error_cleanup;
       }
     }
 
@@ -587,10 +611,12 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
        * consensus has already reached the end, both are extended to their
        * respecting ends since we are done.
        */
-      int cmp = base64cmp(&hash1, &hash2);
+      int cmp = base64cmp(&iter1.hash, &iter2.hash);
       while (cmp != 0) {
         if (i1 < len1 && cmp < 0) {
-          i1 = next_router(cons1, i1);
+          if (find_next_router_line(cons1, "base", &i1, &iter1) < 0) {
+            goto error_cleanup;
+          }
           if (i1 == len1) {
             /* We finished the first consensus, so grab all the remaining
              * lines of the second consensus and finish up.
@@ -598,16 +624,10 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
             i2 = len2;
             break;
           }
-          memcpy(&last_hash1, &hash1, sizeof(cdline_t));
-          if (get_id_hash(smartlist_get(cons1, i1), &hash1) < 0 ||
-              base64cmp(&hash1, &last_hash1) <= 0) {
-            log_warn(LD_CONSDIFF, "Refusing to generate consensus diff "
-                "because the base consensus doesn't have its router entries "
-                "sorted properly.");
+        } else if (i2 < len2 && cmp > 0) {
+          if (find_next_router_line(cons2, "target", &i2, &iter2) < 0) {
             goto error_cleanup;
           }
-        } else if (i2 < len2 && cmp > 0) {
-          i2 = next_router(cons2, i2);
           if (i2 == len2) {
             /* We finished the second consensus, so grab all the remaining
              * lines of the first consensus and finish up.
@@ -615,20 +635,12 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
             i1 = len1;
             break;
           }
-          memcpy(&last_hash2, &hash2, sizeof(cdline_t));
-          if (get_id_hash(smartlist_get(cons2, i2), &hash2) < 0 ||
-              base64cmp(&hash2, &last_hash2) <= 0) {
-            log_warn(LD_CONSDIFF, "Refusing to generate consensus diff "
-                "because the target consensus doesn't have its router entries "
-                "sorted properly.");
-            goto error_cleanup;
-          }
         } else {
           i1 = len1;
           i2 = len2;
           break;
         }
-        cmp = base64cmp(&hash1, &hash2);
+        cmp = base64cmp(&iter1.hash, &iter2.hash);
       }
     }
 
