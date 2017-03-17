@@ -329,7 +329,7 @@ test_dir_formats(void *arg)
     ntor_cc = make_ntor_onion_key_crosscert(&r2_onion_keypair,
                                           &kp1.pubkey,
                                           r2->cache_info.published_on,
-                                          MIN_ONION_KEY_LIFETIME,
+                                          get_onion_key_lifetime(),
                                           &ntor_cc_sign);
     tt_assert(ntor_cc);
     base64_encode(cert_buf, sizeof(cert_buf),
