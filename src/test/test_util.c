@@ -4029,6 +4029,16 @@ test_util_string_from_pipe(void *ptr)
   tt_mem_op(buf, OP_EQ, "B\0\xff\xff", sizeof(buf));
   errno = 0;
 
+  /* Send in multiple lines. */
+  retlen = write(test_pipe[1], "A\nB", 3);
+  tt_int_op(retlen, OP_EQ, 3);
+
+  status = get_string_from_pipe(test_pipe[0], buf, sizeof(buf)-1);
+  tt_int_op(errno, OP_EQ, 0);
+  tt_int_op(status, OP_EQ, IO_STREAM_OKAY);
+  tt_str_op(buf, OP_EQ, "A\nB");
+  errno = 0;
+
   /* Send in a line and close */
   retlen = write(test_pipe[1], "AB", 2);
   tt_int_op(retlen, OP_EQ, 2);
