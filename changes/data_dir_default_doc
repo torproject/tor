@@ -1,0 +1,3 @@
+  o Documentation:
+    - Correct the documentation about the default DataDirectory value.
+      Closes ticket 21151.

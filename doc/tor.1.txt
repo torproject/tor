@@ -394,7 +394,9 @@ GENERAL OPTIONS
 
 [[DataDirectory]] **DataDirectory** __DIR__::
     Store working data in DIR. Can not be changed while tor is running.
-    (Default: @LOCALSTATEDIR@/lib/tor)
+    (Default: ~/.tor if your home directory is not /; otherwise,
+    @LOCALSTATEDIR@/lib/tor.  On Windows, the default is
+    your ApplicationData folder.)
 
 [[DataDirectoryGroupReadable]] **DataDirectoryGroupReadable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read the
