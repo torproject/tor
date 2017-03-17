@@ -164,6 +164,10 @@
 /** Default grace period for acceptance of an onion key in days. */
 #define DEFAULT_ONION_KEY_GRACE_PERIOD_DAYS (7)
 
+/** How often we should check the network consensus if it is time to rotate or
+ * expire onion keys. */
+#define ONION_KEY_CONSENSUS_CHECK_INTERVAL (60*60)
+
 /** How often do we rotate TLS contexts? */
 #define MAX_SSL_KEY_LIFETIME_INTERNAL (2*60*60)
 

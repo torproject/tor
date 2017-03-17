@@ -1485,7 +1485,7 @@ rotate_onion_key_callback(time_t now, const or_options_t *options)
     int onion_key_lifetime = get_onion_key_lifetime();
     time_t rotation_time = get_onion_key_set_at()+onion_key_lifetime;
     if (rotation_time > now) {
-      return safe_timer_diff(now, rotation_time);
+      return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
     }
 
     log_info(LD_GENERAL,"Rotating onion key.");
@@ -1496,7 +1496,7 @@ rotate_onion_key_callback(time_t now, const or_options_t *options)
     }
     if (advertised_server_mode() && !options->DisableNetwork)
       router_upload_dir_desc_to_dirservers(0);
-    return onion_key_lifetime;
+    return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
   }
   return PERIODIC_EVENT_NO_UPDATE;
 }
@@ -1512,17 +1512,14 @@ check_onion_keys_expiry_time_callback(time_t now, const or_options_t *options)
   if (server_mode(options)) {
     int onion_key_grace_period = get_onion_key_grace_period();
     time_t expiry_time = get_onion_key_set_at()+onion_key_grace_period;
-
     if (expiry_time > now) {
-      return safe_timer_diff(now, expiry_time);
+      return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
     }
 
     log_info(LD_GENERAL, "Expiring old onion keys.");
-
     expire_old_onion_keys();
     cpuworkers_rotate_keyinfo();
-
-    return onion_key_grace_period;
+    return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
   }
 
   return PERIODIC_EVENT_NO_UPDATE;
