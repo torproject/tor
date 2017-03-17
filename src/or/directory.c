@@ -3181,7 +3181,8 @@ handle_get_current_consensus(dir_connection_t *conn,
       conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
 
     /* Prime the connection with some data. */
-    connection_dirserv_flushed_some(conn);
+    const int initial_flush_result = connection_dirserv_flushed_some(conn);
+    tor_assert_nonfatal(initial_flush_result == 0);
     goto done;
   }
 
@@ -3337,7 +3338,8 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
       conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
                                       choose_compression_level(size_guess));
 
-    connection_dirserv_flushed_some(conn);
+    const int initial_flush_result = connection_dirserv_flushed_some(conn);
+    tor_assert_nonfatal(initial_flush_result == 0);
     goto done;
   }
 
@@ -3430,7 +3432,8 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
                                         choose_compression_level(size_guess));
       clear_spool = 0;
       /* Prime the connection with some data. */
-      connection_dirserv_flushed_some(conn);
+      int initial_flush_result = connection_dirserv_flushed_some(conn);
+      tor_assert_nonfatal(initial_flush_result == 0);
     }
     goto done;
   }
