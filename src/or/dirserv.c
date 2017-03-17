@@ -3740,8 +3740,14 @@ get_signed_descriptor_by_fp(const uint8_t *fp, int extrainfo)
  * below this threshold. */
 #define DIRSERV_BUFFER_MIN 16384
 
-/** Called whenever we have flushed some directory data in state
- * SERVER_WRITING. */
+/**
+ * Called whenever we have flushed some directory data in state
+ * SERVER_WRITING, or whenever we want to fill the buffer with initial
+ * directory data (so that subsequent writes will occur, and trigger this
+ * function again.)
+ *
+ * Return 0 on success, and -1 on failure.
+ */
 int
 connection_dirserv_flushed_some(dir_connection_t *conn)
 {
