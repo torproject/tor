@@ -3186,6 +3186,7 @@ tor_free_all(int postfork)
   if (!postfork) {
     escaped(NULL);
     esc_router_info(NULL);
+    clean_up_backtrace_handler();
     logs_free_all(); /* free log strings. do this last so logs keep working. */
   }
 }
