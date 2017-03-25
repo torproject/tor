@@ -131,6 +131,10 @@ int crypto_early_init(void) ATTR_WUR;
 int crypto_global_init(int hardwareAccel,
                        const char *accelName,
                        const char *accelPath) ATTR_WUR;
+#ifdef USE_DMALLOC
+int crypto_use_tor_alloc_functions(void);
+#endif
+
 void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
 
