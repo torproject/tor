@@ -101,6 +101,7 @@ noinst_LIBRARIES += $(LIBED25519_REF10)
 src_ext_ed25519_donna_libed25519_donna_a_CFLAGS=\
   @CFLAGS_CONSTTIME@ \
   -DED25519_CUSTOMRANDOM \
+  -DED25519_CUSTOMHASH \
   -DED25519_SUFFIX=_donna
 
 src_ext_ed25519_donna_libed25519_donna_a_SOURCES= \
