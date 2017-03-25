@@ -32,8 +32,6 @@
 #include "ed25519/ref10/ed25519_ref10.h"
 #include "ed25519/donna/ed25519_donna_tor.h"
 
-#include <openssl/sha.h>
-
 static void pick_ed25519_impl(void);
 
 /** An Ed25519 implementation, as a set of function pointers. */
@@ -442,14 +440,16 @@ ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
 {
   const char string[] = "Derive high part of ed25519 key from curve25519 key";
   ed25519_public_key_t pubkey_check;
-  SHA512_CTX ctx;
-  uint8_t sha512_output[64];
+  crypto_digest_t *ctx;
+  uint8_t sha512_output[DIGEST512_LEN];
 
   memcpy(out->seckey.seckey, inp->seckey.secret_key, 32);
-  SHA512_Init(&ctx);
-  SHA512_Update(&ctx, out->seckey.seckey, 32);
-  SHA512_Update(&ctx, string, sizeof(string));
-  SHA512_Final(sha512_output, &ctx);
+
+  ctx = crypto_digest512_new(DIGEST_SHA512);
+  crypto_digest_add_bytes(ctx, (const char*)out->seckey.seckey, 32);
+  crypto_digest_add_bytes(ctx, (const char*)string, sizeof(string));
+  crypto_digest_get_digest(ctx, (char *)sha512_output, sizeof(sha512_output));
+  crypto_digest_free(ctx);
   memcpy(out->seckey.seckey + 32, sha512_output, 32);
 
   ed25519_public_key_generate(&out->pubkey, &out->seckey);
