@@ -14,12 +14,6 @@
 
 #include "test.h"
 
-DISABLE_GCC_WARNING(redundant-decls)
-#include <openssl/rsa.h>
-#include <openssl/bn.h>
-#include <openssl/pem.h>
-ENABLE_GCC_WARNING(redundant-decls)
-
 #ifdef _WIN32
 /* For mkdir() */
 #include <direct.h>
