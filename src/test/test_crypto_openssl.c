@@ -8,6 +8,9 @@
 #define CRYPTO_PRIVATE
 
 #include "crypto.h"
+#include "util.h"
+#include "util_format.h"
+#include "compat.h"
 #include "test.h"
 
 #include <openssl/evp.h>
@@ -46,7 +49,59 @@ test_crypto_rng_engine(void *arg)
   ;
 }
 
+#ifndef OPENSSL_1_1_API
+#define EVP_ENCODE_CTX_new() tor_malloc_zero(sizeof(EVP_ENCODE_CTX))
+#define EVP_ENCODE_CTX_free(ctx) tor_free(ctx)
+#endif
+
+/** Encode src into dest with OpenSSL's EVP Encode interface, returning the
+ * length of the encoded data in bytes.
+ */
+static int
+base64_encode_evp(char *dest, char *src, size_t srclen)
+{
+  const unsigned char *s = (unsigned char*)src;
+  EVP_ENCODE_CTX *ctx = EVP_ENCODE_CTX_new();
+  int len, ret;
+
+  EVP_EncodeInit(ctx);
+  EVP_EncodeUpdate(ctx, (unsigned char *)dest, &len, s, (int)srclen);
+  EVP_EncodeFinal(ctx, (unsigned char *)(dest + len), &ret);
+  EVP_ENCODE_CTX_free(ctx);
+  return ret+ len;
+}
+
+static void
+test_crypto_base64_encode_matches(void *arg)
+{
+  (void)arg;
+  int i, j;
+  char data1[1024];
+  char data2[1024];
+  char data3[1024];
+
+  for (i = 0; i < 256; i++) {
+    /* Test the multiline format Base64 encoder with 0 .. 256 bytes of
+     * output against OpenSSL.
+     */
+    const size_t enclen = base64_encode_size(i, BASE64_ENCODE_MULTILINE);
+    data1[i] = i;
+    j = base64_encode(data2, 1024, data1, i, BASE64_ENCODE_MULTILINE);
+    tt_int_op(j, OP_EQ, enclen);
+    j = base64_encode_evp(data3, data1, i);
+    tt_int_op(j, OP_EQ, enclen);
+    tt_mem_op(data2, OP_EQ, data3, enclen);
+    tt_int_op(j, OP_EQ, strlen(data2));
+  }
+
+ done:
+  ;
+}
+
 struct testcase_t crypto_openssl_tests[] = {
   { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
+  { "base64_encode_match", test_crypto_base64_encode_matches,
+    TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
+
