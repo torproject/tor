@@ -16,7 +16,6 @@
 #include "ed25519_vectors.inc"
 
 #include <openssl/evp.h>
-#include <openssl/rand.h>
 
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
@@ -329,38 +328,6 @@ test_crypto_rng_strongest(void *arg)
  done:
   ;
 #undef N
-}
-
-/* Test for rectifying openssl RAND engine. */
-static void
-test_crypto_rng_engine(void *arg)
-{
-  (void)arg;
-  RAND_METHOD dummy_method;
-  memset(&dummy_method, 0, sizeof(dummy_method));
-
-  /* We should be a no-op if we're already on RAND_OpenSSL */
-  tt_int_op(0, ==, crypto_force_rand_ssleay());
-  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
-
-  /* We should correct the method if it's a dummy. */
-  RAND_set_rand_method(&dummy_method);
-#ifdef LIBRESSL_VERSION_NUMBER
-  /* On libressl, you can't override the RNG. */
-  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
-  tt_int_op(0, ==, crypto_force_rand_ssleay());
-#else
-  tt_assert(RAND_get_rand_method() == &dummy_method);
-  tt_int_op(1, ==, crypto_force_rand_ssleay());
-#endif
-  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
-
-  /* Make sure we aren't calling dummy_method */
-  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
-  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
-
- done:
-  ;
 }
 
 /** Run unit tests for our AES128 functionality */
@@ -2941,7 +2908,6 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   CRYPTO_LEGACY(rng),
   { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
-  { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
   { "rng_strongest", test_crypto_rng_strongest, TT_FORK, NULL, NULL },
   { "rng_strongest_nosyscall", test_crypto_rng_strongest, TT_FORK,
     &passthrough_setup, (void*)"nosyscall" },
