@@ -98,7 +98,12 @@ new Tor release:
    to a release-0.2.x branch, manually commit the changelogs to the later
    git branches too.
 
-3. If you're doing the first stable release in a series, you need to
+3. If there are changes that require or suggest operator intervention
+   before or during the update, mail operators (either dirauth or relays
+   list) with a headline that indicates that an action is required or
+   appreciated.
+
+4. If you're doing the first stable release in a series, you need to
    create a ReleaseNotes for the series as a whole.  To get started
    there, copy all of the Changelog entries from the series into a new
    file, and run `./scripts/maint/sortChanges.py` on it.  That will
