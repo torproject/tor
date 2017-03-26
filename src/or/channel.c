@@ -1972,8 +1972,8 @@ channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
  * are appropriate to the state transition in question.
  */
 
-void
-channel_change_state(channel_t *chan, channel_state_t to_state)
+static void
+channel_change_state_(channel_t *chan, channel_state_t to_state)
 {
   channel_state_t from_state;
   unsigned char was_active, is_active;
@@ -2092,22 +2092,41 @@ channel_change_state(channel_t *chan, channel_state_t to_state)
     estimated_total_queue_size += chan->bytes_in_queue;
   }
 
-  /* Tell circuits if we opened and stuff */
-  if (to_state == CHANNEL_STATE_OPEN) {
-    channel_do_open_actions(chan);
-    chan->has_been_open = 1;
-
-    /* Check for queued cells to process */
-    if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
-      channel_process_cells(chan);
-    if (! TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue))
-      channel_flush_cells(chan);
-  } else if (to_state == CHANNEL_STATE_CLOSED ||
-             to_state == CHANNEL_STATE_ERROR) {
+  if (to_state == CHANNEL_STATE_CLOSED ||
+      to_state == CHANNEL_STATE_ERROR) {
     /* Assert that all queues are empty */
     tor_assert(TOR_SIMPLEQ_EMPTY(&chan->incoming_queue));
     tor_assert(TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue));
   }
+}
+
+/**
+ * As channel_change_state_, but change the state to any state but open.
+ */
+void
+channel_change_state(channel_t *chan, channel_state_t to_state)
+{
+  tor_assert(to_state != CHANNEL_STATE_OPEN);
+  channel_change_state_(chan, to_state);
+}
+
+/**
+ * As channel_change_state, but change the state to open.
+ */
+void
+channel_change_state_open(channel_t *chan)
+{
+  channel_change_state_(chan, CHANNEL_STATE_OPEN);
+
+  /* Tell circuits if we opened and stuff */
+  channel_do_open_actions(chan);
+  chan->has_been_open = 1;
+
+  /* Check for queued cells to process */
+  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
+    channel_process_cells(chan);
+  if (! TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue))
+    channel_flush_cells(chan);
 }
 
 /**

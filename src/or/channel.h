@@ -436,6 +436,7 @@ void channel_listener_free(channel_listener_t *chan_l);
 /* State/metadata setters */
 
 void channel_change_state(channel_t *chan, channel_state_t to_state);
+void channel_change_state_open(channel_t *chan);
 void channel_clear_identity_digest(channel_t *chan);
 void channel_clear_remote_end(channel_t *chan);
 void channel_mark_local(channel_t *chan);
