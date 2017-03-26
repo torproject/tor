@@ -18,6 +18,8 @@
 .dirstamp
 *.trs
 *.log
+# Calltool stuff
+.*.graph
 # Stuff made by our makefiles
 *.bak
 # Python droppings
