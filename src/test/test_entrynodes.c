@@ -584,6 +584,9 @@ test_entry_guard_parse_from_state_full(void *arg)
   smartlist_t *text = smartlist_new();
   char *joined = NULL;
 
+  // So nodes aren't expired. This is Tue, 13 Dec 2016 09:37:14 GMT
+  update_approx_time(1481621834);
+
   MOCK(entry_guard_is_listed, mock_entry_guard_is_listed);
 
   dummy_state = state;

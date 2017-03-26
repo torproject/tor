@@ -1,0 +1,6 @@
+  o Minor bugfixes (tests):
+    - Run the entry_guard_parse_from_state_full test with the time set
+      to a specific date.  (The guard state that this test was parsing
+      contained guards that had expired since the test was first
+      written.) Fixes bug 21799; bugfix on 0.3.0.1-alpha.
+
