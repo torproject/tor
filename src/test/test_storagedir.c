@@ -172,17 +172,17 @@ test_storagedir_full(void *arg)
   d = storage_dir_new(dirname, 3);
   tt_assert(d);
 
-  r = storage_dir_save_string_to_file(d, str, 0, NULL);
+  r = storage_dir_save_string_to_file(d, str, 1, NULL);
   tt_int_op(r, OP_EQ, 0);
-  r = storage_dir_save_string_to_file(d, str, 0, NULL);
+  r = storage_dir_save_string_to_file(d, str, 1, NULL);
   tt_int_op(r, OP_EQ, 0);
-  r = storage_dir_save_string_to_file(d, str, 0, NULL);
+  r = storage_dir_save_string_to_file(d, str, 1, NULL);
   tt_int_op(r, OP_EQ, 0);
 
   // These should fail!
-  r = storage_dir_save_string_to_file(d, str, 0, NULL);
+  r = storage_dir_save_string_to_file(d, str, 1, NULL);
   tt_int_op(r, OP_EQ, -1);
-  r = storage_dir_save_string_to_file(d, str, 0, NULL);
+  r = storage_dir_save_string_to_file(d, str, 1, NULL);
   tt_int_op(r, OP_EQ, -1);
 
   tt_u64_op(strlen(str) * 3, OP_EQ, storage_dir_get_usage(d));
@@ -212,7 +212,7 @@ test_storagedir_cleaning(void *arg)
   tt_assert(d);
 
   for (i = 0; i < 8; ++i) {
-    r = storage_dir_save_string_to_file(d, str+i*2, 0, &fns[i]);
+    r = storage_dir_save_string_to_file(d, str+i*2, 1, &fns[i]);
     tt_int_op(r, OP_EQ, 0);
   }
 
