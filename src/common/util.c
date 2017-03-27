@@ -5270,7 +5270,7 @@ tor_get_lines_from_handle, (int fd, enum stream_status *stream_status_out))
       goto done;
 
     if (!lines) lines = smartlist_new();
-    smartlist_add_strdup(lines, stdout_buf);
+    smartlist_split_string(lines, stdout_buf, "\n", 0, 0);
   }
 
  done:
