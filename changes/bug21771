@@ -1,0 +1,5 @@
+  o Minor bugfixes (guard selection):
+    - Fix a guard selection bug where Tor would refuse to bootstrap in some
+      cases if the user swapped a bridge for another bridge in their
+      configuration file.
+      Fixes bug 21771; bugfix on 0.3.0.1-alpha. Reported by "torvlnt33r".
