@@ -3661,7 +3661,7 @@ void
 dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
                                             time_t cutoff,
                                             int compression,
-                                            uint64_t *size_out,
+                                            size_t *size_out,
                                             int *n_expired_out)
 {
   if (BUG(!conn))
@@ -3693,8 +3693,9 @@ dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
     }
   } SMARTLIST_FOREACH_END(spooled);
 
-  if (size_out)
-    *size_out = total;
+  if (size_out) {
+    *size_out = (total > SIZE_MAX) ? SIZE_MAX : (size_t)total;
+  }
   if (n_expired_out)
     *n_expired_out = n_expired;
 }

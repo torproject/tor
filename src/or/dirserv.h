@@ -188,7 +188,7 @@ void spooled_resource_free(spooled_resource_t *spooled);
 void dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
                                                  time_t cutoff,
                                                  int compression,
-                                                 uint64_t *size_out,
+                                                 size_t *size_out,
                                                  int *n_expired_out);
 void dirserv_spool_sort(dir_connection_t *conn);
 void dir_conn_clear_spool(dir_connection_t *conn);
