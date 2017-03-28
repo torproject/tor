@@ -73,7 +73,6 @@ static int circuit_deliver_create_cell(circuit_t *circ,
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
-static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 /** This function tries to get a channel to the specified endpoint,
@@ -1552,7 +1551,7 @@ onionskin_answer(or_circuit_t *circ,
  * If the routerlist <b>nodes</b> doesn't have enough routers
  * to handle the desired path length, return -1.
  */
-static int
+STATIC int
 new_route_len(uint8_t purpose, extend_info_t *exit_ei, smartlist_t *nodes)
 {
   int num_acceptable_routers;
@@ -2188,8 +2187,8 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
 /** Return the number of routers in <b>routers</b> that are currently up
  * and available for building circuits through.
  */
-static int
-count_acceptable_nodes(smartlist_t *nodes)
+MOCK_IMPL(STATIC int,
+count_acceptable_nodes, (smartlist_t *nodes))
 {
   int num=0;
 
