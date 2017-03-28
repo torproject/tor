@@ -96,10 +96,33 @@ test_new_route_len_safe_exit(void *arg)
   UNMOCK(count_acceptable_nodes);
 }
 
+/* Make sure a non-fatal assertion fails when new_route_len() gets an
+ * unexpected circuit purpose. */
+static void
+test_new_route_len_unhandled_exit(void *arg)
+{
+  int r;
+
+  (void)arg;
+  MOCK(count_acceptable_nodes, mock_count_acceptable_nodes);
+
+  tor_capture_bugs_(1);
+  r = new_route_len(CIRCUIT_PURPOSE_CONTROLLER, &dummy_ei, &dummy_nodes);
+  tt_int_op(DEFAULT_ROUTE_LEN + 1, OP_EQ, r);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(exit_ei && !known_purpose)");
+  tor_end_capture_bugs_();
+
+ done:
+  UNMOCK(count_acceptable_nodes);
+}
+
 struct testcase_t circuitbuild_tests[] = {
   { "noexit", test_new_route_len_noexit, 0, NULL, NULL },
   { "safe_exit", test_new_route_len_safe_exit, 0, NULL, NULL },
   { "unsafe_exit", test_new_route_len_unsafe_exit, 0, NULL, NULL },
+  { "unhandled_exit", test_new_route_len_unhandled_exit, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
