@@ -629,12 +629,12 @@ connection_free_(connection_t *conn)
     tor_free(dir_conn->requested_resource);
 
     tor_zlib_free(dir_conn->zlib_state);
-    if (dir_conn->fingerprint_stack) {
-      SMARTLIST_FOREACH(dir_conn->fingerprint_stack, char *, cp, tor_free(cp));
-      smartlist_free(dir_conn->fingerprint_stack);
+    if (dir_conn->spool) {
+      SMARTLIST_FOREACH(dir_conn->spool, spooled_resource_t *, spooled,
+                        spooled_resource_free(spooled));
+      smartlist_free(dir_conn->spool);
     }
 
-    cached_dir_decref(dir_conn->cached_dir);
     rend_data_free(dir_conn->rend_data);
     if (dir_conn->guard_state) {
       /* Cancel before freeing, if it's still there. */

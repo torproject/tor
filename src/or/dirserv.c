@@ -81,13 +81,22 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         int severity);
 static void clear_cached_dir(cached_dir_t *d);
 static const signed_descriptor_t *get_signed_descriptor_by_fp(
-                                                        const char *fp,
-                                                        int extrainfo,
-                                                        time_t publish_cutoff);
+                                                        const uint8_t *fp,
+                                                        int extrainfo);
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
 static uint32_t dirserv_get_bandwidth_for_router_kb(const routerinfo_t *ri);
 static uint32_t dirserv_get_credible_bandwidth_kb(const routerinfo_t *ri);
+
+static int spooled_resource_lookup_body(const spooled_resource_t *spooled,
+                                        int conn_is_encrypted,
+                                        const uint8_t **body_out,
+                                        size_t *size_out,
+                                        time_t *published_out);
+static cached_dir_t *spooled_resource_lookup_cached_dir(
+                                   const spooled_resource_t *spooled,
+                                   time_t *published_out);
+static cached_dir_t *lookup_cached_dir_by_fp(const uint8_t *fp);
 
 /************** Fingerprint handling code ************/
 
@@ -3043,58 +3052,61 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
  * requests, adds identity digests.
  */
 int
-dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
-                                    const char **msg, int for_unencrypted_conn,
-                                    int is_extrainfo)
+dirserv_get_routerdesc_spool(smartlist_t *spool_out,
+                             const char *key,
+                             dir_spool_source_t source,
+                             int conn_is_encrypted,
+                             const char **msg_out)
 {
-  int by_id = 1;
-  *msg = NULL;
+  *msg_out = NULL;
 
   if (!strcmp(key, "all")) {
-    routerlist_t *rl = router_get_routerlist();
-    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
-                      smartlist_add(fps_out,
-                      tor_memdup(r->cache_info.identity_digest, DIGEST_LEN)));
-    /* Treat "all" requests as if they were unencrypted */
-    for_unencrypted_conn = 1;
+    const routerlist_t *rl = router_get_routerlist();
+    SMARTLIST_FOREACH_BEGIN(rl->routers, const routerinfo_t *, r) {
+      spooled_resource_t *spooled;
+      spooled = spooled_resource_new(source,
+                              (const uint8_t *)r->cache_info.identity_digest,
+                              DIGEST_LEN);
+      /* Treat "all" requests as if they were unencrypted */
+      conn_is_encrypted = 0;
+      smartlist_add(spool_out, spooled);
+    } SMARTLIST_FOREACH_END(r);
   } else if (!strcmp(key, "authority")) {
     const routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
-      smartlist_add(fps_out,
-                    tor_memdup(ri->cache_info.identity_digest, DIGEST_LEN));
+      smartlist_add(spool_out,
+                    spooled_resource_new(source,
+                             (const uint8_t *)ri->cache_info.identity_digest,
+                             DIGEST_LEN));
   } else if (!strcmpstart(key, "d/")) {
-    by_id = 0;
     key += strlen("d/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL,
-                                         DSR_HEX|DSR_SORT_UNIQ);
+    dir_split_resource_into_spoolable(key, source, spool_out, NULL,
+                                  DSR_HEX|DSR_SORT_UNIQ);
   } else if (!strcmpstart(key, "fp/")) {
     key += strlen("fp/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL,
-                                         DSR_HEX|DSR_SORT_UNIQ);
+    dir_split_resource_into_spoolable(key, source, spool_out, NULL,
+                                  DSR_HEX|DSR_SORT_UNIQ);
   } else {
-    *msg = "Key not recognized";
+    *msg_out = "Not found";
     return -1;
   }
 
-  if (for_unencrypted_conn) {
+  if (! conn_is_encrypted) {
     /* Remove anything that insists it not be sent unencrypted. */
-    SMARTLIST_FOREACH_BEGIN(fps_out, char *, cp) {
-        const signed_descriptor_t *sd;
-        if (by_id)
-          sd = get_signed_descriptor_by_fp(cp,is_extrainfo,0);
-        else if (is_extrainfo)
-          sd = extrainfo_get_by_descriptor_digest(cp);
-        else
-          sd = router_get_by_descriptor_digest(cp);
-        if (sd && !sd->send_unencrypted) {
-          tor_free(cp);
-          SMARTLIST_DEL_CURRENT(fps_out, cp);
-        }
-    } SMARTLIST_FOREACH_END(cp);
+    SMARTLIST_FOREACH_BEGIN(spool_out, spooled_resource_t *, spooled) {
+      const uint8_t *body = NULL;
+      size_t bodylen = 0;
+      int r = spooled_resource_lookup_body(spooled, conn_is_encrypted,
+                                           &body, &bodylen, NULL);
+      if (r < 0 || body == NULL || bodylen == 0) {
+        SMARTLIST_DEL_CURRENT(spool_out, spooled);
+        spooled_resource_free(spooled);
+      }
+    } SMARTLIST_FOREACH_END(spooled);
   }
 
-  if (!smartlist_len(fps_out)) {
-    *msg = "Servers unavailable";
+  if (!smartlist_len(spool_out)) {
+    *msg_out = "Servers unavailable";
     return -1;
   }
   return 0;
@@ -3358,45 +3370,351 @@ dirserv_test_reachability(time_t now)
   ctr = (ctr + 1) % REACHABILITY_MODULO_PER_TEST; /* increment ctr */
 }
 
+/* ==========
+ * Spooling code.
+ * ========== */
+
+spooled_resource_t *
+spooled_resource_new(dir_spool_source_t source,
+                     const uint8_t *digest, size_t digestlen)
+{
+  spooled_resource_t *spooled = tor_malloc_zero(sizeof(spooled_resource_t));
+  spooled->spool_source = source;
+  switch (source) {
+    case DIR_SPOOL_NETWORKSTATUS:
+      spooled->spool_eagerly = 0;
+      break;
+    case DIR_SPOOL_SERVER_BY_DIGEST:
+    case DIR_SPOOL_SERVER_BY_FP:
+    case DIR_SPOOL_EXTRA_BY_DIGEST:
+    case DIR_SPOOL_EXTRA_BY_FP:
+    case DIR_SPOOL_MICRODESC:
+    default:
+      spooled->spool_eagerly = 1;
+      break;
+  }
+  tor_assert(digestlen <= sizeof(spooled->digest));
+  if (digest)
+    memcpy(spooled->digest, digest, digestlen);
+  return spooled;
+}
+
+/** Release all storage held by <b>spooled</b>. */
+void
+spooled_resource_free(spooled_resource_t *spooled)
+{
+  if (spooled == NULL)
+    return;
+
+  if (spooled->cached_dir_ref) {
+    cached_dir_decref(spooled->cached_dir_ref);
+  }
+
+  tor_free(spooled);
+}
+
+/** When spooling data from a cached_dir_t object, we always add
+ * at least this much. */
+#define DIRSERV_CACHED_DIR_CHUNK_SIZE 8192
+
+/** Return an compression ratio for compressing objects from <b>source</b>.
+ */
+static double
+estimate_compression_ratio(dir_spool_source_t source)
+{
+  /* We should put in better estimates here, depending on the number of
+     objects and their type */
+  (void) source;
+  return 0.5;
+}
+
+/** Return an estimated number of bytes needed for transmitting the
+ * resource in <b>spooled</b> on <b>conn</b>
+ *
+ * As a convenient side-effect, set *<b>published_out</b> to the resource's
+ * publication time.
+ */
+static size_t
+spooled_resource_estimate_size(const spooled_resource_t *spooled,
+                               dir_connection_t *conn,
+                               int compressed,
+                               time_t *published_out)
+{
+  if (spooled->spool_eagerly) {
+    const uint8_t *body = NULL;
+    size_t bodylen = 0;
+    int r = spooled_resource_lookup_body(spooled,
+                                         connection_dir_is_encrypted(conn),
+                                         &body, &bodylen,
+                                         published_out);
+    if (r == -1 || body == NULL || bodylen == 0)
+      return 0;
+    if (compressed) {
+      double ratio = estimate_compression_ratio(spooled->spool_source);
+      bodylen = (size_t)(bodylen * ratio);
+    }
+    return bodylen;
+  } else {
+    cached_dir_t *cached;
+    if (spooled->cached_dir_ref) {
+      cached = spooled->cached_dir_ref;
+    } else {
+      cached = spooled_resource_lookup_cached_dir(spooled,
+                                                  published_out);
+    }
+    if (cached == NULL) {
+      return 0;
+    }
+    size_t result = compressed ? cached->dir_z_len : cached->dir_len;
+    return result;
+  }
+}
+
+/** Return code for spooled_resource_flush_some */
+typedef enum {
+  SRFS_ERR = -1,
+  SRFS_MORE = 0,
+  SRFS_DONE
+} spooled_resource_flush_status_t;
+
+/** Flush some or all of the bytes from <b>spooled</b> onto <b>conn</b>.
+ * Return SRFS_ERR on error, SRFS_MORE if there are more bytes to flush from
+ * this spooled resource, or SRFS_DONE if we are done flushing this spooled
+ * resource.
+ */
+static spooled_resource_flush_status_t
+spooled_resource_flush_some(spooled_resource_t *spooled,
+                            dir_connection_t *conn)
+{
+  if (spooled->spool_eagerly) {
+    /* Spool_eagerly resources are sent all-at-once. */
+    const uint8_t *body = NULL;
+    size_t bodylen = 0;
+    int r = spooled_resource_lookup_body(spooled,
+                                         connection_dir_is_encrypted(conn),
+                                         &body, &bodylen, NULL);
+    if (r == -1 || body == NULL || bodylen == 0) {
+      /* Absent objects count as "done". */
+      return SRFS_DONE;
+    }
+    if (conn->zlib_state) {
+      connection_write_to_buf_zlib((const char*)body, bodylen, conn, 0);
+    } else {
+      connection_write_to_buf((const char*)body, bodylen, TO_CONN(conn));
+    }
+    return SRFS_DONE;
+  } else {
+    cached_dir_t *cached = spooled->cached_dir_ref;
+    if (cached == NULL) {
+      /* The cached_dir_t hasn't been materialized yet. So let's look it up. */
+      cached = spooled->cached_dir_ref =
+        spooled_resource_lookup_cached_dir(spooled, NULL);
+      if (!cached) {
+        /* Absent objects count as done. */
+        return SRFS_DONE;
+      }
+      ++cached->refcnt;
+      tor_assert_nonfatal(spooled->cached_dir_offset == 0);
+    }
+
+    /* How many bytes left to flush? */
+    int64_t remaining = 0;
+    remaining = cached->dir_z_len - spooled->cached_dir_offset;
+    if (BUG(remaining < 0))
+      return SRFS_ERR;
+    ssize_t bytes = MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
+    if (conn->zlib_state) {
+      connection_write_to_buf_zlib(cached->dir_z + spooled->cached_dir_offset,
+                                   bytes, conn, 0);
+    } else {
+      connection_write_to_buf(cached->dir_z + spooled->cached_dir_offset,
+                              bytes, TO_CONN(conn));
+    }
+    spooled->cached_dir_offset += bytes;
+    if (spooled->cached_dir_offset >= (off_t)cached->dir_z_len) {
+      return SRFS_DONE;
+    } else {
+      return SRFS_MORE;
+    }
+  }
+}
+
+/** Helper: find the cached_dir_t for a spooled_resource_t, for
+ * sending it to <b>conn</b>. Set *<b>published_out</b>, if provided,
+ * to the published time of the cached_dir_t.
+ *
+ * DOES NOT increase the reference count on the result.  Callers must do that
+ * themselves if they mean to hang on to it.
+ */
+static cached_dir_t *
+spooled_resource_lookup_cached_dir(const spooled_resource_t *spooled,
+                                   time_t *published_out)
+{
+  tor_assert(spooled->spool_eagerly == 0);
+  cached_dir_t *d = lookup_cached_dir_by_fp(spooled->digest);
+  if (d != NULL) {
+    if (published_out)
+      *published_out = d->published;
+  }
+  return d;
+}
+
+/** Helper: Look up the body for an eagerly-served spooled_resource.  If
+ * <b>conn_is_encrypted</b> is false, don't look up any resource that
+ * shouldn't be sent over an unencrypted connection.  On success, set
+ * <b>body_out</b>, <b>size_out</b>, and <b>published_out</b> to refer
+ * to the resource's body, size, and publication date, and return 0.
+ * On failure return -1. */
+static int
+spooled_resource_lookup_body(const spooled_resource_t *spooled,
+                             int conn_is_encrypted,
+                             const uint8_t **body_out,
+                             size_t *size_out,
+                             time_t *published_out)
+{
+  tor_assert(spooled->spool_eagerly == 1);
+
+  const signed_descriptor_t *sd = NULL;
+
+  switch (spooled->spool_source) {
+    case DIR_SPOOL_EXTRA_BY_FP: {
+      sd = get_signed_descriptor_by_fp(spooled->digest, 1);
+      break;
+    }
+    case DIR_SPOOL_SERVER_BY_FP: {
+      sd = get_signed_descriptor_by_fp(spooled->digest, 0);
+      break;
+    }
+    case DIR_SPOOL_SERVER_BY_DIGEST: {
+      sd = router_get_by_descriptor_digest((const char *)spooled->digest);
+      break;
+    }
+    case DIR_SPOOL_EXTRA_BY_DIGEST: {
+      sd = extrainfo_get_by_descriptor_digest((const char *)spooled->digest);
+      break;
+    }
+    case DIR_SPOOL_MICRODESC: {
+      microdesc_t *md = microdesc_cache_lookup_by_digest256(
+                                  get_microdesc_cache(),
+                                  (const char *)spooled->digest);
+      if (! md || ! md->body) {
+        return -1;
+      }
+      *body_out = (const uint8_t *)md->body;
+      *size_out = md->bodylen;
+      if (published_out)
+        *published_out = TIME_MAX;
+      return 0;
+    }
+    case DIR_SPOOL_NETWORKSTATUS:
+    default:
+      /* LCOV_EXCL_START */
+      tor_assert_nonfatal_unreached();
+      return -1;
+      /* LCOV_EXCL_STOP */
+  }
+
+  /* If we get here, then we tried to set "sd" to a signed_descriptor_t. */
+
+  if (sd == NULL) {
+    return -1;
+  }
+  if (sd->send_unencrypted == 0 && ! conn_is_encrypted) {
+    /* we did this check once before (so we could have an accurate size
+     * estimate and maybe send a 404 if somebody asked for only bridges on
+     * a connection), but we need to do it again in case a previously
+     * unknown bridge descriptor has shown up between then and now. */
+    return -1;
+  }
+  *body_out = (const uint8_t *) signed_descriptor_get_body(sd);
+  *size_out = sd->signed_descriptor_len;
+  if (published_out)
+    *published_out = sd->published_on;
+  return 0;
+}
+
 /** Given a fingerprint <b>fp</b> which is either set if we're looking for a
  * v2 status, or zeroes if we're looking for a v3 status, or a NUL-padded
  * flavor name if we want a flavored v3 status, return a pointer to the
  * appropriate cached dir object, or NULL if there isn't one available. */
 static cached_dir_t *
-lookup_cached_dir_by_fp(const char *fp)
+lookup_cached_dir_by_fp(const uint8_t *fp)
 {
   cached_dir_t *d = NULL;
-  if (tor_digest_is_zero(fp) && cached_consensuses) {
+  if (tor_digest_is_zero((const char *)fp) && cached_consensuses) {
     d = strmap_get(cached_consensuses, "ns");
-  } else if (memchr(fp, '\0', DIGEST_LEN) && cached_consensuses &&
-           (d = strmap_get(cached_consensuses, fp))) {
-    /* this here interface is a nasty hack XXXX */;
+  } else if (memchr(fp, '\0', DIGEST_LEN) && cached_consensuses) {
+    /* this here interface is a nasty hack: we're shoving a flavor into
+     * a digest field. */
+    d = strmap_get(cached_consensuses, (const char *)fp);
   }
   return d;
 }
 
-/** Remove from <b>fps</b> every networkstatus key where both
- * a) we have a networkstatus document and
- * b) it is not newer than <b>cutoff</b>.
- *
- * Return 1 if any items were present at all; else return 0.
- */
-int
-dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
+/** Try to guess the number of bytes that will be needed to send the
+ * spooled objects for <b>conn</b>'s outgoing spool.  In the process,
+ * remove every element of the spool that refers to an absent object, or
+ * which was published earlier than <b>cutoff</b>.  Set *<b>size_out</b>
+ * to the number of bytes, and *<b>n_expired_out</b> to the number of
+ * objects removed for being too old. */
+void
+dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
+                                            time_t cutoff,
+                                            int compression,
+                                            uint64_t *size_out,
+                                            int *n_expired_out)
 {
-  int found_any = 0;
-  SMARTLIST_FOREACH_BEGIN(fps, char *, digest) {
-    cached_dir_t *d = lookup_cached_dir_by_fp(digest);
-    if (!d)
-      continue;
-    found_any = 1;
-    if (d->published <= cutoff) {
-      tor_free(digest);
-      SMARTLIST_DEL_CURRENT(fps, digest);
-    }
-  } SMARTLIST_FOREACH_END(digest);
+  if (BUG(!conn))
+    return;
 
-  return found_any;
+  smartlist_t *spool = conn->spool;
+  if (!spool) {
+    if (size_out)
+      *size_out = 0;
+    if (n_expired_out)
+      *n_expired_out = 0;
+    return;
+  }
+  int n_expired = 0;
+  uint64_t total = 0;
+  SMARTLIST_FOREACH_BEGIN(spool, spooled_resource_t *, spooled) {
+    time_t published = TIME_MAX;
+    size_t sz = spooled_resource_estimate_size(spooled, conn,
+                                               compression, &published);
+    if (published < cutoff) {
+      ++n_expired;
+      SMARTLIST_DEL_CURRENT(spool, spooled);
+      spooled_resource_free(spooled);
+    } else if (sz == 0) {
+      SMARTLIST_DEL_CURRENT(spool, spooled);
+      spooled_resource_free(spooled);
+    } else {
+      total += sz;
+    }
+  } SMARTLIST_FOREACH_END(spooled);
+
+  if (size_out)
+    *size_out = total;
+  if (n_expired_out)
+    *n_expired_out = n_expired;
+}
+
+/** Helper: used to sort a connection's spool. */
+static int
+dirserv_spool_sort_comparison_(const void **a_, const void **b_)
+{
+  const spooled_resource_t *a = *a_;
+  const spooled_resource_t *b = *b_;
+  return fast_memcmp(a->digest, b->digest, sizeof(a->digest));
+}
+
+/** Sort all the entries in <b>conn</b> by digest. */
+void
+dirserv_spool_sort(dir_connection_t *conn)
+{
+  if (conn->spool == NULL)
+    return;
+  smartlist_sort(conn->spool, dirserv_spool_sort_comparison_);
 }
 
 /** Return the cache-info for identity fingerprint <b>fp</b>, or
@@ -3404,18 +3722,16 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
  * NULL if not found or if the descriptor is older than
  * <b>publish_cutoff</b>. */
 static const signed_descriptor_t *
-get_signed_descriptor_by_fp(const char *fp, int extrainfo,
-                            time_t publish_cutoff)
+get_signed_descriptor_by_fp(const uint8_t *fp, int extrainfo)
 {
-  if (router_digest_is_me(fp)) {
+  if (router_digest_is_me((const char *)fp)) {
     if (extrainfo)
       return &(router_get_my_extrainfo()->cache_info);
     else
       return &(router_get_my_routerinfo()->cache_info);
   } else {
-    const routerinfo_t *ri = router_get_by_id_digest(fp);
-    if (ri &&
-        ri->cache_info.published_on > publish_cutoff) {
+    const routerinfo_t *ri = router_get_by_id_digest((const char *)fp);
+    if (ri) {
       if (extrainfo)
         return extrainfo_get_by_descriptor_digest(
                                      ri->cache_info.extra_info_digest);
@@ -3426,348 +3742,72 @@ get_signed_descriptor_by_fp(const char *fp, int extrainfo,
   return NULL;
 }
 
-/** Return true iff we have any of the documents (extrainfo or routerdesc)
- * specified by the fingerprints in <b>fps</b> and <b>spool_src</b>.  Used to
- * decide whether to send a 404.  */
-int
-dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
-{
-  time_t publish_cutoff = time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH;
-  SMARTLIST_FOREACH_BEGIN(fps, const char *, fp) {
-      switch (spool_src)
-      {
-        case DIR_SPOOL_EXTRA_BY_DIGEST:
-          if (extrainfo_get_by_descriptor_digest(fp)) return 1;
-          break;
-        case DIR_SPOOL_SERVER_BY_DIGEST:
-          if (router_get_by_descriptor_digest(fp)) return 1;
-          break;
-        case DIR_SPOOL_EXTRA_BY_FP:
-        case DIR_SPOOL_SERVER_BY_FP:
-          if (get_signed_descriptor_by_fp(fp,
-                spool_src == DIR_SPOOL_EXTRA_BY_FP, publish_cutoff))
-            return 1;
-          break;
-      }
-  } SMARTLIST_FOREACH_END(fp);
-  return 0;
-}
-
-/** Return true iff any of the 256-bit elements in <b>fps</b> is the digest of
- * a microdescriptor we have. */
-int
-dirserv_have_any_microdesc(const smartlist_t *fps)
-{
-  microdesc_cache_t *cache = get_microdesc_cache();
-  SMARTLIST_FOREACH(fps, const char *, fp,
-                    if (microdesc_cache_lookup_by_digest256(cache, fp))
-                      return 1);
-  return 0;
-}
-
-/** Return an approximate estimate of the number of bytes that will
- * be needed to transmit the server descriptors (if is_serverdescs --
- * they can be either d/ or fp/ queries) or networkstatus objects (if
- * !is_serverdescs) listed in <b>fps</b>.  If <b>compressed</b> is set,
- * we guess how large the data will be after compression.
- *
- * The return value is an estimate; it might be larger or smaller.
- **/
-size_t
-dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
-                           int compressed)
-{
-  size_t result;
-  tor_assert(fps);
-  if (is_serverdescs) {
-    int n = smartlist_len(fps);
-    const routerinfo_t *me = router_get_my_routerinfo();
-    result = (me?me->cache_info.signed_descriptor_len:2048) * n;
-    if (compressed)
-      result /= 2; /* observed compressibility is between 35 and 55%. */
-  } else {
-    result = 0;
-    SMARTLIST_FOREACH(fps, const char *, digest, {
-        cached_dir_t *dir = lookup_cached_dir_by_fp(digest);
-        if (dir)
-          result += compressed ? dir->dir_z_len : dir->dir_len;
-      });
-  }
-  return result;
-}
-
-/** Given a list of microdescriptor hashes, guess how many bytes will be
- * needed to transmit them, and return the guess. */
-size_t
-dirserv_estimate_microdesc_size(const smartlist_t *fps, int compressed)
-{
-  size_t result = smartlist_len(fps) * microdesc_average_size(NULL);
-  if (compressed)
-    result /= 2;
-  return result;
-}
-
 /** When we're spooling data onto our outbuf, add more whenever we dip
  * below this threshold. */
 #define DIRSERV_BUFFER_MIN 16384
 
-/** Spooling helper: called when we have no more data to spool to <b>conn</b>.
- * Flushes any remaining data to be (un)compressed, and changes the spool
- * source to NONE.  Returns 0 on success, negative on failure. */
-static int
-connection_dirserv_finish_spooling(dir_connection_t *conn)
-{
-  if (conn->zlib_state) {
-    connection_write_to_buf_zlib("", 0, conn, 1);
-    tor_zlib_free(conn->zlib_state);
-    conn->zlib_state = NULL;
-  }
-  conn->dir_spool_src = DIR_SPOOL_NONE;
-  return 0;
-}
-
-/** Spooling helper: called when we're sending a bunch of server descriptors,
- * and the outbuf has become too empty. Pulls some entries from
- * fingerprint_stack, and writes the corresponding servers onto outbuf.  If we
- * run out of entries, flushes the zlib state and sets the spool source to
- * NONE.  Returns 0 on success, negative on failure.
+/**
+ * Called whenever we have flushed some directory data in state
+ * SERVER_WRITING, or whenever we want to fill the buffer with initial
+ * directory data (so that subsequent writes will occur, and trigger this
+ * function again.)
+ *
+ * Return 0 on success, and -1 on failure.
  */
-static int
-connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
-{
-  int by_fp = (conn->dir_spool_src == DIR_SPOOL_SERVER_BY_FP ||
-               conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_FP);
-  int extra = (conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_FP ||
-               conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_DIGEST);
-  time_t publish_cutoff = time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH;
-
-  const or_options_t *options = get_options();
-
-  while (smartlist_len(conn->fingerprint_stack) &&
-         connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
-    const char *body;
-    char *fp = smartlist_pop_last(conn->fingerprint_stack);
-    const signed_descriptor_t *sd = NULL;
-    if (by_fp) {
-      sd = get_signed_descriptor_by_fp(fp, extra, publish_cutoff);
-    } else {
-      sd = extra ? extrainfo_get_by_descriptor_digest(fp)
-        : router_get_by_descriptor_digest(fp);
-    }
-    tor_free(fp);
-    if (!sd)
-      continue;
-    if (!connection_dir_is_encrypted(conn) && !sd->send_unencrypted) {
-      /* we did this check once before (so we could have an accurate size
-       * estimate and maybe send a 404 if somebody asked for only bridges on a
-       * connection), but we need to do it again in case a previously
-       * unknown bridge descriptor has shown up between then and now. */
-      continue;
-    }
-
-    /** If we are the bridge authority and the descriptor is a bridge
-     * descriptor, remember that we served this descriptor for desc stats. */
-    if (options->BridgeAuthoritativeDir && by_fp) {
-      const routerinfo_t *router =
-          router_get_by_id_digest(sd->identity_digest);
-      /* router can be NULL here when the bridge auth is asked for its own
-       * descriptor. */
-      if (router && router->purpose == ROUTER_PURPOSE_BRIDGE)
-        rep_hist_note_desc_served(sd->identity_digest);
-    }
-    body = signed_descriptor_get_body(sd);
-    if (conn->zlib_state) {
-      int last = ! smartlist_len(conn->fingerprint_stack);
-      connection_write_to_buf_zlib(body, sd->signed_descriptor_len, conn,
-                                   last);
-      if (last) {
-        tor_zlib_free(conn->zlib_state);
-        conn->zlib_state = NULL;
-      }
-    } else {
-      connection_write_to_buf(body,
-                              sd->signed_descriptor_len,
-                              TO_CONN(conn));
-    }
-  }
-
-  if (!smartlist_len(conn->fingerprint_stack)) {
-    /* We just wrote the last one; finish up. */
-    if (conn->zlib_state) {
-      connection_write_to_buf_zlib("", 0, conn, 1);
-      tor_zlib_free(conn->zlib_state);
-      conn->zlib_state = NULL;
-    }
-    conn->dir_spool_src = DIR_SPOOL_NONE;
-    smartlist_free(conn->fingerprint_stack);
-    conn->fingerprint_stack = NULL;
-  }
-  return 0;
-}
-
-/** Spooling helper: called when we're sending a bunch of microdescriptors,
- * and the outbuf has become too empty. Pulls some entries from
- * fingerprint_stack, and writes the corresponding microdescs onto outbuf.  If
- * we run out of entries, flushes the zlib state and sets the spool source to
- * NONE.  Returns 0 on success, negative on failure.
- */
-static int
-connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
-{
-  microdesc_cache_t *cache = get_microdesc_cache();
-  while (smartlist_len(conn->fingerprint_stack) &&
-         connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
-    char *fp256 = smartlist_pop_last(conn->fingerprint_stack);
-    microdesc_t *md = microdesc_cache_lookup_by_digest256(cache, fp256);
-    tor_free(fp256);
-    if (!md || !md->body)
-      continue;
-    if (conn->zlib_state) {
-      int last = !smartlist_len(conn->fingerprint_stack);
-      connection_write_to_buf_zlib(md->body, md->bodylen, conn, last);
-      if (last) {
-        tor_zlib_free(conn->zlib_state);
-        conn->zlib_state = NULL;
-      }
-    } else {
-      connection_write_to_buf(md->body, md->bodylen, TO_CONN(conn));
-    }
-  }
-  if (!smartlist_len(conn->fingerprint_stack)) {
-    if (conn->zlib_state) {
-      connection_write_to_buf_zlib("", 0, conn, 1);
-      tor_zlib_free(conn->zlib_state);
-      conn->zlib_state = NULL;
-    }
-    conn->dir_spool_src = DIR_SPOOL_NONE;
-    smartlist_free(conn->fingerprint_stack);
-    conn->fingerprint_stack = NULL;
-  }
-  return 0;
-}
-
-/** Spooling helper: Called when we're sending a directory or networkstatus,
- * and the outbuf has become too empty.  Pulls some bytes from
- * <b>conn</b>-\>cached_dir-\>dir_z, uncompresses them if appropriate, and
- * puts them on the outbuf.  If we run out of entries, flushes the zlib state
- * and sets the spool source to NONE.  Returns 0 on success, negative on
- * failure. */
-static int
-connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
-{
-  ssize_t bytes;
-  int64_t remaining;
-
-  bytes = DIRSERV_BUFFER_MIN - connection_get_outbuf_len(TO_CONN(conn));
-  tor_assert(bytes > 0);
-  tor_assert(conn->cached_dir);
-  if (bytes < 8192)
-    bytes = 8192;
-  remaining = conn->cached_dir->dir_z_len - conn->cached_dir_offset;
-  if (BUG(remaining < 0)) {
-    remaining = 0;
-  }
-  if (bytes > remaining) {
-    bytes = (ssize_t) remaining;
-    if (BUG(bytes < 0))
-      return -1;
-  }
-
-  if (conn->zlib_state) {
-    connection_write_to_buf_zlib(
-                             conn->cached_dir->dir_z + conn->cached_dir_offset,
-                             bytes, conn, bytes == remaining);
-  } else {
-    connection_write_to_buf(conn->cached_dir->dir_z + conn->cached_dir_offset,
-                            bytes, TO_CONN(conn));
-  }
-  conn->cached_dir_offset += bytes;
-  if (conn->cached_dir_offset >= (off_t)conn->cached_dir->dir_z_len) {
-    /* We just wrote the last one; finish up. */
-    connection_dirserv_finish_spooling(conn);
-    cached_dir_decref(conn->cached_dir);
-    conn->cached_dir = NULL;
-  }
-  return 0;
-}
-
-/** Spooling helper: Called when we're spooling networkstatus objects on
- * <b>conn</b>, and the outbuf has become too empty.  If the current
- * networkstatus object (in <b>conn</b>-\>cached_dir) has more data, pull data
- * from there.  Otherwise, pop the next fingerprint from fingerprint_stack,
- * and start spooling the next networkstatus.  (A digest of all 0 bytes is
- * treated as a request for the current consensus.) If we run out of entries,
- * flushes the zlib state and sets the spool source to NONE.  Returns 0 on
- * success, negative on failure. */
-static int
-connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
-{
-
-  while (connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
-    if (conn->cached_dir) {
-      int uncompressing = (conn->zlib_state != NULL);
-      int r = connection_dirserv_add_dir_bytes_to_outbuf(conn);
-      if (conn->dir_spool_src == DIR_SPOOL_NONE) {
-        /* add_dir_bytes thinks we're done with the cached_dir.  But we
-         * may have more cached_dirs! */
-        conn->dir_spool_src = DIR_SPOOL_NETWORKSTATUS;
-        /* This bit is tricky.  If we were uncompressing the last
-         * networkstatus, we may need to make a new zlib object to
-         * uncompress the next one. */
-        if (uncompressing && ! conn->zlib_state &&
-            conn->fingerprint_stack &&
-            smartlist_len(conn->fingerprint_stack)) {
-          conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
-        }
-      }
-      if (r) return r;
-    } else if (conn->fingerprint_stack &&
-               smartlist_len(conn->fingerprint_stack)) {
-      /* Add another networkstatus; start serving it. */
-      char *fp = smartlist_pop_last(conn->fingerprint_stack);
-      cached_dir_t *d = lookup_cached_dir_by_fp(fp);
-      tor_free(fp);
-      if (d) {
-        ++d->refcnt;
-        conn->cached_dir = d;
-        conn->cached_dir_offset = 0;
-      }
-    } else {
-      connection_dirserv_finish_spooling(conn);
-      smartlist_free(conn->fingerprint_stack);
-      conn->fingerprint_stack = NULL;
-      return 0;
-    }
-  }
-  return 0;
-}
-
-/** Called whenever we have flushed some directory data in state
- * SERVER_WRITING. */
 int
 connection_dirserv_flushed_some(dir_connection_t *conn)
 {
   tor_assert(conn->base_.state == DIR_CONN_STATE_SERVER_WRITING);
-
-  if (connection_get_outbuf_len(TO_CONN(conn)) >= DIRSERV_BUFFER_MIN)
+  if (conn->spool == NULL)
     return 0;
 
-  switch (conn->dir_spool_src) {
-    case DIR_SPOOL_EXTRA_BY_DIGEST:
-    case DIR_SPOOL_EXTRA_BY_FP:
-    case DIR_SPOOL_SERVER_BY_DIGEST:
-    case DIR_SPOOL_SERVER_BY_FP:
-      return connection_dirserv_add_servers_to_outbuf(conn);
-    case DIR_SPOOL_MICRODESC:
-      return connection_dirserv_add_microdescs_to_outbuf(conn);
-    case DIR_SPOOL_CACHED_DIR:
-      return connection_dirserv_add_dir_bytes_to_outbuf(conn);
-    case DIR_SPOOL_NETWORKSTATUS:
-      return connection_dirserv_add_networkstatus_bytes_to_outbuf(conn);
-    case DIR_SPOOL_NONE:
-    default:
+  while (connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN &&
+         smartlist_len(conn->spool)) {
+    spooled_resource_t *spooled =
+      smartlist_get(conn->spool, smartlist_len(conn->spool)-1);
+    spooled_resource_flush_status_t status;
+    status = spooled_resource_flush_some(spooled, conn);
+    if (status == SRFS_ERR) {
+      return -1;
+    } else if (status == SRFS_MORE) {
       return 0;
+    }
+    tor_assert(status == SRFS_DONE);
+
+    /* If we're here, we're done flushing this resource. */
+    tor_assert(smartlist_pop_last(conn->spool) == spooled);
+    spooled_resource_free(spooled);
   }
+
+  if (smartlist_len(conn->spool) > 0) {
+    /* We're still spooling something. */
+    return 0;
+  }
+
+  /* If we get here, we're done. */
+  smartlist_free(conn->spool);
+  conn->spool = NULL;
+  if (conn->zlib_state) {
+    /* Flush the zlib state: there could be more bytes pending in there, and
+     * we don't want to omit bytes. */
+    connection_write_to_buf_zlib("", 0, conn, 1);
+    tor_zlib_free(conn->zlib_state);
+    conn->zlib_state = NULL;
+  }
+  return 0;
+}
+
+/** Remove every element from <b>conn</b>'s outgoing spool, and delete
+ * the spool. */
+void
+dir_conn_clear_spool(dir_connection_t *conn)
+{
+  if (!conn || ! conn->spool)
+    return;
+  SMARTLIST_FOREACH(conn->spool, spooled_resource_t *, s,
+                    spooled_resource_free(s));
+  smartlist_free(conn->spool);
+  conn->spool = NULL;
 }
 
 /** Return true iff <b>line</b> is a valid RecommendedPackages line.
