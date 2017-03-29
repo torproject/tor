@@ -3522,7 +3522,7 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
     remaining = cached->dir_z_len - spooled->cached_dir_offset;
     if (BUG(remaining < 0))
       return SRFS_ERR;
-    ssize_t bytes = MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
+    ssize_t bytes = (ssize_t) MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
     if (conn->zlib_state) {
       connection_write_to_buf_zlib(cached->dir_z + spooled->cached_dir_offset,
                                    bytes, conn, 0);
