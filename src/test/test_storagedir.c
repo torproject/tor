@@ -220,7 +220,7 @@ test_storagedir_cleaning(void *arg)
   time_t now = time(NULL);
   struct utimbuf ub;
   ub.actime = now;
-  ub.modtime -= 1000;
+  ub.modtime = now - 1000;
   for (i = 0; i < 8; ++i) {
     char *f = NULL;
     tor_asprintf(&f, "%s/%s", dirname, fns[i]);
