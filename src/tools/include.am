@@ -1,5 +1,4 @@
 bin_PROGRAMS+= src/tools/tor-resolve src/tools/tor-gencert
-noinst_PROGRAMS+=  src/tools/tor-checkkey
 
 if COVERAGE_ENABLED
 noinst_PROGRAMS+= src/tools/tor-cov-resolve src/tools/tor-cov-gencert
@@ -42,15 +41,5 @@ src_tools_tor_cov_gencert_LDADD = src/common/libor-testing.a \
     @TOR_LIB_MATH@ @TOR_ZLIB_LIBS@ @TOR_OPENSSL_LIBS@ \
     @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 endif
-
-src_tools_tor_checkkey_SOURCES = src/tools/tor-checkkey.c
-src_tools_tor_checkkey_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
-src_tools_tor_checkkey_LDADD = src/common/libor.a \
-    src/common/libor-ctime.a \
-    src/common/libor-crypto.a \
-    $(LIBKECCAK_TINY) \
-    $(LIBDONNA) \
-    @TOR_LIB_MATH@ @TOR_ZLIB_LIBS@ @TOR_OPENSSL_LIBS@ \
-    @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 
 EXTRA_DIST += src/tools/tor-fw-helper/README

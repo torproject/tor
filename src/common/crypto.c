@@ -467,7 +467,7 @@ crypto_new_pk_from_rsa_(RSA *rsa)
   return env;
 }
 
-/** Helper, used by tor-checkkey.c and tor-gencert.c.  Return the RSA from a
+/** Helper, used by tor-gencert.c.  Return the RSA from a
  * crypto_pk_t. */
 RSA *
 crypto_pk_get_rsa_(crypto_pk_t *env)
