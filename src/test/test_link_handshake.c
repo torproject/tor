@@ -14,7 +14,6 @@
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
 DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/x509.h>
-#include <openssl/ssl.h>
 ENABLE_GCC_WARNING(redundant-decls)
 
 #include "or.h"
