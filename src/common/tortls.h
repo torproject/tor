@@ -187,6 +187,11 @@ extern tor_tls_context_t *client_tls_context;
 extern uint16_t v2_cipher_list[];
 extern uint64_t total_bytes_written_over_tls;
 extern uint64_t total_bytes_written_by_tls;
+
+STATIC tor_x509_cert_t *tor_x509_cert_replace_expiration(
+                                               const tor_x509_cert_t *inp,
+                                               time_t new_expiration_time,
+                                               crypto_pk_t *signing_key);
 #endif
 
 #endif /* endif TORTLS_PRIVATE */

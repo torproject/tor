@@ -2264,6 +2264,24 @@ check_cert_lifetime_internal(int severity, const X509 *cert,
   return 0;
 }
 
+#ifdef TOR_UNIT_TESTS
+/* Testing only: return a new x509 cert with the same contents as <b>inp</b>,
+   but with the expiration time <b>new_expiration_time</b>, signed with
+   <b>signing_key</b>. */
+STATIC tor_x509_cert_t *
+tor_x509_cert_replace_expiration(const tor_x509_cert_t *inp,
+                                 time_t new_expiration_time,
+                                 crypto_pk_t *signing_key)
+{
+  X509 *newc = X509_dup(inp->cert);
+  X509_time_adj(X509_get_notAfter(newc), 0, &new_expiration_time);
+  EVP_PKEY *pk = crypto_pk_get_evp_pkey_(signing_key, 1);
+  tor_assert(X509_sign(newc, pk, EVP_sha256()));
+  EVP_PKEY_free(pk);
+  return tor_x509_cert_new(newc);
+}
+#endif
+
 /** Return the number of bytes available for reading from <b>tls</b>.
  */
 int
