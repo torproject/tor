@@ -40,6 +40,8 @@ int config_lines_eq(config_line_t *a, config_line_t *b);
 int config_count_key(const config_line_t *a, const char *key);
 int config_get_lines(const char *string, config_line_t **result, int extended);
 void config_free_lines(config_line_t *front);
-
+const char *parse_config_line_from_str_verbose(const char *line,
+                                       char **key_out, char **value_out,
+                                       const char **err_out);
 #endif
 

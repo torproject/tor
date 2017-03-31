@@ -389,9 +389,6 @@ char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
                                  size_t *sz_out)
   ATTR_MALLOC;
 const char *unescape_string(const char *s, char **result, size_t *size_out);
-const char *parse_config_line_from_str_verbose(const char *line,
-                                       char **key_out, char **value_out,
-                                       const char **err_out);
 char *expand_filename(const char *filename);
 MOCK_DECL(struct smartlist_t *, tor_listdir, (const char *dirname));
 int path_is_relative(const char *filename);
