@@ -84,6 +84,7 @@ LIBOR_A_SRC = \
   src/common/compat.c					\
   src/common/compat_threads.c				\
   src/common/compat_time.c				\
+  src/common/confline.c					\
   src/common/container.c				\
   src/common/log.c					\
   src/common/memarea.c					\
@@ -144,6 +145,7 @@ COMMONHEADERS = \
   src/common/compat_openssl.h			\
   src/common/compat_threads.h			\
   src/common/compat_time.h			\
+  src/common/confline.h				\
   src/common/container.h			\
   src/common/crypto.h				\
   src/common/crypto_curve25519.h		\
