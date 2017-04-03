@@ -183,6 +183,7 @@ extern struct testcase_t cell_queue_tests[];
 extern struct testcase_t channel_tests[];
 extern struct testcase_t channeltls_tests[];
 extern struct testcase_t checkdir_tests[];
+extern struct testcase_t circuitbuild_tests[];
 extern struct testcase_t circuitlist_tests[];
 extern struct testcase_t circuitmux_tests[];
 extern struct testcase_t circuituse_tests[];

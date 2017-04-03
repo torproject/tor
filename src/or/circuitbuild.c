@@ -73,7 +73,6 @@ static int circuit_deliver_create_cell(circuit_t *circ,
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
-static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 /** This function tries to get a channel to the specified endpoint,
@@ -1546,13 +1545,98 @@ onionskin_answer(or_circuit_t *circ,
   return 0;
 }
 
-/** Choose a length for a circuit of purpose <b>purpose</b>: three + the
- * number of endpoints that would give something away about our destination.
+/** Helper for new_route_len().  Choose a circuit length for purpose
+ * <b>purpose</b>: DEFAULT_ROUTE_LEN (+ 1 if someone else chose the
+ * exit).  If someone else chose the exit, they could be colluding
+ * with the exit, so add a randomly selected node to preserve
+ * anonymity.
+ *
+ * Here, "exit node" sometimes means an OR acting as an internal
+ * endpoint, rather than as a relay to an external endpoint.  This
+ * means there need to be at least DEFAULT_ROUTE_LEN routers between
+ * us and the internal endpoint to preserve the same anonymity
+ * properties that we would get when connecting to an external
+ * endpoint.  These internal endpoints can include:
+ *
+ *   - Connections to a directory of hidden services
+ *     (CIRCUIT_PURPOSE_C_GENERAL)
+ *
+ *   - A client connecting to an introduction point, which the hidden
+ *     service picked (CIRCUIT_PURPOSE_C_INTRODUCING, via
+ *     circuit_get_open_circ_or_launch() which rewrites it from
+ *     CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
+ *
+ *   - A hidden service connecting to a rendezvous point, which the
+ *     client picked (CIRCUIT_PURPOSE_S_CONNECT_REND, via
+ *     rend_service_receive_introduction() and
+ *     rend_service_relaunch_rendezvous)
+ *
+ * There are currently two situations where we picked the exit node
+ * ourselves, making DEFAULT_ROUTE_LEN a safe circuit length:
+ *
+ *   - We are a hidden service connecting to an introduction point
+ *     (CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, via
+ *     rend_service_launch_establish_intro())
+ *
+ *   - We are a router testing its own reachabiity
+ *     (CIRCUIT_PURPOSE_TESTING, via consider_testing_reachability())
+ *
+ * onion_pick_cpath_exit() bypasses us (by not calling
+ * new_route_len()) in the one-hop tunnel case, so we don't need to
+ * handle that.
+ */
+static int
+route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
+{
+  int routelen = DEFAULT_ROUTE_LEN;
+  int known_purpose = 0;
+
+  if (!exit_ei)
+    return routelen;
+
+  switch (purpose) {
+    /* These two purposes connect to a router that we chose, so
+     * DEFAULT_ROUTE_LEN is safe. */
+  case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+    /* hidden service connecting to introduction point */
+  case CIRCUIT_PURPOSE_TESTING:
+    /* router reachability testing */
+    known_purpose = 1;
+    break;
+
+    /* These three purposes connect to a router that someone else
+     * might have chosen, so add an extra hop to protect anonymity. */
+  case CIRCUIT_PURPOSE_C_GENERAL:
+    /* connecting to hidden service directory */
+  case CIRCUIT_PURPOSE_C_INTRODUCING:
+    /* client connecting to introduction point */
+  case CIRCUIT_PURPOSE_S_CONNECT_REND:
+    /* hidden service connecting to rendezvous point */
+    known_purpose = 1;
+    routelen++;
+    break;
+
+  default:
+    /* Got a purpose not listed above along with a chosen exit.
+     * Increase the circuit length by one anyway for safety. */
+    routelen++;
+    break;
+  }
+
+  if (BUG(exit_ei && !known_purpose)) {
+    log_warn(LD_BUG, "Unhandled purpose %d with a chosen exit; "
+             "assuming routelen %d.", purpose, routelen);
+  }
+  return routelen;
+}
+
+/** Choose a length for a circuit of purpose <b>purpose</b> and check
+ * if enough routers are available.
  *
  * If the routerlist <b>nodes</b> doesn't have enough routers
  * to handle the desired path length, return -1.
  */
-static int
+STATIC int
 new_route_len(uint8_t purpose, extend_info_t *exit_ei, smartlist_t *nodes)
 {
   int num_acceptable_routers;
@@ -1560,11 +1644,7 @@ new_route_len(uint8_t purpose, extend_info_t *exit_ei, smartlist_t *nodes)
 
   tor_assert(nodes);
 
-  routelen = DEFAULT_ROUTE_LEN;
-  if (exit_ei &&
-      purpose != CIRCUIT_PURPOSE_TESTING &&
-      purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
-    routelen++;
+  routelen = route_len_for_purpose(purpose, exit_ei);
 
   num_acceptable_routers = count_acceptable_nodes(nodes);
 
@@ -2188,8 +2268,8 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
 /** Return the number of routers in <b>routers</b> that are currently up
  * and available for building circuits through.
  */
-static int
-count_acceptable_nodes(smartlist_t *nodes)
+MOCK_IMPL(STATIC int,
+count_acceptable_nodes, (smartlist_t *nodes))
 {
   int num=0;
 
