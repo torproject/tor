@@ -1,3 +1,0 @@
-  o Minor bugfixes (relay):
-    - Avoid a double-marked-circuit warning that can happen when we receive
-      DESTROY cells under heavy load. Fixes bug 20059; bugfix on 0.1.0.1-rc.

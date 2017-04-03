@@ -1,4 +1,0 @@
-  o Major bugfixes (crash, directory connections):
-    - Fix a rare crash when sending a begin cell on a circuit whose linked
-      directory connection has already been closed. Fixes bug 21576;
-      bugfix on Tor 0.2.9.3-alpha. Reported by alecmuffett.
