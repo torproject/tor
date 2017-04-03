@@ -256,6 +256,109 @@ test_storagedir_cleaning(void *arg)
   }
 }
 
+static void
+test_storagedir_save_labeled(void *arg)
+{
+  (void)arg;
+  char *dirname = tor_strdup(get_fname_rnd("store_dir"));
+  storage_dir_t *d = NULL;
+  uint8_t *inp = tor_malloc_zero(8192);
+  config_line_t *labels = NULL;
+  char *fname = NULL;
+  uint8_t *saved = NULL;
+
+  d = storage_dir_new(dirname, 10);
+  tt_assert(d);
+
+  crypto_rand((char *)inp, 8192);
+
+  config_line_append(&labels, "Foo", "bar baz");
+  config_line_append(&labels, "quux", "quuzXxz");
+  const char expected[] =
+    "Foo bar baz\n"
+    "quux quuzXxz\n";
+
+  int r = storage_dir_save_labeled_to_file(d, labels, inp, 8192, &fname);
+  tt_int_op(r, OP_EQ, 0);
+
+  size_t n;
+  saved = storage_dir_read(d, fname, 1, &n);
+  tt_assert(memchr(saved, '\0', n));
+  tt_str_op((char*)saved, OP_EQ, expected); /* NUL guarantees strcmp works */
+  tt_mem_op(saved+strlen(expected)+1, OP_EQ, inp, 8192);
+
+ done:
+  storage_dir_free(d);
+  tor_free(dirname);
+  tor_free(inp);
+  tor_free(fname);
+  config_free_lines(labels);
+  tor_free(saved);
+}
+
+static void
+test_storagedir_read_labeled(void *arg)
+{
+  (void)arg;
+  char *dirname = tor_strdup(get_fname_rnd("store_dir"));
+  storage_dir_t *d = NULL;
+  uint8_t *inp = tor_malloc_zero(8192);
+  config_line_t *labels = NULL, *labels2 = NULL;
+  char *fname = NULL;
+  tor_mmap_t *map = NULL;
+  uint8_t *as_read = NULL;
+
+  d = storage_dir_new(dirname, 10);
+  tt_assert(d);
+
+  tor_snprintf((char*)inp, 8192,
+               "Hello world\n"
+               "This is a test\n"
+               "Yadda yadda.\n");
+  size_t bodylen = 8192 - strlen((char*)inp) - 1;
+  crypto_rand((char *)inp+strlen((char*)inp)+1, bodylen);
+
+  int r = storage_dir_save_bytes_to_file(d, inp, 8192, 1, &fname);
+  tt_int_op(r, OP_EQ, 0);
+
+  /* Try mapping */
+  const uint8_t *datap = NULL;
+  size_t sz = 0;
+  map = storage_dir_map_labeled(d, fname, &labels, &datap, &sz);
+  tt_assert(map);
+  tt_assert(datap);
+  tt_u64_op(sz, OP_EQ, bodylen);
+  tt_mem_op(datap, OP_EQ, inp+strlen((char*)inp)+1, bodylen);
+  tt_assert(labels);
+  tt_str_op(labels->key, OP_EQ, "Hello");
+  tt_str_op(labels->value, OP_EQ, "world");
+  tt_assert(labels->next);
+  tt_str_op(labels->next->key, OP_EQ, "This");
+  tt_str_op(labels->next->value, OP_EQ, "is a test");
+  tt_assert(labels->next->next);
+  tt_str_op(labels->next->next->key, OP_EQ, "Yadda");
+  tt_str_op(labels->next->next->value, OP_EQ, "yadda.");
+  tt_assert(labels->next->next->next == NULL);
+
+  /* Try reading this time. */
+  sz = 0;
+  as_read = storage_dir_read_labeled(d, fname, &labels2, &sz);
+  tt_assert(as_read);
+  tt_u64_op(sz, OP_EQ, bodylen);
+  tt_mem_op(as_read, OP_EQ, inp+strlen((char*)inp)+1, bodylen);
+  tt_assert(config_lines_eq(labels, labels2));
+
+ done:
+  storage_dir_free(d);
+  tor_free(dirname);
+  tor_free(inp);
+  tor_free(fname);
+  config_free_lines(labels);
+  config_free_lines(labels2);
+  tor_munmap_file(map);
+  tor_free(as_read);
+}
+
 #define ENT(name)                                               \
   { #name, test_storagedir_ ## name, TT_FORK, NULL, NULL }
 
@@ -265,6 +368,8 @@ struct testcase_t storagedir_tests[] = {
   ENT(deletion),
   ENT(full),
   ENT(cleaning),
+  ENT(save_labeled),
+  ENT(read_labeled),
   END_OF_TESTCASES
 };
 
