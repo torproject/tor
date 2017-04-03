@@ -8,6 +8,7 @@
 #include "or.h"
 #include "test.h"
 #include "test_helpers.h"
+#include "log_test_helpers.h"
 #include "config.h"
 #include "circuitbuild.h"
 
@@ -107,11 +108,15 @@ test_new_route_len_unhandled_exit(void *arg)
   MOCK(count_acceptable_nodes, mock_count_acceptable_nodes);
 
   tor_capture_bugs_(1);
+  setup_full_capture_of_logs(LOG_WARN);
   r = new_route_len(CIRCUIT_PURPOSE_CONTROLLER, &dummy_ei, &dummy_nodes);
   tt_int_op(DEFAULT_ROUTE_LEN + 1, OP_EQ, r);
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
             "!(exit_ei && !known_purpose)");
+  expect_single_log_msg_containing("Unhandled purpose");
+  expect_single_log_msg_containing("with a chosen exit; assuming routelen");
+  teardown_capture_of_logs();
   tor_end_capture_bugs_();
 
  done:
