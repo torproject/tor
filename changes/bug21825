@@ -1,0 +1,6 @@
+  o Minor bugfix (compilation):
+    - Functions in hs_service.c was only compiled for unit test making the
+      created object (.o) contain no symbols in src/or/libor.a resulting in a
+      compilation warning from clang. We now expose those functions for the
+      unit tests. This will be changed in 0.3.2 release. Fixes bug 21825.;
+      bugfix on tor-0.3.0.1-alpha.
