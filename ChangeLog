@@ -10,7 +10,7 @@ Changes in version 0.3.0.5-rc - 2017-04-0?
   o Major bugfixes (crash, directory connections):
     - Fix a rare crash when sending a begin cell on a circuit whose
       linked directory connection had already been closed. Fixes bug
-      21576; bugfix on Tor 0.2.9.3-alpha. Reported by Alec Muffett.
+      21576; bugfix on 0.2.9.3-alpha. Reported by Alec Muffett.
 
   o Major bugfixes (guard selection):
     - Fix a guard selection bug where Tor would refuse to bootstrap in
@@ -31,12 +31,11 @@ Changes in version 0.3.0.5-rc - 2017-04-0?
   o Minor bugfixes (hidden services):
     - Make hidden services check for failed intro point connections,
       even when they have exceeded their intro point creation limit.
-      Fixes bug 21596; bugfix on Tor 0.2.7.2-alpha. Reported by
-      Alec Muffett.
+      Fixes bug 21596; bugfix on 0.2.7.2-alpha. Reported by Alec Muffett.
     - Make hidden services with 8 to 10 introduction points check for
       failed circuits immediately after startup. Previously, they would
       wait for 5 minutes before performing their first checks. Fixes bug
-      21594; bugfix on Tor 0.2.3.9-alpha. Reported by Alec Muffett.
+      21594; bugfix on 0.2.3.9-alpha. Reported by Alec Muffett.
 
   o Minor bugfixes (memory leaks):
     - Fix a memory leak when using GETCONF on a port option. Fixes bug
