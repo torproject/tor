@@ -485,3 +485,22 @@ consensus_cache_entry_unmap(consensus_cache_entry_t *ent)
   ent->unused_since = TIME_MAX;
 }
 
+#ifdef TOR_UNIT_TESTS
+/**
+ * Testing only: Return true iff <b>ent</b> is mapped into memory.
+ *
+ * (In normal operation, this information is not exposed.)
+ */
+int
+consensus_cache_entry_is_mapped(consensus_cache_entry_t *ent)
+{
+  if (ent->map) {
+    tor_assert(ent->body);
+    return 1;
+  } else {
+    tor_assert(!ent->body);
+    return 0;
+  }
+}
+#endif
+

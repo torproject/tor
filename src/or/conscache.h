@@ -44,5 +44,9 @@ int consensus_cache_entry_get_body(const consensus_cache_entry_t *ent,
                                    const uint8_t **body_out,
                                    size_t *sz_out);
 
+#ifdef TOR_UNIT_TESTS
+int consensus_cache_entry_is_mapped(consensus_cache_entry_t *ent);
+#endif
+
 #endif
 
