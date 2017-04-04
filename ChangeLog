@@ -22,6 +22,12 @@ Changes in version 0.3.0.5-rc - 2017-04-0?
     - Update geoip and geoip6 to the March 7 2017 Maxmind GeoLite2
       Country database.
 
+  o Minor bugfix (compilation):
+    - Fix a warning when compiling hs_service.c. Previously, it had no
+      exported symbols when compiled for libor.a, resulting in a
+      compilation warning from clang. Fixes bug 21825; bugfix
+      on 0.3.0.1-alpha.
+
   o Minor bugfixes (hidden services):
     - Make hidden services check for failed intro point connections,
       even when they have exceeded their intro point creation limit.
