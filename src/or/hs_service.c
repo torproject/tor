@@ -6,8 +6,6 @@
  * \brief Implement next generation hidden service functionality
  **/
 
-#define HS_SERVICE_PRIVATE
-
 #include "or.h"
 #include "relay.h"
 #include "rendservice.h"
@@ -22,14 +20,12 @@
 
 /* XXX We don't currently use these functions, apart from generating unittest
    data. When we start implementing the service-side support for prop224 we
-   should revisit these functions and use them. For now we mark them as
-   unittest-only code: */
-#ifdef TOR_UNIT_TESTS
+   should revisit these functions and use them. */
 
 /** Given an ESTABLISH_INTRO <b>cell</b>, encode it and place its payload in
  *  <b>buf_out</b> which has size <b>buf_out_len</b>. Return the number of
  *  bytes written, or a negative integer if there was an error. */
-STATIC ssize_t
+ssize_t
 get_establish_intro_payload(uint8_t *buf_out, size_t buf_out_len,
                             const hs_cell_establish_intro_t *cell)
 {
@@ -59,7 +55,7 @@ set_cell_extensions(hs_cell_establish_intro_t *cell)
  *  return an ESTABLISH_INTRO cell. Return NULL if something went wrong.  The
  *  returned cell is allocated on the heap and it's the responsibility of the
  *  caller to free it. */
-STATIC hs_cell_establish_intro_t *
+hs_cell_establish_intro_t *
 generate_establish_intro_cell(const uint8_t *circuit_key_material,
                               size_t circuit_key_material_len)
 {
@@ -173,6 +169,4 @@ generate_establish_intro_cell(const uint8_t *circuit_key_material,
   hs_cell_establish_intro_free(cell);
   return NULL;
 }
-
-#endif /* TOR_UNIT_TESTS */
 
