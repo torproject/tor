@@ -11,6 +11,19 @@
 #endif
 
 static void
+test_conscache_open_failure(void *arg)
+{
+  (void) arg;
+  /* Try opening a directory that doesn't exist and which we shouldn't be
+   * able to create. */
+  consensus_cache_t *cache = consensus_cache_open("a/b/c/d/e/f/g", 128);
+  tt_ptr_op(cache, OP_EQ, NULL);
+
+ done:
+  ;
+}
+
+static void
 test_conscache_simple_usage(void *arg)
 {
   (void)arg;
@@ -246,12 +259,83 @@ test_conscache_cleanup(void *arg)
   consensus_cache_free(cache);
 }
 
+static void
+test_conscache_filter(void *arg)
+{
+  (void)arg;
+  const int N = 30;
+  smartlist_t *lst = NULL;
+
+  /* Make a temporary datadir for these tests */
+  char *ddir_fname = tor_strdup(get_fname_rnd("datadir_cache"));
+  tor_free(get_options_mutable()->DataDirectory);
+  get_options_mutable()->DataDirectory = tor_strdup(ddir_fname);
+  check_private_dir(ddir_fname, CPD_CREATE, NULL);
+  consensus_cache_t *cache = consensus_cache_open("cons", 128);
+
+  tt_assert(cache);
+
+  /* Create a bunch of entries with different labels */
+  int i;
+  for (i = 0; i < N; ++i) {
+    config_line_t *labels = NULL;
+    char num[8];
+    tor_snprintf(num, sizeof(num), "%d", i);
+    config_line_append(&labels, "test-id", "filter");
+    config_line_append(&labels, "index", num);
+    tor_snprintf(num, sizeof(num), "%d", i % 3);
+    config_line_append(&labels, "mod3", num);
+    tor_snprintf(num, sizeof(num), "%d", i % 5);
+    config_line_append(&labels, "mod5", num);
+
+    size_t bodylen = i * 3;
+    uint8_t *body = tor_malloc(bodylen);
+    memset(body, i, bodylen);
+    consensus_cache_entry_t *ent =
+      consensus_cache_add(cache, labels, body, bodylen);
+    tor_free(body);
+    config_free_lines(labels);
+    tt_assert(ent);
+    consensus_cache_entry_decref(ent);
+  }
+
+  lst = smartlist_new();
+  /* Find nothing. */
+  consensus_cache_find_all(lst, cache, "mod5", "5");
+  tt_int_op(smartlist_len(lst), OP_EQ, 0);
+  /* Find everything. */
+  consensus_cache_find_all(lst, cache, "test-id", "filter");
+  tt_int_op(smartlist_len(lst), OP_EQ, N);
+
+  /* Now filter to find the entries that have i%3 == 1 */
+  consensus_cache_filter_list(lst, "mod3", "1");
+  tt_int_op(smartlist_len(lst), OP_EQ, 10);
+  /* Now filter to find the entries that also have i%5 == 3 */
+  consensus_cache_filter_list(lst, "mod5", "3");
+  tt_int_op(smartlist_len(lst), OP_EQ, 2);
+  /* So now we have those entries for which i%15 == 13. */
+
+  consensus_cache_entry_t *ent1 = smartlist_get(lst, 0);
+  consensus_cache_entry_t *ent2 = smartlist_get(lst, 1);
+  const char *idx1 = consensus_cache_entry_get_value(ent1, "index");
+  const char *idx2 = consensus_cache_entry_get_value(ent2, "index");
+  tt_assert( (!strcmp(idx1, "28") && !strcmp(idx2, "13")) ||
+             (!strcmp(idx1, "13") && !strcmp(idx2, "28")) );
+
+ done:
+  tor_free(ddir_fname);
+  consensus_cache_free(cache);
+  smartlist_free(lst);
+}
+
 #define ENT(name)                                               \
   { #name, test_conscache_ ## name, TT_FORK, NULL, NULL }
 
 struct testcase_t conscache_tests[] = {
+  ENT(open_failure),
   ENT(simple_usage),
   ENT(cleanup),
+  ENT(filter),
   END_OF_TESTCASES
 };
 
