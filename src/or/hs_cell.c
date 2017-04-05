@@ -207,6 +207,105 @@ build_legacy_establish_intro(const char *circ_nonce, crypto_pk_t *enc_key,
   return cell_len;
 }
 
+/* Free the given cell pointer. If is_legacy_cell is set, cell_ptr is cast to
+ * a rend_intro_cell_t else to a trn_cell_introduce1_t. */
+static void
+introduce2_free_cell(void *cell_ptr, unsigned int is_legacy_cell)
+{
+  if (cell_ptr == NULL) {
+    return;
+  }
+  if (is_legacy_cell) {
+    rend_intro_cell_t *legacy_cell = cell_ptr;
+    rend_service_free_intro(legacy_cell);
+  } else {
+    trn_cell_introduce1_free((trn_cell_introduce1_t *) cell_ptr);
+  }
+}
+
+/* Return the length of the encrypted section of the cell_ptr. If
+ * is_legacy_cell is set, cell_ptr is cast to a rend_intro_cell_t else to a
+ * trn_cell_introduce1_t. */
+static size_t
+get_introduce2_encrypted_section_len(const void *cell_ptr,
+                                     unsigned int is_legacy_cell)
+{
+  tor_assert(cell_ptr);
+  if (is_legacy_cell) {
+    return ((const rend_intro_cell_t *) cell_ptr)->ciphertext_len;
+  }
+  return trn_cell_introduce1_getlen_encrypted(
+                             (const trn_cell_introduce1_t *) cell_ptr);
+}
+
+/* Return the encrypted section pointer from the the cell_ptr. If
+ * is_legacy_cell is set, cell_ptr is cast to a rend_intro_cell_t else to a
+ * trn_cell_introduce1_t. */
+static const uint8_t *
+get_introduce2_encrypted_section(const void *cell_ptr,
+                                 unsigned int is_legacy_cell)
+{
+  tor_assert(cell_ptr);
+  if (is_legacy_cell) {
+    return ((const rend_intro_cell_t *) cell_ptr)->ciphertext;
+  }
+  return trn_cell_introduce1_getconstarray_encrypted(
+                             (const trn_cell_introduce1_t *) cell_ptr);
+}
+
+/* Parse an INTRODUCE2 cell from payload of size payload_len for the given
+ * service and circuit which are used only for logging purposes. The resulting
+ * parsed cell is put in cell_ptr_out. If is_legacy_cell is set, the type of
+ * the returned cell is rend_intro_cell_t else trn_cell_introduce1_t.
+ *
+ * Return 0 on success else a negative value and cell_ptr_out is untouched. */
+static int
+parse_introduce2_cell(const hs_service_t *service,
+                      const origin_circuit_t *circ, const uint8_t *payload,
+                      size_t payload_len, unsigned int is_legacy_cell,
+                      void **cell_ptr_out)
+{
+  tor_assert(service);
+  tor_assert(circ);
+  tor_assert(payload);
+  tor_assert(cell_ptr_out);
+
+  /* We parse the cell differently for legacy. */
+  if (is_legacy_cell) {
+    char *err_msg;
+    rend_intro_cell_t *legacy_cell = NULL;
+
+    legacy_cell = rend_service_begin_parse_intro(payload, payload_len, 2,
+                                                 &err_msg);
+    if (legacy_cell == NULL) {
+      log_info(LD_REND, "Unable to parse legacy INTRODUCE2 cell on "
+                        "circuit %u for service %s: %s",
+               TO_CIRCUIT(circ)->n_circ_id, err_msg,
+               safe_str_client(service->onion_address));
+      tor_free(err_msg);
+      goto err;
+    }
+    *cell_ptr_out = legacy_cell;
+  } else {
+    trn_cell_introduce1_t *cell = NULL;
+    /* Parse the cell so we can start cell validation. */
+    if (trn_cell_introduce1_parse(&cell, payload, payload_len) < 0) {
+      log_info(LD_PROTOCOL, "Unable to parse INTRODUCE2 cell on circuit %u "
+                            "for service %s",
+               TO_CIRCUIT(circ)->n_circ_id,
+               safe_str_client(service->onion_address));
+      goto err;
+    }
+    *cell_ptr_out = cell;
+  }
+
+  /* On success, we must have set the cell pointer. */
+  tor_assert(*cell_ptr_out);
+  return 0;
+ err:
+  return -1;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -364,21 +463,17 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   uint8_t *decrypted = NULL;
   size_t encrypted_section_len;
   const uint8_t *encrypted_section;
-  trn_cell_introduce1_t *cell = NULL;
   trn_cell_introduce_encrypted_t *enc_cell = NULL;
   hs_ntor_intro_cell_keys_t *intro_keys = NULL;
+  void *cell_ptr = NULL;
 
   tor_assert(data);
   tor_assert(circ);
   tor_assert(service);
 
-  /* Parse the cell so we can start cell validation. */
-  if (trn_cell_introduce1_parse(&cell, data->payload,
-                                data->payload_len) < 0) {
-    log_info(LD_PROTOCOL, "Unable to parse INTRODUCE2 cell on circuit %u "
-                          "for service %s",
-             TO_CIRCUIT(circ)->n_circ_id,
-             safe_str_client(service->onion_address));
+  /* Parse the cell into a decoded data structure pointed by cell_ptr. */
+  if (parse_introduce2_cell(service, circ, data->payload, data->payload_len,
+                            data->is_legacy, &cell_ptr) < 0) {
     goto done;
   }
 
@@ -389,8 +484,10 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
            TO_CIRCUIT(circ)->n_circ_id,
            safe_str_client(service->onion_address));
 
-  encrypted_section = trn_cell_introduce1_getconstarray_encrypted(cell);
-  encrypted_section_len = trn_cell_introduce1_getlen_encrypted(cell);
+  encrypted_section =
+    get_introduce2_encrypted_section(cell_ptr, data->is_legacy);
+  encrypted_section_len =
+    get_introduce2_encrypted_section_len(cell_ptr, data->is_legacy);
 
   /* Encrypted section must at least contain the CLIENT_PK and MAC which is
    * defined in section 3.3.2 of the specification. */
@@ -496,8 +593,8 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     tor_free(intro_keys);
   }
   tor_free(decrypted);
-  trn_cell_introduce1_free(cell);
   trn_cell_introduce_encrypted_free(enc_cell);
+  introduce2_free_cell(cell_ptr, data->is_legacy);
   return ret;
 }
 

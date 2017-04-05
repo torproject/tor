@@ -17,8 +17,6 @@
 
 typedef struct rend_intro_cell_s rend_intro_cell_t;
 
-#ifdef RENDSERVICE_PRIVATE
-
 /* This can be used for both INTRODUCE1 and INTRODUCE2 */
 
 struct rend_intro_cell_s {
@@ -62,6 +60,8 @@ struct rend_intro_cell_s {
   /* Diffie-Hellman data */
   uint8_t dh[DH_KEY_LEN];
 };
+
+#ifdef RENDSERVICE_PRIVATE
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {

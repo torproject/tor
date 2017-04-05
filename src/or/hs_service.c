@@ -1914,8 +1914,8 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
   /* If we have an IP object, we MUST have a descriptor object. */
   tor_assert(desc);
 
-  /* XXX: Handle legacy IP connection. */
-
+  /* The following will parse, decode and launch the rendezvous point circuit.
+   * Both current and legacy cells are handled. */
   if (hs_circ_handle_introduce2(service, circ, ip, desc->desc->subcredential,
                                 payload, payload_len) < 0) {
     goto err;

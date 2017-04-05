@@ -34,6 +34,8 @@ typedef struct hs_cell_introduce2_data_t {
   const uint8_t *payload;
   /* Size of the payload of the received encoded cell. */
   size_t payload_len;
+  /* Is this a legacy introduction point? */
+  unsigned int is_legacy : 1;
 
   /*** Muttable Section. ***/
 
