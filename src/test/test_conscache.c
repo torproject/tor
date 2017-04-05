@@ -101,11 +101,157 @@ test_conscache_simple_usage(void *arg)
   consensus_cache_free(cache);
 }
 
+static void
+test_conscache_cleanup(void *arg)
+{
+  (void)arg;
+  const int N = 20;
+  consensus_cache_entry_t **ents =
+    tor_calloc(N, sizeof(consensus_cache_entry_t*));
+
+  /* Make a temporary datadir for these tests */
+  char *ddir_fname = tor_strdup(get_fname_rnd("datadir_cache"));
+  tor_free(get_options_mutable()->DataDirectory);
+  get_options_mutable()->DataDirectory = tor_strdup(ddir_fname);
+  check_private_dir(ddir_fname, CPD_CREATE, NULL);
+  consensus_cache_t *cache = consensus_cache_open("cons", 128);
+
+  tt_assert(cache);
+
+  /* Create a bunch of entries. */
+  int i;
+  for (i = 0; i < N; ++i) {
+    config_line_t *labels = NULL;
+    char num[8];
+    tor_snprintf(num, sizeof(num), "%d", i);
+    config_line_append(&labels, "test-id", "cleanup");
+    config_line_append(&labels, "index", num);
+    size_t bodylen = i * 3;
+    uint8_t *body = tor_malloc(bodylen);
+    memset(body, i, bodylen);
+    ents[i] = consensus_cache_add(cache, labels, body, bodylen);
+    tor_free(body);
+    config_free_lines(labels);
+    tt_assert(ents[i]);
+    /* We're still holding a reference to each entry at this point. */
+  }
+
+  /* Page all of the entries into RAM */
+  for (i = 0; i < N; ++i) {
+    const uint8_t *bp;
+    size_t sz;
+    tt_assert(! consensus_cache_entry_is_mapped(ents[i]));
+    consensus_cache_entry_get_body(ents[i], &bp, &sz);
+    tt_assert(consensus_cache_entry_is_mapped(ents[i]));
+  }
+
+  /* Mark some of the entries as deletable. */
+  for (i = 7; i < N; i += 7) {
+    consensus_cache_entry_mark_for_removal(ents[i]);
+    tt_assert(consensus_cache_entry_is_mapped(ents[i]));
+  }
+
+  /* Mark some of the entries as aggressively unpaged. */
+  for (i = 3; i < N; i += 3) {
+    consensus_cache_entry_mark_for_aggressive_release(ents[i]);
+    tt_assert(consensus_cache_entry_is_mapped(ents[i]));
+  }
+
+  /* Incref some of the entries again */
+  for (i = 0; i < N; i += 2) {
+    consensus_cache_entry_incref(ents[i]);
+  }
+
+  /* Now we're going to decref everything. We do so at a specific time.  I'm
+   * picking the moment when I was writing this test, at 2017-04-05 12:16:48
+   * UTC. */
+  const time_t example_time = 1491394608;
+  update_approx_time(example_time);
+  for (i = 0; i < N; ++i) {
+    consensus_cache_entry_decref(ents[i]);
+    if (i % 2) {
+      ents[i] = NULL; /* We're no longer holding any reference here. */
+    }
+  }
+
+  /* At this point, the aggressively-released items with refcount 1 should
+   * be unmapped. Nothing should be deleted. */
+  consensus_cache_entry_t *e_tmp;
+  e_tmp = consensus_cache_find_first(cache, "index", "3");
+  tt_assert(e_tmp);
+  tt_assert(! consensus_cache_entry_is_mapped(e_tmp));
+  e_tmp = consensus_cache_find_first(cache, "index", "5");
+  tt_assert(e_tmp);
+  tt_assert(consensus_cache_entry_is_mapped(e_tmp));
+  e_tmp = consensus_cache_find_first(cache, "index", "6");
+  tt_assert(e_tmp);
+  tt_assert(consensus_cache_entry_is_mapped(e_tmp));
+  e_tmp = consensus_cache_find_first(cache, "index", "7");
+  tt_assert(e_tmp);
+  tt_assert(consensus_cache_entry_is_mapped(e_tmp));
+
+  /* Delete the pending-deletion items. */
+  consensus_cache_delete_pending(cache);
+  {
+    smartlist_t *entries = smartlist_new();
+    consensus_cache_find_all(entries, cache, NULL, NULL);
+    int n = smartlist_len(entries);
+    smartlist_free(entries);
+    tt_int_op(n, OP_EQ, 20 - 1); /* 1 entry was deleted */
+  }
+  e_tmp = consensus_cache_find_first(cache, "index", "7"); // refcnt == 1...
+  tt_assert(e_tmp == NULL); // so deleted.
+  e_tmp = consensus_cache_find_first(cache, "index", "14"); // refcnt == 2
+  tt_assert(e_tmp); // so, not deleted.
+
+  /* Now do lazy unmapping. */
+  // should do nothing.
+  consensus_cache_unmap_lazy(cache, example_time - 10);
+  e_tmp = consensus_cache_find_first(cache, "index", "11");
+  tt_assert(e_tmp);
+  tt_assert(consensus_cache_entry_is_mapped(e_tmp));
+  // should actually unmap
+  consensus_cache_unmap_lazy(cache, example_time + 10);
+  e_tmp = consensus_cache_find_first(cache, "index", "11");
+  tt_assert(e_tmp);
+  tt_assert(! consensus_cache_entry_is_mapped(e_tmp));
+  // This one will still be mapped, since it has a reference.
+  e_tmp = consensus_cache_find_first(cache, "index", "16");
+  tt_assert(e_tmp);
+  tt_assert(consensus_cache_entry_is_mapped(e_tmp));
+
+  for (i = 0; i < N; ++i) {
+    consensus_cache_entry_decref(ents[i]);
+    ents[i] = NULL;
+  }
+
+  /* Free and re-create the cache, to rescan the directory. Make sure the
+   * deleted thing is still deleted, along with the other deleted thing. */
+  consensus_cache_free(cache);
+  cache = consensus_cache_open("cons", 128);
+  {
+    smartlist_t *entries = smartlist_new();
+    consensus_cache_find_all(entries, cache, NULL, NULL);
+    int n = smartlist_len(entries);
+    smartlist_free(entries);
+    tt_int_op(n, OP_EQ, 18);
+  }
+
+ done:
+  for (i = 0; i < N; ++i) {
+    consensus_cache_entry_decref(ents[i]);
+  }
+  tor_free(ents);
+  tor_free(ddir_fname);
+  consensus_cache_free(cache);
+}
+
 #define ENT(name)                                               \
   { #name, test_conscache_ ## name, TT_FORK, NULL, NULL }
 
 struct testcase_t conscache_tests[] = {
   ENT(simple_usage),
+  ENT(cleanup),
   END_OF_TESTCASES
 };
 
