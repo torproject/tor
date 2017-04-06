@@ -9,6 +9,7 @@
 #include "or.h"
 #include "config.h"
 #include "rendservice.h"
+#include "replaycache.h"
 
 #include "hs_cell.h"
 #include "hs_ntor.h"
@@ -460,6 +461,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
                          const hs_service_t *service)
 {
   int ret = -1;
+  time_t elapsed;
   uint8_t *decrypted = NULL;
   size_t encrypted_section_len;
   const uint8_t *encrypted_section;
@@ -477,8 +479,6 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     goto done;
   }
 
-  /* XXX: Add/Test replaycache. */
-
   log_info(LD_REND, "Received a decodable INTRODUCE2 cell on circuit %u "
                     "for service %s. Decoding encrypted section...",
            TO_CIRCUIT(circ)->n_circ_id,
@@ -495,6 +495,15 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     log_info(LD_REND, "Invalid INTRODUCE2 encrypted section length "
                       "for service %s. Dropping cell.",
              safe_str_client(service->onion_address));
+    goto done;
+  }
+
+  /* Check our replay cache for this introduction point. */
+  if (replaycache_add_test_and_elapsed(data->replay_cache, encrypted_section,
+                                       encrypted_section_len, &elapsed)) {
+    log_warn(LD_REND, "Possible replay detected! An INTRODUCE2 cell with the"
+                      "same ENCRYPTED section was seen %ld seconds ago. "
+                      "Dropping cell.", elapsed);
     goto done;
   }
 

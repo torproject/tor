@@ -47,6 +47,8 @@ typedef struct hs_cell_introduce2_data_t {
   curve25519_public_key_t client_pk;
   /* Link specifiers of the rendezvous point. Contains link_specifier_t. */
   smartlist_t *link_specifiers;
+  /* Replay cache of the introduction point. */
+  replaycache_t *replay_cache;
 } hs_cell_introduce2_data_t;
 
 /* Build cell API. */

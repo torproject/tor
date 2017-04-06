@@ -811,6 +811,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   data.payload_len = payload_len;
   data.link_specifiers = smartlist_new();
   data.is_legacy = ip->base.is_only_legacy;
+  data.replay_cache = ip->replay_cache;
 
   if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
     goto done;
