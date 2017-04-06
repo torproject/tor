@@ -1055,7 +1055,8 @@ The following options are useful only for clients (that is, if
     but never attach a new stream to a circuit that is too old.  For hidden
     services, this applies to the __last__ time a circuit was used, not the
     first. Circuits with streams constructed with SOCKS authentication via
-    SocksPorts that have **KeepAliveIsolateSOCKSAuth** ignore this value.
+    SocksPorts that have **KeepAliveIsolateSOCKSAuth** also remain alive
+    for MaxCircuitDirtiness seconds after carrying the last such stream.
     (Default: 10 minutes)
 
 [[MaxClientCircuitsPending]] **MaxClientCircuitsPending** __NUM__::
@@ -1117,8 +1118,9 @@ The following options are useful only for clients (that is, if
         Don't share circuits with streams targeting a different
         destination address.
     **KeepAliveIsolateSOCKSAuth**;;
-        If **IsolateSOCKSAuth** is enabled, keep alive circuits that have
-        streams with SOCKS authentication set indefinitely.
+        If **IsolateSOCKSAuth** is enabled, keep alive circuits while they have
+        at least one stream with SOCKS authentication active. After such a circuit
+        is idle for more than MaxCircuitDirtiness seconds, it can be closed.
     **SessionGroup=**__INT__;;
         If no other isolation rules would prevent it, allow streams
         on this port to share circuits with streams from every other
