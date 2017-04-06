@@ -16,6 +16,8 @@ config_line_append(config_line_t **lst,
                    const char *key,
                    const char *val)
 {
+  tor_assert(lst);
+
   config_line_t *newline;
 
   newline = tor_malloc_zero(sizeof(config_line_t));
