@@ -16,7 +16,7 @@ typedef struct threadpool_s threadpool_t;
 typedef struct workqueue_entry_s workqueue_entry_t;
 
 /** Possible return value from a work function: */
-typedef enum {
+typedef enum workqueue_reply_t {
   WQ_RPL_REPLY = 0, /** indicates success */
   WQ_RPL_ERROR = 1, /** indicates fatal error */
   WQ_RPL_SHUTDOWN = 2, /** indicates thread is shutting down */

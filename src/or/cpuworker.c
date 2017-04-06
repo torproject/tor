@@ -479,6 +479,20 @@ queue_pending_tasks(void)
   }
 }
 
+/** DOCDOC */
+workqueue_entry_t *
+cpuworker_queue_work(workqueue_reply_t (*fn)(void *, void *),
+                     void (*reply_fn)(void *),
+                     void *arg)
+{
+  tor_assert(threadpool);
+
+  return threadpool_queue_work(threadpool,
+                               fn,
+                               reply_fn,
+                               arg);
+}
+
 /** Try to tell a cpuworker to perform the public key operations necessary to
  * respond to <b>onionskin</b> for the circuit <b>circ</b>.
  *
