@@ -30,6 +30,24 @@ config_line_append(config_line_t **lst,
   (*lst) = newline;
 }
 
+/** Helper: allocate a new configuration option mapping 'key' to 'val',
+ * and prepend it to *<b>lst</b> */
+void
+config_line_prepend(config_line_t **lst,
+                    const char *key,
+                    const char *val)
+{
+  tor_assert(lst);
+
+  config_line_t *newline;
+
+  newline = tor_malloc_zero(sizeof(config_line_t));
+  newline->key = tor_strdup(key);
+  newline->value = tor_strdup(val);
+  newline->next = *lst;
+  *lst = newline;
+}
+
 /** Return the first line in <b>lines</b> whose key is exactly <b>key</b>, or
  * NULL if no such key exists.
  *
