@@ -36,17 +36,14 @@
 
 /* Length of base64 encoded commit NOT including the NUL terminated byte.
  * Formula is taken from base64_encode_size. This adds up to 56 bytes. */
-#define SR_COMMIT_BASE64_LEN \
-  (((SR_COMMIT_LEN - 1) / 3) * 4 + 4)
+#define SR_COMMIT_BASE64_LEN (BASE64_LEN(SR_COMMIT_LEN))
 /* Length of base64 encoded reveal NOT including the NUL terminated byte.
  * Formula is taken from base64_encode_size. This adds up to 56 bytes. */
-#define SR_REVEAL_BASE64_LEN \
-  (((SR_REVEAL_LEN - 1) / 3) * 4 + 4)
+#define SR_REVEAL_BASE64_LEN (BASE64_LEN(SR_REVEAL_LEN))
 /* Length of base64 encoded shared random value. It's 32 bytes long so 44
  * bytes from the base64_encode_size formula. That includes the '='
  * character at the end. */
-#define SR_SRV_VALUE_BASE64_LEN \
-  (((DIGEST256_LEN - 1) / 3) * 4 + 4)
+#define SR_SRV_VALUE_BASE64_LEN (BASE64_LEN(DIGEST256_LEN))
 
 /* Assert if commit valid flag is not set. */
 #define ASSERT_COMMIT_VALID(c) tor_assert((c)->valid)
