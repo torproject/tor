@@ -30,9 +30,11 @@ config_line_append(config_line_t **lst,
   (*lst) = newline;
 }
 
-/** Return the line in <b>lines</b> whose key is exactly <b>key</b>, or NULL
- * if no such key exists. For handling commandline-only options only; other
- * options should be looked up in the appropriate data structure. */
+/** Return the first line in <b>lines</b> whose key is exactly <b>key</b>, or
+ * NULL if no such key exists.
+ *
+ * (In options parsing, this is for handling commandline-only options only;
+ * other options should be looked up in the appropriate data structure.) */
 const config_line_t *
 config_line_find(const config_line_t *lines,
                  const char *key)
