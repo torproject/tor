@@ -794,6 +794,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
                           const uint8_t *payload, size_t payload_len)
 {
   int ret = -1;
+  time_t elapsed;
   hs_cell_introduce2_data_t data;
 
   tor_assert(service);
@@ -814,6 +815,22 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   data.replay_cache = ip->replay_cache;
 
   if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
+    goto done;
+  }
+
+  /* Check whether we've seen this REND_COOKIE before to detect repeats. */
+  if (replaycache_add_test_and_elapsed(
+           service->state.replay_cache_rend_cookie,
+           data.rendezvous_cookie, sizeof(data.rendezvous_cookie),
+           &elapsed)) {
+    /* A Tor client will send a new INTRODUCE1 cell with the same REND_COOKIE
+     * as its previous one if its intro circ times out while in state
+     * CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT. If we received the first
+     * INTRODUCE1 cell (the intro-point relay converts it into an INTRODUCE2
+     * cell), we are already trying to connect to that rend point (and may
+     * have already succeeded); drop this cell. */
+    log_info(LD_REND, "We received an INTRODUCE2 cell with same REND_COOKIE "
+                      "field %ld seconds ago. Dropping cell.", elapsed);
     goto done;
   }
 

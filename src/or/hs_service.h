@@ -181,6 +181,13 @@ typedef struct hs_service_state_t {
   /* Indicate that the service has entered the overlap period. We use this
    * flag to check for descriptor rotation. */
   unsigned int in_overlap_period : 1;
+
+  /* Replay cache tracking the REND_COOKIE found in INTRODUCE2 cell to detect
+   * repeats. Clients may send INTRODUCE1 cells for the same rendezvous point
+   * through two or more different introduction points; when they do, this
+   * keeps us from launching multiple simultaneous attempts to connect to the
+   * same rend point. */
+  replaycache_t *replay_cache_rend_cookie;
 } hs_service_state_t;
 
 /* Representation of a service running on this tor instance. */
