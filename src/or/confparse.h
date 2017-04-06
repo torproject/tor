@@ -103,14 +103,7 @@ typedef struct config_format_t {
 #define CAL_WARN_DEPRECATIONS (1u<<2)
 
 void *config_new(const config_format_t *fmt);
-void config_line_append(config_line_t **lst,
-                        const char *key, const char *val);
-config_line_t *config_lines_dup(const config_line_t *inp);
-const config_line_t *config_line_find(const config_line_t *lines,
-                                      const char *key);
 void config_free(const config_format_t *fmt, void *options);
-int config_lines_eq(config_line_t *a, config_line_t *b);
-int config_count_key(const config_line_t *a, const char *key);
 config_line_t *config_get_assigned_option(const config_format_t *fmt,
                                           const void *options, const char *key,
                                           int escape_val);
@@ -132,8 +125,6 @@ const char *config_find_deprecation(const config_format_t *fmt,
 const config_var_t *config_find_option(const config_format_t *fmt,
                                        const char *key);
 
-int config_get_lines(const char *string, config_line_t **result, int extended);
-void config_free_lines(config_line_t *front);
 const char *config_expand_abbrev(const config_format_t *fmt,
                                  const char *option,
                                  int command_line, int warn_obsolete);

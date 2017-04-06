@@ -3,6 +3,8 @@
 
 #include "container.h"
 #include "compat.h"
+#include "confline.h"
+#include "memarea.h"
 #include "sandbox.h"
 #include "storagedir.h"
 #include "torlog.h"
@@ -237,6 +239,40 @@ find_unused_fname(storage_dir_t *d)
   return NULL;
 }
 
+/** Helper: As storage_dir_save_bytes_to_file, but store a smartlist of
+ * sized_chunk_t rather than a single byte array. */
+static int
+storage_dir_save_chunks_to_file(storage_dir_t *d,
+                                const smartlist_t *chunks,
+                                int binary,
+                                char **fname_out)
+{
+  uint64_t total_length = 0;
+  char *fname = find_unused_fname(d);
+  if (!fname)
+    return -1;
+
+  SMARTLIST_FOREACH(chunks, const sized_chunk_t *, ch,
+                    total_length += ch->len);
+
+  char *path = NULL;
+  tor_asprintf(&path, "%s/%s", d->directory, fname);
+
+  int r = write_chunks_to_file(path, chunks, binary, 0);
+  if (r == 0) {
+    if (d->usage_known)
+      d->usage += total_length;
+    if (fname_out) {
+      *fname_out = tor_strdup(fname);
+    }
+    if (d->contents)
+      smartlist_add(d->contents, tor_strdup(fname));
+  }
+  tor_free(fname);
+  tor_free(path);
+  return r;
+}
+
 /** Try to write the <b>length</b> bytes at <b>data</b> into a new file
  * in <b>d</b>.  On success, return 0 and set *<b>fname_out</b> to a
  * newly allocated string containing the filename.  On failure, return
@@ -248,25 +284,11 @@ storage_dir_save_bytes_to_file(storage_dir_t *d,
                                int binary,
                                char **fname_out)
 {
-  char *fname = find_unused_fname(d);
-  if (!fname)
-    return -1;
-
-  char *path = NULL;
-  tor_asprintf(&path, "%s/%s", d->directory, fname);
-
-  int r = write_bytes_to_file(path, (const char *)data, length, binary);
-  if (r == 0) {
-    if (d->usage_known)
-      d->usage += length;
-    if (fname_out) {
-      *fname_out = tor_strdup(fname);
-    }
-    if (d->contents)
-      smartlist_add(d->contents, tor_strdup(fname));
-  }
-  tor_free(fname);
-  tor_free(path);
+  smartlist_t *chunks = smartlist_new();
+  sized_chunk_t chunk = { (const char *)data, length };
+  smartlist_add(chunks, &chunk);
+  int r = storage_dir_save_chunks_to_file(d, chunks, binary, fname_out);
+  smartlist_free(chunks);
   return r;
 }
 
@@ -282,6 +304,106 @@ storage_dir_save_string_to_file(storage_dir_t *d,
 {
   return storage_dir_save_bytes_to_file(d,
                 (const uint8_t*)str, strlen(str), binary, fname_out);
+}
+
+/**
+ * As storage_dir_save_bytes_to_file, but associates the data with the
+ * key-value pairs in <b>labels</b>. Files
+ * stored in this format can be recovered with storage_dir_map_labeled
+ * or storage_dir_read_labeled().
+ */
+int
+storage_dir_save_labeled_to_file(storage_dir_t *d,
+                                  const config_line_t *labels,
+                                  const uint8_t *data,
+                                  size_t length,
+                                  char **fname_out)
+{
+  /*
+   * The storage format is to prefix the data with the key-value pairs in
+   * <b>labels</b>, and a single NUL separator.  But code outside this module
+   * MUST NOT rely on that format.
+   */
+
+  smartlist_t *chunks = smartlist_new();
+  memarea_t *area = memarea_new();
+  const config_line_t *line;
+  for (line = labels; line; line = line->next) {
+    sized_chunk_t *sz = memarea_alloc(area, sizeof(sized_chunk_t));
+    sz->len = strlen(line->key) + 1 + strlen(line->value) + 1;
+    const size_t allocated = sz->len + 1;
+    char *bytes = memarea_alloc(area, allocated);
+    tor_snprintf(bytes, allocated, "%s %s\n", line->key, line->value);
+    sz->bytes = bytes;
+    smartlist_add(chunks, sz);
+  }
+
+  sized_chunk_t *nul = memarea_alloc(area, sizeof(sized_chunk_t));
+  nul->len = 1;
+  nul->bytes = "\0";
+  smartlist_add(chunks, nul);
+
+  sized_chunk_t *datachunk = memarea_alloc(area, sizeof(sized_chunk_t));
+  datachunk->bytes = (const char *)data;
+  datachunk->len = length;
+  smartlist_add(chunks, datachunk);
+
+  int r = storage_dir_save_chunks_to_file(d, chunks, 1, fname_out);
+  smartlist_free(chunks);
+  memarea_drop_all(area);
+  return r;
+}
+
+/**
+ * Map a file that was created with storage_dir_save_labeled().  On failure,
+ * return NULL.  On success, write a set of newly allocated labels into to
+ * *<b>labels_out</b>, a pointer to the into *<b>data_out</b>, and the data's
+ * into *<b>sz_out</b>. On success, also return a tor_mmap_t object whose
+ * contents should not be used -- it needs to be kept around, though, for as
+ * long as <b>data_out</b> is going to be valid.
+ */
+tor_mmap_t *
+storage_dir_map_labeled(storage_dir_t *dir,
+                         const char *fname,
+                         config_line_t **labels_out,
+                         const uint8_t **data_out,
+                         size_t *sz_out)
+{
+  tor_mmap_t *m = storage_dir_map(dir, fname);
+  if (! m)
+    goto err;
+  const char *nulp = memchr(m->data, '\0', m->size);
+  if (! nulp)
+    goto err;
+  if (labels_out && config_get_lines(m->data, labels_out, 0) < 0)
+    goto err;
+  size_t offset = nulp - m->data + 1;
+  tor_assert(offset <= m->size);
+  *data_out = (const uint8_t *)(m->data + offset);
+  *sz_out = m->size - offset;
+
+  return m;
+ err:
+  tor_munmap_file(m);
+  return NULL;
+}
+
+/** As storage_dir_map_labeled, but return a new byte array containing the
+ * data. */
+uint8_t *
+storage_dir_read_labeled(storage_dir_t *dir,
+                          const char *fname,
+                          config_line_t **labels_out,
+                          size_t *sz_out)
+{
+  const uint8_t *data = NULL;
+  tor_mmap_t *m = storage_dir_map_labeled(dir, fname, labels_out,
+                                           &data, sz_out);
+  if (m == NULL)
+    return NULL;
+  uint8_t *result = tor_memdup(data, *sz_out);
+  tor_munmap_file(m);
+  return result;
 }
 
 /**
