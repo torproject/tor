@@ -2667,6 +2667,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       protocol_list_supports_protocol(tok->args[0], PRT_RELAY, 2);
     rs->supports_ed25519_link_handshake =
       protocol_list_supports_protocol(tok->args[0], PRT_LINKAUTH, 3);
+    rs->supports_ed25519_hs_intro =
+      protocol_list_supports_protocol(tok->args[0], PRT_HSINTRO, 4);
+    rs->supports_v3_hsdir =
+      protocol_list_supports_protocol(tok->args[0], PRT_HSDIR, 2);
   }
   if ((tok = find_opt_by_keyword(tokens, K_V))) {
     tor_assert(tok->n_args == 1);
