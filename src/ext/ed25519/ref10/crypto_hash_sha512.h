@@ -13,7 +13,7 @@
     sha_ctx_ = crypto_digest512_new(DIGEST_SHA512);			\
     crypto_digest_add_bytes(sha_ctx_, (const char *)(inp1), (len1));	\
     crypto_digest_add_bytes(sha_ctx_, (const char *)(inp2), (len2));	\
-    crypto_digest_get_digest(sha_ctx_, (char *)out, 64);		\
+    crypto_digest_get_digest(sha_ctx_, (char *)out, DIGEST512_LEN);	\
     crypto_digest_free(sha_ctx_);					\
   } while (0)
 
@@ -27,6 +27,6 @@
     crypto_digest_add_bytes(sha_ctx_, (const char *)(inp1), (len1));	\
     crypto_digest_add_bytes(sha_ctx_, (const char *)(inp2), (len2));	\
     crypto_digest_add_bytes(sha_ctx_, (const char *)(inp3), (len3));	\
-    crypto_digest_get_digest(sha_ctx_, (char *)out, 64);		\
+    crypto_digest_get_digest(sha_ctx_, (char *)out, DIGEST512_LEN);	\
     crypto_digest_free(sha_ctx_);					\
  } while(0)
