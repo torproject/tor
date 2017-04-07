@@ -28,7 +28,8 @@ size_t
 base32_encoded_size(size_t srclen)
 {
   size_t enclen;
-  enclen = CEIL_DIV(srclen*8, 5) + 1;
+  tor_assert(srclen < SIZE_T_CEILING / 8);
+  enclen = BASE32_NOPAD_BUFSIZE(srclen);
   tor_assert(enclen < INT_MAX && enclen > srclen);
   return enclen;
 }
@@ -41,7 +42,6 @@ base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   size_t nbits = srclen * 8;
   size_t bit;
 
-  tor_assert(srclen < SIZE_T_CEILING/8);
   /* We need enough space for the encoded data and the extra NUL byte. */
   tor_assert(base32_encoded_size(srclen) <= destlen);
   tor_assert(destlen < SIZE_T_CEILING);
@@ -133,6 +133,8 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 /** Return the Base64 encoded size of <b>srclen</b> bytes of data in
  * bytes.
  *
+ * Does <b>NOT</b> count the terminating NUL.
+ *
  * If <b>flags</b>&amp;BASE64_ENCODE_MULTILINE is true, return the size
  * of the encoded output as multiline output (64 character, `\n' terminated
  * lines).
@@ -141,19 +143,16 @@ size_t
 base64_encode_size(size_t srclen, int flags)
 {
   size_t enclen;
+
+  /* Use INT_MAX for overflow checking because base64_encode() returns int. */
   tor_assert(srclen < INT_MAX);
+  tor_assert(CEIL_DIV(srclen, 3) < INT_MAX / 4);
 
-  if (srclen == 0)
-    return 0;
+  enclen = BASE64_LEN(srclen);
+  if (flags & BASE64_ENCODE_MULTILINE)
+    enclen += CEIL_DIV(enclen, BASE64_OPENSSL_LINELEN);
 
-  enclen = ((srclen - 1) / 3) * 4 + 4;
-  if (flags & BASE64_ENCODE_MULTILINE) {
-    size_t remainder = enclen % BASE64_OPENSSL_LINELEN;
-    enclen += enclen / BASE64_OPENSSL_LINELEN;
-    if (remainder)
-      enclen++;
-  }
-  tor_assert(enclen < INT_MAX && enclen > srclen);
+  tor_assert(enclen < INT_MAX && (enclen == 0 || enclen > srclen));
   return enclen;
 }
 
@@ -475,7 +474,8 @@ base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   const char *end;
   char *cp;
 
-  tor_assert(destlen >= srclen*2+1);
+  tor_assert(srclen < SIZE_T_CEILING / 2 - 1);
+  tor_assert(destlen >= BASE16_BUFSIZE(srclen));
   tor_assert(destlen < SIZE_T_CEILING);
 
   /* Make sure we leave no uninitialized data in the destination buffer. */

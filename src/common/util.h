@@ -163,9 +163,9 @@ int64_t clamp_double_to_int64(double number);
 void simplify_fraction64(uint64_t *numer, uint64_t *denom);
 
 /* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
- * and positive <b>b</b>.  Works on integer types only. Not defined if a+b can
- * overflow. */
-#define CEIL_DIV(a,b) (((a)+(b)-1)/(b))
+ * and positive <b>b</b>.  Works on integer types only. Not defined if a+(b-1)
+ * can overflow. */
+#define CEIL_DIV(a,b) (((a)+((b)-1))/(b))
 
 /* Return <b>v</b> if it's between <b>min</b> and <b>max</b>.  Otherwise
  * return <b>min</b> if <b>v</b> is smaller than <b>min</b>, or <b>max</b> if
