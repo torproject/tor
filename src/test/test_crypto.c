@@ -1470,7 +1470,7 @@ test_crypto_formats(void *arg)
     tt_int_op(i, OP_GE, 0);
     tt_int_op(i, OP_EQ, strlen(data2));
     tt_assert(! strchr(data2, '='));
-    j = base64_decode_nopad((uint8_t*)data3, 1024, data2, i);
+    j = base64_decode(data3, 1024, data2, i);
     tt_int_op(j, OP_EQ, idx);
     tt_mem_op(data3,OP_EQ, data1, idx);
   }

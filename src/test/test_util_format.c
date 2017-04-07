@@ -133,48 +133,54 @@ test_util_format_base64_encode(void *ignored)
 }
 
 static void
-test_util_format_base64_decode_nopad(void *ignored)
+test_util_format_base64_decode_oddsize(void *ignored)
 {
   (void)ignored;
   int res;
   int i;
   char *src;
-  uint8_t *dst, *real_dst;
-  uint8_t expected[] = {0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65};
+  char *dst, real_dst[7];
+  char expected[] = {0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65};
   char real_src[] = "ZXhhbXBsZQ";
+  char expected40[] = "testing40characteroddsizebase64encoding!";
+  char src40[] = "dGVzdGluZzQwY2hhcmFjdGVyb2Rkc2l6ZWJhc2U2NGVuY29kaW5nIQ";
+  char pad40[] = "dGVzdGluZzQwY2hhcmFjdGVyb2Rkc2l6ZWJhc2U2NGVuY29kaW5nIQ==";
 
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
-  real_dst = tor_malloc_zero(10);
 
   for (i=0;i<256;i++) {
     src[i] = (char)i;
   }
 
-  res = base64_decode_nopad(dst, 1, src, SIZE_T_CEILING);
-  tt_int_op(res, OP_EQ, -1);
-
-  res = base64_decode_nopad(dst, 1, src, 5);
+  res = base64_decode(dst, 1, src, 5);
   tt_int_op(res, OP_EQ, -1);
 
   const char *s = "SGVsbG8gd29ybGQ";
-  res = base64_decode_nopad(dst, 1000, s, strlen(s));
+  res = base64_decode(dst, 1000, s, strlen(s));
   tt_int_op(res, OP_EQ, 11);
   tt_mem_op(dst, OP_EQ, "Hello world", 11);
 
   s = "T3BhIG11bmRv";
-  res = base64_decode_nopad(dst, 9, s, strlen(s));
+  res = base64_decode(dst, 9, s, strlen(s));
   tt_int_op(res, OP_EQ, 9);
   tt_mem_op(dst, OP_EQ, "Opa mundo", 9);
 
-  res = base64_decode_nopad(real_dst, 10, real_src, 10);
+  res = base64_decode(real_dst, sizeof(real_dst), real_src, 10);
   tt_int_op(res, OP_EQ, 7);
   tt_mem_op(real_dst, OP_EQ, expected, 7);
+
+  res = base64_decode(dst, 40, src40, strlen(src40));
+  tt_int_op(res, OP_EQ, 40);
+  tt_mem_op(dst, OP_EQ, expected40, 40);
+
+  res = base64_decode(dst, 40, pad40, strlen(pad40));
+  tt_int_op(res, OP_EQ, 40);
+  tt_mem_op(dst, OP_EQ, expected40, 40);
 
  done:
   tor_free(src);
   tor_free(dst);
-  tor_free(real_dst);
 }
 
 static void
@@ -402,7 +408,7 @@ struct testcase_t util_format_tests[] = {
   { "unaligned_accessors", test_util_format_unaligned_accessors, 0,
     NULL, NULL },
   { "base64_encode", test_util_format_base64_encode, 0, NULL, NULL },
-  { "base64_decode_nopad", test_util_format_base64_decode_nopad, 0,
+  { "base64_decode_oddsize", test_util_format_base64_decode_oddsize, 0,
     NULL, NULL },
   { "base64_decode", test_util_format_base64_decode, 0, NULL, NULL },
   { "base16_decode", test_util_format_base16_decode, 0, NULL, NULL },
