@@ -136,7 +136,7 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
  * bytes.
  *
  * (WATCH OUT: This API <em>does not</em> count the terminating NUL byte,
- * but base64_encoded_size does.)
+ * but base32_encoded_size does.)
  *
  * If <b>flags</b>&amp;BASE64_ENCODE_MULTILINE is true, return the size
  * of the encoded output as multiline output (64 character, `\n' terminated
