@@ -38,7 +38,6 @@ const char tor_git_revision[] = "";
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
-#include <openssl/crypto.h>
 #include "main.h"
 #endif
 
@@ -238,8 +237,8 @@ main(int c, const char **v)
 
 #ifdef USE_DMALLOC
   {
-    int r = CRYPTO_set_mem_ex_functions(tor_malloc_, tor_realloc_, tor_free_);
-    tor_assert(r);
+    int r = crypto_use_tor_alloc_functions();
+    tor_assert(r == 0);
   }
 #endif
 

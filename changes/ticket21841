@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Isolate our usage of the openssl headers so that they are only
+      used from our crypto wrapper modules, and from tests that examing those
+      modules' internals. Closes ticket 21841.

@@ -10,13 +10,6 @@
 
 #include "compat.h"
 
-/* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
- * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
-DISABLE_GCC_WARNING(redundant-decls)
-#include <openssl/x509.h>
-#include <openssl/ssl.h>
-ENABLE_GCC_WARNING(redundant-decls)
-
 #include "or.h"
 #include "config.h"
 #include "connection.h"
@@ -785,19 +778,14 @@ CERTS_FAIL(expired_rsa_id, /* both */
     certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 1);
     const tor_x509_cert_t *idc;
     tor_tls_get_my_certs(1, NULL, &idc);
-    X509 *newc = X509_dup(idc->cert);
+    tor_x509_cert_t *newc;
     time_t new_end = time(NULL) - 86400 * 10;
-    X509_time_adj(X509_get_notAfter(newc), 0, &new_end);
-    EVP_PKEY *pk = crypto_pk_get_evp_pkey_(d->key2, 1);
-    tt_assert(X509_sign(newc, pk, EVP_sha1()));
-    int len = i2d_X509(newc, NULL);
-    certs_cell_cert_setlen_body(cert, len);
-    uint8_t *body = certs_cell_cert_getarray_body(cert);
-    int len2 = i2d_X509(newc, &body);
-    tt_int_op(len, ==, len2);
+    newc = tor_x509_cert_replace_expiration(idc, new_end, d->key2);
+    certs_cell_cert_setlen_body(cert, newc->encoded_len);
+    memcpy(certs_cell_cert_getarray_body(cert),
+           newc->encoded, newc->encoded_len);
     REENCODE();
-    X509_free(newc);
-    EVP_PKEY_free(pk);
+    tor_x509_cert_free(newc);
   })
 CERTS_FAIL(expired_ed_id, /* ed25519 */
   {

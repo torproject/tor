@@ -11,7 +11,6 @@
 #include "routerlist.h"
 #include "config.h"
 #include "hs_common.h"
-#include <openssl/rsa.h>
 #include "rend_test_helpers.h"
 #include "log_test_helpers.h"
 

@@ -104,7 +104,6 @@
 #include "ext_orport.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
-#include <openssl/crypto.h>
 #endif
 #include "memarea.h"
 #include "sandbox.h"
@@ -3617,8 +3616,8 @@ tor_main(int argc, char *argv[])
   {
     /* Instruct OpenSSL to use our internal wrappers for malloc,
        realloc and free. */
-    int r = CRYPTO_set_mem_ex_functions(tor_malloc_, tor_realloc_, tor_free_);
-    tor_assert(r);
+    int r = crypto_use_tor_alloc_functions();
+    tor_assert(r == 0);
   }
 #endif
 #ifdef NT_SERVICE

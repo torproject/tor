@@ -12,10 +12,7 @@
 
 #if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_LIBSCRYPT_SCRYPT)
 #define HAVE_LIBSCRYPT
-#include <libscrypt.h>
 #endif
-
-#include <openssl/evp.h>
 
 /** Run unit tests for our secret-to-key passphrase hashing functionality. */
 static void
