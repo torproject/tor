@@ -370,6 +370,34 @@ test_util_format_base32_decode(void *arg)
   tor_free(dst);
 }
 
+static void
+test_util_format_encoded_size(void *arg)
+{
+  (void)arg;
+  uint8_t inbuf[256];
+  char outbuf[1024];
+  unsigned i;
+
+  crypto_rand((char *)inbuf, sizeof(inbuf));
+  for (i = 0; i <= sizeof(inbuf); ++i) {
+    /* XXXX (Once the return values are consistent, check them too.) */
+
+    base32_encode(outbuf, sizeof(outbuf), (char *)inbuf, i);
+    /* The "+ 1" below is an API inconsistency. */
+    tt_int_op(strlen(outbuf) + 1, OP_EQ, base32_encoded_size(i));
+
+    base64_encode(outbuf, sizeof(outbuf), (char *)inbuf, i, 0);
+    tt_int_op(strlen(outbuf), OP_EQ, base64_encode_size(i, 0));
+    base64_encode(outbuf, sizeof(outbuf), (char *)inbuf, i,
+                  BASE64_ENCODE_MULTILINE);
+    tt_int_op(strlen(outbuf), OP_EQ,
+              base64_encode_size(i, BASE64_ENCODE_MULTILINE));
+  }
+
+ done:
+  ;
+}
+
 struct testcase_t util_format_tests[] = {
   { "unaligned_accessors", test_util_format_unaligned_accessors, 0,
     NULL, NULL },
@@ -382,6 +410,7 @@ struct testcase_t util_format_tests[] = {
     NULL, NULL },
   { "base32_decode", test_util_format_base32_decode, 0,
     NULL, NULL },
+  { "encoded_size", test_util_format_encoded_size, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
