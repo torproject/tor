@@ -22,8 +22,10 @@
 #include <stdlib.h>
 
 /* Return the base32 encoded size in bytes using the source length srclen.
- * The NUL terminated byte is added as well since every base32 encoding
- * requires enough space for it. */
+ *
+ * (WATCH OUT: This API counts the terminating NUL byte, but
+ * base64_encode_size does not.)
+ */
 size_t
 base32_encoded_size(size_t srclen)
 {
@@ -133,7 +135,8 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 /** Return the Base64 encoded size of <b>srclen</b> bytes of data in
  * bytes.
  *
- * Does <b>NOT</b> count the terminating NUL.
+ * (WATCH OUT: This API <em>does not</em> count the terminating NUL byte,
+ * but base64_encoded_size does.)
  *
  * If <b>flags</b>&amp;BASE64_ENCODE_MULTILINE is true, return the size
  * of the encoded output as multiline output (64 character, `\n' terminated
