@@ -313,39 +313,6 @@ base64_encode_nopad(char *dest, size_t destlen,
   return (int)(out - dest);
 }
 
-/** As base64_decode, but do not require any padding on the input */
-int
-base64_decode_nopad(uint8_t *dest, size_t destlen,
-                    const char *src, size_t srclen)
-{
-  if (srclen > SIZE_T_CEILING - 4)
-    return -1;
-  char *buf = tor_malloc(srclen + 4);
-  memcpy(buf, src, srclen+1);
-  size_t buflen;
-  switch (srclen % 4)
-    {
-    case 0:
-    default:
-      buflen = srclen;
-      break;
-    case 1:
-      tor_free(buf);
-      return -1;
-    case 2:
-      memcpy(buf+srclen, "==", 3);
-      buflen = srclen + 2;
-      break;
-    case 3:
-      memcpy(buf+srclen, "=", 2);
-      buflen = srclen + 1;
-      break;
-  }
-  int n = base64_decode((char*)dest, destlen, buf, buflen);
-  tor_free(buf);
-  return n;
-}
-
 #undef BASE64_OPENSSL_LINELEN
 
 /** @{ */
