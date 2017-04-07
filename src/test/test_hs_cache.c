@@ -15,95 +15,9 @@
 #include "directory.h"
 #include "connection.h"
 
+#include "hs_test_helpers.h"
 #include "test_helpers.h"
 #include "test.h"
-
-/* Build an intro point using a blinded key and an address. */
-static hs_desc_intro_point_t *
-helper_build_intro_point(const ed25519_keypair_t *blinded_kp,
-                         const char *addr)
-{
-  int ret;
-  ed25519_keypair_t auth_kp;
-  hs_desc_intro_point_t *intro_point = NULL;
-  hs_desc_intro_point_t *ip = tor_malloc_zero(sizeof(*ip));
-  ip->link_specifiers = smartlist_new();
-
-  {
-    hs_desc_link_specifier_t *ls = tor_malloc_zero(sizeof(*ls));
-    ls->u.ap.port = 9001;
-    int family = tor_addr_parse(&ls->u.ap.addr, addr);
-    switch (family) {
-    case AF_INET:
-      ls->type = LS_IPV4;
-      break;
-    case AF_INET6:
-      ls->type = LS_IPV6;
-      break;
-    default:
-      /* Stop the test, not suppose to have an error. */
-      tt_int_op(family, OP_EQ, AF_INET);
-    }
-    smartlist_add(ip->link_specifiers, ls);
-  }
-
-  ret = ed25519_keypair_generate(&auth_kp, 0);
-  tt_int_op(ret, ==, 0);
-  ip->auth_key_cert = tor_cert_create(blinded_kp, CERT_TYPE_AUTH_HS_IP_KEY,
-                                      &auth_kp.pubkey, time(NULL),
-                                      HS_DESC_CERT_LIFETIME,
-                                      CERT_FLAG_INCLUDE_SIGNING_KEY);
-  tt_assert(ip->auth_key_cert);
-
-  ret = curve25519_keypair_generate(&ip->enc_key.curve25519, 0);
-  tt_int_op(ret, ==, 0);
-  ip->enc_key_type = HS_DESC_KEY_TYPE_CURVE25519;
-  intro_point = ip;
- done:
-  return intro_point;
-}
-
-/* Return a valid hs_descriptor_t object. */
-static hs_descriptor_t *
-helper_build_hs_desc(uint64_t revision_counter, uint32_t lifetime,
-                     ed25519_public_key_t *signing_pubkey)
-{
-  int ret;
-  ed25519_keypair_t blinded_kp;
-  hs_descriptor_t *descp = NULL, *desc = tor_malloc_zero(sizeof(*desc));
-
-  desc->plaintext_data.version = HS_DESC_SUPPORTED_FORMAT_VERSION_MAX;
-
-  /* Copy only the public key into the descriptor. */
-  memcpy(&desc->plaintext_data.signing_pubkey, signing_pubkey,
-         sizeof(ed25519_public_key_t));
-
-  ret = ed25519_keypair_generate(&blinded_kp, 0);
-  tt_int_op(ret, ==, 0);
-  /* Copy only the public key into the descriptor. */
-  memcpy(&desc->plaintext_data.blinded_pubkey, &blinded_kp.pubkey,
-         sizeof(ed25519_public_key_t));
-
-  desc->plaintext_data.signing_key_cert =
-    tor_cert_create(&blinded_kp, CERT_TYPE_SIGNING_HS_DESC, signing_pubkey,
-                    time(NULL), 3600, CERT_FLAG_INCLUDE_SIGNING_KEY);
-  tt_assert(desc->plaintext_data.signing_key_cert);
-  desc->plaintext_data.revision_counter = revision_counter;
-  desc->plaintext_data.lifetime_sec = lifetime;
-
-  /* Setup encrypted data section. */
-  desc->encrypted_data.create2_ntor = 1;
-  desc->encrypted_data.intro_auth_types = smartlist_new();
-  smartlist_add(desc->encrypted_data.intro_auth_types, tor_strdup("ed25519"));
-  desc->encrypted_data.intro_points = smartlist_new();
-  /* Add an intro point. */
-  smartlist_add(desc->encrypted_data.intro_points,
-                helper_build_intro_point(&blinded_kp, "1.2.3.4"));
-
-  descp = desc;
- done:
-  return descp;
-}
 
 /* Static variable used to encoded the HSDir query. */
 static char query_b64[256];
@@ -141,7 +55,7 @@ test_directory(void *arg)
   /* Generate a valid descriptor with normal values. */
   ret = ed25519_keypair_generate(&signing_kp1, 0);
   tt_int_op(ret, ==, 0);
-  desc1 = helper_build_hs_desc(42, 3 * 60 * 60, &signing_kp1.pubkey);
+  desc1 = hs_helper_build_hs_desc_with_ip(&signing_kp1);
   tt_assert(desc1);
   ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &desc1_str);
   tt_int_op(ret, OP_EQ, 0);
@@ -175,8 +89,10 @@ test_directory(void *arg)
     ret = ed25519_keypair_generate(&signing_kp_zero, 0);
     tt_int_op(ret, ==, 0);
     hs_descriptor_t *desc_zero_lifetime;
-    desc_zero_lifetime = helper_build_hs_desc(1, 0, &signing_kp_zero.pubkey);
+    desc_zero_lifetime = hs_helper_build_hs_desc_with_ip(&signing_kp_zero);
     tt_assert(desc_zero_lifetime);
+    desc_zero_lifetime->plaintext_data.revision_counter = 1;
+    desc_zero_lifetime->plaintext_data.lifetime_sec = 0;
     char *desc_zero_lifetime_str;
     ret = hs_desc_encode_descriptor(desc_zero_lifetime, &signing_kp_zero,
                                     &desc_zero_lifetime_str);
@@ -262,7 +178,7 @@ test_clean_as_dir(void *arg)
   /* Generate a valid descriptor with values. */
   ret = ed25519_keypair_generate(&signing_kp1, 0);
   tt_int_op(ret, ==, 0);
-  desc1 = helper_build_hs_desc(42, 3 * 60 * 60, &signing_kp1.pubkey);
+  desc1 = hs_helper_build_hs_desc_with_ip(&signing_kp1);
   tt_assert(desc1);
   ret = hs_desc_encode_descriptor(desc1, &signing_kp1, &desc1_str);
   tt_int_op(ret, OP_EQ, 0);
@@ -375,7 +291,7 @@ test_upload_and_download_hs_desc(void *arg)
     ed25519_keypair_t signing_kp;
     retval = ed25519_keypair_generate(&signing_kp, 0);
     tt_int_op(retval, ==, 0);
-    published_desc = helper_build_hs_desc(42, 3 * 60 * 60, &signing_kp.pubkey);
+    published_desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
     tt_assert(published_desc);
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
                                        &published_desc_str);
@@ -438,8 +354,7 @@ test_hsdir_revision_counter_check(void *arg)
   {
     retval = ed25519_keypair_generate(&signing_kp, 0);
     tt_int_op(retval, ==, 0);
-    published_desc = helper_build_hs_desc(1312, 3 * 60 * 60,
-                                          &signing_kp.pubkey);
+    published_desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
     tt_assert(published_desc);
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
                                        &published_desc_str);
@@ -470,7 +385,7 @@ test_hsdir_revision_counter_check(void *arg)
     tt_assert(received_desc);
 
     /* Check that the revision counter is correct */
-    tt_u64_op(received_desc->plaintext_data.revision_counter, ==, 1312);
+    tt_u64_op(received_desc->plaintext_data.revision_counter, ==, 42);
 
     hs_descriptor_free(received_desc);
     received_desc = NULL;
