@@ -1,0 +1,5 @@
+  o Minor bugfixes (crash prevention):
+    - Fix an (currently untriggerable, but potentially dangerous) crash
+      bug when base32-encoding inputs whose sizes are not a multiple of
+      5. Fixes bug 21894; bugfix on 0.2.9.1-alpha.
+
