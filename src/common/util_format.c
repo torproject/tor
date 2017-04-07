@@ -395,15 +395,9 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   const char *eos = src+srclen;
   uint32_t n=0;
   int n_idx=0;
-  char *dest_orig = dest;
+  size_t di = 0;
 
-  /* Max number of bits == srclen*6.
-   * Number of bytes required to hold all bits == (srclen*6)/8.
-   * Yes, we want to round down: anything that hangs over the end of a
-   * byte is padding. */
-  if (!size_mul_check(srclen, 3) || destlen < (srclen*3)/4)
-    return -1;
-  if (destlen > SIZE_T_CEILING)
+  if (destlen > INT_MAX)
     return -1;
 
   /* Make sure we leave no uninitialized data in the destination buffer. */
@@ -431,9 +425,11 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
         n = (n<<6) | v;
         if ((++n_idx) == 4) {
           /* We've accumulated 24 bits in n. Flush them. */
-          *dest++ = (n>>16);
-          *dest++ = (n>>8) & 0xff;
-          *dest++ = (n) & 0xff;
+          if (destlen < 3 || di > destlen - 3)
+            return -1;
+          dest[di++] = (n>>16);
+          dest[di++] = (n>>8) & 0xff;
+          dest[di++] = (n) & 0xff;
           n_idx = 0;
           n = 0;
         }
@@ -451,18 +447,21 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
       return -1;
     case 2:
       /* 12 leftover bits: The last 4 are padding and the first 8 are data. */
-      *dest++ = n >> 4;
+      if (destlen < 1 || di > destlen - 1)
+        return -1;
+      dest[di++] = n >> 4;
       break;
     case 3:
       /* 18 leftover bits: The last 2 are padding and the first 16 are data. */
-      *dest++ = n >> 10;
-      *dest++ = n >> 2;
+      if (destlen < 2 || di > destlen - 2)
+        return -1;
+      dest[di++] = n >> 10;
+      dest[di++] = n >> 2;
   }
 
-  tor_assert((dest-dest_orig) <= (ssize_t)destlen);
-  tor_assert((dest-dest_orig) <= INT_MAX);
+  tor_assert(di <= destlen);
 
-  return (int)(dest-dest_orig);
+  return (int)di;
 }
 #undef X
 #undef SP
