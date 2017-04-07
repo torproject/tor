@@ -386,7 +386,7 @@ test_encrypted_data_len(void *arg)
 }
 
 static void
-test_decode_intro_point(void *arg)
+test_decode_invalid_intro_point(void *arg)
 {
   int ret;
   char *encoded_ip = NULL;
@@ -396,9 +396,6 @@ test_decode_intro_point(void *arg)
   hs_descriptor_t *desc = NULL;
 
   (void) arg;
-
-  /* The following certificate expires in 2036. After that, one of the test
-   * will fail because of the expiry time. */
 
   /* Seperate pieces of a valid encoded introduction point. */
   const char *intro_point =
@@ -412,13 +409,6 @@ test_decode_intro_point(void *arg)
     "-----END ED25519 CERT-----";
   const char *enc_key =
     "enc-key ntor bpZKLsuhxP6woDQ3yVyjm5gUKSk7RjfAijT2qrzbQk0=";
-  const char *enc_key_legacy =
-    "enc-key legacy\n"
-    "-----BEGIN RSA PUBLIC KEY-----\n"
-    "MIGJAoGBAO4bATcW8kW4h6RQQAKEgg+aXCpF4JwbcO6vGZtzXTDB+HdPVQzwqkbh\n"
-    "XzFM6VGArhYw4m31wcP1Z7IwULir7UMnAFd7Zi62aYfU6l+Y1yAoZ1wzu1XBaAMK\n"
-    "ejpwQinW9nzJn7c2f69fVke3pkhxpNdUZ+vplSA/l9iY+y+v+415AgMBAAE=\n"
-    "-----END RSA PUBLIC KEY-----";
   const char *enc_key_cert =
     "enc-key-certification\n"
     "-----BEGIN ED25519 CERT-----\n"
@@ -426,46 +416,6 @@ test_decode_intro_point(void *arg)
     "lbTt1DF5nKTE/gU3Fr8ZtlCIOhu1A+F5LM7fqCUupfesg0KTHwyIZOYQbJuM5/he\n"
     "/jDNyLy9woPJdjkxywaY2RPUxGjLYtMQV0E8PUxWyICV+7y52fTCYaKpYQw=\n"
     "-----END ED25519 CERT-----";
-  const char *enc_key_cert_legacy =
-    "enc-key-certification\n"
-    "-----BEGIN CROSSCERT-----\n"
-    "Sk28JnVolppHj2VLowJ2xWSFUZWtGqiPRjZPhLOugC0ACOhZgFPA5egeRDUXMM1U\n"
-    "Fn3c7Je0gJS6mVma5FzwlgwggeriF13UZcaT71vEAN/ZJXbxOfQVGMZ0rXuFpjUq\n"
-    "C8CvqmZIwEUaPE1nDFtmnTcucvNS1YQl9nsjH3ejbxc+4yqps/cXh46FmXsm5yz7\n"
-    "NZjBM9U1fbJhlNtOvrkf70K8bLk6\n"
-    "-----END CROSSCERT-----";
-
-  (void) enc_key_legacy;
-  (void) enc_key_cert_legacy;
-
-  /* Start by testing the "decode all intro points" function. */
-  {
-    char *line;
-    ret = ed25519_keypair_generate(&signing_kp, 0);
-    tt_int_op(ret, ==, 0);
-    desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
-    tt_assert(desc);
-    /* Only try to decode an incomplete introduction point section. */
-    tor_asprintf(&line, "\n%s", intro_point);
-    ret = decode_intro_points(desc, &desc->encrypted_data, line);
-    tor_free(line);
-    tt_int_op(ret, ==, -1);
-
-    /* Decode one complete intro point. */
-    smartlist_t *lines = smartlist_new();
-    smartlist_add(lines, (char *) intro_point);
-    smartlist_add(lines, (char *) auth_key);
-    smartlist_add(lines, (char *) enc_key);
-    smartlist_add(lines, (char *) enc_key_cert);
-    encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
-    tt_assert(encoded_ip);
-    tor_asprintf(&line, "\n%s", encoded_ip);
-    tor_free(encoded_ip);
-    ret = decode_intro_points(desc, &desc->encrypted_data, line);
-    tor_free(line);
-    smartlist_free(lines);
-    tt_int_op(ret, ==, 0);
-  }
 
   /* Try to decode a junk string. */
   {
@@ -579,7 +529,7 @@ test_decode_intro_point(void *arg)
   /* Invalid enc-key invalid legacy. */
   {
     smartlist_t *lines = smartlist_new();
-    const char *bad_line = "enc-key legacy blah===";
+    const char *bad_line = "legacy-key blah===";
     /* Build intro point text. */
     smartlist_add(lines, (char *) intro_point);
     smartlist_add(lines, (char *) auth_key);
@@ -589,22 +539,6 @@ test_decode_intro_point(void *arg)
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
     tt_assert(!ip);
-    tor_free(encoded_ip);
-    smartlist_free(lines);
-  }
-
-  /* Valid object. */
-  {
-    smartlist_t *lines = smartlist_new();
-    /* Build intro point text. */
-    smartlist_add(lines, (char *) intro_point);
-    smartlist_add(lines, (char *) auth_key);
-    smartlist_add(lines, (char *) enc_key);
-    smartlist_add(lines, (char *) enc_key_cert);
-    encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
-    tt_assert(encoded_ip);
-    ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(ip);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -900,7 +834,7 @@ struct testcase_t hs_descriptor[] = {
     NULL, NULL },
   { "encrypted_data_len", test_encrypted_data_len, TT_FORK,
     NULL, NULL },
-  { "decode_intro_point", test_decode_intro_point, TT_FORK,
+  { "decode_invalid_intro_point", test_decode_invalid_intro_point, TT_FORK,
     NULL, NULL },
   { "decode_plaintext", test_decode_plaintext, TT_FORK,
     NULL, NULL },
