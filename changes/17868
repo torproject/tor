@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Our base64 decoding functions no longer overestimate the output
+      space that they will need when parsing unpadded inputs.
+      Closes ticket 17868.
