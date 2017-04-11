@@ -16,6 +16,7 @@
  */
 struct consensus_cache_entry_t {
   uint32_t magic; /**< Must be set to CCE_MAGIC */
+  HANDLE_ENTRY(consensus_cache_entry, consensus_cache_entry_t);
   int32_t refcnt; /**< Reference count. */
   unsigned can_remove : 1; /**< If true, we want to delete this file. */
   /** If true, we intend to unmap this file as soon as we're done with it. */
@@ -305,6 +306,7 @@ consensus_cache_entry_decref(consensus_cache_entry_t *ent)
   }
   tor_free(ent->fname);
   config_free_lines(ent->labels);
+  consensus_cache_entry_handles_clear(ent);
   memwipe(ent, 0, sizeof(consensus_cache_entry_t));
   tor_free(ent);
 }
@@ -489,6 +491,8 @@ consensus_cache_entry_unmap(consensus_cache_entry_t *ent)
   ent->bodylen = 0;
   ent->unused_since = TIME_MAX;
 }
+
+HANDLE_IMPL(consensus_cache_entry, consensus_cache_entry_t, )
 
 #ifdef TOR_UNIT_TESTS
 /**

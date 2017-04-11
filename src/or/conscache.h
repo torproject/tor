@@ -4,8 +4,12 @@
 #ifndef TOR_CONSCACHE_H
 #define TOR_CONSCACHE_H
 
+#include "handles.h"
+
 typedef struct consensus_cache_entry_t consensus_cache_entry_t;
 typedef struct consensus_cache_t consensus_cache_t;
+
+HANDLE_DECL(consensus_cache_entry, consensus_cache_entry_t, )
 
 consensus_cache_t *consensus_cache_open(const char *subdir, int max_entries);
 void consensus_cache_free(consensus_cache_t *cache);
