@@ -174,6 +174,8 @@ consensus_cache_find_first(consensus_cache_t *cache,
  * Given a <b>cache</b>, add every entry to <b>out<b> for which
  * <b>key</b>=<b>value</b>.  If <b>key</b> is NULL, add every entry.
  *
+ * Do not add any entry that has been marked for removal.
+ *
  * Does not adjust reference counts.
  */
 void
@@ -182,12 +184,15 @@ consensus_cache_find_all(smartlist_t *out,
                          const char *key,
                          const char *value)
 {
-  if (! key) {
-    smartlist_add_all(out, cache->entries);
-    return;
-  }
-
   SMARTLIST_FOREACH_BEGIN(cache->entries, consensus_cache_entry_t *, ent) {
+    if (ent->can_remove == 1) {
+      /* We want to delete this; pretend it isn't there. */
+      continue;
+    }
+    if (! key) {
+      smartlist_add(out, ent);
+      continue;
+    }
     const char *found_val = consensus_cache_entry_get_value(ent, key);
     if (found_val && !strcmp(value, found_val)) {
       smartlist_add(out, ent);
