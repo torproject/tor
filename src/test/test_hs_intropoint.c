@@ -69,10 +69,10 @@ helper_create_intro_circuit(void)
   return circ;
 }
 
-static hs_cell_introduce1_t *
+static trn_cell_introduce1_t *
 helper_create_introduce1_cell(void)
 {
-  hs_cell_introduce1_t *cell = NULL;
+  trn_cell_introduce1_t *cell = NULL;
   ed25519_keypair_t auth_key_kp;
 
   /* Generate the auth_key of the cell. */
@@ -80,39 +80,39 @@ helper_create_introduce1_cell(void)
     goto err;
   }
 
-  cell = hs_cell_introduce1_new();
+  cell = trn_cell_introduce1_new();
   tt_assert(cell);
 
   /* Set the auth key. */
   {
     size_t auth_key_len = sizeof(auth_key_kp.pubkey);
-    hs_cell_introduce1_set_auth_key_type(cell,
+    trn_cell_introduce1_set_auth_key_type(cell,
                                          HS_INTRO_AUTH_KEY_TYPE_ED25519);
-    hs_cell_introduce1_set_auth_key_len(cell, auth_key_len);
-    hs_cell_introduce1_setlen_auth_key(cell, auth_key_len);
-    uint8_t *auth_key_ptr = hs_cell_introduce1_getarray_auth_key(cell);
+    trn_cell_introduce1_set_auth_key_len(cell, auth_key_len);
+    trn_cell_introduce1_setlen_auth_key(cell, auth_key_len);
+    uint8_t *auth_key_ptr = trn_cell_introduce1_getarray_auth_key(cell);
     memcpy(auth_key_ptr, auth_key_kp.pubkey.pubkey, auth_key_len);
   }
 
   /* Set the cell extentions to none. */
   {
-    cell_extension_t *ext = cell_extension_new();
-    cell_extension_set_num(ext, 0);
-    hs_cell_introduce1_set_extensions(cell, ext);
+    trn_cell_extension_t *ext = trn_cell_extension_new();
+    trn_cell_extension_set_num(ext, 0);
+    trn_cell_introduce1_set_extensions(cell, ext);
   }
 
   /* Set the encrypted section to some data. */
   {
     size_t enc_len = 128;
-    hs_cell_introduce1_setlen_encrypted(cell, enc_len);
-    uint8_t *enc_ptr = hs_cell_introduce1_getarray_encrypted(cell);
+    trn_cell_introduce1_setlen_encrypted(cell, enc_len);
+    uint8_t *enc_ptr = trn_cell_introduce1_getarray_encrypted(cell);
     memset(enc_ptr, 'a', enc_len);
   }
 
   return cell;
  err:
  done:
-  hs_cell_introduce1_free(cell);
+  trn_cell_introduce1_free(cell);
   return NULL;
 }
 
@@ -122,7 +122,7 @@ static void
 test_establish_intro_wrong_purpose(void *arg)
 {
   int retval;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
@@ -154,7 +154,7 @@ test_establish_intro_wrong_purpose(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  hs_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -198,7 +198,7 @@ static void
 test_establish_intro_wrong_keytype2(void *arg)
 {
   int retval;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
@@ -230,7 +230,7 @@ test_establish_intro_wrong_keytype2(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  hs_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -239,7 +239,7 @@ static void
 test_establish_intro_wrong_mac(void *arg)
 {
   int retval;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
@@ -258,7 +258,7 @@ test_establish_intro_wrong_mac(void *arg)
   tt_assert(establish_intro_cell);
   /* Mangle one byte of the MAC. */
   uint8_t *handshake_ptr =
-    hs_cell_establish_intro_getarray_handshake_mac(establish_intro_cell);
+    trn_cell_establish_intro_getarray_handshake_mac(establish_intro_cell);
   handshake_ptr[TRUNNEL_SHA3_256_LEN - 1]++;
   /* We need to resign the payload with that change. */
   {
@@ -269,7 +269,7 @@ test_establish_intro_wrong_mac(void *arg)
     retval = ed25519_keypair_generate(&key_struct, 0);
     tt_int_op(retval, OP_EQ, 0);
     uint8_t *auth_key_ptr =
-      hs_cell_establish_intro_getarray_auth_key(establish_intro_cell);
+      trn_cell_establish_intro_getarray_auth_key(establish_intro_cell);
     memcpy(auth_key_ptr, key_struct.pubkey.pubkey, ED25519_PUBKEY_LEN);
     /* Encode payload so we can sign it. */
     cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
@@ -284,7 +284,7 @@ test_establish_intro_wrong_mac(void *arg)
     tt_int_op(retval, OP_EQ, 0);
     /* And write the signature to the cell */
     uint8_t *sig_ptr =
-      hs_cell_establish_intro_getarray_sig(establish_intro_cell);
+      trn_cell_establish_intro_getarray_sig(establish_intro_cell);
     memcpy(sig_ptr, sig.sig, establish_intro_cell->sig_len);
     /* Re-encode with the new signature. */
     cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
@@ -299,7 +299,7 @@ test_establish_intro_wrong_mac(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  hs_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -309,7 +309,7 @@ static void
 test_establish_intro_wrong_auth_key_len(void *arg)
 {
   int retval;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
@@ -328,9 +328,9 @@ test_establish_intro_wrong_auth_key_len(void *arg)
                                                sizeof(circuit_key_material));
   tt_assert(establish_intro_cell);
   /* Mangle the auth key length. */
-  hs_cell_establish_intro_set_auth_key_len(establish_intro_cell,
+  trn_cell_establish_intro_set_auth_key_len(establish_intro_cell,
                                            bad_auth_key_len);
-  hs_cell_establish_intro_setlen_auth_key(establish_intro_cell,
+  trn_cell_establish_intro_setlen_auth_key(establish_intro_cell,
                                           bad_auth_key_len);
   cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
                                          establish_intro_cell);
@@ -344,7 +344,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  hs_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -354,7 +354,7 @@ static void
 test_establish_intro_wrong_sig_len(void *arg)
 {
   int retval;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
@@ -373,8 +373,8 @@ test_establish_intro_wrong_sig_len(void *arg)
                                                sizeof(circuit_key_material));
   tt_assert(establish_intro_cell);
   /* Mangle the signature length. */
-  hs_cell_establish_intro_set_sig_len(establish_intro_cell, bad_sig_len);
-  hs_cell_establish_intro_setlen_sig(establish_intro_cell, bad_sig_len);
+  trn_cell_establish_intro_set_sig_len(establish_intro_cell, bad_sig_len);
+  trn_cell_establish_intro_setlen_sig(establish_intro_cell, bad_sig_len);
   cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
                                          establish_intro_cell);
   tt_int_op(cell_len, >, 0);
@@ -387,7 +387,7 @@ test_establish_intro_wrong_sig_len(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  hs_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -397,7 +397,7 @@ static void
 test_establish_intro_wrong_sig(void *arg)
 {
   int retval;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
@@ -429,17 +429,17 @@ test_establish_intro_wrong_sig(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  hs_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
 /* Helper function: Send a well-formed v3 ESTABLISH_INTRO cell to
  * <b>intro_circ</b>. Return the cell. */
-static hs_cell_establish_intro_t *
+static trn_cell_establish_intro_t *
 helper_establish_intro_v3(or_circuit_t *intro_circ)
 {
   int retval;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
   uint8_t circuit_key_material[DIGEST_LEN] = {0};
@@ -512,7 +512,7 @@ test_intro_point_registration(void *arg)
   hs_circuitmap_ht *the_hs_circuitmap = NULL;
 
   or_circuit_t *intro_circ = NULL;
-  hs_cell_establish_intro_t *establish_intro_cell = NULL;
+  trn_cell_establish_intro_t *establish_intro_cell = NULL;
   ed25519_public_key_t auth_key;
 
   crypto_pk_t *legacy_auth_key = NULL;
@@ -580,7 +580,7 @@ test_intro_point_registration(void *arg)
   crypto_pk_free(legacy_auth_key);
   circuit_free(TO_CIRCUIT(intro_circ));
   circuit_free(TO_CIRCUIT(legacy_intro_circ));
-  hs_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(establish_intro_cell);
 
   { /* Test circuitmap free_all function. */
     the_hs_circuitmap = get_hs_circuitmap();
@@ -674,7 +674,7 @@ static void
 test_introduce1_validation(void *arg)
 {
   int ret;
-  hs_cell_introduce1_t *cell = NULL;
+  trn_cell_introduce1_t *cell = NULL;
 
   (void) arg;
 
@@ -714,25 +714,25 @@ test_introduce1_validation(void *arg)
   ret = validate_introduce1_parsed_cell(cell);
   tt_int_op(ret, OP_EQ, 0);
   /* Set an invalid size of the auth key buffer. */
-  hs_cell_introduce1_setlen_auth_key(cell, 3);
+  trn_cell_introduce1_setlen_auth_key(cell, 3);
   ret = validate_introduce1_parsed_cell(cell);
   tt_int_op(ret, OP_EQ, -1);
   /* Reset auth key buffer and make sure it works. */
-  hs_cell_introduce1_setlen_auth_key(cell, sizeof(ed25519_public_key_t));
+  trn_cell_introduce1_setlen_auth_key(cell, sizeof(ed25519_public_key_t));
   ret = validate_introduce1_parsed_cell(cell);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Empty encrypted section. */
-  hs_cell_introduce1_setlen_encrypted(cell, 0);
+  trn_cell_introduce1_setlen_encrypted(cell, 0);
   ret = validate_introduce1_parsed_cell(cell);
   tt_int_op(ret, OP_EQ, -1);
   /* Reset it to some non zero bytes and validate. */
-  hs_cell_introduce1_setlen_encrypted(cell, 1);
+  trn_cell_introduce1_setlen_encrypted(cell, 1);
   ret = validate_introduce1_parsed_cell(cell);
   tt_int_op(ret, OP_EQ, 0);
 
  done:
-  hs_cell_introduce1_free(cell);
+  trn_cell_introduce1_free(cell);
 }
 
 static void
@@ -740,7 +740,7 @@ test_received_introduce1_handling(void *arg)
 {
   int ret;
   uint8_t *request = NULL, buf[128];
-  hs_cell_introduce1_t *cell = NULL;
+  trn_cell_introduce1_t *cell = NULL;
   or_circuit_t *circ = NULL;
 
   (void) arg;
@@ -774,11 +774,11 @@ test_received_introduce1_handling(void *arg)
   /* Valid case. */
   {
     cell = helper_create_introduce1_cell();
-    ssize_t request_len = hs_cell_introduce1_encoded_len(cell);
+    ssize_t request_len = trn_cell_introduce1_encoded_len(cell);
     tt_size_op(request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len);
     ssize_t encoded_len =
-      hs_cell_introduce1_encode(request, request_len, cell);
+      trn_cell_introduce1_encode(request, request_len, cell);
     tt_size_op(encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
@@ -788,7 +788,7 @@ test_received_introduce1_handling(void *arg)
     /* Register the circuit in the map for the auth key of the cell. */
     ed25519_public_key_t auth_key;
     const uint8_t *cell_auth_key =
-      hs_cell_introduce1_getconstarray_auth_key(cell);
+      trn_cell_introduce1_getconstarray_auth_key(cell);
     memcpy(auth_key.pubkey, cell_auth_key, ED25519_PUBKEY_LEN);
     hs_circuitmap_register_intro_circ_v3(service_circ, &auth_key);
     ret = hs_intro_received_introduce1(circ, request, request_len);
@@ -800,16 +800,16 @@ test_received_introduce1_handling(void *arg)
   /* Valid legacy cell. */
   {
     tor_free(request);
-    hs_cell_introduce1_free(cell);
+    trn_cell_introduce1_free(cell);
     cell = helper_create_introduce1_cell();
-    uint8_t *legacy_key_id = hs_cell_introduce1_getarray_legacy_key_id(cell);
+    uint8_t *legacy_key_id = trn_cell_introduce1_getarray_legacy_key_id(cell);
     memset(legacy_key_id, 'a', DIGEST_LEN);
     /* Add an arbitrary amount of data for the payload of a v2 cell. */
-    size_t request_len = hs_cell_introduce1_encoded_len(cell) + 256;
+    size_t request_len = trn_cell_introduce1_encoded_len(cell) + 256;
     tt_size_op(request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len + 256);
     ssize_t encoded_len =
-      hs_cell_introduce1_encode(request, request_len, cell);
+      trn_cell_introduce1_encode(request, request_len, cell);
     tt_size_op(encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
@@ -827,7 +827,7 @@ test_received_introduce1_handling(void *arg)
   }
 
  done:
-  hs_cell_introduce1_free(cell);
+  trn_cell_introduce1_free(cell);
   tor_free(request);
   hs_circuitmap_free_all();
   UNMOCK(relay_send_command_from_edge_);

@@ -4,12 +4,12 @@
  * specified in proposal 224 section 3.1.
  */
 
-extern struct cell_extension;
+extern struct trn_cell_extension;
 
 const TRUNNEL_SHA3_256_LEN = 32;
 
 /* ESTABLISH_INTRO payload. See details in section 3.1.1 */
-struct hs_cell_establish_intro {
+struct trn_cell_establish_intro {
   /* Indicate the start of the handshake authentication data. */
   @ptr start_cell;
 
@@ -19,7 +19,7 @@ struct hs_cell_establish_intro {
   u8 auth_key[auth_key_len];
 
   /* Extension(s). Reserved fields. */
-  struct cell_extension extensions;
+  struct trn_cell_extension extensions;
   @ptr end_mac_fields;
 
   /* Handshake MAC. */
@@ -35,7 +35,7 @@ struct hs_cell_establish_intro {
 /* INTRO_ESTABLISHED payload which is an acknowledge of the ESTABLISH_INTRO
  * cell. For legacy node, this payload is empty so the following only applies
  * to version >= 3. */
-struct hs_cell_intro_established {
+struct trn_cell_intro_established {
   /* Extension(s). Reserved fields. */
-  struct cell_extension extensions;
+  struct trn_cell_extension extensions;
 };

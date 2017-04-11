@@ -5,7 +5,7 @@
  */
 
 /* From cell_common.trunnel. */
-extern struct cell_extension;
+extern struct trn_cell_extension;
 /* From ed25519_cert.trunnel. */
 extern struct link_specifier;
 
@@ -13,7 +13,7 @@ const TRUNNEL_SHA1_LEN = 20;
 const TRUNNEL_REND_COOKIE_LEN = 20;
 
 /* INTRODUCE1 payload. See details in section 3.2.1. */
-struct hs_cell_introduce1 {
+struct trn_cell_introduce1 {
   /* Always zeroed. MUST be checked explicitely by the caller. */
   u8 legacy_key_id[TRUNNEL_SHA1_LEN];
 
@@ -23,28 +23,28 @@ struct hs_cell_introduce1 {
   u8 auth_key[auth_key_len];
 
   /* Extension(s). Reserved fields. */
-  struct cell_extension extensions;
+  struct trn_cell_extension extensions;
 
   /* Variable length, up to the end of cell. */
   u8 encrypted[];
 };
 
 /* INTRODUCE_ACK payload. See details in section 3.2.2. */
-struct hs_cell_introduce_ack {
+struct trn_cell_introduce_ack {
   /* Status of introduction. */
   u16 status IN [0x0000, 0x0001, 0x0002];
 
   /* Extension(s). Reserved fields. */
-  struct cell_extension extensions;
+  struct trn_cell_extension extensions;
 };
 
 /* Encrypted section of the INTRODUCE1/INTRODUCE2 cell. */
-struct hs_cell_introduce_encrypted {
+struct trn_cell_introduce_encrypted {
   /* Rendezvous cookie. */
   u8 rend_cookie[TRUNNEL_REND_COOKIE_LEN];
 
   /* Extension(s). Reserved fields. */
-  struct cell_extension extensions;
+  struct trn_cell_extension extensions;
 
   /* Onion key material. */
   u8 onion_key_type IN [0x01];

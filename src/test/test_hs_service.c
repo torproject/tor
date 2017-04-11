@@ -26,8 +26,8 @@ test_gen_establish_intro_cell(void *arg)
   ssize_t retval;
   uint8_t circuit_key_material[DIGEST_LEN] = {0};
   uint8_t buf[RELAY_PAYLOAD_SIZE];
-  hs_cell_establish_intro_t *cell_out = NULL;
-  hs_cell_establish_intro_t *cell_in = NULL;
+  trn_cell_establish_intro_t *cell_out = NULL;
+  trn_cell_establish_intro_t *cell_in = NULL;
 
   crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
 
@@ -44,7 +44,7 @@ test_gen_establish_intro_cell(void *arg)
 
   /* Parse it as the receiver */
   {
-    ssize_t parse_result = hs_cell_establish_intro_parse(&cell_in,
+    ssize_t parse_result = trn_cell_establish_intro_parse(&cell_in,
                                                          buf, sizeof(buf));
     tt_int_op(parse_result, >=, 0);
 
@@ -55,8 +55,8 @@ test_gen_establish_intro_cell(void *arg)
   }
 
  done:
-  hs_cell_establish_intro_free(cell_out);
-  hs_cell_establish_intro_free(cell_in);
+  trn_cell_establish_intro_free(cell_out);
+  trn_cell_establish_intro_free(cell_in);
 }
 
 /* Mocked ed25519_sign_prefixed() function that always fails :) */
@@ -78,7 +78,7 @@ static void
 test_gen_establish_intro_cell_bad(void *arg)
 {
   (void) arg;
-  hs_cell_establish_intro_t *cell = NULL;
+  trn_cell_establish_intro_t *cell = NULL;
   uint8_t circuit_key_material[DIGEST_LEN] = {0};
 
   MOCK(ed25519_sign_prefixed, mock_ed25519_sign_prefixed);
@@ -96,7 +96,7 @@ test_gen_establish_intro_cell_bad(void *arg)
   tt_assert(!cell);
 
  done:
-  hs_cell_establish_intro_free(cell);
+  trn_cell_establish_intro_free(cell);
   UNMOCK(ed25519_sign_prefixed);
 }
 
