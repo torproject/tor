@@ -94,7 +94,8 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
   /* Verify the sig */
   {
     ed25519_signature_t sig_struct;
-    const uint8_t *sig_array = trn_cell_establish_intro_getconstarray_sig(cell);
+    const uint8_t *sig_array =
+      trn_cell_establish_intro_getconstarray_sig(cell);
 
     /* Make sure the signature length is of the right size. For EXTRA safety,
      * we check both the size of the array and the length which must be the
