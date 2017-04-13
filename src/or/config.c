@@ -3510,6 +3510,20 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
   }
 
+  /* Inform the hidden service operator that pinning EntryNodes can possibly
+   * be harmful for the service anonymity. */
+  if (options->EntryNodes &&
+      routerset_is_list(options->EntryNodes) &&
+      (options->RendConfigLines != NULL)) {
+    log_warn(LD_CONFIG,
+             "EntryNodes is set with multiple entries and at least one "
+             "hidden service is configured. Pinning entry nodes can possibly "
+             "be harmful to the service anonymity. Because of this, we "
+             "recommend you either don't do that or make sure you know what "
+             "you are doing. For more details, please look at "
+             "https://trac.torproject.org/projects/tor/ticket/21155.");
+  }
+
   /* Single Onion Services: non-anonymous hidden services */
   if (rend_service_non_anonymous_mode_enabled(options)) {
     log_warn(LD_CONFIG,
