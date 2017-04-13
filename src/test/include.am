@@ -20,7 +20,7 @@ TESTSCRIPTS = \
 	src/test/test_switch_id.sh
 
 if USEPYTHON
-TESTSCRIPTS += src/test/test_ntor.sh src/test/test_bt.sh
+TESTSCRIPTS += src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh
 endif
 
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
@@ -254,6 +254,7 @@ noinst_HEADERS+= \
 	src/test/vote_descriptors.inc
 
 noinst_PROGRAMS+= src/test/test-ntor-cl
+noinst_PROGRAMS+= src/test/test-hs-ntor-cl
 src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
 src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
 src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
@@ -263,6 +264,17 @@ src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 	-I"$(top_srcdir)/src/or"
+
+src_test_test_hs_ntor_cl_SOURCES  = src/test/test_hs_ntor_cl.c
+src_test_test_hs_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
+src_test_test_hs_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
+	src/common/libor-ctime.a \
+	src/common/libor-crypto.a $(LIBKECCAK_TINY) $(LIBDONNA) \
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
+	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
+src_test_test_hs_ntor_cl_AM_CPPFLAGS =	       \
+	-I"$(top_srcdir)/src/or"
+
 
 noinst_PROGRAMS += src/test/test-bt-cl
 src_test_test_bt_cl_SOURCES = src/test/test_bt_cl.c
@@ -276,12 +288,13 @@ src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS) $(TEST_CPPFLAGS)
 EXTRA_DIST += \
 	src/test/bt_test.py \
 	src/test/ntor_ref.py \
+	src/test/hs_ntor_ref.py \
 	src/test/fuzz_static_testcases.sh \
 	src/test/slownacl_curve25519.py \
 	src/test/zero_length_keys.sh \
 	src/test/test_keygen.sh \
 	src/test/test_zero_length_keys.sh \
-	src/test/test_ntor.sh src/test/test_bt.sh \
+	src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh \
 	src/test/test-network.sh \
 	src/test/test_switch_id.sh \
 	src/test/test_workqueue_cancel.sh \
