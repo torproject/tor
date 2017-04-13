@@ -943,10 +943,6 @@ circuit_free(circuit_t *circ)
     crypto_cipher_free(ocirc->n_crypto);
     crypto_digest_free(ocirc->n_digest);
 
-    if (ocirc->hs_token) {
-      hs_circuitmap_remove_circuit(ocirc);
-    }
-
     if (ocirc->rend_splice) {
       or_circuit_t *other = ocirc->rend_splice;
       tor_assert(other->base_.magic == OR_CIRCUIT_MAGIC);
@@ -977,6 +973,11 @@ circuit_free(circuit_t *circ)
 
   /* Remove from map. */
   circuit_set_n_circid_chan(circ, 0, NULL);
+
+  /* Clear HS circuitmap token from this circ (if any) */
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
 
   /* Clear cell queue _after_ removing it from the map.  Otherwise our
    * "active" checks will be violated. */

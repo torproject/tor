@@ -196,7 +196,7 @@ handle_verified_establish_intro_cell(or_circuit_t *circ,
   }
 
   /* Associate intro point auth key with this circuit. */
-  hs_circuitmap_register_intro_circ_v3(circ, &auth_key);
+  hs_circuitmap_register_intro_circ_v3_relay_side(circ, &auth_key);
   /* Repurpose this circuit into an intro circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
 
@@ -462,7 +462,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   {
     ed25519_public_key_t auth_key;
     get_auth_key_from_cell(&auth_key, RELAY_COMMAND_INTRODUCE1, parsed_cell);
-    service_circ = hs_circuitmap_get_intro_circ_v3(&auth_key);
+    service_circ = hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     if (service_circ == NULL) {
       char b64_key[ED25519_BASE64_LEN + 1];
       ed25519_public_to_base64(b64_key, &auth_key);
