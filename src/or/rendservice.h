@@ -133,13 +133,19 @@ STATIC ssize_t encode_establish_intro_cell_legacy(char *cell_body_out,
                                                   size_t cell_body_out_len,
                                                   crypto_pk_t *intro_key,
                                                   char *rend_circ_nonce);
-STATIC void prune_services_on_reload(smartlist_t *old_service_list,
-                                     smartlist_t *new_service_list);
+#ifdef TOR_UNIT_TESTS
 
-#endif
+STATIC void set_rend_service_list(smartlist_t *new_list);
+STATIC void set_rend_rend_service_staging_list(smartlist_t *new_list);
+STATIC void rend_service_prune_list_impl_(void);
+
+#endif /* TOR_UNIT_TESTS */
+
+#endif /* RENDSERVICE_PRIVATE */
 
 int num_rend_services(void);
 int rend_config_services(const or_options_t *options, int validate_only);
+void rend_service_prune_list(void);
 int rend_service_load_all_keys(const smartlist_t *service_list);
 void rend_services_add_filenames_to_lists(smartlist_t *open_lst,
                                           smartlist_t *stat_lst);

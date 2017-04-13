@@ -73,9 +73,9 @@ verify_establish_intro_cell(const trn_cell_establish_intro_t *cell,
                             size_t circuit_key_material_len)
 {
   /* We only reach this function if the first byte of the cell is 0x02 which
-   * means that auth_key_type is AUTH_KEY_ED25519, hence this check should
+   * means that auth_key_type is of ed25519 type, hence this check should
    * always pass. See hs_intro_received_establish_intro().  */
-  if (BUG(cell->auth_key_type != AUTH_KEY_ED25519)) {
+  if (BUG(cell->auth_key_type != HS_INTRO_AUTH_KEY_TYPE_ED25519)) {
     return -1;
   }
 
