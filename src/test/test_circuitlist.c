@@ -420,7 +420,8 @@ test_hs_circuitmap_isolation(void *arg)
     hs_circuitmap_register_intro_circ_v2_relay_side(circ3, tok2);
 
     /* Check that the getters work */
-    tt_ptr_op(circ2, OP_EQ, hs_circuitmap_get_intro_circ_v2_service_side(tok2));
+    tt_ptr_op(circ2, OP_EQ,
+              hs_circuitmap_get_intro_circ_v2_service_side(tok2));
     tt_ptr_op(circ3, OP_EQ, hs_circuitmap_get_intro_circ_v2_relay_side(tok2));
 
     /* Register circ4 with tok2: it should override circ2 */
@@ -431,7 +432,8 @@ test_hs_circuitmap_isolation(void *arg)
 
     /* Check that the getter returns circ4; the last circuit registered with
      * that token. */
-    tt_ptr_op(circ4, OP_EQ, hs_circuitmap_get_intro_circ_v2_service_side(tok2));
+    tt_ptr_op(circ4, OP_EQ,
+              hs_circuitmap_get_intro_circ_v2_service_side(tok2));
   }
 
  done:
@@ -444,7 +446,6 @@ test_hs_circuitmap_isolation(void *arg)
   if (circ4)
     circuit_free(TO_CIRCUIT(circ4));
 }
-
 
 struct testcase_t circuitlist_tests[] = {
   { "maps", test_clist_maps, TT_FORK, NULL, NULL },

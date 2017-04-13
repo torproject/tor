@@ -548,7 +548,8 @@ test_intro_point_registration(void *arg)
     tt_int_op(1, ==, HT_SIZE(the_hs_circuitmap));
     get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
                            establish_intro_cell);
-    returned_intro_circ = hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
+    returned_intro_circ =
+      hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     tt_ptr_op(intro_circ, ==, returned_intro_circ);
   }
 
