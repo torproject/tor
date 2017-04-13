@@ -8,15 +8,15 @@
 #include <stdint.h>
 #include "trunnel.h"
 
-struct cell_extension_st;
+struct trn_cell_extension_st;
 #define TRUNNEL_SHA3_256_LEN 32
-#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_HS_CELL_ESTABLISH_INTRO)
-struct hs_cell_establish_intro_st {
+#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TRN_CELL_ESTABLISH_INTRO)
+struct trn_cell_establish_intro_st {
   const uint8_t *start_cell;
   uint8_t auth_key_type;
   uint16_t auth_key_len;
   TRUNNEL_DYNARRAY_HEAD(, uint8_t) auth_key;
-  struct cell_extension_st *extensions;
+  struct trn_cell_extension_st *extensions;
   const uint8_t *end_mac_fields;
   uint8_t handshake_mac[TRUNNEL_SHA3_256_LEN];
   const uint8_t *end_sig_fields;
@@ -25,251 +25,252 @@ struct hs_cell_establish_intro_st {
   uint8_t trunnel_error_code_;
 };
 #endif
-typedef struct hs_cell_establish_intro_st hs_cell_establish_intro_t;
-#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_HS_CELL_INTRO_ESTABLISHED)
-struct hs_cell_intro_established_st {
-  struct cell_extension_st *extensions;
+typedef struct trn_cell_establish_intro_st trn_cell_establish_intro_t;
+#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TRN_CELL_INTRO_ESTABLISHED)
+struct trn_cell_intro_established_st {
+  struct trn_cell_extension_st *extensions;
   uint8_t trunnel_error_code_;
 };
 #endif
-typedef struct hs_cell_intro_established_st hs_cell_intro_established_t;
-/** Return a newly allocated hs_cell_establish_intro with all elements
- * set to zero.
+typedef struct trn_cell_intro_established_st trn_cell_intro_established_t;
+/** Return a newly allocated trn_cell_establish_intro with all
+ * elements set to zero.
  */
-hs_cell_establish_intro_t *hs_cell_establish_intro_new(void);
-/** Release all storage held by the hs_cell_establish_intro in
+trn_cell_establish_intro_t *trn_cell_establish_intro_new(void);
+/** Release all storage held by the trn_cell_establish_intro in
  * 'victim'. (Do nothing if 'victim' is NULL.)
  */
-void hs_cell_establish_intro_free(hs_cell_establish_intro_t *victim);
-/** Try to parse a hs_cell_establish_intro from the buffer in 'input',
- * using up to 'len_in' bytes from the input buffer. On success,
- * return the number of bytes consumed and set *output to the newly
- * allocated hs_cell_establish_intro_t. On failure, return -2 if the
- * input appears truncated, and -1 if the input is otherwise invalid.
+void trn_cell_establish_intro_free(trn_cell_establish_intro_t *victim);
+/** Try to parse a trn_cell_establish_intro from the buffer in
+ * 'input', using up to 'len_in' bytes from the input buffer. On
+ * success, return the number of bytes consumed and set *output to the
+ * newly allocated trn_cell_establish_intro_t. On failure, return -2
+ * if the input appears truncated, and -1 if the input is otherwise
+ * invalid.
  */
-ssize_t hs_cell_establish_intro_parse(hs_cell_establish_intro_t **output, const uint8_t *input, const size_t len_in);
+ssize_t trn_cell_establish_intro_parse(trn_cell_establish_intro_t **output, const uint8_t *input, const size_t len_in);
 /** Return the number of bytes we expect to need to encode the
- * hs_cell_establish_intro in 'obj'. On failure, return a negative
+ * trn_cell_establish_intro in 'obj'. On failure, return a negative
  * value. Note that this value may be an overestimate, and can even be
  * an underestimate for certain unencodeable objects.
  */
-ssize_t hs_cell_establish_intro_encoded_len(const hs_cell_establish_intro_t *obj);
-/** Try to encode the hs_cell_establish_intro from 'input' into the
+ssize_t trn_cell_establish_intro_encoded_len(const trn_cell_establish_intro_t *obj);
+/** Try to encode the trn_cell_establish_intro from 'input' into the
  * buffer at 'output', using up to 'avail' bytes of the output buffer.
  * On success, return the number of bytes used. On failure, return -2
  * if the buffer was not long enough, and -1 if the input was invalid.
  */
-ssize_t hs_cell_establish_intro_encode(uint8_t *output, size_t avail, const hs_cell_establish_intro_t *input);
-/** Check whether the internal state of the hs_cell_establish_intro in
- * 'obj' is consistent. Return NULL if it is, and a short message if
- * it is not.
+ssize_t trn_cell_establish_intro_encode(uint8_t *output, size_t avail, const trn_cell_establish_intro_t *input);
+/** Check whether the internal state of the trn_cell_establish_intro
+ * in 'obj' is consistent. Return NULL if it is, and a short message
+ * if it is not.
  */
-const char *hs_cell_establish_intro_check(const hs_cell_establish_intro_t *obj);
+const char *trn_cell_establish_intro_check(const trn_cell_establish_intro_t *obj);
 /** Clear any errors that were set on the object 'obj' by its setter
  * functions. Return true iff errors were cleared.
  */
-int hs_cell_establish_intro_clear_errors(hs_cell_establish_intro_t *obj);
+int trn_cell_establish_intro_clear_errors(trn_cell_establish_intro_t *obj);
 /** Return the position for start_cell when we parsed this object
  */
-const uint8_t * hs_cell_establish_intro_get_start_cell(const hs_cell_establish_intro_t *inp);
+const uint8_t * trn_cell_establish_intro_get_start_cell(const trn_cell_establish_intro_t *inp);
 /** Return the value of the auth_key_type field of the
- * hs_cell_establish_intro_t in 'inp'
+ * trn_cell_establish_intro_t in 'inp'
  */
-uint8_t hs_cell_establish_intro_get_auth_key_type(const hs_cell_establish_intro_t *inp);
+uint8_t trn_cell_establish_intro_get_auth_key_type(const trn_cell_establish_intro_t *inp);
 /** Set the value of the auth_key_type field of the
- * hs_cell_establish_intro_t in 'inp' to 'val'. Return 0 on success;
+ * trn_cell_establish_intro_t in 'inp' to 'val'. Return 0 on success;
  * return -1 and set the error code on 'inp' on failure.
  */
-int hs_cell_establish_intro_set_auth_key_type(hs_cell_establish_intro_t *inp, uint8_t val);
+int trn_cell_establish_intro_set_auth_key_type(trn_cell_establish_intro_t *inp, uint8_t val);
 /** Return the value of the auth_key_len field of the
- * hs_cell_establish_intro_t in 'inp'
+ * trn_cell_establish_intro_t in 'inp'
  */
-uint16_t hs_cell_establish_intro_get_auth_key_len(const hs_cell_establish_intro_t *inp);
+uint16_t trn_cell_establish_intro_get_auth_key_len(const trn_cell_establish_intro_t *inp);
 /** Set the value of the auth_key_len field of the
- * hs_cell_establish_intro_t in 'inp' to 'val'. Return 0 on success;
+ * trn_cell_establish_intro_t in 'inp' to 'val'. Return 0 on success;
  * return -1 and set the error code on 'inp' on failure.
  */
-int hs_cell_establish_intro_set_auth_key_len(hs_cell_establish_intro_t *inp, uint16_t val);
+int trn_cell_establish_intro_set_auth_key_len(trn_cell_establish_intro_t *inp, uint16_t val);
 /** Return the length of the dynamic array holding the auth_key field
- * of the hs_cell_establish_intro_t in 'inp'.
+ * of the trn_cell_establish_intro_t in 'inp'.
  */
-size_t hs_cell_establish_intro_getlen_auth_key(const hs_cell_establish_intro_t *inp);
+size_t trn_cell_establish_intro_getlen_auth_key(const trn_cell_establish_intro_t *inp);
 /** Return the element at position 'idx' of the dynamic array field
- * auth_key of the hs_cell_establish_intro_t in 'inp'.
+ * auth_key of the trn_cell_establish_intro_t in 'inp'.
  */
-uint8_t hs_cell_establish_intro_get_auth_key(hs_cell_establish_intro_t *inp, size_t idx);
-/** As hs_cell_establish_intro_get_auth_key, but take and return a
+uint8_t trn_cell_establish_intro_get_auth_key(trn_cell_establish_intro_t *inp, size_t idx);
+/** As trn_cell_establish_intro_get_auth_key, but take and return a
  * const pointer
  */
-uint8_t hs_cell_establish_intro_getconst_auth_key(const hs_cell_establish_intro_t *inp, size_t idx);
+uint8_t trn_cell_establish_intro_getconst_auth_key(const trn_cell_establish_intro_t *inp, size_t idx);
 /** Change the element at position 'idx' of the dynamic array field
- * auth_key of the hs_cell_establish_intro_t in 'inp', so that it will
- * hold the value 'elt'.
+ * auth_key of the trn_cell_establish_intro_t in 'inp', so that it
+ * will hold the value 'elt'.
  */
-int hs_cell_establish_intro_set_auth_key(hs_cell_establish_intro_t *inp, size_t idx, uint8_t elt);
+int trn_cell_establish_intro_set_auth_key(trn_cell_establish_intro_t *inp, size_t idx, uint8_t elt);
 /** Append a new element 'elt' to the dynamic array field auth_key of
- * the hs_cell_establish_intro_t in 'inp'.
+ * the trn_cell_establish_intro_t in 'inp'.
  */
-int hs_cell_establish_intro_add_auth_key(hs_cell_establish_intro_t *inp, uint8_t elt);
+int trn_cell_establish_intro_add_auth_key(trn_cell_establish_intro_t *inp, uint8_t elt);
 /** Return a pointer to the variable-length array field auth_key of
  * 'inp'.
  */
-uint8_t * hs_cell_establish_intro_getarray_auth_key(hs_cell_establish_intro_t *inp);
-/** As hs_cell_establish_intro_get_auth_key, but take and return a
+uint8_t * trn_cell_establish_intro_getarray_auth_key(trn_cell_establish_intro_t *inp);
+/** As trn_cell_establish_intro_get_auth_key, but take and return a
  * const pointer
  */
-const uint8_t  * hs_cell_establish_intro_getconstarray_auth_key(const hs_cell_establish_intro_t *inp);
+const uint8_t  * trn_cell_establish_intro_getconstarray_auth_key(const trn_cell_establish_intro_t *inp);
 /** Change the length of the variable-length array field auth_key of
  * 'inp' to 'newlen'.Fill extra elements with 0. Return 0 on success;
  * return -1 and set the error code on 'inp' on failure.
  */
-int hs_cell_establish_intro_setlen_auth_key(hs_cell_establish_intro_t *inp, size_t newlen);
+int trn_cell_establish_intro_setlen_auth_key(trn_cell_establish_intro_t *inp, size_t newlen);
 /** Return the value of the extensions field of the
- * hs_cell_establish_intro_t in 'inp'
+ * trn_cell_establish_intro_t in 'inp'
  */
-struct cell_extension_st * hs_cell_establish_intro_get_extensions(hs_cell_establish_intro_t *inp);
-/** As hs_cell_establish_intro_get_extensions, but take and return a
+struct trn_cell_extension_st * trn_cell_establish_intro_get_extensions(trn_cell_establish_intro_t *inp);
+/** As trn_cell_establish_intro_get_extensions, but take and return a
  * const pointer
  */
-const struct cell_extension_st * hs_cell_establish_intro_getconst_extensions(const hs_cell_establish_intro_t *inp);
+const struct trn_cell_extension_st * trn_cell_establish_intro_getconst_extensions(const trn_cell_establish_intro_t *inp);
 /** Set the value of the extensions field of the
- * hs_cell_establish_intro_t in 'inp' to 'val'. Free the old value if
+ * trn_cell_establish_intro_t in 'inp' to 'val'. Free the old value if
  * any. Steals the referenceto 'val'.Return 0 on success; return -1
  * and set the error code on 'inp' on failure.
  */
-int hs_cell_establish_intro_set_extensions(hs_cell_establish_intro_t *inp, struct cell_extension_st *val);
-/** As hs_cell_establish_intro_set_extensions, but does not free the
+int trn_cell_establish_intro_set_extensions(trn_cell_establish_intro_t *inp, struct trn_cell_extension_st *val);
+/** As trn_cell_establish_intro_set_extensions, but does not free the
  * previous value.
  */
-int hs_cell_establish_intro_set0_extensions(hs_cell_establish_intro_t *inp, struct cell_extension_st *val);
+int trn_cell_establish_intro_set0_extensions(trn_cell_establish_intro_t *inp, struct trn_cell_extension_st *val);
 /** Return the position for end_mac_fields when we parsed this object
  */
-const uint8_t * hs_cell_establish_intro_get_end_mac_fields(const hs_cell_establish_intro_t *inp);
+const uint8_t * trn_cell_establish_intro_get_end_mac_fields(const trn_cell_establish_intro_t *inp);
 /** Return the (constant) length of the array holding the
- * handshake_mac field of the hs_cell_establish_intro_t in 'inp'.
+ * handshake_mac field of the trn_cell_establish_intro_t in 'inp'.
  */
-size_t hs_cell_establish_intro_getlen_handshake_mac(const hs_cell_establish_intro_t *inp);
+size_t trn_cell_establish_intro_getlen_handshake_mac(const trn_cell_establish_intro_t *inp);
 /** Return the element at position 'idx' of the fixed array field
- * handshake_mac of the hs_cell_establish_intro_t in 'inp'.
+ * handshake_mac of the trn_cell_establish_intro_t in 'inp'.
  */
-uint8_t hs_cell_establish_intro_get_handshake_mac(hs_cell_establish_intro_t *inp, size_t idx);
-/** As hs_cell_establish_intro_get_handshake_mac, but take and return
+uint8_t trn_cell_establish_intro_get_handshake_mac(trn_cell_establish_intro_t *inp, size_t idx);
+/** As trn_cell_establish_intro_get_handshake_mac, but take and return
  * a const pointer
  */
-uint8_t hs_cell_establish_intro_getconst_handshake_mac(const hs_cell_establish_intro_t *inp, size_t idx);
+uint8_t trn_cell_establish_intro_getconst_handshake_mac(const trn_cell_establish_intro_t *inp, size_t idx);
 /** Change the element at position 'idx' of the fixed array field
- * handshake_mac of the hs_cell_establish_intro_t in 'inp', so that it
- * will hold the value 'elt'.
+ * handshake_mac of the trn_cell_establish_intro_t in 'inp', so that
+ * it will hold the value 'elt'.
  */
-int hs_cell_establish_intro_set_handshake_mac(hs_cell_establish_intro_t *inp, size_t idx, uint8_t elt);
+int trn_cell_establish_intro_set_handshake_mac(trn_cell_establish_intro_t *inp, size_t idx, uint8_t elt);
 /** Return a pointer to the TRUNNEL_SHA3_256_LEN-element array field
  * handshake_mac of 'inp'.
  */
-uint8_t * hs_cell_establish_intro_getarray_handshake_mac(hs_cell_establish_intro_t *inp);
-/** As hs_cell_establish_intro_get_handshake_mac, but take and return
+uint8_t * trn_cell_establish_intro_getarray_handshake_mac(trn_cell_establish_intro_t *inp);
+/** As trn_cell_establish_intro_get_handshake_mac, but take and return
  * a const pointer
  */
-const uint8_t  * hs_cell_establish_intro_getconstarray_handshake_mac(const hs_cell_establish_intro_t *inp);
+const uint8_t  * trn_cell_establish_intro_getconstarray_handshake_mac(const trn_cell_establish_intro_t *inp);
 /** Return the position for end_sig_fields when we parsed this object
  */
-const uint8_t * hs_cell_establish_intro_get_end_sig_fields(const hs_cell_establish_intro_t *inp);
+const uint8_t * trn_cell_establish_intro_get_end_sig_fields(const trn_cell_establish_intro_t *inp);
 /** Return the value of the sig_len field of the
- * hs_cell_establish_intro_t in 'inp'
+ * trn_cell_establish_intro_t in 'inp'
  */
-uint16_t hs_cell_establish_intro_get_sig_len(const hs_cell_establish_intro_t *inp);
+uint16_t trn_cell_establish_intro_get_sig_len(const trn_cell_establish_intro_t *inp);
 /** Set the value of the sig_len field of the
- * hs_cell_establish_intro_t in 'inp' to 'val'. Return 0 on success;
+ * trn_cell_establish_intro_t in 'inp' to 'val'. Return 0 on success;
  * return -1 and set the error code on 'inp' on failure.
  */
-int hs_cell_establish_intro_set_sig_len(hs_cell_establish_intro_t *inp, uint16_t val);
+int trn_cell_establish_intro_set_sig_len(trn_cell_establish_intro_t *inp, uint16_t val);
 /** Return the length of the dynamic array holding the sig field of
- * the hs_cell_establish_intro_t in 'inp'.
+ * the trn_cell_establish_intro_t in 'inp'.
  */
-size_t hs_cell_establish_intro_getlen_sig(const hs_cell_establish_intro_t *inp);
+size_t trn_cell_establish_intro_getlen_sig(const trn_cell_establish_intro_t *inp);
 /** Return the element at position 'idx' of the dynamic array field
- * sig of the hs_cell_establish_intro_t in 'inp'.
+ * sig of the trn_cell_establish_intro_t in 'inp'.
  */
-uint8_t hs_cell_establish_intro_get_sig(hs_cell_establish_intro_t *inp, size_t idx);
-/** As hs_cell_establish_intro_get_sig, but take and return a const
+uint8_t trn_cell_establish_intro_get_sig(trn_cell_establish_intro_t *inp, size_t idx);
+/** As trn_cell_establish_intro_get_sig, but take and return a const
  * pointer
  */
-uint8_t hs_cell_establish_intro_getconst_sig(const hs_cell_establish_intro_t *inp, size_t idx);
+uint8_t trn_cell_establish_intro_getconst_sig(const trn_cell_establish_intro_t *inp, size_t idx);
 /** Change the element at position 'idx' of the dynamic array field
- * sig of the hs_cell_establish_intro_t in 'inp', so that it will hold
- * the value 'elt'.
+ * sig of the trn_cell_establish_intro_t in 'inp', so that it will
+ * hold the value 'elt'.
  */
-int hs_cell_establish_intro_set_sig(hs_cell_establish_intro_t *inp, size_t idx, uint8_t elt);
+int trn_cell_establish_intro_set_sig(trn_cell_establish_intro_t *inp, size_t idx, uint8_t elt);
 /** Append a new element 'elt' to the dynamic array field sig of the
- * hs_cell_establish_intro_t in 'inp'.
+ * trn_cell_establish_intro_t in 'inp'.
  */
-int hs_cell_establish_intro_add_sig(hs_cell_establish_intro_t *inp, uint8_t elt);
+int trn_cell_establish_intro_add_sig(trn_cell_establish_intro_t *inp, uint8_t elt);
 /** Return a pointer to the variable-length array field sig of 'inp'.
  */
-uint8_t * hs_cell_establish_intro_getarray_sig(hs_cell_establish_intro_t *inp);
-/** As hs_cell_establish_intro_get_sig, but take and return a const
+uint8_t * trn_cell_establish_intro_getarray_sig(trn_cell_establish_intro_t *inp);
+/** As trn_cell_establish_intro_get_sig, but take and return a const
  * pointer
  */
-const uint8_t  * hs_cell_establish_intro_getconstarray_sig(const hs_cell_establish_intro_t *inp);
+const uint8_t  * trn_cell_establish_intro_getconstarray_sig(const trn_cell_establish_intro_t *inp);
 /** Change the length of the variable-length array field sig of 'inp'
  * to 'newlen'.Fill extra elements with 0. Return 0 on success; return
  * -1 and set the error code on 'inp' on failure.
  */
-int hs_cell_establish_intro_setlen_sig(hs_cell_establish_intro_t *inp, size_t newlen);
-/** Return a newly allocated hs_cell_intro_established with all
+int trn_cell_establish_intro_setlen_sig(trn_cell_establish_intro_t *inp, size_t newlen);
+/** Return a newly allocated trn_cell_intro_established with all
  * elements set to zero.
  */
-hs_cell_intro_established_t *hs_cell_intro_established_new(void);
-/** Release all storage held by the hs_cell_intro_established in
+trn_cell_intro_established_t *trn_cell_intro_established_new(void);
+/** Release all storage held by the trn_cell_intro_established in
  * 'victim'. (Do nothing if 'victim' is NULL.)
  */
-void hs_cell_intro_established_free(hs_cell_intro_established_t *victim);
-/** Try to parse a hs_cell_intro_established from the buffer in
+void trn_cell_intro_established_free(trn_cell_intro_established_t *victim);
+/** Try to parse a trn_cell_intro_established from the buffer in
  * 'input', using up to 'len_in' bytes from the input buffer. On
  * success, return the number of bytes consumed and set *output to the
- * newly allocated hs_cell_intro_established_t. On failure, return -2
+ * newly allocated trn_cell_intro_established_t. On failure, return -2
  * if the input appears truncated, and -1 if the input is otherwise
  * invalid.
  */
-ssize_t hs_cell_intro_established_parse(hs_cell_intro_established_t **output, const uint8_t *input, const size_t len_in);
+ssize_t trn_cell_intro_established_parse(trn_cell_intro_established_t **output, const uint8_t *input, const size_t len_in);
 /** Return the number of bytes we expect to need to encode the
- * hs_cell_intro_established in 'obj'. On failure, return a negative
+ * trn_cell_intro_established in 'obj'. On failure, return a negative
  * value. Note that this value may be an overestimate, and can even be
  * an underestimate for certain unencodeable objects.
  */
-ssize_t hs_cell_intro_established_encoded_len(const hs_cell_intro_established_t *obj);
-/** Try to encode the hs_cell_intro_established from 'input' into the
+ssize_t trn_cell_intro_established_encoded_len(const trn_cell_intro_established_t *obj);
+/** Try to encode the trn_cell_intro_established from 'input' into the
  * buffer at 'output', using up to 'avail' bytes of the output buffer.
  * On success, return the number of bytes used. On failure, return -2
  * if the buffer was not long enough, and -1 if the input was invalid.
  */
-ssize_t hs_cell_intro_established_encode(uint8_t *output, size_t avail, const hs_cell_intro_established_t *input);
-/** Check whether the internal state of the hs_cell_intro_established
+ssize_t trn_cell_intro_established_encode(uint8_t *output, size_t avail, const trn_cell_intro_established_t *input);
+/** Check whether the internal state of the trn_cell_intro_established
  * in 'obj' is consistent. Return NULL if it is, and a short message
  * if it is not.
  */
-const char *hs_cell_intro_established_check(const hs_cell_intro_established_t *obj);
+const char *trn_cell_intro_established_check(const trn_cell_intro_established_t *obj);
 /** Clear any errors that were set on the object 'obj' by its setter
  * functions. Return true iff errors were cleared.
  */
-int hs_cell_intro_established_clear_errors(hs_cell_intro_established_t *obj);
+int trn_cell_intro_established_clear_errors(trn_cell_intro_established_t *obj);
 /** Return the value of the extensions field of the
- * hs_cell_intro_established_t in 'inp'
+ * trn_cell_intro_established_t in 'inp'
  */
-struct cell_extension_st * hs_cell_intro_established_get_extensions(hs_cell_intro_established_t *inp);
-/** As hs_cell_intro_established_get_extensions, but take and return a
- * const pointer
+struct trn_cell_extension_st * trn_cell_intro_established_get_extensions(trn_cell_intro_established_t *inp);
+/** As trn_cell_intro_established_get_extensions, but take and return
+ * a const pointer
  */
-const struct cell_extension_st * hs_cell_intro_established_getconst_extensions(const hs_cell_intro_established_t *inp);
+const struct trn_cell_extension_st * trn_cell_intro_established_getconst_extensions(const trn_cell_intro_established_t *inp);
 /** Set the value of the extensions field of the
- * hs_cell_intro_established_t in 'inp' to 'val'. Free the old value
+ * trn_cell_intro_established_t in 'inp' to 'val'. Free the old value
  * if any. Steals the referenceto 'val'.Return 0 on success; return -1
  * and set the error code on 'inp' on failure.
  */
-int hs_cell_intro_established_set_extensions(hs_cell_intro_established_t *inp, struct cell_extension_st *val);
-/** As hs_cell_intro_established_set_extensions, but does not free the
- * previous value.
+int trn_cell_intro_established_set_extensions(trn_cell_intro_established_t *inp, struct trn_cell_extension_st *val);
+/** As trn_cell_intro_established_set_extensions, but does not free
+ * the previous value.
  */
-int hs_cell_intro_established_set0_extensions(hs_cell_intro_established_t *inp, struct cell_extension_st *val);
+int trn_cell_intro_established_set0_extensions(trn_cell_intro_established_t *inp, struct trn_cell_extension_st *val);
 
 
 #endif

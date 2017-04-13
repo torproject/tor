@@ -28,10 +28,10 @@ int cellcommon_deadcode_dummy__ = 0;
     }                                                            \
   } while (0)
 
-cell_extension_fields_t *
-cell_extension_fields_new(void)
+trn_cell_extension_fields_t *
+trn_cell_extension_fields_new(void)
 {
-  cell_extension_fields_t *val = trunnel_calloc(1, sizeof(cell_extension_fields_t));
+  trn_cell_extension_fields_t *val = trunnel_calloc(1, sizeof(trn_cell_extension_fields_t));
   if (NULL == val)
     return NULL;
   return val;
@@ -40,7 +40,7 @@ cell_extension_fields_new(void)
 /** Release all storage held inside 'obj', but do not free 'obj'.
  */
 static void
-cell_extension_fields_clear(cell_extension_fields_t *obj)
+trn_cell_extension_fields_clear(trn_cell_extension_fields_t *obj)
 {
   (void) obj;
   TRUNNEL_DYNARRAY_WIPE(&obj->field);
@@ -48,62 +48,62 @@ cell_extension_fields_clear(cell_extension_fields_t *obj)
 }
 
 void
-cell_extension_fields_free(cell_extension_fields_t *obj)
+trn_cell_extension_fields_free(trn_cell_extension_fields_t *obj)
 {
   if (obj == NULL)
     return;
-  cell_extension_fields_clear(obj);
-  trunnel_memwipe(obj, sizeof(cell_extension_fields_t));
+  trn_cell_extension_fields_clear(obj);
+  trunnel_memwipe(obj, sizeof(trn_cell_extension_fields_t));
   trunnel_free_(obj);
 }
 
 uint8_t
-cell_extension_fields_get_field_type(const cell_extension_fields_t *inp)
+trn_cell_extension_fields_get_field_type(const trn_cell_extension_fields_t *inp)
 {
   return inp->field_type;
 }
 int
-cell_extension_fields_set_field_type(cell_extension_fields_t *inp, uint8_t val)
+trn_cell_extension_fields_set_field_type(trn_cell_extension_fields_t *inp, uint8_t val)
 {
   inp->field_type = val;
   return 0;
 }
 uint8_t
-cell_extension_fields_get_field_len(const cell_extension_fields_t *inp)
+trn_cell_extension_fields_get_field_len(const trn_cell_extension_fields_t *inp)
 {
   return inp->field_len;
 }
 int
-cell_extension_fields_set_field_len(cell_extension_fields_t *inp, uint8_t val)
+trn_cell_extension_fields_set_field_len(trn_cell_extension_fields_t *inp, uint8_t val)
 {
   inp->field_len = val;
   return 0;
 }
 size_t
-cell_extension_fields_getlen_field(const cell_extension_fields_t *inp)
+trn_cell_extension_fields_getlen_field(const trn_cell_extension_fields_t *inp)
 {
   return TRUNNEL_DYNARRAY_LEN(&inp->field);
 }
 
 uint8_t
-cell_extension_fields_get_field(cell_extension_fields_t *inp, size_t idx)
+trn_cell_extension_fields_get_field(trn_cell_extension_fields_t *inp, size_t idx)
 {
   return TRUNNEL_DYNARRAY_GET(&inp->field, idx);
 }
 
 uint8_t
-cell_extension_fields_getconst_field(const cell_extension_fields_t *inp, size_t idx)
+trn_cell_extension_fields_getconst_field(const trn_cell_extension_fields_t *inp, size_t idx)
 {
-  return cell_extension_fields_get_field((cell_extension_fields_t*)inp, idx);
+  return trn_cell_extension_fields_get_field((trn_cell_extension_fields_t*)inp, idx);
 }
 int
-cell_extension_fields_set_field(cell_extension_fields_t *inp, size_t idx, uint8_t elt)
+trn_cell_extension_fields_set_field(trn_cell_extension_fields_t *inp, size_t idx, uint8_t elt)
 {
   TRUNNEL_DYNARRAY_SET(&inp->field, idx, elt);
   return 0;
 }
 int
-cell_extension_fields_add_field(cell_extension_fields_t *inp, uint8_t elt)
+trn_cell_extension_fields_add_field(trn_cell_extension_fields_t *inp, uint8_t elt)
 {
 #if SIZE_MAX >= UINT8_MAX
   if (inp->field.n_ == UINT8_MAX)
@@ -117,17 +117,17 @@ cell_extension_fields_add_field(cell_extension_fields_t *inp, uint8_t elt)
 }
 
 uint8_t *
-cell_extension_fields_getarray_field(cell_extension_fields_t *inp)
+trn_cell_extension_fields_getarray_field(trn_cell_extension_fields_t *inp)
 {
   return inp->field.elts_;
 }
 const uint8_t  *
-cell_extension_fields_getconstarray_field(const cell_extension_fields_t *inp)
+trn_cell_extension_fields_getconstarray_field(const trn_cell_extension_fields_t *inp)
 {
-  return (const uint8_t  *)cell_extension_fields_getarray_field((cell_extension_fields_t*)inp);
+  return (const uint8_t  *)trn_cell_extension_fields_getarray_field((trn_cell_extension_fields_t*)inp);
 }
 int
-cell_extension_fields_setlen_field(cell_extension_fields_t *inp, size_t newlen)
+trn_cell_extension_fields_setlen_field(trn_cell_extension_fields_t *inp, size_t newlen)
 {
   uint8_t *newptr;
 #if UINT8_MAX < SIZE_MAX
@@ -147,7 +147,7 @@ cell_extension_fields_setlen_field(cell_extension_fields_t *inp, size_t newlen)
   return -1;
 }
 const char *
-cell_extension_fields_check(const cell_extension_fields_t *obj)
+trn_cell_extension_fields_check(const trn_cell_extension_fields_t *obj)
 {
   if (obj == NULL)
     return "Object was NULL";
@@ -159,11 +159,11 @@ cell_extension_fields_check(const cell_extension_fields_t *obj)
 }
 
 ssize_t
-cell_extension_fields_encoded_len(const cell_extension_fields_t *obj)
+trn_cell_extension_fields_encoded_len(const trn_cell_extension_fields_t *obj)
 {
   ssize_t result = 0;
 
-  if (NULL != cell_extension_fields_check(obj))
+  if (NULL != trn_cell_extension_fields_check(obj))
      return -1;
 
 
@@ -178,24 +178,24 @@ cell_extension_fields_encoded_len(const cell_extension_fields_t *obj)
   return result;
 }
 int
-cell_extension_fields_clear_errors(cell_extension_fields_t *obj)
+trn_cell_extension_fields_clear_errors(trn_cell_extension_fields_t *obj)
 {
   int r = obj->trunnel_error_code_;
   obj->trunnel_error_code_ = 0;
   return r;
 }
 ssize_t
-cell_extension_fields_encode(uint8_t *output, const size_t avail, const cell_extension_fields_t *obj)
+trn_cell_extension_fields_encode(uint8_t *output, const size_t avail, const trn_cell_extension_fields_t *obj)
 {
   ssize_t result = 0;
   size_t written = 0;
   uint8_t *ptr = output;
   const char *msg;
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
-  const ssize_t encoded_len = cell_extension_fields_encoded_len(obj);
+  const ssize_t encoded_len = trn_cell_extension_fields_encoded_len(obj);
 #endif
 
-  if (NULL != (msg = cell_extension_fields_check(obj)))
+  if (NULL != (msg = trn_cell_extension_fields_check(obj)))
     goto check_failed;
 
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
@@ -252,11 +252,11 @@ cell_extension_fields_encode(uint8_t *output, const size_t avail, const cell_ext
   return result;
 }
 
-/** As cell_extension_fields_parse(), but do not allocate the output
- * object.
+/** As trn_cell_extension_fields_parse(), but do not allocate the
+ * output object.
  */
 static ssize_t
-cell_extension_fields_parse_into(cell_extension_fields_t *obj, const uint8_t *input, const size_t len_in)
+trn_cell_extension_fields_parse_into(trn_cell_extension_fields_t *obj, const uint8_t *input, const size_t len_in)
 {
   const uint8_t *ptr = input;
   size_t remaining = len_in;
@@ -290,23 +290,23 @@ cell_extension_fields_parse_into(cell_extension_fields_t *obj, const uint8_t *in
 }
 
 ssize_t
-cell_extension_fields_parse(cell_extension_fields_t **output, const uint8_t *input, const size_t len_in)
+trn_cell_extension_fields_parse(trn_cell_extension_fields_t **output, const uint8_t *input, const size_t len_in)
 {
   ssize_t result;
-  *output = cell_extension_fields_new();
+  *output = trn_cell_extension_fields_new();
   if (NULL == *output)
     return -1;
-  result = cell_extension_fields_parse_into(*output, input, len_in);
+  result = trn_cell_extension_fields_parse_into(*output, input, len_in);
   if (result < 0) {
-    cell_extension_fields_free(*output);
+    trn_cell_extension_fields_free(*output);
     *output = NULL;
   }
   return result;
 }
-cell_extension_t *
-cell_extension_new(void)
+trn_cell_extension_t *
+trn_cell_extension_new(void)
 {
-  cell_extension_t *val = trunnel_calloc(1, sizeof(cell_extension_t));
+  trn_cell_extension_t *val = trunnel_calloc(1, sizeof(trn_cell_extension_t));
   if (NULL == val)
     return NULL;
   return val;
@@ -315,14 +315,14 @@ cell_extension_new(void)
 /** Release all storage held inside 'obj', but do not free 'obj'.
  */
 static void
-cell_extension_clear(cell_extension_t *obj)
+trn_cell_extension_clear(trn_cell_extension_t *obj)
 {
   (void) obj;
   {
 
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->fields); ++idx) {
-      cell_extension_fields_free(TRUNNEL_DYNARRAY_GET(&obj->fields, idx));
+      trn_cell_extension_fields_free(TRUNNEL_DYNARRAY_GET(&obj->fields, idx));
     }
   }
   TRUNNEL_DYNARRAY_WIPE(&obj->fields);
@@ -330,92 +330,92 @@ cell_extension_clear(cell_extension_t *obj)
 }
 
 void
-cell_extension_free(cell_extension_t *obj)
+trn_cell_extension_free(trn_cell_extension_t *obj)
 {
   if (obj == NULL)
     return;
-  cell_extension_clear(obj);
-  trunnel_memwipe(obj, sizeof(cell_extension_t));
+  trn_cell_extension_clear(obj);
+  trunnel_memwipe(obj, sizeof(trn_cell_extension_t));
   trunnel_free_(obj);
 }
 
 uint8_t
-cell_extension_get_num(const cell_extension_t *inp)
+trn_cell_extension_get_num(const trn_cell_extension_t *inp)
 {
   return inp->num;
 }
 int
-cell_extension_set_num(cell_extension_t *inp, uint8_t val)
+trn_cell_extension_set_num(trn_cell_extension_t *inp, uint8_t val)
 {
   inp->num = val;
   return 0;
 }
 size_t
-cell_extension_getlen_fields(const cell_extension_t *inp)
+trn_cell_extension_getlen_fields(const trn_cell_extension_t *inp)
 {
   return TRUNNEL_DYNARRAY_LEN(&inp->fields);
 }
 
-struct cell_extension_fields_st *
-cell_extension_get_fields(cell_extension_t *inp, size_t idx)
+struct trn_cell_extension_fields_st *
+trn_cell_extension_get_fields(trn_cell_extension_t *inp, size_t idx)
 {
   return TRUNNEL_DYNARRAY_GET(&inp->fields, idx);
 }
 
- const struct cell_extension_fields_st *
-cell_extension_getconst_fields(const cell_extension_t *inp, size_t idx)
+ const struct trn_cell_extension_fields_st *
+trn_cell_extension_getconst_fields(const trn_cell_extension_t *inp, size_t idx)
 {
-  return cell_extension_get_fields((cell_extension_t*)inp, idx);
+  return trn_cell_extension_get_fields((trn_cell_extension_t*)inp, idx);
 }
 int
-cell_extension_set_fields(cell_extension_t *inp, size_t idx, struct cell_extension_fields_st * elt)
+trn_cell_extension_set_fields(trn_cell_extension_t *inp, size_t idx, struct trn_cell_extension_fields_st * elt)
 {
-  cell_extension_fields_t *oldval = TRUNNEL_DYNARRAY_GET(&inp->fields, idx);
+  trn_cell_extension_fields_t *oldval = TRUNNEL_DYNARRAY_GET(&inp->fields, idx);
   if (oldval && oldval != elt)
-    cell_extension_fields_free(oldval);
-  return cell_extension_set0_fields(inp, idx, elt);
+    trn_cell_extension_fields_free(oldval);
+  return trn_cell_extension_set0_fields(inp, idx, elt);
 }
 int
-cell_extension_set0_fields(cell_extension_t *inp, size_t idx, struct cell_extension_fields_st * elt)
+trn_cell_extension_set0_fields(trn_cell_extension_t *inp, size_t idx, struct trn_cell_extension_fields_st * elt)
 {
   TRUNNEL_DYNARRAY_SET(&inp->fields, idx, elt);
   return 0;
 }
 int
-cell_extension_add_fields(cell_extension_t *inp, struct cell_extension_fields_st * elt)
+trn_cell_extension_add_fields(trn_cell_extension_t *inp, struct trn_cell_extension_fields_st * elt)
 {
 #if SIZE_MAX >= UINT8_MAX
   if (inp->fields.n_ == UINT8_MAX)
     goto trunnel_alloc_failed;
 #endif
-  TRUNNEL_DYNARRAY_ADD(struct cell_extension_fields_st *, &inp->fields, elt, {});
+  TRUNNEL_DYNARRAY_ADD(struct trn_cell_extension_fields_st *, &inp->fields, elt, {});
   return 0;
  trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
 
-struct cell_extension_fields_st * *
-cell_extension_getarray_fields(cell_extension_t *inp)
+struct trn_cell_extension_fields_st * *
+trn_cell_extension_getarray_fields(trn_cell_extension_t *inp)
 {
   return inp->fields.elts_;
 }
-const struct cell_extension_fields_st *  const  *
-cell_extension_getconstarray_fields(const cell_extension_t *inp)
+const struct trn_cell_extension_fields_st *  const  *
+trn_cell_extension_getconstarray_fields(const trn_cell_extension_t *inp)
 {
-  return (const struct cell_extension_fields_st *  const  *)cell_extension_getarray_fields((cell_extension_t*)inp);
+  return (const struct trn_cell_extension_fields_st *  const  *)trn_cell_extension_getarray_fields((trn_cell_extension_t*)inp);
 }
 int
-cell_extension_setlen_fields(cell_extension_t *inp, size_t newlen)
+trn_cell_extension_setlen_fields(trn_cell_extension_t *inp, size_t newlen)
 {
-  struct cell_extension_fields_st * *newptr;
+  struct trn_cell_extension_fields_st * *newptr;
 #if UINT8_MAX < SIZE_MAX
   if (newlen > UINT8_MAX)
     goto trunnel_alloc_failed;
 #endif
   newptr = trunnel_dynarray_setlen(&inp->fields.allocated_,
                  &inp->fields.n_, inp->fields.elts_, newlen,
-                 sizeof(inp->fields.elts_[0]), (trunnel_free_fn_t) cell_extension_fields_free,
+                 sizeof(inp->fields.elts_[0]), (trunnel_free_fn_t) trn_cell_extension_fields_free,
                  &inp->trunnel_error_code_);
   if (newlen != 0 && newptr == NULL)
     goto trunnel_alloc_failed;
@@ -426,7 +426,7 @@ cell_extension_setlen_fields(cell_extension_t *inp, size_t newlen)
   return -1;
 }
 const char *
-cell_extension_check(const cell_extension_t *obj)
+trn_cell_extension_check(const trn_cell_extension_t *obj)
 {
   if (obj == NULL)
     return "Object was NULL";
@@ -437,7 +437,7 @@ cell_extension_check(const cell_extension_t *obj)
 
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->fields); ++idx) {
-      if (NULL != (msg = cell_extension_fields_check(TRUNNEL_DYNARRAY_GET(&obj->fields, idx))))
+      if (NULL != (msg = trn_cell_extension_fields_check(TRUNNEL_DYNARRAY_GET(&obj->fields, idx))))
         return msg;
     }
   }
@@ -447,46 +447,46 @@ cell_extension_check(const cell_extension_t *obj)
 }
 
 ssize_t
-cell_extension_encoded_len(const cell_extension_t *obj)
+trn_cell_extension_encoded_len(const trn_cell_extension_t *obj)
 {
   ssize_t result = 0;
 
-  if (NULL != cell_extension_check(obj))
+  if (NULL != trn_cell_extension_check(obj))
      return -1;
 
 
   /* Length of u8 num */
   result += 1;
 
-  /* Length of struct cell_extension_fields fields[num] */
+  /* Length of struct trn_cell_extension_fields fields[num] */
   {
 
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->fields); ++idx) {
-      result += cell_extension_fields_encoded_len(TRUNNEL_DYNARRAY_GET(&obj->fields, idx));
+      result += trn_cell_extension_fields_encoded_len(TRUNNEL_DYNARRAY_GET(&obj->fields, idx));
     }
   }
   return result;
 }
 int
-cell_extension_clear_errors(cell_extension_t *obj)
+trn_cell_extension_clear_errors(trn_cell_extension_t *obj)
 {
   int r = obj->trunnel_error_code_;
   obj->trunnel_error_code_ = 0;
   return r;
 }
 ssize_t
-cell_extension_encode(uint8_t *output, const size_t avail, const cell_extension_t *obj)
+trn_cell_extension_encode(uint8_t *output, const size_t avail, const trn_cell_extension_t *obj)
 {
   ssize_t result = 0;
   size_t written = 0;
   uint8_t *ptr = output;
   const char *msg;
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
-  const ssize_t encoded_len = cell_extension_encoded_len(obj);
+  const ssize_t encoded_len = trn_cell_extension_encoded_len(obj);
 #endif
 
-  if (NULL != (msg = cell_extension_check(obj)))
+  if (NULL != (msg = trn_cell_extension_check(obj)))
     goto check_failed;
 
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
@@ -500,13 +500,13 @@ cell_extension_encode(uint8_t *output, const size_t avail, const cell_extension_
   trunnel_set_uint8(ptr, (obj->num));
   written += 1; ptr += 1;
 
-  /* Encode struct cell_extension_fields fields[num] */
+  /* Encode struct trn_cell_extension_fields fields[num] */
   {
 
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->fields); ++idx) {
       trunnel_assert(written <= avail);
-      result = cell_extension_fields_encode(ptr, avail - written, TRUNNEL_DYNARRAY_GET(&obj->fields, idx));
+      result = trn_cell_extension_fields_encode(ptr, avail - written, TRUNNEL_DYNARRAY_GET(&obj->fields, idx));
       if (result < 0)
         goto fail; /* XXXXXXX !*/
       written += result; ptr += result;
@@ -537,10 +537,11 @@ cell_extension_encode(uint8_t *output, const size_t avail, const cell_extension_
   return result;
 }
 
-/** As cell_extension_parse(), but do not allocate the output object.
+/** As trn_cell_extension_parse(), but do not allocate the output
+ * object.
  */
 static ssize_t
-cell_extension_parse_into(cell_extension_t *obj, const uint8_t *input, const size_t len_in)
+trn_cell_extension_parse_into(trn_cell_extension_t *obj, const uint8_t *input, const size_t len_in)
 {
   const uint8_t *ptr = input;
   size_t remaining = len_in;
@@ -552,18 +553,18 @@ cell_extension_parse_into(cell_extension_t *obj, const uint8_t *input, const siz
   obj->num = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
 
-  /* Parse struct cell_extension_fields fields[num] */
-  TRUNNEL_DYNARRAY_EXPAND(cell_extension_fields_t *, &obj->fields, obj->num, {});
+  /* Parse struct trn_cell_extension_fields fields[num] */
+  TRUNNEL_DYNARRAY_EXPAND(trn_cell_extension_fields_t *, &obj->fields, obj->num, {});
   {
-    cell_extension_fields_t * elt;
+    trn_cell_extension_fields_t * elt;
     unsigned idx;
     for (idx = 0; idx < obj->num; ++idx) {
-      result = cell_extension_fields_parse(&elt, ptr, remaining);
+      result = trn_cell_extension_fields_parse(&elt, ptr, remaining);
       if (result < 0)
         goto relay_fail;
       trunnel_assert((size_t)result <= remaining);
       remaining -= result; ptr += result;
-      TRUNNEL_DYNARRAY_ADD(cell_extension_fields_t *, &obj->fields, elt, {cell_extension_fields_free(elt);});
+      TRUNNEL_DYNARRAY_ADD(trn_cell_extension_fields_t *, &obj->fields, elt, {trn_cell_extension_fields_free(elt);});
     }
   }
   trunnel_assert(ptr + remaining == input + len_in);
@@ -579,15 +580,15 @@ cell_extension_parse_into(cell_extension_t *obj, const uint8_t *input, const siz
 }
 
 ssize_t
-cell_extension_parse(cell_extension_t **output, const uint8_t *input, const size_t len_in)
+trn_cell_extension_parse(trn_cell_extension_t **output, const uint8_t *input, const size_t len_in)
 {
   ssize_t result;
-  *output = cell_extension_new();
+  *output = trn_cell_extension_new();
   if (NULL == *output)
     return -1;
-  result = cell_extension_parse_into(*output, input, len_in);
+  result = trn_cell_extension_parse_into(*output, input, len_in);
   if (result < 0) {
-    cell_extension_free(*output);
+    trn_cell_extension_free(*output);
     *output = NULL;
   }
   return result;

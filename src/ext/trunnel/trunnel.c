@@ -31,7 +31,7 @@
 #    define IS_LITTLE_ENDIAN
 #  endif
 #else
-# if defined(__FreeBSD__) || defined(__NetBSD__) || defined(OpenBSD)
+# if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #  include <sys/endian.h>
 # else
 #  include <endian.h>

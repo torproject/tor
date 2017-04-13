@@ -41,7 +41,7 @@ int hs_intro_circuit_is_suitable_for_establish_intro(const or_circuit_t *circ);
 #include "hs/cell_introduce1.h"
 
 STATIC int
-verify_establish_intro_cell(const hs_cell_establish_intro_t *out,
+verify_establish_intro_cell(const trn_cell_establish_intro_t *out,
                             const uint8_t *circuit_key_material,
                             size_t circuit_key_material_len);
 
@@ -52,7 +52,7 @@ get_auth_key_from_cell(ed25519_public_key_t *auth_key_out,
 STATIC int introduce1_cell_is_legacy(const uint8_t *request);
 STATIC int handle_introduce1(or_circuit_t *client_circ,
                              const uint8_t *request, size_t request_len);
-STATIC int validate_introduce1_parsed_cell(const hs_cell_introduce1_t *cell);
+STATIC int validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell);
 STATIC int circuit_is_suitable_for_introduce1(const or_circuit_t *circ);
 
 #endif /* HS_INTROPOINT_PRIVATE */
