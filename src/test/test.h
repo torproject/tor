@@ -192,6 +192,7 @@ extern struct testcase_t config_tests[];
 extern struct testcase_t connection_tests[];
 extern struct testcase_t conscache_tests[];
 extern struct testcase_t consdiff_tests[];
+extern struct testcase_t consdiffmgr_tests[];
 extern struct testcase_t container_tests[];
 extern struct testcase_t controller_tests[];
 extern struct testcase_t controller_event_tests[];

@@ -11,6 +11,8 @@
  * and serve the diffs from those documents to the latest consensus.
  */
 
+#define CONSDIFFMGR_PRIVATE
+
 #include "or.h"
 #include "conscache.h"
 #include "consdiff.h"
@@ -122,7 +124,7 @@ cdm_labels_prepend_sha3(config_line_t **labels,
  * <b>valid_after</b> time in the cache. Return that consensus if it's
  * present, or NULL if it's missing.
  */
-static consensus_cache_entry_t *
+STATIC consensus_cache_entry_t *
 cdm_cache_lookup_consensus(consensus_flavor_t flavor, time_t valid_after)
 {
   char formatted_time[ISO_TIME_LEN+1];

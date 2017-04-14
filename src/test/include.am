@@ -89,6 +89,7 @@ src_test_test_SOURCES = \
 	src/test/test_connection.c \
 	src/test/test_conscache.c \
 	src/test/test_consdiff.c \
+	src/test/test_consdiffmgr.c \
 	src/test/test_containers.c \
 	src/test/test_controller.c \
 	src/test/test_controller_events.c \
