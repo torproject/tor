@@ -480,10 +480,10 @@ queue_pending_tasks(void)
 }
 
 /** DOCDOC */
-workqueue_entry_t *
-cpuworker_queue_work(workqueue_reply_t (*fn)(void *, void *),
-                     void (*reply_fn)(void *),
-                     void *arg)
+MOCK_IMPL(workqueue_entry_t *,
+cpuworker_queue_work,(workqueue_reply_t (*fn)(void *, void *),
+                      void (*reply_fn)(void *),
+                      void *arg))
 {
   tor_assert(threadpool);
 

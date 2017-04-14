@@ -16,10 +16,10 @@ void cpu_init(void);
 void cpuworkers_rotate_keyinfo(void);
 struct workqueue_entry_s;
 enum workqueue_reply_t;
-struct workqueue_entry_s *cpuworker_queue_work(
+MOCK_DECL(struct workqueue_entry_s *, cpuworker_queue_work, (
                     enum workqueue_reply_t (*fn)(void *, void *),
                     void (*reply_fn)(void *),
-                    void *arg);
+                    void *arg));
 
 struct create_cell_t;
 int assign_onionskin_to_cpuworker(or_circuit_t *circ,
