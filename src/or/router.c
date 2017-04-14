@@ -2278,14 +2278,12 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   }
 
   if (options->MyFamily && ! options->BridgeRelay) {
-    smartlist_t *family;
     if (!warned_nonexistent_family)
       warned_nonexistent_family = smartlist_new();
-    family = smartlist_new();
     ri->declared_family = smartlist_new();
-    smartlist_split_string(family, options->MyFamily, ",",
-      SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
-    SMARTLIST_FOREACH_BEGIN(family, char *, name) {
+    config_line_t *family;
+    for (family = options->MyFamily; family; family = family->next) {
+       char *name = family->value;
        const node_t *member;
        if (!strcasecmp(name, options->Nickname))
          goto skip; /* Don't list ourself, that's redundant */
@@ -2324,13 +2322,11 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
        }
     skip:
        tor_free(name);
-    } SMARTLIST_FOREACH_END(name);
+    }
 
     /* remove duplicates from the list */
     smartlist_sort_strings(ri->declared_family);
     smartlist_uniq_strings(ri->declared_family);
-
-    smartlist_free(family);
   }
 
   /* Now generate the extrainfo. */

@@ -854,9 +854,23 @@ static void
 test_config_fix_my_family(void *arg)
 {
   char *err = NULL;
-  const char *family = "$1111111111111111111111111111111111111111, "
-                       "1111111111111111111111111111111111111112, "
-                       "$1111111111111111111111111111111111111113";
+  config_line_t *family = tor_malloc_zero(sizeof(config_line_t));
+  family->key = tor_strdup("MyFamily");
+  family->value = tor_strdup("$1111111111111111111111111111111111111111, "
+                             "1111111111111111111111111111111111111112, "
+                             "$1111111111111111111111111111111111111113");
+
+  config_line_t *family2 = tor_malloc_zero(sizeof(config_line_t));
+  family2->key = tor_strdup("MyFamily");
+  family2->value = tor_strdup("1111111111111111111111111111111111111114");
+
+  config_line_t *family3 = tor_malloc_zero(sizeof(config_line_t));
+  family3->key = tor_strdup("MyFamily");
+  family3->value = tor_strdup("$1111111111111111111111111111111111111115");
+
+  family->next = family2;
+  family2->next = family3;
+  family3->next = NULL;
 
   or_options_t* options = options_new();
   or_options_t* defaults = options_new();
@@ -864,7 +878,7 @@ test_config_fix_my_family(void *arg)
 
   options_init(options);
   options_init(defaults);
-  options->MyFamily = tor_strdup(family);
+  options->MyFamily = family;
 
   options_validate(NULL, options, defaults, 0, &err) ;
 
@@ -872,10 +886,18 @@ test_config_fix_my_family(void *arg)
     TT_FAIL(("options_validate failed: %s", err));
   }
 
-  tt_str_op(options->MyFamily,OP_EQ,
-                                "$1111111111111111111111111111111111111111, "
-                                "$1111111111111111111111111111111111111112, "
-                                "$1111111111111111111111111111111111111113");
+  const char *valid[] = { "$1111111111111111111111111111111111111111",
+                          "$1111111111111111111111111111111111111112",
+                          "$1111111111111111111111111111111111111113",
+                          "$1111111111111111111111111111111111111114",
+                          "$1111111111111111111111111111111111111115" };
+  int ret_size = 0;
+  config_line_t *ret;
+  for (ret = options->MyFamily; ret && ret_size < 5; ret = ret->next) {
+    tt_str_op(ret->value, OP_EQ, valid[ret_size]);
+    ret_size++;
+  }
+  tt_int_op(ret_size, OP_EQ, 5);
 
   done:
     if (err != NULL) {
