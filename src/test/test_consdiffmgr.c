@@ -556,6 +556,9 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
   tt_int_op(2, OP_EQ, consdiffmgr_cleanup());
 
+  /* Everything should be valid at this point */
+  tt_int_op(0, OP_EQ, consdiffmgr_validate());
+
  done:
   for (i = 0; i < N; ++i) {
     tor_free(md_body[i]);

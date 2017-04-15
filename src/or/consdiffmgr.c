@@ -370,8 +370,6 @@ consdiffmgr_cleanup(void)
   smartlist_free(objects);
   smartlist_free(consensuses);
   smartlist_free(diffs);
-  // XXXX for anything where the sha3 doesn't match -- delete it.  But not
-  // XXXX here. Somewhere else?
 
   // Actually remove files, if they're not used.
   consensus_cache_delete_pending(cdm_cache_get());
@@ -388,6 +386,61 @@ consdiffmgr_configure(const consdiff_cfg_t *cfg)
   memcpy(&consdiff_cfg, cfg, sizeof(consdiff_cfg));
 
   (void) cdm_cache_get();
+}
+
+/**
+ * Scan the consensus diff manager's cache for any grossly malformed entries,
+ * and mark them as deletable.  Return 0 if no problems were found; 1
+ * if problems were found and fixed.
+ */
+int
+consdiffmgr_validate(void)
+{
+  /* Right now, we only check for entries that have bad sha3 values */
+  int problems = 0;
+
+  smartlist_t *objects = smartlist_new();
+  consensus_cache_find_all(objects, cdm_cache_get(),
+                           NULL, NULL);
+  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, obj) {
+    const char *lv_sha3 =
+      consensus_cache_entry_get_value(obj, LABEL_SHA3_DIGEST);
+    if (lv_sha3 == NULL)
+      continue;
+
+    uint8_t sha3_expected[DIGEST256_LEN];
+    uint8_t sha3_received[DIGEST256_LEN];
+    int r = cdm_entry_get_sha3_value(sha3_expected, obj, LABEL_SHA3_DIGEST);
+    if (r == -1) {
+      /* digest isn't there; that's allowed */
+      continue;
+    } else if (r == -2) {
+      /* digest is malformed; that's not allowed */
+      problems = 1;
+      consensus_cache_entry_mark_for_removal(obj);
+      continue;
+    }
+    const uint8_t *body;
+    size_t bodylen;
+    consensus_cache_entry_incref(obj);
+    r = consensus_cache_entry_get_body(obj, &body, &bodylen);
+    if (r == 0) {
+      crypto_digest256((char *)sha3_received, (const char *)body, bodylen,
+                       DIGEST_SHA3_256);
+    }
+    consensus_cache_entry_decref(obj);
+    if (r < 0)
+      continue;
+
+    if (fast_memneq(sha3_received, sha3_expected, DIGEST256_LEN)) {
+      problems = 1;
+      consensus_cache_entry_mark_for_removal(obj);
+      continue;
+    }
+
+  } SMARTLIST_FOREACH_END(obj);
+  smartlist_free(objects);
+  return problems;
 }
 
 /**

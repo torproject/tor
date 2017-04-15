@@ -33,6 +33,7 @@ void consdiffmgr_rescan(void);
 int consdiffmgr_cleanup(void);
 void consdiffmgr_configure(const consdiff_cfg_t *cfg);
 void consdiffmgr_free_all(void);
+int consdiffmgr_validate(void);
 
 #ifdef CONSDIFFMGR_PRIVATE
 STATIC consensus_cache_t *cdm_cache_get(void);
