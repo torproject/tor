@@ -59,6 +59,44 @@ static consensus_cache_t *cons_diff_cache = NULL;
  */
 static int cdm_cache_dirty = 0;
 /**
+ * If true, we have scanned the cache to update our hashtable of diffs.
+ */
+static int cdm_cache_loaded = 0;
+
+/**
+ * Possible status values for cdm_diff_t.cdm_diff_status
+ **/
+typedef enum cdm_diff_status_t {
+  CDM_DIFF_PRESENT=1,
+  CDM_DIFF_IN_PROGRESS=2,
+  CDM_DIFF_ERROR=3,
+} cdm_diff_status_t;
+
+/** Hashtable node used to remember the current status of the diff
+ * from a given sha3 digest to the current consensus.  */
+typedef struct cdm_diff_t {
+  HT_ENTRY(cdm_diff_t) node;
+
+  /** Consensus flavor for this diff (part of ht key) */
+  consensus_flavor_t flavor;
+  /** SHA3-256 digest of the consensus that this diff is _from_. (part of the
+   * ht key) */
+  uint8_t from_sha3[DIGEST256_LEN];
+
+  /** One of the CDM_DIFF_* values, depending on whether this diff
+   * is available, in progress, or impossible to compute. */
+  cdm_diff_status_t cdm_diff_status;
+  /** SHA3-256 digest of the consensus that this diff is _to. */
+  uint8_t target_sha3[DIGEST256_LEN];
+  /** Handle to the cache entry for this diff, if any.  We use a handle here
+   * to avoid thinking too hard about cache entry lifetime issues. */
+  consensus_cache_entry_handle_t *entry;
+} cdm_diff_t;
+
+/** Hashtable mapping flavor and source consensus digest to status. */
+static HT_HEAD(cdm_diff_ht, cdm_diff_t) cdm_diff_ht = HT_INITIALIZER();
+
+/**
  * Configuration for this module
  */
 static consdiff_cfg_t consdiff_cfg = {
@@ -69,6 +107,160 @@ static consdiff_cfg_t consdiff_cfg = {
 static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
                                           consensus_cache_entry_t *diff_to);
 static void consdiffmgr_set_cache_flags(void);
+
+/* =====
+ * Hashtable setup
+ * ===== */
+
+/** Helper: hash the key of a cdm_diff_t. */
+static unsigned
+cdm_diff_hash(const cdm_diff_t *diff)
+{
+  uint8_t tmp[DIGEST256_LEN + 1];
+  memcpy(tmp, diff->from_sha3, DIGEST256_LEN);
+  tmp[DIGEST256_LEN] = (uint8_t) diff->flavor;
+  return (unsigned) siphash24g(tmp, sizeof(tmp));
+}
+/** Helper: compare two cdm_diff_t objects for key equality */
+static int
+cdm_diff_eq(const cdm_diff_t *diff1, const cdm_diff_t *diff2)
+{
+  return fast_memeq(diff1->from_sha3, diff2->from_sha3, DIGEST256_LEN) &&
+    diff1->flavor == diff2->flavor;
+}
+
+HT_PROTOTYPE(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq)
+HT_GENERATE2(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq,
+             0.6, tor_reallocarray, tor_free_)
+
+/** Release all storage held in <b>diff</b>. */
+static void
+cdm_diff_free(cdm_diff_t *diff)
+{
+  if (!diff)
+    return;
+  consensus_cache_entry_handle_free(diff->entry);
+  tor_free(diff);
+}
+
+/** Create and return a new cdm_diff_t with the given values.  Does not
+ * add it to the hashtable. */
+static cdm_diff_t *
+cdm_diff_new(consensus_flavor_t flav,
+             const uint8_t *from_sha3,
+             const uint8_t *target_sha3)
+{
+  cdm_diff_t *ent;
+  ent = tor_malloc_zero(sizeof(cdm_diff_t));
+  ent->flavor = flav;
+  memcpy(ent->from_sha3, from_sha3, DIGEST256_LEN);
+  memcpy(ent->target_sha3, target_sha3, DIGEST256_LEN);
+  return ent;
+}
+
+/**
+ * Examine the diff hashtable to see whether we know anything about computing
+ * a diff of type <b>flav</b> between consensuses with the two provided
+ * SHA3-256 digests.  If a computation is in progress, or if the computation
+ * has already been tried and failed, return 1.  Otherwise, note the
+ * computation as "in progress" so that we don't reattempt it later, and
+ * return 0.
+ */
+static int
+cdm_diff_ht_check_and_note_pending(consensus_flavor_t flav,
+                                   const uint8_t *from_sha3,
+                                   const uint8_t *target_sha3)
+{
+  struct cdm_diff_t search, *ent;
+  memset(&search, 0, sizeof(cdm_diff_t));
+  search.flavor = flav;
+  memcpy(search.from_sha3, from_sha3, DIGEST256_LEN);
+  ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
+  if (ent) {
+    tor_assert_nonfatal(ent->cdm_diff_status != CDM_DIFF_PRESENT);
+    return 1;
+  }
+  ent = cdm_diff_new(flav, from_sha3, target_sha3);
+  ent->cdm_diff_status = CDM_DIFF_IN_PROGRESS;
+  HT_INSERT(cdm_diff_ht, &cdm_diff_ht, ent);
+  return 0;
+}
+
+/**
+ * Update the status of the diff of type <b>flav</b> between consensuses with
+ * the two provided SHA3-256 digests, so that its status becomes
+ * <b>status</b>, and its value becomes the <b>handle</b>.  If <b>handle</b>
+ * is NULL, then the old handle (if any) is freed, and replaced with NULL.
+ */
+static void
+cdm_diff_ht_set_status(consensus_flavor_t flav,
+                       const uint8_t *from_sha3,
+                       const uint8_t *to_sha3,
+                       int status,
+                       consensus_cache_entry_handle_t *handle)
+{
+  struct cdm_diff_t search, *ent;
+  memset(&search, 0, sizeof(cdm_diff_t));
+  search.flavor = flav;
+  memcpy(search.from_sha3, from_sha3, DIGEST256_LEN);
+  ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
+  if (!ent) {
+    ent = cdm_diff_new(flav, from_sha3, to_sha3);
+    ent->cdm_diff_status = CDM_DIFF_IN_PROGRESS;
+    HT_INSERT(cdm_diff_ht, &cdm_diff_ht, ent);
+  } else if (fast_memneq(ent->target_sha3, to_sha3, DIGEST256_LEN)) {
+    // This can happen under certain really pathological conditions
+    // if we decide we don't care about a diff before it is actually
+    // done computing.
+    return;
+  }
+
+  tor_assert_nonfatal(ent->cdm_diff_status == CDM_DIFF_IN_PROGRESS);
+
+  ent->cdm_diff_status = status;
+  consensus_cache_entry_handle_free(ent->entry);
+  ent->entry = handle;
+}
+
+/**
+ * Helper: Remove from the hash table every present (actually computed) diff
+ * of type <b>flav</b> whose target digest does not match
+ * <b>unless_target_sha3_matches</b>.
+ *
+ * This function is used for the hash table to throw away references to diffs
+ * that do not lead to the most given consensus of a given flavor.
+ */
+static void
+cdm_diff_ht_purge(consensus_flavor_t flav,
+                  const uint8_t *unless_target_sha3_matches)
+{
+  cdm_diff_t **diff, **next;
+  for (diff = HT_START(cdm_diff_ht, &cdm_diff_ht); diff; diff = next) {
+    cdm_diff_t *this = *diff;
+
+    if ((*diff)->cdm_diff_status == CDM_DIFF_PRESENT &&
+        flav == (*diff)->flavor) {
+
+      if (consensus_cache_entry_handle_get((*diff)->entry) == NULL) {
+        /* the underlying entry has gone away; drop this. */
+        next = HT_NEXT_RMV(cdm_diff_ht, &cdm_diff_ht, diff);
+        cdm_diff_free(this);
+        continue;
+      }
+
+      if (unless_target_sha3_matches &&
+          fast_memneq(unless_target_sha3_matches, (*diff)->target_sha3,
+                      DIGEST256_LEN)) {
+        /* target hash doesn't match; drop this. */
+        next = HT_NEXT_RMV(cdm_diff_ht, &cdm_diff_ht, diff);
+        cdm_diff_free(this);
+        continue;
+      }
+    }
+    next = HT_NEXT(cdm_diff_ht, &cdm_diff_ht, diff);
+  }
+}
+
 /**
  * Helper: initialize <b>cons_diff_cache</b>.
  */
@@ -88,6 +280,7 @@ cdm_cache_init(void)
     consdiffmgr_set_cache_flags();
   }
   cdm_cache_dirty = 1;
+  cdm_cache_loaded = 0;
 }
 
 /**
@@ -160,7 +353,8 @@ cdm_cache_lookup_consensus(consensus_flavor_t flavor, time_t valid_after)
 
   /* We'll filter by valid-after time first, since that should
    * match the fewest documents. */
-  // XXXX This is stupid and it should be a hash table.
+  /* We could add an extra hashtable here, but since we only do this scan
+   * when adding a new consensus, it probably doesn't matter much. */
   smartlist_t *matches = smartlist_new();
   consensus_cache_find_all(matches, cdm_cache_get(),
                            LABEL_VALID_AFTER, formatted_time);
@@ -289,12 +483,33 @@ consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
                            const uint8_t *digest,
                            size_t digestlen)
 {
-  // XXXX actually return IN_PROGRESS some times?
   if (BUG(digest_type != DIGEST_SHA3_256) ||
       BUG(digestlen != DIGEST256_LEN)) {
     return CONSDIFF_NOT_FOUND; // LCOV_EXCL_LINE
   }
 
+  // Try to look up the entry in the hashtable.
+  cdm_diff_t search, *ent;
+  memset(&search, 0, sizeof(search));
+  search.flavor = flavor;
+  memcpy(search.from_sha3, digest, DIGEST256_LEN);
+  ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
+
+  if (ent == NULL ||
+      ent->cdm_diff_status == CDM_DIFF_ERROR) {
+    return CONSDIFF_NOT_FOUND;
+  } else if (ent->cdm_diff_status == CDM_DIFF_IN_PROGRESS) {
+    return CONSDIFF_IN_PROGRESS;
+  } else if (BUG(ent->cdm_diff_status != CDM_DIFF_PRESENT)) {
+    return CONSDIFF_IN_PROGRESS;
+  }
+
+  *entry_out = consensus_cache_entry_handle_get(ent->entry);
+  return (*entry_out) ? CONSDIFF_AVAILABLE : CONSDIFF_NOT_FOUND;
+
+#if 0
+  // XXXX Remove this.  I'm keeping it around for now in case we need to
+  // XXXX debug issues in the hashtable.
   char hex[HEX_DIGEST256_LEN+1];
   base16_encode(hex, sizeof(hex), (const char *)digest, digestlen);
   const char *flavname = networkstatus_get_flavor_name(flavor);
@@ -311,6 +526,7 @@ consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
   smartlist_free(matches);
 
   return result;
+#endif
 }
 
 /**
@@ -495,6 +711,10 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
     consensus_cache_entry_get_value(most_recent, LABEL_VALID_AFTER);
   if (BUG(most_recent_valid_after == NULL))
     goto done; //LCOV_EXCL_LINE
+  uint8_t most_recent_sha3[DIGEST256_LEN];
+  if (BUG(cdm_entry_get_sha3_value(most_recent_sha3, most_recent,
+                                   LABEL_SHA3_DIGEST) < 0))
+    goto done; //LCOV_EXCL_LINE
 
   // 2. Find all the relevant diffs _to_ this consensus. These are ones
   //    that we don't need to compute.
@@ -535,13 +755,23 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
            flavname,
            smartlist_len(compute_diffs_from));
 
-  // 4. Actually launch the requests.
+  // 4. Update the hashtable; remove entries in this flavor to other
+  //    target consensuses.
+  cdm_diff_ht_purge(flavor, most_recent_sha3);
+
+  // 5. Actually launch the requests.
   SMARTLIST_FOREACH_BEGIN(compute_diffs_from, consensus_cache_entry_t *, c) {
     if (BUG(c == most_recent))
       continue; // LCOV_EXCL_LINE
 
-    // XXXX how do we know that we are not already computing this?????
-    // XXXX DO NOT MERGE UNTIL THAT ISSUE IS SOLVED.
+    uint8_t this_sha3[DIGEST256_LEN];
+    if (BUG(cdm_entry_get_sha3_value(this_sha3, c, LABEL_SHA3_DIGEST)<0))
+      continue; // LCOV_EXCL_LINE
+    if (cdm_diff_ht_check_and_note_pending(flavor,
+                                           this_sha3, most_recent_sha3)) {
+      // This is already pending, or we encountered an error.
+      continue;
+    }
     consensus_diff_queue_diff_work(c, most_recent);
   } SMARTLIST_FOREACH_END(c);
 
@@ -550,6 +780,37 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
   smartlist_free(diffs);
   smartlist_free(compute_diffs_from);
   strmap_free(have_diff_from, NULL);
+}
+
+/**
+ * Scan the cache for diffs, and add them to the hashtable.
+ */
+static void
+consdiffmgr_diffs_load(void)
+{
+  smartlist_t *diffs = smartlist_new();
+  consensus_cache_find_all(diffs, cdm_cache_get(),
+                           LABEL_DOCTYPE, DOCTYPE_CONSENSUS_DIFF);
+  SMARTLIST_FOREACH_BEGIN(diffs, consensus_cache_entry_t *, diff) {
+    const char *lv_flavor =
+      consensus_cache_entry_get_value(diff, LABEL_FLAVOR);
+    if (!lv_flavor)
+      continue;
+    int flavor = networkstatus_parse_flavor_name(lv_flavor);
+    if (flavor < 0)
+      continue;
+    uint8_t from_sha3[DIGEST256_LEN];
+    uint8_t to_sha3[DIGEST256_LEN];
+    if (cdm_entry_get_sha3_value(from_sha3, diff, LABEL_FROM_SHA3_DIGEST)<0)
+      continue;
+    if (cdm_entry_get_sha3_value(to_sha3, diff, LABEL_TARGET_SHA3_DIGEST)<0)
+      continue;
+
+    cdm_diff_ht_set_status(flavor, from_sha3, to_sha3,
+                           CDM_DIFF_PRESENT,
+                           consensus_cache_entry_handle_new(diff));
+  } SMARTLIST_FOREACH_END(diff);
+  smartlist_free(diffs);
 }
 
 /**
@@ -564,6 +825,11 @@ consdiffmgr_rescan(void)
   // Clean up here to make room for new diffs, and to ensure that older
   // consensuses do not have any entries.
   consdiffmgr_cleanup();
+
+  if (cdm_cache_loaded == 0) {
+    consdiffmgr_diffs_load();
+    cdm_cache_loaded = 1;
+  }
 
   for (int flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
     consdiffmgr_rescan_flavor_((consensus_flavor_t) flav);
@@ -595,6 +861,12 @@ consdiffmgr_set_cache_flags(void)
 void
 consdiffmgr_free_all(void)
 {
+  cdm_diff_t **diff, **next;
+  for (diff = HT_START(cdm_diff_ht, &cdm_diff_ht); diff; diff = next) {
+    cdm_diff_t *this = *diff;
+    next = HT_NEXT_RMV(cdm_diff_ht, &cdm_diff_ht, diff);
+    cdm_diff_free(this);
+  }
   consensus_cache_free(cons_diff_cache);
   cons_diff_cache = NULL;
 }
@@ -751,27 +1023,52 @@ consensus_diff_worker_replyfn(void *work_)
     consensus_cache_entry_get_value(job->diff_from, LABEL_SHA3_DIGEST);
   const char *lv_to_digest =
     consensus_cache_entry_get_value(job->diff_to, LABEL_SHA3_DIGEST);
+  const char *lv_flavor =
+    consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
   if (BUG(lv_from_digest == NULL))
     lv_from_digest = "???"; // LCOV_EXCL_LINE
   if (BUG(lv_to_digest == NULL))
     lv_to_digest = "???"; // LCOV_EXCL_LINE
 
+  uint8_t from_sha3[DIGEST256_LEN];
+  uint8_t to_sha3[DIGEST256_LEN];
+  int flav = -1;
+  int cache = 1;
+  if (BUG(cdm_entry_get_sha3_value(from_sha3, job->diff_from,
+                                   LABEL_SHA3_DIGEST) < 0))
+    cache = 0;
+  if (BUG(cdm_entry_get_sha3_value(to_sha3, job->diff_to,
+                                   LABEL_SHA3_DIGEST) < 0))
+    cache = 0;
+  if (BUG(lv_flavor == NULL)) {
+    cache = 0;
+  } else if ((flav = networkstatus_parse_flavor_name(lv_flavor)) < 0) {
+    cache = 0;
+  }
+
+  int status;
+  consensus_cache_entry_handle_t *handle = NULL;
   if (job->body_out && job->bodylen_out && job->labels_out) {
     /* Success! Store the results */
     log_info(LD_DIRSERV, "Adding consensus diff from %s to %s",
              lv_from_digest, lv_to_digest);
-    consensus_cache_add(cdm_cache_get(), job->labels_out,
-                        job->body_out,
-                        job->bodylen_out);
+    consensus_cache_entry_t *ent =
+      consensus_cache_add(cdm_cache_get(), job->labels_out,
+                          job->body_out,
+                          job->bodylen_out);
+    status = CDM_DIFF_PRESENT;
+    handle = consensus_cache_entry_handle_new(ent);
   } else {
     /* Failure! Nothing to do but complain */
     log_warn(LD_DIRSERV,
              "Worker was unable to compute consensus diff "
              "from %s to %s", lv_from_digest, lv_to_digest);
-    /* XXXX Actually, we should cache this failure and not repeat the
-     * attempt over and over */
+    /* Cache this error so we don't try to compute this one again. */
+    status = CDM_DIFF_ERROR;
   }
 
+  if (cache)
+    cdm_diff_ht_set_status(flav, from_sha3, to_sha3, status, handle);
   consensus_diff_worker_job_free(job);
 }
 
