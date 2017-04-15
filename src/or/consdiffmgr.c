@@ -123,6 +123,29 @@ cdm_labels_prepend_sha3(config_line_t **labels,
   config_line_prepend(labels, LABEL_SHA3_DIGEST, hexdigest);
 }
 
+/** Helper: if there is a sha3-256 hex-encoded digest in <b>ent</b> with the
+ * given label, set <b>digest_out</b> to that value (decoded), and return 0.
+ *
+ * Return -1 if there is no such label, and -2 if it is badly formatted. */
+static int
+cdm_entry_get_sha3_value(uint8_t *digest_out,
+                         consensus_cache_entry_t *ent,
+                         const char *label)
+{
+  if (ent == NULL)
+    return -1;
+
+  const char *hex = consensus_cache_entry_get_value(ent, label);
+  if (hex == NULL)
+    return -1;
+
+  int n = base16_decode((char*)digest_out, DIGEST256_LEN, hex, strlen(hex));
+  if (n != DIGEST256_LEN)
+    return -2;
+  else
+    return 0;
+}
+
 /**
  * Helper: look for a consensus with the given <b>flavor</b> and
  * <b>valid_after</b> time in the cache. Return that consensus if it's
@@ -403,11 +426,6 @@ consdiffmgr_validate(void)
   consensus_cache_find_all(objects, cdm_cache_get(),
                            NULL, NULL);
   SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, obj) {
-    const char *lv_sha3 =
-      consensus_cache_entry_get_value(obj, LABEL_SHA3_DIGEST);
-    if (lv_sha3 == NULL)
-      continue;
-
     uint8_t sha3_expected[DIGEST256_LEN];
     uint8_t sha3_received[DIGEST256_LEN];
     int r = cdm_entry_get_sha3_value(sha3_expected, obj, LABEL_SHA3_DIGEST);
