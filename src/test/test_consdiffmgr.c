@@ -428,6 +428,89 @@ test_consdiffmgr_diff_failure(void *arg)
   networkstatus_vote_free(ns2);
 }
 
+static void
+test_consdiffmgr_cleanup_old(void *arg)
+{
+  (void)arg;
+  config_line_t *labels = NULL;
+  consensus_cache_entry_t *ent = NULL;
+  consensus_cache_t *cache = cdm_cache_get(); // violate abstraction barrier
+
+  /* This item will be will be cleanable because it has a valid-after
+   * time far in the past. */
+  config_line_prepend(&labels, "document-type", "confribble-blarg");
+  config_line_prepend(&labels, "consensus-valid-after",
+                      "1980-10-10T10:10:10");
+  ent = consensus_cache_add(cache, labels, (const uint8_t*)"Foo", 3);
+  tt_assert(ent);
+  consensus_cache_entry_decref(ent);
+
+  setup_capture_of_logs(LOG_DEBUG);
+  tt_int_op(1, OP_EQ, consdiffmgr_cleanup());
+  expect_log_msg_containing("Deleting entry because its consensus-valid-"
+                            "after value (1980-10-10T10:10:10) was too old");
+
+ done:
+  teardown_capture_of_logs();
+  config_free_lines(labels);
+}
+
+static void
+test_consdiffmgr_cleanup_bad_valid_after(void *arg)
+{
+  /* This will seem cleanable, but isn't, because its valid-after time is
+   * misformed. */
+
+  (void)arg;
+  config_line_t *labels = NULL;
+  consensus_cache_entry_t *ent = NULL;
+  consensus_cache_t *cache = cdm_cache_get(); // violate abstraction barrier
+
+  config_line_prepend(&labels, "document-type", "consensus");
+  config_line_prepend(&labels, "consensus-valid-after",
+                      "whan that aprille with his shoures soote"); // (~1385?)
+  ent = consensus_cache_add(cache, labels, (const uint8_t*)"Foo", 3);
+  tt_assert(ent);
+  consensus_cache_entry_decref(ent);
+
+  setup_capture_of_logs(LOG_DEBUG);
+  tt_int_op(0, OP_EQ, consdiffmgr_cleanup());
+  expect_log_msg_containing("Ignoring entry because its consensus-valid-"
+                            "after value (\"whan that aprille with his "
+                            "shoures soote\") was unparseable");
+
+ done:
+  teardown_capture_of_logs();
+  config_free_lines(labels);
+}
+
+static void
+test_consdiffmgr_cleanup_no_valid_after(void *arg)
+{
+  (void)arg;
+  config_line_t *labels = NULL;
+  consensus_cache_entry_t *ent = NULL;
+  consensus_cache_t *cache = cdm_cache_get(); // violate abstraction barrier
+
+  /* This item will be will be uncleanable because it has no recognized
+   * valid-after. */
+  config_line_prepend(&labels, "document-type", "consensus");
+  config_line_prepend(&labels, "confrooble-voolid-oofter",
+                      "2010-10-10T09:08:07");
+  ent = consensus_cache_add(cache, labels, (const uint8_t*)"Foo", 3);
+  tt_assert(ent);
+  consensus_cache_entry_decref(ent);
+
+  setup_capture_of_logs(LOG_DEBUG);
+  tt_int_op(0, OP_EQ, consdiffmgr_cleanup());
+  expect_log_msg_containing("Ignoring entry because it had no consensus-"
+                            "valid-after label");
+
+ done:
+  teardown_capture_of_logs();
+  config_free_lines(labels);
+}
+
 #define TEST(name)                                      \
   { #name, test_consdiffmgr_ ## name , TT_FORK, &setup_diffmgr, NULL }
 
@@ -439,11 +522,11 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(make_diffs),
   TEST(diff_rules),
   TEST(diff_failure),
+  TEST(cleanup_old),
+  TEST(cleanup_bad_valid_after),
+  TEST(cleanup_no_valid_after),
+  //TEST(cleanup_old_diffs),
 
-  // XXXX Test: deleting consensuses for being too old
-  // XXXX Test: deleting diffs for not being to most recent consensus
-  // XXXX Test: Objects of unrecognized doctype are not cleaned.
-  // XXXX Test: Objects with bad iso time are not cleaned.
   END_OF_TESTCASES
 };
 

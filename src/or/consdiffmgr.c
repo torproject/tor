@@ -92,7 +92,7 @@ cdm_cache_init(void)
  * Helper: return the consensus_cache_t * that backs this manager,
  * initializing it if needed.
  */
-static consensus_cache_t *
+STATIC consensus_cache_t *
 cdm_cache_get(void)
 {
   if (PREDICT_UNLIKELY(cons_diff_cache == NULL)) {

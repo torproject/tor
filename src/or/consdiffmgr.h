@@ -35,6 +35,7 @@ void consdiffmgr_configure(const consdiff_cfg_t *cfg);
 void consdiffmgr_free_all(void);
 
 #ifdef CONSDIFFMGR_PRIVATE
+STATIC consensus_cache_t *cdm_cache_get(void);
 STATIC consensus_cache_entry_t *cdm_cache_lookup_consensus(
                           consensus_flavor_t flavor, time_t valid_after);
 #endif
