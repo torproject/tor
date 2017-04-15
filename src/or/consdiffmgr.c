@@ -68,7 +68,7 @@ static consdiff_cfg_t consdiff_cfg = {
 
 static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
                                           consensus_cache_entry_t *diff_to);
-
+static void consdiffmgr_set_cache_flags(void);
 /**
  * Helper: initialize <b>cons_diff_cache</b>.
  */
@@ -84,6 +84,8 @@ cdm_cache_init(void)
     log_err(LD_FS, "Error: Couldn't open storage for consensus diffs.");
     tor_assert_unreached();
     // LCOV_EXCL_STOP
+  } else {
+    consdiffmgr_set_cache_flags();
   }
   cdm_cache_dirty = 1;
 }
@@ -210,8 +212,10 @@ consdiffmgr_add_consensus(const char *consensus,
     config_free_lines(labels);
   }
 
-  if (entry)
+  if (entry) {
+    consensus_cache_entry_mark_for_aggressive_release(entry);
     consensus_cache_entry_decref(entry);
+  }
 
   cdm_cache_dirty = 1;
   return entry ? 0 : -1;
@@ -495,6 +499,23 @@ consdiffmgr_rescan(void)
   }
 
   cdm_cache_dirty = 0;
+}
+
+/**
+ * Set consensus cache flags on the objects in this consdiffmgr.
+ */
+static void
+consdiffmgr_set_cache_flags(void)
+{
+  /* Right now, we just mark the consensus objects for aggressive release,
+   * so that they get mmapped for as little time as possible. */
+  smartlist_t *objects = smartlist_new();
+  consensus_cache_find_all(objects, cdm_cache_get(), LABEL_DOCTYPE,
+                           DOCTYPE_CONSENSUS);
+  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, ent) {
+    consensus_cache_entry_mark_for_aggressive_release(ent);
+  } SMARTLIST_FOREACH_END(ent);
+  smartlist_free(objects);
 }
 
 /**
