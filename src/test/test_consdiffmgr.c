@@ -285,19 +285,87 @@ test_consdiffmgr_make_diffs(void *arg)
   tor_free(applied);
 }
 
+static void
+test_consdiffmgr_diff_rules(void *arg)
+{
+  (void)arg;
+#define N 6
+  char *md_body[N], *ns_body[N];
+  networkstatus_t *md_ns[N], *ns_ns[N];
+  uint8_t md_ns_sha3[N][DIGEST256_LEN], ns_ns_sha3[N][DIGEST256_LEN];
+  int i;
+
+  MOCK(cpuworker_queue_work, mock_cpuworker_queue_work);
+
+  /* Create a bunch of consensus things at 15-second intervals. */
+  time_t start = approx_time() - 120;
+  for (i = 0; i < N; ++i) {
+    time_t when = start + i * 15;
+    md_body[i] = fake_ns_body_new(FLAV_MICRODESC, when);
+    ns_body[i] = fake_ns_body_new(FLAV_NS, when);
+    md_ns[i] = fake_ns_new(FLAV_MICRODESC, when);
+    ns_ns[i] = fake_ns_new(FLAV_NS, when);
+    crypto_digest256((char *)md_ns_sha3[i], md_body[i], strlen(md_body[i]),
+                     DIGEST_SHA3_256);
+    crypto_digest256((char *)ns_ns_sha3[i], ns_body[i], strlen(ns_body[i]),
+                     DIGEST_SHA3_256);
+  }
+
+  /* For the MD consensuses: add 4 of them, and make sure that
+   * diffs are created to one consensus (the most recent) only. */
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[1], md_ns[1]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[2], md_ns[2]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[4], md_ns[4]));
+  consdiffmgr_rescan();
+  tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
+  tt_int_op(3, OP_EQ, smartlist_len(fake_cpuworker_queue));
+  tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
+  mock_cpuworker_handle_replies();
+  tt_ptr_op(NULL, OP_EQ, fake_cpuworker_queue);
+
+  /* For the NS consensuses: add 3, generate, and add one older one and
+   * make sure that older one is the only one whose diff is generated */
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(ns_body[0], ns_ns[0]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(ns_body[1], ns_ns[1]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(ns_body[5], ns_ns[5]));
+  consdiffmgr_rescan();
+  tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
+  tt_int_op(2, OP_EQ, smartlist_len(fake_cpuworker_queue));
+  tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
+  mock_cpuworker_handle_replies();
+
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(ns_body[2], ns_ns[2]));
+  consdiffmgr_rescan();
+  tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
+  tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
+  tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
+  mock_cpuworker_handle_replies();
+
+ done:
+  for (i = 0; i < N; ++i) {
+    tor_free(md_body[i]);
+    tor_free(ns_body[i]);
+    networkstatus_vote_free(md_ns[i]);
+    networkstatus_vote_free(ns_ns[i]);
+  }
+  UNMOCK(cpuworker_queue_work);
+#undef N
+}
+
 #define TEST(name)                                      \
   { #name, test_consdiffmgr_ ## name , TT_FORK, &setup_diffmgr, NULL }
 
 struct testcase_t consdiffmgr_tests[] = {
   TEST(add),
   TEST(make_diffs),
+  TEST(diff_rules),
+
   // XXXX Test: deleting consensuses for being too old
   // XXXX Test: deleting diffs for not being to most recent consensus
   // XXXX Test: Objects of unrecognized doctype are not cleaned.
   // XXXX Test: Objects with bad iso time are not cleaned.
-  // XXXX Test: only generate diffs to most recent consensus
-  // XXXX Test: making diffs from some old consensuses, but having diffs
-  //           for others.
+
   // XXXX Test: Failure to open cache???
   // XXXX Test: failure to create consensus diff.
   END_OF_TESTCASES
