@@ -132,6 +132,42 @@ mock_cpuworker_handle_replies(void)
 
 // ==============================  Beginning of tests
 
+#if 0
+static int got_failure = 0;
+static void
+got_assertion_failure(void)
+{
+  ++got_failure;
+}
+
+/* XXXX This test won't work, because there is currently no way to actually
+ * XXXX capture a real assertion failure. */
+static void
+test_consdiffmgr_init_failure(void *arg)
+{
+  (void)arg;
+  // Capture assertions and bugs.
+
+  /* As in ...test_setup, but do not create the datadir. The missing directory
+   * will cause a failure. */
+  char *ddir_fname = tor_strdup(get_fname_rnd("datadir_cdm"));
+  tor_free(get_options_mutable()->DataDirectory);
+  get_options_mutable()->DataDirectory = ddir_fname; // now owns the pointer.
+
+  consdiff_cfg_t consdiff_cfg = { 7200, 300 };
+
+  tor_set_failed_assertion_callback(got_assertion_failure);
+  tor_capture_bugs_(1);
+  consdiffmgr_configure(&consdiff_cfg); // This should fail.
+  tt_int_op(got_failure, OP_EQ, 1);
+  const smartlist_t *bugs = tor_get_captured_bug_log_();
+  tt_int_op(smartlist_len(bugs), OP_EQ, 1);
+
+ done:
+  tor_end_capture_bugs_();
+}
+#endif
+
 static void
 test_consdiffmgr_add(void *arg)
 {
@@ -396,6 +432,9 @@ test_consdiffmgr_diff_failure(void *arg)
   { #name, test_consdiffmgr_ ## name , TT_FORK, &setup_diffmgr, NULL }
 
 struct testcase_t consdiffmgr_tests[] = {
+#if 0
+  { "init_failure", test_consdiffmgr_init_failure, TT_FORK, NULL, NULL },
+#endif
   TEST(add),
   TEST(make_diffs),
   TEST(diff_rules),
@@ -405,8 +444,6 @@ struct testcase_t consdiffmgr_tests[] = {
   // XXXX Test: deleting diffs for not being to most recent consensus
   // XXXX Test: Objects of unrecognized doctype are not cleaned.
   // XXXX Test: Objects with bad iso time are not cleaned.
-
-  // XXXX Test: Failure to open cache???
   END_OF_TESTCASES
 };
 

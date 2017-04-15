@@ -80,8 +80,10 @@ cdm_cache_init(void)
   tor_assert(cons_diff_cache == NULL);
   cons_diff_cache = consensus_cache_open("diff-cache", n_entries);
   if (cons_diff_cache == NULL) {
+    // LCOV_EXCL_START
     log_err(LD_FS, "Error: Couldn't open storage for consensus diffs.");
     tor_assert_unreached();
+    // LCOV_EXCL_STOP
   }
   cdm_cache_dirty = 1;
 }
