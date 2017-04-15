@@ -353,6 +353,45 @@ test_consdiffmgr_diff_rules(void *arg)
 #undef N
 }
 
+static void
+test_consdiffmgr_diff_failure(void *arg)
+{
+  (void)arg;
+  MOCK(cpuworker_queue_work, mock_cpuworker_queue_work);
+
+  /* We're going to make sure that if we have a bogus request where
+   * we can't actually compute a diff, the world must not end. */
+  networkstatus_t *ns1 = NULL;
+  networkstatus_t *ns2 = NULL;
+  int r;
+
+  ns1 = fake_ns_new(FLAV_NS, approx_time()-100);
+  ns2 = fake_ns_new(FLAV_NS, approx_time()-50);
+  r = consdiffmgr_add_consensus("foo bar baz\n", ns1);
+  tt_int_op(r, OP_EQ, 0);
+  // We refuse to compute a diff to or from a line holding only a single dot.
+  // We can add it here, though.
+  r = consdiffmgr_add_consensus("foo bar baz\n.\n.\n", ns2);
+  tt_int_op(r, OP_EQ, 0);
+
+  consdiffmgr_rescan();
+  tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
+  setup_capture_of_logs(LOG_WARN);
+  tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
+  tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
+  expect_single_log_msg_containing("one of the lines to be added is \".\".");
+  mock_clean_saved_logs();
+  mock_cpuworker_handle_replies();
+  expect_single_log_msg_containing("Worker was unable to compute consensus "
+                                   "diff from ");
+
+ done:
+  teardown_capture_of_logs();
+  UNMOCK(cpuworker_queue_work);
+  networkstatus_vote_free(ns1);
+  networkstatus_vote_free(ns2);
+}
+
 #define TEST(name)                                      \
   { #name, test_consdiffmgr_ ## name , TT_FORK, &setup_diffmgr, NULL }
 
@@ -360,6 +399,7 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(add),
   TEST(make_diffs),
   TEST(diff_rules),
+  TEST(diff_failure),
 
   // XXXX Test: deleting consensuses for being too old
   // XXXX Test: deleting diffs for not being to most recent consensus
@@ -367,7 +407,6 @@ struct testcase_t consdiffmgr_tests[] = {
   // XXXX Test: Objects with bad iso time are not cleaned.
 
   // XXXX Test: Failure to open cache???
-  // XXXX Test: failure to create consensus diff.
   END_OF_TESTCASES
 };
 
