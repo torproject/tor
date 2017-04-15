@@ -511,6 +511,60 @@ test_consdiffmgr_cleanup_no_valid_after(void *arg)
   config_free_lines(labels);
 }
 
+static void
+test_consdiffmgr_cleanup_old_diffs(void *arg)
+{
+  (void)arg;
+#define N 4
+  char *md_body[N];
+  networkstatus_t *md_ns[N];
+  uint8_t md_ns_sha3[N][DIGEST256_LEN];
+  int i;
+
+  /* Make sure that the cleanup function removes diffs to the not-most-recent
+   * consensus. */
+
+  MOCK(cpuworker_queue_work, mock_cpuworker_queue_work);
+
+  /* Create a bunch of consensus things at 15-second intervals. */
+  time_t start = approx_time() - 120;
+  for (i = 0; i < N; ++i) {
+    time_t when = start + i * 15;
+    md_body[i] = fake_ns_body_new(FLAV_MICRODESC, when);
+    md_ns[i] = fake_ns_new(FLAV_MICRODESC, when);
+    crypto_digest256((char *)md_ns_sha3[i], md_body[i], strlen(md_body[i]),
+                     DIGEST_SHA3_256);
+  }
+
+  /* add the first 3. */
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[0], md_ns[0]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[1], md_ns[1]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[2], md_ns[2]));
+  /* Make diffs. */
+  consdiffmgr_rescan();
+  tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
+  tt_int_op(2, OP_EQ, smartlist_len(fake_cpuworker_queue));
+  tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
+  mock_cpuworker_handle_replies();
+  tt_ptr_op(NULL, OP_EQ, fake_cpuworker_queue);
+
+  /* Nothing is deletable now */
+  tt_int_op(0, OP_EQ, consdiffmgr_cleanup());
+
+  /* Now add an even-more-recent consensus; this should make all previous
+   * diffs deletable */
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
+  tt_int_op(2, OP_EQ, consdiffmgr_cleanup());
+
+ done:
+  for (i = 0; i < N; ++i) {
+    tor_free(md_body[i]);
+    networkstatus_vote_free(md_ns[i]);
+  }
+  UNMOCK(cpuworker_queue_work);
+#undef N
+}
+
 #define TEST(name)                                      \
   { #name, test_consdiffmgr_ ## name , TT_FORK, &setup_diffmgr, NULL }
 
@@ -525,7 +579,7 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(cleanup_old),
   TEST(cleanup_bad_valid_after),
   TEST(cleanup_no_valid_after),
-  //TEST(cleanup_old_diffs),
+  TEST(cleanup_old_diffs),
 
   END_OF_TESTCASES
 };
