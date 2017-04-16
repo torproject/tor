@@ -280,13 +280,10 @@ test_consdiffmgr_make_diffs(void *arg)
   consdiffmgr_rescan();
   tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
   tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
-  // XXXX not working yet
-  /*
   diff_status = consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC,
                                            DIGEST_SHA3_256,
                                            md_ns_sha3, DIGEST256_LEN);
   tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ, diff_status);
-  */
 
   // Now run that process and get the diff.
   r = mock_cpuworker_run_work();
@@ -584,6 +581,17 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(cleanup_no_valid_after),
   TEST(cleanup_old_diffs),
 
+  // XXXX Test: Look up consensuses by digest in existing cases.
+  // XXXX Test: no duplicate diff job is launched when a job is pending.
+  // XXXX Test: register status when no pending entry existed?? (bug)
+  // XXXX Test: lookup entry, find in-progress.
+  // XXXX Test: lookup entry, find error.
+  // XXXX Test: clean up hashtable after most-recent-consensus changes.
+  // XXXX Test: cdm_entry_get_sha3_value cases.
+  // XXXX Test: sha3 mismatch on validation
+  // XXXX Test: initial loading of diffs from disk.
+  // XXXX Test: non-cacheing cases of replyfn().
+  //       (Bug: must release handle)
   END_OF_TESTCASES
 };
 
