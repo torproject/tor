@@ -745,6 +745,70 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
 #undef N
 }
 
+static void
+test_consdiffmgr_validate(void *arg)
+{
+  (void)arg;
+  config_line_t *lines = NULL;
+  consensus_cache_entry_t *ent = NULL;
+  consensus_cache_t *cache = cdm_cache_get(); // violate abstraction barrier
+  smartlist_t *vals = smartlist_new();
+
+  /* Put these: objects in the cache: one with a good sha3, one with bad sha3,
+   * one with a wrong sha3, and one with no sha3. */
+  config_line_prepend(&lines, "id", "wrong sha3");
+  config_line_prepend(&lines, "sha3-digest",
+                      "F00DF00DF00DF00DF00DF00DF00DF00D"
+                      "F00DF00DF00DF00DF00DF00DF00DF00D");
+  ent = consensus_cache_add(cache, lines, (const uint8_t *)"Hi there", 8);
+  consensus_cache_entry_decref(ent);
+  config_free_lines(lines);
+  lines = NULL;
+
+  config_line_prepend(&lines, "id", "bad sha3");
+  config_line_prepend(&lines, "sha3-digest",
+                      "now is the winter of our dicotheque");
+  ent = consensus_cache_add(cache, lines, (const uint8_t *)"Hi there", 8);
+  consensus_cache_entry_decref(ent);
+  config_free_lines(lines);
+  lines = NULL;
+
+  config_line_prepend(&lines, "id", "no sha3");
+  ent = consensus_cache_add(cache, lines, (const uint8_t *)"Hi there", 8);
+  consensus_cache_entry_decref(ent);
+  config_free_lines(lines);
+  lines = NULL;
+
+  config_line_prepend(&lines, "id", "good sha3");
+  config_line_prepend(&lines, "sha3-digest",
+                      "8d8b1998616cd6b4c4055da8d38728dc"
+                      "93c758d4131a53c7d81aa6337dee1c05");
+  ent = consensus_cache_add(cache, lines, (const uint8_t *)"Hi there", 8);
+  consensus_cache_entry_decref(ent);
+  config_free_lines(lines);
+  lines = NULL;
+
+  cdm_reload();
+  cache = cdm_cache_get();
+  tt_int_op(1, OP_EQ, consdiffmgr_validate());
+
+  consensus_cache_find_all(vals, cache, "id", "good sha3");
+  tt_int_op(smartlist_len(vals), OP_EQ, 1);
+  smartlist_clear(vals);
+
+  consensus_cache_find_all(vals, cache, "id", "no sha3");
+  tt_int_op(smartlist_len(vals), OP_EQ, 1);
+  smartlist_clear(vals);
+
+  consensus_cache_find_all(vals, cache, "id", "wrong sha3");
+  tt_int_op(smartlist_len(vals), OP_EQ, 0);
+  consensus_cache_find_all(vals, cache, "id", "bad sha3");
+  tt_int_op(smartlist_len(vals), OP_EQ, 0);
+
+ done:
+  smartlist_free(vals);
+}
+
 #define TEST(name)                                      \
   { #name, test_consdiffmgr_ ## name , TT_FORK, &setup_diffmgr, NULL }
 
@@ -761,10 +825,10 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(cleanup_bad_valid_after),
   TEST(cleanup_no_valid_after),
   TEST(cleanup_old_diffs),
+  TEST(validate),
 
   // XXXX Test: no duplicate diff job is launched when a job is pending.
   // XXXX Test: register status when no pending entry existed?? (bug)
-  // XXXX Test: sha3 mismatch on validation
   // XXXX Test: non-cacheing cases of replyfn().
 
   END_OF_TESTCASES
