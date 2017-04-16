@@ -1168,6 +1168,117 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
                              if_modified_since, NULL, NULL);
 }
 
+struct directory_request_t {
+  tor_addr_port_t or_addr_port;
+  tor_addr_port_t dir_addr_port;
+  char digest[DIGEST_LEN];
+  uint8_t dir_purpose;
+  uint8_t router_purpose;
+  dir_indirection_t indirection;
+  const char *resource;
+  const char *payload;
+  size_t payload_len;
+  time_t if_modified_since;
+  const rend_data_t *rend_query;
+  circuit_guard_state_t *guard_state; // XXXX Does this belong?
+};
+
+directory_request_t *
+directory_request_new(uint8_t dir_purpose)
+{
+  tor_assert(dir_purpose >= DIR_PURPOSE_MIN_);
+  tor_assert(dir_purpose <= DIR_PURPOSE_MAX_);
+  tor_assert(dir_purpose != DIR_PURPOSE_SERVER);
+  tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2);
+
+  directory_request_t *result = tor_malloc_zero(sizeof(*result));
+  result->dir_purpose = dir_purpose;
+  result->router_purpose = ROUTER_PURPOSE_GENERAL;
+  result->indirection = DIRIND_ONEHOP;
+  return result;
+}
+void
+directory_request_free(directory_request_t *req)
+{
+  if (req == NULL)
+    return;
+  tor_free(req);
+}
+
+void
+directory_request_set_or_addr_port(directory_request_t *req,
+                                   const tor_addr_port_t *p)
+{
+  memcpy(&req->or_addr_port, p, sizeof(*p));
+}
+void
+directory_request_set_dir_addr_port(directory_request_t *req,
+                                    const tor_addr_port_t *p)
+{
+  memcpy(&req->dir_addr_port, p, sizeof(*p));
+}
+void
+directory_request_set_directory_id_digest(directory_request_t *req,
+                                          const char *digest)
+{
+  memcpy(req->digest, digest, DIGEST_LEN);
+}
+void
+directory_request_set_router_purpose(directory_request_t *req,
+                                     uint8_t router_purpose)
+{
+  tor_assert(router_purpose == ROUTER_PURPOSE_GENERAL ||
+             router_purpose == ROUTER_PURPOSE_BRIDGE);
+  // assert that it actually makes sense to set this purpose, given
+  // the dir_purpose.
+  req->router_purpose = router_purpose;
+}
+void
+directory_request_set_indirection(directory_request_t *req,
+                                  dir_indirection_t indirection)
+{
+  req->indirection = indirection;
+}
+// DOCDOC lifetime
+void
+directory_request_set_resource(directory_request_t *req,
+                               const char *resource)
+{
+  req->resource = resource;
+}
+// DOCDOC Lifetime
+void
+directory_request_set_payload(directory_request_t *req,
+                              const char *payload,
+                              size_t payload_len)
+{
+  tor_assert(DIR_PURPOSE_IS_UPLOAD(req->dir_purpose) ||
+             // XXXX why not included?
+             req->dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2);
+
+  req->payload = payload;
+  req->payload_len = payload_len;
+}
+void
+directory_request_set_if_modified_since(directory_request_t *req,
+                                        time_t if_modified_since)
+{
+  req->if_modified_since = if_modified_since;
+}
+// DOCDOC lifetime
+void
+directory_request_set_rend_query(directory_request_t *req,
+                                 const rend_data_t *query)
+{
+  req->rend_query = query;
+}
+void
+directory_request_set_guard_state(directory_request_t *req,
+                                  circuit_guard_state_t *state)
+{
+  req->guard_state = state;
+}
+
 /** Same as directory_initiate_command(), but accepts rendezvous data to
  * fetch a hidden service descriptor, and takes its address & port arguments
  * as tor_addr_port_t. */
@@ -1175,14 +1286,54 @@ static void
 directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
                                 const tor_addr_port_t *dir_addr_port,
                                 const char *digest,
-                                uint8_t dir_purpose, uint8_t router_purpose,
+                                uint8_t dir_purpose,
+                                uint8_t router_purpose,
                                 dir_indirection_t indirection,
                                 const char *resource,
-                                const char *payload, size_t payload_len,
+                                const char *payload,
+                                size_t payload_len,
                                 time_t if_modified_since,
                                 const rend_data_t *rend_query,
                                 circuit_guard_state_t *guard_state)
 {
+  directory_request_t *r = directory_request_new(dir_purpose);
+  directory_request_set_or_addr_port(r, or_addr_port);
+  directory_request_set_dir_addr_port(r, dir_addr_port);
+  directory_request_set_directory_id_digest(r, digest);
+  directory_request_set_router_purpose(r, router_purpose);
+  directory_request_set_indirection(r, indirection);
+  if (resource)
+    directory_request_set_resource(r, resource);
+  if (payload)
+    directory_request_set_payload(r, payload, payload_len);
+  if (if_modified_since)
+    directory_request_set_if_modified_since(r, if_modified_since);
+  if (rend_query)
+    directory_request_set_rend_query(r, rend_query);
+  if (guard_state)
+    directory_request_set_guard_state(r, guard_state);
+
+  directory_initiate_request(r);
+
+  directory_request_free(r);
+}
+
+void
+directory_initiate_request(directory_request_t *request)
+{
+  const tor_addr_port_t *or_addr_port = &request->or_addr_port;
+  const tor_addr_port_t *dir_addr_port = &request->dir_addr_port;
+  const char *digest = request->digest;
+  const uint8_t dir_purpose = request->dir_purpose;
+  const uint8_t router_purpose = request->router_purpose;
+  const dir_indirection_t indirection = request->indirection;
+  const char *resource = request->resource;
+  const char *payload = request->payload;
+  const size_t payload_len = request->payload_len;
+  const time_t if_modified_since = request->if_modified_since;
+  const rend_data_t *rend_query = request->rend_query;
+  circuit_guard_state_t *guard_state = request->guard_state;
+
   tor_assert(or_addr_port);
   tor_assert(dir_addr_port);
   tor_assert(or_addr_port->port || dir_addr_port->port);
