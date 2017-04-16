@@ -1058,6 +1058,7 @@ consensus_diff_worker_replyfn(void *work_)
                           job->bodylen_out);
     status = CDM_DIFF_PRESENT;
     handle = consensus_cache_entry_handle_new(ent);
+    consensus_cache_entry_decref(ent);
   } else {
     /* Failure! Nothing to do but complain */
     log_warn(LD_DIRSERV,
@@ -1069,6 +1070,9 @@ consensus_diff_worker_replyfn(void *work_)
 
   if (cache)
     cdm_diff_ht_set_status(flav, from_sha3, to_sha3, status, handle);
+  else
+    consensus_cache_entry_handle_free(handle);
+
   consensus_diff_worker_job_free(job);
 }
 
