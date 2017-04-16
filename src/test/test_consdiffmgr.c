@@ -174,6 +174,14 @@ lookup_apply_and_verify_diff(consensus_flavor_t flav,
   return match ? 0 : -1;
 }
 
+static void
+cdm_reload(void)
+{
+  consdiffmgr_free_all();
+  cdm_cache_get();
+  consdiffmgr_rescan();
+}
+
 // ==============================  Beginning of tests
 
 #if 0
@@ -451,6 +459,23 @@ test_consdiffmgr_diff_rules(void *arg)
   tt_int_op(0, OP_EQ,
             lookup_apply_and_verify_diff(FLAV_NS, ns_body[2], ns_body[5]));
 
+  /* Finally: reload, and make sure that the information is still indexed */
+  cdm_reload();
+
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_NS, ns_body[0], ns_body[5]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_NS, ns_body[2], ns_body[5]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_NS, ns_body[1], ns_body[5]));
+
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[4]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[2], md_body[4]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[3], md_body[4]));
+
  done:
   for (i = 0; i < N; ++i) {
     tor_free(md_body[i]);
@@ -680,7 +705,6 @@ struct testcase_t consdiffmgr_tests[] = {
   //            in cdm_diff_ht_purge().
   // XXXX Test: cdm_entry_get_sha3_value cases.
   // XXXX Test: sha3 mismatch on validation
-  // XXXX Test: initial loading of diffs from disk.
   // XXXX Test: non-cacheing cases of replyfn().
 
   END_OF_TESTCASES
