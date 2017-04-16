@@ -571,6 +571,54 @@ test_consdiffmgr_diff_failure(void *arg)
 }
 
 static void
+test_consdiffmgr_diff_pending(void *arg)
+{
+#define N 3
+  (void)arg;
+  char *md_body[N];
+  networkstatus_t *md_ns[N];
+  time_t start = approx_time() - 120;
+  int i;
+  for (i = 0; i < N; ++i) {
+    time_t when = start + i * 30;
+    md_body[i] = fake_ns_body_new(FLAV_MICRODESC, when);
+    md_ns[i] = fake_ns_new(FLAV_MICRODESC, when);
+  }
+
+  MOCK(cpuworker_queue_work, mock_cpuworker_queue_work);
+
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[1], md_ns[1]));
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[2], md_ns[2]));
+  /* Make a diff */
+  consdiffmgr_rescan();
+  tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
+
+  /* Look it up.  Is it pending? */
+  consensus_cache_entry_t *ent = NULL;
+  consdiff_status_t diff_status;
+  diff_status = lookup_diff_from(&ent, FLAV_MICRODESC, md_body[1]);
+  tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ, diff_status);
+  tt_ptr_op(ent, OP_EQ, NULL);
+
+  /* Add another old consensus.  only one new diff should launch! */
+  tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[0], md_ns[0]));
+  consdiffmgr_rescan();
+  tt_int_op(2, OP_EQ, smartlist_len(fake_cpuworker_queue));
+
+  tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
+  mock_cpuworker_handle_replies();
+
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[0], md_body[2]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
+
+ done:
+  UNMOCK(cpuworker_queue_work);
+#undef N
+}
+
+static void
 test_consdiffmgr_cleanup_old(void *arg)
 {
   (void)arg;
@@ -821,13 +869,13 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(make_diffs),
   TEST(diff_rules),
   TEST(diff_failure),
+  TEST(diff_pending),
   TEST(cleanup_old),
   TEST(cleanup_bad_valid_after),
   TEST(cleanup_no_valid_after),
   TEST(cleanup_old_diffs),
   TEST(validate),
 
-  // XXXX Test: no duplicate diff job is launched when a job is pending.
   // XXXX Test: register status when no pending entry existed?? (bug)
   // XXXX Test: non-cacheing cases of replyfn().
 
