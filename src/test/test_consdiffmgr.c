@@ -623,6 +623,7 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   networkstatus_t *md_ns[N];
   uint8_t md_ns_sha3[N][DIGEST256_LEN];
   int i;
+  consensus_cache_entry_t *hold_ent = NULL, *ent;
 
   /* Make sure that the cleanup function removes diffs to the not-most-recent
    * consensus. */
@@ -658,15 +659,19 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   tt_int_op(0, OP_EQ,
        lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
 
+  tt_int_op(CONSDIFF_AVAILABLE, OP_EQ,
+            lookup_diff_from(&hold_ent, FLAV_MICRODESC, md_body[1]));
+  consensus_cache_entry_incref(hold_ent); // incref, so it is preserved.
+
   /* Now add an even-more-recent consensus; this should make all previous
    * diffs deletable */
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
   tt_int_op(2, OP_EQ, consdiffmgr_cleanup());
 
-  consensus_cache_entry_t *ent;
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
             lookup_diff_from(&ent, FLAV_MICRODESC, md_body[0]));
-  tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
+  /* This one is marked deletable but still in the hashtable */
+  tt_int_op(CONSDIFF_AVAILABLE, OP_EQ,
             lookup_diff_from(&ent, FLAV_MICRODESC, md_body[1]));
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
             lookup_diff_from(&ent, FLAV_MICRODESC, md_body[2]));
@@ -674,11 +679,29 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   /* Everything should be valid at this point */
   tt_int_op(0, OP_EQ, consdiffmgr_validate());
 
+  /* And if we recan NOW, we'll purge the hashtable of the entries,
+   * and launch attempts to generate new ones */
+  consdiffmgr_rescan();
+  tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ,
+            lookup_diff_from(&ent, FLAV_MICRODESC, md_body[0]));
+  tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ,
+            lookup_diff_from(&ent, FLAV_MICRODESC, md_body[1]));
+  tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ,
+            lookup_diff_from(&ent, FLAV_MICRODESC, md_body[2]));
+
+  /* We're still holding on to this, though, so we can still map it! */
+  const uint8_t *t1 = NULL;
+  size_t s;
+  int r = consensus_cache_entry_get_body(hold_ent, &t1, &s);
+  tt_int_op(r, OP_EQ, 0);
+  tt_assert(t1);
+
  done:
   for (i = 0; i < N; ++i) {
     tor_free(md_body[i]);
     networkstatus_vote_free(md_ns[i]);
   }
+  consensus_cache_entry_decref(hold_ent);
   UNMOCK(cpuworker_queue_work);
 #undef N
 }
@@ -701,8 +724,6 @@ struct testcase_t consdiffmgr_tests[] = {
 
   // XXXX Test: no duplicate diff job is launched when a job is pending.
   // XXXX Test: register status when no pending entry existed?? (bug)
-  // XXXX Test: clean up hashtable after most-recent-consensus changes
-  //            in cdm_diff_ht_purge().
   // XXXX Test: cdm_entry_get_sha3_value cases.
   // XXXX Test: sha3 mismatch on validation
   // XXXX Test: non-cacheing cases of replyfn().
