@@ -130,6 +130,50 @@ mock_cpuworker_handle_replies(void)
   fake_cpuworker_queue = NULL;
 }
 
+// ==============================  Other helpers
+
+static consdiff_status_t
+lookup_diff_from(consensus_cache_entry_t **out,
+                 consensus_flavor_t flav,
+                 const char *str1)
+{
+  uint8_t digest[DIGEST256_LEN];
+  crypto_digest256((char*)digest, str1, strlen(str1), DIGEST_SHA3_256);
+  return consdiffmgr_find_diff_from(out, flav,
+                                    DIGEST_SHA3_256, digest, sizeof(digest));
+}
+
+static int
+lookup_apply_and_verify_diff(consensus_flavor_t flav,
+                             const char *str1,
+                             const char *str2)
+{
+  char *diff_string = NULL;
+  consensus_cache_entry_t *ent = NULL;
+  consdiff_status_t status = lookup_diff_from(&ent, flav, str1);
+  if (ent == NULL || status != CONSDIFF_AVAILABLE)
+    return -1;
+
+  consensus_cache_entry_incref(ent);
+  size_t size;
+  const uint8_t *body;
+  int r = consensus_cache_entry_get_body(ent, &body, &size);
+  if (r == 0)
+    diff_string = tor_memdup_nulterm(body, size);
+  consensus_cache_entry_decref(ent);
+  if (diff_string == NULL)
+    return -1;
+
+  char *applied = consensus_diff_apply(str1, diff_string);
+  tor_free(diff_string);
+  if (applied == NULL)
+    return -1;
+
+  int match = !strcmp(applied, str2);
+  tor_free(applied);
+  return match ? 0 : -1;
+}
+
 // ==============================  Beginning of tests
 
 #if 0
@@ -368,12 +412,44 @@ test_consdiffmgr_diff_rules(void *arg)
   tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
   mock_cpuworker_handle_replies();
 
+  /* At this point, we should actually have working diffs! */
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_NS, ns_body[0], ns_body[5]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_NS, ns_body[1], ns_body[5]));
+
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[4]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[2], md_body[4]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[3], md_body[4]));
+
+  /* Self-to-self diff won't be present */
+  consensus_cache_entry_t *ent;
+  tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
+       lookup_diff_from(&ent, FLAV_NS, ns_body[5]));
+  /* No diff from 2 has been added yet */
+  tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
+       lookup_diff_from(&ent, FLAV_NS, ns_body[2]));
+  /* No diff arriving at old things. */
+  tt_int_op(-1, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
+  /* No backwards diff */
+  tt_int_op(-1, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[4], md_body[3]));
+
+  /* Now, an update: add number 2 and make sure it's the only one whose diff
+   * is regenerated. */
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(ns_body[2], ns_ns[2]));
   consdiffmgr_rescan();
   tt_ptr_op(NULL, OP_NE, fake_cpuworker_queue);
   tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
   tt_int_op(0, OP_EQ, mock_cpuworker_run_work());
   mock_cpuworker_handle_replies();
+
+  tt_int_op(0, OP_EQ,
+            lookup_apply_and_verify_diff(FLAV_NS, ns_body[2], ns_body[5]));
 
  done:
   for (i = 0; i < N; ++i) {
@@ -417,6 +493,11 @@ test_consdiffmgr_diff_failure(void *arg)
   mock_cpuworker_handle_replies();
   expect_single_log_msg_containing("Worker was unable to compute consensus "
                                    "diff from ");
+
+  /* Make sure the diff is not present */
+  consensus_cache_entry_t *ent;
+  tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
+            lookup_diff_from(&ent, FLAV_NS, "foo bar baz\n"));
 
  done:
   teardown_capture_of_logs();
@@ -547,11 +628,23 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
 
   /* Nothing is deletable now */
   tt_int_op(0, OP_EQ, consdiffmgr_cleanup());
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[0], md_body[2]));
+  tt_int_op(0, OP_EQ,
+       lookup_apply_and_verify_diff(FLAV_MICRODESC, md_body[1], md_body[2]));
 
   /* Now add an even-more-recent consensus; this should make all previous
    * diffs deletable */
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
   tt_int_op(2, OP_EQ, consdiffmgr_cleanup());
+
+  consensus_cache_entry_t *ent;
+  tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
+            lookup_diff_from(&ent, FLAV_MICRODESC, md_body[0]));
+  tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
+            lookup_diff_from(&ent, FLAV_MICRODESC, md_body[1]));
+  tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
+            lookup_diff_from(&ent, FLAV_MICRODESC, md_body[2]));
 
   /* Everything should be valid at this point */
   tt_int_op(0, OP_EQ, consdiffmgr_validate());
@@ -581,17 +674,15 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(cleanup_no_valid_after),
   TEST(cleanup_old_diffs),
 
-  // XXXX Test: Look up consensuses by digest in existing cases.
   // XXXX Test: no duplicate diff job is launched when a job is pending.
   // XXXX Test: register status when no pending entry existed?? (bug)
-  // XXXX Test: lookup entry, find in-progress.
-  // XXXX Test: lookup entry, find error.
-  // XXXX Test: clean up hashtable after most-recent-consensus changes.
+  // XXXX Test: clean up hashtable after most-recent-consensus changes
+  //            in cdm_diff_ht_purge().
   // XXXX Test: cdm_entry_get_sha3_value cases.
   // XXXX Test: sha3 mismatch on validation
   // XXXX Test: initial loading of diffs from disk.
   // XXXX Test: non-cacheing cases of replyfn().
-  //       (Bug: must release handle)
+
   END_OF_TESTCASES
 };
 
