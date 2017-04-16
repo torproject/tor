@@ -39,6 +39,9 @@ int consdiffmgr_validate(void);
 STATIC consensus_cache_t *cdm_cache_get(void);
 STATIC consensus_cache_entry_t *cdm_cache_lookup_consensus(
                           consensus_flavor_t flavor, time_t valid_after);
+STATIC int cdm_entry_get_sha3_value(uint8_t *digest_out,
+                                    consensus_cache_entry_t *ent,
+                                    const char *label);
 #endif
 
 #endif

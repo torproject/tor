@@ -221,6 +221,45 @@ test_consdiffmgr_init_failure(void *arg)
 #endif
 
 static void
+test_consdiffmgr_sha3_helper(void *arg)
+{
+  (void) arg;
+  consensus_cache_t *cache = cdm_cache_get(); // violate abstraction barrier
+  config_line_t *lines = NULL;
+  char *mem_op_hex_tmp = NULL;
+  config_line_prepend(&lines, "good-sha",
+                      "F00DF00DF00DF00DF00DF00DF00DF00D"
+                      "F00DF00DF00DF00DF00DF00DF00DF00D");
+  config_line_prepend(&lines, "short-sha",
+                      "F00DF00DF00DF00DF00DF00DF00DF00D"
+                      "F00DF00DF00DF00DF00DF00DF00DF0");
+  config_line_prepend(&lines, "long-sha",
+                      "F00DF00DF00DF00DF00DF00DF00DF00D"
+                      "F00DF00DF00DF00DF00DF00DF00DF00DF00D");
+  config_line_prepend(&lines, "not-sha",
+                      "F00DF00DF00DF00DF00DF00DF00DF00D"
+                      "F00DF00DF00DF00DF00DF00DF00DXXXX");
+  consensus_cache_entry_t *ent =
+    consensus_cache_add(cache, lines, (const uint8_t *)"Hi there", 8);
+
+  uint8_t buf[DIGEST256_LEN];
+  tt_int_op(-1, OP_EQ, cdm_entry_get_sha3_value(buf, NULL, "good-sha"));
+  tt_int_op(0, OP_EQ, cdm_entry_get_sha3_value(buf, ent, "good-sha"));
+  test_memeq_hex(buf, "F00DF00DF00DF00DF00DF00DF00DF00D"
+                      "F00DF00DF00DF00DF00DF00DF00DF00D");
+
+  tt_int_op(-1, OP_EQ, cdm_entry_get_sha3_value(buf, ent, "missing-sha"));
+  tt_int_op(-2, OP_EQ, cdm_entry_get_sha3_value(buf, ent, "short-sha"));
+  tt_int_op(-2, OP_EQ, cdm_entry_get_sha3_value(buf, ent, "long-sha"));
+  tt_int_op(-2, OP_EQ, cdm_entry_get_sha3_value(buf, ent, "not-sha"));
+
+ done:
+  consensus_cache_entry_decref(ent);
+  config_free_lines(lines);
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
 test_consdiffmgr_add(void *arg)
 {
   (void) arg;
@@ -713,6 +752,7 @@ struct testcase_t consdiffmgr_tests[] = {
 #if 0
   { "init_failure", test_consdiffmgr_init_failure, TT_FORK, NULL, NULL },
 #endif
+  TEST(sha3_helper),
   TEST(add),
   TEST(make_diffs),
   TEST(diff_rules),
@@ -724,7 +764,6 @@ struct testcase_t consdiffmgr_tests[] = {
 
   // XXXX Test: no duplicate diff job is launched when a job is pending.
   // XXXX Test: register status when no pending entry existed?? (bug)
-  // XXXX Test: cdm_entry_get_sha3_value cases.
   // XXXX Test: sha3 mismatch on validation
   // XXXX Test: non-cacheing cases of replyfn().
 

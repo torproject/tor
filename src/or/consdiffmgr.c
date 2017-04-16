@@ -320,7 +320,7 @@ cdm_labels_prepend_sha3(config_line_t **labels,
  * given label, set <b>digest_out</b> to that value (decoded), and return 0.
  *
  * Return -1 if there is no such label, and -2 if it is badly formatted. */
-static int
+STATIC int
 cdm_entry_get_sha3_value(uint8_t *digest_out,
                          consensus_cache_entry_t *ent,
                          const char *label)
