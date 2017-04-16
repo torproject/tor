@@ -876,7 +876,6 @@ struct testcase_t consdiffmgr_tests[] = {
   TEST(cleanup_old_diffs),
   TEST(validate),
 
-  // XXXX Test: register status when no pending entry existed?? (bug)
   // XXXX Test: non-cacheing cases of replyfn().
 
   END_OF_TESTCASES
