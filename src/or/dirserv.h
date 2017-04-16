@@ -38,6 +38,7 @@ typedef enum dir_spool_source_t {
     DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
     DIR_SPOOL_MICRODESC,
     DIR_SPOOL_NETWORKSTATUS,
+    DIR_SPOOL_CONSENSUS_CACHE_ENTRY,
 } dir_spool_source_t;
 #define dir_spool_source_bitfield_t ENUM_BF(dir_spool_source_t)
 
@@ -74,8 +75,15 @@ typedef struct spooled_resource_t {
    */
   struct cached_dir_t *cached_dir_ref;
   /**
-   * The current offset into cached_dir. Only used when spool_eagerly is
-   * false */
+   * A different kind of large object that we might be spooling. Also
+   * reference-counted.  Also only used when spool_eagerly is false.
+   */
+  struct consensus_cache_entry_t *consensus_cache_entry;
+  const uint8_t *cce_body;
+  size_t cce_len;
+  /**
+   * The current offset into cached_dir or cce_body. Only used when
+   * spool_eagerly is false */
   off_t cached_dir_offset;
 } spooled_resource_t;
 
@@ -184,6 +192,8 @@ int dirserv_read_guardfraction_file(const char *fname,
 spooled_resource_t *spooled_resource_new(dir_spool_source_t source,
                                          const uint8_t *digest,
                                          size_t digestlen);
+spooled_resource_t *spooled_resource_new_from_cache_entry(
+                                      struct consensus_cache_entry_t *entry);
 void spooled_resource_free(spooled_resource_t *spooled);
 void dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
                                                  time_t cutoff,
