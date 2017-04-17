@@ -3280,8 +3280,8 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
         conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                            choose_compression_level(estimated_len));
         SMARTLIST_FOREACH(items, const char *, c,
-                 connection_write_to_buf_zlib(c, strlen(c), conn, 0));
-        connection_write_to_buf_zlib("", 0, conn, 1);
+                 connection_write_to_buf_compress(c, strlen(c), conn, 0));
+        connection_write_to_buf_compress("", 0, conn, 1);
       } else {
         SMARTLIST_FOREACH(items, const char *, c,
                          connection_write_to_buf(c, strlen(c), TO_CONN(conn)));
@@ -3523,10 +3523,11 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
       conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                                               choose_compression_level(len));
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-            connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
-                                         c->cache_info.signed_descriptor_len,
-                                         conn, 0));
-      connection_write_to_buf_zlib("", 0, conn, 1);
+            connection_write_to_buf_compress(
+                c->cache_info.signed_descriptor_body,
+                c->cache_info.signed_descriptor_len,
+                conn, 0));
+      connection_write_to_buf_compress("", 0, conn, 1);
     } else {
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf(c->cache_info.signed_descriptor_body,

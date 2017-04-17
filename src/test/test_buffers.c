@@ -593,14 +593,17 @@ test_buffers_zlib_impl(int finalize_with_nil)
 
   msg = tor_malloc(512);
   crypto_rand(msg, 512);
-  tt_int_op(write_to_buf_zlib(buf, compress_state, msg, 128, 0), OP_EQ, 0);
-  tt_int_op(write_to_buf_zlib(buf, compress_state, msg+128, 128, 0), OP_EQ, 0);
-  tt_int_op(write_to_buf_zlib(buf, compress_state, msg+256, 256, 0), OP_EQ, 0);
+  tt_int_op(write_to_buf_compress(buf, compress_state,
+                                  msg, 128, 0), OP_EQ, 0);
+  tt_int_op(write_to_buf_compress(buf, compress_state,
+                                  msg+128, 128, 0), OP_EQ, 0);
+  tt_int_op(write_to_buf_compress(buf, compress_state,
+                                  msg+256, 256, 0), OP_EQ, 0);
   done = !finalize_with_nil;
-  tt_int_op(write_to_buf_zlib(buf, compress_state,
-                              "all done", 9, done), OP_EQ, 0);
+  tt_int_op(write_to_buf_compress(buf, compress_state,
+                                  "all done", 9, done), OP_EQ, 0);
   if (finalize_with_nil) {
-    tt_int_op(write_to_buf_zlib(buf, compress_state, "", 0, 1), OP_EQ, 0);
+    tt_int_op(write_to_buf_compress(buf, compress_state, "", 0, 1), OP_EQ, 0);
   }
 
   in_len = buf_datalen(buf);
@@ -668,7 +671,7 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   tt_uint_op(buf_datalen(buf), OP_EQ, headerjunk);
   /* Write an empty string, with finalization on. */
   compress_state = tor_compress_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
-  tt_int_op(write_to_buf_zlib(buf, compress_state, "", 0, 1), OP_EQ, 0);
+  tt_int_op(write_to_buf_compress(buf, compress_state, "", 0, 1), OP_EQ, 0);
 
   in_len = buf_datalen(buf);
   contents = tor_malloc(in_len);

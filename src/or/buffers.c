@@ -2092,9 +2092,9 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
  * <b>done</b> is true, flush the data in the state and finish the
  * compression/uncompression.  Return -1 on failure, 0 on success. */
 int
-write_to_buf_zlib(buf_t *buf, tor_compress_state_t *state,
-                  const char *data, size_t data_len,
-                  int done)
+write_to_buf_compress(buf_t *buf, tor_compress_state_t *state,
+                      const char *data, size_t data_len,
+                      int done)
 {
   char *next;
   size_t old_avail, avail;

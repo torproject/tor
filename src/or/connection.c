@@ -4060,9 +4060,9 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   if (zlib) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     int done = zlib < 0;
-    CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(conn->outbuf,
-                                                 dir_conn->compress_state,
-                                                 string, len, done));
+    CONN_LOG_PROTECT(conn, r = write_to_buf_compress(conn->outbuf,
+                                                     dir_conn->compress_state,
+                                                     string, len, done));
   } else {
     CONN_LOG_PROTECT(conn, r = write_to_buf(string, len, conn->outbuf));
   }
