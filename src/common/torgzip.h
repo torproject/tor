@@ -11,10 +11,9 @@
 #ifndef TOR_TORGZIP_H
 #define TOR_TORGZIP_H
 
-/** Enumeration of what kind of compression to use.  Only ZLIB_METHOD is
- * guaranteed to be supported by the compress/uncompress functions here;
- * GZIP_METHOD may be supported if we built against zlib version 1.2 or later
- * and is_gzip_supported() returns true. */
+/** Enumeration of what kind of compression to use.  Only ZLIB_METHOD and
+ * GZIP_METHOD is guaranteed to be supported by the compress/uncompress
+ * functions here. */
 typedef enum {
   NO_METHOD=0, GZIP_METHOD=1, ZLIB_METHOD=2, UNKNOWN_METHOD=3
 } compress_method_t;
@@ -38,8 +37,6 @@ tor_gzip_uncompress(char **out, size_t *out_len,
                     compress_method_t method,
                     int complete_only,
                     int protocol_warn_level);
-
-int is_gzip_supported(void);
 
 const char *
 tor_zlib_get_version_str(void);
