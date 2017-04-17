@@ -2845,7 +2845,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
 /** Return the compression level we should use for sending a compressed
  * response of size <b>n_bytes</b>. */
-STATIC zlib_compression_level_t
+STATIC compression_level_t
 choose_compression_level(ssize_t n_bytes)
 {
   if (! have_been_under_memory_pressure()) {

@@ -25,7 +25,7 @@ typedef enum {
  **/
 typedef enum {
   HIGH_COMPRESSION, MEDIUM_COMPRESSION, LOW_COMPRESSION
-} zlib_compression_level_t;
+} compression_level_t;
 
 int
 tor_gzip_compress(char **out, size_t *out_len,
@@ -54,7 +54,7 @@ typedef enum {
 /** Internal state for an incremental zlib compression/decompression. */
 typedef struct tor_zlib_state_t tor_zlib_state_t;
 tor_zlib_state_t *tor_zlib_new(int compress, compress_method_t method,
-                               zlib_compression_level_t level);
+                               compression_level_t level);
 
 tor_zlib_output_t tor_zlib_process(tor_zlib_state_t *state,
                                    char **out, size_t *out_len,
