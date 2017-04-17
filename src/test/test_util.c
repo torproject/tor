@@ -2264,8 +2264,8 @@ test_util_gzip(void *arg)
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                  GZIP_METHOD, 1, LOG_INFO));
   tt_assert(buf3 != NULL);
-  tt_int_op(strlen(buf1) + 1,OP_EQ, len2);
-  tt_str_op(buf1,OP_EQ, buf3);
+  tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
+  tt_str_op(buf1, OP_EQ, buf3);
 
   tor_free(buf2);
   tor_free(buf3);
@@ -2278,8 +2278,8 @@ test_util_gzip(void *arg)
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                    ZLIB_METHOD, 1, LOG_INFO));
   tt_assert(buf3 != NULL);
-  tt_int_op(strlen(buf1) + 1,OP_EQ, len2);
-  tt_str_op(buf1,OP_EQ, buf3);
+  tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
+  tt_str_op(buf1, OP_EQ, buf3);
 
   /* Check whether we can uncompress concatenated, compressed strings. */
   tor_free(buf3);
@@ -2287,8 +2287,8 @@ test_util_gzip(void *arg)
   memcpy(buf2+len1, buf2, len1);
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
                                    ZLIB_METHOD, 1, LOG_INFO));
-  tt_int_op((strlen(buf1)+1)*2,OP_EQ, len2);
-  tt_mem_op(buf3,OP_EQ,
+  tt_int_op((strlen(buf1)+1)*2, OP_EQ, len2);
+  tt_mem_op(buf3, OP_EQ,
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
              (strlen(buf1)+1)*2);
@@ -2328,21 +2328,21 @@ test_util_gzip(void *arg)
   len2 = 21;
   tt_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0)
               == TOR_ZLIB_OK);
-  tt_int_op(0,OP_EQ, len2); /* Make sure we compressed it all. */
+  tt_int_op(0, OP_EQ, len2); /* Make sure we compressed it all. */
   tt_assert(cp1 > buf1);
 
   len2 = 0;
   cp2 = cp1;
   tt_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1)
               == TOR_ZLIB_DONE);
-  tt_int_op(0,OP_EQ, len2);
+  tt_int_op(0, OP_EQ, len2);
   tt_assert(cp1 > cp2); /* Make sure we really added something. */
 
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
                                   ZLIB_METHOD, 1, LOG_WARN));
   /* Make sure it compressed right. */
   tt_str_op(buf3, OP_EQ, "ABCDEFGHIJABCDEFGHIJ");
-  tt_int_op(21,OP_EQ, len2);
+  tt_int_op(21, OP_EQ, len2);
 
  done:
   if (state)
