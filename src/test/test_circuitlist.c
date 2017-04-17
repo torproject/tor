@@ -388,6 +388,7 @@ test_hs_circuitmap_isolation(void *arg)
     const uint8_t tok1[REND_TOKEN_LEN] = "bet i got some of th";
 
     circ1 = or_circuit_new(0, NULL);
+    tt_assert(circ1);
     circ1->base_.purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
 
     /* check that circuitmap is empty right? */
@@ -408,10 +409,13 @@ test_hs_circuitmap_isolation(void *arg)
     const uint8_t tok2[REND_TOKEN_LEN] = "you dont know anythi";
 
     circ2 = origin_circuit_new();
+    tt_assert(circ2);
     circ2->base_.purpose = CIRCUIT_PURPOSE_S_ESTABLISH_INTRO;
     circ3 = or_circuit_new(0, NULL);
+    tt_assert(circ3);
     circ3->base_.purpose = CIRCUIT_PURPOSE_INTRO_POINT;
     circ4 = origin_circuit_new();
+    tt_assert(circ4);
     circ4->base_.purpose = CIRCUIT_PURPOSE_S_ESTABLISH_INTRO;
 
     /* Register circ2 with tok2 as service-side intro v2 circ */
@@ -437,14 +441,10 @@ test_hs_circuitmap_isolation(void *arg)
   }
 
  done:
-  if (circ1)
-    circuit_free(TO_CIRCUIT(circ1));
-  if (circ2)
-    circuit_free(TO_CIRCUIT(circ2));
-  if (circ3)
-    circuit_free(TO_CIRCUIT(circ3));
-  if (circ4)
-    circuit_free(TO_CIRCUIT(circ4));
+  circuit_free(TO_CIRCUIT(circ1));
+  circuit_free(TO_CIRCUIT(circ2));
+  circuit_free(TO_CIRCUIT(circ3));
+  circuit_free(TO_CIRCUIT(circ4));
 }
 
 struct testcase_t circuitlist_tests[] = {
