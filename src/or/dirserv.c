@@ -3497,7 +3497,7 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
       /* Absent objects count as "done". */
       return SRFS_DONE;
     }
-    if (conn->zlib_state) {
+    if (conn->compress_state) {
       connection_write_to_buf_zlib((const char*)body, bodylen, conn, 0);
     } else {
       connection_write_to_buf((const char*)body, bodylen, TO_CONN(conn));
@@ -3523,7 +3523,7 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
     if (BUG(remaining < 0))
       return SRFS_ERR;
     ssize_t bytes = (ssize_t) MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
-    if (conn->zlib_state) {
+    if (conn->compress_state) {
       connection_write_to_buf_zlib(cached->dir_z + spooled->cached_dir_offset,
                                    bytes, conn, 0);
     } else {
@@ -3788,12 +3788,12 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   /* If we get here, we're done. */
   smartlist_free(conn->spool);
   conn->spool = NULL;
-  if (conn->zlib_state) {
+  if (conn->compress_state) {
     /* Flush the zlib state: there could be more bytes pending in there, and
      * we don't want to omit bytes. */
     connection_write_to_buf_zlib("", 0, conn, 1);
-    tor_compress_free(conn->zlib_state);
-    conn->zlib_state = NULL;
+    tor_compress_free(conn->compress_state);
+    conn->compress_state = NULL;
   }
   return 0;
 }

@@ -1774,7 +1774,7 @@ typedef struct dir_connection_t {
    * it from back to front. */
   smartlist_t *spool;
   /** The compression object doing on-the-fly compression for spooled data. */
-  tor_compress_state_t *zlib_state;
+  tor_compress_state_t *compress_state;
 
   /** What rendezvous service are we querying for? */
   rend_data_t *rend_data;
