@@ -2257,13 +2257,13 @@ test_util_gzip(void *arg)
 
   tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                GZIP_METHOD));
-  tt_assert(buf2);
-  tt_assert(len1 < strlen(buf1));
-  tt_assert(detect_compression_method(buf2, len1) == GZIP_METHOD);
+  tt_assert(buf2 != NULL);
+  tt_int_op(len1, OP_LT, strlen(buf1));
+  tt_int_op(detect_compression_method(buf2, len1), OP_EQ, GZIP_METHOD);
 
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                  GZIP_METHOD, 1, LOG_INFO));
-  tt_assert(buf3);
+  tt_assert(buf3 != NULL);
   tt_int_op(strlen(buf1) + 1,OP_EQ, len2);
   tt_str_op(buf1,OP_EQ, buf3);
 
@@ -2273,11 +2273,11 @@ test_util_gzip(void *arg)
   tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
   tt_assert(buf2);
-  tt_assert(detect_compression_method(buf2, len1) == ZLIB_METHOD);
+  tt_int_op(detect_compression_method(buf2, len1), OP_EQ, ZLIB_METHOD);
 
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                    ZLIB_METHOD, 1, LOG_INFO));
-  tt_assert(buf3);
+  tt_assert(buf3 != NULL);
   tt_int_op(strlen(buf1) + 1,OP_EQ, len2);
   tt_str_op(buf1,OP_EQ, buf3);
 
@@ -2302,7 +2302,7 @@ test_util_gzip(void *arg)
     tor_strdup("String with low redundancy that won't be compressed much.");
   tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
-  tt_assert(len1>16);
+  tt_int_op(len1, OP_GT, 16);
   /* when we allow an incomplete string, we should succeed.*/
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
                                   ZLIB_METHOD, 0, LOG_INFO));
@@ -2314,7 +2314,7 @@ test_util_gzip(void *arg)
   tor_free(buf3);
   tt_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
                                  ZLIB_METHOD, 1, LOG_INFO));
-  tt_assert(!buf3);
+  tt_assert(buf3 == NULL);
 
   /* Now, try streaming compression. */
   tor_free(buf1);
