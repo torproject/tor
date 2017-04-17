@@ -132,9 +132,9 @@ is_compression_bomb(size_t size_in, size_t size_out)
  * Return 0 on success, -1 on failure.
  */
 int
-tor_gzip_compress(char **out, size_t *out_len,
-                  const char *in, size_t in_len,
-                  compress_method_t method)
+tor_compress(char **out, size_t *out_len,
+             const char *in, size_t in_len,
+             compress_method_t method)
 {
   struct z_stream_s *stream = NULL;
   size_t out_size, old_size;
@@ -252,11 +252,11 @@ tor_gzip_compress(char **out, size_t *out_len,
  * or corrupt inputs at <b>protocol_warn_level</b>.
  */
 int
-tor_gzip_uncompress(char **out, size_t *out_len,
-                    const char *in, size_t in_len,
-                    compress_method_t method,
-                    int complete_only,
-                    int protocol_warn_level)
+tor_uncompress(char **out, size_t *out_len,
+               const char *in, size_t in_len,
+               compress_method_t method,
+               int complete_only,
+               int protocol_warn_level)
 {
   struct z_stream_s *stream = NULL;
   size_t out_size, old_size;

@@ -1832,8 +1832,8 @@ test_dir_handle_get_status_vote_current_consensus_ns(void* data)
                                                             comp_body_used);
   tt_int_op(ZLIB_METHOD, OP_EQ, compression);
 
-  tor_gzip_uncompress(&body, &body_used, comp_body, comp_body_used,
-                      compression, 0, LOG_PROTOCOL_WARN);
+  tor_uncompress(&body, &body_used, comp_body, comp_body_used,
+                 compression, 0, LOG_PROTOCOL_WARN);
 
   tt_str_op(NETWORK_STATUS, OP_EQ, body);
   tt_int_op(strlen(NETWORK_STATUS), OP_EQ, body_used);

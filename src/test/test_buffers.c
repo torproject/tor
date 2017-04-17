@@ -607,10 +607,10 @@ test_buffers_zlib_impl(int finalize_with_nil)
 
   tt_int_op(fetch_from_buf(contents, in_len, buf), OP_EQ, 0);
 
-  tt_int_op(0, OP_EQ, tor_gzip_uncompress(&expanded, &out_len,
-                                       contents, in_len,
-                                       ZLIB_METHOD, 1,
-                                       LOG_WARN));
+  tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
+                                     contents, in_len,
+                                     ZLIB_METHOD, 1,
+                                     LOG_WARN));
 
   tt_int_op(out_len, OP_GE, 128);
   tt_mem_op(msg, OP_EQ, expanded, 128);
@@ -676,10 +676,11 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
 
   tt_uint_op(in_len, OP_GT, headerjunk);
 
-  tt_int_op(0, OP_EQ, tor_gzip_uncompress(&expanded, &out_len,
-                                  contents + headerjunk, in_len - headerjunk,
-                                  ZLIB_METHOD, 1,
-                                  LOG_WARN));
+  tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
+                                     contents + headerjunk,
+                                     in_len - headerjunk,
+                                     ZLIB_METHOD, 1,
+                                     LOG_WARN));
 
   tt_int_op(out_len, OP_EQ, 0);
   tt_assert(expanded);

@@ -2255,14 +2255,14 @@ test_util_gzip(void *arg)
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
-  tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
-                               GZIP_METHOD));
+  tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                          GZIP_METHOD));
   tt_assert(buf2 != NULL);
   tt_int_op(len1, OP_LT, strlen(buf1));
   tt_int_op(detect_compression_method(buf2, len1), OP_EQ, GZIP_METHOD);
 
-  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
-                                 GZIP_METHOD, 1, LOG_INFO));
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1,
+                            GZIP_METHOD, 1, LOG_INFO));
   tt_assert(buf3 != NULL);
   tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
   tt_str_op(buf1, OP_EQ, buf3);
@@ -2270,13 +2270,13 @@ test_util_gzip(void *arg)
   tor_free(buf2);
   tor_free(buf3);
 
-  tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
-                                 ZLIB_METHOD));
+  tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                          ZLIB_METHOD));
   tt_assert(buf2);
   tt_int_op(detect_compression_method(buf2, len1), OP_EQ, ZLIB_METHOD);
 
-  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
-                                   ZLIB_METHOD, 1, LOG_INFO));
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1,
+                            ZLIB_METHOD, 1, LOG_INFO));
   tt_assert(buf3 != NULL);
   tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
   tt_str_op(buf1, OP_EQ, buf3);
@@ -2285,8 +2285,8 @@ test_util_gzip(void *arg)
   tor_free(buf3);
   buf2 = tor_reallocarray(buf2, len1, 2);
   memcpy(buf2+len1, buf2, len1);
-  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
-                                   ZLIB_METHOD, 1, LOG_INFO));
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1*2,
+                            ZLIB_METHOD, 1, LOG_INFO));
   tt_int_op((strlen(buf1)+1)*2, OP_EQ, len2);
   tt_mem_op(buf3, OP_EQ,
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
@@ -2300,20 +2300,20 @@ test_util_gzip(void *arg)
   /* Check whether we can uncompress partial strings. */
   buf1 =
     tor_strdup("String with low redundancy that won't be compressed much.");
-  tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
-                                 ZLIB_METHOD));
+  tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                          ZLIB_METHOD));
   tt_int_op(len1, OP_GT, 16);
   /* when we allow an incomplete string, we should succeed.*/
-  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
-                                  ZLIB_METHOD, 0, LOG_INFO));
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1-16,
+                            ZLIB_METHOD, 0, LOG_INFO));
   tt_assert(len2 > 5);
   buf3[len2]='\0';
   tt_assert(!strcmpstart(buf1, buf3));
 
   /* when we demand a complete string, this must fail. */
   tor_free(buf3);
-  tt_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
-                                 ZLIB_METHOD, 1, LOG_INFO));
+  tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
+                           ZLIB_METHOD, 1, LOG_INFO));
   tt_assert(buf3 == NULL);
 
   /* Now, try streaming compression. */
@@ -2338,8 +2338,8 @@ test_util_gzip(void *arg)
   tt_int_op(0, OP_EQ, len2);
   tt_assert(cp1 > cp2); /* Make sure we really added something. */
 
-  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
-                                  ZLIB_METHOD, 1, LOG_WARN));
+  tt_assert(!tor_uncompress(&buf3, &len2, buf1, 1024-len1,
+                            ZLIB_METHOD, 1, LOG_WARN));
   /* Make sure it compressed right. */
   tt_str_op(buf3, OP_EQ, "ABCDEFGHIJABCDEFGHIJ");
   tt_int_op(21, OP_EQ, len2);
@@ -2368,9 +2368,9 @@ test_util_gzip_compression_bomb(void *arg)
 
   /* Make sure we can't produce a compression bomb */
   setup_full_capture_of_logs(LOG_WARN);
-  tt_int_op(-1, OP_EQ, tor_gzip_compress(&result, &result_len,
-                                         one_mb, one_million,
-                                         ZLIB_METHOD));
+  tt_int_op(-1, OP_EQ, tor_compress(&result, &result_len,
+                                    one_mb, one_million,
+                                    ZLIB_METHOD));
   expect_single_log_msg_containing(
          "We compressed something and got an insanely high "
          "compression factor; other Tors would think this "
@@ -2381,9 +2381,9 @@ test_util_gzip_compression_bomb(void *arg)
   const char compression_bomb[1039] =
     { 0x78, 0xDA, 0xED, 0xC1, 0x31, 0x01, 0x00, 0x00, 0x00, 0xC2,
       0xA0, 0xF5, 0x4F, 0x6D, 0x08, 0x5F, 0xA0 /* .... */ };
-  tt_int_op(-1, OP_EQ, tor_gzip_uncompress(&result, &result_len,
-                                           compression_bomb, 1039,
-                                           ZLIB_METHOD, 0, LOG_WARN));
+  tt_int_op(-1, OP_EQ, tor_uncompress(&result, &result_len,
+                                      compression_bomb, 1039,
+                                      ZLIB_METHOD, 0, LOG_WARN));
 
   /* Now try streaming that. */
   state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);

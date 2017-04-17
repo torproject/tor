@@ -28,15 +28,15 @@ typedef enum {
 } compression_level_t;
 
 int
-tor_gzip_compress(char **out, size_t *out_len,
-                  const char *in, size_t in_len,
-                  compress_method_t method);
+tor_compress(char **out, size_t *out_len,
+             const char *in, size_t in_len,
+             compress_method_t method);
 int
-tor_gzip_uncompress(char **out, size_t *out_len,
-                    const char *in, size_t in_len,
-                    compress_method_t method,
-                    int complete_only,
-                    int protocol_warn_level);
+tor_uncompress(char **out, size_t *out_len,
+               const char *in, size_t in_len,
+               compress_method_t method,
+               int complete_only,
+               int protocol_warn_level);
 
 const char *
 tor_zlib_get_version_str(void);
