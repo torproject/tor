@@ -687,6 +687,15 @@ test_consdiff_apply_ed_diff(void *arg)
 
   smartlist_clear(diff);
 
+  /* Unexpected range for add command. */
+  smartlist_add_linecpy(diff, area, "1,2a");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("add lines after a range");
+
+  smartlist_clear(diff);
+
   /* Script is not in reverse order. */
   smartlist_add_linecpy(diff, area, "1d");
   smartlist_add_linecpy(diff, area, "3d");

@@ -795,6 +795,7 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
     diff_line[diff_cdline->len] = 0;
     const char *ptr = diff_line;
     int start = 0, end = 0;
+    int had_range = 0;
     if (get_linenum(&ptr, &start) < 0) {
       log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
                "an ed command was missing a line number.");
@@ -802,6 +803,7 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
     }
     if (*ptr == ',') {
       /* Two-item range */
+      had_range = 1;
       ++ptr;
       if (get_linenum(&ptr, &end) < 0) {
         log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
@@ -848,6 +850,13 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
         log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
             "an unrecognised ed command was found.");
         goto error_cleanup;
+    }
+
+    /* 'a' commands are not allowed to have ranges. */
+    if (had_range && action == 'a') {
+      log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
+          "it wanted to add lines after a range.");
+      goto error_cleanup;
     }
 
     /* Add unchanged lines. */
