@@ -3178,7 +3178,7 @@ handle_get_current_consensus(dir_connection_t *conn,
     write_http_response_header(conn, -1, compressed,
                                smartlist_len(conn->spool) == 1 ? lifetime : 0);
     if (! compressed)
-      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
+      conn->zlib_state = tor_compress_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
 
     /* Prime the connection with some data. */
     const int initial_flush_result = connection_dirserv_flushed_some(conn);
@@ -3276,8 +3276,8 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
 
     if (smartlist_len(items)) {
       if (compressed) {
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
-                                    choose_compression_level(estimated_len));
+        conn->zlib_state = tor_compress_new(1, ZLIB_METHOD,
+                           choose_compression_level(estimated_len));
         SMARTLIST_FOREACH(items, const char *, c,
                  connection_write_to_buf_zlib(c, strlen(c), conn, 0));
         connection_write_to_buf_zlib("", 0, conn, 1);
@@ -3335,7 +3335,7 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
     write_http_response_header(conn, -1, compressed, MICRODESC_CACHE_LIFETIME);
 
     if (compressed)
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+      conn->zlib_state = tor_compress_new(1, ZLIB_METHOD,
                                       choose_compression_level(size_guess));
 
     const int initial_flush_result = connection_dirserv_flushed_some(conn);
@@ -3428,7 +3428,7 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
       }
       write_http_response_header(conn, -1, compressed, cache_lifetime);
       if (compressed)
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+        conn->zlib_state = tor_compress_new(1, ZLIB_METHOD,
                                         choose_compression_level(size_guess));
       clear_spool = 0;
       /* Prime the connection with some data. */
@@ -3519,8 +3519,8 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
 
     write_http_response_header(conn, compressed?-1:len, compressed, 60*60);
     if (compressed) {
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
-                                      choose_compression_level(len));
+      conn->zlib_state = tor_compress_new(1, ZLIB_METHOD,
+                                          choose_compression_level(len));
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
                                          c->cache_info.signed_descriptor_len,

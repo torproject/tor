@@ -36,7 +36,7 @@ int flush_buf(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen);
 int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen);
 
 int write_to_buf(const char *string, size_t string_len, buf_t *buf);
-int write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
+int write_to_buf_zlib(buf_t *buf, tor_compress_state_t *state,
                       const char *data, size_t data_len, int done);
 int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);

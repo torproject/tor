@@ -628,7 +628,7 @@ connection_free_(connection_t *conn)
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     tor_free(dir_conn->requested_resource);
 
-    tor_zlib_free(dir_conn->zlib_state);
+    tor_compress_free(dir_conn->zlib_state);
     if (dir_conn->spool) {
       SMARTLIST_FOREACH(dir_conn->spool, spooled_resource_t *, spooled,
                         spooled_resource_free(spooled));

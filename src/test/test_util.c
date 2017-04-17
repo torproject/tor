@@ -2249,7 +2249,7 @@ test_util_gzip(void *arg)
   char *buf1=NULL, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
   const char *ccp2;
   size_t len1, len2;
-  tor_zlib_state_t *state = NULL;
+  tor_compress_state_t *state = NULL;
 
   (void)arg;
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
@@ -2320,21 +2320,21 @@ test_util_gzip(void *arg)
   tor_free(buf1);
   tor_free(buf2);
   tor_free(buf3);
-  state = tor_zlib_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
+  state = tor_compress_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
   tt_assert(state);
   cp1 = buf1 = tor_malloc(1024);
   len1 = 1024;
   ccp2 = "ABCDEFGHIJABCDEFGHIJ";
   len2 = 21;
-  tt_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0)
-              == TOR_ZLIB_OK);
+  tt_int_op(tor_compress_process(state, &cp1, &len1, &ccp2, &len2, 0),
+            OP_EQ, TOR_COMPRESS_OK);
   tt_int_op(0, OP_EQ, len2); /* Make sure we compressed it all. */
   tt_assert(cp1 > buf1);
 
   len2 = 0;
   cp2 = cp1;
-  tt_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1)
-              == TOR_ZLIB_DONE);
+  tt_int_op(tor_compress_process(state, &cp1, &len1, &ccp2, &len2, 1),
+            OP_EQ, TOR_COMPRESS_DONE);
   tt_int_op(0, OP_EQ, len2);
   tt_assert(cp1 > cp2); /* Make sure we really added something. */
 
@@ -2346,7 +2346,7 @@ test_util_gzip(void *arg)
 
  done:
   if (state)
-    tor_zlib_free(state);
+    tor_compress_free(state);
   tor_free(buf2);
   tor_free(buf3);
   tor_free(buf1);
@@ -2364,7 +2364,7 @@ test_util_gzip_compression_bomb(void *arg)
   char *one_mb = tor_malloc_zero(one_million);
   char *result = NULL;
   size_t result_len = 0;
-  tor_zlib_state_t *state = NULL;
+  tor_compress_state_t *state = NULL;
 
   /* Make sure we can't produce a compression bomb */
   setup_full_capture_of_logs(LOG_WARN);
@@ -2386,22 +2386,22 @@ test_util_gzip_compression_bomb(void *arg)
                                       ZLIB_METHOD, 0, LOG_WARN));
 
   /* Now try streaming that. */
-  state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
-  tor_zlib_output_t r;
+  state = tor_compress_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
+  tor_compress_output_t r;
   const char *inp = compression_bomb;
   size_t inlen = 1039;
   do {
     char *outp = one_mb;
     size_t outleft = 4096; /* small on purpose */
-    r = tor_zlib_process(state, &outp, &outleft, &inp, &inlen, 0);
+    r = tor_compress_process(state, &outp, &outleft, &inp, &inlen, 0);
     tt_int_op(inlen, OP_NE, 0);
-  } while (r == TOR_ZLIB_BUF_FULL);
+  } while (r == TOR_COMPRESS_BUFFER_FULL);
 
-  tt_int_op(r, OP_EQ, TOR_ZLIB_ERR);
+  tt_int_op(r, OP_EQ, TOR_COMPRESS_ERROR);
 
  done:
   tor_free(one_mb);
-  tor_zlib_free(state);
+  tor_compress_free(state);
 }
 
 /** Run unit tests for mmap() wrapper functionality. */

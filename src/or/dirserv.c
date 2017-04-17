@@ -3792,7 +3792,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
     /* Flush the zlib state: there could be more bytes pending in there, and
      * we don't want to omit bytes. */
     connection_write_to_buf_zlib("", 0, conn, 1);
-    tor_zlib_free(conn->zlib_state);
+    tor_compress_free(conn->zlib_state);
     conn->zlib_state = NULL;
   }
   return 0;

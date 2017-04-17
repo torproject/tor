@@ -584,12 +584,12 @@ test_buffers_zlib_impl(int finalize_with_nil)
   char *contents = NULL;
   char *expanded = NULL;
   buf_t *buf = NULL;
-  tor_zlib_state_t *zlib_state = NULL;
+  tor_compress_state_t *zlib_state = NULL;
   size_t out_len, in_len;
   int done;
 
   buf = buf_new_with_capacity(128); /* will round up */
-  zlib_state = tor_zlib_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
+  zlib_state = tor_compress_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
 
   msg = tor_malloc(512);
   crypto_rand(msg, 512);
@@ -621,7 +621,7 @@ test_buffers_zlib_impl(int finalize_with_nil)
 
  done:
   buf_free(buf);
-  tor_zlib_free(zlib_state);
+  tor_compress_free(zlib_state);
   tor_free(contents);
   tor_free(expanded);
   tor_free(msg);
@@ -647,7 +647,7 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   char *contents = NULL;
   char *expanded = NULL;
   buf_t *buf = NULL;
-  tor_zlib_state_t *zlib_state = NULL;
+  tor_compress_state_t *zlib_state = NULL;
   size_t out_len, in_len;
   size_t sz, headerjunk;
   (void) arg;
@@ -666,7 +666,7 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   tt_uint_op(buf->head->datalen, OP_EQ, headerjunk);
   tt_uint_op(buf_datalen(buf), OP_EQ, headerjunk);
   /* Write an empty string, with finalization on. */
-  zlib_state = tor_zlib_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
+  zlib_state = tor_compress_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
   tt_int_op(write_to_buf_zlib(buf, zlib_state, "", 0, 1), OP_EQ, 0);
 
   in_len = buf_datalen(buf);
@@ -687,7 +687,7 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
 
  done:
   buf_free(buf);
-  tor_zlib_free(zlib_state);
+  tor_compress_free(zlib_state);
   tor_free(contents);
   tor_free(expanded);
   tor_free(msg);

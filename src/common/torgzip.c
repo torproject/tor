@@ -399,9 +399,9 @@ detect_compression_method(const char *in, size_t in_len)
   }
 }
 
-/** Internal state for an incremental zlib compression/decompression.  The
- * body of this struct is not exposed. */
-struct tor_zlib_state_t {
+/** Internal state for an incremental compression/decompression.  The body of
+ * this struct is not exposed. */
+struct tor_compress_state_t {
   struct z_stream_s stream; /**< The zlib stream */
   int compress; /**< True if we are compressing; false if we are inflating */
 
@@ -414,14 +414,13 @@ struct tor_zlib_state_t {
   size_t allocation;
 };
 
-/** Construct and return a tor_zlib_state_t object using <b>method</b>.  If
- * <b>compress</b>, it's for compression; otherwise it's for
- * decompression. */
-tor_zlib_state_t *
-tor_zlib_new(int compress_, compress_method_t method,
-             compression_level_t compression_level)
+/** Construct and return a tor_compress_state_t object using <b>method</b>.  If
+ * <b>compress</b>, it's for compression; otherwise it's for decompression. */
+tor_compress_state_t *
+tor_compress_new(int compress_, compress_method_t method,
+                 compression_level_t compression_level)
 {
-  tor_zlib_state_t *out;
+  tor_compress_state_t *out;
   int bits, memlevel;
 
  if (! compress_) {
@@ -430,7 +429,7 @@ tor_zlib_new(int compress_, compress_method_t method,
    compression_level = HIGH_COMPRESSION;
  }
 
- out = tor_malloc_zero(sizeof(tor_zlib_state_t));
+ out = tor_malloc_zero(sizeof(tor_compress_state_t));
  out->stream.zalloc = Z_NULL;
  out->stream.zfree = Z_NULL;
  out->stream.opaque = NULL;
@@ -462,16 +461,17 @@ tor_zlib_new(int compress_, compress_method_t method,
  * to *<b>out</b>, adjusting the values as we go.  If <b>finish</b> is true,
  * we've reached the end of the input.
  *
- * Return TOR_ZLIB_DONE if we've finished the entire compression/decompression.
- * Return TOR_ZLIB_OK if we're processed everything from the input.
- * Return TOR_ZLIB_BUF_FULL if we're out of space on <b>out</b>.
- * Return TOR_ZLIB_ERR if the stream is corrupt.
+ * Return TOR_COMPRESS_DONE if we've finished the entire
+ * compression/decompression.
+ * Return TOR_COMPRESS_OK if we're processed everything from the input.
+ * Return TOR_COMPRESS_BUFFER_FULL if we're out of space on <b>out</b>.
+ * Return TOR_COMPRESS_ERROR if the stream is corrupt.
  */
-tor_zlib_output_t
-tor_zlib_process(tor_zlib_state_t *state,
-                 char **out, size_t *out_len,
-                 const char **in, size_t *in_len,
-                 int finish)
+tor_compress_output_t
+tor_compress_process(tor_compress_state_t *state,
+                     char **out, size_t *out_len,
+                     const char **in, size_t *in_len,
+                     int finish)
 {
   int err;
   tor_assert(*in_len <= UINT_MAX);
@@ -498,31 +498,31 @@ tor_zlib_process(tor_zlib_state_t *state,
   if (! state->compress &&
       is_compression_bomb(state->input_so_far, state->output_so_far)) {
     log_warn(LD_DIR, "Possible zlib bomb; abandoning stream.");
-    return TOR_ZLIB_ERR;
+    return TOR_COMPRESS_ERROR;
   }
 
   switch (err)
     {
     case Z_STREAM_END:
-      return TOR_ZLIB_DONE;
+      return TOR_COMPRESS_DONE;
     case Z_BUF_ERROR:
       if (state->stream.avail_in == 0 && !finish)
-        return TOR_ZLIB_OK;
-      return TOR_ZLIB_BUF_FULL;
+        return TOR_COMPRESS_OK;
+      return TOR_COMPRESS_BUFFER_FULL;
     case Z_OK:
       if (state->stream.avail_out == 0 || finish)
-        return TOR_ZLIB_BUF_FULL;
-      return TOR_ZLIB_OK;
+        return TOR_COMPRESS_BUFFER_FULL;
+      return TOR_COMPRESS_OK;
     default:
       log_warn(LD_GENERAL, "Gzip returned an error: %s",
                state->stream.msg ? state->stream.msg : "<no message>");
-      return TOR_ZLIB_ERR;
+      return TOR_COMPRESS_ERROR;
     }
 }
 
 /** Deallocate <b>state</b>. */
 void
-tor_zlib_free(tor_zlib_state_t *state)
+tor_compress_free(tor_compress_state_t *state)
 {
   if (!state)
     return;
@@ -553,7 +553,7 @@ tor_zlib_state_size_precalc(int inflate_, int windowbits, int memlevel)
        that is, 32K for windowBits=15 (default value) plus a few kilobytes
        for small objects."
     */
-    return sizeof(tor_zlib_state_t) + sizeof(struct z_stream_s) +
+    return sizeof(tor_compress_state_t) + sizeof(struct z_stream_s) +
       (1 << 15) + A_FEW_KILOBYTES;
   } else {
     /* Also from zconf.h:
@@ -562,7 +562,7 @@ tor_zlib_state_size_precalc(int inflate_, int windowbits, int memlevel)
             (1 << (windowBits+2)) +  (1 << (memLevel+9))
         ... plus a few kilobytes for small objects."
     */
-    return sizeof(tor_zlib_state_t) + sizeof(struct z_stream_s) +
+    return sizeof(tor_compress_state_t) + sizeof(struct z_stream_s) +
       (1 << (windowbits + 2)) + (1 << (memlevel + 9)) + A_FEW_KILOBYTES;
   }
 #undef A_FEW_KILOBYTES
@@ -570,7 +570,7 @@ tor_zlib_state_size_precalc(int inflate_, int windowbits, int memlevel)
 
 /** Return the approximate number of bytes allocated for <b>state</b>. */
 size_t
-tor_zlib_state_size(const tor_zlib_state_t *state)
+tor_compress_state_size(const tor_compress_state_t *state)
 {
   return state->allocation;
 }

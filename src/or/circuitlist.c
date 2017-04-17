@@ -1991,8 +1991,8 @@ single_conn_free_bytes(connection_t *conn)
   if (conn->type == CONN_TYPE_DIR) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     if (dir_conn->zlib_state) {
-      result += tor_zlib_state_size(dir_conn->zlib_state);
-      tor_zlib_free(dir_conn->zlib_state);
+      result += tor_compress_state_size(dir_conn->zlib_state);
+      tor_compress_free(dir_conn->zlib_state);
       dir_conn->zlib_state = NULL;
     }
   }

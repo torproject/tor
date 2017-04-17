@@ -1773,8 +1773,8 @@ typedef struct dir_connection_t {
   /** List of spooled_resource_t for objects that we're spooling. We use
    * it from back to front. */
   smartlist_t *spool;
-  /** The zlib object doing on-the-fly compression for spooled data. */
-  tor_zlib_state_t *zlib_state;
+  /** The compression object doing on-the-fly compression for spooled data. */
+  tor_compress_state_t *zlib_state;
 
   /** What rendezvous service are we querying for? */
   rend_data_t *rend_data;

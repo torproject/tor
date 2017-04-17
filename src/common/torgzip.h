@@ -46,23 +46,27 @@ tor_zlib_get_header_version_str(void);
 
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
-/** Return values from tor_zlib_process; see that function's documentation for
- * details. */
+/** Return values from tor_compress_process; see that function's documentation
+ * for details. */
 typedef enum {
-  TOR_ZLIB_OK, TOR_ZLIB_DONE, TOR_ZLIB_BUF_FULL, TOR_ZLIB_ERR
-} tor_zlib_output_t;
+  TOR_COMPRESS_OK,
+  TOR_COMPRESS_DONE,
+  TOR_COMPRESS_BUFFER_FULL,
+  TOR_COMPRESS_ERROR
+} tor_compress_output_t;
 /** Internal state for an incremental zlib compression/decompression. */
-typedef struct tor_zlib_state_t tor_zlib_state_t;
-tor_zlib_state_t *tor_zlib_new(int compress, compress_method_t method,
-                               compression_level_t level);
+typedef struct tor_compress_state_t tor_compress_state_t;
+tor_compress_state_t *tor_compress_new(int compress,
+                                       compress_method_t method,
+                                       compression_level_t level);
 
-tor_zlib_output_t tor_zlib_process(tor_zlib_state_t *state,
-                                   char **out, size_t *out_len,
-                                   const char **in, size_t *in_len,
-                                   int finish);
-void tor_zlib_free(tor_zlib_state_t *state);
+tor_compress_output_t tor_compress_process(tor_compress_state_t *state,
+                                           char **out, size_t *out_len,
+                                           const char **in, size_t *in_len,
+                                           int finish);
+void tor_compress_free(tor_compress_state_t *state);
 
-size_t tor_zlib_state_size(const tor_zlib_state_t *state);
+size_t tor_compress_state_size(const tor_compress_state_t *state);
 size_t tor_zlib_get_total_allocation(void);
 
 #endif
