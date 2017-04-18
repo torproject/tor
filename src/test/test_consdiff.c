@@ -746,6 +746,55 @@ test_consdiff_apply_ed_diff(void *arg)
 
   smartlist_clear(diff);
 
+  /* Ranges must be numeric only and cannot contain spaces. */
+  smartlist_add_linecpy(diff, area, "0, 4d");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an ed command was missing a range "
+                                   "end line number.");
+
+  smartlist_clear(diff);
+
+  /* '+' is not a number. */
+  smartlist_add_linecpy(diff, area, "+0,4d");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an ed command was missing a line number");
+
+  smartlist_clear(diff);
+
+  /* range duplication */
+  smartlist_add_linecpy(diff, area, "0,4d,5d");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an ed command longer than one char was "
+                                   "found");
+
+  smartlist_clear(diff);
+
+  /* space before command */
+  smartlist_add_linecpy(diff, area, "0,4 d");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an ed command longer than one char was "
+                                   "found");
+
+  smartlist_clear(diff);
+
+  /* space inside number */
+  smartlist_add_linecpy(diff, area, "0,4 5d");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("an ed command longer than one char was "
+                                   "found");
+
+  smartlist_clear(diff);
+
   /* Test appending text, 'a'. */
   consensus_split_lines(diff, "3a\nU\nO\n.\n0a\nV\n.\n", area);
   cons2 = apply_ed_diff(cons1, diff, 0);
@@ -775,7 +824,7 @@ test_consdiff_apply_ed_diff(void *arg)
   smartlist_free(cons2);
 
   /* Test changing text, 'c'. */
-  consensus_split_lines(diff, "4c\nT\nX\n.\n1, 2c\nM\n.\n", area);
+  consensus_split_lines(diff, "4c\nT\nX\n.\n1,2c\nM\n.\n", area);
   cons2 = apply_ed_diff(cons1, diff, 0);
   tt_ptr_op(NULL, OP_NE, cons2);
   tt_int_op(5, OP_EQ, smartlist_len(cons2));
