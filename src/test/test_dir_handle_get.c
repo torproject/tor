@@ -14,6 +14,7 @@
 #include "connection.h"
 #include "directory.h"
 #include "test.h"
+#include "compress.h"
 #include "connection.h"
 #include "rendcommon.h"
 #include "rendcache.h"
@@ -28,7 +29,6 @@
 #include "networkstatus.h"
 #include "geoip.h"
 #include "dirserv.h"
-#include "torgzip.h"
 #include "dirvote.h"
 #include "log_test_helpers.h"
 

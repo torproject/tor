@@ -4,12 +4,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file torgzip.h
- * \brief Headers for torgzip.h
+ * \file compress.h
+ * \brief Headers for compress.c
  **/
 
-#ifndef TOR_TORGZIP_H
-#define TOR_TORGZIP_H
+#ifndef TOR_COMPRESS_H
+#define TOR_COMPRESS_H
 
 /** Enumeration of what kind of compression to use.  Only ZLIB_METHOD and
  * GZIP_METHOD is guaranteed to be supported by the compress/uncompress
@@ -70,5 +70,5 @@ void tor_compress_free(tor_compress_state_t *state);
 
 size_t tor_compress_state_size(const tor_compress_state_t *state);
 
-#endif
+#endif // TOR_COMPRESS_H.
 

@@ -105,12 +105,12 @@ src/common/src_common_libor_testing_a-log.$(OBJEXT) \
 
 LIBOR_CRYPTO_A_SRC = \
   src/common/aes.c		\
+  src/common/compress.c	\
   src/common/compress_zlib.c	\
   src/common/crypto.c		\
   src/common/crypto_pwbox.c     \
   src/common/crypto_s2k.c	\
   src/common/crypto_format.c	\
-  src/common/torgzip.c		\
   src/common/tortls.c		\
   src/common/crypto_curve25519.c \
   src/common/crypto_ed25519.c
@@ -146,6 +146,7 @@ COMMONHEADERS = \
   src/common/compat_openssl.h			\
   src/common/compat_threads.h			\
   src/common/compat_time.h			\
+  src/common/compress.h			\
   src/common/compress_zlib.h			\
   src/common/confline.h				\
   src/common/container.h			\
@@ -165,7 +166,6 @@ COMMONHEADERS = \
   src/common/storagedir.h			\
   src/common/testsupport.h			\
   src/common/timers.h				\
-  src/common/torgzip.h				\
   src/common/torint.h				\
   src/common/torlog.h				\
   src/common/tortls.h				\

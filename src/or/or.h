@@ -71,7 +71,7 @@
 #include "tortls.h"
 #include "torlog.h"
 #include "container.h"
-#include "torgzip.h"
+#include "compress.h"
 #include "address.h"
 #include "compat_libevent.h"
 #include "ht.h"

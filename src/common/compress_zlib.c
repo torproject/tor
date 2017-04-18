@@ -15,7 +15,7 @@
 
 #include "util.h"
 #include "torlog.h"
-#include "torgzip.h"
+#include "compress.h"
 #include "compress_zlib.h"
 
 /* zlib 1.2.4 and 1.2.5 do some "clever" things with macros.  Instead of

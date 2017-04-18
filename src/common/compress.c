@@ -4,8 +4,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file torgzip.c
- * \brief A simple in-memory gzip implementation.
+ * \file compress.c
+ * \brief Common compression API.
  **/
 
 #include "orconfig.h"
@@ -22,7 +22,7 @@
 
 #include "util.h"
 #include "torlog.h"
-#include "torgzip.h"
+#include "compress.h"
 #include "compress_zlib.h"
 
 /** @{ */

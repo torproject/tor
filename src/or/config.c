@@ -69,6 +69,7 @@
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
 #include "circuitstats.h"
+#include "compress.h"
 #include "compress_zlib.h"
 #include "config.h"
 #include "connection.h"
@@ -100,7 +101,6 @@
 #include "statefile.h"
 #include "transports.h"
 #include "ext_orport.h"
-#include "torgzip.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
