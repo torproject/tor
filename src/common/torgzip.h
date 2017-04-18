@@ -46,6 +46,9 @@ tor_zlib_get_header_version_str(void);
 
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
+int
+tor_compress_memory_level(compression_level_t level);
+
 /** Return values from tor_compress_process; see that function's documentation
  * for details. */
 typedef enum {

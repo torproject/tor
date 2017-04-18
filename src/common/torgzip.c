@@ -86,16 +86,6 @@ method_bits(compress_method_t method, compression_level_t level)
   }
 }
 
-static inline int
-get_memlevel(compression_level_t level)
-{
-  switch (level) {
-    default:
-    case HIGH_COMPRESSION: return 8;
-    case MEDIUM_COMPRESSION: return 7;
-    case LOW_COMPRESSION: return 6;
-  }
-}
 
 /** @{ */
 /* These macros define the maximum allowable compression factor.  Anything of
@@ -124,6 +114,20 @@ is_compression_bomb(size_t size_in, size_t size_out)
     return 0;
 
   return (size_out / size_in > MAX_UNCOMPRESSION_FACTOR);
+}
+
+/** Given <b>level</b> return the memory level.  The memory level is needed for
+ * the various compression backends used in Tor.
+ */
+int
+tor_compress_memory_level(compression_level_t level)
+{
+  switch (level) {
+    default:
+    case HIGH_COMPRESSION: return 8;
+    case MEDIUM_COMPRESSION: return 7;
+    case LOW_COMPRESSION: return 6;
+  }
 }
 
 /** Given <b>in_len</b> bytes at <b>in</b>, compress them into a newly
