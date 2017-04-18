@@ -2510,6 +2510,112 @@ test_util_lzma(void *arg)
 #endif // HAVE_LZMA.
 }
 
+static void
+test_util_zstd(void *arg)
+{
+#ifdef HAVE_ZSTD
+  char *buf1=NULL, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
+  const char *ccp2;
+  size_t len1, len2;
+  tor_compress_state_t *state = NULL;
+
+  (void)arg;
+  buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
+  tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
+
+  tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                          ZSTD_METHOD));
+  tt_assert(buf2 != NULL);
+  tt_int_op(len1, OP_LT, strlen(buf1));
+  tt_int_op(detect_compression_method(buf2, len1), OP_EQ, ZSTD_METHOD);
+
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1,
+                            ZSTD_METHOD, 1, LOG_INFO));
+  tt_assert(buf3 != NULL);
+  tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
+  tt_str_op(buf1, OP_EQ, buf3);
+
+  tor_free(buf1);
+  tor_free(buf2);
+  tor_free(buf3);
+
+#if 0
+  /* Check whether we can uncompress concatenated, compressed strings. */
+  tor_free(buf3);
+  buf2 = tor_reallocarray(buf2, len1, 2);
+  memcpy(buf2+len1, buf2, len1);
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1*2,
+                            ZSTD_METHOD, 1, LOG_INFO));
+  tt_int_op((strlen(buf1)+1)*2, OP_EQ, len2);
+  tt_mem_op(buf3, OP_EQ,
+             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
+             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
+             (strlen(buf1)+1)*2);
+
+  tor_free(buf1);
+  tor_free(buf2);
+  tor_free(buf3);
+
+  /* Check whether we can uncompress partial strings. */
+  buf1 =
+    tor_strdup("String with low redundancy that won't be compressed much.");
+  tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                          ZSTD_METHOD));
+  tt_int_op(len1, OP_GT, 16);
+  /* when we allow an incomplete string, we should succeed.*/
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1-16,
+                            ZSTD_METHOD, 0, LOG_INFO));
+  tt_assert(len2 > 5);
+  buf3[len2]='\0';
+  tt_assert(!strcmpstart(buf1, buf3));
+
+  /* when we demand a complete string, this must fail. */
+  tor_free(buf3);
+  tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
+                           ZSTD_METHOD, 1, LOG_INFO));
+  tt_assert(buf3 == NULL);
+
+  tor_free(buf1);
+  tor_free(buf2);
+  tor_free(buf3);
+#endif
+
+  /* Now, try streaming compression. */
+  state = tor_compress_new(1, ZSTD_METHOD, HIGH_COMPRESSION);
+  tt_assert(state);
+  cp1 = buf1 = tor_malloc(1024);
+  len1 = 1024;
+  ccp2 = "ABCDEFGHIJABCDEFGHIJ";
+  len2 = 21;
+  tt_int_op(tor_compress_process(state, &cp1, &len1, &ccp2, &len2, 0),
+            OP_EQ, TOR_COMPRESS_OK);
+  tt_int_op(0, OP_EQ, len2); /* Make sure we compressed it all. */
+//  tt_assert(cp1 > buf1);
+
+  len2 = 0;
+  cp2 = cp1;
+  tt_int_op(tor_compress_process(state, &cp1, &len1, &ccp2, &len2, 1),
+            OP_EQ, TOR_COMPRESS_DONE);
+  tt_int_op(0, OP_EQ, len2);
+  tt_assert(cp1 > cp2); /* Make sure we really added something. */
+
+  tt_assert(!tor_uncompress(&buf3, &len2, buf1, 1024-len1,
+                            ZSTD_METHOD, 1, LOG_WARN));
+  /* Make sure it compressed right. */
+  tt_str_op(buf3, OP_EQ, "ABCDEFGHIJABCDEFGHIJ");
+  tt_int_op(21, OP_EQ, len2);
+
+ done:
+  if (state)
+    tor_compress_free(state);
+  tor_free(buf2);
+  tor_free(buf3);
+  tor_free(buf1);
+#else
+  (void)arg;
+#endif // HAVE_ZSTD.
+}
+
 /** Run unit tests for mmap() wrapper functionality. */
 static void
 test_util_mmap(void *arg)
@@ -5824,6 +5930,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(gzip),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(lzma),
+  UTIL_LEGACY(zstd),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),
   UTIL_LEGACY(control_formats),

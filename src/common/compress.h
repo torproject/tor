@@ -19,7 +19,8 @@ typedef enum {
   GZIP_METHOD=1,
   ZLIB_METHOD=2,
   LZMA_METHOD=3,
-  UNKNOWN_METHOD=4
+  ZSTD_METHOD=4,
+  UNKNOWN_METHOD=5
 } compress_method_t;
 
 /**
