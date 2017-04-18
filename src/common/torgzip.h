@@ -38,12 +38,6 @@ tor_uncompress(char **out, size_t *out_len,
                int complete_only,
                int protocol_warn_level);
 
-const char *
-tor_zlib_get_version_str(void);
-
-const char *
-tor_zlib_get_header_version_str(void);
-
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
 int
@@ -60,8 +54,10 @@ typedef enum {
   TOR_COMPRESS_BUFFER_FULL,
   TOR_COMPRESS_ERROR
 } tor_compress_output_t;
-/** Internal state for an incremental zlib compression/decompression. */
+
+/** Internal state for an incremental compression/decompression. */
 typedef struct tor_compress_state_t tor_compress_state_t;
+
 tor_compress_state_t *tor_compress_new(int compress,
                                        compress_method_t method,
                                        compression_level_t level);
@@ -73,7 +69,6 @@ tor_compress_output_t tor_compress_process(tor_compress_state_t *state,
 void tor_compress_free(tor_compress_state_t *state);
 
 size_t tor_compress_state_size(const tor_compress_state_t *state);
-size_t tor_zlib_get_total_allocation(void);
 
 #endif
 

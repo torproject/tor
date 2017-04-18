@@ -58,6 +58,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "command.h"
+#include "compress_zlib.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"

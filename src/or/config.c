@@ -69,6 +69,7 @@
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
 #include "circuitstats.h"
+#include "compress_zlib.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"

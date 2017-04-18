@@ -54,6 +54,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "compress_zlib.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
