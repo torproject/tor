@@ -23,6 +23,7 @@
 #include "util.h"
 #include "torlog.h"
 #include "compress.h"
+#include "compress_lzma.h"
 #include "compress_zlib.h"
 
 /** @{ */
@@ -81,6 +82,9 @@ tor_compress(char **out, size_t *out_len,
   if (method == GZIP_METHOD || method == ZLIB_METHOD)
     return tor_zlib_compress(out, out_len, in, in_len, method);
 
+  if (method == LZMA_METHOD)
+    return tor_lzma_compress(out, out_len, in, in_len, method);
+
   return -1;
 }
 
@@ -108,6 +112,12 @@ tor_uncompress(char **out, size_t *out_len,
                                complete_only,
                                protocol_warn_level);
 
+  if (method == LZMA_METHOD)
+    return tor_lzma_uncompress(out, out_len, in, in_len,
+                               method,
+                               complete_only,
+                               protocol_warn_level);
+
   return -1;
 }
 
@@ -123,6 +133,9 @@ detect_compression_method(const char *in, size_t in_len)
   } else if (in_len > 2 && (in[0] & 0x0f) == 8 &&
              (ntohs(get_uint16(in)) % 31) == 0) {
     return ZLIB_METHOD;
+  } else if (in_len > 3 &&
+             fast_memeq(in, "\x5d\x00\x00\x00", 4)) {
+    return LZMA_METHOD;
   } else {
     return UNKNOWN_METHOD;
   }
@@ -135,6 +148,7 @@ struct tor_compress_state_t {
 
   union {
     tor_zlib_compress_state_t *zlib_state;
+    tor_lzma_compress_state_t *lzma_state;
   } u; /**< Compression backend state. */
 };
 
@@ -161,7 +175,16 @@ tor_compress_new(int compress, compress_method_t method,
       state->u.zlib_state = zlib_state;
       break;
     }
+    case LZMA_METHOD: {
+      tor_lzma_compress_state_t *lzma_state =
+        tor_lzma_compress_new(compress, method, compression_level);
 
+      if (lzma_state == NULL)
+        goto err;
+
+      state->u.lzma_state = lzma_state;
+      break;
+    }
     case NO_METHOD:
     case UNKNOWN_METHOD:
       goto err;
@@ -199,7 +222,10 @@ tor_compress_process(tor_compress_state_t *state,
       return tor_zlib_compress_process(state->u.zlib_state,
                                        out, out_len, in, in_len,
                                        finish);
-
+    case LZMA_METHOD:
+      return tor_lzma_compress_process(state->u.lzma_state,
+                                       out, out_len, in, in_len,
+                                       finish);
     case NO_METHOD:
     case UNKNOWN_METHOD:
       goto err;
@@ -221,7 +247,9 @@ tor_compress_free(tor_compress_state_t *state)
     case ZLIB_METHOD:
       tor_zlib_compress_free(state->u.zlib_state);
       break;
-
+    case LZMA_METHOD:
+      tor_lzma_compress_free(state->u.lzma_state);
+      break;
     case NO_METHOD:
     case UNKNOWN_METHOD:
       break;
@@ -240,7 +268,8 @@ tor_compress_state_size(const tor_compress_state_t *state)
     case GZIP_METHOD:
     case ZLIB_METHOD:
       return tor_zlib_compress_state_size(state->u.zlib_state);
-
+    case LZMA_METHOD:
+      return tor_lzma_compress_state_size(state->u.lzma_state);
     case NO_METHOD:
     case UNKNOWN_METHOD:
       goto err;

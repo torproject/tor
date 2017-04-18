@@ -15,7 +15,11 @@
  * GZIP_METHOD is guaranteed to be supported by the compress/uncompress
  * functions here. */
 typedef enum {
-  NO_METHOD=0, GZIP_METHOD=1, ZLIB_METHOD=2, UNKNOWN_METHOD=3
+  NO_METHOD=0,
+  GZIP_METHOD=1,
+  ZLIB_METHOD=2,
+  LZMA_METHOD=3,
+  UNKNOWN_METHOD=4
 } compress_method_t;
 
 /**
