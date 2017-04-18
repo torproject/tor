@@ -101,6 +101,18 @@
 #define HS_SUBCREDENTIAL_PREFIX "subcredential"
 #define HS_SUBCREDENTIAL_PREFIX_LEN (sizeof(HS_SUBCREDENTIAL_PREFIX) - 1)
 
+/* Node hidden service stored at index prefix value. */
+#define HS_INDEX_PREFIX "store-at-idx"
+#define HS_INDEX_PREFIX_LEN (sizeof(HS_INDEX_PREFIX) - 1)
+
+/* Node hidden service directory index prefix value. */
+#define HSDIR_INDEX_PREFIX "node-idx"
+#define HSDIR_INDEX_PREFIX_LEN (sizeof(HSDIR_INDEX_PREFIX) - 1)
+
+/* Prefix of the shared random value disaster mode. */
+#define HS_SRV_DISASTER_PREFIX "shared-random-disaster"
+#define HS_SRV_DISASTER_PREFIX_LEN (sizeof(HS_SRV_DISASTER_PREFIX) - 1)
+
 /* Type of authentication key used by an introduction point. */
 typedef enum {
   HS_AUTH_KEY_TYPE_LEGACY  = 1,
@@ -121,6 +133,15 @@ typedef struct rend_service_port_config_t {
   /* The socket path to connect to, if is_unix_addr */
   char unix_addr[FLEXIBLE_ARRAY_MEMBER];
 } rend_service_port_config_t;
+
+/* Hidden service directory index used in a node_t which is set once we set
+ * the consensus. */
+typedef struct hsdir_index_t {
+  /* The hsdir index for the current time period. */
+  uint8_t current[DIGEST256_LEN];
+  /* The hsdir index for the next time period. */
+  uint8_t next[DIGEST256_LEN];
+} hsdir_index_t;
 
 void hs_init(void);
 void hs_free_all(void);
@@ -171,6 +192,16 @@ uint64_t hs_get_next_time_period_num(time_t now);
 link_specifier_t *hs_link_specifier_dup(const link_specifier_t *lspec);
 
 int hs_overlap_mode_is_active(const networkstatus_t *consensus, time_t now);
+
+uint8_t *hs_get_current_srv(uint64_t time_period_num);
+uint8_t *hs_get_previous_srv(uint64_t time_period_num);
+
+void hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
+                          const uint8_t *srv, uint64_t period_num,
+                          uint8_t *hsdir_index_out);
+void hs_build_hs_index(uint64_t replica,
+                       const ed25519_public_key_t *blinded_pk,
+                       uint64_t period_num, uint8_t *hs_index_out);
 
 #ifdef HS_COMMON_PRIVATE
 

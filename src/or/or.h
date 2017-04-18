@@ -850,6 +850,8 @@ rend_data_v2_t *TO_REND_DATA_V2(const rend_data_t *d)
 struct hs_ident_edge_conn_t;
 struct hs_ident_dir_conn_t;
 struct hs_ident_circuit_t;
+/* Stub because we can't include hs_common.h. */
+struct hsdir_index_t;
 
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple
@@ -2490,6 +2492,10 @@ typedef struct node_t {
   time_t last_reachable;        /* IPv4. */
   time_t last_reachable6;       /* IPv6. */
 
+  /* Hidden service directory index data. This is used by a service or client
+   * in order to know what's the hs directory index for this node at the time
+   * the consensus is set. */
+  struct hsdir_index_t *hsdir_index;
 } node_t;
 
 /** Linked list of microdesc hash lines for a single router in a directory

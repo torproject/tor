@@ -20,6 +20,7 @@
 #include "hs_service.h"
 #include "rendcommon.h"
 #include "rendservice.h"
+#include "shared_random.h"
 
 /* Ed25519 Basepoint value. Taken from section 5 of
  * https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03 */
@@ -367,6 +368,25 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
     /* We should always have a supported version. */
     tor_assert(0);
   }
+}
+
+/* Using the given time period number, compute the disaster shared random
+ * value and put it in srv_out. It MUST be at least DIGEST256_LEN bytes. */
+static void
+get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
+{
+  crypto_digest_t *digest;
+
+  tor_assert(srv_out);
+
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  /* Setup payload: H("shared-random-disaster" | INT_8(period_num)) */
+  crypto_digest_add_bytes(digest, HS_SRV_DISASTER_PREFIX,
+                          HS_SRV_DISASTER_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) &time_period_num,
+                          sizeof(time_period_num));
+  crypto_digest_get_digest(digest, (char *) srv_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
 }
 
 /* When creating a blinded key, we need a parameter which construction is as
@@ -742,6 +762,99 @@ hs_service_requires_uptime_circ(const smartlist_t *ports)
     }
   } SMARTLIST_FOREACH_END(p);
   return 0;
+}
+
+/* Build hs_index which is used to find the responsible hsdirs. This index
+ * value is used to select the responsible HSDir where their hsdir_index is
+ * closest to this value.
+ *    SHA3-256("store-at-idx" | blinded_public_key |
+ *             INT_8(replicanum) | INT_8(period_num) )
+ *
+ * hs_index_out must be large enough to receive DIGEST256_LEN bytes. */
+void
+hs_build_hs_index(uint64_t replica, const ed25519_public_key_t *blinded_pk,
+                  uint64_t period_num, uint8_t *hs_index_out)
+{
+  crypto_digest_t *digest;
+
+  tor_assert(blinded_pk);
+  tor_assert(hs_index_out);
+
+  /* Build hs_index. See construction at top of function comment. */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HS_INDEX_PREFIX, HS_INDEX_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+  crypto_digest_add_bytes(digest, (const char *) &replica, sizeof(replica));
+  crypto_digest_add_bytes(digest, (const char *) &period_num,
+                          sizeof(period_num));
+  crypto_digest_get_digest(digest, (char *) hs_index_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+}
+
+/* Build hsdir_index which is used to find the responsible hsdirs. This is the
+ * index value that is compare to the hs_index when selecting an HSDir.
+ *    SHA3-256("node-idx" | node_identity |
+ *             shared_random_value | INT_8(period_num) )
+ *
+ * hsdir_index_out must be large enough to receive DIGEST256_LEN bytes. */
+void
+hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
+                     const uint8_t *srv_value, uint64_t period_num,
+                     uint8_t *hsdir_index_out)
+{
+  crypto_digest_t *digest;
+
+  tor_assert(identity_pk);
+  tor_assert(srv_value);
+  tor_assert(hsdir_index_out);
+
+  /* Build hsdir_index. See construction at top of function comment. */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HSDIR_INDEX_PREFIX, HSDIR_INDEX_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) identity_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+  crypto_digest_add_bytes(digest, (const char *) srv_value, DIGEST256_LEN);
+  crypto_digest_add_bytes(digest, (const char *) &period_num,
+                          sizeof(period_num));
+  crypto_digest_get_digest(digest, (char *) hsdir_index_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+}
+
+/* Return a newly allocated buffer containing the current shared random value
+ * or if not present, a disaster value is computed using the given time period
+ * number. This function can't fail. */
+uint8_t *
+hs_get_current_srv(uint64_t time_period_num)
+{
+  uint8_t *sr_value = tor_malloc_zero(DIGEST256_LEN);
+  const sr_srv_t *current_srv = sr_get_current();
+
+  if (current_srv) {
+    memcpy(sr_value, current_srv->value, sizeof(current_srv->value));
+  } else {
+    /* Disaster mode. */
+    get_disaster_srv(time_period_num, sr_value);
+  }
+  return sr_value;
+}
+
+/* Return a newly allocated buffer containing the previous shared random
+ * value or if not present, a disaster value is computed using the given time
+ * period number. This function can't fail. */
+uint8_t *
+hs_get_previous_srv(uint64_t time_period_num)
+{
+  uint8_t *sr_value = tor_malloc_zero(DIGEST256_LEN);
+  const sr_srv_t *previous_srv = sr_get_previous();
+
+  if (previous_srv) {
+    memcpy(sr_value, previous_srv->value, sizeof(previous_srv->value));
+  } else {
+    /* Disaster mode. */
+    get_disaster_srv(time_period_num, sr_value);
+  }
+  return sr_value;
 }
 
 /* Initialize the entire HS subsytem. This is called in tor_init() before any

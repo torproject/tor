@@ -45,6 +45,7 @@
 #include "dirserv.h"
 #include "entrynodes.h"
 #include "geoip.h"
+#include "hs_common.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -164,10 +165,69 @@ node_get_or_create(const char *identity_digest)
 
   smartlist_add(the_nodelist->nodes, node);
   node->nodelist_idx = smartlist_len(the_nodelist->nodes) - 1;
+  node->hsdir_index = tor_malloc_zero(sizeof(hsdir_index_t));
 
   node->country = -1;
 
   return node;
+}
+
+/* For a given <b>node</b> for the consensus <b>ns</b>, set the hsdir index
+ * for the node, both current and next if possible. This can only fails if the
+ * node_t ed25519 identity key can't be found which would be a bug. */
+static void
+node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
+{
+  time_t now = time(NULL);
+  const ed25519_public_key_t *node_identity_pk;
+  uint8_t *next_hsdir_index_srv = NULL, *current_hsdir_index_srv = NULL;
+  uint64_t next_time_period_num, current_time_period_num;
+
+  tor_assert(node);
+  tor_assert(ns);
+
+  node_identity_pk = node_get_ed25519_id(node);
+  if (node_identity_pk == NULL) {
+    log_warn(LD_BUG, "ed25519 identity public key not found when "
+                     "trying to build the hsdir indexes for node %s",
+             node_describe(node));
+    goto done;
+  }
+
+  /* Get the current and next time period number, we might use them both. */
+  current_time_period_num = hs_get_time_period_num(now);
+  next_time_period_num = hs_get_next_time_period_num(now);
+
+  /* If NOT in overlap mode, we only need to compute the current hsdir index
+   * for the ongoing time period and thus the current SRV. If it can't be
+   * found, the disaster one is returned. */
+  current_hsdir_index_srv = hs_get_current_srv(current_time_period_num);
+
+  if (hs_overlap_mode_is_active(ns, now)) {
+    /* We are in overlap mode, this means that our consensus has just cycled
+     * from current SRV to previous SRV so for the _next_ upcoming time
+     * period, we have to use the current SRV and use the previous SRV for the
+     * current time period. If the current or previous SRV can't be found, the
+     * disaster one is returned. */
+    next_hsdir_index_srv = hs_get_current_srv(next_time_period_num);
+    /* The following can be confusing so again, in overlap mode, we use our
+     * previous SRV for our _current_ hsdir index. */
+    current_hsdir_index_srv = hs_get_previous_srv(current_time_period_num);
+  }
+
+  /* Build the current hsdir index. */
+  hs_build_hsdir_index(node_identity_pk, current_hsdir_index_srv,
+                       current_time_period_num, node->hsdir_index->current);
+  if (next_hsdir_index_srv) {
+    /* Build the next hsdir index if we have a next SRV that we can use. */
+    hs_build_hsdir_index(node_identity_pk, next_hsdir_index_srv,
+                         next_time_period_num, node->hsdir_index->next);
+  }
+
+ done:
+  tor_free(current_hsdir_index_srv);
+  tor_free(next_hsdir_index_srv);
+  return;
 }
 
 /** Called when a node's address changes. */
@@ -216,6 +276,14 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
     dirserv_set_node_flags_from_authoritative_status(node, status);
   }
 
+  /* Setting the HSDir index requires the ed25519 identity key which can
+   * only be found either in the ri or md. This is why this is called here.
+   * Only nodes supporting HSDir=2 protocol version needs this index. */
+  if (node->rs && node->rs->supports_v3_hsdir) {
+    node_set_hsdir_index(node,
+                         networkstatus_get_latest_consensus());
+  }
+
   return node;
 }
 
@@ -246,6 +314,12 @@ nodelist_add_microdesc(microdesc_t *md)
       node->md->held_by_nodes--;
     node->md = md;
     md->held_by_nodes++;
+    /* Setting the HSDir index requires the ed25519 identity key which can
+     * only be found either in the ri or md. This is why this is called here.
+     * Only nodes supporting HSDir=2 protocol version needs this index. */
+    if (rs->supports_v3_hsdir) {
+      node_set_hsdir_index(node, ns);
+    }
   }
   return node;
 }
@@ -283,6 +357,9 @@ nodelist_set_consensus(networkstatus_t *ns)
       }
     }
 
+    if (rs->supports_v3_hsdir) {
+      node_set_hsdir_index(node, ns);
+    }
     node_set_country(node);
 
     /* If we're not an authdir, believe others. */
@@ -410,6 +487,7 @@ node_free(node_t *node)
   if (node->md)
     node->md->held_by_nodes--;
   tor_assert(node->nodelist_idx == -1);
+  tor_free(node->hsdir_index);
   tor_free(node);
 }
 

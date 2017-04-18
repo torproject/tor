@@ -1390,6 +1390,30 @@ sr_get_previous_for_control(void)
   return srv_str;
 }
 
+/* Return current shared random value from the latest consensus. Caller can
+ * NOT keep a reference to the returned pointer. Return NULL if none. */
+const sr_srv_t *
+sr_get_current(void)
+{
+  const networkstatus_t *c = networkstatus_get_latest_consensus();
+  if (c) {
+    return c->sr_info.current_srv;
+  }
+  return NULL;
+}
+
+/* Return previous shared random value from the latest consensus. Caller can
+ * NOT keep a reference to the returned pointer. Return NULL if none. */
+const sr_srv_t *
+sr_get_previous(void)
+{
+  const networkstatus_t *c = networkstatus_get_latest_consensus();
+  if (c) {
+    return c->sr_info.previous_srv;
+  }
+  return NULL;
+}
+
 #ifdef TOR_UNIT_TESTS
 
 /* Set the global value of number of SRV agreements so the test can play
