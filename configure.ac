@@ -732,6 +732,38 @@ else
 fi
 AC_SUBST(TOR_ZLIB_LIBS)
 
+dnl ------------------------------------------------------
+dnl Where we do we find lzma?
+
+AC_ARG_ENABLE(lzma,
+      AS_HELP_STRING(--enable-lzma, [enable support for the Zstandard compression scheme.]),
+      [case "${enableval}" in
+        "yes") lzma=true ;;
+        "no")  lzma=false ;;
+        * ) AC_MSG_ERROR(bad value for --enable-lzma) ;;
+      esac], [lzma=auto])
+
+if test "x$enable_lzma" = "xno"; then
+    have_lzma=no;
+else
+    PKG_CHECK_MODULES([LZMA],
+                      [liblzma],
+                      have_lzma=yes,
+                      have_lzma=no)
+
+    if test "x$have_lzma" = "xno" ; then
+        AC_MSG_WARN([Unable to find liblzma.])
+    fi
+fi
+
+if test "x$have_lzma" = "xyes"; then
+    AC_DEFINE(HAVE_LZMA,1,[Have LZMA])
+    TOR_LZMA_CFLAGS="${LZMA_CFLAGS}"
+    TOR_LZMA_LIBS="${LZMA_LIBS}"
+fi
+AC_SUBST(TOR_LZMA_CFLAGS)
+AC_SUBST(TOR_LZMA_LIBS)
+
 dnl ----------------------------------------------------------------------
 dnl Check if libcap is available for capabilities.
 
