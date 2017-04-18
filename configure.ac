@@ -764,6 +764,38 @@ fi
 AC_SUBST(TOR_LZMA_CFLAGS)
 AC_SUBST(TOR_LZMA_LIBS)
 
+dnl ------------------------------------------------------
+dnl Where we do we find zstd?
+
+AC_ARG_ENABLE(zstd,
+      AS_HELP_STRING(--enable-zstd, [enable support for the Zstandard compression scheme.]),
+      [case "${enableval}" in
+        "yes") zstd=true ;;
+        "no")  zstd=false ;;
+        * ) AC_MSG_ERROR(bad value for --enable-zstd) ;;
+      esac], [zstd=auto])
+
+if test "x$enable_zstd" = "xno"; then
+    have_zstd=no;
+else
+    PKG_CHECK_MODULES([ZSTD],
+                      [libzstd],
+                      have_zstd=yes,
+                      have_zstd=no)
+
+    if test "x$have_zstd" = "xno" ; then
+        AC_MSG_WARN([Unable to find libzstd.])
+    fi
+fi
+
+if test "x$have_zstd" = "xyes"; then
+    AC_DEFINE(HAVE_ZSTD,1,[Have Zstd])
+    TOR_ZSTD_CFLAGS="${ZSTD_CFLAGS}"
+    TOR_ZSTD_LIBS="${ZSTD_LIBS}"
+fi
+AC_SUBST(TOR_ZSTD_CFLAGS)
+AC_SUBST(TOR_ZSTD_LIBS)
+
 dnl ----------------------------------------------------------------------
 dnl Check if libcap is available for capabilities.
 
