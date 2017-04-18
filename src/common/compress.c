@@ -149,14 +149,22 @@ tor_compress_new(int compress, compress_method_t method,
   state = tor_malloc_zero(sizeof(tor_compress_state_t));
   state->method = method;
 
-  if (method == GZIP_METHOD || method == ZLIB_METHOD) {
-    tor_zlib_compress_state_t *zlib_state =
-      tor_zlib_compress_new(compress, method, compression_level);
+  switch (method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD: {
+      tor_zlib_compress_state_t *zlib_state =
+        tor_zlib_compress_new(compress, method, compression_level);
 
-    if (zlib_state == NULL)
+      if (zlib_state == NULL)
+        goto err;
+
+      state->u.zlib_state = zlib_state;
+      break;
+    }
+
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
       goto err;
-
-    state->u.zlib_state = zlib_state;
   }
 
   return state;
@@ -185,11 +193,19 @@ tor_compress_process(tor_compress_state_t *state,
 {
   tor_assert(state != NULL);
 
-  if (state->method == GZIP_METHOD || state->method == ZLIB_METHOD)
-    return tor_zlib_compress_process(state->u.zlib_state,
-                                     out, out_len, in, in_len,
-                                     finish);
+  switch (state->method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      return tor_zlib_compress_process(state->u.zlib_state,
+                                       out, out_len, in, in_len,
+                                       finish);
 
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+      goto err;
+  }
+
+ err:
   return TOR_COMPRESS_ERROR;
 }
 
@@ -200,8 +216,16 @@ tor_compress_free(tor_compress_state_t *state)
   if (state == NULL)
     return;
 
-  if (state->method == GZIP_METHOD || state->method == ZLIB_METHOD)
-    tor_zlib_compress_free(state->u.zlib_state);
+  switch (state->method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      tor_zlib_compress_free(state->u.zlib_state);
+      break;
+
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+      break;
+  }
 
   tor_free(state);
 }
@@ -212,9 +236,17 @@ tor_compress_state_size(const tor_compress_state_t *state)
 {
   tor_assert(state != NULL);
 
-  if (state->method == GZIP_METHOD || state->method == ZLIB_METHOD)
-    return tor_zlib_compress_state_size(state->u.zlib_state);
+  switch (state->method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      return tor_zlib_compress_state_size(state->u.zlib_state);
 
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+      goto err;
+  }
+
+ err:
   return 0;
 }
 
