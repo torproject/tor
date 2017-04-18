@@ -58,7 +58,9 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "command.h"
+#include "compress_lzma.h"
 #include "compress_zlib.h"
+#include "compress_zstd.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
@@ -2999,11 +3001,13 @@ tor_init(int argc, char *argv[])
     const char *version = get_version();
 
     log_notice(LD_GENERAL, "Tor %s running on %s with Libevent %s, "
-               "OpenSSL %s and Zlib %s.", version,
+               "OpenSSL %s, Zlib %s, Liblzma %s, and Libzstd %s.", version,
                get_uname(),
                tor_libevent_get_version_str(),
                crypto_openssl_get_version_str(),
-               tor_zlib_get_version_str());
+               tor_zlib_get_version_str(),
+               tor_lzma_get_version_str(),
+               tor_zstd_get_version_str());
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "
