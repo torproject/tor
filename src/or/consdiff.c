@@ -671,7 +671,7 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
    */
   i1=len1-1, i2=len2-1;
   char buf[128];
-  while (i1 > 0 || i2 > 0) {
+  while (i1 >= 0 || i2 >= 0) {
 
     int start1x, start2x, end1, end2, added, deleted;
 
