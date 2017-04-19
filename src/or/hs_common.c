@@ -15,11 +15,13 @@
 
 #include "config.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "hs_cache.h"
 #include "hs_common.h"
 #include "hs_service.h"
 #include "rendcommon.h"
 #include "rendservice.h"
+#include "router.h"
 #include "shared_random.h"
 
 /* Ed25519 Basepoint value. Taken from section 5 of
@@ -29,6 +31,48 @@ static const char *str_ed25519_basepoint =
   "454012693041857206046113283949847762202, "
   "463168356949264781694283940034751631413"
   "07993866256225615783033603165251855960)";
+
+/* Helper function: The key is a digest that we compare to a node_t object
+ * current hsdir_index. */
+static int
+compare_digest_to_current_hsdir_index(const void *_key, const void **_member)
+{
+  const char *key = _key;
+  const node_t *node = *_member;
+  return tor_memcmp(key, node->hsdir_index->current, DIGEST256_LEN);
+}
+
+/* Helper function: The key is a digest that we compare to a node_t object
+ * next hsdir_index. */
+static int
+compare_digest_to_next_hsdir_index(const void *_key, const void **_member)
+{
+  const char *key = _key;
+  const node_t *node = *_member;
+  return tor_memcmp(key, node->hsdir_index->next, DIGEST256_LEN);
+}
+
+/* Helper function: Compare two node_t objects current hsdir_index. */
+static int
+compare_node_current_hsdir_index(const void **a, const void **b)
+{
+  const node_t *node1= *a;
+  const node_t *node2 = *b;
+  return tor_memcmp(node1->hsdir_index->current,
+                    node2->hsdir_index->current,
+                    DIGEST256_LEN);
+}
+
+/* Helper function: Compare two node_t objects next hsdir_index. */
+static int
+compare_node_next_hsdir_index(const void **a, const void **b)
+{
+  const node_t *node1= *a;
+  const node_t *node2 = *b;
+  return tor_memcmp(node1->hsdir_index->next,
+                    node2->hsdir_index->next,
+                    DIGEST256_LEN);
+}
 
 /* Allocate and return a string containing the path to filename in directory.
  * This function will never return NULL. The caller must free this path. */
@@ -885,6 +929,114 @@ hs_get_hsdir_spread_store(void)
   /* The [1,128] range is a specification requirement. */
   return networkstatus_get_param(NULL, "hsdir_spread_store",
                                  HS_DEFAULT_HSDIR_SPREAD_STORE, 1, 128);
+}
+
+/* For a given blinded key and time period number, get the responsible HSDir
+ * and put their routerstatus_t object in the responsible_dirs list. If
+ * is_next_period is true, the next hsdir_index of the node_t is used. If
+ * is_client is true, the spread fetch consensus parameter is used else the
+ * spread store is used which is only for upload. This function can't fail but
+ * it is possible that the responsible_dirs list contains fewer nodes than
+ * expected.
+ *
+ * This function goes over the latest consensus routerstatus list and sorts it
+ * by their node_t hsdir_index then does a binary search to find the closest
+ * node. All of this makes it a bit CPU intensive so use it wisely. */
+void
+hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
+                          uint64_t time_period_num, int is_next_period,
+                          int is_client, smartlist_t *responsible_dirs)
+{
+  smartlist_t *sorted_nodes;
+  /* The compare function used for the smartlist bsearch. We have two
+   * different depending on is_next_period. */
+  int (*cmp_fct)(const void *, const void **);
+
+  tor_assert(blinded_pk);
+  tor_assert(responsible_dirs);
+
+  sorted_nodes = smartlist_new();
+
+  /* Add every node_t that support HSDir v3 for which we do have a valid
+   * hsdir_index already computed for them for this consensus. */
+  {
+    networkstatus_t *c = networkstatus_get_latest_consensus();
+    if (!c || smartlist_len(c->routerstatus_list) == 0) {
+      log_warn(LD_REND, "No valid consensus so we can't get the responsible "
+                        "hidden service directories.");
+      goto done;
+    }
+    SMARTLIST_FOREACH_BEGIN(c->routerstatus_list, const routerstatus_t *, rs) {
+      /* Even though this node_t object won't be modified and should be const,
+       * we can't add const object in a smartlist_t. */
+      node_t *n = node_get_mutable_by_id(rs->identity_digest);
+      tor_assert(n);
+      if (node_supports_v3_hsdir(n) && rs->is_hs_dir) {
+        if (BUG(n->hsdir_index == NULL)) {
+          continue;
+        }
+        smartlist_add(sorted_nodes, n);
+      }
+    } SMARTLIST_FOREACH_END(rs);
+  }
+  if (smartlist_len(sorted_nodes) == 0) {
+    log_warn(LD_REND, "No nodes found to be HSDir or supporting v3.");
+    goto done;
+  }
+
+  /* First thing we have to do is sort all node_t by hsdir_index. The
+   * is_next_period tells us if we want the current or the next one. Set the
+   * bsearch compare function also while we are at it. */
+  if (is_next_period) {
+    smartlist_sort(sorted_nodes, compare_node_next_hsdir_index);
+    cmp_fct = compare_digest_to_next_hsdir_index;
+  } else {
+    smartlist_sort(sorted_nodes, compare_node_current_hsdir_index);
+    cmp_fct = compare_digest_to_current_hsdir_index;
+  }
+
+  /* For all replicas, we'll select a set of HSDirs using the consensus
+   * parameters and the sorted list. The replica starting at value 1 is
+   * defined by the specification. */
+  for (int replica = 1; replica <= hs_get_hsdir_n_replicas(); replica++) {
+    int idx, start, found, n_added = 0;
+    uint8_t hs_index[DIGEST256_LEN] = {0};
+    /* Number of node to add to the responsible dirs list depends on if we are
+     * trying to fetch or store. A client always fetches. */
+    int n_to_add = (is_client) ? hs_get_hsdir_spread_fetch() :
+                                 hs_get_hsdir_spread_store();
+
+    /* Get the index that we should use to select the node. */
+    hs_build_hs_index(replica, blinded_pk, time_period_num, hs_index);
+    /* The compare function pointer has been set correctly earlier. */
+    start = idx = smartlist_bsearch_idx(sorted_nodes, hs_index, cmp_fct,
+                                        &found);
+    /* Getting the length of the list if no member is greater than the key we
+     * are looking for so start at the first element. */
+    if (idx == smartlist_len(sorted_nodes)) {
+      start = idx = 0;
+    }
+    while (n_added < n_to_add) {
+      const node_t *node = smartlist_get(sorted_nodes, idx);
+      /* If the node has already been selected which is possible between
+       * replicas, the specification says to skip over. */
+      if (!smartlist_contains(responsible_dirs, node->rs)) {
+        smartlist_add(responsible_dirs, node->rs);
+        ++n_added;
+      }
+      if (++idx == smartlist_len(sorted_nodes)) {
+        /* Wrap if we've reached the end of the list. */
+        idx = 0;
+      }
+      if (idx == start) {
+        /* We've gone over the whole list, stop and avoid infinite loop. */
+        break;
+      }
+    }
+  }
+
+ done:
+  smartlist_free(sorted_nodes);
 }
 
 /* Initialize the entire HS subsytem. This is called in tor_init() before any

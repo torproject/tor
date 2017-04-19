@@ -214,6 +214,10 @@ int32_t hs_get_hsdir_n_replicas(void);
 int32_t hs_get_hsdir_spread_fetch(void);
 int32_t hs_get_hsdir_spread_store(void);
 
+void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
+                               uint64_t time_period_num, int is_next_period,
+                               int is_client, smartlist_t *responsible_dirs);
+
 #ifdef HS_COMMON_PRIVATE
 
 #ifdef TOR_UNIT_TESTS
