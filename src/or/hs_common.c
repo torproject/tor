@@ -857,6 +857,36 @@ hs_get_previous_srv(uint64_t time_period_num)
   return sr_value;
 }
 
+/* Return the number of replicas defined by a consensus parameter or the
+ * default value. */
+int32_t
+hs_get_hsdir_n_replicas(void)
+{
+  /* The [1,16] range is a specification requirement. */
+  return networkstatus_get_param(NULL, "hsdir_n_replicas",
+                                 HS_DEFAULT_HSDIR_N_REPLICAS, 1, 16);
+}
+
+/* Return the spread fetch value defined by a consensus parameter or the
+ * default value. */
+int32_t
+hs_get_hsdir_spread_fetch(void)
+{
+  /* The [1,128] range is a specification requirement. */
+  return networkstatus_get_param(NULL, "hsdir_spread_fetch",
+                                 HS_DEFAULT_HSDIR_SPREAD_FETCH, 1, 128);
+}
+
+/* Return the spread store value defined by a consensus parameter or the
+ * default value. */
+int32_t
+hs_get_hsdir_spread_store(void)
+{
+  /* The [1,128] range is a specification requirement. */
+  return networkstatus_get_param(NULL, "hsdir_spread_store",
+                                 HS_DEFAULT_HSDIR_SPREAD_STORE, 1, 128);
+}
+
 /* Initialize the entire HS subsytem. This is called in tor_init() before any
  * torrc options are loaded. Only for >= v3. */
 void

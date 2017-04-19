@@ -113,6 +113,13 @@
 #define HS_SRV_DISASTER_PREFIX "shared-random-disaster"
 #define HS_SRV_DISASTER_PREFIX_LEN (sizeof(HS_SRV_DISASTER_PREFIX) - 1)
 
+/* Default value of number of hsdir replicas (hsdir_n_replicas). */
+#define HS_DEFAULT_HSDIR_N_REPLICAS 2
+/* Default value of hsdir spread store (hsdir_spread_store). */
+#define HS_DEFAULT_HSDIR_SPREAD_STORE 3
+/* Default value of hsdir spread fetch (hsdir_spread_fetch). */
+#define HS_DEFAULT_HSDIR_SPREAD_FETCH 3
+
 /* Type of authentication key used by an introduction point. */
 typedef enum {
   HS_AUTH_KEY_TYPE_LEGACY  = 1,
@@ -202,6 +209,10 @@ void hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
 void hs_build_hs_index(uint64_t replica,
                        const ed25519_public_key_t *blinded_pk,
                        uint64_t period_num, uint8_t *hs_index_out);
+
+int32_t hs_get_hsdir_n_replicas(void);
+int32_t hs_get_hsdir_spread_fetch(void);
+int32_t hs_get_hsdir_spread_store(void);
 
 #ifdef HS_COMMON_PRIVATE
 
