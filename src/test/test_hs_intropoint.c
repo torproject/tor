@@ -777,11 +777,11 @@ test_received_introduce1_handling(void *arg)
   {
     cell = helper_create_introduce1_cell();
     ssize_t request_len = trn_cell_introduce1_encoded_len(cell);
-    tt_size_op(request_len, OP_GT, 0);
+    tt_int_op((int)request_len, OP_GT, 0);
     request = tor_malloc_zero(request_len);
     ssize_t encoded_len =
       trn_cell_introduce1_encode(request, request_len, cell);
-    tt_size_op(encoded_len, OP_GT, 0);
+    tt_int_op((int)encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
     or_circuit_t *service_circ = helper_create_intro_circuit();
@@ -812,7 +812,7 @@ test_received_introduce1_handling(void *arg)
     request = tor_malloc_zero(request_len + 256);
     ssize_t encoded_len =
       trn_cell_introduce1_encode(request, request_len, cell);
-    tt_size_op(encoded_len, OP_GT, 0);
+    tt_int_op((int)encoded_len, OP_GT, 0);
 
     circ = helper_create_intro_circuit();
     or_circuit_t *service_circ = helper_create_intro_circuit();
