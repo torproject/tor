@@ -622,6 +622,8 @@ test_consdiff_gen_ed_diff(void *arg)
   tt_str_eq_line(".", smartlist_get(diff, 5));
   tt_str_eq_line("2d", smartlist_get(diff, 6));
 
+  smartlist_free(diff);
+
   smartlist_clear(cons1);
   smartlist_clear(cons2);
   consensus_split_lines(cons1, "B\n", area);
