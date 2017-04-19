@@ -12,6 +12,8 @@
 #ifndef TOR_DIRECTORY_H
 #define TOR_DIRECTORY_H
 
+#include "hs_ident.h"
+
 int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
@@ -71,6 +73,8 @@ void directory_request_set_if_modified_since(directory_request_t *req,
                                              time_t if_modified_since);
 void directory_request_set_rend_query(directory_request_t *req,
                                       const rend_data_t *query);
+void directory_request_set_hs_ident(directory_request_t *req,
+                                    const hs_ident_dir_conn_t *ident);
 
 void directory_request_set_routerstatus(directory_request_t *req,
                                         const routerstatus_t *rs);
