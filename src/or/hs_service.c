@@ -14,6 +14,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "directory.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -172,10 +173,10 @@ static void
 set_service_default_config(hs_service_config_t *c,
                            const or_options_t *options)
 {
+  (void) options;
   tor_assert(c);
   c->ports = smartlist_new();
   c->directory_path = NULL;
-  c->descriptor_post_period = options->RendPostPeriod;
   c->max_streams_per_rdv_circuit = 0;
   c->max_streams_close_circuit = 0;
   c->num_intro_points = NUM_INTRO_POINTS_DEFAULT;
@@ -532,6 +533,23 @@ get_intro_circuit(const hs_service_intro_point_t *ip)
   return circ;
 }
 
+/* Return the number of introduction points that are established for the
+ * given descriptor. */
+static unsigned int
+count_desc_circuit_established(const hs_service_descriptor_t *desc)
+{
+  unsigned int count = 0;
+
+  tor_assert(desc);
+
+  DIGEST256MAP_FOREACH(desc->intro_points.map, key,
+                       const hs_service_intro_point_t *, ip) {
+    count += ip->circuit_established;
+  } DIGEST256MAP_FOREACH_END;
+
+  return count;
+}
+
 /* Close all rendezvous circuits for the given service. */
 static void
 close_service_rp_circuits(hs_service_t *service)
@@ -867,6 +885,8 @@ service_descriptor_free(hs_service_descriptor_t *desc)
   hs_descriptor_free(desc->desc);
   memwipe(&desc->signing_kp, 0, sizeof(desc->signing_kp));
   memwipe(&desc->blinded_kp, 0, sizeof(desc->blinded_kp));
+  SMARTLIST_FOREACH(desc->hsdir_missing_info, char *, id, tor_free(id));
+  smartlist_free(desc->hsdir_missing_info);
   /* Cleanup all intro points. */
   digest256map_free(desc->intro_points.map, service_intro_point_free_);
   tor_free(desc);
@@ -880,6 +900,7 @@ service_descriptor_new(void)
   sdesc->desc = tor_malloc_zero(sizeof(hs_descriptor_t));
   /* Initialize the intro points map. */
   sdesc->intro_points.map = digest256map_new();
+  sdesc->hsdir_missing_info = smartlist_new();
   return sdesc;
 }
 
@@ -1140,6 +1161,7 @@ build_service_descriptor(hs_service_t *service, time_t now,
   tor_assert(desc_out);
 
   desc = service_descriptor_new();
+  desc->time_period_num = time_period_num;
 
   /* Create the needed keys so we can setup the descriptor content. */
   if (build_service_desc_keys(service, desc, time_period_num) < 0) {
@@ -1315,6 +1337,11 @@ pick_needed_intro_points(hs_service_t *service,
     /* Valid intro point object, add it to the descriptor current map. */
     service_intro_point_add(desc->intro_points.map, ip);
   }
+  /* We've successfully picked all our needed intro points thus none are
+   * missing which will tell our upload process to expect the number of
+   * circuits to be the number of configured intro points circuits and not the
+   * number of intro points object that we have. */
+  desc->missing_intro_points = 0;
 
   /* Success. */
  done:
@@ -1356,6 +1383,13 @@ update_service_descriptor(hs_service_t *service,
        * confirmation that the circuits are opened and ready. However,
        * indicate that this descriptor should be uploaded from now on. */
       desc->next_upload_time = now;
+    }
+    /* Were we able to pick all the intro points we needed? If not, we'll
+     * flag the descriptor that it's missing intro points because it
+     * couldn't pick enough which will trigger a descriptor upload. */
+    if ((num_new_intro_points + num_intro_points) <
+        service->config.num_intro_points) {
+      desc->missing_intro_points = 1;
     }
   }
 }
@@ -1710,6 +1744,192 @@ run_build_circuit_event(time_t now)
   } FOR_EACH_SERVICE_END;
 }
 
+/* Encode and sign the service descriptor desc and upload it to the given
+ * hidden service directory.  This does nothing if PublishHidServDescriptors
+ * is false. */
+static void
+upload_descriptor_to_hsdir(const hs_service_t *service,
+                           hs_service_descriptor_t *desc, const node_t *hsdir)
+{
+  char version_str[4] = {0}, *encoded_desc = NULL;
+  directory_request_t *dir_req;
+  hs_ident_dir_conn_t ident;
+
+  tor_assert(service);
+  tor_assert(desc);
+  tor_assert(hsdir);
+
+  memset(&ident, 0, sizeof(ident));
+
+  /* Let's avoid doing that if tor is configured to not publish. */
+  if (!get_options()->PublishHidServDescriptors) {
+    log_info(LD_REND, "Service %s not publishing descriptor. "
+                      "PublishHidServDescriptors is set to 1.",
+             safe_str_client(service->onion_address));
+    goto end;
+  }
+
+  /* First of all, we'll encode the descriptor. This should NEVER fail but
+   * just in case, let's make sure we have an actual usable descriptor. */
+  if (BUG(hs_desc_encode_descriptor(desc->desc, &desc->signing_kp,
+                                    &encoded_desc) < 0)) {
+    goto end;
+  }
+
+  /* Setup the connection identifier. */
+  ed25519_pubkey_copy(&ident.identity_pk, &service->keys.identity_pk);
+  /* This is our resource when uploading which is used to construct the URL
+   * with the version number: "/tor/hs/<version>/publish". */
+  tor_snprintf(version_str, sizeof(version_str), "%u",
+               service->config.version);
+
+  /* Build the directory request for this HSDir. */
+  dir_req = directory_request_new(DIR_PURPOSE_UPLOAD_HSDESC);
+  directory_request_set_routerstatus(dir_req, hsdir->rs);
+  directory_request_set_indirection(dir_req, DIRIND_ANONYMOUS);
+  directory_request_set_resource(dir_req, version_str);
+  directory_request_set_payload(dir_req, encoded_desc,
+                                strlen(encoded_desc));
+  /* The ident object is copied over the directory connection object once
+   * the directory request is initiated. */
+  directory_request_set_hs_ident(dir_req, &ident);
+
+  /* Initiate the directory request to the hsdir.*/
+  directory_initiate_request(dir_req);
+  directory_request_free(dir_req);
+
+  /* Logging so we know where it was sent. */
+  {
+    int is_next_desc = (service->desc_next == desc);
+    const uint8_t *index = (is_next_desc) ? hsdir->hsdir_index->next :
+                                            hsdir->hsdir_index->current;
+    log_info(LD_REND, "Service %s %s descriptor of revision %" PRIu64
+                      " initiated upload request to %s with index %s",
+             safe_str_client(service->onion_address),
+             (is_next_desc) ? "next" : "current",
+             desc->desc->plaintext_data.revision_counter,
+             safe_str_client(node_describe(hsdir)),
+             safe_str_client(hex_str((const char *) index, 32)));
+  }
+
+  /* XXX: Inform control port of the upload event (#20699). */
+ end:
+  tor_free(encoded_desc);
+  return;
+}
+
+/* Encode and sign the service descriptor desc and upload it to the
+ * responsible hidden service directories. If for_next_period is true, the set
+ * of directories are selected using the next hsdir_index. This does nothing
+ * if PublishHidServDescriptors is false. */
+static void
+upload_descriptor_to_all(const hs_service_t *service,
+                         hs_service_descriptor_t *desc, int for_next_period)
+{
+  smartlist_t *responsible_dirs = NULL;
+
+  tor_assert(service);
+  tor_assert(desc);
+
+  /* Get our list of responsible HSDir. */
+  responsible_dirs = smartlist_new();
+  /* The parameter 0 means that we aren't a client so tell the function to use
+   * the spread store consensus paremeter. */
+  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
+                            for_next_period, 0, responsible_dirs);
+
+  /* For each responsible HSDir we have, initiate an upload command. */
+  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *,
+                          hsdir_rs) {
+    const node_t *hsdir_node = node_get_by_id(hsdir_rs->identity_digest);
+    /* Getting responsible hsdir implies that the node_t object exists for the
+     * routerstatus_t found in the consensus else we have a problem. */
+    tor_assert(hsdir_node);
+    /* Do not upload to an HSDir we don't have a descriptor for. */
+    if (!node_has_descriptor(hsdir_node)) {
+      log_info(LD_REND, "Missing descriptor for HSDir %s. Not uploading "
+                        "descriptor. We'll try later once we have it.",
+               safe_str_client(node_describe(hsdir_node)));
+      /* Once we get new directory information, this HSDir will be retried if
+       * we ever get the descriptor. */
+      smartlist_add(desc->hsdir_missing_info,
+                    tor_memdup(hsdir_rs->identity_digest, DIGEST_LEN));
+      continue;
+    }
+
+    /* Upload this descriptor to the chosen directory. */
+    upload_descriptor_to_hsdir(service, desc, hsdir_node);
+  } SMARTLIST_FOREACH_END(hsdir_rs);
+
+  /* Set the next upload time for this descriptor. Even if we are configured
+   * to not upload, we still want to follow the right cycle of life for this
+   * descriptor. */
+  desc->next_upload_time =
+    (time(NULL) + crypto_rand_int_range(HS_SERVICE_NEXT_UPLOAD_TIME_MIN,
+                                        HS_SERVICE_NEXT_UPLOAD_TIME_MAX));
+  {
+    char fmt_next_time[ISO_TIME_LEN+1];
+    format_local_iso_time(fmt_next_time, desc->next_upload_time);
+    log_debug(LD_REND, "Service %s set to upload a descriptor at %s",
+              safe_str_client(service->onion_address), fmt_next_time);
+  }
+
+  /* Increment the revision counter so the next update (which will trigger an
+   * upload) will have the right value. We do this at this stage to only do it
+   * once because a descriptor can have many updates before being uploaded. By
+   * doing it at upload, we are sure to only increment by 1 and thus avoid
+   * leaking how many operations we made on the descriptor from the previous
+   * one before uploading. */
+  desc->desc->plaintext_data.revision_counter += 1;
+
+  smartlist_free(responsible_dirs);
+  return;
+}
+
+/* Return 1 if the given descriptor from the given service can be uploaded
+ * else return 0 if it can not. */
+static int
+should_service_upload_descriptor(const hs_service_t *service,
+                              const hs_service_descriptor_t *desc, time_t now)
+{
+  unsigned int num_intro_points;
+
+  tor_assert(service);
+  tor_assert(desc);
+
+  /* If this descriptors has missing intro points that is that it couldn't get
+   * them all when it was time to pick them, it means that we should upload
+   * instead of waiting an arbitrary amount of time breaking the service.
+   * Else, if we have no missing intro points, we use the value taken from the
+   * service configuration. */
+  (desc->missing_intro_points) ?
+    (num_intro_points = digest256map_size(desc->intro_points.map)) :
+    (num_intro_points = service->config.num_intro_points);
+
+  /* This means we tried to pick intro points but couldn't get any so do not
+   * upload descriptor in this case. We need at least one for the service to
+   * be reachable. */
+  if (desc->missing_intro_points && num_intro_points == 0) {
+    goto cannot;
+  }
+
+  /* Check if all our introduction circuit have been established for all the
+   * intro points we have selected. */
+  if (count_desc_circuit_established(desc) != num_intro_points) {
+    goto cannot;
+  }
+
+  /* Is it the right time to upload? */
+  if (desc->next_upload_time > now) {
+    goto cannot;
+  }
+
+  /* Can upload! */
+  return 1;
+ cannot:
+  return 0;
+}
+
 /* Scheduled event run from the main loop. Try to upload the descriptor for
  * each service. */
 static void
@@ -1724,10 +1944,35 @@ run_upload_descriptor_event(time_t now)
 
   /* Run v3+ check. */
   FOR_EACH_SERVICE_BEGIN(service) {
-    /* XXX: Upload if needed the descriptor(s). Update next upload time. */
-    /* XXX: Build the descriptor intro points list with
-     * build_desc_intro_points() once we have enough circuit opened. */
-    build_desc_intro_points(service, NULL, now);
+    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+      int for_next_period = 0;
+
+      /* Can this descriptor be uploaed? */
+      if (!should_service_upload_descriptor(service, desc, now)) {
+        continue;
+      }
+
+      log_info(LD_REND, "Initiating upload for hidden service %s descriptor "
+                        "for service %s with %u/%u introduction points%s.",
+               (desc == service->desc_current) ? "current" : "next",
+               safe_str_client(service->onion_address),
+               digest256map_size(desc->intro_points.map),
+               service->config.num_intro_points,
+               (desc->missing_intro_points) ? " (couldn't pick more)" : "");
+
+      /* At this point, we have to upload the descriptor so start by building
+       * the intro points descriptor section which we are now sure to be
+       * accurate because all circuits have been established. */
+      build_desc_intro_points(service, desc, now);
+
+      /* If the service is in the overlap period and this descriptor is the
+       * next one, it has to be uploaded for the next time period meaning
+       * we'll use the next node_t hsdir_index to pick the HSDirs. */
+      if (desc == service->desc_next) {
+        for_next_period = 1;
+      }
+      upload_descriptor_to_all(service, desc, for_next_period);
+    } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
 }
 
@@ -1926,9 +2171,80 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
   return -1;
 }
 
+/* For a given service and a descriptor of that service, consider retrying to
+ * upload the descriptor to any directories from which we had missing
+ * information when originally tried to be uploaded. This is called when our
+ * directory information has changed. */
+static void
+consider_hsdir_retry(const hs_service_t *service,
+                     hs_service_descriptor_t *desc)
+{
+  smartlist_t *responsible_dirs = NULL;
+  smartlist_t *still_missing_dirs = NULL;
+
+  tor_assert(service);
+  tor_assert(desc);
+
+  responsible_dirs = smartlist_new();
+  still_missing_dirs = smartlist_new();
+
+  /* We first need to get responsible directories from the latest consensus so
+   * we can then make sure that the node that we were missing information for
+   * is still responsible for this descriptor. */
+  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
+                            service->desc_next == desc, 0, responsible_dirs);
+
+  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, rs) {
+    const node_t *node;
+    const char *id = rs->identity_digest;
+    if (!smartlist_contains_digest(desc->hsdir_missing_info, id)) {
+      continue;
+    }
+    /* We do need a node_t object and descriptor to perform an upload. If
+     * found, we remove the id from the missing dir list else we add it to the
+     * still missing dir list to keep track of id that are still missing. */
+    node = node_get_by_id(id);
+    if (node && node_has_descriptor(node)) {
+      upload_descriptor_to_hsdir(service, desc, node);
+      smartlist_remove(desc->hsdir_missing_info, id);
+    } else {
+      smartlist_add(still_missing_dirs, tor_memdup(id, DIGEST_LEN));
+    }
+  } SMARTLIST_FOREACH_END(rs);
+
+  /* Switch the still missing dir list with the current missing dir list in
+   * the descriptor. It is possible that the list ends up empty which is what
+   * we want if we have no more missing dir. */
+  SMARTLIST_FOREACH(desc->hsdir_missing_info, char *, id, tor_free(id));
+  smartlist_free(desc->hsdir_missing_info);
+  desc->hsdir_missing_info = still_missing_dirs;
+
+  /* No ownership of the routerstatus_t object in this list. */
+  smartlist_free(responsible_dirs);
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Called when our internal view of the directory has changed. We might have
+ * new descriptors for hidden service directories that we didn't have before
+ * so try them if it's the case. */
+void
+hs_service_dir_info_changed(void)
+{
+  /* For each service we have, check every descriptor and consider retrying to
+   * upload it to directories that we might have had missing information
+   * previously that is missing a router descriptor. */
+  FOR_EACH_SERVICE_BEGIN(service) {
+    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+      /* This cleans up the descriptor missing hsdir information list if a
+       * successful upload is made or if any of the directory aren't
+       * responsible anymore for the service descriptor. */
+      consider_hsdir_retry(service, desc);
+    } FOR_EACH_DESCRIPTOR_END;
+  } FOR_EACH_SERVICE_END;
+}
 
 /* Called when we get an INTRODUCE2 cell on the circ. Respond to the cell and
  * launch a circuit to the rendezvous point. */

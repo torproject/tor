@@ -25,6 +25,11 @@
  * present. */
 #define HS_SERVICE_DEFAULT_VERSION HS_VERSION_TWO
 
+/* As described in the specification, service publishes their next descriptor
+ * at a random time between those two values (in seconds). */
+#define HS_SERVICE_NEXT_UPLOAD_TIME_MIN (60 * 60)
+#define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (120 * 60)
+
 /* Service side introduction point. */
 typedef struct hs_service_intro_point_t {
   /* Top level intropoint "shared" data between client/service. */
@@ -106,6 +111,17 @@ typedef struct hs_service_descriptor_t {
 
   /* The time period number this descriptor has been created for. */
   uint64_t time_period_num;
+
+  /* True iff we have missing intro points for this descriptor because we
+   * couldn't pick any nodes. */
+  unsigned int missing_intro_points : 1;
+
+  /* List of hidden service directories node_t object to which we couldn't
+   * upload this descriptor because we didn't have its router descriptor at
+   * the time. If this list is non-empty, only the relays in this list are
+   * re-tried to upload this descriptor when our directory information have
+   * been updated. */
+  smartlist_t *hsdir_missing_info;
 } hs_service_descriptor_t;
 
 /* Service key material. */
@@ -133,10 +149,6 @@ typedef struct hs_service_config_t {
   /* Path on the filesystem where the service persistent data is stored. NULL
    * if the service is ephemeral. Specified by HiddenServiceDir option. */
   char *directory_path;
-
-  /* The time period after which a descriptor is uploaded to the directories
-   * in seconds. Specified by RendPostPeriod option. */
-  uint32_t descriptor_post_period;
 
   /* The maximum number of simultaneous streams per rendezvous circuit that
    * are allowed to be created. No limit if 0. Specified by
@@ -237,6 +249,7 @@ void hs_service_free(hs_service_t *service);
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
 
+void hs_service_dir_info_changed(void);
 void hs_service_run_scheduled_events(time_t now);
 void hs_service_circuit_has_opened(origin_circuit_t *circ);
 int hs_service_receive_intro_established(origin_circuit_t *circ,
