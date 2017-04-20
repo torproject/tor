@@ -58,9 +58,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "command.h"
-#include "compress_lzma.h"
-#include "compress_zlib.h"
-#include "compress_zstd.h"
+#include "compress.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
@@ -3005,9 +3003,12 @@ tor_init(int argc, char *argv[])
                get_uname(),
                tor_libevent_get_version_str(),
                crypto_openssl_get_version_str(),
-               tor_zlib_get_version_str(),
-               tor_lzma_get_version_str(),
-               tor_zstd_get_version_str());
+               tor_compress_supports_method(ZLIB_METHOD) ?
+                 tor_compress_version_str(ZLIB_METHOD) : "N/A",
+               tor_compress_supports_method(LZMA_METHOD) ?
+                 tor_compress_version_str(LZMA_METHOD) : "N/A",
+               tor_compress_supports_method(ZSTD_METHOD) ?
+                 tor_compress_version_str(ZSTD_METHOD) : "N/A");
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "

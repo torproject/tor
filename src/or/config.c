@@ -70,9 +70,6 @@
 #include "circuitmux_ewma.h"
 #include "circuitstats.h"
 #include "compress.h"
-#include "compress_lzma.h"
-#include "compress_zlib.h"
-#include "compress_zstd.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
@@ -4952,15 +4949,21 @@ options_init_from_torrc(int argc, char **argv)
     printf("OpenSSL \t\t%-15s\t\t%s\n",
                       crypto_openssl_get_header_version_str(),
                       crypto_openssl_get_version_str());
-    printf("Zlib    \t\t%-15s\t\t%s\n",
-                      tor_zlib_get_header_version_str(),
-                      tor_zlib_get_version_str());
-    printf("Liblzma \t\t%-15s\t\t%s\n",
-                      tor_lzma_get_header_version_str(),
-                      tor_lzma_get_version_str());
-    printf("Libzstd \t\t%-15s\t\t%s\n",
-                      tor_zstd_get_header_version_str(),
-                      tor_zstd_get_version_str());
+    if (tor_compress_supports_method(ZLIB_METHOD)) {
+      printf("Zlib    \t\t%-15s\t\t%s\n",
+                        tor_compress_version_str(ZLIB_METHOD),
+                        tor_compress_header_version_str(ZLIB_METHOD));
+    }
+    if (tor_compress_supports_method(LZMA_METHOD)) {
+      printf("Liblzma \t\t%-15s\t\t%s\n",
+                        tor_compress_version_str(LZMA_METHOD),
+                        tor_compress_header_version_str(LZMA_METHOD));
+    }
+    if (tor_compress_supports_method(ZSTD_METHOD)) {
+      printf("Libzstd \t\t%-15s\t\t%s\n",
+                        tor_compress_version_str(ZSTD_METHOD),
+                        tor_compress_header_version_str(ZSTD_METHOD));
+    }
     //TODO: Hex versions?
     exit(0);
   }
