@@ -80,16 +80,19 @@ tor_compress(char **out, size_t *out_len,
              const char *in, size_t in_len,
              compress_method_t method)
 {
-  if (method == GZIP_METHOD || method == ZLIB_METHOD)
-    return tor_zlib_compress(out, out_len, in, in_len, method);
-
-  if (method == LZMA_METHOD)
-    return tor_lzma_compress(out, out_len, in, in_len, method);
-
-  if (method == ZSTD_METHOD)
-    return tor_zstd_compress(out, out_len, in, in_len, method);
-
-  return -1;
+  switch (method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      return tor_zlib_compress(out, out_len, in, in_len, method);
+    case LZMA_METHOD:
+      return tor_lzma_compress(out, out_len, in, in_len, method);
+    case ZSTD_METHOD:
+      return tor_zstd_compress(out, out_len, in, in_len, method);
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+    default:
+      return -1;
+  }
 }
 
 /** Given zero or more zlib-compressed or gzip-compressed strings of
@@ -110,25 +113,28 @@ tor_uncompress(char **out, size_t *out_len,
                int complete_only,
                int protocol_warn_level)
 {
-  if (method == GZIP_METHOD || method == ZLIB_METHOD)
-    return tor_zlib_uncompress(out, out_len, in, in_len,
-                               method,
-                               complete_only,
-                               protocol_warn_level);
-
-  if (method == LZMA_METHOD)
-    return tor_lzma_uncompress(out, out_len, in, in_len,
-                               method,
-                               complete_only,
-                               protocol_warn_level);
-
-  if (method == ZSTD_METHOD)
-    return tor_zstd_uncompress(out, out_len, in, in_len,
-                               method,
-                               complete_only,
-                               protocol_warn_level);
-
-  return -1;
+  switch (method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      return tor_zlib_uncompress(out, out_len, in, in_len,
+                                 method,
+                                 complete_only,
+                                 protocol_warn_level);
+    case LZMA_METHOD:
+      return tor_lzma_uncompress(out, out_len, in, in_len,
+                                 method,
+                                 complete_only,
+                                 protocol_warn_level);
+    case ZSTD_METHOD:
+      return tor_zstd_uncompress(out, out_len, in, in_len,
+                                 method,
+                                 complete_only,
+                                 protocol_warn_level);
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+    default:
+      return -1;
+  }
 }
 
 /** Try to tell whether the <b>in_len</b>-byte string in <b>in</b> is likely
