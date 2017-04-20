@@ -154,6 +154,25 @@ detect_compression_method(const char *in, size_t in_len)
   }
 }
 
+/** Return 1 if a given <b>method</b> is supported; otherwise 0. */
+int
+tor_compress_supports_method(compress_method_t method)
+{
+  switch (method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      return tor_zlib_method_supported();
+    case LZMA_METHOD:
+      return tor_lzma_method_supported();
+    case ZSTD_METHOD:
+      return tor_zstd_method_supported();
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+    default:
+      return 0;
+  }
+}
+
 /** Return the approximate number of bytes allocated for all
  * supported compression schemas. */
 size_t

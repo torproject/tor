@@ -26,6 +26,17 @@
 /** Total number of bytes allocated for Zstandard state. */
 static size_t total_zstd_allocation = 0;
 
+/** Return 1 if Zstandard compression is supported; otherwise 0. */
+int
+tor_zstd_method_supported(void)
+{
+#ifdef HAVE_ZSTD
+  return 1;
+#else
+  return 0;
+#endif
+}
+
 /** Return a string representation of the version of the currently running
  * version of libzstd. */
 const char *

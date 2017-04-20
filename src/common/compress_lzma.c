@@ -61,6 +61,17 @@ lzma_error_str(lzma_ret error)
 }
 #endif // HAVE_LZMA.
 
+/** Return 1 if LZMA compression is supported; otherwise 0. */
+int
+tor_lzma_method_supported(void)
+{
+#ifdef HAVE_LZMA
+  return 1;
+#else
+  return 0;
+#endif
+}
+
 /** Return a string representation of the version of the currently running
  * version of liblzma. */
 const char *

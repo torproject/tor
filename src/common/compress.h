@@ -13,7 +13,8 @@
 
 /** Enumeration of what kind of compression to use.  Only ZLIB_METHOD and
  * GZIP_METHOD is guaranteed to be supported by the compress/uncompress
- * functions here. */
+ * functions here. Call tor_compress_supports_method() to check if a given
+ * compression schema is supported by Tor. */
 typedef enum {
   NO_METHOD=0,
   GZIP_METHOD=1,
@@ -50,6 +51,9 @@ tor_compress_memory_level(compression_level_t level);
 
 int
 tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
+
+int
+tor_compress_supports_method(compress_method_t method);
 
 size_t
 tor_compress_get_total_allocation(void);

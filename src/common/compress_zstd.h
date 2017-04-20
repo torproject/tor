@@ -11,6 +11,9 @@
 #ifndef TOR_COMPRESS_ZSTD_H
 #define TOR_COMPRESS_ZSTD_H
 
+int
+tor_zstd_method_supported(void);
+
 const char *
 tor_zstd_get_version_str(void);
 

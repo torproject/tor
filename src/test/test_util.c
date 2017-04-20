@@ -2252,6 +2252,9 @@ test_util_gzip(void *arg)
   tor_compress_state_t *state = NULL;
 
   (void)arg;
+  tt_assert(tor_compress_supports_method(GZIP_METHOD));
+  tt_assert(tor_compress_supports_method(ZLIB_METHOD));
+
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
@@ -2414,6 +2417,8 @@ test_util_lzma(void *arg)
   tor_compress_state_t *state = NULL;
 
   (void)arg;
+  tt_assert(tor_compress_supports_method(LZMA_METHOD));
+
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
@@ -2507,6 +2512,10 @@ test_util_lzma(void *arg)
   tor_free(buf1);
 #else
   (void)arg;
+  tt_assert(! tor_compress_supports_method(LZMA_METHOD));
+
+ done:
+  ;
 #endif // HAVE_LZMA.
 }
 
@@ -2520,6 +2529,8 @@ test_util_zstd(void *arg)
   tor_compress_state_t *state = NULL;
 
   (void)arg;
+  tt_assert(tor_compress_supports_method(ZSTD_METHOD));
+
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
@@ -2613,6 +2624,10 @@ test_util_zstd(void *arg)
   tor_free(buf1);
 #else
   (void)arg;
+  tt_assert(! tor_compress_supports_method(ZSTD_METHOD));
+
+ done:
+  ;
 #endif // HAVE_ZSTD.
 }
 

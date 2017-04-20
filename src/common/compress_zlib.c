@@ -64,6 +64,16 @@ method_bits(compress_method_t method, compression_level_t level)
   }
 }
 
+/** Return 1 if zlib/gzip compression is supported; otherwise 0. */
+int
+tor_zlib_method_supported(void)
+{
+  /* We currently always support zlib/gzip, but we keep this function around in
+   * case we some day decide to deprecate zlib/gzip support.
+   */
+  return 1;
+}
+
 /** Return a string representation of the version of the currently running
  * version of zlib. */
 const char *
