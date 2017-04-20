@@ -55,6 +55,12 @@ tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
 int
 tor_compress_supports_method(compress_method_t method);
 
+const char *
+tor_compress_version_str(compress_method_t method);
+
+const char *
+tor_compress_header_version_str(compress_method_t method);
+
 size_t
 tor_compress_get_total_allocation(void);
 

@@ -173,6 +173,48 @@ tor_compress_supports_method(compress_method_t method)
   }
 }
 
+/** Return a string representation of the version of the library providing the
+ * compression method given in <b>method</b>. Returns NULL if <b>method</b> is
+ * unknown or unsupported. */
+const char *
+tor_compress_version_str(compress_method_t method)
+{
+  switch (method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      return tor_zlib_get_version_str();
+    case LZMA_METHOD:
+      return tor_lzma_get_version_str();
+    case ZSTD_METHOD:
+      return tor_zstd_get_version_str();
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+    default:
+      return NULL;
+  }
+}
+
+/** Return a string representation of the version of the library, found at
+ * compile time, providing the compression method given in <b>method</b>.
+ * Returns NULL if <b>method</b> is unknown or unsupported. */
+const char *
+tor_compress_header_version_str(compress_method_t method)
+{
+  switch (method) {
+    case GZIP_METHOD:
+    case ZLIB_METHOD:
+      return tor_zlib_get_header_version_str();
+    case LZMA_METHOD:
+      return tor_lzma_get_header_version_str();
+    case ZSTD_METHOD:
+      return tor_zstd_get_header_version_str();
+    case NO_METHOD:
+    case UNKNOWN_METHOD:
+    default:
+      return NULL;
+  }
+}
+
 /** Return the approximate number of bytes allocated for all
  * supported compression schemas. */
 size_t

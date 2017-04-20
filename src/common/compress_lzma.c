@@ -73,26 +73,26 @@ tor_lzma_method_supported(void)
 }
 
 /** Return a string representation of the version of the currently running
- * version of liblzma. */
+ * version of liblzma. Returns NULL if LZMA is unsupported. */
 const char *
 tor_lzma_get_version_str(void)
 {
 #ifdef HAVE_LZMA
   return lzma_version_string();
 #else
-  return "N/A";
+  return NULL;
 #endif
 }
 
-/** Return a string representation of the version of the version of liblzma
- * used at compilation. */
+/** Return a string representation of the version of liblzma used at
+ * compilation time. Returns NULL if LZMA is unsupported. */
 const char *
 tor_lzma_get_header_version_str(void)
 {
 #ifdef HAVE_LZMA
   return LZMA_VERSION_STRING;
 #else
-  return "N/A";
+  return NULL;
 #endif
 }
 

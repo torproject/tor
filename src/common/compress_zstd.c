@@ -38,7 +38,7 @@ tor_zstd_method_supported(void)
 }
 
 /** Return a string representation of the version of the currently running
- * version of libzstd. */
+ * version of libzstd. Returns NULL if Zstandard is unsupported. */
 const char *
 tor_zstd_get_version_str(void)
 {
@@ -55,19 +55,19 @@ tor_zstd_get_version_str(void)
 
   return version_str;
 #else
-  return "N/A";
+  return NULL;
 #endif
 }
 
 /** Return a string representation of the version of the version of libzstd
- * used at compilation. */
+ * used at compilation time. Returns NULL if Zstandard is unsupported. */
 const char *
 tor_zstd_get_header_version_str(void)
 {
 #ifdef HAVE_ZSTD
   return ZSTD_VERSION_STRING;
 #else
-  return "N/A";
+  return NULL;
 #endif
 }
 
