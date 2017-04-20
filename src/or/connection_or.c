@@ -1976,7 +1976,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   if (conn->chan) {
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
-    if (conn->chan->base_.currently_padding) {
+    if (TLS_CHAN_TO_BASE(conn->chan)->currently_padding) {
       rep_hist_padding_count_write(PADDING_TYPE_ENABLED_TOTAL);
       if (cell->command == CELL_PADDING)
         rep_hist_padding_count_write(PADDING_TYPE_ENABLED_CELL);

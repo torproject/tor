@@ -1114,13 +1114,13 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   entry_guards_note_internet_connectivity(get_guard_selection_info());
   rep_hist_padding_count_read(PADDING_TYPE_TOTAL);
 
-  if (chan->base_.currently_padding)
+  if (TLS_CHAN_TO_BASE(chan)->currently_padding)
     rep_hist_padding_count_read(PADDING_TYPE_ENABLED_TOTAL);
 
   switch (cell->command) {
     case CELL_PADDING:
       rep_hist_padding_count_read(PADDING_TYPE_CELL);
-      if (chan->base_.currently_padding)
+      if (TLS_CHAN_TO_BASE(chan)->currently_padding)
         rep_hist_padding_count_read(PADDING_TYPE_ENABLED_CELL);
       ++stats_n_padding_cells_processed;
       /* do nothing */
@@ -1591,11 +1591,11 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
 
     /* We set this after sending the verions cell. */
     /*XXXXX symbolic const.*/
-    chan->base_.wide_circ_ids =
+    TLS_CHAN_TO_BASE(chan)->wide_circ_ids =
       chan->conn->link_proto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
-    chan->conn->wide_circ_ids = chan->base_.wide_circ_ids;
+    chan->conn->wide_circ_ids = TLS_CHAN_TO_BASE(chan)->wide_circ_ids;
 
-    chan->base_.padding_enabled =
+    TLS_CHAN_TO_BASE(chan)->padding_enabled =
       chan->conn->link_proto >= MIN_LINK_PROTO_FOR_CHANNEL_PADDING;
 
     if (send_certs) {
@@ -1758,7 +1758,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
     if (!get_options()->BridgeRelay && me &&
         get_uint32(my_addr_ptr) == htonl(me->addr)) {
-      chan->base_.is_canonical_to_peer = 1;
+      TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
     }
 
   } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
@@ -1767,7 +1767,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
     if (!get_options()->BridgeRelay && me &&
         !tor_addr_is_null(&me->ipv6_addr) &&
         tor_addr_eq(&my_apparent_addr, &me->ipv6_addr)) {
-      chan->base_.is_canonical_to_peer = 1;
+      TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
     }
   }
 
@@ -1800,12 +1800,14 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
     --n_other_addrs;
   }
 
-  if (me && !chan->base_.is_canonical_to_peer && chan->conn->is_canonical) {
+  if (me && !TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer &&
+      channel_is_canonical(TLS_CHAN_TO_BASE(chan))) {
     log_info(LD_OR,
              "We made a connection to a relay at %s (fp=%s) but we think "
              "they will not consider this connection canonical. They "
              "think we are at %s, but we think its %s.",
-             safe_str(chan->base_.get_remote_descr(&chan->base_, 0)),
+             safe_str(TLS_CHAN_TO_BASE(chan)->get_remote_descr(TLS_CHAN_TO_BASE(chan),
+                      0)),
              safe_str(hex_str(chan->conn->identity_digest, DIGEST_LEN)),
              safe_str(tor_addr_is_null(&my_apparent_addr) ?
              "<none>" : fmt_and_decorate_addr(&my_apparent_addr)),

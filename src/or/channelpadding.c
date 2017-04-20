@@ -47,6 +47,28 @@ static int consensus_nf_pad_before_usage;
 /** Should we pad relay-to-relay connections? */
 static int consensus_nf_pad_relays;
 
+#define TOR_MSEC_PER_SEC 1000
+#define TOR_USEC_PER_MSEC 1000
+
+/**
+ * How often do we get called by the connection housekeeping (ie: once
+ * per second) */
+#define TOR_HOUSEKEEPING_CALLBACK_MSEC 1000
+/**
+ * Additional extra time buffer on the housekeeping callback, since
+ * it can be delayed. This extra slack is used to decide if we should
+ * schedule a timer or wait for the next callback. */
+#define TOR_HOUSEKEEPING_CALLBACK_SLACK_MSEC 100
+
+/**
+ * This macro tells us if either end of the channel is connected to a client.
+ * (If we're not a server, we're definitely a client. If the channel thinks
+ *  its a client, use that. Then finally verify in the consensus).
+ */
+#define CHANNEL_IS_CLIENT(chan, options) \
+  (!public_server_mode((options)) || (chan)->is_client || \
+      !connection_or_digest_is_known_relay((chan)->identity_digest))
+
 /**
  * This function is called to update cached consensus parameters every time
  * there is a consensus update. This allows us to move the consensus param
@@ -64,7 +86,7 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
       DFLT_NETFLOW_INACTIVE_KEEPALIVE_LOW,
       DFLT_NETFLOW_INACTIVE_KEEPALIVE_MIN,
       DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX);
-  consensus_nf_ito_high = networkstatus_get_param(NULL, "nf_ito_high",
+  consensus_nf_ito_high = networkstatus_get_param(ns, "nf_ito_high",
       DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH,
       consensus_nf_ito_low,
       DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX);
@@ -74,13 +96,13 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
 #define DFLT_NETFLOW_REDUCED_KEEPALIVE_MIN 0
 #define DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX 60000
   consensus_nf_ito_low_reduced =
-    networkstatus_get_param(NULL, "nf_ito_low_reduced",
+    networkstatus_get_param(ns, "nf_ito_low_reduced",
         DFLT_NETFLOW_REDUCED_KEEPALIVE_LOW,
         DFLT_NETFLOW_REDUCED_KEEPALIVE_MIN,
         DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX);
 
   consensus_nf_ito_high_reduced =
-    networkstatus_get_param(NULL, "nf_ito_high_reduced",
+    networkstatus_get_param(ns, "nf_ito_high_reduced",
         DFLT_NETFLOW_REDUCED_KEEPALIVE_HIGH,
         consensus_nf_ito_low_reduced,
         DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX);
@@ -89,7 +111,7 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
 #define CONNTIMEOUT_RELAYS_MIN 60
 #define CONNTIMEOUT_RELAYS_MAX (7*24*60*60) // 1 week
   consensus_nf_conntimeout_relays =
-    networkstatus_get_param(NULL, "nf_conntimeout_relays",
+    networkstatus_get_param(ns, "nf_conntimeout_relays",
         CONNTIMEOUT_RELAYS_DFLT,
         CONNTIMEOUT_RELAYS_MIN,
         CONNTIMEOUT_RELAYS_MAX);
@@ -98,16 +120,16 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
 #define CIRCTIMEOUT_CLIENTS_MIN 60
 #define CIRCTIMEOUT_CLIENTS_MAX (24*60*60) // 24 hours
   consensus_nf_conntimeout_clients =
-    networkstatus_get_param(NULL, "nf_conntimeout_clients",
+    networkstatus_get_param(ns, "nf_conntimeout_clients",
         CIRCTIMEOUT_CLIENTS_DFLT,
         CIRCTIMEOUT_CLIENTS_MIN,
         CIRCTIMEOUT_CLIENTS_MAX);
 
   consensus_nf_pad_before_usage =
-    networkstatus_get_param(NULL, "nf_pad_before_usage", 1, 0, 1);
+    networkstatus_get_param(ns, "nf_pad_before_usage", 1, 0, 1);
 
   consensus_nf_pad_relays =
-    networkstatus_get_param(NULL, "nf_pad_relays", 0, 0, 1);
+    networkstatus_get_param(ns, "nf_pad_relays", 0, 0, 1);
 }
 
 /**
@@ -214,10 +236,10 @@ channelpadding_update_padding_for_channel(channel_t *chan,
 
   // We should not allow malicious relays to disable or reduce padding for
   // us as clients. In fact, we should only accept this cell at all if we're
-  // operating as a relay. Brides should not accept it from relays, either
+  // operating as a relay. Bridges should not accept it from relays, either
   // (only from their clients).
   if ((get_options()->BridgeRelay &&
-        connection_or_digest_is_known_relay(chan->identity_digest)) ||
+       connection_or_digest_is_known_relay(chan->identity_digest)) ||
       !get_options()->ORPort_set) {
     static ratelim_t relay_limit = RATELIM_INIT(600);
 
@@ -238,7 +260,7 @@ channelpadding_update_padding_for_channel(channel_t *chan,
 
   /* Max must not be lower than ito_low_ms */
   chan->padding_timeout_high_ms = MAX(chan->padding_timeout_low_ms,
-                                   pad_vars->ito_high_ms);
+                                      pad_vars->ito_high_ms);
 
   log_fn(LOG_INFO,LD_OR,
          "Negotiated padding=%d, lo=%d, hi=%d on "U64_FORMAT,
@@ -271,7 +293,7 @@ channelpadding_send_disable_command(channel_t *chan)
   channelpadding_negotiate_set_command(&disable, CHANNELPADDING_COMMAND_STOP);
 
   if (channelpadding_negotiate_encode(cell.payload, CELL_PAYLOAD_SIZE,
-        &disable) < 0)
+                                      &disable) < 0)
     return -1;
 
   if (chan->write_cell(chan, &cell) == 1)
@@ -305,7 +327,7 @@ channelpadding_send_enable_command(channel_t *chan, uint16_t low_timeout,
   channelpadding_negotiate_set_ito_high_ms(&enable, high_timeout);
 
   if (channelpadding_negotiate_encode(cell.payload, CELL_PAYLOAD_SIZE,
-        &enable) < 0)
+                                      &enable) < 0)
     return -1;
 
   if (chan->write_cell(chan, &cell) == 1)
@@ -388,9 +410,9 @@ channelpadding_send_padding_callback(tor_timer_t *timer, void *args,
   if (chan && CHANNEL_CAN_HANDLE_CELLS(chan)) {
     /* Hrmm.. It might be nice to have an equivalent to assert_connection_ok
      * for channels. Then we could get rid of the channeltls dependency */
-    tor_assert(BASE_CHAN_TO_TLS(chan)->conn->base_.magic ==
+    tor_assert(TO_CONN(BASE_CHAN_TO_TLS(chan)->conn)->magic ==
                OR_CONNECTION_MAGIC);
-    assert_connection_ok(&BASE_CHAN_TO_TLS(chan)->conn->base_, approx_time());
+    assert_connection_ok(TO_CONN(BASE_CHAN_TO_TLS(chan)->conn), approx_time());
 
     channelpadding_send_padding_cell_for_callback(chan);
   } else {
@@ -421,8 +443,8 @@ channelpadding_schedule_padding(channel_t *chan, int in_ms)
     return CHANNELPADDING_PADDING_SENT;
   }
 
-  timeout.tv_sec = in_ms/1000;
-  timeout.tv_usec = (in_ms%1000)*1000;
+  timeout.tv_sec = in_ms/TOR_MSEC_PER_SEC;
+  timeout.tv_usec = (in_ms%TOR_USEC_PER_MSEC)*TOR_USEC_PER_MSEC;
 
   if (!chan->timer_handle) {
     chan->timer_handle = channel_handle_new(chan);
@@ -467,7 +489,7 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
 
   if (!chan->next_padding_time_ms) {
     /* If the below line or crypto_rand_int() shows up on a profile,
-     * we can avoid getting a timeout until we're at least nt_ito_lo
+     * we can avoid getting a timeout until we're at least nf_ito_lo
      * from a timeout window. That will prevent us from setting timers
      * on connections that were active up to 1.5 seconds ago.
      * Idle connections should only call this once every 5.5s on average
@@ -479,7 +501,7 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
       return CHANNELPADDING_TIME_DISABLED;
 
     chan->next_padding_time_ms = padding_timeout
-        + chan->timestamp_xfer_ms;
+                                 + chan->timestamp_xfer_ms;
   }
 
   /* If the next padding time is beyond the maximum possible consensus value,
@@ -499,11 +521,13 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
   }
 
   /* If the timeout will expire before the next time we're called (1000ms
-     from now, plus some slack), then calcualte the number of milliseconds
+     from now, plus some slack), then calculate the number of milliseconds
      from now which we should send padding, so we can schedule a callback
      then.
    */
-  if (long_now + 1100 >= chan->next_padding_time_ms) {
+  if (long_now +
+      (TOR_HOUSEKEEPING_CALLBACK_MSEC + TOR_HOUSEKEEPING_CALLBACK_SLACK_MSEC)
+      >= chan->next_padding_time_ms) {
     int64_t ms_until_pad_for_netflow = chan->next_padding_time_ms -
                                        long_now;
     if (ms_until_pad_for_netflow < 0) {
@@ -540,9 +564,7 @@ channelpadding_get_channel_idle_timeout(const channel_t *chan,
   unsigned int timeout;
 
   /* Non-canonical and client channels only last for 3-4.5 min when idle */
-  if (!is_canonical || !public_server_mode(options) ||
-      chan->is_client ||
-      !connection_or_digest_is_known_relay(chan->identity_digest)) {
+  if (!is_canonical || CHANNEL_IS_CLIENT(chan, options)) { 
 #define CONNTIMEOUT_CLIENTS_BASE 180 // 3 to 4.5 min
     timeout = CONNTIMEOUT_CLIENTS_BASE
         + crypto_rand_int(CONNTIMEOUT_CLIENTS_BASE/2);
@@ -562,7 +584,7 @@ channelpadding_get_channel_idle_timeout(const channel_t *chan,
    * set.
    */
   if (options->ReducedConnectionPadding
-          && !options->CircuitsAvailableTimeout) {
+      && !options->CircuitsAvailableTimeout) {
     timeout /= 2;
   }
 
@@ -688,8 +710,7 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
   if (!chan->has_queued_writes(chan)) {
     int is_client_channel = 0;
 
-    if (!public_server_mode(options) || chan->is_client ||
-            !connection_or_digest_is_known_relay(chan->identity_digest)) {
+    if (CHANNEL_IS_CLIENT(chan, options)) {
        is_client_channel = 1;
     }
 

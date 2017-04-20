@@ -260,8 +260,8 @@ circuit_update_channel_usage(circuit_t *circ, cell_t *cell)
     if (BUG(!or_circ->p_chan))
       return;
 
-    if (!or_circ->p_chan->is_client ||
-        (or_circ->p_chan->is_client && circ->n_chan)) {
+    if (!channel_is_client(or_circ->p_chan) ||
+        (channel_is_client(or_circ->p_chan) && circ->n_chan)) {
       if (cell->command == CELL_RELAY_EARLY) {
         if (or_circ->p_chan->channel_usage < CHANNEL_USED_FOR_FULL_CIRCS) {
           or_circ->p_chan->channel_usage = CHANNEL_USED_FOR_FULL_CIRCS;

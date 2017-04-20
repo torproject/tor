@@ -24,7 +24,8 @@ typedef enum {
 channelpadding_decision_t channelpadding_decide_to_pad_channel(channel_t
                                                                *chan);
 int channelpadding_update_padding_for_channel(channel_t *,
-    const channelpadding_negotiate_t *);
+                                              const channelpadding_negotiate_t
+                                              *chan);
 
 void channelpadding_disable_padding_on_channel(channel_t *chan);
 void channelpadding_reduce_padding_on_channel(channel_t *chan);
