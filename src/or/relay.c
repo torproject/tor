@@ -54,7 +54,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
-#include "compress_zlib.h"
+#include "compress.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
@@ -2454,7 +2454,7 @@ cell_queues_check_size(void)
 {
   size_t alloc = cell_queues_get_total_allocation();
   alloc += buf_get_total_allocation();
-  alloc += tor_zlib_get_total_allocation();
+  alloc += tor_compress_get_total_allocation();
   const size_t rend_cache_total = rend_cache_get_total_allocation();
   alloc += rend_cache_total;
   if (alloc >= get_options()->MaxMemInQueues_low_threshold) {

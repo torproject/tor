@@ -154,6 +154,16 @@ detect_compression_method(const char *in, size_t in_len)
   }
 }
 
+/** Return the approximate number of bytes allocated for all
+ * supported compression schemas. */
+size_t
+tor_compress_get_total_allocation(void)
+{
+  return tor_zlib_get_total_allocation() +
+         tor_lzma_get_total_allocation() +
+         tor_zstd_get_total_allocation();
+}
+
 /** Internal state for an incremental compression/decompression.  The body of
  * this struct is not exposed. */
 struct tor_compress_state_t {

@@ -51,6 +51,9 @@ tor_compress_memory_level(compression_level_t level);
 int
 tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
 
+size_t
+tor_compress_get_total_allocation(void);
+
 /** Return values from tor_compress_process; see that function's documentation
  * for details. */
 typedef enum {
