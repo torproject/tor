@@ -407,11 +407,14 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
       } else {
         indirection = DIRIND_DIRECT_CONN;
       }
-      directory_initiate_command_routerstatus(rs, dir_purpose,
-                                              router_purpose,
-                                              indirection,
-                                              NULL, payload, upload_len, 0,
-                                              NULL);
+
+      directory_request_t *req = directory_request_new(dir_purpose);
+      directory_request_set_routerstatus(req, rs);
+      directory_request_set_router_purpose(req, router_purpose);
+      directory_request_set_indirection(req, indirection);
+      directory_request_set_payload(req, payload, upload_len);
+      directory_initiate_request(req);
+      directory_request_free(req);
   } SMARTLIST_FOREACH_END(ds);
   if (!found) {
     char *s = authdir_type_to_string(type);
