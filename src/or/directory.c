@@ -98,9 +98,8 @@
  *   connection_finished_connecting() in connection.c
  */
 static void directory_send_command(dir_connection_t *conn,
-                             int purpose, int direct, const char *resource,
-                             const char *payload, size_t payload_len,
-                             time_t if_modified_since);
+                                   int direct,
+                                   const directory_request_t *request);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
@@ -1320,9 +1319,6 @@ directory_initiate_request,(directory_request_t *request))
   const uint8_t router_purpose = request->router_purpose;
   const dir_indirection_t indirection = request->indirection;
   const char *resource = request->resource;
-  const char *payload = request->payload;
-  const size_t payload_len = request->payload_len;
-  const time_t if_modified_since = request->if_modified_since;
   const rend_data_t *rend_query = request->rend_query;
   circuit_guard_state_t *guard_state = request->guard_state;
 
@@ -1441,9 +1437,7 @@ directory_initiate_request,(directory_request_t *request))
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, dir_purpose, 1, resource,
-                               payload, payload_len,
-                               if_modified_since);
+        directory_send_command(conn, 1, request);
         connection_watch_events(TO_CONN(conn), READ_EVENT | WRITE_EVENT);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -1497,9 +1491,7 @@ directory_initiate_request,(directory_request_t *request))
     }
     conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
-    directory_send_command(conn, dir_purpose, 0, resource,
-                           payload, payload_len,
-                           if_modified_since);
+    directory_send_command(conn, 0, request);
 
     connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
     connection_start_reading(ENTRY_TO_CONN(linked_conn));
@@ -1602,17 +1594,22 @@ copy_ipv6_address(char* destination, const char* source, size_t len,
   }
 }
 
-/** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
- * are as in directory_request_set_...()
- *
- *
+/** Queue an appropriate HTTP command for <b>request</b> on
+ * <b>conn</b>-\>outbuf.  If <b>direct</b> is true, we're making a
+ * non-anonymized connection to the dirport.
  */
 static void
 directory_send_command(dir_connection_t *conn,
-                       int purpose, int direct, const char *resource,
-                       const char *payload, size_t payload_len,
-                       time_t if_modified_since)
+                       const int direct,
+                       const directory_request_t *req)
 {
+  tor_assert(req);
+  const int purpose = req->dir_purpose;
+  const char *resource = req->resource;
+  const char *payload = req->payload;
+  const size_t payload_len = req->payload_len;
+  const time_t if_modified_since = req->if_modified_since;
+
   char proxystring[256];
   char hoststring[128];
   /* NEEDS to be the same size hoststring.
