@@ -69,28 +69,6 @@ void directory_request_set_guard_state(directory_request_t *req,
 void directory_request_set_routerstatus(directory_request_t *req,
                                         const routerstatus_t *rs);
 
-MOCK_DECL(void, directory_initiate_command_routerstatus,
-                (const routerstatus_t *status,
-                 uint8_t dir_purpose,
-                 uint8_t router_purpose,
-                 dir_indirection_t indirection,
-                 const char *resource,
-                 const char *payload,
-                 size_t payload_len,
-                 time_t if_modified_since,
-                 struct circuit_guard_state_t *guard_state));
-
-void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
-                                                  uint8_t dir_purpose,
-                                                  uint8_t router_purpose,
-                                                 dir_indirection_t indirection,
-                                                  const char *resource,
-                                                  const char *payload,
-                                                  size_t payload_len,
-                                                  time_t if_modified_since,
-                                    const rend_data_t *rend_query,
-                                    struct circuit_guard_state_t *guard_state);
-
 MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
 
 int parse_http_response(const char *headers, int *code, time_t *date,
@@ -102,14 +80,6 @@ int connection_dir_process_inbuf(dir_connection_t *conn);
 int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_about_to_close(dir_connection_t *dir_conn);
-void directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
-                                const tor_addr_t *dir_addr, uint16_t dir_port,
-                                const char *digest,
-                                uint8_t dir_purpose, uint8_t router_purpose,
-                                dir_indirection_t indirection,
-                                const char *resource,
-                                const char *payload, size_t payload_len,
-                                time_t if_modified_since);
 
 #define DSR_HEX       (1<<0)
 #define DSR_BASE64    (1<<1)

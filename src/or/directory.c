@@ -772,78 +772,6 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   return 0;
 }
 
-/** Same as directory_initiate_command_routerstatus(), but accepts
- * rendezvous data to fetch a hidden service descriptor. */
-void
-directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
-                                             uint8_t dir_purpose,
-                                             uint8_t router_purpose,
-                                             dir_indirection_t indirection,
-                                             const char *resource,
-                                             const char *payload,
-                                             size_t payload_len,
-                                             time_t if_modified_since,
-                                             const rend_data_t *rend_query,
-                                           circuit_guard_state_t *guard_state)
-{
-  directory_request_t *req = directory_request_new(dir_purpose);
-  directory_request_set_routerstatus(req, status);
-  directory_request_set_router_purpose(req, router_purpose);
-  directory_request_set_indirection(req, indirection);
-
-  if (resource)
-    directory_request_set_resource(req, resource);
-  if (payload)
-    directory_request_set_payload(req, payload, payload_len);
-  if (if_modified_since)
-    directory_request_set_if_modified_since(req, if_modified_since);
-  if (rend_query)
-    directory_request_set_rend_query(req, rend_query);
-  if (guard_state)
-    directory_request_set_guard_state(req, guard_state);
-
-  /* We don't retry the alternate OR/Dir address for the same directory if
-   * the address we choose fails (#6772).
-   * Instead, we'll retry another directory on failure. */
-
-  directory_initiate_request(req);
-
-  directory_request_free(req);
-}
-
-/** Launch a new connection to the directory server <b>status</b> to
- * upload or download a server or rendezvous
- * descriptor. <b>dir_purpose</b> determines what
- * kind of directory connection we're launching, and must be one of
- * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC_V2}. <b>router_purpose</b>
- * specifies the descriptor purposes we have in mind (currently only
- * used for FETCH_DIR).
- *
- * When uploading, <b>payload</b> and <b>payload_len</b> determine the content
- * of the HTTP post.  Otherwise, <b>payload</b> should be NULL.
- *
- * When fetching a rendezvous descriptor, <b>resource</b> is the service ID we
- * want to fetch.
- */
-MOCK_IMPL(void, directory_initiate_command_routerstatus,
-                (const routerstatus_t *status,
-                 uint8_t dir_purpose,
-                 uint8_t router_purpose,
-                 dir_indirection_t indirection,
-                 const char *resource,
-                 const char *payload,
-                 size_t payload_len,
-                 time_t if_modified_since,
-                 circuit_guard_state_t *guard_state))
-{
-  directory_initiate_command_routerstatus_rend(status, dir_purpose,
-                                          router_purpose,
-                                          indirection, resource,
-                                          payload, payload_len,
-                                          if_modified_since, NULL,
-                                          guard_state);
-}
-
 /** Return true iff <b>conn</b> is the client side of a directory connection
  * we launched to ourself in order to determine the reachability of our
  * dir_port. */
@@ -1083,62 +1011,6 @@ directory_command_should_use_begindir(const or_options_t *options,
    */
   *reason = "(using begindir)";
   return 1;
-}
-
-/** Helper for directory_initiate_command_rend: send the
- * command to a server whose OR address/port is <b>or_addr</b>/<b>or_port</b>,
- * whose directory address/port is <b>dir_addr</b>/<b>dir_port</b>, whose
- * identity key digest is <b>digest</b>, with purposes <b>dir_purpose</b> and
- * <b>router_purpose</b>, making an (in)direct connection as specified in
- * <b>indirection</b>, with command <b>resource</b>, <b>payload</b> of
- * <b>payload_len</b>, and asking for a result only <b>if_modified_since</b>.
- */
-void
-directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
-                           const tor_addr_t *dir_addr, uint16_t dir_port,
-                           const char *digest,
-                           uint8_t dir_purpose, uint8_t router_purpose,
-                           dir_indirection_t indirection, const char *resource,
-                           const char *payload, size_t payload_len,
-                           time_t if_modified_since)
-{
-  tor_addr_port_t or_ap, dir_ap;
-
-  /* Use the null tor_addr and 0 port if the address or port isn't valid. */
-  if (tor_addr_port_is_valid(or_addr, or_port, 0)) {
-    tor_addr_copy(&or_ap.addr, or_addr);
-    or_ap.port = or_port;
-  } else {
-    /* the family doesn't matter here, so make it IPv4 */
-    tor_addr_make_null(&or_ap.addr, AF_INET);
-    or_ap.port = or_port = 0;
-  }
-
-  if (tor_addr_port_is_valid(dir_addr, dir_port, 0)) {
-    tor_addr_copy(&dir_ap.addr, dir_addr);
-    dir_ap.port = dir_port;
-  } else {
-    /* the family doesn't matter here, so make it IPv4 */
-    tor_addr_make_null(&dir_ap.addr, AF_INET);
-    dir_ap.port = dir_port = 0;
-  }
-
-  directory_request_t *req = directory_request_new(dir_purpose);
-  directory_request_set_or_addr_port(req, &or_ap);
-  directory_request_set_dir_addr_port(req, &dir_ap);
-  directory_request_set_directory_id_digest(req, digest);
-
-  directory_request_set_router_purpose(req, router_purpose);
-  directory_request_set_indirection(req, indirection);
-  if (resource)
-    directory_request_set_resource(req, resource);
-  if (payload)
-    directory_request_set_payload(req, payload, payload_len);
-  if (if_modified_since)
-    directory_request_set_if_modified_since(req, if_modified_since);
-
-  directory_initiate_request(req);
-  directory_request_free(req);
 }
 
 struct directory_request_t {
@@ -1630,7 +1502,9 @@ copy_ipv6_address(char* destination, const char* source, size_t len,
 }
 
 /** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
- * are as in directory_initiate_command().
+ * are as in directory_request_set_...()
+ *
+ *
  */
 static void
 directory_send_command(dir_connection_t *conn,
