@@ -1210,12 +1210,17 @@ directory_request_set_guard_state(directory_request_t *req,
   req->guard_state = state;
 }
 
+/**
+ * Internal: Return true if any information for contacting the directory in
+ * <b>req</b> has been set, other than by the routerstatus. */
 static int
-directory_request_is_dir_specified(const directory_request_t *req)
+directory_request_dir_contact_info_specified(const directory_request_t *req)
 {
-  // XXXX inline and revise
-  return (req->or_addr_port.port || req->dir_addr_port.port) &&
-    ! tor_digest_is_zero(req->digest);
+  /* We only check for ports here, since we don't use an addr unless the port
+   * is set */
+  return (req->or_addr_port.port ||
+          req->dir_addr_port.port ||
+          ! tor_digest_is_zero(req->digest));
 }
 
 /**
@@ -1301,7 +1306,8 @@ directory_initiate_request,(directory_request_t *request))
 {
   tor_assert(request);
   if (request->routerstatus) {
-    tor_assert_nonfatal(! directory_request_is_dir_specified(request));
+    tor_assert_nonfatal(
+               ! directory_request_dir_contact_info_specified(request));
     if (directory_request_set_dir_from_routerstatus(request) < 0) {
       return;
     }
