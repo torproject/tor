@@ -5303,7 +5303,8 @@ typedef struct dir_server_t {
                            * address information from published? */
 
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
-                               * dir_server_t to directory_initiate_command_*
+                               * dir_server_t to
+                               * directory_request_set_routerstatus.
                                * as a routerstatus_t.  Not updated by the
                                * router-status management code!
                                **/

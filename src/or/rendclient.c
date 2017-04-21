@@ -756,13 +756,15 @@ directory_get_from_hs_dir(const char *desc_id,
   /* Send fetch request. (Pass query and possibly descriptor cookie so that
    * they can be written to the directory connection and be referred to when
    * the response arrives. */
-  directory_initiate_command_routerstatus_rend(hs_dir,
-                                          DIR_PURPOSE_FETCH_RENDDESC_V2,
-                                          ROUTER_PURPOSE_GENERAL,
-                                          how_to_fetch,
-                                          desc_id_base32,
-                                          NULL, 0, 0,
-                                          rend_query, NULL);
+  directory_request_t *req =
+    directory_request_new(DIR_PURPOSE_FETCH_RENDDESC_V2);
+  directory_request_set_routerstatus(req, hs_dir);
+  directory_request_set_indirection(req, how_to_fetch);
+  directory_request_set_resource(req, desc_id_base32);
+  directory_request_set_rend_query(req, rend_query);
+  directory_initiate_request(req);
+  directory_request_free(req);
+
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
                     "service '%s' with descriptor ID '%s', auth type %d, "
                     "and descriptor cookie '%s' to hidden service "

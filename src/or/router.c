@@ -1470,13 +1470,23 @@ consider_testing_reachability(int test_or, int test_dir)
       !connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
+    tor_addr_port_t my_orport, my_dirport;
+    memcpy(&my_orport.addr, &addr, sizeof(addr));
+    memcpy(&my_dirport.addr, &addr, sizeof(addr));
+    my_orport.port = me->or_port;
+    my_dirport.port = me->dir_port;
     /* ask myself, via tor, for my server descriptor. */
-    directory_initiate_command(&addr, me->or_port,
-                               &addr, me->dir_port,
-                               me->cache_info.identity_digest,
-                               DIR_PURPOSE_FETCH_SERVERDESC,
-                               ROUTER_PURPOSE_GENERAL,
-                               DIRIND_ANON_DIRPORT, "authority.z", NULL, 0, 0);
+    directory_request_t *req =
+      directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
+    directory_request_set_or_addr_port(req, &my_orport);
+    directory_request_set_dir_addr_port(req, &my_dirport);
+    directory_request_set_directory_id_digest(req,
+                                              me->cache_info.identity_digest);
+    // ask via an anon circuit, connecting to our dirport.
+    directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
+    directory_request_set_resource(req, "authority.z");
+    directory_initiate_request(req);
+    directory_request_free(req);
   }
 }
 
