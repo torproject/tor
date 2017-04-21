@@ -41,6 +41,12 @@ typedef enum {
 
 int directory_must_use_begindir(const or_options_t *options);
 
+/**
+ * A directory_request_t describes the information about a directory request
+ * at the client side.  It describes what we're going to ask for, which
+ * directory we're going to ask for it, how we're going to contact that
+ * directory, and (in some cases) what to do with it when we're done.
+ */
 typedef struct directory_request_t directory_request_t;
 directory_request_t *directory_request_new(uint8_t dir_purpose);
 void directory_request_free(directory_request_t *req);

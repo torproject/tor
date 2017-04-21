@@ -1014,23 +1014,44 @@ directory_command_should_use_begindir(const or_options_t *options,
 }
 
 struct directory_request_t {
+  /**
+   * These fields specify which directory we're contacting.  Routerstatus,
+   * if present, overrides the other fields.
+   *
+   * @{ */
   tor_addr_port_t or_addr_port;
   tor_addr_port_t dir_addr_port;
   char digest[DIGEST_LEN];
 
   const routerstatus_t *routerstatus;
-
+  /** @} */
+  /** One of DIR_PURPOSE_* other than DIR_PURPOSE_SERVER. Describes what
+   * kind of operation we'll be doing (upload/download), and of what kind
+   * of document. */
   uint8_t dir_purpose;
+  /** One of ROUTER_PURPOSE_*; used for uploads and downloads of routerinfo
+   * and extrainfo docs.  */
   uint8_t router_purpose;
+  /** Enum: determines whether to anonymize, and whether to use dirport or
+   * orport. */
   dir_indirection_t indirection;
+  /** Alias to the variable part of the URL for this request */
   const char *resource;
+  /** Alias to the payload to upload (if any) */
   const char *payload;
+  /** Number of bytes to upload from payload</b> */
   size_t payload_len;
+  /** Value to send in an if-modified-since header, or 0 for none. */
   time_t if_modified_since;
+  /** Hidden-service-specific information */
   const rend_data_t *rend_query;
   circuit_guard_state_t *guard_state; // XXXX Does this belong?
 };
 
+/**
+ * Create and return a new directory_request_t with purpose
+ * <b>dir_purpose</b>.
+ */
 directory_request_t *
 directory_request_new(uint8_t dir_purpose)
 {
@@ -1049,6 +1070,9 @@ directory_request_new(uint8_t dir_purpose)
   result->indirection = DIRIND_ONEHOP;
   return result;
 }
+/**
+ * Release all resources held by <b>req</b>.
+ */
 void
 directory_request_free(directory_request_t *req)
 {
@@ -1056,25 +1080,44 @@ directory_request_free(directory_request_t *req)
     return;
   tor_free(req);
 }
-
+/**
+ * Set the address and OR port to use for this directory request.  If there is
+ * no OR port, we'll have to connect over the dirport.  (If there are both,
+ * the indirection setting determins which to use.)
+ */
 void
 directory_request_set_or_addr_port(directory_request_t *req,
                                    const tor_addr_port_t *p)
 {
   memcpy(&req->or_addr_port, p, sizeof(*p));
 }
+/**
+ * Set the address and dirport to use for this directory request.  If there
+ * is no dirport, we'll have to connect over the OR port.  (If there are both,
+ * the indirection setting determins which to use.)
+ */
 void
 directory_request_set_dir_addr_port(directory_request_t *req,
                                     const tor_addr_port_t *p)
 {
   memcpy(&req->dir_addr_port, p, sizeof(*p));
 }
+/**
+ * Set the RSA identity digest of the directory to use for this directory
+ * request.
+ */
 void
 directory_request_set_directory_id_digest(directory_request_t *req,
                                           const char *digest)
 {
   memcpy(req->digest, digest, DIGEST_LEN);
 }
+/**
+ * Set the router purpose associated with uploaded and downloaded router
+ * descriptors and extrainfo documents in this directory request.  The purpose
+ * must be one of ROUTER_PURPOSE_GENERAL (the default) or
+ * ROUTER_PURPOSE_BRIDGE.
+ */
 void
 directory_request_set_router_purpose(directory_request_t *req,
                                      uint8_t router_purpose)
@@ -1085,20 +1128,36 @@ directory_request_set_router_purpose(directory_request_t *req,
   // the dir_purpose.
   req->router_purpose = router_purpose;
 }
+/**
+ * Set the indirection to be used for the directory request.  The indirection
+ * parameter configures whether to connect to a DirPort or ORPort, and whether
+ * to anonymize the connection.  DIRIND_ONEHOP (use ORPort, don't anonymize)
+ * is the default.  See dir_indirection_t for more information.
+ */
 void
 directory_request_set_indirection(directory_request_t *req,
                                   dir_indirection_t indirection)
 {
   req->indirection = indirection;
 }
-// DOCDOC lifetime
+
+/**
+ * Set a pointer to the resource to request from a directory.  Different
+ * request types use resources to indicate different components of their URL.
+ * Note that only an alias to <b>resource</b> is stored, so the
+ * <b>resource</b> must outlive the request.
+ */
 void
 directory_request_set_resource(directory_request_t *req,
                                const char *resource)
 {
   req->resource = resource;
 }
-// DOCDOC Lifetime
+/**
+ * Set a pointer to the payload to include with this directory request, along
+ * with its length.  Note that only an alias to <b>payload</b> is stored, so
+ * the <b>payload</b> must outlive the request.
+ */
 void
 directory_request_set_payload(directory_request_t *req,
                               const char *payload,
@@ -1111,44 +1170,69 @@ directory_request_set_payload(directory_request_t *req,
   req->payload = payload;
   req->payload_len = payload_len;
 }
+/**
+ * Set an if-modified-since date to send along with the request.  The
+ * default is 0 (meaning, send no if-modified-since header).
+ */
 void
 directory_request_set_if_modified_since(directory_request_t *req,
                                         time_t if_modified_since)
 {
   req->if_modified_since = if_modified_since;
 }
-// DOCDOC lifetime
+/**
+ * Set an object containing HS data to be associated with this request.  Note
+ * that only an alias to <b>query</b> is stored, so the <b>query</b> object
+ * must outlive the request.
+ */
 void
 directory_request_set_rend_query(directory_request_t *req,
                                  const rend_data_t *query)
 {
+  if (query) {
+    tor_assert(req->dir_purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 ||
+               req->dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2);
+  }
   req->rend_query = query;
 }
 void
 directory_request_set_guard_state(directory_request_t *req,
                                   circuit_guard_state_t *state)
 {
+  // XXXX make static.
   req->guard_state = state;
 }
 
 static int
 directory_request_is_dir_specified(const directory_request_t *req)
 {
+  // XXXX inline and revise
   return (req->or_addr_port.port || req->dir_addr_port.port) &&
     ! tor_digest_is_zero(req->digest);
 }
+
+/**
+ * Set the routerstatus to use for the directory associated with this
+ * request.  If this option is set, then no other function to set the
+ * directory's address or identity should be called.
+ */
 void
 directory_request_set_routerstatus(directory_request_t *req,
                                    const routerstatus_t *status)
 {
   req->routerstatus = status;
 }
+/**
+ * Helper: update the addresses, ports, and identities in <b>req</b>
+ * from the routerstatus object in <b>req</b>.  Return 0 on success.
+ * On failure, warn and return -1.
+ */
 static int
 directory_request_set_dir_from_routerstatus(directory_request_t *req)
 
 {
   const routerstatus_t *status = req->routerstatus;
-  if (status == NULL)
+  if (BUG(status == NULL))
     return -1;
   const or_options_t *options = get_options();
   const node_t *node;
@@ -1201,6 +1285,10 @@ directory_request_set_dir_from_routerstatus(directory_request_t *req)
   return 0;
 }
 
+/**
+ * Launch the provided directory request, configured in <b>request</b>.
+ * After this function is called, you can free <b>request</b>.
+ */
 MOCK_IMPL(void,
 directory_initiate_request,(directory_request_t *request))
 {
