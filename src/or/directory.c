@@ -655,15 +655,17 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
 
   SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
                           dir_server_t *, ds) {
-      routerstatus_t *rs;
       if (router_digest_is_me(ds->digest))
         continue;
       if (!(ds->type & V3_DIRINFO))
         continue;
-      rs = &ds->fake_status;
-      directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
-                                              DIRIND_ONEHOP, resource, NULL,
-                                              0, 0, NULL);
+      const routerstatus_t *rs = &ds->fake_status;
+      directory_request_t *req = directory_request_new(dir_purpose);
+      directory_request_set_routerstatus(req, rs);
+      directory_request_set_router_purpose(req, router_purpose);
+      directory_request_set_resource(req, resource);
+      directory_initiate_request(req);
+      directory_request_free(req);
   } SMARTLIST_FOREACH_END(ds);
 }
 
@@ -1320,8 +1322,8 @@ directory_request_set_dir_from_routerstatus(directory_request_t *req)
   return 0;
 }
 
-void
-directory_initiate_request(directory_request_t *request)
+MOCK_IMPL(void,
+directory_initiate_request,(directory_request_t *request))
 {
   tor_assert(request);
   if (request->routerstatus) {

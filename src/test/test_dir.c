@@ -4541,6 +4541,8 @@ directory_initiate_command_routerstatus, (const routerstatus_t *status,
                                           size_t payload_len,
                                           time_t if_modified_since,
                                           circuit_guard_state_t *guardstate));
+NS_DECL(void,
+directory_initiate_request, (directory_request_t *req));
 
 static void
 test_dir_should_not_init_request_to_ourselves(void *data)
@@ -4616,7 +4618,7 @@ test_dir_should_init_request_to_dir_auths(void *data)
   dir_server_t *ds = NULL;
   (void) data;
 
-  NS_MOCK(directory_initiate_command_routerstatus);
+  NS_MOCK(directory_initiate_request);
 
   clear_dir_servers();
   routerlist_free_all();
@@ -4627,11 +4629,11 @@ test_dir_should_init_request_to_dir_auths(void *data)
   dir_server_add(ds);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
-  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 1);
+  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 1);
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
                                      NULL);
-  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 2);
+  tt_int_op(CALLED(directory_initiate_request), OP_EQ, 2);
 
   done:
     NS_UNMOCK(directory_initiate_command_routerstatus);
@@ -4660,6 +4662,13 @@ NS(directory_initiate_command_routerstatus)(const routerstatus_t *status,
   (void)if_modified_since;
   (void)guardstate;
   CALLED(directory_initiate_command_routerstatus)++;
+}
+
+void
+NS(directory_initiate_request)(directory_request_t *req)
+{
+  (void)req;
+  CALLED(directory_initiate_request)++;
 }
 
 static void

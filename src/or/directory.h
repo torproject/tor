@@ -91,7 +91,7 @@ void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                     const rend_data_t *rend_query,
                                     struct circuit_guard_state_t *guard_state);
 
-void directory_initiate_request(directory_request_t *request);
+MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         compress_method_t *compression, char **response);
