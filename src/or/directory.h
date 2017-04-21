@@ -69,8 +69,6 @@ void directory_request_set_if_modified_since(directory_request_t *req,
                                              time_t if_modified_since);
 void directory_request_set_rend_query(directory_request_t *req,
                                       const rend_data_t *query);
-void directory_request_set_guard_state(directory_request_t *req,
-                                       struct circuit_guard_state_t *state);
 
 void directory_request_set_routerstatus(directory_request_t *req,
                                         const routerstatus_t *rs);

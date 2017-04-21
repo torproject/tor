@@ -120,6 +120,8 @@ static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
 static void connection_dir_close_consensus_fetches(
                    dir_connection_t *except_this_one, const char *resource);
+static void directory_request_set_guard_state(directory_request_t *req,
+                                       struct circuit_guard_state_t *state);
 
 /********* START VARIABLES **********/
 
@@ -1045,7 +1047,10 @@ struct directory_request_t {
   time_t if_modified_since;
   /** Hidden-service-specific information */
   const rend_data_t *rend_query;
-  circuit_guard_state_t *guard_state; // XXXX Does this belong?
+  /** Used internally to directory.c: gets informed when the attempt to
+   * connect to the directory succeeds or fails, if that attempt bears on the
+   * directory's usability as a directory guard. */
+  circuit_guard_state_t *guard_state;
 };
 
 /**
@@ -1195,11 +1200,13 @@ directory_request_set_rend_query(directory_request_t *req,
   }
   req->rend_query = query;
 }
-void
+/** Set a static circuit_guard_state_t object to affliate with the request in
+ * <b>req</b>.  This object will receive notification when the attempt to
+ * connect to the guard either succeeds or fails. */
+static void
 directory_request_set_guard_state(directory_request_t *req,
                                   circuit_guard_state_t *state)
 {
-  // XXXX make static.
   req->guard_state = state;
 }
 
