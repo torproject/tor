@@ -1007,12 +1007,16 @@ struct directory_request_t {
  */
 static int
 directory_command_should_use_begindir(const or_options_t *options,
-                                      const tor_addr_t *or_addr, int or_port,
-                                      const tor_addr_t *dir_addr, int dir_port,
-                                      dir_indirection_t indirection,
+                                      const directory_request_t *req,
                                       const char **reason)
 {
-  (void)dir_addr;
+  const tor_addr_t *or_addr = &req->or_addr_port.addr;
+  //const tor_addr_t *dir_addr = &req->dir_addr_port.addr;
+  const int or_port = req->or_addr_port.port;
+  const int dir_port = req->dir_addr_port.port;
+
+  const dir_indirection_t indirection = req->indirection;
+
   tor_assert(reason);
   *reason = NULL;
 
@@ -1331,11 +1335,8 @@ directory_initiate_request,(directory_request_t *request))
   const char *begindir_reason = NULL;
   /* Should the connection be to a relay's OR port (and inside that we will
    * send our directory request)? */
-  const int use_begindir = directory_command_should_use_begindir(options,
-                                     &or_addr_port->addr, or_addr_port->port,
-                                     &dir_addr_port->addr, dir_addr_port->port,
-                                     indirection,
-                                     &begindir_reason);
+  const int use_begindir =
+    directory_command_should_use_begindir(options, request, &begindir_reason);
 
   /* Will the connection go via a three-hop Tor circuit? Note that this
    * is separate from whether it will use_begindir. */
