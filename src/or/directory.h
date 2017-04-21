@@ -66,6 +66,9 @@ void directory_request_set_rend_query(directory_request_t *req,
 void directory_request_set_guard_state(directory_request_t *req,
                                        struct circuit_guard_state_t *state);
 
+void directory_request_set_routerstatus(directory_request_t *req,
+                                        const routerstatus_t *rs);
+
 MOCK_DECL(void, directory_initiate_command_routerstatus,
                 (const routerstatus_t *status,
                  uint8_t dir_purpose,
