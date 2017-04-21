@@ -570,12 +570,18 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return;
   }
 
-  directory_initiate_command(&bridge->addr, bridge->port,
-                             NULL, 0, /*no dirport*/
-                             bridge->identity,
-                             DIR_PURPOSE_FETCH_SERVERDESC,
-                             ROUTER_PURPOSE_BRIDGE,
-                             DIRIND_ONEHOP, "authority.z", NULL, 0, 0);
+  tor_addr_port_t bridge_addrport;
+  memcpy(&bridge_addrport.addr, &bridge->addr, sizeof(tor_addr_t));
+  bridge_addrport.port = bridge->port;
+
+  directory_request_t *req =
+    directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
+  directory_request_set_or_addr_port(req, &bridge_addrport);
+  directory_request_set_directory_id_digest(req, bridge->identity);
+  directory_request_set_router_purpose(req, ROUTER_PURPOSE_BRIDGE);
+  directory_request_set_resource(req, "authority.z");
+  directory_initiate_request(req);
+  directory_request_free(req);
 }
 
 /** Fetching the bridge descriptor from the bridge authority returned a
