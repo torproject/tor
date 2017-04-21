@@ -627,12 +627,16 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
   if (rs) {
     const dir_indirection_t indirection =
       get_via_tor ? DIRIND_ANONYMOUS : DIRIND_ONEHOP;
-    directory_initiate_command_routerstatus(rs, dir_purpose,
-                                            router_purpose,
-                                            indirection,
-                                            resource, NULL, 0,
-                                            if_modified_since,
-                                            guard_state);
+    directory_request_t *req = directory_request_new(dir_purpose);
+    directory_request_set_routerstatus(req, rs);
+    directory_request_set_router_purpose(req, router_purpose);
+    directory_request_set_indirection(req, indirection);
+    directory_request_set_resource(req, resource);
+    directory_request_set_if_modified_since(req, if_modified_since);
+    if (guard_state)
+      directory_request_set_guard_state(req, guard_state);
+    directory_initiate_request(req);
+    directory_request_free(req);
   } else {
     log_notice(LD_DIR,
                "While fetching directory info, "
