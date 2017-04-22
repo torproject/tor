@@ -1873,7 +1873,7 @@ getinfo_helper_listeners(control_connection_t *control_conn,
 
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
-static int
+STATIC int
 getinfo_helper_dir(control_connection_t *control_conn,
                    const char *question, char **answer,
                    const char **errmsg)

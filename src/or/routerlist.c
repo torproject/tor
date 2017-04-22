@@ -3045,8 +3045,8 @@ router_get_by_extrainfo_digest,(const char *digest))
 /** Return the signed descriptor for the extrainfo_t in our routerlist whose
  * extra-info-digest is <b>digest</b>. Return NULL if no such extra-info
  * document is known. */
-signed_descriptor_t *
-extrainfo_get_by_descriptor_digest(const char *digest)
+MOCK_IMPL(signed_descriptor_t *,
+extrainfo_get_by_descriptor_digest,(const char *digest))
 {
   extrainfo_t *ei;
   tor_assert(digest);

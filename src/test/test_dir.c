@@ -7,6 +7,7 @@
 #include <math.h>
 
 #define CONFIG_PRIVATE
+#define CONTROL_PRIVATE
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
 #define ROUTER_PRIVATE
@@ -19,6 +20,7 @@
 #include "or.h"
 #include "confparse.h"
 #include "config.h"
+#include "control.h"
 #include "crypto_ed25519.h"
 #include "directory.h"
 #include "dirserv.h"
@@ -910,6 +912,23 @@ mock_get_by_ei_desc_digest(const char *d)
   }
 }
 
+static signed_descriptor_t *
+mock_ei_get_by_ei_digest(const char *d)
+{
+  char hex[HEX_DIGEST_LEN+1];
+  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
+  signed_descriptor_t *sd = &sd_ei_minimal;
+
+  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
+    sd->signed_descriptor_body = (char *)EX_EI_MINIMAL;
+    sd->signed_descriptor_len = sizeof(EX_EI_MINIMAL);
+    sd->annotations_len = 0;
+    sd->saved_location = SAVED_NOWHERE;
+    return sd;
+  }
+  return NULL;
+}
+
 static smartlist_t *mock_ei_insert_list = NULL;
 static was_router_added_t
 mock_ei_insert(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible)
@@ -996,6 +1015,37 @@ test_dir_load_extrainfo(void *arg)
   SMARTLIST_FOREACH(wanted, char *, cp, tor_free(cp));
   smartlist_free(wanted);
   tor_free(list);
+}
+
+static void
+test_dir_getinfo_extra(void *arg)
+{
+  int r;
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void)arg;
+  MOCK(extrainfo_get_by_descriptor_digest, mock_ei_get_by_ei_digest);
+  r = getinfo_helper_dir(NULL, "extra-info/digest/"
+                         "11E0EDF526950739F7769810FCACAB8C882FAEEE", &answer,
+                         &errmsg);
+  tt_int_op(0, OP_EQ, r);
+  tt_ptr_op(NULL, OP_EQ, errmsg);
+  tt_str_op(answer, OP_EQ, EX_EI_MINIMAL);
+  tor_free(answer);
+
+  answer = NULL;
+  r = getinfo_helper_dir(NULL, "extra-info/digest/"
+                         "NOTAVALIDHEXSTRINGNOTAVALIDHEXSTRINGNOTA", &answer,
+                         &errmsg);
+  tt_int_op(0, OP_EQ, r);
+  /* getinfo_helper_dir() should maybe return an error here but doesn't */
+  tt_ptr_op(NULL, OP_EQ, errmsg);
+  /* In any case, there should be no answer for an invalid hex string. */
+  tt_ptr_op(NULL, OP_EQ, answer);
+
+ done:
+  UNMOCK(extrainfo_get_by_descriptor_digest);
 }
 
 static void
@@ -5970,6 +6020,7 @@ struct testcase_t dir_tests[] = {
   DIR(parse_router_list, TT_FORK),
   DIR(load_routers, TT_FORK),
   DIR(load_extrainfo, TT_FORK),
+  DIR(getinfo_extra, 0),
   DIR_LEGACY(versions),
   DIR_LEGACY(fp_pairs),
   DIR(split_fps, 0),
