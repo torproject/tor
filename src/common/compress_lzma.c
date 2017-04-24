@@ -26,6 +26,18 @@
 static size_t total_lzma_allocation = 0;
 
 #ifdef HAVE_LZMA
+/** Given <b>level</b> return the memory level. */
+static int
+memory_level(compression_level_t level)
+{
+  switch (level) {
+    default:
+    case HIGH_COMPRESSION: return 9;
+    case MEDIUM_COMPRESSION: return 6;
+    case LOW_COMPRESSION: return 3;
+  }
+}
+
 /** Convert a given <b>error</b> to a human readable error string. */
 static const char *
 lzma_error_str(lzma_ret error)
@@ -124,7 +136,7 @@ tor_lzma_compress(char **out, size_t *out_len,
   stream.avail_in = in_len;
 
   lzma_lzma_preset(&stream_options,
-                   tor_compress_memory_level(HIGH_COMPRESSION));
+                   memory_level(HIGH_COMPRESSION));
 
   retval = lzma_alone_encoder(&stream, &stream_options);
 
@@ -432,7 +444,7 @@ tor_lzma_compress_new(int compress,
 
   if (compress) {
     lzma_lzma_preset(&stream_options,
-                     tor_compress_memory_level(compression_level));
+                     memory_level(compression_level));
 
     retval = lzma_alone_encoder(&result->stream, &stream_options);
 

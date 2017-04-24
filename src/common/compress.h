@@ -47,9 +47,6 @@ tor_uncompress(char **out, size_t *out_len,
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
 int
-tor_compress_memory_level(compression_level_t level);
-
-int
 tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
 
 int

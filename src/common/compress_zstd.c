@@ -26,6 +26,20 @@
 /** Total number of bytes allocated for Zstandard state. */
 static size_t total_zstd_allocation = 0;
 
+#ifdef HAVE_ZSTD
+/** Given <b>level</b> return the memory level. */
+static int
+memory_level(compression_level_t level)
+{
+  switch (level) {
+    default:
+    case HIGH_COMPRESSION: return 9;
+    case MEDIUM_COMPRESSION: return 8;
+    case LOW_COMPRESSION: return 7;
+  }
+}
+#endif // HAVE_ZSTD.
+
 /** Return 1 if Zstandard compression is supported; otherwise 0. */
 int
 tor_zstd_method_supported(void)
@@ -104,7 +118,7 @@ tor_zstd_compress(char **out, size_t *out_len,
   }
 
   retval = ZSTD_initCStream(stream,
-                            tor_compress_memory_level(HIGH_COMPRESSION));
+                            memory_level(HIGH_COMPRESSION));
 
   if (ZSTD_isError(retval)) {
     log_warn(LD_GENERAL, "Zstandard stream initialization error: %s",
@@ -408,7 +422,7 @@ tor_zstd_compress_new(int compress,
     }
 
     retval = ZSTD_initCStream(result->u.compress_stream,
-                              tor_compress_memory_level(compression_level));
+                              memory_level(compression_level));
 
     if (ZSTD_isError(retval)) {
       log_warn(LD_GENERAL, "Zstandard stream initialization error: %s",

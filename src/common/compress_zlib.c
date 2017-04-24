@@ -50,6 +50,18 @@ static size_t tor_zlib_state_size_precalc(int inflate,
 /** Total number of bytes allocated for zlib state */
 static size_t total_zlib_allocation = 0;
 
+/** Given <b>level</b> return the memory level. */
+static int
+memory_level(compression_level_t level)
+{
+  switch (level) {
+    default:
+    case HIGH_COMPRESSION: return 8;
+    case MEDIUM_COMPRESSION: return 7;
+    case LOW_COMPRESSION: return 6;
+  }
+}
+
 /** Return the 'bits' value to tell zlib to use <b>method</b>.*/
 static inline int
 method_bits(compress_method_t method, compression_level_t level)
@@ -120,7 +132,7 @@ tor_zlib_compress(char **out, size_t *out_len,
 
   if (deflateInit2(stream, Z_BEST_COMPRESSION, Z_DEFLATED,
                    method_bits(method, HIGH_COMPRESSION),
-                   tor_compress_memory_level(HIGH_COMPRESSION),
+                   memory_level(HIGH_COMPRESSION),
                    Z_DEFAULT_STRATEGY) != Z_OK) {
     //LCOV_EXCL_START -- we can only provoke failure by giving junk arguments.
     log_warn(LD_GENERAL, "Error from deflateInit2: %s",
@@ -413,7 +425,7 @@ tor_zlib_compress_new(int compress,
   out->stream.opaque = NULL;
   out->compress = compress;
   bits = method_bits(method, compression_level);
-  memlevel = tor_compress_memory_level(compression_level);
+  memlevel = memory_level(compression_level);
   if (compress) {
     if (deflateInit2(&out->stream, Z_BEST_COMPRESSION, Z_DEFLATED,
                      bits, memlevel,
