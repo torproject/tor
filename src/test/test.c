@@ -1197,6 +1197,7 @@ struct testgroup_t testgroups[] = {
   { "connection/", connection_tests },
   { "conscache/", conscache_tests },
   { "consdiff/", consdiff_tests },
+  { "consdiffmgr/", consdiffmgr_tests },
   { "container/", container_tests },
   { "control/", controller_tests },
   { "control/event/", controller_event_tests },

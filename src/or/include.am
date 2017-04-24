@@ -38,6 +38,7 @@ LIBTOR_A_SOURCES = \
 	src/or/connection_or.c				\
 	src/or/conscache.c				\
 	src/or/consdiff.c				\
+	src/or/consdiffmgr.c				\
 	src/or/control.c				\
 	src/or/cpuworker.c				\
 	src/or/dircollate.c				\
@@ -156,6 +157,7 @@ ORHEADERS = \
 	src/or/connection_or.h				\
 	src/or/conscache.h				\
 	src/or/consdiff.h				\
+	src/or/consdiffmgr.h				\
 	src/or/control.h				\
 	src/or/cpuworker.h				\
 	src/or/dircollate.h				\

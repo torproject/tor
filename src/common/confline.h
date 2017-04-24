@@ -31,6 +31,8 @@ typedef struct config_line_t {
 
 void config_line_append(config_line_t **lst,
                         const char *key, const char *val);
+void config_line_prepend(config_line_t **lst,
+                         const char *key, const char *val);
 config_line_t *config_lines_dup(const config_line_t *inp);
 config_line_t *config_lines_dup_and_filter(const config_line_t *inp,
                                            const char *key);

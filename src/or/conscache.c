@@ -16,6 +16,7 @@
  */
 struct consensus_cache_entry_t {
   uint32_t magic; /**< Must be set to CCE_MAGIC */
+  HANDLE_ENTRY(consensus_cache_entry, consensus_cache_entry_t);
   int32_t refcnt; /**< Reference count. */
   unsigned can_remove : 1; /**< If true, we want to delete this file. */
   /** If true, we intend to unmap this file as soon as we're done with it. */
@@ -174,6 +175,8 @@ consensus_cache_find_first(consensus_cache_t *cache,
  * Given a <b>cache</b>, add every entry to <b>out<b> for which
  * <b>key</b>=<b>value</b>.  If <b>key</b> is NULL, add every entry.
  *
+ * Do not add any entry that has been marked for removal.
+ *
  * Does not adjust reference counts.
  */
 void
@@ -182,12 +185,15 @@ consensus_cache_find_all(smartlist_t *out,
                          const char *key,
                          const char *value)
 {
-  if (! key) {
-    smartlist_add_all(out, cache->entries);
-    return;
-  }
-
   SMARTLIST_FOREACH_BEGIN(cache->entries, consensus_cache_entry_t *, ent) {
+    if (ent->can_remove == 1) {
+      /* We want to delete this; pretend it isn't there. */
+      continue;
+    }
+    if (! key) {
+      smartlist_add(out, ent);
+      continue;
+    }
     const char *found_val = consensus_cache_entry_get_value(ent, key);
     if (found_val && !strcmp(value, found_val)) {
       smartlist_add(out, ent);
@@ -300,6 +306,7 @@ consensus_cache_entry_decref(consensus_cache_entry_t *ent)
   }
   tor_free(ent->fname);
   config_free_lines(ent->labels);
+  consensus_cache_entry_handles_clear(ent);
   memwipe(ent, 0, sizeof(consensus_cache_entry_t));
   tor_free(ent);
 }
@@ -484,6 +491,8 @@ consensus_cache_entry_unmap(consensus_cache_entry_t *ent)
   ent->bodylen = 0;
   ent->unused_since = TIME_MAX;
 }
+
+HANDLE_IMPL(consensus_cache_entry, consensus_cache_entry_t, )
 
 #ifdef TOR_UNIT_TESTS
 /**
