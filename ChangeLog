@@ -1,4 +1,25 @@
-Changes in version 0.3.0.6-rc - 2017-0?-??
+Changes in version 0.3.0.6 - 2017-04-2?
+  Tor 0.3.0.6 is the first stable release of the Tor 0.2.9 series.
+
+  XXXXX BLURB HERE.
+
+  Below are the changes since 0.3.0.5-rc. For a list of all changes
+  since 0.2.9, see the ReleaseNotes file.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the April 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (control port):
+    - The GETINFO extra-info/digest/<digest> command was broken because
+      of a wrong base16 decode return value check, introduced when
+      refactoring that API. Fixes bug 22034; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (crash prevention):
+    - Fix an (currently untriggerable, but potentially dangerous) crash
+      bug when base32-encoding inputs whose sizes are not a multiple of
+      5. Fixes bug 21894; bugfix on 0.2.9.1-alpha.
+
 
 Changes in version 0.3.0.5-rc - 2017-04-05
   Tor 0.3.0.5-rc fixes a few remaining bugs, large and small, in the

@@ -1,5 +1,10 @@
-Changes in version 0.3.0.6 - 2017-04-??
-  draft draft draft
+Changes in version 0.3.0.6 - 2017-04-2?
+  Tor 0.3.0.6 is the first stable release of the Tor 0.3.0 series.
+
+  XXXXX BLURB HERE.
+
+  Below are the changes since 0.2.9.10. For a list of only the changes
+  since 0.3.0.5-rc, see the ChangeLog file.
 
   o Major features (directory authority, security):
     - The default for AuthDirPinKeys is now 1: directory authorities
@@ -223,9 +228,7 @@ Changes in version 0.3.0.6 - 2017-04-??
       secrecy, we used P256.) Closes ticket 13752.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the March 7 2017 Maxmind GeoLite2
+    - Update geoip and geoip6 to the April 4 2017 Maxmind GeoLite2
       Country database.
 
   o Minor features (geoip, also in 0.2.9.9):
@@ -273,6 +276,9 @@ Changes in version 0.3.0.6 - 2017-04-??
       breaking change in the control protocol. (The field seems to be
       ignored by the most common known controllers.) Fixes bug 18146;
       bugfix on 0.1.1.4-alpha.
+    - The GETINFO extra-info/digest/<digest> command was broken because
+      of a wrong base16 decode return value check, introduced when
+      refactoring that API. Fixes bug 22034; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfix (logging):
     - Don't recommend the use of Tor2web in non-anonymous mode.
@@ -334,6 +340,11 @@ Changes in version 0.3.0.6 - 2017-04-??
       of 0. This prevents a zero weight from making it all the way to
       the end (happens in small testing networks) and causing an error.
       Fixes bug 14881; bugfix on 0.2.2.17-alpha.
+
+  o Minor bugfixes (crash prevention):
+    - Fix an (currently untriggerable, but potentially dangerous) crash
+      bug when base32-encoding inputs whose sizes are not a multiple of
+      5. Fixes bug 21894; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (dead code):
     - Remove a redundant check for PidFile changes at runtime in
