@@ -1,5 +1,0 @@
-  o Documentation:
-    - Update the description of the directory server options in the manual
-      page, to clarify that DirPort is no longer necessary to be a directory
-      cache.  Closes ticket 21720.
-

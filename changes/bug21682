@@ -1,3 +1,0 @@
-  o Minor bugfixes (memory leaks):
-    - Fix a memory leak when using GETCONF on a port option.
-      Fixes bug 21682; bugfix on 0.3.0.3-alpha.
