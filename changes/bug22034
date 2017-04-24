@@ -1,0 +1,4 @@
+  o Minor bugfixes (control port, regression):
+    - The GETINFO extra-info/digest/<digest> command was broken because of a
+      wrong base16 decode return value check. In was introduced in a refactor
+      of that API. Fixex bug #22034; bugfix on tor-0.2.9.1-alpha.
