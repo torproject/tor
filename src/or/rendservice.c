@@ -1054,20 +1054,13 @@ rend_log_intro_limit(const rend_service_t *service, int min_severity)
   }
   time_t intro_period_elapsed = time(NULL) - service->intro_period_started;
   tor_assert_nonfatal(intro_period_elapsed >= 0);
-  /* We delayed resuming circuits longer than expected */
-  int exceeded_elapsed = (intro_period_elapsed > INTRO_CIRC_RETRY_PERIOD +
-                          INTRO_CIRC_RETRY_PERIOD_SLOP);
-  if (exceeded_elapsed) {
-    severity = LOG_WARN;
-  }
   log_fn(severity, LD_REND, "Hidden service %s %s %d intro points in the last "
-         "%d seconds%s. Intro circuit launches are limited to %d per %d "
+         "%d seconds. Intro circuit launches are limited to %d per %d "
          "seconds.",
          service->service_id,
          exceeded_limit ? "exceeded launch limit with" : "launched",
          service->n_intro_circuits_launched,
          (int)intro_period_elapsed,
-         exceeded_elapsed ? " (delayed)" : "",
          rend_max_intro_circs_per_period(service->n_intro_points_wanted),
          INTRO_CIRC_RETRY_PERIOD);
   rend_service_dump_stats(severity);
