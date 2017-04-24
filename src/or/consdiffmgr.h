@@ -14,8 +14,8 @@ typedef enum consdiff_status_t {
 } consdiff_status_t;
 
 typedef struct consdiff_cfg_t {
-  uint32_t cache_max_age_hours;
-  uint32_t cache_max_num;
+  int32_t cache_max_age_hours;
+  int32_t cache_max_num;
 } consdiff_cfg_t;
 
 struct consensus_cache_entry_t; // from conscache.h
