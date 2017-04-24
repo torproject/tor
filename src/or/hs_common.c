@@ -9,6 +9,8 @@
  *        protocol.
  **/
 
+#define HS_COMMON_PRIVATE
+
 #include "or.h"
 
 #include "config.h"
@@ -48,6 +50,46 @@ hs_check_service_private_dir(const char *username, const char *path,
     return -1;
   }
   return 0;
+}
+
+/** Get the default HS time period length in minutes from the consensus. */
+STATIC uint64_t
+get_time_period_length(void)
+{
+  int32_t time_period_length = networkstatus_get_param(NULL, "hsdir-interval",
+                                             HS_TIME_PERIOD_LENGTH_DEFAULT,
+                                             HS_TIME_PERIOD_LENGTH_MIN,
+                                             HS_TIME_PERIOD_LENGTH_MAX);
+  /* Make sure it's a positive value. */
+  tor_assert(time_period_length >= 0);
+  /* uint64_t will always be able to contain a int32_t */
+  return (uint64_t) time_period_length;
+}
+
+/** Get the HS time period number at time <b>now</b> */
+STATIC uint64_t
+get_time_period_num(time_t now)
+{
+  uint64_t time_period_num;
+  uint64_t time_period_length = get_time_period_length();
+  uint64_t minutes_since_epoch = now / 60;
+
+  /* Now subtract half a day to fit the prop224 time period schedule (see
+   * section [TIME-PERIODS]). */
+  tor_assert(minutes_since_epoch > HS_TIME_PERIOD_ROTATION_OFFSET);
+  minutes_since_epoch -= HS_TIME_PERIOD_ROTATION_OFFSET;
+
+  /* Calculate the time period */
+  time_period_num = minutes_since_epoch / time_period_length;
+  return time_period_num;
+}
+
+/** Get the number of the _upcoming_ HS time period, given that the current
+ *  time is <b>now</b>. */
+uint64_t
+hs_get_next_time_period_num(time_t now)
+{
+  return get_time_period_num(now) + 1;
 }
 
 /* Create a new rend_data_t for a specific given <b>version</b>.
