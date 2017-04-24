@@ -125,6 +125,7 @@ mock_cpuworker_handle_replies(void)
     return;
   SMARTLIST_FOREACH(fake_cpuworker_queue, fake_work_queue_ent_t *, ent, {
       ent->reply_fn(ent->arg);
+      tor_free(ent);
   });
   smartlist_free(fake_cpuworker_queue);
   fake_cpuworker_queue = NULL;
@@ -615,6 +616,10 @@ test_consdiffmgr_diff_pending(void *arg)
 
  done:
   UNMOCK(cpuworker_queue_work);
+  for (i = 0; i < N; ++i) {
+    tor_free(md_body[i]);
+    networkstatus_vote_free(md_ns[i]);
+  }
 #undef N
 }
 
