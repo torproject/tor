@@ -757,6 +757,9 @@ get_linenum(const char **s, int *num_out)
 {
   int ok;
   char *next;
+  if (!TOR_ISDIGIT(**s)) {
+    return -1;
+  }
   *num_out = (int) tor_parse_long(*s, 10, 0, INT32_MAX, &ok, &next);
   if (ok && next) {
     *s = next;
