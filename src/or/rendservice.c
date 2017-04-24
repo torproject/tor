@@ -245,6 +245,81 @@ rend_service_free_all(void)
   rend_service_list = NULL;
 }
 
+/* Validate a <b>service</b>. Use the <b>service_list</b> to make sure there
+ * is no duplicate entry for the given service object. Return 0 if valid else
+ * -1 if not.*/
+static int
+rend_validate_service(const smartlist_t *service_list,
+                      const rend_service_t *service)
+{
+  int dupe = 0;
+
+  tor_assert(service_list);
+  tor_assert(service);
+
+  if (service->max_streams_per_circuit < 0) {
+    log_warn(LD_CONFIG, "Hidden service (%s) configured with negative max "
+                        "streams per circuit.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  if (service->max_streams_close_circuit < 0 ||
+      service->max_streams_close_circuit > 1) {
+    log_warn(LD_CONFIG, "Hidden service (%s) configured with invalid "
+                        "max streams handling.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  if (service->auth_type != REND_NO_AUTH &&
+      (!service->clients || smartlist_len(service->clients) == 0)) {
+    log_warn(LD_CONFIG, "Hidden service (%s) with client authorization but "
+                        "no clients.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  if (!service->ports || !smartlist_len(service->ports)) {
+    log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  /* XXX This duplicate check has two problems:
+   *
+   * a) It's O(n^2), but the same comment from the bottom of
+   *    rend_config_services() should apply.
+   *
+   * b) We only compare directory paths as strings, so we can't
+   *    detect two distinct paths that specify the same directory
+   *    (which can arise from symlinks, case-insensitivity, bind
+   *    mounts, etc.).
+   *
+   * It also can't detect that two separate Tor instances are trying
+   * to use the same HiddenServiceDir; for that, we would need a
+   * lock file.  But this is enough to detect a simple mistake that
+   * at least one person has actually made.
+   */
+  if (!rend_service_is_ephemeral(service)) {
+    /* Skip dupe for ephemeral services. */
+    SMARTLIST_FOREACH(service_list, rend_service_t *, ptr,
+                      dupe = dupe ||
+                      !strcmp(ptr->directory, service->directory));
+    if (dupe) {
+      log_warn(LD_REND, "Another hidden service is already configured for "
+                        "directory %s.",
+               rend_service_escaped_dir(service));
+      goto invalid;
+    }
+  }
+
+  /* Valid. */
+  return 0;
+ invalid:
+  return -1;
+}
+
 /** Validate <b>service</b> and add it to <b>service_list</b>, or to
  * the global rend_service_list if <b>service_list</b> is NULL.
  * Return 0 on success.  On failure, free <b>service</b> and return -1.
@@ -671,6 +746,11 @@ rend_config_services(const or_options_t *options, int validate_only)
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
+      if (service) {
+        if (rend_validate_service(rend_service_staging_list, service) < 0) {
+          goto free_and_return;
+        }
+      }
       /* register the service we just finished parsing
        * this code registers every service except the last one parsed,
        * which is registered below the loop */
@@ -871,6 +951,11 @@ rend_config_services(const or_options_t *options, int validate_only)
         goto free_and_return;
       }
     }
+  }
+  /* Validate the last service that we just parsed. */
+  if (service &&
+      rend_validate_service(rend_service_staging_list, service) < 0) {
+    goto free_and_return;
   }
   /* register the final service after we have finished parsing all services
    * this code only registers the last service, other services are registered
