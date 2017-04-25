@@ -74,6 +74,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "connection_or.h"
+#include "consdiffmgr.h"
 #include "control.h"
 #include "confparse.h"
 #include "cpuworker.h"
@@ -1813,6 +1814,15 @@ options_act(const or_options_t *old_options)
     /* This should be impossible, but let's be sure. */
     log_warn(LD_BUG,"Error parsing already-validated policy options.");
     return -1;
+  }
+
+  if (server_mode(options)) {
+    static int cdm_initialized = 0;
+    if (cdm_initialized == 0) {
+      cdm_initialized = 1;
+      consdiffmgr_configure(NULL);
+      consdiffmgr_validate();
+    }
   }
 
   if (init_control_cookie_authentication(options->CookieAuthentication) < 0) {

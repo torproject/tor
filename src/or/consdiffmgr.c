@@ -622,7 +622,8 @@ consdiffmgr_cleanup(void)
 void
 consdiffmgr_configure(const consdiff_cfg_t *cfg)
 {
-  memcpy(&consdiff_cfg, cfg, sizeof(consdiff_cfg));
+  if (cfg)
+    memcpy(&consdiff_cfg, cfg, sizeof(consdiff_cfg));
 
   (void) cdm_cache_get();
 }
