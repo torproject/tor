@@ -522,13 +522,14 @@ GENERAL OPTIONS
 [[HTTPProxy]] **HTTPProxy** __host__[:__port__]::
     Tor will make all its directory requests through this host:port (or host:80
     if port is not specified), rather than connecting directly to any directory
-    servers.
+    servers. (DEPRECATED: As of 0.3.1.0-alpha you should use HTTPSProxy.)
 
 [[HTTPProxyAuthenticator]] **HTTPProxyAuthenticator** __username:password__::
     If defined, Tor will use this username:password for Basic HTTP proxy
     authentication, as in RFC 2617. This is currently the only form of HTTP
     proxy authentication that Tor supports; feel free to submit a patch if you
-    want it to support others.
+    want it to support others. (DEPRECATED: As of 0.3.1.0-alpha you should use
+    HTTPSProxyAuthenticator.)
 
 [[HTTPSProxy]] **HTTPSProxy** __host__[:__port__]::
     Tor will make all its OR (SSL) connections through this host:port (or
@@ -646,7 +647,7 @@ GENERAL OPTIONS
     (127.0.0.0/8 and ::1).
 
 [[OutboundBindAddressOR]] **OutboundBindAddressOR** __IP__::
-    Make all outbound non-exit (=relay and other) connections originate from the IP 
+    Make all outbound non-exit (=relay and other) connections originate from the IP
     address specified. This option overrides **OutboundBindAddress** for the same
     IP version. This option may be used twice, once with an IPv4 address and once
     with an IPv6 address. This setting will be ignored for connections to the

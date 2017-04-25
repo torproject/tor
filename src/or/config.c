@@ -693,6 +693,13 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "NoAdvertise sub-option" },
   /* End of options deprecated since 0.2.9.2-alpha. */
 
+  /* Deprecated since 0.3.1.0-alpha. */
+  { "HTTPProxy", "It only applies to direct unencrypted HTTP connections "
+    "to your directory server, which your Tor probably wasn't using." },
+  { "HTTPProxyAuthenticator", "HTTPProxy is deprecated in favor of HTTPSProxy "
+    "which should be used with HTTPSProxyAuthenticator." },
+  /* End of options deprecated since 0.3.1.0-alpha. */
+
   { NULL, NULL }
 };
 
