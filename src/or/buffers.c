@@ -1319,7 +1319,7 @@ fetch_from_buf_http(buf_t *buf,
 
 /**
  * Wait this many seconds before warning the user about using SOCKS unsafely
- * again (requires that WarnUnsafeSocks is turned on). */
+ * again. */
 #define SOCKS_WARN_INTERVAL 5
 
 /** Warn that the user application has made an unsafe socks request using
@@ -1331,9 +1331,6 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
 {
   static ratelim_t socks_ratelim = RATELIM_INIT(SOCKS_WARN_INTERVAL);
 
-  const or_options_t *options = get_options();
-  if (! options->WarnUnsafeSocks)
-    return;
   if (safe_socks) {
     log_fn_ratelim(&socks_ratelim, LOG_WARN, LD_APP,
              "Your application (using socks%d to port %d) is giving "

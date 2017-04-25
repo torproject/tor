@@ -402,7 +402,7 @@ static config_var_t option_vars_[] = {
   VPORT(NATDPort),
   V(Nickname,                    STRING,   NULL),
   V(PredictedPortsRelevanceTime,  INTERVAL, "1 hour"),
-  V(WarnUnsafeSocks,              BOOL,     "1"),
+  OBSOLETE("WarnUnsafeSocks"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
   V(NumCPUs,                     UINT,     "0"),
   V(NumDirectoryGuards,          UINT,     "0"),
@@ -664,8 +664,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
-  { "WarnUnsafeSocks", "Changing this option makes it easier for you "
-    "to accidentally lose your anonymity by leaking DNS information" },
   { "TLSECGroup", "The default is a nice secure choice; the other option "
     "is less secure." },
   { "ControlListenAddress", "Use ControlPort instead." },

@@ -1271,12 +1271,6 @@ The following options are useful only for clients (that is, if
     helps to determine whether an application using Tor is possibly leaking
     DNS requests. (Default: 0)
 
-[[WarnUnsafeSocks]] **WarnUnsafeSocks** **0**|**1**::
-    When this option is enabled, Tor will warn whenever a request is
-    received that only contains an IP address instead of a hostname. Allowing
-    applications to do DNS resolves themselves is usually a bad idea and
-    can leak your location to attackers. (Default: 1)
-
 [[VirtualAddrNetworkIPv4]] **VirtualAddrNetworkIPv4** __Address__/__bits__ +
 
 [[VirtualAddrNetworkIPv6]] **VirtualAddrNetworkIPv6** [__Address__]/__bits__::
