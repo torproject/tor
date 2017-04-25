@@ -361,7 +361,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
   V(HidServAuth,                 LINELIST, NULL),
   OBSOLETE("CloseHSClientCircuitsImmediatelyOnTimeout"),
-  V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
+  OBSOLETE("CloseHSServiceRendCircuitsImmediatelyOnTimeout"),
   V(HiddenServiceSingleHopMode,  BOOL,     "0"),
   V(HiddenServiceNonAnonymousMode,BOOL,    "0"),
   V(HTTPProxy,                   STRING,   NULL),
@@ -664,8 +664,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
-  { "CloseHSServiceRendCircuitsImmediatelyOnTimeout", "This option makes "
-    "your hidden services easier to fingerprint." },
   { "WarnUnsafeSocks", "Changing this option makes it easier for you "
     "to accidentally lose your anonymity by leaking DNS information" },
   { "TLSECGroup", "The default is a nice secure choice; the other option "

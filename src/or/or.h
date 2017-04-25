@@ -3769,10 +3769,6 @@ typedef struct {
   /** A routerset that should be used when picking RPs for HS circuits. */
   routerset_t *Tor2webRendezvousPoints;
 
-  /** Close hidden-service-side rendezvous circuits immediately when
-   * they reach the normal circuit-build timeout. */
-  int CloseHSServiceRendCircuitsImmediatelyOnTimeout;
-
   /** Onion Services in HiddenServiceSingleHopMode make one-hop (direct)
    * circuits between the onion service server, and the introduction and
    * rendezvous points. (Onion service descriptors are still posted using

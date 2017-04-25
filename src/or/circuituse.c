@@ -747,8 +747,7 @@ circuit_expire_building(void)
     /* If this is a service-side rendezvous circuit which is far
      * enough along in connecting to its destination, consider sparing
      * it. */
-    if (!(options->CloseHSServiceRendCircuitsImmediatelyOnTimeout) &&
-        !(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out) &&
+    if (!(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out) &&
         victim->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
       log_info(LD_CIRC,"Marking circ %u (state %d:%s, purpose %d) "
                "as timed-out HS circ; relaunching rendezvous attempt.",
