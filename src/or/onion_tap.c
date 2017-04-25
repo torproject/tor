@@ -159,7 +159,7 @@ onion_skin_TAP_server_handshake(
      * big. That should be impossible. */
     log_info(LD_GENERAL, "crypto_dh_get_public failed.");
     goto err;
-    /* LCOV_EXCP_STOP */
+    /* LCOV_EXCL_STOP */
   }
 
   key_material_len = DIGEST_LEN+key_out_len;
