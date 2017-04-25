@@ -32,6 +32,7 @@ memory_level(compression_level_t level)
 {
   switch (level) {
     default:
+    case BEST_COMPRESSION:
     case HIGH_COMPRESSION: return 9;
     case MEDIUM_COMPRESSION: return 6;
     case LOW_COMPRESSION: return 3;

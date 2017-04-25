@@ -56,6 +56,7 @@ memory_level(compression_level_t level)
 {
   switch (level) {
     default:
+    case BEST_COMPRESSION: return 9;
     case HIGH_COMPRESSION: return 8;
     case MEDIUM_COMPRESSION: return 7;
     case LOW_COMPRESSION: return 6;
@@ -70,6 +71,7 @@ method_bits(compress_method_t method, compression_level_t level)
   const int flag = method == GZIP_METHOD ? 16 : 0;
   switch (level) {
     default:
+    case BEST_COMPRESSION:
     case HIGH_COMPRESSION: return flag + 15;
     case MEDIUM_COMPRESSION: return flag + 13;
     case LOW_COMPRESSION: return flag + 11;
@@ -162,7 +164,7 @@ tor_zlib_compress_new(int compress_,
   if (! compress_) {
     /* use this setting for decompression, since we might have the
      * max number of window bits */
-    compression_level = HIGH_COMPRESSION;
+    compression_level = BEST_COMPRESSION;
   }
 
   out = tor_malloc_zero(sizeof(tor_zlib_compress_state_t));

@@ -208,8 +208,8 @@ tor_compress(char **out, size_t *out_len,
              compress_method_t method)
 {
   return tor_compress_impl(1, out, out_len, in, in_len, method,
-                           HIGH_COMPRESSION,
-                           1, LOG_WARN); // XXXX "best"?
+                           BEST_COMPRESSION,
+                           1, LOG_WARN);
 }
 
 /** Given zero or more zlib-compressed or gzip-compressed strings of
@@ -231,7 +231,7 @@ tor_uncompress(char **out, size_t *out_len,
                int protocol_warn_level)
 {
   return tor_compress_impl(0, out, out_len, in, in_len, method,
-                           HIGH_COMPRESSION,
+                           BEST_COMPRESSION,
                            complete_only, protocol_warn_level);
 }
 
