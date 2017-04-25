@@ -110,6 +110,9 @@ static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
                                           consensus_cache_entry_t *diff_to);
 static void consdiffmgr_set_cache_flags(void);
 
+/* Just gzip consensuses for now. */
+#define COMPRESS_CONSENSUS_WITH GZIP_METHOD
+
 /* =====
  * Hashtable setup
  * ===== */
@@ -420,18 +423,28 @@ consdiffmgr_add_consensus(const char *consensus,
     format_iso_time_nospace(formatted_time, valid_after);
     const char *flavname = networkstatus_get_flavor_name(flavor);
 
-    cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST,
-                            (const uint8_t *)consensus, bodylen);
     cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST_UNCOMPRESSED,
                             (const uint8_t *)consensus, bodylen);
+
+    char *body_compressed = NULL;
+    size_t size_compressed = 0;
+    if (tor_compress(&body_compressed, &size_compressed,
+                     consensus, bodylen, COMPRESS_CONSENSUS_WITH) < 0) {
+      config_free_lines(labels);
+      return -1;
+    }
+    cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST,
+                            (const uint8_t *)body_compressed, size_compressed);
+    config_line_prepend(&labels, LABEL_COMPRESSION_TYPE,
+                        compression_method_get_name(COMPRESS_CONSENSUS_WITH));
     config_line_prepend(&labels, LABEL_FLAVOR, flavname);
     config_line_prepend(&labels, LABEL_VALID_AFTER, formatted_time);
     config_line_prepend(&labels, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
 
     entry = consensus_cache_add(cdm_cache_get(),
                                 labels,
-                                (const uint8_t *)consensus,
-                                bodylen);
+                                (const uint8_t *)body_compressed,
+                                size_compressed);
     config_free_lines(labels);
   }
 
@@ -915,6 +928,40 @@ typedef struct consensus_diff_worker_job_t {
   size_t bodylen_out;
 } consensus_diff_worker_job_t;
 
+/** Given a consensus_cache_entry_t, check whether it has a label claiming
+ * that it was compressed.  If so, uncompress its contents into <b>out</b> and
+ * set <b>outlen</b> to hold their size.  If not, just copy the body into
+ * <b>out</b> and set <b>outlen</b> to its length.  Return 0 on success,
+ * -1 on failure.
+ *
+ * In all cases, the output is nul-terminated. */
+STATIC int
+uncompress_or_copy(char **out, size_t *outlen,
+                   consensus_cache_entry_t *ent)
+{
+  const uint8_t *body;
+  size_t bodylen;
+
+  if (consensus_cache_entry_get_body(ent, &body, &bodylen) < 0)
+    return -1;
+
+  const char *lv_compression =
+    consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
+  compress_method_t method = NO_METHOD;
+
+  if (lv_compression)
+    method = compression_method_get_by_name(lv_compression);
+
+  if (method == NO_METHOD) {
+    *out = tor_memdup_nulterm(body, bodylen);
+    *outlen = bodylen;
+    return 0;
+  } else {
+    return tor_uncompress(out, outlen, (const char *)body, bodylen,
+                          method, 1, LOG_WARN);
+  }
+}
+
 /**
  * Worker function. This function runs inside a worker thread and receives
  * a consensus_diff_worker_job_t as its input.
@@ -966,11 +1013,20 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
 
   char *consensus_diff;
   {
-    // XXXX the input might not be nul-terminated. And also we wanted to
-    // XXXX support compression later I guess. So, we need to copy here.
-    char *diff_from_nt, *diff_to_nt;
-    diff_from_nt = tor_memdup_nulterm(diff_from, len_from);
-    diff_to_nt = tor_memdup_nulterm(diff_to, len_to);
+    char *diff_from_nt = NULL, *diff_to_nt = NULL;
+    size_t diff_from_nt_len, diff_to_nt_len;
+
+    if (uncompress_or_copy(&diff_from_nt, &diff_from_nt_len,
+                           job->diff_from) < 0) {
+      return WQ_RPL_REPLY;
+    }
+    if (uncompress_or_copy(&diff_to_nt, &diff_to_nt_len,
+                           job->diff_to) < 0) {
+      tor_free(diff_from_nt);
+      return WQ_RPL_REPLY;
+    }
+    tor_assert(diff_from_nt);
+    tor_assert(diff_to_nt);
 
     // XXXX ugh; this is going to calculate the SHA3 of both its
     // XXXX inputs again, even though we already have that. Maybe it's time
