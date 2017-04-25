@@ -2947,6 +2947,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   tor_assert(msg);
   *msg = NULL;
 
+  if (parse_ports(options, 1, msg, &n_ports,
+                  &world_writable_control_socket) < 0)
+    return -1;
+
   /* Set UseEntryGuards from the configured value, before we check it below.
    * We change UseEntryGuards when it's incompatible with other options,
    * but leave UseEntryGuards_option with the original value.
@@ -2964,10 +2968,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "https://www.torproject.org/docs/faq.html#BestOSForRelay "
         "for details.", uname);
   }
-
-  if (parse_ports(options, 1, msg, &n_ports,
-                  &world_writable_control_socket) < 0)
-    return -1;
 
   if (parse_outbound_addresses(options, 1, msg) < 0)
     return -1;
