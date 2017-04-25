@@ -301,3 +301,4 @@ tor_zlib_init(void)
 {
   atomic_counter_init(&total_zlib_allocation);
 }
+

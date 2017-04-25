@@ -495,3 +495,4 @@ tor_compress_init(void)
   tor_lzma_init();
   tor_zstd_init();
 }
+

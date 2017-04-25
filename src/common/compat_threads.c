@@ -397,3 +397,4 @@ atomic_counter_get(atomic_counter_t *counter)
   tor_mutex_release(&counter->mutex);
   return val;
 }
+

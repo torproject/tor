@@ -332,3 +332,4 @@ tor_zstd_init(void)
 {
   atomic_counter_init(&total_zstd_allocation);
 }
+

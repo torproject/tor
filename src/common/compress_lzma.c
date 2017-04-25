@@ -321,3 +321,4 @@ tor_lzma_init(void)
 {
   atomic_counter_init(&total_lzma_allocation);
 }
+
