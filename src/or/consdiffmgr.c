@@ -628,6 +628,16 @@ consdiffmgr_configure(const consdiff_cfg_t *cfg)
 }
 
 /**
+ * Tell the sandbox (if any) configured by <b>cfg</b> to allow the
+ * operations that the consensus diff manager will need.
+ */
+int
+consdiffmgr_register_with_sandbox(struct sandbox_cfg_elem **cfg)
+{
+  return consensus_cache_register_with_sandbox(cdm_cache_get(), cfg);
+}
+
+/**
  * Scan the consensus diff manager's cache for any grossly malformed entries,
  * and mark them as deletable.  Return 0 if no problems were found; 1
  * if problems were found and fixed.

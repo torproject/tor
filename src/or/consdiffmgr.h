@@ -32,6 +32,8 @@ consdiff_status_t consdiffmgr_find_diff_from(
 void consdiffmgr_rescan(void);
 int consdiffmgr_cleanup(void);
 void consdiffmgr_configure(const consdiff_cfg_t *cfg);
+struct sandbox_cfg_elem;
+int consdiffmgr_register_with_sandbox(struct sandbox_cfg_elem **cfg);
 void consdiffmgr_free_all(void);
 int consdiffmgr_validate(void);
 

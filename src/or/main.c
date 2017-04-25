@@ -64,6 +64,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "connection_or.h"
+#include "consdiffmgr.h"
 #include "control.h"
 #include "cpuworker.h"
 #include "crypto_s2k.h"
@@ -3162,6 +3163,7 @@ tor_free_all(int postfork)
   sandbox_free_getaddrinfo_cache();
   protover_free_all();
   bridges_free_all();
+  consdiffmgr_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();
@@ -3584,6 +3586,8 @@ sandbox_init_filter(void)
     OPEN_DATADIR("stats");
     STAT_DATADIR("stats");
     STAT_DATADIR2("stats", "dirreq-stats");
+
+    consdiffmgr_register_with_sandbox(&cfg);
   }
 
   init_addrinfo();

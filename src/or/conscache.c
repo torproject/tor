@@ -78,6 +78,17 @@ consensus_cache_open(const char *subdir, int max_entries)
 }
 
 /**
+ * Tell the sandbox (if any) configured by <b>cfg</b> to allow the
+ * operations that <b>cache</b> will need.
+ */
+int
+consensus_cache_register_with_sandbox(consensus_cache_t *cache,
+                                      struct sandbox_cfg_elem **cfg)
+{
+  return storage_dir_register_with_sandbox(cache->dir, cfg);
+}
+
+/**
  * Helper: clear all entries from <b>cache</b> (but do not delete
  * any that aren't marked for removal
  */
