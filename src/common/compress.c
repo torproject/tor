@@ -285,7 +285,7 @@ static const struct {
 } compression_method_names[] = {
   { "gzip", GZIP_METHOD },
   { "deflate", ZLIB_METHOD },
-  { "x-lzma2", LZMA_METHOD },
+  { "x-lzma", LZMA_METHOD },
   { "x-zstd" , ZSTD_METHOD },
   { "identity", NO_METHOD },
 
