@@ -323,7 +323,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("FallbackNetworkstatusFile"),
   V(FascistFirewall,             BOOL,     "0"),
   V(FirewallPorts,               CSV,      ""),
-  V(FastFirstHopPK,              AUTOBOOL, "auto"),
+  OBSOLETE("FastFirstHopPK"),
   V(FetchDirInfoEarly,           BOOL,     "0"),
   V(FetchDirInfoExtraEarly,      BOOL,     "0"),
   V(FetchServerDescriptors,      BOOL,     "1"),
@@ -664,8 +664,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
-  { "FastFirstHopPK", "Changing this option does not make your client more "
-    "secure, but does make it easier to fingerprint." },
   { "CloseHSClientCircuitsImmediatelyOnTimeout", "This option makes your "
     "client easier to fingerprint." },
   { "CloseHSServiceRendCircuitsImmediatelyOnTimeout", "This option makes "

@@ -816,12 +816,7 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
      * creating on behalf of others. */
     return 0;
   }
-  if (options->FastFirstHopPK == -1) {
-    /* option is "auto", so look at the consensus. */
-    return networkstatus_get_param(NULL, "usecreatefast", 0, 0, 1);
-  }
-
-  return options->FastFirstHopPK;
+  return networkstatus_get_param(NULL, "usecreatefast", 0, 0, 1);
 }
 
 /** Return true if <b>circ</b> is the type of circuit we want to count

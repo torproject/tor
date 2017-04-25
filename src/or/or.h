@@ -4057,8 +4057,6 @@ typedef struct {
   int NumDirectoryGuards; /**< How many dir guards do we try to establish?
                            * If 0, use value from NumEntryGuards. */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
-  int FastFirstHopPK; /**< If Tor believes it is safe, should we save a third
-                       * of our PK time by sending CREATE_FAST cells? */
   /** Should we always fetch our dir info on the mirror schedule (which
    * means directly from the authorities) no matter our other config? */
   int FetchDirInfoEarly;
