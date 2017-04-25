@@ -21,8 +21,6 @@
 #include "networkstatus.h"
 #include "workqueue.h"
 
-/* XXXX support compression */
-
 /**
  * Labels to apply to items in the conscache object.
  *
@@ -33,8 +31,10 @@
 /* The valid-after time for a consensus (or for the target consensus of a
  * diff), encoded as ISO UTC. */
 #define LABEL_VALID_AFTER "consensus-valid-after"
-/* A hex encoded SHA3 digest of the object after decompression. */
+/* A hex encoded SHA3 digest of the object, as compressed (if any) */
 #define LABEL_SHA3_DIGEST "sha3-digest"
+/* A hex encoded SHA3 digest of the object before compression. */
+#define LABEL_SHA3_DIGEST_UNCOMPRESSED "sha3-digest-uncompressed"
 /* The flavor of the consensus or consensuses diff */
 #define LABEL_FLAVOR "consensus-flavor"
 /* Diff only: the SHA3 digest of the source consensus. */
@@ -43,6 +43,8 @@
 #define LABEL_TARGET_SHA3_DIGEST "target-sha3-digest"
 /* Diff only: the valid-after date of the source consensus. */
 #define LABEL_FROM_VALID_AFTER "from-valid-after"
+/* What kind of compression was used? */
+#define LABEL_COMPRESSION_TYPE "compression"
 /** @} */
 
 #define DOCTYPE_CONSENSUS "consensus"
@@ -299,10 +301,11 @@ cdm_cache_get(void)
 /**
  * Helper: given a list of labels, prepend the hex-encoded SHA3 digest
  * of the <b>bodylen</b>-byte object at <b>body</b> to those labels,
- * with LABEL_SHA3_DIGEST as its label.
+ * with <b>label</b> as its label.
  */
 static void
 cdm_labels_prepend_sha3(config_line_t **labels,
+                        const char *label,
                         const uint8_t *body,
                         size_t bodylen)
 {
@@ -313,7 +316,7 @@ cdm_labels_prepend_sha3(config_line_t **labels,
   base16_encode(hexdigest, sizeof(hexdigest),
                 (const char *)sha3_digest, sizeof(sha3_digest));
 
-  config_line_prepend(labels, LABEL_SHA3_DIGEST, hexdigest);
+  config_line_prepend(labels, label, hexdigest);
 }
 
 /** Helper: if there is a sha3-256 hex-encoded digest in <b>ent</b> with the
@@ -417,7 +420,10 @@ consdiffmgr_add_consensus(const char *consensus,
     format_iso_time_nospace(formatted_time, valid_after);
     const char *flavname = networkstatus_get_flavor_name(flavor);
 
-    cdm_labels_prepend_sha3(&labels, (const uint8_t *)consensus, bodylen);
+    cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST,
+                            (const uint8_t *)consensus, bodylen);
+    cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST_UNCOMPRESSED,
+                            (const uint8_t *)consensus, bodylen);
     config_line_prepend(&labels, LABEL_FLAVOR, flavname);
     config_line_prepend(&labels, LABEL_VALID_AFTER, formatted_time);
     config_line_prepend(&labels, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
@@ -584,7 +590,8 @@ consdiffmgr_cleanup(void)
     if (most_recent == NULL)
       continue;
     const char *most_recent_sha3 =
-      consensus_cache_entry_get_value(most_recent, LABEL_SHA3_DIGEST);
+      consensus_cache_entry_get_value(most_recent,
+                                      LABEL_SHA3_DIGEST_UNCOMPRESSED);
     if (BUG(most_recent_sha3 == NULL))
       continue; // LCOV_EXCL_LINE
 
@@ -713,7 +720,7 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
     goto done; //LCOV_EXCL_LINE
   uint8_t most_recent_sha3[DIGEST256_LEN];
   if (BUG(cdm_entry_get_sha3_value(most_recent_sha3, most_recent,
-                                   LABEL_SHA3_DIGEST) < 0))
+                                   LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
     goto done; //LCOV_EXCL_LINE
 
   // 2. Find all the relevant diffs _to_ this consensus. These are ones
@@ -765,7 +772,8 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
       continue; // LCOV_EXCL_LINE
 
     uint8_t this_sha3[DIGEST256_LEN];
-    if (BUG(cdm_entry_get_sha3_value(this_sha3, c, LABEL_SHA3_DIGEST)<0))
+    if (BUG(cdm_entry_get_sha3_value(this_sha3, c,
+                                     LABEL_SHA3_DIGEST_UNCOMPRESSED)<0))
       continue; // LCOV_EXCL_LINE
     if (cdm_diff_ht_check_and_note_pending(flavor,
                                            this_sha3, most_recent_sha3)) {
@@ -933,13 +941,15 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
   const char *lv_from_valid_after =
     consensus_cache_entry_get_value(job->diff_from, LABEL_VALID_AFTER);
   const char *lv_from_digest =
-    consensus_cache_entry_get_value(job->diff_from, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_from,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
   const char *lv_from_flavor =
     consensus_cache_entry_get_value(job->diff_from, LABEL_FLAVOR);
   const char *lv_to_flavor =
     consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
   const char *lv_to_digest =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_to,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
 
   /* All these values are mandatory on the input */
   if (BUG(!lv_to_valid_after) ||
@@ -978,7 +988,10 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
   job->body_out = (uint8_t *) consensus_diff;
   job->bodylen_out = strlen(consensus_diff);
 
-  cdm_labels_prepend_sha3(&job->labels_out, job->body_out, job->bodylen_out);
+  cdm_labels_prepend_sha3(&job->labels_out, LABEL_SHA3_DIGEST,
+                          job->body_out, job->bodylen_out);
+  cdm_labels_prepend_sha3(&job->labels_out, LABEL_SHA3_DIGEST_UNCOMPRESSED,
+                          job->body_out, job->bodylen_out);
   config_line_prepend(&job->labels_out, LABEL_FROM_VALID_AFTER,
                       lv_from_valid_after);
   config_line_prepend(&job->labels_out, LABEL_VALID_AFTER, lv_to_valid_after);
@@ -1020,9 +1033,11 @@ consensus_diff_worker_replyfn(void *work_)
   consensus_diff_worker_job_t *job = work_;
 
   const char *lv_from_digest =
-    consensus_cache_entry_get_value(job->diff_from, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_from,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
   const char *lv_to_digest =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_to,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
   const char *lv_flavor =
     consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
   if (BUG(lv_from_digest == NULL))
@@ -1035,10 +1050,10 @@ consensus_diff_worker_replyfn(void *work_)
   int flav = -1;
   int cache = 1;
   if (BUG(cdm_entry_get_sha3_value(from_sha3, job->diff_from,
-                                   LABEL_SHA3_DIGEST) < 0))
+                                   LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
     cache = 0;
   if (BUG(cdm_entry_get_sha3_value(to_sha3, job->diff_to,
-                                   LABEL_SHA3_DIGEST) < 0))
+                                   LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
     cache = 0;
   if (BUG(lv_flavor == NULL)) {
     cache = 0;
