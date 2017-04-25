@@ -1,13 +1,14 @@
 # Tracing #
 
-This document describes how the tracing subsystem works in tor so developers
-can add events to the code base but also hook them to a tracing framework.
+This document describes how the event tracing subsystem works in tor so
+developers can add events to the code base but also hook them to an event
+tracing framework.
 
 ## Basics ###
 
-Tracing is seperated in two concepts, trace events and a tracer. The tracing
-subsystem can be found in `src/trace`. The `events.h` header file is the
-main file that maps the different tracers to trace events.
+Event tracing is seperated in two concepts, trace events and a tracer. The
+tracing subsystem can be found in `src/trace`. The `events.h` header file is
+the main file that maps the different tracers to trace events.
 
 ### Events ###
 
