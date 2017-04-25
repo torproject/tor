@@ -2789,6 +2789,31 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
                              cache_lifetime);
 }
 
+/** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
+ * and convert them to a bitfield where compression method x is supported if
+ * and only if 1 &lt;&lt; x is set in the bitfield. */
+static unsigned
+parse_accept_encoding_header(const char *h)
+{
+  unsigned result = (1u << NO_METHOD);
+  smartlist_t *methods = smartlist_new();
+  smartlist_split_string(methods, h, ",",
+             SPLIT_SKIP_SPACE|SPLIT_STRIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+
+  SMARTLIST_FOREACH_BEGIN(methods, const char *, m) {
+    compress_method_t method = compression_method_get_by_name(m);
+    if (method != UNKNOWN_METHOD) {
+      tor_assert(method < 8*sizeof(unsigned));
+      result |= (1u << method);
+    }
+  } SMARTLIST_FOREACH_END(m);
+  SMARTLIST_FOREACH_BEGIN(methods, char *, m) {
+    tor_free(m);
+  } SMARTLIST_FOREACH_END(m);
+  smartlist_free(methods);
+  return result;
+}
+
 /** Decide whether a client would accept the consensus we have.
  *
  * Clients can say they only want a consensus if it's signed by more
@@ -2863,8 +2888,9 @@ choose_compression_level(ssize_t n_bytes)
 
 /** Information passed to handle a GET request. */
 typedef struct get_handler_args_t {
-  /** True if the client asked for compressed data. */
-  int compressed;
+  /** Bitmask of compression methods that the client said (or implied) it
+   * supported. */
+  unsigned compression_supported;
   /** If nonzero, the time included an if-modified-since header with this
    * value. */
   time_t if_modified_since;
@@ -2938,8 +2964,9 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
 {
   char *url, *url_mem, *header;
   time_t if_modified_since = 0;
-  int compressed;
+  int zlib_compressed_in_url;
   size_t url_len;
+  unsigned compression_methods_supported;
 
   /* We ignore the body of a GET request. */
   (void)req_body;
@@ -2970,17 +2997,27 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
 
   url_mem = url;
   url_len = strlen(url);
-  compressed = url_len > 2 && !strcmp(url+url_len-2, ".z");
-  if (compressed) {
+
+  zlib_compressed_in_url = url_len > 2 && !strcmp(url+url_len-2, ".z");
+  if (zlib_compressed_in_url) {
     url[url_len-2] = '\0';
     url_len -= 2;
+  }
+
+  if ((header = http_get_header(headers, "Accept-Encoding"))) {
+    compression_methods_supported = parse_accept_encoding_header(header);
+    tor_free(header);
+  } else {
+    compression_methods_supported = (1u << NO_METHOD);
+    if (zlib_compressed_in_url)
+      compression_methods_supported |= (1u << ZLIB_METHOD);
   }
 
   get_handler_args_t args;
   args.url = url;
   args.headers = headers;
   args.if_modified_since = if_modified_since;
-  args.compressed = compressed;
+  args.compression_supported = compression_methods_supported;
 
   int i, result = -1;
   for (i = 0; url_table[i].string; ++i) {
@@ -3059,7 +3096,7 @@ handle_get_current_consensus(dir_connection_t *conn,
                              const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compressed;
+  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
   const time_t if_modified_since = args->if_modified_since;
   int clear_spool = 0;
 
@@ -3200,7 +3237,7 @@ static int
 handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compressed;
+  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
   {
     int current;
     ssize_t body_len = 0;
@@ -3307,7 +3344,7 @@ static int
 handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compressed;
+  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
   int clear_spool = 1;
   {
     conn->spool = smartlist_new();
@@ -3357,7 +3394,7 @@ static int
 handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compressed;
+  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
   const or_options_t *options = get_options();
   int clear_spool = 1;
   if (!strcmpstart(url,"/tor/server/") ||
@@ -3450,7 +3487,7 @@ static int
 handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compressed;
+  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
   const time_t if_modified_since = args->if_modified_since;
   {
     smartlist_t *certs = smartlist_new();
