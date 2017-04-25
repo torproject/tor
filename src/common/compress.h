@@ -48,6 +48,8 @@ compress_method_t detect_compression_method(const char *in, size_t in_len);
 int tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
 
 int tor_compress_supports_method(compress_method_t method);
+const char * compression_method_get_name(compress_method_t method);
+compress_method_t compression_method_get_by_name(const char *name);
 
 const char *tor_compress_version_str(compress_method_t method);
 

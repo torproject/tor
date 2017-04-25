@@ -277,6 +277,49 @@ tor_compress_supports_method(compress_method_t method)
   }
 }
 
+/** Table of compression method names.  These should have an "x-" prefix,
+ * if they are not listed in the IANA content coding registry. */
+static const struct {
+  const char *name;
+  compress_method_t method;
+} compression_method_names[] = {
+  { "gzip", GZIP_METHOD },
+  { "deflate", ZLIB_METHOD },
+  { "x-lzma2", LZMA_METHOD },
+  { "x-zstd" , ZSTD_METHOD },
+  { "identity", NO_METHOD },
+
+  /* Later entries in this table are not canonical; these are recognized but
+   * not emitted. */
+  { "x-gzip", GZIP_METHOD },
+};
+
+/** Return the canonical string representation of the compression method
+ * <b>method</b>, or NULL if the method isn't recognized. */
+const char *
+compression_method_get_name(compress_method_t method)
+{
+  unsigned i;
+  for (i = 0; i < ARRAY_LENGTH(compression_method_names); ++i) {
+    if (method == compression_method_names[i].method)
+      return compression_method_names[i].name;
+  }
+  return NULL;
+}
+
+/** Return the compression method represented by the string <b>name</b>, or
+ * UNKNOWN_METHOD if the string isn't recognized. */
+compress_method_t
+compression_method_get_by_name(const char *name)
+{
+  unsigned i;
+  for (i = 0; i < ARRAY_LENGTH(compression_method_names); ++i) {
+    if (!strcmp(compression_method_names[i].name, name))
+      return compression_method_names[i].method;
+  }
+  return UNKNOWN_METHOD;
+}
+
 /** Return a string representation of the version of the library providing the
  * compression method given in <b>method</b>. Returns NULL if <b>method</b> is
  * unknown or unsupported. */
