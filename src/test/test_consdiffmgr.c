@@ -141,7 +141,8 @@ lookup_diff_from(consensus_cache_entry_t **out,
   uint8_t digest[DIGEST256_LEN];
   crypto_digest256((char*)digest, str1, strlen(str1), DIGEST_SHA3_256);
   return consdiffmgr_find_diff_from(out, flav,
-                                    DIGEST_SHA3_256, digest, sizeof(digest));
+                                    DIGEST_SHA3_256, digest, sizeof(digest),
+                                    NO_METHOD);
 }
 
 static int
@@ -373,7 +374,8 @@ test_consdiffmgr_make_diffs(void *arg)
   tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
   diff_status = consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC,
                                            DIGEST_SHA3_256,
-                                           md_ns_sha3, DIGEST256_LEN);
+                                           md_ns_sha3, DIGEST256_LEN,
+                                           NO_METHOD);
   tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ, diff_status);
 
   // Now run that process and get the diff.
@@ -384,7 +386,8 @@ test_consdiffmgr_make_diffs(void *arg)
   // At this point we should be able to get that diff.
   diff_status = consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC,
                                            DIGEST_SHA3_256,
-                                           md_ns_sha3, DIGEST256_LEN);
+                                           md_ns_sha3, DIGEST256_LEN,
+                                           NO_METHOD);
   tt_int_op(CONSDIFF_AVAILABLE, OP_EQ, diff_status);
   tt_assert(diff);
 
@@ -757,7 +760,7 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   /* Now add an even-more-recent consensus; this should make all previous
    * diffs deletable */
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
-  tt_int_op(2, OP_EQ, consdiffmgr_cleanup());
+  tt_int_op(2 * n_diff_compression_methods(), OP_EQ, consdiffmgr_cleanup());
 
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
             lookup_diff_from(&ent, FLAV_MICRODESC, md_body[0]));
