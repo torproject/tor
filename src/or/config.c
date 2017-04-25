@@ -208,7 +208,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("AllowInvalidNodes"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
   OBSOLETE("AllowSingleHopCircuits"),
-  V(AllowSingleHopExits,         BOOL,     "0"),
+  OBSOLETE("AllowSingleHopExits"),
   V(AlternateBridgeAuthority,    LINELIST, NULL),
   V(AlternateDirAuthority,       LINELIST, NULL),
   OBSOLETE("AlternateHSAuthority"),
@@ -662,8 +662,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
   /* Deprecated since 0.2.9.2-alpha... */
   { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
     "a wide variety of application-level attacks." },
-  { "AllowSingleHopExits", "Turning this on will make your relay easier "
-    "to abuse." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
   { "ExcludeSingleHopRelays", "Turning it on makes your client easier to "
@@ -4054,13 +4052,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TestingTorNetwork may only be configured in combination with "
            "a non-default set of DirAuthority or both of "
            "AlternateDirAuthority and AlternateBridgeAuthority configured.");
-  }
-
-  if (options->AllowSingleHopExits && !options->DirAuthorities) {
-    COMPLAIN("You have set AllowSingleHopExits; now your relay will allow "
-             "others to make one-hop exits. However, since by default most "
-             "clients avoid relays that set this option, most clients will "
-             "ignore you.");
   }
 
 #define CHECK_DEFAULT(arg)                                              \

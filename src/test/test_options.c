@@ -4190,48 +4190,6 @@ test_options_validate__virtual_addr(void *ignored)
 }
 
 static void
-test_options_validate__exits(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  options_test_data_t *tdata = NULL;
-  setup_capture_of_logs(LOG_WARN);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "AllowSingleHopExits 1"
-                                );
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("You have set AllowSingleHopExits; "
-            "now your relay will allow others to make one-hop exits. However,"
-            " since by default most clients avoid relays that set this option,"
-            " most clients will ignore you.\n");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "AllowSingleHopExits 1\n"
-                                VALID_DIR_AUTH
-                                );
-  mock_clean_saved_logs();
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("You have set AllowSingleHopExits; "
-            "now your relay will allow others to make one-hop exits. However,"
-            " since by default most clients avoid relays that set this option,"
-            " most clients will ignore you.\n");
-  tor_free(msg);
-
- done:
-  policies_free_all();
-  teardown_capture_of_logs();
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
 test_options_validate__testing_options(void *ignored)
 {
   (void)ignored;
@@ -4502,7 +4460,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(constrained_sockets),
   LOCAL_VALIDATE_TEST(v3_auth),
   LOCAL_VALIDATE_TEST(virtual_addr),
-  LOCAL_VALIDATE_TEST(exits),
   LOCAL_VALIDATE_TEST(testing_options),
   LOCAL_VALIDATE_TEST(accel),
   END_OF_TESTCASES              /*  */

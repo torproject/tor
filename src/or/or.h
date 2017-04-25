@@ -4114,10 +4114,7 @@ typedef struct {
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
 
-  /** If true, and we are acting as a relay, allow exit circuits even when
-   * we are the first hop of a circuit. */
-  int AllowSingleHopExits;
-  /** If true, don't allow relays with AllowSingleHopExits=1 to be used in
+  /** If true, don't allow relays with allow-single-hop-exits to be used in
    * circuits that we build. */
   int ExcludeSingleHopRelays;
 

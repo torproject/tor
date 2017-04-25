@@ -1660,13 +1660,6 @@ is non-zero):
     Tor client binds to.  To bind to a different address, use the
     *ListenAddress and OutboundBindAddress options.
 
-[[AllowSingleHopExits]] **AllowSingleHopExits** **0**|**1**::
-    This option controls whether clients can use this server as a single hop
-    proxy. If set to 1, clients can use this server as an exit even if it is
-    the only hop in the circuit.  Note that most clients will refuse to use
-    servers that set this option, since most clients have
-    ExcludeSingleHopRelays set.  (Default: 0)
-
 [[AssumeReachable]] **AssumeReachable** **0**|**1**::
     This option is used when bootstrapping a new Tor network. If set to 1,
     don't do self-reachability testing; just upload your server descriptor

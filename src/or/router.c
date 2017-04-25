@@ -2932,7 +2932,7 @@ router_dump_router_to_string(routerinfo_t *router,
                     "onion-key\n%s"
                     "signing-key\n%s"
                     "%s%s"
-                    "%s%s%s%s",
+                    "%s%s%s",
     router->nickname,
     address,
     router->or_port,
@@ -2955,8 +2955,7 @@ router_dump_router_to_string(routerinfo_t *router,
     ntor_cc_line ? ntor_cc_line : "",
     family_line,
     we_are_hibernating() ? "hibernating 1\n" : "",
-    "hidden-service-dir\n",
-    options->AllowSingleHopExits ? "allow-single-hop-exits\n" : "");
+    "hidden-service-dir\n");
 
   if (options->ContactInfo && strlen(options->ContactInfo)) {
     const char *ci = options->ContactInfo;
