@@ -1,0 +1,5 @@
+  o Documentation (man page):
+    - Default of NumEntryGuards is 1 if the consensus parameter
+      guard-n-primary-guards-to-use isn't set. Default of NumDirectoryGuards
+      is 3 if the consensus parameter guard-n-primary-dir-guards-to-use isn't
+      set. Fixes bug 21715.
