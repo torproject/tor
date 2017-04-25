@@ -2807,14 +2807,12 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   rule = weight_for_exit ? WEIGHT_FOR_EXIT :
     (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
-  /* Exclude relays that allow single hop exit circuits, if the user
-   * wants to (such relays might be risky) */
-  if (get_options()->ExcludeSingleHopRelays) {
-    SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
-      if (node_allows_single_hop_exits(node)) {
-        smartlist_add(excludednodes, node);
-      });
-  }
+  /* Exclude relays that allow single hop exit circuits. This is an obsolete
+   * option since 0.2.9.2-alpha and done by default in 0.3.1.0-alpha. */
+  SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
+    if (node_allows_single_hop_exits(node)) {
+      smartlist_add(excludednodes, node);
+    });
 
   if ((r = routerlist_find_my_routerinfo()))
     routerlist_add_node_and_family(excludednodes, r);

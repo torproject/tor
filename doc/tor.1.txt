@@ -772,15 +772,6 @@ CLIENT OPTIONS
 The following options are useful only for clients (that is, if
 **SocksPort**, **TransPort**, **DNSPort**, or **NATDPort** is non-zero):
 
-[[ExcludeSingleHopRelays]] **ExcludeSingleHopRelays** **0**|**1**::
-    This option controls whether circuits built by Tor will include relays with
-    the AllowSingleHopExits flag set to true. If ExcludeSingleHopRelays is set
-    to 0, these relays will be included. Note that these relays might be at
-    higher risk of being seized or observed, so they are not normally
-    included.  Also note that relatively few clients turn off this option,
-    so using these relays might make your client stand out.
-    (Default: 1)
-
 [[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__]::
     When set along with UseBridges, instructs Tor to use the relay at
     "IP:ORPort" as a "bridge" relaying into the Tor network. If "fingerprint"

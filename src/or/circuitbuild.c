@@ -1835,8 +1835,9 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
 //             router->nickname, i);
       continue; /* skip invalid routers */
     }
-    if (options->ExcludeSingleHopRelays &&
-        node_allows_single_hop_exits(node)) {
+    /* We do not allow relays that allow single hop exits by default. Option
+     * was deprecated in 0.2.9.2-alpha and removed in 0.3.1.0-alpha. */
+    if (node_allows_single_hop_exits(node)) {
       n_supported[i] = -1;
       continue;
     }

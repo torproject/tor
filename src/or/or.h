@@ -4114,10 +4114,6 @@ typedef struct {
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
 
-  /** If true, don't allow relays with allow-single-hop-exits to be used in
-   * circuits that we build. */
-  int ExcludeSingleHopRelays;
-
   /** If true, we convert "www.google.com.foo.exit" addresses on the
    * socks/trans/natd ports into "www.google.com" addresses that
    * exit from the node "foo". Disabled by default since attacking

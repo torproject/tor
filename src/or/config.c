@@ -303,7 +303,7 @@ static config_var_t option_vars_[] = {
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
   V(ExcludeNodes,                ROUTERSET, NULL),
   V(ExcludeExitNodes,            ROUTERSET, NULL),
-  V(ExcludeSingleHopRelays,      BOOL,     "1"),
+  OBSOLETE("ExcludeSingleHopRelays"),
   V(ExitNodes,                   ROUTERSET, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
@@ -664,8 +664,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
-  { "ExcludeSingleHopRelays", "Turning it on makes your client easier to "
-    "fingerprint." },
   { "FastFirstHopPK", "Changing this option does not make your client more "
     "secure, but does make it easier to fingerprint." },
   { "CloseHSClientCircuitsImmediatelyOnTimeout", "This option makes your "
