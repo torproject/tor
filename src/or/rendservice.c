@@ -4179,8 +4179,6 @@ rend_consider_services_intro_points(void)
       const node_t *node;
       rend_intro_point_t *intro;
       router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
-      if (get_options()->AllowInvalid_ & ALLOW_INVALID_INTRODUCTION)
-        flags |= CRN_ALLOW_INVALID;
       router_crn_flags_t direct_flags = flags;
       direct_flags |= CRN_PREF_ADDR;
       direct_flags |= CRN_DIRECT_CONN;

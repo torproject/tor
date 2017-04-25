@@ -205,7 +205,7 @@ static config_var_t option_vars_[] = {
   V(AccountingStart,             STRING,   NULL),
   V(Address,                     STRING,   NULL),
   V(AllowDotExit,                BOOL,     "0"),
-  V(AllowInvalidNodes,           CSV,      "middle,rendezvous"),
+  OBSOLETE("AllowInvalidNodes"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
   V(AllowSingleHopCircuits,      BOOL,     "0"),
   V(AllowSingleHopExits,         BOOL,     "0"),
@@ -662,8 +662,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
   /* Deprecated since 0.2.9.2-alpha... */
   { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
     "a wide variety of application-level attacks." },
-  { "AllowInvalidNodes", "There is no reason to enable this option; at best "
-    "it will make you easier to track." },
   { "AllowSingleHopCircuits", "Almost no relays actually allow single-hop "
     "exits, making this option pointless." },
   { "AllowSingleHopExits", "Turning this on will make your relay easier "
@@ -3371,28 +3369,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
                                    server_mode(options));
   options->MaxMemInQueues_low_threshold = (options->MaxMemInQueues / 4) * 3;
-
-  options->AllowInvalid_ = 0;
-
-  if (options->AllowInvalidNodes) {
-    SMARTLIST_FOREACH_BEGIN(options->AllowInvalidNodes, const char *, cp) {
-        if (!strcasecmp(cp, "entry"))
-          options->AllowInvalid_ |= ALLOW_INVALID_ENTRY;
-        else if (!strcasecmp(cp, "exit"))
-          options->AllowInvalid_ |= ALLOW_INVALID_EXIT;
-        else if (!strcasecmp(cp, "middle"))
-          options->AllowInvalid_ |= ALLOW_INVALID_MIDDLE;
-        else if (!strcasecmp(cp, "introduction"))
-          options->AllowInvalid_ |= ALLOW_INVALID_INTRODUCTION;
-        else if (!strcasecmp(cp, "rendezvous"))
-          options->AllowInvalid_ |= ALLOW_INVALID_RENDEZVOUS;
-        else {
-          tor_asprintf(msg,
-              "Unrecognized value '%s' in AllowInvalidNodes", cp);
-          return -1;
-        }
-    } SMARTLIST_FOREACH_END(cp);
-  }
 
   if (!options->SafeLogging ||
       !strcasecmp(options->SafeLogging, "0")) {

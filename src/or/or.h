@@ -3470,15 +3470,6 @@ static inline const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
   return DOWNCAST(origin_circuit_t, x);
 }
 
-/** Bitfield type: things that we're willing to use invalid routers for. */
-typedef enum invalid_router_usage_t {
-  ALLOW_INVALID_ENTRY       =1,
-  ALLOW_INVALID_EXIT        =2,
-  ALLOW_INVALID_MIDDLE      =4,
-  ALLOW_INVALID_RENDEZVOUS  =8,
-  ALLOW_INVALID_INTRODUCTION=16,
-} invalid_router_usage_t;
-
 /* limits for TCP send and recv buffer size used for constrained sockets */
 #define MIN_CONSTRAINED_TCP_BUFFER 2048
 #define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
@@ -3604,10 +3595,6 @@ typedef struct {
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
 
-  /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
-  smartlist_t *AllowInvalidNodes;
-  /** Bitmask; derived from AllowInvalidNodes. */
-  invalid_router_usage_t AllowInvalid_;
   config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   int ExitPolicyRejectPrivate; /**< Should we not exit to reserved private
                                 * addresses, and our own published addresses?
@@ -5356,7 +5343,6 @@ typedef enum {
   CRN_NEED_UPTIME = 1<<0,
   CRN_NEED_CAPACITY = 1<<1,
   CRN_NEED_GUARD = 1<<2,
-  CRN_ALLOW_INVALID = 1<<3,
   /* XXXX not used, apparently. */
   CRN_WEIGHT_AS_EXIT = 1<<5,
   CRN_NEED_DESC = 1<<6,

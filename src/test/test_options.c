@@ -2008,56 +2008,6 @@ test_options_validate__entry_nodes(void *ignored)
 }
 
 static void
-test_options_validate__invalid_nodes(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                  "AllowInvalidNodes something_stupid\n"
-                                  "MaxClientCircuitsPending 1\n"
-                                  "ConnLimit 1\n"
-                                  "SchedulerHighWaterMark__ 42\n"
-                                  "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ,
-            "Unrecognized value 'something_stupid' in AllowInvalidNodes");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AllowInvalidNodes entry, middle, exit\n"
-                                "MaxClientCircuitsPending 1\n"
-                                "ConnLimit 1\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_int_op(tdata->opt->AllowInvalid_, OP_EQ, ALLOW_INVALID_ENTRY |
-            ALLOW_INVALID_EXIT | ALLOW_INVALID_MIDDLE);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AllowInvalidNodes introduction, rendezvous\n"
-                                "MaxClientCircuitsPending 1\n"
-                                "ConnLimit 1\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_int_op(tdata->opt->AllowInvalid_, OP_EQ, ALLOW_INVALID_INTRODUCTION |
-            ALLOW_INVALID_RENDEZVOUS);
-  tor_free(msg);
-
- done:
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
 test_options_validate__safe_logging(void *ignored)
 {
   (void)ignored;
@@ -4530,7 +4480,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(reachable_addresses),
   LOCAL_VALIDATE_TEST(use_bridges),
   LOCAL_VALIDATE_TEST(entry_nodes),
-  LOCAL_VALIDATE_TEST(invalid_nodes),
   LOCAL_VALIDATE_TEST(safe_logging),
   LOCAL_VALIDATE_TEST(publish_server_descriptor),
   LOCAL_VALIDATE_TEST(testing),
