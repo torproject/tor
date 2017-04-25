@@ -213,8 +213,11 @@ tor_zlib_compress_process(tor_zlib_compress_state_t *state,
 {
   int err;
   tor_assert(state != NULL);
-  tor_assert(*in_len <= UINT_MAX);
-  tor_assert(*out_len <= UINT_MAX);
+  if (*in_len > UINT_MAX ||
+      *out_len > UINT_MAX) {
+    return TOR_COMPRESS_ERROR;
+  }
+
   state->stream.next_in = (unsigned char*) *in;
   state->stream.avail_in = (unsigned int)*in_len;
   state->stream.next_out = (unsigned char*) *out;
