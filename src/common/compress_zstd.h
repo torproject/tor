@@ -17,16 +17,6 @@ const char *tor_zstd_get_version_str(void);
 
 const char *tor_zstd_get_header_version_str(void);
 
-int tor_zstd_compress(char **out, size_t *out_len,
-                      const char *in, size_t in_len,
-                      compress_method_t method);
-
-int tor_zstd_uncompress(char **out, size_t *out_len,
-                        const char *in, size_t in_len,
-                        compress_method_t method,
-                        int complete_only,
-                        int protocol_warn_level);
-
 /** Internal state for an incremental Zstandard compression/decompression. */
 typedef struct tor_zstd_compress_state_t tor_zstd_compress_state_t;
 

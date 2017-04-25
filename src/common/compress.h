@@ -26,11 +26,11 @@ typedef enum {
 
 /**
  * Enumeration to define tradeoffs between memory usage and compression level.
- * HIGH_COMPRESSION saves the most bandwidth; LOW_COMPRESSION saves the most
+ * BEST_COMPRESSION saves the most bandwidth; LOW_COMPRESSION saves the most
  * memory.
  **/
 typedef enum {
-  HIGH_COMPRESSION, MEDIUM_COMPRESSION, LOW_COMPRESSION
+  BEST_COMPRESSION, HIGH_COMPRESSION, MEDIUM_COMPRESSION, LOW_COMPRESSION
 } compression_level_t;
 
 int tor_compress(char **out, size_t *out_len,
