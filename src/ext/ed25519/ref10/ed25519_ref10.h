@@ -27,4 +27,8 @@ int ed25519_ref10_blind_public_key(unsigned char *out,
                               const unsigned char *inp,
                               const unsigned char *param);
 
+int
+ed25519_ref10_scalarmult_with_group_order(unsigned char *out,
+                                          const unsigned char *pubkey);
+
 #endif

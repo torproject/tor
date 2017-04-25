@@ -30,4 +30,9 @@ int ed25519_donna_blind_public_key(unsigned char *out, const unsigned char *inp,
 int ed25519_donna_pubkey_from_curve25519_pubkey(unsigned char *out,
   const unsigned char *inp, int signbit);
 
+
+int
+ed25519_donna_scalarmult_with_group_order(unsigned char *out,
+                                          const unsigned char *pubkey);
+
 #endif
