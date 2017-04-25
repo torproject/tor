@@ -4120,9 +4120,6 @@ typedef struct {
   /** If true, don't allow relays with AllowSingleHopExits=1 to be used in
    * circuits that we build. */
   int ExcludeSingleHopRelays;
-  /** If true, and the controller tells us to use a one-hop circuit, and the
-   * exit allows it, we use it. */
-  int AllowSingleHopCircuits;
 
   /** If true, we convert "www.google.com.foo.exit" addresses on the
    * socks/trans/natd ports into "www.google.com" addresses that

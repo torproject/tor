@@ -1,3 +1,5 @@
   o Remove configuration option (confic):
     - AllowInvalidNodes was deprecated in 0.2.9.2-alpha and now has been
       rendered obsolete. Code has been removed and feature no longer exists.
+    - AllowSingleHopCircuits was deprecated in 0.2.9.2-alpha and now has been
+      rendered obsolete. Code has been removed and feature no longer exists.

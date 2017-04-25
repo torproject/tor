@@ -207,7 +207,7 @@ static config_var_t option_vars_[] = {
   V(AllowDotExit,                BOOL,     "0"),
   OBSOLETE("AllowInvalidNodes"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
-  V(AllowSingleHopCircuits,      BOOL,     "0"),
+  OBSOLETE("AllowSingleHopCircuits"),
   V(AllowSingleHopExits,         BOOL,     "0"),
   V(AlternateBridgeAuthority,    LINELIST, NULL),
   V(AlternateDirAuthority,       LINELIST, NULL),
@@ -662,8 +662,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
   /* Deprecated since 0.2.9.2-alpha... */
   { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
     "a wide variety of application-level attacks." },
-  { "AllowSingleHopCircuits", "Almost no relays actually allow single-hop "
-    "exits, making this option pointless." },
   { "AllowSingleHopExits", "Turning this on will make your relay easier "
     "to abuse." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "

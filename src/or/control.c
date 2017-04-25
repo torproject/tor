@@ -3551,24 +3551,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   }
   /* Is this a single hop circuit? */
   if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
-    const node_t *node = NULL;
-    char *exit_digest = NULL;
-    if (circ->build_state &&
-        circ->build_state->chosen_exit &&
-        !tor_digest_is_zero(circ->build_state->chosen_exit->identity_digest)) {
-      exit_digest = circ->build_state->chosen_exit->identity_digest;
-      node = node_get_by_id(exit_digest);
-    }
-    /* Do both the client and relay allow one-hop exit circuits? */
-    if (!node ||
-        !node_allows_single_hop_exits(node) ||
-        !get_options()->AllowSingleHopCircuits) {
-      connection_write_str_to_buf(
-      "551 Can't attach stream to this one-hop circuit.\r\n", conn);
-      return 0;
-    }
-    tor_assert(exit_digest);
-    ap_conn->chosen_exit_name = tor_strdup(hex_str(exit_digest, DIGEST_LEN));
+    connection_write_str_to_buf(
+               "551 Can't attach stream to this one-hop circuit.\r\n", conn);
+    return 0;
   }
 
   if (circ && hop>0) {
