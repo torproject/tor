@@ -2792,7 +2792,7 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
  * and convert them to a bitfield where compression method x is supported if
  * and only if 1 &lt;&lt; x is set in the bitfield. */
-static unsigned
+STATIC unsigned
 parse_accept_encoding_header(const char *h)
 {
   unsigned result = (1u << NO_METHOD);
