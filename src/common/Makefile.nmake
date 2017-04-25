@@ -7,8 +7,8 @@ LIBOR_OBJECTS = address.obj backtrace.obj compat.obj container.obj di_ops.obj \
 	log.obj memarea.obj mempool.obj procmon.obj sandbox.obj util.obj \
 	util_codedigest.obj
 
-LIBOR_CRYPTO_OBJECTS = aes.obj crypto.obj crypto_format.obj torgzip.obj tortls.obj \
-	crypto_curve25519.obj curve25519-donna.obj
+LIBOR_CRYPTO_OBJECTS = aes.obj crypto.obj crypto_format.obj compress.obj compress_zlib.obj \
+	tortls.obj crypto_curve25519.obj curve25519-donna.obj
 
 LIBOR_EVENT_OBJECTS = compat_libevent.obj
 

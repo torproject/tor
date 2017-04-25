@@ -628,7 +628,7 @@ connection_free_(connection_t *conn)
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     tor_free(dir_conn->requested_resource);
 
-    tor_zlib_free(dir_conn->zlib_state);
+    tor_compress_free(dir_conn->compress_state);
     if (dir_conn->spool) {
       SMARTLIST_FOREACH(dir_conn->spool, spooled_resource_t *, spooled,
                         spooled_resource_free(spooled));
@@ -4060,9 +4060,9 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   if (zlib) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     int done = zlib < 0;
-    CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(conn->outbuf,
-                                                 dir_conn->zlib_state,
-                                                 string, len, done));
+    CONN_LOG_PROTECT(conn, r = write_to_buf_compress(conn->outbuf,
+                                                     dir_conn->compress_state,
+                                                     string, len, done));
   } else {
     CONN_LOG_PROTECT(conn, r = write_to_buf(string, len, conn->outbuf));
   }

@@ -2096,15 +2096,15 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     /* Try declared compression first if we can. */
     if (compression == GZIP_METHOD  || compression == ZLIB_METHOD)
-      tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression,
-                          !allow_partial, LOG_PROTOCOL_WARN);
+      tor_uncompress(&new_body, &new_len, body, body_len, compression,
+                     !allow_partial, LOG_PROTOCOL_WARN);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
     if (!new_body &&
         (guessed == GZIP_METHOD || guessed == ZLIB_METHOD) &&
         compression != guessed)
-      tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed,
-                          !allow_partial, LOG_PROTOCOL_WARN);
+      tor_uncompress(&new_body, &new_len, body, body_len, guessed,
+                     !allow_partial, LOG_PROTOCOL_WARN);
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
@@ -2845,7 +2845,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
 /** Return the compression level we should use for sending a compressed
  * response of size <b>n_bytes</b>. */
-STATIC zlib_compression_level_t
+STATIC compression_level_t
 choose_compression_level(ssize_t n_bytes)
 {
   if (! have_been_under_memory_pressure()) {
@@ -3178,7 +3178,8 @@ handle_get_current_consensus(dir_connection_t *conn,
     write_http_response_header(conn, -1, compressed,
                                smartlist_len(conn->spool) == 1 ? lifetime : 0);
     if (! compressed)
-      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
+      conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
+                                              HIGH_COMPRESSION);
 
     /* Prime the connection with some data. */
     const int initial_flush_result = connection_dirserv_flushed_some(conn);
@@ -3276,11 +3277,11 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
 
     if (smartlist_len(items)) {
       if (compressed) {
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
-                                    choose_compression_level(estimated_len));
+        conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
+                           choose_compression_level(estimated_len));
         SMARTLIST_FOREACH(items, const char *, c,
-                 connection_write_to_buf_zlib(c, strlen(c), conn, 0));
-        connection_write_to_buf_zlib("", 0, conn, 1);
+                 connection_write_to_buf_compress(c, strlen(c), conn, 0));
+        connection_write_to_buf_compress("", 0, conn, 1);
       } else {
         SMARTLIST_FOREACH(items, const char *, c,
                          connection_write_to_buf(c, strlen(c), TO_CONN(conn)));
@@ -3335,7 +3336,7 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
     write_http_response_header(conn, -1, compressed, MICRODESC_CACHE_LIFETIME);
 
     if (compressed)
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+      conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                                       choose_compression_level(size_guess));
 
     const int initial_flush_result = connection_dirserv_flushed_some(conn);
@@ -3428,7 +3429,7 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
       }
       write_http_response_header(conn, -1, compressed, cache_lifetime);
       if (compressed)
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+        conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                                         choose_compression_level(size_guess));
       clear_spool = 0;
       /* Prime the connection with some data. */
@@ -3519,13 +3520,14 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
 
     write_http_response_header(conn, compressed?-1:len, compressed, 60*60);
     if (compressed) {
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
-                                      choose_compression_level(len));
+      conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
+                                              choose_compression_level(len));
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-            connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
-                                         c->cache_info.signed_descriptor_len,
-                                         conn, 0));
-      connection_write_to_buf_zlib("", 0, conn, 1);
+            connection_write_to_buf_compress(
+                c->cache_info.signed_descriptor_body,
+                c->cache_info.signed_descriptor_len,
+                conn, 0));
+      connection_write_to_buf_compress("", 0, conn, 1);
     } else {
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf(c->cache_info.signed_descriptor_body,
