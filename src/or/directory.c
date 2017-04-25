@@ -2814,6 +2814,20 @@ parse_accept_encoding_header(const char *h)
   return result;
 }
 
+/** Bitmask of supported compression types, to use in a bitwise "and"
+ * with the results of parse_accept_encoding_header */
+static const unsigned SUPPORTED_COMPRESSION_MASK =
+    (1u << NO_METHOD)
+  | (1u << ZLIB_METHOD)
+  | (1u << GZIP_METHOD)
+#ifdef HAVE_ZSTD
+  | (1u << ZSTD_METHOD)
+#endif
+#ifdef HAVE_LZMA
+  | (1u << LZMA_METHOD)
+#endif
+  ;
+
 /** Decide whether a client would accept the consensus we have.
  *
  * Clients can say they only want a consensus if it's signed by more
@@ -3012,6 +3026,9 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
     if (zlib_compressed_in_url)
       compression_methods_supported |= (1u << ZLIB_METHOD);
   }
+
+  /* Remove all methods that we don't both support. */
+  compression_methods_supported &= SUPPORTED_COMPRESSION_MASK;
 
   get_handler_args_t args;
   args.url = url;
