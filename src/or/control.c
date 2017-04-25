@@ -7138,9 +7138,11 @@ control_event_hs_descriptor_failed(const rend_data_t *rend_data,
                                           rend_data, id_digest, reason);
 }
 
-/** send HS_DESC_CONTENT event after completion of a successful fetch from
- * hs directory. If <b>hsdir_id_digest</b> is NULL, it is replaced by
- * "UNKNOWN". */
+/** Send HS_DESC_CONTENT event after completion of a successful fetch from hs
+ * directory. If <b>hsdir_id_digest</b> is NULL, it is replaced by "UNKNOWN".
+ * If <b>content</b> is NULL, it is replaced by an empty string. The
+ * <b>onion_address</b> or <b>desc_id</b> set to NULL will no trigger the
+ * control event. */
 void
 control_event_hs_descriptor_content(const char *onion_address,
                                     const char *desc_id,
