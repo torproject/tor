@@ -1,0 +1,12 @@
+  o Major features:
+    - Tor's compression module now includes support for the zstd and lzma2
+      compression algorithms, if the libzstd and liblzma libraries are
+      available when Tor is compiled.  Once these features are exposed in the
+      directory module, they will enable Tor to provide better compression
+      ratios on directory documents. Part of an implementation for proposal
+      278; closes ticket 21662.
+
+  o Code simplification and refactoring:
+    - Tor's compression module now supports multiple backends. Part of
+      an implementation of proposal 278; closes ticket 21663.
+
