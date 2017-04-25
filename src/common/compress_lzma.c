@@ -23,7 +23,7 @@
 #endif
 
 /** Total number of bytes allocated for LZMA state. */
-static size_t total_lzma_allocation = 0;
+static atomic_counter_t total_lzma_allocation;
 
 #ifdef HAVE_LZMA
 /** Given <b>level</b> return the memory level. */
@@ -465,6 +465,7 @@ tor_lzma_compress_new(int compress,
     }
   }
 
+  atomic_counter_add(&total_lzma_allocation, result->allocation);
   return result;
 
  err:
@@ -579,7 +580,7 @@ tor_lzma_compress_free(tor_lzma_compress_state_t *state)
   if (state == NULL)
     return;
 
-  total_lzma_allocation -= state->allocation;
+  atomic_counter_sub(&total_lzma_allocation, state->allocation);
 
 #ifdef HAVE_LZMA
   lzma_end(&state->stream);
@@ -600,6 +601,12 @@ tor_lzma_compress_state_size(const tor_lzma_compress_state_t *state)
 size_t
 tor_lzma_get_total_allocation(void)
 {
-  return total_lzma_allocation;
+  return atomic_counter_get(&total_lzma_allocation);
 }
 
+/** Initialize the lzma module */
+void
+tor_lzma_init(void)
+{
+  atomic_counter_init(&total_lzma_allocation);
+}

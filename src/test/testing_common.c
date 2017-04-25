@@ -245,6 +245,7 @@ main(int c, const char **v)
   update_approx_time(time(NULL));
   options = options_new();
   tor_threads_init();
+  tor_compress_init();
 
   network_init();
 

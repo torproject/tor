@@ -79,5 +79,7 @@ void tor_compress_free(tor_compress_state_t *state);
 
 size_t tor_compress_state_size(const tor_compress_state_t *state);
 
+void tor_compress_init(void);
+
 #endif // TOR_COMPRESS_H.
 
