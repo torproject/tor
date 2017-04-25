@@ -406,14 +406,14 @@ tor_zlib_state_size_precalc(int inflate_, int windowbits, int memlevel)
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
  * decompression. */
 tor_zlib_compress_state_t *
-tor_zlib_compress_new(int compress,
+tor_zlib_compress_new(int compress_,
                       compress_method_t method,
                       compression_level_t compression_level)
 {
   tor_zlib_compress_state_t *out;
   int bits, memlevel;
 
-  if (! compress) {
+  if (! compress_) {
     /* use this setting for decompression, since we might have the
      * max number of window bits */
     compression_level = HIGH_COMPRESSION;
@@ -423,10 +423,10 @@ tor_zlib_compress_new(int compress,
   out->stream.zalloc = Z_NULL;
   out->stream.zfree = Z_NULL;
   out->stream.opaque = NULL;
-  out->compress = compress;
+  out->compress = compress_;
   bits = method_bits(method, compression_level);
   memlevel = memory_level(compression_level);
-  if (compress) {
+  if (compress_) {
     if (deflateInit2(&out->stream, Z_BEST_COMPRESSION, Z_DEFLATED,
                      bits, memlevel,
                      Z_DEFAULT_STRATEGY) != Z_OK)
@@ -435,7 +435,7 @@ tor_zlib_compress_new(int compress,
     if (inflateInit2(&out->stream, bits) != Z_OK)
       goto err; // LCOV_EXCL_LINE
   }
-  out->allocation = tor_zlib_state_size_precalc(!compress, bits, memlevel);
+  out->allocation = tor_zlib_state_size_precalc(!compress_, bits, memlevel);
 
   total_zlib_allocation += out->allocation;
 
