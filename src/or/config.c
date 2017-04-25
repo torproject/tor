@@ -360,7 +360,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceNumIntroductionPoints", LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
   V(HidServAuth,                 LINELIST, NULL),
-  V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
+  OBSOLETE("CloseHSClientCircuitsImmediatelyOnTimeout"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(HiddenServiceSingleHopMode,  BOOL,     "0"),
   V(HiddenServiceNonAnonymousMode,BOOL,    "0"),
@@ -664,8 +664,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
-  { "CloseHSClientCircuitsImmediatelyOnTimeout", "This option makes your "
-    "client easier to fingerprint." },
   { "CloseHSServiceRendCircuitsImmediatelyOnTimeout", "This option makes "
     "your hidden services easier to fingerprint." },
   { "WarnUnsafeSocks", "Changing this option makes it easier for you "

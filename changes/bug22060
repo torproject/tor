@@ -9,3 +9,6 @@
       rendered obsolete. Code has been removed and feature no longer exists.
     - FastFirstHopPK was deprecated in 0.2.9.2-alpha and now has been rendered
       obsolete. Code has been removed and feature no longer exists.
+    - CloseHSClientCircuitsImmediatelyOnTimeout was deprecated in
+      0.2.9.2-alpha and now has been rendered obsolete. Code has been removed
+      and feature no longer exists.
