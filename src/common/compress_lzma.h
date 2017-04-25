@@ -17,16 +17,6 @@ const char *tor_lzma_get_version_str(void);
 
 const char *tor_lzma_get_header_version_str(void);
 
-int tor_lzma_compress(char **out, size_t *out_len,
-                      const char *in, size_t in_len,
-                      compress_method_t method);
-
-int tor_lzma_uncompress(char **out, size_t *out_len,
-                        const char *in, size_t in_len,
-                        compress_method_t method,
-                        int complete_only,
-                        int protocol_warn_level);
-
 /** Internal state for an incremental LZMA compression/decompression. */
 typedef struct tor_lzma_compress_state_t tor_lzma_compress_state_t;
 

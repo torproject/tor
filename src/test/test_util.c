@@ -2377,7 +2377,7 @@ test_util_gzip_compression_bomb(void *arg)
   expect_single_log_msg_containing(
          "We compressed something and got an insanely high "
          "compression factor; other Tors would think this "
-         "was a zlib bomb.");
+         "was a compression bomb.");
   teardown_capture_of_logs();
 
   /* Here's a compression bomb that we made manually. */
