@@ -7013,10 +7013,9 @@ control_event_hs_descriptor_receive_end(const char *action,
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   const char *desc_id = NULL;
 
-  if (!action || !id_digest || !rend_data || !onion_address) {
-    log_warn(LD_BUG, "Called with action==%p, id_digest==%p, "
-             "rend_data==%p, onion_address==%p", action, id_digest,
-             rend_data, onion_address);
+  if (!action || !rend_data || !onion_address) {
+    log_warn(LD_BUG, "Called with action==%p, rend_data==%p, "
+                     "onion_address==%p", action, rend_data, onion_address);
     return;
   }
 
@@ -7039,7 +7038,8 @@ control_event_hs_descriptor_receive_end(const char *action,
                      rend_hsaddress_str_or_unknown(onion_address),
                      rend_auth_type_to_string(
                           TO_REND_DATA_V2(rend_data)->auth_type),
-                     node_describe_longname_by_id(id_digest),
+                     id_digest ?
+                        node_describe_longname_by_id(id_digest) : "UNKNOWN",
                      desc_id_field ? desc_id_field : "",
                      reason_field ? reason_field : "");
 
@@ -7119,19 +7119,18 @@ control_event_hs_descriptor_uploaded(const char *id_digest,
                                          id_digest, NULL);
 }
 
-/** Send HS_DESC event to inform controller that query <b>rend_query</b>
- * failed to retrieve hidden service descriptor identified by
- * <b>id_digest</b>. If <b>reason</b> is not NULL, add it to REASON=
- * field.
+/** Send HS_DESC event to inform controller that query <b>rend_data</b>
+ * failed to retrieve hidden service descriptor from directory identified by
+ * <b>id_digest</b>. If NULL, "UNKNOWN" is used. If <b>reason</b> is not NULL,
+ * add it to REASON= field.
  */
 void
 control_event_hs_descriptor_failed(const rend_data_t *rend_data,
                                    const char *id_digest,
                                    const char *reason)
 {
-  if (!rend_data || !id_digest) {
-    log_warn(LD_BUG, "Called with rend_data==%p, id_digest==%p",
-             rend_data, id_digest);
+  if (!rend_data) {
+    log_warn(LD_BUG, "Called with rend_data==%p", rend_data);
     return;
   }
   control_event_hs_descriptor_receive_end("FAILED",
@@ -7140,7 +7139,8 @@ control_event_hs_descriptor_failed(const rend_data_t *rend_data,
 }
 
 /** send HS_DESC_CONTENT event after completion of a successful fetch from
- * hs directory. */
+ * hs directory. If <b>hsdir_id_digest</b> is NULL, it is replaced by
+ * "UNKNOWN". */
 void
 control_event_hs_descriptor_content(const char *onion_address,
                                     const char *desc_id,
@@ -7150,9 +7150,9 @@ control_event_hs_descriptor_content(const char *onion_address,
   static const char *event_name = "HS_DESC_CONTENT";
   char *esc_content = NULL;
 
-  if (!onion_address || !desc_id || !hsdir_id_digest) {
-    log_warn(LD_BUG, "Called with onion_address==%p, desc_id==%p, "
-             "hsdir_id_digest==%p", onion_address, desc_id, hsdir_id_digest);
+  if (!onion_address || !desc_id) {
+    log_warn(LD_BUG, "Called with onion_address==%p, desc_id==%p, ",
+             onion_address, desc_id);
     return;
   }
 
@@ -7167,7 +7167,9 @@ control_event_hs_descriptor_content(const char *onion_address,
                      event_name,
                      rend_hsaddress_str_or_unknown(onion_address),
                      desc_id,
-                     node_describe_longname_by_id(hsdir_id_digest),
+                     hsdir_id_digest ?
+                        node_describe_longname_by_id(hsdir_id_digest) :
+                        "UNKNOWN",
                      esc_content);
   tor_free(esc_content);
 }
