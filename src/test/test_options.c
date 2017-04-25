@@ -402,7 +402,7 @@ test_options_validate__uname_for_server(void *ignored)
   (void)ignored;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
-                                      "ORListenAddress 127.0.0.1:5555");
+                                      "ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_WARN);
 
   MOCK(get_uname, fixed_get_uname);
@@ -536,7 +536,7 @@ test_options_validate__contactinfo(void *ignored)
   int ret;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
-                                "ORListenAddress 127.0.0.1:5555\nORPort 955");
+                                "ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_DEBUG);
   tdata->opt->ContactInfo = NULL;
 
@@ -549,7 +549,7 @@ test_options_validate__contactinfo(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("ORListenAddress 127.0.0.1:5555\nORPort 955\n"
+  tdata = get_options_test_data("ORPort 127.0.0.1:5555\n"
                                 "ContactInfo hella@example.org");
   mock_clean_saved_logs();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -957,8 +957,7 @@ test_options_validate__relay_with_hidden_services(void *ignored)
   char *msg;
   setup_capture_of_logs(LOG_DEBUG);
   options_test_data_t *tdata = get_options_test_data(
-                                  "ORListenAddress 127.0.0.1:5555\n"
-                                  "ORPort 955\n"
+                                  "ORPort 127.0.0.1:5555\n"
                                   "HiddenServiceDir "
                                   "/Library/Tor/var/lib/tor/hidden_service/\n"
                                   "HiddenServicePort 80 127.0.0.1:8080\n"
@@ -1028,7 +1027,7 @@ test_options_validate__transproxy(void *ignored)
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_PF_DIVERT);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without "
-            "any valid TransPort or TransListenAddress.");
+            "any valid TransPort.");
 #endif
   tor_free(msg);
 
@@ -1043,7 +1042,7 @@ test_options_validate__transproxy(void *ignored)
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_TPROXY);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
-            "TransPort or TransListenAddress.");
+            "TransPort.");
 #endif
   tor_free(msg);
 
@@ -1059,7 +1058,7 @@ test_options_validate__transproxy(void *ignored)
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_IPFW);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
-            "TransPort or TransListenAddress.");
+            "TransPort.");
 #endif
   tor_free(msg);
 
@@ -1117,8 +1116,7 @@ test_options_validate__transproxy(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "TransPort and TransListenAddress are disabled in "
-            "this build.");
+  tt_str_op(msg, OP_EQ, "TransPort is disabled in this build.");
   tor_free(msg);
 #endif
 
@@ -1694,8 +1692,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableAddresses *:82\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1708,8 +1705,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableORAddresses *:82\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1722,8 +1718,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableDirAddresses *:82\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1736,8 +1731,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ClientUseIPv4 0\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1837,8 +1831,7 @@ test_options_validate__use_bridges(void *ignored)
   options_test_data_t *tdata = get_options_test_data(
                                    "UseBridges 1\n"
                                    "ClientUseIPv4 1\n"
-                                   "ORListenAddress 127.0.0.1:5555\n"
-                                   "ORPort 955\n"
+                                   "ORPort 127.0.0.1:5555\n"
                                    "MaxClientCircuitsPending 1\n"
                                    "ConnLimit 1\n"
                                    "SchedulerHighWaterMark__ 42\n"
@@ -2398,8 +2391,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 1\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -2410,8 +2402,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
                                 "MaxAdvertisedBandwidth 30000\n"
                                 );
@@ -2423,8 +2414,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
                                 "RelayBandwidthRate 1\n"
                                 "MaxAdvertisedBandwidth 38400\n"
@@ -2437,8 +2427,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
                                 "BandwidthBurst 76800\n"
                                 "RelayBandwidthRate 76800\n"
@@ -2876,8 +2865,7 @@ test_options_validate__accounting(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data(
            TEST_OPTIONS_DEFAULT_VALUES
-           "ORListenAddress 127.0.0.1:5555\n"
-           "ORPort 955\n"
+           "ORPort 127.0.0.1:5555\n"
            "BandwidthRate 76800\n"
            "BandwidthBurst 76800\n"
            "MaxAdvertisedBandwidth 38400\n"
@@ -3511,8 +3499,7 @@ test_options_validate__families(void *ignored)
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "MyFamily home\n"
                                 "BridgeRelay 1\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 51300\n"
                                 "BandwidthBurst 51300\n"
                                 "MaxAdvertisedBandwidth 25700\n"
@@ -3741,8 +3728,7 @@ test_options_validate__transport(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "ServerTransportPlugin foo exec bar\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76900\n"
                                 "BandwidthBurst 76900\n"
                                 "MaxAdvertisedBandwidth 38500\n"
@@ -3784,8 +3770,7 @@ test_options_validate__transport(void *ignored)
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "ServerTransportListenAddr foo 127.0.0.42:55\n"
                                 "ServerTransportPlugin foo exec bar\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76900\n"
                                 "BandwidthBurst 76900\n"
                                 "MaxAdvertisedBandwidth 38500\n"

@@ -261,7 +261,7 @@ static config_var_t option_vars_[] = {
   V(ConstrainedSockets,          BOOL,     "0"),
   V(ConstrainedSockSize,         MEMUNIT,  "8192"),
   V(ContactInfo,                 STRING,   NULL),
-  V(ControlListenAddress,        LINELIST, NULL),
+  OBSOLETE("ControlListenAddress"),
   VPORT(ControlPort),
   V(ControlPortFileGroupReadable,BOOL,     "0"),
   V(ControlPortWriteToFile,      FILENAME, NULL),
@@ -278,7 +278,7 @@ static config_var_t option_vars_[] = {
   V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     "0"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
-  V(DirListenAddress,            LINELIST, NULL),
+  OBSOLETE("DirListenAddress"),
   V(DirPolicy,                   LINELIST, NULL),
   VPORT(DirPort),
   V(DirPortFrontPage,            FILENAME, NULL),
@@ -292,7 +292,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DisableV2DirectoryInfo_"),
   OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort),
-  V(DNSListenAddress,            LINELIST, NULL),
+  OBSOLETE("DNSListenAddress"),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(TestingEnableConnBwEvent,    BOOL,     "0"),
   V(TestingEnableCellStatsEvent, BOOL,     "0"),
@@ -398,7 +398,7 @@ static config_var_t option_vars_[] = {
   V(MyFamily,                    STRING,   NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
-  V(NATDListenAddress,           LINELIST, NULL),
+  OBSOLETE("NATDListenAddress"),
   VPORT(NATDPort),
   V(Nickname,                    STRING,   NULL),
   V(PredictedPortsRelevanceTime,  INTERVAL, "1 hour"),
@@ -408,7 +408,7 @@ static config_var_t option_vars_[] = {
   V(NumDirectoryGuards,          UINT,     "0"),
   V(NumEntryGuards,              UINT,     "0"),
   V(OfflineMasterKey,            BOOL,     "0"),
-  V(ORListenAddress,             LINELIST, NULL),
+  OBSOLETE("ORListenAddress"),
   VPORT(ORPort),
   V(OutboundBindAddress,         LINELIST,   NULL),
   V(OutboundBindAddressOR,       LINELIST,   NULL),
@@ -481,7 +481,7 @@ static config_var_t option_vars_[] = {
   V(SchedulerHighWaterMark__,    MEMUNIT,  "101 MB"),
   V(SchedulerMaxFlushCells__,    UINT,     "1000"),
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
-  V(SocksListenAddress,          LINELIST, NULL),
+  OBSOLETE("SocksListenAddress"),
   V(SocksPolicy,                 LINELIST, NULL),
   VPORT(SocksPort),
   V(SocksTimeout,                INTERVAL, "2 minutes"),
@@ -497,7 +497,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("TLSECGroup"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
-  V(TransListenAddress,          LINELIST, NULL),
+  OBSOLETE("TransListenAddress"),
   VPORT(TransPort),
   V(TransProxyType,              STRING,   "default"),
   OBSOLETE("TunnelDirConns"),
@@ -664,15 +664,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
-  { "ControlListenAddress", "Use ControlPort instead." },
-  { "DirListenAddress", "Use DirPort instead, possibly with the "
-    "NoAdvertise sub-option" },
-  { "DNSListenAddress", "Use DNSPort instead." },
-  { "SocksListenAddress", "Use SocksPort instead." },
-  { "TransListenAddress", "Use TransPort instead." },
-  { "NATDListenAddress", "Use NATDPort instead." },
-  { "ORListenAddress", "Use ORPort instead, possibly with the "
-    "NoAdvertise sub-option" },
   /* End of options deprecated since 0.2.9.2-alpha. */
 
   { NULL, NULL }
@@ -3070,14 +3061,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
     if (strcasecmp(options->TransProxyType, "default") &&
         !options->TransPort_set) {
-      REJECT("Cannot use TransProxyType without any valid TransPort or "
-             "TransListenAddress.");
+      REJECT("Cannot use TransProxyType without any valid TransPort.");
     }
   }
 #else
   if (options->TransPort_set)
-    REJECT("TransPort and TransListenAddress are disabled "
-           "in this build.");
+    REJECT("TransPort is disabled in this build.");
 #endif
 
   if (options->TokenBucketRefillInterval <= 0
@@ -6369,14 +6358,9 @@ warn_client_dns_cache(const char *option, int disabling)
 /**
  * Parse port configuration for a single port type.
  *
- * Read entries of the "FooPort" type from the list <b>ports</b>, and
- * entries of the "FooListenAddress" type from the list
- * <b>listenaddrs</b>.  Two syntaxes are supported: a legacy syntax
- * where FooPort is at most a single entry containing a port number and
- * where FooListenAddress has any number of address:port combinations;
- * and a new syntax where there are no FooListenAddress entries and
- * where FooPort can have any number of entries of the format
- * "[Address:][Port] IsolationOptions".
+ * Read entries of the "FooPort" type from the list <b>ports</b>.  Syntax is
+ * that FooPort can have any number of entries of the format
+ *  "[Address:][Port] IsolationOptions".
  *
  * In log messages, describe the port type as <b>portname</b>.
  *
@@ -6389,9 +6373,6 @@ warn_client_dns_cache(const char *option, int disabling)
  * If CL_PORT_WARN_NONLOCAL is set in <b>flags</b>, warn if any of the
  * ports are not on a local address.  If CL_PORT_FORBID_NONLOCAL is set,
  * this is a control port with no password set: don't even allow it.
- *
- * Unless CL_PORT_ALLOW_EXTRA_LISTENADDR is set in <b>flags</b>, warn
- * if FooListenAddress is set but FooPort is 0.
  *
  * If CL_PORT_SERVER_OPTIONS is set in <b>flags</b>, do not allow stream
  * isolation options in the FooPort entries; instead allow the
@@ -6407,7 +6388,6 @@ warn_client_dns_cache(const char *option, int disabling)
 STATIC int
 parse_port_config(smartlist_t *out,
                   const config_line_t *ports,
-                  const config_line_t *listenaddrs,
                   const char *portname,
                   int listener_type,
                   const char *defaultaddr,
@@ -6424,90 +6404,12 @@ parse_port_config(smartlist_t *out,
   const unsigned forbid_nonlocal = flags & CL_PORT_FORBID_NONLOCAL;
   const unsigned default_to_group_writable =
     flags & CL_PORT_DFLT_GROUP_WRITABLE;
-  const unsigned allow_spurious_listenaddr =
-    flags & CL_PORT_ALLOW_EXTRA_LISTENADDR;
   const unsigned takes_hostnames = flags & CL_PORT_TAKES_HOSTNAMES;
   const unsigned is_unix_socket = flags & CL_PORT_IS_UNIXSOCKET;
   int got_zero_port=0, got_nonzero_port=0;
   char *unix_socket_path = NULL;
 
-  /* FooListenAddress is deprecated; let's make it work like it used to work,
-   * though. */
-  if (listenaddrs) {
-    int mainport = defaultport;
-
-    if (ports && ports->next) {
-      log_warn(LD_CONFIG, "%sListenAddress can't be used when there are "
-               "multiple %sPort lines", portname, portname);
-      return -1;
-    } else if (ports) {
-      if (!strcmp(ports->value, "auto")) {
-        mainport = CFG_AUTO_PORT;
-      } else {
-        int ok;
-        mainport = (int)tor_parse_long(ports->value, 10, 0, 65535, &ok, NULL);
-        if (!ok) {
-          log_warn(LD_CONFIG, "%sListenAddress can only be used with a single "
-                   "%sPort with value \"auto\" or 1-65535 and no options set.",
-                   portname, portname);
-          return -1;
-        }
-      }
-    }
-
-    if (mainport == 0) {
-      if (allow_spurious_listenaddr)
-        return 1; /*DOCDOC*/
-      log_warn(LD_CONFIG, "%sPort must be defined if %sListenAddress is used",
-               portname, portname);
-      return -1;
-    }
-
-    if (use_server_options && out) {
-      /* Add a no_listen port. */
-      port_cfg_t *cfg = port_cfg_new(0);
-      cfg->type = listener_type;
-      cfg->port = mainport;
-      tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
-      cfg->server_cfg.no_listen = 1;
-      cfg->server_cfg.bind_ipv4_only = 1;
-      /* cfg->entry_cfg defaults are already set by port_cfg_new */
-      smartlist_add(out, cfg);
-    }
-
-    for (; listenaddrs; listenaddrs = listenaddrs->next) {
-      tor_addr_t addr;
-      uint16_t port = 0;
-      if (tor_addr_port_lookup(listenaddrs->value, &addr, &port) < 0) {
-        log_warn(LD_CONFIG, "Unable to parse %sListenAddress '%s'",
-                 portname, listenaddrs->value);
-        return -1;
-      }
-      if (out) {
-        port_cfg_t *cfg = port_cfg_new(0);
-        cfg->type = listener_type;
-        cfg->port = port ? port : mainport;
-        tor_addr_copy(&cfg->addr, &addr);
-        cfg->entry_cfg.session_group = SESSION_GROUP_UNSET;
-        cfg->entry_cfg.isolation_flags = ISO_DEFAULT;
-        cfg->server_cfg.no_advertise = 1;
-        smartlist_add(out, cfg);
-      }
-    }
-
-    if (warn_nonlocal && out) {
-      if (is_control)
-        warn_nonlocal_controller_ports(out, forbid_nonlocal);
-      else if (is_ext_orport)
-        warn_nonlocal_ext_orports(out, portname);
-      else
-        warn_nonlocal_client_ports(out, portname, listener_type);
-    }
-    return 0;
-  } /* end if (listenaddrs) */
-
-  /* No ListenAddress lines. If there's no FooPort, then maybe make a default
-   * one. */
+  /* If there's no FooPort, then maybe make a default one. */
   if (! ports) {
     if (defaultport && defaultaddr && out) {
       port_cfg_t *cfg = port_cfg_new(is_unix_socket ? strlen(defaultaddr) : 0);
@@ -6978,36 +6880,35 @@ parse_ports(or_options_t *options, int validate_only,
   const unsigned gw_flag = options->SocksSocketsGroupWritable ?
     CL_PORT_DFLT_GROUP_WRITABLE : 0;
   if (parse_port_config(ports,
-             options->SocksPort_lines, options->SocksListenAddress,
+             options->SocksPort_lines,
              "Socks", CONN_TYPE_AP_LISTENER,
              "127.0.0.1", 9050,
-             CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR|
-             CL_PORT_TAKES_HOSTNAMES|gw_flag) < 0) {
-    *msg = tor_strdup("Invalid SocksPort/SocksListenAddress configuration");
+             CL_PORT_WARN_NONLOCAL|CL_PORT_TAKES_HOSTNAMES|gw_flag) < 0) {
+    *msg = tor_strdup("Invalid SocksPort configuration");
     goto err;
   }
   if (parse_port_config(ports,
-                        options->DNSPort_lines, options->DNSListenAddress,
+                        options->DNSPort_lines,
                         "DNS", CONN_TYPE_AP_DNS_LISTENER,
                         "127.0.0.1", 0,
                         CL_PORT_WARN_NONLOCAL|CL_PORT_TAKES_HOSTNAMES) < 0) {
-    *msg = tor_strdup("Invalid DNSPort/DNSListenAddress configuration");
+    *msg = tor_strdup("Invalid DNSPort configuration");
     goto err;
   }
   if (parse_port_config(ports,
-                        options->TransPort_lines, options->TransListenAddress,
+                        options->TransPort_lines,
                         "Trans", CONN_TYPE_AP_TRANS_LISTENER,
                         "127.0.0.1", 0,
                         CL_PORT_WARN_NONLOCAL) < 0) {
-    *msg = tor_strdup("Invalid TransPort/TransListenAddress configuration");
+    *msg = tor_strdup("Invalid TransPort configuration");
     goto err;
   }
   if (parse_port_config(ports,
-                        options->NATDPort_lines, options->NATDListenAddress,
+                        options->NATDPort_lines,
                         "NATD", CONN_TYPE_AP_NATD_LISTENER,
                         "127.0.0.1", 0,
                         CL_PORT_WARN_NONLOCAL) < 0) {
-    *msg = tor_strdup("Invalid NatdPort/NatdListenAddress configuration");
+    *msg = tor_strdup("Invalid NatdPort configuration");
     goto err;
   }
   {
@@ -7023,16 +6924,14 @@ parse_ports(or_options_t *options, int validate_only,
 
     if (parse_port_config(ports,
                           options->ControlPort_lines,
-                          options->ControlListenAddress,
                           "Control", CONN_TYPE_CONTROL_LISTENER,
                           "127.0.0.1", 0,
                           control_port_flags) < 0) {
-      *msg = tor_strdup("Invalid ControlPort/ControlListenAddress "
-                        "configuration");
+      *msg = tor_strdup("Invalid ControlPort configuration");
       goto err;
     }
 
-    if (parse_port_config(ports, options->ControlSocket, NULL,
+    if (parse_port_config(ports, options->ControlSocket,
                           "ControlSocket",
                           CONN_TYPE_CONTROL_LISTENER, NULL, 0,
                           control_port_flags | CL_PORT_IS_UNIXSOCKET) < 0) {
@@ -7042,15 +6941,15 @@ parse_ports(or_options_t *options, int validate_only,
   }
   if (! options->ClientOnly) {
     if (parse_port_config(ports,
-                          options->ORPort_lines, options->ORListenAddress,
+                          options->ORPort_lines,
                           "OR", CONN_TYPE_OR_LISTENER,
                           "0.0.0.0", 0,
                           CL_PORT_SERVER_OPTIONS) < 0) {
-      *msg = tor_strdup("Invalid ORPort/ORListenAddress configuration");
+      *msg = tor_strdup("Invalid ORPort configuration");
       goto err;
     }
     if (parse_port_config(ports,
-                          options->ExtORPort_lines, NULL,
+                          options->ExtORPort_lines,
                           "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
                           "127.0.0.1", 0,
                           CL_PORT_SERVER_OPTIONS|CL_PORT_WARN_NONLOCAL) < 0) {
@@ -7058,11 +6957,11 @@ parse_ports(or_options_t *options, int validate_only,
       goto err;
     }
     if (parse_port_config(ports,
-                          options->DirPort_lines, options->DirListenAddress,
+                          options->DirPort_lines,
                           "Dir", CONN_TYPE_DIR_LISTENER,
                           "0.0.0.0", 0,
                           CL_PORT_SERVER_OPTIONS) < 0) {
-      *msg = tor_strdup("Invalid DirPort/DirListenAddress configuration");
+      *msg = tor_strdup("Invalid DirPort configuration");
       goto err;
     }
   }

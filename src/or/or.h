@@ -3605,21 +3605,6 @@ typedef struct {
                                         * configured ports. */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
   config_line_t *DirPolicy; /**< Lists of dir policy components */
-  /** Addresses to bind for listening for SOCKS connections. */
-  config_line_t *SocksListenAddress;
-  /** Addresses to bind for listening for transparent pf/netfilter
-   * connections. */
-  config_line_t *TransListenAddress;
-  /** Addresses to bind for listening for transparent natd connections */
-  config_line_t *NATDListenAddress;
-  /** Addresses to bind for listening for SOCKS connections. */
-  config_line_t *DNSListenAddress;
-  /** Addresses to bind for listening for OR connections. */
-  config_line_t *ORListenAddress;
-  /** Addresses to bind for listening for directory connections. */
-  config_line_t *DirListenAddress;
-  /** Addresses to bind for listening for control connections. */
-  config_line_t *ControlListenAddress;
   /** Local address to bind outbound sockets */
   config_line_t *OutboundBindAddress;
   /** Local address to bind outbound relay sockets */

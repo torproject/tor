@@ -341,14 +341,6 @@ GENERAL OPTIONS
         Unix domain sockets only: Do not insist that the directory
         that holds the socket be read-restricted.
 
-[[ControlListenAddress]] **ControlListenAddress** __IP__[:__PORT__]::
-    Bind the controller listener to this address. If you specify a port, bind
-    to this port rather than the one specified in ControlPort. We strongly
-    recommend that you leave this alone unless you know what you're doing,
-    since giving attackers access to your control listener is really
-    dangerous. This directive can be specified multiple
-    times to bind to multiple addresses/ports.  (Default: 127.0.0.1)
-
 [[ControlSocket]] **ControlSocket** __Path__::
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
     socket. '0' disables ControlSocket (Unix and Unix-like systems only.)
@@ -1163,16 +1155,6 @@ The following options are useful only for clients (that is, if
     line is used, and all earlier flags are ignored. No error is issued for
     conflicting flags.
 
-[[SocksListenAddress]] **SocksListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for connections from Socks-speaking
-    applications. (Default: 127.0.0.1) You can also specify a port (e.g.
-    192.168.0.1:9100). This directive can be specified multiple times to bind
-    to multiple addresses/ports.  (DEPRECATED: As of 0.2.3.x-alpha, you can
-    now use multiple SocksPort entries, and provide addresses for SocksPort
-    entries, so SocksListenAddress no longer has a purpose.  For backward
-    compatibility, SocksListenAddress is only allowed when SocksPort is just
-    a port number.)
-
 [[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
     SocksPort and DNSPort ports. The policies have the same form as exit
@@ -1312,17 +1294,7 @@ The following options are useful only for clients (that is, if
     TransPort requires OS support for transparent proxies, such as BSDs' pf or
     Linux's IPTables. If you're planning to use Tor as a transparent proxy for
     a network, you'll want to examine and change VirtualAddrNetwork from the
-    default setting. You'll also want to set the TransListenAddress option for
-    the network you'd like to proxy. (Default: 0)
-
-[[TransListenAddress]] **TransListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for transparent proxy connections. (Default:
-    127.0.0.1). This is useful for exporting a transparent proxy server to an
-    entire network. (DEPRECATED: As of 0.2.3.x-alpha, you can
-    now use multiple TransPort entries, and provide addresses for TransPort
-    entries, so TransListenAddress no longer has a purpose.  For backward
-    compatibility, TransListenAddress is only allowed when TransPort is just
-    a port number.)
+    default setting. (Default: 0)
 
 [[TransProxyType]] **TransProxyType** **default**|**TPROXY**|**ipfw**|**pf-divert**::
     TransProxyType may only be enabled when there is transparent proxy listener
@@ -1330,9 +1302,7 @@ The following options are useful only for clients (that is, if
  +
     Set this to "TPROXY" if you wish to be able to use the TPROXY Linux module
     to transparently proxy connections that are configured using the TransPort
-    option. This setting lets the listener on the TransPort accept connections
-    for all addresses, even when the TransListenAddress is configured for an
-    internal address. Detailed information on how to configure the TPROXY
+    option. Detailed information on how to configure the TPROXY
     feature can be found in the Linux kernel source tree in the file
     Documentation/networking/tproxy.txt. +
  +
@@ -1360,13 +1330,6 @@ The following options are useful only for clients (that is, if
  +
     This option is only for people who cannot use TransPort. (Default: 0)
 
-[[NATDListenAddress]] **NATDListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for NATD connections. (DEPRECATED: As of
-    0.2.3.x-alpha, you can now use multiple NATDPort entries, and provide
-    addresses for NATDPort entries, so NATDListenAddress no longer has a
-    purpose.  For backward compatibility, NATDListenAddress is only allowed
-    when NATDPort is just a port number.)
-
 [[AutomapHostsOnResolve]] **AutomapHostsOnResolve** **0**|**1**::
     When this option is enabled, and we get a request to resolve an address
     that ends with one of the suffixes in **AutomapHostsSuffixes**, we map an
@@ -1386,13 +1349,6 @@ The following options are useful only for clients (that is, if
     you. This directive can be specified multiple times to bind to multiple
     addresses/ports. See SocksPort for an explanation of isolation
     flags. (Default: 0)
-
-[[DNSListenAddress]] **DNSListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for DNS connections. (DEPRECATED: As of
-    0.2.3.x-alpha, you can now use multiple DNSPort entries, and provide
-    addresses for DNSPort entries, so DNSListenAddress no longer has a
-    purpose.  For backward compatibility, DNSListenAddress is only allowed
-    when DNSPort is just a port number.)
 
 [[ClientDNSRejectInternalAddresses]] **ClientDNSRejectInternalAddresses** **0**|**1**::
     If true, Tor does not believe any anonymously retrieved DNS answer that
@@ -1798,15 +1754,6 @@ is non-zero):
     For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
     IPv4Only and IPv6Only are mutually exclusive.
 
-[[ORListenAddress]] **ORListenAddress** __IP__[:__PORT__]::
-    Bind to this IP address to listen for connections from Tor clients and
-    servers. If you specify a port, bind to this port rather than the one
-    specified in ORPort. (Default: 0.0.0.0) This directive can be specified
-    multiple times to bind to multiple addresses/ports. +
- +
-    This option is deprecated; you can get the same behavior with ORPort now
-    that it supports NoAdvertise and explicit addresses.
-
 [[PortForwarding]] **PortForwarding** **0**|**1**::
     Attempt to automatically forward the DirPort and ORPort on a NAT router
     connecting this Tor server to the Internet. If set, Tor will try both
@@ -2075,15 +2022,6 @@ details.)
     but one DirPort must have the **NoAdvertise** flag set. (Default: 0) +
  +
     The same flags are supported here as are supported by ORPort.
-
-[[DirListenAddress]] **DirListenAddress** __IP__[:__PORT__]::
-    Bind the directory service to this address. If you specify a port, bind to
-    this port rather than the one specified in DirPort.  (Default: 0.0.0.0)
-    This directive can be specified multiple times  to bind to multiple
-    addresses/ports. +
- +
-    This option is deprecated; you can get the same behavior with DirPort now
-    that it supports NoAdvertise and explicit addresses.
 
 [[DirPolicy]] **DirPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the

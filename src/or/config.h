@@ -157,7 +157,7 @@ smartlist_t *get_options_for_server_transport(const char *transport);
 
 #define CL_PORT_NO_STREAM_OPTIONS (1u<<0)
 #define CL_PORT_WARN_NONLOCAL (1u<<1)
-#define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
+/* Was CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2) */
 #define CL_PORT_SERVER_OPTIONS (1u<<3)
 #define CL_PORT_FORBID_NONLOCAL (1u<<4)
 #define CL_PORT_TAKES_HOSTNAMES (1u<<5)
@@ -193,7 +193,6 @@ STATIC int have_enough_mem_for_dircache(const or_options_t *options,
                                         size_t total_mem, char **msg);
 STATIC int parse_port_config(smartlist_t *out,
                   const config_line_t *ports,
-                  const config_line_t *listenaddrs,
                   const char *portname,
                   int listener_type,
                   const char *defaultaddr,
