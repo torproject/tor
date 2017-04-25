@@ -674,6 +674,7 @@ main(int argc, const char **argv)
   or_options_t *options;
 
   tor_threads_init();
+  tor_compress_init();
 
   if (argc == 4 && !strcmp(argv[1], "diff")) {
     init_logging(1);

@@ -47,5 +47,7 @@ size_t tor_zlib_compress_state_size(const tor_zlib_compress_state_t *state);
 
 size_t tor_zlib_get_total_allocation(void);
 
+void tor_zlib_init(void);
+
 #endif // TOR_COMPRESS_ZLIB_H.
 

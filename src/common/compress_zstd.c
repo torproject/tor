@@ -24,7 +24,7 @@
 #endif
 
 /** Total number of bytes allocated for Zstandard state. */
-static size_t total_zstd_allocation = 0;
+static atomic_counter_t total_zstd_allocation;
 
 #ifdef HAVE_ZSTD
 /** Given <b>level</b> return the memory level. */
@@ -446,6 +446,7 @@ tor_zstd_compress_new(int compress,
     }
   }
 
+  atomic_counter_add(&total_zstd_allocation, result->allocation);
   return result;
 
  err:
@@ -578,7 +579,7 @@ tor_zstd_compress_free(tor_zstd_compress_state_t *state)
   if (state == NULL)
     return;
 
-  total_zstd_allocation -= state->allocation;
+  atomic_counter_sub(&total_zstd_allocation, state->allocation);
 
 #ifdef HAVE_ZSTD
   if (state->compress) {
@@ -604,6 +605,12 @@ tor_zstd_compress_state_size(const tor_zstd_compress_state_t *state)
 size_t
 tor_zstd_get_total_allocation(void)
 {
-  return total_zstd_allocation;
+  return atomic_counter_get(&total_zstd_allocation);
 }
 
+/** Initialize the zstd module */
+void
+tor_zstd_init(void)
+{
+  atomic_counter_init(&total_zstd_allocation);
+}

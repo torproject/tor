@@ -47,5 +47,7 @@ size_t tor_lzma_compress_state_size(const tor_lzma_compress_state_t *state);
 
 size_t tor_lzma_get_total_allocation(void);
 
+void tor_lzma_init(void);
+
 #endif // TOR_COMPRESS_LZMA_H.
 

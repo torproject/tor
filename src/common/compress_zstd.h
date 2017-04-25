@@ -47,5 +47,7 @@ size_t tor_zstd_compress_state_size(const tor_zstd_compress_state_t *state);
 
 size_t tor_zstd_get_total_allocation(void);
 
+void tor_zstd_init(void);
+
 #endif // TOR_COMPRESS_ZSTD_H.
 

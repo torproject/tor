@@ -48,7 +48,7 @@ static size_t tor_zlib_state_size_precalc(int inflate,
                                           int windowbits, int memlevel);
 
 /** Total number of bytes allocated for zlib state */
-static size_t total_zlib_allocation = 0;
+static atomic_counter_t total_zlib_allocation;
 
 /** Given <b>level</b> return the memory level. */
 static int
@@ -437,7 +437,7 @@ tor_zlib_compress_new(int compress_,
   }
   out->allocation = tor_zlib_state_size_precalc(!compress_, bits, memlevel);
 
-  total_zlib_allocation += out->allocation;
+  atomic_counter_add(&total_zlib_allocation, out->allocation);
 
   return out;
 
@@ -519,7 +519,7 @@ tor_zlib_compress_free(tor_zlib_compress_state_t *state)
   if (state == NULL)
     return;
 
-  total_zlib_allocation -= state->allocation;
+  atomic_counter_sub(&total_zlib_allocation, state->allocation);
 
   if (state->compress)
     deflateEnd(&state->stream);
@@ -541,6 +541,12 @@ tor_zlib_compress_state_size(const tor_zlib_compress_state_t *state)
 size_t
 tor_zlib_get_total_allocation(void)
 {
-  return total_zlib_allocation;
+  return atomic_counter_get(&total_zlib_allocation);
 }
 
+/** Set up global state for the zlib module */
+void
+tor_zlib_init(void)
+{
+  atomic_counter_init(&total_zlib_allocation);
+}

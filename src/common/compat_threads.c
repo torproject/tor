@@ -352,3 +352,48 @@ alert_sockets_close(alert_sockets_t *socks)
   socks->read_fd = socks->write_fd = -1;
 }
 
+/*
+ * XXXX We might be smart to move to compiler intrinsics or real atomic
+ * XXXX operations at some point.  But not yet.
+ *
+ */
+
+/** Initialize a new atomic counter with the value 0 */
+void
+atomic_counter_init(atomic_counter_t *counter)
+{
+  tor_mutex_init_nonrecursive(&counter->mutex);
+  counter->val = 0;
+}
+/** Clean up all resources held by an atomic counter. */
+void
+atomic_counter_destroy(atomic_counter_t *counter)
+{
+  tor_mutex_uninit(&counter->mutex);
+  memset(counter, 0, sizeof(*counter));
+}
+/** Add a value to an atomic counter. */
+void
+atomic_counter_add(atomic_counter_t *counter, size_t add)
+{
+  tor_mutex_acquire(&counter->mutex);
+  counter->val += add;
+  tor_mutex_release(&counter->mutex);
+}
+/** Subtract a value from an atomic counter. */
+void
+atomic_counter_sub(atomic_counter_t *counter, size_t sub)
+{
+  // this relies on unsigned overflow, but that's fine.
+  atomic_counter_add(counter, -sub);
+}
+/** Return the current value of an atomic counter */
+size_t
+atomic_counter_get(atomic_counter_t *counter)
+{
+  size_t val;
+  tor_mutex_acquire(&counter->mutex);
+  val = counter->val;
+  tor_mutex_release(&counter->mutex);
+  return val;
+}

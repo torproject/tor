@@ -375,3 +375,11 @@ tor_compress_state_size(const tor_compress_state_t *state)
   return 0;
 }
 
+/** Initialize all compression modules. */
+void
+tor_compress_init(void)
+{
+  tor_zlib_init();
+  tor_lzma_init();
+  tor_zstd_init();
+}
