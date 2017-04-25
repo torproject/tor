@@ -33,33 +33,27 @@ typedef enum {
   HIGH_COMPRESSION, MEDIUM_COMPRESSION, LOW_COMPRESSION
 } compression_level_t;
 
-int
-tor_compress(char **out, size_t *out_len,
-             const char *in, size_t in_len,
-             compress_method_t method);
-int
-tor_uncompress(char **out, size_t *out_len,
-               const char *in, size_t in_len,
-               compress_method_t method,
-               int complete_only,
-               int protocol_warn_level);
+int tor_compress(char **out, size_t *out_len,
+                 const char *in, size_t in_len,
+                 compress_method_t method);
+
+int tor_uncompress(char **out, size_t *out_len,
+                   const char *in, size_t in_len,
+                   compress_method_t method,
+                   int complete_only,
+                   int protocol_warn_level);
 
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
-int
-tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
+int tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
 
-int
-tor_compress_supports_method(compress_method_t method);
+int tor_compress_supports_method(compress_method_t method);
 
-const char *
-tor_compress_version_str(compress_method_t method);
+const char *tor_compress_version_str(compress_method_t method);
 
-const char *
-tor_compress_header_version_str(compress_method_t method);
+const char *tor_compress_header_version_str(compress_method_t method);
 
-size_t
-tor_compress_get_total_allocation(void);
+size_t tor_compress_get_total_allocation(void);
 
 /** Return values from tor_compress_process; see that function's documentation
  * for details. */
