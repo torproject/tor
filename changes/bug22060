@@ -17,3 +17,5 @@
       and feature no longer exists.
     - WarnUnsafeSocks was deprecated in 0.2.9.2-alpha and now has been
       rendered obsolete. Code has been removed and feature no longer exists.
+    - TLSECGroup was deprecated in 0.2.9.2-alpha and now has been rendered
+      obsolete. Code has been removed and feature no longer exists.

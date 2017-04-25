@@ -1313,54 +1313,6 @@ test_options_validate__node_families(void *ignored)
 }
 
 static void
-test_options_validate__tlsec(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  setup_capture_of_logs(LOG_DEBUG);
-  options_test_data_t *tdata = get_options_test_data(
-                                 "TLSECGroup ed25519\n"
-                                 "SchedulerHighWaterMark__ 42\n"
-                                 "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_log_msg("Unrecognized TLSECGroup: Falling back to the default.\n");
-  tt_assert(!tdata->opt->TLSECGroup);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("TLSECGroup P224\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-  mock_clean_saved_logs();
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_no_log_msg(
-            "Unrecognized TLSECGroup: Falling back to the default.\n");
-  tt_assert(tdata->opt->TLSECGroup);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("TLSECGroup P256\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-  mock_clean_saved_logs();
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_no_log_msg(
-            "Unrecognized TLSECGroup: Falling back to the default.\n");
-  tt_assert(tdata->opt->TLSECGroup);
-  tor_free(msg);
-
- done:
-  teardown_capture_of_logs();
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
 test_options_validate__token_bucket(void *ignored)
 {
   (void)ignored;
@@ -4427,7 +4379,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(exclude_nodes),
   LOCAL_VALIDATE_TEST(scheduler),
   LOCAL_VALIDATE_TEST(node_families),
-  LOCAL_VALIDATE_TEST(tlsec),
   LOCAL_VALIDATE_TEST(token_bucket),
   LOCAL_VALIDATE_TEST(recommended_packages),
   LOCAL_VALIDATE_TEST(fetch_dir),

@@ -779,12 +779,6 @@ router_initialize_tls_context(void)
   int lifetime = options->SSLKeyLifetime;
   if (public_server_mode(options))
     flags |= TOR_TLS_CTX_IS_PUBLIC_SERVER;
-  if (options->TLSECGroup) {
-    if (!strcasecmp(options->TLSECGroup, "P256"))
-      flags |= TOR_TLS_CTX_USE_ECDHE_P256;
-    else if (!strcasecmp(options->TLSECGroup, "P224"))
-      flags |= TOR_TLS_CTX_USE_ECDHE_P224;
-  }
   if (!lifetime) { /* we should guess a good ssl cert lifetime */
 
     /* choose between 5 and 365 days, and round to the day */

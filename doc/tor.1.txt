@@ -1958,12 +1958,6 @@ is non-zero):
 [[GeoIPv6File]] **GeoIPv6File** __filename__::
     A filename containing IPv6 GeoIP data, for use with by-country statistics.
 
-[[TLSECGroup]] **TLSECGroup** **P224**|**P256**::
-    What EC group should we try to use for incoming TLS connections?
-    P224 is faster, but makes us stand out more. Has no effect if
-    we're a client, or if our OpenSSL version lacks support for ECDHE.
-    (Default: P256)
-
 [[CellStatistics]] **CellStatistics** **0**|**1**::
     Relays only.
     When this option is enabled, Tor collects statistics about cell

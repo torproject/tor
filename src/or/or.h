@@ -4466,8 +4466,6 @@ typedef struct {
 
   int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
 
-  char *TLSECGroup; /**< One of "P256", "P224", or nil for auto */
-
   /** Fraction: */
   double PathsNeededToBuildCircuits;
 

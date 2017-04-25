@@ -494,7 +494,7 @@ static config_var_t option_vars_[] = {
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
   V(Tor2webMode,                 BOOL,     "0"),
   V(Tor2webRendezvousPoints,      ROUTERSET, NULL),
-  V(TLSECGroup,                  STRING,   NULL),
+  OBSOLETE("TLSECGroup"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   V(TransListenAddress,          LINELIST, NULL),
@@ -664,8 +664,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
-  { "TLSECGroup", "The default is a nice secure choice; the other option "
-    "is less secure." },
   { "ControlListenAddress", "Use ControlPort instead." },
   { "DirListenAddress", "Use DirPort instead, possibly with the "
     "NoAdvertise sub-option" },
@@ -1537,23 +1535,6 @@ get_effective_bwburst(const or_options_t *options)
   return (uint32_t)bw;
 }
 
-/** Return True if any changes from <b>old_options</b> to
- * <b>new_options</b> needs us to refresh our TLS context. */
-static int
-options_transition_requires_fresh_tls_context(const or_options_t *old_options,
-                                              const or_options_t *new_options)
-{
-  tor_assert(new_options);
-
-  if (!old_options)
-    return 0;
-
-  if (!opt_streq(old_options->TLSECGroup, new_options->TLSECGroup))
-    return 1;
-
-  return 0;
-}
-
 /**
  * Return true if changing the configuration from <b>old</b> to <b>new</b>
  * affects the guard susbsystem.
@@ -1770,13 +1751,6 @@ options_act(const or_options_t *old_options)
                                        !old_options->V3AuthoritativeDir))) {
     if (init_keys() < 0) {
       log_warn(LD_BUG,"Error initializing keys; exiting");
-      return -1;
-    }
-  } else if (old_options &&
-             options_transition_requires_fresh_tls_context(old_options,
-                                                           options)) {
-    if (router_initialize_tls_context() < 0) {
-      log_warn(LD_BUG,"Error initializing TLS context.");
       return -1;
     }
   }
@@ -3138,15 +3112,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
         routerset_free(rs);
       }
     }
-  }
-
-  if (options->TLSECGroup && (strcasecmp(options->TLSECGroup, "P256") &&
-                              strcasecmp(options->TLSECGroup, "P224"))) {
-    COMPLAIN("Unrecognized TLSECGroup: Falling back to the default.");
-    tor_free(options->TLSECGroup);
-  }
-  if (!evaluate_ecgroup_for_tls(options->TLSECGroup)) {
-    REJECT("Unsupported TLSECGroup.");
   }
 
   if (options->ExcludeNodes && options->StrictNodes) {
