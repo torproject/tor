@@ -2170,6 +2170,9 @@ test_crypto_ed25519_simple(void *arg)
   tt_int_op(0, OP_EQ, ed25519_public_key_generate(&pub1, &sec1));
   tt_int_op(0, OP_EQ, ed25519_public_key_generate(&pub2, &sec1));
 
+  tt_int_op(ed25519_validate_pubkey(&pub1), OP_EQ, 0);
+  tt_int_op(ed25519_validate_pubkey(&pub2), OP_EQ, 0);
+
   tt_mem_op(pub1.pubkey, OP_EQ, pub2.pubkey, sizeof(pub1.pubkey));
   tt_assert(ed25519_pubkey_eq(&pub1, &pub2));
   tt_assert(ed25519_pubkey_eq(&pub1, &pub1));
@@ -2832,6 +2835,68 @@ crypto_rand_check_failure_mode_predict(void)
 
 #undef FAILURE_MODE_BUFFER_SIZE
 
+/** Test that our ed25519 validation function rejects evil public keys and
+ *  accepts good ones. */
+static void
+test_crypto_ed25519_validation(void *arg)
+{
+  (void) arg;
+
+  int retval;
+  ed25519_public_key_t pub1;
+
+  /* See https://lists.torproject.org/pipermail/tor-dev/2017-April/012230.html
+     for a list of points with torsion components in ed25519. */
+
+  { /* Point with torsion component (order 8l) */
+    const char badkey[] =
+      "300ef2e64e588e1df55b48e4da0416ffb64cc85d5b00af6463d5cc6c2b1c185e";
+    retval = base16_decode((char*)pub1.pubkey, sizeof(pub1.pubkey),
+                           badkey, strlen(badkey));
+    tt_int_op(retval, OP_EQ, sizeof(pub1.pubkey));
+    tt_int_op(ed25519_validate_pubkey(&pub1), OP_EQ, -1);
+  }
+
+  { /* Point with torsion component (order 4l) */
+    const char badkey[] =
+      "f43e3a046db8749164c6e69b193f1e942c7452e7d888736f40b98093d814d5e7";
+    retval = base16_decode((char*)pub1.pubkey, sizeof(pub1.pubkey),
+                           badkey, strlen(badkey));
+    tt_int_op(retval, OP_EQ, sizeof(pub1.pubkey));
+    tt_int_op(ed25519_validate_pubkey(&pub1), OP_EQ, -1);
+  }
+
+  { /* Point with torsion component (order 2l) */
+    const char badkey[] =
+      "c9fff3af0471c28e33e98c2043e44f779d0427b1e37c521a6bddc011ed1869af";
+    retval = base16_decode((char*)pub1.pubkey, sizeof(pub1.pubkey),
+                           badkey, strlen(badkey));
+    tt_int_op(retval, OP_EQ, sizeof(pub1.pubkey));
+    tt_int_op(ed25519_validate_pubkey(&pub1), OP_EQ, -1);
+  }
+
+  { /* This point is not even on the curve */
+    const char badkey[] =
+      "e19c65de75c68cf3b7643ea732ba9eb1a3d20d6d57ba223c2ece1df66feb5af0";
+    retval = base16_decode((char*)pub1.pubkey, sizeof(pub1.pubkey),
+                           badkey, strlen(badkey));
+    tt_int_op(retval, OP_EQ, sizeof(pub1.pubkey));
+    tt_int_op(ed25519_validate_pubkey(&pub1), OP_EQ, -1);
+  }
+
+  { /* This one is a good key */
+    const char goodkey[] =
+      "4ba2e44760dff4c559ef3c38768c1c14a8a54740c782c8d70803e9d6e3ad8794";
+    retval = base16_decode((char*)pub1.pubkey, sizeof(pub1.pubkey),
+                           goodkey, strlen(goodkey));
+    tt_int_op(retval, OP_EQ, sizeof(pub1.pubkey));
+    tt_int_op(ed25519_validate_pubkey(&pub1), OP_EQ, 0);
+  }
+
+
+ done: ;
+}
+
 static void
 test_crypto_failure_modes(void *arg)
 {
@@ -2918,6 +2983,7 @@ struct testcase_t crypto_tests[] = {
   ED25519_TEST(convert, 0),
   ED25519_TEST(blinding, 0),
   ED25519_TEST(testvectors, 0),
+  ED25519_TEST(validation, 0),
   { "ed25519_storage", test_crypto_ed25519_storage, 0, NULL, NULL },
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
