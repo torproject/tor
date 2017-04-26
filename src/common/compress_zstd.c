@@ -145,7 +145,8 @@ tor_zstd_state_size_precalc(int compress, int preset)
     // variables that are not exposed via the public API. We use a _very_
     // simplified function to calculate the estimated amount of bytes used in
     // this struct.
-    memory_usage += (preset - 0.5) * 1024 * 1024;
+    // memory_usage += (preset - 0.5) * 1024 * 1024;
+    memory_usage += (preset * 1024 * 1024) - (512 * 1024);
     // - ZSTD_sizeof_CDict(stream->cdictLocal): Unused in Tor: 0 bytes.
     // - stream->outBuffSize: 128 KB:
     memory_usage += 128 * 1024;
