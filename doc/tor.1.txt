@@ -788,7 +788,7 @@ The following options are useful only for clients (that is, if
     so using these relays might make your client stand out.
     (Default: 1)
 
-[[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__]::
+[[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__] [__key__=__val__...]::
     When set along with UseBridges, instructs Tor to use the relay at
     "IP:ORPort" as a "bridge" relaying into the Tor network. If "fingerprint"
     is provided (using the same format as for DirAuthority), we will verify that
@@ -801,7 +801,12 @@ The following options are useful only for clients (that is, if
     rather than connecting to the bridge directly. Some transports use a
     transport-specific method to work out the remote address to connect to.
     These transports typically ignore the "IP:ORPort" specified in the bridge
-    line.
+    line.  +
+ +
+    Tor passes any "key=val" settings to the pluggable transport proxy as
+    per-connection arguments when connecting to the bridge.  Consult
+    the documentation of the pluggable transport for details of what
+    arguments it supports.
 
 [[LearnCircuitBuildTimeout]] **LearnCircuitBuildTimeout** **0**|**1**::
     If 0, CircuitBuildTimeout adaptive learning is disabled. (Default: 1)
