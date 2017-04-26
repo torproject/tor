@@ -362,8 +362,8 @@ alert_sockets_close(alert_sockets_t *socks)
 void
 atomic_counter_init(atomic_counter_t *counter)
 {
+  memset(counter, 0, sizeof(*counter));
   tor_mutex_init_nonrecursive(&counter->mutex);
-  counter->val = 0;
 }
 /** Clean up all resources held by an atomic counter. */
 void
