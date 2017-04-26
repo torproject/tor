@@ -20,7 +20,6 @@
 
 #ifdef HAVE_ZSTD
 #include <zstd.h>
-#include <zstd_errors.h>
 #endif
 
 /** Total number of bytes allocated for Zstandard state. */
