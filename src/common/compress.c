@@ -215,12 +215,11 @@ tor_compress(char **out, size_t *out_len,
                            1, LOG_WARN);
 }
 
-/** Given zero or more zlib-compressed or gzip-compressed strings of
- * total length
- * <b>in_len</b> bytes at <b>in</b>, uncompress them into a newly allocated
- * buffer, using the method described in <b>method</b>.  Store the uncompressed
- * string in *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on
- * success, -1 on failure.
+/** Given zero or more compressed strings of total length <b>in_len</b> bytes
+ * at <b>in</b>, uncompress them into a newly allocated buffer, using the
+ * method described in <b>method</b>.  Store the uncompressed string in
+ * *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on success, -1 on
+ * failure.
  *
  * If <b>complete_only</b> is true, we consider a truncated input as a
  * failure; otherwise we decompress as much as we can.  Warn about truncated
