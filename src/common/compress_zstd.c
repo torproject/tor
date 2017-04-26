@@ -237,7 +237,7 @@ tor_zstd_compress_new(int compress,
 #else // HAVE_ZSTD.
   (void)compress;
   (void)method;
-  (void)compression_level;
+  (void)level;
 
   return NULL;
 #endif // HAVE_ZSTD.
