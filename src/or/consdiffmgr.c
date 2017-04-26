@@ -101,7 +101,10 @@ static HT_HEAD(cdm_diff_ht, cdm_diff_t) cdm_diff_ht = HT_INITIALIZER();
  */
 static consdiff_cfg_t consdiff_cfg = {
   /* .cache_max_age_hours = */ 24 * 90,
-  /* .cache_max_num = */ 1440
+  // XXXX I'd like to make this number bigger, but it interferes with the
+  // XXXX seccomp2 syscall filter, which tops out at BPF_MAXINS (4096)
+  // XXXX rules.
+  /* .cache_max_num = */ 128
 };
 
 static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
