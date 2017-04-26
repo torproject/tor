@@ -20,7 +20,6 @@
 
 #ifdef HAVE_ZSTD
 #include <zstd.h>
-#include <zstd_errors.h>
 #endif
 
 /** Total number of bytes allocated for Zstandard state. */
@@ -109,27 +108,86 @@ struct tor_zstd_compress_state_t {
   size_t allocation;
 };
 
+#ifdef HAVE_ZSTD
+/** Return an approximate number of bytes stored in memory to hold the
+ * Zstandard compression/decompression state. */
+static size_t
+tor_zstd_state_size_precalc(int compress, int preset)
+{
+  tor_assert(preset > 0);
+
+  size_t memory_usage = sizeof(tor_zstd_compress_state_t);
+
+  // The Zstandard library provides a number of functions that would be useful
+  // here, but they are, unfortunately, still considered experimental and are
+  // thus only available in libzstd if we link against the library statically.
+  //
+  // The code in this function tries to approximate the calculations without
+  // being able to use the following:
+  //
+  // - We do not have access to neither the internal members of ZSTD_CStream
+  //   and ZSTD_DStream and their internal context objects.
+  //
+  // - We cannot use ZSTD_sizeof_CStream() and ZSTD_sizeof_DStream() since they
+  //   are unexposed.
+  //
+  // In the future it might be useful to check if libzstd have started
+  // providing these functions in a stable manner and simplify this function.
+  if (compress) {
+    // We try to approximate the ZSTD_sizeof_CStream(ZSTD_CStream *stream)
+    // function here. This function uses the following fields to make its
+    // estimate:
+
+    // - sizeof(ZSTD_CStream): Around 192 bytes on a 64-bit machine:
+    memory_usage += 192;
+
+    // - ZSTD_sizeof_CCtx(stream->cctx): This function requires access to
+    // variables that are not exposed via the public API. We use a _very_
+    // simplified function to calculate the estimated amount of bytes used in
+    // this struct.
+    memory_usage += (preset - 0.5) * 1024 * 1024;
+    // - ZSTD_sizeof_CDict(stream->cdictLocal): Unused in Tor: 0 bytes.
+    // - stream->outBuffSize: 128 KB:
+    memory_usage += 128 * 1024;
+    // - stream->inBuffSize: 2048 KB:
+    memory_usage += 2048 * 1024;
+  } else {
+    // We try to approximate the ZSTD_sizeof_DStream(ZSTD_DStream *stream)
+    // function here. This function uses the following fields to make its
+    // estimate:
+
+    // - sizeof(ZSTD_DStream): Around 208 bytes on a 64-bit machine:
+    memory_usage += 208;
+    // - ZSTD_sizeof_DCtx(stream->dctx): Around 150 KB.
+    memory_usage += 150 * 1024;
+
+    // - ZSTD_sizeof_DDict(stream->ddictLocal): Unused in Tor: 0 bytes.
+    // - stream->inBuffSize: 0 KB.
+    // - stream->outBuffSize: 0 KB.
+  }
+
+  return memory_usage;
+}
+#endif // HAVE_ZSTD.
+
 /** Construct and return a tor_zstd_compress_state_t object using
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
  * decompression. */
 tor_zstd_compress_state_t *
 tor_zstd_compress_new(int compress,
                       compress_method_t method,
-                      compression_level_t compression_level)
+                      compression_level_t level)
 {
   tor_assert(method == ZSTD_METHOD);
 
 #ifdef HAVE_ZSTD
+  const int preset = memory_level(level);
   tor_zstd_compress_state_t *result;
   size_t retval;
 
   result = tor_malloc_zero(sizeof(tor_zstd_compress_state_t));
   result->compress = compress;
-
-  // FIXME(ahf): We should either try to do the pre-calculation that is done
-  // with the zlib backend or use a custom allocator here where we pass our
-  // tor_zstd_compress_state_t as the opaque value.
-  result->allocation = 0;
+  result->allocation = tor_zstd_state_size_precalc(compress, preset);
 
   if (compress) {
     result->u.compress_stream = ZSTD_createCStream();
@@ -139,8 +197,7 @@ tor_zstd_compress_new(int compress,
       goto err;
     }
 
-    retval = ZSTD_initCStream(result->u.compress_stream,
-                              memory_level(compression_level));
+    retval = ZSTD_initCStream(result->u.compress_stream, preset);
 
     if (ZSTD_isError(retval)) {
       log_warn(LD_GENERAL, "Zstandard stream initialization error: %s",

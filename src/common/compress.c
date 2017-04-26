@@ -27,6 +27,9 @@
 #include "compress_zlib.h"
 #include "compress_zstd.h"
 
+/** Total number of bytes allocated for compression state overhead. */
+static atomic_counter_t total_compress_allocation;
+
 /** @{ */
 /* These macros define the maximum allowable compression factor.  Anything of
  * size greater than CHECK_FOR_COMPRESSION_BOMB_AFTER is not allowed to
@@ -212,12 +215,11 @@ tor_compress(char **out, size_t *out_len,
                            1, LOG_WARN);
 }
 
-/** Given zero or more zlib-compressed or gzip-compressed strings of
- * total length
- * <b>in_len</b> bytes at <b>in</b>, uncompress them into a newly allocated
- * buffer, using the method described in <b>method</b>.  Store the uncompressed
- * string in *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on
- * success, -1 on failure.
+/** Given zero or more compressed strings of total length <b>in_len</b> bytes
+ * at <b>in</b>, uncompress them into a newly allocated buffer, using the
+ * method described in <b>method</b>.  Store the uncompressed string in
+ * *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on success, -1 on
+ * failure.
  *
  * If <b>complete_only</b> is true, we consider a truncated input as a
  * failure; otherwise we decompress as much as we can.  Warn about truncated
@@ -367,7 +369,8 @@ tor_compress_header_version_str(compress_method_t method)
 size_t
 tor_compress_get_total_allocation(void)
 {
-  return tor_zlib_get_total_allocation() +
+  return atomic_counter_get(&total_compress_allocation) +
+         tor_zlib_get_total_allocation() +
          tor_lzma_get_total_allocation() +
          tor_zstd_get_total_allocation();
 }
@@ -432,6 +435,8 @@ tor_compress_new(int compress, compress_method_t method,
       goto err;
   }
 
+  atomic_counter_add(&total_compress_allocation,
+                     sizeof(tor_compress_state_t));
   return state;
 
  err:
@@ -504,6 +509,8 @@ tor_compress_free(tor_compress_state_t *state)
       break;
   }
 
+  atomic_counter_sub(&total_compress_allocation,
+                     sizeof(tor_compress_state_t));
   tor_free(state);
 }
 
@@ -513,27 +520,33 @@ tor_compress_state_size(const tor_compress_state_t *state)
 {
   tor_assert(state != NULL);
 
+  size_t size = sizeof(tor_compress_state_t);
+
   switch (state->method) {
     case GZIP_METHOD:
     case ZLIB_METHOD:
-      return tor_zlib_compress_state_size(state->u.zlib_state);
+      size += tor_zlib_compress_state_size(state->u.zlib_state);
+      break;
     case LZMA_METHOD:
-      return tor_lzma_compress_state_size(state->u.lzma_state);
+      size += tor_lzma_compress_state_size(state->u.lzma_state);
+      break;
     case ZSTD_METHOD:
-      return tor_zstd_compress_state_size(state->u.zstd_state);
+      size += tor_zstd_compress_state_size(state->u.zstd_state);
+      break;
     case NO_METHOD:
     case UNKNOWN_METHOD:
-      goto err;
+      break;
   }
 
- err:
-  return 0;
+  return size;
 }
 
 /** Initialize all compression modules. */
 void
 tor_compress_init(void)
 {
+  atomic_counter_init(&total_compress_allocation);
+
   tor_zlib_init();
   tor_lzma_init();
   tor_zstd_init();

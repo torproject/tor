@@ -127,13 +127,44 @@ struct tor_lzma_compress_state_t {
   size_t allocation;
 };
 
+#ifdef HAVE_LZMA
+/** Return an approximate number of bytes stored in memory to hold the LZMA
+ * encoder/decoder state. */
+static size_t
+tor_lzma_state_size_precalc(int compress, compression_level_t level)
+{
+  uint64_t memory_usage;
+
+  if (compress)
+    memory_usage = lzma_easy_encoder_memusage(memory_level(level));
+  else
+    memory_usage = lzma_easy_decoder_memusage(memory_level(level));
+
+  if (memory_usage == UINT64_MAX) {
+    log_warn(LD_GENERAL, "Unsupported compression level passed to LZMA %s",
+                         compress ? "encoder" : "decoder");
+    goto err;
+  }
+
+  if (memory_usage + sizeof(tor_lzma_compress_state_t) > SIZE_MAX)
+    memory_usage = SIZE_MAX;
+  else
+    memory_usage += sizeof(tor_lzma_compress_state_t);
+
+  return (size_t)memory_usage;
+
+ err:
+  return 0;
+}
+#endif // HAVE_LZMA.
+
 /** Construct and return a tor_lzma_compress_state_t object using
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
  * decompression. */
 tor_lzma_compress_state_t *
 tor_lzma_compress_new(int compress,
                       compress_method_t method,
-                      compression_level_t compression_level)
+                      compression_level_t level)
 {
   tor_assert(method == LZMA_METHOD);
 
@@ -147,15 +178,10 @@ tor_lzma_compress_new(int compress,
   // also what `tor_malloc_zero()` does.
   result = tor_malloc_zero(sizeof(tor_lzma_compress_state_t));
   result->compress = compress;
-
-  // FIXME(ahf): We should either try to do the pre-calculation that is done
-  // with the zlib backend or use a custom allocator here where we pass our
-  // tor_lzma_compress_state_t as the opaque value.
-  result->allocation = 0;
+  result->allocation = tor_lzma_state_size_precalc(compress, level);
 
   if (compress) {
-    lzma_lzma_preset(&stream_options,
-                     memory_level(compression_level));
+    lzma_lzma_preset(&stream_options, memory_level(level));
 
     retval = lzma_alone_encoder(&result->stream, &stream_options);
 
