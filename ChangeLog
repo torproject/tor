@@ -1,7 +1,22 @@
-Changes in version 0.3.0.6 - 2017-04-2?
+Changes in version 0.3.0.6 - 2017-04-26
   Tor 0.3.0.6 is the first stable release of the Tor 0.3.0 series.
 
-  XXXXX BLURB HERE.
+  With the 0.3.0 series, clients and relays now use Ed25519 keys to
+  authenticate their link connections to relays, rather than the old
+  RSA1024 keys that they used before. (Circuit crypto has been
+  Curve25519- authenticated since 0.2.4.8-alpha.)  We have also replaced
+  the guard selection and replacement algorithm to behave more robustly
+  in the presence of unreliable networks, and to resist guard-capture
+  attacks.
+
+  This series also includes numerous other small features and bugfixes,
+  along with more groundwork for the upcoming hidden-services revamp.
+
+  Per our stable release policy, we plan to support the Tor 0.3.0
+  release series will be supported for at least the next nine months, or
+  for three months after the release the first stable 0.3.1 series:
+  whichever is longer.  If you need release with long-term support,
+  we recommend that you stay with the 0.2.9 series.
 
   Below are the changes since 0.3.0.5-rc. For a list of all changes
   since 0.2.9, see the ReleaseNotes file.
