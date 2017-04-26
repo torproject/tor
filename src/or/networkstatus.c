@@ -46,6 +46,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
+#include "consdiffmgr.h"
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
@@ -1981,6 +1982,9 @@ networkstatus_set_current_consensus(const char *consensus,
                                                flavor,
                                                &c->digests,
                                                c->valid_after);
+    if (server_mode(get_options())) {
+      consdiffmgr_add_consensus(consensus, c);
+    }
   }
 
   if (!from_cache) {
