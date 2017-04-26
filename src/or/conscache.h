@@ -19,6 +19,7 @@ int consensus_cache_register_with_sandbox(consensus_cache_t *cache,
 void consensus_cache_unmap_lazy(consensus_cache_t *cache, time_t cutoff);
 void consensus_cache_delete_pending(consensus_cache_t *cache,
                                     int force);
+int consensus_cache_get_n_filenames_available(consensus_cache_t *cache);
 consensus_cache_entry_t *consensus_cache_add(consensus_cache_t *cache,
                                              const config_line_t *labels,
                                              const uint8_t *data,

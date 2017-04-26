@@ -400,6 +400,19 @@ consensus_cache_unmap_lazy(consensus_cache_t *cache, time_t cutoff)
 }
 
 /**
+ * Return the number of currently unused filenames available in this cache.
+ */
+int
+consensus_cache_get_n_filenames_available(consensus_cache_t *cache)
+{
+  tor_assert(cache);
+  int max = storage_dir_get_max_files(cache->dir);
+  int used = smartlist_len(storage_dir_list(cache->dir));
+  tor_assert_nonfatal(max >= used);
+  return max - used;
+}
+
+/**
  * Delete every element of <b>cache</b> has been marked with
  * consensus_cache_entry_mark_for_removal.  If <b>force</b> is false,
  * retain those entries which are not in use except by the cache.

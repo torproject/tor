@@ -107,6 +107,7 @@ static consdiff_cfg_t consdiff_cfg = {
   /* .cache_max_num = */ 128
 };
 
+static int consdiffmgr_ensure_space_for_files(int n);
 static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
                                           consensus_cache_entry_t *diff_to);
 static void consdiffmgr_set_cache_flags(void);
@@ -413,6 +414,8 @@ consdiffmgr_add_consensus(const char *consensus,
   }
 
   /* We don't have it. Add it to the cache. */
+  consdiffmgr_ensure_space_for_files(1);
+
   {
     size_t bodylen = strlen(consensus);
     config_line_t *labels = NULL;
@@ -853,6 +856,82 @@ consdiffmgr_rescan(void)
 }
 
 /**
+ * Helper: compare two files by their from-valid-after and valid-after labels,
+ * trying to sort in ascending order by from-valid-after (when present) and
+ * valid-after (when not).  Place everything that has neither label first in
+ * the list.
+ */
+static int
+compare_by_staleness_(const void **a, const void **b)
+{
+  const consensus_cache_entry_t *e1 = *a;
+  const consensus_cache_entry_t *e2 = *b;
+  const char *va1, *fva1, *va2, *fva2;
+  va1 = consensus_cache_entry_get_value(e1, LABEL_VALID_AFTER);
+  va2 = consensus_cache_entry_get_value(e2, LABEL_VALID_AFTER);
+  fva1 = consensus_cache_entry_get_value(e1, LABEL_FROM_VALID_AFTER);
+  fva2 = consensus_cache_entry_get_value(e2, LABEL_FROM_VALID_AFTER);
+
+  if (fva1)
+    va1 = fva1;
+  if (fva2)
+    va2 = fva2;
+
+  /* See note about iso-encoded values in compare_by_valid_after_.  Also note
+   * that missing dates will get placed first. */
+  return strcmp_opt(va1, va2);
+}
+
+/** If there are not enough unused filenames to store <b>n</b> files, then
+ * delete old consensuses until there are.  (We have to keep track of the
+ * number of filenames because of the way that the seccomp2 cache works.)
+ *
+ * Return 0 on success, -1 on failure.
+ **/
+static int
+consdiffmgr_ensure_space_for_files(int n)
+{
+  consensus_cache_t *cache = cdm_cache_get();
+  if (consensus_cache_get_n_filenames_available(cache) >= n) {
+    // there are already enough unused filenames.
+    return 0;
+  }
+  // Try a cheap deletion of stuff that's waiting to get deleted.
+  consensus_cache_delete_pending(cache, 0);
+  if (consensus_cache_get_n_filenames_available(cache) >= n) {
+    // okay, _that_ made enough filenames available.
+    return 0;
+  }
+  // Let's get more assertive: clean out unused stuff, and force-remove
+  // the files.
+  consdiffmgr_cleanup();
+  consensus_cache_delete_pending(cache, 1);
+  const int n_to_remove = n - consensus_cache_get_n_filenames_available(cache);
+  if (n_to_remove <= 0) {
+    // okay, finally!
+    return 0;
+  }
+
+  // At this point, we're going to have to throw out objects that will be
+  // missed.  Too bad!
+  smartlist_t *objects = smartlist_new();
+  consensus_cache_find_all(objects, cache, NULL, NULL);
+  smartlist_sort(objects, compare_by_staleness_);
+  int n_marked = 0;
+  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, ent) {
+    consensus_cache_entry_mark_for_removal(ent);
+    if (++n_marked >= n_to_remove)
+      break;
+  } SMARTLIST_FOREACH_END(ent);
+
+  consensus_cache_delete_pending(cache, 1);
+  if (BUG(n_marked < n_to_remove))
+    return -1;
+  else
+    return 0;
+}
+
+/**
  * Set consensus cache flags on the objects in this consdiffmgr.
  */
 static void
@@ -1066,6 +1145,8 @@ consensus_diff_worker_replyfn(void *work_)
     /* Success! Store the results */
     log_info(LD_DIRSERV, "Adding consensus diff from %s to %s",
              lv_from_digest, lv_to_digest);
+
+    consdiffmgr_ensure_space_for_files(1);
     consensus_cache_entry_t *ent =
       consensus_cache_add(cdm_cache_get(), job->labels_out,
                           job->body_out,

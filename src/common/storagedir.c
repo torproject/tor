@@ -530,3 +530,13 @@ storage_dir_remove_all(storage_dir_t *d)
   return storage_dir_shrink(d, 0, d->max_files);
 }
 
+/**
+ * Return the largest number of non-temporary files we're willing to
+ * store in <b>d</b>.
+ */
+int
+storage_dir_get_max_files(storage_dir_t *d)
+{
+  return d->max_files;
+}
+
