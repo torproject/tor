@@ -666,6 +666,10 @@ consdiffmgr_validate(void)
     if (r < 0)
       continue;
 
+    // Deconfuse coverity about the possibility of sha3_received being
+    // uninitialized
+    tor_assert(r <= 0);
+
     if (fast_memneq(sha3_received, sha3_expected, DIGEST256_LEN)) {
       problems = 1;
       consensus_cache_entry_mark_for_removal(obj);
