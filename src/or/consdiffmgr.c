@@ -614,7 +614,7 @@ consdiffmgr_cleanup(void)
   smartlist_free(diffs);
 
   // Actually remove files, if they're not used.
-  consensus_cache_delete_pending(cdm_cache_get());
+  consensus_cache_delete_pending(cdm_cache_get(), 0);
   return n_to_delete;
 }
 

@@ -95,7 +95,7 @@ consensus_cache_register_with_sandbox(consensus_cache_t *cache,
 static void
 consensus_cache_clear(consensus_cache_t *cache)
 {
-  consensus_cache_delete_pending(cache);
+  consensus_cache_delete_pending(cache, 0);
 
   SMARTLIST_FOREACH_BEGIN(cache->entries, consensus_cache_entry_t *, ent) {
     ent->in_cache = NULL;
@@ -401,17 +401,19 @@ consensus_cache_unmap_lazy(consensus_cache_t *cache, time_t cutoff)
 
 /**
  * Delete every element of <b>cache</b> has been marked with
- * consensus_cache_entry_mark_for_removal, and which is not in use except by
- * the cache.
+ * consensus_cache_entry_mark_for_removal.  If <b>force</b> is false,
+ * retain those entries which are not in use except by the cache.
  */
 void
-consensus_cache_delete_pending(consensus_cache_t *cache)
+consensus_cache_delete_pending(consensus_cache_t *cache, int force)
 {
   SMARTLIST_FOREACH_BEGIN(cache->entries, consensus_cache_entry_t *, ent) {
     tor_assert_nonfatal(ent->in_cache == cache);
-    if (ent->refcnt > 1 || BUG(ent->in_cache == NULL)) {
-      /* Somebody is using this entry right now */
-      continue;
+    if (! force) {
+      if (ent->refcnt > 1 || BUG(ent->in_cache == NULL)) {
+        /* Somebody is using this entry right now */
+        continue;
+      }
     }
     if (ent->can_remove == 0) {
       /* Don't want to delete this. */
