@@ -611,7 +611,11 @@ test_buffers_compress_fin_at_chunk_end_impl(compress_method_t method,
 
   tt_int_op(fetch_from_buf(contents, in_len, buf), OP_EQ, 0);
 
-  tt_uint_op(in_len, OP_GT, headerjunk);
+  if (method == NO_METHOD) {
+    tt_uint_op(in_len, OP_EQ, headerjunk);
+  } else {
+    tt_uint_op(in_len, OP_GT, headerjunk);
+  }
 
   tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
                                      contents + headerjunk,
@@ -855,6 +859,8 @@ struct testcase_t buffer_tests[] = {
     &passthrough_setup, (char*)"x-zstd" },
   { "compress/lzma", test_buffers_compress, TT_FORK,
     &passthrough_setup, (char*)"x-lzma" },
+  { "compress/none", test_buffers_compress, TT_FORK,
+    &passthrough_setup, (char*)"identity" },
 
   END_OF_TESTCASES
 };
