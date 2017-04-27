@@ -2942,7 +2942,7 @@ parse_accept_encoding_header(const char *h)
   SMARTLIST_FOREACH_BEGIN(methods, const char *, m) {
     compress_method_t method = compression_method_get_by_name(m);
     if (method != UNKNOWN_METHOD) {
-      tor_assert(method < 8*sizeof(unsigned));
+      tor_assert(((unsigned)method) < 8*sizeof(unsigned));
       result |= (1u << method);
     }
   } SMARTLIST_FOREACH_END(m);
