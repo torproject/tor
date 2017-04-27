@@ -63,7 +63,7 @@
  * multi-hop circuits for anonymity.
  *
  * Directory requests are launched by calling
- * directory_initiate_command_rend() or one of its numerous variants. This
+ * directory_initiate_request(). This
  * launch the connection, will construct an HTTP request with
  * directory_send_command(), send the and wait for a response.  The client
  * later handles the response with connection_dir_client_reached_eof(),
@@ -98,9 +98,8 @@
  *   connection_finished_connecting() in connection.c
  */
 static void directory_send_command(dir_connection_t *conn,
-                             int purpose, int direct, const char *resource,
-                             const char *payload, size_t payload_len,
-                             time_t if_modified_since);
+                                   int direct,
+                                   const directory_request_t *request);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
@@ -118,22 +117,10 @@ static void dir_microdesc_download_failed(smartlist_t *failed,
                                           int status_code);
 static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
-static void directory_initiate_command_rend(
-                                          const tor_addr_port_t *or_addr_port,
-                                          const tor_addr_port_t *dir_addr_port,
-                                          const char *digest,
-                                          uint8_t dir_purpose,
-                                          uint8_t router_purpose,
-                                          dir_indirection_t indirection,
-                                          const char *resource,
-                                          const char *payload,
-                                          size_t payload_len,
-                                          time_t if_modified_since,
-                                          const rend_data_t *rend_query,
-                                          circuit_guard_state_t *guard_state);
-
 static void connection_dir_close_consensus_fetches(
                    dir_connection_t *except_this_one, const char *resource);
+static void directory_request_set_guard_state(directory_request_t *req,
+                                       struct circuit_guard_state_t *state);
 
 /********* START VARIABLES **********/
 
@@ -421,11 +408,14 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
       } else {
         indirection = DIRIND_DIRECT_CONN;
       }
-      directory_initiate_command_routerstatus(rs, dir_purpose,
-                                              router_purpose,
-                                              indirection,
-                                              NULL, payload, upload_len, 0,
-                                              NULL);
+
+      directory_request_t *req = directory_request_new(dir_purpose);
+      directory_request_set_routerstatus(req, rs);
+      directory_request_set_router_purpose(req, router_purpose);
+      directory_request_set_indirection(req, indirection);
+      directory_request_set_payload(req, payload, upload_len);
+      directory_initiate_request(req);
+      directory_request_free(req);
   } SMARTLIST_FOREACH_END(ds);
   if (!found) {
     char *s = authdir_type_to_string(type);
@@ -566,20 +556,19 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
         routerinfo_t *ri = node->ri;
         /* clients always make OR connections to bridges */
         tor_addr_port_t or_ap;
-        tor_addr_port_t nil_dir_ap;
+        directory_request_t *req = directory_request_new(dir_purpose);
         /* we are willing to use a non-preferred address if we need to */
         fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0,
                                              &or_ap);
-        tor_addr_make_null(&nil_dir_ap.addr, AF_INET);
-        nil_dir_ap.port = 0;
-        directory_initiate_command_rend(&or_ap,
-                                        &nil_dir_ap,
-                                        ri->cache_info.identity_digest,
-                                        dir_purpose,
-                                        router_purpose,
-                                        DIRIND_ONEHOP,
-                                        resource, NULL, 0, if_modified_since,
-                                        NULL, guard_state);
+        directory_request_set_or_addr_port(req, &or_ap);
+        directory_request_set_directory_id_digest(req,
+                                            ri->cache_info.identity_digest);
+        directory_request_set_router_purpose(req, router_purpose);
+        directory_request_set_resource(req, resource);
+        directory_request_set_if_modified_since(req, if_modified_since);
+        directory_request_set_guard_state(req, guard_state);
+        directory_initiate_request(req);
+        directory_request_free(req);
       } else {
         if (guard_state) {
           entry_guard_cancel(&guard_state);
@@ -639,12 +628,16 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
   if (rs) {
     const dir_indirection_t indirection =
       get_via_tor ? DIRIND_ANONYMOUS : DIRIND_ONEHOP;
-    directory_initiate_command_routerstatus(rs, dir_purpose,
-                                            router_purpose,
-                                            indirection,
-                                            resource, NULL, 0,
-                                            if_modified_since,
-                                            guard_state);
+    directory_request_t *req = directory_request_new(dir_purpose);
+    directory_request_set_routerstatus(req, rs);
+    directory_request_set_router_purpose(req, router_purpose);
+    directory_request_set_indirection(req, indirection);
+    directory_request_set_resource(req, resource);
+    directory_request_set_if_modified_since(req, if_modified_since);
+    if (guard_state)
+      directory_request_set_guard_state(req, guard_state);
+    directory_initiate_request(req);
+    directory_request_free(req);
   } else {
     log_notice(LD_DIR,
                "While fetching directory info, "
@@ -670,15 +663,17 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
 
   SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
                           dir_server_t *, ds) {
-      routerstatus_t *rs;
       if (router_digest_is_me(ds->digest))
         continue;
       if (!(ds->type & V3_DIRINFO))
         continue;
-      rs = &ds->fake_status;
-      directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
-                                              DIRIND_ONEHOP, resource, NULL,
-                                              0, 0, NULL);
+      const routerstatus_t *rs = &ds->fake_status;
+      directory_request_t *req = directory_request_new(dir_purpose);
+      directory_request_set_routerstatus(req, rs);
+      directory_request_set_router_purpose(req, router_purpose);
+      directory_request_set_resource(req, resource);
+      directory_initiate_request(req);
+      directory_request_free(req);
   } SMARTLIST_FOREACH_END(ds);
 }
 
@@ -776,110 +771,6 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   }
 
   return 0;
-}
-
-/** Same as directory_initiate_command_routerstatus(), but accepts
- * rendezvous data to fetch a hidden service descriptor. */
-void
-directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
-                                             uint8_t dir_purpose,
-                                             uint8_t router_purpose,
-                                             dir_indirection_t indirection,
-                                             const char *resource,
-                                             const char *payload,
-                                             size_t payload_len,
-                                             time_t if_modified_since,
-                                             const rend_data_t *rend_query,
-                                           circuit_guard_state_t *guard_state)
-{
-  const or_options_t *options = get_options();
-  const node_t *node;
-  tor_addr_port_t use_or_ap, use_dir_ap;
-  const int anonymized_connection = dirind_is_anon(indirection);
-
-  tor_assert(status != NULL);
-
-  node = node_get_by_id(status->identity_digest);
-
-  /* XXX The below check is wrong: !node means it's not in the consensus,
-   * but we haven't checked if we have a descriptor for it -- and also,
-   * we only care about the descriptor if it's a begindir-style anonymized
-   * connection. */
-  if (!node && anonymized_connection) {
-    log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
-             "don't have its router descriptor.",
-             routerstatus_describe(status));
-    return;
-  }
-
-  if (options->ExcludeNodes && options->StrictNodes &&
-      routerset_contains_routerstatus(options->ExcludeNodes, status, -1)) {
-    log_warn(LD_DIR, "Wanted to contact directory mirror %s for %s, but "
-             "it's in our ExcludedNodes list and StrictNodes is set. "
-             "Skipping. This choice might make your Tor not work.",
-             routerstatus_describe(status),
-             dir_conn_purpose_to_string(dir_purpose));
-    return;
-  }
-
-  /* At this point, if we are a client making a direct connection to a
-   * directory server, we have selected a server that has at least one address
-   * allowed by ClientUseIPv4/6 and Reachable{"",OR,Dir}Addresses. This
-   * selection uses the preference in ClientPreferIPv6{OR,Dir}Port, if
-   * possible. (If UseBridges is set, clients always use IPv6, and prefer it
-   * by default.)
-   *
-   * Now choose an address that we can use to connect to the directory server.
-   */
-  if (directory_choose_address_routerstatus(status, indirection, &use_or_ap,
-                                            &use_dir_ap) < 0) {
-    return;
-  }
-
-  /* We don't retry the alternate OR/Dir address for the same directory if
-   * the address we choose fails (#6772).
-   * Instead, we'll retry another directory on failure. */
-
-  directory_initiate_command_rend(&use_or_ap, &use_dir_ap,
-                                  status->identity_digest,
-                                  dir_purpose, router_purpose,
-                                  indirection, resource,
-                                  payload, payload_len, if_modified_since,
-                                  rend_query,
-                                  guard_state);
-}
-
-/** Launch a new connection to the directory server <b>status</b> to
- * upload or download a server or rendezvous
- * descriptor. <b>dir_purpose</b> determines what
- * kind of directory connection we're launching, and must be one of
- * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC_V2}. <b>router_purpose</b>
- * specifies the descriptor purposes we have in mind (currently only
- * used for FETCH_DIR).
- *
- * When uploading, <b>payload</b> and <b>payload_len</b> determine the content
- * of the HTTP post.  Otherwise, <b>payload</b> should be NULL.
- *
- * When fetching a rendezvous descriptor, <b>resource</b> is the service ID we
- * want to fetch.
- */
-MOCK_IMPL(void, directory_initiate_command_routerstatus,
-                (const routerstatus_t *status,
-                 uint8_t dir_purpose,
-                 uint8_t router_purpose,
-                 dir_indirection_t indirection,
-                 const char *resource,
-                 const char *payload,
-                 size_t payload_len,
-                 time_t if_modified_since,
-                 circuit_guard_state_t *guard_state))
-{
-  directory_initiate_command_routerstatus_rend(status, dir_purpose,
-                                          router_purpose,
-                                          indirection, resource,
-                                          payload, payload_len,
-                                          if_modified_since, NULL,
-                                          guard_state);
 }
 
 /** Return true iff <b>conn</b> is the client side of a directory connection
@@ -1065,6 +956,44 @@ directory_must_use_begindir(const or_options_t *options)
   return !public_server_mode(options);
 }
 
+struct directory_request_t {
+  /**
+   * These fields specify which directory we're contacting.  Routerstatus,
+   * if present, overrides the other fields.
+   *
+   * @{ */
+  tor_addr_port_t or_addr_port;
+  tor_addr_port_t dir_addr_port;
+  char digest[DIGEST_LEN];
+
+  const routerstatus_t *routerstatus;
+  /** @} */
+  /** One of DIR_PURPOSE_* other than DIR_PURPOSE_SERVER. Describes what
+   * kind of operation we'll be doing (upload/download), and of what kind
+   * of document. */
+  uint8_t dir_purpose;
+  /** One of ROUTER_PURPOSE_*; used for uploads and downloads of routerinfo
+   * and extrainfo docs.  */
+  uint8_t router_purpose;
+  /** Enum: determines whether to anonymize, and whether to use dirport or
+   * orport. */
+  dir_indirection_t indirection;
+  /** Alias to the variable part of the URL for this request */
+  const char *resource;
+  /** Alias to the payload to upload (if any) */
+  const char *payload;
+  /** Number of bytes to upload from payload</b> */
+  size_t payload_len;
+  /** Value to send in an if-modified-since header, or 0 for none. */
+  time_t if_modified_since;
+  /** Hidden-service-specific information */
+  const rend_data_t *rend_query;
+  /** Used internally to directory.c: gets informed when the attempt to
+   * connect to the directory succeeds or fails, if that attempt bears on the
+   * directory's usability as a directory guard. */
+  circuit_guard_state_t *guard_state;
+};
+
 /** Evaluate the situation and decide if we should use an encrypted
  * "begindir-style" connection for this directory request.
  * 0) If there is no DirPort, yes.
@@ -1078,12 +1007,16 @@ directory_must_use_begindir(const or_options_t *options)
  */
 static int
 directory_command_should_use_begindir(const or_options_t *options,
-                                      const tor_addr_t *or_addr, int or_port,
-                                      const tor_addr_t *dir_addr, int dir_port,
-                                      dir_indirection_t indirection,
+                                      const directory_request_t *req,
                                       const char **reason)
 {
-  (void)dir_addr;
+  const tor_addr_t *or_addr = &req->or_addr_port.addr;
+  //const tor_addr_t *dir_addr = &req->dir_addr_port.addr;
+  const int or_port = req->or_addr_port.port;
+  const int dir_port = req->dir_addr_port.port;
+
+  const dir_indirection_t indirection = req->indirection;
+
   tor_assert(reason);
   *reason = NULL;
 
@@ -1123,68 +1056,274 @@ directory_command_should_use_begindir(const or_options_t *options,
   return 1;
 }
 
-/** Helper for directory_initiate_command_rend: send the
- * command to a server whose OR address/port is <b>or_addr</b>/<b>or_port</b>,
- * whose directory address/port is <b>dir_addr</b>/<b>dir_port</b>, whose
- * identity key digest is <b>digest</b>, with purposes <b>dir_purpose</b> and
- * <b>router_purpose</b>, making an (in)direct connection as specified in
- * <b>indirection</b>, with command <b>resource</b>, <b>payload</b> of
- * <b>payload_len</b>, and asking for a result only <b>if_modified_since</b>.
+/**
+ * Create and return a new directory_request_t with purpose
+ * <b>dir_purpose</b>.
+ */
+directory_request_t *
+directory_request_new(uint8_t dir_purpose)
+{
+  tor_assert(dir_purpose >= DIR_PURPOSE_MIN_);
+  tor_assert(dir_purpose <= DIR_PURPOSE_MAX_);
+  tor_assert(dir_purpose != DIR_PURPOSE_SERVER);
+  tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2);
+
+  directory_request_t *result = tor_malloc_zero(sizeof(*result));
+  tor_addr_make_null(&result->or_addr_port.addr, AF_INET);
+  result->or_addr_port.port = 0;
+  tor_addr_make_null(&result->dir_addr_port.addr, AF_INET);
+  result->dir_addr_port.port = 0;
+  result->dir_purpose = dir_purpose;
+  result->router_purpose = ROUTER_PURPOSE_GENERAL;
+  result->indirection = DIRIND_ONEHOP;
+  return result;
+}
+/**
+ * Release all resources held by <b>req</b>.
  */
 void
-directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
-                           const tor_addr_t *dir_addr, uint16_t dir_port,
-                           const char *digest,
-                           uint8_t dir_purpose, uint8_t router_purpose,
-                           dir_indirection_t indirection, const char *resource,
-                           const char *payload, size_t payload_len,
-                           time_t if_modified_since)
+directory_request_free(directory_request_t *req)
 {
-  tor_addr_port_t or_ap, dir_ap;
-
-  /* Use the null tor_addr and 0 port if the address or port isn't valid. */
-  if (tor_addr_port_is_valid(or_addr, or_port, 0)) {
-    tor_addr_copy(&or_ap.addr, or_addr);
-    or_ap.port = or_port;
-  } else {
-    /* the family doesn't matter here, so make it IPv4 */
-    tor_addr_make_null(&or_ap.addr, AF_INET);
-    or_ap.port = or_port = 0;
-  }
-
-  if (tor_addr_port_is_valid(dir_addr, dir_port, 0)) {
-    tor_addr_copy(&dir_ap.addr, dir_addr);
-    dir_ap.port = dir_port;
-  } else {
-    /* the family doesn't matter here, so make it IPv4 */
-    tor_addr_make_null(&dir_ap.addr, AF_INET);
-    dir_ap.port = dir_port = 0;
-  }
-
-  directory_initiate_command_rend(&or_ap, &dir_ap,
-                             digest, dir_purpose,
-                             router_purpose, indirection,
-                             resource, payload, payload_len,
-                             if_modified_since, NULL, NULL);
+  if (req == NULL)
+    return;
+  tor_free(req);
+}
+/**
+ * Set the address and OR port to use for this directory request.  If there is
+ * no OR port, we'll have to connect over the dirport.  (If there are both,
+ * the indirection setting determins which to use.)
+ */
+void
+directory_request_set_or_addr_port(directory_request_t *req,
+                                   const tor_addr_port_t *p)
+{
+  memcpy(&req->or_addr_port, p, sizeof(*p));
+}
+/**
+ * Set the address and dirport to use for this directory request.  If there
+ * is no dirport, we'll have to connect over the OR port.  (If there are both,
+ * the indirection setting determins which to use.)
+ */
+void
+directory_request_set_dir_addr_port(directory_request_t *req,
+                                    const tor_addr_port_t *p)
+{
+  memcpy(&req->dir_addr_port, p, sizeof(*p));
+}
+/**
+ * Set the RSA identity digest of the directory to use for this directory
+ * request.
+ */
+void
+directory_request_set_directory_id_digest(directory_request_t *req,
+                                          const char *digest)
+{
+  memcpy(req->digest, digest, DIGEST_LEN);
+}
+/**
+ * Set the router purpose associated with uploaded and downloaded router
+ * descriptors and extrainfo documents in this directory request.  The purpose
+ * must be one of ROUTER_PURPOSE_GENERAL (the default) or
+ * ROUTER_PURPOSE_BRIDGE.
+ */
+void
+directory_request_set_router_purpose(directory_request_t *req,
+                                     uint8_t router_purpose)
+{
+  tor_assert(router_purpose == ROUTER_PURPOSE_GENERAL ||
+             router_purpose == ROUTER_PURPOSE_BRIDGE);
+  // assert that it actually makes sense to set this purpose, given
+  // the dir_purpose.
+  req->router_purpose = router_purpose;
+}
+/**
+ * Set the indirection to be used for the directory request.  The indirection
+ * parameter configures whether to connect to a DirPort or ORPort, and whether
+ * to anonymize the connection.  DIRIND_ONEHOP (use ORPort, don't anonymize)
+ * is the default.  See dir_indirection_t for more information.
+ */
+void
+directory_request_set_indirection(directory_request_t *req,
+                                  dir_indirection_t indirection)
+{
+  req->indirection = indirection;
 }
 
-/** Same as directory_initiate_command(), but accepts rendezvous data to
- * fetch a hidden service descriptor, and takes its address & port arguments
- * as tor_addr_port_t. */
-static void
-directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
-                                const tor_addr_port_t *dir_addr_port,
-                                const char *digest,
-                                uint8_t dir_purpose, uint8_t router_purpose,
-                                dir_indirection_t indirection,
-                                const char *resource,
-                                const char *payload, size_t payload_len,
-                                time_t if_modified_since,
-                                const rend_data_t *rend_query,
-                                circuit_guard_state_t *guard_state)
+/**
+ * Set a pointer to the resource to request from a directory.  Different
+ * request types use resources to indicate different components of their URL.
+ * Note that only an alias to <b>resource</b> is stored, so the
+ * <b>resource</b> must outlive the request.
+ */
+void
+directory_request_set_resource(directory_request_t *req,
+                               const char *resource)
 {
-  tor_assert(or_addr_port);
-  tor_assert(dir_addr_port);
+  req->resource = resource;
+}
+/**
+ * Set a pointer to the payload to include with this directory request, along
+ * with its length.  Note that only an alias to <b>payload</b> is stored, so
+ * the <b>payload</b> must outlive the request.
+ */
+void
+directory_request_set_payload(directory_request_t *req,
+                              const char *payload,
+                              size_t payload_len)
+{
+  tor_assert(DIR_PURPOSE_IS_UPLOAD(req->dir_purpose));
+
+  req->payload = payload;
+  req->payload_len = payload_len;
+}
+/**
+ * Set an if-modified-since date to send along with the request.  The
+ * default is 0 (meaning, send no if-modified-since header).
+ */
+void
+directory_request_set_if_modified_since(directory_request_t *req,
+                                        time_t if_modified_since)
+{
+  req->if_modified_since = if_modified_since;
+}
+/**
+ * Set an object containing HS data to be associated with this request.  Note
+ * that only an alias to <b>query</b> is stored, so the <b>query</b> object
+ * must outlive the request.
+ */
+void
+directory_request_set_rend_query(directory_request_t *req,
+                                 const rend_data_t *query)
+{
+  if (query) {
+    tor_assert(req->dir_purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 ||
+               req->dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2);
+  }
+  req->rend_query = query;
+}
+/** Set a static circuit_guard_state_t object to affliate with the request in
+ * <b>req</b>.  This object will receive notification when the attempt to
+ * connect to the guard either succeeds or fails. */
+static void
+directory_request_set_guard_state(directory_request_t *req,
+                                  circuit_guard_state_t *state)
+{
+  req->guard_state = state;
+}
+
+/**
+ * Internal: Return true if any information for contacting the directory in
+ * <b>req</b> has been set, other than by the routerstatus. */
+static int
+directory_request_dir_contact_info_specified(const directory_request_t *req)
+{
+  /* We only check for ports here, since we don't use an addr unless the port
+   * is set */
+  return (req->or_addr_port.port ||
+          req->dir_addr_port.port ||
+          ! tor_digest_is_zero(req->digest));
+}
+
+/**
+ * Set the routerstatus to use for the directory associated with this
+ * request.  If this option is set, then no other function to set the
+ * directory's address or identity should be called.
+ */
+void
+directory_request_set_routerstatus(directory_request_t *req,
+                                   const routerstatus_t *status)
+{
+  req->routerstatus = status;
+}
+/**
+ * Helper: update the addresses, ports, and identities in <b>req</b>
+ * from the routerstatus object in <b>req</b>.  Return 0 on success.
+ * On failure, warn and return -1.
+ */
+static int
+directory_request_set_dir_from_routerstatus(directory_request_t *req)
+
+{
+  const routerstatus_t *status = req->routerstatus;
+  if (BUG(status == NULL))
+    return -1;
+  const or_options_t *options = get_options();
+  const node_t *node;
+  tor_addr_port_t use_or_ap, use_dir_ap;
+  const int anonymized_connection = dirind_is_anon(req->indirection);
+
+  tor_assert(status != NULL);
+
+  node = node_get_by_id(status->identity_digest);
+
+  /* XXX The below check is wrong: !node means it's not in the consensus,
+   * but we haven't checked if we have a descriptor for it -- and also,
+   * we only care about the descriptor if it's a begindir-style anonymized
+   * connection. */
+  if (!node && anonymized_connection) {
+    log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
+             "don't have its router descriptor.",
+             routerstatus_describe(status));
+    return -1;
+  }
+
+  if (options->ExcludeNodes && options->StrictNodes &&
+      routerset_contains_routerstatus(options->ExcludeNodes, status, -1)) {
+    log_warn(LD_DIR, "Wanted to contact directory mirror %s for %s, but "
+             "it's in our ExcludedNodes list and StrictNodes is set. "
+             "Skipping. This choice might make your Tor not work.",
+             routerstatus_describe(status),
+             dir_conn_purpose_to_string(req->dir_purpose));
+    return -1;
+  }
+
+    /* At this point, if we are a client making a direct connection to a
+   * directory server, we have selected a server that has at least one address
+   * allowed by ClientUseIPv4/6 and Reachable{"",OR,Dir}Addresses. This
+   * selection uses the preference in ClientPreferIPv6{OR,Dir}Port, if
+   * possible. (If UseBridges is set, clients always use IPv6, and prefer it
+   * by default.)
+   *
+   * Now choose an address that we can use to connect to the directory server.
+   */
+  if (directory_choose_address_routerstatus(status,
+                                            req->indirection, &use_or_ap,
+                                            &use_dir_ap) < 0) {
+    return -1;
+  }
+
+  directory_request_set_or_addr_port(req, &use_or_ap);
+  directory_request_set_dir_addr_port(req, &use_dir_ap);
+  directory_request_set_directory_id_digest(req, status->identity_digest);
+  return 0;
+}
+
+/**
+ * Launch the provided directory request, configured in <b>request</b>.
+ * After this function is called, you can free <b>request</b>.
+ */
+MOCK_IMPL(void,
+directory_initiate_request,(directory_request_t *request))
+{
+  tor_assert(request);
+  if (request->routerstatus) {
+    tor_assert_nonfatal(
+               ! directory_request_dir_contact_info_specified(request));
+    if (directory_request_set_dir_from_routerstatus(request) < 0) {
+      return;
+    }
+  }
+
+  const tor_addr_port_t *or_addr_port = &request->or_addr_port;
+  const tor_addr_port_t *dir_addr_port = &request->dir_addr_port;
+  const char *digest = request->digest;
+  const uint8_t dir_purpose = request->dir_purpose;
+  const uint8_t router_purpose = request->router_purpose;
+  const dir_indirection_t indirection = request->indirection;
+  const char *resource = request->resource;
+  const rend_data_t *rend_query = request->rend_query;
+  circuit_guard_state_t *guard_state = request->guard_state;
+
   tor_assert(or_addr_port->port || dir_addr_port->port);
   tor_assert(digest);
 
@@ -1194,11 +1333,8 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   const char *begindir_reason = NULL;
   /* Should the connection be to a relay's OR port (and inside that we will
    * send our directory request)? */
-  const int use_begindir = directory_command_should_use_begindir(options,
-                                     &or_addr_port->addr, or_addr_port->port,
-                                     &dir_addr_port->addr, dir_addr_port->port,
-                                     indirection,
-                                     &begindir_reason);
+  const int use_begindir =
+    directory_command_should_use_begindir(options, request, &begindir_reason);
 
   /* Will the connection go via a three-hop Tor circuit? Note that this
    * is separate from whether it will use_begindir. */
@@ -1300,9 +1436,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, dir_purpose, 1, resource,
-                               payload, payload_len,
-                               if_modified_since);
+        directory_send_command(conn, 1, request);
         connection_watch_events(TO_CONN(conn), READ_EVENT | WRITE_EVENT);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -1356,9 +1490,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
     }
     conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
-    directory_send_command(conn, dir_purpose, 0, resource,
-                           payload, payload_len,
-                           if_modified_since);
+    directory_send_command(conn, 0, request);
 
     connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
     connection_start_reading(ENTRY_TO_CONN(linked_conn));
@@ -1461,15 +1593,22 @@ copy_ipv6_address(char* destination, const char* source, size_t len,
   }
 }
 
-/** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
- * are as in directory_initiate_command().
+/** Queue an appropriate HTTP command for <b>request</b> on
+ * <b>conn</b>-\>outbuf.  If <b>direct</b> is true, we're making a
+ * non-anonymized connection to the dirport.
  */
 static void
 directory_send_command(dir_connection_t *conn,
-                       int purpose, int direct, const char *resource,
-                       const char *payload, size_t payload_len,
-                       time_t if_modified_since)
+                       const int direct,
+                       const directory_request_t *req)
 {
+  tor_assert(req);
+  const int purpose = req->dir_purpose;
+  const char *resource = req->resource;
+  const char *payload = req->payload;
+  const size_t payload_len = req->payload_len;
+  const time_t if_modified_since = req->if_modified_since;
+
   char proxystring[256];
   char hoststring[128];
   /* NEEDS to be the same size hoststring.

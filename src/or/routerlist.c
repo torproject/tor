@@ -947,6 +947,7 @@ authority_certs_fetch_resource_impl(const char *resource,
   const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
                                                     : DIRIND_ONEHOP;
 
+  directory_request_t *req = NULL;
   /* If we've just downloaded a consensus from a bridge, re-use that
    * bridge */
   if (options->UseBridges && node && node->ri && !get_via_tor) {
@@ -955,23 +956,25 @@ authority_certs_fetch_resource_impl(const char *resource,
     /* we are willing to use a non-preferred address if we need to */
     fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0,
                                          &or_ap);
-    directory_initiate_command(&or_ap.addr, or_ap.port,
-                               NULL, 0, /*no dirport*/
-                               dir_hint,
-                               DIR_PURPOSE_FETCH_CERTIFICATE,
-                               0,
-                               indirection,
-                               resource, NULL, 0, 0);
-    return;
+
+    req = directory_request_new(DIR_PURPOSE_FETCH_CERTIFICATE);
+    directory_request_set_or_addr_port(req, &or_ap);
+    if (dir_hint)
+      directory_request_set_directory_id_digest(req, dir_hint);
+  } else if (rs) {
+    /* And if we've just downloaded a consensus from a directory, re-use that
+     * directory */
+    req = directory_request_new(DIR_PURPOSE_FETCH_CERTIFICATE);
+    directory_request_set_routerstatus(req, rs);
   }
 
-  if (rs) {
-    /* If we've just downloaded a consensus from a directory, re-use that
-     * directory */
-    directory_initiate_command_routerstatus(rs,
-                                            DIR_PURPOSE_FETCH_CERTIFICATE,
-                                            0, indirection, resource, NULL,
-                                            0, 0, NULL);
+  if (req) {
+    /* We've set up a request object -- fill in the other request fields, and
+     * send the request.  */
+    directory_request_set_indirection(req, indirection);
+    directory_request_set_resource(req, resource);
+    directory_initiate_request(req);
+    directory_request_free(req);
     return;
   }
 
@@ -4932,10 +4935,11 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
 
   if (source) {
     /* We know which authority or directory mirror we want. */
-    directory_initiate_command_routerstatus(source, purpose,
-                                            ROUTER_PURPOSE_GENERAL,
-                                            DIRIND_ONEHOP,
-                                            resource, NULL, 0, 0, NULL);
+    directory_request_t *req = directory_request_new(purpose);
+    directory_request_set_routerstatus(req, source);
+    directory_request_set_resource(req, resource);
+    directory_initiate_request(req);
+    directory_request_free(req);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,
                                  pds_flags, DL_WANT_ANY_DIRSERVER);

@@ -423,12 +423,13 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_MICRODESC 19
 #define DIR_PURPOSE_MAX_ 19
 
-/** True iff <b>p</b> is a purpose corresponding to uploading data to a
- * directory server. */
+/** True iff <b>p</b> is a purpose corresponding to uploading
+ * data to a directory server. */
 #define DIR_PURPOSE_IS_UPLOAD(p)                \
   ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
    (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
-   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES)
+   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES || \
+   (p)==DIR_PURPOSE_UPLOAD_RENDDESC_V2)
 
 #define EXIT_PURPOSE_MIN_ 1
 /** This exit stream wants to do an ordinary connect. */
@@ -5303,7 +5304,8 @@ typedef struct dir_server_t {
                            * address information from published? */
 
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
-                               * dir_server_t to directory_initiate_command_*
+                               * dir_server_t to
+                               * directory_request_set_routerstatus.
                                * as a routerstatus_t.  Not updated by the
                                * router-status management code!
                                **/

@@ -2527,7 +2527,7 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
     /* Sensitive directory connections must have an anonymous path length.
      * Otherwise, directory connections are typically one-hop.
      * This matches the earlier check for directory connection path anonymity
-     * in directory_initiate_command_rend(). */
+     * in directory_initiate_request(). */
     if (purpose_needs_anonymity(linked_dir_conn_base->purpose,
                     TO_DIR_CONN(linked_dir_conn_base)->router_purpose,
                     TO_DIR_CONN(linked_dir_conn_base)->requested_resource)) {

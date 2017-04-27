@@ -41,27 +41,39 @@ typedef enum {
 
 int directory_must_use_begindir(const or_options_t *options);
 
-MOCK_DECL(void, directory_initiate_command_routerstatus,
-                (const routerstatus_t *status,
-                 uint8_t dir_purpose,
-                 uint8_t router_purpose,
-                 dir_indirection_t indirection,
-                 const char *resource,
-                 const char *payload,
-                 size_t payload_len,
-                 time_t if_modified_since,
-                 struct circuit_guard_state_t *guard_state));
+/**
+ * A directory_request_t describes the information about a directory request
+ * at the client side.  It describes what we're going to ask for, which
+ * directory we're going to ask for it, how we're going to contact that
+ * directory, and (in some cases) what to do with it when we're done.
+ */
+typedef struct directory_request_t directory_request_t;
+directory_request_t *directory_request_new(uint8_t dir_purpose);
+void directory_request_free(directory_request_t *req);
+void directory_request_set_or_addr_port(directory_request_t *req,
+                                        const tor_addr_port_t *p);
+void directory_request_set_dir_addr_port(directory_request_t *req,
+                                         const tor_addr_port_t *p);
+void directory_request_set_directory_id_digest(directory_request_t *req,
+                                               const char *digest);
+void directory_request_set_router_purpose(directory_request_t *req,
+                                          uint8_t router_purpose);
+void directory_request_set_indirection(directory_request_t *req,
+                                       dir_indirection_t indirection);
+void directory_request_set_resource(directory_request_t *req,
+                                    const char *resource);
+void directory_request_set_payload(directory_request_t *req,
+                                   const char *payload,
+                                   size_t payload_len);
+void directory_request_set_if_modified_since(directory_request_t *req,
+                                             time_t if_modified_since);
+void directory_request_set_rend_query(directory_request_t *req,
+                                      const rend_data_t *query);
 
-void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
-                                                  uint8_t dir_purpose,
-                                                  uint8_t router_purpose,
-                                                 dir_indirection_t indirection,
-                                                  const char *resource,
-                                                  const char *payload,
-                                                  size_t payload_len,
-                                                  time_t if_modified_since,
-                                    const rend_data_t *rend_query,
-                                    struct circuit_guard_state_t *guard_state);
+void directory_request_set_routerstatus(directory_request_t *req,
+                                        const routerstatus_t *rs);
+
+MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         compress_method_t *compression, char **response);
@@ -72,14 +84,6 @@ int connection_dir_process_inbuf(dir_connection_t *conn);
 int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_about_to_close(dir_connection_t *dir_conn);
-void directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
-                                const tor_addr_t *dir_addr, uint16_t dir_port,
-                                const char *digest,
-                                uint8_t dir_purpose, uint8_t router_purpose,
-                                dir_indirection_t indirection,
-                                const char *resource,
-                                const char *payload, size_t payload_len,
-                                time_t if_modified_since);
 
 #define DSR_HEX       (1<<0)
 #define DSR_BASE64    (1<<1)

@@ -265,7 +265,7 @@ test_conn_get_rend_setup(const struct testcase_t *tc)
 
   rend_cache_init();
 
-  /* TODO: use directory_initiate_command_rend() to do this - maybe? */
+  /* TODO: use directory_initiate_request() to do this - maybe? */
   tor_assert(strlen(TEST_CONN_REND_ADDR) == REND_SERVICE_ID_LEN_BASE32);
   conn->rend_data = rend_data_client_create(TEST_CONN_REND_ADDR, NULL, NULL,
                                             REND_NO_AUTH);
