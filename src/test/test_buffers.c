@@ -578,7 +578,62 @@ test_buffer_time_tracking(void *arg)
 }
 
 static void
-test_buffers_zlib_impl(int finalize_with_nil)
+test_buffers_compress_fin_at_chunk_end_impl(compress_method_t method,
+                                            compression_level_t level)
+{
+  char *msg = NULL;
+  char *contents = NULL;
+  char *expanded = NULL;
+  buf_t *buf = NULL;
+  tor_compress_state_t *compress_state = NULL;
+  size_t out_len, in_len;
+  size_t sz, headerjunk;
+
+  buf = buf_new_with_capacity(128); /* will round up */
+  sz = buf_get_default_chunk_size(buf);
+  msg = tor_malloc_zero(sz);
+
+  write_to_buf(msg, 1, buf);
+  tt_assert(buf->head);
+
+  /* Fill up the chunk so the compression stuff won't fit in one chunk. */
+  tt_uint_op(buf->head->memlen, OP_LT, sz);
+  headerjunk = buf->head->memlen - 7;
+  write_to_buf(msg, headerjunk-1, buf);
+  tt_uint_op(buf->head->datalen, OP_EQ, headerjunk);
+  tt_uint_op(buf_datalen(buf), OP_EQ, headerjunk);
+  /* Write an empty string, with finalization on. */
+  compress_state = tor_compress_new(1, method, level);
+  tt_int_op(write_to_buf_compress(buf, compress_state, "", 0, 1), OP_EQ, 0);
+
+  in_len = buf_datalen(buf);
+  contents = tor_malloc(in_len);
+
+  tt_int_op(fetch_from_buf(contents, in_len, buf), OP_EQ, 0);
+
+  tt_uint_op(in_len, OP_GT, headerjunk);
+
+  tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
+                                     contents + headerjunk,
+                                     in_len - headerjunk,
+                                     method, 1,
+                                     LOG_WARN));
+
+  tt_int_op(out_len, OP_EQ, 0);
+  tt_assert(expanded);
+
+ done:
+  buf_free(buf);
+  tor_compress_free(compress_state);
+  tor_free(contents);
+  tor_free(expanded);
+  tor_free(msg);
+}
+
+static void
+test_buffers_compress_impl(compress_method_t method,
+                           compression_level_t level,
+                           int finalize_with_nil)
 {
   char *msg = NULL;
   char *contents = NULL;
@@ -589,7 +644,7 @@ test_buffers_zlib_impl(int finalize_with_nil)
   int done;
 
   buf = buf_new_with_capacity(128); /* will round up */
-  compress_state = tor_compress_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
+  compress_state = tor_compress_new(1, method, level);
 
   msg = tor_malloc(512);
   crypto_rand(msg, 512);
@@ -613,7 +668,7 @@ test_buffers_zlib_impl(int finalize_with_nil)
 
   tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
                                      contents, in_len,
-                                     ZLIB_METHOD, 1,
+                                     method, 1,
                                      LOG_WARN));
 
   tt_int_op(out_len, OP_GE, 128);
@@ -632,69 +687,37 @@ test_buffers_zlib_impl(int finalize_with_nil)
 }
 
 static void
-test_buffers_zlib(void *arg)
+test_buffers_compress(void *arg)
 {
   (void) arg;
-  test_buffers_zlib_impl(0);
-}
-static void
-test_buffers_zlib_fin_with_nil(void *arg)
-{
-  (void) arg;
-  test_buffers_zlib_impl(1);
-}
+  compress_method_t methods[] = {
+    GZIP_METHOD,
+    ZLIB_METHOD,
+    LZMA_METHOD,
+    ZSTD_METHOD
+  };
 
-static void
-test_buffers_zlib_fin_at_chunk_end(void *arg)
-{
-  char *msg = NULL;
-  char *contents = NULL;
-  char *expanded = NULL;
-  buf_t *buf = NULL;
-  tor_compress_state_t *compress_state = NULL;
-  size_t out_len, in_len;
-  size_t sz, headerjunk;
-  (void) arg;
+  compression_level_t levels[] = {
+    BEST_COMPRESSION,
+    HIGH_COMPRESSION,
+    MEDIUM_COMPRESSION,
+    LOW_COMPRESSION
+  };
 
-  buf = buf_new_with_capacity(128); /* will round up */
-  sz = buf_get_default_chunk_size(buf);
-  msg = tor_malloc_zero(sz);
+  for (unsigned m = 0; m < ARRAY_LENGTH(methods); ++m) {
+    compress_method_t method = methods[m];
 
-  write_to_buf(msg, 1, buf);
-  tt_assert(buf->head);
+    if (! tor_compress_supports_method(method))
+      continue;
 
-  /* Fill up the chunk so the zlib stuff won't fit in one chunk. */
-  tt_uint_op(buf->head->memlen, OP_LT, sz);
-  headerjunk = buf->head->memlen - 7;
-  write_to_buf(msg, headerjunk-1, buf);
-  tt_uint_op(buf->head->datalen, OP_EQ, headerjunk);
-  tt_uint_op(buf_datalen(buf), OP_EQ, headerjunk);
-  /* Write an empty string, with finalization on. */
-  compress_state = tor_compress_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
-  tt_int_op(write_to_buf_compress(buf, compress_state, "", 0, 1), OP_EQ, 0);
+    for (unsigned l = 0; l < ARRAY_LENGTH(levels); ++l) {
+      compression_level_t level = levels[l];
 
-  in_len = buf_datalen(buf);
-  contents = tor_malloc(in_len);
-
-  tt_int_op(fetch_from_buf(contents, in_len, buf), OP_EQ, 0);
-
-  tt_uint_op(in_len, OP_GT, headerjunk);
-
-  tt_int_op(0, OP_EQ, tor_uncompress(&expanded, &out_len,
-                                     contents + headerjunk,
-                                     in_len - headerjunk,
-                                     ZLIB_METHOD, 1,
-                                     LOG_WARN));
-
-  tt_int_op(out_len, OP_EQ, 0);
-  tt_assert(expanded);
-
- done:
-  buf_free(buf);
-  tor_compress_free(compress_state);
-  tor_free(contents);
-  tor_free(expanded);
-  tor_free(msg);
+      test_buffers_compress_impl(method, level, 0);
+      test_buffers_compress_impl(method, level, 1);
+      test_buffers_compress_fin_at_chunk_end_impl(method, level);
+    }
+  }
 }
 
 static const uint8_t *tls_read_ptr;
@@ -821,10 +844,7 @@ struct testcase_t buffer_tests[] = {
   { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
     NULL, NULL },
   { "time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL },
-  { "zlib", test_buffers_zlib, TT_FORK, NULL, NULL },
-  { "zlib_fin_with_nil", test_buffers_zlib_fin_with_nil, TT_FORK, NULL, NULL },
-  { "zlib_fin_at_chunk_end", test_buffers_zlib_fin_at_chunk_end, TT_FORK,
-    NULL, NULL},
+  { "compress", test_buffers_compress, TT_FORK, NULL, NULL },
   { "tls_read_mocked", test_buffers_tls_read_mocked, 0,
     NULL, NULL },
   { "chunk_size", test_buffers_chunk_size, 0, NULL, NULL },

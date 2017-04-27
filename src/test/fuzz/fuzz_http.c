@@ -18,10 +18,10 @@
 
 static void
 mock_connection_write_to_buf_impl_(const char *string, size_t len,
-                                   connection_t *conn, int zlib)
+                                   connection_t *conn, int compressed)
 {
   log_debug(LD_GENERAL, "%sResponse:\n%u\nConnection: %p\n%s\n",
-            zlib ? "Compressed " : "", (unsigned)len, conn, string);
+            compressed ? "Compressed " : "", (unsigned)len, conn, string);
 }
 
 static int
