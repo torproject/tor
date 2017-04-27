@@ -255,8 +255,8 @@ detect_compression_method(const char *in, size_t in_len)
   } else if (in_len > 2 && (in[0] & 0x0f) == 8 &&
              (ntohs(get_uint16(in)) % 31) == 0) {
     return ZLIB_METHOD;
-  } else if (in_len > 3 &&
-             fast_memeq(in, "\x5d\x00\x00\x00", 4)) {
+  } else if (in_len > 2 &&
+             fast_memeq(in, "\x5d\x00\x00", 3)) {
     return LZMA_METHOD;
   } else if (in_len > 3 &&
              fast_memeq(in, "\x28\xb5\x2f\xfd", 4)) {
