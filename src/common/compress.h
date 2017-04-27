@@ -16,12 +16,12 @@
  * functions here. Call tor_compress_supports_method() to check if a given
  * compression schema is supported by Tor. */
 typedef enum {
-  NO_METHOD=0,
+  NO_METHOD=0, // This method must be first.
   GZIP_METHOD=1,
   ZLIB_METHOD=2,
   LZMA_METHOD=3,
   ZSTD_METHOD=4,
-  UNKNOWN_METHOD=5
+  UNKNOWN_METHOD=5, // This method must be last. Add new ones in the middle.
 } compress_method_t;
 
 /**
@@ -48,6 +48,7 @@ compress_method_t detect_compression_method(const char *in, size_t in_len);
 int tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
 
 int tor_compress_supports_method(compress_method_t method);
+unsigned tor_compress_get_supported_method_bitmask(void);
 const char * compression_method_get_name(compress_method_t method);
 compress_method_t compression_method_get_by_name(const char *name);
 

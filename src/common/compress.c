@@ -285,6 +285,26 @@ tor_compress_supports_method(compress_method_t method)
   }
 }
 
+/**
+ * Return a bitmask of the supported compression types, where 1&lt;&lt;m is
+ * set in the bitmask if and only if compression with method <b>m</b> is
+ * supported.
+ */
+unsigned
+tor_compress_get_supported_method_bitmask(void)
+{
+  static unsigned supported = 0;
+  if (supported == 0) {
+    compress_method_t m;
+    for (m = NO_METHOD; m <= UNKNOWN_METHOD; ++m) {
+      if (tor_compress_supports_method(m)) {
+        supported |= (1u << m);
+      }
+    }
+  }
+  return supported;
+}
+
 /** Table of compression method names.  These should have an "x-" prefix,
  * if they are not listed in the IANA content coding registry. */
 static const struct {

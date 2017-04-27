@@ -196,6 +196,7 @@ STATIC int next_random_exponential_delay(int delay, int max_delay);
 STATIC int parse_hs_version_from_post(const char *url, const char *prefix,
                                       const char **end_pos);
 
+STATIC unsigned parse_accept_encoding_header(const char *h);
 #endif
 
 #endif
