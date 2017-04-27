@@ -316,7 +316,10 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
       return TOR_COMPRESS_BUFFER_FULL;
   }
 
-  if (state->compress && finish) {
+  if (!finish) {
+    // We're not done with the input, so no need to flush.
+    return TOR_COMPRESS_OK;
+  } else if (state->compress && finish) {
     retval = ZSTD_endStream(state->u.compress_stream, &output);
 
     *out = (char *)output.dst + output.pos;
@@ -333,9 +336,14 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
     // epilogue.
     if (retval > 0)
       return TOR_COMPRESS_BUFFER_FULL;
+
+    return TOR_COMPRESS_DONE;
+  } else {
+    // ZSTD_flushStream returns 0 if the frame is done, or >0 if it
+    // is incomplete.
+    return (retval == 0) ? TOR_COMPRESS_DONE : TOR_COMPRESS_OK;
   }
 
-  return finish ? TOR_COMPRESS_DONE : TOR_COMPRESS_OK;
 #else // HAVE_ZSTD.
   (void)state;
   (void)out;
