@@ -22,6 +22,9 @@
 #include <lzma.h>
 #endif
 
+/** The maximum amount of memory we allow the LZMA decoder to use, in bytes. */
+#define MEMORY_LIMIT (16 * 1024 * 1024)
+
 /** Total number of bytes allocated for LZMA state. */
 static atomic_counter_t total_lzma_allocation;
 
@@ -33,9 +36,9 @@ memory_level(compression_level_t level)
   switch (level) {
     default:
     case BEST_COMPRESSION:
-    case HIGH_COMPRESSION: return 9;
-    case MEDIUM_COMPRESSION: return 6;
-    case LOW_COMPRESSION: return 3;
+    case HIGH_COMPRESSION: return 6;
+    case MEDIUM_COMPRESSION: return 4;
+    case LOW_COMPRESSION: return 2;
   }
 }
 
@@ -191,9 +194,7 @@ tor_lzma_compress_new(int compress,
       goto err;
     }
   } else {
-    // FIXME(ahf): This should be something more sensible than
-    // UINT64_MAX: See #21665.
-    retval = lzma_alone_decoder(&result->stream, UINT64_MAX);
+    retval = lzma_alone_decoder(&result->stream, MEMORY_LIMIT);
 
     if (retval != LZMA_OK) {
       log_warn(LD_GENERAL, "Error from LZMA decoder: %s (%u).",
