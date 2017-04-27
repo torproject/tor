@@ -2262,6 +2262,7 @@ test_util_compress_impl(compress_method_t method)
   tt_assert(buf3 != NULL);
   tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
   tt_str_op(buf1, OP_EQ, buf3);
+  tt_int_op(buf3[len2], OP_EQ, 0);
 
   /* Check whether we can uncompress concatenated, compressed strings. */
   tor_free(buf3);
@@ -2273,6 +2274,7 @@ test_util_compress_impl(compress_method_t method)
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
              (strlen(buf1)+1)*2);
+  tt_int_op(buf3[len2], OP_EQ, 0);
 
   /* Check whether we can uncompress partial strings */
 
@@ -2296,6 +2298,8 @@ test_util_compress_impl(compress_method_t method)
   tt_int_op(len2, OP_GT, 5);
   tt_int_op(len2, OP_LE, len1);
   tt_assert(fast_memeq(buf1, buf3, len2));
+  tt_int_op(buf3[len2], OP_EQ, 0);
+
   /* when we demand a complete output, this must fail. */
   tor_free(buf3);
   tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,

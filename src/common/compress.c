@@ -221,6 +221,12 @@ tor_compress(char **out, size_t *out_len,
  * *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on success, -1 on
  * failure.
  *
+ * If any bytes are written to <b>out</b>, an extra byte NUL is always
+ * written at the end, but not counted in <b>out_len</b>.  This is a
+ * safety feature to ensure that the output can be treated as a
+ * NUL-terminated string -- though of course, callers should check
+ * out_len anyway.
+ *
  * If <b>complete_only</b> is true, we consider a truncated input as a
  * failure; otherwise we decompress as much as we can.  Warn about truncated
  * or corrupt inputs at <b>protocol_warn_level</b>.
