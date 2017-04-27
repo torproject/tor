@@ -1171,9 +1171,7 @@ directory_request_set_payload(directory_request_t *req,
                               const char *payload,
                               size_t payload_len)
 {
-  tor_assert(DIR_PURPOSE_IS_UPLOAD(req->dir_purpose) ||
-             // XXXX why not included?
-             req->dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2);
+  tor_assert(DIR_PURPOSE_IS_UPLOAD(req->dir_purpose));
 
   req->payload = payload;
   req->payload_len = payload_len;
