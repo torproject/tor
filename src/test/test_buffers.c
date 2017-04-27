@@ -689,13 +689,15 @@ test_buffers_compress_impl(compress_method_t method,
 static void
 test_buffers_compress(void *arg)
 {
-  (void) arg;
-  compress_method_t methods[] = {
-    GZIP_METHOD,
-    ZLIB_METHOD,
-    LZMA_METHOD,
-    ZSTD_METHOD
-  };
+  const char *methodname = arg;
+  tt_assert(methodname);
+
+  compress_method_t method = compression_method_get_by_name(methodname);
+  tt_int_op(method, OP_NE, UNKNOWN_METHOD);
+
+  if (! tor_compress_supports_method(method)) {
+    tt_skip();
+  }
 
   compression_level_t levels[] = {
     BEST_COMPRESSION,
@@ -704,20 +706,16 @@ test_buffers_compress(void *arg)
     LOW_COMPRESSION
   };
 
-  for (unsigned m = 0; m < ARRAY_LENGTH(methods); ++m) {
-    compress_method_t method = methods[m];
+  for (unsigned l = 0; l < ARRAY_LENGTH(levels); ++l) {
+    compression_level_t level = levels[l];
 
-    if (! tor_compress_supports_method(method))
-      continue;
-
-    for (unsigned l = 0; l < ARRAY_LENGTH(levels); ++l) {
-      compression_level_t level = levels[l];
-
-      test_buffers_compress_impl(method, level, 0);
-      test_buffers_compress_impl(method, level, 1);
-      test_buffers_compress_fin_at_chunk_end_impl(method, level);
-    }
+    test_buffers_compress_impl(method, level, 0);
+    test_buffers_compress_impl(method, level, 1);
+    test_buffers_compress_fin_at_chunk_end_impl(method, level);
   }
+
+ done:
+  ;
 }
 
 static const uint8_t *tls_read_ptr;
@@ -844,11 +842,20 @@ struct testcase_t buffer_tests[] = {
   { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
     NULL, NULL },
   { "time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL },
-  { "compress", test_buffers_compress, TT_FORK, NULL, NULL },
   { "tls_read_mocked", test_buffers_tls_read_mocked, 0,
     NULL, NULL },
   { "chunk_size", test_buffers_chunk_size, 0, NULL, NULL },
   { "find_contentlen", test_buffers_find_contentlen, 0, NULL, NULL },
+
+  { "compress/zlib", test_buffers_compress, TT_FORK,
+    &passthrough_setup, (char*)"deflate" },
+  { "compress/gzip", test_buffers_compress, TT_FORK,
+    &passthrough_setup, (char*)"gzip" },
+  { "compress/zstd", test_buffers_compress, TT_FORK,
+    &passthrough_setup, (char*)"x-zstd" },
+  { "compress/lzma", test_buffers_compress, TT_FORK,
+    &passthrough_setup, (char*)"x-lzma" },
+
   END_OF_TESTCASES
 };
 

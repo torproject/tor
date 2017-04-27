@@ -2351,13 +2351,15 @@ test_util_compress_stream_impl(compress_method_t method,
 static void
 test_util_compress(void *arg)
 {
-  (void) arg;
-  compress_method_t methods[] = {
-    GZIP_METHOD,
-    ZLIB_METHOD,
-    LZMA_METHOD,
-    ZSTD_METHOD
-  };
+  const char *methodname = arg;
+  tt_assert(methodname);
+
+  compress_method_t method = compression_method_get_by_name(methodname);
+  tt_int_op(method, OP_NE, UNKNOWN_METHOD);
+
+  if (! tor_compress_supports_method(method)) {
+    tt_skip();
+  }
 
   compression_level_t levels[] = {
     BEST_COMPRESSION,
@@ -2366,19 +2368,14 @@ test_util_compress(void *arg)
     LOW_COMPRESSION
   };
 
-  for (unsigned m = 0; m < ARRAY_LENGTH(methods); ++m) {
-    compress_method_t method = methods[m];
+  test_util_compress_impl(method);
 
-    if (! tor_compress_supports_method(method))
-      continue;
-
-    test_util_compress_impl(method);
-
-    for (unsigned l = 0; l < ARRAY_LENGTH(levels); ++l) {
-      compression_level_t level = levels[l];
-      test_util_compress_stream_impl(method, level);
-    }
+  for (unsigned l = 0; l < ARRAY_LENGTH(levels); ++l) {
+    compression_level_t level = levels[l];
+    test_util_compress_stream_impl(method, level);
   }
+ done:
+  ;
 }
 
 static void
@@ -5720,6 +5717,10 @@ test_util_htonll(void *arg)
 #define UTIL_TEST(name, flags)                          \
   { #name, test_util_ ## name, flags, NULL, NULL }
 
+#define COMPRESS(name, identifier)              \
+  { "compress/" #name, test_util_compress, 0, &passthrough_setup,       \
+    (char*)(identifier) }
+
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
@@ -5744,7 +5745,10 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(strmisc),
   UTIL_TEST(parse_integer, 0),
   UTIL_LEGACY(pow2),
-  UTIL_LEGACY(compress),
+  COMPRESS(zlib, "deflate"),
+  COMPRESS(gzip, "gzip"),
+  COMPRESS(lzma, "x-lzma"),
+  COMPRESS(zstd, "x-zstd"),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),
