@@ -961,17 +961,16 @@ authority_certs_fetch_resource_impl(const char *resource,
     directory_request_set_or_addr_port(req, &or_ap);
     if (dir_hint)
       directory_request_set_directory_id_digest(req, dir_hint);
-  }
-
-  if (rs) {
-    /* If we've just downloaded a consensus from a directory, re-use that
+  } else if (rs) {
+    /* And if we've just downloaded a consensus from a directory, re-use that
      * directory */
     req = directory_request_new(DIR_PURPOSE_FETCH_CERTIFICATE);
     directory_request_set_routerstatus(req, rs);
   }
 
   if (req) {
-    /* Fill in the other request fields, and send the request.  */
+    /* We've set up a request object -- fill in the other request fields, and
+     * send the request.  */
     directory_request_set_indirection(req, indirection);
     directory_request_set_resource(req, resource);
     directory_initiate_request(req);
