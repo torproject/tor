@@ -2274,31 +2274,34 @@ test_util_compress_impl(compress_method_t method)
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
              (strlen(buf1)+1)*2);
 
-  if (method != ZSTD_METHOD) {
-    /* Check whether we can uncompress partial strings unless we are Zstandard,
-     * which doesn't seem to support this. */
 
-    tor_free(buf1);
-    tor_free(buf2);
-    tor_free(buf3);
+  /* Check whether we can uncompress partial strings */
 
-    buf1 =
-      tor_strdup("String with low redundancy that won't be compressed much.");
-    tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1, method));
-    tt_int_op(len1, OP_GT, 16);
-    /* when we allow an incomplete string, we should succeed.*/
-    tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1-16,
-                              method, 0, LOG_INFO));
-    tt_assert(len2 > 5);
-    buf3[len2]='\0';
-    tt_assert(!strcmpstart(buf1, buf3));
+  tor_free(buf1);
+  tor_free(buf2);
+  tor_free(buf3);
 
-    /* when we demand a complete string, this must fail. */
-    tor_free(buf3);
-    tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
-                             method, 1, LOG_INFO));
-    tt_assert(buf3 == NULL);
+  size_t b1len = 1<<10;
+  if (method == ZSTD_METHOD) {
+    // zstd needs a big input before it starts generating output that it
+    // can partially decompress.
+    b1len = 1<<18;
   }
+  buf1 = tor_malloc(b1len);
+  crypto_rand(buf1, b1len);
+  tt_assert(!tor_compress(&buf2, &len1, buf1, b1len, method));
+  tt_int_op(len1, OP_GT, 16);
+  /* when we allow an incomplete output we should succeed.*/
+  tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1-16,
+                            method, 0, LOG_INFO));
+  tt_int_op(len2, OP_GT, 5);
+  tt_int_op(len2, OP_LE, len1);
+  tt_assert(fast_memeq(buf1, buf3, len2));
+  /* when we demand a complete output, this must fail. */
+  tor_free(buf3);
+  tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
+                           method, 1, LOG_INFO));
+  tt_assert(buf3 == NULL);
 
  done:
   tor_free(buf1);
