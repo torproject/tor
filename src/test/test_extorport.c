@@ -72,9 +72,9 @@ test_ext_or_id_map(void *arg)
  * writes to outbuf. */
 static void
 connection_write_to_buf_impl_replacement(const char *string, size_t len,
-                                         connection_t *conn, int zlib)
+                                         connection_t *conn, int compressed)
 {
-  (void) zlib;
+  (void) compressed;
 
   tor_assert(string);
   tor_assert(conn);
