@@ -2274,7 +2274,6 @@ test_util_compress_impl(compress_method_t method)
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
              (strlen(buf1)+1)*2);
 
-
   /* Check whether we can uncompress partial strings */
 
   tor_free(buf1);
