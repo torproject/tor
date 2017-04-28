@@ -11,6 +11,7 @@
 #include "config.h"
 #include <event.h>
 #include "compat_time.h"
+#include "log_test_helpers.h"
 
 extern smartlist_t *connection_array;
 extern networkstatus_t *current_ns_consensus;
@@ -231,7 +232,8 @@ dummy_timer_cb(tor_timer_t *t, void *arg, const monotime_t *now_mono)
 // actually returns when we don't expect any timers to fire. Otherwise,
 // the global_timer_event gets scheduled an hour from now, and the
 // base loop never returns.
-void dummy_nop_timer(void)
+void
+dummy_nop_timer(void)
 {
   tor_timer_t *dummy_timer = timer_new(dummy_timer_cb, NULL);
   struct timeval timeout;
@@ -633,16 +635,14 @@ test_channelpadding_negotiation(void *arg)
   cell.command = CELL_PADDING_NEGOTIATE;
 
   channelpadding_negotiate_set_command(&disable, CHANNELPADDING_COMMAND_STOP);
+  disable.version = 1;
   channelpadding_negotiate_encode(cell.payload, CELL_PAYLOAD_SIZE, &disable);
-  ((channelpadding_negotiate_t*)cell.payload)->version = 1;
   client_relay3->write_cell(client_relay3, &cell);
   tt_assert(relay3_client->padding_enabled);
-  disable.version = 1;
   tt_int_op(channelpadding_update_padding_for_channel(client_relay3, &disable),
           OP_EQ, -1);
   tt_assert(client_relay3->padding_enabled);
 
-  ((channelpadding_negotiate_t*)cell.payload)->version = 0;
   disable.version = 0;
   channelpadding_negotiate_encode(cell.payload, CELL_PAYLOAD_SIZE, &disable);
   client_relay3->write_cell(client_relay3, &cell);
@@ -724,6 +724,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   monotime_init();
   timers_initialize();
+  setup_full_capture_of_logs(LOG_WARN);
   channelpadding_new_consensus_params(NULL);
 
   chan = (channel_t*)new_fake_channeltls(0);
@@ -786,6 +787,8 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   tried_to_write_cell = 0;
   chan->next_padding_time_ms = monotime_coarse_absolute_msec() - 100;
   decision = channelpadding_decide_to_pad_channel(chan);
+  expect_log_msg("Channel padding timeout scheduled 100ms in the past. "
+                 "Did the monotonic clock just jump?\n");
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SENT);
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!chan->pending_padding_callback);
@@ -868,6 +871,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
  done:
   smartlist_free(connection_array);
 
+  teardown_capture_of_logs();
   timers_shutdown();
   channel_free_all();
 
