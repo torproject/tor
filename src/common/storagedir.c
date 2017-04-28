@@ -89,11 +89,12 @@ storage_dir_register_with_sandbox(storage_dir_t *d, sandbox_cfg_t **cfg)
     tor_asprintf(&path, "%s/%d", d->directory, idx);
     tor_asprintf(&tmppath, "%s/%d.tmp", d->directory, idx);
 
-    problems += sandbox_cfg_allow_open_filename(cfg, path);
-    problems += sandbox_cfg_allow_open_filename(cfg, tmppath);
-    problems += sandbox_cfg_allow_stat_filename(cfg, path);
-    problems += sandbox_cfg_allow_stat_filename(cfg, tmppath);
-    problems += sandbox_cfg_allow_rename(cfg, tmppath, path);
+    problems += sandbox_cfg_allow_open_filename(cfg, tor_strdup(path));
+    problems += sandbox_cfg_allow_open_filename(cfg, tor_strdup(tmppath));
+    problems += sandbox_cfg_allow_stat_filename(cfg, tor_strdup(path));
+    problems += sandbox_cfg_allow_stat_filename(cfg, tor_strdup(tmppath));
+    problems += sandbox_cfg_allow_rename(cfg,
+                                      tor_strdup(tmppath), tor_strdup(path));
 
     tor_free(path);
     tor_free(tmppath);
@@ -527,5 +528,15 @@ int
 storage_dir_remove_all(storage_dir_t *d)
 {
   return storage_dir_shrink(d, 0, d->max_files);
+}
+
+/**
+ * Return the largest number of non-temporary files we're willing to
+ * store in <b>d</b>.
+ */
+int
+storage_dir_get_max_files(storage_dir_t *d)
+{
+  return d->max_files;
 }
 

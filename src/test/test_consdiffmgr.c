@@ -141,7 +141,8 @@ lookup_diff_from(consensus_cache_entry_t **out,
   uint8_t digest[DIGEST256_LEN];
   crypto_digest256((char*)digest, str1, strlen(str1), DIGEST_SHA3_256);
   return consdiffmgr_find_diff_from(out, flav,
-                                    DIGEST_SHA3_256, digest, sizeof(digest));
+                                    DIGEST_SHA3_256, digest, sizeof(digest),
+                                    NO_METHOD);
 }
 
 static int
@@ -149,7 +150,6 @@ lookup_apply_and_verify_diff(consensus_flavor_t flav,
                              const char *str1,
                              const char *str2)
 {
-  char *diff_string = NULL;
   consensus_cache_entry_t *ent = NULL;
   consdiff_status_t status = lookup_diff_from(&ent, flav, str1);
   if (ent == NULL || status != CONSDIFF_AVAILABLE)
@@ -157,12 +157,10 @@ lookup_apply_and_verify_diff(consensus_flavor_t flav,
 
   consensus_cache_entry_incref(ent);
   size_t size;
-  const uint8_t *body;
-  int r = consensus_cache_entry_get_body(ent, &body, &size);
-  if (r == 0)
-    diff_string = tor_memdup_nulterm(body, size);
+  char *diff_string = NULL;
+  int r = uncompress_or_copy(&diff_string, &size, ent);
   consensus_cache_entry_decref(ent);
-  if (diff_string == NULL)
+  if (diff_string == NULL || r < 0)
     return -1;
 
   char *applied = consensus_diff_apply(str1, diff_string);
@@ -266,6 +264,8 @@ test_consdiffmgr_add(void *arg)
   (void) arg;
   time_t now = approx_time();
 
+  char *body = NULL;
+
   consensus_cache_entry_t *ent = NULL;
   networkstatus_t *ns_tmp = fake_ns_new(FLAV_NS, now);
   const char *dummy = "foo";
@@ -306,8 +306,7 @@ test_consdiffmgr_add(void *arg)
   tt_assert(ent);
   consensus_cache_entry_incref(ent);
   size_t s;
-  const uint8_t *body;
-  r = consensus_cache_entry_get_body(ent, &body, &s);
+  r = uncompress_or_copy(&body, &s, ent);
   tt_int_op(r, OP_EQ, 0);
   tt_int_op(s, OP_EQ, 4);
   tt_mem_op(body, OP_EQ, "quux", 4);
@@ -320,6 +319,7 @@ test_consdiffmgr_add(void *arg)
   networkstatus_vote_free(ns_tmp);
   teardown_capture_of_logs();
   consensus_cache_entry_decref(ent);
+  tor_free(body);
 }
 
 static void
@@ -374,7 +374,8 @@ test_consdiffmgr_make_diffs(void *arg)
   tt_int_op(1, OP_EQ, smartlist_len(fake_cpuworker_queue));
   diff_status = consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC,
                                            DIGEST_SHA3_256,
-                                           md_ns_sha3, DIGEST256_LEN);
+                                           md_ns_sha3, DIGEST256_LEN,
+                                           NO_METHOD);
   tt_int_op(CONSDIFF_IN_PROGRESS, OP_EQ, diff_status);
 
   // Now run that process and get the diff.
@@ -385,7 +386,8 @@ test_consdiffmgr_make_diffs(void *arg)
   // At this point we should be able to get that diff.
   diff_status = consdiffmgr_find_diff_from(&diff, FLAV_MICRODESC,
                                            DIGEST_SHA3_256,
-                                           md_ns_sha3, DIGEST256_LEN);
+                                           md_ns_sha3, DIGEST256_LEN,
+                                           NO_METHOD);
   tt_int_op(CONSDIFF_AVAILABLE, OP_EQ, diff_status);
   tt_assert(diff);
 
@@ -758,7 +760,7 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   /* Now add an even-more-recent consensus; this should make all previous
    * diffs deletable */
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
-  tt_int_op(2, OP_EQ, consdiffmgr_cleanup());
+  tt_int_op(2 * n_diff_compression_methods(), OP_EQ, consdiffmgr_cleanup());
 
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
             lookup_diff_from(&ent, FLAV_MICRODESC, md_body[0]));

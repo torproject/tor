@@ -21,8 +21,6 @@
 #include "networkstatus.h"
 #include "workqueue.h"
 
-/* XXXX support compression */
-
 /**
  * Labels to apply to items in the conscache object.
  *
@@ -33,8 +31,10 @@
 /* The valid-after time for a consensus (or for the target consensus of a
  * diff), encoded as ISO UTC. */
 #define LABEL_VALID_AFTER "consensus-valid-after"
-/* A hex encoded SHA3 digest of the object after decompression. */
+/* A hex encoded SHA3 digest of the object, as compressed (if any) */
 #define LABEL_SHA3_DIGEST "sha3-digest"
+/* A hex encoded SHA3 digest of the object before compression. */
+#define LABEL_SHA3_DIGEST_UNCOMPRESSED "sha3-digest-uncompressed"
 /* The flavor of the consensus or consensuses diff */
 #define LABEL_FLAVOR "consensus-flavor"
 /* Diff only: the SHA3 digest of the source consensus. */
@@ -43,6 +43,8 @@
 #define LABEL_TARGET_SHA3_DIGEST "target-sha3-digest"
 /* Diff only: the valid-after date of the source consensus. */
 #define LABEL_FROM_VALID_AFTER "from-valid-after"
+/* What kind of compression was used? */
+#define LABEL_COMPRESSION_TYPE "compression"
 /** @} */
 
 #define DOCTYPE_CONSENSUS "consensus"
@@ -72,6 +74,25 @@ typedef enum cdm_diff_status_t {
   CDM_DIFF_ERROR=3,
 } cdm_diff_status_t;
 
+/** Which methods do we use for precompressing diffs? */
+static const compress_method_t compress_diffs_with[] = {
+  NO_METHOD,
+  GZIP_METHOD,
+#ifdef HAVE_LZMA
+  LZMA_METHOD,
+#endif
+#ifdef HAVE_ZSTD
+  ZSTD_METHOD,
+#endif
+};
+
+/** How many different methods will we try to use for diff compression? */
+STATIC unsigned
+n_diff_compression_methods(void)
+{
+  return ARRAY_LENGTH(compress_diffs_with);
+}
+
 /** Hashtable node used to remember the current status of the diff
  * from a given sha3 digest to the current consensus.  */
 typedef struct cdm_diff_t {
@@ -82,12 +103,15 @@ typedef struct cdm_diff_t {
   /** SHA3-256 digest of the consensus that this diff is _from_. (part of the
    * ht key) */
   uint8_t from_sha3[DIGEST256_LEN];
+  /** Method by which the diff is compressed. (part of the ht key */
+  compress_method_t compress_method;
 
   /** One of the CDM_DIFF_* values, depending on whether this diff
    * is available, in progress, or impossible to compute. */
   cdm_diff_status_t cdm_diff_status;
   /** SHA3-256 digest of the consensus that this diff is _to. */
   uint8_t target_sha3[DIGEST256_LEN];
+
   /** Handle to the cache entry for this diff, if any.  We use a handle here
    * to avoid thinking too hard about cache entry lifetime issues. */
   consensus_cache_entry_handle_t *entry;
@@ -101,12 +125,19 @@ static HT_HEAD(cdm_diff_ht, cdm_diff_t) cdm_diff_ht = HT_INITIALIZER();
  */
 static consdiff_cfg_t consdiff_cfg = {
   /* .cache_max_age_hours = */ 24 * 90,
-  /* .cache_max_num = */ 1440
+  // XXXX I'd like to make this number bigger, but it interferes with the
+  // XXXX seccomp2 syscall filter, which tops out at BPF_MAXINS (4096)
+  // XXXX rules.
+  /* .cache_max_num = */ 128
 };
 
+static int consdiffmgr_ensure_space_for_files(int n);
 static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
                                           consensus_cache_entry_t *diff_to);
 static void consdiffmgr_set_cache_flags(void);
+
+/* Just gzip consensuses for now. */
+#define COMPRESS_CONSENSUS_WITH GZIP_METHOD
 
 /* =====
  * Hashtable setup
@@ -116,9 +147,10 @@ static void consdiffmgr_set_cache_flags(void);
 static unsigned
 cdm_diff_hash(const cdm_diff_t *diff)
 {
-  uint8_t tmp[DIGEST256_LEN + 1];
+  uint8_t tmp[DIGEST256_LEN + 2];
   memcpy(tmp, diff->from_sha3, DIGEST256_LEN);
   tmp[DIGEST256_LEN] = (uint8_t) diff->flavor;
+  tmp[DIGEST256_LEN+1] = (uint8_t) diff->compress_method;
   return (unsigned) siphash24g(tmp, sizeof(tmp));
 }
 /** Helper: compare two cdm_diff_t objects for key equality */
@@ -126,7 +158,8 @@ static int
 cdm_diff_eq(const cdm_diff_t *diff1, const cdm_diff_t *diff2)
 {
   return fast_memeq(diff1->from_sha3, diff2->from_sha3, DIGEST256_LEN) &&
-    diff1->flavor == diff2->flavor;
+    diff1->flavor == diff2->flavor &&
+    diff1->compress_method == diff2->compress_method;
 }
 
 HT_PROTOTYPE(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq)
@@ -148,13 +181,15 @@ cdm_diff_free(cdm_diff_t *diff)
 static cdm_diff_t *
 cdm_diff_new(consensus_flavor_t flav,
              const uint8_t *from_sha3,
-             const uint8_t *target_sha3)
+             const uint8_t *target_sha3,
+             compress_method_t method)
 {
   cdm_diff_t *ent;
   ent = tor_malloc_zero(sizeof(cdm_diff_t));
   ent->flavor = flav;
   memcpy(ent->from_sha3, from_sha3, DIGEST256_LEN);
   memcpy(ent->target_sha3, target_sha3, DIGEST256_LEN);
+  ent->compress_method = method;
   return ent;
 }
 
@@ -172,18 +207,25 @@ cdm_diff_ht_check_and_note_pending(consensus_flavor_t flav,
                                    const uint8_t *target_sha3)
 {
   struct cdm_diff_t search, *ent;
-  memset(&search, 0, sizeof(cdm_diff_t));
-  search.flavor = flav;
-  memcpy(search.from_sha3, from_sha3, DIGEST256_LEN);
-  ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
-  if (ent) {
-    tor_assert_nonfatal(ent->cdm_diff_status != CDM_DIFF_PRESENT);
-    return 1;
+  unsigned u;
+  int result = 0;
+  for (u = 0; u < n_diff_compression_methods(); ++u) {
+    compress_method_t method = compress_diffs_with[u];
+    memset(&search, 0, sizeof(cdm_diff_t));
+    search.flavor = flav;
+    search.compress_method = method;
+    memcpy(search.from_sha3, from_sha3, DIGEST256_LEN);
+    ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
+    if (ent) {
+      tor_assert_nonfatal(ent->cdm_diff_status != CDM_DIFF_PRESENT);
+      result = 1;
+      continue;
+    }
+    ent = cdm_diff_new(flav, from_sha3, target_sha3, method);
+    ent->cdm_diff_status = CDM_DIFF_IN_PROGRESS;
+    HT_INSERT(cdm_diff_ht, &cdm_diff_ht, ent);
   }
-  ent = cdm_diff_new(flav, from_sha3, target_sha3);
-  ent->cdm_diff_status = CDM_DIFF_IN_PROGRESS;
-  HT_INSERT(cdm_diff_ht, &cdm_diff_ht, ent);
-  return 0;
+  return result;
 }
 
 /**
@@ -196,16 +238,18 @@ static void
 cdm_diff_ht_set_status(consensus_flavor_t flav,
                        const uint8_t *from_sha3,
                        const uint8_t *to_sha3,
+                       compress_method_t method,
                        int status,
                        consensus_cache_entry_handle_t *handle)
 {
   struct cdm_diff_t search, *ent;
   memset(&search, 0, sizeof(cdm_diff_t));
   search.flavor = flav;
+  search.compress_method = method,
   memcpy(search.from_sha3, from_sha3, DIGEST256_LEN);
   ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
   if (!ent) {
-    ent = cdm_diff_new(flav, from_sha3, to_sha3);
+    ent = cdm_diff_new(flav, from_sha3, to_sha3, method);
     ent->cdm_diff_status = CDM_DIFF_IN_PROGRESS;
     HT_INSERT(cdm_diff_ht, &cdm_diff_ht, ent);
   } else if (fast_memneq(ent->target_sha3, to_sha3, DIGEST256_LEN)) {
@@ -299,10 +343,11 @@ cdm_cache_get(void)
 /**
  * Helper: given a list of labels, prepend the hex-encoded SHA3 digest
  * of the <b>bodylen</b>-byte object at <b>body</b> to those labels,
- * with LABEL_SHA3_DIGEST as its label.
+ * with <b>label</b> as its label.
  */
 static void
 cdm_labels_prepend_sha3(config_line_t **labels,
+                        const char *label,
                         const uint8_t *body,
                         size_t bodylen)
 {
@@ -313,7 +358,7 @@ cdm_labels_prepend_sha3(config_line_t **labels,
   base16_encode(hexdigest, sizeof(hexdigest),
                 (const char *)sha3_digest, sizeof(sha3_digest));
 
-  config_line_prepend(labels, LABEL_SHA3_DIGEST, hexdigest);
+  config_line_prepend(labels, label, hexdigest);
 }
 
 /** Helper: if there is a sha3-256 hex-encoded digest in <b>ent</b> with the
@@ -410,6 +455,8 @@ consdiffmgr_add_consensus(const char *consensus,
   }
 
   /* We don't have it. Add it to the cache. */
+  consdiffmgr_ensure_space_for_files(1);
+
   {
     size_t bodylen = strlen(consensus);
     config_line_t *labels = NULL;
@@ -417,15 +464,28 @@ consdiffmgr_add_consensus(const char *consensus,
     format_iso_time_nospace(formatted_time, valid_after);
     const char *flavname = networkstatus_get_flavor_name(flavor);
 
-    cdm_labels_prepend_sha3(&labels, (const uint8_t *)consensus, bodylen);
+    cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST_UNCOMPRESSED,
+                            (const uint8_t *)consensus, bodylen);
+
+    char *body_compressed = NULL;
+    size_t size_compressed = 0;
+    if (tor_compress(&body_compressed, &size_compressed,
+                     consensus, bodylen, COMPRESS_CONSENSUS_WITH) < 0) {
+      config_free_lines(labels);
+      return -1;
+    }
+    cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST,
+                            (const uint8_t *)body_compressed, size_compressed);
+    config_line_prepend(&labels, LABEL_COMPRESSION_TYPE,
+                        compression_method_get_name(COMPRESS_CONSENSUS_WITH));
     config_line_prepend(&labels, LABEL_FLAVOR, flavname);
     config_line_prepend(&labels, LABEL_VALID_AFTER, formatted_time);
     config_line_prepend(&labels, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
 
     entry = consensus_cache_add(cdm_cache_get(),
                                 labels,
-                                (const uint8_t *)consensus,
-                                bodylen);
+                                (const uint8_t *)body_compressed,
+                                size_compressed);
     config_free_lines(labels);
   }
 
@@ -481,7 +541,8 @@ consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
                            consensus_flavor_t flavor,
                            int digest_type,
                            const uint8_t *digest,
-                           size_t digestlen)
+                           size_t digestlen,
+                           compress_method_t method)
 {
   if (BUG(digest_type != DIGEST_SHA3_256) ||
       BUG(digestlen != DIGEST256_LEN)) {
@@ -492,6 +553,7 @@ consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
   cdm_diff_t search, *ent;
   memset(&search, 0, sizeof(search));
   search.flavor = flavor;
+  search.compress_method = method;
   memcpy(search.from_sha3, digest, DIGEST256_LEN);
   ent = HT_FIND(cdm_diff_ht, &cdm_diff_ht, &search);
 
@@ -584,7 +646,8 @@ consdiffmgr_cleanup(void)
     if (most_recent == NULL)
       continue;
     const char *most_recent_sha3 =
-      consensus_cache_entry_get_value(most_recent, LABEL_SHA3_DIGEST);
+      consensus_cache_entry_get_value(most_recent,
+                                      LABEL_SHA3_DIGEST_UNCOMPRESSED);
     if (BUG(most_recent_sha3 == NULL))
       continue; // LCOV_EXCL_LINE
 
@@ -611,7 +674,7 @@ consdiffmgr_cleanup(void)
   smartlist_free(diffs);
 
   // Actually remove files, if they're not used.
-  consensus_cache_delete_pending(cdm_cache_get());
+  consensus_cache_delete_pending(cdm_cache_get(), 0);
   return n_to_delete;
 }
 
@@ -622,9 +685,20 @@ consdiffmgr_cleanup(void)
 void
 consdiffmgr_configure(const consdiff_cfg_t *cfg)
 {
-  memcpy(&consdiff_cfg, cfg, sizeof(consdiff_cfg));
+  if (cfg)
+    memcpy(&consdiff_cfg, cfg, sizeof(consdiff_cfg));
 
   (void) cdm_cache_get();
+}
+
+/**
+ * Tell the sandbox (if any) configured by <b>cfg</b> to allow the
+ * operations that the consensus diff manager will need.
+ */
+int
+consdiffmgr_register_with_sandbox(struct sandbox_cfg_elem **cfg)
+{
+  return consensus_cache_register_with_sandbox(cdm_cache_get(), cfg);
 }
 
 /**
@@ -717,7 +791,7 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
     goto done; //LCOV_EXCL_LINE
   uint8_t most_recent_sha3[DIGEST256_LEN];
   if (BUG(cdm_entry_get_sha3_value(most_recent_sha3, most_recent,
-                                   LABEL_SHA3_DIGEST) < 0))
+                                   LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
     goto done; //LCOV_EXCL_LINE
 
   // 2. Find all the relevant diffs _to_ this consensus. These are ones
@@ -769,7 +843,8 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
       continue; // LCOV_EXCL_LINE
 
     uint8_t this_sha3[DIGEST256_LEN];
-    if (BUG(cdm_entry_get_sha3_value(this_sha3, c, LABEL_SHA3_DIGEST)<0))
+    if (BUG(cdm_entry_get_sha3_value(this_sha3, c,
+                                     LABEL_SHA3_DIGEST_UNCOMPRESSED)<0))
       continue; // LCOV_EXCL_LINE
     if (cdm_diff_ht_check_and_note_pending(flavor,
                                            this_sha3, most_recent_sha3)) {
@@ -803,6 +878,16 @@ consdiffmgr_diffs_load(void)
     int flavor = networkstatus_parse_flavor_name(lv_flavor);
     if (flavor < 0)
       continue;
+    const char *lv_compression =
+      consensus_cache_entry_get_value(diff, LABEL_COMPRESSION_TYPE);
+    compress_method_t method = NO_METHOD;
+    if (lv_compression) {
+      method = compression_method_get_by_name(lv_compression);
+      if (method == UNKNOWN_METHOD) {
+        continue;
+      }
+    }
+
     uint8_t from_sha3[DIGEST256_LEN];
     uint8_t to_sha3[DIGEST256_LEN];
     if (cdm_entry_get_sha3_value(from_sha3, diff, LABEL_FROM_SHA3_DIGEST)<0)
@@ -811,6 +896,7 @@ consdiffmgr_diffs_load(void)
       continue;
 
     cdm_diff_ht_set_status(flavor, from_sha3, to_sha3,
+                           method,
                            CDM_DIFF_PRESENT,
                            consensus_cache_entry_handle_new(diff));
   } SMARTLIST_FOREACH_END(diff);
@@ -840,6 +926,82 @@ consdiffmgr_rescan(void)
   }
 
   cdm_cache_dirty = 0;
+}
+
+/**
+ * Helper: compare two files by their from-valid-after and valid-after labels,
+ * trying to sort in ascending order by from-valid-after (when present) and
+ * valid-after (when not).  Place everything that has neither label first in
+ * the list.
+ */
+static int
+compare_by_staleness_(const void **a, const void **b)
+{
+  const consensus_cache_entry_t *e1 = *a;
+  const consensus_cache_entry_t *e2 = *b;
+  const char *va1, *fva1, *va2, *fva2;
+  va1 = consensus_cache_entry_get_value(e1, LABEL_VALID_AFTER);
+  va2 = consensus_cache_entry_get_value(e2, LABEL_VALID_AFTER);
+  fva1 = consensus_cache_entry_get_value(e1, LABEL_FROM_VALID_AFTER);
+  fva2 = consensus_cache_entry_get_value(e2, LABEL_FROM_VALID_AFTER);
+
+  if (fva1)
+    va1 = fva1;
+  if (fva2)
+    va2 = fva2;
+
+  /* See note about iso-encoded values in compare_by_valid_after_.  Also note
+   * that missing dates will get placed first. */
+  return strcmp_opt(va1, va2);
+}
+
+/** If there are not enough unused filenames to store <b>n</b> files, then
+ * delete old consensuses until there are.  (We have to keep track of the
+ * number of filenames because of the way that the seccomp2 cache works.)
+ *
+ * Return 0 on success, -1 on failure.
+ **/
+static int
+consdiffmgr_ensure_space_for_files(int n)
+{
+  consensus_cache_t *cache = cdm_cache_get();
+  if (consensus_cache_get_n_filenames_available(cache) >= n) {
+    // there are already enough unused filenames.
+    return 0;
+  }
+  // Try a cheap deletion of stuff that's waiting to get deleted.
+  consensus_cache_delete_pending(cache, 0);
+  if (consensus_cache_get_n_filenames_available(cache) >= n) {
+    // okay, _that_ made enough filenames available.
+    return 0;
+  }
+  // Let's get more assertive: clean out unused stuff, and force-remove
+  // the files.
+  consdiffmgr_cleanup();
+  consensus_cache_delete_pending(cache, 1);
+  const int n_to_remove = n - consensus_cache_get_n_filenames_available(cache);
+  if (n_to_remove <= 0) {
+    // okay, finally!
+    return 0;
+  }
+
+  // At this point, we're going to have to throw out objects that will be
+  // missed.  Too bad!
+  smartlist_t *objects = smartlist_new();
+  consensus_cache_find_all(objects, cache, NULL, NULL);
+  smartlist_sort(objects, compare_by_staleness_);
+  int n_marked = 0;
+  SMARTLIST_FOREACH_BEGIN(objects, consensus_cache_entry_t *, ent) {
+    consensus_cache_entry_mark_for_removal(ent);
+    if (++n_marked >= n_to_remove)
+      break;
+  } SMARTLIST_FOREACH_END(ent);
+
+  consensus_cache_delete_pending(cache, 1);
+  if (BUG(n_marked < n_to_remove))
+    return -1;
+  else
+    return 0;
 }
 
 /**
@@ -879,6 +1041,18 @@ consdiffmgr_free_all(void)
    Thread workers
    =====*/
 
+typedef struct compressed_result_t {
+  config_line_t *labels;
+  /**
+   * Output: Body of the diff, as compressed.
+   */
+  uint8_t *body;
+  /**
+   * Output: length of body_out
+   */
+  size_t bodylen;
+} compressed_result_t;
+
 /**
  * An object passed to a worker thread that will try to produce a consensus
  * diff.
@@ -897,19 +1071,43 @@ typedef struct consensus_diff_worker_job_t {
    */
   consensus_cache_entry_t *diff_to;
 
-  /**
-   * Output: Labels to store in the cache associated with this diff.
-   */
-  config_line_t *labels_out;
-  /**
-   * Output: Body of the diff
-   */
-  uint8_t *body_out;
-  /**
-   * Output: length of body_out
-   */
-  size_t bodylen_out;
+  /** Output: labels and bodies */
+  compressed_result_t out[ARRAY_LENGTH(compress_diffs_with)];
 } consensus_diff_worker_job_t;
+
+/** Given a consensus_cache_entry_t, check whether it has a label claiming
+ * that it was compressed.  If so, uncompress its contents into <b>out</b> and
+ * set <b>outlen</b> to hold their size.  If not, just copy the body into
+ * <b>out</b> and set <b>outlen</b> to its length.  Return 0 on success,
+ * -1 on failure.
+ *
+ * In all cases, the output is nul-terminated. */
+STATIC int
+uncompress_or_copy(char **out, size_t *outlen,
+                   consensus_cache_entry_t *ent)
+{
+  const uint8_t *body;
+  size_t bodylen;
+
+  if (consensus_cache_entry_get_body(ent, &body, &bodylen) < 0)
+    return -1;
+
+  const char *lv_compression =
+    consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
+  compress_method_t method = NO_METHOD;
+
+  if (lv_compression)
+    method = compression_method_get_by_name(lv_compression);
+
+  if (method == NO_METHOD) {
+    *out = tor_memdup_nulterm(body, bodylen);
+    *outlen = bodylen;
+    return 0;
+  } else {
+    return tor_uncompress(out, outlen, (const char *)body, bodylen,
+                          method, 1, LOG_WARN);
+  }
+}
 
 /**
  * Worker function. This function runs inside a worker thread and receives
@@ -937,13 +1135,15 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
   const char *lv_from_valid_after =
     consensus_cache_entry_get_value(job->diff_from, LABEL_VALID_AFTER);
   const char *lv_from_digest =
-    consensus_cache_entry_get_value(job->diff_from, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_from,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
   const char *lv_from_flavor =
     consensus_cache_entry_get_value(job->diff_from, LABEL_FLAVOR);
   const char *lv_to_flavor =
     consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
   const char *lv_to_digest =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_to,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
 
   /* All these values are mandatory on the input */
   if (BUG(!lv_to_valid_after) ||
@@ -960,11 +1160,20 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
 
   char *consensus_diff;
   {
-    // XXXX the input might not be nul-terminated. And also we wanted to
-    // XXXX support compression later I guess. So, we need to copy here.
-    char *diff_from_nt, *diff_to_nt;
-    diff_from_nt = tor_memdup_nulterm(diff_from, len_from);
-    diff_to_nt = tor_memdup_nulterm(diff_to, len_to);
+    char *diff_from_nt = NULL, *diff_to_nt = NULL;
+    size_t diff_from_nt_len, diff_to_nt_len;
+
+    if (uncompress_or_copy(&diff_from_nt, &diff_from_nt_len,
+                           job->diff_from) < 0) {
+      return WQ_RPL_REPLY;
+    }
+    if (uncompress_or_copy(&diff_to_nt, &diff_to_nt_len,
+                           job->diff_to) < 0) {
+      tor_free(diff_from_nt);
+      return WQ_RPL_REPLY;
+    }
+    tor_assert(diff_from_nt);
+    tor_assert(diff_to_nt);
 
     // XXXX ugh; this is going to calculate the SHA3 of both its
     // XXXX inputs again, even though we already have that. Maybe it's time
@@ -978,20 +1187,55 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     return WQ_RPL_REPLY;
   }
 
-  /* Send the reply */
-  job->body_out = (uint8_t *) consensus_diff;
-  job->bodylen_out = strlen(consensus_diff);
+  /* Compress the results and send the reply */
+  tor_assert(compress_diffs_with[0] == NO_METHOD);
+  size_t difflen = strlen(consensus_diff);
+  job->out[0].body = (uint8_t *) consensus_diff;
+  job->out[0].bodylen = difflen;
 
-  cdm_labels_prepend_sha3(&job->labels_out, job->body_out, job->bodylen_out);
-  config_line_prepend(&job->labels_out, LABEL_FROM_VALID_AFTER,
+  config_line_t *common_labels = NULL;
+  cdm_labels_prepend_sha3(&common_labels,
+                          LABEL_SHA3_DIGEST_UNCOMPRESSED,
+                          job->out[0].body,
+                          job->out[0].bodylen);
+  config_line_prepend(&common_labels, LABEL_FROM_VALID_AFTER,
                       lv_from_valid_after);
-  config_line_prepend(&job->labels_out, LABEL_VALID_AFTER, lv_to_valid_after);
-  config_line_prepend(&job->labels_out, LABEL_FLAVOR, lv_from_flavor);
-  config_line_prepend(&job->labels_out, LABEL_FROM_SHA3_DIGEST,
+  config_line_prepend(&common_labels, LABEL_VALID_AFTER,
+                      lv_to_valid_after);
+  config_line_prepend(&common_labels, LABEL_FLAVOR, lv_from_flavor);
+  config_line_prepend(&common_labels, LABEL_FROM_SHA3_DIGEST,
                       lv_from_digest);
-  config_line_prepend(&job->labels_out, LABEL_TARGET_SHA3_DIGEST,
+  config_line_prepend(&common_labels, LABEL_TARGET_SHA3_DIGEST,
                       lv_to_digest);
-  config_line_prepend(&job->labels_out, LABEL_DOCTYPE, DOCTYPE_CONSENSUS_DIFF);
+  config_line_prepend(&common_labels, LABEL_DOCTYPE,
+                      DOCTYPE_CONSENSUS_DIFF);
+
+  job->out[0].labels = config_lines_dup(common_labels);
+  cdm_labels_prepend_sha3(&job->out[0].labels,
+                          LABEL_SHA3_DIGEST,
+                          job->out[0].body,
+                          job->out[0].bodylen);
+
+  unsigned u;
+  for (u = 1; u < n_diff_compression_methods(); ++u) {
+    compress_method_t method = compress_diffs_with[u];
+    const char *methodname = compression_method_get_name(method);
+    char *result;
+    size_t sz;
+    if (0 == tor_compress(&result, &sz, consensus_diff, difflen, method)) {
+      job->out[u].body = (uint8_t*)result;
+      job->out[u].bodylen = sz;
+      job->out[u].labels = config_lines_dup(common_labels);
+      cdm_labels_prepend_sha3(&job->out[u].labels, LABEL_SHA3_DIGEST,
+                              job->out[u].body,
+                              job->out[u].bodylen);
+      config_line_prepend(&job->out[u].labels,
+                          LABEL_COMPRESSION_TYPE,
+                          methodname);
+    }
+  }
+
+  config_free_lines(common_labels);
   return WQ_RPL_REPLY;
 }
 
@@ -1003,8 +1247,11 @@ consensus_diff_worker_job_free(consensus_diff_worker_job_t *job)
 {
   if (!job)
     return;
-  tor_free(job->body_out);
-  config_free_lines(job->labels_out);
+  unsigned u;
+  for (u = 0; u < n_diff_compression_methods(); ++u) {
+    config_free_lines(job->out[u].labels);
+    tor_free(job->out[u].body);
+  }
   consensus_cache_entry_decref(job->diff_from);
   consensus_cache_entry_decref(job->diff_to);
   tor_free(job);
@@ -1024,9 +1271,11 @@ consensus_diff_worker_replyfn(void *work_)
   consensus_diff_worker_job_t *job = work_;
 
   const char *lv_from_digest =
-    consensus_cache_entry_get_value(job->diff_from, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_from,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
   const char *lv_to_digest =
-    consensus_cache_entry_get_value(job->diff_to, LABEL_SHA3_DIGEST);
+    consensus_cache_entry_get_value(job->diff_to,
+                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
   const char *lv_flavor =
     consensus_cache_entry_get_value(job->diff_to, LABEL_FLAVOR);
   if (BUG(lv_from_digest == NULL))
@@ -1039,10 +1288,10 @@ consensus_diff_worker_replyfn(void *work_)
   int flav = -1;
   int cache = 1;
   if (BUG(cdm_entry_get_sha3_value(from_sha3, job->diff_from,
-                                   LABEL_SHA3_DIGEST) < 0))
+                                   LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
     cache = 0;
   if (BUG(cdm_entry_get_sha3_value(to_sha3, job->diff_to,
-                                   LABEL_SHA3_DIGEST) < 0))
+                                   LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
     cache = 0;
   if (BUG(lv_flavor == NULL)) {
     cache = 0;
@@ -1050,20 +1299,37 @@ consensus_diff_worker_replyfn(void *work_)
     cache = 0;
   }
 
-  int status;
-  consensus_cache_entry_handle_t *handle = NULL;
-  if (job->body_out && job->bodylen_out && job->labels_out) {
-    /* Success! Store the results */
-    log_info(LD_DIRSERV, "Adding consensus diff from %s to %s",
-             lv_from_digest, lv_to_digest);
-    consensus_cache_entry_t *ent =
-      consensus_cache_add(cdm_cache_get(), job->labels_out,
-                          job->body_out,
-                          job->bodylen_out);
-    status = CDM_DIFF_PRESENT;
-    handle = consensus_cache_entry_handle_new(ent);
-    consensus_cache_entry_decref(ent);
-  } else {
+  int status = CDM_DIFF_ERROR;
+  consensus_cache_entry_handle_t *handles[ARRAY_LENGTH(compress_diffs_with)];
+  memset(handles, 0, sizeof(handles));
+
+  consdiffmgr_ensure_space_for_files(n_diff_compression_methods());
+
+  unsigned u;
+  for (u = 0; u < n_diff_compression_methods(); ++u) {
+    compress_method_t method = compress_diffs_with[u];
+    uint8_t *body_out = job->out[u].body;
+    size_t bodylen_out = job->out[u].bodylen;
+    config_line_t *labels = job->out[u].labels;
+    const char *methodname = compression_method_get_name(method);
+    if (body_out && bodylen_out && labels) {
+      /* Success! Store the results */
+      log_info(LD_DIRSERV, "Adding consensus diff from %s to %s, "
+               "compressed with %s",
+               lv_from_digest, lv_to_digest, methodname);
+
+      consensus_cache_entry_t *ent =
+        consensus_cache_add(cdm_cache_get(),
+                            labels,
+                            body_out,
+                            bodylen_out);
+
+      status = CDM_DIFF_PRESENT;
+      handles[u] = consensus_cache_entry_handle_new(ent);
+      consensus_cache_entry_decref(ent);
+    }
+  }
+  if (status != CDM_DIFF_PRESENT) {
     /* Failure! Nothing to do but complain */
     log_warn(LD_DIRSERV,
              "Worker was unable to compute consensus diff "
@@ -1072,10 +1338,15 @@ consensus_diff_worker_replyfn(void *work_)
     status = CDM_DIFF_ERROR;
   }
 
-  if (cache)
-    cdm_diff_ht_set_status(flav, from_sha3, to_sha3, status, handle);
-  else
-    consensus_cache_entry_handle_free(handle);
+  for (u = 0; u < ARRAY_LENGTH(handles); ++u) {
+    compress_method_t method = compress_diffs_with[u];
+    if (cache) {
+      cdm_diff_ht_set_status(flav, from_sha3, to_sha3, method, status,
+                             handles[u]);
+    } else {
+      consensus_cache_entry_handle_free(handles[u]);
+    }
+  }
 
   consensus_diff_worker_job_free(job);
 }
