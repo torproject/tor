@@ -3165,13 +3165,19 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
  * based on whether the response will be <b>compressed</b> or not. */
 static void
 write_http_response_header(dir_connection_t *conn, ssize_t length,
-                           int compressed, long cache_lifetime)
+                           compress_method_t method, long cache_lifetime)
 {
+  const char *methodname = compression_method_get_name(method);
+  const char *doctype;
+  if (method == NO_METHOD)
+    doctype = "text/plain";
+  else
+    doctype = "application/octet-stream";
   write_http_response_header_impl(conn, length,
-                          compressed?"application/octet-stream":"text/plain",
-                          compressed?"deflate":"identity",
-                             NULL,
-                             cache_lifetime);
+                                  doctype,
+                                  methodname,
+                                  NULL,
+                                  cache_lifetime);
 }
 
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
@@ -3599,7 +3605,8 @@ handle_get_current_consensus(dir_connection_t *conn,
   }
 
   clear_spool = 0;
-  write_http_response_header(conn, -1, compressed,
+  write_http_response_header(conn, -1,
+                             compressed ? ZLIB_METHOD : NO_METHOD,
                              smartlist_len(conn->spool) == 1 ? lifetime : 0);
   if (! compressed)
     conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
@@ -3695,7 +3702,8 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       write_http_status_line(conn, 503, "Directory busy, try again later");
       goto vote_done;
     }
-    write_http_response_header(conn, body_len ? body_len : -1, compressed,
+    write_http_response_header(conn, body_len ? body_len : -1,
+                 compressed ? ZLIB_METHOD : NO_METHOD,
                  lifetime);
 
     if (smartlist_len(items)) {
@@ -3756,7 +3764,9 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
     }
 
     clear_spool = 0;
-    write_http_response_header(conn, -1, compressed, MICRODESC_CACHE_LIFETIME);
+    write_http_response_header(conn, -1,
+                               compressed ? ZLIB_METHOD : NO_METHOD,
+                               MICRODESC_CACHE_LIFETIME);
 
     if (compressed)
       conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
@@ -3850,7 +3860,9 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
         dir_conn_clear_spool(conn);
         goto done;
       }
-      write_http_response_header(conn, -1, compressed, cache_lifetime);
+      write_http_response_header(conn, -1,
+                                 compressed ? ZLIB_METHOD : NO_METHOD,
+                                 cache_lifetime);
       if (compressed)
         conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                                         choose_compression_level(size_guess));
@@ -3941,7 +3953,9 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
       goto keys_done;
     }
 
-    write_http_response_header(conn, compressed?-1:len, compressed, 60*60);
+    write_http_response_header(conn, compressed?-1:len,
+                               compressed ? ZLIB_METHOD : NO_METHOD,
+                               60*60);
     if (compressed) {
       conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                                               choose_compression_level(len));
@@ -3981,7 +3995,7 @@ handle_get_hs_descriptor_v2(dir_connection_t *conn,
                safe_str(escaped(query)));
       switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
         case 1: /* valid */
-          write_http_response_header(conn, strlen(descp), 0, 0);
+          write_http_response_header(conn, strlen(descp), NO_METHOD, 0);
           connection_write_to_buf(descp, strlen(descp), TO_CONN(conn));
           break;
         case 0: /* well-formed but not present */
@@ -4033,7 +4047,7 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
   }
 
   /* Found requested descriptor! Pass it to this nice client. */
-  write_http_response_header(conn, strlen(desc_str), 0, 0);
+  write_http_response_header(conn, strlen(desc_str), NO_METHOD, 0);
   connection_write_to_buf(desc_str, strlen(desc_str), TO_CONN(conn));
 
  done:
@@ -4072,7 +4086,7 @@ handle_get_networkstatus_bridges(dir_connection_t *conn,
     /* all happy now. send an answer. */
     status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
     size_t dlen = strlen(status);
-    write_http_response_header(conn, dlen, 0, 0);
+    write_http_response_header(conn, dlen, NO_METHOD, 0);
     connection_write_to_buf(status, dlen, TO_CONN(conn));
     tor_free(status);
     goto done;
@@ -4089,7 +4103,7 @@ handle_get_robots(dir_connection_t *conn, const get_handler_args_t *args)
   {
     const char robots[] = "User-agent: *\r\nDisallow: /\r\n";
     size_t len = strlen(robots);
-    write_http_response_header(conn, len, 0, ROBOTS_CACHE_LIFETIME);
+    write_http_response_header(conn, len, NO_METHOD, ROBOTS_CACHE_LIFETIME);
     connection_write_to_buf(robots, len, TO_CONN(conn));
   }
   return 0;
