@@ -486,6 +486,7 @@ consdiffmgr_add_consensus(const char *consensus,
                                 labels,
                                 (const uint8_t *)body_compressed,
                                 size_compressed);
+    tor_free(body_compressed);
     config_free_lines(labels);
   }
 
