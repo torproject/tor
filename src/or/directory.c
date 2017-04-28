@@ -13,6 +13,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "consdiffmgr.h"
 #include "control.h"
 #include "compat.h"
 #define DIRECTORY_PRIVATE
@@ -3180,6 +3181,16 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
                                   cache_lifetime);
 }
 
+/** Array of compression methods to use (if supported) for serving
+ * precompressed data, ordered from best to worst. */
+static compress_method_t srv_meth_pref_precompressed[] = {
+  LZMA_METHOD,
+  ZSTD_METHOD,
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
+
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
  * and convert them to a bitfield where compression method x is supported if
  * and only if 1 &lt;&lt; x is set in the bitfield. */
@@ -3483,6 +3494,69 @@ warn_consensus_is_too_old(networkstatus_t *v, const char *flavor, time_t now)
   }
 }
 
+/** If there is an X-Or-Diff-From-Consensus header included in <b>headers</b>,
+ * set <b>digest_out<b> to a new smartlist containing every 256-bit
+ * hex-encoded digest listed in that header and return 0.  Otherwise return
+ * -1.  */
+static int
+parse_or_diff_from_header(smartlist_t **digests_out, const char *headers)
+{
+  char *hdr = http_get_header(headers, "X-Or-Diff-From-Consensus");
+  if (hdr == NULL) {
+    return -1;
+  }
+  smartlist_t *hex_digests = smartlist_new();
+  *digests_out = smartlist_new();
+  smartlist_split_string(hex_digests, hdr, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+  SMARTLIST_FOREACH_BEGIN(hex_digests, const char *, hex) {
+    uint8_t digest[DIGEST256_LEN];
+    if (base16_decode((char*)digest, sizeof(digest), hex, strlen(hex)) ==
+        DIGEST256_LEN) {
+      smartlist_add(*digests_out, tor_memdup(digest, sizeof(digest)));
+    } else {
+      log_fn(LOG_PROTOCOL_WARN, LD_DIR,
+             "X-Or-Diff-From-Consensus header contained bogus digest %s; "
+             "ignoring.", escaped(hex));
+    }
+  } SMARTLIST_FOREACH_END(hex);
+  SMARTLIST_FOREACH(hex_digests, char *, cp, tor_free(cp));
+  smartlist_free(hex_digests);
+  return 0;
+}
+
+/**
+ * Try to find the best consensus diff possible in order to serve a client
+ * request for a diff from one of the consensuses in <b>digests</b> to the
+ * current consensus of flavor <b>flav</b>.  The client supports the
+ * compression methods listed in the <b>compression_methods</b> bitfield:
+ * place the method chosen (if any) into <b>compression_used_out</b>.
+ */
+static struct consensus_cache_entry_t *
+find_best_diff(const smartlist_t *digests, int flav,
+               unsigned compression_methods,
+               compress_method_t *compression_used_out)
+{
+  struct consensus_cache_entry_t *result = NULL;
+
+  SMARTLIST_FOREACH_BEGIN(digests, const uint8_t *, diff_from) {
+    unsigned u;
+    for (u = 0; u < ARRAY_LENGTH(srv_meth_pref_precompressed); ++u) {
+      compress_method_t method = srv_meth_pref_precompressed[u];
+      if (0 == (compression_methods & (1u<<method)))
+        continue; // client doesn't like this one, or we don't have it.
+      if (consdiffmgr_find_diff_from(&result, flav, DIGEST_SHA3_256,
+                                     diff_from, DIGEST256_LEN,
+                                     method) == CONSDIFF_AVAILABLE) {
+        tor_assert_nonfatal(result);
+        *compression_used_out = method;
+        return result;
+      }
+    }
+  } SMARTLIST_FOREACH_END(diff_from);
+  return NULL;
+}
+
 /** Helper function for GET /tor/status-vote/current/consensus
  */
 static int
@@ -3542,16 +3616,33 @@ handle_get_current_consensus(dir_connection_t *conn,
     goto done;
   }
 
+  struct consensus_cache_entry_t *cached_diff = NULL;
+  smartlist_t *diff_from_digests = NULL;
+  compress_method_t compression_used = NO_METHOD;
+  if (!parse_or_diff_from_header(&diff_from_digests, args->headers)) {
+    tor_assert(diff_from_digests);
+    cached_diff = find_best_diff(diff_from_digests, flav,
+                                 args->compression_supported,
+                                 &compression_used);
+    SMARTLIST_FOREACH(diff_from_digests, uint8_t *, d, tor_free(d));
+    smartlist_free(diff_from_digests);
+  }
+
   conn->spool = smartlist_new();
   clear_spool = 1;
   {
     spooled_resource_t *spooled;
-    if (flavor)
+    if (cached_diff) {
+      spooled = spooled_resource_new_from_cache_entry(cached_diff);
+    } else if (flavor) {
       spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
                                      (uint8_t*)flavor, strlen(flavor));
-    else
+      compression_used = compressed ? ZLIB_METHOD : NO_METHOD;
+    } else {
       spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
                                      NULL, 0);
+      compression_used = compressed ? ZLIB_METHOD : NO_METHOD;
+    }
     tor_free(flavor);
     smartlist_add(conn->spool, spooled);
   }
@@ -3606,7 +3697,7 @@ handle_get_current_consensus(dir_connection_t *conn,
 
   clear_spool = 0;
   write_http_response_header(conn, -1,
-                             compressed ? ZLIB_METHOD : NO_METHOD,
+                             compression_used,
                              smartlist_len(conn->spool) == 1 ? lifetime : 0);
   if (! compressed)
     conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
