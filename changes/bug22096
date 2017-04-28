@@ -1,0 +1,6 @@
+  o Minor features (linux seccomp2 sandbox):
+    - Increase the maximum allowed size passed to mprotect(PROT_WRITE)
+      from 1MB to 16MB. This was necessary with the glibc allocator in
+      order to allow worker threads to allocate more memory -- which in
+      turn is necessary because of our new use of worker threads for
+      compression. Closes ticket 22096.

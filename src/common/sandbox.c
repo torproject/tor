@@ -20,7 +20,7 @@
 #endif
 
 /** Malloc mprotect limit in bytes. */
-#define MALLOC_MP_LIM 1048576
+#define MALLOC_MP_LIM (16*1024*1024)
 
 #include <stdio.h>
 #include <string.h>
