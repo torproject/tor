@@ -14,6 +14,7 @@
 #include "log_test_helpers.h"
 
 #include "crypto_ed25519.h"
+#include "hs_cell.h"
 #include "hs_intropoint.h"
 #include "hs_service.h"
 
@@ -26,40 +27,44 @@ static void
 test_gen_establish_intro_cell(void *arg)
 {
   (void) arg;
-  ssize_t retval;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  ssize_t ret;
+  char circ_nonce[DIGEST_LEN] = {0};
   uint8_t buf[RELAY_PAYLOAD_SIZE];
   trn_cell_establish_intro_t *cell_out = NULL;
   trn_cell_establish_intro_t *cell_in = NULL;
 
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   {
-    cell_out = generate_establish_intro_cell(circuit_key_material,
-                                             sizeof(circuit_key_material));
-    tt_assert(cell_out);
+    cell_out = trn_cell_establish_intro_new();
+    /* We only need the auth key pair here. */
+    hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0);
+    /* Auth key pair is generated in the constructor so we are all set for
+     * using this IP object. */
+    ret = hs_cell_build_establish_intro(circ_nonce, ip, buf);
+    service_intro_point_free(ip);
+    tt_u64_op(ret, OP_GT, 0);
 
-    retval = get_establish_intro_payload(buf, sizeof(buf), cell_out);
-    tt_int_op(retval, >=, 0);
+    ret = trn_cell_establish_intro_encode(buf, sizeof(buf), cell_out);
+    tt_u64_op(ret, OP_GT, 0);
   }
 
   /* Parse it as the receiver */
   {
-    ssize_t parse_result = trn_cell_establish_intro_parse(&cell_in,
-                                                         buf, sizeof(buf));
-    tt_int_op(parse_result, >=, 0);
+    ret = trn_cell_establish_intro_parse(&cell_in, buf, sizeof(buf));
+    tt_u64_op(ret, OP_GT, 0);
 
-    retval = verify_establish_intro_cell(cell_in,
-                                         circuit_key_material,
-                                         sizeof(circuit_key_material));
-    tt_int_op(retval, >=, 0);
+    ret = verify_establish_intro_cell(cell_in,
+                                      (const uint8_t *) circ_nonce,
+                                      sizeof(circ_nonce));
+    tt_u64_op(ret, OP_EQ, 0);
   }
 
  done:
-  trn_cell_establish_intro_free(cell_out);
   trn_cell_establish_intro_free(cell_in);
+  trn_cell_establish_intro_free(cell_out);
 }
 
 /* Mocked ed25519_sign_prefixed() function that always fails :) */
@@ -81,22 +86,27 @@ static void
 test_gen_establish_intro_cell_bad(void *arg)
 {
   (void) arg;
+  ssize_t cell_len = 0;
   trn_cell_establish_intro_t *cell = NULL;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  char circ_nonce[DIGEST_LEN] = {0};
+  hs_service_intro_point_t *ip = NULL;
 
   MOCK(ed25519_sign_prefixed, mock_ed25519_sign_prefixed);
 
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
 
   setup_full_capture_of_logs(LOG_WARN);
   /* Easiest way to make that function fail is to mock the
      ed25519_sign_prefixed() function and make it fail. */
-  cell = generate_establish_intro_cell(circuit_key_material,
-                                       sizeof(circuit_key_material));
-  expect_log_msg_containing("Unable to gen signature for "
+  cell = trn_cell_establish_intro_new();
+  tt_assert(cell);
+  ip = service_intro_point_new(NULL, 0);
+  cell_len = hs_cell_build_establish_intro(circ_nonce, ip, NULL);
+  service_intro_point_free(ip);
+  expect_log_msg_containing("Unable to make signature for "
                             "ESTABLISH_INTRO cell.");
   teardown_capture_of_logs();
-  tt_assert(!cell);
+  tt_u64_op(cell_len, OP_EQ, -1);
 
  done:
   trn_cell_establish_intro_free(cell);

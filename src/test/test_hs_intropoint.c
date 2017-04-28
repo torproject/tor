@@ -17,21 +17,66 @@
 #include "log_test_helpers.h"
 
 #include "or.h"
+#include "circuitlist.h"
+#include "circuituse.h"
 #include "ht.h"
+#include "relay.h"
+#include "rendservice.h"
+
+#include "hs_cell.h"
+#include "hs_circuitmap.h"
+#include "hs_common.h"
+#include "hs_intropoint.h"
+#include "hs_service.h"
 
 /* Trunnel. */
 #include "hs/cell_establish_intro.h"
 #include "hs/cell_introduce1.h"
 #include "hs/cell_common.h"
-#include "hs_service.h"
-#include "hs_common.h"
-#include "hs_circuitmap.h"
-#include "hs_intropoint.h"
 
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "rendservice.h"
-#include "relay.h"
+static size_t
+new_establish_intro_cell(const char *circ_nonce,
+                         trn_cell_establish_intro_t **cell_out)
+{
+  ssize_t cell_len = 0;
+  uint8_t buf[RELAY_PAYLOAD_SIZE] = {0};
+  trn_cell_establish_intro_t *cell = NULL;
+  hs_service_intro_point_t *ip = NULL;
+
+  /* Auth key pair is generated in the constructor so we are all set for
+   * using this IP object. */
+  ip = service_intro_point_new(NULL, 0);
+  tt_assert(ip);
+  cell_len = hs_cell_build_establish_intro(circ_nonce, ip, buf);
+  tt_u64_op(cell_len, OP_GT, 0);
+
+  cell_len = trn_cell_establish_intro_parse(&cell, buf, sizeof(buf));
+  tt_int_op(cell_len, OP_GT, 0);
+  tt_assert(cell);
+  *cell_out = cell;
+
+ done:
+  service_intro_point_free(ip);
+  return cell_len;
+}
+
+static ssize_t
+new_establish_intro_encoded_cell(const char *circ_nonce, uint8_t *cell_out)
+{
+  ssize_t cell_len = 0;
+  hs_service_intro_point_t *ip = NULL;
+
+  /* Auth key pair is generated in the constructor so we are all set for
+   * using this IP object. */
+  ip = service_intro_point_new(NULL, 0);
+  tt_assert(ip);
+  cell_len = hs_cell_build_establish_intro(circ_nonce, ip, cell_out);
+  tt_u64_op(cell_len, OP_GT, 0);
+
+ done:
+  service_intro_point_free(ip);
+  return cell_len;
+}
 
 /* Mock function to avoid networking in unittests */
 static int
@@ -122,29 +167,24 @@ static void
 test_establish_intro_wrong_purpose(void *arg)
 {
   int retval;
-  trn_cell_establish_intro_t *establish_intro_cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
-  uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  char circ_nonce[DIGEST_LEN] = {0};
+  uint8_t cell_body[RELAY_PAYLOAD_SIZE];
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
 
   (void)arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  memcpy(intro_circ->rend_circ_nonce, circuit_key_material, DIGEST_LEN);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  memcpy(intro_circ->rend_circ_nonce, circ_nonce, DIGEST_LEN);
 
   /* Set a bad circuit purpose!! :) */
   circuit_change_purpose(TO_CIRCUIT(intro_circ), CIRCUIT_PURPOSE_INTRO_POINT);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
-  establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                           sizeof(circuit_key_material));
-  tt_assert(establish_intro_cell);
-  cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                         establish_intro_cell);
-  tt_int_op(cell_len, >, 0);
+  cell_len = new_establish_intro_encoded_cell(circ_nonce, cell_body);
+  tt_u64_op(cell_len, OP_GT, 0);
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
@@ -154,18 +194,16 @@ test_establish_intro_wrong_purpose(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
 /* Prepare a circuit for accepting an ESTABLISH_INTRO cell */
 static void
-helper_prepare_circ_for_intro(or_circuit_t *circ,
-                              uint8_t *circuit_key_material)
+helper_prepare_circ_for_intro(or_circuit_t *circ, const char *circ_nonce)
 {
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
-  memcpy(circ->rend_circ_nonce, circuit_key_material, DIGEST_LEN);
+  memcpy(circ->rend_circ_nonce, circ_nonce, DIGEST_LEN);
 }
 
 /* Send an empty ESTABLISH_INTRO cell. Should fail. */
@@ -174,17 +212,17 @@ test_establish_intro_wrong_keytype(void *arg)
 {
   int retval;
   or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  char circ_nonce[DIGEST_LEN] = {0};
 
-  (void)arg;
+  (void) arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
-  retval = hs_intro_received_establish_intro(intro_circ, (uint8_t*)"", 0);
+  retval = hs_intro_received_establish_intro(intro_circ, (uint8_t *) "", 0);
   expect_log_msg_containing("Empty ESTABLISH_INTRO cell.");
   teardown_capture_of_logs();
   tt_int_op(retval, ==, -1);
@@ -198,26 +236,21 @@ static void
 test_establish_intro_wrong_keytype2(void *arg)
 {
   int retval;
-  trn_cell_establish_intro_t *establish_intro_cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
 
-  (void)arg;
+  (void) arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
-     attempt to parse it. */
-  establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                           sizeof(circuit_key_material));
-  tt_assert(establish_intro_cell);
-  cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                         establish_intro_cell);
-  tt_int_op(cell_len, >, 0);
+   * attempt to parse it. */
+  cell_len = new_establish_intro_encoded_cell(circ_nonce, cell_body);
+  tt_u64_op(cell_len, OP_GT, 0);
 
   /* Mutate the auth key type! :) */
   cell_body[0] = 42;
@@ -230,7 +263,6 @@ test_establish_intro_wrong_keytype2(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -239,26 +271,27 @@ static void
 test_establish_intro_wrong_mac(void *arg)
 {
   int retval;
-  trn_cell_establish_intro_t *establish_intro_cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
-  uint8_t cell_body[RELAY_PAYLOAD_SIZE];
+  char circ_nonce[DIGEST_LEN] = {0};
   ssize_t cell_len = 0;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  uint8_t cell_body[RELAY_PAYLOAD_SIZE];
+  trn_cell_establish_intro_t *cell = NULL;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
 
-  (void)arg;
+  (void) arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
-     attempt to parse it. */
-  establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                                sizeof(circuit_key_material));
-  tt_assert(establish_intro_cell);
+   * attempt to parse it. */
+  cell_len = new_establish_intro_cell(circ_nonce, &cell);
+  tt_u64_op(cell_len, OP_GT, 0);
+  tt_assert(cell);
+
   /* Mangle one byte of the MAC. */
   uint8_t *handshake_ptr =
-    trn_cell_establish_intro_getarray_handshake_mac(establish_intro_cell);
+    trn_cell_establish_intro_getarray_handshake_mac(cell);
   handshake_ptr[TRUNNEL_SHA3_256_LEN - 1]++;
   /* We need to resign the payload with that change. */
   {
@@ -269,26 +302,26 @@ test_establish_intro_wrong_mac(void *arg)
     retval = ed25519_keypair_generate(&key_struct, 0);
     tt_int_op(retval, OP_EQ, 0);
     uint8_t *auth_key_ptr =
-      trn_cell_establish_intro_getarray_auth_key(establish_intro_cell);
+      trn_cell_establish_intro_getarray_auth_key(cell);
     memcpy(auth_key_ptr, key_struct.pubkey.pubkey, ED25519_PUBKEY_LEN);
     /* Encode payload so we can sign it. */
-    cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                           establish_intro_cell);
-    tt_int_op(cell_len, >, 0);
+    cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
+                                               cell);
+    tt_int_op(cell_len, OP_GT, 0);
 
     retval = ed25519_sign_prefixed(&sig, cell_body,
                                    cell_len -
-                                   (ED25519_SIG_LEN +
-                                    sizeof(establish_intro_cell->sig_len)),
+                                   (ED25519_SIG_LEN + sizeof(cell->sig_len)),
                                    ESTABLISH_INTRO_SIG_PREFIX, &key_struct);
     tt_int_op(retval, OP_EQ, 0);
     /* And write the signature to the cell */
     uint8_t *sig_ptr =
-      trn_cell_establish_intro_getarray_sig(establish_intro_cell);
-    memcpy(sig_ptr, sig.sig, establish_intro_cell->sig_len);
+      trn_cell_establish_intro_getarray_sig(cell);
+    memcpy(sig_ptr, sig.sig, cell->sig_len);
     /* Re-encode with the new signature. */
-    cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                           establish_intro_cell);
+    cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
+                                               cell);
+    tt_int_op(cell_len, OP_GT, 0);
   }
 
   /* Receive the cell. Should fail because our MAC is wrong. */
@@ -299,7 +332,7 @@ test_establish_intro_wrong_mac(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  trn_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -309,32 +342,32 @@ static void
 test_establish_intro_wrong_auth_key_len(void *arg)
 {
   int retval;
-  trn_cell_establish_intro_t *establish_intro_cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
   size_t bad_auth_key_len = ED25519_PUBKEY_LEN - 1;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  trn_cell_establish_intro_t *cell = NULL;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
 
-  (void)arg;
+  (void) arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
-     attempt to parse it. */
-  establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                               sizeof(circuit_key_material));
-  tt_assert(establish_intro_cell);
+   * attempt to parse it. */
+  cell_len = new_establish_intro_cell(circ_nonce, &cell);
+  tt_u64_op(cell_len, OP_GT, 0);
+  tt_assert(cell);
+
   /* Mangle the auth key length. */
-  trn_cell_establish_intro_set_auth_key_len(establish_intro_cell,
-                                           bad_auth_key_len);
-  trn_cell_establish_intro_setlen_auth_key(establish_intro_cell,
-                                          bad_auth_key_len);
-  cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                         establish_intro_cell);
-  tt_int_op(cell_len, >, 0);
+  trn_cell_establish_intro_set_auth_key_len(cell, bad_auth_key_len);
+  trn_cell_establish_intro_setlen_auth_key(cell, bad_auth_key_len);
+  /* Encode cell. */
+  cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
+                                             cell);
+  tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
@@ -344,7 +377,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  trn_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -354,30 +387,32 @@ static void
 test_establish_intro_wrong_sig_len(void *arg)
 {
   int retval;
-  trn_cell_establish_intro_t *establish_intro_cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
   size_t bad_sig_len = ED25519_SIG_LEN - 1;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  trn_cell_establish_intro_t *cell = NULL;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
 
-  (void)arg;
+  (void) arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
-     attempt to parse it. */
-  establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                               sizeof(circuit_key_material));
-  tt_assert(establish_intro_cell);
+   * attempt to parse it. */
+  cell_len = new_establish_intro_cell(circ_nonce, &cell);
+  tt_u64_op(cell_len, OP_GT, 0);
+  tt_assert(cell);
+
   /* Mangle the signature length. */
-  trn_cell_establish_intro_set_sig_len(establish_intro_cell, bad_sig_len);
-  trn_cell_establish_intro_setlen_sig(establish_intro_cell, bad_sig_len);
-  cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                         establish_intro_cell);
-  tt_int_op(cell_len, >, 0);
+  trn_cell_establish_intro_set_sig_len(cell, bad_sig_len);
+  trn_cell_establish_intro_setlen_sig(cell, bad_sig_len);
+  /* Encode cell. */
+  cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
+                                             cell);
+  tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
@@ -387,7 +422,7 @@ test_establish_intro_wrong_sig_len(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  trn_cell_establish_intro_free(establish_intro_cell);
+  trn_cell_establish_intro_free(cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -397,29 +432,24 @@ static void
 test_establish_intro_wrong_sig(void *arg)
 {
   int retval;
-  trn_cell_establish_intro_t *establish_intro_cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
 
-  (void)arg;
+  (void) arg;
 
   /* Get the auth key of the intro point */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
-  establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                           sizeof(circuit_key_material));
-  tt_assert(establish_intro_cell);
-  cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                         establish_intro_cell);
-  tt_int_op(cell_len, >, 0);
+  cell_len = new_establish_intro_encoded_cell(circ_nonce, cell_body);
+  tt_u64_op(cell_len, OP_GT, 0);
 
   /* Mutate the last byte (signature)! :) */
-  cell_body[cell_len-1]++;
+  cell_body[cell_len - 1]++;
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
@@ -429,7 +459,6 @@ test_establish_intro_wrong_sig(void *arg)
   tt_int_op(retval, ==, -1);
 
  done:
-  trn_cell_establish_intro_free(establish_intro_cell);
   circuit_free(TO_CIRCUIT(intro_circ));
 }
 
@@ -439,32 +468,32 @@ static trn_cell_establish_intro_t *
 helper_establish_intro_v3(or_circuit_t *intro_circ)
 {
   int retval;
-  trn_cell_establish_intro_t *establish_intro_cell = NULL;
+  char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  trn_cell_establish_intro_t *cell = NULL;
 
   tt_assert(intro_circ);
 
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
-     attempt to parse it. */
-  establish_intro_cell = generate_establish_intro_cell(circuit_key_material,
-                                           sizeof(circuit_key_material));
-  tt_assert(establish_intro_cell);
-  cell_len = get_establish_intro_payload(cell_body, sizeof(cell_body),
-                                         establish_intro_cell);
-  tt_int_op(cell_len, >, 0);
+   * attempt to parse it. */
+  cell_len = new_establish_intro_cell(circ_nonce, &cell);
+  tt_u64_op(cell_len, OP_GT, 0);
+  tt_assert(cell);
+  cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
+                                             cell);
+  tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive the cell */
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
   tt_int_op(retval, ==, 0);
 
  done:
-  return establish_intro_cell;
+  return cell;
 }
 
 /* Helper function: Send a well-formed v2 ESTABLISH_INTRO cell to
@@ -476,22 +505,22 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   int retval;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  uint8_t circuit_key_material[DIGEST_LEN] = {0};
+  char circ_nonce[DIGEST_LEN] = {0};
 
   tt_assert(intro_circ);
 
   /* Prepare the circuit for the incoming ESTABLISH_INTRO */
-  crypto_rand((char *) circuit_key_material, sizeof(circuit_key_material));
-  helper_prepare_circ_for_intro(intro_circ, circuit_key_material);
+  crypto_rand(circ_nonce, sizeof(circ_nonce));
+  helper_prepare_circ_for_intro(intro_circ, circ_nonce);
 
   /* Send legacy establish_intro */
   key1 = pk_generate(0);
 
-  /* Use old circuit_key_material why not */
+  /* Use old circ_nonce why not */
   cell_len = rend_service_encode_establish_intro_cell(
                                            (char*)cell_body,
                                            sizeof(cell_body), key1,
-                                           (char *) circuit_key_material);
+                                           circ_nonce);
   tt_int_op(cell_len, >, 0);
 
   /* Receive legacy establish_intro */

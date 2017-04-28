@@ -269,17 +269,6 @@ int hs_service_receive_introduce2(origin_circuit_t *circ,
                                   const uint8_t *payload,
                                   size_t payload_len);
 
-/* These functions are only used by unit tests and we need to expose them else
- * hs_service.o ends up with no symbols in libor.a which makes clang throw a
- * warning at compile time. See #21825. */
-
-trn_cell_establish_intro_t *
-generate_establish_intro_cell(const uint8_t *circuit_key_material,
-                              size_t circuit_key_material_len);
-ssize_t
-get_establish_intro_payload(uint8_t *buf, size_t buf_len,
-                            const trn_cell_establish_intro_t *cell);
-
 #ifdef HS_SERVICE_PRIVATE
 
 #ifdef TOR_UNIT_TESTS
@@ -295,6 +284,10 @@ STATIC hs_service_t *find_service(hs_service_ht *map,
                                   const ed25519_public_key_t *pk);
 STATIC void remove_service(hs_service_ht *map, hs_service_t *service);
 STATIC int register_service(hs_service_ht *map, hs_service_t *service);
+STATIC hs_service_intro_point_t *service_intro_point_new(
+                                         const extend_info_t *ei,
+                                         unsigned int is_legacy);
+STATIC void service_intro_point_free(hs_service_intro_point_t *ip);
 
 #endif /* TOR_UNIT_TESTS */
 
