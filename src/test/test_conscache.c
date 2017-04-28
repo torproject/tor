@@ -203,7 +203,7 @@ test_conscache_cleanup(void *arg)
   tt_assert(e_tmp == NULL); // not found because pending deletion.
 
   /* Delete the pending-deletion items. */
-  consensus_cache_delete_pending(cache);
+  consensus_cache_delete_pending(cache, 0);
   {
     smartlist_t *entries = smartlist_new();
     consensus_cache_find_all(entries, cache, NULL, NULL);

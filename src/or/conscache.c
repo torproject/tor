@@ -78,13 +78,24 @@ consensus_cache_open(const char *subdir, int max_entries)
 }
 
 /**
+ * Tell the sandbox (if any) configured by <b>cfg</b> to allow the
+ * operations that <b>cache</b> will need.
+ */
+int
+consensus_cache_register_with_sandbox(consensus_cache_t *cache,
+                                      struct sandbox_cfg_elem **cfg)
+{
+  return storage_dir_register_with_sandbox(cache->dir, cfg);
+}
+
+/**
  * Helper: clear all entries from <b>cache</b> (but do not delete
  * any that aren't marked for removal
  */
 static void
 consensus_cache_clear(consensus_cache_t *cache)
 {
-  consensus_cache_delete_pending(cache);
+  consensus_cache_delete_pending(cache, 0);
 
   SMARTLIST_FOREACH_BEGIN(cache->entries, consensus_cache_entry_t *, ent) {
     ent->in_cache = NULL;
@@ -389,18 +400,33 @@ consensus_cache_unmap_lazy(consensus_cache_t *cache, time_t cutoff)
 }
 
 /**
+ * Return the number of currently unused filenames available in this cache.
+ */
+int
+consensus_cache_get_n_filenames_available(consensus_cache_t *cache)
+{
+  tor_assert(cache);
+  int max = storage_dir_get_max_files(cache->dir);
+  int used = smartlist_len(storage_dir_list(cache->dir));
+  tor_assert_nonfatal(max >= used);
+  return max - used;
+}
+
+/**
  * Delete every element of <b>cache</b> has been marked with
- * consensus_cache_entry_mark_for_removal, and which is not in use except by
- * the cache.
+ * consensus_cache_entry_mark_for_removal.  If <b>force</b> is false,
+ * retain those entries which are not in use except by the cache.
  */
 void
-consensus_cache_delete_pending(consensus_cache_t *cache)
+consensus_cache_delete_pending(consensus_cache_t *cache, int force)
 {
   SMARTLIST_FOREACH_BEGIN(cache->entries, consensus_cache_entry_t *, ent) {
     tor_assert_nonfatal(ent->in_cache == cache);
-    if (ent->refcnt > 1 || BUG(ent->in_cache == NULL)) {
-      /* Somebody is using this entry right now */
-      continue;
+    if (! force) {
+      if (ent->refcnt > 1 || BUG(ent->in_cache == NULL)) {
+        /* Somebody is using this entry right now */
+        continue;
+      }
     }
     if (ent->can_remove == 0) {
       /* Don't want to delete this. */

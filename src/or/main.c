@@ -64,6 +64,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "connection_or.h"
+#include "consdiffmgr.h"
 #include "control.h"
 #include "cpuworker.h"
 #include "crypto_s2k.h"
@@ -1185,6 +1186,7 @@ CALLBACK(check_dns_honesty);
 CALLBACK(write_bridge_ns);
 CALLBACK(check_fw_helper_app);
 CALLBACK(heartbeat);
+CALLBACK(clean_consdiffmgr);
 
 #undef CALLBACK
 
@@ -1217,6 +1219,7 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(write_bridge_ns),
   CALLBACK(check_fw_helper_app),
   CALLBACK(heartbeat),
+  CALLBACK(clean_consdiffmgr),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1472,6 +1475,12 @@ run_scheduled_events(time_t now)
   /* 11b. check pending unconfigured managed proxies */
   if (!net_is_disabled() && pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
+
+  /* 12. launch diff computations.  (This is free if there are none to
+   * launch.) */
+  if (server_mode(options)) {
+    consdiffmgr_rescan();
+  }
 }
 
 /* Periodic callback: rotate the onion keys after the period defined by the
@@ -2033,6 +2042,17 @@ heartbeat_callback(time_t now, const or_options_t *options)
   }
 
   return options->HeartbeatPeriod;
+}
+
+#define CDM_CLEAN_CALLBACK_INTERVAL 600
+static int
+clean_consdiffmgr_callback(time_t now, const or_options_t *options)
+{
+  (void)now;
+  if (server_mode(options)) {
+    consdiffmgr_cleanup();
+  }
+  return CDM_CLEAN_CALLBACK_INTERVAL;
 }
 
 /** Timer: used to invoke second_elapsed_callback() once per second. */
@@ -3162,6 +3182,7 @@ tor_free_all(int postfork)
   sandbox_free_getaddrinfo_cache();
   protover_free_all();
   bridges_free_all();
+  consdiffmgr_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();
@@ -3584,6 +3605,8 @@ sandbox_init_filter(void)
     OPEN_DATADIR("stats");
     STAT_DATADIR("stats");
     STAT_DATADIR2("stats", "dirreq-stats");
+
+    consdiffmgr_register_with_sandbox(&cfg);
   }
 
   init_addrinfo();

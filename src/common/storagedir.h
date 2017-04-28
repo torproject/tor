@@ -45,6 +45,7 @@ int storage_dir_shrink(storage_dir_t *d,
                        uint64_t target_size,
                        int min_to_remove);
 int storage_dir_remove_all(storage_dir_t *d);
+int storage_dir_get_max_files(storage_dir_t *d);
 
 #endif
 
