@@ -3488,129 +3488,127 @@ handle_get_current_consensus(dir_connection_t *conn,
   const time_t if_modified_since = args->if_modified_since;
   int clear_spool = 0;
 
-  {
-    /* v3 network status fetch. */
-    long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
+  /* v3 network status fetch. */
+  long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
-    networkstatus_t *v;
-    time_t now = time(NULL);
-    const char *want_fps = NULL;
-    char *flavor = NULL;
-    int flav = FLAV_NS;
+  networkstatus_t *v;
+  time_t now = time(NULL);
+  const char *want_fps = NULL;
+  char *flavor = NULL;
+  int flav = FLAV_NS;
 #define CONSENSUS_URL_PREFIX "/tor/status-vote/current/consensus/"
 #define CONSENSUS_FLAVORED_PREFIX "/tor/status-vote/current/consensus-"
-    /* figure out the flavor if any, and who we wanted to sign the thing */
-    if (!strcmpstart(url, CONSENSUS_FLAVORED_PREFIX)) {
-      const char *f, *cp;
-      f = url + strlen(CONSENSUS_FLAVORED_PREFIX);
-      cp = strchr(f, '/');
-      if (cp) {
-        want_fps = cp+1;
-        flavor = tor_strndup(f, cp-f);
-      } else {
-        flavor = tor_strdup(f);
-      }
-      flav = networkstatus_parse_flavor_name(flavor);
-      if (flav < 0)
-        flav = FLAV_NS;
+  /* figure out the flavor if any, and who we wanted to sign the thing */
+  if (!strcmpstart(url, CONSENSUS_FLAVORED_PREFIX)) {
+    const char *f, *cp;
+    f = url + strlen(CONSENSUS_FLAVORED_PREFIX);
+    cp = strchr(f, '/');
+    if (cp) {
+      want_fps = cp+1;
+      flavor = tor_strndup(f, cp-f);
     } else {
-      if (!strcmpstart(url, CONSENSUS_URL_PREFIX))
-        want_fps = url+strlen(CONSENSUS_URL_PREFIX);
+      flavor = tor_strdup(f);
     }
+    flav = networkstatus_parse_flavor_name(flavor);
+    if (flav < 0)
+      flav = FLAV_NS;
+  } else {
+    if (!strcmpstart(url, CONSENSUS_URL_PREFIX))
+      want_fps = url+strlen(CONSENSUS_URL_PREFIX);
+  }
 
-    v = networkstatus_get_latest_consensus_by_flavor(flav);
+  v = networkstatus_get_latest_consensus_by_flavor(flav);
 
-    if (v && !networkstatus_consensus_reasonably_live(v, now)) {
-      write_http_status_line(conn, 404, "Consensus is too old");
-      warn_consensus_is_too_old(v, flavor, now);
-      geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
-      tor_free(flavor);
-      goto done;
-    }
-
-    if (v && want_fps &&
-        !client_likes_consensus(v, want_fps)) {
-      write_http_status_line(conn, 404, "Consensus not signed by sufficient "
-                             "number of requested authorities");
-      geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
-      tor_free(flavor);
-      goto done;
-    }
-
-    conn->spool = smartlist_new();
-    clear_spool = 1;
-    {
-      spooled_resource_t *spooled;
-      if (flavor)
-        spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                       (uint8_t*)flavor, strlen(flavor));
-      else
-        spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                       NULL, 0);
-      tor_free(flavor);
-      smartlist_add(conn->spool, spooled);
-    }
-    lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
-
-    if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
-      write_http_status_line(conn, 503, "Network status object unavailable");
-      geoip_note_ns_response(GEOIP_REJECT_UNAVAILABLE);
-      goto done;
-    }
-
-    size_t size_guess = 0;
-    int n_expired = 0;
-    dirserv_spool_remove_missing_and_guess_size(conn, if_modified_since,
-                                                compressed,
-                                                &size_guess,
-                                                &n_expired);
-
-    if (!smartlist_len(conn->spool) && !n_expired) {
-      write_http_status_line(conn, 404, "Not found");
-      geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
-      goto done;
-    } else if (!smartlist_len(conn->spool)) {
-      write_http_status_line(conn, 304, "Not modified");
-      geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
-      goto done;
-    }
-
-    if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
-      log_debug(LD_DIRSERV,
-               "Client asked for network status lists, but we've been "
-               "writing too many bytes lately. Sending 503 Dir busy.");
-      write_http_status_line(conn, 503, "Directory busy, try again later");
-      geoip_note_ns_response(GEOIP_REJECT_BUSY);
-      goto done;
-    }
-
-    tor_addr_t addr;
-    if (tor_addr_parse(&addr, (TO_CONN(conn))->address) >= 0) {
-      geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS,
-                             &addr, NULL,
-                             time(NULL));
-      geoip_note_ns_response(GEOIP_SUCCESS);
-      /* Note that a request for a network status has started, so that we
-       * can measure the download time later on. */
-      if (conn->dirreq_id)
-        geoip_start_dirreq(conn->dirreq_id, size_guess, DIRREQ_TUNNELED);
-      else
-        geoip_start_dirreq(TO_CONN(conn)->global_identifier, size_guess,
-                           DIRREQ_DIRECT);
-    }
-
-    clear_spool = 0;
-    write_http_response_header(conn, -1, compressed,
-                               smartlist_len(conn->spool) == 1 ? lifetime : 0);
-    if (! compressed)
-      conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
-                                              HIGH_COMPRESSION);
-
-    /* Prime the connection with some data. */
-    const int initial_flush_result = connection_dirserv_flushed_some(conn);
-    tor_assert_nonfatal(initial_flush_result == 0);
+  if (v && !networkstatus_consensus_reasonably_live(v, now)) {
+    write_http_status_line(conn, 404, "Consensus is too old");
+    warn_consensus_is_too_old(v, flavor, now);
+    geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
+    tor_free(flavor);
     goto done;
   }
+
+  if (v && want_fps &&
+      !client_likes_consensus(v, want_fps)) {
+    write_http_status_line(conn, 404, "Consensus not signed by sufficient "
+                           "number of requested authorities");
+    geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
+    tor_free(flavor);
+    goto done;
+  }
+
+  conn->spool = smartlist_new();
+  clear_spool = 1;
+  {
+    spooled_resource_t *spooled;
+    if (flavor)
+      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
+                                     (uint8_t*)flavor, strlen(flavor));
+    else
+      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
+                                     NULL, 0);
+    tor_free(flavor);
+    smartlist_add(conn->spool, spooled);
+  }
+  lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
+
+  if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
+    write_http_status_line(conn, 503, "Network status object unavailable");
+    geoip_note_ns_response(GEOIP_REJECT_UNAVAILABLE);
+    goto done;
+  }
+
+  size_t size_guess = 0;
+  int n_expired = 0;
+  dirserv_spool_remove_missing_and_guess_size(conn, if_modified_since,
+                                              compressed,
+                                              &size_guess,
+                                              &n_expired);
+
+  if (!smartlist_len(conn->spool) && !n_expired) {
+    write_http_status_line(conn, 404, "Not found");
+    geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
+    goto done;
+  } else if (!smartlist_len(conn->spool)) {
+    write_http_status_line(conn, 304, "Not modified");
+    geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
+    goto done;
+  }
+
+  if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
+    log_debug(LD_DIRSERV,
+              "Client asked for network status lists, but we've been "
+              "writing too many bytes lately. Sending 503 Dir busy.");
+    write_http_status_line(conn, 503, "Directory busy, try again later");
+    geoip_note_ns_response(GEOIP_REJECT_BUSY);
+    goto done;
+  }
+
+  tor_addr_t addr;
+  if (tor_addr_parse(&addr, (TO_CONN(conn))->address) >= 0) {
+    geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS,
+                           &addr, NULL,
+                           time(NULL));
+    geoip_note_ns_response(GEOIP_SUCCESS);
+    /* Note that a request for a network status has started, so that we
+     * can measure the download time later on. */
+    if (conn->dirreq_id)
+      geoip_start_dirreq(conn->dirreq_id, size_guess, DIRREQ_TUNNELED);
+    else
+      geoip_start_dirreq(TO_CONN(conn)->global_identifier, size_guess,
+                         DIRREQ_DIRECT);
+  }
+
+  clear_spool = 0;
+  write_http_response_header(conn, -1, compressed,
+                             smartlist_len(conn->spool) == 1 ? lifetime : 0);
+  if (! compressed)
+    conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
+                                            HIGH_COMPRESSION);
+
+  /* Prime the connection with some data. */
+  const int initial_flush_result = connection_dirserv_flushed_some(conn);
+  tor_assert_nonfatal(initial_flush_result == 0);
+  goto done;
 
  done:
   if (clear_spool) {
