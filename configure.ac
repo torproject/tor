@@ -55,6 +55,8 @@ AC_ARG_ENABLE(oss-fuzz,
    AS_HELP_STRING(--enable-oss-fuzz, [build extra fuzzers based on 'oss-fuzz' environment]))
 AC_ARG_ENABLE(memory-sentinels,
    AS_HELP_STRING(--disable-memory-sentinels, [disable code that tries to prevent some kinds of memory access bugs. For fuzzing only.]))
+AC_ARG_ENABLE(rust,
+   AS_HELP_STRING(--enable-rust, [enable rust integration]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -65,6 +67,7 @@ AM_CONDITIONAL(COVERAGE_ENABLED, test "x$enable_coverage" = "xyes")
 AM_CONDITIONAL(DISABLE_ASSERTS_IN_UNIT_TESTS, test "x$enable_asserts_in_tests" = "xno")
 AM_CONDITIONAL(LIBFUZZER_ENABLED, test "x$enable_libfuzzer" = "xyes")
 AM_CONDITIONAL(OSS_FUZZ_ENABLED, test "x$enable_oss_fuzz" = "xyes")
+AM_CONDITIONAL(USE_RUST, test "x$enable_rust" = "xyes")
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
@@ -248,6 +251,23 @@ if test "x$PYTHON" = "x"; then
   AC_MSG_WARN([Python unavailable; some tests will not be run.])
 fi
 AM_CONDITIONAL(USEPYTHON, [test "x$PYTHON" != "x"])
+
+
+if test "x$enable_rust" = "xyes"; then
+  AC_ARG_VAR([RUSTC], [path to the rustc binary])
+  AC_CHECK_PROG([RUSTC], [rustc], [rustc],[no])
+  if test "x$RUSTC" = "xno"; then
+    AC_MSG_ERROR([rustc unavailable but rust integration requested.])
+  fi
+
+  AC_ARG_VAR([CARGO], [path to the cargo binary])
+  AC_CHECK_PROG([CARGO], [cargo], [cargo],[no])
+  if test "x$CARGO" = "xno"; then
+    AC_MSG_ERROR([cargo unavailable but rust integration requested.])
+  fi
+
+  AC_DEFINE([HAVE_RUST], 1, [have Rust])
+fi
 
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
 AC_C_FLEXIBLE_ARRAY_MEMBER

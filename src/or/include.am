@@ -123,7 +123,8 @@ src_or_tor_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-ctime.a \
 	src/trace/libor-trace.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ @TOR_SYSTEMD_LIBS@ \
-	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
+	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@ \
+	$(rust_ldadd)
 
 if COVERAGE_ENABLED
 src_or_tor_cov_SOURCES = src/or/tor_main.c
