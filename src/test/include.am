@@ -6,7 +6,8 @@ TESTS_ENVIRONMENT = \
 	export SHELL="$(SHELL)"; \
 	export abs_top_srcdir="$(abs_top_srcdir)"; \
 	export builddir="$(builddir)"; \
-	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)";
+	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)"; \
+	export CARGO="$(CARGO)";
 
 TESTSCRIPTS = \
 	src/test/fuzz_static_testcases.sh \
@@ -18,6 +19,11 @@ TESTSCRIPTS = \
 	src/test/test_workqueue_pipe2.sh \
 	src/test/test_workqueue_socketpair.sh \
 	src/test/test_switch_id.sh
+
+if USE_RUST
+TESTSCRIPTS += \
+	src/test/test_rust.sh
+endif
 
 if USEPYTHON
 TESTSCRIPTS += src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh
@@ -314,6 +320,7 @@ EXTRA_DIST += \
 	src/test/test_zero_length_keys.sh \
 	src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh \
 	src/test/test-network.sh \
+	src/test/test_rust.sh \
 	src/test/test_switch_id.sh \
 	src/test/test_workqueue_cancel.sh \
 	src/test/test_workqueue_efd.sh \
