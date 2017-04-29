@@ -1,0 +1,14 @@
+[root]
+name = "tor_util"
+version = "0.0.1"
+dependencies = [
+ "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libc"
+version = "0.2.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)" = "babb8281da88cba992fa1f4ddec7d63ed96280a1a53ec9b919fd37b53d71e502"

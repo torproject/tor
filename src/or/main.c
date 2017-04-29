@@ -58,6 +58,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "command.h"
+#include "compat_rust.h"
 #include "compress.h"
 #include "config.h"
 #include "confparse.h"
@@ -3037,6 +3038,15 @@ tor_init(int argc, char *argv[])
     if (strstr(version, "alpha") || strstr(version, "beta"))
       log_notice(LD_GENERAL, "This version is not a stable Tor release. "
                  "Expect more bugs than usual.");
+  }
+
+  {
+    rust_str_t rust_str = rust_welcome_string();
+    const char *s = rust_str_get(rust_str);
+    if (strlen(s) > 0) {
+      log_notice(LD_GENERAL, "%s", s);
+    }
+    rust_str_free(rust_str);
   }
 
   if (network_init()<0) {

@@ -26,7 +26,7 @@ TESTING_TOR_BINARY=$(top_builddir)/src/or/tor$(EXEEXT)
 endif
 
 if USE_RUST
-rust_ldadd=
+rust_ldadd=$(top_builddir)/src/rust/target/release/libtor_util.a
 else
 rust_ldadd=
 endif
@@ -236,3 +236,6 @@ mostlyclean-local:
 	rm -rf $(HTML_COVER_DIR)
 	rm -rf $(top_builddir)/doc/doxygen
 	rm -rf $(TEST_NETWORK_ALL_LOG_DIR)
+
+clean-local:
+	rm -rf $(top_builddir)/src/rust/target
