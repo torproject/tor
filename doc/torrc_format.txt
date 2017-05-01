@@ -175,7 +175,7 @@ and\
 friends
 
 # Backslashes in the middle of a line are included as-is.  The key of
-# this one is "Too" and the value is "Many\\Backsl\ashes here" (with
+# this one is "Too" and the value is "Many\\Backsl\ashes \here" (with
 # backslashes in that last string as-is)
 Too \
 Many\\\
@@ -185,7 +185,7 @@ here
 # And here's the really yucky part. If a comment appears in a multi-line
 # entry, the entry is still able to continue on the next line, as in the
 # following, where the key is "This" and the value is
-# "entry   and some        are  silly"
+# "entry        and some        are  silly"
 This entry      \
  # has comments \
  and some       \
