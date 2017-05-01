@@ -1,0 +1,5 @@
+  o Minor bugfixes (control, hidden service client):
+    - Trigger HS descriptor events on the control port when the client is
+      unable to pick a suitable hidden service directory. This can happen if
+      they are all in the ExcludeNodes list or they all have been queried
+      inside the allowed 15 minutes. Fixes bug 22042.
