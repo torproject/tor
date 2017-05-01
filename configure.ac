@@ -746,7 +746,7 @@ dnl ------------------------------------------------------
 dnl Where we do we find lzma?
 
 AC_ARG_ENABLE(lzma,
-      AS_HELP_STRING(--enable-lzma, [enable support for the Zstandard compression scheme.]),
+      AS_HELP_STRING(--enable-lzma, [enable support for the LZMA compression scheme.]),
       [case "${enableval}" in
         "yes") lzma=true ;;
         "no")  lzma=false ;;
