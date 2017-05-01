@@ -854,7 +854,7 @@ struct testcase_t buffer_tests[] = {
   { "compress/zstd", test_buffers_compress, TT_FORK,
     &passthrough_setup, (char*)"x-zstd" },
   { "compress/lzma", test_buffers_compress, TT_FORK,
-    &passthrough_setup, (char*)"x-lzma" },
+    &passthrough_setup, (char*)"x-tor-lzma" },
 
   END_OF_TESTCASES
 };

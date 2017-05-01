@@ -2530,13 +2530,14 @@ test_dir_handle_get_parse_accept_encoding(void *arg)
   encodings = parse_accept_encoding_header("gzip");
   tt_uint_op(B_NONE|B_GZIP, OP_EQ, encodings);
 
-  encodings = parse_accept_encoding_header("x-zstd, deflate, x-lzma");
+  encodings = parse_accept_encoding_header("x-zstd, deflate, x-tor-lzma");
   tt_uint_op(B_NONE|B_ZLIB|B_ZSTD|B_LZMA, OP_EQ, encodings);
 
-  encodings = parse_accept_encoding_header("x-zstd, deflate, x-lzma, gzip");
+  encodings = parse_accept_encoding_header(
+                                        "x-zstd, deflate, x-tor-lzma, gzip");
   tt_uint_op(B_NONE|B_ZLIB|B_ZSTD|B_LZMA|B_GZIP, OP_EQ, encodings);
 
-  encodings = parse_accept_encoding_header("x-zstd,deflate,x-lzma,gzip");
+  encodings = parse_accept_encoding_header("x-zstd,deflate,x-tor-lzma,gzip");
   tt_uint_op(B_NONE|B_ZLIB|B_ZSTD|B_LZMA|B_GZIP, OP_EQ, encodings);
 
  done:

@@ -313,7 +313,9 @@ static const struct {
 } compression_method_names[] = {
   { "gzip", GZIP_METHOD },
   { "deflate", ZLIB_METHOD },
-  { "x-lzma", LZMA_METHOD },
+  // We call this "x-tor-lzma" rather than "x-lzma", because we impose a
+  // lower maximum memory usage on the decoding side.
+  { "x-tor-lzma", LZMA_METHOD },
   { "x-zstd" , ZSTD_METHOD },
   { "identity", NO_METHOD },
 

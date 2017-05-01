@@ -5753,7 +5753,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(pow2),
   COMPRESS(zlib, "deflate"),
   COMPRESS(gzip, "gzip"),
-  COMPRESS(lzma, "x-lzma"),
+  COMPRESS(lzma, "x-tor-lzma"),
   COMPRESS(zstd, "x-zstd"),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
