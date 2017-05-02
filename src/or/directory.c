@@ -2073,6 +2073,39 @@ load_downloaded_routers(const char *body, smartlist_t *which,
   return added;
 }
 
+/** A structure to hold arguments passed into each directory response
+ * handler */
+typedef struct response_handler_args_t {
+  int status_code;
+  const char *reason;
+  const char *body;
+  size_t body_len;
+  const char *headers;
+} response_handler_args_t;
+
+static int handle_response_fetch_consensus(dir_connection_t *,
+                                           const response_handler_args_t *);
+static int handle_response_fetch_certificate(dir_connection_t *,
+                                             const response_handler_args_t *);
+static int handle_response_fetch_status_vote(dir_connection_t *,
+                                             const response_handler_args_t *);
+static int handle_response_fetch_detached_signatures(dir_connection_t *,
+                                             const response_handler_args_t *);
+static int handle_response_fetch_desc(dir_connection_t *,
+                                             const response_handler_args_t *);
+static int handle_response_fetch_microdesc(dir_connection_t *,
+                                           const response_handler_args_t *);
+static int handle_response_upload_dir(dir_connection_t *,
+                                      const response_handler_args_t *);
+static int handle_response_upload_vote(dir_connection_t *,
+                                       const response_handler_args_t *);
+static int handle_response_upload_signatures(dir_connection_t *,
+                                             const response_handler_args_t *);
+static int handle_response_fetch_renddesc_v2(dir_connection_t *,
+                                             const response_handler_args_t *);
+static int handle_response_upload_renddesc_v2(dir_connection_t *,
+                                              const response_handler_args_t *);
+
 /** We are a client, and we've finished reading the server's
  * response. Parse it and act appropriately.
  *
@@ -2098,8 +2131,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
-  time_t now = time(NULL);
-  int src_code;
   size_t received_bytes;
 
   received_bytes = connection_get_inbuf_len(TO_CONN(conn));
@@ -2193,6 +2224,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              "'%s:%d'. I'll try again soon.",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port);
+    time_t now = approx_time();
     if ((rs = router_get_mutable_consensus_status_by_id(id_digest)))
       rs->last_dir_503_at = now;
     if ((ds = router_get_fallback_dirserver_by_digest(id_digest)))
@@ -2260,7 +2292,77 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
   }
 
-  if (conn->base_.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
+  int rv;
+  response_handler_args_t args;
+  memset(&args, 0, sizeof(args));
+  args.status_code = status_code;
+  args.reason = reason;
+  args.body = body;
+  args.body_len = body_len;
+  args.headers = headers;
+
+  switch (conn->base_.purpose) {
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+      rv = handle_response_fetch_consensus(conn, &args);
+      break;
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+      rv = handle_response_fetch_certificate(conn, &args);
+      break;
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+      rv = handle_response_fetch_status_vote(conn, &args);
+      break;
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+      rv = handle_response_fetch_detached_signatures(conn, &args);
+      break;
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+      rv = handle_response_fetch_desc(conn, &args);
+      break;
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      rv = handle_response_fetch_microdesc(conn, &args);
+      break;
+    case DIR_PURPOSE_FETCH_RENDDESC_V2:
+      rv = handle_response_fetch_renddesc_v2(conn, &args);
+      break;
+    case DIR_PURPOSE_UPLOAD_DIR:
+      rv = handle_response_upload_dir(conn, &args);
+      break;
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:
+      rv = handle_response_upload_signatures(conn, &args);
+      break;
+    case DIR_PURPOSE_UPLOAD_VOTE:
+      rv = handle_response_upload_vote(conn, &args);
+      break;
+    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
+      rv = handle_response_upload_renddesc_v2(conn, &args);
+      break;
+    default:
+      tor_assert_nonfatal_unreached();
+      rv = -1;
+      break;
+  }
+  tor_free(body);
+  tor_free(headers);
+  tor_free(reason);
+  return rv;
+}
+
+/**
+ * Handler function: processes a response to a request for a networkstatus
+ * consensus document by checking the consensus, storing it, and marking
+ * router requests as reachable.
+ **/
+static int
+handle_response_fetch_consensus(dir_connection_t *conn,
+                                const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_CONSENSUS);
+  const int status_code = args->status_code;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+  const char *reason = args->reason;
+  const time_t now = approx_time();
+
     int r;
     const char *flavname = conn->requested_resource;
     if (status_code != 200) {
@@ -2270,7 +2372,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           "'%s:%d' while fetching consensus directory.",
            status_code, escaped(reason), conn->base_.address,
            conn->base_.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
       networkstatus_consensus_download_failed(status_code, flavname);
       return -1;
     }
@@ -2282,7 +2383,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              "Unable to load %s consensus directory downloaded from "
              "server '%s:%d'. I'll try again soon.",
              flavname, conn->base_.address, conn->base_.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
       networkstatus_consensus_download_failed(0, flavname);
       return -1;
     }
@@ -2300,17 +2400,31 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                    networkstatus_get_latest_consensus_by_flavor(FLAV_NS));
     }
     log_info(LD_DIR, "Successfully loaded consensus.");
-  }
 
-  if (conn->base_.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
-    if (status_code != 200) {
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to a request for one or more
+ * authority certificates
+ **/
+static int
+handle_response_fetch_certificate(dir_connection_t *conn,
+                                  const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_CERTIFICATE);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+
+  if (status_code != 200) {
       log_warn(LD_DIR,
           "Received http status code %d (%s) from server "
           "'%s:%d' while fetching \"/tor/keys/%s\".",
            status_code, escaped(reason), conn->base_.address,
            conn->base_.port, conn->requested_resource);
       connection_dir_download_cert_failed(conn, status_code);
-      tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     log_info(LD_DIR,"Received authority certificates (body size %d) from "
@@ -2321,7 +2435,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      * Tell trusted_dirs_load_certs_from_string() whether it was by fp
      * or fp-sk pair.
      */
-    src_code = -1;
+    int src_code = -1;
     if (!strcmpstart(conn->requested_resource, "fp/")) {
       src_code = TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST;
     } else if (!strcmpstart(conn->requested_resource, "fp-sk/")) {
@@ -2336,6 +2450,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
          * ones got flushed to disk so it's safe to call this on them */
         connection_dir_download_cert_failed(conn, status_code);
       } else {
+        time_t now = approx_time();
         directory_info_has_arrived(now, 0, 0);
         log_info(LD_DIR, "Successfully loaded certificates from fetch.");
       }
@@ -2346,8 +2461,24 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                conn->requested_resource);
       connection_dir_download_cert_failed(conn, status_code);
     }
-  }
-  if (conn->base_.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
+  return 0;
+}
+
+
+/**
+ * Handler function: processes a response to a request for an authority's
+ * current networkstatus vote.
+ **/
+static int
+handle_response_fetch_status_vote(dir_connection_t *conn,
+                                const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+
     const char *msg;
     int st;
     log_info(LD_DIR,"Got votes (body size %d) from server %s:%d",
@@ -2358,7 +2489,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              "'%s:%d' while fetching \"/tor/status-vote/next/%s.z\".",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port, conn->requested_resource);
-      tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     dirvote_add_vote(body, &msg, &st);
@@ -2367,8 +2497,24 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     } else {
       log_info(LD_DIR, "Added vote(s) successfully [msg: %s]", msg);
     }
-  }
-  if (conn->base_.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
+
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to a request for the signatures
+ * that an authority knows about on a given consensus.
+ **/
+static int
+handle_response_fetch_detached_signatures(dir_connection_t *conn,
+                                const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+
     const char *msg = NULL;
     log_info(LD_DIR,"Got detached signatures (body size %d) from server %s:%d",
              (int)body_len, conn->base_.address, conn->base_.port);
@@ -2378,17 +2524,31 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         "\"/tor/status-vote/next/consensus-signatures.z\".",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (dirvote_add_signatures(body, conn->base_.address, &msg)<0) {
       log_warn(LD_DIR, "Problem adding detached signatures from %s:%d: %s",
                conn->base_.address, conn->base_.port, msg?msg:"???");
     }
-  }
 
-  if (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-      conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to a request for a group of server
+ * descriptors or an extrainfo documents.
+ **/
+static int
+handle_response_fetch_desc(dir_connection_t *conn,
+                           const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+             conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+
     int was_ei = conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO;
     smartlist_t *which = NULL;
     int n_asked_for = 0;
@@ -2425,7 +2585,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
         smartlist_free(which);
       }
-      tor_free(body); tor_free(headers); tor_free(reason);
       return dir_okay ? 0 : -1;
     }
     /* Learn the routers, assuming we requested by fingerprint or "all"
@@ -2449,8 +2608,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         //                       descriptor_digests, conn->router_purpose);
         if (load_downloaded_routers(body, which, descriptor_digests,
                                 conn->router_purpose,
-                                conn->base_.address))
+                                conn->base_.address)) {
+          time_t now = approx_time();
           directory_info_has_arrived(now, 0, 0);
+        }
       }
     }
     if (which) { /* mark remaining ones as failed */
@@ -2468,8 +2629,24 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     if (directory_conn_is_self_reachability_test(conn))
       router_dirport_found_reachable();
-  }
-  if (conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to a request for a group of
+ * microdescriptors
+ **/
+static int
+handle_response_fetch_microdesc(dir_connection_t *conn,
+                                const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+
     smartlist_t *which = NULL;
     log_info(LD_DIR,"Received answer to microdescriptor request (status %d, "
              "body size %d) from server '%s:%d'",
@@ -2490,10 +2667,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       dir_microdesc_download_failed(which, status_code);
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
-      tor_free(body); tor_free(headers); tor_free(reason);
       return 0;
     } else {
       smartlist_t *mds;
+      time_t now = approx_time();
       mds = microdescs_add_to_cache(get_microdesc_cache(),
                                     body, body+body_len, SAVED_NOWHERE, 0,
                                     now, which);
@@ -2510,9 +2687,23 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       smartlist_free(which);
       smartlist_free(mds);
     }
-  }
 
-  if (conn->base_.purpose == DIR_PURPOSE_UPLOAD_DIR) {
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to a POST request to upload our
+ * router descriptor.
+ **/
+static int
+handle_response_upload_dir(dir_connection_t *conn,
+                           const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_UPLOAD_DIR);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *headers = args->headers;
+
     switch (status_code) {
       case 200: {
           dir_server_t *ds =
@@ -2563,9 +2754,22 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     /* return 0 in all cases, since we don't want to mark any
      * dirservers down just because they don't like us. */
-  }
 
-  if (conn->base_.purpose == DIR_PURPOSE_UPLOAD_VOTE) {
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to POST request to upload our
+ * own networkstatus vote.
+ **/
+static int
+handle_response_upload_vote(dir_connection_t *conn,
+                            const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_UPLOAD_VOTE);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+
     switch (status_code) {
       case 200: {
         log_notice(LD_DIR,"Uploaded a vote to dirserver %s:%d",
@@ -2587,9 +2791,21 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     /* return 0 in all cases, since we don't want to mark any
      * dirservers down just because they don't like us. */
-  }
+  return 0;
+}
 
-  if (conn->base_.purpose == DIR_PURPOSE_UPLOAD_SIGNATURES) {
+/**
+ * Handler function: processes a response to POST request to upload our
+ * view of the signatures on the current consensus.
+ **/
+static int
+handle_response_upload_signatures(dir_connection_t *conn,
+                                  const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_UPLOAD_SIGNATURES);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+
     switch (status_code) {
       case 200: {
         log_notice(LD_DIR,"Uploaded signature(s) to dirserver %s:%d",
@@ -2611,10 +2827,25 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     /* return 0 in all cases, since we don't want to mark any
      * dirservers down just because they don't like us. */
-  }
 
-  if (conn->base_.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2) {
-    #define SEND_HS_DESC_FAILED_EVENT(reason) ( \
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to a request for a v2 hidden service
+ * descriptor.
+ **/
+static int
+handle_response_fetch_renddesc_v2(dir_connection_t *conn,
+                                const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+
+    #define SEND_HS_DESC_FAILED_EVENT(reason) (               \
       control_event_hs_descriptor_failed(conn->rend_data, \
                                          conn->identity_digest, \
                                          reason) )
@@ -2689,10 +2920,23 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         SEND_HS_DESC_FAILED_CONTENT();
         break;
     }
-  }
 
-  if (conn->base_.purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2) {
-    #define SEND_HS_DESC_UPLOAD_FAILED_EVENT(reason) ( \
+  return 0;
+}
+
+/**
+ * Handler function: processes a response to a POST request to upload a v2
+ * hidden service descriptor.
+ **/
+static int
+handle_response_upload_renddesc_v2(dir_connection_t *conn,
+                                   const response_handler_args_t *args)
+{
+  tor_assert(conn->base_.purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2);
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+
+  #define SEND_HS_DESC_UPLOAD_FAILED_EVENT(reason) (      \
       control_event_hs_descriptor_upload_failed( \
         conn->identity_digest, \
         rend_data_get_address(conn->rend_data), \
@@ -2726,8 +2970,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         SEND_HS_DESC_UPLOAD_FAILED_EVENT("UNEXPECTED");
         break;
     }
-  }
-  tor_free(body); tor_free(headers); tor_free(reason);
+
   return 0;
 }
 
