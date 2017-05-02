@@ -105,27 +105,13 @@ clear_log_messages(void)
   "EDE6D711294FADF8E7951F4DE6CA56B58 194.109.206.212:80 7EA6 EAD6 FD83" \
   " 083C 538F 4403 8BBF A077 587D D755\n"
 
-static void
-test_options_validate_impl(const char *configuration,
-                           const char *expect_errmsg,
-                           int expect_log_severity,
-                           const char *expect_log)
+static int
+test_options_checkmsgs(const char *configuration,
+                       const char *expect_errmsg,
+                       int expect_log_severity,
+                       const char *expect_log,
+                       char *msg)
 {
-  or_options_t *opt=NULL;
-  or_options_t *dflt;
-  config_line_t *cl=NULL;
-  char *msg=NULL;
-  int r;
-
-  setup_options(opt, dflt);
-
-  r = config_get_lines(configuration, &cl, 1);
-  tt_int_op(r, OP_EQ, 0);
-
-  r = config_assign(&options_format, opt, cl, 0, &msg);
-  tt_int_op(r, OP_EQ, 0);
-
-  r = options_validate(NULL, opt, dflt, 0, &msg);
   if (expect_errmsg && !msg) {
     TT_DIE(("Expected error message <%s> from <%s>, but got none.",
             expect_errmsg, configuration));
@@ -136,8 +122,6 @@ test_options_validate_impl(const char *configuration,
     TT_DIE(("Expected no error message from <%s> but got <%s>.",
             configuration, msg));
   }
-  tt_int_op((r == 0), OP_EQ, (msg == NULL));
-
   if (expect_log) {
     int found = 0;
     if (messages) {
@@ -157,6 +141,56 @@ test_options_validate_impl(const char *configuration,
               configuration, msg));
     }
   }
+  return 0;
+
+ done:
+  return -1;
+}
+
+/* Which phases of config parsing/validation to check for messages/logs */
+enum { PH_GETLINES, PH_ASSIGN, PH_VALIDATE };
+
+static void
+test_options_validate_impl(const char *configuration,
+                           const char *expect_errmsg,
+                           int expect_log_severity,
+                           const char *expect_log,
+                           int phase)
+{
+  or_options_t *opt=NULL;
+  or_options_t *dflt;
+  config_line_t *cl=NULL;
+  char *msg=NULL;
+  int r;
+
+  setup_options(opt, dflt);
+
+  r = config_get_lines(configuration, &cl, 1);
+  if (phase == PH_GETLINES) {
+    if (test_options_checkmsgs(configuration, expect_errmsg,
+                               expect_log_severity,
+                               expect_log, msg))
+      goto done;
+  }
+  tt_int_op((r == 0), OP_EQ, (msg == NULL));
+
+  r = config_assign(&options_format, opt, cl, 0, &msg);
+  if (phase == PH_ASSIGN) {
+    if (test_options_checkmsgs(configuration, expect_errmsg,
+                               expect_log_severity,
+                               expect_log, msg))
+      goto done;
+  }
+  tt_int_op((r == 0), OP_EQ, (msg == NULL));
+
+  r = options_validate(NULL, opt, dflt, 0, &msg);
+  if (phase == PH_VALIDATE) {
+    if (test_options_checkmsgs(configuration, expect_errmsg,
+                               expect_log_severity,
+                               expect_log, msg))
+      goto done;
+  }
+  tt_int_op((r == 0), OP_EQ, (msg == NULL));
 
  done:
   escaped(NULL);
@@ -168,14 +202,14 @@ test_options_validate_impl(const char *configuration,
   clear_log_messages();
 }
 
-#define WANT_ERR(config, msg)                           \
-  test_options_validate_impl((config), (msg), 0, NULL)
-#define WANT_LOG(config, severity, msg)                         \
-  test_options_validate_impl((config), NULL, (severity), (msg))
-#define WANT_ERR_LOG(config, msg, severity, logmsg)                     \
-  test_options_validate_impl((config), (msg), (severity), (logmsg))
-#define OK(config)                                      \
-  test_options_validate_impl((config), NULL, 0, NULL)
+#define WANT_ERR(config, msg, ph)                               \
+  test_options_validate_impl((config), (msg), 0, NULL, (ph))
+#define WANT_LOG(config, severity, msg, ph)                             \
+  test_options_validate_impl((config), NULL, (severity), (msg), (ph))
+#define WANT_ERR_LOG(config, msg, severity, logmsg, ph)                 \
+  test_options_validate_impl((config), (msg), (severity), (logmsg), (ph))
+#define OK(config, ph)                                          \
+  test_options_validate_impl((config), NULL, 0, NULL, (ph))
 
 static void
 test_options_validate(void *arg)
@@ -184,21 +218,32 @@ test_options_validate(void *arg)
   setup_log_callback();
   sandbox_disable_getaddrinfo_cache();
 
-  WANT_ERR("ExtORPort 500000", "Invalid ExtORPort");
+  WANT_ERR("ExtORPort 500000", "Invalid ExtORPort", PH_VALIDATE);
 
   WANT_ERR_LOG("ServerTransportOptions trebuchet",
                "ServerTransportOptions did not parse",
-               LOG_WARN, "Too few arguments");
-  OK("ServerTransportOptions trebuchet sling=snappy");
-  OK("ServerTransportOptions trebuchet sling=");
+               LOG_WARN, "Too few arguments", PH_VALIDATE);
+  OK("ServerTransportOptions trebuchet sling=snappy", PH_VALIDATE);
+  OK("ServerTransportOptions trebuchet sling=", PH_VALIDATE);
   WANT_ERR_LOG("ServerTransportOptions trebuchet slingsnappy",
                "ServerTransportOptions did not parse",
-               LOG_WARN, "\"slingsnappy\" is not a k=v");
+               LOG_WARN, "\"slingsnappy\" is not a k=v", PH_VALIDATE);
 
   WANT_ERR("DirPort 8080\nDirCache 0",
-           "DirPort configured but DirCache disabled.");
+           "DirPort configured but DirCache disabled.", PH_VALIDATE);
   WANT_ERR("BridgeRelay 1\nDirCache 0",
-           "We're a bridge but DirCache is disabled.");
+           "We're a bridge but DirCache is disabled.", PH_VALIDATE);
+
+  WANT_ERR_LOG("HeartbeatPeriod 21 snarks",
+               "Interval 'HeartbeatPeriod 21 snarks' is malformed or"
+               " out of bounds.", LOG_WARN, "Unknown unit 'snarks'.",
+               PH_ASSIGN);
+  WANT_ERR_LOG("LogTimeGranularity 21 snarks",
+               "Msec interval 'LogTimeGranularity 21 snarks' is malformed or"
+               " out of bounds.", LOG_WARN, "Unknown unit 'snarks'.",
+               PH_ASSIGN);
+  OK("HeartbeatPeriod 1 hour", PH_VALIDATE);
+  OK("LogTimeGranularity 100 milliseconds", PH_VALIDATE);
 
   close_temp_logs();
   clear_log_messages();
