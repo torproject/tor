@@ -7,7 +7,7 @@ exitcode=0
 
 for crate in $crates; do
     cd "${abs_top_srcdir:-.}/src/rust/${crate}"
-    "${CARGO:-cargo}" test --frozen || exitcode=1
+    "${CARGO:-cargo}" test ${CARGO_ONLINE-"--frozen"} || exitcode=1
 done
 
 exit $exitcode

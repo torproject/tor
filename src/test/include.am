@@ -7,7 +7,8 @@ TESTS_ENVIRONMENT = \
 	export abs_top_srcdir="$(abs_top_srcdir)"; \
 	export builddir="$(builddir)"; \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)"; \
-	export CARGO="$(CARGO)";
+	export CARGO="$(CARGO)"; \
+	export CARGO_ONLINE="$(CARGO_ONLINE)";
 
 TESTSCRIPTS = \
 	src/test/fuzz_static_testcases.sh \

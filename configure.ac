@@ -57,6 +57,8 @@ AC_ARG_ENABLE(memory-sentinels,
    AS_HELP_STRING(--disable-memory-sentinels, [disable code that tries to prevent some kinds of memory access bugs. For fuzzing only.]))
 AC_ARG_ENABLE(rust,
    AS_HELP_STRING(--enable-rust, [enable rust integration]))
+AC_ARG_ENABLE(cargo-online-mode,
+   AS_HELP_STRING(--enable-cargo-online-mode, [Allow cargo to make network requests to fetch crates. For builds with rust only.]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -267,6 +269,12 @@ if test "x$enable_rust" = "xyes"; then
   fi
 
   AC_DEFINE([HAVE_RUST], 1, [have Rust])
+  if test "x$enable_cargo_online_mode" = "xyes"; then
+    CARGO_ONLINE=
+  else
+    CARGO_ONLINE=--frozen
+  fi
+  AC_SUBST(CARGO_ONLINE)
 fi
 
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
