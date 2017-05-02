@@ -2195,7 +2195,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
 
   cpath->rend_dh_handshake_state = dh;
   dh = NULL;
-  if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
+  if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1, 0)<0)
     goto err;
   memcpy(cpath->rend_circ_nonce, keys, DIGEST_LEN);
 

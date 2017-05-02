@@ -1184,7 +1184,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
     goto err;
   }
   /* ... and set up cpath. */
-  if (circuit_init_cpath_crypto(hop, keys+DIGEST_LEN, 0)<0)
+  if (circuit_init_cpath_crypto(hop, keys+DIGEST_LEN, 0, 0)<0)
     goto err;
 
   /* Check whether the digest is right... */
