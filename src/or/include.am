@@ -59,6 +59,7 @@ LIBTOR_A_SOURCES = \
 	src/or/hs_intropoint.c				\
 	src/or/hs_ntor.c				\
 	src/or/hs_service.c				\
+	src/or/hs_client.c				\
 	src/or/entrynodes.c				\
 	src/or/ext_orport.c				\
 	src/or/hibernate.c				\
@@ -190,6 +191,7 @@ ORHEADERS = \
 	src/or/hs_circuitmap.h          \
 	src/or/hs_ntor.h                \
 	src/or/hs_service.h             \
+	src/or/hs_client.h              \
 	src/or/keypin.h					\
 	src/or/main.h					\
 	src/or/microdesc.h				\

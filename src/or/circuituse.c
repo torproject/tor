@@ -42,6 +42,7 @@
 #include "control.h"
 #include "entrynodes.h"
 #include "hs_common.h"
+#include "hs_client.h"
 #include "hs_ident.h"
 #include "nodelist.h"
 #include "networkstatus.h"
@@ -2374,8 +2375,7 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
     /* We are attaching a stream to a rendezvous circuit.  That means
      * that an attempt to connect to a hidden service just
      * succeeded.  Tell rendclient.c. */
-    rend_client_note_connection_attempt_ended(
-                    ENTRY_TO_EDGE_CONN(apconn)->rend_data);
+    hs_client_note_connection_attempt_succeeded(ENTRY_TO_EDGE_CONN(apconn));
   }
 
   if (cpath) { /* we were given one; use it */
