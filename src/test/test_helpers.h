@@ -20,6 +20,9 @@ void connection_write_to_buf_mock(const char *string, size_t len,
 int mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
                                             uint16_t family, tor_addr_t *out);
 
+connection_t *test_conn_get_connection(uint8_t state,
+                                       uint8_t type, uint8_t purpose);
+
 extern const char TEST_DESCRIPTORS[];
 
 #endif

@@ -17,9 +17,8 @@
 #include "rendcache.h"
 #include "directory.h"
 
-static void test_conn_lookup_addr_helper(const char *address,
-                                         int family,
-                                         tor_addr_t *addr);
+#include "test_connection.h"
+#include "test_helpers.h"
 
 static void * test_conn_get_basic_setup(const struct testcase_t *tc);
 static int test_conn_get_basic_teardown(const struct testcase_t *tc,
@@ -62,48 +61,7 @@ static int test_conn_get_rsrc_teardown(const struct testcase_t *tc,
 #define TEST_CONN_UNATTACHED_STATE (AP_CONN_STATE_CIRCUIT_WAIT)
 #define TEST_CONN_ATTACHED_STATE   (AP_CONN_STATE_CONNECT_WAIT)
 
-#define TEST_CONN_FD_INIT 50
-static int mock_connection_connect_sockaddr_called = 0;
-static int fake_socket_number = TEST_CONN_FD_INIT;
-
-static int
-mock_connection_connect_sockaddr(connection_t *conn,
-                                 const struct sockaddr *sa,
-                                 socklen_t sa_len,
-                                 const struct sockaddr *bindaddr,
-                                 socklen_t bindaddr_len,
-                                 int *socket_error)
-{
-  (void)sa_len;
-  (void)bindaddr;
-  (void)bindaddr_len;
-
-  tor_assert(conn);
-  tor_assert(sa);
-  tor_assert(socket_error);
-
-  mock_connection_connect_sockaddr_called++;
-
-  conn->s = fake_socket_number++;
-  tt_assert(SOCKET_OK(conn->s));
-  /* We really should call tor_libevent_initialize() here. Because we don't,
-   * we are relying on other parts of the code not checking if the_event_base
-   * (and therefore event->ev_base) is NULL.  */
-  tt_assert(connection_add_connecting(conn) == 0);
-
- done:
-  /* Fake "connected" status */
-  return 1;
-}
-
-static int
-fake_close_socket(evutil_socket_t sock)
-{
-  (void)sock;
-  return 0;
-}
-
-static void
+void
 test_conn_lookup_addr_helper(const char *address, int family, tor_addr_t *addr)
 {
   int rv = 0;
@@ -120,51 +78,6 @@ test_conn_lookup_addr_helper(const char *address, int family, tor_addr_t *addr)
 
  done:
   tor_addr_make_null(addr, TEST_CONN_FAMILY);
-}
-
-static connection_t *
-test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
-{
-  connection_t *conn = NULL;
-  tor_addr_t addr;
-  int socket_err = 0;
-  int in_progress = 0;
-
-  MOCK(connection_connect_sockaddr,
-       mock_connection_connect_sockaddr);
-  MOCK(tor_close_socket, fake_close_socket);
-
-  init_connection_lists();
-
-  conn = connection_new(type, TEST_CONN_FAMILY);
-  tt_assert(conn);
-
-  test_conn_lookup_addr_helper(TEST_CONN_ADDRESS, TEST_CONN_FAMILY, &addr);
-  tt_assert(!tor_addr_is_null(&addr));
-
-  tor_addr_copy_tight(&conn->addr, &addr);
-  conn->port = TEST_CONN_PORT;
-  mock_connection_connect_sockaddr_called = 0;
-  in_progress = connection_connect(conn, TEST_CONN_ADDRESS_PORT, &addr,
-                                   TEST_CONN_PORT, &socket_err);
-  tt_assert(mock_connection_connect_sockaddr_called == 1);
-  tt_assert(!socket_err);
-  tt_assert(in_progress == 0 || in_progress == 1);
-
-  /* fake some of the attributes so the connection looks OK */
-  conn->state = state;
-  conn->purpose = purpose;
-  assert_connection_ok(conn, time(NULL));
-
-  UNMOCK(connection_connect_sockaddr);
-  UNMOCK(tor_close_socket);
-  return conn;
-
-  /* On failure */
- done:
-  UNMOCK(connection_connect_sockaddr);
-  UNMOCK(tor_close_socket);
-  return NULL;
 }
 
 static void *
