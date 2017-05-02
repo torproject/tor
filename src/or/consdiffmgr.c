@@ -1100,14 +1100,8 @@ uncompress_or_copy(char **out, size_t *outlen,
   if (lv_compression)
     method = compression_method_get_by_name(lv_compression);
 
-  if (method == NO_METHOD) {
-    *out = tor_memdup_nulterm(body, bodylen);
-    *outlen = bodylen;
-    return 0;
-  } else {
-    return tor_uncompress(out, outlen, (const char *)body, bodylen,
-                          method, 1, LOG_WARN);
-  }
+  return tor_uncompress(out, outlen, (const char *)body, bodylen,
+                        method, 1, LOG_WARN);
 }
 
 /**
