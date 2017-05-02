@@ -1654,6 +1654,10 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
         tor_assert(tor_mem_is_zero(
                   (const char*)(chan->conn->handshake_state->
                                 authenticated_ed25519_peer_id.pubkey), 32));
+        /* If the client never authenticated, it's a tor client or bridge
+         * relay, and we must not use it for EXTEND requests (nor could we, as
+         * there are no authenticated peer IDs) */
+        channel_mark_client(TLS_CHAN_TO_BASE(chan));
         channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL,
                chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
 

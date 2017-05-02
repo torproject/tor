@@ -1,0 +1,5 @@
+  o Minor bugfixes (code correctness):
+    - Accurately identify client connections using their lack of peer
+      authentication. This means that we bail out earlier if asked to extend
+      to a client. Follow-up to 21407.
+      Fixes bug 21406; bugfix on 0.2.4.23.
