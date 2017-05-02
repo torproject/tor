@@ -275,6 +275,17 @@ if test "x$enable_rust" = "xyes"; then
     CARGO_ONLINE=--frozen
   fi
   AC_SUBST(CARGO_ONLINE)
+
+dnl Let's check the rustc version, too
+  AC_MSG_CHECKING([rust version])
+  RUSTC_VERSION_MAJOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 1`
+  RUSTC_VERSION_MINOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 2`
+  if test "x$RUSTC_VERSION_MAJOR" = "x" -o "x$RUSTC_VERSION_MINOR" = "x"; then
+    AC_MSG_ERROR([rustc version couldn't be identified])
+  fi
+  if test "$RUSTC_VERSION_MAJOR" -lt 2 -a "$RUSTC_VERSION_MINOR" -lt 14; then
+    AC_MSG_ERROR([rustc must be at least version 1.14])
+  fi
 fi
 
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
