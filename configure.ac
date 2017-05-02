@@ -254,6 +254,9 @@ if test "x$PYTHON" = "x"; then
 fi
 AM_CONDITIONAL(USEPYTHON, [test "x$PYTHON" != "x"])
 
+dnl List all external rust crates we depend on here. Include the version
+rust_crates="libc-0.2.22"
+AC_SUBST(rust_crates)
 
 if test "x$enable_rust" = "xyes"; then
   AC_ARG_VAR([RUSTC], [path to the rustc binary])
@@ -271,10 +274,35 @@ if test "x$enable_rust" = "xyes"; then
   AC_DEFINE([HAVE_RUST], 1, [have Rust])
   if test "x$enable_cargo_online_mode" = "xyes"; then
     CARGO_ONLINE=
+    RUST_DL=#
   else
     CARGO_ONLINE=--frozen
+    RUST_DL=
+
+    dnl When we're not allowed to touch the network, we need crate dependencies
+    dnl locally available.
+    AC_MSG_CHECKING([rust crate dependencies])
+    AC_ARG_VAR([RUST_DEPENDENCIES], [path to directory with local crate mirror])
+    if test "x$RUST_DEPENDENCIES" = "x"; then
+      RUST_DEPENDENCIES="$srcdir/src/ext/rust/"
+      NEED_MOD=1
+    fi
+    if test ! -d "$RUST_DEPENDENCIES"; then
+      AC_MSG_ERROR([Rust dependency directory $RUST_DEPENDENCIES does not exist. Specify a dependency directory using the RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
+    fi
+    for dep in $rust_crates; do
+      if test ! -d "$RUST_DEPENDENCIES"/"$dep"; then
+        AC_MSG_ERROR([Failure to find rust dependency $RUST_DEPENDENCIES/$dep. Specify a dependency directory using the RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
+      fi
+    done
+    if test "x$NEED_MOD" = "x1"; then
+      dnl When looking for dependencies from cargo, pick right directory
+      RUST_DEPENDENCIES="../../src/ext/rust"
+    fi
   fi
+
   AC_SUBST(CARGO_ONLINE)
+  AC_SUBST(RUST_DL)
 
 dnl Let's check the rustc version, too
   AC_MSG_CHECKING([rust version])
@@ -2065,6 +2093,7 @@ AC_CONFIG_FILES([
         contrib/dist/tor.service
         src/config/torrc.sample
         src/config/torrc.minimal
+        src/rust/.cargo/config
         scripts/maint/checkOptionDocs.pl
         scripts/maint/updateVersions.pl
 ])

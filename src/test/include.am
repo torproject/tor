@@ -5,6 +5,7 @@ TESTS_ENVIRONMENT = \
 	export PYTHON="$(PYTHON)"; \
 	export SHELL="$(SHELL)"; \
 	export abs_top_srcdir="$(abs_top_srcdir)"; \
+	export abs_top_builddir="$(abs_top_builddir)"; \
 	export builddir="$(builddir)"; \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)"; \
 	export CARGO="$(CARGO)"; \

@@ -239,3 +239,4 @@ mostlyclean-local:
 
 clean-local:
 	rm -rf $(top_builddir)/src/rust/target
+	rm -rf $(top_builddir)/src/rust/.cargo/registry

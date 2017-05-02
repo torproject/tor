@@ -1,0 +1,3 @@
+[submodule "src/ext/rust"]
+	path = src/ext/rust
+	url = https://git.torproject.org/user/sebastian/tor-rust-dependencies

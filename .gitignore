@@ -173,6 +173,11 @@ uptime-*.json
 /src/or/libtor-testing.a
 /src/or/libtor.lib
 
+# /src/rust
+/src/rust/.cargo/config
+/src/rust/.cargo/registry
+/src/rust/target
+
 # /src/test
 /src/test/Makefile
 /src/test/Makefile.in
