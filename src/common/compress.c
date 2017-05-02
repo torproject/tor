@@ -24,6 +24,7 @@
 #include "torlog.h"
 #include "compress.h"
 #include "compress_lzma.h"
+#include "compress_none.h"
 #include "compress_zlib.h"
 #include "compress_zstd.h"
 
@@ -67,8 +68,12 @@ guess_compress_size(int compress, compress_method_t method,
                     size_t in_len)
 {
   // ignore these for now.
-  (void)method;
   (void)compression_level;
+  if (method == NO_METHOD) {
+    /* Guess that we'll need an extra byte, to avoid a needless realloc
+     * for nul-termination */
+    return (in_len < SIZE_MAX) ? in_len + 1 : in_len;
+  }
 
   /* Always guess a factor of 2. */
   if (compress) {
@@ -279,6 +284,7 @@ tor_compress_supports_method(compress_method_t method)
     case ZSTD_METHOD:
       return tor_zstd_method_supported();
     case NO_METHOD:
+      return 1;
     case UNKNOWN_METHOD:
     default:
       return 0;
@@ -458,7 +464,9 @@ tor_compress_new(int compress, compress_method_t method,
       state->u.zstd_state = zstd_state;
       break;
     }
-    case NO_METHOD:
+    case NO_METHOD: {
+      break;
+    }
     case UNKNOWN_METHOD:
       goto err;
   }
@@ -506,6 +514,8 @@ tor_compress_process(tor_compress_state_t *state,
                                        out, out_len, in, in_len,
                                        finish);
     case NO_METHOD:
+      return tor_cnone_compress_process(out, out_len, in, in_len,
+                                        finish);
     case UNKNOWN_METHOD:
       goto err;
   }
@@ -533,6 +543,7 @@ tor_compress_free(tor_compress_state_t *state)
       tor_zstd_compress_free(state->u.zstd_state);
       break;
     case NO_METHOD:
+      break;
     case UNKNOWN_METHOD:
       break;
   }

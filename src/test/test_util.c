@@ -2255,8 +2255,15 @@ test_util_compress_impl(compress_method_t method)
 
   tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1, method));
   tt_assert(buf2 != NULL);
-  tt_int_op(len1, OP_LT, strlen(buf1));
-  tt_int_op(detect_compression_method(buf2, len1), OP_EQ, method);
+  if (method == NO_METHOD) {
+    // The identity transform doesn't actually compress, and it isn't
+    // detectable as "the identity transform."
+    tt_int_op(len1, OP_EQ, strlen(buf1)+1);
+    tt_int_op(detect_compression_method(buf2, len1), OP_EQ, UNKNOWN_METHOD);
+  } else {
+    tt_int_op(len1, OP_LT, strlen(buf1));
+    tt_int_op(detect_compression_method(buf2, len1), OP_EQ, method);
+  }
 
   tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1, method, 1, LOG_INFO));
   tt_assert(buf3 != NULL);
@@ -2300,11 +2307,14 @@ test_util_compress_impl(compress_method_t method)
   tt_assert(fast_memeq(buf1, buf3, len2));
   tt_int_op(buf3[len2], OP_EQ, 0);
 
-  /* when we demand a complete output, this must fail. */
+  /* when we demand a complete output from a real compression method, this
+   * must fail. */
   tor_free(buf3);
-  tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
-                           method, 1, LOG_INFO));
-  tt_assert(buf3 == NULL);
+  if (method != NO_METHOD) {
+    tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
+                             method, 1, LOG_INFO));
+    tt_assert(buf3 == NULL);
+  }
 
  done:
   tor_free(buf1);
@@ -2337,7 +2347,11 @@ test_util_compress_stream_impl(compress_method_t method,
   tt_int_op(tor_compress_process(state, &cp1, &len1, &ccp2, &len2, 1),
             OP_EQ, TOR_COMPRESS_DONE);
   tt_int_op(0, OP_EQ, len2);
-  tt_assert(cp1 > cp2); /* Make sure we really added something. */
+  if (method == NO_METHOD) {
+    tt_ptr_op(cp1, OP_EQ, cp2);
+  } else {
+    tt_assert(cp1 > cp2); /* Make sure we really added something. */
+  }
 
   tt_assert(!tor_uncompress(&buf3, &len2, buf1, 1024-len1,
                             method, 1, LOG_WARN));
@@ -5755,6 +5769,7 @@ struct testcase_t util_tests[] = {
   COMPRESS(gzip, "gzip"),
   COMPRESS(lzma, "x-tor-lzma"),
   COMPRESS(zstd, "x-zstd"),
+  COMPRESS(none, "identity"),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),
