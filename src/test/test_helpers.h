@@ -1,8 +1,10 @@
-/* Copyright (c) 2014-2017, The Tor Project, Inc. */
+/* Copyright (c) 2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_TEST_HELPERS_H
 #define TOR_TEST_HELPERS_H
+
+#include "or.h"
 
 const char *get_yesterday_date_str(void);
 
@@ -25,5 +27,5 @@ connection_t *test_conn_get_connection(uint8_t state,
 
 extern const char TEST_DESCRIPTORS[];
 
-#endif
+#endif /* TOR_TEST_HELPERS_H */
 

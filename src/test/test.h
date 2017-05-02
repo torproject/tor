@@ -209,6 +209,7 @@ extern struct testcase_t hs_tests[];
 extern struct testcase_t hs_cache[];
 extern struct testcase_t hs_descriptor[];
 extern struct testcase_t hs_service_tests[];
+extern struct testcase_t hs_client_tests[];
 extern struct testcase_t hs_intropoint_tests[];
 extern struct testcase_t introduce_tests[];
 extern struct testcase_t keypin_tests[];
