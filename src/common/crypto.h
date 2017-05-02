@@ -20,6 +20,9 @@
 #include "testsupport.h"
 #include "compat.h"
 
+#include <openssl/engine.h>
+#include "keccak-tiny/keccak-tiny.h"
+
 /*
   Macro to create an arbitrary OpenSSL version number as used by
   OPENSSL_VERSION_NUMBER or SSLeay(), since the actual numbers are a bit hard
@@ -335,6 +338,22 @@ struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
 void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #ifdef CRYPTO_PRIVATE
+
+/** Intermediate information about the digest of a stream of data. */
+struct crypto_digest_t {
+  digest_algorithm_t algorithm; /**< Which algorithm is in use? */
+   /** State for the digest we're using.  Only one member of the
+    * union is usable, depending on the value of <b>algorithm</b>. Note also
+    * that space for other members might not even be allocated!
+    */
+  union {
+    SHA_CTX sha1; /**< state for SHA1 */
+    SHA256_CTX sha2; /**< state for SHA256 */
+    SHA512_CTX sha512; /**< state for SHA512 */
+    keccak_state sha3; /**< state for SHA3-[256,512] */
+  } d;
+};
+
 STATIC int crypto_force_rand_ssleay(void);
 STATIC int crypto_strongest_rand_raw(uint8_t *out, size_t out_len);
 

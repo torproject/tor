@@ -2338,6 +2338,30 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
   }
 }
 
+#ifdef TOR_UNIT_TESTS
+
+/** Unittest helper function: Count number of hops in cpath linked list. */
+unsigned int
+cpath_get_n_hops(crypt_path_t **head_ptr)
+{
+  unsigned int n_hops = 0;
+  crypt_path_t *tmp;
+
+  if (!*head_ptr) {
+    return 0;
+  }
+
+  tmp = *head_ptr;
+  if (tmp) {
+    n_hops++;
+    tmp = (*head_ptr)->next;
+  }
+
+  return n_hops;
+}
+
+#endif
+
 /** A helper function used by onion_extend_cpath(). Use <b>purpose</b>
  * and <b>state</b> and the cpath <b>head</b> (currently populated only
  * to length <b>cur_len</b> to decide a suitable middle hop for a

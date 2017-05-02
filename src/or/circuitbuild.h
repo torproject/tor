@@ -83,6 +83,8 @@ MOCK_DECL(STATIC int, count_acceptable_nodes, (smartlist_t *nodes));
 #if defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS)
 STATIC const node_t *pick_tor2web_rendezvous_node(router_crn_flags_t flags,
                                                   const or_options_t *options);
+unsigned int cpath_get_n_hops(crypt_path_t **head_ptr);
+
 #endif
 
 #endif

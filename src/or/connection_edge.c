@@ -2455,8 +2455,8 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
  *
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
-int
-connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
+MOCK_IMPL(int,
+connection_ap_handshake_send_begin,(entry_connection_t *ap_conn))
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
