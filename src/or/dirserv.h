@@ -118,6 +118,7 @@ cached_dir_t *dirserv_get_consensus(const char *flavor_name);
 void dirserv_set_cached_consensus_networkstatus(const char *consensus,
                                               const char *flavor_name,
                                               const common_digests_t *digests,
+                                              const uint8_t *sha3_as_signed,
                                               time_t published);
 void dirserv_clear_old_networkstatuses(time_t cutoff);
 int dirserv_get_routerdesc_spool(smartlist_t *spools_out, const char *key,

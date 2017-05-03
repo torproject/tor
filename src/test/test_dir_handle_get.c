@@ -1773,10 +1773,14 @@ status_vote_current_consensus_ns_test(char **header, char **body,
                                       size_t *body_len)
 {
   common_digests_t digests;
+  uint8_t sha3[DIGEST256_LEN];
   dir_connection_t *conn = NULL;
 
   #define NETWORK_STATUS "some network status string"
+  memset(&digests, 0x60, sizeof(digests));
+  memset(sha3, 0x06, sizeof(sha3));
   dirserv_set_cached_consensus_networkstatus(NETWORK_STATUS, "ns", &digests,
+                                             sha3,
                                              time(NULL));
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);

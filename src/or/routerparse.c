@@ -3384,6 +3384,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   networkstatus_voter_info_t *voter = NULL;
   networkstatus_t *ns = NULL;
   common_digests_t ns_digests;
+  uint8_t sha3_full[DIGEST256_LEN];
   const char *cert, *end_of_header, *end_of_footer, *s_dup = s;
   directory_token_t *tok;
   struct in_addr in;
@@ -3397,7 +3398,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   if (eos_out)
     *eos_out = NULL;
 
-  if (router_get_networkstatus_v3_hashes(s, &ns_digests)) {
+  // XXXX replace SHA3_full with as_signed digest once #22143 is merged.
+  // XXXX Merge #22143 before this!
+  if (router_get_networkstatus_v3_hashes(s, &ns_digests) ||
+      crypto_digest256((char *)sha3_full, s, strlen(s), DIGEST_SHA3_256)<0) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
   }
@@ -3414,6 +3418,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   ns = tor_malloc_zero(sizeof(networkstatus_t));
   memcpy(&ns->digests, &ns_digests, sizeof(ns_digests));
+  memcpy(&ns->digest_full_sha3, sha3_full, sizeof(sha3_full));
 
   tok = find_by_keyword(tokens, K_NETWORK_STATUS_VERSION);
   tor_assert(tok);

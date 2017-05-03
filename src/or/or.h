@@ -1938,6 +1938,7 @@ typedef struct cached_dir_t {
   size_t dir_z_len; /**< Length of <b>dir_z</b>. */
   time_t published; /**< When was this object published. */
   common_digests_t digests; /**< Digests of this object (networkstatus only) */
+  uint8_t digest_sha3_full[DIGEST256_LEN]; /**< sha3 digest (also ns only) */
   int refcnt; /**< Reference count for this cached_dir_t. */
 } cached_dir_t;
 
@@ -2638,6 +2639,9 @@ typedef struct networkstatus_t {
 
   /** Digests of this document, as signed. */
   common_digests_t digests;
+  /** A SHA3-256 digest of the document, including signatures: used for
+   * consensus diffs */
+  uint8_t digest_full_sha3[DIGEST256_LEN];
 
   /** List of router statuses, sorted by identity digest.  For a vote,
    * the elements are vote_routerstatus_t; for a consensus, the elements
