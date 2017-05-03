@@ -486,41 +486,41 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
                                              const char *resource)
 {
   time_t if_modified_since = 0;
-  {
-    int flav = FLAV_NS;
-    networkstatus_t *v;
-    if (resource)
-      flav = networkstatus_parse_flavor_name(resource);
 
-    /* DEFAULT_IF_MODIFIED_SINCE_DELAY is 1/20 of the default consensus
-     * period of 1 hour.
-     */
+  int flav = FLAV_NS;
+  networkstatus_t *v;
+  if (resource)
+    flav = networkstatus_parse_flavor_name(resource);
+
+  /* DEFAULT_IF_MODIFIED_SINCE_DELAY is 1/20 of the default consensus
+   * period of 1 hour.
+   */
 #define DEFAULT_IF_MODIFIED_SINCE_DELAY (180)
-    if (flav != -1) {
-      /* IF we have a parsed consensus of this type, we can do an
-       * if-modified-time based on it. */
-      v = networkstatus_get_latest_consensus_by_flavor(flav);
-      if (v) {
-        /* In networks with particularly short V3AuthVotingIntervals,
-         * ask for the consensus if it's been modified since half the
-         * V3AuthVotingInterval of the most recent consensus. */
-        time_t ims_delay = DEFAULT_IF_MODIFIED_SINCE_DELAY;
-        if (v->fresh_until > v->valid_after
-            && ims_delay > (v->fresh_until - v->valid_after)/2) {
-          ims_delay = (v->fresh_until - v->valid_after)/2;
-        }
-        if_modified_since = v->valid_after + ims_delay;
+  if (flav != -1) {
+    /* IF we have a parsed consensus of this type, we can do an
+     * if-modified-time based on it. */
+    v = networkstatus_get_latest_consensus_by_flavor(flav);
+    if (v) {
+      /* In networks with particularly short V3AuthVotingIntervals,
+       * ask for the consensus if it's been modified since half the
+       * V3AuthVotingInterval of the most recent consensus. */
+      time_t ims_delay = DEFAULT_IF_MODIFIED_SINCE_DELAY;
+      if (v->fresh_until > v->valid_after
+          && ims_delay > (v->fresh_until - v->valid_after)/2) {
+        ims_delay = (v->fresh_until - v->valid_after)/2;
       }
-    } else {
-      /* Otherwise it might be a consensus we don't parse, but which we
-       * do cache.  Look at the cached copy, perhaps. */
-      cached_dir_t *cd = dirserv_get_consensus(resource);
-      /* We have no method of determining the voting interval from an
-       * unparsed consensus, so we use the default. */
-      if (cd)
-        if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
+      if_modified_since = v->valid_after + ims_delay;
     }
+  } else {
+    /* Otherwise it might be a consensus we don't parse, but which we
+     * do cache.  Look at the cached copy, perhaps. */
+    cached_dir_t *cd = dirserv_get_consensus(resource);
+    /* We have no method of determining the voting interval from an
+     * unparsed consensus, so we use the default. */
+    if (cd)
+      if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
   }
+
   directory_request_set_if_modified_since(req, if_modified_since);
 }
 
