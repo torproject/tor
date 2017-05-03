@@ -130,6 +130,7 @@ static void directory_request_set_guard_state(directory_request_t *req,
 #define ALLOW_DIRECTORY_TIME_SKEW (30*60)
 
 #define X_ADDRESS_HEADER "X-Your-Address-Is: "
+#define X_OR_DIFF_FROM_CONSENSUS_HEADER "X-Or-Diff-From-Consensus"
 
 /** HTTP cache control: how long do we tell proxies they can cache each
  * kind of document we serve? */
@@ -480,15 +481,18 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
 /**
  * Set the extra fields in <b>req</b> that are used when requesting a
  * consensus of type <b>resource</b>.
+ *
+ * Right now, these fields are if-modified-since and x-or-diff-from-consensus.
  */
 static void
 dir_consensus_request_set_additional_headers(directory_request_t *req,
                                              const char *resource)
 {
   time_t if_modified_since = 0;
+  uint8_t or_diff_from[DIGEST256_LEN];
+  int or_diff_from_is_set = 0;
 
   int flav = FLAV_NS;
-  networkstatus_t *v;
   if (resource)
     flav = networkstatus_parse_flavor_name(resource);
 
@@ -499,6 +503,7 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
   if (flav != -1) {
     /* IF we have a parsed consensus of this type, we can do an
      * if-modified-time based on it. */
+    networkstatus_t *v;
     v = networkstatus_get_latest_consensus_by_flavor(flav);
     if (v) {
       /* In networks with particularly short V3AuthVotingIntervals,
@@ -510,6 +515,8 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
         ims_delay = (v->fresh_until - v->valid_after)/2;
       }
       if_modified_since = v->valid_after + ims_delay;
+      memcpy(or_diff_from, v->digest_full_sha3, DIGEST256_LEN);
+      or_diff_from_is_set = 1;
     }
   } else {
     /* Otherwise it might be a consensus we don't parse, but which we
@@ -517,11 +524,21 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
     cached_dir_t *cd = dirserv_get_consensus(resource);
     /* We have no method of determining the voting interval from an
      * unparsed consensus, so we use the default. */
-    if (cd)
+    if (cd) {
       if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
+      memcpy(or_diff_from, cd->digest_sha3_full, DIGEST256_LEN);
+      or_diff_from_is_set = 1;
+    }
   }
 
-  directory_request_set_if_modified_since(req, if_modified_since);
+  if (if_modified_since > 0)
+    directory_request_set_if_modified_since(req, if_modified_since);
+  if (or_diff_from_is_set) {
+    char hex[HEX_DIGEST256_LEN + 1];
+    base16_encode(hex, sizeof(hex),
+                  (const char*)or_diff_from, sizeof(or_diff_from));
+    directory_request_add_header(req, X_OR_DIFF_FROM_CONSENSUS_HEADER, hex);
+  }
 }
 
 /** Start a connection to a random running directory server, using
@@ -3537,7 +3554,7 @@ warn_consensus_is_too_old(networkstatus_t *v, const char *flavor, time_t now)
 static int
 parse_or_diff_from_header(smartlist_t **digests_out, const char *headers)
 {
-  char *hdr = http_get_header(headers, "X-Or-Diff-From-Consensus");
+  char *hdr = http_get_header(headers, X_OR_DIFF_FROM_CONSENSUS_HEADER);
   if (hdr == NULL) {
     return -1;
   }
