@@ -106,6 +106,35 @@ clear_log_messages(void)
   " 083C 538F 4403 8BBF A077 587D D755\n"
 
 static int
+test_options_checklog(const char *configuration, int expect_log_severity,
+                      const char *expect_log)
+{
+  int found = 0, ret = -1;
+  char *actual_log = NULL;
+
+  if (messages) {
+    SMARTLIST_FOREACH_BEGIN(messages, logmsg_t *, m) {
+      if (m->severity == expect_log_severity &&
+          strstr(m->msg, expect_log)) {
+        found = 1;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(m);
+  }
+  if (!found) {
+    actual_log = dump_logs();
+    TT_DIE(("Expected log message [%s] %s from <%s>, but got <%s>.",
+            log_level_to_string(expect_log_severity), expect_log,
+            configuration, actual_log));
+  }
+  ret = 0;
+
+ done:
+  tor_free(actual_log);
+  return ret;
+}
+
+static int
 test_options_checkmsgs(const char *configuration,
                        const char *expect_errmsg,
                        int expect_log_severity,
@@ -123,23 +152,8 @@ test_options_checkmsgs(const char *configuration,
             configuration, msg));
   }
   if (expect_log) {
-    int found = 0;
-    if (messages) {
-      SMARTLIST_FOREACH_BEGIN(messages, logmsg_t *, m) {
-        if (m->severity == expect_log_severity &&
-            strstr(m->msg, expect_log)) {
-          found = 1;
-          break;
-        }
-      } SMARTLIST_FOREACH_END(m);
-    }
-    if (!found) {
-      tor_free(msg);
-      msg = dump_logs();
-      TT_DIE(("Expected log message [%s] %s from <%s>, but got <%s>.",
-              log_level_to_string(expect_log_severity), expect_log,
-              configuration, msg));
-    }
+    return test_options_checklog(configuration, expect_log_severity,
+                                 expect_log);
   }
   return 0;
 
