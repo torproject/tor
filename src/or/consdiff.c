@@ -91,6 +91,18 @@ consensus_compute_digest,(const char *cons,
   return r;
 }
 
+/** Compute the digest-as-signed of <b>cons</b>, and store the result in
+ * <b>digest_out</b>. Return 0 on success, -1 on failure. */
+/* This is a separate, mockable function so that we can override it when
+ * fuzzing. */
+MOCK_IMPL(STATIC int,
+consensus_compute_digest_as_signed,(const char *cons,
+                                    consensus_digest_t *digest_out))
+{
+  return router_get_networkstatus_v3_sha3_as_signed(digest_out->sha3_256,
+                                                    cons);
+}
+
 /** Return true iff <b>d1</b> and <b>d2</b> contain the same digest */
 /* This is a separate, mockable function so that we can override it when
  * fuzzing. */
@@ -1250,7 +1262,7 @@ consensus_diff_generate(const char *cons1,
   int r1, r2;
   char *result = NULL;
 
-  r1 = consensus_compute_digest(cons1, &d1);
+  r1 = consensus_compute_digest_as_signed(cons1, &d1);
   r2 = consensus_compute_digest(cons2, &d2);
   if (BUG(r1 < 0 || r2 < 0))
     return NULL; // LCOV_EXCL_LINE
@@ -1291,7 +1303,7 @@ consensus_diff_apply(const char *consensus,
   char *result = NULL;
   memarea_t *area = memarea_new();
 
-  r1 = consensus_compute_digest(consensus, &d1);
+  r1 = consensus_compute_digest_as_signed(consensus, &d1);
   if (BUG(r1 < 0))
     return NULL; // LCOV_EXCL_LINE
 

@@ -907,7 +907,7 @@ test_consdiff_gen_diff(void *arg)
       );
 
   tt_int_op(0, OP_EQ,
-      consensus_compute_digest(cons1_str, &digests1));
+      consensus_compute_digest_as_signed(cons1_str, &digests1));
   tt_int_op(0, OP_EQ,
       consensus_compute_digest(cons2_str, &digests2));
 
@@ -926,7 +926,7 @@ test_consdiff_gen_diff(void *arg)
       "directory-signature foo bar\nbar\n"
       );
   tt_int_op(0, OP_EQ,
-      consensus_compute_digest(cons1_str, &digests1));
+      consensus_compute_digest_as_signed(cons1_str, &digests1));
   smartlist_clear(cons1);
   consensus_split_lines(cons1, cons1_str, area);
   diff = consdiff_gen_diff(cons1, cons2, &digests1, &digests2, area);
@@ -935,7 +935,7 @@ test_consdiff_gen_diff(void *arg)
   tt_assert(line_str_eq(smartlist_get(diff, 0),
                         "network-status-diff-version 1"));
   tt_assert(line_str_eq(smartlist_get(diff, 1), "hash "
-      "06646D6CF563A41869D3B02E73254372AE3140046C5E7D83C9F71E54976AF9B4 "
+      "95D70F5A3CC65F920AA8B44C4563D7781A082674329661884E19E94B79D539C2 "
       "7AFECEFA4599BA33D603653E3D2368F648DF4AC4723929B0F7CF39281596B0C1"));
   tt_assert(line_str_eq(smartlist_get(diff, 2), "3,4d"));
   tt_assert(line_str_eq(smartlist_get(diff, 3), "1a"));
