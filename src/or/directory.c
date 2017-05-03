@@ -989,6 +989,9 @@ struct directory_request_t {
   time_t if_modified_since;
   /** Hidden-service-specific information */
   const rend_data_t *rend_query;
+  /** Extra headers to append to the request */
+  config_line_t *additional_headers;
+  /** */
   /** Used internally to directory.c: gets informed when the attempt to
    * connect to the directory succeeds or fails, if that attempt bears on the
    * directory's usability as a directory guard. */
@@ -1087,6 +1090,7 @@ directory_request_free(directory_request_t *req)
 {
   if (req == NULL)
     return;
+  config_free_lines(req->additional_headers);
   tor_free(req);
 }
 /**
@@ -1186,6 +1190,18 @@ directory_request_set_if_modified_since(directory_request_t *req,
                                         time_t if_modified_since)
 {
   req->if_modified_since = if_modified_since;
+}
+
+/** Include a header of name <b>key</b> with content <b>val</b> in the
+ * request. Neither may include newlines or other odd characters. Their
+ * ordering is not currently guaranteed.
+ */
+void
+directory_request_add_header(directory_request_t *req,
+                             const char *key,
+                             const char *val)
+{
+  config_line_prepend(&req->additional_headers, key, val);
 }
 /**
  * Set an object containing HS data to be associated with this request.  Note
@@ -1671,6 +1687,14 @@ directory_send_command(dir_connection_t *conn,
     }
   } else {
     proxystring[0] = 0;
+  }
+
+  /* Add additional headers, if any */
+  {
+    config_line_t *h;
+    for (h = req->additional_headers; h; h = h->next) {
+      smartlist_add_asprintf(headers, "%s: %s\r\n", h->key, h->value);
+    }
   }
 
   switch (purpose) {
