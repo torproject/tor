@@ -19,6 +19,7 @@
 #include "consdiffmgr.h"
 #include "cpuworker.h"
 #include "networkstatus.h"
+#include "routerparse.h"
 #include "workqueue.h"
 
 /**
@@ -35,11 +36,13 @@
 #define LABEL_SHA3_DIGEST "sha3-digest"
 /* A hex encoded SHA3 digest of the object before compression. */
 #define LABEL_SHA3_DIGEST_UNCOMPRESSED "sha3-digest-uncompressed"
+/* A hex encoded SHA3 digest-as-signed of a consensus */
+#define LABEL_SHA3_DIGEST_AS_SIGNED "sha3-digest-as-signed"
 /* The flavor of the consensus or consensuses diff */
 #define LABEL_FLAVOR "consensus-flavor"
-/* Diff only: the SHA3 digest of the source consensus. */
+/* Diff only: the SHA3 digest-as-signed of the source consensus. */
 #define LABEL_FROM_SHA3_DIGEST "from-sha3-digest"
-/* Diff only: the SHA3 digest of the target consensus. */
+/* Diff only: the SHA3 digest-in-full of the target consensus. */
 #define LABEL_TARGET_SHA3_DIGEST "target-sha3-digest"
 /* Diff only: the valid-after date of the source consensus. */
 #define LABEL_FROM_VALID_AFTER "from-valid-after"
@@ -466,6 +469,17 @@ consdiffmgr_add_consensus(const char *consensus,
 
     cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST_UNCOMPRESSED,
                             (const uint8_t *)consensus, bodylen);
+    {
+      const char *start, *end;
+      if (router_get_networkstatus_v3_signed_boundaries(consensus,
+                                                        &start, &end) < 0) {
+        start = consensus;
+        end = consensus+bodylen;
+      }
+      cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST_AS_SIGNED,
+                              (const uint8_t *)start,
+                              end - start);
+    }
 
     char *body_compressed = NULL;
     size_t size_compressed = 0;
@@ -845,7 +859,7 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
 
     uint8_t this_sha3[DIGEST256_LEN];
     if (BUG(cdm_entry_get_sha3_value(this_sha3, c,
-                                     LABEL_SHA3_DIGEST_UNCOMPRESSED)<0))
+                                     LABEL_SHA3_DIGEST_AS_SIGNED)<0))
       continue; // LCOV_EXCL_LINE
     if (cdm_diff_ht_check_and_note_pending(flavor,
                                            this_sha3, most_recent_sha3)) {
@@ -1131,7 +1145,7 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     consensus_cache_entry_get_value(job->diff_from, LABEL_VALID_AFTER);
   const char *lv_from_digest =
     consensus_cache_entry_get_value(job->diff_from,
-                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
+                                    LABEL_SHA3_DIGEST_AS_SIGNED);
   const char *lv_from_flavor =
     consensus_cache_entry_get_value(job->diff_from, LABEL_FLAVOR);
   const char *lv_to_flavor =
@@ -1140,10 +1154,17 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
     consensus_cache_entry_get_value(job->diff_to,
                                     LABEL_SHA3_DIGEST_UNCOMPRESSED);
 
+  if (! lv_from_digest) {
+    /* This isn't a bug right now, since it can happen if you're migrating
+     * from an older version of master to a newer one.  The older ones didn't
+     * annotate their stored consensus objects with sha3-digest-as-signed.
+    */
+    return WQ_RPL_REPLY; // LCOV_EXCL_LINE
+  }
+
   /* All these values are mandatory on the input */
   if (BUG(!lv_to_valid_after) ||
       BUG(!lv_from_valid_after) ||
-      BUG(!lv_from_digest) ||
       BUG(!lv_from_flavor) ||
       BUG(!lv_to_flavor)) {
     return WQ_RPL_REPLY; // LCOV_EXCL_LINE
@@ -1267,7 +1288,7 @@ consensus_diff_worker_replyfn(void *work_)
 
   const char *lv_from_digest =
     consensus_cache_entry_get_value(job->diff_from,
-                                    LABEL_SHA3_DIGEST_UNCOMPRESSED);
+                                    LABEL_SHA3_DIGEST_AS_SIGNED);
   const char *lv_to_digest =
     consensus_cache_entry_get_value(job->diff_to,
                                     LABEL_SHA3_DIGEST_UNCOMPRESSED);
@@ -1283,7 +1304,7 @@ consensus_diff_worker_replyfn(void *work_)
   int flav = -1;
   int cache = 1;
   if (BUG(cdm_entry_get_sha3_value(from_sha3, job->diff_from,
-                                   LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
+                                   LABEL_SHA3_DIGEST_AS_SIGNED) < 0))
     cache = 0;
   if (BUG(cdm_entry_get_sha3_value(to_sha3, job->diff_to,
                                    LABEL_SHA3_DIGEST_UNCOMPRESSED) < 0))
