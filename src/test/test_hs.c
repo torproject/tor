@@ -210,8 +210,29 @@ test_hs_desc_event(void *arg)
   tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
-  /* test valid content. */
+  /* test no HSDir fingerprint type */
+  rend_query.auth_type = REND_NO_AUTH;
+  control_event_hs_descriptor_failed(&rend_query.base_, NULL,
+                                     "QUERY_NO_HSDIR");
+  expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" NO_AUTH " \
+                 "UNKNOWN REASON=QUERY_NO_HSDIR\r\n";
+  tt_assert(received_msg);
+  tt_str_op(received_msg,OP_EQ, expected_msg);
+  tor_free(received_msg);
+
+  /* Test invalid content with no HSDir fingerprint. */
   char *exp_msg;
+  control_event_hs_descriptor_content(rend_query.onion_address,
+                                      STR_HS_CONTENT_DESC_ID, NULL, NULL);
+  tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR " "\
+               STR_HS_CONTENT_DESC_ID " UNKNOWN" \
+               "\r\n\r\n.\r\n650 OK\r\n");
+  tt_assert(received_msg);
+  tt_str_op(received_msg, OP_EQ, exp_msg);
+  tor_free(received_msg);
+  tor_free(exp_msg);
+
+  /* test valid content. */
   control_event_hs_descriptor_content(rend_query.onion_address,
                                       STR_HS_CONTENT_DESC_ID, HSDIR_EXIST_ID,
                                       hs_desc_content);

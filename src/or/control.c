@@ -6924,6 +6924,11 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
     goto end;
   }
 
+  /* Without a directory fingerprint at this stage, we can't do much. */
+  if (hsdir_fp == NULL) {
+     goto end;
+  }
+
   /* OK, we have an onion address so now let's find which descriptor ID
    * is the one associated with the HSDir fingerprint. */
   for (replica = 0; replica < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
