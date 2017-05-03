@@ -477,33 +477,16 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
   return rs;
 }
 
-/** Start a connection to a random running directory server, using
- * connection purpose <b>dir_purpose</b>, intending to fetch descriptors
- * of purpose <b>router_purpose</b>, and requesting <b>resource</b>.
- * Use <b>pds_flags</b> as arguments to router_pick_directory_server()
- * or router_pick_trusteddirserver().
+/**
+ * Set the extra fields in <b>req</b> that are used when requesting a
+ * consensus of type <b>resource</b>.
  */
-MOCK_IMPL(void, directory_get_from_dirserver, (
-                            uint8_t dir_purpose,
-                            uint8_t router_purpose,
-                            const char *resource,
-                            int pds_flags,
-                            download_want_authority_t want_authority))
+static void
+dir_consensus_request_set_additional_headers(directory_request_t *req,
+                                             const char *resource)
 {
-  const routerstatus_t *rs = NULL;
-  const or_options_t *options = get_options();
-  int prefer_authority = (directory_fetches_from_authorities(options)
-                          || want_authority == DL_WANT_AUTHORITY);
-  int require_authority = 0;
-  int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose,
-                                            resource);
-  dirinfo_type_t type = dir_fetch_type(dir_purpose, router_purpose, resource);
   time_t if_modified_since = 0;
-
-  if (type == NO_DIRINFO)
-    return;
-
-  if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
+  {
     int flav = FLAV_NS;
     networkstatus_t *v;
     if (resource)
@@ -538,6 +521,33 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
         if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
     }
   }
+  directory_request_set_if_modified_since(req, if_modified_since);
+}
+
+/** Start a connection to a random running directory server, using
+ * connection purpose <b>dir_purpose</b>, intending to fetch descriptors
+ * of purpose <b>router_purpose</b>, and requesting <b>resource</b>.
+ * Use <b>pds_flags</b> as arguments to router_pick_directory_server()
+ * or router_pick_trusteddirserver().
+ */
+MOCK_IMPL(void, directory_get_from_dirserver, (
+                            uint8_t dir_purpose,
+                            uint8_t router_purpose,
+                            const char *resource,
+                            int pds_flags,
+                            download_want_authority_t want_authority))
+{
+  const routerstatus_t *rs = NULL;
+  const or_options_t *options = get_options();
+  int prefer_authority = (directory_fetches_from_authorities(options)
+                          || want_authority == DL_WANT_AUTHORITY);
+  int require_authority = 0;
+  int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose,
+                                            resource);
+  dirinfo_type_t type = dir_fetch_type(dir_purpose, router_purpose, resource);
+
+  if (type == NO_DIRINFO)
+    return;
 
   if (!options->FetchServerDescriptors)
     return;
@@ -566,7 +576,8 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
                                             ri->cache_info.identity_digest);
         directory_request_set_router_purpose(req, router_purpose);
         directory_request_set_resource(req, resource);
-        directory_request_set_if_modified_since(req, if_modified_since);
+        if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS)
+          dir_consensus_request_set_additional_headers(req, resource);
         directory_request_set_guard_state(req, guard_state);
         directory_initiate_request(req);
         directory_request_free(req);
@@ -634,7 +645,8 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
     directory_request_set_router_purpose(req, router_purpose);
     directory_request_set_indirection(req, indirection);
     directory_request_set_resource(req, resource);
-    directory_request_set_if_modified_since(req, if_modified_since);
+    if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS)
+      dir_consensus_request_set_additional_headers(req, resource);
     if (guard_state)
       directory_request_set_guard_state(req, guard_state);
     directory_initiate_request(req);
