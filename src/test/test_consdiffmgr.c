@@ -428,7 +428,6 @@ test_consdiffmgr_diff_rules(void *arg)
 #define N 6
   char *md_body[N], *ns_body[N];
   networkstatus_t *md_ns[N], *ns_ns[N];
-  uint8_t md_ns_sha3[N][DIGEST256_LEN], ns_ns_sha3[N][DIGEST256_LEN];
   int i;
 
   MOCK(cpuworker_queue_work, mock_cpuworker_queue_work);
@@ -441,10 +440,6 @@ test_consdiffmgr_diff_rules(void *arg)
     ns_body[i] = fake_ns_body_new(FLAV_NS, when);
     md_ns[i] = fake_ns_new(FLAV_MICRODESC, when);
     ns_ns[i] = fake_ns_new(FLAV_NS, when);
-    crypto_digest256((char *)md_ns_sha3[i], md_body[i], strlen(md_body[i]),
-                     DIGEST_SHA3_256);
-    crypto_digest256((char *)ns_ns_sha3[i], ns_body[i], strlen(ns_body[i]),
-                     DIGEST_SHA3_256);
   }
 
   /* For the MD consensuses: add 4 of them, and make sure that
@@ -724,7 +719,6 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
 #define N 4
   char *md_body[N];
   networkstatus_t *md_ns[N];
-  uint8_t md_ns_sha3[N][DIGEST256_LEN];
   int i;
   consensus_cache_entry_t *hold_ent = NULL, *ent;
 
@@ -739,8 +733,6 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
     time_t when = start + i * 15;
     md_body[i] = fake_ns_body_new(FLAV_MICRODESC, when);
     md_ns[i] = fake_ns_new(FLAV_MICRODESC, when);
-    crypto_digest256((char *)md_ns_sha3[i], md_body[i], strlen(md_body[i]),
-                     DIGEST_SHA3_256);
   }
 
   /* add the first 3. */
