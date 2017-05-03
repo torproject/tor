@@ -13,6 +13,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "consdiff.h"
 #include "consdiffmgr.h"
 #include "control.h"
 #include "compat.h"
@@ -2417,6 +2418,10 @@ handle_response_fetch_consensus(dir_connection_t *conn,
   const char *reason = args->reason;
   const time_t now = approx_time();
 
+  const char *consensus;
+  char *new_consensus = NULL;
+  const char *sourcename;
+
   int r;
   const char *flavname = conn->requested_resource;
   if (status_code != 200) {
@@ -2429,15 +2434,57 @@ handle_response_fetch_consensus(dir_connection_t *conn,
     networkstatus_consensus_download_failed(status_code, flavname);
     return -1;
   }
-  log_info(LD_DIR,"Received consensus directory (body size %d) from server "
-           "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
-  if ((r=networkstatus_set_current_consensus(body, flavname, 0,
+
+  if (looks_like_a_consensus_diff(body, body_len)) {
+    /* First find our previous consensus. Maybe it's in ram, maybe not. */
+    cached_dir_t *cd = dirserv_get_consensus(flavname);
+    const char *consensus_body;
+    char *owned_consensus = NULL;
+    if (cd) {
+      consensus_body = cd->dir;
+    } else {
+      owned_consensus = networkstatus_read_cached_consensus(flavname);
+      consensus_body = owned_consensus;
+    }
+    if (!consensus_body) {
+      log_warn(LD_DIR, "Received a consensus diff, but we can't find "
+               "any %s-flavored consensus in our current cache.",flavname);
+      networkstatus_consensus_download_failed(0, flavname);
+      // XXXX if this happens too much, see below
+      return -1;
+    }
+
+    new_consensus = consensus_diff_apply(consensus_body, body);
+    tor_free(owned_consensus);
+    if (new_consensus == NULL) {
+      log_warn(LD_DIR, "Could not apply consensus diff received from server "
+               "'%s:%d'", conn->base_.address, conn->base_.port);
+      // XXXX If this happens too many times, we should maybe not use
+      // XXXX this directory for diffs any more?
+      networkstatus_consensus_download_failed(0, flavname);
+      return -1;
+    }
+    log_info(LD_DIR, "Applied consensus diff (body size %d) from server "
+             "'%s:%d' resulted in a new consensus document (size %d).",
+             (int)body_len, conn->base_.address, conn->base_.port,
+             (int)strlen(new_consensus));
+    consensus = new_consensus;
+    sourcename = "generated based on a diff";
+  } else {
+    log_info(LD_DIR,"Received consensus directory (body size %d) from server "
+             "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
+    consensus = body;
+    sourcename = "downloaded";
+  }
+
+  if ((r=networkstatus_set_current_consensus(consensus, flavname, 0,
                                              conn->identity_digest))<0) {
     log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
-           "Unable to load %s consensus directory downloaded from "
+           "Unable to load %s consensus directory %s from "
            "server '%s:%d'. I'll try again soon.",
-           flavname, conn->base_.address, conn->base_.port);
+           flavname, sourcename, conn->base_.address, conn->base_.port);
     networkstatus_consensus_download_failed(0, flavname);
+    tor_free(new_consensus);
     return -1;
   }
 
@@ -2455,6 +2502,7 @@ handle_response_fetch_consensus(dir_connection_t *conn,
   }
   log_info(LD_DIR, "Successfully loaded consensus.");
 
+  tor_free(new_consensus);
   return 0;
 }
 

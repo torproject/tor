@@ -1401,3 +1401,12 @@ consensus_diff_apply(const char *consensus,
   return result;
 }
 
+/** Return true iff, based on its header, <b>document</b> is likely
+ * to be a consensus diff. */
+int
+looks_like_a_consensus_diff(const char *document, size_t len)
+{
+  return (len >= strlen(ns_diff_version) &&
+          fast_memeq(document, ns_diff_version, strlen(ns_diff_version)));
+}
+

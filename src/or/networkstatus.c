@@ -179,53 +179,74 @@ networkstatus_reset_download_failures(void)
     download_status_reset(&consensus_bootstrap_dl_status[i]);
 }
 
+/**
+ * Read and and return the cached consensus of type <b>flavorname</b>.  If
+ * <b>unverified</b> is false, get the one we haven't verified. Return NULL if
+ * the file isn't there. */
+static char *
+networkstatus_read_cached_consensus_impl(int flav,
+                                         const char *flavorname,
+                                         int unverified_consensus)
+{
+  char buf[128];
+  const char *prefix;
+  if (unverified_consensus) {
+    prefix = "unverified";
+  } else {
+    prefix = "cached";
+  }
+  if (flav == FLAV_NS) {
+    tor_snprintf(buf, sizeof(buf), "%s-consensus", prefix);
+  } else {
+    tor_snprintf(buf, sizeof(buf), "%s-%s-consensus", prefix, flavorname);
+  }
+
+  char *filename = get_datadir_fname(buf);
+  char *result = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+  tor_free(filename);
+  return result;
+}
+
+/** Return a new string containing the current cached consensus of flavor
+ * <b>flavorname</b>. */
+char *
+networkstatus_read_cached_consensus(const char *flavorname)
+ {
+  int flav = networkstatus_parse_flavor_name(flavorname);
+  if (flav < 0)
+    return NULL;
+  return networkstatus_read_cached_consensus_impl(flav, flavorname, 0);
+}
+
 /** Read every cached v3 consensus networkstatus from the disk. */
 int
 router_reload_consensus_networkstatus(void)
 {
-  char *filename;
-  char *s;
   const unsigned int flags = NSSET_FROM_CACHE | NSSET_DONT_DOWNLOAD_CERTS;
   int flav;
 
   /* FFFF Suppress warnings if cached consensus is bad? */
   for (flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
-    char buf[128];
     const char *flavor = networkstatus_get_flavor_name(flav);
-    if (flav == FLAV_NS) {
-      filename = get_datadir_fname("cached-consensus");
-    } else {
-      tor_snprintf(buf, sizeof(buf), "cached-%s-consensus", flavor);
-      filename = get_datadir_fname(buf);
-    }
-    s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+    char *s = networkstatus_read_cached_consensus_impl(flav, flavor, 0);
     if (s) {
       if (networkstatus_set_current_consensus(s, flavor, flags, NULL) < -1) {
-        log_warn(LD_FS, "Couldn't load consensus %s networkstatus from \"%s\"",
-                 flavor, filename);
+        log_warn(LD_FS, "Couldn't load consensus %s networkstatus from cache",
+                 flavor);
       }
       tor_free(s);
     }
-    tor_free(filename);
 
-    if (flav == FLAV_NS) {
-      filename = get_datadir_fname("unverified-consensus");
-    } else {
-      tor_snprintf(buf, sizeof(buf), "unverified-%s-consensus", flavor);
-      filename = get_datadir_fname(buf);
-    }
-
-    s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+    s = networkstatus_read_cached_consensus_impl(flav, flavor, 1);
     if (s) {
       if (networkstatus_set_current_consensus(s, flavor,
                                      flags|NSSET_WAS_WAITING_FOR_CERTS,
                                      NULL)) {
-      log_info(LD_FS, "Couldn't load consensus %s networkstatus from \"%s\"",
-               flavor, filename);
-    }
+        log_info(LD_FS, "Couldn't load unverified consensus %s networkstatus "
+                 "from cache", flavor);
+      }
       tor_free(s);
     }
-    tor_free(filename);
   }
 
   if (!networkstatus_get_latest_consensus()) {
