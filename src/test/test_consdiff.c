@@ -931,18 +931,24 @@ test_consdiff_gen_diff(void *arg)
   consensus_split_lines(cons1, cons1_str, area);
   diff = consdiff_gen_diff(cons1, cons2, &digests1, &digests2, area);
   tt_ptr_op(NULL, OP_NE, diff);
-  tt_int_op(7, OP_EQ, smartlist_len(diff));
+  tt_int_op(11, OP_EQ, smartlist_len(diff));
   tt_assert(line_str_eq(smartlist_get(diff, 0),
                         "network-status-diff-version 1"));
   tt_assert(line_str_eq(smartlist_get(diff, 1), "hash "
       "95D70F5A3CC65F920AA8B44C4563D7781A082674329661884E19E94B79D539C2 "
       "7AFECEFA4599BA33D603653E3D2368F648DF4AC4723929B0F7CF39281596B0C1"));
-  tt_assert(line_str_eq(smartlist_get(diff, 2), "3,4d"));
-  tt_assert(line_str_eq(smartlist_get(diff, 3), "1a"));
-  tt_assert(line_str_eq(smartlist_get(diff, 4),
+  tt_assert(line_str_eq(smartlist_get(diff, 2), "6,$d"));
+  tt_assert(line_str_eq(smartlist_get(diff, 3), "3,4c"));
+  tt_assert(line_str_eq(smartlist_get(diff, 4), "bar"));
+  tt_assert(line_str_eq(smartlist_get(diff, 5),
+                        "directory-signature foo bar"));
+  tt_assert(line_str_eq(smartlist_get(diff, 6),
+                        "."));
+  tt_assert(line_str_eq(smartlist_get(diff, 7), "1a"));
+  tt_assert(line_str_eq(smartlist_get(diff, 8),
                         "r name aaaaaaaaaaaaaaaaa etc"));
-  tt_assert(line_str_eq(smartlist_get(diff, 5), "foo"));
-  tt_assert(line_str_eq(smartlist_get(diff, 6), "."));
+  tt_assert(line_str_eq(smartlist_get(diff, 9), "foo"));
+  tt_assert(line_str_eq(smartlist_get(diff, 10), "."));
 
   /* TODO: small real use-cases, i.e. consensuses. */
 
