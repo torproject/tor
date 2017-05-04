@@ -709,6 +709,16 @@ test_consdiff_apply_ed_diff(void *arg)
 
   smartlist_clear(diff);
 
+  /* $ for a non-delete command. */
+  smartlist_add_linecpy(diff, area, "1,$c");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("it wanted to use $ with a command "
+                                   "other than delete");
+
+  smartlist_clear(diff);
+
   /* Script is not in reverse order. */
   smartlist_add_linecpy(diff, area, "1d");
   smartlist_add_linecpy(diff, area, "3d");
