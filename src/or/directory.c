@@ -3822,43 +3822,75 @@ find_best_compression_method(unsigned compression_methods, int stream)
   return NO_METHOD;
 }
 
-/** Helper function for GET /tor/status-vote/current/consensus
+/** Encodes the results of parsing a consensus request to figure out what
+ * consensus, and possibly what diffs, the user asked for. */
+typedef struct {
+  /** name of the flavor to retrieve. */
+  char *flavor;
+  /** flavor to retrive, as enum. */
+  consensus_flavor_t flav;
+  /** plus-separated list of authority fingerprints; see
+   * client_likes_consensus(). Aliases the URL in the request passed to
+   * parse_consensus_request(). */
+  const char *want_fps;
+  /** Optionally, a smartlist of sha3 digests-as-signed of the consensuses
+   * to return a diff from. */
+  smartlist_t *diff_from_digests;
+  /** If true, never send a full consensus. If there is no diff, send
+   * a 404 instead. */
+  int diff_only;
+} parsed_consensus_request_t;
+
+/** Remove all data held in <b>req</b>. Do not free <b>req</b> itself, since
+ * it is stack-allocated. */
+static void
+parsed_consensus_request_clear(parsed_consensus_request_t *req)
+{
+  if (!req)
+    return;
+  tor_free(req->flavor);
+  if (req->diff_from_digests) {
+    SMARTLIST_FOREACH(req->diff_from_digests, uint8_t *, d, tor_free(d));
+    smartlist_free(req->diff_from_digests);
+  }
+  memset(req, 0, sizeof(parsed_consensus_request_t));
+}
+
+/**
+ * Parse the URL and relevant headers of <b>args</b> for a current-consensus
+ * request to learn what flavor of consensus we want, what keys it must be
+ * signed with, and what diffs we would accept (or demand) instead. Return 0
+ * on success and -1 on failure.
  */
 static int
-handle_get_current_consensus(dir_connection_t *conn,
-                             const get_handler_args_t *args)
+parse_consensus_request(parsed_consensus_request_t *out,
+                        const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const compress_method_t compress_method =
-    find_best_compression_method(args->compression_supported, 0);
-  const time_t if_modified_since = args->if_modified_since;
-  int clear_spool = 0;
+  memset(out, 0, sizeof(parsed_consensus_request_t));
+  out->flav = FLAV_NS;
 
-  /* v3 network status fetch. */
-  long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
-
-  time_t now = time(NULL);
-  const char *want_fps = NULL, *after_flavor = NULL;
-  char *flavor = NULL;
-  int flav = FLAV_NS;
   const char CONSENSUS_URL_PREFIX[] = "/tor/status-vote/current/consensus/";
   const char CONSENSUS_FLAVORED_PREFIX[] =
     "/tor/status-vote/current/consensus-";
 
   /* figure out the flavor if any, and who we wanted to sign the thing */
+  const char *after_flavor = NULL;
+
   if (!strcmpstart(url, CONSENSUS_FLAVORED_PREFIX)) {
     const char *f, *cp;
     f = url + strlen(CONSENSUS_FLAVORED_PREFIX);
     cp = strchr(f, '/');
     if (cp) {
       after_flavor = cp+1;
-      flavor = tor_strndup(f, cp-f);
+      out->flavor = tor_strndup(f, cp-f);
     } else {
-      flavor = tor_strdup(f);
+      out->flavor = tor_strdup(f);
     }
-    flav = networkstatus_parse_flavor_name(flavor);
+    int flav = networkstatus_parse_flavor_name(out->flavor);
     if (flav < 0)
       flav = FLAV_NS;
+    out->flav = flav;
   } else {
     if (!strcmpstart(url, CONSENSUS_URL_PREFIX))
       after_flavor = url+strlen(CONSENSUS_URL_PREFIX);
@@ -3874,44 +3906,74 @@ handle_get_current_consensus(dir_connection_t *conn,
     const char *cp = strchr(after_flavor, '/');
     if (cp) {
       diff_hash_in_url = tor_strndup(after_flavor, cp-after_flavor);
-      want_fps = cp+1;
+      out->want_fps = cp+1;
     } else {
       diff_hash_in_url = tor_strdup(after_flavor);
-      want_fps = NULL;
+      out->want_fps = NULL;
     }
   } else {
-    want_fps = after_flavor;
+    out->want_fps = after_flavor;
+  }
+
+  if (diff_hash_in_url) {
+    uint8_t diff_from[DIGEST256_LEN];
+    out->diff_from_digests = smartlist_new();
+    out->diff_only = 1;
+    if (!parse_one_diff_hash(diff_from, diff_hash_in_url, "URL",
+                             "rejecting")) {
+      smartlist_add(out->diff_from_digests,
+                    tor_memdup(diff_from, DIGEST256_LEN));
+    } else {
+      return -1;
+    }
+  } else {
+    parse_or_diff_from_header(&out->diff_from_digests, args->headers);
+  }
+
+  return 0;
+}
+
+/** Helper function for GET /tor/status-vote/current/consensus
+ */
+static int
+handle_get_current_consensus(dir_connection_t *conn,
+                             const get_handler_args_t *args)
+{
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 0);
+  const time_t if_modified_since = args->if_modified_since;
+  int clear_spool = 0;
+
+  /* v3 network status fetch. */
+  long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
+
+  time_t now = time(NULL);
+  const char *want_fps = NULL;
+  parsed_consensus_request_t req;
+
+  if (parse_consensus_request(&req, args) < 0) {
+    write_http_status_line(conn, 404, "Couldn't parse request");
+    goto done;
   }
 
   struct consensus_cache_entry_t *cached_consensus = NULL;
-  smartlist_t *diff_from_digests = NULL;
-  compress_method_t compression_used = NO_METHOD;
-  if (diff_hash_in_url) {
-    uint8_t diff_from[DIGEST256_LEN];
-    diff_from_digests = smartlist_new();
-    if (!parse_one_diff_hash(diff_from, diff_hash_in_url, "URL",
-                             "rejecting")) {
-      smartlist_add(diff_from_digests, tor_memdup(diff_from, DIGEST256_LEN));
-    }
-  } else if (!parse_or_diff_from_header(&diff_from_digests, args->headers)) {
-    tor_assert(diff_from_digests);
-  }
 
-  if (diff_from_digests) {
-    cached_consensus = find_best_diff(diff_from_digests, flav,
+  compress_method_t compression_used = NO_METHOD;
+  if (req.diff_from_digests) {
+    cached_consensus = find_best_diff(req.diff_from_digests, req.flav,
                                       args->compression_supported,
                                       &compression_used);
   }
 
-  if (diff_hash_in_url && !cached_consensus) {
+  if (req.diff_only && !cached_consensus) {
     write_http_status_line(conn, 404, "No such diff available");
-    // XXXX warn_consensus_is_too_old(v, flavor, now);
+    // XXXX warn_consensus_is_too_old(v, req.flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     goto done;
   }
 
   if (! cached_consensus) {
-    cached_consensus = find_best_consensus(flav,
+    cached_consensus = find_best_consensus(req.flav,
                                            args->compression_supported,
                                            &compression_used);
   }
@@ -3928,7 +3990,7 @@ handle_get_current_consensus(dir_connection_t *conn,
   if (cached_consensus && have_valid_until &&
       !networkstatus_valid_until_is_reasonably_live(valid_until, now)) {
     write_http_status_line(conn, 404, "Consensus is too old");
-    warn_consensus_is_too_old(cached_consensus, flavor, now);
+    warn_consensus_is_too_old(cached_consensus, req.flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     goto done;
   }
@@ -4014,8 +4076,7 @@ handle_get_current_consensus(dir_connection_t *conn,
   goto done;
 
  done:
-  tor_free(flavor);
-  tor_free(diff_hash_in_url);
+  parsed_consensus_request_clear(&req);
   if (clear_spool) {
     dir_conn_clear_spool(conn);
   }
