@@ -497,10 +497,22 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
    * period of 1 hour.
    */
   const int DEFAULT_IF_MODIFIED_SINCE_DELAY = 180;
+  const int32_t DEFAULT_TRY_DIFF_FOR_CONSENSUS_NEWER = 72;
+  const int32_t MIN_TRY_DIFF_FOR_CONSENSUS_NEWER = 0;
+  const int32_t MAX_TRY_DIFF_FOR_CONSENSUS_NEWER = 8192;
+  const char TRY_DIFF_FOR_CONSENSUS_NEWER_NAME[] =
+    "try-diff-for-consensus-newer-than";
 
   int flav = FLAV_NS;
   if (resource)
     flav = networkstatus_parse_flavor_name(resource);
+
+  int32_t max_age_for_diff = 3600 *
+    networkstatus_get_param(NULL,
+                            TRY_DIFF_FOR_CONSENSUS_NEWER_NAME,
+                            DEFAULT_TRY_DIFF_FOR_CONSENSUS_NEWER,
+                            MIN_TRY_DIFF_FOR_CONSENSUS_NEWER,
+                            MAX_TRY_DIFF_FOR_CONSENSUS_NEWER);
 
   if (flav != -1) {
     /* IF we have a parsed consensus of this type, we can do an
@@ -517,8 +529,10 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
         ims_delay = (v->fresh_until - v->valid_after)/2;
       }
       if_modified_since = v->valid_after + ims_delay;
-      memcpy(or_diff_from, v->digest_sha3_as_signed, DIGEST256_LEN);
-      or_diff_from_is_set = 1;
+      if (v->valid_after >= approx_time() - max_age_for_diff) {
+        memcpy(or_diff_from, v->digest_sha3_as_signed, DIGEST256_LEN);
+        or_diff_from_is_set = 1;
+      }
     }
   } else {
     /* Otherwise it might be a consensus we don't parse, but which we
@@ -528,8 +542,10 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
      * unparsed consensus, so we use the default. */
     if (cd) {
       if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
-      memcpy(or_diff_from, cd->digest_sha3_as_signed, DIGEST256_LEN);
-      or_diff_from_is_set = 1;
+      if (cd->published >= approx_time() - max_age_for_diff) {
+        memcpy(or_diff_from, cd->digest_sha3_as_signed, DIGEST256_LEN);
+        or_diff_from_is_set = 1;
+      }
     }
   }
 
