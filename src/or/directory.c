@@ -493,14 +493,15 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
   uint8_t or_diff_from[DIGEST256_LEN];
   int or_diff_from_is_set = 0;
 
+  /* DEFAULT_IF_MODIFIED_SINCE_DELAY is 1/20 of the default consensus
+   * period of 1 hour.
+   */
+  const int DEFAULT_IF_MODIFIED_SINCE_DELAY = 180;
+
   int flav = FLAV_NS;
   if (resource)
     flav = networkstatus_parse_flavor_name(resource);
 
-  /* DEFAULT_IF_MODIFIED_SINCE_DELAY is 1/20 of the default consensus
-   * period of 1 hour.
-   */
-#define DEFAULT_IF_MODIFIED_SINCE_DELAY (180)
   if (flav != -1) {
     /* IF we have a parsed consensus of this type, we can do an
      * if-modified-time based on it. */
