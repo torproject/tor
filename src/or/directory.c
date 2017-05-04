@@ -517,7 +517,7 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
         ims_delay = (v->fresh_until - v->valid_after)/2;
       }
       if_modified_since = v->valid_after + ims_delay;
-      memcpy(or_diff_from, v->digest_full_sha3, DIGEST256_LEN);
+      memcpy(or_diff_from, v->digest_sha3_as_signed, DIGEST256_LEN);
       or_diff_from_is_set = 1;
     }
   } else {
@@ -528,7 +528,7 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
      * unparsed consensus, so we use the default. */
     if (cd) {
       if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
-      memcpy(or_diff_from, cd->digest_sha3_full, DIGEST256_LEN);
+      memcpy(or_diff_from, cd->digest_sha3_as_signed, DIGEST256_LEN);
       or_diff_from_is_set = 1;
     }
   }

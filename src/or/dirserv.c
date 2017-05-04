@@ -1212,8 +1212,7 @@ void
 dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
                                            const char *flavor_name,
                                            const common_digests_t *digests,
-                                           // XXXX rename after 22143
-                                           const uint8_t *sha3_full_digest,
+                                           const uint8_t *sha3_as_signed,
                                            time_t published)
 {
   cached_dir_t *new_networkstatus;
@@ -1223,7 +1222,7 @@ dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
 
   new_networkstatus = new_cached_dir(tor_strdup(networkstatus), published);
   memcpy(&new_networkstatus->digests, digests, sizeof(common_digests_t));
-  memcpy(&new_networkstatus->digest_sha3_full, sha3_full_digest,
+  memcpy(&new_networkstatus->digest_sha3_as_signed, sha3_as_signed,
          DIGEST256_LEN);
   old_networkstatus = strmap_set(cached_consensuses, flavor_name,
                                  new_networkstatus);

@@ -2002,7 +2002,7 @@ networkstatus_set_current_consensus(const char *consensus,
     dirserv_set_cached_consensus_networkstatus(consensus,
                                                flavor,
                                                &c->digests,
-                                               c->digest_full_sha3,
+                                               c->digest_sha3_as_signed,
                                                c->valid_after);
     if (server_mode(get_options())) {
       consdiffmgr_add_consensus(consensus, c);
