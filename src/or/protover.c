@@ -288,7 +288,7 @@ protover_get_supported_protocols(void)
   return
     "Cons=1-2 "
     "Desc=1-2 "
-    "DirCache=1 "
+    "DirCache=1-2 "
     "HSDir=1-2 "
     "HSIntro=3-4 "
     "HSRend=1-2 "
