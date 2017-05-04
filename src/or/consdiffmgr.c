@@ -858,9 +858,12 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
       continue; // LCOV_EXCL_LINE
 
     uint8_t this_sha3[DIGEST256_LEN];
-    if (BUG(cdm_entry_get_sha3_value(this_sha3, c,
-                                     LABEL_SHA3_DIGEST_AS_SIGNED)<0))
-      continue; // LCOV_EXCL_LINE
+    if (cdm_entry_get_sha3_value(this_sha3, c,
+                                 LABEL_SHA3_DIGEST_AS_SIGNED)<0) {
+      // Not actually a bug, since we might be running with a directory
+      // with stale files from before the #22143 fixes.
+      continue;
+    }
     if (cdm_diff_ht_check_and_note_pending(flavor,
                                            this_sha3, most_recent_sha3)) {
       // This is already pending, or we encountered an error.

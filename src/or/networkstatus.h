@@ -16,6 +16,7 @@
 
 void networkstatus_reset_warnings(void);
 void networkstatus_reset_download_failures(void);
+char *networkstatus_read_cached_consensus(const char *flavorname);
 int router_reload_consensus_networkstatus(void);
 void routerstatus_free(routerstatus_t *rs);
 void networkstatus_vote_free(networkstatus_t *ns);

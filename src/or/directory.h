@@ -72,7 +72,9 @@ void directory_request_set_rend_query(directory_request_t *req,
 
 void directory_request_set_routerstatus(directory_request_t *req,
                                         const routerstatus_t *rs);
-
+void directory_request_add_header(directory_request_t *req,
+                                  const char *key,
+                                  const char *val);
 MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
 
 int parse_http_response(const char *headers, int *code, time_t *date,

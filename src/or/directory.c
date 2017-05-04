@@ -13,6 +13,8 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "consdiff.h"
+#include "consdiffmgr.h"
 #include "control.h"
 #include "compat.h"
 #define DIRECTORY_PRIVATE
@@ -129,6 +131,7 @@ static void directory_request_set_guard_state(directory_request_t *req,
 #define ALLOW_DIRECTORY_TIME_SKEW (30*60)
 
 #define X_ADDRESS_HEADER "X-Your-Address-Is: "
+#define X_OR_DIFF_FROM_CONSENSUS_HEADER "X-Or-Diff-From-Consensus: "
 
 /** HTTP cache control: how long do we tell proxies they can cache each
  * kind of document we serve? */
@@ -476,6 +479,70 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
   return rs;
 }
 
+/**
+ * Set the extra fields in <b>req</b> that are used when requesting a
+ * consensus of type <b>resource</b>.
+ *
+ * Right now, these fields are if-modified-since and x-or-diff-from-consensus.
+ */
+static void
+dir_consensus_request_set_additional_headers(directory_request_t *req,
+                                             const char *resource)
+{
+  time_t if_modified_since = 0;
+  uint8_t or_diff_from[DIGEST256_LEN];
+  int or_diff_from_is_set = 0;
+
+  /* DEFAULT_IF_MODIFIED_SINCE_DELAY is 1/20 of the default consensus
+   * period of 1 hour.
+   */
+  const int DEFAULT_IF_MODIFIED_SINCE_DELAY = 180;
+
+  int flav = FLAV_NS;
+  if (resource)
+    flav = networkstatus_parse_flavor_name(resource);
+
+  if (flav != -1) {
+    /* IF we have a parsed consensus of this type, we can do an
+     * if-modified-time based on it. */
+    networkstatus_t *v;
+    v = networkstatus_get_latest_consensus_by_flavor(flav);
+    if (v) {
+      /* In networks with particularly short V3AuthVotingIntervals,
+       * ask for the consensus if it's been modified since half the
+       * V3AuthVotingInterval of the most recent consensus. */
+      time_t ims_delay = DEFAULT_IF_MODIFIED_SINCE_DELAY;
+      if (v->fresh_until > v->valid_after
+          && ims_delay > (v->fresh_until - v->valid_after)/2) {
+        ims_delay = (v->fresh_until - v->valid_after)/2;
+      }
+      if_modified_since = v->valid_after + ims_delay;
+      memcpy(or_diff_from, v->digest_sha3_as_signed, DIGEST256_LEN);
+      or_diff_from_is_set = 1;
+    }
+  } else {
+    /* Otherwise it might be a consensus we don't parse, but which we
+     * do cache.  Look at the cached copy, perhaps. */
+    cached_dir_t *cd = dirserv_get_consensus(resource);
+    /* We have no method of determining the voting interval from an
+     * unparsed consensus, so we use the default. */
+    if (cd) {
+      if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
+      memcpy(or_diff_from, cd->digest_sha3_as_signed, DIGEST256_LEN);
+      or_diff_from_is_set = 1;
+    }
+  }
+
+  if (if_modified_since > 0)
+    directory_request_set_if_modified_since(req, if_modified_since);
+  if (or_diff_from_is_set) {
+    char hex[HEX_DIGEST256_LEN + 1];
+    base16_encode(hex, sizeof(hex),
+                  (const char*)or_diff_from, sizeof(or_diff_from));
+    directory_request_add_header(req, X_OR_DIFF_FROM_CONSENSUS_HEADER, hex);
+  }
+}
+
 /** Start a connection to a random running directory server, using
  * connection purpose <b>dir_purpose</b>, intending to fetch descriptors
  * of purpose <b>router_purpose</b>, and requesting <b>resource</b>.
@@ -497,46 +564,9 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose,
                                             resource);
   dirinfo_type_t type = dir_fetch_type(dir_purpose, router_purpose, resource);
-  time_t if_modified_since = 0;
 
   if (type == NO_DIRINFO)
     return;
-
-  if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
-    int flav = FLAV_NS;
-    networkstatus_t *v;
-    if (resource)
-      flav = networkstatus_parse_flavor_name(resource);
-
-    /* DEFAULT_IF_MODIFIED_SINCE_DELAY is 1/20 of the default consensus
-     * period of 1 hour.
-     */
-#define DEFAULT_IF_MODIFIED_SINCE_DELAY (180)
-    if (flav != -1) {
-      /* IF we have a parsed consensus of this type, we can do an
-       * if-modified-time based on it. */
-      v = networkstatus_get_latest_consensus_by_flavor(flav);
-      if (v) {
-        /* In networks with particularly short V3AuthVotingIntervals,
-         * ask for the consensus if it's been modified since half the
-         * V3AuthVotingInterval of the most recent consensus. */
-        time_t ims_delay = DEFAULT_IF_MODIFIED_SINCE_DELAY;
-        if (v->fresh_until > v->valid_after
-            && ims_delay > (v->fresh_until - v->valid_after)/2) {
-          ims_delay = (v->fresh_until - v->valid_after)/2;
-        }
-        if_modified_since = v->valid_after + ims_delay;
-      }
-    } else {
-      /* Otherwise it might be a consensus we don't parse, but which we
-       * do cache.  Look at the cached copy, perhaps. */
-      cached_dir_t *cd = dirserv_get_consensus(resource);
-      /* We have no method of determining the voting interval from an
-       * unparsed consensus, so we use the default. */
-      if (cd)
-        if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
-    }
-  }
 
   if (!options->FetchServerDescriptors)
     return;
@@ -565,7 +595,8 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
                                             ri->cache_info.identity_digest);
         directory_request_set_router_purpose(req, router_purpose);
         directory_request_set_resource(req, resource);
-        directory_request_set_if_modified_since(req, if_modified_since);
+        if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS)
+          dir_consensus_request_set_additional_headers(req, resource);
         directory_request_set_guard_state(req, guard_state);
         directory_initiate_request(req);
         directory_request_free(req);
@@ -633,7 +664,8 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
     directory_request_set_router_purpose(req, router_purpose);
     directory_request_set_indirection(req, indirection);
     directory_request_set_resource(req, resource);
-    directory_request_set_if_modified_since(req, if_modified_since);
+    if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS)
+      dir_consensus_request_set_additional_headers(req, resource);
     if (guard_state)
       directory_request_set_guard_state(req, guard_state);
     directory_initiate_request(req);
@@ -988,6 +1020,9 @@ struct directory_request_t {
   time_t if_modified_since;
   /** Hidden-service-specific information */
   const rend_data_t *rend_query;
+  /** Extra headers to append to the request */
+  config_line_t *additional_headers;
+  /** */
   /** Used internally to directory.c: gets informed when the attempt to
    * connect to the directory succeeds or fails, if that attempt bears on the
    * directory's usability as a directory guard. */
@@ -1086,6 +1121,7 @@ directory_request_free(directory_request_t *req)
 {
   if (req == NULL)
     return;
+  config_free_lines(req->additional_headers);
   tor_free(req);
 }
 /**
@@ -1185,6 +1221,21 @@ directory_request_set_if_modified_since(directory_request_t *req,
                                         time_t if_modified_since)
 {
   req->if_modified_since = if_modified_since;
+}
+
+/** Include a header of name <b>key</b> with content <b>val</b> in the
+ * request. Neither may include newlines or other odd characters. Their
+ * ordering is not currently guaranteed.
+ *
+ * Note that, as elsewhere in this module, header keys include a trailing
+ * colon and space.
+ */
+void
+directory_request_add_header(directory_request_t *req,
+                             const char *key,
+                             const char *val)
+{
+  config_line_prepend(&req->additional_headers, key, val);
 }
 /**
  * Set an object containing HS data to be associated with this request.  Note
@@ -1670,6 +1721,14 @@ directory_send_command(dir_connection_t *conn,
     }
   } else {
     proxystring[0] = 0;
+  }
+
+  /* Add additional headers, if any */
+  {
+    config_line_t *h;
+    for (h = req->additional_headers; h; h = h->next) {
+      smartlist_add_asprintf(headers, "%s%s\r\n", h->key, h->value);
+    }
   }
 
   switch (purpose) {
@@ -2363,6 +2422,10 @@ handle_response_fetch_consensus(dir_connection_t *conn,
   const char *reason = args->reason;
   const time_t now = approx_time();
 
+  const char *consensus;
+  char *new_consensus = NULL;
+  const char *sourcename;
+
   int r;
   const char *flavname = conn->requested_resource;
   if (status_code != 200) {
@@ -2375,15 +2438,57 @@ handle_response_fetch_consensus(dir_connection_t *conn,
     networkstatus_consensus_download_failed(status_code, flavname);
     return -1;
   }
-  log_info(LD_DIR,"Received consensus directory (body size %d) from server "
-           "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
-  if ((r=networkstatus_set_current_consensus(body, flavname, 0,
+
+  if (looks_like_a_consensus_diff(body, body_len)) {
+    /* First find our previous consensus. Maybe it's in ram, maybe not. */
+    cached_dir_t *cd = dirserv_get_consensus(flavname);
+    const char *consensus_body;
+    char *owned_consensus = NULL;
+    if (cd) {
+      consensus_body = cd->dir;
+    } else {
+      owned_consensus = networkstatus_read_cached_consensus(flavname);
+      consensus_body = owned_consensus;
+    }
+    if (!consensus_body) {
+      log_warn(LD_DIR, "Received a consensus diff, but we can't find "
+               "any %s-flavored consensus in our current cache.",flavname);
+      networkstatus_consensus_download_failed(0, flavname);
+      // XXXX if this happens too much, see below
+      return -1;
+    }
+
+    new_consensus = consensus_diff_apply(consensus_body, body);
+    tor_free(owned_consensus);
+    if (new_consensus == NULL) {
+      log_warn(LD_DIR, "Could not apply consensus diff received from server "
+               "'%s:%d'", conn->base_.address, conn->base_.port);
+      // XXXX If this happens too many times, we should maybe not use
+      // XXXX this directory for diffs any more?
+      networkstatus_consensus_download_failed(0, flavname);
+      return -1;
+    }
+    log_info(LD_DIR, "Applied consensus diff (size %d) from server "
+             "'%s:%d', resulting in a new consensus document (size %d).",
+             (int)body_len, conn->base_.address, conn->base_.port,
+             (int)strlen(new_consensus));
+    consensus = new_consensus;
+    sourcename = "generated based on a diff";
+  } else {
+    log_info(LD_DIR,"Received consensus directory (body size %d) from server "
+             "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
+    consensus = body;
+    sourcename = "downloaded";
+  }
+
+  if ((r=networkstatus_set_current_consensus(consensus, flavname, 0,
                                              conn->identity_digest))<0) {
     log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
-           "Unable to load %s consensus directory downloaded from "
+           "Unable to load %s consensus directory %s from "
            "server '%s:%d'. I'll try again soon.",
-           flavname, conn->base_.address, conn->base_.port);
+           flavname, sourcename, conn->base_.address, conn->base_.port);
     networkstatus_consensus_download_failed(0, flavname);
+    tor_free(new_consensus);
     return -1;
   }
 
@@ -2401,6 +2506,7 @@ handle_response_fetch_consensus(dir_connection_t *conn,
   }
   log_info(LD_DIR, "Successfully loaded consensus.");
 
+  tor_free(new_consensus);
   return 0;
 }
 
@@ -3165,14 +3271,30 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
  * based on whether the response will be <b>compressed</b> or not. */
 static void
 write_http_response_header(dir_connection_t *conn, ssize_t length,
-                           int compressed, long cache_lifetime)
+                           compress_method_t method, long cache_lifetime)
 {
+  const char *methodname = compression_method_get_name(method);
+  const char *doctype;
+  if (method == NO_METHOD)
+    doctype = "text/plain";
+  else
+    doctype = "application/octet-stream";
   write_http_response_header_impl(conn, length,
-                          compressed?"application/octet-stream":"text/plain",
-                          compressed?"deflate":"identity",
-                             NULL,
-                             cache_lifetime);
+                                  doctype,
+                                  methodname,
+                                  NULL,
+                                  cache_lifetime);
 }
+
+/** Array of compression methods to use (if supported) for serving
+ * precompressed data, ordered from best to worst. */
+static compress_method_t srv_meth_pref_precompressed[] = {
+  LZMA_METHOD,
+  ZSTD_METHOD,
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
 
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
  * and convert them to a bitfield where compression method x is supported if
@@ -3389,7 +3511,7 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
     url_len -= 2;
   }
 
-  if ((header = http_get_header(headers, "Accept-Encoding"))) {
+  if ((header = http_get_header(headers, "Accept-Encoding: "))) {
     compression_methods_supported = parse_accept_encoding_header(header);
     tor_free(header);
   } else {
@@ -3477,6 +3599,69 @@ warn_consensus_is_too_old(networkstatus_t *v, const char *flavor, time_t now)
   }
 }
 
+/** If there is an X-Or-Diff-From-Consensus header included in <b>headers</b>,
+ * set <b>digest_out<b> to a new smartlist containing every 256-bit
+ * hex-encoded digest listed in that header and return 0.  Otherwise return
+ * -1.  */
+static int
+parse_or_diff_from_header(smartlist_t **digests_out, const char *headers)
+{
+  char *hdr = http_get_header(headers, X_OR_DIFF_FROM_CONSENSUS_HEADER);
+  if (hdr == NULL) {
+    return -1;
+  }
+  smartlist_t *hex_digests = smartlist_new();
+  *digests_out = smartlist_new();
+  smartlist_split_string(hex_digests, hdr, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+  SMARTLIST_FOREACH_BEGIN(hex_digests, const char *, hex) {
+    uint8_t digest[DIGEST256_LEN];
+    if (base16_decode((char*)digest, sizeof(digest), hex, strlen(hex)) ==
+        DIGEST256_LEN) {
+      smartlist_add(*digests_out, tor_memdup(digest, sizeof(digest)));
+    } else {
+      log_fn(LOG_PROTOCOL_WARN, LD_DIR,
+             "X-Or-Diff-From-Consensus header contained bogus digest %s; "
+             "ignoring.", escaped(hex));
+    }
+  } SMARTLIST_FOREACH_END(hex);
+  SMARTLIST_FOREACH(hex_digests, char *, cp, tor_free(cp));
+  smartlist_free(hex_digests);
+  return 0;
+}
+
+/**
+ * Try to find the best consensus diff possible in order to serve a client
+ * request for a diff from one of the consensuses in <b>digests</b> to the
+ * current consensus of flavor <b>flav</b>.  The client supports the
+ * compression methods listed in the <b>compression_methods</b> bitfield:
+ * place the method chosen (if any) into <b>compression_used_out</b>.
+ */
+static struct consensus_cache_entry_t *
+find_best_diff(const smartlist_t *digests, int flav,
+               unsigned compression_methods,
+               compress_method_t *compression_used_out)
+{
+  struct consensus_cache_entry_t *result = NULL;
+
+  SMARTLIST_FOREACH_BEGIN(digests, const uint8_t *, diff_from) {
+    unsigned u;
+    for (u = 0; u < ARRAY_LENGTH(srv_meth_pref_precompressed); ++u) {
+      compress_method_t method = srv_meth_pref_precompressed[u];
+      if (0 == (compression_methods & (1u<<method)))
+        continue; // client doesn't like this one, or we don't have it.
+      if (consdiffmgr_find_diff_from(&result, flav, DIGEST_SHA3_256,
+                                     diff_from, DIGEST256_LEN,
+                                     method) == CONSDIFF_AVAILABLE) {
+        tor_assert_nonfatal(result);
+        *compression_used_out = method;
+        return result;
+      }
+    }
+  } SMARTLIST_FOREACH_END(diff_from);
+  return NULL;
+}
+
 /** Helper function for GET /tor/status-vote/current/consensus
  */
 static int
@@ -3488,129 +3673,145 @@ handle_get_current_consensus(dir_connection_t *conn,
   const time_t if_modified_since = args->if_modified_since;
   int clear_spool = 0;
 
-  {
-    /* v3 network status fetch. */
-    long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
+  /* v3 network status fetch. */
+  long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
-    networkstatus_t *v;
-    time_t now = time(NULL);
-    const char *want_fps = NULL;
-    char *flavor = NULL;
-    int flav = FLAV_NS;
+  networkstatus_t *v;
+  time_t now = time(NULL);
+  const char *want_fps = NULL;
+  char *flavor = NULL;
+  int flav = FLAV_NS;
 #define CONSENSUS_URL_PREFIX "/tor/status-vote/current/consensus/"
 #define CONSENSUS_FLAVORED_PREFIX "/tor/status-vote/current/consensus-"
-    /* figure out the flavor if any, and who we wanted to sign the thing */
-    if (!strcmpstart(url, CONSENSUS_FLAVORED_PREFIX)) {
-      const char *f, *cp;
-      f = url + strlen(CONSENSUS_FLAVORED_PREFIX);
-      cp = strchr(f, '/');
-      if (cp) {
-        want_fps = cp+1;
-        flavor = tor_strndup(f, cp-f);
-      } else {
-        flavor = tor_strdup(f);
-      }
-      flav = networkstatus_parse_flavor_name(flavor);
-      if (flav < 0)
-        flav = FLAV_NS;
+  /* figure out the flavor if any, and who we wanted to sign the thing */
+  if (!strcmpstart(url, CONSENSUS_FLAVORED_PREFIX)) {
+    const char *f, *cp;
+    f = url + strlen(CONSENSUS_FLAVORED_PREFIX);
+    cp = strchr(f, '/');
+    if (cp) {
+      want_fps = cp+1;
+      flavor = tor_strndup(f, cp-f);
     } else {
-      if (!strcmpstart(url, CONSENSUS_URL_PREFIX))
-        want_fps = url+strlen(CONSENSUS_URL_PREFIX);
+      flavor = tor_strdup(f);
     }
+    flav = networkstatus_parse_flavor_name(flavor);
+    if (flav < 0)
+      flav = FLAV_NS;
+  } else {
+    if (!strcmpstart(url, CONSENSUS_URL_PREFIX))
+      want_fps = url+strlen(CONSENSUS_URL_PREFIX);
+  }
 
-    v = networkstatus_get_latest_consensus_by_flavor(flav);
+  v = networkstatus_get_latest_consensus_by_flavor(flav);
 
-    if (v && !networkstatus_consensus_reasonably_live(v, now)) {
-      write_http_status_line(conn, 404, "Consensus is too old");
-      warn_consensus_is_too_old(v, flavor, now);
-      geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
-      tor_free(flavor);
-      goto done;
-    }
-
-    if (v && want_fps &&
-        !client_likes_consensus(v, want_fps)) {
-      write_http_status_line(conn, 404, "Consensus not signed by sufficient "
-                             "number of requested authorities");
-      geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
-      tor_free(flavor);
-      goto done;
-    }
-
-    conn->spool = smartlist_new();
-    clear_spool = 1;
-    {
-      spooled_resource_t *spooled;
-      if (flavor)
-        spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                       (uint8_t*)flavor, strlen(flavor));
-      else
-        spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                       NULL, 0);
-      tor_free(flavor);
-      smartlist_add(conn->spool, spooled);
-    }
-    lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
-
-    if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
-      write_http_status_line(conn, 503, "Network status object unavailable");
-      geoip_note_ns_response(GEOIP_REJECT_UNAVAILABLE);
-      goto done;
-    }
-
-    size_t size_guess = 0;
-    int n_expired = 0;
-    dirserv_spool_remove_missing_and_guess_size(conn, if_modified_since,
-                                                compressed,
-                                                &size_guess,
-                                                &n_expired);
-
-    if (!smartlist_len(conn->spool) && !n_expired) {
-      write_http_status_line(conn, 404, "Not found");
-      geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
-      goto done;
-    } else if (!smartlist_len(conn->spool)) {
-      write_http_status_line(conn, 304, "Not modified");
-      geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
-      goto done;
-    }
-
-    if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
-      log_debug(LD_DIRSERV,
-               "Client asked for network status lists, but we've been "
-               "writing too many bytes lately. Sending 503 Dir busy.");
-      write_http_status_line(conn, 503, "Directory busy, try again later");
-      geoip_note_ns_response(GEOIP_REJECT_BUSY);
-      goto done;
-    }
-
-    tor_addr_t addr;
-    if (tor_addr_parse(&addr, (TO_CONN(conn))->address) >= 0) {
-      geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS,
-                             &addr, NULL,
-                             time(NULL));
-      geoip_note_ns_response(GEOIP_SUCCESS);
-      /* Note that a request for a network status has started, so that we
-       * can measure the download time later on. */
-      if (conn->dirreq_id)
-        geoip_start_dirreq(conn->dirreq_id, size_guess, DIRREQ_TUNNELED);
-      else
-        geoip_start_dirreq(TO_CONN(conn)->global_identifier, size_guess,
-                           DIRREQ_DIRECT);
-    }
-
-    clear_spool = 0;
-    write_http_response_header(conn, -1, compressed,
-                               smartlist_len(conn->spool) == 1 ? lifetime : 0);
-    if (! compressed)
-      conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
-                                              HIGH_COMPRESSION);
-
-    /* Prime the connection with some data. */
-    const int initial_flush_result = connection_dirserv_flushed_some(conn);
-    tor_assert_nonfatal(initial_flush_result == 0);
+  if (v && !networkstatus_consensus_reasonably_live(v, now)) {
+    write_http_status_line(conn, 404, "Consensus is too old");
+    warn_consensus_is_too_old(v, flavor, now);
+    geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
+    tor_free(flavor);
     goto done;
   }
+
+  if (v && want_fps &&
+      !client_likes_consensus(v, want_fps)) {
+    write_http_status_line(conn, 404, "Consensus not signed by sufficient "
+                           "number of requested authorities");
+    geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
+    tor_free(flavor);
+    goto done;
+  }
+
+  struct consensus_cache_entry_t *cached_diff = NULL;
+  smartlist_t *diff_from_digests = NULL;
+  compress_method_t compression_used = NO_METHOD;
+  if (!parse_or_diff_from_header(&diff_from_digests, args->headers)) {
+    tor_assert(diff_from_digests);
+    cached_diff = find_best_diff(diff_from_digests, flav,
+                                 args->compression_supported,
+                                 &compression_used);
+    SMARTLIST_FOREACH(diff_from_digests, uint8_t *, d, tor_free(d));
+    smartlist_free(diff_from_digests);
+  }
+
+  conn->spool = smartlist_new();
+  clear_spool = 1;
+  {
+    spooled_resource_t *spooled;
+    if (cached_diff) {
+      spooled = spooled_resource_new_from_cache_entry(cached_diff);
+    } else if (flavor) {
+      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
+                                     (uint8_t*)flavor, strlen(flavor));
+      compression_used = compressed ? ZLIB_METHOD : NO_METHOD;
+    } else {
+      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
+                                     NULL, 0);
+      compression_used = compressed ? ZLIB_METHOD : NO_METHOD;
+    }
+    tor_free(flavor);
+    smartlist_add(conn->spool, spooled);
+  }
+  lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
+
+  if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
+    write_http_status_line(conn, 503, "Network status object unavailable");
+    geoip_note_ns_response(GEOIP_REJECT_UNAVAILABLE);
+    goto done;
+  }
+
+  size_t size_guess = 0;
+  int n_expired = 0;
+  dirserv_spool_remove_missing_and_guess_size(conn, if_modified_since,
+                                              compressed,
+                                              &size_guess,
+                                              &n_expired);
+
+  if (!smartlist_len(conn->spool) && !n_expired) {
+    write_http_status_line(conn, 404, "Not found");
+    geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
+    goto done;
+  } else if (!smartlist_len(conn->spool)) {
+    write_http_status_line(conn, 304, "Not modified");
+    geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
+    goto done;
+  }
+
+  if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
+    log_debug(LD_DIRSERV,
+              "Client asked for network status lists, but we've been "
+              "writing too many bytes lately. Sending 503 Dir busy.");
+    write_http_status_line(conn, 503, "Directory busy, try again later");
+    geoip_note_ns_response(GEOIP_REJECT_BUSY);
+    goto done;
+  }
+
+  tor_addr_t addr;
+  if (tor_addr_parse(&addr, (TO_CONN(conn))->address) >= 0) {
+    geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS,
+                           &addr, NULL,
+                           time(NULL));
+    geoip_note_ns_response(GEOIP_SUCCESS);
+    /* Note that a request for a network status has started, so that we
+     * can measure the download time later on. */
+    if (conn->dirreq_id)
+      geoip_start_dirreq(conn->dirreq_id, size_guess, DIRREQ_TUNNELED);
+    else
+      geoip_start_dirreq(TO_CONN(conn)->global_identifier, size_guess,
+                         DIRREQ_DIRECT);
+  }
+
+  clear_spool = 0;
+  write_http_response_header(conn, -1,
+                             compression_used,
+                             smartlist_len(conn->spool) == 1 ? lifetime : 0);
+  if (! compressed)
+    conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
+                                            HIGH_COMPRESSION);
+
+  /* Prime the connection with some data. */
+  const int initial_flush_result = connection_dirserv_flushed_some(conn);
+  tor_assert_nonfatal(initial_flush_result == 0);
+  goto done;
 
  done:
   if (clear_spool) {
@@ -3697,7 +3898,8 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       write_http_status_line(conn, 503, "Directory busy, try again later");
       goto vote_done;
     }
-    write_http_response_header(conn, body_len ? body_len : -1, compressed,
+    write_http_response_header(conn, body_len ? body_len : -1,
+                 compressed ? ZLIB_METHOD : NO_METHOD,
                  lifetime);
 
     if (smartlist_len(items)) {
@@ -3758,7 +3960,9 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
     }
 
     clear_spool = 0;
-    write_http_response_header(conn, -1, compressed, MICRODESC_CACHE_LIFETIME);
+    write_http_response_header(conn, -1,
+                               compressed ? ZLIB_METHOD : NO_METHOD,
+                               MICRODESC_CACHE_LIFETIME);
 
     if (compressed)
       conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
@@ -3852,7 +4056,9 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
         dir_conn_clear_spool(conn);
         goto done;
       }
-      write_http_response_header(conn, -1, compressed, cache_lifetime);
+      write_http_response_header(conn, -1,
+                                 compressed ? ZLIB_METHOD : NO_METHOD,
+                                 cache_lifetime);
       if (compressed)
         conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                                         choose_compression_level(size_guess));
@@ -3943,7 +4149,9 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
       goto keys_done;
     }
 
-    write_http_response_header(conn, compressed?-1:len, compressed, 60*60);
+    write_http_response_header(conn, compressed?-1:len,
+                               compressed ? ZLIB_METHOD : NO_METHOD,
+                               60*60);
     if (compressed) {
       conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
                                               choose_compression_level(len));
@@ -3983,7 +4191,7 @@ handle_get_hs_descriptor_v2(dir_connection_t *conn,
                safe_str(escaped(query)));
       switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
         case 1: /* valid */
-          write_http_response_header(conn, strlen(descp), 0, 0);
+          write_http_response_header(conn, strlen(descp), NO_METHOD, 0);
           connection_write_to_buf(descp, strlen(descp), TO_CONN(conn));
           break;
         case 0: /* well-formed but not present */
@@ -4035,7 +4243,7 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
   }
 
   /* Found requested descriptor! Pass it to this nice client. */
-  write_http_response_header(conn, strlen(desc_str), 0, 0);
+  write_http_response_header(conn, strlen(desc_str), NO_METHOD, 0);
   connection_write_to_buf(desc_str, strlen(desc_str), TO_CONN(conn));
 
  done:
@@ -4074,7 +4282,7 @@ handle_get_networkstatus_bridges(dir_connection_t *conn,
     /* all happy now. send an answer. */
     status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
     size_t dlen = strlen(status);
-    write_http_response_header(conn, dlen, 0, 0);
+    write_http_response_header(conn, dlen, NO_METHOD, 0);
     connection_write_to_buf(status, dlen, TO_CONN(conn));
     tor_free(status);
     goto done;
@@ -4091,7 +4299,7 @@ handle_get_robots(dir_connection_t *conn, const get_handler_args_t *args)
   {
     const char robots[] = "User-agent: *\r\nDisallow: /\r\n";
     size_t len = strlen(robots);
-    write_http_response_header(conn, len, 0, ROBOTS_CACHE_LIFETIME);
+    write_http_response_header(conn, len, NO_METHOD, ROBOTS_CACHE_LIFETIME);
     connection_write_to_buf(robots, len, TO_CONN(conn));
   }
   return 0;

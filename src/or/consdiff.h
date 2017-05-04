@@ -12,6 +12,8 @@ char *consensus_diff_generate(const char *cons1,
 char *consensus_diff_apply(const char *consensus,
                            const char *diff);
 
+int looks_like_a_consensus_diff(const char *document, size_t len);
+
 #ifdef CONSDIFF_PRIVATE
 struct memarea_t;
 
