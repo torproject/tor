@@ -16,6 +16,11 @@ int router_get_router_hash(const char *s, size_t s_len, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_networkstatus_v3_hashes(const char *s,
                                        common_digests_t *digests);
+int router_get_networkstatus_v3_signed_boundaries(const char *s,
+                                                  const char **start_out,
+                                                  const char **end_out);
+int router_get_networkstatus_v3_sha3_as_signed(uint8_t *digest_out,
+                                               const char *s);
 int router_get_extrainfo_hash(const char *s, size_t s_len, char *digest);
 #define DIROBJ_MAX_SIG_LEN 256
 char *router_get_dirobj_signature(const char *digest,

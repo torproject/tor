@@ -359,6 +359,7 @@ static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 static int router_get_hash_impl_helper(const char *s, size_t s_len,
                             const char *start_str,
                             const char *end_str, char end_c,
+                            int log_severity,
                             const char **start_out, const char **end_out);
 static int router_get_hash_impl(const char *s, size_t s_len, char *digest,
                                 const char *start_str, const char *end_str,
@@ -986,6 +987,41 @@ router_get_router_hash(const char *s, size_t s_len, char *digest)
   return router_get_hash_impl(s, s_len, digest,
                               "router ","\nrouter-signature", '\n',
                               DIGEST_SHA1);
+}
+
+/** Try to find the start and end of the signed portion of a networkstatus
+ * document in <b>s</b>. On success, set <b>start_out</b> to the first
+ * character of the document, and <b>end_out</b> to a position one after the
+ * final character of the signed document, and return 0.  On failure, return
+ * -1. */
+int
+router_get_networkstatus_v3_signed_boundaries(const char *s,
+                                              const char **start_out,
+                                              const char **end_out)
+{
+  return router_get_hash_impl_helper(s, strlen(s),
+                                     "network-status-version",
+                                     "\ndirectory-signature",
+                                     ' ', LOG_INFO,
+                                     start_out, end_out);
+}
+
+/** Set <b>digest_out</b> to the SHA3-256 digest of the signed portion of the
+ * networkstatus vote in <b>s</b> -- or of the entirety of <b>s</b> if no
+ * signed portion can be identified.  Return 0 on success, -1 on failure. */
+int
+router_get_networkstatus_v3_sha3_as_signed(uint8_t *digest_out,
+                                           const char *s)
+{
+  const char *start, *end;
+  if (router_get_networkstatus_v3_signed_boundaries(s, &start, &end) < 0) {
+    start = s;
+    end = s + strlen(s);
+  }
+  tor_assert(start);
+  tor_assert(end);
+  return crypto_digest256((char*)digest_out, start, end-start,
+                          DIGEST_SHA3_256);
 }
 
 /** Set <b>digests</b> to all the digests of the consensus document in
@@ -1787,7 +1823,8 @@ router_parse_entry_from_string(const char *s, const char *end,
 
       if (router_get_hash_impl_helper(s, end-s, "router ",
                                       "\nrouter-sig-ed25519",
-                                      ' ', &signed_start, &signed_end) < 0) {
+                                      ' ', LOG_WARN,
+                                      &signed_start, &signed_end) < 0) {
         log_warn(LD_DIR, "Can't find ed25519-signed portion of descriptor");
         goto err;
       }
@@ -2140,7 +2177,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 
       if (router_get_hash_impl_helper(s, end-s, "extra-info ",
                                       "\nrouter-sig-ed25519",
-                                      ' ', &signed_start, &signed_end) < 0) {
+                                      ' ', LOG_WARN,
+                                      &signed_start, &signed_end) < 0) {
         log_warn(LD_DIR, "Can't find ed25519-signed portion of extrainfo");
         goto err;
       }
@@ -4471,16 +4509,18 @@ static int
 router_get_hash_impl_helper(const char *s, size_t s_len,
                             const char *start_str,
                             const char *end_str, char end_c,
+                            int log_severity,
                             const char **start_out, const char **end_out)
 {
   const char *start, *end;
   start = tor_memstr(s, s_len, start_str);
   if (!start) {
-    log_warn(LD_DIR,"couldn't find start of hashed material \"%s\"",start_str);
+    log_fn(log_severity,LD_DIR,
+           "couldn't find start of hashed material \"%s\"",start_str);
     return -1;
   }
   if (start != s && *(start-1) != '\n') {
-    log_warn(LD_DIR,
+    log_fn(log_severity,LD_DIR,
              "first occurrence of \"%s\" is not at the start of a line",
              start_str);
     return -1;
@@ -4488,12 +4528,14 @@ router_get_hash_impl_helper(const char *s, size_t s_len,
   end = tor_memstr(start+strlen(start_str),
                    s_len - (start-s) - strlen(start_str), end_str);
   if (!end) {
-    log_warn(LD_DIR,"couldn't find end of hashed material \"%s\"",end_str);
+    log_fn(log_severity,LD_DIR,
+           "couldn't find end of hashed material \"%s\"",end_str);
     return -1;
   }
   end = memchr(end+strlen(end_str), end_c, s_len - (end-s) - strlen(end_str));
   if (!end) {
-    log_warn(LD_DIR,"couldn't find EOL");
+    log_fn(log_severity,LD_DIR,
+           "couldn't find EOL");
     return -1;
   }
   ++end;
@@ -4517,7 +4559,7 @@ router_get_hash_impl(const char *s, size_t s_len, char *digest,
                      digest_algorithm_t alg)
 {
   const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,
+  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,LOG_WARN,
                                   &start,&end)<0)
     return -1;
 
@@ -4554,7 +4596,7 @@ router_get_hashes_impl(const char *s, size_t s_len, common_digests_t *digests,
                        const char *end_str, char end_c)
 {
   const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,
+  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,LOG_WARN,
                                   &start,&end)<0)
     return -1;
 

@@ -65,17 +65,35 @@ line_str_eq(const cdline_t *a, const char *b)
   return lines_eq(a, &bline);
 }
 
-/** Add a cdline_t to <b>lst</b> holding as its contents the nul-terminated
- * string s.  Use the provided memory area for storage. */
-STATIC void
-smartlist_add_linecpy(smartlist_t *lst, memarea_t *area, const char *s)
+/** Return true iff a begins with the same contents as the nul-terminated
+ * string b. */
+static int
+line_starts_with_str(const cdline_t *a, const char *b)
+{
+  const size_t len = strlen(b);
+  tor_assert(len <= UINT32_MAX);
+  return a->len >= len && fast_memeq(a->s, b, len);
+}
+
+/** Return a new cdline_t holding as its contents the nul-terminated
+ * string s. Use the provided memory area for storage. */
+static cdline_t *
+cdline_linecpy(memarea_t *area, const char *s)
 {
   size_t len = strlen(s);
   const char *ss = memarea_memdup(area, s, len);
   cdline_t *line = memarea_alloc(area, sizeof(cdline_t));
   line->s = ss;
   line->len = (uint32_t)len;
-  smartlist_add(lst, line);
+  return line;
+}
+
+/** Add a cdline_t to <b>lst</b> holding as its contents the nul-terminated
+ * string s.  Use the provided memory area for storage. */
+STATIC void
+smartlist_add_linecpy(smartlist_t *lst, memarea_t *area, const char *s)
+{
+  smartlist_add(lst, cdline_linecpy(area, s));
 }
 
 /** Compute the digest of <b>cons</b>, and store the result in
@@ -89,6 +107,18 @@ consensus_compute_digest,(const char *cons,
   int r = crypto_digest256((char*)digest_out->sha3_256,
                            cons, strlen(cons), DIGEST_SHA3_256);
   return r;
+}
+
+/** Compute the digest-as-signed of <b>cons</b>, and store the result in
+ * <b>digest_out</b>. Return 0 on success, -1 on failure. */
+/* This is a separate, mockable function so that we can override it when
+ * fuzzing. */
+MOCK_IMPL(STATIC int,
+consensus_compute_digest_as_signed,(const char *cons,
+                                    consensus_digest_t *digest_out))
+{
+  return router_get_networkstatus_v3_sha3_as_signed(digest_out->sha3_256,
+                                                    cons);
 }
 
 /** Return true iff <b>d1</b> and <b>d2</b> contain the same digest */
@@ -533,6 +563,42 @@ find_next_router_line(const smartlist_t *cons,
   return 0;
 }
 
+/** Line-prefix indicating the beginning of the signatures section that we
+ * intend to delete. */
+#define START_OF_SIGNATURES_SECTION "directory-signature "
+
+/** Pre-process a consensus in <b>cons</b> (represented as a list of cdline_t)
+ * to remove the signatures from it.  If the footer is removed, return a
+ * cdline_t containing a delete command to delete the footer, allocated in
+ * <b>area</>.  If no footer is removed, return NULL.
+ *
+ * We remove the signatures here because they are not themselves signed, and
+ * as such there might be different encodings for them.
+ */
+static cdline_t *
+preprocess_consensus(memarea_t *area,
+                     smartlist_t *cons)
+{
+  int idx;
+  int dirsig_idx = -1;
+  for (idx = 0; idx < smartlist_len(cons); ++idx) {
+    cdline_t *line = smartlist_get(cons, idx);
+    if (line_starts_with_str(line, START_OF_SIGNATURES_SECTION)) {
+      dirsig_idx = idx;
+      break;
+    }
+  }
+  if (dirsig_idx >= 0) {
+    char buf[64];
+    while (smartlist_len(cons) > dirsig_idx)
+      smartlist_del(cons, dirsig_idx);
+    tor_snprintf(buf, sizeof(buf), "%d,$d", dirsig_idx+1);
+    return cdline_linecpy(area, buf);
+  } else {
+    return NULL;
+  }
+}
+
 /** Generate an ed diff as a smartlist from two consensuses, also given as
  * smartlists. Will return NULL if the diff could not be generated, which can
  * happen if any lines the script had to add matched "." or if the routers
@@ -554,12 +620,21 @@ find_next_router_line(const smartlist_t *cons,
  *   calc_changes(cons1_sl, cons2_sl, changed1, changed2);
  */
 STATIC smartlist_t *
-gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
+gen_ed_diff(const smartlist_t *cons1_orig, const smartlist_t *cons2,
             memarea_t *area)
 {
+  smartlist_t *cons1 = smartlist_new();
+  smartlist_add_all(cons1, cons1_orig);
+  cdline_t *remove_trailer = preprocess_consensus(area, cons1);
+
   int len1 = smartlist_len(cons1);
   int len2 = smartlist_len(cons2);
   smartlist_t *result = smartlist_new();
+
+  if (remove_trailer) {
+    /* There's a delete-the-trailer line at the end, so add it here. */
+    smartlist_add(result, remove_trailer);
+  }
 
   /* Initialize the changed bitarrays to zero, so that calc_changes only needs
    * to set the ones that matter and leave the rest untouched.
@@ -734,6 +809,7 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
     }
   }
 
+  smartlist_free(cons1);
   bitarray_free(changed1);
   bitarray_free(changed2);
 
@@ -741,6 +817,7 @@ gen_ed_diff(const smartlist_t *cons1, const smartlist_t *cons2,
 
  error_cleanup:
 
+  smartlist_free(cons1);
   bitarray_free(changed1);
   bitarray_free(changed2);
 
@@ -799,6 +876,7 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
     const char *ptr = diff_line;
     int start = 0, end = 0;
     int had_range = 0;
+    int end_was_eof = 0;
     if (get_linenum(&ptr, &start) < 0) {
       log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
                "an ed command was missing a line number.");
@@ -808,7 +886,11 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
       /* Two-item range */
       had_range = 1;
       ++ptr;
-      if (get_linenum(&ptr, &end) < 0) {
+      if (*ptr == '$') {
+        end_was_eof = 1;
+        end = smartlist_len(cons1);
+        ++ptr;
+      } else if (get_linenum(&ptr, &end) < 0) {
         log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
                  "an ed command was missing a range end line number.");
         goto error_cleanup;
@@ -853,6 +935,13 @@ apply_ed_diff(const smartlist_t *cons1, const smartlist_t *diff,
         log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
             "an unrecognised ed command was found.");
         goto error_cleanup;
+    }
+
+    /** $ is not allowed with non-d actions. */
+    if (end_was_eof && action != 'd') {
+      log_warn(LD_CONSDIFF, "Could not apply consensus diff because "
+               "it wanted to use $ with a command other than delete");
+      goto error_cleanup;
     }
 
     /* 'a' commands are not allowed to have ranges. */
@@ -1250,7 +1339,7 @@ consensus_diff_generate(const char *cons1,
   int r1, r2;
   char *result = NULL;
 
-  r1 = consensus_compute_digest(cons1, &d1);
+  r1 = consensus_compute_digest_as_signed(cons1, &d1);
   r2 = consensus_compute_digest(cons2, &d2);
   if (BUG(r1 < 0 || r2 < 0))
     return NULL; // LCOV_EXCL_LINE
@@ -1291,7 +1380,7 @@ consensus_diff_apply(const char *consensus,
   char *result = NULL;
   memarea_t *area = memarea_new();
 
-  r1 = consensus_compute_digest(consensus, &d1);
+  r1 = consensus_compute_digest_as_signed(consensus, &d1);
   if (BUG(r1 < 0))
     return NULL; // LCOV_EXCL_LINE
 

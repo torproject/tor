@@ -10,6 +10,7 @@
 #include "consdiffmgr.h"
 #include "cpuworker.h"
 #include "networkstatus.h"
+#include "routerparse.h"
 #include "workqueue.h"
 
 #include "test.h"
@@ -66,6 +67,7 @@ fake_ns_body_new(consensus_flavor_t flav, time_t valid_after)
 
   format_iso_time(valid_after_string, valid_after);
   char *random_stuff = crypto_random_hostname(3, 25, "junk ", "");
+  char *random_stuff2 = crypto_random_hostname(3, 10, "", "");
 
   char *consensus;
   tor_asprintf(&consensus,
@@ -74,11 +76,15 @@ fake_ns_body_new(consensus_flavor_t flav, time_t valid_after)
                "valid-after %s\n"
                "r name ccccccccccccccccc etc\nsample\n"
                "r name eeeeeeeeeeeeeeeee etc\nbar\n"
-               "%s\n",
+               "%s\n"
+               "directory-signature hello-there\n"
+               "directory-signature %s\n",
                flavor_string,
                valid_after_string,
-               random_stuff);
+               random_stuff,
+               random_stuff2);
   tor_free(random_stuff);
+  tor_free(random_stuff2);
   return consensus;
 }
 
@@ -139,7 +145,10 @@ lookup_diff_from(consensus_cache_entry_t **out,
                  const char *str1)
 {
   uint8_t digest[DIGEST256_LEN];
-  crypto_digest256((char*)digest, str1, strlen(str1), DIGEST_SHA3_256);
+  if (router_get_networkstatus_v3_sha3_as_signed(digest, str1)<0) {
+    TT_FAIL(("Unable to compute sha3-as-signed"));
+    return CONSDIFF_NOT_FOUND;
+  }
   return consdiffmgr_find_diff_from(out, flav,
                                     DIGEST_SHA3_256, digest, sizeof(digest),
                                     NO_METHOD);
@@ -152,8 +161,9 @@ lookup_apply_and_verify_diff(consensus_flavor_t flav,
 {
   consensus_cache_entry_t *ent = NULL;
   consdiff_status_t status = lookup_diff_from(&ent, flav, str1);
-  if (ent == NULL || status != CONSDIFF_AVAILABLE)
+  if (ent == NULL || status != CONSDIFF_AVAILABLE) {
     return -1;
+  }
 
   consensus_cache_entry_incref(ent);
   size_t size;
@@ -299,7 +309,7 @@ test_consdiffmgr_add(void *arg)
   ns_tmp->valid_after = 86400 * 100; /* A few months into 1970 */
   r = consdiffmgr_add_consensus(dummy, ns_tmp);
   tt_int_op(r, OP_EQ, -1);
-  expect_single_log_msg_containing("it's too old.");
+  expect_log_msg_containing("it's too old.");
 
   /* Try looking up a consensuses. */
   ent = cdm_cache_lookup_consensus(FLAV_NS, now-60);
@@ -352,8 +362,7 @@ test_consdiffmgr_make_diffs(void *arg)
   ns = fake_ns_new(FLAV_MICRODESC, now-3600);
   md_ns_body = fake_ns_body_new(FLAV_MICRODESC, now-3600);
   r = consdiffmgr_add_consensus(md_ns_body, ns);
-  crypto_digest256((char*)md_ns_sha3, md_ns_body, strlen(md_ns_body),
-                   DIGEST_SHA3_256);
+  router_get_networkstatus_v3_sha3_as_signed(md_ns_sha3, md_ns_body);
   networkstatus_vote_free(ns);
   tt_int_op(r, OP_EQ, 0);
 
@@ -419,7 +428,6 @@ test_consdiffmgr_diff_rules(void *arg)
 #define N 6
   char *md_body[N], *ns_body[N];
   networkstatus_t *md_ns[N], *ns_ns[N];
-  uint8_t md_ns_sha3[N][DIGEST256_LEN], ns_ns_sha3[N][DIGEST256_LEN];
   int i;
 
   MOCK(cpuworker_queue_work, mock_cpuworker_queue_work);
@@ -432,10 +440,6 @@ test_consdiffmgr_diff_rules(void *arg)
     ns_body[i] = fake_ns_body_new(FLAV_NS, when);
     md_ns[i] = fake_ns_new(FLAV_MICRODESC, when);
     ns_ns[i] = fake_ns_new(FLAV_NS, when);
-    crypto_digest256((char *)md_ns_sha3[i], md_body[i], strlen(md_body[i]),
-                     DIGEST_SHA3_256);
-    crypto_digest256((char *)ns_ns_sha3[i], ns_body[i], strlen(ns_body[i]),
-                     DIGEST_SHA3_256);
   }
 
   /* For the MD consensuses: add 4 of them, and make sure that
@@ -715,7 +719,6 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
 #define N 4
   char *md_body[N];
   networkstatus_t *md_ns[N];
-  uint8_t md_ns_sha3[N][DIGEST256_LEN];
   int i;
   consensus_cache_entry_t *hold_ent = NULL, *ent;
 
@@ -730,8 +733,6 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
     time_t when = start + i * 15;
     md_body[i] = fake_ns_body_new(FLAV_MICRODESC, when);
     md_ns[i] = fake_ns_new(FLAV_MICRODESC, when);
-    crypto_digest256((char *)md_ns_sha3[i], md_body[i], strlen(md_body[i]),
-                     DIGEST_SHA3_256);
   }
 
   /* add the first 3. */

@@ -709,6 +709,16 @@ test_consdiff_apply_ed_diff(void *arg)
 
   smartlist_clear(diff);
 
+  /* $ for a non-delete command. */
+  smartlist_add_linecpy(diff, area, "1,$c");
+  mock_clean_saved_logs();
+  cons2 = apply_ed_diff(cons1, diff, 0);
+  tt_ptr_op(NULL, OP_EQ, cons2);
+  expect_single_log_msg_containing("it wanted to use $ with a command "
+                                   "other than delete");
+
+  smartlist_clear(diff);
+
   /* Script is not in reverse order. */
   smartlist_add_linecpy(diff, area, "1d");
   smartlist_add_linecpy(diff, area, "3d");
@@ -907,7 +917,7 @@ test_consdiff_gen_diff(void *arg)
       );
 
   tt_int_op(0, OP_EQ,
-      consensus_compute_digest(cons1_str, &digests1));
+      consensus_compute_digest_as_signed(cons1_str, &digests1));
   tt_int_op(0, OP_EQ,
       consensus_compute_digest(cons2_str, &digests2));
 
@@ -926,23 +936,29 @@ test_consdiff_gen_diff(void *arg)
       "directory-signature foo bar\nbar\n"
       );
   tt_int_op(0, OP_EQ,
-      consensus_compute_digest(cons1_str, &digests1));
+      consensus_compute_digest_as_signed(cons1_str, &digests1));
   smartlist_clear(cons1);
   consensus_split_lines(cons1, cons1_str, area);
   diff = consdiff_gen_diff(cons1, cons2, &digests1, &digests2, area);
   tt_ptr_op(NULL, OP_NE, diff);
-  tt_int_op(7, OP_EQ, smartlist_len(diff));
+  tt_int_op(11, OP_EQ, smartlist_len(diff));
   tt_assert(line_str_eq(smartlist_get(diff, 0),
                         "network-status-diff-version 1"));
   tt_assert(line_str_eq(smartlist_get(diff, 1), "hash "
-      "06646D6CF563A41869D3B02E73254372AE3140046C5E7D83C9F71E54976AF9B4 "
+      "95D70F5A3CC65F920AA8B44C4563D7781A082674329661884E19E94B79D539C2 "
       "7AFECEFA4599BA33D603653E3D2368F648DF4AC4723929B0F7CF39281596B0C1"));
-  tt_assert(line_str_eq(smartlist_get(diff, 2), "3,4d"));
-  tt_assert(line_str_eq(smartlist_get(diff, 3), "1a"));
-  tt_assert(line_str_eq(smartlist_get(diff, 4),
+  tt_assert(line_str_eq(smartlist_get(diff, 2), "6,$d"));
+  tt_assert(line_str_eq(smartlist_get(diff, 3), "3,4c"));
+  tt_assert(line_str_eq(smartlist_get(diff, 4), "bar"));
+  tt_assert(line_str_eq(smartlist_get(diff, 5),
+                        "directory-signature foo bar"));
+  tt_assert(line_str_eq(smartlist_get(diff, 6),
+                        "."));
+  tt_assert(line_str_eq(smartlist_get(diff, 7), "1a"));
+  tt_assert(line_str_eq(smartlist_get(diff, 8),
                         "r name aaaaaaaaaaaaaaaaa etc"));
-  tt_assert(line_str_eq(smartlist_get(diff, 5), "foo"));
-  tt_assert(line_str_eq(smartlist_get(diff, 6), "."));
+  tt_assert(line_str_eq(smartlist_get(diff, 9), "foo"));
+  tt_assert(line_str_eq(smartlist_get(diff, 10), "."));
 
   /* TODO: small real use-cases, i.e. consensuses. */
 

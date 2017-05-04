@@ -21,6 +21,7 @@ int
 fuzz_init(void)
 {
   MOCK(consensus_compute_digest, mock_consensus_compute_digest_);
+  MOCK(consensus_compute_digest_as_signed, mock_consensus_compute_digest_);
   return 0;
 }
 
@@ -28,6 +29,7 @@ int
 fuzz_cleanup(void)
 {
   UNMOCK(consensus_compute_digest);
+  UNMOCK(consensus_compute_digest_as_signed);
   return 0;
 }
 
