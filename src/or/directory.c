@@ -2468,8 +2468,8 @@ handle_response_fetch_consensus(dir_connection_t *conn,
       networkstatus_consensus_download_failed(0, flavname);
       return -1;
     }
-    log_info(LD_DIR, "Applied consensus diff (body size %d) from server "
-             "'%s:%d' resulted in a new consensus document (size %d).",
+    log_info(LD_DIR, "Applied consensus diff (size %d) from server "
+             "'%s:%d', resulting in a new consensus document (size %d).",
              (int)body_len, conn->base_.address, conn->base_.port,
              (int)strlen(new_consensus));
     consensus = new_consensus;
