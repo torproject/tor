@@ -131,7 +131,7 @@ static void directory_request_set_guard_state(directory_request_t *req,
 #define ALLOW_DIRECTORY_TIME_SKEW (30*60)
 
 #define X_ADDRESS_HEADER "X-Your-Address-Is: "
-#define X_OR_DIFF_FROM_CONSENSUS_HEADER "X-Or-Diff-From-Consensus"
+#define X_OR_DIFF_FROM_CONSENSUS_HEADER "X-Or-Diff-From-Consensus: "
 
 /** HTTP cache control: how long do we tell proxies they can cache each
  * kind of document we serve? */
@@ -1226,6 +1226,9 @@ directory_request_set_if_modified_since(directory_request_t *req,
 /** Include a header of name <b>key</b> with content <b>val</b> in the
  * request. Neither may include newlines or other odd characters. Their
  * ordering is not currently guaranteed.
+ *
+ * Note that, as elsewhere in this module, header keys include a trailing
+ * colon and space.
  */
 void
 directory_request_add_header(directory_request_t *req,
@@ -1724,7 +1727,7 @@ directory_send_command(dir_connection_t *conn,
   {
     config_line_t *h;
     for (h = req->additional_headers; h; h = h->next) {
-      smartlist_add_asprintf(headers, "%s: %s\r\n", h->key, h->value);
+      smartlist_add_asprintf(headers, "%s%s\r\n", h->key, h->value);
     }
   }
 
@@ -3508,7 +3511,7 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
     url_len -= 2;
   }
 
-  if ((header = http_get_header(headers, "Accept-Encoding"))) {
+  if ((header = http_get_header(headers, "Accept-Encoding: "))) {
     compression_methods_supported = parse_accept_encoding_header(header);
     tor_free(header);
   } else {
