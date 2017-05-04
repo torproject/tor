@@ -14,7 +14,6 @@ typedef enum consdiff_status_t {
 } consdiff_status_t;
 
 typedef struct consdiff_cfg_t {
-  int32_t cache_max_age_hours;
   int32_t cache_max_num;
 } consdiff_cfg_t;
 
