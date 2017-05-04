@@ -3288,8 +3288,9 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
 /** As write_http_response_header_impl, but sets encoding and content-typed
  * based on whether the response will be <b>compressed</b> or not. */
 static void
-write_http_response_header(dir_connection_t *conn, ssize_t length,
-                           compress_method_t method, long cache_lifetime)
+write_http_response_headers(dir_connection_t *conn, ssize_t length,
+                            compress_method_t method,
+                            const char *extra_headers, long cache_lifetime)
 {
   const char *methodname = compression_method_get_name(method);
   const char *doctype;
@@ -3300,8 +3301,17 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
   write_http_response_header_impl(conn, length,
                                   doctype,
                                   methodname,
-                                  NULL,
+                                  extra_headers,
                                   cache_lifetime);
+}
+
+/** As write_http_response_headers, but assumes extra_headers is NULL */
+static void
+write_http_response_header(dir_connection_t *conn, ssize_t length,
+                           compress_method_t method,
+                           long cache_lifetime)
+{
+  write_http_response_headers(conn, length, method, NULL, cache_lifetime);
 }
 
 /** Array of compression methods to use (if supported) for serving
@@ -4056,14 +4066,19 @@ handle_get_current_consensus(dir_connection_t *conn,
                          DIRREQ_DIRECT);
   }
 
+  /* Use this header to tell caches that the response depends on the
+   * X-Or-Diff-From-Consensus header (or lack thereof). */
+  const char vary_header[] = "Vary: X-Or-Diff-From-Consensus\r\n";
+
   clear_spool = 0;
 
   // The compress_method might have been NO_METHOD, but we store the data
   // compressed. Decompress them using `compression_used`. See fallback code in
   // find_best_consensus() and find_best_diff().
-  write_http_response_header(conn, -1,
+  write_http_response_headers(conn, -1,
                              compress_method == NO_METHOD ?
                                NO_METHOD : compression_used,
+                             vary_header,
                              smartlist_len(conn->spool) == 1 ? lifetime : 0);
 
   if (compress_method == NO_METHOD)
