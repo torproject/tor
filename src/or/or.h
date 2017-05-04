@@ -1934,9 +1934,9 @@ typedef struct addr_policy_t {
  * compressed form. */
 typedef struct cached_dir_t {
   char *dir; /**< Contents of this object, NUL-terminated. */
-  char *dir_z; /**< Compressed contents of this object. */
+  char *dir_compressed; /**< Compressed contents of this object. */
   size_t dir_len; /**< Length of <b>dir</b> (not counting its NUL). */
-  size_t dir_z_len; /**< Length of <b>dir_z</b>. */
+  size_t dir_compressed_len; /**< Length of <b>dir_compressed</b>. */
   time_t published; /**< When was this object published. */
   common_digests_t digests; /**< Digests of this object (networkstatus only) */
   /** Sha3 digest (also ns only) */

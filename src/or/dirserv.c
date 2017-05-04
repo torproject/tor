@@ -1179,8 +1179,8 @@ new_cached_dir(char *s, time_t published)
   d->dir = s;
   d->dir_len = strlen(s);
   d->published = published;
-  if (tor_compress(&(d->dir_z), &(d->dir_z_len), d->dir, d->dir_len,
-                   ZLIB_METHOD)) {
+  if (tor_compress(&(d->dir_compressed), &(d->dir_compressed_len),
+                   d->dir, d->dir_len, ZLIB_METHOD)) {
     log_warn(LD_BUG, "Error compressing directory");
   }
   return d;
@@ -1191,7 +1191,7 @@ static void
 clear_cached_dir(cached_dir_t *d)
 {
   tor_free(d->dir);
-  tor_free(d->dir_z);
+  tor_free(d->dir_compressed);
   memset(d, 0, sizeof(cached_dir_t));
 }
 
@@ -3508,7 +3508,7 @@ spooled_resource_estimate_size(const spooled_resource_t *spooled,
     if (cached == NULL) {
       return 0;
     }
-    size_t result = compressed ? cached->dir_z_len : cached->dir_len;
+    size_t result = compressed ? cached->dir_compressed_len : cached->dir_len;
     return result;
   }
 }
@@ -3567,8 +3567,8 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
     int64_t total_len;
     const char *ptr;
     if (cached) {
-      total_len = cached->dir_z_len;
-      ptr = cached->dir_z;
+      total_len = cached->dir_compressed_len;
+      ptr = cached->dir_compressed;
     } else {
       total_len = spooled->cce_len;
       ptr = (const char *)spooled->cce_body;
