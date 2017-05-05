@@ -114,6 +114,12 @@ n_consensus_compression_methods(void)
   return ARRAY_LENGTH(compress_consensus_with);
 }
 
+/** For which compression method do we retain old consensuses?  There's no
+ * need to keep all of them, since we won't be serving them.  We'll
+ * go with ZLIB_METHOD because it's pretty fast and everyone has it.
+ */
+#define RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD ZLIB_METHOD
+
 /** Hashtable node used to remember the current status of the diff
  * from a given sha3 digest to the current consensus.  */
 typedef struct cdm_diff_t {
@@ -645,6 +651,43 @@ consdiffmgr_cleanup(void)
     smartlist_clear(diffs);
   }
 
+  // 3. Delete all consensuses except the most recent that are compressed with
+  // an un-preferred method.
+  for (int flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
+    const char *flavname = networkstatus_get_flavor_name(flav);
+    /* Determine the most recent consensus of this flavor */
+    consensus_cache_find_all(consensuses, cdm_cache_get(),
+                             LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
+    consensus_cache_filter_list(consensuses, LABEL_FLAVOR, flavname);
+    consensus_cache_entry_t *most_recent =
+      sort_and_find_most_recent(consensuses);
+    if (most_recent == NULL)
+      continue;
+    const char *most_recent_sha3_uncompressed =
+      consensus_cache_entry_get_value(most_recent,
+                                      LABEL_SHA3_DIGEST_UNCOMPRESSED);
+    const char *retain_methodname = compression_method_get_name(
+                               RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD);
+
+
+    if (BUG(most_recent_sha3_uncompressed == NULL))
+      continue;
+    SMARTLIST_FOREACH_BEGIN(consensuses, consensus_cache_entry_t *, ent) {
+      const char *lv_sha3_uncompressed =
+        consensus_cache_entry_get_value(ent, LABEL_SHA3_DIGEST_UNCOMPRESSED);
+      if (BUG(! lv_sha3_uncompressed))
+        continue;
+      if (!strcmp(lv_sha3_uncompressed, most_recent_sha3_uncompressed))
+        continue; // This _is_ the most recent.
+      const char *lv_methodname =
+        consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
+      if (! lv_methodname || strcmp(lv_methodname, retain_methodname)) {
+        consensus_cache_entry_mark_for_removal(ent);
+        ++n_to_delete;
+      }
+    } SMARTLIST_FOREACH_END(ent);
+  }
+
   smartlist_free(objects);
   smartlist_free(consensuses);
   smartlist_free(diffs);
@@ -748,10 +791,14 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
 
   // 1. find the most recent consensus, and the ones that we might want
   //    to diff to it.
+  const char *methodname = compression_method_get_name(
+                             RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD);
+
   matches = smartlist_new();
   consensus_cache_find_all(matches, cdm_cache_get(),
                            LABEL_FLAVOR, flavname);
   consensus_cache_filter_list(matches, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
+  consensus_cache_filter_list(matches, LABEL_COMPRESSION_TYPE, methodname);
   consensus_cache_entry_t *most_recent = sort_and_find_most_recent(matches);
   if (!most_recent) {
     log_info(LD_DIRSERV, "No 'most recent' %s consensus found; "
