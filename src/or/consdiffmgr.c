@@ -516,6 +516,20 @@ sort_and_find_most_recent(smartlist_t *lst)
   }
 }
 
+/** Return i such that compress_consensus_with[i] == method. Return
+ * -1 if no such i exists. */
+static int
+consensus_compression_method_pos(compress_method_t method)
+{
+  unsigned i;
+  for (i = 0; i < n_consensus_compression_methods(); ++i) {
+    if (compress_consensus_with[i] == method) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 /**
  * If we know a consensus with the flavor <b>flavor</b> compressed with
  * <b>method</b>, set *<b>entry_out</b> to that value.  Return values are as
@@ -526,17 +540,9 @@ consdiffmgr_find_consensus(struct consensus_cache_entry_t **entry_out,
                            consensus_flavor_t flavor,
                            compress_method_t method)
 {
-  int pos=-1;
-  unsigned i;
   tor_assert(flavor < N_CONSENSUS_FLAVORS);
 
-  // Find the index of method withing compress_consensus_with
-  for (i = 0; i < n_consensus_compression_methods(); ++i) {
-    if (compress_consensus_with[i] == method) {
-      pos = i;
-      break;
-    }
-  }
+  int pos = consensus_compression_method_pos(method);
   if (pos < 0) {
      // We don't compress consensuses with this method.
     return CONSDIFF_NOT_FOUND;
@@ -933,6 +939,48 @@ consdiffmgr_rescan_flavor_(consensus_flavor_t flavor)
 }
 
 /**
+ * Scan the cache for the latest consensuses and add their handles to
+ * latest_consensus
+ */
+static void
+consdiffmgr_consensus_load(void)
+{
+  smartlist_t *matches = smartlist_new();
+  for (int flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
+    const char *flavname = networkstatus_get_flavor_name(flav);
+    smartlist_clear(matches);
+    consensus_cache_find_all(matches, cdm_cache_get(),
+                             LABEL_FLAVOR, flavname);
+    consensus_cache_filter_list(matches, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
+    consensus_cache_entry_t *most_recent = sort_and_find_most_recent(matches);
+    if (! most_recent)
+      continue; // no consensuses.
+    const char *most_recent_sha3 =
+      consensus_cache_entry_get_value(most_recent,
+                                      LABEL_SHA3_DIGEST_UNCOMPRESSED);
+    if (BUG(most_recent_sha3 == NULL))
+      continue; // LCOV_EXCL_LINE
+    consensus_cache_filter_list(matches, LABEL_SHA3_DIGEST_UNCOMPRESSED,
+                                most_recent_sha3);
+
+    // Everything that remains matches the most recent consensus of this
+    // flavor.
+    SMARTLIST_FOREACH_BEGIN(matches, consensus_cache_entry_t *, ent) {
+      const char *lv_compression =
+        consensus_cache_entry_get_value(ent, LABEL_COMPRESSION_TYPE);
+      compress_method_t method =
+        compression_method_get_by_name(lv_compression);
+      int pos = consensus_compression_method_pos(method);
+      if (pos < 0)
+        continue;
+      consensus_cache_entry_handle_free(latest_consensus[flav][pos]);
+      latest_consensus[flav][pos] = consensus_cache_entry_handle_new(ent);
+    } SMARTLIST_FOREACH_END(ent);
+  }
+  smartlist_free(matches);
+}
+
+/**
  * Scan the cache for diffs, and add them to the hashtable.
  */
 static void
@@ -989,6 +1037,7 @@ consdiffmgr_rescan(void)
 
   if (cdm_cache_loaded == 0) {
     consdiffmgr_diffs_load();
+    consdiffmgr_consensus_load();
     cdm_cache_loaded = 1;
   }
 
