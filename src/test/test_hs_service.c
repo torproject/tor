@@ -15,24 +15,28 @@
 #define HS_SERVICE_PRIVATE
 #define HS_INTROPOINT_PRIVATE
 #define MAIN_PRIVATE
+#define NETWORKSTATUS_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 
 #include "test.h"
 #include "test_helpers.h"
 #include "log_test_helpers.h"
 #include "rend_test_helpers.h"
+#include "hs_test_helpers.h"
 
 #include "or.h"
-#include "channeltls.h"
+#include "config.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
-#include "config.h"
-#include "connection.h"
 #include "crypto.h"
-#include "hs_circuit.h"
+#include "networkstatus.h"
+#include "nodelist.h"
+#include "relay.h"
+
 #include "hs_common.h"
 #include "hs_config.h"
+#include "hs_circuit.h"
 #include "hs_ident.h"
 #include "hs_intropoint.h"
 #include "hs_ntor.h"
@@ -42,6 +46,57 @@
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
+
+static networkstatus_t mock_ns;
+
+static networkstatus_t *
+mock_networkstatus_get_live_consensus(time_t now)
+{
+  (void) now;
+  return &mock_ns;
+}
+
+/* Mock function because we are not trying to test the close circuit that does
+ * an awful lot of checks on the circuit object. */
+static void
+mock_circuit_mark_for_close(circuit_t *circ, int reason, int line,
+                            const char *file)
+{
+  (void) circ;
+  (void) reason;
+  (void) line;
+  (void) file;
+  return;
+}
+
+static int
+mock_relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
+                                  uint8_t relay_command, const char *payload,
+                                  size_t payload_len,
+                                  crypt_path_t *cpath_layer,
+                                  const char *filename, int lineno)
+{
+  (void) stream_id;
+  (void) circ;
+  (void) relay_command;
+  (void) payload;
+  (void) payload_len;
+  (void) cpath_layer;
+  (void) filename;
+  (void) lineno;
+  return 0;
+}
+
+/* Mock function that always return true so we can test the descriptor
+ * creation of the next time period deterministically. */
+static int
+mock_hs_overlap_mode_is_active_true(const networkstatus_t *consensus,
+                                    time_t now)
+{
+  (void) consensus;
+  (void) now;
+  return 1;
+}
 
 /* Helper: from a set of options in conf, configure a service which will add
  * it to the staging list of the HS subsytem. */
@@ -123,6 +178,77 @@ test_e2e_rend_circuit_setup(void *arg)
 
  done:
   circuit_free(TO_CIRCUIT(or_circ));
+}
+
+/* Helper: Return a newly allocated and initialized origin circuit with
+ * purpose and flags. A default HS identifier is set to an ed25519
+ * authentication key for introduction point. */
+static origin_circuit_t *
+helper_create_origin_circuit(int purpose, int flags)
+{
+  origin_circuit_t *circ = NULL;
+
+  circ = origin_circuit_init(purpose, flags);
+  tt_assert(circ);
+  circ->cpath = tor_malloc_zero(sizeof(crypt_path_t));
+  circ->cpath->magic = CRYPT_PATH_MAGIC;
+  circ->cpath->state = CPATH_STATE_OPEN;
+  circ->cpath->package_window = circuit_initial_package_window();
+  circ->cpath->deliver_window = CIRCWINDOW_START;
+  circ->cpath->prev = circ->cpath;
+  /* Random nonce. */
+  crypto_rand(circ->cpath->prev->rend_circ_nonce, DIGEST_LEN);
+  /* Create a default HS identifier. */
+  circ->hs_ident = tor_malloc_zero(sizeof(hs_ident_circuit_t));
+
+ done:
+  return circ;
+}
+
+/* Helper: Return a newly allocated service object with the identity keypair
+ * sets and the current descriptor. Then register it to the global map.
+ * Caller should us hs_free_all() to free this service or remove it from the
+ * global map before freeing. */
+static hs_service_t *
+helper_create_service(void)
+{
+  /* Set a service for this circuit. */
+  hs_service_t *service = hs_service_new(get_options());
+  tt_assert(service);
+  service->config.version = HS_VERSION_THREE;
+  ed25519_secret_key_generate(&service->keys.identity_sk, 0);
+  ed25519_public_key_generate(&service->keys.identity_pk,
+                              &service->keys.identity_sk);
+  service->desc_current = service_descriptor_new();
+  tt_assert(service->desc_current);
+  /* Register service to global map. */
+  int ret = register_service(get_hs_service_map(), service);
+  tt_int_op(ret, OP_EQ, 0);
+
+ done:
+  return service;
+}
+
+/* Helper: Return a newly allocated service intro point with two link
+ * specifiers, one IPv4 and one legacy ID set to As. */
+static hs_service_intro_point_t *
+helper_create_service_ip(void)
+{
+  hs_desc_link_specifier_t *ls;
+  hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0);
+  tt_assert(ip);
+  /* Add a first unused link specifier. */
+  ls = tor_malloc_zero(sizeof(*ls));
+  ls->type = LS_IPV4;
+  smartlist_add(ip->base.link_specifiers, ls);
+  /* Add a second link specifier used by a test. */
+  ls = tor_malloc_zero(sizeof(*ls));
+  ls->type = LS_LEGACY_ID;
+  memset(ls->u.legacy_id, 'A', sizeof(ls->u.legacy_id));
+  smartlist_add(ip->base.link_specifiers, ls);
+
+ done:
+  return ip;
 }
 
 static void
@@ -260,12 +386,834 @@ test_access_service(void *arg)
   hs_free_all();
 }
 
+static void
+test_service_intro_point(void *arg)
+{
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL;
+
+  (void) arg;
+
+  /* Test simple creation of an object. */
+  {
+    time_t now = time(NULL);
+    ip = helper_create_service_ip();
+    tt_assert(ip);
+    /* Make sure the authentication keypair is not zeroes. */
+    tt_int_op(tor_mem_is_zero((const char *) &ip->auth_key_kp,
+                              sizeof(ed25519_keypair_t)), OP_EQ, 0);
+    /* The introduce2_max MUST be in that range. */
+    tt_u64_op(ip->introduce2_max, OP_GE,
+              INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS);
+    tt_u64_op(ip->introduce2_max, OP_LE,
+              INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
+    /* Time to expire MUST also be in that range. We add 5 seconds because
+     * there could be a gap between setting now and the time taken in
+     * service_intro_point_new. On ARM, it can be surprisingly slow... */
+    tt_u64_op(ip->time_to_expire, OP_GE,
+              now + INTRO_POINT_LIFETIME_MIN_SECONDS + 5);
+    tt_u64_op(ip->time_to_expire, OP_LE,
+              now + INTRO_POINT_LIFETIME_MAX_SECONDS + 5);
+    tt_assert(ip->replay_cache);
+    tt_assert(ip->base.link_specifiers);
+    /* By default, this is NOT a legacy object. */
+    tt_int_op(ip->base.is_only_legacy, OP_EQ, 0);
+  }
+
+  /* Test functions that uses a service intropoints map with that previously
+   * created object (non legacy). */
+  {
+    uint8_t garbage[DIGEST256_LEN] = {0};
+    hs_service_intro_point_t *query;
+
+    service = hs_service_new(get_options());
+    tt_assert(service);
+    service->desc_current = service_descriptor_new();
+    tt_assert(service->desc_current);
+    /* Add intropoint to descriptor map. */
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    query = service_intro_point_find(service, &ip->auth_key_kp.pubkey);
+    tt_mem_op(query, OP_EQ, ip, sizeof(hs_service_intro_point_t));
+    query = service_intro_point_find(service,
+                                     (const ed25519_public_key_t *) garbage);
+    tt_assert(query == NULL);
+
+    /* While at it, can I find the descriptor with the intro point? */
+    hs_service_descriptor_t *desc_lookup =
+      service_desc_find_by_intro(service, ip);
+    tt_mem_op(service->desc_current, OP_EQ, desc_lookup,
+              sizeof(hs_service_descriptor_t));
+
+    /* Remove object from service descriptor and make sure it is out. */
+    service_intro_point_remove(service, ip);
+    query = service_intro_point_find(service, &ip->auth_key_kp.pubkey);
+    tt_assert(query == NULL);
+  }
+
+ done:
+  /* If the test succeed, this object is no longer referenced in the service
+   * so we can free it without use after free. Else, it might explode because
+   * it's still in the service descriptor map. */
+  service_intro_point_free(ip);
+  hs_service_free(service);
+}
+
+static node_t mock_node;
+static const node_t *
+mock_node_get_by_id(const char *digest)
+{
+  (void) digest;
+  memset(mock_node.identity, 'A', DIGEST_LEN);
+  /* Only return the matchin identity of As */
+  if (!tor_memcmp(mock_node.identity, digest, DIGEST_LEN)) {
+    return &mock_node;
+  }
+  return NULL;
+}
+
+static void
+test_helper_functions(void *arg)
+{
+  int ret;
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL;
+  hs_ident_circuit_t ident;
+
+  (void) arg;
+
+  MOCK(node_get_by_id, mock_node_get_by_id);
+
+  hs_service_init();
+
+  service = helper_create_service();
+
+  ip = helper_create_service_ip();
+  /* Immediately add the intro point to the service so the free service at the
+   * end cleans it as well. */
+  service_intro_point_add(service->desc_current->intro_points.map, ip);
+
+  /* Setup the circuit identifier. */
+  ed25519_pubkey_copy(&ident.intro_auth_pk, &ip->auth_key_kp.pubkey);
+  ed25519_pubkey_copy(&ident.identity_pk, &service->keys.identity_pk);
+
+  /* Testing get_objects_from_ident(). */
+  {
+    hs_service_t *s_lookup = NULL;
+    hs_service_intro_point_t *ip_lookup = NULL;
+    hs_service_descriptor_t *desc_lookup = NULL;
+
+    get_objects_from_ident(&ident, &s_lookup, &ip_lookup, &desc_lookup);
+    tt_mem_op(s_lookup, OP_EQ, service, sizeof(hs_service_t));
+    tt_mem_op(ip_lookup, OP_EQ, ip, sizeof(hs_service_intro_point_t));
+    tt_mem_op(desc_lookup, OP_EQ, service->desc_current,
+              sizeof(hs_service_descriptor_t));
+    /* Reset */
+    s_lookup = NULL; ip_lookup = NULL; desc_lookup = NULL;
+
+    /* NULL parameter should work. */
+    get_objects_from_ident(&ident, NULL, &ip_lookup, &desc_lookup);
+    tt_mem_op(ip_lookup, OP_EQ, ip, sizeof(hs_service_intro_point_t));
+    tt_mem_op(desc_lookup, OP_EQ, service->desc_current,
+              sizeof(hs_service_descriptor_t));
+    /* Reset. */
+    s_lookup = NULL; ip_lookup = NULL; desc_lookup = NULL;
+
+    /* Break the ident and we should find nothing. */
+    memset(&ident, 0, sizeof(ident));
+    get_objects_from_ident(&ident, &s_lookup, &ip_lookup, &desc_lookup);
+    tt_assert(s_lookup == NULL);
+    tt_assert(ip_lookup == NULL);
+    tt_assert(desc_lookup == NULL);
+  }
+
+  /* Testing get_node_from_intro_point() */
+  {
+    const node_t *node = get_node_from_intro_point(ip);
+    tt_assert(node == &mock_node);
+    SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
+                            hs_desc_link_specifier_t *, ls) {
+      if (ls->type == LS_LEGACY_ID) {
+        /* Change legacy id in link specifier which is not the mock node. */
+        memset(ls->u.legacy_id, 'B', sizeof(ls->u.legacy_id));
+      }
+    } SMARTLIST_FOREACH_END(ls);
+    node = get_node_from_intro_point(ip);
+    tt_assert(node == NULL);
+  }
+
+  /* Testing can_service_launch_intro_circuit() */
+  {
+    time_t now = time(NULL);
+    /* Put the start of the retry period back in time, we should be allowed.
+     * to launch intro circuit. */
+    service->state.num_intro_circ_launched = 2;
+    service->state.intro_circ_retry_started_time =
+      (now - INTRO_CIRC_RETRY_PERIOD - 1);
+    ret = can_service_launch_intro_circuit(service, now);
+    tt_int_op(ret, OP_EQ, 1);
+    tt_u64_op(service->state.intro_circ_retry_started_time, OP_EQ, now);
+    tt_u64_op(service->state.num_intro_circ_launched, OP_EQ, 0);
+    /* Call it again, we should still be allowed because we are under
+     * MAX_INTRO_CIRCS_PER_PERIOD which been set to 0 previously. */
+    ret = can_service_launch_intro_circuit(service, now);
+    tt_int_op(ret, OP_EQ, 1);
+    tt_u64_op(service->state.intro_circ_retry_started_time, OP_EQ, now);
+    tt_u64_op(service->state.num_intro_circ_launched, OP_EQ, 0);
+    /* Too many intro circuit launched means we are not allowed. */
+    service->state.num_intro_circ_launched = 20;
+    ret = can_service_launch_intro_circuit(service, now);
+    tt_int_op(ret, OP_EQ, 0);
+  }
+
+  /* Testing intro_point_should_expire(). */
+  {
+    time_t now = time(NULL);
+    /* Just some basic test of the current state. */
+    tt_u64_op(ip->introduce2_max, OP_GE,
+              INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS);
+    tt_u64_op(ip->introduce2_max, OP_LE,
+              INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
+    tt_u64_op(ip->time_to_expire, OP_GE,
+              now + INTRO_POINT_LIFETIME_MIN_SECONDS);
+    tt_u64_op(ip->time_to_expire, OP_LE,
+              now + INTRO_POINT_LIFETIME_MAX_SECONDS);
+
+    /* This newly created IP from above shouldn't expire now. */
+    ret = intro_point_should_expire(ip, now);
+    tt_int_op(ret, OP_EQ, 0);
+    /* Maximum number of INTRODUCE2 cell reached, it should expire. */
+    ip->introduce2_count = INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS + 1;
+    ret = intro_point_should_expire(ip, now);
+    tt_int_op(ret, OP_EQ, 1);
+    ip->introduce2_count = 0;
+    /* It should expire if time to expire has been reached. */
+    ip->time_to_expire = now - 1000;
+    ret = intro_point_should_expire(ip, now);
+    tt_int_op(ret, OP_EQ, 1);
+  }
+
+ done:
+  /* This will free the service and all objects associated to it. */
+  hs_service_free_all();
+  UNMOCK(node_get_by_id);
+}
+
+static void
+test_intro_circuit_opened(void *arg)
+{
+  int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+  hs_service_t *service;
+  origin_circuit_t *circ = NULL;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
+  MOCK(relay_send_command_from_edge_, mock_relay_send_command_from_edge);
+
+  circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
+                                      flags);
+
+  /* No service associated with this circuit. */
+  setup_full_capture_of_logs(LOG_WARN);
+  hs_service_circuit_has_opened(circ);
+  expect_log_msg_containing("Unknown service identity key");
+  teardown_capture_of_logs();
+
+  /* Set a service for this circuit. */
+  {
+    service = helper_create_service();
+    ed25519_pubkey_copy(&circ->hs_ident->identity_pk,
+                        &service->keys.identity_pk);
+
+    /* No intro point associated with this circuit. */
+    setup_full_capture_of_logs(LOG_WARN);
+    hs_service_circuit_has_opened(circ);
+    expect_log_msg_containing("Unknown introduction point auth key");
+    teardown_capture_of_logs();
+  }
+
+  /* Set an IP object now for this circuit. */
+  {
+    hs_service_intro_point_t *ip = helper_create_service_ip();
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    /* Update ident to contain the intro point auth key. */
+    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                        &ip->auth_key_kp.pubkey);
+  }
+
+  /* This one should go all the way. */
+  setup_full_capture_of_logs(LOG_INFO);
+  hs_service_circuit_has_opened(circ);
+  expect_log_msg_containing("Introduction circuit 0 established for service");
+  teardown_capture_of_logs();
+
+ done:
+  circuit_free(TO_CIRCUIT(circ));
+  hs_free_all();
+  UNMOCK(circuit_mark_for_close_);
+  UNMOCK(relay_send_command_from_edge_);
+}
+
+static void
+test_intro_established(void *arg)
+{
+  int ret;
+  int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+  uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
+  origin_circuit_t *circ = NULL;
+  hs_service_t *service;
+  hs_service_intro_point_t *ip = NULL;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
+
+  circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
+                                      flags);
+  /* Test a wrong purpose. */
+  TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_S_INTRO;
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Received an INTRO_ESTABLISHED cell on a "
+                            "non introduction circuit of purpose");
+  teardown_capture_of_logs();
+
+  /* Back to normal. */
+  TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_S_ESTABLISH_INTRO;
+
+  /* No service associated to it. */
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Unknown service identity key");
+  teardown_capture_of_logs();
+
+  /* Set a service for this circuit. */
+  service = helper_create_service();
+  ed25519_pubkey_copy(&circ->hs_ident->identity_pk,
+                      &service->keys.identity_pk);
+  /* No introduction point associated to it. */
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Introduction circuit established without an "
+                            "intro point object on circuit");
+  teardown_capture_of_logs();
+
+  /* Set an IP object now for this circuit. */
+  {
+    ip = helper_create_service_ip();
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    /* Update ident to contain the intro point auth key. */
+    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                        &ip->auth_key_kp.pubkey);
+  }
+
+  /* Send an empty payload. INTRO_ESTABLISHED cells are basically zeroes. */
+  ret = hs_service_receive_intro_established(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, 0);
+  tt_u64_op(ip->circuit_established, OP_EQ, 1);
+  tt_int_op(TO_CIRCUIT(circ)->purpose, OP_EQ, CIRCUIT_PURPOSE_S_INTRO);
+
+ done:
+  circuit_free(TO_CIRCUIT(circ));
+  hs_free_all();
+  UNMOCK(circuit_mark_for_close_);
+}
+
+static void
+test_rdv_circuit_opened(void *arg)
+{
+  int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+  origin_circuit_t *circ = NULL;
+  hs_service_t *service;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
+  MOCK(relay_send_command_from_edge_, mock_relay_send_command_from_edge);
+
+  circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_CONNECT_REND, flags);
+  crypto_rand((char *) circ->hs_ident->rendezvous_cookie, REND_COOKIE_LEN);
+  crypto_rand((char *) circ->hs_ident->rendezvous_handshake_info,
+              sizeof(circ->hs_ident->rendezvous_handshake_info));
+
+  /* No service associated with this circuit. */
+  setup_full_capture_of_logs(LOG_WARN);
+  hs_service_circuit_has_opened(circ);
+  expect_log_msg_containing("Unknown service identity key");
+  teardown_capture_of_logs();
+  /* This should be set to a non zero timestamp. */
+  tt_u64_op(TO_CIRCUIT(circ)->timestamp_dirty, OP_NE, 0);
+
+  /* Set a service for this circuit. */
+  service = helper_create_service();
+  ed25519_pubkey_copy(&circ->hs_ident->identity_pk,
+                      &service->keys.identity_pk);
+  /* Should be all good. */
+  hs_service_circuit_has_opened(circ);
+  tt_int_op(TO_CIRCUIT(circ)->purpose, OP_EQ, CIRCUIT_PURPOSE_S_REND_JOINED);
+
+ done:
+  circuit_free(TO_CIRCUIT(circ));
+  hs_free_all();
+  UNMOCK(circuit_mark_for_close_);
+  UNMOCK(relay_send_command_from_edge_);
+}
+
+static void
+test_introduce2(void *arg)
+{
+  int ret;
+  int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+  uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
+  origin_circuit_t *circ = NULL;
+  hs_service_t *service;
+  hs_service_intro_point_t *ip = NULL;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
+
+  circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_INTRO, flags);
+
+  /* Test a wrong purpose. */
+  TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_S_ESTABLISH_INTRO;
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_service_receive_introduce2(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Received an INTRODUCE2 cell on a "
+                            "non introduction circuit of purpose");
+  teardown_capture_of_logs();
+
+  /* Back to normal. */
+  TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_S_INTRO;
+
+  /* No service associated to it. */
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_service_receive_introduce2(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Unknown service identity key");
+  teardown_capture_of_logs();
+
+  /* Set a service for this circuit. */
+  service = helper_create_service();
+  ed25519_pubkey_copy(&circ->hs_ident->identity_pk,
+                      &service->keys.identity_pk);
+  /* No introduction point associated to it. */
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_service_receive_introduce2(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Unknown introduction auth key when handling "
+                            "an INTRODUCE2 cell on circuit");
+  teardown_capture_of_logs();
+
+  /* Set an IP object now for this circuit. */
+  {
+    ip = helper_create_service_ip();
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    /* Update ident to contain the intro point auth key. */
+    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                        &ip->auth_key_kp.pubkey);
+  }
+
+  /* This will fail because receiving an INTRODUCE2 cell implies a valid cell
+   * and then launching circuits so let's not do that and instead test that
+   * behaviour differently. */
+  ret = hs_service_receive_introduce2(circ, payload, sizeof(payload));
+  tt_int_op(ret, OP_EQ, -1);
+  tt_u64_op(ip->introduce2_count, OP_EQ, 0);
+
+ done:
+  circuit_free(TO_CIRCUIT(circ));
+  hs_free_all();
+  UNMOCK(circuit_mark_for_close_);
+}
+
+static void
+test_service_event(void *arg)
+{
+  int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+  time_t now = time(NULL);
+  hs_service_t *service;
+  origin_circuit_t *circ = NULL;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
+
+  circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_INTRO, flags);
+
+  /* Set a service for this circuit. */
+  service = helper_create_service();
+  ed25519_pubkey_copy(&circ->hs_ident->identity_pk,
+                      &service->keys.identity_pk);
+
+  /* Currently this consists of cleaning invalid intro points. So adding IPs
+   * here that should get cleaned up. */
+  {
+    hs_service_intro_point_t *ip = helper_create_service_ip();
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    /* This run will remove the IP because we have no circuits nor node_t
+     * associated with it. */
+    run_housekeeping_event(now);
+    tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+              OP_EQ, 0);
+    /* We'll trigger a removal because we've reached our maximum amount of
+     * times we should retry a circuit. For this, we need to have a node_t
+     * that matches the identity of this IP. */
+    routerinfo_t ri;
+    ip = helper_create_service_ip();
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
+    /* This triggers a node_t creation. */
+    tt_assert(nodelist_set_routerinfo(&ri, NULL));
+    ip->circuit_retries = MAX_INTRO_POINT_CIRCUIT_RETRIES + 1;
+    run_housekeeping_event(now);
+    tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+              OP_EQ, 0);
+    /* No removal but no circuit so this means the IP object will stay in the
+     * descriptor map so we can retry it. */
+    ip = helper_create_service_ip();
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    ip->circuit_established = 1;  /* We'll test that, it MUST be 0 after. */
+    run_housekeeping_event(now);
+    tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+              OP_EQ, 1);
+    /* Remove the IP object at once for the next test. */
+    ip->circuit_retries = MAX_INTRO_POINT_CIRCUIT_RETRIES + 1;
+    run_housekeeping_event(now);
+    tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+              OP_EQ, 0);
+    /* Now, we'll create an IP with a registered circuit. The IP object
+     * shouldn't go away. */
+    ip = helper_create_service_ip();
+    service_intro_point_add(service->desc_current->intro_points.map, ip);
+    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                        &ip->auth_key_kp.pubkey);
+    hs_circuitmap_register_intro_circ_v3_service_side(
+                                         circ, &ip->auth_key_kp.pubkey);
+    run_housekeeping_event(now);
+    tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+              OP_EQ, 1);
+    /* We'll mangle the IP object to expire. */
+    ip->time_to_expire = now;
+    run_housekeeping_event(now);
+    tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+              OP_EQ, 0);
+  }
+
+ done:
+  hs_circuitmap_remove_circuit(TO_CIRCUIT(circ));
+  circuit_free(TO_CIRCUIT(circ));
+  hs_free_all();
+  UNMOCK(circuit_mark_for_close_);
+}
+
+static void
+test_rotate_descriptors(void *arg)
+{
+  int ret;
+  time_t now = time(NULL);
+  hs_service_t *service;
+  hs_service_descriptor_t *desc_next;
+  hs_service_intro_point_t *ip;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  /* Setup the valid_after time to be 13:00 UTC, not in overlap period. The
+   * overlap check doesn't care about the year. */
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Create a service with a default descriptor and state. It's added to the
+   * global map. */
+  service = helper_create_service();
+  ip = helper_create_service_ip();
+  service_intro_point_add(service->desc_current->intro_points.map, ip);
+
+  /* Nothing should happen because we are not in the overlap period. */
+  rotate_all_descriptors(now);
+  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
+  tt_assert(service->desc_current);
+  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+            OP_EQ, 1);
+
+  /* Entering an overlap period. */
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 01:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  desc_next = service_descriptor_new();
+  desc_next->next_upload_time = 42; /* Our marker to recognize it. */
+  service->desc_next = desc_next;
+  /* We should have our state flagged to be in the overlap period, our current
+   * descriptor cleaned up and the next descriptor becoming the current. */
+  rotate_all_descriptors(now);
+  tt_int_op(service->state.in_overlap_period, OP_EQ, 1);
+  tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
+  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+            OP_EQ, 0);
+  tt_assert(service->desc_next == NULL);
+  /* A second time should do nothing. */
+  rotate_all_descriptors(now);
+  tt_int_op(service->state.in_overlap_period, OP_EQ, 1);
+  tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
+  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+            OP_EQ, 0);
+  tt_assert(service->desc_next == NULL);
+
+  /* Going out of the overlap period. */
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC",
+                           &mock_ns.valid_after);
+  /* This should reset the state and not touch the current descriptor. */
+  tt_int_op(ret, OP_EQ, 0);
+  rotate_all_descriptors(now);
+  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
+  tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
+  tt_assert(service->desc_next == NULL);
+
+ done:
+  hs_free_all();
+  UNMOCK(circuit_mark_for_close_);
+  UNMOCK(networkstatus_get_live_consensus);
+}
+
+static void
+test_build_update_descriptors(void *arg)
+{
+  int ret;
+  time_t now = time(NULL);
+  time_t period_num = hs_get_time_period_num(now);
+  time_t next_period_num = hs_get_next_time_period_num(now);
+  node_t *node;
+  hs_service_t *service;
+  hs_service_intro_point_t *ip_cur, *ip_next;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
+
+  /* Create a service without a current descriptor to trigger a build. */
+  service = hs_service_new(get_options());
+  tt_assert(service);
+  service->config.version = HS_VERSION_THREE;
+  ed25519_secret_key_generate(&service->keys.identity_sk, 0);
+  ed25519_public_key_generate(&service->keys.identity_pk,
+                              &service->keys.identity_sk);
+  /* Register service to global map. */
+  ret = register_service(get_hs_service_map(), service);
+  tt_int_op(ret, OP_EQ, 0);
+
+  build_all_descriptors(now);
+  /* Check *current* descriptor. */
+  tt_assert(service->desc_current);
+  tt_assert(service->desc_current->desc);
+  tt_assert(service->desc_current->intro_points.map);
+  tt_u64_op(service->desc_current->time_period_num, OP_EQ, period_num);
+  /* This should be untouched, the update descriptor process changes it. */
+  tt_u64_op(service->desc_current->next_upload_time, OP_EQ, 0);
+
+  /* Check *next* descriptor. */
+  tt_assert(service->desc_next);
+  tt_assert(service->desc_next->desc);
+  tt_assert(service->desc_next->intro_points.map);
+  tt_assert(service->desc_current != service->desc_next);
+  tt_u64_op(service->desc_next->time_period_num, OP_EQ, next_period_num);
+  /* This should be untouched, the update descriptor process changes it. */
+  tt_u64_op(service->desc_next->next_upload_time, OP_EQ, 0);
+
+  /* Time to test the update of those descriptors. At first, we have no node
+   * in the routerlist so this will find NO suitable node for the IPs. */
+  setup_full_capture_of_logs(LOG_INFO);
+  update_all_descriptors(now);
+  expect_log_msg_containing("Unable to find a suitable node to be an "
+                            "introduction point for service");
+  teardown_capture_of_logs();
+  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+            OP_EQ, 0);
+  tt_int_op(digest256map_size(service->desc_next->intro_points.map),
+            OP_EQ, 0);
+
+  /* Now, we'll setup a node_t. */
+  {
+    routerinfo_t ri;
+    tor_addr_t ipv4_addr;
+    curve25519_secret_key_t curve25519_secret_key;
+
+    tor_addr_parse(&ipv4_addr, "127.0.0.1");
+    ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
+    ri.or_port = 1337;
+    ri.purpose = ROUTER_PURPOSE_GENERAL;
+    /* Ugly yes but we never free the "ri" object so this just makes things
+     * easier. */
+    ri.protocol_list = (char *) "HSDir 1-2";
+    ret = curve25519_secret_key_generate(&curve25519_secret_key, 0);
+    tt_int_op(ret, OP_EQ, 0);
+    ri.onion_curve25519_pkey =
+      tor_malloc_zero(sizeof(curve25519_public_key_t));
+    curve25519_public_key_generate(ri.onion_curve25519_pkey,
+                                   &curve25519_secret_key);
+    memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
+    nodelist_set_routerinfo(&ri, NULL);
+    node = node_get_mutable_by_id(ri.cache_info.identity_digest);
+    tt_assert(node);
+    node->is_running = node->is_valid = node->is_fast = node->is_stable = 1;
+  }
+
+  /* We expect to pick only one intro point from the node above. */
+  setup_full_capture_of_logs(LOG_INFO);
+  update_all_descriptors(now);
+  tor_free(node->ri->onion_curve25519_pkey); /* Avoid memleak. */
+  expect_log_msg_containing("just picked 1 intro points and wanted 3. It "
+                            "currently has 0 intro points. Launching "
+                            "ESTABLISH_INTRO circuit shortly.");
+  teardown_capture_of_logs();
+  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
+            OP_EQ, 1);
+  tt_int_op(digest256map_size(service->desc_next->intro_points.map),
+            OP_EQ, 1);
+  /* Get the IP object. Because we don't have the auth key of the IP, we can't
+   * query it so get the first element in the map. */
+  {
+    void *obj = NULL;
+    const uint8_t *key;
+    digest256map_iter_t *iter =
+      digest256map_iter_init(service->desc_current->intro_points.map);
+    digest256map_iter_get(iter, &key, &obj);
+    tt_assert(obj);
+    ip_cur = obj;
+    /* Get also the IP from the next descriptor. We'll make sure it's not the
+     * same object as in the current descriptor. */
+    iter = digest256map_iter_init(service->desc_next->intro_points.map);
+    digest256map_iter_get(iter, &key, &obj);
+    tt_assert(obj);
+    ip_next = obj;
+  }
+  tt_mem_op(ip_cur, OP_NE, ip_next, sizeof(hs_desc_intro_point_t));
+
+  /* We won't test the service IP object because there is a specific test
+   * already for this but we'll make sure that the state is coherent.*/
+
+  /* Three link specifiers are mandatoy so make sure we do have them. */
+  tt_int_op(smartlist_len(ip_cur->base.link_specifiers), OP_EQ, 3);
+  /* Make sure we have a valid encryption keypair generated when we pick an
+   * intro point in the update process. */
+  tt_assert(!tor_mem_is_zero((char *) ip_cur->enc_key_kp.seckey.secret_key,
+                             CURVE25519_SECKEY_LEN));
+  tt_assert(!tor_mem_is_zero((char *) ip_cur->enc_key_kp.pubkey.public_key,
+                             CURVE25519_PUBKEY_LEN));
+  tt_u64_op(ip_cur->time_to_expire, OP_GE, now +
+            INTRO_POINT_LIFETIME_MIN_SECONDS);
+  tt_u64_op(ip_cur->time_to_expire, OP_LE, now +
+            INTRO_POINT_LIFETIME_MAX_SECONDS);
+
+ done:
+  hs_free_all();
+  nodelist_free_all();
+  UNMOCK(hs_overlap_mode_is_active);
+}
+
+static void
+test_upload_desctriptors(void *arg)
+{
+  int ret;
+  time_t now = time(NULL);
+  hs_service_t *service;
+  hs_service_intro_point_t *ip;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
+
+  /* Create a service with no descriptor. It's added to the global map. */
+  service = hs_service_new(get_options());
+  tt_assert(service);
+  service->config.version = HS_VERSION_THREE;
+  ed25519_secret_key_generate(&service->keys.identity_sk, 0);
+  ed25519_public_key_generate(&service->keys.identity_pk,
+                              &service->keys.identity_sk);
+  /* Register service to global map. */
+  ret = register_service(get_hs_service_map(), service);
+  tt_int_op(ret, OP_EQ, 0);
+  /* But first, build our descriptor. */
+  build_all_descriptors(now);
+
+  /* Nothing should happen because we have 0 introduction circuit established
+   * and we want (by default) 3 intro points. */
+  run_upload_descriptor_event(now);
+  /* If no upload happened, this should be untouched. */
+  tt_u64_op(service->desc_current->next_upload_time, OP_EQ, 0);
+  /* We'll simulate that we've opened our intro point circuit and that we only
+   * want one intro point. */
+  service->config.num_intro_points = 1;
+
+  /* Set our next upload time after now which will skip the upload. */
+  service->desc_current->next_upload_time = now + 1000;
+  run_upload_descriptor_event(now);
+  /* If no upload happened, this should be untouched. */
+  tt_u64_op(service->desc_current->next_upload_time, OP_EQ, now + 1000);
+
+  /* Set our upload time in the past so we trigger an upload. */
+  service->desc_current->next_upload_time = now - 1000;
+  service->desc_next->next_upload_time = now - 1000;
+  ip = helper_create_service_ip();
+  ip->circuit_established = 1;
+  service_intro_point_add(service->desc_current->intro_points.map, ip);
+
+  setup_full_capture_of_logs(LOG_WARN);
+  run_upload_descriptor_event(now);
+  expect_log_msg_containing("No valid consensus so we can't get the");
+  teardown_capture_of_logs();
+  tt_u64_op(service->desc_current->next_upload_time, OP_GE,
+            now + HS_SERVICE_NEXT_UPLOAD_TIME_MIN);
+  tt_u64_op(service->desc_current->next_upload_time, OP_LE,
+            now + HS_SERVICE_NEXT_UPLOAD_TIME_MAX);
+
+ done:
+  hs_free_all();
+  UNMOCK(hs_overlap_mode_is_active);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
   { "load_keys", test_load_keys, TT_FORK,
     NULL, NULL },
   { "access_service", test_access_service, TT_FORK,
+    NULL, NULL },
+  { "service_intro_point", test_service_intro_point, TT_FORK,
+    NULL, NULL },
+  { "helper_functions", test_helper_functions, TT_FORK,
+    NULL, NULL },
+  { "intro_circuit_opened", test_intro_circuit_opened, TT_FORK,
+    NULL, NULL },
+  { "intro_established", test_intro_established, TT_FORK,
+    NULL, NULL },
+  { "rdv_circuit_opened", test_rdv_circuit_opened, TT_FORK,
+    NULL, NULL },
+  { "introduce2", test_introduce2, TT_FORK,
+    NULL, NULL },
+  { "service_event", test_service_event, TT_FORK,
+    NULL, NULL },
+  { "rotate_descriptors", test_rotate_descriptors, TT_FORK,
+    NULL, NULL },
+  { "build_update_descriptors", test_build_update_descriptors, TT_FORK,
+    NULL, NULL },
+  { "upload_desctriptors", test_upload_desctriptors, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

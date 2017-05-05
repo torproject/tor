@@ -873,8 +873,8 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
 
 /* Return true if overlap mode is active given the date in consensus. If
  * consensus is NULL, then we use the latest live consensus we can find. */
-int
-hs_overlap_mode_is_active(const networkstatus_t *consensus, time_t now)
+MOCK_IMPL(int,
+hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
 {
   struct tm valid_after_tm;
 

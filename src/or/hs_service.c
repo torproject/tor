@@ -395,7 +395,7 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
 /* Add the given intro point object to the given intro point map. The intro
  * point MUST have its RSA encryption key set if this is a legacy type or the
  * authentication key set otherwise. */
-static void
+STATIC void
 service_intro_point_add(digest256map_t *map, hs_service_intro_point_t *ip)
 {
   tor_assert(map);
@@ -406,7 +406,7 @@ service_intro_point_add(digest256map_t *map, hs_service_intro_point_t *ip)
 
 /* For a given service, remove the intro point from that service which will
  * look in both descriptors. */
-static void
+STATIC void
 service_intro_point_remove(const hs_service_t *service,
                            const hs_service_intro_point_t *ip)
 {
@@ -424,7 +424,7 @@ service_intro_point_remove(const hs_service_t *service,
 
 /* For a given service and authentication key, return the intro point or NULL
  * if not found. This will check both descriptors in the service. */
-static hs_service_intro_point_t *
+STATIC hs_service_intro_point_t *
 service_intro_point_find(const hs_service_t *service,
                          const ed25519_public_key_t *auth_key)
 {
@@ -446,7 +446,7 @@ service_intro_point_find(const hs_service_t *service,
 
 /* For a given service and intro point, return the descriptor for which the
  * intro point is assigned to. NULL is returned if not found. */
-static hs_service_descriptor_t *
+STATIC hs_service_descriptor_t *
 service_desc_find_by_intro(const hs_service_t *service,
                            const hs_service_intro_point_t *ip)
 {
@@ -472,7 +472,7 @@ service_desc_find_by_intro(const hs_service_t *service,
  *
  * This is an helper function because we do those lookups often so it's more
  * convenient to simply call this functions to get all the things at once. */
-static void
+STATIC void
 get_objects_from_ident(const hs_ident_circuit_t *ident,
                        hs_service_t **service, hs_service_intro_point_t **ip,
                        hs_service_descriptor_t **desc)
@@ -525,7 +525,7 @@ get_link_spec_by_type(const hs_service_intro_point_t *ip, uint8_t type)
 /* Given a service intro point, return the node_t associated to it. This can
  * return NULL if the given intro point has no legacy ID or if the node can't
  * be found in the consensus. */
-static const node_t *
+STATIC const node_t *
 get_node_from_intro_point(const hs_service_intro_point_t *ip)
 {
   const hs_desc_link_specifier_t *ls;
@@ -952,7 +952,7 @@ service_descriptor_free(hs_service_descriptor_t *desc)
 }
 
 /* Return a newly allocated service descriptor object. */
-static hs_service_descriptor_t *
+STATIC hs_service_descriptor_t *
 service_descriptor_new(void)
 {
   hs_service_descriptor_t *sdesc = tor_malloc_zero(sizeof(*sdesc));
@@ -1315,7 +1315,7 @@ build_service_descriptor(hs_service_t *service, time_t now,
 
 /* Build descriptors for each service if needed. There are conditions to build
  * a descriptor which are details in the function. */
-static void
+STATIC void
 build_all_descriptors(time_t now)
 {
   FOR_EACH_SERVICE_BEGIN(service) {
@@ -1518,7 +1518,7 @@ update_service_descriptor(hs_service_t *service,
 }
 
 /* Update descriptors for each service if needed. */
-static void
+STATIC void
 update_all_descriptors(time_t now)
 {
   FOR_EACH_SERVICE_BEGIN(service) {
@@ -1532,7 +1532,7 @@ update_all_descriptors(time_t now)
 
 /* Return true iff the given intro point has expired that is it has been used
  * for too long or we've reached our max seen INTRODUCE2 cell. */
-static int
+STATIC int
 intro_point_should_expire(const hs_service_intro_point_t *ip,
                           time_t now)
 {
@@ -1642,7 +1642,7 @@ rotate_service_descriptors(hs_service_t *service)
  * the overlap period, rotate them that is point the previous descriptor to
  * the current and cleanup the previous one. A non existing current
  * descriptor will trigger a descriptor build for the next time period. */
-static void
+STATIC void
 rotate_all_descriptors(time_t now)
 {
   FOR_EACH_SERVICE_BEGIN(service) {
@@ -1673,7 +1673,7 @@ rotate_all_descriptors(time_t now)
 /* Scheduled event run from the main loop. Make sure all our services are up
  * to date and ready for the other scheduled events. This includes looking at
  * the introduction points status and descriptor rotation time. */
-static void
+STATIC void
 run_housekeeping_event(time_t now)
 {
   /* Note that nothing here opens circuit(s) nor uploads descriptor(s). We are
@@ -1809,7 +1809,7 @@ get_max_intro_circ_per_period(const hs_service_t *service)
 /* For the given service, return 1 if the service is allowed to launch more
  * introduction circuits else 0 if the maximum has been reached for the retry
  * period of INTRO_CIRC_RETRY_PERIOD. */
-static int
+STATIC int
 can_service_launch_intro_circuit(hs_service_t *service, time_t now)
 {
   tor_assert(service);
@@ -2069,7 +2069,7 @@ should_service_upload_descriptor(const hs_service_t *service,
 
 /* Scheduled event run from the main loop. Try to upload the descriptor for
  * each service. */
-static void
+STATIC void
 run_upload_descriptor_event(time_t now)
 {
   /* v2 services use the same function for descriptor creation and upload so

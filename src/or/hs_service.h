@@ -15,6 +15,7 @@
 
 #include "hs_common.h"
 #include "hs_descriptor.h"
+#include "hs_ident.h"
 #include "hs_intropoint.h"
 
 /* Trunnel */
@@ -284,10 +285,42 @@ STATIC hs_service_t *find_service(hs_service_ht *map,
                                   const ed25519_public_key_t *pk);
 STATIC void remove_service(hs_service_ht *map, hs_service_t *service);
 STATIC int register_service(hs_service_ht *map, hs_service_t *service);
+/* Service introduction point functions. */
 STATIC hs_service_intro_point_t *service_intro_point_new(
                                          const extend_info_t *ei,
                                          unsigned int is_legacy);
 STATIC void service_intro_point_free(hs_service_intro_point_t *ip);
+STATIC void service_intro_point_add(digest256map_t *map,
+                                    hs_service_intro_point_t *ip);
+STATIC void service_intro_point_remove(const hs_service_t *service,
+                                       const hs_service_intro_point_t *ip);
+STATIC hs_service_intro_point_t *service_intro_point_find(
+                                 const hs_service_t *service,
+                                 const ed25519_public_key_t *auth_key);
+STATIC hs_service_intro_point_t *service_intro_point_find_by_ident(
+                                         const hs_service_t *service,
+                                         const hs_ident_circuit_t *ident);
+/* Service descriptor functions. */
+STATIC hs_service_descriptor_t *service_descriptor_new(void);
+STATIC hs_service_descriptor_t *service_desc_find_by_intro(
+                                         const hs_service_t *service,
+                                         const hs_service_intro_point_t *ip);
+/* Helper functions. */
+STATIC void get_objects_from_ident(const hs_ident_circuit_t *ident,
+                                   hs_service_t **service,
+                                   hs_service_intro_point_t **ip,
+                                   hs_service_descriptor_t **desc);
+STATIC const node_t *get_node_from_intro_point(
+                                   const hs_service_intro_point_t *ip);
+STATIC int can_service_launch_intro_circuit(hs_service_t *service,
+                                            time_t now);
+STATIC int intro_point_should_expire(const hs_service_intro_point_t *ip,
+                                     time_t now);
+STATIC void run_housekeeping_event(time_t now);
+STATIC void rotate_all_descriptors(time_t now);
+STATIC void build_all_descriptors(time_t now);
+STATIC void update_all_descriptors(time_t now);
+STATIC void run_upload_descriptor_event(time_t now);
 
 #endif /* TOR_UNIT_TESTS */
 
