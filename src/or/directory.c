@@ -3627,6 +3627,7 @@ parse_or_diff_from_header(smartlist_t **digests_out, const char *headers)
   } SMARTLIST_FOREACH_END(hex);
   SMARTLIST_FOREACH(hex_digests, char *, cp, tor_free(cp));
   smartlist_free(hex_digests);
+  tor_free(hdr);
   return 0;
 }
 
