@@ -108,7 +108,7 @@ static const compress_method_t compress_consensus_with[] = {
 };
 
 /** How many different methods will we try to use for diff compression? */
-static unsigned
+STATIC unsigned
 n_consensus_compression_methods(void)
 {
   return ARRAY_LENGTH(compress_consensus_with);

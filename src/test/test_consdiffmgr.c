@@ -759,9 +759,11 @@ test_consdiffmgr_cleanup_old_diffs(void *arg)
   consensus_cache_entry_incref(hold_ent); // incref, so it is preserved.
 
   /* Now add an even-more-recent consensus; this should make all previous
-   * diffs deletable */
+   * diffs deletable, and make delete */
   tt_int_op(0, OP_EQ, consdiffmgr_add_consensus(md_body[3], md_ns[3]));
-  tt_int_op(2 * n_diff_compression_methods(), OP_EQ, consdiffmgr_cleanup());
+  tt_int_op(2 * n_diff_compression_methods() +
+            (n_consensus_compression_methods() - 1) , OP_EQ,
+            consdiffmgr_cleanup());
 
   tt_int_op(CONSDIFF_NOT_FOUND, OP_EQ,
             lookup_diff_from(&ent, FLAV_MICRODESC, md_body[0]));

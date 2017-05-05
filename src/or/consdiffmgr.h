@@ -46,6 +46,7 @@ int consdiffmgr_validate(void);
 
 #ifdef CONSDIFFMGR_PRIVATE
 STATIC unsigned n_diff_compression_methods(void);
+STATIC unsigned n_consensus_compression_methods(void);
 STATIC consensus_cache_t *cdm_cache_get(void);
 STATIC consensus_cache_entry_t *cdm_cache_lookup_consensus(
                           consensus_flavor_t flavor, time_t valid_after);
