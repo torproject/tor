@@ -23,6 +23,11 @@ struct consensus_cache_entry_t; // from conscache.h
 int consdiffmgr_add_consensus(const char *consensus,
                               const networkstatus_t *as_parsed);
 
+consdiff_status_t consdiffmgr_find_consensus(
+                           struct consensus_cache_entry_t **entry_out,
+                           consensus_flavor_t flavor,
+                           compress_method_t method);
+
 consdiff_status_t consdiffmgr_find_diff_from(
                            struct consensus_cache_entry_t **entry_out,
                            consensus_flavor_t flavor,

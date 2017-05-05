@@ -120,6 +120,12 @@ n_consensus_compression_methods(void)
  */
 #define RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD ZLIB_METHOD
 
+/** Handles pointing to the latest consensus entries as compressed and
+ * stored. */
+static consensus_cache_entry_handle_t *
+                  latest_consensus[N_CONSENSUS_FLAVORS]
+                                  [ARRAY_LENGTH(compress_consensus_with)];
+
 /** Hashtable node used to remember the current status of the diff
  * from a given sha3 digest to the current consensus.  */
 typedef struct cdm_diff_t {
@@ -508,6 +514,41 @@ sort_and_find_most_recent(smartlist_t *lst)
   } else {
     return NULL;
   }
+}
+
+/**
+ * If we know a consensus with the flavor <b>flavor</b> compressed with
+ * <b>method</b>, set *<b>entry_out</b> to that value.  Return values are as
+ * for consdiffmgr_find_diff_from().
+ */
+consdiff_status_t
+consdiffmgr_find_consensus(struct consensus_cache_entry_t **entry_out,
+                           consensus_flavor_t flavor,
+                           compress_method_t method)
+{
+  int pos=-1;
+  unsigned i;
+  tor_assert(flavor < N_CONSENSUS_FLAVORS);
+
+  // Find the index of method withing compress_consensus_with
+  for (i = 0; i < n_consensus_compression_methods(); ++i) {
+    if (compress_consensus_with[i] == method) {
+      pos = i;
+      break;
+    }
+  }
+  if (pos < 0) {
+     // We don't compress consensuses with this method.
+    return CONSDIFF_NOT_FOUND;
+  }
+  consensus_cache_entry_handle_t *handle = latest_consensus[flavor][pos];
+  if (!handle)
+    return CONSDIFF_NOT_FOUND;
+  *entry_out = consensus_cache_entry_handle_get(handle);
+  if (entry_out)
+    return CONSDIFF_AVAILABLE;
+  else
+    return CONSDIFF_NOT_FOUND;
 }
 
 /**
@@ -1063,6 +1104,14 @@ consdiffmgr_free_all(void)
     next = HT_NEXT_RMV(cdm_diff_ht, &cdm_diff_ht, diff);
     cdm_diff_free(this);
   }
+  int i;
+  unsigned j;
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    for (j = 0; j < n_consensus_compression_methods(); ++j) {
+      consensus_cache_entry_handle_free(latest_consensus[i][j]);
+    }
+  }
+  memset(latest_consensus, 0, sizeof(latest_consensus));
   consensus_cache_free(cons_diff_cache);
   cons_diff_cache = NULL;
 }
@@ -1570,6 +1619,16 @@ consensus_compress_worker_replyfn(void *work_)
                  job->out,
                  "consensus");
   cdm_cache_dirty = 1;
+
+  unsigned u;
+  consensus_flavor_t f = job->flavor;
+  tor_assert(f < N_CONSENSUS_FLAVORS);
+  for (u = 0; u < ARRAY_LENGTH(handles); ++u) {
+    if (handles[u] == NULL)
+      continue;
+    consensus_cache_entry_handle_free(latest_consensus[f][u]);
+    latest_consensus[f][u] = handles[u];
+  }
 
   consensus_compress_worker_job_free(job);
 }
