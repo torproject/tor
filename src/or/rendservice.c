@@ -245,11 +245,84 @@ rend_service_free_all(void)
   rend_service_list = NULL;
 }
 
-/** Validate <b>service</b> and add it to <b>service_list</b>, or to
- * the global rend_service_list if <b>service_list</b> is NULL.
- * Return 0 on success.  On failure, free <b>service</b> and return -1.
- * Takes ownership of <b>service</b>.
- */
+/* Validate a <b>service</b>. Use the <b>service_list</b> to make sure there
+ * is no duplicate entry for the given service object. Return 0 if valid else
+ * -1 if not.*/
+static int
+rend_validate_service(const smartlist_t *service_list,
+                      const rend_service_t *service)
+{
+  int dupe = 0;
+
+  tor_assert(service_list);
+  tor_assert(service);
+
+  if (service->max_streams_per_circuit < 0) {
+    log_warn(LD_CONFIG, "Hidden service (%s) configured with negative max "
+                        "streams per circuit.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  if (service->max_streams_close_circuit < 0 ||
+      service->max_streams_close_circuit > 1) {
+    log_warn(LD_CONFIG, "Hidden service (%s) configured with invalid "
+                        "max streams handling.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  if (service->auth_type != REND_NO_AUTH &&
+      (!service->clients || smartlist_len(service->clients) == 0)) {
+    log_warn(LD_CONFIG, "Hidden service (%s) with client authorization but "
+                        "no clients.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  if (!service->ports || !smartlist_len(service->ports)) {
+    log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured.",
+             rend_service_escaped_dir(service));
+    goto invalid;
+  }
+
+  /* XXX This duplicate check has two problems:
+   *
+   * a) It's O(n^2), but the same comment from the bottom of
+   *    rend_config_services() should apply.
+   *
+   * b) We only compare directory paths as strings, so we can't
+   *    detect two distinct paths that specify the same directory
+   *    (which can arise from symlinks, case-insensitivity, bind
+   *    mounts, etc.).
+   *
+   * It also can't detect that two separate Tor instances are trying
+   * to use the same HiddenServiceDir; for that, we would need a
+   * lock file.  But this is enough to detect a simple mistake that
+   * at least one person has actually made.
+   */
+  if (!rend_service_is_ephemeral(service)) {
+    /* Skip dupe for ephemeral services. */
+    SMARTLIST_FOREACH(service_list, rend_service_t *, ptr,
+                      dupe = dupe ||
+                      !strcmp(ptr->directory, service->directory));
+    if (dupe) {
+      log_warn(LD_REND, "Another hidden service is already configured for "
+                        "directory %s.",
+               rend_service_escaped_dir(service));
+      goto invalid;
+    }
+  }
+
+  /* Valid. */
+  return 0;
+ invalid:
+  return -1;
+}
+
+/** Add it to <b>service_list</b>, or to the global rend_service_list if
+ * <b>service_list</b> is NULL.  Return 0 on success.  On failure, free
+ * <b>service</b> and return -1. Takes ownership of <b>service</b>. */
 static int
 rend_add_service(smartlist_t *service_list, rend_service_t *service)
 {
@@ -268,100 +341,35 @@ rend_add_service(smartlist_t *service_list, rend_service_t *service)
   service->intro_nodes = smartlist_new();
   service->expiring_nodes = smartlist_new();
 
-  if (service->max_streams_per_circuit < 0) {
-    log_warn(LD_CONFIG, "Hidden service (%s) configured with negative max "
-                        "streams per circuit.",
-             rend_service_escaped_dir(service));
-    rend_service_free(service);
-    return -1;
-  }
-
-  if (service->max_streams_close_circuit < 0 ||
-      service->max_streams_close_circuit > 1) {
-    log_warn(LD_CONFIG, "Hidden service (%s) configured with invalid "
-                        "max streams handling.",
-             rend_service_escaped_dir(service));
-    rend_service_free(service);
-    return -1;
-  }
-
-  if (service->auth_type != REND_NO_AUTH &&
-      (!service->clients ||
-       smartlist_len(service->clients) == 0)) {
-    log_warn(LD_CONFIG, "Hidden service (%s) with client authorization but no "
-                        "clients.",
-             rend_service_escaped_dir(service));
-    rend_service_free(service);
-    return -1;
-  }
-
-  if (!service->ports || !smartlist_len(service->ports)) {
-    log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured.",
-             rend_service_escaped_dir(service));
-    rend_service_free(service);
-    return -1;
-  } else {
-    int dupe = 0;
-    /* XXX This duplicate check has two problems:
-     *
-     * a) It's O(n^2), but the same comment from the bottom of
-     *    rend_config_services() should apply.
-     *
-     * b) We only compare directory paths as strings, so we can't
-     *    detect two distinct paths that specify the same directory
-     *    (which can arise from symlinks, case-insensitivity, bind
-     *    mounts, etc.).
-     *
-     * It also can't detect that two separate Tor instances are trying
-     * to use the same HiddenServiceDir; for that, we would need a
-     * lock file.  But this is enough to detect a simple mistake that
-     * at least one person has actually made.
-     */
-    tor_assert(s_list);
-    if (!rend_service_is_ephemeral(service)) {
-      /* Skip dupe for ephemeral services. */
-      SMARTLIST_FOREACH(s_list, rend_service_t*, ptr,
-                        dupe = dupe ||
-                               !strcmp(ptr->directory, service->directory));
-      if (dupe) {
-        log_warn(LD_REND, "Another hidden service is already configured for "
-                 "directory %s.",
-                 rend_service_escaped_dir(service));
-        rend_service_free(service);
-        return -1;
-      }
-    }
-    log_debug(LD_REND,"Configuring service with directory %s",
-              rend_service_escaped_dir(service));
-    for (i = 0; i < smartlist_len(service->ports); ++i) {
-      p = smartlist_get(service->ports, i);
-      if (!(p->is_unix_addr)) {
-        log_debug(LD_REND,
-                  "Service maps port %d to %s",
-                  p->virtual_port,
-                  fmt_addrport(&p->real_addr, p->real_port));
-      } else {
+  log_debug(LD_REND,"Configuring service with directory %s",
+            rend_service_escaped_dir(service));
+  for (i = 0; i < smartlist_len(service->ports); ++i) {
+    p = smartlist_get(service->ports, i);
+    if (!(p->is_unix_addr)) {
+      log_debug(LD_REND,
+                "Service maps port %d to %s",
+                p->virtual_port,
+                fmt_addrport(&p->real_addr, p->real_port));
+    } else {
 #ifdef HAVE_SYS_UN_H
-        log_debug(LD_REND,
-                  "Service maps port %d to socket at \"%s\"",
-                  p->virtual_port, p->unix_addr);
+      log_debug(LD_REND,
+                "Service maps port %d to socket at \"%s\"",
+                p->virtual_port, p->unix_addr);
 #else
-        log_warn(LD_BUG,
-                 "Service maps port %d to an AF_UNIX socket, but we "
-                 "have no AF_UNIX support on this platform.  This is "
-                 "probably a bug.",
-                 p->virtual_port);
-        rend_service_free(service);
-        return -1;
+      log_warn(LD_BUG,
+               "Service maps port %d to an AF_UNIX socket, but we "
+               "have no AF_UNIX support on this platform.  This is "
+               "probably a bug.",
+               p->virtual_port);
+      rend_service_free(service);
+      return -1;
 #endif /* defined(HAVE_SYS_UN_H) */
-      }
     }
-    /* The service passed all the checks */
-    tor_assert(s_list);
-    smartlist_add(s_list, service);
-    return 0;
   }
-  /* NOTREACHED */
+  /* The service passed all the checks */
+  tor_assert(s_list);
+  smartlist_add(s_list, service);
+  return 0;
 }
 
 /** Return a new rend_service_port_config_t with its path set to
@@ -671,13 +679,19 @@ rend_config_services(const or_options_t *options, int validate_only)
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      /* register the service we just finished parsing
-       * this code registers every service except the last one parsed,
-       * which is registered below the loop */
-      if (rend_service_check_dir_and_add(rend_service_staging_list, options,
-                                         service, validate_only) < 0) {
-        service = NULL;
-        goto free_and_return;
+      if (service) {
+        /* Validate and register the service we just finished parsing this
+         * code registers every service except the last one parsed, which is
+         * validated and registered below the loop. */
+        if (rend_validate_service(rend_service_staging_list, service) < 0) {
+          goto free_and_return;
+        }
+        if (rend_service_check_dir_and_add(rend_service_staging_list, options,
+                                           service, validate_only) < 0) {
+          /* The above frees the service on error so nullify the pointer. */
+          service = NULL;
+          goto free_and_return;
+        }
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
@@ -872,14 +886,23 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
     }
   }
+  /* Validate the last service that we just parsed. */
+  if (service &&
+      rend_validate_service(rend_service_staging_list, service) < 0) {
+    goto free_and_return;
+  }
   /* register the final service after we have finished parsing all services
    * this code only registers the last service, other services are registered
    * within the loop. It is ok for this service to be NULL, it is ignored. */
   if (rend_service_check_dir_and_add(rend_service_staging_list, options,
                                      service, validate_only) < 0) {
+    /* Service object is freed on error so nullify pointer. */
     service = NULL;
     goto free_and_return;
   }
+  /* The service is in the staging list so nullify pointer to avoid double
+   * free of this object in case of error because we lost ownership of it at
+   * this point. */
   service = NULL;
 
   /* Free the newly added services if validating */
