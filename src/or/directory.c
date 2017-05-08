@@ -2309,6 +2309,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         description1 = "as deflated";
       else if (compression == GZIP_METHOD)
         description1 = "as gzipped";
+      else if (compression == ZSTD_METHOD)
+        description1 = "as Zstandard compressed";
+      else if (compression == LZMA_METHOD)
+        description1 = "as LZMA compressed";
       else if (compression == NO_METHOD)
         description1 = "as uncompressed";
       else
@@ -2317,6 +2321,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         description2 = "deflated";
       else if (guessed == GZIP_METHOD)
         description2 = "gzipped";
+      else if (guessed == ZSTD_METHOD)
+        description2 = "Zstandard compressed";
+      else if (guessed == LZMA_METHOD)
+        description2 = "LZMA compressed";
       else if (!plausible)
         description2 = "confusing binary junk";
       else
