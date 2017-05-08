@@ -2056,6 +2056,10 @@ parse_http_response(const char *headers, int *code, time_t *date,
       *compression = ZLIB_METHOD;
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
       *compression = GZIP_METHOD;
+    } else if (!strcmp(enc, "x-zstd")) {
+      *compression = ZSTD_METHOD;
+    } else if (!strcmp(enc, "x-tor-lzma")) {
+      *compression = LZMA_METHOD;
     } else {
       log_info(LD_HTTP, "Unrecognized content encoding: %s. Trying to deal.",
                escaped(enc));
