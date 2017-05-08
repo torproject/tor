@@ -2336,14 +2336,14 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                description2,
                (compression>0 && guessed>0)?"  Trying both.":"");
     }
-    /* Try declared compression first if we can. */
-    if (compression == GZIP_METHOD  || compression == ZLIB_METHOD)
+    /* Try declared compression first if we can.
+     * tor_compress_supports_method() also returns true for NO_METHOD. */
+    if (tor_compress_supports_method(compression))
       tor_uncompress(&new_body, &new_len, body, body_len, compression,
                      !allow_partial, LOG_PROTOCOL_WARN);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
-    if (!new_body &&
-        (guessed == GZIP_METHOD || guessed == ZLIB_METHOD) &&
+    if (!new_body && tor_compress_supports_method(guessed) &&
         compression != guessed)
       tor_uncompress(&new_body, &new_len, body, body_len, guessed,
                      !allow_partial, LOG_PROTOCOL_WARN);
