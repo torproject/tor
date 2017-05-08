@@ -55,6 +55,7 @@
 #include "ext_orport.h"
 #include "scheduler.h"
 #include "torcert.h"
+#include "channelpadding.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
@@ -814,24 +815,6 @@ connection_or_update_token_buckets(smartlist_t *conns,
   });
 }
 
-/** How long do we wait before killing non-canonical OR connections with no
- * circuits?  In Tor versions up to 0.2.1.25 and 0.2.2.12-alpha, we waited 15
- * minutes before cancelling these connections, which caused fast relays to
- * accrue many many idle connections. Hopefully 3-4.5 minutes is low enough
- * that it kills most idle connections, without being so low that we cause
- * clients to bounce on and off.
- *
- * For canonical connections, the limit is higher, at 15-22.5 minutes.
- *
- * For each OR connection, we randomly add up to 50% extra to its idle_timeout
- * field, to avoid exposing when exactly the last circuit closed.  Since we're
- * storing idle_timeout in a uint16_t, don't let these values get higher than
- * 12 hours or so without revising connection_or_set_canonical and/or expanding
- * idle_timeout.
- */
-#define IDLE_OR_CONN_TIMEOUT_NONCANONICAL 180
-#define IDLE_OR_CONN_TIMEOUT_CANONICAL 900
-
 /* Mark <b>or_conn</b> as canonical if <b>is_canonical</b> is set, and
  * non-canonical otherwise. Adjust idle_timeout accordingly.
  */
@@ -839,9 +822,6 @@ void
 connection_or_set_canonical(or_connection_t *or_conn,
                             int is_canonical)
 {
-  const unsigned int timeout_base = is_canonical ?
-    IDLE_OR_CONN_TIMEOUT_CANONICAL : IDLE_OR_CONN_TIMEOUT_NONCANONICAL;
-
   if (bool_eq(is_canonical, or_conn->is_canonical) &&
       or_conn->idle_timeout != 0) {
     /* Don't recalculate an existing idle_timeout unless the canonical
@@ -850,7 +830,14 @@ connection_or_set_canonical(or_connection_t *or_conn,
   }
 
   or_conn->is_canonical = !! is_canonical; /* force to a 1-bit boolean */
-  or_conn->idle_timeout = timeout_base + crypto_rand_int(timeout_base / 2);
+  or_conn->idle_timeout = channelpadding_get_channel_idle_timeout(
+          TLS_CHAN_TO_BASE(or_conn->chan), is_canonical);
+
+  log_info(LD_CIRC,
+          "Channel " U64_FORMAT " chose an idle timeout of %d.",
+          or_conn->chan ?
+          U64_PRINTF_ARG(TLS_CHAN_TO_BASE(or_conn->chan)->global_identifier):0,
+          or_conn->idle_timeout);
 }
 
 /** If we don't necessarily know the router we're connecting to, but we
@@ -1053,10 +1040,8 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
     }
 
     if (!best ||
-        channel_is_better(now,
-                          TLS_CHAN_TO_BASE(or_conn->chan),
-                          TLS_CHAN_TO_BASE(best->chan),
-                          0)) {
+        channel_is_better(TLS_CHAN_TO_BASE(or_conn->chan),
+                          TLS_CHAN_TO_BASE(best->chan))) {
       best = or_conn;
     }
   } SMARTLIST_FOREACH_END(or_conn);
@@ -1084,11 +1069,9 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
         or_conn->base_.state != OR_CONN_STATE_OPEN)
       continue;
     if (or_conn != best &&
-        channel_is_better(now,
-                          TLS_CHAN_TO_BASE(best->chan),
-                          TLS_CHAN_TO_BASE(or_conn->chan), 1)) {
-      /* This isn't the best conn, _and_ the best conn is better than it,
-         even when we're being forgiving. */
+        channel_is_better(TLS_CHAN_TO_BASE(best->chan),
+                          TLS_CHAN_TO_BASE(or_conn->chan))) {
+      /* This isn't the best conn, _and_ the best conn is better than it */
       if (best->is_canonical) {
         log_info(LD_OR,
                  "Marking OR conn to %s:%d as unsuitable for new circuits: "
@@ -1983,11 +1966,22 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 
   cell_pack(&networkcell, cell, conn->wide_circ_ids);
 
+  rep_hist_padding_count_write(PADDING_TYPE_TOTAL);
+  if (cell->command == CELL_PADDING)
+    rep_hist_padding_count_write(PADDING_TYPE_CELL);
+
   connection_write_to_buf(networkcell.body, cell_network_size, TO_CONN(conn));
 
   /* Touch the channel's active timestamp if there is one */
-  if (conn->chan)
+  if (conn->chan) {
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
+
+    if (TLS_CHAN_TO_BASE(conn->chan)->currently_padding) {
+      rep_hist_padding_count_write(PADDING_TYPE_ENABLED_TOTAL);
+      if (cell->command == CELL_PADDING)
+        rep_hist_padding_count_write(PADDING_TYPE_ENABLED_CELL);
+    }
+  }
 
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_cell(conn, conn->handshake_state, cell, 0);
@@ -2094,7 +2088,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
 }
 
 /** Array of recognized link protocol versions. */
-static const uint16_t or_protocol_versions[] = { 1, 2, 3, 4 };
+static const uint16_t or_protocol_versions[] = { 1, 2, 3, 4, 5 };
 /** Number of versions in <b>or_protocol_versions</b>. */
 static const int n_or_protocol_versions =
   (int)( sizeof(or_protocol_versions)/sizeof(uint16_t) );

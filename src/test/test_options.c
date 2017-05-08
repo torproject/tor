@@ -415,6 +415,12 @@ get_options_test_data(const char *conf)
   result->opt = options_new();
   result->old_opt = options_new();
   result->def_opt = options_new();
+
+  // XXX: Really, all of these options should be set to defaults
+  // with options_init(), but about a dozen tests break when I do that.
+  // Being kinda lame and just fixing the immedate breakage for now..
+  result->opt->ConnectionPadding = -1; // default must be "auto"
+
   rv = config_get_lines(conf, &cl, 1);
   tt_assert(rv == 0);
   rv = config_assign(&options_format, result->opt, cl, 0, &msg);
@@ -2379,30 +2385,6 @@ test_options_validate__hidserv(void *ignored)
             "clipping to 302400s.\n");
   tt_int_op(tdata->opt->RendPostPeriod, OP_EQ, 302400);
   tor_free(msg);
-
- done:
-  teardown_capture_of_logs();
-  policies_free_all();
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
-test_options_validate__predicted_ports(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  setup_capture_of_logs(LOG_WARN);
-
-  options_test_data_t *tdata = get_options_test_data(
-                                     "PredictedPortsRelevanceTime 100000000\n"
-                                     TEST_OPTIONS_DEFAULT_VALUES);
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("PredictedPortsRelevanceTime is too "
-            "large; clipping to 3600s.\n");
-  tt_int_op(tdata->opt->PredictedPortsRelevanceTime, OP_EQ, 3600);
 
  done:
   teardown_capture_of_logs();
@@ -4596,7 +4578,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(publish_server_descriptor),
   LOCAL_VALIDATE_TEST(testing),
   LOCAL_VALIDATE_TEST(hidserv),
-  LOCAL_VALIDATE_TEST(predicted_ports),
   LOCAL_VALIDATE_TEST(path_bias),
   LOCAL_VALIDATE_TEST(bandwidth),
   LOCAL_VALIDATE_TEST(circuits),

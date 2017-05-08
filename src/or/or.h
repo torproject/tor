@@ -896,6 +896,7 @@ typedef enum {
 #define CELL_RELAY_EARLY 9
 #define CELL_CREATE2 10
 #define CELL_CREATED2 11
+#define CELL_PADDING_NEGOTIATE 12
 
 #define CELL_VPADDING 128
 #define CELL_CERTS 129
@@ -3331,6 +3332,13 @@ typedef struct origin_circuit_t {
    * adjust_exit_policy_from_exitpolicy_failure.
    */
   smartlist_t *prepend_policy;
+
+  /** How long do we wait before closing this circuit if it remains
+   * completely idle after it was built, in seconds? This value
+   * is randomized on a per-circuit basis from CircuitsAvailableTimoeut
+   * to 2*CircuitsAvailableTimoeut. */
+  int circuit_idle_timeout;
+
 } origin_circuit_t;
 
 struct onion_queue_t;
@@ -3759,6 +3767,15 @@ typedef struct {
   int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
                         * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
+
+  int ReducedConnectionPadding; /**< Boolean: Should we try to keep connections
+                                  open shorter and pad them less against
+                                  connection-level traffic analysis? */
+  /** Autobool: if auto, then connection padding will be negotiated by client
+   * and server. If 0, it will be fully disabled. If 1, the client will still
+   * pad to the server regardless of server support. */
+  int ConnectionPadding;
+
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "v3", "bridge", or "". */
   smartlist_t *PublishServerDescriptor;
@@ -3875,6 +3892,8 @@ typedef struct {
                             * adaptive algorithm learns a new value. */
   int CircuitIdleTimeout; /**< Cull open clean circuits that were born
                            * at least this many seconds ago. */
+  int CircuitsAvailableTimeout; /**< Try to have an open circuit for at
+                                     least this long after last activity */
   int CircuitStreamTimeout; /**< If non-zero, detach streams from circuits
                              * and try a new circuit if the stream has been
                              * waiting for this many seconds. If zero, use
@@ -4165,6 +4184,9 @@ typedef struct {
 
   /** If true, the user wants us to collect cell statistics. */
   int CellStatistics;
+
+  /** If true, the user wants us to collect padding statistics. */
+  int PaddingStatistics;
 
   /** If true, the user wants us to collect statistics as entry node. */
   int EntryStatistics;
@@ -4816,7 +4838,7 @@ typedef uint32_t build_time_t;
 double circuit_build_times_quantile_cutoff(void);
 
 /** How often in seconds should we build a test circuit */
-#define CBT_DEFAULT_TEST_FREQUENCY 60
+#define CBT_DEFAULT_TEST_FREQUENCY 10
 #define CBT_MIN_TEST_FREQUENCY 1
 #define CBT_MAX_TEST_FREQUENCY INT32_MAX
 

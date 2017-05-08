@@ -1,0 +1,2 @@
+  o Minor features:
+    - Add an O(1) implementation of channel_find_by_global_id().

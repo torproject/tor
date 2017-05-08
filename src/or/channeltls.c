@@ -57,6 +57,9 @@
 #include "routerlist.h"
 #include "scheduler.h"
 #include "torcert.h"
+#include "networkstatus.h"
+#include "channelpadding_negotiation.h"
+#include "channelpadding.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
@@ -122,6 +125,8 @@ static void channel_tls_process_netinfo_cell(cell_t *cell,
 static int command_allowed_before_handshake(uint8_t command);
 static int enter_v3_handshake_with_cell(var_cell_t *cell,
                                         channel_tls_t *tlschan);
+static void channel_tls_process_padding_negotiate_cell(cell_t *cell,
+                                                       channel_tls_t *chan);
 
 /**
  * Do parts of channel_tls_t initialization common to channel_tls_connect()
@@ -734,6 +739,15 @@ channel_tls_matches_target_method(channel_t *chan,
     return 0;
   }
 
+  /* real_addr is the address this connection came from.
+   * base_.addr is updated by connection_or_init_conn_from_address()
+   * to be the address in the descriptor. It may be tempting to
+   * allow either address to be allowed, but if we did so, it would
+   * enable someone who steals a relay's keys to impersonate/MITM it
+   * from anywhere on the Internet! (Because they could make long-lived
+   * TLS connections from anywhere to all relays, and wait for them to
+   * be used for extends).
+   */
   return tor_addr_eq(&(tlschan->conn->real_addr), target);
 }
 
@@ -1098,9 +1112,16 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   /* We note that we're on the internet whenever we read a cell. This is
    * a fast operation. */
   entry_guards_note_internet_connectivity(get_guard_selection_info());
+  rep_hist_padding_count_read(PADDING_TYPE_TOTAL);
+
+  if (TLS_CHAN_TO_BASE(chan)->currently_padding)
+    rep_hist_padding_count_read(PADDING_TYPE_ENABLED_TOTAL);
 
   switch (cell->command) {
     case CELL_PADDING:
+      rep_hist_padding_count_read(PADDING_TYPE_CELL);
+      if (TLS_CHAN_TO_BASE(chan)->currently_padding)
+        rep_hist_padding_count_read(PADDING_TYPE_ENABLED_CELL);
       ++stats_n_padding_cells_processed;
       /* do nothing */
       break;
@@ -1110,6 +1131,10 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
     case CELL_NETINFO:
       ++stats_n_netinfo_cells_processed;
       PROCESS_CELL(netinfo, cell, chan);
+      break;
+    case CELL_PADDING_NEGOTIATE:
+      ++stats_n_netinfo_cells_processed;
+      PROCESS_CELL(padding_negotiate, cell, chan);
       break;
     case CELL_CREATE:
     case CELL_CREATE_FAST:
@@ -1566,9 +1591,12 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
 
     /* We set this after sending the verions cell. */
     /*XXXXX symbolic const.*/
-    chan->base_.wide_circ_ids =
+    TLS_CHAN_TO_BASE(chan)->wide_circ_ids =
       chan->conn->link_proto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
-    chan->conn->wide_circ_ids = chan->base_.wide_circ_ids;
+    chan->conn->wide_circ_ids = TLS_CHAN_TO_BASE(chan)->wide_circ_ids;
+
+    TLS_CHAN_TO_BASE(chan)->padding_enabled =
+      chan->conn->link_proto >= MIN_LINK_PROTO_FOR_CHANNEL_PADDING;
 
     if (send_certs) {
       if (connection_or_send_certs_cell(chan->conn) < 0) {
@@ -1595,6 +1623,43 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
 }
 
 /**
+ * Process a 'padding_negotiate' cell
+ *
+ * This function is called to handle an incoming PADDING_NEGOTIATE cell;
+ * enable or disable padding accordingly, and read and act on its timeout
+ * value contents.
+ */
+static void
+channel_tls_process_padding_negotiate_cell(cell_t *cell, channel_tls_t *chan)
+{
+  channelpadding_negotiate_t *negotiation;
+  tor_assert(cell);
+  tor_assert(chan);
+  tor_assert(chan->conn);
+
+  if (chan->conn->link_proto < MIN_LINK_PROTO_FOR_CHANNEL_PADDING) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a PADDING_NEGOTIATE cell on v%d connection; dropping.",
+           chan->conn->link_proto);
+    return;
+  }
+
+  if (channelpadding_negotiate_parse(&negotiation, cell->payload,
+                                     CELL_PAYLOAD_SIZE) < 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+          "Received malformed PADDING_NEGOTIATE cell on v%d connection; "
+          "dropping.", chan->conn->link_proto);
+
+    return;
+  }
+
+  channelpadding_update_padding_for_channel(TLS_CHAN_TO_BASE(chan),
+                                            negotiation);
+
+  channelpadding_negotiate_free(negotiation);
+}
+
+/**
  * Process a 'netinfo' cell
  *
  * This function is called to handle an incoming NETINFO cell; read and act
@@ -1611,6 +1676,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   const uint8_t *cp, *end;
   uint8_t n_other_addrs;
   time_t now = time(NULL);
+  const routerinfo_t *me = router_get_my_routerinfo();
 
   long apparent_skew = 0;
   tor_addr_t my_apparent_addr = TOR_ADDR_NULL;
@@ -1693,8 +1759,20 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
     tor_addr_from_ipv4n(&my_apparent_addr, get_uint32(my_addr_ptr));
+
+    if (!get_options()->BridgeRelay && me &&
+        get_uint32(my_addr_ptr) == htonl(me->addr)) {
+      TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
+    }
+
   } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
     tor_addr_from_ipv6_bytes(&my_apparent_addr, (const char *) my_addr_ptr);
+
+    if (!get_options()->BridgeRelay && me &&
+        !tor_addr_is_null(&me->ipv6_addr) &&
+        tor_addr_eq(&my_apparent_addr, &me->ipv6_addr)) {
+      TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
+    }
   }
 
   n_other_addrs = (uint8_t) *cp++;
@@ -1710,12 +1788,34 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
       connection_or_close_for_error(chan->conn, 0);
       return;
     }
+    /* A relay can connect from anywhere and be canonical, so
+     * long as it tells you from where it came. This may be a bit
+     * concerning.. Luckily we have another check in
+     * channel_tls_matches_target_method() to ensure that extends
+     * only go to the IP they ask for.
+     *
+     * XXX: Bleh. That check is not used if the connection is canonical.
+     */
     if (tor_addr_eq(&addr, &(chan->conn->real_addr))) {
       connection_or_set_canonical(chan->conn, 1);
       break;
     }
     cp = next;
     --n_other_addrs;
+  }
+
+  if (me && !TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer &&
+      channel_is_canonical(TLS_CHAN_TO_BASE(chan))) {
+    log_info(LD_OR,
+             "We made a connection to a relay at %s (fp=%s) but we think "
+             "they will not consider this connection canonical. They "
+             "think we are at %s, but we think its %s.",
+             safe_str(TLS_CHAN_TO_BASE(chan)->get_remote_descr(TLS_CHAN_TO_BASE(chan),
+                      0)),
+             safe_str(hex_str(chan->conn->identity_digest, DIGEST_LEN)),
+             safe_str(tor_addr_is_null(&my_apparent_addr) ?
+             "<none>" : fmt_and_decorate_addr(&my_apparent_addr)),
+             safe_str(fmt_addr32(me->addr)));
   }
 
   /* Act on apparent skew. */

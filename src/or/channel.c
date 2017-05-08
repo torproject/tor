@@ -49,6 +49,7 @@
 #include "or.h"
 #include "channel.h"
 #include "channeltls.h"
+#include "channelpadding.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuitstats.h"
@@ -63,6 +64,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "scheduler.h"
+#include "compat_time.h"
 
 /* Global lists of channels */
 
@@ -83,6 +85,29 @@ static smartlist_t *active_listeners = NULL;
 
 /* All channel_listener_t instances in LISTENING state */
 static smartlist_t *finished_listeners = NULL;
+
+
+/** Map from channel->global_identifier to channel.  Contains the same
+ * elements as all_channels. */
+HT_HEAD(channel_gid_map, channel_s) channel_gid_map = HT_INITIALIZER();
+
+static unsigned
+channel_id_hash(const channel_t *chan)
+{
+  return (unsigned) chan->global_identifier;
+}
+static int
+channel_id_eq(const channel_t *a, const channel_t *b)
+{
+  return a->global_identifier == b->global_identifier;
+}
+HT_PROTOTYPE(channel_gid_map, channel_s, gidmap_node,
+             channel_id_hash, channel_id_eq);
+HT_GENERATE2(channel_gid_map, channel_s, gidmap_node,
+             channel_id_hash, channel_id_eq,
+             0.6, tor_reallocarray_, tor_free_);
+
+HANDLE_IMPL(channel, channel_s,);
 
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
@@ -429,6 +454,7 @@ void
 channel_register(channel_t *chan)
 {
   tor_assert(chan);
+  tor_assert(chan->global_identifier);
 
   /* No-op if already registered */
   if (chan->registered) return;
@@ -443,6 +469,8 @@ channel_register(channel_t *chan)
   /* Make sure we have all_channels, then add it */
   if (!all_channels) all_channels = smartlist_new();
   smartlist_add(all_channels, chan);
+  channel_t *oldval = HT_REPLACE(channel_gid_map, &channel_gid_map, chan);
+  tor_assert(! oldval);
 
   /* Is it finished? */
   if (CHANNEL_FINISHED(chan)) {
@@ -498,7 +526,9 @@ channel_unregister(channel_t *chan)
   }
 
   /* Get it out of all_channels */
- if (all_channels) smartlist_remove(all_channels, chan);
+  if (all_channels) smartlist_remove(all_channels, chan);
+  channel_t *oldval = HT_REMOVE(channel_gid_map, &channel_gid_map, chan);
+  tor_assert(oldval == NULL || oldval == chan);
 
   /* Mark it as unregistered */
   chan->registered = 0;
@@ -533,7 +563,7 @@ channel_listener_register(channel_listener_t *chan_l)
             channel_listener_state_to_string(chan_l->state),
             chan_l->state);
 
-  /* Make sure we have all_channels, then add it */
+  /* Make sure we have all_listeners, then add it */
   if (!all_listeners) all_listeners = smartlist_new();
   smartlist_add(all_listeners, chan_l);
 
@@ -578,7 +608,7 @@ channel_listener_unregister(channel_listener_t *chan_l)
     if (active_listeners) smartlist_remove(active_listeners, chan_l);
   }
 
-  /* Get it out of all_channels */
+  /* Get it out of all_listeners */
  if (all_listeners) smartlist_remove(all_listeners, chan_l);
 
   /* Mark it as unregistered */
@@ -719,15 +749,13 @@ channel_remove_from_digest_map(channel_t *chan)
 channel_t *
 channel_find_by_global_id(uint64_t global_identifier)
 {
+  channel_t lookup;
   channel_t *rv = NULL;
 
-  if (all_channels && smartlist_len(all_channels) > 0) {
-    SMARTLIST_FOREACH_BEGIN(all_channels, channel_t *, curr) {
-      if (curr->global_identifier == global_identifier) {
-        rv = curr;
-        break;
-      }
-    } SMARTLIST_FOREACH_END(curr);
+  lookup.global_identifier = global_identifier;
+  rv = HT_FIND(channel_gid_map, &channel_gid_map, &lookup);
+  if (rv) {
+    tor_assert(rv->global_identifier == global_identifier);
   }
 
   return rv;
@@ -809,6 +837,83 @@ channel_next_with_rsa_identity(channel_t *chan)
 }
 
 /**
+ * Relays run this once an hour to look over our list of channels to other
+ * relays. It prints out some statistics if there are multiple connections
+ * to many relays.
+ *
+ * This function is similar to connection_or_set_bad_connections(),
+ * and probably could be adapted to replace it, if it was modified to actually
+ * take action on any of these connections.
+ */
+void
+channel_check_for_duplicates(void)
+{
+  channel_idmap_entry_t **iter;
+  channel_t *chan;
+  int total_relay_connections = 0, total_relays = 0, total_canonical = 0;
+  int total_half_canonical = 0;
+  int total_gt_one_connection = 0, total_gt_two_connections = 0;
+  int total_gt_four_connections = 0;
+
+  HT_FOREACH(iter, channel_idmap, &channel_identity_map) {
+    int connections_to_relay = 0;
+
+    /* Only consider relay connections */
+    if (!connection_or_digest_is_known_relay((char*)(*iter)->digest))
+      continue;
+
+    total_relays++;
+
+    for (chan = TOR_LIST_FIRST(&(*iter)->channel_list); chan;
+        chan = channel_next_with_rsa_identity(chan)) {
+
+      if (CHANNEL_CONDEMNED(chan) || !CHANNEL_IS_OPEN(chan))
+        continue;
+
+      connections_to_relay++;
+      total_relay_connections++;
+
+      if (chan->is_canonical(chan, 0)) total_canonical++;
+
+      if (!chan->is_canonical_to_peer && chan->is_canonical(chan, 0)
+          && chan->is_canonical(chan, 1)) {
+        total_half_canonical++;
+      }
+    }
+
+    if (connections_to_relay > 1) total_gt_one_connection++;
+    if (connections_to_relay > 2) total_gt_two_connections++;
+    if (connections_to_relay > 4) total_gt_four_connections++;
+  }
+
+#define MIN_RELAY_CONNECTIONS_TO_WARN 5
+
+  /* If we average 1.5 or more connections per relay, something is wrong */
+  if (total_relays > MIN_RELAY_CONNECTIONS_TO_WARN &&
+          total_relay_connections >= 1.5*total_relays) {
+    log_notice(LD_OR,
+        "Your relay has a very large number of connections to other relays. "
+        "Is your outbound address the same as your relay address? "
+        "Found %d connections to %d relays. Found %d current canonical "
+        "connections, in %d of which we were a non-canonical peer. "
+        "%d relays had more than 1 connection, %d had more than 2, and "
+        "%d had more than 4 connections.",
+        total_relay_connections, total_relays, total_canonical,
+        total_half_canonical, total_gt_one_connection,
+        total_gt_two_connections, total_gt_four_connections);
+  } else {
+    log_info(LD_OR, "Performed connection pruning. "
+        "Found %d connections to %d relays. Found %d current canonical "
+        "connections, in %d of which we were a non-canonical peer. "
+        "%d relays had more than 1 connection, %d had more than 2, and "
+        "%d had more than 4 connections.",
+        total_relay_connections, total_relays, total_canonical,
+        total_half_canonical, total_gt_one_connection,
+        total_gt_two_connections, total_gt_four_connections);
+  }
+}
+
+/**
  * Initialize a channel
  *
  * This function should be called by subclasses to set up some per-channel
@@ -822,7 +927,7 @@ channel_init(channel_t *chan)
   tor_assert(chan);
 
   /* Assign an ID and bump the counter */
-  chan->global_identifier = n_channels_allocated++;
+  chan->global_identifier = ++n_channels_allocated;
 
   /* Init timestamp */
   chan->timestamp_last_had_circuits = time(NULL);
@@ -861,7 +966,7 @@ channel_init_listener(channel_listener_t *chan_l)
   tor_assert(chan_l);
 
   /* Assign an ID and bump the counter */
-  chan_l->global_identifier = n_channels_allocated++;
+  chan_l->global_identifier = ++n_channels_allocated;
 
   /* Timestamp it */
   channel_listener_timestamp_created(chan_l);
@@ -897,6 +1002,11 @@ channel_free(channel_t *chan)
   if (chan->cmux) {
     circuitmux_set_policy(chan->cmux, NULL);
   }
+
+  /* Remove all timers and associated handle entries now */
+  timer_free(chan->padding_timer);
+  channel_handle_free(chan->timer_handle);
+  channel_handles_clear(chan);
 
   /* Call a free method if there is one */
   if (chan->free_fn) chan->free_fn(chan);
@@ -975,6 +1085,11 @@ channel_force_free(channel_t *chan)
   if (chan->cmux) {
     circuitmux_set_policy(chan->cmux, NULL);
   }
+
+  /* Remove all timers and associated handle entries now */
+  timer_free(chan->padding_timer);
+  channel_handle_free(chan->timer_handle);
+  channel_handles_clear(chan);
 
   /* Call a free method if there is one */
   if (chan->free_fn) chan->free_fn(chan);
@@ -2595,6 +2710,19 @@ channel_do_open_actions(channel_t *chan)
     }
   }
 
+  /* Disable or reduce padding according to user prefs. */
+  if (chan->padding_enabled || get_options()->ConnectionPadding == 1) {
+    if (!get_options()->ConnectionPadding) {
+      channelpadding_disable_padding_on_channel(chan);
+    }
+
+    /* Padding can be forced and/or reduced by clients, regardless of if
+     * the channel supports it */
+    if (get_options()->ReducedConnectionPadding) {
+      channelpadding_reduce_padding_on_channel(chan);
+    }
+  }
+
   circuit_n_chan_done(chan, 1, close_origin_circuits);
 }
 
@@ -3232,6 +3360,11 @@ channel_free_all(void)
   /* Geez, anything still left over just won't die ... let it leak then */
   HT_CLEAR(channel_idmap, &channel_identity_map);
 
+  /* Same with channel_gid_map */
+  log_debug(LD_CHANNEL,
+            "Freeing channel_gid_map");
+  HT_CLEAR(channel_gid_map, &channel_gid_map);
+
   log_debug(LD_CHANNEL,
             "Done cleaning up after channels");
 }
@@ -3267,21 +3400,19 @@ channel_connect(const tor_addr_t *addr, uint16_t port,
  */
 
 int
-channel_is_better(time_t now, channel_t *a, channel_t *b,
-                  int forgive_new_connections)
+channel_is_better(channel_t *a, channel_t *b)
 {
-  int a_grace, b_grace;
   int a_is_canonical, b_is_canonical;
-  int a_has_circs, b_has_circs;
-
-  /*
-   * Do not definitively deprecate a new channel with no circuits on it
-   * until this much time has passed.
-   */
-#define NEW_CHAN_GRACE_PERIOD (15*60)
 
   tor_assert(a);
   tor_assert(b);
+
+  /* If one channel is bad for new circuits, and the other isn't,
+   * use the one that is still good. */
+  if (!channel_is_bad_for_new_circs(a) && channel_is_bad_for_new_circs(b))
+    return 1;
+  if (channel_is_bad_for_new_circs(a) && !channel_is_bad_for_new_circs(b))
+    return 0;
 
   /* Check if one is canonical and the other isn't first */
   a_is_canonical = channel_is_canonical(a);
@@ -3290,26 +3421,31 @@ channel_is_better(time_t now, channel_t *a, channel_t *b,
   if (a_is_canonical && !b_is_canonical) return 1;
   if (!a_is_canonical && b_is_canonical) return 0;
 
+  /* Check if we suspect that one of the channels will be preferred
+   * by the peer */
+  if (a->is_canonical_to_peer && !b->is_canonical_to_peer) return 1;
+  if (!a->is_canonical_to_peer && b->is_canonical_to_peer) return 0;
+
   /*
-   * Okay, if we're here they tied on canonicity. Next we check if
-   * they have any circuits, and if one does and the other doesn't,
-   * we prefer the one that does, unless we are forgiving and the
-   * one that has no circuits is in its grace period.
+   * Okay, if we're here they tied on canonicity, the prefer the older
+   * connection, so that the adversary can't create a new connection
+   * and try to switch us over to it (which will leak information
+   * about long-lived circuits). Additionally, switching connections
+   * too often makes us more vulnerable to attacks like Torscan and
+   * passive netflow-based equivalents.
+   *
+   * Connections will still only live for at most a week, due to
+   * the check in connection_or_group_set_badness() against
+   * TIME_BEFORE_OR_CONN_IS_TOO_OLD, which marks old connections as
+   * unusable for new circuits after 1 week. That check sets
+   * is_bad_for_new_circs, which is checked in channel_get_for_extend().
+   *
+   * We check channel_is_bad_for_new_circs() above here anyway, for safety.
    */
+  if (channel_when_created(a) < channel_when_created(b)) return 1;
+  else if (channel_when_created(a) > channel_when_created(b)) return 0;
 
-  a_has_circs = (channel_num_circuits(a) > 0);
-  b_has_circs = (channel_num_circuits(b) > 0);
-  a_grace = (forgive_new_connections &&
-             (now < channel_when_created(a) + NEW_CHAN_GRACE_PERIOD));
-  b_grace = (forgive_new_connections &&
-             (now < channel_when_created(b) + NEW_CHAN_GRACE_PERIOD));
-
-  if (a_has_circs && !b_has_circs && !b_grace) return 1;
-  if (!a_has_circs && b_has_circs && !a_grace) return 0;
-
-  /* They tied on circuits too; just prefer whichever is newer */
-
-  if (channel_when_created(a) > channel_when_created(b)) return 1;
+  if (channel_num_circuits(a) > channel_num_circuits(b)) return 1;
   else return 0;
 }
 
@@ -3334,7 +3470,6 @@ channel_get_for_extend(const char *rsa_id_digest,
   channel_t *chan, *best = NULL;
   int n_inprogress_goodaddr = 0, n_old = 0;
   int n_noncanonical = 0, n_possible = 0;
-  time_t now = approx_time();
 
   tor_assert(msg_out);
   tor_assert(launch_out);
@@ -3404,7 +3539,7 @@ channel_get_for_extend(const char *rsa_id_digest,
       continue;
     }
 
-    if (channel_is_better(now, chan, best, 0))
+    if (channel_is_better(chan, best))
       best = chan;
   }
 
@@ -4186,8 +4321,12 @@ channel_timestamp_active(channel_t *chan)
   time_t now = time(NULL);
 
   tor_assert(chan);
+  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
 
   chan->timestamp_active = now;
+
+  /* Clear any potential netflow padding timer. We're active */
+  chan->next_padding_time_ms = 0;
 }
 
 /**
@@ -4270,11 +4409,14 @@ void
 channel_timestamp_recv(channel_t *chan)
 {
   time_t now = time(NULL);
-
   tor_assert(chan);
+  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
 
   chan->timestamp_active = now;
   chan->timestamp_recv = now;
+
+  /* Clear any potential netflow padding timer. We're active */
+  chan->next_padding_time_ms = 0;
 }
 
 /**
@@ -4287,11 +4429,15 @@ void
 channel_timestamp_xmit(channel_t *chan)
 {
   time_t now = time(NULL);
-
   tor_assert(chan);
+
+  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
 
   chan->timestamp_active = now;
   chan->timestamp_xmit = now;
+
+  /* Clear any potential netflow padding timer. We're active */
+  chan->next_padding_time_ms = 0;
 }
 
 /***************************************************************

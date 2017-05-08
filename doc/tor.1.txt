@@ -671,8 +671,8 @@ GENERAL OPTIONS
 [[PredictedPortsRelevanceTime]] **PredictedPortsRelevanceTime** __NUM__::
     Set how long, after the client has made an anonymized connection to a
     given port, we will try to make sure that we build circuits to
-    exits that support that port. The maximum value for this option is 1
-    hour. (Default: 1 hour)
+    exits that support that port. This option is deprecated. Please use
+    CircuitsAvailableTimeout instead.
 
 [[RunAsDaemon]] **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect
@@ -819,13 +819,19 @@ The following options are useful only for clients (that is, if
     LearnCircuitBuildTimeout is 0, this value is the only value used.
     (Default: 60 seconds)
 
+[[CircuitsAvailableTimeout]] **CircuitsAvailableTimeout** __NUM__::
+    Tor will attempt to keep at least one open, unused circuit available for
+    this amount of time. This option governs how long idle circuits are kept
+    open, as well as the amount of time Tor will keep a circuit open to each
+    of the recently used ports. This way when the Tor client is entirely
+    idle, it can expire all of its circuits, and then expire its TLS
+    connections. Note that the actual timeout value is uniformly randomized
+    from the specified value to twice that amount. (Default: 30 minutes;
+    Max: 24 hours)
+
 [[CircuitIdleTimeout]] **CircuitIdleTimeout** __NUM__::
     If we have kept a clean (never used) circuit around for NUM seconds, then
-    close it. This way when the Tor client is entirely idle, it can expire all
-    of its circuits, and then expire its TLS connections. Also, if we end up
-    making a circuit that is not useful for exiting any of the requests we're
-    receiving, it won't forever take up a slot in the circuit list. (Default: 1
-    hour)
+    close it. This option is deprecated. Use CircuitsAvailableTimeout instead.
 
 [[CircuitStreamTimeout]] **CircuitStreamTimeout** __NUM__::
     If non-zero, this option overrides our internal timeout schedule for how
@@ -841,6 +847,22 @@ The following options are useful only for clients (that is, if
     Tor clients auto-promote themselves to being relays if they were stable
     and fast enough. The current behavior is simply that Tor is a client
     unless ORPort, ExtORPort, or DirPort are configured.) (Default: 0)
+
+[[ConnectionPadding]] **ConnectionPadding** **0**|**1**|**auto**::
+    This option governs Tor's use of padding to defend against some forms of
+    traffic analysis. If it is set to 'auto', Tor will send padding only
+    if both the client and the relay support it. If it is set to 0, Tor will
+    not send any padding cells. If it is set to 1, Tor will still send padding
+    for client connections regardless of relay support. Only clients may set
+    this option. This option should be offered via the UI to mobile users
+    for use where bandwidth may be expensive.
+    (Default: auto)
+
+[[ReducedConnectionPadding]] **ReducedConnectionPadding** **0**|**1**::
+    If set to 1, Tor will not not hold OR connections open for very long,
+    and will send less padding on these connections. Only clients may set
+    this option. This option should be offered via the UI to mobile users
+    for use where bandwidth may be expensive. (Default: 0)
 
 [[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
@@ -2042,6 +2064,14 @@ is non-zero):
     operators may use the statistics for performance monitoring.
     If ExtraInfoStatistics is enabled, it will published as part of
     extra-info document. (Default: 0)
+
+[[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
+    Relays only.
+    When this option is enabled, Tor collects statistics for padding cells
+    sent and received by this relay, in addition to total cell counts.
+    These statistics are rounded, and omitted if traffic is low. This
+    information is important for load balancing decisions related to padding.
+    (Default: 1)
 
 [[DirReqStatistics]] **DirReqStatistics** **0**|**1**::
     Relays and bridges only.

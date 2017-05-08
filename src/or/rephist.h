@@ -48,6 +48,7 @@ double rep_hist_get_weighted_fractional_uptime(const char *id, time_t when);
 long rep_hist_get_weighted_time_known(const char *id, time_t when);
 int rep_hist_have_measured_enough_stability(void);
 
+void predicted_ports_init(void);
 void rep_hist_note_used_port(time_t now, uint16_t port);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);
 void rep_hist_remove_predicted_ports(const smartlist_t *rmv_ports);
@@ -59,6 +60,7 @@ int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 
 int any_predicted_circuits(time_t now);
 int rep_hist_circbuilding_dormant(time_t now);
+int predicted_ports_prediction_time_remaining(time_t now);
 
 void note_crypto_pk_op(pk_op_t operation);
 void dump_pk_ops(int severity);
@@ -118,6 +120,31 @@ extern uint32_t rephist_total_num;
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
 #endif
+
+/**
+ * Represents the type of a cell for padding accounting
+ */
+typedef enum padding_type_t {
+    /** A RELAY_DROP cell */
+    PADDING_TYPE_DROP,
+    /** A CELL_PADDING cell */
+    PADDING_TYPE_CELL,
+    /** Total counts of padding and non-padding together */
+    PADDING_TYPE_TOTAL,
+    /** Total cell counts for all padding-enabled channels */
+    PADDING_TYPE_ENABLED_TOTAL,
+    /** CELL_PADDING counts for all padding-enabled channels */
+    PADDING_TYPE_ENABLED_CELL
+} padding_type_t;
+
+/** The amount of time over which the padding cell counts were counted */
+#define REPHIST_CELL_PADDING_COUNTS_INTERVAL (24*60*60)
+void rep_hist_padding_count_read(padding_type_t type);
+void rep_hist_padding_count_write(padding_type_t type);
+char *rep_hist_get_padding_count_lines(void);
+void rep_hist_reset_padding_counts(void);
+void rep_hist_prep_published_padding_counts(time_t now);
+void rep_hist_padding_count_timers(uint64_t num_timers);
 
 #endif
 

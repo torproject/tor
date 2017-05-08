@@ -54,6 +54,7 @@
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"
+#include "channelpadding.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -177,7 +178,7 @@ static int signewnym_is_pending = 0;
 static unsigned newnym_epoch = 0;
 
 /** Smartlist of all open connections. */
-static smartlist_t *connection_array = NULL;
+STATIC smartlist_t *connection_array = NULL;
 /** List of connections that have been marked for close and need to be freed
  * and removed from connection_array. */
 static smartlist_t *closeable_connection_lst = NULL;
@@ -1096,8 +1097,9 @@ run_connection_housekeeping(int i, time_t now)
   } else if (!have_any_circuits &&
              now - or_conn->idle_timeout >=
                                          chan->timestamp_last_had_circuits) {
-    log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-             "[no circuits for %d; timeout %d; %scanonical].",
+    log_info(LD_OR,"Expiring non-used OR connection "U64_FORMAT" to fd %d "
+             "(%s:%d) [no circuits for %d; timeout %d; %scanonical].",
+             U64_PRINTF_ARG(chan->global_identifier),
              (int)conn->s, conn->address, conn->port,
              (int)(now - chan->timestamp_last_had_circuits),
              or_conn->idle_timeout,
@@ -1120,6 +1122,8 @@ run_connection_housekeeping(int i, time_t now)
     memset(&cell,0,sizeof(cell_t));
     cell.command = CELL_PADDING;
     connection_or_write_cell_to_buf(&cell, or_conn);
+  } else {
+    channelpadding_decide_to_pad_channel(chan);
   }
 }
 
@@ -1187,6 +1191,8 @@ CALLBACK(write_bridge_ns);
 CALLBACK(check_fw_helper_app);
 CALLBACK(heartbeat);
 CALLBACK(clean_consdiffmgr);
+CALLBACK(reset_padding_counts);
+CALLBACK(check_canonical_channels);
 
 #undef CALLBACK
 
@@ -1220,6 +1226,8 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(check_fw_helper_app),
   CALLBACK(heartbeat),
   CALLBACK(clean_consdiffmgr),
+  CALLBACK(reset_padding_counts),
+  CALLBACK(check_canonical_channels),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1754,6 +1762,28 @@ write_stats_file_callback(time_t now, const or_options_t *options)
   }
 
   return safe_timer_diff(now, next_time_to_write_stats_files);
+}
+
+#define CHANNEL_CHECK_INTERVAL (60*60)
+static int
+check_canonical_channels_callback(time_t now, const or_options_t *options)
+{
+  (void)now;
+  if (public_server_mode(options))
+    channel_check_for_duplicates();
+
+  return CHANNEL_CHECK_INTERVAL;
+}
+
+static int
+reset_padding_counts_callback(time_t now, const or_options_t *options)
+{
+  if (options->PaddingStatistics) {
+    rep_hist_prep_published_padding_counts(now);
+  }
+
+  rep_hist_reset_padding_counts();
+  return REPHIST_CELL_PADDING_COUNTS_INTERVAL;
 }
 
 /**
@@ -2383,6 +2413,8 @@ do_main_loop(void)
   }
 
   handle_signals(1);
+  monotime_init();
+  timers_initialize();
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
@@ -3053,6 +3085,13 @@ tor_init(int argc, char *argv[])
   /* The options are now initialised */
   const or_options_t *options = get_options();
 
+  /* Initialize channelpadding parameters to defaults until we get
+   * a consensus */
+  channelpadding_new_consensus_params(NULL);
+
+  /* Initialize predicted ports list after loading options */
+  predicted_ports_init();
+
 #ifndef _WIN32
   if (geteuid()==0)
     log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
@@ -3250,6 +3289,9 @@ tor_cleanup(void)
       rep_hist_record_mtbf_data(now, 0);
     keypin_close_journal();
   }
+
+  timers_shutdown();
+
 #ifdef USE_DMALLOC
   dmalloc_log_stats();
 #endif

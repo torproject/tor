@@ -243,9 +243,11 @@ static config_var_t option_vars_[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
+  V(PaddingStatistics,           BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
   V(CircuitBuildTimeout,         INTERVAL, "0"),
-  V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
+  OBSOLETE("CircuitIdleTimeout"),
+  V(CircuitsAvailableTimeout,    INTERVAL, "0"),
   V(CircuitStreamTimeout,        INTERVAL, "0"),
   V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
@@ -402,7 +404,7 @@ static config_var_t option_vars_[] = {
   V(NATDListenAddress,           LINELIST, NULL),
   VPORT(NATDPort),
   V(Nickname,                    STRING,   NULL),
-  V(PredictedPortsRelevanceTime,  INTERVAL, "1 hour"),
+  OBSOLETE("PredictedPortsRelevanceTime"),
   V(WarnUnsafeSocks,              BOOL,     "1"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
   V(NumCPUs,                     UINT,     "0"),
@@ -459,6 +461,8 @@ static config_var_t option_vars_[] = {
   V(RecommendedClientVersions,   LINELIST, NULL),
   V(RecommendedServerVersions,   LINELIST, NULL),
   V(RecommendedPackages,         LINELIST, NULL),
+  V(ReducedConnectionPadding,    BOOL,     "0"),
+  V(ConnectionPadding,           AUTOBOOL, "auto"),
   V(RefuseUnknownExits,          AUTOBOOL, "auto"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
@@ -2819,10 +2823,10 @@ compute_publishserverdescriptor(or_options_t *options)
 #define MIN_REND_POST_PERIOD (10*60)
 #define MIN_REND_POST_PERIOD_TESTING (5)
 
-/** Highest allowable value for PredictedPortsRelevanceTime; if this is
- * too high, our selection of exits will decrease for an extended
- * period of time to an uncomfortable level .*/
-#define MAX_PREDICTED_CIRCS_RELEVANCE (60*60)
+/** Higest allowable value for CircuitsAvailableTimeout.
+ * If this is too large, client connections will stay open for too long,
+ * incurring extra padding overhead. */
+#define MAX_CIRCS_AVAILABLE_TIME (24*60*60)
 
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD ((7*24*60*60)/2)
@@ -3439,6 +3443,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->DirPort_set = 0;
   }
 
+  if (server_mode(options) && options->ConnectionPadding != -1) {
+    REJECT("Relays must use 'auto' for the ConnectionPadding setting.");
+  }
+
+  if (server_mode(options) && options->ReducedConnectionPadding != 0) {
+    REJECT("Relays cannot set ReducedConnectionPadding. ");
+  }
+
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
                         "least 0 seconds. Changing to 0.");
@@ -3460,16 +3472,16 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->RendPostPeriod = MAX_DIR_PERIOD;
   }
 
-  if (options->PredictedPortsRelevanceTime >
-      MAX_PREDICTED_CIRCS_RELEVANCE) {
-    log_warn(LD_CONFIG, "PredictedPortsRelevanceTime is too large; "
-             "clipping to %ds.", MAX_PREDICTED_CIRCS_RELEVANCE);
-    options->PredictedPortsRelevanceTime = MAX_PREDICTED_CIRCS_RELEVANCE;
-  }
-
   /* Check the Single Onion Service options */
   if (options_validate_single_onion(options, msg) < 0)
     return -1;
+
+  if (options->CircuitsAvailableTimeout > MAX_CIRCS_AVAILABLE_TIME) {
+    // options_t is immutable for new code (the above code is older),
+    // so just make the user fix the value themselves rather than
+    // silently keep a shadow value lower than what they asked for.
+    REJECT("CircuitsAvailableTimeout is too large. Max is 24 hours.");
+  }
 
 #ifdef ENABLE_TOR2WEB_MODE
   if (options->Tor2webMode && options->UseEntryGuards) {

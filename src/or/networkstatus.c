@@ -64,6 +64,7 @@
 #include "shared_random.h"
 #include "transports.h"
 #include "torcert.h"
+#include "channelpadding.h"
 
 /** Map from lowercase nickname to identity digest of named server, if any. */
 static strmap_t *named_server_map = NULL;
@@ -73,11 +74,11 @@ static strmap_t *unnamed_server_map = NULL;
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
-static networkstatus_t *current_ns_consensus = NULL;
+STATIC networkstatus_t *current_ns_consensus = NULL;
 
 /** Most recently received and validated v3 "microdec"-flavored consensus
  * network status. */
-static networkstatus_t *current_md_consensus = NULL;
+STATIC networkstatus_t *current_md_consensus = NULL;
 
 /** A v3 consensus networkstatus that we've received, but which we don't
  * have enough certificates to be happy about. */
@@ -1988,6 +1989,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
     circuit_build_times_new_consensus_params(
                                get_circuit_build_times_mutable(), c);
+    channelpadding_new_consensus_params(c);
   }
 
   /* Reset the failure count only if this consensus is actually valid. */

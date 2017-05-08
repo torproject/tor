@@ -21,6 +21,7 @@ const char tor_git_revision[] = "";
 #include "rephist.h"
 #include "backtrace.h"
 #include "test.h"
+#include "channelpadding.h"
 
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
@@ -304,9 +305,14 @@ main(int c, const char **v)
     tor_free(errmsg);
     return 1;
   }
+
   tor_set_failed_assertion_callback(an_assertion_failed);
 
   init_pregenerated_keys();
+
+  channelpadding_new_consensus_params(NULL);
+
+  predicted_ports_init();
 
   atexit(remove_directory);
 

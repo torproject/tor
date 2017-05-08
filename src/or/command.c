@@ -326,10 +326,19 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     return;
   }
 
+  if (connection_or_digest_is_known_relay(chan->identity_digest)) {
+    rep_hist_note_circuit_handshake_requested(create_cell->handshake_type);
+    // Needed for chutney: Sometimes relays aren't in the consensus yet, and
+    // get marked as clients. This resets their channels once they appear.
+    // Probably useful for normal operation wrt relay flapping, too.
+    chan->is_client = 0;
+  } else {
+    channel_mark_client(chan);
+  }
+
   if (create_cell->handshake_type != ONION_HANDSHAKE_TYPE_FAST) {
     /* hand it off to the cpuworkers, and then return. */
-    if (connection_or_digest_is_known_relay(chan->identity_digest))
-      rep_hist_note_circuit_handshake_requested(create_cell->handshake_type);
+
     if (assign_onionskin_to_cpuworker(circ, create_cell) < 0) {
       log_debug(LD_GENERAL,"Failed to hand off onionskin. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
