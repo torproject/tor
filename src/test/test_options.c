@@ -187,8 +187,6 @@ test_options_validate_impl(const char *configuration,
       goto done;
   }
   tt_int_op((r == 0), OP_EQ, (msg == NULL));
-  if (r)
-    goto done;
 
   r = config_assign(&options_format, opt, cl, 0, &msg);
   if (phase == PH_ASSIGN) {
