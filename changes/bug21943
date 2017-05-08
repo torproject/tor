@@ -1,0 +1,6 @@
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - The getpid() system call is now permitted under the Linux seccomp2
+      sandbox, to avoid crashing with versions of OpenSSL (and other
+      libraries) that attempt to learn the process's PID by using the
+      syscall rather than the VDSO code. Fixes bug 21943; bugfix on
+      0.2.5.1-alpha.
