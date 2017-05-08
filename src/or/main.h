@@ -92,6 +92,9 @@ STATIC void init_connection_lists(void);
 STATIC void close_closeable_connections(void);
 STATIC void initialize_periodic_events(void);
 STATIC void teardown_periodic_events(void);
+#ifdef TOR_UNIT_TESTS
+extern smartlist_t *connection_array;
+#endif
 #endif
 
 #endif

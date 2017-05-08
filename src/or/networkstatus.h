@@ -139,7 +139,9 @@ void vote_routerstatus_free(vote_routerstatus_t *rs);
 #ifdef TOR_UNIT_TESTS
 STATIC int networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
                                                 const char *flavor);
-#endif // TOR_UNIT_TESTS
+extern networkstatus_t *current_ns_consensus;
+extern networkstatus_t *current_md_consensus;
+#endif
 #endif
 
 #endif

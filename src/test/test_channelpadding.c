@@ -1,4 +1,6 @@
 #define TOR_CHANNEL_INTERNAL_
+#define MAIN_PRIVATE
+#define NETWORKSTATUS_PRIVATE
 #include "or.h"
 #include "test.h"
 #include "testsupport.h"
@@ -11,11 +13,9 @@
 #include "config.h"
 #include <event.h>
 #include "compat_time.h"
+#include "main.h"
+#include "networkstatus.h"
 #include "log_test_helpers.h"
-
-extern smartlist_t *connection_array;
-extern networkstatus_t *current_ns_consensus;
-extern networkstatus_t *current_md_consensus;
 
 int channelpadding_get_netflow_inactive_timeout_ms(channel_t *chan);
 int64_t channelpadding_compute_time_until_pad_for_netflow(channel_t *chan);
