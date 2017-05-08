@@ -86,7 +86,6 @@ static smartlist_t *active_listeners = NULL;
 /* All channel_listener_t instances in LISTENING state */
 static smartlist_t *finished_listeners = NULL;
 
-
 /** Map from channel->global_identifier to channel.  Contains the same
  * elements as all_channels. */
 HT_HEAD(channel_gid_map, channel_s) channel_gid_map = HT_INITIALIZER();

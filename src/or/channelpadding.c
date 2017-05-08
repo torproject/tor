@@ -564,7 +564,7 @@ channelpadding_get_channel_idle_timeout(const channel_t *chan,
   unsigned int timeout;
 
   /* Non-canonical and client channels only last for 3-4.5 min when idle */
-  if (!is_canonical || CHANNEL_IS_CLIENT(chan, options)) { 
+  if (!is_canonical || CHANNEL_IS_CLIENT(chan, options)) {
 #define CONNTIMEOUT_CLIENTS_BASE 180 // 3 to 4.5 min
     timeout = CONNTIMEOUT_CLIENTS_BASE
         + crypto_rand_int(CONNTIMEOUT_CLIENTS_BASE/2);
