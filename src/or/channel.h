@@ -716,7 +716,7 @@ int packed_cell_is_destroy(channel_t *chan,
                            circid_t *circid_out);
 
 /* Declare the handle helpers */
-HANDLE_DECL(channel, channel_s,);
+HANDLE_DECL(channel, channel_s,)
 
 #endif
 

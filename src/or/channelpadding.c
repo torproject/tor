@@ -727,13 +727,16 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
         chan->currently_padding = 1;
         return CHANNELPADDING_PADLATER;
       } else {
+        if (BUG(pad_time_ms > INT_MAX)) {
+          pad_time_ms = INT_MAX;
+        }
        /* We have to schedule a callback because we're called exactly once per
         * second, but we don't want padding packets to go out exactly on an
         * integer multiple of seconds. This callback will only be scheduled
         * if we're within 1.1 seconds of the padding time.
         */
         chan->currently_padding = 1;
-        return channelpadding_schedule_padding(chan, pad_time_ms);
+        return channelpadding_schedule_padding(chan, (int)pad_time_ms);
       }
     } else {
       chan->currently_padding = 0;

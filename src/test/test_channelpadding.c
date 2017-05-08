@@ -409,9 +409,9 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
   tt_assert(!chan->pending_padding_callback);
   val = channelpadding_get_netflow_inactive_timeout_ms(chan);
-  tt_int_op(val, OP_EQ, 0);
+  tt_i64_op(val, OP_EQ, 0);
   val = channelpadding_compute_time_until_pad_for_netflow(chan);
-  tt_int_op(val, OP_EQ, -2);
+  tt_i64_op(val, OP_EQ, -2);
 
   /* Test 2: Negotiation can't re-enable consensus-disabled padding */
   channelpadding_send_enable_command(chan, 100, 200);
@@ -420,9 +420,9 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
   tt_assert(!chan->pending_padding_callback);
   val = channelpadding_get_netflow_inactive_timeout_ms(chan);
-  tt_int_op(val, OP_EQ, 0);
+  tt_i64_op(val, OP_EQ, 0);
   val = channelpadding_compute_time_until_pad_for_netflow(chan);
-  tt_int_op(val, OP_EQ, -2);
+  tt_i64_op(val, OP_EQ, -2);
   tt_assert(!chan->next_padding_time_ms);
 
   smartlist_clear(current_md_consensus->net_params);
@@ -441,10 +441,10 @@ test_channelpadding_consensus(void *arg)
   tt_assert(chan->pending_padding_callback);
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
   val = channelpadding_get_netflow_inactive_timeout_ms(chan);
-  tt_int_op(val, OP_GE, 100);
-  tt_int_op(val, OP_LE, 200);
+  tt_i64_op(val, OP_GE, 100);
+  tt_i64_op(val, OP_LE, 200);
   val = channelpadding_compute_time_until_pad_for_netflow(chan);
-  tt_int_op(val, OP_LE, 200);
+  tt_i64_op(val, OP_LE, 200);
 
   // Wait for the timer
   event_base_loop(tor_libevent_get_base(), 0);
@@ -464,10 +464,10 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADLATER);
   tt_assert(!chan->pending_padding_callback);
   val = channelpadding_get_netflow_inactive_timeout_ms(chan);
-  tt_int_op(val, OP_GE, 1500);
-  tt_int_op(val, OP_LE, 4500);
+  tt_i64_op(val, OP_GE, 1500);
+  tt_i64_op(val, OP_LE, 4500);
   val = channelpadding_compute_time_until_pad_for_netflow(chan);
-  tt_int_op(val, OP_LE, 4500);
+  tt_i64_op(val, OP_LE, 4500);
 
   /* Test 4: Relay-to-relay padding can be enabled/disabled in consensus */
   /* Make this channel a relay's channel */
@@ -488,10 +488,10 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADLATER);
   tt_assert(!chan->pending_padding_callback);
   val = channelpadding_get_netflow_inactive_timeout_ms(chan);
-  tt_int_op(val, OP_GE, 1500);
-  tt_int_op(val, OP_LE, 4500);
+  tt_i64_op(val, OP_GE, 1500);
+  tt_i64_op(val, OP_LE, 4500);
   val = channelpadding_compute_time_until_pad_for_netflow(chan);
-  tt_int_op(val, OP_LE, 4500);
+  tt_i64_op(val, OP_LE, 4500);
 
   /* Test 5: If we disable padding before channel usage, does that work? */
   smartlist_add(current_md_consensus->net_params,
@@ -504,15 +504,15 @@ test_channelpadding_consensus(void *arg)
 
   /* Test 6: Can we control circ and TLS conn lifetime from the consensus? */
   val = channelpadding_get_channel_idle_timeout(NULL, 0);
-  tt_int_op(val, OP_GE, 180);
-  tt_int_op(val, OP_LE, 180+90);
+  tt_i64_op(val, OP_GE, 180);
+  tt_i64_op(val, OP_LE, 180+90);
   val = channelpadding_get_channel_idle_timeout(chan, 0);
-  tt_int_op(val, OP_GE, 180);
-  tt_int_op(val, OP_LE, 180+90);
+  tt_i64_op(val, OP_GE, 180);
+  tt_i64_op(val, OP_LE, 180+90);
   options->ReducedConnectionPadding = 1;
   val = channelpadding_get_channel_idle_timeout(chan, 0);
-  tt_int_op(val, OP_GE, 180/2);
-  tt_int_op(val, OP_LE, (180+90)/2);
+  tt_i64_op(val, OP_GE, 180/2);
+  tt_i64_op(val, OP_LE, (180+90)/2);
 
   options->ReducedConnectionPadding = 0;
   options->ORPort_set = 1;
@@ -520,26 +520,26 @@ test_channelpadding_consensus(void *arg)
                 (void*)"nf_conntimeout_relays=600");
   channelpadding_new_consensus_params(current_md_consensus);
   val = channelpadding_get_channel_idle_timeout(chan, 1);
-  tt_int_op(val, OP_GE, 450);
-  tt_int_op(val, OP_LE, 750);
+  tt_i64_op(val, OP_GE, 450);
+  tt_i64_op(val, OP_LE, 750);
 
   val = channelpadding_get_circuits_available_timeout();
-  tt_int_op(val, OP_GE, 30*60);
-  tt_int_op(val, OP_LE, 30*60*2);
+  tt_i64_op(val, OP_GE, 30*60);
+  tt_i64_op(val, OP_LE, 30*60*2);
 
   options->ReducedConnectionPadding = 1;
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_conntimeout_clients=600");
   channelpadding_new_consensus_params(current_md_consensus);
   val = channelpadding_get_circuits_available_timeout();
-  tt_int_op(val, OP_GE, 600/2);
-  tt_int_op(val, OP_LE, 600*2/2);
+  tt_i64_op(val, OP_GE, 600/2);
+  tt_i64_op(val, OP_LE, 600*2/2);
 
   options->ReducedConnectionPadding = 0;
   options->CircuitsAvailableTimeout = 24*60*60;
   val = channelpadding_get_circuits_available_timeout();
-  tt_int_op(val, OP_GE, 24*60*60);
-  tt_int_op(val, OP_LE, 24*60*60*2);
+  tt_i64_op(val, OP_GE, 24*60*60);
+  tt_i64_op(val, OP_LE, 24*60*60*2);
 
  done:
   free_fake_channeltls((channel_tls_t*)chan);

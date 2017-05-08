@@ -88,7 +88,7 @@ static smartlist_t *finished_listeners = NULL;
 
 /** Map from channel->global_identifier to channel.  Contains the same
  * elements as all_channels. */
-HT_HEAD(channel_gid_map, channel_s) channel_gid_map = HT_INITIALIZER();
+static HT_HEAD(channel_gid_map, channel_s) channel_gid_map = HT_INITIALIZER();
 
 static unsigned
 channel_id_hash(const channel_t *chan)
@@ -101,10 +101,10 @@ channel_id_eq(const channel_t *a, const channel_t *b)
   return a->global_identifier == b->global_identifier;
 }
 HT_PROTOTYPE(channel_gid_map, channel_s, gidmap_node,
-             channel_id_hash, channel_id_eq);
+             channel_id_hash, channel_id_eq)
 HT_GENERATE2(channel_gid_map, channel_s, gidmap_node,
              channel_id_hash, channel_id_eq,
-             0.6, tor_reallocarray_, tor_free_);
+             0.6, tor_reallocarray_, tor_free_)
 
 HANDLE_IMPL(channel, channel_s,);
 
