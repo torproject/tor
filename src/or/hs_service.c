@@ -203,6 +203,30 @@ service_clear_config(hs_service_config_t *config)
   memset(config, 0, sizeof(*config));
 }
 
+/* Return the number of minimum INTRODUCE2 cell defined by a consensus
+ * parameter or the default value. */
+static int32_t
+get_intro_point_min_introduce2(void)
+{
+  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+   * in the future. */
+  return networkstatus_get_param(NULL, "hs_intro_min_introduce2",
+                                 INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS,
+                                 0, INT32_MAX);
+}
+
+/* Return the number of maximum INTRODUCE2 cell defined by a consensus
+ * parameter or the default value. */
+static int32_t
+get_intro_point_max_introduce2(void)
+{
+  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+   * in the future. */
+  return networkstatus_get_param(NULL, "hs_intro_max_introduce2",
+                                 INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS,
+                                 0, INT32_MAX);
+}
+
 /* Helper: Function that needs to return 1 for the HT for each loop which
  * frees every service in an hash map. */
 static int
@@ -274,10 +298,10 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
    * term keys. */
   ed25519_keypair_generate(&ip->auth_key_kp, 0);
 
-  /* XXX: These will be controlled by consensus params. (#20961) */
   ip->introduce2_max =
-    crypto_rand_int_range(INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS,
-                          INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
+    crypto_rand_int_range(get_intro_point_min_introduce2(),
+                          get_intro_point_max_introduce2());
+  /* XXX: These will be controlled by consensus params. (#20961) */
   ip->time_to_expire = time(NULL) +
     crypto_rand_int_range(INTRO_POINT_LIFETIME_MIN_SECONDS,
                           INTRO_POINT_LIFETIME_MAX_SECONDS);
