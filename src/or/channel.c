@@ -106,7 +106,7 @@ HT_GENERATE2(channel_gid_map, channel_s, gidmap_node,
              channel_id_hash, channel_id_eq,
              0.6, tor_reallocarray_, tor_free_)
 
-HANDLE_IMPL(channel, channel_s,);
+HANDLE_IMPL(channel, channel_s,)
 
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
