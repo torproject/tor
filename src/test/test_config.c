@@ -899,13 +899,10 @@ test_config_fix_my_family(void *arg)
   }
   tt_int_op(ret_size, OP_EQ, 5);
 
-  done:
-    if (err != NULL) {
-      tor_free(err);
-    }
-
-    or_options_free(options);
-    or_options_free(defaults);
+ done:
+  tor_free(err);
+  or_options_free(options);
+  or_options_free(defaults);
 }
 
 static int n_hostname_01010101 = 0;
