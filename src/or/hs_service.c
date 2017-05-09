@@ -227,6 +227,30 @@ get_intro_point_max_introduce2(void)
                                  0, INT32_MAX);
 }
 
+/* Return the minimum lifetime of an introduction point defined by a consensus
+ * parameter or the default value. */
+static int32_t
+get_intro_point_min_lifetime(void)
+{
+  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+   * in the future. */
+  return networkstatus_get_param(NULL, "hs_intro_min_lifetime",
+                                 INTRO_POINT_LIFETIME_MIN_SECONDS,
+                                 0, INT32_MAX);
+}
+
+/* Return the maximum lifetime of an introduction point defined by a consensus
+ * parameter or the default value. */
+static int32_t
+get_intro_point_max_lifetime(void)
+{
+  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+   * in the future. */
+  return networkstatus_get_param(NULL, "hs_intro_max_lifetime",
+                                 INTRO_POINT_LIFETIME_MAX_SECONDS,
+                                 0, INT32_MAX);
+}
+
 /* Helper: Function that needs to return 1 for the HT for each loop which
  * frees every service in an hash map. */
 static int
@@ -301,10 +325,9 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
   ip->introduce2_max =
     crypto_rand_int_range(get_intro_point_min_introduce2(),
                           get_intro_point_max_introduce2());
-  /* XXX: These will be controlled by consensus params. (#20961) */
   ip->time_to_expire = time(NULL) +
-    crypto_rand_int_range(INTRO_POINT_LIFETIME_MIN_SECONDS,
-                          INTRO_POINT_LIFETIME_MAX_SECONDS);
+    crypto_rand_int_range(get_intro_point_min_lifetime(),
+                          get_intro_point_max_lifetime());
   ip->replay_cache = replaycache_new(0, 0);
 
   /* Initialize the base object. We don't need the certificate object. */
