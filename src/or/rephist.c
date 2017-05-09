@@ -1828,7 +1828,11 @@ predicted_ports_prediction_time_remaining(time_t now)
   if (idle_delta > prediction_timeout)
     return 0;
 
-  return prediction_timeout - idle_delta;
+  if (BUG((prediction_timeout - idle_delta) > INT_MAX)) {
+    return INT_MAX;
+  }
+
+  return (int)(prediction_timeout - idle_delta);
 }
 
 /** We just got an application request for a connection with
