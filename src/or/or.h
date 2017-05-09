@@ -3636,7 +3636,6 @@ typedef struct {
   /** Whether routers accept EXTEND cells to routers with private IPs. */
   int ExtendAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
-  char *Group; /**< Name of group to run Tor as. */
   config_line_t *ORPort_lines; /**< Ports to listen on for OR connections. */
   /** Ports to listen on for extended OR connections. */
   config_line_t *ExtORPort_lines;
@@ -3853,8 +3852,6 @@ typedef struct {
   int CircuitBuildTimeout; /**< Cull non-open circuits that were born at
                             * least this many seconds ago. Used until
                             * adaptive algorithm learns a new value. */
-  int CircuitIdleTimeout; /**< Cull open clean circuits that were born
-                           * at least this many seconds ago. */
   int CircuitsAvailableTimeout; /**< Try to have an open circuit for at
                                      least this long after last activity */
   int CircuitStreamTimeout; /**< If non-zero, detach streams from circuits
@@ -3866,10 +3863,6 @@ typedef struct {
                          * a new one? */
   int MaxCircuitDirtiness; /**< Never use circs that were first used more than
                                 this interval ago. */
-  int PredictedPortsRelevanceTime; /** How long after we've requested a
-                                    * connection for a given port, do we want
-                                    * to continue to pick exits that support
-                                    * that port?  */
   uint64_t BandwidthRate; /**< How much bandwidth, on average, are we willing
                            * to use in a second? */
   uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing
@@ -3883,8 +3876,6 @@ typedef struct {
   uint64_t PerConnBWRate; /**< Long-term bw on a single TLS conn, if set. */
   uint64_t PerConnBWBurst; /**< Allowed burst on a single TLS conn, if set. */
   int NumCPUs; /**< How many CPUs should we try to use? */
-//int RunTesting; /**< If true, create testing circuits to measure how well the
-//                 * other ORs are running. */
   config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   config_line_t *HidServAuth; /**< List of configuration lines for client-side
@@ -4342,8 +4333,7 @@ typedef struct {
   int TestingDirAuthVoteGuardIsStrict;
 
   /** Relays in a testing network which should be voted HSDir
-   * regardless of uptime and DirPort.
-   * Respects VoteOnHidServDirectoriesV2. */
+   * regardless of uptime and DirPort. */
   routerset_t *TestingDirAuthVoteHSDir;
   int TestingDirAuthVoteHSDirIsStrict;
 
