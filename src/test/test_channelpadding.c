@@ -669,8 +669,9 @@ test_channelpadding_negotiation(void *arg)
   val = channelpadding_get_netflow_inactive_timeout_ms(client_relay3);
   tt_int_op(val, OP_GE, 9000);
   tt_int_op(val, OP_LE, 14000);
-  val = channelpadding_compute_time_until_pad_for_netflow(client_relay3);
-  tt_int_op(val, OP_LE, 14000);
+  int64_t val64 =
+    channelpadding_compute_time_until_pad_for_netflow(client_relay3);
+  tt_i64_op(val64, OP_LE, 14000);
 
  done:
   free_mock_network();
