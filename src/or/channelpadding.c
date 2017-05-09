@@ -402,10 +402,10 @@ channelpadding_send_padding_cell_for_callback(channel_t *chan)
  */
 static void
 channelpadding_send_padding_callback(tor_timer_t *timer, void *args,
-                                     const struct monotime_t *time)
+                                     const struct monotime_t *when)
 {
   channel_t *chan = channel_handle_get((struct channel_handle_t*)args);
-  (void)timer; (void)time;
+  (void)timer; (void)when;
 
   if (chan && CHANNEL_CAN_HANDLE_CELLS(chan)) {
     /* Hrmm.. It might be nice to have an equivalent to assert_connection_ok
