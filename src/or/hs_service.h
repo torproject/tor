@@ -87,6 +87,12 @@ typedef struct hs_service_intropoints_t {
   /* Contains the current hs_service_intro_point_t objects indexed by
    * authentication public key. */
   digest256map_t *map;
+
+  /* Contains node's identity key digest that were introduction point for this
+   * descriptor but were retried to many times. We keep those so we avoid
+   * re-picking them over and over for a circuit retry period.
+   * XXX: Once we have #22173, change this to only use ed25519 identity. */
+  digestmap_t *failed_id;
 } hs_service_intropoints_t;
 
 /* Representation of a service descriptor. */

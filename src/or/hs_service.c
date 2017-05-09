@@ -889,6 +889,7 @@ service_descriptor_free(hs_service_descriptor_t *desc)
   smartlist_free(desc->hsdir_missing_info);
   /* Cleanup all intro points. */
   digest256map_free(desc->intro_points.map, service_intro_point_free_);
+  digestmap_free(desc->intro_points.failed_id, tor_free_);
   tor_free(desc);
 }
 
@@ -900,8 +901,69 @@ service_descriptor_new(void)
   sdesc->desc = tor_malloc_zero(sizeof(hs_descriptor_t));
   /* Initialize the intro points map. */
   sdesc->intro_points.map = digest256map_new();
+  sdesc->intro_points.failed_id = digestmap_new();
   sdesc->hsdir_missing_info = smartlist_new();
   return sdesc;
+}
+
+/* From the given service, remove all expired failing intro points for each
+ * descriptor. */
+static void
+remove_expired_failing_intro(hs_service_t *service, time_t now)
+{
+  tor_assert(service);
+
+  /* For both descriptors, cleanup the failing intro points list. */
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    DIGESTMAP_FOREACH_MODIFY(desc->intro_points.failed_id, key, time_t *, t) {
+      time_t failure_time = *t;
+      if ((failure_time + INTRO_CIRC_RETRY_PERIOD) <= now) {
+        MAP_DEL_CURRENT(key);
+        tor_free(t);
+      }
+    } DIGESTMAP_FOREACH_END;
+  } FOR_EACH_DESCRIPTOR_END;
+}
+
+/* For the given descriptor desc, put all node_t object found from its failing
+ * intro point list and put them in the given node_list. */
+static void
+setup_intro_point_exclude_list(const hs_service_descriptor_t *desc,
+                               smartlist_t *node_list)
+{
+  tor_assert(desc);
+  tor_assert(node_list);
+
+  DIGESTMAP_FOREACH(desc->intro_points.failed_id, key, time_t *, t) {
+    (void) t; /* Make gcc happy. */
+    const node_t *node = node_get_by_id(key);
+    if (node) {
+      smartlist_add(node_list, (void *) node);
+    }
+  } DIGESTMAP_FOREACH_END;
+}
+
+/* For the given failing intro point ip, we add its time of failure to the
+ * failed map and index it by identity digest (legacy ID) in the descriptor
+ * desc failed id map. */
+static void
+remember_failing_intro_point(const hs_service_intro_point_t *ip,
+                             hs_service_descriptor_t *desc, time_t now)
+{
+  time_t *time_of_failure, *prev_ptr;
+  const hs_desc_link_specifier_t *legacy_ls;
+
+  tor_assert(ip);
+  tor_assert(desc);
+
+  time_of_failure = tor_malloc_zero(sizeof(time_t));
+  *time_of_failure = now;
+  legacy_ls = get_link_spec_by_type(ip, LS_LEGACY_ID);
+  tor_assert(legacy_ls);
+  prev_ptr = digestmap_set(desc->intro_points.failed_id,
+                           (const char *) legacy_ls->u.legacy_id,
+                           time_of_failure);
+  tor_free(prev_ptr);
 }
 
 /* Copy the descriptor link specifier object from src to dst. */
@@ -1318,6 +1380,9 @@ pick_needed_intro_points(hs_service_t *service,
                        hs_service_intro_point_t *, ip) {
     smartlist_add(exclude_nodes, (void *) get_node_from_intro_point(ip));
   } DIGEST256MAP_FOREACH_END;
+  /* Also, add the failing intro points that our descriptor encounteered in
+   * the exclude node list. */
+  setup_intro_point_exclude_list(desc, exclude_nodes);
 
   for (i = 0; i < num_needed_ip; i++) {
     hs_service_intro_point_t *ip;
@@ -1462,9 +1527,19 @@ cleanup_intro_points(hs_service_t *service, time_t now)
        * reached the maximum number of retry with a non existing circuit. */
       if (has_expired || node == NULL ||
           (ocirc == NULL &&
-           ip->circuit_retries >= MAX_INTRO_POINT_CIRCUIT_RETRIES)) {
+           ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES)) {
+        /* Remove intro point from descriptor map. We'll add it to the failed
+         * map if we retried it too many times. */
         MAP_DEL_CURRENT(key);
+
+        /* We've retried too many times, remember it has a failed intro point
+         * so we don't pick it up again. It will be retried in
+         * INTRO_CIRC_RETRY_PERIOD seconds. */
+        if (ip->circuit_retries >= MAX_INTRO_POINT_CIRCUIT_RETRIES) {
+          remember_failing_intro_point(ip, desc, now);
+        }
         service_intro_point_free(ip);
+
         /* XXX: Legacy code does NOT do that, it keeps the circuit open until
          * a new descriptor is uploaded and then closed all expiring intro
          * point circuit. Here, we close immediately and because we just
@@ -1549,6 +1624,10 @@ run_housekeeping_event(time_t now)
   FOR_EACH_SERVICE_BEGIN(service) {
     /* Cleanup invalid intro points from the service descriptor. */
     cleanup_intro_points(service, now);
+
+    /* Remove expired failing intro point from the descriptor failed list. We
+     * reset them at each INTRO_CIRC_RETRY_PERIOD. */
+    remove_expired_failing_intro(service, now);
 
     /* At this point, the service is now ready to go through the scheduled
      * events guaranteeing a valid state. Intro points might be missing from
