@@ -1,0 +1,27 @@
+  o Remove configuration option (confic):
+    - AllowInvalidNodes was deprecated in 0.2.9.2-alpha and now has been
+      removed. It is not possible anymore to use Invalid nodes.
+    - AllowSingleHopCircuits was deprecated in 0.2.9.2-alpha and now has been
+      removed. It's not possible anymore to attach streams to single hop exit
+      circuit.
+    - AllowSingleHopExits was deprecated in 0.2.9.2-alpha and now has been
+      removed. Relays no longer advertise that they can be used for single hop
+      exit proxy.
+    - ExcludeSingleHopRelays was deprecated in 0.2.9.2-alpha and now has been
+      removed. Client will always exclude relays that supports single hop
+      exits meaning relays that still advertise AllowSingleHopExits.
+    - FastFirstHopPK was deprecated in 0.2.9.2-alpha and now has been removed.
+      Decision for this feature will always be decided by the consensus.
+    - CloseHSClientCircuitsImmediatelyOnTimeout was deprecated in
+      0.2.9.2-alpha and now has been removed. HS circuits never close on
+      circuit build timeout, they have a longer timeout period.
+    - CloseHSServiceRendCircuitsImmediatelyOnTimeout was deprecated in
+      0.2.9.2-alpha and now has been removed. HS circuits never close on
+      circuit build timeout, they have a long timeout period.
+    - WarnUnsafeSocks was deprecated in 0.2.9.2-alpha and now has been
+      removed. Tor will now always warn the user if only an IP address is
+      given instead of an hostname on a SOCKS connection if SafeSocks is 1.
+    - TLSECGroup was deprecated in 0.2.9.2-alpha and now has been removed.
+      P256 EC group is always used.
+    - {Control,DNS,Dir,Socks,Trans,NATD,OR}ListenAddress was deprecated in
+      0.2.9.2-alpha and now has been removed. Use the ORPort (and others).

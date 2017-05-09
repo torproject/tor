@@ -3480,15 +3480,6 @@ static inline const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
   return DOWNCAST(origin_circuit_t, x);
 }
 
-/** Bitfield type: things that we're willing to use invalid routers for. */
-typedef enum invalid_router_usage_t {
-  ALLOW_INVALID_ENTRY       =1,
-  ALLOW_INVALID_EXIT        =2,
-  ALLOW_INVALID_MIDDLE      =4,
-  ALLOW_INVALID_RENDEZVOUS  =8,
-  ALLOW_INVALID_INTRODUCTION=16,
-} invalid_router_usage_t;
-
 /* limits for TCP send and recv buffer size used for constrained sockets */
 #define MIN_CONSTRAINED_TCP_BUFFER 2048
 #define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
@@ -3614,10 +3605,6 @@ typedef struct {
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
 
-  /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
-  smartlist_t *AllowInvalidNodes;
-  /** Bitmask; derived from AllowInvalidNodes. */
-  invalid_router_usage_t AllowInvalid_;
   config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   int ExitPolicyRejectPrivate; /**< Should we not exit to reserved private
                                 * addresses, and our own published addresses?
@@ -3628,21 +3615,6 @@ typedef struct {
                                         * configured ports. */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
   config_line_t *DirPolicy; /**< Lists of dir policy components */
-  /** Addresses to bind for listening for SOCKS connections. */
-  config_line_t *SocksListenAddress;
-  /** Addresses to bind for listening for transparent pf/netfilter
-   * connections. */
-  config_line_t *TransListenAddress;
-  /** Addresses to bind for listening for transparent natd connections */
-  config_line_t *NATDListenAddress;
-  /** Addresses to bind for listening for SOCKS connections. */
-  config_line_t *DNSListenAddress;
-  /** Addresses to bind for listening for OR connections. */
-  config_line_t *ORListenAddress;
-  /** Addresses to bind for listening for directory connections. */
-  config_line_t *DirListenAddress;
-  /** Addresses to bind for listening for control connections. */
-  config_line_t *ControlListenAddress;
   /** Local address to bind outbound sockets */
   config_line_t *OutboundBindAddress;
   /** Local address to bind outbound relay sockets */
@@ -3800,15 +3772,6 @@ typedef struct {
 
   /** A routerset that should be used when picking RPs for HS circuits. */
   routerset_t *Tor2webRendezvousPoints;
-
-  /** Close hidden service client circuits immediately when they reach
-   * the normal circuit-build timeout, even if they have already sent
-   * an INTRODUCE1 cell on its way to the service. */
-  int CloseHSClientCircuitsImmediatelyOnTimeout;
-
-  /** Close hidden-service-side rendezvous circuits immediately when
-   * they reach the normal circuit-build timeout. */
-  int CloseHSServiceRendCircuitsImmediatelyOnTimeout;
 
   /** Onion Services in HiddenServiceSingleHopMode make one-hop (direct)
    * circuits between the onion service server, and the introduction and
@@ -4091,8 +4054,6 @@ typedef struct {
   int NumDirectoryGuards; /**< How many dir guards do we try to establish?
                            * If 0, use value from NumEntryGuards. */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
-  int FastFirstHopPK; /**< If Tor believes it is safe, should we save a third
-                       * of our PK time by sending CREATE_FAST cells? */
   /** Should we always fetch our dir info on the mirror schedule (which
    * means directly from the authorities) no matter our other config? */
   int FetchDirInfoEarly;
@@ -4148,26 +4109,12 @@ typedef struct {
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
 
-  /** If true, and we are acting as a relay, allow exit circuits even when
-   * we are the first hop of a circuit. */
-  int AllowSingleHopExits;
-  /** If true, don't allow relays with AllowSingleHopExits=1 to be used in
-   * circuits that we build. */
-  int ExcludeSingleHopRelays;
-  /** If true, and the controller tells us to use a one-hop circuit, and the
-   * exit allows it, we use it. */
-  int AllowSingleHopCircuits;
-
   /** If true, we convert "www.google.com.foo.exit" addresses on the
    * socks/trans/natd ports into "www.google.com" addresses that
    * exit from the node "foo". Disabled by default since attacking
    * websites and exit relays can use it to manipulate your path
    * selection. */
   int AllowDotExit;
-
-  /** If true, we will warn if a user gives us only an IP address
-   * instead of a hostname. */
-  int WarnUnsafeSocks;
 
   /** If true, we're configured to collect statistics on clients
    * requesting network statuses from us as directory. */
@@ -4527,8 +4474,6 @@ typedef struct {
   /** @} */
 
   int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
-
-  char *TLSECGroup; /**< One of "P256", "P224", or nil for auto */
 
   /** Fraction: */
   double PathsNeededToBuildCircuits;
@@ -5381,7 +5326,6 @@ typedef enum {
   CRN_NEED_UPTIME = 1<<0,
   CRN_NEED_CAPACITY = 1<<1,
   CRN_NEED_GUARD = 1<<2,
-  CRN_ALLOW_INVALID = 1<<3,
   /* XXXX not used, apparently. */
   CRN_WEIGHT_AS_EXIT = 1<<5,
   CRN_NEED_DESC = 1<<6,

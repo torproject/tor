@@ -2320,17 +2320,16 @@ routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
  * we can pick a node for a circuit.
  */
 void
-router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
-                                      int need_uptime, int need_capacity,
-                                      int need_guard, int need_desc,
-                                      int pref_addr, int direct_conn)
+router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
+                                      int need_capacity, int need_guard,
+                                      int need_desc, int pref_addr,
+                                      int direct_conn)
 {
   const int check_reach = !router_skip_or_reachability(get_options(),
                                                        pref_addr);
   /* XXXX MOVE */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
-    if (!node->is_running ||
-        (!node->is_valid && !allow_invalid))
+    if (!node->is_running || !node->is_valid)
       continue;
     if (need_desc && !(node->ri || (node->rs && node->md)))
       continue;
@@ -2776,8 +2775,6 @@ node_sl_choose_by_bandwidth(const smartlist_t *sl,
  * a minimum uptime, return one of those.
  * If <b>CRN_NEED_CAPACITY</b> is set in flags, weight your choice by the
  * advertised capacity of each router.
- * If <b>CRN_ALLOW_INVALID</b> is not set in flags, consider only Valid
- * routers.
  * If <b>CRN_NEED_GUARD</b> is set in flags, consider only Guard routers.
  * If <b>CRN_WEIGHT_AS_EXIT</b> is set in flags, we weight bandwidths as if
  * picking an exit node, otherwise we weight bandwidths for picking a relay
@@ -2798,7 +2795,6 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
   const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
   const int need_guard = (flags & CRN_NEED_GUARD) != 0;
-  const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
   const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
   const int need_desc = (flags & CRN_NEED_DESC) != 0;
   const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
@@ -2814,20 +2810,17 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   rule = weight_for_exit ? WEIGHT_FOR_EXIT :
     (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
-  /* Exclude relays that allow single hop exit circuits, if the user
-   * wants to (such relays might be risky) */
-  if (get_options()->ExcludeSingleHopRelays) {
-    SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
-      if (node_allows_single_hop_exits(node)) {
-        smartlist_add(excludednodes, node);
-      });
-  }
+  /* Exclude relays that allow single hop exit circuits. This is an obsolete
+   * option since 0.2.9.2-alpha and done by default in 0.3.1.0-alpha. */
+  SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
+    if (node_allows_single_hop_exits(node)) {
+      smartlist_add(excludednodes, node);
+    });
 
   if ((r = routerlist_find_my_routerinfo()))
     routerlist_add_node_and_family(excludednodes, r);
 
-  router_add_running_nodes_to_smartlist(sl, allow_invalid,
-                                        need_uptime, need_capacity,
+  router_add_running_nodes_to_smartlist(sl, need_uptime, need_capacity,
                                         need_guard, need_desc, pref_addr,
                                         direct_conn);
   log_debug(LD_CIRC,

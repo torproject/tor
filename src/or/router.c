@@ -779,12 +779,6 @@ router_initialize_tls_context(void)
   int lifetime = options->SSLKeyLifetime;
   if (public_server_mode(options))
     flags |= TOR_TLS_CTX_IS_PUBLIC_SERVER;
-  if (options->TLSECGroup) {
-    if (!strcasecmp(options->TLSECGroup, "P256"))
-      flags |= TOR_TLS_CTX_USE_ECDHE_P256;
-    else if (!strcasecmp(options->TLSECGroup, "P224"))
-      flags |= TOR_TLS_CTX_USE_ECDHE_P224;
-  }
   if (!lifetime) { /* we should guess a good ssl cert lifetime */
 
     /* choose between 5 and 365 days, and round to the day */
@@ -1663,8 +1657,7 @@ MOCK_IMPL(int,
 server_mode,(const or_options_t *options))
 {
   if (options->ClientOnly) return 0;
-  /* XXXX I believe we can kill off ORListenAddress here.*/
-  return (options->ORPort_set || options->ORListenAddress);
+  return (options->ORPort_set);
 }
 
 /** Return true iff we are trying to be a non-bridge server.
@@ -2942,7 +2935,7 @@ router_dump_router_to_string(routerinfo_t *router,
                     "onion-key\n%s"
                     "signing-key\n%s"
                     "%s%s"
-                    "%s%s%s%s",
+                    "%s%s%s",
     router->nickname,
     address,
     router->or_port,
@@ -2965,8 +2958,7 @@ router_dump_router_to_string(routerinfo_t *router,
     ntor_cc_line ? ntor_cc_line : "",
     family_line,
     we_are_hibernating() ? "hibernating 1\n" : "",
-    "hidden-service-dir\n",
-    options->AllowSingleHopExits ? "allow-single-hop-exits\n" : "");
+    "hidden-service-dir\n");
 
   if (options->ContactInfo && strlen(options->ContactInfo)) {
     const char *ci = options->ContactInfo;

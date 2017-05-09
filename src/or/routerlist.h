@@ -62,10 +62,10 @@ int router_skip_or_reachability(const or_options_t *options, int try_ip_pref);
 int router_get_my_share_of_directory_requests(double *v3_share_out);
 void router_reset_status_download_failures(void);
 int routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2);
-void router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
-                                           int need_uptime, int need_capacity,
-                                           int need_guard, int need_desc,
-                                           int pref_addr, int direct_conn);
+void router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
+                                           int need_capacity, int need_guard,
+                                           int need_desc, int pref_addr,
+                                           int direct_conn);
 
 const routerinfo_t *routerlist_find_my_routerinfo(void);
 uint32_t router_get_advertised_bandwidth(const routerinfo_t *router);

@@ -469,7 +469,7 @@ test_options_validate__uname_for_server(void *ignored)
   (void)ignored;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
-                                      "ORListenAddress 127.0.0.1:5555");
+                                      "ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_WARN);
 
   MOCK(get_uname, fixed_get_uname);
@@ -603,7 +603,7 @@ test_options_validate__contactinfo(void *ignored)
   int ret;
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
-                                "ORListenAddress 127.0.0.1:5555\nORPort 955");
+                                "ORPort 127.0.0.1:5555");
   setup_capture_of_logs(LOG_DEBUG);
   tdata->opt->ContactInfo = NULL;
 
@@ -616,7 +616,7 @@ test_options_validate__contactinfo(void *ignored)
   tor_free(msg);
 
   free_options_test_data(tdata);
-  tdata = get_options_test_data("ORListenAddress 127.0.0.1:5555\nORPort 955\n"
+  tdata = get_options_test_data("ORPort 127.0.0.1:5555\n"
                                 "ContactInfo hella@example.org");
   mock_clean_saved_logs();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -1024,8 +1024,7 @@ test_options_validate__relay_with_hidden_services(void *ignored)
   char *msg;
   setup_capture_of_logs(LOG_DEBUG);
   options_test_data_t *tdata = get_options_test_data(
-                                  "ORListenAddress 127.0.0.1:5555\n"
-                                  "ORPort 955\n"
+                                  "ORPort 127.0.0.1:5555\n"
                                   "HiddenServiceDir "
                                   "/Library/Tor/var/lib/tor/hidden_service/\n"
                                   "HiddenServicePort 80 127.0.0.1:8080\n"
@@ -1095,7 +1094,7 @@ test_options_validate__transproxy(void *ignored)
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_PF_DIVERT);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without "
-            "any valid TransPort or TransListenAddress.");
+            "any valid TransPort.");
 #endif
   tor_free(msg);
 
@@ -1110,7 +1109,7 @@ test_options_validate__transproxy(void *ignored)
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_TPROXY);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
-            "TransPort or TransListenAddress.");
+            "TransPort.");
 #endif
   tor_free(msg);
 
@@ -1126,7 +1125,7 @@ test_options_validate__transproxy(void *ignored)
 #else
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_IPFW);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
-            "TransPort or TransListenAddress.");
+            "TransPort.");
 #endif
   tor_free(msg);
 
@@ -1184,8 +1183,7 @@ test_options_validate__transproxy(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "TransPort and TransListenAddress are disabled in "
-            "this build.");
+  tt_str_op(msg, OP_EQ, "TransPort is disabled in this build.");
   tor_free(msg);
 #endif
 
@@ -1375,54 +1373,6 @@ test_options_validate__node_families(void *ignored)
   tor_free(msg);
 
  done:
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
-test_options_validate__tlsec(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  setup_capture_of_logs(LOG_DEBUG);
-  options_test_data_t *tdata = get_options_test_data(
-                                 "TLSECGroup ed25519\n"
-                                 "SchedulerHighWaterMark__ 42\n"
-                                 "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_log_msg("Unrecognized TLSECGroup: Falling back to the default.\n");
-  tt_assert(!tdata->opt->TLSECGroup);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("TLSECGroup P224\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-  mock_clean_saved_logs();
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_no_log_msg(
-            "Unrecognized TLSECGroup: Falling back to the default.\n");
-  tt_assert(tdata->opt->TLSECGroup);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("TLSECGroup P256\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-  mock_clean_saved_logs();
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  expect_no_log_msg(
-            "Unrecognized TLSECGroup: Falling back to the default.\n");
-  tt_assert(tdata->opt->TLSECGroup);
-  tor_free(msg);
-
- done:
-  teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -1809,8 +1759,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableAddresses *:82\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1823,8 +1772,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableORAddresses *:82\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1837,8 +1785,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableDirAddresses *:82\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1851,8 +1798,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("ClientUseIPv4 0\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "MaxClientCircuitsPending 1\n"
                                 "ConnLimit 1\n"
                                 "SchedulerHighWaterMark__ 42\n"
@@ -1952,8 +1898,7 @@ test_options_validate__use_bridges(void *ignored)
   options_test_data_t *tdata = get_options_test_data(
                                    "UseBridges 1\n"
                                    "ClientUseIPv4 1\n"
-                                   "ORListenAddress 127.0.0.1:5555\n"
-                                   "ORPort 955\n"
+                                   "ORPort 127.0.0.1:5555\n"
                                    "MaxClientCircuitsPending 1\n"
                                    "ConnLimit 1\n"
                                    "SchedulerHighWaterMark__ 42\n"
@@ -2070,56 +2015,6 @@ test_options_validate__entry_nodes(void *ignored)
 
  done:
   NS_UNMOCK(geoip_get_country);
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
-test_options_validate__invalid_nodes(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  options_test_data_t *tdata = get_options_test_data(
-                                  "AllowInvalidNodes something_stupid\n"
-                                  "MaxClientCircuitsPending 1\n"
-                                  "ConnLimit 1\n"
-                                  "SchedulerHighWaterMark__ 42\n"
-                                  "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ,
-            "Unrecognized value 'something_stupid' in AllowInvalidNodes");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AllowInvalidNodes entry, middle, exit\n"
-                                "MaxClientCircuitsPending 1\n"
-                                "ConnLimit 1\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_int_op(tdata->opt->AllowInvalid_, OP_EQ, ALLOW_INVALID_ENTRY |
-            ALLOW_INVALID_EXIT | ALLOW_INVALID_MIDDLE);
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("AllowInvalidNodes introduction, rendezvous\n"
-                                "MaxClientCircuitsPending 1\n"
-                                "ConnLimit 1\n"
-                                "SchedulerHighWaterMark__ 42\n"
-                                "SchedulerLowWaterMark__ 10\n");
-
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_int_op(tdata->opt->AllowInvalid_, OP_EQ, ALLOW_INVALID_INTRODUCTION |
-            ALLOW_INVALID_RENDEZVOUS);
-  tor_free(msg);
-
- done:
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -2539,8 +2434,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 1\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -2551,8 +2445,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
                                 "MaxAdvertisedBandwidth 30000\n"
                                 );
@@ -2564,8 +2457,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
                                 "RelayBandwidthRate 1\n"
                                 "MaxAdvertisedBandwidth 38400\n"
@@ -2578,8 +2470,7 @@ test_options_validate__bandwidth(void *ignored)
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76800\n"
                                 "BandwidthBurst 76800\n"
                                 "RelayBandwidthRate 76800\n"
@@ -3017,8 +2908,7 @@ test_options_validate__accounting(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data(
            TEST_OPTIONS_DEFAULT_VALUES
-           "ORListenAddress 127.0.0.1:5555\n"
-           "ORPort 955\n"
+           "ORPort 127.0.0.1:5555\n"
            "BandwidthRate 76800\n"
            "BandwidthBurst 76800\n"
            "MaxAdvertisedBandwidth 38400\n"
@@ -3652,8 +3542,7 @@ test_options_validate__families(void *ignored)
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "MyFamily home\n"
                                 "BridgeRelay 1\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 51300\n"
                                 "BandwidthBurst 51300\n"
                                 "MaxAdvertisedBandwidth 25700\n"
@@ -3882,8 +3771,7 @@ test_options_validate__transport(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "ServerTransportPlugin foo exec bar\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76900\n"
                                 "BandwidthBurst 76900\n"
                                 "MaxAdvertisedBandwidth 38500\n"
@@ -3925,8 +3813,7 @@ test_options_validate__transport(void *ignored)
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "ServerTransportListenAddr foo 127.0.0.42:55\n"
                                 "ServerTransportPlugin foo exec bar\n"
-                                "ORListenAddress 127.0.0.1:5555\n"
-                                "ORPort 955\n"
+                                "ORPort 127.0.0.1:5555\n"
                                 "BandwidthRate 76900\n"
                                 "BandwidthBurst 76900\n"
                                 "MaxAdvertisedBandwidth 38500\n"
@@ -4283,48 +4170,6 @@ test_options_validate__virtual_addr(void *ignored)
 }
 
 static void
-test_options_validate__exits(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  char *msg;
-  options_test_data_t *tdata = NULL;
-  setup_capture_of_logs(LOG_WARN);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "AllowSingleHopExits 1"
-                                );
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_log_msg("You have set AllowSingleHopExits; "
-            "now your relay will allow others to make one-hop exits. However,"
-            " since by default most clients avoid relays that set this option,"
-            " most clients will ignore you.\n");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "AllowSingleHopExits 1\n"
-                                VALID_DIR_AUTH
-                                );
-  mock_clean_saved_logs();
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, 0);
-  expect_no_log_msg("You have set AllowSingleHopExits; "
-            "now your relay will allow others to make one-hop exits. However,"
-            " since by default most clients avoid relays that set this option,"
-            " most clients will ignore you.\n");
-  tor_free(msg);
-
- done:
-  policies_free_all();
-  teardown_capture_of_logs();
-  free_options_test_data(tdata);
-  tor_free(msg);
-}
-
-static void
 test_options_validate__testing_options(void *ignored)
 {
   (void)ignored;
@@ -4562,7 +4407,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(exclude_nodes),
   LOCAL_VALIDATE_TEST(scheduler),
   LOCAL_VALIDATE_TEST(node_families),
-  LOCAL_VALIDATE_TEST(tlsec),
   LOCAL_VALIDATE_TEST(token_bucket),
   LOCAL_VALIDATE_TEST(recommended_packages),
   LOCAL_VALIDATE_TEST(fetch_dir),
@@ -4573,7 +4417,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(reachable_addresses),
   LOCAL_VALIDATE_TEST(use_bridges),
   LOCAL_VALIDATE_TEST(entry_nodes),
-  LOCAL_VALIDATE_TEST(invalid_nodes),
   LOCAL_VALIDATE_TEST(safe_logging),
   LOCAL_VALIDATE_TEST(publish_server_descriptor),
   LOCAL_VALIDATE_TEST(testing),
@@ -4595,7 +4438,6 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(constrained_sockets),
   LOCAL_VALIDATE_TEST(v3_auth),
   LOCAL_VALIDATE_TEST(virtual_addr),
-  LOCAL_VALIDATE_TEST(exits),
   LOCAL_VALIDATE_TEST(testing_options),
   LOCAL_VALIDATE_TEST(accel),
   END_OF_TESTCASES              /*  */

@@ -816,12 +816,7 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
      * creating on behalf of others. */
     return 0;
   }
-  if (options->FastFirstHopPK == -1) {
-    /* option is "auto", so look at the consensus. */
-    return networkstatus_get_param(NULL, "usecreatefast", 0, 0, 1);
-  }
-
-  return options->FastFirstHopPK;
+  return networkstatus_get_param(NULL, "usecreatefast", 0, 0, 1);
 }
 
 /** Return true if <b>circ</b> is the type of circuit we want to count
@@ -1837,15 +1832,16 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
                  * we'll retry later in this function with need_update and
                  * need_capacity set to 0. */
     }
-    if (!(node->is_valid || options->AllowInvalid_ & ALLOW_INVALID_EXIT)) {
+    if (!(node->is_valid)) {
       /* if it's invalid and we don't want it */
       n_supported[i] = -1;
 //      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- invalid router.",
 //             router->nickname, i);
       continue; /* skip invalid routers */
     }
-    if (options->ExcludeSingleHopRelays &&
-        node_allows_single_hop_exits(node)) {
+    /* We do not allow relays that allow single hop exits by default. Option
+     * was deprecated in 0.2.9.2-alpha and removed in 0.3.1.0-alpha. */
+    if (node_allows_single_hop_exits(node)) {
       n_supported[i] = -1;
       continue;
     }
@@ -1977,7 +1973,6 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
                              const or_options_t *options)
 {
   const node_t *rp_node = NULL;
-  const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
   const int need_desc = (flags & CRN_NEED_DESC) != 0;
   const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
   const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
@@ -1989,7 +1984,6 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
 
   /* Add all running nodes to all_live_nodes */
   router_add_running_nodes_to_smartlist(all_live_nodes,
-                                        allow_invalid,
                                         0, 0, 0,
                                         need_desc,
                                         pref_addr,
@@ -2030,9 +2024,6 @@ static const node_t *
 pick_rendezvous_node(router_crn_flags_t flags)
 {
   const or_options_t *options = get_options();
-
-  if (options->AllowInvalid_ & ALLOW_INVALID_RENDEZVOUS)
-    flags |= CRN_ALLOW_INVALID;
 
 #ifdef ENABLE_TOR2WEB_MODE
   /* We want to connect directly to the node if we can */
@@ -2090,8 +2081,6 @@ choose_good_exit_server(uint8_t purpose,
 
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
-      if (options->AllowInvalid_ & ALLOW_INVALID_MIDDLE)
-        flags |= CRN_ALLOW_INVALID;
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
       else
@@ -2289,10 +2278,6 @@ count_acceptable_nodes, (smartlist_t *nodes))
     if (! node->is_running)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not running.",i);
       continue;
-    /* XXX This clause makes us count incorrectly: if AllowInvalidRouters
-     * allows this node in some places, then we're getting an inaccurate
-     * count. For now, be conservative and don't count it. But later we
-     * should try to be smarter. */
     if (! node->is_valid)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
       continue;
@@ -2363,8 +2348,6 @@ choose_good_middle_server(uint8_t purpose,
     flags |= CRN_NEED_UPTIME;
   if (state->need_capacity)
     flags |= CRN_NEED_CAPACITY;
-  if (options->AllowInvalid_ & ALLOW_INVALID_MIDDLE)
-    flags |= CRN_ALLOW_INVALID;
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
   smartlist_free(excluded);
   return choice;
@@ -2417,8 +2400,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
     if (state->need_capacity)
       flags |= CRN_NEED_CAPACITY;
   }
-  if (options->AllowInvalid_ & ALLOW_INVALID_ENTRY)
-    flags |= CRN_ALLOW_INVALID;
 
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
   smartlist_free(excluded);

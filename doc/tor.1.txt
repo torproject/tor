@@ -341,14 +341,6 @@ GENERAL OPTIONS
         Unix domain sockets only: Do not insist that the directory
         that holds the socket be read-restricted.
 
-[[ControlListenAddress]] **ControlListenAddress** __IP__[:__PORT__]::
-    Bind the controller listener to this address. If you specify a port, bind
-    to this port rather than the one specified in ControlPort. We strongly
-    recommend that you leave this alone unless you know what you're doing,
-    since giving attackers access to your control listener is really
-    dangerous. This directive can be specified multiple
-    times to bind to multiple addresses/ports.  (Default: 127.0.0.1)
-
 [[ControlSocket]] **ControlSocket** __Path__::
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
     socket. '0' disables ControlSocket (Unix and Unix-like systems only.)
@@ -772,23 +764,7 @@ CLIENT OPTIONS
 The following options are useful only for clients (that is, if
 **SocksPort**, **TransPort**, **DNSPort**, or **NATDPort** is non-zero):
 
-[[AllowInvalidNodes]] **AllowInvalidNodes** **entry**|**exit**|**middle**|**introduction**|**rendezvous**|**...**::
-    If some Tor servers are obviously not working right, the directory
-    authorities can manually mark them as invalid, meaning that it's not
-    recommended you use them for entry or exit positions in your circuits. You
-    can opt to use them in some circuit positions, though. The default is
-    "middle,rendezvous", and other choices are not advised.
-
-[[ExcludeSingleHopRelays]] **ExcludeSingleHopRelays** **0**|**1**::
-    This option controls whether circuits built by Tor will include relays with
-    the AllowSingleHopExits flag set to true. If ExcludeSingleHopRelays is set
-    to 0, these relays will be included. Note that these relays might be at
-    higher risk of being seized or observed, so they are not normally
-    included.  Also note that relatively few clients turn off this option,
-    so using these relays might make your client stand out.
-    (Default: 1)
-
-[[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__] [__key__=__val__...]::
+[[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__]::
     When set along with UseBridges, instructs Tor to use the relay at
     "IP:ORPort" as a "bridge" relaying into the Tor network. If "fingerprint"
     is provided (using the same format as for DirAuthority), we will verify that
@@ -1006,24 +982,6 @@ The following options are useful only for clients (that is, if
     services can be configured to require authorization using the
     **HiddenServiceAuthorizeClient** option.
 
-[[CloseHSClientCircuitsImmediatelyOnTimeout]] **CloseHSClientCircuitsImmediatelyOnTimeout** **0**|**1**::
-    If 1, Tor will close unfinished hidden service client circuits
-    which have not moved closer to connecting to their destination
-    hidden service when their internal state has not changed for the
-    duration of the current circuit-build timeout.  Otherwise, such
-    circuits will be left open, in the hope that they will finish
-    connecting to their destination hidden services.  In either case,
-    another set of introduction and rendezvous circuits for the same
-    destination hidden service will be launched. (Default: 0)
-
-[[CloseHSServiceRendCircuitsImmediatelyOnTimeout]] **CloseHSServiceRendCircuitsImmediatelyOnTimeout** **0**|**1**::
-    If 1, Tor will close unfinished hidden-service-side rendezvous
-    circuits after the current circuit-build timeout.  Otherwise, such
-    circuits will be left open, in the hope that they will finish
-    connecting to their destinations.  In either case, another
-    rendezvous circuit for the same destination client will be
-    launched. (Default: 0)
-
 [[LongLivedPorts]] **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections
     (e.g. chat and interactive shells). Circuits for streams that use these
@@ -1224,16 +1182,6 @@ The following options are useful only for clients (that is, if
     line is used, and all earlier flags are ignored. No error is issued for
     conflicting flags.
 
-[[SocksListenAddress]] **SocksListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for connections from Socks-speaking
-    applications. (Default: 127.0.0.1) You can also specify a port (e.g.
-    192.168.0.1:9100). This directive can be specified multiple times to bind
-    to multiple addresses/ports.  (DEPRECATED: As of 0.2.3.x-alpha, you can
-    now use multiple SocksPort entries, and provide addresses for SocksPort
-    entries, so SocksListenAddress no longer has a purpose.  For backward
-    compatibility, SocksListenAddress is only allowed when SocksPort is just
-    a port number.)
-
 [[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
     SocksPort and DNSPort ports. The policies have the same form as exit
@@ -1332,12 +1280,6 @@ The following options are useful only for clients (that is, if
     helps to determine whether an application using Tor is possibly leaking
     DNS requests. (Default: 0)
 
-[[WarnUnsafeSocks]] **WarnUnsafeSocks** **0**|**1**::
-    When this option is enabled, Tor will warn whenever a request is
-    received that only contains an IP address instead of a hostname. Allowing
-    applications to do DNS resolves themselves is usually a bad idea and
-    can leak your location to attackers. (Default: 1)
-
 [[VirtualAddrNetworkIPv4]] **VirtualAddrNetworkIPv4** __Address__/__bits__ +
 
 [[VirtualAddrNetworkIPv6]] **VirtualAddrNetworkIPv6** [__Address__]/__bits__::
@@ -1369,18 +1311,6 @@ The following options are useful only for clients (that is, if
     the node "foo". Disabled by default since attacking websites and exit
     relays can use it to manipulate your path selection. (Default: 0)
 
-[[FastFirstHopPK]] **FastFirstHopPK** **0**|**1**|**auto**::
-    When this option is disabled, Tor uses the public key step for the first
-    hop of creating circuits. Skipping it is generally safe since we have
-    already used TLS to authenticate the relay and to establish forward-secure
-    keys. Turning this option off makes circuit building a little
-    slower. Setting this option to "auto" takes advice from the authorities
-    in the latest consensus about whether to use this feature.  +
- +
-    Note that Tor will always use the public key step for the first hop if it's
-    operating as a relay, and it will never use the public key step if it
-    doesn't yet know the onion key of the first hop. (Default: auto)
-
 [[TransPort]] **TransPort**  \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for transparent proxy connections.  Set this to
     0 if you don't want to allow transparent proxy connections.  Set the port
@@ -1391,17 +1321,7 @@ The following options are useful only for clients (that is, if
     TransPort requires OS support for transparent proxies, such as BSDs' pf or
     Linux's IPTables. If you're planning to use Tor as a transparent proxy for
     a network, you'll want to examine and change VirtualAddrNetwork from the
-    default setting. You'll also want to set the TransListenAddress option for
-    the network you'd like to proxy. (Default: 0)
-
-[[TransListenAddress]] **TransListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for transparent proxy connections. (Default:
-    127.0.0.1). This is useful for exporting a transparent proxy server to an
-    entire network. (DEPRECATED: As of 0.2.3.x-alpha, you can
-    now use multiple TransPort entries, and provide addresses for TransPort
-    entries, so TransListenAddress no longer has a purpose.  For backward
-    compatibility, TransListenAddress is only allowed when TransPort is just
-    a port number.)
+    default setting. (Default: 0)
 
 [[TransProxyType]] **TransProxyType** **default**|**TPROXY**|**ipfw**|**pf-divert**::
     TransProxyType may only be enabled when there is transparent proxy listener
@@ -1409,9 +1329,7 @@ The following options are useful only for clients (that is, if
  +
     Set this to "TPROXY" if you wish to be able to use the TPROXY Linux module
     to transparently proxy connections that are configured using the TransPort
-    option. This setting lets the listener on the TransPort accept connections
-    for all addresses, even when the TransListenAddress is configured for an
-    internal address. Detailed information on how to configure the TPROXY
+    option. Detailed information on how to configure the TPROXY
     feature can be found in the Linux kernel source tree in the file
     Documentation/networking/tproxy.txt. +
  +
@@ -1439,13 +1357,6 @@ The following options are useful only for clients (that is, if
  +
     This option is only for people who cannot use TransPort. (Default: 0)
 
-[[NATDListenAddress]] **NATDListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for NATD connections. (DEPRECATED: As of
-    0.2.3.x-alpha, you can now use multiple NATDPort entries, and provide
-    addresses for NATDPort entries, so NATDListenAddress no longer has a
-    purpose.  For backward compatibility, NATDListenAddress is only allowed
-    when NATDPort is just a port number.)
-
 [[AutomapHostsOnResolve]] **AutomapHostsOnResolve** **0**|**1**::
     When this option is enabled, and we get a request to resolve an address
     that ends with one of the suffixes in **AutomapHostsSuffixes**, we map an
@@ -1465,13 +1376,6 @@ The following options are useful only for clients (that is, if
     you. This directive can be specified multiple times to bind to multiple
     addresses/ports. See SocksPort for an explanation of isolation
     flags. (Default: 0)
-
-[[DNSListenAddress]] **DNSListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for DNS connections. (DEPRECATED: As of
-    0.2.3.x-alpha, you can now use multiple DNSPort entries, and provide
-    addresses for DNSPort entries, so DNSListenAddress no longer has a
-    purpose.  For backward compatibility, DNSListenAddress is only allowed
-    when DNSPort is just a port number.)
 
 [[ClientDNSRejectInternalAddresses]] **ClientDNSRejectInternalAddresses** **0**|**1**::
     If true, Tor does not believe any anonymously retrieved DNS answer that
@@ -1501,11 +1405,6 @@ The following options are useful only for clients (that is, if
 [[RejectPlaintextPorts]] **RejectPlaintextPorts** __port__,__port__,__...__::
     Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
     will instead refuse to make the connection. (Default: None)
-
-[[AllowSingleHopCircuits]] **AllowSingleHopCircuits** **0**|**1**::
-    When this option is set, the attached Tor controller can use relays
-    that have the **AllowSingleHopExits** option turned on to build
-    one-hop Tor connections.  (Default: 0)
 
 [[OptimisticData]] **OptimisticData** **0**|**1**|**auto**::
     When this option is set, and Tor is using an exit node that supports
@@ -1699,13 +1598,6 @@ is non-zero):
     Tor client binds to.  To bind to a different address, use the
     *ListenAddress and OutboundBindAddress options.
 
-[[AllowSingleHopExits]] **AllowSingleHopExits** **0**|**1**::
-    This option controls whether clients can use this server as a single hop
-    proxy. If set to 1, clients can use this server as an exit even if it is
-    the only hop in the circuit.  Note that most clients will refuse to use
-    servers that set this option, since most clients have
-    ExcludeSingleHopRelays set.  (Default: 0)
-
 [[AssumeReachable]] **AssumeReachable** **0**|**1**::
     This option is used when bootstrapping a new Tor network. If set to 1,
     don't do self-reachability testing; just upload your server descriptor
@@ -1889,15 +1781,6 @@ is non-zero):
     For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
     IPv4Only and IPv6Only are mutually exclusive.
 
-[[ORListenAddress]] **ORListenAddress** __IP__[:__PORT__]::
-    Bind to this IP address to listen for connections from Tor clients and
-    servers. If you specify a port, bind to this port rather than the one
-    specified in ORPort. (Default: 0.0.0.0) This directive can be specified
-    multiple times to bind to multiple addresses/ports. +
- +
-    This option is deprecated; you can get the same behavior with ORPort now
-    that it supports NoAdvertise and explicit addresses.
-
 [[PortForwarding]] **PortForwarding** **0**|**1**::
     Attempt to automatically forward the DirPort and ORPort on a NAT router
     connecting this Tor server to the Internet. If set, Tor will try both
@@ -2049,12 +1932,6 @@ is non-zero):
 [[GeoIPv6File]] **GeoIPv6File** __filename__::
     A filename containing IPv6 GeoIP data, for use with by-country statistics.
 
-[[TLSECGroup]] **TLSECGroup** **P224**|**P256**::
-    What EC group should we try to use for incoming TLS connections?
-    P224 is faster, but makes us stand out more. Has no effect if
-    we're a client, or if our OpenSSL version lacks support for ECDHE.
-    (Default: P256)
-
 [[CellStatistics]] **CellStatistics** **0**|**1**::
     Relays only.
     When this option is enabled, Tor collects statistics about cell
@@ -2180,15 +2057,6 @@ details.)
     but one DirPort must have the **NoAdvertise** flag set. (Default: 0) +
  +
     The same flags are supported here as are supported by ORPort.
-
-[[DirListenAddress]] **DirListenAddress** __IP__[:__PORT__]::
-    Bind the directory service to this address. If you specify a port, bind to
-    this port rather than the one specified in DirPort.  (Default: 0.0.0.0)
-    This directive can be specified multiple times  to bind to multiple
-    addresses/ports. +
- +
-    This option is deprecated; you can get the same behavior with DirPort now
-    that it supports NoAdvertise and explicit addresses.
 
 [[DirPolicy]] **DirPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
