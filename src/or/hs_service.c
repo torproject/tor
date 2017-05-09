@@ -251,6 +251,17 @@ get_intro_point_max_lifetime(void)
                                  0, INT32_MAX);
 }
 
+/* Return the number of extra introduction point defined by a consensus
+ * parameter or the default value. */
+static int32_t
+get_intro_point_num_extra(void)
+{
+  /* The [0, 128] range bounds the number of extra introduction point allowed.
+   * Above 128 intro points, it's getting a bit crazy. */
+  return networkstatus_get_param(NULL, "hs_intro_num_extra",
+                                 NUM_INTRO_POINTS_EXTRA, 0, 128);
+}
+
 /* Helper: Function that needs to return 1 for the HT for each loop which
  * frees every service in an hash map. */
 static int
@@ -1406,18 +1417,18 @@ pick_needed_intro_points(hs_service_t *service,
     /* Let's not make tor freak out here and just skip this. */
     goto done;
   }
+
   /* We want to end up with config.num_intro_points intro points, but if we
    * have no intro points at all (chances are they all cycled or we are
-   * starting up), we launch NUM_INTRO_POINTS_EXTRA extra circuits and use the
-   * first config.num_intro_points that complete. See proposal #155, section 4
-   * for the rationale of this which is purely for performance.
+   * starting up), we launch get_intro_point_num_extra() extra circuits and
+   * use the first config.num_intro_points that complete. See proposal #155,
+   * section 4 for the rationale of this which is purely for performance.
    *
    * The ones after the first config.num_intro_points will be converted to
    * 'General' internal circuits and then we'll drop them from the list of
    * intro points. */
   if (digest256map_size(desc->intro_points.map) == 0) {
-    /* XXX: Should a consensus param control that value? */
-    num_needed_ip += NUM_INTRO_POINTS_EXTRA;
+    num_needed_ip += get_intro_point_num_extra();
   }
 
   /* Build an exclude list of nodes of our intro point(s). The expiring intro
@@ -1780,7 +1791,7 @@ get_max_intro_circ_per_period(const hs_service_t *service)
    * extra value so we can launch multiple circuits at once and pick the
    * quickest ones. For instance, we want 3 intros, we add 2 extra so we'll
    * pick 5 intros and launch 5 circuits. */
-  count += (num_wanted_ip + NUM_INTRO_POINTS_EXTRA);
+  count += (num_wanted_ip + get_intro_point_num_extra());
 
   /* Then we add the number of retries that is possible to do for each intro
    * point. If we want 3 intros, we'll allow 3 times the number of possible
