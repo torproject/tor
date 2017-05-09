@@ -878,7 +878,7 @@ test_config_fix_my_family(void *arg)
 
   options_init(options);
   options_init(defaults);
-  options->MyFamily = family;
+  options->MyFamily_lines = family;
 
   options_validate(NULL, options, defaults, 0, &err) ;
 

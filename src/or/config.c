@@ -395,7 +395,7 @@ static config_var_t option_vars_[] = {
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
   V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
-  V(MyFamily,                    LINELIST,   NULL),
+  VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
   V(NATDListenAddress,           LINELIST, NULL),
@@ -707,8 +707,9 @@ static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
-static int normalize_nickname_list(config_line_t **lst, const char *name,
-      char **msg);
+static int normalize_nickname_list(config_line_t **normalized_out,
+                                   const config_line_t *lst, const char *name,
+                                   char **msg);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
 static int parse_ports(or_options_t *options, int validate_only,
@@ -916,6 +917,7 @@ or_options_free(or_options_t *options)
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
+  config_free_lines(options->MyFamily);
   config_free(&options_format, options);
 }
 
@@ -3880,13 +3882,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "have it group-readable.");
   }
 
-  if (options->MyFamily && options->BridgeRelay) {
+  if (options->MyFamily_lines && options->BridgeRelay) {
     log_warn(LD_CONFIG, "Listing a family for a bridge relay is not "
              "supported: it can reveal bridge fingerprints to censors. "
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
   }
-  if (normalize_nickname_list(&options->MyFamily, "MyFamily", msg))
+  if (normalize_nickname_list(&options->MyFamily,
+                              options->MyFamily_lines, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
     routerset_t *rs = routerset_new();
@@ -4697,16 +4700,19 @@ get_default_conf_file(int defaults_file)
  * Warn and return -1 on failure.
  */
 static int
-normalize_nickname_list(config_line_t **lst, const char *name, char **msg)
+normalize_nickname_list(config_line_t **normalized_out,
+                        const config_line_t *lst, const char *name,
+                        char **msg)
 {
-  if (!*lst)
+  if (!lst)
     return 0;
 
   config_line_t *new_nicknames = NULL;
-  config_line_t *new_nicknames_last = NULL;
-  config_line_t *cl;
-  for (cl = *lst; cl; cl = cl->next) {
-    char *line = cl->value;
+  config_line_t **new_nicknames_next = &new_nicknames;
+
+  const config_line_t *cl;
+  for (cl = lst; cl; cl = cl->next) {
+    const char *line = cl->value;
     if (!line)
       continue;
 
@@ -4748,14 +4754,8 @@ normalize_nickname_list(config_line_t **lst, const char *name, char **msg)
       next->value = normalized;
       next->next = NULL;
 
-      if (!new_nicknames) {
-        new_nicknames = next;
-        new_nicknames_last = next;
-      } else {
-        new_nicknames_last->next = next;
-        new_nicknames_last = next;
-      }
-
+      *new_nicknames_next = next;
+      new_nicknames_next = &next->next;
     } SMARTLIST_FOREACH_END(s);
 
     SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
@@ -4767,9 +4767,7 @@ normalize_nickname_list(config_line_t **lst, const char *name, char **msg)
     }
   }
 
-  // Replace the caller's nickname list with the normalized one
-  config_free_lines(*lst);
-  *lst = new_nicknames;
+  *normalized_out = new_nicknames;
 
   return 0;
 }

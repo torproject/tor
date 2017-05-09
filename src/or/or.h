@@ -3951,7 +3951,8 @@ typedef struct {
   /** If set, use these bridge authorities and not the default one. */
   config_line_t *AlternateBridgeAuthority;
 
-  config_line_t *MyFamily; /**< Declared family for this OR. */
+  config_line_t *MyFamily_lines; /**< Declared family for this OR. */
+  config_line_t *MyFamily; /**< Declared family for this OR, normalized */
   config_line_t *NodeFamilies; /**< List of config lines for
                                 * node families */
   smartlist_t *NodeFamilySets; /**< List of parsed NodeFamilies values. */
