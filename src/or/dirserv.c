@@ -274,6 +274,13 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     return FP_REJECT;
   }
 
+  /* Check for the more usual versions to reject a router first. */
+  const uint32_t r = dirserv_get_status_impl(d, router->nickname,
+                                             router->addr, router->or_port,
+                                             router->platform, msg, severity);
+  if (r)
+    return r;
+
   /* dirserv_get_status_impl already rejects versions older than 0.2.4.18-rc,
    * and onion_curve25519_pkey was introduced in 0.2.4.8-alpha.
    * But just in case a relay doesn't provide or lies about its version, or
@@ -324,9 +331,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     }
   }
 
-  return dirserv_get_status_impl(d, router->nickname,
-                                 router->addr, router->or_port,
-                                 router->platform, msg, severity);
+  return 0;
 }
 
 /** Return true if there is no point in downloading the router described by
