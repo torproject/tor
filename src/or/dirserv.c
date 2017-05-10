@@ -571,6 +571,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
                    !general ? router_purpose_to_string(purpose) : "",
                    !general ? "\n" : "")<0) {
     *msg = "Couldn't format annotations";
+    /* XXX Not cool: we return -1 below, but (was_router_added_t)-1 is
+     * ROUTER_BAD_EI, which isn't what's gone wrong here. :( */
     return -1;
   }
 
