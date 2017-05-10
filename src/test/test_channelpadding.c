@@ -11,7 +11,7 @@
 #include "channelpadding.h"
 #include "compat_libevent.h"
 #include "config.h"
-#include <event.h>
+#include <event2/event.h>
 #include "compat_time.h"
 #include "main.h"
 #include "networkstatus.h"

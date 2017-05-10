@@ -20,7 +20,7 @@
 #include "rephist.h"
 #include "router.h"
 #include "compat_time.h"
-#include <event.h>
+#include <event2/event.h>
 
 STATIC int channelpadding_get_netflow_inactive_timeout_ms(const channel_t *);
 STATIC int channelpadding_send_disable_command(channel_t *);
