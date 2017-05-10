@@ -223,9 +223,6 @@ STATIC smartlist_t *decode_link_specifiers(const char *encoded);
 STATIC hs_desc_intro_point_t *decode_introduction_point(
                                 const hs_descriptor_t *desc,
                                 const char *text);
-STATIC int decode_intro_points(const hs_descriptor_t *desc,
-                               hs_desc_encrypted_data_t *desc_enc,
-                               const char *data);
 STATIC int encrypted_data_length_is_valid(size_t len);
 STATIC int cert_is_valid(tor_cert_t *cert, uint8_t type,
                          const char *log_obj_type);
