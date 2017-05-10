@@ -258,6 +258,9 @@ test_channelpadding_timers(void *arg)
   channelpadding_decision_t decision;
   channel_t *chans[CHANNELS_TO_TEST];
   (void)arg;
+
+  tor_libevent_postfork();
+
   connection_array = smartlist_new();
 
   monotime_init();
@@ -348,6 +351,8 @@ test_channelpadding_consensus(void *arg)
   or_options_t *options = get_options_mutable();
   int64_t val;
   (void)arg;
+
+  tor_libevent_postfork();
 
   /*
    * Params tested:
@@ -722,6 +727,8 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   channel_t *chan;
   connection_array = smartlist_new();
   (void)arg;
+
+  tor_libevent_postfork();
 
   monotime_init();
   timers_initialize();

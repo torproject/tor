@@ -54,6 +54,7 @@ void tor_gettimeofday_cached(struct timeval *tv);
 void tor_gettimeofday_cache_clear(void);
 #ifdef TOR_UNIT_TESTS
 void tor_gettimeofday_cache_set(const struct timeval *tv);
+void tor_libevent_postfork(void);
 #endif
 
 #ifdef COMPAT_LIBEVENT_PRIVATE
