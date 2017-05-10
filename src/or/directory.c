@@ -1667,6 +1667,7 @@ directory_send_command(dir_connection_t *conn,
   char decorated_address[128];
   smartlist_t *headers = smartlist_new();
   char *url;
+  char *accept_encoding;
   size_t url_len;
   char request[8192];
   size_t request_len, total_request_len = 0;
@@ -1722,6 +1723,12 @@ directory_send_command(dir_connection_t *conn,
   } else {
     proxystring[0] = 0;
   }
+
+  /* Add Accept-Encoding. */
+  accept_encoding = accept_encoding_header();
+  smartlist_add_asprintf(headers, "Accept-Encoding: %s\r\n",
+                         accept_encoding);
+  tor_free(accept_encoding);
 
   /* Add additional headers, if any */
   {
@@ -3331,6 +3338,29 @@ parse_accept_encoding_header(const char *h)
   } SMARTLIST_FOREACH_END(m);
   smartlist_free(methods);
   return result;
+}
+
+/** Return a newly allocated string containing a comma separated list of
+ * supported encodings. */
+STATIC char *
+accept_encoding_header(void)
+{
+  smartlist_t *methods = smartlist_new();
+  char *header = NULL;
+  compress_method_t method;
+
+  // FIXME(ahf): Should we rename `srv_meth_pref_precompressed` and use this
+  // instead to define the order in the directory module rather than the order
+  // defined in the compression module?
+  for (method = UNKNOWN_METHOD; method > NO_METHOD; --method) {
+    if (tor_compress_supports_method(method))
+      smartlist_add(methods, (char *)compression_method_get_name(method));
+  }
+
+  header = smartlist_join_strings(methods, ", ", 0, NULL);
+  smartlist_free(methods);
+
+  return header;
 }
 
 /** Decide whether a client would accept the consensus we have.
