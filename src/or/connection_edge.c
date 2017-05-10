@@ -3066,6 +3066,64 @@ begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
   return 0;
 }
 
+/** For the given <b>circ</b> and the edge connection <b>n_stream</b>, setup
+ * the the connection, attach it to the circ and connect it. Return 0 on
+ * success or END_CIRC_AT_ORIGIN if we can't find the requested hidden
+ * service port where the caller should close the circuit. */
+static int
+handle_hs_exit_conn(circuit_t *circ, edge_connection_t *n_stream)
+{
+  origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+  log_info(LD_REND,"begin is for rendezvous. configuring stream.");
+  n_stream->base_.address = tor_strdup("(rendezvous)");
+  n_stream->base_.state = EXIT_CONN_STATE_CONNECTING;
+  n_stream->rend_data = rend_data_dup(origin_circ->rend_data);
+  tor_assert(connection_edge_is_rendezvous_stream(n_stream));
+  assert_circuit_ok(circ);
+
+  const int r = rend_service_set_connection_addr_port(n_stream, origin_circ);
+  if (r < 0) {
+    log_info(LD_REND,"Didn't find rendezvous service (port %d)",
+             n_stream->base_.port);
+    /* Send back reason DONE because we want to make hidden service port
+     * scanning harder thus instead of returning that the exit policy
+     * didn't match, which makes it obvious that the port is closed,
+     * return DONE and kill the circuit. That way, a user (malicious or
+     * not) needs one circuit per bad port unless it matches the policy of
+     * the hidden service. */
+    relay_send_end_cell_from_edge(n_stream->stream_id, circ,
+                                  END_STREAM_REASON_DONE,
+                                  origin_circ->cpath->prev);
+    connection_free(TO_CONN(n_stream));
+
+    /* Drop the circuit here since it might be someone deliberately
+     * scanning the hidden service ports. Note that this mitigates port
+     * scanning by adding more work on the attacker side to successfully
+     * scan but does not fully solve it. */
+    if (r < -1)
+      return END_CIRC_AT_ORIGIN;
+    else
+      return 0;
+  }
+  assert_circuit_ok(circ);
+  log_debug(LD_REND,"Finished assigning addr/port");
+  n_stream->cpath_layer = origin_circ->cpath->prev; /* link it */
+
+  /* add it into the linked list of p_streams on this circuit */
+  n_stream->next_stream = origin_circ->p_streams;
+  n_stream->on_circuit = circ;
+  origin_circ->p_streams = n_stream;
+  assert_circuit_ok(circ);
+
+  origin_circ->rend_data->nr_streams++;
+
+  connection_exit_connect(n_stream);
+
+  /* For path bias: This circuit was used successfully */
+  pathbias_mark_use_success(origin_circ);
+  return 0;
+}
+
 /** A relay 'begin' or 'begin_dir' cell has arrived, and either we are
  * an exit hop for the circuit, or we are the origin and it is a
  * rendezvous begin.
@@ -3217,58 +3275,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   n_stream->deliver_window = STREAMWINDOW_START;
 
   if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
-    tor_assert(origin_circ);
-    log_info(LD_REND,"begin is for rendezvous. configuring stream.");
-    n_stream->base_.address = tor_strdup("(rendezvous)");
-    n_stream->base_.state = EXIT_CONN_STATE_CONNECTING;
-    n_stream->rend_data = rend_data_dup(origin_circ->rend_data);
-    tor_assert(connection_edge_is_rendezvous_stream(n_stream));
-    assert_circuit_ok(circ);
-
-    const int r = rend_service_set_connection_addr_port(n_stream, origin_circ);
-    if (r < 0) {
-      log_info(LD_REND,"Didn't find rendezvous service (port %d)",
-               n_stream->base_.port);
-      /* Send back reason DONE because we want to make hidden service port
-       * scanning harder thus instead of returning that the exit policy
-       * didn't match, which makes it obvious that the port is closed,
-       * return DONE and kill the circuit. That way, a user (malicious or
-       * not) needs one circuit per bad port unless it matches the policy of
-       * the hidden service. */
-      relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                    END_STREAM_REASON_DONE,
-                                    layer_hint);
-      connection_free(TO_CONN(n_stream));
-      tor_free(address);
-
-      /* Drop the circuit here since it might be someone deliberately
-       * scanning the hidden service ports. Note that this mitigates port
-       * scanning by adding more work on the attacker side to successfully
-       * scan but does not fully solve it. */
-      if (r < -1)
-        return END_CIRC_AT_ORIGIN;
-      else
-        return 0;
-    }
-    assert_circuit_ok(circ);
-    log_debug(LD_REND,"Finished assigning addr/port");
-    n_stream->cpath_layer = origin_circ->cpath->prev; /* link it */
-
-    /* add it into the linked list of p_streams on this circuit */
-    n_stream->next_stream = origin_circ->p_streams;
-    n_stream->on_circuit = circ;
-    origin_circ->p_streams = n_stream;
-    assert_circuit_ok(circ);
-
-    origin_circ->rend_data->nr_streams++;
-
-    connection_exit_connect(n_stream);
-
-    /* For path bias: This circuit was used successfully */
-    pathbias_mark_use_success(origin_circ);
-
     tor_free(address);
-    return 0;
+    /* We handle this circuit and stream in this function for all supported
+     * hidden service version. */
+    return handle_hs_exit_conn(circ, n_stream);
   }
   tor_strlower(address);
   n_stream->base_.address = address;
