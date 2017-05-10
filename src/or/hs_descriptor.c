@@ -62,6 +62,7 @@
 #include "parsecommon.h"
 #include "rendcache.h"
 #include "hs_cache.h"
+#include "hs_config.h"
 #include "torcert.h" /* tor_cert_encode_ed22519() */
 
 /* Constant string value used for the descriptor format. */
@@ -2035,10 +2036,11 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
   decode_intro_points(desc, desc_encrypted_out, message);
 
   /* Validation of maximum introduction points allowed. */
-  if (smartlist_len(desc_encrypted_out->intro_points) > MAX_INTRO_POINTS) {
+  if (smartlist_len(desc_encrypted_out->intro_points) >
+      HS_CONFIG_V3_MAX_INTRO_POINTS) {
     log_warn(LD_REND, "Service descriptor contains too many introduction "
                       "points. Maximum allowed is %d but we have %d",
-             MAX_INTRO_POINTS,
+             HS_CONFIG_V3_MAX_INTRO_POINTS,
              smartlist_len(desc_encrypted_out->intro_points));
     goto err;
   }
