@@ -3516,8 +3516,9 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
     tor_free(header);
   } else {
     compression_methods_supported = (1u << NO_METHOD);
-    if (zlib_compressed_in_url)
-      compression_methods_supported |= (1u << ZLIB_METHOD);
+  }
+  if (zlib_compressed_in_url) {
+    compression_methods_supported |= (1u << ZLIB_METHOD);
   }
 
   /* Remove all methods that we don't both support. */
