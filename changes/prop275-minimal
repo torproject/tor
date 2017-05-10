@@ -1,0 +1,9 @@
+  o Minor features (future-proofing):
+
+    - Tor no longer refuses to download microdescriptors or descriptors if
+      they are listed as "published in the future".  This change will
+      eventually allow us to stop listing meaningful "published" dates
+      in microdescriptor consensuses, and thereby allow us to reduce the
+      resources required to download consensus diffs by over 50%.
+      Implements part of ticket 21642; implements part of proposal 275.
+
