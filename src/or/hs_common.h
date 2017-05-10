@@ -218,6 +218,8 @@ void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
                                uint64_t time_period_num, int is_next_period,
                                int is_client, smartlist_t *responsible_dirs);
 
+int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
+
 #ifdef HS_COMMON_PRIVATE
 
 #ifdef TOR_UNIT_TESTS

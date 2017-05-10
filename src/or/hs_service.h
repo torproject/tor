@@ -256,6 +256,8 @@ void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
 void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
                                          smartlist_t *dir_list);
+int hs_service_set_conn_addr_port(const origin_circuit_t *circ,
+                                  edge_connection_t *conn);
 
 void hs_service_dir_info_changed(void);
 void hs_service_run_scheduled_events(time_t now);

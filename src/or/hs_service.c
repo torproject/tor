@@ -2386,6 +2386,91 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* Public API */
 /* ========== */
 
+/* Given conn, a rendezvous edge connection acting as an exit stream, look up
+ * the hidden service for the circuit circ, and look up the port and address
+ * based on the connection port. Assign the actual connection address.
+ *
+ * Return 0 on success. Return -1 on failure and the caller should NOT close
+ * the circuit. Return -2 on failure and the caller MUST close the circuit for
+ * security reasons. */
+int
+hs_service_set_conn_addr_port(const origin_circuit_t *circ,
+                              edge_connection_t *conn)
+{
+  hs_service_t *service = NULL;
+
+  tor_assert(circ);
+  tor_assert(conn);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
+  tor_assert(circ->hs_ident);
+
+  get_objects_from_ident(circ->hs_ident, &service, NULL, NULL);
+
+  if (service == NULL) {
+    log_warn(LD_REND, "Unable to find any hidden service associated "
+                      "identity key %s on rendezvous circuit %u.",
+             ed25519_fmt(&circ->hs_ident->identity_pk),
+             TO_CIRCUIT(circ)->n_circ_id);
+    /* We want the caller to close the circuit because it's not a valid
+     * service so no danger. Attempting to bruteforce the entire key space by
+     * opening circuits to learn which service is being hosted here is
+     * impractical. */
+    goto err_close;
+  }
+
+  /* Enforce the streams-per-circuit limit, and refuse to provide a mapping if
+   * this circuit will exceed the limit. */
+  if (service->config.max_streams_per_rdv_circuit > 0 &&
+      (circ->hs_ident->num_rdv_streams >=
+       service->config.max_streams_per_rdv_circuit)) {
+#define MAX_STREAM_WARN_INTERVAL 600
+    static struct ratelim_t stream_ratelim =
+      RATELIM_INIT(MAX_STREAM_WARN_INTERVAL);
+    log_fn_ratelim(&stream_ratelim, LOG_WARN, LD_REND,
+                   "Maximum streams per circuit limit reached on "
+                   "rendezvous circuit %u for service %s. Circuit has "
+                   "%" PRIu64 " out of %" PRIu64 " streams. %s.",
+                   TO_CIRCUIT(circ)->n_circ_id,
+                   service->onion_address,
+                   circ->hs_ident->num_rdv_streams,
+                   service->config.max_streams_per_rdv_circuit,
+                   service->config.max_streams_close_circuit ?
+                    "Closing circuit" : "Ignoring open stream request");
+    if (service->config.max_streams_close_circuit) {
+      /* Service explicitly configured to close immediately. */
+      goto err_close;
+    }
+    /* Exceeding the limit makes tor silently ignore the stream creation
+     * request and keep the circuit open. */
+    goto err_no_close;
+  }
+
+  /* Find a virtual port of that service mathcing the one in the connection if
+   * succesful, set the address in the connection. */
+  if (hs_set_conn_addr_port(service->config.ports, conn) < 0) {
+    log_info(LD_REND, "No virtual port mapping exists for port %d for "
+                      "hidden service %s.",
+             TO_CONN(conn)->port, service->onion_address);
+    if (service->config.allow_unknown_ports) {
+      /* Service explicitly allow connection to unknown ports so close right
+       * away because we do not care about port mapping. */
+      goto err_close;
+    }
+    /* If the service didn't explicitly allow it, we do NOT close the circuit
+     * here to raise the bar in terms of performance for port mapping. */
+    goto err_no_close;
+  }
+
+  /* Success. */
+  return 0;
+ err_close:
+  /* Indicate the caller that the circuit should be closed. */
+  return -2;
+ err_no_close:
+  /* Indicate the caller to NOT close the circuit. */
+  return -1;
+}
+
 /* Add to file_list every filename used by a configured hidden service, and to
  * dir_list every directory path used by a configured hidden service. This is
  * used by the sandbox subsystem to whitelist those. */
