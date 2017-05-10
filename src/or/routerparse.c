@@ -2585,7 +2585,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       goto err;
     }
   } else if (flav == FLAV_MICRODESC) {
-    offset = -1; /* There is no identity digest */
+    offset = -1; /* There is no descriptor digest in an md consensus r line */
   }
 
   if (vote_rs) {
