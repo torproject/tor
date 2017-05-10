@@ -398,7 +398,7 @@ static config_var_t option_vars_[] = {
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
   V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
-  V(MyFamily,                    STRING,   NULL),
+  VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
   OBSOLETE("NATDListenAddress"),
@@ -685,7 +685,9 @@ static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
-static int check_nickname_list(char **lst, const char *name, char **msg);
+static int normalize_nickname_list(config_line_t **normalized_out,
+                                   const config_line_t *lst, const char *name,
+                                   char **msg);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
 static int parse_ports(or_options_t *options, int validate_only,
@@ -893,6 +895,7 @@ or_options_free(or_options_t *options)
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
+  config_free_lines(options->MyFamily);
   config_free(&options_format, options);
 }
 
@@ -3817,13 +3820,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "have it group-readable.");
   }
 
-  if (options->MyFamily && options->BridgeRelay) {
+  if (options->MyFamily_lines && options->BridgeRelay) {
     log_warn(LD_CONFIG, "Listing a family for a bridge relay is not "
              "supported: it can reveal bridge fingerprints to censors. "
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
   }
-  if (check_nickname_list(&options->MyFamily, "MyFamily", msg))
+  if (normalize_nickname_list(&options->MyFamily,
+                              options->MyFamily_lines, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
     routerset_t *rs = routerset_new();
@@ -4524,7 +4528,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       get_effective_bwburst(old_options) !=
         get_effective_bwburst(new_options) ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
-      !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
+      !config_lines_eq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
       old_options->AccountingMax != new_options->AccountingMax ||
       old_options->AccountingRule != new_options->AccountingRule ||
@@ -4620,27 +4624,36 @@ get_default_conf_file(int defaults_file)
 #endif
 }
 
-/** Verify whether lst is a string containing valid-looking comma-separated
- * nicknames, or NULL. Will normalise <b>lst</b> to prefix '$' to any nickname
- * or fingerprint that needs it. Return 0 on success.
+/** Verify whether lst is a list of strings containing valid-looking
+ * comma-separated nicknames, or NULL. Will normalise <b>lst</b> to prefix '$'
+ * to any nickname or fingerprint that needs it. Also splits comma-separated
+ * list elements into multiple elements. Return 0 on success.
  * Warn and return -1 on failure.
  */
 static int
-check_nickname_list(char **lst, const char *name, char **msg)
+normalize_nickname_list(config_line_t **normalized_out,
+                        const config_line_t *lst, const char *name,
+                        char **msg)
 {
-  int r = 0;
-  smartlist_t *sl;
-  int changes = 0;
-
-  if (!*lst)
+  if (!lst)
     return 0;
-  sl = smartlist_new();
 
-  smartlist_split_string(sl, *lst, ",",
-    SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
+  config_line_t *new_nicknames = NULL;
+  config_line_t **new_nicknames_next = &new_nicknames;
 
-  SMARTLIST_FOREACH_BEGIN(sl, char *, s)
+  const config_line_t *cl;
+  for (cl = lst; cl; cl = cl->next) {
+    const char *line = cl->value;
+    if (!line)
+      continue;
+
+    int valid_line = 1;
+    smartlist_t *sl = smartlist_new();
+    smartlist_split_string(sl, line, ",",
+      SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
+    SMARTLIST_FOREACH_BEGIN(sl, char *, s)
     {
+      char *normalized = NULL;
       if (!is_legal_nickname_or_hexdigest(s)) {
         // check if first char is dollar
         if (s[0] != '$') {
@@ -4649,36 +4662,45 @@ check_nickname_list(char **lst, const char *name, char **msg)
           tor_asprintf(&prepended, "$%s", s);
 
           if (is_legal_nickname_or_hexdigest(prepended)) {
-            // The nickname is valid when it's prepended, swap the current
-            // version with a prepended one
-            tor_free(s);
-            SMARTLIST_REPLACE_CURRENT(sl, s, prepended);
-            changes = 1;
-            continue;
+            // The nickname is valid when it's prepended, set it as the
+            // normalized version
+            normalized = prepended;
+          } else {
+            // Still not valid, free and fallback to error message
+            tor_free(prepended);
           }
-
-          // Still not valid, free and fallback to error message
-          tor_free(prepended);
         }
 
-        tor_asprintf(msg, "Invalid nickname '%s' in %s line", s, name);
-        r = -1;
-        break;
+        if (!normalized) {
+          tor_asprintf(msg, "Invalid nickname '%s' in %s line", s, name);
+          valid_line = 0;
+          break;
+        }
+      } else {
+        normalized = tor_strdup(s);
       }
-    }
-  SMARTLIST_FOREACH_END(s);
 
-  // Replace the caller's nickname list with a fixed one
-  if (changes && r == 0) {
-    char *newNicknames = smartlist_join_strings(sl, ", ", 0, NULL);
-    tor_free(*lst);
-    *lst = newNicknames;
+      config_line_t *next = tor_malloc_zero(sizeof(*next));
+      next->key = tor_strdup(cl->key);
+      next->value = normalized;
+      next->next = NULL;
+
+      *new_nicknames_next = next;
+      new_nicknames_next = &next->next;
+    } SMARTLIST_FOREACH_END(s);
+
+    SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
+    smartlist_free(sl);
+
+    if (!valid_line) {
+      config_free_lines(new_nicknames);
+      return -1;
+    }
   }
 
-  SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
-  smartlist_free(sl);
+  *normalized_out = new_nicknames;
 
-  return r;
+  return 0;
 }
 
 /** Learn config file name from command line arguments, or use the default.
