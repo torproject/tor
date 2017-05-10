@@ -74,7 +74,6 @@ static void count_usable_descriptors(int *num_present,
                                      int *num_usable,
                                      smartlist_t *descs_out,
                                      const networkstatus_t *consensus,
-                                     const or_options_t *options,
                                      time_t now,
                                      routerset_t *in_set,
                                      usable_descriptor_t exit_only);
@@ -1690,7 +1689,7 @@ static void
 count_usable_descriptors(int *num_present, int *num_usable,
                          smartlist_t *descs_out,
                          const networkstatus_t *consensus,
-                         const or_options_t *options, time_t now,
+                         time_t now,
                          routerset_t *in_set,
                          usable_descriptor_t exit_only)
 {
@@ -1707,7 +1706,7 @@ count_usable_descriptors(int *num_present, int *num_usable,
          continue;
        if (in_set && ! routerset_contains_routerstatus(in_set, rs, -1))
          continue;
-       if (client_would_use_router(rs, now, options)) {
+       if (client_would_use_router(rs, now)) {
          const char * const digest = rs->descriptor_digest;
          int present;
          ++*num_usable; /* the consensus says we want it. */
@@ -1761,10 +1760,10 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   const int authdir = authdir_mode_v3(options);
 
   count_usable_descriptors(num_present_out, num_usable_out,
-                           mid, consensus, options, now, NULL,
+                           mid, consensus, now, NULL,
                            USABLE_DESCRIPTOR_ALL);
   if (options->EntryNodes) {
-    count_usable_descriptors(&np, &nu, guards, consensus, options, now,
+    count_usable_descriptors(&np, &nu, guards, consensus, now,
                              options->EntryNodes, USABLE_DESCRIPTOR_ALL);
   } else {
     SMARTLIST_FOREACH(mid, const node_t *, node, {
@@ -1785,7 +1784,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
    * an unavoidable feature of forcing authorities to declare
    * certain nodes as exits.
    */
-  count_usable_descriptors(&np, &nu, exits, consensus, options, now,
+  count_usable_descriptors(&np, &nu, exits, consensus, now,
                            NULL, USABLE_DESCRIPTOR_EXIT_ONLY);
   log_debug(LD_NET,
             "%s: %d present, %d usable",
@@ -1834,7 +1833,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     smartlist_t *myexits_unflagged = smartlist_new();
 
     /* All nodes with exit flag in ExitNodes option */
-    count_usable_descriptors(&np, &nu, myexits, consensus, options, now,
+    count_usable_descriptors(&np, &nu, myexits, consensus, now,
                              options->ExitNodes, USABLE_DESCRIPTOR_EXIT_ONLY);
     log_debug(LD_NET,
               "%s: %d present, %d usable",
@@ -1845,7 +1844,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     /* Now compute the nodes in the ExitNodes option where which we don't know
      * what their exit policy is, or we know it permits something. */
     count_usable_descriptors(&np, &nu, myexits_unflagged,
-                             consensus, options, now,
+                             consensus, now,
                              options->ExitNodes, USABLE_DESCRIPTOR_ALL);
     log_debug(LD_NET,
               "%s: %d present, %d usable",

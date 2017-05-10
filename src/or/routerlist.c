@@ -5142,7 +5142,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         continue; /* We would throw it out immediately. */
       }
       if (!we_want_to_fetch_flavor(options, consensus->flavor) &&
-          !client_would_use_router(rs, now, options)) {
+          !client_would_use_router(rs, now)) {
         ++n_wouldnt_use;
         continue; /* We would never use it ourself. */
       }

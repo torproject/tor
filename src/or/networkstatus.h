@@ -76,8 +76,7 @@ int should_delay_dir_fetches(const or_options_t *options,const char **msg_out);
 void update_networkstatus_downloads(time_t now);
 void update_certificate_downloads(time_t now);
 int consensus_is_waiting_for_certs(void);
-int client_would_use_router(const routerstatus_t *rs, time_t now,
-                            const or_options_t *options);
+int client_would_use_router(const routerstatus_t *rs, time_t now);
 MOCK_DECL(networkstatus_t *,networkstatus_get_latest_consensus,(void));
 MOCK_DECL(networkstatus_t *,networkstatus_get_latest_consensus_by_flavor,
           (consensus_flavor_t f));
