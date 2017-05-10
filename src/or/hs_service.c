@@ -2360,9 +2360,55 @@ consider_hsdir_retry(const hs_service_t *service,
   smartlist_free(responsible_dirs);
 }
 
+/* Add to list every filename used by service. This is used by the sandbox
+ * subsystem. */
+static void
+service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
+{
+  const char *s_dir;
+  char fname[128] = {0};
+
+  tor_assert(service);
+  tor_assert(list);
+
+  /* Ease our life. */
+  s_dir = service->config.directory_path;
+  /* The hostname file. */
+  smartlist_add(list, hs_path_from_filename(s_dir, fname_hostname));
+  /* The key files splitted in two. */
+  tor_snprintf(fname, sizeof(fname), "%s_secret_key", fname_keyfile_prefix);
+  smartlist_add(list, hs_path_from_filename(s_dir, fname));
+  tor_snprintf(fname, sizeof(fname), "%s_public_key", fname_keyfile_prefix);
+  smartlist_add(list, hs_path_from_filename(s_dir, fname));
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Add to file_list every filename used by a configured hidden service, and to
+ * dir_list every directory path used by a configured hidden service. This is
+ * used by the sandbox subsystem to whitelist those. */
+void
+hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
+                                    smartlist_t *dir_list)
+{
+  tor_assert(file_list);
+  tor_assert(dir_list);
+
+  /* Add files and dirs for legacy services. */
+  rend_services_add_filenames_to_lists(file_list, dir_list);
+
+  /* Add files and dirs for v3+. */
+  FOR_EACH_SERVICE_BEGIN(service) {
+    /* Skip ephemeral service, they don't touch the disk. */
+    if (service->config.is_ephemeral) {
+      continue;
+    }
+    service_add_fnames_to_list(service, file_list);
+    smartlist_add_strdup(dir_list, service->config.directory_path);
+  } FOR_EACH_DESCRIPTOR_END;
+}
 
 /* Called when our internal view of the directory has changed. We might have
  * new descriptors for hidden service directories that we didn't have before

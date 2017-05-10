@@ -3572,7 +3572,7 @@ sandbox_init_filter(void)
   {
     smartlist_t *files = smartlist_new();
     smartlist_t *dirs = smartlist_new();
-    rend_services_add_filenames_to_lists(files, dirs);
+    hs_service_lists_fnames_for_sandbox(files, dirs);
     SMARTLIST_FOREACH(files, char *, file_name, {
       char *tmp_name = NULL;
       tor_asprintf(&tmp_name, "%s.tmp", file_name);
@@ -3581,6 +3581,7 @@ sandbox_init_filter(void)
       /* steals references */
       sandbox_cfg_allow_open_filename(&cfg, file_name);
       sandbox_cfg_allow_open_filename(&cfg, tmp_name);
+      tor_free(file_name);
     });
     SMARTLIST_FOREACH(dirs, char *, dir, {
       /* steals reference */
