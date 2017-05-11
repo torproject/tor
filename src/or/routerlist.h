@@ -124,7 +124,7 @@ static int WRA_NEVER_DOWNLOADABLE(was_router_added_t s);
  */
 static inline int
 WRA_WAS_ADDED(was_router_added_t s) {
-  return s == ROUTER_ADDED_SUCCESSFULLY || s == ROUTER_ADDED_NOTIFY_GENERATOR;
+  return s == ROUTER_ADDED_SUCCESSFULLY;
 }
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
  * was not added because it was either:

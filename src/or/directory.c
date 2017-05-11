@@ -4467,14 +4467,7 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
                                              conn->base_.address, &msg);
     tor_assert(msg);
 
-    if (r == ROUTER_ADDED_NOTIFY_GENERATOR) {
-      /* Accepted with a message. */
-      log_info(LD_DIRSERV,
-               "Problematic router descriptor or extra-info from %s "
-               "(\"%s\").",
-               conn->base_.address, msg);
-      write_http_status_line(conn, 400, msg);
-    } else if (r == ROUTER_ADDED_SUCCESSFULLY) {
+    if (r == ROUTER_ADDED_SUCCESSFULLY) {
       write_http_status_line(conn, 200, msg);
     } else if (WRA_WAS_OUTDATED(r)) {
       write_http_response_header_impl(conn, -1, NULL, NULL,
