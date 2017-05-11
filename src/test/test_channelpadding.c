@@ -287,22 +287,22 @@ test_channelpadding_timers(void *arg)
       tt_int_op(tried_to_write_cell, OP_EQ, 0);
     }
 
-    /* This loop should add timers to our existing lists in a weak
-     * pseudorandom pattern.  It ensures that the lists can grow with multiple
-     * timers in them. */
-    for (; i < CHANNELS_TO_TEST/2; i++) {
-      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec() + 10 +
-          i*3 % CHANNELPADDING_MAX_TIMERS;
+    /* This loop should add timers to the first position in the timerslot
+     * array, since its timeout is before all other timers. */
+    for (; i < CHANNELS_TO_TEST/3; i++) {
+      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec() + 1;
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
       tt_int_op(tried_to_write_cell, OP_EQ, 0);
     }
 
-    /* This loop should add timers to the first position in the timerslot
-     * array, since its timeout is before all other timers. */
-    for (; i < CHANNELS_TO_TEST/3; i++) {
-      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec() + 1;
+    /* This loop should add timers to our existing lists in a weak
+     * pseudorandom pattern.  It ensures that the lists can grow with multiple
+     * timers in them. */
+    for (; i < CHANNELS_TO_TEST/2; i++) {
+      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec() + 10 +
+          i*3 % CHANNELPADDING_MAX_TIMERS;
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
