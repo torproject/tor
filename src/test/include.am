@@ -69,6 +69,7 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 
 src_test_test_SOURCES = \
 	src/test/log_test_helpers.c \
+	src/test/hs_test_helpers.c \
 	src/test/rend_test_helpers.c \
 	src/test/test.c \
 	src/test/test_accounting.c \

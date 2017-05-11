@@ -58,12 +58,6 @@ typedef enum {
   HS_DESC_AUTH_ED25519 = 1
 } hs_desc_auth_type_t;
 
-/* Type of encryption key in the descriptor. */
-typedef enum {
-  HS_DESC_KEY_TYPE_LEGACY     = 1,
-  HS_DESC_KEY_TYPE_CURVE25519 = 2,
-} hs_desc_key_type_t;
-
 /* Link specifier object that contains information on how to extend to the
  * relay that is the address, port and handshake type. */
 typedef struct hs_desc_link_specifier_t {
@@ -91,18 +85,29 @@ typedef struct hs_desc_intro_point_t {
    * the blinded key and in turn signs it. */
   tor_cert_t *auth_key_cert;
 
-  /* Encryption key type so we know which one to use in the union below. */
-  hs_desc_key_type_t enc_key_type;
+  /* Encryption key for the "ntor" type. */
+  curve25519_public_key_t enc_key;
 
-  /* Keys are mutually exclusive thus the union. */
-  union {
-    /* Encryption key used to encrypt request to hidden service. */
-    curve25519_keypair_t curve25519;
+  /* Certificate cross certifying the descriptor signing key by the encryption
+   * curve25519 key. This certificate contains the signing key and is of type
+   * CERT_TYPE_CROSS_HS_IP_KEYS [0B]. */
+  tor_cert_t *enc_key_cert;
 
-    /* Backward compat: RSA 1024 encryption key for legacy purposes.
-     * Mutually exclusive with enc_key. */
-    crypto_pk_t *legacy;
-  } enc_key;
+  /* (Optional): If this introduction point is a legacy one that is version <=
+   * 0.2.9.x (HSIntro=3), we use this extra key for the intro point to be able
+   * to relay the cells to the service correctly. */
+  struct {
+    /* RSA public key. */
+    crypto_pk_t *key;
+
+    /* Cross certified cert with the descriptor signing key (RSA->Ed). Because
+     * of the cross certification API, we need to keep the certificate binary
+     * blob and its length in order to properly encode it after. */
+    struct {
+      uint8_t *encoded;
+      size_t len;
+    } cert;
+  } legacy;
 
   /* True iff the introduction point has passed the cross certification. Upon
    * decoding an intro point, this must be true. */
