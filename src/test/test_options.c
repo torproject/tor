@@ -186,7 +186,8 @@ test_options_validate_impl(const char *configuration,
                                expect_log, msg))
       goto done;
   }
-  tt_int_op((r == 0), OP_EQ, (msg == NULL));
+  if (r)
+    goto done;
 
   r = config_assign(&options_format, opt, cl, 0, &msg);
   if (phase == PH_ASSIGN) {
@@ -260,6 +261,13 @@ test_options_validate(void *arg)
                PH_ASSIGN);
   OK("HeartbeatPeriod 1 hour", PH_VALIDATE);
   OK("LogTimeGranularity 100 milliseconds", PH_VALIDATE);
+
+  WANT_LOG("ControlSocket \"string with trailing garbage\" bogus", LOG_WARN,
+           "Error while parsing configuration: "
+           "Excess data after quoted string", PH_GETLINES);
+  WANT_LOG("ControlSocket \"bogus escape \\@\"", LOG_WARN,
+           "Error while parsing configuration: "
+           "Invalid escape sequence in quoted string", PH_GETLINES);
 
   close_temp_logs();
   clear_log_messages();
