@@ -5331,8 +5331,6 @@ typedef enum {
 typedef enum was_router_added_t {
   /* Router was added successfully. */
   ROUTER_ADDED_SUCCESSFULLY = 1,
-  /* Router descriptor was added with warnings to submitter. */
-  ROUTER_ADDED_NOTIFY_GENERATOR = 0,
   /* Extrainfo document was rejected because no corresponding router
    * descriptor was found OR router descriptor was rejected because
    * it was incompatible with its extrainfo document. */
