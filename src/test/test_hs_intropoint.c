@@ -503,6 +503,24 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   return key1;
 }
 
+/* Helper function: test circuitmap free_all function outside of
+ * test_intro_point_registration to prevent Coverity from seeing a
+ * double free if the assertion hypothetically fails.
+ */
+static void
+test_circuitmap_free_all(void)
+{
+  hs_circuitmap_ht *the_hs_circuitmap = NULL;
+
+  the_hs_circuitmap = get_hs_circuitmap();
+  tt_assert(the_hs_circuitmap);
+  hs_circuitmap_free_all();
+  the_hs_circuitmap = get_hs_circuitmap();
+  tt_assert(!the_hs_circuitmap);
+ done:
+  ;
+}
+
 /** Successfuly register a v2 intro point and a v3 intro point. Ensure that HS
  *  circuitmap is maintained properly. */
 static void
@@ -583,14 +601,7 @@ test_intro_point_registration(void *arg)
   circuit_free(TO_CIRCUIT(intro_circ));
   circuit_free(TO_CIRCUIT(legacy_intro_circ));
   trn_cell_establish_intro_free(establish_intro_cell);
-
-  { /* Test circuitmap free_all function. */
-    the_hs_circuitmap = get_hs_circuitmap();
-    tt_assert(the_hs_circuitmap);
-    hs_circuitmap_free_all();
-    the_hs_circuitmap = get_hs_circuitmap();
-    tt_assert(!the_hs_circuitmap);
-  }
+  test_circuitmap_free_all();
 
   UNMOCK(hs_intro_send_intro_established_cell);
 }
