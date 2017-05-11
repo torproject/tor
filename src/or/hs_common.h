@@ -95,6 +95,12 @@
 #define HS_KEYBLIND_NONCE_LEN \
   (HS_KEYBLIND_NONCE_PREFIX_LEN + sizeof(uint64_t) + sizeof(uint64_t))
 
+/* Credential and subcredential prefix value. */
+#define HS_CREDENTIAL_PREFIX "credential"
+#define HS_CREDENTIAL_PREFIX_LEN (sizeof(HS_CREDENTIAL_PREFIX) - 1)
+#define HS_SUBCREDENTIAL_PREFIX "subcredential"
+#define HS_SUBCREDENTIAL_PREFIX_LEN (sizeof(HS_SUBCREDENTIAL_PREFIX) - 1)
+
 /* Type of authentication key used by an introduction point. */
 typedef enum {
   HS_AUTH_KEY_TYPE_LEGACY  = 1,
@@ -138,6 +144,10 @@ const char *rend_data_get_desc_id(const rend_data_t *rend_data,
                                   uint8_t replica, size_t *len_out);
 const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
                                        size_t *len_out);
+
+void hs_get_subcredential(const ed25519_public_key_t *identity_pk,
+                          const ed25519_public_key_t *blinded_pk,
+                          uint8_t *subcred_out);
 
 uint64_t hs_get_time_period_num(time_t now);
 uint64_t hs_get_next_time_period_num(time_t now);

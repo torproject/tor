@@ -500,6 +500,43 @@ hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
   tor_assert(offset == HS_SERVICE_ADDR_LEN);
 }
 
+/* Using the given identity public key and a blinded public key, compute the
+ * subcredential and put it in subcred_out. This can't fail. */
+void
+hs_get_subcredential(const ed25519_public_key_t *identity_pk,
+                     const ed25519_public_key_t *blinded_pk,
+                     uint8_t *subcred_out)
+{
+  uint8_t credential[DIGEST256_LEN];
+  crypto_digest_t *digest;
+
+  tor_assert(identity_pk);
+  tor_assert(blinded_pk);
+  tor_assert(subcred_out);
+
+  /* First, build the credential. Construction is as follow:
+   *  credential = H("credential" | public-identity-key) */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HS_CREDENTIAL_PREFIX,
+                          HS_CREDENTIAL_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) identity_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+  crypto_digest_get_digest(digest, (char *) credential, DIGEST256_LEN);
+  crypto_digest_free(digest);
+
+  /* Now, compute the subcredential. Construction is as follow:
+   *  subcredential = H("subcredential" | credential | blinded-public-key). */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HS_SUBCREDENTIAL_PREFIX,
+                          HS_SUBCREDENTIAL_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) credential,
+                          sizeof(credential));
+  crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+  crypto_digest_get_digest(digest, (char *) subcred_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+}
+
 /* Using a base32 representation of a service address, parse its content into
  * the key_out, checksum_out and version_out. Any out variable can be NULL in
  * case the caller would want only one field. checksum_out MUST at least be 2
