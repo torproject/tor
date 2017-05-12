@@ -2307,32 +2307,18 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     if (compression == UNKNOWN_METHOD || guessed != compression) {
       /* Tell the user if we don't believe what we're told about compression.*/
       const char *description1, *description2;
-      if (compression == ZLIB_METHOD)
-        description1 = "as deflated";
-      else if (compression == GZIP_METHOD)
-        description1 = "as gzipped";
-      else if (compression == ZSTD_METHOD)
-        description1 = "as Zstandard compressed";
-      else if (compression == LZMA_METHOD)
-        description1 = "as LZMA compressed";
-      else if (compression == NO_METHOD)
-        description1 = "as uncompressed";
-      else
-        description1 = "with an unknown Content-Encoding";
-      if (guessed == ZLIB_METHOD)
-        description2 = "deflated";
-      else if (guessed == GZIP_METHOD)
-        description2 = "gzipped";
-      else if (guessed == ZSTD_METHOD)
-        description2 = "Zstandard compressed";
-      else if (guessed == LZMA_METHOD)
-        description2 = "LZMA compressed";
-      else if (!plausible)
+
+      description1 = compression_method_get_human_name(compression);
+
+      if (BUG(description1 == NULL))
+        description1 = compression_method_get_human_name(UNKNOWN_METHOD);
+
+      if (guessed == UNKNOWN_METHOD && !plausible)
         description2 = "confusing binary junk";
       else
-        description2 = "uncompressed";
+        description2 = compression_method_get_human_name(guessed);
 
-      log_info(LD_HTTP, "HTTP body from server '%s:%d' was labeled %s, "
+      log_info(LD_HTTP, "HTTP body from server '%s:%d' was labeled as %s, "
                "but it seems to be %s.%s",
                conn->base_.address, conn->base_.port, description1,
                description2,
