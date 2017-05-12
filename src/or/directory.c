@@ -13,6 +13,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "conscache.h"
 #include "consdiff.h"
 #include "consdiffmgr.h"
 #include "control.h"
@@ -117,7 +118,8 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_descriptor_digests);
 static void dir_microdesc_download_failed(smartlist_t *failed,
                                           int status_code);
-static int client_likes_consensus(networkstatus_t *v, const char *want_url);
+static int client_likes_consensus(const struct consensus_cache_entry_t *ent,
+                                  const char *want_url);
 
 static void connection_dir_close_consensus_fetches(
                    dir_connection_t *except_this_one, const char *resource);
@@ -3377,14 +3379,20 @@ accept_encoding_header(void)
  * consensus, 0 otherwise.
  */
 int
-client_likes_consensus(networkstatus_t *v, const char *want_url)
+client_likes_consensus(const struct consensus_cache_entry_t *ent,
+                       const char *want_url)
 {
   smartlist_t *want_authorities = smartlist_new();
+  smartlist_t *voters = smartlist_new();
   int need_at_least;
   int have = 0;
 
   dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0);
   need_at_least = smartlist_len(want_authorities)/2+1;
+
+  if (consensus_cache_entry_get_voters(ent, voters) != 0)
+    goto done;
+
   SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, d) {
     char want_digest[DIGEST_LEN];
     size_t want_len = strlen(d)/2;
@@ -3398,7 +3406,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
       continue;
     };
 
-    SMARTLIST_FOREACH_BEGIN(v->voters, networkstatus_voter_info_t *, vi) {
+    SMARTLIST_FOREACH_BEGIN(voters, networkstatus_voter_info_t *, vi) {
       if (smartlist_len(vi->sigs) &&
           tor_memeq(vi->identity_digest, want_digest, want_len)) {
         have++;
@@ -3411,8 +3419,11 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
       break;
   } SMARTLIST_FOREACH_END(d);
 
+ done:
   SMARTLIST_FOREACH(want_authorities, char *, d, tor_free(d));
   smartlist_free(want_authorities);
+  SMARTLIST_FOREACH(voters, networkstatus_voter_info_t *, v, tor_free(v));
+  smartlist_free(voters);
   return (have >= need_at_least);
 }
 
@@ -3619,20 +3630,25 @@ handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
   return 0;
 }
 
-/** Warn that the consensus <b>v</b> of type <b>flavor</b> is too old and will
- * not be served to clients. Rate-limit the warning to avoid logging an entry
- * on every request.
+/** Warn that the cached consensus <b>cached_consensus</b> of type
+ * <b>flavor</b> is too old and will not be served to clients. Rate-limit the
+ * warning to avoid logging an entry on every request.
  */
 static void
-warn_consensus_is_too_old(networkstatus_t *v, const char *flavor, time_t now)
+warn_consensus_is_too_old(const struct consensus_cache_entry_t *cached_consensus,
+                          const char *flavor, time_t now)
 {
 #define TOO_OLD_WARNING_INTERVAL (60*60)
   static ratelim_t warned = RATELIM_INIT(TOO_OLD_WARNING_INTERVAL);
   char timestamp[ISO_TIME_LEN+1];
+  time_t valid_until;
   char *dupes;
 
+  if (consensus_cache_entry_valid_until(cached_consensus, &valid_until))
+    return;
+
   if ((dupes = rate_limit_log(&warned, now))) {
-    format_local_iso_time(timestamp, v->valid_until);
+    format_local_iso_time(timestamp, valid_until);
     log_warn(LD_DIRSERV, "Our %s%sconsensus is too old, so we will not "
              "serve it to clients. It was valid until %s local time and we "
              "continued to serve it for up to 24 hours after it expired.%s",
@@ -3705,6 +3721,35 @@ find_best_diff(const smartlist_t *digests, int flav,
   return NULL;
 }
 
+/** Lookup the cached consensus document by the flavor found in <b>flav</b>.
+ * The prefered set of compression methods should be listed in the
+ * <b>compression_methods</b> bitfield. The compression method chosen (if any)
+ * is stored in <b>compression_used_out</b>. */
+static struct consensus_cache_entry_t *
+find_best_consensus(int flav,
+                    unsigned compression_methods,
+                    compress_method_t *compression_used_out)
+{
+  struct consensus_cache_entry_t *result = NULL;
+  unsigned u;
+
+  for (u = 0; u < ARRAY_LENGTH(srv_meth_pref_precompressed); ++u) {
+    compress_method_t method = srv_meth_pref_precompressed[u];
+
+    if (0 == (compression_methods & (1u<<method)))
+      continue;
+
+    if (consdiffmgr_find_consensus(&result, flav,
+                                   method) == CONSDIFF_AVAILABLE) {
+      tor_assert_nonfatal(result);
+      *compression_used_out = method;
+      return result;
+    }
+  }
+
+  return NULL;
+}
+
 /** Try to find the best supported compression method possible from a given
  * <b>compression_methods</b>. Return NO_METHOD if no mutually supported
  * compression method could be found. */
@@ -3747,7 +3792,6 @@ handle_get_current_consensus(dir_connection_t *conn,
   /* v3 network status fetch. */
   long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
-  networkstatus_t *v;
   time_t now = time(NULL);
   const char *want_fps = NULL;
   char *flavor = NULL;
@@ -3773,18 +3817,33 @@ handle_get_current_consensus(dir_connection_t *conn,
       want_fps = url+strlen(CONSENSUS_URL_PREFIX);
   }
 
-  v = networkstatus_get_latest_consensus_by_flavor(flav);
+  struct consensus_cache_entry_t *cached_consensus = NULL;
+  smartlist_t *diff_from_digests = NULL;
+  compress_method_t compression_used = NO_METHOD;
+  if (!parse_or_diff_from_header(&diff_from_digests, args->headers)) {
+    tor_assert(diff_from_digests);
+    cached_consensus = find_best_diff(diff_from_digests, flav,
+                                      args->compression_supported,
+                                      &compression_used);
+    SMARTLIST_FOREACH(diff_from_digests, uint8_t *, d, tor_free(d));
+    smartlist_free(diff_from_digests);
+  } else {
+    cached_consensus = find_best_consensus(flav,
+                                           args->compression_supported,
+                                           &compression_used);
+  }
 
-  if (v && !networkstatus_consensus_reasonably_live(v, now)) {
+  if (cached_consensus &&
+      !consensus_cache_entry_is_reasonably_live(cached_consensus, now)) {
     write_http_status_line(conn, 404, "Consensus is too old");
-    warn_consensus_is_too_old(v, flavor, now);
+    warn_consensus_is_too_old(cached_consensus, flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     tor_free(flavor);
     goto done;
   }
 
-  if (v && want_fps &&
-      !client_likes_consensus(v, want_fps)) {
+  if (cached_consensus && want_fps &&
+      !client_likes_consensus(cached_consensus, want_fps)) {
     write_http_status_line(conn, 404, "Consensus not signed by sufficient "
                            "number of requested authorities");
     geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
@@ -3792,37 +3851,30 @@ handle_get_current_consensus(dir_connection_t *conn,
     goto done;
   }
 
-  struct consensus_cache_entry_t *cached_diff = NULL;
-  smartlist_t *diff_from_digests = NULL;
-  compress_method_t compression_used = NO_METHOD;
-  if (!parse_or_diff_from_header(&diff_from_digests, args->headers)) {
-    tor_assert(diff_from_digests);
-    cached_diff = find_best_diff(diff_from_digests, flav,
-                                 args->compression_supported,
-                                 &compression_used);
-    SMARTLIST_FOREACH(diff_from_digests, uint8_t *, d, tor_free(d));
-    smartlist_free(diff_from_digests);
-  }
-
   conn->spool = smartlist_new();
   clear_spool = 1;
   {
     spooled_resource_t *spooled;
-    if (cached_diff) {
-      spooled = spooled_resource_new_from_cache_entry(cached_diff);
+    if (cached_consensus) {
+      spooled = spooled_resource_new_from_cache_entry(cached_consensus);
     } else if (flavor) {
       spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
                                      (uint8_t*)flavor, strlen(flavor));
-      compression_used = compress_method;
+      compression_used = ZLIB_METHOD;
     } else {
       spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
                                      NULL, 0);
-      compression_used = compress_method;
+      compression_used = ZLIB_METHOD;
     }
     tor_free(flavor);
     smartlist_add(conn->spool, spooled);
   }
-  lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
+
+  if (cached_consensus &&
+      consensus_cache_entry_get_lifetime(cached_consensus,
+                                         &lifetime) != 0) {
+    lifetime = 0;
+  }
 
   if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
     write_http_status_line(conn, 503, "Network status object unavailable");
@@ -3875,8 +3927,11 @@ handle_get_current_consensus(dir_connection_t *conn,
   write_http_response_header(conn, -1,
                              compression_used,
                              smartlist_len(conn->spool) == 1 ? lifetime : 0);
-  if (compress_method != NO_METHOD)
-    conn->compress_state = tor_compress_new(0, compress_method,
+
+  // The compress_method requested was NO_METHOD, but we store the data
+  // compressed. Decompress them using `compression_used`.
+  if (compress_method == NO_METHOD)
+    conn->compress_state = tor_compress_new(0, compression_used,
                                             HIGH_COMPRESSION);
 
   /* Prime the connection with some data. */
