@@ -84,6 +84,7 @@
 #include "geoip.h"
 #include "main.h"
 #include "hs_common.h"
+#include "hs_ident.h"
 #include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
@@ -605,6 +606,7 @@ connection_free_(connection_t *conn)
   }
   if (CONN_IS_EDGE(conn)) {
     rend_data_free(TO_EDGE_CONN(conn)->rend_data);
+    hs_ident_edge_conn_free(TO_EDGE_CONN(conn)->hs_ident);
   }
   if (conn->type == CONN_TYPE_CONTROL) {
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
@@ -636,6 +638,7 @@ connection_free_(connection_t *conn)
     }
 
     rend_data_free(dir_conn->rend_data);
+    hs_ident_dir_conn_free(dir_conn->hs_ident);
     if (dir_conn->guard_state) {
       /* Cancel before freeing, if it's still there. */
       entry_guard_cancel(&dir_conn->guard_state);
