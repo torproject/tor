@@ -343,6 +343,32 @@ compression_method_get_name(compress_method_t method)
   return NULL;
 }
 
+/** Table of compression human readable method names. */
+static const struct {
+  compress_method_t method;
+  const char *name;
+} compression_method_human_names[] = {
+  { NO_METHOD, "uncompressed" },
+  { GZIP_METHOD, "gzipped" },
+  { ZLIB_METHOD, "deflated" },
+  { LZMA_METHOD, "LZMA compressed" },
+  { ZSTD_METHOD, "Zstandard compressed" },
+  { UNKNOWN_METHOD, "unknown encoding" },
+};
+
+/** Return a human readable string representation of the compression method
+ * <b>method</b>, or NULL if the method isn't recognized. */
+const char *
+compression_method_get_human_name(compress_method_t method)
+{
+  unsigned i;
+  for (i = 0; i < ARRAY_LENGTH(compression_method_human_names); ++i) {
+    if (method == compression_method_human_names[i].method)
+      return compression_method_human_names[i].name;
+  }
+  return NULL;
+}
+
 /** Return the compression method represented by the string <b>name</b>, or
  * UNKNOWN_METHOD if the string isn't recognized. */
 compress_method_t
