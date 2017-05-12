@@ -716,7 +716,6 @@ consdiffmgr_cleanup(void)
     const char *retain_methodname = compression_method_get_name(
                                RETAIN_CONSENSUS_COMPRESSED_WITH_METHOD);
 
-
     if (BUG(most_recent_sha3_uncompressed == NULL))
       continue;
     SMARTLIST_FOREACH_BEGIN(consensuses, consensus_cache_entry_t *, ent) {
