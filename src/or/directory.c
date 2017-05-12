@@ -3926,9 +3926,8 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       goto vote_done;
     }
     SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
-                      body_len += compress_method != NO_METHOD
-                      ? d->dir_compressed_len
-                      : d->dir_len);
+                      body_len += compress_method != NO_METHOD ?
+                        d->dir_compressed_len : d->dir_len);
     estimated_len += body_len;
     SMARTLIST_FOREACH(items, const char *, item, {
         size_t ln = strlen(item);
@@ -3960,10 +3959,10 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       }
     } else {
       SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
-          connection_write_to_buf(compress_method != NO_METHOD
-                                  ? d->dir_compressed : d->dir,
-                                  compress_method != NO_METHOD
-                                  ? d->dir_compressed_len : d->dir_len,
+          connection_write_to_buf(compress_method != NO_METHOD ?
+                                    d->dir_compressed : d->dir,
+                                  compress_method != NO_METHOD ?
+                                    d->dir_compressed_len : d->dir_len,
                                   TO_CONN(conn)));
     }
   vote_done:
