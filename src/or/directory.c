@@ -3296,6 +3296,15 @@ static compress_method_t srv_meth_pref_precompressed[] = {
   NO_METHOD
 };
 
+/** Array of compression methods to use (if supported) for serving
+ * streamed data, ordered from best to worst. */
+static compress_method_t srv_meth_pref_streaming_compression[] = {
+  ZSTD_METHOD,
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
+
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
  * and convert them to a bitfield where compression method x is supported if
  * and only if 1 &lt;&lt; x is set in the bitfield. */
@@ -3700,11 +3709,22 @@ find_best_diff(const smartlist_t *digests, int flav,
  * <b>compression_methods</b>. Return NO_METHOD if no mutually supported
  * compression method could be found. */
 static compress_method_t
-find_best_compression_method(unsigned compression_methods)
+find_best_compression_method(unsigned compression_methods, int stream)
 {
   unsigned u;
-  for (u = 0; u < ARRAY_LENGTH(srv_meth_pref_precompressed); ++u) {
-    compress_method_t method = srv_meth_pref_precompressed[u];
+  compress_method_t *methods;
+  size_t length;
+
+  if (stream) {
+    methods = srv_meth_pref_streaming_compression;
+    length = ARRAY_LENGTH(srv_meth_pref_streaming_compression);
+  } else {
+    methods = srv_meth_pref_precompressed;
+    length = ARRAY_LENGTH(srv_meth_pref_precompressed);
+  }
+
+  for (u = 0; u < length; ++u) {
+    compress_method_t method = methods[u];
     if (compression_methods & (1u<<method))
       return method;
   }
@@ -3720,7 +3740,7 @@ handle_get_current_consensus(dir_connection_t *conn,
 {
   const char *url = args->url;
   const compress_method_t compress_method =
-    find_best_compression_method(args->compression_supported);
+    find_best_compression_method(args->compression_supported, 0);
   const time_t if_modified_since = args->if_modified_since;
   int clear_spool = 0;
 
@@ -3878,7 +3898,7 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
   const compress_method_t compress_method =
-    find_best_compression_method(args->compression_supported);
+    find_best_compression_method(args->compression_supported, 1);
   {
     int current;
     ssize_t body_len = 0;
@@ -3990,7 +4010,7 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
   const compress_method_t compress_method =
-    find_best_compression_method(args->compression_supported);
+    find_best_compression_method(args->compression_supported, 1);
   int clear_spool = 1;
   {
     conn->spool = smartlist_new();
@@ -4044,7 +4064,7 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
   const compress_method_t compress_method =
-    find_best_compression_method(args->compression_supported);
+    find_best_compression_method(args->compression_supported, 1);
   const or_options_t *options = get_options();
   int clear_spool = 1;
   if (!strcmpstart(url,"/tor/server/") ||
@@ -4138,7 +4158,7 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
   const compress_method_t compress_method =
-    find_best_compression_method(args->compression_supported);
+    find_best_compression_method(args->compression_supported, 1);
   const time_t if_modified_since = args->if_modified_since;
   {
     smartlist_t *certs = smartlist_new();
