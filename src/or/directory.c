@@ -3321,6 +3321,16 @@ parse_accept_encoding_header(const char *h)
   return result;
 }
 
+/** Array of compression methods to use (if supported) for requesting
+ * compressed data, ordered from best to worst. */
+static compress_method_t client_meth_pref[] = {
+  LZMA_METHOD,
+  ZSTD_METHOD,
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
+
 /** Return a newly allocated string containing a comma separated list of
  * supported encodings. */
 STATIC char *
@@ -3329,11 +3339,10 @@ accept_encoding_header(void)
   smartlist_t *methods = smartlist_new();
   char *header = NULL;
   compress_method_t method;
+  unsigned i;
 
-  // FIXME(ahf): Should we rename `srv_meth_pref_precompressed` and use this
-  // instead to define the order in the directory module rather than the order
-  // defined in the compression module?
-  for (method = UNKNOWN_METHOD; method > NO_METHOD; --method) {
+  for (i = 0; i < ARRAY_LENGTH(client_meth_pref); ++i) {
+    method = client_meth_pref[i];
     if (tor_compress_supports_method(method))
       smartlist_add(methods, (char *)compression_method_get_name(method));
   }
