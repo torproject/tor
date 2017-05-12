@@ -2057,20 +2057,15 @@ parse_http_response(const char *headers, int *code, time_t *date,
       if (!strcmpstart(s, "Content-Encoding: ")) {
         enc = s+18; break;
       });
-    if (!enc || !strcmp(enc, "identity")) {
+
+    if (enc == NULL)
       *compression = NO_METHOD;
-    } else if (!strcmp(enc, "deflate") || !strcmp(enc, "x-deflate")) {
-      *compression = ZLIB_METHOD;
-    } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
-      *compression = GZIP_METHOD;
-    } else if (!strcmp(enc, "x-zstd")) {
-      *compression = ZSTD_METHOD;
-    } else if (!strcmp(enc, "x-tor-lzma")) {
-      *compression = LZMA_METHOD;
-    } else {
-      log_info(LD_HTTP, "Unrecognized content encoding: %s. Trying to deal.",
-               escaped(enc));
-      *compression = UNKNOWN_METHOD;
+    else {
+      *compression = compression_method_get_by_name(enc);
+
+      if (*compression == UNKNOWN_METHOD)
+        log_info(LD_HTTP, "Unrecognized content encoding: %s. Trying to deal.",
+                 escaped(enc));
     }
   }
   SMARTLIST_FOREACH(parsed_headers, char *, s, tor_free(s));
