@@ -540,7 +540,7 @@ consdiffmgr_find_consensus(struct consensus_cache_entry_t **entry_out,
                            consensus_flavor_t flavor,
                            compress_method_t method)
 {
-  tor_assert(flavor < N_CONSENSUS_FLAVORS);
+  tor_assert((int)flavor < N_CONSENSUS_FLAVORS);
 
   int pos = consensus_compression_method_pos(method);
   if (pos < 0) {
@@ -1670,7 +1670,7 @@ consensus_compress_worker_replyfn(void *work_)
 
   unsigned u;
   consensus_flavor_t f = job->flavor;
-  tor_assert(f < N_CONSENSUS_FLAVORS);
+  tor_assert((int)f < N_CONSENSUS_FLAVORS);
   for (u = 0; u < ARRAY_LENGTH(handles); ++u) {
     if (handles[u] == NULL)
       continue;
