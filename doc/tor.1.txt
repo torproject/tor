@@ -638,7 +638,7 @@ GENERAL OPTIONS
     (127.0.0.0/8 and ::1).
 
 [[OutboundBindAddressOR]] **OutboundBindAddressOR** __IP__::
-    Make all outbound non-exit (=relay and other) connections originate from the IP
+    Make all outbound non-exit (relay and other) connections originate from the IP
     address specified. This option overrides **OutboundBindAddress** for the same
     IP version. This option may be used twice, once with an IPv4 address and once
     with an IPv6 address. This setting will be ignored for connections to the
