@@ -32,6 +32,15 @@
 /* The valid-after time for a consensus (or for the target consensus of a
  * diff), encoded as ISO UTC. */
 #define LABEL_VALID_AFTER "consensus-valid-after"
+/* The fresh-until time for a consensus (or for the target consensus of a
+ * diff), encoded as ISO UTC. */
+#define LABEL_FRESH_UNTIL "consensus-fresh-until"
+/* The valid-until time for a consensus (or for the target consensus of a
+ * diff), encoded as ISO UTC. */
+#define LABEL_VALID_UNTIL "consensus-valid-until"
+/* Comma-separated list of hex-encoded identity digests for the voting
+ * authorities. */
+#define LABEL_SIGNATORIES "consensus-signatories"
 /* A hex encoded SHA3 digest of the object, as compressed (if any) */
 #define LABEL_SHA3_DIGEST "sha3-digest"
 /* A hex encoded SHA3 digest of the object before compression. */
@@ -1729,54 +1738,53 @@ consdiffmgr_enable_background_compression(void)
   background_compression = 1;
 }
 
-/** Read the lifetime of cached object <b>ent</b> into <b>lifetime</b>. */
+/** Read the set of voters from the cached object <b>ent</b> into
+ * <b>out</b>, as a list of hex-encoded digests. Return 0 on success,
+ * -1 if no signatories were recorded. */
 int
-consensus_cache_entry_get_lifetime(const consensus_cache_entry_t *ent,
-                                   long *lifetime)
+consensus_cache_entry_get_voter_id_digests(const consensus_cache_entry_t *ent,
+                                           smartlist_t *out)
 {
-  tor_assert(lifetime);
-
-  // FIXME(ahf): Fill out.
-  *lifetime = 0;
-
+  tor_assert(ent);
+  tor_assert(out);
+  const char *s;
+  s = consensus_cache_entry_get_value(ent, LABEL_SIGNATORIES);
+  if (s == NULL)
+    return -1;
+  smartlist_split_string(out, s, ",", SPLIT_SKIP_SPACE|SPLIT_STRIP_SPACE, 0);
   return 0;
 }
 
-/** Return non-zero if the cache object found in <b>ent</b> is
- * reasonably live, otherwise return 0.   Use <b>now</b> to pass the
- * timestamp used for comparison. */
+/** Read the fresh-until time of cached object <b>ent</b> into *<b>out</b>
+ * and return 0, or return -1 if no such time was recorded. */
 int
-consensus_cache_entry_is_reasonably_live(const consensus_cache_entry_t *ent,
-                                         time_t now)
+consensus_cache_entry_get_fresh_until(const consensus_cache_entry_t *ent,
+                                      time_t *out)
 {
-  // FIXME(ahf): Fill out.
-  (void)now;
-
-  return 1;
+  tor_assert(ent);
+  tor_assert(out);
+  const char *s;
+  s = consensus_cache_entry_get_value(ent, LABEL_FRESH_UNTIL);
+  if (s == NULL || parse_iso_time_nospace(s, out) < 0)
+    return -1;
+  else
+    return 0;
 }
 
-/** Read the set of voters from the cached object <b>ent</b> into <b>out</b>. */
+/** Read the valid until timestamp from the cached object <b>ent</b> into
+ * *<b>out</b> and return 0, or return -1 if no such time was recorded. */
 int
-consensus_cache_entry_get_voters(const consensus_cache_entry_t *ent,
-                                     smartlist_t *out)
+consensus_cache_entry_get_valid_until(const consensus_cache_entry_t *ent,
+                                      time_t *out)
 {
-  // FIXME(ahf): Fill out.
-  (void)out;
-
-  return 0;
-}
-
-/** Read the valid until timestamp from the cached object <b>ent</b>
- * into <b>out</b>. */
-int
-consensus_cache_entry_valid_until(const consensus_cache_entry_t *ent,
-                                  time_t *out)
-{
+  tor_assert(ent);
   tor_assert(out);
 
-  // FIXME(ahf): Fill out.
-  *out = time(NULL);
-
-  return 0;
+  const char *s;
+  s = consensus_cache_entry_get_value(ent, LABEL_VALID_UNTIL);
+  if (s == NULL || parse_iso_time_nospace(s, out) < 0)
+    return -1;
+  else
+    return 0;
 }
 

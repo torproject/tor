@@ -36,16 +36,13 @@ consdiff_status_t consdiffmgr_find_diff_from(
                            size_t digestlen,
                            compress_method_t method);
 
-int consensus_cache_entry_get_lifetime(
-                                  const struct consensus_cache_entry_t *ent,
-                                  long *lifetime);
-int consensus_cache_entry_is_reasonably_live(
-                                  const struct consensus_cache_entry_t *ent,
-                                  time_t now);
-int consensus_cache_entry_get_voters(
+int consensus_cache_entry_get_voter_id_digests(
                                   const struct consensus_cache_entry_t *ent,
                                   smartlist_t *out);
-int consensus_cache_entry_valid_until(
+int consensus_cache_entry_get_fresh_until(
+                                  const struct consensus_cache_entry_t *ent,
+                                  time_t *out);
+int consensus_cache_entry_get_valid_until(
                                   const struct consensus_cache_entry_t *ent,
                                   time_t *out);
 

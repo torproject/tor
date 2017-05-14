@@ -3382,47 +3382,35 @@ int
 client_likes_consensus(const struct consensus_cache_entry_t *ent,
                        const char *want_url)
 {
-  smartlist_t *want_authorities = smartlist_new();
   smartlist_t *voters = smartlist_new();
   int need_at_least;
   int have = 0;
 
+  if (consensus_cache_entry_get_voter_id_digests(ent, voters) != 0) {
+    return 1; // We don't know the voters; assume the client won't mind. */
+  }
+
+  smartlist_t *want_authorities = smartlist_new();
   dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0);
   need_at_least = smartlist_len(want_authorities)/2+1;
 
-  if (consensus_cache_entry_get_voters(ent, voters) != 0)
-    goto done;
+  SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, want_digest) {
 
-  SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, d) {
-    char want_digest[DIGEST_LEN];
-    size_t want_len = strlen(d)/2;
-    if (want_len > DIGEST_LEN)
-      want_len = DIGEST_LEN;
-
-    if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2)
-                      != (int) want_len) {
-      log_fn(LOG_PROTOCOL_WARN, LD_DIR,
-             "Failed to decode requested authority digest %s.", escaped(d));
-      continue;
-    };
-
-    SMARTLIST_FOREACH_BEGIN(voters, networkstatus_voter_info_t *, vi) {
-      if (smartlist_len(vi->sigs) &&
-          tor_memeq(vi->identity_digest, want_digest, want_len)) {
+    SMARTLIST_FOREACH_BEGIN(voters, const char *, digest) {
+      if (!strcasecmpstart(digest, want_digest)) {
         have++;
         break;
       };
-    } SMARTLIST_FOREACH_END(vi);
+    } SMARTLIST_FOREACH_END(digest);
 
     /* early exit, if we already have enough */
     if (have >= need_at_least)
       break;
-  } SMARTLIST_FOREACH_END(d);
+  } SMARTLIST_FOREACH_END(want_digest);
 
- done:
   SMARTLIST_FOREACH(want_authorities, char *, d, tor_free(d));
   smartlist_free(want_authorities);
-  SMARTLIST_FOREACH(voters, networkstatus_voter_info_t *, v, tor_free(v));
+  SMARTLIST_FOREACH(voters, char *, cp, tor_free(cp));
   smartlist_free(voters);
   return (have >= need_at_least);
 }
@@ -3644,7 +3632,7 @@ warn_consensus_is_too_old(const struct consensus_cache_entry_t *cached_consensus
   time_t valid_until;
   char *dupes;
 
-  if (consensus_cache_entry_valid_until(cached_consensus, &valid_until))
+  if (consensus_cache_entry_get_valid_until(cached_consensus, &valid_until))
     return;
 
   if ((dupes = rate_limit_log(&warned, now))) {
@@ -3832,9 +3820,17 @@ handle_get_current_consensus(dir_connection_t *conn,
                                            args->compression_supported,
                                            &compression_used);
   }
+  time_t fresh_until, valid_until;
+  int have_fresh_until = 0, have_valid_until = 0;
+  if (cached_consensus) {
+    have_fresh_until =
+      !consensus_cache_entry_get_fresh_until(cached_consensus, &fresh_until);
+    have_valid_until =
+      !consensus_cache_entry_get_valid_until(cached_consensus, &valid_until);
+  }
 
-  if (cached_consensus &&
-      !consensus_cache_entry_is_reasonably_live(cached_consensus, now)) {
+  if (cached_consensus && have_valid_until &&
+      !networkstatus_valid_until_is_reasonably_live(valid_until, now)) {
     write_http_status_line(conn, 404, "Consensus is too old");
     warn_consensus_is_too_old(cached_consensus, flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
@@ -3870,11 +3866,7 @@ handle_get_current_consensus(dir_connection_t *conn,
     smartlist_add(conn->spool, spooled);
   }
 
-  if (cached_consensus &&
-      consensus_cache_entry_get_lifetime(cached_consensus,
-                                         &lifetime) != 0) {
-    lifetime = 0;
-  }
+  lifetime = (have_fresh_until && fresh_until > now) ? fresh_until - now : 0;
 
   if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
     write_http_status_line(conn, 503, "Network status object unavailable");
