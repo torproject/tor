@@ -661,12 +661,6 @@ GENERAL OPTIONS
     following the Tor specification. Otherwise, they are logged with severity
     \'info'. (Default: 0)
 
-[[PredictedPortsRelevanceTime]] **PredictedPortsRelevanceTime** __NUM__::
-    Set how long, after the client has made an anonymized connection to a
-    given port, we will try to make sure that we build circuits to
-    exits that support that port. This option is deprecated. Please use
-    CircuitsAvailableTimeout instead.
-
 [[RunAsDaemon]] **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect
     on Windows; instead you should use the --service command-line option.
@@ -805,10 +799,6 @@ The following options are useful only for clients (that is, if
     connections. Note that the actual timeout value is uniformly randomized
     from the specified value to twice that amount. (Default: 30 minutes;
     Max: 24 hours)
-
-[[CircuitIdleTimeout]] **CircuitIdleTimeout** __NUM__::
-    If we have kept a clean (never used) circuit around for NUM seconds, then
-    close it. This option is deprecated. Use CircuitsAvailableTimeout instead.
 
 [[CircuitStreamTimeout]] **CircuitStreamTimeout** __NUM__::
     If non-zero, this option overrides our internal timeout schedule for how
