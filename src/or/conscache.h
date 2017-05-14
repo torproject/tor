@@ -52,14 +52,6 @@ void consensus_cache_entry_mark_for_aggressive_release(
 int consensus_cache_entry_get_body(const consensus_cache_entry_t *ent,
                                    const uint8_t **body_out,
                                    size_t *sz_out);
-int consensus_cache_entry_get_lifetime(const consensus_cache_entry_t *ent,
-                                       long *lifetime);
-int consensus_cache_entry_is_reasonably_live(const consensus_cache_entry_t *ent,
-                                             time_t now);
-int consensus_cache_entry_get_voters(const consensus_cache_entry_t *ent,
-                                     smartlist_t *out);
-int consensus_cache_entry_valid_until(const consensus_cache_entry_t *ent,
-                                      time_t *out);
 
 #ifdef TOR_UNIT_TESTS
 int consensus_cache_entry_is_mapped(consensus_cache_entry_t *ent);

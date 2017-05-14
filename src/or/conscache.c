@@ -374,65 +374,6 @@ consensus_cache_entry_get_body(const consensus_cache_entry_t *ent,
   return 0;
 }
 
-/** Read the lifetime of cached object <b>ent</b> into <b>lifetime</b>. */
-int consensus_cache_entry_get_lifetime(const consensus_cache_entry_t *ent,
-                                       long *lifetime)
-{
-  if (BUG(ent->magic != CCE_MAGIC))
-    return -1; // LCOV_EXCL_LINE
-
-  tor_assert(lifetime);
-
-  // FIXME(ahf): Fill out.
-  *lifetime = 0;
-
-  return 0;
-}
-
-/** Return non-zero if the cache object found in <b>ent</b> is
- * reasonably live, otherwise return 0.   Use <b>now</b> to pass the
- * timestamp used for comparison. */
-int consensus_cache_entry_is_reasonably_live(const consensus_cache_entry_t *ent,
-                                             time_t now)
-{
-  if (BUG(ent->magic != CCE_MAGIC))
-    return -1; // LCOV_EXCL_LINE
-
-  // FIXME(ahf): Fill out.
-  (void)now;
-
-  return 1;
-}
-
-/** Read the set of voters from the cached object <b>ent</b> into <b>out</b>. */
-int consensus_cache_entry_get_voters(const consensus_cache_entry_t *ent,
-                                     smartlist_t *out)
-{
-  if (BUG(ent->magic != CCE_MAGIC))
-    return -1; // LCOV_EXCL_LINE
-
-  // FIXME(ahf): Fill out.
-  (void)out;
-
-  return 0;
-}
-
-/** Read the valid until timestamp from the cached object <b>ent</b>
- * into <b>out</b>. */
-int consensus_cache_entry_valid_until(const consensus_cache_entry_t *ent,
-                                      time_t *out)
-{
-  if (BUG(ent->magic != CCE_MAGIC))
-    return -1; // LCOV_EXCL_LINE
-
-  tor_assert(out);
-
-  // FIXME(ahf): Fill out.
-  *out = time(NULL);
-
-  return 0;
-}
-
 /**
  * Unmap every mmap'd element of <b>cache</b> that has been unused
  * since <b>cutoff</b>.
