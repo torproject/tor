@@ -3815,11 +3815,14 @@ handle_get_current_consensus(dir_connection_t *conn,
                                       &compression_used);
     SMARTLIST_FOREACH(diff_from_digests, uint8_t *, d, tor_free(d));
     smartlist_free(diff_from_digests);
-  } else {
+  }
+
+  if (! cached_consensus) {
     cached_consensus = find_best_consensus(flav,
                                            args->compression_supported,
                                            &compression_used);
   }
+
   time_t fresh_until, valid_until;
   int have_fresh_until = 0, have_valid_until = 0;
   if (cached_consensus) {
