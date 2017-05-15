@@ -2,4 +2,4 @@
     - Onion key rotation and expiry intervals are now defined as a network
       consensus parameter as per proposal 274. The default lifetime of an
       onion key is bumped from 7 to 28 days. Old onion keys will expire after 7
-      days by default. Fixes bug 21641.
+      days by default. Closes ticket 21641.
