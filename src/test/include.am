@@ -250,6 +250,7 @@ src_test_test_timers_LDFLAGS = $(src_test_test_LDFLAGS)
 
 noinst_HEADERS+= \
 	src/test/fakechans.h \
+	src/test/hs_test_helpers.h \
 	src/test/log_test_helpers.h \
 	src/test/rend_test_helpers.h \
 	src/test/test.h \
