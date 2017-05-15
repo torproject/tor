@@ -2926,6 +2926,7 @@ tor_init(int argc, char *argv[])
   rep_hist_init();
   /* Initialize the service cache. */
   rend_cache_init();
+  hs_cache_init();
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
                       * cheap. */
 

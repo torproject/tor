@@ -1,0 +1,6 @@
+  o Major bugfixes (hidden service directory, security):
+    - Fix an assertion failure in the hidden service directory code, which
+      could be used by an attacker to remotely cause a Tor relay process to
+      exit. Relays running earlier versions of Tor 0.3.0.x should upgrade.
+      This security issue is tracked as tracked as
+      TROVE-2017-002. Fixes bug 22246; bugfix on 0.3.0.1-alpha.
