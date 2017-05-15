@@ -3618,12 +3618,12 @@ handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
   return 0;
 }
 
-/** Warn that the cached consensus <b>cached_consensus</b> of type
+/** Warn that the cached consensus <b>consensus</b> of type
  * <b>flavor</b> is too old and will not be served to clients. Rate-limit the
  * warning to avoid logging an entry on every request.
  */
 static void
-warn_consensus_is_too_old(const struct consensus_cache_entry_t *cached_consensus,
+warn_consensus_is_too_old(const struct consensus_cache_entry_t *consensus,
                           const char *flavor, time_t now)
 {
 #define TOO_OLD_WARNING_INTERVAL (60*60)
@@ -3632,7 +3632,7 @@ warn_consensus_is_too_old(const struct consensus_cache_entry_t *cached_consensus
   time_t valid_until;
   char *dupes;
 
-  if (consensus_cache_entry_get_valid_until(cached_consensus, &valid_until))
+  if (consensus_cache_entry_get_valid_until(consensus, &valid_until))
     return;
 
   if ((dupes = rate_limit_log(&warned, now))) {
