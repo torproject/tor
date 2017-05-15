@@ -1,3 +1,26 @@
+Changes in version 0.3.0.7 - 2017-05-1?
+  blurb blurb blurb
+
+  o Minor features:
+    - Update geoip and geoip6 to the May 2 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (future-proofing):
+    - Tor no longer refuses to download microdescriptors or descriptors
+      if they are listed as "published in the future". This change will
+      eventually allow us to stop listing meaningful "published" dates
+      in microdescriptor consensuses, and thereby allow us to reduce the
+      resources required to download consensus diffs by over 50%.
+      Implements part of ticket 21642; implements part of proposal 275.
+
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - The getpid() system call is now permitted under the Linux seccomp2
+      sandbox, to avoid crashing with versions of OpenSSL (and other
+      libraries) that attempt to learn the process's PID by using the
+      syscall rather than the VDSO code. Fixes bug 21943; bugfix
+      on 0.2.5.1-alpha.
+
+
 Changes in version 0.3.0.6 - 2017-04-26
   Tor 0.3.0.6 is the first stable release of the Tor 0.3.0 series.
 
