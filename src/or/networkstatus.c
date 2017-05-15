@@ -1407,16 +1407,24 @@ networkstatus_get_live_consensus,(time_t now))
  * Return 1 if the consensus is reasonably live, or 0 if it is too old.
  */
 int
-networkstatus_consensus_reasonably_live(networkstatus_t *consensus, time_t now)
+networkstatus_consensus_reasonably_live(const networkstatus_t *consensus,
+                                        time_t now)
 {
-#define REASONABLY_LIVE_TIME (24*60*60)
   if (BUG(!consensus))
     return 0;
 
-  if (now <= consensus->valid_until + REASONABLY_LIVE_TIME)
-    return 1;
+  return networkstatus_valid_until_is_reasonably_live(consensus->valid_until,
+                                                      now);
+}
 
-  return 0;
+/** As networkstatus_consensus_reasonably_live, but takes a valid_until
+ * time rather than an entire consensus. */
+int
+networkstatus_valid_until_is_reasonably_live(time_t valid_until,
+                                             time_t now)
+{
+#define REASONABLY_LIVE_TIME (24*60*60)
+  return (now <= valid_until + REASONABLY_LIVE_TIME);
 }
 
 /* XXXX remove this in favor of get_live_consensus. But actually,

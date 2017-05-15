@@ -23,6 +23,11 @@ struct consensus_cache_entry_t; // from conscache.h
 int consdiffmgr_add_consensus(const char *consensus,
                               const networkstatus_t *as_parsed);
 
+consdiff_status_t consdiffmgr_find_consensus(
+                           struct consensus_cache_entry_t **entry_out,
+                           consensus_flavor_t flavor,
+                           compress_method_t method);
+
 consdiff_status_t consdiffmgr_find_diff_from(
                            struct consensus_cache_entry_t **entry_out,
                            consensus_flavor_t flavor,
@@ -30,8 +35,20 @@ consdiff_status_t consdiffmgr_find_diff_from(
                            const uint8_t *digest,
                            size_t digestlen,
                            compress_method_t method);
+
+int consensus_cache_entry_get_voter_id_digests(
+                                  const struct consensus_cache_entry_t *ent,
+                                  smartlist_t *out);
+int consensus_cache_entry_get_fresh_until(
+                                  const struct consensus_cache_entry_t *ent,
+                                  time_t *out);
+int consensus_cache_entry_get_valid_until(
+                                  const struct consensus_cache_entry_t *ent,
+                                  time_t *out);
+
 void consdiffmgr_rescan(void);
 int consdiffmgr_cleanup(void);
+void consdiffmgr_enable_background_compression(void);
 void consdiffmgr_configure(const consdiff_cfg_t *cfg);
 struct sandbox_cfg_elem;
 int consdiffmgr_register_with_sandbox(struct sandbox_cfg_elem **cfg);
@@ -40,6 +57,7 @@ int consdiffmgr_validate(void);
 
 #ifdef CONSDIFFMGR_PRIVATE
 STATIC unsigned n_diff_compression_methods(void);
+STATIC unsigned n_consensus_compression_methods(void);
 STATIC consensus_cache_t *cdm_cache_get(void);
 STATIC consensus_cache_entry_t *cdm_cache_lookup_consensus(
                           consensus_flavor_t flavor, time_t valid_after);

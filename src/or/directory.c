@@ -13,6 +13,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "conscache.h"
 #include "consdiff.h"
 #include "consdiffmgr.h"
 #include "control.h"
@@ -117,7 +118,8 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_descriptor_digests);
 static void dir_microdesc_download_failed(smartlist_t *failed,
                                           int status_code);
-static int client_likes_consensus(networkstatus_t *v, const char *want_url);
+static int client_likes_consensus(const struct consensus_cache_entry_t *ent,
+                                  const char *want_url);
 
 static void connection_dir_close_consensus_fetches(
                    dir_connection_t *except_this_one, const char *resource);
@@ -1667,6 +1669,7 @@ directory_send_command(dir_connection_t *conn,
   char decorated_address[128];
   smartlist_t *headers = smartlist_new();
   char *url;
+  char *accept_encoding;
   size_t url_len;
   char request[8192];
   size_t request_len, total_request_len = 0;
@@ -1722,6 +1725,12 @@ directory_send_command(dir_connection_t *conn,
   } else {
     proxystring[0] = 0;
   }
+
+  /* Add Accept-Encoding. */
+  accept_encoding = accept_encoding_header();
+  smartlist_add_asprintf(headers, "Accept-Encoding: %s\r\n",
+                         accept_encoding);
+  tor_free(accept_encoding);
 
   /* Add additional headers, if any */
   {
@@ -2050,16 +2059,15 @@ parse_http_response(const char *headers, int *code, time_t *date,
       if (!strcmpstart(s, "Content-Encoding: ")) {
         enc = s+18; break;
       });
-    if (!enc || !strcmp(enc, "identity")) {
+
+    if (enc == NULL)
       *compression = NO_METHOD;
-    } else if (!strcmp(enc, "deflate") || !strcmp(enc, "x-deflate")) {
-      *compression = ZLIB_METHOD;
-    } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
-      *compression = GZIP_METHOD;
-    } else {
-      log_info(LD_HTTP, "Unrecognized content encoding: %s. Trying to deal.",
-               escaped(enc));
-      *compression = UNKNOWN_METHOD;
+    else {
+      *compression = compression_method_get_by_name(enc);
+
+      if (*compression == UNKNOWN_METHOD)
+        log_info(LD_HTTP, "Unrecognized content encoding: %s. Trying to deal.",
+                 escaped(enc));
     }
   }
   SMARTLIST_FOREACH(parsed_headers, char *, s, tor_free(s));
@@ -2301,37 +2309,31 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     if (compression == UNKNOWN_METHOD || guessed != compression) {
       /* Tell the user if we don't believe what we're told about compression.*/
       const char *description1, *description2;
-      if (compression == ZLIB_METHOD)
-        description1 = "as deflated";
-      else if (compression == GZIP_METHOD)
-        description1 = "as gzipped";
-      else if (compression == NO_METHOD)
-        description1 = "as uncompressed";
-      else
-        description1 = "with an unknown Content-Encoding";
-      if (guessed == ZLIB_METHOD)
-        description2 = "deflated";
-      else if (guessed == GZIP_METHOD)
-        description2 = "gzipped";
-      else if (!plausible)
+
+      description1 = compression_method_get_human_name(compression);
+
+      if (BUG(description1 == NULL))
+        description1 = compression_method_get_human_name(UNKNOWN_METHOD);
+
+      if (guessed == UNKNOWN_METHOD && !plausible)
         description2 = "confusing binary junk";
       else
-        description2 = "uncompressed";
+        description2 = compression_method_get_human_name(guessed);
 
-      log_info(LD_HTTP, "HTTP body from server '%s:%d' was labeled %s, "
+      log_info(LD_HTTP, "HTTP body from server '%s:%d' was labeled as %s, "
                "but it seems to be %s.%s",
                conn->base_.address, conn->base_.port, description1,
                description2,
                (compression>0 && guessed>0)?"  Trying both.":"");
     }
-    /* Try declared compression first if we can. */
-    if (compression == GZIP_METHOD  || compression == ZLIB_METHOD)
+    /* Try declared compression first if we can.
+     * tor_compress_supports_method() also returns true for NO_METHOD. */
+    if (tor_compress_supports_method(compression))
       tor_uncompress(&new_body, &new_len, body, body_len, compression,
                      !allow_partial, LOG_PROTOCOL_WARN);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
-    if (!new_body &&
-        (guessed == GZIP_METHOD || guessed == ZLIB_METHOD) &&
+    if (!new_body && tor_compress_supports_method(guessed) &&
         compression != guessed)
       tor_uncompress(&new_body, &new_len, body, body_len, guessed,
                      !allow_partial, LOG_PROTOCOL_WARN);
@@ -3296,6 +3298,15 @@ static compress_method_t srv_meth_pref_precompressed[] = {
   NO_METHOD
 };
 
+/** Array of compression methods to use (if supported) for serving
+ * streamed data, ordered from best to worst. */
+static compress_method_t srv_meth_pref_streaming_compression[] = {
+  ZSTD_METHOD,
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
+
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
  * and convert them to a bitfield where compression method x is supported if
  * and only if 1 &lt;&lt; x is set in the bitfield. */
@@ -3321,6 +3332,38 @@ parse_accept_encoding_header(const char *h)
   return result;
 }
 
+/** Array of compression methods to use (if supported) for requesting
+ * compressed data, ordered from best to worst. */
+static compress_method_t client_meth_pref[] = {
+  LZMA_METHOD,
+  ZSTD_METHOD,
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
+
+/** Return a newly allocated string containing a comma separated list of
+ * supported encodings. */
+STATIC char *
+accept_encoding_header(void)
+{
+  smartlist_t *methods = smartlist_new();
+  char *header = NULL;
+  compress_method_t method;
+  unsigned i;
+
+  for (i = 0; i < ARRAY_LENGTH(client_meth_pref); ++i) {
+    method = client_meth_pref[i];
+    if (tor_compress_supports_method(method))
+      smartlist_add(methods, (char *)compression_method_get_name(method));
+  }
+
+  header = smartlist_join_strings(methods, ", ", 0, NULL);
+  smartlist_free(methods);
+
+  return header;
+}
+
 /** Decide whether a client would accept the consensus we have.
  *
  * Clients can say they only want a consensus if it's signed by more
@@ -3336,42 +3379,39 @@ parse_accept_encoding_header(const char *h)
  * consensus, 0 otherwise.
  */
 int
-client_likes_consensus(networkstatus_t *v, const char *want_url)
+client_likes_consensus(const struct consensus_cache_entry_t *ent,
+                       const char *want_url)
 {
-  smartlist_t *want_authorities = smartlist_new();
+  smartlist_t *voters = smartlist_new();
   int need_at_least;
   int have = 0;
 
+  if (consensus_cache_entry_get_voter_id_digests(ent, voters) != 0) {
+    return 1; // We don't know the voters; assume the client won't mind. */
+  }
+
+  smartlist_t *want_authorities = smartlist_new();
   dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0);
   need_at_least = smartlist_len(want_authorities)/2+1;
-  SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, d) {
-    char want_digest[DIGEST_LEN];
-    size_t want_len = strlen(d)/2;
-    if (want_len > DIGEST_LEN)
-      want_len = DIGEST_LEN;
 
-    if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2)
-                      != (int) want_len) {
-      log_fn(LOG_PROTOCOL_WARN, LD_DIR,
-             "Failed to decode requested authority digest %s.", escaped(d));
-      continue;
-    };
+  SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, want_digest) {
 
-    SMARTLIST_FOREACH_BEGIN(v->voters, networkstatus_voter_info_t *, vi) {
-      if (smartlist_len(vi->sigs) &&
-          tor_memeq(vi->identity_digest, want_digest, want_len)) {
+    SMARTLIST_FOREACH_BEGIN(voters, const char *, digest) {
+      if (!strcasecmpstart(digest, want_digest)) {
         have++;
         break;
       };
-    } SMARTLIST_FOREACH_END(vi);
+    } SMARTLIST_FOREACH_END(digest);
 
     /* early exit, if we already have enough */
     if (have >= need_at_least)
       break;
-  } SMARTLIST_FOREACH_END(d);
+  } SMARTLIST_FOREACH_END(want_digest);
 
   SMARTLIST_FOREACH(want_authorities, char *, d, tor_free(d));
   smartlist_free(want_authorities);
+  SMARTLIST_FOREACH(voters, char *, cp, tor_free(cp));
+  smartlist_free(voters);
   return (have >= need_at_least);
 }
 
@@ -3578,20 +3618,25 @@ handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
   return 0;
 }
 
-/** Warn that the consensus <b>v</b> of type <b>flavor</b> is too old and will
- * not be served to clients. Rate-limit the warning to avoid logging an entry
- * on every request.
+/** Warn that the cached consensus <b>consensus</b> of type
+ * <b>flavor</b> is too old and will not be served to clients. Rate-limit the
+ * warning to avoid logging an entry on every request.
  */
 static void
-warn_consensus_is_too_old(networkstatus_t *v, const char *flavor, time_t now)
+warn_consensus_is_too_old(const struct consensus_cache_entry_t *consensus,
+                          const char *flavor, time_t now)
 {
 #define TOO_OLD_WARNING_INTERVAL (60*60)
   static ratelim_t warned = RATELIM_INIT(TOO_OLD_WARNING_INTERVAL);
   char timestamp[ISO_TIME_LEN+1];
+  time_t valid_until;
   char *dupes;
 
+  if (consensus_cache_entry_get_valid_until(consensus, &valid_until))
+    return;
+
   if ((dupes = rate_limit_log(&warned, now))) {
-    format_local_iso_time(timestamp, v->valid_until);
+    format_local_iso_time(timestamp, valid_until);
     log_warn(LD_DIRSERV, "Our %s%sconsensus is too old, so we will not "
              "serve it to clients. It was valid until %s local time and we "
              "continued to serve it for up to 24 hours after it expired.%s",
@@ -3632,6 +3677,13 @@ parse_or_diff_from_header(smartlist_t **digests_out, const char *headers)
   return 0;
 }
 
+/** Fallback compression method.  The fallback compression method is used in
+ * case a client requests a non-compressed document. We only store compressed
+ * documents, so we use this compression method to fetch the document and let
+ * the spooling system do the streaming decompression.
+ */
+#define FALLBACK_COMPRESS_METHOD ZLIB_METHOD
+
 /**
  * Try to find the best consensus diff possible in order to serve a client
  * request for a diff from one of the consensuses in <b>digests</b> to the
@@ -3661,7 +3713,80 @@ find_best_diff(const smartlist_t *digests, int flav,
       }
     }
   } SMARTLIST_FOREACH_END(diff_from);
+
+  SMARTLIST_FOREACH_BEGIN(digests, const uint8_t *, diff_from) {
+    if (consdiffmgr_find_diff_from(&result, flav, DIGEST_SHA3_256, diff_from,
+          DIGEST256_LEN, FALLBACK_COMPRESS_METHOD) == CONSDIFF_AVAILABLE) {
+      tor_assert_nonfatal(result);
+      *compression_used_out = FALLBACK_COMPRESS_METHOD;
+      return result;
+    }
+  } SMARTLIST_FOREACH_END(diff_from);
+
   return NULL;
+}
+
+/** Lookup the cached consensus document by the flavor found in <b>flav</b>.
+ * The prefered set of compression methods should be listed in the
+ * <b>compression_methods</b> bitfield. The compression method chosen (if any)
+ * is stored in <b>compression_used_out</b>. */
+static struct consensus_cache_entry_t *
+find_best_consensus(int flav,
+                    unsigned compression_methods,
+                    compress_method_t *compression_used_out)
+{
+  struct consensus_cache_entry_t *result = NULL;
+  unsigned u;
+
+  for (u = 0; u < ARRAY_LENGTH(srv_meth_pref_precompressed); ++u) {
+    compress_method_t method = srv_meth_pref_precompressed[u];
+
+    if (0 == (compression_methods & (1u<<method)))
+      continue;
+
+    if (consdiffmgr_find_consensus(&result, flav,
+                                   method) == CONSDIFF_AVAILABLE) {
+      tor_assert_nonfatal(result);
+      *compression_used_out = method;
+      return result;
+    }
+  }
+
+  if (consdiffmgr_find_consensus(&result, flav,
+        FALLBACK_COMPRESS_METHOD) == CONSDIFF_AVAILABLE) {
+    tor_assert_nonfatal(result);
+    *compression_used_out = FALLBACK_COMPRESS_METHOD;
+    return result;
+  }
+
+  return NULL;
+}
+
+/** Try to find the best supported compression method possible from a given
+ * <b>compression_methods</b>. Return NO_METHOD if no mutually supported
+ * compression method could be found. */
+static compress_method_t
+find_best_compression_method(unsigned compression_methods, int stream)
+{
+  unsigned u;
+  compress_method_t *methods;
+  size_t length;
+
+  if (stream) {
+    methods = srv_meth_pref_streaming_compression;
+    length = ARRAY_LENGTH(srv_meth_pref_streaming_compression);
+  } else {
+    methods = srv_meth_pref_precompressed;
+    length = ARRAY_LENGTH(srv_meth_pref_precompressed);
+  }
+
+  for (u = 0; u < length; ++u) {
+    compress_method_t method = methods[u];
+    if (compression_methods & (1u<<method))
+      return method;
+  }
+
+  return NO_METHOD;
 }
 
 /** Helper function for GET /tor/status-vote/current/consensus
@@ -3671,14 +3796,14 @@ handle_get_current_consensus(dir_connection_t *conn,
                              const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 0);
   const time_t if_modified_since = args->if_modified_since;
   int clear_spool = 0;
 
   /* v3 network status fetch. */
   long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
-  networkstatus_t *v;
   time_t now = time(NULL);
   const char *want_fps = NULL;
   char *flavor = NULL;
@@ -3704,18 +3829,44 @@ handle_get_current_consensus(dir_connection_t *conn,
       want_fps = url+strlen(CONSENSUS_URL_PREFIX);
   }
 
-  v = networkstatus_get_latest_consensus_by_flavor(flav);
+  struct consensus_cache_entry_t *cached_consensus = NULL;
+  smartlist_t *diff_from_digests = NULL;
+  compress_method_t compression_used = NO_METHOD;
+  if (!parse_or_diff_from_header(&diff_from_digests, args->headers)) {
+    tor_assert(diff_from_digests);
+    cached_consensus = find_best_diff(diff_from_digests, flav,
+                                      args->compression_supported,
+                                      &compression_used);
+    SMARTLIST_FOREACH(diff_from_digests, uint8_t *, d, tor_free(d));
+    smartlist_free(diff_from_digests);
+  }
 
-  if (v && !networkstatus_consensus_reasonably_live(v, now)) {
+  if (! cached_consensus) {
+    cached_consensus = find_best_consensus(flav,
+                                           args->compression_supported,
+                                           &compression_used);
+  }
+
+  time_t fresh_until, valid_until;
+  int have_fresh_until = 0, have_valid_until = 0;
+  if (cached_consensus) {
+    have_fresh_until =
+      !consensus_cache_entry_get_fresh_until(cached_consensus, &fresh_until);
+    have_valid_until =
+      !consensus_cache_entry_get_valid_until(cached_consensus, &valid_until);
+  }
+
+  if (cached_consensus && have_valid_until &&
+      !networkstatus_valid_until_is_reasonably_live(valid_until, now)) {
     write_http_status_line(conn, 404, "Consensus is too old");
-    warn_consensus_is_too_old(v, flavor, now);
+    warn_consensus_is_too_old(cached_consensus, flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     tor_free(flavor);
     goto done;
   }
 
-  if (v && want_fps &&
-      !client_likes_consensus(v, want_fps)) {
+  if (cached_consensus && want_fps &&
+      !client_likes_consensus(cached_consensus, want_fps)) {
     write_http_status_line(conn, 404, "Consensus not signed by sufficient "
                            "number of requested authorities");
     geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
@@ -3723,48 +3874,23 @@ handle_get_current_consensus(dir_connection_t *conn,
     goto done;
   }
 
-  struct consensus_cache_entry_t *cached_diff = NULL;
-  smartlist_t *diff_from_digests = NULL;
-  compress_method_t compression_used = NO_METHOD;
-  if (!parse_or_diff_from_header(&diff_from_digests, args->headers)) {
-    tor_assert(diff_from_digests);
-    cached_diff = find_best_diff(diff_from_digests, flav,
-                                 args->compression_supported,
-                                 &compression_used);
-    SMARTLIST_FOREACH(diff_from_digests, uint8_t *, d, tor_free(d));
-    smartlist_free(diff_from_digests);
-  }
-
   conn->spool = smartlist_new();
   clear_spool = 1;
   {
     spooled_resource_t *spooled;
-    if (cached_diff) {
-      spooled = spooled_resource_new_from_cache_entry(cached_diff);
-    } else if (flavor) {
-      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                     (uint8_t*)flavor, strlen(flavor));
-      compression_used = compressed ? ZLIB_METHOD : NO_METHOD;
-    } else {
-      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                     NULL, 0);
-      compression_used = compressed ? ZLIB_METHOD : NO_METHOD;
+    if (cached_consensus) {
+      spooled = spooled_resource_new_from_cache_entry(cached_consensus);
+      smartlist_add(conn->spool, spooled);
     }
     tor_free(flavor);
-    smartlist_add(conn->spool, spooled);
   }
-  lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
 
-  if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
-    write_http_status_line(conn, 503, "Network status object unavailable");
-    geoip_note_ns_response(GEOIP_REJECT_UNAVAILABLE);
-    goto done;
-  }
+  lifetime = (have_fresh_until && fresh_until > now) ? fresh_until - now : 0;
 
   size_t size_guess = 0;
   int n_expired = 0;
   dirserv_spool_remove_missing_and_guess_size(conn, if_modified_since,
-                                              compressed,
+                                              compress_method != NO_METHOD,
                                               &size_guess,
                                               &n_expired);
 
@@ -3803,11 +3929,17 @@ handle_get_current_consensus(dir_connection_t *conn,
   }
 
   clear_spool = 0;
+
+  // The compress_method might have been NO_METHOD, but we store the data
+  // compressed. Decompress them using `compression_used`. See fallback code in
+  // find_best_consensus() and find_best_diff().
   write_http_response_header(conn, -1,
-                             compression_used,
+                             compress_method == NO_METHOD ?
+                               NO_METHOD : compression_used,
                              smartlist_len(conn->spool) == 1 ? lifetime : 0);
-  if (! compressed)
-    conn->compress_state = tor_compress_new(0, ZLIB_METHOD,
+
+  if (compress_method == NO_METHOD)
+    conn->compress_state = tor_compress_new(0, compression_used,
                                             HIGH_COMPRESSION);
 
   /* Prime the connection with some data. */
@@ -3828,7 +3960,8 @@ static int
 handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 1);
   {
     int current;
     ssize_t body_len = 0;
@@ -3885,11 +4018,12 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       goto vote_done;
     }
     SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
-                      body_len += compressed ? d->dir_z_len : d->dir_len);
+                      body_len += compress_method != NO_METHOD ?
+                        d->dir_compressed_len : d->dir_len);
     estimated_len += body_len;
     SMARTLIST_FOREACH(items, const char *, item, {
         size_t ln = strlen(item);
-        if (compressed) {
+        if (compress_method != NO_METHOD) {
           estimated_len += ln/2;
         } else {
           body_len += ln; estimated_len += ln;
@@ -3901,12 +4035,12 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       goto vote_done;
     }
     write_http_response_header(conn, body_len ? body_len : -1,
-                 compressed ? ZLIB_METHOD : NO_METHOD,
+                 compress_method,
                  lifetime);
 
     if (smartlist_len(items)) {
-      if (compressed) {
-        conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
+      if (compress_method != NO_METHOD) {
+        conn->compress_state = tor_compress_new(1, compress_method,
                            choose_compression_level(estimated_len));
         SMARTLIST_FOREACH(items, const char *, c,
                  connection_write_to_buf_compress(c, strlen(c), conn, 0));
@@ -3917,8 +4051,10 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       }
     } else {
       SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
-          connection_write_to_buf(compressed ? d->dir_z : d->dir,
-                                  compressed ? d->dir_z_len : d->dir_len,
+          connection_write_to_buf(compress_method != NO_METHOD ?
+                                    d->dir_compressed : d->dir,
+                                  compress_method != NO_METHOD ?
+                                    d->dir_compressed_len : d->dir_len,
                                   TO_CONN(conn)));
     }
   vote_done:
@@ -3936,7 +4072,8 @@ static int
 handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 1);
   int clear_spool = 1;
   {
     conn->spool = smartlist_new();
@@ -3947,7 +4084,8 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
                                       DSR_DIGEST256|DSR_BASE64|DSR_SORT_UNIQ);
 
     size_t size_guess = 0;
-    dirserv_spool_remove_missing_and_guess_size(conn, 0, compressed,
+    dirserv_spool_remove_missing_and_guess_size(conn, 0,
+                                                compress_method != NO_METHOD,
                                                 &size_guess, NULL);
     if (smartlist_len(conn->spool) == 0) {
       write_http_status_line(conn, 404, "Not found");
@@ -3963,11 +4101,11 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
 
     clear_spool = 0;
     write_http_response_header(conn, -1,
-                               compressed ? ZLIB_METHOD : NO_METHOD,
+                               compress_method,
                                MICRODESC_CACHE_LIFETIME);
 
-    if (compressed)
-      conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
+    if (compress_method != NO_METHOD)
+      conn->compress_state = tor_compress_new(1, compress_method,
                                       choose_compression_level(size_guess));
 
     const int initial_flush_result = connection_dirserv_flushed_some(conn);
@@ -3988,7 +4126,8 @@ static int
 handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 1);
   const or_options_t *options = get_options();
   int clear_spool = 1;
   if (!strcmpstart(url,"/tor/server/") ||
@@ -4027,8 +4166,8 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
     size_t size_guess = 0;
     int n_expired = 0;
     dirserv_spool_remove_missing_and_guess_size(conn, publish_cutoff,
-                                                compressed, &size_guess,
-                                                &n_expired);
+                                                compress_method != NO_METHOD,
+                                                &size_guess, &n_expired);
 
     /* If we are the bridge authority and the descriptor is a bridge
      * descriptor, remember that we served this descriptor for desc stats. */
@@ -4058,11 +4197,9 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
         dir_conn_clear_spool(conn);
         goto done;
       }
-      write_http_response_header(conn, -1,
-                                 compressed ? ZLIB_METHOD : NO_METHOD,
-                                 cache_lifetime);
-      if (compressed)
-        conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
+      write_http_response_header(conn, -1, compress_method, cache_lifetime);
+      if (compress_method != NO_METHOD)
+        conn->compress_state = tor_compress_new(1, compress_method,
                                         choose_compression_level(size_guess));
       clear_spool = 0;
       /* Prime the connection with some data. */
@@ -4083,7 +4220,8 @@ static int
 handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const int compressed = args->compression_supported & (1u << ZLIB_METHOD);
+  const compress_method_t compress_method =
+    find_best_compression_method(args->compression_supported, 1);
   const time_t if_modified_since = args->if_modified_since;
   {
     smartlist_t *certs = smartlist_new();
@@ -4146,16 +4284,19 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
     SMARTLIST_FOREACH(certs, authority_cert_t *, c,
                       len += c->cache_info.signed_descriptor_len);
 
-    if (global_write_bucket_low(TO_CONN(conn), compressed?len/2:len, 2)) {
+    if (global_write_bucket_low(TO_CONN(conn),
+                                compress_method != NO_METHOD ? len/2 : len,
+                                2)) {
       write_http_status_line(conn, 503, "Directory busy, try again later");
       goto keys_done;
     }
 
-    write_http_response_header(conn, compressed?-1:len,
-                               compressed ? ZLIB_METHOD : NO_METHOD,
+    write_http_response_header(conn,
+                               compress_method != NO_METHOD ? -1 : len,
+                               compress_method,
                                60*60);
-    if (compressed) {
-      conn->compress_state = tor_compress_new(1, ZLIB_METHOD,
+    if (compress_method != NO_METHOD) {
+      conn->compress_state = tor_compress_new(1, compress_method,
                                               choose_compression_level(len));
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf_compress(

@@ -2482,6 +2482,7 @@ do_main_loop(void)
     /* launch cpuworkers. Need to do this *after* we've read the onion key. */
     cpu_init();
   }
+  consdiffmgr_enable_background_compression();
 
   /* Setup shared random protocol subsystem. */
   if (authdir_mode_v3(get_options())) {
