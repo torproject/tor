@@ -1,0 +1,6 @@
+  o Minor bugfixes (directory authority):
+    - When rejecting a router descriptor because the relay is running an
+      obsolete version of Tor without ntor support, warn about the obsolete
+      tor version, not the missing ntor key. Fixes bug 20270;
+      bugfix on 0.2.9.3-alpha.
+
