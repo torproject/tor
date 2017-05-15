@@ -64,6 +64,7 @@ new_dir_conn(void)
 {
   dir_connection_t *conn = dir_connection_new(AF_INET);
   tor_addr_from_ipv4h(&conn->base_.addr, 0x7f000001);
+  TO_CONN(conn)->address = tor_strdup("127.0.0.1");
   return conn;
 }
 
@@ -1718,7 +1719,6 @@ test_dir_handle_get_status_vote_current_consensus_too_old(void *data)
   MOCK(networkstatus_get_latest_consensus_by_flavor, mock_ns_get_by_flavor);
 
   conn = new_dir_conn();
-  TO_CONN(conn)->address = tor_strdup("127.0.0.1");
 
   setup_capture_of_logs(LOG_WARN);
 
@@ -1815,7 +1815,6 @@ status_vote_current_consensus_ns_test(char **header, char **body,
   tt_str_op("ab", OP_EQ, geoip_get_country_name(1));
 
   conn = new_dir_conn();
-  TO_CONN(conn)->address = tor_strdup("127.0.0.1");
 
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/consensus-ns"), NULL, 0));
