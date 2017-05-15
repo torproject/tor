@@ -3677,6 +3677,13 @@ parse_or_diff_from_header(smartlist_t **digests_out, const char *headers)
   return 0;
 }
 
+/** Fallback compression method.  The fallback compression method is used in
+ * case a client requests a non-compressed document. We only store compressed
+ * documents, so we use this compression method to fetch the document and let
+ * the spooling system do the streaming decompression.
+ */
+#define FALLBACK_COMPRESS_METHOD ZLIB_METHOD
+
 /**
  * Try to find the best consensus diff possible in order to serve a client
  * request for a diff from one of the consensuses in <b>digests</b> to the
@@ -3706,6 +3713,16 @@ find_best_diff(const smartlist_t *digests, int flav,
       }
     }
   } SMARTLIST_FOREACH_END(diff_from);
+
+  SMARTLIST_FOREACH_BEGIN(digests, const uint8_t *, diff_from) {
+    if (consdiffmgr_find_diff_from(&result, flav, DIGEST_SHA3_256, diff_from,
+          DIGEST256_LEN, FALLBACK_COMPRESS_METHOD) == CONSDIFF_AVAILABLE) {
+      tor_assert_nonfatal(result);
+      *compression_used_out = FALLBACK_COMPRESS_METHOD;
+      return result;
+    }
+  } SMARTLIST_FOREACH_END(diff_from);
+
   return NULL;
 }
 
@@ -3733,6 +3750,13 @@ find_best_consensus(int flav,
       *compression_used_out = method;
       return result;
     }
+  }
+
+  if (consdiffmgr_find_consensus(&result, flav,
+        FALLBACK_COMPRESS_METHOD) == CONSDIFF_AVAILABLE) {
+    tor_assert_nonfatal(result);
+    *compression_used_out = FALLBACK_COMPRESS_METHOD;
+    return result;
   }
 
   return NULL;
@@ -3911,12 +3935,15 @@ handle_get_current_consensus(dir_connection_t *conn,
   }
 
   clear_spool = 0;
+
+  // The compress_method might have been NO_METHOD, but we store the data
+  // compressed. Decompress them using `compression_used`. See fallback code in
+  // find_best_consensus() and find_best_diff().
   write_http_response_header(conn, -1,
-                             compression_used,
+                             compress_method == NO_METHOD ?
+                               NO_METHOD : compression_used,
                              smartlist_len(conn->spool) == 1 ? lifetime : 0);
 
-  // The compress_method requested was NO_METHOD, but we store the data
-  // compressed. Decompress them using `compression_used`.
   if (compress_method == NO_METHOD)
     conn->compress_state = tor_compress_new(0, compression_used,
                                             HIGH_COMPRESSION);
