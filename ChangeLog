@@ -1,5 +1,15 @@
-Changes in version 0.3.0.7 - 2017-05-1?
-  blurb blurb blurb
+Changes in version 0.3.0.7 - 2017-05-15
+  Tor 0.3.0.7 fixes a medium-severity security bug in earlier versions
+  of Tor 0.3.0.x, where an attacker could cause a Tor relay process to
+  exit. Relays running earlier versions of Tor 0.3.0.x should upgrade;
+  clients are not affected.
+
+  o Major bugfixes (hidden service directory, security):
+    - Fix an assertion failure in the hidden service directory code,
+      which could be used by an attacker to remotely cause a Tor relay
+      process to exit. Relays running earlier versions of Tor 0.3.0.x
+      should upgrade. This security issue is tracked as tracked as
+      TROVE-2017-002. Fixes bug 22246; bugfix on 0.3.0.1-alpha.
 
   o Minor features:
     - Update geoip and geoip6 to the May 2 2017 Maxmind GeoLite2
