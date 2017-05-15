@@ -1758,6 +1758,7 @@ consensus_queue_compression_work(const char *consensus,
     config_line_prepend(&job->labels_in, LABEL_SIGNATORIES, signers);
     tor_free(signers);
     SMARTLIST_FOREACH(hexvoters, char *, cp, tor_free(cp));
+    smartlist_free(hexvoters);
   }
 
   if (background_compression) {
