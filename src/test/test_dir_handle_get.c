@@ -1606,12 +1606,15 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_enough_sigs(void* d)
   (void) d;
 
   /* init mock */
-  // XXXX Instead of mocking this, we need to mock
-  // XXXX consensus_cache_entry_get_voter_id_digests().
   mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
   mock_ns_val->flavor = FLAV_NS;
+  mock_ns_val->type = NS_TYPE_CONSENSUS;
   mock_ns_val->voters = smartlist_new();
-  mock_ns_val->valid_until = time(NULL);
+  mock_ns_val->valid_after = time(NULL) - 1800;
+  mock_ns_val->valid_until = time(NULL) - 60;
+
+  #define NETWORK_STATUS "some network status string"
+  consdiffmgr_add_consensus(NETWORK_STATUS, mock_ns_val);
 
   /* init mock */
   init_mock_options();
@@ -1673,8 +1676,6 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_found(void* data)
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/consensus-ns"), NULL, 0));
 
-  // XXXX This fails with 503 instead of 404; I think that's a regression in
-  // XXXX our behavior.
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
                       NULL, NULL, 1, 0);
   tt_assert(header);
@@ -1700,18 +1701,24 @@ test_dir_handle_get_status_vote_current_consensus_too_old(void *data)
   char *header = NULL;
   (void)data;
 
-  // XXXX Instead of mocking this, we need to mock
-  // XXXX consensus_cache_entry_get_valid_until.
   mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
+  mock_ns_val->type = NS_TYPE_CONSENSUS;
   mock_ns_val->flavor = FLAV_MICRODESC;
-  mock_ns_val->valid_until = time(NULL) - (60 * 60 * 24) - 1;
+  mock_ns_val->valid_after = time(NULL) - (24 * 60 * 60 + 1800);
+  mock_ns_val->fresh_until = time(NULL) - (24 * 60 * 60 + 900);
+  mock_ns_val->valid_until = time(NULL) - (24 * 60 * 60 + 20);
+
+  #define NETWORK_STATUS "some network status string"
+  consdiffmgr_add_consensus(NETWORK_STATUS, mock_ns_val);
 
   init_mock_options();
+
   MOCK(get_options, mock_get_options);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
   MOCK(networkstatus_get_latest_consensus_by_flavor, mock_ns_get_by_flavor);
 
   conn = new_dir_conn();
+  TO_CONN(conn)->address = tor_strdup("127.0.0.1");
 
   setup_capture_of_logs(LOG_WARN);
 
@@ -1727,6 +1734,17 @@ test_dir_handle_get_status_vote_current_consensus_too_old(void *data)
 
   tor_free(header);
   teardown_capture_of_logs();
+  tor_free(mock_ns_val);
+
+  mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
+  mock_ns_val->type = NS_TYPE_CONSENSUS;
+  mock_ns_val->flavor = FLAV_NS;
+  mock_ns_val->valid_after = time(NULL) - (24 * 60 * 60 + 1800);
+  mock_ns_val->fresh_until = time(NULL) - (24 * 60 * 60 + 900);
+  mock_ns_val->valid_until = time(NULL) - (24 * 60 * 60 + 20);
+
+  #define NETWORK_STATUS "some network status string"
+  consdiffmgr_add_consensus(NETWORK_STATUS, mock_ns_val);
 
   setup_capture_of_logs(LOG_WARN);
 

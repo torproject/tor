@@ -3887,12 +3887,6 @@ handle_get_current_consensus(dir_connection_t *conn,
 
   lifetime = (have_fresh_until && fresh_until > now) ? fresh_until - now : 0;
 
-  if (!smartlist_len(conn->spool)) { /* we failed to create/cache cp */
-    write_http_status_line(conn, 503, "Network status object unavailable");
-    geoip_note_ns_response(GEOIP_REJECT_UNAVAILABLE);
-    goto done;
-  }
-
   size_t size_guess = 0;
   int n_expired = 0;
   dirserv_spool_remove_missing_and_guess_size(conn, if_modified_since,
