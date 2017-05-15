@@ -28,7 +28,7 @@ consdiffmgr_test_setup(const struct testcase_t *arg)
   get_options_mutable()->DataDirectory = ddir_fname; // now owns the pointer.
   check_private_dir(ddir_fname, CPD_CREATE, NULL);
 
-  consdiff_cfg_t consdiff_cfg = { 7200, 300 };
+  consdiff_cfg_t consdiff_cfg = { 300 };
   consdiffmgr_configure(&consdiff_cfg);
   return (void *)1; // must return something non-null.
 }

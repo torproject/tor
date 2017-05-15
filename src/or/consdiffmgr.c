@@ -166,7 +166,6 @@ static HT_HEAD(cdm_diff_ht, cdm_diff_t) cdm_diff_ht = HT_INITIALIZER();
  * Configuration for this module
  */
 static consdiff_cfg_t consdiff_cfg = {
-  /* .cache_max_age_hours = */ 24 * 90,
   // XXXX I'd like to make this number bigger, but it interferes with the
   // XXXX seccomp2 syscall filter, which tops out at BPF_MAXINS (4096)
   // XXXX rules.
@@ -456,6 +455,25 @@ cdm_cache_lookup_consensus(consensus_flavor_t flavor, time_t valid_after)
   return result;
 }
 
+/** Return the maximum age (in seconds) of consensuses that we should consider
+ * storing. The available space in the directory may impose additional limits
+ * on how much we store. */
+static int32_t
+get_max_age_to_cache(void)
+{
+  /* The parameter is in hours. */
+  const int32_t DEFAULT_MAX_AGE_TO_CACHE = 8192;
+  const int32_t MIN_MAX_AGE_TO_CACHE = 0;
+  const int32_t MAX_MAX_AGE_TO_CACHE = 8192;
+  const char MAX_AGE_TO_CACHE_NAME[] = "max-consensus-age-to-cache-for-diff";
+
+  return 3600 * networkstatus_get_param(NULL,
+                                        MAX_AGE_TO_CACHE_NAME,
+                                        DEFAULT_MAX_AGE_TO_CACHE,
+                                        MIN_MAX_AGE_TO_CACHE,
+                                        MAX_MAX_AGE_TO_CACHE);
+}
+
 /**
  * Given a string containing a networkstatus consensus, and the results of
  * having parsed that consensus, add that consensus to the cache if it is not
@@ -476,7 +494,7 @@ consdiffmgr_add_consensus(const char *consensus,
   const consensus_flavor_t flavor = as_parsed->flavor;
   const time_t valid_after = as_parsed->valid_after;
 
-  if (valid_after < approx_time() - 3600 * consdiff_cfg.cache_max_age_hours) {
+  if (valid_after < approx_time() - get_max_age_to_cache()) {
     log_info(LD_DIRSERV, "We don't care about this consensus document; it's "
              "too old.");
     return -1;
@@ -643,8 +661,7 @@ consdiffmgr_cleanup(void)
   log_debug(LD_DIRSERV, "Looking for consdiffmgr entries to remove");
 
   // 1. Delete any consensus or diff or anything whose valid_after is too old.
-  const time_t valid_after_cutoff =
-    approx_time() - 3600 * consdiff_cfg.cache_max_age_hours;
+  const time_t valid_after_cutoff = approx_time() - get_max_age_to_cache();
 
   consensus_cache_find_all(objects, cdm_cache_get(),
                            NULL, NULL);
