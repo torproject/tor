@@ -1348,6 +1348,12 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
 
   const char *lv_to_valid_after =
     consensus_cache_entry_get_value(job->diff_to, LABEL_VALID_AFTER);
+  const char *lv_to_fresh_until =
+    consensus_cache_entry_get_value(job->diff_to, LABEL_FRESH_UNTIL);
+  const char *lv_to_valid_until =
+    consensus_cache_entry_get_value(job->diff_to, LABEL_VALID_UNTIL);
+  const char *lv_to_signatories =
+    consensus_cache_entry_get_value(job->diff_to, LABEL_SIGNATORIES);
   const char *lv_from_valid_after =
     consensus_cache_entry_get_value(job->diff_from, LABEL_VALID_AFTER);
   const char *lv_from_digest =
@@ -1417,6 +1423,12 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
   job->out[0].bodylen = difflen;
 
   config_line_t *common_labels = NULL;
+  if (lv_to_valid_until)
+    config_line_prepend(&common_labels, LABEL_VALID_UNTIL, lv_to_valid_until);
+  if (lv_to_fresh_until)
+    config_line_prepend(&common_labels, LABEL_FRESH_UNTIL, lv_to_fresh_until);
+  if (lv_to_signatories)
+    config_line_prepend(&common_labels, LABEL_SIGNATORIES, lv_to_signatories);
   cdm_labels_prepend_sha3(&common_labels,
                           LABEL_SHA3_DIGEST_UNCOMPRESSED,
                           job->out[0].body,
