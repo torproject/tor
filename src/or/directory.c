@@ -4081,7 +4081,7 @@ handle_get_current_consensus(dir_connection_t *conn,
                              vary_header,
                              smartlist_len(conn->spool) == 1 ? lifetime : 0);
 
-  if (compress_method == NO_METHOD)
+  if (compress_method == NO_METHOD && smartlist_len(conn->spool))
     conn->compress_state = tor_compress_new(0, compression_used,
                                             HIGH_COMPRESSION);
 
