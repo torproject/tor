@@ -3958,7 +3958,6 @@ handle_get_current_consensus(dir_connection_t *conn,
   long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
   time_t now = time(NULL);
-  const char *want_fps = NULL;
   parsed_consensus_request_t req;
 
   if (parse_consensus_request(&req, args) < 0) {
@@ -4005,8 +4004,8 @@ handle_get_current_consensus(dir_connection_t *conn,
     goto done;
   }
 
-  if (cached_consensus && want_fps &&
-      !client_likes_consensus(cached_consensus, want_fps)) {
+  if (cached_consensus && req.want_fps &&
+      !client_likes_consensus(cached_consensus, req.want_fps)) {
     write_http_status_line(conn, 404, "Consensus not signed by sufficient "
                            "number of requested authorities");
     geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
