@@ -12,6 +12,7 @@
 #include "or.h"
 #include "config.h"
 #include "connection.h"
+#include "consdiffmgr.h"
 #include "directory.h"
 #include "test.h"
 #include "compress.h"
@@ -465,6 +466,8 @@ init_mock_options(void)
   mock_options = tor_malloc(sizeof(or_options_t));
   memset(mock_options, 0, sizeof(or_options_t));
   mock_options->TestingTorNetwork = 1;
+  mock_options->DataDirectory = tor_strdup(get_fname_rnd("datadir_tmp"));
+  check_private_dir(mock_options->DataDirectory, CPD_CREATE, NULL);
 }
 
 static const or_options_t *
@@ -501,14 +504,6 @@ test_dir_handle_get_micro_d(void *data)
 
   /* SETUP */
   init_mock_options();
-  const char *fn = get_fname("dir_handle_datadir_test1");
-  mock_options->DataDirectory = tor_strdup(fn);
-
-#ifdef _WIN32
-  tt_int_op(0, OP_EQ, mkdir(mock_options->DataDirectory));
-#else
-  tt_int_op(0, OP_EQ, mkdir(mock_options->DataDirectory, 0700));
-#endif
 
   /* Add microdesc to cache */
   crypto_digest256(digest, microdesc, strlen(microdesc), DIGEST_SHA256);
@@ -568,14 +563,6 @@ test_dir_handle_get_micro_d_server_busy(void *data)
 
   /* SETUP */
   init_mock_options();
-  const char *fn = get_fname("dir_handle_datadir_test2");
-  mock_options->DataDirectory = tor_strdup(fn);
-
-#ifdef _WIN32
-  tt_int_op(0, OP_EQ, mkdir(mock_options->DataDirectory));
-#else
-  tt_int_op(0, OP_EQ, mkdir(mock_options->DataDirectory, 0700));
-#endif
 
   /* Add microdesc to cache */
   crypto_digest256(digest, microdesc, strlen(microdesc), DIGEST_SHA256);
@@ -1619,6 +1606,8 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_enough_sigs(void* d)
   (void) d;
 
   /* init mock */
+  // XXXX Instead of mocking this, we need to mock
+  // XXXX consensus_cache_entry_get_voter_id_digests().
   mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
   mock_ns_val->flavor = FLAV_NS;
   mock_ns_val->voters = smartlist_new();
@@ -1684,6 +1673,8 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_found(void* data)
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/consensus-ns"), NULL, 0));
 
+  // XXXX This fails with 503 instead of 404; I think that's a regression in
+  // XXXX our behavior.
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
                       NULL, NULL, 1, 0);
   tt_assert(header);
@@ -1709,6 +1700,8 @@ test_dir_handle_get_status_vote_current_consensus_too_old(void *data)
   char *header = NULL;
   (void)data;
 
+  // XXXX Instead of mocking this, we need to mock
+  // XXXX consensus_cache_entry_get_valid_until.
   mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
   mock_ns_val->flavor = FLAV_MICRODESC;
   mock_ns_val->valid_until = time(NULL) - (60 * 60 * 24) - 1;
@@ -1772,16 +1765,26 @@ static void
 status_vote_current_consensus_ns_test(char **header, char **body,
                                       size_t *body_len)
 {
-  common_digests_t digests;
-  uint8_t sha3[DIGEST256_LEN];
   dir_connection_t *conn = NULL;
 
   #define NETWORK_STATUS "some network status string"
+#if 0
+  common_digests_t digests;
+  uint8_t sha3[DIGEST256_LEN];
   memset(&digests, 0x60, sizeof(digests));
   memset(sha3, 0x06, sizeof(sha3));
   dirserv_set_cached_consensus_networkstatus(NETWORK_STATUS, "ns", &digests,
                                              sha3,
                                              time(NULL));
+#endif
+  networkstatus_t *ns = tor_malloc_zero(sizeof(networkstatus_t));
+  ns->type = NS_TYPE_CONSENSUS;
+  ns->flavor = FLAV_NS;
+  ns->valid_after = time(NULL) - 1800;
+  ns->fresh_until = time(NULL) - 900;
+  ns->valid_until = time(NULL) - 60;
+  consdiffmgr_add_consensus(NETWORK_STATUS, ns);
+  networkstatus_vote_free(ns);
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
@@ -2592,11 +2595,11 @@ struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(status_vote_current_authority, 0),
   DIR_HANDLE_CMD(status_vote_next_authority_not_found, 0),
   DIR_HANDLE_CMD(status_vote_next_authority, 0),
-  DIR_HANDLE_CMD(status_vote_current_consensus_ns_not_enough_sigs, 0),
-  DIR_HANDLE_CMD(status_vote_current_consensus_ns_not_found, 0),
-  DIR_HANDLE_CMD(status_vote_current_consensus_too_old, 0),
-  DIR_HANDLE_CMD(status_vote_current_consensus_ns_busy, 0),
-  DIR_HANDLE_CMD(status_vote_current_consensus_ns, 0),
+  DIR_HANDLE_CMD(status_vote_current_consensus_ns_not_enough_sigs, TT_FORK),
+  DIR_HANDLE_CMD(status_vote_current_consensus_ns_not_found, TT_FORK),
+  DIR_HANDLE_CMD(status_vote_current_consensus_too_old, TT_FORK),
+  DIR_HANDLE_CMD(status_vote_current_consensus_ns_busy, TT_FORK),
+  DIR_HANDLE_CMD(status_vote_current_consensus_ns, TT_FORK),
   DIR_HANDLE_CMD(status_vote_current_d_not_found, 0),
   DIR_HANDLE_CMD(status_vote_next_d_not_found, 0),
   DIR_HANDLE_CMD(status_vote_d, 0),
