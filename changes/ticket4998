@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (relay, configuration):
     - The MyFamily line may now be repeated as many times as desired, for
       relays that want to configure large families. Closes ticket 4998;
       patch by Daniel Pinto.

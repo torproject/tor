@@ -1,4 +1,4 @@
- o Minor bugfixes (connection usage)
+  o Minor bugfixes (connection usage):
    - Use NETINFO cells to try to determine if both relays involved in
      a connection will agree on the canonical status of that connection.
      Prefer the connections where this is the case for extend cells,
@@ -6,7 +6,7 @@
      status early. Also, additionally alter the connection selection
      logic to prefer the oldest valid connection for extend cells.
      These two changes should reduce the number of long-term connections
-     that are kept open between relays. Fixes bug #17604.
+     that are kept open between relays. Fixes bug 17604.
    - Relays will now log hourly statistics on the total number of
      connections to other relays. If the number of connections per relay
      unexpectedly large, this log message is at notice level. Otherwise

@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (security, windows):
     - Enable a couple of pieces of Windows hardening: one
       (HeapEnableTerminationOnCorruption) that has been on-by-default since
       Windows 8, and unavailable before Windows 7, and one

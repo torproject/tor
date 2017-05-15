@@ -1,4 +1,4 @@
- o Major features (traffic analysis)
+  o Major features (traffic analysis resistance):
    - Relays and clients will now send a padding cell on idle OR
      connections every 1.5 to 9.5 seconds (tunable via consensus
      parameters). Directory connections and inter-relay connections
@@ -9,7 +9,7 @@
      by setting ConnectionPadding 0 in torrc. Padding may be minimized
      for mobile users with the torrc option ReducedConnectionPadding.
      Implements Proposal 251 and Section 2 of Proposal 254; closes ticket
-     #16861.
+     16861.
    - Relays will publish 24 hour totals of padding and non-padding cell
      counts to their extra-info descriptors, unless PaddingStatistics 0
      is set in torrc. These 24 hour totals are also rounded to multiples

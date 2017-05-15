@@ -1,3 +1,3 @@
   o Minor bugfixes (controller):
     - GETINFO onions/current and onions/detached no longer 551 on empty lists
-      Fixes bug 21329
+      Fixes bug 21329.

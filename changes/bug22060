@@ -1,4 +1,4 @@
-  o Remove configuration option (confic):
+  o Removed features (configuration options, all in ticket 22060):
     - AllowInvalidNodes was deprecated in 0.2.9.2-alpha and now has been
       removed. It is not possible anymore to use Invalid nodes.
     - AllowSingleHopCircuits was deprecated in 0.2.9.2-alpha and now has been
@@ -25,3 +25,4 @@
       P256 EC group is always used.
     - {Control,DNS,Dir,Socks,Trans,NATD,OR}ListenAddress was deprecated in
       0.2.9.2-alpha and now has been removed. Use the ORPort (and others).
+

@@ -1,4 +1,4 @@
-  o Major features:
+  o Major features (directory system):
     - Tor's compression module now includes support for the zstd and lzma2
       compression algorithms, if the libzstd and liblzma libraries are
       available when Tor is compiled.  Once these features are exposed in the

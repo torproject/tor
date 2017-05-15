@@ -1,9 +1,9 @@
- o Minor bugfixes (connection lifespan)
+  o Minor bugfixes (connection lifespan):
    - Allow more control over how long TLS connections are kept open: unify
      CircuitIdleTimeout and PredictedPortsRelevanceTime into a single option
      called CircuitsAvailableTimeout. Also, allow the consensus to control
      the default values for both this preference, as well as the lifespan
-     of relay-to-relay connections. Fixes bug #17592.
+     of relay-to-relay connections. Fixes bug 17592.
    - Increase the intial circuit build timeout testing frequency, to help
      ensure that ReducedConnectionPadding clients finish learning a timeout
      before their orconn would expire. The initial testing rate was set back

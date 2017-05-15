@@ -1,4 +1,4 @@
-  o Minor enhancements (unit tests):
+  o Minor features (unit tests):
     - Improve version parsing tests: add tests for typical version components,
       add tests for invalid versions, including numeric range and non-numeric
       prefixes.
