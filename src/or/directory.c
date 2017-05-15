@@ -3856,17 +3856,9 @@ handle_get_current_consensus(dir_connection_t *conn,
     spooled_resource_t *spooled;
     if (cached_consensus) {
       spooled = spooled_resource_new_from_cache_entry(cached_consensus);
-    } else if (flavor) {
-      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                     (uint8_t*)flavor, strlen(flavor));
-      compression_used = ZLIB_METHOD;
-    } else {
-      spooled = spooled_resource_new(DIR_SPOOL_NETWORKSTATUS,
-                                     NULL, 0);
-      compression_used = ZLIB_METHOD;
+      smartlist_add(conn->spool, spooled);
     }
     tor_free(flavor);
-    smartlist_add(conn->spool, spooled);
   }
 
   lifetime = (have_fresh_until && fresh_until > now) ? fresh_until - now : 0;
