@@ -175,8 +175,7 @@ static consdiff_cfg_t consdiff_cfg = {
 
 static int consdiffmgr_ensure_space_for_files(int n);
 static int consensus_queue_compression_work(const char *consensus,
-                                            consensus_flavor_t flavor,
-                                            time_t valid_after);
+                                            const networkstatus_t *as_parsed);
 static int consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
                                           consensus_cache_entry_t *diff_to);
 static void consdiffmgr_set_cache_flags(void);
@@ -492,7 +491,7 @@ consdiffmgr_add_consensus(const char *consensus,
   }
 
   /* We don't have it. Add it to the cache. */
-  return consensus_queue_compression_work(consensus, flavor, valid_after);
+  return consensus_queue_compression_work(consensus, as_parsed);
 }
 
 /**
@@ -1591,7 +1590,7 @@ typedef struct consensus_compress_worker_job_t {
   char *consensus;
   size_t consensus_len;
   consensus_flavor_t flavor;
-  time_t valid_after;
+  config_line_t *labels_in;
   compressed_result_t out[ARRAY_LENGTH(compress_consensus_with)];
 } consensus_compress_worker_job_t;
 
@@ -1604,6 +1603,7 @@ consensus_compress_worker_job_free(consensus_compress_worker_job_t *job)
   if (!job)
     return;
   tor_free(job->consensus);
+  config_free_lines(job->labels_in);
   unsigned u;
   for (u = 0; u < n_consensus_compression_methods(); ++u) {
     config_free_lines(job->out[u].labels);
@@ -1623,12 +1623,8 @@ consensus_compress_worker_threadfn(void *state_, void *work_)
   consensus_flavor_t flavor = job->flavor;
   const char *consensus = job->consensus;
   size_t bodylen = job->consensus_len;
-  time_t valid_after = job->valid_after;
 
-  config_line_t *labels = NULL;
-  char formatted_time[ISO_TIME_LEN+1];
-  format_iso_time_nospace(formatted_time, valid_after);
-
+  config_line_t *labels = config_lines_dup(job->labels_in);
   const char *flavname = networkstatus_get_flavor_name(flavor);
 
   cdm_labels_prepend_sha3(&labels, LABEL_SHA3_DIGEST_UNCOMPRESSED,
@@ -1645,7 +1641,6 @@ consensus_compress_worker_threadfn(void *state_, void *work_)
                             end - start);
   }
   config_line_prepend(&labels, LABEL_FLAVOR, flavname);
-  config_line_prepend(&labels, LABEL_VALID_AFTER, formatted_time);
   config_line_prepend(&labels, LABEL_DOCTYPE, DOCTYPE_CONSENSUS);
 
   compress_multiple(job->out,
@@ -1701,14 +1696,40 @@ static int background_compression = 0;
  */
 static int
 consensus_queue_compression_work(const char *consensus,
-                                 consensus_flavor_t flavor,
-                                 time_t valid_after)
+                                 const networkstatus_t *as_parsed)
 {
+  tor_assert(consensus);
+  tor_assert(as_parsed);
+
   consensus_compress_worker_job_t *job = tor_malloc_zero(sizeof(*job));
   job->consensus = tor_strdup(consensus);
   job->consensus_len = strlen(consensus);
-  job->flavor = flavor;
-  job->valid_after = valid_after;
+  job->flavor = as_parsed->flavor;
+
+  char va_str[ISO_TIME_LEN+1];
+  char vu_str[ISO_TIME_LEN+1];
+  char fu_str[ISO_TIME_LEN+1];
+  format_iso_time_nospace(va_str, as_parsed->valid_after);
+  format_iso_time_nospace(fu_str, as_parsed->fresh_until);
+  format_iso_time_nospace(vu_str, as_parsed->valid_until);
+  config_line_append(&job->labels_in, LABEL_VALID_AFTER, va_str);
+  config_line_append(&job->labels_in, LABEL_FRESH_UNTIL, fu_str);
+  config_line_append(&job->labels_in, LABEL_VALID_UNTIL, vu_str);
+  if (as_parsed->voters) {
+    smartlist_t *hexvoters = smartlist_new();
+    SMARTLIST_FOREACH_BEGIN(as_parsed->voters,
+                            networkstatus_voter_info_t *, vi) {
+      if (smartlist_len(vi->sigs) == 0)
+        continue; // didn't sign.
+      char d[HEX_DIGEST_LEN+1];
+      base16_encode(d, sizeof(d), vi->identity_digest, DIGEST_LEN);
+      smartlist_add_strdup(hexvoters, d);
+    } SMARTLIST_FOREACH_END(vi);
+    char *signers = smartlist_join_strings(hexvoters, ",", 0, NULL);
+    config_line_prepend(&job->labels_in, LABEL_SIGNATORIES, signers);
+    tor_free(signers);
+    SMARTLIST_FOREACH(hexvoters, char *, cp, tor_free(cp));
+  }
 
   if (background_compression) {
     workqueue_entry_t *work;
