@@ -107,11 +107,19 @@ get_circuit_build_timeout_ms(void)
 int
 circuit_build_times_disabled(void)
 {
+  return circuit_build_times_disabled_(get_options());
+}
+
+/** As circuit_build_times_disabled, but take options as an argument. */
+int
+circuit_build_times_disabled_(const or_options_t *options,
+                              int ignore_consensus)
+{
   if (unit_tests) {
     return 0;
   } else {
-    const or_options_t *options = get_options();
-    int consensus_disabled = networkstatus_get_param(NULL, "cbtdisabled",
+    int consensus_disabled =
+      ignore_consensus ? 0 : networkstatus_get_param(NULL, "cbtdisabled",
                                                      0, 0, 1);
     int config_disabled = !options->LearnCircuitBuildTimeout;
     int dirauth_disabled = options->AuthoritativeDir;
