@@ -2250,6 +2250,11 @@ test_util_compress_impl(compress_method_t method)
 
   tt_assert(tor_compress_supports_method(method));
 
+  if (method != NO_METHOD) {
+    tt_assert(tor_compress_version_str(method) != NULL);
+    tt_assert(tor_compress_header_version_str(method) != NULL);
+  }
+
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
