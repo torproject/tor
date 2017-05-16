@@ -2358,6 +2358,8 @@ test_util_compress_stream_impl(compress_method_t method,
     tt_assert(cp1 > cp2); /* Make sure we really added something. */
   }
 
+  tt_int_op(tor_compress_state_size(state), OP_GT, 0);
+
   tt_assert(!tor_uncompress(&buf3, &len2, buf1, 1024-len1,
                             method, 1, LOG_WARN));
   /* Make sure it compressed right. */
