@@ -1,4 +1,4 @@
   o Minor bugfixes (fallback directory mirrors):
     - Make the usage example in updateFallbackDirs.py actually work.
       (And explain what it does.)
-      Fixes bug 22270 in 0.3.0.3-alpha.
+      Fixes bug 22270; bugfix on 0.3.0.3-alpha.
