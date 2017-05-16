@@ -37,8 +37,6 @@
 # https://lists.torproject.org/pipermail/tor-relays/2015-December/008370.html
 # https://lists.torproject.org/pipermail/tor-relays/2016-January/008517.html
 # https://lists.torproject.org/pipermail/tor-relays/2016-January/008555.html
-62.210.124.124:9030 orport=9001 id=86E78DD3720C78DA8673182EF96C54B162CD660C ipv6=[2001:bc8:3f23:100::1]:9001
-62.210.124.124:9130 orport=9101 id=2EBD117806EE43C3CC885A8F1E4DC60F207E7D3E ipv6=[2001:bc8:3f23:100::1]:9101
 212.47.237.95:9030 orport=9001 id=3F5D8A879C58961BB45A3D26AC41B543B40236D6
 212.47.237.95:9130 orport=9101 id=6FB38EB22E57EF7ED5EF00238F6A48E553735D88
 
@@ -92,9 +90,6 @@
 
 # https://lists.torproject.org/pipermail/tor-relays/2016-January/008542.html
 178.62.199.226:80 orport=443 id=CBEFF7BA4A4062045133C053F2D70524D8BBE5BE ipv6=[2a03:b0c0:2:d0::b7:5001]:443
-
-# Emails sent directly to teor, verified using relay contact info
-217.12.199.208:80 orport=443 id=DF3AED4322B1824BF5539AE54B2D1B38E080FF05 ipv6=[2a02:27a8:0:2::7e]:443
 
 # Email sent directly to teor, verified using relay contact info
 94.23.204.175:9030 orport=9001 id=5665A3904C89E22E971305EE8C1997BCA4123C69
@@ -328,9 +323,6 @@
 37.187.102.186:9030 orport=9001 id=489D94333DF66D57FFE34D9D59CC2D97E2CB0053 ipv6=[2001:41d0:a:26ba::1]:9001
 
 # Email sent directly to teor, verified using relay contact info
-5.35.251.247:9030 orport=9001 id=9B1F5187DFBA89DC24B37EA7BF896C12B43A27AE
-
-# Email sent directly to teor, verified using relay contact info
 198.96.155.3:8080 orport=5001 id=BCEDF6C193AA687AE471B8A22EBF6BC57C2D285E
 
 # Email sent directly to teor, verified using relay contact info
@@ -429,8 +421,6 @@
 
 # Email sent directly to teor, verified using relay contact info
 176.10.107.180:9030 orport=9001 id=3D7E274A87D9A89AF064C13D1EE4CA1F184F2600
-195.154.75.84:9030 orport=9001 id=F80FDE27EFCB3F6A7B4E2CC517133DBFFA78BA2D
-195.154.127.246:9030 orport=9001 id=4FEE77AFFD157BBCF2D896AE417FBF647860466C
 
 # Email sent directly to teor, verified using relay contact info
 46.28.207.19:80 orport=443 id=5B92FA5C8A49D46D235735504C72DBB3472BA321
