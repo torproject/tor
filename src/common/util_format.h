@@ -23,11 +23,11 @@
 #define BASE32_BUFSIZE(n) (BASE32_LEN(n) + 1)
 #define BASE16_BUFSIZE(n) (BASE16_LEN(n) + 1)
 
-#define BASE64_NOPAD_LEN(n) (CEIL_DIV((n) * 4, 3)
-#define BASE32_NOPAD_LEN(n) (CEIL_DIV((n) * 8, 5)
+#define BASE64_NOPAD_LEN(n) (CEIL_DIV((n) * 4, 3))
+#define BASE32_NOPAD_LEN(n) (CEIL_DIV((n) * 8, 5))
 
-#define BASE64_NOPAD_BUFSIZE(n) (BASE64_NOPAD_LEN(n) + 1))
-#define BASE32_NOPAD_BUFSIZE(n) (BASE32_NOPAD_LEN(n) + 1))
+#define BASE64_NOPAD_BUFSIZE(n) (BASE64_NOPAD_LEN(n) + 1)
+#define BASE32_NOPAD_BUFSIZE(n) (BASE32_NOPAD_LEN(n) + 1)
 /** @} */
 
 #define BASE64_ENCODE_MULTILINE 1
