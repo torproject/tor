@@ -577,7 +577,7 @@ consdiffmgr_find_consensus(struct consensus_cache_entry_t **entry_out,
   if (!handle)
     return CONSDIFF_NOT_FOUND;
   *entry_out = consensus_cache_entry_handle_get(handle);
-  if (entry_out)
+  if (*entry_out)
     return CONSDIFF_AVAILABLE;
   else
     return CONSDIFF_NOT_FOUND;
