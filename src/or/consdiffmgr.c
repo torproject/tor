@@ -566,6 +566,7 @@ consdiffmgr_find_consensus(struct consensus_cache_entry_t **entry_out,
                            consensus_flavor_t flavor,
                            compress_method_t method)
 {
+  tor_assert(entry_out);
   tor_assert((int)flavor < N_CONSENSUS_FLAVORS);
 
   int pos = consensus_compression_method_pos(method);

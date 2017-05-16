@@ -3929,8 +3929,10 @@ parse_consensus_request(parsed_consensus_request_t *out,
     uint8_t diff_from[DIGEST256_LEN];
     out->diff_from_digests = smartlist_new();
     out->diff_only = 1;
-    if (!parse_one_diff_hash(diff_from, diff_hash_in_url, "URL",
-                             "rejecting")) {
+    int ok = !parse_one_diff_hash(diff_from, diff_hash_in_url, "URL",
+                                  "rejecting");
+    tor_free(diff_hash_in_url);
+    if (ok) {
       smartlist_add(out->diff_from_digests,
                     tor_memdup(diff_from, DIGEST256_LEN));
     } else {
