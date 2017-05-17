@@ -46,6 +46,7 @@ memory_level(compression_level_t level)
 static const char *
 lzma_error_str(lzma_ret error)
 {
+  // LCOV_EXCL_START
   switch (error) {
     case LZMA_OK:
       return "Operation completed successfully";
@@ -74,6 +75,7 @@ lzma_error_str(lzma_ret error)
     default:
       return "Unknown LZMA error";
   }
+  // LCOV_EXCL_STOP
 }
 #endif // HAVE_LZMA.
 
@@ -144,9 +146,11 @@ tor_lzma_state_size_precalc(int compress, compression_level_t level)
     memory_usage = lzma_easy_decoder_memusage(memory_level(level));
 
   if (memory_usage == UINT64_MAX) {
+    // LCOV_EXCL_START
     log_warn(LD_GENERAL, "Unsupported compression level passed to LZMA %s",
                          compress ? "encoder" : "decoder");
     goto err;
+    // LCOV_EXCL_STOP
   }
 
   if (memory_usage + sizeof(tor_lzma_compress_state_t) > SIZE_MAX)
@@ -157,7 +161,7 @@ tor_lzma_state_size_precalc(int compress, compression_level_t level)
   return (size_t)memory_usage;
 
  err:
-  return 0;
+  return 0; // LCOV_EXCL_LINE
 }
 #endif // HAVE_LZMA.
 
@@ -189,17 +193,21 @@ tor_lzma_compress_new(int compress,
     retval = lzma_alone_encoder(&result->stream, &stream_options);
 
     if (retval != LZMA_OK) {
+      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Error from LZMA encoder: %s (%u).",
                lzma_error_str(retval), retval);
       goto err;
+      // LCOV_EXCL_STOP
     }
   } else {
     retval = lzma_alone_decoder(&result->stream, MEMORY_LIMIT);
 
     if (retval != LZMA_OK) {
+      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Error from LZMA decoder: %s (%u).",
                lzma_error_str(retval), retval);
       goto err;
+      // LCOV_EXCL_STOP
     }
   }
 
@@ -207,7 +215,7 @@ tor_lzma_compress_new(int compress,
   return result;
 
  err:
-  tor_free(result);
+  tor_free(result); // LCOV_EXCL_LINE
   return NULL;
 #else // HAVE_LZMA.
   (void)compress;
@@ -295,10 +303,12 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
     case LZMA_DATA_ERROR:
     case LZMA_PROG_ERROR:
     default:
+      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "LZMA %s didn't finish: %s.",
                state->compress ? "compression" : "decompression",
                lzma_error_str(retval));
       return TOR_COMPRESS_ERROR;
+      // LCOV_EXCL_STOP
   }
 #else // HAVE_LZMA.
   (void)state;
