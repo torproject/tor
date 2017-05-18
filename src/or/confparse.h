@@ -124,7 +124,6 @@ const char *config_find_deprecation(const config_format_t *fmt,
                                      const char *key);
 const config_var_t *config_find_option(const config_format_t *fmt,
                                        const char *key);
-
 const char *config_expand_abbrev(const config_format_t *fmt,
                                  const char *option,
                                  int command_line, int warn_obsolete);

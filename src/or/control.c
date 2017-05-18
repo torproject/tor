@@ -1462,8 +1462,10 @@ handle_control_saveconf(control_connection_t *conn, uint32_t len,
                         const char *body)
 {
   (void) len;
-  (void) body;
-  if (options_save_current()<0) {
+
+  int force = !strcmpstart(body, "FORCE");
+  const or_options_t *options = get_options();
+  if ((!force && options->IncludeUsed) || options_save_current() < 0) {
     connection_write_str_to_buf(
       "551 Unable to write configuration to disk.\r\n", conn);
   } else {
@@ -1677,6 +1679,8 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       *answer = tor_strdup(a);
   } else if (!strcmp(question, "config-text")) {
     *answer = options_dump(get_options(), OPTIONS_DUMP_MINIMAL);
+  } else if (!strcmp(question, "config-can-saveconf")) {
+    *answer = tor_strdup(get_options()->IncludeUsed ? "0" : "1");
   } else if (!strcmp(question, "info/names")) {
     *answer = list_getinfo_options();
   } else if (!strcmp(question, "dormant")) {
@@ -2931,6 +2935,8 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("config-defaults-file", misc, "Current location of the defaults file."),
   ITEM("config-text", misc,
        "Return the string that would be written by a saveconf command."),
+  ITEM("config-can-saveconf", misc,
+       "Is it possible to save the configuration to the \"torrc\" file?"),
   ITEM("accounting/bytes", accounting,
        "Number of bytes read/written so far in the accounting interval."),
   ITEM("accounting/bytes-left", accounting,

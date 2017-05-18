@@ -153,6 +153,13 @@ values. To split one configuration entry into multiple lines, use a single
 backslash character (\) before the end of the line.  Comments can be used in
 such multiline entries, but they must start at the beginning of a line.
 
+Configuration options can be imported from files or folders using the %include
+option with the value being a path. If the path is a file, the options from the
+file will be parsed as if they were written where the %include option is. If
+the path is a folder, all files on that folder will be parsed following lexical
+order. Files starting with a dot are ignored. Files on subfolders are ignored.
+The %include option can be used recursively.
+
 By default, an option on the command line overrides an option found in the
 configuration file, and an option in a configuration file overrides one in
 the defaults file.

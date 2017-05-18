@@ -5731,6 +5731,85 @@ test_util_htonll(void *arg)
   ;
 }
 
+static void
+test_util_get_unquoted_path(void *arg)
+{
+  (void)arg;
+
+  char *r;
+
+  r = get_unquoted_path("\""); // "
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("\"\"\""); // """
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("\\\""); // \"
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("\\\"\\\""); // \"\"
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("A\\B\\C\""); // A\B\C"
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("\"A\\B\\C"); // "A\B\C
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("\"A\\B\"C\""); // "A\B"C"
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("A\\B\"C"); // A\B"C
+  tt_ptr_op(r, OP_EQ, NULL);
+  tor_free(r);
+
+  r = get_unquoted_path("");
+  tt_str_op(r, OP_EQ, "");
+  tor_free(r);
+
+  r = get_unquoted_path("\"\""); // ""
+  tt_str_op(r, OP_EQ, "");
+  tor_free(r);
+
+  r = get_unquoted_path("A\\B\\C"); // A\B\C
+  tt_str_op(r, OP_EQ, "A\\B\\C"); // A\B\C
+  tor_free(r);
+
+  r = get_unquoted_path("\"A\\B\\C\""); // "A\B\C"
+  tt_str_op(r, OP_EQ, "A\\B\\C"); // A\B\C
+  tor_free(r);
+
+  r = get_unquoted_path("\"\\\""); // "\"
+  tt_str_op(r, OP_EQ, "\\"); // \ /* comment to prevent line continuation */
+  tor_free(r);
+
+  r = get_unquoted_path("\"\\\"\""); // "\""
+  tt_str_op(r, OP_EQ, "\""); // "
+  tor_free(r);
+
+  r = get_unquoted_path("\"A\\B\\C\\\"\""); // "A\B\C\""
+  tt_str_op(r, OP_EQ, "A\\B\\C\""); // A\B\C"
+  tor_free(r);
+
+  r = get_unquoted_path("A\\B\\\"C"); // A\B\"C
+  tt_str_op(r, OP_EQ, "A\\B\"C"); // A\B"C
+  tor_free(r);
+
+  r = get_unquoted_path("\"A\\B\\\"C\""); // "A\B\"C"
+  tt_str_op(r, OP_EQ, "A\\B\"C"); // A\B"C
+  tor_free(r);
+
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -5833,6 +5912,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(monotonic_time, 0),
   UTIL_TEST(monotonic_time_ratchet, TT_FORK),
   UTIL_TEST(htonll, 0),
+  UTIL_TEST(get_unquoted_path, 0),
   END_OF_TESTCASES
 };
 

@@ -389,6 +389,7 @@ char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
                                  size_t *sz_out)
   ATTR_MALLOC;
 const char *unescape_string(const char *s, char **result, size_t *size_out);
+char *get_unquoted_path(const char *path);
 char *expand_filename(const char *filename);
 MOCK_DECL(struct smartlist_t *, tor_listdir, (const char *dirname));
 int path_is_relative(const char *filename);
