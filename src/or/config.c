@@ -3535,7 +3535,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     int severity = LOG_NOTICE;
     /* Be a little quieter if we've deliberately disabled
      * LearnCircuitBuildTimeout. */
-    if (circuit_build_times_disabled(options)) {
+    if (circuit_build_times_disabled_(options, 1)) {
       severity = LOG_INFO;
     }
     log_fn(severity, LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but "
