@@ -5172,11 +5172,17 @@ test_config_include_path_syntax(void *data)
   tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
 #endif
 
+#ifdef _WIN32
+#define ESCAPED_PATH_SEPARATOR "\\" PATH_SEPARATOR
+#else
+#define ESCAPED_PATH_SEPARATOR PATH_SEPARATOR
+#endif
+
   char torrc_contents[1000];
   tor_snprintf(torrc_contents, sizeof(torrc_contents),
                "%%include \"%s\"\n"
                "%%include %s"PATH_SEPARATOR"\n"
-               "%%include \"%s"PATH_SEPARATOR"\"\n",
+                "%%include \"%s"ESCAPED_PATH_SEPARATOR"\"\n",
                dir, dir, dir);
 
   int include_used;
