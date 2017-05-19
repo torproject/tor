@@ -5174,7 +5174,6 @@ test_config_include_path_syntax(void *data)
   tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
 #endif
 
-
   esc_dir = esc_for_log(dir);
   tor_asprintf(&dir_with_pathsep, "%s%s", dir, PATH_SEPARATOR);
   esc_dir_with_pathsep = esc_for_log(dir_with_pathsep);
