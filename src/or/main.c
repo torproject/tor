@@ -3667,6 +3667,9 @@ tor_main(int argc, char *argv[])
   int result = 0;
 
 #ifdef _WIN32
+#ifndef HeapEnableTerminationOnCorruption
+#define HeapEnableTerminationOnCorruption 1
+#endif
   /* On heap corruption, just give up; don't try to play along. */
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
   /* Call SetProcessDEPPolicy to permanently enable DEP.
