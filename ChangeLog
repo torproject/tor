@@ -1,48 +1,55 @@
 Changes in version 0.3.1.1-alpha - 2017-05-??
-  blurb goes here
+  Tor 0.3.1.1-alpha is the first release in the 0.3.1.x series. It
+  reduces the bandwidth usage for Tor's directory protocol, adds some
+  basic padding to resist netflow-based traffic analysis and to serve as
+  the basis of other padding in the future, and adds rust support to the
+  build system.
+
+  It also contains numerous other small features and improvements to
+  security, correctness, and performance.
+
+  Below are the changes since 0.3.0.7.
 
   o Major features (directory protocol):
-    - Tor relays and authorities are now able to serve clients an
-      abbreviated version of the networkstatus consensus document,
-      containing only the changes since the an older consensus document
-      that the client holds. Clients now request these documents when
-      available. When this new protocol is in use by both client and
-      server, they will use far less bandwidth (up to 94% less) to keep
-      an up-to-date consensus. Implements proposal 140; closes ticket
-      13339. Based on work by by Daniel Martí.
-    - Tor's compression module now includes support for the zstd and
-      lzma2 compression algorithms, if the libzstd and liblzma libraries
-      are available when Tor is compiled. Once these features are
-      exposed in the directory module, they will enable Tor to provide
-      better compression ratios on directory documents. Part of an
-      implementation for proposal 278; closes ticket 21662.
-    - Add an ed diff/patch backend, optimized for consensus documents.
-      This backend will be the basis of our consensus diff
-      implementation. Most of the work here was done by Daniel Martí.
-      Closes ticket 21643.
+    - Tor relays and authorities can now serve clients an abbreviated
+      version of the consensus document, containing only the changes
+      since an older consensus document that the client holds. Clients
+      now request these documents when available. When both client and
+      server use this new protocol, they will use far less bandwidth (up
+      to 94% less) to keep the client's consensus up-to-date. Implements
+      proposal 140; closes ticket 13339. Based on work by by
+      Daniel Martí.
+    - Tor can now compress directory traffic with lzma or with zstd
+      compression algoritms, which can deliver better bandwidth
+      performance. Because lzma is computationally expensive, it's only
+      used for documents that can be compressed once and served many
+      times. Support for these algorithms requires that tor is build
+      with the libzstd and/or liblzma libraries available. Implements
+      proposal 278; closes ticket 21662.
 
   o Major features (experimental):
-    - Tor now has the optional ability to include modules written in
-      Rust. To turn this on, pass the "--enable-rust" flag to the
-      configure script. It's not time to get excited yet: currently,
-      there is no actual Rust functionality beyond some simple glue
-      code, and a notice at startup to tell you that Rust is running.
-      Still, we hope that programmers and packagers will try building
-      with rust support, so that we can find issues with the build
-      system, and solve portability issues. Closes ticket 22106.
+    - Tor can now build modules written in Rust. To turn this on, pass
+      the "--enable-rust" flag to the configure script. It's not time to
+      get excited yet: currently, there is no actual Rust functionality
+      beyond some simple glue code, and a notice at startup to tell you
+      that Rust is running. Still, we hope that programmers and
+      packagers will try building Tor with rust support, so that we can
+      find issues, and solve portability problems. Closes ticket 22106.
 
   o Major features (traffic analysis resistance):
-    - Relays and clients will now send a padding cell on idle OR
-      connections every 1.5 to 9.5 seconds (tunable via consensus
-      parameters). Directory connections and inter-relay connections are
-      not padded. Padding is negotiated using Tor's link protocol, so
-      both relays and clients must upgrade for this to take effect.
-      Clients may still send padding despite the relay's version by
-      setting ConnectionPadding 1 in torrc, and may disable padding by
-      setting ConnectionPadding 0 in torrc. Padding may be minimized for
-      mobile users with the torrc option ReducedConnectionPadding.
-      Implements Proposal 251 and Section 2 of Proposal 254; closes
-      ticket 16861.
+    - Client-to-relays connections can now send a padding cells every
+      1.5 to 9.5 seconds (tunable via consensus parameters). This will
+      not resist specialized eavesdroppers, but it should be enough to
+      make many ISPs' routine network flow logging less useful in
+      traffic analysis against Tor users.
+
+      Padding is negotiated using Tor's link protocol, so both relays
+      and clients must upgrade for this to take effect. Clients may
+      still send padding despite the relay's version by setting
+      ConnectionPadding 1 in torrc, and may disable padding by setting
+      ConnectionPadding 0 in torrc. Padding may be minimized for mobile
+      users with the torrc option ReducedConnectionPadding. Implements
+      Proposal 251 and Section 2 of Proposal 254; closes ticket 16861.
     - Relays will publish 24 hour totals of padding and non-padding cell
       counts to their extra-info descriptors, unless PaddingStatistics 0
       is set in torrc. These 24 hour totals are also rounded to
@@ -56,7 +63,7 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
   o Minor features (security, windows):
     - Enable a couple of pieces of Windows hardening: one
       (HeapEnableTerminationOnCorruption) that has been on-by-default
-      since Windows 8, and unavailable before Windows 7, and one
+      since Windows 8, and unavailable before Windows 7; and one
       (PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION) which we believe doesn't
       affect us, but shouldn't do any harm. Closes ticket 21953.
 
@@ -66,23 +73,25 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
 
   o Minor features (defaults):
     - The default value for UseCreateFast is now 0: clients which
-      haven't yet received a consensus document will nonetheless use a
-      proper handshake to talk to their directory servers (when they
-      can). Closes ticket 21407.
+      haven't yet received a consensus document will now use a proper
+      ntor handshake to talk to their directory servers whenever they
+      can. Closes ticket 21407.
     - Onion key rotation and expiry intervals are now defined as a
-      network consensus parameter as per proposal 274. The default
-      lifetime of an onion key is bumped from 7 to 28 days. Old onion
-      keys will expire after 7 days by default. Closes ticket 21641.
+      network consensus parameter, per proposal 274. The default
+      lifetime of an onion key is increased from 7 to 28 days. Old onion
+      keys will expire after 7 days by default. This change will make
+      consensus diffs much smaller, and save significant bandwidth.
+      Closes ticket 21641.
 
   o Minor features (fallback directory list):
     - Update the fallback directory mirror whitelist and blacklist based
       on operator emails. Closes task 21121.
     - Replace the 177 fallbacks originally introduced in Tor 0.2.9.8 in
-      December 2016 (of which ~126 were still functional), with a list
-      of 151 fallbacks (32 new, 119 existing, 58 removed) generated in
-      May 2017. Resolves ticket 21564.
+      December 2016 (of which ~126 were still functional) with a list of
+      151 fallbacks (32 new, 119 unchanged, 58 removed) generated in May
+      2017. Resolves ticket 21564.
 
-  o Minor features (hidden services):
+  o Minor features (hidden services, logging):
     - Add more information to the message logged when a hidden service
       descriptor has fewer introduction points than specified in
       HiddenServiceNumIntroductionPoints. Follow up to tickets 21598 and
@@ -99,23 +108,20 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       14917 or 21155. Closes ticket 21155.
 
   o Minor features (include in torrc config files):
-    - Allow the use of %include on configuration files to include
-      settings from other files or directories. Using %include with a
-      directory will include all (non-dot) files in that directory in
-      lexically sorted order (non-recursive), closes ticket 1922.
-    - Make SAVECONF command return error when overwriting a torrc that
-      has includes. Using SAVECONF with the FORCE option will allow it
-      to overwrite torrc even if includes are used, closes ticket 1922.
-    - Adds config-can-saveconf to GETINFO command to tell if SAVECONF
-      will work without the FORCE option, closes ticket 1922.
-
-  o Minor features (infrastructure, seccomp2 sandbox):
-    - We now have a document storage backend compatible with the Linux
-      seccomp2 sandbox. The long-term plan is to use this backend for
-      consensus documents and for storing unparseable directory
-      material. Closes ticket 21645.
+    - Allow "%include" directives in torrc configuration files. These
+      directives import the settings from other files, or from all the
+      files in a directory. Closes ticket 1922. Code by Daniel Pinto.
+    - Make SAVECONF return error when overwriting a torrc that has
+      includes. Using SAVECONF with the FORCE option will allow it to
+      overwrite torrc even if includes are used. Related to ticket 1922.
+    - Add "GETINFO config-can-saveconf" to tell controllers if SAVECONF
+      will work without the FORCE option. Related to ticket 1922.
 
   o Minor features (linux seccomp2 sandbox):
+    - We now have a document storage backend compatible with the Linux
+      seccomp2 sandbox. This backend is used for consensus documents and
+      diffs between them; in the long term, we'd like to use it for
+      unparseable directory material too. Closes ticket 21645
     - Increase the maximum allowed size passed to mprotect(PROT_WRITE)
       from 1MB to 16MB. This was necessary with the glibc allocator in
       order to allow worker threads to allocate more memory -- which in
@@ -130,13 +136,13 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       from toralf.
 
   o Minor features (performance):
-    - The minimal keccak implementation we include now accesses memory
-      more efficiently, especially on little-endian systems. Closes
-      ticket 21737.
-    - Add an O(1) implementation of channel_find_by_global_id().
+    - Our Keccak implementation now accesses memory more efficiently,
+      especially on little-endian systems. Closes ticket 21737.
+    - Add an O(1) implementation of channel_find_by_global_id(), to
+      speed some controller functions.
 
   o Minor features (relay, configuration):
-    - The MyFamily line may now be repeated as many times as desired,
+    - The MyFamily option may now be repeated as many times as desired,
       for relays that want to configure large families. Closes ticket
       4998; patch by Daniel Pinto.
 
@@ -159,7 +165,7 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       examining Tor network performance issues. There are no trace
       events yet, and event-tracing is off by default unless enabled at
       compile time. Implements ticket 13802.
-    - Improve version parsing tests: add tests for typical version
+    - Improve our version parsing tests: add tests for typical version
       components, add tests for invalid versions, including numeric
       range and non-numeric prefixes. Unit tests 21278, 21450, and
       21507. Partially implements 21470.
@@ -170,7 +176,7 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       Found by Andrey Karpov with PVS-Studio.
 
   o Minor bugfixes (code correctness):
-    - Accurately identify client connections using their lack of peer
+    - Accurately identify client connections by their lack of peer
       authentication. This means that we bail out earlier if asked to
       extend to a client. Follow-up to 21407. Fixes bug 21406; bugfix
       on 0.2.4.23.
@@ -183,9 +189,9 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
     - Allow more control over how long TLS connections are kept open:
       unify CircuitIdleTimeout and PredictedPortsRelevanceTime into a
       single option called CircuitsAvailableTimeout. Also, allow the
-      consensus to control the default values for both this preference,
-      as well as the lifespan of relay-to-relay connections. Fixes bug
-      17592; bugfix on 0.2.5.5-alpha.
+      consensus to control the default values for both this preference
+      and lifespan of relay-to-relay connections. Fixes bug 17592;
+      bugfix on 0.2.5.5-alpha.
     - Increase the intial circuit build timeout testing frequency, to
       help ensure that ReducedConnectionPadding clients finish learning
       a timeout before their orconn would expire. The initial testing
@@ -195,34 +201,32 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       learned in about 15-20 minutes, instead of ~100-120 minutes.
 
   o Minor bugfixes (connection usage):
-    - Relays will now log hourly statistics on the total number of
+    - Relays now log hourly statistics on the total number of
       connections to other relays. If the number of connections per
       relay unexpectedly large, this log message is at notice level.
       Otherwise it is at info.
-    - Use NETINFO cells to try to determine if both relays involved in a
-      connection will agree on the canonical status of that connection.
-      Prefer the connections where this is the case for extend cells,
-      and try to close connections where relays disagree on canonical
-      status early. Also, additionally alter the connection selection
-      logic to prefer the oldest valid connection for extend cells.
-      These two changes should reduce the number of long-term
-      connections that are kept open between relays. Fixes bug 17604;
-      bugfix on 0.2.5.5-alpha.
+    - We use NETINFO cells to try to determine if both relays involved
+      in a connection will agree on the canonical status of that
+      connection. We prefer the connections where this is the case for
+      extend cells, and try to close connections where relays disagree
+      on their canonical status early. Also, we now prefer the oldest
+      valid connection for extend cells. These two changes should reduce
+      the number of long-term connections that are kept open between
+      relays. Fixes bug 17604; bugfix on 0.2.5.5-alpha.
 
   o Minor bugfixes (controller):
     - GETINFO onions/current and onions/detached no longer 551 on empty
-      lists Fixes bug 21329; bugfix on 0.2.7.1-alpha.
+      lists. Fixes bug 21329; bugfix on 0.2.7.1-alpha.
     - Trigger HS descriptor events on the control port when the client
-      is unable to pick a suitable hidden service directory. This can
-      happen if they are all in the ExcludeNodes list or they all have
-      been queried inside the allowed 15 minutes. Fixes bug 22042;
-      bugfix on 0.2.5.2-alpha.
+      fails to pick a hidden service directory for a hidden service.
+      This can happen if they all hidden service directories are in
+      ExcludeNodes, or they have all been queried inside the last 15
+      minutes. Fixes bug 22042; bugfix on 0.2.5.2-alpha.
 
   o Minor bugfixes (directory authority):
-    - When rejecting a router descriptor because the relay is running an
-      obsolete version of Tor without ntor support, warn about the
-      obsolete tor version, not the missing ntor key. Fixes bug 20270;
-      bugfix on 0.2.9.3-alpha.
+    - When rejecting a router descriptor for running an obsolete version
+      of Tor without ntor support, warn about the obsolete tor version,
+      not the missing ntor key. Fixes bug 20270; bugfix on 0.2.9.3-alpha.
     - Prevent the shared randomness subsystem from asserting when
       initialized by a bridge authority with an incomplete configuration
       file. Fixes bug 21586; bugfix on 0.2.9.8.
@@ -234,9 +238,8 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       Karpov using PVS-Studio.
 
   o Minor bugfixes (fallback directories):
-    - Make the usage example in updateFallbackDirs.py actually work.
-      (And explain what it does.) Fixes bug 22270; bugfix
-      on 0.3.0.3-alpha.
+    - Make the usage example in updateFallbackDirs.py actually work, and
+      explain what it does. Fixes bug 22270; bugfix on 0.3.0.3-alpha.
     - Decrease the guard flag average required to be a fallback. This
       allows us to keep relays that have their guard flag removed when
       they restart. Fixes bug 20913; bugfix on 0.2.8.1-alpha.
@@ -247,8 +250,8 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       selected. Fixes bug 20913; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (hidden services):
-    - Stop printing cryptic warning when a client tries to connect on an
-      invalid port of the service. Fixes bug 16706; bugfix
+    - Stop printing a cryptic warning when a client tries to connect to
+      invalid port on a hidden service. Fixes bug 16706; bugfix
       on 0.2.6.3-alpha.
     - Simplify hidden service descriptor creation by using an existing
       flag to check if an introduction point is established. Fixes bug
@@ -259,9 +262,9 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       Fixes bug 21788; bugfix on 0.2.5.2-alpha. Patch from Daniel Pinto.
 
   o Minor bugfixes (protocol, logging):
-    - Downgrade a log statement from bug to protocol warning because
-      there is at least one use case where it can be triggered by a
-      buggy tor implementation on the Internet for instance. Fixes bug
+    - Downgrade a log statement about unexpected relay cells from "bug"
+      to "protocol warning", because there is at least one use case
+      where it can be triggered by a buggy tor implementation. Fixes bug
       21293; bugfix on 0.1.1.14-alpha.
 
   o Minor bugfixes (testing):
@@ -276,10 +279,10 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       bug 21510; bugfix on 0.2.9.3-alpha.
 
   o Minor bugfixes (voting consistency):
-    - Reject version numbers with non-numeric prefixes (such as +, -,
-      and whitespace). Disallowing whitespace prevents differential
-      version parsing between POSIX-based and Windows platforms. Fixes
-      bug 21507 and part of 21508; bugfix on 0.0.8pre1.
+    - Reject version numbers with non-numeric prefixes (such as +, -, or
+      whitespace). Disallowing whitespace prevents differential version
+      parsing between POSIX-based and Windows platforms. Fixes bug 21507
+      and part of 21508; bugfix on 0.0.8pre1.
 
   o Minor bugfixes (windows, relay):
     - Resolve "Failure from drain_fd: No error" warnings on Windows
@@ -289,15 +292,14 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
     - Break up the 630-line function connection_dir_client_reached_eof()
       into a dozen smaller functions. This change should help
       maintainability and readability of the client directory code.
-    - Isolate our usage of the openssl headers so that they are only
-      used from our crypto wrapper modules, and from tests that examing
-      those modules' internals. Closes ticket 21841.
-    - Our API to launch directory requests has been greatly simplified
-      to become more extensible and less error-prone. We'll be using
-      this to improve support for adding extra headers to directory
-      requests. Closes ticket 21646.
+    - Isolate our use of the openssl headers so that they are only
+      included from our crypto wrapper modules, and from tests that
+      examine those modules' internals. Closes ticket 21841.
+    - Our API to launch directory requests has been simplified to be
+      more extensible and less error-prone. We'll use this to support
+      adding extra headers to directory requests. Closes ticket 21646.
     - Our base64 decoding functions no longer overestimate the output
-      space that they will need when parsing unpadded inputs. Closes
+      space that they need when parsing unpadded inputs. Closes
       ticket 17868.
     - Remove unused "ROUTER_ADDED_NOTIFY_GENERATOR" internal value.
       Resolves ticket 22213.
@@ -308,60 +310,45 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       there is one common spooling implementation, with extensible data
       types. Closes ticket 21651.
     - Tor's compression module now supports multiple backends. Part of
-      an implementation of proposal 278; closes ticket 21663.
+      the implementation for proposal 278; closes ticket 21663.
 
   o Documentation:
     - Clarify the behavior of the KeepAliveIsolateSOCKSAuth sub-option.
       Closes ticket 21873.
-    - Correct the documentation about the default DataDirectory value.
+    - Correct documentation about the default DataDirectory value.
       Closes ticket 21151.
-    - Default of NumEntryGuards is 1 if the consensus parameter guard-n-
-      primary-guards-to-use isn't set. Default of NumDirectoryGuards is
-      3 if the consensus parameter guard-n-primary-dir-guards-to-use
-      isn't set. Fixes bug 21715; bugfix on 0.3.0.1-alpha.
+    - Document the default behavior of NumEntryGuards and
+      NumDirectoryGuards correctly. Fixes bug 21715; bugfix
+      on 0.3.0.1-alpha.
     - Document key=value pluggable transport arguments for Bridge lines
       in torrc. Fixes bug 20341; bugfix on 0.2.5.1-alpha.
     - Note that bandwidth-limiting options don't affect TCP headers or
       DNS. Closes ticket 17170.
 
-  o Removed features:
-    - We've removed the tor-checkkey tool from src/tools. Long ago, we
-      used it to help people detect RSA keys that were generated by
-      versions of Debian affected by CVE-2008-0166. But those keys have
-      been out of circulation for ages, and this tool is no longer
-      required. Closes ticket 21842.
-
   o Removed features (configuration options, all in ticket 22060):
-    - AllowInvalidNodes was deprecated in 0.2.9.2-alpha and now has been
-      removed. It is not possible anymore to use Invalid nodes.
-    - AllowSingleHopCircuits was deprecated in 0.2.9.2-alpha and now has
-      been removed. It's not possible anymore to attach streams to
-      single hop exit circuit.
-    - AllowSingleHopExits was deprecated in 0.2.9.2-alpha and now has
-      been removed. Relays no longer advertise that they can be used for
-      single hop exit proxy.
+    - These configuration options are now marked Obsolete, and no longer
+      have any affect: AllowInvalidNodes, AllowSingleHopCircuits,
+      AllowSingleHopExits, ExcludeSingleHopRelays, FastFirstHopPK,
+      TLSECGroup, WarnUnsafeSocks. They were first marked as deprecated
+      in 0.2.9.2-alpha and have now has been removed. The previous
+      default behavior is now always-on; the previous (less secure) non-
+      default behavior is now unavailable.
     - CloseHSClientCircuitsImmediatelyOnTimeout was deprecated in
       0.2.9.2-alpha and now has been removed. HS circuits never close on
       circuit build timeout, they have a longer timeout period.
     - CloseHSServiceRendCircuitsImmediatelyOnTimeout was deprecated in
       0.2.9.2-alpha and now has been removed. HS circuits never close on
       circuit build timeout, they have a long timeout period.
-    - ExcludeSingleHopRelays was deprecated in 0.2.9.2-alpha and now has
-      been removed. Client will always exclude relays that supports
-      single hop exits meaning relays that still advertise
-      AllowSingleHopExits.
-    - FastFirstHopPK was deprecated in 0.2.9.2-alpha and now has been
-      removed. Decision for this feature will always be decided by
-      the consensus.
-    - TLSECGroup was deprecated in 0.2.9.2-alpha and now has been
-      removed. P256 EC group is always used.
-    - WarnUnsafeSocks was deprecated in 0.2.9.2-alpha and now has been
-      removed. Tor will now always warn the user if only an IP address
-      is given instead of an hostname on a SOCKS connection if SafeSocks
-      is 1.
-    - {Control,DNS,Dir,Socks,Trans,NATD,OR}ListenAddress was deprecated
-      in 0.2.9.2-alpha and now has been removed. Use the ORPort
-      (and others).
+    - {Control,DNS,Dir,Socks,Trans,NATD,OR}ListenAddress were deprecated
+      in 0.2.9.2-alpha and now has been removed. Use the ORPort option
+      (and others) to configure listen-only and advertise-only addresses.
+
+  o Removed features (tools):
+    - We've removed the tor-checkkey tool from src/tools. Long ago, we
+      used it to help people detect RSA keys that were generated by
+      versions of Debian affected by CVE-2008-0166. But those keys have
+      been out of circulation for ages, and this tool is no longer
+      required. Closes ticket 21842.
 
 
 Changes in version 0.3.0.7 - 2017-05-15
