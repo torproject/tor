@@ -1,0 +1,6 @@
+include src/rust/tor_util/include.am
+
+EXTRA_DIST +=\
+	src/rust/Cargo.toml \
+	src/rust/Cargo.lock \
+	src/rust/.cargo/config.in
