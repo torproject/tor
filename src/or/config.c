@@ -5056,7 +5056,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   config_line_t *cl;
   int retval;
   setopt_err_t err = SETOPT_ERR_MISC;
-  int cf_has_include;
+  int cf_has_include = 0;
   tor_assert(msg);
 
   oldoptions = global_options; /* get_options unfortunately asserts if
