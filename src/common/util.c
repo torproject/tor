@@ -3051,7 +3051,7 @@ unescape_string(const char *s, char **result, size_t *size_out)
 char *
 get_unquoted_path(const char *path)
 {
-  int len = strlen(path);
+  size_t len = strlen(path);
 
   if (len == 0) {
     return tor_strdup("");
@@ -3065,7 +3065,7 @@ get_unquoted_path(const char *path)
 
   char *unquoted_path = tor_malloc(len - has_start_quote - has_end_quote + 1);
   char *s = unquoted_path;
-  int i;
+  size_t i;
   for (i = has_start_quote; i < len - has_end_quote; i++) {
     if (path[i] == '\"' && (i > 0 && path[i-1] == '\\')) {
       *(s-1) = path[i];
