@@ -270,6 +270,8 @@ static int
 config_process_include(const char *path, int recursion_level, int extended,
                        config_line_t ***next, config_line_t **list_last)
 {
+#if 0
+  // Disabled -- we already unescape_string() on the result. */
   char *unquoted_path = get_unquoted_path(path);
   if (!unquoted_path) {
     return -1;
@@ -281,6 +283,11 @@ config_process_include(const char *path, int recursion_level, int extended,
     return -1;
   }
   tor_free(unquoted_path);
+#endif
+  smartlist_t *config_files = config_get_file_list(path);
+  if (!config_files) {
+    return -1;
+  }
 
   SMARTLIST_FOREACH_BEGIN(config_files, char *, config_file) {
     config_line_t *included_list = NULL;
