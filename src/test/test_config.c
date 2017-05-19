@@ -5164,6 +5164,8 @@ test_config_include_path_syntax(void *data)
 
   config_line_t *result = NULL;
   char *dir = tor_strdup(get_fname("test_include_path_syntax"));
+  char *esc_dir = NULL, *dir_with_pathsep = NULL,
+    *esc_dir_with_pathsep = NULL, *torrc_contents = NULL;
   tt_ptr_op(dir, OP_NE, NULL);
 
 #ifdef _WIN32
@@ -5172,18 +5174,18 @@ test_config_include_path_syntax(void *data)
   tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
 #endif
 
-#ifdef _WIN32
-#define ESCAPED_PATH_SEPARATOR "\\" PATH_SEPARATOR
-#else
-#define ESCAPED_PATH_SEPARATOR PATH_SEPARATOR
-#endif
 
-  char torrc_contents[1000];
-  tor_snprintf(torrc_contents, sizeof(torrc_contents),
-               "%%include \"%s\"\n"
-               "%%include %s"PATH_SEPARATOR"\n"
-                "%%include \"%s"ESCAPED_PATH_SEPARATOR"\"\n",
-               dir, dir, dir);
+  esc_dir = esc_for_log(dir);
+  tor_asprintf(&dir_with_pathsep, "%s%s", dir, PATH_SEPARATOR);
+  esc_dir_with_pathsep = esc_for_log(dir_with_pathsep);
+
+  tor_asprintf(&torrc_contents,
+               "%%include %s\n"
+               "%%include %s%s \n" // space to avoid suppressing newline
+               "%%include %s\n",
+               esc_dir,
+               dir, PATH_SEPARATOR,
+               esc_dir_with_pathsep);
 
   int include_used;
   tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
@@ -5194,6 +5196,10 @@ test_config_include_path_syntax(void *data)
  done:
   config_free_lines(result);
   tor_free(dir);
+  tor_free(torrc_contents);
+  tor_free(esc_dir);
+  tor_free(dir_with_pathsep);
+  tor_free(esc_dir_with_pathsep);
 }
 
 static void
