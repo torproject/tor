@@ -4549,6 +4549,9 @@ typedef struct {
    * do we enforce Ed25519 identity match? */
   /* NOTE: remove this option someday. */
   int AuthDirTestEd25519LinkKeys;
+
+  /** Bool (default: 0): Tells if a %include was used on torrc */
+  int IncludeUsed;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

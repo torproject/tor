@@ -209,3 +209,12 @@
 ## address manually to your friends, uncomment this line:
 #PublishServerDescriptor 0
 
+## Configuration options can be imported from files or folders using the %include
+## option with the value being a path. If the path is a file, the options from the
+## file will be parsed as if they were written where the %include option is. If
+## the path is a folder, all files on that folder will be parsed following lexical
+## order. Files starting with a dot are ignored. Files on subfolders are ignored.
+## The %include option can be used recursively.
+#%include /etc/torrc.d/
+#%include /etc/torrc.custom
+
