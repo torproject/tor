@@ -1,5 +1,0 @@
-  o Minor bugfixes (cell, logging):
-    - Downgrade a log statement from bug to protocol warning because there is
-      at least one use case where it can be triggered by a buggy tor
-      implementation on the Internet for instance. Fixes bug 21293; bugfix on
-      0.1.1.14-alpha.

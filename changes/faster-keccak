@@ -1,4 +1,0 @@
-  o Minor features (performance):
-    - The minimal keccak implementation we include now accesses memory
-      more efficiently, especially on little-endian systems.
-      Closes ticket 21737.

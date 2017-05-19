@@ -1,6 +1,0 @@
-  o Minor bugfixes (exit-side DNS):
-    - Fix an untriggerable assertion that checked the output of a
-      libevent DNS error, so that the assertion actually behaves as
-      expected.  Fixes bug 22244; bugfix on 0.2.0.20-rc. Found by Andrey
-      Karpov using PVS-Studio.
-

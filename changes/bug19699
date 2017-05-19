@@ -1,5 +1,0 @@
-  o Minor bugfixes (testing):
-    - Make test-network.sh always call chutney's test-network.sh.
-      Previously, this only worked on systems which had bash installed, due to
-      some bash-specific code in the script.
-      Fixes bug 19699; bugfix on 0.3.0.4-rc. Follow-up to ticket 21581.

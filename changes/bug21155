@@ -1,5 +1,0 @@
-  o Minor features (hidden service, logging):
-    - Warn user if multiple entries in  EntryNodes and at least one
-      HiddenService are used together. Pinning EntryNodes along with an hidden
-      service can be possibly harmful for instance see ticket 14917 or 21155.
-      Closes ticket 21155.

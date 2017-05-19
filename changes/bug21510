@@ -1,4 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - Make display of captured unit test log messages consistent.
-      Fixes bug 21510; bugfix on 0.2.9.3-alpha.
-

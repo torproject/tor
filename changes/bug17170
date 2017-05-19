@@ -1,3 +1,0 @@
-  o Documentation:
-    - Note that bandwidth-limiting options don't affect TCP headers or DNS.
-      Closes ticket 17170.

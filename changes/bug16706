@@ -1,3 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - Stop printing cryptic warning when a client tries to connect on an
-      invalid port of the service. Fixes bug 16706; bugfix on 0.2.6.3-alpha.

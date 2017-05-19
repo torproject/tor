@@ -1,4 +1,0 @@
-  o Minor bugfixes (windows, relay):
-    - Resolve "Failure from drain_fd: No error" warnings on Windows
-      relays. Fixes bug 21540; bugfix on 0.2.6.3-alpha.
-

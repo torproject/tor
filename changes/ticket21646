@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Our API to launch directory requests has been greatly simplified
-      to become more extensible and less error-prone. We'll be using
-      this to improve support for adding extra headers to directory
-      requests. Closes ticket 21646.
-

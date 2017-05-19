@@ -1,7 +1,0 @@
-  o Minor features (testing):
-    - Add a general event-tracing instrumentation support to Tor.  This
-      subsystem will enable developers and researchers to add fine-grained
-      instrumentation to their Tor instances, for use when examining Tor
-      network performance issues.  There are no trace events yet, and
-      event-tracing is off by default unless enabled at compile time.
-      Implements ticket 13802.

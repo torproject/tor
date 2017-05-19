@@ -1,3 +1,0 @@
-  o Documentation:
-    - Clarify the behavior of the KeepAliveIsolateSOCKSAuth sub-option.
-      Closes ticket 21873.

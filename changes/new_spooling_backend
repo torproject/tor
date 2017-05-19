@@ -1,7 +1,0 @@
-  o Code simplification and refactoring:
-    - The logic that directory caches use to spool request to clients,
-      serving them one part at a time so as not to allocate too much memory,
-      has been refactored for consistency.  Previously there was a separate
-      spooling implementation per type of spoolable data.  Now there
-      is one common spooling implementation, with extensible data types.
-      Closes ticket 21651.

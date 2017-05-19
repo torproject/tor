@@ -1,3 +1,0 @@
-  o Minor features (fallback directories):
-    - Update the fallback directory mirror whitelist and blacklist based on
-      operator emails. Closes task 21121.

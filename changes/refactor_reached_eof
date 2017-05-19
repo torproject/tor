@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-
-    - Break up the 630-line function connection_dir_client_reached_eof() into
-      a dozen smaller functions. This change should help maintainability and
-      readability of the client directory code.

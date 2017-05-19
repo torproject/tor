@@ -1,3 +1,0 @@
-  o Documentation:
-    - Document key=value pluggable transport arguments for Bridge lines in
-      torrc.  Fixes bug 20341; bugfix on 0.2.5.1-alpha.

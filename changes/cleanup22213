@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove unused "ROUTER_ADDED_NOTIFY_GENERATOR" internal value.
-      Resolves ticket 22213.
-

@@ -1,4 +1,0 @@
-  o Minor features (defaults, security):
-    - The default value for UseCreateFast is now 0: clients which haven't yet
-      received a consensus document will nonetheless use a proper handshake
-      to talk to their directory servers (when they can). Closes ticket 21407.
