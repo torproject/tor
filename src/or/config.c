@@ -2775,7 +2775,7 @@ compute_publishserverdescriptor(or_options_t *options)
 #define MIN_REND_POST_PERIOD (10*60)
 #define MIN_REND_POST_PERIOD_TESTING (5)
 
-/** Higest allowable value for CircuitsAvailableTimeout.
+/** Highest allowable value for CircuitsAvailableTimeout.
  * If this is too large, client connections will stay open for too long,
  * incurring extra padding overhead. */
 #define MAX_CIRCS_AVAILABLE_TIME (24*60*60)
