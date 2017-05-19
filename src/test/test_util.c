@@ -5736,7 +5736,7 @@ test_util_get_unquoted_path(void *arg)
 {
   (void)arg;
 
-  char *r;
+  char *r = NULL;
 
   r = get_unquoted_path("\""); // "
   tt_ptr_op(r, OP_EQ, NULL);
@@ -5804,10 +5804,9 @@ test_util_get_unquoted_path(void *arg)
 
   r = get_unquoted_path("\"A\\B\\\"C\""); // "A\B\"C"
   tt_str_op(r, OP_EQ, "A\\B\"C"); // A\B"C
-  tor_free(r);
 
  done:
-  ;
+  tor_free(r);
 }
 
 #define UTIL_LEGACY(name)                                               \
