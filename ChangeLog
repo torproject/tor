@@ -17,15 +17,17 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       now request these documents when available. When both client and
       server use this new protocol, they will use far less bandwidth (up
       to 94% less) to keep the client's consensus up-to-date. Implements
-      proposal 140; closes ticket 13339. Based on work by by
-      Daniel Martí.
+      proposal 140; closes ticket 13339. Based on work by Daniel Martí.
     - Tor can now compress directory traffic with lzma or with zstd
-      compression algoritms, which can deliver better bandwidth
+      compression algorithms, which can deliver better bandwidth
       performance. Because lzma is computationally expensive, it's only
       used for documents that can be compressed once and served many
-      times. Support for these algorithms requires that tor is build
+      times. Support for these algorithms requires that tor is built
       with the libzstd and/or liblzma libraries available. Implements
       proposal 278; closes ticket 21662.
+    - Relays now perform the more expensive compression operations, and
+      consensus diff generation, in worker threads. This separation
+      avoids delaying the main thread when a new consensus arrives.
 
   o Major features (experimental):
     - Tor can now build modules written in Rust. To turn this on, pass
@@ -33,12 +35,13 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       get excited yet: currently, there is no actual Rust functionality
       beyond some simple glue code, and a notice at startup to tell you
       that Rust is running. Still, we hope that programmers and
-      packagers will try building Tor with rust support, so that we can
-      find issues, and solve portability problems. Closes ticket 22106.
+      packagers will try building Tor with Rust support, so that we can
+      find issues and solve portability problems. Closes ticket 22106.
 
   o Major features (traffic analysis resistance):
-    - Client-to-relays connections can now send a padding cells every
-      1.5 to 9.5 seconds (tunable via consensus parameters). This will
+    - Connections between clients and relays now send a padding cell in
+      each direction every 1.5 to 9.5 seconds (tunable via consensus
+      parameters). This padding will
       not resist specialized eavesdroppers, but it should be enough to
       make many ISPs' routine network flow logging less useful in
       traffic analysis against Tor users.
@@ -92,26 +95,22 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       2017. Resolves ticket 21564.
 
   o Minor features (hidden services, logging):
-    - Add more information to the message logged when a hidden service
-      descriptor has fewer introduction points than specified in
-      HiddenServiceNumIntroductionPoints. Follow up to tickets 21598 and
-      21599, closes ticket 21622.
     - Log a message when a hidden service descriptor has fewer
       introduction points than specified in
-      HiddenServiceNumIntroductionPoints. Closes ticket 21598.
+      HiddenServiceNumIntroductionPoints. Closes tickets 21598.
     - Log a message when a hidden service reaches its introduction point
       circuit limit, and when that limit is reset. Follow up to ticket
-      21594, closes ticket 21622.
+      21594; closes ticket 21622.
     - Warn user if multiple entries in EntryNodes and at least one
-      HiddenService are used together. Pinning EntryNodes along with an
-      hidden service can be possibly harmful for instance see ticket
+      HiddenService are used together. Pinning EntryNodes along with a
+      hidden service can be possibly harmful; for instance see ticket
       14917 or 21155. Closes ticket 21155.
 
-  o Minor features (include in torrc config files):
+  o Minor features (config options):
     - Allow "%include" directives in torrc configuration files. These
       directives import the settings from other files, or from all the
       files in a directory. Closes ticket 1922. Code by Daniel Pinto.
-    - Make SAVECONF return error when overwriting a torrc that has
+    - Make SAVECONF return an error when overwriting a torrc that has
       includes. Using SAVECONF with the FORCE option will allow it to
       overwrite torrc even if includes are used. Related to ticket 1922.
     - Add "GETINFO config-can-saveconf" to tell controllers if SAVECONF
@@ -136,7 +135,8 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       from toralf.
 
   o Minor features (performance):
-    - Our Keccak implementation now accesses memory more efficiently,
+    - Our Keccak (SHA-3) implementation now accesses memory more
+      efficiently,
       especially on little-endian systems. Closes ticket 21737.
     - Add an O(1) implementation of channel_find_by_global_id(), to
       speed some controller functions.
@@ -147,7 +147,7 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       4998; patch by Daniel Pinto.
 
   o Minor features (safety):
-    - Add an explict check to extrainfo_parse_entry_from_string() for
+    - Add an explicit check to extrainfo_parse_entry_from_string() for
       NULL inputs. We don't believe this can actually happen, but it may
       help silence a warning from the Clang analyzer. Closes
       ticket 21496.
@@ -190,20 +190,21 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       unify CircuitIdleTimeout and PredictedPortsRelevanceTime into a
       single option called CircuitsAvailableTimeout. Also, allow the
       consensus to control the default values for both this preference
-      and lifespan of relay-to-relay connections. Fixes bug 17592;
+      and the lifespan of relay-to-relay connections. Fixes bug 17592;
       bugfix on 0.2.5.5-alpha.
-    - Increase the intial circuit build timeout testing frequency, to
+    - Increase the initial circuit build timeout testing frequency, to
       help ensure that ReducedConnectionPadding clients finish learning
       a timeout before their orconn would expire. The initial testing
       rate was set back in the days of TAP and before the Tor Browser
       updater, when we had to be much more careful about new clients
-      making lots of circuits. With this change, a circuit build time is
-      learned in about 15-20 minutes, instead of ~100-120 minutes.
+      making lots of circuits. With this change, a circuit build timeout is
+      learned in about 15-20 minutes, instead of 100-120 minutes.
 
   o Minor bugfixes (connection usage):
-    - Relays now log hourly statistics on the total number of
+    - Relays now log hourly statistics (look for
+      "channel_check_for_duplicates" lines) on the total number of
       connections to other relays. If the number of connections per
-      relay unexpectedly large, this log message is at notice level.
+      relay is unexpectedly large, this log message is at notice level.
       Otherwise it is at info.
     - We use NETINFO cells to try to determine if both relays involved
       in a connection will agree on the canonical status of that
@@ -215,12 +216,12 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       relays. Fixes bug 17604; bugfix on 0.2.5.5-alpha.
 
   o Minor bugfixes (controller):
-    - GETINFO onions/current and onions/detached no longer 551 on empty
-      lists. Fixes bug 21329; bugfix on 0.2.7.1-alpha.
+    - GETINFO onions/current and onions/detached no longer respond with
+      551 on empty lists. Fixes bug 21329; bugfix on 0.2.7.1-alpha.
     - Trigger HS descriptor events on the control port when the client
       fails to pick a hidden service directory for a hidden service.
-      This can happen if they all hidden service directories are in
-      ExcludeNodes, or they have all been queried inside the last 15
+      This can happen if all the hidden service directories are in
+      ExcludeNodes, or they have all been queried within the last 15
       minutes. Fixes bug 22042; bugfix on 0.2.5.2-alpha.
 
   o Minor bugfixes (directory authority):
@@ -250,9 +251,9 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       selected. Fixes bug 20913; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (hidden services):
-    - Stop printing a cryptic warning when a client tries to connect to
-      invalid port on a hidden service. Fixes bug 16706; bugfix
-      on 0.2.6.3-alpha.
+    - Stop printing a cryptic warning when a hidden service gets a request
+      to connect to a virtual port that it hasn't configured. Fixes bug
+      16706; bugfix on 0.2.6.3-alpha.
     - Simplify hidden service descriptor creation by using an existing
       flag to check if an introduction point is established. Fixes bug
       21599; bugfix on 0.2.7.2-alpha.
@@ -268,15 +269,15 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       21293; bugfix on 0.1.1.14-alpha.
 
   o Minor bugfixes (testing):
-    - Make test-network.sh always call chutney's test-network.sh.
-      Previously, this only worked on systems which had bash installed,
-      due to some bash-specific code in the script. Fixes bug 19699;
-      bugfix on 0.3.0.4-rc. Follow-up to ticket 21581.
     - Use unbuffered I/O for utility functions around the
       process_handle_t type. This fixes unit test failures reported on
       OpenBSD and FreeBSD. Fixes bug 21654; bugfix on 0.2.3.1-alpha.
     - Make display of captured unit test log messages consistent. Fixes
       bug 21510; bugfix on 0.2.9.3-alpha.
+    - Make test-network.sh always call chutney's test-network.sh.
+      Previously, this only worked on systems which had bash installed,
+      due to some bash-specific code in the script. Fixes bug 19699;
+      bugfix on 0.3.0.4-rc. Follow-up to ticket 21581.
 
   o Minor bugfixes (voting consistency):
     - Reject version numbers with non-numeric prefixes (such as +, -, or
@@ -295,9 +296,9 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
     - Isolate our use of the openssl headers so that they are only
       included from our crypto wrapper modules, and from tests that
       examine those modules' internals. Closes ticket 21841.
-    - Our API to launch directory requests has been simplified to be
-      more extensible and less error-prone. We'll use this to support
-      adding extra headers to directory requests. Closes ticket 21646.
+    - Simplify our API to launch directory requests, making it
+      more extensible and less error-prone. Now it's easier to add
+      extra headers to directory requests. Closes ticket 21646.
     - Our base64 decoding functions no longer overestimate the output
       space that they need when parsing unpadded inputs. Closes
       ticket 17868.
@@ -327,20 +328,18 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
 
   o Removed features (configuration options, all in ticket 22060):
     - These configuration options are now marked Obsolete, and no longer
-      have any affect: AllowInvalidNodes, AllowSingleHopCircuits,
+      have any effect: AllowInvalidNodes, AllowSingleHopCircuits,
       AllowSingleHopExits, ExcludeSingleHopRelays, FastFirstHopPK,
       TLSECGroup, WarnUnsafeSocks. They were first marked as deprecated
-      in 0.2.9.2-alpha and have now has been removed. The previous
-      default behavior is now always-on; the previous (less secure) non-
+      in 0.2.9.2-alpha and have now been removed. The previous
+      default behavior is now always chosen; the previous (less secure) non-
       default behavior is now unavailable.
-    - CloseHSClientCircuitsImmediatelyOnTimeout was deprecated in
-      0.2.9.2-alpha and now has been removed. HS circuits never close on
-      circuit build timeout, they have a longer timeout period.
-    - CloseHSServiceRendCircuitsImmediatelyOnTimeout was deprecated in
-      0.2.9.2-alpha and now has been removed. HS circuits never close on
-      circuit build timeout, they have a long timeout period.
+    - CloseHSClientCircuitsImmediatelyOnTimeout and
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout were deprecated in
+      0.2.9.2-alpha and now have been removed. HS circuits never close
+      on circuit build timeout; they have a longer timeout period.
     - {Control,DNS,Dir,Socks,Trans,NATD,OR}ListenAddress were deprecated
-      in 0.2.9.2-alpha and now has been removed. Use the ORPort option
+      in 0.2.9.2-alpha and now have been removed. Use the ORPort option
       (and others) to configure listen-only and advertise-only addresses.
 
   o Removed features (tools):
