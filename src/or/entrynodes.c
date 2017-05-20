@@ -67,7 +67,7 @@
  *
  * While we're building circuits, we track a little "guard state" for
  * each circuit. We use this to keep track of whether the circuit is
- * one that we can use as soon as its done, or whether it's one that
+ * one that we can use as soon as it's done, or whether it's one that
  * we should keep around to see if we can do better.  In the latter case,
  * a periodic call to entry_guards_upgrade_waiting_circuits() will
  * eventually upgrade it.
