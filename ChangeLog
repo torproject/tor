@@ -58,6 +58,21 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       is set in torrc. These 24 hour totals are also rounded to
       multiples of 10000.
 
+  o Major bugfixes (connection usage):
+    - We use NETINFO cells to try to determine if both relays involved
+      in a connection will agree on the canonical status of that
+      connection. We prefer the connections where this is the case for
+      extend cells, and try to close connections where relays disagree
+      on their canonical status early. Also, we now prefer the oldest
+      valid connection for extend cells. These two changes should reduce
+      the number of long-term connections that are kept open between
+      relays. Fixes bug 17604; bugfix on 0.2.5.5-alpha.
+    - Relays now log hourly statistics (look for
+      "channel_check_for_duplicates" lines) on the total number of
+      connections to other relays. If the number of connections per
+      relay is unexpectedly large, this log message is at notice level.
+      Otherwise it is at info.
+
   o Major bugfixes (linux TPROXY support):
     - Fix a typo that had prevented TPROXY-based transparent proxying
       from working under Linux. Fixes bug 18100; bugfix on 0.2.6.3-alpha.
@@ -199,21 +214,6 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       updater, when we had to be much more careful about new clients
       making lots of circuits. With this change, a circuit build timeout is
       learned in about 15-20 minutes, instead of 100-120 minutes.
-
-  o Minor bugfixes (connection usage):
-    - Relays now log hourly statistics (look for
-      "channel_check_for_duplicates" lines) on the total number of
-      connections to other relays. If the number of connections per
-      relay is unexpectedly large, this log message is at notice level.
-      Otherwise it is at info.
-    - We use NETINFO cells to try to determine if both relays involved
-      in a connection will agree on the canonical status of that
-      connection. We prefer the connections where this is the case for
-      extend cells, and try to close connections where relays disagree
-      on their canonical status early. Also, we now prefer the oldest
-      valid connection for extend cells. These two changes should reduce
-      the number of long-term connections that are kept open between
-      relays. Fixes bug 17604; bugfix on 0.2.5.5-alpha.
 
   o Minor bugfixes (controller):
     - GETINFO onions/current and onions/detached no longer respond with
