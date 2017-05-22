@@ -414,10 +414,10 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 #endif
 
 #ifndef timercmp
-/** Replacement for timersub on platforms that do not have it: returns true
+/** Replacement for timercmp on platforms that do not have it: returns true
  * iff the relational operator "op" makes the expression tv1 op tv2 true.
  *
- * Note that while this definition should work for all boolean opeators, some
+ * Note that while this definition should work for all boolean operators, some
  * platforms' native timercmp definitions do not support >=, <=, or ==.  So
  * don't use those.
  */
