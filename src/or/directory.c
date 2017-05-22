@@ -2219,6 +2219,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                        conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
   size_t received_bytes;
+  const int anonymized_connection =
+    purpose_needs_anonymity(conn->base_.purpose,
+                            conn->router_purpose,
+                            conn->requested_resource);
 
   received_bytes = connection_get_inbuf_len(TO_CONN(conn));
 
@@ -2347,13 +2351,29 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                description2,
                (compression>0 && guessed>0)?"  Trying both.":"");
     }
+
     /* Try declared compression first if we can.
-     * tor_compress_supports_method() also returns true for NO_METHOD. */
+     * tor_compress_supports_method() also returns true for NO_METHOD.
+     * Ensure that the server is not sending us data compressed using a
+     * compression method that is not allowed for anonymous connections. */
+    if (anonymized_connection &&
+        ! allowed_anonymous_connection_compression_method(compression)) {
+      rv = -1;
+      goto done;
+    }
+
     if (tor_compress_supports_method(compression))
       tor_uncompress(&new_body, &new_len, body, body_len, compression,
                      !allow_partial, LOG_PROTOCOL_WARN);
+
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
+    if (anonymized_connection &&
+        ! allowed_anonymous_connection_compression_method(guessed)) {
+      rv = -1;
+      goto done;
+    }
+
     if (!new_body && tor_compress_supports_method(guessed) &&
         compression != guessed)
       tor_uncompress(&new_body, &new_len, body, body_len, guessed,
@@ -3339,6 +3359,14 @@ static compress_method_t srv_meth_pref_streaming_compression[] = {
   NO_METHOD
 };
 
+/** Array of allowed compression methods to use (if supported) when receiving a
+ * response from a request that was required to be anonymous. */
+static compress_method_t client_meth_allowed_anonymous_compression[] = {
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
+
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
  * and convert them to a bitfield where compression method x is supported if
  * and only if 1 &lt;&lt; x is set in the bitfield. */
@@ -3836,6 +3864,29 @@ find_best_compression_method(unsigned compression_methods, int stream)
   }
 
   return NO_METHOD;
+}
+
+/** Check if the given compression method is allowed for a connection that is
+ * supposed to be anonymous. Returns 1 if the compression method is allowed,
+ * otherwise 0. */
+STATIC int
+allowed_anonymous_connection_compression_method(compress_method_t method)
+{
+  unsigned u;
+
+  for (u = 0; u < ARRAY_LENGTH(client_meth_allowed_anonymous_compression);
+       ++u) {
+    compress_method_t allowed_method =
+      client_meth_allowed_anonymous_compression[u];
+
+    if (! tor_compress_supports_method(allowed_method))
+      continue;
+
+    if (method == allowed_method)
+      return 1;
+  }
+
+  return 0;
 }
 
 /** Encodes the results of parsing a consensus request to figure out what
