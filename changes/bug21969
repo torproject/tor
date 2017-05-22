@@ -1,0 +1,3 @@
+  o Major bugfixes (entry guards):
+    - Don't block bootstrapping when a primary bridge is offline and we can't
+      get its descriptor. Fixes bug 21969; bugfix on 0.3.0.3-alpha.

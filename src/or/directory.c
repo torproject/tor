@@ -123,8 +123,6 @@ static int client_likes_consensus(const struct consensus_cache_entry_t *ent,
 
 static void connection_dir_close_consensus_fetches(
                    dir_connection_t *except_this_one, const char *resource);
-static void directory_request_set_guard_state(directory_request_t *req,
-                                       struct circuit_guard_state_t *state);
 
 /********* START VARIABLES **********/
 
@@ -1273,7 +1271,7 @@ directory_request_set_rend_query(directory_request_t *req,
 /** Set a static circuit_guard_state_t object to affliate with the request in
  * <b>req</b>.  This object will receive notification when the attempt to
  * connect to the guard either succeeds or fails. */
-static void
+void
 directory_request_set_guard_state(directory_request_t *req,
                                   circuit_guard_state_t *state)
 {
