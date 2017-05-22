@@ -47,6 +47,7 @@ int directory_must_use_begindir(const or_options_t *options);
  * directory we're going to ask for it, how we're going to contact that
  * directory, and (in some cases) what to do with it when we're done.
  */
+typedef struct circuit_guard_state_t circuit_guard_state_t;
 typedef struct directory_request_t directory_request_t;
 directory_request_t *directory_request_new(uint8_t dir_purpose);
 void directory_request_free(directory_request_t *req);
@@ -56,6 +57,8 @@ void directory_request_set_dir_addr_port(directory_request_t *req,
                                          const tor_addr_port_t *p);
 void directory_request_set_directory_id_digest(directory_request_t *req,
                                                const char *digest);
+void directory_request_set_guard_state(directory_request_t *req,
+                                       circuit_guard_state_t *state);
 void directory_request_set_router_purpose(directory_request_t *req,
                                           uint8_t router_purpose);
 void directory_request_set_indirection(directory_request_t *req,

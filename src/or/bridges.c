@@ -547,6 +547,7 @@ static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
   const or_options_t *options = get_options();
+  circuit_guard_state_t *guard_state = NULL;
 
   if (connection_get_by_type_addr_port_purpose(
       CONN_TYPE_DIR, &bridge->addr, bridge->port,
@@ -574,12 +575,17 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
   memcpy(&bridge_addrport.addr, &bridge->addr, sizeof(tor_addr_t));
   bridge_addrport.port = bridge->port;
 
+  guard_state = get_guard_state_for_bridge_desc_fetch(bridge->identity);
+
   directory_request_t *req =
     directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
   directory_request_set_or_addr_port(req, &bridge_addrport);
   directory_request_set_directory_id_digest(req, bridge->identity);
   directory_request_set_router_purpose(req, ROUTER_PURPOSE_BRIDGE);
   directory_request_set_resource(req, "authority.z");
+  if (guard_state) {
+    directory_request_set_guard_state(req, guard_state);
+  }
   directory_initiate_request(req);
   directory_request_free(req);
 }
