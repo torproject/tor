@@ -2073,6 +2073,23 @@ circuit_guard_state_free(circuit_guard_state_t *state)
   tor_free(state);
 }
 
+/** Allocate and return a new circuit_guard_state_t to track the result
+ * of using <b>guard</b> for a given operation. */
+static circuit_guard_state_t *
+circuit_guard_state_new(entry_guard_t *guard, unsigned state,
+                        entry_guard_restriction_t *rst)
+{
+  circuit_guard_state_t *result;
+
+  result = tor_malloc_zero(sizeof(circuit_guard_state_t));
+  result->guard = entry_guard_handle_new(guard);
+  result->state = state;
+  result->state_set_at = approx_time();
+  result->restrictions = rst;
+
+  return result;
+}
+
 /**
  * Pick a suitable entry guard for a circuit in, and place that guard
  * in *<b>chosen_node_out</b>. Set *<b>guard_state_out</b> to an opaque
@@ -2111,11 +2128,7 @@ entry_guard_pick_for_circuit(guard_selection_t *gs,
     goto fail;
 
   *chosen_node_out = node;
-  *guard_state_out = tor_malloc_zero(sizeof(circuit_guard_state_t));
-  (*guard_state_out)->guard = entry_guard_handle_new(guard);
-  (*guard_state_out)->state = state;
-  (*guard_state_out)->state_set_at = approx_time();
-  (*guard_state_out)->restrictions = rst;
+  *guard_state_out = circuit_guard_state_new(guard, state, rst);
 
   return 0;
  fail:
@@ -2945,11 +2958,9 @@ get_guard_state_for_bridge_desc_fetch(const char *digest)
   guard->last_tried_to_connect = approx_time();
 
   /* Create the guard state */
-  guard_state = tor_malloc_zero(sizeof(circuit_guard_state_t));
-  guard_state->guard = entry_guard_handle_new(guard);
-  guard_state->state = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
-  guard_state->state_set_at = approx_time();
-  guard_state->restrictions = NULL;
+  guard_state = circuit_guard_state_new(guard,
+                                        GUARD_CIRC_STATE_USABLE_ON_COMPLETION,
+                                        NULL);
 
   return guard_state;
 }
