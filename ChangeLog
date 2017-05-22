@@ -41,10 +41,10 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
   o Major features (traffic analysis resistance):
     - Connections between clients and relays now send a padding cell in
       each direction every 1.5 to 9.5 seconds (tunable via consensus
-      parameters). This padding will
-      not resist specialized eavesdroppers, but it should be enough to
-      make many ISPs' routine network flow logging less useful in
-      traffic analysis against Tor users.
+      parameters). This padding will not resist specialized
+      eavesdroppers, but it should be enough to make many ISPs' routine
+      network flow logging less useful in traffic analysis against
+      Tor users.
 
       Padding is negotiated using Tor's link protocol, so both relays
       and clients must upgrade for this to take effect. Clients may
@@ -74,9 +74,9 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       Otherwise it is at info.
 
   o Major bugfixes (entry guards):
-    - Don't block bootstrapping when a primary bridge is offline and we can't
-      get its descriptor. Fixes bug 22325; fixes one case of bug 21969;
-      bugfix on 0.3.0.3-alpha.
+    - Don't block bootstrapping when a primary bridge is offline and we
+      can't get its descriptor. Fixes bug 22325; fixes one case of bug
+      21969; bugfix on 0.3.0.3-alpha.
 
   o Major bugfixes (linux TPROXY support):
     - Fix a typo that had prevented TPROXY-based transparent proxying
@@ -89,6 +89,16 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       since Windows 8, and unavailable before Windows 7; and one
       (PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION) which we believe doesn't
       affect us, but shouldn't do any harm. Closes ticket 21953.
+
+  o Minor features (config options):
+    - Allow "%include" directives in torrc configuration files. These
+      directives import the settings from other files, or from all the
+      files in a directory. Closes ticket 1922. Code by Daniel Pinto.
+    - Make SAVECONF return an error when overwriting a torrc that has
+      includes. Using SAVECONF with the FORCE option will allow it to
+      overwrite torrc even if includes are used. Related to ticket 1922.
+    - Add "GETINFO config-can-saveconf" to tell controllers if SAVECONF
+      will work without the FORCE option. Related to ticket 1922.
 
   o Minor features (controller):
     - Warn the first time that a controller requests data in the long-
@@ -126,16 +136,6 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       hidden service can be possibly harmful; for instance see ticket
       14917 or 21155. Closes ticket 21155.
 
-  o Minor features (config options):
-    - Allow "%include" directives in torrc configuration files. These
-      directives import the settings from other files, or from all the
-      files in a directory. Closes ticket 1922. Code by Daniel Pinto.
-    - Make SAVECONF return an error when overwriting a torrc that has
-      includes. Using SAVECONF with the FORCE option will allow it to
-      overwrite torrc even if includes are used. Related to ticket 1922.
-    - Add "GETINFO config-can-saveconf" to tell controllers if SAVECONF
-      will work without the FORCE option. Related to ticket 1922.
-
   o Minor features (linux seccomp2 sandbox):
     - We now have a document storage backend compatible with the Linux
       seccomp2 sandbox. This backend is used for consensus documents and
@@ -156,8 +156,8 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
 
   o Minor features (performance):
     - Our Keccak (SHA-3) implementation now accesses memory more
-      efficiently,
-      especially on little-endian systems. Closes ticket 21737.
+      efficiently, especially on little-endian systems. Closes
+      ticket 21737.
     - Add an O(1) implementation of channel_find_by_global_id(), to
       speed some controller functions.
 
@@ -217,8 +217,8 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       a timeout before their orconn would expire. The initial testing
       rate was set back in the days of TAP and before the Tor Browser
       updater, when we had to be much more careful about new clients
-      making lots of circuits. With this change, a circuit build timeout is
-      learned in about 15-20 minutes, instead of 100-120 minutes.
+      making lots of circuits. With this change, a circuit build timeout
+      is learned in about 15-20 minutes, instead of 100-120 minutes.
 
   o Minor bugfixes (controller):
     - GETINFO onions/current and onions/detached no longer respond with
@@ -256,9 +256,9 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       selected. Fixes bug 20913; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (hidden services):
-    - Stop printing a cryptic warning when a hidden service gets a request
-      to connect to a virtual port that it hasn't configured. Fixes bug
-      16706; bugfix on 0.2.6.3-alpha.
+    - Stop printing a cryptic warning when a hidden service gets a
+      request to connect to a virtual port that it hasn't configured.
+      Fixes bug 16706; bugfix on 0.2.6.3-alpha.
     - Simplify hidden service descriptor creation by using an existing
       flag to check if an introduction point is established. Fixes bug
       21599; bugfix on 0.2.7.2-alpha.
@@ -301,9 +301,9 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
     - Isolate our use of the openssl headers so that they are only
       included from our crypto wrapper modules, and from tests that
       examine those modules' internals. Closes ticket 21841.
-    - Simplify our API to launch directory requests, making it
-      more extensible and less error-prone. Now it's easier to add
-      extra headers to directory requests. Closes ticket 21646.
+    - Simplify our API to launch directory requests, making it more
+      extensible and less error-prone. Now it's easier to add extra
+      headers to directory requests. Closes ticket 21646.
     - Our base64 decoding functions no longer overestimate the output
       space that they need when parsing unpadded inputs. Closes
       ticket 17868.
@@ -336,8 +336,8 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       have any effect: AllowInvalidNodes, AllowSingleHopCircuits,
       AllowSingleHopExits, ExcludeSingleHopRelays, FastFirstHopPK,
       TLSECGroup, WarnUnsafeSocks. They were first marked as deprecated
-      in 0.2.9.2-alpha and have now been removed. The previous
-      default behavior is now always chosen; the previous (less secure) non-
+      in 0.2.9.2-alpha and have now been removed. The previous default
+      behavior is now always chosen; the previous (less secure) non-
       default behavior is now unavailable.
     - CloseHSClientCircuitsImmediatelyOnTimeout and
       CloseHSServiceRendCircuitsImmediatelyOnTimeout were deprecated in
