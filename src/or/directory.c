@@ -2204,8 +2204,8 @@ static int handle_response_upload_renddesc_v2(dir_connection_t *,
 static int
 connection_dir_client_reached_eof(dir_connection_t *conn)
 {
-  char *body;
-  char *headers;
+  char *body = NULL;
+  char *headers = NULL;
   char *reason = NULL;
   size_t body_len = 0;
   int status_code;
@@ -2214,6 +2214,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   compress_method_t compression;
   int plausible;
   int skewed = 0;
+  int rv;
   int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
@@ -2241,8 +2242,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                           &compression, &reason) < 0) {
     log_warn(LD_HTTP,"Unparseable headers (server '%s:%d'). Closing.",
              conn->base_.address, conn->base_.port);
-    tor_free(body); tor_free(headers);
-    return -1;
+
+    rv = -1;
+    goto done;
   }
   if (!reason) reason = tor_strdup("[no reason given]");
 
@@ -2316,8 +2318,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     if ((ds = router_get_fallback_dirserver_by_digest(id_digest)))
       ds->fake_status.last_dir_503_at = now;
 
-    tor_free(body); tor_free(headers); tor_free(reason);
-    return -1;
+    rv = -1;
+    goto done;
   }
 
   plausible = body_is_plausible(body, body_len, conn->base_.purpose);
@@ -2362,8 +2364,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       log_fn(LOG_PROTOCOL_WARN, LD_HTTP,
              "Unable to decompress HTTP body (server '%s:%d').",
              conn->base_.address, conn->base_.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
+      rv = -1;
+      goto done;
     }
     if (new_body) {
       tor_free(body);
@@ -2372,7 +2374,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
   }
 
-  int rv;
   response_handler_args_t args;
   memset(&args, 0, sizeof(args));
   args.status_code = status_code;
@@ -2421,6 +2422,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       rv = -1;
       break;
   }
+
+ done:
   tor_free(body);
   tor_free(headers);
   tor_free(reason);
