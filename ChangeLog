@@ -1,4 +1,4 @@
-Changes in version 0.3.1.1-alpha - 2017-05-??
+Changes in version 0.3.1.1-alpha - 2017-05-22
   Tor 0.3.1.1-alpha is the first release in the 0.3.1.x series. It
   reduces the bandwidth usage for Tor's directory protocol, adds some
   basic padding to resist netflow-based traffic analysis and to serve as
