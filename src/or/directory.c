@@ -1677,6 +1677,7 @@ directory_send_command(dir_connection_t *conn,
   const char *payload = req->payload;
   const size_t payload_len = req->payload_len;
   const time_t if_modified_since = req->if_modified_since;
+  const int anonymized_connection = dirind_is_anon(req->indirection);
 
   char proxystring[256];
   char hoststring[128];
@@ -1742,11 +1743,13 @@ directory_send_command(dir_connection_t *conn,
     proxystring[0] = 0;
   }
 
-  /* Add Accept-Encoding. */
-  accept_encoding = accept_encoding_header();
-  smartlist_add_asprintf(headers, "Accept-Encoding: %s\r\n",
-                         accept_encoding);
-  tor_free(accept_encoding);
+  if (! anonymized_connection) {
+    /* Add Accept-Encoding. */
+    accept_encoding = accept_encoding_header();
+    smartlist_add_asprintf(headers, "Accept-Encoding: %s\r\n",
+                           accept_encoding);
+    tor_free(accept_encoding);
+  }
 
   /* Add additional headers, if any */
   {
