@@ -2356,6 +2356,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      * compression method that is not allowed for anonymous connections. */
     if (anonymized_connection &&
         ! allowed_anonymous_connection_compression_method(compression)) {
+      warn_disallowed_anonymous_compression_method(compression);
       rv = -1;
       goto done;
     }
@@ -2368,6 +2369,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      * differently, try that. */
     if (anonymized_connection &&
         ! allowed_anonymous_connection_compression_method(guessed)) {
+      warn_disallowed_anonymous_compression_method(guessed);
       rv = -1;
       goto done;
     }
@@ -3885,6 +3887,17 @@ allowed_anonymous_connection_compression_method(compress_method_t method)
   }
 
   return 0;
+}
+
+/** Log a warning when a remote server have send us a document using a
+ * compression method that is not allowed for anonymous directory requests. */
+STATIC void
+warn_disallowed_anonymous_compression_method(compress_method_t method)
+{
+  log_fn(LOG_PROTOCOL_WARN, LD_HTTP,
+         "Received a %s HTTP response, which is not "
+         "allowed for anonymous directory requests.",
+         compression_method_get_human_name(method));
 }
 
 /** Encodes the results of parsing a consensus request to figure out what
