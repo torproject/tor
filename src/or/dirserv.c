@@ -398,6 +398,17 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     return FP_REJECT;
   }
 
+  /* Tor 0.2.9.x where x<5 suffers from bug #20499, where relays don't
+   * keep their consensus up to date so they make bad guards.
+   * The simple fix is to just drop them from the network. */
+  if (platform &&
+      tor_version_as_new_as(platform,"0.2.9.0-alpha") &&
+      !tor_version_as_new_as(platform,"0.2.9.5-alpha")) {
+    if (msg)
+      *msg = "Tor version contains bug 20499. Please upgrade!";
+    return FP_REJECT;
+  }
+
   status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
                                    id_digest);
   if (status_by_digest)

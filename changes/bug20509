@@ -1,0 +1,5 @@
+  o Minor features:
+    - Directory authorities now reject relays running versions
+      0.2.9.1-alpha through 0.2.9.4-alpha, because those relays
+      suffer from bug 20499 and don't keep their consensus cache
+      up-to-date. Resolves ticket 20509.
