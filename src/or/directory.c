@@ -1131,6 +1131,7 @@ directory_command_should_use_begindir(const or_options_t *options,
  * <b>router_purpose</b>, making an (in)direct connection as specified in
  * <b>indirection</b>, with command <b>resource</b>, <b>payload</b> of
  * <b>payload_len</b>, and asking for a result only <b>if_modified_since</b>.
+ * If <b>guard_state</b> is set, assign it to the directory circuit.
  */
 void
 directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
@@ -1139,7 +1140,8 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
                            uint8_t dir_purpose, uint8_t router_purpose,
                            dir_indirection_t indirection, const char *resource,
                            const char *payload, size_t payload_len,
-                           time_t if_modified_since)
+                           time_t if_modified_since,
+                           circuit_guard_state_t *guard_state)
 {
   tor_addr_port_t or_ap, dir_ap;
 
@@ -1166,7 +1168,7 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
                              digest, dir_purpose,
                              router_purpose, indirection,
                              resource, payload, payload_len,
-                             if_modified_since, NULL, NULL);
+                             if_modified_since, NULL, guard_state);
 }
 
 /** Same as directory_initiate_command(), but accepts rendezvous data to

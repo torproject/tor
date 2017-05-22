@@ -961,7 +961,7 @@ authority_certs_fetch_resource_impl(const char *resource,
                                DIR_PURPOSE_FETCH_CERTIFICATE,
                                0,
                                indirection,
-                               resource, NULL, 0, 0);
+                               resource, NULL, 0, 0, NULL);
     return;
   }
 
