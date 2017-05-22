@@ -1675,6 +1675,7 @@ directory_send_command(dir_connection_t *conn,
   const char *payload = req->payload;
   const size_t payload_len = req->payload_len;
   const time_t if_modified_since = req->if_modified_since;
+  const int anonymized_connection = dirind_is_anon(req->indirection);
 
   char proxystring[256];
   char hoststring[128];
@@ -1740,11 +1741,13 @@ directory_send_command(dir_connection_t *conn,
     proxystring[0] = 0;
   }
 
-  /* Add Accept-Encoding. */
-  accept_encoding = accept_encoding_header();
-  smartlist_add_asprintf(headers, "Accept-Encoding: %s\r\n",
-                         accept_encoding);
-  tor_free(accept_encoding);
+  if (! anonymized_connection) {
+    /* Add Accept-Encoding. */
+    accept_encoding = accept_encoding_header();
+    smartlist_add_asprintf(headers, "Accept-Encoding: %s\r\n",
+                           accept_encoding);
+    tor_free(accept_encoding);
+  }
 
   /* Add additional headers, if any */
   {
@@ -2199,8 +2202,8 @@ static int handle_response_upload_renddesc_v2(dir_connection_t *,
 static int
 connection_dir_client_reached_eof(dir_connection_t *conn)
 {
-  char *body;
-  char *headers;
+  char *body = NULL;
+  char *headers = NULL;
   char *reason = NULL;
   size_t body_len = 0;
   int status_code;
@@ -2209,10 +2212,15 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   compress_method_t compression;
   int plausible;
   int skewed = 0;
+  int rv;
   int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
   size_t received_bytes;
+  const int anonymized_connection =
+    purpose_needs_anonymity(conn->base_.purpose,
+                            conn->router_purpose,
+                            conn->requested_resource);
 
   received_bytes = connection_get_inbuf_len(TO_CONN(conn));
 
@@ -2236,8 +2244,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                           &compression, &reason) < 0) {
     log_warn(LD_HTTP,"Unparseable headers (server '%s:%d'). Closing.",
              conn->base_.address, conn->base_.port);
-    tor_free(body); tor_free(headers);
-    return -1;
+
+    rv = -1;
+    goto done;
   }
   if (!reason) reason = tor_strdup("[no reason given]");
 
@@ -2311,8 +2320,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     if ((ds = router_get_fallback_dirserver_by_digest(id_digest)))
       ds->fake_status.last_dir_503_at = now;
 
-    tor_free(body); tor_free(headers); tor_free(reason);
-    return -1;
+    rv = -1;
+    goto done;
   }
 
   plausible = body_is_plausible(body, body_len, conn->base_.purpose);
@@ -2340,13 +2349,29 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                description2,
                (compression>0 && guessed>0)?"  Trying both.":"");
     }
+
     /* Try declared compression first if we can.
-     * tor_compress_supports_method() also returns true for NO_METHOD. */
+     * tor_compress_supports_method() also returns true for NO_METHOD.
+     * Ensure that the server is not sending us data compressed using a
+     * compression method that is not allowed for anonymous connections. */
+    if (anonymized_connection &&
+        ! allowed_anonymous_connection_compression_method(compression)) {
+      rv = -1;
+      goto done;
+    }
+
     if (tor_compress_supports_method(compression))
       tor_uncompress(&new_body, &new_len, body, body_len, compression,
                      !allow_partial, LOG_PROTOCOL_WARN);
+
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
+    if (anonymized_connection &&
+        ! allowed_anonymous_connection_compression_method(guessed)) {
+      rv = -1;
+      goto done;
+    }
+
     if (!new_body && tor_compress_supports_method(guessed) &&
         compression != guessed)
       tor_uncompress(&new_body, &new_len, body, body_len, guessed,
@@ -2357,8 +2382,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       log_fn(LOG_PROTOCOL_WARN, LD_HTTP,
              "Unable to decompress HTTP body (server '%s:%d').",
              conn->base_.address, conn->base_.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
+      rv = -1;
+      goto done;
     }
     if (new_body) {
       tor_free(body);
@@ -2367,7 +2392,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
   }
 
-  int rv;
   response_handler_args_t args;
   memset(&args, 0, sizeof(args));
   args.status_code = status_code;
@@ -2416,6 +2440,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       rv = -1;
       break;
   }
+
+ done:
   tor_free(body);
   tor_free(headers);
   tor_free(reason);
@@ -3331,6 +3357,14 @@ static compress_method_t srv_meth_pref_streaming_compression[] = {
   NO_METHOD
 };
 
+/** Array of allowed compression methods to use (if supported) when receiving a
+ * response from a request that was required to be anonymous. */
+static compress_method_t client_meth_allowed_anonymous_compression[] = {
+  ZLIB_METHOD,
+  GZIP_METHOD,
+  NO_METHOD
+};
+
 /** Parse the compression methods listed in an Accept-Encoding header <b>h</b>,
  * and convert them to a bitfield where compression method x is supported if
  * and only if 1 &lt;&lt; x is set in the bitfield. */
@@ -3828,6 +3862,29 @@ find_best_compression_method(unsigned compression_methods, int stream)
   }
 
   return NO_METHOD;
+}
+
+/** Check if the given compression method is allowed for a connection that is
+ * supposed to be anonymous. Returns 1 if the compression method is allowed,
+ * otherwise 0. */
+STATIC int
+allowed_anonymous_connection_compression_method(compress_method_t method)
+{
+  unsigned u;
+
+  for (u = 0; u < ARRAY_LENGTH(client_meth_allowed_anonymous_compression);
+       ++u) {
+    compress_method_t allowed_method =
+      client_meth_allowed_anonymous_compression[u];
+
+    if (! tor_compress_supports_method(allowed_method))
+      continue;
+
+    if (method == allowed_method)
+      return 1;
+  }
+
+  return 0;
 }
 
 /** Encodes the results of parsing a consensus request to figure out what
