@@ -73,6 +73,11 @@ Changes in version 0.3.1.1-alpha - 2017-05-??
       relay is unexpectedly large, this log message is at notice level.
       Otherwise it is at info.
 
+  o Major bugfixes (entry guards):
+    - Don't block bootstrapping when a primary bridge is offline and we can't
+      get its descriptor. Fixes bug 22325; fixes one case of bug 21969;
+      bugfix on 0.3.0.3-alpha.
+
   o Major bugfixes (linux TPROXY support):
     - Fix a typo that had prevented TPROXY-based transparent proxying
       from working under Linux. Fixes bug 18100; bugfix on 0.2.6.3-alpha.
@@ -988,6 +993,10 @@ Changes in version 0.3.0.4-rc - 2017-03-01
     - Reject version numbers with components that exceed INT32_MAX.
       Otherwise 32-bit and 64-bit platforms would behave inconsistently.
       Fixes bug 21450; bugfix on 0.0.8pre1.
+    - Directory authorities now reject relays running versions
+      0.2.9.1-alpha through 0.2.9.4-alpha, because those relays
+      suffer from bug 20499 and don't keep their consensus cache
+      up-to-date. Resolves ticket 20509.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the February 8 2017 Maxmind GeoLite2
