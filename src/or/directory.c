@@ -3889,7 +3889,7 @@ allowed_anonymous_connection_compression_method(compress_method_t method)
   return 0;
 }
 
-/** Log a warning when a remote server have send us a document using a
+/** Log a warning when a remote server has sent us a document using a
  * compression method that is not allowed for anonymous directory requests. */
 STATIC void
 warn_disallowed_anonymous_compression_method(compress_method_t method)
