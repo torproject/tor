@@ -1953,7 +1953,7 @@ parse_http_time(const char *date, struct tm *tm)
 
 /** Given an <b>interval</b> in seconds, try to write it to the
  * <b>out_len</b>-byte buffer in <b>out</b> in a human-readable form.
- * Return 0 on success, -1 on failure.
+ * Returns a non-negative integer on success, -1 on failure.
  */
 int
 format_time_interval(char *out, size_t out_len, long interval)
