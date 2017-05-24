@@ -1010,16 +1010,6 @@ node_get_platform(const node_t *node)
     return NULL;
 }
 
-/** Return <b>node</b>'s time of publication, or 0 if we don't have one. */
-time_t
-node_get_published_on(const node_t *node)
-{
-  if (node->ri)
-    return node->ri->cache_info.published_on;
-  else
-    return 0;
-}
-
 /** Return true iff <b>node</b> is one representing this router. */
 int
 node_is_me(const node_t *node)
