@@ -2895,8 +2895,9 @@ handle_response_upload_dir(dir_connection_t *conn,
     break;
   default:
     log_warn(LD_GENERAL,
-             "http status %d (%s) reason unexpected while uploading "
-             "descriptor to server '%s:%d').",
+             "HTTP status %d (%s) was unexpected while uploading "
+             "descriptor to server '%s:%d'. Possibly the server is "
+             "misconfigured?",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port);
     break;
@@ -2932,8 +2933,8 @@ handle_response_upload_vote(dir_connection_t *conn,
     break;
   default:
     log_warn(LD_GENERAL,
-             "http status %d (%s) reason unexpected while uploading "
-             "vote to server '%s:%d').",
+             "HTTP status %d (%s) was unexpected while uploading "
+             "vote to server '%s:%d'.",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port);
     break;
@@ -2968,8 +2969,8 @@ handle_response_upload_signatures(dir_connection_t *conn,
     break;
   default:
     log_warn(LD_GENERAL,
-             "http status %d (%s) reason unexpected while uploading "
-             "signatures to server '%s:%d').",
+             "HTTP status %d (%s) was unexpected while uploading "
+             "signatures to server '%s:%d'.",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port);
     break;
