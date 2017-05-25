@@ -2309,7 +2309,6 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
          }
          if (is_legal) {
            smartlist_add_strdup(ri->declared_family, name);
-           name = NULL;
          }
        } else if (router_digest_is_me(member->identity)) {
          /* Don't list ourself in our own family; that's redundant */
