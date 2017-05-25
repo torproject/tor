@@ -1949,6 +1949,13 @@ circuit_about_to_free(circuit_t *circ)
      orig_reason);
   }
 
+  /* Notify the HS subsystem for any intro point circuit closing so it can be
+   * dealt with cleanly. */
+  if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+      circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
+    hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
+  }
+
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     int timed_out = (reason == END_CIRC_REASON_TIMEOUT);

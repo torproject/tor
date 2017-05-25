@@ -270,6 +270,8 @@ int hs_service_receive_introduce2(origin_circuit_t *circ,
                                   const uint8_t *payload,
                                   size_t payload_len);
 
+void hs_service_intro_circ_has_closed(origin_circuit_t *circ);
+
 #ifdef HS_SERVICE_PRIVATE
 
 #ifdef TOR_UNIT_TESTS

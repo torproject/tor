@@ -1584,18 +1584,10 @@ cleanup_intro_points(hs_service_t *service, time_t now)
        * node_t anymore (removed from our latest consensus) or if we've
        * reached the maximum number of retry with a non existing circuit. */
       if (has_expired || node == NULL ||
-          (ocirc == NULL &&
-           ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES)) {
+          ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
         /* Remove intro point from descriptor map. We'll add it to the failed
          * map if we retried it too many times. */
         MAP_DEL_CURRENT(key);
-
-        /* We've retried too many times, remember it has a failed intro point
-         * so we don't pick it up again. It will be retried in
-         * INTRO_CIRC_RETRY_PERIOD seconds. */
-        if (ip->circuit_retries >= MAX_INTRO_POINT_CIRCUIT_RETRIES) {
-          remember_failing_intro_point(ip, desc, now);
-        }
         service_intro_point_free(ip);
 
         /* XXX: Legacy code does NOT do that, it keeps the circuit open until
@@ -1610,11 +1602,6 @@ cleanup_intro_points(hs_service_t *service, time_t now)
           circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
         }
         continue;
-      }
-      if (ocirc == NULL) {
-        /* Circuit disappeared so make sure the intro point is updated. By
-         * keeping the object in the descriptor, we'll be able to retry. */
-        ip->circuit_established = 0;
       }
     } DIGEST256MAP_FOREACH_END;
   } FOR_EACH_DESCRIPTOR_END;
@@ -2385,6 +2372,55 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Called once an introduction circuit is closed. If the circuit doesn't have
+ * a v3 identifier, it is ignored. */
+void
+hs_service_intro_circ_has_closed(origin_circuit_t *circ)
+{
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL;
+  hs_service_descriptor_t *desc = NULL;
+
+  tor_assert(circ);
+
+  if (circ->hs_ident == NULL) {
+    /* This is not a v3 circuit, ignore. */
+    goto end;
+  }
+
+  get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
+  if (service == NULL) {
+    log_warn(LD_REND, "Unable to find any hidden service associated "
+                      "identity key %s on intro circuit %u.",
+             ed25519_fmt(&circ->hs_ident->identity_pk),
+             TO_CIRCUIT(circ)->n_circ_id);
+    goto end;
+  }
+  if (ip == NULL) {
+    /* The introduction point object has already been removed probably by our
+     * cleanup process so ignore. */
+    goto end;
+  }
+  /* Can't have an intro point object without a descriptor. */
+  tor_assert(desc);
+
+  /* Circuit disappeared so make sure the intro point is updated. By
+   * keeping the object in the descriptor, we'll be able to retry. */
+  ip->circuit_established = 0;
+
+  /* We've retried too many times, remember it as a failed intro point so we
+   * don't pick it up again. It will be retried in INTRO_CIRC_RETRY_PERIOD
+   * seconds. */
+  if (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
+    remember_failing_intro_point(ip, desc, approx_time());
+    service_intro_point_remove(service, ip);
+    service_intro_point_free(ip);
+  }
+
+ end:
+  return;
+}
 
 /* Given conn, a rendezvous edge connection acting as an exit stream, look up
  * the hidden service for the circuit circ, and look up the port and address
