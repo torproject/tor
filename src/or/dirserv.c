@@ -643,7 +643,11 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
  * passed back to the origin of this descriptor, or NULL if there is no such
  * message. Use <b>source</b> to produce better log messages.
  *
- * Return the status of the operation
+ * If <b>ri</b> is not added to the list of server descriptors, free it.
+ * That means the caller must not access <b>ri</b> after this function
+ * returns, since it might have been freed.
+ *
+ * Return the status of the operation.
  *
  * This function is only called when fresh descriptors are posted, not when
  * we re-load the cache.
@@ -716,6 +720,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
              "its key did not match an older RSA/Ed25519 keypair",
              router_describe(ri), source);
     *msg = "Looks like your keypair does not match its older value.";
+    routerinfo_free(ri);
     return ROUTER_AUTHDIR_REJECTS;
   }
 
