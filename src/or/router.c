@@ -2289,7 +2289,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
        char *name = family->value;
        const node_t *member;
        if (!strcasecmp(name, options->Nickname))
-         goto skip; /* Don't list ourself, that's redundant */
+         continue; /* Don't list ourself, that's redundant */
        else
          member = node_get_by_nickname(name, 1);
        if (!member) {
@@ -2323,8 +2323,6 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
          if (smartlist_contains_string(warned_nonexistent_family, name))
            smartlist_string_remove(warned_nonexistent_family, name);
        }
-    skip:
-       tor_free(name);
     }
 
     /* remove duplicates from the list */
