@@ -1,0 +1,4 @@
+  o Minor bugfixes (memory handling):
+    - When directory authorities reject a router descriptor due to keypinning,
+      free the router descriptor rather than leaking the memory.
+      Fixes bug 22370; bugfix on 0.2.7.2-alpha.
