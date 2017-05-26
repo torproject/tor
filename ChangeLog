@@ -3,19 +3,18 @@ Changes in version 0.3.1.2-alpha - 2017-05-26
   fixes a couple of bugs found while testing 0.3.1.1-alpha, including a
   memory corruption bug that affected relay stability.
 
-  o Major bugfixes (relay, crash):
-    - Relays that set MyFamily no longer free the elements of options-
-      >MyFamily while making their descriptor. They tried to access the
-      freed elements, and then double-free them, when making the next
-      descriptor or when changing the config. Fixes bug 22368; bugfix
-      on 0.3.1.1-alpha.
+  o Major bugfixes (crash, relay):
+    - Fix a memory-corruption bug in relays that set MyFamily.
+      Previously, they would double-free MyFamily elements when making
+      the next descriptor or when changing their configuration. Fixes
+      bug 22368; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (logging):
-    - Provide a better log message when a directory authority responds
-      to an upload with an unexpected status code. Fixes bug 11121;
-      bugfix on 0.1.0.1-rc.
+    - Log a better message when a directory authority replies to an
+      upload with an unexpected status code. Fixes bug 11121; bugfix
+      on 0.1.0.1-rc.
 
-  o Minor bugfixes (memory handling):
+  o Minor bugfixes (memory leak, directory authority):
     - When directory authorities reject a router descriptor due to
       keypinning, free the router descriptor rather than leaking the
       memory. Fixes bug 22370; bugfix on 0.2.7.2-alpha.
