@@ -1552,6 +1552,24 @@ if test "$tor_cv_sign_extend" != "no"; then
             [Define to 1 iff right-shifting a negative value performs sign-extension])
 fi
 
+# Is uint8_t the same type as unsigned char?
+AC_CACHE_CHECK([whether uint8_t is the same type as unsigned char], tor_cv_uint8_uchar,
+[AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#include <stdint.h>
+extern uint8_t c;
+unsigned char c;]])],
+       [tor_cv_uint8_uchar=yes],
+       [tor_cv_uint8_uchar=no],
+       [tor_cv_uint8_uchar=cross])])
+
+if test "$tor_cv_uint8_uchar" = "cross"; then
+  AC_MSG_NOTICE([Cross-compiling: we'll assume that uint8_t is the same type as unsigned char])
+fi
+
+if test "$tor_cv_uint8_uchar" = "no"; then
+  AC_MSG_ERROR([We assume that uint8_t is the same type as unsigned char, but your compiler disagrees.])
+fi
+
 # Whether we should use the dmalloc memory allocation debugging library.
 AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
 AC_ARG_WITH(dmalloc,
