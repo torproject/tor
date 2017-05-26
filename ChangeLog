@@ -1,6 +1,6 @@
 Changes in version 0.3.1.2-alpha - 2017-05-26
   Tor 0.3.1.2-alpha is the second release in the 0.3.1.x series. It
-  fixes a couple of bugs found while testing 0.3.1.1-alpha, including a
+  fixes a few bugs found while testing 0.3.1.1-alpha, including a
   memory corruption bug that affected relay stability.
 
   o Major bugfixes (crash, relay):
