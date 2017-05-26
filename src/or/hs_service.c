@@ -232,6 +232,11 @@ get_intro_point_max_introduce2(void)
 static int32_t
 get_intro_point_min_lifetime(void)
 {
+#define MIN_INTRO_POINT_LIFETIME_TESTING 10
+  if (get_options()->TestingTorNetwork) {
+    return MIN_INTRO_POINT_LIFETIME_TESTING;
+  }
+
   /* The [0, 2147483647] range is quite large to accomodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_min_lifetime",
@@ -244,6 +249,11 @@ get_intro_point_min_lifetime(void)
 static int32_t
 get_intro_point_max_lifetime(void)
 {
+#define MAX_INTRO_POINT_LIFETIME_TESTING 30
+  if (get_options()->TestingTorNetwork) {
+    return MAX_INTRO_POINT_LIFETIME_TESTING;
+  }
+
   /* The [0, 2147483647] range is quite large to accomodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_max_lifetime",
@@ -1770,6 +1780,13 @@ get_max_intro_circ_per_period(const hs_service_t *service)
   tor_assert(service);
   tor_assert(service->config.num_intro_points <=
              HS_CONFIG_V3_MAX_INTRO_POINTS);
+
+/* For a testing network, allow to do it for the maximum amount so circuit
+ * creation and rotation and so on can actually be tested without limit. */
+#define MAX_INTRO_POINT_CIRCUIT_RETRIES_TESTING -1
+  if (get_options()->TestingTorNetwork) {
+    return MAX_INTRO_POINT_CIRCUIT_RETRIES_TESTING;
+  }
 
   num_wanted_ip = service->config.num_intro_points;
 
