@@ -1,0 +1,4 @@
+  o Minor bugfixes (unit tests):
+    - The unit tests now pass on systems where localhost is misconfigured
+      to some IPv4 address other than 127.0.0.1.  Fixes bug 6298;
+      bugfix on 0.0.9pre2.
