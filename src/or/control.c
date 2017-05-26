@@ -6709,8 +6709,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
  * is the connection that caused this problem.
  */
 MOCK_IMPL(void,
-          control_event_bootstrap_problem, (const char *warn, int reason,
-                                            or_connection_t *or_conn))
+control_event_bootstrap_problem, (const char *warn, int reason,
+                                  or_connection_t *or_conn))
 {
   int status = bootstrap_percent;
   const char *tag = "", *summary = "";

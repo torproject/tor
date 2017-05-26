@@ -1781,9 +1781,10 @@ free_interface_address6_list(smartlist_t *addrs)
  * Returns NULL on failure.
  * Use free_interface_address6_list to free the returned list.
  */
-MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
-                                                     sa_family_t family,
-                                                     int include_internal))
+MOCK_IMPL(smartlist_t *,
+get_interface_address6_list,(int severity,
+                             sa_family_t family,
+                             int include_internal))
 {
   smartlist_t *addrs;
   tor_addr_t addr;

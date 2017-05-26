@@ -460,11 +460,11 @@ tor_x509_name_new(const char *cname)
  * Return a certificate on success, NULL on failure.
  */
 MOCK_IMPL(STATIC X509 *,
-          tor_tls_create_certificate,(crypto_pk_t *rsa,
-                                      crypto_pk_t *rsa_sign,
-                                      const char *cname,
-                                      const char *cname_sign,
-                                      unsigned int cert_lifetime))
+tor_tls_create_certificate,(crypto_pk_t *rsa,
+                            crypto_pk_t *rsa_sign,
+                            const char *cname,
+                            const char *cname_sign,
+                            unsigned int cert_lifetime))
 {
   /* OpenSSL generates self-signed certificates with random 64-bit serial
    * numbers, so let's do that too. */
@@ -662,7 +662,7 @@ tor_x509_cert_free(tor_x509_cert_t *cert)
  * Steals a reference to x509_cert.
  */
 MOCK_IMPL(STATIC tor_x509_cert_t *,
-          tor_x509_cert_new,(X509 *x509_cert))
+tor_x509_cert_new,(X509 *x509_cert))
 {
   tor_x509_cert_t *cert;
   EVP_PKEY *pkey;

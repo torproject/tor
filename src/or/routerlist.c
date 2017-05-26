@@ -426,8 +426,8 @@ list_sk_digests_for_authority_id, (const char *digest))
  * download_status_t or NULL if none exists. */
 
 MOCK_IMPL(download_status_t *,
-  download_status_for_authority_id_and_sk,
-  (const char *id_digest, const char *sk_digest))
+download_status_for_authority_id_and_sk,(const char *id_digest,
+                                         const char *sk_digest))
 {
   download_status_t *dl = NULL;
   cert_list_t *cl = NULL;
@@ -4874,9 +4874,10 @@ list_pending_fpsk_downloads(fp_pair_map_t *result)
  * range.)  If <b>source</b> is given, download from <b>source</b>;
  * otherwise, download from an appropriate random directory server.
  */
-MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
-          (const routerstatus_t *source, int purpose, smartlist_t *digests,
-           int lo, int hi, int pds_flags))
+MOCK_IMPL(STATIC void,
+initiate_descriptor_downloads,(const routerstatus_t *source,
+                               int purpose, smartlist_t *digests,
+                               int lo, int hi, int pds_flags))
 {
   char *resource, *cp;
   int digest_len, enc_digest_len;

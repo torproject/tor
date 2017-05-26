@@ -479,7 +479,7 @@ crypto_pk_get_rsa_(crypto_pk_t *env)
  * private is set, include the private-key portion of the key. Return a valid
  * pointer on success, and NULL on failure. */
 MOCK_IMPL(EVP_PKEY *,
-          crypto_pk_get_evp_pkey_,(crypto_pk_t *env, int private))
+crypto_pk_get_evp_pkey_,(crypto_pk_t *env, int private))
 {
   RSA *key = NULL;
   EVP_PKEY *pkey = NULL;
@@ -516,7 +516,7 @@ crypto_dh_get_dh_(crypto_dh_t *dh)
  * be set.
  */
 MOCK_IMPL(crypto_pk_t *,
-          crypto_pk_new,(void))
+crypto_pk_new,(void))
 {
   RSA *rsa;
 
@@ -606,7 +606,7 @@ crypto_cipher_free(crypto_cipher_t *env)
  * Return 0 on success, -1 on failure.
  */
 MOCK_IMPL(int,
-          crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
+crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
 {
   tor_assert(env);
 

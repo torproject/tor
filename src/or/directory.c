@@ -565,7 +565,8 @@ dir_consensus_request_set_additional_headers(directory_request_t *req,
  * Use <b>pds_flags</b> as arguments to router_pick_directory_server()
  * or router_pick_trusteddirserver().
  */
-MOCK_IMPL(void, directory_get_from_dirserver, (
+MOCK_IMPL(void,
+directory_get_from_dirserver,(
                             uint8_t dir_purpose,
                             uint8_t router_purpose,
                             const char *resource,

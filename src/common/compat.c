@@ -2678,7 +2678,8 @@ static int uname_result_is_set = 0;
 
 /** Return a pointer to a description of our platform.
  */
-MOCK_IMPL(const char *, get_uname, (void))
+MOCK_IMPL(const char *,
+get_uname,(void))
 {
 #ifdef HAVE_UNAME
   struct utsname u;
