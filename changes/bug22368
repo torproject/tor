@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Relays that set MyFamily no longer free the elements of
-      options->MyFamily while making their descriptor. They tried to
-      access the freed elements, and then double-free them, when making
-      the next descriptor or when changing the config. Fixes bug 22368;
-      bugfix on 0.3.1.1-alpha.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging):
-    - Provide a better log message when a directory authority responds
-      to an upload with an unexpected status code. Fixes bug 11121;
-      bugfix on 0.1.0.1-rc.
