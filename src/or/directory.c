@@ -3701,7 +3701,7 @@ connection_dir_finished_connecting(dir_connection_t *conn)
  * Helper function for download_status_increment_failure(),
  * download_status_reset(), and download_status_increment_attempt(). */
 STATIC const smartlist_t *
-find_dl_schedule(download_status_t *dls, const or_options_t *options)
+find_dl_schedule(const download_status_t *dls, const or_options_t *options)
 {
   const int dir_server = dir_server_mode(options);
   const int multi_d = networkstatus_consensus_can_use_multiple_directories(
@@ -3954,6 +3954,11 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
   tor_assert(dls);
 
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
   /* count the failure */
   if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1) {
     ++dls->n_download_failures;
@@ -4006,6 +4011,11 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
 
   tor_assert(dls);
 
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
   if (dls->increment_on == DL_SCHED_INCREMENT_FAILURE) {
     /* this schedule should retry on failure, and not launch any concurrent
      attempts */
@@ -4029,6 +4039,15 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
   return dls->next_attempt_at;
 }
 
+static time_t
+download_status_get_initial_delay_from_now(const download_status_t *dls)
+{
+  const smartlist_t *schedule = find_dl_schedule(dls, get_options());
+  /* We use constant initial delays, even in exponential backoff
+   * schedules. */
+  return time(NULL) + *(int *)smartlist_get(schedule, 0);
+}
+
 /** Reset <b>dls</b> so that it will be considered downloadable
  * immediately, and/or to show that we don't need it anymore.
  *
@@ -4047,11 +4066,9 @@ download_status_reset(download_status_t *dls)
       || dls->n_download_attempts == IMPOSSIBLE_TO_DOWNLOAD)
     return; /* Don't reset this. */
 
-  const smartlist_t *schedule = find_dl_schedule(dls, get_options());
-
   dls->n_download_failures = 0;
   dls->n_download_attempts = 0;
-  dls->next_attempt_at = time(NULL) + *(int *)smartlist_get(schedule, 0);
+  dls->next_attempt_at = download_status_get_initial_delay_from_now(dls);
   dls->last_backoff_position = 0;
   dls->last_delay_used = 0;
   /* Don't reset dls->want_authority or dls->increment_on */
@@ -4078,6 +4095,12 @@ download_status_get_n_attempts(const download_status_t *dls)
 time_t
 download_status_get_next_attempt_at(const download_status_t *dls)
 {
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    /* so give the answer we would have given if it had been */
+    return download_status_get_initial_delay_from_now(dls);
+  }
+
   return dls->next_attempt_at;
 }
 

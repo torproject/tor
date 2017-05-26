@@ -3806,7 +3806,7 @@ test_dir_download_status_increment(void *arg)
   tt_assert(next_at == TIME_MAX);
   tt_assert(download_status_get_n_failures(&dls_attempt) == 1);
   tt_assert(download_status_get_n_attempts(&dls_attempt) == 0);
-  tt_assert(mock_get_options_calls == 0);
+  tt_assert(mock_get_options_calls >= 1);
 
   /* Check that an attempt reset works */
   mock_get_options_calls = 0;

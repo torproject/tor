@@ -114,6 +114,11 @@ static inline int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
 {
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
   if (dls->backoff == DL_SCHED_DETERMINISTIC) {
     /* Deterministic schedules can hit an endpoint; exponential backoff
      * schedules just wait longer and longer. */
@@ -162,7 +167,7 @@ STATIC char* authdir_type_to_string(dirinfo_type_t auth);
 STATIC const char * dir_conn_purpose_to_string(int purpose);
 STATIC int should_use_directory_guards(const or_options_t *options);
 STATIC zlib_compression_level_t choose_compression_level(ssize_t n_bytes);
-STATIC const smartlist_t *find_dl_schedule(download_status_t *dls,
+STATIC const smartlist_t *find_dl_schedule(const download_status_t *dls,
                                            const or_options_t *options);
 STATIC void find_dl_min_and_max_delay(download_status_t *dls,
                                       const or_options_t *options,
