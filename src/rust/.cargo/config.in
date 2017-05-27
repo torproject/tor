@@ -5,4 +5,4 @@
 @RUST_DL@ replace-with = 'vendored-sources'
 
 @RUST_DL@ [source.vendored-sources]
-@RUST_DL@ directory = '@RUST_DEPENDENCIES@'
+@RUST_DL@ directory = '@TOR_RUST_DEPENDENCIES@'
