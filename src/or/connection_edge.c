@@ -261,6 +261,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       }
       /* Fall through if the connection is on a circuit without optimistic
        * data support. */
+      /* Falls through. */
     case EXIT_CONN_STATE_CONNECTING:
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
