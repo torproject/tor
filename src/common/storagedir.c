@@ -406,6 +406,22 @@ storage_dir_read_labeled(storage_dir_t *dir,
   return result;
 }
 
+/* Reduce the cached usage amount in <b>d</b> by <b>removed_file_size</b>.
+ * This function is a no-op if <b>d->usage_known</b> is 0. */
+static void
+storage_dir_reduce_usage(storage_dir_t *d, uint64_t removed_file_size)
+{
+  if (d->usage_known) {
+    if (! BUG(d->usage < removed_file_size)) {
+      /* This bug can also be triggered if an external process resized a file
+       * between the call to storage_dir_get_usage() that last checked
+       * actual usage (rather than relaying on cached usage), and the call to
+       * this function. */
+      d->usage -= removed_file_size;
+    }
+  }
+}
+
 /**
  * Remove the file called <b>fname</b> from <b>d</b>.
  */
@@ -425,9 +441,7 @@ storage_dir_remove_file(storage_dir_t *d,
     }
   }
   if (unlink(ipath) == 0) {
-    if (d->usage_known && ! BUG(d->usage < size)) {
-      d->usage -= size;
-    }
+    storage_dir_reduce_usage(d, size);
   } else {
     log_warn(LD_FS, "Unable to unlink %s", escaped(path));
     tor_free(path);
@@ -506,9 +520,7 @@ storage_dir_shrink(storage_dir_t *d,
   int idx = 0;
   while ((d->usage > target_size || min_to_remove > 0) && idx < n) {
     if (unlink(sandbox_intern_string(ents[idx].path)) == 0) {
-      if (! BUG(d->usage < ents[idx].size)) {
-        d->usage -= ents[idx].size;
-      }
+      storage_dir_reduce_usage(d, ents[idx].size);
       --min_to_remove;
     }
     ++idx;
