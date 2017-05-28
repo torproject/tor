@@ -76,8 +76,8 @@ storage_dir_free(storage_dir_t *d)
  * operations that <b>d</b> will need.
  *
  * The presence of this function is why we need an upper limit on the
- * number of filers in a storage_dir_t: we need to approve file
- * operaitons one by one.
+ * number of files in a storage_dir_t: we need to approve file operations
+ * one by one.
  */
 int
 storage_dir_register_with_sandbox(storage_dir_t *d, sandbox_cfg_t **cfg)
@@ -309,9 +309,8 @@ storage_dir_save_string_to_file(storage_dir_t *d,
 
 /**
  * As storage_dir_save_bytes_to_file, but associates the data with the
- * key-value pairs in <b>labels</b>. Files
- * stored in this format can be recovered with storage_dir_map_labeled
- * or storage_dir_read_labeled().
+ * key-value pairs in <b>labels</b>. Files stored in this format can be
+ * recovered with storage_dir_map_labeled() or storage_dir_read_labeled().
  */
 int
 storage_dir_save_labeled_to_file(storage_dir_t *d,
@@ -356,12 +355,12 @@ storage_dir_save_labeled_to_file(storage_dir_t *d,
 }
 
 /**
- * Map a file that was created with storage_dir_save_labeled().  On failure,
- * return NULL.  On success, write a set of newly allocated labels into to
- * *<b>labels_out</b>, a pointer to the into *<b>data_out</b>, and the data's
- * into *<b>sz_out</b>. On success, also return a tor_mmap_t object whose
- * contents should not be used -- it needs to be kept around, though, for as
- * long as <b>data_out</b> is going to be valid.
+ * Map a file that was created with storage_dir_save_labeled_to_file().  On
+ * failure, return NULL.  On success, write a set of newly allocated labels
+ * into *<b>labels_out</b>, a pointer to the data into *<b>data_out</b>, and
+ * the data's size into *<b>sz_out</b>. On success, also return a tor_mmap_t
+ * object whose contents should not be used -- it needs to be kept around,
+ * though, for as long as <b>data_out</b> is going to be valid.
  */
 tor_mmap_t *
 storage_dir_map_labeled(storage_dir_t *dir,
