@@ -300,7 +300,8 @@ config_process_include(const char *path, int recursion_level, int extended,
     tor_free(config_file);
 
     **next = included_list;
-    *next = &(*list_last)->next;
+    if (*list_last)
+      *next = &(*list_last)->next;
 
   } SMARTLIST_FOREACH_END(config_file);
   smartlist_free(config_files);
