@@ -418,6 +418,16 @@ storage_dir_reduce_usage(storage_dir_t *d, uint64_t removed_file_size)
        * actual usage (rather than relaying on cached usage), and the call to
        * this function. */
       d->usage -= removed_file_size;
+    } else {
+      /* If we underflowed the cached directory size, re-check the sizes of all
+       * the files in the directory. This makes storage_dir_shrink() quadratic,
+       * but only if a process is continually changing file sizes in the
+       * storage directory (in which case, we have bigger issues).
+       *
+       * We can't just reset usage_known, because storage_dir_shrink() relies
+       * on knowing the usage. */
+      storage_dir_rescan(d);
+      (void)storage_dir_get_usage(d);
     }
   }
 }
