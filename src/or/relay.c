@@ -184,18 +184,12 @@ relay_digest_matches(crypto_digest_t *digest, cell_t *cell)
 /** Apply <b>cipher</b> to CELL_PAYLOAD_SIZE bytes of <b>in</b>
  * (in place).
  *
- * If <b>encrypt_mode</b> is 1 then encrypt, else decrypt.
- *
- * Returns 0.
+ * Note that we use the same operation for encrypting and for decrypting.
  */
-static int
-relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in,
-                        int encrypt_mode)
+static void
+relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in)
 {
-  (void)encrypt_mode;
   crypto_cipher_crypt_inplace(cipher, (char*) in, CELL_PAYLOAD_SIZE);
-
-  return 0;
 }
 
 /**
@@ -449,8 +443,8 @@ relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
       do { /* Remember: cpath is in forward order, that is, first hop first. */
         tor_assert(thishop);
 
-        if (relay_crypt_one_payload(thishop->b_crypto, cell->payload, 0) < 0)
-          return -1;
+        /* decrypt one layer */
+        relay_crypt_one_payload(thishop->b_crypto, cell->payload);
 
         relay_header_unpack(&rh, cell->payload);
         if (rh.recognized == 0) {
@@ -467,19 +461,14 @@ relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
       log_fn(LOG_PROTOCOL_WARN, LD_OR,
              "Incoming cell at client not recognized. Closing.");
       return -1;
-    } else { /* we're in the middle. Just one crypt. */
-      if (relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->p_crypto,
-                                  cell->payload, 1) < 0)
-        return -1;
-//      log_fn(LOG_DEBUG,"Skipping recognized check, because we're not "
-//             "the client.");
+    } else {
+      /* We're in the middle. Encrypt one layer. */
+      relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->p_crypto, cell->payload);
     }
   } else /* cell_direction == CELL_DIRECTION_OUT */ {
-    /* we're in the middle. Just one crypt. */
+    /* We're in the middle. Decrypt one layer. */
 
-    if (relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->n_crypto,
-                                cell->payload, 0) < 0)
-      return -1;
+    relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->n_crypto, cell->payload);
 
     relay_header_unpack(&rh, cell->payload);
     if (rh.recognized == 0) {
@@ -526,10 +515,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     do {
       tor_assert(thishop);
       /* XXXX RD This is a bug, right? */
-      log_debug(LD_OR,"crypting a layer of the relay cell.");
-      if (relay_crypt_one_payload(thishop->f_crypto, cell->payload, 1) < 0) {
-        return -1;
-      }
+      log_debug(LD_OR,"encrypting a layer of the relay cell.");
+      relay_crypt_one_payload(thishop->f_crypto, cell->payload);
 
       thishop = thishop->prev;
     } while (thishop != TO_ORIGIN_CIRCUIT(circ)->cpath->prev);
@@ -546,8 +533,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     or_circ = TO_OR_CIRCUIT(circ);
     chan = or_circ->p_chan;
     relay_set_digest(or_circ->p_digest, cell);
-    if (relay_crypt_one_payload(or_circ->p_crypto, cell->payload, 1) < 0)
-      return -1;
+    /* encrypt one layer */
+    relay_crypt_one_payload(or_circ->p_crypto, cell->payload);
   }
   ++stats_n_relay_cells_relayed;
 
