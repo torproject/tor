@@ -19,7 +19,7 @@ static int config_get_included_list(const char *path, int recursion_level,
                                     int extended, config_line_t **list,
                                     config_line_t **list_last);
 static int config_process_include(const char *path, int recursion_level,
-                                  int extended, config_line_t ***next,
+                                  int extended, config_line_t **list,
                                   config_line_t **list_last);
 
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
@@ -132,7 +132,8 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
         tor_free(k);
         include_used = 1;
 
-        if (config_process_include(v, recursion_level, extended, &next,
+        config_line_t *include_list;
+        if (config_process_include(v, recursion_level, extended, &include_list,
                                    &list_last) < 0) {
           log_warn(LD_CONFIG, "Error reading included configuration "
                    "file or directory: \"%s\".", v);
@@ -140,6 +141,9 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
           tor_free(v);
           return -1;
         }
+        *next = include_list;
+        if (list_last)
+          next = &list_last->next;
         tor_free(v);
       } else {
         /* This list can get long, so we keep a pointer to the end of it
@@ -262,14 +266,15 @@ config_get_included_list(const char *path, int recursion_level, int extended,
   return 0;
 }
 
-/** Process an %include <b>path</b> in a config file. Set <b>next</b> to a
- * pointer to the next pointer of the last element of the config_line_t list
- * obtained from the config file and <b>list_last</b> to the last element of
- * the same list. Return 0 on success, -1 on failure. */
+/** Process an %include <b>path</b> in a config file. Set <b>list</b> to the
+ * list of configuration settings obtained and <b>list_last</b> to the last
+ * element of the same list. Return 0 on success, -1 on failure. */
 static int
 config_process_include(const char *path, int recursion_level, int extended,
-                       config_line_t ***next, config_line_t **list_last)
+                       config_line_t **list, config_line_t **list_last)
 {
+  config_line_t *ret_list = NULL;
+  config_line_t **next = &ret_list;
 #if 0
   // Disabled -- we already unescape_string() on the result. */
   char *unquoted_path = get_unquoted_path(path);
@@ -299,12 +304,13 @@ config_process_include(const char *path, int recursion_level, int extended,
     }
     tor_free(config_file);
 
-    **next = included_list;
+    *next = included_list;
     if (*list_last)
-      *next = &(*list_last)->next;
+      next = &(*list_last)->next;
 
   } SMARTLIST_FOREACH_END(config_file);
   smartlist_free(config_files);
+  *list = ret_list;
   return 0;
 }
 
