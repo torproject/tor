@@ -425,7 +425,7 @@ storage_dir_remove_file(storage_dir_t *d,
     }
   }
   if (unlink(ipath) == 0) {
-    if (! BUG(d->usage < size)) {
+    if (d->usage_known && ! BUG(d->usage < size)) {
       d->usage -= size;
     }
   } else {
