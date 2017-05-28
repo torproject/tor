@@ -425,7 +425,9 @@ storage_dir_remove_file(storage_dir_t *d,
     }
   }
   if (unlink(ipath) == 0) {
-    d->usage -= size;
+    if (! BUG(d->usage < size)) {
+      d->usage -= size;
+    }
   } else {
     log_warn(LD_FS, "Unable to unlink %s", escaped(path));
     tor_free(path);
