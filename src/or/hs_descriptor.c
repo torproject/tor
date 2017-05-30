@@ -1023,29 +1023,14 @@ cert_parse_and_validate(tor_cert_t **cert_out, const char *data,
 STATIC int
 encrypted_data_length_is_valid(size_t len)
 {
-  /* Check for the minimum length possible. */
-  if (len < HS_DESC_ENCRYPTED_MIN_LEN) {
+  /* Make sure there is enough data for the salt and the mac. The equality is
+   * there to ensure that there is at least one byte of encrypted data. */
+  if (len <= HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN) {
     log_warn(LD_REND, "Length of descriptor's encrypted data is too small. "
                       "Got %lu but minimum value is %d",
-             (unsigned long)len, HS_DESC_ENCRYPTED_MIN_LEN);
+             (unsigned long)len, HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN);
     goto err;
   }
-
-  /* Encrypted data has the salt and MAC concatenated to it so remove those
-   * from the validation calculation. */
-  len -= HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN;
-
-  /* Check that it's aligned on the block size of the crypto algorithm. */
-  if (len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE) {
-    log_warn(LD_REND, "Length of descriptor's encrypted data is invalid. "
-                      "Got %lu which is not a multiple of %d.",
-             (unsigned long) len, HS_DESC_PLAINTEXT_PADDING_MULTIPLE);
-    goto err;
-  }
-
-  /* XXX: Check maximum size. Will strongly depends on the maximum intro point
-   * allowed we decide on and probably if they will all have to use the legacy
-   * key which is bigger than the ed25519 key. */
 
   return 1;
  err:

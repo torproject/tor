@@ -1,0 +1,3 @@
+  o Major bugfixes (hidden service v3):
+    - HSDir failed to validate the encrypted size of a v3 descriptor and thus
+      rejecting it. Fixes bug 22447; bugfix on tor-0.3.0.1-alpha.
