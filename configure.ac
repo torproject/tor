@@ -856,7 +856,7 @@ if test "x$enable_zstd" = "xno"; then
     have_zstd=no;
 else
     PKG_CHECK_MODULES([ZSTD],
-                      [libzstd],
+                      [libzstd >= 1.1],
                       have_zstd=yes,
                       have_zstd=no)
 
