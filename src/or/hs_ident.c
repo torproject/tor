@@ -34,6 +34,16 @@ hs_ident_circuit_free(hs_ident_circuit_t *ident)
   tor_free(ident);
 }
 
+/* For a given circuit identifier src, return a newly allocated copy of it.
+ * This can't fail. */
+hs_ident_circuit_t *
+hs_ident_circuit_dup(const hs_ident_circuit_t *src)
+{
+  hs_ident_circuit_t *ident = tor_malloc_zero(sizeof(*ident));
+  memcpy(ident, src, sizeof(*ident));
+  return ident;
+}
+
 /* For a given directory connection identifier src, return a newly allocated
  * copy of it. This can't fail. */
 hs_ident_dir_conn_t *

@@ -566,9 +566,130 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
   extend_info_free(info);
 }
 
+/* Return true iff the given service rendezvous circuit circ is allowed for a
+ * relaunch to the rendezvous point. */
+static int
+can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  /* This is initialized when allocating an origin circuit. */
+  tor_assert(circ->build_state);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+
+  /* XXX: Retrying under certain condition. This is related to #22455. */
+
+  /* Avoid to relaunch twice a circuit to the same rendezvous point at the
+   * same time. */
+  if (circ->hs_service_side_rend_circ_has_been_relaunched) {
+    log_info(LD_REND, "Rendezvous circuit to %s has already been retried. "
+                      "Skipping retry.",
+             safe_str_client(
+                  extend_info_describe(circ->build_state->chosen_exit)));
+    goto disallow;
+  }
+
+  /* A failure count that has reached maximum allowed or circuit that expired,
+   * we skip relaunching. */
+  if (circ->build_state->failure_count > MAX_REND_FAILURES ||
+      circ->build_state->expiry_time <= time(NULL)) {
+    log_info(LD_REND, "Attempt to build a rendezvous circuit to %s has "
+                      "failed with %d attempts and expiry time %ld. "
+                      "Giving up building.",
+             safe_str_client(
+                  extend_info_describe(circ->build_state->chosen_exit)),
+             circ->build_state->failure_count,
+             circ->build_state->expiry_time);
+    goto disallow;
+  }
+
+  /* Allowed to relaunch. */
+  return 1;
+ disallow:
+  return 0;
+}
+
+/* Retry the rendezvous point of circ by launching a new circuit to it. */
+static void
+retry_service_rendezvous_point(const origin_circuit_t *circ)
+{
+  int flags = 0;
+  origin_circuit_t *new_circ;
+  cpath_build_state_t *bstate;
+
+  tor_assert(circ);
+  /* This is initialized when allocating an origin circuit. */
+  tor_assert(circ->build_state);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+
+  /* Ease our life. */
+  bstate = circ->build_state;
+
+  log_info(LD_REND, "Retrying rendezvous point circuit to %s",
+           safe_str_client(extend_info_describe(bstate->chosen_exit)));
+
+  /* Get the current build state flags for the next circuit. */
+  flags |= (bstate->need_uptime) ? CIRCLAUNCH_NEED_UPTIME : 0;
+  flags |= (bstate->need_capacity) ? CIRCLAUNCH_NEED_CAPACITY : 0;
+  flags |= (bstate->is_internal) ? CIRCLAUNCH_IS_INTERNAL : 0;
+
+  /* We do NOT add the onehop tunnel flag even though it might be a single
+   * onion service. The reason is that if we failed once to connect to the RP
+   * with a direct connection, we consider that chances are that we will fail
+   * again so try a 3-hop circuit and hope for the best. Because the service
+   * has no anonymity (single onion), this change of behavior won't affect
+   * security directly. */
+
+  /* Help predict this next time */
+  rep_hist_note_used_internal(time(NULL), bstate->need_uptime,
+                              bstate->need_capacity);
+
+  new_circ = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
+                                           bstate->chosen_exit, flags);
+  if (new_circ == NULL) {
+    log_warn(LD_REND, "Failed to launch rendezvous circuit to %s",
+             safe_str_client(extend_info_describe(bstate->chosen_exit)));
+    goto done;
+  }
+
+  /* Transfer build state information to the new circuit state in part to
+   * catch any other failures. */
+  new_circ->build_state->failure_count = bstate->failure_count++;
+  new_circ->build_state->expiry_time = bstate->expiry_time;
+  new_circ->hs_ident = hs_ident_circuit_dup(circ->hs_ident);
+
+ done:
+  return;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Called when we fail building a rendezvous circuit at some point other than
+ * the last hop: launches a new circuit to the same rendezvous point. This
+ * supports legacy service. */
+void
+hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+
+  /* Check if we are allowed to relaunch to the rendezvous point of circ. */
+  if (!can_relaunch_service_rendezvous_point(circ)) {
+    goto done;
+  }
+
+  /* Flag the circuit that we are relaunching so to avoid to relaunch twice a
+   * circuit to the same rendezvous point at the same time. */
+  circ->hs_service_side_rend_circ_has_been_relaunched = 1;
+
+  /* Legacy service don't have an hidden service ident. */
+  (circ->hs_ident) ? retry_service_rendezvous_point(circ) :
+                     rend_service_relaunch_rendezvous(circ);
+
+ done:
+  return;
+}
 
 /* For a given service and a service intro point, launch a circuit to the
  * extend info ei. If the service is a single onion, a one-hop circuit will be

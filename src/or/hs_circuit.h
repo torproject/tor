@@ -28,6 +28,7 @@ int hs_circ_launch_intro_point(hs_service_t *service,
 int hs_circ_launch_rendezvous_point(const hs_service_t *service,
                                     const curve25519_public_key_t *onion_key,
                                     const uint8_t *rendezvous_cookie);
+void hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ);
 
 /* Cell API. */
 int hs_circ_handle_intro_established(const hs_service_t *service,

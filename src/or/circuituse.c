@@ -43,6 +43,7 @@
 #include "entrynodes.h"
 #include "hs_common.h"
 #include "hs_client.h"
+#include "hs_circuit.h"
 #include "hs_ident.h"
 #include "nodelist.h"
 #include "networkstatus.h"
@@ -782,7 +783,7 @@ circuit_expire_building(void)
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
       TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
-      rend_service_relaunch_rendezvous(TO_ORIGIN_CIRCUIT(victim));
+      hs_circ_retry_service_rendezvous_point(TO_ORIGIN_CIRCUIT(victim));
       continue;
     }
 
@@ -1790,7 +1791,7 @@ circuit_build_failed(origin_circuit_t *circ)
                "(%s hop failed).",
                escaped(build_state_get_exit_nickname(circ->build_state)),
                failed_at_last_hop?"last":"non-last");
-      rend_service_relaunch_rendezvous(circ);
+      hs_circ_retry_service_rendezvous_point(circ);
       break;
     /* default:
      * This won't happen in normal operation, but might happen if the
