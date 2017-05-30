@@ -1,0 +1,4 @@
+  o Minor bugfixes (directory protocol):
+    - Check for libzstd >= 1.1 because older versions lack the
+      necessary streaming API.  Fixes bug 22413; bugfix on
+      0.3.1.1-alpha.
