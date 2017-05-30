@@ -17,12 +17,10 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-**torify** is a simple wrapper that 
-calls torsocks with a tor-specific
+**torify** is a simple wrapper that calls torsocks with a tor-specific
 configuration file.
 
-It is provided for backward compatibility; probably instead you should
-just use torsocks.
+It is provided for backward compatibility; instead you should use torsocks.
 
 WARNING
 -------
