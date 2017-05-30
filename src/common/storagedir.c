@@ -76,8 +76,8 @@ storage_dir_free(storage_dir_t *d)
  * operations that <b>d</b> will need.
  *
  * The presence of this function is why we need an upper limit on the
- * number of filers in a storage_dir_t: we need to approve file
- * operaitons one by one.
+ * number of files in a storage_dir_t: we need to approve file operations
+ * one by one.
  */
 int
 storage_dir_register_with_sandbox(storage_dir_t *d, sandbox_cfg_t **cfg)
@@ -309,9 +309,8 @@ storage_dir_save_string_to_file(storage_dir_t *d,
 
 /**
  * As storage_dir_save_bytes_to_file, but associates the data with the
- * key-value pairs in <b>labels</b>. Files
- * stored in this format can be recovered with storage_dir_map_labeled
- * or storage_dir_read_labeled().
+ * key-value pairs in <b>labels</b>. Files stored in this format can be
+ * recovered with storage_dir_map_labeled() or storage_dir_read_labeled().
  */
 int
 storage_dir_save_labeled_to_file(storage_dir_t *d,
@@ -356,12 +355,12 @@ storage_dir_save_labeled_to_file(storage_dir_t *d,
 }
 
 /**
- * Map a file that was created with storage_dir_save_labeled().  On failure,
- * return NULL.  On success, write a set of newly allocated labels into to
- * *<b>labels_out</b>, a pointer to the into *<b>data_out</b>, and the data's
- * into *<b>sz_out</b>. On success, also return a tor_mmap_t object whose
- * contents should not be used -- it needs to be kept around, though, for as
- * long as <b>data_out</b> is going to be valid.
+ * Map a file that was created with storage_dir_save_labeled_to_file().  On
+ * failure, return NULL.  On success, write a set of newly allocated labels
+ * into *<b>labels_out</b>, a pointer to the data into *<b>data_out</b>, and
+ * the data's size into *<b>sz_out</b>. On success, also return a tor_mmap_t
+ * object whose contents should not be used -- it needs to be kept around,
+ * though, for as long as <b>data_out</b> is going to be valid.
  */
 tor_mmap_t *
 storage_dir_map_labeled(storage_dir_t *dir,
@@ -407,6 +406,32 @@ storage_dir_read_labeled(storage_dir_t *dir,
   return result;
 }
 
+/* Reduce the cached usage amount in <b>d</b> by <b>removed_file_size</b>.
+ * This function is a no-op if <b>d->usage_known</b> is 0. */
+static void
+storage_dir_reduce_usage(storage_dir_t *d, uint64_t removed_file_size)
+{
+  if (d->usage_known) {
+    if (! BUG(d->usage < removed_file_size)) {
+      /* This bug can also be triggered if an external process resized a file
+       * between the call to storage_dir_get_usage() that last checked
+       * actual usage (rather than relaying on cached usage), and the call to
+       * this function. */
+      d->usage -= removed_file_size;
+    } else {
+      /* If we underflowed the cached directory size, re-check the sizes of all
+       * the files in the directory. This makes storage_dir_shrink() quadratic,
+       * but only if a process is continually changing file sizes in the
+       * storage directory (in which case, we have bigger issues).
+       *
+       * We can't just reset usage_known, because storage_dir_shrink() relies
+       * on knowing the usage. */
+      storage_dir_rescan(d);
+      (void)storage_dir_get_usage(d);
+    }
+  }
+}
+
 /**
  * Remove the file called <b>fname</b> from <b>d</b>.
  */
@@ -426,7 +451,7 @@ storage_dir_remove_file(storage_dir_t *d,
     }
   }
   if (unlink(ipath) == 0) {
-    d->usage -= size;
+    storage_dir_reduce_usage(d, size);
   } else {
     log_warn(LD_FS, "Unable to unlink %s", escaped(path));
     tor_free(path);
@@ -505,9 +530,7 @@ storage_dir_shrink(storage_dir_t *d,
   int idx = 0;
   while ((d->usage > target_size || min_to_remove > 0) && idx < n) {
     if (unlink(sandbox_intern_string(ents[idx].path)) == 0) {
-      if (! BUG(d->usage < ents[idx].size)) {
-        d->usage -= ents[idx].size;
-      }
+      storage_dir_reduce_usage(d, ents[idx].size);
       --min_to_remove;
     }
     ++idx;
