@@ -558,11 +558,13 @@ static config_var_t option_vars_[] = {
                                  "10800, 21600, 43200"),
   /* With the ClientBootstrapConsensus*Download* below:
    * Clients with only authorities will try:
-   *  - 3 authorities over 10 seconds, then wait 60 minutes.
+   *  - at least 3 authorities over 10 seconds, then exponentially backoff,
+   *    with the next attempt 3-21 seconds later,
    * Clients with authorities and fallbacks will try:
-   *  - 2 authorities and 4 fallbacks over 21 seconds, then wait 60 minutes.
+   *  - at least 2 authorities and 4 fallbacks over 21 seconds, then
+   *    exponentially backoff, with the next attempts 4-33 seconds later,
    * Clients will also retry when an application request arrives.
-   * After a number of failed reqests, clients retry every 3 days + 1 hour.
+   * After a number of failed requests, clients retry every 3 days + 1 hour.
    *
    * Clients used to try 2 authorities over 10 seconds, then wait for
    * 60 minutes or an application request.
