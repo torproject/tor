@@ -4038,10 +4038,6 @@ connection_flush(connection_t *conn)
  * its contents compressed or decompressed as they're written.  If zlib is
  * negative, this is the last data to be compressed, and the connection's zlib
  * state should be flushed.
- *
- * If it's a local control connection and a 64k chunk is ready, try to flush
- * it all, so we don't end up with many megabytes of controller info queued at
- * once.
  */
 MOCK_IMPL(void,
 connection_write_to_buf_impl_,(const char *string, size_t len,
