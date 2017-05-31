@@ -2021,6 +2021,24 @@ tor_tls_get_peer_cert,(tor_tls_t *tls))
   return tor_x509_cert_new(cert);
 }
 
+/** Return the cerficate we used on the connection, or NULL if somehow
+ * we didn't use one. */
+tor_x509_cert_t *
+tor_tls_get_own_cert(tor_tls_t *tls)
+{
+  X509 *cert = SSL_get_certificate(tls->ssl);
+  tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE,
+                 "getting own-connection certificate");
+  if (!cert)
+    return NULL;
+  /* Fun inconsistency: SSL_get_peer_certificate increments the reference
+   * count, but SSL_get_certificate does not. */
+  X509 *duplicate = X509_dup(cert);
+  if (BUG(duplicate == NULL))
+    return NULL;
+  return tor_x509_cert_new(duplicate);
+}
+
 /** Warn that a certificate lifetime extends through a certain range. */
 static void
 log_cert_lifetime(int severity, const X509 *cert, const char *problem)
