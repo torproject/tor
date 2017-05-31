@@ -11,7 +11,7 @@
  * constructing/sending create/extend cells, and so on).
  *
  * On the client side, this module handles launching circuits. Circuit
- * launches are srtarted from circuit_establish_circuit(), called from
+ * launches are started from circuit_establish_circuit(), called from
  * circuit_launch_by_extend_info()).  To choose the path the circuit will
  * take, onion_extend_cpath() calls into a maze of node selection functions.
  *
