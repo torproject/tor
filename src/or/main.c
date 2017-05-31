@@ -1506,8 +1506,9 @@ check_ed_keys_callback(time_t now, const or_options_t *options)
 {
   if (server_mode(options)) {
     if (should_make_new_ed_keys(options, now)) {
-      if (load_ed_keys(options, now) < 0 ||
-          generate_ed_link_cert(options, now)) {
+      int new_signing_key = load_ed_keys(options, now);
+      if (new_signing_key < 0 ||
+          generate_ed_link_cert(options, now, new_signing_key > 0)) {
         log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
         tor_cleanup();
         exit(0);
@@ -1557,6 +1558,11 @@ rotate_x509_certificate_callback(time_t now, const or_options_t *options)
   log_info(LD_GENERAL,"Rotating tls context.");
   if (router_initialize_tls_context() < 0) {
     log_err(LD_BUG, "Error reinitializing TLS context");
+    tor_assert_unreached();
+  }
+  if (generate_ed_link_cert(options, now, 1)) {
+    log_err(LD_OR, "Unable to update Ed25519->TLS link certificate for "
+            "new TLS context.");
     tor_assert_unreached();
   }
 
@@ -2298,8 +2304,9 @@ do_hup(void)
     /* Maybe we've been given a new ed25519 key or certificate?
      */
     time_t now = approx_time();
-    if (load_ed_keys(options, now) < 0 ||
-         generate_ed_link_cert(options, now)) {
+    int new_signing_key = load_ed_keys(options, now);
+    if (new_signing_key < 0 ||
+        generate_ed_link_cert(options, now, new_signing_key > 0)) {
       log_warn(LD_OR, "Problem reloading Ed25519 keys; still using old keys.");
     }
 
@@ -3627,7 +3634,7 @@ tor_main(int argc, char *argv[])
     result = do_main_loop();
     break;
   case CMD_KEYGEN:
-    result = load_ed_keys(get_options(), time(NULL));
+    result = load_ed_keys(get_options(), time(NULL)) < 0;
     break;
   case CMD_LIST_FINGERPRINT:
     result = do_list_fingerprint();

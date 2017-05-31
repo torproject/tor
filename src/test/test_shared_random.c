@@ -48,7 +48,7 @@ init_authority_state(void)
   mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
   tt_assert(mock_cert);
   options->AuthoritativeDir = 1;
-  tt_int_op(0, ==, load_ed_keys(options, time(NULL)));
+  tt_int_op(load_ed_keys(options, time(NULL)), OP_GE, 0);
   sr_state_init(0, 0);
   /* It's possible a commit has been generated in our state depending on
    * the phase we are currently in which uses "now" as the starting
@@ -286,7 +286,7 @@ test_sr_commit(void *arg)
     tt_assert(auth_cert);
 
     options->AuthoritativeDir = 1;
-    tt_int_op(0, ==, load_ed_keys(options, now));
+    tt_int_op(load_ed_keys(options, time(NULL)), OP_GE, 0);
   }
 
   /* Generate our commit object and validate it has the appropriate field

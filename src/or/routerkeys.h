@@ -66,7 +66,7 @@ MOCK_DECL(int, check_tap_onion_key_crosscert,(const uint8_t *crosscert,
 int load_ed_keys(const or_options_t *options, time_t now);
 int should_make_new_ed_keys(const or_options_t *options, const time_t now);
 
-int generate_ed_link_cert(const or_options_t *options, time_t now);
+int generate_ed_link_cert(const or_options_t *options, time_t now, int force);
 
 int read_encrypted_secret_key(ed25519_secret_key_t *out,
                               const char *fname);
