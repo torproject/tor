@@ -25,6 +25,7 @@
 #include "geoip.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_client.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -3345,6 +3346,33 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   return 0;
 }
 
+/** We are closing a dir connection: If <b>dir_conn</b> is a dir connection
+ *  that tried to fetch an HS descriptor, check if it successfuly fetched it,
+ *  or if we need to try again. */
+static void
+refetch_hsdesc_if_needed(dir_connection_t *dir_conn)
+{
+  connection_t *conn = TO_CONN(dir_conn);
+
+  /* If we were trying to fetch a v2 rend desc and did not succeed,
+   * retry as needed. (If a fetch is successful, the connection state
+   * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 to mark that
+   * refetching is unnecessary.) */
+  if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
+      dir_conn->rend_data &&
+      rend_valid_v2_service_id(
+           rend_data_get_address(dir_conn->rend_data))) {
+    rend_client_refetch_v2_renddesc(dir_conn->rend_data);
+  }
+
+  /* Check for v3 rend desc fetch */
+  if (conn->purpose == DIR_PURPOSE_FETCH_HSDESC &&
+      dir_conn->hs_ident &&
+      !ed25519_public_key_is_zero(&dir_conn->hs_ident->identity_pk)) {
+    hs_client_refetch_hsdesc(&dir_conn->hs_ident->identity_pk);
+  }
+}
+
 /** Called when we're about to finally unlink and free a directory connection:
  * perform necessary accounting and cleanup */
 void
@@ -3357,15 +3385,8 @@ connection_dir_about_to_close(dir_connection_t *dir_conn)
      * failed: forget about this router, and maybe try again. */
     connection_dir_request_failed(dir_conn);
   }
-  /* If we were trying to fetch a v2 rend desc and did not succeed,
-   * retry as needed. (If a fetch is successful, the connection state
-   * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 to mark that
-   * refetching is unnecessary.) */
-  if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
-      dir_conn->rend_data &&
-      strlen(rend_data_get_address(dir_conn->rend_data)) ==
-             REND_SERVICE_ID_LEN_BASE32)
-    rend_client_refetch_v2_renddesc(dir_conn->rend_data);
+
+  refetch_hsdesc_if_needed(dir_conn);
 }
 
 /** Create an http response for the client <b>conn</b> out of
