@@ -1006,6 +1006,11 @@ desc_encode_v3(const hs_descriptor_t *desc,
   tor_assert(encoded_out);
   tor_assert(desc->plaintext_data.version == 3);
 
+  if (BUG(desc->subcredential == NULL)) {
+    log_warn(LD_GENERAL, "Asked to encode desc with no subcred. No!");
+    goto err;
+  }
+
   /* Build the non-encrypted values. */
   {
     char *encoded_cert;
@@ -2261,7 +2266,7 @@ hs_desc_decode_descriptor(const char *encoded,
                           const uint8_t *subcredential,
                           hs_descriptor_t **desc_out)
 {
-  int ret;
+  int ret = -1;
   hs_descriptor_t *desc;
 
   tor_assert(encoded);
@@ -2269,9 +2274,12 @@ hs_desc_decode_descriptor(const char *encoded,
   desc = tor_malloc_zero(sizeof(hs_descriptor_t));
 
   /* Subcredentials are optional. */
-  if (subcredential) {
-    memcpy(desc->subcredential, subcredential, sizeof(desc->subcredential));
+  if (BUG(!subcredential)) {
+    log_warn(LD_GENERAL, "Tried to decrypt without subcred. Impossible!");
+    goto err;
   }
+
+  memcpy(desc->subcredential, subcredential, sizeof(desc->subcredential));
 
   ret = hs_desc_decode_plaintext(encoded, &desc->plaintext_data);
   if (ret < 0) {

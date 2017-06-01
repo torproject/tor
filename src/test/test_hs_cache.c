@@ -342,6 +342,7 @@ test_hsdir_revision_counter_check(void *arg)
   hs_descriptor_t *published_desc = NULL;
   char *published_desc_str = NULL;
 
+  uint8_t subcredential[DIGEST256_LEN];
   char *received_desc_str = NULL;
   hs_descriptor_t *received_desc = NULL;
 
@@ -378,9 +379,11 @@ test_hsdir_revision_counter_check(void *arg)
     const ed25519_public_key_t *blinded_key;
 
     blinded_key = &published_desc->plaintext_data.blinded_pubkey;
+    hs_get_subcredential(&signing_kp.pubkey, blinded_key, subcredential);
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
-    retval = hs_desc_decode_descriptor(received_desc_str,NULL, &received_desc);
+    retval = hs_desc_decode_descriptor(received_desc_str,
+                                       subcredential, &received_desc);
     tt_int_op(retval, ==, 0);
     tt_assert(received_desc);
 
@@ -412,7 +415,8 @@ test_hsdir_revision_counter_check(void *arg)
     blinded_key = &published_desc->plaintext_data.blinded_pubkey;
     received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
 
-    retval = hs_desc_decode_descriptor(received_desc_str,NULL, &received_desc);
+    retval = hs_desc_decode_descriptor(received_desc_str,
+                                       subcredential, &received_desc);
     tt_int_op(retval, ==, 0);
     tt_assert(received_desc);
 

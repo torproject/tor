@@ -296,6 +296,7 @@ test_decode_descriptor(void *arg)
   hs_descriptor_t *desc = NULL;
   hs_descriptor_t *decoded = NULL;
   hs_descriptor_t *desc_no_ip = NULL;
+  uint8_t subcredential[DIGEST256_LEN];
 
   (void) arg;
 
@@ -303,15 +304,18 @@ test_decode_descriptor(void *arg)
   tt_int_op(ret, ==, 0);
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
 
+  hs_helper_get_subcred_from_identity_keypair(&signing_kp,
+                                              subcredential);
+
   /* Give some bad stuff to the decoding function. */
-  ret = hs_desc_decode_descriptor("hladfjlkjadf", NULL, &decoded);
+  ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential, &decoded);
   tt_int_op(ret, OP_EQ, -1);
 
   ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
   tt_int_op(ret, ==, 0);
   tt_assert(encoded);
 
-  ret = hs_desc_decode_descriptor(encoded, NULL, &decoded);
+  ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
   tt_int_op(ret, ==, 0);
   tt_assert(decoded);
 
@@ -322,6 +326,8 @@ test_decode_descriptor(void *arg)
     ed25519_keypair_t signing_kp_no_ip;
     ret = ed25519_keypair_generate(&signing_kp_no_ip, 0);
     tt_int_op(ret, ==, 0);
+    hs_helper_get_subcred_from_identity_keypair(&signing_kp_no_ip,
+                                                subcredential);
     desc_no_ip = hs_helper_build_hs_desc_no_ip(&signing_kp_no_ip);
     tt_assert(desc_no_ip);
     tor_free(encoded);
@@ -329,7 +335,7 @@ test_decode_descriptor(void *arg)
     tt_int_op(ret, ==, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
-    ret = hs_desc_decode_descriptor(encoded, NULL, &decoded);
+    ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
     tt_int_op(ret, ==, 0);
     tt_assert(decoded);
   }
