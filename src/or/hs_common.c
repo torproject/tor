@@ -21,6 +21,7 @@
 #include "hs_service.h"
 #include "rendcommon.h"
 #include "rendservice.h"
+#include "routerset.h"
 #include "router.h"
 #include "routerset.h"
 #include "shared_random.h"
@@ -1491,35 +1492,33 @@ hs_purge_last_hid_serv_requests(void)
 
 /***********************************************************************/
 
-/** This returns a good valid hs dir that should be used for the given
- * descriptor id.
+/** Given the list of responsible HSDirs in <b>responsible_dirs</b>, pick the
+ *  one that we should use to fetch a descriptor right now. Take into account
+ *  previous failed attempts at fetching this descriptor from HSDirs using the
+ *  string identifier <b>req_key_str</b>.
  *
- * Return NULL on error else the hsdir node pointer. */
+ *  Steals ownership of <b>responsible_dirs</b>.
+ *
+ *  Return the routerstatus of the chosen HSDir if successful, otherwise return
+ *  NULL if no HSDirs are worth trying right now. */
 routerstatus_t *
-pick_hsdir(const char *desc_id, const char *desc_id_base32)
+hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
 {
-  smartlist_t *responsible_dirs = smartlist_new();
   smartlist_t *usable_responsible_dirs = smartlist_new();
   const or_options_t *options = get_options();
   routerstatus_t *hs_dir;
   time_t now = time(NULL);
   int excluded_some;
 
-  tor_assert(desc_id);
-  tor_assert(desc_id_base32);
+  tor_assert(req_key_str);
 
-  /* Determine responsible dirs. Even if we can't get all we want, work with
-   * the ones we have. If it's empty, we'll notice below. */
-  hid_serv_get_responsible_directories(responsible_dirs, desc_id);
-
-  /* Clean request history first. */
+  /* Clean outdated request history first. */
   hs_clean_last_hid_serv_requests(now);
 
   /* Only select those hidden service directories to which we did not send a
    * request recently and for which we have a router descriptor here. */
   SMARTLIST_FOREACH_BEGIN(responsible_dirs, routerstatus_t *, dir) {
-    time_t last = hs_lookup_last_hid_serv_request(dir, desc_id_base32,
-                                                  0, 0);
+    time_t last = hs_lookup_last_hid_serv_request(dir, req_key_str, 0, 0);
     const node_t *node = node_get_by_id(dir->identity_digest);
     if (last + hs_hsdir_requery_period(options) >= now ||
         !node || !node_has_descriptor(node)) {
@@ -1553,7 +1552,7 @@ pick_hsdir(const char *desc_id, const char *desc_id_base32)
   } else {
     /* Remember that we are requesting a descriptor from this hidden service
      * directory now. */
-    hs_lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
+    hs_lookup_last_hid_serv_request(hs_dir, req_key_str, now, 1);
   }
 
   return hs_dir;
