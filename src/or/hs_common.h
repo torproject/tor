@@ -187,6 +187,10 @@ const char *rend_data_get_desc_id(const rend_data_t *rend_data,
 const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
                                        size_t *len_out);
 
+void rend_client_purge_last_hid_serv_requests(void);
+void purge_hid_serv_from_last_hid_serv_requests(const char *desc_id);
+routerstatus_t *pick_hsdir(const char *desc_id, const char *desc_id_base32);
+
 void hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                           const ed25519_public_key_t *blinded_pk,
                           uint8_t *subcred_out);
@@ -228,6 +232,13 @@ void hs_dec_rdv_stream_counter(origin_circuit_t *circ);
 #ifdef HS_COMMON_PRIVATE
 
 STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
+
+/** The period for which a hidden service directory cannot be queried for
+ * the same descriptor ID again. */
+#define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
+/** Test networks generate a new consensus every 5 or 10 seconds.
+ * So allow them to requery HSDirs much faster. */
+#define REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING (5)
 
 #ifdef TOR_UNIT_TESTS
 
