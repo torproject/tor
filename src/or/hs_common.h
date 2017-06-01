@@ -187,8 +187,6 @@ const char *rend_data_get_desc_id(const rend_data_t *rend_data,
 const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
                                        size_t *len_out);
 
-void rend_client_purge_last_hid_serv_requests(void);
-void purge_hid_serv_from_last_hid_serv_requests(const char *desc_id);
 routerstatus_t *pick_hsdir(const char *desc_id, const char *desc_id_base32);
 
 void hs_get_subcredential(const ed25519_public_key_t *identity_pk,
@@ -224,6 +222,14 @@ void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
                                uint64_t time_period_num, int is_next_period,
                                int is_client, smartlist_t *responsible_dirs);
 
+time_t hs_hsdir_requery_period(const or_options_t *options);
+time_t hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
+                                       const char *desc_id_base32,
+                                       time_t now, int set);
+void hs_clean_last_hid_serv_requests(time_t now);
+void hs_purge_hid_serv_from_last_hid_serv_requests(const char *desc_id);
+void hs_purge_last_hid_serv_requests(void);
+
 int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
 
 void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
@@ -242,6 +248,7 @@ STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
 
 #ifdef TOR_UNIT_TESTS
 
+STATIC strmap_t *get_last_hid_serv_requests(void);
 STATIC uint64_t get_time_period_length(void);
 
 STATIC uint8_t *get_first_cached_disaster_srv(void);

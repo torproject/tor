@@ -42,7 +42,7 @@ rend_client_purge_state(void)
   rend_cache_purge();
   rend_cache_failure_purge();
   rend_client_cancel_descriptor_fetches();
-  rend_client_purge_last_hid_serv_requests();
+  hs_purge_last_hid_serv_requests();
 }
 
 /** Called when we've established a circuit to an introduction point:
@@ -636,7 +636,7 @@ fetch_v2_desc_by_addr(rend_data_t *rend_query, smartlist_t *hsdirs)
                    sizeof(descriptor_id)) != 0) {
       /* Not equal from what we currently have so purge the last hid serv
        * request cache and update the descriptor ID with the new value. */
-      purge_hid_serv_from_last_hid_serv_requests(
+      hs_purge_hid_serv_from_last_hid_serv_requests(
                                      rend_data->descriptor_id[chosen_replica]);
       memcpy(rend_data->descriptor_id[chosen_replica], descriptor_id,
              sizeof(rend_data->descriptor_id[chosen_replica]));
@@ -1036,14 +1036,14 @@ rend_client_note_connection_attempt_ended(const rend_data_t *rend_data)
     for (replica = 0; replica < ARRAY_LENGTH(rend_data_v2->descriptor_id);
          replica++) {
       const char *desc_id = rend_data_v2->descriptor_id[replica];
-      purge_hid_serv_from_last_hid_serv_requests(desc_id);
+      hs_purge_hid_serv_from_last_hid_serv_requests(desc_id);
     }
     log_info(LD_REND, "Connection attempt for %s has ended; "
              "cleaning up temporary state.",
              safe_str_client(onion_address));
   } else {
     /* We only have an ID for a fetch. Probably used by HSFETCH. */
-    purge_hid_serv_from_last_hid_serv_requests(rend_data_v2->desc_id_fetch);
+    hs_purge_hid_serv_from_last_hid_serv_requests(rend_data_v2->desc_id_fetch);
   }
 }
 

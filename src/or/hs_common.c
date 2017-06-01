@@ -1325,8 +1325,8 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
 
 /** Return the period for which a hidden service directory cannot be queried
  * for the same descriptor ID again, taking TestingTorNetwork into account. */
-static time_t
-hsdir_requery_period(const or_options_t *options)
+time_t
+hs_hsdir_requery_period(const or_options_t *options)
 {
   tor_assert(options);
 
@@ -1337,17 +1337,25 @@ hsdir_requery_period(const or_options_t *options)
   }
 }
 
-/** Contains the last request times to hidden service directories for
- * certain queries; each key is a string consisting of the
- * concatenation of a base32-encoded HS directory identity digest and
- * base32-encoded HS descriptor ID; each value is a pointer to a time_t
- * holding the time of the last request for that descriptor ID to that
- * HS directory. */
+/** Tracks requests for fetching hidden service descriptors. It's used by
+ *  hidden service clients, to avoid querying HSDirs that have already failed
+ *  giving back a descriptor. The same data structure is used to track both v2
+ *  and v3 HS descriptor requests.
+ *
+ * The string map is a key/value store that contains the last request times to
+ * hidden service directories for certain queries. Specifically:
+ *
+ *   key = base32(hsdir_identity) + base32(hs_identity)
+ *   value = time_t of last request for that hs_identity to that HSDir
+ *
+ * where 'hsdir_identity' is the identity digest of the HSDir node, and
+ * 'hs_identity' is the descriptor ID of the HS in the v2 case, or the ed25519
+ * identity public key of the HS in the v3 case. */
 static strmap_t *last_hid_serv_requests_ = NULL;
 
 /** Returns last_hid_serv_requests_, initializing it to a new strmap if
  * necessary. */
-static strmap_t *
+STATIC strmap_t *
 get_last_hid_serv_requests(void)
 {
   if (!last_hid_serv_requests_)
@@ -1355,30 +1363,26 @@ get_last_hid_serv_requests(void)
   return last_hid_serv_requests_;
 }
 
-#define LAST_HID_SERV_REQUEST_KEY_LEN (REND_DESC_ID_V2_LEN_BASE32 + \
-                                       REND_DESC_ID_V2_LEN_BASE32)
-
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
- * assign the current time <b>now</b> and return that. Otherwise, return the
- * most recent request time, or 0 if no such request has been sent before.
- */
-static time_t
-lookup_last_hid_serv_request(routerstatus_t *hs_dir,
-                             const char *desc_id_base32,
-                             time_t now, int set)
+ * for descriptor request key <b>req_key_str</b> which is the descriptor ID
+ * for a v2 service or the blinded key for v3. If <b>set</b> is non-zero,
+ * assign the current time <b>now</b> and return that.  Otherwise, return the
+ * most recent request time, or 0 if no such request has been sent before. */
+time_t
+hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
+                                const char *req_key_str,
+                                time_t now, int set)
 {
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  char hsdir_desc_comb_id[LAST_HID_SERV_REQUEST_KEY_LEN + 1];
+  char *hsdir_desc_comb_id = NULL;
   time_t *last_request_ptr;
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
+
+  /* Create the key */
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
-  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
-               hsdir_id_base32,
-               desc_id_base32);
-  /* XXX++?? tor_assert(strlen(hsdir_desc_comb_id) ==
-                       LAST_HID_SERV_REQUEST_KEY_LEN); */
+  tor_asprintf(&hsdir_desc_comb_id, "%s%s", hsdir_id_base32, req_key_str);
+
   if (set) {
     time_t *oldptr;
     last_request_ptr = tor_malloc_zero(sizeof(time_t));
@@ -1386,20 +1390,23 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
     oldptr = strmap_set(last_hid_serv_requests, hsdir_desc_comb_id,
                         last_request_ptr);
     tor_free(oldptr);
-  } else
-    last_request_ptr = strmap_get_lc(last_hid_serv_requests,
-                                     hsdir_desc_comb_id);
+  } else {
+    last_request_ptr = strmap_get(last_hid_serv_requests,
+                                  hsdir_desc_comb_id);
+  }
+
+  tor_free(hsdir_desc_comb_id);
   return (last_request_ptr) ? *last_request_ptr : 0;
 }
 
 /** Clean the history of request times to hidden service directories, so that
  * it does not contain requests older than REND_HID_SERV_DIR_REQUERY_PERIOD
  * seconds any more. */
-static void
-directory_clean_last_hid_serv_requests(time_t now)
+void
+hs_clean_last_hid_serv_requests(time_t now)
 {
   strmap_iter_t *iter;
-  time_t cutoff = now - hsdir_requery_period(get_options());
+  time_t cutoff = now - hs_hsdir_requery_period(get_options());
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   for (iter = strmap_iter_init(last_hid_serv_requests);
        !strmap_iter_done(iter); ) {
@@ -1417,33 +1424,43 @@ directory_clean_last_hid_serv_requests(time_t now)
   }
 }
 
-/** Remove all requests related to the descriptor ID <b>desc_id</b> from the
- * history of times of requests to hidden service directories.
- * <b>desc_id</b> is an unencoded descriptor ID of size DIGEST_LEN.
+/** Remove all requests related to the descriptor request key string
+ * <b>req_key_str</b> from the history of times of requests to hidden service
+ * directories.
  *
  * This is called from rend_client_note_connection_attempt_ended(), which
  * must be idempotent, so any future changes to this function must leave it
  * idempotent too. */
 void
-purge_hid_serv_from_last_hid_serv_requests(const char *desc_id)
+hs_purge_hid_serv_from_last_hid_serv_requests(const char *req_key_str)
 {
   strmap_iter_t *iter;
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
-  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
 
-  /* Key is stored with the base32 encoded desc_id. */
-  base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                DIGEST_LEN);
   for (iter = strmap_iter_init(last_hid_serv_requests);
        !strmap_iter_done(iter); ) {
     const char *key;
     void *val;
     strmap_iter_get(iter, &key, &val);
-    /* XXX++?? tor_assert(strlen(key) == LAST_HID_SERV_REQUEST_KEY_LEN); */
-    if (tor_memeq(key + LAST_HID_SERV_REQUEST_KEY_LEN -
-                  REND_DESC_ID_V2_LEN_BASE32,
-                  desc_id_base32,
-                  REND_DESC_ID_V2_LEN_BASE32)) {
+
+    /* XXX: The use of REND_DESC_ID_V2_LEN_BASE32 is very wrong in terms of
+     * semantic, see #23305. */
+
+    /* Length check on the strings we are about to compare. The "key" contains
+     * both the base32 HSDir identity digest and the requested key at the
+     * directory. The "req_key_str" can either be a base32 descriptor ID or a
+     * base64 blinded key which should be the second part of "key". BUG on
+     * this check because both strings are internally controlled so this
+     * should never happen. */
+    if (BUG((strlen(req_key_str) + REND_DESC_ID_V2_LEN_BASE32) <
+            strlen(key))) {
+      iter = strmap_iter_next(last_hid_serv_requests, iter);
+      continue;
+    }
+
+    /* Check if the tracked request matches our request key */
+    if (tor_memeq(key + REND_DESC_ID_V2_LEN_BASE32, req_key_str,
+                  strlen(req_key_str))) {
       iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
       tor_free(val);
     } else {
@@ -1457,9 +1474,9 @@ purge_hid_serv_from_last_hid_serv_requests(const char *desc_id)
  * accessed all of the HSDir relays responsible for the descriptor
  * recently. */
 void
-rend_client_purge_last_hid_serv_requests(void)
+hs_purge_last_hid_serv_requests(void)
 {
-  /* Don't create the table if it doesn't exist yet (and it may very
+ /* Don't create the table if it doesn't exist yet (and it may very
    * well not exist if the user hasn't accessed any HSes)... */
   strmap_t *old_last_hid_serv_requests = last_hid_serv_requests_;
   /* ... and let get_last_hid_serv_requests re-create it for us if
@@ -1496,15 +1513,15 @@ pick_hsdir(const char *desc_id, const char *desc_id_base32)
   hid_serv_get_responsible_directories(responsible_dirs, desc_id);
 
   /* Clean request history first. */
-  directory_clean_last_hid_serv_requests(now);
+  hs_clean_last_hid_serv_requests(now);
 
   /* Only select those hidden service directories to which we did not send a
    * request recently and for which we have a router descriptor here. */
   SMARTLIST_FOREACH_BEGIN(responsible_dirs, routerstatus_t *, dir) {
-    time_t last = lookup_last_hid_serv_request(dir, desc_id_base32,
-                                               0, 0);
+    time_t last = hs_lookup_last_hid_serv_request(dir, desc_id_base32,
+                                                  0, 0);
     const node_t *node = node_get_by_id(dir->identity_digest);
-    if (last + hsdir_requery_period(options) >= now ||
+    if (last + hs_hsdir_requery_period(options) >= now ||
         !node || !node_has_descriptor(node)) {
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
       continue;
@@ -1536,7 +1553,7 @@ pick_hsdir(const char *desc_id, const char *desc_id_base32)
   } else {
     /* Remember that we are requesting a descriptor from this hidden service
      * directory now. */
-    lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
+    hs_lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
   }
 
   return hs_dir;
