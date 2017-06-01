@@ -1855,6 +1855,9 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   s->started_here = started_here ? 1 : 0;
   s->digest_sent_data = 1;
   s->digest_received_data = 1;
+  if (! started_here && get_current_link_cert_cert()) {
+    s->own_link_cert = tor_cert_dup(get_current_link_cert_cert());
+  }
   s->certs = or_handshake_certs_new();
   s->certs->started_here = s->started_here;
   return 0;
@@ -1869,6 +1872,7 @@ or_handshake_state_free(or_handshake_state_t *state)
   crypto_digest_free(state->digest_sent);
   crypto_digest_free(state->digest_received);
   or_handshake_certs_free(state->certs);
+  tor_cert_free(state->own_link_cert);
   memwipe(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
@@ -2311,7 +2315,7 @@ connection_or_send_certs_cell(or_connection_t *conn)
   if (conn_in_server_mode) {
     add_ed25519_cert(certs_cell,
                      CERTTYPE_ED_SIGN_LINK,
-                     get_current_link_cert_cert());
+                     conn->handshake_state->own_link_cert);
   } else {
     add_ed25519_cert(certs_cell,
                      CERTTYPE_ED_SIGN_AUTH,

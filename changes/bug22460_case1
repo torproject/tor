@@ -6,5 +6,11 @@
       inconsistent set of keys and certificates, which other relays
       would not accept. Fixes two cases of bug 22460; bugfix on
       0.3.0.1-alpha.
+    - When sending an Ed25519 signing->link certificate in a CERTS cell,
+      send the certificate that matches the x509 certificate that we used
+      on the TLS connection. Previously, there was a race condition if
+      the TLS context rotated after we began the TLS handshake but
+      before we sent the CERTS cell. Fixes a case of bug 22460; bugfix
+      on 0.3.0.1-alpha.
 
 
