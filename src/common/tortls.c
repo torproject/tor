@@ -677,6 +677,15 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
   return cert;
 }
 
+/** Return a new copy of <b>cert</b>. */
+tor_x509_cert_t *
+tor_x509_cert_dup(const tor_x509_cert_t *cert)
+{
+  tor_assert(cert);
+  X509 *x509 = cert->cert;
+  return tor_x509_cert_new(X509_dup(x509));
+}
+
 /** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,
  * from a <b>certificate</b>.  Return a newly allocated tor_x509_cert_t on
  * success and NULL on failure. */
@@ -2023,8 +2032,8 @@ tor_tls_get_peer_cert,(tor_tls_t *tls))
 
 /** Return the cerficate we used on the connection, or NULL if somehow
  * we didn't use one. */
-tor_x509_cert_t *
-tor_tls_get_own_cert(tor_tls_t *tls)
+MOCK_IMPL(tor_x509_cert_t *,
+tor_tls_get_own_cert,(tor_tls_t *tls))
 {
   X509 *cert = SSL_get_certificate(tls->ssl);
   tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE,
