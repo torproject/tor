@@ -697,6 +697,104 @@ test_disaster_srv(void *arg)
   ;
 }
 
+/** Test our HS descriptor request tracker by making various requests and
+ *  checking whether they get tracked properly. */
+static void
+test_hid_serv_request_tracker(void *arg)
+{
+  (void) arg;
+  time_t retval;
+  routerstatus_t *hsdir = NULL, *hsdir2 = NULL;
+  time_t now = approx_time();
+
+  const char *req_key_str_first =
+ "vd4zb6zesaubtrjvdqcr2w7x7lhw2up4Xnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
+  const char *req_key_str_second =
+ "g53o7iavcd62oihswhr24u6czmqws5kpXnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
+
+  /*************************** basic test *******************************/
+
+  /* Get request tracker and make sure it's empty */
+  strmap_t *request_tracker = get_last_hid_serv_requests();
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 0);
+
+  /* Let's register a hid serv request */
+  hsdir = tor_malloc_zero(sizeof(routerstatus_t));
+  memset(hsdir->identity_digest, 'Z', DIGEST_LEN);
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
+                                           now, 1);
+  tt_int_op(retval, OP_EQ, now);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /* Let's lookup a non-existent hidserv request */
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_second,
+                                           now+1, 0);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /* Let's lookup a real hidserv request */
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
+                                           now+2, 0);
+  tt_int_op(retval, OP_EQ, now); /* we got it */
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /**********************************************************************/
+
+  /* Let's add another request for the same HS but on a different HSDir. */
+  hsdir2 = tor_malloc_zero(sizeof(routerstatus_t));
+  memset(hsdir->identity_digest, 2, DIGEST_LEN);
+  retval = hs_lookup_last_hid_serv_request(hsdir2, req_key_str_first,
+                                           now+3, 1);
+  tt_int_op(retval, OP_EQ, now+3);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+
+  /* Check that we can clean the first request based on time */
+  hs_clean_last_hid_serv_requests(now+3+REND_HID_SERV_DIR_REQUERY_PERIOD);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+  /* Check that it doesn't exist anymore */
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
+                                           now+2, 0);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /*************************** deleting entries **************************/
+
+  /* Add another request with very short key */
+  retval = hs_lookup_last_hid_serv_request(hsdir, "l",  now, 1);
+
+  /* Try deleting entries with a dummy key. Check that our previous requests
+   * are still there */
+  tor_capture_bugs_(1);
+  hs_purge_hid_serv_from_last_hid_serv_requests("a");
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  tor_end_capture_bugs_();
+
+  /* Try another dummy key. Check that requests are still there */
+  {
+    char dummy[2000];
+    memset(dummy, 'Z', 2000);
+    dummy[1999] = '\x00';
+    hs_purge_hid_serv_from_last_hid_serv_requests(dummy);
+    tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  }
+
+  /* Another dummy key! */
+  hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_second);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+
+  /* Now actually delete a request! */
+  hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_first);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /* Purge it all! */
+  hs_purge_last_hid_serv_requests();
+  request_tracker = get_last_hid_serv_requests();
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 0);
+
+ done:
+  tor_free(hsdir);
+  tor_free(hsdir2);
+}
+
 static void
 test_parse_extended_hostname(void *arg)
 {
@@ -747,6 +845,8 @@ struct testcase_t hs_common_tests[] = {
   { "desc_reupload_logic", test_desc_reupload_logic, TT_FORK,
     NULL, NULL },
   { "disaster_srv", test_disaster_srv, TT_FORK,
+    NULL, NULL },
+  { "hid_serv_request_tracker", test_hid_serv_request_tracker, TT_FORK,
     NULL, NULL },
   { "parse_extended_hostname", test_parse_extended_hostname, TT_FORK,
     NULL, NULL },

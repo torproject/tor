@@ -562,6 +562,20 @@ directory_get_from_hs_dir(const char *desc_id,
   return 1;
 }
 
+/** Remove tracked HSDir requests from our history for this hidden service
+ *  descriptor <b>desc_id</b> (of size DIGEST_LEN) */
+static void
+purge_v2_hidserv_req(const char *desc_id)
+{
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+
+  /* The hsdir request tracker stores v2 keys using the base32 encoded
+     desc_id. Do it: */
+  base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                DIGEST_LEN);
+  hs_purge_hid_serv_from_last_hid_serv_requests(desc_id_base32);
+}
+
 /** Fetch a v2 descriptor using the given descriptor id. If any hsdir(s) are
  * given, they will be used instead.
  *
@@ -636,8 +650,7 @@ fetch_v2_desc_by_addr(rend_data_t *rend_query, smartlist_t *hsdirs)
                    sizeof(descriptor_id)) != 0) {
       /* Not equal from what we currently have so purge the last hid serv
        * request cache and update the descriptor ID with the new value. */
-      hs_purge_hid_serv_from_last_hid_serv_requests(
-                                     rend_data->descriptor_id[chosen_replica]);
+      purge_v2_hidserv_req(rend_data->descriptor_id[chosen_replica]);
       memcpy(rend_data->descriptor_id[chosen_replica], descriptor_id,
              sizeof(rend_data->descriptor_id[chosen_replica]));
     }
@@ -1036,14 +1049,14 @@ rend_client_note_connection_attempt_ended(const rend_data_t *rend_data)
     for (replica = 0; replica < ARRAY_LENGTH(rend_data_v2->descriptor_id);
          replica++) {
       const char *desc_id = rend_data_v2->descriptor_id[replica];
-      hs_purge_hid_serv_from_last_hid_serv_requests(desc_id);
+      purge_v2_hidserv_req(desc_id);
     }
     log_info(LD_REND, "Connection attempt for %s has ended; "
              "cleaning up temporary state.",
              safe_str_client(onion_address));
   } else {
     /* We only have an ID for a fetch. Probably used by HSFETCH. */
-    hs_purge_hid_serv_from_last_hid_serv_requests(rend_data_v2->desc_id_fetch);
+    purge_v2_hidserv_req(rend_data_v2->desc_id_fetch);
   }
 }
 
