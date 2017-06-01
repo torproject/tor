@@ -9,14 +9,18 @@
 /* For unit tests.*/
 #define HS_CACHE_PRIVATE
 
-#include "hs_cache.h"
-
 #include "or.h"
 #include "config.h"
+#include "hs_ident.h"
 #include "hs_common.h"
+#include "hs_client.h"
 #include "hs_descriptor.h"
 #include "networkstatus.h"
 #include "rendcache.h"
+
+#include "hs_cache.h"
+
+/********************** Directory HS cache ******************/
 
 /* Directory descriptor cache. Map indexed by blinded key. */
 static digest256map_t *hs_cache_v3_dir;
@@ -98,7 +102,7 @@ cache_dir_desc_new(const char *desc)
 
 /* Return the size of a cache entry in bytes. */
 static size_t
-cache_get_entry_size(const hs_cache_dir_descriptor_t *entry)
+cache_get_dir_entry_size(const hs_cache_dir_descriptor_t *entry)
 {
   return (sizeof(*entry) + hs_desc_plaintext_obj_size(entry->plaintext_data)
           + strlen(entry->encoded_desc));
@@ -134,7 +138,7 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
      * remove the entry we currently have from our cache so we can then
      * store the new one. */
     remove_v3_desc_as_dir(cache_entry);
-    rend_cache_decrement_allocation(cache_get_entry_size(cache_entry));
+    rend_cache_decrement_allocation(cache_get_dir_entry_size(cache_entry));
     cache_dir_desc_free(cache_entry);
   }
   /* Store the descriptor we just got. We are sure here that either we
@@ -144,7 +148,7 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
 
   /* Update our total cache size with this entry for the OOM. This uses the
    * old HS protocol cache subsystem for which we are tied with. */
-  rend_cache_increment_allocation(cache_get_entry_size(desc));
+  rend_cache_increment_allocation(cache_get_dir_entry_size(desc));
 
   /* XXX: Update HS statistics. We should have specific stats for v3. */
 
@@ -221,7 +225,7 @@ cache_clean_v3_as_dir(time_t now, time_t global_cutoff)
     }
     /* Here, our entry has expired, remove and free. */
     MAP_DEL_CURRENT(key);
-    entry_size = cache_get_entry_size(entry);
+    entry_size = cache_get_dir_entry_size(entry);
     bytes_removed += entry_size;
     /* Entry is not in the cache anymore, destroy it. */
     cache_dir_desc_free(entry);
@@ -315,6 +319,243 @@ hs_cache_clean_as_dir(time_t now)
   cache_clean_v3_as_dir(now, 0);
 }
 
+/********************** Client-side HS cache ******************/
+
+/* Client-side HS descriptor cache. Map indexed by service identity key. */
+static digest256map_t *hs_cache_v3_client;
+
+/* Remove a given descriptor from our cache. */
+static void
+remove_v3_desc_as_client(const hs_cache_client_descriptor_t *desc)
+{
+  tor_assert(desc);
+  digest256map_remove(hs_cache_v3_client, desc->key.pubkey);
+}
+
+/* Store a given descriptor in our cache. */
+static void
+store_v3_desc_as_client(hs_cache_client_descriptor_t *desc)
+{
+  tor_assert(desc);
+  digest256map_set(hs_cache_v3_client, desc->key.pubkey, desc);
+}
+
+/* Query our cache and return the entry or NULL if not found. */
+STATIC hs_cache_client_descriptor_t *
+lookup_v3_desc_as_client(const uint8_t *key)
+{
+  tor_assert(key);
+  return digest256map_get(hs_cache_v3_client, key);
+}
+
+/* Return the size of a client cache entry in bytes. */
+static size_t
+cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
+{
+  return sizeof(*entry) +
+         strlen(entry->encoded_desc) + hs_desc_obj_size(entry->desc);
+}
+
+/* Parse the encoded descriptor in <b>desc_str</b> using
+ * <b>service_identity_pk<b> to decrypt it first.
+ *
+ * If everything goes well, allocate and return a new
+ * hs_cache_client_descriptor_t object. In case of error, return NULL. */
+static hs_cache_client_descriptor_t *
+cache_client_desc_new(const char *desc_str,
+                      const ed25519_public_key_t *service_identity_pk)
+{
+  hs_descriptor_t *desc = NULL;
+  hs_cache_client_descriptor_t *client_desc = NULL;
+
+  tor_assert(desc_str);
+  tor_assert(service_identity_pk);
+
+  /* Decode the descriptor we just fetched. */
+  if (hs_client_decode_descriptor(desc_str, service_identity_pk, &desc) < 0) {
+    goto end;
+  }
+  tor_assert(desc);
+
+  /* All is good: make a cache object for this descriptor */
+  client_desc = tor_malloc_zero(sizeof(hs_cache_client_descriptor_t));
+  ed25519_pubkey_copy(&client_desc->key, service_identity_pk);
+  client_desc->created_ts = approx_time();
+  client_desc->desc = desc;
+  client_desc->encoded_desc = tor_strdup(desc_str);
+
+ end:
+  return client_desc;
+}
+
+/** Free memory allocated by <b>desc</b>. */
+static void
+cache_client_desc_free(hs_cache_client_descriptor_t *desc)
+{
+  if (desc == NULL) {
+    return;
+  }
+  hs_descriptor_free(desc->desc);
+  memwipe(&desc->key, 0, sizeof(desc->key));
+  memwipe(desc->encoded_desc, 0, strlen(desc->encoded_desc));
+  tor_free(desc->encoded_desc);
+  tor_free(desc);
+}
+
+/** Helper function: Use by the free all function to clear the client cache */
+static void
+cache_client_desc_free_(void *ptr)
+{
+  hs_cache_client_descriptor_t *desc = ptr;
+  cache_client_desc_free(desc);
+}
+
+/** Check whether <b>client_desc</b> is useful for us, and store it in the
+ *  client-side HS cache if so. The client_desc is freed if we already have a
+ *  fresher (higher revision counter count) in the cache. */
+static int
+cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
+{
+  hs_cache_client_descriptor_t *cache_entry;
+
+  /* TODO: Heavy code duplication with cache_store_as_dir(). Consider
+   * refactoring and uniting! */
+
+  tor_assert(client_desc);
+
+  /* Check if we already have a descriptor from this HS in cache. If we do,
+   * check if this descriptor is newer than the cached one */
+  cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
+  if (cache_entry != NULL) {
+    /* If we have an entry in our cache that has a revision counter greater
+     * than the one we just fetched, discard the one we fetched. */
+    if (cache_entry->desc->plaintext_data.revision_counter >
+        client_desc->desc->plaintext_data.revision_counter) {
+      log_info(LD_REND, "We already have fresher descriptor. Ignoring.");
+      cache_client_desc_free(client_desc);
+      goto done;
+    }
+    /* Remove old entry. Make space for the new one! */
+    remove_v3_desc_as_client(cache_entry);
+    rend_cache_decrement_allocation(cache_get_client_entry_size(cache_entry));
+    cache_client_desc_free(cache_entry);
+  }
+
+  /* Store descriptor in cache */
+  store_v3_desc_as_client(client_desc);
+
+  /* Update cache size with this entry for the OOM handler. */
+  rend_cache_increment_allocation(cache_get_client_entry_size(client_desc));
+
+ done:
+  return 0;
+}
+
+/* Clean the client cache using now as the current time. Return the total size
+ * of removed bytes from the cache. */
+static size_t
+cache_clean_v3_as_client(time_t now)
+{
+  size_t bytes_removed = 0;
+
+  if (!hs_cache_v3_client) { /* No cache to clean. Just return. */
+    return 0;
+  }
+
+  DIGEST256MAP_FOREACH_MODIFY(hs_cache_v3_client, key,
+                              hs_cache_client_descriptor_t *, entry) {
+    size_t entry_size;
+    time_t cutoff = now - rend_cache_max_entry_lifetime();
+
+    /* If the entry has been created _after_ the cutoff, not expired so
+     * continue to the next entry in our v3 cache. */
+    if (entry->created_ts > cutoff) {
+      continue;
+    }
+    /* Here, our entry has expired, remove and free. */
+    MAP_DEL_CURRENT(key);
+    entry_size = cache_get_client_entry_size(entry);
+    bytes_removed += entry_size;
+    /* Entry is not in the cache anymore, destroy it. */
+    cache_client_desc_free(entry);
+    /* Update our cache entry allocation size for the OOM. */
+    rend_cache_decrement_allocation(entry_size);
+    /* Logging. */
+    {
+      char key_b64[BASE64_DIGEST256_LEN + 1];
+      base64_encode(key_b64, sizeof(key_b64), (const char *) key,
+                    DIGEST256_LEN, 0);
+      log_info(LD_REND, "Removing hidden service v3 descriptor '%s' "
+                        "from client cache",
+               safe_str_client(key_b64));
+    }
+  } DIGEST256MAP_FOREACH_END;
+
+  return bytes_removed;
+}
+
+/** Public API: Given the HS ed25519 identity public key in <b>key</b>, return
+ *  its HS descriptor if it's stored in our cache, or NULL if not. */
+const hs_descriptor_t *
+hs_cache_lookup_as_client(const ed25519_public_key_t *key)
+{
+  hs_cache_client_descriptor_t *cached_desc = NULL;
+
+  tor_assert(key);
+
+  cached_desc = lookup_v3_desc_as_client(key->pubkey);
+  if (cached_desc) {
+    tor_assert(cached_desc->desc);
+    return cached_desc->desc;
+  }
+
+  return NULL;
+}
+
+/** Public API: Given an encoded descriptor, store it in the client HS
+ *  cache. Return -1 on error, 0 on success .*/
+int
+hs_cache_store_as_client(const char *desc_str,
+                         const ed25519_public_key_t *identity_pk)
+{
+  hs_cache_client_descriptor_t *client_desc = NULL;
+
+  tor_assert(desc_str);
+  tor_assert(identity_pk);
+
+  /* Create client cache descriptor object */
+  client_desc = cache_client_desc_new(desc_str, identity_pk);
+  if (!client_desc) {
+    log_warn(LD_GENERAL, "Failed to parse received descriptor %s.",
+             escaped(desc_str));
+    goto err;
+  }
+
+  /* Push it to the cache */
+  if (cache_store_as_client(client_desc) < 0) {
+    goto err;
+  }
+
+  return 0;
+
+ err:
+  cache_client_desc_free(client_desc);
+  return -1;
+}
+
+/* Clean all client caches using the current time now. */
+void
+hs_cache_clean_as_client(time_t now)
+{
+  /* Start with v2 cache cleaning. */
+  rend_cache_clean(now, REND_CACHE_TYPE_CLIENT);
+  /* Now, clean the v3 cache. Set the cutoff to 0 telling the cleanup function
+   * to compute the cutoff by itself using the lifetime value. */
+  cache_clean_v3_as_client(now);
+}
+
+/**************** Generics *********************************/
+
 /* Do a round of OOM cleanup on all directory caches. Return the amount of
  * removed bytes. It is possible that the returned value is lower than
  * min_remove_bytes if the caches get emptied out so the caller should be
@@ -388,6 +629,9 @@ hs_cache_init(void)
   /* Calling this twice is very wrong code flow. */
   tor_assert(!hs_cache_v3_dir);
   hs_cache_v3_dir = digest256map_new();
+
+  tor_assert(!hs_cache_v3_client);
+  hs_cache_v3_client = digest256map_new();
 }
 
 /* Cleanup the hidden service cache subsystem. */
@@ -396,5 +640,8 @@ hs_cache_free_all(void)
 {
   digest256map_free(hs_cache_v3_dir, cache_dir_desc_free_);
   hs_cache_v3_dir = NULL;
+
+  digest256map_free(hs_cache_v3_client, cache_client_desc_free_);
+  hs_cache_v3_client = NULL;
 }
 

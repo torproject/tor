@@ -1827,8 +1827,8 @@ clean_caches_callback(time_t now, const or_options_t *options)
 {
   /* Remove old information from rephist and the rend cache. */
   rep_history_clean(now - options->RephistTrackTime);
-  rend_cache_clean(now, REND_CACHE_TYPE_CLIENT);
   rend_cache_clean(now, REND_CACHE_TYPE_SERVICE);
+  hs_cache_clean_as_client(now);
   hs_cache_clean_as_dir(now);
   microdesc_cache_rebuild(NULL, 0);
 #define CLEAN_CACHES_INTERVAL (30*60)

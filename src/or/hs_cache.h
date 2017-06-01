@@ -53,9 +53,34 @@ int hs_cache_store_as_dir(const char *desc);
 int hs_cache_lookup_as_dir(uint32_t version, const char *query,
                            const char **desc_out);
 
+const hs_descriptor_t *
+hs_cache_lookup_as_client(const ed25519_public_key_t *key);
+int hs_cache_store_as_client(const char *desc_str,
+                             const ed25519_public_key_t *identity_pk);
+void hs_cache_clean_as_client(time_t now);
+
 #ifdef HS_CACHE_PRIVATE
 
+/** Represents a locally cached HS descriptor on a hidden service client. */
+typedef struct hs_cache_client_descriptor_t {
+  /* This object is indexed using the service identity public key */
+  ed25519_public_key_t key;
+
+  /* When was this entry created. Used to expire entries. */
+  time_t created_ts;
+
+  /* The cached descriptor, this object is the owner. It can't be NULL. A
+   * cache object without a valid descriptor is not possible. */
+  hs_descriptor_t *desc;
+
+  /* Encoded descriptor in string form. Can't be NULL. */
+  char *encoded_desc;
+} hs_cache_client_descriptor_t;
+
 STATIC size_t cache_clean_v3_as_dir(time_t now, time_t global_cutoff);
+
+STATIC hs_cache_client_descriptor_t *
+lookup_v3_desc_as_client(const uint8_t *key);
 
 #endif /* HS_CACHE_PRIVATE */
 

@@ -2437,6 +2437,37 @@ hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data)
           data->superencrypted_blob_size);
 }
 
+/* Return the size in bytes of the given encrypted data object. Used by OOM
+ * subsystem. */
+static size_t
+hs_desc_encrypted_obj_size(const hs_desc_encrypted_data_t *data)
+{
+  tor_assert(data);
+  size_t intro_size = 0;
+  if (data->intro_auth_types) {
+    intro_size +=
+      smartlist_len(data->intro_auth_types) * sizeof(intro_auth_types);
+  }
+  if (data->intro_points) {
+    /* XXX could follow pointers here and get more accurate size */
+    intro_size +=
+      smartlist_len(data->intro_points) * sizeof(hs_desc_intro_point_t);
+  }
+
+  return sizeof(*data) + intro_size;
+}
+
+/* Return the size in bytes of the given descriptor object. Used by OOM
+ * subsystem. */
+  size_t
+hs_desc_obj_size(const hs_descriptor_t *data)
+{
+  tor_assert(data);
+  return (hs_desc_plaintext_obj_size(&data->plaintext_data) +
+          hs_desc_encrypted_obj_size(&data->encrypted_data) +
+          sizeof(data->subcredential));
+}
+
 /* Return a newly allocated descriptor intro point. */
 hs_desc_intro_point_t *
 hs_desc_intro_point_new(void)
