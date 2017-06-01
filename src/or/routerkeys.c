@@ -685,6 +685,10 @@ load_ed_keys(const or_options_t *options, time_t now)
   tor_cert_t *sign_cert = NULL;
   tor_cert_t *auth_cert = NULL;
 
+  // It is later than 1972, since otherwise there would be no C compilers.
+  // (Try to diagnose #22466.)
+  tor_assert_nonfatal(now >= 2 * 365 * 86400);
+
 #define FAIL(msg) do {                          \
     log_warn(LD_OR, (msg));                     \
     goto err;                                   \

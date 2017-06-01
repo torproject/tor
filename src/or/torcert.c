@@ -302,6 +302,10 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
                                time_t expires,
                                uint8_t **cert)
 {
+  // It is later than 1985, since otherwise there would be no C89
+  // compilers. (Try to diagnose #22466.)
+  tor_assert_nonfatal(expires >= 15 * 365 * 86400);
+
   uint8_t *res;
 
   rsa_ed_crosscert_t *cc = rsa_ed_crosscert_new();
