@@ -76,6 +76,8 @@
 #include "dirserv.h"
 #include "hibernate.h"
 #include "hs_common.h"
+#include "hs_cache.h"
+#include "hs_client.h"
 #include "hs_circuit.h"
 #include "main.h"
 #include "nodelist.h"
@@ -1392,10 +1394,13 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
   }
 }
 
+/** We just received a SOCKS request in <b>conn</b> to an onion address of type
+ *  <b>addresstype</b>. Start connecting to the onion service. */
 static int
 connection_ap_handle_onion(entry_connection_t *conn,
                            socks_request_t *socks,
-                           origin_circuit_t *circ)
+                           origin_circuit_t *circ,
+                           hostname_type_t addresstype)
 {
   time_t now = approx_time();
   connection_t *base_conn = ENTRY_TO_CONN(conn);
@@ -1432,38 +1437,81 @@ connection_ap_handle_onion(entry_connection_t *conn,
     return -1;
   }
 
-  /* Look up if we have client authorization configured for this hidden
-   * service.  If we do, associate it with the rend_data. */
-  rend_service_authorization_t *client_auth =
-    rend_client_lookup_service_authorization(socks->address);
+  /* Interface: Regardless of HS version after the block below we should have
+     set onion_address, rend_cache_lookup_result, and descriptor_is_usable. */
+  const char *onion_address = NULL;
+  int rend_cache_lookup_result = -ENOENT;
+  int descriptor_is_usable = 0;
 
-  const uint8_t *cookie = NULL;
-  rend_auth_type_t auth_type = REND_NO_AUTH;
-  if (client_auth) {
-    log_info(LD_REND, "Using previously configured client authorization "
-             "for hidden service request.");
-    auth_type = client_auth->auth_type;
-    cookie = client_auth->descriptor_cookie;
-  }
+  if (addresstype == ONION_V2_HOSTNAME) { /* it's a v2 hidden service */
+    rend_cache_entry_t *entry = NULL;
+    /* Look up if we have client authorization configured for this hidden
+     * service.  If we do, associate it with the rend_data. */
+    rend_service_authorization_t *client_auth =
+      rend_client_lookup_service_authorization(socks->address);
 
-  /* Fill in the rend_data field so we can start doing a connection to
-   * a hidden service. */
-  rend_data_t *rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data =
-    rend_data_client_create(socks->address, NULL, (char *) cookie,
-                            auth_type);
-  if (rend_data == NULL) {
-    return -1;
+    const uint8_t *cookie = NULL;
+    rend_auth_type_t auth_type = REND_NO_AUTH;
+    if (client_auth) {
+      log_info(LD_REND, "Using previously configured client authorization "
+               "for hidden service request.");
+      auth_type = client_auth->auth_type;
+      cookie = client_auth->descriptor_cookie;
+    }
+
+    /* Fill in the rend_data field so we can start doing a connection to
+     * a hidden service. */
+    rend_data_t *rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data =
+      rend_data_client_create(socks->address, NULL, (char *) cookie,
+                              auth_type);
+    if (rend_data == NULL) {
+      return -1;
+    }
+    onion_address = rend_data_get_address(rend_data);
+    log_info(LD_REND,"Got a hidden service request for ID '%s'",
+             safe_str_client(onion_address));
+
+    rend_cache_lookup_result = rend_cache_lookup_entry(onion_address,-1,
+                                                       &entry);
+    if (!rend_cache_lookup_result && entry) {
+      descriptor_is_usable = rend_client_any_intro_points_usable(entry);
+    }
+  } else { /* it's a v3 hidden service */
+    tor_assert(addresstype == ONION_V3_HOSTNAME);
+    const hs_descriptor_t *cached_desc = NULL;
+    int retval;
+    /* Create HS conn identifier with HS pubkey */
+    hs_ident_edge_conn_t *hs_conn_ident =
+      tor_malloc_zero(sizeof(hs_ident_edge_conn_t));
+
+    retval = hs_parse_address(socks->address, &hs_conn_ident->identity_pk,
+                              NULL, NULL);
+    if (retval < 0) {
+      log_warn(LD_GENERAL, "failed to parse hs address");
+      tor_free(hs_conn_ident);
+      return -1;
+    }
+    ENTRY_TO_EDGE_CONN(conn)->hs_ident = hs_conn_ident;
+
+    onion_address = socks->address;
+
+    /* Check the v3 desc cache */
+    cached_desc = hs_cache_lookup_as_client(&hs_conn_ident->identity_pk);
+    if (cached_desc) {
+      rend_cache_lookup_result = 0;
+      descriptor_is_usable = hs_client_any_intro_points_usable(cached_desc);
+      log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
+               (descriptor_is_usable) ? "usable" : "unusable",
+               safe_str_client(onion_address),
+               (descriptor_is_usable) ? "Not fetching." : "Refecting.");
+    } else {
+      rend_cache_lookup_result = -ENOENT;
+    }
   }
-  const char *onion_address = rend_data_get_address(rend_data);
-  log_info(LD_REND,"Got a hidden service request for ID '%s'",
-           safe_str_client(onion_address));
 
   /* Lookup the given onion address. If invalid, stop right now.
    * Otherwise, we might have it in the cache or not. */
   unsigned int refetch_desc = 0;
-  rend_cache_entry_t *entry = NULL;
-  const int rend_cache_lookup_result =
-    rend_cache_lookup_entry(onion_address, -1, &entry);
   if (rend_cache_lookup_result < 0) {
     switch (-rend_cache_lookup_result) {
     case EINVAL:
@@ -1474,6 +1522,8 @@ connection_ap_handle_onion(entry_connection_t *conn,
       return -1;
     case ENOENT:
       /* We didn't have this; we should look it up. */
+      log_info(LD_REND, "No descriptor found in our cache for %s. Fetching.",
+               safe_str_client(onion_address));
       refetch_desc = 1;
       break;
     default:
@@ -1491,12 +1541,18 @@ connection_ap_handle_onion(entry_connection_t *conn,
   /* Now we have a descriptor but is it usable or not? If not, refetch.
    * Also, a fetch could have been requested if the onion address was not
    * found in the cache previously. */
-  if (refetch_desc || !rend_client_any_intro_points_usable(entry)) {
+  if (refetch_desc || !descriptor_is_usable) {
+    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
     connection_ap_mark_as_non_pending_circuit(conn);
     base_conn->state = AP_CONN_STATE_RENDDESC_WAIT;
-    log_info(LD_REND, "Unknown descriptor %s. Fetching.",
-             safe_str_client(onion_address));
-    rend_client_refetch_v2_renddesc(rend_data);
+    if (addresstype == ONION_V2_HOSTNAME) {
+      tor_assert(edge_conn->rend_data);
+      rend_client_refetch_v2_renddesc(edge_conn->rend_data);
+    } else {
+      tor_assert(addresstype == ONION_V3_HOSTNAME);
+      tor_assert(edge_conn->hs_ident);
+      hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
+    }
     return 0;
   }
 
@@ -1676,7 +1732,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   }
 
   /* Now, we handle everything that isn't a .onion address. */
-  if (addresstype != ONION_V2_HOSTNAME) {
+  if (addresstype != ONION_V2_HOSTNAME && addresstype != ONION_V3_HOSTNAME) {
     /* Not a hidden-service request.  It's either a hostname or an IP,
      * possibly with a .exit that we stripped off.  We're going to check
      * if we're allowed to connect/resolve there, and then launch the
@@ -1954,8 +2010,10 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     return 0;
   } else {
     /* If we get here, it's a request for a .onion address! */
+    tor_assert(addresstype == ONION_V2_HOSTNAME ||
+               addresstype == ONION_V3_HOSTNAME);
     tor_assert(!automap);
-    if (connection_ap_handle_onion(conn, socks, circ) < 0) {
+    if (connection_ap_handle_onion(conn, socks, circ, addresstype) < 0) {
       return -1;
     }
   }
