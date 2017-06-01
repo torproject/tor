@@ -1558,7 +1558,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   }
 
   /* Now, we handle everything that isn't a .onion address. */
-  if (addresstype != ONION_HOSTNAME) {
+  if (addresstype != ONION_V2_HOSTNAME) {
     /* Not a hidden-service request.  It's either a hostname or an IP,
      * possibly with a .exit that we stripped off.  We're going to check
      * if we're allowed to connect/resolve there, and then launch the
@@ -3679,10 +3679,12 @@ connection_ap_can_use_exit(const entry_connection_t *conn,
 }
 
 /** If address is of the form "y.onion" with a well-formed handle y:
- *     Put a NUL after y, lower-case it, and return ONION_HOSTNAME.
+ *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
+ *     ONION_V3_HOSTNAME depending on the HS version.
  *
  *  If address is of the form "x.y.onion" with a well-formed handle x:
- *     Drop "x.", put a NUL after y, lower-case it, and return ONION_HOSTNAME.
+ *     Drop "x.", put a NUL after y, lower-case it, and return
+ *     ONION_V2_HOSTNAME or ONION_V3_HOSTNAME depending on the HS version.
  *
  * If address is of the form "y.onion" with a badly-formed handle y:
  *     Return BAD_HOSTNAME and log a message.
@@ -3698,7 +3700,7 @@ parse_extended_hostname(char *address)
 {
     char *s;
     char *q;
-    char query[REND_SERVICE_ID_LEN_BASE32+1];
+    char query[HS_SERVICE_ADDR_LEN_BASE32+1];
 
     s = strrchr(address,'.');
     if (!s)
@@ -3718,14 +3720,17 @@ parse_extended_hostname(char *address)
       goto failed; /* reject sub-domain, as DNS does */
     }
     q = (NULL == q) ? address : q + 1;
-    if (strlcpy(query, q, REND_SERVICE_ID_LEN_BASE32+1) >=
-        REND_SERVICE_ID_LEN_BASE32+1)
+    if (strlcpy(query, q, HS_SERVICE_ADDR_LEN_BASE32+1) >=
+        HS_SERVICE_ADDR_LEN_BASE32+1)
       goto failed;
     if (q != address) {
       memmove(address, q, strlen(q) + 1 /* also get \0 */);
     }
-    if (rend_valid_service_id(query)) {
-      return ONION_HOSTNAME; /* success */
+    if (rend_valid_v2_service_id(query)) {
+      return ONION_V2_HOSTNAME; /* success */
+    }
+    if (hs_address_is_valid(query)) {
+      return ONION_V3_HOSTNAME;
     }
  failed:
     /* otherwise, return to previous state and return 0 */

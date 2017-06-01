@@ -534,25 +534,8 @@ test_rend_fns(void *arg)
   size_t intro_points_size;
   size_t encoded_size;
   int i;
-  char address1[] = "fooaddress.onion";
-  char address2[] = "aaaaaaaaaaaaaaaa.onion";
-  char address3[] = "fooaddress.exit";
-  char address4[] = "www.torproject.org";
-  char address5[] = "foo.abcdefghijklmnop.onion";
-  char address6[] = "foo.bar.abcdefghijklmnop.onion";
-  char address7[] = ".abcdefghijklmnop.onion";
 
   (void)arg;
-  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
-  tt_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
-  tt_str_op(address2,OP_EQ, "aaaaaaaaaaaaaaaa");
-  tt_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
-  tt_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
-  tt_assert(ONION_HOSTNAME == parse_extended_hostname(address5));
-  tt_str_op(address5,OP_EQ, "abcdefghijklmnop");
-  tt_assert(ONION_HOSTNAME == parse_extended_hostname(address6));
-  tt_str_op(address6,OP_EQ, "abcdefghijklmnop");
-  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address7));
 
   /* Initialize the service cache. */
   rend_cache_init();

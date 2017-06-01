@@ -1466,7 +1466,7 @@ rend_parse_service_authorization(const or_options_t *options,
       goto err;
     }
     strlcpy(auth->onion_address, onion_address, REND_SERVICE_ID_LEN_BASE32+1);
-    if (!rend_valid_service_id(auth->onion_address)) {
+    if (!rend_valid_v2_service_id(auth->onion_address)) {
       log_warn(LD_CONFIG, "Onion address has wrong format: '%s'",
                onion_address);
       goto err;

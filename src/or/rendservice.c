@@ -890,7 +890,7 @@ int
 rend_service_del_ephemeral(const char *service_id)
 {
   rend_service_t *s;
-  if (!rend_valid_service_id(service_id)) {
+  if (!rend_valid_v2_service_id(service_id)) {
     log_warn(LD_CONFIG, "Requested malformed Onion Service id for removal.");
     return -1;
   }

@@ -14,6 +14,7 @@
 #include "log_test_helpers.h"
 #include "hs_test_helpers.h"
 
+#include "connection_edge.h"
 #include "hs_common.h"
 #include "hs_service.h"
 #include "config.h"
@@ -696,6 +697,38 @@ test_disaster_srv(void *arg)
   ;
 }
 
+static void
+test_parse_extended_hostname(void *arg)
+{
+  (void) arg;
+
+  char address1[] = "fooaddress.onion";
+  char address2[] = "aaaaaaaaaaaaaaaa.onion";
+  char address3[] = "fooaddress.exit";
+  char address4[] = "www.torproject.org";
+  char address5[] = "foo.abcdefghijklmnop.onion";
+  char address6[] = "foo.bar.abcdefghijklmnop.onion";
+  char address7[] = ".abcdefghijklmnop.onion";
+  char address8[] =
+    "www.p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad.onion";
+
+  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
+  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address2));
+  tt_str_op(address2,OP_EQ, "aaaaaaaaaaaaaaaa");
+  tt_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
+  tt_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
+  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address5));
+  tt_str_op(address5,OP_EQ, "abcdefghijklmnop");
+  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address6));
+  tt_str_op(address6,OP_EQ, "abcdefghijklmnop");
+  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address7));
+  tt_assert(ONION_V3_HOSTNAME == parse_extended_hostname(address8));
+  tt_str_op(address8, OP_EQ,
+            "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad");
+
+ done: ;
+}
+
 struct testcase_t hs_common_tests[] = {
   { "build_address", test_build_address, TT_FORK,
     NULL, NULL },
@@ -713,7 +746,10 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "desc_reupload_logic", test_desc_reupload_logic, TT_FORK,
     NULL, NULL },
-  { "disaster_srv", test_disaster_srv, TT_FORK, NULL, NULL },
+  { "disaster_srv", test_disaster_srv, TT_FORK,
+    NULL, NULL },
+  { "parse_extended_hostname", test_parse_extended_hostname, TT_FORK,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };
