@@ -1859,6 +1859,13 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "GET";
       tor_asprintf(&url, "/tor/rendezvous2/%s", resource);
       break;
+    case DIR_PURPOSE_FETCH_HSDESC:
+      tor_assert(resource);
+      tor_assert(strlen(resource) <= ED25519_BASE64_LEN);
+      tor_assert(!payload);
+      httpcommand = "GET";
+      tor_asprintf(&url, "/tor/hs/3/%s", resource);
+      break;
     case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
       tor_assert(!resource);
       tor_assert(payload);

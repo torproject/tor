@@ -9,6 +9,7 @@
 #ifndef TOR_HS_CLIENT_H
 #define TOR_HS_CLIENT_H
 
+#include "crypto_ed25519.h"
 #include "hs_descriptor.h"
 
 void hs_client_note_connection_attempt_succeeded(
@@ -18,6 +19,8 @@ int hs_client_decode_descriptor(
                      const char *desc_str,
                      const ed25519_public_key_t *service_identity_pk,
                      hs_descriptor_t **desc);
+int hs_client_any_intro_points_usable(const hs_descriptor_t *desc);
+int hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk);
 
 #endif /* TOR_HS_CLIENT_H */
 
