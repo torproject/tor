@@ -2203,16 +2203,6 @@ load_downloaded_routers(const char *body, smartlist_t *which,
   return added;
 }
 
-/** A structure to hold arguments passed into each directory response
- * handler */
-typedef struct response_handler_args_t {
-  int status_code;
-  const char *reason;
-  const char *body;
-  size_t body_len;
-  const char *headers;
-} response_handler_args_t;
-
 static int handle_response_fetch_consensus(dir_connection_t *,
                                            const response_handler_args_t *);
 static int handle_response_fetch_certificate(dir_connection_t *,
