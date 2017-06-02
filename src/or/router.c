@@ -1596,12 +1596,6 @@ authdir_mode_v3(const or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
-/** Return true iff we are a v3 directory authority. */
-int
-authdir_mode_any_main(const or_options_t *options)
-{
-  return options->V3AuthoritativeDir;
-}
 /** Return true if we believe ourselves to be any kind of
  * authoritative directory beyond just a hidserv authority. */
 int
@@ -1619,7 +1613,7 @@ authdir_mode_handles_descs(const or_options_t *options, int purpose)
   if (purpose < 0)
     return authdir_mode_any_nonhidserv(options);
   else if (purpose == ROUTER_PURPOSE_GENERAL)
-    return authdir_mode_any_main(options);
+    return authdir_mode_v3(options);
   else if (purpose == ROUTER_PURPOSE_BRIDGE)
     return (options->BridgeAuthoritativeDir);
   else
