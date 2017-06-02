@@ -5164,7 +5164,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
       smartlist_add(downloadable, rs->descriptor_digest);
   } SMARTLIST_FOREACH_END(rsp);
 
-  if (!authdir_mode_handles_descs(options, ROUTER_PURPOSE_GENERAL)
+  if (!authdir_mode_v3(options)
       && smartlist_len(no_longer_old)) {
     routerlist_t *rl = router_get_routerlist();
     log_info(LD_DIR, "%d router descriptors listed in consensus are "

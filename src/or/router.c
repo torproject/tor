@@ -1065,7 +1065,7 @@ init_keys(void)
   /* 4. Build our router descriptor. */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
-  if (authdir_mode_handles_descs(options, ROUTER_PURPOSE_GENERAL)) {
+  if (authdir_mode_v3(options)) {
     const char *m = NULL;
     routerinfo_t *ri;
     /* We need to add our own fingerprint so it gets recognized. */
@@ -1615,7 +1615,7 @@ authdir_mode_handles_descs(const or_options_t *options, int purpose)
   else if (purpose == ROUTER_PURPOSE_GENERAL)
     return authdir_mode_v3(options);
   else if (purpose == ROUTER_PURPOSE_BRIDGE)
-    return (options->BridgeAuthoritativeDir);
+    return authdir_mode_bridge(options);
   else
     return 0;
 }
