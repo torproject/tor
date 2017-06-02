@@ -1635,7 +1635,7 @@ authdir_mode_publishes_statuses(const or_options_t *options)
 int
 authdir_mode_tests_reachability(const or_options_t *options)
 {
-  return authdir_mode_handles_descs(options, -1);
+  return authdir_mode(options);
 }
 /** Return true iff we believe ourselves to be a bridge authoritative
  * directory server.

@@ -2355,7 +2355,7 @@ do_hup(void)
       tor_free(msg);
     }
   }
-  if (authdir_mode_handles_descs(options, -1)) {
+  if (authdir_mode(options)) {
     /* reload the approved-routers file */
     if (dirserv_load_fingerprint_file() < 0) {
       /* warnings are logged from dirserv_load_fingerprint_file() directly */
@@ -3478,7 +3478,7 @@ sandbox_init_filter(void)
   if (options->BridgeAuthoritativeDir)
     OPEN_DATADIR_SUFFIX("networkstatus-bridges", ".tmp");
 
-  if (authdir_mode_handles_descs(options, -1))
+  if (authdir_mode(options))
     OPEN_DATADIR("approved-routers");
 
   if (options->ServerDNSResolvConfFile)
