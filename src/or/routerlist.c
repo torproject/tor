@@ -5033,7 +5033,7 @@ launch_descriptor_downloads(int purpose,
     }
   }
 
-  if (!authdir_mode_any_nonhidserv(options)) {
+  if (!authdir_mode(options)) {
     /* If we wind up going to the authorities, we want to only open one
      * connection to each authority at a time, so that we don't overload
      * them.  We do this by setting PDS_NO_EXISTING_SERVERDESC_FETCH

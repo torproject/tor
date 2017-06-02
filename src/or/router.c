@@ -1596,14 +1596,6 @@ authdir_mode_v3(const or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
-/** Return true if we believe ourselves to be any kind of
- * authoritative directory beyond just a hidserv authority. */
-int
-authdir_mode_any_nonhidserv(const or_options_t *options)
-{
-  return options->BridgeAuthoritativeDir ||
-         authdir_mode_any_main(options);
-}
 /** Return true iff we are an authoritative directory server that is
  * authoritative about receiving and serving descriptors of type
  * <b>purpose</b> on its dirport.  Use -1 for "any purpose". */
@@ -1611,7 +1603,7 @@ int
 authdir_mode_handles_descs(const or_options_t *options, int purpose)
 {
   if (purpose < 0)
-    return authdir_mode_any_nonhidserv(options);
+    return authdir_mode(options);
   else if (purpose == ROUTER_PURPOSE_GENERAL)
     return authdir_mode_v3(options);
   else if (purpose == ROUTER_PURPOSE_BRIDGE)
@@ -1627,7 +1619,7 @@ authdir_mode_publishes_statuses(const or_options_t *options)
 {
   if (authdir_mode_bridge(options))
     return 0;
-  return authdir_mode_any_nonhidserv(options);
+  return authdir_mode(options);
 }
 /** Return true iff we are an authoritative directory server that
  * tests reachability of the descriptors it learns about.
