@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Refrain from needlessly warning Tor controller about passing
+      IP addresses as FQDNs through SOCKS5 interface. Fixes bug
+      22461, bugfix on Tor 0.2.6.2-alpha.
