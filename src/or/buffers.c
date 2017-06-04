@@ -1806,7 +1806,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       log_debug(LD_APP,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,
               sizeof(req->address));
-      if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
+      if (!string_is_valid_hostname(req->address)) {
         log_warn(LD_PROTOCOL,
                  "Your application (using socks4 to port %d) gave Tor "
                  "a malformed hostname: %s. Rejecting the connection.",
