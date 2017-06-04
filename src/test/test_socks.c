@@ -229,25 +229,24 @@ test_socks_5_supported_commands(void *ptr)
   tt_int_op(0,OP_EQ, buf_datalen(buf));
   socks_request_clear(socks);
 
-  /* SOCKS 5 Should reject RESOLVE [F0] request for IPv4 address
+  /* SOCKS 5 Should NOT reject RESOLVE [F0] request for IPv4 address
    * string if SafeSocks is enabled. */
 
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\xF0\x00\x03\x07");
   ADD_DATA(buf, "8.8.8.8");
-  ADD_DATA(buf, "\x01\x02");
+  ADD_DATA(buf, "\x11\x11");
   tt_assert(fetch_from_buf_socks(buf,socks,get_options()->TestSocks,1)
-            == -1);
+            == 1);
 
-  tt_int_op(5,OP_EQ,socks->socks_version);
-  tt_int_op(10,OP_EQ,socks->replylen);
-  tt_int_op(5,OP_EQ,socks->reply[0]);
-  tt_int_op(SOCKS5_NOT_ALLOWED,OP_EQ,socks->reply[1]);
-  tt_int_op(1,OP_EQ,socks->reply[3]);
+  tt_str_op("8.8.8.8", OP_EQ, socks->address);
+  tt_int_op(4369, OP_EQ, socks->port);
+  
+  tt_int_op(0, OP_EQ, buf_datalen(buf));
 
   socks_request_clear(socks);
 
-  /* SOCKS 5 should reject RESOLVE [F0] reject for IPv6 address
+  /* SOCKS 5 should NOT reject RESOLVE [F0] reject for IPv6 address
    * string if SafeSocks is enabled. */
 
   ADD_DATA(buf, "\x05\x01\x00");
@@ -257,11 +256,10 @@ test_socks_5_supported_commands(void *ptr)
   tt_assert(fetch_from_buf_socks(buf,socks,get_options()->TestSocks,1)
             == -1);
 
-  tt_int_op(5,OP_EQ,socks->socks_version);
-  tt_int_op(10,OP_EQ,socks->replylen);
-  tt_int_op(5,OP_EQ,socks->reply[0]);
-  tt_int_op(SOCKS5_NOT_ALLOWED,OP_EQ,socks->reply[1]);
-  tt_int_op(1,OP_EQ,socks->reply[3]);
+  tt_str_op("2001:0db8:85a3:0000:0000:8a2e:0370:7334", OP_EQ, socks->address);
+  tt_int_op(258, OP_EQ, socks->port);
+
+  tt_int_op(0, OP_EQ, buf_datalen(buf));
 
   socks_request_clear(socks);
 
