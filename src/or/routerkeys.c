@@ -668,6 +668,7 @@ static tor_cert_t *auth_key_cert = NULL;
 
 static uint8_t *rsa_ed_crosscert = NULL;
 static size_t rsa_ed_crosscert_len = 0;
+static time_t rsa_ed_crosscert_expiration = 0;
 
 /**
  * Running as a server: load, reload, or refresh our ed25519 keys and
@@ -699,8 +700,10 @@ load_ed_keys(const or_options_t *options, time_t now)
       tor_cert_free(cert);                      \
     cert = (newval);                            \
   } while (0)
+#define HAPPENS_SOON(when, interval)            \
+  ((when) < now + (interval))
 #define EXPIRES_SOON(cert, interval)            \
-  (!(cert) || (cert)->valid_until < now + (interval))
+  (!(cert) || HAPPENS_SOON((cert)->valid_until, (interval)))
 
   /* XXXX support encrypted identity keys fully */
 
@@ -899,14 +902,19 @@ load_ed_keys(const or_options_t *options, time_t now)
   if (options->command == CMD_KEYGEN)
     goto end;
 
-  if (!rsa_ed_crosscert && server_mode(options)) {
+  if (server_mode(options) &&
+      (!rsa_ed_crosscert ||
+       HAPPENS_SOON(rsa_ed_crosscert_expiration, 30*86400))) {
     uint8_t *crosscert;
+    time_t expiration = now+6*30*86400; /* 6 months in the future. */
     ssize_t crosscert_len = tor_make_rsa_ed25519_crosscert(&id->pubkey,
                                                    get_server_identity_key(),
-                                                   now+10*365*86400,/*XXXX*/
+                                                   expiration,
                                                    &crosscert);
+    tor_free(rsa_ed_crosscert);
     rsa_ed_crosscert_len = crosscert_len;
     rsa_ed_crosscert = crosscert;
+    rsa_ed_crosscert_expiration = expiration;
   }
 
   if (!current_auth_key ||
@@ -1038,6 +1046,7 @@ should_make_new_ed_keys(const or_options_t *options, const time_t now)
 }
 
 #undef EXPIRES_SOON
+#undef HAPPENS_SOON
 
 #ifdef TOR_UNIT_TESTS
 /* Helper for unit tests: populate the ed25519 keys without saving or

@@ -1,0 +1,8 @@
+  o Minor bugfixes (link handshake):
+    - Lower the lifetime of the RSA->Ed25519 cross-certificate to
+      six months, and regenerate it when it is within one month of expiring.
+      Previously, we had generated this certificate at startup with
+      a ten-year lifetime, but that could lead to weird behavior when
+      Tor was started with a grossly inaccurate clock. Mitigates
+      bug 22466; mitigation on 0.3.0.1-alpha.
+
