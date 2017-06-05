@@ -233,7 +233,8 @@ test_link_specifier(void *arg)
     for (unsigned int i = 0; i < sizeof(ipv6); i++) {
       ipv6[i] = link_specifier_get_un_ipv6_addr(ls, i);
     }
-    tt_mem_op(tor_addr_to_in6_addr8(&spec.u.ap.addr), OP_EQ, ipv6, sizeof(ipv6));
+    tt_mem_op(tor_addr_to_in6_addr8(&spec.u.ap.addr), OP_EQ, ipv6,
+              sizeof(ipv6));
     tt_int_op(link_specifier_get_un_ipv6_port(ls), OP_EQ, spec.u.ap.port);
 
     link_specifier_free(ls);

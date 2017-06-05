@@ -543,7 +543,7 @@ test_hs_rend_data(void *arg)
   tt_assert(service_dup->hsdirs_fp);
   tt_int_op(smartlist_len(service_dup->hsdirs_fp), OP_EQ, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_id[rep]), OP_EQ, 1);
+    tt_assert(tor_digest_is_zero(service_dup_v2->descriptor_id[rep]));
   }
   /* The rest should be zeroed because this is a service request. */
   tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_cookie), OP_EQ, 1);

@@ -165,7 +165,8 @@ test_needs_exit_circuits_ret_false_for_predicted_ports_and_path(void *arg)
   int needs_capacity = 0;
 
   time_t now = time(NULL);
-  tt_int_op(0, OP_EQ, needs_exit_circuits(now, &needs_uptime, &needs_capacity));
+  tt_int_op(0, OP_EQ,
+            needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
   done:
     UNMOCK(circuit_all_predicted_ports_handled);
@@ -183,7 +184,8 @@ test_needs_exit_circuits_ret_false_for_non_exit_consensus_path(void *arg)
   MOCK(router_have_consensus_path, mock_router_have_unknown_consensus_path);
 
   time_t now = time(NULL);
-  tt_int_op(0, OP_EQ, needs_exit_circuits(now, &needs_uptime, &needs_capacity));
+  tt_int_op(0, OP_EQ,
+            needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
   done:
     UNMOCK(circuit_all_predicted_ports_handled);
@@ -202,7 +204,8 @@ test_needs_exit_circuits_ret_true_for_predicted_ports_and_path(void *arg)
   MOCK(router_have_consensus_path, mock_router_have_exit_consensus_path);
 
   time_t now = time(NULL);
-  tt_int_op(1, OP_EQ, needs_exit_circuits(now, &needs_uptime, &needs_capacity));
+  tt_int_op(1, OP_EQ,
+            needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
   done:
     UNMOCK(circuit_all_predicted_ports_handled);

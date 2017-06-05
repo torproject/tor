@@ -294,7 +294,8 @@ test_dir_formats(void *arg)
   strlcat(buf2, "master-key-ed25519 ", sizeof(buf2));
   {
     char k[ED25519_BASE64_LEN+1];
-    tt_int_op(ed25519_public_to_base64(k, &r2->cache_info.signing_key_cert->signing_key),
+    tt_int_op(ed25519_public_to_base64(k,
+                          &r2->cache_info.signing_key_cert->signing_key),
               OP_GE, 0);
     strlcat(buf2, k, sizeof(buf2));
     strlcat(buf2, "\n", sizeof(buf2));
@@ -3713,8 +3714,9 @@ test_dir_purpose_needs_anonymity_returns_true_for_bridges(void *arg)
   tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE, NULL));
   tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE,
                                            "foobar"));
-  tt_int_op(1, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
-                                           ROUTER_PURPOSE_BRIDGE, NULL));
+  tt_int_op(1, OP_EQ,
+            purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
+                                    ROUTER_PURPOSE_BRIDGE, NULL));
  done: ;
 }
 
@@ -3750,7 +3752,8 @@ test_dir_purpose_needs_anonymity_ret_false_for_non_sensitive_conn(void *arg)
 
   tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_DIR,
                                            ROUTER_PURPOSE_GENERAL, NULL));
-  tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0, NULL));
+  tt_int_op(0, OP_EQ,
+            purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0, NULL));
   tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_SIGNATURES, 0, NULL));
   tt_int_op(0, OP_EQ,
@@ -4319,11 +4322,14 @@ test_dir_download_status_increment(void *arg)
   dls_failure.next_attempt_at = current_time + delay0;
 
   /* check that a reset schedule becomes ready at the right time */
-  tt_int_op(download_status_is_ready(&dls_failure, current_time + delay0 - 1, 1),
+  tt_int_op(download_status_is_ready(&dls_failure,
+                                     current_time + delay0 - 1, 1),
             OP_EQ, 0);
-  tt_int_op(download_status_is_ready(&dls_failure, current_time + delay0, 1),
+  tt_int_op(download_status_is_ready(&dls_failure,
+                                     current_time + delay0, 1),
             OP_EQ, 1);
-  tt_int_op(download_status_is_ready(&dls_failure, current_time + delay0 + 1, 1),
+  tt_int_op(download_status_is_ready(&dls_failure,
+                                     current_time + delay0 + 1, 1),
             OP_EQ, 1);
 
   /* Check that a failure increment works */
@@ -4336,15 +4342,19 @@ test_dir_download_status_increment(void *arg)
   tt_int_op(mock_get_options_calls, OP_GE, 1);
 
   /* check that an incremented schedule becomes ready at the right time */
-  tt_int_op(download_status_is_ready(&dls_failure, current_time + delay1 - 1, 1),
+  tt_int_op(download_status_is_ready(&dls_failure,
+                                     current_time + delay1 - 1, 1),
             OP_EQ, 0);
-  tt_int_op(download_status_is_ready(&dls_failure, current_time + delay1, 1),
+  tt_int_op(download_status_is_ready(&dls_failure,
+                                     current_time + delay1, 1),
             OP_EQ, 1);
-  tt_int_op(download_status_is_ready(&dls_failure, current_time + delay1 + 1, 1),
+  tt_int_op(download_status_is_ready(&dls_failure,
+                                     current_time + delay1 + 1, 1),
             OP_EQ, 1);
 
   /* check that a schedule isn't ready if it's had too many failures */
-  tt_int_op(download_status_is_ready(&dls_failure, current_time + delay1 + 10, 0),
+  tt_int_op(download_status_is_ready(&dls_failure,
+                                     current_time + delay1 + 10, 0),
             OP_EQ, 0);
 
   /* Check that failure increments do happen on 503 for clients, and
@@ -4440,11 +4450,14 @@ test_dir_download_status_increment(void *arg)
   dls_attempt.next_attempt_at = current_time + delay0;
 
   /* check that a reset schedule becomes ready at the right time */
-  tt_int_op(download_status_is_ready(&dls_attempt, current_time + delay0 - 1, 1),
+  tt_int_op(download_status_is_ready(&dls_attempt,
+                                     current_time + delay0 - 1, 1),
             OP_EQ, 0);
-  tt_int_op(download_status_is_ready(&dls_attempt, current_time + delay0, 1),
+  tt_int_op(download_status_is_ready(&dls_attempt,
+                                     current_time + delay0, 1),
             OP_EQ, 1);
-  tt_int_op(download_status_is_ready(&dls_attempt, current_time + delay0 + 1, 1),
+  tt_int_op(download_status_is_ready(&dls_attempt,
+                                     current_time + delay0 + 1, 1),
             OP_EQ, 1);
 
   /* Check that an attempt increment works */
@@ -4457,15 +4470,19 @@ test_dir_download_status_increment(void *arg)
   tt_int_op(mock_get_options_calls, OP_GE, 1);
 
   /* check that an incremented schedule becomes ready at the right time */
-  tt_int_op(download_status_is_ready(&dls_attempt, current_time + delay1 - 1, 1),
+  tt_int_op(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1 - 1, 1),
             OP_EQ, 0);
-  tt_int_op(download_status_is_ready(&dls_attempt, current_time + delay1, 1),
+  tt_int_op(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1, 1),
             OP_EQ, 1);
-  tt_int_op(download_status_is_ready(&dls_attempt, current_time + delay1 + 1, 1),
+  tt_int_op(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1 + 1, 1),
             OP_EQ, 1);
 
   /* check that a schedule isn't ready if it's had too many attempts */
-  tt_int_op(download_status_is_ready(&dls_attempt, current_time + delay1 + 10, 0),
+  tt_int_op(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1 + 10, 0),
             OP_EQ, 0);
 
   /* Check what happens when we reach then run off the end of the schedule */
@@ -5103,7 +5120,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5154,7 +5172,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_4) + strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_4) + strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5170,7 +5189,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5221,7 +5241,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5237,7 +5258,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5288,7 +5310,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5304,7 +5327,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5355,7 +5379,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5371,7 +5396,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5387,7 +5413,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_4) + strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_4) + strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5438,7 +5465,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5454,7 +5482,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -5470,7 +5499,8 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ,
+            strlen(test_desc_2) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*

@@ -603,7 +603,8 @@ test_channel_dumpstats(void *arg)
                             chan_test_cell_handler,
                             chan_test_var_cell_handler);
   tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ, chan_test_var_cell_handler);
+  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
+            chan_test_var_cell_handler);
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
   old_count = test_chan_fixed_cells_recved;
@@ -804,7 +805,8 @@ test_channel_incoming(void *arg)
                             chan_test_var_cell_handler);
   /* Test cell handler getters */
   tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ, chan_test_var_cell_handler);
+  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
+            chan_test_var_cell_handler);
 
   /* Try to register it */
   channel_register(ch);
@@ -915,7 +917,8 @@ test_channel_lifecycle(void *arg)
   tt_assert(ch2->registered);
 
   /* Check counters */
-  tt_int_op(test_doesnt_want_writes_count, OP_EQ, init_doesnt_want_writes_count);
+  tt_int_op(test_doesnt_want_writes_count, OP_EQ,
+            init_doesnt_want_writes_count);
   tt_int_op(test_releases_count, OP_EQ, init_releases_count);
 
   /* Move ch1 to MAINT */
@@ -1495,7 +1498,8 @@ test_channel_queue_incoming(void *arg)
                             chan_test_cell_handler,
                             chan_test_var_cell_handler);
   tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ, chan_test_var_cell_handler);
+  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
+            chan_test_var_cell_handler);
 
   /* Assert cells were received */
   tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_fixed_count + 1);
@@ -1578,7 +1582,8 @@ test_channel_queue_size(void *arg)
 
   /* Now check chan_test_num_cells_writeable() again */
   n = channel_num_cells_writeable(ch);
-  tt_int_op(n, OP_EQ, 0); /* Should return 0 since we're in CHANNEL_STATE_MAINT */
+  /* Should return 0 since we're in CHANNEL_STATE_MAINT */
+  tt_int_op(n, OP_EQ, 0);
 
   /* Update queue size estimates */
   channel_update_xmit_queue_size(ch);

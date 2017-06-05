@@ -2033,9 +2033,11 @@ test_policies_fascist_firewall_choose_address(void *arg)
             == &ipv6_or_ap);
 
   /* null both OR addresses */
-  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0, FIREWALL_OR_CONNECTION, 0, 1),
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
+                                            FIREWALL_OR_CONNECTION, 0, 1),
             OP_EQ, NULL);
-  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1, FIREWALL_OR_CONNECTION, 0, 0),
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1,
+                                            FIREWALL_OR_CONNECTION, 0, 0),
             OP_EQ, NULL);
 
   /* null preferred Dir addresses */
@@ -2047,9 +2049,11 @@ test_policies_fascist_firewall_choose_address(void *arg)
             == &ipv6_dir_ap);
 
   /* null both Dir addresses */
-  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0, FIREWALL_DIR_CONNECTION, 0, 1),
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
+                                            FIREWALL_DIR_CONNECTION, 0, 1),
             OP_EQ, NULL);
-  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1, FIREWALL_DIR_CONNECTION, 0, 0),
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1,
+                                            FIREWALL_DIR_CONNECTION, 0, 0),
             OP_EQ, NULL);
 
   /* Prefer IPv4 but want IPv6 (contradictory) */

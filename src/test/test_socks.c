@@ -61,7 +61,8 @@ test_socks_4_unsupported_commands(void *ptr)
 
   /* SOCKS 4 Send BIND [02] to IP address 2.2.2.2:4369 */
   ADD_DATA(buf, "\x04\x02\x11\x11\x02\x02\x02\x02\x00");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, -1);
   tt_int_op(4,OP_EQ, socks->socks_version);
   tt_int_op(0,OP_EQ, socks->replylen); /* XXX: shouldn't tor reply? */
@@ -80,7 +81,8 @@ test_socks_4_supported_commands(void *ptr)
 
   /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4370 */
   ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x03\x00");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, 1);
   tt_int_op(4,OP_EQ, socks->socks_version);
   tt_int_op(0,OP_EQ, socks->replylen); /* XXX: shouldn't tor reply? */
@@ -95,7 +97,8 @@ test_socks_4_supported_commands(void *ptr)
 
   /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 with userid*/
   ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x04me\x00");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, 1);
   tt_int_op(4,OP_EQ, socks->socks_version);
   tt_int_op(0,OP_EQ, socks->replylen); /* XXX: shouldn't tor reply? */
@@ -112,7 +115,8 @@ test_socks_4_supported_commands(void *ptr)
 
   /* SOCKS 4a Send RESOLVE [F0] request for torproject.org */
   ADD_DATA(buf, "\x04\xF0\x01\x01\x00\x00\x00\x02me\x00torproject.org\x00");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, 1);
   tt_int_op(4,OP_EQ, socks->socks_version);
   tt_int_op(0,OP_EQ, socks->replylen); /* XXX: shouldn't tor reply? */
@@ -218,7 +222,8 @@ test_socks_5_supported_commands(void *ptr)
   /* SOCKS 5 Send RESOLVE [F0] request for torproject.org:4369 */
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\xF0\x00\x03\x0Etorproject.org\x01\x02");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, 1);
   tt_int_op(5,OP_EQ, socks->socks_version);
   tt_int_op(2,OP_EQ, socks->replylen);
@@ -266,7 +271,8 @@ test_socks_5_supported_commands(void *ptr)
   /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.5 */
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\xF1\x00\x01\x02\x02\x02\x05\x01\x03");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, 1);
   tt_int_op(5,OP_EQ, socks->socks_version);
   tt_int_op(2,OP_EQ, socks->replylen);
@@ -378,7 +384,8 @@ test_socks_5_authenticate_with_data(void *ptr)
   /* SOCKS 5 Send username/password */
   /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
   ADD_DATA(buf, "\x01\x02me\x03you\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, 1);
   tt_int_op(5,OP_EQ, socks->socks_version);
   tt_int_op(2,OP_EQ, socks->replylen);
@@ -405,7 +412,8 @@ test_socks_5_auth_before_negotiation(void *ptr)
 
   /* SOCKS 5 Send username/password */
   ADD_DATA(buf, "\x01\x02me\x02me");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
             OP_EQ, -1);
   tt_int_op(0,OP_EQ, socks->socks_version);
   tt_int_op(0,OP_EQ, socks->replylen);

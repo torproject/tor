@@ -115,7 +115,8 @@ test_keypin_parse_file(void *arg)
 
   ent = smartlist_get(mock_addent_got, 12);
   tt_mem_op(ent->rsa_id, OP_EQ, "ds speak truth, and ", 20);
-  tt_mem_op(ent->ed25519_key, OP_EQ, "it was tru\xa5 that all the master\n", 32);
+  tt_mem_op(ent->ed25519_key, OP_EQ,
+            "it was tru\xa5 that all the master\n", 32);
 
   /* File truncated before NL */
   const char data3[] =

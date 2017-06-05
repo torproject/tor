@@ -571,15 +571,21 @@ test_rend_fns(void *arg)
     intro->intro_key = crypto_pk_dup_key(pk2);
     smartlist_add(generated->intro_nodes, intro);
   }
-  tt_int_op(rend_encode_v2_descriptors(descs, generated, now, 0, REND_NO_AUTH, NULL, NULL),
-            OP_GT, 0);
-  tt_int_op(rend_compute_v2_desc_id(computed_desc_id, service_id_base32, NULL, now, 0),
-            OP_EQ, 0);
+  int rv = rend_encode_v2_descriptors(descs, generated, now, 0,
+                                      REND_NO_AUTH, NULL, NULL);
+  tt_int_op(rv, OP_GT, 0);
+  rv = rend_compute_v2_desc_id(computed_desc_id, service_id_base32, NULL,
+                               now, 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_mem_op(((rend_encoded_v2_service_descriptor_t *)
              smartlist_get(descs, 0))->desc_id, OP_EQ,
             computed_desc_id, DIGEST_LEN);
-  tt_int_op(rend_parse_v2_service_descriptor(&parsed, parsed_desc_id, &intro_points_encrypted, &intro_points_size, &encoded_size, &next_desc, ((rend_encoded_v2_service_descriptor_t *)smartlist_get(descs, 0))->desc_str, 1),
-            OP_EQ, 0);
+  rv = rend_parse_v2_service_descriptor(&parsed, parsed_desc_id,
+               &intro_points_encrypted, &intro_points_size, &encoded_size,
+               &next_desc,
+          ((rend_encoded_v2_service_descriptor_t *)smartlist_get(descs, 0))
+                                        ->desc_str, 1);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(parsed);
   tt_mem_op(((rend_encoded_v2_service_descriptor_t *)
          smartlist_get(descs, 0))->desc_id,OP_EQ, parsed_desc_id, DIGEST_LEN);

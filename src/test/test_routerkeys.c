@@ -211,7 +211,8 @@ test_routerkeys_ed_key_create(void *arg)
   kp2 = ed_key_new(kp1, INIT_ED_KEY_NEEDCERT, now, 3600, 4, &cert);
   tt_assert(kp2);
   tt_assert(cert);
-  tt_mem_op(&cert->signed_key, OP_EQ, &kp2->pubkey, sizeof(ed25519_public_key_t));
+  tt_mem_op(&cert->signed_key, OP_EQ, &kp2->pubkey,
+            sizeof(ed25519_public_key_t));
   tt_assert(! cert->signing_key_included);
 
   tt_int_op(cert->valid_until, OP_GE, now);
@@ -227,8 +228,10 @@ test_routerkeys_ed_key_create(void *arg)
   tt_assert(kp2);
   tt_assert(cert);
   tt_assert(cert->signing_key_included);
-  tt_mem_op(&cert->signed_key, OP_EQ, &kp2->pubkey, sizeof(ed25519_public_key_t));
-  tt_mem_op(&cert->signing_key, OP_EQ, &kp1->pubkey,sizeof(ed25519_public_key_t));
+  tt_mem_op(&cert->signed_key, OP_EQ, &kp2->pubkey,
+            sizeof(ed25519_public_key_t));
+  tt_mem_op(&cert->signing_key, OP_EQ, &kp1->pubkey,
+            sizeof(ed25519_public_key_t));
 
  done:
   ed25519_keypair_free(kp1);

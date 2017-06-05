@@ -540,22 +540,31 @@ test_conn_get_rsrc(void *arg)
                                                     TEST_CONN_RSRC_2,
                                                     !TEST_CONN_STATE));
 
-  tt_int_op(connection_dir_count_by_purpose_and_resource(conn->base_.purpose, conn->requested_resource),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                 conn->base_.purpose, conn->requested_resource),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                 TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(!conn->base_.purpose, ""),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                 !conn->base_.purpose, ""),
             OP_EQ, 0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(!TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                 !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2),
             OP_EQ, 0);
 
-  tt_int_op(connection_dir_count_by_purpose_resource_and_state(conn->base_.purpose, conn->requested_resource, conn->base_.state),
+  tt_int_op(connection_dir_count_by_purpose_resource_and_state(
+                 conn->base_.purpose, conn->requested_resource,
+                 conn->base_.state),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_resource_and_state(TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC, TEST_CONN_STATE),
+  tt_int_op(connection_dir_count_by_purpose_resource_and_state(
+                 TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC, TEST_CONN_STATE),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_resource_and_state(!conn->base_.purpose, "", !conn->base_.state),
+  tt_int_op(connection_dir_count_by_purpose_resource_and_state(
+                 !conn->base_.purpose, "", !conn->base_.state),
             OP_EQ, 0);
-  tt_int_op(connection_dir_count_by_purpose_resource_and_state(!TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2, !TEST_CONN_STATE),
+  tt_int_op(connection_dir_count_by_purpose_resource_and_state(
+                 !TEST_CONN_RSRC_PURPOSE, TEST_CONN_RSRC_2, !TEST_CONN_STATE),
             OP_EQ, 0);
 
  done:
@@ -585,9 +594,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, not downloading */
@@ -595,9 +606,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, downloading but not linked (not possible on a client,
@@ -606,9 +619,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, downloading and linked, but not yet attached */
@@ -617,9 +632,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
     /* one connection, downloading and linked and attached */
@@ -627,9 +644,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* one connection, linked and attached but not downloading */
@@ -637,9 +656,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* two connections, both not downloading */
@@ -647,9 +668,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 2);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* two connections, one downloading */
@@ -657,9 +680,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 2);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
   conn->base_.state = TEST_CONN_STATE;
 
@@ -669,9 +694,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 0);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* more connections, one downloading */
@@ -679,9 +706,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* more connections, two downloading (should never happen, but needs
@@ -693,9 +722,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
   conn->base_.state = TEST_CONN_STATE;
 
@@ -703,9 +734,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                           TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 0);
 
   /* a connection for the other flavor (could happen if a client is set to
@@ -715,9 +748,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             0);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                   TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                   TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 1);
 
   /* a connection for the other flavor (could happen if a client is set to
@@ -730,9 +765,11 @@ test_conn_download_status(void *arg)
   tt_int_op(networkstatus_consensus_is_already_downloading(res), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_is_already_downloading(other_res), OP_EQ,
             1);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                   TEST_CONN_RSRC_PURPOSE, res),
             OP_EQ, 3);
-  tt_int_op(connection_dir_count_by_purpose_and_resource(TEST_CONN_RSRC_PURPOSE, other_res),
+  tt_int_op(connection_dir_count_by_purpose_and_resource(
+                                   TEST_CONN_RSRC_PURPOSE, other_res),
             OP_EQ, 1);
 
  done:
