@@ -1,0 +1,16 @@
+  o Major bugfixes (relays, key management):
+    - Regenerate link and authentication certificates whenever the key that
+      signs them changes; also, regenerate link certificates whenever the
+      signed key changes. Previously, these processes were only weakly
+      coupled, and we relays could (for minutes to hours) wind up with an
+      inconsistent set of keys and certificates, which other relays
+      would not accept. Fixes two cases of bug 22460; bugfix on
+      0.3.0.1-alpha.
+    - When sending an Ed25519 signing->link certificate in a CERTS cell,
+      send the certificate that matches the x509 certificate that we used
+      on the TLS connection. Previously, there was a race condition if
+      the TLS context rotated after we began the TLS handshake but
+      before we sent the CERTS cell. Fixes a case of bug 22460; bugfix
+      on 0.3.0.1-alpha.
+
+

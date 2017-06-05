@@ -906,7 +906,8 @@ init_keys(void)
   }
 
   /* 1d. Load all ed25519 keys */
-  if (load_ed_keys(options,now) < 0)
+  const int new_signing_key = load_ed_keys(options,now);
+  if (new_signing_key < 0)
     return -1;
 
   /* 2. Read onion key.  Make it if none is found. */
@@ -976,7 +977,7 @@ init_keys(void)
 
   /* 3b. Get an ed25519 link certificate.  Note that we need to do this
    * after we set up the TLS context */
-  if (generate_ed_link_cert(options, now) < 0) {
+  if (generate_ed_link_cert(options, now, new_signing_key > 0) < 0) {
     log_err(LD_GENERAL,"Couldn't make link cert");
     return -1;
   }

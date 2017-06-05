@@ -59,7 +59,7 @@ mock_get_peer_cert(tor_tls_t *tls)
   if (mock_peer_cert_expect_tortls &&
       mock_peer_cert_expect_tortls != tls)
     return NULL;
-  return mock_peer_cert;
+  return tor_x509_cert_dup(mock_peer_cert);
 }
 
 static int mock_send_netinfo_called = 0;
@@ -105,6 +105,14 @@ mock_export_key_material(tor_tls_t *tls, uint8_t *secrets_out,
   return 0;
 }
 
+static tor_x509_cert_t *mock_own_cert = NULL;
+static tor_x509_cert_t *
+mock_get_own_cert(tor_tls_t *tls)
+{
+  (void)tls;
+  return tor_x509_cert_dup(mock_own_cert);
+}
+
 /* Test good certs cells */
 static void
 test_link_handshake_certs_ok(void *arg)
@@ -126,6 +134,7 @@ test_link_handshake_certs_ok(void *arg)
   MOCK(connection_or_write_var_cell_to_buf, mock_write_var_cell);
   MOCK(connection_or_send_netinfo, mock_send_netinfo);
   MOCK(tor_tls_get_peer_cert, mock_get_peer_cert);
+  MOCK(tor_tls_get_own_cert, mock_get_own_cert);
 
   key1 = pk_generate(2);
   key2 = pk_generate(3);
@@ -140,9 +149,17 @@ test_link_handshake_certs_ok(void *arg)
     /* If we're making a CERTS cell for an ed handshake, let's make sure we
      * have some Ed25519 certificates and keys. */
     init_mock_ed_keys(key2);
+  } else {
+    certs_cell_ed25519_disabled_for_testing = 1;
   }
 
   /* c1 has started_here == 1 */
+  {
+    const tor_x509_cert_t *link = NULL;
+    tt_assert(!tor_tls_get_my_certs(1, &link, NULL));
+    mock_own_cert = tor_x509_cert_dup(link);
+  }
+
   c1->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   c1->link_proto = 3;
   tt_int_op(connection_init_or_handshake_state(c1, 1), ==, 0);
@@ -285,6 +302,9 @@ test_link_handshake_certs_ok(void *arg)
   UNMOCK(connection_or_write_var_cell_to_buf);
   UNMOCK(connection_or_send_netinfo);
   UNMOCK(tor_tls_get_peer_cert);
+  UNMOCK(tor_tls_get_own_cert);
+  tor_x509_cert_free(mock_own_cert);
+  mock_own_cert = NULL;
   memset(c1->identity_digest, 0, sizeof(c1->identity_digest));
   memset(c2->identity_digest, 0, sizeof(c2->identity_digest));
   connection_free_(TO_CONN(c1));
@@ -322,6 +342,7 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
   UNMOCK(connection_or_send_netinfo);
   UNMOCK(connection_or_close_for_error);
   UNMOCK(tor_tls_get_peer_cert);
+  UNMOCK(tor_tls_get_own_cert);
 
   if (d) {
     tor_free(d->cell);
@@ -892,6 +913,11 @@ test_link_handshake_send_authchallenge(void *arg)
   or_connection_t *c1 = or_connection_new(CONN_TYPE_OR, AF_INET);
   var_cell_t *cell1=NULL, *cell2=NULL;
 
+  crypto_pk_t *rsa0 = pk_generate(0), *rsa1 = pk_generate(1);
+  tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
+                                 rsa0, rsa1, 86400), ==, 0);
+  init_mock_ed_keys(rsa0);
+
   MOCK(connection_or_write_var_cell_to_buf, mock_write_var_cell);
 
   tt_int_op(connection_init_or_handshake_state(c1, 0), ==, 0);
@@ -917,6 +943,8 @@ test_link_handshake_send_authchallenge(void *arg)
   connection_free_(TO_CONN(c1));
   tor_free(cell1);
   tor_free(cell2);
+  crypto_pk_free(rsa0);
+  crypto_pk_free(rsa1);
 }
 
 typedef struct authchallenge_data_s {
@@ -1130,6 +1158,7 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
   (void) test;
   UNMOCK(connection_or_write_var_cell_to_buf);
   UNMOCK(tor_tls_get_peer_cert);
+  UNMOCK(tor_tls_get_own_cert);
   UNMOCK(tor_tls_get_tlssecrets);
   UNMOCK(connection_or_close_for_error);
   UNMOCK(channel_set_circid_type);
@@ -1147,7 +1176,11 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
     crypto_pk_free(d->key2);
     tor_free(d);
   }
+  tor_x509_cert_free(mock_peer_cert);
+  tor_x509_cert_free(mock_own_cert);
   mock_peer_cert = NULL;
+  mock_own_cert = NULL;
+
   return 1;
 }
 
@@ -1161,6 +1194,7 @@ authenticate_data_setup(const struct testcase_t *test)
 
   MOCK(connection_or_write_var_cell_to_buf, mock_write_var_cell);
   MOCK(tor_tls_get_peer_cert, mock_get_peer_cert);
+  MOCK(tor_tls_get_own_cert, mock_get_own_cert);
   MOCK(tor_tls_get_tlssecrets, mock_get_tlssecrets);
   MOCK(connection_or_close_for_error, mock_close_for_err);
   MOCK(channel_set_circid_type, mock_set_circid_type);
@@ -1226,6 +1260,9 @@ authenticate_data_setup(const struct testcase_t *test)
   tor_x509_cert_get_der(link_cert, &der, &sz);
   mock_peer_cert = tor_x509_cert_decode(der, sz);
   tt_assert(mock_peer_cert);
+
+  mock_own_cert = tor_x509_cert_decode(der, sz);
+  tt_assert(mock_own_cert);
 
   /* Make an authenticate cell ... */
   int authtype;

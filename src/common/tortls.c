@@ -704,11 +704,13 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
   return cert;
 }
 
-/** Return a copy of <b>cert</b> */
+/** Return a new copy of <b>cert</b>. */
 tor_x509_cert_t *
 tor_x509_cert_dup(const tor_x509_cert_t *cert)
 {
-  return tor_x509_cert_new(X509_dup(cert->cert));
+  tor_assert(cert);
+  X509 *x509 = cert->cert;
+  return tor_x509_cert_new(X509_dup(x509));
 }
 
 /** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,
@@ -2046,7 +2048,8 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
   return 1;
 }
 
-/** Return the peer certificate, or NULL if there isn't one. */
+/** Return a newly allocated copy of the peer certificate, or NULL if there
+ * isn't one. */
 MOCK_IMPL(tor_x509_cert_t *,
 tor_tls_get_peer_cert,(tor_tls_t *tls))
 {
@@ -2056,6 +2059,24 @@ tor_tls_get_peer_cert,(tor_tls_t *tls))
   if (!cert)
     return NULL;
   return tor_x509_cert_new(cert);
+}
+
+/** Return a newly allocated copy of the cerficate we used on the connection,
+ * or NULL if somehow we didn't use one. */
+MOCK_IMPL(tor_x509_cert_t *,
+tor_tls_get_own_cert,(tor_tls_t *tls))
+{
+  X509 *cert = SSL_get_certificate(tls->ssl);
+  tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE,
+                 "getting own-connection certificate");
+  if (!cert)
+    return NULL;
+  /* Fun inconsistency: SSL_get_peer_certificate increments the reference
+   * count, but SSL_get_certificate does not. */
+  X509 *duplicate = X509_dup(cert);
+  if (BUG(duplicate == NULL))
+    return NULL;
+  return tor_x509_cert_new(duplicate);
 }
 
 /** Warn that a certificate lifetime extends through a certain range. */

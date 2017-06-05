@@ -1855,6 +1855,9 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   s->started_here = started_here ? 1 : 0;
   s->digest_sent_data = 1;
   s->digest_received_data = 1;
+  if (! started_here && get_current_link_cert_cert()) {
+    s->own_link_cert = tor_cert_dup(get_current_link_cert_cert());
+  }
   s->certs = or_handshake_certs_new();
   s->certs->started_here = s->started_here;
   return 0;
@@ -1869,6 +1872,7 @@ or_handshake_state_free(or_handshake_state_t *state)
   crypto_digest_free(state->digest_sent);
   crypto_digest_free(state->digest_received);
   or_handshake_certs_free(state->certs);
+  tor_cert_free(state->own_link_cert);
   memwipe(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
@@ -2234,7 +2238,8 @@ add_certs_cell_cert_helper(certs_cell_t *certs_cell,
 
 /** Add an encoded X509 cert (stored as <b>cert_len</b> bytes at
  * <b>cert_encoded</b>) to the trunnel certs_cell_t object that we are
- * building in <b>certs_cell</b>.  Set its type field to <b>cert_type</b>. */
+ * building in <b>certs_cell</b>.  Set its type field to <b>cert_type</b>.
+ * (If <b>cert</b> is NULL, take no action.) */
 static void
 add_x509_cert(certs_cell_t *certs_cell,
               uint8_t cert_type,
@@ -2252,7 +2257,7 @@ add_x509_cert(certs_cell_t *certs_cell,
 
 /** Add an Ed25519 cert from <b>cert</b> to the trunnel certs_cell_t object
  * that we are building in <b>certs_cell</b>.  Set its type field to
- * <b>cert_type</b>. */
+ * <b>cert_type</b>. (If <b>cert</b> is NULL, take no action.) */
 static void
 add_ed25519_cert(certs_cell_t *certs_cell,
                  uint8_t cert_type,
@@ -2265,12 +2270,19 @@ add_ed25519_cert(certs_cell_t *certs_cell,
                              cert->encoded, cert->encoded_len);
 }
 
+#ifdef TOR_UNIT_TESTS
+int certs_cell_ed25519_disabled_for_testing = 0;
+#else
+#define certs_cell_ed25519_disabled_for_testing 0
+#endif
+
 /** Send a CERTS cell on the connection <b>conn</b>.  Return 0 on success, -1
  * on failure. */
 int
 connection_or_send_certs_cell(or_connection_t *conn)
 {
-  const tor_x509_cert_t *link_cert = NULL, *id_cert = NULL;
+  const tor_x509_cert_t *global_link_cert = NULL, *id_cert = NULL;
+  tor_x509_cert_t *own_link_cert = NULL;
   var_cell_t *cell;
 
   certs_cell_t *certs_cell = NULL;
@@ -2283,21 +2295,26 @@ connection_or_send_certs_cell(or_connection_t *conn)
   const int conn_in_server_mode = ! conn->handshake_state->started_here;
 
   /* Get the encoded values of the X509 certificates */
-  if (tor_tls_get_my_certs(conn_in_server_mode, &link_cert, &id_cert) < 0)
+  if (tor_tls_get_my_certs(conn_in_server_mode,
+                           &global_link_cert, &id_cert) < 0)
     return -1;
 
-  tor_assert(link_cert);
+  if (conn_in_server_mode) {
+    own_link_cert = tor_tls_get_own_cert(conn->tls);
+  }
   tor_assert(id_cert);
 
   certs_cell = certs_cell_new();
 
   /* Start adding certs.  First the link cert or auth1024 cert. */
   if (conn_in_server_mode) {
+    tor_assert_nonfatal(own_link_cert);
     add_x509_cert(certs_cell,
-                  OR_CERT_TYPE_TLS_LINK, link_cert);
+                  OR_CERT_TYPE_TLS_LINK, own_link_cert);
   } else {
+    tor_assert(global_link_cert);
     add_x509_cert(certs_cell,
-                  OR_CERT_TYPE_AUTH_1024, link_cert);
+                  OR_CERT_TYPE_AUTH_1024, global_link_cert);
   }
 
   /* Next the RSA->RSA ID cert */
@@ -2309,9 +2326,11 @@ connection_or_send_certs_cell(or_connection_t *conn)
                    CERTTYPE_ED_ID_SIGN,
                    get_master_signing_key_cert());
   if (conn_in_server_mode) {
+    tor_assert_nonfatal(conn->handshake_state->own_link_cert ||
+                        certs_cell_ed25519_disabled_for_testing);
     add_ed25519_cert(certs_cell,
                      CERTTYPE_ED_SIGN_LINK,
-                     get_current_link_cert_cert());
+                     conn->handshake_state->own_link_cert);
   } else {
     add_ed25519_cert(certs_cell,
                      CERTTYPE_ED_SIGN_AUTH,
@@ -2344,6 +2363,7 @@ connection_or_send_certs_cell(or_connection_t *conn)
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
   certs_cell_free(certs_cell);
+  tor_x509_cert_free(own_link_cert);
 
   return 0;
 }
@@ -2484,10 +2504,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   memcpy(auth1_getarray_type(auth), authtype_str, 8);
 
   {
-    const tor_x509_cert_t *id_cert=NULL, *link_cert=NULL;
+    const tor_x509_cert_t *id_cert=NULL;
     const common_digests_t *my_digests, *their_digests;
     const uint8_t *my_id, *their_id, *client_id, *server_id;
-    if (tor_tls_get_my_certs(server, &link_cert, &id_cert))
+    if (tor_tls_get_my_certs(server, NULL, &id_cert))
       goto err;
     my_digests = tor_x509_cert_get_id_digests(id_cert);
     their_digests =
@@ -2542,13 +2562,11 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   {
     /* Digest of cert used on TLS link : 32 octets. */
-    const tor_x509_cert_t *cert = NULL;
-    tor_x509_cert_t *freecert = NULL;
+    tor_x509_cert_t *cert = NULL;
     if (server) {
-      tor_tls_get_my_certs(1, &cert, NULL);
+      cert = tor_tls_get_own_cert(conn->tls);
     } else {
-      freecert = tor_tls_get_peer_cert(conn->tls);
-      cert = freecert;
+      cert = tor_tls_get_peer_cert(conn->tls);
     }
     if (!cert) {
       log_warn(LD_OR, "Unable to find cert when making %s data.",
@@ -2559,8 +2577,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     memcpy(auth->scert,
            tor_x509_cert_get_cert_digests(cert)->d[DIGEST_SHA256], 32);
 
-    if (freecert)
-      tor_x509_cert_free(freecert);
+    tor_x509_cert_free(cert);
   }
 
   /* HMAC of clientrandom and serverrandom using master key : 32 octets */
