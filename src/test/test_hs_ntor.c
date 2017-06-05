@@ -57,7 +57,7 @@ test_hs_ntor(void *arg)
                                        &client_ephemeral_enc_keypair,
                                        subcredential,
                                        &client_hs_ntor_intro_cell_keys);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /* Service: Simulate the decryption of the received INTRODUCE1 */
   retval =
@@ -66,7 +66,7 @@ test_hs_ntor(void *arg)
                                         &client_ephemeral_enc_keypair.pubkey,
                                         subcredential,
                                         &service_hs_ntor_intro_cell_keys);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /* Test that the INTRODUCE1 encryption/mac keys match! */
   tt_mem_op(client_hs_ntor_intro_cell_keys.enc_key, OP_EQ,
@@ -83,7 +83,7 @@ test_hs_ntor(void *arg)
                                          &service_ephemeral_rend_keypair,
                                          &client_ephemeral_enc_keypair.pubkey,
                                          &service_hs_ntor_rend_cell_keys);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /* Client: Simulate the verification of a received RENDEZVOUS1 cell */
   retval =
@@ -92,7 +92,7 @@ test_hs_ntor(void *arg)
                                         &service_intro_enc_keypair.pubkey,
                                         &service_ephemeral_rend_keypair.pubkey,
                                         &client_hs_ntor_rend_cell_keys);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /* Test that the RENDEZVOUS1 key material match! */
   tt_mem_op(client_hs_ntor_rend_cell_keys.rend_cell_auth_mac, OP_EQ,

@@ -1139,7 +1139,7 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(retval == 0);
-  tt_want_str_op(method_used,==,"CONFIGURED");
+  tt_want_str_op(method_used,OP_EQ,"CONFIGURED");
   tt_want(hostname_out == NULL);
   tt_assert(resolved_addr == 0x80348069);
 
@@ -1164,8 +1164,8 @@ test_config_resolve_my_address(void *arg)
 
   tt_want(retval == 0);
   tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
-  tt_want_str_op(method_used,==,"RESOLVED");
-  tt_want_str_op(hostname_out,==,"www.torproject.org");
+  tt_want_str_op(method_used,OP_EQ,"RESOLVED");
+  tt_want_str_op(hostname_out,OP_EQ,"www.torproject.org");
   tt_assert(resolved_addr == 0x01010101);
 
   UNMOCK(tor_lookup_hostname);
@@ -1196,8 +1196,8 @@ test_config_resolve_my_address(void *arg)
   tt_want(retval == 0);
   tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
   tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
-  tt_want_str_op(method_used,==,"GETHOSTNAME");
-  tt_want_str_op(hostname_out,==,"onionrouter!");
+  tt_want_str_op(method_used,OP_EQ,"GETHOSTNAME");
+  tt_want_str_op(hostname_out,OP_EQ,"onionrouter!");
   tt_assert(resolved_addr == 0x01010101);
 
   UNMOCK(tor_gethostname);
@@ -1285,11 +1285,11 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(retval == 0);
-  tt_want_int_op(n_gethostname_replacement, ==,
+  tt_want_int_op(n_gethostname_replacement, OP_EQ,
                  prev_n_gethostname_replacement + 1);
-  tt_want_int_op(n_get_interface_address, ==,
+  tt_want_int_op(n_get_interface_address, OP_EQ,
                  prev_n_get_interface_address + 1);
-  tt_want_str_op(method_used,==,"INTERFACE");
+  tt_want_str_op(method_used,OP_EQ,"INTERFACE");
   tt_want(hostname_out == NULL);
   tt_assert(resolved_addr == 0x08080808);
 
@@ -1345,7 +1345,7 @@ test_config_resolve_my_address(void *arg)
   tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
   tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
   tt_want(retval == 0);
-  tt_want_str_op(method_used,==,"INTERFACE");
+  tt_want_str_op(method_used,OP_EQ,"INTERFACE");
   tt_assert(resolved_addr == 0x09090909);
 
   UNMOCK(tor_lookup_hostname);
@@ -1419,7 +1419,7 @@ test_config_resolve_my_address(void *arg)
   tt_want(n_hostname_localhost == prev_n_hostname_localhost + 1);
   tt_want(n_get_interface_address6 == prev_n_get_interface_address6 + 1);
 
-  tt_str_op(method_used,==,"INTERFACE");
+  tt_str_op(method_used,OP_EQ,"INTERFACE");
   tt_assert(!hostname_out);
   tt_assert(retval == 0);
 

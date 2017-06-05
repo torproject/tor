@@ -3695,8 +3695,8 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
 
   tor_capture_bugs_(1);
   setup_full_capture_of_logs(LOG_WARN);
-  tt_int_op(1, ==, purpose_needs_anonymity(0, 0, NULL));
-  tt_int_op(1, ==, smartlist_len(tor_get_captured_bug_log_()));
+  tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, 0, NULL));
+  tt_int_op(1, OP_EQ, smartlist_len(tor_get_captured_bug_log_()));
   expect_single_log_msg_containing("Called with dir_purpose=0");
 
   tor_end_capture_bugs_();
@@ -3710,10 +3710,10 @@ test_dir_purpose_needs_anonymity_returns_true_for_bridges(void *arg)
 {
   (void)arg;
 
-  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE, NULL));
-  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE,
+  tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE, NULL));
+  tt_int_op(1, OP_EQ, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE,
                                            "foobar"));
-  tt_int_op(1, ==, purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
+  tt_int_op(1, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
                                            ROUTER_PURPOSE_BRIDGE, NULL));
  done: ;
 }
@@ -3722,7 +3722,7 @@ static void
 test_dir_purpose_needs_anonymity_returns_false_for_own_bridge_desc(void *arg)
 {
   (void)arg;
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC,
+  tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC,
                                            ROUTER_PURPOSE_BRIDGE,
                                            "authority.z"));
  done: ;
@@ -3733,12 +3733,12 @@ test_dir_purpose_needs_anonymity_returns_true_for_sensitive_purpose(void *arg)
 {
   (void)arg;
 
-  tt_int_op(1, ==, purpose_needs_anonymity(
+  tt_int_op(1, OP_EQ, purpose_needs_anonymity(
                     DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
                     ROUTER_PURPOSE_GENERAL, NULL));
-  tt_int_op(1, ==, purpose_needs_anonymity(
+  tt_int_op(1, OP_EQ, purpose_needs_anonymity(
                     DIR_PURPOSE_UPLOAD_RENDDESC_V2, 0,  NULL));
-  tt_int_op(1, ==, purpose_needs_anonymity(
+  tt_int_op(1, OP_EQ, purpose_needs_anonymity(
                     DIR_PURPOSE_FETCH_RENDDESC_V2, 0, NULL));
  done: ;
 }
@@ -3748,24 +3748,24 @@ test_dir_purpose_needs_anonymity_ret_false_for_non_sensitive_conn(void *arg)
 {
   (void)arg;
 
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_DIR,
+  tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_DIR,
                                            ROUTER_PURPOSE_GENERAL, NULL));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0, NULL));
-  tt_int_op(0, ==,
+  tt_int_op(0, OP_EQ, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0, NULL));
+  tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_SIGNATURES, 0, NULL));
-  tt_int_op(0, ==,
+  tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL));
-  tt_int_op(0, ==, purpose_needs_anonymity(
+  tt_int_op(0, OP_EQ, purpose_needs_anonymity(
                     DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0, NULL));
-  tt_int_op(0, ==,
+  tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_CONSENSUS, 0, NULL));
-  tt_int_op(0, ==,
+  tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0, NULL));
-  tt_int_op(0, ==,
+  tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC, 0, NULL));
-  tt_int_op(0, ==,
+  tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_EXTRAINFO, 0, NULL));
-  tt_int_op(0, ==,
+  tt_int_op(0, OP_EQ,
             purpose_needs_anonymity(DIR_PURPOSE_FETCH_MICRODESC, 0, NULL));
   done: ;
 }
@@ -3818,9 +3818,9 @@ test_dir_packages(void *arg)
   (void)arg;
 
 #define BAD(s) \
-  tt_int_op(0, ==, validate_recommended_package_line(s));
+  tt_int_op(0, OP_EQ, validate_recommended_package_line(s));
 #define GOOD(s) \
-  tt_int_op(1, ==, validate_recommended_package_line(s));
+  tt_int_op(1, OP_EQ, validate_recommended_package_line(s));
   GOOD("tor 0.2.6.3-alpha "
        "http://torproject.example.com/dist/tor-0.2.6.3-alpha.tar.gz "
        "sha256=sssdlkfjdsklfjdskfljasdklfj");
@@ -3937,7 +3937,7 @@ test_dir_packages(void *arg)
 
   res = compute_consensus_package_lines(votes);
   tt_assert(res);
-  tt_str_op(res, ==,
+  tt_str_op(res, OP_EQ,
     "package cbc 99.1.11.1.1 http://example.com/cbc/ cubehash=ahooy sha512=m\n"
     "package clownshoes 22alpha3 http://quumble.example.com/ blake2=fooz\n"
     "package clownshoes 22alpha4 http://quumble.example.cam/ blake2=fooa\n"
@@ -4359,9 +4359,9 @@ test_dir_download_status_increment(void *arg)
   mock_get_options_calls = 0;
   next_at = download_status_increment_failure(&dls_failure, 503, "test", 0,
                                               current_time);
-  tt_i64_op(next_at, ==, current_time + delay2);
-  tt_int_op(download_status_get_n_failures(&dls_failure), ==, 2);
-  tt_int_op(download_status_get_n_attempts(&dls_failure), ==, 2);
+  tt_i64_op(next_at, OP_EQ, current_time + delay2);
+  tt_int_op(download_status_get_n_failures(&dls_failure), OP_EQ, 2);
+  tt_int_op(download_status_get_n_attempts(&dls_failure), OP_EQ, 2);
   tt_assert(mock_get_options_calls >= 1);
 
   /* Check that failure increments do happen on 503 for servers */
@@ -5053,7 +5053,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5066,21 +5066,21 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 1);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_1_hash, DIGEST_SHA256);
 
   /*
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5088,8 +5088,8 @@ test_dir_dump_unparseable_descriptors(void *data)
    */
   mock_unlink_reset();
   mock_write_str_to_file_reset();
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 0);
 
   /*
    * (2) Fire off dump_desc() twice; this still should trigger no cleanup.
@@ -5101,14 +5101,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 1);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_2_hash, DIGEST_SHA256);
 
   /* Second time */
@@ -5117,21 +5117,21 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_3_hash, DIGEST_SHA256);
 
   /*
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5139,8 +5139,8 @@ test_dir_dump_unparseable_descriptors(void *data)
    */
   mock_unlink_reset();
   mock_write_str_to_file_reset();
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 0);
 
   /*
    * (3) Three calls to dump_desc cause a FIFO cleanup
@@ -5152,14 +5152,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 1);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_4_hash, DIGEST_SHA256);
 
   /* Second time */
@@ -5168,14 +5168,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_4) + strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_4) + strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_1_hash, DIGEST_SHA256);
 
   /* Third time - we should unlink the dump of test_desc_4 here */
@@ -5184,21 +5184,21 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 1);
-  tt_int_op(write_str_count, ==, 3);
+  tt_int_op(unlinked_count, OP_EQ, 1);
+  tt_int_op(write_str_count, OP_EQ, 3);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_2_hash, DIGEST_SHA256);
 
   /*
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5206,8 +5206,8 @@ test_dir_dump_unparseable_descriptors(void *data)
    */
   mock_unlink_reset();
   mock_write_str_to_file_reset();
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 0);
 
   /*
    * (4) But repeating one (A B B) doesn't overflow and cleanup
@@ -5219,14 +5219,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 1);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_3_hash, DIGEST_SHA256);
 
   /* Second time */
@@ -5235,14 +5235,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_4_hash, DIGEST_SHA256);
 
   /* Third time */
@@ -5251,21 +5251,21 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_4_hash, DIGEST_SHA256);
 
   /*
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5273,8 +5273,8 @@ test_dir_dump_unparseable_descriptors(void *data)
    */
   mock_unlink_reset();
   mock_write_str_to_file_reset();
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 0);
 
   /*
    * (5) Same for the (A B A) repetition
@@ -5286,14 +5286,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 1);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_1_hash, DIGEST_SHA256);
 
   /* Second time */
@@ -5302,14 +5302,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_2_hash, DIGEST_SHA256);
 
   /* Third time */
@@ -5318,21 +5318,21 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_2_hash, DIGEST_SHA256);
 
   /*
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5340,8 +5340,8 @@ test_dir_dump_unparseable_descriptors(void *data)
    */
   mock_unlink_reset();
   mock_write_str_to_file_reset();
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 0);
 
   /*
    * (6) (A B B C) triggering overflow on C causes A, not B to be unlinked
@@ -5353,14 +5353,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 1);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_3_hash, DIGEST_SHA256);
 
   /* Second time */
@@ -5369,14 +5369,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_4_hash, DIGEST_SHA256);
 
   /* Third time */
@@ -5385,14 +5385,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_4_hash, DIGEST_SHA256);
 
   /* Fourth time - we should unlink the dump of test_desc_3 here */
@@ -5401,21 +5401,21 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_4) + strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_4) + strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 1);
-  tt_int_op(write_str_count, ==, 3);
+  tt_int_op(unlinked_count, OP_EQ, 1);
+  tt_int_op(write_str_count, OP_EQ, 3);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_1_hash, DIGEST_SHA256);
 
   /*
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5423,8 +5423,8 @@ test_dir_dump_unparseable_descriptors(void *data)
    */
   mock_unlink_reset();
   mock_write_str_to_file_reset();
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 0);
 
   /*
    * (7) (A B A C) triggering overflow on C causes B, not A to be unlinked
@@ -5436,14 +5436,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 1);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_2_hash, DIGEST_SHA256);
 
   /* Second time */
@@ -5452,14 +5452,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_3_hash, DIGEST_SHA256);
 
   /* Third time */
@@ -5468,14 +5468,14 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 2);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_3_hash, DIGEST_SHA256);
 
   /* Fourth time - we should unlink the dump of test_desc_3 here */
@@ -5484,21 +5484,21 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, OP_EQ, strlen(test_desc_2) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
    * Assert things about the mocks
    */
-  tt_int_op(unlinked_count, ==, 1);
-  tt_int_op(write_str_count, ==, 3);
+  tt_int_op(unlinked_count, OP_EQ, 1);
+  tt_int_op(write_str_count, OP_EQ, 3);
   tt_mem_op(last_write_str_hash, OP_EQ, test_desc_4_hash, DIGEST_SHA256);
 
   /*
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_u64_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, OP_EQ, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5506,8 +5506,8 @@ test_dir_dump_unparseable_descriptors(void *data)
    */
   mock_unlink_reset();
   mock_write_str_to_file_reset();
-  tt_int_op(unlinked_count, ==, 0);
-  tt_int_op(write_str_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
+  tt_int_op(write_str_count, OP_EQ, 0);
 
  done:
 
@@ -5617,43 +5617,43 @@ test_dir_populate_dump_desc_fifo(void *data)
   reset_read_file_to_str_mock();
 
   /* Check state of unlink mock */
-  tt_int_op(unlinked_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
 
   /* Some cases that should fail before trying to read the file */
   ent = dump_desc_populate_one_file(dirname, "bar");
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 1);
-  tt_int_op(read_count, ==, 0);
-  tt_int_op(read_call_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 1);
+  tt_int_op(read_count, OP_EQ, 0);
+  tt_int_op(read_call_count, OP_EQ, 0);
 
   ent = dump_desc_populate_one_file(dirname, "unparseable-desc");
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 2);
-  tt_int_op(read_count, ==, 0);
-  tt_int_op(read_call_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 2);
+  tt_int_op(read_count, OP_EQ, 0);
+  tt_int_op(read_call_count, OP_EQ, 0);
 
   ent = dump_desc_populate_one_file(dirname, "unparseable-desc.baz");
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 3);
-  tt_int_op(read_count, ==, 0);
-  tt_int_op(read_call_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 3);
+  tt_int_op(read_count, OP_EQ, 0);
+  tt_int_op(read_call_count, OP_EQ, 0);
 
   ent = dump_desc_populate_one_file(
       dirname,
       "unparseable-desc.08AE85E90461F59E");
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 4);
-  tt_int_op(read_count, ==, 0);
-  tt_int_op(read_call_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 4);
+  tt_int_op(read_count, OP_EQ, 0);
+  tt_int_op(read_call_count, OP_EQ, 0);
 
   ent = dump_desc_populate_one_file(
       dirname,
       "unparseable-desc.08AE85E90461F59EDF0981323F3A70D02B55AB54B44B04F"
       "287D72F7B72F242E85C8CB0EDA8854A99");
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 5);
-  tt_int_op(read_count, ==, 0);
-  tt_int_op(read_call_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 5);
+  tt_int_op(read_count, OP_EQ, 0);
+  tt_int_op(read_call_count, OP_EQ, 0);
 
   /* This is a correct-length digest but base16_decode() will fail */
   ent = dump_desc_populate_one_file(
@@ -5661,9 +5661,9 @@ test_dir_populate_dump_desc_fifo(void *data)
       "unparseable-desc.68219B8BGE64B705A6FFC728C069DC596216D60A7D7520C"
       "D5ECE250D912E686B");
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 6);
-  tt_int_op(read_count, ==, 0);
-  tt_int_op(read_call_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 6);
+  tt_int_op(read_count, OP_EQ, 0);
+  tt_int_op(read_call_count, OP_EQ, 0);
 
   /* This one has a correctly formed filename and should try reading */
 
@@ -5673,9 +5673,9 @@ test_dir_populate_dump_desc_fifo(void *data)
       "unparseable-desc.DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E"
       "85C8CB0EDA8854A99");
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 7);
-  tt_int_op(read_count, ==, 0);
-  tt_int_op(read_call_count, ==, 1);
+  tt_int_op(unlinked_count, OP_EQ, 7);
+  tt_int_op(read_count, OP_EQ, 0);
+  tt_int_op(read_call_count, OP_EQ, 1);
 
   /* This read will succeed but the digest won't match the file content */
   fname =
@@ -5689,9 +5689,9 @@ test_dir_populate_dump_desc_fifo(void *data)
   ent = dump_desc_populate_one_file(dirname, fname);
   enforce_expected_filename = 0;
   tt_assert(ent == NULL);
-  tt_int_op(unlinked_count, ==, 8);
-  tt_int_op(read_count, ==, 1);
-  tt_int_op(read_call_count, ==, 2);
+  tt_int_op(unlinked_count, OP_EQ, 8);
+  tt_int_op(read_count, OP_EQ, 1);
+  tt_int_op(read_call_count, OP_EQ, 2);
   tor_free(expected_filename);
   tor_free(file_content);
 
@@ -5705,12 +5705,12 @@ test_dir_populate_dump_desc_fifo(void *data)
   file_stat.st_mtime = 789012;
   ent = dump_desc_populate_one_file(dirname, fname);
   tt_assert(ent != NULL);
-  tt_int_op(unlinked_count, ==, 8);
-  tt_int_op(read_count, ==, 2);
-  tt_int_op(read_call_count, ==, 3);
+  tt_int_op(unlinked_count, OP_EQ, 8);
+  tt_int_op(read_count, OP_EQ, 2);
+  tt_int_op(read_call_count, OP_EQ, 3);
   tt_str_op(ent->filename, OP_EQ, expected_filename);
-  tt_int_op(ent->len, ==, file_content_len);
-  tt_int_op(ent->when, ==, file_stat.st_mtime);
+  tt_int_op(ent->len, OP_EQ, file_content_len);
+  tt_int_op(ent->when, OP_EQ, file_stat.st_mtime);
   tor_free(ent->filename);
   tor_free(ent);
   tor_free(expected_filename);
@@ -5719,9 +5719,9 @@ test_dir_populate_dump_desc_fifo(void *data)
    * Reset the mocks and check their state
    */
   mock_unlink_reset();
-  tt_int_op(unlinked_count, ==, 0);
+  tt_int_op(unlinked_count, OP_EQ, 0);
   reset_read_file_to_str_mock();
-  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_count, OP_EQ, 0);
 
  done:
 

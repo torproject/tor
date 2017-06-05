@@ -73,58 +73,58 @@ test_get_sr_protocol_phase(void *arg)
 
   {
     retval = parse_rfc1123_time("Wed, 20 Apr 2015 23:59:00 UTC", &the_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     phase = get_sr_protocol_phase(the_time);
-    tt_int_op(phase, ==, SR_PHASE_REVEAL);
+    tt_int_op(phase, OP_EQ, SR_PHASE_REVEAL);
   }
 
   {
     retval = parse_rfc1123_time("Wed, 20 Apr 2015 00:00:00 UTC", &the_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     phase = get_sr_protocol_phase(the_time);
-    tt_int_op(phase, ==, SR_PHASE_COMMIT);
+    tt_int_op(phase, OP_EQ, SR_PHASE_COMMIT);
   }
 
   {
     retval = parse_rfc1123_time("Wed, 20 Apr 2015 00:00:01 UTC", &the_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     phase = get_sr_protocol_phase(the_time);
-    tt_int_op(phase, ==, SR_PHASE_COMMIT);
+    tt_int_op(phase, OP_EQ, SR_PHASE_COMMIT);
   }
 
   {
     retval = parse_rfc1123_time("Wed, 20 Apr 2015 11:59:00 UTC", &the_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     phase = get_sr_protocol_phase(the_time);
-    tt_int_op(phase, ==, SR_PHASE_COMMIT);
+    tt_int_op(phase, OP_EQ, SR_PHASE_COMMIT);
   }
 
   {
     retval = parse_rfc1123_time("Wed, 20 Apr 2015 12:00:00 UTC", &the_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     phase = get_sr_protocol_phase(the_time);
-    tt_int_op(phase, ==, SR_PHASE_REVEAL);
+    tt_int_op(phase, OP_EQ, SR_PHASE_REVEAL);
   }
 
   {
     retval = parse_rfc1123_time("Wed, 20 Apr 2015 12:00:01 UTC", &the_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     phase = get_sr_protocol_phase(the_time);
-    tt_int_op(phase, ==, SR_PHASE_REVEAL);
+    tt_int_op(phase, OP_EQ, SR_PHASE_REVEAL);
   }
 
   {
     retval = parse_rfc1123_time("Wed, 20 Apr 2015 13:00:00 UTC", &the_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     phase = get_sr_protocol_phase(the_time);
-    tt_int_op(phase, ==, SR_PHASE_REVEAL);
+    tt_int_op(phase, OP_EQ, SR_PHASE_REVEAL);
   }
 
  done:
@@ -147,7 +147,7 @@ test_get_state_valid_until_time(void *arg)
     /* Get the valid until time if called at 00:00:01 */
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     valid_until_time = get_state_valid_until_time(current_time);
 
     /* Compare it with the correct result */
@@ -158,7 +158,7 @@ test_get_state_valid_until_time(void *arg)
   {
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 19:22:00 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -168,7 +168,7 @@ test_get_state_valid_until_time(void *arg)
   {
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:00 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -178,7 +178,7 @@ test_get_state_valid_until_time(void *arg)
   {
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -204,7 +204,7 @@ test_get_start_time_of_current_run(void *arg)
     /* Get start time if called at 00:00:01 */
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -216,7 +216,7 @@ test_get_start_time_of_current_run(void *arg)
   {
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:59 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -228,7 +228,7 @@ test_get_start_time_of_current_run(void *arg)
   {
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -247,7 +247,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:15:32 UTC",
                                 &current_time);
 
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -290,15 +290,15 @@ test_get_sr_protocol_duration(void *arg)
   (void) arg;
 
   /* Check that by default an SR phase is 12 hours */
-  tt_int_op(sr_state_get_phase_duration(), ==, 12*60*60);
-  tt_int_op(sr_state_get_protocol_run_duration(), ==, 24*60*60);
+  tt_int_op(sr_state_get_phase_duration(), OP_EQ, 12*60*60);
+  tt_int_op(sr_state_get_protocol_run_duration(), OP_EQ, 24*60*60);
 
   /* Now alter the voting interval and check that the SR phase is 2 mins long
    * if voting happens every 10 seconds (10*12 seconds = 2 mins) */
   or_options_t *options = get_options_mutable();
   options->V3AuthVotingInterval = 10;
-  tt_int_op(sr_state_get_phase_duration(), ==, 2*60);
-  tt_int_op(sr_state_get_protocol_run_duration(), ==, 4*60);
+  tt_int_op(sr_state_get_phase_duration(), OP_EQ, 2*60);
+  tt_int_op(sr_state_get_protocol_run_duration(), OP_EQ, 4*60);
 
  done: ;
 }
@@ -329,11 +329,11 @@ test_get_next_valid_after_time(void *arg)
 
     retval = parse_rfc1123_time("Mon, 13 Jan 2016 16:00:00 UTC",
                                 &mock_consensus->fresh_until);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     retval = parse_rfc1123_time("Mon, 13 Jan 2016 15:00:00 UTC",
                                 &mock_consensus->valid_after);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     MOCK(networkstatus_get_live_consensus,
          mock_networkstatus_get_live_consensus);
@@ -343,7 +343,7 @@ test_get_next_valid_after_time(void *arg)
     /* Get the valid after time if called at 00:00:00 */
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     valid_after_time = get_next_valid_after_time(current_time);
 
     /* Compare it with the correct result */
@@ -355,7 +355,7 @@ test_get_next_valid_after_time(void *arg)
     /* Get the valid until time if called at 00:00:01 */
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     valid_after_time = get_next_valid_after_time(current_time);
 
     /* Compare it with the correct result */
@@ -366,7 +366,7 @@ test_get_next_valid_after_time(void *arg)
   {
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:30:01 UTC",
                                 &current_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     valid_after_time = get_next_valid_after_time(current_time);
 
     /* Compare it with the correct result */
@@ -418,18 +418,18 @@ test_sr_commit(void *arg)
     tt_assert(!tor_mem_is_zero((char *) our_commit->random_number,
                                sizeof(our_commit->random_number)));
     /* Commit and reveal timestamp should be the same. */
-    tt_u64_op(our_commit->commit_ts, ==, our_commit->reveal_ts);
+    tt_u64_op(our_commit->commit_ts, OP_EQ, our_commit->reveal_ts);
     /* We should have a hashed reveal. */
     tt_assert(!tor_mem_is_zero(our_commit->hashed_reveal,
                                sizeof(our_commit->hashed_reveal)));
     /* Do we have a valid encoded commit and reveal. Note the following only
      * tests if the generated values are correct. Their could be a bug in
      * the decode function but we test them seperately. */
-    tt_int_op(0, ==, reveal_decode(our_commit->encoded_reveal,
+    tt_int_op(0, OP_EQ, reveal_decode(our_commit->encoded_reveal,
                                    &test_commit));
-    tt_int_op(0, ==, commit_decode(our_commit->encoded_commit,
+    tt_int_op(0, OP_EQ, commit_decode(our_commit->encoded_commit,
                                    &test_commit));
-    tt_int_op(0, ==, verify_commit_and_reveal(our_commit));
+    tt_int_op(0, OP_EQ, verify_commit_and_reveal(our_commit));
   }
 
   /* Let's make sure our verify commit and reveal function works. We'll
@@ -442,21 +442,21 @@ test_sr_commit(void *arg)
     /* Timestamp MUST match. */
     test_commit.commit_ts = test_commit.reveal_ts - 42;
     setup_full_capture_of_logs(LOG_WARN);
-    tt_int_op(-1, ==, verify_commit_and_reveal(&test_commit));
+    tt_int_op(-1, OP_EQ, verify_commit_and_reveal(&test_commit));
     expect_log_msg_containing("doesn't match reveal timestamp");
     teardown_capture_of_logs();
     memcpy(&test_commit, our_commit, sizeof(test_commit));
-    tt_int_op(0, ==, verify_commit_and_reveal(&test_commit));
+    tt_int_op(0, OP_EQ, verify_commit_and_reveal(&test_commit));
 
     /* Hashed reveal must match the H(encoded_reveal). */
     memset(test_commit.hashed_reveal, 'X',
            sizeof(test_commit.hashed_reveal));
     setup_full_capture_of_logs(LOG_WARN);
-    tt_int_op(-1, ==, verify_commit_and_reveal(&test_commit));
+    tt_int_op(-1, OP_EQ, verify_commit_and_reveal(&test_commit));
     expect_single_log_msg_containing("doesn't match the commit value");
     teardown_capture_of_logs();
     memcpy(&test_commit, our_commit, sizeof(test_commit));
-    tt_int_op(0, ==, verify_commit_and_reveal(&test_commit));
+    tt_int_op(0, OP_EQ, verify_commit_and_reveal(&test_commit));
   }
 
   /* We'll build a list of values from our commit that our parsing function
@@ -510,26 +510,26 @@ test_encoding(void *arg)
   /* Hash random number because we don't expose bytes of the RNG. */
   ret = crypto_digest256(hashed_rand, raw_rand,
                          sizeof(raw_rand), SR_DIGEST_ALG);
-  tt_int_op(0, ==, ret);
+  tt_int_op(0, OP_EQ, ret);
   /* Hash reveal value. */
-  tt_int_op(SR_REVEAL_BASE64_LEN, ==, strlen(encoded_reveal));
+  tt_int_op(SR_REVEAL_BASE64_LEN, OP_EQ, strlen(encoded_reveal));
   ret = crypto_digest256(hashed_reveal, encoded_reveal,
                          strlen(encoded_reveal), SR_DIGEST_ALG);
-  tt_int_op(0, ==, ret);
-  tt_int_op(SR_COMMIT_BASE64_LEN, ==, strlen(encoded_commit));
+  tt_int_op(0, OP_EQ, ret);
+  tt_int_op(SR_COMMIT_BASE64_LEN, OP_EQ, strlen(encoded_commit));
 
   /* Test our commit/reveal decode functions. */
   {
     /* Test the reveal encoded value. */
-    tt_int_op(0, ==, reveal_decode(encoded_reveal, &parsed_commit));
-    tt_u64_op(ts, ==, parsed_commit.reveal_ts);
+    tt_int_op(0, OP_EQ, reveal_decode(encoded_reveal, &parsed_commit));
+    tt_u64_op(ts, OP_EQ, parsed_commit.reveal_ts);
     tt_mem_op(hashed_rand, OP_EQ, parsed_commit.random_number,
               sizeof(hashed_rand));
 
     /* Test the commit encoded value. */
     memset(&parsed_commit, 0, sizeof(parsed_commit));
-    tt_int_op(0, ==, commit_decode(encoded_commit, &parsed_commit));
-    tt_u64_op(ts, ==, parsed_commit.commit_ts);
+    tt_int_op(0, OP_EQ, commit_decode(encoded_commit, &parsed_commit));
+    tt_u64_op(ts, OP_EQ, parsed_commit.commit_ts);
     tt_mem_op(encoded_commit, OP_EQ, parsed_commit.encoded_commit,
               sizeof(parsed_commit.encoded_commit));
     tt_mem_op(hashed_reveal, OP_EQ, parsed_commit.hashed_reveal,
@@ -544,7 +544,7 @@ test_encoding(void *arg)
     memcpy(parsed_commit.random_number, hashed_rand,
            sizeof(parsed_commit.random_number));
     ret = reveal_encode(&parsed_commit, encoded, sizeof(encoded));
-    tt_int_op(SR_REVEAL_BASE64_LEN, ==, ret);
+    tt_int_op(SR_REVEAL_BASE64_LEN, OP_EQ, ret);
     tt_mem_op(encoded_reveal, OP_EQ, encoded, strlen(encoded_reveal));
   }
 
@@ -555,7 +555,7 @@ test_encoding(void *arg)
     memcpy(parsed_commit.hashed_reveal, hashed_reveal,
            sizeof(parsed_commit.hashed_reveal));
     ret = commit_encode(&parsed_commit, encoded, sizeof(encoded));
-    tt_int_op(SR_COMMIT_BASE64_LEN, ==, ret);
+    tt_int_op(SR_COMMIT_BASE64_LEN, OP_EQ, ret);
     tt_mem_op(encoded_commit, OP_EQ, encoded, strlen(encoded_commit));
   }
 
@@ -632,7 +632,7 @@ test_vote(void *arg)
     tt_assert(lines);
     /* Split the lines. We expect 2 here. */
     ret = smartlist_split_string(chunks, lines, "\n", SPLIT_IGNORE_BLANK, 0);
-    tt_int_op(ret, ==, 4);
+    tt_int_op(ret, OP_EQ, 4);
     tt_str_op(smartlist_get(chunks, 0), OP_EQ, "shared-rand-participate");
     /* Get our commitment line and will validate it agains our commit. The
      * format is as follow:
@@ -642,7 +642,7 @@ test_vote(void *arg)
     char *commit_line = smartlist_get(chunks, 1);
     tt_assert(commit_line);
     ret = smartlist_split_string(tokens, commit_line, " ", 0, 0);
-    tt_int_op(ret, ==, 6);
+    tt_int_op(ret, OP_EQ, 6);
     tt_str_op(smartlist_get(tokens, 0), OP_EQ, "shared-rand-commit");
     tt_str_op(smartlist_get(tokens, 1), OP_EQ, "1");
     tt_str_op(smartlist_get(tokens, 2), OP_EQ,
@@ -650,7 +650,7 @@ test_vote(void *arg)
     char digest[DIGEST_LEN];
     base16_decode(digest, sizeof(digest), smartlist_get(tokens, 3),
                   HEX_DIGEST_LEN);
-    tt_mem_op(digest, ==, our_commit->rsa_identity, sizeof(digest));
+    tt_mem_op(digest, OP_EQ, our_commit->rsa_identity, sizeof(digest));
     tt_str_op(smartlist_get(tokens, 4), OP_EQ, our_commit->encoded_commit);
     tt_str_op(smartlist_get(tokens, 5), OP_EQ, our_commit->encoded_reveal)
 ;
@@ -666,7 +666,7 @@ test_vote(void *arg)
     /* Set valid flag explicitly here to compare since it's not set by
      * simply parsing the commit. */
     parsed_commit->valid = 1;
-    tt_mem_op(parsed_commit, ==, our_commit, sizeof(*our_commit));
+    tt_mem_op(parsed_commit, OP_EQ, our_commit, sizeof(*our_commit));
 
     /* minor cleanup */
     SMARTLIST_FOREACH(tokens, char *, s, tor_free(s));
@@ -676,7 +676,7 @@ test_vote(void *arg)
     char *prev_srv_line = smartlist_get(chunks, 2);
     tt_assert(prev_srv_line);
     ret = smartlist_split_string(tokens, prev_srv_line, " ", 0, 0);
-    tt_int_op(ret, ==, 3);
+    tt_int_op(ret, OP_EQ, 3);
     tt_str_op(smartlist_get(tokens, 0), OP_EQ, "shared-rand-previous-value");
     tt_str_op(smartlist_get(tokens, 1), OP_EQ, "42");
     tt_str_op(smartlist_get(tokens, 2), OP_EQ,
@@ -690,7 +690,7 @@ test_vote(void *arg)
     char *current_srv_line = smartlist_get(chunks, 3);
     tt_assert(current_srv_line);
     ret = smartlist_split_string(tokens, current_srv_line, " ", 0, 0);
-    tt_int_op(ret, ==, 3);
+    tt_int_op(ret, OP_EQ, 3);
     tt_str_op(smartlist_get(tokens, 0), OP_EQ, "shared-rand-current-value");
     tt_str_op(smartlist_get(tokens, 1), OP_EQ, "128");
     tt_str_op(smartlist_get(tokens, 2), OP_EQ,
@@ -803,7 +803,7 @@ test_sr_setup_commits(void)
     tt_assert(auth_cert);
 
     options->AuthoritativeDir = 1;
-    tt_int_op(0, ==, load_ed_keys(options, now));
+    tt_int_op(0, OP_EQ, load_ed_keys(options, now));
   }
 
   /* Generate three dummy commits according to sr_srv_calc_ref.py .  Then
@@ -889,7 +889,7 @@ test_sr_setup_commits(void)
   save_commit_to_state(commit_b);
   save_commit_to_state(commit_c);
   save_commit_to_state(commit_d);
-  tt_int_op(digestmap_size(get_sr_state()->commits), ==, 4);
+  tt_int_op(digestmap_size(get_sr_state()->commits), OP_EQ, 4);
 
   /* Now during REVEAL phase save commit D by restoring its reveal. */
   set_sr_phase(SR_PHASE_REVEAL);
@@ -934,9 +934,9 @@ test_sr_compute_srv(void *arg)
   /* Check the result against the test vector */
   current_srv = sr_state_get_current_srv();
   tt_assert(current_srv);
-  tt_u64_op(current_srv->num_reveals, ==, 3);
+  tt_u64_op(current_srv->num_reveals, OP_EQ, 3);
   tt_str_op(hex_str((char*)current_srv->value, 32),
-            ==,
+            OP_EQ,
             SRV_TEST_VECTOR);
 
  done:
@@ -1011,7 +1011,7 @@ test_sr_get_majority_srv_from_votes(void *arg)
       smartlist_add(votes, vote);
     }
 
-    tt_int_op(smartlist_len(votes), ==, 9);
+    tt_int_op(smartlist_len(votes), OP_EQ, 9);
   }
 
   /* Now we achieve majority for SRV_1, but not the AuthDirNumSRVAgreements
@@ -1025,7 +1025,7 @@ test_sr_get_majority_srv_from_votes(void *arg)
   set_num_srv_agreements(7);
   chosen_srv = get_majority_srv_from_votes(votes, 1);
   tt_assert(chosen_srv);
-  tt_u64_op(chosen_srv->num_reveals, ==, 42);
+  tt_u64_op(chosen_srv->num_reveals, OP_EQ, 42);
   tt_mem_op(chosen_srv->value, OP_EQ, SRV_1, sizeof(chosen_srv->value));
 
  done:
@@ -1049,7 +1049,7 @@ test_utils(void *arg)
     memcpy(srv->value, srv_value, sizeof(srv->value));
     dup_srv = srv_dup(srv);
     tt_assert(dup_srv);
-    tt_u64_op(dup_srv->num_reveals, ==, srv->num_reveals);
+    tt_u64_op(dup_srv->num_reveals, OP_EQ, srv->num_reveals);
     tt_mem_op(dup_srv->value, OP_EQ, srv->value, sizeof(srv->value));
     tor_free(srv);
     tor_free(dup_srv);
@@ -1069,10 +1069,10 @@ test_utils(void *arg)
     sr_commit_t commit1, commit2;
     memcpy(commit1.encoded_commit, payload, sizeof(commit1.encoded_commit));
     memcpy(commit2.encoded_commit, payload, sizeof(commit2.encoded_commit));
-    tt_int_op(commitments_are_the_same(&commit1, &commit2), ==, 1);
+    tt_int_op(commitments_are_the_same(&commit1, &commit2), OP_EQ, 1);
     /* Let's corrupt one of them. */
     memset(commit1.encoded_commit, 'A', sizeof(commit1.encoded_commit));
-    tt_int_op(commitments_are_the_same(&commit1, &commit2), ==, 0);
+    tt_int_op(commitments_are_the_same(&commit1, &commit2), OP_EQ, 0);
   }
 
   /* Testing commit_is_authoritative(). */
@@ -1083,32 +1083,32 @@ test_utils(void *arg)
 
     tt_assert(!crypto_pk_generate_key(k));
 
-    tt_int_op(0, ==, crypto_pk_get_digest(k, digest));
+    tt_int_op(0, OP_EQ, crypto_pk_get_digest(k, digest));
     memcpy(commit.rsa_identity, digest, sizeof(commit.rsa_identity));
-    tt_int_op(commit_is_authoritative(&commit, digest), ==, 1);
+    tt_int_op(commit_is_authoritative(&commit, digest), OP_EQ, 1);
     /* Change the pubkey. */
     memset(commit.rsa_identity, 0, sizeof(commit.rsa_identity));
-    tt_int_op(commit_is_authoritative(&commit, digest), ==, 0);
+    tt_int_op(commit_is_authoritative(&commit, digest), OP_EQ, 0);
     crypto_pk_free(k);
   }
 
   /* Testing get_phase_str(). */
   {
-    tt_str_op(get_phase_str(SR_PHASE_REVEAL), ==, "reveal");
-    tt_str_op(get_phase_str(SR_PHASE_COMMIT), ==, "commit");
+    tt_str_op(get_phase_str(SR_PHASE_REVEAL), OP_EQ, "reveal");
+    tt_str_op(get_phase_str(SR_PHASE_COMMIT), OP_EQ, "commit");
   }
 
   /* Testing phase transition */
   {
     init_authority_state();
     set_sr_phase(SR_PHASE_COMMIT);
-    tt_int_op(is_phase_transition(SR_PHASE_REVEAL), ==, 1);
-    tt_int_op(is_phase_transition(SR_PHASE_COMMIT), ==, 0);
+    tt_int_op(is_phase_transition(SR_PHASE_REVEAL), OP_EQ, 1);
+    tt_int_op(is_phase_transition(SR_PHASE_COMMIT), OP_EQ, 0);
     set_sr_phase(SR_PHASE_REVEAL);
-    tt_int_op(is_phase_transition(SR_PHASE_REVEAL), ==, 0);
-    tt_int_op(is_phase_transition(SR_PHASE_COMMIT), ==, 1);
+    tt_int_op(is_phase_transition(SR_PHASE_REVEAL), OP_EQ, 0);
+    tt_int_op(is_phase_transition(SR_PHASE_COMMIT), OP_EQ, 1);
     /* Junk. */
-    tt_int_op(is_phase_transition(42), ==, 1);
+    tt_int_op(is_phase_transition(42), OP_EQ, 1);
   }
 
  done:
@@ -1136,24 +1136,24 @@ test_state_transition(void *arg)
     sr_commit_t *commit = sr_generate_our_commit(now, mock_cert);
     tt_assert(commit);
     sr_state_add_commit(commit);
-    tt_int_op(digestmap_size(state->commits), ==, 1);
+    tt_int_op(digestmap_size(state->commits), OP_EQ, 1);
     /* Let's test our delete feature. */
     sr_state_delete_commits();
-    tt_int_op(digestmap_size(state->commits), ==, 0);
+    tt_int_op(digestmap_size(state->commits), OP_EQ, 0);
     /* Add it back so we can continue the rest of the test because after
      * deletiong our commit will be freed so generate a new one. */
     commit = sr_generate_our_commit(now, mock_cert);
     tt_assert(commit);
     sr_state_add_commit(commit);
-    tt_int_op(digestmap_size(state->commits), ==, 1);
+    tt_int_op(digestmap_size(state->commits), OP_EQ, 1);
     state->n_reveal_rounds = 42;
     state->n_commit_rounds = 43;
     state->n_protocol_runs = 44;
     reset_state_for_new_protocol_run(now);
-    tt_int_op(state->n_reveal_rounds, ==, 0);
-    tt_int_op(state->n_commit_rounds, ==, 0);
-    tt_u64_op(state->n_protocol_runs, ==, 45);
-    tt_int_op(digestmap_size(state->commits), ==, 0);
+    tt_int_op(state->n_reveal_rounds, OP_EQ, 0);
+    tt_int_op(state->n_commit_rounds, OP_EQ, 0);
+    tt_u64_op(state->n_protocol_runs, OP_EQ, 45);
+    tt_int_op(digestmap_size(state->commits), OP_EQ, 0);
   }
 
   /* Test SRV rotation in our state. */
@@ -1191,11 +1191,11 @@ test_state_transition(void *arg)
     /* Also, make sure we did change the current. */
     tt_assert(sr_state_get_current_srv() != cur);
     /* We should have our commitment alone. */
-    tt_int_op(digestmap_size(state->commits), ==, 1);
-    tt_int_op(state->n_reveal_rounds, ==, 0);
-    tt_int_op(state->n_commit_rounds, ==, 0);
+    tt_int_op(digestmap_size(state->commits), OP_EQ, 1);
+    tt_int_op(state->n_reveal_rounds, OP_EQ, 0);
+    tt_int_op(state->n_commit_rounds, OP_EQ, 0);
     /* 46 here since we were at 45 just before. */
-    tt_u64_op(state->n_protocol_runs, ==, 46);
+    tt_u64_op(state->n_protocol_runs, OP_EQ, 46);
   }
 
   /* Cleanup of SRVs. */
@@ -1239,21 +1239,21 @@ test_keep_commit(void *arg)
   /* Set us in COMMIT phase for starter. */
   set_sr_phase(SR_PHASE_COMMIT);
   /* We should never keep a commit from a non authoritative authority. */
-  tt_int_op(should_keep_commit(commit, fp, SR_PHASE_COMMIT), ==, 0);
+  tt_int_op(should_keep_commit(commit, fp, SR_PHASE_COMMIT), OP_EQ, 0);
   /* This should NOT be kept because it has a reveal value in it. */
   tt_assert(commit_has_reveal_value(commit));
   tt_int_op(should_keep_commit(commit, commit->rsa_identity,
-                               SR_PHASE_COMMIT), ==, 0);
+                               SR_PHASE_COMMIT), OP_EQ, 0);
   /* Add it to the state which should return to not keep it. */
   sr_state_add_commit(commit);
   tt_int_op(should_keep_commit(commit, commit->rsa_identity,
-                               SR_PHASE_COMMIT), ==, 0);
+                               SR_PHASE_COMMIT), OP_EQ, 0);
   /* Remove it from state so we can continue our testing. */
   digestmap_remove(state->commits, commit->rsa_identity);
   /* Let's remove our reveal value which should make it OK to keep it. */
   memset(commit->encoded_reveal, 0, sizeof(commit->encoded_reveal));
   tt_int_op(should_keep_commit(commit, commit->rsa_identity,
-                               SR_PHASE_COMMIT), ==, 1);
+                               SR_PHASE_COMMIT), OP_EQ, 1);
 
   /* Let's reset our commit and go into REVEAL phase. */
   sr_commit_free(commit);
@@ -1265,17 +1265,17 @@ test_keep_commit(void *arg)
   memset(dup_commit->encoded_reveal, 0, sizeof(dup_commit->encoded_reveal));
   set_sr_phase(SR_PHASE_REVEAL);
   /* We should never keep a commit from a non authoritative authority. */
-  tt_int_op(should_keep_commit(commit, fp, SR_PHASE_REVEAL), ==, 0);
+  tt_int_op(should_keep_commit(commit, fp, SR_PHASE_REVEAL), OP_EQ, 0);
   /* We shouldn't accept a commit that is not in our state. */
   tt_int_op(should_keep_commit(commit, commit->rsa_identity,
-                               SR_PHASE_REVEAL), ==, 0);
+                               SR_PHASE_REVEAL), OP_EQ, 0);
   /* Important to add the commit _without_ the reveal here. */
   sr_state_add_commit(dup_commit);
-  tt_int_op(digestmap_size(state->commits), ==, 1);
+  tt_int_op(digestmap_size(state->commits), OP_EQ, 1);
   /* Our commit should be valid that is authoritative, contains a reveal, be
    * in the state and commitment and reveal values match. */
   tt_int_op(should_keep_commit(commit, commit->rsa_identity,
-                               SR_PHASE_REVEAL), ==, 1);
+                               SR_PHASE_REVEAL), OP_EQ, 1);
   /* The commit shouldn't be kept if it's not verified that is no matchin
    * hashed reveal. */
   {
@@ -1286,7 +1286,7 @@ test_keep_commit(void *arg)
     memset(commit->hashed_reveal, 0, sizeof(commit->hashed_reveal));
     setup_full_capture_of_logs(LOG_WARN);
     tt_int_op(should_keep_commit(commit, commit->rsa_identity,
-                                 SR_PHASE_REVEAL), ==, 0);
+                                 SR_PHASE_REVEAL), OP_EQ, 0);
     expect_log_msg_containing("doesn't match the commit value.");
     expect_log_msg_containing("has an invalid reveal value.");
     assert_log_predicate(mock_saved_log_n_entries() == 2,
@@ -1297,11 +1297,11 @@ test_keep_commit(void *arg)
   }
   /* We shouldn't keep a commit that has no reveal. */
   tt_int_op(should_keep_commit(dup_commit, dup_commit->rsa_identity,
-                               SR_PHASE_REVEAL), ==, 0);
+                               SR_PHASE_REVEAL), OP_EQ, 0);
   /* We must not keep a commit that is not the same from the commit phase. */
   memset(commit->encoded_commit, 0, sizeof(commit->encoded_commit));
   tt_int_op(should_keep_commit(commit, commit->rsa_identity,
-                               SR_PHASE_REVEAL), ==, 0);
+                               SR_PHASE_REVEAL), OP_EQ, 0);
 
  done:
   teardown_capture_of_logs();
@@ -1339,35 +1339,35 @@ test_state_update(void *arg)
   /* We are in COMMIT phase here and we'll trigger a state update but no
    * transition. */
   sr_state_update(commit_phase_time);
-  tt_int_op(state->valid_after, ==, commit_phase_time);
-  tt_int_op(state->n_commit_rounds, ==, 1);
-  tt_int_op(state->phase, ==, SR_PHASE_COMMIT);
-  tt_int_op(digestmap_size(state->commits), ==, 1);
+  tt_int_op(state->valid_after, OP_EQ, commit_phase_time);
+  tt_int_op(state->n_commit_rounds, OP_EQ, 1);
+  tt_int_op(state->phase, OP_EQ, SR_PHASE_COMMIT);
+  tt_int_op(digestmap_size(state->commits), OP_EQ, 1);
 
   /* We are still in the COMMIT phase here but we'll trigger a state
    * transition to the REVEAL phase. */
   sr_state_update(reveal_phase_time);
-  tt_int_op(state->phase, ==, SR_PHASE_REVEAL);
-  tt_int_op(state->valid_after, ==, reveal_phase_time);
+  tt_int_op(state->phase, OP_EQ, SR_PHASE_REVEAL);
+  tt_int_op(state->valid_after, OP_EQ, reveal_phase_time);
   /* Only our commit should be in there. */
-  tt_int_op(digestmap_size(state->commits), ==, 1);
-  tt_int_op(state->n_reveal_rounds, ==, 1);
+  tt_int_op(digestmap_size(state->commits), OP_EQ, 1);
+  tt_int_op(state->n_reveal_rounds, OP_EQ, 1);
 
   /* We can't update a state with a valid after _lower_ than the creation
    * time so here it is. */
   sr_state_update(commit_phase_time);
-  tt_int_op(state->valid_after, ==, reveal_phase_time);
+  tt_int_op(state->valid_after, OP_EQ, reveal_phase_time);
 
   /* Finally, let's go back in COMMIT phase so we can test the state update
    * of a new protocol run. */
   state->valid_after = 0;
   sr_state_update(commit_phase_time);
-  tt_int_op(state->valid_after, ==, commit_phase_time);
-  tt_int_op(state->n_commit_rounds, ==, 1);
-  tt_int_op(state->n_reveal_rounds, ==, 0);
-  tt_u64_op(state->n_protocol_runs, ==, 1);
-  tt_int_op(state->phase, ==, SR_PHASE_COMMIT);
-  tt_int_op(digestmap_size(state->commits), ==, 1);
+  tt_int_op(state->valid_after, OP_EQ, commit_phase_time);
+  tt_int_op(state->n_commit_rounds, OP_EQ, 1);
+  tt_int_op(state->n_reveal_rounds, OP_EQ, 0);
+  tt_u64_op(state->n_protocol_runs, OP_EQ, 1);
+  tt_int_op(state->phase, OP_EQ, SR_PHASE_COMMIT);
+  tt_int_op(digestmap_size(state->commits), OP_EQ, 1);
   tt_assert(state->current_srv);
 
  done:

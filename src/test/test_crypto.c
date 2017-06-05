@@ -1139,7 +1139,7 @@ test_crypto_mac_sha3(void *arg)
     result = crypto_digest256(hmac_manual, all, all_len, DIGEST_SHA3_256);
     tor_free(key_msg_concat);
     tor_free(all);
-    tt_int_op(result, ==, 0);
+    tt_int_op(result, OP_EQ, 0);
   }
 
   /* Now compare the two results */
@@ -2675,8 +2675,8 @@ test_crypto_ed25519_storage(void *arg)
   tor_free(tag);
 
   /* whitebox test: truncated keys. */
-  tt_int_op(0, ==, do_truncate(fname_1, 40));
-  tt_int_op(0, ==, do_truncate(fname_2, 40));
+  tt_int_op(0, OP_EQ, do_truncate(fname_1, 40));
+  tt_int_op(0, OP_EQ, do_truncate(fname_2, 40));
   tt_int_op(-1, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_2));
   tt_ptr_op(tag, OP_EQ, NULL);
   tor_free(tag);

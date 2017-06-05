@@ -510,22 +510,22 @@ test_container_smartlist_pos(void *arg)
   smartlist_add_strdup(sl, "function");
 
   /* Test string_pos */
-  tt_int_op(smartlist_string_pos(NULL, "Fred"), ==, -1);
-  tt_int_op(smartlist_string_pos(sl, "Fred"), ==, -1);
-  tt_int_op(smartlist_string_pos(sl, "This"), ==, 0);
-  tt_int_op(smartlist_string_pos(sl, "a"), ==, 2);
-  tt_int_op(smartlist_string_pos(sl, "function"), ==, 6);
+  tt_int_op(smartlist_string_pos(NULL, "Fred"), OP_EQ, -1);
+  tt_int_op(smartlist_string_pos(sl, "Fred"), OP_EQ, -1);
+  tt_int_op(smartlist_string_pos(sl, "This"), OP_EQ, 0);
+  tt_int_op(smartlist_string_pos(sl, "a"), OP_EQ, 2);
+  tt_int_op(smartlist_string_pos(sl, "function"), OP_EQ, 6);
 
   /* Test pos */
-  tt_int_op(smartlist_pos(NULL, "Fred"), ==, -1);
-  tt_int_op(smartlist_pos(sl, "Fred"), ==, -1);
-  tt_int_op(smartlist_pos(sl, "This"), ==, -1);
-  tt_int_op(smartlist_pos(sl, "a"), ==, -1);
-  tt_int_op(smartlist_pos(sl, "function"), ==, -1);
-  tt_int_op(smartlist_pos(sl, smartlist_get(sl,0)), ==, 0);
-  tt_int_op(smartlist_pos(sl, smartlist_get(sl,2)), ==, 2);
-  tt_int_op(smartlist_pos(sl, smartlist_get(sl,5)), ==, 5);
-  tt_int_op(smartlist_pos(sl, smartlist_get(sl,6)), ==, 6);
+  tt_int_op(smartlist_pos(NULL, "Fred"), OP_EQ, -1);
+  tt_int_op(smartlist_pos(sl, "Fred"), OP_EQ, -1);
+  tt_int_op(smartlist_pos(sl, "This"), OP_EQ, -1);
+  tt_int_op(smartlist_pos(sl, "a"), OP_EQ, -1);
+  tt_int_op(smartlist_pos(sl, "function"), OP_EQ, -1);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,0)), OP_EQ, 0);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,2)), OP_EQ, 2);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,5)), OP_EQ, 5);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,6)), OP_EQ, 6);
 
  done:
   SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
@@ -990,13 +990,13 @@ test_container_order_functions(void *arg)
   tt_assert(15 == median_time(times, 5));
 
   int32_t int32s[] = { -5, -10, -50, 100 };
-  tt_int_op(-5, ==, median_int32(int32s, 1));
-  tt_int_op(-10, ==, median_int32(int32s, 2));
-  tt_int_op(-10, ==, median_int32(int32s, 3));
-  tt_int_op(-10, ==, median_int32(int32s, 4));
+  tt_int_op(-5, OP_EQ, median_int32(int32s, 1));
+  tt_int_op(-10, OP_EQ, median_int32(int32s, 2));
+  tt_int_op(-10, OP_EQ, median_int32(int32s, 3));
+  tt_int_op(-10, OP_EQ, median_int32(int32s, 4));
 
   long longs[] = { -30, 30, 100, -100, 7 };
-  tt_int_op(7, ==, find_nth_long(longs, 5, 2));
+  tt_int_op(7, OP_EQ, find_nth_long(longs, 5, 2));
 
  done:
   ;
@@ -1153,31 +1153,31 @@ test_container_smartlist_most_frequent(void *arg)
   const char *cp;
 
   cp = smartlist_get_most_frequent_string_(sl, &count);
-  tt_int_op(count, ==, 0);
-  tt_ptr_op(cp, ==, NULL);
+  tt_int_op(count, OP_EQ, 0);
+  tt_ptr_op(cp, OP_EQ, NULL);
 
   /* String must be sorted before we call get_most_frequent */
   smartlist_split_string(sl, "abc:def:ghi", ":", 0, 0);
 
   cp = smartlist_get_most_frequent_string_(sl, &count);
-  tt_int_op(count, ==, 1);
-  tt_str_op(cp, ==, "ghi"); /* Ties broken in favor of later element */
+  tt_int_op(count, OP_EQ, 1);
+  tt_str_op(cp, OP_EQ, "ghi"); /* Ties broken in favor of later element */
 
   smartlist_split_string(sl, "def:ghi", ":", 0, 0);
   smartlist_sort_strings(sl);
 
   cp = smartlist_get_most_frequent_string_(sl, &count);
-  tt_int_op(count, ==, 2);
-  tt_ptr_op(cp, !=, NULL);
-  tt_str_op(cp, ==, "ghi"); /* Ties broken in favor of later element */
+  tt_int_op(count, OP_EQ, 2);
+  tt_ptr_op(cp, OP_NE, NULL);
+  tt_str_op(cp, OP_EQ, "ghi"); /* Ties broken in favor of later element */
 
   smartlist_split_string(sl, "def:abc:qwop", ":", 0, 0);
   smartlist_sort_strings(sl);
 
   cp = smartlist_get_most_frequent_string_(sl, &count);
-  tt_int_op(count, ==, 3);
-  tt_ptr_op(cp, !=, NULL);
-  tt_str_op(cp, ==, "def"); /* No tie */
+  tt_int_op(count, OP_EQ, 3);
+  tt_ptr_op(cp, OP_NE, NULL);
+  tt_str_op(cp, OP_EQ, "def"); /* No tie */
 
  done:
   SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
@@ -1206,7 +1206,7 @@ test_container_smartlist_sort_ptrs(void *arg)
     smartlist_shuffle(sl);
     smartlist_sort_pointers(sl);
     for (j = 0; j < ARRAY_LENGTH(arrayptrs); ++j) {
-      tt_ptr_op(smartlist_get(sl, j), ==, arrayptrs[j]);
+      tt_ptr_op(smartlist_get(sl, j), OP_EQ, arrayptrs[j]);
     }
   }
 
@@ -1232,11 +1232,11 @@ test_container_smartlist_strings_eq(void *arg)
   } while (0)
 
   /* Both NULL, so equal */
-  tt_int_op(1, ==, smartlist_strings_eq(NULL, NULL));
+  tt_int_op(1, OP_EQ, smartlist_strings_eq(NULL, NULL));
 
   /* One NULL, not equal. */
-  tt_int_op(0, ==, smartlist_strings_eq(NULL, sl1));
-  tt_int_op(0, ==, smartlist_strings_eq(sl1, NULL));
+  tt_int_op(0, OP_EQ, smartlist_strings_eq(NULL, sl1));
+  tt_int_op(0, OP_EQ, smartlist_strings_eq(sl1, NULL));
 
   /* Both empty, both equal. */
   EQ_SHOULD_SAY("", "", 1);

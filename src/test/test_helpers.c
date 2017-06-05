@@ -83,16 +83,16 @@ helper_setup_fake_routerlist(void)
   retval = router_load_routers_from_string(TEST_DESCRIPTORS,
                                            NULL, SAVED_IN_JOURNAL,
                                            NULL, 0, NULL);
-  tt_int_op(retval, ==, HELPER_NUMBER_OF_DESCRIPTORS);
+  tt_int_op(retval, OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Sanity checking of routerlist and nodelist. */
   our_routerlist = router_get_routerlist();
-  tt_int_op(smartlist_len(our_routerlist->routers), ==,
+  tt_int_op(smartlist_len(our_routerlist->routers), OP_EQ,
               HELPER_NUMBER_OF_DESCRIPTORS);
   routerlist_assert_ok(our_routerlist);
 
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), ==, HELPER_NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Mark all routers as non-guards but up and running! */
   SMARTLIST_FOREACH_BEGIN(our_nodelist, node_t *, node) {

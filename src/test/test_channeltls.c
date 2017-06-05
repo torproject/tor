@@ -142,7 +142,7 @@ test_channeltls_num_bytes_queued(void *arg)
   tlschan_buf_datalen_mock_size = 1024;
   MOCK(buf_datalen, tlschan_buf_datalen_mock);
   len = ch->num_bytes_queued(ch);
-  tt_int_op(len, ==, tlschan_buf_datalen_mock_size);
+  tt_int_op(len, OP_EQ, tlschan_buf_datalen_mock_size);
   /*
    * We also cover num_cells_writeable here; since wide_circ_ids = 0 on
    * the fake tlschans, cell_network_size returns 512, and so with
@@ -151,7 +151,7 @@ test_channeltls_num_bytes_queued(void *arg)
    * - 2 cells.
    */
   n = ch->num_cells_writeable(ch);
-  tt_int_op(n, ==, CEIL_DIV(OR_CONN_HIGHWATER, 512) - 2);
+  tt_int_op(n, OP_EQ, CEIL_DIV(OR_CONN_HIGHWATER, 512) - 2);
   UNMOCK(buf_datalen);
   tlschan_buf_datalen_mock_target = NULL;
   tlschan_buf_datalen_mock_size = 0;
@@ -302,7 +302,7 @@ tlschan_fake_close_method(channel_t *chan)
   channel_tls_t *tlschan = NULL;
 
   tt_assert(chan != NULL);
-  tt_int_op(chan->magic, ==, TLS_CHAN_MAGIC);
+  tt_int_op(chan->magic, OP_EQ, TLS_CHAN_MAGIC);
 
   tlschan = BASE_CHAN_TO_TLS(chan);
   tt_assert(tlschan != NULL);

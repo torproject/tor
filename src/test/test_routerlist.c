@@ -117,7 +117,7 @@ test_routerlist_launch_descriptor_downloads(void *arg)
   MOCK(initiate_descriptor_downloads, mock_initiate_descriptor_downloads);
   launch_descriptor_downloads(DIR_PURPOSE_FETCH_MICRODESC, downloadable,
                               NULL, now);
-  tt_int_op(3, ==, count);
+  tt_int_op(3, OP_EQ, count);
   UNMOCK(initiate_descriptor_downloads);
 
  done:
@@ -148,24 +148,24 @@ construct_consensus(char **consensus_text_md)
                               &v1, &n_vrs, now, 1);
   networkstatus_vote_free(vote);
   tt_assert(v1);
-  tt_int_op(n_vrs, ==, 4);
-  tt_int_op(smartlist_len(v1->routerstatus_list), ==, 4);
+  tt_int_op(n_vrs, OP_EQ, 4);
+  tt_int_op(smartlist_len(v1->routerstatus_list), OP_EQ, 4);
 
   dir_common_construct_vote_2(&vote, cert2, sign_skey_2,
                               &dir_common_gen_routerstatus_for_v3ns,
                               &v2, &n_vrs, now, 1);
   networkstatus_vote_free(vote);
   tt_assert(v2);
-  tt_int_op(n_vrs, ==, 4);
-  tt_int_op(smartlist_len(v2->routerstatus_list), ==, 4);
+  tt_int_op(n_vrs, OP_EQ, 4);
+  tt_int_op(smartlist_len(v2->routerstatus_list), OP_EQ, 4);
 
   dir_common_construct_vote_3(&vote, cert3, sign_skey_3,
                               &dir_common_gen_routerstatus_for_v3ns,
                               &v3, &n_vrs, now, 1);
 
   tt_assert(v3);
-  tt_int_op(n_vrs, ==, 4);
-  tt_int_op(smartlist_len(v3->routerstatus_list), ==, 4);
+  tt_int_op(n_vrs, OP_EQ, 4);
+  tt_int_op(smartlist_len(v3->routerstatus_list), OP_EQ, 4);
   networkstatus_vote_free(vote);
   votes = smartlist_new();
   smartlist_add(votes, v1);
@@ -254,9 +254,9 @@ test_router_pick_directory_server_impl(void *arg)
   con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
                                                 NS_TYPE_CONSENSUS);
   tt_assert(con_md);
-  tt_int_op(con_md->flavor,==, FLAV_MICRODESC);
+  tt_int_op(con_md->flavor,OP_EQ, FLAV_MICRODESC);
   tt_assert(con_md->routerstatus_list);
-  tt_int_op(smartlist_len(con_md->routerstatus_list), ==, 3);
+  tt_int_op(smartlist_len(con_md->routerstatus_list), OP_EQ, 3);
   tt_assert(!networkstatus_set_current_consensus_from_ns(con_md,
                                                  "microdesc"));
 
