@@ -112,5 +112,9 @@ void var_cell_free(var_cell_t *cell);
 
 void connection_or_group_set_badness_(smartlist_t *group, int force);
 
+#ifdef TOR_UNIT_TESTS
+extern int certs_cell_ed25519_disabled_for_testing;
+#endif
+
 #endif
 

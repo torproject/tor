@@ -149,6 +149,8 @@ test_link_handshake_certs_ok(void *arg)
     /* If we're making a CERTS cell for an ed handshake, let's make sure we
      * have some Ed25519 certificates and keys. */
     init_mock_ed_keys(key2);
+  } else {
+    certs_cell_ed25519_disabled_for_testing = 1;
   }
 
   /* c1 has started_here == 1 */

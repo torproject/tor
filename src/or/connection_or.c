@@ -2270,6 +2270,12 @@ add_ed25519_cert(certs_cell_t *certs_cell,
                              cert->encoded, cert->encoded_len);
 }
 
+#ifdef TOR_UNIT_TESTS
+int certs_cell_ed25519_disabled_for_testing = 0;
+#else
+#define certs_cell_ed25519_disabled_for_testing 0
+#endif
+
 /** Send a CERTS cell on the connection <b>conn</b>.  Return 0 on success, -1
  * on failure. */
 int
@@ -2320,7 +2326,8 @@ connection_or_send_certs_cell(or_connection_t *conn)
                    CERTTYPE_ED_ID_SIGN,
                    get_master_signing_key_cert());
   if (conn_in_server_mode) {
-    tor_assert_nonfatal(conn->handshake_state->own_link_cert);
+    tor_assert_nonfatal(conn->handshake_state->own_link_cert ||
+                        certs_cell_ed25519_disabled_for_testing);
     add_ed25519_cert(certs_cell,
                      CERTTYPE_ED_SIGN_LINK,
                      conn->handshake_state->own_link_cert);
