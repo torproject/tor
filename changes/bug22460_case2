@@ -1,0 +1,8 @@
+  o Major bugfixes (relay, link handshake):
+
+    - When performing the v3 link handshake on a TLS connection, report that
+      we have the x509 certificate that we actually used on that connection,
+      even if we have changed certificates since that connection was first
+      opened. Previously, we would claim to have used our most recent x509
+      link certificate, which would sometimes make the link handshake fail.
+      Fixes one case of bug 22460; bugfix on 0.2.3.6-alpha.
