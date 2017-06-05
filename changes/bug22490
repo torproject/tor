@@ -1,0 +1,3 @@
+  o Minor bugfixes (correctness):
+    - Avoid undefined behavior when parsing IPv6 entries from the geoip6
+      file. Fixes bug 22490; bugfix on 0.2.4.6-alpha.
