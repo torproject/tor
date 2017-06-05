@@ -104,9 +104,9 @@ test_link_handshake_certs_ok(void *arg)
                                  key1, key2, 86400), ==, 0);
 
   {
-    const tor_x509_cert_t *link = NULL;
-    tt_assert(!tor_tls_get_my_certs(1, &link, NULL));
-    mock_own_cert = tor_x509_cert_dup(link);
+    const tor_x509_cert_t *link_cert = NULL;
+    tt_assert(!tor_tls_get_my_certs(1, &link_cert, NULL));
+    mock_own_cert = tor_x509_cert_dup(link_cert);
   }
 
   c1->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
