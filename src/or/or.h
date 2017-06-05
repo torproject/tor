@@ -1449,6 +1449,12 @@ typedef struct or_handshake_state_t {
   /* True iff we have sent a netinfo cell */
   unsigned int sent_netinfo : 1;
 
+  /** The signing->ed25519 link certificate corresponding to the x509
+   * certificate we used on the TLS connection (if this is a server-side
+   * connection). We make a copy of this here to prevent a race condition
+   * caused by TLS context rotation. */
+  struct tor_cert_st *own_link_cert;
+
   /** True iff we should feed outgoing cells into digest_sent and
    * digest_received respectively.
    *

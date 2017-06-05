@@ -911,6 +911,11 @@ test_link_handshake_send_authchallenge(void *arg)
   or_connection_t *c1 = or_connection_new(CONN_TYPE_OR, AF_INET);
   var_cell_t *cell1=NULL, *cell2=NULL;
 
+  crypto_pk_t *rsa0 = pk_generate(0), *rsa1 = pk_generate(1);
+  tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
+                                 rsa0, rsa1, 86400), ==, 0);
+  init_mock_ed_keys(rsa0);
+
   MOCK(connection_or_write_var_cell_to_buf, mock_write_var_cell);
 
   tt_int_op(connection_init_or_handshake_state(c1, 0), ==, 0);
@@ -936,6 +941,8 @@ test_link_handshake_send_authchallenge(void *arg)
   connection_free_(TO_CONN(c1));
   tor_free(cell1);
   tor_free(cell2);
+  crypto_pk_free(rsa0);
+  crypto_pk_free(rsa1);
 }
 
 typedef struct authchallenge_data_s {

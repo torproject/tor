@@ -450,8 +450,8 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
   options->DataDirectory = dir;
 
-  tt_int_op(0, ==, load_ed_keys(options, now));
-  tt_int_op(0, ==, generate_ed_link_cert(options, now));
+  tt_int_op(1, ==, load_ed_keys(options, now));
+  tt_int_op(0, ==, generate_ed_link_cert(options, now, 0));
   tt_assert(get_master_identity_key());
   tt_assert(get_master_identity_key());
   tt_assert(get_master_signing_keypair());
@@ -466,7 +466,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
   /* Call load_ed_keys again, but nothing has changed. */
   tt_int_op(0, ==, load_ed_keys(options, now));
-  tt_int_op(0, ==, generate_ed_link_cert(options, now));
+  tt_int_op(0, ==, generate_ed_link_cert(options, now, 0));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
   tt_mem_op(&auth, ==, get_current_auth_keypair(), sizeof(auth));
@@ -474,8 +474,8 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
   /* Force a reload: we make new link/auth keys. */
   routerkeys_free_all();
-  tt_int_op(0, ==, load_ed_keys(options, now));
-  tt_int_op(0, ==, generate_ed_link_cert(options, now));
+  tt_int_op(1, ==, load_ed_keys(options, now));
+  tt_int_op(0, ==, generate_ed_link_cert(options, now, 0));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
   tt_assert(tor_cert_eq(link_cert, get_current_link_cert_cert()));
@@ -489,7 +489,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
   /* Force a link/auth-key regeneration by advancing time. */
   tt_int_op(0, ==, load_ed_keys(options, now+3*86400));
-  tt_int_op(0, ==, generate_ed_link_cert(options, now+3*86400));
+  tt_int_op(0, ==, generate_ed_link_cert(options, now+3*86400, 0));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
   tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
@@ -502,8 +502,8 @@ test_routerkeys_ed_keys_init_all(void *arg)
   memcpy(&auth, get_current_auth_keypair(), sizeof(auth));
 
   /* Force a signing-key regeneration by advancing time. */
-  tt_int_op(0, ==, load_ed_keys(options, now+100*86400));
-  tt_int_op(0, ==, generate_ed_link_cert(options, now+100*86400));
+  tt_int_op(1, ==, load_ed_keys(options, now+100*86400));
+  tt_int_op(0, ==, generate_ed_link_cert(options, now+100*86400, 0));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, !=, get_master_signing_keypair(), sizeof(sign));
   tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
@@ -520,8 +520,8 @@ test_routerkeys_ed_keys_init_all(void *arg)
   routerkeys_free_all();
   unlink(get_fname("test_ed_keys_init_all/keys/"
                    "ed25519_master_id_secret_key"));
-  tt_int_op(0, ==, load_ed_keys(options, now));
-  tt_int_op(0, ==, generate_ed_link_cert(options, now));
+  tt_int_op(1, ==, load_ed_keys(options, now));
+  tt_int_op(0, ==, generate_ed_link_cert(options, now, 0));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
   tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
