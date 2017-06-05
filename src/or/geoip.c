@@ -144,6 +144,7 @@ geoip_parse_entry(const char *line, sa_family_t family)
   if (*line == '#')
     return 0;
 
+  char buf[512];
   if (family == AF_INET) {
     unsigned int low, high;
     if (tor_sscanf(line,"%u,%u,%2s", &low, &high, c) == 3 ||
@@ -154,7 +155,6 @@ geoip_parse_entry(const char *line, sa_family_t family)
       goto fail;
     country = c;
   } else {                      /* AF_INET6 */
-    char buf[512];
     char *low_str, *high_str;
     struct in6_addr low, high;
     char *strtok_state;
