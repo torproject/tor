@@ -2238,7 +2238,8 @@ add_certs_cell_cert_helper(certs_cell_t *certs_cell,
 
 /** Add an encoded X509 cert (stored as <b>cert_len</b> bytes at
  * <b>cert_encoded</b>) to the trunnel certs_cell_t object that we are
- * building in <b>certs_cell</b>.  Set its type field to <b>cert_type</b>. */
+ * building in <b>certs_cell</b>.  Set its type field to <b>cert_type</b>.
+ * (If <b>cert</b> is NULL, take no action.) */
 static void
 add_x509_cert(certs_cell_t *certs_cell,
               uint8_t cert_type,
@@ -2256,7 +2257,7 @@ add_x509_cert(certs_cell_t *certs_cell,
 
 /** Add an Ed25519 cert from <b>cert</b> to the trunnel certs_cell_t object
  * that we are building in <b>certs_cell</b>.  Set its type field to
- * <b>cert_type</b>. */
+ * <b>cert_type</b>. (If <b>cert</b> is NULL, take no action.) */
 static void
 add_ed25519_cert(certs_cell_t *certs_cell,
                  uint8_t cert_type,
@@ -2313,6 +2314,7 @@ connection_or_send_certs_cell(or_connection_t *conn)
                    CERTTYPE_ED_ID_SIGN,
                    get_master_signing_key_cert());
   if (conn_in_server_mode) {
+    tor_assert_nonfatal(conn->handshake_state->own_link_cert);
     add_ed25519_cert(certs_cell,
                      CERTTYPE_ED_SIGN_LINK,
                      conn->handshake_state->own_link_cert);
