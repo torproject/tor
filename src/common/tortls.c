@@ -2018,7 +2018,8 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
   return 1;
 }
 
-/** Return the peer certificate, or NULL if there isn't one. */
+/** Return a newly allocated copy of the peer certificate, or NULL if there
+ * isn't one. */
 MOCK_IMPL(tor_x509_cert_t *,
 tor_tls_get_peer_cert,(tor_tls_t *tls))
 {
@@ -2030,8 +2031,8 @@ tor_tls_get_peer_cert,(tor_tls_t *tls))
   return tor_x509_cert_new(cert);
 }
 
-/** Return the cerficate we used on the connection, or NULL if somehow
- * we didn't use one. */
+/** Return a newly allocated copy of the cerficate we used on the connection,
+ * or NULL if somehow we didn't use one. */
 MOCK_IMPL(tor_x509_cert_t *,
 tor_tls_get_own_cert,(tor_tls_t *tls))
 {
