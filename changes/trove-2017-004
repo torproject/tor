@@ -1,0 +1,5 @@
+  o Major bugfixes (hidden service, relay):
+    - Fix an assertion failure when an hidden service handles a malformed
+      BEGIN cell. This bug resulted in the service crashing triggered by a
+      tor_assert(). Part of TROVE-2017-004. Fixes bug 22493; bugfix on
+      tor-0.3.0.1-alpha. Found by armadev.
