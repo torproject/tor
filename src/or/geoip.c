@@ -126,6 +126,7 @@ geoip_parse_entry(const char *line, sa_family_t family)
   tor_addr_t low_addr, high_addr;
   char c[3];
   char *country = NULL;
+  char buf[512];
 
   if (!geoip_countries)
     init_geoip_countries();
@@ -145,7 +146,6 @@ geoip_parse_entry(const char *line, sa_family_t family)
   if (*line == '#')
     return 0;
 
-  char buf[512];
   if (family == AF_INET) {
     unsigned int low, high;
     if (tor_sscanf(line,"%u,%u,%2s", &low, &high, c) == 3 ||
