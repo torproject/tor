@@ -1,0 +1,7 @@
+  o Major bugfixes (hidden service, relay, security):
+    - Fix an assertion failure caused by receiving a BEGIN_DIR cell on
+      a hidden service rendezvous circuit. Fixes bug 22494, tracked as
+      TROVE-2017-005 and CVE-2017-0376; bugfix on 0.2.2.1-alpha. Found
+      by armadev.
+
+
