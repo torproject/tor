@@ -992,7 +992,7 @@ load_ed_keys(const or_options_t *options, time_t now)
  *
  * Returns -1 upon error.  Otherwise, returns 0 upon success (either when the
  * current certificate is still valid, or when a new certificate was
- * successfully generated).
+ * successfully generated, or no certificate was needed).
  */
 int
 generate_ed_link_cert(const or_options_t *options, time_t now,
@@ -1000,6 +1000,11 @@ generate_ed_link_cert(const or_options_t *options, time_t now,
 {
   const tor_x509_cert_t *link_ = NULL, *id = NULL;
   tor_cert_t *link_cert = NULL;
+
+  if (!server_mode(options)) {
+    /* No need to make an Ed25519->Link cert: we are a client */
+    return 0;
+  }
 
   if (tor_tls_get_my_certs(1, &link_, &id) < 0 || link_ == NULL) {
     log_warn(LD_OR, "Can't get my x509 link cert.");
