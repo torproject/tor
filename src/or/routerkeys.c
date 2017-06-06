@@ -1001,12 +1001,11 @@ generate_ed_link_cert(const or_options_t *options, time_t now,
   const tor_x509_cert_t *link_ = NULL, *id = NULL;
   tor_cert_t *link_cert = NULL;
 
-  if (!server_mode(options)) {
-    /* No need to make an Ed25519->Link cert: we are a client */
-    return 0;
-  }
-
   if (tor_tls_get_my_certs(1, &link_, &id) < 0 || link_ == NULL) {
+    if (!server_mode(options)) {
+        /* No need to make an Ed25519->Link cert: we are a client */
+      return 0;
+    }
     log_warn(LD_OR, "Can't get my x509 link cert.");
     return -1;
   }
