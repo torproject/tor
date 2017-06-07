@@ -1,6 +1,82 @@
-Changes in version 0.3.1.3-alpha - 2017-06-??
+Changes in version 0.3.1.3-alpha - 2017-06-08
+  Tor 0.3.1.3-alpha fixes a pair of bugs that would allow an attacker to
+  remotely crash a hidden service with an assertion failure. Anyone
+  running a hidden service should upgrade to this version, or to some
+  other version with fixes for TROVE-2017-004 and TROVE-2017-005.
 
+  Tor 0.3.1.3-alpha also includes fixes for several key management bugs
+  that sometimes made relays unreliable, as well as several other
+  bugfixes described below.
 
+  o Major bugfixes (relay, link handshake):
+    - When performing the v3 link handshake on a TLS connection, report
+      that we have the x509 certificate that we actually used on that
+      connection, even if we have changed certificates since that
+      connection was first opened. Previously, we would claim to have
+      used our most recent x509 link certificate, which would sometimes
+      make the link handshake fail. Fixes one case of bug 22460; bugfix
+      on 0.2.3.6-alpha.
+
+  o Major bugfixes (relays, key management):
+    - Regenerate link and authentication certificates whenever the key
+      that signs them changes; also, regenerate link certificates
+      whenever the signed key changes. Previously, these processes were
+      only weakly coupled, and we relays could (for minutes to hours)
+      wind up with an inconsistent set of keys and certificates, which
+      other relays would not accept. Fixes two cases of bug 22460;
+      bugfix on 0.3.0.1-alpha.
+    - When sending an Ed25519 signing->link certificate in a CERTS cell,
+      send the certificate that matches the x509 certificate that we
+      used on the TLS connection. Previously, there was a race condition
+      if the TLS context rotated after we began the TLS handshake but
+      before we sent the CERTS cell. Fixes a case of bug 22460; bugfix
+      on 0.3.0.1-alpha.
+
+  o Major bugfixes (torrc, crash):
+    - Fix a crash bug when using %include in torrc. Fixes bug 22417;
+      bugfix on 0.3.1.1-alpha. Patch by Daniel Pinto.
+
+  o Minor features (code style):
+    - Add "Falls through" comments to our codebase, in order to silence
+      GCC 7's -Wimplicit-fallthrough warnings. Patch from Andreas
+      Stieger. Closes ticket 22446.
+
+  o Minor features (diagnostic):
+    - Add logging messages to try to diagnose a rare bug that seems to
+      generate RSA->Ed25519 cross-certificates dated in the 1970s. We
+      think this is happening because of incorrect system clocks, but
+      we'd like to know for certain. Diagnostic for bug 22466.
+
+  o Minor bugfixes (correctness):
+    - Avoid undefined behavior when parsing IPv6 entries from the geoip6
+      file. Fixes bug 22490; bugfix on 0.2.4.6-alpha.
+
+  o Minor bugfixes (directory protocol):
+    - Check for libzstd >= 1.1, because older versions lack the
+      necessary streaming API. Fixes bug 22413; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (link handshake):
+    - Lower the lifetime of the RSA->Ed25519 cross-certificate to six
+      months, and regenerate it when it is within one month of expiring.
+      Previously, we had generated this certificate at startup with a
+      ten-year lifetime, but that could lead to weird behavior when Tor
+      was started with a grossly inaccurate clock. Mitigates bug 22466;
+      mitigation on 0.3.0.1-alpha.
+
+  o Minor bugfixes (storage directories):
+    - Always check for underflows in the cached storage directory usage.
+      If the usage does underflow, re-calculate it. Also, avoid a
+      separate underflow when the usage is not known. Fixes bug 22424;
+      bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (unit tests):
+    - The unit tests now pass on systems where localhost is misconfigured
+      to some IPv4 address other than 127.0.0.1. Fixes bug 6298; bugfix
+      on 0.0.9pre2.
+
+  o Documentation:
+    - Clarify the manpage for the (deprecated) torify script. Closes
+      ticket 6892.
 
 
 Changes in version 0.3.1.2-alpha - 2017-05-26

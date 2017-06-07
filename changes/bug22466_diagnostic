@@ -1,4 +1,0 @@
-   o Minor features (diagnostic):
-     - Add logging messages to try to diagnose a rare bug that seems
-       to generate RSA->Ed25519 cross-certificates dated in the 1970s.
-       Diagnostic for bug 22466.

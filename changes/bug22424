@@ -1,5 +1,0 @@
-  o Minor bugfixes (storage directories):
-    - Always check for underflows in the cached storage directory usage amount.
-      If the usage does underflow, re-calculate the usage. Also, avoid a
-      separate underflow when the usage is not known.
-      Fixes bug 22424 in 0.3.1.1-alpha.
