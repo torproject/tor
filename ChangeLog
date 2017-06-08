@@ -1,3 +1,25 @@
+Changes in version 0.2.4.29 - 2017-06-08
+  Tor 0.2.4.29 backports a fix for a bug that would allow an attacker to
+  remotely crash a hidden service with an assertion failure. Anyone
+  running a hidden service should upgrade to this version, or to some
+  other version with fixes for TROVE-2017-005.  (Versions before 0.3.0
+  are not affected by TROVE-2017-004.)
+
+  o Major bugfixes (hidden service, relay, security):
+    - Fix a remotely triggerable assertion failure caused by receiving a
+      BEGIN_DIR cell on a hidden service rendezvous circuit. Fixes bug
+      22494, tracked as TROVE-2017-005 and CVE-2017-0376; bugfix
+      on 0.2.2.1-alpha.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the May 2 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (correctness):
+    - Avoid undefined behavior when parsing IPv6 entries from the geoip6
+      file. Fixes bug 22490; bugfix on 0.2.4.6-alpha.
+
+
 Changes in version 0.2.4.28 - 2017-03-03
   Tor 0.2.4.28 backports a number of security fixes from later Tor
   releases.  Anybody running Tor 0.2.4.27 or earlier should upgrade to
