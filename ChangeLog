@@ -1,8 +1,9 @@
 Changes in version 0.2.9.11 - 2017-06-08
-  Tor 0.2.9.11 fixes a pair of bugs that would allow an attacker to
+  Tor 0.2.9.11 backports a fix for a bug that would allow an attacker to
   remotely crash a hidden service with an assertion failure. Anyone
   running a hidden service should upgrade to this version, or to some
-  other version with fixes for TROVE-2017-004 and TROVE-2017-005.
+  other version with fixes for TROVE-2017-005. (Versions before 0.3.0
+  are not affected by TROVE-2017-004.)
 
   Tor 0.2.9.11 also backports fixes for several key management bugs
   that sometimes made relays unreliable, as well as several other
