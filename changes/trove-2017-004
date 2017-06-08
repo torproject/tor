@@ -4,5 +4,3 @@
       triggered by a tor_assert(). Fixes bug 22493, tracked as
       TROVE-2017-004 and as CVE-2017-0375; bugfix on 0.3.0.1-alpha.
       Found by armadev.
-
-
