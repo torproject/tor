@@ -8,6 +8,15 @@ Changes in version 0.3.1.3-alpha - 2017-06-08
   that sometimes made relays unreliable, as well as several other
   bugfixes described below.
 
+  o Major bugfixes (hidden service, relay, security):
+    - Fix a remotely triggerable assertion failure when a hidden service
+      handles a malformed BEGIN cell. Fixes bug 22493, tracked as
+      TROVE-2017-004 and as CVE-2017-0375; bugfix on 0.3.0.1-alpha.
+    - Fix a remotely triggerable assertion failure caused by receiving a
+      BEGIN_DIR cell on a hidden service rendezvous circuit. Fixes bug
+      22494, tracked as TROVE-2017-005 and CVE-2017-0376; bugfix
+      on 0.2.2.1-alpha.
+
   o Major bugfixes (relay, link handshake):
     - When performing the v3 link handshake on a TLS connection, report
       that we have the x509 certificate that we actually used on that
