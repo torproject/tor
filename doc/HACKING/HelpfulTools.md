@@ -226,17 +226,10 @@ performance! See the gperftools manual for more info, but basically:
 Generating and analyzing a callgraph
 ------------------------------------
 
-1. Run `./scripts/maint/generate_callgraph.sh`.  This will generate a
-   bunch of files in a new ./callgraph directory.
+0. Build Tor on linux or mac, ideally with -O0 or -fno-inline.
 
-2. Run `./scripts/maint/analyze_callgraph.py callgraph/src/*/*`.  This
-   will do a lot of graph operations and then dump out a new
-   `callgraph.pkl` file, containing data in Python's 'pickle' format.
-
-3. Run `./scripts/maint/display_callgraph.py`.  It will display:
-    - the number of functions reachable from each function.
-    - all strongly-connnected components in the Tor callgraph
-    - the largest bottlenecks in the largest SCC in the Tor callgraph.
+1. Clone 'https://gitweb.torproject.org/user/nickm/calltool.git/' .
+   Follow the README in that repository.
 
 Note that currently the callgraph generator can't detect calls that pass
 through function pointers.
