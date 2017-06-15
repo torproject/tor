@@ -340,8 +340,20 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
       return TOR_COMPRESS_BUFFER_FULL;
 
     return TOR_COMPRESS_DONE;
-  } else {
-    return (retval == 0) ? TOR_COMPRESS_DONE : TOR_COMPRESS_OK;
+  } else /* if (!state->compress) */ {
+    // ZSTD_decompressStream returns 0 if the frame is done, or >0 if it
+    // is incomplete.
+    // We check this above.
+    tor_assert_nonfatal(!ZSTD_isError(retval));
+    // Start a new frame if this frame is done
+    if (retval == 0)
+      return TOR_COMPRESS_DONE;
+    // Don't check out_len, it might have some space left if the next output
+    // chunk is larger than the remaining space
+    else if (*in_len > 0)
+      return  TOR_COMPRESS_BUFFER_FULL;
+    else
+      return TOR_COMPRESS_OK;
   }
 
 #else // HAVE_ZSTD.
