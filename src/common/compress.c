@@ -139,7 +139,15 @@ tor_compress_impl(int compress,
         if (compress || complete_only) {
           goto err;
         } else {
-          goto done;
+          if (in_len != 0) {
+            log_fn(protocol_warn_level, LD_PROTOCOL,
+                   "Unexpected extra input while decompressing");
+            log_debug(LD_GENERAL, "method: %d level: %d at len: %zd",
+                      method, compression_level, in_len);
+            goto err;
+          } else {
+            goto done;
+          }
         }
         break;
       case TOR_COMPRESS_BUFFER_FULL: {
