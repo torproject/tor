@@ -128,6 +128,11 @@ tor_compress_impl(int compress,
           // inputs.
           tor_compress_free(stream);
           stream = tor_compress_new(compress, method, compression_level);
+          if (stream == NULL) {
+            log_warn(LD_GENERAL, "NULL stream while %scompressing",
+                     compress?"":"de");
+            goto err;
+          }
         }
         break;
       case TOR_COMPRESS_OK:
