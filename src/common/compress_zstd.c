@@ -321,7 +321,7 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
   if (!finish) {
     // We're not done with the input, so no need to flush.
     return TOR_COMPRESS_OK;
-  } else if (state->compress && finish) {
+  } else if (state->compress) {
     retval = ZSTD_endStream(state->u.compress_stream, &output);
 
     *out = (char *)output.dst + output.pos;
