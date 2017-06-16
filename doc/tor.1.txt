@@ -2741,6 +2741,13 @@ __DataDirectory__**/lock**::
     directory. If access to this file is locked, data directory is already
     in use by Tor.
 
+__DataDirectory__**/key-pinning-journal**::
+    Used by authorities. A line-based file that records mappings between
+    RSA1024 identity keys and Ed25519 identity keys. Authorities enforce
+    these mappings, so that once a relay has picked an Ed25519 key, stealing
+    or factoring the RSA1024 key will no longer let an attacker impersonate
+    the relay.
+
 __DataDirectory__**/keys/***::
     Only used by servers. Holds identity keys and onion keys.
 
