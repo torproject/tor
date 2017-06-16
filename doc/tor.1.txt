@@ -2724,6 +2724,17 @@ __DataDirectory__**/state**::
             - A short history of bandwidth usage, as produced in the server
             descriptors.
 
+__DataDirectory__**/sr-state**::
+    Authority only. State file used to record information about the current
+    status of the shared-random-value voting state.
+
+__DataDirectory__**/diff-cache**::
+    Directory cache only. Holds older consensuses, and diffs from older
+    consensuses to the most recent consensus of each type, compressed
+    in various ways. Each file contains a set of key-value arguments
+    decribing its contents, followed by a single NUL byte, followed by the
+    main file contents.
+
 __DataDirectory__**/bw_accounting**::
     Used to track bandwidth accounting values (when the current period starts
     and ends; how much has been read and written so far this period). This file
