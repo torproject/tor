@@ -514,7 +514,6 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     /* moving from farthest to nearest hop */
     do {
       tor_assert(thishop);
-      /* XXXX RD This is a bug, right? */
       log_debug(LD_OR,"encrypting a layer of the relay cell.");
       relay_crypt_one_payload(thishop->f_crypto, cell->payload);
 
