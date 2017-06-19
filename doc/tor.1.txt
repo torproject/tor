@@ -2687,7 +2687,8 @@ FILES
 __DataDirectory__**/cached-status/**::
     The most recently downloaded network status document for each authority.
     Each file holds one such document; the filenames are the hexadecimal
-    identity key fingerprints of the directory authorities.  Mostly obsolete.
+    identity key fingerprints of the directory authorities.  Obsolete;
+    no longer in use.
 
 __DataDirectory__**/cached-certs**::
     This file holds downloaded directory key certificates that are used to
@@ -2702,6 +2703,13 @@ __DataDirectory__**/cached-descriptors** and **cached-descriptors.new**::
     beginning with @-signs are annotations that contain more information about
     a given router. The ".new" file is an append-only journal; when it gets
     too large, all entries are merged into a new cached-descriptors file.
+
+__DataDirectory__**/cached-extrainfo** and **cached-extrainfo.new**::
+   As "cached-descriptors", but holds optionally-downloaded "extra-info"
+   documents. Relays use these documents to send inessential information
+   about statistics, bandwidth history, and network health to the
+   authorities. They aren't fetched by default; see the DownloadExtraInfo
+   option for more info.
 
 __DataDirectory__**/cached-microdescs** and **cached-microdescs.new**::
     These files hold downloaded microdescriptors.  Lines beginning with
@@ -2809,13 +2817,17 @@ __DataDirectory__**/keys/ed25519_signing_cert**::
     The certificate which authenticates "ed25519_signing_secret_key" as
     having been signed by the Ed25519 master key.
 
-__DataDirectory__**/keys/secret_onion_key**::
+__DataDirectory__**/keys/secret_onion_key** and **secret_onion_key.old**::
     A relay's RSA1024 short-term onion key. Used to decrypt old-style ("TAP")
-    circuit extension requests.
+    circuit extension requests. The ".old" file holds the previously
+    generated key, which the relay uses to handle any requests that were
+    made by clients that didn't have the new one.
 
-__DataDirectory__**/keys/secret_onion_key_ntor**::
+__DataDirectory__**/keys/secret_onion_key_ntor** and **secret_onion_key_ntor.old**::
     A relay's Curve25519 short-term onion key. Used to handle modern ("ntor")
-    circuit extension requests.
+    circuit extension requests. The ".old" file holds the previously
+    generated key, which the relay uses to handle any requests that were
+    made by clients that didn't have the new one.
 
 __DataDirectory__**/fingerprint**::
     Only used by servers. Holds the fingerprint of the server's identity key.
@@ -2870,10 +2882,19 @@ __DataDirectory__**/stats/conn-stats**::
     Only used by servers. This file is used to collect approximate connection
     history (number of active connections over time).
 
+__DataDirectory__**/stats/hidserv-stats**::
+    Only used by servers. This file is used to collect approximate counts
+    of what fraction of the traffic is hidden service rendezvous traffic, and
+    approximately how many hidden services the relay has seen.
+
 __DataDirectory__**/networkstatus-bridges**::
     Only used by authoritative bridge directories. Contains information
     about bridges that have self-reported themselves to the bridge
     authority.
+
+__DataDirectory__**/approved-routers**::
+    Authorities only. This file is used to configure which relays are
+    known to be valid, invalid, and so forth.
 
 __HiddenServiceDirectory__**/hostname**::
     The <base32-encoded-fingerprint>.onion domain name for this hidden service.
