@@ -1,0 +1,5 @@
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Permit the fchmod system call, to avoid crashing on startup when
+      starting with the seccomp2 sandbox and an unexpected set of permissions
+      on the data directory or its contents. Fixes bug 22516; bugfix on
+      0.2.5.4-alpha.
