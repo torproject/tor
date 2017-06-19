@@ -136,6 +136,9 @@ static int filter_nopar_gen[] = {
 #ifdef HAVE_PIPE
     SCMP_SYS(pipe),
 #endif
+#ifdef __NR_fchmod
+    SCMP_SYS(fchmod),
+#endif
     SCMP_SYS(fcntl),
     SCMP_SYS(fstat),
 #ifdef __NR_fstat64
