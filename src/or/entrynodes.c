@@ -1104,6 +1104,21 @@ entry_guards_expand_sample(guard_selection_t *gs)
 {
   tor_assert(gs);
   const or_options_t *options = get_options();
+
+  if (gs->type != GS_TYPE_BRIDGE) {
+    networkstatus_t *consensus = networkstatus_get_latest_consensus();
+    time_t now = approx_time();
+    if (consensus == NULL) {
+      log_info(LD_GUARD, "Not expanding the sample guard set; we have "
+               "no consensus.");
+      return NULL;
+    } else if (!networkstatus_consensus_reasonably_live(consensus, now)) {
+      log_info(LD_GUARD, "Not expanding the sample guard set; we have "
+               "a consensus, but it is far too old.");
+      return NULL;
+    }
+  }
+
   int n_sampled = smartlist_len(gs->sampled_entry_guards);
   entry_guard_t *added_guard = NULL;
   int n_usable_filtered_guards = num_reachable_filtered_guards(gs, NULL);
