@@ -2255,9 +2255,15 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
     goto done;
   }
 
-  if (tor_compress_supports_method(compression))
+  if (tor_compress_supports_method(compression)) {
     tor_uncompress(&new_body, &new_len, body, body_len, compression,
                    !allow_partial, LOG_PROTOCOL_WARN);
+    if (new_body) {
+      /* We succeeded with the declared compression method. Great! */
+      rv = 0;
+      goto done;
+    }
+  }
 
   /* Okay, if that didn't work, and we think that it was compressed
    * differently, try that. */
@@ -2268,7 +2274,7 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
     goto done;
   }
 
-  if (!new_body && tor_compress_supports_method(guessed) &&
+  if (tor_compress_supports_method(guessed) &&
       compression != guessed) {
     tor_uncompress(&new_body, &new_len, body, body_len, guessed,
                    !allow_partial, LOG_INFO);
@@ -2286,13 +2292,19 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
     rv = -1;
     goto done;
   }
-  if (new_body) {
-    tor_free(*bodyp);
-    *bodyp = new_body;
-    *bodylenp = new_len;
-  }
 
  done:
+  if (new_body) {
+    if (rv == 0) {
+      /* success! */
+      tor_free(*bodyp);
+      *bodyp = new_body;
+      *bodylenp = new_len;
+    } else {
+      tor_free(new_body);
+    }
+  }
+
   return rv;
 }
 
