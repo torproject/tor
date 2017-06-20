@@ -2271,7 +2271,7 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
   if (!new_body && tor_compress_supports_method(guessed) &&
       compression != guessed) {
     tor_uncompress(&new_body, &new_len, body, body_len, guessed,
-                   !allow_partial, LOG_PROTOCOL_WARN);
+                   !allow_partial, LOG_INFO);
     tried_both = 1;
   }
   /* If we're pretty sure that we have a compressed directory, and
