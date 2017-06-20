@@ -4,7 +4,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file compress_lzma.c
+ * \file compress_none.c
  * \brief Compression backend for identity compression.
  *
  * We actually define this backend so that we can treat the identity transform
