@@ -548,28 +548,42 @@ tor_compress_process(tor_compress_state_t *state,
                      int finish)
 {
   tor_assert(state != NULL);
+  const size_t in_len_orig = *in_len;
+  const size_t out_len_orig = *out_len;
+  tor_compress_output_t rv;
 
   switch (state->method) {
     case GZIP_METHOD:
     case ZLIB_METHOD:
-      return tor_zlib_compress_process(state->u.zlib_state,
-                                       out, out_len, in, in_len,
-                                       finish);
+      rv = tor_zlib_compress_process(state->u.zlib_state,
+                                     out, out_len, in, in_len,
+                                     finish);
+      break;
     case LZMA_METHOD:
-      return tor_lzma_compress_process(state->u.lzma_state,
-                                       out, out_len, in, in_len,
-                                       finish);
+      rv =tor_lzma_compress_process(state->u.lzma_state,
+                                    out, out_len, in, in_len,
+                                    finish);
+      break;
     case ZSTD_METHOD:
-      return tor_zstd_compress_process(state->u.zstd_state,
-                                       out, out_len, in, in_len,
-                                       finish);
+      rv = tor_zstd_compress_process(state->u.zstd_state,
+                                     out, out_len, in, in_len,
+                                     finish);
+      break;
     case NO_METHOD:
-      return tor_cnone_compress_process(out, out_len, in, in_len,
-                                        finish);
+      rv = tor_cnone_compress_process(out, out_len, in, in_len,
+                                      finish);
+      break;
+    default:
     case UNKNOWN_METHOD:
       goto err;
   }
+  if (BUG((rv == TOR_COMPRESS_OK) &&
+          *in_len == in_len_orig &&
+          *out_len == out_len_orig)) {
+    return TOR_COMPRESS_ERROR;
+  }
 
+  return rv;
  err:
   return TOR_COMPRESS_ERROR;
 }

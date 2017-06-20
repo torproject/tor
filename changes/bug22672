@@ -1,0 +1,5 @@
+  o Minor features (compression, defensive programming):
+    - Detect and break out of infinite loops in our compression code.
+      We don't think that any such loops exist now, but it's best to be
+      safe. Closes ticket 22672.
+
