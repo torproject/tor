@@ -63,5 +63,12 @@ int rend_non_anonymous_mode_enabled(const or_options_t *options);
 void assert_circ_anonymity_ok(origin_circuit_t *circ,
                               const or_options_t *options);
 
+#ifdef RENDCOMMON_PRIVATE
+
+STATIC int
+rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc);
+
+#endif
+
 #endif
 
