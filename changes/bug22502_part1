@@ -1,0 +1,12 @@
+  o Major bugfixes (compression, zstd):
+    - Correctly detect a full buffer when decompessing a large
+      zstd-compressed input. Fixes bug 22628; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (compression):
+    - When compressing or decompressing a buffer, check for a failure to
+      create a compression object. Fixes bug 22626; bugfix on
+      0.3.1.1-alpha.
+
+    - When decompressing a buffer, check for extra data after the end of
+      the compressed data. Fixes bug 22629; bugfix on 0.3.1.1-alpha.
+
