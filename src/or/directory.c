@@ -2191,6 +2191,108 @@ static int handle_response_fetch_renddesc_v2(dir_connection_t *,
 static int handle_response_upload_renddesc_v2(dir_connection_t *,
                                               const response_handler_args_t *);
 
+static int
+dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
+                                    dir_connection_t *conn,
+                                    compress_method_t compression,
+                                    int anonymized_connection)
+{
+  int rv = 0;
+  const char *body = *bodyp;
+  size_t body_len = *bodylenp;
+  int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+                       conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
+                       conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
+
+  int plausible = body_is_plausible(body, body_len, conn->base_.purpose);
+  if (compression != NO_METHOD || !plausible) {
+    int severity = LOG_DEBUG;
+    char *new_body = NULL;
+    size_t new_len = 0;
+    const char *description1, *description2;
+    int want_to_try_both = 0;
+    int tried_both = 0;
+    compress_method_t guessed = detect_compression_method(body, body_len);
+
+    description1 = compression_method_get_human_name(compression);
+
+    if (BUG(description1 == NULL))
+      description1 = compression_method_get_human_name(UNKNOWN_METHOD);
+
+    if (guessed == UNKNOWN_METHOD && !plausible)
+      description2 = "confusing binary junk";
+    else
+      description2 = compression_method_get_human_name(guessed);
+
+    /* Tell the user if we don't believe what we're told about compression.*/
+    want_to_try_both = (compression == UNKNOWN_METHOD ||
+                        guessed != compression);
+    if (want_to_try_both) {
+      severity = LOG_INFO;
+    }
+
+    tor_log(severity, LD_HTTP,
+            "HTTP body from server '%s:%d' was labeled as %s, "
+            "%s it seems to be %s.%s",
+            conn->base_.address, conn->base_.port, description1,
+            guessed != compression?"but":"and",
+            description2,
+            (compression>0 && guessed>0 && want_to_try_both)?
+            "  Trying both.":"");
+
+    /* Try declared compression first if we can.
+     * tor_compress_supports_method() also returns true for NO_METHOD.
+     * Ensure that the server is not sending us data compressed using a
+     * compression method that is not allowed for anonymous connections. */
+    if (anonymized_connection &&
+        ! allowed_anonymous_connection_compression_method(compression)) {
+      warn_disallowed_anonymous_compression_method(compression);
+      rv = -1;
+      goto done;
+    }
+
+    if (tor_compress_supports_method(compression))
+      tor_uncompress(&new_body, &new_len, body, body_len, compression,
+                     !allow_partial, LOG_PROTOCOL_WARN);
+
+    /* Okay, if that didn't work, and we think that it was compressed
+     * differently, try that. */
+    if (anonymized_connection &&
+        ! allowed_anonymous_connection_compression_method(guessed)) {
+      warn_disallowed_anonymous_compression_method(guessed);
+      rv = -1;
+      goto done;
+    }
+
+    if (!new_body && tor_compress_supports_method(guessed) &&
+        compression != guessed) {
+      tor_uncompress(&new_body, &new_len, body, body_len, guessed,
+                     !allow_partial, LOG_PROTOCOL_WARN);
+      tried_both = 1;
+    }
+    /* If we're pretty sure that we have a compressed directory, and
+     * we didn't manage to uncompress it, then warn and bail. */
+    if (!plausible && !new_body) {
+      log_fn(LOG_PROTOCOL_WARN, LD_HTTP,
+             "Unable to decompress HTTP body (tried %s%s%s, server '%s:%d').",
+             description1,
+             tried_both?" and ":"",
+             tried_both?description2:"",
+             conn->base_.address, conn->base_.port);
+      rv = -1;
+      goto done;
+    }
+    if (new_body) {
+      tor_free(*bodyp);
+      *bodyp = new_body;
+      *bodylenp = new_len;
+    }
+  }
+
+ done:
+  return rv;
+}
+
 /** We are a client, and we've finished reading the server's
  * response. Parse it and act appropriately.
  *
@@ -2211,7 +2313,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   time_t date_header = 0;
   long apparent_skew;
   compress_method_t compression;
-  int plausible;
   int skewed = 0;
   int rv;
   int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
@@ -2325,89 +2426,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     goto done;
   }
 
-  plausible = body_is_plausible(body, body_len, conn->base_.purpose);
-  if (compression != NO_METHOD || !plausible) {
-    int severity = LOG_DEBUG;
-    char *new_body = NULL;
-    size_t new_len = 0;
-    const char *description1, *description2;
-    int want_to_try_both = 0;
-    int tried_both = 0;
-    compress_method_t guessed = detect_compression_method(body, body_len);
-
-    description1 = compression_method_get_human_name(compression);
-
-    if (BUG(description1 == NULL))
-      description1 = compression_method_get_human_name(UNKNOWN_METHOD);
-
-    if (guessed == UNKNOWN_METHOD && !plausible)
-      description2 = "confusing binary junk";
-    else
-      description2 = compression_method_get_human_name(guessed);
-
-    /* Tell the user if we don't believe what we're told about compression.*/
-    want_to_try_both = (compression == UNKNOWN_METHOD ||
-                        guessed != compression);
-    if (want_to_try_both) {
-      severity = LOG_INFO;
-    }
-
-    tor_log(severity, LD_HTTP,
-            "HTTP body from server '%s:%d' was labeled as %s, "
-            "%s it seems to be %s.%s",
-            conn->base_.address, conn->base_.port, description1,
-            guessed != compression?"but":"and",
-            description2,
-            (compression>0 && guessed>0 && want_to_try_both)?
-            "  Trying both.":"");
-
-    /* Try declared compression first if we can.
-     * tor_compress_supports_method() also returns true for NO_METHOD.
-     * Ensure that the server is not sending us data compressed using a
-     * compression method that is not allowed for anonymous connections. */
-    if (anonymized_connection &&
-        ! allowed_anonymous_connection_compression_method(compression)) {
-      warn_disallowed_anonymous_compression_method(compression);
-      rv = -1;
-      goto done;
-    }
-
-    if (tor_compress_supports_method(compression))
-      tor_uncompress(&new_body, &new_len, body, body_len, compression,
-                     !allow_partial, LOG_PROTOCOL_WARN);
-
-    /* Okay, if that didn't work, and we think that it was compressed
-     * differently, try that. */
-    if (anonymized_connection &&
-        ! allowed_anonymous_connection_compression_method(guessed)) {
-      warn_disallowed_anonymous_compression_method(guessed);
-      rv = -1;
-      goto done;
-    }
-
-    if (!new_body && tor_compress_supports_method(guessed) &&
-        compression != guessed) {
-      tor_uncompress(&new_body, &new_len, body, body_len, guessed,
-                     !allow_partial, LOG_PROTOCOL_WARN);
-      tried_both = 1;
-    }
-    /* If we're pretty sure that we have a compressed directory, and
-     * we didn't manage to uncompress it, then warn and bail. */
-    if (!plausible && !new_body) {
-      log_fn(LOG_PROTOCOL_WARN, LD_HTTP,
-             "Unable to decompress HTTP body (tried %s%s%s, server '%s:%d').",
-             description1,
-             tried_both?" and ":"",
-             tried_both?description2:"",
-             conn->base_.address, conn->base_.port);
-      rv = -1;
-      goto done;
-    }
-    if (new_body) {
-      tor_free(body);
-      body = new_body;
-      body_len = new_len;
-    }
+  if (dir_client_decompress_response_body(&body, &body_len,
+                             conn, compression, anonymized_connection) < 0) {
+    rv = -1;
+    goto done;
   }
 
   response_handler_args_t args;
