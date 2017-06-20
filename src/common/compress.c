@@ -105,8 +105,8 @@ tor_compress_impl(int compress,
   if (stream == NULL) {
     log_warn(LD_GENERAL, "NULL stream while %scompressing",
              compress?"":"de");
-    log_debug(LD_GENERAL, "method: %d level: %d at len: %zd",
-              method, compression_level, in_len);
+    log_debug(LD_GENERAL, "method: %d level: %d at len: %lu",
+              method, compression_level, (unsigned long)in_len);
     return -1;
   }
 
@@ -146,15 +146,15 @@ tor_compress_impl(int compress,
                  "Unexpected %s while %scompressing",
                  complete_only?"end of input":"result",
                  compress?"":"de");
-          log_debug(LD_GENERAL, "method: %d level: %d at len: %zd",
-                    method, compression_level, in_len);
+          log_debug(LD_GENERAL, "method: %d level: %d at len: %lu",
+                    method, compression_level, (unsigned long)in_len);
           goto err;
         } else {
           if (in_len != 0) {
             log_fn(protocol_warn_level, LD_PROTOCOL,
                    "Unexpected extra input while decompressing");
-            log_debug(LD_GENERAL, "method: %d level: %d at len: %zd",
-                      method, compression_level, in_len);
+            log_debug(LD_GENERAL, "method: %d level: %d at len: %lu",
+                      method, compression_level, (unsigned long)in_len);
             goto err;
           } else {
             goto done;
