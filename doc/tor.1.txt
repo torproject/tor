@@ -2725,8 +2725,7 @@ __DataDirectory__**/state**::
     A set of persistent key-value mappings. These are documented in
     the file. These include:
             - The current entry guards and their status.
-            - The current bandwidth accounting values (unused so far; see
-            below).
+            - The current bandwidth accounting values.
             - When the file was last written
             - What version of Tor generated the state file
             - A short history of bandwidth usage, as produced in the server
@@ -2746,8 +2745,7 @@ __DataDirectory__**/diff-cache**::
 __DataDirectory__**/bw_accounting**::
     Used to track bandwidth accounting values (when the current period starts
     and ends; how much has been read and written so far this period). This file
-    is obsolete, and the data is now stored in the \'state' file as well. Only
-    used when bandwidth accounting is enabled.
+    is obsolete, and the data is now stored in the \'state' file instead.
 
 __DataDirectory__**/control_auth_cookie**::
     Used for cookie authentication with the controller. Location can be
