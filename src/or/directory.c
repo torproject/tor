@@ -2232,7 +2232,7 @@ dir_client_decompress_response_body(char **bodyp, size_t *bodylenp,
   want_to_try_both = (compression == UNKNOWN_METHOD ||
                       guessed != compression);
   if (want_to_try_both) {
-    severity = LOG_INFO;
+    severity = LOG_PROTOCOL_WARN;
   }
 
   tor_log(severity, LD_HTTP,
