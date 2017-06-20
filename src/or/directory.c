@@ -2327,29 +2327,39 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   plausible = body_is_plausible(body, body_len, conn->base_.purpose);
   if (compression != NO_METHOD || !plausible) {
+    int severity = LOG_DEBUG;
     char *new_body = NULL;
     size_t new_len = 0;
+    const char *description1, *description2;
+    int want_to_try_both = 0;
+    int tried_both = 0;
     compress_method_t guessed = detect_compression_method(body, body_len);
-    if (compression == UNKNOWN_METHOD || guessed != compression) {
-      /* Tell the user if we don't believe what we're told about compression.*/
-      const char *description1, *description2;
 
-      description1 = compression_method_get_human_name(compression);
+    description1 = compression_method_get_human_name(compression);
 
-      if (BUG(description1 == NULL))
-        description1 = compression_method_get_human_name(UNKNOWN_METHOD);
+    if (BUG(description1 == NULL))
+      description1 = compression_method_get_human_name(UNKNOWN_METHOD);
 
-      if (guessed == UNKNOWN_METHOD && !plausible)
-        description2 = "confusing binary junk";
-      else
-        description2 = compression_method_get_human_name(guessed);
+    if (guessed == UNKNOWN_METHOD && !plausible)
+      description2 = "confusing binary junk";
+    else
+      description2 = compression_method_get_human_name(guessed);
 
-      log_info(LD_HTTP, "HTTP body from server '%s:%d' was labeled as %s, "
-               "but it seems to be %s.%s",
-               conn->base_.address, conn->base_.port, description1,
-               description2,
-               (compression>0 && guessed>0)?"  Trying both.":"");
+    /* Tell the user if we don't believe what we're told about compression.*/
+    want_to_try_both = (compression == UNKNOWN_METHOD ||
+                        guessed != compression);
+    if (want_to_try_both) {
+      severity = LOG_INFO;
     }
+
+    tor_log(severity, LD_HTTP,
+            "HTTP body from server '%s:%d' was labeled as %s, "
+            "%s it seems to be %s.%s",
+            conn->base_.address, conn->base_.port, description1,
+            guessed != compression?"but":"and",
+            description2,
+            (compression>0 && guessed>0 && want_to_try_both)?
+            "  Trying both.":"");
 
     /* Try declared compression first if we can.
      * tor_compress_supports_method() also returns true for NO_METHOD.
@@ -2376,14 +2386,19 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
 
     if (!new_body && tor_compress_supports_method(guessed) &&
-        compression != guessed)
+        compression != guessed) {
       tor_uncompress(&new_body, &new_len, body, body_len, guessed,
                      !allow_partial, LOG_PROTOCOL_WARN);
+      tried_both = 1;
+    }
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
       log_fn(LOG_PROTOCOL_WARN, LD_HTTP,
-             "Unable to decompress HTTP body (server '%s:%d').",
+             "Unable to decompress HTTP body (tried %s%s%s, server '%s:%d').",
+             description1,
+             tried_both?" and ":"",
+             tried_both?description2:"",
              conn->base_.address, conn->base_.port);
       rv = -1;
       goto done;
