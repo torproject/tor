@@ -811,7 +811,7 @@ test_channel_incoming(void *arg)
   tt_assert(ch->registered);
 
   /* Open it */
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
 
   /* Receive a fixed cell */
@@ -899,7 +899,7 @@ test_channel_lifecycle(void *arg)
   tt_int_op(old_count, ==, test_cells_written);
 
   /* Move it to OPEN and flush */
-  channel_change_state(ch1, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch1);
 
   /* Queue should drain */
   tt_int_op(old_count + 1, ==, test_cells_written);
@@ -925,13 +925,13 @@ test_channel_lifecycle(void *arg)
   tt_int_op(test_releases_count, ==, init_releases_count);
 
   /* Move ch2 to OPEN */
-  channel_change_state(ch2, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch2);
   tt_int_op(test_doesnt_want_writes_count, ==,
             init_doesnt_want_writes_count + 1);
   tt_int_op(test_releases_count, ==, init_releases_count);
 
   /* Move ch1 back to OPEN */
-  channel_change_state(ch1, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch1);
   tt_int_op(test_doesnt_want_writes_count, ==,
             init_doesnt_want_writes_count + 1);
   tt_int_op(test_releases_count, ==, init_releases_count);
@@ -1018,7 +1018,7 @@ test_channel_lifecycle_2(void *arg)
   tt_assert(ch->registered);
 
   /* Finish opening it */
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
 
   /* Error exit from lower layer */
   chan_test_error(ch);
@@ -1037,7 +1037,7 @@ test_channel_lifecycle_2(void *arg)
   tt_assert(ch->registered);
 
   /* Finish opening it */
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
 
   /* Go to maintenance state */
@@ -1066,7 +1066,7 @@ test_channel_lifecycle_2(void *arg)
   tt_assert(ch->registered);
 
   /* Finish opening it */
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
 
   /* Go to maintenance state */
@@ -1092,7 +1092,7 @@ test_channel_lifecycle_2(void *arg)
   tt_assert(ch->registered);
 
   /* Finish opening it */
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
 
   /* Go to maintenance state */
@@ -1322,7 +1322,7 @@ test_channel_queue_impossible(void *arg)
    * gets thrown away properly.
    */
   test_chan_accept_cells = 1;
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
   tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
 
@@ -1350,7 +1350,7 @@ test_channel_queue_impossible(void *arg)
 
   /* Let it drain and check that the bad entry is discarded */
   test_chan_accept_cells = 1;
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
   tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
 
@@ -1378,7 +1378,7 @@ test_channel_queue_impossible(void *arg)
 
   /* Let it drain and check that the bad entry is discarded */
   test_chan_accept_cells = 1;
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
   tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
 
@@ -1406,7 +1406,7 @@ test_channel_queue_impossible(void *arg)
   /* Let it drain and check that the bad entry is discarded */
   test_chan_accept_cells = 1;
   tor_capture_bugs_(1);
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
   tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
 
@@ -1463,7 +1463,7 @@ test_channel_queue_incoming(void *arg)
   tt_assert(ch->registered);
 
   /* Open it */
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
 
   /* Assert that the incoming queue is empty */
@@ -1603,7 +1603,7 @@ test_channel_queue_size(void *arg)
 
   /* Go to open */
   old_count = test_cells_written;
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
 
   /*
    * It should try to write, but we aren't accepting cells right now, so
@@ -1706,7 +1706,7 @@ test_channel_write(void *arg)
    * gets drained from the queue.
    */
   test_chan_accept_cells = 1;
-  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count + 1);
 
   /*

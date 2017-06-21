@@ -993,7 +993,7 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
      * We can go to CHANNEL_STATE_OPEN from CHANNEL_STATE_OPENING or
      * CHANNEL_STATE_MAINT on this.
      */
-    channel_change_state(base_chan, CHANNEL_STATE_OPEN);
+    channel_change_state_open(base_chan);
     /* We might have just become writeable; check and tell the scheduler */
     if (connection_or_num_cells_writeable(conn) > 0) {
       scheduler_channel_wants_writes(base_chan);

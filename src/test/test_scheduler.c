@@ -567,7 +567,7 @@ test_scheduler_loop(void *arg)
   channel_register(ch1);
   tt_assert(ch1->registered);
   /* Finish opening it */
-  channel_change_state(ch1, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch1);
 
   /* It should start off in SCHED_CHAN_IDLE */
   tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_IDLE);
@@ -636,7 +636,7 @@ test_scheduler_loop(void *arg)
   tt_int_op(smartlist_len(channels_pending), ==, 0);
 
   /* Now, finish opening ch2, and get both back to pending */
-  channel_change_state(ch2, CHANNEL_STATE_OPEN);
+  channel_change_state_open(ch2);
   scheduler_channel_wants_writes(ch1);
   scheduler_channel_wants_writes(ch2);
   scheduler_channel_has_waiting_cells(ch1);
