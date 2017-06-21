@@ -2399,6 +2399,59 @@ test_util_compress(void *arg)
 }
 
 static void
+test_util_decompress_concatenated_impl(compress_method_t method)
+{
+  char input[4096];
+  char *c1 = NULL, *c2 = NULL, *c3 = NULL;
+  char *result = NULL;
+  size_t sz1, sz2, sz3, szr;
+  int r;
+
+  crypto_rand(input, sizeof(input));
+
+  /* Compress the input in two chunks. */
+  r = tor_compress(&c1, &sz1, input, 2048, method);
+  tt_int_op(r, OP_EQ, 0);
+  r = tor_compress(&c2, &sz2, input+2048, 2048, method);
+  tt_int_op(r, OP_EQ, 0);
+
+  /* concatenate the chunks. */
+  sz3 = sz1 + sz2;
+  c3 = tor_malloc(sz3);
+  memcpy(c3, c1, sz1);
+  memcpy(c3+sz1, c2, sz2);
+
+  /* decompress the concatenated result */
+  r = tor_uncompress(&result, &szr, c3, sz3, method, 0, LOG_WARN);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(szr, OP_EQ, sizeof(input));
+  tt_mem_op(result, OP_EQ, input, sizeof(input));
+
+ done:
+  tor_free(c1);
+  tor_free(c2);
+  tor_free(c3);
+  tor_free(result);
+}
+
+static void
+test_util_decompress_concatenated(void *arg)
+{
+  const char *methodname = arg;
+  tt_assert(methodname);
+
+  compress_method_t method = compression_method_get_by_name(methodname);
+  tt_int_op(method, OP_NE, UNKNOWN_METHOD);
+  if (! tor_compress_supports_method(method)) {
+    tt_skip();
+  }
+
+  test_util_decompress_concatenated_impl(method);
+ done:
+  ;
+}
+
+static void
 test_util_gzip_compression_bomb(void *arg)
 {
   /* A 'compression bomb' is a very small object that uncompresses to a huge
@@ -5819,6 +5872,11 @@ test_util_get_unquoted_path(void *arg)
   { "compress/" #name, test_util_compress, 0, &passthrough_setup,       \
     (char*)(identifier) }
 
+#define COMPRESS_CONCAT(name, identifier)                               \
+  { "compress_concat/" #name, test_util_decompress_concatenated, 0,     \
+    &passthrough_setup,                                                 \
+    (char*)(identifier) }
+
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
@@ -5848,6 +5906,11 @@ struct testcase_t util_tests[] = {
   COMPRESS(lzma, "x-tor-lzma"),
   COMPRESS(zstd, "x-zstd"),
   COMPRESS(none, "identity"),
+  COMPRESS_CONCAT(zlib, "deflate"),
+  COMPRESS_CONCAT(gzip, "gzip"),
+  COMPRESS_CONCAT(lzma, "x-tor-lzma"),
+  COMPRESS_CONCAT(zstd, "x-zstd"),
+  COMPRESS_CONCAT(none, "identity"),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),

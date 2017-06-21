@@ -4190,13 +4190,14 @@ static int
 handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
 {
   const char *url = args->url;
-  const compress_method_t compress_method =
-    find_best_compression_method(args->compression_supported, 1);
   {
     int current;
     ssize_t body_len = 0;
     ssize_t estimated_len = 0;
+    /* This smartlist holds strings that we can compress on the fly. */
     smartlist_t *items = smartlist_new();
+    /* This smartlist holds cached_dir_t objects that have a precompressed
+     * deflated version. */
     smartlist_t *dir_items = smartlist_new();
     int lifetime = 60; /* XXXX?? should actually use vote intervals. */
     url += strlen("/tor/status-vote/");
@@ -4247,6 +4248,26 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       write_http_status_line(conn, 404, "Not found");
       goto vote_done;
     }
+
+    /* We're sending items from at most one kind of source */
+    tor_assert_nonfatal(smartlist_len(items) == 0 ||
+                        smartlist_len(dir_items) == 0);
+
+    int streaming;
+    unsigned mask;
+    if (smartlist_len(items)) {
+      /* We're taking strings and compressing them on the fly. */
+      streaming = 1;
+      mask = ~0u;
+    } else {
+      /* We're taking cached_dir_t objects. We only have them uncompressed
+       * or deflated. */
+      streaming = 0;
+      mask = (1u<<NO_METHOD) | (1u<<ZLIB_METHOD);
+    }
+    const compress_method_t compress_method = find_best_compression_method(
+                              args->compression_supported&mask, streaming);
+
     SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
                       body_len += compress_method != NO_METHOD ?
                         d->dir_compressed_len : d->dir_len);
