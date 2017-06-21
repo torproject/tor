@@ -838,10 +838,37 @@ test_buffers_find_contentlen(void *arg)
   ;
 }
 
+static void
+test_buffer_peek_startswith(void *arg)
+{
+  (void)arg;
+  buf_t *buf;
+  buf = buf_new();
+  tt_ptr_op(buf, OP_NE, NULL);
+
+  tt_assert(peek_buf_startswith(buf, ""));
+  tt_assert(! peek_buf_startswith(buf, "X"));
+
+  write_to_buf("Tor", 3, buf);
+
+  tt_assert(peek_buf_startswith(buf, ""));
+  tt_assert(peek_buf_startswith(buf, "T"));
+  tt_assert(peek_buf_startswith(buf, "To"));
+  tt_assert(peek_buf_startswith(buf, "Tor"));
+  tt_assert(! peek_buf_startswith(buf, "Top"));
+  tt_assert(! peek_buf_startswith(buf, "For"));
+  tt_assert(! peek_buf_startswith(buf, "Tork"));
+  tt_assert(! peek_buf_startswith(buf, "Torpor"));
+
+ done:
+  buf_free(buf);
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
   { "pullup", test_buffer_pullup, TT_FORK, NULL, NULL },
+  { "startswith", test_buffer_peek_startswith, 0, NULL, NULL },
   { "ext_or_cmd", test_buffer_ext_or_cmd, TT_FORK, NULL, NULL },
   { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
     NULL, NULL },
