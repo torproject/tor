@@ -530,10 +530,20 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
       >= chan->next_padding_time_ms) {
     int64_t ms_until_pad_for_netflow = chan->next_padding_time_ms -
                                        long_now;
+    /* If the padding time is in the past, that means that libevent delayed
+     * calling the once-per-second callback due to other work taking too long.
+     * See https://bugs.torproject.org/22212 and
+     * https://bugs.torproject.org/16585. This is a systemic problem
+     * with being single-threaded, but let's emit a notice if this
+     * is long enough in the past that we might have missed a netflow window,
+     * and allowed a router to emit a netflow frame, just so we don't forget
+     * about it entirely.. */
+#define NETFLOW_MISSED_WINDOW (150000 - DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH)
     if (ms_until_pad_for_netflow < 0) {
-      log_warn(LD_BUG,
-              "Channel padding timeout scheduled "I64_FORMAT"ms in the past. "
-              "Did the monotonic clock just jump?",
+      int severity = (ms_until_pad_for_netflow < -NETFLOW_MISSED_WINDOW)
+                      ? LOG_NOTICE : LOG_INFO;
+      log_fn(severity, LD_OR,
+              "Channel padding timeout scheduled "I64_FORMAT"ms in the past. ",
               I64_PRINTF_ARG(-ms_until_pad_for_netflow));
       return 0; /* Clock jumped: Send padding now */
     }
