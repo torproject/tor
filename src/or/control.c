@@ -60,6 +60,7 @@
 #include "hibernate.h"
 #include "hs_common.h"
 #include "main.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
@@ -1892,6 +1893,12 @@ getinfo_helper_dir(control_connection_t *control_conn,
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
         *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
+    } else if (! we_fetch_router_descriptors(get_options())) {
+      /* Descriptors won't be available, provide proper error */
+      *errmsg = "We fetch microdescriptors, not router "
+                "descriptors. You'll need to use md/id/* "
+                "instead of desc/id/*.";
+      return 0;
     }
   } else if (!strcmpstart(question, "desc/name/")) {
     const routerinfo_t *ri = NULL;
@@ -1905,6 +1912,12 @@ getinfo_helper_dir(control_connection_t *control_conn,
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
         *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
+    } else if (! we_fetch_router_descriptors(get_options())) {
+      /* Descriptors won't be available, provide proper error */
+      *errmsg = "We fetch microdescriptors, not router "
+                "descriptors. You'll need to use md/name/* "
+                "instead of desc/name/*.";
+      return 0;
     }
   } else if (!strcmp(question, "desc/all-recent")) {
     routerlist_t *routerlist = router_get_routerlist();
@@ -2907,7 +2920,8 @@ getinfo_helper_sr(control_connection_t *control_conn,
  * *<b>a</b>. If an internal error occurs, return -1 and optionally set
  * *<b>error_out</b> to point to an error message to be delivered to the
  * controller. On success, _or if the key is not recognized_, return 0. Do not
- * set <b>a</b> if the key is not recognized.
+ * set <b>a</b> if the key is not recognized but you may set <b>error_out</b>
+ * to improve the error message.
  */
 typedef int (*getinfo_helper_t)(control_connection_t *,
                                 const char *q, char **a,
@@ -3162,7 +3176,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   smartlist_t *questions = smartlist_new();
   smartlist_t *answers = smartlist_new();
   smartlist_t *unrecognized = smartlist_new();
-  char *msg = NULL, *ans = NULL;
+  char *ans = NULL;
   int i;
   (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
@@ -3177,20 +3191,26 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
       goto done;
     }
     if (!ans) {
-      smartlist_add(unrecognized, (char*)q);
+      if (errmsg) /* use provided error message */
+        smartlist_add_strdup(unrecognized, errmsg);
+      else /* use default error message */
+        smartlist_add_asprintf(unrecognized, "Unrecognized key \"%s\"", q);
     } else {
       smartlist_add_strdup(answers, q);
       smartlist_add(answers, ans);
     }
   } SMARTLIST_FOREACH_END(q);
+
   if (smartlist_len(unrecognized)) {
+    /* control-spec section 2.3, mid-reply '-' or end of reply ' ' */
     for (i=0; i < smartlist_len(unrecognized)-1; ++i)
       connection_printf_to_buf(conn,
-                               "552-Unrecognized key \"%s\"\r\n",
-                               (char*)smartlist_get(unrecognized, i));
+                               "552-%s\r\n",
+                               (char *)smartlist_get(unrecognized, i));
+
     connection_printf_to_buf(conn,
-                             "552 Unrecognized key \"%s\"\r\n",
-                             (char*)smartlist_get(unrecognized, i));
+                             "552 %s\r\n",
+                             (char *)smartlist_get(unrecognized, i));
     goto done;
   }
 
@@ -3217,8 +3237,8 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   smartlist_free(answers);
   SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
   smartlist_free(questions);
+  SMARTLIST_FOREACH(unrecognized, char *, cp, tor_free(cp));
   smartlist_free(unrecognized);
-  tor_free(msg);
 
   return 0;
 }
