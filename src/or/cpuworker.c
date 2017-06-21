@@ -474,7 +474,7 @@ queue_pending_tasks(void)
     if (!circ)
       return;
 
-    if (assign_onionskin_to_cpuworker(circ, onionskin))
+    if (assign_onionskin_to_cpuworker(circ, onionskin) < 0)
       log_info(LD_OR,"assign_to_cpuworker failed. Ignoring.");
   }
 }
