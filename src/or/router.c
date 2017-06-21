@@ -1598,11 +1598,12 @@ authdir_mode_v3(const or_options_t *options)
 }
 /** Return true iff we are an authoritative directory server that is
  * authoritative about receiving and serving descriptors of type
- * <b>purpose</b> on its dirport.  Use -1 for "any purpose". */
+ * <b>purpose</b> on its dirport.
+ */
 int
 authdir_mode_handles_descs(const or_options_t *options, int purpose)
 {
-  if (purpose < 0)
+  if (BUG(purpose < 0)) /* Deprecated. */
     return authdir_mode(options);
   else if (purpose == ROUTER_PURPOSE_GENERAL)
     return authdir_mode_v3(options);
