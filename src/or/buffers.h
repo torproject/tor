@@ -53,8 +53,9 @@ int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 int peek_buf_has_control0_command(buf_t *buf);
-int peek_buf_startswith(buf_t *buf, const char *cmd);
-int peek_buf_has_http_command(buf_t *buf);
+#define PEEK_BUF_STARTSWITH_MAX 16
+int peek_buf_startswith(const buf_t *buf, const char *cmd);
+int peek_buf_has_http_command(const buf_t *buf);
 
 int fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out);
 

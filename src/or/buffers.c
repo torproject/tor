@@ -2024,7 +2024,7 @@ parse_socks_client(const uint8_t *data, size_t datalen,
 
 /** Return true if <b>cmd</b> looks like a HTTP (proxy) request. */
 int
-peek_buf_has_http_command(buf_t *buf)
+peek_buf_has_http_command(const buf_t *buf)
 {
   if (peek_buf_startswith(buf, "CONNECT ") ||
       peek_buf_startswith(buf, "DELETE ") ||
@@ -2036,15 +2036,18 @@ peek_buf_has_http_command(buf_t *buf)
 }
 
 /** Return 1 iff <b>buf</b> starts with <b>cmd</b>. <b>cmd</b> must be a null
- * terminated string */
+ * terminated string, of no more than PEEK_BUF_STARTSWITH_MAX bytes. */
 int
-peek_buf_startswith(buf_t *buf, const char *cmd)
+peek_buf_startswith(const buf_t *buf, const char *cmd)
 {
+  char tmp[PEEK_BUF_STARTSWITH_MAX];
   size_t clen = strlen(cmd);
-  if (buf->datalen >= clen)
-    if (!strncasecmp((buf->head)->data, cmd, (size_t) clen))
-      return 1;
-  return 0;
+  if (BUG(clen > sizeof(tmp)))
+    return 0;
+  if (buf->datalen < clen)
+    return 0;
+  peek_from_buf(tmp, clen, buf);
+  return fast_memeq(tmp, cmd, clen);
 }
 
 /** Return 1 iff buf looks more like it has an (obsolete) v0 controller
