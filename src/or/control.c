@@ -4928,7 +4928,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   }
 
   /* If the user has the HTTP proxy port and the control port confused. */
-  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH &&
+  if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
       peek_connection_has_http_command(TO_CONN(conn))) {
     connection_write_str_to_buf("HTTP/1.0 501 Tor ControlPort is not a proxy"
 "\r\nContent-Type: text/html; charset=iso-8859-1\r\n\r\n"

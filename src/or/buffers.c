@@ -2040,7 +2040,7 @@ peek_buf_has_http_command(buf_t *buf)
 int
 peek_buf_startswith(buf_t *buf, const char *cmd)
 {
-  int clen = strlen(cmd);
+  size_t clen = strlen(cmd);
   if (buf->datalen >= clen)
     if (!strncasecmp((buf->head)->data, cmd, (size_t) clen))
       return 1;
