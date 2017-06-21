@@ -1,0 +1,5 @@
+  o Minor bugfixes (logging, relay):
+    - Downgrade "assigned_to_cpuworker failed" message to INFO-level
+      severity. In every case that can reach it, either a better warning
+      has already been logged, or no warning is warranted. Fixes bug 22356;
+      bugfix on 0.2.6.3-alpha.
