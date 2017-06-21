@@ -1919,6 +1919,9 @@ getinfo_helper_dir(control_connection_t *control_conn,
                 "instead of desc/name/*.";
       return 0;
     }
+  } else if (!strcmp(question, "desc/download-enabled")) {
+    int r = we_fetch_router_descriptors(get_options());
+    tor_asprintf(answer, "%d", !!r);
   } else if (!strcmp(question, "desc/all-recent")) {
     routerlist_t *routerlist = router_get_routerlist();
     smartlist_t *sl = smartlist_new();
@@ -2004,6 +2007,9 @@ getinfo_helper_dir(control_connection_t *control_conn,
     if (md && md->body) {
       *answer = tor_strndup(md->body, md->bodylen);
     }
+  } else if (!strcmp(question, "md/download-enabled")) {
+    int r = we_fetch_microdescriptors(get_options());
+    tor_asprintf(answer, "%d", !!r);
   } else if (!strcmpstart(question, "desc-annotations/id/")) {
     const routerinfo_t *ri = NULL;
     const node_t *node =
@@ -3026,9 +3032,13 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("desc/name/", dir, "Router descriptors by nickname."),
   ITEM("desc/all-recent", dir,
        "All non-expired, non-superseded router descriptors."),
+  ITEM("desc/download-enabled", dir,
+       "Do we try to download router descriptors?"),
   ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
   PREFIX("md/id/", dir, "Microdescriptors by ID"),
   PREFIX("md/name/", dir, "Microdescriptors by name"),
+  ITEM("md/download-enabled", dir,
+       "Do we try to download microdescriptors?"),
   PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
   PREFIX("hs/client/desc/id", dir,
          "Hidden Service descriptor in client's cache by onion."),
