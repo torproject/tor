@@ -1093,6 +1093,18 @@ select_and_add_guard_item_for_sample(guard_selection_t *gs,
   return added_guard;
 }
 
+/** Return true iff we need a consensus to maintain our  */
+static int
+live_consensus_is_missing(const guard_selection_t *gs)
+{
+  tor_assert(gs);
+  if (gs->type == GS_TYPE_BRIDGE) {
+    /* We don't update bridges from the consensus; they aren't there. */
+    return 0;
+  }
+  return networkstatus_get_live_consensus(approx_time()) == NULL;
+}
+
 /**
  * Add new guards to the sampled guards in <b>gs</b> until there are
  * enough usable filtered guards, but never grow the sample beyond its
@@ -1105,18 +1117,10 @@ entry_guards_expand_sample(guard_selection_t *gs)
   tor_assert(gs);
   const or_options_t *options = get_options();
 
-  if (gs->type != GS_TYPE_BRIDGE) {
-    networkstatus_t *consensus = networkstatus_get_latest_consensus();
-    time_t now = approx_time();
-    if (consensus == NULL) {
-      log_info(LD_GUARD, "Not expanding the sample guard set; we have "
-               "no consensus.");
-      return NULL;
-    } else if (!networkstatus_consensus_reasonably_live(consensus, now)) {
-      log_info(LD_GUARD, "Not expanding the sample guard set; we have "
-               "a consensus, but it is far too old.");
-      return NULL;
-    }
+  if (live_consensus_is_missing(gs)) {
+    log_info(LD_GUARD, "Not expanding the sample guard set; we have "
+             "no live consensus.");
+    return NULL;
   }
 
   int n_sampled = smartlist_len(gs->sampled_entry_guards);
@@ -1227,18 +1231,13 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
 
   // It's important to use only a live consensus here; we don't want to
   // make changes based on anything expired or old.
-  if (gs->type != GS_TYPE_BRIDGE) {
-    networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
-
-    if (! ns) {
-      log_info(LD_GUARD, "No live consensus; can't update "
-               "sampled entry guards.");
-      return;
-    } else {
-      log_info(LD_GUARD, "Updating sampled guard status based on received "
-               "consensus.");
-    }
+  if (live_consensus_is_missing(gs)) {
+    log_info(LD_GUARD, "Not updating the sample guard set; we have "
+             "no live consensus.");
+    return;
   }
+  log_info(LD_GUARD, "Updating sampled guard status based on received "
+           "consensus.");
 
   int n_changes = 0;
 
