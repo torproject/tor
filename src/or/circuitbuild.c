@@ -1956,9 +1956,10 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   }
   if (options->ExitNodes) {
     log_warn(LD_CIRC,
-             "No specified %sexit routers seem to be running: "
+             "No exits in ExitNodes%s seem to be running: "
              "can't choose an exit.",
-             options->ExcludeExitNodesUnion_ ? "non-excluded " : "");
+             options->ExcludeExitNodesUnion_ ?
+             ", except possibly those excluded by your configuration, " : "");
   }
   return NULL;
 }
