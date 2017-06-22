@@ -241,7 +241,7 @@ test_socks_5_supported_commands(void *ptr)
 
   tt_str_op("8.8.8.8", OP_EQ, socks->address);
   tt_int_op(4369, OP_EQ, socks->port);
-  
+
   tt_int_op(0, OP_EQ, buf_datalen(buf));
 
   socks_request_clear(socks);
