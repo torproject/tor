@@ -6258,8 +6258,9 @@ port_cfg_free(port_cfg_t *port)
 /** Warn for every port in <b>ports</b> of type <b>listener_type</b> that is
  * on a publicly routable address. */
 static void
-warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname,
-                           int listener_type)
+warn_nonlocal_client_ports(const smartlist_t *ports,
+                           const char *portname,
+                           const int listener_type)
 {
   SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
     if (port->type != listener_type)
@@ -6943,7 +6944,8 @@ parse_ports(or_options_t *options, int validate_only,
              options->SocksPort_lines,
              "Socks", CONN_TYPE_AP_LISTENER,
              "127.0.0.1", 9050,
-             CL_PORT_WARN_NONLOCAL|CL_PORT_TAKES_HOSTNAMES|gw_flag) < 0) {
+             ((validate_only ? 0 : CL_PORT_WARN_NONLOCAL)
+              | CL_PORT_TAKES_HOSTNAMES | gw_flag)) < 0) {
     *msg = tor_strdup("Invalid SocksPort configuration");
     goto err;
   }
