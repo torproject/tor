@@ -44,6 +44,9 @@ int consensus_cache_entry_get_fresh_until(
 int consensus_cache_entry_get_valid_until(
                                   const struct consensus_cache_entry_t *ent,
                                   time_t *out);
+int consensus_cache_entry_get_valid_after(
+                                  const struct consensus_cache_entry_t *ent,
+                                  time_t *out);
 
 void consdiffmgr_rescan(void);
 int consdiffmgr_cleanup(void);

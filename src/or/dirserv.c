@@ -14,6 +14,7 @@
 #include "connection.h"
 #include "connection_or.h"
 #include "conscache.h"
+#include "consdiffmgr.h"
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
@@ -3518,6 +3519,11 @@ spooled_resource_estimate_size(const spooled_resource_t *spooled,
   } else {
     cached_dir_t *cached;
     if (spooled->consensus_cache_entry) {
+      if (published_out) {
+        consensus_cache_entry_get_valid_after(
+            spooled->consensus_cache_entry, published_out);
+      }
+
       return spooled->cce_len;
     }
     if (spooled->cached_dir_ref) {

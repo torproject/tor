@@ -1840,3 +1840,21 @@ consensus_cache_entry_get_valid_until(const consensus_cache_entry_t *ent,
     return 0;
 }
 
+/** Read the valid after timestamp from the cached object <b>ent</b> into
+ * *<b>out</b> and return 0, or return -1 if no such time was recorded. */
+int
+consensus_cache_entry_get_valid_after(const consensus_cache_entry_t *ent,
+                                      time_t *out)
+{
+  tor_assert(ent);
+  tor_assert(out);
+
+  const char *s;
+  s = consensus_cache_entry_get_value(ent, LABEL_VALID_AFTER);
+
+  if (s == NULL || parse_iso_time_nospace(s, out) < 0)
+    return -1;
+  else
+    return 0;
+}
+
