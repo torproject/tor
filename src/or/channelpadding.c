@@ -46,6 +46,10 @@ static int consensus_nf_conntimeout_clients;
 static int consensus_nf_pad_before_usage;
 /** Should we pad relay-to-relay connections? */
 static int consensus_nf_pad_relays;
+/** Should we pad tor2web connections? */
+static int consensus_nf_pad_tor2web;
+/** Should we pad rosos connections? */
+static int consensus_nf_pad_single_onion;
 
 #define TOR_MSEC_PER_SEC 1000
 #define TOR_USEC_PER_MSEC 1000
@@ -130,6 +134,12 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
 
   consensus_nf_pad_relays =
     networkstatus_get_param(ns, "nf_pad_relays", 0, 0, 1);
+
+  consensus_nf_pad_tor2web =
+    networkstatus_get_param(ns, "nf_pad_tor2web", 1, 0, 1);
+
+  consensus_nf_pad_single_onion =
+    networkstatus_get_param(ns, "nf_pad_single_onion", 1, 0, 1);
 }
 
 /**
@@ -706,6 +716,12 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
   if (!chan->padding_enabled && options->ConnectionPadding != 1) {
     return CHANNELPADDING_WONTPAD;
   }
+
+  if (options->Tor2webMode && !consensus_nf_pad_tor2web)
+    return CHANNELPADDING_WONTPAD;
+
+  if (options->HiddenServiceSingleHopMode && !consensus_nf_pad_single_onion)
+    return CHANNELPADDING_WONTPAD;
 
   if (!chan->has_queued_writes(chan)) {
     int is_client_channel = 0;

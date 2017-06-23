@@ -26,6 +26,7 @@ void test_channelpadding_timers(void *arg);
 void test_channelpadding_consensus(void *arg);
 void test_channelpadding_negotiation(void *arg);
 void test_channelpadding_decide_to_pad_channel(void *arg);
+void test_channelpadding_killonehop(void *arg);
 
 void dummy_nop_timer(void);
 
@@ -111,8 +112,6 @@ setup_fake_connection_for_channel(channel_tls_t *chan)
   conn->base_.conn_array_index = smartlist_len(connection_array);
   smartlist_add(connection_array, conn);
 
-  connection_or_set_canonical(conn, 1);
-
   conn->chan = chan;
   chan->conn = conn;
 
@@ -127,6 +126,8 @@ setup_fake_connection_for_channel(channel_tls_t *chan)
   conn->tls = (tor_tls_t *)((void *)(&fake_tortls));
 
   conn->link_proto = MIN_LINK_PROTO_FOR_CHANNEL_PADDING;
+
+  connection_or_set_canonical(conn, 1);
 }
 
 static channel_tls_t *
@@ -166,16 +167,30 @@ free_fake_channeltls(channel_tls_t *chan)
 }
 
 static void
-setup_mock_network(void)
+setup_mock_consensus(void)
 {
-  routerstatus_t *relay;
-  connection_array = smartlist_new();
-
   current_md_consensus = current_ns_consensus
         = tor_malloc_zero(sizeof(networkstatus_t));
   current_md_consensus->net_params = smartlist_new();
   current_md_consensus->routerstatus_list = smartlist_new();
   channelpadding_new_consensus_params(current_md_consensus);
+}
+
+static void
+free_mock_consensus(void)
+{
+  SMARTLIST_FOREACH(current_md_consensus->routerstatus_list, void *, r,
+                    tor_free(r));
+  smartlist_free(current_md_consensus->routerstatus_list);
+  smartlist_free(current_ns_consensus->net_params);
+  tor_free(current_ns_consensus);
+}
+
+static void
+setup_mock_network(void)
+{
+  routerstatus_t *relay;
+  connection_array = smartlist_new();
 
   relay1_relay2 = (channel_t*)new_fake_channeltls(2);
   relay1_relay2->write_cell = mock_channel_write_cell_relay1;
@@ -202,6 +217,11 @@ setup_mock_network(void)
   client_relay3 = (channel_t*)new_fake_channeltls(3);
   client_relay3->write_cell = mock_channel_write_cell_client;
   channel_timestamp_active(client_relay3);
+
+  channel_do_open_actions(relay1_relay2);
+  channel_do_open_actions(relay2_relay1);
+  channel_do_open_actions(relay3_client);
+  channel_do_open_actions(client_relay3);
 }
 
 static void
@@ -212,12 +232,7 @@ free_mock_network(void)
   free_fake_channeltls((channel_tls_t*)relay3_client);
   free_fake_channeltls((channel_tls_t*)client_relay3);
 
-  SMARTLIST_FOREACH(current_md_consensus->routerstatus_list, void *, r,
-                    tor_free(r));
-  smartlist_free(current_md_consensus->routerstatus_list);
-  smartlist_free(current_ns_consensus->net_params);
   smartlist_free(connection_array);
-  tor_free(current_ns_consensus);
 }
 
 static void
@@ -345,6 +360,118 @@ test_channelpadding_timers(void *arg)
 }
 
 void
+test_channelpadding_killonehop(void *arg)
+{
+  channelpadding_decision_t decision;
+  (void)arg;
+  tor_libevent_postfork();
+
+  routerstatus_t *relay = tor_malloc_zero(sizeof(routerstatus_t));
+  monotime_init();
+  timers_initialize();
+
+  setup_mock_consensus();
+
+  /* Do we disable padding if tor2webmode or rsos are enabled, and
+   * the consensus says don't pad?  */
+
+  /* Ensure we can kill tor2web and rsos padding if we want. */
+  // First, test that padding works if either is enabled
+  smartlist_clear(current_md_consensus->net_params);
+  channelpadding_new_consensus_params(current_md_consensus);
+
+  setup_mock_network();
+  tried_to_write_cell = 0;
+  get_options_mutable()->Tor2webMode = 1;
+  client_relay3->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  decision = channelpadding_decide_to_pad_channel(client_relay3);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
+  tt_assert(client_relay3->pending_padding_callback);
+  tt_int_op(tried_to_write_cell, OP_EQ, 0);
+
+  decision = channelpadding_decide_to_pad_channel(client_relay3);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
+
+  // Wait for the timer
+  event_base_loop(tor_libevent_get_base(), 0);
+  tt_int_op(tried_to_write_cell, OP_EQ, 1);
+  tt_assert(!client_relay3->pending_padding_callback);
+
+  // Then test disabling each via consensus param
+  smartlist_add(current_md_consensus->net_params,
+                (void*)"nf_pad_tor2web=0");
+  channelpadding_new_consensus_params(current_md_consensus);
+
+  // Test client side (it should stop immediately)
+  decision = channelpadding_decide_to_pad_channel(client_relay3);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
+  tt_assert(!client_relay3->pending_padding_callback);
+
+  // Reset connnections.. XXX: remove this requirement via client
+  // negotiation
+  free_mock_network();
+  setup_mock_network();
+
+  // Test relay side (it should have gotten the negotiation to disable)
+  get_options_mutable()->Tor2webMode = 0;
+  tt_int_op(channelpadding_decide_to_pad_channel(relay3_client), OP_EQ,
+      CHANNELPADDING_WONTPAD);
+  tt_assert(!relay3_client->padding_enabled);
+
+  /* Repeat for SOS */
+  // First, test that padding works if either is enabled
+  smartlist_clear(current_md_consensus->net_params);
+  channelpadding_new_consensus_params(current_md_consensus);
+
+  // Reset connections
+  free_mock_network();
+  setup_mock_network();
+  tried_to_write_cell = 0;
+  get_options_mutable()->HiddenServiceSingleHopMode = 1;
+  client_relay3->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  decision = channelpadding_decide_to_pad_channel(client_relay3);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
+  tt_assert(client_relay3->pending_padding_callback);
+  tt_int_op(tried_to_write_cell, OP_EQ, 0);
+
+  decision = channelpadding_decide_to_pad_channel(client_relay3);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
+
+  // Wait for the timer
+  event_base_loop(tor_libevent_get_base(), 0);
+  tt_int_op(tried_to_write_cell, OP_EQ, 1);
+  tt_assert(!client_relay3->pending_padding_callback);
+
+  // Then test disabling each via consensus param
+  smartlist_add(current_md_consensus->net_params,
+                (void*)"nf_pad_single_onion=0");
+  channelpadding_new_consensus_params(current_md_consensus);
+
+  // Test client side (it should stop immediately)
+  decision = channelpadding_decide_to_pad_channel(client_relay3);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
+  tt_assert(!client_relay3->pending_padding_callback);
+
+  // Reset connnections.. XXX: remove this requirement...
+  free_mock_network();
+  setup_mock_network();
+
+  // Test relay side (it should have gotten the negotiation to disable)
+  get_options_mutable()->HiddenServiceSingleHopMode = 0;
+  tt_int_op(channelpadding_decide_to_pad_channel(relay3_client), OP_EQ,
+      CHANNELPADDING_WONTPAD);
+  tt_assert(!relay3_client->padding_enabled);
+
+ done:
+  free_mock_consensus();
+  free_mock_network();
+  tor_free(relay);
+
+  timers_shutdown();
+  channel_free_all();
+}
+
+void
 test_channelpadding_consensus(void *arg)
 {
   channelpadding_decision_t decision;
@@ -379,11 +506,7 @@ test_channelpadding_consensus(void *arg)
   chan = (channel_t*)new_fake_channeltls(0);
   channel_timestamp_active(chan);
 
-  current_md_consensus = current_ns_consensus
-        = tor_malloc_zero(sizeof(networkstatus_t));
-  current_md_consensus->net_params = smartlist_new();
-  current_md_consensus->routerstatus_list = smartlist_new();
-  channelpadding_new_consensus_params(current_md_consensus);
+  setup_mock_consensus();
 
   get_options_mutable()->ORPort_set = 1;
 
@@ -441,6 +564,7 @@ test_channelpadding_consensus(void *arg)
   channelpadding_new_consensus_params(current_md_consensus);
 
   tried_to_write_cell = 0;
+  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(chan->pending_padding_callback);
@@ -547,12 +671,9 @@ test_channelpadding_consensus(void *arg)
   tt_i64_op(val, OP_LE, 24*60*60*2);
 
  done:
+  free_mock_consensus();
   free_fake_channeltls((channel_tls_t*)chan);
   smartlist_free(connection_array);
-  smartlist_free(current_md_consensus->routerstatus_list);
-  smartlist_free(current_ns_consensus->net_params);
-  tor_free(relay);
-  tor_free(current_ns_consensus);
 
   timers_shutdown();
   channel_free_all();
@@ -579,6 +700,7 @@ test_channelpadding_negotiation(void *arg)
    */
   monotime_init();
   timers_initialize();
+  setup_mock_consensus();
   setup_mock_network();
 
   /* Test case #1: Do the right things ignore negotiation? */
@@ -680,6 +802,7 @@ test_channelpadding_negotiation(void *arg)
 
  done:
   free_mock_network();
+  free_mock_consensus();
 
   timers_shutdown();
   channel_free_all();
@@ -894,6 +1017,7 @@ struct testcase_t channelpadding_tests[] = {
   TEST_CHANNELPADDING(channelpadding_decide_to_pad_channel, TT_FORK),
   TEST_CHANNELPADDING(channelpadding_negotiation, TT_FORK),
   TEST_CHANNELPADDING(channelpadding_consensus, TT_FORK),
+  TEST_CHANNELPADDING(channelpadding_killonehop, TT_FORK),
   TEST_CHANNELPADDING(channelpadding_timers, TT_FORK),
   END_OF_TESTCASES
 };

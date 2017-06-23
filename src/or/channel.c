@@ -65,6 +65,7 @@
 #include "routerlist.h"
 #include "scheduler.h"
 #include "compat_time.h"
+#include "networkstatus.h"
 
 /* Global lists of channels */
 
@@ -2711,7 +2712,11 @@ channel_do_open_actions(channel_t *chan)
 
   /* Disable or reduce padding according to user prefs. */
   if (chan->padding_enabled || get_options()->ConnectionPadding == 1) {
-    if (!get_options()->ConnectionPadding) {
+    if (!get_options()->ConnectionPadding ||
+        (get_options()->Tor2webMode &&
+         !networkstatus_get_param(NULL, "nf_pad_tor2web", 1, 0, 1))
+        || (get_options()->HiddenServiceSingleHopMode &&
+            !networkstatus_get_param(NULL, "nf_pad_single_onion", 1, 0, 1))) {
       channelpadding_disable_padding_on_channel(chan);
     }
 
