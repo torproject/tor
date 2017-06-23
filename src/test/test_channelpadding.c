@@ -371,6 +371,7 @@ test_channelpadding_killonehop(void *arg)
   timers_initialize();
 
   setup_mock_consensus();
+  setup_mock_network();
 
   /* Do we disable padding if tor2webmode or rsos are enabled, and
    * the consensus says don't pad?  */
@@ -380,7 +381,6 @@ test_channelpadding_killonehop(void *arg)
   smartlist_clear(current_md_consensus->net_params);
   channelpadding_new_consensus_params(current_md_consensus);
 
-  setup_mock_network();
   tried_to_write_cell = 0;
   get_options_mutable()->Tor2webMode = 1;
   client_relay3->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
@@ -402,17 +402,35 @@ test_channelpadding_killonehop(void *arg)
                 (void*)"nf_pad_tor2web=0");
   channelpadding_new_consensus_params(current_md_consensus);
 
-  // Test client side (it should stop immediately)
-  decision = channelpadding_decide_to_pad_channel(client_relay3);
-  tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
+  // Before the client tries to pad, the relay will still pad:
+  tried_to_write_cell = 0;
+  relay3_client->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  get_options_mutable()->ORPort_set = 1;
+  get_options_mutable()->Tor2webMode = 0;
+  decision = channelpadding_decide_to_pad_channel(relay3_client);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
+  tt_assert(relay3_client->pending_padding_callback);
+
+  // Wait for the timer
+  event_base_loop(tor_libevent_get_base(), 0);
+  tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
 
-  // Reset connnections.. XXX: remove this requirement via client
-  // negotiation
-  free_mock_network();
-  setup_mock_network();
+  // Test client side (it should stop immediately, but send a negotiate)
+  tried_to_write_cell = 0;
+  tt_assert(relay3_client->padding_enabled);
+  tt_assert(client_relay3->padding_enabled);
+  get_options_mutable()->Tor2webMode = 1;
+  /* For the relay to recieve the negotiate: */
+  get_options_mutable()->ORPort_set = 1;
+  decision = channelpadding_decide_to_pad_channel(client_relay3);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
+  tt_int_op(tried_to_write_cell, OP_EQ, 1);
+  tt_assert(!client_relay3->pending_padding_callback);
+  tt_assert(!relay3_client->padding_enabled);
 
   // Test relay side (it should have gotten the negotiation to disable)
+  get_options_mutable()->ORPort_set = 1;
   get_options_mutable()->Tor2webMode = 0;
   tt_int_op(channelpadding_decide_to_pad_channel(relay3_client), OP_EQ,
       CHANNELPADDING_WONTPAD);
@@ -423,11 +441,13 @@ test_channelpadding_killonehop(void *arg)
   smartlist_clear(current_md_consensus->net_params);
   channelpadding_new_consensus_params(current_md_consensus);
 
-  // Reset connections
-  free_mock_network();
-  setup_mock_network();
+  relay3_client->padding_enabled = 1;
+  client_relay3->padding_enabled = 1;
+
   tried_to_write_cell = 0;
+  get_options_mutable()->ORPort_set = 0;
   get_options_mutable()->HiddenServiceSingleHopMode = 1;
+  get_options_mutable()->HiddenServiceNonAnonymousMode = 1;
   client_relay3->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
   decision = channelpadding_decide_to_pad_channel(client_relay3);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
@@ -447,17 +467,34 @@ test_channelpadding_killonehop(void *arg)
                 (void*)"nf_pad_single_onion=0");
   channelpadding_new_consensus_params(current_md_consensus);
 
+  // Before the client tries to pad, the relay will still pad:
+  tried_to_write_cell = 0;
+  relay3_client->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  get_options_mutable()->ORPort_set = 1;
+  get_options_mutable()->HiddenServiceSingleHopMode = 0;
+  get_options_mutable()->HiddenServiceNonAnonymousMode = 0;
+  decision = channelpadding_decide_to_pad_channel(relay3_client);
+  tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
+  tt_assert(relay3_client->pending_padding_callback);
+
+  // Wait for the timer
+  event_base_loop(tor_libevent_get_base(), 0);
+  tt_int_op(tried_to_write_cell, OP_EQ, 1);
+  tt_assert(!client_relay3->pending_padding_callback);
+
   // Test client side (it should stop immediately)
+  get_options_mutable()->HiddenServiceSingleHopMode = 1;
+  get_options_mutable()->HiddenServiceNonAnonymousMode = 1;
+  /* For the relay to recieve the negotiate: */
+  get_options_mutable()->ORPort_set = 1;
   decision = channelpadding_decide_to_pad_channel(client_relay3);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
   tt_assert(!client_relay3->pending_padding_callback);
 
-  // Reset connnections.. XXX: remove this requirement...
-  free_mock_network();
-  setup_mock_network();
-
   // Test relay side (it should have gotten the negotiation to disable)
+  get_options_mutable()->ORPort_set = 1;
   get_options_mutable()->HiddenServiceSingleHopMode = 0;
+  get_options_mutable()->HiddenServiceNonAnonymousMode = 0;
   tt_int_op(channelpadding_decide_to_pad_channel(relay3_client), OP_EQ,
       CHANNELPADDING_WONTPAD);
   tt_assert(!relay3_client->padding_enabled);

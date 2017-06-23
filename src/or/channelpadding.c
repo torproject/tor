@@ -21,6 +21,7 @@
 #include "router.h"
 #include "compat_time.h"
 #include <event2/event.h>
+#include "rendservice.h"
 
 STATIC int channelpadding_get_netflow_inactive_timeout_ms(const channel_t *);
 STATIC int channelpadding_send_disable_command(channel_t *);
@@ -136,10 +137,14 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
     networkstatus_get_param(ns, "nf_pad_relays", 0, 0, 1);
 
   consensus_nf_pad_tor2web =
-    networkstatus_get_param(ns, "nf_pad_tor2web", 1, 0, 1);
+    networkstatus_get_param(ns,
+                            CHANNELPADDING_TOR2WEB_PARAM,
+                            CHANNELPADDING_TOR2WEB_DEFAULT, 0, 1);
 
   consensus_nf_pad_single_onion =
-    networkstatus_get_param(ns, "nf_pad_single_onion", 1, 0, 1);
+    networkstatus_get_param(ns,
+                            CHANNELPADDING_SOS_PARAM,
+                            CHANNELPADDING_SOS_DEFAULT, 0, 1);
 }
 
 /**
@@ -717,11 +722,24 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
     return CHANNELPADDING_WONTPAD;
   }
 
-  if (options->Tor2webMode && !consensus_nf_pad_tor2web)
-    return CHANNELPADDING_WONTPAD;
+  if (options->Tor2webMode && !consensus_nf_pad_tor2web) {
+    /* If the consensus just changed values, this channel may still
+     * think padding is enabled. Negotiate it off. */
+    if (chan->padding_enabled)
+      channelpadding_disable_padding_on_channel(chan);
 
-  if (options->HiddenServiceSingleHopMode && !consensus_nf_pad_single_onion)
     return CHANNELPADDING_WONTPAD;
+  }
+
+  if (rend_service_allow_non_anonymous_connection(options) &&
+      !consensus_nf_pad_single_onion) {
+    /* If the consensus just changed values, this channel may still
+     * think padding is enabled. Negotiate it off. */
+    if (chan->padding_enabled)
+      channelpadding_disable_padding_on_channel(chan);
+
+    return CHANNELPADDING_WONTPAD;
+  }
 
   if (!chan->has_queued_writes(chan)) {
     int is_client_channel = 0;
