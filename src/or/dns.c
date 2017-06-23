@@ -182,6 +182,18 @@ evdns_log_cb(int warn, const char *msg)
   } else if (!strcmp(msg, "All nameservers have failed")) {
     control_event_server_status(LOG_WARN, "NAMESERVER_ALL_DOWN");
     all_down = 1;
+  } else if (!strcmpstart(msg, "Address mismatch on received DNS")) {
+    static ratelim_t mismatch_limit = RATELIM_INIT(3600);
+    const char *src = strstr(msg, " Apparent source");
+    if (!src || get_options()->SafeLogging) {
+      src = "";
+    }
+    log_fn_ratelim(&mismatch_limit, severity, LD_EXIT,
+                   "eventdns: Received a DNS packet from "
+                   "an IP address to which we did not send a request. This "
+                   "could be a DNS spoofing attempt, or some kind of "
+                   "misconfiguration.%s", src);
+    return;
   }
   tor_log(severity, LD_EXIT, "eventdns: %s", msg);
 }
