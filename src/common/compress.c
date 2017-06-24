@@ -574,6 +574,10 @@ tor_compress_process(tor_compress_state_t *state,
   if (BUG((rv == TOR_COMPRESS_OK) &&
           *in_len == in_len_orig &&
           *out_len == out_len_orig)) {
+    log_warn(LD_GENERAL,
+             "More info on the bug: *in_len == in_len_orig == %lu, "
+             "*out_len == out_len_orig == %lu",
+             (unsigned long)in_len_orig, (unsigned long)out_len_orig);
     return TOR_COMPRESS_ERROR;
   }
 
