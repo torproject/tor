@@ -795,8 +795,6 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   tried_to_write_cell = 0;
   chan->next_padding_time_ms = monotime_coarse_absolute_msec() - 100;
   decision = channelpadding_decide_to_pad_channel(chan);
-  expect_log_msg("Channel padding timeout scheduled 100ms in the past. "
-                 "Did the monotonic clock just jump?\n");
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SENT);
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!chan->pending_padding_callback);
