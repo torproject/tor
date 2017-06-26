@@ -1556,7 +1556,7 @@ check_ed_keys_callback(time_t now, const or_options_t *options)
           generate_ed_link_cert(options, now, new_signing_key > 0)) {
         log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
         tor_cleanup();
-        exit(0);
+        exit(1);
       }
     }
     return 30;
@@ -3168,7 +3168,7 @@ try_locking(const or_options_t *options, int err_if_locked)
         r = try_locking(options, 0);
         if (r<0) {
           log_err(LD_GENERAL, "No, it's still there.  Exiting.");
-          exit(0);
+          exit(1);
         }
         return r;
       }
