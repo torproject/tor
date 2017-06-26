@@ -36,7 +36,7 @@ oss-fuzz-prereqs: \
 noinst_HEADERS += \
 	src/test/fuzz/fuzzing.h
 
-LIBFUZZER = /home/nickm/build/libfuzz/libFuzzer.a
+LIBFUZZER = -lFuzzer
 LIBFUZZER_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
 LIBFUZZER_CFLAGS = $(FUZZING_CFLAGS)
 LIBFUZZER_LDFLAG = $(FUZZING_LDFLAG)
