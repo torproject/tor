@@ -210,7 +210,9 @@ storage_dir_read(storage_dir_t *d, const char *fname, int bin, size_t *sz_out)
   char *contents = read_file_to_str(path, flags, &st);
   if (contents && sz_out) {
     // it fits in RAM, so we know its size is less than SIZE_MAX
+#if UINT64_MAX > SIZE_MAX
     tor_assert((uint64_t)st.st_size <= SIZE_MAX);
+#endif
     *sz_out = (size_t) st.st_size;
   }
 
