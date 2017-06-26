@@ -1,0 +1,9 @@
+  o Minor bugfixes (process behavior):
+    - When exiting because of an error, always exit with a nonzero
+      exit status. Previously, we would fail to report an error in
+      our exit status in cases related to lockfile contention,
+      __OwningControllerProcess failure, and Ed25519 key
+      initialization.  Fixes bug 22720; bugfix on versions
+      0.2.1.6-alpha, 0.2.2.28-beta, and 0.2.7.2-alpha
+      respectively. Reported by "f55jwk4f"; patch from "huyvq".
+

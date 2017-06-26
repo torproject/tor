@@ -6506,7 +6506,7 @@ monitor_owning_controller_process(const char *process_spec)
             msg);
     owning_controller_process_spec = NULL;
     tor_cleanup();
-    exit(0);
+    exit(1);
   }
 }
 
