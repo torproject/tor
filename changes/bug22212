@@ -1,0 +1,5 @@
+  o Minor bugfixes (netflow padding logging):
+    - Demote a warn that was caused by libevent delays to info if
+      the padding is less than 4.5 seconds late, or notice if it is more
+      (4.5 seconds is the amount of time that a netflow record might
+       be emitted after, if we chose the maximum timeout). Fixes bug #22212.
