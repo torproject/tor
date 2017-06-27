@@ -184,6 +184,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_EXTRAINFO:
     case DIR_PURPOSE_FETCH_MICRODESC:
       return 0;
+    case DIR_PURPOSE_HAS_FETCHED_HSDESC:
     case DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2:
     case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
     case DIR_PURPOSE_FETCH_RENDDESC_V2:
@@ -1126,6 +1127,7 @@ directory_request_new(uint8_t dir_purpose)
   tor_assert(dir_purpose <= DIR_PURPOSE_MAX_);
   tor_assert(dir_purpose != DIR_PURPOSE_SERVER);
   tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2);
+  tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_HSDESC);
 
   directory_request_t *result = tor_malloc_zero(sizeof(*result));
   tor_addr_make_null(&result->or_addr_port.addr, AF_INET);
@@ -3110,6 +3112,7 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
       log_warn(LD_REND, "Failed to store hidden service descriptor");
     } else {
       log_info(LD_REND, "Stored hidden service descriptor successfully.");
+      TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
     }
     break;
   case 404:
@@ -3409,10 +3412,10 @@ refetch_hsdesc_if_needed(dir_connection_t *dir_conn)
 {
   connection_t *conn = TO_CONN(dir_conn);
 
-  /* If we were trying to fetch a v2 rend desc and did not succeed,
-   * retry as needed. (If a fetch is successful, the connection state
-   * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 to mark that
-   * refetching is unnecessary.) */
+  /* If we were trying to fetch a v2 rend desc and did not succeed, retry as
+   * needed. (If a fetch is successful, the connection state is changed to
+   * DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 or DIR_PURPOSE_HAS_FETCHED_HSDESC to
+   * mark that refetching is unnecessary.) */
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
       dir_conn->rend_data &&
       rend_valid_v2_service_id(
