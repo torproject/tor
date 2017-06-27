@@ -610,10 +610,7 @@ hs_cache_handle_oom(time_t now, size_t min_remove_bytes)
   return bytes_removed;
 }
 
-/**
- * Return the maximum size of an HS descriptor we are willing to accept as an
- * HSDir.
- */
+/* Return the maximum size of a v3 HS descriptor. */
 unsigned int
 hs_cache_get_max_descriptor_size(void)
 {
