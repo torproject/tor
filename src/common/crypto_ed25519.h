@@ -127,6 +127,8 @@ void ed25519_pubkey_copy(ed25519_public_key_t *dest,
 void ed25519_set_impl_params(int use_donna);
 void ed25519_init(void);
 
+int ed25519_validate_pubkey(const ed25519_public_key_t *pubkey);
+
 #ifdef TOR_UNIT_TESTS
 void crypto_ed25519_testing_force_impl(const char *name);
 void crypto_ed25519_testing_restore_impl(void);

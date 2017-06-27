@@ -703,10 +703,22 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   /* Do keypinning again ... this time, to add the pin if appropriate */
   int keypin_status;
   if (ri->cache_info.signing_key_cert) {
+    ed25519_public_key_t *pkey = &ri->cache_info.signing_key_cert->signing_key;
+    /* First let's validate this pubkey before pinning it */
+    if (ed25519_validate_pubkey(pkey) < 0) {
+      log_warn(LD_DIRSERV, "Received bad key from %s (source %s)",
+               router_describe(ri), source);
+      control_event_or_authdir_new_descriptor("REJECTED",
+                                         ri->cache_info.signed_descriptor_body,
+                                         desclen, *msg);
+      routerinfo_free(ri);
+      return ROUTER_AUTHDIR_REJECTS;
+    }
+
+    /* Now pin it! */
     keypin_status = keypin_check_and_add(
       (const uint8_t*)ri->cache_info.identity_digest,
-      ri->cache_info.signing_key_cert->signing_key.pubkey,
-      ! key_pinning);
+      pkey->pubkey, ! key_pinning);
   } else {
     keypin_status = keypin_check_lone_rsa(
       (const uint8_t*)ri->cache_info.identity_digest);
