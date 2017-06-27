@@ -1,0 +1,5 @@
+  o Major bugfixes (directory protocol):
+    - Ensure that we sent "304 Not modified" as HTTP status code when a
+      client is attempting to fetch a consensus or consensus diff that
+      matches the latest consensus we have available. Fixes bug 22702;
+      bugfix on 0.3.1.1-alpha.
