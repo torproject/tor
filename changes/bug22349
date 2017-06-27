@@ -1,0 +1,9 @@
+  o Minor bugfixes (directory authority):
+    - When a directory authority rejects a descriptor or extrainfo with
+      a given digest, mark that digest as undownloadable, so that we
+      do not attempt to download it again over and over. We previously
+      tried to avoid downloading such descriptors by other means, but
+      we didn't notice if we accidentally downloaded one anyway. This
+      behavior became problematic in 0.2.7.2-alpha, when authorities
+      began pinning Ed25519 keys. Fixes ticket
+      22349; bugfix on 0.2.1.19-alpha.
