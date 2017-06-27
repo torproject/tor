@@ -2092,7 +2092,7 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
 int
 write_to_buf_compress(buf_t *buf, tor_compress_state_t *state,
                       const char *data, size_t data_len,
-                      int done)
+                      const int done)
 {
   char *next;
   size_t old_avail, avail;
@@ -2114,8 +2114,10 @@ write_to_buf_compress(buf_t *buf, tor_compress_state_t *state,
       case TOR_COMPRESS_ERROR:
         return -1;
       case TOR_COMPRESS_OK:
-        if (data_len == 0)
+        if (data_len == 0) {
+          tor_assert_nonfatal(!done);
           over = 1;
+        }
         break;
       case TOR_COMPRESS_BUFFER_FULL:
         if (avail) {
@@ -2123,6 +2125,11 @@ write_to_buf_compress(buf_t *buf, tor_compress_state_t *state,
            * (TOR_COMPRESS_BUFFER_FULL).  Start a new chunk automatically,
            * whether were going to or not. */
           need_new_chunk = 1;
+        }
+        if (data_len == 0 && !done) {
+          /* We've consumed all the input data, though, so there's no
+           * point in forging ahead right now. */
+          over = 1;
         }
         break;
     }
