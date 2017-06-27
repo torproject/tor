@@ -783,7 +783,7 @@ ed25519_validate_pubkey(const ed25519_public_key_t *pubkey)
 
   /* First check that we were not given the identity element */
   if (ed25519_point_is_identity_element(pubkey->pubkey)) {
-    log_warn(LD_CRYPTO, "ed25519 pubkey is the identity\n");
+    log_warn(LD_CRYPTO, "ed25519 pubkey is the identity");
     return -1;
   }
 
@@ -792,12 +792,12 @@ ed25519_validate_pubkey(const ed25519_public_key_t *pubkey)
    * identity element is returned. */
   if (get_ed_impl()->ed25519_scalarmult_with_group_order(result,
                                                          pubkey->pubkey) < 0) {
-    log_warn(LD_CRYPTO, "ed25519 group order scalarmult failed\n");
+    log_warn(LD_CRYPTO, "ed25519 group order scalarmult failed");
     return -1;
   }
 
   if (!ed25519_point_is_identity_element(result)) {
-    log_warn(LD_CRYPTO, "ed25519 validation failed\n");
+    log_warn(LD_CRYPTO, "ed25519 validation failed");
     return -1;
   }
 
