@@ -3883,6 +3883,30 @@ find_best_compression_method(unsigned compression_methods, int stream)
   return NO_METHOD;
 }
 
+/** Check if any of the digests in <b>digests</b> matches the latest consensus
+ *  flavor (given in <b>flavor</b>) that we have available. */
+static int
+digest_list_contains_best_consensus(consensus_flavor_t flavor,
+                                    const smartlist_t *digests)
+{
+  const networkstatus_t *ns = NULL;
+
+  if (digests == NULL)
+    return 0;
+
+  ns = networkstatus_get_latest_consensus_by_flavor(flavor);
+
+  if (ns == NULL)
+    return 0;
+
+  SMARTLIST_FOREACH_BEGIN(digests, const uint8_t *, digest) {
+    if (tor_memeq(ns->digest_sha3_as_signed, digest, DIGEST256_LEN))
+      return 1;
+  } SMARTLIST_FOREACH_END(digest);
+
+  return 0;
+}
+
 /** Check if the given compression method is allowed for a connection that is
  * supposed to be anonymous. Returns 1 if the compression method is allowed,
  * otherwise 0. */
@@ -4049,6 +4073,13 @@ handle_get_current_consensus(dir_connection_t *conn,
 
   if (parse_consensus_request(&req, args) < 0) {
     write_http_status_line(conn, 404, "Couldn't parse request");
+    goto done;
+  }
+
+  if (digest_list_contains_best_consensus(req.flav,
+                                          req.diff_from_digests)) {
+    write_http_status_line(conn, 304, "Not modified");
+    geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
     goto done;
   }
 
