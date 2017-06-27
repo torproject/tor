@@ -2893,7 +2893,6 @@ test_crypto_ed25519_validation(void *arg)
     tt_int_op(ed25519_validate_pubkey(&pub1), OP_EQ, 0);
   }
 
-
  done: ;
 }
 
