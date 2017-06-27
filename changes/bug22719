@@ -1,0 +1,7 @@
+  o Minor bugfixes (compression):
+    - When spooling compressed data to an output buffer, don't try to
+      spool more data when there is no more data to spool and we are
+      not trying to flush the input. Previously, we would sometimes
+      launch compression requests with nothing to do, which interferes
+      with our 22672 checks. Fixes bug 22719; bugfix on 0.2.0.16-alpha.
+
