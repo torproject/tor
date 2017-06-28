@@ -19,8 +19,14 @@
 #define _LARGEFILE64_SOURCE
 #endif
 
-/** Malloc mprotect limit in bytes. */
-#define MALLOC_MP_LIM (16*1024*1024)
+/** Malloc mprotect limit in bytes.
+ *
+ * 28/06/2017: This value was increased from 16 MB to 20 MB after we introduced
+ * LZMA support in Tor (0.3.1.1-alpha). We limit our LZMA coder to 16 MB, but
+ * liblzma have a small overhead that we need to compensate for to avoid being
+ * killed by the sandbox.
+ */
+#define MALLOC_MP_LIM (20*1024*1024)
 
 #include <stdio.h>
 #include <string.h>
