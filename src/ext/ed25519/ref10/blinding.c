@@ -49,6 +49,7 @@ int ed25519_ref10_blind_public_key(unsigned char *out,
   unsigned char pkcopy[32];
   ge_p3 A;
   ge_p2 Aprime;
+  int retval = -1;
 
   ed25519_ref10_gettweak(tweak, param);
 
@@ -62,17 +63,22 @@ int ed25519_ref10_blind_public_key(unsigned char *out,
    * "ge_frombytes", we'd use that, but there isn't. */
   memcpy(pkcopy, inp, 32);
   pkcopy[31] ^= (1<<7);
-  ge_frombytes_negate_vartime(&A, pkcopy);
+  if (ge_frombytes_negate_vartime(&A, pkcopy) != 0) {
+    goto done;
+  }
   /* There isn't a regular ge_scalarmult -- we have to do tweak*A + zero*B. */
   ge_double_scalarmult_vartime(&Aprime, tweak, &A, zero);
   ge_tobytes(out, &Aprime);
 
+  retval = 0;
+
+ done:
   memwipe(tweak, 0, sizeof(tweak));
   memwipe(&A, 0, sizeof(A));
   memwipe(&Aprime, 0, sizeof(Aprime));
   memwipe(pkcopy, 0, sizeof(pkcopy));
 
-  return 0;
+  return retval;
 }
 
 /* This is the group order encoded in a format that
