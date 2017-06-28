@@ -722,7 +722,7 @@ node_supports_v3_hsdir(const node_t *node)
       return 0;
     }
     return protocol_list_supports_protocol(node->ri->protocol_list,
-                                           PRT_HSDIR, 2);
+                                           PRT_HSDIR, PROTOVER_HSDIR_V3);
   }
   tor_assert_nonfatal_unreached_once();
   return 0;
@@ -743,7 +743,7 @@ node_supports_ed25519_hs_intro(const node_t *node)
       return 0;
     }
     return protocol_list_supports_protocol(node->ri->protocol_list,
-                                           PRT_HSINTRO, 4);
+                                           PRT_HSINTRO, PROTOVER_HS_INTRO_V3);
   }
   tor_assert_nonfatal_unreached_once();
   return 0;

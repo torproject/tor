@@ -17,6 +17,11 @@
 /* This is a guess. */
 #define FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS "0.2.9.3-alpha"
 
+/** The protover version number that signifies HSDir support for HSv3 */
+#define PROTOVER_HSDIR_V3 2
+/** The protover version number that signifies HSv3 intro point support */
+#define PROTOVER_HS_INTRO_V3 4
+
 /** List of recognized subprotocols. */
 typedef enum protocol_type_t {
   PRT_LINK,
