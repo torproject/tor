@@ -2544,6 +2544,39 @@ test_crypto_ed25519_blinding(void *arg)
   ;
 }
 
+/** Test that our blinding functions will fail if we pass them bad pubkeys */
+static void
+test_crypto_ed25519_blinding_fail(void *arg)
+{
+  int retval;
+  uint8_t param[32] = {2};
+  ed25519_public_key_t pub;
+  ed25519_public_key_t pub_blinded;
+
+  (void)arg;
+
+  /* This point is not on the curve: the blind routines should fail */
+  const char badkey[] =
+    "e19c65de75c68cf3b7643ea732ba9eb1a3d20d6d57ba223c2ece1df66feb5af0";
+  retval = base16_decode((char*)pub.pubkey, sizeof(pub.pubkey),
+                         badkey, strlen(badkey));
+  tt_int_op(retval, OP_EQ, sizeof(pub.pubkey));
+  retval = ed25519_public_blind(&pub_blinded, &pub, param);
+  tt_int_op(retval, OP_EQ, -1);
+
+  /* This point is legit: blind routines should be happy */
+  const char goodkey[] =
+    "4ba2e44760dff4c559ef3c38768c1c14a8a54740c782c8d70803e9d6e3ad8794";
+  retval = base16_decode((char*)pub.pubkey, sizeof(pub.pubkey),
+                         goodkey, strlen(goodkey));
+  tt_int_op(retval, OP_EQ, sizeof(pub.pubkey));
+  retval = ed25519_public_blind(&pub_blinded, &pub, param);
+  tt_int_op(retval, OP_EQ, 0);
+
+ done:
+  ;
+}
+
 static void
 test_crypto_ed25519_testvectors(void *arg)
 {
@@ -2981,6 +3014,7 @@ struct testcase_t crypto_tests[] = {
   ED25519_TEST(encode, 0),
   ED25519_TEST(convert, 0),
   ED25519_TEST(blinding, 0),
+  ED25519_TEST(blinding_fail, 0),
   ED25519_TEST(testvectors, 0),
   ED25519_TEST(validation, 0),
   { "ed25519_storage", test_crypto_ed25519_storage, 0, NULL, NULL },
