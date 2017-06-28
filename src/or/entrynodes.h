@@ -276,16 +276,17 @@ struct entry_guard_handle_t;
  * A restriction to remember which entry guards are off-limits for a given
  * circuit.
  *
- * Right now, we only use restrictions to block a single guard from being
- * selected; this mechanism is designed to be more extensible in the future,
- * however.
+ * Right now, we only use restrictions to block a single guard and its family
+ * from being selected; this mechanism is designed to be more extensible in
+ * the future, however.
  *
  * Note: This mechanism is NOT for recording which guards are never to be
  * used: only which guards cannot be used on <em>one particular circuit</em>.
  */
 struct entry_guard_restriction_t {
   /**
-   * The guard's RSA identity digest must not equal this.
+   * The guard's RSA identity digest must not equal this; and it must not
+   * be in the same family as any node with this digest.
    */
   uint8_t exclude_id[DIGEST_LEN];
 };
