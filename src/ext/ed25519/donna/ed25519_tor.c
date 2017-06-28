@@ -304,7 +304,9 @@ ed25519_donna_blind_public_key(unsigned char *out, const unsigned char *inp,
   /* No "ge25519_unpack", negate the public key. */
   memcpy(pkcopy, inp, 32);
   pkcopy[31] ^= (1<<7);
-  ge25519_unpack_negative_vartime(&A, pkcopy);
+  if (!ge25519_unpack_negative_vartime(&A, pkcopy)) {
+    return -1;
+  }
 
   /* A' = [tweak] * A + [0] * basepoint. */
   ge25519_double_scalarmult_vartime(&Aprime, &A, t, zero);

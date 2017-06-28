@@ -497,7 +497,8 @@ ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
  * service descriptors are encrypted with a key derived from the service's
  * long-term public key, and then signed with (and stored at a position
  * indexed by) a short-term key derived by blinding the long-term keys.
- */
+ *
+ * Return 0 if blinding was successful, else return -1. */
 int
 ed25519_keypair_blind(ed25519_keypair_t *out,
                       const ed25519_keypair_t *inp,
@@ -508,7 +509,9 @@ ed25519_keypair_blind(ed25519_keypair_t *out,
   get_ed_impl()->blind_secret_key(out->seckey.seckey,
                                   inp->seckey.seckey, param);
 
-  ed25519_public_blind(&pubkey_check, &inp->pubkey, param);
+  if (ed25519_public_blind(&pubkey_check, &inp->pubkey, param) < 0) {
+    return -1;
+  }
   ed25519_public_key_generate(&out->pubkey, &out->seckey);
 
   tor_assert(fast_memeq(pubkey_check.pubkey, out->pubkey.pubkey, 32));
@@ -528,8 +531,7 @@ ed25519_public_blind(ed25519_public_key_t *out,
                      const ed25519_public_key_t *inp,
                      const uint8_t *param)
 {
-  get_ed_impl()->blind_public_key(out->pubkey, inp->pubkey, param);
-  return 0;
+  return get_ed_impl()->blind_public_key(out->pubkey, inp->pubkey, param);
 }
 
 /**
