@@ -2940,6 +2940,34 @@ entry_guard_get_by_id_digest(const char *digest)
       get_guard_selection_info(), digest);
 }
 
+/** We are about to connect to bridge with identity <b>digest</b> to fetch its
+ *  descriptor. Create a new guard state for this connection and return it. */
+circuit_guard_state_t *
+get_guard_state_for_bridge_desc_fetch(const char *digest)
+{
+  circuit_guard_state_t *guard_state = NULL;
+  entry_guard_t *guard = NULL;
+
+  guard = entry_guard_get_by_id_digest_for_guard_selection(
+                                    get_guard_selection_info(), digest);
+  if (!guard) {
+    return NULL;
+  }
+
+  /* Update the guard last_tried_to_connect time since it's checked by the
+   * guard susbsystem. */
+  guard->last_tried_to_connect = approx_time();
+
+  /* Create the guard state */
+  guard_state = tor_malloc_zero(sizeof(circuit_guard_state_t));
+  guard_state->guard = entry_guard_handle_new(guard);
+  guard_state->state = GUARD_CIRC_STATE_USABLE_ON_COMPLETION;
+  guard_state->state_set_at = approx_time();
+  guard_state->restrictions = NULL;
+
+  return guard_state;
+}
+
 /** Release all storage held by <b>e</b>. */
 STATIC void
 entry_guard_free(entry_guard_t *e)

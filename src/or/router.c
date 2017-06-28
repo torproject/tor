@@ -1391,7 +1391,8 @@ consider_testing_reachability(int test_or, int test_dir)
                                me->cache_info.identity_digest,
                                DIR_PURPOSE_FETCH_SERVERDESC,
                                ROUTER_PURPOSE_GENERAL,
-                               DIRIND_ANON_DIRPORT, "authority.z", NULL, 0, 0);
+                               DIRIND_ANON_DIRPORT, "authority.z",
+                               NULL, 0, 0, NULL);
   }
 }
 

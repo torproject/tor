@@ -547,6 +547,7 @@ static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
   const or_options_t *options = get_options();
+  circuit_guard_state_t *guard_state = NULL;
 
   if (connection_get_by_type_addr_port_purpose(
       CONN_TYPE_DIR, &bridge->addr, bridge->port,
@@ -570,12 +571,15 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return;
   }
 
+  guard_state = get_guard_state_for_bridge_desc_fetch(bridge->identity);
+
   directory_initiate_command(&bridge->addr, bridge->port,
                              NULL, 0, /*no dirport*/
                              bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
-                             DIRIND_ONEHOP, "authority.z", NULL, 0, 0);
+                             DIRIND_ONEHOP, "authority.z", NULL, 0, 0,
+                             guard_state);
 }
 
 /** Fetching the bridge descriptor from the bridge authority returned a

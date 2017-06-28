@@ -12,6 +12,7 @@
 #ifndef TOR_DIRECTORY_H
 #define TOR_DIRECTORY_H
 
+
 int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
@@ -79,7 +80,8 @@ void directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
                                 dir_indirection_t indirection,
                                 const char *resource,
                                 const char *payload, size_t payload_len,
-                                time_t if_modified_since);
+                                time_t if_modified_since,
+                                struct circuit_guard_state_t *guard_state);
 
 #define DSR_HEX       (1<<0)
 #define DSR_BASE64    (1<<1)
