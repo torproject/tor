@@ -323,6 +323,10 @@ const node_t *guards_choose_dirguard(circuit_guard_state_t **guard_state_out);
 entry_guard_t *entry_guard_get_by_id_digest_for_guard_selection(
     guard_selection_t *gs, const char *digest);
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
+
+circuit_guard_state_t *
+get_guard_state_for_bridge_desc_fetch(const char *digest);
+
 void entry_guards_changed_for_guard_selection(guard_selection_t *gs);
 void entry_guards_changed(void);
 guard_selection_t * get_guard_selection_info(void);
