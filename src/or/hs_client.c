@@ -18,10 +18,10 @@
 #include "hs_client.h"
 #include "router.h"
 
-/** A prop224 v3 HS circuit successfully connected to the hidden
- *  service. Update the stream state at <b>hs_conn_ident</b> appropriately. */
+/* A v3 HS circuit successfully connected to the hidden service. Update the
+ * stream state at <b>hs_conn_ident</b> appropriately. */
 static void
-hs_client_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
+note_connection_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
 {
   (void) hs_conn_ident;
 
@@ -153,7 +153,7 @@ hs_client_note_connection_attempt_succeeded(const edge_connection_t *conn)
   }
 
   if (conn->hs_ident) { /* It's v3: pass it to the prop224 handler */
-    hs_client_attempt_succeeded(conn->hs_ident);
+    note_connection_attempt_succeeded(conn->hs_ident);
     return;
   } else if (conn->rend_data) { /* It's v2: pass it to the legacy handler */
     rend_client_note_connection_attempt_ended(conn->rend_data);
