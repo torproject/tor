@@ -119,7 +119,8 @@ storage_dir_clean_tmpfiles(storage_dir_t *d)
     char *path = NULL;
     tor_asprintf(&path, "%s/%s", d->directory, fname);
     if (unlink(sandbox_intern_string(path))) {
-      log_warn(LD_FS, "Unable to unlink %s", escaped(path));
+      log_warn(LD_FS, "Unable to unlink %s while cleaning "
+               "temporary files: %s", escaped(path), strerror(errno));
       tor_free(path);
       continue;
     }
@@ -455,7 +456,8 @@ storage_dir_remove_file(storage_dir_t *d,
   if (unlink(ipath) == 0) {
     storage_dir_reduce_usage(d, size);
   } else {
-    log_warn(LD_FS, "Unable to unlink %s", escaped(path));
+    log_warn(LD_FS, "Unable to unlink %s while removing file: %s",
+             escaped(path), strerror(errno));
     tor_free(path);
     return;
   }

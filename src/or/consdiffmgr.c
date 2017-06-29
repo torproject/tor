@@ -325,7 +325,8 @@ cdm_diff_ht_purge(consensus_flavor_t flav,
     if ((*diff)->cdm_diff_status == CDM_DIFF_PRESENT &&
         flav == (*diff)->flavor) {
 
-      if (consensus_cache_entry_handle_get((*diff)->entry) == NULL) {
+      if (BUG((*diff)->entry == NULL) ||
+          consensus_cache_entry_handle_get((*diff)->entry) == NULL) {
         /* the underlying entry has gone away; drop this. */
         next = HT_NEXT_RMV(cdm_diff_ht, &cdm_diff_ht, diff);
         cdm_diff_free(this);
@@ -622,6 +623,9 @@ consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
     return CONSDIFF_IN_PROGRESS;
   }
 
+  if (BUG(ent->entry == NULL)) {
+    return CONSDIFF_NOT_FOUND;
+  }
   *entry_out = consensus_cache_entry_handle_get(ent->entry);
   return (*entry_out) ? CONSDIFF_AVAILABLE : CONSDIFF_NOT_FOUND;
 

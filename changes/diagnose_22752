@@ -1,0 +1,4 @@
+  o Minor features (bug mitigation, diagnostics, logging):
+    - Avoid an assertion failure, and log a better error message,
+      when unable to remove a file from the consensus cache on
+      Windows. Attempts to mitigate and diagnose bug 22752.
