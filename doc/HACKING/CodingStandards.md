@@ -6,7 +6,7 @@ tl;dr:
    - Run configure with `--enable-fatal-warnings`
    - Document your functions
    - Write unit tests
-   - Run `make test-full` to test against all unit and integration tests.
+   - Run `make check` before submitting a patch
    - Run `make distcheck` to ensure the distribution works
    - Add a file in `changes` for your branch.
 
@@ -31,6 +31,11 @@ Did you remember...
    - To test that the distribution will actually work via `make distcheck`?
    - To base your code on the appropriate branch?
    - To include a file in the `changes` directory as appropriate?
+
+If you are submitting a major patch or new feature, or want to in the future...
+
+   - Set up Chutney and Stem, see HACKING/WritingTests.md
+   - Run `make test-full` to test against all unit and integration tests.
 
 How we use Git branches
 =======================
