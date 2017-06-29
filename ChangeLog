@@ -2,41 +2,36 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
   Tor 0.3.1.4-alpha fixes a path selection bug that would allow a client
   to use a guard that was in the same network family as a chosen exit
   node. This is a security regression; all clients running earlier
-  versions of 0.3.0.x or 0.3.1.x should upgrade to 0.3.0.9 or
-  0.3.1.4-alpha.
+  versions of 0.3.0.x or 0.3.1.x should upgrade to 0.3.0.9
+  or 0.3.1.4-alpha.
 
   This release also fixes several other bugs related to new features in
   0.3.0.x and 0.3.1.x, including others that can effect bandwidth usage
   and correctness.
 
-  o Major bugfixes (path selection, security):
-    - When choosing which guard to use for a circuit, avoid the
-      exit's family along with the exit itself. Previously, the new
-      guard selection logic avoided the exit, but did not consider
-      its family.  Fixes bug 22753; bugfix on 0.3.0.1-alpha. Tracked
-      as TROVE-2016-006 and CVE-2017-0377.
-
   o New dependencies:
-    - To build with zstd and lzma support, Tor now requires the pkg-
-      config tool at build time. (This requirement was new in
+    - To build with zstd and lzma support, Tor now requires the
+      pkg-config tool at build time. (This requirement was new in
       0.3.1.1-alpha, but was not noted at the time. Noting it here to
       close ticket 22623.)
 
-  o Major bugfixes (compression):
-    - Fix crash in LZMA module, when the Sandbox is enabled, where
-      liblzma would allocate more than 16 MB of memory. We solve this by
-      bumping the mprotect() limit in the Sandbox module from 16 MB to
-      20 MB. Fixes bug 22751; bugfix on 0.3.1.1-alpha.
+  o Major bugfixes (path selection, security):
+    - When choosing which guard to use for a circuit, avoid the exit's
+      family along with the exit itself. Previously, the new guard
+      selection logic avoided the exit, but did not consider its family.
+      Fixes bug 22753; bugfix on 0.3.0.1-alpha. Tracked as TROVE-2016-
+      006 and CVE-2017-0377.
 
   o Major bugfixes (compression, zstd):
     - Correctly detect a full buffer when decompessing a large zstd-
-      compressed input. Fixes bug 22628; bugfix on 0.3.1.1-alpha.
+      compressed input. (Previously, we would sometimes treat a full
+      buffer as an error.) Fixes bug 22628; bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (directory protocol):
-    - Ensure that we sent "304 Not modified" as HTTP status code when a
-      client is attempting to fetch a consensus or consensus diff that
-      matches the latest consensus we have available. Fixes bug 22702;
-      bugfix on 0.3.1.1-alpha.
+    - Ensure that we send "304 Not modified" as HTTP status code when a
+      client is attempting to fetch a consensus or consensus diff, and
+      the best one we can send them is one we already have. Fixes bug
+      22702; bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (entry guards):
     - When starting with an old consensus, do not add new entry guards
@@ -47,11 +42,6 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
     - Avoid an assertion failure, and log a better error message, when
       unable to remove a file from the consensus cache on Windows.
       Attempts to mitigate and diagnose bug 22752.
-
-  o Minor features (compression, defensive programming):
-    - Detect and break out of infinite loops in our compression code. We
-      don't think that any such loops exist now, but it's best to be
-      safe. Closes ticket 22672.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the June 8 2017 Maxmind GeoLite2
@@ -64,10 +54,10 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
     - When decompressing a buffer, check for extra data after the end of
       the compressed data. Fixes bug 22629; bugfix on 0.3.1.1-alpha.
     - When decompressing an object received over an anonymous directory
-      connection, if we have already successfully decompressed it using
-      an acceptable compression method, do not reject it for looking
-      like an unacceptable compression method. Fixes part of bug 22670;
-      bugfix on 0.3.1.1-alpha.
+      connection, if we have already decompressed it using an acceptable
+      compression method, do not reject it for looking like an
+      unacceptable compression method. Fixes part of bug 22670; bugfix
+      on 0.3.1.1-alpha.
     - When serving directory votes compressed with zlib, do not claim to
       have compressed them with zstd. Fixes bug 22669; bugfix
       on 0.3.1.1-alpha.
@@ -77,7 +67,10 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
       compression requests with nothing to do, which interferes with our
       22672 checks. Fixes bug 22719; bugfix on 0.2.0.16-alpha.
 
-  o Minor bugfixes (defensive programming, undefined behavior):
+  o Minor bugfixes (defensive programming):
+    - Detect and break out of infinite loops in our compression code. We
+      don't think that any such loops exist now, but it's best to be
+      safe. Closes ticket 22672.
     - Fix a memset() off the end of an array when packing cells. This
       bug should be harmless in practice, since the corrupted bytes are
       still in the same structure, and are always padding bytes,
@@ -92,6 +85,10 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
       starting with the seccomp2 sandbox and an unexpected set of
       permissions on the data directory or its contents. Fixes bug
       22516; bugfix on 0.2.5.4-alpha.
+    - Fix a crash in LZMA module, when the sandbox was enabled, and
+      liblzma would allocate more than 16 MB of memory. We solve this by
+      bumping the mprotect() limit in the sandbox module from 16 MB to
+      20 MB. Fixes bug 22751; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (logging):
     - When decompressing, do not warn if we fail to decompress using a
@@ -100,23 +97,23 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
     - When decompressing, treat mismatch between content-encoding and
       actual compression type as a protocol warning. Fixes part of bug
       22670; bugfix on 0.1.1.9-alpha.
-    - Downgrade "assigned_to_cpuworker failed" message to INFO-level
+    - Downgrade "assigned_to_cpuworker failed" message to info-level
       severity. In every case that can reach it, either a better warning
       has already been logged, or no warning is warranted. Fixes bug
       22356; bugfix on 0.2.6.3-alpha.
-    - Demote a warn that was caused by libevent delays to info if the
-      padding is less than 4.5 seconds late, or notice if it is more
-      (4.5 seconds is the amount of time that a netflow record might be
-      emitted after, if we chose the maximum timeout). Fixes bug 22212;
-      bugfix on 0.3.1.1-alpha.
+    - Demote a warn that was caused by libevent delays to info if
+      netflow padding padding is less than 4.5 seconds late, or to
+      notice if it is more (4.5 seconds is the amount of time that a
+      netflow record might be emitted after, if we chose the maximum
+      timeout). Fixes bug 22212; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (process behavior):
     - When exiting because of an error, always exit with a nonzero exit
       status. Previously, we would fail to report an error in our exit
-      status in cases related to lockfile contention,
-      __OwningControllerProcess failure, and Ed25519 key initialization.
-      Fixes bug 22720; bugfix on versions 0.2.1.6-alpha, 0.2.2.28-beta,
-      and 0.2.7.2-alpha respectively. Reported by "f55jwk4f"; patch
+      status in cases related to __OwningControllerProcess failure,
+      lockfile contention, and Ed25519 key initialization. Fixes bug
+      22720; bugfix on versions 0.2.1.6-alpha, 0.2.2.28-beta, and
+      0.2.7.2-alpha respectively. Reported by "f55jwk4f"; patch
       from "huyvq".
 
   o Documentation:
