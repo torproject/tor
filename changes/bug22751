@@ -1,5 +1,0 @@
-  o Major bugfixes (compression):
-    - Fix crash in LZMA module, when the Sandbox is enabled, where
-      liblzma would allocate more than 16 MB of memory.  We solve this
-      by bumping the mprotect() limit in the Sandbox module from 16 MB
-      to 20 MB.  Fixes bug 22751; bugfix on 0.3.1.1-alpha.

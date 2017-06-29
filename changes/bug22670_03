@@ -1,6 +1,0 @@
-  o Minor bugfixes (compression):
-    - When decompressing an object received over an anonymous directory
-      connection, if we have already successfully decompressed it using an
-      acceptable compression method, do not reject it for looking like an
-      unacceptable compression method. Fixes part of bug 22670; bugfix on
-      0.3.1.1-alpha.

@@ -1,3 +1,124 @@
+Changes in version 0.3.1.4-alpha - 2017-06-29:
+  blurb goes here.
+
+  o Major bugfixes (compression):
+    - Fix crash in LZMA module, when the Sandbox is enabled, where
+      liblzma would allocate more than 16 MB of memory.  We solve this
+      by bumping the mprotect() limit in the Sandbox module from 16 MB
+      to 20 MB.  Fixes bug 22751; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (compression, zstd):
+    - Correctly detect a full buffer when decompessing a large
+      zstd-compressed input. Fixes bug 22628; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (directory protocol):
+    - Ensure that we sent "304 Not modified" as HTTP status code when a
+      client is attempting to fetch a consensus or consensus diff that
+      matches the latest consensus we have available. Fixes bug 22702;
+      bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (entry guards):
+    - When starting with an old consensus, do not add new entry guards
+      unless the consensus is "reasonably live" (under 1 day old). Fixes
+      one root cause of bug 22400; bugfix on 0.3.0.1-alpha.
+
+  o Minor features (bug mitigation, diagnostics, logging):
+    - Avoid an assertion failure, and log a better error message,
+      when unable to remove a file from the consensus cache on
+      Windows. Attempts to mitigate and diagnose bug 22752.
+
+  o Minor features (compression, defensive programming):
+    - Detect and break out of infinite loops in our compression code.
+      We don't think that any such loops exist now, but it's best to be
+      safe. Closes ticket 22672.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the June 8 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compression):
+    - When compressing or decompressing a buffer, check for a failure to
+      create a compression object. Fixes bug 22626; bugfix on
+      0.3.1.1-alpha.
+    - When decompressing a buffer, check for extra data after the end of
+      the compressed data. Fixes bug 22629; bugfix on 0.3.1.1-alpha.
+    - When decompressing an object received over an anonymous directory
+      connection, if we have already successfully decompressed it using an
+      acceptable compression method, do not reject it for looking like an
+      unacceptable compression method. Fixes part of bug 22670; bugfix on
+      0.3.1.1-alpha.
+    - When serving directory votes compressed with zlib,
+      do not claim to have compressed them with zstd. Fixes bug 22669;
+      bugfix on 0.3.1.1-alpha.
+    - When spooling compressed data to an output buffer, don't try to
+      spool more data when there is no more data to spool and we are
+      not trying to flush the input. Previously, we would sometimes
+      launch compression requests with nothing to do, which interferes
+      with our 22672 checks. Fixes bug 22719; bugfix on 0.2.0.16-alpha.
+
+  o Minor bugfixes (defensive programming, undefined behavior):
+    - Fix a memset() off the end of an array when packing cells.  This
+      bug should be harmless in practice, since the corrupted bytes
+      are still in the same structure, and are always padding bytes,
+      ignored, or immediately overwritten, depending on compiler
+      behavior. Nevertheless, because the memset()'s purpose is to
+      make sure that any other cell-handling bugs can't expose bytes
+      to the network, we need to fix it. Fixes bug 22737; bugfix on
+      0.2.4.11-alpha. Fixes CID 1401591.
+
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Permit the fchmod system call, to avoid crashing on startup when
+      starting with the seccomp2 sandbox and an unexpected set of permissions
+      on the data directory or its contents. Fixes bug 22516; bugfix on
+      0.2.5.4-alpha.
+
+  o Minor bugfixes (logging, compression):
+    - When decompressing, do not warn if we fail to decompress using a
+      compression method that we merely guessed. Fixes part of
+      bug 22670; bugfix on 0.1.1.14-alpha.
+    - When decompressing, treat mismatch between content-encoding and
+      actual compression type as a protocol warning. Fixes part of bug
+      22670; bugfix on 0.1.1.9-alpha.
+
+  o Minor bugfixes (logging, relay):
+    - Downgrade "assigned_to_cpuworker failed" message to INFO-level
+      severity. In every case that can reach it, either a better warning
+      has already been logged, or no warning is warranted. Fixes bug 22356;
+      bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (netflow padding logging):
+    - Demote a warn that was caused by libevent delays to info if
+      the padding is less than 4.5 seconds late, or notice if it is more
+      (4.5 seconds is the amount of time that a netflow record might
+      be emitted after, if we chose the maximum timeout). Fixes bug 22212;
+      bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (process behavior):
+    - When exiting because of an error, always exit with a nonzero
+      exit status. Previously, we would fail to report an error in
+      our exit status in cases related to lockfile contention,
+      __OwningControllerProcess failure, and Ed25519 key
+      initialization.  Fixes bug 22720; bugfix on versions
+      0.2.1.6-alpha, 0.2.2.28-beta, and 0.2.7.2-alpha
+      respectively. Reported by "f55jwk4f"; patch from "huyvq".
+
+  o Documentation:
+    - Add a manpage description for the key-pinning-journal file.
+      Closes ticket 22347.
+    - Correctly note that bandwidth accounting values are stored in the
+      state file, and the bw_accounting file is now obsolete. Closes
+      ticket 16082.
+    - Document more of the files in the Tor data directory, including
+      cached-extrainfo, secret_onion_key{,_ntor}.old, hidserv-stats,
+      approved-routers, sr-random, and diff-cache.
+
+  o New dependencies:
+    - To build with zstd and lzma support, Tor now requires the
+      pkg-config tool at build time. (This requirement was new in
+      0.3.1.1-alpha, but was not noted at the time. Noting it here to
+      close ticket 22623.)
+
+
 Changes in version 0.3.1.3-alpha - 2017-06-08
   Tor 0.3.1.3-alpha fixes a pair of bugs that would allow an attacker to
   remotely crash a hidden service with an assertion failure. Anyone

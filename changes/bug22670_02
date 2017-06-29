@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging, compression):
-   - When decompressing, treat mismatch between content-encoding and
-      actual compression type as a protocol warning. Fixes part of bug
-      22670; bugfix on 0.1.1.9-alpha.
