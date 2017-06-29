@@ -616,6 +616,9 @@ hs_service_init(void)
   tor_assert(!hs_service_map);
   tor_assert(!hs_service_staging_list);
 
+  /* v2 specific. */
+  rend_service_init();
+
   hs_service_map = tor_malloc_zero(sizeof(struct hs_service_ht));
   HT_INIT(hs_service_ht, hs_service_map);
 

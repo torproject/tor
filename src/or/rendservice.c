@@ -257,6 +257,17 @@ rend_service_free_all(void)
   rend_service_free_staging_list();
 }
 
+/* Initialize the subsystem. */
+void
+rend_service_init(void)
+{
+  tor_assert(!rend_service_list);
+  tor_assert(!rend_service_staging_list);
+
+  rend_service_list = smartlist_new();
+  rend_service_staging_list = smartlist_new();
+}
+
 /* Validate a <b>service</b>. Use the <b>service_list</b> to make sure there
  * is no duplicate entry for the given service object. Return 0 if valid else
  * -1 if not.*/

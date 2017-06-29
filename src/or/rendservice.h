@@ -179,6 +179,7 @@ int rend_service_set_connection_addr_port(edge_connection_t *conn,
                                           origin_circuit_t *circ);
 void rend_service_dump_stats(int severity);
 void rend_service_free_all(void);
+void rend_service_init(void);
 
 rend_service_port_config_t *rend_service_parse_port_config(const char *string,
                                                            const char *sep,
