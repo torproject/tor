@@ -5,8 +5,8 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
   versions of 0.3.0.x or 0.3.1.x should upgrade to 0.3.0.9
   or 0.3.1.4-alpha.
 
-  This release also fixes several other bugs related to new features in
-  0.3.0.x and 0.3.1.x, including others that can effect bandwidth usage
+  This release also fixes several other bugs introduced in 0.3.0.x
+  and 0.3.1.x, including others that can affect bandwidth usage
   and correctness.
 
   o New dependencies:
