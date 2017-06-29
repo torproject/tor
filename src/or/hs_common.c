@@ -18,6 +18,7 @@
 #include "nodelist.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_ident.h"
 #include "hs_service.h"
 #include "rendcommon.h"
 #include "rendservice.h"

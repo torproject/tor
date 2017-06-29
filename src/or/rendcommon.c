@@ -990,7 +990,7 @@ rend_non_anonymous_mode_enabled(const or_options_t *options)
  * service.
  */
 void
-assert_circ_anonymity_ok(origin_circuit_t *circ,
+assert_circ_anonymity_ok(const origin_circuit_t *circ,
                          const or_options_t *options)
 {
   tor_assert(options);

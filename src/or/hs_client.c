@@ -140,6 +140,20 @@ fetch_v3_desc(const ed25519_public_key_t *onion_identity_pk)
   return directory_launch_v3_desc_fetch(onion_identity_pk, hsdir_rs);
 }
 
+#if 0
+/* Make sure that the given origin circuit circ is a valid correct
+ * introduction circuit. This asserts on validation failure. */
+static void
+assert_intro_circ(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  tor_assert(circ->hs_ident);
+  tor_assert(hs_ident_intro_circ_is_valid(circ->hs_ident));
+  assert_circ_anonymity_ok(circ, get_options());
+}
+#endif
+
 /** A circuit just finished connecting to a hidden service that the stream
  *  <b>conn</b> has been waiting for. Let the HS subsystem know about this. */
 void

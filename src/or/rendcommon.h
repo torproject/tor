@@ -60,7 +60,7 @@ int rend_auth_decode_cookie(const char *cookie_in,
 int rend_allow_non_anonymous_connection(const or_options_t* options);
 int rend_non_anonymous_mode_enabled(const or_options_t *options);
 
-void assert_circ_anonymity_ok(origin_circuit_t *circ,
+void assert_circ_anonymity_ok(const origin_circuit_t *circ,
                               const or_options_t *options);
 
 #ifdef RENDCOMMON_PRIVATE
