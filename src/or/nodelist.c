@@ -1343,7 +1343,7 @@ nodelist_refresh_countries(void)
 
 /** Return true iff router1 and router2 have similar enough network addresses
  * that we should treat them as being in the same family */
-static inline int
+int
 addrs_in_same_network_family(const tor_addr_t *a1,
                              const tor_addr_t *a2)
 {
