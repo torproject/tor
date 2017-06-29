@@ -23,7 +23,7 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
       006 and CVE-2017-0377.
 
   o Major bugfixes (compression, zstd):
-    - Correctly detect a full buffer when decompessing a large zstd-
+    - Correctly detect a full buffer when decompressing a large zstd-
       compressed input. Previously, we would sometimes treat a full
       buffer as an error. Fixes bug 22628; bugfix on 0.3.1.1-alpha.
 
