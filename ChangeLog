@@ -85,7 +85,7 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
       starting with the seccomp2 sandbox and an unexpected set of
       permissions on the data directory or its contents. Fixes bug
       22516; bugfix on 0.2.5.4-alpha.
-    - Fix a crash in LZMA module, when the sandbox was enabled, and
+    - Fix a crash in the LZMA module, when the sandbox was enabled, and
       liblzma would allocate more than 16 MB of memory. We solve this by
       bumping the mprotect() limit in the sandbox module from 16 MB to
       20 MB. Fixes bug 22751; bugfix on 0.3.1.1-alpha.
@@ -102,10 +102,10 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
       has already been logged, or no warning is warranted. Fixes bug
       22356; bugfix on 0.2.6.3-alpha.
     - Demote a warn that was caused by libevent delays to info if
-      netflow padding padding is less than 4.5 seconds late, or to
-      notice if it is more (4.5 seconds is the amount of time that a
-      netflow record might be emitted after, if we chose the maximum
-      timeout). Fixes bug 22212; bugfix on 0.3.1.1-alpha.
+      netflow padding is less than 4.5 seconds late, or to notice
+      if it is more (4.5 seconds is the amount of time that a netflow
+      record might be emitted after, if we chose the maximum timeout).
+      Fixes bug 22212; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (process behavior):
     - When exiting because of an error, always exit with a nonzero exit
@@ -124,7 +124,8 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
       ticket 16082.
     - Document more of the files in the Tor data directory, including
       cached-extrainfo, secret_onion_key{,_ntor}.old, hidserv-stats,
-      approved-routers, sr-random, and diff-cache.
+      approved-routers, sr-random, and diff-cache. Found while fixing
+      ticket 22347.
 
 
 Changes in version 0.3.1.3-alpha - 2017-06-08
