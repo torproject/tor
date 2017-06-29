@@ -1,3 +1,57 @@
+Changes in version 0.3.0.9 - 2017-06-29
+  Tor 0.3.0.9 fixes a path selection bug that would allow a client
+  to use a guard that was in the same network family as a chosen exit
+  relay. This is a security regression; all clients running earlier
+  versions of 0.3.0.x or 0.3.1.x should upgrade to 0.3.0.9 or
+  0.3.1.4-alpha.
+
+  This release also backports several other bugfixes from the 0.3.1.x
+  series.
+
+  o Major bugfixes (path selection, security, backport from 0.3.1.4-alpha):
+    - When choosing which guard to use for a circuit, avoid the exit's
+      family along with the exit itself. Previously, the new guard
+      selection logic avoided the exit, but did not consider its family.
+      Fixes bug 22753; bugfix on 0.3.0.1-alpha. Tracked as TROVE-2016-
+      006 and CVE-2017-0377.
+
+  o Major bugfixes (entry guards, backport from 0.3.1.1-alpha):
+    - Don't block bootstrapping when a primary bridge is offline and we
+      can't get its descriptor. Fixes bug 22325; fixes one case of bug
+      21969; bugfix on 0.3.0.3-alpha.
+
+  o Major bugfixes (entry guards, backport from 0.3.1.4-alpha):
+    - When starting with an old consensus, do not add new entry guards
+      unless the consensus is "reasonably live" (under 1 day old). Fixes
+      one root cause of bug 22400; bugfix on 0.3.0.1-alpha.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the June 8 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (voting consistency, backport from 0.3.1.1-alpha):
+    - Reject version numbers with non-numeric prefixes (such as +, -, or
+      whitespace). Disallowing whitespace prevents differential version
+      parsing between POSIX-based and Windows platforms. Fixes bug 21507
+      and part of 21508; bugfix on 0.0.8pre1.
+
+  o Minor bugfixes (linux seccomp2 sandbox, backport from 0.3.1.4-alpha):
+    - Permit the fchmod system call, to avoid crashing on startup when
+      starting with the seccomp2 sandbox and an unexpected set of
+      permissions on the data directory or its contents. Fixes bug
+      22516; bugfix on 0.2.5.4-alpha.
+
+  o Minor bugfixes (defensive programming, backport from 0.3.1.4-alpha):
+    - Fix a memset() off the end of an array when packing cells. This
+      bug should be harmless in practice, since the corrupted bytes are
+      still in the same structure, and are always padding bytes,
+      ignored, or immediately overwritten, depending on compiler
+      behavior. Nevertheless, because the memset()'s purpose is to make
+      sure that any other cell-handling bugs can't expose bytes to the
+      network, we need to fix it. Fixes bug 22737; bugfix on
+      0.2.4.11-alpha. Fixes CID 1401591.
+
+
 Changes in version 0.3.0.8 - 2017-06-08
   Tor 0.3.0.8 fixes a pair of bugs that would allow an attacker to
   remotely crash a hidden service with an assertion failure. Anyone
