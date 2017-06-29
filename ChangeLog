@@ -30,7 +30,7 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
   o Major bugfixes (directory protocol):
     - Ensure that we send "304 Not modified" as HTTP status code when a
       client is attempting to fetch a consensus or consensus diff, and
-      the best one we can send them is one we already have. Fixes bug
+      the best one we can send them is one they already have. Fixes bug
       22702; bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (entry guards):
