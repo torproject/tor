@@ -1,7 +1,7 @@
 Changes in version 0.3.1.4-alpha - 2017-06-29
   Tor 0.3.1.4-alpha fixes a path selection bug that would allow a client
   to use a guard that was in the same network family as a chosen exit
-  node. This is a security regression; all clients running earlier
+  relay. This is a security regression; all clients running earlier
   versions of 0.3.0.x or 0.3.1.x should upgrade to 0.3.0.9
   or 0.3.1.4-alpha.
 
