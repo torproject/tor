@@ -1,0 +1,7 @@
+  o Major bugfixes (path selection, security):
+    - When choosing which guard to use for a circuit, avoid the
+      exit's family along with the exit itself. Previously, the new
+      guard selection logic avoided the exit, but did not consider
+      its family.  Fixes bug 22753; bugfix on 0.3.0.1-alpha. Tracked
+      as TROVE-2016-006 and CVE-2017-0377.
+
