@@ -121,6 +121,8 @@ big_fake_network_setup(const struct testcase_t *testcase)
 
     n->is_running = n->is_valid = n->is_fast = n->is_stable = 1;
 
+    /* Note: all these guards have the same address, so you'll need to
+     * disable EnforceDistinctSubnets when a restriction is applied. */
     n->rs->addr = 0x04020202;
     n->rs->or_port = 1234;
     n->rs->is_v2_dir = 1;
@@ -1846,14 +1848,17 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
   tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
 
-  // If we say that the next confirmed guard in order is excluded, we get
-  // The one AFTER that.
+  // If we say that the next confirmed guard in order is excluded, and
+  // we disable EnforceDistinctSubnets, we get the guard AFTER the
+  // one we excluded.
+  get_options_mutable()->EnforceDistinctSubnets = 0;
   g = smartlist_get(gs->confirmed_entry_guards,
                      smartlist_len(gs->primary_entry_guards)+2);
   entry_guard_restriction_t rst;
   memset(&rst, 0, sizeof(rst));
   memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
   g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, &rst, &state);
+  tt_ptr_op(g2, OP_NE, NULL);
   tt_ptr_op(g2, OP_NE, g);
   tt_int_op(g2->confirmed_idx, OP_EQ,
             smartlist_len(gs->primary_entry_guards)+3);
@@ -1872,6 +1877,16 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   tt_assert(g);
   tt_assert(g->is_pending);
   tt_int_op(g->confirmed_idx, OP_EQ, -1);
+
+  // If we EnforceDistinctSubnets and apply a restriction, we get
+  // nothing, since we put all of the nodes in the same /16.
+  // Regression test for bug 22753/TROVE-2017-006.
+  get_options_mutable()->EnforceDistinctSubnets = 1;
+  g = smartlist_get(gs->confirmed_entry_guards, 0);
+  memset(&rst, 0, sizeof(rst));
+  memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, &rst, &state);
+  tt_ptr_op(g2, OP_EQ, NULL);
 
  done:
   guard_selection_free(gs);
