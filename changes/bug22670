@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging, compression):
+    - When decompressing, do not warn if we fail to decompress using a
+      compression method that we merely guessed. Fixes part of
+      bug 22670; bugfix on 0.1.1.14-alpha.
