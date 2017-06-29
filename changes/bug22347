@@ -1,2 +1,3 @@
   o Documentation:
     - Add a manpage description for the key-pinning-journal file.
+      Closes ticket 22347.
