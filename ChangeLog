@@ -24,8 +24,8 @@ Changes in version 0.3.1.4-alpha - 2017-06-29
 
   o Major bugfixes (compression, zstd):
     - Correctly detect a full buffer when decompessing a large zstd-
-      compressed input. (Previously, we would sometimes treat a full
-      buffer as an error.) Fixes bug 22628; bugfix on 0.3.1.1-alpha.
+      compressed input. Previously, we would sometimes treat a full
+      buffer as an error. Fixes bug 22628; bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (directory protocol):
     - Ensure that we send "304 Not modified" as HTTP status code when a
