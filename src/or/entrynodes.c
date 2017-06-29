@@ -1428,6 +1428,38 @@ entry_guard_passes_filter(const or_options_t *options, guard_selection_t *gs,
   }
 }
 
+/** Return true iff <b>guard</b> is in the same family as <b>node</b>.
+ */
+static int
+guard_in_node_family(const entry_guard_t *guard, const node_t *node)
+{
+  const node_t *guard_node = node_get_by_id(guard->identity);
+  if (guard_node) {
+    return nodes_in_same_family(guard_node, node);
+  } else {
+    /* If we don't have a node_t for the guard node, we might have
+     * a bridge_info_t for it. So let's check to see whether the bridge
+     * address matches has any family issues.
+     *
+     * (Strictly speaking, I believe this check is unnecessary, since we only
+     * use it to avoid the exit's family when building circuits, and we don't
+     * build multihop circuits until we have a routerinfo_t for the
+     * bridge... at which point, we'll also have a node_t for the
+     * bridge. Nonetheless, it seems wise to include it, in case our
+     * assumptions change down the road.  -nickm.)
+     */
+    if (get_options()->EnforceDistinctSubnets && guard->bridge_addr) {
+      tor_addr_t node_addr;
+      node_get_addr(node, &node_addr);
+      if (addrs_in_same_network_family(&node_addr,
+                                       &guard->bridge_addr->addr)) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+}
+
 /**
  * Return true iff <b>guard</b> obeys the restrictions defined in <b>rst</b>.
  * (If <b>rst</b> is NULL, there are no restrictions.)
@@ -1440,7 +1472,12 @@ entry_guard_obeys_restriction(const entry_guard_t *guard,
   if (! rst)
     return 1; // No restriction?  No problem.
 
-  // Only one kind of restriction exists right now
+  // Only one kind of restriction exists right now: excluding an exit
+  // ID and all of its family.
+  const node_t *node = node_get_by_id((const char*)rst->exclude_id);
+  if (node && guard_in_node_family(guard, node))
+    return 0;
+
   return tor_memneq(guard->identity, rst->exclude_id, DIGEST_LEN);
 }
 
