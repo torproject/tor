@@ -1915,7 +1915,6 @@ certs_cell_typenum_to_cert_type(int typenum)
  * of the connection, we then authenticate the server or mark the connection.
  * If it's the server side, wait for an AUTHENTICATE cell.
  */
-
 STATIC void
 channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 {

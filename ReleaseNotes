@@ -592,7 +592,7 @@ Changes in version 0.3.0.6 - 2017-04-26
     - Select 200 fallback directories for each release. Closes
       ticket 20881.
 
-  o Minor features (fingerprinting resistence, authentication):
+  o Minor features (fingerprinting resistance, authentication):
     - Extend the length of RSA keys used for TLS link authentication to
       2048 bits. (These weren't used for forward secrecy; for forward
       secrecy, we used P256.) Closes ticket 13752.
@@ -3239,7 +3239,7 @@ Changes in version 0.2.7.5 - 2015-11-20
 
   o Major bugfixes (hidden services):
     - Revert commit that made directory authorities assign the HSDir
-      flag to relay without a DirPort; this was bad because such relays
+      flag to relays without a DirPort; this was bad because such relays
       can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
       on 0.2.6.3-alpha.
     - When cannibalizing a circuit for an introduction point, always
@@ -3854,7 +3854,7 @@ Changes in version 0.2.6.8 - 2015-05-21
 
   o Major bugfixes (hidden services, backport from 0.2.7.1-alpha):
     - Revert commit that made directory authorities assign the HSDir
-      flag to relay without a DirPort; this was bad because such relays
+      flag to relays without a DirPort; this was bad because such relays
       can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
       on 0.2.6.3-alpha.
 

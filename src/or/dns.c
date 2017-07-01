@@ -1940,7 +1940,7 @@ dns_launch_wildcard_checks(void)
       launch_wildcard_check(8, 16, ipv6, ".com");
       launch_wildcard_check(8, 16, ipv6, ".org");
       launch_wildcard_check(8, 16, ipv6, ".net");
-  }
+    }
   }
 }
 

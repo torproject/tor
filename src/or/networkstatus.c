@@ -76,7 +76,7 @@ static strmap_t *unnamed_server_map = NULL;
  * status. */
 STATIC networkstatus_t *current_ns_consensus = NULL;
 
-/** Most recently received and validated v3 "microdec"-flavored consensus
+/** Most recently received and validated v3 "microdesc"-flavored consensus
  * network status. */
 STATIC networkstatus_t *current_md_consensus = NULL;
 
@@ -1783,7 +1783,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (from_cache && !was_waiting_for_certs) {
     /* We previously stored this; check _now_ to make sure that version-kills
-     * really work.  This happens even before we check signatures: we did so
+     * really work. This happens even before we check signatures: we did so
      * before when we stored this to disk. This does mean an attacker who can
      * write to the datadir can make us not start: such an attacker could
      * already harm us by replacing our guards, which would be worse. */

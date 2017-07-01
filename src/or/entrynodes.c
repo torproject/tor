@@ -813,7 +813,7 @@ STATIC entry_guard_t *
 entry_guard_add_to_sample(guard_selection_t *gs,
                           const node_t *node)
 {
-  log_info(LD_GUARD, "Adding %s as to the entry guard sample set.",
+  log_info(LD_GUARD, "Adding %s to the entry guard sample set.",
            node_describe(node));
 
   /* make sure that the guard is not already sampled. */

@@ -2180,7 +2180,7 @@ Changes in version 0.3.0.1-alpha - 2016-12-19
       subprotocol-versions mechanism, so that clients can tell which
       relays can identity themselves by Ed25519 ID. Closes ticket 20552.
 
-  o Minor features (fingerprinting resistence, authentication):
+  o Minor features (fingerprinting resistance, authentication):
     - Extend the length of RSA keys used for TLS link authentication to
       2048 bits. (These weren't used for forward secrecy; for forward
       secrecy, we used P256.) Closes ticket 13752.
@@ -5246,7 +5246,7 @@ Changes in version 0.2.6.8 - 2015-05-21
 
   o Major bugfixes (hidden services, backport from 0.2.7.1-alpha):
     - Revert commit that made directory authorities assign the HSDir
-      flag to relay without a DirPort; this was bad because such relays
+      flag to relays without a DirPort; this was bad because such relays
       can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
       on 0.2.6.3-alpha.
 
@@ -5287,7 +5287,7 @@ Changes in version 0.2.7.1-alpha - 2015-05-12
 
   o Major bugfixes (hidden services):
     - Revert commit that made directory authorities assign the HSDir
-      flag to relay without a DirPort; this was bad because such relays
+      flag to relays without a DirPort; this was bad because such relays
       can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
       on 0.2.6.3-alpha.
 

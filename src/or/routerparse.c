@@ -3360,8 +3360,8 @@ extract_shared_random_srvs(networkstatus_t *ns, smartlist_t *tokens)
     voter_identity = "consensus";
   }
 
-  /* We extract both and on error, everything is stopped because it means
-   * the votes is malformed for the shared random value(s). */
+  /* We extract both, and on error everything is stopped because it means
+   * the vote is malformed for the shared random value(s). */
   if (extract_one_srv(tokens, K_PREVIOUS_SRV, &ns->sr_info.previous_srv) < 0) {
     log_warn(LD_DIR, "SR: Unable to parse previous SRV from %s",
              voter_identity);

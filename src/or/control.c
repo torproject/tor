@@ -803,7 +803,7 @@ queued_events_flush_all(int force)
 }
 
 /** Libevent callback: Flushes pending events to controllers that are
- * interested in them */
+ * interested in them. */
 static void
 flush_queued_events_cb(evutil_socket_t fd, short what, void *arg)
 {

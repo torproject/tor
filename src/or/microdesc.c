@@ -876,7 +876,7 @@ update_microdesc_downloads(time_t now)
   smartlist_free(missing);
 }
 
-/** For every microdescriptor listed in the current microdecriptor consensus,
+/** For every microdescriptor listed in the current microdescriptor consensus,
  * update its last_listed field to be at least as recent as the publication
  * time of the current microdescriptor consensus.
  */

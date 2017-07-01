@@ -2581,7 +2581,7 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
     ed_pubkey = node_get_ed25519_id(node);
   } else if (node_get_ed25519_id(node)) {
     log_info(LD_CIRC, "Not including the ed25519 ID for %s, since it won't "
-             " be able to authenticate it.",
+             "be able to authenticate it.",
              node_describe(node));
   }
 
