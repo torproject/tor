@@ -1,0 +1,10 @@
+language: c
+sudo: enabled
+dist: trusty
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get -y install libevent-dev libseccomp2 zlib1g-dev
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+
+script: ./autogen.sh && ./configure --disable-asciidoc && make test
