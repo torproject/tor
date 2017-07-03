@@ -981,15 +981,11 @@ circuit_send_first_onion_skin(origin_circuit_t *circ)
   node = node_get_by_id(circ->base_.n_chan->identity_digest);
   fast = should_use_create_fast_for_circuit(circ);
   if (!fast) {
-    /* We are an OR and we know the right onion key: we should
-     * send a create cell.
-     */
+    /* We know the right onion key: we should send a create cell. */
     circuit_pick_create_handshake(&cc.cell_type, &cc.handshake_type,
                                   circ->cpath->extend_info);
   } else {
-    /* We are not an OR, and we're building the first hop of a circuit to a
-     * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
-     * and a DH operation. */
+    /* We don't know an onion key, so we need to fall back to CREATE_FAST. */
     cc.cell_type = CELL_CREATE_FAST;
     cc.handshake_type = ONION_HANDSHAKE_TYPE_FAST;
   }
