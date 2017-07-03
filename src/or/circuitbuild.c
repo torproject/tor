@@ -74,6 +74,10 @@ static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
+static int circuit_send_first_onion_skin(origin_circuit_t *circ);
+static int circuit_build_no_more_hops(origin_circuit_t *circ);
+static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
+                                                crypt_path_t *hop);
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -920,12 +924,28 @@ circuit_purpose_may_omit_guard(int purpose)
 int
 circuit_send_next_onion_skin(origin_circuit_t *circ)
 {
-  crypt_path_t *hop;
-  const node_t *node;
 
   tor_assert(circ);
 
   if (circ->cpath->state == CPATH_STATE_CLOSED) {
+    return circuit_send_first_onion_skin(circ);
+  } else {
+    tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
+    tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
+    log_debug(LD_CIRC,"starting to send subsequent skin.");
+    crypt_path_t *hop = onion_next_hop_in_cpath(circ->cpath);
+    if (!hop) {
+      return circuit_build_no_more_hops(circ);
+    } else {
+      return circuit_send_intermediate_onion_skin(circ, hop);
+    }
+  }
+}
+
+static int
+circuit_send_first_onion_skin(origin_circuit_t *circ)
+{
+  const node_t *node;
     /* This is the first hop. */
     create_cell_t cc;
     int fast;
@@ -980,15 +1000,12 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     log_info(LD_CIRC,"First hop: finished sending %s cell to '%s'",
              fast ? "CREATE_FAST" : "CREATE",
              node ? node_describe(node) : "<unnamed>");
-  } else {
-    extend_cell_t ec;
-    int len;
-    tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
-    tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
-    log_debug(LD_CIRC,"starting to send subsequent skin.");
-    hop = onion_next_hop_in_cpath(circ->cpath);
-    memset(&ec, 0, sizeof(ec));
-    if (!hop) {
+    return 0;
+}
+
+static int
+circuit_build_no_more_hops(origin_circuit_t *circ)
+{
       /* done building the circuit. whew. */
       guard_usable_t r;
       if (! circ->guard_state) {
@@ -1090,8 +1107,15 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
       }
       return 0;
-    }
+}
 
+static int
+circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
+                                     crypt_path_t *hop)
+{
+    extend_cell_t ec;
+    int len;
+    memset(&ec, 0, sizeof(ec));
     if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
       log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
       return - END_CIRC_REASON_INTERNAL;
@@ -1139,8 +1163,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         return 0; /* circuit is closed */
     }
     hop->state = CPATH_STATE_AWAITING_KEYS;
-  }
-  return 0;
+    return 0;
 }
 
 /** Our clock just jumped by <b>seconds_elapsed</b>. Assume
