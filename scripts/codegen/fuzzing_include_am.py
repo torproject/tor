@@ -1,4 +1,4 @@
-
+#!/usr/bin/python
 
 FUZZERS = """
 	consensus
@@ -33,7 +33,10 @@ FUZZING_LIBS = \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	@TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
-	@TOR_SYSTEMD_LIBS@
+	@TOR_SYSTEMD_LIBS@ \
+	@TOR_LZMA_LIBS@ \
+	@TOR_ZSTD_LIBS@ \
+	$(rust_ldadd)
 
 oss-fuzz-prereqs: \
 	src/or/libtor-testing.a \
@@ -48,7 +51,7 @@ oss-fuzz-prereqs: \
 noinst_HEADERS += \
 	src/test/fuzz/fuzzing.h
 
-LIBFUZZER = /home/nickm/build/libfuzz/libFuzzer.a
+LIBFUZZER = -lFuzzer
 LIBFUZZER_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
 LIBFUZZER_CFLAGS = $(FUZZING_CFLAGS)
 LIBFUZZER_LDFLAG = $(FUZZING_LDFLAG)
