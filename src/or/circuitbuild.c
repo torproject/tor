@@ -916,30 +916,35 @@ circuit_purpose_may_omit_guard(int purpose)
  * If circ's first hop is closed, then we need to build a create
  * cell and send it forward.
  *
- * Otherwise, we need to build a relay extend cell and send it
- * forward.
+ * Otherwise, if circ's cpath still has any non-open hops, we need to
+ * build a relay extend cell and send it forward to the next non-open hop.
+ *
+ * If all hops on the cpath are open, we're done building the circuit
+ * and we should do housekeeping for the newly opened circuit.
  *
  * Return -reason if we want to tear down circ, else return 0.
  */
 int
 circuit_send_next_onion_skin(origin_circuit_t *circ)
 {
-
   tor_assert(circ);
 
   if (circ->cpath->state == CPATH_STATE_CLOSED) {
+    /* Case one: we're on the first hop. */
     return circuit_send_first_onion_skin(circ);
-  } else {
-    tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
-    tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
-    log_debug(LD_CIRC,"starting to send subsequent skin.");
-    crypt_path_t *hop = onion_next_hop_in_cpath(circ->cpath);
-    if (!hop) {
-      return circuit_build_no_more_hops(circ);
-    } else {
-      return circuit_send_intermediate_onion_skin(circ, hop);
-    }
   }
+
+  tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
+  tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
+  crypt_path_t *hop = onion_next_hop_in_cpath(circ->cpath);
+
+  if (hop) {
+    /* Case two: we're on a hop after the first. */
+    return circuit_send_intermediate_onion_skin(circ, hop);
+  }
+
+  /* Case three: the circuit is finished. Do housekeeping tasks on it. */
+  return circuit_build_no_more_hops(circ);
 }
 
 /**
@@ -951,16 +956,17 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
 static int
 circuit_send_first_onion_skin(origin_circuit_t *circ)
 {
-  const node_t *node;
-  /* This is the first hop. */
-  create_cell_t cc;
   int fast;
   int len;
-  log_debug(LD_CIRC,"First skin; sending create cell.");
+  const node_t *node;
+  create_cell_t cc;
   memset(&cc, 0, sizeof(cc));
-  if (circ->build_state->onehop_tunnel)
+
+  log_debug(LD_CIRC,"First skin; sending create cell.");
+
+  if (circ->build_state->onehop_tunnel) {
     control_event_bootstrap(BOOTSTRAP_STATUS_ONEHOP_CREATE, 0);
-  else {
+  } else {
     control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
 
     /* If this is not a one-hop tunnel, the channel is being used
@@ -1018,7 +1024,6 @@ circuit_send_first_onion_skin(origin_circuit_t *circ)
 static int
 circuit_build_no_more_hops(origin_circuit_t *circ)
 {
-  /* done building the circuit. whew. */
   guard_usable_t r;
   if (! circ->guard_state) {
     if (circuit_get_cpath_len(circ) != 1 &&
@@ -1131,9 +1136,12 @@ static int
 circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                      crypt_path_t *hop)
 {
-  extend_cell_t ec;
   int len;
+  extend_cell_t ec;
   memset(&ec, 0, sizeof(ec));
+
+  log_debug(LD_CIRC,"starting to send subsequent skin.");
+
   if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
     log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
     return - END_CIRC_REASON_INTERNAL;
@@ -1172,7 +1180,7 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
       return -END_CIRC_REASON_INTERNAL;
     }
 
-    /* send it to hop->prev, because it will transfer
+    /* send it to hop->prev, because that relay will transfer
      * it to a create cell and then send to hop */
     if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                      command,
