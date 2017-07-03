@@ -942,6 +942,12 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
   }
 }
 
+/**
+ * Called from circuit_send_next_onion_skin() when we find ourselves connected
+ * to the first hop in <b>circ</b>: Send a CREATE or CREATE2 or CREATE_FAST
+ * cell to that hop.  Return 0 on success; -reason on failure (if the circuit
+ * should be torn down).
+ */
 static int
 circuit_send_first_onion_skin(origin_circuit_t *circ)
 {
@@ -1003,6 +1009,12 @@ circuit_send_first_onion_skin(origin_circuit_t *circ)
   return 0;
 }
 
+/**
+ * Called from circuit_send_next_onion_skin() when we find that we have no
+ * more hops: mark the circuit as finished, and perform the necessary
+ * bookkeeping.  Return 0 on success; -reason on failure (if the circuit
+ * should be torn down).
+ */
 static int
 circuit_build_no_more_hops(origin_circuit_t *circ)
 {
@@ -1109,6 +1121,12 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
   return 0;
 }
 
+/**
+ * Called from circuit_send_next_onion_skin() when we find that we have a hop
+ * other than the first that we need to extend to: use <b>hop</b>'s
+ * information to extend the circuit another step. Return 0 on success;
+ * -reason on failure (if the circuit should be torn down).
+ */
 static int
 circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                      crypt_path_t *hop)
