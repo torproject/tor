@@ -3771,6 +3771,8 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
   const smartlist_t *schedule = find_dl_schedule(dls, options);
   tor_assert(schedule != NULL && smartlist_len(schedule) >= 2);
   *min = *((int *)(smartlist_get(schedule, 0)));
+  /* Increment on failure schedules always use exponential backoff, but they
+   * have a smaller limit when they're deterministic */
   if (dls->backoff == DL_SCHED_DETERMINISTIC)
     *max = *((int *)((smartlist_get(schedule, smartlist_len(schedule) - 1))));
   else
