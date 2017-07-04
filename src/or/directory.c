@@ -3778,8 +3778,8 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
 
 /** Advance one delay step.  The algorithm is to use the previous delay to
  * compute an increment, we construct a value uniformly at random between
- * delay and MAX(delay*2,delay+1).  We then clamp that value to be no larger
- * than max_delay, and return it.
+ * delay+1 and (delay*4)+1 (or *3 in test networks).
+ * We then clamp that value to be no larger than max_delay, and return it.
  *
  * Requires that delay is less than INT_MAX, and delay is in [0,max_delay].
  */
