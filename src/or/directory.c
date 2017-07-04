@@ -3983,14 +3983,16 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
   download_status_log_helper(item, !dls->increment_on, "failed",
                              "concurrently", dls->n_download_failures,
-                             increment, dls->next_attempt_at, now);
+                             increment,
+                             download_status_get_next_attempt_at(dls),
+                             now);
 
   if (dls->increment_on == DL_SCHED_INCREMENT_ATTEMPT) {
     /* stop this schedule retrying on failure, it will launch concurrent
      * connections instead */
     return TIME_MAX;
   } else {
-    return dls->next_attempt_at;
+    return download_status_get_next_attempt_at(dls);
   }
 }
 
@@ -4034,9 +4036,10 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
 
   download_status_log_helper(item, dls->increment_on, "attempted",
                              "on failure", dls->n_download_attempts,
-                             delay, dls->next_attempt_at, now);
+                             delay, download_status_get_next_attempt_at(dls),
+                             now);
 
-  return dls->next_attempt_at;
+  return download_status_get_next_attempt_at(dls);
 }
 
 static time_t

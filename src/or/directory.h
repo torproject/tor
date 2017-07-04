@@ -108,6 +108,8 @@ time_t download_status_increment_attempt(download_status_t *dls,
 void download_status_reset(download_status_t *dls);
 static int download_status_is_ready(download_status_t *dls, time_t now,
                                     int max_failures);
+time_t download_status_get_next_attempt_at(const download_status_t *dls);
+
 /** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
  * ready to get its download reattempted. */
 static inline int
@@ -127,7 +129,7 @@ download_status_is_ready(download_status_t *dls, time_t now,
     if (!under_failure_limit)
       return 0;
   }
-  return dls->next_attempt_at <= now;
+  return download_status_get_next_attempt_at(dls) <= now;
 }
 
 static void download_status_mark_impossible(download_status_t *dl);
@@ -141,7 +143,6 @@ download_status_mark_impossible(download_status_t *dl)
 
 int download_status_get_n_failures(const download_status_t *dls);
 int download_status_get_n_attempts(const download_status_t *dls);
-time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
 /* Yes, these two functions are confusingly similar.
  * Let's sort that out in #20077. */
