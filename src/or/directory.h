@@ -177,5 +177,15 @@ STATIC int next_random_exponential_delay(int delay, int max_delay);
 
 #endif
 
+#if defined(TOR_UNIT_TESTS) || defined(DIRECTORY_PRIVATE)
+/* Used only by directory.c and test_dir.c */
+
+/* no more than quadruple the previous delay (multiplier + 1) */
+#define DIR_DEFAULT_RANDOM_MULTIPLIER (3)
+/* no more than triple the previous delay */
+#define DIR_TEST_NET_RANDOM_MULTIPLIER (2)
+
+#endif
+
 #endif
 

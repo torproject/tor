@@ -3610,7 +3610,7 @@ download_status_random_backoff_helper(int min_delay, int max_delay)
   int increment = -1;
   int old_increment = -1;
   time_t current_time = time(NULL);
-  const int exponent = 4;
+  const int exponent = DIR_DEFAULT_RANDOM_MULTIPLIER + 1;
 
   /* Check the random backoff cases */
   do {
