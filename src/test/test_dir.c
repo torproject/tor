@@ -3602,32 +3602,59 @@ test_dir_download_status_schedule(void *arg)
 }
 
 static void
-test_dir_download_status_random_backoff(void *arg)
+download_status_random_backoff_helper(int min_delay, int max_delay)
 {
   download_status_t dls_random =
     { 0, 0, 0, DL_SCHED_GENERIC, DL_WANT_AUTHORITY,
                DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 };
   int increment = -1;
-  int old_increment;
+  int old_increment = -1;
   time_t current_time = time(NULL);
-  const int min_delay = 0;
-  const int max_delay = 1000000;
-
-  (void)arg;
+  const int exponent = 4;
 
   /* Check the random backoff cases */
-  old_increment = 0;
   do {
     increment = download_status_schedule_get_delay(&dls_random,
                                                    NULL,
                                                    min_delay, max_delay,
                                                    current_time);
+
+    log_debug(LD_DIR, "Min: %d, Max: %d, Inc: %d, Old Inc: %d",
+              min_delay, max_delay, increment, old_increment);
+
+    /* Regression test for 20534 and friends
+     * increment must always increase after the first */
+    if (dls_random.last_backoff_position > 0 && max_delay > 0) {
+      /* Always increment the exponential backoff */
+      tt_int_op(increment, OP_GE, 1);
+    }
+
     /* Test */
     tt_int_op(increment, OP_GE, min_delay);
     tt_int_op(increment, OP_LE, max_delay);
-    tt_int_op(increment, OP_GE, old_increment);
-    /* We at most quadruple, and maybe add one */
-    tt_int_op(increment, OP_LE, 4 * old_increment + 1);
+    if (dls_random.last_backoff_position == 0) {
+      /* regression tests for 17750
+       * Always use the minimum delay for the first increment */
+      tt_int_op(increment, OP_EQ, min_delay);
+    } else {
+      /* It's times like these I'd love a good saturating arithmetic
+       * implementation */
+      int min_inc = INT_MAX;
+      if (old_increment <= INT_MAX - 1) {
+        min_inc = old_increment + 1;
+      }
+
+      int max_inc = INT_MAX;
+      if (old_increment <= (INT_MAX - 1)/exponent) {
+        max_inc = (exponent * old_increment) + 1;
+      }
+
+      /* Regression test for 20534 and friends:
+       * increment must always increase after the first */
+      tt_int_op(increment, OP_GE, min_inc);
+      /* We at most quadruple, and always add one */
+      tt_int_op(increment, OP_LE, max_inc);
+    }
 
     /* Advance */
     current_time += increment;
@@ -3643,6 +3670,27 @@ test_dir_download_status_random_backoff(void *arg)
 }
 
 static void
+test_dir_download_status_random_backoff(void *arg)
+{
+  (void)arg;
+
+  /* Do a standard test */
+  download_status_random_backoff_helper(0, 1000000);
+  /* Regression test for 20534 and friends:
+   * try tighter bounds */
+  download_status_random_backoff_helper(0, 100);
+  /* regression tests for 17750: initial delay */
+  download_status_random_backoff_helper(10, 1000);
+  download_status_random_backoff_helper(20, 30);
+
+  /* Pathological cases */
+  download_status_random_backoff_helper(0, 0);
+  download_status_random_backoff_helper(1, 1);
+  download_status_random_backoff_helper(0, INT_MAX);
+  download_status_random_backoff_helper(INT_MAX/2, INT_MAX);
+}
+
+static void
 test_dir_download_status_increment(void *arg)
 {
   (void)arg;
@@ -3654,31 +3702,96 @@ test_dir_download_status_increment(void *arg)
     DL_WANT_ANY_DIRSERVER,
     DL_SCHED_INCREMENT_ATTEMPT,
     DL_SCHED_DETERMINISTIC, 0, 0 };
+  download_status_t dls_exp = { 0, 0, 0, DL_SCHED_GENERIC,
+    DL_WANT_ANY_DIRSERVER,
+    DL_SCHED_INCREMENT_ATTEMPT,
+    DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 };
+  int no_delay = 0;
   int delay0 = -1;
   int delay1 = -1;
   int delay2 = -1;
   smartlist_t *schedule = smartlist_new();
+  smartlist_t *schedule_no_initial_delay = smartlist_new();
   or_options_t test_options;
   time_t next_at = TIME_MAX;
   time_t current_time = time(NULL);
 
-  /* Provide some values for the schedule */
+  /* Provide some values for the schedules */
   delay0 = 10;
   delay1 = 99;
   delay2 = 20;
 
-  /* Make the schedule */
+  /* Make the schedules */
   smartlist_add(schedule, (void *)&delay0);
   smartlist_add(schedule, (void *)&delay1);
   smartlist_add(schedule, (void *)&delay2);
 
+  smartlist_add(schedule_no_initial_delay, (void *)&no_delay);
+  smartlist_add(schedule_no_initial_delay, (void *)&delay1);
+  smartlist_add(schedule_no_initial_delay, (void *)&delay2);
+
   /* Put it in the options */
   mock_options = &test_options;
   reset_options(mock_options, &mock_get_options_calls);
-  mock_options->TestingClientDownloadSchedule = schedule;
   mock_options->TestingBridgeDownloadSchedule = schedule;
+  mock_options->TestingClientDownloadSchedule = schedule;
 
   MOCK(get_options, mock_get_options);
+
+  /* Check that the initial value of the schedule is the first value used,
+   * whether or not it was reset before being used */
+
+  /* regression test for 17750: no initial delay */
+  mock_options->TestingClientDownloadSchedule = schedule_no_initial_delay;
+  mock_get_options_calls = 0;
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            >= current_time + no_delay);
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 0);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* regression test for 17750: initial delay */
+  mock_options->TestingClientDownloadSchedule = schedule;
+  mock_get_options_calls = 0;
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            >= current_time + delay0);
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 0);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* regression test for 17750: exponential, no initial delay */
+  mock_options->TestingClientDownloadSchedule = schedule_no_initial_delay;
+  mock_get_options_calls = 0;
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_exp)
+            >= current_time + no_delay);
+  tt_assert(download_status_get_next_attempt_at(&dls_exp)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_exp) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_exp) == 0);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* regression test for 17750: exponential, initial delay */
+  mock_options->TestingClientDownloadSchedule = schedule;
+  mock_get_options_calls = 0;
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_exp)
+            >= current_time + delay0);
+  tt_assert(download_status_get_next_attempt_at(&dls_exp)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_exp) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_exp) == 0);
+  tt_assert(mock_get_options_calls >= 1);
 
   /* Check that a failure reset works */
   mock_get_options_calls = 0;
@@ -3933,6 +4046,7 @@ test_dir_download_status_increment(void *arg)
  done:
   /* the pointers in schedule are allocated on the stack */
   smartlist_free(schedule);
+  smartlist_free(schedule_no_initial_delay);
   UNMOCK(get_options);
   mock_options = NULL;
   mock_get_options_calls = 0;
