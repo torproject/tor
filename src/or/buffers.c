@@ -1478,6 +1478,32 @@ socks_request_set_socks5_error(socks_request_t *req,
    req->reply[3] = 0x01;   // ATYP field.
 }
 
+const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
+  "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
+  "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
+  "<html>\n"
+  "<head>\n"
+  "<title>Tor is not an HTTP Proxy</title>\n"
+  "</head>\n"
+  "<body>\n"
+  "<h1>Tor is not an HTTP Proxy</h1>\n"
+  "<p>\n"
+  "It appears you have configured your web browser to use Tor as "
+  "an HTTP proxy.\n\n"
+  "This is not correct: Tor is a SOCKS proxy, not an HTTP proxy.\n"
+  "Please configure your client accordingly.\n"
+  "</p>\n"
+  "<p>\n"
+  "See <a href=\"https://www.torproject.org/documentation.html\">"
+  "https://www.torproject.org/documentation.html</a> for more "
+  "information.\n"
+  "<!-- Plus this comment, to make the body response more than 512 bytes, so "
+  "     IE will be willing to display it. Comment comment comment comment "
+  "     comment comment comment comment comment comment comment comment.-->\n"
+  "</p>\n"
+  "</body>\n"
+  "</html>\n";
+
 /** Implementation helper to implement fetch_from_*_socks.  Instead of looking
  * at a buffer's contents, we look at the <b>datalen</b> bytes of data in
  * <b>data</b>. Instead of removing data from the buffer, we set
@@ -1826,32 +1852,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
     case 'H': /* head */
     case 'P': /* put/post */
     case 'C': /* connect */
-      strlcpy((char*)req->reply,
-"HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
-"Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
-"<html>\n"
-"<head>\n"
-"<title>Tor is not an HTTP Proxy</title>\n"
-"</head>\n"
-"<body>\n"
-"<h1>Tor is not an HTTP Proxy</h1>\n"
-"<p>\n"
-"It appears you have configured your web browser to use Tor as an HTTP proxy."
-"\n"
-"This is not correct: Tor is a SOCKS proxy, not an HTTP proxy.\n"
-"Please configure your client accordingly.\n"
-"</p>\n"
-"<p>\n"
-"See <a href=\"https://www.torproject.org/documentation.html\">"
-           "https://www.torproject.org/documentation.html</a> for more "
-           "information.\n"
-"<!-- Plus this comment, to make the body response more than 512 bytes, so "
-"     IE will be willing to display it. Comment comment comment comment "
-"     comment comment comment comment comment comment comment comment.-->\n"
-"</p>\n"
-"</body>\n"
-"</html>\n"
-             , MAX_SOCKS_REPLY_LEN);
+      strlcpy((char*)req->reply, SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG,
+              MAX_SOCKS_REPLY_LEN);
       req->replylen = strlen((char*)req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */
@@ -2012,6 +2014,34 @@ parse_socks_client(const uint8_t *data, size_t datalen,
   tor_assert(0);
 
   return -1;
+}
+
+/** Return true if <b>cmd</b> looks like a HTTP (proxy) request. */
+int
+peek_buf_has_http_command(const buf_t *buf)
+{
+  if (peek_buf_startswith(buf, "CONNECT ") ||
+      peek_buf_startswith(buf, "DELETE ") ||
+      peek_buf_startswith(buf, "GET ") ||
+      peek_buf_startswith(buf, "POST ") ||
+      peek_buf_startswith(buf, "PUT " ))
+    return 1;
+  return 0;
+}
+
+/** Return 1 iff <b>buf</b> starts with <b>cmd</b>. <b>cmd</b> must be a null
+ * terminated string, of no more than PEEK_BUF_STARTSWITH_MAX bytes. */
+int
+peek_buf_startswith(const buf_t *buf, const char *cmd)
+{
+  char tmp[PEEK_BUF_STARTSWITH_MAX];
+  size_t clen = strlen(cmd);
+  if (BUG(clen > sizeof(tmp)))
+    return 0;
+  if (buf->datalen < clen)
+    return 0;
+  peek_from_buf(tmp, clen, buf);
+  return fast_memeq(tmp, cmd, clen);
 }
 
 /** Return 1 iff buf looks more like it has an (obsolete) v0 controller
