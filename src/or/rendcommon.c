@@ -8,6 +8,8 @@
  * introducers, services, clients, and rendezvous points.
  **/
 
+#define RENDCOMMON_PRIVATE
+
 #include "or.h"
 #include "circuitbuild.h"
 #include "config.h"
@@ -395,7 +397,7 @@ rend_encrypt_v2_intro_points_stealth(char **encrypted_out,
 
 /** Attempt to parse the given <b>desc_str</b> and return true if this
  * succeeds, false otherwise. */
-static int
+STATIC int
 rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc)
 {
   rend_service_descriptor_t *test_parsed = NULL;
