@@ -4918,7 +4918,7 @@ peek_connection_has_http_command(connection_t *conn)
   return peek_buf_has_http_command(conn->inbuf);
 }
 
-const char CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG[] =
+static const char CONTROLPORT_IS_NOT_AN_HTTP_PROXY_MSG[] =
   "HTTP/1.0 501 Tor ControlPort is not an HTTP proxy"
   "\r\nContent-Type: text/html; charset=iso-8859-1\r\n\r\n"
   "<html>\n"

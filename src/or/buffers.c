@@ -1478,7 +1478,7 @@ socks_request_set_socks5_error(socks_request_t *req,
    req->reply[3] = 0x01;   // ATYP field.
 }
 
-const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
+static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
   "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
   "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
   "<html>\n"
