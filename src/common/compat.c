@@ -1719,7 +1719,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     int bad = 1;
 #ifdef OPEN_MAX
     uint64_t try_limit = OPEN_MAX - ULIMIT_BUFFER;
-    if (errno == EINVAL && try_limit < rlim.rlim_cur) {
+    if (errno == EINVAL && try_limit < (uint64_t) rlim.rlim_cur) {
       /* On some platforms, OPEN_MAX is the real limit, and getrlimit() is
        * full of nasty lies.  I'm looking at you, OSX 10.5.... */
       rlim.rlim_cur = try_limit;
