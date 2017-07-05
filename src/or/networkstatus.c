@@ -2308,13 +2308,22 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   char *thresholds = NULL;
   char *published_thresholds_and_status = NULL;
   char published[ISO_TIME_LEN+1];
+  const routerinfo_t *me = router_get_my_routerinfo();
+  char fingerprint[FINGERPRINT_LEN+1];
+  char *fingerprint_line = NULL;
 
+  if (me && crypto_pk_get_fingerprint(me->identity_pkey, fingerprint, 0) >= 0) {
+    tor_asprintf(&fingerprint_line, "fingerprint %s\n", fingerprint);
+  } else {
+    log_warn(LD_BUG, "Error computing fingerprint for bridge status.");
+  }
   format_iso_time(published, now);
   dirserv_compute_bridge_flag_thresholds();
   thresholds = dirserv_get_flag_thresholds_line();
   tor_asprintf(&published_thresholds_and_status,
-               "published %s\nflag-thresholds %s\n%s",
-               published, thresholds, status);
+               "published %s\nflag-thresholds %s\n%s%s",
+               published, thresholds, fingerprint_line ? fingerprint_line : "",
+               status);
   tor_asprintf(&fname, "%s"PATH_SEPARATOR"networkstatus-bridges",
                options->DataDirectory);
   write_str_to_file(fname,published_thresholds_and_status,0);
@@ -2322,6 +2331,7 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   tor_free(published_thresholds_and_status);
   tor_free(fname);
   tor_free(status);
+  tor_free(fingerprint_line);
 }
 
 /* DOCDOC get_net_param_from_list */
