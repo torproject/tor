@@ -2312,7 +2312,8 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   char fingerprint[FINGERPRINT_LEN+1];
   char *fingerprint_line = NULL;
 
-  if (me && crypto_pk_get_fingerprint(me->identity_pkey, fingerprint, 0) >= 0) {
+  if (me && crypto_pk_get_fingerprint(me->identity_pkey,
+                                      fingerprint, 0) >= 0) {
     tor_asprintf(&fingerprint_line, "fingerprint %s\n", fingerprint);
   } else {
     log_warn(LD_BUG, "Error computing fingerprint for bridge status.");
