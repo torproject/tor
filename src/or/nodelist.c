@@ -602,11 +602,9 @@ node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
       if (! node->name_lookup_warned) {
         base16_encode(fp, sizeof(fp), node->identity, DIGEST_LEN);
         log_warn(LD_CONFIG,
-                 "You specified a server \"%s\" by name, but the directory "
-                 "authorities do not have any key registered for this "
-                 "nickname -- so it could be used by any server, not just "
-                 "the one you meant. "
-                 "To make sure you get the same server in the future, refer "
+                 "You specified a relay \"%s\" by name, but nicknames can be "
+                 "used by any relay, not just the one you meant. "
+                 "To make sure you get the same relay in the future, refer "
                  "to it by key, as \"$%s\".", nickname, fp);
         node->name_lookup_warned = 1;
       }
