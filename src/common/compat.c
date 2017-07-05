@@ -2593,8 +2593,12 @@ tor_inet_pton(int af, const char *src, void *dst)
         char *next;
         ssize_t len;
         long r = strtol(src, &next, 16);
-        tor_assert(next != NULL);
-        tor_assert(next != src);
+        if (next == NULL || next == src) {
+          /* The 'next == src' error case can happen on versions of openbsd
+           * where treats "0xfoo" as an error, rather than as "0" followed by
+           * "xfoo". */
+          return 0;
+        }
 
         len = *next == '\0' ? eow - src : next - src;
         if (len > 4)
