@@ -1,0 +1,4 @@
+  o Minor features:
+    - Add "fingerprint" line to networkstatus-bridges produced by
+      bridge authorities. Implements #22207.
+
