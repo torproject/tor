@@ -5598,13 +5598,14 @@ clamp_double_to_int64(double number)
 {
   int exponent;
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#if (defined(__MINGW32__) || defined(__MINGW64__)) && GCC_VERSION >= 409
 /*
   Mingw's math.h uses gcc's __builtin_choose_expr() facility to declare
   isnan, isfinite, and signbit.  But as implemented in at least some
   versions of gcc, __builtin_choose_expr() can generate type warnings
   even from branches that are not taken.  So, suppress those warnings.
 */
+#define PROBLEMATIC_FLOAT_CONVERSION_WARNING
 DISABLE_GCC_WARNING(float-conversion)
 #endif
   /* NaN is a special case that can't be used with the logic below. */
@@ -5632,7 +5633,7 @@ DISABLE_GCC_WARNING(float-conversion)
 
   /* Handle infinities and finite numbers with magnitude >= 2^63. */
   return signbit(number) ? INT64_MIN : INT64_MAX;
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#ifdef PROBLEMATIC_FLOAT_CONVERSION_WARNING
 ENABLE_GCC_WARNING(float-conversion)
 #endif
 }
