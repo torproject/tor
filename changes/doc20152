@@ -1,0 +1,3 @@
+  o Documentation:
+    - Improve the documentation for the directory port part of the
+      DirAuthority line. Closes ticket 20152.
