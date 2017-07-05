@@ -1747,18 +1747,13 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
 
 /* Given a descriptor string at <b>data</b>, decode all possible introduction
  * points that we can find. Add the introduction point object to desc_enc as we
- * find them. Return 0 on success.
- *
- * On error, a negative value is returned. It is possible that some intro
- * point object have been added to the desc_enc, they should be considered
- * invalid. One single bad encoded introduction point will make this function
- * return an error. */
-STATIC int
+ * find them. This function can't fail and it is possible that zero
+ * introduction points can be decoded. */
+static void
 decode_intro_points(const hs_descriptor_t *desc,
                     hs_desc_encrypted_data_t *desc_enc,
                     const char *data)
 {
-  int retval = -1;
   smartlist_t *chunked_desc = smartlist_new();
   smartlist_t *intro_points = smartlist_new();
 
@@ -1799,22 +1794,19 @@ decode_intro_points(const hs_descriptor_t *desc,
   SMARTLIST_FOREACH_BEGIN(intro_points, const char *, intro_point) {
     hs_desc_intro_point_t *ip = decode_introduction_point(desc, intro_point);
     if (!ip) {
-      /* Malformed introduction point section. Stop right away, this
-       * descriptor shouldn't be used. */
-      goto err;
+      /* Malformed introduction point section. We'll ignore this introduction
+       * point and continue parsing. New or unknown fields are possible for
+       * forward compatibility. */
+      continue;
     }
     smartlist_add(desc_enc->intro_points, ip);
   } SMARTLIST_FOREACH_END(intro_point);
 
  done:
-  retval = 0;
-
- err:
   SMARTLIST_FOREACH(chunked_desc, char *, a, tor_free(a));
   smartlist_free(chunked_desc);
   SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
   smartlist_free(intro_points);
-  return retval;
 }
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
  * descriptor in encoded_desc validates the descriptor content. */
@@ -2040,9 +2032,8 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
   /* Initialize the descriptor's introduction point list before we start
    * decoding. Having 0 intro point is valid. Then decode them all. */
   desc_encrypted_out->intro_points = smartlist_new();
-  if (decode_intro_points(desc, desc_encrypted_out, message) < 0) {
-    goto err;
-  }
+  decode_intro_points(desc, desc_encrypted_out, message);
+
   /* Validation of maximum introduction points allowed. */
   if (smartlist_len(desc_encrypted_out->intro_points) > MAX_INTRO_POINTS) {
     log_warn(LD_REND, "Service descriptor contains too many introduction "
