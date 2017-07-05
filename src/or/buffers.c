@@ -1478,6 +1478,32 @@ socks_request_set_socks5_error(socks_request_t *req,
    req->reply[3] = 0x01;   // ATYP field.
 }
 
+const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
+  "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
+  "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
+  "<html>\n"
+  "<head>\n"
+  "<title>Tor is not an HTTP Proxy</title>\n"
+  "</head>\n"
+  "<body>\n"
+  "<h1>Tor is not an HTTP Proxy</h1>\n"
+  "<p>\n"
+  "It appears you have configured your web browser to use Tor as "
+  "an HTTP proxy.\n\n"
+  "This is not correct: Tor is a SOCKS proxy, not an HTTP proxy.\n"
+  "Please configure your client accordingly.\n"
+  "</p>\n"
+  "<p>\n"
+  "See <a href=\"https://www.torproject.org/documentation.html\">"
+  "https://www.torproject.org/documentation.html</a> for more "
+  "information.\n"
+  "<!-- Plus this comment, to make the body response more than 512 bytes, so "
+  "     IE will be willing to display it. Comment comment comment comment "
+  "     comment comment comment comment comment comment comment comment.-->\n"
+  "</p>\n"
+  "</body>\n"
+  "</html>\n";
+
 /** Implementation helper to implement fetch_from_*_socks.  Instead of looking
  * at a buffer's contents, we look at the <b>datalen</b> bytes of data in
  * <b>data</b>. Instead of removing data from the buffer, we set
@@ -1834,32 +1860,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
     case 'H': /* head */
     case 'P': /* put/post */
     case 'C': /* connect */
-      strlcpy((char*)req->reply,
-"HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
-"Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
-"<html>\n"
-"<head>\n"
-"<title>Tor is not an HTTP Proxy</title>\n"
-"</head>\n"
-"<body>\n"
-"<h1>Tor is not an HTTP Proxy</h1>\n"
-"<p>\n"
-"It appears you have configured your web browser to use Tor as an HTTP proxy."
-"\n"
-"This is not correct: Tor is a SOCKS proxy, not an HTTP proxy.\n"
-"Please configure your client accordingly.\n"
-"</p>\n"
-"<p>\n"
-"See <a href=\"https://www.torproject.org/documentation.html\">"
-           "https://www.torproject.org/documentation.html</a> for more "
-           "information.\n"
-"<!-- Plus this comment, to make the body response more than 512 bytes, so "
-"     IE will be willing to display it. Comment comment comment comment "
-"     comment comment comment comment comment comment comment comment.-->\n"
-"</p>\n"
-"</body>\n"
-"</html>\n"
-             , MAX_SOCKS_REPLY_LEN);
+      strlcpy((char*)req->reply, SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG,
+              MAX_SOCKS_REPLY_LEN);
       req->replylen = strlen((char*)req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */
