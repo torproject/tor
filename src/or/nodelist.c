@@ -707,6 +707,48 @@ node_supports_ed25519_link_authentication(const node_t *node)
   return 0;
 }
 
+/** Return true iff <b>node</b> supports the hidden service directory version
+ * 3 protocol (proposal 224). */
+int
+node_supports_v3_hsdir(const node_t *node)
+{
+  tor_assert(node);
+
+  if (node->rs) {
+    return node->rs->supports_v3_hsdir;
+  }
+  if (node->ri) {
+    if (node->ri->protocol_list == NULL) {
+      return 0;
+    }
+    return protocol_list_supports_protocol(node->ri->protocol_list,
+                                           PRT_HSDIR, PROTOVER_HSDIR_V3);
+  }
+  tor_assert_nonfatal_unreached_once();
+  return 0;
+}
+
+/** Return true iff <b>node</b> supports ed25519 authentication as an hidden
+ * service introduction point.*/
+int
+node_supports_ed25519_hs_intro(const node_t *node)
+{
+  tor_assert(node);
+
+  if (node->rs) {
+    return node->rs->supports_ed25519_hs_intro;
+  }
+  if (node->ri) {
+    if (node->ri->protocol_list == NULL) {
+      return 0;
+    }
+    return protocol_list_supports_protocol(node->ri->protocol_list,
+                                           PRT_HSINTRO, PROTOVER_HS_INTRO_V3);
+  }
+  tor_assert_nonfatal_unreached_once();
+  return 0;
+}
+
 /** Return the RSA ID key's SHA1 digest for the provided node. */
 const uint8_t *
 node_get_rsa_id_digest(const node_t *node)
