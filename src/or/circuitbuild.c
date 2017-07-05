@@ -74,6 +74,10 @@ static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
+static int circuit_send_first_onion_skin(origin_circuit_t *circ);
+static int circuit_build_no_more_hops(origin_circuit_t *circ);
+static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
+                                                crypt_path_t *hop);
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -912,234 +916,275 @@ circuit_purpose_may_omit_guard(int purpose)
  * If circ's first hop is closed, then we need to build a create
  * cell and send it forward.
  *
- * Otherwise, we need to build a relay extend cell and send it
- * forward.
+ * Otherwise, if circ's cpath still has any non-open hops, we need to
+ * build a relay extend cell and send it forward to the next non-open hop.
+ *
+ * If all hops on the cpath are open, we're done building the circuit
+ * and we should do housekeeping for the newly opened circuit.
  *
  * Return -reason if we want to tear down circ, else return 0.
  */
 int
 circuit_send_next_onion_skin(origin_circuit_t *circ)
 {
-  crypt_path_t *hop;
-  const node_t *node;
-
   tor_assert(circ);
 
   if (circ->cpath->state == CPATH_STATE_CLOSED) {
-    /* This is the first hop. */
-    create_cell_t cc;
-    int fast;
-    int len;
-    log_debug(LD_CIRC,"First skin; sending create cell.");
-    memset(&cc, 0, sizeof(cc));
-    if (circ->build_state->onehop_tunnel)
-      control_event_bootstrap(BOOTSTRAP_STATUS_ONEHOP_CREATE, 0);
-    else {
-      control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
-
-      /* If this is not a one-hop tunnel, the channel is being used
-       * for traffic that wants anonymity and protection from traffic
-       * analysis (such as netflow record retention). That means we want
-       * to pad it.
-       */
-      if (circ->base_.n_chan->channel_usage < CHANNEL_USED_FOR_FULL_CIRCS)
-        circ->base_.n_chan->channel_usage = CHANNEL_USED_FOR_FULL_CIRCS;
-    }
-
-    node = node_get_by_id(circ->base_.n_chan->identity_digest);
-    fast = should_use_create_fast_for_circuit(circ);
-    if (!fast) {
-      /* We are an OR and we know the right onion key: we should
-       * send a create cell.
-       */
-      circuit_pick_create_handshake(&cc.cell_type, &cc.handshake_type,
-                                    circ->cpath->extend_info);
-    } else {
-      /* We are not an OR, and we're building the first hop of a circuit to a
-       * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
-       * and a DH operation. */
-      cc.cell_type = CELL_CREATE_FAST;
-      cc.handshake_type = ONION_HANDSHAKE_TYPE_FAST;
-    }
-
-    len = onion_skin_create(cc.handshake_type,
-                            circ->cpath->extend_info,
-                            &circ->cpath->handshake_state,
-                            cc.onionskin);
-    if (len < 0) {
-      log_warn(LD_CIRC,"onion_skin_create (first hop) failed.");
-      return - END_CIRC_REASON_INTERNAL;
-    }
-    cc.handshake_len = len;
-
-    if (circuit_deliver_create_cell(TO_CIRCUIT(circ), &cc, 0) < 0)
-      return - END_CIRC_REASON_RESOURCELIMIT;
-
-    circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
-    circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
-    log_info(LD_CIRC,"First hop: finished sending %s cell to '%s'",
-             fast ? "CREATE_FAST" : "CREATE",
-             node ? node_describe(node) : "<unnamed>");
-  } else {
-    extend_cell_t ec;
-    int len;
-    tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
-    tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
-    log_debug(LD_CIRC,"starting to send subsequent skin.");
-    hop = onion_next_hop_in_cpath(circ->cpath);
-    memset(&ec, 0, sizeof(ec));
-    if (!hop) {
-      /* done building the circuit. whew. */
-      guard_usable_t r;
-      if (! circ->guard_state) {
-        if (circuit_get_cpath_len(circ) != 1 &&
-            ! circuit_purpose_may_omit_guard(circ->base_.purpose) &&
-            get_options()->UseEntryGuards) {
-          log_warn(LD_BUG, "%d-hop circuit %p with purpose %d has no "
-                   "guard state",
-                   circuit_get_cpath_len(circ), circ, circ->base_.purpose);
-        }
-        r = GUARD_USABLE_NOW;
-      } else {
-        r = entry_guard_succeeded(&circ->guard_state);
-      }
-      const int is_usable_for_streams = (r == GUARD_USABLE_NOW);
-      if (r == GUARD_USABLE_NOW) {
-        circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-      } else if (r == GUARD_MAYBE_USABLE_LATER) {
-        // Wait till either a better guard succeeds, or till
-        // all better guards fail.
-        circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_GUARD_WAIT);
-      } else {
-        tor_assert_nonfatal(r == GUARD_USABLE_NEVER);
-        return - END_CIRC_REASON_INTERNAL;
-      }
-
-      /* XXXX #21422 -- the rest of this branch needs careful thought!
-       * Some of the things here need to happen when a circuit becomes
-       * mechanically open; some need to happen when it is actually usable.
-       * I think I got them right, but more checking would be wise. -NM
-       */
-
-      if (circuit_timeout_want_to_count_circ(circ)) {
-        struct timeval end;
-        long timediff;
-        tor_gettimeofday(&end);
-        timediff = tv_mdiff(&circ->base_.timestamp_began, &end);
-
-        /*
-         * If the circuit build time is much greater than we would have cut
-         * it off at, we probably had a suspend event along this codepath,
-         * and we should discard the value.
-         */
-        if (timediff < 0 ||
-            timediff > 2*get_circuit_build_close_time_ms()+1000) {
-          log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
-                              "Assuming clock jump. Purpose %d (%s)", timediff,
-                     circ->base_.purpose,
-                     circuit_purpose_to_string(circ->base_.purpose));
-        } else if (!circuit_build_times_disabled(get_options())) {
-          /* Only count circuit times if the network is live */
-          if (circuit_build_times_network_check_live(
-              get_circuit_build_times())) {
-            circuit_build_times_add_time(get_circuit_build_times_mutable(),
-                (build_time_t)timediff);
-            circuit_build_times_set_timeout(get_circuit_build_times_mutable());
-          }
-
-          if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
-            circuit_build_times_network_circ_success(
-                get_circuit_build_times_mutable());
-          }
-        }
-      }
-      log_info(LD_CIRC,"circuit built!");
-      circuit_reset_failure_count(0);
-
-      if (circ->build_state->onehop_tunnel || circ->has_opened) {
-        control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
-      }
-
-      pathbias_count_build_success(circ);
-      circuit_rep_hist_note_result(circ);
-      if (is_usable_for_streams)
-        circuit_has_opened(circ); /* do other actions as necessary */
-
-      if (!have_completed_a_circuit() && !circ->build_state->onehop_tunnel) {
-        const or_options_t *options = get_options();
-        note_that_we_completed_a_circuit();
-        /* FFFF Log a count of known routers here */
-        log_notice(LD_GENERAL,
-            "Tor has successfully opened a circuit. "
-            "Looks like client functionality is working.");
-        if (control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0) == 0) {
-          log_notice(LD_GENERAL,
-                     "Tor has successfully opened a circuit. "
-                     "Looks like client functionality is working.");
-        }
-        control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
-        clear_broken_connection_map(1);
-        if (server_mode(options) && !check_whether_orport_reachable(options)) {
-          inform_testing_reachability();
-          consider_testing_reachability(1, 1);
-        }
-      }
-
-      /* We're done with measurement circuits here. Just close them */
-      if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
-        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
-      }
-      return 0;
-    }
-
-    if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
-      log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
-      return - END_CIRC_REASON_INTERNAL;
-    }
-
-    circuit_pick_extend_handshake(&ec.cell_type,
-                                  &ec.create_cell.cell_type,
-                                  &ec.create_cell.handshake_type,
-                                  hop->extend_info);
-
-    tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
-    ec.orport_ipv4.port = hop->extend_info->port;
-    tor_addr_make_unspec(&ec.orport_ipv6.addr);
-    memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
-    /* Set the ED25519 identity too -- it will only get included
-     * in the extend2 cell if we're configured to use it, though. */
-    ed25519_pubkey_copy(&ec.ed_pubkey, &hop->extend_info->ed_identity);
-
-    len = onion_skin_create(ec.create_cell.handshake_type,
-                            hop->extend_info,
-                            &hop->handshake_state,
-                            ec.create_cell.onionskin);
-    if (len < 0) {
-      log_warn(LD_CIRC,"onion_skin_create failed.");
-      return - END_CIRC_REASON_INTERNAL;
-    }
-    ec.create_cell.handshake_len = len;
-
-    log_info(LD_CIRC,"Sending extend relay cell.");
-    {
-      uint8_t command = 0;
-      uint16_t payload_len=0;
-      uint8_t payload[RELAY_PAYLOAD_SIZE];
-      if (extend_cell_format(&command, &payload_len, payload, &ec)<0) {
-        log_warn(LD_CIRC,"Couldn't format extend cell");
-        return -END_CIRC_REASON_INTERNAL;
-      }
-
-      /* send it to hop->prev, because it will transfer
-       * it to a create cell and then send to hop */
-      if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
-                                       command,
-                                       (char*)payload, payload_len,
-                                       hop->prev) < 0)
-        return 0; /* circuit is closed */
-    }
-    hop->state = CPATH_STATE_AWAITING_KEYS;
+    /* Case one: we're on the first hop. */
+    return circuit_send_first_onion_skin(circ);
   }
+
+  tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
+  tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
+  crypt_path_t *hop = onion_next_hop_in_cpath(circ->cpath);
+
+  if (hop) {
+    /* Case two: we're on a hop after the first. */
+    return circuit_send_intermediate_onion_skin(circ, hop);
+  }
+
+  /* Case three: the circuit is finished. Do housekeeping tasks on it. */
+  return circuit_build_no_more_hops(circ);
+}
+
+/**
+ * Called from circuit_send_next_onion_skin() when we find ourselves connected
+ * to the first hop in <b>circ</b>: Send a CREATE or CREATE2 or CREATE_FAST
+ * cell to that hop.  Return 0 on success; -reason on failure (if the circuit
+ * should be torn down).
+ */
+static int
+circuit_send_first_onion_skin(origin_circuit_t *circ)
+{
+  int fast;
+  int len;
+  const node_t *node;
+  create_cell_t cc;
+  memset(&cc, 0, sizeof(cc));
+
+  log_debug(LD_CIRC,"First skin; sending create cell.");
+
+  if (circ->build_state->onehop_tunnel) {
+    control_event_bootstrap(BOOTSTRAP_STATUS_ONEHOP_CREATE, 0);
+  } else {
+    control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
+
+    /* If this is not a one-hop tunnel, the channel is being used
+     * for traffic that wants anonymity and protection from traffic
+     * analysis (such as netflow record retention). That means we want
+     * to pad it.
+     */
+    if (circ->base_.n_chan->channel_usage < CHANNEL_USED_FOR_FULL_CIRCS)
+      circ->base_.n_chan->channel_usage = CHANNEL_USED_FOR_FULL_CIRCS;
+  }
+
+  node = node_get_by_id(circ->base_.n_chan->identity_digest);
+  fast = should_use_create_fast_for_circuit(circ);
+  if (!fast) {
+    /* We know the right onion key: we should send a create cell. */
+    circuit_pick_create_handshake(&cc.cell_type, &cc.handshake_type,
+                                  circ->cpath->extend_info);
+  } else {
+    /* We don't know an onion key, so we need to fall back to CREATE_FAST. */
+    cc.cell_type = CELL_CREATE_FAST;
+    cc.handshake_type = ONION_HANDSHAKE_TYPE_FAST;
+  }
+
+  len = onion_skin_create(cc.handshake_type,
+                          circ->cpath->extend_info,
+                          &circ->cpath->handshake_state,
+                          cc.onionskin);
+  if (len < 0) {
+    log_warn(LD_CIRC,"onion_skin_create (first hop) failed.");
+    return - END_CIRC_REASON_INTERNAL;
+  }
+  cc.handshake_len = len;
+
+  if (circuit_deliver_create_cell(TO_CIRCUIT(circ), &cc, 0) < 0)
+    return - END_CIRC_REASON_RESOURCELIMIT;
+
+  circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
+  circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
+  log_info(LD_CIRC,"First hop: finished sending %s cell to '%s'",
+           fast ? "CREATE_FAST" : "CREATE",
+           node ? node_describe(node) : "<unnamed>");
+  return 0;
+}
+
+/**
+ * Called from circuit_send_next_onion_skin() when we find that we have no
+ * more hops: mark the circuit as finished, and perform the necessary
+ * bookkeeping.  Return 0 on success; -reason on failure (if the circuit
+ * should be torn down).
+ */
+static int
+circuit_build_no_more_hops(origin_circuit_t *circ)
+{
+  guard_usable_t r;
+  if (! circ->guard_state) {
+    if (circuit_get_cpath_len(circ) != 1 &&
+        ! circuit_purpose_may_omit_guard(circ->base_.purpose) &&
+        get_options()->UseEntryGuards) {
+      log_warn(LD_BUG, "%d-hop circuit %p with purpose %d has no "
+               "guard state",
+               circuit_get_cpath_len(circ), circ, circ->base_.purpose);
+    }
+    r = GUARD_USABLE_NOW;
+  } else {
+    r = entry_guard_succeeded(&circ->guard_state);
+  }
+  const int is_usable_for_streams = (r == GUARD_USABLE_NOW);
+  if (r == GUARD_USABLE_NOW) {
+    circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
+  } else if (r == GUARD_MAYBE_USABLE_LATER) {
+    // Wait till either a better guard succeeds, or till
+    // all better guards fail.
+    circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_GUARD_WAIT);
+  } else {
+    tor_assert_nonfatal(r == GUARD_USABLE_NEVER);
+    return - END_CIRC_REASON_INTERNAL;
+  }
+
+  /* XXXX #21422 -- the rest of this branch needs careful thought!
+   * Some of the things here need to happen when a circuit becomes
+   * mechanically open; some need to happen when it is actually usable.
+   * I think I got them right, but more checking would be wise. -NM
+   */
+
+  if (circuit_timeout_want_to_count_circ(circ)) {
+    struct timeval end;
+    long timediff;
+    tor_gettimeofday(&end);
+    timediff = tv_mdiff(&circ->base_.timestamp_began, &end);
+
+    /*
+     * If the circuit build time is much greater than we would have cut
+     * it off at, we probably had a suspend event along this codepath,
+     * and we should discard the value.
+     */
+    if (timediff < 0 ||
+        timediff > 2*get_circuit_build_close_time_ms()+1000) {
+      log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
+                 "Assuming clock jump. Purpose %d (%s)", timediff,
+                 circ->base_.purpose,
+                 circuit_purpose_to_string(circ->base_.purpose));
+    } else if (!circuit_build_times_disabled(get_options())) {
+      /* Only count circuit times if the network is live */
+      if (circuit_build_times_network_check_live(
+                                                 get_circuit_build_times())) {
+        circuit_build_times_add_time(get_circuit_build_times_mutable(),
+                                     (build_time_t)timediff);
+        circuit_build_times_set_timeout(get_circuit_build_times_mutable());
+      }
+
+      if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+        circuit_build_times_network_circ_success(
+                                      get_circuit_build_times_mutable());
+      }
+    }
+  }
+  log_info(LD_CIRC,"circuit built!");
+  circuit_reset_failure_count(0);
+
+  if (circ->build_state->onehop_tunnel || circ->has_opened) {
+    control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
+  }
+
+  pathbias_count_build_success(circ);
+  circuit_rep_hist_note_result(circ);
+  if (is_usable_for_streams)
+    circuit_has_opened(circ); /* do other actions as necessary */
+
+  if (!have_completed_a_circuit() && !circ->build_state->onehop_tunnel) {
+    const or_options_t *options = get_options();
+    note_that_we_completed_a_circuit();
+    /* FFFF Log a count of known routers here */
+    log_notice(LD_GENERAL,
+               "Tor has successfully opened a circuit. "
+               "Looks like client functionality is working.");
+    if (control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0) == 0) {
+      log_notice(LD_GENERAL,
+                 "Tor has successfully opened a circuit. "
+                 "Looks like client functionality is working.");
+    }
+    control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
+    clear_broken_connection_map(1);
+    if (server_mode(options) && !check_whether_orport_reachable(options)) {
+      inform_testing_reachability();
+      consider_testing_reachability(1, 1);
+    }
+  }
+
+  /* We're done with measurement circuits here. Just close them */
+  if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
+  }
+  return 0;
+}
+
+/**
+ * Called from circuit_send_next_onion_skin() when we find that we have a hop
+ * other than the first that we need to extend to: use <b>hop</b>'s
+ * information to extend the circuit another step. Return 0 on success;
+ * -reason on failure (if the circuit should be torn down).
+ */
+static int
+circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
+                                     crypt_path_t *hop)
+{
+  int len;
+  extend_cell_t ec;
+  memset(&ec, 0, sizeof(ec));
+
+  log_debug(LD_CIRC,"starting to send subsequent skin.");
+
+  if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
+    log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
+    return - END_CIRC_REASON_INTERNAL;
+  }
+
+  circuit_pick_extend_handshake(&ec.cell_type,
+                                &ec.create_cell.cell_type,
+                                &ec.create_cell.handshake_type,
+                                hop->extend_info);
+
+  tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
+  ec.orport_ipv4.port = hop->extend_info->port;
+  tor_addr_make_unspec(&ec.orport_ipv6.addr);
+  memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
+  /* Set the ED25519 identity too -- it will only get included
+   * in the extend2 cell if we're configured to use it, though. */
+  ed25519_pubkey_copy(&ec.ed_pubkey, &hop->extend_info->ed_identity);
+
+  len = onion_skin_create(ec.create_cell.handshake_type,
+                          hop->extend_info,
+                          &hop->handshake_state,
+                          ec.create_cell.onionskin);
+  if (len < 0) {
+    log_warn(LD_CIRC,"onion_skin_create failed.");
+    return - END_CIRC_REASON_INTERNAL;
+  }
+  ec.create_cell.handshake_len = len;
+
+  log_info(LD_CIRC,"Sending extend relay cell.");
+  {
+    uint8_t command = 0;
+    uint16_t payload_len=0;
+    uint8_t payload[RELAY_PAYLOAD_SIZE];
+    if (extend_cell_format(&command, &payload_len, payload, &ec)<0) {
+      log_warn(LD_CIRC,"Couldn't format extend cell");
+      return -END_CIRC_REASON_INTERNAL;
+    }
+
+    /* send it to hop->prev, because that relay will transfer
+     * it to a create cell and then send to hop */
+    if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
+                                     command,
+                                     (char*)payload, payload_len,
+                                     hop->prev) < 0)
+      return 0; /* circuit is closed */
+  }
+  hop->state = CPATH_STATE_AWAITING_KEYS;
   return 0;
 }
 
