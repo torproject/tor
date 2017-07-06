@@ -290,7 +290,9 @@ test_e2e_rend_circuit_setup(void *arg)
   /* Setup the circuit: do the ntor key exchange */
   {
     uint8_t ntor_key_seed[DIGEST256_LEN] = {2};
-    retval = hs_circuit_setup_e2e_rend_circ(or_circ, ntor_key_seed, 1);
+    retval = hs_circuit_setup_e2e_rend_circ(or_circ,
+                                            ntor_key_seed, sizeof(ntor_key_seed),
+                                            1);
     tt_int_op(retval, OP_EQ, 0);
   }
 

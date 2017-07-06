@@ -243,7 +243,9 @@ test_e2e_rend_circuit_setup(void *arg)
   /**********************************************/
 
   /* Setup the circuit */
-  retval = hs_circuit_setup_e2e_rend_circ(or_circ, ntor_key_seed, 0);
+  retval = hs_circuit_setup_e2e_rend_circ(or_circ,
+                                          ntor_key_seed, sizeof(ntor_key_seed),
+                                          0);
   tt_int_op(retval, OP_EQ, 0);
 
   /**********************************************/

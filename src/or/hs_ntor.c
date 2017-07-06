@@ -582,13 +582,24 @@ hs_ntor_client_rendezvous2_mac_is_good(
 /** Given the rendezvous key seed in <b>ntor_key_seed</b> (of size
  *  DIGEST256_LEN), do the circuit key expansion as specified by section
  *  '4.2.1. Key expansion' and place the keys in <b>keys_out</b> (which must be
- *  of size HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN). */
-void
-hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed, uint8_t *keys_out)
+ *  of size HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN).
+ *
+ * Return 0 if things went well, else return -1. */
+int
+hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed, size_t seed_len,
+                              uint8_t *keys_out, size_t keys_out_len)
 {
   uint8_t *ptr;
   uint8_t kdf_input[NTOR_KEY_EXPANSION_KDF_INPUT_LEN];
   crypto_xof_t *xof;
+
+  /* Sanity checks on lengths to make sure we are good */
+  if (BUG(seed_len != DIGEST256_LEN)) {
+    return -1;
+  }
+  if (BUG(keys_out_len != HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN)) {
+    return -1;
+  }
 
   /* Let's build the input to the KDF */
   ptr = kdf_input;
@@ -601,5 +612,7 @@ hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed, uint8_t *keys_out)
   crypto_xof_add_bytes(xof, kdf_input, sizeof(kdf_input));
   crypto_xof_squeeze_bytes(xof, keys_out, HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN);
   crypto_xof_free(xof);
+
+  return 0;
 }
 

@@ -15,6 +15,7 @@
 
 int hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
                                    const uint8_t *ntor_key_seed,
+                                   size_t seed_len,
                                    int is_service_side);
 int hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
                                           const uint8_t *rend_cell_body);
