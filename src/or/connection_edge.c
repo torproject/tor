@@ -3566,10 +3566,8 @@ int
 connection_edge_is_rendezvous_stream(const edge_connection_t *conn)
 {
   tor_assert(conn);
-
-  if (BUG(conn->rend_data && conn->hs_ident)) {
-    log_warn(LD_BUG, "Connection has both rend_data and hs_ident...");
-  }
+  /* It should not be possible to set both of these structs */
+  tor_assert_nonfatal(!(conn->rend_data && conn->hs_ident));
 
   if (conn->rend_data || conn->hs_ident) {
     return 1;

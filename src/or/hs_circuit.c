@@ -23,8 +23,8 @@ rend_circuit_validate_purpose(unsigned int circ_purpose, int is_service_side)
 {
   if (is_service_side) {
     if (circ_purpose != CIRCUIT_PURPOSE_S_CONNECT_REND) {
-      log_warn(LD_GENERAL, "HS e2e circuit setup with wrong purpose(%d)",
-               circ_purpose);
+      log_fn(LOG_PROTOCOL_WARN, LD_GENERAL,
+             "HS e2e circuit setup with wrong purpose(%d)", circ_purpose);
       return -1;
     }
   }
@@ -32,8 +32,8 @@ rend_circuit_validate_purpose(unsigned int circ_purpose, int is_service_side)
   if (!is_service_side) {
     if (circ_purpose != CIRCUIT_PURPOSE_C_REND_READY &&
         circ_purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      log_warn(LD_GENERAL, "Client e2e circuit setup with wrong purpose(%d)",
-               circ_purpose);
+      log_fn(LOG_PROTOCOL_WARN, LD_GENERAL,
+             "Client e2e circuit setup with wrong purpose(%d)", circ_purpose);
       return -1;
     }
   }
