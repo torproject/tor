@@ -16,16 +16,16 @@
 #include "hs_ntor.h"
 
 /* A circuit is about to become an e2e rendezvous circuit. Check
- * <b>circ_purpose</b> and ensure that it's properly set.  Return 0 if circuit
- * purpose is properly set, otherwise return -1. */
+ * <b>circ_purpose</b> and ensure that it's properly set. Return true iff
+ * circuit purpose is properly set, otherwise return false. */
 static int
-rend_circuit_validate_purpose(unsigned int circ_purpose, int is_service_side)
+circuit_purpose_is_correct_for_rend(unsigned int circ_purpose, int is_service_side)
 {
   if (is_service_side) {
     if (circ_purpose != CIRCUIT_PURPOSE_S_CONNECT_REND) {
       log_fn(LOG_PROTOCOL_WARN, LD_GENERAL,
              "HS e2e circuit setup with wrong purpose(%d)", circ_purpose);
-      return -1;
+      return 0;
     }
   }
 
@@ -34,11 +34,11 @@ rend_circuit_validate_purpose(unsigned int circ_purpose, int is_service_side)
         circ_purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
       log_fn(LOG_PROTOCOL_WARN, LD_GENERAL,
              "Client e2e circuit setup with wrong purpose(%d)", circ_purpose);
-      return -1;
+      return 0;
     }
   }
 
-  return 0;
+  return 1;
 }
 
 /* Create and return a crypt path for the final hop of a v3 prop224 rendezvous
@@ -172,8 +172,8 @@ hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
                                const uint8_t *ntor_key_seed,
                                int is_service_side)
 {
-  if (BUG(rend_circuit_validate_purpose(TO_CIRCUIT(circ)->purpose,
-                                        is_service_side)) < 0) {
+  if (BUG(!circuit_purpose_is_correct_for_rend(TO_CIRCUIT(circ)->purpose,
+                                        is_service_side))) {
     return -1;
   }
 
@@ -197,7 +197,9 @@ int
 hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
                                              const uint8_t *rend_cell_body)
 {
-  if (BUG(rend_circuit_validate_purpose(TO_CIRCUIT(circ)->purpose, 0)) < 0) {
+
+  if (BUG(!circuit_purpose_is_correct_for_rend(
+                                      TO_CIRCUIT(circ)->purpose, 0))) {
     return -1;
   }
 
