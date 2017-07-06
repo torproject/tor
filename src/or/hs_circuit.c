@@ -48,7 +48,7 @@ circuit_purpose_is_correct_for_rend(unsigned int circ_purpose, int is_service_si
  * If <b>is_service_side</b> is set, we are the hidden service and the final
  * hop of the rendezvous circuit is the client on the other side. */
 static crypt_path_t *
-get_rend_cpath(const uint8_t *ntor_key_seed, int is_service_side)
+create_rend_cpath(const uint8_t *ntor_key_seed, int is_service_side)
 {
   uint8_t keys[HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN];
   crypt_path_t *cpath = NULL;
@@ -77,7 +77,7 @@ get_rend_cpath(const uint8_t *ntor_key_seed, int is_service_side)
  * <b>rend_cell_body</b> (which must be at least DH_KEY_LEN+DIGEST_LEN bytes).
  */
 static crypt_path_t *
-get_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
+create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
 {
   crypt_path_t *hop = NULL;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
@@ -177,7 +177,7 @@ hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
     return -1;
   }
 
-  crypt_path_t *hop = get_rend_cpath(ntor_key_seed, is_service_side);
+  crypt_path_t *hop = create_rend_cpath(ntor_key_seed, is_service_side);
   if (!hop) {
     log_warn(LD_REND, "Couldn't get v3 %s cpath!",
              is_service_side ? "service-side" : "client-side");
@@ -203,7 +203,7 @@ hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
     return -1;
   }
 
-  crypt_path_t *hop = get_rend_cpath_legacy(circ, rend_cell_body);
+  crypt_path_t *hop = create_rend_cpath_legacy(circ, rend_cell_body);
   if (!hop) {
     log_warn(LD_GENERAL, "Couldn't get v2 cpath.");
     return -1;
