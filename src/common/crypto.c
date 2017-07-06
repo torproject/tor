@@ -1839,6 +1839,33 @@ crypto_digest_algorithm_get_length(digest_algorithm_t alg)
   }
 }
 
+/** Intermediate information about the digest of a stream of data. */
+struct crypto_digest_t {
+  digest_algorithm_t algorithm; /**< Which algorithm is in use? */
+   /** State for the digest we're using.  Only one member of the
+    * union is usable, depending on the value of <b>algorithm</b>. Note also
+    * that space for other members might not even be allocated!
+    */
+  union {
+    SHA_CTX sha1; /**< state for SHA1 */
+    SHA256_CTX sha2; /**< state for SHA256 */
+    SHA512_CTX sha512; /**< state for SHA512 */
+    keccak_state sha3; /**< state for SHA3-[256,512] */
+  } d;
+};
+
+#ifdef TOR_UNIT_TESTS
+
+digest_algorithm_t
+crypto_digest_get_algorithm(crypto_digest_t *digest)
+{
+  tor_assert(digest);
+
+  return digest->algorithm;
+}
+
+#endif
+
 /**
  * Return the number of bytes we need to malloc in order to get a
  * crypto_digest_t for <b>alg</b>, or the number of bytes we need to wipe

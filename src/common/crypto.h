@@ -339,21 +339,6 @@ void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #ifdef CRYPTO_PRIVATE
 
-/** Intermediate information about the digest of a stream of data. */
-struct crypto_digest_t {
-  digest_algorithm_t algorithm; /**< Which algorithm is in use? */
-   /** State for the digest we're using.  Only one member of the
-    * union is usable, depending on the value of <b>algorithm</b>. Note also
-    * that space for other members might not even be allocated!
-    */
-  union {
-    SHA_CTX sha1; /**< state for SHA1 */
-    SHA256_CTX sha2; /**< state for SHA256 */
-    SHA512_CTX sha512; /**< state for SHA512 */
-    keccak_state sha3; /**< state for SHA3-[256,512] */
-  } d;
-};
-
 STATIC int crypto_force_rand_ssleay(void);
 STATIC int crypto_strongest_rand_raw(uint8_t *out, size_t out_len);
 
@@ -365,6 +350,7 @@ extern int break_strongest_rng_fallback;
 
 #ifdef TOR_UNIT_TESTS
 void crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src);
+digest_algorithm_t crypto_digest_get_algorithm(crypto_digest_t *digest);
 #endif
 
 #endif

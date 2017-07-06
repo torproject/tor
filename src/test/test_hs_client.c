@@ -188,8 +188,10 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check the digest algo */
-  tt_int_op(or_circ->cpath->f_digest->algorithm, OP_EQ, DIGEST_SHA1);
-  tt_int_op(or_circ->cpath->b_digest->algorithm, OP_EQ, DIGEST_SHA1);
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->f_digest),
+            OP_EQ, DIGEST_SHA1);
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->b_digest),
+            OP_EQ, DIGEST_SHA1);
   tt_assert(or_circ->cpath->f_crypto);
   tt_assert(or_circ->cpath->b_crypto);
 
@@ -255,8 +257,10 @@ test_e2e_rend_circuit_setup(void *arg)
   tt_int_op(retval, OP_EQ, 1);
 
   /* Check that the crypt path has prop224 algorithm parameters */
-  tt_int_op(or_circ->cpath->f_digest->algorithm, OP_EQ, DIGEST_SHA3_256);
-  tt_int_op(or_circ->cpath->b_digest->algorithm, OP_EQ, DIGEST_SHA3_256);
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->f_digest),
+            OP_EQ, DIGEST_SHA3_256);
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->b_digest),
+            OP_EQ, DIGEST_SHA3_256);
   tt_assert(or_circ->cpath->f_crypto);
   tt_assert(or_circ->cpath->b_crypto);
 
