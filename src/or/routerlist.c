@@ -5055,8 +5055,9 @@ launch_descriptor_downloads(int purpose,
   if (n_per_request > max_dl_per_req)
     n_per_request = max_dl_per_req;
 
-  if (n_per_request < MIN_DL_PER_REQUEST)
-    n_per_request = MIN_DL_PER_REQUEST;
+  if (n_per_request < MIN_DL_PER_REQUEST) {
+    n_per_request = MIN(MIN_DL_PER_REQUEST, n_downloadable);
+  }
 
   if (n_downloadable > n_per_request)
     req_plural = rtr_plural = "s";
