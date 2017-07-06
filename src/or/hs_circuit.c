@@ -135,8 +135,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
 
   /* All is well. Extend the circuit. */
   hop->state = CPATH_STATE_OPEN;
-  /* Set the windows to default. These are the windows that the client thinks
-   * the service has. */
+  /* Set the windows to default. */
   hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 

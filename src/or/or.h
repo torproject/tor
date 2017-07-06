@@ -1638,8 +1638,9 @@ typedef struct edge_connection_t {
    * an exit)? */
   rend_data_t *rend_data;
 
-  /* Hidden service connection identifier that is which service is being
-   * queried? */
+  /* Hidden service connection identifier for edge connections. Used by the HS
+   * client-side code to identify client SOCKS connections and by the
+   * service-side code to match HS circuits with their streams. */
   hs_ident_edge_conn_t *hs_ident;
 
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
@@ -1792,8 +1793,9 @@ typedef struct dir_connection_t {
   /** What rendezvous service are we querying for? */
   rend_data_t *rend_data;
 
-  /* Hidden service connection identifier that is which service is being
-   * queried? */
+  /* Hidden service connection identifier for dir connections: Used by HS
+     client-side code to fetch HS descriptors, and by the service-side code to
+     upload descriptors. */
   hs_ident_dir_conn_t *hs_ident;
 
   /** If this is a one-hop connection, tracks the state of the directory guard
