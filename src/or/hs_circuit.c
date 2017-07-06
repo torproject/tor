@@ -60,7 +60,7 @@ create_rend_cpath(const uint8_t *ntor_key_seed, int is_service_side)
   cpath = tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
 
-  if (circuit_init_cpath_crypto(cpath, (char*)keys,
+  if (circuit_init_cpath_crypto(cpath, (char*)keys, sizeof(keys),
                                 is_service_side, 1) < 0) {
     tor_free(cpath);
     goto err;
@@ -96,7 +96,9 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
     goto err;
   }
   /* ... and set up cpath. */
-  if (circuit_init_cpath_crypto(hop, keys+DIGEST_LEN, 0, 0)<0)
+  if (circuit_init_cpath_crypto(hop,
+                                keys+DIGEST_LEN, sizeof(keys)-DIGEST_LEN,
+                                0, 0) < 0)
     goto err;
 
   /* Check whether the digest is right... */
