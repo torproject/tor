@@ -130,7 +130,7 @@ helper_get_circ_and_stream_for_test(origin_circuit_t **circ_out,
 static void
 test_e2e_rend_circuit_setup_legacy(void *arg)
 {
-  int retval;
+  ssize_t retval;
   origin_circuit_t *or_circ = NULL;
   connection_t *conn = NULL;
 
