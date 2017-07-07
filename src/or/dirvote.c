@@ -737,12 +737,12 @@ dirvote_get_intermediate_param_value(const smartlist_t *param_list,
     }
   } SMARTLIST_FOREACH_END(k_v_pair);
 
-  if (n_found == 1)
+  if (n_found == 1) {
     return value;
-  else if (BUG(n_found > 1))
+  } else {
+    tor_assert_nonfatal(n_found == 0);
     return default_val;
-  else
-    return default_val;
+  }
 }
 
 /** Minimum number of directory authorities voting for a parameter to
