@@ -1785,7 +1785,7 @@ test_dir_param_voting_lookup(void *arg)
             dirvote_get_intermediate_param_value(lst, "moomin", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(n_found > 1)");
+            "n_found == 0");
   tor_end_capture_bugs_();
   /* There is no 'fred=', so that is treated as not existing. */
   tt_int_op(-100, OP_EQ,
