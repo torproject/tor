@@ -19,12 +19,13 @@
  * <b>circ_purpose</b> and ensure that it's properly set. Return true iff
  * circuit purpose is properly set, otherwise return false. */
 static int
-circuit_purpose_is_correct_for_rend(unsigned int circ_purpose, int is_service_side)
+circuit_purpose_is_correct_for_rend(unsigned int circ_purpose,
+                                    int is_service_side)
 {
   if (is_service_side) {
     if (circ_purpose != CIRCUIT_PURPOSE_S_CONNECT_REND) {
-      log_fn(LOG_PROTOCOL_WARN, LD_GENERAL,
-             "HS e2e circuit setup with wrong purpose(%d)", circ_purpose);
+      log_warn(LD_BUG,
+            "HS e2e circuit setup with wrong purpose (%d)", circ_purpose);
       return 0;
     }
   }
@@ -32,8 +33,8 @@ circuit_purpose_is_correct_for_rend(unsigned int circ_purpose, int is_service_si
   if (!is_service_side) {
     if (circ_purpose != CIRCUIT_PURPOSE_C_REND_READY &&
         circ_purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      log_fn(LOG_PROTOCOL_WARN, LD_GENERAL,
-             "Client e2e circuit setup with wrong purpose(%d)", circ_purpose);
+      log_warn(LD_BUG,
+            "Client e2e circuit setup with wrong purpose (%d)", circ_purpose);
       return 0;
     }
   }
