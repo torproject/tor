@@ -6,20 +6,34 @@
  * \brief Test hidden service functionality.
  */
 
+#define CIRCUITBUILD_PRIVATE
+#define CIRCUITLIST_PRIVATE
+#define CONNECTION_PRIVATE
+#define CRYPTO_PRIVATE
 #define HS_COMMON_PRIVATE
-#define HS_SERVICE_PRIVATE
 #define HS_INTROPOINT_PRIVATE
+#define MAIN_PRIVATE
+#define TOR_CHANNEL_INTERNAL_
 
 #include "test.h"
 #include "log_test_helpers.h"
-#include "crypto.h"
+#include "rend_test_helpers.h"
 
-#include "hs/cell_establish_intro.h"
+#include "or.h"
+#include "channeltls.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "connection.h"
+#include "hs_circuit.h"
 #include "hs_common.h"
-#include "hs_service.h"
+#include "hs_ident.h"
 #include "hs_intropoint.h"
-
 #include "hs_ntor.h"
+#include "hs_service.h"
+#include "main.h"
+#include "rendservice.h"
 
 /** We simulate the creation of an outgoing ESTABLISH_INTRO cell, and then we
  *  parse it from the receiver side. */
@@ -235,6 +249,72 @@ test_time_period(void *arg)
   ;
 }
 
+/* Test: Ensure that setting up rendezvous circuits works correctly. */
+static void
+test_e2e_rend_circuit_setup(void *arg)
+{
+  ed25519_public_key_t service_pk;
+  origin_circuit_t *or_circ;
+  int retval;
+
+  /** In this test we create a v3 prop224 service-side rendezvous circuit.
+   *  We simulate an HS ntor key exchange with a client, and check that
+   *  the circuit was setup correctly and is ready to accept rendezvous data */
+
+  (void) arg;
+
+  /* Now make dummy circuit */
+  {
+    or_circ = origin_circuit_new();
+
+    or_circ->base_.purpose = CIRCUIT_PURPOSE_S_CONNECT_REND;
+
+    or_circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+    or_circ->build_state->is_internal = 1;
+
+    /* prop224: Setup hs conn identifier on the stream */
+    ed25519_secret_key_t sk;
+    tt_int_op(0, OP_EQ, ed25519_secret_key_generate(&sk, 0));
+    tt_int_op(0, OP_EQ, ed25519_public_key_generate(&service_pk, &sk));
+
+    or_circ->hs_ident = hs_ident_circuit_new(&service_pk,
+                                             HS_IDENT_CIRCUIT_RENDEZVOUS);
+
+    TO_CIRCUIT(or_circ)->state = CIRCUIT_STATE_OPEN;
+  }
+
+  /* Check number of hops */
+  retval = cpath_get_n_hops(&or_circ->cpath);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Setup the circuit: do the ntor key exchange */
+  {
+    uint8_t ntor_key_seed[DIGEST256_LEN] = {2};
+    retval = hs_circuit_setup_e2e_rend_circ(or_circ,
+                                       ntor_key_seed, sizeof(ntor_key_seed),
+                                       1);
+    tt_int_op(retval, OP_EQ, 0);
+  }
+
+  /* See that a hop was added to the circuit's cpath */
+  retval = cpath_get_n_hops(&or_circ->cpath);
+  tt_int_op(retval, OP_EQ, 1);
+
+  /* Check the digest algo */
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->f_digest),
+            OP_EQ, DIGEST_SHA3_256);
+  tt_int_op(crypto_digest_get_algorithm(or_circ->cpath->b_digest),
+            OP_EQ, DIGEST_SHA3_256);
+  tt_assert(or_circ->cpath->f_crypto);
+  tt_assert(or_circ->cpath->b_crypto);
+
+  /* Ensure that circ purpose was changed */
+  tt_int_op(or_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_S_REND_JOINED);
+
+ done:
+  circuit_free(TO_CIRCUIT(or_circ));
+}
+
 struct testcase_t hs_service_tests[] = {
   { "gen_establish_intro_cell", test_gen_establish_intro_cell, TT_FORK,
     NULL, NULL },
@@ -243,6 +323,8 @@ struct testcase_t hs_service_tests[] = {
   { "hs_ntor", test_hs_ntor, TT_FORK,
     NULL, NULL },
   { "time_period", test_time_period, TT_FORK,
+    NULL, NULL },
+  { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

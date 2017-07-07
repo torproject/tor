@@ -846,6 +846,11 @@ rend_data_v2_t *TO_REND_DATA_V2(const rend_data_t *d)
   return DOWNCAST(rend_data_v2_t, d);
 }
 
+/* Stub because we can't include hs_ident.h. */
+typedef struct hs_ident_edge_conn_t hs_ident_edge_conn_t;
+typedef struct hs_ident_dir_conn_t hs_ident_dir_conn_t;
+typedef struct hs_ident_circuit_t hs_ident_circuit_t;
+
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple
  * simultaneous attempts to connect to the same rendezvous point. */
@@ -1633,6 +1638,11 @@ typedef struct edge_connection_t {
    * an exit)? */
   rend_data_t *rend_data;
 
+  /* Hidden service connection identifier for edge connections. Used by the HS
+   * client-side code to identify client SOCKS connections and by the
+   * service-side code to match HS circuits with their streams. */
+  hs_ident_edge_conn_t *hs_ident;
+
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
                          * connection.  Exit connections only. */
   uint32_t begincell_flags; /** Flags sent or received in the BEGIN cell
@@ -1782,6 +1792,11 @@ typedef struct dir_connection_t {
 
   /** What rendezvous service are we querying for? */
   rend_data_t *rend_data;
+
+  /* Hidden service connection identifier for dir connections: Used by HS
+     client-side code to fetch HS descriptors, and by the service-side code to
+     upload descriptors. */
+  hs_ident_dir_conn_t *hs_ident;
 
   /** If this is a one-hop connection, tracks the state of the directory guard
    * for this connection (if any). */
@@ -3185,6 +3200,10 @@ typedef struct origin_circuit_t {
 
   /** Holds all rendezvous data on either client or service side. */
   rend_data_t *rend_data;
+
+  /** Holds hidden service identifier on either client or service side. This
+   * is for both introduction and rendezvous circuit. */
+  hs_ident_circuit_t *hs_ident;
 
   /** Holds the data that the entry guard system uses to track the
    * status of the guard this circuit is using, and thereby to determine

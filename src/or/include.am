@@ -50,16 +50,19 @@ LIBTOR_A_SOURCES = \
 	src/or/dnsserv.c				\
 	src/or/fp_pair.c				\
 	src/or/geoip.c					\
-	src/or/hs_intropoint.c          \
-	src/or/hs_circuitmap.c          \
-	src/or/hs_ntor.c                \
-	src/or/hs_service.c             \
+	src/or/hs_cache.c				\
+	src/or/hs_circuitmap.c				\
+	src/or/hs_common.c				\
+	src/or/hs_circuit.c				\
+	src/or/hs_descriptor.c				\
+	src/or/hs_ident.c				\
+	src/or/hs_intropoint.c				\
+	src/or/hs_ntor.c				\
+	src/or/hs_service.c				\
+	src/or/hs_client.c				\
 	src/or/entrynodes.c				\
 	src/or/ext_orport.c				\
 	src/or/hibernate.c				\
-	src/or/hs_cache.c				\
-	src/or/hs_common.c				\
-	src/or/hs_descriptor.c				\
 	src/or/keypin.c					\
 	src/or/main.c					\
 	src/or/microdesc.c				\
@@ -181,11 +184,14 @@ ORHEADERS = \
 	src/or/hibernate.h				\
 	src/or/hs_cache.h				\
 	src/or/hs_common.h				\
+	src/or/hs_circuit.h				\
 	src/or/hs_descriptor.h				\
+	src/or/hs_ident.h				\
 	src/or/hs_intropoint.h          \
 	src/or/hs_circuitmap.h          \
 	src/or/hs_ntor.h                \
 	src/or/hs_service.h             \
+	src/or/hs_client.h              \
 	src/or/keypin.h					\
 	src/or/main.h					\
 	src/or/microdesc.h				\

@@ -372,7 +372,7 @@ cpuworker_onion_handshake_replyfn(void *work_)
 
   if (onionskin_answer(circ,
                        &rpl.created_cell,
-                       (const char*)rpl.keys,
+                       (const char*)rpl.keys, sizeof(rpl.keys),
                        rpl.rend_auth_material) < 0) {
     log_warn(LD_OR,"onionskin_answer failed. Closing.");
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);

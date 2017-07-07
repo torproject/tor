@@ -49,6 +49,12 @@
 /* The time period rotation offset as seen in prop224 section [TIME-PERIODS] */
 #define HS_TIME_PERIOD_ROTATION_OFFSET (12 * 60) /* minutes */
 
+/* Type of authentication key used by an introduction point. */
+typedef enum {
+  HS_AUTH_KEY_TYPE_LEGACY  = 1,
+  HS_AUTH_KEY_TYPE_ED25519 = 2,
+} hs_auth_key_type_t;
+
 int hs_check_service_private_dir(const char *username, const char *path,
                                  unsigned int dir_group_readable,
                                  unsigned int create);

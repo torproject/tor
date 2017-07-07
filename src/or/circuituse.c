@@ -42,6 +42,8 @@
 #include "control.h"
 #include "entrynodes.h"
 #include "hs_common.h"
+#include "hs_client.h"
+#include "hs_ident.h"
 #include "nodelist.h"
 #include "networkstatus.h"
 #include "policies.h"
@@ -54,6 +56,36 @@
 
 static void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
+
+/** Check whether the hidden service destination of the stream at
+ *  <b>edge_conn</b> is the same as the destination of the circuit at
+ *  <b>origin_circ</b>. */
+static int
+circuit_matches_with_rend_stream(const edge_connection_t *edge_conn,
+                                 const origin_circuit_t *origin_circ)
+{
+  /* Check if this is a v2 rendezvous circ/stream */
+  if ((edge_conn->rend_data && !origin_circ->rend_data) ||
+      (!edge_conn->rend_data && origin_circ->rend_data) ||
+      (edge_conn->rend_data && origin_circ->rend_data &&
+       rend_cmp_service_ids(rend_data_get_address(edge_conn->rend_data),
+                            rend_data_get_address(origin_circ->rend_data)))) {
+    /* this circ is not for this conn */
+    return 0;
+  }
+
+  /* Check if this is a v3 rendezvous circ/stream */
+  if ((edge_conn->hs_ident && !origin_circ->hs_ident) ||
+      (!edge_conn->hs_ident && origin_circ->hs_ident) ||
+      (edge_conn->hs_ident && origin_circ->hs_ident &&
+       !ed25519_pubkey_eq(&edge_conn->hs_ident->identity_pk,
+                          &origin_circ->hs_ident->identity_pk))) {
+    /* this circ is not for this conn */
+    return 0;
+  }
+
+  return 1;
+}
 
 /** Return 1 if <b>circ</b> could be returned by circuit_get_best().
  * Else return 0.
@@ -169,14 +201,9 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
       /* can't exit from this router */
       return 0;
     }
-  } else { /* not general */
+  } else { /* not general: this might be a rend circuit */
     const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
-    if ((edge_conn->rend_data && !origin_circ->rend_data) ||
-        (!edge_conn->rend_data && origin_circ->rend_data) ||
-        (edge_conn->rend_data && origin_circ->rend_data &&
-         rend_cmp_service_ids(rend_data_get_address(edge_conn->rend_data),
-                            rend_data_get_address(origin_circ->rend_data)))) {
-      /* this circ is not for this conn */
+    if (!circuit_matches_with_rend_stream(edge_conn, origin_circ)) {
       return 0;
     }
   }
@@ -2348,8 +2375,7 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
     /* We are attaching a stream to a rendezvous circuit.  That means
      * that an attempt to connect to a hidden service just
      * succeeded.  Tell rendclient.c. */
-    rend_client_note_connection_attempt_ended(
-                    ENTRY_TO_EDGE_CONN(apconn)->rend_data);
+    hs_client_note_connection_attempt_succeeded(ENTRY_TO_EDGE_CONN(apconn));
   }
 
   if (cpath) { /* we were given one; use it */

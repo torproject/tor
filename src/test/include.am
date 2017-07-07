@@ -115,6 +115,7 @@ src_test_test_SOURCES = \
 	src/test/test_extorport.c \
 	src/test/test_hs.c \
 	src/test/test_hs_service.c \
+	src/test/test_hs_client.c  \
 	src/test/test_hs_intropoint.c \
 	src/test/test_handles.c \
 	src/test/test_hs_cache.c \
@@ -270,6 +271,7 @@ noinst_HEADERS+= \
 	src/test/test.h \
 	src/test/test_helpers.h \
 	src/test/test_dir_common.h \
+	src/test/test_connection.h \
 	src/test/test_descriptors.inc \
 	src/test/example_extrainfo.inc \
 	src/test/failing_routerdescs.inc \

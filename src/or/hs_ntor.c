@@ -578,49 +578,41 @@ hs_ntor_client_rendezvous2_mac_is_good(
 
 /* Input length to KDF for key expansion */
 #define NTOR_KEY_EXPANSION_KDF_INPUT_LEN (DIGEST256_LEN + M_HSEXPAND_LEN)
-/* Output length of KDF for key expansion */
-#define NTOR_KEY_EXPANSION_KDF_OUTPUT_LEN (DIGEST256_LEN*3+CIPHER256_KEY_LEN*2)
 
-/** Given the rendezvous key material in <b>hs_ntor_rend_cell_keys</b>, do the
- *  circuit key expansion as specified by section '4.2.1. Key expansion' and
- *  return a hs_ntor_rend_circuit_keys_t structure with the computed keys. */
-hs_ntor_rend_circuit_keys_t *
-hs_ntor_circuit_key_expansion(
-                       const hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys)
+/** Given the rendezvous key seed in <b>ntor_key_seed</b> (of size
+ *  DIGEST256_LEN), do the circuit key expansion as specified by section
+ *  '4.2.1. Key expansion' and place the keys in <b>keys_out</b> (which must be
+ *  of size HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN).
+ *
+ * Return 0 if things went well, else return -1. */
+int
+hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed, size_t seed_len,
+                              uint8_t *keys_out, size_t keys_out_len)
 {
   uint8_t *ptr;
   uint8_t kdf_input[NTOR_KEY_EXPANSION_KDF_INPUT_LEN];
-  uint8_t keys[NTOR_KEY_EXPANSION_KDF_OUTPUT_LEN];
   crypto_xof_t *xof;
-  hs_ntor_rend_circuit_keys_t *rend_circuit_keys = NULL;
+
+  /* Sanity checks on lengths to make sure we are good */
+  if (BUG(seed_len != DIGEST256_LEN)) {
+    return -1;
+  }
+  if (BUG(keys_out_len != HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN)) {
+    return -1;
+  }
 
   /* Let's build the input to the KDF */
   ptr = kdf_input;
-  APPEND(ptr, hs_ntor_rend_cell_keys->ntor_key_seed, DIGEST256_LEN);
+  APPEND(ptr, ntor_key_seed, DIGEST256_LEN);
   APPEND(ptr, M_HSEXPAND, strlen(M_HSEXPAND));
   tor_assert(ptr == kdf_input + sizeof(kdf_input));
 
   /* Generate the keys */
   xof = crypto_xof_new();
   crypto_xof_add_bytes(xof, kdf_input, sizeof(kdf_input));
-  crypto_xof_squeeze_bytes(xof, keys, sizeof(keys));
+  crypto_xof_squeeze_bytes(xof, keys_out, HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN);
   crypto_xof_free(xof);
 
-  /* Generate keys structure and assign keys to it */
-  rend_circuit_keys = tor_malloc_zero(sizeof(hs_ntor_rend_circuit_keys_t));
-  ptr = keys;
-  memcpy(rend_circuit_keys->KH, ptr, DIGEST256_LEN);
-  ptr += DIGEST256_LEN;;
-  memcpy(rend_circuit_keys->Df, ptr, DIGEST256_LEN);
-  ptr += DIGEST256_LEN;
-  memcpy(rend_circuit_keys->Db, ptr, DIGEST256_LEN);
-  ptr += DIGEST256_LEN;
-  memcpy(rend_circuit_keys->Kf, ptr, CIPHER256_KEY_LEN);
-  ptr += CIPHER256_KEY_LEN;
-  memcpy(rend_circuit_keys->Kb, ptr, CIPHER256_KEY_LEN);
-  ptr += CIPHER256_KEY_LEN;
-  tor_assert(ptr == keys + sizeof(keys));
-
-  return rend_circuit_keys;
+  return 0;
 }
 

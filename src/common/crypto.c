@@ -1854,6 +1854,18 @@ struct crypto_digest_t {
   } d;
 };
 
+#ifdef TOR_UNIT_TESTS
+
+digest_algorithm_t
+crypto_digest_get_algorithm(crypto_digest_t *digest)
+{
+  tor_assert(digest);
+
+  return digest->algorithm;
+}
+
+#endif
+
 /**
  * Return the number of bytes we need to malloc in order to get a
  * crypto_digest_t for <b>alg</b>, or the number of bytes we need to wipe

@@ -17,6 +17,7 @@
 #include "connection_edge.h"
 #include "directory.h"
 #include "hs_common.h"
+#include "hs_circuit.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -1150,9 +1151,6 @@ int
 rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
                                size_t request_len)
 {
-  crypt_path_t *hop;
-  char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
-
   if ((circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY &&
        circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
       || !circ->build_state->pending_final_cpath) {
@@ -1170,55 +1168,13 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
 
   log_info(LD_REND,"Got RENDEZVOUS2 cell from hidden service.");
 
-  /* first DH_KEY_LEN bytes are g^y from the service. Finish the dh
-   * handshake...*/
-  tor_assert(circ->build_state);
-  tor_assert(circ->build_state->pending_final_cpath);
-  hop = circ->build_state->pending_final_cpath;
-  tor_assert(hop->rend_dh_handshake_state);
-  if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN,
-                               hop->rend_dh_handshake_state, (char*)request,
-                               DH_KEY_LEN,
-                               keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
-    log_warn(LD_GENERAL, "Couldn't complete DH handshake.");
+  if (hs_circuit_setup_e2e_rend_circ_legacy_client(circ, request) < 0) {
+    log_warn(LD_GENERAL, "Failed to setup circ");
     goto err;
   }
-  /* ... and set up cpath. */
-  if (circuit_init_cpath_crypto(hop, keys+DIGEST_LEN, 0)<0)
-    goto err;
-
-  /* Check whether the digest is right... */
-  if (tor_memneq(keys, request+DH_KEY_LEN, DIGEST_LEN)) {
-    log_warn(LD_PROTOCOL, "Incorrect digest of key material.");
-    goto err;
-  }
-
-  crypto_dh_free(hop->rend_dh_handshake_state);
-  hop->rend_dh_handshake_state = NULL;
-
-  /* All is well. Extend the circuit. */
-  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_JOINED);
-  hop->state = CPATH_STATE_OPEN;
-  /* set the windows to default. these are the windows
-   * that the client thinks the service has.
-   */
-  hop->package_window = circuit_initial_package_window();
-  hop->deliver_window = CIRCWINDOW_START;
-
-  /* Now that this circuit has finished connecting to its destination,
-   * make sure circuit_get_open_circ_or_launch is willing to return it
-   * so we can actually use it. */
-  circ->hs_circ_has_timed_out = 0;
-
-  onion_append_to_cpath(&circ->cpath, hop);
-  circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
-
-  circuit_try_attaching_streams(circ);
-
-  memwipe(keys, 0, sizeof(keys));
   return 0;
+
  err:
-  memwipe(keys, 0, sizeof(keys));
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
 }

@@ -2455,8 +2455,8 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
  *
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
-int
-connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
+MOCK_IMPL(int,
+connection_ap_handshake_send_begin,(entry_connection_t *ap_conn))
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
@@ -3566,8 +3566,12 @@ int
 connection_edge_is_rendezvous_stream(const edge_connection_t *conn)
 {
   tor_assert(conn);
-  if (conn->rend_data)
+  /* It should not be possible to set both of these structs */
+  tor_assert_nonfatal(!(conn->rend_data && conn->hs_ident));
+
+  if (conn->rend_data || conn->hs_ident) {
     return 1;
+  }
   return 0;
 }
 

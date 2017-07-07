@@ -46,6 +46,7 @@
 #include "crypto.h"
 #include "directory.h"
 #include "entrynodes.h"
+#include "hs_ntor.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -1370,40 +1371,76 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   return 0;
 }
 
-/** Initialize cpath-\>{f|b}_{crypto|digest} from the key material in
- * key_data.  key_data must contain CPATH_KEY_MATERIAL bytes, which are
- * used as follows:
+/** Initialize cpath-\>{f|b}_{crypto|digest} from the key material in key_data.
+ *
+ * If <b>is_hs_v3</b> is set, this cpath will be used for next gen hidden
+ * service circuits and <b>key_data</b> must be at least
+ * HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN bytes in length.
+ *
+ * If <b>is_hs_v3</b> is not set, key_data must contain CPATH_KEY_MATERIAL_LEN
+ * bytes, which are used as follows:
  *   - 20 to initialize f_digest
  *   - 20 to initialize b_digest
  *   - 16 to key f_crypto
  *   - 16 to key b_crypto
  *
  * (If 'reverse' is true, then f_XX and b_XX are swapped.)
+ *
+ * Return 0 if init was successful, else -1 if it failed.
  */
 int
-circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
-                          int reverse)
+circuit_init_cpath_crypto(crypt_path_t *cpath,
+                          const char *key_data, size_t key_data_len,
+                          int reverse, int is_hs_v3)
 {
   crypto_digest_t *tmp_digest;
   crypto_cipher_t *tmp_crypto;
+  size_t digest_len = 0;
+  size_t cipher_key_len = 0;
 
   tor_assert(cpath);
   tor_assert(key_data);
   tor_assert(!(cpath->f_crypto || cpath->b_crypto ||
              cpath->f_digest || cpath->b_digest));
 
-  cpath->f_digest = crypto_digest_new();
-  crypto_digest_add_bytes(cpath->f_digest, key_data, DIGEST_LEN);
-  cpath->b_digest = crypto_digest_new();
-  crypto_digest_add_bytes(cpath->b_digest, key_data+DIGEST_LEN, DIGEST_LEN);
+  /* Basic key size validation */
+  if (is_hs_v3 && BUG(key_data_len != HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN)) {
+    return -1;
+  } else if (!is_hs_v3 && BUG(key_data_len != CPATH_KEY_MATERIAL_LEN)) {
+    return -1;
+  }
 
-  if (!(cpath->f_crypto =
-        crypto_cipher_new(key_data+(2*DIGEST_LEN)))) {
+  /* If we are using this cpath for next gen onion services use SHA3-256,
+     otherwise use good ol' SHA1 */
+  if (is_hs_v3) {
+    digest_len = DIGEST256_LEN;
+    cipher_key_len = CIPHER256_KEY_LEN;
+    cpath->f_digest = crypto_digest256_new(DIGEST_SHA3_256);
+    cpath->b_digest = crypto_digest256_new(DIGEST_SHA3_256);
+  } else {
+    digest_len = DIGEST_LEN;
+    cipher_key_len = CIPHER_KEY_LEN;
+    cpath->f_digest = crypto_digest_new();
+    cpath->b_digest = crypto_digest_new();
+  }
+
+  tor_assert(digest_len != 0);
+  tor_assert(cipher_key_len != 0);
+
+  crypto_digest_add_bytes(cpath->f_digest, key_data, digest_len);
+  crypto_digest_add_bytes(cpath->b_digest, key_data+digest_len, digest_len);
+
+  cpath->f_crypto = crypto_cipher_new_with_bits(key_data+(2*digest_len),
+                                                cipher_key_len*8);
+  if (!cpath->f_crypto) {
     log_warn(LD_BUG,"Forward cipher initialization failed.");
     return -1;
   }
-  if (!(cpath->b_crypto =
-        crypto_cipher_new(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN))) {
+
+  cpath->b_crypto = crypto_cipher_new_with_bits(
+                                        key_data+(2*digest_len)+cipher_key_len,
+                                        cipher_key_len*8);
+  if (!cpath->b_crypto) {
     log_warn(LD_BUG,"Backward cipher initialization failed.");
     return -1;
   }
@@ -1469,7 +1506,7 @@ circuit_finish_handshake(origin_circuit_t *circ,
 
   onion_handshake_state_release(&hop->handshake_state);
 
-  if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
+  if (circuit_init_cpath_crypto(hop, keys, sizeof(keys), 0, 0)<0) {
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 
@@ -1536,11 +1573,13 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
 int
 onionskin_answer(or_circuit_t *circ,
                  const created_cell_t *created_cell,
-                 const char *keys,
+                 const char *keys, size_t keys_len,
                  const uint8_t *rend_circ_nonce)
 {
   cell_t cell;
   crypt_path_t *tmp_cpath;
+
+  tor_assert(keys_len == CPATH_KEY_MATERIAL_LEN);
 
   if (created_cell_format(&cell, created_cell) < 0) {
     log_warn(LD_BUG,"couldn't format created cell (type=%d, len=%d)",
@@ -1557,7 +1596,7 @@ onionskin_answer(or_circuit_t *circ,
   log_debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
             (unsigned int)get_uint32(keys),
             (unsigned int)get_uint32(keys+20));
-  if (circuit_init_cpath_crypto(tmp_cpath, keys, 0)<0) {
+  if (circuit_init_cpath_crypto(tmp_cpath, keys, keys_len, 0, 0)<0) {
     log_warn(LD_BUG,"Circuit initialization failed");
     tor_free(tmp_cpath);
     return -1;
@@ -2356,6 +2395,30 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
     new_hop->prev = new_hop->next = new_hop;
   }
 }
+
+#ifdef TOR_UNIT_TESTS
+
+/** Unittest helper function: Count number of hops in cpath linked list. */
+unsigned int
+cpath_get_n_hops(crypt_path_t **head_ptr)
+{
+  unsigned int n_hops = 0;
+  crypt_path_t *tmp;
+
+  if (!*head_ptr) {
+    return 0;
+  }
+
+  tmp = *head_ptr;
+  if (tmp) {
+    n_hops++;
+    tmp = (*head_ptr)->next;
+  }
+
+  return n_hops;
+}
+
+#endif
 
 /** A helper function used by onion_extend_cpath(). Use <b>purpose</b>
  * and <b>state</b> and the cpath <b>head</b> (currently populated only
