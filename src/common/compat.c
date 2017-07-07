@@ -3261,7 +3261,7 @@ format_win32_error(DWORD err)
                  FORMAT_MESSAGE_FROM_SYSTEM |
                  FORMAT_MESSAGE_IGNORE_INSERTS,
                  NULL, err,
-                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                 MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
                  (LPVOID)&str,
                  0, NULL);
 
