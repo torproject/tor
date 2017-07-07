@@ -18,7 +18,6 @@
 #include "consdiffmgr.h"
 #include "control.h"
 #include "compat.h"
-#define DIRECTORY_PRIVATE
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
@@ -5124,7 +5123,7 @@ connection_dir_finished_connecting(dir_connection_t *conn)
  * Helper function for download_status_increment_failure(),
  * download_status_reset(), and download_status_increment_attempt(). */
 STATIC const smartlist_t *
-find_dl_schedule(download_status_t *dls, const or_options_t *options)
+find_dl_schedule(const download_status_t *dls, const or_options_t *options)
 {
   const int dir_server = dir_server_mode(options);
   const int multi_d = networkstatus_consensus_can_use_multiple_directories(
@@ -5193,6 +5192,8 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
   const smartlist_t *schedule = find_dl_schedule(dls, options);
   tor_assert(schedule != NULL && smartlist_len(schedule) >= 2);
   *min = *((int *)(smartlist_get(schedule, 0)));
+  /* Increment on failure schedules always use exponential backoff, but they
+   * have a smaller limit when they're deterministic */
   if (dls->backoff == DL_SCHED_DETERMINISTIC)
     *max = *((int *)((smartlist_get(schedule, smartlist_len(schedule) - 1))));
   else
@@ -5201,8 +5202,9 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
 
 /** Advance one delay step.  The algorithm is to use the previous delay to
  * compute an increment, we construct a value uniformly at random between
- * delay and MAX(delay*2,delay+1).  We then clamp that value to be no larger
- * than max_delay, and return it.
+ * delay+1 and (delay*(DIR_DEFAULT_RANDOM_MULTIPLIER+1))+1 (or
+ * DIR_TEST_NET_RANDOM_MULTIPLIER in test networks).
+ * We then clamp that value to be no larger than max_delay, and return it.
  *
  * Requires that delay is less than INT_MAX, and delay is in [0,max_delay].
  */
@@ -5221,11 +5223,11 @@ next_random_exponential_delay(int delay, int max_delay)
 
   /* How much are we willing to add to the delay? */
   int max_increment;
-  int multiplier = 3; /* no more than quadruple the previous delay */
+  int multiplier = DIR_DEFAULT_RANDOM_MULTIPLIER;
   if (get_options()->TestingTorNetwork) {
     /* Decrease the multiplier in testing networks. This reduces the variance,
      * so that bootstrap is more reliable. */
-    multiplier = 2; /* no more than triple the previous delay */
+    multiplier = DIR_TEST_NET_RANDOM_MULTIPLIER;
   }
 
   if (delay && delay < (INT_MAX-1) / multiplier) {
@@ -5377,6 +5379,11 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
   tor_assert(dls);
 
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
   /* count the failure */
   if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1) {
     ++dls->n_download_failures;
@@ -5401,14 +5408,16 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
   download_status_log_helper(item, !dls->increment_on, "failed",
                              "concurrently", dls->n_download_failures,
-                             increment, dls->next_attempt_at, now);
+                             increment,
+                             download_status_get_next_attempt_at(dls),
+                             now);
 
   if (dls->increment_on == DL_SCHED_INCREMENT_ATTEMPT) {
     /* stop this schedule retrying on failure, it will launch concurrent
      * connections instead */
     return TIME_MAX;
   } else {
-    return dls->next_attempt_at;
+    return download_status_get_next_attempt_at(dls);
   }
 }
 
@@ -5429,6 +5438,11 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
 
   tor_assert(dls);
 
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
   if (dls->increment_on == DL_SCHED_INCREMENT_FAILURE) {
     /* this schedule should retry on failure, and not launch any concurrent
      attempts */
@@ -5447,9 +5461,19 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
 
   download_status_log_helper(item, dls->increment_on, "attempted",
                              "on failure", dls->n_download_attempts,
-                             delay, dls->next_attempt_at, now);
+                             delay, download_status_get_next_attempt_at(dls),
+                             now);
 
-  return dls->next_attempt_at;
+  return download_status_get_next_attempt_at(dls);
+}
+
+static time_t
+download_status_get_initial_delay_from_now(const download_status_t *dls)
+{
+  const smartlist_t *schedule = find_dl_schedule(dls, get_options());
+  /* We use constant initial delays, even in exponential backoff
+   * schedules. */
+  return time(NULL) + *(int *)smartlist_get(schedule, 0);
 }
 
 /** Reset <b>dls</b> so that it will be considered downloadable
@@ -5470,11 +5494,9 @@ download_status_reset(download_status_t *dls)
       || dls->n_download_attempts == IMPOSSIBLE_TO_DOWNLOAD)
     return; /* Don't reset this. */
 
-  const smartlist_t *schedule = find_dl_schedule(dls, get_options());
-
   dls->n_download_failures = 0;
   dls->n_download_attempts = 0;
-  dls->next_attempt_at = time(NULL) + *(int *)smartlist_get(schedule, 0);
+  dls->next_attempt_at = download_status_get_initial_delay_from_now(dls);
   dls->last_backoff_position = 0;
   dls->last_delay_used = 0;
   /* Don't reset dls->want_authority or dls->increment_on */
@@ -5501,6 +5523,12 @@ download_status_get_n_attempts(const download_status_t *dls)
 time_t
 download_status_get_next_attempt_at(const download_status_t *dls)
 {
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    /* so give the answer we would have given if it had been */
+    return download_status_get_initial_delay_from_now(dls);
+  }
+
   return dls->next_attempt_at;
 }
 

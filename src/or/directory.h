@@ -123,12 +123,19 @@ time_t download_status_increment_attempt(download_status_t *dls,
 void download_status_reset(download_status_t *dls);
 static int download_status_is_ready(download_status_t *dls, time_t now,
                                     int max_failures);
+time_t download_status_get_next_attempt_at(const download_status_t *dls);
+
 /** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
  * ready to get its download reattempted. */
 static inline int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
 {
+  /* dls wasn't reset before it was used */
+  if (dls->next_attempt_at == 0) {
+    download_status_reset(dls);
+  }
+
   if (dls->backoff == DL_SCHED_DETERMINISTIC) {
     /* Deterministic schedules can hit an endpoint; exponential backoff
      * schedules just wait longer and longer. */
@@ -137,7 +144,7 @@ download_status_is_ready(download_status_t *dls, time_t now,
     if (!under_failure_limit)
       return 0;
   }
-  return dls->next_attempt_at <= now;
+  return download_status_get_next_attempt_at(dls) <= now;
 }
 
 static void download_status_mark_impossible(download_status_t *dl);
@@ -151,7 +158,6 @@ download_status_mark_impossible(download_status_t *dl)
 
 int download_status_get_n_failures(const download_status_t *dls);
 int download_status_get_n_attempts(const download_status_t *dls);
-time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
 int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
                             const char *resource);
@@ -193,7 +199,7 @@ STATIC char* authdir_type_to_string(dirinfo_type_t auth);
 STATIC const char * dir_conn_purpose_to_string(int purpose);
 STATIC int should_use_directory_guards(const or_options_t *options);
 STATIC compression_level_t choose_compression_level(ssize_t n_bytes);
-STATIC const smartlist_t *find_dl_schedule(download_status_t *dls,
+STATIC const smartlist_t *find_dl_schedule(const download_status_t *dls,
                                            const or_options_t *options);
 STATIC void find_dl_min_and_max_delay(download_status_t *dls,
                                       const or_options_t *options,
@@ -204,6 +210,16 @@ STATIC int parse_hs_version_from_post(const char *url, const char *prefix,
                                       const char **end_pos);
 
 STATIC unsigned parse_accept_encoding_header(const char *h);
+#endif
+
+#if defined(TOR_UNIT_TESTS) || defined(DIRECTORY_PRIVATE)
+/* Used only by directory.c and test_dir.c */
+
+/* no more than quadruple the previous delay (multiplier + 1) */
+#define DIR_DEFAULT_RANDOM_MULTIPLIER (3)
+/* no more than triple the previous delay */
+#define DIR_TEST_NET_RANDOM_MULTIPLIER (2)
+
 #endif
 
 #endif

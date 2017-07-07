@@ -2073,7 +2073,9 @@ typedef struct download_status_t {
                                         * or after each failure? */
   download_schedule_backoff_bitfield_t backoff : 1; /**< do we use the
                                         * deterministic schedule, or random
-                                        * exponential backoffs? */
+                                        * exponential backoffs?
+                                        * Increment on failure schedules
+                                        * always use exponential backoff. */
   uint8_t last_backoff_position; /**< number of attempts/failures, depending
                                   * on increment_on, when we last recalculated
                                   * the delay.  Only updated if backoff
