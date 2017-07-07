@@ -55,7 +55,8 @@ int hs_ntor_service_get_rendezvous1_keys(
                   const curve25519_public_key_t *client_ephemeral_enc_pubkey,
                   hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys_out);
 
-int hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed, size_t seed_len,
+int hs_ntor_circuit_key_expansion(const uint8_t *ntor_key_seed,
+                                  size_t seed_len,
                                   uint8_t *keys_out, size_t keys_out_len);
 
 int hs_ntor_client_rendezvous2_mac_is_good(
