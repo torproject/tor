@@ -115,6 +115,69 @@ service_is_duplicate_in_list(const smartlist_t *service_list,
   return ret;
 }
 
+/* Return true iff the given options starting at line_ for a hidden service
+ * contains at least one invalid option. Each hidden service option don't
+ * apply to all versions so this function can find out. The line_ MUST start
+ * right after the HiddenServiceDir line of this service.
+ *
+ * This is mainly for usability so we can inform the user of any invalid
+ * option for the hidden service version instead of silently ignoring. */
+static int
+config_has_invalid_options(const config_line_t *line_,
+                           const hs_service_t *service)
+{
+  int ret = 0;
+  const char **optlist;
+  const config_line_t *line;
+
+  tor_assert(service);
+  tor_assert(service->version <= HS_VERSION_MAX);
+
+  /* List of options that a v3 service doesn't support thus must exclude from
+   * its configuration. */
+  const char *opts_exclude_v3[] = {
+    "HiddenServiceAuthorizeClient",
+    NULL /* End marker. */
+  };
+
+  /* Defining the size explicitly allows us to take advantage of the compiler
+   * which warns us if we ever bump the max version but forget to grow this
+   * array. The plus one is because we have a version 0 :). */
+  struct {
+    const char **list;
+  } exclude_lists[HS_VERSION_MAX + 1] = {
+    { NULL }, /* v0. */
+    { NULL }, /* v1. */
+    { NULL }, /* v2 */
+    { opts_exclude_v3 }, /* v3. */
+  };
+
+  optlist = exclude_lists[service->version].list;
+  if (optlist == NULL) {
+    /* No exclude options to look at for this version. */
+    goto end;
+  }
+  for (int i = 0; optlist[i]; i++) {
+    const char *opt = optlist[i];
+    for (line = line_; line; line = line->next) {
+      if (!strcasecmp(line->key, "HiddenServiceDir")) {
+        /* We just hit the next hidden service, stop right now. */
+        goto end;
+      }
+      if (!strcasecmp(line->key, opt)) {
+        log_warn(LD_CONFIG, "Hidden service option %s is incompatible with "
+                            "version %" PRIu32 " of service in %s",
+                 opt, service->version, service->config.directory_path);
+        ret = 1;
+        /* Continue the loop so we can find all possible options. */
+        continue;
+      }
+    }
+  }
+ end:
+  return ret;
+}
+
 /* Validate service configuration. This is used when loading the configuration
  * and once we've setup a service object, it's config object is passed to this
  * function for further validation. This does not validate service key
@@ -395,6 +458,12 @@ config_service(const config_line_t *line, const or_options_t *options,
     goto err;
   }
   tor_assert(service->version <= HS_VERSION_MAX);
+  /* Before we configure the service with the per-version handler, we'll make
+   * sure that this set of options for a service are valid that is for
+   * instance an option only for v2 is not used for v3. */
+  if (config_has_invalid_options(line->next, service)) {
+    goto err;
+  }
   /* Check permission on service directory that was just parsed. And this must
    * be done regardless of the service version. Do not ask for the directory
    * to be created, this is done when the keys are loaded because we could be
