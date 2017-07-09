@@ -7,7 +7,7 @@ tl;dr:
    - Document your functions
    - Write unit tests
    - Run `make check` before submitting a patch
-   - Run `make distcheck` to ensure the distribution works
+   - Run `make distcheck` if you have made changes to build system components
    - Add a file in `changes` for your branch.
 
 Patch checklist
@@ -36,6 +36,11 @@ If you are submitting a major patch or new feature, or want to in the future...
 
    - Set up Chutney and Stem, see HACKING/WritingTests.md
    - Run `make test-full` to test against all unit and integration tests.
+
+If you have changed build system components:
+   - Please run `make distcheck`
+   - For example, if you have changed Makefiles, autoconf files, or anything
+     else that impacts the build system.
 
 How we use Git branches
 =======================
