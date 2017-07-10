@@ -37,6 +37,11 @@ void scheduler_touch_channel(channel_t *chan);
 /* Adjust the watermarks from config file*/
 void scheduler_set_watermarks(uint32_t lo, uint32_t hi, uint32_t max_flush);
 
+/* XXXFORTOR Temp def of this func to get this commit to compile. Replace with
+ * real func */
+void scheduler_notify_networkstatus_changed(const networkstatus_t *old_c,
+                                            const networkstatus_t *new_c);
+
 /* Things only scheduler.c and its test suite should see */
 
 #ifdef SCHEDULER_PRIVATE_

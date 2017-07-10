@@ -114,10 +114,9 @@ void signed_descs_update_status_from_consensus_networkstatus(
 char *networkstatus_getinfo_helper_single(const routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
-int32_t networkstatus_get_param(const networkstatus_t *ns,
-                                const char *param_name,
-                                int32_t default_val, int32_t min_val,
-                                int32_t max_val);
+MOCK_DECL(int32_t, networkstatus_get_param,
+          (const networkstatus_t *ns, const char *param_name,
+           int32_t default_val, int32_t min_val, int32_t max_val));
 int32_t networkstatus_get_overridable_param(const networkstatus_t *ns,
                                             int32_t torrc_value,
                                             const char *param_name,
