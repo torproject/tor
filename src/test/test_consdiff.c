@@ -415,18 +415,18 @@ test_consdiff_base64cmp(void *arg)
   tt_int_op(-1, OP_EQ, base64cmp_wrapper("abcABC/+ ", "abcABC/+a"));
 
   /* Comparisons that would return differently with strcmp(). */
-  tt_int_op(-1, OP_EQ, strcmp("/foo", "Afoo"));
-  tt_int_op(1, OP_EQ, base64cmp_wrapper("/foo", "Afoo"));
-  tt_int_op(1, OP_EQ, strcmp("Afoo", "0foo"));
-  tt_int_op(-1, OP_EQ, base64cmp_wrapper("Afoo", "0foo"));
+  tt_int_op(strcmp("/foo", "Afoo"), OP_LT, 0);
+  tt_int_op(base64cmp_wrapper("/foo", "Afoo"), OP_GT, 0);
+  tt_int_op(strcmp("Afoo", "0foo"), OP_GT, 0);
+  tt_int_op(base64cmp_wrapper("Afoo", "0foo"), OP_LT, 0);
 
   /* Comparisons that would return the same as with strcmp(). */
-  tt_int_op(1, OP_EQ, strcmp("afoo", "Afoo"));
-  tt_int_op(1, OP_EQ, base64cmp_wrapper("afoo", "Afoo"));
+  tt_int_op(strcmp("afoo", "Afoo"), OP_GT, 0);
+  tt_int_op(base64cmp_wrapper("afoo", "Afoo"), OP_GT, 0);
 
   /* Different lengths */
-  tt_int_op(-1, OP_EQ, base64cmp_wrapper("afoo", "afooo"));
-  tt_int_op(1, OP_EQ, base64cmp_wrapper("afooo", "afoo"));
+  tt_int_op(base64cmp_wrapper("afoo", "afooo"), OP_LT, 0);
+  tt_int_op(base64cmp_wrapper("afooo", "afoo"), OP_GT, 0);
 
  done:
   ;
