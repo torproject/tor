@@ -135,7 +135,7 @@ STATIC void rend_service_prune_list_impl_(void);
 
 #endif /* RENDSERVICE_PRIVATE */
 
-int num_rend_services(void);
+int rend_num_services(void);
 int rend_config_service(const config_line_t *line_,
                         const or_options_t *options,
                         hs_service_config_t *config);

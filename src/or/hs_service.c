@@ -1864,7 +1864,7 @@ run_build_circuit_event(time_t now)
   }
 
   /* Run v2 check. */
-  if (num_rend_services() > 0) {
+  if (rend_num_services() > 0) {
     rend_consider_services_intro_points(now);
   }
 
@@ -2074,7 +2074,7 @@ run_upload_descriptor_event(time_t now)
 {
   /* v2 services use the same function for descriptor creation and upload so
    * we do everything here because the intro circuits were checked before. */
-  if (num_rend_services() > 0) {
+  if (rend_num_services() > 0) {
     rend_consider_services_upload(now);
     rend_consider_descriptor_republication();
   }
@@ -2605,7 +2605,7 @@ int
 hs_service_load_all_keys(void)
 {
   /* Load v2 service keys if we have v2. */
-  if (num_rend_services() != 0) {
+  if (rend_num_services() != 0) {
     if (rend_service_load_all_keys(NULL) < 0) {
       goto err;
     }

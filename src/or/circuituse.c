@@ -1115,7 +1115,7 @@ needs_exit_circuits(time_t now, int *needs_uptime, int *needs_capacity)
 STATIC int
 needs_hs_server_circuits(int num_uptime_internal)
 {
-  return (num_rend_services() &&
+  return (rend_num_services() &&
           num_uptime_internal < SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS &&
           router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
 }

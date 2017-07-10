@@ -148,7 +148,7 @@ rend_service_escaped_dir(const struct rend_service_t *s)
 
 /** Return the number of rendezvous services we have configured. */
 int
-num_rend_services(void)
+rend_num_services(void)
 {
   if (!rend_service_list)
     return 0;
