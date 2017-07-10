@@ -486,9 +486,11 @@ static config_var_t option_vars_[] = {
   V(ServerDNSSearchDomains,      BOOL,     "0"),
   V(ServerDNSTestAddresses,      CSV,
       "www.google.com,www.mit.edu,www.yahoo.com,www.slashdot.org"),
-  V(SchedulerLowWaterMark__,     MEMUNIT,  "100 MB"),
-  V(SchedulerHighWaterMark__,    MEMUNIT,  "101 MB"),
-  V(SchedulerMaxFlushCells__,    UINT,     "1000"),
+  OBSOLETE("SchedulerLowWaterMark__"),
+  OBSOLETE("SchedulerHighWaterMark__"),
+  OBSOLETE("SchedulerMaxFlushCells__"),
+  V(KISTSchedRunInterval,        MSEC_INTERVAL, "0 msec"),
+  V(KISTSockBufSizeFactor,       DOUBLE,   "1.0"),
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   OBSOLETE("SocksListenAddress"),
   V(SocksPolicy,                 LINELIST, NULL),
@@ -1811,11 +1813,14 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 
+  /* XXXFORTOR remove set_watermarks */
   /* Set up scheduler thresholds */
-  scheduler_set_watermarks((uint32_t)options->SchedulerLowWaterMark__,
-                           (uint32_t)options->SchedulerHighWaterMark__,
-                           (options->SchedulerMaxFlushCells__ > 0) ?
-                           options->SchedulerMaxFlushCells__ : 1000);
+  scheduler_set_watermarks(100 * 1024*1024 /* 100 MB */,
+                           101 * 1024*1024 /* 101 MB */,
+                           100);
+
+  /* XXXFORTOR enable notification to sched that the conf might have changed */
+  //scheduler_conf_changed();
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
@@ -3110,17 +3115,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->ExcludeExitNodesUnion_ = routerset_new();
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeExitNodes);
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeNodes);
-  }
-
-  if (options->SchedulerLowWaterMark__ == 0 ||
-      options->SchedulerLowWaterMark__ > UINT32_MAX) {
-    log_warn(LD_GENERAL, "Bad SchedulerLowWaterMark__ option");
-    return -1;
-  } else if (options->SchedulerHighWaterMark__ <=
-             options->SchedulerLowWaterMark__ ||
-             options->SchedulerHighWaterMark__ > UINT32_MAX) {
-    log_warn(LD_GENERAL, "Bad SchedulerHighWaterMark option");
-    return -1;
   }
 
   if (options->NodeFamilies) {

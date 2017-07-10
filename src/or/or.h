@@ -4535,19 +4535,6 @@ typedef struct {
   /** How long (seconds) do we keep a guard before picking a new one? */
   int GuardLifetime;
 
-  /** Low-water mark for global scheduler - start sending when estimated
-   * queued size falls below this threshold.
-   */
-  uint64_t SchedulerLowWaterMark__;
-  /** High-water mark for global scheduler - stop sending when estimated
-   * queued size exceeds this threshold.
-   */
-  uint64_t SchedulerHighWaterMark__;
-  /** Flush size for global scheduler - flush this many cells at a time
-   * when sending.
-   */
-  int SchedulerMaxFlushCells__;
-
   /** Is this an exit node?  This is a tristate, where "1" means "yes, and use
    * the default exit policy if none is given" and "0" means "no; exit policy
    * is 'reject *'" and "auto" (-1) means "same as 1, but warn the user."
@@ -4620,6 +4607,15 @@ typedef struct {
   /** Bool (default: 0). Tells Tor to never try to exec another program.
    */
   int NoExec;
+
+  /** Have the KIST scheduler run every X milliseconds. If less than zero, do
+   * not use the KIST scheduler but use the old vanilla scheduler instead. If
+   * zero, do what the consensus says and fall back to using KIST as if this is
+   * set to "10 msec" if the consensus doesn't say anything. */
+  int64_t KISTSchedRunInterval;
+
+  /** A multiplier for the KIST per-socket limit calculation. */
+  double KISTSockBufSizeFactor;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
