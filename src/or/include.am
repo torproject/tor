@@ -99,6 +99,8 @@ LIBTOR_A_SOURCES = \
 	src/or/routerparse.c				\
 	src/or/routerset.c				\
 	src/or/scheduler.c				\
+	src/or/scheduler_kist.c				\
+	src/or/scheduler_vanilla.c			\
 	src/or/statefile.c				\
 	src/or/status.c					\
 	src/or/torcert.c				\

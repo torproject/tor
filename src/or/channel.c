@@ -2601,8 +2601,8 @@ channel_flush_cells(channel_t *chan)
  * available.
  */
 
-int
-channel_more_to_flush(channel_t *chan)
+MOCK_IMPL(int,
+channel_more_to_flush, (channel_t *chan))
 {
   tor_assert(chan);
 
