@@ -62,8 +62,17 @@ before it gets merged into maint, but that's rare.
 
 If you're working on a bugfix for a bug that occurs in a particular version,
 base your bugfix branch on the "maint" branch for the first supported series
-that has that bug.  (As of June 2013, we're supporting 0.2.3 and later.) If
-you're working on a new feature, base it on the master branch.
+that has that bug.  (As of June 2013, we're supporting 0.2.3 and later.)
+
+If you're working on a new feature, base it on the master branch. If you're
+working on a new feature and it will take a while to implement and/or you'd
+like to avoid the possibility of unrelated bugs in Tor while you're
+implementing your feature, consider branching off of the latest maint- branch.
+_Never_ branch off a relase- branch. Don't branch off a tag either: they come
+from release branches. Doing so will likely produce a nightmare of merge
+conflicts in the ChangeLog when it comes time to merge your branch into Tor.
+Best advice: don't try to keep an independent branch forked for more than 6
+months and expect it to merge cleanly. Try to merge pieces early and often.
 
 
 How we log changes
