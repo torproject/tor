@@ -8,6 +8,7 @@
 
 #include "or.h"
 #include "hs_circuit.h"
+#include "hs_ident.h"
 #include "connection_edge.h"
 #include "rendclient.h"
 
