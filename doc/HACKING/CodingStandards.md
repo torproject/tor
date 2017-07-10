@@ -40,7 +40,7 @@ If you are submitting a major patch or new feature, or want to in the future...
 If you have changed build system components:
    - Please run `make distcheck`
    - For example, if you have changed Makefiles, autoconf files, or anything
-     else that impacts the build system.
+     else that affects the build system.
 
 How we use Git branches
 =======================
