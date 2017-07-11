@@ -253,6 +253,7 @@ void hs_service_free_all(void);
 hs_service_t *hs_service_new(const or_options_t *options);
 void hs_service_free(hs_service_t *service);
 
+unsigned int hs_service_get_num_services(void);
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
 void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,

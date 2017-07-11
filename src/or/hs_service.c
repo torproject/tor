@@ -2390,6 +2390,16 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* Public API */
 /* ========== */
 
+/* Return the number of service we have configured and usable. */
+unsigned int
+hs_service_get_num_services(void)
+{
+  if (hs_service_map == NULL) {
+    return 0;
+  }
+  return HT_SIZE(hs_service_map);
+}
+
 /* Called once an introduction circuit is closed. If the circuit doesn't have
  * a v3 identifier, it is ignored. */
 void
