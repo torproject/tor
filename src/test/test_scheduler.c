@@ -9,8 +9,12 @@
 #define TOR_CHANNEL_INTERNAL_
 #define CHANNEL_PRIVATE_
 #include "or.h"
+#include "config.h"
 #include "compat_libevent.h"
 #include "channel.h"
+#include "channeltls.h"
+#include "connection.h"
+#include "networkstatus.h"
 #define SCHEDULER_PRIVATE_
 #include "scheduler.h"
 
@@ -18,53 +22,65 @@
 #include "test.h"
 #include "fakechans.h"
 
-/* Event base for scheduelr tests */
-static struct event_base *mock_event_base = NULL;
-
-/* Statics controlling mocks */
-static circuitmux_t *mock_ccm_tgt_1 = NULL;
-static circuitmux_t *mock_ccm_tgt_2 = NULL;
-
-static circuitmux_t *mock_cgp_tgt_1 = NULL;
-static circuitmux_policy_t *mock_cgp_val_1 = NULL;
-static circuitmux_t *mock_cgp_tgt_2 = NULL;
-static circuitmux_policy_t *mock_cgp_val_2 = NULL;
-static int scheduler_compare_channels_mock_ctr = 0;
-static int scheduler_run_mock_ctr = 0;
-
-static void channel_flush_some_cells_mock_free_all(void);
-static void channel_flush_some_cells_mock_set(channel_t *chan,
-                                              ssize_t num_cells);
-
-/* Setup for mock event stuff */
-static void mock_event_free_all(void);
-static void mock_event_init(void);
-
-/* Mocks used by scheduler tests */
-static ssize_t channel_flush_some_cells_mock(channel_t *chan,
-                                             ssize_t num_cells);
-static int circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
-                                         circuitmux_t *cmux_2);
-static const circuitmux_policy_t * circuitmux_get_policy_mock(
-    circuitmux_t *cmux);
-static int scheduler_compare_channels_mock(const void *c1_v,
-                                           const void *c2_v);
-static void scheduler_run_noop_mock(void);
-static struct event_base * tor_libevent_get_base_mock(void);
-
-/* Scheduler test cases */
-static void test_scheduler_channel_states(void *arg);
-static void test_scheduler_compare_channels(void *arg);
-static void test_scheduler_initfree(void *arg);
-static void test_scheduler_loop(void *arg);
-static void test_scheduler_queue_heuristic(void *arg);
-
-/* Mock event init/free */
-
 /* Shamelessly stolen from compat_libevent.c */
 #define V(major, minor, patch) \
   (((major) << 24) | ((minor) << 16) | ((patch) << 8))
 
+/******************************************************************************
+ * Statistical info
+ *****************************************************************************/
+static int scheduler_compare_channels_mock_ctr = 0;
+static int scheduler_run_mock_ctr = 0;
+
+/******************************************************************************
+ * Utility functions and things we need to mock
+ *****************************************************************************/
+static or_options_t mocked_options;
+static const or_options_t *
+mock_get_options(void)
+{
+  return &mocked_options;
+}
+
+static void
+clear_options(void)
+{
+  memset(&mocked_options, 0, sizeof(mocked_options));
+}
+
+static int32_t
+mock_vanilla_networkstatus_get_param(
+    const networkstatus_t *ns, const char *param_name, int32_t default_val,
+    int32_t min_val, int32_t max_val)
+{
+  (void)ns;
+  (void)default_val;
+  (void)min_val;
+  (void)max_val;
+  // only support KISTSchedRunInterval right now
+  tor_assert(strcmp(param_name, "KISTSchedRunInterval")==0);
+  return -1;
+}
+
+static int32_t
+mock_kist_networkstatus_get_param(
+    const networkstatus_t *ns, const char *param_name, int32_t default_val,
+    int32_t min_val, int32_t max_val)
+{
+  (void)ns;
+  (void)default_val;
+  (void)min_val;
+  (void)max_val;
+  // only support KISTSchedRunInterval right now
+  tor_assert(strcmp(param_name, "KISTSchedRunInterval")==0);
+  return 12;
+}
+
+/* Event base for scheduelr tests */
+static struct event_base *mock_event_base = NULL;
+/* Setup for mock event stuff */
+static void mock_event_free_all(void);
+static void mock_event_init(void);
 static void
 mock_event_free_all(void)
 {
@@ -110,7 +126,84 @@ mock_event_init(void)
   return;
 }
 
-/* Mocks */
+static struct event_base *
+tor_libevent_get_base_mock(void)
+{
+  return mock_event_base;
+}
+
+static int
+scheduler_compare_channels_mock(const void *c1_v,
+                                const void *c2_v)
+{
+  uintptr_t p1, p2;
+
+  p1 = (uintptr_t)(c1_v);
+  p2 = (uintptr_t)(c2_v);
+
+  ++scheduler_compare_channels_mock_ctr;
+
+  if (p1 == p2) return 0;
+  else if (p1 < p2) return 1;
+  else return -1;
+}
+
+static void
+scheduler_run_noop_mock(void)
+{
+  ++scheduler_run_mock_ctr;
+}
+
+static circuitmux_t *mock_ccm_tgt_1 = NULL;
+static circuitmux_t *mock_ccm_tgt_2 = NULL;
+static circuitmux_t *mock_cgp_tgt_1 = NULL;
+static circuitmux_policy_t *mock_cgp_val_1 = NULL;
+static circuitmux_t *mock_cgp_tgt_2 = NULL;
+static circuitmux_policy_t *mock_cgp_val_2 = NULL;
+
+static const circuitmux_policy_t *
+circuitmux_get_policy_mock(circuitmux_t *cmux)
+{
+  const circuitmux_policy_t *result = NULL;
+
+  tt_assert(cmux != NULL);
+  if (cmux) {
+    if (cmux == mock_cgp_tgt_1) result = mock_cgp_val_1;
+    else if (cmux == mock_cgp_tgt_2) result = mock_cgp_val_2;
+    else result = circuitmux_get_policy__real(cmux);
+  }
+
+ done:
+  return result;
+}
+
+static int
+circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
+                              circuitmux_t *cmux_2)
+{
+  int result = 0;
+
+  tt_assert(cmux_1 != NULL);
+  tt_assert(cmux_2 != NULL);
+
+  if (cmux_1 != cmux_2) {
+    if (cmux_1 == mock_ccm_tgt_1 && cmux_2 == mock_ccm_tgt_2) result = -1;
+    else if (cmux_1 == mock_ccm_tgt_2 && cmux_2 == mock_ccm_tgt_1) {
+      result = 1;
+    } else {
+      if (cmux_1 == mock_ccm_tgt_1 || cmux_1 == mock_ccm_tgt_2) result = -1;
+      else if (cmux_2 == mock_ccm_tgt_1 || cmux_2 == mock_ccm_tgt_2) {
+        result = 1;
+      } else {
+        result = circuitmux_compare_muxes__real(cmux_1, cmux_2);
+      }
+    }
+  }
+  /* else result = 0 always */
+
+ done:
+  return result;
+}
 
 typedef struct {
   const channel_t *chan;
@@ -174,6 +267,67 @@ channel_flush_some_cells_mock_set(channel_t *chan, ssize_t num_cells)
   }
 }
 
+static int
+channel_more_to_flush_mock(channel_t *chan)
+{
+  tor_assert(chan);
+
+  flush_mock_channel_t *found_mock_ch = NULL;
+
+  /* Check if we have any queued */
+  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
+      return 1;
+
+  SMARTLIST_FOREACH_BEGIN(chans_for_flush_mock,
+                          flush_mock_channel_t *,
+                          flush_mock_ch) {
+    if (flush_mock_ch != NULL && flush_mock_ch->chan != NULL) {
+      if (flush_mock_ch->chan == chan) {
+        /* Found it */
+        found_mock_ch = flush_mock_ch;
+        break;
+      }
+    } else {
+      /* That shouldn't be there... */
+      SMARTLIST_DEL_CURRENT(chans_for_flush_mock, flush_mock_ch);
+      tor_free(flush_mock_ch);
+    }
+  } SMARTLIST_FOREACH_END(flush_mock_ch);
+
+  tor_assert(found_mock_ch);
+
+  /* Check if any circuits would like to queue some */
+  /* special for the mock: return the number of cells (instead of 1), or zero
+   * if nothing to flush */
+  return (found_mock_ch->cells > 0 ? (int)found_mock_ch->cells : 0 );
+}
+
+static void
+channel_write_to_kernel_mock(channel_t *chan)
+{
+  (void)chan;
+  //log_debug(LD_SCHED, "chan=%d writing to kernel",
+  //    (int)chan->global_identifier);
+}
+
+static int
+channel_should_write_to_kernel_mock(outbuf_table_t *ot, channel_t *chan)
+{
+  (void)ot;
+  (void)chan;
+  return 1;
+  /* We could make this more complicated if we wanted. But I don't think doing
+   * so tests much of anything */
+  //static int called_counter = 0;
+  //if (++called_counter >= 3) {
+  //  called_counter -= 3;
+  //  log_debug(LD_SCHED, "chan=%d should write to kernel",
+  //      (int)chan->global_identifier);
+  //  return 1;
+  //}
+  //return 0;
+}
+
 static ssize_t
 channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
 {
@@ -215,11 +369,6 @@ channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
 
         flushed += max;
         found->cells -= max;
-
-        if (found->cells <= 0) {
-          smartlist_remove(chans_for_flush_mock, found);
-          tor_free(found);
-        }
       }
     }
   }
@@ -228,90 +377,25 @@ channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
   return flushed;
 }
 
-static int
-circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
-                              circuitmux_t *cmux_2)
+static void
+update_socket_info_impl_mock(socket_table_ent_t *ent)
 {
-  int result = 0;
-
-  tt_ptr_op(cmux_1, OP_NE, NULL);
-  tt_ptr_op(cmux_2, OP_NE, NULL);
-
-  if (cmux_1 != cmux_2) {
-    if (cmux_1 == mock_ccm_tgt_1 && cmux_2 == mock_ccm_tgt_2) result = -1;
-    else if (cmux_1 == mock_ccm_tgt_2 && cmux_2 == mock_ccm_tgt_1) {
-      result = 1;
-    } else {
-      if (cmux_1 == mock_ccm_tgt_1 || cmux_1 == mock_ccm_tgt_2) result = -1;
-      else if (cmux_2 == mock_ccm_tgt_1 || cmux_2 == mock_ccm_tgt_2) {
-        result = 1;
-      } else {
-        result = circuitmux_compare_muxes__real(cmux_1, cmux_2);
-      }
-    }
-  }
-  /* else result = 0 always */
-
- done:
-  return result;
-}
-
-static const circuitmux_policy_t *
-circuitmux_get_policy_mock(circuitmux_t *cmux)
-{
-  const circuitmux_policy_t *result = NULL;
-
-  tt_ptr_op(cmux, OP_NE, NULL);
-  if (cmux) {
-    if (cmux == mock_cgp_tgt_1) result = mock_cgp_val_1;
-    else if (cmux == mock_cgp_tgt_2) result = mock_cgp_val_2;
-    else result = circuitmux_get_policy__real(cmux);
-  }
-
- done:
-  return result;
-}
-
-static int
-scheduler_compare_channels_mock(const void *c1_v,
-                                const void *c2_v)
-{
-  uintptr_t p1, p2;
-
-  p1 = (uintptr_t)(c1_v);
-  p2 = (uintptr_t)(c2_v);
-
-  ++scheduler_compare_channels_mock_ctr;
-
-  if (p1 == p2) return 0;
-  else if (p1 < p2) return 1;
-  else return -1;
+  ent->cwnd = ent->unacked = ent->mss = ent->notsent = 0;
+  ent->limit = INT_MAX;
 }
 
 static void
-scheduler_run_noop_mock(void)
-{
-  ++scheduler_run_mock_ctr;
-}
-
-static struct event_base *
-tor_libevent_get_base_mock(void)
-{
-  return mock_event_base;
-}
-
-/* Test cases */
-
-static void
-test_scheduler_channel_states(void *arg)
+perform_channel_state_tests(int KISTSchedRunInterval)
 {
   channel_t *ch1 = NULL, *ch2 = NULL;
   int old_count;
 
-  (void)arg;
+  /* setup options so we're sure about what sched we are running */
+  MOCK(get_options, mock_get_options);
+  clear_options();
+  mocked_options.KISTSchedRunInterval = KISTSchedRunInterval;
 
   /* Set up libevent and scheduler */
-
   mock_event_init();
   MOCK(tor_libevent_get_base, tor_libevent_get_base_mock);
   scheduler_init();
@@ -324,7 +408,7 @@ test_scheduler_channel_states(void *arg)
    * Disable scheduler_run so we can just check the state transitions
    * without having to make everything it might call work too.
    */
-  MOCK(scheduler_run, scheduler_run_noop_mock);
+  scheduler->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 
@@ -351,7 +435,7 @@ test_scheduler_channel_states(void *arg)
   channel_register(ch2);
   tt_assert(ch2->registered);
 
-  /* Send it to SCHED_CHAN_WAITING_TO_WRITE */
+  /* Send ch1 to SCHED_CHAN_WAITING_TO_WRITE */
   scheduler_channel_has_waiting_cells(ch1);
   tt_int_op(ch1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_TO_WRITE);
 
@@ -415,8 +499,8 @@ test_scheduler_channel_states(void *arg)
   tor_free(ch2);
 
   UNMOCK(scheduler_compare_channels);
-  UNMOCK(scheduler_run);
   UNMOCK(tor_libevent_get_base);
+  UNMOCK(get_options);
 
   return;
 }
@@ -502,40 +586,21 @@ test_scheduler_compare_channels(void *arg)
   return;
 }
 
+/******************************************************************************
+ * The actual tests!
+ *****************************************************************************/
+
 static void
-test_scheduler_initfree(void *arg)
+test_scheduler_loop_vanilla(void *arg)
 {
   (void)arg;
-
-  tt_ptr_op(channels_pending, OP_EQ, NULL);
-  tt_ptr_op(run_sched_ev, OP_EQ, NULL);
-
-  mock_event_init();
-  MOCK(tor_libevent_get_base, tor_libevent_get_base_mock);
-
-  scheduler_init();
-
-  tt_ptr_op(channels_pending, OP_NE, NULL);
-  tt_ptr_op(run_sched_ev, OP_NE, NULL);
-
-  scheduler_free_all();
-
-  UNMOCK(tor_libevent_get_base);
-  mock_event_free_all();
-
-  tt_ptr_op(channels_pending, OP_EQ, NULL);
-  tt_ptr_op(run_sched_ev, OP_EQ, NULL);
-
- done:
-  return;
-}
-
-static void
-test_scheduler_loop(void *arg)
-{
   channel_t *ch1 = NULL, *ch2 = NULL;
+  void (*run_func_ptr)(void);
 
-  (void)arg;
+  /* setup options so we're sure about what sched we are running */
+  MOCK(get_options, mock_get_options);
+  clear_options();
+  mocked_options.KISTSchedRunInterval = -1;
 
   /* Set up libevent and scheduler */
 
@@ -551,12 +616,14 @@ test_scheduler_loop(void *arg)
    * Disable scheduler_run so we can just check the state transitions
    * without having to make everything it might call work too.
    */
-  MOCK(scheduler_run, scheduler_run_noop_mock);
+  run_func_ptr = scheduler->run;
+  scheduler->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 
   /* Set up a fake channel */
   ch1 = new_fake_channel();
+  ch1->magic = TLS_CHAN_MAGIC;
   tt_assert(ch1);
 
   /* Start it off in OPENING */
@@ -574,6 +641,7 @@ test_scheduler_loop(void *arg)
 
   /* Now get another one */
   ch2 = new_fake_channel();
+  ch2->magic = TLS_CHAN_MAGIC;
   tt_assert(ch2);
   ch2->state = CHANNEL_STATE_OPENING;
   ch2->cmux = circuitmux_alloc();
@@ -615,15 +683,9 @@ test_scheduler_loop(void *arg)
 
   /*
    * Now we've got two pending channels and need to fire off
-   * scheduler_run(); first, unmock it.
+   * the scheduler run() that we kept.
    */
-
-  UNMOCK(scheduler_run);
-
-  scheduler_run();
-
-  /* Now re-mock it */
-  MOCK(scheduler_run, scheduler_run_noop_mock);
+  run_func_ptr();
 
   /*
    * Assert that they're still in the states we left and aren't still
@@ -661,15 +723,10 @@ test_scheduler_loop(void *arg)
   channel_flush_some_cells_mock_set(ch2, 48);
 
   /*
-   * And re-run the scheduler_run() loop with non-zero returns from
+   * And re-run the scheduler run() loop with non-zero returns from
    * channel_flush_some_cells() this time.
    */
-  UNMOCK(scheduler_run);
-
-  scheduler_run();
-
-  /* Now re-mock it */
-  MOCK(scheduler_run, scheduler_run_noop_mock);
+  run_func_ptr();
 
   /*
    * ch1 should have gone to SCHED_CHAN_WAITING_FOR_CELLS, with 16 flushed
@@ -707,52 +764,240 @@ test_scheduler_loop(void *arg)
 
   UNMOCK(channel_flush_some_cells);
   UNMOCK(scheduler_compare_channels);
-  UNMOCK(scheduler_run);
   UNMOCK(tor_libevent_get_base);
+  UNMOCK(get_options);
 }
 
 static void
-test_scheduler_queue_heuristic(void *arg)
+test_scheduler_loop_kist(void *arg)
 {
-  time_t now = approx_time();
-  uint64_t qh;
+  (void) arg;
+  channel_t *ch1 = new_fake_channel(), *ch2 = new_fake_channel();
 
+  /* setup options so we're sure about what sched we are running */
+  MOCK(get_options, mock_get_options);
+  MOCK(channel_flush_some_cells, channel_flush_some_cells_mock);
+  MOCK(channel_more_to_flush, channel_more_to_flush_mock);
+  MOCK(channel_write_to_kernel, channel_write_to_kernel_mock);
+  MOCK(channel_should_write_to_kernel, channel_should_write_to_kernel_mock);
+  MOCK(update_socket_info_impl, update_socket_info_impl_mock);
+  clear_options();
+  mocked_options.KISTSchedRunInterval = 11;
+  scheduler_init();
+
+  tt_assert(ch1);
+  ch1->magic = TLS_CHAN_MAGIC;
+  ch1->state = CHANNEL_STATE_OPENING;
+  ch1->cmux = circuitmux_alloc();
+  channel_register(ch1);
+  tt_assert(ch1->registered);
+  channel_change_state_open(ch1);
+  scheduler_channel_has_waiting_cells(ch1);
+  scheduler_channel_wants_writes(ch1);
+  channel_flush_some_cells_mock_set(ch1, 5);
+
+  tt_assert(ch2);
+  ch2->magic = TLS_CHAN_MAGIC;
+  ch2->state = CHANNEL_STATE_OPENING;
+  ch2->cmux = circuitmux_alloc();
+  channel_register(ch2);
+  tt_assert(ch2->registered);
+  channel_change_state_open(ch2);
+  scheduler_channel_has_waiting_cells(ch2);
+  scheduler_channel_wants_writes(ch2);
+  channel_flush_some_cells_mock_set(ch2, 5);
+
+  scheduler->run();
+
+  scheduler_channel_has_waiting_cells(ch1);
+  channel_flush_some_cells_mock_set(ch1, 5);
+
+  scheduler->run();
+
+  scheduler_channel_has_waiting_cells(ch1);
+  channel_flush_some_cells_mock_set(ch1, 5);
+  scheduler_channel_has_waiting_cells(ch2);
+  channel_flush_some_cells_mock_set(ch2, 5);
+
+  scheduler->run();
+
+  channel_flush_some_cells_mock_free_all();
+  tt_int_op(1,==,1);
+
+ done:
+  /* Prep the channel so the free() function doesn't explode. */
+  ch1->state = ch2->state = CHANNEL_STATE_CLOSED;
+  ch1->registered = ch2->registered = 0;
+  channel_free(ch1);
+  channel_free(ch2);
+  UNMOCK(update_socket_info_impl);
+  UNMOCK(channel_should_write_to_kernel);
+  UNMOCK(channel_write_to_kernel);
+  UNMOCK(channel_more_to_flush);
+  UNMOCK(channel_flush_some_cells);
+  UNMOCK(get_options);
+  scheduler_free_all();
+  return;
+}
+
+static void
+test_scheduler_channel_states(void *arg)
+{
+  (void)arg;
+  perform_channel_state_tests(-1); // vanilla
+  perform_channel_state_tests(11); // kist
+}
+
+static void
+test_scheduler_initfree(void *arg)
+{
   (void)arg;
 
-  queue_heuristic = 0;
-  queue_heuristic_timestamp = 0;
+  tt_ptr_op(channels_pending, ==, NULL);
+  tt_ptr_op(run_sched_ev, ==, NULL);
 
-  /* Not yet inited case */
-  scheduler_update_queue_heuristic(now - 180);
-  tt_u64_op(queue_heuristic, OP_EQ, 0);
-  tt_int_op(queue_heuristic_timestamp, OP_EQ, now - 180);
+  mock_event_init();
+  MOCK(tor_libevent_get_base, tor_libevent_get_base_mock);
 
-  queue_heuristic = 1000000000L;
-  queue_heuristic_timestamp = now - 120;
+  scheduler_init();
 
-  scheduler_update_queue_heuristic(now - 119);
-  tt_u64_op(queue_heuristic, OP_EQ, 500000000L);
-  tt_int_op(queue_heuristic_timestamp, OP_EQ, now - 119);
+  tt_ptr_op(channels_pending, !=, NULL);
+  tt_ptr_op(run_sched_ev, !=, NULL);
+  /* We have specified nothing in the torrc and there's no consensus so the
+   * KIST scheduler is what should be in use */
+  tt_ptr_op(scheduler, ==, get_kist_scheduler());
+  tt_int_op(sched_run_interval, ==, 10);
 
-  scheduler_update_queue_heuristic(now - 116);
-  tt_u64_op(queue_heuristic, OP_EQ, 62500000L);
-  tt_int_op(queue_heuristic_timestamp, OP_EQ, now - 116);
+  scheduler_free_all();
 
-  qh = scheduler_get_queue_heuristic();
-  tt_u64_op(qh, OP_EQ, 0);
+  UNMOCK(tor_libevent_get_base);
+  mock_event_free_all();
+
+  tt_ptr_op(channels_pending, ==, NULL);
+  tt_ptr_op(run_sched_ev, ==, NULL);
 
  done:
   return;
 }
 
+static void
+test_scheduler_should_use_kist(void *arg)
+{
+  (void)arg;
+
+  int res_should, res_freq;
+  MOCK(get_options, mock_get_options);
+
+  /* Test force disabling of KIST */
+  clear_options();
+  mocked_options.KISTSchedRunInterval = -1;
+  res_should = scheduler_should_use_kist();
+  res_freq = kist_scheduler_run_interval(NULL);
+  tt_int_op(res_should, ==, 0);
+  tt_int_op(res_freq, ==, -1);
+
+  /* Test force enabling of KIST */
+  clear_options();
+  mocked_options.KISTSchedRunInterval = 1234;
+  res_should = scheduler_should_use_kist();
+  res_freq = kist_scheduler_run_interval(NULL);
+  tt_int_op(res_should, ==, 1);
+  tt_int_op(res_freq, ==, 1234);
+
+  /* Test defer to consensus, but no consensus available */
+  clear_options();
+  mocked_options.KISTSchedRunInterval = 0;
+  res_should = scheduler_should_use_kist();
+  res_freq = kist_scheduler_run_interval(NULL);
+  tt_int_op(res_should, ==, 1);
+  tt_int_op(res_freq, ==, 10);
+
+  /* Test defer to consensus, and kist consensus available */
+  MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
+  clear_options();
+  mocked_options.KISTSchedRunInterval = 0;
+  res_should = scheduler_should_use_kist();
+  res_freq = kist_scheduler_run_interval(NULL);
+  tt_int_op(res_should, ==, 1);
+  tt_int_op(res_freq, ==, 12);
+  UNMOCK(networkstatus_get_param);
+
+  /* Test defer to consensus, and vanilla consensus available */
+  MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
+  clear_options();
+  mocked_options.KISTSchedRunInterval = 0;
+  res_should = scheduler_should_use_kist();
+  res_freq = kist_scheduler_run_interval(NULL);
+  tt_int_op(res_should, ==, 0);
+  tt_int_op(res_freq, ==, -1);
+  UNMOCK(networkstatus_get_param);
+
+ done:
+  UNMOCK(get_options);
+  return;
+}
+
+static void
+test_scheduler_ns_changed(void *arg)
+{
+  (void) arg;
+
+  /*
+   * Currently no scheduler implementations use the old/new consensuses passed
+   * in scheduler_notify_networkstatus_changed, so it is okay to pass NULL.
+   *
+   * "But then what does test actually exercise???" It tests that
+   * scheduler_notify_networkstatus_changed fetches the correct value from the
+   * consensus, and then switches the scheduler if necessasry.
+   */
+
+  MOCK(get_options, mock_get_options);
+  clear_options();
+
+  tt_ptr_op(scheduler, ==, NULL);
+
+  /* Change from vanilla to kist via consensus */
+  scheduler = get_vanilla_scheduler();
+  MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
+  scheduler_notify_networkstatus_changed(NULL, NULL);
+  UNMOCK(networkstatus_get_param);
+  tt_ptr_op(scheduler, ==, get_kist_scheduler());
+
+  /* Change from kist to vanilla via consensus */
+  scheduler = get_kist_scheduler();
+  MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
+  scheduler_notify_networkstatus_changed(NULL, NULL);
+  UNMOCK(networkstatus_get_param);
+  tt_ptr_op(scheduler, ==, get_vanilla_scheduler());
+
+  /* Doesn't change when using KIST */
+  scheduler = get_kist_scheduler();
+  MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
+  scheduler_notify_networkstatus_changed(NULL, NULL);
+  UNMOCK(networkstatus_get_param);
+  tt_ptr_op(scheduler, ==, get_kist_scheduler());
+
+  /* Doesn't change when using vanilla */
+  scheduler = get_vanilla_scheduler();
+  MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
+  scheduler_notify_networkstatus_changed(NULL, NULL);
+  UNMOCK(networkstatus_get_param);
+  tt_ptr_op(scheduler, ==, get_vanilla_scheduler());
+
+ done:
+  UNMOCK(get_options);
+  return;
+}
+
 struct testcase_t scheduler_tests[] = {
-  { "channel_states", test_scheduler_channel_states, TT_FORK, NULL, NULL },
   { "compare_channels", test_scheduler_compare_channels,
     TT_FORK, NULL, NULL },
+  { "channel_states", test_scheduler_channel_states, TT_FORK, NULL, NULL },
   { "initfree", test_scheduler_initfree, TT_FORK, NULL, NULL },
-  { "loop", test_scheduler_loop, TT_FORK, NULL, NULL },
-  { "queue_heuristic", test_scheduler_queue_heuristic,
-    TT_FORK, NULL, NULL },
+  { "loop_vanilla", test_scheduler_loop_vanilla, TT_FORK, NULL, NULL },
+  { "loop_kist", test_scheduler_loop_kist, TT_FORK, NULL, NULL },
+  { "ns_changed", test_scheduler_ns_changed, TT_FORK, NULL, NULL},
+  { "should_use_kist", test_scheduler_should_use_kist, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

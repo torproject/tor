@@ -1813,14 +1813,9 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 
-  /* XXXFORTOR remove set_watermarks */
-  /* Set up scheduler thresholds */
-  scheduler_set_watermarks(100 * 1024*1024 /* 100 MB */,
-                           101 * 1024*1024 /* 101 MB */,
-                           100);
-
-  /* XXXFORTOR enable notification to sched that the conf might have changed */
-  //scheduler_conf_changed();
+  /* Inform the scheduler subsystem that a configuration changed happened. It
+   * might be a change of scheduler or parameter. */
+  scheduler_conf_changed();
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {

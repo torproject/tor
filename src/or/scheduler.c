@@ -2,9 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
-
-#define TOR_CHANNEL_INTERNAL_ /* For channel_flush_some_cells() */
-#include "channel.h"
+#include "config.h"
 
 #include "compat_libevent.h"
 #define SCHEDULER_PRIVATE_
@@ -12,35 +10,41 @@
 
 #include <event2/event.h>
 
-/*
- * Scheduler high/low watermarks
- */
-
-static uint32_t sched_q_low_water = 16384;
-static uint32_t sched_q_high_water = 32768;
-
-/*
- * Maximum cells to flush in a single call to channel_flush_some_cells();
- * setting this low means more calls, but too high and we could overshoot
- * sched_q_high_water.
- */
-
-static uint32_t sched_max_flush_cells = 16;
-
 /**
  * \file scheduler.c
  * \brief Channel scheduling system: decides which channels should send and
  * receive when.
  *
- * This module implements a scheduler algorithm, to decide
- * which channels should send/receive when.
+ * This module is the global/common parts of the scheduling system. This system
+ * is what decides what channels get to send cells on their circuits and when.
+ *
+ * Terms:
+ * - "Scheduling system": the collection of scheduler*.{h,c} files and their
+ *   aggregate behavior.
+ * - "Scheduler implementation": a scheduler_t. The scheduling system has one
+ *   active scheduling implementation at a time.
+ *
+ * In this file you will find state that any scheduler implmentation can have
+ * access to as well as the functions the rest of Tor uses to interact with the
+ * scheduling system.
  *
  * The earliest versions of Tor approximated a kind of round-robin system
- * among active connections, but only approximated it.
+ * among active connections, but only approximated it. It would only consider
+ * one connection (roughly equal to a channel in today's terms) at a time, and
+ * thus could only prioritize circuits against others on the same connection.
  *
- * Now, write scheduling works by keeping track of which channels can
- * accept cells, and have cells to write.  From the scheduler's perspective,
- * a channel can be in four possible states:
+ * Then in response to the KIST paper[0], Tor implemented a global
+ * circuit scheduler. It was supposed to prioritize circuits across man
+ * channels, but wasn't effective. It is preserved in scheduler_vanilla.c.
+ *
+ * [0]: http://www.robgjansen.com/publications/kist-sec2014.pdf
+ *
+ * Then we actually got around to implementing KIST for real. We decided to
+ * modularize the scheduler so new ones can be implemented. You can find KIST
+ * in scheduler_kist.c.
+ *
+ * Channels have one of four scheduling states based on whether or not they
+ * have cells to send and whether or not they are able to send.
  *
  * <ol>
  * <li>
@@ -125,85 +129,108 @@ static uint32_t sched_max_flush_cells = 16;
  * </ol>
  *
  * Other event-driven parts of the code move channels between these scheduling
- * states by calling scheduler functions; the scheduler only runs on open-for-
- * writes/has-cells channels and is the only path for those to transition to
- * other states.  The scheduler_run() function gives us the opportunity to do
- * scheduling work, and is called from other scheduler functions whenever a
- * state transition occurs, and periodically from the main event loop.
+ * states by calling scheduler functions. The scheduling system builds up a
+ * list of channels in the SCHED_CHAN_PENDING state that the scheduler
+ * implementation should then use when it runs. Scheduling implementations need
+ * to properly update channel states during their scheduler_t->run() function
+ * as that is the only opportunity for channels to move from SCHED_CHAN_PENDING
+ * to any other state.
+ *
+ * The remainder of this file is a small amount of state that any scheduler
+ * implementation should have access to, and the functions the rest of Tor uses
+ * to interact with the scheduling system.
  */
 
-/* Scheduler global data structures */
+/*****************************************************************************
+ * Scheduling system state
+ *
+ * State that can be accessed from any scheduler implementation (but not
+ * outside the scheduling system)
+ *****************************************************************************/
+
+STATIC scheduler_t *scheduler;
 
 /*
  * We keep a list of channels that are pending - i.e, have cells to write
- * and can accept them to send.  The enum scheduler_state in channel_t
+ * and can accept them to send. The enum scheduler_state in channel_t
  * is reserved for our use.
+ *
+ * Priority queue of channels that can write and have cells (pending work)
  */
-
-/* Pqueue of channels that can write and have cells (pending work) */
 STATIC smartlist_t *channels_pending = NULL;
 
 /*
  * This event runs the scheduler from its callback, and is manually
  * activated whenever a channel enters open for writes/cells to send.
  */
-
 STATIC struct event *run_sched_ev = NULL;
 
+/*****************************************************************************
+ * Scheduling system static function definitions
+ *
+ * Functions that can only be accessed from this file.
+ *****************************************************************************/
+
 /*
- * Queue heuristic; this is not the queue size, but an 'effective queuesize'
- * that ages out contributions from stalled channels.
+ * Scheduler event callback; this should get triggered once per event loop
+ * if any scheduling work was created during the event loop.
  */
-
-STATIC uint64_t queue_heuristic = 0;
-
-/*
- * Timestamp for last queue heuristic update
- */
-
-STATIC time_t queue_heuristic_timestamp = 0;
-
-/* Scheduler static function declarations */
-
-static void scheduler_evt_callback(evutil_socket_t fd,
-                                   short events, void *arg);
-static int scheduler_more_work(void);
-static void scheduler_retrigger(void);
-#if 0
-static void scheduler_trigger(void);
-#endif
-
-/* Scheduler function implementations */
-
-/** Free everything and shut down the scheduling system */
-
-void
-scheduler_free_all(void)
+static void
+scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
 {
-  log_debug(LD_SCHED, "Shutting down scheduler");
+  (void) fd;
+  (void) events;
+  (void) arg;
 
-  if (run_sched_ev) {
-    if (event_del(run_sched_ev) < 0) {
-      log_warn(LD_BUG, "Problem deleting run_sched_ev");
-    }
-    tor_event_free(run_sched_ev);
-    run_sched_ev = NULL;
-  }
+  log_debug(LD_SCHED, "Scheduler event callback called");
 
-  if (channels_pending) {
-    smartlist_free(channels_pending);
-    channels_pending = NULL;
-  }
+  tor_assert(run_sched_ev);
+
+  /* Run the scheduler. This is a mandatory function. */
+  tor_assert(scheduler->run);
+  scheduler->run();
+
+  /* Schedule itself back in if it has more work. */
+  tor_assert(scheduler->schedule);
+  scheduler->schedule();
 }
 
-/**
- * Comparison function to use when sorting pending channels
- */
+/*****************************************************************************
+ * Scheduling system private function definitions
+ *
+ * Functions that can only be accessed from scheduler*.c
+ *****************************************************************************/
 
-MOCK_IMPL(STATIC int,
+/* Return the pending channel list. */
+smartlist_t *
+get_channels_pending(void)
+{
+  return channels_pending;
+}
+
+/* Return our libevent scheduler event. */
+struct event *
+get_run_sched_ev(void)
+{
+  return run_sched_ev;
+}
+
+/* Return true iff the scheduler subsystem should use KIST. */
+int
+scheduler_should_use_kist(void)
+{
+  int64_t run_freq = kist_scheduler_run_interval();
+  log_info(LD_SCHED, "Determined sched_run_interval should be %" PRId64 ". "
+                     "Will%s use KIST.",
+           run_freq, (run_freq > 0 ? "" : " not"));
+  return run_freq > 0;
+}
+
+/* Comparison function to use when sorting pending channels */
+MOCK_IMPL(int,
 scheduler_compare_channels, (const void *c1_v, const void *c2_v))
 {
-  channel_t *c1 = NULL, *c2 = NULL;
+  const channel_t *c1 = NULL, *c2 = NULL;
   /* These are a workaround for -Wbad-function-cast throwing a fit */
   const circuitmux_policy_t *p1, *p2;
   uintptr_t p1_i, p2_i;
@@ -211,8 +238,8 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
   tor_assert(c1_v);
   tor_assert(c2_v);
 
-  c1 = (channel_t *)(c1_v);
-  c2 = (channel_t *)(c2_v);
+  c1 = (const channel_t *)(c1_v);
+  c2 = (const channel_t *)(c2_v);
 
   tor_assert(c1);
   tor_assert(c2);
@@ -242,26 +269,109 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
   }
 }
 
+/*****************************************************************************
+ * Scheduling system global functions
+ *
+ * Functions that can be accessed from anywhere in Tor.
+ *****************************************************************************/
+
 /*
- * Scheduler event callback; this should get triggered once per event loop
- * if any scheduling work was created during the event loop.
+ * Little helper function called from a few different places. It changes the
+ * scheduler implementation, if necessary. And if it did, it then tells the
+ * old one to free its state and the new one to initialize.
  */
-
 static void
-scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
+set_scheduler(void)
 {
-  (void)fd;
-  (void)events;
-  (void)arg;
-  log_debug(LD_SCHED, "Scheduler event callback called");
+  int have_kist = 0;
 
-  tor_assert(run_sched_ev);
+  /* Switch, if needed */
+  scheduler_t *old_scheduler = scheduler;
+  if (scheduler_should_use_kist()) {
+    scheduler = get_kist_scheduler();
+    have_kist = 1;
+  } else {
+    scheduler = get_vanilla_scheduler();
+  }
+  tor_assert(scheduler);
 
-  /* Run the scheduler */
-  scheduler_run();
+  if (old_scheduler != scheduler) {
+    /* Allow the old scheduler to clean up, if needed. */
+    if (old_scheduler && old_scheduler->free_all) {
+      old_scheduler->free_all();
+    }
+    /* We don't clean up the old one, we keep any type of scheduler we've
+     * allocated so we can do an easy switch back. */
 
-  /* Do we have more work to do? */
-  if (scheduler_more_work()) scheduler_retrigger();
+    /* Initialize the new scheduler. */
+    if (scheduler->init) {
+      scheduler->init();
+    }
+    log_notice(LD_CONFIG, "Using the %s scheduler.",
+               have_kist ? "KIST" : "vanilla");
+  }
+}
+
+/*
+ * This is how the scheduling system is notified of Tor's configuration
+ * changing. For example: a SIGHUP was issued.
+ */
+void
+scheduler_conf_changed(void)
+{
+  /* Let the scheduler decide what it should do. */
+  set_scheduler();
+
+  /* Then tell the (possibly new) scheduler that we have new options. */
+  if (scheduler->on_new_options) {
+    scheduler->on_new_options();
+  }
+}
+
+/*
+ * Whenever we get a new consensus, this function is called.
+ */
+void
+scheduler_notify_networkstatus_changed(const networkstatus_t *old_c,
+                                       const networkstatus_t *new_c)
+{
+  /* Then tell the (possibly new) scheduler that we have a new consensus */
+  if (scheduler->on_new_consensus) {
+    scheduler->on_new_consensus(old_c, new_c);
+  }
+  /* Maybe the consensus param made us change the scheduler. */
+  set_scheduler();
+}
+
+/*
+ * Free everything scheduling-related from main.c. Note this is only called
+ * when Tor is shutting down, while scheduler_t->free_all() is called both when
+ * Tor is shutting down and when we are switching schedulers.
+ */
+void
+scheduler_free_all(void)
+{
+  log_debug(LD_SCHED, "Shutting down scheduler");
+
+  if (run_sched_ev) {
+    if (event_del(run_sched_ev) < 0) {
+      log_warn(LD_BUG, "Problem deleting run_sched_ev");
+    }
+    tor_event_free(run_sched_ev);
+    run_sched_ev = NULL;
+  }
+
+  if (channels_pending) {
+    /* We don't have ownership of the object in this list. */
+    smartlist_free(channels_pending);
+    channels_pending = NULL;
+  }
+
+  if (scheduler && scheduler->free_all) {
+    scheduler->free_all();
+  }
+  tor_free(scheduler);
+  scheduler = NULL;
 }
 
 /** Mark a channel as no longer ready to accept writes */
@@ -309,8 +419,6 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
 MOCK_IMPL(void,
 scheduler_channel_has_waiting_cells,(channel_t *chan))
 {
-  int became_pending = 0;
-
   tor_assert(chan);
   tor_assert(channels_pending);
 
@@ -330,7 +438,9 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
               "Channel " U64_FORMAT " at %p went from waiting_for_cells "
               "to pending",
               U64_PRINTF_ARG(chan->global_identifier), chan);
-    became_pending = 1;
+    /* If we made a channel pending, we potentially have scheduling work to
+     * do. */
+    scheduler->schedule();
   } else {
     /*
      * It's not in waiting_for_cells, so it can't become pending; it's
@@ -345,16 +455,13 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
                 U64_PRINTF_ARG(chan->global_identifier), chan);
     }
   }
-
-  /*
-   * If we made a channel pending, we potentially have scheduling work
-   * to do.
-   */
-  if (became_pending) scheduler_retrigger();
 }
 
-/** Set up the scheduling system */
-
+/*
+ * Initialize everything scheduling-related from config.c. Note this is only
+ * called when Tor is starting up, while scheduler_t->init() is called both
+ * when Tor is starting up and when we are switching schedulers.
+ */
 void
 scheduler_init(void)
 {
@@ -363,34 +470,17 @@ scheduler_init(void)
   tor_assert(!run_sched_ev);
   run_sched_ev = tor_event_new(tor_libevent_get_base(), -1,
                                0, scheduler_evt_callback, NULL);
-
   channels_pending = smartlist_new();
-  queue_heuristic = 0;
-  queue_heuristic_timestamp = approx_time();
+
+  set_scheduler();
 }
 
-/** Check if there's more scheduling work */
-
-static int
-scheduler_more_work(void)
-{
-  tor_assert(channels_pending);
-
-  return ((scheduler_get_queue_heuristic() < sched_q_low_water) &&
-          ((smartlist_len(channels_pending) > 0))) ? 1 : 0;
-}
-
-/** Retrigger the scheduler in a way safe to use from the callback */
-
-static void
-scheduler_retrigger(void)
-{
-  tor_assert(run_sched_ev);
-  event_active(run_sched_ev, EV_TIMEOUT, 1);
-}
-
-/** Notify the scheduler of a channel being closed */
-
+/*
+ * If a channel is going away, this is how the scheduling system is informed
+ * so it can do any freeing necessary. This ultimately calls
+ * scheduler_t->on_channel_free() so the current scheduler can release any
+ * state specific to this channel.
+ */
 MOCK_IMPL(void,
 scheduler_release_channel,(channel_t *chan))
 {
@@ -398,179 +488,29 @@ scheduler_release_channel,(channel_t *chan))
   tor_assert(channels_pending);
 
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
-    smartlist_pqueue_remove(channels_pending,
-                            scheduler_compare_channels,
-                            offsetof(channel_t, sched_heap_idx),
-                            chan);
+    if (smartlist_pos(channels_pending, chan) == -1) {
+      log_warn(LD_SCHED, "Scheduler asked to release channel %" PRIu64 " "
+                         "but it wasn't in channels_pending",
+               chan->global_identifier);
+    } else {
+      smartlist_pqueue_remove(channels_pending,
+                              scheduler_compare_channels,
+                              offsetof(channel_t, sched_heap_idx),
+                              chan);
+    }
+    if (scheduler->on_channel_free) {
+      scheduler->on_channel_free(chan);
+    }
   }
 
   chan->scheduler_state = SCHED_CHAN_IDLE;
 }
-
-/** Run the scheduling algorithm if necessary */
-
-MOCK_IMPL(void,
-scheduler_run, (void))
-{
-  int n_cells, n_chans_before, n_chans_after;
-  uint64_t q_len_before, q_heur_before, q_len_after, q_heur_after;
-  ssize_t flushed, flushed_this_time;
-  smartlist_t *to_readd = NULL;
-  channel_t *chan = NULL;
-
-  log_debug(LD_SCHED, "We have a chance to run the scheduler");
-
-  if (scheduler_get_queue_heuristic() < sched_q_low_water) {
-    n_chans_before = smartlist_len(channels_pending);
-    q_len_before = channel_get_global_queue_estimate();
-    q_heur_before = scheduler_get_queue_heuristic();
-
-    while (scheduler_get_queue_heuristic() <= sched_q_high_water &&
-           smartlist_len(channels_pending) > 0) {
-      /* Pop off a channel */
-      chan = smartlist_pqueue_pop(channels_pending,
-                                  scheduler_compare_channels,
-                                  offsetof(channel_t, sched_heap_idx));
-      tor_assert(chan);
-
-      /* Figure out how many cells we can write */
-      n_cells = channel_num_cells_writeable(chan);
-      if (n_cells > 0) {
-        log_debug(LD_SCHED,
-                  "Scheduler saw pending channel " U64_FORMAT " at %p with "
-                  "%d cells writeable",
-                  U64_PRINTF_ARG(chan->global_identifier), chan, n_cells);
-
-        flushed = 0;
-        while (flushed < n_cells &&
-               scheduler_get_queue_heuristic() <= sched_q_high_water) {
-          flushed_this_time =
-            channel_flush_some_cells(chan,
-                                     MIN(sched_max_flush_cells,
-                                         (size_t) n_cells - flushed));
-          if (flushed_this_time <= 0) break;
-          flushed += flushed_this_time;
-        }
-
-        if (flushed < n_cells) {
-          /* We ran out of cells to flush */
-          chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
-          log_debug(LD_SCHED,
-                    "Channel " U64_FORMAT " at %p "
-                    "entered waiting_for_cells from pending",
-                    U64_PRINTF_ARG(chan->global_identifier),
-                    chan);
-        } else {
-          /* The channel may still have some cells */
-          if (channel_more_to_flush(chan)) {
-          /* The channel goes to either pending or waiting_to_write */
-            if (channel_num_cells_writeable(chan) > 0) {
-              /* Add it back to pending later */
-              if (!to_readd) to_readd = smartlist_new();
-              smartlist_add(to_readd, chan);
-              log_debug(LD_SCHED,
-                        "Channel " U64_FORMAT " at %p "
-                        "is still pending",
-                        U64_PRINTF_ARG(chan->global_identifier),
-                        chan);
-            } else {
-              /* It's waiting to be able to write more */
-              chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
-              log_debug(LD_SCHED,
-                        "Channel " U64_FORMAT " at %p "
-                        "entered waiting_to_write from pending",
-                        U64_PRINTF_ARG(chan->global_identifier),
-                        chan);
-            }
-          } else {
-            /* No cells left; it can go to idle or waiting_for_cells */
-            if (channel_num_cells_writeable(chan) > 0) {
-              /*
-               * It can still accept writes, so it goes to
-               * waiting_for_cells
-               */
-              chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
-              log_debug(LD_SCHED,
-                        "Channel " U64_FORMAT " at %p "
-                        "entered waiting_for_cells from pending",
-                        U64_PRINTF_ARG(chan->global_identifier),
-                        chan);
-            } else {
-              /*
-               * We exactly filled up the output queue with all available
-               * cells; go to idle.
-               */
-              chan->scheduler_state = SCHED_CHAN_IDLE;
-              log_debug(LD_SCHED,
-                        "Channel " U64_FORMAT " at %p "
-                        "become idle from pending",
-                        U64_PRINTF_ARG(chan->global_identifier),
-                        chan);
-            }
-          }
-        }
-
-        log_debug(LD_SCHED,
-                  "Scheduler flushed %d cells onto pending channel "
-                  U64_FORMAT " at %p",
-                  (int)flushed, U64_PRINTF_ARG(chan->global_identifier),
-                  chan);
-      } else {
-        log_info(LD_SCHED,
-                 "Scheduler saw pending channel " U64_FORMAT " at %p with "
-                 "no cells writeable",
-                 U64_PRINTF_ARG(chan->global_identifier), chan);
-        /* Put it back to WAITING_TO_WRITE */
-        chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
-      }
-    }
-
-    /* Readd any channels we need to */
-    if (to_readd) {
-      SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
-        readd_chan->scheduler_state = SCHED_CHAN_PENDING;
-        smartlist_pqueue_add(channels_pending,
-                             scheduler_compare_channels,
-                             offsetof(channel_t, sched_heap_idx),
-                             readd_chan);
-      } SMARTLIST_FOREACH_END(readd_chan);
-      smartlist_free(to_readd);
-    }
-
-    n_chans_after = smartlist_len(channels_pending);
-    q_len_after = channel_get_global_queue_estimate();
-    q_heur_after = scheduler_get_queue_heuristic();
-    log_debug(LD_SCHED,
-              "Scheduler handled %d of %d pending channels, queue size from "
-              U64_FORMAT " to " U64_FORMAT ", queue heuristic from "
-              U64_FORMAT " to " U64_FORMAT,
-              n_chans_before - n_chans_after, n_chans_before,
-              U64_PRINTF_ARG(q_len_before), U64_PRINTF_ARG(q_len_after),
-              U64_PRINTF_ARG(q_heur_before), U64_PRINTF_ARG(q_heur_after));
-  }
-}
-
-/** Trigger the scheduling event so we run the scheduler later */
-
-#if 0
-static void
-scheduler_trigger(void)
-{
-  log_debug(LD_SCHED, "Triggering scheduler event");
-
-  tor_assert(run_sched_ev);
-
-  event_add(run_sched_ev, EV_TIMEOUT, 1);
-}
-#endif
 
 /** Mark a channel as ready to accept writes */
 
 void
 scheduler_channel_wants_writes(channel_t *chan)
 {
-  int became_pending = 0;
-
   tor_assert(chan);
   tor_assert(channels_pending);
 
@@ -579,6 +519,8 @@ scheduler_channel_wants_writes(channel_t *chan)
     /*
      * It can write now, so it goes to channels_pending.
      */
+    log_debug(LD_SCHED, "chan=%" PRIu64 " became pending",
+        chan->global_identifier);
     smartlist_pqueue_add(channels_pending,
                          scheduler_compare_channels,
                          offsetof(channel_t, sched_heap_idx),
@@ -588,7 +530,8 @@ scheduler_channel_wants_writes(channel_t *chan)
               "Channel " U64_FORMAT " at %p went from waiting_to_write "
               "to pending",
               U64_PRINTF_ARG(chan->global_identifier), chan);
-    became_pending = 1;
+    /* We just made a channel pending, we have scheduling work to do. */
+    scheduler->schedule();
   } else {
     /*
      * It's not in SCHED_CHAN_WAITING_TO_WRITE, so it can't become pending;
@@ -602,19 +545,13 @@ scheduler_channel_wants_writes(channel_t *chan)
                 U64_PRINTF_ARG(chan->global_identifier), chan);
     }
   }
-
-  /*
-   * If we made a channel pending, we potentially have scheduling work
-   * to do.
-   */
-  if (became_pending) scheduler_retrigger();
 }
 
-/**
- * Notify the scheduler that a channel's position in the pqueue may have
- * changed
- */
+#ifdef TOR_UNIT_TESTS
 
+/*
+ * Notify scheduler that a channel's queue position may have changed.
+ */
 void
 scheduler_touch_channel(channel_t *chan)
 {
@@ -634,115 +571,5 @@ scheduler_touch_channel(channel_t *chan)
   /* else no-op, since it isn't in the queue */
 }
 
-/**
- * Notify the scheduler of a queue size adjustment, to recalculate the
- * queue heuristic.
- */
-
-void
-scheduler_adjust_queue_size(channel_t *chan, int dir, uint64_t adj)
-{
-  time_t now = approx_time();
-
-  log_debug(LD_SCHED,
-            "Queue size adjustment by %s" U64_FORMAT " for channel "
-            U64_FORMAT,
-            (dir >= 0) ? "+" : "-",
-            U64_PRINTF_ARG(adj),
-            U64_PRINTF_ARG(chan->global_identifier));
-
-  /* Get the queue heuristic up to date */
-  scheduler_update_queue_heuristic(now);
-
-  /* Adjust as appropriate */
-  if (dir >= 0) {
-    /* Increasing it */
-    queue_heuristic += adj;
-  } else {
-    /* Decreasing it */
-    if (queue_heuristic > adj) queue_heuristic -= adj;
-    else queue_heuristic = 0;
-  }
-
-  log_debug(LD_SCHED,
-            "Queue heuristic is now " U64_FORMAT,
-            U64_PRINTF_ARG(queue_heuristic));
-}
-
-/**
- * Query the current value of the queue heuristic
- */
-
-STATIC uint64_t
-scheduler_get_queue_heuristic(void)
-{
-  time_t now = approx_time();
-
-  scheduler_update_queue_heuristic(now);
-
-  return queue_heuristic;
-}
-
-/**
- * Adjust the queue heuristic value to the present time
- */
-
-STATIC void
-scheduler_update_queue_heuristic(time_t now)
-{
-  time_t diff;
-
-  if (queue_heuristic_timestamp == 0) {
-    /*
-     * Nothing we can sensibly do; must not have been initted properly.
-     * Oh well.
-     */
-    queue_heuristic_timestamp = now;
-  } else if (queue_heuristic_timestamp < now) {
-    diff = now - queue_heuristic_timestamp;
-    /*
-     * This is a simple exponential age-out; the other proposed alternative
-     * was a linear age-out using the bandwidth history in rephist.c; I'm
-     * going with this out of concern that if an adversary can jam the
-     * scheduler long enough, it would cause the bandwidth to drop to
-     * zero and render the aging mechanism ineffective thereafter.
-     */
-    if (0 <= diff && diff < 64) queue_heuristic >>= diff;
-    else queue_heuristic = 0;
-
-    queue_heuristic_timestamp = now;
-
-    log_debug(LD_SCHED,
-              "Queue heuristic is now " U64_FORMAT,
-              U64_PRINTF_ARG(queue_heuristic));
-  }
-  /* else no update needed, or time went backward */
-}
-
-/**
- * Set scheduler watermarks and flush size
- */
-
-void
-scheduler_set_watermarks(uint32_t lo, uint32_t hi, uint32_t max_flush)
-{
-  /* Sanity assertions - caller should ensure these are true */
-  tor_assert(lo > 0);
-  tor_assert(hi > lo);
-  tor_assert(max_flush > 0);
-
-  sched_q_low_water = lo;
-  sched_q_high_water = hi;
-  sched_max_flush_cells = max_flush;
-}
-
-/* XXXFORTOR Temp def of this func to get this commit to compile. Replace with
- * real func */
-void
-scheduler_notify_networkstatus_changed(const networkstatus_t *old_c,
-                                       const networkstatus_t *new_c)
-{
-  (void) old_c;
-  (void) new_c;
-}
+#endif /* TOR_UNIT_TESTS */
 
