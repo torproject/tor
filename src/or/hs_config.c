@@ -287,7 +287,6 @@ config_generic_service(const config_line_t *line_,
 
   /* Makes thing easier. */
   config = &service->config;
-  memset(config, 0, sizeof(*config));
 
   /* The first line starts with HiddenServiceDir so we consider what's next is
    * the configuration of the service. */
