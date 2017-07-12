@@ -241,6 +241,8 @@ config_service_v3(const config_line_t *line_,
                   hs_service_t *service)
 {
   (void) options;
+  int have_num_ip = 0;
+  const char *dup_opt_seen = NULL;
   const config_line_t *line;
   hs_service_config_t *config;
 
@@ -261,9 +263,12 @@ config_service_v3(const config_line_t *line_,
                                            NUM_INTRO_POINTS_DEFAULT,
                                            HS_CONFIG_V3_MAX_INTRO_POINTS,
                                            &ok);
-      if (!ok) {
+      if (!ok || have_num_ip) {
+        if (have_num_ip)
+          dup_opt_seen = line->key;
         goto err;
       }
+      have_num_ip = 1;
       continue;
     }
   }
@@ -279,6 +284,9 @@ config_service_v3(const config_line_t *line_,
 
   return 0;
  err:
+  if (dup_opt_seen) {
+    log_warn(LD_CONFIG, "Duplicate directive %s.", dup_opt_seen);
+  }
   return -1;
 }
 
@@ -301,6 +309,13 @@ config_generic_service(const config_line_t *line_,
   int dir_seen = 0;
   const config_line_t *line;
   hs_service_config_t *config;
+  /* If this is set, we've seen a duplicate of this option. Keep the string
+   * so we can log the directive. */
+  const char *dup_opt_seen = NULL;
+  /* These variables will tell us if we ever have duplicate. */
+  int have_version = 0, have_allow_unknown_ports = 0;
+  int have_dir_group_read = 0, have_max_streams = 0;
+  int have_max_streams_close = 0;
 
   tor_assert(line_);
   tor_assert(options);
@@ -313,6 +328,7 @@ config_generic_service(const config_line_t *line_,
    * the configuration of the service. */
   for (line = line_; line ; line = line->next) {
     int ok = 0;
+
     /* This indicate that we have a new service to configure. */
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       /* This function only configures one service at a time so if we've
@@ -335,9 +351,12 @@ config_generic_service(const config_line_t *line_,
       service->version =
         (uint32_t) helper_parse_uint64(line->key, line->value, HS_VERSION_MIN,
                                        HS_VERSION_MAX, &ok);
-      if (!ok) {
+      if (!ok || have_version) {
+        if (have_version)
+          dup_opt_seen = line->key;
         goto err;
       }
+      have_version = 1;
       continue;
     }
     /* Virtual port. */
@@ -363,18 +382,24 @@ config_generic_service(const config_line_t *line_,
     if (!strcasecmp(line->key, "HiddenServiceAllowUnknownPorts")) {
       config->allow_unknown_ports =
         (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
-      if (!ok) {
+      if (!ok || have_allow_unknown_ports) {
+        if (have_allow_unknown_ports)
+          dup_opt_seen = line->key;
         goto err;
       }
+      have_allow_unknown_ports = 1;
       continue;
     }
     /* Directory group readable. */
     if (!strcasecmp(line->key, "HiddenServiceDirGroupReadable")) {
       config->dir_group_readable =
         (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
-      if (!ok) {
+      if (!ok || have_dir_group_read) {
+        if (have_dir_group_read)
+          dup_opt_seen = line->key;
         goto err;
       }
+      have_dir_group_read = 1;
       continue;
     }
     /* Maximum streams per circuit. */
@@ -382,18 +407,24 @@ config_generic_service(const config_line_t *line_,
       config->max_streams_per_rdv_circuit =
         helper_parse_uint64(line->key, line->value, 0,
                             HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT, &ok);
-      if (!ok) {
+      if (!ok || have_max_streams) {
+        if (have_max_streams)
+          dup_opt_seen = line->key;
         goto err;
       }
+      have_max_streams = 1;
       continue;
     }
     /* Maximum amount of streams before we close the circuit. */
     if (!strcasecmp(line->key, "HiddenServiceMaxStreamsCloseCircuit")) {
       config->max_streams_close_circuit =
         (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
-      if (!ok) {
+      if (!ok || have_max_streams_close) {
+        if (have_max_streams_close)
+          dup_opt_seen = line->key;
         goto err;
       }
+      have_max_streams_close = 1;
       continue;
     }
   }
@@ -408,6 +439,9 @@ config_generic_service(const config_line_t *line_,
   /* Success */
   return 0;
  err:
+  if (dup_opt_seen) {
+    log_warn(LD_CONFIG, "Duplicate directive %s.", dup_opt_seen);
+  }
   return -1;
 }
 
