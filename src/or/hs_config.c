@@ -115,6 +115,33 @@ service_is_duplicate_in_list(const smartlist_t *service_list,
   return ret;
 }
 
+/* Helper function: Given an configuration option name, its value, a minimum
+ * min and a maxium max, parse the value as a uint64_t. On success, ok is set
+ * to 1 and ret is the parsed value. On error, ok is set to 0 and ret must be
+ * ignored. This function logs both on error and success. */
+static uint64_t
+helper_parse_uint64(const char *opt, const char *value, uint64_t min,
+                    uint64_t max, int *ok)
+{
+  uint64_t ret = 0;
+
+  tor_assert(opt);
+  tor_assert(value);
+  tor_assert(ok);
+
+  *ok = 0;
+  ret = tor_parse_uint64(value, 10, min, max, ok, NULL);
+  if (!*ok) {
+    log_warn(LD_CONFIG, "%s must be between %" PRIu64 " and %"PRIu64
+                        ", not %s.",
+             opt, min, max, value);
+    goto err;
+  }
+  log_info(LD_CONFIG, "%s was parsed to %" PRIu64, opt, ret);
+ err:
+  return ret;
+}
+
 /* Return true iff the given options starting at line_ for a hidden service
  * contains at least one invalid option. Each hidden service option don't
  * apply to all versions so this function can find out. The line_ MUST start
@@ -222,27 +249,21 @@ config_service_v3(const config_line_t *line_,
   config = &service->config;
 
   for (line = line_; line; line = line->next) {
+    int ok = 0;
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       /* We just hit the next hidden service, stop right now. */
       break;
     }
     /* Number of introduction points. */
     if (!strcasecmp(line->key, "HiddenServiceNumIntroductionPoints")) {
-      int ok = 0;
       config->num_intro_points =
-        (unsigned int) tor_parse_ulong(line->value, 10,
-                                       NUM_INTRO_POINTS_DEFAULT,
-                                       HS_CONFIG_V3_MAX_INTRO_POINTS,
-                                       &ok, NULL);
+        (unsigned int) helper_parse_uint64(line->key, line->value,
+                                           NUM_INTRO_POINTS_DEFAULT,
+                                           HS_CONFIG_V3_MAX_INTRO_POINTS,
+                                           &ok);
       if (!ok) {
-        log_warn(LD_CONFIG, "HiddenServiceNumIntroductionPoints "
-                 "should be between %d and %d, not %s",
-                 NUM_INTRO_POINTS_DEFAULT, HS_CONFIG_V3_MAX_INTRO_POINTS,
-                 line->value);
         goto err;
       }
-      log_info(LD_CONFIG, "HiddenServiceNumIntroductionPoints=%d for %s",
-               config->num_intro_points, escaped(config->directory_path));
       continue;
     }
   }
@@ -277,7 +298,7 @@ config_generic_service(const config_line_t *line_,
                        const or_options_t *options,
                        hs_service_t *service)
 {
-  int ok, dir_seen = 0;
+  int dir_seen = 0;
   const config_line_t *line;
   hs_service_config_t *config;
 
@@ -291,6 +312,7 @@ config_generic_service(const config_line_t *line_,
   /* The first line starts with HiddenServiceDir so we consider what's next is
    * the configuration of the service. */
   for (line = line_; line ; line = line->next) {
+    int ok = 0;
     /* This indicate that we have a new service to configure. */
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       /* This function only configures one service at a time so if we've
@@ -310,18 +332,12 @@ config_generic_service(const config_line_t *line_,
     }
     /* Version of the service. */
     if (!strcasecmp(line->key, "HiddenServiceVersion")) {
-      service->version = (uint32_t) tor_parse_ulong(line->value,
-                                                    10, HS_VERSION_MIN,
-                                                    HS_VERSION_MAX,
-                                                    &ok, NULL);
+      service->version =
+        (uint32_t) helper_parse_uint64(line->key, line->value, HS_VERSION_MIN,
+                                       HS_VERSION_MAX, &ok);
       if (!ok) {
-        log_warn(LD_CONFIG,
-                 "HiddenServiceVersion be between %u and %u, not %s",
-                 HS_VERSION_TWO, HS_VERSION_MAX, line->value);
         goto err;
       }
-      log_info(LD_CONFIG, "HiddenServiceVersion=%" PRIu32 " for %s",
-               service->version, escaped(config->directory_path));
       continue;
     }
     /* Virtual port. */
@@ -345,67 +361,39 @@ config_generic_service(const config_line_t *line_,
     }
     /* Do we allow unknown ports. */
     if (!strcasecmp(line->key, "HiddenServiceAllowUnknownPorts")) {
-      config->allow_unknown_ports = (unsigned int) tor_parse_long(line->value,
-                                                                  10, 0, 1,
-                                                                  &ok, NULL);
+      config->allow_unknown_ports =
+        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
       if (!ok) {
-        log_warn(LD_CONFIG,
-                 "HiddenServiceAllowUnknownPorts should be 0 or 1, not %s",
-                 line->value);
         goto err;
       }
-      log_info(LD_CONFIG,
-               "HiddenServiceAllowUnknownPorts=%u for %s",
-               config->allow_unknown_ports, escaped(config->directory_path));
       continue;
     }
     /* Directory group readable. */
     if (!strcasecmp(line->key, "HiddenServiceDirGroupReadable")) {
-      config->dir_group_readable = (unsigned int) tor_parse_long(line->value,
-                                                                 10, 0, 1,
-                                                                 &ok, NULL);
+      config->dir_group_readable =
+        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
       if (!ok) {
-        log_warn(LD_CONFIG,
-                 "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
-                 line->value);
         goto err;
       }
-      log_info(LD_CONFIG,
-               "HiddenServiceDirGroupReadable=%u for %s",
-               config->dir_group_readable, escaped(config->directory_path));
       continue;
     }
     /* Maximum streams per circuit. */
     if (!strcasecmp(line->key, "HiddenServiceMaxStreams")) {
       config->max_streams_per_rdv_circuit =
-        tor_parse_uint64(line->value, 10, 0,
-                         HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT, &ok, NULL);
+        helper_parse_uint64(line->key, line->value, 0,
+                            HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT, &ok);
       if (!ok) {
-        log_warn(LD_CONFIG,
-                 "HiddenServiceMaxStreams should be between 0 and %d, not %s",
-                 HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT, line->value);
         goto err;
       }
-      log_info(LD_CONFIG,
-               "HiddenServiceMaxStreams=%" PRIu64 " for %s",
-               config->max_streams_per_rdv_circuit,
-               escaped(config->directory_path));
       continue;
     }
     /* Maximum amount of streams before we close the circuit. */
     if (!strcasecmp(line->key, "HiddenServiceMaxStreamsCloseCircuit")) {
       config->max_streams_close_circuit =
-        (unsigned int) tor_parse_long(line->value, 10, 0, 1, &ok, NULL);
+        (unsigned int) helper_parse_uint64(line->key, line->value, 0, 1, &ok);
       if (!ok) {
-        log_warn(LD_CONFIG,
-                 "HiddenServiceMaxStreamsCloseCircuit should be 0 or 1, "
-                 "not %s", line->value);
         goto err;
       }
-      log_info(LD_CONFIG,
-               "HiddenServiceMaxStreamsCloseCircuit=%u for %s",
-               config->max_streams_close_circuit,
-               escaped(config->directory_path));
       continue;
     }
   }
