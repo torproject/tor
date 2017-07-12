@@ -481,16 +481,18 @@ queue_pending_tasks(void)
 
 /** DOCDOC */
 MOCK_IMPL(workqueue_entry_t *,
-cpuworker_queue_work,(workqueue_reply_t (*fn)(void *, void *),
+cpuworker_queue_work,(workqueue_priority_t priority,
+                      workqueue_reply_t (*fn)(void *, void *),
                       void (*reply_fn)(void *),
                       void *arg))
 {
   tor_assert(threadpool);
 
-  return threadpool_queue_work(threadpool,
-                               fn,
-                               reply_fn,
-                               arg);
+  return threadpool_queue_work_priority(threadpool,
+                                        priority,
+                                        fn,
+                                        reply_fn,
+                                        arg);
 }
 
 /** Try to tell a cpuworker to perform the public key operations necessary to
@@ -545,7 +547,8 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
   memwipe(&req, 0, sizeof(req));
 
   ++total_pending_tasks;
-  queue_entry = threadpool_queue_work(threadpool,
+  queue_entry = threadpool_queue_work_priority(threadpool,
+                                      WQ_PRI_HIGH,
                                       cpuworker_onion_handshake_threadfn,
                                       cpuworker_onion_handshake_replyfn,
                                       job);
