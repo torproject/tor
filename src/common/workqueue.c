@@ -128,6 +128,8 @@ typedef struct workerthread_s {
   replyqueue_t *reply_queue;
   /** The current update generation of this thread */
   unsigned generation;
+  /** One over the probability of taking work from a lower-priority queue. */
+  int32_t lower_priority_chance;
 } workerthread_t;
 
 static void queue_reply(replyqueue_t *queue, workqueue_entry_t *work);
@@ -209,11 +211,6 @@ worker_thread_has_work(workerthread_t *thread)
   return thread->generation != thread->in_pool->generation;
 }
 
-/** With this probability, we'll consider taking work from a lower-priority
- * queue when we already have higher-priority work.  This keeps priority from
- * becoming completely inverted. */
-#define LOWER_PRIORITY_CHANCE 37
-
 /** Extract the next workqueue_entry_t from the the thread's pool, removing
  * it from the relevant queues and marking it as non-pending.
  *
@@ -228,7 +225,8 @@ worker_thread_extract_next_work(workerthread_t *thread)
     this_queue = &pool->work[i];
     if (!TOR_TAILQ_EMPTY(this_queue)) {
       queue = this_queue;
-      if (! tor_weak_random_one_in_n(&pool->weak_rng, LOWER_PRIORITY_CHANCE)) {
+      if (! tor_weak_random_one_in_n(&pool->weak_rng,
+                                     thread->lower_priority_chance)) {
         /* Usually we'll just break now, so that we can get out of the loop
          * and use the queue where we found work. But with a small
          * probability, we'll keep looking for lower priority work, so that
@@ -331,12 +329,14 @@ queue_reply(replyqueue_t *queue, workqueue_entry_t *work)
 /** Allocate and start a new worker thread to use state object <b>state</b>,
  * and send responses to <b>replyqueue</b>. */
 static workerthread_t *
-workerthread_new(void *state, threadpool_t *pool, replyqueue_t *replyqueue)
+workerthread_new(int32_t lower_priority_chance,
+                 void *state, threadpool_t *pool, replyqueue_t *replyqueue)
 {
   workerthread_t *thr = tor_malloc_zero(sizeof(workerthread_t));
   thr->state = state;
   thr->reply_queue = replyqueue;
   thr->in_pool = pool;
+  thr->lower_priority_chance = lower_priority_chance;
 
   if (spawn_func(worker_thread_main, thr) < 0) {
     //LCOV_EXCL_START
@@ -470,6 +470,14 @@ threadpool_queue_update(threadpool_t *pool,
 /** Don't have more than this many threads per pool. */
 #define MAX_THREADS 1024
 
+/** For half of our threads, choose lower priority queues with probability
+ * 1/N for each of these values. Both are chosen somewhat arbitrarily.  If
+ * CHANCE_PERMISSIVE is too low, then we have a risk of low-priority tasks
+ * stalling forever.  If it's too high, we have a risk of low-priority tasks
+ * grabbing half of the threads. */
+#define CHANCE_PERMISSIVE 37
+#define CHANCE_STRICT INT32_MAX
+
 /** Launch threads until we have <b>n</b>. */
 static int
 threadpool_start_threads(threadpool_t *pool, int n)
@@ -486,8 +494,14 @@ threadpool_start_threads(threadpool_t *pool, int n)
                                      sizeof(workerthread_t*), n);
 
   while (pool->n_threads < n) {
+    /* For half of our threads, we'll choose lower priorities permissively;
+     * for the other half, we'll stick more strictly to higher priorities.
+     * This keeps slow low-priority tasks from taking over completely. */
+    int32_t chance = (pool->n_threads & 1) ? CHANCE_STRICT : CHANCE_PERMISSIVE;
+
     void *state = pool->new_thread_state_fn(pool->new_thread_state_arg);
-    workerthread_t *thr = workerthread_new(state, pool, pool->reply_queue);
+    workerthread_t *thr = workerthread_new(chance,
+                                           state, pool, pool->reply_queue);
 
     if (!thr) {
       //LCOV_EXCL_START
