@@ -367,7 +367,7 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
  * checksum_out must be large enough to receive 32 bytes (DIGEST256_LEN). */
 static void
 build_hs_checksum(const ed25519_public_key_t *key, uint8_t version,
-                  char *checksum_out)
+                  uint8_t *checksum_out)
 {
   size_t offset = 0;
   char data[HS_SERVICE_ADDR_CHECKSUM_INPUT_LEN];
@@ -383,7 +383,8 @@ build_hs_checksum(const ed25519_public_key_t *key, uint8_t version,
   tor_assert(offset == HS_SERVICE_ADDR_CHECKSUM_INPUT_LEN);
 
   /* Hash the data payload to create the checksum. */
-  crypto_digest256(checksum_out, data, sizeof(data), DIGEST_SHA3_256);
+  crypto_digest256((char *) checksum_out, data, sizeof(data),
+                   DIGEST_SHA3_256);
 }
 
 /* Using an ed25519 public key, checksum and version to build the binary
@@ -392,7 +393,7 @@ build_hs_checksum(const ed25519_public_key_t *key, uint8_t version,
  *
  * addr_out must be large enough to receive HS_SERVICE_ADDR_LEN bytes. */
 static void
-build_hs_address(const ed25519_public_key_t *key, const char *checksum,
+build_hs_address(const ed25519_public_key_t *key, const uint8_t *checksum,
                  uint8_t version, char *addr_out)
 {
   size_t offset = 0;
@@ -416,7 +417,7 @@ build_hs_address(const ed25519_public_key_t *key, const char *checksum,
  * HS_SERVICE_ADDR_LEN bytes but doesn't need to be NUL terminated. */
 static void
 hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
-                      char *checksum_out, uint8_t *version_out)
+                      uint8_t *checksum_out, uint8_t *version_out)
 {
   size_t offset = 0;
 
@@ -449,7 +450,7 @@ hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
  * Return 0 if parsing went well; return -1 in case of error. */
 int
 hs_parse_address(const char *address, ed25519_public_key_t *key_out,
-                 char *checksum_out, uint8_t *version_out)
+                 uint8_t *checksum_out, uint8_t *version_out)
 {
   char decoded[HS_SERVICE_ADDR_LEN];
 
@@ -485,8 +486,8 @@ int
 hs_address_is_valid(const char *address)
 {
   uint8_t version;
-  char checksum[HS_SERVICE_ADDR_CHECKSUM_LEN_USED];
-  char target_checksum[DIGEST256_LEN];
+  uint8_t checksum[HS_SERVICE_ADDR_CHECKSUM_LEN_USED];
+  uint8_t target_checksum[DIGEST256_LEN];
   ed25519_public_key_t key;
 
   /* Parse the decoded address into the fields we need. */
@@ -521,7 +522,8 @@ void
 hs_build_address(const ed25519_public_key_t *key, uint8_t version,
                  char *addr_out)
 {
-  char checksum[DIGEST256_LEN], address[HS_SERVICE_ADDR_LEN];
+  uint8_t checksum[DIGEST256_LEN];
+  char address[HS_SERVICE_ADDR_LEN];
 
   tor_assert(key);
   tor_assert(addr_out);

@@ -93,7 +93,7 @@ void hs_build_address(const ed25519_public_key_t *key, uint8_t version,
                       char *addr_out);
 int hs_address_is_valid(const char *address);
 int hs_parse_address(const char *address, ed25519_public_key_t *key_out,
-                     char *checksum_out, uint8_t *version_out);
+                     uint8_t *checksum_out, uint8_t *version_out);
 
 void rend_data_free(rend_data_t *data);
 rend_data_t *rend_data_dup(const rend_data_t *data);
