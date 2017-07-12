@@ -143,7 +143,7 @@ STATIC void rend_service_prune_list_impl_(void);
 int num_rend_services(void);
 int rend_config_service(const config_line_t *line_,
                         const or_options_t *options,
-                        hs_service_t *hs_service);
+                        hs_service_config_t *config);
 void rend_service_prune_list(void);
 void rend_service_free_staging_list(void);
 int rend_service_load_all_keys(const smartlist_t *service_list);

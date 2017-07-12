@@ -622,14 +622,12 @@ rend_service_prune_list(void)
  * object which so we have to copy the parsed values to a rend service object
  * which is version 2 specific. */
 static void
-service_shadow_copy(rend_service_t *service, hs_service_t *hs_service)
+service_config_shadow_copy(rend_service_t *service,
+                           hs_service_config_t *config)
 {
-  hs_service_config_t *config;
-
   tor_assert(service);
-  tor_assert(hs_service);
+  tor_assert(config);
 
-  config = &hs_service->config;
   service->directory = tor_strdup(config->directory_path);
   service->dir_group_readable = config->dir_group_readable;
   service->allow_unknown_ports = config->allow_unknown_ports;
@@ -638,19 +636,19 @@ service_shadow_copy(rend_service_t *service, hs_service_t *hs_service)
   service->n_intro_points_wanted = config->num_intro_points;
   /* Switching ownership of the ports to the rend service object. */
   smartlist_add_all(service->ports, config->ports);
-  smartlist_free(hs_service->config.ports);
-  hs_service->config.ports = NULL;
+  smartlist_free(config->ports);
+  config->ports = NULL;
 }
 
 /* Parse the hidden service configuration starting at <b>line_</b> using the
- * already configured generic service in <b>hs_service</b>. This function will
- * translate the service object to a rend_service_t and add it to the
- * temporary list if valid. If <b>validate_only</b> is set, parse, warn and
- * return as normal but don't actually add the service to the list. */
+ * already configured generic service configuration in <b>config</b>. This
+ * function will translate the config object to a rend_service_t and add it to
+ * the temporary list if valid. If <b>validate_only</b> is set, parse, warn
+ * and return as normal but don't actually add the service to the list. */
 int
 rend_config_service(const config_line_t *line_,
                     const or_options_t *options,
-                    hs_service_t *hs_service)
+                    hs_service_config_t *config)
 {
   const config_line_t *line;
   rend_service_t *service = NULL;
@@ -658,7 +656,7 @@ rend_config_service(const config_line_t *line_,
   /* line_ can be NULL which would mean that the service configuration only
    * have one line that is the directory directive. */
   tor_assert(options);
-  tor_assert(hs_service);
+  tor_assert(config);
 
   /* Use the staging service list so that we can check then do the pruning
    * process using the main list at the end. */
@@ -672,7 +670,7 @@ rend_config_service(const config_line_t *line_,
   service->ports = smartlist_new();
   /* From the hs_service object which has been used to load the generic
    * options, we'll copy over the useful data to the rend_service_t object. */
-  service_shadow_copy(service, hs_service);
+  service_config_shadow_copy(service, config);
 
   for (line = line_; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {

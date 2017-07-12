@@ -236,18 +236,13 @@ config_validate_service(const hs_service_config_t *config)
  * Return 0 on success else a negative value. */
 static int
 config_service_v3(const config_line_t *line_,
-                  const or_options_t *options,
-                  hs_service_t *service)
+                  hs_service_config_t *config)
 {
-  (void) options;
   int have_num_ip = 0;
   const char *dup_opt_seen = NULL;
   const config_line_t *line;
-  hs_service_config_t *config;
 
-  tor_assert(service);
-
-  config = &service->config;
+  tor_assert(config);
 
   for (line = line_; line; line = line->next) {
     int ok = 0;
@@ -489,10 +484,10 @@ config_service(const config_line_t *line, const or_options_t *options,
    * directory line, the function knows that it has to stop parsing. */
   switch (service->version) {
   case HS_VERSION_TWO:
-    ret = rend_config_service(line->next, options, service);
+    ret = rend_config_service(line->next, options, &service->config);
     break;
   case HS_VERSION_THREE:
-    ret = config_service_v3(line->next, options, service);
+    ret = config_service_v3(line->next, &service->config);
     break;
   default:
     /* We do validate before if we support the parsed version. */
