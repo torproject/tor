@@ -113,9 +113,7 @@ struct replyqueue_s {
   alert_sockets_t alert;
 };
 
-/** A worker thread represents a single thread in a thread pool.  To avoid
- * contention, each gets its own queue. This breaks the guarantee that that
- * queued work will get executed strictly in order. */
+/** A worker thread represents a single thread in a thread pool. */
 typedef struct workerthread_s {
   /** Which thread it this?  In range 0..in_pool->n_threads-1 */
   int index;
@@ -368,7 +366,7 @@ workerthread_new(int32_t lower_priority_chance,
  * take from the queued work with the highest prioirity, but will occasionally
  * visit lower-priority queues to keep them from starving completely.
  *
- * Note that because each thread has its own work queue, work items may not
+ * Note that because of priorities and thread behavior, work items may not
  * be executed strictly in order.
  */
 workqueue_entry_t *
