@@ -2060,6 +2060,9 @@ check_fw_helper_app_callback(time_t now, const or_options_t *options)
 
 /**
  * Periodic callback: write the heartbeat message in the logs.
+ *
+ * If writing the heartbeat message to the logs fails for some reason, retry
+ * again after <b>MIN_HEARTBEAT_PERIOD</b> seconds.
  */
 static int
 heartbeat_callback(time_t now, const or_options_t *options)
@@ -2078,12 +2081,13 @@ heartbeat_callback(time_t now, const or_options_t *options)
   }
 
   /* Write the heartbeat message */
-  int r = log_heartbeat(now);
-  if (r == 0) {
+  if (log_heartbeat(now) == 0) {
     return options->HeartbeatPeriod;
+  } else {
+    /* If we couldn't write the heartbeat log message, try again in the minimum
+     * interval of time. */
+    return MIN_HEARTBEAT_PERIOD;
   }
-
-  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 #define CDM_CLEAN_CALLBACK_INTERVAL 600

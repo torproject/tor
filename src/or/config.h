@@ -18,6 +18,10 @@
 #define KERNEL_MAY_SUPPORT_IPFW
 #endif
 
+/** Lowest allowable value for HeartbeatPeriod; if this is too low, we might
+ * expose more information than we're comfortable with. */
+#define MIN_HEARTBEAT_PERIOD (30*60)
+
 MOCK_DECL(const char*, get_dirportfrontpage, (void));
 MOCK_DECL(const or_options_t *, get_options, (void));
 MOCK_DECL(or_options_t *, get_options_mutable, (void));
