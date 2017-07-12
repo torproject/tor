@@ -149,6 +149,23 @@ set_service_default_config(hs_service_config_t *c,
   c->is_ephemeral = 0;
 }
 
+/* From a service configuration object config, clear everything from it
+ * meaning free allocated pointers and reset the values. */
+static void
+service_clear_config(hs_service_config_t *config)
+{
+  if (config == NULL) {
+    return;
+  }
+  tor_free(config->directory_path);
+  if (config->ports) {
+    SMARTLIST_FOREACH(config->ports, rend_service_port_config_t *, p,
+                      rend_service_port_config_free(p););
+    smartlist_free(config->ports);
+  }
+  memset(config, 0, sizeof(*config));
+}
+
 /* Helper: Function that needs to return 1 for the HT for each loop which
  * frees every service in an hash map. */
 static int
@@ -592,12 +609,7 @@ hs_service_free(hs_service_t *service)
   }
 
   /* Free service configuration. */
-  tor_free(service->config.directory_path);
-  if (service->config.ports) {
-    SMARTLIST_FOREACH(service->config.ports, rend_service_port_config_t *, p,
-                      rend_service_port_config_free(p););
-    smartlist_free(service->config.ports);
-  }
+  service_clear_config(&service->config);
 
   /* Wipe service keys. */
   memwipe(&service->keys.identity_sk, 0, sizeof(service->keys.identity_sk));
