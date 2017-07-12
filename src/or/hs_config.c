@@ -19,9 +19,8 @@
  * successful, transfert the service to the main global service list where
  * at that point it is ready to be used.
  *
- * Configuration handlers are per-version (see config_service_handlers[]) and
- * there is a main generic one for every option that is common to all version
- * (config_generic_service).
+ * Configuration functions are per-version and there is a main generic one for
+ * every option that is common to all version (config_generic_service).
  **/
 
 #define HS_CONFIG_PRIVATE
@@ -227,7 +226,7 @@ config_validate_service(const hs_service_config_t *config)
   return -1;
 }
 
-/* Configuration handler for a version 3 service. The line_ must be pointing
+/* Configuration funcion for a version 3 service. The line_ must be pointing
  * to the directive directly after a HiddenServiceDir. That way, when hitting
  * the next HiddenServiceDir line or reaching the end of the list of lines, we
  * know that we have to stop looking for more options. The given service
@@ -445,26 +444,16 @@ config_generic_service(const config_line_t *line_,
   return -1;
 }
 
-/* Configuration handler indexed by version number. */
-static int
-  (*config_service_handlers[])(const config_line_t *line,
-                               const or_options_t *options,
-                               hs_service_t *service) =
-{
-  NULL, /* v0 */
-  NULL, /* v1 */
-  rend_config_service, /* v2 */
-  config_service_v3, /* v3 */
-};
-
 /* Configure a service using the given line and options. This function will
- * call the corresponding version handler and validate the service against the
- * other one. On success, add the service to the given list and return 0. On
- * error, nothing is added to the list and a negative value is returned. */
+ * call the corresponding configuration function for a specific service
+ * version and validate the service against the other ones. On success, add
+ * the service to the given list and return 0. On error, nothing is added to
+ * the list and a negative value is returned. */
 static int
 config_service(const config_line_t *line, const or_options_t *options,
                smartlist_t *service_list)
 {
+  int ret;
   hs_service_t *service = NULL;
 
   tor_assert(line);
@@ -473,13 +462,13 @@ config_service(const config_line_t *line, const or_options_t *options,
 
   /* We have a new hidden service. */
   service = hs_service_new(options);
-  /* We'll configure that service as a generic one and then pass it to the
-   * specific handler according to the configured version number. */
+  /* We'll configure that service as a generic one and then pass it to a
+   * specific function according to the configured version number. */
   if (config_generic_service(line, options, service) < 0) {
     goto err;
   }
   tor_assert(service->version <= HS_VERSION_MAX);
-  /* Before we configure the service with the per-version handler, we'll make
+  /* Before we configure the service on a per-version basis, we'll make
    * sure that this set of options for a service are valid that is for
    * instance an option only for v2 is not used for v3. */
   if (config_has_invalid_options(line->next, service)) {
@@ -495,11 +484,22 @@ config_service(const config_line_t *line, const or_options_t *options,
                                    0) < 0) {
     goto err;
   }
-  /* The handler is in charge of specific options for a version. We start
-   * after this service directory line so once we hit another directory
-   * line, the handler knows that it has to stop. */
-  if (config_service_handlers[service->version](line->next, options,
-                                                service) < 0) {
+  /* Different functions are in charge of specific options for a version. We
+   * start just after the service directory line so once we hit another
+   * directory line, the function knows that it has to stop parsing. */
+  switch (service->version) {
+  case HS_VERSION_TWO:
+    ret = rend_config_service(line->next, options, service);
+    break;
+  case HS_VERSION_THREE:
+    ret = config_service_v3(line->next, options, service);
+    break;
+  default:
+    /* We do validate before if we support the parsed version. */
+    tor_assert_nonfatal_unreached();
+    goto err;
+  }
+  if (ret < 0) {
     goto err;
   }
   /* We'll check if this service can be kept depending on the others
@@ -564,10 +564,10 @@ hs_config_service_all(const or_options_t *options, int validate_only)
      * services. We don't need those objects anymore. */
     SMARTLIST_FOREACH(new_service_list, hs_service_t *, s,
                       hs_service_free(s));
-    /* For the v2 subsystem, the configuration handler adds the service object
-     * to the staging list and it is transferred in the main list through the
-     * prunning process. In validation mode, we thus have to purge the staging
-     * list so it's not kept in memory as valid service. */
+    /* For the v2 subsystem, the configuration function adds the service
+     * object to the staging list and it is transferred in the main list
+     * through the prunning process. In validation mode, we thus have to purge
+     * the staging list so it's not kept in memory as valid service. */
     rend_service_free_staging_list();
   }
 
