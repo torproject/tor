@@ -14,6 +14,7 @@
 #define CONSDIFFMGR_PRIVATE
 
 #include "or.h"
+#include "config.h"
 #include "conscache.h"
 #include "consdiff.h"
 #include "consdiffmgr.h"
@@ -462,12 +463,22 @@ cdm_cache_lookup_consensus(consensus_flavor_t flavor, time_t valid_after)
 static int32_t
 get_max_age_to_cache(void)
 {
-  /* The parameter is in hours. */
   const int32_t DEFAULT_MAX_AGE_TO_CACHE = 8192;
   const int32_t MIN_MAX_AGE_TO_CACHE = 0;
   const int32_t MAX_MAX_AGE_TO_CACHE = 8192;
   const char MAX_AGE_TO_CACHE_NAME[] = "max-consensus-age-to-cache-for-diff";
 
+  const or_options_t *options = get_options();
+
+  if (options->MaxConsensusAgeForDiffs) {
+    const int v = options->MaxConsensusAgeForDiffs;
+    if (v >= MAX_MAX_AGE_TO_CACHE * 3600)
+      return MAX_MAX_AGE_TO_CACHE;
+    else
+      return v;
+  }
+
+  /* The parameter is in hours, so we multiply */
   return 3600 * networkstatus_get_param(NULL,
                                         MAX_AGE_TO_CACHE_NAME,
                                         DEFAULT_MAX_AGE_TO_CACHE,
