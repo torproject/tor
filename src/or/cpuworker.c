@@ -89,7 +89,14 @@ cpu_init(void)
     event_add(reply_event, NULL);
   }
   if (!threadpool) {
-    threadpool = threadpool_new(get_num_cpus(get_options()),
+    /*
+      In our threadpool implementation, half the threads are permissive and
+      half are strict (when it comes to running lower-priority tasks). So we
+      always make sure we have at least two threads, so that there will be at
+      least one thread of each kind.
+    */
+    const int n_threads = get_num_cpus(get_options()) + 1;
+    threadpool = threadpool_new(n_threads,
                                 replyqueue,
                                 worker_state_new,
                                 worker_state_free,

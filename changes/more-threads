@@ -1,0 +1,3 @@
+  o Minor features (relay, performance):
+    - Always start relays with at least two worker threads, to prevent
+      priority inversion on slow tasks.  Part of the fix for bug 22883.
