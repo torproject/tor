@@ -80,9 +80,10 @@ HT_GENERATE2(hs_service_ht, hs_service_t, hs_service_node,
 STATIC hs_service_t *
 find_service(hs_service_ht *map, const ed25519_public_key_t *pk)
 {
-  hs_service_t dummy_service = {0};
+  hs_service_t dummy_service;
   tor_assert(map);
   tor_assert(pk);
+  memset(&dummy_service, 0, sizeof(dummy_service));
   ed25519_pubkey_copy(&dummy_service.keys.identity_pk, pk);
   return HT_FIND(hs_service_ht, map, &dummy_service);
 }

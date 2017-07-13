@@ -18,6 +18,7 @@
 #include "control.h"
 #include "directory.h"
 #include "hs_common.h"
+#include "hs_config.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -631,7 +632,14 @@ service_config_shadow_copy(rend_service_t *service,
   service->directory = tor_strdup(config->directory_path);
   service->dir_group_readable = config->dir_group_readable;
   service->allow_unknown_ports = config->allow_unknown_ports;
-  service->max_streams_per_circuit = config->max_streams_per_rdv_circuit;
+  /* This value can't go above HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT (65535)
+   * if the code flow is right so this cast is safe. But just in case, we'll
+   * check it. */
+  service->max_streams_per_circuit = (int) config->max_streams_per_rdv_circuit;
+  if (BUG(config->max_streams_per_rdv_circuit >
+          HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT)) {
+    service->max_streams_per_circuit = HS_CONFIG_MAX_STREAMS_PER_RDV_CIRCUIT;
+  }
   service->max_streams_close_circuit = config->max_streams_close_circuit;
   service->n_intro_points_wanted = config->num_intro_points;
   /* Switching ownership of the ports to the rend service object. */
