@@ -306,7 +306,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                            signing_key_fingerprint);
   }
 
-  note_crypto_pk_op(SIGN_DIR);
   {
     char *sig = router_get_dirobj_signature(digest, DIGEST_LEN,
                                             private_signing_key);

@@ -286,7 +286,6 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     goto perm_err;
   }
 
-  note_crypto_pk_op(REND_CLIENT);
   /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
   r = crypto_pk_public_hybrid_encrypt(intro_key, payload+DIGEST_LEN,

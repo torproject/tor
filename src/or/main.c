@@ -2877,7 +2877,6 @@ dumpstats(int severity)
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
-  dump_pk_ops(severity);
   dump_distinct_digest_count(severity);
 }
 

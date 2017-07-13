@@ -1996,7 +1996,6 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   tok = find_by_keyword(tokens, K_ROUTER_SIGNATURE);
-  note_crypto_pk_op(VERIFY_RTR);
 #ifdef COUNT_DISTINCT_DIGESTS
   if (!verified_digests)
     verified_digests = digestmap_new();
@@ -2231,7 +2230,6 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   }
 
   if (key) {
-    note_crypto_pk_op(VERIFY_RTR);
     if (check_signature_token(digest, DIGEST_LEN, tok, key, 0,
                               "extra-info") < 0)
       goto err;
@@ -5288,7 +5286,6 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   }
   /* Parse and verify signature. */
   tok = find_by_keyword(tokens, R_SIGNATURE);
-  note_crypto_pk_op(VERIFY_RTR);
   if (check_signature_token(desc_hash, DIGEST_LEN, tok, result->pk, 0,
                             "v2 rendezvous service descriptor") < 0)
     goto err;

@@ -3009,7 +3009,6 @@ router_dump_router_to_string(routerinfo_t *router,
 
   crypto_digest_smartlist(digest, DIGEST_LEN, chunks, "", DIGEST_SHA1);
 
-  note_crypto_pk_op(SIGN_RTR);
   {
     char *sig;
     if (!(sig = router_get_dirobj_signature(digest, DIGEST_LEN, ident_key))) {

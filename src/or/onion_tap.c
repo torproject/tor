@@ -72,8 +72,6 @@ onion_skin_TAP_create(crypto_pk_t *dest_router_key,
   if (crypto_dh_get_public(dh, challenge, dhbytes))
     goto err;
 
-  note_crypto_pk_op(ENC_ONIONSKIN);
-
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
   if (crypto_pk_public_hybrid_encrypt(dest_router_key, onion_skin_out,
                                       TAP_ONIONSKIN_CHALLENGE_LEN,
@@ -124,7 +122,6 @@ onion_skin_TAP_server_handshake(
     k = i==0?private_key:prev_private_key;
     if (!k)
       break;
-    note_crypto_pk_op(DEC_ONIONSKIN);
     len = crypto_pk_private_hybrid_decrypt(k, challenge,
                                            TAP_ONIONSKIN_CHALLENGE_LEN,
                                            onion_skin,

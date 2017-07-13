@@ -2845,8 +2845,6 @@ rend_service_decrypt_intro(
   }
 
   /* Decrypt the encrypted part */
-
-  note_crypto_pk_op(REND_SERVER);
   result =
     crypto_pk_private_hybrid_decrypt(
        key, (char *)buf, sizeof(buf),
@@ -3260,7 +3258,6 @@ encode_establish_intro_cell_legacy(char *cell_body_out,
   if (crypto_digest(cell_body_out+len, auth, DIGEST_LEN+9))
     goto err;
   len += 20;
-  note_crypto_pk_op(REND_SERVER);
   r = crypto_pk_private_sign_digest(intro_key, cell_body_out+len,
                                     cell_body_out_len - len,
                                     cell_body_out, len);

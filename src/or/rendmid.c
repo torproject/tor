@@ -71,7 +71,6 @@ rend_mid_establish_intro_legacy(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
   /* Rest of body: signature of previous data */
-  note_crypto_pk_op(REND_MID);
   if (crypto_pk_public_checksig_digest(pk,
                                        (char*)request, 2+asn1len+DIGEST_LEN,
                                        (char*)(request+2+DIGEST_LEN+asn1len),

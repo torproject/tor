@@ -62,9 +62,6 @@ int any_predicted_circuits(time_t now);
 int rep_hist_circbuilding_dormant(time_t now);
 int predicted_ports_prediction_time_remaining(time_t now);
 
-void note_crypto_pk_op(pk_op_t operation);
-void dump_pk_ops(int severity);
-
 void rep_hist_exit_stats_init(time_t now);
 void rep_hist_reset_exit_stats(time_t now);
 void rep_hist_exit_stats_term(void);
