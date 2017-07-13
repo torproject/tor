@@ -112,6 +112,10 @@ typedef struct hs_service_keys_t {
  * set by the configuration file or by the control port. Nothing else should
  * change those values. */
 typedef struct hs_service_config_t {
+  /* Protocol version of the service. Specified by HiddenServiceVersion
+   * option. */
+  uint32_t version;
+
   /* List of rend_service_port_config_t */
   smartlist_t *ports;
 
@@ -170,9 +174,6 @@ typedef struct hs_service_state_t {
 
 /* Representation of a service running on this tor instance. */
 typedef struct hs_service_t {
-  /* Protocol version of the service. Specified by HiddenServiceVersion. */
-  uint32_t version;
-
   /* Onion address base32 encoded and NUL terminated. We keep it for logging
    * purposes so we don't have to build it everytime. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];

@@ -471,7 +471,7 @@ test_load_keys(void *arg)
   tt_assert(!tor_mem_is_zero((char *) s->keys.identity_pk.pubkey,
                              ED25519_PUBKEY_LEN));
   /* Check onion address from identity key. */
-  hs_build_address(&s->keys.identity_pk, s->version, addr);
+  hs_build_address(&s->keys.identity_pk, s->config.version, addr);
   tt_int_op(hs_address_is_valid(addr), OP_EQ, 1);
   tt_str_op(addr, OP_EQ, s->onion_address);
 

@@ -55,7 +55,7 @@ stage_services(smartlist_t *service_list)
    * only >= v3 service. And remember, v2 has a different object type which is
    * shadow copied from an hs_service_t type. */
   SMARTLIST_FOREACH_BEGIN(service_list, hs_service_t *, s) {
-    if (s->version == HS_VERSION_TWO) {
+    if (s->config.version == HS_VERSION_TWO) {
       SMARTLIST_DEL_CURRENT(service_list, s);
       hs_service_free(s);
     }
@@ -157,7 +157,7 @@ config_has_invalid_options(const config_line_t *line_,
   const config_line_t *line;
 
   tor_assert(service);
-  tor_assert(service->version <= HS_VERSION_MAX);
+  tor_assert(service->config.version <= HS_VERSION_MAX);
 
   /* List of options that a v3 service doesn't support thus must exclude from
    * its configuration. */
@@ -178,7 +178,7 @@ config_has_invalid_options(const config_line_t *line_,
     { opts_exclude_v3 }, /* v3. */
   };
 
-  optlist = exclude_lists[service->version].list;
+  optlist = exclude_lists[service->config.version].list;
   if (optlist == NULL) {
     /* No exclude options to look at for this version. */
     goto end;
@@ -193,7 +193,8 @@ config_has_invalid_options(const config_line_t *line_,
       if (!strcasecmp(line->key, opt)) {
         log_warn(LD_CONFIG, "Hidden service option %s is incompatible with "
                             "version %" PRIu32 " of service in %s",
-                 opt, service->version, service->config.directory_path);
+                 opt, service->config.version,
+                 service->config.directory_path);
         ret = 1;
         /* Continue the loop so we can find all possible options. */
         continue;
@@ -342,7 +343,7 @@ config_generic_service(const config_line_t *line_,
     }
     /* Version of the service. */
     if (!strcasecmp(line->key, "HiddenServiceVersion")) {
-      service->version =
+      service->config.version =
         (uint32_t) helper_parse_uint64(line->key, line->value, HS_VERSION_MIN,
                                        HS_VERSION_MAX, &ok);
       if (!ok || have_version) {
@@ -462,7 +463,7 @@ config_service(const config_line_t *line, const or_options_t *options,
   if (config_generic_service(line, options, service) < 0) {
     goto err;
   }
-  tor_assert(service->version <= HS_VERSION_MAX);
+  tor_assert(service->config.version <= HS_VERSION_MAX);
   /* Before we configure the service on a per-version basis, we'll make
    * sure that this set of options for a service are valid that is for
    * instance an option only for v2 is not used for v3. */
@@ -482,7 +483,7 @@ config_service(const config_line_t *line, const or_options_t *options,
   /* Different functions are in charge of specific options for a version. We
    * start just after the service directory line so once we hit another
    * directory line, the function knows that it has to stop parsing. */
-  switch (service->version) {
+  switch (service->config.version) {
   case HS_VERSION_TWO:
     ret = rend_config_service(line->next, options, &service->config);
     break;

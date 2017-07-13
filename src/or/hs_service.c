@@ -250,7 +250,7 @@ close_service_circuits(hs_service_t *service)
   tor_assert(service);
 
   /* Only support for version >= 3. */
-  if (BUG(service->version < HS_VERSION_THREE)) {
+  if (BUG(service->config.version < HS_VERSION_THREE)) {
     return;
   }
   /* Close intro points. */
@@ -492,8 +492,9 @@ load_service_keys(hs_service_t *service)
   ed25519_keypair_free(kp);
 
   /* Build onion address from the newly loaded keys. */
-  tor_assert(service->version <= UINT8_MAX);
-  hs_build_address(&service->keys.identity_pk, (uint8_t) service->version,
+  tor_assert(service->config.version <= UINT8_MAX);
+  hs_build_address(&service->keys.identity_pk,
+                   (uint8_t) service->config.version,
                    service->onion_address);
 
   /* Write onion address to hostname file. */
@@ -572,7 +573,7 @@ hs_service_new(const or_options_t *options)
   /* Set default configuration value. */
   set_service_default_config(&service->config, options);
   /* Set the default service version. */
-  service->version = HS_SERVICE_DEFAULT_VERSION;
+  service->config.version = HS_SERVICE_DEFAULT_VERSION;
   return service;
 }
 
