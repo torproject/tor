@@ -15,8 +15,24 @@
 
 #include "config.h"
 #include "networkstatus.h"
+#include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_service.h"
 #include "rendcommon.h"
+
+/* Allocate and return a string containing the path to filename in directory.
+ * This function will never return NULL. The caller must free this path. */
+char *
+hs_path_from_filename(const char *directory, const char *filename)
+{
+  char *file_path = NULL;
+
+  tor_assert(directory);
+  tor_assert(filename);
+
+  tor_asprintf(&file_path, "%s%s%s", directory, PATH_SEPARATOR, filename);
+  return file_path;
+}
 
 /* Make sure that the directory for <b>service</b> is private, using the config
  * <b>username</b>.
@@ -342,5 +358,205 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
     /* We should always have a supported version. */
     tor_assert(0);
   }
+}
+
+/* Using an ed25519 public key and version to build the checksum of an
+ * address. Put in checksum_out. Format is:
+ *    SHA3-256(".onion checksum" || PUBKEY || VERSION)
+ *
+ * checksum_out must be large enough to receive 32 bytes (DIGEST256_LEN). */
+static void
+build_hs_checksum(const ed25519_public_key_t *key, uint8_t version,
+                  uint8_t *checksum_out)
+{
+  size_t offset = 0;
+  char data[HS_SERVICE_ADDR_CHECKSUM_INPUT_LEN];
+
+  /* Build checksum data. */
+  memcpy(data, HS_SERVICE_ADDR_CHECKSUM_PREFIX,
+         HS_SERVICE_ADDR_CHECKSUM_PREFIX_LEN);
+  offset += HS_SERVICE_ADDR_CHECKSUM_PREFIX_LEN;
+  memcpy(data + offset, key->pubkey, ED25519_PUBKEY_LEN);
+  offset += ED25519_PUBKEY_LEN;
+  set_uint8(data + offset, version);
+  offset += sizeof(version);
+  tor_assert(offset == HS_SERVICE_ADDR_CHECKSUM_INPUT_LEN);
+
+  /* Hash the data payload to create the checksum. */
+  crypto_digest256((char *) checksum_out, data, sizeof(data),
+                   DIGEST_SHA3_256);
+}
+
+/* Using an ed25519 public key, checksum and version to build the binary
+ * representation of a service address. Put in addr_out. Format is:
+ *    addr_out = PUBKEY || CHECKSUM || VERSION
+ *
+ * addr_out must be large enough to receive HS_SERVICE_ADDR_LEN bytes. */
+static void
+build_hs_address(const ed25519_public_key_t *key, const uint8_t *checksum,
+                 uint8_t version, char *addr_out)
+{
+  size_t offset = 0;
+
+  tor_assert(key);
+  tor_assert(checksum);
+
+  memcpy(addr_out, key->pubkey, ED25519_PUBKEY_LEN);
+  offset += ED25519_PUBKEY_LEN;
+  memcpy(addr_out + offset, checksum, HS_SERVICE_ADDR_CHECKSUM_LEN_USED);
+  offset += HS_SERVICE_ADDR_CHECKSUM_LEN_USED;
+  set_uint8(addr_out + offset, version);
+  offset += sizeof(uint8_t);
+  tor_assert(offset == HS_SERVICE_ADDR_LEN);
+}
+
+/* Helper for hs_parse_address(): Using a binary representation of a service
+ * address, parse its content into the key_out, checksum_out and version_out.
+ * Any out variable can be NULL in case the caller would want only one field.
+ * checksum_out MUST at least be 2 bytes long. address must be at least
+ * HS_SERVICE_ADDR_LEN bytes but doesn't need to be NUL terminated. */
+static void
+hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
+                      uint8_t *checksum_out, uint8_t *version_out)
+{
+  size_t offset = 0;
+
+  tor_assert(address);
+
+  if (key_out) {
+    /* First is the key. */
+    memcpy(key_out->pubkey, address, ED25519_PUBKEY_LEN);
+  }
+  offset += ED25519_PUBKEY_LEN;
+  if (checksum_out) {
+    /* Followed by a 2 bytes checksum. */
+    memcpy(checksum_out, address + offset, HS_SERVICE_ADDR_CHECKSUM_LEN_USED);
+  }
+  offset += HS_SERVICE_ADDR_CHECKSUM_LEN_USED;
+  if (version_out) {
+    /* Finally, version value is 1 byte. */
+    *version_out = get_uint8(address + offset);
+  }
+  offset += sizeof(uint8_t);
+  /* Extra safety. */
+  tor_assert(offset == HS_SERVICE_ADDR_LEN);
+}
+
+/* Using a base32 representation of a service address, parse its content into
+ * the key_out, checksum_out and version_out. Any out variable can be NULL in
+ * case the caller would want only one field. checksum_out MUST at least be 2
+ * bytes long.
+ *
+ * Return 0 if parsing went well; return -1 in case of error. */
+int
+hs_parse_address(const char *address, ed25519_public_key_t *key_out,
+                 uint8_t *checksum_out, uint8_t *version_out)
+{
+  char decoded[HS_SERVICE_ADDR_LEN];
+
+  tor_assert(address);
+
+  /* Obvious length check. */
+  if (strlen(address) != HS_SERVICE_ADDR_LEN_BASE32) {
+    log_warn(LD_REND, "Service address %s has an invalid length. "
+                      "Expected %ld but got %lu.",
+             escaped_safe_str(address), HS_SERVICE_ADDR_LEN_BASE32,
+             strlen(address));
+    goto invalid;
+  }
+
+  /* Decode address so we can extract needed fields. */
+  if (base32_decode(decoded, sizeof(decoded), address, strlen(address)) < 0) {
+    log_warn(LD_REND, "Service address %s can't be decoded.",
+             escaped_safe_str(address));
+    goto invalid;
+  }
+
+  /* Parse the decoded address into the fields we need. */
+  hs_parse_address_impl(decoded, key_out, checksum_out, version_out);
+
+  return 0;
+ invalid:
+  return -1;
+}
+
+/* Validate a given onion address. The length, the base32 decoding and
+ * checksum are validated. Return 1 if valid else 0. */
+int
+hs_address_is_valid(const char *address)
+{
+  uint8_t version;
+  uint8_t checksum[HS_SERVICE_ADDR_CHECKSUM_LEN_USED];
+  uint8_t target_checksum[DIGEST256_LEN];
+  ed25519_public_key_t key;
+
+  /* Parse the decoded address into the fields we need. */
+  if (hs_parse_address(address, &key, checksum, &version) < 0) {
+    goto invalid;
+  }
+
+  /* Get the checksum it's suppose to be and compare it with what we have
+   * encoded in the address. */
+  build_hs_checksum(&key, version, target_checksum);
+  if (tor_memcmp(checksum, target_checksum, sizeof(checksum))) {
+    log_warn(LD_REND, "Service address %s invalid checksum.",
+             escaped_safe_str(address));
+    goto invalid;
+  }
+
+  /* Valid address. */
+  return 1;
+ invalid:
+  return 0;
+}
+
+/* Build a service address using an ed25519 public key and a given version.
+ * The returned address is base32 encoded and put in addr_out. The caller MUST
+ * make sure the addr_out is at least HS_SERVICE_ADDR_LEN_BASE32 + 1 long.
+ *
+ * Format is as follow:
+ *     base32(PUBKEY || CHECKSUM || VERSION)
+ *     CHECKSUM = H(".onion checksum" || PUBKEY || VERSION)
+ * */
+void
+hs_build_address(const ed25519_public_key_t *key, uint8_t version,
+                 char *addr_out)
+{
+  uint8_t checksum[DIGEST256_LEN];
+  char address[HS_SERVICE_ADDR_LEN];
+
+  tor_assert(key);
+  tor_assert(addr_out);
+
+  /* Get the checksum of the address. */
+  build_hs_checksum(key, version, checksum);
+  /* Get the binary address representation. */
+  build_hs_address(key, checksum, version, address);
+
+  /* Encode the address. addr_out will be NUL terminated after this. */
+  base32_encode(addr_out, HS_SERVICE_ADDR_LEN_BASE32 + 1, address,
+                sizeof(address));
+  /* Validate what we just built. */
+  tor_assert(hs_address_is_valid(addr_out));
+}
+
+/* Initialize the entire HS subsytem. This is called in tor_init() before any
+ * torrc options are loaded. Only for >= v3. */
+void
+hs_init(void)
+{
+  hs_circuitmap_init();
+  hs_service_init();
+  hs_cache_init();
+}
+
+/* Release and cleanup all memory of the HS subsystem (all version). This is
+ * called by tor_free_all(). */
+void
+hs_free_all(void)
+{
+  hs_circuitmap_free_all();
+  hs_service_free_all();
+  hs_cache_free_all();
 }
 

@@ -7,18 +7,21 @@
  */
 
 #define ROUTERLIST_PRIVATE
+#define CONFIG_PRIVATE
 #define CONNECTION_PRIVATE
 #define MAIN_PRIVATE
 
 #include "orconfig.h"
 #include "or.h"
 
+#include "buffers.h"
+#include "config.h"
+#include "confparse.h"
 #include "connection.h"
 #include "main.h"
+#include "nodelist.h"
 #include "relay.h"
 #include "routerlist.h"
-#include "nodelist.h"
-#include "buffers.h"
 
 #include "test.h"
 #include "test_helpers.h"
@@ -237,5 +240,40 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   UNMOCK(connection_connect_sockaddr);
   UNMOCK(tor_close_socket);
   return NULL;
+}
+
+/* Helper function to parse a set of torrc options in a text format and return
+ * a newly allocated or_options_t object containing the configuration. On
+ * error, NULL is returned indicating that the conf couldn't be parsed
+ * properly. */
+or_options_t *
+helper_parse_options(const char *conf)
+{
+  int ret = 0;
+  char *msg = NULL;
+  or_options_t *opt = NULL;
+  config_line_t *line = NULL;
+
+  /* Kind of pointless to call this with a NULL value. */
+  tt_assert(conf);
+
+  opt = options_new();
+  tt_assert(opt);
+  ret = config_get_lines(conf, &line, 1);
+  if (ret != 0) {
+    goto done;
+  }
+  ret = config_assign(&options_format, opt, line, 0, &msg);
+  if (ret != 0) {
+    goto done;
+  }
+
+ done:
+  config_free_lines(line);
+  if (ret != 0) {
+    or_options_free(opt);
+    opt = NULL;
+  }
+  return opt;
 }
 
