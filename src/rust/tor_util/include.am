@@ -7,7 +7,7 @@ EXTRA_DIST +=\
 src/rust/target/release/libtor_util.a: FORCE
 	( cd "$(abs_top_srcdir)/src/rust/tor_util" ; \
 		CARGO_TARGET_DIR="$(abs_top_builddir)/src/rust/target" \
-		HOME="$(abs_top_builddir)/src/rust" \
+		CARGO_HOME="$(abs_top_builddir)/src/rust" \
 		$(CARGO) build --release --quiet $(CARGO_ONLINE) )
 
 FORCE:
