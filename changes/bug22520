@@ -1,0 +1,5 @@
+  o Minor bugfixes (error reporting, windows):
+    - When formatting Windows error messages, use the English format
+      to avoid codepage issues. Fixes bug 22520; bugfix on
+      0.1.2.8-alpha. Patch from "Vort".
+
