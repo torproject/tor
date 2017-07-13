@@ -2073,6 +2073,16 @@ details.)
     because clients connect via the ORPort by default. Setting either DirPort
     or BridgeRelay and setting DirCache to 0 is not supported.  (Default: 1)
 
+[[MaxConsensusAgeForDiffs]] **MaxConsensusAgeForDiffs**  __N__ **minutes**|**hours**|**days**|**weeks**::
+    When this option is nonzero, Tor caches will not try to generate
+    consensus diffs for any consensus older than this amount of time.
+    If this option is set to zero, Tor will pick a reasonable default from
+    the current networkstatus document.  You should not set this
+    option unless your cache is severely low on disk space or CPU.
+    If you need to set it, keeping it above 3 or 4 hours will help clients
+    much more than setting it to zero.
+    (Default: 0)
+
 
 DIRECTORY AUTHORITY SERVER OPTIONS
 ----------------------------------

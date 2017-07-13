@@ -4579,6 +4579,11 @@ typedef struct {
 
   /** Bool (default: 0): Tells if a %include was used on torrc */
   int IncludeUsed;
+
+  /** The seconds after expiration which we as a relay should keep old
+   * consensuses around so that we can generate diffs from them.  If 0,
+   * use the default. */
+  int MaxConsensusAgeForDiffs;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
