@@ -2805,10 +2805,6 @@ compute_publishserverdescriptor(or_options_t *options)
  * will generate too many circuits and potentially overload the network. */
 #define MIN_CIRCUIT_STREAM_TIMEOUT 10
 
-/** Lowest allowable value for HeartbeatPeriod; if this is too low, we might
- * expose more information than we're comfortable with. */
-#define MIN_HEARTBEAT_PERIOD (30*60)
-
 /** Lowest recommended value for CircuitBuildTimeout; if it is set too low
  * and LearnCircuitBuildTimeout is off, the failure rate for circuit
  * construction may be very high.  In that case, if it is set below this
