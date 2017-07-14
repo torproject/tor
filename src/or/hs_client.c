@@ -10,13 +10,48 @@
 #include "hs_circuit.h"
 #include "hs_ident.h"
 #include "connection_edge.h"
+#include "container.h"
 #include "rendclient.h"
 #include "hs_descriptor.h"
 #include "hs_cache.h"
+#include "hs_cell.h"
+#include "hs_ident.h"
 #include "config.h"
 #include "directory.h"
 #include "hs_client.h"
 #include "router.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "connection.h"
+#include "circpathbias.h"
+
+/* Get all connections that are waiting on a circuit and flag them back to
+ * waiting for a hidden service descriptor for the given service key
+ * service_identity_pk. */
+static void
+flag_all_conn_wait_desc(const ed25519_public_key_t *service_identity_pk)
+{
+  tor_assert(service_identity_pk);
+
+  smartlist_t *conns =
+    connection_list_by_type_state(CONN_TYPE_AP, AP_CONN_STATE_CIRCUIT_WAIT);
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    edge_connection_t *edge_conn;
+    if (BUG(!CONN_IS_EDGE(conn))) {
+      continue;
+    }
+    edge_conn = TO_EDGE_CONN(conn);
+    if (edge_conn->hs_ident &&
+        ed25519_pubkey_eq(&edge_conn->hs_ident->identity_pk,
+                          service_identity_pk)) {
+      connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
+      conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+  smartlist_free(conns);
+}
 
 /* A v3 HS circuit successfully connected to the hidden service. Update the
  * stream state at <b>hs_conn_ident</b> appropriately. */
@@ -140,11 +175,10 @@ fetch_v3_desc(const ed25519_public_key_t *onion_identity_pk)
   return directory_launch_v3_desc_fetch(onion_identity_pk, hsdir_rs);
 }
 
-#if 0
 /* Make sure that the given origin circuit circ is a valid correct
  * introduction circuit. This asserts on validation failure. */
 static void
-assert_intro_circ(const origin_circuit_t *circ)
+assert_intro_circ_ok(const origin_circuit_t *circ)
 {
   tor_assert(circ);
   tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
@@ -152,7 +186,131 @@ assert_intro_circ(const origin_circuit_t *circ)
   tor_assert(hs_ident_intro_circ_is_valid(circ->hs_ident));
   assert_circ_anonymity_ok(circ, get_options());
 }
-#endif
+
+/* Find a descriptor intro point object that matches the given ident in the
+ * given descriptor desc. Return NULL if not found. */
+static const hs_desc_intro_point_t *
+find_desc_intro_point_by_ident(const hs_ident_circuit_t *ident,
+                               const hs_descriptor_t *desc)
+{
+  const hs_desc_intro_point_t *intro_point = NULL;
+
+  tor_assert(ident);
+  tor_assert(desc);
+
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          const hs_desc_intro_point_t *, ip) {
+    if (ed25519_pubkey_eq(&ident->intro_auth_pk,
+                          &ip->auth_key_cert->signed_key)) {
+      intro_point = ip;
+      break;
+    }
+  } SMARTLIST_FOREACH_END(ip);
+
+  return intro_point;
+}
+
+/* Send an INTRODUCE1 cell along the intro circuit and populate the rend
+ * circuit identifier with the needed key material for the e2e encryption.
+ * Return 0 on success, -1 if there is a transient error such that an action
+ * has been taken to recover and -2 if there is a permanent error indicating
+ * that both circuits were closed. */
+static int
+send_introduce1(origin_circuit_t *intro_circ,
+                origin_circuit_t *rend_circ)
+{
+  int status;
+  char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+  const ed25519_public_key_t *service_identity_pk = NULL;
+  const hs_desc_intro_point_t *ip;
+
+  assert_intro_circ_ok(intro_circ);
+  tor_assert(rend_circ);
+
+  service_identity_pk = &intro_circ->hs_ident->identity_pk;
+  /* For logging purposes. There will be a time where the hs_ident will have a
+   * version number but for now there is none because it's all v3. */
+  hs_build_address(service_identity_pk, HS_VERSION_THREE, onion_address);
+
+  log_info(LD_REND, "Sending INTRODUCE1 cell to service %s on circuit %u",
+           safe_str_client(onion_address), TO_CIRCUIT(intro_circ)->n_circ_id);
+
+  /* 1) Get descriptor from our cache. */
+  const hs_descriptor_t *desc =
+    hs_cache_lookup_as_client(service_identity_pk);
+  if (desc == NULL || !hs_client_any_intro_points_usable(desc)) {
+    log_info(LD_REND, "Request to %s %s. Trying to fetch a new descriptor.",
+             safe_str_client(onion_address),
+             (desc) ? "didn't have usable intro points" :
+             "didn't have a descriptor");
+    hs_client_refetch_hsdesc(service_identity_pk);
+    /* We just triggered a refetch, make sure every connections are back
+     * waiting for that descriptor. */
+    flag_all_conn_wait_desc(service_identity_pk);
+    /* We just asked for a refetch so this is a transient error. */
+    goto tran_err;
+  }
+
+  /* We need to find which intro point in the descriptor we are connected to
+   * on intro_circ. */
+  ip = find_desc_intro_point_by_ident(intro_circ->hs_ident, desc);
+  if (BUG(ip == NULL)) {
+    /* If we can find a descriptor from this introduction circuit ident, we
+     * must have a valid intro point object. Permanent error. */
+    goto perm_err;
+  }
+
+  /* Send the INTRODUCE1 cell. */
+  if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
+                              desc->subcredential) < 0) {
+    /* Unable to send the cell, the intro circuit has been marked for close so
+     * this is a permanent error. */
+    tor_assert_nonfatal(TO_CIRCUIT(intro_circ)->marked_for_close);
+    goto perm_err;
+  }
+
+  /* Cell has been sent successfully. Copy the introduction point
+   * authentication and encryption key in the rendezvous circuit identifier so
+   * we can compute the ntor keys when we receive the RENDEZVOUS2 cell. */
+  memcpy(&rend_circ->hs_ident->intro_enc_pk, &ip->enc_key,
+         sizeof(rend_circ->hs_ident->intro_enc_pk));
+  ed25519_pubkey_copy(&rend_circ->hs_ident->intro_auth_pk,
+                      &intro_circ->hs_ident->intro_auth_pk);
+
+  /* Now, we wait for an ACK or NAK on this circuit. */
+  circuit_change_purpose(TO_CIRCUIT(intro_circ),
+                         CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT);
+  /* Set timestamp_dirty, because circuit_expire_building expects it to
+   * specify when a circuit entered the _C_INTRODUCE_ACK_WAIT state. */
+  TO_CIRCUIT(intro_circ)->timestamp_dirty = time(NULL);
+  pathbias_count_use_attempt(intro_circ);
+
+  /* Success. */
+  status = 0;
+  goto end;
+
+ perm_err:
+  /* Permanent error: it is possible that the intro circuit was closed prior
+   * because we weren't able to send the cell. Make sure we don't double close
+   * it which would result in a warning. */
+  if (!TO_CIRCUIT(intro_circ)->marked_for_close) {
+    circuit_mark_for_close(TO_CIRCUIT(intro_circ), END_CIRC_REASON_INTERNAL);
+  }
+  circuit_mark_for_close(TO_CIRCUIT(rend_circ), END_CIRC_REASON_INTERNAL);
+  status = -2;
+  goto end;
+
+ tran_err:
+  status = -1;
+
+ end:
+  memwipe(onion_address, 0, sizeof(onion_address));
+  return status;
+}
+
+/* ========== */
+/* Public API */
+/* ========== */
 
 /** A circuit just finished connecting to a hidden service that the stream
  *  <b>conn</b> has been waiting for. Let the HS subsystem know about this. */
@@ -254,5 +412,21 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
   }
 
   return fetch_v3_desc(identity_pk);
+}
+
+/* This is called when we are trying to attach an AP connection to these
+ * hidden service circuits from connection_ap_handshake_attach_circuit().
+ * Return 0 on success, -1 for a transient error that is actions were
+ * triggered to recover or -2 for a permenent error where both circuits will
+ * marked for close.
+ *
+ * The following supports every hidden service version. */
+int
+hs_client_send_introduce1(origin_circuit_t *intro_circ,
+                          origin_circuit_t *rend_circ)
+{
+  return (intro_circ->hs_ident) ? send_introduce1(intro_circ, rend_circ) :
+                                  rend_client_send_introduction(intro_circ,
+                                                                rend_circ);
 }
 

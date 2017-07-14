@@ -10,6 +10,7 @@
 #include "config.h"
 #include "rendservice.h"
 #include "replaycache.h"
+#include "util.h"
 
 #include "hs_cell.h"
 #include "hs_ntor.h"
@@ -243,6 +244,229 @@ parse_introduce2_cell(const hs_service_t *service,
   return 0;
  err:
   return -1;
+}
+
+/* Set the onion public key onion_pk in cell, the encrypted section of an
+ * INTRODUCE1 cell. */
+static void
+introduce1_set_encrypted_onion_key(trn_cell_introduce_encrypted_t *cell,
+                                   const uint8_t *onion_pk)
+{
+  tor_assert(cell);
+  tor_assert(onion_pk);
+  /* There is only one possible key type for a non legacy cell. */
+  trn_cell_introduce_encrypted_set_onion_key_type(cell,
+                                                  HS_CELL_ONION_KEY_TYPE_NTOR);
+  trn_cell_introduce_encrypted_set_onion_key_len(cell, CURVE25519_PUBKEY_LEN);
+  trn_cell_introduce_encrypted_setlen_onion_key(cell, CURVE25519_PUBKEY_LEN);
+  memcpy(trn_cell_introduce_encrypted_getarray_onion_key(cell), onion_pk,
+         trn_cell_introduce_encrypted_getlen_onion_key(cell));
+}
+
+/* Set the link specifiers in lspecs in cell, the encrypted section of an
+ * INTRODUCE1 cell. */
+static void
+introduce1_set_encrypted_link_spec(trn_cell_introduce_encrypted_t *cell,
+                                   const smartlist_t *lspecs)
+{
+  tor_assert(cell);
+  tor_assert(lspecs);
+  tor_assert(smartlist_len(lspecs) > 0);
+  tor_assert(smartlist_len(lspecs) <= UINT8_MAX);
+
+  uint8_t lspecs_num = (uint8_t) smartlist_len(lspecs);
+  trn_cell_introduce_encrypted_set_nspec(cell, lspecs_num);
+  /* We aren't duplicating the link specifiers object here which means that
+   * the ownership goes to the trn_cell_introduce_encrypted_t cell and those
+   * object will be freed when the cell is. */
+  SMARTLIST_FOREACH(lspecs, link_specifier_t *, ls,
+                    trn_cell_introduce_encrypted_add_nspecs(cell, ls));
+}
+
+/* Set padding in the enc_cell only if needed that is the total length of both
+ * sections are below the mininum required for an INTRODUCE1 cell. */
+static void
+introduce1_set_encrypted_padding(const trn_cell_introduce1_t *cell,
+                                 trn_cell_introduce_encrypted_t *enc_cell)
+{
+  tor_assert(cell);
+  tor_assert(enc_cell);
+  /* This is the length we expect to have once encoded of the whole cell. */
+  ssize_t full_len = trn_cell_introduce1_encoded_len(cell) +
+                     trn_cell_introduce_encrypted_encoded_len(enc_cell);
+  tor_assert(full_len > 0);
+  if (full_len < HS_CELL_INTRODUCE1_MIN_SIZE) {
+    size_t padding = HS_CELL_INTRODUCE1_MIN_SIZE - full_len;
+    trn_cell_introduce_encrypted_setlen_pad(enc_cell, padding);
+    memset(trn_cell_introduce_encrypted_getarray_pad(enc_cell), 0,
+           trn_cell_introduce_encrypted_getlen_pad(enc_cell));
+  }
+}
+
+/* Encrypt the ENCRYPTED payload and encode it in the cell using the enc_cell
+ * and the INTRODUCE1 data.
+ *
+ * This can't fail but it is very important that the caller sets every field
+ * in data so the computation of the INTRODUCE1 keys doesn't fail. */
+static void
+introduce1_encrypt_and_encode(trn_cell_introduce1_t *cell,
+                              const trn_cell_introduce_encrypted_t *enc_cell,
+                              const hs_cell_introduce1_data_t *data)
+{
+  size_t offset = 0;
+  ssize_t encrypted_len;
+  ssize_t encoded_cell_len, encoded_enc_cell_len;
+  uint8_t encoded_cell[RELAY_PAYLOAD_SIZE] = {0};
+  uint8_t encoded_enc_cell[RELAY_PAYLOAD_SIZE] = {0};
+  uint8_t *encrypted = NULL;
+  uint8_t mac[DIGEST256_LEN];
+  crypto_cipher_t *cipher = NULL;
+  hs_ntor_intro_cell_keys_t keys;
+
+  tor_assert(cell);
+  tor_assert(enc_cell);
+  tor_assert(data);
+
+  /* Encode the cells up to now of what we have to we can perform the MAC
+   * computation on it. */
+  encoded_cell_len = trn_cell_introduce1_encode(encoded_cell,
+                                                sizeof(encoded_cell), cell);
+  /* We have a much more serious issue if this isn't true. */
+  tor_assert(encoded_cell_len > 0);
+
+  encoded_enc_cell_len =
+    trn_cell_introduce_encrypted_encode(encoded_enc_cell,
+                                        sizeof(encoded_enc_cell), enc_cell);
+  /* We have a much more serious issue if this isn't true. */
+  tor_assert(encoded_enc_cell_len > 0);
+
+  /* Get the key material for the encryption. */
+  if (hs_ntor_client_get_introduce1_keys(data->auth_pk, data->enc_pk,
+                                         data->client_kp,
+                                         data->subcredential, &keys) < 0) {
+    tor_assert_unreached();
+  }
+
+  /* Prepare cipher with the encryption key just computed. */
+  cipher = crypto_cipher_new_with_bits((const char *) keys.enc_key,
+                                       sizeof(keys.enc_key) * 8);
+  tor_assert(cipher);
+
+  /* Compute the length of the ENCRYPTED section which is the CLIENT_PK,
+   * ENCRYPTED_DATA and MAC length. */
+  encrypted_len = sizeof(data->client_kp->pubkey) + encoded_enc_cell_len +
+                  sizeof(mac);
+  tor_assert(encrypted_len < RELAY_PAYLOAD_SIZE);
+  encrypted = tor_malloc_zero(encrypted_len);
+
+  /* Put the CLIENT_PK first. */
+  memcpy(encrypted, data->client_kp->pubkey.public_key,
+         sizeof(data->client_kp->pubkey.public_key));
+  offset += sizeof(data->client_kp->pubkey.public_key);
+  /* Then encrypt and set the ENCRYPTED_DATA. This can't fail. */
+  crypto_cipher_encrypt(cipher, (char *) encrypted + offset,
+                        (const char *) encoded_enc_cell, encoded_enc_cell_len);
+  crypto_cipher_free(cipher);
+  offset += encoded_enc_cell_len;
+  /* Compute MAC from the above and put it in the buffer. This function will
+   * make the adjustment to the encryptled_len to ommit the MAC length. */
+  compute_introduce_mac(encoded_cell, encoded_cell_len,
+                        encrypted, encrypted_len,
+                        keys.mac_key, sizeof(keys.mac_key),
+                        mac, sizeof(mac));
+  memcpy(encrypted + offset, mac, sizeof(mac));
+  offset += sizeof(mac);
+  tor_assert(offset == (size_t) encrypted_len);
+
+  /* Set the ENCRYPTED section in the cell. */
+  trn_cell_introduce1_setlen_encrypted(cell, encrypted_len);
+  memcpy(trn_cell_introduce1_getarray_encrypted(cell),
+         encrypted, encrypted_len);
+
+  /* Cleanup. */
+  memwipe(&keys, 0, sizeof(keys));
+  memwipe(mac, 0, sizeof(mac));
+  memwipe(encrypted, 0, sizeof(encrypted_len));
+  memwipe(encoded_enc_cell, 0, sizeof(encoded_enc_cell));
+  tor_free(encrypted);
+}
+
+/* Using the INTRODUCE1 data, setup the ENCRYPTED section in cell. This means
+ * set it, encrypt it and encode it. */
+static void
+introduce1_set_encrypted(trn_cell_introduce1_t *cell,
+                         const hs_cell_introduce1_data_t *data)
+{
+  trn_cell_introduce_encrypted_t *enc_cell;
+  trn_cell_extension_t *ext;
+
+  tor_assert(cell);
+  tor_assert(data);
+
+  enc_cell = trn_cell_introduce_encrypted_new();
+  tor_assert(enc_cell);
+
+  /* Set extension data. None are used. */
+  ext = trn_cell_extension_new();
+  tor_assert(ext);
+  trn_cell_extension_set_num(ext, 0);
+  trn_cell_introduce_encrypted_set_extensions(enc_cell, ext);
+
+  /* Set the rendezvous cookie. */
+  memcpy(trn_cell_introduce_encrypted_getarray_rend_cookie(enc_cell),
+         data->rendezvous_cookie, REND_COOKIE_LEN);
+
+  /* Set the onion public key. */
+  introduce1_set_encrypted_onion_key(enc_cell, data->onion_pk->public_key);
+
+  /* Set the link specifiers. */
+  introduce1_set_encrypted_link_spec(enc_cell, data->link_specifiers);
+
+  /* Set padding. */
+  introduce1_set_encrypted_padding(cell, enc_cell);
+
+  /* Encrypt and encode it in the cell. */
+  introduce1_encrypt_and_encode(cell, enc_cell, data);
+
+  /* Cleanup. */
+  trn_cell_introduce_encrypted_free(enc_cell);
+}
+
+/* Set the authentication key in the INTRODUCE1 cell from the given data. */
+static void
+introduce1_set_auth_key(trn_cell_introduce1_t *cell,
+                        const hs_cell_introduce1_data_t *data)
+{
+  tor_assert(cell);
+  tor_assert(data);
+  /* There is only one possible type for a non legacy cell. */
+  trn_cell_introduce1_set_auth_key_type(cell, HS_INTRO_AUTH_KEY_TYPE_ED25519);
+  trn_cell_introduce1_set_auth_key_len(cell, ED25519_PUBKEY_LEN);
+  trn_cell_introduce1_setlen_auth_key(cell, ED25519_PUBKEY_LEN);
+  memcpy(trn_cell_introduce1_getarray_auth_key(cell),
+         data->auth_pk->pubkey, trn_cell_introduce1_getlen_auth_key(cell));
+}
+
+/* Set the legacy ID field in the INTRODUCE1 cell from the given data. */
+static void
+introduce1_set_legacy_id(trn_cell_introduce1_t *cell,
+                         const hs_cell_introduce1_data_t *data)
+{
+  tor_assert(cell);
+  tor_assert(data);
+
+  if (data->is_legacy) {
+    uint8_t digest[DIGEST_LEN];
+    if (BUG(crypto_pk_get_digest(data->legacy_key, (char *) digest) < 0)) {
+      return;
+    }
+    memcpy(trn_cell_introduce1_getarray_legacy_key_id(cell),
+           digest, trn_cell_introduce1_getlen_legacy_key_id(cell));
+  } else {
+    /* We have to zeroed the LEGACY_KEY_ID field. */
+    memset(trn_cell_introduce1_getarray_legacy_key_id(cell), 0,
+           trn_cell_introduce1_getlen_legacy_key_id(cell));
+  }
 }
 
 /* ========== */
@@ -579,6 +803,47 @@ hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
   tor_assert(cell_len > 0);
 
   trn_cell_rendezvous1_free(cell);
+  return cell_len;
+}
+
+/* Build an INTRODUCE1 cell from the given data. The encoded cell is put in
+ * cell_out which must be of at least size RELAY_PAYLOAD_SIZE. On success, the
+ * encoded length is returned else a negative value and the content of
+ * cell_out should be ignored. */
+ssize_t
+hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
+                         uint8_t *cell_out)
+{
+  ssize_t cell_len;
+  trn_cell_introduce1_t *cell;
+  trn_cell_extension_t *ext;
+
+  tor_assert(data);
+  tor_assert(cell_out);
+
+  cell = trn_cell_introduce1_new();
+  tor_assert(cell);
+
+  /* Set extension data. None are used. */
+  ext = trn_cell_extension_new();
+  tor_assert(ext);
+  trn_cell_extension_set_num(ext, 0);
+  trn_cell_introduce1_set_extensions(cell, ext);
+
+  /* Set the legacy ID field. */
+  introduce1_set_legacy_id(cell, data);
+
+  /* Set the authentication key. */
+  introduce1_set_auth_key(cell, data);
+
+  /* Set the encrypted section. This will set, encrypt and encode the
+   * ENCRYPTED section in the cell. After this, we'll be ready to encode. */
+  introduce1_set_encrypted(cell, data);
+
+  /* Final encoding. */
+  cell_len = trn_cell_introduce1_encode(cell_out, RELAY_PAYLOAD_SIZE, cell);
+
+  trn_cell_introduce1_free(cell);
   return cell_len;
 }
 

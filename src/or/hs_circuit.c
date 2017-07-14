@@ -530,6 +530,83 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
   return;
 }
 
+/* Using an extend info object ei, set all possible link specifiers in lspecs.
+ * IPv4, legacy ID and ed25519 ID are mandatory thus MUST be present in ei. */
+static void
+get_lspecs_from_extend_info(const extend_info_t *ei, smartlist_t *lspecs)
+{
+  link_specifier_t *ls;
+
+  tor_assert(ei);
+  tor_assert(lspecs);
+
+  /* IPv4 is mandatory. */
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_IPV4);
+  link_specifier_set_un_ipv4_addr(ls, tor_addr_to_ipv4h(&ei->addr));
+  link_specifier_set_un_ipv4_port(ls, ei->port);
+  /* Four bytes IPv4 and two bytes port. */
+  link_specifier_set_ls_len(ls, sizeof(ei->addr.addr.in_addr) +
+                            sizeof(ei->port));
+  smartlist_add(lspecs, ls);
+
+  /* Legacy ID is mandatory. */
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_LEGACY_ID);
+  memcpy(link_specifier_getarray_un_legacy_id(ls), ei->identity_digest,
+         link_specifier_getlen_un_legacy_id(ls));
+  link_specifier_set_ls_len(ls, link_specifier_getlen_un_legacy_id(ls));
+  smartlist_add(lspecs, ls);
+
+  /* ed25519 ID is mandatory. */
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_ED25519_ID);
+  memcpy(link_specifier_getarray_un_ed25519_id(ls), &ei->ed_identity,
+         link_specifier_getlen_un_ed25519_id(ls));
+  link_specifier_set_ls_len(ls, link_specifier_getlen_un_ed25519_id(ls));
+  smartlist_add(lspecs, ls);
+
+  /* XXX: IPv6 is not clearly a thing in extend_info_t? */
+}
+
+/* Using the given descriptor intro point ip, the extend information of the
+ * rendezvous point rp_ei and the service's subcredential, populate the
+ * already allocated intro1_data object with the needed key material and link
+ * specifiers.
+ *
+ * This can't fail but the ip MUST be a valid object containing the needed
+ * keys and authentication method. */
+static void
+setup_introduce1_data(const hs_desc_intro_point_t *ip,
+                      const extend_info_t *rp_ei,
+                      const uint8_t *subcredential,
+                      hs_cell_introduce1_data_t *intro1_data)
+{
+  smartlist_t *rp_lspecs;
+
+  tor_assert(ip);
+  tor_assert(rp_ei);
+  tor_assert(subcredential);
+  tor_assert(intro1_data);
+
+  /* Build the link specifiers from the extend information of the rendezvous
+   * circuit that we've picked previously. */
+  rp_lspecs = smartlist_new();
+  get_lspecs_from_extend_info(rp_ei, rp_lspecs);
+
+  /* Populate the introduce1 data object. */
+  memset(intro1_data, 0, sizeof(hs_cell_introduce1_data_t));
+  if (ip->legacy.key != NULL) {
+    intro1_data->is_legacy = 1;
+    intro1_data->legacy_key = ip->legacy.key;
+  }
+  intro1_data->auth_pk = &ip->auth_key_cert->signed_key;
+  intro1_data->enc_pk = &ip->enc_key;
+  intro1_data->subcredential = subcredential;
+  intro1_data->onion_pk = &rp_ei->curve25519_onion_key;
+  intro1_data->link_specifiers = rp_lspecs;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -935,5 +1012,75 @@ hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
   finalize_rend_circuit(circ, hop, 0);
 
   return 0;
+}
+
+/* Given the introduction circuit intro_circ, the rendezvous circuit
+ * rend_circ, a descriptor intro point object ip and the service's
+ * subcredential, send an INTRODUCE1 cell on intro_circ.
+ *
+ * This will also setup the circuit identifier on rend_circ containing the key
+ * material for the handshake and e2e encryption. Return 0 on success else
+ * negative value. Because relay_send_command_from_edge() closes the circuit
+ * on error, it is possible that intro_circ is closed on error. */
+int
+hs_circ_send_introduce1(origin_circuit_t *intro_circ,
+                        origin_circuit_t *rend_circ,
+                        const hs_desc_intro_point_t *ip,
+                        const uint8_t *subcredential)
+{
+  int ret = -1;
+  ssize_t payload_len;
+  uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
+  hs_cell_introduce1_data_t intro1_data;
+
+  tor_assert(intro_circ);
+  tor_assert(rend_circ);
+  tor_assert(ip);
+  tor_assert(subcredential);
+
+  /* This takes various objects in order to populate the introduce1 data
+   * object which is used to build the content of the cell. */
+  setup_introduce1_data(ip, rend_circ->build_state->chosen_exit,
+                        subcredential, &intro1_data);
+
+  /* Final step before we encode a cell, we setup the circuit identifier which
+   * will generate both the rendezvous cookie and client keypair for this
+   * connection. Those are put in the ident. */
+  intro1_data.rendezvous_cookie = rend_circ->hs_ident->rendezvous_cookie;
+  intro1_data.client_kp = &rend_circ->hs_ident->rendezvous_client_kp;
+
+  memcpy(intro_circ->hs_ident->rendezvous_cookie,
+         rend_circ->hs_ident->rendezvous_cookie,
+         sizeof(intro_circ->hs_ident->rendezvous_cookie));
+
+  /* From the introduce1 data object, this will encode the INTRODUCE1 cell
+   * into payload which is then ready to be sent as is. */
+  payload_len = hs_cell_build_introduce1(&intro1_data, payload);
+  if (BUG(payload_len < 0)) {
+    goto done;
+  }
+
+  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(intro_circ),
+                                   RELAY_COMMAND_INTRODUCE1,
+                                   (const char *) payload, payload_len,
+                                   intro_circ->cpath->prev) < 0) {
+    /* On error, circuit is closed. */
+    log_warn(LD_REND, "Unable to send INTRODUCE1 cell on circuit %u.",
+             TO_CIRCUIT(intro_circ)->n_circ_id);
+    goto done;
+  }
+
+  /* Success. */
+  ret = 0;
+  goto done;
+
+ done:
+  /* Object in this list have been moved to the cell object when building it
+   * so they've been freed earlier. We do that in order to avoid duplicating
+   * them leading to more memory and CPU time being used for nothing. */
+  smartlist_free(intro1_data.link_specifiers);
+  memwipe(&intro1_data, 0, sizeof(intro1_data));
+  memwipe(payload, 0, sizeof(payload));
+  return ret;
 }
 

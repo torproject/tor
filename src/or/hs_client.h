@@ -22,5 +22,8 @@ int hs_client_decode_descriptor(
 int hs_client_any_intro_points_usable(const hs_descriptor_t *desc);
 int hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk);
 
+int hs_client_send_introduce1(origin_circuit_t *intro_circ,
+                              origin_circuit_t *rend_circ);
+
 #endif /* TOR_HS_CLIENT_H */
 
