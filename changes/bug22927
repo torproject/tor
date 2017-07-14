@@ -1,0 +1,6 @@
+  o Minor bugfixes (compatibility, zstd):
+    - Write zstd epilogues correctly when the epilogue requires reallocation
+      of the output buffer, even with zstd 1.3.0. (Previously,
+      we worked on 1.2.0 and failed with 1.3.0).  Fixes bug 22927; bugfix on
+      0.3.1.1-alpha.
+

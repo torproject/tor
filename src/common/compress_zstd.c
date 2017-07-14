@@ -98,6 +98,8 @@ struct tor_zstd_compress_state_t {
 #endif // HAVE_ZSTD.
 
   int compress; /**< True if we are compressing; false if we are inflating */
+  int have_called_end; /**< True if we are compressing and we've called
+                        * ZSTD_endStream */
 
   /** Number of bytes read so far.  Used to detect compression bombs. */
   size_t input_so_far;
@@ -270,9 +272,16 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
   ZSTD_inBuffer input = { *in, *in_len, 0 };
   ZSTD_outBuffer output = { *out, *out_len, 0 };
 
+  if (BUG(finish == 0 && state->have_called_end)) {
+    finish = 1;
+  }
+
   if (state->compress) {
-    retval = ZSTD_compressStream(state->u.compress_stream,
-                                 &output, &input);
+    if (! state->have_called_end)
+      retval = ZSTD_compressStream(state->u.compress_stream,
+                                   &output, &input);
+    else
+      retval = 0;
   } else {
     retval = ZSTD_decompressStream(state->u.decompress_stream,
                                    &output, &input);
@@ -300,7 +309,7 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
     return TOR_COMPRESS_ERROR;
   }
 
-  if (state->compress && !finish) {
+  if (state->compress && !state->have_called_end) {
     retval = ZSTD_flushStream(state->u.compress_stream, &output);
 
     *out = (char *)output.dst + output.pos;
@@ -314,16 +323,24 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
 
     // ZSTD_flushStream returns 0 if the frame is done, or >0 if it
     // is incomplete.
-    if (retval > 0)
+    if (retval > 0) {
       return TOR_COMPRESS_BUFFER_FULL;
+    }
   }
 
   if (!finish) {
-    // We're not done with the input, so no need to flush.
+    // The caller says we're not done with the input, so no need to write an
+    // epilogue.
     return TOR_COMPRESS_OK;
   } else if (state->compress) {
-    retval = ZSTD_endStream(state->u.compress_stream, &output);
+    if (*in_len) {
+      // We say that we're not done with the input, so we can't write an
+      // epilogue.
+      return TOR_COMPRESS_OK;
+    }
 
+    retval = ZSTD_endStream(state->u.compress_stream, &output);
+    state->have_called_end = 1;
     *out = (char *)output.dst + output.pos;
     *out_len = output.size - output.pos;
 
