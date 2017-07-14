@@ -459,9 +459,10 @@ hs_parse_address(const char *address, ed25519_public_key_t *key_out,
   /* Obvious length check. */
   if (strlen(address) != HS_SERVICE_ADDR_LEN_BASE32) {
     log_warn(LD_REND, "Service address %s has an invalid length. "
-                      "Expected %ld but got %lu.",
-             escaped_safe_str(address), HS_SERVICE_ADDR_LEN_BASE32,
-             strlen(address));
+                      "Expected %lu but got %lu.",
+             escaped_safe_str(address),
+             (unsigned long) HS_SERVICE_ADDR_LEN_BASE32,
+             (unsigned long) strlen(address));
     goto invalid;
   }
 
