@@ -241,6 +241,7 @@ test_link_handshake_certs_ok(void *arg)
   }
   channel_tls_process_certs_cell(cell2, chan1);
   mock_peer_cert_expect_tortls = NULL;
+  tor_x509_cert_free(mock_peer_cert);
   mock_peer_cert = NULL;
 
   tor_assert(c1->handshake_state->authenticated);
@@ -304,7 +305,8 @@ test_link_handshake_certs_ok(void *arg)
   UNMOCK(tor_tls_get_peer_cert);
   UNMOCK(tor_tls_get_own_cert);
   tor_x509_cert_free(mock_own_cert);
-  mock_own_cert = NULL;
+  tor_x509_cert_free(mock_peer_cert);
+  mock_own_cert = mock_peer_cert = NULL;
   memset(c1->identity_digest, 0, sizeof(c1->identity_digest));
   memset(c2->identity_digest, 0, sizeof(c2->identity_digest));
   connection_free_(TO_CONN(c1));
