@@ -3657,12 +3657,14 @@ download_status_random_backoff_helper(int min_delay, int max_delay)
     }
 
     /* Advance */
-    current_time += increment;
     ++(dls_random.n_download_attempts);
     ++(dls_random.n_download_failures);
 
     /* Try another maybe */
     old_increment = increment;
+    if (increment >= max_delay)
+      current_time += increment;
+
   } while (increment < max_delay);
 
  done:
