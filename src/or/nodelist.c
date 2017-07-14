@@ -55,6 +55,7 @@
 #include "rendservice.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerparse.h"
 #include "routerset.h"
 #include "torcert.h"
 
@@ -796,6 +797,10 @@ node_supports_v3_hsdir(const node_t *node)
   if (node->ri) {
     if (node->ri->protocol_list == NULL) {
       return 0;
+    }
+    if (node->ri->platform) {
+      /* Bug #22447 forces us to filter on this version. */
+      return tor_version_as_new_as(node->ri->platform, "0.3.0.8");
     }
     return protocol_list_supports_protocol(node->ri->protocol_list,
                                            PRT_HSDIR, PROTOVER_HSDIR_V3);

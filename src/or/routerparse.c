@@ -2718,6 +2718,11 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         tor_version_as_new_as(tok->args[0], "0.2.4.8-alpha");
       rs->protocols_known = 1;
     }
+    if (!strcmpstart(tok->args[0], "Tor ") && found_protocol_list) {
+      /* Bug #22447 forces us to filter on this version. */
+      rs->supports_v3_hsdir =
+        tor_version_as_new_as(tok->args[0], "0.3.0.8");
+    }
     if (vote_rs) {
       vote_rs->version = tor_strdup(tok->args[0]);
     }
