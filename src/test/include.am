@@ -34,6 +34,7 @@ endif
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 	src/test/test_workqueue \
 	src/test/test_keygen.sh \
+	src/test/test_key_expiration.sh \
 	src/test/test-timers \
 	$(TESTSCRIPTS)
 
@@ -325,6 +326,7 @@ EXTRA_DIST += \
 	src/test/slownacl_curve25519.py \
 	src/test/zero_length_keys.sh \
 	src/test/test_keygen.sh \
+	src/test/test_key_expiration.sh \
 	src/test/test_zero_length_keys.sh \
 	src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh \
 	src/test/test-network.sh \

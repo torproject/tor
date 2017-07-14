@@ -1136,6 +1136,108 @@ init_mock_ed_keys(const crypto_pk_t *rsa_identity_key)
 #undef MAKECERT
 #endif
 
+/**
+ * Print the ISO8601-formated <b>expiration</b> for a certificate with
+ * some <b>description</b> to stdout.
+ *
+ * For example, for a signing certificate, this might print out:
+ * signing-cert-expiry: 2017-07-25 08:30:15 UTC
+ */
+static void
+print_cert_expiration(const char *expiration,
+                      const char *description)
+{
+  fprintf(stderr, "%s-cert-expiry: %s\n", description, expiration);
+}
+
+/**
+ * Log when a certificate, <b>cert</b>, with some <b>description</b> and
+ * stored in a file named <b>fname</b>, is going to expire.
+ */
+static void
+log_ed_cert_expiration(const tor_cert_t *cert,
+                       const char *description,
+                       const char *fname) {
+  char expiration[ISO_TIME_LEN+1];
+
+  if (BUG(!cert)) { /* If the specified key hasn't been loaded */
+    log_warn(LD_OR, "No %s key loaded; can't get certificate expiration.",
+             description);
+  } else {
+    format_local_iso_time(expiration, cert->valid_until);
+    log_notice(LD_OR, "The %s certificate stored in %s is valid until %s.",
+               description, fname, expiration);
+    print_cert_expiration(expiration, description);
+  }
+}
+
+/**
+ * Log when our master signing key certificate expires.  Used when tor is given
+ * the --key-expiration command-line option.
+ *
+ * Returns 0 on success and 1 on failure.
+ */
+static int
+log_master_signing_key_cert_expiration(const or_options_t *options)
+{
+  const tor_cert_t *signing_key;
+  char *fn = NULL;
+  int failed = 0;
+  time_t now = approx_time();
+
+  fn = options_get_datadir_fname2(options, "keys", "ed25519_signing_cert");
+
+  /* Try to grab our cached copy of the key. */
+  signing_key = get_master_signing_key_cert();
+
+  tor_assert(server_identity_key_is_set());
+
+  /* Load our keys from disk, if necessary. */
+  if (!signing_key) {
+    failed = load_ed_keys(options, now) < 0;
+    signing_key = get_master_signing_key_cert();
+  }
+
+  /* If we do have a signing key, log the expiration time. */
+  if (signing_key) {
+    log_ed_cert_expiration(signing_key, "signing", fn);
+  } else {
+    log_warn(LD_OR, "Could not load signing key certificate from %s, so " \
+             "we couldn't learn anything about certificate expiration.", fn);
+  }
+
+  tor_free(fn);
+
+  return failed;
+}
+
+/**
+ * Log when a key certificate expires.  Used when tor is given the
+ * --key-expiration command-line option.
+ *
+ * If an command argument is given, which should specify the type of
+ * key to get expiry information about (currently supported arguments
+ * are "sign"), get info about that type of certificate.  Otherwise,
+ * print info about the supported arguments.
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int
+log_cert_expiration(void)
+{
+  const or_options_t *options = get_options();
+  const char *arg = options->command_arg;
+
+  if (!strcmp(arg, "sign")) {
+    return log_master_signing_key_cert_expiration(options);
+  } else {
+    fprintf(stderr, "No valid argument to --key-expiration found!\n");
+    fprintf(stderr, "Currently recognised arguments are: 'sign'\n");
+
+    return -1;
+  }
+}
+
 const ed25519_public_key_t *
 get_master_identity_key(void)
 {

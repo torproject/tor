@@ -128,6 +128,16 @@ COMMAND-LINE OPTIONS
     the passphrase, including any trailing newlines.
     Default: read from the terminal.
 
+[[opt-key-expiration]] **--key-expiration** [**purpose**]::
+    The **purpose** specifies which type of key certificate to determine
+    the expiration of.  The only currently recognised **purpose** is
+    "sign". +
+ +
+    Running "tor --key-expiration sign" will attempt to find your signing
+    key certificate and will output, both in the logs as well as to stdout,
+    the signing key certificate's expiration time in ISO-8601 format.
+    For example, the output sent to stdout will be of the form:
+    "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
 
 Other options can be specified on the command-line in the format "--option
 value", in the format "option value", or in a configuration file.  For
