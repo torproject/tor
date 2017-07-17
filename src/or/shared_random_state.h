@@ -121,6 +121,8 @@ int sr_state_is_initialized(void);
 void sr_state_save(void);
 void sr_state_free(void);
 
+time_t sr_state_get_start_time_of_current_protocol_run(time_t now);
+
 #ifdef SHARED_RANDOM_STATE_PRIVATE
 
 STATIC int disk_state_load_from_disk_impl(const char *fname);

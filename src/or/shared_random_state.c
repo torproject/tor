@@ -156,6 +156,26 @@ get_start_time_of_current_round(time_t now)
   return curr_start;
 }
 
+/** Return the start time of the current SR protocol run. For example, if the
+ *  time is 23/06/2017 23:47:08 and a full SR protocol run is 24 hours, this
+ *  function should return 23/06/2017 00:00:00. */
+time_t
+sr_state_get_start_time_of_current_protocol_run(time_t now)
+{
+  int total_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
+  int voting_interval = get_voting_interval();
+  /* Find the time the current round started. */
+  time_t beginning_of_current_round = get_start_time_of_current_round(now);
+
+  /* Get current SR protocol round */
+  int current_round = (now / voting_interval) % total_rounds;
+
+  /* Get start time by subtracting the time elapsed from the beginning of the
+     protocol run */
+  time_t time_elapsed_since_start_of_run = current_round * voting_interval;
+  return beginning_of_current_round - time_elapsed_since_start_of_run;
+}
+
 /* Return the time we should expire the state file created at <b>now</b>.
  * We expire the state file in the beginning of the next protocol run. */
 STATIC time_t
