@@ -237,6 +237,10 @@ int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
 void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
 void hs_dec_rdv_stream_counter(origin_circuit_t *circ);
 
+extend_info_t *hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
+                                  const curve25519_public_key_t *onion_key,
+                                  int direct_conn);
+
 #ifdef HS_COMMON_PRIVATE
 
 STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
