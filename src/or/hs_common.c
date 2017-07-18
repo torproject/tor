@@ -181,6 +181,17 @@ hs_check_service_private_dir(const char *username, const char *path,
 STATIC uint64_t
 get_time_period_length(void)
 {
+  /* If we are on a test network, make the time period smaller than normal so
+     that we actually see it rotate. Specifically, make it the same length as
+     an SRV protocol run. */
+  if (get_options()->TestingTorNetwork) {
+    unsigned run_duration = sr_state_get_protocol_run_duration();
+    /* An SRV run should take more than a minute (it's 24 rounds) */
+    tor_assert_nonfatal(run_duration > 60);
+    /* Turn it from seconds to minutes before returning: */
+    return sr_state_get_protocol_run_duration() / 60;
+  }
+
   int32_t time_period_length = networkstatus_get_param(NULL, "hsdir-interval",
                                              HS_TIME_PERIOD_LENGTH_DEFAULT,
                                              HS_TIME_PERIOD_LENGTH_MIN,
