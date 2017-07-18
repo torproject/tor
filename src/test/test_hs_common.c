@@ -14,6 +14,7 @@
 #include "hs_test_helpers.h"
 
 #include "hs_common.h"
+#include "config.h"
 
 static void
 test_validate_address(void *arg)
@@ -132,6 +133,64 @@ test_time_period(void *arg)
   ;
 }
 
+static void
+test_start_time_of_next_time_period(void *arg)
+{
+  (void) arg;
+  int retval;
+  time_t fake_time;
+  char tbuf[ISO_TIME_LEN + 1];
+  time_t next_tp_start_time;
+
+  /* Do some basic tests */
+  retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC",
+                              &fake_time);
+  tt_int_op(retval, ==, 0);
+  next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
+  /* Compare it with the correct result */
+  format_iso_time(tbuf, next_tp_start_time);
+  tt_str_op("2016-04-13 12:00:00", OP_EQ, tbuf);
+
+  /* Another test with an edge-case time (start of TP) */
+  retval = parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC",
+                              &fake_time);
+  tt_int_op(retval, ==, 0);
+  next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
+  format_iso_time(tbuf, next_tp_start_time);
+  tt_str_op("2016-04-14 12:00:00", OP_EQ, tbuf);
+
+  {
+    /* Now pretend we are on a testing network and alter the voting schedule to
+       be every 10 seconds. This means that a time period has length 10*24
+       seconds (4 minutes). It also means that we apply a rotational offset of
+       120 seconds to the time period, so that it starts at 00:02:00 instead of
+       00:00:00. */
+    or_options_t *options = get_options_mutable();
+    options->TestingTorNetwork = 1;
+    options->V3AuthVotingInterval = 10;
+    options->TestingV3AuthInitialVotingInterval = 10;
+
+    retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC",
+                                &fake_time);
+    tt_int_op(retval, ==, 0);
+    next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
+    /* Compare it with the correct result */
+    format_iso_time(tbuf, next_tp_start_time);
+    tt_str_op("2016-04-13 00:02:00", OP_EQ, tbuf);
+
+    retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:02:00 UTC",
+                                &fake_time);
+    tt_int_op(retval, ==, 0);
+    next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
+    /* Compare it with the correct result */
+    format_iso_time(tbuf, next_tp_start_time);
+    tt_str_op("2016-04-13 00:06:00", OP_EQ, tbuf);
+  }
+
+ done:
+  ;
+}
+
 /** Test that our HS overlap period functions work properly. */
 static void
 test_desc_overlap_period(void *arg)
@@ -186,6 +245,8 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "time_period", test_time_period, TT_FORK,
     NULL, NULL },
+  { "start_time_of_next_time_period", test_start_time_of_next_time_period,
+    TT_FORK, NULL, NULL },
   { "desc_overlap_period", test_desc_overlap_period, TT_FORK,
     NULL, NULL },
 

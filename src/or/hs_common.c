@@ -23,6 +23,7 @@
 #include "rendservice.h"
 #include "router.h"
 #include "shared_random.h"
+#include "shared_random_state.h"
 
 /* Ed25519 Basepoint value. Taken from section 5 of
  * https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03 */
@@ -214,6 +215,21 @@ uint64_t
 hs_get_next_time_period_num(time_t now)
 {
   return hs_get_time_period_num(now) + 1;
+}
+
+/* Return the start time of the upcoming time period based on <b>now</b>. */
+time_t
+hs_get_start_time_of_next_time_period(time_t now)
+{
+  uint64_t time_period_length = get_time_period_length();
+
+  /* Get start time of next time period */
+  uint64_t next_time_period_num = hs_get_next_time_period_num(now);
+  uint64_t start_of_next_tp_in_mins = next_time_period_num *time_period_length;
+
+  /* Apply rotation offset as specified by prop224 section [TIME-PERIODS] */
+  unsigned int time_period_rotation_offset = sr_state_get_phase_duration();
+  return start_of_next_tp_in_mins * 60 + time_period_rotation_offset;
 }
 
 /* Create a new rend_data_t for a specific given <b>version</b>.
