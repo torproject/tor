@@ -4102,6 +4102,27 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   }
 }
 
+#define CONN_GET_ALL_TEMPLATE(var, test) \
+  STMT_BEGIN \
+    smartlist_t *conns = get_connection_array();   \
+    smartlist_t *ret_conns = smartlist_new();     \
+    SMARTLIST_FOREACH_BEGIN(conns, connection_t *, var) { \
+      if (var && (test) && !var->marked_for_close) \
+        smartlist_add(ret_conns, var); \
+    } SMARTLIST_FOREACH_END(var);                                            \
+    return ret_conns; \
+  STMT_END
+
+/* Return a list of connections that aren't close and matches the given state.
+ * The returned list can be empty and must be freed using smartlist_free().
+ * The caller does NOT have owernship of the objects in the list so it must
+ * not free them nor reference them as they can disapear. */
+smartlist_t *
+connection_list_by_type_state(int type, int state)
+{
+  CONN_GET_ALL_TEMPLATE(conn, (conn->type == type && conn->state == state));
+}
+
 /** Return a connection_t * from get_connection_array() that satisfies test on
  * var, and that is not marked for close. */
 #define CONN_GET_TEMPLATE(var, test)               \
