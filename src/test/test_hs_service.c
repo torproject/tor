@@ -936,6 +936,8 @@ test_rotate_descriptors(void *arg)
    * overlap check doesn't care about the year. */
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
                            &mock_ns.valid_after);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
 
   /* Create a service with a default descriptor and state. It's added to the
@@ -954,6 +956,8 @@ test_rotate_descriptors(void *arg)
   /* Entering an overlap period. */
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 01:00:00 UTC",
                            &mock_ns.valid_after);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 02:00:00 UTC",
+                           &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
   desc_next = service_descriptor_new();
   desc_next->next_upload_time = 42; /* Our marker to recognize it. */
@@ -977,6 +981,8 @@ test_rotate_descriptors(void *arg)
   /* Going out of the overlap period. */
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC",
                            &mock_ns.valid_after);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.fresh_until);
   /* This should reset the state and not touch the current descriptor. */
   tt_int_op(ret, OP_EQ, 0);
   rotate_all_descriptors(now);

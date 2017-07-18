@@ -908,7 +908,8 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
 MOCK_IMPL(int,
 hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
 {
-  struct tm valid_after_tm;
+  time_t valid_after;
+  time_t srv_start_time, tp_start_time;
 
   if (!consensus) {
     consensus = networkstatus_get_live_consensus(now);
@@ -917,16 +918,18 @@ hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
     }
   }
 
-  /* XXX: Futur commits will change this to a slot system so it can be
-   * fine tuned better for testing networks in terms of timings. */
+  /* We consider to be in overlap mode when we are in the period of time
+   * between a fresh SRV and the beginning of the new time period (in the
+   * normal network this is between 00:00 (inclusive) and 12:00 UTC
+   * (exclusive)) */
+  valid_after = consensus->valid_after;
+  srv_start_time =sr_state_get_start_time_of_current_protocol_run(valid_after);
+  tp_start_time = hs_get_start_time_of_next_time_period(srv_start_time);
 
-  /* From the spec: "Specifically, when a hidden service fetches a consensus
-   * with "valid-after" between 00:00UTC and 12:00UTC, it goes into
-   * "descriptor overlap" mode." */
-  tor_gmtime_r(&consensus->valid_after, &valid_after_tm);
-  if (valid_after_tm.tm_hour > 0 && valid_after_tm.tm_hour < 12) {
+  if (valid_after >= srv_start_time && valid_after < tp_start_time) {
     return 1;
   }
+
   return 0;
 }
 
