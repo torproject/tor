@@ -18,6 +18,9 @@
 #include "crypto_ed25519.h"
 #include "torcert.h"
 
+/* Trunnel */
+#include "ed25519_cert.h"
+
 /* The earliest descriptor format version we support. */
 #define HS_DESC_SUPPORTED_FORMAT_VERSION_MIN 3
 /* The latest descriptor format version we support. */
@@ -229,6 +232,8 @@ size_t hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data);
 
 hs_desc_intro_point_t *hs_desc_intro_point_new(void);
 void hs_desc_intro_point_free(hs_desc_intro_point_t *ip);
+
+link_specifier_t *hs_desc_encode_lspec(const hs_desc_link_specifier_t *spec);
 
 #ifdef HS_DESCRIPTOR_PRIVATE
 
