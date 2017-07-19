@@ -215,17 +215,7 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        const hs_service_intro_point_t *, ip) {
     circuit_t *circ;
-    origin_circuit_t *ocirc;
-    if (ip->base.is_only_legacy) {
-      uint8_t digest[DIGEST_LEN];
-      if (BUG(crypto_pk_get_digest(ip->legacy_key, (char *) digest) < 0)) {
-        continue;
-      }
-      ocirc = hs_circuitmap_get_intro_circ_v2_service_side(digest);
-    } else {
-      ocirc =
-        hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
-    }
+    origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
     if (ocirc == NULL) {
       continue;
     }
@@ -664,6 +654,29 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Return an introduction point circuit matching the given intro point object.
+ * NULL is returned is no such circuit can be found. */
+origin_circuit_t *
+hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
+{
+  origin_circuit_t *circ = NULL;
+
+  tor_assert(ip);
+
+  if (ip->base.is_only_legacy) {
+    uint8_t digest[DIGEST_LEN];
+    if (BUG(crypto_pk_get_digest(ip->legacy_key, (char *) digest) < 0)) {
+      goto end;
+    }
+    circ = hs_circuitmap_get_intro_circ_v2_service_side(digest);
+  } else {
+    circ = hs_circuitmap_get_intro_circ_v3_service_side(
+                                        &ip->auth_key_kp.pubkey);
+  }
+ end:
+  return circ;
+}
 
 /* Called when we fail building a rendezvous circuit at some point other than
  * the last hop: launches a new circuit to the same rendezvous point. This

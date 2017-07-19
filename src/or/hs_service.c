@@ -578,29 +578,6 @@ get_extend_info_from_intro_point(const hs_service_intro_point_t *ip,
   return info;
 }
 
-/* Return an introduction point circuit matching the given intro point object.
- * NULL is returned is no such circuit can be found. */
-static origin_circuit_t *
-get_intro_circuit(const hs_service_intro_point_t *ip)
-{
-  origin_circuit_t *circ = NULL;
-
-  tor_assert(ip);
-
-  if (ip->base.is_only_legacy) {
-    uint8_t digest[DIGEST_LEN];
-    if (BUG(crypto_pk_get_digest(ip->legacy_key, (char *) digest) < 0)) {
-      goto end;
-    }
-    circ = hs_circuitmap_get_intro_circ_v2_service_side(digest);
-  } else {
-    circ = hs_circuitmap_get_intro_circ_v3_service_side(
-                                        &ip->auth_key_kp.pubkey);
-  }
- end:
-  return circ;
-}
-
 /* Return the number of introduction points that are established for the
  * given descriptor. */
 static unsigned int
@@ -656,7 +633,7 @@ close_intro_circuits(hs_service_intropoints_t *intro_points)
 
   DIGEST256MAP_FOREACH(intro_points->map, key,
                        const hs_service_intro_point_t *, ip) {
-    origin_circuit_t *ocirc = get_intro_circuit(ip);
+    origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
     if (ocirc) {
       /* Reason is FINISHED because service has been removed and thus the
        * circuit is considered old/uneeded. When freed, the circuit is removed
@@ -1587,7 +1564,7 @@ cleanup_intro_points(hs_service_t *service, time_t now)
     DIGEST256MAP_FOREACH_MODIFY(desc->intro_points.map, key,
                                 hs_service_intro_point_t *, ip) {
       const node_t *node = get_node_from_intro_point(ip);
-      origin_circuit_t *ocirc = get_intro_circuit(ip);
+      origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
       int has_expired = intro_point_should_expire(ip, now);
 
       /* We cleanup an intro point if it has expired or if we do not know the
@@ -1733,7 +1710,7 @@ launch_intro_point_circuits(hs_service_t *service, time_t now)
 
       /* Skip the intro point that already has an existing circuit
        * (established or not). */
-      if (get_intro_circuit(ip)) {
+      if (hs_circ_service_get_intro_circ(ip)) {
         continue;
       }
 

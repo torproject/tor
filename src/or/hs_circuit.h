@@ -30,6 +30,9 @@ int hs_circ_launch_rendezvous_point(const hs_service_t *service,
                                     const uint8_t *rendezvous_cookie);
 void hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ);
 
+origin_circuit_t *hs_circ_service_get_intro_circ(
+                                      const hs_service_intro_point_t *ip);
+
 /* Cell API. */
 int hs_circ_handle_intro_established(const hs_service_t *service,
                                      const hs_service_intro_point_t *ip,
