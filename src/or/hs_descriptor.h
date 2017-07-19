@@ -80,6 +80,10 @@ typedef struct hs_desc_intro_point_t {
    * contains hs_desc_link_specifier_t object. It MUST have at least one. */
   smartlist_t *link_specifiers;
 
+  /* Onion key of the introduction point used to extend to it for the ntor
+   * handshake. */
+  curve25519_public_key_t onion_key;
+
   /* Authentication key used to establish the introduction point circuit and
    * cross-certifies the blinded public key for the replica thus signed by
    * the blinded key and in turn signs it. */

@@ -78,6 +78,7 @@
 #define str_intro_auth_required "intro-auth-required"
 #define str_single_onion "single-onion-service"
 #define str_intro_point "introduction-point"
+#define str_ip_onion_key "onion-key"
 #define str_ip_auth_key "auth-key"
 #define str_ip_enc_key "enc-key"
 #define str_ip_enc_key_cert "enc-key-cert"
@@ -136,6 +137,7 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
 /* Descriptor ruleset for the introduction points section. */
 static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   T1_START(str_intro_point, R3_INTRODUCTION_POINT, EQ(1), NO_OBJ),
+  T1N(str_ip_onion_key, R3_INTRO_ONION_KEY, GE(2), OBJ_OK),
   T1(str_ip_auth_key, R3_INTRO_AUTH_KEY, NO_ARGS, NEED_OBJ),
   T1(str_ip_enc_key, R3_INTRO_ENC_KEY, GE(2), OBJ_OK),
   T1(str_ip_enc_key_cert, R3_INTRO_ENC_KEY_CERT, ARGS, OBJ_OK),
@@ -479,6 +481,26 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
   return encoded;
 }
 
+/* Encode an introduction point onion key. Return a newly allocated string
+ * with it. On failure, return NULL. */
+static char *
+encode_onion_key(const hs_desc_intro_point_t *ip)
+{
+  char *encoded = NULL;
+  char key_b64[CURVE25519_BASE64_PADDED_LEN + 1];
+
+  tor_assert(ip);
+
+  /* Base64 encode the encryption key for the "onion-key" field. */
+  if (curve25519_public_to_base64(key_b64, &ip->onion_key) < 0) {
+    goto done;
+  }
+  tor_asprintf(&encoded, "%s ntor %s", str_ip_onion_key, key_b64);
+
+ done:
+  return encoded;
+}
+
 /* Encode an introduction point object and return a newly allocated string
  * with it. On failure, return NULL. */
 static char *
@@ -496,6 +518,16 @@ encode_intro_point(const ed25519_public_key_t *sig_key,
     char *ls_str = encode_link_specifiers(ip->link_specifiers);
     smartlist_add_asprintf(lines, "%s %s", str_intro_point, ls_str);
     tor_free(ls_str);
+  }
+
+  /* Onion key encoding. */
+  {
+    char *encoded_onion_key = encode_onion_key(ip);
+    if (encoded_onion_key == NULL) {
+      goto err;
+    }
+    smartlist_add_asprintf(lines, "%s", encoded_onion_key);
+    tor_free(encoded_onion_key);
   }
 
   /* Authentication key encoding. */
@@ -1659,6 +1691,23 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   ip->link_specifiers = decode_link_specifiers(tok->args[0]);
   if (!ip->link_specifiers) {
     log_warn(LD_REND, "Introduction point has invalid link specifiers");
+    goto err;
+  }
+
+  /* "onion-key" SP ntor SP key NL */
+  tok = find_by_keyword(tokens, R3_INTRO_ONION_KEY);
+  if (!strcmp(tok->args[0], "ntor")) {
+    /* This field is using GE(2) so for possible forward compatibility, we
+     * accept more fields but must be at least 2. */
+    tor_assert(tok->n_args >= 2);
+
+    if (curve25519_public_from_base64(&ip->onion_key, tok->args[1]) < 0) {
+      log_warn(LD_REND, "Introduction point ntor onion-key is invalid");
+      goto err;
+    }
+  } else {
+    /* Unknown key type so we can't use that introduction point. */
+    log_warn(LD_REND, "Introduction point onion key is unrecognized.");
     goto err;
   }
 
