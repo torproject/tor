@@ -215,6 +215,9 @@ int hs_desc_decode_encrypted(const hs_descriptor_t *desc,
 
 size_t hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data);
 
+hs_desc_intro_point_t *hs_desc_intro_point_new(void);
+void hs_desc_intro_point_free(hs_desc_intro_point_t *ip);
+
 #ifdef HS_DESCRIPTOR_PRIVATE
 
 /* Encoding. */
@@ -233,7 +236,6 @@ STATIC int cert_is_valid(tor_cert_t *cert, uint8_t type,
 STATIC int desc_sig_is_valid(const char *b64_sig,
                              const ed25519_public_key_t *signing_pubkey,
                              const char *encoded_desc, size_t encoded_len);
-STATIC void desc_intro_point_free(hs_desc_intro_point_t *ip);
 STATIC size_t decode_superencrypted(const char *message, size_t message_len,
                                    uint8_t **encrypted_out);
 #endif /* HS_DESCRIPTOR_PRIVATE */

@@ -146,29 +146,6 @@ static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   END_OF_TABLE
 };
 
-/* Free a descriptor intro point object. */
-STATIC void
-desc_intro_point_free(hs_desc_intro_point_t *ip)
-{
-  if (!ip) {
-    return;
-  }
-  if (ip->link_specifiers) {
-    SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *,
-                      ls, tor_free(ls));
-    smartlist_free(ip->link_specifiers);
-  }
-  tor_cert_free(ip->auth_key_cert);
-  tor_cert_free(ip->enc_key_cert);
-  if (ip->legacy.key) {
-    crypto_pk_free(ip->legacy.key);
-  }
-  if (ip->legacy.cert.encoded) {
-    tor_free(ip->legacy.cert.encoded);
-  }
-  tor_free(ip);
-}
-
 /* Free the content of the plaintext section of a descriptor. */
 static void
 desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
@@ -199,7 +176,7 @@ desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
   }
   if (desc->intro_points) {
     SMARTLIST_FOREACH(desc->intro_points, hs_desc_intro_point_t *, ip,
-                      desc_intro_point_free(ip));
+                      hs_desc_intro_point_free(ip));
     smartlist_free(desc->intro_points);
   }
   memwipe(desc, 0, sizeof(*desc));
@@ -1683,11 +1660,13 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
 
   /* Ok we seem to have a well formed section containing enough tokens to
    * parse. Allocate our IP object and try to populate it. */
-  ip = tor_malloc_zero(sizeof(hs_desc_intro_point_t));
+  ip = hs_desc_intro_point_new();
 
   /* "introduction-point" SP link-specifiers NL */
   tok = find_by_keyword(tokens, R3_INTRODUCTION_POINT);
   tor_assert(tok->n_args == 1);
+  /* Our constructor creates this list by default so free it. */
+  smartlist_free(ip->link_specifiers);
   ip->link_specifiers = decode_link_specifiers(tok->args[0]);
   if (!ip->link_specifiers) {
     log_warn(LD_REND, "Introduction point has invalid link specifiers");
@@ -1782,7 +1761,7 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   goto done;
 
  err:
-  desc_intro_point_free(ip);
+  hs_desc_intro_point_free(ip);
   ip = NULL;
 
  done:
@@ -2399,5 +2378,33 @@ hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data)
   tor_assert(data);
   return (sizeof(*data) + sizeof(*data->signing_key_cert) +
           data->superencrypted_blob_size);
+}
+
+/* Return a newly allocated descriptor intro point. */
+hs_desc_intro_point_t *
+hs_desc_intro_point_new(void)
+{
+  hs_desc_intro_point_t *ip = tor_malloc_zero(sizeof(*ip));
+  ip->link_specifiers = smartlist_new();
+  return ip;
+}
+
+/* Free a descriptor intro point object. */
+void
+hs_desc_intro_point_free(hs_desc_intro_point_t *ip)
+{
+  if (ip == NULL) {
+    return;
+  }
+  if (ip->link_specifiers) {
+    SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *,
+                      ls, tor_free(ls));
+    smartlist_free(ip->link_specifiers);
+  }
+  tor_cert_free(ip->auth_key_cert);
+  tor_cert_free(ip->enc_key_cert);
+  crypto_pk_free(ip->legacy.key);
+  tor_free(ip->legacy.cert.encoded);
+  tor_free(ip);
 }
 

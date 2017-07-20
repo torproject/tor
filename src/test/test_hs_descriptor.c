@@ -427,7 +427,7 @@ test_decode_invalid_intro_point(void *arg)
     const char *junk = "this is not a descriptor";
     ip = decode_introduction_point(desc, junk);
     tt_assert(!ip);
-    desc_intro_point_free(ip);
+    hs_desc_intro_point_free(ip);
     ip = NULL;
   }
 
@@ -445,7 +445,7 @@ test_decode_invalid_intro_point(void *arg)
     tt_assert(!ip);
     tor_free(encoded_ip);
     smartlist_free(lines);
-    desc_intro_point_free(ip);
+    hs_desc_intro_point_free(ip);
     ip = NULL;
   }
 
@@ -545,7 +545,7 @@ test_decode_invalid_intro_point(void *arg)
 
  done:
   hs_descriptor_free(desc);
-  desc_intro_point_free(ip);
+  hs_desc_intro_point_free(ip);
 }
 
 static void

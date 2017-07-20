@@ -15,8 +15,7 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
   int ret;
   ed25519_keypair_t auth_kp;
   hs_desc_intro_point_t *intro_point = NULL;
-  hs_desc_intro_point_t *ip = tor_malloc_zero(sizeof(*ip));
-  ip->link_specifiers = smartlist_new();
+  hs_desc_intro_point_t *ip = hs_desc_intro_point_new();
 
   {
     hs_desc_link_specifier_t *ls = tor_malloc_zero(sizeof(*ls));
