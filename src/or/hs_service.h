@@ -30,6 +30,10 @@ typedef struct hs_service_intro_point_t {
   /* Top level intropoint "shared" data between client/service. */
   hs_intropoint_t base;
 
+  /* Onion key of the introduction point used to extend to it for the ntor
+   * handshake. */
+  curve25519_public_key_t onion_key;
+
   /* Authentication keypair used to create the authentication certificate
    * which is published in the descriptor. */
   ed25519_keypair_t auth_key_kp;
