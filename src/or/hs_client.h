@@ -11,6 +11,7 @@
 
 #include "crypto_ed25519.h"
 #include "hs_descriptor.h"
+#include "hs_ident.h"
 
 void hs_client_note_connection_attempt_succeeded(
                                        const edge_connection_t *conn);
@@ -30,6 +31,8 @@ void hs_client_circuit_has_opened(origin_circuit_t *circ);
 int hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
                                        const uint8_t *payload,
                                        size_t payload_len);
+
+void hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident);
 
 #endif /* TOR_HS_CLIENT_H */
 

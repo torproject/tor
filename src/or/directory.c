@@ -3103,6 +3103,7 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
     } else {
       log_info(LD_REND, "Stored hidden service descriptor successfully.");
       TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
+      hs_client_desc_has_arrived(conn->hs_ident);
     }
     break;
   case 404:
