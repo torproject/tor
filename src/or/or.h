@@ -4626,6 +4626,9 @@ typedef struct {
 
   config_line_t *TransportProxies;
 
+  /** Cached revision counters for active hidden services on this host */
+  config_line_t *HidServRevCounters;
+
   /** These fields hold information on the history of bandwidth usage for
    * servers.  The "Ends" fields hold the time when we last updated the
    * bandwidth usage. The "Interval" fields hold the granularity, in seconds,
