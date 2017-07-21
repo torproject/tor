@@ -782,7 +782,7 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
       break;
     case RELAY_COMMAND_INTRODUCE_ACK:
       if (origin_circ)
-        r = rend_client_introduction_acked(origin_circ,payload,length);
+        r = hs_client_receive_introduce_ack(origin_circ,payload,length);
       break;
     case RELAY_COMMAND_RENDEZVOUS1:
       if (or_circ)

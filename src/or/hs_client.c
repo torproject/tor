@@ -491,6 +491,99 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
   return ei;
 }
 
+/* Called when we get an INTRODUCE_ACK success status code. Do the appropriate
+ * actions for the rendezvous point and finally close intro_circ. */
+static void
+handle_introduce_ack_success(origin_circuit_t *intro_circ)
+{
+  origin_circuit_t *rend_circ = NULL;
+
+  tor_assert(intro_circ);
+
+  log_info(LD_REND, "Received INTRODUCE_ACK ack! Informing rendezvous");
+
+  /* Get the rendezvous circuit matching this intro point circuit.
+   * XXX Replace this by our hs circuitmap to support client? */
+  rend_circ = circuit_get_ready_rend_by_hs_ident(intro_circ->hs_ident);
+  if (rend_circ == NULL) {
+    log_warn(LD_REND, "Can't find any rendezvous circuit. Stopping");
+    goto end;
+  }
+
+  assert_circ_anonymity_ok(rend_circ, get_options());
+  circuit_change_purpose(TO_CIRCUIT(rend_circ),
+                         CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
+  /* Set timestamp_dirty, because circuit_expire_building expects it to
+   * specify when a circuit entered the
+   * CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED state. */
+  TO_CIRCUIT(rend_circ)->timestamp_dirty = time(NULL);
+
+ end:
+  /* We don't need the intro circuit anymore. It did what it had to do! */
+  circuit_change_purpose(TO_CIRCUIT(intro_circ),
+                         CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
+  circuit_mark_for_close(TO_CIRCUIT(intro_circ), END_CIRC_REASON_FINISHED);
+
+  /* XXX: Close pending intro circuits we might have in parallel. */
+  return;
+}
+
+/* Called when we get an INTRODUCE_ACK failure status code. Depending on our
+ * failure cache status, either close the circuit or re-extend to a new
+ * introduction point. */
+static void
+handle_introduce_ack_bad(origin_circuit_t *circ, int status)
+{
+  tor_assert(circ);
+
+  log_info(LD_REND, "Received INTRODUCE_ACK nack by %s. Reason: %u",
+      safe_str_client(extend_info_describe(circ->build_state->chosen_exit)),
+      status);
+
+  /* It's a NAK. The introduction point didn't relay our request. */
+  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_INTRODUCING);
+
+  /* XXX: Report this failure for the intro point failure cache. Depending on
+   * how many times we've tried this intro point, close it or reextend. */
+}
+
+/* Called when we get an INTRODUCE_ACK on the intro circuit circ. The encoded
+ * cell is in payload of length payload_len. Return 0 on success else a
+ * negative value. The circuit is either close or reuse to re-extend to a new
+ * introduction point. */
+static int
+handle_introduce_ack(origin_circuit_t *circ, const uint8_t *payload,
+                     size_t payload_len)
+{
+  int status, ret = -1;
+
+  tor_assert(circ);
+  tor_assert(circ->build_state);
+  tor_assert(circ->build_state->chosen_exit);
+  assert_circ_anonymity_ok(circ, get_options());
+  tor_assert(payload);
+
+  status = hs_cell_parse_introduce_ack(payload, payload_len);
+  switch (status) {
+  case HS_CELL_INTRO_ACK_SUCCESS:
+    ret = 0;
+    handle_introduce_ack_success(circ);
+    break;
+  case HS_CELL_INTRO_ACK_FAILURE:
+  case HS_CELL_INTRO_ACK_BADFMT:
+  case HS_CELL_INTRO_ACK_NORELAY:
+    handle_introduce_ack_bad(circ, status);
+    break;
+  default:
+    log_info(LD_PROTOCOL, "Unknown INTRODUCE_ACK status code %u from %s",
+        status,
+        safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
+    break;
+  }
+
+  return ret;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -758,5 +851,33 @@ hs_client_get_random_intro_from_edge(const edge_connection_t *edge_conn)
   return (edge_conn->hs_ident) ?
     client_get_random_intro(&edge_conn->hs_ident->identity_pk) :
     rend_client_get_random_intro(edge_conn->rend_data);
+}
+/* Called when get an INTRODUCE_ACK cell on the introduction circuit circ.
+ * Return 0 on success else a negative value is returned. The circuit will be
+ * closed or reuse to extend again to another intro point. */
+int
+hs_client_receive_introduce_ack(origin_circuit_t *circ,
+                                const uint8_t *payload, size_t payload_len)
+{
+  int ret = -1;
+
+  tor_assert(circ);
+  tor_assert(payload);
+
+  if (TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+    log_warn(LD_PROTOCOL, "Unexpected INTRODUCE_ACK on circuit %u.",
+             (unsigned int) TO_CIRCUIT(circ)->n_circ_id);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+    goto end;
+  }
+
+  ret = (circ->hs_ident) ? handle_introduce_ack(circ, payload, payload_len) :
+                           rend_client_introduction_acked(circ, payload,
+                                                          payload_len);
+  /* For path bias: This circuit was used successfully. NACK or ACK counts. */
+  pathbias_mark_use_success(circ);
+
+ end:
+  return ret;
 }
 

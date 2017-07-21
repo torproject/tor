@@ -875,6 +875,18 @@ hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len)
 
   tor_assert(payload);
 
+  /* If it is a legacy IP, rend-spec.txt specifies that a ACK is 0 byte and a
+   * NACK is 1 byte. We can't use the legacy function for this so we have to
+   * do a special case. */
+  if (payload_len <= 1) {
+    if (payload_len == 0) {
+      ret = HS_CELL_INTRO_ACK_SUCCESS;
+    } else {
+      ret = HS_CELL_INTRO_ACK_FAILURE;
+    }
+    goto end;
+  }
+
   if (trn_cell_introduce_ack_parse(&cell, payload, payload_len) < 0) {
     log_info(LD_REND, "Invalid INTRODUCE_ACK cell. Unable to parse it.");
     goto end;

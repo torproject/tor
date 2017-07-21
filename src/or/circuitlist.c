@@ -1498,6 +1498,33 @@ circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
   return NULL;
 }
 
+/* Return an origin circuit such that:
+ *  - Identifier identity key matches,
+ *  - Rendezvous cookie matches
+ *  - Circuit is not marked for close
+ *  - Circuit has purpose CIRCUIT_PURPOSE_C_REND_READY.
+ *
+ * Return NULL if no such circuit exits. */
+origin_circuit_t *
+circuit_get_ready_rend_by_hs_ident(const hs_ident_circuit_t *ident)
+{
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
+    if (!circ->marked_for_close &&
+        circ->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
+      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+      if (ocirc->hs_ident &&
+          ed25519_pubkey_eq(&ident->identity_pk,
+                            &ocirc->hs_ident->identity_pk) &&
+          tor_memeq(ident->rendezvous_cookie,
+                    ocirc->hs_ident->rendezvous_cookie,
+                    HS_REND_COOKIE_LEN)) {
+        return ocirc;
+      }
+    }
+  } SMARTLIST_FOREACH_END(circ);
+  return NULL;
+}
+
 /** Return the first service introduction circuit originating from the global
  * circuit list after <b>start</b> or at the start of the list if <b>start</b>
  * is NULL. Return NULL if no circuit is found.

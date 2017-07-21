@@ -13,6 +13,7 @@
 #define TOR_CIRCUITLIST_H
 
 #include "testsupport.h"
+#include "hs_ident.h"
 
 MOCK_DECL(smartlist_t *, circuit_get_global_list, (void));
 smartlist_t *circuit_get_global_origin_circuit_list(void);
@@ -45,6 +46,8 @@ void circuit_unlink_all_from_channel(channel_t *chan, int reason);
 origin_circuit_t *circuit_get_by_global_id(uint32_t id);
 origin_circuit_t *circuit_get_ready_rend_circ_by_rend_data(
   const rend_data_t *rend_data);
+origin_circuit_t *circuit_get_ready_rend_by_hs_ident(
+  const hs_ident_circuit_t *ident);
 origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
                                      const uint8_t *digest, uint8_t purpose);
 origin_circuit_t *circuit_get_next_service_intro_circ(origin_circuit_t *start);

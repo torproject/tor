@@ -391,22 +391,10 @@ rend_client_introduction_acked(origin_circuit_t *circ,
   origin_circuit_t *rendcirc;
   (void) request; // XXXX Use this.
 
-  if (circ->base_.purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
-    log_warn(LD_PROTOCOL,
-             "Received REND_INTRODUCE_ACK on unexpected circuit %u.",
-             (unsigned)circ->base_.n_circ_id);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    return -1;
-  }
-
   tor_assert(circ->build_state);
   tor_assert(circ->build_state->chosen_exit);
   assert_circ_anonymity_ok(circ, options);
   tor_assert(circ->rend_data);
-
-  /* For path bias: This circuit was used successfully. Valid
-   * nacks and acks count. */
-  pathbias_mark_use_success(circ);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
