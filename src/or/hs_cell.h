@@ -16,6 +16,14 @@
  * 3.2.2 of the specification). Below this value, the cell must be padded. */
 #define HS_CELL_INTRODUCE1_MIN_SIZE 246
 
+/* Status code of an INTRODUCE_ACK cell. */
+typedef enum {
+  HS_CELL_INTRO_ACK_SUCCESS = 0x0000, /* Cell relayed to service. */
+  HS_CELL_INTRO_ACK_FAILURE = 0x0001, /* Service ID not recognized */
+  HS_CELL_INTRO_ACK_BADFMT  = 0x0002, /* Bad message format */
+  HS_CELL_INTRO_ACK_NORELAY = 0x0003, /* Can't relay cell to service */
+} hs_cell_introd_ack_status_t;
+
 /* Onion key type found in the INTRODUCE1 cell. */
 typedef enum {
   HS_CELL_ONION_KEY_TYPE_NTOR = 1,
@@ -102,6 +110,7 @@ ssize_t hs_cell_parse_intro_established(const uint8_t *payload,
 ssize_t hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
                                  const origin_circuit_t *circ,
                                  const hs_service_t *service);
+int hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len);
 
 #endif /* TOR_HS_CELL_H */
 

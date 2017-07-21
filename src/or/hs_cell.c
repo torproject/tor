@@ -864,3 +864,26 @@ hs_cell_build_establish_rendezvous(const uint8_t *rendezvous_cookie,
   return HS_REND_COOKIE_LEN;
 }
 
+/* Handle an INTRODUCE_ACK cell encoded in payload of length payload_len.
+ * Return the status code on success else a negative value if the cell as not
+ * decodable. */
+int
+hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len)
+{
+  int ret = -1;
+  trn_cell_introduce_ack_t *cell = NULL;
+
+  tor_assert(payload);
+
+  if (trn_cell_introduce_ack_parse(&cell, payload, payload_len) < 0) {
+    log_info(LD_REND, "Invalid INTRODUCE_ACK cell. Unable to parse it.");
+    goto end;
+  }
+
+  ret = trn_cell_introduce_ack_get_status(cell);
+
+ end:
+  trn_cell_introduce_ack_free(cell);
+  return ret;
+}
+
