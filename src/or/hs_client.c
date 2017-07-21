@@ -20,6 +20,7 @@
 #include "directory.h"
 #include "hs_client.h"
 #include "router.h"
+#include "routerset.h"
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "connection.h"
@@ -387,6 +388,109 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
   hs_circ_send_establish_rendezvous(circ);
 }
 
+/* This is an helper function that convert a descriptor intro point object ip
+ * to a newly allocated extend_info_t object fully initialized. Return NULL if
+ * we can't convert it for which chances are that we are missing or malformed
+ * link specifiers. */
+static extend_info_t *
+desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip)
+{
+  extend_info_t *ei;
+  smartlist_t *lspecs = smartlist_new();
+
+  tor_assert(ip);
+
+  /* We first encode the descriptor link specifiers into the binary
+   * representation which is a trunnel object. */
+  SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
+                          const hs_desc_link_specifier_t *, desc_lspec) {
+    link_specifier_t *lspec = hs_desc_encode_lspec(desc_lspec);
+    smartlist_add(lspecs, lspec);
+  } SMARTLIST_FOREACH_END(desc_lspec);
+
+  /* Explicitely put the direct connection option to 0 because this is client
+   * side and there is no such thing as a non anonymous client. */
+  ei = hs_get_extend_info_from_lspecs(lspecs, &ip->onion_key, 0);
+
+  SMARTLIST_FOREACH(lspecs, link_specifier_t *, ls, link_specifier_free(ls));
+  smartlist_free(lspecs);
+  return ei;
+}
+
+/* Using a descriptor desc, return a newly allocated extend_info_t object of a
+ * randomly picked introduction point from its list. Return NULL if none are
+ * usable. */
+static extend_info_t *
+client_get_random_intro(const ed25519_public_key_t *service_pk)
+{
+  extend_info_t *ei = NULL, *ei_excluded = NULL;
+  smartlist_t *usable_ips = NULL;
+  const hs_descriptor_t *desc;
+  const hs_desc_encrypted_data_t *enc_data;
+  const or_options_t *options = get_options();
+
+  tor_assert(service_pk);
+
+  desc = hs_cache_lookup_as_client(service_pk);
+  if (desc == NULL || !hs_client_any_intro_points_usable(desc)) {
+    log_info(LD_REND, "Unable to randomly select an introduction point "
+                      "because descriptor %s.",
+             (desc) ? "doesn't have usable intro point" : "is missing");
+    goto end;
+  }
+
+  enc_data = &desc->encrypted_data;
+  usable_ips = smartlist_new();
+  smartlist_add_all(usable_ips, enc_data->intro_points);
+  while (smartlist_len(usable_ips) != 0) {
+    int idx;
+    const hs_desc_intro_point_t *ip;
+
+    /* Pick a random intro point and immediately remove it from the usable
+     * list so we don't pick it again if we have to iterate more. */
+    idx = crypto_rand_int(smartlist_len(usable_ips));
+    ip = smartlist_get(usable_ips, idx);
+    smartlist_del(usable_ips, idx);
+
+    /* Generate an extend info object from the intro point object. */
+    ei = desc_intro_point_to_extend_info(ip);
+    if (ei == NULL) {
+      /* We can get here for instance if the intro point is a private address
+       * and we aren't allowed to extend to those. */
+      continue;
+    }
+
+    /* Test the pick against ExcludeNodes. */
+    if (routerset_contains_extendinfo(options->ExcludeNodes, ei)) {
+      /* If this pick is in the ExcludeNodes list, we keep its reference so if
+       * we ever end up not being able to pick anything else and StrictNodes is
+       * unset, we'll use it. */
+      ei_excluded = ei;
+      continue;
+    }
+    /* XXX: Intro point can time out or just be unsuable, we need to keep
+     * track of this and check against such cache. */
+
+    /* Good pick! Let's go with this. */
+    goto end;
+  }
+
+  /* Reaching this point means a couple of things. Either we can't use any of
+   * the intro point listed because the IP address can't be extended to or it
+   * is listed in the ExcludeNodes list. In the later case, if StrictNodes is
+   * set, we are forced to not use anything. */
+  ei = ei_excluded;
+  if (options->StrictNodes) {
+    log_warn(LD_REND, "Every introduction points are in the ExcludeNodes set "
+             "and StrictNodes is set. We can't connect.");
+    ei = NULL;
+  }
+
+ end:
+  smartlist_free(usable_ips);
+  return ei;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -641,5 +745,18 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
  end:
   /* We don't have ownership of the objects in this list. */
   smartlist_free(conns);
+}
+
+/* Return a newly allocated extend_info_t for a randomly chosen introduction
+ * point for the given edge connection identifier ident. Return NULL if we
+ * can't pick any usable introduction points. */
+extend_info_t *
+hs_client_get_random_intro_from_edge(const edge_connection_t *edge_conn)
+{
+  tor_assert(edge_conn);
+
+  return (edge_conn->hs_ident) ?
+    client_get_random_intro(&edge_conn->hs_ident->identity_pk) :
+    rend_client_get_random_intro(edge_conn->rend_data);
 }
 
