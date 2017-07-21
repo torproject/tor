@@ -538,3 +538,45 @@ hs_client_circuit_has_opened(origin_circuit_t *circ)
   }
 }
 
+/* Called when we receive a RENDEZVOUS_ESTABLISHED cell. Change the state of
+ * the circuit to CIRCUIT_PURPOSE_C_REND_READY. Return 0 on success else a
+ * negative value and the circuit marked for close. */
+int
+hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
+                                   const uint8_t *payload, size_t payload_len)
+{
+  tor_assert(circ);
+  tor_assert(payload);
+
+  (void) payload_len;
+
+  if (TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
+    log_warn(LD_PROTOCOL, "Got a RENDEZVOUS_ESTABLISHED but we were not "
+                          "expecting one. Closing circuit.");
+    goto err;
+  }
+
+  log_info(LD_REND, "Received an RENDEZVOUS_ESTABLISHED. This circuit is "
+                    "now ready for rendezvous.");
+  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_READY);
+
+  /* Set timestamp_dirty, because circuit_expire_building expects it to
+   * specify when a circuit entered the _C_REND_READY state. */
+  TO_CIRCUIT(circ)->timestamp_dirty = time(NULL);
+
+  /* From a path bias point of view, this circuit is now successfully used.
+   * Waiting any longer opens us up to attacks from malicious hidden services.
+   * They could induce the client to attempt to connect to their hidden
+   * service and never reply to the client's rend requests */
+  pathbias_mark_use_success(circ);
+
+  /* If we already have the introduction circuit built, make sure we send
+   * the INTRODUCE cell _now_ */
+  connection_ap_attach_pending(1);
+
+  return 0;
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+  return -1;
+}
+

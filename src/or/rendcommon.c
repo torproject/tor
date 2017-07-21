@@ -19,6 +19,7 @@
 #include "rendcommon.h"
 #include "rendmid.h"
 #include "hs_intropoint.h"
+#include "hs_client.h"
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
@@ -797,7 +798,7 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
       break;
     case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
       if (origin_circ)
-        r = rend_client_rendezvous_acked(origin_circ,payload,length);
+        r = hs_client_receive_rendezvous_acked(origin_circ,payload,length);
       break;
     default:
       tor_fragile_assert();
