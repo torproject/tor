@@ -25,5 +25,7 @@ int hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk);
 int hs_client_send_introduce1(origin_circuit_t *intro_circ,
                               origin_circuit_t *rend_circ);
 
+void hs_client_circuit_has_opened(origin_circuit_t *circ);
+
 #endif /* TOR_HS_CLIENT_H */
 

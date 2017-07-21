@@ -308,6 +308,82 @@ send_introduce1(origin_circuit_t *intro_circ,
   return status;
 }
 
+/* Using the introduction circuit circ, setup the authentication key of the
+ * intro point this circuit has extended to. */
+static void
+setup_intro_circ_auth_key(origin_circuit_t *circ)
+{
+  const hs_descriptor_t *desc;
+
+  tor_assert(circ);
+
+  desc = hs_cache_lookup_as_client(&circ->hs_ident->identity_pk);
+  if (BUG(desc == NULL)) {
+    /* Opening intro circuit without the descriptor is no good... */
+    goto end;
+  }
+
+  /* We will go over every intro point and try to find which one is linked to
+   * that circuit. Those lists are small so it's not that expensive. */
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          const hs_desc_intro_point_t *, ip) {
+    SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
+                            const hs_desc_link_specifier_t *, lspec) {
+      /* Not all tor node have an ed25519 identity key so we still rely on the
+       * legacy identity digest. */
+      if (lspec->type != LS_LEGACY_ID) {
+        continue;
+      }
+      if (fast_memneq(circ->build_state->chosen_exit->identity_digest,
+                      lspec->u.legacy_id, DIGEST_LEN)) {
+        break;
+      }
+      /* We got it, copy its authentication key to the identifier. */
+      ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                          &ip->auth_key_cert->signed_key);
+      goto end;
+    } SMARTLIST_FOREACH_END(lspec);
+  } SMARTLIST_FOREACH_END(ip);
+
+  /* Reaching this point means we didn't find any intro point for this circuit
+   * which is not suppose to happen. */
+  tor_assert_nonfatal_unreached();
+
+ end:
+  return;
+}
+
+/* Called when an introduction circuit has opened. */
+static void
+client_intro_circ_has_opened(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  log_info(LD_REND, "Introduction circuit %u has opened. Attaching streams.",
+           (unsigned int) TO_CIRCUIT(circ)->n_circ_id);
+
+  /* This is an introduction circuit so we'll attach the correct
+   * authentication key to the circuit identifier so it can be identified
+   * properly later on. */
+  setup_intro_circ_auth_key(circ);
+
+  connection_ap_attach_pending(1);
+}
+
+/* Called when a rendezvous circuit has opened. */
+static void
+client_rendezvous_circ_has_opened(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+
+  log_info(LD_REND, "Rendezvous circuit has opened to %s.",
+           safe_str_client(
+                extend_info_describe(circ->build_state->chosen_exit)));
+
+  /* XXX Send ESTABLISH REND cell. */
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -428,5 +504,35 @@ hs_client_send_introduce1(origin_circuit_t *intro_circ,
   return (intro_circ->hs_ident) ? send_introduce1(intro_circ, rend_circ) :
                                   rend_client_send_introduction(intro_circ,
                                                                 rend_circ);
+}
+
+/* Called when the client circuit circ has been established. It can be either
+ * an introduction or rendezvous circuit. This function handles all hidden
+ * service versions. */
+void
+hs_client_circuit_has_opened(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
+   * identifier hs_ident. Can't be both. */
+  switch (TO_CIRCUIT(circ)->purpose) {
+  case CIRCUIT_PURPOSE_C_INTRODUCING:
+    if (circ->hs_ident) {
+      client_intro_circ_has_opened(circ);
+    } else {
+      rend_client_introcirc_has_opened(circ);
+    }
+    break;
+  case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+    if (circ->hs_ident) {
+      client_rendezvous_circ_has_opened(circ);
+    } else {
+      rend_client_rendcirc_has_opened(circ);
+    }
+    break;
+  default:
+    tor_assert_nonfatal_unreached();
+  }
 }
 

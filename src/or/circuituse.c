@@ -1636,7 +1636,7 @@ circuit_has_opened(origin_circuit_t *circ)
 
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      rend_client_rendcirc_has_opened(circ);
+      hs_client_circuit_has_opened(circ);
       /* Start building an intro circ if we don't have one yet. */
       connection_ap_attach_pending(1);
       /* This isn't a call to circuit_try_attaching_streams because a
@@ -1648,7 +1648,7 @@ circuit_has_opened(origin_circuit_t *circ)
        * state. */
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
-      rend_client_introcirc_has_opened(circ);
+      hs_client_circuit_has_opened(circ);
       break;
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* Tell any AP connections that have been waiting for a new
