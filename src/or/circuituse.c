@@ -2174,22 +2174,25 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     /* If this is a hidden service trying to start an introduction point,
      * handle that case. */
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+      const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
       /* need to pick an intro point */
-      rend_data_t *rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data;
-      tor_assert(rend_data);
-      extend_info = rend_client_get_random_intro(rend_data);
+      extend_info = hs_client_get_random_intro_from_edge(edge_conn);
       if (!extend_info) {
-        log_info(LD_REND,
-                 "No intro points for '%s': re-fetching service descriptor.",
-                 safe_str_client(rend_data_get_address(rend_data)));
-        rend_client_refetch_v2_renddesc(rend_data);
+        log_info(LD_REND, "No intro points: re-fetching service descriptor.");
+        if (edge_conn->rend_data) {
+          rend_client_refetch_v2_renddesc(edge_conn->rend_data);
+        } else {
+          hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
+        }
         connection_ap_mark_as_non_pending_circuit(conn);
         ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
       log_info(LD_REND,"Chose %s as intro point for '%s'.",
                extend_info_describe(extend_info),
-               safe_str_client(rend_data_get_address(rend_data)));
+               (edge_conn->rend_data) ?
+               safe_str_client(rend_data_get_address(edge_conn->rend_data)) :
+               "service");
     }
 
     /* If we have specified a particular exit node for our
@@ -2308,8 +2311,15 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       /* help predict this next time */
       rep_hist_note_used_internal(time(NULL), need_uptime, 1);
       if (circ) {
-        /* write the service_id into circ */
-        circ->rend_data = rend_data_dup(ENTRY_TO_EDGE_CONN(conn)->rend_data);
+        const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
+        if (edge_conn->rend_data) {
+          /* write the service_id into circ */
+          circ->rend_data = rend_data_dup(edge_conn->rend_data);
+        } else if (edge_conn->hs_ident) {
+          circ->hs_ident =
+            hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk,
+                                 HS_IDENT_CIRCUIT_INTRO);
+        }
         if (circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->base_.state == CIRCUIT_STATE_OPEN)
           circuit_has_opened(circ);
@@ -2737,12 +2747,14 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
 
       tor_assert(introcirc->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
       if (introcirc->base_.state == CIRCUIT_STATE_OPEN) {
+        int ret;
         log_info(LD_REND,"found open intro circ %u (rend %u); sending "
                  "introduction. (stream %d sec old)",
                  (unsigned)introcirc->base_.n_circ_id,
                  (unsigned)rendcirc->base_.n_circ_id,
                  conn_age);
-        switch (rend_client_send_introduction(introcirc, rendcirc)) {
+        ret = hs_client_send_introduce1(introcirc, rendcirc);
+        switch (ret) {
         case 0: /* success */
           rendcirc->base_.timestamp_dirty = time(NULL);
           introcirc->base_.timestamp_dirty = time(NULL);
