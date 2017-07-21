@@ -1084,3 +1084,54 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   return ret;
 }
 
+/* Send an ESTABLISH_RENDEZVOUS cell along the rendezvous circuit circ. On
+ * success, 0 is returned else -1 and the circuit is marked for close. */
+int
+hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
+{
+  ssize_t cell_len = 0;
+  uint8_t cell[RELAY_PAYLOAD_SIZE] = {0};
+
+  tor_assert(circ);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+
+  log_info(LD_REND, "Send an ESTABLISH_RENDEZVOUS cell on circuit %u",
+           TO_CIRCUIT(circ)->n_circ_id);
+
+  /* Set timestamp_dirty, because circuit_expire_building expects it,
+   * and the rend cookie also means we've used the circ. */
+  TO_CIRCUIT(circ)->timestamp_dirty = time(NULL);
+
+  /* We've attempted to use this circuit. Probe it if we fail */
+  pathbias_count_use_attempt(circ);
+
+  /* Generate the RENDEZVOUS_COOKIE and place it in the identifier so we can
+   * complete the handshake when receiving the acknowledgement. */
+  crypto_rand((char *) circ->hs_ident->rendezvous_cookie, HS_REND_COOKIE_LEN);
+  /* Generate the client keypair. No need to be extra strong, not long term */
+  curve25519_keypair_generate(&circ->hs_ident->rendezvous_client_kp, 0);
+
+  cell_len =
+    hs_cell_build_establish_rendezvous(circ->hs_ident->rendezvous_cookie,
+                                       cell);
+  if (BUG(cell_len < 0)) {
+    goto err;
+  }
+
+  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
+                                   RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
+                                   (const char *) cell, cell_len,
+                                   circ->cpath->prev) < 0) {
+    /* Circuit has been marked for close */
+    log_warn(LD_REND, "Unable to send ESTABLISH_RENDEZVOUS cell on "
+                      "circuit %u", TO_CIRCUIT(circ)->n_circ_id);
+    memwipe(cell, 0, cell_len);
+    goto err;
+  }
+
+  memwipe(cell, 0, cell_len);
+  return 0;
+ err:
+  return -1;
+}
+

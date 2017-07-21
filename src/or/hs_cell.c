@@ -847,3 +847,20 @@ hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
   return cell_len;
 }
 
+/* Build an ESTABLISH_RENDEZVOUS cell from the given rendezvous_cookie. The
+ * encoded cell is put in cell_out which must be of at least
+ * RELAY_PAYLOAD_SIZE. On success, the encoded length is returned and the
+ * caller should clear up the content of the cell.
+ *
+ * This function can't fail. */
+ssize_t
+hs_cell_build_establish_rendezvous(const uint8_t *rendezvous_cookie,
+                                   uint8_t *cell_out)
+{
+  tor_assert(rendezvous_cookie);
+  tor_assert(cell_out);
+
+  memcpy(cell_out, rendezvous_cookie, HS_REND_COOKIE_LEN);
+  return HS_REND_COOKIE_LEN;
+}
+

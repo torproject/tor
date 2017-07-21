@@ -381,7 +381,9 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
            safe_str_client(
                 extend_info_describe(circ->build_state->chosen_exit)));
 
-  /* XXX Send ESTABLISH REND cell. */
+  /* Ignore returned value, nothing we can really do. On failure, the circuit
+   * will be marked for close. */
+  hs_circ_send_establish_rendezvous(circ);
 }
 
 /* ========== */

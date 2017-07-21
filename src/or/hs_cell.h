@@ -93,6 +93,8 @@ ssize_t hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
                                   uint8_t *cell_out);
 ssize_t hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
                                  uint8_t *cell_out);
+ssize_t hs_cell_build_establish_rendezvous(const uint8_t *rendezvous_cookie,
+                                           uint8_t *cell_out);
 
 /* Parse cell API. */
 ssize_t hs_cell_parse_intro_established(const uint8_t *payload,

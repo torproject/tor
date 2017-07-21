@@ -48,6 +48,7 @@ int hs_circ_send_introduce1(origin_circuit_t *intro_circ,
                             origin_circuit_t *rend_circ,
                             const hs_desc_intro_point_t *ip,
                             const uint8_t *subcredential);
+int hs_circ_send_establish_rendezvous(origin_circuit_t *circ);
 
 /* e2e circuit API. */
 
