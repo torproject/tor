@@ -541,6 +541,24 @@ hs_build_address(const ed25519_public_key_t *key, uint8_t version,
   tor_assert(hs_address_is_valid(addr_out));
 }
 
+/* Return a newly allocated copy of lspec. */
+link_specifier_t *
+hs_link_specifier_dup(const link_specifier_t *lspec)
+{
+  link_specifier_t *dup = link_specifier_new();
+  memcpy(dup, lspec, sizeof(*dup));
+  /* The unrecognized field is a dynamic array so make sure to copy its
+   * content and not the pointer. */
+  link_specifier_setlen_un_unrecognized(
+                        dup, link_specifier_getlen_un_unrecognized(lspec));
+  if (link_specifier_getlen_un_unrecognized(dup)) {
+    memcpy(link_specifier_getarray_un_unrecognized(dup),
+           link_specifier_getconstarray_un_unrecognized(lspec),
+           link_specifier_getlen_un_unrecognized(dup));
+  }
+  return dup;
+}
+
 /* Initialize the entire HS subsytem. This is called in tor_init() before any
  * torrc options are loaded. Only for >= v3. */
 void

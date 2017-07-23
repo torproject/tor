@@ -11,6 +11,9 @@
 
 #include "or.h"
 
+/* Trunnel */
+#include "ed25519_cert.h"
+
 /* Protocol version 2. Use this instead of hardcoding "2" in the code base,
  * this adds a clearer semantic to the value when used. */
 #define HS_VERSION_TWO 2
@@ -112,6 +115,8 @@ const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
                                        size_t *len_out);
 
 uint64_t hs_get_next_time_period_num(time_t now);
+
+link_specifier_t *hs_link_specifier_dup(const link_specifier_t *lspec);
 
 #ifdef HS_COMMON_PRIVATE
 
