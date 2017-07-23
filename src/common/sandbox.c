@@ -1038,7 +1038,7 @@ sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
           SCMP_CMP_STR(0, SCMP_CMP_EQ, param->value));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add stat64 syscall, received "
-            "libseccomp  error %d", rc);
+            "libseccomp error %d", rc);
         return rc;
       }
     }
