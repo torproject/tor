@@ -899,3 +899,35 @@ hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len)
   return ret;
 }
 
+/* Handle a RENDEZVOUS2 cell encoded in payload of length payload_len. On
+ * success, handshake_info contains the data in the HANDSHAKE_INFO field, and
+ * 0 is returned. On error, a negative value is returned. */
+int
+hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
+                          uint8_t *handshake_info, size_t handshake_info_len)
+{
+  int ret = -1;
+  trn_cell_rendezvous2_t *cell = NULL;
+
+  tor_assert(payload);
+  tor_assert(handshake_info);
+
+  if (trn_cell_rendezvous2_parse(&cell, payload, payload_len) < 0) {
+    log_info(LD_REND, "Invalid RENDEZVOUS2 cell. Unable to parse it.");
+    goto end;
+  }
+
+  /* Static size, we should never have an issue with this else we messed up
+   * our code flow. */
+  tor_assert(trn_cell_rendezvous2_getlen_handshake_info(cell) ==
+             handshake_info_len);
+  memcpy(handshake_info,
+         trn_cell_rendezvous2_getconstarray_handshake_info(cell),
+         handshake_info_len);
+  ret = 0;
+
+ end:
+  trn_cell_rendezvous2_free(cell);
+  return ret;
+}
+
