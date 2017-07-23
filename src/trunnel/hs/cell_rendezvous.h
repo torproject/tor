@@ -9,6 +9,7 @@
 #include "trunnel.h"
 
 #define TRUNNEL_REND_COOKIE_LEN 20
+#define TRUNNEL_HANDSHAKE_INFO_LEN 64
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TRN_CELL_RENDEZVOUS1)
 struct trn_cell_rendezvous1_st {
   uint8_t rendezvous_cookie[TRUNNEL_REND_COOKIE_LEN];
@@ -17,6 +18,13 @@ struct trn_cell_rendezvous1_st {
 };
 #endif
 typedef struct trn_cell_rendezvous1_st trn_cell_rendezvous1_t;
+#if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TRN_CELL_RENDEZVOUS2)
+struct trn_cell_rendezvous2_st {
+  uint8_t handshake_info[TRUNNEL_HANDSHAKE_INFO_LEN];
+  uint8_t trunnel_error_code_;
+};
+#endif
+typedef struct trn_cell_rendezvous2_st trn_cell_rendezvous2_t;
 /** Return a newly allocated trn_cell_rendezvous1 with all elements
  * set to zero.
  */
@@ -113,6 +121,67 @@ const uint8_t  * trn_cell_rendezvous1_getconstarray_handshake_info(const trn_cel
  * failure.
  */
 int trn_cell_rendezvous1_setlen_handshake_info(trn_cell_rendezvous1_t *inp, size_t newlen);
+/** Return a newly allocated trn_cell_rendezvous2 with all elements
+ * set to zero.
+ */
+trn_cell_rendezvous2_t *trn_cell_rendezvous2_new(void);
+/** Release all storage held by the trn_cell_rendezvous2 in 'victim'.
+ * (Do nothing if 'victim' is NULL.)
+ */
+void trn_cell_rendezvous2_free(trn_cell_rendezvous2_t *victim);
+/** Try to parse a trn_cell_rendezvous2 from the buffer in 'input',
+ * using up to 'len_in' bytes from the input buffer. On success,
+ * return the number of bytes consumed and set *output to the newly
+ * allocated trn_cell_rendezvous2_t. On failure, return -2 if the
+ * input appears truncated, and -1 if the input is otherwise invalid.
+ */
+ssize_t trn_cell_rendezvous2_parse(trn_cell_rendezvous2_t **output, const uint8_t *input, const size_t len_in);
+/** Return the number of bytes we expect to need to encode the
+ * trn_cell_rendezvous2 in 'obj'. On failure, return a negative value.
+ * Note that this value may be an overestimate, and can even be an
+ * underestimate for certain unencodeable objects.
+ */
+ssize_t trn_cell_rendezvous2_encoded_len(const trn_cell_rendezvous2_t *obj);
+/** Try to encode the trn_cell_rendezvous2 from 'input' into the
+ * buffer at 'output', using up to 'avail' bytes of the output buffer.
+ * On success, return the number of bytes used. On failure, return -2
+ * if the buffer was not long enough, and -1 if the input was invalid.
+ */
+ssize_t trn_cell_rendezvous2_encode(uint8_t *output, size_t avail, const trn_cell_rendezvous2_t *input);
+/** Check whether the internal state of the trn_cell_rendezvous2 in
+ * 'obj' is consistent. Return NULL if it is, and a short message if
+ * it is not.
+ */
+const char *trn_cell_rendezvous2_check(const trn_cell_rendezvous2_t *obj);
+/** Clear any errors that were set on the object 'obj' by its setter
+ * functions. Return true iff errors were cleared.
+ */
+int trn_cell_rendezvous2_clear_errors(trn_cell_rendezvous2_t *obj);
+/** Return the (constant) length of the array holding the
+ * handshake_info field of the trn_cell_rendezvous2_t in 'inp'.
+ */
+size_t trn_cell_rendezvous2_getlen_handshake_info(const trn_cell_rendezvous2_t *inp);
+/** Return the element at position 'idx' of the fixed array field
+ * handshake_info of the trn_cell_rendezvous2_t in 'inp'.
+ */
+uint8_t trn_cell_rendezvous2_get_handshake_info(trn_cell_rendezvous2_t *inp, size_t idx);
+/** As trn_cell_rendezvous2_get_handshake_info, but take and return a
+ * const pointer
+ */
+uint8_t trn_cell_rendezvous2_getconst_handshake_info(const trn_cell_rendezvous2_t *inp, size_t idx);
+/** Change the element at position 'idx' of the fixed array field
+ * handshake_info of the trn_cell_rendezvous2_t in 'inp', so that it
+ * will hold the value 'elt'.
+ */
+int trn_cell_rendezvous2_set_handshake_info(trn_cell_rendezvous2_t *inp, size_t idx, uint8_t elt);
+/** Return a pointer to the TRUNNEL_HANDSHAKE_INFO_LEN-element array
+ * field handshake_info of 'inp'.
+ */
+uint8_t * trn_cell_rendezvous2_getarray_handshake_info(trn_cell_rendezvous2_t *inp);
+/** As trn_cell_rendezvous2_get_handshake_info, but take and return a
+ * const pointer
+ */
+const uint8_t  * trn_cell_rendezvous2_getconstarray_handshake_info(const trn_cell_rendezvous2_t *inp);
 
 
 #endif

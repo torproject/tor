@@ -290,3 +290,181 @@ trn_cell_rendezvous1_parse(trn_cell_rendezvous1_t **output, const uint8_t *input
   }
   return result;
 }
+trn_cell_rendezvous2_t *
+trn_cell_rendezvous2_new(void)
+{
+  trn_cell_rendezvous2_t *val = trunnel_calloc(1, sizeof(trn_cell_rendezvous2_t));
+  if (NULL == val)
+    return NULL;
+  return val;
+}
+
+/** Release all storage held inside 'obj', but do not free 'obj'.
+ */
+static void
+trn_cell_rendezvous2_clear(trn_cell_rendezvous2_t *obj)
+{
+  (void) obj;
+}
+
+void
+trn_cell_rendezvous2_free(trn_cell_rendezvous2_t *obj)
+{
+  if (obj == NULL)
+    return;
+  trn_cell_rendezvous2_clear(obj);
+  trunnel_memwipe(obj, sizeof(trn_cell_rendezvous2_t));
+  trunnel_free_(obj);
+}
+
+size_t
+trn_cell_rendezvous2_getlen_handshake_info(const trn_cell_rendezvous2_t *inp)
+{
+  (void)inp;  return TRUNNEL_HANDSHAKE_INFO_LEN;
+}
+
+uint8_t
+trn_cell_rendezvous2_get_handshake_info(trn_cell_rendezvous2_t *inp, size_t idx)
+{
+  trunnel_assert(idx < TRUNNEL_HANDSHAKE_INFO_LEN);
+  return inp->handshake_info[idx];
+}
+
+uint8_t
+trn_cell_rendezvous2_getconst_handshake_info(const trn_cell_rendezvous2_t *inp, size_t idx)
+{
+  return trn_cell_rendezvous2_get_handshake_info((trn_cell_rendezvous2_t*)inp, idx);
+}
+int
+trn_cell_rendezvous2_set_handshake_info(trn_cell_rendezvous2_t *inp, size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < TRUNNEL_HANDSHAKE_INFO_LEN);
+  inp->handshake_info[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+trn_cell_rendezvous2_getarray_handshake_info(trn_cell_rendezvous2_t *inp)
+{
+  return inp->handshake_info;
+}
+const uint8_t  *
+trn_cell_rendezvous2_getconstarray_handshake_info(const trn_cell_rendezvous2_t *inp)
+{
+  return (const uint8_t  *)trn_cell_rendezvous2_getarray_handshake_info((trn_cell_rendezvous2_t*)inp);
+}
+const char *
+trn_cell_rendezvous2_check(const trn_cell_rendezvous2_t *obj)
+{
+  if (obj == NULL)
+    return "Object was NULL";
+  if (obj->trunnel_error_code_)
+    return "A set function failed on this object";
+  return NULL;
+}
+
+ssize_t
+trn_cell_rendezvous2_encoded_len(const trn_cell_rendezvous2_t *obj)
+{
+  ssize_t result = 0;
+
+  if (NULL != trn_cell_rendezvous2_check(obj))
+     return -1;
+
+
+  /* Length of u8 handshake_info[TRUNNEL_HANDSHAKE_INFO_LEN] */
+  result += TRUNNEL_HANDSHAKE_INFO_LEN;
+  return result;
+}
+int
+trn_cell_rendezvous2_clear_errors(trn_cell_rendezvous2_t *obj)
+{
+  int r = obj->trunnel_error_code_;
+  obj->trunnel_error_code_ = 0;
+  return r;
+}
+ssize_t
+trn_cell_rendezvous2_encode(uint8_t *output, const size_t avail, const trn_cell_rendezvous2_t *obj)
+{
+  ssize_t result = 0;
+  size_t written = 0;
+  uint8_t *ptr = output;
+  const char *msg;
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  const ssize_t encoded_len = trn_cell_rendezvous2_encoded_len(obj);
+#endif
+
+  if (NULL != (msg = trn_cell_rendezvous2_check(obj)))
+    goto check_failed;
+
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  trunnel_assert(encoded_len >= 0);
+#endif
+
+  /* Encode u8 handshake_info[TRUNNEL_HANDSHAKE_INFO_LEN] */
+  trunnel_assert(written <= avail);
+  if (avail - written < TRUNNEL_HANDSHAKE_INFO_LEN)
+    goto truncated;
+  memcpy(ptr, obj->handshake_info, TRUNNEL_HANDSHAKE_INFO_LEN);
+  written += TRUNNEL_HANDSHAKE_INFO_LEN; ptr += TRUNNEL_HANDSHAKE_INFO_LEN;
+
+
+  trunnel_assert(ptr == output + written);
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  {
+    trunnel_assert(encoded_len >= 0);
+    trunnel_assert((size_t)encoded_len == written);
+  }
+
+#endif
+
+  return written;
+
+ truncated:
+  result = -2;
+  goto fail;
+ check_failed:
+  (void)msg;
+  result = -1;
+  goto fail;
+ fail:
+  trunnel_assert(result < 0);
+  return result;
+}
+
+/** As trn_cell_rendezvous2_parse(), but do not allocate the output
+ * object.
+ */
+static ssize_t
+trn_cell_rendezvous2_parse_into(trn_cell_rendezvous2_t *obj, const uint8_t *input, const size_t len_in)
+{
+  const uint8_t *ptr = input;
+  size_t remaining = len_in;
+  ssize_t result = 0;
+  (void)result;
+
+  /* Parse u8 handshake_info[TRUNNEL_HANDSHAKE_INFO_LEN] */
+  CHECK_REMAINING(TRUNNEL_HANDSHAKE_INFO_LEN, truncated);
+  memcpy(obj->handshake_info, ptr, TRUNNEL_HANDSHAKE_INFO_LEN);
+  remaining -= TRUNNEL_HANDSHAKE_INFO_LEN; ptr += TRUNNEL_HANDSHAKE_INFO_LEN;
+  trunnel_assert(ptr + remaining == input + len_in);
+  return len_in - remaining;
+
+ truncated:
+  return -2;
+}
+
+ssize_t
+trn_cell_rendezvous2_parse(trn_cell_rendezvous2_t **output, const uint8_t *input, const size_t len_in)
+{
+  ssize_t result;
+  *output = trn_cell_rendezvous2_new();
+  if (NULL == *output)
+    return -1;
+  result = trn_cell_rendezvous2_parse_into(*output, input, len_in);
+  if (result < 0) {
+    trn_cell_rendezvous2_free(*output);
+    *output = NULL;
+  }
+  return result;
+}
