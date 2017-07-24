@@ -355,7 +355,7 @@ make_intro_from_plaintext(
 
   /*
    * Figure out an upper bound on how big the ciphertext will be
-   * (see crypto_pk_public_hybrid_encrypt())
+   * (see crypto_pk_obsolete_public_hybrid_encrypt())
    */
   ciphertext_size = PKCS1_OAEP_PADDING_OVERHEAD;
   ciphertext_size += crypto_pk_keysize(key);
@@ -372,7 +372,7 @@ make_intro_from_plaintext(
   tt_assert(r >= 0);
 
   /* Do encryption */
-  r = crypto_pk_public_hybrid_encrypt(
+  r = crypto_pk_obsolete_public_hybrid_encrypt(
       key, cell + DIGEST_LEN, ciphertext_size,
       buf, len,
       PK_PKCS1_OAEP_PADDING, 0);

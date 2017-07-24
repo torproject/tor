@@ -1238,9 +1238,12 @@ crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
  *   - The beginning of the source data prefixed with a 16-byte symmetric key,
  *     padded and encrypted with the public key; followed by the rest of
  *     the source data encrypted in AES-CTR mode with the symmetric key.
+ *
+ * NOTE that this format does not authenticate the symmetrically encrypted
+ * part of the data, and SHOULD NOT BE USED for new protocols.
  */
 int
-crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
+crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env,
                                 char *to, size_t tolen,
                                 const char *from,
                                 size_t fromlen,
@@ -1302,10 +1305,14 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
   return -1;
 }
 
-/** Invert crypto_pk_public_hybrid_encrypt. Returns the number of bytes
- * written on success, -1 on failure. */
+/** Invert crypto_pk_obsolete_public_hybrid_encrypt. Returns the number of
+ * bytes written on success, -1 on failure.
+ *
+ * NOTE that this format does not authenticate the symmetrically encrypted
+ * part of the data, and SHOULD NOT BE USED for new protocols.
+ */
 int
-crypto_pk_private_hybrid_decrypt(crypto_pk_t *env,
+crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env,
                                  char *to,
                                  size_t tolen,
                                  const char *from,

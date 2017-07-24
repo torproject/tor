@@ -2732,7 +2732,7 @@ rend_service_decrypt_intro(
 
   /* Decrypt the encrypted part */
   result =
-    crypto_pk_private_hybrid_decrypt(
+    crypto_pk_obsolete_private_hybrid_decrypt(
        key, (char *)buf, sizeof(buf),
        (const char *)(intro->ciphertext), intro->ciphertext_len,
        PK_PKCS1_OAEP_PADDING, 1);

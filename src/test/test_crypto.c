@@ -1252,10 +1252,10 @@ test_crypto_pk(void *arg)
   for (i = 85; i < 140; ++i) {
     memset(data2,0,1024);
     memset(data3,0,1024);
-    len = crypto_pk_public_hybrid_encrypt(pk1,data2,sizeof(data2),
+    len = crypto_pk_obsolete_public_hybrid_encrypt(pk1,data2,sizeof(data2),
                                           data1,i,PK_PKCS1_OAEP_PADDING,0);
     tt_int_op(len, OP_GE, 0);
-    len = crypto_pk_private_hybrid_decrypt(pk1,data3,sizeof(data3),
+    len = crypto_pk_obsolete_private_hybrid_decrypt(pk1,data3,sizeof(data3),
                                            data2,len,PK_PKCS1_OAEP_PADDING,1);
     tt_int_op(len,OP_EQ, i);
     tt_mem_op(data1,OP_EQ, data3,i);

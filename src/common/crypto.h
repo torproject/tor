@@ -197,11 +197,11 @@ int crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                            const char *from, size_t fromlen);
 int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
                                   const char *from, size_t fromlen);
-int crypto_pk_public_hybrid_encrypt(crypto_pk_t *env, char *to,
+int crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env, char *to,
                                     size_t tolen,
                                     const char *from, size_t fromlen,
                                     int padding, int force);
-int crypto_pk_private_hybrid_decrypt(crypto_pk_t *env, char *to,
+int crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env, char *to,
                                      size_t tolen,
                                      const char *from, size_t fromlen,
                                      int padding, int warnOnFailure);

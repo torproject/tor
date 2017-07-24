@@ -142,7 +142,8 @@ test_bad_onion_handshake(void *arg)
 
   /* Server: Case 1: the encrypted data is degenerate. */
   memset(junk_buf, 0, sizeof(junk_buf));
-  crypto_pk_public_hybrid_encrypt(pk, junk_buf2, TAP_ONIONSKIN_CHALLENGE_LEN,
+  crypto_pk_obsolete_public_hybrid_encrypt(pk,
+                               junk_buf2, TAP_ONIONSKIN_CHALLENGE_LEN,
                                junk_buf, DH_KEY_LEN, PK_PKCS1_OAEP_PADDING, 1);
   tt_int_op(-1, OP_EQ,
             onion_skin_TAP_server_handshake(junk_buf2, pk, NULL,

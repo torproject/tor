@@ -286,9 +286,9 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     goto perm_err;
   }
 
-  /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
+  /*XXX maybe give crypto_pk_obsolete_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
-  r = crypto_pk_public_hybrid_encrypt(intro_key, payload+DIGEST_LEN,
+  r = crypto_pk_obsolete_public_hybrid_encrypt(intro_key, payload+DIGEST_LEN,
                                       sizeof(payload)-DIGEST_LEN,
                                       tmp,
                                       (int)(dh_offset+DH_KEY_LEN),
