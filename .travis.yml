@@ -34,9 +34,15 @@ sudo: false
 addons:
   apt:
     packages:
+      ## Required dependencies
       - libevent-dev
       - libseccomp2
       - zlib1g-dev
+      ## Optional dependencies
+      - liblzma-dev
+      - libscrypt-dev
+      ## zstd doesn't exist in Ubuntu Trusty
+      #- libzstd
 
 ## The build matrix in the following two stanzas expands into four builds (per OS):
 ##
@@ -62,10 +68,14 @@ before_install:
   - curl -Ssf -o rustup.sh https://sh.rustup.rs
 
 install:
-  ## If we're on OSX use brew to install dependencies (for Linux, see the "apt:" section above)
+  ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl    || brew upgrade openssl;    }; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libevent   || brew upgrade libevent;   }; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated pkg-config || brew upgrade pkg-config; }; fi
+  ## If we're on OSX also install the optional dependencies
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated xz         || brew upgrade xz;         }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libscrypt  || brew upgrade libscrypt;  }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated zstd       || brew upgrade zstd;       }; fi
 
 script:
   - ./autogen.sh
