@@ -266,7 +266,9 @@ test_valid_service_v2(void *arg)
       "HiddenServiceVersion 2\n"
       "HiddenServicePort 80\n"
       "HiddenServicePort 22 localhost:22\n"
+#ifndef HAVE_SYS_UN_H
       "HiddenServicePort 42 unix:/path/to/socket\n"
+#endif
       "HiddenServiceAuthorizeClient basic alice,bob,eve\n"
       "HiddenServiceAllowUnknownPorts 1\n"
       "HiddenServiceMaxStreams 42\n"
