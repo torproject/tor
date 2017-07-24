@@ -68,7 +68,7 @@ before_install:
   ## If we're on OSX, homebrew usually needs to updated first
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
   ## Download rustup
-  - curl -Ssf -o rustup.sh https://sh.rustup.rs
+  - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
 
 install:
   ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
@@ -80,13 +80,13 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libscrypt  || brew upgrade libscrypt;  }; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated zstd       || brew upgrade zstd;       }; fi
   ## Install the nightly channels of rustc and cargo and setup our toolchain environment
-  - sh rustup.sh -y --default-toolchain nightly
-  - source $HOME/.cargo/env
+  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain nightly; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ## Get some info about rustc and cargo
-  - which rustc
-  - which cargo
-  - rustc --version
-  - cargo --version
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustc; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then which cargo; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
+  - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
 
 script:
   - ./autogen.sh
