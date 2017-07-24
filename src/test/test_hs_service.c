@@ -16,6 +16,7 @@
 #define HS_INTROPOINT_PRIVATE
 #define MAIN_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define STATEFILE_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 
 #include "test.h"
@@ -43,6 +44,7 @@
 #include "hs_service.h"
 #include "main.h"
 #include "rendservice.h"
+#include "statefile.h"
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
@@ -54,6 +56,15 @@ mock_networkstatus_get_live_consensus(time_t now)
 {
   (void) now;
   return &mock_ns;
+}
+
+static or_state_t *dummy_state = NULL;
+
+/* Mock function to get fake or state (used for rev counters) */
+static or_state_t *
+get_or_state_replacement(void)
+{
+  return dummy_state;
 }
 
 /* Mock function because we are not trying to test the close circuit that does
@@ -779,6 +790,10 @@ test_introduce2(void *arg)
 
   hs_init();
   MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
   circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_INTRO, flags);
 
@@ -830,6 +845,8 @@ test_introduce2(void *arg)
   tt_u64_op(ip->introduce2_count, OP_EQ, 0);
 
  done:
+  or_state_free(dummy_state);
+  dummy_state = NULL;
   circuit_free(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
@@ -1011,6 +1028,10 @@ test_build_update_descriptors(void *arg)
 
   hs_init();
   MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
   /* Create a service without a current descriptor to trigger a build. */
   service = hs_service_new(get_options());
@@ -1133,7 +1154,7 @@ test_build_update_descriptors(void *arg)
 }
 
 static void
-test_upload_desctriptors(void *arg)
+test_upload_descriptors(void *arg)
 {
   int ret;
   time_t now = time(NULL);
@@ -1144,6 +1165,10 @@ test_upload_desctriptors(void *arg)
 
   hs_init();
   MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
   /* Create a service with no descriptor. It's added to the global map. */
   service = hs_service_new(get_options());
@@ -1278,7 +1303,7 @@ struct testcase_t hs_service_tests[] = {
     NULL, NULL },
   { "build_update_descriptors", test_build_update_descriptors, TT_FORK,
     NULL, NULL },
-  { "upload_desctriptors", test_upload_desctriptors, TT_FORK,
+  { "upload_descriptors", test_upload_descriptors, TT_FORK,
     NULL, NULL },
   { "revision_counter_state", test_revision_counter_state, TT_FORK,
     NULL, NULL },
