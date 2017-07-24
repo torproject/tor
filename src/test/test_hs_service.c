@@ -1194,6 +1194,65 @@ test_upload_desctriptors(void *arg)
   UNMOCK(hs_overlap_mode_is_active);
 }
 
+/** Test the functions that save and load HS revision counters to state. */
+static void
+test_revision_counter_state(void *arg)
+{
+  char *state_line_one = NULL;
+  char *state_line_two = NULL;
+
+  hs_service_descriptor_t *desc_one = service_descriptor_new();
+  hs_service_descriptor_t *desc_two = service_descriptor_new();
+
+  (void) arg;
+
+  /* Prepare both descriptors */
+  desc_one->desc->plaintext_data.revision_counter = 42;
+  desc_two->desc->plaintext_data.revision_counter = 240;
+  memset(&desc_one->blinded_kp.pubkey.pubkey, '\x42',
+         sizeof(desc_one->blinded_kp.pubkey.pubkey));
+  memset(&desc_two->blinded_kp.pubkey.pubkey, '\xf0',
+         sizeof(desc_one->blinded_kp.pubkey.pubkey));
+
+  /* Turn the descriptor rev counters into state lines */
+  state_line_one = encode_desc_rev_counter_for_state(desc_one);
+  tt_str_op(state_line_one, OP_EQ,
+            "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI 42");
+
+  state_line_two = encode_desc_rev_counter_for_state(desc_two);
+  tt_str_op(state_line_two, OP_EQ,
+            "8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PA 240");
+
+  /* Now let's test our state parsing function: */
+  int service_found;
+  uint64_t cached_rev_counter;
+
+  /* First's try with wrong pubkey and check that no service was found */
+  cached_rev_counter =check_state_line_for_service_rev_counter(state_line_one,
+                                                 &desc_two->blinded_kp.pubkey,
+                                                               &service_found);
+  tt_int_op(service_found, OP_EQ, 0);
+
+  /* Now let's try with the right pubkeys */
+  cached_rev_counter =check_state_line_for_service_rev_counter(state_line_one,
+                                                 &desc_one->blinded_kp.pubkey,
+                                                               &service_found);
+  tt_int_op(service_found, OP_EQ, 1);
+  tt_int_op(cached_rev_counter, OP_EQ, 42);
+
+  cached_rev_counter =check_state_line_for_service_rev_counter(state_line_two,
+                                                 &desc_two->blinded_kp.pubkey,
+                                                               &service_found);
+  tt_int_op(service_found, OP_EQ, 1);
+  tt_int_op(cached_rev_counter, OP_EQ, 240);
+
+ done:
+  tor_free(state_line_one);
+  tor_free(state_line_two);
+  service_descriptor_free(desc_one);
+  service_descriptor_free(desc_two);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
@@ -1220,6 +1279,8 @@ struct testcase_t hs_service_tests[] = {
   { "build_update_descriptors", test_build_update_descriptors, TT_FORK,
     NULL, NULL },
   { "upload_desctriptors", test_upload_desctriptors, TT_FORK,
+    NULL, NULL },
+  { "revision_counter_state", test_revision_counter_state, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

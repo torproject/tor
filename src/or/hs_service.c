@@ -924,7 +924,7 @@ load_service_keys(hs_service_t *service)
 }
 
 /* Free a given service descriptor object and all key material is wiped. */
-static void
+STATIC void
 service_descriptor_free(hs_service_descriptor_t *desc)
 {
   if (!desc) {
@@ -1947,7 +1947,7 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
  *
  *     HidServRevCounter <blinded_pubkey> <rev_counter>
  */
-static char *
+STATIC char *
 encode_desc_rev_counter_for_state(const hs_service_descriptor_t *desc)
 {
   char *state_str = NULL;
@@ -2009,7 +2009,7 @@ update_revision_counters_in_state(void)
  *  with <b>blinded_pubkey</b>. Set <b>service_found_out</b> to True if the
  *  line is relevant to this service, and return the cached revision
  *  counter. Else set <b>service_found_out</b> to False. */
-static uint64_t
+STATIC uint64_t
 check_state_line_for_service_rev_counter(const char *state_line,
                                          ed25519_public_key_t *blinded_pubkey,
                                          int *service_found_out)

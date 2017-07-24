@@ -325,6 +325,16 @@ STATIC void build_all_descriptors(time_t now);
 STATIC void update_all_descriptors(time_t now);
 STATIC void run_upload_descriptor_event(time_t now);
 
+STATIC char *
+encode_desc_rev_counter_for_state(const hs_service_descriptor_t *desc);
+
+STATIC void service_descriptor_free(hs_service_descriptor_t *desc);
+
+STATIC uint64_t
+check_state_line_for_service_rev_counter(const char *state_line,
+                                         ed25519_public_key_t *blinded_pubkey,
+                                         int *service_found_out);
+
 #endif /* TOR_UNIT_TESTS */
 
 #endif /* HS_SERVICE_PRIVATE */
