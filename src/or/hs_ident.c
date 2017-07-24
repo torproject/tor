@@ -30,9 +30,6 @@ hs_ident_circuit_free(hs_ident_circuit_t *ident)
   if (ident == NULL) {
     return;
   }
-  if (ident->auth_key_type == HS_AUTH_KEY_TYPE_LEGACY) {
-    crypto_pk_free(ident->auth_rsa_pk);
-  }
   memwipe(ident, 0, sizeof(hs_ident_circuit_t));
   tor_free(ident);
 }
