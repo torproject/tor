@@ -260,6 +260,25 @@ test_get_start_time_of_current_run(void *arg)
   ;
 }
 
+static void
+test_get_sr_protocol_duration(void *arg)
+{
+  (void) arg;
+
+  /* Check that by default an SR phase is 12 hours */
+  tt_int_op(sr_state_get_phase_duration(), ==, 12*60*60);
+  tt_int_op(sr_state_get_protocol_run_duration(), ==, 24*60*60);
+
+  /* Now alter the voting interval and check that the SR phase is 2 mins long
+   * if voting happens every 10 seconds (10*12 seconds = 2 mins) */
+  or_options_t *options = get_options_mutable();
+  options->V3AuthVotingInterval = 10;
+  tt_int_op(sr_state_get_phase_duration(), ==, 2*60);
+  tt_int_op(sr_state_get_protocol_run_duration(), ==, 4*60);
+
+ done: ;
+}
+
 /* Mock function to immediately return our local 'mock_consensus'. */
 static networkstatus_t *
 mock_networkstatus_get_live_consensus(time_t now)
@@ -1345,6 +1364,8 @@ struct testcase_t sr_tests[] = {
     NULL, NULL },
   { "get_start_time_of_current_run", test_get_start_time_of_current_run,
     TT_FORK, NULL, NULL },
+  { "get_sr_protocol_duration", test_get_sr_protocol_duration, TT_FORK,
+    NULL, NULL },
   { "get_state_valid_until_time", test_get_state_valid_until_time, TT_FORK,
     NULL, NULL },
   { "vote", test_vote, TT_FORK,

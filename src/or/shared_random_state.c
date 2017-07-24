@@ -176,6 +176,22 @@ sr_state_get_start_time_of_current_protocol_run(time_t now)
   return beginning_of_current_round - time_elapsed_since_start_of_run;
 }
 
+/** Return the time (in seconds) it takes to complete a full SR protocol phase
+ *  (e.g. the commit phase). */
+unsigned int
+sr_state_get_phase_duration(void)
+{
+  return SHARED_RANDOM_N_ROUNDS * get_voting_interval();
+}
+
+/** Return the time (in seconds) it takes to complete a full SR protocol run */
+unsigned int
+sr_state_get_protocol_run_duration(void)
+{
+  int total_protocol_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
+  return total_protocol_rounds * get_voting_interval();
+}
+
 /* Return the time we should expire the state file created at <b>now</b>.
  * We expire the state file in the beginning of the next protocol run. */
 STATIC time_t

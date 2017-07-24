@@ -122,6 +122,8 @@ void sr_state_save(void);
 void sr_state_free(void);
 
 time_t sr_state_get_start_time_of_current_protocol_run(time_t now);
+unsigned int sr_state_get_phase_duration(void);
+unsigned int sr_state_get_protocol_run_duration(void);
 
 #ifdef SHARED_RANDOM_STATE_PRIVATE
 
