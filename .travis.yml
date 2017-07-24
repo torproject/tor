@@ -66,9 +66,9 @@ before_install:
 
 install:
   ## If we're on OSX use brew to install dependencies (for Linux, see the "apt:" section above)
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl || brew upgrade openssl;    }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl || brew upgrade libevent;   }; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl || brew upgrade pkg-config; }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl    || brew upgrade openssl;    }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libevent   || brew upgrade libevent;   }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated pkg-config || brew upgrade pkg-config; }; fi
   ## Install the nightly channels of rustc and cargo and setup our toolchain environment
   - sh rustup.sh -y --default-toolchain nightly
   - source $HOME/.cargo/env
