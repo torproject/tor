@@ -488,6 +488,7 @@ test_access_service(void *arg)
   char *conf = NULL;
   char *hsdir_v3 = tor_strdup(get_fname("hs3"));
   hs_service_ht *global_map;
+  hs_service_t *s = NULL;
 
   (void) arg;
 
@@ -513,7 +514,7 @@ test_access_service(void *arg)
    * in the global map. */
   hs_service_load_all_keys();
   tt_int_op(get_hs_service_map_size(), OP_EQ, 1);
-  hs_service_t *s = get_first_service();
+  s = get_first_service();
   tt_assert(s);
   global_map = get_hs_service_map();
   tt_assert(global_map);
@@ -535,14 +536,9 @@ test_access_service(void *arg)
   /* Twice should fail. */
   ret = register_service(global_map, s);
   tt_int_op(ret, OP_EQ, -1);
-  /* Modify key of service and we should be able to put it back in. */
-  s->keys.identity_pk.pubkey[1] = '\x42';
-  ret = register_service(global_map, s);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(get_hs_service_map_size(), OP_EQ, 2);
   /* Remove service from map so we don't double free on cleanup. */
   remove_service(global_map, s);
-  tt_int_op(get_hs_service_map_size(), OP_EQ, 1);
+  tt_int_op(get_hs_service_map_size(), OP_EQ, 0);
   query = find_service(global_map, &s->keys.identity_pk);
   tt_assert(!query);
   /* Let's try to remove twice for fun. */
@@ -552,6 +548,7 @@ test_access_service(void *arg)
   teardown_capture_of_logs();
 
  done:
+  hs_service_free(s);
   tor_free(hsdir_v3);
   hs_free_all();
 }
