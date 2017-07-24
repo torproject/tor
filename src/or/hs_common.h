@@ -52,8 +52,6 @@
 #define HS_TIME_PERIOD_LENGTH_MIN 30 /* minutes */
 /* The minimum time period length as seen in prop224 section [TIME-PERIODS] */
 #define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes */
-/* The time period rotation offset as seen in prop224 section [TIME-PERIODS] */
-#define HS_TIME_PERIOD_ROTATION_OFFSET (12 * 60) /* minutes */
 
 /* Prefix of the onion address checksum. */
 #define HS_SERVICE_ADDR_CHECKSUM_PREFIX ".onion checksum"

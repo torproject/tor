@@ -196,13 +196,18 @@ uint64_t
 hs_get_time_period_num(time_t now)
 {
   uint64_t time_period_num;
+
+  /* Start by calculating minutes since the epoch */
   uint64_t time_period_length = get_time_period_length();
   uint64_t minutes_since_epoch = now / 60;
 
-  /* Now subtract half a day to fit the prop224 time period schedule (see
-   * section [TIME-PERIODS]). */
-  tor_assert(minutes_since_epoch > HS_TIME_PERIOD_ROTATION_OFFSET);
-  minutes_since_epoch -= HS_TIME_PERIOD_ROTATION_OFFSET;
+  /* Apply the rotation offset as specified by prop224 (section
+   * [TIME-PERIODS]), so that new time periods synchronize nicely with SRV
+   * publication */
+  unsigned int time_period_rotation_offset = sr_state_get_phase_duration();
+  time_period_rotation_offset /= 60; /* go from seconds to minutes */
+  tor_assert(minutes_since_epoch > time_period_rotation_offset);
+  minutes_since_epoch -= time_period_rotation_offset;
 
   /* Calculate the time period */
   time_period_num = minutes_since_epoch / time_period_length;
