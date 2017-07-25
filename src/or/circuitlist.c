@@ -1961,8 +1961,8 @@ circuit_about_to_free(circuit_t *circ)
     int timed_out = (reason == END_CIRC_REASON_TIMEOUT);
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     tor_assert(ocirc->build_state->chosen_exit);
-    tor_assert(ocirc->rend_data);
-    if (orig_reason != END_CIRC_REASON_IP_NOW_REDUNDANT) {
+    if (orig_reason != END_CIRC_REASON_IP_NOW_REDUNDANT &&
+        ocirc->rend_data) {
       /* treat this like getting a nack from it */
       log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). %s",
           safe_str_client(rend_data_get_address(ocirc->rend_data)),
@@ -1978,7 +1978,8 @@ circuit_about_to_free(circuit_t *circ)
              reason != END_CIRC_REASON_TIMEOUT) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     if (ocirc->build_state->chosen_exit && ocirc->rend_data) {
-      if (orig_reason != END_CIRC_REASON_IP_NOW_REDUNDANT) {
+      if (orig_reason != END_CIRC_REASON_IP_NOW_REDUNDANT &&
+          ocirc->rend_data) {
         log_info(LD_REND, "Failed intro circ %s to %s "
             "(building circuit to intro point). "
             "Marking intro point as possibly unreachable.",
