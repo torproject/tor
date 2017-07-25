@@ -34,6 +34,9 @@ int hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
 int hs_client_receive_introduce_ack(origin_circuit_t *circ,
                                     const uint8_t *payload,
                                     size_t payload_len);
+int hs_client_receive_rendezvous2(origin_circuit_t *circ,
+                                  const uint8_t *payload,
+                                  size_t payload_len);
 
 void hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident);
 

@@ -932,22 +932,11 @@ int
 rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
                                size_t request_len)
 {
-  if ((circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY &&
-       circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
-      || !circ->build_state->pending_final_cpath) {
-    log_warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
-             "expecting it. Closing.");
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    return -1;
-  }
-
   if (request_len != DH_KEY_LEN+DIGEST_LEN) {
     log_warn(LD_PROTOCOL,"Incorrect length (%d) on RENDEZVOUS2 cell.",
              (int)request_len);
     goto err;
   }
-
-  log_info(LD_REND,"Got RENDEZVOUS2 cell from hidden service.");
 
   if (hs_circuit_setup_e2e_rend_circ_legacy_client(circ, request) < 0) {
     log_warn(LD_GENERAL, "Failed to setup circ");

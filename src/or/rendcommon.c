@@ -790,7 +790,7 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
       break;
     case RELAY_COMMAND_RENDEZVOUS2:
       if (origin_circ)
-        r = rend_client_receive_rendezvous(origin_circ,payload,length);
+        r = hs_client_receive_rendezvous2(origin_circ,payload,length);
       break;
     case RELAY_COMMAND_INTRO_ESTABLISHED:
       if (origin_circ)
