@@ -3007,7 +3007,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
  * <0 and set *<b>end_reason_out</b> to the end reason we should send back to
  * the client.
  *
- * Return -1 in the case where want to send a RELAY_END cell, and < -1 when
+ * Return -1 in the case where we want to send a RELAY_END cell, and < -1 when
  * we don't.
  **/
 STATIC int
