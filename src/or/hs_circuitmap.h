@@ -43,6 +43,8 @@ struct origin_circuit_t *
 hs_circuitmap_get_intro_circ_v2_service_side(const uint8_t *digest);
 struct origin_circuit_t *
 hs_circuitmap_get_rend_circ_service_side(const uint8_t *cookie);
+struct origin_circuit_t *
+hs_circuitmap_get_rend_circ_client_side(const uint8_t *cookie);
 
 void hs_circuitmap_register_intro_circ_v2_service_side(
                                         struct origin_circuit_t *circ,
@@ -53,6 +55,9 @@ void hs_circuitmap_register_intro_circ_v3_service_side(
 void hs_circuitmap_register_rend_circ_service_side(
                                         struct origin_circuit_t *circ,
                                         const uint8_t *cookie);
+void hs_circuitmap_register_rend_circ_client_side(
+                                      struct origin_circuit_t *circ,
+                                      const uint8_t *cookie);
 
 void hs_circuitmap_remove_circuit(struct circuit_t *circ);
 
@@ -76,6 +81,9 @@ typedef enum {
   HS_TOKEN_INTRO_V2_SERVICE_SIDE,
   /** A v3 introduction point pubkey on a hidden service (256bit) */
   HS_TOKEN_INTRO_V3_SERVICE_SIDE,
+
+  /** A rendezvous cookie on the client side (128bit) */
+  HS_TOKEN_REND_CLIENT_SIDE,
 } hs_token_type_t;
 
 /** Represents a token used in the HS protocol. Each such token maps to a
