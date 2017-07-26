@@ -79,7 +79,7 @@ install:
 
 script:
   - ./autogen.sh
-  - ./configure $RUST_OPTIONS --disable-asciidoc --enable-gcc-warnings --disable-silent-rules --enable-fragile-hardening
+  - ./configure $RUST_OPTIONS --disable-asciidoc --enable-fatal-warnings --disable-silent-rules --enable-fragile-hardening
   ## We run `make check` because that's what https://jenkins.torproject.org does.
   - make check
 
