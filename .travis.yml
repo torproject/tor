@@ -7,7 +7,7 @@ compiler:
 notifications:
   irc:
     channels:
-      - "irc.oftc.net#tor-bots"
+      - "irc.oftc.net#tor-ci"
     template:
       - "%{repository} %{branch} %{commit} - %{author}: %{commit_subject}"
       - "Build #%{build_number} %{result}. Details: %{build_url}"
