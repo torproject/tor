@@ -1,0 +1,88 @@
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+notifications:
+  irc:
+    channels:
+      - "irc.oftc.net#tor-bots"
+    template:
+      - "%{repository} %{branch} %{commit} - %{author}: %{commit_subject}"
+      - "Build #%{build_number} %{result}. Details: %{build_url}"
+    on_success: change
+    on_failure: change
+  email:
+    on_success: never
+    on_failure: change
+
+os:
+  - linux
+  ## Uncomment the following line to also run the entire build matrix on OSX.
+  ## This will make your CI builds take roughly ten times longer to finish.
+  # - osx
+
+## Use the Ubuntu Trusty images.
+dist: trusty
+
+## We don't need sudo. (The "apt:" stanza after this allows us to not need sudo;
+## otherwise, we would need it for getting dependencies.)
+sudo: false
+
+## (Linux only) Download our dependencies
+addons:
+  apt:
+    packages:
+      ## Required dependencies
+      - libevent-dev
+      - libseccomp2
+      - zlib1g-dev
+      ## Optional dependencies
+      - liblzma-dev
+      - libscrypt-dev
+      ## zstd doesn't exist in Ubuntu Trusty
+      #- libzstd
+
+## The build matrix in the following two stanzas expands into four builds (per OS):
+##
+##  * with GCC, with Rust
+##  * with GCC, without Rust
+##  * with Clang, with Rust
+##  * with Clang, without Rust
+env:
+  global:
+    ## The Travis CI environment allows us two cores, so let's use both.
+    - MAKEFLAGS="-j 2"
+
+matrix:
+  ## If one build in the matrix fails (e.g. if building withour Rust and Clang
+  ## fails, but building with Rust and GCC is still going), then cancel the
+  ## entire job early and call the whole thing a failure.
+  fast_finish: true
+
+before_install:
+  ## If we're on OSX, homebrew usually needs to updated first
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
+  ## Download rustup
+  - curl -Ssf -o rustup.sh https://sh.rustup.rs
+
+install:
+  ## If we're on OSX use brew to install required dependencies (for Linux, see the "apt:" section above)
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated openssl    || brew upgrade openssl;    }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libevent   || brew upgrade libevent;   }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated pkg-config || brew upgrade pkg-config; }; fi
+  ## If we're on OSX also install the optional dependencies
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated xz         || brew upgrade xz;         }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libscrypt  || brew upgrade libscrypt;  }; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated zstd       || brew upgrade zstd;       }; fi
+
+script:
+  - ./autogen.sh
+  - ./configure $RUST_OPTIONS --disable-asciidoc --enable-gcc-warnings --disable-silent-rules --enable-fragile-hardening
+  ## We run `make check` because that's what https://jenkins.torproject.org does.
+  - make check
+
+after_failure:
+  ## `make check` will leave a log file with more details of test failures.
+  - cat test-suite.log
