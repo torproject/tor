@@ -5608,6 +5608,18 @@ clamp_double_to_int64(double number)
 #define PROBLEMATIC_FLOAT_CONVERSION_WARNING
 DISABLE_GCC_WARNING(float-conversion)
 #endif
+
+/*
+  With clang 4.0 we apparently run into "double promotion" warnings here,
+  since clang thinks we're promoting a double to a long double.
+ */
+#if defined(__clang__)
+#if __has_warning("-Wdouble-promotion")
+#define PROBLEMATIC_DOUBLE_PROMOTION_WARNING
+DISABLE_GCC_WARNING(double-promotion)
+#endif
+#endif
+
   /* NaN is a special case that can't be used with the logic below. */
   if (isnan(number)) {
     return 0;
@@ -5633,6 +5645,10 @@ DISABLE_GCC_WARNING(float-conversion)
 
   /* Handle infinities and finite numbers with magnitude >= 2^63. */
   return signbit(number) ? INT64_MIN : INT64_MAX;
+
+#ifdef PROBLEMATIC_DOUBLE_PROMOTION_WARNING
+ENABLE_GCC_WARNING(double-promotion)
+#endif
 #ifdef PROBLEMATIC_FLOAT_CONVERSION_WARNING
 ENABLE_GCC_WARNING(float-conversion)
 #endif
