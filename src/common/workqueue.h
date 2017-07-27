@@ -22,6 +22,20 @@ typedef enum workqueue_reply_t {
   WQ_RPL_SHUTDOWN = 2, /** indicates thread is shutting down */
 } workqueue_reply_t;
 
+/** Possible priorities for work.  Lower numeric values are more important. */
+typedef enum workqueue_priority_t {
+  WQ_PRI_HIGH = 0,
+  WQ_PRI_MED  = 1,
+  WQ_PRI_LOW  = 2,
+} workqueue_priority_t;
+
+workqueue_entry_t *threadpool_queue_work_priority(threadpool_t *pool,
+                                    workqueue_priority_t prio,
+                                    workqueue_reply_t (*fn)(void *,
+                                                            void *),
+                                    void (*reply_fn)(void *),
+                                    void *arg);
+
 workqueue_entry_t *threadpool_queue_work(threadpool_t *pool,
                                          workqueue_reply_t (*fn)(void *,
                                                                  void *),

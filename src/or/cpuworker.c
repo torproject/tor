@@ -11,8 +11,11 @@
  * The multithreading backend for this module is in workqueue.c; this module
  * specializes workqueue.c.
  *
- * Right now, we only use this for processing onionskins, and invoke it mostly
- * from onion.c.
+ * Right now, we use this infrastructure
+ *  <ul><li>for processing onionskins in onion.c
+ *      <li>for compressing consensuses in consdiffmgr.c,
+ *      <li>and for calculating diffs and compressing them in consdiffmgr.c.
+ *  </ul>
  **/
 #include "or.h"
 #include "channel.h"
@@ -89,7 +92,14 @@ cpu_init(void)
     event_add(reply_event, NULL);
   }
   if (!threadpool) {
-    threadpool = threadpool_new(get_num_cpus(get_options()),
+    /*
+      In our threadpool implementation, half the threads are permissive and
+      half are strict (when it comes to running lower-priority tasks). So we
+      always make sure we have at least two threads, so that there will be at
+      least one thread of each kind.
+    */
+    const int n_threads = get_num_cpus(get_options()) + 1;
+    threadpool = threadpool_new(n_threads,
                                 replyqueue,
                                 worker_state_new,
                                 worker_state_free,
@@ -481,16 +491,18 @@ queue_pending_tasks(void)
 
 /** DOCDOC */
 MOCK_IMPL(workqueue_entry_t *,
-cpuworker_queue_work,(workqueue_reply_t (*fn)(void *, void *),
+cpuworker_queue_work,(workqueue_priority_t priority,
+                      workqueue_reply_t (*fn)(void *, void *),
                       void (*reply_fn)(void *),
                       void *arg))
 {
   tor_assert(threadpool);
 
-  return threadpool_queue_work(threadpool,
-                               fn,
-                               reply_fn,
-                               arg);
+  return threadpool_queue_work_priority(threadpool,
+                                        priority,
+                                        fn,
+                                        reply_fn,
+                                        arg);
 }
 
 /** Try to tell a cpuworker to perform the public key operations necessary to
@@ -545,7 +557,8 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
   memwipe(&req, 0, sizeof(req));
 
   ++total_pending_tasks;
-  queue_entry = threadpool_queue_work(threadpool,
+  queue_entry = threadpool_queue_work_priority(threadpool,
+                                      WQ_PRI_HIGH,
                                       cpuworker_onion_handshake_threadfn,
                                       cpuworker_onion_handshake_replyfn,
                                       job);
