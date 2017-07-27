@@ -360,7 +360,8 @@ workerthread_new(int32_t lower_priority_chance,
  * function's responsibility to free the work object.
  *
  * On success, return a workqueue_entry_t object that can be passed to
- * workqueue_entry_cancel(). On failure, return NULL.
+ * workqueue_entry_cancel(). On failure, return NULL.  (Failure is not
+ * currently possible, but callers should check anyway.)
  *
  * Items are executed in a loose priority order -- each thread will usually
  * take from the queued work with the highest prioirity, but will occasionally
