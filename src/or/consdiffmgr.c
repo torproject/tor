@@ -1616,7 +1616,8 @@ consensus_diff_queue_diff_work(consensus_cache_entry_t *diff_from,
     goto err;
 
   workqueue_entry_t *work;
-  work = cpuworker_queue_work(consensus_diff_worker_threadfn,
+  work = cpuworker_queue_work(WQ_PRI_LOW,
+                              consensus_diff_worker_threadfn,
                               consensus_diff_worker_replyfn,
                               job);
   if (!work)
@@ -1779,7 +1780,8 @@ consensus_queue_compression_work(const char *consensus,
 
   if (background_compression) {
     workqueue_entry_t *work;
-    work = cpuworker_queue_work(consensus_compress_worker_threadfn,
+    work = cpuworker_queue_work(WQ_PRI_LOW,
+                                consensus_compress_worker_threadfn,
                                 consensus_compress_worker_replyfn,
                                 job);
     if (!work) {

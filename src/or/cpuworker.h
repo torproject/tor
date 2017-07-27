@@ -16,7 +16,9 @@ void cpu_init(void);
 void cpuworkers_rotate_keyinfo(void);
 struct workqueue_entry_s;
 enum workqueue_reply_t;
+enum workqueue_priority_t;
 MOCK_DECL(struct workqueue_entry_s *, cpuworker_queue_work, (
+                    enum workqueue_priority_t priority,
                     enum workqueue_reply_t (*fn)(void *, void *),
                     void (*reply_fn)(void *),
                     void *arg));

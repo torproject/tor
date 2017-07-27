@@ -200,7 +200,9 @@ add_work(threadpool_t *tp)
     crypto_rand((char*)w->msg, 20);
     w->msglen = 20;
     ++rsa_sent;
-    return threadpool_queue_work(tp, workqueue_do_rsa, handle_reply, w);
+    return threadpool_queue_work_priority(tp,
+                                          WQ_PRI_MED,
+                                          workqueue_do_rsa, handle_reply, w);
   } else {
     ecdh_work_t *w = tor_malloc_zero(sizeof(*w));
     w->serial = n_sent++;
