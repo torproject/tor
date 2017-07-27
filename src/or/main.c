@@ -1847,6 +1847,7 @@ rend_cache_failure_clean_callback(time_t now, const or_options_t *options)
    * clean it as soon as we can since we want to make sure the client waits
    * as little as possible for reachability reasons. */
   rend_cache_failure_clean(now);
+  hs_cache_client_intro_state_clean(now);
   return 30;
 }
 

@@ -324,6 +324,11 @@ hs_cache_clean_as_dir(time_t now)
 /* Client-side HS descriptor cache. Map indexed by service identity key. */
 static digest256map_t *hs_cache_v3_client;
 
+/* Client-side introduction point state cache. Map indexed by service public
+ * identity key (onion address). It contains hs_cache_client_intro_state_t
+ * objects all related to a specific service. */
+static digest256map_t *hs_cache_client_intro_state;
+
 /* Remove a given descriptor from our cache. */
 static void
 remove_v3_desc_as_client(const hs_cache_client_descriptor_t *desc)
@@ -408,6 +413,172 @@ cache_client_desc_free_(void *ptr)
 {
   hs_cache_client_descriptor_t *desc = ptr;
   cache_client_desc_free(desc);
+}
+
+/* Return a newly allocated and initialized hs_cache_intro_state_t object. */
+static hs_cache_intro_state_t *
+cache_intro_state_new(void)
+{
+  hs_cache_intro_state_t *state = tor_malloc_zero(sizeof(*state));
+  state->created_ts = approx_time();
+  return state;
+}
+
+/* Free an hs_cache_intro_state_t object. */
+static void
+cache_intro_state_free(hs_cache_intro_state_t *state)
+{
+  tor_free(state);
+}
+
+/* Helper function: use by the free all function. */
+static void
+cache_intro_state_free_(void *state)
+{
+  cache_intro_state_free(state);
+}
+
+/* Return a newly allocated and initialized hs_cache_client_intro_state_t
+ * object. */
+static hs_cache_client_intro_state_t *
+cache_client_intro_state_new(void)
+{
+  hs_cache_client_intro_state_t *cache = tor_malloc_zero(sizeof(*cache));
+  cache->intro_points = digest256map_new();
+  return cache;
+}
+
+/* Free a cache client intro state object. */
+static void
+cache_client_intro_state_free(hs_cache_client_intro_state_t *cache)
+{
+  if (cache == NULL) {
+    return;
+  }
+  digest256map_free(cache->intro_points, cache_intro_state_free_);
+  tor_free(cache);
+}
+
+/* Helper function: use by the free all function. */
+static void
+cache_client_intro_state_free_(void *entry)
+{
+  cache_client_intro_state_free(entry);
+}
+
+/* For the given service identity key service_pk and an introduction
+ * authentication key auth_key, lookup the intro state object. Return 1 if
+ * found and put it in entry if not NULL. Return 0 if not found and entry is
+ * untouched. */
+static int
+cache_client_intro_state_lookup(const ed25519_public_key_t *service_pk,
+                                const ed25519_public_key_t *auth_key,
+                                hs_cache_intro_state_t **entry)
+{
+  hs_cache_intro_state_t *state;
+  hs_cache_client_intro_state_t *cache;
+
+  tor_assert(service_pk);
+  tor_assert(auth_key);
+
+  /* Lookup the intro state cache for this service key. */
+  cache = digest256map_get(hs_cache_client_intro_state, service_pk->pubkey);
+  if (cache == NULL) {
+    goto not_found;
+  }
+
+  /* From the cache we just found for the service, lookup in the introduction
+   * points map for the given authentication key. */
+  state = digest256map_get(cache->intro_points, auth_key->pubkey);
+  if (state == NULL) {
+    goto not_found;
+  }
+  if (entry) {
+    *entry = state;
+  }
+  return 1;
+ not_found:
+  return 0;
+}
+
+/* Note the given failure in state. */
+static void
+cache_client_intro_state_note(hs_cache_intro_state_t *state,
+                              rend_intro_point_failure_t failure)
+{
+  tor_assert(state);
+  switch (failure) {
+  case INTRO_POINT_FAILURE_GENERIC:
+    state->error = 1;
+    break;
+  case INTRO_POINT_FAILURE_TIMEOUT:
+    state->timed_out = 1;
+    break;
+  case INTRO_POINT_FAILURE_UNREACHABLE:
+    state->unreachable_count++;
+    break;
+  default:
+    tor_assert_nonfatal_unreached();
+    return;
+  }
+}
+
+/* For the given service identity key service_pk and an introduction
+ * authentication key auth_key, add an entry in the client intro state cache
+ * If no entry exists for the service, it will create one. If state is non
+ * NULL, it will point to the new intro state entry. */
+static void
+cache_client_intro_state_add(const ed25519_public_key_t *service_pk,
+                             const ed25519_public_key_t *auth_key,
+                             hs_cache_intro_state_t **state)
+{
+  hs_cache_intro_state_t *entry, *old_entry;
+  hs_cache_client_intro_state_t *cache;
+
+  tor_assert(service_pk);
+  tor_assert(auth_key);
+
+  /* Lookup the state cache for this service key. */
+  cache = digest256map_get(hs_cache_client_intro_state, service_pk->pubkey);
+  if (cache == NULL) {
+    cache = cache_client_intro_state_new();
+    digest256map_set(hs_cache_client_intro_state, service_pk->pubkey, cache);
+  }
+
+  entry = cache_intro_state_new();
+  old_entry = digest256map_set(cache->intro_points, auth_key->pubkey, entry);
+  /* This should never happened because the code flow is to lookup the entry
+   * before adding it. But, just in case, non fatal assert and free it. */
+  tor_assert_nonfatal(old_entry == NULL);
+  tor_free(old_entry);
+
+  if (state) {
+    *state = entry;
+  }
+}
+
+/* Remove every intro point state entry from cache that has been created
+ * before or at the cutoff. */
+static void
+cache_client_intro_state_clean(time_t cutoff,
+                               hs_cache_client_intro_state_t *cache)
+{
+  tor_assert(cache);
+
+  DIGEST256MAP_FOREACH_MODIFY(cache->intro_points, key,
+                              hs_cache_intro_state_t *, entry) {
+    if (entry->created_ts <= cutoff) {
+      cache_intro_state_free(entry);
+      MAP_DEL_CURRENT(key);
+    }
+  } DIGEST256MAP_FOREACH_END;
+}
+
+/* Return true iff no intro points are in this cache. */
+static int
+cache_client_intro_state_is_empty(const hs_cache_client_intro_state_t *cache)
+{
+  return digest256map_isempty(cache->intro_points);
 }
 
 /** Check whether <b>client_desc</b> is useful for us, and store it in the
@@ -554,6 +725,59 @@ hs_cache_clean_as_client(time_t now)
   cache_clean_v3_as_client(now);
 }
 
+/* For a given service identity public key and an introduction authentication
+ * key, note the given failure in the client intro state cache. */
+void
+hs_cache_client_intro_state_note(const ed25519_public_key_t *service_pk,
+                                 const ed25519_public_key_t *auth_key,
+                                 rend_intro_point_failure_t failure)
+{
+  int found;
+  hs_cache_intro_state_t *entry;
+
+  tor_assert(service_pk);
+  tor_assert(auth_key);
+
+  found = cache_client_intro_state_lookup(service_pk, auth_key, &entry);
+  if (!found) {
+    /* Create a new entry and add it to the cache. */
+    cache_client_intro_state_add(service_pk, auth_key, &entry);
+  }
+  /* Note down the entry. */
+  cache_client_intro_state_note(entry, failure);
+}
+
+/* For a given service identity public key and an introduction authentication
+ * key, return true iff it is present in the failure cache. */
+const hs_cache_intro_state_t *
+hs_cache_client_intro_state_find(const ed25519_public_key_t *service_pk,
+                                 const ed25519_public_key_t *auth_key)
+{
+  hs_cache_intro_state_t *state = NULL;
+  cache_client_intro_state_lookup(service_pk, auth_key, &state);
+  return state;
+}
+
+/* Cleanup the client introduction state cache. */
+void
+hs_cache_client_intro_state_clean(time_t now)
+{
+  time_t cutoff = now - HS_CACHE_CLIENT_INTRO_STATE_MAX_AGE;
+
+  DIGEST256MAP_FOREACH_MODIFY(hs_cache_client_intro_state, key,
+                              hs_cache_client_intro_state_t *, cache) {
+    /* Cleanup intro points failure. */
+    cache_client_intro_state_clean(cutoff, cache);
+
+    /* Is this cache empty for this service key? If yes, remove it from the
+     * cache. Else keep it. */
+    if (cache_client_intro_state_is_empty(cache)) {
+      cache_client_intro_state_free(cache);
+      MAP_DEL_CURRENT(key);
+    }
+  } DIGEST256MAP_FOREACH_END;
+}
+
 /**************** Generics *********************************/
 
 /* Do a round of OOM cleanup on all directory caches. Return the amount of
@@ -629,6 +853,9 @@ hs_cache_init(void)
 
   tor_assert(!hs_cache_v3_client);
   hs_cache_v3_client = digest256map_new();
+
+  tor_assert(!hs_cache_client_intro_state);
+  hs_cache_client_intro_state = digest256map_new();
 }
 
 /* Cleanup the hidden service cache subsystem. */
@@ -640,5 +867,9 @@ hs_cache_free_all(void)
 
   digest256map_free(hs_cache_v3_client, cache_client_desc_free_);
   hs_cache_v3_client = NULL;
+
+  digest256map_free(hs_cache_client_intro_state,
+                    cache_client_intro_state_free_);
+  hs_cache_client_intro_state = NULL;
 }
 
