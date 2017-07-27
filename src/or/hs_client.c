@@ -419,6 +419,51 @@ desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip)
   return ei;
 }
 
+/* Return true iff the intro point ip for the service service_pk is usable.
+ * This function checks if the intro point is in the client intro state cache
+ * and checks at the failures. It is considered usable if:
+ *   - No error happened (INTRO_POINT_FAILURE_GENERIC)
+ *   - It is not flagged as timed out (INTRO_POINT_FAILURE_TIMEOUT)
+ *   - The unreachable count is lower than
+ *     MAX_INTRO_POINT_REACHABILITY_FAILURES (INTRO_POINT_FAILURE_UNREACHABLE)
+ */
+static int
+intro_point_is_usable(const ed25519_public_key_t *service_pk,
+                      const hs_desc_intro_point_t *ip)
+{
+  const hs_cache_intro_state_t *state;
+
+  tor_assert(service_pk);
+  tor_assert(ip);
+
+  state = hs_cache_client_intro_state_find(service_pk,
+                                           &ip->auth_key_cert->signed_key);
+  if (state == NULL) {
+    /* This means we've never encountered any problem thus usable. */
+    goto usable;
+  }
+  if (state->error) {
+    log_info(LD_REND, "Intro point with auth key %s had an error. Not usable",
+             safe_str_client(ed25519_fmt(&ip->auth_key_cert->signed_key)));
+    goto not_usable;
+  }
+  if (state->timed_out) {
+    log_info(LD_REND, "Intro point with auth key %s timed out. Not usable",
+             safe_str_client(ed25519_fmt(&ip->auth_key_cert->signed_key)));
+    goto not_usable;
+  }
+  if (state->unreachable_count >= MAX_INTRO_POINT_REACHABILITY_FAILURES) {
+    log_info(LD_REND, "Intro point with auth key %s unreachable. Not usable",
+             safe_str_client(ed25519_fmt(&ip->auth_key_cert->signed_key)));
+    goto not_usable;
+  }
+
+ usable:
+  return 1;
+ not_usable:
+  return 0;
+}
+
 /* Using a descriptor desc, return a newly allocated extend_info_t object of a
  * randomly picked introduction point from its list. Return NULL if none are
  * usable. */
@@ -454,6 +499,12 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
     ip = smartlist_get(usable_ips, idx);
     smartlist_del(usable_ips, idx);
 
+    /* We need to make sure we have a usable intro points which is in a good
+     * state in our cache. */
+    if (!intro_point_is_usable(service_pk, ip)) {
+      continue;
+    }
+
     /* Generate an extend info object from the intro point object. */
     ei = desc_intro_point_to_extend_info(ip);
     if (ei == NULL) {
@@ -470,8 +521,6 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
       ei_excluded = ei;
       continue;
     }
-    /* XXX: Intro point can time out or just be unsuable, we need to keep
-     * track of this and check against such cache. */
 
     /* Good pick! Let's go with this. */
     goto end;
@@ -491,6 +540,62 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
  end:
   smartlist_free(usable_ips);
   return ei;
+}
+
+/* For this introduction circuit, we'll look at if we have any usable
+ * introduction point left for this service. If so, we'll use the circuit to
+ * re-extend to a new intro point. Else, we'll close the circuit and its
+ * corresponding rendezvous circuit. Return 0 if we are re-extending else -1
+ * if we are closing the circuits.
+ *
+ * This is called when getting an INTRODUCE_ACK cell with a NACK. */
+static int
+close_or_reextend_intro_circ(origin_circuit_t *intro_circ)
+{
+  int ret = -1;
+  const hs_descriptor_t *desc;
+  origin_circuit_t *rend_circ;
+
+  tor_assert(intro_circ);
+
+  desc = hs_cache_lookup_as_client(&intro_circ->hs_ident->identity_pk);
+  if (BUG(desc == NULL)) {
+    /* We can't continue without a descriptor. */
+    goto close;
+  }
+  /* We still have the descriptor, great! Let's try to see if we can
+   * re-extend by looking up if there are any usable intro points. */
+  if (!hs_client_any_intro_points_usable(desc)) {
+    goto close;
+  }
+  /* Try to re-extend now. */
+  if (hs_client_reextend_intro_circuit(intro_circ) < 0) {
+    goto close;
+  }
+  /* Success on re-extending. Don't return an error. */
+  ret = 0;
+  goto end;
+
+ close:
+  /* Change the intro circuit purpose before so we don't report an intro point
+   * failure again triggering an extra descriptor fetch. The circuit can
+   * already be closed on failure to re-extend. */
+  if (!TO_CIRCUIT(intro_circ)->marked_for_close) {
+    circuit_change_purpose(TO_CIRCUIT(intro_circ),
+                           CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
+    circuit_mark_for_close(TO_CIRCUIT(intro_circ), END_CIRC_REASON_FINISHED);
+  }
+  /* Close the related rendezvous circuit. */
+  rend_circ = hs_circuitmap_get_rend_circ_client_side(
+                                     intro_circ->hs_ident->rendezvous_cookie);
+  /* The rendezvous circuit might have collapsed while the INTRODUCE_ACK was
+   * inflight so we can't expect one every time. */
+  if (rend_circ) {
+    circuit_mark_for_close(TO_CIRCUIT(rend_circ), END_CIRC_REASON_FINISHED);
+  }
+
+ end:
+  return ret;
 }
 
 /* Called when we get an INTRODUCE_ACK success status code. Do the appropriate
@@ -545,8 +650,11 @@ handle_introduce_ack_bad(origin_circuit_t *circ, int status)
   /* It's a NAK. The introduction point didn't relay our request. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_INTRODUCING);
 
-  /* XXX: Report this failure for the intro point failure cache. Depending on
-   * how many times we've tried this intro point, close it or reextend. */
+  /* Note down this failure in the intro point failure cache. Depending on how
+   * many times we've tried this intro point, close it or reextend. */
+  hs_cache_client_intro_state_note(&circ->hs_ident->identity_pk,
+                                   &circ->hs_ident->intro_auth_pk,
+                                   INTRO_POINT_FAILURE_GENERIC);
 }
 
 /* Called when we get an INTRODUCE_ACK on the intro circuit circ. The encoded
@@ -570,11 +678,14 @@ handle_introduce_ack(origin_circuit_t *circ, const uint8_t *payload,
   case HS_CELL_INTRO_ACK_SUCCESS:
     ret = 0;
     handle_introduce_ack_success(circ);
-    break;
+    goto end;
   case HS_CELL_INTRO_ACK_FAILURE:
   case HS_CELL_INTRO_ACK_BADFMT:
   case HS_CELL_INTRO_ACK_NORELAY:
     handle_introduce_ack_bad(circ, status);
+    /* We are going to see if we have to close the circuits (IP and RP) or we
+     * can re-extend to a new intro point. */
+    ret = close_or_reextend_intro_circ(circ);
     break;
   default:
     log_info(LD_PROTOCOL, "Unknown INTRODUCE_ACK status code %u from %s",
@@ -583,6 +694,7 @@ handle_introduce_ack(origin_circuit_t *circ, const uint8_t *payload,
     break;
   }
 
+ end:
   return ret;
 }
 
