@@ -242,7 +242,8 @@ send_introduce1(origin_circuit_t *intro_circ,
   /* 1) Get descriptor from our cache. */
   const hs_descriptor_t *desc =
     hs_cache_lookup_as_client(service_identity_pk);
-  if (desc == NULL || !hs_client_any_intro_points_usable(desc)) {
+  if (desc == NULL || !hs_client_any_intro_points_usable(service_identity_pk,
+                                                         desc)) {
     log_info(LD_REND, "Request to %s %s. Trying to fetch a new descriptor.",
              safe_str_client(onion_address),
              (desc) ? "didn't have usable intro points" :
@@ -479,7 +480,8 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
   tor_assert(service_pk);
 
   desc = hs_cache_lookup_as_client(service_pk);
-  if (desc == NULL || !hs_client_any_intro_points_usable(desc)) {
+  if (desc == NULL || !hs_client_any_intro_points_usable(service_pk,
+                                                         desc)) {
     log_info(LD_REND, "Unable to randomly select an introduction point "
                       "because descriptor %s.",
              (desc) ? "doesn't have usable intro point" : "is missing");
@@ -565,7 +567,8 @@ close_or_reextend_intro_circ(origin_circuit_t *intro_circ)
   }
   /* We still have the descriptor, great! Let's try to see if we can
    * re-extend by looking up if there are any usable intro points. */
-  if (!hs_client_any_intro_points_usable(desc)) {
+  if (!hs_client_any_intro_points_usable(&intro_circ->hs_ident->identity_pk,
+                                         desc)) {
     goto close;
   }
   /* Try to re-extend now. */
@@ -824,14 +827,24 @@ hs_client_decode_descriptor(const char *desc_str,
   return -1;
 }
 
-/** Return true if there are any usable intro points in the v3 HS descriptor
- *  <b>desc</b>. */
+/* Return true iff there are at least one usable intro point in the service
+ * descriptor desc. */
 int
-hs_client_any_intro_points_usable(const hs_descriptor_t *desc)
+hs_client_any_intro_points_usable(const ed25519_public_key_t *service_pk,
+                                  const hs_descriptor_t *desc)
 {
-  /* XXX stub waiting for more client-side work:
-     equivalent to v2 rend_client_any_intro_points_usable() */
+  tor_assert(service_pk);
   tor_assert(desc);
+
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          const hs_desc_intro_point_t *, ip) {
+    if (intro_point_is_usable(service_pk, ip)) {
+      goto usable;
+    }
+  } SMARTLIST_FOREACH_END(ip);
+
+  return 0;
+ usable:
   return 1;
 }
 
@@ -856,7 +869,8 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
   {
     const hs_descriptor_t *cached_desc = NULL;
     cached_desc = hs_cache_lookup_as_client(identity_pk);
-    if (cached_desc && hs_client_any_intro_points_usable(cached_desc)) {
+    if (cached_desc && hs_client_any_intro_points_usable(identity_pk,
+                                                         cached_desc)) {
       log_warn(LD_GENERAL, "We would fetch a v3 hidden service descriptor "
                             "but we already have a useable descriprot.");
       return 0;
@@ -989,7 +1003,7 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
       goto end;
     }
 
-    if (!hs_client_any_intro_points_usable(desc)) {
+    if (!hs_client_any_intro_points_usable(&ident->identity_pk, desc)) {
       log_info(LD_REND, "Hidden service descriptor is unusable. "
                         "Closing streams.");
       connection_mark_unattached_ap(entry_conn,

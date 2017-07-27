@@ -1501,7 +1501,9 @@ connection_ap_handle_onion(entry_connection_t *conn,
     cached_desc = hs_cache_lookup_as_client(&hs_conn_ident->identity_pk);
     if (cached_desc) {
       rend_cache_lookup_result = 0;
-      descriptor_is_usable = hs_client_any_intro_points_usable(cached_desc);
+      descriptor_is_usable =
+        hs_client_any_intro_points_usable(&hs_conn_ident->identity_pk,
+                                          cached_desc);
       log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
                (descriptor_is_usable) ? "usable" : "unusable",
                safe_str_client(onion_address),

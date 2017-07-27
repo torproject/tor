@@ -20,7 +20,8 @@ int hs_client_decode_descriptor(
                      const char *desc_str,
                      const ed25519_public_key_t *service_identity_pk,
                      hs_descriptor_t **desc);
-int hs_client_any_intro_points_usable(const hs_descriptor_t *desc);
+int hs_client_any_intro_points_usable(const ed25519_public_key_t *service_pk,
+                                      const hs_descriptor_t *desc);
 int hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk);
 
 int hs_client_send_introduce1(origin_circuit_t *intro_circ,
