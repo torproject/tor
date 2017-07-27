@@ -1,0 +1,8 @@
+  o Major bugfixes (relay, performance):
+
+    - Perform circuit handshake operations at a higher priority than we use
+      for consensus diff creation and compression. This should prevent
+      circuits from starving when a relay or bridge receive a new consensus,
+      especially on lower-powered machines. Fixes bug 22883; bugfix on
+      0.3.1.1-alpha.
+

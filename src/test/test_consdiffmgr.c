@@ -98,10 +98,13 @@ typedef struct fake_work_queue_ent_t {
   void *arg;
 } fake_work_queue_ent_t;
 static struct workqueue_entry_s *
-mock_cpuworker_queue_work(enum workqueue_reply_t (*fn)(void *, void *),
+mock_cpuworker_queue_work(workqueue_priority_t prio,
+                          enum workqueue_reply_t (*fn)(void *, void *),
                           void (*reply_fn)(void *),
                           void *arg)
 {
+  (void) prio;
+
   if (! fake_cpuworker_queue)
     fake_cpuworker_queue = smartlist_new();
 
