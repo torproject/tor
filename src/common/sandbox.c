@@ -728,6 +728,14 @@ sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     return rc;
 #endif
 
+#ifdef IPV6_V6ONLY
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(setsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, IPPROTO_IPV6),
+      SCMP_CMP(2, SCMP_CMP_EQ, IPV6_V6ONLY));
+  if (rc)
+    return rc;
+#endif
+
   return 0;
 }
 
