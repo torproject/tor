@@ -11,8 +11,11 @@
  * The multithreading backend for this module is in workqueue.c; this module
  * specializes workqueue.c.
  *
- * Right now, we only use this for processing onionskins, and invoke it mostly
- * from onion.c.
+ * Right now, we use this infrastructure
+ *  <ul><li>for processing onionskins in onion.c
+ *      <li>for compressing consensuses in consdiffmgr.c,
+ *      <li>and for calculating diffs and compressing them in consdiffmgr.c.
+ *  </ul>
  **/
 #include "or.h"
 #include "channel.h"
