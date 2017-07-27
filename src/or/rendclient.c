@@ -18,6 +18,7 @@
 #include "directory.h"
 #include "hs_common.h"
 #include "hs_circuit.h"
+#include "hs_client.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -87,46 +88,6 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
   }
 
   return 0;
-}
-
-/** Extend the introduction circuit <b>circ</b> to another valid
- * introduction point for the hidden service it is trying to connect
- * to, or mark it and launch a new circuit if we can't extend it.
- * Return 0 on success or possible success.  Return -1 and mark the
- * introduction circuit for close on permanent failure.
- *
- * On failure, the caller is responsible for marking the associated
- * rendezvous circuit for close. */
-static int
-rend_client_reextend_intro_circuit(origin_circuit_t *circ)
-{
-  extend_info_t *extend_info;
-  int result;
-  extend_info = rend_client_get_random_intro(circ->rend_data);
-  if (!extend_info) {
-    log_warn(LD_REND,
-             "No usable introduction points left for %s. Closing.",
-             safe_str_client(rend_data_get_address(circ->rend_data)));
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-    return -1;
-  }
-  // XXX: should we not re-extend if hs_circ_has_timed_out?
-  if (circ->remaining_relay_early_cells) {
-    log_info(LD_REND,
-             "Re-extending circ %u, this time to %s.",
-             (unsigned)circ->base_.n_circ_id,
-             safe_str_client(extend_info_describe(extend_info)));
-    result = circuit_extend_to_new_exit(circ, extend_info);
-  } else {
-    log_info(LD_REND,
-             "Closing intro circ %u (out of RELAY_EARLY cells).",
-             (unsigned)circ->base_.n_circ_id);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
-    /* connection_ap_handshake_attach_circuit will launch a new intro circ. */
-    result = 0;
-  }
-  extend_info_free(extend_info);
-  return result;
 }
 
 /** Called when we're trying to connect an ap conn; sends an INTRODUCE1 cell
@@ -202,7 +163,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                    introcirc->build_state->chosen_exit)),
              smartlist_len(entry->parsed->intro_nodes));
 
-    if (rend_client_reextend_intro_circuit(introcirc)) {
+    if (hs_client_reextend_intro_circuit(introcirc)) {
       status = -2;
       goto perm_err;
     } else {
@@ -437,7 +398,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
                                              INTRO_POINT_FAILURE_GENERIC)>0) {
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
-      int result = rend_client_reextend_intro_circuit(circ);
+      int result = hs_client_reextend_intro_circuit(circ);
       /* XXXX If that call failed, should we close the rend circuit,
        * too? */
       return result;

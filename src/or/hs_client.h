@@ -43,5 +43,7 @@ void hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident);
 extend_info_t *hs_client_get_random_intro_from_edge(
                                           const edge_connection_t *edge_conn);
 
+int hs_client_reextend_intro_circuit(origin_circuit_t *circ);
+
 #endif /* TOR_HS_CLIENT_H */
 

@@ -27,6 +27,7 @@
 #include "circpathbias.h"
 #include "connection.h"
 #include "hs_ntor.h"
+#include "circuitbuild.h"
 
 /* Get all connections that are waiting on a circuit and flag them back to
  * waiting for a hidden service descriptor for the given service key
@@ -974,6 +975,49 @@ hs_client_receive_rendezvous2(origin_circuit_t *circ,
                            rend_client_receive_rendezvous(circ, payload,
                                                           payload_len);
  end:
+  return ret;
+}
+
+/* Extend the introduction circuit circ to another valid introduction point
+ * for the hidden service it is trying to connect to, or mark it and launch a
+ * new circuit if we can't extend it.  Return 0 on success or possible
+ * success. Return -1 and mark the introduction circuit for close on permanent
+ * failure.
+ *
+ * On failure, the caller is responsible for marking the associated rendezvous
+ * circuit for close. */
+int
+hs_client_reextend_intro_circuit(origin_circuit_t *circ)
+{
+  int ret = -1;
+  extend_info_t *ei;
+
+  tor_assert(circ);
+
+  ei = (circ->hs_ident) ?
+    client_get_random_intro(&circ->hs_ident->identity_pk) :
+    rend_client_get_random_intro(circ->rend_data);
+  if (ei == NULL) {
+    log_warn(LD_REND, "No usable introduction points left. Closing.");
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+    goto end;
+  }
+
+  if (circ->remaining_relay_early_cells) {
+    log_info(LD_REND, "Re-extending circ %u, this time to %s.",
+             (unsigned int) TO_CIRCUIT(circ)->n_circ_id,
+             safe_str_client(extend_info_describe(ei)));
+    ret = circuit_extend_to_new_exit(circ, ei);
+  } else {
+    log_info(LD_REND, "Closing intro circ %u (out of RELAY_EARLY cells).",
+             (unsigned int) TO_CIRCUIT(circ)->n_circ_id);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
+    /* connection_ap_handshake_attach_circuit will launch a new intro circ. */
+    ret = 0;
+  }
+
+ end:
+  extend_info_free(ei);
   return ret;
 }
 
