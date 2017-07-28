@@ -1172,7 +1172,7 @@ tor_parse_long(const char *s, int base, long min, long max,
   char *endptr;
   long r;
 
-  if (base < 0) {
+  if (BUG(base < 0)) {
     if (ok)
       *ok = 0;
     return 0;
@@ -1191,7 +1191,7 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   char *endptr;
   unsigned long r;
 
-  if (base < 0) {
+  if (BUG(base < 0)) {
     if (ok)
       *ok = 0;
     return 0;
@@ -1223,7 +1223,7 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   char *endptr;
   uint64_t r;
 
-  if (base < 0) {
+  if (BUG(base < 0)) {
     if (ok)
       *ok = 0;
     return 0;
