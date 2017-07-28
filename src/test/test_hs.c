@@ -572,6 +572,7 @@ test_single_onion_poisoning(void *arg)
   char *dir2 = tor_strdup(get_fname_rnd("test_hs_dir2"));
   smartlist_t *services = smartlist_new();
   char *poison_path = NULL;
+  char *err_msg = NULL;
 
   /* No services, no service to verify, no problem! */
   mock_options->HiddenServiceSingleHopMode = 0;
@@ -607,7 +608,6 @@ test_single_onion_poisoning(void *arg)
   /* Add port to service 1 */
   service_1->ports = smartlist_new();
   service_2->ports = smartlist_new();
-  char *err_msg = NULL;
   rend_service_port_config_t *port1 = rend_service_parse_port_config("80", " ",
                                                                      &err_msg);
   tt_assert(port1);
@@ -806,6 +806,7 @@ test_single_onion_poisoning(void *arg)
   rend_service_free(service_2);
   UNMOCK(get_options);
   tor_free(mock_options->DataDirectory);
+  tor_free(err_msg);
 }
 
 static rend_service_t *
