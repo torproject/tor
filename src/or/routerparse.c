@@ -2854,7 +2854,6 @@ compare_vote_routerstatus_entries(const void **_a, const void **_b)
 int
 networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
 {
-  int64_t weight_scale;
   int64_t G=0, M=0, E=0, D=0, T=0;
   double Wgg, Wgm, Wgd, Wmg, Wmm, Wme, Wmd, Weg, Wem, Wee, Wed;
   double Gtotal=0, Mtotal=0, Etotal=0;
@@ -2862,7 +2861,8 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   int valid = 1;
   (void) consensus_method;
 
-  weight_scale = networkstatus_get_weight_scale_param(ns);
+  const int64_t weight_scale = networkstatus_get_weight_scale_param(ns);
+  tor_assert(weight_scale >= 1);
   Wgg = networkstatus_get_bw_weight(ns, "Wgg", -1);
   Wgm = networkstatus_get_bw_weight(ns, "Wgm", -1);
   Wgd = networkstatus_get_bw_weight(ns, "Wgd", -1);
