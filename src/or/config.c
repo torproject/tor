@@ -6864,6 +6864,7 @@ parse_port_config(smartlist_t *out,
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);
     tor_free(addrport);
+    tor_free(unix_socket_path);
   }
 
   if (warn_nonlocal && out) {
