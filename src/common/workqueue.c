@@ -377,8 +377,8 @@ threadpool_queue_work_priority(threadpool_t *pool,
                                void (*reply_fn)(void *),
                                void *arg)
 {
-  tor_assert(prio >= WORKQUEUE_PRIORITY_FIRST &&
-             prio <= WORKQUEUE_PRIORITY_LAST);
+  tor_assert(((int)prio) >= WORKQUEUE_PRIORITY_FIRST &&
+             ((int)prio) <= WORKQUEUE_PRIORITY_LAST);
 
   workqueue_entry_t *ent = workqueue_entry_new(fn, reply_fn, arg);
   ent->on_pool = pool;
