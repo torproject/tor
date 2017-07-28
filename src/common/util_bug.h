@@ -59,10 +59,13 @@
  */
 
 #ifdef __COVERITY__
+extern int bug_macro_deadcode_dummy__;
 #undef BUG
 // Coverity defines this in global headers; let's override it.  This is a
 // magic coverity-only preprocessor thing.
-#nodef BUG(x) ((x)?(__coverity_panic__(),1):0)
+// We use this "deadcode_dummy__" trick to prevent coverity from
+// complaining about unreachable bug cases.
+#nodef BUG(x) ((x)?(__coverity_panic__(),1):(0+bug_macro_deadcode_dummy__))
 #endif
 
 #if defined(__COVERITY__) || defined(__clang_analyzer__)

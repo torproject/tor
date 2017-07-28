@@ -13,6 +13,10 @@
 #include "backtrace.h"
 #include "container.h"
 
+#ifdef __COVERITY__
+int bug_macro_deadcode_dummy__ = 0;
+#endif
+
 #ifdef TOR_UNIT_TESTS
 static void (*failed_assertion_cb)(void) = NULL;
 static int n_bugs_to_capture = 0;
