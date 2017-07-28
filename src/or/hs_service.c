@@ -709,34 +709,20 @@ close_service_circuits(hs_service_t *service)
   close_service_rp_circuits(service);
 }
 
-/* Move introduction points from the src descriptor to the dst descriptor. The
- * destination service intropoints are wiped out if any before moving. */
+/* Move descriptor(s) from the src service to the dst service. */
 static void
-move_descriptor_intro_points(hs_service_descriptor_t *src,
-                             hs_service_descriptor_t *dst)
+move_descriptors(hs_service_t *src, hs_service_t *dst)
 {
   tor_assert(src);
   tor_assert(dst);
 
-  digest256map_free(dst->intro_points.map, service_intro_point_free_);
-  dst->intro_points.map = src->intro_points.map;
-  /* Nullify the source. */
-  src->intro_points.map = NULL;
-}
-
-/* Move introduction points from the src service to the dst service. The
- * destination service intropoints are wiped out if any before moving. */
-static void
-move_intro_points(hs_service_t *src, hs_service_t *dst)
-{
-  tor_assert(src);
-  tor_assert(dst);
-
-  if (src->desc_current && dst->desc_current) {
-    move_descriptor_intro_points(src->desc_current, dst->desc_current);
+  if (src->desc_current) {
+    dst->desc_current = src->desc_current;
+    src->desc_current = NULL;
   }
-  if (src->desc_next && dst->desc_next) {
-    move_descriptor_intro_points(src->desc_next, dst->desc_next);
+  if (src->desc_next) {
+    dst->desc_next = src->desc_next;
+    src->desc_next = NULL;
   }
 }
 
@@ -812,13 +798,14 @@ register_all_services(void)
      * transfer the intro points to it. */
     s = find_service(hs_service_map, &snew->keys.identity_pk);
     if (s) {
-      /* Pass ownership of intro points from s (the current service) to snew
-       * (the newly configured one). */
-      move_intro_points(s, snew);
+      /* Pass ownership of the descriptors from s (the current service) to
+       * snew (the newly configured one). */
+      move_descriptors(s, snew);
       /* Remove the service from the global map because after this, we need to
        * go over the remaining service in that map that aren't surviving the
        * reload to close their circuits. */
       remove_service(hs_service_map, s);
+      hs_service_free(s);
     }
     /* Great, this service is now ready to be added to our new map. */
     if (BUG(register_service(new_service_map, snew) < 0)) {
