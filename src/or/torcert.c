@@ -393,7 +393,7 @@ rsa_ed25519_crosscert_check(const uint8_t *crosscert,
   }
 
   const uint32_t expiration_date = rsa_ed_crosscert_get_expiration(cc);
-  const uint64_t expiration_time = expiration_date * 3600;
+  const uint64_t expiration_time = ((uint64_t)expiration_date) * 3600;
 
   if (reject_if_expired_before < 0 ||
       expiration_time < (uint64_t)reject_if_expired_before) {
