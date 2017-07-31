@@ -2215,9 +2215,11 @@ should_service_upload_descriptor(const hs_service_t *service,
    * instead of waiting an arbitrary amount of time breaking the service.
    * Else, if we have no missing intro points, we use the value taken from the
    * service configuration. */
-  (desc->missing_intro_points) ?
-    (num_intro_points = digest256map_size(desc->intro_points.map)) :
-    (num_intro_points = service->config.num_intro_points);
+  if (desc->missing_intro_points) {
+    num_intro_points = digest256map_size(desc->intro_points.map);
+  } else {
+    num_intro_points = service->config.num_intro_points;
+  }
 
   /* This means we tried to pick intro points but couldn't get any so do not
    * upload descriptor in this case. We need at least one for the service to
@@ -2768,10 +2770,12 @@ hs_service_receive_introduce2(origin_circuit_t *circ, const uint8_t *payload,
     goto done;
   }
 
-  ret = (circ->hs_ident) ? service_handle_introduce2(circ, payload,
-                                                     payload_len) :
-                           rend_service_receive_introduction(circ, payload,
-                                                             payload_len);
+  if (circ->hs_ident) {
+    ret = service_handle_introduce2(circ, payload, payload_len);
+  } else {
+    ret = rend_service_receive_introduction(circ, payload, payload_len);
+  }
+
  done:
   return ret;
 }
@@ -2798,10 +2802,12 @@ hs_service_receive_intro_established(origin_circuit_t *circ,
 
   /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
    * identifier hs_ident. Can't be both. */
-  ret = (circ->hs_ident) ? service_handle_intro_established(circ, payload,
-                                                            payload_len) :
-                           rend_service_intro_established(circ, payload,
-                                                          payload_len);
+  if (circ->hs_ident) {
+    ret = service_handle_intro_established(circ, payload, payload_len);
+  } else {
+    ret = rend_service_intro_established(circ, payload, payload_len);
+  }
+
   if (ret < 0) {
     goto err;
   }
@@ -2822,12 +2828,18 @@ hs_service_circuit_has_opened(origin_circuit_t *circ)
    * identifier hs_ident. Can't be both. */
   switch (TO_CIRCUIT(circ)->purpose) {
   case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
-    (circ->hs_ident) ? service_intro_circ_has_opened(circ) :
+    if (circ->hs_ident) {
+      service_intro_circ_has_opened(circ);
+    } else {
                        rend_service_intro_has_opened(circ);
+    }
     break;
   case CIRCUIT_PURPOSE_S_CONNECT_REND:
-    (circ->hs_ident) ? service_rendezvous_circ_has_opened(circ) :
+    if (circ->hs_ident) {
+      service_rendezvous_circ_has_opened(circ);
+    } else {
                        rend_service_rendezvous_has_opened(circ);
+    }
     break;
   default:
     tor_assert(0);
