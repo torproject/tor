@@ -1,5 +1,8 @@
-Changes in version 0.3.1.5-??? - 2017-08-01
-  Blurb goes here
+Changes in version 0.3.1.5-alpha - 2017-08-01
+  Tor 0.3.1.5-alpha improves the performance of consensus diff
+  calculation, fixes a crash bug on older versions of OpenBSD, and fixes
+  several other bugs. If no serious bugs are found in this version, the
+  next version will be a release candidate.
 
   This release also marks the end of support for the Tor 0.2.4.x,
   0.2.6.x, and 0.2.7.x release series. Those releases will receive no
