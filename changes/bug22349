@@ -5,5 +5,5 @@
       tried to avoid downloading such descriptors by other means, but
       we didn't notice if we accidentally downloaded one anyway. This
       behavior became problematic in 0.2.7.2-alpha, when authorities
-      began pinning Ed25519 keys. Fixes ticket
+      began pinning Ed25519 keys. Fixes bug
       22349; bugfix on 0.2.1.19-alpha.
