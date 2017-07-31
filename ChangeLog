@@ -25,7 +25,7 @@ Changes in version 0.3.1.5-??? - 2017-08-01
   o Major bugfixes (relay, performance):
     - Perform circuit handshake operations at a higher priority than we
       use for consensus diff creation and compression. This should
-      prevent circuits from starving when a relay or bridge receive a
+      prevent circuits from starving when a relay or bridge receives a
       new consensus, especially on lower-powered machines. Fixes bug
       22883; bugfix on 0.3.1.1-alpha.
 
@@ -68,7 +68,7 @@ Changes in version 0.3.1.5-??? - 2017-08-01
     - Compile correctly when both openssl 1.1.0 and libscrypt are
       detected. Previously this would cause an error. Fixes bug 22892;
       bugfix on 0.3.1.1-alpha.
-    - When building with certain versions the mingw C header files,
+    - When building with certain versions of the mingw C header files,
       avoid float-conversion warnings when calling the C functions
       isfinite(), isnan(), and signbit(). Fixes bug 22801; bugfix
       on 0.2.8.1-alpha.
