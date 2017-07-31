@@ -42,7 +42,7 @@ static const char dstate_cur_srv_key[] = "SharedRandCurrentValue";
 
 /* These next two are duplicates or near-duplicates from config.c */
 #define VAR(name, conftype, member, initvalue)                              \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(sr_disk_state_t, member), \
+  { name, CONFIG_TYPE_ ## conftype, offsetof(sr_disk_state_t, member),      \
     initvalue }
 /* As VAR, but the option name and member name are the same. */
 #define V(member, conftype, initvalue) \
@@ -77,14 +77,14 @@ static config_var_t state_vars[] = {
  * lets us preserve options from versions of Tor newer than us. */
 static config_var_t state_extra_var = {
   "__extra", CONFIG_TYPE_LINELIST,
-  STRUCT_OFFSET(sr_disk_state_t, ExtraLines), NULL
+  offsetof(sr_disk_state_t, ExtraLines), NULL
 };
 
 /* Configuration format of sr_disk_state_t. */
 static const config_format_t state_format = {
   sizeof(sr_disk_state_t),
   SR_DISK_STATE_MAGIC,
-  STRUCT_OFFSET(sr_disk_state_t, magic_),
+  offsetof(sr_disk_state_t, magic_),
   NULL,
   NULL,
   state_vars,

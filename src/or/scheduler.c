@@ -282,7 +282,7 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
      */
     smartlist_pqueue_remove(channels_pending,
                             scheduler_compare_channels,
-                            STRUCT_OFFSET(channel_t, sched_heap_idx),
+                            offsetof(channel_t, sched_heap_idx),
                             chan);
     chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
     log_debug(LD_SCHED,
@@ -324,7 +324,7 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
     chan->scheduler_state = SCHED_CHAN_PENDING;
     smartlist_pqueue_add(channels_pending,
                          scheduler_compare_channels,
-                         STRUCT_OFFSET(channel_t, sched_heap_idx),
+                         offsetof(channel_t, sched_heap_idx),
                          chan);
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_for_cells "
@@ -400,7 +400,7 @@ scheduler_release_channel,(channel_t *chan))
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
     smartlist_pqueue_remove(channels_pending,
                             scheduler_compare_channels,
-                            STRUCT_OFFSET(channel_t, sched_heap_idx),
+                            offsetof(channel_t, sched_heap_idx),
                             chan);
   }
 
@@ -430,7 +430,7 @@ scheduler_run, (void))
       /* Pop off a channel */
       chan = smartlist_pqueue_pop(channels_pending,
                                   scheduler_compare_channels,
-                                  STRUCT_OFFSET(channel_t, sched_heap_idx));
+                                  offsetof(channel_t, sched_heap_idx));
       tor_assert(chan);
 
       /* Figure out how many cells we can write */
@@ -531,7 +531,7 @@ scheduler_run, (void))
         readd_chan->scheduler_state = SCHED_CHAN_PENDING;
         smartlist_pqueue_add(channels_pending,
                              scheduler_compare_channels,
-                             STRUCT_OFFSET(channel_t, sched_heap_idx),
+                             offsetof(channel_t, sched_heap_idx),
                              readd_chan);
       } SMARTLIST_FOREACH_END(readd_chan);
       smartlist_free(to_readd);
@@ -581,7 +581,7 @@ scheduler_channel_wants_writes(channel_t *chan)
      */
     smartlist_pqueue_add(channels_pending,
                          scheduler_compare_channels,
-                         STRUCT_OFFSET(channel_t, sched_heap_idx),
+                         offsetof(channel_t, sched_heap_idx),
                          chan);
     chan->scheduler_state = SCHED_CHAN_PENDING;
     log_debug(LD_SCHED,
@@ -624,11 +624,11 @@ scheduler_touch_channel(channel_t *chan)
     /* Remove and re-add it */
     smartlist_pqueue_remove(channels_pending,
                             scheduler_compare_channels,
-                            STRUCT_OFFSET(channel_t, sched_heap_idx),
+                            offsetof(channel_t, sched_heap_idx),
                             chan);
     smartlist_pqueue_add(channels_pending,
                          scheduler_compare_channels,
-                         STRUCT_OFFSET(channel_t, sched_heap_idx),
+                         offsetof(channel_t, sched_heap_idx),
                          chan);
   }
   /* else no-op, since it isn't in the queue */

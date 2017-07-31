@@ -731,7 +731,7 @@ add_cell_ewma(ewma_policy_data_t *pol, cell_ewma_t *ewma)
 
   smartlist_pqueue_add(pol->active_circuit_pqueue,
                        compare_cell_ewma_counts,
-                       STRUCT_OFFSET(cell_ewma_t, heap_index),
+                       offsetof(cell_ewma_t, heap_index),
                        ewma);
 }
 
@@ -746,7 +746,7 @@ remove_cell_ewma(ewma_policy_data_t *pol, cell_ewma_t *ewma)
 
   smartlist_pqueue_remove(pol->active_circuit_pqueue,
                           compare_cell_ewma_counts,
-                          STRUCT_OFFSET(cell_ewma_t, heap_index),
+                          offsetof(cell_ewma_t, heap_index),
                           ewma);
 }
 
@@ -760,6 +760,6 @@ pop_first_cell_ewma(ewma_policy_data_t *pol)
 
   return smartlist_pqueue_pop(pol->active_circuit_pqueue,
                               compare_cell_ewma_counts,
-                              STRUCT_OFFSET(cell_ewma_t, heap_index));
+                              offsetof(cell_ewma_t, heap_index));
 }
 

@@ -55,7 +55,7 @@ static config_abbrev_t state_abbrevs_[] = {
 
 /*XXXX these next two are duplicates or near-duplicates from config.c */
 #define VAR(name,conftype,member,initvalue)                             \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member),  \
+  { name, CONFIG_TYPE_ ## conftype, offsetof(or_state_t, member),       \
       initvalue }
 /** As VAR, but the option name and member name are the same. */
 #define V(member,conftype,initvalue)                                    \
@@ -131,14 +131,14 @@ static int or_state_validate_cb(void *old_options, void *options,
 /** "Extra" variable in the state that receives lines we can't parse. This
  * lets us preserve options from versions of Tor newer than us. */
 static config_var_t state_extra_var = {
-  "__extra", CONFIG_TYPE_LINELIST, STRUCT_OFFSET(or_state_t, ExtraLines), NULL
+  "__extra", CONFIG_TYPE_LINELIST, offsetof(or_state_t, ExtraLines), NULL
 };
 
 /** Configuration format for or_state_t. */
 static const config_format_t state_format = {
   sizeof(or_state_t),
   OR_STATE_MAGIC,
-  STRUCT_OFFSET(or_state_t, magic_),
+  offsetof(or_state_t, magic_),
   state_abbrevs_,
   NULL,
   state_vars_,

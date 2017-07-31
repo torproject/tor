@@ -109,19 +109,11 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 
 void tor_log_mallinfo(int severity);
 
-/** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
-#if defined(__GNUC__) && __GNUC__ > 3
-#define STRUCT_OFFSET(tp, member) __builtin_offsetof(tp, member)
-#else
- #define STRUCT_OFFSET(tp, member) \
-   ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
-#endif
-
 /** Macro: yield a pointer to the field at position <b>off</b> within the
  * structure <b>st</b>.  Example:
  * <pre>
  *   struct a { int foo; int bar; } x;
- *   off_t bar_offset = STRUCT_OFFSET(struct a, bar);
+ *   off_t bar_offset = offsetof(struct a, bar);
  *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
  *   *bar_p = 3;
  * </pre>
@@ -138,7 +130,7 @@ void tor_log_mallinfo(int severity);
  * </pre>
  */
 #define SUBTYPE_P(p, subtype, basemember) \
-  ((void*) ( ((char*)(p)) - STRUCT_OFFSET(subtype, basemember) ))
+  ((void*) ( ((char*)(p)) - offsetof(subtype, basemember) ))
 
 /* Logic */
 /** Macro: true if two values have the same boolean value. */

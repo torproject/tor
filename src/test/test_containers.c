@@ -681,7 +681,7 @@ test_container_pqueue(void *arg)
 {
   smartlist_t *sl = smartlist_new();
   int (*cmp)(const void *, const void*);
-  const int offset = STRUCT_OFFSET(pq_entry_t, idx);
+  const int offset = offsetof(pq_entry_t, idx);
 #define ENTRY(s) pq_entry_t s = { #s, -1 }
   ENTRY(cows);
   ENTRY(zebras);

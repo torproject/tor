@@ -378,7 +378,7 @@ set_expiry(cached_resolve_t *resolve, time_t expires)
   resolve->expire = expires;
   smartlist_pqueue_add(cached_resolve_pqueue,
                        compare_cached_resolves_by_expiry_,
-                       STRUCT_OFFSET(cached_resolve_t, minheap_idx),
+                       offsetof(cached_resolve_t, minheap_idx),
                        resolve);
 }
 
@@ -425,7 +425,7 @@ purge_expired_resolves(time_t now)
       break;
     smartlist_pqueue_pop(cached_resolve_pqueue,
                          compare_cached_resolves_by_expiry_,
-                         STRUCT_OFFSET(cached_resolve_t, minheap_idx));
+                         offsetof(cached_resolve_t, minheap_idx));
 
     if (resolve->state == CACHE_STATE_PENDING) {
       log_debug(LD_EXIT,
@@ -2083,7 +2083,7 @@ assert_cache_ok_(void)
 
   smartlist_pqueue_assert_ok(cached_resolve_pqueue,
                              compare_cached_resolves_by_expiry_,
-                             STRUCT_OFFSET(cached_resolve_t, minheap_idx));
+                             offsetof(cached_resolve_t, minheap_idx));
 
   SMARTLIST_FOREACH(cached_resolve_pqueue, cached_resolve_t *, res,
     {

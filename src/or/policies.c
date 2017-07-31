@@ -2731,7 +2731,7 @@ parse_short_policy(const char *summary)
   }
 
   {
-    size_t size = STRUCT_OFFSET(short_policy_t, entries) +
+    size_t size = offsetof(short_policy_t, entries) +
       sizeof(short_policy_entry_t)*(n_entries);
     result = tor_malloc_zero(size);
 

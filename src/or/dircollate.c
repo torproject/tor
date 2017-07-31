@@ -53,7 +53,7 @@ ddmap_entry_free(ddmap_entry_t *e)
 static ddmap_entry_t *
 ddmap_entry_new(int n_votes)
 {
-  return tor_malloc_zero(STRUCT_OFFSET(ddmap_entry_t, vrs_lst) +
+  return tor_malloc_zero(offsetof(ddmap_entry_t, vrs_lst) +
                          sizeof(vote_routerstatus_t *) * n_votes);
 }
 

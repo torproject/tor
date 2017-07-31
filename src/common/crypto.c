@@ -1884,7 +1884,7 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
   /* Helper: returns the number of bytes in the 'f' field of 'st' */
 #define STRUCT_FIELD_SIZE(st, f) (sizeof( ((st*)0)->f ))
   /* Gives the length of crypto_digest_t through the end of the field 'd' */
-#define END_OF_FIELD(f) (STRUCT_OFFSET(crypto_digest_t, f) + \
+#define END_OF_FIELD(f) (offsetof(crypto_digest_t, f) + \
                          STRUCT_FIELD_SIZE(crypto_digest_t, f))
   switch (alg) {
     case DIGEST_SHA1:

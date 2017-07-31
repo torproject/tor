@@ -7,6 +7,7 @@
  */
 
 #include "orconfig.h"
+#include <stddef.h>
 #include <stdlib.h>
 #include "memarea.h"
 #include "util.h"
@@ -101,7 +102,7 @@ typedef struct memarea_chunk_t {
 
 /** How many bytes are needed for overhead before we get to the memory part
  * of a chunk? */
-#define CHUNK_HEADER_SIZE STRUCT_OFFSET(memarea_chunk_t, U_MEM)
+#define CHUNK_HEADER_SIZE offsetof(memarea_chunk_t, U_MEM)
 
 /** What's the smallest that we'll allocate a chunk? */
 #define CHUNK_SIZE 4096

@@ -472,7 +472,7 @@ var_cell_pack_header(const var_cell_t *cell, char *hdr_out, int wide_circ_ids)
 var_cell_t *
 var_cell_new(uint16_t payload_len)
 {
-  size_t size = STRUCT_OFFSET(var_cell_t, payload) + payload_len;
+  size_t size = offsetof(var_cell_t, payload) + payload_len;
   var_cell_t *cell = tor_malloc_zero(size);
   cell->payload_len = payload_len;
   cell->command = 0;
@@ -491,7 +491,7 @@ var_cell_copy(const var_cell_t *src)
   size_t size = 0;
 
   if (src != NULL) {
-    size = STRUCT_OFFSET(var_cell_t, payload) + src->payload_len;
+    size = offsetof(var_cell_t, payload) + src->payload_len;
     copy = tor_malloc_zero(size);
     copy->payload_len = src->payload_len;
     copy->command = src->command;

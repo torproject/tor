@@ -80,7 +80,7 @@ static int parse_socks_client(const uint8_t *data, size_t datalen,
 
 /* Chunk manipulation functions */
 
-#define CHUNK_HEADER_LEN STRUCT_OFFSET(chunk_t, mem[0])
+#define CHUNK_HEADER_LEN offsetof(chunk_t, mem[0])
 
 /* We leave this many NUL bytes at the end of the buffer. */
 #ifdef DISABLE_MEMORY_SENTINELS

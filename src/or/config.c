@@ -177,7 +177,7 @@ static config_abbrev_t option_abbrevs_[] = {
  * or_options_t.<b>member</b>"
  */
 #define VAR(name,conftype,member,initvalue)                             \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), \
+  { name, CONFIG_TYPE_ ## conftype, offsetof(or_options_t, member),     \
       initvalue }
 /** As VAR, but the option name and member name are the same. */
 #define V(member,conftype,initvalue)                                    \
@@ -733,7 +733,7 @@ static uint64_t compute_real_max_mem_in_queues(const uint64_t val,
 STATIC config_format_t options_format = {
   sizeof(or_options_t),
   OR_OPTIONS_MAGIC,
-  STRUCT_OFFSET(or_options_t, magic_),
+  offsetof(or_options_t, magic_),
   option_abbrevs_,
   option_deprecation_notes_,
   option_vars_,

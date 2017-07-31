@@ -31,7 +31,7 @@
 ext_or_cmd_t *
 ext_or_cmd_new(uint16_t len)
 {
-  size_t size = STRUCT_OFFSET(ext_or_cmd_t, body) + len;
+  size_t size = offsetof(ext_or_cmd_t, body) + len;
   ext_or_cmd_t *cmd = tor_malloc(size);
   cmd->len = len;
   return cmd;
