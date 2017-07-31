@@ -1,3 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - Fix a memory leak in the link-handshake/certs_ok_ed25519 test.
-      Fixes bug 22803; bugfix on 0.3.0.1-alpha.

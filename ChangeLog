@@ -1,3 +1,129 @@
+Changes in version 0.3.1.5-??? - 2017-08-01
+  Blurb goes here
+
+  This release also marks the end of support for the Tor 0.2.4.x,
+  0.2.6.x, and 0.2.7.x release series. Those releases will receive no
+  further bug or security fixes. Anyone still running or distributing
+  one of those versions should upgrade.
+
+  o Major features (build system):
+    - Tor's repository now includes a Travis Continuous Integration (CI)
+      configuration file (.travis.yml). This is meant to help new
+      developers and contributors who fork Tor to a Github repository be
+      better able to test their changes, and understand what we expect
+      to pass. To use this new build feature, you must fork Tor to your
+      Github account, then go into the "Integrations" menu in the
+      repository settings for your fork and enable Travis, then push
+      your changes. Closes ticket 22636.
+
+  o Major bugfixes (openbsd, denial-of-service):
+    - Avoid an assertion failure bug affecting our implementation of
+      inet_pton(AF_INET6) on certain OpenBSD systems whose strtol()
+      handling of "0xfoo" differs from what we had expected. Fixes bug
+      22789; bugfix on 0.2.3.8-alpha. Also tracked as TROVE-2017-007.
+
+  o Major bugfixes (relay, performance):
+    - Perform circuit handshake operations at a higher priority than we
+      use for consensus diff creation and compression. This should
+      prevent circuits from starving when a relay or bridge receive a
+      new consensus, especially on lower-powered machines. Fixes bug
+      22883; bugfix on 0.3.1.1-alpha.
+
+  o Minor features (bridge authority):
+    - Add "fingerprint" line to networkstatus-bridges produced by bridge
+      authorities. Closes ticket 22207.
+
+  o Minor features (directory cache, consensus diff):
+    - Add a new MaxConsensusAgeForDiffs option to allow directory cache
+      operators with low-resource environments to adjust the number of
+      consensuses they'll store and generate diffs from. Most cache
+      operators should leave it unchanged. Helps to work around
+      bug 22883.
+
+  o Minor features (relay, performance):
+    - Always start relays with at least two worker threads, to prevent
+      priority inversion on slow tasks. Part of the fix for bug 22883.
+
+  o Minor features (relay, thread pool):
+    - Allow background work to be queued with different priorities, so
+      that a big pile of slow low-priority jobs will not starve out
+      higher priority jobs. This lays the groundwork for a fix for
+      bug 22883.
+
+  o Minor bugfixes (build system, rust):
+    - Fix a problem with Rust toolchains not being found when building
+      without --enable-cargo-online-mode, due to setting the $HOME
+      environment variable instead of $CARGO_HOME. Fixes bug 22830;
+      bugfix on 0.3.1.1-alpha. Fix by Chelsea Komlo.
+
+  o Minor bugfixes (compatibility, zstd):
+    - Write zstd epilogues correctly when the epilogue requires
+      reallocation of the output buffer, even with zstd 1.3.0.
+      (Previously, we worked on 1.2.0 and failed with 1.3.0). Fixes bug
+      22927; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (compilation warnings):
+    - Suppress -Wdouble-promotion warnings with clang 4.0. Fixes bug
+      22915; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (Compilation):
+    - Fix warnings when building with libscrypt and openssl scrypt
+      support on Clang. Fixes bug 22916; bugfix on 0.2.7.2-alpha.
+    - Compile correctly when both openssl 1.1.0 and libscrypt are
+      detected. Previously this would cause an error. Fixes bug 22892;
+      bugfix on 0.3.1.1-alpha.
+    - When building with certain versions the mingw C header files,
+      avoid float-conversion warnings when calling the C functions
+      isfinite(), isnan(), and signbit(). Fixes bug 22801; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (consensus diff):
+    - test_consdiff_base64cmp would fail on OS X because while OS X
+      follows the standard of (less than zero/zero/greater than zero),
+      it doesn't follow the convention of (-1/0/+1). Make the test
+      comply with the standard. Fixes bug 22870; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (coverity builds):
+    - Avoid Coverity build warnings related to our BUG() macro. By
+      default, Coverity treats BUG() as the Linux kernel does: an
+      instant abort(). We need to override that so our BUG() macro
+      doesn't prevent Coverity from analyzing functions that use it.
+      Fixes bug 23030; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (directory authority):
+    - When a directory authority rejects a descriptor or extrainfo with
+      a given digest, mark that digest as undownloadable, so that we do
+      not attempt to download it again over and over. We previously
+      tried to avoid downloading such descriptors by other means, but we
+      didn't notice if we accidentally downloaded one anyway. This
+      behavior became problematic in 0.2.7.2-alpha, when authorities
+      began pinning Ed25519 keys. Fixes bug 22349; bugfix
+      on 0.2.1.19-alpha.
+
+  o Minor bugfixes (error reporting, windows):
+    - When formatting Windows error messages, use the English format to
+      avoid codepage issues. Fixes bug 22520; bugfix on 0.1.2.8-alpha.
+      Patch from "Vort".
+
+  o Minor bugfixes (file limits):
+    - When setting the maximum number of connections allowed by the OS,
+      always allow some extra file descriptors for other files. Fixes
+      bug 22797; bugfix on 0.2.0.10-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Avoid a sandbox failure when trying to re-bind to a socket and
+      mark it as IPv6-only. Fixes bug 20247; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (memory leak):
+    - Fix a small memory leak when validating a configuration that uses
+      two or more AF_UNIX sockets for the same port type. Fixes bug
+      23053; bugfix on 0.2.6.3-alpha. This is CID 1415725.
+
+  o Minor bugfixes (unit tests):
+    - Fix a memory leak in the link-handshake/certs_ok_ed25519 test.
+      Fixes bug 22803; bugfix on 0.3.0.1-alpha.
+
+
 Changes in version 0.3.1.4-alpha - 2017-06-29
   Tor 0.3.1.4-alpha fixes a path selection bug that would allow a client
   to use a guard that was in the same network family as a chosen exit

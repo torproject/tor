@@ -1,4 +1,0 @@
-  o Minor features (bridge authority):
-    - Add "fingerprint" line to networkstatus-bridges produced by
-      bridge authorities. Closes ticket 22207.
-
