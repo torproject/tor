@@ -2125,10 +2125,13 @@ test_util_parse_integer(void *arg)
   /* Base different than 10 */
   tt_int_op(2L,OP_EQ,   tor_parse_long("10",2,0,100,NULL,NULL));
   tt_int_op(0L,OP_EQ,   tor_parse_long("2",2,0,100,NULL,NULL));
-  tt_int_op(0L,OP_EQ,   tor_parse_long("10",-2,0,100,NULL,NULL));
   tt_int_op(68284L,OP_EQ, tor_parse_long("10abc",16,0,70000,NULL,NULL));
   tt_int_op(68284L,OP_EQ, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
+  tor_capture_bugs_(2);
+  tt_int_op(0L,OP_EQ,   tor_parse_long("10",-2,0,100,NULL,NULL));
   tt_int_op(0,OP_EQ, tor_parse_long("10ABC",-1,0,70000,&i,NULL));
+  tt_int_op(2, OP_EQ, smartlist_len(tor_get_captured_bug_log_()));
+  tor_end_capture_bugs_();
   tt_int_op(i,OP_EQ, 0);
 
   /* Test parse_ulong */
@@ -2141,7 +2144,10 @@ test_util_parse_integer(void *arg)
   tt_int_op(0UL,OP_EQ, tor_parse_ulong("8",8,0,100,NULL,NULL));
   tt_int_op(50UL,OP_EQ, tor_parse_ulong("50",10,50,100,NULL,NULL));
   tt_int_op(0UL,OP_EQ, tor_parse_ulong("-50",10,0,100,NULL,NULL));
+  tor_capture_bugs_(1);
   tt_int_op(0UL,OP_EQ, tor_parse_ulong("50",-1,50,100,&i,NULL));
+  tt_int_op(1, OP_EQ, smartlist_len(tor_get_captured_bug_log_()));
+  tor_end_capture_bugs_();
   tt_int_op(0,OP_EQ, i);
   tt_int_op(0UL,OP_EQ, tor_parse_ulong("-50",10,0,100,&i,NULL));
   tt_int_op(0,OP_EQ, i);
@@ -2157,8 +2163,11 @@ test_util_parse_integer(void *arg)
   tt_assert(U64_LITERAL(0) ==
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
   tt_int_op(0,OP_EQ, i);
+  tor_capture_bugs_(1);
   tt_assert(U64_LITERAL(0) ==
               tor_parse_uint64("123",-1,0,INT32_MAX, &i, &cp));
+  tt_int_op(1, OP_EQ, smartlist_len(tor_get_captured_bug_log_()));
+  tor_end_capture_bugs_();
   tt_int_op(0,OP_EQ, i);
 
   {
