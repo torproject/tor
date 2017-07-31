@@ -3139,15 +3139,7 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
   conn->on_circuit = circ;
   assert_circuit_ok(circ);
 
-  if (origin_circ->rend_data) {
-    origin_circ->rend_data->nr_streams++;
-  } else if (origin_circ->hs_ident) {
-    origin_circ->hs_ident->num_rdv_streams++;
-  } else {
-    /* The previous if/else at the start of the function guarantee that we'll
-     * never end up in a else situation unless it's freed in between. */
-    tor_assert(0);
-  }
+  hs_inc_rdv_stream_counter(origin_circ);
 
   /* Connect tor to the hidden service destination. */
   connection_exit_connect(conn);

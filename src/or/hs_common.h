@@ -222,6 +222,9 @@ void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
 
 int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
 
+void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
+void hs_dec_rdv_stream_counter(origin_circuit_t *circ);
+
 #ifdef HS_COMMON_PRIVATE
 
 STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);

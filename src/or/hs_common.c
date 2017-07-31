@@ -1333,3 +1333,37 @@ hs_free_all(void)
   hs_cache_free_all();
 }
 
+/* For the given origin circuit circ, decrement the number of rendezvous
+ * stream counter. This handles every hidden service version. */
+void
+hs_dec_rdv_stream_counter(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circ->rend_data) {
+    circ->rend_data->nr_streams--;
+  } else if (circ->hs_ident) {
+    circ->hs_ident->num_rdv_streams--;
+  } else {
+    /* Should not be called if this circuit is not for hidden service. */
+    tor_assert_nonfatal_unreached();
+  }
+}
+
+/* For the given origin circuit circ, increment the number of rendezvous
+ * stream counter. This handles every hidden service version. */
+void
+hs_inc_rdv_stream_counter(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circ->rend_data) {
+    circ->rend_data->nr_streams++;
+  } else if (circ->hs_ident) {
+    circ->hs_ident->num_rdv_streams++;
+  } else {
+    /* Should not be called if this circuit is not for hidden service. */
+    tor_assert_nonfatal_unreached();
+  }
+}
+
