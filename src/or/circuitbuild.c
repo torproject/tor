@@ -2358,9 +2358,6 @@ choose_good_middle_server(uint8_t purpose,
  * router (if we're an OR), and respect firewall settings; if we're
  * configured to use entry guards, return one.
  *
- * If <b>state</b> is NULL, we're choosing a router to serve as an entry
- * guard, not for any particular circuit.
- *
  * Set *<b>guard_state_out</b> to information about the guard that
  * we're selecting, which we'll use later to remember whether the
  * guard worked or not.
@@ -2377,6 +2374,11 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
   router_crn_flags_t flags = (CRN_NEED_GUARD|CRN_NEED_DESC|CRN_PREF_ADDR|
                               CRN_DIRECT_CONN);
   const node_t *node;
+
+  /* Once we used this function to select a node to be a guard.  We had
+   * 'state == NULL' be the signal for that.  But we don't do that any more.
+   */
+  tor_assert_nonfatal(state);
 
   if (state && options->UseEntryGuards &&
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
