@@ -175,6 +175,19 @@ old C functions.  Use `strlcat`, `strlcpy`, or `tor_snprintf/tor_asprintf` inste
 We don't call `memcmp()` directly.  Use `fast_memeq()`, `fast_memneq()`,
 `tor_memeq()`, or `tor_memneq()` for most purposes.
 
+Also see a longer list of functions to avoid in:
+https://people.torproject.org/~nickm/tor-auto/internal/this-not-that.html
+
+Other C conventions
+-------------------
+
+The `a ? b : c` trinary operator only goes inside other expressions;
+don't use it as a replacement for if. (You can ignore this inside macro
+definitions when necessary.)
+
+Assignment operators shouldn't nest inside other expressions.  (You can
+ignore this inside macro definitions when necessary.)
+
 Functions not to write
 ----------------------
 
