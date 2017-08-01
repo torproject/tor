@@ -1,4 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox):
-    - Avoid a sandbox failure when trying to re-bind to a socket and mark
-      it as IPv6-only. Fixes bug 20247; bugfix on 0.2.5.1-alpha.
-

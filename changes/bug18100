@@ -1,5 +1,0 @@
-  o Major bugfixes (linux TPROXY support):
-    - Fix a typo that had prevented TPROXY-based transparent proxying from
-      working under Linux. Fixes bug 18100; bugfix on 0.2.6.3-alpha.
-      Patch from "d4fq0fQAgoJ".
-

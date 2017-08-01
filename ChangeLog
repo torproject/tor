@@ -1,3 +1,75 @@
+Changes in version 0.3.0.10 - 2017-08-02
+   Tor 0.3.0.10 alpha backports a collection of small-to-medium bugfixes
+   from the current Tor alpha series. OpenBSD users and TPROXY users
+   should upgrade; others are probably okay sticking with 0.3.0.9.
+
+  o Major features (build system, continuous integration, backport from 0.3.1.5-alpha):
+    - Tor's repository now includes a Travis Continuous Integration (CI)
+      configuration file (.travis.yml). This is meant to help new
+      developers and contributors who fork Tor to a Github repository be
+      better able to test their changes, and understand what we expect
+      to pass. To use this new build feature, you must fork Tor to your
+      Github account, then go into the "Integrations" menu in the
+      repository settings for your fork and enable Travis, then push
+      your changes. Closes ticket 22636.
+
+  o Major bugfixes (linux TPROXY support, backport from 0.3.1.1-alpha):
+    - Fix a typo that had prevented TPROXY-based transparent proxying
+      from working under Linux. Fixes bug 18100; bugfix on 0.2.6.3-alpha.
+      Patch from "d4fq0fQAgoJ".
+
+  o Major bugfixes (openbsd, denial-of-service, backport from 0.3.1.5-alpha):
+    - Avoid an assertion failure bug affecting our implementation of
+      inet_pton(AF_INET6) on certain OpenBSD systems whose strtol()
+      handling of "0xfoo" differs from what we had expected. Fixes bug
+      22789; bugfix on 0.2.3.8-alpha. Also tracked as TROVE-2017-007.
+
+  o Minor features (backport from 0.3.1.5-alpha):
+    - Update geoip and geoip6 to the July 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (bandwidth accounting, backport from 0.3.1.2-alpha):
+    - Roll over monthly accounting at the configured hour and minute,
+      rather than always at 00:00. Fixes bug 22245; bugfix on 0.0.9rc1.
+      Found by Andrey Karpov with PVS-Studio.
+
+  o Minor bugfixes (compilation warnings, backport from 0.3.1.5-alpha):
+    - Suppress -Wdouble-promotion warnings with clang 4.0. Fixes bug 22915;
+      bugfix on 0.2.8.1-alpha.
+    - Fix warnings when building with libscrypt and openssl scrypt
+      support on Clang. Fixes bug 22916; bugfix on 0.2.7.2-alpha.
+    - When building with certain versions of the mingw C header files,
+      avoid float-conversion warnings when calling the C functions
+      isfinite(), isnan(), and signbit(). Fixes bug 22801; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (compilation, mingw, backport from 0.3.1.1-alpha):
+    - Backport a fix for an "unused variable" warning that appeared
+      in some versions of mingw. Fixes bug 22838; bugfix on
+      0.2.8.1-alpha.
+
+  o Minor bugfixes (coverity build support, backport from 0.3.1.5-alpha):
+    - Avoid Coverity build warnings related to our BUG() macro. By
+      default, Coverity treats BUG() as the Linux kernel does: an
+      instant abort(). We need to override that so our BUG() macro
+      doesn't prevent Coverity from analyzing functions that use it.
+      Fixes bug 23030; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (directory authority, backport from 0.3.1.1-alpha):
+    - When rejecting a router descriptor for running an obsolete version
+      of Tor without ntor support, warn about the obsolete tor version,
+      not the missing ntor key. Fixes bug 20270; bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox, backport from 0.3.1.5-alpha):
+    - Avoid a sandbox failure when trying to re-bind to a socket and
+      mark it as IPv6-only. Fixes bug 20247; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (unit tests, backport from 0.3.1.5-alpha)
+    - Fix a memory leak in the link-handshake/certs_ok_ed25519 test.
+      Fixes bug 22803; bugfix on 0.3.0.1-alpha.
+
+
+
 Changes in version 0.3.0.9 - 2017-06-29
   Tor 0.3.0.9 fixes a path selection bug that would allow a client
   to use a guard that was in the same network family as a chosen exit
