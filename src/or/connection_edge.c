@@ -1987,8 +1987,8 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
   socklen_t orig_dst_len = sizeof(orig_dst);
   tor_addr_t addr;
 
-#ifdef TRANS_TRPOXY
-  if (options->TransProxyType_parsed == TPT_TPROXY) {
+#ifdef TRANS_TPROXY
+  if (get_options()->TransProxyType_parsed == TPT_TPROXY) {
     if (getsockname(ENTRY_TO_CONN(conn)->s, (struct sockaddr*)&orig_dst,
                     &orig_dst_len) < 0) {
       int e = tor_socket_errno(ENTRY_TO_CONN(conn)->s);
