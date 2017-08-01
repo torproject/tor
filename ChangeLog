@@ -69,7 +69,6 @@ Changes in version 0.3.0.10 - 2017-08-02
       Fixes bug 22803; bugfix on 0.3.0.1-alpha.
 
 
-
 Changes in version 0.3.0.9 - 2017-06-29
   Tor 0.3.0.9 fixes a path selection bug that would allow a client
   to use a guard that was in the same network family as a chosen exit
