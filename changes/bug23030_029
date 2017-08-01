@@ -1,7 +1,0 @@
-  o Minor bugfixes (coverity builds):
-    - Avoid Coverity build warnings related to our BUG() macro. By
-      default, Coverity treats BUG() as the Linux kernel does: an
-      instant abort(). We need to override that so our BUG() macro
-      doesn't prevent Coverity from analyzing functions that use it.
-      Fixes bug 23030; bugfix on 0.2.9.1-alpha.
-

@@ -1,7 +1,0 @@
-  o Minor features (directory cache, consensus diff):
-    - Add a new MaxConsensusAgeForDiffs option to allow directory cache
-      operators with low-resource environments to adjust the number of
-      consensuses they'll store and generate diffs from. Most cache operators
-      should leave it unchanged. Helps to work around bug 22883.
-
-

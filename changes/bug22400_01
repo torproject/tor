@@ -1,4 +1,0 @@
-  o Major bugfixes (entry guards):
-    - When starting with an old consensus, do not add new entry guards
-      unless the consensus is "reasonably live" (under 1 day old). Fixes
-      one root cause of bug 22400; bugfix on 0.3.0.1-alpha.

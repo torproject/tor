@@ -1,5 +1,0 @@
-  o Minor bugfixes (consensus diff):
-    - test_consdiff_base64cmp would fail on OS X because while OS X
-      follows the standard of (less than zero/zero/greater than zero),
-      it doesn't follow the convention of (-1/0/+1). Make the test
-      comply with the standard. Fixes bug 22870; bugfix on 0.3.1.1-alpha.

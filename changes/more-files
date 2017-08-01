@@ -1,4 +1,0 @@
-  o Documentation:
-    - Document more of the files in the Tor data directory, including
-      cached-extrainfo, secret_onion_key{,_ntor}.old, hidserv-stats,
-      approved-routers, sr-random, and diff-cache.

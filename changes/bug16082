@@ -1,4 +1,0 @@
-  o Documentation:
-    - Correctly note that bandwidth accounting values are stored in the
-      state file, and the bw_accounting file is now obsolete. Closes
-      ticket 16082.

@@ -1,5 +1,0 @@
- o Minor bugfixes:
-   - Fix a problem with Rust toolchains not being found when building
-     without --enable-cargo-online-mode, due to setting the $HOME
-     environment variable instead of $CARGO_HOME.  Fixes bug 22830;
-     fix by Chelsea Komlo.  Bugfix on 0.3.1.1-alpha.

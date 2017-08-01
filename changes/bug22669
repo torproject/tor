@@ -1,4 +1,0 @@
-  o Minor bugfixes (compression):
-    - When serving directory votes compressed with zlib,
-      do not claim to have compressed them with zstd. Fixes bug 22669;
-      bugfix on 0.3.1.1-alpha.

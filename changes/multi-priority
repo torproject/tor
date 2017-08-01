@@ -1,5 +1,0 @@
-  o Minor features (relay, thread pool):
-    - Allow background work to be queued with different priorities, so
-      that a big pile of slow low-priority jobs will not starve out
-      higher priority jobs. This lays the groundwork for a fix for bug
-      22883.

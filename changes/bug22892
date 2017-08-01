@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Compile correctly when both openssl 1.1.0 and libscrypt are detected.
-      Previously this would cause an error. Fixes bug 22892; bugfix on 
-      0.3.1.1-alpha.

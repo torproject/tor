@@ -1,5 +1,0 @@
-  o Minor bugfixes (memory leak):
-    - Fix a small memory leak when validating a configuration that
-      uses two or more AF_UNIX sockets for the same port type.
-      Fixes bug 23053; bugfix on 0.2.6.3-alpha. This is CID
-      1415725.
