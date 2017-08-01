@@ -43,6 +43,10 @@ Changes in version 0.3.1.5-alpha - 2017-08-01
       operators should leave it unchanged. Helps to work around
       bug 22883.
 
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 4 2017 Maxmind GeoLite2
+      Country database.
+
   o Minor features (relay, performance):
     - Always start relays with at least two worker threads, to prevent
       priority inversion on slow tasks. Part of the fix for bug 22883.
