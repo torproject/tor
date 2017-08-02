@@ -189,9 +189,9 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
 
   node_identity_pk = node_get_ed25519_id(node);
   if (node_identity_pk == NULL) {
-    log_warn(LD_BUG, "ed25519 identity public key not found when "
-                     "trying to build the hsdir indexes for node %s",
-             node_describe(node));
+    log_debug(LD_GENERAL, "ed25519 identity public key not found when "
+              "trying to build the hsdir indexes for node %s",
+              node_describe(node));
     goto done;
   }
 
