@@ -60,7 +60,7 @@ try:
 except ImportError:
     # In python 3.6, the sha3 functions are in hashlib whether we
     # import sha3 or not.
-    pass
+    sha3 = None
 
 try:
     # Pull the sha3 functions in.
