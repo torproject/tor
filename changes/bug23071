@@ -1,0 +1,5 @@
+  o Minor bugfixes (tests):
+    - Port the hs_ntor handshake test to work correctly with recent
+      versions of the pysha3 module. Fixes bug 23071; bugfix on
+      0.3.1.1-alpha.
+

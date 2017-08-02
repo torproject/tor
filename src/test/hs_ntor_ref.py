@@ -54,11 +54,28 @@ except ImportError:
     import slownacl_curve25519
     curve25519mod = slownacl_curve25519
 
+import hashlib
 try:
     import sha3
 except ImportError:
-    # error code 77 tells automake to skip this test
-    sys.exit(77)
+    # In python 3.6, the sha3 functions are in hashlib whether we
+    # import sha3 or not.
+    sha3 = None
+
+try:
+    # Pull the sha3 functions in.
+    from hashlib import sha3_256, shake_256
+    shake_squeeze = shake_256.digest
+except ImportError:
+    if hasattr(sha3, "SHA3256"):
+        # If this happens, then we have the old "sha3" module which
+        # hashlib and pysha3 superseded.
+        sha3_256 = sha3.SHA3256
+        shake_256 = sha3.SHAKE256
+        shake_squeeze = shake_256.squeeze
+    else:
+        # error code 77 tells automake to skip this test
+        sys.exit(77)
 
 # Import Nick's ntor reference implementation in Python
 # We are gonna use a few of its utilities.
@@ -81,7 +98,7 @@ def mac(k,m):
     def htonll(num):
         return struct.pack('!q', num)
 
-    s = sha3.SHA3256()
+    s = sha3_256()
     s.update(htonll(len(k)))
     s.update(k)
     s.update(m)
@@ -107,9 +124,9 @@ def intro2_ntor_client(intro_auth_pubkey_str, intro_enc_pubkey,
     assert(len(secret) == INTRO_SECRET_LEN)
     info = M_HSEXPAND + subcredential
 
-    kdf = sha3.SHAKE256()
+    kdf = shake_256()
     kdf.update(secret + T_HSENC + info)
-    key_material = kdf.squeeze(64*8)
+    key_material = shake_squeeze(kdf, 64*8)
 
     enc_key = key_material[0:32]
     mac_key = key_material[32:64]
@@ -139,9 +156,9 @@ def intro2_ntor_service(intro_auth_pubkey_str, client_enc_pubkey, service_enc_pr
     assert(len(secret) == INTRO_SECRET_LEN)
     info = M_HSEXPAND + subcredential
 
-    kdf = sha3.SHAKE256()
+    kdf = shake_256()
     kdf.update(secret + T_HSENC + info)
-    key_material = kdf.squeeze(64*8)
+    key_material = shake_squeeze(kdf, 64*8)
 
     enc_key = key_material[0:32]
     mac_key = key_material[32:64]
