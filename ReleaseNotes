@@ -3,7 +3,7 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.3.0.10 - 2017-08-02
-   Tor 0.3.0.10 alpha backports a collection of small-to-medium bugfixes
+   Tor 0.3.0.10 backports a collection of small-to-medium bugfixes
    from the current Tor alpha series. OpenBSD users and TPROXY users
    should upgrade; others are probably okay sticking with 0.3.0.9.
 
