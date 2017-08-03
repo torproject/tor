@@ -2490,7 +2490,7 @@ hs_desc_link_specifier_new(const extend_info_t *info, uint8_t type)
 
 /* From the given descriptor, remove and free every introduction point. */
 void
-hs_descriptor_free_intro_points(hs_descriptor_t *desc)
+hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
 {
   smartlist_t *ips;
 

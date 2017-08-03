@@ -595,9 +595,10 @@ hs_intro_received_introduce1(or_circuit_t *circ, const uint8_t *request,
   return -1;
 }
 
-/* Free the given intropoint object ip. */
+/* Clear memory allocated by the given intropoint object ip (but don't free the
+ * object itself). */
 void
-hs_intro_free_content(hs_intropoint_t *ip)
+hs_intropoint_clear(hs_intropoint_t *ip)
 {
   if (ip == NULL) {
     return;

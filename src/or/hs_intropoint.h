@@ -51,7 +51,7 @@ MOCK_DECL(int, hs_intro_send_intro_established_cell,(or_circuit_t *circ));
 int hs_intro_circuit_is_suitable_for_establish_intro(const or_circuit_t *circ);
 
 hs_intropoint_t *hs_intro_new(void);
-void hs_intro_free_content(hs_intropoint_t *ip);
+void hs_intropoint_clear(hs_intropoint_t *ip);
 
 #ifdef HS_INTROPOINT_PRIVATE
 

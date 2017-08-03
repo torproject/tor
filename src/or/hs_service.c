@@ -320,7 +320,7 @@ service_intro_point_free(hs_service_intro_point_t *ip)
   memwipe(&ip->enc_key_kp, 0, sizeof(ip->enc_key_kp));
   crypto_pk_free(ip->legacy_key);
   replaycache_free(ip->replay_cache);
-  hs_intro_free_content(&ip->base);
+  hs_intropoint_clear(&ip->base);
   tor_free(ip);
 }
 
@@ -1141,7 +1141,7 @@ build_desc_intro_points(const hs_service_t *service,
   /* Ease our life. */
   encrypted = &desc->desc->encrypted_data;
   /* Cleanup intro points, we are about to set them from scratch. */
-  hs_descriptor_free_intro_points(desc->desc);
+  hs_descriptor_clear_intro_points(desc->desc);
 
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        const hs_service_intro_point_t *, ip) {
@@ -2125,7 +2125,7 @@ get_rev_counter_for_service(ed25519_public_key_t *blinded_pubkey)
 /** Update the value of the revision counter for <b>hs_desc</b> and save it on
     our state file. */
 static void
-update_descriptor_revision_counter(hs_descriptor_t *hs_desc)
+increment_descriptor_revision_counter(hs_descriptor_t *hs_desc)
 {
   /* Find stored rev counter if it exists */
   uint64_t rev_counter =
@@ -2212,7 +2212,7 @@ upload_descriptor_to_all(const hs_service_t *service,
   }
 
   /* Update the revision counter of this descriptor */
-  update_descriptor_revision_counter(desc->desc);
+  increment_descriptor_revision_counter(desc->desc);
 
   smartlist_free(responsible_dirs);
   return;
@@ -2517,8 +2517,8 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
  * information when originally tried to be uploaded. This is called when our
  * directory information has changed. */
 static void
-consider_hsdir_retry(const hs_service_t *service,
-                     hs_service_descriptor_t *desc)
+consider_hsdir_upload_retry(const hs_service_t *service,
+                            hs_service_descriptor_t *desc)
 {
   smartlist_t *responsible_dirs = NULL;
   smartlist_t *still_missing_dirs = NULL;
@@ -2772,7 +2772,7 @@ hs_service_dir_info_changed(void)
       /* This cleans up the descriptor missing hsdir information list if a
        * successful upload is made or if any of the directory aren't
        * responsible anymore for the service descriptor. */
-      consider_hsdir_retry(service, desc);
+      consider_hsdir_upload_retry(service, desc);
     } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
 }
