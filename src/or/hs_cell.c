@@ -193,18 +193,16 @@ build_legacy_establish_intro(const char *circ_nonce, crypto_pk_t *enc_key,
                              uint8_t *cell_out)
 {
   ssize_t cell_len;
-  char buf[RELAY_PAYLOAD_SIZE] = {0};
 
   tor_assert(circ_nonce);
   tor_assert(enc_key);
   tor_assert(cell_out);
 
-  cell_len = rend_service_encode_establish_intro_cell(buf, sizeof(buf),
+  memwipe(cell_out, 0, RELAY_PAYLOAD_SIZE);
+
+  cell_len = rend_service_encode_establish_intro_cell((char*)cell_out,
+                                                      RELAY_PAYLOAD_SIZE,
                                                       enc_key, circ_nonce);
-  tor_assert(cell_len <= RELAY_PAYLOAD_SIZE);
-  if (cell_len >= 0) {
-    memcpy(cell_out, buf, cell_len);
-  }
   return cell_len;
 }
 
@@ -326,6 +324,9 @@ hs_cell_build_establish_intro(const char *circ_nonce,
                         tmp_cell_enc, tmp_cell_enc_len - tmp_cell_mac_offset);
     handshake_ptr = trn_cell_establish_intro_getarray_handshake_mac(cell);
     memcpy(handshake_ptr, mac, sizeof(mac));
+
+    memwipe(mac, 0, sizeof(mac));
+    memwipe(tmp_cell_enc, 0, sizeof(tmp_cell_enc));
   }
 
   /* Calculate the cell signature SIG. */
@@ -353,6 +354,8 @@ hs_cell_build_establish_intro(const char *circ_nonce,
     /* Copy the signature into the cell. */
     sig_ptr = trn_cell_establish_intro_getarray_sig(cell);
     memcpy(sig_ptr, sig.sig, sig_len);
+
+    memwipe(tmp_cell_enc, 0, sizeof(tmp_cell_enc));
   }
 
   /* Encode the cell. Can't be bigger than a standard cell. */

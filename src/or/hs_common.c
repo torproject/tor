@@ -582,6 +582,8 @@ build_blinded_key_param(const ed25519_public_key_t *pubkey,
   /* Extract digest and put it in the param. */
   crypto_digest_get_digest(digest, (char *) param_out, DIGEST256_LEN);
   crypto_digest_free(digest);
+
+  memwipe(nonce, 0, sizeof(nonce));
 }
 
 /* Using an ed25519 public key and version to build the checksum of an
@@ -701,6 +703,8 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                           ED25519_PUBKEY_LEN);
   crypto_digest_get_digest(digest, (char *) subcred_out, DIGEST256_LEN);
   crypto_digest_free(digest);
+
+  memwipe(credential, 0, sizeof(credential));
 }
 
 /* From the given list of hidden service ports, find the matching one from the
@@ -892,6 +896,8 @@ hs_build_blinded_pubkey(const ed25519_public_key_t *pk,
   build_blinded_key_param(pk, secret, secret_len,
                           time_period_num, get_time_period_length(), param);
   ed25519_public_blind(blinded_pk_out, pk, param);
+
+  memwipe(param, 0, sizeof(param));
 }
 
 /* From a given ed25519 keypair kp and an optional secret, compute a blinded
@@ -916,6 +922,8 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
   build_blinded_key_param(&kp->pubkey, secret, secret_len,
                           time_period_num, get_time_period_length(), param);
   ed25519_keypair_blind(blinded_kp_out, kp, param);
+
+  memwipe(param, 0, sizeof(param));
 }
 
 /* Return true if overlap mode is active given the date in consensus. If
