@@ -2706,7 +2706,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     rs->supports_ed25519_hs_intro =
       protocol_list_supports_protocol(tok->args[0], PRT_HSINTRO, 4);
     rs->supports_v3_hsdir =
-      protocol_list_supports_protocol(tok->args[0], PRT_HSDIR, 2);
+      protocol_list_supports_protocol(tok->args[0], PRT_HSDIR,
+                                      PROTOVER_HSDIR_V3);
   }
   if ((tok = find_opt_by_keyword(tokens, K_V))) {
     tor_assert(tok->n_args == 1);
@@ -2720,8 +2721,9 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     }
     if (!strcmpstart(tok->args[0], "Tor ") && found_protocol_list) {
       /* Bug #22447 forces us to filter on this version. */
-      rs->supports_v3_hsdir =
-        tor_version_as_new_as(tok->args[0], "0.3.0.8");
+      if (!tor_version_as_new_as(tok->args[0], "0.3.0.8")) {
+        rs->supports_v3_hsdir = 0;
+      }
     }
     if (vote_rs) {
       vote_rs->version = tor_strdup(tok->args[0]);
