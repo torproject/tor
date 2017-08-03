@@ -199,11 +199,6 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
   current_time_period_num = hs_get_time_period_num(now);
   next_time_period_num = hs_get_next_time_period_num(now);
 
-  /* If NOT in overlap mode, we only need to compute the current hsdir index
-   * for the ongoing time period and thus the current SRV. If it can't be
-   * found, the disaster one is returned. */
-  current_hsdir_index_srv = hs_get_current_srv(current_time_period_num);
-
   if (hs_overlap_mode_is_active(ns, now)) {
     /* We are in overlap mode, this means that our consensus has just cycled
      * from current SRV to previous SRV so for the _next_ upcoming time
@@ -214,6 +209,11 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
     /* The following can be confusing so again, in overlap mode, we use our
      * previous SRV for our _current_ hsdir index. */
     current_hsdir_index_srv = hs_get_previous_srv(current_time_period_num);
+  } else {
+    /* If NOT in overlap mode, we only need to compute the current hsdir index
+     * for the ongoing time period and thus the current SRV. If it can't be
+     * found, the disaster one is returned. */
+    current_hsdir_index_srv = hs_get_current_srv(current_time_period_num);
   }
 
   /* Build the current hsdir index. */
@@ -223,6 +223,8 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
     /* Build the next hsdir index if we have a next SRV that we can use. */
     hs_build_hsdir_index(node_identity_pk, next_hsdir_index_srv,
                          next_time_period_num, node->hsdir_index->next);
+  } else {
+    memset(node->hsdir_index->next, 0, sizeof(node->hsdir_index->next));
   }
 
  done:
