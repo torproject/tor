@@ -1856,7 +1856,7 @@ static const char *desc_gen_reason = NULL;
  * now. */
 static time_t desc_clean_since = 0;
 /** Why did we mark the descriptor dirty? */
-static const char *desc_dirty_reason = NULL;
+static const char *desc_dirty_reason = "Tor just started";
 /** Boolean: do we need to regenerate the above? */
 static int desc_needs_upload = 0;
 
