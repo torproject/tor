@@ -346,12 +346,25 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
    * term keys. */
   ed25519_keypair_generate(&ip->auth_key_kp, 0);
 
-  ip->introduce2_max =
-    crypto_rand_int_range(get_intro_point_min_introduce2(),
-                          get_intro_point_max_introduce2());
-  ip->time_to_expire = time(NULL) +
-    crypto_rand_int_range(get_intro_point_min_lifetime(),
-                          get_intro_point_max_lifetime());
+  { /* Set introduce2 max cells limit */
+    int32_t min_introduce2_cells = get_intro_point_min_introduce2();
+    int32_t max_introduce2_cells = get_intro_point_max_introduce2();
+    if (BUG(max_introduce2_cells < min_introduce2_cells)) {
+      goto err;
+    }
+    ip->introduce2_max = crypto_rand_int_range(min_introduce2_cells,
+                                               max_introduce2_cells);
+  }
+  { /* Set intro point lifetime */
+    int32_t intro_point_min_lifetime = get_intro_point_min_lifetime();
+    int32_t intro_point_max_lifetime = get_intro_point_max_lifetime();
+    if (BUG(intro_point_max_lifetime < intro_point_min_lifetime)) {
+      goto err;
+    }
+    ip->time_to_expire = time(NULL) +
+      crypto_rand_int_range(intro_point_min_lifetime,intro_point_max_lifetime);
+  }
+
   ip->replay_cache = replaycache_new(0, 0);
 
   /* Initialize the base object. We don't need the certificate object. */
