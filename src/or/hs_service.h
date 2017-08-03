@@ -332,8 +332,8 @@ STATIC void service_descriptor_free(hs_service_descriptor_t *desc);
 
 STATIC uint64_t
 check_state_line_for_service_rev_counter(const char *state_line,
-                                         ed25519_public_key_t *blinded_pubkey,
-                                         int *service_found_out);
+                                    const ed25519_public_key_t *blinded_pubkey,
+                                    int *service_found_out);
 
 #endif /* TOR_UNIT_TESTS */
 

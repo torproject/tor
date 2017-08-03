@@ -2048,8 +2048,8 @@ update_revision_counters_in_state(void)
  *  counter. Else set <b>service_found_out</b> to False. */
 STATIC uint64_t
 check_state_line_for_service_rev_counter(const char *state_line,
-                                         ed25519_public_key_t *blinded_pubkey,
-                                         int *service_found_out)
+                                    const ed25519_public_key_t *blinded_pubkey,
+                                    int *service_found_out)
 {
   smartlist_t *items = NULL;
   int ok;
@@ -2111,7 +2111,7 @@ check_state_line_for_service_rev_counter(const char *state_line,
  *  service with blinded key <b>blinded_pubkey</b>. If no revision counter is
  *  found, return 0. */
 static uint64_t
-get_rev_counter_for_service(ed25519_public_key_t *blinded_pubkey)
+get_rev_counter_for_service(const ed25519_public_key_t *blinded_pubkey)
 {
   or_state_t *state = get_or_state();
   config_line_t *line;

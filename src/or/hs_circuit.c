@@ -214,8 +214,8 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
 
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        const hs_service_intro_point_t *, ip) {
-    circuit_t *circ;
-    origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
+    const circuit_t *circ;
+    const origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
     if (ocirc == NULL) {
       continue;
     }
