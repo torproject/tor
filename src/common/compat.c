@@ -2349,15 +2349,26 @@ get_parent_directory(char *fname)
 static char *
 alloc_getcwd(void)
 {
-#ifdef PATH_MAX
-#define MAX_CWD PATH_MAX
+#ifdef HAVE_GET_CURRENT_DIR_NAME
+  return get_current_dir_name();
 #else
-#define MAX_CWD 4096
-#endif
+  size_t size = 1024;
+  char *buf = NULL;
+  char *ptr = NULL;
 
-  char path_buf[MAX_CWD];
-  char *path = getcwd(path_buf, sizeof(path_buf));
-  return path ? tor_strdup(path) : NULL;
+  while (ptr == NULL) {
+    buf = tor_realloc(buf, size);
+    ptr = getcwd(buf, size);
+
+    if (ptr == NULL && errno != ERANGE) {
+      tor_free(buf);
+      return NULL;
+    }
+
+    size *= 2;
+  }
+  return buf;
+#endif
 }
 #endif
 

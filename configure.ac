@@ -481,6 +481,7 @@ AC_CHECK_FUNCS(
 	timingsafe_memcmp \
         flock \
         ftime \
+        get_current_dir_name \
         getaddrinfo \
         getifaddrs \
         getpass \
