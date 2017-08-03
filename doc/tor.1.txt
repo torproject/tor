@@ -439,8 +439,8 @@ GENERAL OPTIONS
     Tor will contact the authority at __address__ to
     download directory documents. The provided __port__ value is a dirport;
     clients ignore this in favor of the specified "orport=" value.  If an
-    IPv6 address is supplied, Tor will
-    also download directory documents at the IPv6 address on the ORPort. +
+    IPv6 ORPort is supplied, Tor will
+    also download directory documents at the IPv6 ORPort. +
  +
     If no **DirAuthority** line is given, Tor will use the default directory
     authorities. NOTE: this option is intended for setting up a private Tor
