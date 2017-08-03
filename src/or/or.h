@@ -421,9 +421,9 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_RENDDESC_V2 18
 /** A connection to a directory server: download a microdescriptor. */
 #define DIR_PURPOSE_FETCH_MICRODESC 19
-/** A connetion to a hidden service directory: upload a descriptor. */
+/** A connection to a hidden service directory: upload a v3 descriptor. */
 #define DIR_PURPOSE_UPLOAD_HSDESC 20
-/** A connetion to a hidden service directory: fetch a descriptor. */
+/** A connection to a hidden service directory: fetch a v3 descriptor. */
 #define DIR_PURPOSE_FETCH_HSDESC 21
 #define DIR_PURPOSE_MAX_ 21
 

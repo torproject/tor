@@ -233,7 +233,7 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
   return count;
 }
 
-/* From a given service, rendezvous cookie and handshake infor, create a
+/* From a given service, rendezvous cookie and handshake info, create a
  * rendezvous point circuit identifier. This can't fail. */
 static hs_ident_circuit_t *
 create_rp_circuit_identifier(const hs_service_t *service,
@@ -351,7 +351,7 @@ send_establish_intro(const hs_service_t *service,
  *  if direct_conn, IPv6 is prefered if we have one available.
  *  if firewall does not allow the chosen address, error.
  *
- * Return NULL if we can fulfill the conditions. */
+ * Return NULL if we can't fulfill the conditions. */
 static extend_info_t *
 get_rp_extend_info(const smartlist_t *link_specifiers,
                    const curve25519_public_key_t *onion_key, int direct_conn)
@@ -778,6 +778,8 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
   tor_assert(desc);
   tor_assert(circ);
 
+  /* Cound opened circuits that have sent ESTABLISH_INTRO cells or are already
+   * established introduction circuits */
   num_intro_circ = count_opened_desc_intro_point_circuits(service, desc);
   num_needed_circ = service->config.num_intro_points;
   if (num_intro_circ > num_needed_circ) {
@@ -879,8 +881,9 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
   memwipe(payload, 0, sizeof(payload));
 }
 
-/* Handle an INTRO_ESTABLISHED cell payload of length payload_len arriving on
- * the given introduction circuit circ. The service is only used for logging
+/* Circ has been expecting an INTRO_ESTABLISHED cell that just arrived. Handle
+ * the INTRO_ESTABLISHED cell payload of length payload_len arriving on the
+ * given introduction circuit circ. The service is only used for logging
  * purposes. Return 0 on success else a negative value. */
 int
 hs_circ_handle_intro_established(const hs_service_t *service,
@@ -919,9 +922,10 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   return ret;
 }
 
-/* Handle an INTRODUCE2 unparsed payload of payload_len for the given circuit
- * and service. This cell is associated with the intro point object ip and the
- * subcredential. Return 0 on success else a negative value. */
+/* We just received an INTRODUCE2 cell on the established introduction circuit
+ * circ.  Handle the INTRODUCE2 payload of size payload_len for the given
+ * circuit and service. This cell is associated with the intro point object ip
+ * and the subcredential. Return 0 on success else a negative value. */
 int
 hs_circ_handle_introduce2(const hs_service_t *service,
                           const origin_circuit_t *circ,

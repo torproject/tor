@@ -16,6 +16,7 @@
 #include "hs_common.h"
 #include "config.h"
 
+/** Test the validation of HS v3 addresses */
 static void
 test_validate_address(void *arg)
 {
@@ -69,6 +70,7 @@ test_validate_address(void *arg)
   ;
 }
 
+/** Test building HS v3 onion addresses */
 static void
 test_build_address(void *arg)
 {
@@ -133,6 +135,7 @@ test_time_period(void *arg)
   ;
 }
 
+/** Test that we can correctly find the start time of the next time period */
 static void
 test_start_time_of_next_time_period(void *arg)
 {

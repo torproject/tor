@@ -206,8 +206,9 @@ service_clear_config(hs_service_config_t *config)
   memset(config, 0, sizeof(*config));
 }
 
-/* Return the number of minimum INTRODUCE2 cell defined by a consensus
- * parameter or the default value. */
+/* Return the lower bound of maximum INTRODUCE2 cells per circuit before we
+ * rotate intro point (defined by a consensus parameter or the default
+ * value). */
 static int32_t
 get_intro_point_min_introduce2(void)
 {
@@ -218,8 +219,9 @@ get_intro_point_min_introduce2(void)
                                  0, INT32_MAX);
 }
 
-/* Return the number of maximum INTRODUCE2 cell defined by a consensus
- * parameter or the default value. */
+/* Return the upper bound of maximum INTRODUCE2 cells per circuit before we
+ * rotate intro point (defined by a consensus parameter or the default
+ * value). */
 static int32_t
 get_intro_point_max_introduce2(void)
 {
@@ -230,8 +232,8 @@ get_intro_point_max_introduce2(void)
                                  0, INT32_MAX);
 }
 
-/* Return the minimum lifetime of an introduction point defined by a consensus
- * parameter or the default value. */
+/* Return the minimum lifetime in seconds of an introduction point defined by a
+ * consensus parameter or the default value. */
 static int32_t
 get_intro_point_min_lifetime(void)
 {
@@ -247,8 +249,8 @@ get_intro_point_min_lifetime(void)
                                  0, INT32_MAX);
 }
 
-/* Return the maximum lifetime of an introduction point defined by a consensus
- * parameter or the default value. */
+/* Return the maximum lifetime in seconds of an introduction point defined by a
+ * consensus parameter or the default value. */
 static int32_t
 get_intro_point_max_lifetime(void)
 {
@@ -466,7 +468,16 @@ service_intro_point_find(const hs_service_t *service,
   tor_assert(service);
   tor_assert(auth_key);
 
-  /* Trying all descriptors. */
+  /* Trying all descriptors to find the right intro point.
+   *
+   * Even if we use the same node as intro point in both descriptors, the node
+   * will have a different intro auth key for each descriptor since we generate
+   * a new one everytime we pick an intro point.
+   *
+   * After #22893 gets implemented, intro points will be moved to be
+   * per-service instead of per-descriptor so this function will need to
+   * change.
+   */
   FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
     if ((ip = digest256map_get(desc->intro_points.map,
                                auth_key->pubkey)) != NULL) {
@@ -1647,6 +1658,10 @@ rotate_service_descriptors(hs_service_t *service)
 STATIC void
 rotate_all_descriptors(time_t now)
 {
+  /* XXX We rotate all our service descriptors at once. In the future it might
+   *     be wise, to rotate service descriptors independently to hide that all
+   *     those descriptors are on the same tor instance */
+
   FOR_EACH_SERVICE_BEGIN(service) {
     /* We are _not_ in the overlap period so skip rotation. */
     if (!hs_overlap_mode_is_active(NULL, now)) {
@@ -2379,7 +2394,7 @@ service_rendezvous_circ_has_opened(origin_circuit_t *circ)
 
   tor_assert(circ);
   tor_assert(circ->cpath);
-  /* Getting here means this is a v3 intro circuit. */
+  /* Getting here means this is a v3 rendezvous circuit. */
   tor_assert(circ->hs_ident);
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
 
@@ -2411,8 +2426,9 @@ service_rendezvous_circ_has_opened(origin_circuit_t *circ)
   return;
 }
 
-/* Handle an INTRO_ESTABLISHED cell arriving on the given introduction
- * circuit. Return 0 on success else a negative value. */
+/* We've been expecting an INTRO_ESTABLISHED cell on this circuit and it just
+ * arrived. Handle the INTRO_ESTABLISHED cell arriving on the given
+ * introduction circuit. Return 0 on success else a negative value. */
 static int
 service_handle_intro_established(origin_circuit_t *circ,
                                  const uint8_t *payload,
@@ -2446,7 +2462,8 @@ service_handle_intro_established(origin_circuit_t *circ,
   }
 
   /* Try to parse the payload into a cell making sure we do actually have a
-   * valid cell. On success, the ip object is updated. */
+   * valid cell. On success, the ip object and circuit purpose is updated to
+   * reflect the fact that the introduction circuit is established. */
   if (hs_circ_handle_intro_established(service, ip, circ, payload,
                                        payload_len) < 0) {
     goto err;
@@ -2467,8 +2484,8 @@ service_handle_intro_established(origin_circuit_t *circ,
   return -1;
 }
 
-/* Handle an INTRODUCE2 cell arriving on the given introduction circuit.
- * Return 0 on success else a negative value. */
+/* We just received an INTRODUCE2 cell on the established introduction circuit
+ * circ. Handle the cell and return 0 on success else a negative value. */
 static int
 service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
                           size_t payload_len)

@@ -123,11 +123,11 @@ typedef struct hs_service_descriptor_t {
    * couldn't pick any nodes. */
   unsigned int missing_intro_points : 1;
 
-  /* List of hidden service directories node_t object to which we couldn't
-   * upload this descriptor because we didn't have its router descriptor at
-   * the time. If this list is non-empty, only the relays in this list are
-   * re-tried to upload this descriptor when our directory information have
-   * been updated. */
+  /* List of identity digests for hidden service directories to which we
+   * couldn't upload this descriptor because we didn't have its router
+   * descriptor at the time. If this list is non-empty, only the relays in this
+   * list are re-tried to upload this descriptor when our directory information
+   * have been updated. */
   smartlist_t *hsdir_missing_info;
 } hs_service_descriptor_t;
 

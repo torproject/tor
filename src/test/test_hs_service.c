@@ -397,6 +397,7 @@ test_access_service(void *arg)
   hs_free_all();
 }
 
+/** Test that we can create intro point objects, index them and find them */
 static void
 test_service_intro_point(void *arg)
 {
@@ -609,6 +610,7 @@ test_helper_functions(void *arg)
   UNMOCK(node_get_by_id);
 }
 
+/** Test that we do the right operations when an intro circuit opens */
 static void
 test_intro_circuit_opened(void *arg)
 {
@@ -666,6 +668,8 @@ test_intro_circuit_opened(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+/** Test the operations we do on a circuit after we learn that we successfuly
+ *  established an intro point on it */
 static void
 test_intro_established(void *arg)
 {
@@ -735,6 +739,8 @@ test_intro_established(void *arg)
   UNMOCK(circuit_mark_for_close_);
 }
 
+/** Check the operations we do on a rendezvous circuit after we learn it's
+ *  open */
 static void
 test_rdv_circuit_opened(void *arg)
 {
@@ -776,6 +782,7 @@ test_rdv_circuit_opened(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+/** Test sending and receiving introduce2 cells */
 static void
 test_introduce2(void *arg)
 {
@@ -852,6 +859,8 @@ test_introduce2(void *arg)
   UNMOCK(circuit_mark_for_close_);
 }
 
+/** Test basic hidden service housekeeping operations (maintaining intro
+ *  points, etc) */
 static void
 test_service_event(void *arg)
 {
@@ -933,6 +942,7 @@ test_service_event(void *arg)
   UNMOCK(circuit_mark_for_close_);
 }
 
+/** Test that we rotate descriptors correctly in overlap period */
 static void
 test_rotate_descriptors(void *arg)
 {
@@ -1013,6 +1023,8 @@ test_rotate_descriptors(void *arg)
   UNMOCK(networkstatus_get_live_consensus);
 }
 
+/** Test building descriptors: picking intro points, setting up their link
+ *  specifiers, etc. */
 static void
 test_build_update_descriptors(void *arg)
 {

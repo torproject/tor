@@ -20,22 +20,27 @@ typedef enum {
 /* This data structure contains data that we need to parse an INTRODUCE2 cell
  * which is used by the INTRODUCE2 cell parsing function. On a successful
  * parsing, the onion_pk and rendezvous_cookie will be populated with the
- * computed key material from the cell data. */
+ * computed key material from the cell data. This structure is only used during
+ * INTRO2 parsing and discarded after that. */
 typedef struct hs_cell_introduce2_data_t {
-  /*** Immutable Section. ***/
+  /*** Immutable Section: Set on structure init. ***/
 
-  /* Introduction point authentication public key. */
+  /* Introduction point authentication public key. Pointer owned by the
+     introduction point object through which we received the INTRO2 cell. */
   const ed25519_public_key_t *auth_pk;
-  /* Introduction point encryption keypair for the ntor handshake. */
+  /* Introduction point encryption keypair for the ntor handshake. Pointer
+     owned by the introduction point object through which we received the
+     INTRO2 cell*/
   const curve25519_keypair_t *enc_kp;
-  /* Subcredentials of the service. */
+  /* Subcredentials of the service. Pointer owned by the descriptor that owns
+     the introduction point through which we received the INTRO2 cell. */
   const uint8_t *subcredential;
   /* Payload of the received encoded cell. */
   const uint8_t *payload;
   /* Size of the payload of the received encoded cell. */
   size_t payload_len;
 
-  /*** Muttable Section. ***/
+  /*** Mutable Section: Set upon parsing INTRODUCE2 cell. ***/
 
   /* Onion public key computed using the INTRODUCE2 encrypted section. */
   curve25519_public_key_t onion_pk;

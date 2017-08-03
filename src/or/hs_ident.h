@@ -53,7 +53,9 @@ typedef struct hs_ident_circuit_t {
   hs_ident_circuit_type_t circuit_type;
 
   /* (All circuit) Introduction point authentication key. It's also needed on
-   * the rendezvous circuit for the ntor handshake. */
+   * the rendezvous circuit for the ntor handshake. It's used as the unique key
+   * of the introduction point so it should not be shared between multiple
+   * intro points. */
   ed25519_public_key_t intro_auth_pk;
 
   /* (Only client rendezvous circuit) Introduction point encryption public

@@ -669,7 +669,8 @@ hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
 }
 
 /* Using the given identity public key and a blinded public key, compute the
- * subcredential and put it in subcred_out. This can't fail. */
+ * subcredential and put it in subcred_out (must be of size DIGEST256_LEN).
+ * This can't fail. */
 void
 hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                      const ed25519_public_key_t *blinded_pk,
@@ -707,9 +708,9 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
   memwipe(credential, 0, sizeof(credential));
 }
 
-/* From the given list of hidden service ports, find the matching one from the
- * given edge connection conn and set the connection address from the service
- * port object. Return 0 on success or -1 if none. */
+/* From the given list of hidden service ports, find the ones that much the
+ * given edge connection conn, pick one at random and use it to set the
+ * connection address. Return 0 on success or -1 if none. */
 int
 hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
 {
