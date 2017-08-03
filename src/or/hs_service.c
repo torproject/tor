@@ -62,9 +62,9 @@
 #define FOR_EACH_DESCRIPTOR_END } STMT_END ;
 
 /* Onion service directory file names. */
-static const char *fname_keyfile_prefix = "hs_ed25519";
-static const char *fname_hostname = "hostname";
-static const char *address_tld = "onion";
+static const char fname_keyfile_prefix[] = "hs_ed25519";
+static const char fname_hostname[] = "hostname";
+static const char address_tld[] = "onion";
 
 /* Staging list of service object. When configuring service, we add them to
  * this list considered a staging area and they will get added to our global
@@ -817,20 +817,17 @@ write_address_to_file(const hs_service_t *service, const char *fname_)
 {
   int ret = -1;
   char *fname = NULL;
-  /* Length of an address plus the sizeof the address tld (onion) which counts
-   * the NUL terminated byte so we keep it for the "." and the newline. */
-  char buf[HS_SERVICE_ADDR_LEN_BASE32 + sizeof(address_tld) + 1];
+  char *addr_buf = NULL;
 
   tor_assert(service);
   tor_assert(fname_);
 
   /* Construct the full address with the onion tld and write the hostname file
    * to disk. */
-  tor_snprintf(buf, sizeof(buf), "%s.%s\n", service->onion_address,
-               address_tld);
+  tor_asprintf(&addr_buf, "%s.%s\n", service->onion_address, address_tld);
   /* Notice here that we use the given "fname_". */
   fname = hs_path_from_filename(service->config.directory_path, fname_);
-  if (write_str_to_file(fname, buf, 0) < 0) {
+  if (write_str_to_file(fname, addr_buf, 0) < 0) {
     log_warn(LD_REND, "Could not write onion address to hostname file %s",
              escaped(fname));
     goto end;
@@ -850,6 +847,7 @@ write_address_to_file(const hs_service_t *service, const char *fname_)
   ret = 0;
  end:
   tor_free(fname);
+  tor_free(addr_buf);
   return ret;
 }
 
