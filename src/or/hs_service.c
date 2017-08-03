@@ -433,14 +433,18 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
 STATIC void
 service_intro_point_add(digest256map_t *map, hs_service_intro_point_t *ip)
 {
+  hs_service_intro_point_t *old_ip_entry;
+
   tor_assert(map);
   tor_assert(ip);
 
-  digest256map_set(map, ip->auth_key_kp.pubkey.pubkey, ip);
+  old_ip_entry = digest256map_set(map, ip->auth_key_kp.pubkey.pubkey, ip);
+  /* Make sure we didn't just try to double-add an intro point */
+  tor_assert_nonfatal(!old_ip_entry);
 }
 
-/* For a given service, remove the intro point from that service which will
- * look in both descriptors. */
+/* For a given service, remove the intro point from that service's descriptors
+ * (check both current and next descriptor) */
 STATIC void
 service_intro_point_remove(const hs_service_t *service,
                            const hs_service_intro_point_t *ip)
@@ -1623,7 +1627,7 @@ cleanup_intro_points(hs_service_t *service, time_t now)
          * descriptor created and uploaded. There is no difference to an
          * attacker between the timing of a new consensus and intro point
          * rotation (possibly?). */
-        if (ocirc) {
+        if (ocirc && !TO_CIRCUIT(ocirc)->marked_for_close) {
           /* After this, no new cells will be handled on the circuit. */
           circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
         }

@@ -607,5 +607,6 @@ hs_intropoint_clear(hs_intropoint_t *ip)
   SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *, ls,
                     hs_desc_link_specifier_free(ls));
   smartlist_free(ip->link_specifiers);
+  memset(ip, 0, sizeof(hs_intropoint_t));
 }
 

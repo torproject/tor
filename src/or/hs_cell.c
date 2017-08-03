@@ -169,9 +169,9 @@ parse_introduce2_encrypted(const uint8_t *decrypted_data,
 
   if (trn_cell_introduce_encrypted_getlen_onion_key(enc_cell) !=
       CURVE25519_PUBKEY_LEN) {
-    log_info(LD_REND, "INTRODUCE2 onion key length is invalid. Got %ld but "
+    log_info(LD_REND, "INTRODUCE2 onion key length is invalid. Got %u but "
                       "expected %d on circuit %u for service %s",
-             trn_cell_introduce_encrypted_getlen_onion_key(enc_cell),
+             (unsigned)trn_cell_introduce_encrypted_getlen_onion_key(enc_cell),
              CURVE25519_PUBKEY_LEN, TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
     goto err;

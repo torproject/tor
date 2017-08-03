@@ -898,6 +898,10 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   tor_assert(circ);
   tor_assert(payload);
 
+  if (BUG(TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)) {
+    goto done;
+  }
+
   /* Try to parse the payload into a cell making sure we do actually have a
    * valid cell. For a legacy node, it's an empty payload so as long as we
    * have the cell, we are good. */

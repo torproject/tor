@@ -106,7 +106,7 @@ test_gen_establish_intro_cell_bad(void *arg)
   expect_log_msg_containing("Unable to make signature for "
                             "ESTABLISH_INTRO cell.");
   teardown_capture_of_logs();
-  tt_u64_op(cell_len, OP_EQ, -1);
+  tt_i64_op(cell_len, OP_EQ, -1);
 
  done:
   trn_cell_establish_intro_free(cell);
