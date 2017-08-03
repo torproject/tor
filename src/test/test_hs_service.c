@@ -540,7 +540,7 @@ test_helper_functions(void *arg)
   /* Testing get_node_from_intro_point() */
   {
     const node_t *node = get_node_from_intro_point(ip);
-    tt_assert(node == &mock_node);
+    tt_ptr_op(node, OP_EQ, &mock_node);
     SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
                             hs_desc_link_specifier_t *, ls) {
       if (ls->type == LS_LEGACY_ID) {

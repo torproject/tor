@@ -3098,10 +3098,12 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
     /* Setup the identifier to be the one for the circuit service. */
     conn->hs_ident =
       hs_ident_edge_conn_new(&origin_circ->hs_ident->identity_pk);
+    tor_assert(connection_edge_is_rendezvous_stream(conn));
     ret = hs_service_set_conn_addr_port(origin_circ, conn);
   } else {
     /* We should never get here if the circuit's purpose is rendezvous. */
-    tor_assert(0);
+    tor_assert_nonfatal_unreached();
+    return -1;
   }
   if (ret < 0) {
     log_info(LD_REND, "Didn't find rendezvous service (addr%s, port %d)",

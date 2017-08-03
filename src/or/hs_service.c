@@ -377,12 +377,16 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
    * mandatory. */
   ls = hs_desc_link_specifier_new(ei, LS_IPV4);
   /* It is impossible to have an extend info object without a v4. */
-  tor_assert(ls);
+  if (BUG(!ls)) {
+    goto err;
+  }
   smartlist_add(ip->base.link_specifiers, ls);
   ls = hs_desc_link_specifier_new(ei, LS_LEGACY_ID);
   /* It is impossible to have an extend info object without an identity
    * digest. */
-  tor_assert(ls);
+  if (BUG(!ls)) {
+    goto err;
+  }
   smartlist_add(ip->base.link_specifiers, ls);
   ls = hs_desc_link_specifier_new(ei, LS_ED25519_ID);
   /* It is impossible to have an extend info object without an ed25519
@@ -546,8 +550,9 @@ get_node_from_intro_point(const hs_service_intro_point_t *ip)
   tor_assert(ip);
 
   ls = get_link_spec_by_type(ip, LS_LEGACY_ID);
-  /* Legacy ID is mandatory for an intro point object to have. */
-  tor_assert(ls);
+  if (BUG(!ls)) {
+    return NULL;
+  }
   /* XXX In the future, we want to only use the ed25519 ID (#22173). */
   return node_get_by_id((const char *) ls->u.legacy_id);
 }
@@ -1427,7 +1432,10 @@ pick_needed_intro_points(hs_service_t *service,
    * robin so they are considered valid nodes to pick again. */
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        hs_service_intro_point_t *, ip) {
-    smartlist_add(exclude_nodes, (void *) get_node_from_intro_point(ip));
+    const node_t *intro_node = get_node_from_intro_point(ip);
+    if (intro_node) {
+      smartlist_add(exclude_nodes, (void*)intro_node);
+    }
   } DIGEST256MAP_FOREACH_END;
   /* Also, add the failing intro points that our descriptor encounteered in
    * the exclude node list. */
@@ -2299,10 +2307,17 @@ service_intro_circ_has_opened(origin_circuit_t *circ)
   hs_service_descriptor_t *desc = NULL;
 
   tor_assert(circ);
-  tor_assert(circ->cpath);
-  /* Getting here means this is a v3 intro circuit. */
-  tor_assert(circ->hs_ident);
-  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+
+  /* Let's do some basic sanity checking of the circ state */
+  if (BUG(!circ->cpath)) {
+    return;
+  }
+  if (BUG(TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)) {
+    return;
+  }
+  if (BUG(!circ->hs_ident)) {
+    return;
+  }
 
   /* Get the corresponding service and intro point. */
   get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
