@@ -85,8 +85,7 @@ static config_var_t state_vars_[] = {
   VAR("TransportProxy",               LINELIST_S, TransportProxies, NULL),
   V(TransportProxies,                 LINELIST_V, NULL),
 
-  VAR("HidServRevCounter", LINELIST_S, HidServRevCounters, NULL),
-  V(HidServRevCounters,                 LINELIST_V, NULL),
+  V(HidServRevCounter,            LINELIST, NULL),
 
   V(BWHistoryReadEnds,                ISOTIME,  NULL),
   V(BWHistoryReadInterval,            UINT,     "900"),

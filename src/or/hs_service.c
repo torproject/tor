@@ -2015,8 +2015,8 @@ update_revision_counters_in_state(void)
   } FOR_EACH_SERVICE_END;
 
   /* Remove the old rev counters, and replace them with the new ones */
-  config_free_lines(state->HidServRevCounters);
-  state->HidServRevCounters = lines;
+  config_free_lines(state->HidServRevCounter);
+  state->HidServRevCounter = lines;
 
   /* Set the state as dirty since we just edited it */
   if (!get_options()->AvoidDiskWrites) {
@@ -2101,13 +2101,13 @@ get_rev_counter_for_service(ed25519_public_key_t *blinded_pubkey)
   /* Set default value for rev counters (if not found) to 0 */
   uint64_t final_rev_counter = 0;
 
-  for (line = state->HidServRevCounters ; line ; line = line->next) {
+  for (line = state->HidServRevCounter ; line ; line = line->next) {
     int service_found = 0;
     uint64_t rev_counter = 0;
 
     tor_assert(!strcmp(line->key, "HidServRevCounter"));
 
-    /* Scan all the HidServRevCounters lines till we find the line for this
+    /* Scan all the HidServRevCounter lines till we find the line for this
        service: */
     rev_counter = check_state_line_for_service_rev_counter(line->value,
                                                            blinded_pubkey,
