@@ -406,7 +406,7 @@ get_rp_extend_info(const smartlist_t *link_specifiers,
   } SMARTLIST_FOREACH_END(ls);
 
   /* IPv4, legacy ID and ed25519 are mandatory. */
-  if (!have_v4 || !have_legacy_id || !have_ed25519_id) {
+  if (!have_v4 || !have_legacy_id) {
     goto done;
   }
   /* By default, we pick IPv4 but this might change to v6 if certain
@@ -451,7 +451,9 @@ get_rp_extend_info(const smartlist_t *link_specifiers,
   }
 
   /* We do have everything for which we think we can connect successfully. */
-  info = extend_info_new(NULL, legacy_id, &ed25519_pk, NULL, onion_key,
+  info = extend_info_new(NULL, legacy_id,
+                         have_ed25519_id ? &ed25519_pk : NULL,
+                         NULL, onion_key,
                          addr, port);
  done:
   return info;

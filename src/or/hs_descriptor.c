@@ -2471,9 +2471,17 @@ hs_desc_link_specifier_new(const extend_info_t *info, uint8_t type)
     ls->u.ap.port = info->port;
     break;
   case LS_LEGACY_ID:
+    /* Bug out if the identity digest is not set */
+    if (BUG(tor_mem_is_zero(info->identity_digest,
+                            sizeof(info->identity_digest)))) {
+      goto err;
+    }
     memcpy(ls->u.legacy_id, info->identity_digest, sizeof(ls->u.legacy_id));
     break;
   case LS_ED25519_ID:
+    if (ed25519_public_key_is_zero(&info->ed_identity)) {
+      goto err;
+    }
     memcpy(ls->u.ed25519_id, info->ed_identity.pubkey,
            sizeof(ls->u.ed25519_id));
     break;

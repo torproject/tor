@@ -394,6 +394,7 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
     goto err;
   }
   smartlist_add(ip->base.link_specifiers, ls);
+
   ls = hs_desc_link_specifier_new(ei, LS_LEGACY_ID);
   /* It is impossible to have an extend info object without an identity
    * digest. */
@@ -401,11 +402,13 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
     goto err;
   }
   smartlist_add(ip->base.link_specifiers, ls);
+
+  /* ed25519 identity key is optional */
   ls = hs_desc_link_specifier_new(ei, LS_ED25519_ID);
-  /* It is impossible to have an extend info object without an ed25519
-   * identity key. */
-  tor_assert(ls);
-  smartlist_add(ip->base.link_specifiers, ls);
+  if (ls) {
+    smartlist_add(ip->base.link_specifiers, ls);
+  }
+
   /* IPv6 is optional. */
   ls = hs_desc_link_specifier_new(ei, LS_IPV6);
   if (ls) {

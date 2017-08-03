@@ -1086,14 +1086,21 @@ test_build_update_descriptors(void *arg)
     ri.purpose = ROUTER_PURPOSE_GENERAL;
     /* Ugly yes but we never free the "ri" object so this just makes things
      * easier. */
-    ri.protocol_list = (char *) "HSDir 1-2";
+    ri.protocol_list = (char *) "HSDir=1-2 LinkAuth=3";
     ret = curve25519_secret_key_generate(&curve25519_secret_key, 0);
     tt_int_op(ret, OP_EQ, 0);
     ri.onion_curve25519_pkey =
       tor_malloc_zero(sizeof(curve25519_public_key_t));
+    ri.onion_pkey = crypto_pk_new();
     curve25519_public_key_generate(ri.onion_curve25519_pkey,
                                    &curve25519_secret_key);
     memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
+    /* Setup ed25519 identity */
+    ed25519_keypair_t kp1;
+    ed25519_keypair_generate(&kp1, 0);
+    ri.cache_info.signing_key_cert = tor_malloc_zero(sizeof(tor_cert_t));
+    tt_assert(ri.cache_info.signing_key_cert);
+    ed25519_pubkey_copy(&ri.cache_info.signing_key_cert->signing_key, &kp1.pubkey);
     nodelist_set_routerinfo(&ri, NULL);
     node = node_get_mutable_by_id(ri.cache_info.identity_digest);
     tt_assert(node);
@@ -1104,6 +1111,8 @@ test_build_update_descriptors(void *arg)
   setup_full_capture_of_logs(LOG_INFO);
   update_all_descriptors(now);
   tor_free(node->ri->onion_curve25519_pkey); /* Avoid memleak. */
+  tor_free(node->ri->cache_info.signing_key_cert);
+  crypto_pk_free(node->ri->onion_pkey);
   expect_log_msg_containing("just picked 1 intro points and wanted 3. It "
                             "currently has 0 intro points. Launching "
                             "ESTABLISH_INTRO circuit shortly.");
