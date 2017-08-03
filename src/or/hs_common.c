@@ -510,11 +510,26 @@ get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
   tor_assert(srv_out);
 
   digest = crypto_digest256_new(DIGEST_SHA3_256);
-  /* Setup payload: H("shared-random-disaster" | INT_8(period_num)) */
+
+  /* Start setting up payload:
+   *  H("shared-random-disaster" | INT_8(period_length) | INT_8(period_num)) */
   crypto_digest_add_bytes(digest, HS_SRV_DISASTER_PREFIX,
                           HS_SRV_DISASTER_PREFIX_LEN);
-  crypto_digest_add_bytes(digest, (const char *) &time_period_num,
-                          sizeof(time_period_num));
+
+  /* Setup INT_8(period_length) | INT_8(period_num) */
+  {
+    uint64_t time_period_length = get_time_period_length();
+    char period_stuff[sizeof(uint64_t)*2];
+    size_t offset = 0;
+    set_uint64(period_stuff, tor_htonll(time_period_num));
+    offset += sizeof(uint64_t);
+    set_uint64(period_stuff+offset, tor_htonll(time_period_length));
+    offset += sizeof(uint64_t);
+    tor_assert(offset == sizeof(period_stuff));
+
+    crypto_digest_add_bytes(digest, period_stuff,  sizeof(period_stuff));
+  }
+
   crypto_digest_get_digest(digest, (char *) srv_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 }
@@ -532,7 +547,7 @@ get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
 static void
 build_blinded_key_param(const ed25519_public_key_t *pubkey,
                         const uint8_t *secret, size_t secret_len,
-                        uint64_t period_num, uint64_t start_time_period,
+                        uint64_t period_num, uint64_t period_length,
                         uint8_t *param_out)
 {
   size_t offset = 0;
@@ -543,12 +558,12 @@ build_blinded_key_param(const ed25519_public_key_t *pubkey,
   tor_assert(param_out);
 
   /* Create the nonce N. The construction is as follow:
-   *    N = "key-blind" || INT_8(period_num) || INT_8(start_period_sec) */
+   *    N = "key-blind" || INT_8(period_num) || INT_8(period_length) */
   memcpy(nonce, HS_KEYBLIND_NONCE_PREFIX, HS_KEYBLIND_NONCE_PREFIX_LEN);
   offset += HS_KEYBLIND_NONCE_PREFIX_LEN;
-  set_uint64(nonce + offset, period_num);
+  set_uint64(nonce + offset, tor_htonll(period_num));
   offset += sizeof(uint64_t);
-  set_uint64(nonce + offset, start_time_period);
+  set_uint64(nonce + offset, tor_htonll(period_length));
   offset += sizeof(uint64_t);
   tor_assert(offset == HS_KEYBLIND_NONCE_LEN);
 
@@ -953,7 +968,7 @@ hs_service_requires_uptime_circ(const smartlist_t *ports)
  * value is used to select the responsible HSDir where their hsdir_index is
  * closest to this value.
  *    SHA3-256("store-at-idx" | blinded_public_key |
- *             INT_8(replicanum) | INT_8(period_num) )
+ *             INT_8(replicanum) | INT_8(period_length) | INT_8(period_num) )
  *
  * hs_index_out must be large enough to receive DIGEST256_LEN bytes. */
 void
@@ -970,9 +985,23 @@ hs_build_hs_index(uint64_t replica, const ed25519_public_key_t *blinded_pk,
   crypto_digest_add_bytes(digest, HS_INDEX_PREFIX, HS_INDEX_PREFIX_LEN);
   crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
                           ED25519_PUBKEY_LEN);
-  crypto_digest_add_bytes(digest, (const char *) &replica, sizeof(replica));
-  crypto_digest_add_bytes(digest, (const char *) &period_num,
-                          sizeof(period_num));
+
+  /* Now setup INT_8(replicanum) | INT_8(period_length) | INT_8(period_num) */
+  {
+    uint64_t period_length = get_time_period_length();
+    char buf[sizeof(uint64_t)*3];
+    size_t offset = 0;
+    set_uint64(buf, tor_htonll(replica));
+    offset += sizeof(uint64_t);
+    set_uint64(buf, tor_htonll(period_length));
+    offset += sizeof(uint64_t);
+    set_uint64(buf, tor_htonll(period_num));
+    offset += sizeof(uint64_t);
+    tor_assert(offset == sizeof(buf));
+
+    crypto_digest_add_bytes(digest, buf, sizeof(buf));
+  }
+
   crypto_digest_get_digest(digest, (char *) hs_index_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 }
@@ -980,7 +1009,7 @@ hs_build_hs_index(uint64_t replica, const ed25519_public_key_t *blinded_pk,
 /* Build hsdir_index which is used to find the responsible hsdirs. This is the
  * index value that is compare to the hs_index when selecting an HSDir.
  *    SHA3-256("node-idx" | node_identity |
- *             shared_random_value | INT_8(period_num) )
+ *             shared_random_value | INT_8(period_length) | INT_8(period_num) )
  *
  * hsdir_index_out must be large enough to receive DIGEST256_LEN bytes. */
 void
@@ -1000,8 +1029,20 @@ hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
   crypto_digest_add_bytes(digest, (const char *) identity_pk->pubkey,
                           ED25519_PUBKEY_LEN);
   crypto_digest_add_bytes(digest, (const char *) srv_value, DIGEST256_LEN);
-  crypto_digest_add_bytes(digest, (const char *) &period_num,
-                          sizeof(period_num));
+
+  {
+    uint64_t time_period_length = get_time_period_length();
+    char period_stuff[sizeof(uint64_t)*2];
+    size_t offset = 0;
+    set_uint64(period_stuff, tor_htonll(period_num));
+    offset += sizeof(uint64_t);
+    set_uint64(period_stuff+offset, tor_htonll(time_period_length));
+    offset += sizeof(uint64_t);
+    tor_assert(offset == sizeof(period_stuff));
+
+    crypto_digest_add_bytes(digest, period_stuff,  sizeof(period_stuff));
+  }
+
   crypto_digest_get_digest(digest, (char *) hsdir_index_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 }

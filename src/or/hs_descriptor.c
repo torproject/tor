@@ -236,7 +236,7 @@ build_secret_input(const hs_descriptor_t *desc, uint8_t *dst, size_t dstlen)
   memcpy(dst + offset, desc->subcredential, sizeof(desc->subcredential));
   offset += sizeof(desc->subcredential);
   /* Copy revision counter value. */
-  set_uint64(dst + offset, tor_ntohll(desc->plaintext_data.revision_counter));
+  set_uint64(dst + offset, tor_htonll(desc->plaintext_data.revision_counter));
   offset += sizeof(uint64_t);
   tor_assert(HS_DESC_ENCRYPTED_SECRET_INPUT_LEN == offset);
 }
