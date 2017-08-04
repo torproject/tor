@@ -1114,11 +1114,32 @@ needs_exit_circuits(time_t now, int *needs_uptime, int *needs_capacity)
 /* Return true if we need any more hidden service server circuits.
  * HS servers only need an internal circuit. */
 STATIC int
-needs_hs_server_circuits(int num_uptime_internal)
+needs_hs_server_circuits(time_t now, int num_uptime_internal)
 {
-  return ((rend_num_services() || hs_service_get_num_services()) &&
-          num_uptime_internal < SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS &&
-          router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
+  if (!rend_num_services() && !hs_service_get_num_services()) {
+    /* No services, we don't need anything. */
+    goto no_need;
+  }
+
+  if (num_uptime_internal >= SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS) {
+    /* We have sufficient amount of internal circuit. */
+    goto no_need;
+  }
+
+  if (router_have_consensus_path() == CONSENSUS_PATH_UNKNOWN) {
+    /* Consensus hasn't been checked or might be invalid so requesting
+     * internal circuits is not wise. */
+    goto no_need;
+  }
+
+  /* At this point, we need a certain amount of circuits and we will most
+   * likely use them for rendezvous so we note down the use of internal
+   * circuit for our prediction for circuit needing uptime and capacity. */
+  rep_hist_note_used_internal(now, 1, 1);
+
+  return 1;
+ no_need:
+  return 0;
 }
 
 /* We need at least this many internal circuits for hidden service clients */
@@ -1217,7 +1238,7 @@ circuit_predict_and_launch_new(void)
     return;
   }
 
-  if (needs_hs_server_circuits(num_uptime_internal)) {
+  if (needs_hs_server_circuits(now, num_uptime_internal)) {
     flags = (CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_NEED_UPTIME |
              CIRCLAUNCH_IS_INTERNAL);
 

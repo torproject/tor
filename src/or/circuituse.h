@@ -68,7 +68,8 @@ STATIC int circuit_is_available_for_use(const circuit_t *circ);
 STATIC int needs_exit_circuits(time_t now,
                                int *port_needs_uptime,
                                int *port_needs_capacity);
-STATIC int needs_hs_server_circuits(int num_uptime_internal);
+STATIC int needs_hs_server_circuits(time_t now,
+                                    int num_uptime_internal);
 
 STATIC int needs_hs_client_circuits(time_t now,
                                     int *needs_uptime,

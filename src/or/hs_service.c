@@ -1749,7 +1749,7 @@ run_build_descriptor_event(time_t now)
 /* For the given service, launch any intro point circuits that could be
  * needed. This considers every descriptor of the service. */
 static void
-launch_intro_point_circuits(hs_service_t *service, time_t now)
+launch_intro_point_circuits(hs_service_t *service)
 {
   tor_assert(service);
 
@@ -1785,7 +1785,7 @@ launch_intro_point_circuits(hs_service_t *service, time_t now)
 
       /* Launch a circuit to the intro point. */
       ip->circuit_retries++;
-      if (hs_circ_launch_intro_point(service, ip, ei, now) < 0) {
+      if (hs_circ_launch_intro_point(service, ip, ei) < 0) {
         log_warn(LD_REND, "Unable to launch intro circuit to node %s "
                           "for service %s.",
                  safe_str_client(extend_info_describe(ei)),
@@ -1910,7 +1910,7 @@ run_build_circuit_event(time_t now)
      * circuit creation so make sure this service is respecting that limit. */
     if (can_service_launch_intro_circuit(service, now)) {
       /* Launch intro point circuits if needed. */
-      launch_intro_point_circuits(service, now);
+      launch_intro_point_circuits(service);
       /* Once the circuits have opened, we'll make sure to update the
        * descriptor intro point list and cleanup any extraneous. */
     }

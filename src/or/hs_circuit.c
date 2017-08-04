@@ -480,8 +480,6 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
   tor_assert(data);
 
   circ_needs_uptime = hs_service_requires_uptime_circ(service->config.ports);
-  /* Help predict this next time */
-  rep_hist_note_used_internal(now, circ_needs_uptime, 1);
 
   /* Get the extend info data structure for the chosen rendezvous point
    * specified by the given link specifiers. */
@@ -632,10 +630,6 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
    * has no anonymity (single onion), this change of behavior won't affect
    * security directly. */
 
-  /* Help predict this next time */
-  rep_hist_note_used_internal(time(NULL), bstate->need_uptime,
-                              bstate->need_capacity);
-
   new_circ = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
                                            bstate->chosen_exit, flags);
   if (new_circ == NULL) {
@@ -728,7 +722,7 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
 int
 hs_circ_launch_intro_point(hs_service_t *service,
                            const hs_service_intro_point_t *ip,
-                           extend_info_t *ei, time_t now)
+                           extend_info_t *ei)
 {
   /* Standard flags for introduction circuit. */
   int ret = -1, circ_flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
@@ -747,10 +741,6 @@ hs_circ_launch_intro_point(hs_service_t *service,
   log_info(LD_REND, "Launching a circuit to intro point %s for service %s.",
            safe_str_client(extend_info_describe(ei)),
            safe_str_client(service->onion_address));
-
-  /* Note down that we are about to use an internal circuit. */
-  rep_hist_note_used_internal(now, circ_flags & CIRCLAUNCH_NEED_UPTIME,
-                              circ_flags & CIRCLAUNCH_NEED_CAPACITY);
 
   /* Note down the launch for the retry period. Even if the circuit fails to
    * be launched, we still want to respect the retry period to avoid stress on
