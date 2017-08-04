@@ -32,8 +32,7 @@ def curve25519ToEd25519(c, sign):
     return encodepoint([x,y])
 
 def blindESK(esk, param):
-    h = H("Derive temporary signing key" + param)
-    mult = 2**(b-2) + sum(2**i * bit(h,i) for i in range(3,b-2))
+    mult = 2**(b-2) + sum(2**i * bit(param,i) for i in range(3,b-2))
     s = decodeint(esk[:32])
     s_prime = (s * mult) % ell
     k = esk[32:]
@@ -42,8 +41,7 @@ def blindESK(esk, param):
     return encodeint(s_prime) + k_prime
 
 def blindPK(pk, param):
-    h = H("Derive temporary signing key" + param)
-    mult = 2**(b-2) + sum(2**i * bit(h,i) for i in range(3,b-2))
+    mult = 2**(b-2) + sum(2**i * bit(param,i) for i in range(3,b-2))
     P = decodepoint(pk)
     return encodepoint(scalarmult(P, mult))
 

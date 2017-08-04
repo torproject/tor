@@ -12,8 +12,8 @@
 static void
 ed25519_ref10_gettweak(unsigned char *out, const unsigned char *param)
 {
-  const char str[] = "Derive temporary signing key";
-  crypto_hash_sha512_2(out, (const unsigned char*)str, strlen(str), param, 32);
+  memcpy(out, param, 32);
+
   out[0] &= 248;  /* Is this necessary necessary ? */
   out[31] &= 63;
   out[31] |= 64;

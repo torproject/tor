@@ -245,13 +245,7 @@ ed25519_donna_sign(unsigned char *sig, const unsigned char *m, size_t mlen,
 static void
 ed25519_donna_gettweak(unsigned char *out, const unsigned char *param)
 {
-  static const char str[] = "Derive temporary signing key";
-  ed25519_hash_context ctx;
-
-  ed25519_hash_init(&ctx);
-  ed25519_hash_update(&ctx, (const unsigned char*)str, strlen(str));
-  ed25519_hash_update(&ctx, param, 32);
-  ed25519_hash_final(&ctx, out);
+  memcpy(out, param, 32);
 
   out[0] &= 248;  /* Is this necessary ? */
   out[31] &= 63;

@@ -551,6 +551,7 @@ build_blinded_key_param(const ed25519_public_key_t *pubkey,
                         uint8_t *param_out)
 {
   size_t offset = 0;
+  const char blind_str[] = "Derive temporary signing key";
   uint8_t nonce[HS_KEYBLIND_NONCE_LEN];
   crypto_digest_t *digest;
 
@@ -568,8 +569,9 @@ build_blinded_key_param(const ed25519_public_key_t *pubkey,
   tor_assert(offset == HS_KEYBLIND_NONCE_LEN);
 
   /* Generate the parameter h and the construction is as follow:
-   *    h = H(pubkey | [secret] | ed25519-basepoint | nonce) */
+   *    h = H(BLIND_STRING | pubkey | [secret] | ed25519-basepoint | N) */
   digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, blind_str, sizeof(blind_str));
   crypto_digest_add_bytes(digest, (char *) pubkey, ED25519_PUBKEY_LEN);
   /* Optional secret. */
   if (secret) {
