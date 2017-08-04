@@ -1657,6 +1657,50 @@ decode_intro_legacy_key(const directory_token_t *tok,
   return -1;
 }
 
+/* Dig into the descriptor <b>tokens</b> to find the onion key we should use
+ * for this intro point, and set it into <b>onion_key_out</b>. Return 0 if it
+ * was found and well-formed, otherwise return -1 in case of errors. */
+static int
+set_intro_point_onion_key(curve25519_public_key_t *onion_key_out,
+                          const smartlist_t *tokens)
+{
+  int retval = -1;
+  smartlist_t *onion_keys = NULL;
+
+  tor_assert(onion_key_out);
+
+  onion_keys = find_all_by_keyword(tokens, R3_INTRO_ONION_KEY);
+  if (!onion_keys) {
+    log_warn(LD_REND, "Descriptor did not contain intro onion keys");
+    goto err;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(onion_keys, directory_token_t *, tok) {
+    /* This field is using GE(2) so for possible forward compatibility, we
+     * accept more fields but must be at least 2. */
+    tor_assert(tok->n_args >= 2);
+
+    /* Try to find an ntor key, it's the only recognized type right now */
+    if (!strcmp(tok->args[0], "ntor")) {
+      if (curve25519_public_from_base64(onion_key_out, tok->args[1]) < 0) {
+        log_warn(LD_REND, "Introduction point ntor onion-key is invalid");
+        goto err;
+      }
+      /* Got the onion key! Set the appropriate retval */
+      retval = 0;
+    }
+  } SMARTLIST_FOREACH_END(tok);
+
+  /* Log an error if we didn't find it :( */
+  if (retval < 0) {
+    log_warn(LD_REND, "Descriptor did not contain ntor onion keys");
+  }
+
+ err:
+  smartlist_free(onion_keys);
+  return retval;
+}
+
 /* Given the start of a section and the end of it, decode a single
  * introduction point from that section. Return a newly allocated introduction
  * point object containing the decoded data. Return NULL if the section can't
@@ -1696,19 +1740,7 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   }
 
   /* "onion-key" SP ntor SP key NL */
-  tok = find_by_keyword(tokens, R3_INTRO_ONION_KEY);
-  if (!strcmp(tok->args[0], "ntor")) {
-    /* This field is using GE(2) so for possible forward compatibility, we
-     * accept more fields but must be at least 2. */
-    tor_assert(tok->n_args >= 2);
-
-    if (curve25519_public_from_base64(&ip->onion_key, tok->args[1]) < 0) {
-      log_warn(LD_REND, "Introduction point ntor onion-key is invalid");
-      goto err;
-    }
-  } else {
-    /* Unknown key type so we can't use that introduction point. */
-    log_warn(LD_REND, "Introduction point onion key is unrecognized.");
+  if (set_intro_point_onion_key(&ip->onion_key, tokens) < 0) {
     goto err;
   }
 

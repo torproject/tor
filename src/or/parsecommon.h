@@ -316,7 +316,7 @@ directory_token_t *find_by_keyword_(smartlist_t *s,
 
 directory_token_t *find_opt_by_keyword(smartlist_t *s,
                                        directory_keyword keyword);
-smartlist_t * find_all_by_keyword(smartlist_t *s, directory_keyword k);
+smartlist_t * find_all_by_keyword(const smartlist_t *s, directory_keyword k);
 
 #endif /* TOR_PARSECOMMON_H */
 
