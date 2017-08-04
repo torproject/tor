@@ -30,7 +30,6 @@ test_gen_establish_intro_cell(void *arg)
   ssize_t ret;
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t buf[RELAY_PAYLOAD_SIZE];
-  trn_cell_establish_intro_t *cell_out = NULL;
   trn_cell_establish_intro_t *cell_in = NULL;
 
   crypto_rand(circ_nonce, sizeof(circ_nonce));
@@ -38,7 +37,6 @@ test_gen_establish_intro_cell(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   {
-    cell_out = trn_cell_establish_intro_new();
     /* We only need the auth key pair here. */
     hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0);
     /* Auth key pair is generated in the constructor so we are all set for
@@ -46,9 +44,18 @@ test_gen_establish_intro_cell(void *arg)
     ret = hs_cell_build_establish_intro(circ_nonce, ip, buf);
     service_intro_point_free(ip);
     tt_u64_op(ret, OP_GT, 0);
+  }
 
-    ret = trn_cell_establish_intro_encode(buf, sizeof(buf), cell_out);
-    tt_u64_op(ret, OP_GT, 0);
+  /* Check the contents of the cell */
+  {
+    /* First byte is the auth key type: make sure its correct */
+    tt_int_op(buf[0], OP_EQ, HS_INTRO_AUTH_KEY_TYPE_ED25519);
+    /* Next two bytes is auth key len */
+    tt_int_op(ntohs(get_uint16(buf+1)), OP_EQ, ED25519_PUBKEY_LEN);
+    /* Skip to the number of extensions: no extensions */
+    tt_int_op(buf[35], OP_EQ, 0);
+    /* Skip to the sig len. Make sure it's the size of an ed25519 sig */
+    tt_int_op(ntohs(get_uint16(buf+35+1+32)), OP_EQ, ED25519_SIG_LEN);
   }
 
   /* Parse it as the receiver */
@@ -64,7 +71,6 @@ test_gen_establish_intro_cell(void *arg)
 
  done:
   trn_cell_establish_intro_free(cell_in);
-  trn_cell_establish_intro_free(cell_out);
 }
 
 /* Mocked ed25519_sign_prefixed() function that always fails :) */
