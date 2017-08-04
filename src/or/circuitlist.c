@@ -1789,6 +1789,25 @@ circuit_get_cpath_len(origin_circuit_t *circ)
   return n;
 }
 
+/** Return the number of opened hops in circuit's path.
+ * If circ has no entries, or is NULL, returns 0. */
+int
+circuit_get_cpath_opened_len(origin_circuit_t *circ)
+{
+  int n = 0;
+  if (circ && circ->cpath) {
+    crypt_path_t *cpath, *cpath_next = NULL;
+    for (cpath = circ->cpath;
+         cpath->state == CPATH_STATE_OPEN
+           && cpath_next != circ->cpath;
+         cpath = cpath_next) {
+      cpath_next = cpath->next;
+      ++n;
+    }
+  }
+  return n;
+}
+
 /** Return the <b>hopnum</b>th hop in <b>circ</b>->cpath, or NULL if there
  * aren't that many hops in the list. <b>hopnum</b> starts at 1.
  * Returns NULL if <b>hopnum</b> is 0 or negative. */

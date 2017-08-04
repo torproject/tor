@@ -34,6 +34,7 @@ void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
                                  build_time_t time);
 int circuit_build_times_needs_circuits(const circuit_build_times_t *cbt);
+void circuit_build_times_handle_completed_hop(origin_circuit_t *circ);
 
 int circuit_build_times_needs_circuits_now(const circuit_build_times_t *cbt);
 void circuit_build_times_init(circuit_build_times_t *cbt);
