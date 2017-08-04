@@ -5163,6 +5163,7 @@ test_config_include_folder_order(void *data)
 
  done:
   config_free_lines(result);
+  tor_free(torrcd);
   tor_free(path);
   tor_free(path2);
   tor_free(dir);
