@@ -1281,12 +1281,11 @@ directory_request_set_rend_query(directory_request_t *req,
  * <b>ident</b> object must outlive the request.
  */
 void
-directory_request_set_hs_ident(directory_request_t *req,
-                               const hs_ident_dir_conn_t *ident)
+directory_request_upload_set_hs_ident(directory_request_t *req,
+                                      const hs_ident_dir_conn_t *ident)
 {
   if (ident) {
-    tor_assert(req->dir_purpose == DIR_PURPOSE_FETCH_HSDESC ||
-               req->dir_purpose == DIR_PURPOSE_UPLOAD_HSDESC);
+    tor_assert(req->dir_purpose == DIR_PURPOSE_UPLOAD_HSDESC);
   }
   req->hs_ident = ident;
 }

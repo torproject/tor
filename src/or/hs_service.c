@@ -1957,7 +1957,7 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
                                 strlen(encoded_desc));
   /* The ident object is copied over the directory connection object once
    * the directory request is initiated. */
-  directory_request_set_hs_ident(dir_req, &ident);
+  directory_request_upload_set_hs_ident(dir_req, &ident);
 
   /* Initiate the directory request to the hsdir.*/
   directory_initiate_request(dir_req);

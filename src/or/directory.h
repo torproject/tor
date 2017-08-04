@@ -73,8 +73,8 @@ void directory_request_set_if_modified_since(directory_request_t *req,
                                              time_t if_modified_since);
 void directory_request_set_rend_query(directory_request_t *req,
                                       const rend_data_t *query);
-void directory_request_set_hs_ident(directory_request_t *req,
-                                    const hs_ident_dir_conn_t *ident);
+void directory_request_upload_set_hs_ident(directory_request_t *req,
+                                           const hs_ident_dir_conn_t *ident);
 
 void directory_request_set_routerstatus(directory_request_t *req,
                                         const routerstatus_t *rs);
