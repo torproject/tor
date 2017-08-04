@@ -2350,7 +2350,15 @@ static char *
 alloc_getcwd(void)
 {
 #ifdef HAVE_GET_CURRENT_DIR_NAME
-  return get_current_dir_name();
+  /* Glibc makes this nice and simple for us. */
+  char *cwd = get_current_dir_name();
+  char *result = NULL;
+  if (cwd) {
+    /* We make a copy here, in case tor_malloc() is not malloc(). */
+    result = tor_strdup(cwd);
+    raw_free(cwd); // alias for free to avoid tripping check-spaces.
+  }
+  return result;
 #else
   size_t size = 1024;
   char *buf = NULL;
