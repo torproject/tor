@@ -1219,7 +1219,7 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
       *command_out = RELAY_COMMAND_EXTEND;
       *len_out = 6 + TAP_ONIONSKIN_CHALLENGE_LEN + DIGEST_LEN;
       set_uint32(p, tor_addr_to_ipv4n(&cell_in->orport_ipv4.addr));
-      set_uint16(p+4, ntohs(cell_in->orport_ipv4.port));
+      set_uint16(p+4, htons(cell_in->orport_ipv4.port));
       if (cell_in->create_cell.handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
         memcpy(p+6, NTOR_CREATE_MAGIC, 16);
         memcpy(p+22, cell_in->create_cell.onionskin, NTOR_ONIONSKIN_LEN);
