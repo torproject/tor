@@ -1007,7 +1007,6 @@ desc_encode_v3(const hs_descriptor_t *desc,
   tor_assert(desc->plaintext_data.version == 3);
 
   if (BUG(desc->subcredential == NULL)) {
-    log_warn(LD_GENERAL, "Asked to encode desc with no subcred. No!");
     goto err;
   }
 

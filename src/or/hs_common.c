@@ -521,9 +521,9 @@ get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
     uint64_t time_period_length = get_time_period_length();
     char period_stuff[sizeof(uint64_t)*2];
     size_t offset = 0;
-    set_uint64(period_stuff, tor_htonll(time_period_num));
+    set_uint64(period_stuff, tor_htonll(time_period_length));
     offset += sizeof(uint64_t);
-    set_uint64(period_stuff+offset, tor_htonll(time_period_length));
+    set_uint64(period_stuff+offset, tor_htonll(time_period_num));
     offset += sizeof(uint64_t);
     tor_assert(offset == sizeof(period_stuff));
 

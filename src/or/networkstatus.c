@@ -1400,7 +1400,7 @@ networkstatus_get_live_consensus,(time_t now))
     return NULL;
 }
 
-/** Given a consensus in <b>ns</b>, validate that it's currently live and
+/** Given a consensus in <b>ns</b>, return true iff currently live and
  *  unexpired. */
 int
 networkstatus_is_live(const networkstatus_t *ns, time_t now)

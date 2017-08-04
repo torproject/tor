@@ -2881,14 +2881,14 @@ hs_service_circuit_has_opened(origin_circuit_t *circ)
     if (circ->hs_ident) {
       service_intro_circ_has_opened(circ);
     } else {
-                       rend_service_intro_has_opened(circ);
+      rend_service_intro_has_opened(circ);
     }
     break;
   case CIRCUIT_PURPOSE_S_CONNECT_REND:
     if (circ->hs_ident) {
       service_rendezvous_circ_has_opened(circ);
     } else {
-                       rend_service_rendezvous_has_opened(circ);
+      rend_service_rendezvous_has_opened(circ);
     }
     break;
   default:

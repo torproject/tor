@@ -699,8 +699,11 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
   circ->hs_service_side_rend_circ_has_been_relaunched = 1;
 
   /* Legacy service don't have an hidden service ident. */
-  (circ->hs_ident) ? retry_service_rendezvous_point(circ) :
-                     rend_service_relaunch_rendezvous(circ);
+  if (circ->hs_ident) {
+    retry_service_rendezvous_point(circ);
+  } else {
+    rend_service_relaunch_rendezvous(circ);
+  }
 
  done:
   return;
