@@ -1058,12 +1058,13 @@ hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
 
 /* Return a newly allocated buffer containing the current shared random value
  * or if not present, a disaster value is computed using the given time period
- * number. This function can't fail. */
+ * number. If a consensus is provided in <b>ns</b>, use it to get the SRV
+ * value. This function can't fail. */
 uint8_t *
-hs_get_current_srv(uint64_t time_period_num)
+hs_get_current_srv(uint64_t time_period_num, const networkstatus_t *ns)
 {
   uint8_t *sr_value = tor_malloc_zero(DIGEST256_LEN);
-  const sr_srv_t *current_srv = sr_get_current();
+  const sr_srv_t *current_srv = sr_get_current(ns);
 
   if (current_srv) {
     memcpy(sr_value, current_srv->value, sizeof(current_srv->value));
@@ -1078,10 +1079,10 @@ hs_get_current_srv(uint64_t time_period_num)
  * value or if not present, a disaster value is computed using the given time
  * period number. This function can't fail. */
 uint8_t *
-hs_get_previous_srv(uint64_t time_period_num)
+hs_get_previous_srv(uint64_t time_period_num, const networkstatus_t *ns)
 {
   uint8_t *sr_value = tor_malloc_zero(DIGEST256_LEN);
-  const sr_srv_t *previous_srv = sr_get_previous();
+  const sr_srv_t *previous_srv = sr_get_previous(ns);
 
   if (previous_srv) {
     memcpy(sr_value, previous_srv->value, sizeof(previous_srv->value));

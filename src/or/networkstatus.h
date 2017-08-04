@@ -81,6 +81,7 @@ MOCK_DECL(networkstatus_t *,networkstatus_get_latest_consensus,(void));
 MOCK_DECL(networkstatus_t *,networkstatus_get_latest_consensus_by_flavor,
           (consensus_flavor_t f));
 MOCK_DECL(networkstatus_t *, networkstatus_get_live_consensus,(time_t now));
+int networkstatus_is_live(const networkstatus_t *ns, time_t now);
 int networkstatus_consensus_reasonably_live(const networkstatus_t *consensus,
                                             time_t now);
 int networkstatus_valid_until_is_reasonably_live(time_t valid_until,

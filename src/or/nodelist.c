@@ -179,13 +179,18 @@ node_get_or_create(const char *identity_digest)
 static void
 node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
 {
-  time_t now = time(NULL);
+  time_t now = approx_time();
   const ed25519_public_key_t *node_identity_pk;
   uint8_t *next_hsdir_index_srv = NULL, *current_hsdir_index_srv = NULL;
   uint64_t next_time_period_num, current_time_period_num;
 
   tor_assert(node);
   tor_assert(ns);
+
+  if (!networkstatus_is_live(ns, now)) {
+    log_info(LD_GENERAL, "Not setting hsdir index with a non-live consensus.");
+    goto done;
+  }
 
   node_identity_pk = node_get_ed25519_id(node);
   if (node_identity_pk == NULL) {
@@ -205,15 +210,15 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
      * period, we have to use the current SRV and use the previous SRV for the
      * current time period. If the current or previous SRV can't be found, the
      * disaster one is returned. */
-    next_hsdir_index_srv = hs_get_current_srv(next_time_period_num);
+    next_hsdir_index_srv = hs_get_current_srv(next_time_period_num, ns);
     /* The following can be confusing so again, in overlap mode, we use our
      * previous SRV for our _current_ hsdir index. */
-    current_hsdir_index_srv = hs_get_previous_srv(current_time_period_num);
+    current_hsdir_index_srv = hs_get_previous_srv(current_time_period_num, ns);
   } else {
     /* If NOT in overlap mode, we only need to compute the current hsdir index
      * for the ongoing time period and thus the current SRV. If it can't be
      * found, the disaster one is returned. */
-    current_hsdir_index_srv = hs_get_current_srv(current_time_period_num);
+    current_hsdir_index_srv = hs_get_current_srv(current_time_period_num, ns);
   }
 
   /* Build the current hsdir index. */
