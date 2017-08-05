@@ -335,6 +335,9 @@ check_state_line_for_service_rev_counter(const char *state_line,
                                     const ed25519_public_key_t *blinded_pubkey,
                                     int *service_found_out);
 
+STATIC int
+write_address_to_file(const hs_service_t *service, const char *fname_);
+
 #endif /* TOR_UNIT_TESTS */
 
 #endif /* HS_SERVICE_PRIVATE */

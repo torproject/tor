@@ -7,6 +7,7 @@
  */
 
 #define HS_COMMON_PRIVATE
+#define HS_SERVICE_PRIVATE
 
 #include "test.h"
 #include "test_helpers.h"
@@ -14,6 +15,7 @@
 #include "hs_test_helpers.h"
 
 #include "hs_common.h"
+#include "hs_service.h"
 #include "config.h"
 
 /** Test the validation of HS v3 addresses */
@@ -70,6 +72,18 @@ test_validate_address(void *arg)
   ;
 }
 
+static int
+mock_write_str_to_file(const char *path, const char *str, int bin)
+{
+  (void)bin;
+  tt_str_op(path, OP_EQ, "/double/five/squared");
+  tt_str_op(str, OP_EQ,
+           "ijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbezhid.onion\n");
+
+ done:
+  return 0;
+}
+
 /** Test building HS v3 onion addresses */
 static void
 test_build_address(void *arg)
@@ -77,8 +91,11 @@ test_build_address(void *arg)
   int ret;
   char onion_addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   ed25519_public_key_t pubkey;
+  hs_service_t *service = NULL;
 
   (void) arg;
+
+  MOCK(write_str_to_file, mock_write_str_to_file);
 
   /* The following has been created with hs_build_address.py script that
    * follows proposal 224 specification to build an onion address. */
@@ -94,8 +111,14 @@ test_build_address(void *arg)
   ret = hs_address_is_valid(onion_addr);
   tt_int_op(ret, OP_EQ, 1);
 
+  service = tor_malloc_zero(sizeof(hs_service_t));
+  memcpy(service->onion_address, onion_addr, sizeof(service->onion_address));
+  tor_asprintf(&service->config.directory_path, "/double/five");
+  ret = write_address_to_file(service, "squared");
+  tt_int_op(ret, OP_EQ, 0);
+
  done:
-  ;
+  hs_service_free(service);
 }
 
 /** Test that our HS time period calculation functions work properly */

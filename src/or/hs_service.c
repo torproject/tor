@@ -848,7 +848,7 @@ register_all_services(void)
 
 /* Write the onion address of a given service to the given filename fname_ in
  * the service directory. Return 0 on success else -1 on error. */
-static int
+STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_)
 {
   int ret = -1;
