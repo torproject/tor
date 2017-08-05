@@ -260,6 +260,30 @@ test_get_start_time_of_current_run(void *arg)
   ;
 }
 
+/** Do some rudimentary consistency checks between the functions that
+ *  understand the shared random protocol schedule */
+static void
+test_get_start_time_functions(void *arg)
+{
+  (void) arg;
+  time_t now = approx_time();
+
+  time_t start_time_of_protocol_run =
+    sr_state_get_start_time_of_current_protocol_run(now);
+  tt_assert(start_time_of_protocol_run);
+
+  /* Check that the round start time of the beginning of the run, is itself */
+  tt_int_op(get_start_time_of_current_round(start_time_of_protocol_run), OP_EQ,
+            start_time_of_protocol_run);
+
+  /* Check that even if we increment the start time, we still get the start
+     time of the run as the beginning of the round. */
+  tt_int_op(get_start_time_of_current_round(start_time_of_protocol_run+1),
+            OP_EQ, start_time_of_protocol_run);
+
+ done: ;
+}
+
 static void
 test_get_sr_protocol_duration(void *arg)
 {
@@ -1363,6 +1387,8 @@ struct testcase_t sr_tests[] = {
   { "get_next_valid_after_time", test_get_next_valid_after_time, TT_FORK,
     NULL, NULL },
   { "get_start_time_of_current_run", test_get_start_time_of_current_run,
+    TT_FORK, NULL, NULL },
+  { "get_start_time_functions", test_get_start_time_functions,
     TT_FORK, NULL, NULL },
   { "get_sr_protocol_duration", test_get_sr_protocol_duration, TT_FORK,
     NULL, NULL },

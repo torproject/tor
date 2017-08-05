@@ -133,7 +133,7 @@ get_voting_interval(void)
 /* Given the time <b>now</b>, return the start time of the current round of
  * the SR protocol. For example, if it's 23:47:08, the current round thus
  * started at 23:47:00 for a voting interval of 10 seconds. */
-static time_t
+STATIC time_t
 get_start_time_of_current_round(time_t now)
 {
   const or_options_t *options = get_options();
