@@ -128,7 +128,7 @@ test_time_period(void *arg)
   (void) arg;
   uint64_t tn;
   int retval;
-  time_t fake_time;
+  time_t fake_time, correct_time, start_time;
 
   /* Let's do the example in prop224 section [TIME-PERIODS] */
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC",
@@ -145,6 +145,15 @@ test_time_period(void *arg)
   tn = hs_get_time_period_num(fake_time);
   tt_u64_op(tn, ==, 16903);
 
+  { /* Check start time of next time period */
+    retval = parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC",
+                                &correct_time);
+    tt_int_op(retval, ==, 0);
+
+    start_time = hs_get_start_time_of_next_time_period(fake_time);
+    tt_int_op(start_time, OP_EQ, correct_time);
+  }
+
   /* Now take time to 12:00:00 UTC and check that the time period rotated */
   fake_time += 1;
   tn = hs_get_time_period_num(fake_time);
@@ -153,6 +162,24 @@ test_time_period(void *arg)
   /* Now also check our hs_get_next_time_period_num() function */
   tn = hs_get_next_time_period_num(fake_time);
   tt_u64_op(tn, ==, 16905);
+
+  { /* Check start time of next time period again */
+    retval = parse_rfc1123_time("Wed, 14 Apr 2016 12:00:00 UTC",
+                                &correct_time);
+    tt_int_op(retval, ==, 0);
+
+    start_time = hs_get_start_time_of_next_time_period(fake_time);
+    tt_int_op(start_time, OP_EQ, correct_time);
+  }
+
+  /* Now do another sanity check: The time period number at the start of the
+   * next time period, must be the same time period number as the one returned
+   * from hs_get_next_time_period_num() */
+  {
+    time_t next_tp_start = hs_get_start_time_of_next_time_period(fake_time);
+    tt_int_op(hs_get_time_period_num(next_tp_start), OP_EQ,
+              hs_get_next_time_period_num(fake_time));
+  }
 
  done:
   ;
