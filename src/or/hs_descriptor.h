@@ -31,7 +31,7 @@
 #define HS_DESC_MAX_LIFETIME (12 * 60 * 60)
 /* Lifetime of certificate in the descriptor. This defines the lifetime of the
  * descriptor signing key and the cross certification cert of that key. */
-#define HS_DESC_CERT_LIFETIME (24 * 60 * 60)
+#define HS_DESC_CERT_LIFETIME (36 * 60 * 60)
 /* Length of the salt needed for the encrypted section of a descriptor. */
 #define HS_DESC_ENCRYPTED_SALT_LEN 16
 /* Length of the secret input needed for the KDF construction which derives
