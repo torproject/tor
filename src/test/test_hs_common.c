@@ -17,6 +17,8 @@
 #include "hs_common.h"
 #include "hs_service.h"
 #include "config.h"
+#include "networkstatus.h"
+#include "nodelist.h"
 
 /** Test the validation of HS v3 addresses */
 static void
@@ -355,6 +357,83 @@ test_desc_overlap_period_testnet(void *arg)
   tor_free(dummy_consensus);
 }
 
+static networkstatus_t *mock_ns = NULL;
+
+static networkstatus_t *
+mock_networkstatus_get_latest_consensus(void)
+{
+  time_t now = approx_time();
+
+  /* If initialized, return it */
+  if (mock_ns) {
+    return mock_ns;
+  }
+
+  /* Initialize fake consensus */
+  mock_ns = tor_malloc_zero(sizeof(networkstatus_t));
+
+  /* This consensus is live */
+  mock_ns->valid_after = now-1;
+  mock_ns->fresh_until = now+1;
+  mock_ns->valid_until = now+2;
+  /* Create routerstatus list */
+  mock_ns->routerstatus_list = smartlist_new();
+
+  return mock_ns;
+}
+
+/** Test the responsible HSDirs calculation function */
+static void
+test_responsible_hsdirs(void *arg)
+{
+  time_t now = approx_time();
+  smartlist_t *responsible_dirs = smartlist_new();
+  networkstatus_t *ns = NULL;
+  routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
+
+  (void) arg;
+
+  hs_init();
+
+  MOCK(networkstatus_get_latest_consensus,
+       mock_networkstatus_get_latest_consensus);
+
+  ns = networkstatus_get_latest_consensus();
+
+  { /* First router: HSdir */
+    tor_addr_t ipv4_addr;
+    memset(rs->identity_digest, 'A', DIGEST_LEN);
+    rs->is_hs_dir = 1;
+    rs->supports_v3_hsdir = 1;
+    routerinfo_t ri;
+    memset(&ri, 0 ,sizeof(routerinfo_t));
+    tor_addr_parse(&ipv4_addr, "127.0.0.1");
+    ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
+    ri.nickname = tor_strdup("fatal");
+    ri.protocol_list = (char *) "HSDir=1-2 LinkAuth=3";
+    memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
+    tt_assert(nodelist_set_routerinfo(&ri, NULL));
+    node_t *node = node_get_mutable_by_id(ri.cache_info.identity_digest);
+    memset(node->hsdir_index->current, 'Z',
+           sizeof(node->hsdir_index->current));
+    smartlist_add(ns->routerstatus_list, rs);
+  }
+
+  ed25519_public_key_t blinded_pk;
+  uint64_t time_period_num = hs_get_time_period_num(now);
+  hs_get_responsible_hsdirs(&blinded_pk, time_period_num,
+                            0, 0, responsible_dirs);
+  tt_int_op(smartlist_len(responsible_dirs), OP_EQ, 1);
+
+  /** TODO: Build a bigger network and do more tests here */
+
+ done:
+  routerstatus_free(rs);
+  smartlist_free(responsible_dirs);
+  smartlist_clear(ns->routerstatus_list);
+  networkstatus_vote_free(mock_ns);
+}
+
 struct testcase_t hs_common_tests[] = {
   { "build_address", test_build_address, TT_FORK,
     NULL, NULL },
@@ -368,6 +447,9 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "desc_overlap_period_testnet", test_desc_overlap_period_testnet, TT_FORK,
     NULL, NULL },
+  { "desc_responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
+    NULL, NULL },
+
 
   END_OF_TESTCASES
 };

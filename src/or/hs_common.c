@@ -1004,9 +1004,9 @@ hs_build_hs_index(uint64_t replica, const ed25519_public_key_t *blinded_pk,
     size_t offset = 0;
     set_uint64(buf, tor_htonll(replica));
     offset += sizeof(uint64_t);
-    set_uint64(buf, tor_htonll(period_length));
+    set_uint64(buf+offset, tor_htonll(period_length));
     offset += sizeof(uint64_t);
-    set_uint64(buf, tor_htonll(period_num));
+    set_uint64(buf+offset, tor_htonll(period_num));
     offset += sizeof(uint64_t);
     tor_assert(offset == sizeof(buf));
 
