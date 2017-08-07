@@ -2619,7 +2619,7 @@ tor_inet_pton(int af, const char *src, void *dst)
         long r = strtol(src, &next, 16);
         if (next == NULL || next == src) {
           /* The 'next == src' error case can happen on versions of openbsd
-           * where treats "0xfoo" as an error, rather than as "0" followed by
+           * which treat "0xfoo" as an error, rather than as "0" followed by
            * "xfoo". */
           return 0;
         }
