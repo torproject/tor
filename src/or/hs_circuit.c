@@ -682,7 +682,18 @@ hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
 
 /* Called when we fail building a rendezvous circuit at some point other than
  * the last hop: launches a new circuit to the same rendezvous point. This
- * supports legacy service. */
+ * supports legacy service.
+ *
+ * We currently relaunch connections to rendezvous points if:
+ * - A rendezvous circuit timed out before connecting to RP.
+ * - The redenzvous circuit failed to connect to the RP.
+ *
+ * We avoid relaunching a connection to this rendezvous point if:
+ * - We have already tried MAX_REND_FAILURES times to connect to this RP.
+ * - We've been trying to connect to this RP for more than MAX_REND_TIMEOUT
+ *   seconds
+ * - We've already retried this specific rendezvous circuit.
+ */
 void
 hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
 {
