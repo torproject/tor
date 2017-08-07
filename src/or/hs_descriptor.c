@@ -2510,6 +2510,7 @@ hs_desc_link_specifier_new(const extend_info_t *info, uint8_t type)
     memcpy(ls->u.legacy_id, info->identity_digest, sizeof(ls->u.legacy_id));
     break;
   case LS_ED25519_ID:
+    /* ed25519 keys are optional for intro points */
     if (ed25519_public_key_is_zero(&info->ed_identity)) {
       goto err;
     }

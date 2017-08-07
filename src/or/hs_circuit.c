@@ -405,7 +405,8 @@ get_rp_extend_info(const smartlist_t *link_specifiers,
     }
   } SMARTLIST_FOREACH_END(ls);
 
-  /* IPv4, legacy ID and ed25519 are mandatory. */
+  /* IPv4, legacy ID are mandatory for rend points.
+   * ed25519 keys and ipv6 are optional for rend points */
   if (!have_v4 || !have_legacy_id) {
     goto done;
   }
