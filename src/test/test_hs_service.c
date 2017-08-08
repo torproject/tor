@@ -1114,7 +1114,8 @@ test_build_update_descriptors(void *arg)
     ed25519_keypair_generate(&kp1, 0);
     ri.cache_info.signing_key_cert = tor_malloc_zero(sizeof(tor_cert_t));
     tt_assert(ri.cache_info.signing_key_cert);
-    ed25519_pubkey_copy(&ri.cache_info.signing_key_cert->signing_key, &kp1.pubkey);
+    ed25519_pubkey_copy(&ri.cache_info.signing_key_cert->signing_key,
+                        &kp1.pubkey);
     nodelist_set_routerinfo(&ri, NULL);
     node = node_get_mutable_by_id(ri.cache_info.identity_digest);
     tt_assert(node);

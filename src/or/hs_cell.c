@@ -210,6 +210,11 @@ build_legacy_establish_intro(const char *circ_nonce, crypto_pk_t *enc_key,
  * service and circuit which are used only for logging purposes. The resulting
  * parsed cell is put in cell_ptr_out.
  *
+ * This function only parses prop224 INTRODUCE2 cells even when the intro point
+ * is a legacy intro point. That's because intro points don't actually care
+ * about the contents of the introduce cell. Legacy INTRODUCE cells are only
+ * used by the legacy system now.
+ *
  * Return 0 on success else a negative value and cell_ptr_out is untouched. */
 static int
 parse_introduce2_cell(const hs_service_t *service,
