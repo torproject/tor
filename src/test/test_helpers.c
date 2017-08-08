@@ -114,7 +114,7 @@ connection_write_to_buf_mock(const char *string, size_t len,
   tor_assert(string);
   tor_assert(conn);
 
-  write_to_buf(string, len, conn->outbuf);
+  buf_add(string, len, conn->outbuf);
 }
 
 /* Set up a fake origin circuit with the specified number of cells,

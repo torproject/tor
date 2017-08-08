@@ -3617,9 +3617,9 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
       return SRFS_DONE;
     }
     if (conn->compress_state) {
-      connection_write_to_buf_compress((const char*)body, bodylen, conn, 0);
+      connection_buf_add_compress((const char*)body, bodylen, conn, 0);
     } else {
-      connection_write_to_buf((const char*)body, bodylen, TO_CONN(conn));
+      connection_buf_add((const char*)body, bodylen, TO_CONN(conn));
     }
     return SRFS_DONE;
   } else {
@@ -3656,11 +3656,11 @@ spooled_resource_flush_some(spooled_resource_t *spooled,
       return SRFS_ERR;
     ssize_t bytes = (ssize_t) MIN(DIRSERV_CACHED_DIR_CHUNK_SIZE, remaining);
     if (conn->compress_state) {
-      connection_write_to_buf_compress(
+      connection_buf_add_compress(
               ptr + spooled->cached_dir_offset,
               bytes, conn, 0);
     } else {
-      connection_write_to_buf(ptr + spooled->cached_dir_offset,
+      connection_buf_add(ptr + spooled->cached_dir_offset,
                               bytes, TO_CONN(conn));
     }
     spooled->cached_dir_offset += bytes;
@@ -3925,7 +3925,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   if (conn->compress_state) {
     /* Flush the compression state: there could be more bytes pending in there,
      * and we don't want to omit bytes. */
-    connection_write_to_buf_compress("", 0, conn, 1);
+    connection_buf_add_compress("", 0, conn, 1);
     tor_compress_free(conn->compress_state);
     conn->compress_state = NULL;
   }

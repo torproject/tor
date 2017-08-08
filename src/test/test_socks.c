@@ -44,7 +44,7 @@ static const struct testcase_setup_t socks_setup = {
   buf_t *buf = testdata->buf;                   \
   socks_request_t *socks = testdata->req;
 #define ADD_DATA(buf, s)                                        \
-  write_to_buf(s, sizeof(s)-1, buf)
+  buf_add(s, sizeof(s)-1, buf)
 
 static void
 socks_request_clear(socks_request_t *socks)

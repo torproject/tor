@@ -123,8 +123,8 @@ void connection_bucket_refill(int seconds_elapsed, time_t now);
 
 int connection_handle_read(connection_t *conn);
 
-int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
-int connection_fetch_from_buf_line(connection_t *conn, char *data,
+int connection_buf_get_bytes(char *string, size_t len, connection_t *conn);
+int connection_buf_get_line(connection_t *conn, char *data,
                                    size_t *data_len);
 int connection_fetch_from_buf_http(connection_t *conn,
                                char **headers_out, size_t max_headerlen,
@@ -139,18 +139,18 @@ int connection_flush(connection_t *conn);
 MOCK_DECL(void, connection_write_to_buf_impl_,
           (const char *string, size_t len, connection_t *conn, int zlib));
 /* DOCDOC connection_write_to_buf */
-static void connection_write_to_buf(const char *string, size_t len,
+static void connection_buf_add(const char *string, size_t len,
                                     connection_t *conn);
 /* DOCDOC connection_write_to_buf_compress */
-static void connection_write_to_buf_compress(const char *string, size_t len,
+static void connection_buf_add_compress(const char *string, size_t len,
                                              dir_connection_t *conn, int done);
 static inline void
-connection_write_to_buf(const char *string, size_t len, connection_t *conn)
+connection_buf_add(const char *string, size_t len, connection_t *conn)
 {
   connection_write_to_buf_impl_(string, len, conn, 0);
 }
 static inline void
-connection_write_to_buf_compress(const char *string, size_t len,
+connection_buf_add_compress(const char *string, size_t len,
                                  dir_connection_t *conn, int done)
 {
   connection_write_to_buf_impl_(string, len, TO_CONN(conn), done ? -1 : 1);

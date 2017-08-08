@@ -57,7 +57,7 @@ read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
  * ready to write -- or vice versa.
  */
 int
-read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
+buf_read_from_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
 {
   int r = 0;
   size_t total_read = 0;
@@ -94,7 +94,7 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
   return (int)total_read;
 }
 
-/** Helper for flush_buf_tls(): try to write <b>sz</b> bytes from chunk
+/** Helper for buf_flush_to_tls(): try to write <b>sz</b> bytes from chunk
  * <b>chunk</b> of buffer <b>buf</b> onto socket <b>s</b>.  (Tries to write
  * more if there is a forced pending write size.)  On success, deduct the
  * bytes written from *<b>buf_flushlen</b>.  Return the number of bytes
@@ -125,17 +125,17 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
     *buf_flushlen -= r;
   else
     *buf_flushlen = 0;
-  buf_remove_from_front(buf, r);
+  buf_drain(buf, r);
   log_debug(LD_NET,"flushed %d bytes, %d ready to flush, %d remain.",
             r,(int)*buf_flushlen,(int)buf->datalen);
   return r;
 }
 
-/** As flush_buf(), but writes data to a TLS connection.  Can write more than
+/** As buf_flush_to_socket(), but writes data to a TLS connection.  Can write more than
  * <b>flushlen</b> bytes.
  */
 int
-flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen,
+buf_flush_to_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen,
               size_t *buf_flushlen)
 {
   int r;

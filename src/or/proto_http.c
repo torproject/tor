@@ -13,11 +13,11 @@
 int
 peek_buf_has_http_command(const buf_t *buf)
 {
-  if (peek_buf_startswith(buf, "CONNECT ") ||
-      peek_buf_startswith(buf, "DELETE ") ||
-      peek_buf_startswith(buf, "GET ") ||
-      peek_buf_startswith(buf, "POST ") ||
-      peek_buf_startswith(buf, "PUT " ))
+  if (buf_peek_startswith(buf, "CONNECT ") ||
+      buf_peek_startswith(buf, "DELETE ") ||
+      buf_peek_startswith(buf, "GET ") ||
+      buf_peek_startswith(buf, "POST ") ||
+      buf_peek_startswith(buf, "PUT " ))
     return 1;
   return 0;
 }
@@ -110,14 +110,14 @@ fetch_from_buf_http(buf_t *buf,
   /* all happy. copy into the appropriate places, and return 1 */
   if (headers_out) {
     *headers_out = tor_malloc(headerlen+1);
-    fetch_from_buf(*headers_out, headerlen, buf);
+    buf_get_bytes(*headers_out, headerlen, buf);
     (*headers_out)[headerlen] = 0; /* NUL terminate it */
   }
   if (body_out) {
     tor_assert(body_used);
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
-    fetch_from_buf(*body_out, bodylen, buf);
+    buf_get_bytes(*body_out, bodylen, buf);
     (*body_out)[bodylen] = 0; /* NUL terminate it */
   }
   return 1;

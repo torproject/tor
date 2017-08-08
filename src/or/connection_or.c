@@ -1979,7 +1979,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   if (cell->command == CELL_PADDING)
     rep_hist_padding_count_write(PADDING_TYPE_CELL);
 
-  connection_write_to_buf(networkcell.body, cell_network_size, TO_CONN(conn));
+  connection_buf_add(networkcell.body, cell_network_size, TO_CONN(conn));
 
   /* Touch the channel's active timestamp if there is one */
   if (conn->chan) {
@@ -2009,8 +2009,8 @@ connection_or_write_var_cell_to_buf,(const var_cell_t *cell,
   tor_assert(cell);
   tor_assert(conn);
   n = var_cell_pack_header(cell, hdr, conn->wide_circ_ids);
-  connection_write_to_buf(hdr, n, TO_CONN(conn));
-  connection_write_to_buf((char*)cell->payload,
+  connection_buf_add(hdr, n, TO_CONN(conn));
+  connection_buf_add((char*)cell->payload,
                           cell->payload_len, TO_CONN(conn));
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_var_cell(conn, conn->handshake_state, cell, 0);
@@ -2085,7 +2085,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
         channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
       circuit_build_times_network_is_live(get_circuit_build_times_mutable());
-      connection_fetch_from_buf(buf, cell_network_size, TO_CONN(conn));
+      connection_buf_get_bytes(buf, cell_network_size, TO_CONN(conn));
 
       /* retrieve cell info from buf (create the host-order struct from the
        * network-order string) */

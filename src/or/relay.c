@@ -1670,7 +1670,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 
       stats_n_data_bytes_received += rh.length;
-      connection_write_to_buf((char*)(cell->payload + RELAY_HEADER_SIZE),
+      connection_buf_add((char*)(cell->payload + RELAY_HEADER_SIZE),
                               rh.length, TO_CONN(conn));
 
 #ifdef MEASUREMENTS_21206
@@ -2038,13 +2038,13 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     /* XXXX We could be more efficient here by sometimes packing
      * previously-sent optimistic data in the same cell with data
      * from the inbuf. */
-    fetch_from_buf(payload, length, entry_conn->sending_optimistic_data);
+    buf_get_bytes(payload, length, entry_conn->sending_optimistic_data);
     if (!buf_datalen(entry_conn->sending_optimistic_data)) {
         buf_free(entry_conn->sending_optimistic_data);
         entry_conn->sending_optimistic_data = NULL;
     }
   } else {
-    connection_fetch_from_buf(payload, length, TO_CONN(conn));
+    connection_buf_get_bytes(payload, length, TO_CONN(conn));
   }
 
   log_debug(domain,TOR_SOCKET_T_FORMAT": Packaging %d bytes (%d waiting).",
@@ -2056,7 +2056,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
        retry */
     if (!entry_conn->pending_optimistic_data)
       entry_conn->pending_optimistic_data = buf_new();
-    write_to_buf(payload, length, entry_conn->pending_optimistic_data);
+    buf_add(payload, length, entry_conn->pending_optimistic_data);
   }
 
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,

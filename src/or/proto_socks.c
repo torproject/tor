@@ -132,7 +132,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     if (n_drain < 0)
       buf_clear(buf);
     else if (n_drain > 0)
-      buf_remove_from_front(buf, n_drain);
+      buf_drain(buf, n_drain);
 
   } while (res == 0 && head && want_length < buf_datalen(buf) &&
            buf_datalen(buf) >= 2);
@@ -575,7 +575,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
   r = parse_socks_client((uint8_t*)head, datalen,
                          state, reason, &drain);
   if (drain > 0)
-    buf_remove_from_front(buf, drain);
+    buf_drain(buf, drain);
   else if (drain < 0)
     buf_clear(buf);
 

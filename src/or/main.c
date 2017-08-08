@@ -836,7 +836,7 @@ conn_close_if_marked(int i)
                (int)conn->outbuf_flushlen,
                 conn->marked_for_close_file, conn->marked_for_close);
     if (conn->linked_conn) {
-      retval = move_buf_to_buf(conn->linked_conn->inbuf, conn->outbuf,
+      retval = buf_move_to_buf(conn->linked_conn->inbuf, conn->outbuf,
                                &conn->outbuf_flushlen);
       if (retval >= 0) {
         /* The linked conn will notice that it has data when it notices that
@@ -850,12 +850,12 @@ conn_close_if_marked(int i)
                 connection_wants_to_flush(conn));
     } else if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
-        retval = flush_buf_tls(TO_OR_CONN(conn)->tls, conn->outbuf, sz,
+        retval = buf_flush_to_tls(TO_OR_CONN(conn)->tls, conn->outbuf, sz,
                                &conn->outbuf_flushlen);
       } else
         retval = -1; /* never flush non-open broken tls connections */
     } else {
-      retval = flush_buf(conn->s, conn->outbuf, sz, &conn->outbuf_flushlen);
+      retval = buf_flush_to_socket(conn->s, conn->outbuf, sz, &conn->outbuf_flushlen);
     }
     if (retval >= 0 && /* Technically, we could survive things like
                           TLS_WANT_WRITE here. But don't bother for now. */

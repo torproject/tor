@@ -357,7 +357,7 @@ static inline void
 connection_write_str_to_buf(const char *s, control_connection_t *conn)
 {
   size_t len = strlen(s);
-  connection_write_to_buf(s, len, TO_CONN(conn));
+  connection_buf_add(s, len, TO_CONN(conn));
 }
 
 /** Given a <b>len</b>-character string in <b>data</b>, made of lines
@@ -567,7 +567,7 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
     tor_assert(0);
   }
 
-  connection_write_to_buf(buf, (size_t)len, TO_CONN(conn));
+  connection_buf_add(buf, (size_t)len, TO_CONN(conn));
 
   tor_free(buf);
 }
@@ -792,7 +792,7 @@ queued_events_flush_all(int force)
     SMARTLIST_FOREACH_BEGIN(controllers, control_connection_t *,
                             control_conn) {
       if (control_conn->event_mask & bit) {
-        connection_write_to_buf(ev->msg, msg_len, TO_CONN(control_conn));
+        connection_buf_add(ev->msg, msg_len, TO_CONN(control_conn));
       }
     } SMARTLIST_FOREACH_END(control_conn);
 
@@ -1074,7 +1074,7 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
     tor_assert(strlen(tmp)>4);
     tmp[3] = ' ';
     msg = smartlist_join_strings(answers, "", 0, &msg_len);
-    connection_write_to_buf(msg, msg_len, TO_CONN(conn));
+    connection_buf_add(msg, msg_len, TO_CONN(conn));
   } else {
     connection_write_str_to_buf("250 OK\r\n", conn);
   }
@@ -1656,12 +1656,12 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   if (smartlist_len(reply)) {
     ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
     r = smartlist_join_strings(reply, "\r\n", 1, &sz);
-    connection_write_to_buf(r, sz, TO_CONN(conn));
+    connection_buf_add(r, sz, TO_CONN(conn));
     tor_free(r);
   } else {
     const char *response =
       "512 syntax error: not enough arguments to mapaddress.\r\n";
-    connection_write_to_buf(response, strlen(response), TO_CONN(conn));
+    connection_buf_add(response, strlen(response), TO_CONN(conn));
   }
 
   SMARTLIST_FOREACH(reply, char *, cp, tor_free(cp));
@@ -3246,7 +3246,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
       size_t esc_len;
       esc_len = write_escaped_data(v, strlen(v), &esc);
       connection_printf_to_buf(conn, "250+%s=\r\n", k);
-      connection_write_to_buf(esc, esc_len, TO_CONN(conn));
+      connection_buf_add(esc, esc_len, TO_CONN(conn));
       tor_free(esc);
     }
   }
@@ -4987,7 +4987,7 @@ connection_control_process_inbuf(control_connection_t *conn)
             sizeof(buf)-6);
     body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
     set_uint16(buf+0, htons(body_len));
-    connection_write_to_buf(buf, 4+body_len, TO_CONN(conn));
+    connection_buf_add(buf, 4+body_len, TO_CONN(conn));
 
     connection_mark_and_flush(TO_CONN(conn));
     return 0;
@@ -5009,7 +5009,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     /* First, fetch a line. */
     do {
       data_len = conn->incoming_cmd_len - conn->incoming_cmd_cur_len;
-      r = connection_fetch_from_buf_line(TO_CONN(conn),
+      r = connection_buf_get_line(TO_CONN(conn),
                               conn->incoming_cmd+conn->incoming_cmd_cur_len,
                               &data_len);
       if (r == 0)

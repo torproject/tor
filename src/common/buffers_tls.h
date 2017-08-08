@@ -10,9 +10,9 @@
 struct buf_t;
 struct tor_tls_t;
 
-int read_to_buf_tls(struct tor_tls_t *tls, size_t at_most,
+int buf_read_from_tls(struct tor_tls_t *tls, size_t at_most,
                     struct buf_t *buf);
-int flush_buf_tls(struct tor_tls_t *tls, struct buf_t *buf, size_t sz,
+int buf_flush_to_tls(struct tor_tls_t *tls, struct buf_t *buf, size_t sz,
                   size_t *buf_flushlen);
 
 #endif
