@@ -468,7 +468,6 @@ ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
   tor_assert(fast_memeq(pubkey_check.pubkey, out->pubkey.pubkey, 32));
 
   memwipe(&pubkey_check, 0, sizeof(pubkey_check));
-  memwipe(&ctx, 0, sizeof(ctx));
   memwipe(sha512_output, 0, sizeof(sha512_output));
 
   return 0;
