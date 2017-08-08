@@ -196,31 +196,41 @@ tor_zstd_compress_new(int compress,
     result->u.compress_stream = ZSTD_createCStream();
 
     if (result->u.compress_stream == NULL) {
-      log_warn(LD_GENERAL, "Error while creating Zstandard stream");
+      // LCOV_EXCL_START
+      log_warn(LD_GENERAL, "Error while creating Zstandard compression "
+               "stream");
       goto err;
+      // LCOV_EXCL_STOP
     }
 
     retval = ZSTD_initCStream(result->u.compress_stream, preset);
 
     if (ZSTD_isError(retval)) {
+      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Zstandard stream initialization error: %s",
                ZSTD_getErrorName(retval));
       goto err;
+      // LCOV_EXCL_STOP
     }
   } else {
     result->u.decompress_stream = ZSTD_createDStream();
 
     if (result->u.decompress_stream == NULL) {
-      log_warn(LD_GENERAL, "Error while creating Zstandard stream");
+      // LCOV_EXCL_START
+      log_warn(LD_GENERAL, "Error while creating Zstandard decompression "
+               "stream");
       goto err;
+      // LCOV_EXCL_STOP
     }
 
     retval = ZSTD_initDStream(result->u.decompress_stream);
 
     if (ZSTD_isError(retval)) {
+      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Zstandard stream initialization error: %s",
                ZSTD_getErrorName(retval));
       goto err;
+      // LCOV_EXCL_STOP
     }
   }
 
@@ -228,6 +238,7 @@ tor_zstd_compress_new(int compress,
   return result;
 
  err:
+  // LCOV_EXCL_START
   if (compress) {
     ZSTD_freeCStream(result->u.compress_stream);
   } else {
@@ -236,6 +247,7 @@ tor_zstd_compress_new(int compress,
 
   tor_free(result);
   return NULL;
+  // LCOV_EXCL_STOP
 #else // HAVE_ZSTD.
   (void)compress;
   (void)method;
