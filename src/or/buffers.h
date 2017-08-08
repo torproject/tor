@@ -19,9 +19,7 @@
 
 typedef struct buf_t buf_t;
 
-struct tor_tls_t;
 struct tor_compress_state_t;
-struct ext_or_cmd_t;
 
 buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
@@ -39,11 +37,8 @@ size_t buf_get_total_allocation(void);
 
 int read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
                 int *socket_error);
-int read_to_buf_tls(struct tor_tls_t *tls, size_t at_most, buf_t *buf);
 
 int flush_buf(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen);
-int flush_buf_tls(struct tor_tls_t *tls, buf_t *buf, size_t sz,
-                  size_t *buf_flushlen);
 
 int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int write_to_buf_compress(buf_t *buf, struct tor_compress_state_t *state,
@@ -100,6 +95,28 @@ struct buf_t {
   chunk_t *head; /**< First chunk in the list, or NULL for none. */
   chunk_t *tail; /**< Last chunk in the list, or NULL for none. */
 };
+
+chunk_t *buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped);
+/** If a read onto the end of a chunk would be smaller than this number, then
+ * just start a new chunk. */
+#define MIN_READ_LEN 8
+
+/** Return the number of bytes that can be written onto <b>chunk</b> without
+ * running out of space. */
+static inline size_t
+CHUNK_REMAINING_CAPACITY(const chunk_t *chunk)
+{
+  return (chunk->mem + chunk->memlen) - (chunk->data + chunk->datalen);
+}
+
+/** Return the next character in <b>chunk</b> onto which data can be appended.
+ * If the chunk is full, this might be off the end of chunk->mem. */
+static inline char *
+CHUNK_WRITE_PTR(chunk_t *chunk)
+{
+  return chunk->data + chunk->datalen;
+}
+
 #endif
 
 #endif

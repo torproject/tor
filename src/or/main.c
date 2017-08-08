@@ -52,6 +52,7 @@
 #include "backtrace.h"
 #include "bridges.h"
 #include "buffers.h"
+#include "buffers_tls.h"
 #include "channel.h"
 #include "channeltls.h"
 #include "channelpadding.h"

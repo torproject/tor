@@ -58,6 +58,7 @@
 #include "or.h"
 #include "bridges.h"
 #include "buffers.h"
+#include "buffers_tls.h"
 /*
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).

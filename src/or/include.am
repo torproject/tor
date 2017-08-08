@@ -21,6 +21,7 @@ LIBTOR_A_SOURCES = \
 	src/or/addressmap.c				\
 	src/or/bridges.c				\
 	src/or/buffers.c				\
+	src/or/buffers_tls.c				\
 	src/or/channel.c				\
 	src/or/channelpadding.c				\
 	src/or/channeltls.c				\
@@ -156,6 +157,7 @@ ORHEADERS = \
 	src/or/addressmap.h				\
 	src/or/bridges.h				\
 	src/or/buffers.h				\
+	src/or/buffers_tls.h				\
 	src/or/channel.h				\
 	src/or/channelpadding.h				\
 	src/or/channeltls.h				\

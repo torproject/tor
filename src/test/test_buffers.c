@@ -7,6 +7,7 @@
 #define PROTO_HTTP_PRIVATE
 #include "or.h"
 #include "buffers.h"
+#include "buffers_tls.h"
 #include "ext_orport.h"
 #include "proto_cell.h"
 #include "proto_ext_or.h"
