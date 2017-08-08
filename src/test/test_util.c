@@ -2250,6 +2250,11 @@ test_util_compress_impl(compress_method_t method)
 
   tt_assert(tor_compress_supports_method(method));
 
+  if (method != NO_METHOD) {
+    tt_assert(tor_compress_version_str(method) != NULL);
+    tt_assert(tor_compress_header_version_str(method) != NULL);
+  }
+
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
@@ -2352,6 +2357,8 @@ test_util_compress_stream_impl(compress_method_t method,
   } else {
     tt_assert(cp1 > cp2); /* Make sure we really added something. */
   }
+
+  tt_int_op(tor_compress_state_size(state), OP_GT, 0);
 
   tt_assert(!tor_uncompress(&buf3, &len2, buf1, 1024-len1,
                             method, 1, LOG_WARN));
