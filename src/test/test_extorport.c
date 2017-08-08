@@ -78,7 +78,7 @@ connection_write_to_buf_impl_replacement(const char *string, size_t len,
 
   tor_assert(string);
   tor_assert(conn);
-  buf_add(string, len, conn->outbuf);
+  buf_add(conn->outbuf, string, len);
 }
 
 static char *
@@ -89,7 +89,7 @@ buf_get_contents(buf_t *buf, size_t *sz_out)
   if (*sz_out >= ULONG_MAX)
     return NULL; /* C'mon, really? */
   out = tor_malloc(*sz_out + 1);
-  if (buf_get_bytes(out, (unsigned long)*sz_out, buf) != 0) {
+  if (buf_get_bytes(buf, out, (unsigned long)*sz_out) != 0) {
     tor_free(out);
     return NULL;
   }
@@ -399,14 +399,14 @@ handshake_start(or_connection_t *conn, int receiving)
 
 #define WRITE(s,n)                                                      \
   do {                                                                  \
-    buf_add((s), (n), TO_CONN(conn)->inbuf);                       \
+    buf_add(TO_CONN(conn)->inbuf, (s), (n));                           \
   } while (0)
 #define CONTAINS(s,n)                                           \
   do {                                                          \
     tt_int_op((n), OP_LE, sizeof(b));                              \
     tt_int_op(buf_datalen(TO_CONN(conn)->outbuf), OP_EQ, (n));     \
     if ((n)) {                                                  \
-      buf_get_bytes(b, (n), TO_CONN(conn)->outbuf);            \
+      buf_get_bytes(TO_CONN(conn)->outbuf, b, (n));                \
       tt_mem_op(b, OP_EQ, (s), (n));                               \
     }                                                           \
   } while (0)

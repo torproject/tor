@@ -850,12 +850,12 @@ conn_close_if_marked(int i)
                 connection_wants_to_flush(conn));
     } else if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
-        retval = buf_flush_to_tls(TO_OR_CONN(conn)->tls, conn->outbuf, sz,
+        retval = buf_flush_to_tls(conn->outbuf, TO_OR_CONN(conn)->tls, sz,
                                &conn->outbuf_flushlen);
       } else
         retval = -1; /* never flush non-open broken tls connections */
     } else {
-      retval = buf_flush_to_socket(conn->s, conn->outbuf, sz,
+      retval = buf_flush_to_socket(conn->outbuf, conn->s, sz,
                                    &conn->outbuf_flushlen);
     }
     if (retval >= 0 && /* Technically, we could survive things like

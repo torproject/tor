@@ -3552,7 +3552,7 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
 
     initial_size = buf_datalen(conn->inbuf);
     /* else open, or closing */
-    result = buf_read_from_tls(or_conn->tls, at_most, conn->inbuf);
+    result = buf_read_from_tls(conn->inbuf, or_conn->tls, at_most);
     if (TOR_TLS_IS_ERROR(result) || result == TOR_TLS_CLOSE)
       or_conn->tls_error = result;
     else
@@ -3601,7 +3601,7 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
       /* If we have any pending bytes, we read them now.  This *can*
        * take us over our read allotment, but really we shouldn't be
        * believing that SSL bytes are the same as TCP bytes anyway. */
-      int r2 = buf_read_from_tls(or_conn->tls, pending, conn->inbuf);
+      int r2 = buf_read_from_tls(conn->inbuf, or_conn->tls, pending);
       if (BUG(r2<0)) {
         log_warn(LD_BUG, "apparently, reading pending bytes can fail.");
         return -1;
@@ -3631,9 +3631,10 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     /* !connection_speaks_cells, !conn->linked_conn. */
     int reached_eof = 0;
     CONN_LOG_PROTECT(conn,
-        result = buf_read_from_socket(conn->s, at_most, conn->inbuf,
-                                      &reached_eof,
-                                      socket_error));
+                     result = buf_read_from_socket(conn->inbuf, conn->s,
+                                                   at_most,
+                                                   &reached_eof,
+                                                   socket_error));
     if (reached_eof)
       conn->inbuf_reached_eof = 1;
 
@@ -3704,7 +3705,7 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
 int
 connection_buf_get_bytes(char *string, size_t len, connection_t *conn)
 {
-  return buf_get_bytes(string, len, conn->inbuf);
+  return buf_get_bytes(conn->inbuf, string, len);
 }
 
 /** As buf_get_line(), but read from a connection's input buffer. */
@@ -3860,7 +3861,7 @@ connection_handle_write_impl(connection_t *conn, int force)
 
     /* else open, or closing */
     initial_size = buf_datalen(conn->outbuf);
-    result = buf_flush_to_tls(or_conn->tls, conn->outbuf,
+    result = buf_flush_to_tls(conn->outbuf, or_conn->tls,
                            max_to_write, &conn->outbuf_flushlen);
 
     /* If we just flushed the last bytes, tell the channel on the
@@ -3923,8 +3924,8 @@ connection_handle_write_impl(connection_t *conn, int force)
     result = (int)(initial_size-buf_datalen(conn->outbuf));
   } else {
     CONN_LOG_PROTECT(conn,
-             result = buf_flush_to_socket(conn->s, conn->outbuf,
-                                max_to_write, &conn->outbuf_flushlen));
+                     result = buf_flush_to_socket(conn->outbuf, conn->s,
+                                        max_to_write, &conn->outbuf_flushlen));
     if (result < 0) {
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(TO_EDGE_CONN(conn));
@@ -4068,7 +4069,7 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
                                                      dir_conn->compress_state,
                                                      string, len, done));
   } else {
-    CONN_LOG_PROTECT(conn, r = buf_add(string, len, conn->outbuf));
+    CONN_LOG_PROTECT(conn, r = buf_add(conn->outbuf, string, len));
   }
   if (r < 0) {
     if (CONN_IS_EDGE(conn)) {

@@ -57,7 +57,7 @@ read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
  * ready to write -- or vice versa.
  */
 int
-buf_read_from_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
+buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
 {
   int r = 0;
   size_t total_read = 0;
@@ -135,7 +135,7 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
  * more than <b>flushlen</b> bytes.
  */
 int
-buf_flush_to_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen,
+buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
               size_t *buf_flushlen)
 {
   int r;

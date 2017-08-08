@@ -551,7 +551,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
  */
 /* XXXX indicate "read blocked" somehow? */
 int
-buf_read_from_socket(tor_socket_t s, size_t at_most, buf_t *buf,
+buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
                      int *reached_eof,
                      int *socket_error)
 {
@@ -638,7 +638,7 @@ flush_chunk(tor_socket_t s, buf_t *buf, chunk_t *chunk, size_t sz,
  * -1 on failure.  Return 0 if write() would block.
  */
 int
-buf_flush_to_socket(tor_socket_t s, buf_t *buf, size_t sz,
+buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
                     size_t *buf_flushlen)
 {
   /* XXXX It's stupid to overload the return values for these functions:
@@ -679,7 +679,7 @@ buf_flush_to_socket(tor_socket_t s, buf_t *buf, size_t sz,
  * Return the new length of the buffer on success, -1 on failure.
  */
 int
-buf_add(const char *string, size_t string_len, buf_t *buf)
+buf_add(buf_t *buf, const char *string, size_t string_len)
 {
   if (!string_len)
     return (int)buf->datalen;
@@ -714,7 +714,7 @@ buf_add(const char *string, size_t string_len, buf_t *buf)
  * onto <b>string</b>.
  */
 void
-buf_peek(char *string, size_t string_len, const buf_t *buf)
+buf_peek(const buf_t *buf, char *string, size_t string_len)
 {
   chunk_t *chunk;
 
@@ -741,7 +741,7 @@ buf_peek(char *string, size_t string_len, const buf_t *buf)
  * must be \<= the number of bytes on the buffer.
  */
 int
-buf_get_bytes(char *string, size_t string_len, buf_t *buf)
+buf_get_bytes(buf_t *buf, char *string, size_t string_len)
 {
   /* There must be string_len bytes in buf; write them onto string,
    * then memmove buf back (that is, remove them from buf).
@@ -749,7 +749,7 @@ buf_get_bytes(char *string, size_t string_len, buf_t *buf)
    * Return the number of bytes still on the buffer. */
 
   check();
-  buf_peek(string, string_len, buf);
+  buf_peek(buf, string, string_len);
   buf_drain(buf, string_len);
   check();
   tor_assert(buf->datalen < INT_MAX);
@@ -783,8 +783,8 @@ buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
      * it does two copies instead of 1, but I kinda doubt that this will be
      * critical path. */
     size_t n = len > sizeof(b) ? sizeof(b) : len;
-    buf_get_bytes(b, n, buf_in);
-    buf_add(b, n, buf_out);
+    buf_get_bytes(buf_in, b, n);
+    buf_add(buf_out, b, n);
     len -= n;
   }
   *buf_flushlen -= cp;
@@ -911,7 +911,7 @@ buf_peek_startswith(const buf_t *buf, const char *cmd)
     return 0;
   if (buf->datalen < clen)
     return 0;
-  buf_peek(tmp, clen, buf);
+  buf_peek(buf, tmp, clen);
   return fast_memeq(tmp, cmd, clen);
 }
 
@@ -956,7 +956,7 @@ buf_get_line(buf_t *buf, char *data_out, size_t *data_len)
     *data_len = sz + 2;
     return -1;
   }
-  buf_get_bytes(data_out, sz+1, buf);
+  buf_get_bytes(buf, data_out, sz+1);
   data_out[sz+1] = '\0';
   *data_len = sz+1;
   return 1;

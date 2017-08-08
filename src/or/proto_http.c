@@ -110,14 +110,14 @@ fetch_from_buf_http(buf_t *buf,
   /* all happy. copy into the appropriate places, and return 1 */
   if (headers_out) {
     *headers_out = tor_malloc(headerlen+1);
-    buf_get_bytes(*headers_out, headerlen, buf);
+    buf_get_bytes(buf, *headers_out, headerlen);
     (*headers_out)[headerlen] = 0; /* NUL terminate it */
   }
   if (body_out) {
     tor_assert(body_used);
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
-    buf_get_bytes(*body_out, bodylen, buf);
+    buf_get_bytes(buf, *body_out, bodylen);
     (*body_out)[bodylen] = 0; /* NUL terminate it */
   }
   return 1;

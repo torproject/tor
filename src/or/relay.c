@@ -2038,7 +2038,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     /* XXXX We could be more efficient here by sometimes packing
      * previously-sent optimistic data in the same cell with data
      * from the inbuf. */
-    buf_get_bytes(payload, length, entry_conn->sending_optimistic_data);
+    buf_get_bytes(entry_conn->sending_optimistic_data, payload, length);
     if (!buf_datalen(entry_conn->sending_optimistic_data)) {
         buf_free(entry_conn->sending_optimistic_data);
         entry_conn->sending_optimistic_data = NULL;
@@ -2056,7 +2056,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
        retry */
     if (!entry_conn->pending_optimistic_data)
       entry_conn->pending_optimistic_data = buf_new();
-    buf_add(payload, length, entry_conn->pending_optimistic_data);
+    buf_add(entry_conn->pending_optimistic_data, payload, length);
   }
 
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,

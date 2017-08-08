@@ -35,20 +35,20 @@ size_t buf_slack(const buf_t *buf);
 uint32_t buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now);
 size_t buf_get_total_allocation(void);
 
-int buf_read_from_socket(tor_socket_t s, size_t at_most, buf_t *buf,
+int buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
                          int *reached_eof,
                          int *socket_error);
 
-int buf_flush_to_socket(tor_socket_t s, buf_t *buf, size_t sz,
+int buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
                         size_t *buf_flushlen);
 
-int buf_add(const char *string, size_t string_len, buf_t *buf);
+int buf_add(buf_t *buf, const char *string, size_t string_len);
 int buf_add_compress(buf_t *buf, struct tor_compress_state_t *state,
                           const char *data, size_t data_len, int done);
 int buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
-void buf_peek(char *string, size_t string_len, const buf_t *buf);
+void buf_peek(const buf_t *buf, char *string, size_t string_len);
 void buf_drain(buf_t *buf, size_t n);
-int buf_get_bytes(char *string, size_t string_len, buf_t *buf);
+int buf_get_bytes(buf_t *buf, char *string, size_t string_len);
 int buf_get_line(buf_t *buf, char *data_out, size_t *data_len);
 
 #define PEEK_BUF_STARTSWITH_MAX 16
