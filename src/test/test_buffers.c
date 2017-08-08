@@ -220,8 +220,7 @@ test_buffer_pullup(void *arg)
 
   /* There are a bunch of cases for pullup.  One is the trivial case. Let's
      mess around with an empty buffer. */
-  buf_pullup(buf, 16);
-  buf_get_first_chunk_data(buf, &cp, &sz);
+  buf_pullup(buf, 16, &cp, &sz);
   tt_ptr_op(cp, OP_EQ, NULL);
   tt_uint_op(sz, OP_EQ, 0);
 
@@ -234,7 +233,7 @@ test_buffer_pullup(void *arg)
   crypto_rand(stuff, 16384);
   write_to_buf(stuff, 3000, buf);
   write_to_buf(stuff+3000, 3000, buf);
-  buf_get_first_chunk_data(buf, &cp, &sz);
+  buf_pullup(buf, 0, &cp, &sz);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_LE, 4096);
 
@@ -242,9 +241,8 @@ test_buffer_pullup(void *arg)
    * can get tested. */
   tt_int_op(fetch_from_buf(tmp, 3000, buf), OP_EQ, 3000);
   tt_mem_op(tmp,OP_EQ, stuff, 3000);
-  buf_pullup(buf, 2048);
+  buf_pullup(buf, 2048, &cp, &sz);
   assert_buf_ok(buf);
-  buf_get_first_chunk_data(buf, &cp, &sz);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_GE, 2048);
   tt_mem_op(cp,OP_EQ, stuff+3000, 2048);
@@ -261,13 +259,12 @@ test_buffer_pullup(void *arg)
   write_to_buf(stuff+8000, 4000, buf);
   write_to_buf(stuff+12000, 4000, buf);
   tt_int_op(buf_datalen(buf), OP_EQ, 16000);
-  buf_get_first_chunk_data(buf, &cp, &sz);
+  buf_pullup(buf, 0, &cp, &sz);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_LE, 4096);
 
-  buf_pullup(buf, 12500);
+  buf_pullup(buf, 12500, &cp, &sz);
   assert_buf_ok(buf);
-  buf_get_first_chunk_data(buf, &cp, &sz);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_GE, 12500);
   tt_mem_op(cp,OP_EQ, stuff, 12500);
@@ -288,9 +285,8 @@ test_buffer_pullup(void *arg)
   write_to_buf(stuff, 4000, buf);
   write_to_buf(stuff+4000, 4000, buf);
   fetch_from_buf(tmp, 100, buf); /* dump 100 bytes from first chunk */
-  buf_pullup(buf, 16000); /* Way too much. */
+  buf_pullup(buf, 16000, &cp, &sz);
   assert_buf_ok(buf);
-  buf_get_first_chunk_data(buf, &cp, &sz);
   tt_ptr_op(cp, OP_NE, NULL);
   tt_int_op(sz, OP_EQ, 7900);
   tt_mem_op(cp,OP_EQ, stuff+100, 7900);

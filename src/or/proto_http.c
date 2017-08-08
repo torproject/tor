@@ -4,7 +4,6 @@
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define BUFFERS_PRIVATE // XXXX remove.
 #define PROTO_HTTP_PRIVATE
 #include "or.h"
 #include "buffers.h"
@@ -48,12 +47,12 @@ fetch_from_buf_http(buf_t *buf,
                     char **body_out, size_t *body_used, size_t max_bodylen,
                     int force_complete)
 {
-  char *headers;
+  const char *headers;
   size_t headerlen, bodylen, contentlen=0;
   int crlf_offset;
   int r;
 
-  if (!buf->head)
+  if (buf_datalen(buf) == 0)
     return 0;
 
   crlf_offset = buf_find_string_offset(buf, "\r\n\r\n", 4);
@@ -67,11 +66,10 @@ fetch_from_buf_http(buf_t *buf,
   }
   /* Okay, we have a full header.  Make sure it all appears in the first
    * chunk. */
-  if ((int)buf->head->datalen < crlf_offset + 4)
-    buf_pullup(buf, crlf_offset+4);
   headerlen = crlf_offset + 4;
+  size_t headers_in_chunk = 0;
+  buf_pullup(buf, headerlen, &headers, &headers_in_chunk);
 
-  headers = buf->head->data;
   bodylen = buf_datalen(buf) - headerlen;
   log_debug(LD_HTTP,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
 

@@ -55,11 +55,11 @@ int buf_set_to_copy(buf_t **output,
 void assert_buf_ok(buf_t *buf);
 
 int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
-void buf_pullup(buf_t *buf, size_t bytes);
+void buf_pullup(buf_t *buf, size_t bytes,
+                const char **head_out, size_t *len_out);
 
 #ifdef BUFFERS_PRIVATE
 #ifdef TOR_UNIT_TESTS
-void buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz);
 buf_t *buf_new_with_data(const char *cp, size_t sz);
 #endif
 ATTR_UNUSED STATIC size_t preferred_chunk_size(size_t target);

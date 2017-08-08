@@ -4,7 +4,6 @@
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define BUFFERS_PRIVATE // XXXX remove.
 #include "or.h"
 #include "addressmap.h"
 #include "buffers.h"
@@ -115,17 +114,19 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
   int res;
   ssize_t n_drain;
   size_t want_length = 128;
+  const char *head = NULL;
+  size_t datalen = 0;
 
   if (buf_datalen(buf) < 2) /* version and another byte */
     return 0;
 
   do {
     n_drain = 0;
-    buf_pullup(buf, want_length);
-    tor_assert(buf->head && buf->head->datalen >= 2);
+    buf_pullup(buf, want_length, &head, &datalen);
+    tor_assert(head && datalen >= 2);
     want_length = 0;
 
-    res = parse_socks(buf->head->data, buf->head->datalen, req, log_sockstype,
+    res = parse_socks(head, datalen, req, log_sockstype,
                       safe_socks, &n_drain, &want_length);
 
     if (n_drain < 0)
@@ -133,7 +134,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     else if (n_drain > 0)
       buf_remove_from_front(buf, n_drain);
 
-  } while (res == 0 && buf->head && want_length < buf_datalen(buf) &&
+  } while (res == 0 && head && want_length < buf_datalen(buf) &&
            buf_datalen(buf) >= 2);
 
   return res;
@@ -591,13 +592,16 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
 {
   ssize_t drain = 0;
   int r;
+  const char *head = NULL;
+  size_t datalen = 0;
+
   if (buf_datalen(buf) < 2)
     return 0;
 
-  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN);
-  tor_assert(buf->head && buf->head->datalen >= 2);
+  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN, &head, &datalen);
+  tor_assert(head && datalen >= 2);
 
-  r = parse_socks_client((uint8_t*)buf->head->data, buf->head->datalen,
+  r = parse_socks_client((uint8_t*)head, datalen,
                          state, reason, &drain);
   if (drain > 0)
     buf_remove_from_front(buf, drain);

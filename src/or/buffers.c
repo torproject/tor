@@ -203,22 +203,33 @@ preferred_chunk_size(size_t target)
 /** Collapse data from the first N chunks from <b>buf</b> into buf->head,
  * growing it as necessary, until buf->head has the first <b>bytes</b> bytes
  * of data from the buffer, or until buf->head has all the data in <b>buf</b>.
+ *
+ * Set *<b>head_out</b> to point to the first byte of available data, and
+ * *<b>len_out</b> to the number of bytes of data available at
+ * *<b>head_out</b>. Note that *<b>len_out</b> may be more or less than
+ * <b>bytes</b>, depending on the number of bytes available.
  */
 void
-buf_pullup(buf_t *buf, size_t bytes)
+buf_pullup(buf_t *buf, size_t bytes, const char **head_out, size_t *len_out)
 {
   chunk_t *dest, *src;
   size_t capacity;
-  if (!buf->head)
+  if (!buf->head) {
+    *head_out = NULL;
+    *len_out = 0;
     return;
+  }
 
   check();
   if (buf->datalen < bytes)
     bytes = buf->datalen;
 
   capacity = bytes;
-  if (buf->head->datalen >= bytes)
+  if (buf->head->datalen >= bytes) {
+    *head_out = buf->head->data;
+    *len_out = buf->head->datalen;
     return;
+  }
 
   if (buf->head->memlen >= capacity) {
     /* We don't need to grow the first chunk, but we might need to repack it.*/
@@ -263,22 +274,11 @@ buf_pullup(buf_t *buf, size_t bytes)
   }
 
   check();
+  *head_out = buf->head->data;
+  *len_out = buf->head->datalen;
 }
 
 #ifdef TOR_UNIT_TESTS
-/* Return the data from the first chunk of buf in cp, and its length in sz. */
-void
-buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz)
-{
-  if (!buf || !buf->head) {
-    *cp = NULL;
-    *sz = 0;
-  } else {
-    *cp = buf->head->data;
-    *sz = buf->head->datalen;
-  }
-}
-
 /* Write sz bytes from cp into a newly allocated buffer buf.
  * Returns NULL when passed a NULL cp or zero sz.
  * Asserts on failure: only for use in unit tests.
