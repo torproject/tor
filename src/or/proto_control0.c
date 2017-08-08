@@ -4,7 +4,6 @@
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define BUFFERS_PRIVATE // XXXX remove.
 #include "or.h"
 #include "buffers.h"
 #include "proto_control0.h"
@@ -14,7 +13,7 @@
 int
 peek_buf_has_control0_command(buf_t *buf)
 {
-  if (buf->datalen >= 4) {
+  if (buf_datalen(buf) >= 4) {
     char header[4];
     uint16_t cmd;
     peek_from_buf(header, sizeof(header), buf);

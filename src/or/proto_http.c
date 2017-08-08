@@ -58,7 +58,7 @@ fetch_from_buf_http(buf_t *buf,
 
   crlf_offset = buf_find_string_offset(buf, "\r\n\r\n", 4);
   if (crlf_offset > (int)max_headerlen ||
-      (crlf_offset < 0 && buf->datalen > max_headerlen)) {
+      (crlf_offset < 0 && buf_datalen(buf) > max_headerlen)) {
     log_debug(LD_HTTP,"headers too long.");
     return -1;
   } else if (crlf_offset < 0) {
@@ -72,7 +72,7 @@ fetch_from_buf_http(buf_t *buf,
   headerlen = crlf_offset + 4;
 
   headers = buf->head->data;
-  bodylen = buf->datalen - headerlen;
+  bodylen = buf_datalen(buf) - headerlen;
   log_debug(LD_HTTP,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
 
   if (max_headerlen <= headerlen) {

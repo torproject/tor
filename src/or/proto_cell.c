@@ -4,7 +4,6 @@
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define BUFFERS_PRIVATE // XXXX remove.
 #include "or.h"
 #include "buffers.h"
 #include "proto_cell.h"
@@ -56,7 +55,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
   const int circ_id_len = get_circ_id_size(wide_circ_ids);
   const unsigned header_len = get_var_cell_header_size(wide_circ_ids);
   *out = NULL;
-  if (buf->datalen < header_len)
+  if (buf_datalen(buf) < header_len)
     return 0;
   peek_from_buf(hdr, header_len, buf);
 
@@ -65,7 +64,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     return 0;
 
   length = ntohs(get_uint16(hdr + circ_id_len + 1));
-  if (buf->datalen < (size_t)(header_len+length))
+  if (buf_datalen(buf) < (size_t)(header_len+length))
     return 1;
   result = var_cell_new(length);
   result->command = command;

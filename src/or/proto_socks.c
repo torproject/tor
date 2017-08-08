@@ -116,7 +116,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
   ssize_t n_drain;
   size_t want_length = 128;
 
-  if (buf->datalen < 2) /* version and another byte */
+  if (buf_datalen(buf) < 2) /* version and another byte */
     return 0;
 
   do {
@@ -133,8 +133,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     else if (n_drain > 0)
       buf_remove_from_front(buf, n_drain);
 
-  } while (res == 0 && buf->head && want_length < buf->datalen &&
-           buf->datalen >= 2);
+  } while (res == 0 && buf->head && want_length < buf_datalen(buf) &&
+           buf_datalen(buf) >= 2);
 
   return res;
 }
@@ -154,11 +154,11 @@ fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out)
   char hdr[EXT_OR_CMD_HEADER_SIZE];
   uint16_t len;
 
-  if (buf->datalen < EXT_OR_CMD_HEADER_SIZE)
+  if (buf_datalen(buf) < EXT_OR_CMD_HEADER_SIZE)
     return 0;
   peek_from_buf(hdr, sizeof(hdr), buf);
   len = ntohs(get_uint16(hdr+2));
-  if (buf->datalen < (unsigned)len + EXT_OR_CMD_HEADER_SIZE)
+  if (buf_datalen(buf) < (unsigned)len + EXT_OR_CMD_HEADER_SIZE)
     return 0;
   *out = ext_or_cmd_new(len);
   (*out)->cmd = ntohs(get_uint16(hdr));
@@ -526,7 +526,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           log_warn(LD_APP,"socks4: Destaddr too long. Rejecting.");
           return -1;
         }
-        // tor_assert(next < buf->cur+buf->datalen);
+        // tor_assert(next < buf->cur+buf_datalen(buf));
 
         if (log_sockstype)
           log_notice(LD_APP,
@@ -591,7 +591,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
 {
   ssize_t drain = 0;
   int r;
-  if (buf->datalen < 2)
+  if (buf_datalen(buf) < 2)
     return 0;
 
   buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN);
