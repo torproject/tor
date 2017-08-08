@@ -17,11 +17,17 @@
  * and drained from functions in connection.c, trigged by events that are
  * monitored in main.c.
  **/
+
 #define BUFFERS_PRIVATE
-#include "or.h"
+#include "orconfig.h"
+#include <stddef.h>
 #include "buffers.h"
+#include "compat.h"
+#include "compress.h"
 #include "util.h"
+#include "torint.h"
 #include "torlog.h"
+#include "tortls.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

@@ -81,6 +81,7 @@ LIBTOR_A_SOURCES = \
 	src/or/protover.c				\
 	src/or/proto_cell.c				\
 	src/or/proto_control0.c				\
+	src/or/proto_ext_or.c				\
 	src/or/proto_http.c				\
 	src/or/proto_socks.c				\
 	src/or/policies.c				\
@@ -221,6 +222,7 @@ ORHEADERS = \
 	src/or/protover.h				\
 	src/or/proto_cell.h				\
 	src/or/proto_control0.h				\
+	src/or/proto_ext_or.h				\
 	src/or/proto_http.h				\
 	src/or/proto_socks.h				\
 	src/or/reasons.h				\

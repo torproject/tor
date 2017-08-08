@@ -23,8 +23,9 @@
 #include "ext_orport.h"
 #include "control.h"
 #include "config.h"
-#include "util.h"
 #include "main.h"
+#include "proto_ext_or.h"
+#include "util.h"
 
 /** Allocate and return a structure capable of holding an Extended
  *  ORPort message of body length <b>len</b>. */

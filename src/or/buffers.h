@@ -12,7 +12,16 @@
 #ifndef TOR_BUFFERS_H
 #define TOR_BUFFERS_H
 
+#include "compat.h"
+#include "compat.h"
+#include "torint.h"
 #include "testsupport.h"
+
+typedef struct buf_t buf_t;
+
+struct tor_tls_t;
+struct tor_compress_state_t;
+struct ext_or_cmd_t;
 
 buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
@@ -30,13 +39,14 @@ size_t buf_get_total_allocation(void);
 
 int read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
                 int *socket_error);
-int read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf);
+int read_to_buf_tls(struct tor_tls_t *tls, size_t at_most, buf_t *buf);
 
 int flush_buf(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen);
-int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen);
+int flush_buf_tls(struct tor_tls_t *tls, buf_t *buf, size_t sz,
+                  size_t *buf_flushlen);
 
 int write_to_buf(const char *string, size_t string_len, buf_t *buf);
-int write_to_buf_compress(buf_t *buf, tor_compress_state_t *state,
+int write_to_buf_compress(buf_t *buf, struct tor_compress_state_t *state,
                           const char *data, size_t data_len, int done);
 int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
 void peek_from_buf(char *string, size_t string_len, const buf_t *buf);
@@ -46,8 +56,6 @@ int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 #define PEEK_BUF_STARTSWITH_MAX 16
 int peek_buf_startswith(const buf_t *buf, const char *cmd);
-
-int fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out);
 
 int buf_set_to_copy(buf_t **output,
                     const buf_t *input);

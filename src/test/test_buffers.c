@@ -9,6 +9,7 @@
 #include "buffers.h"
 #include "ext_orport.h"
 #include "proto_cell.h"
+#include "proto_ext_or.h"
 #include "proto_http.h"
 #include "proto_control0.h"
 #include "proto_socks.h"
