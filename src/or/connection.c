@@ -86,6 +86,8 @@
 #include "hs_common.h"
 #include "hs_ident.h"
 #include "nodelist.h"
+#include "proto_http.h"
+#include "proto_socks.h"
 #include "policies.h"
 #include "reasons.h"
 #include "relay.h"

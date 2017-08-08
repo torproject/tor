@@ -6,6 +6,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "config.h"
+#include "proto_socks.h"
 #include "test.h"
 
 typedef struct socks_test_data_t {

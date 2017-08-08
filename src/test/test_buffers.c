@@ -4,9 +4,14 @@
 /* See LICENSE for licensing information */
 
 #define BUFFERS_PRIVATE
+#define PROTO_HTTP_PRIVATE
 #include "or.h"
 #include "buffers.h"
 #include "ext_orport.h"
+#include "proto_cell.h"
+#include "proto_http.h"
+#include "proto_control0.h"
+#include "proto_socks.h"
 #include "test.h"
 
 /** Run unit tests for buffers.c */

@@ -39,23 +39,13 @@ int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int write_to_buf_compress(buf_t *buf, tor_compress_state_t *state,
                           const char *data, size_t data_len, int done);
 int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
+void peek_from_buf(char *string, size_t string_len, const buf_t *buf);
+void buf_remove_from_front(buf_t *buf, size_t n);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
-int fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto);
-int fetch_from_buf_http(buf_t *buf,
-                        char **headers_out, size_t max_headerlen,
-                        char **body_out, size_t *body_used, size_t max_bodylen,
-                        int force_complete);
-socks_request_t *socks_request_new(void);
-void socks_request_free(socks_request_t *req);
-int fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
-                         int log_sockstype, int safe_socks);
-int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
-int peek_buf_has_control0_command(buf_t *buf);
 #define PEEK_BUF_STARTSWITH_MAX 16
 int peek_buf_startswith(const buf_t *buf, const char *cmd);
-int peek_buf_has_http_command(const buf_t *buf);
 
 int fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out);
 
@@ -64,14 +54,15 @@ int buf_set_to_copy(buf_t **output,
 
 void assert_buf_ok(buf_t *buf);
 
+int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
+void buf_pullup(buf_t *buf, size_t bytes);
+
 #ifdef BUFFERS_PRIVATE
-STATIC int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
-STATIC void buf_pullup(buf_t *buf, size_t bytes);
 #ifdef TOR_UNIT_TESTS
 void buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz);
 buf_t *buf_new_with_data(const char *cp, size_t sz);
 #endif
-STATIC size_t preferred_chunk_size(size_t target);
+ATTR_UNUSED STATIC size_t preferred_chunk_size(size_t target);
 
 #define DEBUG_CHUNK_ALLOC
 /** A single chunk on a buffer. */
@@ -101,11 +92,6 @@ struct buf_t {
   chunk_t *head; /**< First chunk in the list, or NULL for none. */
   chunk_t *tail; /**< Last chunk in the list, or NULL for none. */
 };
-#endif
-
-#ifdef BUFFERS_PRIVATE
-STATIC int buf_http_find_content_length(const char *headers, size_t headerlen,
-                                        size_t *result_out);
 #endif
 
 #endif

@@ -64,6 +64,8 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "proto_control0.h"
+#include "proto_http.h"
 #include "reasons.h"
 #include "rendclient.h"
 #include "rendcommon.h"

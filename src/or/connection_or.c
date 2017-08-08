@@ -46,6 +46,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "proto_cell.h"
 #include "reasons.h"
 #include "relay.h"
 #include "rephist.h"

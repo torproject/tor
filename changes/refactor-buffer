@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - Split the portions of the buffer.c module that handle particular
+      protocols into separate modules. Part of ticket 23149.

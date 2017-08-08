@@ -82,6 +82,7 @@
 #include "main.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "proto_socks.h"
 #include "reasons.h"
 #include "relay.h"
 #include "rendclient.h"

@@ -28,6 +28,7 @@
 #include "entrynodes.h"
 #include "routerparse.h"
 #include "networkstatus.h"
+#include "proto_http.h"
 #include "geoip.h"
 #include "dirserv.h"
 #include "dirvote.h"
