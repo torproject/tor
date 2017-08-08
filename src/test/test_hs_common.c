@@ -434,6 +434,57 @@ test_responsible_hsdirs(void *arg)
   networkstatus_vote_free(mock_ns);
 }
 
+/** Test disaster SRV computation and caching */
+static void
+test_disaster_srv(void *arg)
+{
+  uint8_t *cached_disaster_srv_one = NULL;
+  uint8_t *cached_disaster_srv_two = NULL;
+  uint8_t srv_one[DIGEST256_LEN] = {0};
+  uint8_t srv_two[DIGEST256_LEN] = {0};
+  uint8_t srv_three[DIGEST256_LEN] = {0};
+  uint8_t srv_four[DIGEST256_LEN] = {0};
+  uint8_t srv_five[DIGEST256_LEN] = {0};
+
+  (void) arg;
+
+  /* Get the cached SRVs: we gonna use them later for verification */
+  cached_disaster_srv_one = get_first_cached_disaster_srv();
+  cached_disaster_srv_two = get_second_cached_disaster_srv();
+
+  /* Compute some srvs */
+  get_disaster_srv(1, srv_one);
+  get_disaster_srv(2, srv_two);
+
+  /* Check that the cached ones where updated */
+  tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_one, DIGEST256_LEN);
+  tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_two, DIGEST256_LEN);
+
+  /* Ask for an SRV that has already been computed */
+  get_disaster_srv(2, srv_two);
+  /* and check that the cache entries have not changed */
+  tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_one, DIGEST256_LEN);
+  tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_two, DIGEST256_LEN);
+
+  /* Ask for a new SRV */
+  get_disaster_srv(3, srv_three);
+  tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_three, DIGEST256_LEN);
+  tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_two, DIGEST256_LEN);
+
+  /* Ask for another SRV: none of the original SRVs should now be cached */
+  get_disaster_srv(4, srv_four);
+  tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_three, DIGEST256_LEN);
+  tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_four, DIGEST256_LEN);
+
+  /* Ask for yet another SRV */
+  get_disaster_srv(5, srv_five);
+  tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_five, DIGEST256_LEN);
+  tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_four, DIGEST256_LEN);
+
+ done:
+  ;
+}
+
 struct testcase_t hs_common_tests[] = {
   { "build_address", test_build_address, TT_FORK,
     NULL, NULL },
@@ -449,7 +500,7 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "desc_responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
     NULL, NULL },
-
+  { "disaster_srv", test_disaster_srv, TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };

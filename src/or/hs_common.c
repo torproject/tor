@@ -503,7 +503,7 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
 /* Using the given time period number, compute the disaster shared random
  * value and put it in srv_out. It MUST be at least DIGEST256_LEN bytes. */
 static void
-get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
+compute_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
 {
   crypto_digest_t *digest;
 
@@ -533,6 +533,60 @@ get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
   crypto_digest_get_digest(digest, (char *) srv_out, DIGEST256_LEN);
   crypto_digest_free(digest);
 }
+
+/** Due to the high cost of computing the disaster SRV and that potentially we
+ *  would have to do it thousands of times in a row, we always cache the
+ *  computer disaster SRV (and its corresponding time period num) in case we
+ *  want to reuse it soon after. We need to cache two SRVs, one for each active
+ *  time period (in case of overlap mode).
+ */
+static uint8_t cached_disaster_srv[2][DIGEST256_LEN];
+static uint64_t cached_time_period_nums[2] = {0};
+
+/** Compute the disaster SRV value for this <b>time_period_num</b> and put it
+ *  in <b>srv_out</b> (of size at least DIGEST256_LEN). First check our caches
+ *  to see if we have already computed it. */
+STATIC void
+get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
+{
+  if (time_period_num == cached_time_period_nums[0]) {
+    memcpy(srv_out, cached_disaster_srv[0], DIGEST256_LEN);
+    return;
+  } else if (time_period_num == cached_time_period_nums[1]) {
+    memcpy(srv_out, cached_disaster_srv[1], DIGEST256_LEN);
+    return;
+  } else {
+    int replace_idx;
+    // Replace the lower period number.
+    if (cached_time_period_nums[0] <= cached_time_period_nums[1]) {
+      replace_idx = 0;
+    } else {
+      replace_idx = 1;
+    }
+    cached_time_period_nums[replace_idx] = time_period_num;
+    compute_disaster_srv(time_period_num, cached_disaster_srv[replace_idx]);
+    memcpy(srv_out, cached_disaster_srv[replace_idx], DIGEST256_LEN);
+    return;
+  }
+}
+
+#ifdef TOR_UNIT_TESTS
+
+/** Get the first cached disaster SRV. Only used by unittests. */
+STATIC uint8_t *
+get_first_cached_disaster_srv(void)
+{
+  return cached_disaster_srv[0];
+}
+
+/** Get the second cached disaster SRV. Only used by unittests. */
+STATIC uint8_t *
+get_second_cached_disaster_srv(void)
+{
+  return cached_disaster_srv[1];
+}
+
+#endif
 
 /* When creating a blinded key, we need a parameter which construction is as
  * follow: H(pubkey | [secret] | ed25519-basepoint | nonce).

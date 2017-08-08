@@ -224,9 +224,14 @@ int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
 
 #ifdef HS_COMMON_PRIVATE
 
+STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
+
 #ifdef TOR_UNIT_TESTS
 
 STATIC uint64_t get_time_period_length(void);
+
+STATIC uint8_t *get_first_cached_disaster_srv(void);
+STATIC uint8_t *get_second_cached_disaster_srv(void);
 
 #endif /* TOR_UNIT_TESTS */
 
