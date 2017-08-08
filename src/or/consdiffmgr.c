@@ -1156,6 +1156,7 @@ consdiffmgr_ensure_space_for_files(int n)
     if (++n_marked >= n_to_remove)
       break;
   } SMARTLIST_FOREACH_END(ent);
+  smartlist_free(objects);
 
   consensus_cache_delete_pending(cache, 1);
   if (BUG(n_marked < n_to_remove))
