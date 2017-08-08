@@ -131,8 +131,8 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
   return r;
 }
 
-/** As buf_flush_to_socket(), but writes data to a TLS connection.  Can write more than
- * <b>flushlen</b> bytes.
+/** As buf_flush_to_socket(), but writes data to a TLS connection.  Can write
+ * more than <b>flushlen</b> bytes.
  */
 int
 buf_flush_to_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen,

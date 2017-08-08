@@ -551,8 +551,9 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
  */
 /* XXXX indicate "read blocked" somehow? */
 int
-buf_read_from_socket(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
-            int *socket_error)
+buf_read_from_socket(tor_socket_t s, size_t at_most, buf_t *buf,
+                     int *reached_eof,
+                     int *socket_error)
 {
   /* XXXX It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes read" are not mutually exclusive.
@@ -637,7 +638,8 @@ flush_chunk(tor_socket_t s, buf_t *buf, chunk_t *chunk, size_t sz,
  * -1 on failure.  Return 0 if write() would block.
  */
 int
-buf_flush_to_socket(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen)
+buf_flush_to_socket(tor_socket_t s, buf_t *buf, size_t sz,
+                    size_t *buf_flushlen)
 {
   /* XXXX It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes flushed" are not mutually exclusive.

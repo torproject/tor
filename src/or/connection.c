@@ -127,8 +127,9 @@ static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
 static int connection_reached_eof(connection_t *conn);
-static int connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
-                                  int *socket_error);
+static int connection_buf_read_from_socket(connection_t *conn,
+                                           ssize_t *max_to_read,
+                                           int *socket_error);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
 static void client_check_address_changed(tor_socket_t sock);
 static void set_constrained_socket_buffers(tor_socket_t sock, int size);
@@ -3630,8 +3631,9 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     /* !connection_speaks_cells, !conn->linked_conn. */
     int reached_eof = 0;
     CONN_LOG_PROTECT(conn,
-        result = buf_read_from_socket(conn->s, at_most, conn->inbuf, &reached_eof,
-                             socket_error));
+        result = buf_read_from_socket(conn->s, at_most, conn->inbuf,
+                                      &reached_eof,
+                                      socket_error));
     if (reached_eof)
       conn->inbuf_reached_eof = 1;
 

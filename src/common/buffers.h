@@ -35,10 +35,12 @@ size_t buf_slack(const buf_t *buf);
 uint32_t buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now);
 size_t buf_get_total_allocation(void);
 
-int buf_read_from_socket(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
-                int *socket_error);
+int buf_read_from_socket(tor_socket_t s, size_t at_most, buf_t *buf,
+                         int *reached_eof,
+                         int *socket_error);
 
-int buf_flush_to_socket(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen);
+int buf_flush_to_socket(tor_socket_t s, buf_t *buf, size_t sz,
+                        size_t *buf_flushlen);
 
 int buf_add(const char *string, size_t string_len, buf_t *buf);
 int buf_add_compress(buf_t *buf, struct tor_compress_state_t *state,

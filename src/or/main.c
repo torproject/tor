@@ -855,7 +855,8 @@ conn_close_if_marked(int i)
       } else
         retval = -1; /* never flush non-open broken tls connections */
     } else {
-      retval = buf_flush_to_socket(conn->s, conn->outbuf, sz, &conn->outbuf_flushlen);
+      retval = buf_flush_to_socket(conn->s, conn->outbuf, sz,
+                                   &conn->outbuf_flushlen);
     }
     if (retval >= 0 && /* Technically, we could survive things like
                           TLS_WANT_WRITE here. But don't bother for now. */
