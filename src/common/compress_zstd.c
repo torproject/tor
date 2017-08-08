@@ -197,7 +197,8 @@ tor_zstd_compress_new(int compress,
 
     if (result->u.compress_stream == NULL) {
       // LCOV_EXCL_START
-      log_warn(LD_GENERAL, "Error while creating Zstandard stream");
+      log_warn(LD_GENERAL, "Error while creating Zstandard compression "
+               "stream");
       goto err;
       // LCOV_EXCL_STOP
     }
@@ -216,7 +217,8 @@ tor_zstd_compress_new(int compress,
 
     if (result->u.decompress_stream == NULL) {
       // LCOV_EXCL_START
-      log_warn(LD_GENERAL, "Error while creating Zstandard stream");
+      log_warn(LD_GENERAL, "Error while creating Zstandard decompression "
+               "stream");
       goto err;
       // LCOV_EXCL_STOP
     }
@@ -313,12 +315,10 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
   }
 
   if (ZSTD_isError(retval)) {
-    // LCOV_EXCL_START
     log_warn(LD_GENERAL, "Zstandard %s didn't finish: %s.",
              state->compress ? "compression" : "decompression",
              ZSTD_getErrorName(retval));
     return TOR_COMPRESS_ERROR;
-    // LCOV_EXCL_STOP
   }
 
   if (state->compress && !state->have_called_end) {
@@ -328,11 +328,9 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
     *out_len = output.size - output.pos;
 
     if (ZSTD_isError(retval)) {
-      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Zstandard compression unable to flush: %s.",
                ZSTD_getErrorName(retval));
       return TOR_COMPRESS_ERROR;
-      // LCOV_EXCL_STOP
     }
 
     // ZSTD_flushStream returns 0 if the frame is done, or >0 if it
@@ -359,12 +357,10 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
     *out_len = output.size - output.pos;
 
     if (ZSTD_isError(retval)) {
-      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "Zstandard compression unable to write "
                "epilogue: %s.",
                ZSTD_getErrorName(retval));
       return TOR_COMPRESS_ERROR;
-      // LCOV_EXCL_STOP
     }
 
     // endStream returns the number of bytes that is needed to write the

@@ -46,7 +46,6 @@ memory_level(compression_level_t level)
 static const char *
 lzma_error_str(lzma_ret error)
 {
-  // LCOV_EXCL_START
   switch (error) {
     case LZMA_OK:
       return "Operation completed successfully";
@@ -75,7 +74,6 @@ lzma_error_str(lzma_ret error)
     default:
       return "Unknown LZMA error";
   }
-  // LCOV_EXCL_STOP
 }
 #endif // HAVE_LZMA.
 
@@ -303,12 +301,10 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
     case LZMA_DATA_ERROR:
     case LZMA_PROG_ERROR:
     default:
-      // LCOV_EXCL_START
       log_warn(LD_GENERAL, "LZMA %s didn't finish: %s.",
                state->compress ? "compression" : "decompression",
                lzma_error_str(retval));
       return TOR_COMPRESS_ERROR;
-      // LCOV_EXCL_STOP
   }
 #else // HAVE_LZMA.
   (void)state;
