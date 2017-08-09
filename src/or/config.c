@@ -5741,6 +5741,15 @@ parse_transport_line(const or_options_t *options,
     goto err;
   }
 
+  if (is_managed && options->NoExec) {
+    log_warn(LD_CONFIG,
+             "Managed proxies are not compatible with NoExec mode; ignoring."
+             "(%sTransportPlugin line was %s)",
+             server ? "Server" : "Client", escaped(line));
+    r = 0;
+    goto done;
+  }
+
   if (is_managed) {
     /* managed */
 
