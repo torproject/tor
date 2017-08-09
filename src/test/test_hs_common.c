@@ -179,7 +179,7 @@ test_time_period(void *arg)
    * from hs_get_next_time_period_num() */
   {
     time_t next_tp_start = hs_get_start_time_of_next_time_period(fake_time);
-    tt_int_op(hs_get_time_period_num(next_tp_start), OP_EQ,
+    tt_u64_op(hs_get_time_period_num(next_tp_start), OP_EQ,
               hs_get_next_time_period_num(fake_time));
   }
 
