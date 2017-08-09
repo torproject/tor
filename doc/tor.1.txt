@@ -1819,7 +1819,9 @@ is non-zero):
     publishing for you.) Otherwise, Tor will publish its descriptors of all
     type(s) specified. The default is "1",
     which means "if running as a server, publish the
-    appropriate descriptors to the authorities".
+    appropriate descriptors to the authorities". Other possibilities are
+    "v3", meaning "publish if running as a relay", and
+    "bridge", meaning "publish if running as a bridge".
 
 [[ShutdownWaitLength]] **ShutdownWaitLength** __NUM__::
     When we get a SIGINT and we're a server, we begin shutting down:
