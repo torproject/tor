@@ -212,7 +212,11 @@ set_server_identity_key(crypto_pk_t *k)
 {
   crypto_pk_free(server_identitykey);
   server_identitykey = k;
-  crypto_pk_get_digest(server_identitykey, server_identitykey_digest);
+  if (crypto_pk_get_digest(server_identitykey,
+                           server_identitykey_digest) < 0) {
+    log_err(LD_BUG, "Couldn't compute our own identity key digest.");
+    tor_assert(0);
+  }
 }
 
 /** Make sure that we have set up our identity keys to match or not match as
@@ -871,8 +875,12 @@ init_keys(void)
     }
     cert = get_my_v3_authority_cert();
     if (cert) {
-      crypto_pk_get_digest(get_my_v3_authority_cert()->identity_key,
-                           v3_digest);
+      if (crypto_pk_get_digest(get_my_v3_authority_cert()->identity_key,
+                               v3_digest) < 0) {
+        log_err(LD_BUG, "Couldn't compute my v3 authority identity key "
+                "digest.");
+        return -1;
+      }
       v3_digest_set = 1;
     }
   }

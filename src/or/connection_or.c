@@ -1552,7 +1552,9 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
 
   if (identity_rcvd) {
-    crypto_pk_get_digest(identity_rcvd, digest_rcvd_out);
+    if (crypto_pk_get_digest(identity_rcvd, digest_rcvd_out) < 0) {
+      return -1;
+    }
   } else {
     memset(digest_rcvd_out, 0, DIGEST_LEN);
   }

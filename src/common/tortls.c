@@ -648,12 +648,7 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
   length = i2d_X509(x509_cert, &buf);
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   if (length <= 0 || buf == NULL) {
-    /* LCOV_EXCL_START for the same reason as the exclusion above */
-    tor_free(cert);
-    log_err(LD_CRYPTO, "Couldn't get length of encoded x509 certificate");
-    X509_free(x509_cert);
-    return NULL;
-    /* LCOV_EXCL_STOP */
+    goto err;
   }
   cert->encoded_len = (size_t) length;
   cert->encoded = tor_malloc(length);
@@ -668,13 +663,25 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
   if ((pkey = X509_get_pubkey(x509_cert)) &&
       (rsa = EVP_PKEY_get1_RSA(pkey))) {
     crypto_pk_t *pk = crypto_new_pk_from_rsa_(rsa);
-    crypto_pk_get_common_digests(pk, &cert->pkey_digests);
+    if (crypto_pk_get_common_digests(pk, &cert->pkey_digests) < 0) {
+      crypto_pk_free(pk);
+      EVP_PKEY_free(pkey);
+      goto err;
+    }
+
     cert->pkey_digests_set = 1;
     crypto_pk_free(pk);
     EVP_PKEY_free(pkey);
   }
 
   return cert;
+ err:
+  /* LCOV_EXCL_START for the same reason as the exclusion above */
+  tor_free(cert);
+  log_err(LD_CRYPTO, "Couldn't wrap encoded X509 certificate.");
+  X509_free(x509_cert);
+  return NULL;
+  /* LCOV_EXCL_STOP */
 }
 
 /** Return a new copy of <b>cert</b>. */
