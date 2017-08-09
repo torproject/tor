@@ -1258,9 +1258,9 @@ test_revision_counter_state(void *arg)
   /* Prepare both descriptors */
   desc_one->desc->plaintext_data.revision_counter = 42;
   desc_two->desc->plaintext_data.revision_counter = 240;
-  memset(&desc_one->blinded_kp.pubkey.pubkey, '\x42',
+  memset(&desc_one->blinded_kp.pubkey.pubkey, 66,
          sizeof(desc_one->blinded_kp.pubkey.pubkey));
-  memset(&desc_two->blinded_kp.pubkey.pubkey, '\xf0',
+  memset(&desc_two->blinded_kp.pubkey.pubkey, 240,
          sizeof(desc_one->blinded_kp.pubkey.pubkey));
 
   /* Turn the descriptor rev counters into state lines */

@@ -2111,10 +2111,9 @@ check_state_line_for_service_rev_counter(const char *state_line,
            b64_key_str, rev_counter);
 
  done:
-  if (items) {
-    SMARTLIST_FOREACH(items, char*, s, tor_free(s));
-    smartlist_free(items);
-  }
+  tor_assert(items);
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
 
   return rev_counter;
 }

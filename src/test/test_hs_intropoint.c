@@ -446,14 +446,15 @@ test_establish_intro_wrong_sig(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   cell_len = new_establish_intro_encoded_cell(circ_nonce, cell_body);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
 
   /* Mutate the last byte (signature)! :) */
   cell_body[cell_len - 1]++;
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
-  retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
+  retval = hs_intro_received_establish_intro(intro_circ, cell_body,
+                                             (size_t)cell_len);
   expect_log_msg_containing("Failed to verify ESTABLISH_INTRO cell.");
   teardown_capture_of_logs();
   tt_int_op(retval, ==, -1);
@@ -482,14 +483,15 @@ helper_establish_intro_v3(or_circuit_t *intro_circ)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
    * attempt to parse it. */
   cell_len = new_establish_intro_cell(circ_nonce, &cell);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
   tt_assert(cell);
   cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
                                              cell);
   tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive the cell */
-  retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
+  retval = hs_intro_received_establish_intro(intro_circ, cell_body,
+                                             (size_t) cell_len);
   tt_int_op(retval, ==, 0);
 
  done:
@@ -521,11 +523,11 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
                                            (char*)cell_body,
                                            sizeof(cell_body), key1,
                                            circ_nonce);
-  tt_int_op(cell_len, >, 0);
+  tt_int_op(cell_len, OP_GT, 0);
 
   /* Receive legacy establish_intro */
   retval = hs_intro_received_establish_intro(intro_circ,
-                                       cell_body, cell_len);
+                                             cell_body, (size_t) cell_len);
   tt_int_op(retval, ==, 0);
 
  done:
