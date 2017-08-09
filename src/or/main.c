@@ -2036,7 +2036,8 @@ check_fw_helper_app_callback(time_t now, const or_options_t *options)
 {
   if (net_is_disabled() ||
       ! server_mode(options) ||
-      ! options->PortForwarding) {
+      ! options->PortForwarding ||
+      options->NoExec) {
     return PERIODIC_EVENT_NO_UPDATE;
   }
   /* 11. check the port forwarding app */

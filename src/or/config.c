@@ -3575,6 +3575,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("PortForwarding is not compatible with Sandbox; at most one can "
            "be set");
   }
+  if (options->PortForwarding && options->NoExec) {
+    COMPLAIN("Both PortForwarding and NoExec are set; PortForwarding will "
+             "be ignored.");
+  }
 
   if (ensure_bandwidth_cap(&options->BandwidthRate,
                            "BandwidthRate", msg) < 0)
