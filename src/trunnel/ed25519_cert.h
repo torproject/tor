@@ -59,10 +59,6 @@ struct link_specifier_st {
 };
 #endif
 typedef struct link_specifier_st link_specifier_t;
-/** XXX hs_link_specifier_dup() violates the opaqueness of link_specifier_t by
- *  taking its sizeof(). If we ever want to turn on TRUNNEL_OPAQUE we would
- *  need to refactor that function to do the coyp by encoding and decoding the
- *  object. */
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_ED25519_CERT)
 struct ed25519_cert_st {
   uint8_t version;
