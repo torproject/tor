@@ -1,0 +1,3 @@
+  o Documentation:
+    - Clarify in the manual that "Sandbox 1" is only supported on Linux
+      kernels. Closes ticket 22677.
