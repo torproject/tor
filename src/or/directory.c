@@ -1292,6 +1292,20 @@ directory_request_upload_set_hs_ident(directory_request_t *req,
   }
   req->hs_ident = ident;
 }
+/**
+ * Set an object containing HS connection identifier to be associated with
+ * this fetch request. Note that only an alias to <b>ident</b> is stored, so
+ * the <b>ident</b> object must outlive the request.
+ */
+void
+directory_request_fetch_set_hs_ident(directory_request_t *req,
+                                     const hs_ident_dir_conn_t *ident)
+{
+  if (ident) {
+    tor_assert(req->dir_purpose == DIR_PURPOSE_FETCH_HSDESC);
+  }
+  req->hs_ident = ident;
+}
 /** Set a static circuit_guard_state_t object to affliate with the request in
  * <b>req</b>.  This object will receive notification when the attempt to
  * connect to the guard either succeeds or fails. */

@@ -102,7 +102,7 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   directory_request_set_routerstatus(req, hsdir);
   directory_request_set_indirection(req, DIRIND_ANONYMOUS);
   directory_request_set_resource(req, base64_blinded_pubkey);
-  directory_request_upload_set_hs_ident(req, &hs_conn_dir_ident);
+  directory_request_fetch_set_hs_ident(req, &hs_conn_dir_ident);
   directory_initiate_request(req);
   directory_request_free(req);
 
