@@ -245,7 +245,7 @@ hs_get_start_time_of_next_time_period(time_t now)
 
   /* Apply rotation offset as specified by prop224 section [TIME-PERIODS] */
   unsigned int time_period_rotation_offset = sr_state_get_phase_duration();
-  return start_of_next_tp_in_mins * 60 + time_period_rotation_offset;
+  return (time_t)(start_of_next_tp_in_mins * 60 + time_period_rotation_offset);
 }
 
 /* Create a new rend_data_t for a specific given <b>version</b>.
