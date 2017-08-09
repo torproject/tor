@@ -92,7 +92,14 @@ typedef struct nodelist_t {
   smartlist_t *nodes;
   /* Hash table to map from node ID digest to node. */
   HT_HEAD(nodelist_map, node_t) nodes_by_id;
-
+  /* Hash table to map from node Ed25519 ID to node.
+   *
+   * Whenever a node's routerinfo or microdescriptor is about to change,
+   * you should remove it from this map with node_remove_from_ed25519_map().
+   * Whenever a node's routerinfo or microdescriptor has just chaned,
+   * you should add it to this map with node_add_to_ed25519_map().
+   */
+  HT_HEAD(nodelist_ed_map, node_t) nodes_by_ed_id;
 } nodelist_t;
 
 static inline unsigned int
@@ -111,6 +118,23 @@ HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq)
 HT_GENERATE2(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq,
              0.6, tor_reallocarray_, tor_free_)
 
+static inline unsigned int
+node_ed_id_hash(const node_t *node)
+{
+  return (unsigned) siphash24g(node->ed25519_id.pubkey, ED25519_PUBKEY_LEN);
+}
+
+static inline unsigned int
+node_ed_id_eq(const node_t *node1, const node_t *node2)
+{
+  return ed25519_pubkey_eq(&node1->ed25519_id, &node2->ed25519_id);
+}
+
+HT_PROTOTYPE(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
+             node_ed_id_eq)
+HT_GENERATE2(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
+             node_ed_id_eq, 0.6, tor_reallocarray_, tor_free_)
+
 /** The global nodelist. */
 static nodelist_t *the_nodelist=NULL;
 
@@ -121,6 +145,7 @@ init_nodelist(void)
   if (PREDICT_UNLIKELY(the_nodelist == NULL)) {
     the_nodelist = tor_malloc_zero(sizeof(nodelist_t));
     HT_INIT(nodelist_map, &the_nodelist->nodes_by_id);
+    HT_INIT(nodelist_ed_map, &the_nodelist->nodes_by_ed_id);
     the_nodelist->nodes = smartlist_new();
   }
 }
@@ -138,12 +163,35 @@ node_get_mutable_by_id(const char *identity_digest)
   return node;
 }
 
+/** As node_get_by_ed25519_id, but returns a non-const pointer */
+node_t *
+node_get_mutable_by_ed25519_id(const ed25519_public_key_t *ed_id)
+{
+  node_t search, *node;
+  if (PREDICT_UNLIKELY(the_nodelist == NULL))
+    return NULL;
+  if (BUG(ed_id == NULL) || BUG(ed25519_public_key_is_zero(ed_id)))
+    return NULL;
+
+  memcpy(&search.ed25519_id, ed_id, sizeof(search.ed25519_id));
+  node = HT_FIND(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, &search);
+  return node;
+}
+
 /** Return the node_t whose identity is <b>identity_digest</b>, or NULL
  * if no such node exists. */
 MOCK_IMPL(const node_t *,
 node_get_by_id,(const char *identity_digest))
 {
   return node_get_mutable_by_id(identity_digest);
+}
+
+/** Return the node_t whose ed25519 identity is <b>ed_id</b>, or NULL
+ * if no such node exists. */
+MOCK_IMPL(const node_t *,
+node_get_by_ed25519_id,(const ed25519_public_key_t *ed_id))
+{
+  return node_get_mutable_by_ed25519_id(ed_id);
 }
 
 /** Internal: return the node_t whose identity_digest is
@@ -171,6 +219,67 @@ node_get_or_create(const char *identity_digest)
   node->country = -1;
 
   return node;
+}
+
+/** Remove <b>node</b> from the ed25519 map (if it present), and
+ * set its ed25519_id field to zero. */
+static int
+node_remove_from_ed25519_map(node_t *node)
+{
+  tor_assert(the_nodelist);
+  tor_assert(node);
+
+  if (ed25519_public_key_is_zero(&node->ed25519_id)) {
+    return 0;
+  }
+
+  int rv = 0;
+  node_t *search =
+    HT_FIND(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  if (BUG(search != node)) {
+    goto clear_and_return;
+  }
+
+  search = HT_REMOVE(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  tor_assert(search == node);
+  rv = 1;
+
+ clear_and_return:
+  memset(&node->ed25519_id, 0, sizeof(node->ed25519_id));
+  return rv;
+}
+
+/** If <b>node</b> has an ed25519 id, and it is not already in the ed25519 id
+ * map, set its ed25519_id field, and add it to the ed25519 map.
+ */
+static int
+node_add_to_ed25519_map(node_t *node)
+{
+  tor_assert(the_nodelist);
+  tor_assert(node);
+
+  if (! ed25519_public_key_is_zero(&node->ed25519_id)) {
+    return 0;
+  }
+
+  const ed25519_public_key_t *key = node_get_ed25519_id(node);
+  if (!key) {
+    return 0;
+  }
+
+  node_t *old;
+  memcpy(&node->ed25519_id, key, sizeof(node->ed25519_id));
+  old = HT_FIND(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  if (BUG(old)) {
+    /* XXXX order matters here, and this may mean that authorities aren't
+     * pinning. */
+    if (old != node)
+      memset(&node->ed25519_id, 0, sizeof(node->ed25519_id));
+    return 0;
+  }
+
+  HT_INSERT(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  return 1;
 }
 
 /* For a given <b>node</b> for the consensus <b>ns</b>, set the hsdir index
@@ -262,6 +371,8 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
   id_digest = ri->cache_info.identity_digest;
   node = node_get_or_create(id_digest);
 
+  node_remove_from_ed25519_map(node);
+
   if (node->ri) {
     if (!routers_have_same_or_addrs(node->ri, ri)) {
       node_addrs_changed(node);
@@ -274,6 +385,8 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
       *ri_old_out = NULL;
   }
   node->ri = ri;
+
+  node_add_to_ed25519_map(node);
 
   if (node->country == -1)
     node_set_country(node);
@@ -318,8 +431,10 @@ nodelist_add_microdesc(microdesc_t *md)
     return NULL;
   node = node_get_mutable_by_id(rs->identity_digest);
   if (node) {
+    node_remove_from_ed25519_map(node);
     if (node->md)
       node->md->held_by_nodes--;
+
     node->md = md;
     md->held_by_nodes++;
     /* Setting the HSDir index requires the ed25519 identity key which can
@@ -328,7 +443,9 @@ nodelist_add_microdesc(microdesc_t *md)
     if (rs->supports_v3_hsdir) {
       node_set_hsdir_index(node, ns);
     }
+    node_add_to_ed25519_map(node);
   }
+
   return node;
 }
 
@@ -356,12 +473,14 @@ nodelist_set_consensus(networkstatus_t *ns)
     if (ns->flavor == FLAV_MICRODESC) {
       if (node->md == NULL ||
           tor_memneq(node->md->digest,rs->descriptor_digest,DIGEST256_LEN)) {
+        node_remove_from_ed25519_map(node);
         if (node->md)
           node->md->held_by_nodes--;
         node->md = microdesc_cache_lookup_by_digest256(NULL,
                                                        rs->descriptor_digest);
         if (node->md)
           node->md->held_by_nodes++;
+        node_add_to_ed25519_map(node);
       }
     }
 
@@ -426,6 +545,9 @@ nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md)
   if (node && node->md == md) {
     node->md = NULL;
     md->held_by_nodes--;
+    if (! node_get_ed25519_id(node)) {
+      node_remove_from_ed25519_map(node);
+    }
   }
 }
 
@@ -454,6 +576,7 @@ nodelist_drop_node(node_t *node, int remove_from_ht)
     tmp = HT_REMOVE(nodelist_map, &the_nodelist->nodes_by_id, node);
     tor_assert(tmp == node);
   }
+  node_remove_from_ed25519_map(node);
 
   idx = node->nodelist_idx;
   tor_assert(idx >= 0);
@@ -537,6 +660,7 @@ nodelist_free_all(void)
     return;
 
   HT_CLEAR(nodelist_map, &the_nodelist->nodes_by_id);
+  HT_CLEAR(nodelist_ed_map, &the_nodelist->nodes_by_ed_id);
   SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
     node->nodelist_idx = -1;
     node_free(node);

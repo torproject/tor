@@ -18,6 +18,9 @@
 
 node_t *node_get_mutable_by_id(const char *identity_digest);
 MOCK_DECL(const node_t *, node_get_by_id, (const char *identity_digest));
+node_t *node_get_mutable_by_ed25519_id(const ed25519_public_key_t *ed_id);
+MOCK_DECL(const node_t *, node_get_by_ed25519_id,
+          (const ed25519_public_key_t *ed_id));
 const node_t *node_get_by_hex_id(const char *identity_digest);
 node_t *nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out);
 node_t *nodelist_add_microdesc(microdesc_t *md);
