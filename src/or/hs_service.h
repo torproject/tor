@@ -15,6 +15,7 @@
 
 #include "hs_common.h"
 #include "hs_descriptor.h"
+#include "hs_ident.h"
 #include "hs_intropoint.h"
 
 /* Trunnel */
@@ -25,17 +26,30 @@
  * present. */
 #define HS_SERVICE_DEFAULT_VERSION HS_VERSION_TWO
 
+/* As described in the specification, service publishes their next descriptor
+ * at a random time between those two values (in seconds). */
+#define HS_SERVICE_NEXT_UPLOAD_TIME_MIN (60 * 60)
+#define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (120 * 60)
+
 /* Service side introduction point. */
 typedef struct hs_service_intro_point_t {
   /* Top level intropoint "shared" data between client/service. */
   hs_intropoint_t base;
 
+  /* Onion key of the introduction point used to extend to it for the ntor
+   * handshake. */
+  curve25519_public_key_t onion_key;
+
   /* Authentication keypair used to create the authentication certificate
    * which is published in the descriptor. */
   ed25519_keypair_t auth_key_kp;
 
-  /* Encryption private key. */
-  curve25519_secret_key_t enc_key_sk;
+  /* Encryption keypair for the "ntor" type. */
+  curve25519_keypair_t enc_key_kp;
+
+  /* Legacy key if that intro point doesn't support v3. This should be used if
+   * the base object legacy flag is set. */
+  crypto_pk_t *legacy_key;
 
   /* Amount of INTRODUCE2 cell accepted from this intro point. */
   uint64_t introduce2_count;
@@ -74,6 +88,12 @@ typedef struct hs_service_intropoints_t {
   /* Contains the current hs_service_intro_point_t objects indexed by
    * authentication public key. */
   digest256map_t *map;
+
+  /* Contains node's identity key digest that were introduction point for this
+   * descriptor but were retried to many times. We keep those so we avoid
+   * re-picking them over and over for a circuit retry period.
+   * XXX: Once we have #22173, change this to only use ed25519 identity. */
+  digestmap_t *failed_id;
 } hs_service_intropoints_t;
 
 /* Representation of a service descriptor. */
@@ -95,6 +115,20 @@ typedef struct hs_service_descriptor_t {
    * hs_service_intropoints_t object indexed by authentication key (the RSA
    * key if the node is legacy). */
   hs_service_intropoints_t intro_points;
+
+  /* The time period number this descriptor has been created for. */
+  uint64_t time_period_num;
+
+  /* True iff we have missing intro points for this descriptor because we
+   * couldn't pick any nodes. */
+  unsigned int missing_intro_points : 1;
+
+  /* List of identity digests for hidden service directories to which we
+   * couldn't upload this descriptor because we didn't have its router
+   * descriptor at the time. If this list is non-empty, only the relays in this
+   * list are re-tried to upload this descriptor when our directory information
+   * have been updated. */
+  smartlist_t *hsdir_missing_info;
 } hs_service_descriptor_t;
 
 /* Service key material. */
@@ -122,10 +156,6 @@ typedef struct hs_service_config_t {
   /* Path on the filesystem where the service persistent data is stored. NULL
    * if the service is ephemeral. Specified by HiddenServiceDir option. */
   char *directory_path;
-
-  /* The time period after which a descriptor is uploaded to the directories
-   * in seconds. Specified by RendPostPeriod option. */
-  uint32_t descriptor_post_period;
 
   /* The maximum number of simultaneous streams per rendezvous circuit that
    * are allowed to be created. No limit if 0. Specified by
@@ -170,6 +200,13 @@ typedef struct hs_service_state_t {
   /* Indicate that the service has entered the overlap period. We use this
    * flag to check for descriptor rotation. */
   unsigned int in_overlap_period : 1;
+
+  /* Replay cache tracking the REND_COOKIE found in INTRODUCE2 cell to detect
+   * repeats. Clients may send INTRODUCE1 cells for the same rendezvous point
+   * through two or more different introduction points; when they do, this
+   * keeps us from launching multiple simultaneous attempts to connect to the
+   * same rend point. */
+  replaycache_t *replay_cache_rend_cookie;
 } hs_service_state_t;
 
 /* Representation of a service running on this tor instance. */
@@ -216,19 +253,25 @@ void hs_service_free_all(void);
 hs_service_t *hs_service_new(const or_options_t *options);
 void hs_service_free(hs_service_t *service);
 
+unsigned int hs_service_get_num_services(void);
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
+void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
+                                         smartlist_t *dir_list);
+int hs_service_set_conn_addr_port(const origin_circuit_t *circ,
+                                  edge_connection_t *conn);
 
-/* These functions are only used by unit tests and we need to expose them else
- * hs_service.o ends up with no symbols in libor.a which makes clang throw a
- * warning at compile time. See #21825. */
+void hs_service_dir_info_changed(void);
+void hs_service_run_scheduled_events(time_t now);
+void hs_service_circuit_has_opened(origin_circuit_t *circ);
+int hs_service_receive_intro_established(origin_circuit_t *circ,
+                                         const uint8_t *payload,
+                                         size_t payload_len);
+int hs_service_receive_introduce2(origin_circuit_t *circ,
+                                  const uint8_t *payload,
+                                  size_t payload_len);
 
-trn_cell_establish_intro_t *
-generate_establish_intro_cell(const uint8_t *circuit_key_material,
-                              size_t circuit_key_material_len);
-ssize_t
-get_establish_intro_payload(uint8_t *buf, size_t buf_len,
-                            const trn_cell_establish_intro_t *cell);
+void hs_service_intro_circ_has_closed(origin_circuit_t *circ);
 
 #ifdef HS_SERVICE_PRIVATE
 
@@ -245,6 +288,55 @@ STATIC hs_service_t *find_service(hs_service_ht *map,
                                   const ed25519_public_key_t *pk);
 STATIC void remove_service(hs_service_ht *map, hs_service_t *service);
 STATIC int register_service(hs_service_ht *map, hs_service_t *service);
+/* Service introduction point functions. */
+STATIC hs_service_intro_point_t *service_intro_point_new(
+                                         const extend_info_t *ei,
+                                         unsigned int is_legacy);
+STATIC void service_intro_point_free(hs_service_intro_point_t *ip);
+STATIC void service_intro_point_add(digest256map_t *map,
+                                    hs_service_intro_point_t *ip);
+STATIC void service_intro_point_remove(const hs_service_t *service,
+                                       const hs_service_intro_point_t *ip);
+STATIC hs_service_intro_point_t *service_intro_point_find(
+                                 const hs_service_t *service,
+                                 const ed25519_public_key_t *auth_key);
+STATIC hs_service_intro_point_t *service_intro_point_find_by_ident(
+                                         const hs_service_t *service,
+                                         const hs_ident_circuit_t *ident);
+/* Service descriptor functions. */
+STATIC hs_service_descriptor_t *service_descriptor_new(void);
+STATIC hs_service_descriptor_t *service_desc_find_by_intro(
+                                         const hs_service_t *service,
+                                         const hs_service_intro_point_t *ip);
+/* Helper functions. */
+STATIC void get_objects_from_ident(const hs_ident_circuit_t *ident,
+                                   hs_service_t **service,
+                                   hs_service_intro_point_t **ip,
+                                   hs_service_descriptor_t **desc);
+STATIC const node_t *
+get_node_from_intro_point(const hs_service_intro_point_t *ip);
+STATIC int can_service_launch_intro_circuit(hs_service_t *service,
+                                            time_t now);
+STATIC int intro_point_should_expire(const hs_service_intro_point_t *ip,
+                                     time_t now);
+STATIC void run_housekeeping_event(time_t now);
+STATIC void rotate_all_descriptors(time_t now);
+STATIC void build_all_descriptors(time_t now);
+STATIC void update_all_descriptors(time_t now);
+STATIC void run_upload_descriptor_event(time_t now);
+
+STATIC char *
+encode_desc_rev_counter_for_state(const hs_service_descriptor_t *desc);
+
+STATIC void service_descriptor_free(hs_service_descriptor_t *desc);
+
+STATIC uint64_t
+check_state_line_for_service_rev_counter(const char *state_line,
+                                    const ed25519_public_key_t *blinded_pubkey,
+                                    int *service_found_out);
+
+STATIC int
+write_address_to_file(const hs_service_t *service, const char *fname_);
 
 #endif /* TOR_UNIT_TESTS */
 

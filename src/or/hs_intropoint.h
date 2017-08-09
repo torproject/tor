@@ -13,11 +13,11 @@
 #include "torcert.h"
 
 /* Authentication key type in an ESTABLISH_INTRO cell. */
-enum hs_intro_auth_key_type {
+typedef enum {
   HS_INTRO_AUTH_KEY_TYPE_LEGACY0 = 0x00,
   HS_INTRO_AUTH_KEY_TYPE_LEGACY1 = 0x01,
   HS_INTRO_AUTH_KEY_TYPE_ED25519 = 0x02,
-};
+} hs_intro_auth_key_type_t;
 
 /* INTRODUCE_ACK status code. */
 typedef enum {
@@ -30,6 +30,9 @@ typedef enum {
 /* Object containing introduction point common data between the service and
  * the client side. */
 typedef struct hs_intropoint_t {
+  /* Does this intro point only supports legacy ID ?. */
+  unsigned int is_only_legacy : 1;
+
   /* Authentication key certificate from the descriptor. */
   tor_cert_t *auth_key_cert;
   /* A list of link specifier. */
@@ -46,6 +49,9 @@ MOCK_DECL(int, hs_intro_send_intro_established_cell,(or_circuit_t *circ));
 
 /* also used by rendservice.c */
 int hs_intro_circuit_is_suitable_for_establish_intro(const or_circuit_t *circ);
+
+hs_intropoint_t *hs_intro_new(void);
+void hs_intropoint_clear(hs_intropoint_t *ip);
 
 #ifdef HS_INTROPOINT_PRIVATE
 

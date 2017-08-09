@@ -30,11 +30,18 @@ hs_ident_circuit_free(hs_ident_circuit_t *ident)
   if (ident == NULL) {
     return;
   }
-  if (ident->auth_key_type == HS_AUTH_KEY_TYPE_LEGACY) {
-    crypto_pk_free(ident->auth_rsa_pk);
-  }
   memwipe(ident, 0, sizeof(hs_ident_circuit_t));
   tor_free(ident);
+}
+
+/* For a given circuit identifier src, return a newly allocated copy of it.
+ * This can't fail. */
+hs_ident_circuit_t *
+hs_ident_circuit_dup(const hs_ident_circuit_t *src)
+{
+  hs_ident_circuit_t *ident = tor_malloc_zero(sizeof(*ident));
+  memcpy(ident, src, sizeof(*ident));
+  return ident;
 }
 
 /* For a given directory connection identifier src, return a newly allocated

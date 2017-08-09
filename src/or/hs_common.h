@@ -11,6 +11,9 @@
 
 #include "or.h"
 
+/* Trunnel */
+#include "ed25519_cert.h"
+
 /* Protocol version 2. Use this instead of hardcoding "2" in the code base,
  * this adds a clearer semantic to the value when used. */
 #define HS_VERSION_TWO 2
@@ -49,8 +52,6 @@
 #define HS_TIME_PERIOD_LENGTH_MIN 30 /* minutes */
 /* The minimum time period length as seen in prop224 section [TIME-PERIODS] */
 #define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes */
-/* The time period rotation offset as seen in prop224 section [TIME-PERIODS] */
-#define HS_TIME_PERIOD_ROTATION_OFFSET (12 * 60) /* minutes */
 
 /* Prefix of the onion address checksum. */
 #define HS_SERVICE_ADDR_CHECKSUM_PREFIX ".onion checksum"
@@ -76,11 +77,76 @@
 #define HS_SERVICE_ADDR_LEN_BASE32 \
   (CEIL_DIV(HS_SERVICE_ADDR_LEN * 8, 5))
 
+/* The default HS time period length */
+#define HS_TIME_PERIOD_LENGTH_DEFAULT 1440 /* 1440 minutes == one day */
+/* The minimum time period length as seen in prop224 section [TIME-PERIODS] */
+#define HS_TIME_PERIOD_LENGTH_MIN 30 /* minutes */
+/* The minimum time period length as seen in prop224 section [TIME-PERIODS] */
+#define HS_TIME_PERIOD_LENGTH_MAX (60 * 24 * 10) /* 10 days or 14400 minutes */
+/* The time period rotation offset as seen in prop224 section [TIME-PERIODS] */
+#define HS_TIME_PERIOD_ROTATION_OFFSET (12 * 60) /* minutes */
+
+/* Keyblinding parameter construction is as follow:
+ *    "key-blind" || INT_8(period_num) || INT_8(start_period_sec) */
+#define HS_KEYBLIND_NONCE_PREFIX "key-blind"
+#define HS_KEYBLIND_NONCE_PREFIX_LEN (sizeof(HS_KEYBLIND_NONCE_PREFIX) - 1)
+#define HS_KEYBLIND_NONCE_LEN \
+  (HS_KEYBLIND_NONCE_PREFIX_LEN + sizeof(uint64_t) + sizeof(uint64_t))
+
+/* Credential and subcredential prefix value. */
+#define HS_CREDENTIAL_PREFIX "credential"
+#define HS_CREDENTIAL_PREFIX_LEN (sizeof(HS_CREDENTIAL_PREFIX) - 1)
+#define HS_SUBCREDENTIAL_PREFIX "subcredential"
+#define HS_SUBCREDENTIAL_PREFIX_LEN (sizeof(HS_SUBCREDENTIAL_PREFIX) - 1)
+
+/* Node hidden service stored at index prefix value. */
+#define HS_INDEX_PREFIX "store-at-idx"
+#define HS_INDEX_PREFIX_LEN (sizeof(HS_INDEX_PREFIX) - 1)
+
+/* Node hidden service directory index prefix value. */
+#define HSDIR_INDEX_PREFIX "node-idx"
+#define HSDIR_INDEX_PREFIX_LEN (sizeof(HSDIR_INDEX_PREFIX) - 1)
+
+/* Prefix of the shared random value disaster mode. */
+#define HS_SRV_DISASTER_PREFIX "shared-random-disaster"
+#define HS_SRV_DISASTER_PREFIX_LEN (sizeof(HS_SRV_DISASTER_PREFIX) - 1)
+
+/* Default value of number of hsdir replicas (hsdir_n_replicas). */
+#define HS_DEFAULT_HSDIR_N_REPLICAS 2
+/* Default value of hsdir spread store (hsdir_spread_store). */
+#define HS_DEFAULT_HSDIR_SPREAD_STORE 3
+/* Default value of hsdir spread fetch (hsdir_spread_fetch). */
+#define HS_DEFAULT_HSDIR_SPREAD_FETCH 3
+
 /* Type of authentication key used by an introduction point. */
 typedef enum {
   HS_AUTH_KEY_TYPE_LEGACY  = 1,
   HS_AUTH_KEY_TYPE_ED25519 = 2,
 } hs_auth_key_type_t;
+
+/* Represents the mapping from a virtual port of a rendezvous service to a
+ * real port on some IP. */
+typedef struct rend_service_port_config_t {
+  /* The incoming HS virtual port we're mapping */
+  uint16_t virtual_port;
+  /* Is this an AF_UNIX port? */
+  unsigned int is_unix_addr:1;
+  /* The outgoing TCP port to use, if !is_unix_addr */
+  uint16_t real_port;
+  /* The outgoing IPv4 or IPv6 address to use, if !is_unix_addr */
+  tor_addr_t real_addr;
+  /* The socket path to connect to, if is_unix_addr */
+  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
+} rend_service_port_config_t;
+
+/* Hidden service directory index used in a node_t which is set once we set
+ * the consensus. */
+typedef struct hsdir_index_t {
+  /* The hsdir index for the current time period. */
+  uint8_t current[DIGEST256_LEN];
+  /* The hsdir index for the next time period. */
+  uint8_t next[DIGEST256_LEN];
+} hsdir_index_t;
 
 void hs_init(void);
 void hs_free_all(void);
@@ -94,6 +160,16 @@ void hs_build_address(const ed25519_public_key_t *key, uint8_t version,
 int hs_address_is_valid(const char *address);
 int hs_parse_address(const char *address, ed25519_public_key_t *key_out,
                      uint8_t *checksum_out, uint8_t *version_out);
+
+void hs_build_blinded_pubkey(const ed25519_public_key_t *pubkey,
+                             const uint8_t *secret, size_t secret_len,
+                             uint64_t time_period_num,
+                             ed25519_public_key_t *pubkey_out);
+void hs_build_blinded_keypair(const ed25519_keypair_t *kp,
+                              const uint8_t *secret, size_t secret_len,
+                              uint64_t time_period_num,
+                              ed25519_keypair_t *kp_out);
+int hs_service_requires_uptime_circ(const smartlist_t *ports);
 
 void rend_data_free(rend_data_t *data);
 rend_data_t *rend_data_dup(const rend_data_t *data);
@@ -111,14 +187,54 @@ const char *rend_data_get_desc_id(const rend_data_t *rend_data,
 const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
                                        size_t *len_out);
 
+void hs_get_subcredential(const ed25519_public_key_t *identity_pk,
+                          const ed25519_public_key_t *blinded_pk,
+                          uint8_t *subcred_out);
+
+uint64_t hs_get_time_period_num(time_t now);
 uint64_t hs_get_next_time_period_num(time_t now);
+time_t hs_get_start_time_of_next_time_period(time_t now);
+
+link_specifier_t *hs_link_specifier_dup(const link_specifier_t *lspec);
+
+MOCK_DECL(int, hs_overlap_mode_is_active,
+          (const networkstatus_t *consensus, time_t now));
+
+uint8_t *hs_get_current_srv(uint64_t time_period_num,
+                            const networkstatus_t *ns);
+uint8_t *hs_get_previous_srv(uint64_t time_period_num,
+                             const networkstatus_t *ns);
+
+void hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
+                          const uint8_t *srv, uint64_t period_num,
+                          uint8_t *hsdir_index_out);
+void hs_build_hs_index(uint64_t replica,
+                       const ed25519_public_key_t *blinded_pk,
+                       uint64_t period_num, uint8_t *hs_index_out);
+
+int32_t hs_get_hsdir_n_replicas(void);
+int32_t hs_get_hsdir_spread_fetch(void);
+int32_t hs_get_hsdir_spread_store(void);
+
+void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
+                               uint64_t time_period_num, int is_next_period,
+                               int is_client, smartlist_t *responsible_dirs);
+
+int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
+
+void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
+void hs_dec_rdv_stream_counter(origin_circuit_t *circ);
 
 #ifdef HS_COMMON_PRIVATE
+
+STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
 
 #ifdef TOR_UNIT_TESTS
 
 STATIC uint64_t get_time_period_length(void);
-STATIC uint64_t get_time_period_num(time_t now);
+
+STATIC uint8_t *get_first_cached_disaster_srv(void);
+STATIC uint8_t *get_second_cached_disaster_srv(void);
 
 #endif /* TOR_UNIT_TESTS */
 

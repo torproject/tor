@@ -52,26 +52,31 @@ typedef struct hs_ident_circuit_t {
    * set when an object is initialized in its constructor. */
   hs_ident_circuit_type_t circuit_type;
 
-  /* (Only intro point circuit) Which type of authentication key this
-   * circuit identifier is using. */
-  hs_auth_key_type_t auth_key_type;
+  /* (All circuit) Introduction point authentication key. It's also needed on
+   * the rendezvous circuit for the ntor handshake. It's used as the unique key
+   * of the introduction point so it should not be shared between multiple
+   * intro points. */
+  ed25519_public_key_t intro_auth_pk;
 
-  /* (Only intro point circuit) Introduction point authentication key. In
-   * legacy mode, we use an RSA key else an ed25519 public key. */
-  crypto_pk_t *auth_rsa_pk;
-  ed25519_public_key_t auth_ed25519_pk;
+  /* (Only client rendezvous circuit) Introduction point encryption public
+   * key. We keep it in the rendezvous identifier for the ntor handshake. */
+  curve25519_public_key_t intro_enc_pk;
 
   /* (Only rendezvous circuit) Rendezvous cookie sent from the client to the
    * service with an INTRODUCE1 cell and used by the service in an
    * RENDEZVOUS1 cell. */
   uint8_t rendezvous_cookie[HS_REND_COOKIE_LEN];
 
-  /* (Only rendezvous circuit) The HANDSHAKE_INFO needed in the RENDEZVOUS1
-   * cell of the service. The construction is as follows:
+  /* (Only service rendezvous circuit) The HANDSHAKE_INFO needed in the
+   * RENDEZVOUS1 cell of the service. The construction is as follows:
    *    SERVER_PK   [32 bytes]
    *    AUTH_MAC    [32 bytes]
    */
   uint8_t rendezvous_handshake_info[CURVE25519_PUBKEY_LEN + DIGEST256_LEN];
+
+  /* (Only client rendezvous circuit) Client ephemeral keypair needed for the
+   * e2e encryption with the service. */
+  curve25519_keypair_t rendezvous_client_kp;
 
   /* (Only rendezvous circuit) The NTOR_KEY_SEED needed for key derivation for
    * the e2e encryption with the client on the circuit. */
@@ -110,6 +115,7 @@ hs_ident_circuit_t *hs_ident_circuit_new(
                              const ed25519_public_key_t *identity_pk,
                              hs_ident_circuit_type_t circuit_type);
 void hs_ident_circuit_free(hs_ident_circuit_t *ident);
+hs_ident_circuit_t *hs_ident_circuit_dup(const hs_ident_circuit_t *src);
 
 /* Directory connection identifier API. */
 hs_ident_dir_conn_t *hs_ident_dir_conn_dup(const hs_ident_dir_conn_t *src);

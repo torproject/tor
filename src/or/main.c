@@ -1194,6 +1194,7 @@ CALLBACK(heartbeat);
 CALLBACK(clean_consdiffmgr);
 CALLBACK(reset_padding_counts);
 CALLBACK(check_canonical_channels);
+CALLBACK(hs_service);
 
 #undef CALLBACK
 
@@ -1229,6 +1230,7 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(clean_consdiffmgr),
   CALLBACK(reset_padding_counts),
   CALLBACK(check_canonical_channels),
+  CALLBACK(hs_service),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1460,12 +1462,6 @@ run_scheduled_events(time_t now)
 
   /* 6. And remove any marked circuits... */
   circuit_close_all_marked();
-
-  /* 7. And upload service descriptors if necessary. */
-  if (have_completed_a_circuit() && !net_is_disabled()) {
-    rend_consider_services_upload(now);
-    rend_consider_descriptor_republication();
-  }
 
   /* 8. and blow away any connections that need to die. have to do this now,
    * because if we marked a conn for close and left its socket -1, then
@@ -2099,6 +2095,28 @@ clean_consdiffmgr_callback(time_t now, const or_options_t *options)
     consdiffmgr_cleanup();
   }
   return CDM_CLEAN_CALLBACK_INTERVAL;
+}
+
+/*
+ * Periodic callback: Run scheduled events for HS service. This is called
+ * every second.
+ */
+static int
+hs_service_callback(time_t now, const or_options_t *options)
+{
+  (void) options;
+
+  /* We need to at least be able to build circuits and that we actually have
+   * a working network. */
+  if (!have_completed_a_circuit() || net_is_disabled()) {
+    goto end;
+  }
+
+  hs_service_run_scheduled_events(now);
+
+ end:
+  /* Every 1 second. */
+  return 1;
 }
 
 /** Timer: used to invoke second_elapsed_callback() once per second. */
@@ -3554,7 +3572,7 @@ sandbox_init_filter(void)
   {
     smartlist_t *files = smartlist_new();
     smartlist_t *dirs = smartlist_new();
-    rend_services_add_filenames_to_lists(files, dirs);
+    hs_service_lists_fnames_for_sandbox(files, dirs);
     SMARTLIST_FOREACH(files, char *, file_name, {
       char *tmp_name = NULL;
       tor_asprintf(&tmp_name, "%s.tmp", file_name);
@@ -3563,6 +3581,7 @@ sandbox_init_filter(void)
       /* steals references */
       sandbox_cfg_allow_open_filename(&cfg, file_name);
       sandbox_cfg_allow_open_filename(&cfg, tmp_name);
+      tor_free(file_name);
     });
     SMARTLIST_FOREACH(dirs, char *, dir, {
       /* steals reference */

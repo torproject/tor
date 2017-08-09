@@ -133,7 +133,7 @@ get_voting_interval(void)
 /* Given the time <b>now</b>, return the start time of the current round of
  * the SR protocol. For example, if it's 23:47:08, the current round thus
  * started at 23:47:00 for a voting interval of 10 seconds. */
-static time_t
+STATIC time_t
 get_start_time_of_current_round(time_t now)
 {
   const or_options_t *options = get_options();
@@ -154,6 +154,42 @@ get_start_time_of_current_round(time_t now)
   voting_schedule_free(new_voting_schedule);
 
   return curr_start;
+}
+
+/** Return the start time of the current SR protocol run. For example, if the
+ *  time is 23/06/2017 23:47:08 and a full SR protocol run is 24 hours, this
+ *  function should return 23/06/2017 00:00:00. */
+time_t
+sr_state_get_start_time_of_current_protocol_run(time_t now)
+{
+  int total_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
+  int voting_interval = get_voting_interval();
+  /* Find the time the current round started. */
+  time_t beginning_of_current_round = get_start_time_of_current_round(now);
+
+  /* Get current SR protocol round */
+  int current_round = (now / voting_interval) % total_rounds;
+
+  /* Get start time by subtracting the time elapsed from the beginning of the
+     protocol run */
+  time_t time_elapsed_since_start_of_run = current_round * voting_interval;
+  return beginning_of_current_round - time_elapsed_since_start_of_run;
+}
+
+/** Return the time (in seconds) it takes to complete a full SR protocol phase
+ *  (e.g. the commit phase). */
+unsigned int
+sr_state_get_phase_duration(void)
+{
+  return SHARED_RANDOM_N_ROUNDS * get_voting_interval();
+}
+
+/** Return the time (in seconds) it takes to complete a full SR protocol run */
+unsigned int
+sr_state_get_protocol_run_duration(void)
+{
+  int total_protocol_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
+  return total_protocol_rounds * get_voting_interval();
 }
 
 /* Return the time we should expire the state file created at <b>now</b>.

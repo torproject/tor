@@ -124,8 +124,10 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
     if (cache_entry->plaintext_data->revision_counter >=
         desc->plaintext_data->revision_counter) {
       log_info(LD_REND, "Descriptor revision counter in our cache is "
-                        "greater or equal than the one we received. "
-                        "Rejecting!");
+               "greater or equal than the one we received (%d/%d). "
+               "Rejecting!",
+               (int)cache_entry->plaintext_data->revision_counter,
+               (int)desc->plaintext_data->revision_counter);
       goto err;
     }
     /* We now know that the descriptor we just received is a new one so

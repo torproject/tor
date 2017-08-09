@@ -189,6 +189,120 @@ test_get_state_valid_until_time(void *arg)
   ;
 }
 
+/** Test the function that calculates the start time of the current SRV
+ *  protocol run. */
+static void
+test_get_start_time_of_current_run(void *arg)
+{
+  int retval;
+  char tbuf[ISO_TIME_LEN + 1];
+  time_t current_time, run_start_time;
+
+  (void) arg;
+
+  {
+    /* Get start time if called at 00:00:01 */
+    retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
+                                &current_time);
+    tt_int_op(retval, ==, 0);
+    run_start_time =
+      sr_state_get_start_time_of_current_protocol_run(current_time);
+
+    /* Compare it with the correct result */
+    format_iso_time(tbuf, run_start_time);
+    tt_str_op("2015-04-20 00:00:00", OP_EQ, tbuf);
+  }
+
+  {
+    retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:59 UTC",
+                                &current_time);
+    tt_int_op(retval, ==, 0);
+    run_start_time =
+      sr_state_get_start_time_of_current_protocol_run(current_time);
+
+    /* Compare it with the correct result */
+    format_iso_time(tbuf, run_start_time);
+    tt_str_op("2015-04-20 00:00:00", OP_EQ, tbuf);
+  }
+
+  {
+    retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
+                                &current_time);
+    tt_int_op(retval, ==, 0);
+    run_start_time =
+      sr_state_get_start_time_of_current_protocol_run(current_time);
+
+    /* Compare it with the correct result */
+    format_iso_time(tbuf, run_start_time);
+    tt_str_op("2015-04-20 00:00:00", OP_EQ, tbuf);
+  }
+
+  /* Now let's alter the voting schedule and check the correctness of the
+   * function. Voting interval of 10 seconds, means that an SRV protocol run
+   * takes 10 seconds * 24 rounds = 4 mins */
+  {
+    or_options_t *options = get_options_mutable();
+    options->V3AuthVotingInterval = 10;
+    options->TestingV3AuthInitialVotingInterval = 10;
+    retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:15:32 UTC",
+                                &current_time);
+
+    tt_int_op(retval, ==, 0);
+    run_start_time =
+      sr_state_get_start_time_of_current_protocol_run(current_time);
+
+    /* Compare it with the correct result */
+    format_iso_time(tbuf, run_start_time);
+    tt_str_op("2015-04-20 00:12:00", OP_EQ, tbuf);
+  }
+
+ done:
+  ;
+}
+
+/** Do some rudimentary consistency checks between the functions that
+ *  understand the shared random protocol schedule */
+static void
+test_get_start_time_functions(void *arg)
+{
+  (void) arg;
+  time_t now = approx_time();
+
+  time_t start_time_of_protocol_run =
+    sr_state_get_start_time_of_current_protocol_run(now);
+  tt_assert(start_time_of_protocol_run);
+
+  /* Check that the round start time of the beginning of the run, is itself */
+  tt_int_op(get_start_time_of_current_round(start_time_of_protocol_run), OP_EQ,
+            start_time_of_protocol_run);
+
+  /* Check that even if we increment the start time, we still get the start
+     time of the run as the beginning of the round. */
+  tt_int_op(get_start_time_of_current_round(start_time_of_protocol_run+1),
+            OP_EQ, start_time_of_protocol_run);
+
+ done: ;
+}
+
+static void
+test_get_sr_protocol_duration(void *arg)
+{
+  (void) arg;
+
+  /* Check that by default an SR phase is 12 hours */
+  tt_int_op(sr_state_get_phase_duration(), ==, 12*60*60);
+  tt_int_op(sr_state_get_protocol_run_duration(), ==, 24*60*60);
+
+  /* Now alter the voting interval and check that the SR phase is 2 mins long
+   * if voting happens every 10 seconds (10*12 seconds = 2 mins) */
+  or_options_t *options = get_options_mutable();
+  options->V3AuthVotingInterval = 10;
+  tt_int_op(sr_state_get_phase_duration(), ==, 2*60);
+  tt_int_op(sr_state_get_protocol_run_duration(), ==, 4*60);
+
+ done: ;
+}
+
 /* Mock function to immediately return our local 'mock_consensus'. */
 static networkstatus_t *
 mock_networkstatus_get_live_consensus(time_t now)
@@ -1271,6 +1385,12 @@ struct testcase_t sr_tests[] = {
   { "encoding", test_encoding, TT_FORK,
     NULL, NULL },
   { "get_next_valid_after_time", test_get_next_valid_after_time, TT_FORK,
+    NULL, NULL },
+  { "get_start_time_of_current_run", test_get_start_time_of_current_run,
+    TT_FORK, NULL, NULL },
+  { "get_start_time_functions", test_get_start_time_functions,
+    TT_FORK, NULL, NULL },
+  { "get_sr_protocol_duration", test_get_sr_protocol_duration, TT_FORK,
     NULL, NULL },
   { "get_state_valid_until_time", test_get_state_valid_until_time, TT_FORK,
     NULL, NULL },

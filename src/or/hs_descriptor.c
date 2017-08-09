@@ -58,6 +58,7 @@
 #include "hs_descriptor.h"
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "ed25519_cert.h" /* Trunnel interface. */
 #include "parsecommon.h"
 #include "rendcache.h"
@@ -78,6 +79,7 @@
 #define str_intro_auth_required "intro-auth-required"
 #define str_single_onion "single-onion-service"
 #define str_intro_point "introduction-point"
+#define str_ip_onion_key "onion-key"
 #define str_ip_auth_key "auth-key"
 #define str_ip_enc_key "enc-key"
 #define str_ip_enc_key_cert "enc-key-cert"
@@ -136,6 +138,7 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
 /* Descriptor ruleset for the introduction points section. */
 static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   T1_START(str_intro_point, R3_INTRODUCTION_POINT, EQ(1), NO_OBJ),
+  T1N(str_ip_onion_key, R3_INTRO_ONION_KEY, GE(2), OBJ_OK),
   T1(str_ip_auth_key, R3_INTRO_AUTH_KEY, NO_ARGS, NEED_OBJ),
   T1(str_ip_enc_key, R3_INTRO_ENC_KEY, GE(2), OBJ_OK),
   T1(str_ip_enc_key_cert, R3_INTRO_ENC_KEY_CERT, ARGS, OBJ_OK),
@@ -143,29 +146,6 @@ static token_rule_t hs_desc_intro_point_v3_token_table[] = {
   T01(str_ip_legacy_key_cert, R3_INTRO_LEGACY_KEY_CERT, ARGS, OBJ_OK),
   END_OF_TABLE
 };
-
-/* Free a descriptor intro point object. */
-STATIC void
-desc_intro_point_free(hs_desc_intro_point_t *ip)
-{
-  if (!ip) {
-    return;
-  }
-  if (ip->link_specifiers) {
-    SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *,
-                      ls, tor_free(ls));
-    smartlist_free(ip->link_specifiers);
-  }
-  tor_cert_free(ip->auth_key_cert);
-  tor_cert_free(ip->enc_key_cert);
-  if (ip->legacy.key) {
-    crypto_pk_free(ip->legacy.key);
-  }
-  if (ip->legacy.cert.encoded) {
-    tor_free(ip->legacy.cert.encoded);
-  }
-  tor_free(ip);
-}
 
 /* Free the content of the plaintext section of a descriptor. */
 static void
@@ -197,7 +177,7 @@ desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
   }
   if (desc->intro_points) {
     SMARTLIST_FOREACH(desc->intro_points, hs_desc_intro_point_t *, ip,
-                      desc_intro_point_free(ip));
+                      hs_desc_intro_point_free(ip));
     smartlist_free(desc->intro_points);
   }
   memwipe(desc, 0, sizeof(*desc));
@@ -256,7 +236,7 @@ build_secret_input(const hs_descriptor_t *desc, uint8_t *dst, size_t dstlen)
   memcpy(dst + offset, desc->subcredential, sizeof(desc->subcredential));
   offset += sizeof(desc->subcredential);
   /* Copy revision counter value. */
-  set_uint64(dst + offset, tor_ntohll(desc->plaintext_data.revision_counter));
+  set_uint64(dst + offset, tor_htonll(desc->plaintext_data.revision_counter));
   offset += sizeof(uint64_t);
   tor_assert(HS_DESC_ENCRYPTED_SECRET_INPUT_LEN == offset);
 }
@@ -383,6 +363,14 @@ encode_link_specifiers(const smartlist_t *specs)
       link_specifier_set_ls_len(ls, legacy_id_len);
       break;
     }
+    case LS_ED25519_ID:
+    {
+      size_t ed25519_id_len = link_specifier_getlen_un_ed25519_id(ls);
+      uint8_t *ed25519_id_array = link_specifier_getarray_un_ed25519_id(ls);
+      memcpy(ed25519_id_array, spec->u.ed25519_id, ed25519_id_len);
+      link_specifier_set_ls_len(ls, ed25519_id_len);
+      break;
+    }
     default:
       tor_assert(0);
     }
@@ -479,6 +467,26 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
   return encoded;
 }
 
+/* Encode an introduction point onion key. Return a newly allocated string
+ * with it. On failure, return NULL. */
+static char *
+encode_onion_key(const hs_desc_intro_point_t *ip)
+{
+  char *encoded = NULL;
+  char key_b64[CURVE25519_BASE64_PADDED_LEN + 1];
+
+  tor_assert(ip);
+
+  /* Base64 encode the encryption key for the "onion-key" field. */
+  if (curve25519_public_to_base64(key_b64, &ip->onion_key) < 0) {
+    goto done;
+  }
+  tor_asprintf(&encoded, "%s ntor %s", str_ip_onion_key, key_b64);
+
+ done:
+  return encoded;
+}
+
 /* Encode an introduction point object and return a newly allocated string
  * with it. On failure, return NULL. */
 static char *
@@ -496,6 +504,16 @@ encode_intro_point(const ed25519_public_key_t *sig_key,
     char *ls_str = encode_link_specifiers(ip->link_specifiers);
     smartlist_add_asprintf(lines, "%s %s", str_intro_point, ls_str);
     tor_free(ls_str);
+  }
+
+  /* Onion key encoding. */
+  {
+    char *encoded_onion_key = encode_onion_key(ip);
+    if (encoded_onion_key == NULL) {
+      goto err;
+    }
+    smartlist_add_asprintf(lines, "%s", encoded_onion_key);
+    tor_free(encoded_onion_key);
   }
 
   /* Authentication key encoding. */
@@ -988,6 +1006,10 @@ desc_encode_v3(const hs_descriptor_t *desc,
   tor_assert(encoded_out);
   tor_assert(desc->plaintext_data.version == 3);
 
+  if (BUG(desc->subcredential == NULL)) {
+    goto err;
+  }
+
   /* Build the non-encrypted values. */
   {
     char *encoded_cert;
@@ -1133,6 +1155,15 @@ decode_link_specifiers(const char *encoded)
                  sizeof(hs_spec->u.legacy_id));
       memcpy(hs_spec->u.legacy_id, link_specifier_getarray_un_legacy_id(ls),
              sizeof(hs_spec->u.legacy_id));
+      break;
+    case LS_ED25519_ID:
+      /* Both are known at compile time so let's make sure they are the same
+       * else we can copy memory out of bound. */
+      tor_assert(link_specifier_getlen_un_ed25519_id(ls) ==
+                 sizeof(hs_spec->u.ed25519_id));
+      memcpy(hs_spec->u.ed25519_id,
+             link_specifier_getconstarray_un_ed25519_id(ls),
+             sizeof(hs_spec->u.ed25519_id));
       break;
     default:
       goto err;
@@ -1626,6 +1657,50 @@ decode_intro_legacy_key(const directory_token_t *tok,
   return -1;
 }
 
+/* Dig into the descriptor <b>tokens</b> to find the onion key we should use
+ * for this intro point, and set it into <b>onion_key_out</b>. Return 0 if it
+ * was found and well-formed, otherwise return -1 in case of errors. */
+static int
+set_intro_point_onion_key(curve25519_public_key_t *onion_key_out,
+                          const smartlist_t *tokens)
+{
+  int retval = -1;
+  smartlist_t *onion_keys = NULL;
+
+  tor_assert(onion_key_out);
+
+  onion_keys = find_all_by_keyword(tokens, R3_INTRO_ONION_KEY);
+  if (!onion_keys) {
+    log_warn(LD_REND, "Descriptor did not contain intro onion keys");
+    goto err;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(onion_keys, directory_token_t *, tok) {
+    /* This field is using GE(2) so for possible forward compatibility, we
+     * accept more fields but must be at least 2. */
+    tor_assert(tok->n_args >= 2);
+
+    /* Try to find an ntor key, it's the only recognized type right now */
+    if (!strcmp(tok->args[0], "ntor")) {
+      if (curve25519_public_from_base64(onion_key_out, tok->args[1]) < 0) {
+        log_warn(LD_REND, "Introduction point ntor onion-key is invalid");
+        goto err;
+      }
+      /* Got the onion key! Set the appropriate retval */
+      retval = 0;
+    }
+  } SMARTLIST_FOREACH_END(tok);
+
+  /* Log an error if we didn't find it :( */
+  if (retval < 0) {
+    log_warn(LD_REND, "Descriptor did not contain ntor onion keys");
+  }
+
+ err:
+  smartlist_free(onion_keys);
+  return retval;
+}
+
 /* Given the start of a section and the end of it, decode a single
  * introduction point from that section. Return a newly allocated introduction
  * point object containing the decoded data. Return NULL if the section can't
@@ -1651,14 +1726,21 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
 
   /* Ok we seem to have a well formed section containing enough tokens to
    * parse. Allocate our IP object and try to populate it. */
-  ip = tor_malloc_zero(sizeof(hs_desc_intro_point_t));
+  ip = hs_desc_intro_point_new();
 
   /* "introduction-point" SP link-specifiers NL */
   tok = find_by_keyword(tokens, R3_INTRODUCTION_POINT);
   tor_assert(tok->n_args == 1);
+  /* Our constructor creates this list by default so free it. */
+  smartlist_free(ip->link_specifiers);
   ip->link_specifiers = decode_link_specifiers(tok->args[0]);
   if (!ip->link_specifiers) {
     log_warn(LD_REND, "Introduction point has invalid link specifiers");
+    goto err;
+  }
+
+  /* "onion-key" SP ntor SP key NL */
+  if (set_intro_point_onion_key(&ip->onion_key, tokens) < 0) {
     goto err;
   }
 
@@ -1733,7 +1815,7 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   goto done;
 
  err:
-  desc_intro_point_free(ip);
+  hs_desc_intro_point_free(ip);
   ip = NULL;
 
  done:
@@ -2215,7 +2297,7 @@ hs_desc_decode_descriptor(const char *encoded,
                           const uint8_t *subcredential,
                           hs_descriptor_t **desc_out)
 {
-  int ret;
+  int ret = -1;
   hs_descriptor_t *desc;
 
   tor_assert(encoded);
@@ -2223,9 +2305,12 @@ hs_desc_decode_descriptor(const char *encoded,
   desc = tor_malloc_zero(sizeof(hs_descriptor_t));
 
   /* Subcredentials are optional. */
-  if (subcredential) {
-    memcpy(desc->subcredential, subcredential, sizeof(desc->subcredential));
+  if (BUG(!subcredential)) {
+    log_warn(LD_GENERAL, "Tried to decrypt without subcred. Impossible!");
+    goto err;
   }
+
+  memcpy(desc->subcredential, subcredential, sizeof(desc->subcredential));
 
   ret = hs_desc_decode_plaintext(encoded, &desc->plaintext_data);
   if (ret < 0) {
@@ -2350,5 +2435,112 @@ hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data)
   tor_assert(data);
   return (sizeof(*data) + sizeof(*data->signing_key_cert) +
           data->superencrypted_blob_size);
+}
+
+/* Return a newly allocated descriptor intro point. */
+hs_desc_intro_point_t *
+hs_desc_intro_point_new(void)
+{
+  hs_desc_intro_point_t *ip = tor_malloc_zero(sizeof(*ip));
+  ip->link_specifiers = smartlist_new();
+  return ip;
+}
+
+/* Free a descriptor intro point object. */
+void
+hs_desc_intro_point_free(hs_desc_intro_point_t *ip)
+{
+  if (ip == NULL) {
+    return;
+  }
+  if (ip->link_specifiers) {
+    SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *,
+                      ls, hs_desc_link_specifier_free(ls));
+    smartlist_free(ip->link_specifiers);
+  }
+  tor_cert_free(ip->auth_key_cert);
+  tor_cert_free(ip->enc_key_cert);
+  crypto_pk_free(ip->legacy.key);
+  tor_free(ip->legacy.cert.encoded);
+  tor_free(ip);
+}
+
+/* Free the given descriptor link specifier. */
+void
+hs_desc_link_specifier_free(hs_desc_link_specifier_t *ls)
+{
+  if (ls == NULL) {
+    return;
+  }
+  tor_free(ls);
+}
+
+/* Return a newly allocated descriptor link specifier using the given extend
+ * info and requested type. Return NULL on error. */
+hs_desc_link_specifier_t *
+hs_desc_link_specifier_new(const extend_info_t *info, uint8_t type)
+{
+  hs_desc_link_specifier_t *ls = NULL;
+
+  tor_assert(info);
+
+  ls = tor_malloc_zero(sizeof(*ls));
+  ls->type = type;
+  switch (ls->type) {
+  case LS_IPV4:
+    if (info->addr.family != AF_INET) {
+      goto err;
+    }
+    tor_addr_copy(&ls->u.ap.addr, &info->addr);
+    ls->u.ap.port = info->port;
+    break;
+  case LS_IPV6:
+    if (info->addr.family != AF_INET6) {
+      goto err;
+    }
+    tor_addr_copy(&ls->u.ap.addr, &info->addr);
+    ls->u.ap.port = info->port;
+    break;
+  case LS_LEGACY_ID:
+    /* Bug out if the identity digest is not set */
+    if (BUG(tor_mem_is_zero(info->identity_digest,
+                            sizeof(info->identity_digest)))) {
+      goto err;
+    }
+    memcpy(ls->u.legacy_id, info->identity_digest, sizeof(ls->u.legacy_id));
+    break;
+  case LS_ED25519_ID:
+    /* ed25519 keys are optional for intro points */
+    if (ed25519_public_key_is_zero(&info->ed_identity)) {
+      goto err;
+    }
+    memcpy(ls->u.ed25519_id, info->ed_identity.pubkey,
+           sizeof(ls->u.ed25519_id));
+    break;
+  default:
+    /* Unknown type is code flow error. */
+    tor_assert(0);
+  }
+
+  return ls;
+ err:
+  tor_free(ls);
+  return NULL;
+}
+
+/* From the given descriptor, remove and free every introduction point. */
+void
+hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
+{
+  smartlist_t *ips;
+
+  tor_assert(desc);
+
+  ips = desc->encrypted_data.intro_points;
+  if (ips) {
+    SMARTLIST_FOREACH(ips, hs_desc_intro_point_t *,
+                      ip, hs_desc_intro_point_free(ip));
+    smartlist_clear(ips);
+  }
 }
 

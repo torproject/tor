@@ -421,15 +421,20 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_RENDDESC_V2 18
 /** A connection to a directory server: download a microdescriptor. */
 #define DIR_PURPOSE_FETCH_MICRODESC 19
-#define DIR_PURPOSE_MAX_ 19
+/** A connection to a hidden service directory: upload a v3 descriptor. */
+#define DIR_PURPOSE_UPLOAD_HSDESC 20
+/** A connection to a hidden service directory: fetch a v3 descriptor. */
+#define DIR_PURPOSE_FETCH_HSDESC 21
+#define DIR_PURPOSE_MAX_ 21
 
 /** True iff <b>p</b> is a purpose corresponding to uploading
  * data to a directory server. */
 #define DIR_PURPOSE_IS_UPLOAD(p)                \
   ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
    (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
-   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES || \
-   (p)==DIR_PURPOSE_UPLOAD_RENDDESC_V2)
+   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES ||        \
+   (p)==DIR_PURPOSE_UPLOAD_RENDDESC_V2 ||       \
+   (p)==DIR_PURPOSE_UPLOAD_HSDESC)
 
 #define EXIT_PURPOSE_MIN_ 1
 /** This exit stream wants to do an ordinary connect. */
@@ -850,6 +855,8 @@ rend_data_v2_t *TO_REND_DATA_V2(const rend_data_t *d)
 struct hs_ident_edge_conn_t;
 struct hs_ident_dir_conn_t;
 struct hs_ident_circuit_t;
+/* Stub because we can't include hs_common.h. */
+struct hsdir_index_t;
 
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple
@@ -2490,6 +2497,10 @@ typedef struct node_t {
   time_t last_reachable;        /* IPv4. */
   time_t last_reachable6;       /* IPv6. */
 
+  /* Hidden service directory index data. This is used by a service or client
+   * in order to know what's the hs directory index for this node at the time
+   * the consensus is set. */
+  struct hsdir_index_t *hsdir_index;
 } node_t;
 
 /** Linked list of microdesc hash lines for a single router in a directory
@@ -4615,6 +4626,9 @@ typedef struct {
   config_line_t *Guard;
 
   config_line_t *TransportProxies;
+
+  /** Cached revision counters for active hidden services on this host */
+  config_line_t *HidServRevCounter;
 
   /** These fields hold information on the history of bandwidth usage for
    * servers.  The "Ends" fields hold the time when we last updated the

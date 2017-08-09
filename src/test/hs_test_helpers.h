@@ -17,6 +17,9 @@ hs_descriptor_t *hs_helper_build_hs_desc_with_ip(
                                  const ed25519_keypair_t *signing_kp);
 void hs_helper_desc_equal(const hs_descriptor_t *desc1,
                           const hs_descriptor_t *desc2);
+void
+hs_helper_get_subcred_from_identity_keypair(ed25519_keypair_t *signing_kp,
+                                            uint8_t *subcred_out);
 
 #endif /* TOR_HS_TEST_HELPERS_H */
 

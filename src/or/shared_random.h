@@ -130,6 +130,9 @@ sr_commit_t *sr_generate_our_commit(time_t timestamp,
 char *sr_get_current_for_control(void);
 char *sr_get_previous_for_control(void);
 
+const sr_srv_t *sr_get_current(const networkstatus_t *ns);
+const sr_srv_t *sr_get_previous(const networkstatus_t *ns);
+
 #ifdef SHARED_RANDOM_PRIVATE
 
 /* Encode */

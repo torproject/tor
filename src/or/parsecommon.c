@@ -436,7 +436,7 @@ find_opt_by_keyword(smartlist_t *s, directory_keyword keyword)
  * in the same order in which they occur in <b>s</b>.  Otherwise return
  * NULL. */
 smartlist_t *
-find_all_by_keyword(smartlist_t *s, directory_keyword k)
+find_all_by_keyword(const smartlist_t *s, directory_keyword k)
 {
   smartlist_t *out = NULL;
   SMARTLIST_FOREACH(s, directory_token_t *, t,

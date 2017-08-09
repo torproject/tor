@@ -453,7 +453,7 @@ test_staging_service_v3(void *arg)
   /* Ok, we have a service in our map! Registration went well. */
   tt_int_op(get_hs_service_staging_list_size(), OP_EQ, 1);
   /* Make sure we don't have a magic v2 service out of this. */
-  tt_int_op(num_rend_services(), OP_EQ, 0);
+  tt_int_op(rend_num_services(), OP_EQ, 0);
 
  done:
   hs_free_all();

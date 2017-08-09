@@ -1393,12 +1393,19 @@ networkstatus_get_latest_consensus_by_flavor,(consensus_flavor_t f))
 MOCK_IMPL(networkstatus_t *,
 networkstatus_get_live_consensus,(time_t now))
 {
-  if (networkstatus_get_latest_consensus() &&
-      networkstatus_get_latest_consensus()->valid_after <= now &&
-      now <= networkstatus_get_latest_consensus()->valid_until)
-    return networkstatus_get_latest_consensus();
+  networkstatus_t *ns = networkstatus_get_latest_consensus();
+  if (ns && networkstatus_is_live(ns, now))
+    return ns;
   else
     return NULL;
+}
+
+/** Given a consensus in <b>ns</b>, return true iff currently live and
+ *  unexpired. */
+int
+networkstatus_is_live(const networkstatus_t *ns, time_t now)
+{
+  return (ns->valid_after <= now && now <= ns->valid_until);
 }
 
 /** Determine if <b>consensus</b> is valid or expired recently enough that

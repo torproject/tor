@@ -15,10 +15,119 @@
 
 #include "config.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "hs_cache.h"
 #include "hs_common.h"
 #include "hs_service.h"
 #include "rendcommon.h"
+#include "rendservice.h"
+#include "router.h"
+#include "shared_random.h"
+#include "shared_random_state.h"
+
+/* Ed25519 Basepoint value. Taken from section 5 of
+ * https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03 */
+static const char *str_ed25519_basepoint =
+  "(15112221349535400772501151409588531511"
+  "454012693041857206046113283949847762202, "
+  "463168356949264781694283940034751631413"
+  "07993866256225615783033603165251855960)";
+
+#ifdef HAVE_SYS_UN_H
+
+/** Given <b>ports</b>, a smarlist containing rend_service_port_config_t,
+ * add the given <b>p</b>, a AF_UNIX port to the list. Return 0 on success
+ * else return -ENOSYS if AF_UNIX is not supported (see function in the
+ * #else statement below). */
+static int
+add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
+{
+  tor_assert(ports);
+  tor_assert(p);
+  tor_assert(p->is_unix_addr);
+
+  smartlist_add(ports, p);
+  return 0;
+}
+
+/** Given <b>conn</b> set it to use the given port <b>p</b> values. Return 0
+ * on success else return -ENOSYS if AF_UNIX is not supported (see function
+ * in the #else statement below). */
+static int
+set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
+{
+  tor_assert(conn);
+  tor_assert(p);
+  tor_assert(p->is_unix_addr);
+
+  conn->base_.socket_family = AF_UNIX;
+  tor_addr_make_unspec(&conn->base_.addr);
+  conn->base_.port = 1;
+  conn->base_.address = tor_strdup(p->unix_addr);
+  return 0;
+}
+
+#else /* defined(HAVE_SYS_UN_H) */
+
+static int
+set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
+{
+  (void) conn;
+  (void) p;
+  return -ENOSYS;
+}
+
+static int
+add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
+{
+  (void) ports;
+  (void) p;
+  return -ENOSYS;
+}
+
+#endif /* HAVE_SYS_UN_H */
+
+/* Helper function: The key is a digest that we compare to a node_t object
+ * current hsdir_index. */
+static int
+compare_digest_to_current_hsdir_index(const void *_key, const void **_member)
+{
+  const char *key = _key;
+  const node_t *node = *_member;
+  return tor_memcmp(key, node->hsdir_index->current, DIGEST256_LEN);
+}
+
+/* Helper function: The key is a digest that we compare to a node_t object
+ * next hsdir_index. */
+static int
+compare_digest_to_next_hsdir_index(const void *_key, const void **_member)
+{
+  const char *key = _key;
+  const node_t *node = *_member;
+  return tor_memcmp(key, node->hsdir_index->next, DIGEST256_LEN);
+}
+
+/* Helper function: Compare two node_t objects current hsdir_index. */
+static int
+compare_node_current_hsdir_index(const void **a, const void **b)
+{
+  const node_t *node1= *a;
+  const node_t *node2 = *b;
+  return tor_memcmp(node1->hsdir_index->current,
+                    node2->hsdir_index->current,
+                    DIGEST256_LEN);
+}
+
+/* Helper function: Compare two node_t objects next hsdir_index. */
+static int
+compare_node_next_hsdir_index(const void **a, const void **b)
+{
+  const node_t *node1= *a;
+  const node_t *node2 = *b;
+  return tor_memcmp(node1->hsdir_index->next,
+                    node2->hsdir_index->next,
+                    DIGEST256_LEN);
+}
 
 /* Allocate and return a string containing the path to filename in directory.
  * This function will never return NULL. The caller must free this path. */
@@ -72,6 +181,17 @@ hs_check_service_private_dir(const char *username, const char *path,
 STATIC uint64_t
 get_time_period_length(void)
 {
+  /* If we are on a test network, make the time period smaller than normal so
+     that we actually see it rotate. Specifically, make it the same length as
+     an SRV protocol run. */
+  if (get_options()->TestingTorNetwork) {
+    unsigned run_duration = sr_state_get_protocol_run_duration();
+    /* An SRV run should take more than a minute (it's 24 rounds) */
+    tor_assert_nonfatal(run_duration > 60);
+    /* Turn it from seconds to minutes before returning: */
+    return sr_state_get_protocol_run_duration() / 60;
+  }
+
   int32_t time_period_length = networkstatus_get_param(NULL, "hsdir-interval",
                                              HS_TIME_PERIOD_LENGTH_DEFAULT,
                                              HS_TIME_PERIOD_LENGTH_MIN,
@@ -83,17 +203,22 @@ get_time_period_length(void)
 }
 
 /** Get the HS time period number at time <b>now</b> */
-STATIC uint64_t
-get_time_period_num(time_t now)
+uint64_t
+hs_get_time_period_num(time_t now)
 {
   uint64_t time_period_num;
+
+  /* Start by calculating minutes since the epoch */
   uint64_t time_period_length = get_time_period_length();
   uint64_t minutes_since_epoch = now / 60;
 
-  /* Now subtract half a day to fit the prop224 time period schedule (see
-   * section [TIME-PERIODS]). */
-  tor_assert(minutes_since_epoch > HS_TIME_PERIOD_ROTATION_OFFSET);
-  minutes_since_epoch -= HS_TIME_PERIOD_ROTATION_OFFSET;
+  /* Apply the rotation offset as specified by prop224 (section
+   * [TIME-PERIODS]), so that new time periods synchronize nicely with SRV
+   * publication */
+  unsigned int time_period_rotation_offset = sr_state_get_phase_duration();
+  time_period_rotation_offset /= 60; /* go from seconds to minutes */
+  tor_assert(minutes_since_epoch > time_period_rotation_offset);
+  minutes_since_epoch -= time_period_rotation_offset;
 
   /* Calculate the time period */
   time_period_num = minutes_since_epoch / time_period_length;
@@ -105,7 +230,22 @@ get_time_period_num(time_t now)
 uint64_t
 hs_get_next_time_period_num(time_t now)
 {
-  return get_time_period_num(now) + 1;
+  return hs_get_time_period_num(now) + 1;
+}
+
+/* Return the start time of the upcoming time period based on <b>now</b>. */
+time_t
+hs_get_start_time_of_next_time_period(time_t now)
+{
+  uint64_t time_period_length = get_time_period_length();
+
+  /* Get start time of next time period */
+  uint64_t next_time_period_num = hs_get_next_time_period_num(now);
+  uint64_t start_of_next_tp_in_mins = next_time_period_num *time_period_length;
+
+  /* Apply rotation offset as specified by prop224 section [TIME-PERIODS] */
+  unsigned int time_period_rotation_offset = sr_state_get_phase_duration();
+  return start_of_next_tp_in_mins * 60 + time_period_rotation_offset;
 }
 
 /* Create a new rend_data_t for a specific given <b>version</b>.
@@ -360,6 +500,148 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
   }
 }
 
+/* Using the given time period number, compute the disaster shared random
+ * value and put it in srv_out. It MUST be at least DIGEST256_LEN bytes. */
+static void
+compute_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
+{
+  crypto_digest_t *digest;
+
+  tor_assert(srv_out);
+
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+
+  /* Start setting up payload:
+   *  H("shared-random-disaster" | INT_8(period_length) | INT_8(period_num)) */
+  crypto_digest_add_bytes(digest, HS_SRV_DISASTER_PREFIX,
+                          HS_SRV_DISASTER_PREFIX_LEN);
+
+  /* Setup INT_8(period_length) | INT_8(period_num) */
+  {
+    uint64_t time_period_length = get_time_period_length();
+    char period_stuff[sizeof(uint64_t)*2];
+    size_t offset = 0;
+    set_uint64(period_stuff, tor_htonll(time_period_length));
+    offset += sizeof(uint64_t);
+    set_uint64(period_stuff+offset, tor_htonll(time_period_num));
+    offset += sizeof(uint64_t);
+    tor_assert(offset == sizeof(period_stuff));
+
+    crypto_digest_add_bytes(digest, period_stuff,  sizeof(period_stuff));
+  }
+
+  crypto_digest_get_digest(digest, (char *) srv_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+}
+
+/** Due to the high cost of computing the disaster SRV and that potentially we
+ *  would have to do it thousands of times in a row, we always cache the
+ *  computer disaster SRV (and its corresponding time period num) in case we
+ *  want to reuse it soon after. We need to cache two SRVs, one for each active
+ *  time period (in case of overlap mode).
+ */
+static uint8_t cached_disaster_srv[2][DIGEST256_LEN];
+static uint64_t cached_time_period_nums[2] = {0};
+
+/** Compute the disaster SRV value for this <b>time_period_num</b> and put it
+ *  in <b>srv_out</b> (of size at least DIGEST256_LEN). First check our caches
+ *  to see if we have already computed it. */
+STATIC void
+get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
+{
+  if (time_period_num == cached_time_period_nums[0]) {
+    memcpy(srv_out, cached_disaster_srv[0], DIGEST256_LEN);
+    return;
+  } else if (time_period_num == cached_time_period_nums[1]) {
+    memcpy(srv_out, cached_disaster_srv[1], DIGEST256_LEN);
+    return;
+  } else {
+    int replace_idx;
+    // Replace the lower period number.
+    if (cached_time_period_nums[0] <= cached_time_period_nums[1]) {
+      replace_idx = 0;
+    } else {
+      replace_idx = 1;
+    }
+    cached_time_period_nums[replace_idx] = time_period_num;
+    compute_disaster_srv(time_period_num, cached_disaster_srv[replace_idx]);
+    memcpy(srv_out, cached_disaster_srv[replace_idx], DIGEST256_LEN);
+    return;
+  }
+}
+
+#ifdef TOR_UNIT_TESTS
+
+/** Get the first cached disaster SRV. Only used by unittests. */
+STATIC uint8_t *
+get_first_cached_disaster_srv(void)
+{
+  return cached_disaster_srv[0];
+}
+
+/** Get the second cached disaster SRV. Only used by unittests. */
+STATIC uint8_t *
+get_second_cached_disaster_srv(void)
+{
+  return cached_disaster_srv[1];
+}
+
+#endif
+
+/* When creating a blinded key, we need a parameter which construction is as
+ * follow: H(pubkey | [secret] | ed25519-basepoint | nonce).
+ *
+ * The nonce has a pre-defined format which uses the time period number
+ * period_num and the start of the period in second start_time_period.
+ *
+ * The secret of size secret_len is optional meaning that it can be NULL and
+ * thus will be ignored for the param construction.
+ *
+ * The result is put in param_out. */
+static void
+build_blinded_key_param(const ed25519_public_key_t *pubkey,
+                        const uint8_t *secret, size_t secret_len,
+                        uint64_t period_num, uint64_t period_length,
+                        uint8_t *param_out)
+{
+  size_t offset = 0;
+  const char blind_str[] = "Derive temporary signing key";
+  uint8_t nonce[HS_KEYBLIND_NONCE_LEN];
+  crypto_digest_t *digest;
+
+  tor_assert(pubkey);
+  tor_assert(param_out);
+
+  /* Create the nonce N. The construction is as follow:
+   *    N = "key-blind" || INT_8(period_num) || INT_8(period_length) */
+  memcpy(nonce, HS_KEYBLIND_NONCE_PREFIX, HS_KEYBLIND_NONCE_PREFIX_LEN);
+  offset += HS_KEYBLIND_NONCE_PREFIX_LEN;
+  set_uint64(nonce + offset, tor_htonll(period_num));
+  offset += sizeof(uint64_t);
+  set_uint64(nonce + offset, tor_htonll(period_length));
+  offset += sizeof(uint64_t);
+  tor_assert(offset == HS_KEYBLIND_NONCE_LEN);
+
+  /* Generate the parameter h and the construction is as follow:
+   *    h = H(BLIND_STRING | pubkey | [secret] | ed25519-basepoint | N) */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, blind_str, sizeof(blind_str));
+  crypto_digest_add_bytes(digest, (char *) pubkey, ED25519_PUBKEY_LEN);
+  /* Optional secret. */
+  if (secret) {
+    crypto_digest_add_bytes(digest, (char *) secret, secret_len);
+  }
+  crypto_digest_add_bytes(digest, str_ed25519_basepoint,
+                          strlen(str_ed25519_basepoint));
+  crypto_digest_add_bytes(digest, (char *) nonce, sizeof(nonce));
+
+  /* Extract digest and put it in the param. */
+  crypto_digest_get_digest(digest, (char *) param_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+
+  memwipe(nonce, 0, sizeof(nonce));
+}
+
 /* Using an ed25519 public key and version to build the checksum of an
  * address. Put in checksum_out. Format is:
  *    SHA3-256(".onion checksum" || PUBKEY || VERSION)
@@ -440,6 +722,98 @@ hs_parse_address_impl(const char *address, ed25519_public_key_t *key_out,
   offset += sizeof(uint8_t);
   /* Extra safety. */
   tor_assert(offset == HS_SERVICE_ADDR_LEN);
+}
+
+/* Using the given identity public key and a blinded public key, compute the
+ * subcredential and put it in subcred_out (must be of size DIGEST256_LEN).
+ * This can't fail. */
+void
+hs_get_subcredential(const ed25519_public_key_t *identity_pk,
+                     const ed25519_public_key_t *blinded_pk,
+                     uint8_t *subcred_out)
+{
+  uint8_t credential[DIGEST256_LEN];
+  crypto_digest_t *digest;
+
+  tor_assert(identity_pk);
+  tor_assert(blinded_pk);
+  tor_assert(subcred_out);
+
+  /* First, build the credential. Construction is as follow:
+   *  credential = H("credential" | public-identity-key) */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HS_CREDENTIAL_PREFIX,
+                          HS_CREDENTIAL_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) identity_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+  crypto_digest_get_digest(digest, (char *) credential, DIGEST256_LEN);
+  crypto_digest_free(digest);
+
+  /* Now, compute the subcredential. Construction is as follow:
+   *  subcredential = H("subcredential" | credential | blinded-public-key). */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HS_SUBCREDENTIAL_PREFIX,
+                          HS_SUBCREDENTIAL_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) credential,
+                          sizeof(credential));
+  crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+  crypto_digest_get_digest(digest, (char *) subcred_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+
+  memwipe(credential, 0, sizeof(credential));
+}
+
+/* From the given list of hidden service ports, find the ones that much the
+ * given edge connection conn, pick one at random and use it to set the
+ * connection address. Return 0 on success or -1 if none. */
+int
+hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
+{
+  rend_service_port_config_t *chosen_port;
+  unsigned int warn_once = 0;
+  smartlist_t *matching_ports;
+
+  tor_assert(ports);
+  tor_assert(conn);
+
+  matching_ports = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(ports, rend_service_port_config_t *, p) {
+    if (TO_CONN(conn)->port != p->virtual_port) {
+      continue;
+    }
+    if (!(p->is_unix_addr)) {
+      smartlist_add(matching_ports, p);
+    } else {
+      if (add_unix_port(matching_ports, p)) {
+        if (!warn_once) {
+          /* Unix port not supported so warn only once. */
+          log_warn(LD_REND, "Saw AF_UNIX virtual port mapping for port %d "
+                            "which is unsupported on this platform. "
+                            "Ignoring it.",
+                   TO_CONN(conn)->port);
+        }
+        warn_once++;
+      }
+    }
+  } SMARTLIST_FOREACH_END(p);
+
+  chosen_port = smartlist_choose(matching_ports);
+  smartlist_free(matching_ports);
+  if (chosen_port) {
+    if (!(chosen_port->is_unix_addr)) {
+      /* Get a non-AF_UNIX connection ready for connection_exit_connect() */
+      tor_addr_copy(&TO_CONN(conn)->addr, &chosen_port->real_addr);
+      TO_CONN(conn)->port = chosen_port->real_port;
+    } else {
+      if (set_unix_port(conn, chosen_port)) {
+        /* Simply impossible to end up here else we were able to add a Unix
+         * port without AF_UNIX support... ? */
+        tor_assert(0);
+      }
+    }
+  }
+  return (chosen_port) ? 0 : -1;
 }
 
 /* Using a base32 representation of a service address, parse its content into
@@ -541,6 +915,404 @@ hs_build_address(const ed25519_public_key_t *key, uint8_t version,
   tor_assert(hs_address_is_valid(addr_out));
 }
 
+/* Return a newly allocated copy of lspec. */
+link_specifier_t *
+hs_link_specifier_dup(const link_specifier_t *lspec)
+{
+  link_specifier_t *dup = link_specifier_new();
+  memcpy(dup, lspec, sizeof(*dup));
+  /* The unrecognized field is a dynamic array so make sure to copy its
+   * content and not the pointer. */
+  link_specifier_setlen_un_unrecognized(
+                        dup, link_specifier_getlen_un_unrecognized(lspec));
+  if (link_specifier_getlen_un_unrecognized(dup)) {
+    memcpy(link_specifier_getarray_un_unrecognized(dup),
+           link_specifier_getconstarray_un_unrecognized(lspec),
+           link_specifier_getlen_un_unrecognized(dup));
+  }
+  return dup;
+}
+
+/* From a given ed25519 public key pk and an optional secret, compute a
+ * blinded public key and put it in blinded_pk_out. This is only useful to
+ * the client side because the client only has access to the identity public
+ * key of the service. */
+void
+hs_build_blinded_pubkey(const ed25519_public_key_t *pk,
+                        const uint8_t *secret, size_t secret_len,
+                        uint64_t time_period_num,
+                        ed25519_public_key_t *blinded_pk_out)
+{
+  /* Our blinding key API requires a 32 bytes parameter. */
+  uint8_t param[DIGEST256_LEN];
+
+  tor_assert(pk);
+  tor_assert(blinded_pk_out);
+  tor_assert(!tor_mem_is_zero((char *) pk, ED25519_PUBKEY_LEN));
+
+  build_blinded_key_param(pk, secret, secret_len,
+                          time_period_num, get_time_period_length(), param);
+  ed25519_public_blind(blinded_pk_out, pk, param);
+
+  memwipe(param, 0, sizeof(param));
+}
+
+/* From a given ed25519 keypair kp and an optional secret, compute a blinded
+ * keypair for the current time period and put it in blinded_kp_out. This is
+ * only useful by the service side because the client doesn't have access to
+ * the identity secret key. */
+void
+hs_build_blinded_keypair(const ed25519_keypair_t *kp,
+                         const uint8_t *secret, size_t secret_len,
+                         uint64_t time_period_num,
+                         ed25519_keypair_t *blinded_kp_out)
+{
+  /* Our blinding key API requires a 32 bytes parameter. */
+  uint8_t param[DIGEST256_LEN];
+
+  tor_assert(kp);
+  tor_assert(blinded_kp_out);
+  /* Extra safety. A zeroed key is bad. */
+  tor_assert(!tor_mem_is_zero((char *) &kp->pubkey, ED25519_PUBKEY_LEN));
+  tor_assert(!tor_mem_is_zero((char *) &kp->seckey, ED25519_SECKEY_LEN));
+
+  build_blinded_key_param(&kp->pubkey, secret, secret_len,
+                          time_period_num, get_time_period_length(), param);
+  ed25519_keypair_blind(blinded_kp_out, kp, param);
+
+  memwipe(param, 0, sizeof(param));
+}
+
+/* Return true if overlap mode is active given the date in consensus. If
+ * consensus is NULL, then we use the latest live consensus we can find. */
+MOCK_IMPL(int,
+hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
+{
+  time_t valid_after;
+  time_t srv_start_time, tp_start_time;
+
+  if (!consensus) {
+    consensus = networkstatus_get_live_consensus(now);
+    if (!consensus) {
+      return 0;
+    }
+  }
+
+  /* We consider to be in overlap mode when we are in the period of time
+   * between a fresh SRV and the beginning of the new time period (in the
+   * normal network this is between 00:00 (inclusive) and 12:00 UTC
+   * (exclusive)) */
+  valid_after = consensus->valid_after;
+  srv_start_time =sr_state_get_start_time_of_current_protocol_run(valid_after);
+  tp_start_time = hs_get_start_time_of_next_time_period(srv_start_time);
+
+  if (valid_after >= srv_start_time && valid_after < tp_start_time) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/* Return 1 if any virtual port in ports needs a circuit with good uptime.
+ * Else return 0. */
+int
+hs_service_requires_uptime_circ(const smartlist_t *ports)
+{
+  tor_assert(ports);
+
+  SMARTLIST_FOREACH_BEGIN(ports, rend_service_port_config_t *, p) {
+    if (smartlist_contains_int_as_string(get_options()->LongLivedPorts,
+                                         p->virtual_port)) {
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(p);
+  return 0;
+}
+
+/* Build hs_index which is used to find the responsible hsdirs. This index
+ * value is used to select the responsible HSDir where their hsdir_index is
+ * closest to this value.
+ *    SHA3-256("store-at-idx" | blinded_public_key |
+ *             INT_8(replicanum) | INT_8(period_length) | INT_8(period_num) )
+ *
+ * hs_index_out must be large enough to receive DIGEST256_LEN bytes. */
+void
+hs_build_hs_index(uint64_t replica, const ed25519_public_key_t *blinded_pk,
+                  uint64_t period_num, uint8_t *hs_index_out)
+{
+  crypto_digest_t *digest;
+
+  tor_assert(blinded_pk);
+  tor_assert(hs_index_out);
+
+  /* Build hs_index. See construction at top of function comment. */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HS_INDEX_PREFIX, HS_INDEX_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) blinded_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+
+  /* Now setup INT_8(replicanum) | INT_8(period_length) | INT_8(period_num) */
+  {
+    uint64_t period_length = get_time_period_length();
+    char buf[sizeof(uint64_t)*3];
+    size_t offset = 0;
+    set_uint64(buf, tor_htonll(replica));
+    offset += sizeof(uint64_t);
+    set_uint64(buf+offset, tor_htonll(period_length));
+    offset += sizeof(uint64_t);
+    set_uint64(buf+offset, tor_htonll(period_num));
+    offset += sizeof(uint64_t);
+    tor_assert(offset == sizeof(buf));
+
+    crypto_digest_add_bytes(digest, buf, sizeof(buf));
+  }
+
+  crypto_digest_get_digest(digest, (char *) hs_index_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+}
+
+/* Build hsdir_index which is used to find the responsible hsdirs. This is the
+ * index value that is compare to the hs_index when selecting an HSDir.
+ *    SHA3-256("node-idx" | node_identity |
+ *             shared_random_value | INT_8(period_length) | INT_8(period_num) )
+ *
+ * hsdir_index_out must be large enough to receive DIGEST256_LEN bytes. */
+void
+hs_build_hsdir_index(const ed25519_public_key_t *identity_pk,
+                     const uint8_t *srv_value, uint64_t period_num,
+                     uint8_t *hsdir_index_out)
+{
+  crypto_digest_t *digest;
+
+  tor_assert(identity_pk);
+  tor_assert(srv_value);
+  tor_assert(hsdir_index_out);
+
+  /* Build hsdir_index. See construction at top of function comment. */
+  digest = crypto_digest256_new(DIGEST_SHA3_256);
+  crypto_digest_add_bytes(digest, HSDIR_INDEX_PREFIX, HSDIR_INDEX_PREFIX_LEN);
+  crypto_digest_add_bytes(digest, (const char *) identity_pk->pubkey,
+                          ED25519_PUBKEY_LEN);
+  crypto_digest_add_bytes(digest, (const char *) srv_value, DIGEST256_LEN);
+
+  {
+    uint64_t time_period_length = get_time_period_length();
+    char period_stuff[sizeof(uint64_t)*2];
+    size_t offset = 0;
+    set_uint64(period_stuff, tor_htonll(period_num));
+    offset += sizeof(uint64_t);
+    set_uint64(period_stuff+offset, tor_htonll(time_period_length));
+    offset += sizeof(uint64_t);
+    tor_assert(offset == sizeof(period_stuff));
+
+    crypto_digest_add_bytes(digest, period_stuff,  sizeof(period_stuff));
+  }
+
+  crypto_digest_get_digest(digest, (char *) hsdir_index_out, DIGEST256_LEN);
+  crypto_digest_free(digest);
+}
+
+/* Return a newly allocated buffer containing the current shared random value
+ * or if not present, a disaster value is computed using the given time period
+ * number. If a consensus is provided in <b>ns</b>, use it to get the SRV
+ * value. This function can't fail. */
+uint8_t *
+hs_get_current_srv(uint64_t time_period_num, const networkstatus_t *ns)
+{
+  uint8_t *sr_value = tor_malloc_zero(DIGEST256_LEN);
+  const sr_srv_t *current_srv = sr_get_current(ns);
+
+  if (current_srv) {
+    memcpy(sr_value, current_srv->value, sizeof(current_srv->value));
+  } else {
+    /* Disaster mode. */
+    get_disaster_srv(time_period_num, sr_value);
+  }
+  return sr_value;
+}
+
+/* Return a newly allocated buffer containing the previous shared random
+ * value or if not present, a disaster value is computed using the given time
+ * period number. This function can't fail. */
+uint8_t *
+hs_get_previous_srv(uint64_t time_period_num, const networkstatus_t *ns)
+{
+  uint8_t *sr_value = tor_malloc_zero(DIGEST256_LEN);
+  const sr_srv_t *previous_srv = sr_get_previous(ns);
+
+  if (previous_srv) {
+    memcpy(sr_value, previous_srv->value, sizeof(previous_srv->value));
+  } else {
+    /* Disaster mode. */
+    get_disaster_srv(time_period_num, sr_value);
+  }
+  return sr_value;
+}
+
+/* Return the number of replicas defined by a consensus parameter or the
+ * default value. */
+int32_t
+hs_get_hsdir_n_replicas(void)
+{
+  /* The [1,16] range is a specification requirement. */
+  return networkstatus_get_param(NULL, "hsdir_n_replicas",
+                                 HS_DEFAULT_HSDIR_N_REPLICAS, 1, 16);
+}
+
+/* Return the spread fetch value defined by a consensus parameter or the
+ * default value. */
+int32_t
+hs_get_hsdir_spread_fetch(void)
+{
+  /* The [1,128] range is a specification requirement. */
+  return networkstatus_get_param(NULL, "hsdir_spread_fetch",
+                                 HS_DEFAULT_HSDIR_SPREAD_FETCH, 1, 128);
+}
+
+/* Return the spread store value defined by a consensus parameter or the
+ * default value. */
+int32_t
+hs_get_hsdir_spread_store(void)
+{
+  /* The [1,128] range is a specification requirement. */
+  return networkstatus_get_param(NULL, "hsdir_spread_store",
+                                 HS_DEFAULT_HSDIR_SPREAD_STORE, 1, 128);
+}
+
+/** <b>node</b> is an HSDir so make sure that we have assigned an hsdir index.
+ *  Return 0 if everything is as expected, else return -1. */
+static int
+node_has_hsdir_index(const node_t *node)
+{
+  tor_assert(node_supports_v3_hsdir(node));
+
+  /* A node can't have an HSDir index without a descriptor since we need desc
+   * to get its ed25519 key */
+  if (!node_has_descriptor(node)) {
+    return 0;
+  }
+
+  /* At this point, since the node has a desc, this node must also have an
+   * hsdir index. If not, something went wrong, so BUG out. */
+  if (BUG(node->hsdir_index == NULL) ||
+      BUG(tor_mem_is_zero((const char*)node->hsdir_index->current,
+                          DIGEST256_LEN))) {
+    return 0;
+  }
+
+  return 1;
+}
+
+/* For a given blinded key and time period number, get the responsible HSDir
+ * and put their routerstatus_t object in the responsible_dirs list. If
+ * is_next_period is true, the next hsdir_index of the node_t is used. If
+ * is_client is true, the spread fetch consensus parameter is used else the
+ * spread store is used which is only for upload. This function can't fail but
+ * it is possible that the responsible_dirs list contains fewer nodes than
+ * expected.
+ *
+ * This function goes over the latest consensus routerstatus list and sorts it
+ * by their node_t hsdir_index then does a binary search to find the closest
+ * node. All of this makes it a bit CPU intensive so use it wisely. */
+void
+hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
+                          uint64_t time_period_num, int is_next_period,
+                          int is_client, smartlist_t *responsible_dirs)
+{
+  smartlist_t *sorted_nodes;
+  /* The compare function used for the smartlist bsearch. We have two
+   * different depending on is_next_period. */
+  int (*cmp_fct)(const void *, const void **);
+
+  tor_assert(blinded_pk);
+  tor_assert(responsible_dirs);
+
+  sorted_nodes = smartlist_new();
+
+  /* Add every node_t that support HSDir v3 for which we do have a valid
+   * hsdir_index already computed for them for this consensus. */
+  {
+    networkstatus_t *c = networkstatus_get_latest_consensus();
+    if (!c || smartlist_len(c->routerstatus_list) == 0) {
+      log_warn(LD_REND, "No valid consensus so we can't get the responsible "
+                        "hidden service directories.");
+      goto done;
+    }
+    SMARTLIST_FOREACH_BEGIN(c->routerstatus_list, const routerstatus_t *, rs) {
+      /* Even though this node_t object won't be modified and should be const,
+       * we can't add const object in a smartlist_t. */
+      node_t *n = node_get_mutable_by_id(rs->identity_digest);
+      tor_assert(n);
+      if (node_supports_v3_hsdir(n) && rs->is_hs_dir) {
+        if (!node_has_hsdir_index(n)) {
+          log_info(LD_GENERAL, "Node %s was found without hsdir index.",
+                   node_describe(n));
+          continue;
+        }
+        smartlist_add(sorted_nodes, n);
+      }
+    } SMARTLIST_FOREACH_END(rs);
+  }
+  if (smartlist_len(sorted_nodes) == 0) {
+    log_warn(LD_REND, "No nodes found to be HSDir or supporting v3.");
+    goto done;
+  }
+
+  /* First thing we have to do is sort all node_t by hsdir_index. The
+   * is_next_period tells us if we want the current or the next one. Set the
+   * bsearch compare function also while we are at it. */
+  if (is_next_period) {
+    smartlist_sort(sorted_nodes, compare_node_next_hsdir_index);
+    cmp_fct = compare_digest_to_next_hsdir_index;
+  } else {
+    smartlist_sort(sorted_nodes, compare_node_current_hsdir_index);
+    cmp_fct = compare_digest_to_current_hsdir_index;
+  }
+
+  /* For all replicas, we'll select a set of HSDirs using the consensus
+   * parameters and the sorted list. The replica starting at value 1 is
+   * defined by the specification. */
+  for (int replica = 1; replica <= hs_get_hsdir_n_replicas(); replica++) {
+    int idx, start, found, n_added = 0;
+    uint8_t hs_index[DIGEST256_LEN] = {0};
+    /* Number of node to add to the responsible dirs list depends on if we are
+     * trying to fetch or store. A client always fetches. */
+    int n_to_add = (is_client) ? hs_get_hsdir_spread_fetch() :
+                                 hs_get_hsdir_spread_store();
+
+    /* Get the index that we should use to select the node. */
+    hs_build_hs_index(replica, blinded_pk, time_period_num, hs_index);
+    /* The compare function pointer has been set correctly earlier. */
+    start = idx = smartlist_bsearch_idx(sorted_nodes, hs_index, cmp_fct,
+                                        &found);
+    /* Getting the length of the list if no member is greater than the key we
+     * are looking for so start at the first element. */
+    if (idx == smartlist_len(sorted_nodes)) {
+      start = idx = 0;
+    }
+    while (n_added < n_to_add) {
+      const node_t *node = smartlist_get(sorted_nodes, idx);
+      /* If the node has already been selected which is possible between
+       * replicas, the specification says to skip over. */
+      if (!smartlist_contains(responsible_dirs, node->rs)) {
+        smartlist_add(responsible_dirs, node->rs);
+        ++n_added;
+      }
+      if (++idx == smartlist_len(sorted_nodes)) {
+        /* Wrap if we've reached the end of the list. */
+        idx = 0;
+      }
+      if (idx == start) {
+        /* We've gone over the whole list, stop and avoid infinite loop. */
+        break;
+      }
+    }
+  }
+
+ done:
+  smartlist_free(sorted_nodes);
+}
+
 /* Initialize the entire HS subsytem. This is called in tor_init() before any
  * torrc options are loaded. Only for >= v3. */
 void
@@ -559,5 +1331,39 @@ hs_free_all(void)
   hs_circuitmap_free_all();
   hs_service_free_all();
   hs_cache_free_all();
+}
+
+/* For the given origin circuit circ, decrement the number of rendezvous
+ * stream counter. This handles every hidden service version. */
+void
+hs_dec_rdv_stream_counter(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circ->rend_data) {
+    circ->rend_data->nr_streams--;
+  } else if (circ->hs_ident) {
+    circ->hs_ident->num_rdv_streams--;
+  } else {
+    /* Should not be called if this circuit is not for hidden service. */
+    tor_assert_nonfatal_unreached();
+  }
+}
+
+/* For the given origin circuit circ, increment the number of rendezvous
+ * stream counter. This handles every hidden service version. */
+void
+hs_inc_rdv_stream_counter(origin_circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circ->rend_data) {
+    circ->rend_data->nr_streams++;
+  } else if (circ->hs_ident) {
+    circ->hs_ident->num_rdv_streams++;
+  } else {
+    /* Should not be called if this circuit is not for hidden service. */
+    tor_assert_nonfatal_unreached();
+  }
 }
 

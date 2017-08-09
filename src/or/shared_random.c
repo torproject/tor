@@ -1390,6 +1390,52 @@ sr_get_previous_for_control(void)
   return srv_str;
 }
 
+/* Return current shared random value from the latest consensus. Caller can
+ * NOT keep a reference to the returned pointer. Return NULL if none. */
+const sr_srv_t *
+sr_get_current(const networkstatus_t *ns)
+{
+  const networkstatus_t *consensus;
+
+  /* Use provided ns else get a live one */
+  if (ns) {
+    consensus = ns;
+  } else {
+    consensus = networkstatus_get_live_consensus(approx_time());
+  }
+  /* Ideally we would never be asked for an SRV without a live consensus. Make
+   * sure this assumption is correct. */
+  tor_assert_nonfatal(consensus);
+
+  if (consensus) {
+    return consensus->sr_info.current_srv;
+  }
+  return NULL;
+}
+
+/* Return previous shared random value from the latest consensus. Caller can
+ * NOT keep a reference to the returned pointer. Return NULL if none. */
+const sr_srv_t *
+sr_get_previous(const networkstatus_t *ns)
+{
+  const networkstatus_t *consensus;
+
+  /* Use provided ns else get a live one */
+  if (ns) {
+    consensus = ns;
+  } else {
+    consensus = networkstatus_get_live_consensus(approx_time());
+  }
+  /* Ideally we would never be asked for an SRV without a live consensus. Make
+   * sure this assumption is correct. */
+  tor_assert_nonfatal(consensus);
+
+  if (consensus) {
+    return consensus->sr_info.previous_srv;
+  }
+  return NULL;
+}
+
 #ifdef TOR_UNIT_TESTS
 
 /* Set the global value of number of SRV agreements so the test can play

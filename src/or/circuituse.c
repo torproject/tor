@@ -43,6 +43,7 @@
 #include "entrynodes.h"
 #include "hs_common.h"
 #include "hs_client.h"
+#include "hs_circuit.h"
 #include "hs_ident.h"
 #include "nodelist.h"
 #include "networkstatus.h"
@@ -782,7 +783,7 @@ circuit_expire_building(void)
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
       TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
-      rend_service_relaunch_rendezvous(TO_ORIGIN_CIRCUIT(victim));
+      hs_circ_retry_service_rendezvous_point(TO_ORIGIN_CIRCUIT(victim));
       continue;
     }
 
@@ -1113,11 +1114,32 @@ needs_exit_circuits(time_t now, int *needs_uptime, int *needs_capacity)
 /* Return true if we need any more hidden service server circuits.
  * HS servers only need an internal circuit. */
 STATIC int
-needs_hs_server_circuits(int num_uptime_internal)
+needs_hs_server_circuits(time_t now, int num_uptime_internal)
 {
-  return (num_rend_services() &&
-          num_uptime_internal < SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS &&
-          router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
+  if (!rend_num_services() && !hs_service_get_num_services()) {
+    /* No services, we don't need anything. */
+    goto no_need;
+  }
+
+  if (num_uptime_internal >= SUFFICIENT_UPTIME_INTERNAL_HS_SERVERS) {
+    /* We have sufficient amount of internal circuit. */
+    goto no_need;
+  }
+
+  if (router_have_consensus_path() == CONSENSUS_PATH_UNKNOWN) {
+    /* Consensus hasn't been checked or might be invalid so requesting
+     * internal circuits is not wise. */
+    goto no_need;
+  }
+
+  /* At this point, we need a certain amount of circuits and we will most
+   * likely use them for rendezvous so we note down the use of internal
+   * circuit for our prediction for circuit needing uptime and capacity. */
+  rep_hist_note_used_internal(now, 1, 1);
+
+  return 1;
+ no_need:
+  return 0;
 }
 
 /* We need at least this many internal circuits for hidden service clients */
@@ -1216,7 +1238,7 @@ circuit_predict_and_launch_new(void)
     return;
   }
 
-  if (needs_hs_server_circuits(num_uptime_internal)) {
+  if (needs_hs_server_circuits(now, num_uptime_internal)) {
     flags = (CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_NEED_UPTIME |
              CIRCLAUNCH_IS_INTERNAL);
 
@@ -1279,11 +1301,6 @@ circuit_build_needed_circs(time_t now)
    * This allows HSs to function in a consensus without exits. */
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN)
     connection_ap_rescan_and_attach_pending();
-
-  /* make sure any hidden services have enough intro points
-   * HS intro point streams only require an internal circuit */
-  if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN)
-    rend_consider_services_intro_points();
 
   circuit_expire_old_circs_as_needed(now);
 
@@ -1366,8 +1383,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
        * number of streams on the circuit associated with the rend service.
        */
       if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
-        tor_assert(origin_circ->rend_data);
-        origin_circ->rend_data->nr_streams--;
+        hs_dec_rdv_stream_counter(origin_circ);
       }
       return;
     }
@@ -1641,11 +1657,11 @@ circuit_has_opened(origin_circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       /* at the service, waiting for introductions */
-      rend_service_intro_has_opened(circ);
+      hs_service_circuit_has_opened(circ);
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at the service, connecting to rend point */
-      rend_service_rendezvous_has_opened(circ);
+      hs_service_circuit_has_opened(circ);
       break;
     case CIRCUIT_PURPOSE_TESTING:
       circuit_testing_opened(circ);
@@ -1795,7 +1811,7 @@ circuit_build_failed(origin_circuit_t *circ)
                "(%s hop failed).",
                escaped(build_state_get_exit_nickname(circ->build_state)),
                failed_at_last_hop?"last":"non-last");
-      rend_service_relaunch_rendezvous(circ);
+      hs_circ_retry_service_rendezvous_point(circ);
       break;
     /* default:
      * This won't happen in normal operation, but might happen if the

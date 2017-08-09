@@ -83,22 +83,6 @@ static smartlist_t* rend_get_service_list_mutable(
                                   smartlist_t* substitute_service_list);
 static int rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted);
 
-/** Represents the mapping from a virtual port of a rendezvous service to
- * a real port on some IP.
- */
-struct rend_service_port_config_s {
-  /* The incoming HS virtual port we're mapping */
-  uint16_t virtual_port;
-  /* Is this an AF_UNIX port? */
-  unsigned int is_unix_addr:1;
-  /* The outgoing TCP port to use, if !is_unix_addr */
-  uint16_t real_port;
-  /* The outgoing IPv4 or IPv6 address to use, if !is_unix_addr */
-  tor_addr_t real_addr;
-  /* The socket path to connect to, if is_unix_addr */
-  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
-};
-
 /* Hidden service directory file names:
  * new file names should be added to rend_service_add_filenames_to_list()
  * for sandboxing purposes. */
@@ -164,7 +148,7 @@ rend_service_escaped_dir(const struct rend_service_t *s)
 
 /** Return the number of rendezvous services we have configured. */
 int
-num_rend_services(void)
+rend_num_services(void)
 {
   if (!rend_service_list)
     return 0;
@@ -1694,24 +1678,6 @@ rend_service_get_by_service_id(const char *id)
   return NULL;
 }
 
-/** Return 1 if any virtual port in <b>service</b> wants a circuit
- * to have good uptime. Else return 0.
- */
-static int
-rend_service_requires_uptime(rend_service_t *service)
-{
-  int i;
-  rend_service_port_config_t *p;
-
-  for (i=0; i < smartlist_len(service->ports); ++i) {
-    p = smartlist_get(service->ports, i);
-    if (smartlist_contains_int_as_string(get_options()->LongLivedPorts,
-                                  p->virtual_port))
-      return 1;
-  }
-  return 0;
-}
-
 /** Check client authorization of a given <b>descriptor_cookie</b> of
  * length <b>cookie_len</b> for <b>service</b>. Return 1 for success
  * and 0 for failure. */
@@ -2029,7 +1995,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
     goto err;
   }
 
-  circ_needs_uptime = rend_service_requires_uptime(service);
+  circ_needs_uptime = hs_service_requires_uptime_circ(service->ports);
 
   /* help predict this next time */
   rep_hist_note_used_internal(now, circ_needs_uptime, 1);
@@ -2926,29 +2892,6 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
 
   tor_assert(oldcirc->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
 
-  /* Don't relaunch the same rend circ twice. */
-  if (oldcirc->hs_service_side_rend_circ_has_been_relaunched) {
-    log_info(LD_REND, "Rendezvous circuit to %s has already been relaunched; "
-             "not relaunching it again.",
-             oldcirc->build_state ?
-             safe_str(extend_info_describe(oldcirc->build_state->chosen_exit))
-             : "*unknown*");
-    return;
-  }
-  oldcirc->hs_service_side_rend_circ_has_been_relaunched = 1;
-
-  if (!oldcirc->build_state ||
-      oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
-      oldcirc->build_state->expiry_time < time(NULL)) {
-    log_info(LD_REND,
-             "Attempt to build circuit to %s for rendezvous has failed "
-             "too many times or expired; giving up.",
-             oldcirc->build_state ?
-             safe_str(extend_info_describe(oldcirc->build_state->chosen_exit))
-             : "*unknown*");
-    return;
-  }
-
   oldstate = oldcirc->build_state;
   tor_assert(oldstate);
 
@@ -3116,10 +3059,11 @@ count_intro_point_circuits(const rend_service_t *service)
    crypto material. On success, fill <b>cell_body_out</b> and return the number
    of bytes written. On fail, return -1.
  */
-STATIC ssize_t
-encode_establish_intro_cell_legacy(char *cell_body_out,
-                                 size_t cell_body_out_len,
-                                 crypto_pk_t *intro_key, char *rend_circ_nonce)
+ssize_t
+rend_service_encode_establish_intro_cell(char *cell_body_out,
+                                         size_t cell_body_out_len,
+                                         crypto_pk_t *intro_key,
+                                         const char *rend_circ_nonce)
 {
   int retval = -1;
   int r;
@@ -3256,7 +3200,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   /* Send the ESTABLISH_INTRO cell */
   {
     ssize_t len;
-    len = encode_establish_intro_cell_legacy(buf, sizeof(buf),
+    len = rend_service_encode_establish_intro_cell(buf, sizeof(buf),
                                       circuit->intro_key,
                                       circuit->cpath->prev->rend_circ_nonce);
     if (len < 0) {
@@ -3983,10 +3927,9 @@ rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted)
  * This is called once a second by the main loop.
  */
 void
-rend_consider_services_intro_points(void)
+rend_consider_services_intro_points(time_t now)
 {
   int i;
-  time_t now;
   const or_options_t *options = get_options();
   /* Are we in single onion mode? */
   const int allow_direct = rend_service_allow_non_anonymous_connection(
@@ -4003,7 +3946,6 @@ rend_consider_services_intro_points(void)
 
   exclude_nodes = smartlist_new();
   retry_nodes = smartlist_new();
-  now = time(NULL);
 
   SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, service) {
     int r;
@@ -4281,60 +4223,6 @@ rend_service_dump_stats(int severity)
   }
 }
 
-#ifdef HAVE_SYS_UN_H
-
-/** Given <b>ports</b>, a smarlist containing rend_service_port_config_t,
- * add the given <b>p</b>, a AF_UNIX port to the list. Return 0 on success
- * else return -ENOSYS if AF_UNIX is not supported (see function in the
- * #else statement below). */
-static int
-add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
-{
-  tor_assert(ports);
-  tor_assert(p);
-  tor_assert(p->is_unix_addr);
-
-  smartlist_add(ports, p);
-  return 0;
-}
-
-/** Given <b>conn</b> set it to use the given port <b>p</b> values. Return 0
- * on success else return -ENOSYS if AF_UNIX is not supported (see function
- * in the #else statement below). */
-static int
-set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
-{
-  tor_assert(conn);
-  tor_assert(p);
-  tor_assert(p->is_unix_addr);
-
-  conn->base_.socket_family = AF_UNIX;
-  tor_addr_make_unspec(&conn->base_.addr);
-  conn->base_.port = 1;
-  conn->base_.address = tor_strdup(p->unix_addr);
-  return 0;
-}
-
-#else /* defined(HAVE_SYS_UN_H) */
-
-static int
-set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
-{
-  (void) conn;
-  (void) p;
-  return -ENOSYS;
-}
-
-static int
-add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
-{
-  (void) ports;
-  (void) p;
-  return -ENOSYS;
-}
-
-#endif /* HAVE_SYS_UN_H */
-
 /** Given <b>conn</b>, a rendezvous exit stream, look up the hidden service for
  * 'circ', and look up the port and address based on conn-\>port.
  * Assign the actual conn-\>addr and conn-\>port. Return -2 on failure
@@ -4347,9 +4235,6 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
 {
   rend_service_t *service;
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
-  smartlist_t *matching_ports;
-  rend_service_port_config_t *chosen_port;
-  unsigned int warn_once = 0;
   const char *rend_pk_digest;
 
   tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
@@ -4385,41 +4270,9 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
       return service->max_streams_close_circuit ? -2 : -1;
     }
   }
-  matching_ports = smartlist_new();
-  SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
-  {
-    if (conn->base_.port != p->virtual_port) {
-      continue;
-    }
-    if (!(p->is_unix_addr)) {
-      smartlist_add(matching_ports, p);
-    } else {
-      if (add_unix_port(matching_ports, p)) {
-        if (!warn_once) {
-         /* Unix port not supported so warn only once. */
-          log_warn(LD_REND,
-              "Saw AF_UNIX virtual port mapping for port %d on service "
-              "%s, which is unsupported on this platform. Ignoring it.",
-              conn->base_.port, serviceid);
-        }
-        warn_once++;
-      }
-    }
-  });
-  chosen_port = smartlist_choose(matching_ports);
-  smartlist_free(matching_ports);
-  if (chosen_port) {
-    if (!(chosen_port->is_unix_addr)) {
-      /* Get a non-AF_UNIX connection ready for connection_exit_connect() */
-      tor_addr_copy(&conn->base_.addr, &chosen_port->real_addr);
-      conn->base_.port = chosen_port->real_port;
-    } else {
-      if (set_unix_port(conn, chosen_port)) {
-        /* Simply impossible to end up here else we were able to add a Unix
-         * port without AF_UNIX support... ? */
-        tor_assert(0);
-      }
-    }
+
+  if (hs_set_conn_addr_port(service->ports, conn) == 0) {
+    /* Successfully set the port to the connection. We are done. */
     return 0;
   }
 

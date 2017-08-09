@@ -22,6 +22,7 @@ TRUNNELSOURCES = \
 	src/trunnel/hs/cell_common.c            \
 	src/trunnel/hs/cell_establish_intro.c	\
 	src/trunnel/hs/cell_introduce1.c \
+	src/trunnel/hs/cell_rendezvous.c \
 	src/trunnel/channelpadding_negotiation.c
 
 TRUNNELHEADERS = \
@@ -34,6 +35,7 @@ TRUNNELHEADERS = \
 	src/trunnel/hs/cell_common.h            \
 	src/trunnel/hs/cell_establish_intro.h	\
 	src/trunnel/hs/cell_introduce1.h \
+	src/trunnel/hs/cell_rendezvous.h \
 	src/trunnel/channelpadding_negotiation.h
 
 src_trunnel_libor_trunnel_a_SOURCES = $(TRUNNELSOURCES)
