@@ -1596,7 +1596,7 @@ options_act(const or_options_t *old_options)
   const int transition_affects_guards =
     old_options && options_transition_affects_guards(old_options, options);
 
-  if (options->NoExec) {
+  if (options->NoExec || options->Sandbox) {
     tor_disable_spawning_background_processes();
   }
 
