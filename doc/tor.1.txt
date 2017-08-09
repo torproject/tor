@@ -773,6 +773,13 @@ GENERAL OPTIONS
     circuits.  If the option is set to "default", we obey a
     parameter in the consensus document. (Default: auto)
 
+[[NoExec]] **NoExec** **0**|**1**::
+    If this option is set to 1, then Tor will never launch another
+    executable, regardless of the settings of PortForwardingHelper,
+    ClientTransportPlugin, or ServerTransportPlugin.  Once this
+    option has been set to 1, it cannot be set back to 0 without
+    restarting Tor. (Default: 0)
+
 CLIENT OPTIONS
 --------------
 

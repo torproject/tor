@@ -4596,6 +4596,10 @@ typedef struct {
    * consensuses around so that we can generate diffs from them.  If 0,
    * use the default. */
   int MaxConsensusAgeForDiffs;
+
+  /** Bool (default: 0). Tells Tor to never try to exec another program.
+   */
+  int NoExec;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

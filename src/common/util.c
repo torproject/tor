@@ -4142,6 +4142,20 @@ process_handle_waitpid_cb(int status, void *arg)
 #define CHILD_STATE_EXEC 8
 #define CHILD_STATE_FAILEXEC 9
 /** @} */
+/**
+ * Boolean.  If true, then Tor may call execve or CreateProcess via
+ * tor_spawn_background.
+ **/
+static int may_spawn_background_process = 1;
+/**
+ * Turn off may_spawn_background_process, so that all future calls to
+ * tor_spawn_background are guaranteed to fail.
+ **/
+void
+tor_disable_spawning_background_processes(void)
+{
+  may_spawn_background_process = 0;
+}
 /** Start a program in the background. If <b>filename</b> contains a '/', then
  * it will be treated as an absolute or relative path.  Otherwise, on
  * non-Windows systems, the system path will be searched for <b>filename</b>.
@@ -4166,6 +4180,9 @@ tor_spawn_background(const char *const filename, const char **argv,
                      process_environment_t *env,
                      process_handle_t **process_handle_out)
 {
+  if (may_spawn_background_process == 0)
+    return PROCESS_STATUS_ERROR;
+
 #ifdef _WIN32
   HANDLE stdout_pipe_read = NULL;
   HANDLE stdout_pipe_write = NULL;
