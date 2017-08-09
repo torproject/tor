@@ -879,22 +879,34 @@ node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
 const ed25519_public_key_t *
 node_get_ed25519_id(const node_t *node)
 {
+  const ed25519_public_key_t *ri_pk = NULL;
+  const ed25519_public_key_t *md_pk = NULL;
   if (node->ri) {
     if (node->ri->cache_info.signing_key_cert) {
-      const ed25519_public_key_t *pk =
-        &node->ri->cache_info.signing_key_cert->signing_key;
-      if (BUG(ed25519_public_key_is_zero(pk)))
-        goto try_the_md;
-      return pk;
+      ri_pk = &node->ri->cache_info.signing_key_cert->signing_key;
+      if (BUG(ed25519_public_key_is_zero(ri_pk)))
+        ri_pk = NULL;
     }
   }
- try_the_md:
+
   if (node->md) {
     if (node->md->ed25519_identity_pkey) {
-      return node->md->ed25519_identity_pkey;
+      md_pk = node->md->ed25519_identity_pkey;
     }
   }
-  return NULL;
+
+  if (ri_pk && md_pk) {
+    if (ed25519_pubkey_eq(ri_pk, md_pk)) {
+      return ri_pk;
+    } else {
+      log_warn(LD_GENERAL, "Inconsistent ed25519 identities in the nodelist");
+      return NULL;
+    }
+  } else if (ri_pk) {
+    return ri_pk;
+  } else {
+    return md_pk;
+  }
 }
 
 /** Return true iff this node's Ed25519 identity matches <b>id</b>.
