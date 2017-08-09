@@ -156,14 +156,6 @@ int sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2);
  */
 int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file);
 
-#if 0
-/**
- * Function used to add a execve allowed filename to a supplied configuration.
- * The (char*) specifies the path to the allowed file; that pointer is stolen.
- */
-int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com);
-#endif
-
 /**
  * Function used to add a stat/stat64 allowed filename to a configuration.
  * The (char*) specifies the path to the allowed file; that pointer is stolen.
