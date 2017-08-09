@@ -1815,13 +1815,13 @@ is non-zero):
  +
     If this option is set to 0, Tor will not publish its
     descriptors to any directories. (This is useful if you're testing
-    out your server, or if you're using a Tor controller that handles directory
-    publishing for you.) Otherwise, Tor will publish its descriptors of all
-    type(s) specified. The default is "1",
-    which means "if running as a server, publish the
-    appropriate descriptors to the authorities". Other possibilities are
-    "v3", meaning "publish if running as a relay", and
-    "bridge", meaning "publish if running as a bridge".
+    out your server, or if you're using a Tor controller that handles
+    directory publishing for you.) Otherwise, Tor will publish its
+    descriptors of all type(s) specified. The default is "1", which
+    means "if running as a relay or bridge, publish descriptors to the
+    appropriate authorities". Other possibilities are "v3", meaning
+    "publish as if you're a relay", and "bridge", meaning "publish as
+    if you're a bridge".
 
 [[ShutdownWaitLength]] **ShutdownWaitLength** __NUM__::
     When we get a SIGINT and we're a server, we begin shutting down:
