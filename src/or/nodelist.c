@@ -725,8 +725,26 @@ nodelist_assert_ok(void)
     tor_assert(node_sl_idx == node->nodelist_idx);
   } SMARTLIST_FOREACH_END(node);
 
+  /* Every node listed with an ed25519 identity should be listed by that
+   * identity.
+   */
+  SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
+    if (!ed25519_public_key_is_zero(&node->ed25519_id)) {
+      tor_assert(node == node_get_by_ed25519_id(&node->ed25519_id));
+    }
+  } SMARTLIST_FOREACH_END(node);
+
+  node_t **idx;
+  HT_FOREACH(idx, nodelist_ed_map, &the_nodelist->nodes_by_ed_id) {
+    node_t *node = *idx;
+    tor_assert(node == node_get_by_ed25519_id(&node->ed25519_id));
+  }
+
   tor_assert((long)smartlist_len(the_nodelist->nodes) ==
              (long)HT_SIZE(&the_nodelist->nodes_by_id));
+
+  tor_assert((long)smartlist_len(the_nodelist->nodes) >=
+             (long)HT_SIZE(&the_nodelist->nodes_by_ed_id));
 
   digestmap_free(dm, NULL);
 }
