@@ -4180,8 +4180,11 @@ tor_spawn_background(const char *const filename, const char **argv,
                      process_environment_t *env,
                      process_handle_t **process_handle_out)
 {
-  if (may_spawn_background_process == 0)
+  if (BUG(may_spawn_background_process == 0)) {
+    /* We should never reach this point if we're forbidden to spawn
+     * processes. Instead we should have caught the attempt earlier. */
     return PROCESS_STATUS_ERROR;
+  }
 
 #ifdef _WIN32
   HANDLE stdout_pipe_read = NULL;
