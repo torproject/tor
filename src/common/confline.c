@@ -294,24 +294,26 @@ config_process_include(const char *path, int recursion_level, int extended,
     return -1;
   }
 
-  SMARTLIST_FOREACH_BEGIN(config_files, char *, config_file) {
+  int rv = -1;
+  SMARTLIST_FOREACH_BEGIN(config_files, const char *, config_file) {
     config_line_t *included_list = NULL;
     if (config_get_included_list(config_file, recursion_level, extended,
                                   &included_list, list_last) < 0) {
-      SMARTLIST_FOREACH(config_files, char *, f, tor_free(f));
-      smartlist_free(config_files);
-      return -1;
+      goto done;
     }
-    tor_free(config_file);
 
     *next = included_list;
     if (*list_last)
       next = &(*list_last)->next;
 
   } SMARTLIST_FOREACH_END(config_file);
-  smartlist_free(config_files);
   *list = ret_list;
-  return 0;
+  rv = 0;
+
+ done:
+  SMARTLIST_FOREACH(config_files, char *, f, tor_free(f));
+  smartlist_free(config_files);
+  return rv;
 }
 
 /**
