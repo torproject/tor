@@ -8,8 +8,8 @@ src_tools_tor_resolve_SOURCES = src/tools/tor-resolve.c
 src_tools_tor_resolve_LDFLAGS =
 src_tools_tor_resolve_LDADD = src/common/libor.a \
 	src/common/libor-ctime.a \
-	@TOR_LIB_MATH@ @TOR_LIB_WS32@ \
-	$(rust_ldadd)
+	$(rust_ldadd) \
+	@TOR_LIB_MATH@ @TOR_LIB_WS32@ @TOR_LIB_USERENV@ 
 
 if COVERAGE_ENABLED
 src_tools_tor_cov_resolve_SOURCES = src/tools/tor-resolve.c
@@ -26,9 +26,9 @@ src_tools_tor_gencert_LDADD = src/common/libor.a src/common/libor-crypto.a \
 	src/common/libor-ctime.a \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA) \
+	$(rust_ldadd) \
 	@TOR_LIB_MATH@ @TOR_ZLIB_LIBS@ @TOR_OPENSSL_LIBS@ \
-	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
-	$(rust_ldadd)
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ @CURVE25519_LIBS@
 
 if COVERAGE_ENABLED
 src_tools_tor_cov_gencert_SOURCES = src/tools/tor-gencert.c

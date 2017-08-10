@@ -258,64 +258,6 @@ dnl List all external rust crates we depend on here. Include the version
 rust_crates="libc-0.2.22"
 AC_SUBST(rust_crates)
 
-if test "x$enable_rust" = "xyes"; then
-  AC_ARG_VAR([RUSTC], [path to the rustc binary])
-  AC_CHECK_PROG([RUSTC], [rustc], [rustc],[no])
-  if test "x$RUSTC" = "xno"; then
-    AC_MSG_ERROR([rustc unavailable but rust integration requested.])
-  fi
-
-  AC_ARG_VAR([CARGO], [path to the cargo binary])
-  AC_CHECK_PROG([CARGO], [cargo], [cargo],[no])
-  if test "x$CARGO" = "xno"; then
-    AC_MSG_ERROR([cargo unavailable but rust integration requested.])
-  fi
-
-  AC_DEFINE([HAVE_RUST], 1, [have Rust])
-  if test "x$enable_cargo_online_mode" = "xyes"; then
-    CARGO_ONLINE=
-    RUST_DL=#
-  else
-    CARGO_ONLINE=--frozen
-    RUST_DL=
-
-    dnl When we're not allowed to touch the network, we need crate dependencies
-    dnl locally available.
-    AC_MSG_CHECKING([rust crate dependencies])
-    AC_ARG_VAR([RUST_DEPENDENCIES], [path to directory with local crate mirror])
-    if test "x$RUST_DEPENDENCIES" = "x"; then
-      RUST_DEPENDENCIES="$srcdir/src/ext/rust/"
-      NEED_MOD=1
-    fi
-    if test ! -d "$RUST_DEPENDENCIES"; then
-      AC_MSG_ERROR([Rust dependency directory $RUST_DEPENDENCIES does not exist. Specify a dependency directory using the RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
-    fi
-    for dep in $rust_crates; do
-      if test ! -d "$RUST_DEPENDENCIES"/"$dep"; then
-        AC_MSG_ERROR([Failure to find rust dependency $RUST_DEPENDENCIES/$dep. Specify a dependency directory using the RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
-      fi
-    done
-    if test "x$NEED_MOD" = "x1"; then
-      dnl When looking for dependencies from cargo, pick right directory
-      RUST_DEPENDENCIES="../../src/ext/rust"
-    fi
-  fi
-
-  AC_SUBST(CARGO_ONLINE)
-  AC_SUBST(RUST_DL)
-
-dnl Let's check the rustc version, too
-  AC_MSG_CHECKING([rust version])
-  RUSTC_VERSION_MAJOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 1`
-  RUSTC_VERSION_MINOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 2`
-  if test "x$RUSTC_VERSION_MAJOR" = "x" -o "x$RUSTC_VERSION_MINOR" = "x"; then
-    AC_MSG_ERROR([rustc version couldn't be identified])
-  fi
-  if test "$RUSTC_VERSION_MAJOR" -lt 2 -a "$RUSTC_VERSION_MINOR" -lt 14; then
-    AC_MSG_ERROR([rustc must be at least version 1.14])
-  fi
-fi
-
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
 AC_C_FLEXIBLE_ARRAY_MEMBER
 ], [
@@ -451,6 +393,73 @@ fi
 
 AC_C_BIGENDIAN
 
+if test "x$enable_rust" = "xyes"; then
+  AC_ARG_VAR([RUSTC], [path to the rustc binary])
+  AC_CHECK_PROG([RUSTC], [rustc], [rustc],[no])
+  if test "x$RUSTC" = "xno"; then
+    AC_MSG_ERROR([rustc unavailable but rust integration requested.])
+  fi
+
+  AC_ARG_VAR([CARGO], [path to the cargo binary])
+  AC_CHECK_PROG([CARGO], [cargo], [cargo],[no])
+  if test "x$CARGO" = "xno"; then
+    AC_MSG_ERROR([cargo unavailable but rust integration requested.])
+  fi
+
+  AC_DEFINE([HAVE_RUST], 1, [have Rust])
+  if test "x$enable_cargo_online_mode" = "xyes"; then
+    CARGO_ONLINE=
+    RUST_DL=#
+  else
+    CARGO_ONLINE=--frozen
+    RUST_DL=
+
+    dnl When we're not allowed to touch the network, we need crate dependencies
+    dnl locally available.
+    AC_MSG_CHECKING([rust crate dependencies])
+    AC_ARG_VAR([RUST_DEPENDENCIES], [path to directory with local crate mirror])
+    if test "x$RUST_DEPENDENCIES" = "x"; then
+      RUST_DEPENDENCIES="$srcdir/src/ext/rust/"
+      NEED_MOD=1
+    fi
+    if test ! -d "$RUST_DEPENDENCIES"; then
+      AC_MSG_ERROR([Rust dependency directory $RUST_DEPENDENCIES does not exist. Specify a dependency directory using the RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
+    fi
+    for dep in $rust_crates; do
+      if test ! -d "$RUST_DEPENDENCIES"/"$dep"; then
+        AC_MSG_ERROR([Failure to find rust dependency $RUST_DEPENDENCIES/$dep. Specify a dependency directory using the RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
+      fi
+    done
+    if test "x$NEED_MOD" = "x1"; then
+      dnl When looking for dependencies from cargo, pick right directory
+      RUST_DEPENDENCIES="../../src/ext/rust"
+    fi
+  fi
+
+  dnl For now both MSVC and MinGW rust libraries will output static libs with
+  dnl the MSVC naming convention.
+  if test "$bwin32" = "true"; then
+    TOR_RUST_UTIL_STATIC_NAME=tor_util.lib
+  else
+    TOR_RUST_UTIL_STATIC_NAME=libtor_util.a
+  fi
+
+  AC_SUBST(TOR_RUST_UTIL_STATIC_NAME)
+  AC_SUBST(CARGO_ONLINE)
+  AC_SUBST(RUST_DL)
+
+  dnl Let's check the rustc version, too
+  AC_MSG_CHECKING([rust version])
+  RUSTC_VERSION_MAJOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 1`
+  RUSTC_VERSION_MINOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 2`
+  if test "x$RUSTC_VERSION_MAJOR" = "x" -o "x$RUSTC_VERSION_MINOR" = "x"; then
+    AC_MSG_ERROR([rustc version couldn't be identified])
+  fi
+  if test "$RUSTC_VERSION_MAJOR" -lt 2 -a "$RUSTC_VERSION_MINOR" -lt 14; then
+    AC_MSG_ERROR([rustc must be at least version 1.14])
+  fi
+fi
+
 AC_SEARCH_LIBS(socket, [socket network])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
@@ -574,13 +583,16 @@ if test "$bwin32" = "true"; then
   # Some of the cargo-cults recommend -lwsock32 as well, but I don't
   # think it's actually necessary.
   TOR_LIB_GDI=-lgdi32
+  TOR_LIB_USERENV=-luserenv
 else
   TOR_LIB_WS32=
   TOR_LIB_GDI=
+  TOR_LIB_USERENV=
 fi
 AC_SUBST(TOR_LIB_WS32)
 AC_SUBST(TOR_LIB_GDI)
 AC_SUBST(TOR_LIB_IPHLPAPI)
+AC_SUBST(TOR_LIB_USERENV)
 
 tor_libevent_pkg_redhat="libevent"
 tor_libevent_pkg_debian="libevent-dev"
@@ -894,7 +906,7 @@ dnl since sometimes the linker will like an option but not be willing to
 dnl use it with a build of a library.
 
 all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
-all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI $TOR_CAP_LIBS"
+all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI $TOR_LIB_USERENV $TOR_CAP_LIBS"
 
 CFLAGS_FTRAPV=
 CFLAGS_FWRAPV=
