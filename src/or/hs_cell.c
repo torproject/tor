@@ -444,7 +444,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
                                        encrypted_section_len, &elapsed)) {
     log_warn(LD_REND, "Possible replay detected! An INTRODUCE2 cell with the"
                       "same ENCRYPTED section was seen %ld seconds ago. "
-                      "Dropping cell.", elapsed);
+                      "Dropping cell.", (long int) elapsed);
     goto done;
   }
 

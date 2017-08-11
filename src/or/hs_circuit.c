@@ -589,7 +589,7 @@ can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
              safe_str_client(
                   extend_info_describe(circ->build_state->chosen_exit)),
              circ->build_state->failure_count,
-             circ->build_state->expiry_time);
+             (long int) circ->build_state->expiry_time);
     goto disallow;
   }
 
@@ -978,7 +978,8 @@ hs_circ_handle_introduce2(const hs_service_t *service,
      * cell), we are already trying to connect to that rend point (and may
      * have already succeeded); drop this cell. */
     log_info(LD_REND, "We received an INTRODUCE2 cell with same REND_COOKIE "
-                      "field %ld seconds ago. Dropping cell.", elapsed);
+                      "field %ld seconds ago. Dropping cell.",
+             (long int) elapsed);
     goto done;
   }
 
