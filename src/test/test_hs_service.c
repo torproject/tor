@@ -1030,8 +1030,8 @@ test_build_update_descriptors(void *arg)
 {
   int ret;
   time_t now = time(NULL);
-  time_t period_num = hs_get_time_period_num(now);
-  time_t next_period_num = hs_get_next_time_period_num(now);
+  uint64_t period_num = hs_get_time_period_num(now);
+  uint64_t next_period_num = hs_get_next_time_period_num(now);
   node_t *node;
   hs_service_t *service;
   hs_service_intro_point_t *ip_cur, *ip_next;
@@ -1287,13 +1287,13 @@ test_revision_counter_state(void *arg)
                                                  &desc_one->blinded_kp.pubkey,
                                                                &service_found);
   tt_int_op(service_found, OP_EQ, 1);
-  tt_int_op(cached_rev_counter, OP_EQ, 42);
+  tt_u64_op(cached_rev_counter, OP_EQ, 42);
 
   cached_rev_counter =check_state_line_for_service_rev_counter(state_line_two,
                                                  &desc_two->blinded_kp.pubkey,
                                                                &service_found);
   tt_int_op(service_found, OP_EQ, 1);
-  tt_int_op(cached_rev_counter, OP_EQ, 240);
+  tt_u64_op(cached_rev_counter, OP_EQ, 240);
 
  done:
   tor_free(state_line_one);
