@@ -1709,7 +1709,7 @@ check_expired_networkstatus_callback(time_t now, const or_options_t *options)
    * networkstatus_get_reasonably_live_consensus(), but that value is way
    * way too high.  Arma: is the bridge issue there resolved yet? -NM */
 #define NS_EXPIRY_SLOP (24*60*60)
-  if (ns && ns->valid_until < now+NS_EXPIRY_SLOP &&
+  if (ns && ns->valid_until < (now - NS_EXPIRY_SLOP) &&
       router_have_minimum_dir_info()) {
     router_dir_info_changed();
   }
