@@ -409,7 +409,7 @@ test_responsible_hsdirs(void *arg)
     memset(&ri, 0 ,sizeof(routerinfo_t));
     tor_addr_parse(&ipv4_addr, "127.0.0.1");
     ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
-    ri.nickname = tor_strdup("fatal");
+    ri.nickname = (char *) "fatal";
     ri.protocol_list = (char *) "HSDir=1-2 LinkAuth=3";
     memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
     tt_assert(nodelist_set_routerinfo(&ri, NULL));
