@@ -78,7 +78,7 @@ static int
 mock_write_str_to_file(const char *path, const char *str, int bin)
 {
   (void)bin;
-  tt_str_op(path, OP_EQ, "/double/five/squared");
+  tt_str_op(path, OP_EQ, "/double/five"PATH_SEPARATOR"squared");
   tt_str_op(str, OP_EQ,
            "ijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbezhid.onion\n");
 
