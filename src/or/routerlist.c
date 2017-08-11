@@ -4971,8 +4971,9 @@ max_dl_per_request(const or_options_t *options, int purpose)
 }
 
 /** Don't split our requests so finely that we are requesting fewer than
- * this number per server. */
-#define MIN_DL_PER_REQUEST 4
+ * this number per server. (Grouping more than this at once leads to
+ * diminishing returns.) */
+#define MIN_DL_PER_REQUEST 32
 /** To prevent a single screwy cache from confusing us by selective reply,
  * try to split our requests into at least this many requests. */
 #define MIN_REQUESTS 3
