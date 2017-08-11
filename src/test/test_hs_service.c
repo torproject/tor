@@ -1177,19 +1177,12 @@ test_build_update_descriptors(void *arg)
   UNMOCK(hs_overlap_mode_is_active);
 }
 
-static int
-mock_router_have_minimum_dir_info(void)
-{
-  return 1;
-}
-
 static void
 test_upload_descriptors(void *arg)
 {
   int ret;
   time_t now = time(NULL);
   hs_service_t *service;
-  hs_service_intro_point_t *ip;
 
   (void) arg;
 
@@ -1227,29 +1220,10 @@ test_upload_descriptors(void *arg)
   /* If no upload happened, this should be untouched. */
   tt_u64_op(service->desc_current->next_upload_time, OP_EQ, now + 1000);
 
-  /* Set our upload time in the past so we trigger an upload. */
-  service->desc_current->next_upload_time = now - 1000;
-  service->desc_next->next_upload_time = now - 1000;
-  ip = helper_create_service_ip();
-  ip->circuit_established = 1;
-  service_intro_point_add(service->desc_current->intro_points.map, ip);
-
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
-  MOCK(router_have_minimum_dir_info,
-       mock_router_have_minimum_dir_info);
-
-  setup_full_capture_of_logs(LOG_WARN);
-  run_upload_descriptor_event(now);
-  teardown_capture_of_logs();
-  tt_u64_op(service->desc_current->next_upload_time, OP_GE,
-            now + HS_SERVICE_NEXT_UPLOAD_TIME_MIN);
-  tt_u64_op(service->desc_current->next_upload_time, OP_LE,
-            now + HS_SERVICE_NEXT_UPLOAD_TIME_MAX);
-
  done:
   hs_free_all();
   UNMOCK(hs_overlap_mode_is_active);
+  UNMOCK(get_or_state);
 }
 
 /** Test the functions that save and load HS revision counters to state. */
