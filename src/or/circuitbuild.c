@@ -2111,7 +2111,7 @@ choose_good_middle_server(uint8_t purpose,
   tor_assert(CIRCUIT_PURPOSE_MIN_ <= purpose &&
              purpose <= CIRCUIT_PURPOSE_MAX_);
 
-  log_debug(LD_CIRC, "Contemplating intermediate hop %d: random choice.",
+  log_debug(LD_CIRC, "Contemplating intermediate hop #%d: random choice.",
             cur_len+1);
   excluded = smartlist_new();
   if ((r = build_state_get_exit_node(state))) {
@@ -2262,12 +2262,12 @@ onion_extend_cpath(origin_circuit_t *circ)
   }
 
   if (!info) {
-    log_warn(LD_CIRC,"Failed to find node for hop %d of our path. Discarding "
+    log_warn(LD_CIRC,"Failed to find node for hop #%d of our path. Discarding "
              "this circuit.", cur_len+1);
     return -1;
   }
 
-  log_debug(LD_CIRC,"Chose router %s for hop %d (exit is %s)",
+  log_debug(LD_CIRC,"Chose router %s for hop #%d (exit is %s)",
             extend_info_describe(info),
             cur_len+1, build_state_get_exit_nickname(state));
 
