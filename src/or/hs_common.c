@@ -1180,9 +1180,10 @@ hs_get_hsdir_spread_store(void)
 }
 
 /** <b>node</b> is an HSDir so make sure that we have assigned an hsdir index.
+ *  If <b>is_for_next_period</b> is set, also check the next HSDir index field.
  *  Return 0 if everything is as expected, else return -1. */
 static int
-node_has_hsdir_index(const node_t *node)
+node_has_hsdir_index(const node_t *node, int is_for_next_period)
 {
   tor_assert(node_supports_v3_hsdir(node));
 
@@ -1196,6 +1197,12 @@ node_has_hsdir_index(const node_t *node)
    * hsdir index. If not, something went wrong, so BUG out. */
   if (BUG(node->hsdir_index == NULL) ||
       BUG(tor_mem_is_zero((const char*)node->hsdir_index->current,
+                          DIGEST256_LEN))) {
+    return 0;
+  }
+
+  if (is_for_next_period &&
+      BUG(tor_mem_is_zero((const char*)node->hsdir_index->next,
                           DIGEST256_LEN))) {
     return 0;
   }
@@ -1244,7 +1251,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
       node_t *n = node_get_mutable_by_id(rs->identity_digest);
       tor_assert(n);
       if (node_supports_v3_hsdir(n) && rs->is_hs_dir) {
-        if (!node_has_hsdir_index(n)) {
+        if (!node_has_hsdir_index(n, is_next_period)) {
           log_info(LD_GENERAL, "Node %s was found without hsdir index.",
                    node_describe(n));
           continue;
