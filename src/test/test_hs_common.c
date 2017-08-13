@@ -357,6 +357,37 @@ test_desc_overlap_period_testnet(void *arg)
   tor_free(dummy_consensus);
 }
 
+static void
+helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
+                                  const uint8_t *identity,
+                                  const uint8_t *curr_hsdir_index,
+                                  const char *nickname,
+                                  int is_hsdir)
+{
+  routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
+  routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
+
+  tor_addr_t ipv4_addr;
+  memcpy(rs->identity_digest, identity, DIGEST_LEN);
+  rs->is_hs_dir = is_hsdir;
+  rs->supports_v3_hsdir = 1;
+  tor_addr_parse(&ipv4_addr, "1.2.3.4");
+  ri->addr = tor_addr_to_ipv4h(&ipv4_addr);
+  ri->nickname = tor_strdup(nickname);
+  ri->protocol_list = tor_strdup("HSDir=1-2 LinkAuth=3");
+  memcpy(ri->cache_info.identity_digest, identity, DIGEST_LEN);
+  tt_assert(nodelist_set_routerinfo(ri, NULL));
+  node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
+  tt_assert(node);
+  node->rs = rs;
+  memcpy(node->hsdir_index->current, curr_hsdir_index,
+         sizeof(node->hsdir_index->current));
+  smartlist_add(ns->routerstatus_list, rs);
+
+ done:
+  ;
+}
+
 static networkstatus_t *mock_ns = NULL;
 
 static networkstatus_t *
@@ -389,7 +420,7 @@ test_responsible_hsdirs(void *arg)
   time_t now = approx_time();
   smartlist_t *responsible_dirs = smartlist_new();
   networkstatus_t *ns = NULL;
-  routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
+  int retval;
 
   (void) arg;
 
@@ -401,34 +432,55 @@ test_responsible_hsdirs(void *arg)
   ns = networkstatus_get_latest_consensus();
 
   { /* First router: HSdir */
-    tor_addr_t ipv4_addr;
-    memset(rs->identity_digest, 'A', DIGEST_LEN);
-    rs->is_hs_dir = 1;
-    rs->supports_v3_hsdir = 1;
-    routerinfo_t ri;
-    memset(&ri, 0 ,sizeof(routerinfo_t));
-    tor_addr_parse(&ipv4_addr, "127.0.0.1");
-    ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
-    ri.nickname = (char *) "fatal";
-    ri.protocol_list = (char *) "HSDir=1-2 LinkAuth=3";
-    memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
-    tt_assert(nodelist_set_routerinfo(&ri, NULL));
-    node_t *node = node_get_mutable_by_id(ri.cache_info.identity_digest);
-    memset(node->hsdir_index->current, 'Z',
-           sizeof(node->hsdir_index->current));
-    smartlist_add(ns->routerstatus_list, rs);
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "let_me";
+    memset(identity, 1, sizeof(identity));
+    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
   }
 
-  ed25519_public_key_t blinded_pk;
+  { /* Second HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "show_you";
+    memset(identity, 2, sizeof(identity));
+    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  { /* Third relay but not HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "how_to_dance";
+    memset(identity, 3, sizeof(identity));
+    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 0);
+  }
+
+  ed25519_keypair_t kp;
+  retval = ed25519_keypair_generate(&kp, 0);
+  tt_int_op(retval, OP_EQ , 0);
+
   uint64_t time_period_num = hs_get_time_period_num(now);
-  hs_get_responsible_hsdirs(&blinded_pk, time_period_num,
+  hs_get_responsible_hsdirs(&kp.pubkey, time_period_num,
                             0, 0, responsible_dirs);
-  tt_int_op(smartlist_len(responsible_dirs), OP_EQ, 1);
+
+  /* Make sure that we only found 2 responsible HSDirs.
+   * The third relay was not an hsdir! */
+  tt_int_op(smartlist_len(responsible_dirs), OP_EQ, 2);
 
   /** TODO: Build a bigger network and do more tests here */
 
  done:
-  routerstatus_free(rs);
+  SMARTLIST_FOREACH(ns->routerstatus_list,
+                    routerstatus_t *, rs, routerstatus_free(rs));
   smartlist_free(responsible_dirs);
   smartlist_clear(ns->routerstatus_list);
   networkstatus_vote_free(mock_ns);
