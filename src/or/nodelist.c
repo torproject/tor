@@ -1741,8 +1741,8 @@ static char dir_info_status[512] = "";
  * no exits in the consensus."
  * To obtain the final weighted bandwidth, we multiply the
  * weighted bandwidth fraction for each position (guard, middle, exit). */
-int
-router_have_minimum_dir_info(void)
+MOCK_IMPL(int,
+router_have_minimum_dir_info,(void))
 {
   static int logged_delay=0;
   const char *delay_fetches_msg = NULL;

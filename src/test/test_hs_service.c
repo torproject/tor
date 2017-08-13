@@ -1177,6 +1177,12 @@ test_build_update_descriptors(void *arg)
   UNMOCK(hs_overlap_mode_is_active);
 }
 
+static int
+mock_router_have_minimum_dir_info(void)
+{
+  return 1;
+}
+
 static void
 test_upload_descriptors(void *arg)
 {
@@ -1191,7 +1197,6 @@ test_upload_descriptors(void *arg)
   MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
   MOCK(get_or_state,
        get_or_state_replacement);
-
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
   /* Create a service with no descriptor. It's added to the global map. */
@@ -1229,9 +1234,13 @@ test_upload_descriptors(void *arg)
   ip->circuit_established = 1;
   service_intro_point_add(service->desc_current->intro_points.map, ip);
 
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+  MOCK(router_have_minimum_dir_info,
+       mock_router_have_minimum_dir_info);
+
   setup_full_capture_of_logs(LOG_WARN);
   run_upload_descriptor_event(now);
-  expect_log_msg_containing("No valid consensus so we can't get the");
   teardown_capture_of_logs();
   tt_u64_op(service->desc_current->next_upload_time, OP_GE,
             now + HS_SERVICE_NEXT_UPLOAD_TIME_MIN);

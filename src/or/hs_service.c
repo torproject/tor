@@ -2288,6 +2288,17 @@ should_service_upload_descriptor(const hs_service_t *service,
     goto cannot;
   }
 
+  /* Don't upload desc if we don't have a live consensus */
+  if (!networkstatus_get_live_consensus(now)) {
+    goto cannot;
+  }
+
+  /* Do we know enough router descriptors to have adequate vision of the HSDir
+     hash ring? */
+  if (!router_have_minimum_dir_info()) {
+    goto cannot;
+  }
+
   /* Can upload! */
   return 1;
  cannot:

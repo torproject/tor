@@ -105,7 +105,7 @@ int addrs_in_same_network_family(const tor_addr_t *a1,
  * no exits in the consensus, we wait for enough info to create internal
  * paths, and should avoid creating exit paths, as they will simply fail.
  * We make sure we create all available circuit types at the same time. */
-int router_have_minimum_dir_info(void);
+MOCK_DECL(int, router_have_minimum_dir_info,(void));
 
 /** Set to CONSENSUS_PATH_EXIT if there is at least one exit node
  * in the consensus. We update this flag in compute_frac_paths_available if
