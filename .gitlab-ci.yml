@@ -1,7 +1,7 @@
 before_script:
   - "apt-get update -qq"
   - "apt-get upgrade -y"
-  - "apt-get install -y --fix-missing git openssh-client asciidoc-base wget gcc g++ automake cmake make libglib2.0 libglib2.0-dev libigraph0 libigraph0-dev libevent-dev openssl libssl-dev"
+  - "apt-get install -y --fix-missing git openssh-client asciidoc wget gcc g++ automake cmake make libglib2.0 libglib2.0-dev libigraph0 libigraph0-dev libevent-dev openssl libssl-dev"
 
   # Run ssh-agent (inside the build environment)
   - eval $(ssh-agent -s)
