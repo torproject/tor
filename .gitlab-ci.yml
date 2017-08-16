@@ -23,11 +23,9 @@ before_script:
   
 build:
   script:
-    - "sh autogen.sh && ./configure && make && make install"
-    
-test:
-  script:
-    - "make test-full-online"
+    - "sh autogen.sh && ./configure && make"
+    - "make check"
+    - "make install"
 
 update:
   script: 
