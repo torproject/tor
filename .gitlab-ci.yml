@@ -23,11 +23,15 @@ before_script:
   # instead.
   - mkdir -p ~/.ssh
   - '[[ -f /.dockerenv ]] && echo "$SSH_SERVER_HOSTKEYS" > ~/.ssh/known_hosts'
-test:
+  
+build:
   script:
     - "sh autogen.sh && ./configure && make && make install"
+    
+test:
+  script:
     - "make test-full-online"
-  
+
 update:
   script: 
     - echo "merging from torgit"
@@ -35,7 +39,7 @@ update:
     - "cd tor"
     - git remote add upstream https://git.torproject.org/tor.git
     - git checkout master
-   - git config --global user.email "labadmin@oniongit.eu"
-   - git config --global user.name "gitadmin"
-   - git pull -Xtheirs upstream master
-   - git push origin master
+    - git config --global user.email "labadmin@oniongit.eu"
+    - git config --global user.name "gitadmin"
+    - git pull -Xtheirs upstream master
+    - git push origin master
