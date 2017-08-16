@@ -1,10 +1,7 @@
 before_script:
   - "apt-get update -qq"
   - "apt-get upgrade -y"
-  - "apt-get install -y --fix-missing git"
-  # Install ssh-agent if not already installed, it is required by Docker.
-  # (change apt-get to yum if you use a CentOS-based image)
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+  - "apt-get install -y --fix-missing git openssh-client wget gcc g++ automake cmake make libglib2.0 libglib2.0-dev libigraph0 libigraph0-dev libevent-dev openssl libssl-dev python"
 
   # Run ssh-agent (inside the build environment)
   - eval $(ssh-agent -s)
