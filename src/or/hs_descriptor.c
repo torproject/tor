@@ -1852,7 +1852,8 @@ desc_sig_is_valid(const char *b64_sig,
   sig_start = tor_memstr(encoded_desc, encoded_len, "\n" str_signature);
   /* Getting here means the token parsing worked for the signature so if we
    * can't find the start of the signature, we have a code flow issue. */
-  if (BUG(!sig_start)) {
+  if (!sig_start) {
+    log_warn(LD_GENERAL, "Malformed signature line. Rejecting.");
     goto err;
   }
   /* Skip newline, it has to go in the signature check. */

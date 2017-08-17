@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden service):
+    - Fix a BUG alert during HSv3 descriptor decoding that could trigger with a
+      specially crafted descriptor. Fixes bug #23233; bugfix on 0.3.0.1-alpha.
+      Bug found by "haxxpop".

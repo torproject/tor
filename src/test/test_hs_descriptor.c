@@ -569,8 +569,12 @@ test_decode_bad_signature(void *arg)
   /* Update approx time to dodge cert expiration */
   update_approx_time(1502661599);
 
+
+  setup_full_capture_of_logs(LOG_WARN);
   ret = hs_desc_decode_plaintext(HS_DESC_BAD_SIG, &desc_plaintext);
   tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Malformed signature line. Rejecting.");
+  teardown_capture_of_logs();
 
  done: ;
 }
