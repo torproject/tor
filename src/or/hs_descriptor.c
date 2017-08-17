@@ -1241,7 +1241,7 @@ cert_is_valid(tor_cert_t *cert, uint8_t type, const char *log_obj_type)
   }
   /* The following will not only check if the signature matches but also the
    * expiration date and overall validity. */
-  if (tor_cert_checksig(cert, &cert->signing_key, time(NULL)) < 0) {
+  if (tor_cert_checksig(cert, &cert->signing_key, approx_time()) < 0) {
     log_warn(LD_REND, "Invalid signature for %s.", log_obj_type);
     goto err;
   }
