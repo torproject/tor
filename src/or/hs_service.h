@@ -129,6 +129,12 @@ typedef struct hs_service_descriptor_t {
    * list are re-tried to upload this descriptor when our directory information
    * have been updated. */
   smartlist_t *hsdir_missing_info;
+
+  /** List of the responsible HSDirs (their b64ed identity digest) last time we
+   *  uploaded this descriptor. If the set of responsible HSDirs is different
+   *  from this list, this means we received new dirinfo and we need to
+   *  reupload our descriptor. This list is always sorted lexicographically. */
+  smartlist_t *previous_hsdirs;
 } hs_service_descriptor_t;
 
 /* Service key material. */
@@ -260,6 +266,7 @@ void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
                                          smartlist_t *dir_list);
 int hs_service_set_conn_addr_port(const origin_circuit_t *circ,
                                   edge_connection_t *conn);
+void hs_hsdir_set_changed_consider_reupload(void);
 
 void hs_service_dir_info_changed(void);
 void hs_service_run_scheduled_events(time_t now);
@@ -337,6 +344,14 @@ check_state_line_for_service_rev_counter(const char *state_line,
 
 STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_);
+
+STATIC void upload_descriptor_to_all(const hs_service_t *service,
+                                     hs_service_descriptor_t *desc,
+                                     int for_next_period);
+
+STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
+                                         time_t now,
+                                         int descriptor_changed);
 
 #endif /* TOR_UNIT_TESTS */
 

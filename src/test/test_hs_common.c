@@ -18,7 +18,9 @@
 #include "hs_service.h"
 #include "config.h"
 #include "networkstatus.h"
+#include "directory.h"
 #include "nodelist.h"
+#include "statefile.h"
 
 /** Test the validation of HS v3 addresses */
 static void
@@ -486,6 +488,163 @@ test_responsible_hsdirs(void *arg)
   networkstatus_vote_free(mock_ns);
 }
 
+static void
+mock_directory_initiate_request(directory_request_t *req)
+{
+  (void)req;
+  return;
+}
+
+static int
+mock_hs_desc_encode_descriptor(const hs_descriptor_t *desc,
+                           const ed25519_keypair_t *signing_kp,
+                           char **encoded_out)
+{
+  (void)desc;
+  (void)signing_kp;
+
+  tor_asprintf(encoded_out, "lulu");
+  return 0;
+}
+
+static or_state_t dummy_state;
+
+/* Mock function to get fake or state (used for rev counters) */
+static or_state_t *
+get_or_state_replacement(void)
+{
+  return &dummy_state;
+}
+
+static int
+mock_router_have_minimum_dir_info(void)
+{
+  return 1;
+}
+
+/** Test that we correctly detect when the HSDir hash ring changes so that we
+ *  reupload our descriptor. */
+static void
+test_desc_reupload_logic(void *arg)
+{
+  networkstatus_t *ns = NULL;
+
+  (void) arg;
+
+  hs_init();
+
+  MOCK(router_have_minimum_dir_info,
+       mock_router_have_minimum_dir_info);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+  MOCK(networkstatus_get_latest_consensus,
+       mock_networkstatus_get_latest_consensus);
+  MOCK(directory_initiate_request,
+       mock_directory_initiate_request);
+  MOCK(hs_desc_encode_descriptor,
+       mock_hs_desc_encode_descriptor);
+
+  ns = networkstatus_get_latest_consensus();
+
+  /** Test logic:
+   *  1) Upload descriptor to HSDirs
+   *     CHECK that previous_hsdirs list was populated.
+   *  2) Then call router_dir_info_changed() without an HSDir set change.
+   *     CHECK that no reuplod occurs.
+   *  3) Now change the HSDir set, and call dir_info_changed() again.
+   *     CHECK that reupload occurs.
+   *  4) Finally call service_desc_schedule_upload().
+   *     CHECK that previous_hsdirs list was cleared.
+   **/
+
+  /* Let's start by building our descriptor and service */
+  hs_service_descriptor_t *desc = service_descriptor_new();
+  hs_service_t *service = NULL;
+  char onion_addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+  ed25519_public_key_t pubkey;
+  memset(&pubkey, '\x42', sizeof(pubkey));
+  hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
+  service = tor_malloc_zero(sizeof(hs_service_t));
+  memcpy(service->onion_address, onion_addr, sizeof(service->onion_address));
+  ed25519_secret_key_generate(&service->keys.identity_sk, 0);
+  ed25519_public_key_generate(&service->keys.identity_pk,
+                              &service->keys.identity_sk);
+  service->desc_current = desc;
+  /* Also add service to service map */
+  hs_service_ht *service_map = get_hs_service_map();
+  tt_assert(service_map);
+  tt_int_op(hs_service_get_num_services(), OP_EQ, 0);
+  register_service(service_map, service);
+  tt_int_op(hs_service_get_num_services(), OP_EQ, 1);
+
+  /* Now let's create our hash ring: */
+  { /* First HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "let_me";
+    memset(identity, 1, sizeof(identity));
+    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  { /* Second HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "show_you";
+    memset(identity, 2, sizeof(identity));
+    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  /* Now let's upload our desc to all hsdirs */
+  upload_descriptor_to_all(service, desc, 0);
+  /* Check that previous hsdirs were populated */
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 2);
+
+  /* Poison next upload time so that we can see if it was changed by
+   * router_dir_info_changed(). No changes in hash ring so far, so the upload
+   * time should stay as is. */
+  desc->next_upload_time = 42;
+  router_dir_info_changed();
+  tt_int_op(desc->next_upload_time, OP_EQ, 42);
+
+  /* Now change the HSDir hash ring by adding another node */
+
+  { /* Third HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "how_to_dance";
+    memset(identity, 3, sizeof(identity));
+    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  /* Now call router_dir_info_changed() again and see that it detected the hash
+     ring change and updated the upload time */
+  time_t now = approx_time();
+  tt_assert(now);
+  router_dir_info_changed();
+  tt_int_op(desc->next_upload_time, OP_EQ, now);
+
+  /* Now pretend that the descriptor changed, and order a reupload to all
+     HSDirs. Make sure that the set of previous HSDirs was cleared. */
+  service_desc_schedule_upload(desc, now, 1);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 0);
+
+  /* Now reupload again: see that the prev hsdir set got populated again. */
+  upload_descriptor_to_all(service, desc, 0);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 3);
+
+ done:
+  hs_free_all();
+}
+
 /** Test disaster SRV computation and caching */
 static void
 test_disaster_srv(void *arg)
@@ -550,7 +709,9 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "desc_overlap_period_testnet", test_desc_overlap_period_testnet, TT_FORK,
     NULL, NULL },
-  { "desc_responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
+  { "responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
+    NULL, NULL },
+  { "desc_reupload_logic", test_desc_reupload_logic, TT_FORK,
     NULL, NULL },
   { "disaster_srv", test_disaster_srv, TT_FORK, NULL, NULL },
 

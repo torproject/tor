@@ -2357,10 +2357,10 @@ static int
  *
  * Return 0 on success and encoded_out is a valid pointer. On error, -1 is
  * returned and encoded_out is set to NULL. */
-int
-hs_desc_encode_descriptor(const hs_descriptor_t *desc,
-                          const ed25519_keypair_t *signing_kp,
-                          char **encoded_out)
+MOCK_IMPL(int,
+hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
+                           const ed25519_keypair_t *signing_kp,
+                           char **encoded_out))
 {
   int ret = -1;
   uint32_t version;

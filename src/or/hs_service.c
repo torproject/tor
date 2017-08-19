@@ -972,6 +972,10 @@ service_descriptor_free(hs_service_descriptor_t *desc)
   /* Cleanup all intro points. */
   digest256map_free(desc->intro_points.map, service_intro_point_free_);
   digestmap_free(desc->intro_points.failed_id, tor_free_);
+  if (desc->previous_hsdirs) {
+    SMARTLIST_FOREACH(desc->previous_hsdirs, char *, s, tor_free(s));
+    smartlist_free(desc->previous_hsdirs);
+  }
   tor_free(desc);
 }
 
@@ -985,6 +989,7 @@ service_descriptor_new(void)
   sdesc->intro_points.map = digest256map_new();
   sdesc->intro_points.failed_id = digestmap_new();
   sdesc->hsdir_missing_info = smartlist_new();
+  sdesc->previous_hsdirs = smartlist_new();
   return sdesc;
 }
 
@@ -1511,6 +1516,52 @@ pick_needed_intro_points(hs_service_t *service,
   return i;
 }
 
+/** Clear previous cached HSDirs in <b>desc</b>. */
+static void
+service_desc_clear_previous_hsdirs(hs_service_descriptor_t *desc)
+{
+  if (BUG(!desc->previous_hsdirs)) {
+    return;
+  }
+
+  SMARTLIST_FOREACH(desc->previous_hsdirs, char*, s, tor_free(s));
+  smartlist_clear(desc->previous_hsdirs);
+}
+
+/** Note that we attempted to upload <b>desc</b> to <b>hsdir</b>. */
+static void
+service_desc_note_upload(hs_service_descriptor_t *desc, const node_t *hsdir)
+{
+  char b64_digest[BASE64_DIGEST_LEN+1] = {0};
+  digest_to_base64(b64_digest, hsdir->identity);
+
+  if (BUG(!desc->previous_hsdirs)) {
+    return;
+  }
+
+  if (!smartlist_contains_string(desc->previous_hsdirs, b64_digest)) {
+    smartlist_add_strdup(desc->previous_hsdirs, b64_digest);
+    smartlist_sort_strings(desc->previous_hsdirs);
+  }
+}
+
+/** Schedule an upload of <b>desc</b>. If <b>descriptor_changed</b> is set, it
+ *  means that this descriptor is dirty. */
+STATIC void
+service_desc_schedule_upload(hs_service_descriptor_t *desc,
+                             time_t now,
+                             int descriptor_changed)
+
+{
+  desc->next_upload_time = now;
+
+  /* If the descriptor changed, clean up the old HSDirs list. We want to
+   * re-upload no matter what. */
+  if (descriptor_changed) {
+    service_desc_clear_previous_hsdirs(desc);
+  }
+}
+
 /* Update the given descriptor from the given service. The possible update
  * actions includes:
  *    - Picking missing intro points if needed.
@@ -1543,7 +1594,7 @@ update_service_descriptor(hs_service_t *service,
       /* We'll build those introduction point into the descriptor once we have
        * confirmation that the circuits are opened and ready. However,
        * indicate that this descriptor should be uploaded from now on. */
-      desc->next_upload_time = now;
+      service_desc_schedule_upload(desc, now, 1);
     }
     /* Were we able to pick all the intro points we needed? If not, we'll
      * flag the descriptor that it's missing intro points because it
@@ -1972,6 +2023,9 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
   directory_initiate_request(dir_req);
   directory_request_free(dir_req);
 
+  /* Add this node to previous_hsdirs list */
+  service_desc_note_upload(desc, hsdir);
+
   /* Logging so we know where it was sent. */
   {
     int is_next_desc = (service->desc_next == desc);
@@ -2189,7 +2243,7 @@ set_descriptor_revision_counter(hs_descriptor_t *hs_desc)
  * responsible hidden service directories. If for_next_period is true, the set
  * of directories are selected using the next hsdir_index. This does nothing
  * if PublishHidServDescriptors is false. */
-static void
+STATIC void
 upload_descriptor_to_all(const hs_service_t *service,
                          hs_service_descriptor_t *desc, int for_next_period)
 {
@@ -2629,9 +2683,87 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
   smartlist_add(list, hs_path_from_filename(s_dir, fname));
 }
 
+/** The set of HSDirs have changed: check if the change affects our descriptor
+ *  HSDir placement, and if it does, reupload the desc. */
+static int
+service_desc_hsdirs_changed(const hs_service_t *service,
+                            const hs_service_descriptor_t *desc)
+{
+  int retval = 0;
+  smartlist_t *responsible_dirs = smartlist_new();
+  smartlist_t *b64_responsible_dirs = smartlist_new();
+
+  /* No desc upload has happened yet: it will happen eventually */
+  if (!desc->previous_hsdirs || !smartlist_len(desc->previous_hsdirs)) {
+    goto done;
+  }
+
+  /* Get list of responsible hsdirs */
+  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
+                            service->desc_next == desc, 0, responsible_dirs);
+
+  /* Make a second list with their b64ed identity digests, so that we can
+   * compare it with out previous list of hsdirs */
+  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, hsdir_rs) {
+    char b64_digest[BASE64_DIGEST_LEN+1] = {0};
+    digest_to_base64(b64_digest, hsdir_rs->identity_digest);
+    smartlist_add_strdup(b64_responsible_dirs, b64_digest);
+  } SMARTLIST_FOREACH_END(hsdir_rs);
+
+  /* Sort this new smartlist so that we can compare it with the other one */
+  smartlist_sort_strings(b64_responsible_dirs);
+
+  /* Check whether the set of HSDirs changed */
+  if (!smartlist_strings_eq(b64_responsible_dirs, desc->previous_hsdirs)) {
+    log_warn(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
+    retval = 1;
+  } else {
+    log_warn(LD_GENERAL, "No change in hsdir set!");
+  }
+
+ done:
+  smartlist_free(responsible_dirs);
+
+  SMARTLIST_FOREACH(b64_responsible_dirs, char*, s, tor_free(s));
+  smartlist_free(b64_responsible_dirs);
+
+  return retval;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* We just received a new batch of descriptors which might affect the shape of
+ * the HSDir hash ring. Signal that we should re-upload our HS descriptors. */
+void
+hs_hsdir_set_changed_consider_reupload(void)
+{
+  time_t now = approx_time();
+
+  /* Check if HS subsystem is initialized */
+  if (!hs_service_map) {
+    return;
+  }
+
+  /* Basic test: If we have not bootstrapped 100% yet, no point in even trying
+     to upload descriptor. */
+  if (!router_have_minimum_dir_info()) {
+    return;
+  }
+
+  log_info(LD_GENERAL, "Received new descriptors. Set of HSdirs changed.");
+
+  /* Go over all descriptors and check if the set of HSDirs changed for any of
+   * them. Schedule reupload if so. */
+  FOR_EACH_SERVICE_BEGIN(service) {
+    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+      if (service_desc_hsdirs_changed(service, desc)) {
+        service_desc_schedule_upload(desc, now, 0);
+      }
+    } FOR_EACH_DESCRIPTOR_END;
+  } FOR_EACH_SERVICE_END;
+}
 
 /* Return the number of service we have configured and usable. */
 unsigned int
