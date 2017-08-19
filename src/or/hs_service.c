@@ -1739,6 +1739,13 @@ rotate_all_descriptors(time_t now)
      * it in order to make sure we don't rotate at next check. */
     service->state.in_overlap_period = 1;
 
+    /* We just entered overlap period: recompute all HSDir indices. We need to
+     * do this otherwise nodes can get stuck with old HSDir indices until we
+     * fetch a new consensus, and we might need to reupload our desc before
+     * that. */
+    /* XXX find a better place than rotate_all_descriptors() to do this */
+    nodelist_recompute_all_hsdir_indices();
+
     /* If we have a next descriptor lined up, rotate the descriptors so that it
      * becomes current. */
     if (service->desc_next) {
