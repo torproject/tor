@@ -127,6 +127,7 @@
 
 static int connection_ap_handshake_process_socks(entry_connection_t *conn);
 static int connection_ap_process_natd(entry_connection_t *conn);
+static int connection_ap_process_http_connect(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
@@ -234,6 +235,11 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
     case AP_CONN_STATE_NATD_WAIT:
       if (connection_ap_process_natd(EDGE_TO_ENTRY_CONN(conn)) < 0) {
         /* already marked */
+        return -1;
+      }
+      return 0;
+    case AP_CONN_STATE_HTTP_CONNECT_WAIT:
+      if (connection_ap_process_http_connect(EDGE_TO_ENTRY_CONN(conn)) < 0) {
         return -1;
       }
       return 0;
@@ -486,6 +492,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
     case AP_CONN_STATE_CONNECT_WAIT:
     case AP_CONN_STATE_CONTROLLER_WAIT:
     case AP_CONN_STATE_RESOLVE_WAIT:
+    case AP_CONN_STATE_HTTP_CONNECT_WAIT:
       return 0;
     default:
       log_warn(LD_BUG, "Called in unexpected state %d.",conn->base_.state);
@@ -2349,6 +2356,95 @@ connection_ap_process_natd(entry_connection_t *conn)
   return connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
 }
 
+/** Called on an HTTP CONNECT entry connection when some bytes have arrived,
+ * but we have not yet received a full HTTP CONNECT request.  Try to parse an
+ * HTTP CONNECT request from the connection's inbuf.  On success, set up the
+ * connection's socks_request field and try to attach the connection.  On
+ * failure, send an HTTP reply, and mark the connection.
+ */
+static int
+connection_ap_process_http_connect(entry_connection_t *conn)
+{
+  if (BUG(ENTRY_TO_CONN(conn)->state != AP_CONN_STATE_HTTP_CONNECT_WAIT))
+    return -1;
+
+  char *headers = NULL, *body = NULL;
+  char *command = NULL, *addrport = NULL;
+  char *addr = NULL;
+  size_t bodylen = 0;
+
+  const char *errmsg = NULL;
+  int rv = 0;
+
+  const int http_status =
+    fetch_from_buf_http(ENTRY_TO_CONN(conn)->inbuf, &headers, 8192,
+                        &body, &bodylen, 1024, 0);
+  if (http_status < 0) {
+    /* Bad http status */
+    errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
+    goto err;
+  } else if (http_status == 0) {
+    /* no HTTP request yet. */
+    goto done;
+  }
+
+  const int cmd_status = parse_http_command(headers, &command, &addrport);
+  if (cmd_status < 0) {
+    errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
+    goto err;
+  }
+  tor_assert(command);
+  tor_assert(addrport);
+  if (strcasecmp(command, "connect")) {
+    errmsg = "HTTP/1.0 405 Method Not Allowed\r\n\r\n";
+    goto err;
+  }
+
+  tor_assert(conn->socks_request);
+  socks_request_t *socks = conn->socks_request;
+  uint16_t port;
+  if (tor_addr_port_split(LOG_WARN, addrport, &addr, &port) < 0) {
+    errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
+    goto err;
+  }
+  if (strlen(addr) >= MAX_SOCKS_ADDR_LEN) {
+    errmsg = "HTTP/1.0 414 Request-URI Too Long\r\n\r\n";
+    goto err;
+  }
+
+  /* XXXX Look at headers */
+
+  socks->command = SOCKS_COMMAND_CONNECT;
+  socks->listener_type = CONN_TYPE_AP_HTTP_CONNECT_LISTENER;
+  strlcpy(socks->address, addr, sizeof(socks->address));
+  socks->port = port;
+
+  control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
+
+  rv = connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
+
+  // XXXX send a "100 Continue" message?
+
+  goto done;
+
+ err:
+  if (BUG(errmsg == NULL))
+    errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
+  log_warn(LD_EDGE, "Saying %s", escaped(errmsg));
+  connection_write_to_buf(errmsg, strlen(errmsg), ENTRY_TO_CONN(conn));
+  connection_mark_unattached_ap(conn,
+                                END_STREAM_REASON_HTTPPROTOCOL|
+                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
+
+ done:
+  tor_free(headers);
+  tor_free(body);
+  tor_free(command);
+  tor_free(addrport);
+  tor_free(addr);
+  return rv;
+}
+
 /** Iterate over the two bytes of stream_id until we get one that is not
  * already in use; return it. Return 0 if can't get a unique stream_id.
  */
@@ -2972,7 +3068,14 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
     conn->socks_request->has_finished = 1;
     return;
   }
-  if (conn->socks_request->socks_version == 4) {
+  if (conn->socks_request->listener_type ==
+       CONN_TYPE_AP_HTTP_CONNECT_LISTENER) {
+    const char *response = end_reason_to_http_connect_response_line(endreason);
+    if (!response) {
+      response = "HTTP/1.0 400 Bad Request\r\n\r\n";
+    }
+    connection_write_to_buf(response, strlen(response), ENTRY_TO_CONN(conn));
+  } else if (conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
     buf[1] = (status==SOCKS5_SUCCEEDED ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */

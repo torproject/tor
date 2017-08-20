@@ -45,6 +45,8 @@ stream_end_reason_to_control_string(int reason)
     case END_STREAM_REASON_CANT_ATTACH: return "CANT_ATTACH";
     case END_STREAM_REASON_NET_UNREACHABLE: return "NET_UNREACHABLE";
     case END_STREAM_REASON_SOCKSPROTOCOL: return "SOCKS_PROTOCOL";
+    // XXXX Controlspec
+    case END_STREAM_REASON_HTTPPROTOCOL: return "HTTP_PROTOCOL";
 
     case END_STREAM_REASON_PRIVATE_ADDR: return "PRIVATE_ADDR";
 
@@ -138,6 +140,11 @@ stream_end_reason_to_socks5_response(int reason)
       return SOCKS5_NET_UNREACHABLE;
     case END_STREAM_REASON_SOCKSPROTOCOL:
       return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_HTTPPROTOCOL:
+      // LCOV_EXCL_START
+      tor_assert_nonfatal_unreached();
+      return SOCKS5_GENERAL_ERROR;
+      // LCOV_EXCL_STOP
     case END_STREAM_REASON_PRIVATE_ADDR:
       return SOCKS5_GENERAL_ERROR;
 
@@ -439,6 +446,51 @@ bandwidth_weight_rule_to_string(bandwidth_weight_rule_t rule)
       return "weight as directory";
     default:
       return "unknown rule";
+  }
+}
+
+/** Given a RELAY_END reason value, convert it to an HTTP response to be
+ * send over an HTTP tunnel connection. */
+const char *
+end_reason_to_http_connect_response_line(int endreason)
+{
+  endreason &= END_STREAM_REASON_MASK;
+  /* XXXX these are probably all wrong. Should they all be 502? */
+  switch (endreason) {
+    case 0:
+      return "HTTP/1.0 200 OK\r\n\r\n";
+    case END_STREAM_REASON_MISC:
+      return "HTTP/1.0 500 Internal Server Error\r\n\r\n";
+    case END_STREAM_REASON_RESOLVEFAILED:
+      return "HTTP/1.0 404 Not Found (resolve failed)\r\n\r\n";
+    case END_STREAM_REASON_NOROUTE:
+      return "HTTP/1.0 404 Not Found (no route)\r\n\r\n";
+    case END_STREAM_REASON_CONNECTREFUSED:
+      return "HTTP/1.0 403 Forbidden (connection refused)\r\n\r\n";
+    case END_STREAM_REASON_EXITPOLICY:
+      return "HTTP/1.0 403 Forbidden (exit policy)\r\n\r\n";
+    case END_STREAM_REASON_DESTROY:
+      return "HTTP/1.0 502 Bad Gateway (destroy cell received)\r\n\r\n";
+    case END_STREAM_REASON_DONE:
+      return "HTTP/1.0 502 Bad Gateway (unexpected close)\r\n\r\n";
+    case END_STREAM_REASON_TIMEOUT:
+      return "HTTP/1.0 504 Gateway Timeout\r\n\r\n";
+    case END_STREAM_REASON_HIBERNATING:
+      return "HTTP/1.0 502 Bad Gateway (hibernating server)\r\n\r\n";
+    case END_STREAM_REASON_INTERNAL:
+      return "HTTP/1.0 502 Bad Gateway (internal error)\r\n\r\n";
+    case END_STREAM_REASON_RESOURCELIMIT:
+      return "HTTP/1.0 502 Bad Gateway (resource limit)\r\n\r\n";
+    case END_STREAM_REASON_CONNRESET:
+      return "HTTP/1.0 403 Forbidden (connection reset)\r\n\r\n";
+    case END_STREAM_REASON_TORPROTOCOL:
+      return "HTTP/1.0 502 Bad Gateway (tor protocol violation)\r\n\r\n";
+    case END_STREAM_REASON_ENTRYPOLICY:
+      return "HTTP/1.0 403 Forbidden (entry policy violation)\r\n\r\n";
+    case END_STREAM_REASON_NOTDIRECTORY: /* Fall Through */
+    default:
+      tor_assert_nonfatal_unreached();
+      return "HTTP/1.0 500 Internal Server Error (weird end reason)\r\n\r\n";
   }
 }
 
