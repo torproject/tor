@@ -103,7 +103,6 @@ static void directory_send_command(dir_connection_t *conn,
                                    int direct,
                                    const directory_request_t *request);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
-static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_bridge_routerdesc_failed(dir_connection_t *conn);
@@ -1942,15 +1941,39 @@ directory_send_command(dir_connection_t *conn,
 STATIC int
 parse_http_url(const char *headers, char **url)
 {
+  char *command = NULL;
+  if (parse_http_command(headers, &command, url) < 0) {
+    return -1;
+  }
+  if (!strcmpstart(*url, "/tor/")) {
+    char *new_url = NULL;
+    tor_asprintf(&new_url, "/tor/%s", *url);
+    tor_free(*url);
+    *url = new_url;
+  }
+  tor_free(command);
+  return 0;
+}
+
+/** Parse an HTTP request line at the start of a headers string.  On failure,
+ * return -1.  On success, set *<b>command_out</b> to a copy of the HTTP
+ * command ("get", "post", etc), set *<b>url_out</b> to a copy of the URL, and
+ * return 0. */
+int
+parse_http_command(const char *headers, char **command_out, char **url_out)
+{
+  const char *command, *end_of_command;
   char *s, *start, *tmp;
 
   s = (char *)eat_whitespace_no_nl(headers);
   if (!*s) return -1;
+  command = s;
   s = (char *)find_whitespace(s); /* get past GET/POST */
   if (!*s) return -1;
+  end_of_command = s;
   s = (char *)eat_whitespace_no_nl(s);
   if (!*s) return -1;
-  start = s; /* this is it, assuming it's valid */
+  start = s; /* this is the URL, assuming it's valid */
   s = (char *)find_whitespace(start);
   if (!*s) return -1;
 
@@ -1981,13 +2004,8 @@ parse_http_url(const char *headers, char **url)
       return -1;
   }
 
-  if (s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
-    *url = tor_malloc(s - start + 5);
-    strlcpy(*url,"/tor", s-start+5);
-    strlcat((*url)+4, start, s-start+1);
-  } else {
-    *url = tor_strndup(start, s-start);
-  }
+  *url_out = tor_memdup_nulterm(start, s-start);
+  *command_out = tor_memdup_nulterm(command, end_of_command - command);
   return 0;
 }
 
@@ -1995,7 +2013,7 @@ parse_http_url(const char *headers, char **url)
  * <b>which</b>.  The key should be given with a terminating colon and space;
  * this function copies everything after, up to but not including the
  * following \\r\\n. */
-static char *
+char *
 http_get_header(const char *headers, const char *which)
 {
   const char *cp = headers;

@@ -85,6 +85,9 @@ MOCK_DECL(void, directory_initiate_request, (directory_request_t *request));
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         compress_method_t *compression, char **response);
+int parse_http_command(const char *headers,
+                       char **command_out, char **url_out);
+char *http_get_header(const char *headers, const char *which);
 
 int connection_dir_is_encrypted(const dir_connection_t *conn);
 int connection_dir_reached_eof(dir_connection_t *conn);
