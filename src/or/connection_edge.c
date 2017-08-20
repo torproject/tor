@@ -2412,7 +2412,20 @@ connection_ap_process_http_connect(entry_connection_t *conn)
     goto err;
   }
 
-  /* XXXX Look at headers */
+  /* Abuse the 'username' and 'password' fields here. They are already an
+  * abuse. */
+  {
+    char *authorization = http_get_header(headers, "Proxy-Authorization: ");
+    if (authorization) {
+      socks->username = authorization; // steal reference
+      socks->usernamelen = strlen(authorization);
+    }
+    char *isolation = http_get_header(headers, "X-Tor-Stream-Isolation: ");
+    if (isolation) {
+      socks->password = isolation; // steal reference
+      socks->passwordlen = strlen(isolation);
+    }
+  }
 
   socks->command = SOCKS_COMMAND_CONNECT;
   socks->listener_type = CONN_TYPE_AP_HTTP_CONNECT_LISTENER;
