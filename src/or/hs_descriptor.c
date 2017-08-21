@@ -1273,7 +1273,7 @@ cert_is_valid(tor_cert_t *cert, uint8_t type, const char *log_obj_type)
   }
   /* The following will not only check if the signature matches but also the
    * expiration date and overall validity. */
-  if (tor_cert_checksig(cert, &cert->signing_key, time(NULL)) < 0) {
+  if (tor_cert_checksig(cert, &cert->signing_key, approx_time()) < 0) {
     log_warn(LD_REND, "Invalid signature for %s.", log_obj_type);
     goto err;
   }
@@ -1927,7 +1927,8 @@ desc_sig_is_valid(const char *b64_sig,
   sig_start = tor_memstr(encoded_desc, encoded_len, "\n" str_signature);
   /* Getting here means the token parsing worked for the signature so if we
    * can't find the start of the signature, we have a code flow issue. */
-  if (BUG(!sig_start)) {
+  if (!sig_start) {
+    log_warn(LD_GENERAL, "Malformed signature line. Rejecting.");
     goto err;
   }
   /* Skip newline, it has to go in the signature check. */
