@@ -19,6 +19,14 @@
 #include "test_helpers.h"
 #include "log_test_helpers.h"
 
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
+DISABLE_GCC_WARNING(overlength-strings)
+/* We allow huge string constants in the unit tests, but not in the code
+ * at large. */
+#endif
+#include "test_hs_descriptor.inc"
+ENABLE_GCC_WARNING(overlength-strings)
+
 /* Test certificate encoding put in a descriptor. */
 static void
 test_cert_encoding(void *arg)
@@ -548,6 +556,27 @@ test_decode_invalid_intro_point(void *arg)
   desc_intro_point_free(ip);
 }
 
+/** Make sure we fail gracefully when decoding the bad desc from #23233. */
+static void
+test_decode_bad_signature(void *arg)
+{
+  hs_desc_plaintext_data_t desc_plaintext;
+  int ret;
+
+  (void) arg;
+
+  /* Update approx time to dodge cert expiration */
+  update_approx_time(1502661599);
+
+  setup_full_capture_of_logs(LOG_WARN);
+  ret = hs_desc_decode_plaintext(HS_DESC_BAD_SIG, &desc_plaintext);
+  tt_int_op(ret, OP_EQ, -1);
+  expect_log_msg_containing("Malformed signature line. Rejecting.");
+  teardown_capture_of_logs();
+
+ done: ;
+}
+
 static void
 test_decode_plaintext(void *arg)
 {
@@ -837,6 +866,8 @@ struct testcase_t hs_descriptor[] = {
   { "decode_invalid_intro_point", test_decode_invalid_intro_point, TT_FORK,
     NULL, NULL },
   { "decode_plaintext", test_decode_plaintext, TT_FORK,
+    NULL, NULL },
+  { "decode_bad_signature", test_decode_bad_signature, TT_FORK,
     NULL, NULL },
 
   /* Misc. */
