@@ -1,0 +1,3 @@
+  o Minor bugfixes (testing):
+    - Fix an undersized buffer in test-memwipe.c. Fixes bug 23291; bugfix on
+      0.2.7.2-alpha. Found and patched by Ties Stuij.
