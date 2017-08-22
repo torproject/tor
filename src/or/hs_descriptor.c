@@ -55,11 +55,10 @@
 /* For unit tests.*/
 #define HS_DESCRIPTOR_PRIVATE
 
-#include "hs_descriptor.h"
-
 #include "or.h"
-#include "circuitbuild.h"
 #include "ed25519_cert.h" /* Trunnel interface. */
+#include "hs_descriptor.h"
+#include "circuitbuild.h"
 #include "parsecommon.h"
 #include "rendcache.h"
 #include "hs_cache.h"

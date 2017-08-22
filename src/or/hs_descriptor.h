@@ -19,7 +19,7 @@
 #include "torcert.h"
 
 /* Trunnel */
-#include "ed25519_cert.h"
+struct link_specifier_t;
 
 /* The earliest descriptor format version we support. */
 #define HS_DESC_SUPPORTED_FORMAT_VERSION_MIN 3
