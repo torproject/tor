@@ -850,44 +850,6 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
   return 1;
 }
 
-/** Called when we receive a RENDEZVOUS_ESTABLISHED cell; changes the state of
- * the circuit to C_REND_READY.
- */
-int
-rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
-                             size_t request_len)
-{
-  (void) request;
-  (void) request_len;
-  /* we just got an ack for our establish-rendezvous. switch purposes. */
-  if (circ->base_.purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
-    log_warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
-             "Closing circ.");
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    return -1;
-  }
-  log_info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
-           "rendezvous.");
-  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_READY);
-  /* Set timestamp_dirty, because circuit_expire_building expects it
-   * to specify when a circuit entered the _C_REND_READY state. */
-  circ->base_.timestamp_dirty = time(NULL);
-
-  /* From a path bias point of view, this circuit is now successfully used.
-   * Waiting any longer opens us up to attacks from malicious hidden services.
-   * They could induce the client to attempt to connect to their hidden
-   * service and never reply to the client's rend requests */
-  pathbias_mark_use_success(circ);
-
-  /* XXXX++ This is a pretty brute-force approach. It'd be better to
-   * attach only the connections that are waiting on this circuit, rather
-   * than trying to attach them all. See comments bug 743. */
-  /* If we already have the introduction circuit built, make sure we send
-   * the INTRODUCE cell _now_ */
-  connection_ap_attach_pending(1);
-  return 0;
-}
-
 /** The service sent us a rendezvous cell; join the circuits. */
 int
 rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,

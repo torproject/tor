@@ -29,9 +29,6 @@ int rend_client_report_intro_point_failure(extend_info_t *failed_intro,
                                            rend_data_t *rend_data,
                                            unsigned int failure_type);
 
-int rend_client_rendezvous_acked(origin_circuit_t *circ,
-                                 const uint8_t *request,
-                                 size_t request_len);
 int rend_client_receive_rendezvous(origin_circuit_t *circ,
                                    const uint8_t *request,
                                    size_t request_len);
