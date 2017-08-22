@@ -1602,7 +1602,7 @@ NS(test_main)(void *arg)
  */
 
 NS_DECL(const node_t *, node_get_by_nickname,
-    (const char *nickname, int warn_if_unused));
+    (const char *nickname, unsigned flags));
 static const char *NS(mock_nickname);
 
 static void
@@ -1632,11 +1632,11 @@ NS(test_main)(void *arg)
 }
 
 const node_t *
-NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
+NS(node_get_by_nickname)(const char *nickname, unsigned flags)
 {
   CALLED(node_get_by_nickname)++;
   tt_str_op(nickname, OP_EQ, NS(mock_nickname));
-  tt_int_op(warn_if_unused, OP_EQ, 1);
+  tt_uint_op(flags, OP_EQ, 0);
 
   done:
     return NULL;
@@ -1651,7 +1651,7 @@ NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
  */
 
 NS_DECL(const node_t *, node_get_by_nickname,
-    (const char *nickname, int warn_if_unused));
+    (const char *nickname, unsigned flags));
 static const char *NS(mock_nickname);
 static node_t NS(mock_node);
 
@@ -1683,11 +1683,11 @@ NS(test_main)(void *arg)
 }
 
 const node_t *
-NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
+NS(node_get_by_nickname)(const char *nickname, unsigned flags)
 {
   CALLED(node_get_by_nickname)++;
   tt_str_op(nickname, OP_EQ, NS(mock_nickname));
-  tt_int_op(warn_if_unused, OP_EQ, 1);
+  tt_int_op(flags, OP_EQ, 0);
 
   done:
     return &NS(mock_node);
@@ -1701,7 +1701,7 @@ NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
  */
 
 NS_DECL(const node_t *, node_get_by_nickname,
-    (const char *nickname, int warn_if_unused));
+    (const char *nickname, unsigned flags));
 static char *NS(mock_nickname);
 static node_t NS(mock_node);
 
@@ -1735,11 +1735,11 @@ NS(test_main)(void *arg)
 }
 
 const node_t *
-NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
+NS(node_get_by_nickname)(const char *nickname, unsigned flags)
 {
   CALLED(node_get_by_nickname)++;
   tt_str_op(nickname, OP_EQ, NS(mock_nickname));
-  tt_int_op(warn_if_unused, OP_EQ, 1);
+  tt_int_op(flags, OP_EQ, 0);
 
   done:
     return &NS(mock_node);

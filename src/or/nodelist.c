@@ -762,13 +762,15 @@ nodelist_get_list,(void))
 /** Given a hex-encoded nickname of the format DIGEST, $DIGEST, $DIGEST=name,
  * or $DIGEST~name, return the node with the matching identity digest and
  * nickname (if any).  Return NULL if no such node exists, or if <b>hex_id</b>
- * is not well-formed. */
+ * is not well-formed. DOCDOC flags */
 const node_t *
-node_get_by_hex_id(const char *hex_id)
+node_get_by_hex_id(const char *hex_id, unsigned flags)
 {
   char digest_buf[DIGEST_LEN];
   char nn_buf[MAX_NICKNAME_LEN+1];
   char nn_char='\0';
+
+  (void) flags; // XXXX
 
   if (hex_digest_nickname_decode(hex_id, digest_buf, &nn_char, nn_buf)==0) {
     const node_t *node = node_get_by_id(digest_buf);
@@ -785,19 +787,21 @@ node_get_by_hex_id(const char *hex_id)
 }
 
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
- * the corresponding node_t, or NULL if none exists.  Warn the user if
- * <b>warn_if_unnamed</b> is set, and they have specified a router by
- * nickname, but the Named flag isn't set for that router. */
+ * the corresponding node_t, or NULL if none exists. Warn the user if they
+ * have specified a router by nickname, unless the NNF_NO_WARN_UNNAMED bit is
+ * set in <b>flags</b>. */
 MOCK_IMPL(const node_t *,
-node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
+node_get_by_nickname,(const char *nickname, unsigned flags))
 {
+  const int warn_if_unnamed = !(flags & NNF_NO_WARN_UNNAMED);
+
   if (!the_nodelist)
     return NULL;
 
   /* Handle these cases: DIGEST, $DIGEST, $DIGEST=name, $DIGEST~name. */
   {
     const node_t *node;
-    if ((node = node_get_by_hex_id(nickname)) != NULL)
+    if ((node = node_get_by_hex_id(nickname, flags)) != NULL)
       return node;
   }
 
@@ -1719,7 +1723,7 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
     SMARTLIST_FOREACH_BEGIN(declared_family, const char *, name) {
       const node_t *node2;
       const smartlist_t *family2;
-      if (!(node2 = node_get_by_nickname(name, 0)))
+      if (!(node2 = node_get_by_nickname(name, NNF_NO_WARN_UNNAMED)))
         continue;
       if (!(family2 = node_get_declared_family(node2)))
         continue;
