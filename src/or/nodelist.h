@@ -40,7 +40,6 @@ void node_get_verbose_nickname(const node_t *node,
                                char *verbose_name_out);
 void node_get_verbose_nickname_by_id(const char *id_digest,
                                 char *verbose_name_out);
-int node_is_named(const node_t *node);
 int node_is_dir(const node_t *node);
 int node_has_descriptor(const node_t *node);
 int node_get_purpose(const node_t *node);

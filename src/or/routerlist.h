@@ -228,7 +228,7 @@ int hex_digest_nickname_decode(const char *hexdigest,
                                char *nickname_out);
 int hex_digest_nickname_matches(const char *hexdigest,
                                 const char *identity_digest,
-                                const char *nickname, int is_named);
+                                const char *nickname);
 
 #ifdef ROUTERLIST_PRIVATE
 STATIC int choose_array_element_by_weight(const uint64_t *entries,

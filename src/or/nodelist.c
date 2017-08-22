@@ -774,16 +774,9 @@ node_get_by_hex_id(const char *hex_id)
     const node_t *node = node_get_by_id(digest_buf);
     if (!node)
       return NULL;
-    if (nn_char) {
-      const char *real_name = node_get_nickname(node);
-      if (!real_name || strcasecmp(real_name, nn_buf))
-        return NULL;
-      if (nn_char == '=') {
-        const char *named_id =
-          networkstatus_get_router_digest_by_nickname(nn_buf);
-        if (!named_id || tor_memneq(named_id, digest_buf, DIGEST_LEN))
-          return NULL;
-      }
+    if (nn_char == '=') {
+      /* "=" indicates a Named relay, but there aren't any of those now. */
+      return NULL;
     }
     return node;
   }
@@ -1017,21 +1010,6 @@ node_get_nickname(const node_t *node)
     return NULL;
 }
 
-/** Return true iff the nickname of <b>node</b> is canonical, based on the
- * latest consensus. */
-int
-node_is_named(const node_t *node)
-{
-  const char *named_id;
-  const char *nickname = node_get_nickname(node);
-  if (!nickname)
-    return 0;
-  named_id = networkstatus_get_router_digest_by_nickname(nickname);
-  if (!named_id)
-    return 0;
-  return tor_memeq(named_id, node->identity, DIGEST_LEN);
-}
-
 /** Return true iff <b>node</b> appears to be a directory authority or
  * directory cache */
 int
@@ -1079,13 +1057,12 @@ node_get_verbose_nickname(const node_t *node,
                           char *verbose_name_out)
 {
   const char *nickname = node_get_nickname(node);
-  int is_named = node_is_named(node);
   verbose_name_out[0] = '$';
   base16_encode(verbose_name_out+1, HEX_DIGEST_LEN+1, node->identity,
                 DIGEST_LEN);
   if (!nickname)
     return;
-  verbose_name_out[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
+  verbose_name_out[1+HEX_DIGEST_LEN] = '~';
   strlcpy(verbose_name_out+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
 }
 
@@ -1640,8 +1617,7 @@ node_nickname_matches(const node_t *node, const char *nickname)
     return 1;
   return hex_digest_nickname_matches(nickname,
                                      node->identity,
-                                     n,
-                                     node_is_named(node));
+                                     n);
 }
 
 /** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
