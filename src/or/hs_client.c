@@ -407,7 +407,7 @@ desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip)
    * representation which is a trunnel object. */
   SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
                           const hs_desc_link_specifier_t *, desc_lspec) {
-    link_specifier_t *lspec = hs_desc_encode_lspec(desc_lspec);
+    link_specifier_t *lspec = hs_desc_lspec_to_trunnel(desc_lspec);
     smartlist_add(lspecs, lspec);
   } SMARTLIST_FOREACH_END(desc_lspec);
 

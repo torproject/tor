@@ -331,7 +331,7 @@ encode_link_specifiers(const smartlist_t *specs)
 
   SMARTLIST_FOREACH_BEGIN(specs, const hs_desc_link_specifier_t *,
                           spec) {
-    link_specifier_t *ls = hs_desc_encode_lspec(spec);
+    link_specifier_t *ls = hs_desc_lspec_to_trunnel(spec);
     if (ls) {
       link_specifier_list_add_spec(lslist, ls);
     }
@@ -2538,7 +2538,7 @@ hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
  * link specifier object that is the encoded representation of spec. Return
  * NULL on error. */
 link_specifier_t *
-hs_desc_encode_lspec(const hs_desc_link_specifier_t *spec)
+hs_desc_lspec_to_trunnel(const hs_desc_link_specifier_t *spec)
 {
   tor_assert(spec);
 
