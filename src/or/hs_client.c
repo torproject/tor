@@ -800,6 +800,7 @@ hs_client_decode_descriptor(const char *desc_str,
 {
   int ret;
   uint8_t subcredential[DIGEST256_LEN];
+  ed25519_public_key_t blinded_pubkey;
 
   tor_assert(desc_str);
   tor_assert(service_identity_pk);
@@ -807,7 +808,6 @@ hs_client_decode_descriptor(const char *desc_str,
 
   /* Create subcredential for this HS so that we can decrypt */
   {
-    ed25519_public_key_t blinded_pubkey;
     uint64_t current_time_period = hs_get_time_period_num(approx_time());
     hs_build_blinded_pubkey(service_identity_pk, NULL, 0, current_time_period,
                             &blinded_pubkey);
@@ -819,6 +819,16 @@ hs_client_decode_descriptor(const char *desc_str,
   memwipe(subcredential, 0, sizeof(subcredential));
   if (ret < 0) {
     log_warn(LD_GENERAL, "Could not parse received descriptor as client");
+    goto err;
+  }
+
+  /* Make sure the descriptor signing key cross certifies with the computed
+   * blinded key. Without this validation, anyone knowing the subcredential
+   * and onion address can forge a descriptor. */
+  if (tor_cert_checksig((*desc)->plaintext_data.signing_key_cert,
+                        &blinded_pubkey, approx_time()) < 0) {
+    log_warn(LD_GENERAL, "Descriptor signing key certificate signature "
+                         "doesn't validate with computed blinded key.");
     goto err;
   }
 
