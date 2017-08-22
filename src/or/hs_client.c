@@ -214,6 +214,42 @@ find_desc_intro_point_by_ident(const hs_ident_circuit_t *ident,
   return intro_point;
 }
 
+/* Find a descriptor intro point object from the descriptor object desc that
+ * matches the given legacy identity digest in legacy_id. Return NULL if not
+ * found. */
+static hs_desc_intro_point_t *
+find_desc_intro_point_by_legacy_id(const char *legacy_id,
+                                   const hs_descriptor_t *desc)
+{
+  hs_desc_intro_point_t *ret_ip = NULL;
+
+  tor_assert(legacy_id);
+  tor_assert(desc);
+
+  /* We will go over every intro point and try to find which one is linked to
+   * that circuit. Those lists are small so it's not that expensive. */
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          hs_desc_intro_point_t *, ip) {
+    SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
+                            const hs_desc_link_specifier_t *, lspec) {
+      /* Not all tor node have an ed25519 identity key so we still rely on the
+       * legacy identity digest. */
+      if (lspec->type != LS_LEGACY_ID) {
+        continue;
+      }
+      if (fast_memneq(legacy_id, lspec->u.legacy_id, DIGEST_LEN)) {
+        break;
+      }
+      /* Found it. */
+      ret_ip = ip;
+      goto end;
+    } SMARTLIST_FOREACH_END(lspec);
+  } SMARTLIST_FOREACH_END(ip);
+
+ end:
+  return ret_ip;
+}
+
 /* Send an INTRODUCE1 cell along the intro circuit and populate the rend
  * circuit identifier with the needed key material for the e2e encryption.
  * Return 0 on success, -1 if there is a transient error such that an action
@@ -319,6 +355,7 @@ static void
 setup_intro_circ_auth_key(origin_circuit_t *circ)
 {
   const hs_descriptor_t *desc;
+  const hs_desc_intro_point_t *ip;
 
   tor_assert(circ);
 
@@ -330,25 +367,14 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
 
   /* We will go over every intro point and try to find which one is linked to
    * that circuit. Those lists are small so it's not that expensive. */
-  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
-                          const hs_desc_intro_point_t *, ip) {
-    SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
-                            const hs_desc_link_specifier_t *, lspec) {
-      /* Not all tor node have an ed25519 identity key so we still rely on the
-       * legacy identity digest. */
-      if (lspec->type != LS_LEGACY_ID) {
-        continue;
-      }
-      if (fast_memneq(circ->build_state->chosen_exit->identity_digest,
-                      lspec->u.legacy_id, DIGEST_LEN)) {
-        break;
-      }
-      /* We got it, copy its authentication key to the identifier. */
-      ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
-                          &ip->auth_key_cert->signed_key);
-      goto end;
-    } SMARTLIST_FOREACH_END(lspec);
-  } SMARTLIST_FOREACH_END(ip);
+  ip = find_desc_intro_point_by_legacy_id(
+                       circ->build_state->chosen_exit->identity_digest, desc);
+  if (ip) {
+    /* We got it, copy its authentication key to the identifier. */
+    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                        &ip->auth_key_cert->signed_key);
+    goto end;
+  }
 
   /* Reaching this point means we didn't find any intro point for this circuit
    * which is not suppose to happen. */
