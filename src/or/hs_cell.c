@@ -931,3 +931,18 @@ hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
   return ret;
 }
 
+/* Clear the given INTRODUCE1 data structure data. */
+void
+hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data)
+{
+  if (data == NULL) {
+    return;
+  }
+  /* Object in this list have been moved to the cell object when building it
+   * so they've been freed earlier. We do that in order to avoid duplicating
+   * them leading to more memory and CPU time being used for nothing. */
+  smartlist_free(data->link_specifiers);
+  /* The data object has no ownership of any members. */
+  memwipe(data, 0, sizeof(hs_cell_introduce1_data_t));
+}
+

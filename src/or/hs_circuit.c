@@ -1079,11 +1079,7 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   goto done;
 
  done:
-  /* Object in this list have been moved to the cell object when building it
-   * so they've been freed earlier. We do that in order to avoid duplicating
-   * them leading to more memory and CPU time being used for nothing. */
-  smartlist_free(intro1_data.link_specifiers);
-  memwipe(&intro1_data, 0, sizeof(intro1_data));
+  hs_cell_introduce1_data_clear(&intro1_data);
   memwipe(payload, 0, sizeof(payload));
   return ret;
 }

@@ -115,5 +115,8 @@ int hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
                               uint8_t *handshake_info,
                               size_t handshake_info_len);
 
+/* Util API. */
+void hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data);
+
 #endif /* TOR_HS_CELL_H */
 
