@@ -329,6 +329,14 @@ static digest256map_t *hs_cache_v3_client;
  * objects all related to a specific service. */
 static digest256map_t *hs_cache_client_intro_state;
 
+/* Return the size of a client cache entry in bytes. */
+static size_t
+cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
+{
+  return sizeof(*entry) +
+         strlen(entry->encoded_desc) + hs_desc_obj_size(entry->desc);
+}
+
 /* Remove a given descriptor from our cache. */
 static void
 remove_v3_desc_as_client(const hs_cache_client_descriptor_t *desc)
@@ -345,6 +353,8 @@ store_v3_desc_as_client(hs_cache_client_descriptor_t *desc)
 {
   tor_assert(desc);
   digest256map_set(hs_cache_v3_client, desc->key.pubkey, desc);
+  /* Update cache size with this entry for the OOM handler. */
+  rend_cache_increment_allocation(cache_get_client_entry_size(desc));
 }
 
 /* Query our cache and return the entry or NULL if not found. */
@@ -353,14 +363,6 @@ lookup_v3_desc_as_client(const uint8_t *key)
 {
   tor_assert(key);
   return digest256map_get(hs_cache_v3_client, key);
-}
-
-/* Return the size of a client cache entry in bytes. */
-static size_t
-cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
-{
-  return sizeof(*entry) +
-         strlen(entry->encoded_desc) + hs_desc_obj_size(entry->desc);
 }
 
 /* Parse the encoded descriptor in <b>desc_str</b> using
@@ -615,9 +617,6 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
 
   /* Store descriptor in cache */
   store_v3_desc_as_client(client_desc);
-
-  /* Update cache size with this entry for the OOM handler. */
-  rend_cache_increment_allocation(cache_get_client_entry_size(client_desc));
 
  done:
   return 0;
