@@ -1877,7 +1877,7 @@ can_service_launch_intro_circuit(hs_service_t *service, time_t now)
                INTRO_CIRC_RETRY_PERIOD,
                service->state.num_intro_circ_launched,
                (long int) elapsed_time,
-               (long int) INTRO_CIRC_RETRY_PERIOD - elapsed_time);
+               (long int) (INTRO_CIRC_RETRY_PERIOD - elapsed_time));
       tor_free(msg);
     }
   }
