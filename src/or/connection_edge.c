@@ -2017,9 +2017,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     tor_assert(addresstype == ONION_V2_HOSTNAME ||
                addresstype == ONION_V3_HOSTNAME);
     tor_assert(!automap);
-    if (connection_ap_handle_onion(conn, socks, circ, addresstype) < 0) {
-      return -1;
-    }
+    return connection_ap_handle_onion(conn, socks, circ, addresstype);
   }
 
   return 0; /* unreached but keeps the compiler happy */
