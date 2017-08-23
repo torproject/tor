@@ -179,16 +179,33 @@ fetch_v3_desc(const ed25519_public_key_t *onion_identity_pk)
   return directory_launch_v3_desc_fetch(onion_identity_pk, hsdir_rs);
 }
 
-/* Make sure that the given origin circuit circ is a valid correct
- * introduction circuit. This asserts on validation failure. */
-static void
-assert_intro_circ_ok(const origin_circuit_t *circ)
+/* Make sure that the given v3 origin circuit circ is a valid correct
+ * introduction circuit. This will BUG() on any problems and hard assert if
+ * the anonymity of the circuit is not ok. Return 0 on success else -1 where
+ * the circuit should be mark for closed immediately. */
+static int
+intro_circ_is_ok(const origin_circuit_t *circ)
 {
+  int ret = 0;
+
   tor_assert(circ);
-  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  tor_assert(circ->hs_ident);
-  tor_assert(hs_ident_intro_circ_is_valid(circ->hs_ident));
+
+  if (BUG(TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_C_INTRODUCING &&
+          TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
+          TO_CIRCUIT(circ)->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)) {
+    ret = -1;
+  }
+  if (BUG(circ->hs_ident == NULL)) {
+    ret = -1;
+  }
+  if (BUG(!hs_ident_intro_circ_is_valid(circ->hs_ident))) {
+    ret = -1;
+  }
+
+  /* This can stop the tor daemon but we want that since if we don't have
+   * anonymity on this circuit, something went really wrong. */
   assert_circ_anonymity_ok(circ, get_options());
+  return ret;
 }
 
 /* Find a descriptor intro point object that matches the given ident in the
@@ -264,8 +281,10 @@ send_introduce1(origin_circuit_t *intro_circ,
   const ed25519_public_key_t *service_identity_pk = NULL;
   const hs_desc_intro_point_t *ip;
 
-  assert_intro_circ_ok(intro_circ);
   tor_assert(rend_circ);
+  if (intro_circ_is_ok(intro_circ) < 0) {
+    goto perm_err;
+  }
 
   service_identity_pk = &intro_circ->hs_ident->identity_pk;
   /* For logging purposes. There will be a time where the hs_ident will have a
