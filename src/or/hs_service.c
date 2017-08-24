@@ -72,6 +72,11 @@ static const char address_tld[] = "onion";
  * loading keys requires that we are an actual running tor process. */
 static smartlist_t *hs_service_staging_list;
 
+/** True if the list of available router descriptors might have changed which
+ *  might result in an altered hash ring. Check if the hash ring changed and
+ *  reupload if needed */
+static int consider_republishing_hs_descriptors = 0;
+
 static void set_descriptor_revision_counter(hs_descriptor_t *hs_desc);
 
 /* Helper: Function to compare two objects in the service map. Return 1 if the
@@ -2429,7 +2434,14 @@ run_upload_descriptor_event(time_t now)
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
       int for_next_period = 0;
 
-      /* Can this descriptor be uploaed? */
+      /* If we were asked to re-examine the hash ring, and it changed, then
+         schedule an upload */
+      if (consider_republishing_hs_descriptors &&
+          service_desc_hsdirs_changed(service, desc)) {
+        service_desc_schedule_upload(desc, now, 0);
+      }
+
+      /* Can this descriptor be uploaded? */
       if (!should_service_upload_descriptor(service, desc, now)) {
         continue;
       }
@@ -2456,6 +2468,9 @@ run_upload_descriptor_event(time_t now)
       upload_descriptor_to_all(service, desc, for_next_period);
     } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
+
+  /* We are done considering whether to republish rend descriptors */
+  consider_republishing_hs_descriptors = 0;
 }
 
 /* Called when the introduction point circuit is done building and ready to be
@@ -2738,7 +2753,7 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 
 /** The set of HSDirs have changed: check if the change affects our descriptor
  *  HSDir placement, and if it does, reupload the desc. */
-static int
+int
 service_desc_hsdirs_changed(const hs_service_t *service,
                             const hs_service_descriptor_t *desc)
 {
@@ -2788,34 +2803,13 @@ service_desc_hsdirs_changed(const hs_service_t *service,
 /* ========== */
 
 /* We just received a new batch of descriptors which might affect the shape of
- * the HSDir hash ring. Signal that we should re-upload our HS descriptors. */
+ * the HSDir hash ring. Signal that we should reexamine the hash ring and
+ * re-upload our HS descriptors if needed. */
 void
 hs_hsdir_set_changed_consider_reupload(void)
 {
-  time_t now = approx_time();
-
-  /* Check if HS subsystem is initialized */
-  if (!hs_service_map) {
-    return;
-  }
-
-  /* Basic test: If we have not bootstrapped 100% yet, no point in even trying
-     to upload descriptor. */
-  if (!router_have_minimum_dir_info()) {
-    return;
-  }
-
-  log_info(LD_GENERAL, "Received new dirinfo: Checking hash ring for changes");
-
-  /* Go over all descriptors and check if the set of HSDirs changed for any of
-   * them. Schedule reupload if so. */
-  FOR_EACH_SERVICE_BEGIN(service) {
-    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      if (service_desc_hsdirs_changed(service, desc)) {
-        service_desc_schedule_upload(desc, now, 0);
-      }
-    } FOR_EACH_DESCRIPTOR_END;
-  } FOR_EACH_SERVICE_END;
+  log_info(LD_REND, "New dirinfo arrived: consider reuploading descriptor");
+  consider_republishing_hs_descriptors = 1;
 }
 
 /* Return the number of service we have configured and usable. */

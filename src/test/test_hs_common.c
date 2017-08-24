@@ -626,12 +626,11 @@ test_desc_reupload_logic(void *arg)
                                       curr_hsdir_index, nickname, 1);
   }
 
-  /* Now call router_dir_info_changed() again and see that it detected the hash
-     ring change and updated the upload time */
+  /* Now call service_desc_hsdirs_changed() and see that it detected the hash
+     ring change */
   time_t now = approx_time();
   tt_assert(now);
-  router_dir_info_changed();
-  tt_int_op(desc->next_upload_time, OP_EQ, now);
+  tt_int_op(service_desc_hsdirs_changed(service, desc), OP_EQ, 1);
 
   /* Now pretend that the descriptor changed, and order a reupload to all
      HSDirs. Make sure that the set of previous HSDirs was cleared. */
