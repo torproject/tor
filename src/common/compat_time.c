@@ -251,7 +251,7 @@ ratchet_timeval(const struct timeval *timeval_raw, struct timeval *out)
 {
   /* must hold lock */
   timeradd(timeval_raw, &timeofday_offset, out);
-  if (PREDICT_UNLIKELY(timercmp(out, &last_timeofday, <))) {
+  if (PREDICT_UNLIKELY(timercmp(out, &last_timeofday, OP_LT))) {
     /* time ran backwards. Instead, declare that no time occurred. */
     timersub(&last_timeofday, timeval_raw, &timeofday_offset);
     memcpy(out, &last_timeofday, sizeof(struct timeval));
