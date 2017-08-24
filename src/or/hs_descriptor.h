@@ -235,6 +235,8 @@ STATIC int desc_sig_is_valid(const char *b64_sig,
 STATIC void desc_intro_point_free(hs_desc_intro_point_t *ip);
 STATIC size_t decode_superencrypted(const char *message, size_t message_len,
                                    uint8_t **encrypted_out);
+STATIC void desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc);
+
 #endif /* HS_DESCRIPTOR_PRIVATE */
 
 #endif /* TOR_HS_DESCRIPTOR_H */
