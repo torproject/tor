@@ -461,7 +461,7 @@ test_get_pt_proxy_uri(void *arg)
 
   /* Test with no proxy. */
   uri = get_pt_proxy_uri();
-  tt_assert(uri == NULL);
+  tt_ptr_op(uri, OP_EQ, NULL);
 
   /* Test with a SOCKS4 proxy. */
   options->Socks4Proxy = tor_strdup("192.0.2.1:1080");

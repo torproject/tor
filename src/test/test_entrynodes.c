@@ -455,29 +455,29 @@ test_entry_guard_parse_from_state_failure(void *arg)
   /* no selection */
   eg = entry_guard_parse_from_state(
                  "rsa_id=596f75206d6179206e656564206120686f626270");
-  tt_assert(! eg);
+  tt_ptr_op(eg, OP_EQ, NULL);
 
   /* no RSA ID. */
   eg = entry_guard_parse_from_state("in=default nickname=Fred");
-  tt_assert(! eg);
+  tt_ptr_op(eg, OP_EQ, NULL);
 
   /* Bad RSA ID: bad character. */
   eg = entry_guard_parse_from_state(
                  "in=default "
                  "rsa_id=596f75206d6179206e656564206120686f62627q");
-  tt_assert(! eg);
+  tt_ptr_op(eg, OP_EQ, NULL);
 
   /* Bad RSA ID: too long.*/
   eg = entry_guard_parse_from_state(
                  "in=default "
                  "rsa_id=596f75206d6179206e656564206120686f6262703");
-  tt_assert(! eg);
+  tt_ptr_op(eg, OP_EQ, NULL);
 
   /* Bad RSA ID: too short.*/
   eg = entry_guard_parse_from_state(
                  "in=default "
                  "rsa_id=596f75206d6179206e65656420612");
-  tt_assert(! eg);
+  tt_ptr_op(eg, OP_EQ, NULL);
 
  done:
   entry_guard_free(eg);
@@ -605,7 +605,7 @@ test_entry_guard_parse_from_state_full(void *arg)
   tt_int_op(r, OP_EQ, 0);
   guard_selection_t *gs_br =
     get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
-  tt_assert(!gs_br);
+  tt_ptr_op(gs_br, OP_EQ, NULL);
 
   r = entry_guards_parse_state(state, 1, &msg);
   tt_int_op(r, OP_EQ, 0);
@@ -742,7 +742,7 @@ test_entry_guard_parse_from_state_broken(void *arg)
   /* And we shouldn't have made anything. */
   guard_selection_t *gs_df =
     get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
-  tt_assert(gs_df == NULL);
+  tt_ptr_op(gs_df, OP_EQ, NULL);
   tor_free(msg);
 
   /* Now see about the set case (which shouldn't happen IRL) */
@@ -750,7 +750,7 @@ test_entry_guard_parse_from_state_broken(void *arg)
   tt_int_op(r, OP_LT, 0);
   tt_ptr_op(msg, OP_NE, NULL);
   gs_df = get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
-  tt_assert(gs_df != NULL);
+  tt_ptr_op(gs_df, OP_NE, NULL);
   tt_int_op(smartlist_len(gs_df->sampled_entry_guards), OP_EQ, 1);
 
  done:
@@ -767,26 +767,26 @@ test_entry_guard_get_guard_selection_by_name(void *arg)
   guard_selection_t *gs1, *gs2, *gs3;
 
   gs1 = get_guard_selection_by_name("unlikely", GS_TYPE_NORMAL, 0);
-  tt_assert(gs1 == NULL);
+  tt_ptr_op(gs1, OP_EQ, NULL);
   gs1 = get_guard_selection_by_name("unlikely", GS_TYPE_NORMAL, 1);
-  tt_assert(gs1 != NULL);
+  tt_ptr_op(gs1, OP_NE, NULL);
   gs2 = get_guard_selection_by_name("unlikely", GS_TYPE_NORMAL, 1);
   tt_assert(gs2 == gs1);
   gs2 = get_guard_selection_by_name("unlikely", GS_TYPE_NORMAL, 0);
   tt_assert(gs2 == gs1);
 
   gs2 = get_guard_selection_by_name("implausible", GS_TYPE_NORMAL, 0);
-  tt_assert(gs2 == NULL);
+  tt_ptr_op(gs2, OP_EQ, NULL);
   gs2 = get_guard_selection_by_name("implausible", GS_TYPE_NORMAL, 1);
-  tt_assert(gs2 != NULL);
+  tt_ptr_op(gs2, OP_NE, NULL);
   tt_assert(gs2 != gs1);
   gs3 = get_guard_selection_by_name("implausible", GS_TYPE_NORMAL, 0);
   tt_assert(gs3 == gs2);
 
   gs3 = get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
-  tt_assert(gs3 == NULL);
+  tt_ptr_op(gs3, OP_EQ, NULL);
   gs3 = get_guard_selection_by_name("default", GS_TYPE_NORMAL, 1);
-  tt_assert(gs3 != NULL);
+  tt_ptr_op(gs3, OP_NE, NULL);
   tt_assert(gs3 != gs2);
   tt_assert(gs3 != gs1);
   tt_assert(gs3 == get_guard_selection_info());
@@ -856,7 +856,7 @@ test_entry_guard_add_single_guard(void *arg)
   tt_uint_op(g1->is_filtered_guard, OP_EQ, 1);
   tt_uint_op(g1->is_usable_filtered_guard, OP_EQ, 1);
   tt_uint_op(g1->is_primary, OP_EQ, 0);
-  tt_assert(g1->extra_state_fields == NULL);
+  tt_ptr_op(g1->extra_state_fields, OP_EQ, NULL);
 
   /* Make sure it got added. */
   tt_int_op(1, OP_EQ, smartlist_len(gs->sampled_entry_guards));
@@ -992,7 +992,7 @@ test_entry_guard_expand_sample(void *arg)
   // Nothing became unusable/unfiltered, so a subsequent expand should
   // make no changes.
   guard = entry_guards_expand_sample(gs);
-  tt_assert(! guard); // no guard was added.
+  tt_ptr_op(guard, OP_EQ, NULL); // no guard was added.
   tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
             num_reachable_filtered_guards(gs, NULL));
 
@@ -1016,7 +1016,7 @@ test_entry_guard_expand_sample(void *arg)
 
   // Still idempotent.
   guard = entry_guards_expand_sample(gs);
-  tt_assert(! guard); // no guard was added.
+  tt_ptr_op(guard, OP_EQ, NULL); // no guard was added.
   tt_int_op(DFLT_MIN_FILTERED_SAMPLE_SIZE, OP_EQ,
             num_reachable_filtered_guards(gs, NULL));
 
@@ -2202,7 +2202,7 @@ test_entry_guard_select_and_cancel(void *arg)
 
   /* Whoops! We should never have asked for this guard. Cancel the request! */
   entry_guard_cancel(&guard);
-  tt_assert(guard == NULL);
+  tt_ptr_op(guard, OP_EQ, NULL);
   tt_int_op(g->is_primary, OP_EQ, 0);
   tt_int_op(g->is_pending, OP_EQ, 0);
 

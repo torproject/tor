@@ -946,9 +946,9 @@ test_rend_cache_free_all(void *data)
 
   rend_cache_free_all();
 
-  tt_assert(!rend_cache);
-  tt_assert(!rend_cache_v2_dir);
-  tt_assert(!rend_cache_failure);
+  tt_ptr_op(rend_cache, OP_EQ, NULL);
+  tt_ptr_op(rend_cache_v2_dir, OP_EQ, NULL);
+  tt_ptr_op(rend_cache_failure, OP_EQ, NULL);
   tt_assert(!rend_cache_total_allocation);
 
  done:

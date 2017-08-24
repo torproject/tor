@@ -404,7 +404,7 @@ test_pick_bad_tor2web_rendezvous_node(void *arg)
      dummy value, we shouldn't find any eligible RPs. */
   for (i = 0; i < 50 ; i++) {
     chosen_rp = pick_tor2web_rendezvous_node(flags, options);
-    tt_assert(!chosen_rp);
+    tt_ptr_op(chosen_rp, OP_EQ, NULL);
   }
 
  done:
@@ -586,7 +586,7 @@ test_hs_auth_cookies(void *arg)
   re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED, raw_cookie, &auth_type,
                                &err_msg);
   tt_assert(!re);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
   tt_int_op(auth_type, OP_EQ, REND_BASIC_AUTH);
   memset(raw_cookie, 0, sizeof(raw_cookie));
@@ -594,7 +594,7 @@ test_hs_auth_cookies(void *arg)
   re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED_STEALTH, raw_cookie,
                                &auth_type, &err_msg);
   tt_assert(!re);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
   tt_int_op(auth_type, OP_EQ, REND_STEALTH_AUTH);
   memset(raw_cookie, 0, sizeof(raw_cookie));
@@ -603,7 +603,7 @@ test_hs_auth_cookies(void *arg)
   re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED "==", raw_cookie, NULL,
                                &err_msg);
   tt_assert(!re);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
 
   /* Decoding with an unknown type should fail */
@@ -691,14 +691,14 @@ test_single_onion_poisoning(void *arg)
   rend_service_port_config_t *port1 = rend_service_parse_port_config("80", " ",
                                                                      &err_msg);
   tt_assert(port1);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   smartlist_add(service_1->ports, port1);
 
   rend_service_port_config_t *port2 = rend_service_parse_port_config("90", " ",
                                                                      &err_msg);
   /* Add port to service 2 */
   tt_assert(port2);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   smartlist_add(service_2->ports, port2);
 
   /* No services, a service to verify, no problem! */

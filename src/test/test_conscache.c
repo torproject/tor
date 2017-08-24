@@ -200,7 +200,7 @@ test_conscache_cleanup(void *arg)
   tt_assert(e_tmp);
   tt_assert(consensus_cache_entry_is_mapped(e_tmp));
   e_tmp = consensus_cache_find_first(cache, "index", "7");
-  tt_assert(e_tmp == NULL); // not found because pending deletion.
+  tt_ptr_op(e_tmp, OP_EQ, NULL); // not found because pending deletion.
 
   /* Delete the pending-deletion items. */
   consensus_cache_delete_pending(cache, 0);
@@ -212,9 +212,9 @@ test_conscache_cleanup(void *arg)
     tt_int_op(n, OP_EQ, 20 - 2); /* 1 entry was deleted; 1 is not-found. */
   }
   e_tmp = consensus_cache_find_first(cache, "index", "7"); // refcnt == 1...
-  tt_assert(e_tmp == NULL); // so deleted.
+  tt_ptr_op(e_tmp, OP_EQ, NULL); // so deleted.
   e_tmp = consensus_cache_find_first(cache, "index", "14"); // refcnt == 2
-  tt_assert(e_tmp == NULL); // not deleted; but not found.
+  tt_ptr_op(e_tmp, OP_EQ, NULL); // not deleted; but not found.
 
   /* Now do lazy unmapping. */
   // should do nothing.

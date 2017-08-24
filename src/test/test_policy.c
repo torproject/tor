@@ -59,7 +59,7 @@ test_policy_summary_helper_family_flags(const char *policy_str,
 
   summary = policy_summarize(policy, family);
 
-  tt_assert(summary != NULL);
+  tt_ptr_op(summary, OP_NE, NULL);
   tt_str_op(summary,OP_EQ, expected_summary);
 
   short_policy = parse_short_policy(summary);
@@ -147,7 +147,7 @@ test_policies_general(void *arg)
 
   p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   tt_int_op(ADDR_POLICY_REJECT,OP_EQ, p->policy_type);
   tor_addr_from_ipv4h(&tar, 0xc0a80000u);
   tt_int_op(0,OP_EQ, tor_addr_compare(&p->addr, &tar, CMP_EXACT));
@@ -192,75 +192,75 @@ test_policies_general(void *arg)
   policy3 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("reject *:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy3, p);
   p = router_parse_addr_policy_item_from_string("accept *:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy3, p);
 
   policy4 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("accept *:443", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy4, p);
   p = router_parse_addr_policy_item_from_string("accept *:443", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy4, p);
 
   policy5 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("reject 0.0.0.0/8:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject 169.254.0.0/16:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject 127.0.0.0/8:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",
                                                 -1, &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject 10.0.0.0/8:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject 172.16.0.0/12:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject 80.190.250.90:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject *:1-65534", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("reject *:65535", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
   p = router_parse_addr_policy_item_from_string("accept *:1-65535", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy5, p);
 
   policy6 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("accept 43.3.0.0/9:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy6, p);
 
   policy7 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("accept 0.0.0.0/8:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy7, p);
 
   tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy8,
@@ -282,13 +282,13 @@ test_policies_general(void *arg)
   policy10 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("accept6 *:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy10, p);
 
   policy11 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("reject6 *:*", -1,
                                                 &malformed_list);
-  tt_assert(p != NULL);
+  tt_ptr_op(p, OP_NE, NULL);
   smartlist_add(policy11, p);
 
   tt_assert(!exit_policy_is_general_exit(policy));
@@ -392,21 +392,21 @@ test_policies_general(void *arg)
   p = router_parse_addr_policy_item_from_string("acce::abcd",
                                                 ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
-  tt_assert(!p);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
   malformed_list = 0;
 
   p = router_parse_addr_policy_item_from_string("7:1234",
                                                 ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
-  tt_assert(!p);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
   malformed_list = 0;
 
   p = router_parse_addr_policy_item_from_string("::",
                                                 ADDR_POLICY_ACCEPT,
                                                 &malformed_list);
-  tt_assert(!p);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
   malformed_list = 0;
 
@@ -968,63 +968,63 @@ test_policies_general(void *arg)
   /* Make sure that IPv4 addresses are ignored in accept6/reject6 lines. */
   p = router_parse_addr_policy_item_from_string("accept6 1.2.3.4:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(!malformed_list);
 
   p = router_parse_addr_policy_item_from_string("reject6 2.4.6.0/24:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(!malformed_list);
 
   p = router_parse_addr_policy_item_from_string("accept6 *4:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(!malformed_list);
 
   /* Make sure malformed policies are detected as such. */
   p = router_parse_addr_policy_item_from_string("bad_token *4:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("accept6 **:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("accept */15:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("reject6 */:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("accept 127.0.0.1/33:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("accept6 [::1]/129:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("reject 8.8.8.8/-1:*", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("reject 8.8.4.4:10-5", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   p = router_parse_addr_policy_item_from_string("reject 1.2.3.4:-1", -1,
                                                 &malformed_list);
-  tt_assert(p == NULL);
+  tt_ptr_op(p, OP_EQ, NULL);
   tt_assert(malformed_list);
 
   /* Test a too-long policy. */
@@ -1158,7 +1158,7 @@ test_policies_reject_exit_address(void *arg)
    * on IPv4-only exits, so policies_parse_exit_policy_reject_private doesn't
    * need to do anything) */
   policies_parse_exit_policy_reject_private(&policy, 0, ipv6_list, 0, 0);
-  tt_assert(policy == NULL);
+  tt_ptr_op(policy, OP_EQ, NULL);
 
   /* test that only IPv4 addresses are rejected on an IPv4-only exit */
   policies_parse_exit_policy_reject_private(&policy, 0, both_list, 0, 0);
@@ -1337,7 +1337,7 @@ test_policies_reject_interface_address(void *arg)
 
   /* test that no addresses are rejected when none are supplied/requested */
   policies_parse_exit_policy_reject_private(&policy, 0, NULL, 0, 0);
-  tt_assert(policy == NULL);
+  tt_ptr_op(policy, OP_EQ, NULL);
 
   /* test that only IPv4 interface addresses are rejected on an IPv4-only exit
    * (and allow for duplicates)
@@ -1372,7 +1372,7 @@ test_policies_reject_interface_address(void *arg)
 
   /* test that no addresses are rejected when none are supplied/requested */
   policies_parse_exit_policy_reject_private(&policy, 0, NULL, 0, 0);
-  tt_assert(policy == NULL);
+  tt_ptr_op(policy, OP_EQ, NULL);
 
   /* test that only IPv4 interface addresses are rejected on an IPv4-only exit
    */
@@ -1529,14 +1529,14 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/default", &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/default",
                                &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
 
@@ -1551,14 +1551,14 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) == 0);
   tor_free(answer);
 
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer,
                                &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   ipv4_len = strlen(answer);
   tt_assert(ipv4_len == 0 || ipv4_len == strlen(DEFAULT_POLICY_STRING));
   tt_assert(ipv4_len == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
@@ -1567,7 +1567,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer,
                                &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   ipv6_len = strlen(answer);
   tt_assert(ipv6_len == 0 || ipv6_len == strlen(DEFAULT_POLICY_STRING));
   tt_assert(ipv6_len == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
@@ -1576,7 +1576,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
                                &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   /* It's either empty or it's the default */
   tt_assert(strlen(answer) == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
   tor_free(answer);
@@ -1600,7 +1600,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
 
@@ -1610,7 +1610,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
 
@@ -1620,7 +1620,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
 
@@ -1630,14 +1630,14 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) == 0);
   tor_free(answer);
 
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer,
                                &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   ipv4_len = strlen(answer);
   tt_assert(ipv4_len > 0);
   tor_free(answer);
@@ -1645,7 +1645,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer,
                                &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   ipv6_len = strlen(answer);
   tt_assert(ipv6_len > 0);
   tor_free(answer);
@@ -1653,7 +1653,7 @@ test_policies_getinfo_helper_policies(void *arg)
   rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
                                &errmsg);
   tt_int_op(rv, OP_EQ, 0);
-  tt_assert(answer != NULL);
+  tt_ptr_op(answer, OP_NE, NULL);
   tt_assert(strlen(answer) > 0);
   tt_assert(strlen(answer) == ipv4_len + ipv6_len + 1);
   tor_free(answer);
@@ -2033,12 +2033,10 @@ test_policies_fascist_firewall_choose_address(void *arg)
             == &ipv6_or_ap);
 
   /* null both OR addresses */
-  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
-                                            FIREWALL_OR_CONNECTION, 0, 1)
-            == NULL);
-  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1,
-                                            FIREWALL_OR_CONNECTION, 0, 0)
-            == NULL);
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0, FIREWALL_OR_CONNECTION, 0, 1),
+            OP_EQ, NULL);
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1, FIREWALL_OR_CONNECTION, 0, 0),
+            OP_EQ, NULL);
 
   /* null preferred Dir addresses */
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &n_ipv6_ap, 0,
@@ -2049,12 +2047,10 @@ test_policies_fascist_firewall_choose_address(void *arg)
             == &ipv6_dir_ap);
 
   /* null both Dir addresses */
-  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
-                                            FIREWALL_DIR_CONNECTION, 0, 1)
-            == NULL);
-  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1,
-                                            FIREWALL_DIR_CONNECTION, 0, 0)
-            == NULL);
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0, FIREWALL_DIR_CONNECTION, 0, 1),
+            OP_EQ, NULL);
+  tt_ptr_op(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 1, FIREWALL_DIR_CONNECTION, 0, 0),
+            OP_EQ, NULL);
 
   /* Prefer IPv4 but want IPv6 (contradictory) */
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,

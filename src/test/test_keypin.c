@@ -37,19 +37,19 @@ test_keypin_parse_line(void *arg)
   ent = keypin_parse_journal_line(
                 "aGVyZSBpcyBhIGdvb2Qgc2hhMSE?"
                 "VGhpcyBlZDI1NTE5IHNjb2ZmcyBhdCB0aGUgc2hhMS4");
-  tt_assert(! ent);
+  tt_ptr_op(ent, OP_EQ, NULL);
 
   /* Bad line: bad base64 in RSA ID */
   ent = keypin_parse_journal_line(
                 "aGVyZSBpcyBhIGdv!2Qgc2hhMSE "
                 "VGhpcyBlZDI1NTE5IHNjb2ZmcyBhdCB0aGUgc2hhMS4");
-  tt_assert(! ent);
+  tt_ptr_op(ent, OP_EQ, NULL);
 
   /* Bad line: bad base64 in Ed25519 */
   ent = keypin_parse_journal_line(
                 "aGVyZSBpcyBhIGdvb2Qgc2hhMSE "
                 "VGhpcyBlZDI1NTE5IHNjb2ZmcyB!dCB0aGUgc2hhMS4");
-  tt_assert(! ent);
+  tt_ptr_op(ent, OP_EQ, NULL);
 
  done:
   tor_free(ent);

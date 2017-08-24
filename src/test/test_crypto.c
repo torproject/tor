@@ -1264,7 +1264,7 @@ test_crypto_pk(void *arg)
   /* Try copy_full */
   crypto_pk_free(pk2);
   pk2 = crypto_pk_copy_full(pk1);
-  tt_assert(pk2 != NULL);
+  tt_ptr_op(pk2, OP_NE, NULL);
   tt_ptr_op(pk1, OP_NE, pk2);
   tt_int_op(crypto_pk_cmp_keys(pk1, pk2), OP_EQ, 0);
 
@@ -1350,11 +1350,11 @@ test_crypto_pk_base64(void *arg)
   /* Test decoding a invalid key (not Base64). */
   static const char *invalid_b64 = "The key is in another castle!";
   pk2 = crypto_pk_base64_decode(invalid_b64, strlen(invalid_b64));
-  tt_assert(!pk2);
+  tt_ptr_op(pk2, OP_EQ, NULL);
 
   /* Test decoding a truncated Base64 blob. */
   pk2 = crypto_pk_base64_decode(encoded, strlen(encoded)/2);
-  tt_assert(!pk2);
+  tt_ptr_op(pk2, OP_EQ, NULL);
 
  done:
   crypto_pk_free(pk1);

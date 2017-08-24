@@ -107,7 +107,7 @@ test_sigsafe_err(void *arg)
   close(STDERR_FILENO);
   content = read_file_to_str(fn, 0, NULL);
 
-  tt_assert(content != NULL);
+  tt_ptr_op(content, OP_NE, NULL);
   tor_split_lines(lines, content, (int)strlen(content));
   tt_int_op(smartlist_len(lines), OP_GE, 5);
 
@@ -140,7 +140,7 @@ test_ratelim(void *arg)
   char *msg = NULL;
 
   msg = rate_limit_log(&ten_min, now);
-  tt_assert(msg != NULL);
+  tt_ptr_op(msg, OP_NE, NULL);
   tt_str_op(msg, OP_EQ, ""); /* nothing was suppressed. */
 
   tt_int_op(ten_min.last_allowed, OP_EQ, now);
@@ -150,14 +150,14 @@ test_ratelim(void *arg)
   for (i = 0; i < 9; ++i) {
     now += 60; /* one minute has passed. */
     msg = rate_limit_log(&ten_min, now);
-    tt_assert(msg == NULL);
+    tt_ptr_op(msg, OP_EQ, NULL);
     tt_int_op(ten_min.last_allowed, OP_EQ, start);
     tt_int_op(ten_min.n_calls_since_last_time, OP_EQ, i + 1);
   }
 
   now += 240; /* Okay, we can be done. */
   msg = rate_limit_log(&ten_min, now);
-  tt_assert(msg != NULL);
+  tt_ptr_op(msg, OP_NE, NULL);
   tt_str_op(msg, OP_EQ,
             " [9 similar message(s) suppressed in last 600 seconds]");
  done:

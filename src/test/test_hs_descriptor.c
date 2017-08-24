@@ -440,7 +440,7 @@ test_decode_invalid_intro_point(void *arg)
     desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
     const char *junk = "this is not a descriptor";
     ip = decode_introduction_point(desc, junk);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     hs_desc_intro_point_free(ip);
     ip = NULL;
   }
@@ -456,7 +456,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
     hs_desc_intro_point_free(ip);
@@ -483,7 +483,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -501,7 +501,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -518,7 +518,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -535,7 +535,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -552,7 +552,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -812,7 +812,7 @@ test_parse_hs_desc_superencrypted(void *arg)
                                    strlen(bad_superencrypted_text1),
                                    &encrypted_out);
     tt_u64_op(retval, OP_EQ, 0);
-    tt_assert(!encrypted_out);
+    tt_ptr_op(encrypted_out, OP_EQ, NULL);
     expect_log_msg_containing("Unrecognized desc auth type");
     teardown_capture_of_logs();
   }
@@ -823,7 +823,7 @@ test_parse_hs_desc_superencrypted(void *arg)
                                    strlen(bad_superencrypted_text2),
                                    &encrypted_out);
     tt_u64_op(retval, OP_EQ, 0);
-    tt_assert(!encrypted_out);
+    tt_ptr_op(encrypted_out, OP_EQ, NULL);
     expect_log_msg_containing("Bogus desc auth key in HS desc");
     teardown_capture_of_logs();
   }
@@ -834,7 +834,7 @@ test_parse_hs_desc_superencrypted(void *arg)
                                    strlen(bad_superencrypted_text3),
                                    &encrypted_out);
     tt_u64_op(retval, OP_EQ, 0);
-    tt_assert(!encrypted_out);
+    tt_ptr_op(encrypted_out, OP_EQ, NULL);
     expect_log_msg_containing("Length of descriptor\'s encrypted data "
                               "is too small.");
     teardown_capture_of_logs();

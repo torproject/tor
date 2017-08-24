@@ -240,8 +240,8 @@ test_link_handshake_certs_ok(void *arg)
   tor_assert(c1->handshake_state->authenticated);
 
   tt_assert(c1->handshake_state->received_certs_cell);
-  tt_assert(c1->handshake_state->certs->auth_cert == NULL);
-  tt_assert(c1->handshake_state->certs->ed_sign_auth == NULL);
+  tt_ptr_op(c1->handshake_state->certs->auth_cert, OP_EQ, NULL);
+  tt_ptr_op(c1->handshake_state->certs->ed_sign_auth, OP_EQ, NULL);
   tt_assert(c1->handshake_state->certs->id_cert);
   if (with_ed) {
     tt_assert(c1->handshake_state->certs->ed_sign_link);
@@ -250,9 +250,9 @@ test_link_handshake_certs_ok(void *arg)
     tt_assert(c1->handshake_state->authenticated_rsa);
     tt_assert(c1->handshake_state->authenticated_ed25519);
   } else {
-    tt_assert(c1->handshake_state->certs->ed_sign_link == NULL);
-    tt_assert(c1->handshake_state->certs->ed_rsa_crosscert == NULL);
-    tt_assert(c1->handshake_state->certs->ed_id_sign == NULL);
+    tt_ptr_op(c1->handshake_state->certs->ed_sign_link, OP_EQ, NULL);
+    tt_ptr_op(c1->handshake_state->certs->ed_rsa_crosscert, OP_EQ, NULL);
+    tt_ptr_op(c1->handshake_state->certs->ed_id_sign, OP_EQ, NULL);
     tt_assert(c1->handshake_state->authenticated_rsa);
     tt_assert(! c1->handshake_state->authenticated_ed25519);
   }
@@ -278,9 +278,9 @@ test_link_handshake_certs_ok(void *arg)
     tt_assert(c2->handshake_state->certs->ed_id_sign);
   } else {
     tt_assert(c2->handshake_state->certs->auth_cert);
-    tt_assert(c2->handshake_state->certs->ed_sign_auth == NULL);
-    tt_assert(c2->handshake_state->certs->ed_rsa_crosscert == NULL);
-    tt_assert(c2->handshake_state->certs->ed_id_sign == NULL);
+    tt_ptr_op(c2->handshake_state->certs->ed_sign_auth, OP_EQ, NULL);
+    tt_ptr_op(c2->handshake_state->certs->ed_rsa_crosscert, OP_EQ, NULL);
+    tt_ptr_op(c2->handshake_state->certs->ed_id_sign, OP_EQ, NULL);
   }
   tt_assert(c2->handshake_state->certs->id_cert);
   tt_assert(tor_mem_is_zero(
@@ -489,20 +489,20 @@ test_link_handshake_recv_certs_ok(void *arg)
   tt_int_op(d->c->handshake_state->authenticated, OP_EQ, 1);
   tt_int_op(d->c->handshake_state->authenticated_rsa, OP_EQ, 1);
   tt_int_op(d->c->handshake_state->received_certs_cell, OP_EQ, 1);
-  tt_assert(d->c->handshake_state->certs->id_cert != NULL);
-  tt_assert(d->c->handshake_state->certs->auth_cert == NULL);
+  tt_ptr_op(d->c->handshake_state->certs->id_cert, OP_NE, NULL);
+  tt_ptr_op(d->c->handshake_state->certs->auth_cert, OP_EQ, NULL);
 
   if (d->is_ed) {
-    tt_assert(d->c->handshake_state->certs->ed_id_sign != NULL);
-    tt_assert(d->c->handshake_state->certs->ed_sign_link != NULL);
-    tt_assert(d->c->handshake_state->certs->ed_sign_auth == NULL);
-    tt_assert(d->c->handshake_state->certs->ed_rsa_crosscert != NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_id_sign, OP_NE, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_sign_link, OP_NE, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_sign_auth, OP_EQ, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_rsa_crosscert, OP_NE, NULL);
     tt_int_op(d->c->handshake_state->authenticated_ed25519, OP_EQ, 1);
   } else {
-    tt_assert(d->c->handshake_state->certs->ed_id_sign == NULL);
-    tt_assert(d->c->handshake_state->certs->ed_sign_link == NULL);
-    tt_assert(d->c->handshake_state->certs->ed_sign_auth == NULL);
-    tt_assert(d->c->handshake_state->certs->ed_rsa_crosscert == NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_id_sign, OP_EQ, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_sign_link, OP_EQ, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_sign_auth, OP_EQ, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_rsa_crosscert, OP_EQ, NULL);
     tt_int_op(d->c->handshake_state->authenticated_ed25519, OP_EQ, 0);
   }
 
@@ -520,14 +520,14 @@ test_link_handshake_recv_certs_ok_server(void *arg)
   tt_int_op(0, OP_EQ, mock_close_called);
   tt_int_op(d->c->handshake_state->authenticated, OP_EQ, 0);
   tt_int_op(d->c->handshake_state->received_certs_cell, OP_EQ, 1);
-  tt_assert(d->c->handshake_state->certs->id_cert != NULL);
-  tt_assert(d->c->handshake_state->certs->link_cert == NULL);
+  tt_ptr_op(d->c->handshake_state->certs->id_cert, OP_NE, NULL);
+  tt_ptr_op(d->c->handshake_state->certs->link_cert, OP_EQ, NULL);
   if (d->is_ed) {
-    tt_assert(d->c->handshake_state->certs->ed_sign_auth != NULL);
-    tt_assert(d->c->handshake_state->certs->auth_cert == NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_sign_auth, OP_NE, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->auth_cert, OP_EQ, NULL);
   } else {
-    tt_assert(d->c->handshake_state->certs->ed_sign_auth == NULL);
-    tt_assert(d->c->handshake_state->certs->auth_cert != NULL);
+    tt_ptr_op(d->c->handshake_state->certs->ed_sign_auth, OP_EQ, NULL);
+    tt_ptr_op(d->c->handshake_state->certs->auth_cert, OP_NE, NULL);
   }
 
  done:
@@ -912,7 +912,7 @@ test_link_handshake_send_authchallenge(void *arg)
 
   tt_int_op(connection_init_or_handshake_state(c1, 0), OP_EQ, 0);
   c1->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
-  tt_assert(! mock_got_var_cell);
+  tt_ptr_op(mock_got_var_cell, OP_EQ, NULL);
   tt_int_op(0, OP_EQ, connection_or_send_auth_challenge_cell(c1));
   cell1 = mock_got_var_cell;
   tt_int_op(0, OP_EQ, connection_or_send_auth_challenge_cell(c1));

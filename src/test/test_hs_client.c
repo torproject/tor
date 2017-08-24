@@ -157,7 +157,7 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check that our stream is not attached on any circuits */
-  tt_assert(!TO_EDGE_CONN(conn)->on_circuit);
+  tt_ptr_op(TO_EDGE_CONN(conn)->on_circuit, OP_EQ, NULL);
 
   /********************************************** */
 
@@ -237,10 +237,10 @@ test_e2e_rend_circuit_setup(void *arg)
   /* Check number of hops: There should be no hops yet to this circ */
   retval = cpath_get_n_hops(&or_circ->cpath);
   tt_int_op(retval, OP_EQ, 0);
-  tt_assert(!or_circ->cpath);
+  tt_ptr_op(or_circ->cpath, OP_EQ, NULL);
 
   /* Check that our stream is not attached on any circuits */
-  tt_assert(!TO_EDGE_CONN(conn)->on_circuit);
+  tt_ptr_op(TO_EDGE_CONN(conn)->on_circuit, OP_EQ, NULL);
 
   /**********************************************/
 

@@ -136,7 +136,7 @@ test_tortls_tor_tls_new(void *data)
   SSL_CTX_free(client_tls_context->ctx);
   client_tls_context->ctx = NULL;
   tls = tor_tls_new(-1, 0);
-  tt_assert(!tls);
+  tt_ptr_op(tls, OP_EQ, NULL);
 
 #ifndef OPENSSL_OPAQUE
   method = give_me_a_test_method();
@@ -144,7 +144,7 @@ test_tortls_tor_tls_new(void *data)
   method->num_ciphers = fake_num_ciphers;
   client_tls_context->ctx = ctx;
   tls = tor_tls_new(-1, 0);
-  tt_assert(!tls);
+  tt_ptr_op(tls, OP_EQ, NULL);
 #endif
 
  done:

@@ -68,7 +68,7 @@ static void test_scheduler_queue_heuristic(void *arg);
 static void
 mock_event_free_all(void)
 {
-  tt_assert(mock_event_base != NULL);
+  tt_ptr_op(mock_event_base, OP_NE, NULL);
 
   if (mock_event_base) {
     event_base_free(mock_event_base);
@@ -104,7 +104,7 @@ mock_event_init(void)
     event_config_free(cfg);
   }
 
-  tt_assert(mock_event_base != NULL);
+  tt_ptr_op(mock_event_base, OP_NE, NULL);
 
  done:
   return;
@@ -181,7 +181,7 @@ channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
   char unlimited = 0;
   flush_mock_channel_t *found = NULL;
 
-  tt_assert(chan != NULL);
+  tt_ptr_op(chan, OP_NE, NULL);
   if (chan) {
     if (num_cells < 0) {
       num_cells = 0;
@@ -234,8 +234,8 @@ circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
 {
   int result = 0;
 
-  tt_assert(cmux_1 != NULL);
-  tt_assert(cmux_2 != NULL);
+  tt_ptr_op(cmux_1, OP_NE, NULL);
+  tt_ptr_op(cmux_2, OP_NE, NULL);
 
   if (cmux_1 != cmux_2) {
     if (cmux_1 == mock_ccm_tgt_1 && cmux_2 == mock_ccm_tgt_2) result = -1;
@@ -261,7 +261,7 @@ circuitmux_get_policy_mock(circuitmux_t *cmux)
 {
   const circuitmux_policy_t *result = NULL;
 
-  tt_assert(cmux != NULL);
+  tt_ptr_op(cmux, OP_NE, NULL);
   if (cmux) {
     if (cmux == mock_cgp_tgt_1) result = mock_cgp_val_1;
     else if (cmux == mock_cgp_tgt_2) result = mock_cgp_val_2;
@@ -515,8 +515,8 @@ test_scheduler_initfree(void *arg)
 
   scheduler_init();
 
-  tt_assert(channels_pending != NULL);
-  tt_assert(run_sched_ev != NULL);
+  tt_ptr_op(channels_pending, OP_NE, NULL);
+  tt_ptr_op(run_sched_ev, OP_NE, NULL);
 
   scheduler_free_all();
 

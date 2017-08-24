@@ -761,7 +761,7 @@ test_state_load_from_disk(void *arg)
 
   /* State should be non-existent at this point. */
   the_sr_state = get_sr_state();
-  tt_assert(!the_sr_state);
+  tt_ptr_op(the_sr_state, OP_EQ, NULL);
 
   /* Now try to load the correct file! */
   ret = disk_state_load_from_disk_impl(sr_state_path);
@@ -992,7 +992,7 @@ test_sr_get_majority_srv_from_votes(void *arg)
   /* Since it's only one vote with an SRV, it should not achieve majority and
      hence no SRV will be returned. */
   chosen_srv = get_majority_srv_from_votes(votes, 1);
-  tt_assert(!chosen_srv);
+  tt_ptr_op(chosen_srv, OP_EQ, NULL);
 
   { /* Now put in 8 more votes. Let SRV_1 have majority. */
     int i;
@@ -1018,7 +1018,7 @@ test_sr_get_majority_srv_from_votes(void *arg)
      requirement. So still not picking an SRV. */
   set_num_srv_agreements(8);
   chosen_srv = get_majority_srv_from_votes(votes, 1);
-  tt_assert(!chosen_srv);
+  tt_ptr_op(chosen_srv, OP_EQ, NULL);
 
   /* We will now lower the AuthDirNumSRVAgreements requirement by tweaking the
    * consensus parameter and we will try again. This time it should work. */
@@ -1166,7 +1166,7 @@ test_state_transition(void *arg)
     state_rotate_srv();
     prev = sr_state_get_previous_srv();
     tt_assert(prev == cur);
-    tt_assert(!sr_state_get_current_srv());
+    tt_ptr_op(sr_state_get_current_srv(), OP_EQ, NULL);
     sr_state_clean_srvs();
   }
 
@@ -1201,8 +1201,8 @@ test_state_transition(void *arg)
   /* Cleanup of SRVs. */
   {
     sr_state_clean_srvs();
-    tt_assert(!sr_state_get_current_srv());
-    tt_assert(!sr_state_get_previous_srv());
+    tt_ptr_op(sr_state_get_current_srv(), OP_EQ, NULL);
+    tt_ptr_op(sr_state_get_previous_srv(), OP_EQ, NULL);
   }
 
  done:

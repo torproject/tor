@@ -70,7 +70,7 @@ test_util_read_until_eof_impl(const char *fname, size_t file_len,
   fd = open(fifo_name, O_RDONLY|O_BINARY);
   tt_int_op(fd, OP_GE, 0);
   str = read_file_to_str_until_eof(fd, read_limit, &sz);
-  tt_assert(str != NULL);
+  tt_ptr_op(str, OP_NE, NULL);
 
   if (read_limit < file_len)
     tt_int_op(sz, OP_EQ, read_limit);
@@ -1674,14 +1674,14 @@ test_util_config_line_crlf(void *arg)
   tt_assert(str);
   tt_str_op(k,OP_EQ,"Hello");
   tt_str_op(v,OP_EQ,"world");
-  tt_assert(!err);
+  tt_ptr_op(err, OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str_verbose(str, &k, &v, &err);
   tt_assert(str);
   tt_str_op(k,OP_EQ,"Hello");
   tt_str_op(v,OP_EQ,"nice big world");
-  tt_assert(!err);
+  tt_ptr_op(err, OP_EQ, NULL);
   tor_free(k); tor_free(v);
   tt_str_op(str,OP_EQ, "");
 
@@ -1941,7 +1941,7 @@ test_util_strmisc(void *arg)
   tt_assert(!tor_mem_is_zero(buf, 10));
 
   /* Test 'escaped' */
-  tt_assert(NULL == escaped(NULL));
+  tt_ptr_op(escaped(NULL), OP_EQ, NULL);
   tt_str_op("\"\"",OP_EQ, escaped(""));
   tt_str_op("\"abcd\"",OP_EQ, escaped("abcd"));
   tt_str_op("\"\\\\ \\n\\r\\t\\\"\\'\"",OP_EQ, escaped("\\ \n\r\t\"'"));
@@ -1999,23 +1999,23 @@ test_util_strmisc(void *arg)
   /* Test memmem and memstr */
   {
     const char *haystack = "abcde";
-    tt_assert(!tor_memmem(haystack, 5, "ef", 2));
+    tt_ptr_op(tor_memmem(haystack, 5, "ef", 2), OP_EQ, NULL);
     tt_ptr_op(tor_memmem(haystack, 5, "cd", 2),OP_EQ, haystack + 2);
     tt_ptr_op(tor_memmem(haystack, 5, "cde", 3),OP_EQ, haystack + 2);
-    tt_assert(!tor_memmem(haystack, 4, "cde", 3));
+    tt_ptr_op(tor_memmem(haystack, 4, "cde", 3), OP_EQ, NULL);
     haystack = "ababcad";
     tt_ptr_op(tor_memmem(haystack, 7, "abc", 3),OP_EQ, haystack + 2);
     tt_ptr_op(tor_memmem(haystack, 7, "ad", 2),OP_EQ, haystack + 5);
     tt_ptr_op(tor_memmem(haystack, 7, "cad", 3),OP_EQ, haystack + 4);
-    tt_assert(!tor_memmem(haystack, 7, "dadad", 5));
-    tt_assert(!tor_memmem(haystack, 7, "abcdefghij", 10));
+    tt_ptr_op(tor_memmem(haystack, 7, "dadad", 5), OP_EQ, NULL);
+    tt_ptr_op(tor_memmem(haystack, 7, "abcdefghij", 10), OP_EQ, NULL);
     /* memstr */
     tt_ptr_op(tor_memstr(haystack, 7, "abc"),OP_EQ, haystack + 2);
     tt_ptr_op(tor_memstr(haystack, 7, "cad"),OP_EQ, haystack + 4);
-    tt_assert(!tor_memstr(haystack, 6, "cad"));
-    tt_assert(!tor_memstr(haystack, 7, "cadd"));
-    tt_assert(!tor_memstr(haystack, 7, "fe"));
-    tt_assert(!tor_memstr(haystack, 7, "ababcade"));
+    tt_ptr_op(tor_memstr(haystack, 6, "cad"), OP_EQ, NULL);
+    tt_ptr_op(tor_memstr(haystack, 7, "cadd"), OP_EQ, NULL);
+    tt_ptr_op(tor_memstr(haystack, 7, "fe"), OP_EQ, NULL);
+    tt_ptr_op(tor_memstr(haystack, 7, "ababcade"), OP_EQ, NULL);
   }
 
   /* Test hex_str */
@@ -2260,15 +2260,15 @@ test_util_compress_impl(compress_method_t method)
   tt_assert(tor_compress_supports_method(method));
 
   if (method != NO_METHOD) {
-    tt_assert(tor_compress_version_str(method) != NULL);
-    tt_assert(tor_compress_header_version_str(method) != NULL);
+    tt_ptr_op(tor_compress_version_str(method), OP_NE, NULL);
+    tt_ptr_op(tor_compress_header_version_str(method), OP_NE, NULL);
   }
 
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
   tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1, method));
-  tt_assert(buf2 != NULL);
+  tt_ptr_op(buf2, OP_NE, NULL);
   if (method == NO_METHOD) {
     // The identity transform doesn't actually compress, and it isn't
     // detectable as "the identity transform."
@@ -2280,7 +2280,7 @@ test_util_compress_impl(compress_method_t method)
   }
 
   tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1, method, 1, LOG_INFO));
-  tt_assert(buf3 != NULL);
+  tt_ptr_op(buf3, OP_NE, NULL);
   tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
   tt_str_op(buf1, OP_EQ, buf3);
   tt_int_op(buf3[len2], OP_EQ, 0);
@@ -2327,7 +2327,7 @@ test_util_compress_impl(compress_method_t method)
   if (method != NO_METHOD) {
     tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
                              method, 1, LOG_INFO));
-    tt_assert(buf3 == NULL);
+    tt_ptr_op(buf3, OP_EQ, NULL);
   }
 
  done:
@@ -2534,7 +2534,7 @@ test_util_mmap(void *arg)
   crypto_rand(buf, buflen);
 
   mapping = tor_mmap_file(fname1);
-  tt_assert(! mapping);
+  tt_ptr_op(mapping, OP_EQ, NULL);
 
   write_str_to_file(fname1, "Short file.", 1);
 
@@ -2563,7 +2563,7 @@ test_util_mmap(void *arg)
 
   /* Make sure that we fail to map a no-longer-existent file. */
   mapping = tor_mmap_file(fname1);
-  tt_assert(! mapping);
+  tt_ptr_op(mapping, OP_EQ, NULL);
 
   /* Now try a big file that stretches across a few pages and isn't aligned */
   write_bytes_to_file(fname2, buf, buflen, 1);
@@ -3631,8 +3631,8 @@ test_util_strtok(void *arg)
     }
     tor_snprintf(buf, sizeof(buf), "%s", pad1);
     tor_snprintf(buf2, sizeof(buf2), "%s", pad2);
-    tt_assert(NULL == tor_strtok_r_impl(buf, " ", &cp1));
-    tt_assert(NULL == tor_strtok_r_impl(buf2, ".!..;!", &cp2));
+    tt_ptr_op(tor_strtok_r_impl(buf, " ", &cp1), OP_EQ, NULL);
+    tt_ptr_op(tor_strtok_r_impl(buf2, ".!..;!", &cp2), OP_EQ, NULL);
 
     tor_snprintf(buf, sizeof(buf),
                  "%sGraved on the dark  in gestures of descent%s", pad1, pad1);
@@ -4376,7 +4376,7 @@ test_util_split_lines(void *ptr)
       /* Check we have not got too many lines */
       tt_int_op(MAX_SPLIT_LINE_COUNT, OP_GT, j);
       /* Check that there actually should be a line here */
-      tt_assert(tests[i].split_line[j] != NULL);
+      tt_ptr_op(tests[i].split_line[j], OP_NE, NULL);
       log_info(LD_GENERAL, "Line %d of test %d, should be <%s>",
                j, i, tests[i].split_line[j]);
       /* Check that the line is as expected */
@@ -5556,25 +5556,25 @@ test_util_pwdb(void *arg)
   /* Uncached case. */
   /* Let's assume that we exist. */
   me = tor_getpwuid(getuid());
-  tt_assert(me != NULL);
+  tt_ptr_op(me, OP_NE, NULL);
   name = tor_strdup(me->pw_name);
 
   /* Uncached case */
   me2 = tor_getpwnam(name);
-  tt_assert(me2 != NULL);
+  tt_ptr_op(me2, OP_NE, NULL);
   tt_int_op(me2->pw_uid, OP_EQ, getuid());
 
   /* Cached case */
   me3 = tor_getpwuid(getuid());
-  tt_assert(me3 != NULL);
+  tt_ptr_op(me3, OP_NE, NULL);
   tt_str_op(me3->pw_name, OP_EQ, name);
 
   me3 = tor_getpwnam(name);
-  tt_assert(me3 != NULL);
+  tt_ptr_op(me3, OP_NE, NULL);
   tt_int_op(me3->pw_uid, OP_EQ, getuid());
 
   dir = get_user_homedir(name);
-  tt_assert(dir != NULL);
+  tt_ptr_op(dir, OP_NE, NULL);
 
   /* Try failing cases.  First find a user that doesn't exist by name */
   char randbytes[4];
@@ -5594,7 +5594,7 @@ test_util_pwdb(void *arg)
   /* We should do a LOG_ERR */
   setup_full_capture_of_logs(LOG_ERR);
   dir = get_user_homedir(badname);
-  tt_assert(dir == NULL);
+  tt_ptr_op(dir, OP_EQ, NULL);
   expect_log_msg_containing("not found");
   tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);
   teardown_capture_of_logs();

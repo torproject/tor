@@ -547,7 +547,7 @@ test_circuitmap_free_all(void)
   tt_assert(the_hs_circuitmap);
   hs_circuitmap_free_all();
   the_hs_circuitmap = get_hs_circuitmap();
-  tt_assert(!the_hs_circuitmap);
+  tt_ptr_op(the_hs_circuitmap, OP_EQ, NULL);
  done:
   ;
 }

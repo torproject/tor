@@ -371,7 +371,7 @@ test_access_service(void *arg)
   remove_service(global_map, s);
   tt_int_op(get_hs_service_map_size(), OP_EQ, 0);
   query = find_service(global_map, &s->keys.identity_pk);
-  tt_assert(!query);
+  tt_ptr_op(query, OP_EQ, NULL);
 
   /* Register back the service in the map. */
   ret = register_service(global_map, s);
@@ -384,7 +384,7 @@ test_access_service(void *arg)
   remove_service(global_map, s);
   tt_int_op(get_hs_service_map_size(), OP_EQ, 0);
   query = find_service(global_map, &s->keys.identity_pk);
-  tt_assert(!query);
+  tt_ptr_op(query, OP_EQ, NULL);
   /* Let's try to remove twice for fun. */
   setup_full_capture_of_logs(LOG_WARN);
   remove_service(global_map, s);
@@ -448,7 +448,7 @@ test_service_intro_point(void *arg)
     tt_mem_op(query, OP_EQ, ip, sizeof(hs_service_intro_point_t));
     query = service_intro_point_find(service,
                                      (const ed25519_public_key_t *) garbage);
-    tt_assert(query == NULL);
+    tt_ptr_op(query, OP_EQ, NULL);
 
     /* While at it, can I find the descriptor with the intro point? */
     hs_service_descriptor_t *desc_lookup =
@@ -459,7 +459,7 @@ test_service_intro_point(void *arg)
     /* Remove object from service descriptor and make sure it is out. */
     service_intro_point_remove(service, ip);
     query = service_intro_point_find(service, &ip->auth_key_kp.pubkey);
-    tt_assert(query == NULL);
+    tt_ptr_op(query, OP_EQ, NULL);
   }
 
  done:
@@ -533,9 +533,9 @@ test_helper_functions(void *arg)
     /* Break the ident and we should find nothing. */
     memset(&ident, 0, sizeof(ident));
     get_objects_from_ident(&ident, &s_lookup, &ip_lookup, &desc_lookup);
-    tt_assert(s_lookup == NULL);
-    tt_assert(ip_lookup == NULL);
-    tt_assert(desc_lookup == NULL);
+    tt_ptr_op(s_lookup, OP_EQ, NULL);
+    tt_ptr_op(ip_lookup, OP_EQ, NULL);
+    tt_ptr_op(desc_lookup, OP_EQ, NULL);
   }
 
   /* Testing get_node_from_intro_point() */
@@ -550,7 +550,7 @@ test_helper_functions(void *arg)
       }
     } SMARTLIST_FOREACH_END(ls);
     node = get_node_from_intro_point(ip);
-    tt_assert(node == NULL);
+    tt_ptr_op(node, OP_EQ, NULL);
   }
 
   /* Testing can_service_launch_intro_circuit() */

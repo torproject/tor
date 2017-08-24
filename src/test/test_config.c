@@ -415,7 +415,7 @@ bad_bridge_line_test(const char *string)
   bridge_line_t *bridge_line = parse_bridge_line(string);
   if (bridge_line)
     TT_FAIL(("%s was supposed to fail, but it didn't.", string));
-  tt_assert(!bridge_line);
+  tt_ptr_op(bridge_line, OP_EQ, NULL);
 
  done:
   bridge_line_free(bridge_line);
@@ -523,18 +523,18 @@ test_config_parse_transport_options_line(void *arg)
 
   { /* too small line */
     options_sl = get_options_from_transport_options_line("valley", NULL);
-    tt_assert(!options_sl);
+    tt_ptr_op(options_sl, OP_EQ, NULL);
   }
 
   { /* no k=v values */
     options_sl = get_options_from_transport_options_line("hit it!", NULL);
-    tt_assert(!options_sl);
+    tt_ptr_op(options_sl, OP_EQ, NULL);
   }
 
   { /* correct line, but wrong transport specified */
     options_sl =
       get_options_from_transport_options_line("trebuchet k=v", "rook");
-    tt_assert(!options_sl);
+    tt_ptr_op(options_sl, OP_EQ, NULL);
   }
 
   { /* correct -- no transport specified */
@@ -1420,7 +1420,7 @@ test_config_resolve_my_address(void *arg)
   tt_want(n_get_interface_address6 == prev_n_get_interface_address6 + 1);
 
   tt_str_op(method_used,OP_EQ,"INTERFACE");
-  tt_assert(!hostname_out);
+  tt_ptr_op(hostname_out, OP_EQ, NULL);
   tt_int_op(retval, OP_EQ, 0);
 
   /*

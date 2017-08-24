@@ -86,7 +86,7 @@ channel_note_destroy_not_pending_mock(channel_t *ch,
 static const char *
 chan_test_describe_transport(channel_t *ch)
 {
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
 
  done:
   return "Fake channel for unit tests";
@@ -100,7 +100,7 @@ chan_test_describe_transport(channel_t *ch)
 static void
 chan_test_channel_dump_statistics_mock(channel_t *chan, int severity)
 {
-  tt_assert(chan != NULL);
+  tt_ptr_op(chan, OP_NE, NULL);
 
   (void)severity;
 
@@ -125,7 +125,7 @@ chan_test_channel_flush_from_first_active_circuit_mock(channel_t *chan,
   int result = 0, c = 0;
   packed_cell_t *cell = NULL;
 
-  tt_assert(chan != NULL);
+  tt_ptr_op(chan, OP_NE, NULL);
   if (test_target_cmux != NULL &&
       test_target_cmux == chan->cmux) {
     while (c <= max && test_cmux_cells > 0) {
@@ -154,7 +154,7 @@ chan_test_circuitmux_num_cells_mock(circuitmux_t *cmux)
 {
   unsigned int result = 0;
 
-  tt_assert(cmux != NULL);
+  tt_ptr_op(cmux, OP_NE, NULL);
   if (cmux != NULL) {
     if (cmux == test_target_cmux) {
       result = test_cmux_cells;
@@ -193,7 +193,7 @@ chan_test_cell_handler(channel_t *ch,
 static void
 chan_test_dumpstats(channel_t *ch, int severity)
 {
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
 
   (void)severity;
 
@@ -286,7 +286,7 @@ chan_test_get_overhead_estimate(channel_t *ch)
 static int
 chan_test_is_canonical(channel_t *ch, int req)
 {
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
   tt_assert(req == 0 || req == 1);
 
  done:
@@ -380,7 +380,7 @@ chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell)
 void
 make_fake_cell(cell_t *c)
 {
-  tt_assert(c != NULL);
+  tt_ptr_op(c, OP_NE, NULL);
 
   c->circ_id = 1;
   c->command = CELL_RELAY;
@@ -397,7 +397,7 @@ make_fake_cell(cell_t *c)
 void
 make_fake_var_cell(var_cell_t *c)
 {
-  tt_assert(c != NULL);
+  tt_ptr_op(c, OP_NE, NULL);
 
   c->circ_id = 1;
   c->command = CELL_VERSIONS;
@@ -1822,7 +1822,7 @@ test_channel_id_map(void *arg)
   ch = channel_next_with_rsa_identity(ch);
   tt_assert(ch == chan[2] || ch == chan[4] || ch == chan[5]);
   ch = channel_next_with_rsa_identity(ch);
-  tt_assert(ch == NULL);
+  tt_ptr_op(ch, OP_EQ, NULL);
 
   /* As above, but with zero Ed25519 ID (meaning "any ID") */
   tt_ptr_op(chan[0], OP_EQ,
@@ -1838,7 +1838,7 @@ test_channel_id_map(void *arg)
   ch = channel_next_with_rsa_identity(ch);
   tt_assert(ch == chan[2] || ch == chan[4] || ch == chan[5]);
   ch = channel_next_with_rsa_identity(ch);
-  tt_assert(ch == NULL);
+  tt_ptr_op(ch, OP_EQ, NULL);
 
   /* Lookup nonexistent RSA identity */
   tt_ptr_op(NULL, OP_EQ,

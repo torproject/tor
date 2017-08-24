@@ -78,7 +78,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
     return;
   }
 
-  tt_assert(process_handle != NULL);
+  tt_ptr_op(process_handle, OP_NE, NULL);
 
   /* When a spawned process forks, fails, then exits very quickly,
    * (this typically occurs when exec fails)

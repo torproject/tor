@@ -366,12 +366,13 @@ test_conn_get_basic(void *arg)
    * its attributes, but get NULL when we supply a different value. */
 
   tt_assert(connection_get_by_global_id(conn->global_identifier) == conn);
-  tt_assert(connection_get_by_global_id(!conn->global_identifier) == NULL);
+  tt_ptr_op(connection_get_by_global_id(!conn->global_identifier), OP_EQ,
+            NULL);
 
   tt_assert(connection_get_by_type(conn->type) == conn);
   tt_assert(connection_get_by_type(TEST_CONN_TYPE) == conn);
-  tt_assert(connection_get_by_type(!conn->type) == NULL);
-  tt_assert(connection_get_by_type(!TEST_CONN_TYPE) == NULL);
+  tt_ptr_op(connection_get_by_type(!conn->type), OP_EQ, NULL);
+  tt_ptr_op(connection_get_by_type(!TEST_CONN_TYPE), OP_EQ, NULL);
 
   tt_assert(connection_get_by_type_state(conn->type, conn->state)
             == conn);

@@ -247,7 +247,7 @@ test_router_pick_directory_server_impl(void *arg)
 
   /* No consensus available, fail early */
   rs = router_pick_directory_server_impl(V3_DIRINFO, (const int) 0, NULL);
-  tt_assert(rs == NULL);
+  tt_ptr_op(rs, OP_EQ, NULL);
 
   construct_consensus(&consensus_text_md);
   tt_assert(consensus_text_md);
@@ -287,7 +287,7 @@ test_router_pick_directory_server_impl(void *arg)
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
   /* We should not fail now we have a consensus and routerstatus_list
    * and nodelist are populated. */
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
 
   /* Manipulate the nodes so we get the dir server we expect */
   router1_id = tor_malloc(DIGEST_LEN);
@@ -306,7 +306,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->is_running = 0;
   node_router3->is_running = 0;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router2_id, DIGEST_LEN));
   rs = NULL;
   node_router1->is_running = 1;
@@ -319,7 +319,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->rs->dir_port = 0;
   node_router3->rs->dir_port = 0;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router2_id, DIGEST_LEN));
   rs = NULL;
   node_router1->rs->is_v2_dir = 1;
@@ -330,7 +330,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->is_valid = 0;
   node_router3->is_valid = 0;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router2_id, DIGEST_LEN));
   rs = NULL;
   node_router1->is_valid = 1;
@@ -341,7 +341,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router2->rs->last_dir_503_at = now;
   node_router3->rs->last_dir_503_at = now;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   node_router2->rs->last_dir_503_at = 0;
   node_router3->rs->last_dir_503_at = 0;
@@ -358,13 +358,13 @@ test_router_pick_directory_server_impl(void *arg)
   node_router2->rs->or_port = 443;
   node_router3->rs->or_port = 442;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router3_id, DIGEST_LEN));
   node_router1->rs->or_port = 442;
   node_router2->rs->or_port = 443;
   node_router3->rs->or_port = 444;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
 
   /* Fascist firewall and overloaded */
@@ -373,7 +373,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->rs->or_port = 442;
   node_router3->rs->last_dir_503_at = now;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   node_router3->rs->last_dir_503_at = 0;
 
@@ -391,7 +391,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->rs->dir_port = 81;
   node_router1->rs->last_dir_503_at = now;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   node_router1->rs->last_dir_503_at = 0;
 

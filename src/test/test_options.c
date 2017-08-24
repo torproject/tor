@@ -299,7 +299,7 @@ test_have_enough_mem_for_dircache(void *arg)
   /* 300 MB RAM available, DirCache enabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
   tt_int_op(r, OP_EQ, 0);
-  tt_assert(!msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   /* 200 MB RAM available, DirCache enabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
@@ -322,7 +322,7 @@ test_have_enough_mem_for_dircache(void *arg)
   /* 300 MB RAM available, DirCache enabled, Bridge */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
   tt_int_op(r, OP_EQ, 0);
-  tt_assert(!msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   /* 200 MB RAM available, DirCache enabled, Bridge */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
@@ -345,7 +345,7 @@ test_have_enough_mem_for_dircache(void *arg)
   /* 200 MB RAM available, DirCache disabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
   tt_int_op(r, OP_EQ, 0);
-  tt_assert(!msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   /* 300 MB RAM available, DirCache disabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);

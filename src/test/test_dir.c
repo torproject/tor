@@ -477,34 +477,34 @@ test_dir_routerinfo_parsing(void *arg)
   routerinfo_free(ri);
   ri = router_parse_entry_from_string(EX_RI_MINIMAL, NULL, 0, 0,
                                       "@purpose bridge\n", NULL);
-  tt_assert(ri != NULL);
+  tt_ptr_op(ri, OP_NE, NULL);
   tt_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
   routerinfo_free(ri);
 
   /* bad annotations prepended. */
   ri = router_parse_entry_from_string(EX_RI_MINIMAL,
                                       NULL, 0, 0, "@purpose\n", NULL);
-  tt_assert(ri == NULL);
+  tt_ptr_op(ri, OP_EQ, NULL);
 
   /* bad annotations on router. */
   ri = router_parse_entry_from_string("@purpose\nrouter x\n", NULL, 0, 1,
                                       NULL, NULL);
-  tt_assert(ri == NULL);
+  tt_ptr_op(ri, OP_EQ, NULL);
 
   /* unwanted annotations on router. */
   ri = router_parse_entry_from_string("@purpose foo\nrouter x\n", NULL, 0, 0,
                                       NULL, NULL);
-  tt_assert(ri == NULL);
+  tt_ptr_op(ri, OP_EQ, NULL);
 
   /* No signature. */
   ri = router_parse_entry_from_string("router x\n", NULL, 0, 0,
                                       NULL, NULL);
-  tt_assert(ri == NULL);
+  tt_ptr_op(ri, OP_EQ, NULL);
 
   /* Not a router */
   routerinfo_free(ri);
   ri = router_parse_entry_from_string("hello\n", NULL, 0, 0, NULL, NULL);
-  tt_assert(ri == NULL);
+  tt_ptr_op(ri, OP_EQ, NULL);
 
   CHECK_FAIL(EX_RI_BAD_SIG1, 1);
   CHECK_FAIL(EX_RI_BAD_SIG2, 1);
@@ -631,11 +631,11 @@ test_dir_extrainfo_parsing(void *arg)
   ADD(EX_EI_ED_MISPLACED_SIG);
 
   CHECK_OK(EX_EI_MINIMAL);
-  tt_assert(!ei->pending_sig);
+  tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
   CHECK_OK(EX_EI_MAXIMAL);
-  tt_assert(!ei->pending_sig);
+  tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
   CHECK_OK(EX_EI_GOOD_ED_EI);
-  tt_assert(!ei->pending_sig);
+  tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
 
   CHECK_FAIL(EX_EI_BAD_SIG1,1);
   CHECK_FAIL(EX_EI_BAD_SIG2,1);
@@ -1988,7 +1988,7 @@ test_consensus_for_v3ns(networkstatus_t *con, time_t now)
   (void)now;
 
   tt_assert(con);
-  tt_assert(!con->cert);
+  tt_ptr_op(con->cert, OP_EQ, NULL);
   tt_int_op(2,OP_EQ, smartlist_len(con->routerstatus_list));
   /* There should be two listed routers: one with identity 3, one with
    * identity 5. */
@@ -3158,7 +3158,7 @@ test_consensus_for_umbw(networkstatus_t *con, time_t now)
   (void)now;
 
   tt_assert(con);
-  tt_assert(!con->cert);
+  tt_ptr_op(con->cert, OP_EQ, NULL);
   // tt_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB);
   tt_int_op(con->consensus_method, OP_GE, 16);
   tt_int_op(4,OP_EQ, smartlist_len(con->routerstatus_list));
@@ -3658,7 +3658,7 @@ test_dir_http_handling(void *args)
                            "User-Agent: Mozilla/5.0 (Windows;"
                            " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
                            &url),OP_EQ, -1);
-  tt_assert(!url);
+  tt_ptr_op(url, OP_EQ, NULL);
 
   /* Bad headers */
   tt_int_op(parse_http_url("GET /a/b/c.txt\r\n"
@@ -3666,23 +3666,23 @@ test_dir_http_handling(void *args)
                            "User-Agent: Mozilla/5.0 (Windows;"
                            " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
                            &url),OP_EQ, -1);
-  tt_assert(!url);
+  tt_ptr_op(url, OP_EQ, NULL);
 
   tt_int_op(parse_http_url("GET /tor/a/b/c.txt", &url),OP_EQ, -1);
-  tt_assert(!url);
+  tt_ptr_op(url, OP_EQ, NULL);
 
   tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1", &url),OP_EQ, -1);
-  tt_assert(!url);
+  tt_ptr_op(url, OP_EQ, NULL);
 
   tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1x\r\n", &url),
             OP_EQ, -1);
-  tt_assert(!url);
+  tt_ptr_op(url, OP_EQ, NULL);
 
   tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.", &url),OP_EQ, -1);
-  tt_assert(!url);
+  tt_ptr_op(url, OP_EQ, NULL);
 
   tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.\r", &url),OP_EQ, -1);
-  tt_assert(!url);
+  tt_ptr_op(url, OP_EQ, NULL);
 
  done:
   tor_free(url);
@@ -4850,13 +4850,13 @@ mock_get_datadir_fname(const or_options_t *options,
    * Assert we were called like get_datadir_fname2() or get_datadir_fname(),
    * since that's all we implement here.
    */
-  tt_assert(options != NULL);
-  tt_assert(sub1 != NULL);
+  tt_ptr_op(options, OP_NE, NULL);
+  tt_ptr_op(sub1, OP_NE, NULL);
   /*
    * No particular assertions about sub2, since we could be in the
    * get_datadir_fname() or get_datadir_fname2() case.
    */
-  tt_assert(suffix == NULL);
+  tt_ptr_op(suffix, OP_EQ, NULL);
 
   /* Just duplicate the basename and return it for this mock */
   if (sub2) {
@@ -4883,7 +4883,7 @@ mock_unlink_reset(void)
 static int
 mock_unlink(const char *path)
 {
-  tt_assert(path != NULL);
+  tt_ptr_op(path, OP_NE, NULL);
 
   tor_free(last_unlinked_path);
   last_unlinked_path = tor_strdup(path);
@@ -4912,8 +4912,8 @@ mock_write_str_to_file(const char *path, const char *str, int bin)
 
   (void)bin;
 
-  tt_assert(path != NULL);
-  tt_assert(str != NULL);
+  tt_ptr_op(path, OP_NE, NULL);
+  tt_ptr_op(str, OP_NE, NULL);
 
   len = strlen(str);
   crypto_digest256((char *)hash, str, len, DIGEST_SHA256);
@@ -5540,7 +5540,7 @@ read_file_to_str_mock(const char *filename, int flags,
   char *result = NULL;
 
   /* Insist we got a filename */
-  tt_assert(filename != NULL);
+  tt_ptr_op(filename, OP_NE, NULL);
 
   /* We ignore flags */
   (void)flags;
@@ -5607,19 +5607,19 @@ test_dir_populate_dump_desc_fifo(void *data)
 
   /* Some cases that should fail before trying to read the file */
   ent = dump_desc_populate_one_file(dirname, "bar");
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 1);
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 0);
 
   ent = dump_desc_populate_one_file(dirname, "unparseable-desc");
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 2);
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 0);
 
   ent = dump_desc_populate_one_file(dirname, "unparseable-desc.baz");
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 3);
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 0);
@@ -5627,7 +5627,7 @@ test_dir_populate_dump_desc_fifo(void *data)
   ent = dump_desc_populate_one_file(
       dirname,
       "unparseable-desc.08AE85E90461F59E");
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 4);
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 0);
@@ -5636,7 +5636,7 @@ test_dir_populate_dump_desc_fifo(void *data)
       dirname,
       "unparseable-desc.08AE85E90461F59EDF0981323F3A70D02B55AB54B44B04F"
       "287D72F7B72F242E85C8CB0EDA8854A99");
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 5);
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 0);
@@ -5646,7 +5646,7 @@ test_dir_populate_dump_desc_fifo(void *data)
       dirname,
       "unparseable-desc.68219B8BGE64B705A6FFC728C069DC596216D60A7D7520C"
       "D5ECE250D912E686B");
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 6);
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 0);
@@ -5658,7 +5658,7 @@ test_dir_populate_dump_desc_fifo(void *data)
       dirname,
       "unparseable-desc.DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E"
       "85C8CB0EDA8854A99");
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 7);
   tt_int_op(read_count, OP_EQ, 0);
   tt_int_op(read_call_count, OP_EQ, 1);
@@ -5674,7 +5674,7 @@ test_dir_populate_dump_desc_fifo(void *data)
   file_stat.st_mtime = 123456;
   ent = dump_desc_populate_one_file(dirname, fname);
   enforce_expected_filename = 0;
-  tt_assert(ent == NULL);
+  tt_ptr_op(ent, OP_EQ, NULL);
   tt_int_op(unlinked_count, OP_EQ, 8);
   tt_int_op(read_count, OP_EQ, 1);
   tt_int_op(read_call_count, OP_EQ, 2);
@@ -5690,7 +5690,7 @@ test_dir_populate_dump_desc_fifo(void *data)
   file_content_len = strlen(file_content);
   file_stat.st_mtime = 789012;
   ent = dump_desc_populate_one_file(dirname, fname);
-  tt_assert(ent != NULL);
+  tt_ptr_op(ent, OP_NE, NULL);
   tt_int_op(unlinked_count, OP_EQ, 8);
   tt_int_op(read_count, OP_EQ, 2);
   tt_int_op(read_call_count, OP_EQ, 3);
