@@ -368,12 +368,12 @@ good_bridge_line_test(const char *string, const char *test_addrport,
   /* If we were asked to validate a digest, but we did not get a
      digest after parsing, we failed. */
   if (test_digest && tor_digest_is_zero(bridge_line->digest))
-    tt_assert(0);
+    tt_abort();
 
   /* If we were not asked to validate a digest, and we got a digest
      after parsing, we failed again. */
   if (!test_digest && !tor_digest_is_zero(bridge_line->digest))
-    tt_assert(0);
+    tt_abort();
 
   /* If we were asked to validate a digest, and we got a digest after
      parsing, make sure it's correct. */
@@ -387,17 +387,17 @@ good_bridge_line_test(const char *string, const char *test_addrport,
   /* If we were asked to validate a transport name, make sure tha it
      matches with the transport name that was parsed. */
   if (test_transport && !bridge_line->transport_name)
-    tt_assert(0);
+    tt_abort();
   if (!test_transport && bridge_line->transport_name)
-    tt_assert(0);
+    tt_abort();
   if (test_transport)
     tt_str_op(test_transport,OP_EQ, bridge_line->transport_name);
 
   /* Validate the SOCKS argument smartlist. */
   if (test_socks_args && !bridge_line->socks_args)
-    tt_assert(0);
+    tt_abort();
   if (!test_socks_args && bridge_line->socks_args)
-    tt_assert(0);
+    tt_abort();
   if (test_socks_args)
     tt_assert(smartlist_strings_eq(test_socks_args,
                                      bridge_line->socks_args));

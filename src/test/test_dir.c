@@ -2060,7 +2060,7 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
     /* XXXX check version */
   } else {
     /* Weren't expecting this... */
-    tt_assert(0);
+    tt_abort();
   }
 
  done:
@@ -3004,7 +3004,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       break;
     default:
       /* Shouldn't happen */
-      tt_assert(0);
+      tt_abort();
   }
   if (vrs) {
     vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
@@ -3144,7 +3144,7 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
     tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb / 2);
     tt_int_op(vrs->measured_bw_kb,OP_EQ, 0);
   } else {
-    tt_assert(0);
+    tt_abort();
   }
 
  done:
@@ -3259,7 +3259,7 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
     tt_assert(rs->bw_is_unmeasured);
   } else {
     /* Weren't expecting this... */
-    tt_assert(0);
+    tt_abort();
   }
 
  done:
