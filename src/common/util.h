@@ -396,6 +396,8 @@ void tor_check_port_forwarding(const char *filename,
                                struct smartlist_t *ports_to_forward,
                                time_t now);
 
+void tor_disable_spawning_background_processes(void);
+
 typedef struct process_handle_t process_handle_t;
 typedef struct process_environment_t process_environment_t;
 int tor_spawn_background(const char *const filename, const char **argv,

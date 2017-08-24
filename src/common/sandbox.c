@@ -289,37 +289,6 @@ sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return rc;
 }
 
-#if 0
-/**
- * Function responsible for setting up the execve syscall for
- * the seccomp filter sandbox.
- */
-static int
-sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
-{
-  int rc;
-  sandbox_cfg_t *elem = NULL;
-
-  // for each dynamic parameter filters
-  for (elem = filter; elem != NULL; elem = elem->next) {
-    smp_param_t *param = elem->param;
-
-    if (param != NULL && param->prot == 1 && param->syscall
-        == SCMP_SYS(execve)) {
-      rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve),
-               SCMP_CMP_STR(0, SCMP_CMP_EQ, param->value));
-      if (rc != 0) {
-        log_err(LD_BUG,"(Sandbox) failed to add execve syscall, received "
-            "libseccomp error %d", rc);
-        return rc;
-      }
-    }
-  }
-
-  return 0;
-}
-#endif
-
 /**
  * Function responsible for setting up the time syscall for
  * the seccomp filter sandbox.
@@ -1063,9 +1032,6 @@ sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_rt_sigprocmask,
-#if 0
-    sb_execve,
-#endif
     sb_time,
     sb_accept4,
 #ifdef __NR_mmap2
@@ -1416,26 +1382,6 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 
   return 0;
 }
-
-#if 0
-int
-sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
-{
-  sandbox_cfg_t *elem = NULL;
-
-  elem = new_element(SCMP_SYS(execve), com);
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
-
-  elem->next = *cfg;
-  *cfg = elem;
-
-  return 0;
-}
-
-#endif
 
 /** Cache entry for getaddrinfo results; used when sandboxing is implemented
  * so that we can consult the cache when the sandbox prevents us from doing
@@ -1909,15 +1855,6 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
   (void)cfg; (void)file;
   return 0;
 }
-
-#if 0
-int
-sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
-{
-  (void)cfg; (void)com;
-  return 0;
-}
-#endif
 
 int
 sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)

@@ -409,6 +409,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("PredictedPortsRelevanceTime"),
   OBSOLETE("WarnUnsafeSocks"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
+  V(NoExec,                      BOOL,     "0"),
   V(NumCPUs,                     UINT,     "0"),
   V(NumDirectoryGuards,          UINT,     "0"),
   V(NumEntryGuards,              UINT,     "0"),
@@ -1594,6 +1595,10 @@ options_act(const or_options_t *old_options)
   int old_ewma_enabled;
   const int transition_affects_guards =
     old_options && options_transition_affects_guards(old_options, options);
+
+  if (options->NoExec || options->Sandbox) {
+    tor_disable_spawning_background_processes();
+  }
 
   /* disable ptrace and later, other basic debugging techniques */
   {
@@ -3570,6 +3575,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("PortForwarding is not compatible with Sandbox; at most one can "
            "be set");
   }
+  if (options->PortForwarding && options->NoExec) {
+    COMPLAIN("Both PortForwarding and NoExec are set; PortForwarding will "
+             "be ignored.");
+  }
 
   if (ensure_bandwidth_cap(&options->BandwidthRate,
                            "BandwidthRate", msg) < 0)
@@ -4444,6 +4453,12 @@ options_transition_allowed(const or_options_t *old,
       !new_val->DisableDebuggerAttachment) {
     *msg = tor_strdup("While Tor is running, disabling "
                       "DisableDebuggerAttachment is not allowed.");
+    return -1;
+  }
+
+  if (old->NoExec && !new_val->NoExec) {
+    *msg = tor_strdup("While Tor is running, disabling "
+                      "NoExec is not allowed.");
     return -1;
   }
 
@@ -5724,6 +5739,15 @@ parse_transport_line(const or_options_t *options,
              "(%sTransportPlugin line was %s)",
              server ? "Server" : "Client", escaped(line));
     goto err;
+  }
+
+  if (is_managed && options->NoExec) {
+    log_warn(LD_CONFIG,
+             "Managed proxies are not compatible with NoExec mode; ignoring."
+             "(%sTransportPlugin line was %s)",
+             server ? "Server" : "Client", escaped(line));
+    r = 0;
+    goto done;
   }
 
   if (is_managed) {
