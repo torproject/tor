@@ -66,7 +66,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #elif OPENSSL_VERSION_NUMBER >= OPENSSL_V_NOPATCH(1,0,1) &&               \
   (defined(__i386) || defined(__i386__) || defined(_M_IX86) ||          \
    defined(__x86_64) || defined(__x86_64__) ||                          \
-   defined(_M_AMD64) || defined(_M_X64) || defined(__INTEL__))          \
+   defined(_M_AMD64) || defined(_M_X64) || defined(__INTEL__))
 
 #define USE_EVP_AES_CTR
 

@@ -40,34 +40,34 @@ test_pt_parsing(void *arg)
 
   /* incomplete cmethod */
   strlcpy(line,"CMETHOD trebuchet",sizeof(line));
-  tt_assert(parse_cmethod_line(line, mp) < 0);
+  tt_int_op(parse_cmethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* wrong proxy type */
   strlcpy(line,"CMETHOD trebuchet dog 127.0.0.1:1999",sizeof(line));
-  tt_assert(parse_cmethod_line(line, mp) < 0);
+  tt_int_op(parse_cmethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* wrong addrport */
   strlcpy(line,"CMETHOD trebuchet socks4 abcd",sizeof(line));
-  tt_assert(parse_cmethod_line(line, mp) < 0);
+  tt_int_op(parse_cmethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* correct line */
   strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
-  tt_assert(parse_cmethod_line(line, mp) == 0);
-  tt_assert(smartlist_len(mp->transports) == 1);
+  tt_int_op(parse_cmethod_line(line, mp), OP_EQ, 0);
+  tt_int_op(smartlist_len(mp->transports), OP_EQ, 1);
   transport = smartlist_get(mp->transports, 0);
   /* test registered address of transport */
   tor_addr_parse(&test_addr, "127.0.0.1");
   tt_assert(tor_addr_eq(&test_addr, &transport->addr));
   /* test registered port of transport */
-  tt_assert(transport->port == 1999);
+  tt_uint_op(transport->port, OP_EQ, 1999);
   /* test registered SOCKS version of transport */
-  tt_assert(transport->socks_version == PROXY_SOCKS5);
+  tt_int_op(transport->socks_version, OP_EQ, PROXY_SOCKS5);
   /* test registered name of transport */
   tt_str_op(transport->name,OP_EQ, "trebuchet");
 
@@ -75,26 +75,26 @@ test_pt_parsing(void *arg)
 
   /* incomplete smethod */
   strlcpy(line,"SMETHOD trebuchet",sizeof(line));
-  tt_assert(parse_smethod_line(line, mp) < 0);
+  tt_int_op(parse_smethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* wrong addr type */
   strlcpy(line,"SMETHOD trebuchet abcd",sizeof(line));
-  tt_assert(parse_smethod_line(line, mp) < 0);
+  tt_int_op(parse_smethod_line(line, mp), OP_LT, 0);
 
   reset_mp(mp);
 
   /* cowwect */
   strlcpy(line,"SMETHOD trebuchy 127.0.0.2:2999",sizeof(line));
-  tt_assert(parse_smethod_line(line, mp) == 0);
-  tt_assert(smartlist_len(mp->transports) == 1);
+  tt_int_op(parse_smethod_line(line, mp), OP_EQ, 0);
+  tt_int_op(smartlist_len(mp->transports), OP_EQ, 1);
   transport = smartlist_get(mp->transports, 0);
   /* test registered address of transport */
   tor_addr_parse(&test_addr, "127.0.0.2");
   tt_assert(tor_addr_eq(&test_addr, &transport->addr));
   /* test registered port of transport */
-  tt_assert(transport->port == 2999);
+  tt_uint_op(transport->port, OP_EQ, 2999);
   /* test registered name of transport */
   tt_str_op(transport->name,OP_EQ, "trebuchy");
 
@@ -104,7 +104,7 @@ test_pt_parsing(void *arg)
   strlcpy(line,"SMETHOD trebuchet 127.0.0.1:9999 "
           "ARGS:counterweight=3,sling=snappy",
           sizeof(line));
-  tt_assert(parse_smethod_line(line, mp) == 0);
+  tt_int_op(parse_smethod_line(line, mp), OP_EQ, 0);
   tt_int_op(1, OP_EQ, smartlist_len(mp->transports));
   {
     const transport_t *transport_ = smartlist_get(mp->transports, 0);
@@ -119,15 +119,15 @@ test_pt_parsing(void *arg)
 
   /* unsupported version */
   strlcpy(line,"VERSION 666",sizeof(line));
-  tt_assert(parse_version(line, mp) < 0);
+  tt_int_op(parse_version(line, mp), OP_LT, 0);
 
   /* incomplete VERSION */
   strlcpy(line,"VERSION ",sizeof(line));
-  tt_assert(parse_version(line, mp) < 0);
+  tt_int_op(parse_version(line, mp), OP_LT, 0);
 
   /* correct VERSION */
   strlcpy(line,"VERSION 1",sizeof(line));
-  tt_assert(parse_version(line, mp) == 0);
+  tt_int_op(parse_version(line, mp), OP_EQ, 0);
 
  done:
   reset_mp(mp);
@@ -461,7 +461,7 @@ test_get_pt_proxy_uri(void *arg)
 
   /* Test with no proxy. */
   uri = get_pt_proxy_uri();
-  tt_assert(uri == NULL);
+  tt_ptr_op(uri, OP_EQ, NULL);
 
   /* Test with a SOCKS4 proxy. */
   options->Socks4Proxy = tor_strdup("192.0.2.1:1080");

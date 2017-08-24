@@ -325,8 +325,8 @@ test_consdiffmgr_add(void *arg)
   tt_mem_op(body, OP_EQ, "quux", 4);
 
   /* Try looking up another entry, but fail */
-  tt_assert(NULL == cdm_cache_lookup_consensus(FLAV_MICRODESC, now-60));
-  tt_assert(NULL == cdm_cache_lookup_consensus(FLAV_NS, now-61));
+  tt_ptr_op(cdm_cache_lookup_consensus(FLAV_MICRODESC, now - 60), OP_EQ, NULL);
+  tt_ptr_op(cdm_cache_lookup_consensus(FLAV_NS, now - 61), OP_EQ, NULL);
 
  done:
   networkstatus_vote_free(ns_tmp);

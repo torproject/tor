@@ -72,7 +72,7 @@ test_channeltls_create(void *arg)
 
   /* Try connecting */
   ch = channel_tls_connect(&test_addr, 567, test_digest, NULL);
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
 
  done:
   if (ch) {
@@ -121,7 +121,7 @@ test_channeltls_num_bytes_queued(void *arg)
 
   /* Try connecting */
   ch = channel_tls_connect(&test_addr, 567, test_digest, NULL);
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
 
   /*
    * Next, we have to test ch->num_bytes_queued, which is
@@ -132,7 +132,7 @@ test_channeltls_num_bytes_queued(void *arg)
 
   tt_assert(ch->num_bytes_queued != NULL);
   tlschan = BASE_CHAN_TO_TLS(ch);
-  tt_assert(tlschan != NULL);
+  tt_ptr_op(tlschan, OP_NE, NULL);
   if (TO_CONN(tlschan->conn)->outbuf == NULL) {
     /* We need an outbuf to make sure buf_datalen() gets called */
     fake_outbuf = 1;
@@ -142,7 +142,7 @@ test_channeltls_num_bytes_queued(void *arg)
   tlschan_buf_datalen_mock_size = 1024;
   MOCK(buf_datalen, tlschan_buf_datalen_mock);
   len = ch->num_bytes_queued(ch);
-  tt_int_op(len, ==, tlschan_buf_datalen_mock_size);
+  tt_int_op(len, OP_EQ, tlschan_buf_datalen_mock_size);
   /*
    * We also cover num_cells_writeable here; since wide_circ_ids = 0 on
    * the fake tlschans, cell_network_size returns 512, and so with
@@ -151,7 +151,7 @@ test_channeltls_num_bytes_queued(void *arg)
    * - 2 cells.
    */
   n = ch->num_cells_writeable(ch);
-  tt_int_op(n, ==, CEIL_DIV(OR_CONN_HIGHWATER, 512) - 2);
+  tt_int_op(n, OP_EQ, CEIL_DIV(OR_CONN_HIGHWATER, 512) - 2);
   UNMOCK(buf_datalen);
   tlschan_buf_datalen_mock_target = NULL;
   tlschan_buf_datalen_mock_size = 0;
@@ -206,11 +206,11 @@ test_channeltls_overhead_estimate(void *arg)
 
   /* Try connecting */
   ch = channel_tls_connect(&test_addr, 567, test_digest, NULL);
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
 
   /* First case: silly low ratios should get clamped to 1.0 */
   tlschan = BASE_CHAN_TO_TLS(ch);
-  tt_assert(tlschan != NULL);
+  tt_ptr_op(tlschan, OP_NE, NULL);
   tlschan->conn->bytes_xmitted = 128;
   tlschan->conn->bytes_xmitted_by_tls = 64;
   r = ch->get_overhead_estimate(ch);
@@ -273,10 +273,10 @@ tlschan_connection_or_connect_mock(const tor_addr_t *addr,
   or_connection_t *result = NULL;
   (void) ed_id; // XXXX Not yet used.
 
-  tt_assert(addr != NULL);
-  tt_assert(port != 0);
-  tt_assert(digest != NULL);
-  tt_assert(tlschan != NULL);
+  tt_ptr_op(addr, OP_NE, NULL);
+  tt_uint_op(port, OP_NE, 0);
+  tt_ptr_op(digest, OP_NE, NULL);
+  tt_ptr_op(tlschan, OP_NE, NULL);
 
   /* Make a fake orconn */
   result = tor_malloc_zero(sizeof(*result));
@@ -301,11 +301,11 @@ tlschan_fake_close_method(channel_t *chan)
 {
   channel_tls_t *tlschan = NULL;
 
-  tt_assert(chan != NULL);
-  tt_int_op(chan->magic, ==, TLS_CHAN_MAGIC);
+  tt_ptr_op(chan, OP_NE, NULL);
+  tt_int_op(chan->magic, OP_EQ, TLS_CHAN_MAGIC);
 
   tlschan = BASE_CHAN_TO_TLS(chan);
-  tt_assert(tlschan != NULL);
+  tt_ptr_op(tlschan, OP_NE, NULL);
 
   /* Just free the fake orconn */
   tor_free(tlschan->conn->base_.address);
@@ -320,7 +320,7 @@ tlschan_fake_close_method(channel_t *chan)
 static int
 tlschan_is_local_addr_mock(const tor_addr_t *addr)
 {
-  tt_assert(addr != NULL);
+  tt_ptr_op(addr, OP_NE, NULL);
 
  done:
   return tlschan_local;

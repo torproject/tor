@@ -307,7 +307,7 @@ do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
   /* Do early parsing */
   parsed_req = rend_service_begin_parse_intro(cell, cell_len, 2, &err_msg);
   tt_assert(parsed_req);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_mem_op(parsed_req->pk,OP_EQ, digest, DIGEST_LEN);
   tt_assert(parsed_req->ciphertext);
   tt_assert(parsed_req->ciphertext_len > 0);
@@ -318,7 +318,7 @@ do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
   /* Do decryption */
   r = rend_service_decrypt_intro(parsed_req, k, &err_msg);
   tt_assert(!r);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_assert(parsed_req->plaintext);
   tt_assert(parsed_req->plaintext_len > 0);
 
@@ -328,7 +328,7 @@ do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
   /* Do late parsing */
   r = rend_service_parse_intro_plaintext(parsed_req, &err_msg);
   tt_assert(!r);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_assert(parsed_req->parsed);
 
  done:

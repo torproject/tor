@@ -2552,7 +2552,7 @@ rep_hist_format_buffer_stats(time_t now)
                processed_cells_string,
                queued_cells_string,
                time_in_queue_string,
-               (number_of_circuits + SHARES - 1) / SHARES);
+               CEIL_DIV(number_of_circuits, SHARES));
   tor_free(processed_cells_string);
   tor_free(queued_cells_string);
   tor_free(time_in_queue_string);

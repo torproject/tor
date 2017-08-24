@@ -464,7 +464,7 @@ test_md_generate(void *arg)
   microdesc_free(md);
   md = NULL;
   md = dirvote_create_microdescriptor(ri, 21);
-  tt_str_op(md->body, ==, test_md_18);
+  tt_str_op(md->body, OP_EQ, test_md_18);
 
   routerinfo_free(ri);
   ri = router_parse_entry_from_string(test_ri2, NULL, 0, 0, NULL, NULL);
@@ -472,12 +472,12 @@ test_md_generate(void *arg)
   microdesc_free(md);
   md = NULL;
   md = dirvote_create_microdescriptor(ri, 18);
-  tt_str_op(md->body, ==, test_md2_18);
+  tt_str_op(md->body, OP_EQ, test_md2_18);
 
   microdesc_free(md);
   md = NULL;
   md = dirvote_create_microdescriptor(ri, 21);
-  tt_str_op(md->body, ==, test_md2_21);
+  tt_str_op(md->body, OP_EQ, test_md2_21);
   tt_assert(ed25519_pubkey_eq(md->ed25519_identity_pkey,
                               &ri->cache_info.signing_key_cert->signing_key));
 
@@ -823,14 +823,14 @@ test_md_corrupt_desc(void *arg)
                                "@last-listed 2015-06-22 10:00:00\n"
                                "onion-k\n",
                                NULL, SAVED_IN_JOURNAL, 0, time(NULL), NULL);
-  tt_int_op(smartlist_len(sl), ==, 0);
+  tt_int_op(smartlist_len(sl), OP_EQ, 0);
   smartlist_free(sl);
 
   sl = microdescs_add_to_cache(get_microdesc_cache(),
                                "@last-listed 2015-06-22 10:00:00\n"
                                "wiggly\n",
                                NULL, SAVED_IN_JOURNAL, 0, time(NULL), NULL);
-  tt_int_op(smartlist_len(sl), ==, 0);
+  tt_int_op(smartlist_len(sl), OP_EQ, 0);
   smartlist_free(sl);
 
   tor_asprintf(&cp, "%s\n%s", test_md1, "@foobar\nonion-wobble\n");
@@ -838,7 +838,7 @@ test_md_corrupt_desc(void *arg)
   sl = microdescs_add_to_cache(get_microdesc_cache(),
                                cp, cp+strlen(cp),
                                SAVED_IN_JOURNAL, 0, time(NULL), NULL);
-  tt_int_op(smartlist_len(sl), ==, 0);
+  tt_int_op(smartlist_len(sl), OP_EQ, 0);
 
  done:
   tor_free(cp);

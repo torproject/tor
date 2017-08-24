@@ -762,11 +762,11 @@ test_buffers_tls_read_mocked(void *arg)
   buf = buf_new();
 
   next_reply_val[0] = 1024;
-  tt_int_op(128, ==, read_to_buf_tls(NULL, 128, buf));
+  tt_int_op(128, OP_EQ, read_to_buf_tls(NULL, 128, buf));
 
   next_reply_val[0] = 5000;
   next_reply_val[1] = 5000;
-  tt_int_op(6000, ==, read_to_buf_tls(NULL, 6000, buf));
+  tt_int_op(6000, OP_EQ, read_to_buf_tls(NULL, 6000, buf));
 
  done:
   UNMOCK(tor_tls_read);
@@ -831,8 +831,8 @@ test_buffers_find_contentlen(void *arg)
     r = buf_http_find_content_length(tmp, headerlen, &sz);
     tor_free(tmp);
     log_debug(LD_DIR, "%d: %s", i, escaped(results[i].headers));
-    tt_int_op(r, ==, results[i].r);
-    tt_int_op(sz, ==, results[i].contentlen);
+    tt_int_op(r, OP_EQ, results[i].r);
+    tt_int_op(sz, OP_EQ, results[i].contentlen);
   }
  done:
   ;

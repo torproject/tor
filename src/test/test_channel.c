@@ -86,7 +86,7 @@ channel_note_destroy_not_pending_mock(channel_t *ch,
 static const char *
 chan_test_describe_transport(channel_t *ch)
 {
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
 
  done:
   return "Fake channel for unit tests";
@@ -100,7 +100,7 @@ chan_test_describe_transport(channel_t *ch)
 static void
 chan_test_channel_dump_statistics_mock(channel_t *chan, int severity)
 {
-  tt_assert(chan != NULL);
+  tt_ptr_op(chan, OP_NE, NULL);
 
   (void)severity;
 
@@ -125,7 +125,7 @@ chan_test_channel_flush_from_first_active_circuit_mock(channel_t *chan,
   int result = 0, c = 0;
   packed_cell_t *cell = NULL;
 
-  tt_assert(chan != NULL);
+  tt_ptr_op(chan, OP_NE, NULL);
   if (test_target_cmux != NULL &&
       test_target_cmux == chan->cmux) {
     while (c <= max && test_cmux_cells > 0) {
@@ -154,7 +154,7 @@ chan_test_circuitmux_num_cells_mock(circuitmux_t *cmux)
 {
   unsigned int result = 0;
 
-  tt_assert(cmux != NULL);
+  tt_ptr_op(cmux, OP_NE, NULL);
   if (cmux != NULL) {
     if (cmux == test_target_cmux) {
       result = test_cmux_cells;
@@ -193,7 +193,7 @@ chan_test_cell_handler(channel_t *ch,
 static void
 chan_test_dumpstats(channel_t *ch, int severity)
 {
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
 
   (void)severity;
 
@@ -268,7 +268,7 @@ static const char *
 chan_test_get_remote_descr(channel_t *ch, int flags)
 {
   tt_assert(ch);
-  tt_int_op(flags & ~(GRD_FLAG_ORIGINAL | GRD_FLAG_ADDR_ONLY), ==, 0);
+  tt_int_op(flags & ~(GRD_FLAG_ORIGINAL | GRD_FLAG_ADDR_ONLY), OP_EQ, 0);
 
  done:
   return "Fake channel for unit tests; no real endpoint";
@@ -286,7 +286,7 @@ chan_test_get_overhead_estimate(channel_t *ch)
 static int
 chan_test_is_canonical(channel_t *ch, int req)
 {
-  tt_assert(ch != NULL);
+  tt_ptr_op(ch, OP_NE, NULL);
   tt_assert(req == 0 || req == 1);
 
  done:
@@ -380,7 +380,7 @@ chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell)
 void
 make_fake_cell(cell_t *c)
 {
-  tt_assert(c != NULL);
+  tt_ptr_op(c, OP_NE, NULL);
 
   c->circ_id = 1;
   c->command = CELL_RELAY;
@@ -397,7 +397,7 @@ make_fake_cell(cell_t *c)
 void
 make_fake_var_cell(var_cell_t *c)
 {
-  tt_assert(c != NULL);
+  tt_ptr_op(c, OP_NE, NULL);
 
   c->circ_id = 1;
   c->command = CELL_VERSIONS;
@@ -552,24 +552,24 @@ test_channel_dumpstats(void *arg)
   channel_dumpstats(LOG_DEBUG);
 
   /* Assert that we hit the mock */
-  tt_int_op(dump_statistics_mock_matches, ==, 1);
+  tt_int_op(dump_statistics_mock_matches, OP_EQ, 1);
 
   /* Close the channel */
   channel_mark_for_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
 
   /* Try again and hit the finished channel */
   channel_dumpstats(LOG_DEBUG);
-  tt_int_op(dump_statistics_mock_matches, ==, 2);
+  tt_int_op(dump_statistics_mock_matches, OP_EQ, 2);
 
   channel_run_cleanup();
   ch = NULL;
 
   /* Now we should hit nothing */
   channel_dumpstats(LOG_DEBUG);
-  tt_int_op(dump_statistics_mock_matches, ==, 2);
+  tt_int_op(dump_statistics_mock_matches, OP_EQ, 2);
 
   /* Unmock */
   UNMOCK(channel_dump_statistics);
@@ -594,7 +594,7 @@ test_channel_dumpstats(void *arg)
   old_count = test_cells_written;
   channel_write_cell(ch, cell);
   cell = NULL;
-  tt_int_op(test_cells_written, ==, old_count + 1);
+  tt_int_op(test_cells_written, OP_EQ, old_count + 1);
   tt_assert(ch->n_bytes_xmitted > 0);
   tt_assert(ch->n_cells_xmitted > 0);
 
@@ -602,14 +602,15 @@ test_channel_dumpstats(void *arg)
   channel_set_cell_handlers(ch,
                             chan_test_cell_handler,
                             chan_test_var_cell_handler);
-  tt_ptr_op(channel_get_cell_handler(ch), ==, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), ==, chan_test_var_cell_handler);
+  tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
+  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
+            chan_test_var_cell_handler);
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
   old_count = test_chan_fixed_cells_recved;
   channel_queue_cell(ch, cell);
   tor_free(cell);
-  tt_int_op(test_chan_fixed_cells_recved, ==, old_count + 1);
+  tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
   tt_assert(ch->n_bytes_recved > 0);
   tt_assert(ch->n_cells_recved > 0);
 
@@ -619,13 +620,13 @@ test_channel_dumpstats(void *arg)
   ch->is_canonical = chan_test_is_canonical;
   old_count = test_dumpstats_calls;
   channel_dump_statistics(ch, LOG_DEBUG);
-  tt_int_op(test_dumpstats_calls, ==, old_count + 1);
+  tt_int_op(test_dumpstats_calls, OP_EQ, old_count + 1);
 
   /* Close the channel */
   channel_mark_for_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
   channel_run_cleanup();
   ch = NULL;
 
@@ -664,21 +665,21 @@ test_channel_flush(void *arg)
   make_fake_cell(cell);
   channel_write_cell(ch, cell);
   /* It should be queued, so assert that we didn't write it */
-  tt_int_op(test_cells_written, ==, init_count);
+  tt_int_op(test_cells_written, OP_EQ, init_count);
 
   /* Queue a var cell */
   v_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
   make_fake_var_cell(v_cell);
   channel_write_var_cell(ch, v_cell);
   /* It should be queued, so assert that we didn't write it */
-  tt_int_op(test_cells_written, ==, init_count);
+  tt_int_op(test_cells_written, OP_EQ, init_count);
 
   /* Try a packed cell now */
   p_cell = packed_cell_new();
   tt_assert(p_cell);
   channel_write_packed_cell(ch, p_cell);
   /* It should be queued, so assert that we didn't write it */
-  tt_int_op(test_cells_written, ==, init_count);
+  tt_int_op(test_cells_written, OP_EQ, init_count);
 
   /* Now allow writes through again */
   test_chan_accept_cells = 1;
@@ -687,7 +688,7 @@ test_channel_flush(void *arg)
   channel_flush_cells(ch);
 
   /* All three should have gone through */
-  tt_int_op(test_cells_written, ==, init_count + 3);
+  tt_int_op(test_cells_written, OP_EQ, init_count + 3);
 
  done:
   tor_free(ch);
@@ -728,9 +729,9 @@ test_channel_flushmux(void *arg)
 
   result = channel_flush_some_cells(ch, 1);
 
-  tt_int_op(result, ==, 1);
-  tt_int_op(test_cells_written, ==, old_count + 1);
-  tt_int_op(test_cmux_cells, ==, 0);
+  tt_int_op(result, OP_EQ, 1);
+  tt_int_op(test_cells_written, OP_EQ, old_count + 1);
+  tt_int_op(test_cmux_cells, OP_EQ, 0);
 
   /* Now try it without accepting to force them into the queue */
   test_chan_accept_cells = 0;
@@ -740,19 +741,19 @@ test_channel_flushmux(void *arg)
   result = channel_flush_some_cells(ch, 1);
 
   /* We should not have actually flushed any */
-  tt_int_op(result, ==, 0);
-  tt_int_op(test_cells_written, ==, old_count + 1);
+  tt_int_op(result, OP_EQ, 0);
+  tt_int_op(test_cells_written, OP_EQ, old_count + 1);
   /* But we should have gotten to the fake cellgen loop */
-  tt_int_op(test_cmux_cells, ==, 0);
+  tt_int_op(test_cmux_cells, OP_EQ, 0);
   /* ...and we should have a queued cell */
   q_len_after = chan_cell_queue_len(&(ch->outgoing_queue));
-  tt_int_op(q_len_after, ==, q_len_before + 1);
+  tt_int_op(q_len_after, OP_EQ, q_len_before + 1);
 
   /* Now accept cells again and drain the queue */
   test_chan_accept_cells = 1;
   channel_flush_cells(ch);
-  tt_int_op(test_cells_written, ==, old_count + 2);
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
+  tt_int_op(test_cells_written, OP_EQ, old_count + 2);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 0);
 
   test_target_cmux = NULL;
   test_cmux_cells = 0;
@@ -803,8 +804,9 @@ test_channel_incoming(void *arg)
                             chan_test_cell_handler,
                             chan_test_var_cell_handler);
   /* Test cell handler getters */
-  tt_ptr_op(channel_get_cell_handler(ch), ==, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), ==, chan_test_var_cell_handler);
+  tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
+  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
+            chan_test_var_cell_handler);
 
   /* Try to register it */
   channel_register(ch);
@@ -812,7 +814,7 @@ test_channel_incoming(void *arg)
 
   /* Open it */
   channel_change_state_open(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_OPEN);
 
   /* Receive a fixed cell */
   cell = tor_malloc_zero(sizeof(cell_t));
@@ -820,7 +822,7 @@ test_channel_incoming(void *arg)
   old_count = test_chan_fixed_cells_recved;
   channel_queue_cell(ch, cell);
   tor_free(cell);
-  tt_int_op(test_chan_fixed_cells_recved, ==, old_count + 1);
+  tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
 
   /* Receive a variable-size cell */
   var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
@@ -828,13 +830,13 @@ test_channel_incoming(void *arg)
   old_count = test_chan_var_cells_recved;
   channel_queue_var_cell(ch, var_cell);
   tor_free(cell);
-  tt_int_op(test_chan_var_cells_recved, ==, old_count + 1);
+  tt_int_op(test_chan_var_cells_recved, OP_EQ, old_count + 1);
 
   /* Close it */
   channel_mark_for_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
   channel_run_cleanup();
   ch = NULL;
 
@@ -896,13 +898,13 @@ test_channel_lifecycle(void *arg)
   make_fake_cell(cell);
   old_count = test_cells_written;
   channel_write_cell(ch1, cell);
-  tt_int_op(old_count, ==, test_cells_written);
+  tt_int_op(old_count, OP_EQ, test_cells_written);
 
   /* Move it to OPEN and flush */
   channel_change_state_open(ch1);
 
   /* Queue should drain */
-  tt_int_op(old_count + 1, ==, test_cells_written);
+  tt_int_op(old_count + 1, OP_EQ, test_cells_written);
 
   /* Get another one */
   ch2 = new_fake_channel();
@@ -915,41 +917,42 @@ test_channel_lifecycle(void *arg)
   tt_assert(ch2->registered);
 
   /* Check counters */
-  tt_int_op(test_doesnt_want_writes_count, ==, init_doesnt_want_writes_count);
-  tt_int_op(test_releases_count, ==, init_releases_count);
+  tt_int_op(test_doesnt_want_writes_count, OP_EQ,
+            init_doesnt_want_writes_count);
+  tt_int_op(test_releases_count, OP_EQ, init_releases_count);
 
   /* Move ch1 to MAINT */
   channel_change_state(ch1, CHANNEL_STATE_MAINT);
-  tt_int_op(test_doesnt_want_writes_count, ==,
+  tt_int_op(test_doesnt_want_writes_count, OP_EQ,
             init_doesnt_want_writes_count + 1);
-  tt_int_op(test_releases_count, ==, init_releases_count);
+  tt_int_op(test_releases_count, OP_EQ, init_releases_count);
 
   /* Move ch2 to OPEN */
   channel_change_state_open(ch2);
-  tt_int_op(test_doesnt_want_writes_count, ==,
+  tt_int_op(test_doesnt_want_writes_count, OP_EQ,
             init_doesnt_want_writes_count + 1);
-  tt_int_op(test_releases_count, ==, init_releases_count);
+  tt_int_op(test_releases_count, OP_EQ, init_releases_count);
 
   /* Move ch1 back to OPEN */
   channel_change_state_open(ch1);
-  tt_int_op(test_doesnt_want_writes_count, ==,
+  tt_int_op(test_doesnt_want_writes_count, OP_EQ,
             init_doesnt_want_writes_count + 1);
-  tt_int_op(test_releases_count, ==, init_releases_count);
+  tt_int_op(test_releases_count, OP_EQ, init_releases_count);
 
   /* Mark ch2 for close */
   channel_mark_for_close(ch2);
-  tt_int_op(ch2->state, ==, CHANNEL_STATE_CLOSING);
-  tt_int_op(test_doesnt_want_writes_count, ==,
+  tt_int_op(ch2->state, OP_EQ, CHANNEL_STATE_CLOSING);
+  tt_int_op(test_doesnt_want_writes_count, OP_EQ,
             init_doesnt_want_writes_count + 1);
-  tt_int_op(test_releases_count, ==, init_releases_count + 1);
+  tt_int_op(test_releases_count, OP_EQ, init_releases_count + 1);
 
   /* Shut down channels */
   channel_free_all();
   ch1 = ch2 = NULL;
-  tt_int_op(test_doesnt_want_writes_count, ==,
+  tt_int_op(test_doesnt_want_writes_count, OP_EQ,
             init_doesnt_want_writes_count + 1);
   /* channel_free() calls scheduler_release_channel() */
-  tt_int_op(test_releases_count, ==, init_releases_count + 4);
+  tt_int_op(test_releases_count, OP_EQ, init_releases_count + 4);
 
  done:
   free_fake_channel(ch1);
@@ -1001,11 +1004,11 @@ test_channel_lifecycle_2(void *arg)
 
   /* Try to close it */
   channel_mark_for_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
 
   /* Finish closing it */
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
   channel_run_cleanup();
   ch = NULL;
 
@@ -1022,9 +1025,9 @@ test_channel_lifecycle_2(void *arg)
 
   /* Error exit from lower layer */
   chan_test_error(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_ERROR);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_ERROR);
   channel_run_cleanup();
   ch = NULL;
 
@@ -1038,19 +1041,19 @@ test_channel_lifecycle_2(void *arg)
 
   /* Finish opening it */
   channel_change_state_open(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_OPEN);
 
   /* Go to maintenance state */
   channel_change_state(ch, CHANNEL_STATE_MAINT);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_MAINT);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_MAINT);
 
   /* Lower layer close */
   channel_mark_for_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
 
   /* Finish */
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
   channel_run_cleanup();
   ch = NULL;
 
@@ -1067,19 +1070,19 @@ test_channel_lifecycle_2(void *arg)
 
   /* Finish opening it */
   channel_change_state_open(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_OPEN);
 
   /* Go to maintenance state */
   channel_change_state(ch, CHANNEL_STATE_MAINT);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_MAINT);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_MAINT);
 
   /* Lower layer close */
   channel_close_from_lower_layer(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
 
   /* Finish */
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
   channel_run_cleanup();
   ch = NULL;
 
@@ -1093,19 +1096,19 @@ test_channel_lifecycle_2(void *arg)
 
   /* Finish opening it */
   channel_change_state_open(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_OPEN);
 
   /* Go to maintenance state */
   channel_change_state(ch, CHANNEL_STATE_MAINT);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_MAINT);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_MAINT);
 
   /* Lower layer close */
   chan_test_error(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
 
   /* Finish */
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_ERROR);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_ERROR);
   channel_run_cleanup();
   ch = NULL;
 
@@ -1142,11 +1145,11 @@ test_channel_multi(void *arg)
 
   /* Initial queue size update */
   channel_update_xmit_queue_size(ch1);
-  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, OP_EQ, 0);
   channel_update_xmit_queue_size(ch2);
-  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch2->bytes_queued_for_xmit, OP_EQ, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, OP_EQ, 0);
 
   /* Queue some cells, check queue estimates */
   cell = tor_malloc_zero(sizeof(cell_t));
@@ -1159,10 +1162,10 @@ test_channel_multi(void *arg)
 
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 0);
-  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, OP_EQ, 0);
+  tt_u64_op(ch2->bytes_queued_for_xmit, OP_EQ, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, OP_EQ, 0);
 
   /* Stop accepting cells at lower layer */
   test_chan_accept_cells = 0;
@@ -1173,18 +1176,18 @@ test_channel_multi(void *arg)
   channel_write_cell(ch1, cell);
 
   channel_update_xmit_queue_size(ch1);
-  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch1->bytes_queued_for_xmit, OP_EQ, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, OP_EQ, 512);
 
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
   channel_write_cell(ch2, cell);
 
   channel_update_xmit_queue_size(ch2);
-  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch2->bytes_queued_for_xmit, OP_EQ, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 1024);
+  tt_u64_op(global_queue_estimate, OP_EQ, 1024);
 
   /* Allow cells through again */
   test_chan_accept_cells = 1;
@@ -1195,10 +1198,10 @@ test_channel_multi(void *arg)
   /* Update and check queue sizes */
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 512);
-  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, OP_EQ, 512);
+  tt_u64_op(ch2->bytes_queued_for_xmit, OP_EQ, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, OP_EQ, 512);
 
   /* Flush chan 1 */
   channel_flush_cells(ch1);
@@ -1206,10 +1209,10 @@ test_channel_multi(void *arg)
   /* Update and check queue sizes */
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 0);
-  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, OP_EQ, 0);
+  tt_u64_op(ch2->bytes_queued_for_xmit, OP_EQ, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, OP_EQ, 0);
 
   /* Now block again */
   test_chan_accept_cells = 0;
@@ -1227,10 +1230,10 @@ test_channel_multi(void *arg)
   /* Check the estimates */
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 512);
-  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch1->bytes_queued_for_xmit, OP_EQ, 512);
+  tt_u64_op(ch2->bytes_queued_for_xmit, OP_EQ, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 1024);
+  tt_u64_op(global_queue_estimate, OP_EQ, 1024);
 
   /* Now close channel 2; it should be subtracted from the global queue */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
@@ -1238,7 +1241,7 @@ test_channel_multi(void *arg)
   UNMOCK(scheduler_release_channel);
 
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, OP_EQ, 512);
 
   /*
    * Since the fake channels aren't registered, channel_free_all() can't
@@ -1249,7 +1252,7 @@ test_channel_multi(void *arg)
   UNMOCK(scheduler_release_channel);
 
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, OP_EQ, 0);
 
   /* Now free everything */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
@@ -1297,7 +1300,7 @@ test_channel_queue_impossible(void *arg)
   old_count = test_cells_written;
 
   /* Assert that the queue is initially empty */
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 0);
 
   /* Get a fresh cell and write it to the channel*/
   cell = tor_malloc_zero(sizeof(cell_t));
@@ -1306,11 +1309,11 @@ test_channel_queue_impossible(void *arg)
   channel_write_cell(ch, cell);
 
   /* Now it should be queued */
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 1);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 1);
   q = TOR_SIMPLEQ_FIRST(&(ch->outgoing_queue));
   tt_assert(q);
   if (q) {
-    tt_int_op(q->type, ==, CELL_QUEUE_FIXED);
+    tt_int_op(q->type, OP_EQ, CELL_QUEUE_FIXED);
     tt_assert((uintptr_t)q->u.fixed.cell == cellintptr);
   }
   /* Do perverse things to it */
@@ -1324,7 +1327,7 @@ test_channel_queue_impossible(void *arg)
   test_chan_accept_cells = 1;
   channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 0);
 
   /* Same thing but for a var_cell */
 
@@ -1336,11 +1339,11 @@ test_channel_queue_impossible(void *arg)
   channel_write_var_cell(ch, var_cell);
 
   /* Check that it's queued */
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 1);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 1);
   q = TOR_SIMPLEQ_FIRST(&(ch->outgoing_queue));
   tt_assert(q);
   if (q) {
-    tt_int_op(q->type, ==, CELL_QUEUE_VAR);
+    tt_int_op(q->type, OP_EQ, CELL_QUEUE_VAR);
     tt_assert((uintptr_t)q->u.var.var_cell == cellintptr);
   }
 
@@ -1352,7 +1355,7 @@ test_channel_queue_impossible(void *arg)
   test_chan_accept_cells = 1;
   channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 0);
 
   /* Same thing with a packed_cell */
 
@@ -1364,11 +1367,11 @@ test_channel_queue_impossible(void *arg)
   channel_write_packed_cell(ch, packed_cell);
 
   /* Check that it's queued */
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 1);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 1);
   q = TOR_SIMPLEQ_FIRST(&(ch->outgoing_queue));
   tt_assert(q);
   if (q) {
-    tt_int_op(q->type, ==, CELL_QUEUE_PACKED);
+    tt_int_op(q->type, OP_EQ, CELL_QUEUE_PACKED);
     tt_assert((uintptr_t)q->u.packed.packed_cell == cellintptr);
   }
 
@@ -1380,7 +1383,7 @@ test_channel_queue_impossible(void *arg)
   test_chan_accept_cells = 1;
   channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 0);
 
   /* Unknown cell type case */
   test_chan_accept_cells = 0;
@@ -1391,11 +1394,11 @@ test_channel_queue_impossible(void *arg)
   channel_write_cell(ch, cell);
 
   /* Check that it's queued */
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 1);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 1);
   q = TOR_SIMPLEQ_FIRST(&(ch->outgoing_queue));
   tt_assert(q);
   if (q) {
-    tt_int_op(q->type, ==, CELL_QUEUE_FIXED);
+    tt_int_op(q->type, OP_EQ, CELL_QUEUE_FIXED);
     tt_assert((uintptr_t)q->u.fixed.cell == cellintptr);
   }
   /* Clobber it, including the queue entry type */
@@ -1408,9 +1411,9 @@ test_channel_queue_impossible(void *arg)
   tor_capture_bugs_(1);
   channel_change_state_open(ch);
   tt_assert(test_cells_written == old_count);
-  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
+  tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), OP_EQ, 0);
 
-  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), ==, 1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tor_end_capture_bugs_();
 
  done:
@@ -1455,8 +1458,8 @@ test_channel_queue_incoming(void *arg)
   ch->cmux = circuitmux_alloc();
 
   /* Test cell handler getters */
-  tt_ptr_op(channel_get_cell_handler(ch), ==, NULL);
-  tt_ptr_op(channel_get_var_cell_handler(ch), ==, NULL);
+  tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, NULL);
+  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ, NULL);
 
   /* Try to register it */
   channel_register(ch);
@@ -1464,7 +1467,7 @@ test_channel_queue_incoming(void *arg)
 
   /* Open it */
   channel_change_state_open(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_OPEN);
 
   /* Assert that the incoming queue is empty */
   tt_assert(TOR_SIMPLEQ_EMPTY(&(ch->incoming_queue)));
@@ -1475,7 +1478,7 @@ test_channel_queue_incoming(void *arg)
   channel_queue_cell(ch, cell);
 
   /* Assert that the incoming queue has one entry */
-  tt_int_op(chan_cell_queue_len(&(ch->incoming_queue)), ==, 1);
+  tt_int_op(chan_cell_queue_len(&(ch->incoming_queue)), OP_EQ, 1);
 
   /* Queue an incoming var cell */
   var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
@@ -1483,7 +1486,7 @@ test_channel_queue_incoming(void *arg)
   channel_queue_var_cell(ch, var_cell);
 
   /* Assert that the incoming queue has two entries */
-  tt_int_op(chan_cell_queue_len(&(ch->incoming_queue)), ==, 2);
+  tt_int_op(chan_cell_queue_len(&(ch->incoming_queue)), OP_EQ, 2);
 
   /*
    * Install cell handlers; this will drain the queue, so save the old
@@ -1494,12 +1497,13 @@ test_channel_queue_incoming(void *arg)
   channel_set_cell_handlers(ch,
                             chan_test_cell_handler,
                             chan_test_var_cell_handler);
-  tt_ptr_op(channel_get_cell_handler(ch), ==, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), ==, chan_test_var_cell_handler);
+  tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
+  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
+            chan_test_var_cell_handler);
 
   /* Assert cells were received */
-  tt_int_op(test_chan_fixed_cells_recved, ==, old_fixed_count + 1);
-  tt_int_op(test_chan_var_cells_recved, ==, old_var_count + 1);
+  tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_fixed_count + 1);
+  tt_int_op(test_chan_var_cells_recved, OP_EQ, old_var_count + 1);
 
   /*
    * Assert that the pointers are different from the cells we allocated;
@@ -1508,17 +1512,17 @@ test_channel_queue_incoming(void *arg)
    * delivery.  These pointers will have already been freed by the time
    * we get here, so don't dereference them.
    */
-  tt_ptr_op(test_chan_last_seen_fixed_cell_ptr, !=, cell);
-  tt_ptr_op(test_chan_last_seen_var_cell_ptr, !=, var_cell);
+  tt_ptr_op(test_chan_last_seen_fixed_cell_ptr, OP_NE, cell);
+  tt_ptr_op(test_chan_last_seen_var_cell_ptr, OP_NE, var_cell);
 
   /* Assert queue is now empty */
   tt_assert(TOR_SIMPLEQ_EMPTY(&(ch->incoming_queue)));
 
   /* Close it; this contains an assertion that the incoming queue is empty */
   channel_mark_for_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
   chan_test_finish_close(ch);
-  tt_int_op(ch->state, ==, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
   channel_run_cleanup();
   ch = NULL;
 
@@ -1548,14 +1552,14 @@ test_channel_queue_size(void *arg)
 
   /* Initial queue size update */
   channel_update_xmit_queue_size(ch);
-  tt_u64_op(ch->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch->bytes_queued_for_xmit, OP_EQ, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, OP_EQ, 0);
 
   /* Test the call-through to our fake lower layer */
   n = channel_num_cells_writeable(ch);
   /* chan_test_num_cells_writeable() always returns 32 */
-  tt_int_op(n, ==, 32);
+  tt_int_op(n, OP_EQ, 32);
 
   /*
    * Now we queue some cells and check that channel_num_cells_writeable()
@@ -1574,32 +1578,33 @@ test_channel_queue_size(void *arg)
   old_count = test_cells_written;
   channel_write_cell(ch, cell);
   /* Assert that it got queued, not written through, correctly */
-  tt_int_op(test_cells_written, ==, old_count);
+  tt_int_op(test_cells_written, OP_EQ, old_count);
 
   /* Now check chan_test_num_cells_writeable() again */
   n = channel_num_cells_writeable(ch);
-  tt_int_op(n, ==, 0); /* Should return 0 since we're in CHANNEL_STATE_MAINT */
+  /* Should return 0 since we're in CHANNEL_STATE_MAINT */
+  tt_int_op(n, OP_EQ, 0);
 
   /* Update queue size estimates */
   channel_update_xmit_queue_size(ch);
   /* One cell, times an overhead factor of 1.0 */
-  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, OP_EQ, 512);
   /* Try a different overhead factor */
   test_overhead_estimate = 0.5;
   /* This one should be ignored since it's below 1.0 */
   channel_update_xmit_queue_size(ch);
-  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, OP_EQ, 512);
   /* Now try a larger one */
   test_overhead_estimate = 2.0;
   channel_update_xmit_queue_size(ch);
-  tt_u64_op(ch->bytes_queued_for_xmit, ==, 1024);
+  tt_u64_op(ch->bytes_queued_for_xmit, OP_EQ, 1024);
   /* Go back to 1.0 */
   test_overhead_estimate = 1.0;
   channel_update_xmit_queue_size(ch);
-  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, OP_EQ, 512);
   /* Check the global estimate too */
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, OP_EQ, 512);
 
   /* Go to open */
   old_count = test_cells_written;
@@ -1609,37 +1614,37 @@ test_channel_queue_size(void *arg)
    * It should try to write, but we aren't accepting cells right now, so
    * it'll requeue
    */
-  tt_int_op(test_cells_written, ==, old_count);
+  tt_int_op(test_cells_written, OP_EQ, old_count);
 
   /* Check the queue size again */
   channel_update_xmit_queue_size(ch);
-  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, OP_EQ, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, OP_EQ, 512);
 
   /*
    * Now the cell is in the queue, and we're open, so we should get 31
    * writeable cells.
    */
   n = channel_num_cells_writeable(ch);
-  tt_int_op(n, ==, 31);
+  tt_int_op(n, OP_EQ, 31);
 
   /* Accept cells again */
   test_chan_accept_cells = 1;
   /* ...and re-process the queue */
   old_count = test_cells_written;
   channel_flush_cells(ch);
-  tt_int_op(test_cells_written, ==, old_count + 1);
+  tt_int_op(test_cells_written, OP_EQ, old_count + 1);
 
   /* Should have 32 writeable now */
   n = channel_num_cells_writeable(ch);
-  tt_int_op(n, ==, 32);
+  tt_int_op(n, OP_EQ, 32);
 
   /* Should have queue size estimate of zero */
   channel_update_xmit_queue_size(ch);
-  tt_u64_op(ch->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch->bytes_queued_for_xmit, OP_EQ, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_u64_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, OP_EQ, 0);
 
   /* Okay, now we're done with this one */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
@@ -1780,7 +1785,7 @@ test_channel_id_map(void *arg)
   ed25519_public_key_t ed_zero;
   memset(&ed_zero, 0, sizeof(ed_zero));
 
-  tt_assert(sizeof(rsa_id[0]) == DIGEST_LEN); // Do I remember C?
+  tt_int_op(DIGEST_LEN, OP_EQ, sizeof(rsa_id[0])); // Do I remember C?
 
   for (i = 0; i < N_CHAN; ++i) {
     crypto_rand(rsa_id[i], DIGEST_LEN);
@@ -1822,7 +1827,7 @@ test_channel_id_map(void *arg)
   ch = channel_next_with_rsa_identity(ch);
   tt_assert(ch == chan[2] || ch == chan[4] || ch == chan[5]);
   ch = channel_next_with_rsa_identity(ch);
-  tt_assert(ch == NULL);
+  tt_ptr_op(ch, OP_EQ, NULL);
 
   /* As above, but with zero Ed25519 ID (meaning "any ID") */
   tt_ptr_op(chan[0], OP_EQ,
@@ -1838,7 +1843,7 @@ test_channel_id_map(void *arg)
   ch = channel_next_with_rsa_identity(ch);
   tt_assert(ch == chan[2] || ch == chan[4] || ch == chan[5]);
   ch = channel_next_with_rsa_identity(ch);
-  tt_assert(ch == NULL);
+  tt_ptr_op(ch, OP_EQ, NULL);
 
   /* Lookup nonexistent RSA identity */
   tt_ptr_op(NULL, OP_EQ,

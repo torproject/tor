@@ -22,7 +22,7 @@ test_circuit_is_available_for_use_ret_false_when_marked_for_close(void *arg)
   circuit_t *circ = tor_malloc(sizeof(circuit_t));
   circ->marked_for_close = 1;
 
-  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+  tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     tor_free(circ);
@@ -36,7 +36,7 @@ test_circuit_is_available_for_use_ret_false_when_timestamp_dirty(void *arg)
   circuit_t *circ = tor_malloc(sizeof(circuit_t));
   circ->timestamp_dirty = 1;
 
-  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+  tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     tor_free(circ);
@@ -50,7 +50,7 @@ test_circuit_is_available_for_use_ret_false_for_non_general_purpose(void *arg)
   circuit_t *circ = tor_malloc(sizeof(circuit_t));
   circ->purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
 
-  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+  tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     tor_free(circ);
@@ -64,7 +64,7 @@ test_circuit_is_available_for_use_ret_false_for_non_general_origin(void *arg)
   circuit_t *circ = tor_malloc(sizeof(circuit_t));
   circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
 
-  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+  tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     tor_free(circ);
@@ -78,7 +78,7 @@ test_circuit_is_available_for_use_ret_false_for_non_origin_purpose(void *arg)
   circuit_t *circ = tor_malloc(sizeof(circuit_t));
   circ->purpose = CIRCUIT_PURPOSE_OR;
 
-  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+  tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     tor_free(circ);
@@ -92,7 +92,7 @@ test_circuit_is_available_for_use_ret_false_unusable_for_new_conns(void *arg)
   circuit_t *circ = dummy_origin_circuit_new(30);
   mark_circuit_unusable_for_new_conns(TO_ORIGIN_CIRCUIT(circ));
 
-  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+  tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     circuit_free(circ);
@@ -108,7 +108,7 @@ test_circuit_is_available_for_use_returns_false_for_onehop_tunnel(void *arg)
   oc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   oc->build_state->onehop_tunnel = 1;
 
-  tt_int_op(0, ==, circuit_is_available_for_use(circ));
+  tt_int_op(0, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     circuit_free(circ);
@@ -124,7 +124,7 @@ test_circuit_is_available_for_use_returns_true_for_clean_circuit(void *arg)
   oc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   oc->build_state->onehop_tunnel = 0;
 
-  tt_int_op(1, ==, circuit_is_available_for_use(circ));
+  tt_int_op(1, OP_EQ, circuit_is_available_for_use(circ));
 
   done:
     circuit_free(circ);
@@ -165,7 +165,8 @@ test_needs_exit_circuits_ret_false_for_predicted_ports_and_path(void *arg)
   int needs_capacity = 0;
 
   time_t now = time(NULL);
-  tt_int_op(0, ==, needs_exit_circuits(now, &needs_uptime, &needs_capacity));
+  tt_int_op(0, OP_EQ,
+            needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
   done:
     UNMOCK(circuit_all_predicted_ports_handled);
@@ -183,7 +184,8 @@ test_needs_exit_circuits_ret_false_for_non_exit_consensus_path(void *arg)
   MOCK(router_have_consensus_path, mock_router_have_unknown_consensus_path);
 
   time_t now = time(NULL);
-  tt_int_op(0, ==, needs_exit_circuits(now, &needs_uptime, &needs_capacity));
+  tt_int_op(0, OP_EQ,
+            needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
   done:
     UNMOCK(circuit_all_predicted_ports_handled);
@@ -202,7 +204,8 @@ test_needs_exit_circuits_ret_true_for_predicted_ports_and_path(void *arg)
   MOCK(router_have_consensus_path, mock_router_have_exit_consensus_path);
 
   time_t now = time(NULL);
-  tt_int_op(1, ==, needs_exit_circuits(now, &needs_uptime, &needs_capacity));
+  tt_int_op(1, OP_EQ,
+            needs_exit_circuits(now, &needs_uptime, &needs_capacity));
 
   done:
     UNMOCK(circuit_all_predicted_ports_handled);
@@ -214,7 +217,7 @@ test_needs_circuits_for_build_ret_false_consensus_path_unknown(void *arg)
 {
   (void)arg;
   MOCK(router_have_consensus_path, mock_router_have_unknown_consensus_path);
-  tt_int_op(0, ==, needs_circuits_for_build(0));
+  tt_int_op(0, OP_EQ, needs_circuits_for_build(0));
   done: ;
 }
 
@@ -223,7 +226,7 @@ test_needs_circuits_for_build_ret_false_if_num_less_than_max(void *arg)
 {
   (void)arg;
   MOCK(router_have_consensus_path, mock_router_have_exit_consensus_path);
-  tt_int_op(0, ==, needs_circuits_for_build(13));
+  tt_int_op(0, OP_EQ, needs_circuits_for_build(13));
   done:
     UNMOCK(router_have_consensus_path);
 }
@@ -233,7 +236,7 @@ test_needs_circuits_for_build_returns_true_when_more_are_needed(void *arg)
 {
   (void)arg;
   MOCK(router_have_consensus_path, mock_router_have_exit_consensus_path);
-  tt_int_op(1, ==, needs_circuits_for_build(0));
+  tt_int_op(1, OP_EQ, needs_circuits_for_build(0));
   done:
     UNMOCK(router_have_consensus_path);
 }

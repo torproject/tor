@@ -299,7 +299,7 @@ test_have_enough_mem_for_dircache(void *arg)
   /* 300 MB RAM available, DirCache enabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
   tt_int_op(r, OP_EQ, 0);
-  tt_assert(!msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   /* 200 MB RAM available, DirCache enabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
@@ -322,7 +322,7 @@ test_have_enough_mem_for_dircache(void *arg)
   /* 300 MB RAM available, DirCache enabled, Bridge */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
   tt_int_op(r, OP_EQ, 0);
-  tt_assert(!msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   /* 200 MB RAM available, DirCache enabled, Bridge */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
@@ -345,7 +345,7 @@ test_have_enough_mem_for_dircache(void *arg)
   /* 200 MB RAM available, DirCache disabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
   tt_int_op(r, OP_EQ, 0);
-  tt_assert(!msg);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   /* 300 MB RAM available, DirCache disabled */
   r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
@@ -430,24 +430,24 @@ get_options_test_data(const char *conf)
   result->opt->ConnectionPadding = -1; // default must be "auto"
 
   rv = config_get_lines(conf, &cl, 1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   rv = config_assign(&options_format, result->opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");
   }
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   config_free_lines(cl);
   result->opt->LogTimeGranularity = 1;
   result->opt->TokenBucketRefillInterval = 1;
   rv = config_get_lines(TEST_OPTIONS_OLD_VALUES, &cl, 1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   rv = config_assign(&options_format, result->def_opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");
   }
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
  done:
   config_free_lines(cl);

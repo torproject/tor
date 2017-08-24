@@ -45,8 +45,8 @@
  * you're doing. */
 #define tt_double_eq(a,b)     \
   STMT_BEGIN                  \
-  tt_double_op((a), >=, (b)); \
-  tt_double_op((a), <=, (b)); \
+  tt_double_op((a), OP_GE, (b)); \
+  tt_double_op((a), OP_LE, (b)); \
   STMT_END
 
 #ifdef _MSC_VER

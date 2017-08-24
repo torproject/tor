@@ -191,7 +191,7 @@ test_establish_intro_wrong_purpose(void *arg)
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
   expect_log_msg_containing("Rejecting ESTABLISH_INTRO on non-OR circuit.");
   teardown_capture_of_logs();
-  tt_int_op(retval, ==, -1);
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   circuit_free(TO_CIRCUIT(intro_circ));
@@ -225,7 +225,7 @@ test_establish_intro_wrong_keytype(void *arg)
   retval = hs_intro_received_establish_intro(intro_circ, (uint8_t *) "", 0);
   expect_log_msg_containing("Empty ESTABLISH_INTRO cell.");
   teardown_capture_of_logs();
-  tt_int_op(retval, ==, -1);
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   circuit_free(TO_CIRCUIT(intro_circ));
@@ -260,7 +260,7 @@ test_establish_intro_wrong_keytype2(void *arg)
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
   expect_log_msg_containing("Unrecognized AUTH_KEY_TYPE 42.");
   teardown_capture_of_logs();
-  tt_int_op(retval, ==, -1);
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   circuit_free(TO_CIRCUIT(intro_circ));
@@ -329,7 +329,7 @@ test_establish_intro_wrong_mac(void *arg)
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
   expect_log_msg_containing("ESTABLISH_INTRO handshake_auth not as expected");
   teardown_capture_of_logs();
-  tt_int_op(retval, ==, -1);
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   trn_cell_establish_intro_free(cell);
@@ -374,7 +374,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
   expect_log_msg_containing("ESTABLISH_INTRO auth key length is invalid");
   teardown_capture_of_logs();
-  tt_int_op(retval, ==, -1);
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   trn_cell_establish_intro_free(cell);
@@ -419,7 +419,7 @@ test_establish_intro_wrong_sig_len(void *arg)
   retval = hs_intro_received_establish_intro(intro_circ, cell_body, cell_len);
   expect_log_msg_containing("ESTABLISH_INTRO sig len is invalid");
   teardown_capture_of_logs();
-  tt_int_op(retval, ==, -1);
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   trn_cell_establish_intro_free(cell);
@@ -457,7 +457,7 @@ test_establish_intro_wrong_sig(void *arg)
                                              (size_t)cell_len);
   expect_log_msg_containing("Failed to verify ESTABLISH_INTRO cell.");
   teardown_capture_of_logs();
-  tt_int_op(retval, ==, -1);
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   circuit_free(TO_CIRCUIT(intro_circ));
@@ -492,7 +492,7 @@ helper_establish_intro_v3(or_circuit_t *intro_circ)
   /* Receive the cell */
   retval = hs_intro_received_establish_intro(intro_circ, cell_body,
                                              (size_t) cell_len);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
  done:
   return cell;
@@ -528,7 +528,7 @@ helper_establish_intro_v2(or_circuit_t *intro_circ)
   /* Receive legacy establish_intro */
   retval = hs_intro_received_establish_intro(intro_circ,
                                              cell_body, (size_t) cell_len);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
  done:
   return key1;
@@ -547,7 +547,7 @@ test_circuitmap_free_all(void)
   tt_assert(the_hs_circuitmap);
   hs_circuitmap_free_all();
   the_hs_circuitmap = get_hs_circuitmap();
-  tt_assert(!the_hs_circuitmap);
+  tt_ptr_op(the_hs_circuitmap, OP_EQ, NULL);
  done:
   ;
 }
@@ -579,10 +579,10 @@ test_intro_point_registration(void *arg)
   {
     the_hs_circuitmap = get_hs_circuitmap();
     tt_assert(the_hs_circuitmap);
-    tt_int_op(0, ==, HT_SIZE(the_hs_circuitmap));
+    tt_int_op(0, OP_EQ, HT_SIZE(the_hs_circuitmap));
     /* Do a circuitmap query in any case */
     returned_intro_circ =hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
-    tt_ptr_op(returned_intro_circ, ==, NULL);
+    tt_ptr_op(returned_intro_circ, OP_EQ, NULL);
   }
 
   /* Create a v3 intro point */
@@ -594,12 +594,12 @@ test_intro_point_registration(void *arg)
     /* Check that the intro point was registered on the HS circuitmap */
     the_hs_circuitmap = get_hs_circuitmap();
     tt_assert(the_hs_circuitmap);
-    tt_int_op(1, ==, HT_SIZE(the_hs_circuitmap));
+    tt_int_op(1, OP_EQ, HT_SIZE(the_hs_circuitmap));
     get_auth_key_from_cell(&auth_key, RELAY_COMMAND_ESTABLISH_INTRO,
                            establish_intro_cell);
     returned_intro_circ =
       hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
-    tt_ptr_op(intro_circ, ==, returned_intro_circ);
+    tt_ptr_op(intro_circ, OP_EQ, returned_intro_circ);
   }
 
   /* Create a v2 intro point */
@@ -614,14 +614,14 @@ test_intro_point_registration(void *arg)
     /* Check that the circuitmap now has two elements */
     the_hs_circuitmap = get_hs_circuitmap();
     tt_assert(the_hs_circuitmap);
-    tt_int_op(2, ==, HT_SIZE(the_hs_circuitmap));
+    tt_int_op(2, OP_EQ, HT_SIZE(the_hs_circuitmap));
 
     /* Check that the new element is our legacy intro circuit. */
     retval = crypto_pk_get_digest(legacy_auth_key, key_digest);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     returned_intro_circ =
       hs_circuitmap_get_intro_circ_v2_relay_side((uint8_t*)key_digest);
-    tt_ptr_op(legacy_intro_circ, ==, returned_intro_circ);
+    tt_ptr_op(legacy_intro_circ, OP_EQ, returned_intro_circ);
   }
 
   /* XXX Continue test and try to register a second v3 intro point with the

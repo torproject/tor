@@ -409,11 +409,11 @@ test_circuit_timeout(void *arg)
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
                 circuit_build_times_cdf(&initial, timeout1)) > 0.02);
 
-  tt_assert(estimate.total_build_times <= CBT_NCIRCUITS_TO_OBSERVE);
+  tt_int_op(estimate.total_build_times, OP_LE, CBT_NCIRCUITS_TO_OBSERVE);
 
   circuit_build_times_update_state(&estimate, state);
   circuit_build_times_free_timeouts(&final);
-  tt_assert(circuit_build_times_parse_state(&final, state) == 0);
+  tt_int_op(circuit_build_times_parse_state(&final, state), OP_EQ, 0);
 
   circuit_build_times_update_alpha(&final);
   timeout2 = circuit_build_times_calculate_timeout(&final,
@@ -491,7 +491,7 @@ test_circuit_timeout(void *arg)
       }
     }
 
-    tt_assert(estimate.liveness.after_firsthop_idx == 0);
+    tt_int_op(estimate.liveness.after_firsthop_idx, OP_EQ, 0);
     tt_assert(final.liveness.after_firsthop_idx ==
                 CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT-1);
 
@@ -571,20 +571,21 @@ test_rend_fns(void *arg)
     intro->intro_key = crypto_pk_dup_key(pk2);
     smartlist_add(generated->intro_nodes, intro);
   }
-  tt_assert(rend_encode_v2_descriptors(descs, generated, now, 0,
-                                         REND_NO_AUTH, NULL, NULL) > 0);
-  tt_assert(rend_compute_v2_desc_id(computed_desc_id, service_id_base32,
-                                      NULL, now, 0) == 0);
+  int rv = rend_encode_v2_descriptors(descs, generated, now, 0,
+                                      REND_NO_AUTH, NULL, NULL);
+  tt_int_op(rv, OP_GT, 0);
+  rv = rend_compute_v2_desc_id(computed_desc_id, service_id_base32, NULL,
+                               now, 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_mem_op(((rend_encoded_v2_service_descriptor_t *)
              smartlist_get(descs, 0))->desc_id, OP_EQ,
             computed_desc_id, DIGEST_LEN);
-  tt_assert(rend_parse_v2_service_descriptor(&parsed, parsed_desc_id,
-                                             &intro_points_encrypted,
-                                             &intro_points_size,
-                                             &encoded_size,
-                                              &next_desc,
-                             ((rend_encoded_v2_service_descriptor_t *)
-                                 smartlist_get(descs, 0))->desc_str, 1) == 0);
+  rv = rend_parse_v2_service_descriptor(&parsed, parsed_desc_id,
+               &intro_points_encrypted, &intro_points_size, &encoded_size,
+               &next_desc,
+          ((rend_encoded_v2_service_descriptor_t *)smartlist_get(descs, 0))
+                                        ->desc_str, 1);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(parsed);
   tt_mem_op(((rend_encoded_v2_service_descriptor_t *)
          smartlist_get(descs, 0))->desc_id,OP_EQ, parsed_desc_id, DIGEST_LEN);
@@ -786,7 +787,7 @@ test_geoip(void *arg)
   /* Start testing bridge statistics by making sure that we don't output
    * bridge stats without initializing them. */
   s = geoip_format_bridge_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Initialize stats and generate the bridge-stats history string out of
    * the connecting clients added above. */
@@ -800,7 +801,7 @@ test_geoip(void *arg)
    * string anymore. */
   geoip_bridge_stats_term();
   s = geoip_format_bridge_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Stop being a bridge and start being a directory mirror that gathers
    * directory request statistics. */
@@ -814,7 +815,7 @@ test_geoip(void *arg)
   SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Initialize stats, note one connecting client, and generate the
    * dirreq-stats history string. */
@@ -831,7 +832,7 @@ test_geoip(void *arg)
   SET_TEST_ADDRESS(101);
   geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Re-start stats, add a connecting client, reset stats, and make sure
    * that we get an all empty history string. */
@@ -867,7 +868,7 @@ test_geoip(void *arg)
   SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Initialize stats, note one connecting client, and generate the
    * entry-stats history string. */
@@ -884,7 +885,7 @@ test_geoip(void *arg)
   SET_TEST_ADDRESS(101);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Re-start stats, add a connecting client, reset stats, and make sure
    * that we get an all empty history string. */
@@ -995,7 +996,7 @@ test_stats(void *arg)
   rep_hist_note_exit_stream_opened(80);
   rep_hist_note_exit_bytes(80, 100, 10000);
   s = rep_hist_format_exit_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Initialize stats, note some streams and bytes, and generate history
    * string. */
@@ -1033,7 +1034,7 @@ test_stats(void *arg)
   rep_hist_exit_stats_term();
   rep_hist_note_exit_bytes(80, 100, 10000);
   s = rep_hist_format_exit_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Re-start stats, add some bytes, reset stats, and see what history we
    * get when observing no streams or bytes at all. */
@@ -1052,7 +1053,7 @@ test_stats(void *arg)
    * conn stats without initializing them. */
   rep_hist_note_or_conn_bytes(1, 20, 400, now);
   s = rep_hist_format_conn_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Initialize stats, note bytes, and generate history string. */
   rep_hist_conn_stats_init(now);
@@ -1069,7 +1070,7 @@ test_stats(void *arg)
   rep_hist_conn_stats_term();
   rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
   s = rep_hist_format_conn_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Re-start stats, add some bytes, reset stats, and see what history we
    * get when observing no bytes at all. */
@@ -1087,7 +1088,7 @@ test_stats(void *arg)
    * stats without initializing them. */
   rep_hist_add_buffer_stats(2.0, 2.0, 20);
   s = rep_hist_format_buffer_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Initialize stats, add statistics for a single circuit, and generate
    * the history string. */
@@ -1122,7 +1123,7 @@ test_stats(void *arg)
   rep_hist_buffer_stats_term();
   rep_hist_add_buffer_stats(2.0, 2.0, 20);
   s = rep_hist_format_buffer_stats(now + 86400);
-  tt_assert(!s);
+  tt_ptr_op(s, OP_EQ, NULL);
 
   /* Re-start stats, add statistics for one circuit, reset stats, and make
    * sure that the history has all zeros. */

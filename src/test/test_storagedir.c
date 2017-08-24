@@ -338,7 +338,7 @@ test_storagedir_read_labeled(void *arg)
   tt_assert(labels->next->next);
   tt_str_op(labels->next->next->key, OP_EQ, "Yadda");
   tt_str_op(labels->next->next->value, OP_EQ, "yadda.");
-  tt_assert(labels->next->next->next == NULL);
+  tt_ptr_op(labels->next->next->next, OP_EQ, NULL);
 
   /* Try reading this time. */
   sz = 0;

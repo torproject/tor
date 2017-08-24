@@ -250,7 +250,7 @@ test_hs_desc_event(void *arg)
   ret = rend_compute_v2_desc_id(rend_query.descriptor_id[0],
                                 rend_query.onion_address,
                                 NULL, 0, 0);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 rend_query.descriptor_id[0], DIGEST_LEN);
   /* Make sure rend_compute_v2_desc_id works properly. */
@@ -363,14 +363,14 @@ test_pick_tor2web_rendezvous_node(void *arg)
   retval = routerset_parse(options->Tor2webRendezvousPoints,
                            tor2web_rendezvous_str,
                            "test_tor2web_rp");
-  tt_int_op(retval, >=, 0);
+  tt_int_op(retval, OP_GE, 0);
 
   /* Pick rendezvous point. Make sure the correct one is
      picked. Repeat many times to make sure it works properly. */
   for (i = 0; i < 50 ; i++) {
     chosen_rp = pick_tor2web_rendezvous_node(flags, options);
     tt_assert(chosen_rp);
-    tt_str_op(chosen_rp->ri->nickname, ==, tor2web_rendezvous_str);
+    tt_str_op(chosen_rp->ri->nickname, OP_EQ, tor2web_rendezvous_str);
   }
 
  done:
@@ -398,13 +398,13 @@ test_pick_bad_tor2web_rendezvous_node(void *arg)
   retval = routerset_parse(options->Tor2webRendezvousPoints,
                            tor2web_rendezvous_str,
                            "test_tor2web_rp");
-  tt_int_op(retval, >=, 0);
+  tt_int_op(retval, OP_GE, 0);
 
   /* Pick rendezvous point. Since Tor2webRendezvousPoints was set to a
      dummy value, we shouldn't find any eligible RPs. */
   for (i = 0; i < 50 ; i++) {
     chosen_rp = pick_tor2web_rendezvous_node(flags, options);
-    tt_assert(!chosen_rp);
+    tt_ptr_op(chosen_rp, OP_EQ, NULL);
   }
 
  done:
@@ -435,30 +435,30 @@ test_hs_rend_data(void *arg)
                                    REND_NO_AUTH);
   tt_assert(client);
   rend_data_v2_t *client_v2 = TO_REND_DATA_V2(client);
-  tt_int_op(client_v2->auth_type, ==, REND_NO_AUTH);
+  tt_int_op(client_v2->auth_type, OP_EQ, REND_NO_AUTH);
   tt_str_op(client_v2->onion_address, OP_EQ, STR_HS_ADDR);
   tt_mem_op(client_v2->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
   tt_mem_op(client_v2->descriptor_cookie, OP_EQ, client_cookie,
             sizeof(client_cookie));
   tt_assert(client->hsdirs_fp);
-  tt_int_op(smartlist_len(client->hsdirs_fp), ==, 0);
+  tt_int_op(smartlist_len(client->hsdirs_fp), OP_EQ, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
     int ret = rend_compute_v2_desc_id(desc_id, client_v2->onion_address,
                                       client_v2->descriptor_cookie, now, rep);
     /* That shouldn't never fail. */
-    tt_int_op(ret, ==, 0);
+    tt_int_op(ret, OP_EQ, 0);
     tt_mem_op(client_v2->descriptor_id[rep], OP_EQ, desc_id,
               sizeof(desc_id));
   }
   /* The rest should be zeroed because this is a client request. */
-  tt_int_op(tor_digest_is_zero(client_v2->rend_pk_digest), ==, 1);
-  tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
+  tt_int_op(tor_digest_is_zero(client_v2->rend_pk_digest), OP_EQ, 1);
+  tt_int_op(tor_digest_is_zero(client->rend_cookie), OP_EQ, 1);
 
   /* Test dup(). */
   client_dup = rend_data_dup(client);
   tt_assert(client_dup);
   rend_data_v2_t *client_dup_v2 = TO_REND_DATA_V2(client_dup);
-  tt_int_op(client_dup_v2->auth_type, ==, client_v2->auth_type);
+  tt_int_op(client_dup_v2->auth_type, OP_EQ, client_v2->auth_type);
   tt_str_op(client_dup_v2->onion_address, OP_EQ, client_v2->onion_address);
   tt_mem_op(client_dup_v2->desc_id_fetch, OP_EQ, client_v2->desc_id_fetch,
             sizeof(client_dup_v2->desc_id_fetch));
@@ -467,14 +467,14 @@ test_hs_rend_data(void *arg)
             sizeof(client_dup_v2->descriptor_cookie));
 
   tt_assert(client_dup->hsdirs_fp);
-  tt_int_op(smartlist_len(client_dup->hsdirs_fp), ==, 0);
+  tt_int_op(smartlist_len(client_dup->hsdirs_fp), OP_EQ, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
     tt_mem_op(client_dup_v2->descriptor_id[rep], OP_EQ,
               client_v2->descriptor_id[rep], DIGEST_LEN);
   }
   /* The rest should be zeroed because this is a client request. */
-  tt_int_op(tor_digest_is_zero(client_dup_v2->rend_pk_digest), ==, 1);
-  tt_int_op(tor_digest_is_zero(client_dup->rend_cookie), ==, 1);
+  tt_int_op(tor_digest_is_zero(client_dup_v2->rend_pk_digest), OP_EQ, 1);
+  tt_int_op(tor_digest_is_zero(client_dup->rend_cookie), OP_EQ, 1);
   rend_data_free(client);
   client = NULL;
   rend_data_free(client_dup);
@@ -490,19 +490,19 @@ test_hs_rend_data(void *arg)
   client = rend_data_client_create(NULL, desc_id, NULL, REND_BASIC_AUTH);
   tt_assert(client);
   client_v2 = TO_REND_DATA_V2(client);
-  tt_int_op(client_v2->auth_type, ==, REND_BASIC_AUTH);
-  tt_int_op(strlen(client_v2->onion_address), ==, 0);
+  tt_int_op(client_v2->auth_type, OP_EQ, REND_BASIC_AUTH);
+  tt_int_op(strlen(client_v2->onion_address), OP_EQ, 0);
   tt_mem_op(client_v2->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
   tt_int_op(tor_mem_is_zero(client_v2->descriptor_cookie,
-                            sizeof(client_v2->descriptor_cookie)), ==, 1);
+                            sizeof(client_v2->descriptor_cookie)), OP_EQ, 1);
   tt_assert(client->hsdirs_fp);
-  tt_int_op(smartlist_len(client->hsdirs_fp), ==, 0);
+  tt_int_op(smartlist_len(client->hsdirs_fp), OP_EQ, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_int_op(tor_digest_is_zero(client_v2->descriptor_id[rep]), ==, 1);
+    tt_int_op(tor_digest_is_zero(client_v2->descriptor_id[rep]), OP_EQ, 1);
   }
   /* The rest should be zeroed because this is a client request. */
-  tt_int_op(tor_digest_is_zero(client_v2->rend_pk_digest), ==, 1);
-  tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
+  tt_int_op(tor_digest_is_zero(client_v2->rend_pk_digest), OP_EQ, 1);
+  tt_int_op(tor_digest_is_zero(client->rend_cookie), OP_EQ, 1);
   rend_data_free(client);
   client = NULL;
 
@@ -516,38 +516,38 @@ test_hs_rend_data(void *arg)
                                      rend_cookie, REND_NO_AUTH);
   tt_assert(service);
   rend_data_v2_t *service_v2 = TO_REND_DATA_V2(service);
-  tt_int_op(service_v2->auth_type, ==, REND_NO_AUTH);
+  tt_int_op(service_v2->auth_type, OP_EQ, REND_NO_AUTH);
   tt_str_op(service_v2->onion_address, OP_EQ, STR_HS_ADDR);
   tt_mem_op(service_v2->rend_pk_digest, OP_EQ, rend_pk_digest,
             sizeof(rend_pk_digest));
   tt_mem_op(service->rend_cookie, OP_EQ, rend_cookie, sizeof(rend_cookie));
   tt_assert(service->hsdirs_fp);
-  tt_int_op(smartlist_len(service->hsdirs_fp), ==, 0);
+  tt_int_op(smartlist_len(service->hsdirs_fp), OP_EQ, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_int_op(tor_digest_is_zero(service_v2->descriptor_id[rep]), ==, 1);
+    tt_int_op(tor_digest_is_zero(service_v2->descriptor_id[rep]), OP_EQ, 1);
   }
   /* The rest should be zeroed because this is a service request. */
-  tt_int_op(tor_digest_is_zero(service_v2->descriptor_cookie), ==, 1);
-  tt_int_op(tor_digest_is_zero(service_v2->desc_id_fetch), ==, 1);
+  tt_int_op(tor_digest_is_zero(service_v2->descriptor_cookie), OP_EQ, 1);
+  tt_int_op(tor_digest_is_zero(service_v2->desc_id_fetch), OP_EQ, 1);
 
   /* Test dup(). */
   service_dup = rend_data_dup(service);
   rend_data_v2_t *service_dup_v2 = TO_REND_DATA_V2(service_dup);
   tt_assert(service_dup);
-  tt_int_op(service_dup_v2->auth_type, ==, service_v2->auth_type);
+  tt_int_op(service_dup_v2->auth_type, OP_EQ, service_v2->auth_type);
   tt_str_op(service_dup_v2->onion_address, OP_EQ, service_v2->onion_address);
   tt_mem_op(service_dup_v2->rend_pk_digest, OP_EQ, service_v2->rend_pk_digest,
             sizeof(service_dup_v2->rend_pk_digest));
   tt_mem_op(service_dup->rend_cookie, OP_EQ, service->rend_cookie,
             sizeof(service_dup->rend_cookie));
   tt_assert(service_dup->hsdirs_fp);
-  tt_int_op(smartlist_len(service_dup->hsdirs_fp), ==, 0);
+  tt_int_op(smartlist_len(service_dup->hsdirs_fp), OP_EQ, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_id[rep]), ==, 1);
+    tt_assert(tor_digest_is_zero(service_dup_v2->descriptor_id[rep]));
   }
   /* The rest should be zeroed because this is a service request. */
-  tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_cookie), ==, 1);
-  tt_int_op(tor_digest_is_zero(service_dup_v2->desc_id_fetch), ==, 1);
+  tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_cookie), OP_EQ, 1);
+  tt_int_op(tor_digest_is_zero(service_dup_v2->desc_id_fetch), OP_EQ, 1);
 
  done:
   rend_data_free(service);
@@ -586,7 +586,7 @@ test_hs_auth_cookies(void *arg)
   re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED, raw_cookie, &auth_type,
                                &err_msg);
   tt_assert(!re);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
   tt_int_op(auth_type, OP_EQ, REND_BASIC_AUTH);
   memset(raw_cookie, 0, sizeof(raw_cookie));
@@ -594,7 +594,7 @@ test_hs_auth_cookies(void *arg)
   re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED_STEALTH, raw_cookie,
                                &auth_type, &err_msg);
   tt_assert(!re);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
   tt_int_op(auth_type, OP_EQ, REND_STEALTH_AUTH);
   memset(raw_cookie, 0, sizeof(raw_cookie));
@@ -603,7 +603,7 @@ test_hs_auth_cookies(void *arg)
   re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED "==", raw_cookie, NULL,
                                &err_msg);
   tt_assert(!re);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
 
   /* Decoding with an unknown type should fail */
@@ -671,14 +671,14 @@ test_single_onion_poisoning(void *arg)
    * The data directory is required for the lockfile, which is used when
    * loading keys. */
   ret = check_private_dir(mock_options->DataDirectory, CPD_CREATE, NULL);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   if (create_dir_mask & CREATE_HS_DIR1) {
     ret = check_private_dir(dir1, CPD_CREATE, NULL);
-    tt_assert(ret == 0);
+    tt_int_op(ret, OP_EQ, 0);
   }
   if (create_dir_mask & CREATE_HS_DIR2) {
     ret = check_private_dir(dir2, CPD_CREATE, NULL);
-    tt_assert(ret == 0);
+    tt_int_op(ret, OP_EQ, 0);
   }
 
   service_1->directory = dir1;
@@ -691,31 +691,31 @@ test_single_onion_poisoning(void *arg)
   rend_service_port_config_t *port1 = rend_service_parse_port_config("80", " ",
                                                                      &err_msg);
   tt_assert(port1);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   smartlist_add(service_1->ports, port1);
 
   rend_service_port_config_t *port2 = rend_service_parse_port_config("90", " ",
                                                                      &err_msg);
   /* Add port to service 2 */
   tt_assert(port2);
-  tt_assert(!err_msg);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
   smartlist_add(service_2->ports, port2);
 
   /* No services, a service to verify, no problem! */
   mock_options->HiddenServiceSingleHopMode = 0;
   mock_options->HiddenServiceNonAnonymousMode = 0;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Either way, no problem. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Add the first service */
   ret = hs_check_service_private_dir(mock_options->User, service_1->directory,
@@ -728,75 +728,75 @@ test_single_onion_poisoning(void *arg)
   mock_options->HiddenServiceSingleHopMode = 0;
   mock_options->HiddenServiceNonAnonymousMode = 0;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Either way, no problem. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Poison! Poison! Poison!
    * This can only be done in HiddenServiceSingleHopMode. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_poison_new_single_onion_dir(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   /* Poisoning twice is a no-op. */
   ret = rend_service_poison_new_single_onion_dir(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Poisoned service directories, but no previous keys, no problem! */
   mock_options->HiddenServiceSingleHopMode = 0;
   mock_options->HiddenServiceNonAnonymousMode = 0;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Either way, no problem. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Now add some keys, and we'll have a problem. */
   ret = rend_service_load_all_keys(services);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Poisoned service directories with previous keys are not allowed. */
   mock_options->HiddenServiceSingleHopMode = 0;
   mock_options->HiddenServiceNonAnonymousMode = 0;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret < 0);
+  tt_int_op(ret, OP_LT, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* But they are allowed if we're in non-anonymous mode. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Re-poisoning directories with existing keys is a no-op, because
    * directories with existing keys are ignored. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_poison_new_single_onion_dir(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   /* And it keeps the poison. */
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Now add the second service: it has no key and no poison file */
   ret = hs_check_service_private_dir(mock_options->User, service_2->directory,
@@ -808,77 +808,77 @@ test_single_onion_poisoning(void *arg)
   mock_options->HiddenServiceSingleHopMode = 0;
   mock_options->HiddenServiceNonAnonymousMode = 0;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret < 0);
+  tt_int_op(ret, OP_LT, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* But ok to add in non-anonymous mode. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Now remove the poisoning from the first service, and we have the opposite
    * problem. */
   poison_path = rend_service_sos_poison_path(service_1);
   tt_assert(poison_path);
   ret = unlink(poison_path);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Unpoisoned service directories with previous keys are ok, as are empty
    * directories. */
   mock_options->HiddenServiceSingleHopMode = 0;
   mock_options->HiddenServiceNonAnonymousMode = 0;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* But the existing unpoisoned key is not ok in non-anonymous mode, even if
    * there is an empty service. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret < 0);
+  tt_int_op(ret, OP_LT, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Poisoning directories with existing keys is a no-op, because directories
    * with existing keys are ignored. But the new directory should poison. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_poison_new_single_onion_dir(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_poison_new_single_onion_dir(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   /* And the old directory remains unpoisoned. */
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret < 0);
+  tt_int_op(ret, OP_LT, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* And the new directory should be ignored, because it has no key. */
   mock_options->HiddenServiceSingleHopMode = 0;
   mock_options->HiddenServiceNonAnonymousMode = 0;
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Re-poisoning directories without existing keys is a no-op. */
   mock_options->HiddenServiceSingleHopMode = 1;
   mock_options->HiddenServiceNonAnonymousMode = 1;
   ret = rend_service_poison_new_single_onion_dir(service_1, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = rend_service_poison_new_single_onion_dir(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   /* And the old directory remains unpoisoned. */
   ret = rend_service_verify_single_onion_poison(service_1, mock_options);
-  tt_assert(ret < 0);
+  tt_int_op(ret, OP_LT, 0);
   ret = rend_service_verify_single_onion_poison(service_2, mock_options);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
  done:
   /* The test harness deletes the directories at exit */

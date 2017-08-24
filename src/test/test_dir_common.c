@@ -146,7 +146,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
       break;
     default:
       /* Shouldn't happen */
-      tt_assert(0);
+      tt_abort();
   }
   if (vrs) {
     vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));

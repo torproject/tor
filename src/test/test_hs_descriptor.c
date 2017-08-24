@@ -54,7 +54,7 @@ test_cert_encoding(void *arg)
 
   /* Test the certificate encoding function. */
   ret = tor_cert_encode_ed22519(cert, &encoded);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Validated the certificate string. */
   {
@@ -63,7 +63,7 @@ test_cert_encoding(void *arg)
     size_t b64_cert_len;
     tor_cert_t *parsed_cert;
 
-    tt_int_op(strcmpstart(pos, "-----BEGIN ED25519 CERT-----\n"), ==, 0);
+    tt_int_op(strcmpstart(pos, "-----BEGIN ED25519 CERT-----\n"), OP_EQ, 0);
     pos += strlen("-----BEGIN ED25519 CERT-----\n");
 
     /* Isolate the base64 encoded certificate and try to decode it. */
@@ -72,23 +72,23 @@ test_cert_encoding(void *arg)
     b64_cert = pos;
     b64_cert_len = end - pos;
     ret = base64_decode(buf, sizeof(buf), b64_cert, b64_cert_len);
-    tt_int_op(ret, >, 0);
+    tt_int_op(ret, OP_GT, 0);
     /* Parseable? */
     parsed_cert = tor_cert_parse((uint8_t *) buf, ret);
     tt_assert(parsed_cert);
     /* Signature is valid? */
     ret = tor_cert_checksig(parsed_cert, &kp.pubkey, now + 10);
-    tt_int_op(ret, ==, 0);
+    tt_int_op(ret, OP_EQ, 0);
     ret = tor_cert_eq(cert, parsed_cert);
-    tt_int_op(ret, ==, 1);
+    tt_int_op(ret, OP_EQ, 1);
     /* The cert did have the signing key? */
     ret= ed25519_pubkey_eq(&parsed_cert->signing_key, &kp.pubkey);
-    tt_int_op(ret, ==, 1);
+    tt_int_op(ret, OP_EQ, 1);
     tor_cert_free(parsed_cert);
 
     /* Get to the end part of the certificate. */
     pos += b64_cert_len;
-    tt_int_op(strcmpstart(pos, "-----END ED25519 CERT-----"), ==, 0);
+    tt_int_op(strcmpstart(pos, "-----END ED25519 CERT-----"), OP_EQ, 0);
     pos += strlen("-----END ED25519 CERT-----");
   }
 
@@ -188,22 +188,22 @@ test_link_specifier(void *arg)
 
     spec.type = LS_IPV4;
     ret = tor_addr_parse(&spec.u.ap.addr, "1.2.3.4");
-    tt_int_op(ret, ==, AF_INET);
+    tt_int_op(ret, OP_EQ, AF_INET);
     b64 = encode_link_specifiers(link_specifiers);
     tt_assert(b64);
 
     /* Decode it and validate the format. */
     ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, >, 0);
+    tt_int_op(ret, OP_GT, 0);
     /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), ==, 1);
+    tt_int_op(get_uint8(buf), OP_EQ, 1);
     ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    tt_int_op(ret, ==, 8);
+    tt_int_op(ret, OP_EQ, 8);
     /* Should be 2 bytes for port and 4 bytes for IPv4. */
-    tt_int_op(link_specifier_get_ls_len(ls), ==, 6);
+    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, 6);
     ipv4 = link_specifier_get_un_ipv4_addr(ls);
-    tt_int_op(tor_addr_to_ipv4h(&spec.u.ap.addr), ==, ipv4);
-    tt_int_op(link_specifier_get_un_ipv4_port(ls), ==, spec.u.ap.port);
+    tt_int_op(tor_addr_to_ipv4h(&spec.u.ap.addr), OP_EQ, ipv4);
+    tt_int_op(link_specifier_get_un_ipv4_port(ls), OP_EQ, spec.u.ap.port);
 
     link_specifier_free(ls);
     tor_free(b64);
@@ -217,24 +217,25 @@ test_link_specifier(void *arg)
 
     spec.type = LS_IPV6;
     ret = tor_addr_parse(&spec.u.ap.addr, "[1:2:3:4::]");
-    tt_int_op(ret, ==, AF_INET6);
+    tt_int_op(ret, OP_EQ, AF_INET6);
     b64 = encode_link_specifiers(link_specifiers);
     tt_assert(b64);
 
     /* Decode it and validate the format. */
     ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, >, 0);
+    tt_int_op(ret, OP_GT, 0);
     /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), ==, 1);
+    tt_int_op(get_uint8(buf), OP_EQ, 1);
     ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    tt_int_op(ret, ==, 20);
+    tt_int_op(ret, OP_EQ, 20);
     /* Should be 2 bytes for port and 16 bytes for IPv6. */
-    tt_int_op(link_specifier_get_ls_len(ls), ==, 18);
+    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, 18);
     for (unsigned int i = 0; i < sizeof(ipv6); i++) {
       ipv6[i] = link_specifier_get_un_ipv6_addr(ls, i);
     }
-    tt_mem_op(tor_addr_to_in6_addr8(&spec.u.ap.addr), ==, ipv6, sizeof(ipv6));
-    tt_int_op(link_specifier_get_un_ipv6_port(ls), ==, spec.u.ap.port);
+    tt_mem_op(tor_addr_to_in6_addr8(&spec.u.ap.addr), OP_EQ, ipv6,
+              sizeof(ipv6));
+    tt_int_op(link_specifier_get_un_ipv6_port(ls), OP_EQ, spec.u.ap.port);
 
     link_specifier_free(ls);
     tor_free(b64);
@@ -253,12 +254,12 @@ test_link_specifier(void *arg)
 
     /* Decode it and validate the format. */
     ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, >, 0);
+    tt_int_op(ret, OP_GT, 0);
     /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), ==, 1);
+    tt_int_op(get_uint8(buf), OP_EQ, 1);
     ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
     /* 20 bytes digest + 1 byte type + 1 byte len. */
-    tt_int_op(ret, ==, 22);
+    tt_int_op(ret, OP_EQ, 22);
     tt_int_op(link_specifier_getlen_un_legacy_id(ls), OP_EQ, DIGEST_LEN);
     /* Digest length is 20 bytes. */
     tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, DIGEST_LEN);
@@ -284,10 +285,10 @@ test_encode_descriptor(void *arg)
   (void) arg;
 
   ret = ed25519_keypair_generate(&signing_kp, 0);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
   ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(encoded);
 
  done:
@@ -309,7 +310,7 @@ test_decode_descriptor(void *arg)
   (void) arg;
 
   ret = ed25519_keypair_generate(&signing_kp, 0);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
 
   hs_helper_get_subcred_from_identity_keypair(&signing_kp,
@@ -320,11 +321,11 @@ test_decode_descriptor(void *arg)
   tt_int_op(ret, OP_EQ, -1);
 
   ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(encoded);
 
   ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(decoded);
 
   hs_helper_desc_equal(desc, decoded);
@@ -333,18 +334,18 @@ test_decode_descriptor(void *arg)
   {
     ed25519_keypair_t signing_kp_no_ip;
     ret = ed25519_keypair_generate(&signing_kp_no_ip, 0);
-    tt_int_op(ret, ==, 0);
+    tt_int_op(ret, OP_EQ, 0);
     hs_helper_get_subcred_from_identity_keypair(&signing_kp_no_ip,
                                                 subcredential);
     desc_no_ip = hs_helper_build_hs_desc_no_ip(&signing_kp_no_ip);
     tt_assert(desc_no_ip);
     tor_free(encoded);
     ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip, &encoded);
-    tt_int_op(ret, ==, 0);
+    tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential, &decoded);
-    tt_int_op(ret, ==, 0);
+    tt_int_op(ret, OP_EQ, 0);
     tt_assert(decoded);
   }
 
@@ -436,11 +437,11 @@ test_decode_invalid_intro_point(void *arg)
     hs_descriptor_free(desc);
     desc = NULL;
     ret = ed25519_keypair_generate(&signing_kp, 0);
-    tt_int_op(ret, ==, 0);
+    tt_int_op(ret, OP_EQ, 0);
     desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
     const char *junk = "this is not a descriptor";
     ip = decode_introduction_point(desc, junk);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     hs_desc_intro_point_free(ip);
     ip = NULL;
   }
@@ -456,7 +457,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
     hs_desc_intro_point_free(ip);
@@ -483,7 +484,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -501,7 +502,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -518,7 +519,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -535,7 +536,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -552,7 +553,7 @@ test_decode_invalid_intro_point(void *arg)
     encoded_ip = smartlist_join_strings(lines, "\n", 0, &len_out);
     tt_assert(encoded_ip);
     ip = decode_introduction_point(desc, encoded_ip);
-    tt_assert(!ip);
+    tt_ptr_op(ip, OP_EQ, NULL);
     tor_free(encoded_ip);
     smartlist_free(lines);
   }
@@ -629,7 +630,7 @@ test_decode_plaintext(void *arg)
   {
     size_t big = 64000;
     /* Must always be bigger than HS_DESC_MAX_LEN. */
-    tt_int_op(HS_DESC_MAX_LEN, <, big);
+    tt_int_op(HS_DESC_MAX_LEN, OP_LT, big);
     char *plaintext = tor_malloc_zero(big);
     memset(plaintext, 'a', big);
     plaintext[big - 1] = '\0';
@@ -689,7 +690,7 @@ test_validate_cert(void *arg)
   (void) arg;
 
   ret = ed25519_keypair_generate(&kp, 0);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Cert of type CERT_TYPE_AUTH_HS_IP_KEY. */
   cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY,
@@ -740,16 +741,16 @@ test_desc_signature(void *arg)
   tor_asprintf(&data, "This is a signed descriptor\n");
   ret = ed25519_sign_prefixed(&sig, (const uint8_t *) data, strlen(data),
                               "Tor onion service descriptor sig v3", &kp);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = ed25519_signature_to_base64(sig_b64, &sig);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   /* Build the descriptor that should be valid. */
   tor_asprintf(&desc, "%ssignature %s\n", data, sig_b64);
   ret = desc_sig_is_valid(sig_b64, &kp.pubkey, desc, strlen(desc));
-  tt_int_op(ret, ==, 1);
+  tt_int_op(ret, OP_EQ, 1);
   /* Junk signature. */
   ret = desc_sig_is_valid("JUNK", &kp.pubkey, desc, strlen(desc));
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
 
  done:
   tor_free(desc);
@@ -811,8 +812,8 @@ test_parse_hs_desc_superencrypted(void *arg)
     retval = decode_superencrypted(bad_superencrypted_text1,
                                    strlen(bad_superencrypted_text1),
                                    &encrypted_out);
-    tt_u64_op(retval, ==, 0);
-    tt_assert(!encrypted_out);
+    tt_u64_op(retval, OP_EQ, 0);
+    tt_ptr_op(encrypted_out, OP_EQ, NULL);
     expect_log_msg_containing("Unrecognized desc auth type");
     teardown_capture_of_logs();
   }
@@ -822,8 +823,8 @@ test_parse_hs_desc_superencrypted(void *arg)
     retval = decode_superencrypted(bad_superencrypted_text2,
                                    strlen(bad_superencrypted_text2),
                                    &encrypted_out);
-    tt_u64_op(retval, ==, 0);
-    tt_assert(!encrypted_out);
+    tt_u64_op(retval, OP_EQ, 0);
+    tt_ptr_op(encrypted_out, OP_EQ, NULL);
     expect_log_msg_containing("Bogus desc auth key in HS desc");
     teardown_capture_of_logs();
   }
@@ -833,8 +834,8 @@ test_parse_hs_desc_superencrypted(void *arg)
     retval = decode_superencrypted(bad_superencrypted_text3,
                                    strlen(bad_superencrypted_text3),
                                    &encrypted_out);
-    tt_u64_op(retval, ==, 0);
-    tt_assert(!encrypted_out);
+    tt_u64_op(retval, OP_EQ, 0);
+    tt_ptr_op(encrypted_out, OP_EQ, NULL);
     expect_log_msg_containing("Length of descriptor\'s encrypted data "
                               "is too small.");
     teardown_capture_of_logs();
@@ -845,7 +846,7 @@ test_parse_hs_desc_superencrypted(void *arg)
                                  strlen(correct_superencrypted_text),
                                  &encrypted_out);
 
-  tt_u64_op(retval, ==, strlen(correct_encrypted_plaintext));
+  tt_u64_op(retval, OP_EQ, strlen(correct_encrypted_plaintext));
   tt_mem_op(encrypted_out, OP_EQ, correct_encrypted_plaintext,
             strlen(correct_encrypted_plaintext));
 

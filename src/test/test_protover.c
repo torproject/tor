@@ -88,27 +88,27 @@ test_protover_parse_fail(void *arg)
 
   /* random junk */
   elts = parse_protocol_list("!!3@*");
-  tt_assert(elts == NULL);
+  tt_ptr_op(elts, OP_EQ, NULL);
 
   /* Missing equals sign in an entry */
   elts = parse_protocol_list("Link=4 Haprauxymatyve Desc=9");
-  tt_assert(elts == NULL);
+  tt_ptr_op(elts, OP_EQ, NULL);
 
   /* Missing word. */
   elts = parse_protocol_list("Link=4 =3 Desc=9");
-  tt_assert(elts == NULL);
+  tt_ptr_op(elts, OP_EQ, NULL);
 
   /* Broken numbers */
   elts = parse_protocol_list("Link=fred");
-  tt_assert(elts == NULL);
+  tt_ptr_op(elts, OP_EQ, NULL);
   elts = parse_protocol_list("Link=1,fred");
-  tt_assert(elts == NULL);
+  tt_ptr_op(elts, OP_EQ, NULL);
   elts = parse_protocol_list("Link=1,fred,3");
-  tt_assert(elts == NULL);
+  tt_ptr_op(elts, OP_EQ, NULL);
 
   /* Broken range */
   elts = parse_protocol_list("Link=1,9-8,3");
-  tt_assert(elts == NULL);
+  tt_ptr_op(elts, OP_EQ, NULL);
 
  done:
   ;
@@ -151,16 +151,16 @@ test_protover_all_supported(void *arg)
   char *msg = NULL;
 
   tt_assert(protover_all_supported(NULL, &msg));
-  tt_assert(msg == NULL);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   tt_assert(protover_all_supported("", &msg));
-  tt_assert(msg == NULL);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   // Some things that we do support
   tt_assert(protover_all_supported("Link=3-4", &msg));
-  tt_assert(msg == NULL);
+  tt_ptr_op(msg, OP_EQ, NULL);
   tt_assert(protover_all_supported("Link=3-4 Desc=2", &msg));
-  tt_assert(msg == NULL);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   // Some things we don't support
   tt_assert(! protover_all_supported("Wombat=9", &msg));

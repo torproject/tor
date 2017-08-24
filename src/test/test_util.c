@@ -70,7 +70,7 @@ test_util_read_until_eof_impl(const char *fname, size_t file_len,
   fd = open(fifo_name, O_RDONLY|O_BINARY);
   tt_int_op(fd, OP_GE, 0);
   str = read_file_to_str_until_eof(fd, read_limit, &sz);
-  tt_assert(str != NULL);
+  tt_ptr_op(str, OP_NE, NULL);
 
   if (read_limit < file_len)
     tt_int_op(sz, OP_EQ, read_limit);
@@ -1674,14 +1674,14 @@ test_util_config_line_crlf(void *arg)
   tt_assert(str);
   tt_str_op(k,OP_EQ,"Hello");
   tt_str_op(v,OP_EQ,"world");
-  tt_assert(!err);
+  tt_ptr_op(err, OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str_verbose(str, &k, &v, &err);
   tt_assert(str);
   tt_str_op(k,OP_EQ,"Hello");
   tt_str_op(v,OP_EQ,"nice big world");
-  tt_assert(!err);
+  tt_ptr_op(err, OP_EQ, NULL);
   tor_free(k); tor_free(v);
   tt_str_op(str,OP_EQ, "");
 
@@ -1941,7 +1941,7 @@ test_util_strmisc(void *arg)
   tt_assert(!tor_mem_is_zero(buf, 10));
 
   /* Test 'escaped' */
-  tt_assert(NULL == escaped(NULL));
+  tt_ptr_op(escaped(NULL), OP_EQ, NULL);
   tt_str_op("\"\"",OP_EQ, escaped(""));
   tt_str_op("\"abcd\"",OP_EQ, escaped("abcd"));
   tt_str_op("\"\\\\ \\n\\r\\t\\\"\\'\"",OP_EQ, escaped("\\ \n\r\t\"'"));
@@ -1999,23 +1999,23 @@ test_util_strmisc(void *arg)
   /* Test memmem and memstr */
   {
     const char *haystack = "abcde";
-    tt_assert(!tor_memmem(haystack, 5, "ef", 2));
+    tt_ptr_op(tor_memmem(haystack, 5, "ef", 2), OP_EQ, NULL);
     tt_ptr_op(tor_memmem(haystack, 5, "cd", 2),OP_EQ, haystack + 2);
     tt_ptr_op(tor_memmem(haystack, 5, "cde", 3),OP_EQ, haystack + 2);
-    tt_assert(!tor_memmem(haystack, 4, "cde", 3));
+    tt_ptr_op(tor_memmem(haystack, 4, "cde", 3), OP_EQ, NULL);
     haystack = "ababcad";
     tt_ptr_op(tor_memmem(haystack, 7, "abc", 3),OP_EQ, haystack + 2);
     tt_ptr_op(tor_memmem(haystack, 7, "ad", 2),OP_EQ, haystack + 5);
     tt_ptr_op(tor_memmem(haystack, 7, "cad", 3),OP_EQ, haystack + 4);
-    tt_assert(!tor_memmem(haystack, 7, "dadad", 5));
-    tt_assert(!tor_memmem(haystack, 7, "abcdefghij", 10));
+    tt_ptr_op(tor_memmem(haystack, 7, "dadad", 5), OP_EQ, NULL);
+    tt_ptr_op(tor_memmem(haystack, 7, "abcdefghij", 10), OP_EQ, NULL);
     /* memstr */
     tt_ptr_op(tor_memstr(haystack, 7, "abc"),OP_EQ, haystack + 2);
     tt_ptr_op(tor_memstr(haystack, 7, "cad"),OP_EQ, haystack + 4);
-    tt_assert(!tor_memstr(haystack, 6, "cad"));
-    tt_assert(!tor_memstr(haystack, 7, "cadd"));
-    tt_assert(!tor_memstr(haystack, 7, "fe"));
-    tt_assert(!tor_memstr(haystack, 7, "ababcade"));
+    tt_ptr_op(tor_memstr(haystack, 6, "cad"), OP_EQ, NULL);
+    tt_ptr_op(tor_memstr(haystack, 7, "cadd"), OP_EQ, NULL);
+    tt_ptr_op(tor_memstr(haystack, 7, "fe"), OP_EQ, NULL);
+    tt_ptr_op(tor_memstr(haystack, 7, "ababcade"), OP_EQ, NULL);
   }
 
   /* Test hex_str */
@@ -2260,15 +2260,15 @@ test_util_compress_impl(compress_method_t method)
   tt_assert(tor_compress_supports_method(method));
 
   if (method != NO_METHOD) {
-    tt_assert(tor_compress_version_str(method) != NULL);
-    tt_assert(tor_compress_header_version_str(method) != NULL);
+    tt_ptr_op(tor_compress_version_str(method), OP_NE, NULL);
+    tt_ptr_op(tor_compress_header_version_str(method), OP_NE, NULL);
   }
 
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
 
   tt_assert(!tor_compress(&buf2, &len1, buf1, strlen(buf1)+1, method));
-  tt_assert(buf2 != NULL);
+  tt_ptr_op(buf2, OP_NE, NULL);
   if (method == NO_METHOD) {
     // The identity transform doesn't actually compress, and it isn't
     // detectable as "the identity transform."
@@ -2280,7 +2280,7 @@ test_util_compress_impl(compress_method_t method)
   }
 
   tt_assert(!tor_uncompress(&buf3, &len2, buf2, len1, method, 1, LOG_INFO));
-  tt_assert(buf3 != NULL);
+  tt_ptr_op(buf3, OP_NE, NULL);
   tt_int_op(strlen(buf1) + 1, OP_EQ, len2);
   tt_str_op(buf1, OP_EQ, buf3);
   tt_int_op(buf3[len2], OP_EQ, 0);
@@ -2327,7 +2327,7 @@ test_util_compress_impl(compress_method_t method)
   if (method != NO_METHOD) {
     tt_assert(tor_uncompress(&buf3, &len2, buf2, len1-16,
                              method, 1, LOG_INFO));
-    tt_assert(buf3 == NULL);
+    tt_ptr_op(buf3, OP_EQ, NULL);
   }
 
  done:
@@ -2534,7 +2534,7 @@ test_util_mmap(void *arg)
   crypto_rand(buf, buflen);
 
   mapping = tor_mmap_file(fname1);
-  tt_assert(! mapping);
+  tt_ptr_op(mapping, OP_EQ, NULL);
 
   write_str_to_file(fname1, "Short file.", 1);
 
@@ -2563,7 +2563,7 @@ test_util_mmap(void *arg)
 
   /* Make sure that we fail to map a no-longer-existent file. */
   mapping = tor_mmap_file(fname1);
-  tt_assert(! mapping);
+  tt_ptr_op(mapping, OP_EQ, NULL);
 
   /* Now try a big file that stretches across a few pages and isn't aligned */
   write_bytes_to_file(fname2, buf, buflen, 1);
@@ -3631,8 +3631,8 @@ test_util_strtok(void *arg)
     }
     tor_snprintf(buf, sizeof(buf), "%s", pad1);
     tor_snprintf(buf2, sizeof(buf2), "%s", pad2);
-    tt_assert(NULL == tor_strtok_r_impl(buf, " ", &cp1));
-    tt_assert(NULL == tor_strtok_r_impl(buf2, ".!..;!", &cp2));
+    tt_ptr_op(tor_strtok_r_impl(buf, " ", &cp1), OP_EQ, NULL);
+    tt_ptr_op(tor_strtok_r_impl(buf2, ".!..;!", &cp2), OP_EQ, NULL);
 
     tor_snprintf(buf, sizeof(buf),
                  "%sGraved on the dark  in gestures of descent%s", pad1, pad1);
@@ -4376,7 +4376,7 @@ test_util_split_lines(void *ptr)
       /* Check we have not got too many lines */
       tt_int_op(MAX_SPLIT_LINE_COUNT, OP_GT, j);
       /* Check that there actually should be a line here */
-      tt_assert(tests[i].split_line[j] != NULL);
+      tt_ptr_op(tests[i].split_line[j], OP_NE, NULL);
       log_info(LD_GENERAL, "Line %d of test %d, should be <%s>",
                j, i, tests[i].split_line[j]);
       /* Check that the line is as expected */
@@ -4492,11 +4492,11 @@ test_util_di_map(void *arg)
 
   char dflt_entry[] = "'You have made a good beginning', but no more";
 
-  tt_int_op(32, ==, sizeof(key1));
-  tt_int_op(32, ==, sizeof(key2));
-  tt_int_op(32, ==, sizeof(key3));
+  tt_int_op(32, OP_EQ, sizeof(key1));
+  tt_int_op(32, OP_EQ, sizeof(key2));
+  tt_int_op(32, OP_EQ, sizeof(key3));
 
-  tt_ptr_op(dflt_entry, ==, dimap_search(dimap, key1, dflt_entry));
+  tt_ptr_op(dflt_entry, OP_EQ, dimap_search(dimap, key1, dflt_entry));
 
   char *str1 = tor_strdup("You are precisely as big as what you love"
                           " and precisely as small as what you allow"
@@ -4514,10 +4514,10 @@ test_util_di_map(void *arg)
   dimap_add_entry(&dimap, key2, str2);
   dimap_add_entry(&dimap, key3, str3);
 
-  tt_ptr_op(str1, ==, dimap_search(dimap, key1, dflt_entry));
-  tt_ptr_op(str3, ==, dimap_search(dimap, key3, dflt_entry));
-  tt_ptr_op(str2, ==, dimap_search(dimap, key2, dflt_entry));
-  tt_ptr_op(dflt_entry, ==, dimap_search(dimap, key4, dflt_entry));
+  tt_ptr_op(str1, OP_EQ, dimap_search(dimap, key1, dflt_entry));
+  tt_ptr_op(str3, OP_EQ, dimap_search(dimap, key3, dflt_entry));
+  tt_ptr_op(str2, OP_EQ, dimap_search(dimap, key2, dflt_entry));
+  tt_ptr_op(dflt_entry, OP_EQ, dimap_search(dimap, key4, dflt_entry));
 
  done:
   dimap_free(dimap, tor_free_);
@@ -4984,34 +4984,34 @@ test_util_round_to_next_multiple_of(void *arg)
 {
   (void)arg;
 
-  tt_u64_op(round_uint64_to_next_multiple_of(0,1), ==, 0);
-  tt_u64_op(round_uint64_to_next_multiple_of(0,7), ==, 0);
+  tt_u64_op(round_uint64_to_next_multiple_of(0,1), OP_EQ, 0);
+  tt_u64_op(round_uint64_to_next_multiple_of(0,7), OP_EQ, 0);
 
-  tt_u64_op(round_uint64_to_next_multiple_of(99,1), ==, 99);
-  tt_u64_op(round_uint64_to_next_multiple_of(99,7), ==, 105);
-  tt_u64_op(round_uint64_to_next_multiple_of(99,9), ==, 99);
+  tt_u64_op(round_uint64_to_next_multiple_of(99,1), OP_EQ, 99);
+  tt_u64_op(round_uint64_to_next_multiple_of(99,7), OP_EQ, 105);
+  tt_u64_op(round_uint64_to_next_multiple_of(99,9), OP_EQ, 99);
 
-  tt_u64_op(round_uint64_to_next_multiple_of(UINT64_MAX,2), ==,
+  tt_u64_op(round_uint64_to_next_multiple_of(UINT64_MAX,2), OP_EQ,
             UINT64_MAX);
 
-  tt_int_op(round_uint32_to_next_multiple_of(0,1), ==, 0);
-  tt_int_op(round_uint32_to_next_multiple_of(0,7), ==, 0);
+  tt_int_op(round_uint32_to_next_multiple_of(0,1), OP_EQ, 0);
+  tt_int_op(round_uint32_to_next_multiple_of(0,7), OP_EQ, 0);
 
-  tt_int_op(round_uint32_to_next_multiple_of(99,1), ==, 99);
-  tt_int_op(round_uint32_to_next_multiple_of(99,7), ==, 105);
-  tt_int_op(round_uint32_to_next_multiple_of(99,9), ==, 99);
+  tt_int_op(round_uint32_to_next_multiple_of(99,1), OP_EQ, 99);
+  tt_int_op(round_uint32_to_next_multiple_of(99,7), OP_EQ, 105);
+  tt_int_op(round_uint32_to_next_multiple_of(99,9), OP_EQ, 99);
 
-  tt_int_op(round_uint32_to_next_multiple_of(UINT32_MAX,2), ==,
+  tt_int_op(round_uint32_to_next_multiple_of(UINT32_MAX,2), OP_EQ,
             UINT32_MAX);
 
-  tt_uint_op(round_to_next_multiple_of(0,1), ==, 0);
-  tt_uint_op(round_to_next_multiple_of(0,7), ==, 0);
+  tt_uint_op(round_to_next_multiple_of(0,1), OP_EQ, 0);
+  tt_uint_op(round_to_next_multiple_of(0,7), OP_EQ, 0);
 
-  tt_uint_op(round_to_next_multiple_of(99,1), ==, 99);
-  tt_uint_op(round_to_next_multiple_of(99,7), ==, 105);
-  tt_uint_op(round_to_next_multiple_of(99,9), ==, 99);
+  tt_uint_op(round_to_next_multiple_of(99,1), OP_EQ, 99);
+  tt_uint_op(round_to_next_multiple_of(99,7), OP_EQ, 105);
+  tt_uint_op(round_to_next_multiple_of(99,9), OP_EQ, 99);
 
-  tt_uint_op(round_to_next_multiple_of(UINT_MAX,2), ==,
+  tt_uint_op(round_to_next_multiple_of(UINT_MAX,2), OP_EQ,
             UINT_MAX);
  done:
   ;
@@ -5032,26 +5032,26 @@ test_util_laplace(void *arg)
   const double delta_f = 15.0, epsilon = 0.3; /* b = 15.0 / 0.3 = 50.0 */
   (void)arg;
 
-  tt_i64_op(INT64_MIN, ==, sample_laplace_distribution(mu, b, 0.0));
-  tt_i64_op(-69, ==, sample_laplace_distribution(mu, b, 0.01));
-  tt_i64_op(24, ==, sample_laplace_distribution(mu, b, 0.5));
-  tt_i64_op(24, ==, sample_laplace_distribution(mu, b, 0.51));
-  tt_i64_op(117, ==, sample_laplace_distribution(mu, b, 0.99));
+  tt_i64_op(INT64_MIN, OP_EQ, sample_laplace_distribution(mu, b, 0.0));
+  tt_i64_op(-69, OP_EQ, sample_laplace_distribution(mu, b, 0.01));
+  tt_i64_op(24, OP_EQ, sample_laplace_distribution(mu, b, 0.5));
+  tt_i64_op(24, OP_EQ, sample_laplace_distribution(mu, b, 0.51));
+  tt_i64_op(117, OP_EQ, sample_laplace_distribution(mu, b, 0.99));
 
   /* >>> laplace.ppf([0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99],
    * ...             loc = 0, scale = 50)
    * array([         -inf,  -80.47189562,  -34.65735903,    0.        ,
    *          34.65735903,   80.47189562,  195.60115027])
    */
-  tt_i64_op(INT64_MIN + 20, ==,
+  tt_i64_op(INT64_MIN + 20, OP_EQ,
             add_laplace_noise(20, 0.0, delta_f, epsilon));
 
-  tt_i64_op(-60, ==, add_laplace_noise(20, 0.1, delta_f, epsilon));
-  tt_i64_op(-14, ==, add_laplace_noise(20, 0.25, delta_f, epsilon));
-  tt_i64_op(20, ==, add_laplace_noise(20, 0.5, delta_f, epsilon));
-  tt_i64_op(54, ==, add_laplace_noise(20, 0.75, delta_f, epsilon));
-  tt_i64_op(100, ==, add_laplace_noise(20, 0.9, delta_f, epsilon));
-  tt_i64_op(215, ==, add_laplace_noise(20, 0.99, delta_f, epsilon));
+  tt_i64_op(-60, OP_EQ, add_laplace_noise(20, 0.1, delta_f, epsilon));
+  tt_i64_op(-14, OP_EQ, add_laplace_noise(20, 0.25, delta_f, epsilon));
+  tt_i64_op(20, OP_EQ, add_laplace_noise(20, 0.5, delta_f, epsilon));
+  tt_i64_op(54, OP_EQ, add_laplace_noise(20, 0.75, delta_f, epsilon));
+  tt_i64_op(100, OP_EQ, add_laplace_noise(20, 0.9, delta_f, epsilon));
+  tt_i64_op(215, OP_EQ, add_laplace_noise(20, 0.99, delta_f, epsilon));
 
   /* Test extreme values of signal with maximally negative values of noise
    * 1.0000000000000002 is the smallest number > 1
@@ -5064,54 +5064,54 @@ test_util_laplace(void *arg)
    */
   const double noscale_df = 1.0, noscale_eps = 1.0;
 
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(0, 0.0, noscale_df, noscale_eps));
 
   /* is it clipped to INT64_MIN? */
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(-1, 0.0, noscale_df, noscale_eps));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(INT64_MIN, 0.0,
                               noscale_df, noscale_eps));
   /* ... even when scaled? */
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(0, 0.0, delta_f, epsilon));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(0, 0.0,
                               DBL_MAX, 1));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(INT64_MIN, 0.0,
                               DBL_MAX, 1));
 
   /* does it play nice with INT64_MAX? */
-  tt_i64_op((INT64_MIN + INT64_MAX), ==,
+  tt_i64_op((INT64_MIN + INT64_MAX), OP_EQ,
             add_laplace_noise(INT64_MAX, 0.0,
                               noscale_df, noscale_eps));
 
   /* do near-zero fractional values work? */
   const double min_dbl_error = 0.0000000000000002;
 
-  tt_i64_op(-35, ==,
+  tt_i64_op(-35, OP_EQ,
             add_laplace_noise(0, min_dbl_error,
                               noscale_df, noscale_eps));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(INT64_MIN, min_dbl_error,
                               noscale_df, noscale_eps));
-  tt_i64_op((-35 + INT64_MAX), ==,
+  tt_i64_op((-35 + INT64_MAX), OP_EQ,
             add_laplace_noise(INT64_MAX, min_dbl_error,
                               noscale_df, noscale_eps));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(0, min_dbl_error,
                               DBL_MAX, 1));
-  tt_i64_op((INT64_MAX + INT64_MIN), ==,
+  tt_i64_op((INT64_MAX + INT64_MIN), OP_EQ,
             add_laplace_noise(INT64_MAX, min_dbl_error,
                               DBL_MAX, 1));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             add_laplace_noise(INT64_MIN, min_dbl_error,
                               DBL_MAX, 1));
 
   /* does it play nice with INT64_MAX? */
-  tt_i64_op((INT64_MAX - 35), ==,
+  tt_i64_op((INT64_MAX - 35), OP_EQ,
             add_laplace_noise(INT64_MAX, min_dbl_error,
                               noscale_df, noscale_eps));
 
@@ -5126,31 +5126,31 @@ test_util_laplace(void *arg)
   const double max_dbl_lt_one = 0.9999999999999998;
 
   /* do near-one fractional values work? */
-  tt_i64_op(35, ==,
+  tt_i64_op(35, OP_EQ,
             add_laplace_noise(0, max_dbl_lt_one, noscale_df, noscale_eps));
 
   /* is it clipped to INT64_MAX? */
-  tt_i64_op(INT64_MAX, ==,
+  tt_i64_op(INT64_MAX, OP_EQ,
             add_laplace_noise(INT64_MAX - 35, max_dbl_lt_one,
                               noscale_df, noscale_eps));
-  tt_i64_op(INT64_MAX, ==,
+  tt_i64_op(INT64_MAX, OP_EQ,
             add_laplace_noise(INT64_MAX - 34, max_dbl_lt_one,
                               noscale_df, noscale_eps));
-  tt_i64_op(INT64_MAX, ==,
+  tt_i64_op(INT64_MAX, OP_EQ,
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               noscale_df, noscale_eps));
   /* ... even when scaled? */
-  tt_i64_op(INT64_MAX, ==,
+  tt_i64_op(INT64_MAX, OP_EQ,
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               delta_f, epsilon));
-  tt_i64_op((INT64_MIN + INT64_MAX), ==,
+  tt_i64_op((INT64_MIN + INT64_MAX), OP_EQ,
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
                               DBL_MAX, 1));
-  tt_i64_op(INT64_MAX, ==,
+  tt_i64_op(INT64_MAX, OP_EQ,
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               DBL_MAX, 1));
   /* does it play nice with INT64_MIN? */
-  tt_i64_op((INT64_MIN + 35), ==,
+  tt_i64_op((INT64_MIN + 35), OP_EQ,
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
                               noscale_df, noscale_eps));
 
@@ -5163,32 +5163,32 @@ test_util_clamp_double_to_int64(void *arg)
 {
   (void)arg;
 
-  tt_i64_op(INT64_MIN, ==, clamp_double_to_int64(-INFINITY_DBL));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ, clamp_double_to_int64(-INFINITY_DBL));
+  tt_i64_op(INT64_MIN, OP_EQ,
             clamp_double_to_int64(-1.0 * pow(2.0, 64.0) - 1.0));
-  tt_i64_op(INT64_MIN, ==,
+  tt_i64_op(INT64_MIN, OP_EQ,
             clamp_double_to_int64(-1.0 * pow(2.0, 63.0) - 1.0));
-  tt_i64_op(((uint64_t) -1) << 53, ==,
+  tt_i64_op(((uint64_t) -1) << 53, OP_EQ,
             clamp_double_to_int64(-1.0 * pow(2.0, 53.0)));
-  tt_i64_op((((uint64_t) -1) << 53) + 1, ==,
+  tt_i64_op((((uint64_t) -1) << 53) + 1, OP_EQ,
             clamp_double_to_int64(-1.0 * pow(2.0, 53.0) + 1.0));
-  tt_i64_op(-1, ==, clamp_double_to_int64(-1.0));
-  tt_i64_op(0, ==, clamp_double_to_int64(-0.9));
-  tt_i64_op(0, ==, clamp_double_to_int64(-0.1));
-  tt_i64_op(0, ==, clamp_double_to_int64(0.0));
-  tt_i64_op(0, ==, clamp_double_to_int64(NAN_DBL));
-  tt_i64_op(0, ==, clamp_double_to_int64(0.1));
-  tt_i64_op(0, ==, clamp_double_to_int64(0.9));
-  tt_i64_op(1, ==, clamp_double_to_int64(1.0));
-  tt_i64_op((((int64_t) 1) << 53) - 1, ==,
+  tt_i64_op(-1, OP_EQ, clamp_double_to_int64(-1.0));
+  tt_i64_op(0, OP_EQ, clamp_double_to_int64(-0.9));
+  tt_i64_op(0, OP_EQ, clamp_double_to_int64(-0.1));
+  tt_i64_op(0, OP_EQ, clamp_double_to_int64(0.0));
+  tt_i64_op(0, OP_EQ, clamp_double_to_int64(NAN_DBL));
+  tt_i64_op(0, OP_EQ, clamp_double_to_int64(0.1));
+  tt_i64_op(0, OP_EQ, clamp_double_to_int64(0.9));
+  tt_i64_op(1, OP_EQ, clamp_double_to_int64(1.0));
+  tt_i64_op((((int64_t) 1) << 53) - 1, OP_EQ,
             clamp_double_to_int64(pow(2.0, 53.0) - 1.0));
-  tt_i64_op(((int64_t) 1) << 53, ==,
+  tt_i64_op(((int64_t) 1) << 53, OP_EQ,
             clamp_double_to_int64(pow(2.0, 53.0)));
-  tt_i64_op(INT64_MAX, ==,
+  tt_i64_op(INT64_MAX, OP_EQ,
             clamp_double_to_int64(pow(2.0, 63.0)));
-  tt_i64_op(INT64_MAX, ==,
+  tt_i64_op(INT64_MAX, OP_EQ,
             clamp_double_to_int64(pow(2.0, 64.0)));
-  tt_i64_op(INT64_MAX, ==, clamp_double_to_int64(INFINITY_DBL));
+  tt_i64_op(INT64_MAX, OP_EQ, clamp_double_to_int64(INFINITY_DBL));
 
  done:
   ;
@@ -5556,25 +5556,25 @@ test_util_pwdb(void *arg)
   /* Uncached case. */
   /* Let's assume that we exist. */
   me = tor_getpwuid(getuid());
-  tt_assert(me != NULL);
+  tt_ptr_op(me, OP_NE, NULL);
   name = tor_strdup(me->pw_name);
 
   /* Uncached case */
   me2 = tor_getpwnam(name);
-  tt_assert(me2 != NULL);
+  tt_ptr_op(me2, OP_NE, NULL);
   tt_int_op(me2->pw_uid, OP_EQ, getuid());
 
   /* Cached case */
   me3 = tor_getpwuid(getuid());
-  tt_assert(me3 != NULL);
+  tt_ptr_op(me3, OP_NE, NULL);
   tt_str_op(me3->pw_name, OP_EQ, name);
 
   me3 = tor_getpwnam(name);
-  tt_assert(me3 != NULL);
+  tt_ptr_op(me3, OP_NE, NULL);
   tt_int_op(me3->pw_uid, OP_EQ, getuid());
 
   dir = get_user_homedir(name);
-  tt_assert(dir != NULL);
+  tt_ptr_op(dir, OP_NE, NULL);
 
   /* Try failing cases.  First find a user that doesn't exist by name */
   char randbytes[4];
@@ -5594,7 +5594,7 @@ test_util_pwdb(void *arg)
   /* We should do a LOG_ERR */
   setup_full_capture_of_logs(LOG_ERR);
   dir = get_user_homedir(badname);
-  tt_assert(dir == NULL);
+  tt_ptr_op(dir, OP_EQ, NULL);
   expect_log_msg_containing("not found");
   tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);
   teardown_capture_of_logs();

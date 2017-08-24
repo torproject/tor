@@ -139,8 +139,8 @@ test_threads_basic(void *arg)
               !strcmp(strmap_get(thread_test_strmap_, "thread 2"),
                       strmap_get(thread_test_strmap_, "last to run")));
 
-  tt_int_op(thread_fns_failed, ==, 0);
-  tt_int_op(thread_fn_tid1, !=, thread_fn_tid2);
+  tt_int_op(thread_fns_failed, OP_EQ, 0);
+  tt_int_op(thread_fn_tid1, OP_NE, thread_fn_tid2);
 
  done:
   tor_free(s1);
@@ -275,14 +275,14 @@ test_threads_conditionvar(void *arg)
   SPIN();
   tor_mutex_release(ti->mutex);
 
-  tt_int_op(ti->value, ==, 1337);
+  tt_int_op(ti->value, OP_EQ, 1337);
   if (!timeout) {
-    tt_int_op(ti->n_shutdown, ==, 4);
+    tt_int_op(ti->n_shutdown, OP_EQ, 4);
   } else {
     tor_sleep_msec(200);
     tor_mutex_acquire(ti->mutex);
-    tt_int_op(ti->n_shutdown, ==, 2);
-    tt_int_op(ti->n_timeouts, ==, 2);
+    tt_int_op(ti->n_shutdown, OP_EQ, 2);
+    tt_int_op(ti->n_timeouts, OP_EQ, 2);
     tor_mutex_release(ti->mutex);
   }
 

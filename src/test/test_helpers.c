@@ -83,16 +83,16 @@ helper_setup_fake_routerlist(void)
   retval = router_load_routers_from_string(TEST_DESCRIPTORS,
                                            NULL, SAVED_IN_JOURNAL,
                                            NULL, 0, NULL);
-  tt_int_op(retval, ==, HELPER_NUMBER_OF_DESCRIPTORS);
+  tt_int_op(retval, OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Sanity checking of routerlist and nodelist. */
   our_routerlist = router_get_routerlist();
-  tt_int_op(smartlist_len(our_routerlist->routers), ==,
+  tt_int_op(smartlist_len(our_routerlist->routers), OP_EQ,
               HELPER_NUMBER_OF_DESCRIPTORS);
   routerlist_assert_ok(our_routerlist);
 
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), ==, HELPER_NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Mark all routers as non-guards but up and running! */
   SMARTLIST_FOREACH_BEGIN(our_nodelist, node_t *, node) {
@@ -189,7 +189,7 @@ mock_connection_connect_sockaddr(connection_t *conn,
   /* We really should call tor_libevent_initialize() here. Because we don't,
    * we are relying on other parts of the code not checking if the_event_base
    * (and therefore event->ev_base) is NULL.  */
-  tt_assert(connection_add_connecting(conn) == 0);
+  tt_int_op(connection_add_connecting(conn), OP_EQ, 0);
 
  done:
   /* Fake "connected" status */
@@ -222,7 +222,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   mock_connection_connect_sockaddr_called = 0;
   in_progress = connection_connect(conn, TEST_CONN_ADDRESS_PORT, &addr,
                                    TEST_CONN_PORT, &socket_err);
-  tt_assert(mock_connection_connect_sockaddr_called == 1);
+  tt_int_op(mock_connection_connect_sockaddr_called, OP_EQ, 1);
   tt_assert(!socket_err);
   tt_assert(in_progress == 0 || in_progress == 1);
 

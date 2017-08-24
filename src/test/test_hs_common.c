@@ -138,22 +138,22 @@ test_time_period(void *arg)
   /* Let's do the example in prop224 section [TIME-PERIODS] */
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC",
                               &fake_time);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /* Check that the time period number is right */
   tn = hs_get_time_period_num(fake_time);
-  tt_u64_op(tn, ==, 16903);
+  tt_u64_op(tn, OP_EQ, 16903);
 
   /* Increase current time to 11:59:59 UTC and check that the time period
      number is still the same */
   fake_time += 3599;
   tn = hs_get_time_period_num(fake_time);
-  tt_u64_op(tn, ==, 16903);
+  tt_u64_op(tn, OP_EQ, 16903);
 
   { /* Check start time of next time period */
     retval = parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC",
                                 &correct_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     start_time = hs_get_start_time_of_next_time_period(fake_time);
     tt_int_op(start_time, OP_EQ, correct_time);
@@ -162,16 +162,16 @@ test_time_period(void *arg)
   /* Now take time to 12:00:00 UTC and check that the time period rotated */
   fake_time += 1;
   tn = hs_get_time_period_num(fake_time);
-  tt_u64_op(tn, ==, 16904);
+  tt_u64_op(tn, OP_EQ, 16904);
 
   /* Now also check our hs_get_next_time_period_num() function */
   tn = hs_get_next_time_period_num(fake_time);
-  tt_u64_op(tn, ==, 16905);
+  tt_u64_op(tn, OP_EQ, 16905);
 
   { /* Check start time of next time period again */
     retval = parse_rfc1123_time("Wed, 14 Apr 2016 12:00:00 UTC",
                                 &correct_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
 
     start_time = hs_get_start_time_of_next_time_period(fake_time);
     tt_int_op(start_time, OP_EQ, correct_time);
@@ -203,7 +203,7 @@ test_start_time_of_next_time_period(void *arg)
   /* Do some basic tests */
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC",
                               &fake_time);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
   /* Compare it with the correct result */
   format_iso_time(tbuf, next_tp_start_time);
@@ -212,7 +212,7 @@ test_start_time_of_next_time_period(void *arg)
   /* Another test with an edge-case time (start of TP) */
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC",
                               &fake_time);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
   format_iso_time(tbuf, next_tp_start_time);
   tt_str_op("2016-04-14 12:00:00", OP_EQ, tbuf);
@@ -230,7 +230,7 @@ test_start_time_of_next_time_period(void *arg)
 
     retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC",
                                 &fake_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
     /* Compare it with the correct result */
     format_iso_time(tbuf, next_tp_start_time);
@@ -238,7 +238,7 @@ test_start_time_of_next_time_period(void *arg)
 
     retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:02:00 UTC",
                                 &fake_time);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     next_tp_start_time = hs_get_start_time_of_next_time_period(fake_time);
     /* Compare it with the correct result */
     format_iso_time(tbuf, next_tp_start_time);
@@ -262,35 +262,35 @@ test_desc_overlap_period(void *arg)
   dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
 
   /* Now increase the valid_after so that it goes to 11:00:00 UTC. Overlap
      period is still active. */
   dummy_consensus->valid_after += 3600*11;
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
 
   /* Now increase the valid_after so that it goes to 11:59:59 UTC. Overlap
      period is still active. */
   dummy_consensus->valid_after += 3599;
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
 
   /* Now increase the valid_after so that it drifts to noon, and check that
      overlap mode is not active anymore. */
   dummy_consensus->valid_after += 1;
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /* Check that overlap mode is also inactive at 23:59:59 UTC */
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 23:59:59 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
  done:
   tor_free(dummy_consensus);
@@ -322,39 +322,39 @@ test_desc_overlap_period_testnet(void *arg)
    * window. Let's test it: */
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
 
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:01:59 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
 
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:02:00 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:04:00 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
 
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:05:59 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
 
   retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:06:00 UTC",
                               &dummy_consensus->valid_after);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
   retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
  done:
   tor_free(dummy_consensus);

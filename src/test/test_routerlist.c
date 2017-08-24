@@ -117,7 +117,7 @@ test_routerlist_launch_descriptor_downloads(void *arg)
   MOCK(initiate_descriptor_downloads, mock_initiate_descriptor_downloads);
   launch_descriptor_downloads(DIR_PURPOSE_FETCH_MICRODESC, downloadable,
                               NULL, now);
-  tt_int_op(3, ==, count);
+  tt_int_op(3, OP_EQ, count);
   UNMOCK(initiate_descriptor_downloads);
 
  done:
@@ -148,24 +148,24 @@ construct_consensus(char **consensus_text_md)
                               &v1, &n_vrs, now, 1);
   networkstatus_vote_free(vote);
   tt_assert(v1);
-  tt_int_op(n_vrs, ==, 4);
-  tt_int_op(smartlist_len(v1->routerstatus_list), ==, 4);
+  tt_int_op(n_vrs, OP_EQ, 4);
+  tt_int_op(smartlist_len(v1->routerstatus_list), OP_EQ, 4);
 
   dir_common_construct_vote_2(&vote, cert2, sign_skey_2,
                               &dir_common_gen_routerstatus_for_v3ns,
                               &v2, &n_vrs, now, 1);
   networkstatus_vote_free(vote);
   tt_assert(v2);
-  tt_int_op(n_vrs, ==, 4);
-  tt_int_op(smartlist_len(v2->routerstatus_list), ==, 4);
+  tt_int_op(n_vrs, OP_EQ, 4);
+  tt_int_op(smartlist_len(v2->routerstatus_list), OP_EQ, 4);
 
   dir_common_construct_vote_3(&vote, cert3, sign_skey_3,
                               &dir_common_gen_routerstatus_for_v3ns,
                               &v3, &n_vrs, now, 1);
 
   tt_assert(v3);
-  tt_int_op(n_vrs, ==, 4);
-  tt_int_op(smartlist_len(v3->routerstatus_list), ==, 4);
+  tt_int_op(n_vrs, OP_EQ, 4);
+  tt_int_op(smartlist_len(v3->routerstatus_list), OP_EQ, 4);
   networkstatus_vote_free(vote);
   votes = smartlist_new();
   smartlist_add(votes, v1);
@@ -247,16 +247,16 @@ test_router_pick_directory_server_impl(void *arg)
 
   /* No consensus available, fail early */
   rs = router_pick_directory_server_impl(V3_DIRINFO, (const int) 0, NULL);
-  tt_assert(rs == NULL);
+  tt_ptr_op(rs, OP_EQ, NULL);
 
   construct_consensus(&consensus_text_md);
   tt_assert(consensus_text_md);
   con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
                                                 NS_TYPE_CONSENSUS);
   tt_assert(con_md);
-  tt_int_op(con_md->flavor,==, FLAV_MICRODESC);
+  tt_int_op(con_md->flavor,OP_EQ, FLAV_MICRODESC);
   tt_assert(con_md->routerstatus_list);
-  tt_int_op(smartlist_len(con_md->routerstatus_list), ==, 3);
+  tt_int_op(smartlist_len(con_md->routerstatus_list), OP_EQ, 3);
   tt_assert(!networkstatus_set_current_consensus_from_ns(con_md,
                                                  "microdesc"));
 
@@ -287,7 +287,7 @@ test_router_pick_directory_server_impl(void *arg)
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
   /* We should not fail now we have a consensus and routerstatus_list
    * and nodelist are populated. */
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
 
   /* Manipulate the nodes so we get the dir server we expect */
   router1_id = tor_malloc(DIGEST_LEN);
@@ -306,7 +306,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->is_running = 0;
   node_router3->is_running = 0;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router2_id, DIGEST_LEN));
   rs = NULL;
   node_router1->is_running = 1;
@@ -319,7 +319,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->rs->dir_port = 0;
   node_router3->rs->dir_port = 0;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router2_id, DIGEST_LEN));
   rs = NULL;
   node_router1->rs->is_v2_dir = 1;
@@ -330,7 +330,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->is_valid = 0;
   node_router3->is_valid = 0;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router2_id, DIGEST_LEN));
   rs = NULL;
   node_router1->is_valid = 1;
@@ -341,7 +341,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router2->rs->last_dir_503_at = now;
   node_router3->rs->last_dir_503_at = now;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   node_router2->rs->last_dir_503_at = 0;
   node_router3->rs->last_dir_503_at = 0;
@@ -358,13 +358,13 @@ test_router_pick_directory_server_impl(void *arg)
   node_router2->rs->or_port = 443;
   node_router3->rs->or_port = 442;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router3_id, DIGEST_LEN));
   node_router1->rs->or_port = 442;
   node_router2->rs->or_port = 443;
   node_router3->rs->or_port = 444;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
 
   /* Fascist firewall and overloaded */
@@ -373,7 +373,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->rs->or_port = 442;
   node_router3->rs->last_dir_503_at = now;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   node_router3->rs->last_dir_503_at = 0;
 
@@ -391,7 +391,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->rs->dir_port = 81;
   node_router1->rs->last_dir_503_at = now;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
-  tt_assert(rs != NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   node_router1->rs->last_dir_503_at = 0;
 
@@ -449,27 +449,27 @@ test_routerlist_router_is_already_dir_fetching(void *arg)
 
   /* Test that we never get 1 from a NULL connection */
   mocked_connection = NULL;
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 0) == 0);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 1) == 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 0), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 1), OP_EQ, 0);
   /* We always expect 0 in these cases */
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 0) == 0);
-  tt_assert(router_is_already_dir_fetching(NULL, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&null_addr_ap, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&zero_port_ap, 1, 1) == 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 0), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(NULL, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&null_addr_ap, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&zero_port_ap, 1, 1), OP_EQ, 0);
 
   /* Test that we get 1 with a connection in the appropriate circumstances */
   mocked_connection = connection_new(CONN_TYPE_DIR, AF_INET);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 1) == 1);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 0) == 1);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 1) == 1);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 1), OP_EQ, 1);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 0), OP_EQ, 1);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 1), OP_EQ, 1);
 
   /* Test that we get 0 even with a connection in the appropriate
    * circumstances */
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 0) == 0);
-  tt_assert(router_is_already_dir_fetching(NULL, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&null_addr_ap, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&zero_port_ap, 1, 1) == 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 0), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(NULL, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&null_addr_ap, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&zero_port_ap, 1, 1), OP_EQ, 0);
 
  done:
   /* If a connection is never set up, connection_free chokes on it. */

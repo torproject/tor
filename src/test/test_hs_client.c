@@ -100,7 +100,7 @@ helper_get_circ_and_stream_for_test(origin_circuit_t **circ_out,
          or_circ->build_state->pending_final_cpath->rend_dh_handshake_state);
     retval = crypto_dh_generate_public(
            or_circ->build_state->pending_final_cpath->rend_dh_handshake_state);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     or_circ->rend_data = rend_data_dup(conn_rend_data);
   } else {
     /* prop224: Setup hs ident on the circuit */
@@ -154,10 +154,10 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
 
   /* Check number of hops */
   retval = cpath_get_n_hops(&or_circ->cpath);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /* Check that our stream is not attached on any circuits */
-  tt_assert(!TO_EDGE_CONN(conn)->on_circuit);
+  tt_ptr_op(TO_EDGE_CONN(conn)->on_circuit, OP_EQ, NULL);
 
   /********************************************** */
 
@@ -236,11 +236,11 @@ test_e2e_rend_circuit_setup(void *arg)
 
   /* Check number of hops: There should be no hops yet to this circ */
   retval = cpath_get_n_hops(&or_circ->cpath);
-  tt_int_op(retval, ==, 0);
-  tt_assert(!or_circ->cpath);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_ptr_op(or_circ->cpath, OP_EQ, NULL);
 
   /* Check that our stream is not attached on any circuits */
-  tt_assert(!TO_EDGE_CONN(conn)->on_circuit);
+  tt_ptr_op(TO_EDGE_CONN(conn)->on_circuit, OP_EQ, NULL);
 
   /**********************************************/
 
