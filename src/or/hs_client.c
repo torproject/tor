@@ -1195,6 +1195,13 @@ hs_client_reextend_intro_circuit(origin_circuit_t *circ)
              (unsigned int) TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(extend_info_describe(ei)));
     ret = circuit_extend_to_new_exit(circ, ei);
+    if (ret == 0) {
+      /* We were able to extend so update the timestamp so we avoid expiring
+       * this circuit too early. The intro circuit is short live so the
+       * linkability issue is minimized, we just need the circuit to hold a
+       * bit longer so we can introduce. */
+      TO_CIRCUIT(circ)->timestamp_dirty = time(NULL);
+    }
   } else {
     log_info(LD_REND, "Closing intro circ %u (out of RELAY_EARLY cells).",
              (unsigned int) TO_CIRCUIT(circ)->n_circ_id);
