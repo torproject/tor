@@ -581,7 +581,8 @@ test_decode_bad_signature(void *arg)
   expect_log_msg_containing("Malformed signature line. Rejecting.");
   teardown_capture_of_logs();
 
- done: ;
+ done:
+  desc_plaintext_data_free_contents(&desc_plaintext);
 }
 
 static void
