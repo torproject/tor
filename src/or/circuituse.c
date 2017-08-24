@@ -651,6 +651,7 @@ circuit_expire_building(void)
            * because that's set when they switch purposes
            */
           if (TO_ORIGIN_CIRCUIT(victim)->rend_data ||
+              TO_ORIGIN_CIRCUIT(victim)->hs_ident ||
               victim->timestamp_dirty > cutoff.tv_sec)
             continue;
           break;
