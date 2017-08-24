@@ -1714,10 +1714,35 @@ rotate_service_descriptors(hs_service_t *service)
   service->desc_next = NULL;
 }
 
-/* Rotate descriptors for each service if needed. If we are just entering
- * the overlap period, rotate them that is point the previous descriptor to
- * the current and cleanup the previous one. A non existing current
- * descriptor will trigger a descriptor build for the next time period. */
+/** Return true if <b>service</b> **just** entered overlap mode. */
+static int
+service_just_entered_overlap_mode(const hs_service_t *service,
+                                  int overlap_mode_is_active)
+{
+  if (overlap_mode_is_active && !service->state.in_overlap_period) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/** Return true if <b>service</b> **just** left overlap mode. */
+static int
+service_just_left_overlap_mode(const hs_service_t *service,
+                               int overlap_mode_is_active)
+{
+  if (!overlap_mode_is_active && service->state.in_overlap_period) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/* Rotate descriptors for each service if needed. If we are just entering or
+ * leaving the overlap period, rotate them that is point the previous
+ * descriptor to the current and cleanup the previous one. A non existing
+ * current descriptor will trigger a descriptor build for the next time
+ * period. */
 STATIC void
 rotate_all_descriptors(time_t now)
 {
@@ -1725,35 +1750,56 @@ rotate_all_descriptors(time_t now)
    *     be wise, to rotate service descriptors independently to hide that all
    *     those descriptors are on the same tor instance */
 
-  FOR_EACH_SERVICE_BEGIN(service) {
-    /* We are _not_ in the overlap period so skip rotation. */
-    if (!hs_overlap_mode_is_active(NULL, now)) {
-      service->state.in_overlap_period = 0;
-      continue;
-    }
-    /* We've entered the overlap period already so skip rotation. */
-    if (service->state.in_overlap_period) {
-      continue;
-    }
-    /* It's the first time the service encounters the overlap period so flag
-     * it in order to make sure we don't rotate at next check. */
-    service->state.in_overlap_period = 1;
+  int overlap_mode_is_active = hs_overlap_mode_is_active(NULL, now);
 
-    /* We just entered overlap period: recompute all HSDir indices. We need to
-     * do this otherwise nodes can get stuck with old HSDir indices until we
-     * fetch a new consensus, and we might need to reupload our desc before
-     * that. */
-    /* XXX find a better place than rotate_all_descriptors() to do this */
-    nodelist_recompute_all_hsdir_indices();
+  FOR_EACH_SERVICE_BEGIN(service) {
+    int service_entered_overlap = service_just_entered_overlap_mode(service,
+                                                      overlap_mode_is_active);
+    int service_left_overlap = service_just_left_overlap_mode(service,
+                                                          overlap_mode_is_active);
+    /* This should not be possible */
+    if (BUG(service_entered_overlap && service_left_overlap)) {
+      return;
+    }
+
+    /* No changes in overlap mode: nothing to do here */
+    if (!service_entered_overlap && !service_left_overlap) {
+      return;
+    }
+
+    /* To get down there means that some change happened to overlap mode */
+    tor_assert(service_entered_overlap || service_left_overlap);
+
+    /* Update the overlap marks on this service */
+    if (service_entered_overlap) {
+      /* It's the first time the service encounters the overlap period so flag
+       * it in order to make sure we don't rotate at next check. */
+      service->state.in_overlap_period = 1;
+    } else if (service_left_overlap) {
+      service->state.in_overlap_period = 0;
+    }
+
+    if (service_entered_overlap) {
+      /* We just entered overlap period: recompute all HSDir indices. We need to
+       * do this otherwise nodes can get stuck with old HSDir indices until we
+       * fetch a new consensus, and we might need to reupload our desc before
+       * that. */
+      /* XXX find a better place than rotate_all_descriptors() to do this */
+      nodelist_recompute_all_hsdir_indices();
+    }
+
+    /* If we just entered or left overlap mode, rotate our descriptors */
+    log_info(LD_REND, "We just %s overlap period. About to rotate %s "
+             "descriptors (%p / %p).",
+             service_entered_overlap ? "entered" : "left",
+             safe_str_client(service->onion_address),
+             service->desc_current, service->desc_next);
 
     /* If we have a next descriptor lined up, rotate the descriptors so that it
      * becomes current. */
     if (service->desc_next) {
       rotate_service_descriptors(service);
     }
-    log_info(LD_REND, "We've just entered the overlap period. Service %s "
-                      "descriptors have been rotated!",
-             safe_str_client(service->onion_address));
   } FOR_EACH_SERVICE_END;
 }
 
