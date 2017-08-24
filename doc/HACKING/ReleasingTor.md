@@ -146,7 +146,7 @@ new Tor release:
 
        - {weasel,gk,mikeperry} at torproject dot org
        - {blueness} at gentoo dot org
-       - {paul} at invizbox dot io
+       - {paul,vincent} at invizbox dot io
        - {lfleischer} at archlinux dot org
        - {Nathan} at freitas dot net
        - {mike} at tig dot as
