@@ -337,7 +337,8 @@ circuit_get_best(const entry_connection_t *conn,
     /* Log an info message if we're going to launch a new intro circ in
      * parallel */
     if (purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
-        !must_be_open && origin_circ->hs_circ_has_timed_out) {
+        !must_be_open && origin_circ->hs_circ_has_timed_out &&
+        !circ->marked_for_close) {
         intro_going_on_but_too_old = 1;
         continue;
     }
