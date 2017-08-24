@@ -2722,10 +2722,10 @@ service_desc_hsdirs_changed(const hs_service_t *service,
 
   /* Check whether the set of HSDirs changed */
   if (!smartlist_strings_eq(b64_responsible_dirs, desc->previous_hsdirs)) {
-    log_warn(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
+    log_info(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
     retval = 1;
   } else {
-    log_warn(LD_GENERAL, "No change in hsdir set!");
+    log_debug(LD_GENERAL, "No change in hsdir set!");
   }
 
  done:
@@ -2759,7 +2759,7 @@ hs_hsdir_set_changed_consider_reupload(void)
     return;
   }
 
-  log_info(LD_GENERAL, "Received new descriptors. Set of HSdirs changed.");
+  log_info(LD_GENERAL, "Received new dirinfo: Checking hash ring for changes");
 
   /* Go over all descriptors and check if the set of HSDirs changed for any of
    * them. Schedule reupload if so. */
