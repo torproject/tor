@@ -2360,6 +2360,53 @@ upload_descriptor_to_all(const hs_service_t *service,
   return;
 }
 
+/** The set of HSDirs have changed: check if the change affects our descriptor
+ *  HSDir placement, and if it does, reupload the desc. */
+STATIC int
+service_desc_hsdirs_changed(const hs_service_t *service,
+                            const hs_service_descriptor_t *desc)
+{
+  int retval = 0;
+  smartlist_t *responsible_dirs = smartlist_new();
+  smartlist_t *b64_responsible_dirs = smartlist_new();
+
+  /* No desc upload has happened yet: it will happen eventually */
+  if (!desc->previous_hsdirs || !smartlist_len(desc->previous_hsdirs)) {
+    goto done;
+  }
+
+  /* Get list of responsible hsdirs */
+  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
+                            service->desc_next == desc, 0, responsible_dirs);
+
+  /* Make a second list with their b64ed identity digests, so that we can
+   * compare it with out previous list of hsdirs */
+  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, hsdir_rs) {
+    char b64_digest[BASE64_DIGEST_LEN+1] = {0};
+    digest_to_base64(b64_digest, hsdir_rs->identity_digest);
+    smartlist_add_strdup(b64_responsible_dirs, b64_digest);
+  } SMARTLIST_FOREACH_END(hsdir_rs);
+
+  /* Sort this new smartlist so that we can compare it with the other one */
+  smartlist_sort_strings(b64_responsible_dirs);
+
+  /* Check whether the set of HSDirs changed */
+  if (!smartlist_strings_eq(b64_responsible_dirs, desc->previous_hsdirs)) {
+    log_warn(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
+    retval = 1;
+  } else {
+    log_warn(LD_GENERAL, "No change in hsdir set!");
+  }
+
+ done:
+  smartlist_free(responsible_dirs);
+
+  SMARTLIST_FOREACH(b64_responsible_dirs, char*, s, tor_free(s));
+  smartlist_free(b64_responsible_dirs);
+
+  return retval;
+}
+
 /* Return 1 if the given descriptor from the given service can be uploaded
  * else return 0 if it can not. */
 static int
@@ -2749,53 +2796,6 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
   smartlist_add(list, hs_path_from_filename(s_dir, fname));
   tor_snprintf(fname, sizeof(fname), "%s_public_key", fname_keyfile_prefix);
   smartlist_add(list, hs_path_from_filename(s_dir, fname));
-}
-
-/** The set of HSDirs have changed: check if the change affects our descriptor
- *  HSDir placement, and if it does, reupload the desc. */
-int
-service_desc_hsdirs_changed(const hs_service_t *service,
-                            const hs_service_descriptor_t *desc)
-{
-  int retval = 0;
-  smartlist_t *responsible_dirs = smartlist_new();
-  smartlist_t *b64_responsible_dirs = smartlist_new();
-
-  /* No desc upload has happened yet: it will happen eventually */
-  if (!desc->previous_hsdirs || !smartlist_len(desc->previous_hsdirs)) {
-    goto done;
-  }
-
-  /* Get list of responsible hsdirs */
-  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
-                            service->desc_next == desc, 0, responsible_dirs);
-
-  /* Make a second list with their b64ed identity digests, so that we can
-   * compare it with out previous list of hsdirs */
-  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, hsdir_rs) {
-    char b64_digest[BASE64_DIGEST_LEN+1] = {0};
-    digest_to_base64(b64_digest, hsdir_rs->identity_digest);
-    smartlist_add_strdup(b64_responsible_dirs, b64_digest);
-  } SMARTLIST_FOREACH_END(hsdir_rs);
-
-  /* Sort this new smartlist so that we can compare it with the other one */
-  smartlist_sort_strings(b64_responsible_dirs);
-
-  /* Check whether the set of HSDirs changed */
-  if (!smartlist_strings_eq(b64_responsible_dirs, desc->previous_hsdirs)) {
-    log_info(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
-    retval = 1;
-  } else {
-    log_debug(LD_GENERAL, "No change in hsdir set!");
-  }
-
- done:
-  smartlist_free(responsible_dirs);
-
-  SMARTLIST_FOREACH(b64_responsible_dirs, char*, s, tor_free(s));
-  smartlist_free(b64_responsible_dirs);
-
-  return retval;
 }
 
 /* ========== */

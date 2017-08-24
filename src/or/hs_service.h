@@ -280,10 +280,6 @@ int hs_service_receive_introduce2(origin_circuit_t *circ,
 
 void hs_service_intro_circ_has_closed(origin_circuit_t *circ);
 
-int service_desc_hsdirs_changed(const hs_service_t *service,
-                                const hs_service_descriptor_t *desc);
-
-
 #ifdef HS_SERVICE_PRIVATE
 
 #ifdef TOR_UNIT_TESTS
@@ -356,6 +352,9 @@ STATIC void upload_descriptor_to_all(const hs_service_t *service,
 STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
                                          time_t now,
                                          int descriptor_changed);
+
+STATIC int service_desc_hsdirs_changed(const hs_service_t *service,
+                                const hs_service_descriptor_t *desc);
 
 #endif /* TOR_UNIT_TESTS */
 
