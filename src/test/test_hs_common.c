@@ -14,11 +14,14 @@
 #include "log_test_helpers.h"
 #include "hs_test_helpers.h"
 
+#include "connection_edge.h"
 #include "hs_common.h"
 #include "hs_service.h"
 #include "config.h"
 #include "networkstatus.h"
+#include "directory.h"
 #include "nodelist.h"
+#include "statefile.h"
 
 /** Test the validation of HS v3 addresses */
 static void
@@ -357,6 +360,37 @@ test_desc_overlap_period_testnet(void *arg)
   tor_free(dummy_consensus);
 }
 
+static void
+helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
+                                  const uint8_t *identity,
+                                  const uint8_t *curr_hsdir_index,
+                                  const char *nickname,
+                                  int is_hsdir)
+{
+  routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
+  routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
+
+  tor_addr_t ipv4_addr;
+  memcpy(rs->identity_digest, identity, DIGEST_LEN);
+  rs->is_hs_dir = is_hsdir;
+  rs->supports_v3_hsdir = 1;
+  tor_addr_parse(&ipv4_addr, "1.2.3.4");
+  ri->addr = tor_addr_to_ipv4h(&ipv4_addr);
+  ri->nickname = tor_strdup(nickname);
+  ri->protocol_list = tor_strdup("HSDir=1-2 LinkAuth=3");
+  memcpy(ri->cache_info.identity_digest, identity, DIGEST_LEN);
+  tt_assert(nodelist_set_routerinfo(ri, NULL));
+  node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
+  tt_assert(node);
+  node->rs = rs;
+  memcpy(node->hsdir_index->current, curr_hsdir_index,
+         sizeof(node->hsdir_index->current));
+  smartlist_add(ns->routerstatus_list, rs);
+
+ done:
+  ;
+}
+
 static networkstatus_t *mock_ns = NULL;
 
 static networkstatus_t *
@@ -389,7 +423,7 @@ test_responsible_hsdirs(void *arg)
   time_t now = approx_time();
   smartlist_t *responsible_dirs = smartlist_new();
   networkstatus_t *ns = NULL;
-  routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
+  int retval;
 
   (void) arg;
 
@@ -401,37 +435,215 @@ test_responsible_hsdirs(void *arg)
   ns = networkstatus_get_latest_consensus();
 
   { /* First router: HSdir */
-    tor_addr_t ipv4_addr;
-    memset(rs->identity_digest, 'A', DIGEST_LEN);
-    rs->is_hs_dir = 1;
-    rs->supports_v3_hsdir = 1;
-    routerinfo_t ri;
-    memset(&ri, 0 ,sizeof(routerinfo_t));
-    tor_addr_parse(&ipv4_addr, "127.0.0.1");
-    ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
-    ri.nickname = (char *) "fatal";
-    ri.protocol_list = (char *) "HSDir=1-2 LinkAuth=3";
-    memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);
-    tt_assert(nodelist_set_routerinfo(&ri, NULL));
-    node_t *node = node_get_mutable_by_id(ri.cache_info.identity_digest);
-    memset(node->hsdir_index->current, 'Z',
-           sizeof(node->hsdir_index->current));
-    smartlist_add(ns->routerstatus_list, rs);
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "let_me";
+    memset(identity, 1, sizeof(identity));
+    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
   }
 
-  ed25519_public_key_t blinded_pk;
+  { /* Second HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "show_you";
+    memset(identity, 2, sizeof(identity));
+    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  { /* Third relay but not HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "how_to_dance";
+    memset(identity, 3, sizeof(identity));
+    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 0);
+  }
+
+  ed25519_keypair_t kp;
+  retval = ed25519_keypair_generate(&kp, 0);
+  tt_int_op(retval, OP_EQ , 0);
+
   uint64_t time_period_num = hs_get_time_period_num(now);
-  hs_get_responsible_hsdirs(&blinded_pk, time_period_num,
+  hs_get_responsible_hsdirs(&kp.pubkey, time_period_num,
                             0, 0, responsible_dirs);
-  tt_int_op(smartlist_len(responsible_dirs), OP_EQ, 1);
+
+  /* Make sure that we only found 2 responsible HSDirs.
+   * The third relay was not an hsdir! */
+  tt_int_op(smartlist_len(responsible_dirs), OP_EQ, 2);
 
   /** TODO: Build a bigger network and do more tests here */
 
  done:
-  routerstatus_free(rs);
+  SMARTLIST_FOREACH(ns->routerstatus_list,
+                    routerstatus_t *, rs, routerstatus_free(rs));
   smartlist_free(responsible_dirs);
   smartlist_clear(ns->routerstatus_list);
   networkstatus_vote_free(mock_ns);
+}
+
+static void
+mock_directory_initiate_request(directory_request_t *req)
+{
+  (void)req;
+  return;
+}
+
+static int
+mock_hs_desc_encode_descriptor(const hs_descriptor_t *desc,
+                           const ed25519_keypair_t *signing_kp,
+                           char **encoded_out)
+{
+  (void)desc;
+  (void)signing_kp;
+
+  tor_asprintf(encoded_out, "lulu");
+  return 0;
+}
+
+static or_state_t dummy_state;
+
+/* Mock function to get fake or state (used for rev counters) */
+static or_state_t *
+get_or_state_replacement(void)
+{
+  return &dummy_state;
+}
+
+static int
+mock_router_have_minimum_dir_info(void)
+{
+  return 1;
+}
+
+/** Test that we correctly detect when the HSDir hash ring changes so that we
+ *  reupload our descriptor. */
+static void
+test_desc_reupload_logic(void *arg)
+{
+  networkstatus_t *ns = NULL;
+
+  (void) arg;
+
+  hs_init();
+
+  MOCK(router_have_minimum_dir_info,
+       mock_router_have_minimum_dir_info);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+  MOCK(networkstatus_get_latest_consensus,
+       mock_networkstatus_get_latest_consensus);
+  MOCK(directory_initiate_request,
+       mock_directory_initiate_request);
+  MOCK(hs_desc_encode_descriptor,
+       mock_hs_desc_encode_descriptor);
+
+  ns = networkstatus_get_latest_consensus();
+
+  /** Test logic:
+   *  1) Upload descriptor to HSDirs
+   *     CHECK that previous_hsdirs list was populated.
+   *  2) Then call router_dir_info_changed() without an HSDir set change.
+   *     CHECK that no reuplod occurs.
+   *  3) Now change the HSDir set, and call dir_info_changed() again.
+   *     CHECK that reupload occurs.
+   *  4) Finally call service_desc_schedule_upload().
+   *     CHECK that previous_hsdirs list was cleared.
+   **/
+
+  /* Let's start by building our descriptor and service */
+  hs_service_descriptor_t *desc = service_descriptor_new();
+  hs_service_t *service = NULL;
+  char onion_addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+  ed25519_public_key_t pubkey;
+  memset(&pubkey, '\x42', sizeof(pubkey));
+  hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
+  service = tor_malloc_zero(sizeof(hs_service_t));
+  memcpy(service->onion_address, onion_addr, sizeof(service->onion_address));
+  ed25519_secret_key_generate(&service->keys.identity_sk, 0);
+  ed25519_public_key_generate(&service->keys.identity_pk,
+                              &service->keys.identity_sk);
+  service->desc_current = desc;
+  /* Also add service to service map */
+  hs_service_ht *service_map = get_hs_service_map();
+  tt_assert(service_map);
+  tt_int_op(hs_service_get_num_services(), OP_EQ, 0);
+  register_service(service_map, service);
+  tt_int_op(hs_service_get_num_services(), OP_EQ, 1);
+
+  /* Now let's create our hash ring: */
+  { /* First HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "let_me";
+    memset(identity, 1, sizeof(identity));
+    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  { /* Second HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "show_you";
+    memset(identity, 2, sizeof(identity));
+    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  /* Now let's upload our desc to all hsdirs */
+  upload_descriptor_to_all(service, desc, 0);
+  /* Check that previous hsdirs were populated */
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 2);
+
+  /* Poison next upload time so that we can see if it was changed by
+   * router_dir_info_changed(). No changes in hash ring so far, so the upload
+   * time should stay as is. */
+  desc->next_upload_time = 42;
+  router_dir_info_changed();
+  tt_int_op(desc->next_upload_time, OP_EQ, 42);
+
+  /* Now change the HSDir hash ring by adding another node */
+
+  { /* Third HSDir */
+    uint8_t identity[DIGEST_LEN];
+    uint8_t curr_hsdir_index[DIGEST256_LEN];
+    char nickname[] = "how_to_dance";
+    memset(identity, 3, sizeof(identity));
+    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
+
+    helper_add_hsdir_to_networkstatus(ns, identity,
+                                      curr_hsdir_index, nickname, 1);
+  }
+
+  /* Now call router_dir_info_changed() again and see that it detected the hash
+     ring change and updated the upload time */
+  time_t now = approx_time();
+  tt_assert(now);
+  router_dir_info_changed();
+  tt_int_op(desc->next_upload_time, OP_EQ, now);
+
+  /* Now pretend that the descriptor changed, and order a reupload to all
+     HSDirs. Make sure that the set of previous HSDirs was cleared. */
+  service_desc_schedule_upload(desc, now, 1);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 0);
+
+  /* Now reupload again: see that the prev hsdir set got populated again. */
+  upload_descriptor_to_all(service, desc, 0);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 3);
+
+ done:
+  hs_free_all();
 }
 
 /** Test disaster SRV computation and caching */
@@ -485,6 +697,136 @@ test_disaster_srv(void *arg)
   ;
 }
 
+/** Test our HS descriptor request tracker by making various requests and
+ *  checking whether they get tracked properly. */
+static void
+test_hid_serv_request_tracker(void *arg)
+{
+  (void) arg;
+  time_t retval;
+  routerstatus_t *hsdir = NULL, *hsdir2 = NULL;
+  time_t now = approx_time();
+
+  const char *req_key_str_first =
+ "vd4zb6zesaubtrjvdqcr2w7x7lhw2up4Xnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
+  const char *req_key_str_second =
+ "g53o7iavcd62oihswhr24u6czmqws5kpXnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
+
+  /*************************** basic test *******************************/
+
+  /* Get request tracker and make sure it's empty */
+  strmap_t *request_tracker = get_last_hid_serv_requests();
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 0);
+
+  /* Let's register a hid serv request */
+  hsdir = tor_malloc_zero(sizeof(routerstatus_t));
+  memset(hsdir->identity_digest, 'Z', DIGEST_LEN);
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
+                                           now, 1);
+  tt_int_op(retval, OP_EQ, now);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /* Let's lookup a non-existent hidserv request */
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_second,
+                                           now+1, 0);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /* Let's lookup a real hidserv request */
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
+                                           now+2, 0);
+  tt_int_op(retval, OP_EQ, now); /* we got it */
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /**********************************************************************/
+
+  /* Let's add another request for the same HS but on a different HSDir. */
+  hsdir2 = tor_malloc_zero(sizeof(routerstatus_t));
+  memset(hsdir->identity_digest, 2, DIGEST_LEN);
+  retval = hs_lookup_last_hid_serv_request(hsdir2, req_key_str_first,
+                                           now+3, 1);
+  tt_int_op(retval, OP_EQ, now+3);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+
+  /* Check that we can clean the first request based on time */
+  hs_clean_last_hid_serv_requests(now+3+REND_HID_SERV_DIR_REQUERY_PERIOD);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+  /* Check that it doesn't exist anymore */
+  retval = hs_lookup_last_hid_serv_request(hsdir, req_key_str_first,
+                                           now+2, 0);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /*************************** deleting entries **************************/
+
+  /* Add another request with very short key */
+  retval = hs_lookup_last_hid_serv_request(hsdir, "l",  now, 1);
+
+  /* Try deleting entries with a dummy key. Check that our previous requests
+   * are still there */
+  tor_capture_bugs_(1);
+  hs_purge_hid_serv_from_last_hid_serv_requests("a");
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  tor_end_capture_bugs_();
+
+  /* Try another dummy key. Check that requests are still there */
+  {
+    char dummy[2000];
+    memset(dummy, 'Z', 2000);
+    dummy[1999] = '\x00';
+    hs_purge_hid_serv_from_last_hid_serv_requests(dummy);
+    tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  }
+
+  /* Another dummy key! */
+  hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_second);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+
+  /* Now actually delete a request! */
+  hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_first);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+
+  /* Purge it all! */
+  hs_purge_last_hid_serv_requests();
+  request_tracker = get_last_hid_serv_requests();
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 0);
+
+ done:
+  tor_free(hsdir);
+  tor_free(hsdir2);
+}
+
+static void
+test_parse_extended_hostname(void *arg)
+{
+  (void) arg;
+
+  char address1[] = "fooaddress.onion";
+  char address2[] = "aaaaaaaaaaaaaaaa.onion";
+  char address3[] = "fooaddress.exit";
+  char address4[] = "www.torproject.org";
+  char address5[] = "foo.abcdefghijklmnop.onion";
+  char address6[] = "foo.bar.abcdefghijklmnop.onion";
+  char address7[] = ".abcdefghijklmnop.onion";
+  char address8[] =
+    "www.p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad.onion";
+
+  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
+  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address2));
+  tt_str_op(address2,OP_EQ, "aaaaaaaaaaaaaaaa");
+  tt_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
+  tt_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
+  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address5));
+  tt_str_op(address5,OP_EQ, "abcdefghijklmnop");
+  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address6));
+  tt_str_op(address6,OP_EQ, "abcdefghijklmnop");
+  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address7));
+  tt_assert(ONION_V3_HOSTNAME == parse_extended_hostname(address8));
+  tt_str_op(address8, OP_EQ,
+            "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad");
+
+ done: ;
+}
+
 struct testcase_t hs_common_tests[] = {
   { "build_address", test_build_address, TT_FORK,
     NULL, NULL },
@@ -498,9 +840,16 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "desc_overlap_period_testnet", test_desc_overlap_period_testnet, TT_FORK,
     NULL, NULL },
-  { "desc_responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
+  { "responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
     NULL, NULL },
-  { "disaster_srv", test_disaster_srv, TT_FORK, NULL, NULL },
+  { "desc_reupload_logic", test_desc_reupload_logic, TT_FORK,
+    NULL, NULL },
+  { "disaster_srv", test_disaster_srv, TT_FORK,
+    NULL, NULL },
+  { "hid_serv_request_tracker", test_hid_serv_request_tracker, TT_FORK,
+    NULL, NULL },
+  { "parse_extended_hostname", test_parse_extended_hostname, TT_FORK,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };

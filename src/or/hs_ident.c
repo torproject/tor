@@ -86,3 +86,25 @@ hs_ident_edge_conn_free(hs_ident_edge_conn_t *ident)
   tor_free(ident);
 }
 
+/* Return true if the given ident is valid for an introduction circuit. */
+int
+hs_ident_intro_circ_is_valid(const hs_ident_circuit_t *ident)
+{
+  if (ident == NULL) {
+    goto invalid;
+  }
+
+  if (ed25519_public_key_is_zero(&ident->identity_pk)) {
+    goto invalid;
+  }
+
+  if (ed25519_public_key_is_zero(&ident->intro_auth_pk)) {
+    goto invalid;
+  }
+
+  /* Valid. */
+  return 1;
+ invalid:
+  return 0;
+}
+

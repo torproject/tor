@@ -25,6 +25,7 @@
 #include "geoip.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_client.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -183,6 +184,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_EXTRAINFO:
     case DIR_PURPOSE_FETCH_MICRODESC:
       return 0;
+    case DIR_PURPOSE_HAS_FETCHED_HSDESC:
     case DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2:
     case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
     case DIR_PURPOSE_FETCH_RENDDESC_V2:
@@ -1125,6 +1127,7 @@ directory_request_new(uint8_t dir_purpose)
   tor_assert(dir_purpose <= DIR_PURPOSE_MAX_);
   tor_assert(dir_purpose != DIR_PURPOSE_SERVER);
   tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2);
+  tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_HSDESC);
 
   directory_request_t *result = tor_malloc_zero(sizeof(*result));
   tor_addr_make_null(&result->or_addr_port.addr, AF_INET);
@@ -1286,6 +1289,20 @@ directory_request_upload_set_hs_ident(directory_request_t *req,
 {
   if (ident) {
     tor_assert(req->dir_purpose == DIR_PURPOSE_UPLOAD_HSDESC);
+  }
+  req->hs_ident = ident;
+}
+/**
+ * Set an object containing HS connection identifier to be associated with
+ * this fetch request. Note that only an alias to <b>ident</b> is stored, so
+ * the <b>ident</b> object must outlive the request.
+ */
+void
+directory_request_fetch_set_hs_ident(directory_request_t *req,
+                                     const hs_ident_dir_conn_t *ident)
+{
+  if (ident) {
+    tor_assert(req->dir_purpose == DIR_PURPOSE_FETCH_HSDESC);
   }
   req->hs_ident = ident;
 }
@@ -1859,6 +1876,13 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "GET";
       tor_asprintf(&url, "/tor/rendezvous2/%s", resource);
       break;
+    case DIR_PURPOSE_FETCH_HSDESC:
+      tor_assert(resource);
+      tor_assert(strlen(resource) <= ED25519_BASE64_LEN);
+      tor_assert(!payload);
+      httpcommand = "GET";
+      tor_asprintf(&url, "/tor/hs/3/%s", resource);
+      break;
     case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
       tor_assert(!resource);
       tor_assert(payload);
@@ -2193,16 +2217,6 @@ load_downloaded_routers(const char *body, smartlist_t *which,
   return added;
 }
 
-/** A structure to hold arguments passed into each directory response
- * handler */
-typedef struct response_handler_args_t {
-  int status_code;
-  const char *reason;
-  const char *body;
-  size_t body_len;
-  const char *headers;
-} response_handler_args_t;
-
 static int handle_response_fetch_consensus(dir_connection_t *,
                                            const response_handler_args_t *);
 static int handle_response_fetch_certificate(dir_connection_t *,
@@ -2529,6 +2543,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       break;
     case DIR_PURPOSE_UPLOAD_HSDESC:
       rv = handle_response_upload_hsdesc(conn, &args);
+      break;
+    case DIR_PURPOSE_FETCH_HSDESC:
+      rv = handle_response_fetch_hsdesc_v3(conn, &args);
       break;
     default:
       tor_assert_nonfatal_unreached();
@@ -3075,6 +3092,60 @@ handle_response_upload_signatures(dir_connection_t *conn,
 }
 
 /**
+ * Handler function: processes a response to a request for a v3 hidden service
+ * descriptor.
+ **/
+STATIC int
+handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
+                                const response_handler_args_t *args)
+{
+  const int status_code = args->status_code;
+  const char *reason = args->reason;
+  const char *body = args->body;
+  const size_t body_len = args->body_len;
+
+  tor_assert(conn->hs_ident);
+
+  log_info(LD_REND,"Received v3 hsdesc (body size %d, status %d (%s))",
+           (int)body_len, status_code, escaped(reason));
+
+  switch (status_code) {
+  case 200:
+    /* We got something: Try storing it in the cache. */
+    if (hs_cache_store_as_client(body, &conn->hs_ident->identity_pk) < 0) {
+      log_warn(LD_REND, "Failed to store hidden service descriptor");
+    } else {
+      log_info(LD_REND, "Stored hidden service descriptor successfully.");
+      TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
+      hs_client_desc_has_arrived(conn->hs_ident);
+    }
+    break;
+  case 404:
+    /* Not there. We'll retry when connection_about_to_close_connection()
+     * tries to clean this conn up. */
+    log_info(LD_REND, "Fetching hidden service v3 descriptor not found: "
+                      "Retrying at another directory.");
+    /* TODO: Inform the control port */
+    break;
+  case 400:
+    log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
+                      "http status 400 (%s). Dirserver didn't like our "
+                      "query? Retrying at another directory.",
+             escaped(reason));
+    break;
+  default:
+    log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
+             "http status %d (%s) response unexpected from HSDir server "
+             "'%s:%d'. Retrying at another directory.",
+             status_code, escaped(reason), TO_CONN(conn)->address,
+             TO_CONN(conn)->port);
+    break;
+  }
+
+  return 0;
+}
+
+/**
  * Handler function: processes a response to a request for a v2 hidden service
  * descriptor.
  **/
@@ -3338,6 +3409,33 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   return 0;
 }
 
+/** We are closing a dir connection: If <b>dir_conn</b> is a dir connection
+ *  that tried to fetch an HS descriptor, check if it successfuly fetched it,
+ *  or if we need to try again. */
+static void
+refetch_hsdesc_if_needed(dir_connection_t *dir_conn)
+{
+  connection_t *conn = TO_CONN(dir_conn);
+
+  /* If we were trying to fetch a v2 rend desc and did not succeed, retry as
+   * needed. (If a fetch is successful, the connection state is changed to
+   * DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 or DIR_PURPOSE_HAS_FETCHED_HSDESC to
+   * mark that refetching is unnecessary.) */
+  if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
+      dir_conn->rend_data &&
+      rend_valid_v2_service_id(
+           rend_data_get_address(dir_conn->rend_data))) {
+    rend_client_refetch_v2_renddesc(dir_conn->rend_data);
+  }
+
+  /* Check for v3 rend desc fetch */
+  if (conn->purpose == DIR_PURPOSE_FETCH_HSDESC &&
+      dir_conn->hs_ident &&
+      !ed25519_public_key_is_zero(&dir_conn->hs_ident->identity_pk)) {
+    hs_client_refetch_hsdesc(&dir_conn->hs_ident->identity_pk);
+  }
+}
+
 /** Called when we're about to finally unlink and free a directory connection:
  * perform necessary accounting and cleanup */
 void
@@ -3350,15 +3448,8 @@ connection_dir_about_to_close(dir_connection_t *dir_conn)
      * failed: forget about this router, and maybe try again. */
     connection_dir_request_failed(dir_conn);
   }
-  /* If we were trying to fetch a v2 rend desc and did not succeed,
-   * retry as needed. (If a fetch is successful, the connection state
-   * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 to mark that
-   * refetching is unnecessary.) */
-  if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
-      dir_conn->rend_data &&
-      strlen(rend_data_get_address(dir_conn->rend_data)) ==
-             REND_SERVICE_ID_LEN_BASE32)
-    rend_client_refetch_v2_renddesc(dir_conn->rend_data);
+
+  refetch_hsdesc_if_needed(dir_conn);
 }
 
 /** Create an http response for the client <b>conn</b> out of

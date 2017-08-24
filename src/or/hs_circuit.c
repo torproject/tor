@@ -341,125 +341,6 @@ send_establish_intro(const hs_service_t *service,
   memwipe(payload, 0, sizeof(payload));
 }
 
-/* From a list of link specifier, an onion key and if we are requesting a
- * direct connection (ex: single onion service), return a newly allocated
- * extend_info_t object. This function checks the firewall policies and if we
- * are allowed to extend to the chosen address.
- *
- *  if either IPv4 or legacy ID is missing, error.
- *  if not direct_conn, IPv4 is prefered.
- *  if direct_conn, IPv6 is prefered if we have one available.
- *  if firewall does not allow the chosen address, error.
- *
- * Return NULL if we can't fulfill the conditions. */
-static extend_info_t *
-get_rp_extend_info(const smartlist_t *link_specifiers,
-                   const curve25519_public_key_t *onion_key, int direct_conn)
-{
-  int have_v4 = 0, have_v6 = 0, have_legacy_id = 0, have_ed25519_id = 0;
-  char legacy_id[DIGEST_LEN] = {0};
-  uint16_t port_v4 = 0, port_v6 = 0, port = 0;
-  tor_addr_t addr_v4, addr_v6, *addr = NULL;
-  ed25519_public_key_t ed25519_pk;
-  extend_info_t *info = NULL;
-
-  tor_assert(link_specifiers);
-  tor_assert(onion_key);
-
-  SMARTLIST_FOREACH_BEGIN(link_specifiers, const link_specifier_t *, ls) {
-    switch (link_specifier_get_ls_type(ls)) {
-    case LS_IPV4:
-      /* Skip if we already seen a v4. */
-      if (have_v4) continue;
-      tor_addr_from_ipv4h(&addr_v4,
-                          link_specifier_get_un_ipv4_addr(ls));
-      port_v4 = link_specifier_get_un_ipv4_port(ls);
-      have_v4 = 1;
-      break;
-    case LS_IPV6:
-      /* Skip if we already seen a v6. */
-      if (have_v6) continue;
-      tor_addr_from_ipv6_bytes(&addr_v6,
-          (const char *) link_specifier_getconstarray_un_ipv6_addr(ls));
-      port_v6 = link_specifier_get_un_ipv6_port(ls);
-      have_v6 = 1;
-      break;
-    case LS_LEGACY_ID:
-      /* Make sure we do have enough bytes for the legacy ID. */
-      if (link_specifier_getlen_un_legacy_id(ls) < sizeof(legacy_id)) {
-        break;
-      }
-      memcpy(legacy_id, link_specifier_getconstarray_un_legacy_id(ls),
-             sizeof(legacy_id));
-      have_legacy_id = 1;
-      break;
-    case LS_ED25519_ID:
-      memcpy(ed25519_pk.pubkey,
-             link_specifier_getconstarray_un_ed25519_id(ls),
-             ED25519_PUBKEY_LEN);
-      have_ed25519_id = 1;
-      break;
-    default:
-      /* Ignore unknown. */
-      break;
-    }
-  } SMARTLIST_FOREACH_END(ls);
-
-  /* IPv4, legacy ID are mandatory for rend points.
-   * ed25519 keys and ipv6 are optional for rend points */
-  if (!have_v4 || !have_legacy_id) {
-    goto done;
-  }
-  /* By default, we pick IPv4 but this might change to v6 if certain
-   * conditions are met. */
-  addr = &addr_v4; port = port_v4;
-
-  /* If we are NOT in a direct connection, we'll use our Guard and a 3-hop
-   * circuit so we can't extend in IPv6. And at this point, we do have an IPv4
-   * address available so go to validation. */
-  if (!direct_conn) {
-    goto validate;
-  }
-
-  /* From this point on, we have a request for a direct connection to the
-   * rendezvous point so make sure we can actually connect through our
-   * firewall. We'll prefer IPv6. */
-
-  /* IPv6 test. */
-  if (have_v6 &&
-      fascist_firewall_allows_address_addr(&addr_v6, port_v6,
-                                           FIREWALL_OR_CONNECTION, 1, 1)) {
-    /* Direct connection and we can reach it in IPv6 so go for it. */
-    addr = &addr_v6; port = port_v6;
-    goto validate;
-  }
-  /* IPv4 test and we are sure we have a v4 because of the check above. */
-  if (fascist_firewall_allows_address_addr(&addr_v4, port_v4,
-                                           FIREWALL_OR_CONNECTION, 0, 0)) {
-    /* Direct connection and we can reach it in IPv4 so go for it. */
-    addr = &addr_v4; port = port_v4;
-    goto validate;
-  }
-
- validate:
-  /* We'll validate now that the address we've picked isn't a private one. If
-   * it is, are we allowing to extend to private address? */
-  if (!extend_info_addr_is_allowed(addr)) {
-    log_warn(LD_REND, "Rendezvous point address is private and it is not "
-                      "allowed to extend to it: %s:%u",
-             fmt_addr(&addr_v4), port_v4);
-    goto done;
-  }
-
-  /* We do have everything for which we think we can connect successfully. */
-  info = extend_info_new(NULL, legacy_id,
-                         have_ed25519_id ? &ed25519_pk : NULL,
-                         NULL, onion_key,
-                         addr, port);
- done:
-  return info;
-}
-
 /* For a given service, the ntor onion key and a rendezvous cookie, launch a
  * circuit to the rendezvous point specified by the link specifiers. On
  * success, a circuit identifier is attached to the circuit with the needed
@@ -483,8 +364,9 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
 
   /* Get the extend info data structure for the chosen rendezvous point
    * specified by the given link specifiers. */
-  info = get_rp_extend_info(data->link_specifiers, &data->onion_pk,
-                            service->config.is_single_onion);
+  info = hs_get_extend_info_from_lspecs(data->link_specifiers,
+                                        &data->onion_pk,
+                                        service->config.is_single_onion);
   if (info == NULL) {
     /* We are done here, we can't extend to the rendezvous point. */
     goto end;
@@ -646,6 +528,83 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 
  done:
   return;
+}
+
+/* Using an extend info object ei, set all possible link specifiers in lspecs.
+ * IPv4, legacy ID and ed25519 ID are mandatory thus MUST be present in ei. */
+static void
+get_lspecs_from_extend_info(const extend_info_t *ei, smartlist_t *lspecs)
+{
+  link_specifier_t *ls;
+
+  tor_assert(ei);
+  tor_assert(lspecs);
+
+  /* IPv4 is mandatory. */
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_IPV4);
+  link_specifier_set_un_ipv4_addr(ls, tor_addr_to_ipv4h(&ei->addr));
+  link_specifier_set_un_ipv4_port(ls, ei->port);
+  /* Four bytes IPv4 and two bytes port. */
+  link_specifier_set_ls_len(ls, sizeof(ei->addr.addr.in_addr) +
+                            sizeof(ei->port));
+  smartlist_add(lspecs, ls);
+
+  /* Legacy ID is mandatory. */
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_LEGACY_ID);
+  memcpy(link_specifier_getarray_un_legacy_id(ls), ei->identity_digest,
+         link_specifier_getlen_un_legacy_id(ls));
+  link_specifier_set_ls_len(ls, link_specifier_getlen_un_legacy_id(ls));
+  smartlist_add(lspecs, ls);
+
+  /* ed25519 ID is mandatory. */
+  ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, LS_ED25519_ID);
+  memcpy(link_specifier_getarray_un_ed25519_id(ls), &ei->ed_identity,
+         link_specifier_getlen_un_ed25519_id(ls));
+  link_specifier_set_ls_len(ls, link_specifier_getlen_un_ed25519_id(ls));
+  smartlist_add(lspecs, ls);
+
+  /* XXX: IPv6 is not clearly a thing in extend_info_t? */
+}
+
+/* Using the given descriptor intro point ip, the extend information of the
+ * rendezvous point rp_ei and the service's subcredential, populate the
+ * already allocated intro1_data object with the needed key material and link
+ * specifiers.
+ *
+ * This can't fail but the ip MUST be a valid object containing the needed
+ * keys and authentication method. */
+static void
+setup_introduce1_data(const hs_desc_intro_point_t *ip,
+                      const extend_info_t *rp_ei,
+                      const uint8_t *subcredential,
+                      hs_cell_introduce1_data_t *intro1_data)
+{
+  smartlist_t *rp_lspecs;
+
+  tor_assert(ip);
+  tor_assert(rp_ei);
+  tor_assert(subcredential);
+  tor_assert(intro1_data);
+
+  /* Build the link specifiers from the extend information of the rendezvous
+   * circuit that we've picked previously. */
+  rp_lspecs = smartlist_new();
+  get_lspecs_from_extend_info(rp_ei, rp_lspecs);
+
+  /* Populate the introduce1 data object. */
+  memset(intro1_data, 0, sizeof(hs_cell_introduce1_data_t));
+  if (ip->legacy.key != NULL) {
+    intro1_data->is_legacy = 1;
+    intro1_data->legacy_key = ip->legacy.key;
+  }
+  intro1_data->auth_pk = &ip->auth_key_cert->signed_key;
+  intro1_data->enc_pk = &ip->enc_key;
+  intro1_data->subcredential = subcredential;
+  intro1_data->onion_pk = &rp_ei->curve25519_onion_key;
+  intro1_data->link_specifiers = rp_lspecs;
 }
 
 /* ========== */
@@ -1053,5 +1012,122 @@ hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
   finalize_rend_circuit(circ, hop, 0);
 
   return 0;
+}
+
+/* Given the introduction circuit intro_circ, the rendezvous circuit
+ * rend_circ, a descriptor intro point object ip and the service's
+ * subcredential, send an INTRODUCE1 cell on intro_circ.
+ *
+ * This will also setup the circuit identifier on rend_circ containing the key
+ * material for the handshake and e2e encryption. Return 0 on success else
+ * negative value. Because relay_send_command_from_edge() closes the circuit
+ * on error, it is possible that intro_circ is closed on error. */
+int
+hs_circ_send_introduce1(origin_circuit_t *intro_circ,
+                        origin_circuit_t *rend_circ,
+                        const hs_desc_intro_point_t *ip,
+                        const uint8_t *subcredential)
+{
+  int ret = -1;
+  ssize_t payload_len;
+  uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
+  hs_cell_introduce1_data_t intro1_data;
+
+  tor_assert(intro_circ);
+  tor_assert(rend_circ);
+  tor_assert(ip);
+  tor_assert(subcredential);
+
+  /* This takes various objects in order to populate the introduce1 data
+   * object which is used to build the content of the cell. */
+  setup_introduce1_data(ip, rend_circ->build_state->chosen_exit,
+                        subcredential, &intro1_data);
+
+  /* Final step before we encode a cell, we setup the circuit identifier which
+   * will generate both the rendezvous cookie and client keypair for this
+   * connection. Those are put in the ident. */
+  intro1_data.rendezvous_cookie = rend_circ->hs_ident->rendezvous_cookie;
+  intro1_data.client_kp = &rend_circ->hs_ident->rendezvous_client_kp;
+
+  memcpy(intro_circ->hs_ident->rendezvous_cookie,
+         rend_circ->hs_ident->rendezvous_cookie,
+         sizeof(intro_circ->hs_ident->rendezvous_cookie));
+
+  /* From the introduce1 data object, this will encode the INTRODUCE1 cell
+   * into payload which is then ready to be sent as is. */
+  payload_len = hs_cell_build_introduce1(&intro1_data, payload);
+  if (BUG(payload_len < 0)) {
+    goto done;
+  }
+
+  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(intro_circ),
+                                   RELAY_COMMAND_INTRODUCE1,
+                                   (const char *) payload, payload_len,
+                                   intro_circ->cpath->prev) < 0) {
+    /* On error, circuit is closed. */
+    log_warn(LD_REND, "Unable to send INTRODUCE1 cell on circuit %u.",
+             TO_CIRCUIT(intro_circ)->n_circ_id);
+    goto done;
+  }
+
+  /* Success. */
+  ret = 0;
+  goto done;
+
+ done:
+  hs_cell_introduce1_data_clear(&intro1_data);
+  memwipe(payload, 0, sizeof(payload));
+  return ret;
+}
+
+/* Send an ESTABLISH_RENDEZVOUS cell along the rendezvous circuit circ. On
+ * success, 0 is returned else -1 and the circuit is marked for close. */
+int
+hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
+{
+  ssize_t cell_len = 0;
+  uint8_t cell[RELAY_PAYLOAD_SIZE] = {0};
+
+  tor_assert(circ);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+
+  log_info(LD_REND, "Send an ESTABLISH_RENDEZVOUS cell on circuit %u",
+           TO_CIRCUIT(circ)->n_circ_id);
+
+  /* Set timestamp_dirty, because circuit_expire_building expects it,
+   * and the rend cookie also means we've used the circ. */
+  TO_CIRCUIT(circ)->timestamp_dirty = time(NULL);
+
+  /* We've attempted to use this circuit. Probe it if we fail */
+  pathbias_count_use_attempt(circ);
+
+  /* Generate the RENDEZVOUS_COOKIE and place it in the identifier so we can
+   * complete the handshake when receiving the acknowledgement. */
+  crypto_rand((char *) circ->hs_ident->rendezvous_cookie, HS_REND_COOKIE_LEN);
+  /* Generate the client keypair. No need to be extra strong, not long term */
+  curve25519_keypair_generate(&circ->hs_ident->rendezvous_client_kp, 0);
+
+  cell_len =
+    hs_cell_build_establish_rendezvous(circ->hs_ident->rendezvous_cookie,
+                                       cell);
+  if (BUG(cell_len < 0)) {
+    goto err;
+  }
+
+  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
+                                   RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
+                                   (const char *) cell, cell_len,
+                                   circ->cpath->prev) < 0) {
+    /* Circuit has been marked for close */
+    log_warn(LD_REND, "Unable to send ESTABLISH_RENDEZVOUS cell on "
+                      "circuit %u", TO_CIRCUIT(circ)->n_circ_id);
+    memwipe(cell, 0, cell_len);
+    goto err;
+  }
+
+  memwipe(cell, 0, cell_len);
+  return 0;
+ err:
+  return -1;
 }
 

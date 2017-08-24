@@ -75,6 +75,8 @@ void directory_request_set_rend_query(directory_request_t *req,
                                       const rend_data_t *query);
 void directory_request_upload_set_hs_ident(directory_request_t *req,
                                            const hs_ident_dir_conn_t *ident);
+void directory_request_fetch_set_hs_ident(directory_request_t *req,
+                                          const hs_ident_dir_conn_t *ident);
 
 void directory_request_set_routerstatus(directory_request_t *req,
                                         const routerstatus_t *rs);
@@ -168,6 +170,16 @@ int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
 
 #ifdef DIRECTORY_PRIVATE
 
+/** A structure to hold arguments passed into each directory response
+ * handler */
+typedef struct response_handler_args_t {
+  int status_code;
+  const char *reason;
+  const char *body;
+  size_t body_len;
+  const char *headers;
+} response_handler_args_t;
+
 struct get_handler_args_t;
 STATIC int handle_get_hs_descriptor_v3(dir_connection_t *conn,
                                        const struct get_handler_args_t *args);
@@ -176,10 +188,14 @@ STATIC char *accept_encoding_header(void);
 STATIC int allowed_anonymous_connection_compression_method(compress_method_t);
 STATIC void warn_disallowed_anonymous_compression_method(compress_method_t);
 
+typedef struct response_handler_args_t response_handler_args_t;
+STATIC int handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
+                                          const response_handler_args_t *args);
+
 #endif
 
 #ifdef TOR_UNIT_TESTS
-/* Used only by test_dir.c */
+/* Used only by test_dir.c and test_hs_cache.c */
 
 STATIC int parse_http_url(const char *headers, char **url);
 STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,

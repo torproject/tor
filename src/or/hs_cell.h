@@ -12,10 +12,46 @@
 #include "or.h"
 #include "hs_service.h"
 
+/* An INTRODUCE1 cell requires at least this amount of bytes (see section
+ * 3.2.2 of the specification). Below this value, the cell must be padded. */
+#define HS_CELL_INTRODUCE1_MIN_SIZE 246
+
+/* Status code of an INTRODUCE_ACK cell. */
+typedef enum {
+  HS_CELL_INTRO_ACK_SUCCESS = 0x0000, /* Cell relayed to service. */
+  HS_CELL_INTRO_ACK_FAILURE = 0x0001, /* Service ID not recognized */
+  HS_CELL_INTRO_ACK_BADFMT  = 0x0002, /* Bad message format */
+  HS_CELL_INTRO_ACK_NORELAY = 0x0003, /* Can't relay cell to service */
+} hs_cell_introd_ack_status_t;
+
 /* Onion key type found in the INTRODUCE1 cell. */
 typedef enum {
   HS_CELL_ONION_KEY_TYPE_NTOR = 1,
 } hs_cell_onion_key_type_t;
+
+/* This data structure contains data that we need to build an INTRODUCE1 cell
+ * used by the INTRODUCE1 build function. */
+typedef struct hs_cell_introduce1_data_t {
+  /* Is this a legacy introduction point? */
+  unsigned int is_legacy : 1;
+  /* (Legacy only) The encryption key for a legacy intro point. Only set if
+   * is_legacy is true. */
+  const crypto_pk_t *legacy_key;
+  /* Introduction point authentication public key. */
+  const ed25519_public_key_t *auth_pk;
+  /* Introduction point encryption public key. */
+  const curve25519_public_key_t *enc_pk;
+  /* Subcredentials of the service. */
+  const uint8_t *subcredential;
+  /* Onion public key for the ntor handshake. */
+  const curve25519_public_key_t *onion_pk;
+  /* Rendezvous cookie. */
+  const uint8_t *rendezvous_cookie;
+  /* Public key put before the encrypted data (CLIENT_PK). */
+  const curve25519_keypair_t *client_kp;
+  /* Rendezvous point link specifiers. */
+  smartlist_t *link_specifiers;
+} hs_cell_introduce1_data_t;
 
 /* This data structure contains data that we need to parse an INTRODUCE2 cell
  * which is used by the INTRODUCE2 cell parsing function. On a successful
@@ -63,6 +99,10 @@ ssize_t hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
                                   const uint8_t *rendezvous_handshake_info,
                                   size_t rendezvous_handshake_info_len,
                                   uint8_t *cell_out);
+ssize_t hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
+                                 uint8_t *cell_out);
+ssize_t hs_cell_build_establish_rendezvous(const uint8_t *rendezvous_cookie,
+                                           uint8_t *cell_out);
 
 /* Parse cell API. */
 ssize_t hs_cell_parse_intro_established(const uint8_t *payload,
@@ -70,6 +110,13 @@ ssize_t hs_cell_parse_intro_established(const uint8_t *payload,
 ssize_t hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
                                  const origin_circuit_t *circ,
                                  const hs_service_t *service);
+int hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len);
+int hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
+                              uint8_t *handshake_info,
+                              size_t handshake_info_len);
+
+/* Util API. */
+void hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data);
 
 #endif /* TOR_HS_CELL_H */
 

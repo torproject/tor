@@ -238,6 +238,27 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
   return;
 }
 
+/** Recompute all node hsdir indices. */
+void
+nodelist_recompute_all_hsdir_indices(void)
+{
+  networkstatus_t *consensus;
+  if (!the_nodelist) {
+    return;
+  }
+
+  /* Get a live consensus. Abort if not found */
+  consensus = networkstatus_get_live_consensus(approx_time());
+  if (!consensus) {
+    return;
+  }
+
+  /* Recompute all hsdir indices */
+  SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
+    node_set_hsdir_index(node, consensus);
+  } SMARTLIST_FOREACH_END(node);
+}
+
 /** Called when a node's address changes. */
 static void
 node_addrs_changed(node_t *node)
@@ -1741,8 +1762,8 @@ static char dir_info_status[512] = "";
  * no exits in the consensus."
  * To obtain the final weighted bandwidth, we multiply the
  * weighted bandwidth fraction for each position (guard, middle, exit). */
-int
-router_have_minimum_dir_info(void)
+MOCK_IMPL(int,
+router_have_minimum_dir_info,(void))
 {
   static int logged_delay=0;
   const char *delay_fetches_msg = NULL;
@@ -1789,6 +1810,7 @@ router_dir_info_changed(void)
 {
   need_to_update_have_min_dir_info = 1;
   rend_hsdir_routers_changed();
+  hs_hsdir_set_changed_consider_reupload();
 }
 
 /** Return a string describing what we're missing before we have enough

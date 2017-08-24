@@ -18,6 +18,7 @@
 #include "directory.h"
 #include "hs_common.h"
 #include "hs_circuit.h"
+#include "hs_client.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -42,7 +43,7 @@ rend_client_purge_state(void)
   rend_cache_purge();
   rend_cache_failure_purge();
   rend_client_cancel_descriptor_fetches();
-  rend_client_purge_last_hid_serv_requests();
+  hs_purge_last_hid_serv_requests();
 }
 
 /** Called when we've established a circuit to an introduction point:
@@ -87,46 +88,6 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
   }
 
   return 0;
-}
-
-/** Extend the introduction circuit <b>circ</b> to another valid
- * introduction point for the hidden service it is trying to connect
- * to, or mark it and launch a new circuit if we can't extend it.
- * Return 0 on success or possible success.  Return -1 and mark the
- * introduction circuit for close on permanent failure.
- *
- * On failure, the caller is responsible for marking the associated
- * rendezvous circuit for close. */
-static int
-rend_client_reextend_intro_circuit(origin_circuit_t *circ)
-{
-  extend_info_t *extend_info;
-  int result;
-  extend_info = rend_client_get_random_intro(circ->rend_data);
-  if (!extend_info) {
-    log_warn(LD_REND,
-             "No usable introduction points left for %s. Closing.",
-             safe_str_client(rend_data_get_address(circ->rend_data)));
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-    return -1;
-  }
-  // XXX: should we not re-extend if hs_circ_has_timed_out?
-  if (circ->remaining_relay_early_cells) {
-    log_info(LD_REND,
-             "Re-extending circ %u, this time to %s.",
-             (unsigned)circ->base_.n_circ_id,
-             safe_str_client(extend_info_describe(extend_info)));
-    result = circuit_extend_to_new_exit(circ, extend_info);
-  } else {
-    log_info(LD_REND,
-             "Closing intro circ %u (out of RELAY_EARLY cells).",
-             (unsigned)circ->base_.n_circ_id);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
-    /* connection_ap_handshake_attach_circuit will launch a new intro circ. */
-    result = 0;
-  }
-  extend_info_free(extend_info);
-  return result;
 }
 
 /** Called when we're trying to connect an ap conn; sends an INTRODUCE1 cell
@@ -202,7 +163,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                    introcirc->build_state->chosen_exit)),
              smartlist_len(entry->parsed->intro_nodes));
 
-    if (rend_client_reextend_intro_circuit(introcirc)) {
+    if (hs_client_reextend_intro_circuit(introcirc)) {
       status = -2;
       goto perm_err;
     } else {
@@ -391,22 +352,10 @@ rend_client_introduction_acked(origin_circuit_t *circ,
   origin_circuit_t *rendcirc;
   (void) request; // XXXX Use this.
 
-  if (circ->base_.purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
-    log_warn(LD_PROTOCOL,
-             "Received REND_INTRODUCE_ACK on unexpected circuit %u.",
-             (unsigned)circ->base_.n_circ_id);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    return -1;
-  }
-
   tor_assert(circ->build_state);
   tor_assert(circ->build_state->chosen_exit);
   assert_circ_anonymity_ok(circ, options);
   tor_assert(circ->rend_data);
-
-  /* For path bias: This circuit was used successfully. Valid
-   * nacks and acks count. */
-  pathbias_mark_use_success(circ);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
@@ -449,7 +398,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
                                              INTRO_POINT_FAILURE_GENERIC)>0) {
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
-      int result = rend_client_reextend_intro_circuit(circ);
+      int result = hs_client_reextend_intro_circuit(circ);
       /* XXXX If that call failed, should we close the rend circuit,
        * too? */
       return result;
@@ -463,230 +412,6 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     }
   }
   return 0;
-}
-
-/** The period for which a hidden service directory cannot be queried for
- * the same descriptor ID again. */
-#define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
-/** Test networks generate a new consensus every 5 or 10 seconds.
- * So allow them to requery HSDirs much faster. */
-#define REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING (5)
-
-/** Return the period for which a hidden service directory cannot be queried
- * for the same descriptor ID again, taking TestingTorNetwork into account. */
-static time_t
-hsdir_requery_period(const or_options_t *options)
-{
-  tor_assert(options);
-
-  if (options->TestingTorNetwork) {
-    return REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING;
-  } else {
-    return REND_HID_SERV_DIR_REQUERY_PERIOD;
-  }
-}
-
-/** Contains the last request times to hidden service directories for
- * certain queries; each key is a string consisting of the
- * concatenation of a base32-encoded HS directory identity digest and
- * base32-encoded HS descriptor ID; each value is a pointer to a time_t
- * holding the time of the last request for that descriptor ID to that
- * HS directory. */
-static strmap_t *last_hid_serv_requests_ = NULL;
-
-/** Returns last_hid_serv_requests_, initializing it to a new strmap if
- * necessary. */
-static strmap_t *
-get_last_hid_serv_requests(void)
-{
-  if (!last_hid_serv_requests_)
-    last_hid_serv_requests_ = strmap_new();
-  return last_hid_serv_requests_;
-}
-
-#define LAST_HID_SERV_REQUEST_KEY_LEN (REND_DESC_ID_V2_LEN_BASE32 + \
-                                       REND_DESC_ID_V2_LEN_BASE32)
-
-/** Look up the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
- * assign the current time <b>now</b> and return that. Otherwise, return the
- * most recent request time, or 0 if no such request has been sent before.
- */
-static time_t
-lookup_last_hid_serv_request(routerstatus_t *hs_dir,
-                             const char *desc_id_base32,
-                             time_t now, int set)
-{
-  char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  char hsdir_desc_comb_id[LAST_HID_SERV_REQUEST_KEY_LEN + 1];
-  time_t *last_request_ptr;
-  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
-  base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
-                hs_dir->identity_digest, DIGEST_LEN);
-  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
-               hsdir_id_base32,
-               desc_id_base32);
-  /* XXX++?? tor_assert(strlen(hsdir_desc_comb_id) ==
-                       LAST_HID_SERV_REQUEST_KEY_LEN); */
-  if (set) {
-    time_t *oldptr;
-    last_request_ptr = tor_malloc_zero(sizeof(time_t));
-    *last_request_ptr = now;
-    oldptr = strmap_set(last_hid_serv_requests, hsdir_desc_comb_id,
-                        last_request_ptr);
-    tor_free(oldptr);
-  } else
-    last_request_ptr = strmap_get_lc(last_hid_serv_requests,
-                                     hsdir_desc_comb_id);
-  return (last_request_ptr) ? *last_request_ptr : 0;
-}
-
-/** Clean the history of request times to hidden service directories, so that
- * it does not contain requests older than REND_HID_SERV_DIR_REQUERY_PERIOD
- * seconds any more. */
-static void
-directory_clean_last_hid_serv_requests(time_t now)
-{
-  strmap_iter_t *iter;
-  time_t cutoff = now - hsdir_requery_period(get_options());
-  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
-  for (iter = strmap_iter_init(last_hid_serv_requests);
-       !strmap_iter_done(iter); ) {
-    const char *key;
-    void *val;
-    time_t *ent;
-    strmap_iter_get(iter, &key, &val);
-    ent = (time_t *) val;
-    if (*ent < cutoff) {
-      iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
-      tor_free(ent);
-    } else {
-      iter = strmap_iter_next(last_hid_serv_requests, iter);
-    }
-  }
-}
-
-/** Remove all requests related to the descriptor ID <b>desc_id</b> from the
- * history of times of requests to hidden service directories.
- * <b>desc_id</b> is an unencoded descriptor ID of size DIGEST_LEN.
- *
- * This is called from rend_client_note_connection_attempt_ended(), which
- * must be idempotent, so any future changes to this function must leave it
- * idempotent too. */
-static void
-purge_hid_serv_from_last_hid_serv_requests(const char *desc_id)
-{
-  strmap_iter_t *iter;
-  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
-  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-
-  /* Key is stored with the base32 encoded desc_id. */
-  base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                DIGEST_LEN);
-  for (iter = strmap_iter_init(last_hid_serv_requests);
-       !strmap_iter_done(iter); ) {
-    const char *key;
-    void *val;
-    strmap_iter_get(iter, &key, &val);
-    /* XXX++?? tor_assert(strlen(key) == LAST_HID_SERV_REQUEST_KEY_LEN); */
-    if (tor_memeq(key + LAST_HID_SERV_REQUEST_KEY_LEN -
-                  REND_DESC_ID_V2_LEN_BASE32,
-                  desc_id_base32,
-                  REND_DESC_ID_V2_LEN_BASE32)) {
-      iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
-      tor_free(val);
-    } else {
-      iter = strmap_iter_next(last_hid_serv_requests, iter);
-    }
-  }
-}
-
-/** Purge the history of request times to hidden service directories,
- * so that future lookups of an HS descriptor will not fail because we
- * accessed all of the HSDir relays responsible for the descriptor
- * recently. */
-void
-rend_client_purge_last_hid_serv_requests(void)
-{
-  /* Don't create the table if it doesn't exist yet (and it may very
-   * well not exist if the user hasn't accessed any HSes)... */
-  strmap_t *old_last_hid_serv_requests = last_hid_serv_requests_;
-  /* ... and let get_last_hid_serv_requests re-create it for us if
-   * necessary. */
-  last_hid_serv_requests_ = NULL;
-
-  if (old_last_hid_serv_requests != NULL) {
-    log_info(LD_REND, "Purging client last-HS-desc-request-time table");
-    strmap_free(old_last_hid_serv_requests, tor_free_);
-  }
-}
-
-/** This returns a good valid hs dir that should be used for the given
- * descriptor id.
- *
- * Return NULL on error else the hsdir node pointer. */
-static routerstatus_t *
-pick_hsdir(const char *desc_id, const char *desc_id_base32)
-{
-  smartlist_t *responsible_dirs = smartlist_new();
-  smartlist_t *usable_responsible_dirs = smartlist_new();
-  const or_options_t *options = get_options();
-  routerstatus_t *hs_dir;
-  time_t now = time(NULL);
-  int excluded_some;
-
-  tor_assert(desc_id);
-  tor_assert(desc_id_base32);
-
-  /* Determine responsible dirs. Even if we can't get all we want, work with
-   * the ones we have. If it's empty, we'll notice below. */
-  hid_serv_get_responsible_directories(responsible_dirs, desc_id);
-
-  /* Clean request history first. */
-  directory_clean_last_hid_serv_requests(now);
-
-  /* Only select those hidden service directories to which we did not send a
-   * request recently and for which we have a router descriptor here. */
-  SMARTLIST_FOREACH_BEGIN(responsible_dirs, routerstatus_t *, dir) {
-    time_t last = lookup_last_hid_serv_request(dir, desc_id_base32,
-                                               0, 0);
-    const node_t *node = node_get_by_id(dir->identity_digest);
-    if (last + hsdir_requery_period(options) >= now ||
-        !node || !node_has_descriptor(node)) {
-      SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
-      continue;
-    }
-    if (!routerset_contains_node(options->ExcludeNodes, node)) {
-      smartlist_add(usable_responsible_dirs, dir);
-    }
-  } SMARTLIST_FOREACH_END(dir);
-
-  excluded_some =
-    smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
-
-  hs_dir = smartlist_choose(usable_responsible_dirs);
-  if (!hs_dir && !options->StrictNodes) {
-    hs_dir = smartlist_choose(responsible_dirs);
-  }
-
-  smartlist_free(responsible_dirs);
-  smartlist_free(usable_responsible_dirs);
-  if (!hs_dir) {
-    log_info(LD_REND, "Could not pick one of the responsible hidden "
-                      "service directories, because we requested them all "
-                      "recently without success.");
-    if (options->StrictNodes && excluded_some) {
-      log_warn(LD_REND, "Could not pick a hidden service directory for the "
-               "requested hidden service: they are all either down or "
-               "excluded, and StrictNodes is set.");
-    }
-  } else {
-    /* Remember that we are requesting a descriptor from this hidden service
-     * directory now. */
-    lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
-  }
-
-  return hs_dir;
 }
 
 /** Determine the responsible hidden service directories for <b>desc_id</b>
@@ -721,7 +446,12 @@ directory_get_from_hs_dir(const char *desc_id,
 
   /* Automatically pick an hs dir if none given. */
   if (!rs_hsdir) {
-    hs_dir = pick_hsdir(desc_id, desc_id_base32);
+    /* Determine responsible dirs. Even if we can't get all we want, work with
+     * the ones we have. If it's empty, we'll notice in hs_pick_hsdir(). */
+    smartlist_t *responsible_dirs = smartlist_new();
+    hid_serv_get_responsible_directories(responsible_dirs, desc_id);
+
+    hs_dir = hs_pick_hsdir(responsible_dirs, desc_id_base32);
     if (!hs_dir) {
       /* No suitable hs dir can be found, stop right now. */
       control_event_hs_descriptor_failed(rend_query, NULL, "QUERY_NO_HSDIR");
@@ -784,6 +514,20 @@ directory_get_from_hs_dir(const char *desc_id,
                                         hs_dir->identity_digest,
                                         desc_id_base32);
   return 1;
+}
+
+/** Remove tracked HSDir requests from our history for this hidden service
+ *  descriptor <b>desc_id</b> (of size DIGEST_LEN) */
+static void
+purge_v2_hidserv_req(const char *desc_id)
+{
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+
+  /* The hsdir request tracker stores v2 keys using the base32 encoded
+     desc_id. Do it: */
+  base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                DIGEST_LEN);
+  hs_purge_hid_serv_from_last_hid_serv_requests(desc_id_base32);
 }
 
 /** Fetch a v2 descriptor using the given descriptor id. If any hsdir(s) are
@@ -860,8 +604,7 @@ fetch_v2_desc_by_addr(rend_data_t *rend_query, smartlist_t *hsdirs)
                    sizeof(descriptor_id)) != 0) {
       /* Not equal from what we currently have so purge the last hid serv
        * request cache and update the descriptor ID with the new value. */
-      purge_hid_serv_from_last_hid_serv_requests(
-                                     rend_data->descriptor_id[chosen_replica]);
+      purge_v2_hidserv_req(rend_data->descriptor_id[chosen_replica]);
       memcpy(rend_data->descriptor_id[chosen_replica], descriptor_id,
              sizeof(rend_data->descriptor_id[chosen_replica]));
     }
@@ -1107,65 +850,16 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
   return 1;
 }
 
-/** Called when we receive a RENDEZVOUS_ESTABLISHED cell; changes the state of
- * the circuit to C_REND_READY.
- */
-int
-rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
-                             size_t request_len)
-{
-  (void) request;
-  (void) request_len;
-  /* we just got an ack for our establish-rendezvous. switch purposes. */
-  if (circ->base_.purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
-    log_warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
-             "Closing circ.");
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    return -1;
-  }
-  log_info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
-           "rendezvous.");
-  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_READY);
-  /* Set timestamp_dirty, because circuit_expire_building expects it
-   * to specify when a circuit entered the _C_REND_READY state. */
-  circ->base_.timestamp_dirty = time(NULL);
-
-  /* From a path bias point of view, this circuit is now successfully used.
-   * Waiting any longer opens us up to attacks from malicious hidden services.
-   * They could induce the client to attempt to connect to their hidden
-   * service and never reply to the client's rend requests */
-  pathbias_mark_use_success(circ);
-
-  /* XXXX++ This is a pretty brute-force approach. It'd be better to
-   * attach only the connections that are waiting on this circuit, rather
-   * than trying to attach them all. See comments bug 743. */
-  /* If we already have the introduction circuit built, make sure we send
-   * the INTRODUCE cell _now_ */
-  connection_ap_attach_pending(1);
-  return 0;
-}
-
 /** The service sent us a rendezvous cell; join the circuits. */
 int
 rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
                                size_t request_len)
 {
-  if ((circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY &&
-       circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
-      || !circ->build_state->pending_final_cpath) {
-    log_warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
-             "expecting it. Closing.");
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
-    return -1;
-  }
-
   if (request_len != DH_KEY_LEN+DIGEST_LEN) {
     log_warn(LD_PROTOCOL,"Incorrect length (%d) on RENDEZVOUS2 cell.",
              (int)request_len);
     goto err;
   }
-
-  log_info(LD_REND,"Got RENDEZVOUS2 cell from hidden service.");
 
   if (hs_circuit_setup_e2e_rend_circ_legacy_client(circ, request) < 0) {
     log_warn(LD_GENERAL, "Failed to setup circ");
@@ -1260,14 +954,14 @@ rend_client_note_connection_attempt_ended(const rend_data_t *rend_data)
     for (replica = 0; replica < ARRAY_LENGTH(rend_data_v2->descriptor_id);
          replica++) {
       const char *desc_id = rend_data_v2->descriptor_id[replica];
-      purge_hid_serv_from_last_hid_serv_requests(desc_id);
+      purge_v2_hidserv_req(desc_id);
     }
     log_info(LD_REND, "Connection attempt for %s has ended; "
              "cleaning up temporary state.",
              safe_str_client(onion_address));
   } else {
     /* We only have an ID for a fetch. Probably used by HSFETCH. */
-    purge_hid_serv_from_last_hid_serv_requests(rend_data_v2->desc_id_fetch);
+    purge_v2_hidserv_req(rend_data_v2->desc_id_fetch);
   }
 }
 
@@ -1466,7 +1160,7 @@ rend_parse_service_authorization(const or_options_t *options,
       goto err;
     }
     strlcpy(auth->onion_address, onion_address, REND_SERVICE_ID_LEN_BASE32+1);
-    if (!rend_valid_service_id(auth->onion_address)) {
+    if (!rend_valid_v2_service_id(auth->onion_address)) {
       log_warn(LD_CONFIG, "Onion address has wrong format: '%s'",
                onion_address);
       goto err;

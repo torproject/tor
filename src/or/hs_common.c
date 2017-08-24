@@ -14,16 +14,24 @@
 #include "or.h"
 
 #include "config.h"
+#include "circuitbuild.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_ident.h"
 #include "hs_service.h"
+#include "policies.h"
 #include "rendcommon.h"
 #include "rendservice.h"
+#include "routerset.h"
 #include "router.h"
+#include "routerset.h"
 #include "shared_random.h"
 #include "shared_random_state.h"
+
+/* Trunnel */
+#include "ed25519_cert.h"
 
 /* Ed25519 Basepoint value. Taken from section 5 of
  * https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03 */
@@ -1180,9 +1188,10 @@ hs_get_hsdir_spread_store(void)
 }
 
 /** <b>node</b> is an HSDir so make sure that we have assigned an hsdir index.
+ *  If <b>is_for_next_period</b> is set, also check the next HSDir index field.
  *  Return 0 if everything is as expected, else return -1. */
 static int
-node_has_hsdir_index(const node_t *node)
+node_has_hsdir_index(const node_t *node, int is_for_next_period)
 {
   tor_assert(node_supports_v3_hsdir(node));
 
@@ -1196,6 +1205,12 @@ node_has_hsdir_index(const node_t *node)
    * hsdir index. If not, something went wrong, so BUG out. */
   if (BUG(node->hsdir_index == NULL) ||
       BUG(tor_mem_is_zero((const char*)node->hsdir_index->current,
+                          DIGEST256_LEN))) {
+    return 0;
+  }
+
+  if (is_for_next_period &&
+      BUG(tor_mem_is_zero((const char*)node->hsdir_index->next,
                           DIGEST256_LEN))) {
     return 0;
   }
@@ -1244,7 +1259,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
       node_t *n = node_get_mutable_by_id(rs->identity_digest);
       tor_assert(n);
       if (node_supports_v3_hsdir(n) && rs->is_hs_dir) {
-        if (!node_has_hsdir_index(n)) {
+        if (!node_has_hsdir_index(n, is_next_period)) {
           log_info(LD_GENERAL, "Node %s was found without hsdir index.",
                    node_describe(n));
           continue;
@@ -1312,6 +1327,361 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
  done:
   smartlist_free(sorted_nodes);
 }
+
+/*********************** HSDir request tracking ***************************/
+
+/** Return the period for which a hidden service directory cannot be queried
+ * for the same descriptor ID again, taking TestingTorNetwork into account. */
+time_t
+hs_hsdir_requery_period(const or_options_t *options)
+{
+  tor_assert(options);
+
+  if (options->TestingTorNetwork) {
+    return REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING;
+  } else {
+    return REND_HID_SERV_DIR_REQUERY_PERIOD;
+  }
+}
+
+/** Tracks requests for fetching hidden service descriptors. It's used by
+ *  hidden service clients, to avoid querying HSDirs that have already failed
+ *  giving back a descriptor. The same data structure is used to track both v2
+ *  and v3 HS descriptor requests.
+ *
+ * The string map is a key/value store that contains the last request times to
+ * hidden service directories for certain queries. Specifically:
+ *
+ *   key = base32(hsdir_identity) + base32(hs_identity)
+ *   value = time_t of last request for that hs_identity to that HSDir
+ *
+ * where 'hsdir_identity' is the identity digest of the HSDir node, and
+ * 'hs_identity' is the descriptor ID of the HS in the v2 case, or the ed25519
+ * identity public key of the HS in the v3 case. */
+static strmap_t *last_hid_serv_requests_ = NULL;
+
+/** Returns last_hid_serv_requests_, initializing it to a new strmap if
+ * necessary. */
+STATIC strmap_t *
+get_last_hid_serv_requests(void)
+{
+  if (!last_hid_serv_requests_)
+    last_hid_serv_requests_ = strmap_new();
+  return last_hid_serv_requests_;
+}
+
+/** Look up the last request time to hidden service directory <b>hs_dir</b>
+ * for descriptor request key <b>req_key_str</b> which is the descriptor ID
+ * for a v2 service or the blinded key for v3. If <b>set</b> is non-zero,
+ * assign the current time <b>now</b> and return that.  Otherwise, return the
+ * most recent request time, or 0 if no such request has been sent before. */
+time_t
+hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
+                                const char *req_key_str,
+                                time_t now, int set)
+{
+  char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+  char *hsdir_desc_comb_id = NULL;
+  time_t *last_request_ptr;
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
+
+  /* Create the key */
+  base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
+                hs_dir->identity_digest, DIGEST_LEN);
+  tor_asprintf(&hsdir_desc_comb_id, "%s%s", hsdir_id_base32, req_key_str);
+
+  if (set) {
+    time_t *oldptr;
+    last_request_ptr = tor_malloc_zero(sizeof(time_t));
+    *last_request_ptr = now;
+    oldptr = strmap_set(last_hid_serv_requests, hsdir_desc_comb_id,
+                        last_request_ptr);
+    tor_free(oldptr);
+  } else {
+    last_request_ptr = strmap_get(last_hid_serv_requests,
+                                  hsdir_desc_comb_id);
+  }
+
+  tor_free(hsdir_desc_comb_id);
+  return (last_request_ptr) ? *last_request_ptr : 0;
+}
+
+/** Clean the history of request times to hidden service directories, so that
+ * it does not contain requests older than REND_HID_SERV_DIR_REQUERY_PERIOD
+ * seconds any more. */
+void
+hs_clean_last_hid_serv_requests(time_t now)
+{
+  strmap_iter_t *iter;
+  time_t cutoff = now - hs_hsdir_requery_period(get_options());
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
+  for (iter = strmap_iter_init(last_hid_serv_requests);
+       !strmap_iter_done(iter); ) {
+    const char *key;
+    void *val;
+    time_t *ent;
+    strmap_iter_get(iter, &key, &val);
+    ent = (time_t *) val;
+    if (*ent < cutoff) {
+      iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
+      tor_free(ent);
+    } else {
+      iter = strmap_iter_next(last_hid_serv_requests, iter);
+    }
+  }
+}
+
+/** Remove all requests related to the descriptor request key string
+ * <b>req_key_str</b> from the history of times of requests to hidden service
+ * directories.
+ *
+ * This is called from rend_client_note_connection_attempt_ended(), which
+ * must be idempotent, so any future changes to this function must leave it
+ * idempotent too. */
+void
+hs_purge_hid_serv_from_last_hid_serv_requests(const char *req_key_str)
+{
+  strmap_iter_t *iter;
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
+
+  for (iter = strmap_iter_init(last_hid_serv_requests);
+       !strmap_iter_done(iter); ) {
+    const char *key;
+    void *val;
+    strmap_iter_get(iter, &key, &val);
+
+    /* XXX: The use of REND_DESC_ID_V2_LEN_BASE32 is very wrong in terms of
+     * semantic, see #23305. */
+
+    /* Length check on the strings we are about to compare. The "key" contains
+     * both the base32 HSDir identity digest and the requested key at the
+     * directory. The "req_key_str" can either be a base32 descriptor ID or a
+     * base64 blinded key which should be the second part of "key". BUG on
+     * this check because both strings are internally controlled so this
+     * should never happen. */
+    if (BUG((strlen(req_key_str) + REND_DESC_ID_V2_LEN_BASE32) <
+            strlen(key))) {
+      iter = strmap_iter_next(last_hid_serv_requests, iter);
+      continue;
+    }
+
+    /* Check if the tracked request matches our request key */
+    if (tor_memeq(key + REND_DESC_ID_V2_LEN_BASE32, req_key_str,
+                  strlen(req_key_str))) {
+      iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
+      tor_free(val);
+    } else {
+      iter = strmap_iter_next(last_hid_serv_requests, iter);
+    }
+  }
+}
+
+/** Purge the history of request times to hidden service directories,
+ * so that future lookups of an HS descriptor will not fail because we
+ * accessed all of the HSDir relays responsible for the descriptor
+ * recently. */
+void
+hs_purge_last_hid_serv_requests(void)
+{
+ /* Don't create the table if it doesn't exist yet (and it may very
+   * well not exist if the user hasn't accessed any HSes)... */
+  strmap_t *old_last_hid_serv_requests = last_hid_serv_requests_;
+  /* ... and let get_last_hid_serv_requests re-create it for us if
+   * necessary. */
+  last_hid_serv_requests_ = NULL;
+
+  if (old_last_hid_serv_requests != NULL) {
+    log_info(LD_REND, "Purging client last-HS-desc-request-time table");
+    strmap_free(old_last_hid_serv_requests, tor_free_);
+  }
+}
+
+/***********************************************************************/
+
+/** Given the list of responsible HSDirs in <b>responsible_dirs</b>, pick the
+ *  one that we should use to fetch a descriptor right now. Take into account
+ *  previous failed attempts at fetching this descriptor from HSDirs using the
+ *  string identifier <b>req_key_str</b>.
+ *
+ *  Steals ownership of <b>responsible_dirs</b>.
+ *
+ *  Return the routerstatus of the chosen HSDir if successful, otherwise return
+ *  NULL if no HSDirs are worth trying right now. */
+routerstatus_t *
+hs_pick_hsdir(smartlist_t *responsible_dirs, const char *req_key_str)
+{
+  smartlist_t *usable_responsible_dirs = smartlist_new();
+  const or_options_t *options = get_options();
+  routerstatus_t *hs_dir;
+  time_t now = time(NULL);
+  int excluded_some;
+
+  tor_assert(req_key_str);
+
+  /* Clean outdated request history first. */
+  hs_clean_last_hid_serv_requests(now);
+
+  /* Only select those hidden service directories to which we did not send a
+   * request recently and for which we have a router descriptor here. */
+  SMARTLIST_FOREACH_BEGIN(responsible_dirs, routerstatus_t *, dir) {
+    time_t last = hs_lookup_last_hid_serv_request(dir, req_key_str, 0, 0);
+    const node_t *node = node_get_by_id(dir->identity_digest);
+    if (last + hs_hsdir_requery_period(options) >= now ||
+        !node || !node_has_descriptor(node)) {
+      SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+      continue;
+    }
+    if (!routerset_contains_node(options->ExcludeNodes, node)) {
+      smartlist_add(usable_responsible_dirs, dir);
+    }
+  } SMARTLIST_FOREACH_END(dir);
+
+  excluded_some =
+    smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
+
+  hs_dir = smartlist_choose(usable_responsible_dirs);
+  if (!hs_dir && !options->StrictNodes) {
+    hs_dir = smartlist_choose(responsible_dirs);
+  }
+
+  smartlist_free(responsible_dirs);
+  smartlist_free(usable_responsible_dirs);
+  if (!hs_dir) {
+    log_info(LD_REND, "Could not pick one of the responsible hidden "
+                      "service directories, because we requested them all "
+                      "recently without success.");
+    if (options->StrictNodes && excluded_some) {
+      log_warn(LD_REND, "Could not pick a hidden service directory for the "
+               "requested hidden service: they are all either down or "
+               "excluded, and StrictNodes is set.");
+    }
+  } else {
+    /* Remember that we are requesting a descriptor from this hidden service
+     * directory now. */
+    hs_lookup_last_hid_serv_request(hs_dir, req_key_str, now, 1);
+  }
+
+  return hs_dir;
+}
+
+/* From a list of link specifier, an onion key and if we are requesting a
+ * direct connection (ex: single onion service), return a newly allocated
+ * extend_info_t object. This function checks the firewall policies and if we
+ * are allowed to extend to the chosen address.
+ *
+ *  if either IPv4 or legacy ID is missing, error.
+ *  if not direct_conn, IPv4 is prefered.
+ *  if direct_conn, IPv6 is prefered if we have one available.
+ *  if firewall does not allow the chosen address, error.
+ *
+ * Return NULL if we can fulfill the conditions. */
+extend_info_t *
+hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
+                               const curve25519_public_key_t *onion_key,
+                               int direct_conn)
+{
+  int have_v4 = 0, have_v6 = 0, have_legacy_id = 0, have_ed25519_id = 0;
+  char legacy_id[DIGEST_LEN] = {0};
+  uint16_t port_v4 = 0, port_v6 = 0, port = 0;
+  tor_addr_t addr_v4, addr_v6, *addr = NULL;
+  ed25519_public_key_t ed25519_pk;
+  extend_info_t *info = NULL;
+
+  tor_assert(lspecs);
+
+  SMARTLIST_FOREACH_BEGIN(lspecs, const link_specifier_t *, ls) {
+    switch (link_specifier_get_ls_type(ls)) {
+    case LS_IPV4:
+      /* Skip if we already seen a v4. */
+      if (have_v4) continue;
+      tor_addr_from_ipv4h(&addr_v4,
+                          link_specifier_get_un_ipv4_addr(ls));
+      port_v4 = link_specifier_get_un_ipv4_port(ls);
+      have_v4 = 1;
+      break;
+    case LS_IPV6:
+      /* Skip if we already seen a v6. */
+      if (have_v6) continue;
+      tor_addr_from_ipv6_bytes(&addr_v6,
+          (const char *) link_specifier_getconstarray_un_ipv6_addr(ls));
+      port_v6 = link_specifier_get_un_ipv6_port(ls);
+      have_v6 = 1;
+      break;
+    case LS_LEGACY_ID:
+      /* Make sure we do have enough bytes for the legacy ID. */
+      if (link_specifier_getlen_un_legacy_id(ls) < sizeof(legacy_id)) {
+        break;
+      }
+      memcpy(legacy_id, link_specifier_getconstarray_un_legacy_id(ls),
+             sizeof(legacy_id));
+      have_legacy_id = 1;
+      break;
+    case LS_ED25519_ID:
+      memcpy(ed25519_pk.pubkey,
+             link_specifier_getconstarray_un_ed25519_id(ls),
+             ED25519_PUBKEY_LEN);
+      have_ed25519_id = 1;
+      break;
+    default:
+      /* Ignore unknown. */
+      break;
+    }
+  } SMARTLIST_FOREACH_END(ls);
+
+  /* IPv4 and legacy ID are mandatory. */
+  if (!have_v4 || !have_legacy_id) {
+    goto done;
+  }
+  /* By default, we pick IPv4 but this might change to v6 if certain
+   * conditions are met. */
+  addr = &addr_v4; port = port_v4;
+
+  /* If we are NOT in a direct connection, we'll use our Guard and a 3-hop
+   * circuit so we can't extend in IPv6. And at this point, we do have an IPv4
+   * address available so go to validation. */
+  if (!direct_conn) {
+    goto validate;
+  }
+
+  /* From this point on, we have a request for a direct connection to the
+   * rendezvous point so make sure we can actually connect through our
+   * firewall. We'll prefer IPv6. */
+
+  /* IPv6 test. */
+  if (have_v6 &&
+      fascist_firewall_allows_address_addr(&addr_v6, port_v6,
+                                           FIREWALL_OR_CONNECTION, 1, 1)) {
+    /* Direct connection and we can reach it in IPv6 so go for it. */
+    addr = &addr_v6; port = port_v6;
+    goto validate;
+  }
+  /* IPv4 test and we are sure we have a v4 because of the check above. */
+  if (fascist_firewall_allows_address_addr(&addr_v4, port_v4,
+                                           FIREWALL_OR_CONNECTION, 0, 0)) {
+    /* Direct connection and we can reach it in IPv4 so go for it. */
+    addr = &addr_v4; port = port_v4;
+    goto validate;
+  }
+
+ validate:
+  /* We'll validate now that the address we've picked isn't a private one. If
+   * it is, are we allowing to extend to private address? */
+  if (!extend_info_addr_is_allowed(addr)) {
+    log_warn(LD_REND, "Requested address is private and it is not "
+                      "allowed to extend to it: %s:%u",
+             fmt_addr(&addr_v4), port_v4);
+    goto done;
+  }
+
+  /* We do have everything for which we think we can connect successfully. */
+  info = extend_info_new(NULL, legacy_id,
+                         (have_ed25519_id) ? &ed25519_pk : NULL, NULL,
+                         onion_key, addr, port);
+ done:
+  return info;
+}
+
+/***********************************************************************/
 
 /* Initialize the entire HS subsytem. This is called in tor_init() before any
  * torrc options are loaded. Only for >= v3. */

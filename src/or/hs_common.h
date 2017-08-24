@@ -187,6 +187,8 @@ const char *rend_data_get_desc_id(const rend_data_t *rend_data,
 const uint8_t *rend_data_get_pk_digest(const rend_data_t *rend_data,
                                        size_t *len_out);
 
+routerstatus_t *pick_hsdir(const char *desc_id, const char *desc_id_base32);
+
 void hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                           const ed25519_public_key_t *blinded_pk,
                           uint8_t *subcred_out);
@@ -219,18 +221,40 @@ int32_t hs_get_hsdir_spread_store(void);
 void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
                                uint64_t time_period_num, int is_next_period,
                                int is_client, smartlist_t *responsible_dirs);
+routerstatus_t *hs_pick_hsdir(smartlist_t *responsible_dirs,
+                              const char *req_key_str);
+
+time_t hs_hsdir_requery_period(const or_options_t *options);
+time_t hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
+                                       const char *desc_id_base32,
+                                       time_t now, int set);
+void hs_clean_last_hid_serv_requests(time_t now);
+void hs_purge_hid_serv_from_last_hid_serv_requests(const char *desc_id);
+void hs_purge_last_hid_serv_requests(void);
 
 int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
 
 void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
 void hs_dec_rdv_stream_counter(origin_circuit_t *circ);
 
+extend_info_t *hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
+                                  const curve25519_public_key_t *onion_key,
+                                  int direct_conn);
+
 #ifdef HS_COMMON_PRIVATE
 
 STATIC void get_disaster_srv(uint64_t time_period_num, uint8_t *srv_out);
 
+/** The period for which a hidden service directory cannot be queried for
+ * the same descriptor ID again. */
+#define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
+/** Test networks generate a new consensus every 5 or 10 seconds.
+ * So allow them to requery HSDirs much faster. */
+#define REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING (5)
+
 #ifdef TOR_UNIT_TESTS
 
+STATIC strmap_t *get_last_hid_serv_requests(void);
 STATIC uint64_t get_time_period_length(void);
 
 STATIC uint8_t *get_first_cached_disaster_srv(void);

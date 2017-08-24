@@ -425,7 +425,10 @@ typedef enum {
 #define DIR_PURPOSE_UPLOAD_HSDESC 20
 /** A connection to a hidden service directory: fetch a v3 descriptor. */
 #define DIR_PURPOSE_FETCH_HSDESC 21
-#define DIR_PURPOSE_MAX_ 21
+/** A connection to a directory server: set after a hidden service descriptor
+ * is downloaded. */
+#define DIR_PURPOSE_HAS_FETCHED_HSDESC 22
+#define DIR_PURPOSE_MAX_ 22
 
 /** True iff <b>p</b> is a purpose corresponding to uploading
  * data to a directory server. */

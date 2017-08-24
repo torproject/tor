@@ -180,6 +180,7 @@ static void
 test_rend_token_maps(void *arg)
 {
   or_circuit_t *c1, *c2, *c3, *c4;
+  origin_circuit_t *c5;
   const uint8_t tok1[REND_TOKEN_LEN] = "The cat can't tell y";
   const uint8_t tok2[REND_TOKEN_LEN] = "ou its name, and it ";
   const uint8_t tok3[REND_TOKEN_LEN] = "doesn't really care.";
@@ -194,6 +195,7 @@ test_rend_token_maps(void *arg)
   c2 = or_circuit_new(0, NULL);
   c3 = or_circuit_new(0, NULL);
   c4 = or_circuit_new(0, NULL);
+  c5 = origin_circuit_new();
 
   /* Make sure we really filled up the tok* variables */
   tt_int_op(tok1[REND_TOKEN_LEN-1], OP_EQ, 'y');
@@ -264,6 +266,13 @@ test_rend_token_maps(void *arg)
   tt_ptr_op(TO_CIRCUIT(c4)->hs_token, OP_EQ, NULL);
   tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_intro_circ_v2_relay_side(tok3));
 
+  /* Now let's do a check for the client-side rend circuitmap */
+  c5->base_.purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
+  hs_circuitmap_register_rend_circ_client_side(c5, tok1);
+
+  tt_ptr_op(c5, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok1));
+  tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok2));
+
  done:
   if (c1)
     circuit_free(TO_CIRCUIT(c1));
@@ -273,6 +282,8 @@ test_rend_token_maps(void *arg)
     circuit_free(TO_CIRCUIT(c3));
   if (c4)
     circuit_free(TO_CIRCUIT(c4));
+  if (c5)
+    circuit_free(TO_CIRCUIT(c5));
 }
 
 static void

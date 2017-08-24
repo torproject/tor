@@ -13,6 +13,7 @@
 #define TOR_CIRCUITLIST_H
 
 #include "testsupport.h"
+#include "hs_ident.h"
 
 MOCK_DECL(smartlist_t *, circuit_get_global_list, (void));
 smartlist_t *circuit_get_global_origin_circuit_list(void);

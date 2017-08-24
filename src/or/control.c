@@ -4140,7 +4140,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   /* Extract the first argument (either HSAddress or DescID). */
   arg1 = smartlist_get(args, 0);
   /* Test if it's an HS address without the .onion part. */
-  if (rend_valid_service_id(arg1)) {
+  if (rend_valid_v2_service_id(arg1)) {
     hsaddress = arg1;
   } else if (strcmpstart(arg1, v2_str) == 0 &&
              rend_valid_descriptor_id(arg1 + v2_str_len) &&
@@ -4779,7 +4779,7 @@ handle_control_del_onion(control_connection_t *conn,
     return 0;
 
   const char *service_id = smartlist_get(args, 0);
-  if (!rend_valid_service_id(service_id)) {
+  if (!rend_valid_v2_service_id(service_id)) {
     connection_printf_to_buf(conn, "512 Malformed Onion Service id\r\n");
     goto out;
   }

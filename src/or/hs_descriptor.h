@@ -18,6 +18,9 @@
 #include "crypto_ed25519.h"
 #include "torcert.h"
 
+/* Trunnel */
+struct link_specifier_t;
+
 /* The earliest descriptor format version we support. */
 #define HS_DESC_SUPPORTED_FORMAT_VERSION_MIN 3
 /* The latest descriptor format version we support. */
@@ -211,9 +214,10 @@ hs_desc_link_specifier_t *hs_desc_link_specifier_new(
                                   const extend_info_t *info, uint8_t type);
 void hs_descriptor_clear_intro_points(hs_descriptor_t *desc);
 
-int hs_desc_encode_descriptor(const hs_descriptor_t *desc,
-                              const ed25519_keypair_t *signing_kp,
-                              char **encoded_out);
+MOCK_DECL(int,
+          hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
+                                     const ed25519_keypair_t *signing_kp,
+                                     char **encoded_out));
 
 int hs_desc_decode_descriptor(const char *encoded,
                               const uint8_t *subcredential,
@@ -223,10 +227,14 @@ int hs_desc_decode_plaintext(const char *encoded,
 int hs_desc_decode_encrypted(const hs_descriptor_t *desc,
                              hs_desc_encrypted_data_t *desc_out);
 
+size_t hs_desc_obj_size(const hs_descriptor_t *data);
 size_t hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data);
 
 hs_desc_intro_point_t *hs_desc_intro_point_new(void);
 void hs_desc_intro_point_free(hs_desc_intro_point_t *ip);
+
+link_specifier_t *hs_desc_lspec_to_trunnel(
+                                   const hs_desc_link_specifier_t *spec);
 
 #ifdef HS_DESCRIPTOR_PRIVATE
 

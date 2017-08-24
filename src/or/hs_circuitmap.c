@@ -5,8 +5,10 @@
  * \file hs_circuitmap.c
  *
  * \brief Hidden service circuitmap: A hash table that maps binary tokens to
- *  introduction and rendezvous circuits; it's used both by relays acting as
- *  intro points and rendezvous points, and also by hidden services themselves.
+ *  introduction and rendezvous circuits; it's used:
+ *  (a) by relays acting as intro points and rendezvous points
+ *  (b) by hidden services to find intro and rend circuits and
+ *  (c) by HS clients to find rendezvous circuits.
  **/
 
 #define HS_CIRCUITMAP_PRIVATE
@@ -404,6 +406,37 @@ hs_circuitmap_get_rend_circ_service_side(const uint8_t *cookie)
   return circ;
 }
 
+/* Public function: Return client-side rendezvous circuit with rendezvous
+ * <b>cookie</b>. It will first lookup for the CIRCUIT_PURPOSE_C_REND_READY
+ * purpose and then try for CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED and then
+ * finally tries for CIRCUIT_PURPOSE_C_ESTABLISH_REND.
+ *
+ * Return NULL if no such circuit is found in the circuitmap. */
+origin_circuit_t *
+hs_circuitmap_get_rend_circ_client_side(const uint8_t *cookie)
+{
+  origin_circuit_t *circ = NULL;
+
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_REND_CLIENT_SIDE,
+                                          REND_TOKEN_LEN, cookie,
+                                          CIRCUIT_PURPOSE_C_REND_READY);
+  if (circ) {
+    return circ;
+  }
+
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_REND_CLIENT_SIDE,
+                                          REND_TOKEN_LEN, cookie,
+                                 CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
+  if (circ) {
+    return circ;
+  }
+
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_REND_CLIENT_SIDE,
+                                          REND_TOKEN_LEN, cookie,
+                                          CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  return circ;
+}
+
 /**** Public servide-side setters: */
 
 /* Public function: Register v2 intro circuit with key <b>digest</b> to the
@@ -436,6 +469,21 @@ hs_circuitmap_register_rend_circ_service_side(origin_circuit_t *circ,
 {
   hs_circuitmap_register_circuit(TO_CIRCUIT(circ),
                                  HS_TOKEN_REND_SERVICE_SIDE,
+                                 REND_TOKEN_LEN, cookie);
+}
+
+/* Public function: Register rendezvous circuit with key <b>cookie</b> to the
+ * client-side circuitmap. */
+void
+hs_circuitmap_register_rend_circ_client_side(origin_circuit_t *or_circ,
+                                             const uint8_t *cookie)
+{
+  circuit_t *circ = TO_CIRCUIT(or_circ);
+  { /* Basic circ purpose sanity checking */
+    tor_assert_nonfatal(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  }
+
+  hs_circuitmap_register_circuit(circ, HS_TOKEN_REND_CLIENT_SIDE,
                                  REND_TOKEN_LEN, cookie);
 }
 

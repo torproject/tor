@@ -7,6 +7,7 @@
  */
 
 #define CONNECTION_PRIVATE
+#define DIRECTORY_PRIVATE
 #define HS_CACHE_PRIVATE
 
 #include "ed25519_cert.h"
@@ -431,6 +432,69 @@ test_hsdir_revision_counter_check(void *arg)
   tor_free(published_desc_str);
 }
 
+/** Test that we can store HS descriptors in the client HS cache. */
+static void
+test_client_cache(void *arg)
+{
+  int retval;
+  ed25519_keypair_t signing_kp;
+  hs_descriptor_t *published_desc = NULL;
+  char *published_desc_str = NULL;
+
+  response_handler_args_t *args = NULL;
+  dir_connection_t *conn = NULL;
+
+  (void) arg;
+
+  /* Initialize HSDir cache subsystem */
+  init_test();
+
+  /* Generate a valid descriptor with normal values. */
+  {
+    retval = ed25519_keypair_generate(&signing_kp, 0);
+    tt_int_op(retval, ==, 0);
+    published_desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
+    tt_assert(published_desc);
+    retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
+                                       &published_desc_str);
+    tt_int_op(retval, OP_EQ, 0);
+  }
+
+  /* Test handle_response_fetch_hsdesc_v3() */
+  {
+    args = tor_malloc_zero(sizeof(response_handler_args_t));
+    args->status_code = 200;
+    args->reason = NULL;
+    args->body = published_desc_str;
+    args->body_len = strlen(published_desc_str);
+
+    conn = tor_malloc_zero(sizeof(dir_connection_t));
+    conn->hs_ident = tor_malloc_zero(sizeof(hs_ident_dir_conn_t));
+    ed25519_pubkey_copy(&conn->hs_ident->identity_pk, &signing_kp.pubkey);
+  }
+
+  /* store the descriptor! */
+  retval = handle_response_fetch_hsdesc_v3(conn, args);
+  tt_int_op(retval, == , 0);
+
+  /* fetch the descriptor and make sure it's there */
+  {
+    hs_cache_client_descriptor_t *cached_desc = NULL;
+    cached_desc = lookup_v3_desc_as_client(signing_kp.pubkey.pubkey);
+    tt_assert(cached_desc);
+    tt_str_op(cached_desc->encoded_desc, OP_EQ, published_desc_str);
+  }
+
+ done:
+  tor_free(args);
+  hs_descriptor_free(published_desc);
+  tor_free(published_desc_str);
+  if (conn) {
+    tor_free(conn->hs_ident);
+    tor_free(conn);
+  }
+}
+
 struct testcase_t hs_cache[] = {
   /* Encoding tests. */
   { "directory", test_directory, TT_FORK,
@@ -440,6 +504,8 @@ struct testcase_t hs_cache[] = {
   { "hsdir_revision_counter_check", test_hsdir_revision_counter_check, TT_FORK,
     NULL, NULL },
   { "upload_and_download_hs_desc", test_upload_and_download_hs_desc, TT_FORK,
+    NULL, NULL },
+  { "client_cache", test_client_cache, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

@@ -55,11 +55,10 @@
 /* For unit tests.*/
 #define HS_DESCRIPTOR_PRIVATE
 
-#include "hs_descriptor.h"
-
 #include "or.h"
-#include "circuitbuild.h"
 #include "ed25519_cert.h" /* Trunnel interface. */
+#include "hs_descriptor.h"
+#include "circuitbuild.h"
 #include "parsecommon.h"
 #include "rendcache.h"
 #include "hs_cache.h"
@@ -332,50 +331,10 @@ encode_link_specifiers(const smartlist_t *specs)
 
   SMARTLIST_FOREACH_BEGIN(specs, const hs_desc_link_specifier_t *,
                           spec) {
-    link_specifier_t *ls = link_specifier_new();
-    link_specifier_set_ls_type(ls, spec->type);
-
-    switch (spec->type) {
-    case LS_IPV4:
-      link_specifier_set_un_ipv4_addr(ls,
-                                      tor_addr_to_ipv4h(&spec->u.ap.addr));
-      link_specifier_set_un_ipv4_port(ls, spec->u.ap.port);
-      /* Four bytes IPv4 and two bytes port. */
-      link_specifier_set_ls_len(ls, sizeof(spec->u.ap.addr.addr.in_addr) +
-                                    sizeof(spec->u.ap.port));
-      break;
-    case LS_IPV6:
-    {
-      size_t addr_len = link_specifier_getlen_un_ipv6_addr(ls);
-      const uint8_t *in6_addr = tor_addr_to_in6_addr8(&spec->u.ap.addr);
-      uint8_t *ipv6_array = link_specifier_getarray_un_ipv6_addr(ls);
-      memcpy(ipv6_array, in6_addr, addr_len);
-      link_specifier_set_un_ipv6_port(ls, spec->u.ap.port);
-      /* Sixteen bytes IPv6 and two bytes port. */
-      link_specifier_set_ls_len(ls, addr_len + sizeof(spec->u.ap.port));
-      break;
+    link_specifier_t *ls = hs_desc_lspec_to_trunnel(spec);
+    if (ls) {
+      link_specifier_list_add_spec(lslist, ls);
     }
-    case LS_LEGACY_ID:
-    {
-      size_t legacy_id_len = link_specifier_getlen_un_legacy_id(ls);
-      uint8_t *legacy_id_array = link_specifier_getarray_un_legacy_id(ls);
-      memcpy(legacy_id_array, spec->u.legacy_id, legacy_id_len);
-      link_specifier_set_ls_len(ls, legacy_id_len);
-      break;
-    }
-    case LS_ED25519_ID:
-    {
-      size_t ed25519_id_len = link_specifier_getlen_un_ed25519_id(ls);
-      uint8_t *ed25519_id_array = link_specifier_getarray_un_ed25519_id(ls);
-      memcpy(ed25519_id_array, spec->u.ed25519_id, ed25519_id_len);
-      link_specifier_set_ls_len(ls, ed25519_id_len);
-      break;
-    }
-    default:
-      tor_assert(0);
-    }
-
-    link_specifier_list_add_spec(lslist, ls);
   } SMARTLIST_FOREACH_END(spec);
 
   {
@@ -2358,10 +2317,10 @@ static int
  *
  * Return 0 on success and encoded_out is a valid pointer. On error, -1 is
  * returned and encoded_out is set to NULL. */
-int
-hs_desc_encode_descriptor(const hs_descriptor_t *desc,
-                          const ed25519_keypair_t *signing_kp,
-                          char **encoded_out)
+MOCK_IMPL(int,
+hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
+                           const ed25519_keypair_t *signing_kp,
+                           char **encoded_out))
 {
   int ret = -1;
   uint32_t version;
@@ -2436,6 +2395,37 @@ hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data)
   tor_assert(data);
   return (sizeof(*data) + sizeof(*data->signing_key_cert) +
           data->superencrypted_blob_size);
+}
+
+/* Return the size in bytes of the given encrypted data object. Used by OOM
+ * subsystem. */
+static size_t
+hs_desc_encrypted_obj_size(const hs_desc_encrypted_data_t *data)
+{
+  tor_assert(data);
+  size_t intro_size = 0;
+  if (data->intro_auth_types) {
+    intro_size +=
+      smartlist_len(data->intro_auth_types) * sizeof(intro_auth_types);
+  }
+  if (data->intro_points) {
+    /* XXX could follow pointers here and get more accurate size */
+    intro_size +=
+      smartlist_len(data->intro_points) * sizeof(hs_desc_intro_point_t);
+  }
+
+  return sizeof(*data) + intro_size;
+}
+
+/* Return the size in bytes of the given descriptor object. Used by OOM
+ * subsystem. */
+  size_t
+hs_desc_obj_size(const hs_descriptor_t *data)
+{
+  tor_assert(data);
+  return (hs_desc_plaintext_obj_size(&data->plaintext_data) +
+          hs_desc_encrypted_obj_size(&data->encrypted_data) +
+          sizeof(data->subcredential));
 }
 
 /* Return a newly allocated descriptor intro point. */
@@ -2543,5 +2533,61 @@ hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
                       ip, hs_desc_intro_point_free(ip));
     smartlist_clear(ips);
   }
+}
+
+/* From a descriptor link specifier object spec, returned a newly allocated
+ * link specifier object that is the encoded representation of spec. Return
+ * NULL on error. */
+link_specifier_t *
+hs_desc_lspec_to_trunnel(const hs_desc_link_specifier_t *spec)
+{
+  tor_assert(spec);
+
+  link_specifier_t *ls = link_specifier_new();
+  link_specifier_set_ls_type(ls, spec->type);
+
+  switch (spec->type) {
+  case LS_IPV4:
+    link_specifier_set_un_ipv4_addr(ls,
+                                    tor_addr_to_ipv4h(&spec->u.ap.addr));
+    link_specifier_set_un_ipv4_port(ls, spec->u.ap.port);
+    /* Four bytes IPv4 and two bytes port. */
+    link_specifier_set_ls_len(ls, sizeof(spec->u.ap.addr.addr.in_addr) +
+                                  sizeof(spec->u.ap.port));
+    break;
+  case LS_IPV6:
+  {
+    size_t addr_len = link_specifier_getlen_un_ipv6_addr(ls);
+    const uint8_t *in6_addr = tor_addr_to_in6_addr8(&spec->u.ap.addr);
+    uint8_t *ipv6_array = link_specifier_getarray_un_ipv6_addr(ls);
+    memcpy(ipv6_array, in6_addr, addr_len);
+    link_specifier_set_un_ipv6_port(ls, spec->u.ap.port);
+    /* Sixteen bytes IPv6 and two bytes port. */
+    link_specifier_set_ls_len(ls, addr_len + sizeof(spec->u.ap.port));
+    break;
+  }
+  case LS_LEGACY_ID:
+  {
+    size_t legacy_id_len = link_specifier_getlen_un_legacy_id(ls);
+    uint8_t *legacy_id_array = link_specifier_getarray_un_legacy_id(ls);
+    memcpy(legacy_id_array, spec->u.legacy_id, legacy_id_len);
+    link_specifier_set_ls_len(ls, legacy_id_len);
+    break;
+  }
+  case LS_ED25519_ID:
+  {
+    size_t ed25519_id_len = link_specifier_getlen_un_ed25519_id(ls);
+    uint8_t *ed25519_id_array = link_specifier_getarray_un_ed25519_id(ls);
+    memcpy(ed25519_id_array, spec->u.ed25519_id, ed25519_id_len);
+    link_specifier_set_ls_len(ls, ed25519_id_len);
+    break;
+  }
+  default:
+    tor_assert_nonfatal_unreached();
+    link_specifier_free(ls);
+    ls = NULL;
+  }
+
+  return ls;
 }
 

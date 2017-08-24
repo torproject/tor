@@ -139,7 +139,7 @@ get_start_time_of_current_round(time_t now)
   const or_options_t *options = get_options();
   int voting_interval = get_voting_interval();
   voting_schedule_t *new_voting_schedule =
-    get_voting_schedule(options, now, LOG_INFO);
+    get_voting_schedule(options, now, LOG_DEBUG);
   tor_assert(new_voting_schedule);
 
   /* First, get the start time of the next round */
