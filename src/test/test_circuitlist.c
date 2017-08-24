@@ -267,7 +267,7 @@ test_rend_token_maps(void *arg)
   tt_ptr_op(NULL, OP_EQ, hs_circuitmap_get_intro_circ_v2_relay_side(tok3));
 
   /* Now let's do a check for the client-side rend circuitmap */
-  c5->base_.purpose = CIRCUIT_PURPOSE_C_REND_READY;
+  c5->base_.purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
   hs_circuitmap_register_rend_circ_client_side(c5, tok1);
 
   tt_ptr_op(c5, OP_EQ, hs_circuitmap_get_rend_circ_client_side(tok1));

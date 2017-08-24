@@ -434,6 +434,12 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
   /* Ignore returned value, nothing we can really do. On failure, the circuit
    * will be marked for close. */
   hs_circ_send_establish_rendezvous(circ);
+
+  /* Register rend circuit in circuitmap if it's still alive. */
+  if (!TO_CIRCUIT(circ)->marked_for_close) {
+    hs_circuitmap_register_rend_circ_client_side(circ,
+                                     circ->hs_ident->rendezvous_cookie);
+  }
 }
 
 /* This is an helper function that convert a descriptor intro point object ip

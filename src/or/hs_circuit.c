@@ -1070,10 +1070,6 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
     goto done;
   }
 
-  /* Register rend circuit in circuitmap */
-  hs_circuitmap_register_rend_circ_client_side(rend_circ,
-                              rend_circ->hs_ident->rendezvous_cookie);
-
   /* Success. */
   ret = 0;
   goto done;
