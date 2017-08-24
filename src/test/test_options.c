@@ -430,24 +430,24 @@ get_options_test_data(const char *conf)
   result->opt->ConnectionPadding = -1; // default must be "auto"
 
   rv = config_get_lines(conf, &cl, 1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   rv = config_assign(&options_format, result->opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");
   }
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   config_free_lines(cl);
   result->opt->LogTimeGranularity = 1;
   result->opt->TokenBucketRefillInterval = 1;
   rv = config_get_lines(TEST_OPTIONS_OLD_VALUES, &cl, 1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   rv = config_assign(&options_format, result->def_opt, cl, 0, &msg);
   if (msg) {
     /* Display the parse error message by comparing it with an empty string */
     tt_str_op(msg, OP_EQ, "");
   }
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
  done:
   config_free_lines(cl);

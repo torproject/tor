@@ -1208,12 +1208,12 @@ test_crypto_pk(void *arg)
   tt_assert(! crypto_pk_write_private_key_to_filename(pk1,
                                                         get_fname("pkey1")));
   /* failing case for read: can't read. */
-  tt_assert(crypto_pk_read_private_key_from_filename(pk2,
-                                                   get_fname("xyzzy")) < 0);
+  tt_int_op(crypto_pk_read_private_key_from_filename(pk2, get_fname("xyzzy")),
+            OP_LT, 0);
   write_str_to_file(get_fname("xyzzy"), "foobar", 6);
   /* Failing case for read: no key. */
-  tt_assert(crypto_pk_read_private_key_from_filename(pk2,
-                                                   get_fname("xyzzy")) < 0);
+  tt_int_op(crypto_pk_read_private_key_from_filename(pk2, get_fname("xyzzy")),
+            OP_LT, 0);
   tt_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                          get_fname("pkey1")));
   tt_int_op(15,OP_EQ,
@@ -1245,7 +1245,7 @@ test_crypto_pk(void *arg)
   i = crypto_pk_asn1_encode(pk1, data1, 1024);
   tt_int_op(i, OP_GT, 0);
   pk2 = crypto_pk_asn1_decode(data1, i);
-  tt_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
+  tt_int_op(crypto_pk_cmp_keys(pk1, pk2), OP_EQ, 0);
 
   /* Try with hybrid encryption wrappers. */
   crypto_rand(data1, 1024);
@@ -1266,7 +1266,7 @@ test_crypto_pk(void *arg)
   pk2 = crypto_pk_copy_full(pk1);
   tt_assert(pk2 != NULL);
   tt_ptr_op(pk1, OP_NE, pk2);
-  tt_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
+  tt_int_op(crypto_pk_cmp_keys(pk1, pk2), OP_EQ, 0);
 
  done:
   if (pk1)
@@ -1344,7 +1344,7 @@ test_crypto_pk_base64(void *arg)
   /* Test decoding a valid key. */
   pk2 = crypto_pk_base64_decode(encoded, strlen(encoded));
   tt_assert(pk2);
-  tt_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
+  tt_int_op(crypto_pk_cmp_keys(pk1, pk2), OP_EQ, 0);
   crypto_pk_free(pk2);
 
   /* Test decoding a invalid key (not Base64). */
@@ -1495,7 +1495,7 @@ test_crypto_formats(void *arg)
   tt_mem_op(data1,OP_EQ, data3, DIGEST_LEN);
   tt_int_op(99,OP_EQ, data3[DIGEST_LEN+1]);
 
-  tt_assert(digest_from_base64(data3, "###") < 0);
+  tt_int_op(digest_from_base64(data3, "###"), OP_LT, 0);
 
   /* Encoding SHA256 */
   crypto_rand(data2, DIGEST256_LEN);
@@ -2936,17 +2936,17 @@ test_crypto_failure_modes(void *arg)
   (void)arg;
 
   rv = crypto_early_init();
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
   /* Check random works */
   rv = crypto_rand_check_failure_mode_zero();
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
   rv = crypto_rand_check_failure_mode_identical();
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
   rv = crypto_rand_check_failure_mode_predict();
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
  done:
   ;

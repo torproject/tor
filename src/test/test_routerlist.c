@@ -449,27 +449,27 @@ test_routerlist_router_is_already_dir_fetching(void *arg)
 
   /* Test that we never get 1 from a NULL connection */
   mocked_connection = NULL;
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 0) == 0);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 1) == 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 0), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 1), OP_EQ, 0);
   /* We always expect 0 in these cases */
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 0) == 0);
-  tt_assert(router_is_already_dir_fetching(NULL, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&null_addr_ap, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&zero_port_ap, 1, 1) == 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 0), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(NULL, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&null_addr_ap, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&zero_port_ap, 1, 1), OP_EQ, 0);
 
   /* Test that we get 1 with a connection in the appropriate circumstances */
   mocked_connection = connection_new(CONN_TYPE_DIR, AF_INET);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 1) == 1);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 1, 0) == 1);
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 1) == 1);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 1), OP_EQ, 1);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 1, 0), OP_EQ, 1);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 1), OP_EQ, 1);
 
   /* Test that we get 0 even with a connection in the appropriate
    * circumstances */
-  tt_assert(router_is_already_dir_fetching(&test_ap, 0, 0) == 0);
-  tt_assert(router_is_already_dir_fetching(NULL, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&null_addr_ap, 1, 1) == 0);
-  tt_assert(router_is_already_dir_fetching(&zero_port_ap, 1, 1) == 0);
+  tt_int_op(router_is_already_dir_fetching(&test_ap, 0, 0), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(NULL, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&null_addr_ap, 1, 1), OP_EQ, 0);
+  tt_int_op(router_is_already_dir_fetching(&zero_port_ap, 1, 1), OP_EQ, 0);
 
  done:
   /* If a connection is never set up, connection_free chokes on it. */

@@ -743,7 +743,7 @@ test_state_load_from_disk(void *arg)
 
   /* First try with a nonexistent path. */
   ret = disk_state_load_from_disk_impl("NONEXISTENTNONEXISTENT");
-  tt_assert(ret == -ENOENT);
+  tt_int_op(ret, OP_EQ, -ENOENT);
 
   /* Now create a mock state directory and state file */
 #ifdef _WIN32
@@ -751,9 +751,9 @@ test_state_load_from_disk(void *arg)
 #else
   ret = mkdir(dir, 0700);
 #endif
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
   ret = write_str_to_file(sr_state_path, sr_state_str, 0);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Try to load the directory itself. Should fail. */
   ret = disk_state_load_from_disk_impl(dir);
@@ -765,7 +765,7 @@ test_state_load_from_disk(void *arg)
 
   /* Now try to load the correct file! */
   ret = disk_state_load_from_disk_impl(sr_state_path);
-  tt_assert(ret == 0);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Check the content of the state */
   /* XXX check more deeply!!! */

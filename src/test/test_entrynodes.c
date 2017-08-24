@@ -595,20 +595,20 @@ test_entry_guard_parse_from_state_full(void *arg)
   MOCK(get_or_state,
        get_or_state_replacement);
 
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_assert(lines);
 
   state->Guard = lines;
 
   /* Try it first without setting the result. */
   r = entry_guards_parse_state(state, 0, &msg);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   guard_selection_t *gs_br =
     get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
   tt_assert(!gs_br);
 
   r = entry_guards_parse_state(state, 1, &msg);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   gs_br = get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
   guard_selection_t *gs_df =
     get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
@@ -625,7 +625,7 @@ test_entry_guard_parse_from_state_full(void *arg)
 
   /* Try again; make sure it doesn't double-add the guards. */
   r = entry_guards_parse_state(state, 1, &msg);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   gs_br = get_guard_selection_by_name("bridges", GS_TYPE_BRIDGE, 0);
   gs_df = get_guard_selection_by_name("default", GS_TYPE_NORMAL, 0);
   tt_assert(gs_br);
@@ -730,7 +730,7 @@ test_entry_guard_parse_from_state_broken(void *arg)
   MOCK(get_or_state,
        get_or_state_replacement);
 
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_assert(lines);
 
   state->Guard = lines;
@@ -847,15 +847,15 @@ test_entry_guard_add_single_guard(void *arg)
   tt_i64_op(g1->sampled_on_date, OP_GE, now - 12*86400);
   tt_i64_op(g1->sampled_on_date, OP_LE, now);
   tt_str_op(g1->sampled_by_version, OP_EQ, VERSION);
-  tt_assert(g1->currently_listed == 1);
+  tt_uint_op(g1->currently_listed, OP_EQ, 1);
   tt_i64_op(g1->confirmed_on_date, OP_EQ, 0);
   tt_int_op(g1->confirmed_idx, OP_EQ, -1);
   tt_int_op(g1->last_tried_to_connect, OP_EQ, 0);
   tt_uint_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
   tt_i64_op(g1->failing_since, OP_EQ, 0);
-  tt_assert(g1->is_filtered_guard == 1);
-  tt_assert(g1->is_usable_filtered_guard == 1);
-  tt_assert(g1->is_primary == 0);
+  tt_uint_op(g1->is_filtered_guard, OP_EQ, 1);
+  tt_uint_op(g1->is_usable_filtered_guard, OP_EQ, 1);
+  tt_uint_op(g1->is_primary, OP_EQ, 0);
   tt_assert(g1->extra_state_fields == NULL);
 
   /* Make sure it got added. */
@@ -886,16 +886,16 @@ test_entry_guard_node_filter(void *arg)
     g[i] = entry_guard_add_to_sample(gs, n[i]);
 
     // everything starts out filtered-in
-    tt_assert(g[i]->is_filtered_guard == 1);
-    tt_assert(g[i]->is_usable_filtered_guard == 1);
+    tt_uint_op(g[i]->is_filtered_guard, OP_EQ, 1);
+    tt_uint_op(g[i]->is_usable_filtered_guard, OP_EQ, 1);
   }
   tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, NUM);
 
   /* Make sure refiltering doesn't hurt */
   entry_guards_update_filtered_sets(gs);
   for (i = 0; i < NUM; ++i) {
-    tt_assert(g[i]->is_filtered_guard == 1);
-    tt_assert(g[i]->is_usable_filtered_guard == 1);
+    tt_uint_op(g[i]->is_filtered_guard, OP_EQ, 1);
+    tt_uint_op(g[i]->is_usable_filtered_guard, OP_EQ, 1);
   }
   tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, NUM);
 
@@ -948,8 +948,8 @@ test_entry_guard_node_filter(void *arg)
   });
   entry_guards_update_filtered_sets(gs);
   for (i = 0; i < NUM; ++i) {
-    tt_assert(g[i]->is_filtered_guard == 0);
-    tt_assert(g[i]->is_usable_filtered_guard == 0);
+    tt_uint_op(g[i]->is_filtered_guard, OP_EQ, 0);
+    tt_uint_op(g[i]->is_usable_filtered_guard, OP_EQ, 0);
   }
   tt_int_op(num_reachable_filtered_guards(gs, NULL), OP_EQ, 0);
 
@@ -1707,7 +1707,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   tt_assert(g);
   tt_assert(g->is_primary);
   tt_int_op(g->confirmed_idx, OP_EQ, -1);
-  tt_assert(g->is_pending == 0); // primary implies non-pending.
+  tt_uint_op(g->is_pending, OP_EQ, 0); // primary implies non-pending.
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
   tt_i64_op(g->last_tried_to_connect, OP_EQ, approx_time());
 
@@ -1727,7 +1727,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   tt_assert(g2);
   tt_assert(g2->is_primary);
   tt_int_op(g2->confirmed_idx, OP_EQ, -1);
-  tt_assert(g2->is_pending == 0); // primary implies non-pending.
+  tt_uint_op(g2->is_pending, OP_EQ, 0); // primary implies non-pending.
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
   tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
 
@@ -1755,7 +1755,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   tt_assert(g2);
   tt_assert(!g2->is_primary);
   tt_int_op(g2->confirmed_idx, OP_EQ, -1);
-  tt_assert(g2->is_pending == 1);
+  tt_uint_op(g2->is_pending, OP_EQ, 1);
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
   tt_i64_op(g2->last_tried_to_connect, OP_EQ, approx_time());
   tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
@@ -1813,7 +1813,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   tt_assert(g);
   tt_assert(g->is_primary);
   tt_int_op(g->confirmed_idx, OP_EQ, 0);
-  tt_assert(g->is_pending == 0); // primary implies non-pending.
+  tt_uint_op(g->is_pending, OP_EQ, 0); // primary implies non-pending.
   tt_uint_op(state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
   tt_i64_op(g->last_tried_to_connect, OP_EQ, approx_time());
   tt_ptr_op(g, OP_EQ, smartlist_get(gs->primary_entry_guards, 0));
@@ -1913,7 +1913,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
   int r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
                                        &node, &guard);
 
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_assert(node);
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
@@ -1945,7 +1945,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
   update_approx_time(start+35);
   r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
                                    &node, &guard);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_assert(node);
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
@@ -1981,7 +1981,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
   update_approx_time(start+60);
   r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
                                    &node, &guard);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_assert(node);
   tt_assert(guard);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
@@ -2036,7 +2036,7 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
                                      &node, &guard);
     tt_assert(node);
     tt_assert(guard);
-    tt_assert(r == 0);
+    tt_int_op(r, OP_EQ, 0);
     tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
     entry_guard_failed(&guard);
     circuit_guard_state_free(guard);
@@ -2050,7 +2050,7 @@ test_entry_guard_select_for_circuit_highlevel_confirm_other(void *arg)
                                    &node, &guard);
   tt_assert(node);
   tt_assert(guard);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   entry_guard_t *g = entry_guard_handle_get(guard->guard);
   tt_assert(g);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
@@ -2102,7 +2102,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
                                      &node, &guard);
     tt_assert(node);
     tt_assert(guard);
-    tt_assert(r == 0);
+    tt_int_op(r, OP_EQ, 0);
     tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
     g = entry_guard_handle_get(guard->guard);
     make_guard_confirmed(gs, g);
@@ -2119,7 +2119,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
                                    &node, &guard);
   tt_assert(node);
   tt_assert(guard);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
   g = entry_guard_handle_get(guard->guard);
   tt_int_op(g->is_primary, OP_EQ, 0);
@@ -2145,7 +2145,7 @@ test_entry_guard_select_for_circuit_highlevel_primary_retry(void *arg)
   /* Have a circuit to a primary guard succeed. */
   r = entry_guard_pick_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL,
                                    &node, &guard2);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_int_op(guard2->state, OP_EQ, GUARD_CIRC_STATE_USABLE_ON_COMPLETION);
   u = entry_guard_succeeded(&guard2);
   tt_assert(u == GUARD_USABLE_NOW);
@@ -2194,7 +2194,7 @@ test_entry_guard_select_and_cancel(void *arg)
                                    &node, &guard);
   tt_assert(node);
   tt_assert(guard);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_int_op(guard->state, OP_EQ, GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD);
   g = entry_guard_handle_get(guard->guard);
   tt_int_op(g->is_primary, OP_EQ, 0);

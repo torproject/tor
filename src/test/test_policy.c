@@ -1148,7 +1148,7 @@ test_policies_reject_exit_address(void *arg)
   /* test that IPv4 addresses are rejected on an IPv4-only exit */
   policies_parse_exit_policy_reject_private(&policy, 0, ipv4_list, 0, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 1);
+  tt_int_op(smartlist_len(policy), OP_EQ, 1);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
   addr_policy_list_free(policy);
   policy = NULL;
@@ -1163,7 +1163,7 @@ test_policies_reject_exit_address(void *arg)
   /* test that only IPv4 addresses are rejected on an IPv4-only exit */
   policies_parse_exit_policy_reject_private(&policy, 0, both_list, 0, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 1);
+  tt_int_op(smartlist_len(policy), OP_EQ, 1);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
   addr_policy_list_free(policy);
   policy = NULL;
@@ -1171,7 +1171,7 @@ test_policies_reject_exit_address(void *arg)
   /* Test that lists with duplicate entries produce the same results */
   policies_parse_exit_policy_reject_private(&policy, 0, dupl_list, 0, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 1);
+  tt_int_op(smartlist_len(policy), OP_EQ, 1);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
   addr_policy_list_free(policy);
   policy = NULL;
@@ -1181,7 +1181,7 @@ test_policies_reject_exit_address(void *arg)
   /* test that IPv4 addresses are rejected on an IPv4/IPv6 exit */
   policies_parse_exit_policy_reject_private(&policy, 1, ipv4_list, 0, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 1);
+  tt_int_op(smartlist_len(policy), OP_EQ, 1);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
   addr_policy_list_free(policy);
   policy = NULL;
@@ -1189,7 +1189,7 @@ test_policies_reject_exit_address(void *arg)
   /* test that IPv6 addresses are rejected on an IPv4/IPv6 exit */
   policies_parse_exit_policy_reject_private(&policy, 1, ipv6_list,  0, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 1);
+  tt_int_op(smartlist_len(policy), OP_EQ, 1);
   tt_assert(test_policy_has_address_helper(policy, &ipv6_addr));
   addr_policy_list_free(policy);
   policy = NULL;
@@ -1197,7 +1197,7 @@ test_policies_reject_exit_address(void *arg)
   /* test that IPv4 and IPv6 addresses are rejected on an IPv4/IPv6 exit */
   policies_parse_exit_policy_reject_private(&policy, 1, both_list,  0, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 2);
+  tt_int_op(smartlist_len(policy), OP_EQ, 2);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
   tt_assert(test_policy_has_address_helper(policy, &ipv6_addr));
   addr_policy_list_free(policy);
@@ -1206,7 +1206,7 @@ test_policies_reject_exit_address(void *arg)
   /* Test that lists with duplicate entries produce the same results */
   policies_parse_exit_policy_reject_private(&policy, 1, dupl_list,  0, 0);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 2);
+  tt_int_op(smartlist_len(policy), OP_EQ, 2);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
   tt_assert(test_policy_has_address_helper(policy, &ipv6_addr));
   addr_policy_list_free(policy);
@@ -1258,7 +1258,7 @@ test_policies_reject_port_address(void *arg)
    * with IPv6 addresses on IPv4-only exits) */
   policies_parse_exit_policy_reject_private(&policy, 0, NULL, 0, 1);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 1);
+  tt_int_op(smartlist_len(policy), OP_EQ, 1);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_port->addr));
   addr_policy_list_free(policy);
   policy = NULL;
@@ -1266,7 +1266,7 @@ test_policies_reject_port_address(void *arg)
   /* test that IPv4 and IPv6 ports are rejected on an IPv4/IPv6 exit */
   policies_parse_exit_policy_reject_private(&policy, 1, NULL, 0, 1);
   tt_assert(policy);
-  tt_assert(smartlist_len(policy) == 2);
+  tt_int_op(smartlist_len(policy), OP_EQ, 2);
   tt_assert(test_policy_has_address_helper(policy, &ipv4_port->addr));
   tt_assert(test_policy_has_address_helper(policy, &ipv6_port->addr));
   addr_policy_list_free(policy);
@@ -1528,14 +1528,14 @@ test_policies_getinfo_helper_policies(void *arg)
   memset(&mock_my_routerinfo, 0, sizeof(mock_my_routerinfo));
 
   rv = getinfo_helper_policies(NULL, "exit-policy/default", &answer, &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/default",
                                &answer, &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
@@ -1550,14 +1550,14 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) == 0);
   tor_free(answer);
 
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer,
                                &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   ipv4_len = strlen(answer);
   tt_assert(ipv4_len == 0 || ipv4_len == strlen(DEFAULT_POLICY_STRING));
@@ -1566,7 +1566,7 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer,
                                &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   ipv6_len = strlen(answer);
   tt_assert(ipv6_len == 0 || ipv6_len == strlen(DEFAULT_POLICY_STRING));
@@ -1575,7 +1575,7 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
                                &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   /* It's either empty or it's the default */
   tt_assert(strlen(answer) == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
@@ -1599,7 +1599,7 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
@@ -1609,7 +1609,7 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
@@ -1619,7 +1619,7 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) > 0);
   tor_free(answer);
@@ -1629,14 +1629,14 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) == 0);
   tor_free(answer);
 
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer,
                                &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   ipv4_len = strlen(answer);
   tt_assert(ipv4_len > 0);
@@ -1644,7 +1644,7 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv6", &answer,
                                &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   ipv6_len = strlen(answer);
   tt_assert(ipv6_len > 0);
@@ -1652,7 +1652,7 @@ test_policies_getinfo_helper_policies(void *arg)
 
   rv = getinfo_helper_policies(NULL, "exit-policy/full", &answer,
                                &errmsg);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) > 0);
   tt_assert(strlen(answer) == ipv4_len + ipv6_len + 1);
@@ -1746,34 +1746,34 @@ test_policies_fascist_firewall_allows_address(void *arg)
   mock_options.ClientUseIPv6 = 1;
   mock_options.UseBridges = 0;
 
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
 
   /* Preferring IPv4 */
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 0),
+            OP_EQ, 0);
 
   /* Preferring IPv6 */
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 1)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 1)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 1)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 1)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 1),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 1),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 1),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 1),
+            OP_EQ, 0);
 
   /* Test the function's address matching with UseBridges on */
   memset(&mock_options, 0, sizeof(or_options_t));
@@ -1781,46 +1781,46 @@ test_policies_fascist_firewall_allows_address(void *arg)
   mock_options.ClientUseIPv6 = 1;
   mock_options.UseBridges = 1;
 
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
 
   /* Preferring IPv4 */
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 0),
+            OP_EQ, 0);
 
   /* Preferring IPv6 */
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 1)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 1)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 1)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 1)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 1),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 1),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 1),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 1),
+            OP_EQ, 0);
 
   /* bridge clients always use IPv6, regardless of ClientUseIPv6 */
   mock_options.ClientUseIPv4 = 1;
   mock_options.ClientUseIPv6 = 0;
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
 
   /* Test the function's address matching with IPv4 on */
   memset(&mock_options, 0, sizeof(or_options_t));
@@ -1828,14 +1828,14 @@ test_policies_fascist_firewall_allows_address(void *arg)
   mock_options.ClientUseIPv6 = 0;
   mock_options.UseBridges = 0;
 
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
 
   /* Test the function's address matching with IPv6 on */
   memset(&mock_options, 0, sizeof(or_options_t));
@@ -1843,14 +1843,14 @@ test_policies_fascist_firewall_allows_address(void *arg)
   mock_options.ClientUseIPv6 = 1;
   mock_options.UseBridges = 0;
 
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
 
   /* Test the function's address matching with ClientUseIPv4 0.
    * This means "use IPv6" regardless of the other settings. */
@@ -1859,14 +1859,14 @@ test_policies_fascist_firewall_allows_address(void *arg)
   mock_options.ClientUseIPv6 = 0;
   mock_options.UseBridges = 0;
 
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
 
   /* Test the function's address matching for unusual inputs */
   memset(&mock_options, 0, sizeof(or_options_t));
@@ -1875,27 +1875,28 @@ test_policies_fascist_firewall_allows_address(void *arg)
   mock_options.UseBridges = 1;
 
   /* NULL and tor_addr_is_null addresses are rejected */
-  tt_assert(fascist_firewall_allows_address(NULL, port, policy, 0, 0) == 0);
-  tt_assert(fascist_firewall_allows_address(&n_ipv4_addr, port, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&n_ipv6_addr, port, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(NULL, port, policy, 0, 0), OP_EQ,
+            0);
+  tt_int_op(fascist_firewall_allows_address(&n_ipv4_addr, port, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&n_ipv6_addr, port, policy, 0, 0),
+            OP_EQ, 0);
 
   /* zero ports are rejected */
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, 0, policy, 0, 0)
-            == 0);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, 0, policy, 0, 0)
-            == 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, 0, policy, 0, 0),
+            OP_EQ, 0);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, 0, policy, 0, 0),
+            OP_EQ, 0);
 
   /* NULL and empty policies accept everything */
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, NULL, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, NULL, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, e_policy, 0, 0)
-            == 1);
-  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, e_policy, 0, 0)
-            == 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, NULL, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, NULL, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv4_addr, port, e_policy, 0, 0),
+            OP_EQ, 1);
+  tt_int_op(fascist_firewall_allows_address(&ipv6_addr, port, e_policy, 0, 0),
+            OP_EQ, 1);
 
  done:
   addr_policy_free(item);

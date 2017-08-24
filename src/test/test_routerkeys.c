@@ -101,10 +101,10 @@ test_routerkeys_ed_certs(void *args)
     cert[i] = tor_cert_create(&kp1, 5, &kp2.pubkey, now, 10000, flags);
     tt_assert(cert[i]);
 
-    tt_assert(cert[i]->sig_bad == 0);
-    tt_assert(cert[i]->sig_ok == 1);
-    tt_assert(cert[i]->cert_expired == 0);
-    tt_assert(cert[i]->cert_valid == 1);
+    tt_uint_op(cert[i]->sig_bad, OP_EQ, 0);
+    tt_uint_op(cert[i]->sig_ok, OP_EQ, 1);
+    tt_uint_op(cert[i]->cert_expired, OP_EQ, 0);
+    tt_uint_op(cert[i]->cert_valid, OP_EQ, 1);
     tt_int_op(cert[i]->cert_type, OP_EQ, 5);
     tt_mem_op(cert[i]->signed_key.pubkey, OP_EQ, &kp2.pubkey.pubkey, 32);
     tt_mem_op(cert[i]->signing_key.pubkey, OP_EQ, &kp1.pubkey.pubkey, 32);
@@ -120,26 +120,26 @@ test_routerkeys_ed_certs(void *args)
     tt_int_op(cert[i]->encoded_len, OP_EQ, parsed_cert[i]->encoded_len);
     tt_mem_op(cert[i]->encoded, OP_EQ, parsed_cert[i]->encoded,
               cert[i]->encoded_len);
-    tt_assert(parsed_cert[i]->sig_bad == 0);
-    tt_assert(parsed_cert[i]->sig_ok == 0);
-    tt_assert(parsed_cert[i]->cert_expired == 0);
-    tt_assert(parsed_cert[i]->cert_valid == 0);
+    tt_uint_op(parsed_cert[i]->sig_bad, OP_EQ, 0);
+    tt_uint_op(parsed_cert[i]->sig_ok, OP_EQ, 0);
+    tt_uint_op(parsed_cert[i]->cert_expired, OP_EQ, 0);
+    tt_uint_op(parsed_cert[i]->cert_valid, OP_EQ, 0);
 
     /* Expired */
     tt_int_op(tor_cert_checksig(parsed_cert[i], &kp1.pubkey, now + 30000),
               OP_LT, 0);
-    tt_assert(parsed_cert[i]->cert_expired == 1);
+    tt_uint_op(parsed_cert[i]->cert_expired, OP_EQ, 1);
     parsed_cert[i]->cert_expired = 0;
 
     /* Wrong key */
     tt_int_op(tor_cert_checksig(parsed_cert[i], &kp2.pubkey, now), OP_LT, 0);
-    tt_assert(parsed_cert[i]->sig_bad== 1);
+    tt_uint_op(parsed_cert[i]->sig_bad, OP_EQ, 1);
     parsed_cert[i]->sig_bad = 0;
 
     /* Missing key */
     int ok = tor_cert_checksig(parsed_cert[i], NULL, now);
     tt_int_op(ok < 0, OP_EQ, i == 0);
-    tt_assert(parsed_cert[i]->sig_bad == 0);
+    tt_uint_op(parsed_cert[i]->sig_bad, OP_EQ, 0);
     tt_assert(parsed_cert[i]->sig_ok == (i != 0));
     tt_assert(parsed_cert[i]->cert_valid == (i != 0));
     parsed_cert[i]->sig_bad = 0;
@@ -148,10 +148,10 @@ test_routerkeys_ed_certs(void *args)
 
     /* Right key */
     tt_int_op(tor_cert_checksig(parsed_cert[i], &kp1.pubkey, now), OP_EQ, 0);
-    tt_assert(parsed_cert[i]->sig_bad == 0);
-    tt_assert(parsed_cert[i]->sig_ok == 1);
-    tt_assert(parsed_cert[i]->cert_expired == 0);
-    tt_assert(parsed_cert[i]->cert_valid == 1);
+    tt_uint_op(parsed_cert[i]->sig_bad, OP_EQ, 0);
+    tt_uint_op(parsed_cert[i]->sig_ok, OP_EQ, 1);
+    tt_uint_op(parsed_cert[i]->cert_expired, OP_EQ, 0);
+    tt_uint_op(parsed_cert[i]->cert_valid, OP_EQ, 1);
   }
 
   /* Now try some junky certs. */

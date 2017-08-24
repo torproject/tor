@@ -516,7 +516,7 @@ test_crypto_ed25519_fuzz_donna(void *arg)
   unsigned i;
   (void)arg;
 
-  tt_assert(sizeof(msg) == iters);
+  tt_uint_op(iters, OP_EQ, sizeof(msg));
   crypto_rand((char*) msg, sizeof(msg));
 
   /* Fuzz Ed25519-donna vs ref10, alternating the implementation used to

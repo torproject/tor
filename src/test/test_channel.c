@@ -1780,7 +1780,7 @@ test_channel_id_map(void *arg)
   ed25519_public_key_t ed_zero;
   memset(&ed_zero, 0, sizeof(ed_zero));
 
-  tt_assert(sizeof(rsa_id[0]) == DIGEST_LEN); // Do I remember C?
+  tt_int_op(DIGEST_LEN, OP_EQ, sizeof(rsa_id[0])); // Do I remember C?
 
   for (i = 0; i < N_CHAN; ++i) {
     crypto_rand(rsa_id[i], DIGEST_LEN);

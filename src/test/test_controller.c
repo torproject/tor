@@ -73,7 +73,7 @@ test_add_onion_helper_keyarg(void *arg)
   tt_assert(!key_new_alg);
   tt_assert(!key_new_blob);
   tt_assert(!err_msg);
-  tt_assert(crypto_pk_cmp_keys(pk, pk2) == 0);
+  tt_int_op(crypto_pk_cmp_keys(pk, pk2), OP_EQ, 0);
 
   /* Test loading a invalid key type. */
   tor_free(arg_str);
@@ -123,13 +123,13 @@ test_getinfo_helper_onion(void *arg)
 
   /* successfully get an empty answer */
   rt = getinfo_helper_onions(&dummy, "onions/current", &answer, &errmsg);
-  tt_assert(rt == 0);
+  tt_int_op(rt, OP_EQ, 0);
   tt_str_op(answer, OP_EQ, "");
   tor_free(answer);
 
   /* successfully get an empty answer */
   rt = getinfo_helper_onions(&dummy, "onions/detached", &answer, &errmsg);
-  tt_assert(rt == 0);
+  tt_int_op(rt, OP_EQ, 0);
   tt_str_op(answer, OP_EQ, "");
   tor_free(answer);
 
@@ -138,7 +138,7 @@ test_getinfo_helper_onion(void *arg)
   dummy.ephemeral_onion_services = smartlist_new();
   smartlist_add(dummy.ephemeral_onion_services, service_id);
   rt = getinfo_helper_onions(&dummy, "onions/current", &answer, &errmsg);
-  tt_assert(rt == 0);
+  tt_int_op(rt, OP_EQ, 0);
   tt_str_op(answer, OP_EQ, "dummy_onion_id");
 
  done:

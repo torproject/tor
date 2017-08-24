@@ -274,7 +274,7 @@ tlschan_connection_or_connect_mock(const tor_addr_t *addr,
   (void) ed_id; // XXXX Not yet used.
 
   tt_assert(addr != NULL);
-  tt_assert(port != 0);
+  tt_uint_op(port, OP_NE, 0);
   tt_assert(digest != NULL);
   tt_assert(tlschan != NULL);
 

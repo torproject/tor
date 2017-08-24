@@ -658,84 +658,84 @@ test_config_parse_transport_plugin_line(void *arg)
 
   /* Bad transport lines - too short */
   r = parse_transport_line(options, "bad", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options, "bad", 1, 1);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options, "bad bad", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options, "bad bad", 1, 1);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
 
   /* Test transport list parsing */
   r = parse_transport_line(options,
       "transport_1 exec /usr/bin/fake-transport", 1, 0);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   r = parse_transport_line(options,
    "transport_1 exec /usr/bin/fake-transport", 1, 1);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   r = parse_transport_line(options,
       "transport_1,transport_2 exec /usr/bin/fake-transport", 1, 0);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   r = parse_transport_line(options,
       "transport_1,transport_2 exec /usr/bin/fake-transport", 1, 1);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   /* Bad transport identifiers */
   r = parse_transport_line(options,
       "transport_* exec /usr/bin/fake-transport", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options,
       "transport_* exec /usr/bin/fake-transport", 1, 1);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
 
   /* Check SOCKS cases for client transport */
   r = parse_transport_line(options,
       "transport_1 socks4 1.2.3.4:567", 1, 0);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   r = parse_transport_line(options,
       "transport_1 socks5 1.2.3.4:567", 1, 0);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   /* Proxy case for server transport */
   r = parse_transport_line(options,
       "transport_1 proxy 1.2.3.4:567", 1, 1);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   /* Multiple-transport error exit */
   r = parse_transport_line(options,
       "transport_1,transport_2 socks5 1.2.3.4:567", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options,
       "transport_1,transport_2 proxy 1.2.3.4:567", 1, 1);
   /* No port error exit */
   r = parse_transport_line(options,
       "transport_1 socks5 1.2.3.4", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options,
      "transport_1 proxy 1.2.3.4", 1, 1);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   /* Unparsable address error exit */
   r = parse_transport_line(options,
       "transport_1 socks5 1.2.3:6x7", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options,
       "transport_1 proxy 1.2.3:6x7", 1, 1);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
 
   /* "Strange {Client|Server}TransportPlugin field" error exit */
   r = parse_transport_line(options,
       "transport_1 foo bar", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options,
       "transport_1 foo bar", 1, 1);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
 
   /* No sandbox mode error exit */
   tmp = options->Sandbox;
   options->Sandbox = 1;
   r = parse_transport_line(options,
       "transport_1 exec /usr/bin/fake-transport", 1, 0);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options,
       "transport_1 exec /usr/bin/fake-transport", 1, 1);
-  tt_assert(r < 0);
+  tt_int_op(r, OP_LT, 0);
   options->Sandbox = tmp;
 
   /*
@@ -747,7 +747,7 @@ test_config_parse_transport_plugin_line(void *arg)
     pt_kickstart_proxy_mock_call_count;
   r = parse_transport_line(options,
       "transport_1 exec /usr/bin/fake-transport", 0, 1);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   tt_assert(pt_kickstart_proxy_mock_call_count ==
       old_pt_kickstart_proxy_mock_call_count + 1);
   UNMOCK(pt_kickstart_proxy);
@@ -755,7 +755,7 @@ test_config_parse_transport_plugin_line(void *arg)
   /* This one hits a log line in the !validate_only case only */
   r = parse_transport_line(options,
       "transport_1 proxy 1.2.3.4:567", 0, 1);
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
 
   /* Check mocked client transport cases */
   MOCK(pt_kickstart_proxy, pt_kickstart_proxy_mock);
@@ -773,7 +773,7 @@ test_config_parse_transport_plugin_line(void *arg)
   r = parse_transport_line(options,
       "transport_1 exec /usr/bin/fake-transport", 0, 0);
   /* Should have succeeded */
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   /* transport_is_needed() should have been called */
   tt_assert(transport_is_needed_mock_call_count ==
       old_transport_is_needed_mock_call_count + 1);
@@ -797,7 +797,7 @@ test_config_parse_transport_plugin_line(void *arg)
   r = parse_transport_line(options,
       "transport_1 exec /usr/bin/fake-transport", 0, 0);
   /* Should have succeeded */
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   /*
    * transport_is_needed() and pt_kickstart_proxy() should have been
    * called.
@@ -821,7 +821,7 @@ test_config_parse_transport_plugin_line(void *arg)
   r = parse_transport_line(options,
       "transport_1 socks5 1.2.3.4:567", 0, 0);
   /* Should have succeeded */
-  tt_assert(r == 0);
+  tt_int_op(r, OP_EQ, 0);
   /*
    * transport_is_needed() and transport_add_from_config() should have
    * been called.
@@ -1219,7 +1219,7 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(resolved_addr == 0);
-  tt_assert(retval == -1);
+  tt_int_op(retval, OP_EQ, -1);
 
   tor_free(options->Address);
   tor_free(hostname_out);
@@ -1241,7 +1241,7 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_assert(retval == -1);
+  tt_int_op(retval, OP_EQ, -1);
 
   UNMOCK(tor_lookup_hostname);
 
@@ -1262,7 +1262,7 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(n_gethostname_failure == prev_n_gethostname_failure + 1);
-  tt_assert(retval == -1);
+  tt_int_op(retval, OP_EQ, -1);
 
   UNMOCK(tor_gethostname);
   tor_free(hostname_out);
@@ -1315,7 +1315,7 @@ test_config_resolve_my_address(void *arg)
           prev_n_get_interface_address_failure + 1);
   tt_want(n_gethostname_replacement ==
           prev_n_gethostname_replacement + 1);
-  tt_assert(retval == -1);
+  tt_int_op(retval, OP_EQ, -1);
 
   UNMOCK(get_interface_address);
   tor_free(hostname_out);
@@ -1375,7 +1375,7 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_assert(retval == -1);
+  tt_int_op(retval, OP_EQ, -1);
 
   UNMOCK(tor_gethostname);
   UNMOCK(tor_lookup_hostname);
@@ -1421,7 +1421,7 @@ test_config_resolve_my_address(void *arg)
 
   tt_str_op(method_used,OP_EQ,"INTERFACE");
   tt_assert(!hostname_out);
-  tt_assert(retval == 0);
+  tt_int_op(retval, OP_EQ, 0);
 
   /*
    * CASE 11b:
@@ -1446,7 +1446,7 @@ test_config_resolve_my_address(void *arg)
   tt_want(n_get_interface_address6_failure ==
           prev_n_get_interface_address6_failure + 1);
 
-  tt_assert(retval == -1);
+  tt_int_op(retval, OP_EQ, -1);
 
   UNMOCK(tor_gethostname);
   UNMOCK(tor_lookup_hostname);
@@ -1475,7 +1475,7 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(n_gethostname_localhost == prev_n_gethostname_localhost + 1);
-  tt_assert(retval == -1);
+  tt_int_op(retval, OP_EQ, -1);
 
   UNMOCK(tor_gethostname);
 
@@ -1510,18 +1510,18 @@ test_config_adding_trusted_dir_server(void *arg)
                               NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
-  tt_assert(get_n_authorities(V3_DIRINFO) == 1);
-  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 1);
+  tt_int_op(get_n_authorities(V3_DIRINFO), OP_EQ, 1);
+  tt_int_op(smartlist_len(router_get_fallback_dir_servers()), OP_EQ, 1);
 
   /* create a trusted ds with an IPv6 address and port */
   rv = tor_addr_port_parse(LOG_WARN, "[::1]:9061", &ipv6.addr, &ipv6.port, -1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, &ipv6, digest,
                               NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
-  tt_assert(get_n_authorities(V3_DIRINFO) == 2);
-  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 2);
+  tt_int_op(get_n_authorities(V3_DIRINFO), OP_EQ, 2);
+  tt_int_op(smartlist_len(router_get_fallback_dir_servers()), OP_EQ, 2);
 
  done:
   clear_dir_servers();
@@ -1543,21 +1543,21 @@ test_config_adding_fallback_dir_server(void *arg)
   routerlist_free_all();
 
   rv = tor_addr_parse(&ipv4, "127.0.0.1");
-  tt_assert(rv == AF_INET);
+  tt_int_op(rv, OP_EQ, AF_INET);
 
   /* create a trusted ds without an IPv6 address and port */
   ds = fallback_dir_server_new(&ipv4, 9059, 9060, NULL, digest, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
-  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 1);
+  tt_int_op(smartlist_len(router_get_fallback_dir_servers()), OP_EQ, 1);
 
   /* create a trusted ds with an IPv6 address and port */
   rv = tor_addr_port_parse(LOG_WARN, "[::1]:9061", &ipv6.addr, &ipv6.port, -1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
   ds = fallback_dir_server_new(&ipv4, 9059, 9060, &ipv6, digest, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
-  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 2);
+  tt_int_op(smartlist_len(router_get_fallback_dir_servers()), OP_EQ, 2);
 
  done:
   clear_dir_servers();
@@ -1588,14 +1588,14 @@ test_config_parsing_trusted_dir_server(void *arg)
   rv = parse_dir_authority_line(TEST_DIR_AUTH_LINE_START
                                 TEST_DIR_AUTH_LINE_END,
                                 V3_DIRINFO, 1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
   /* parse a trusted dir server with an IPv6 address and port */
   rv = parse_dir_authority_line(TEST_DIR_AUTH_LINE_START
                                 TEST_DIR_AUTH_IPV6_FLAG
                                 TEST_DIR_AUTH_LINE_END,
                                 V3_DIRINFO, 1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
   /* Since we are only validating, there is no cleanup. */
  done:
@@ -1623,13 +1623,13 @@ test_config_parsing_fallback_dir_server(void *arg)
 
   /* parse a trusted dir server without an IPv6 address and port */
   rv = parse_dir_fallback_line(TEST_DIR_FALLBACK_LINE, 1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
   /* parse a trusted dir server with an IPv6 address and port */
   rv = parse_dir_fallback_line(TEST_DIR_FALLBACK_LINE
                                TEST_DIR_FALLBACK_IPV6_FLAG,
                                1);
-  tt_assert(rv == 0);
+  tt_int_op(rv, OP_EQ, 0);
 
   /* Since we are only validating, there is no cleanup. */
  done:
@@ -1649,8 +1649,8 @@ test_config_adding_default_trusted_dir_servers(void *arg)
 
   /* Assume we only have one bridge authority */
   add_default_trusted_dir_authorities(BRIDGE_DIRINFO);
-  tt_assert(get_n_authorities(BRIDGE_DIRINFO) == 1);
-  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 1);
+  tt_int_op(get_n_authorities(BRIDGE_DIRINFO), OP_EQ, 1);
+  tt_int_op(smartlist_len(router_get_fallback_dir_servers()), OP_EQ, 1);
 
   /* Assume we have eight V3 authorities */
   add_default_trusted_dir_authorities(V3_DIRINFO);
@@ -1838,7 +1838,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 1);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 1);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -1857,7 +1857,7 @@ test_config_adding_dir_servers(void *arg)
                          1 : 0)
                         );
       /* If we have no default bridge authority, something has gone wrong */
-      tt_assert(n_default_alt_bridge_authority >= 1);
+      tt_int_op(n_default_alt_bridge_authority, OP_GE, 1);
 
       /* Count v3 Authorities */
       SMARTLIST_FOREACH(fallback_servers,
@@ -1869,7 +1869,7 @@ test_config_adding_dir_servers(void *arg)
                          1 : 0)
                         );
       /* If we have no default authorities, something has gone really wrong */
-      tt_assert(n_default_alt_dir_authority >= 1);
+      tt_int_op(n_default_alt_dir_authority, OP_GE, 1);
 
       /* Calculate Fallback Directory Count */
       n_default_fallback_dir = (smartlist_len(fallback_servers) -
@@ -1879,7 +1879,7 @@ test_config_adding_dir_servers(void *arg)
        * or some authorities aren't being added as fallback directories.
        * (networkstatus_consensus_can_use_extra_fallbacks depends on all
        * authorities being fallback directories.) */
-      tt_assert(n_default_fallback_dir >= 0);
+      tt_int_op(n_default_fallback_dir, OP_GE, 0);
     }
   }
 
@@ -1920,7 +1920,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -1929,7 +1929,7 @@ test_config_adding_dir_servers(void *arg)
       /* trusted_dir_servers */
       const smartlist_t *dir_servers = router_get_trusted_dir_servers();
       /* D0, (No B1), (No A2) */
-      tt_assert(smartlist_len(dir_servers) == 1);
+      tt_int_op(smartlist_len(dir_servers), OP_EQ, 1);
 
       /* DirAuthority - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -1941,7 +1941,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 1);
+      tt_int_op(found_D0, OP_EQ, 1);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -1953,7 +1953,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -1965,14 +1965,14 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
     }
 
     {
       /* fallback_dir_servers */
       const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
       /* D0, (No B1), (No A2), Custom Fallback */
-      tt_assert(smartlist_len(fallback_servers) == 2);
+      tt_int_op(smartlist_len(fallback_servers), OP_EQ, 2);
 
       /* DirAuthority - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -1984,7 +1984,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 1);
+      tt_int_op(found_D0, OP_EQ, 1);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -1996,7 +1996,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2008,7 +2008,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* Custom FallbackDir - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -2020,7 +2020,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 1);
+      tt_int_op(found_non_default_fallback, OP_EQ, 1);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -2032,7 +2032,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
     }
   }
 
@@ -2061,7 +2061,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we just have the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 0);
@@ -2070,7 +2070,7 @@ test_config_adding_dir_servers(void *arg)
       /* trusted_dir_servers */
       const smartlist_t *dir_servers = router_get_trusted_dir_servers();
       /* D0, (No B1), (No A2) */
-      tt_assert(smartlist_len(dir_servers) == 1);
+      tt_int_op(smartlist_len(dir_servers), OP_EQ, 1);
 
       /* DirAuthority - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -2082,7 +2082,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 1);
+      tt_int_op(found_D0, OP_EQ, 1);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2094,7 +2094,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2106,14 +2106,14 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
     }
 
     {
       /* fallback_dir_servers */
       const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
       /* D0, (No B1), (No A2), (No Fallback) */
-      tt_assert(smartlist_len(fallback_servers) == 1);
+      tt_int_op(smartlist_len(fallback_servers), OP_EQ, 1);
 
       /* DirAuthority - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -2125,7 +2125,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 1);
+      tt_int_op(found_D0, OP_EQ, 1);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2137,7 +2137,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2149,7 +2149,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -2161,7 +2161,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 0);
+      tt_int_op(found_non_default_fallback, OP_EQ, 0);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -2173,7 +2173,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
     }
   }
 
@@ -2202,7 +2202,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -2211,7 +2211,7 @@ test_config_adding_dir_servers(void *arg)
       /* trusted_dir_servers */
       const smartlist_t *dir_servers = router_get_trusted_dir_servers();
       /* (No D0), B1, A2 */
-      tt_assert(smartlist_len(dir_servers) == 2);
+      tt_int_op(smartlist_len(dir_servers), OP_EQ, 2);
 
       /* (No DirAuthority) - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -2223,7 +2223,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2235,7 +2235,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2247,14 +2247,14 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
     }
 
     {
       /* fallback_dir_servers */
       const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
       /* (No D0), B1, A2, Custom Fallback */
-      tt_assert(smartlist_len(fallback_servers) == 3);
+      tt_int_op(smartlist_len(fallback_servers), OP_EQ, 3);
 
       /* (No DirAuthority) - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -2266,7 +2266,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2278,7 +2278,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2290,7 +2290,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
 
       /* Custom FallbackDir - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -2302,7 +2302,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 1);
+      tt_int_op(found_non_default_fallback, OP_EQ, 1);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -2314,7 +2314,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
     }
   }
 
@@ -2344,7 +2344,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 0);
@@ -2353,7 +2353,7 @@ test_config_adding_dir_servers(void *arg)
       /* trusted_dir_servers */
       const smartlist_t *dir_servers = router_get_trusted_dir_servers();
       /* (No D0), B1, A2 */
-      tt_assert(smartlist_len(dir_servers) == 2);
+      tt_int_op(smartlist_len(dir_servers), OP_EQ, 2);
 
       /* (No DirAuthority) - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -2365,7 +2365,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2377,7 +2377,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2389,14 +2389,14 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
     }
 
     {
       /* fallback_dir_servers */
       const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
       /* (No D0), B1, A2, (No Fallback) */
-      tt_assert(smartlist_len(fallback_servers) == 2);
+      tt_int_op(smartlist_len(fallback_servers), OP_EQ, 2);
 
       /* (No DirAuthority) - D0 - dir_port: 60090 */
       int found_D0 = 0;
@@ -2408,7 +2408,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2420,7 +2420,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2432,7 +2432,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
 
       /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -2444,7 +2444,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 0);
+      tt_int_op(found_non_default_fallback, OP_EQ, 0);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -2456,7 +2456,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
     }
   }
 
@@ -2496,7 +2496,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -2517,7 +2517,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2529,7 +2529,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2541,7 +2541,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default v3 non-Bridge directory authorities, so let's assume that
@@ -2567,7 +2567,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2579,7 +2579,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2591,7 +2591,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* Custom FallbackDir - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -2603,7 +2603,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 1);
+      tt_int_op(found_non_default_fallback, OP_EQ, 1);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -2615,7 +2615,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default v3 non-Bridge directory authorities, so let's assume that
@@ -2650,7 +2650,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 1);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 1);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -2671,7 +2671,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2683,7 +2683,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2695,7 +2695,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default v3 non-Bridge directory authorities, so let's assume that
@@ -2721,7 +2721,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2733,7 +2733,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 1);
+      tt_int_op(found_B1, OP_EQ, 1);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2745,7 +2745,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -2757,7 +2757,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 0);
+      tt_int_op(found_non_default_fallback, OP_EQ, 0);
 
       /* Default FallbackDir - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -2769,7 +2769,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 1);
+      tt_int_op(found_default_fallback, OP_EQ, 1);
 
       /* There's no easy way of checking that we have included all the
        * default v3 non-Bridge directory authorities, so let's assume that
@@ -2813,7 +2813,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -2835,7 +2835,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2847,7 +2847,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2859,7 +2859,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge authorities (except for hard-coding tonga's details),
@@ -2886,7 +2886,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -2898,7 +2898,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -2910,7 +2910,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
 
       /* Custom FallbackDir - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -2922,7 +2922,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 1);
+      tt_int_op(found_non_default_fallback, OP_EQ, 1);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -2934,7 +2934,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge authorities (except for hard-coding tonga's details),
@@ -2970,7 +2970,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we just have the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 0);
@@ -2993,7 +2993,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -3005,7 +3005,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -3017,7 +3017,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge authorities (except for hard-coding tonga's details),
@@ -3044,7 +3044,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -3056,7 +3056,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* AlternateDirAuthority - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -3068,7 +3068,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 1);
+      tt_int_op(found_A2, OP_EQ, 1);
 
       /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -3080,7 +3080,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 0);
+      tt_int_op(found_non_default_fallback, OP_EQ, 0);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -3092,7 +3092,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge authorities (except for hard-coding tonga's details),
@@ -3136,7 +3136,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must not have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 0);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -3158,7 +3158,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -3170,7 +3170,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -3182,7 +3182,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge & V3 Directory authorities, so let's assume that
@@ -3209,7 +3209,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -3221,7 +3221,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -3233,7 +3233,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* Custom FallbackDir - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -3245,7 +3245,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 1);
+      tt_int_op(found_non_default_fallback, OP_EQ, 1);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -3257,7 +3257,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 0);
+      tt_int_op(found_default_fallback, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge & V3 Directory authorities, so let's assume that
@@ -3299,7 +3299,7 @@ test_config_adding_dir_servers(void *arg)
     /* check outcome */
 
     /* we must have added the default fallback dirs */
-    tt_assert(n_add_default_fallback_dir_servers_known_default == 1);
+    tt_int_op(n_add_default_fallback_dir_servers_known_default, OP_EQ, 1);
 
     /* we have more fallbacks than just the authorities */
     tt_assert(networkstatus_consensus_can_use_extra_fallbacks(options) == 1);
@@ -3321,7 +3321,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -3333,7 +3333,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -3345,7 +3345,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge & V3 Directory authorities, so let's assume that
@@ -3372,7 +3372,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60090 ?
                          1 : 0)
                         );
-      tt_assert(found_D0 == 0);
+      tt_int_op(found_D0, OP_EQ, 0);
 
       /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
       int found_B1 = 0;
@@ -3384,7 +3384,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60091 ?
                          1 : 0)
                         );
-      tt_assert(found_B1 == 0);
+      tt_int_op(found_B1, OP_EQ, 0);
 
       /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
       int found_A2 = 0;
@@ -3396,7 +3396,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60092 ?
                          1 : 0)
                         );
-      tt_assert(found_A2 == 0);
+      tt_int_op(found_A2, OP_EQ, 0);
 
       /* Custom FallbackDir - No Nickname - dir_port: 60093 */
       int found_non_default_fallback = 0;
@@ -3408,7 +3408,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60093 ?
                          1 : 0)
                         );
-      tt_assert(found_non_default_fallback == 0);
+      tt_int_op(found_non_default_fallback, OP_EQ, 0);
 
       /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
       int found_default_fallback = 0;
@@ -3420,7 +3420,7 @@ test_config_adding_dir_servers(void *arg)
                         (ds->dir_port == 60099 ?
                          1 : 0)
                         );
-      tt_assert(found_default_fallback == 1);
+      tt_int_op(found_default_fallback, OP_EQ, 1);
 
       /* There's no easy way of checking that we have included all the
        * default Bridge & V3 Directory authorities, and the default
@@ -3477,7 +3477,7 @@ test_config_default_dir_servers(void *arg)
   opts = NULL;
 
   /* assume a release will never go out with less than 7 authorities */
-  tt_assert(trusted_count >= 7);
+  tt_int_op(trusted_count, OP_GE, 7);
   /* if we disable the default fallbacks, there must not be any extra */
   tt_assert(fallback_count == trusted_count);
 
@@ -3490,7 +3490,7 @@ test_config_default_dir_servers(void *arg)
   opts = NULL;
 
   /* assume a release will never go out with less than 7 authorities */
-  tt_assert(trusted_count >= 7);
+  tt_int_op(trusted_count, OP_GE, 7);
   /* XX/teor - allow for default fallbacks to be added without breaking
    * the unit tests. Set a minimum fallback count once the list is stable. */
   tt_assert(fallback_count >= trusted_count);
@@ -3559,18 +3559,18 @@ test_config_directory_fetch(void *arg)
   options->ClientOnly = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 1);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 1);
 
   /* Bridge Clients can use multiple directory mirrors for bootstrap */
   memset(options, 0, sizeof(or_options_t));
   options->UseBridges = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 1);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 1);
 
   /* Bridge Relays (Bridges) must act like clients, and use multiple
    * directory mirrors for bootstrap */
@@ -3579,9 +3579,9 @@ test_config_directory_fetch(void *arg)
   options->ORPort_set = 1;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 0);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 1);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 1);
 
   /* Clients set to FetchDirInfoEarly must fetch it from the authorities,
    * but can use multiple authorities for bootstrap */
@@ -3589,9 +3589,9 @@ test_config_directory_fetch(void *arg)
   options->FetchDirInfoEarly = 1;
   tt_assert(server_mode(options) == 0);
   tt_assert(public_server_mode(options) == 0);
-  tt_assert(directory_fetches_from_authorities(options) == 1);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 1);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 1);
 
   /* OR servers only fetch the consensus from the authorities when they don't
    * know their own address, but never use multiple directories for bootstrap
@@ -3602,16 +3602,16 @@ test_config_directory_fetch(void *arg)
   mock_router_pick_published_address_result = -1;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 1);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   mock_router_pick_published_address_result = 0;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   /* Exit OR servers only fetch the consensus from the authorities when they
    * refuse unknown exits, but never use multiple directories for bootstrap
@@ -3629,17 +3629,17 @@ test_config_directory_fetch(void *arg)
   options->RefuseUnknownExits = 1;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 1);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   options->RefuseUnknownExits = 0;
   mock_router_pick_published_address_result = 0;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   /* Dir servers fetch the consensus from the authorities, unless they are not
    * advertising themselves (hibernating) or have no routerinfo or are not
@@ -3658,26 +3658,26 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 1);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   mock_advertised_server_mode_result = 0;
   routerinfo.dir_port = 1;
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   mock_advertised_server_mode_result = 1;
   mock_router_get_my_routerinfo_result = NULL;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   mock_advertised_server_mode_result = 1;
   routerinfo.dir_port = 0;
@@ -3685,9 +3685,9 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 0);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 0);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
   mock_advertised_server_mode_result = 1;
   routerinfo.dir_port = 1;
@@ -3695,9 +3695,9 @@ test_config_directory_fetch(void *arg)
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
-  tt_assert(directory_fetches_from_authorities(options) == 1);
-  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
-            == 0);
+  tt_int_op(directory_fetches_from_authorities(options), OP_EQ, 1);
+  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
+            OP_EQ, 0);
 
  done:
   tor_free(options);

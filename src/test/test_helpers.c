@@ -189,7 +189,7 @@ mock_connection_connect_sockaddr(connection_t *conn,
   /* We really should call tor_libevent_initialize() here. Because we don't,
    * we are relying on other parts of the code not checking if the_event_base
    * (and therefore event->ev_base) is NULL.  */
-  tt_assert(connection_add_connecting(conn) == 0);
+  tt_int_op(connection_add_connecting(conn), OP_EQ, 0);
 
  done:
   /* Fake "connected" status */
@@ -222,7 +222,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   mock_connection_connect_sockaddr_called = 0;
   in_progress = connection_connect(conn, TEST_CONN_ADDRESS_PORT, &addr,
                                    TEST_CONN_PORT, &socket_err);
-  tt_assert(mock_connection_connect_sockaddr_called == 1);
+  tt_int_op(mock_connection_connect_sockaddr_called, OP_EQ, 1);
   tt_assert(!socket_err);
   tt_assert(in_progress == 0 || in_progress == 1);
 
