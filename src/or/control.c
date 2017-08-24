@@ -368,16 +368,23 @@ connection_write_str_to_buf(const char *s, control_connection_t *conn)
 STATIC size_t
 write_escaped_data(const char *data, size_t len, char **out)
 {
-  size_t sz_out = len+8;
+  tor_assert(len < SIZE_MAX - 9);
+  size_t sz_out = len+8+1;
   char *outp;
   const char *start = data, *end;
-  int i;
+  size_t i;
   int start_of_line;
-  for (i=0; i<(int)len; ++i) {
-    if (data[i]== '\n')
+  for (i=0; i < len; ++i) {
+    if (data[i] == '\n') {
       sz_out += 2; /* Maybe add a CR; maybe add a dot. */
+      if (sz_out >= SIZE_T_CEILING) {
+        log_warn(LD_BUG, "Input to write_escaped_data was too long");
+        *out = tor_strdup(".\r\n");
+        return 3;
+      }
+    }
   }
-  *out = outp = tor_malloc(sz_out+1);
+  *out = outp = tor_malloc(sz_out);
   end = data+len;
   start_of_line = 1;
   while (data < end) {
@@ -403,7 +410,8 @@ write_escaped_data(const char *data, size_t len, char **out)
   *outp++ = '\r';
   *outp++ = '\n';
   *outp = '\0'; /* NUL-terminate just in case. */
-  tor_assert((outp - *out) <= (int)sz_out);
+  tor_assert(outp >= *out);
+  tor_assert((size_t)(outp - *out) <= sz_out);
   return outp - *out;
 }
 
