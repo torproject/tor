@@ -5293,7 +5293,10 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                             "v2 rendezvous service descriptor") < 0)
     goto err;
   /* Verify that descriptor ID belongs to public key and secret ID part. */
-  crypto_pk_get_digest(result->pk, public_key_hash);
+  if (crypto_pk_get_digest(result->pk, public_key_hash) < 0) {
+    log_warn(LD_REND, "Unable to compute rend descriptor public key digest");
+    goto err;
+  }
   rend_get_descriptor_id_bytes(test_desc_id, public_key_hash,
                                secret_id_part);
   if (tor_memneq(desc_id_out, test_desc_id, DIGEST_LEN)) {

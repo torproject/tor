@@ -1,0 +1,7 @@
+  o Minor bugfixes (robustness, error handling):
+    - Improve our handling of the cases where OpenSSL encounters a
+      memory error while encoding keys and certificates. We haven't
+      observed these happening in the wild, but if they do happen,
+      we now detect and respond better. Fixes bug 19418; bugfix
+      on all versions of Tor. Reported by Guido Vranken.
+

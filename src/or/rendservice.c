@@ -2812,7 +2812,14 @@ rend_service_decrypt_intro(
   /* Check that this cell actually matches this service key */
 
   /* first DIGEST_LEN bytes of request is intro or service pk digest */
-  crypto_pk_get_digest(key, (char *)key_digest);
+  if (crypto_pk_get_digest(key, (char *)key_digest) < 0) {
+    if (err_msg_out)
+      *err_msg_out = tor_strdup("Couldn't compute RSA digest.");
+    log_warn(LD_BUG, "Couldn't compute key digest.");
+    status = -7;
+    goto err;
+  }
+
   if (tor_memneq(key_digest, intro->pk, DIGEST_LEN)) {
     if (err_msg_out) {
       base32_encode(service_id, REND_SERVICE_ID_LEN_BASE32 + 1,
