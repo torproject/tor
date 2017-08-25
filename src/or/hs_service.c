@@ -750,6 +750,26 @@ service_escaped_dir(const hs_service_t *s)
                                     escaped(s->config.directory_path);
 }
 
+/** Move the hidden service state from <b>src</b> to <b>dst</b>. We do this
+ *  when we receive a SIGHUP: <b>dst</b> is the post-HUP service */
+static void
+move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
+{
+  tor_assert(src_service);
+  tor_assert(dst_service);
+
+  hs_service_state_t *src = &src_service->state;
+  hs_service_state_t *dst = &dst_service->state;
+
+  /* Let's do a shallow copy */
+  dst->intro_circ_retry_started_time = src->intro_circ_retry_started_time;
+  dst->num_intro_circ_launched = src->num_intro_circ_launched;
+  dst->in_overlap_period = src->in_overlap_period;
+  dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
+
+  src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
+}
+
 /* Register services that are in the staging list. Once this function returns,
  * the global service map will be set with the right content and all non
  * surviving services will be cleaned up. */
@@ -785,6 +805,7 @@ register_all_services(void)
       /* Pass ownership of the descriptors from s (the current service) to
        * snew (the newly configured one). */
       move_descriptors(s, snew);
+      move_hs_state(s, snew);
       /* Remove the service from the global map because after this, we need to
        * go over the remaining service in that map that aren't surviving the
        * reload to close their circuits. */
