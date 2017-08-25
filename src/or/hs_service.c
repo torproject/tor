@@ -964,7 +964,8 @@ service_descriptor_new(void)
   return sdesc;
 }
 
-/* Move descriptor(s) from the src service to the dst service. */
+/* Move descriptor(s) from the src service to the dst service. We do this
+ * during SIGHUP when we re-create our hidden services. */
 static void
 move_descriptors(hs_service_t *src, hs_service_t *dst)
 {
@@ -972,10 +973,19 @@ move_descriptors(hs_service_t *src, hs_service_t *dst)
   tor_assert(dst);
 
   if (src->desc_current) {
+    /* Nothing should be there, but clean it up just in case */
+    if (BUG(dst->desc_current)) {
+      service_descriptor_free(dst->desc_current);
+    }
     dst->desc_current = src->desc_current;
     src->desc_current = NULL;
   }
+
   if (src->desc_next) {
+    /* Nothing should be there, but clean it up just in case */
+    if (BUG(dst->desc_next)) {
+      service_descriptor_free(dst->desc_next);
+    }
     dst->desc_next = src->desc_next;
     src->desc_next = NULL;
   }
