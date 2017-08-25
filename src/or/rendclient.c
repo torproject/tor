@@ -265,6 +265,11 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     klen = crypto_pk_asn1_encode(extend_info->onion_key,
                                  tmp+v3_shift+7+DIGEST_LEN+2,
                                  sizeof(tmp)-(v3_shift+7+DIGEST_LEN+2));
+    if (klen < 0) {
+      log_warn(LD_BUG,"Internal error: can't encode public key.");
+      status = -2;
+      goto perm_err;
+    }
     set_uint16(tmp+v3_shift+7+DIGEST_LEN, htons(klen));
     memcpy(tmp+v3_shift+7+DIGEST_LEN+2+klen, rendcirc->rend_data->rend_cookie,
            REND_COOKIE_LEN);
