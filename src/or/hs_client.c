@@ -57,15 +57,49 @@ flag_all_conn_wait_desc(const ed25519_public_key_t *service_identity_pk)
   smartlist_free(conns);
 }
 
+/* Remove tracked HSDir requests from our history for this hidden service
+ * identity public key. */
+static void
+purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
+{
+  char base64_blinded_pk[ED25519_BASE64_LEN + 1];
+  ed25519_public_key_t blinded_pk;
+
+  tor_assert(identity_pk);
+
+  /* Get blinded pubkey of hidden service. It is possible that we just moved
+   * to a new time period meaning that we won't be able to purge the request
+   * from the previous time period. That is fine because they will expire at
+   * some point and we don't care about those anymore. */
+  hs_build_blinded_pubkey(identity_pk, NULL, 0,
+                          hs_get_time_period_num(approx_time()), &blinded_pk);
+  if (BUG(ed25519_public_to_base64(base64_blinded_pk, &blinded_pk) < 0)) {
+    return;
+  }
+  /* Purge last hidden service request from cache for this blinded key. */
+  hs_purge_hid_serv_from_last_hid_serv_requests(base64_blinded_pk);
+}
+
 /* A v3 HS circuit successfully connected to the hidden service. Update the
  * stream state at <b>hs_conn_ident</b> appropriately. */
 static void
 note_connection_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
 {
-  (void) hs_conn_ident;
+  tor_assert(hs_conn_ident);
 
-  /* TODO: When implementing client side */
-  return;
+  /* Remove from the hid serv cache all requests for that service so we can
+   * query the HSDir again later on for various reasons. */
+  purge_hid_serv_request(&hs_conn_ident->identity_pk);
+
+  /* The v2 subsystem cleans up the intro point time out flag at this stage.
+   * We don't try to do it here because we still need to keep intact the intro
+   * point state for future connections. Even though we are able to connect to
+   * the service, doesn't mean we should reset the timed out intro points.
+   *
+   * It is not possible to have successfully connected to an intro point
+   * present in our cache that was on error or timed out. Every entry in that
+   * cache have a 2 minutes lifetime so ultimately the intro point(s) state
+   * will be reset and thus possible to be retried. */
 }
 
 /* Given the pubkey of a hidden service in <b>onion_identity_pk</b>, fetch its
