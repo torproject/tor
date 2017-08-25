@@ -73,6 +73,7 @@ static const char address_tld[] = "onion";
 static smartlist_t *hs_service_staging_list;
 
 static void set_descriptor_revision_counter(hs_descriptor_t *hs_desc);
+static void move_descriptors(hs_service_t *src, hs_service_t *dst);
 
 /* Helper: Function to compare two objects in the service map. Return 1 if the
  * two service have the same master public identity key. */
@@ -709,23 +710,6 @@ close_service_circuits(hs_service_t *service)
   close_service_rp_circuits(service);
 }
 
-/* Move descriptor(s) from the src service to the dst service. */
-static void
-move_descriptors(hs_service_t *src, hs_service_t *dst)
-{
-  tor_assert(src);
-  tor_assert(dst);
-
-  if (src->desc_current) {
-    dst->desc_current = src->desc_current;
-    src->desc_current = NULL;
-  }
-  if (src->desc_next) {
-    dst->desc_next = src->desc_next;
-    src->desc_next = NULL;
-  }
-}
-
 /* Move every ephemeral services from the src service map to the dst service
  * map. It is possible that a service can't be register to the dst map which
  * won't stop the process of moving them all but will trigger a log warn. */
@@ -978,6 +962,23 @@ service_descriptor_new(void)
   sdesc->hsdir_missing_info = smartlist_new();
   sdesc->previous_hsdirs = smartlist_new();
   return sdesc;
+}
+
+/* Move descriptor(s) from the src service to the dst service. */
+static void
+move_descriptors(hs_service_t *src, hs_service_t *dst)
+{
+  tor_assert(src);
+  tor_assert(dst);
+
+  if (src->desc_current) {
+    dst->desc_current = src->desc_current;
+    src->desc_current = NULL;
+  }
+  if (src->desc_next) {
+    dst->desc_next = src->desc_next;
+    src->desc_next = NULL;
+  }
 }
 
 /* From the given service, remove all expired failing intro points for each
