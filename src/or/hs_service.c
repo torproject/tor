@@ -72,6 +72,11 @@ static const char address_tld[] = "onion";
  * loading keys requires that we are an actual running tor process. */
 static smartlist_t *hs_service_staging_list;
 
+/** True if the list of available router descriptors might have changed which
+ *  might result in an altered hash ring. Check if the hash ring changed and
+ *  reupload if needed */
+static int consider_republishing_hs_descriptors = 0;
+
 static void set_descriptor_revision_counter(hs_descriptor_t *hs_desc);
 
 /* Helper: Function to compare two objects in the service map. Return 1 if the
@@ -1714,10 +1719,35 @@ rotate_service_descriptors(hs_service_t *service)
   service->desc_next = NULL;
 }
 
-/* Rotate descriptors for each service if needed. If we are just entering
- * the overlap period, rotate them that is point the previous descriptor to
- * the current and cleanup the previous one. A non existing current
- * descriptor will trigger a descriptor build for the next time period. */
+/** Return true if <b>service</b> **just** entered overlap mode. */
+static int
+service_just_entered_overlap_mode(const hs_service_t *service,
+                                  int overlap_mode_is_active)
+{
+  if (overlap_mode_is_active && !service->state.in_overlap_period) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/** Return true if <b>service</b> **just** left overlap mode. */
+static int
+service_just_left_overlap_mode(const hs_service_t *service,
+                               int overlap_mode_is_active)
+{
+  if (!overlap_mode_is_active && service->state.in_overlap_period) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/* Rotate descriptors for each service if needed. If we are just entering or
+ * leaving the overlap period, rotate them that is point the previous
+ * descriptor to the current and cleanup the previous one. A non existing
+ * current descriptor will trigger a descriptor build for the next time
+ * period. */
 STATIC void
 rotate_all_descriptors(time_t now)
 {
@@ -1725,35 +1755,56 @@ rotate_all_descriptors(time_t now)
    *     be wise, to rotate service descriptors independently to hide that all
    *     those descriptors are on the same tor instance */
 
-  FOR_EACH_SERVICE_BEGIN(service) {
-    /* We are _not_ in the overlap period so skip rotation. */
-    if (!hs_overlap_mode_is_active(NULL, now)) {
-      service->state.in_overlap_period = 0;
-      continue;
-    }
-    /* We've entered the overlap period already so skip rotation. */
-    if (service->state.in_overlap_period) {
-      continue;
-    }
-    /* It's the first time the service encounters the overlap period so flag
-     * it in order to make sure we don't rotate at next check. */
-    service->state.in_overlap_period = 1;
+  int overlap_mode_is_active = hs_overlap_mode_is_active(NULL, now);
 
-    /* We just entered overlap period: recompute all HSDir indices. We need to
-     * do this otherwise nodes can get stuck with old HSDir indices until we
-     * fetch a new consensus, and we might need to reupload our desc before
-     * that. */
-    /* XXX find a better place than rotate_all_descriptors() to do this */
-    nodelist_recompute_all_hsdir_indices();
+  FOR_EACH_SERVICE_BEGIN(service) {
+    int service_entered_overlap = service_just_entered_overlap_mode(service,
+                                                      overlap_mode_is_active);
+    int service_left_overlap = service_just_left_overlap_mode(service,
+                                                          overlap_mode_is_active);
+    /* This should not be possible */
+    if (BUG(service_entered_overlap && service_left_overlap)) {
+      return;
+    }
+
+    /* No changes in overlap mode: nothing to do here */
+    if (!service_entered_overlap && !service_left_overlap) {
+      return;
+    }
+
+    /* To get down there means that some change happened to overlap mode */
+    tor_assert(service_entered_overlap || service_left_overlap);
+
+    /* Update the overlap marks on this service */
+    if (service_entered_overlap) {
+      /* It's the first time the service encounters the overlap period so flag
+       * it in order to make sure we don't rotate at next check. */
+      service->state.in_overlap_period = 1;
+    } else if (service_left_overlap) {
+      service->state.in_overlap_period = 0;
+    }
+
+    if (service_entered_overlap) {
+      /* We just entered overlap period: recompute all HSDir indices. We need to
+       * do this otherwise nodes can get stuck with old HSDir indices until we
+       * fetch a new consensus, and we might need to reupload our desc before
+       * that. */
+      /* XXX find a better place than rotate_all_descriptors() to do this */
+      nodelist_recompute_all_hsdir_indices();
+    }
+
+    /* If we just entered or left overlap mode, rotate our descriptors */
+    log_info(LD_REND, "We just %s overlap period. About to rotate %s "
+             "descriptors (%p / %p).",
+             service_entered_overlap ? "entered" : "left",
+             safe_str_client(service->onion_address),
+             service->desc_current, service->desc_next);
 
     /* If we have a next descriptor lined up, rotate the descriptors so that it
      * becomes current. */
     if (service->desc_next) {
       rotate_service_descriptors(service);
     }
-    log_info(LD_REND, "We've just entered the overlap period. Service %s "
-                      "descriptors have been rotated!",
-             safe_str_client(service->onion_address));
   } FOR_EACH_SERVICE_END;
 }
 
@@ -2309,6 +2360,53 @@ upload_descriptor_to_all(const hs_service_t *service,
   return;
 }
 
+/** The set of HSDirs have changed: check if the change affects our descriptor
+ *  HSDir placement, and if it does, reupload the desc. */
+STATIC int
+service_desc_hsdirs_changed(const hs_service_t *service,
+                            const hs_service_descriptor_t *desc)
+{
+  int retval = 0;
+  smartlist_t *responsible_dirs = smartlist_new();
+  smartlist_t *b64_responsible_dirs = smartlist_new();
+
+  /* No desc upload has happened yet: it will happen eventually */
+  if (!desc->previous_hsdirs || !smartlist_len(desc->previous_hsdirs)) {
+    goto done;
+  }
+
+  /* Get list of responsible hsdirs */
+  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
+                            service->desc_next == desc, 0, responsible_dirs);
+
+  /* Make a second list with their b64ed identity digests, so that we can
+   * compare it with out previous list of hsdirs */
+  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, hsdir_rs) {
+    char b64_digest[BASE64_DIGEST_LEN+1] = {0};
+    digest_to_base64(b64_digest, hsdir_rs->identity_digest);
+    smartlist_add_strdup(b64_responsible_dirs, b64_digest);
+  } SMARTLIST_FOREACH_END(hsdir_rs);
+
+  /* Sort this new smartlist so that we can compare it with the other one */
+  smartlist_sort_strings(b64_responsible_dirs);
+
+  /* Check whether the set of HSDirs changed */
+  if (!smartlist_strings_eq(b64_responsible_dirs, desc->previous_hsdirs)) {
+    log_warn(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
+    retval = 1;
+  } else {
+    log_warn(LD_GENERAL, "No change in hsdir set!");
+  }
+
+ done:
+  smartlist_free(responsible_dirs);
+
+  SMARTLIST_FOREACH(b64_responsible_dirs, char*, s, tor_free(s));
+  smartlist_free(b64_responsible_dirs);
+
+  return retval;
+}
+
 /* Return 1 if the given descriptor from the given service can be uploaded
  * else return 0 if it can not. */
 static int
@@ -2383,7 +2481,14 @@ run_upload_descriptor_event(time_t now)
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
       int for_next_period = 0;
 
-      /* Can this descriptor be uploaed? */
+      /* If we were asked to re-examine the hash ring, and it changed, then
+         schedule an upload */
+      if (consider_republishing_hs_descriptors &&
+          service_desc_hsdirs_changed(service, desc)) {
+        service_desc_schedule_upload(desc, now, 0);
+      }
+
+      /* Can this descriptor be uploaded? */
       if (!should_service_upload_descriptor(service, desc, now)) {
         continue;
       }
@@ -2410,6 +2515,9 @@ run_upload_descriptor_event(time_t now)
       upload_descriptor_to_all(service, desc, for_next_period);
     } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
+
+  /* We are done considering whether to republish rend descriptors */
+  consider_republishing_hs_descriptors = 0;
 }
 
 /* Called when the introduction point circuit is done building and ready to be
@@ -2690,86 +2798,18 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
   smartlist_add(list, hs_path_from_filename(s_dir, fname));
 }
 
-/** The set of HSDirs have changed: check if the change affects our descriptor
- *  HSDir placement, and if it does, reupload the desc. */
-static int
-service_desc_hsdirs_changed(const hs_service_t *service,
-                            const hs_service_descriptor_t *desc)
-{
-  int retval = 0;
-  smartlist_t *responsible_dirs = smartlist_new();
-  smartlist_t *b64_responsible_dirs = smartlist_new();
-
-  /* No desc upload has happened yet: it will happen eventually */
-  if (!desc->previous_hsdirs || !smartlist_len(desc->previous_hsdirs)) {
-    goto done;
-  }
-
-  /* Get list of responsible hsdirs */
-  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
-                            service->desc_next == desc, 0, responsible_dirs);
-
-  /* Make a second list with their b64ed identity digests, so that we can
-   * compare it with out previous list of hsdirs */
-  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, hsdir_rs) {
-    char b64_digest[BASE64_DIGEST_LEN+1] = {0};
-    digest_to_base64(b64_digest, hsdir_rs->identity_digest);
-    smartlist_add_strdup(b64_responsible_dirs, b64_digest);
-  } SMARTLIST_FOREACH_END(hsdir_rs);
-
-  /* Sort this new smartlist so that we can compare it with the other one */
-  smartlist_sort_strings(b64_responsible_dirs);
-
-  /* Check whether the set of HSDirs changed */
-  if (!smartlist_strings_eq(b64_responsible_dirs, desc->previous_hsdirs)) {
-    log_info(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
-    retval = 1;
-  } else {
-    log_debug(LD_GENERAL, "No change in hsdir set!");
-  }
-
- done:
-  smartlist_free(responsible_dirs);
-
-  SMARTLIST_FOREACH(b64_responsible_dirs, char*, s, tor_free(s));
-  smartlist_free(b64_responsible_dirs);
-
-  return retval;
-}
-
 /* ========== */
 /* Public API */
 /* ========== */
 
 /* We just received a new batch of descriptors which might affect the shape of
- * the HSDir hash ring. Signal that we should re-upload our HS descriptors. */
+ * the HSDir hash ring. Signal that we should reexamine the hash ring and
+ * re-upload our HS descriptors if needed. */
 void
 hs_hsdir_set_changed_consider_reupload(void)
 {
-  time_t now = approx_time();
-
-  /* Check if HS subsystem is initialized */
-  if (!hs_service_map) {
-    return;
-  }
-
-  /* Basic test: If we have not bootstrapped 100% yet, no point in even trying
-     to upload descriptor. */
-  if (!router_have_minimum_dir_info()) {
-    return;
-  }
-
-  log_info(LD_GENERAL, "Received new dirinfo: Checking hash ring for changes");
-
-  /* Go over all descriptors and check if the set of HSDirs changed for any of
-   * them. Schedule reupload if so. */
-  FOR_EACH_SERVICE_BEGIN(service) {
-    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      if (service_desc_hsdirs_changed(service, desc)) {
-        service_desc_schedule_upload(desc, now, 0);
-      }
-    } FOR_EACH_DESCRIPTOR_END;
-  } FOR_EACH_SERVICE_END;
+  log_info(LD_REND, "New dirinfo arrived: consider reuploading descriptor");
+  consider_republishing_hs_descriptors = 1;
 }
 
 /* Return the number of service we have configured and usable. */

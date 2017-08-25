@@ -1005,6 +1005,13 @@ test_rotate_descriptors(void *arg)
             OP_EQ, 0);
   tt_assert(service->desc_next == NULL);
 
+  /* Now let's re-create desc_next and get out of overlap period. We should
+     test that desc_current gets replaced by desc_next, and desc_next becomes
+     NULL. */
+  desc_next = service_descriptor_new();
+  desc_next->next_upload_time = 240; /* Our marker to recognize it. */
+  service->desc_next = desc_next;
+
   /* Going out of the overlap period. */
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC",
                            &mock_ns.valid_after);
@@ -1012,6 +1019,12 @@ test_rotate_descriptors(void *arg)
                            &mock_ns.fresh_until);
   /* This should reset the state and not touch the current descriptor. */
   tt_int_op(ret, OP_EQ, 0);
+  rotate_all_descriptors(now);
+  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
+  tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
+  tt_assert(service->desc_next == NULL);
+
+  /* Calling rotate_all_descriptors() another time should do nothing */
   rotate_all_descriptors(now);
   tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
   tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
