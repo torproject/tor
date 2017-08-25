@@ -1103,7 +1103,9 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
                         "Closing streams.");
       connection_mark_unattached_ap(entry_conn,
                                     END_STREAM_REASON_RESOLVEFAILED);
-      /* XXX: Note the connection attempt. */
+      /* We are unable to use the descriptor so remove the directory request
+       * from the cache so the next connection can try again. */
+      note_connection_attempt_succeeded(edge_conn->hs_ident);
       goto end;
     }
 
