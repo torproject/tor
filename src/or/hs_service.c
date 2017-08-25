@@ -1761,7 +1761,7 @@ rotate_all_descriptors(time_t now)
     int service_entered_overlap = service_just_entered_overlap_mode(service,
                                                       overlap_mode_is_active);
     int service_left_overlap = service_just_left_overlap_mode(service,
-                                                          overlap_mode_is_active);
+                                             overlap_mode_is_active);
     /* This should not be possible */
     if (BUG(service_entered_overlap && service_left_overlap)) {
       return;
@@ -1785,10 +1785,10 @@ rotate_all_descriptors(time_t now)
     }
 
     if (service_entered_overlap) {
-      /* We just entered overlap period: recompute all HSDir indices. We need to
-       * do this otherwise nodes can get stuck with old HSDir indices until we
-       * fetch a new consensus, and we might need to reupload our desc before
-       * that. */
+      /* We just entered overlap period: recompute all HSDir indices. We need
+       * to do this otherwise nodes can get stuck with old HSDir indices until
+       * we fetch a new consensus, and we might need to reupload our desc
+       * before that. */
       /* XXX find a better place than rotate_all_descriptors() to do this */
       nodelist_recompute_all_hsdir_indices();
     }
