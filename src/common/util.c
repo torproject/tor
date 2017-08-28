@@ -1233,15 +1233,7 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
 #ifdef HAVE_STRTOULL
   r = (uint64_t)strtoull(s, &endptr, base);
 #elif defined(_WIN32)
-#if defined(_MSC_VER) && _MSC_VER < 1300
-  tor_assert(base <= 10);
-  r = (uint64_t)_atoi64(s);
-  endptr = (char*)s;
-  while (TOR_ISSPACE(*endptr)) endptr++;
-  while (TOR_ISDIGIT(*endptr)) endptr++;
-#else
   r = (uint64_t)_strtoui64(s, &endptr, base);
-#endif
 #elif SIZEOF_LONG == 8
   r = (uint64_t)strtoul(s, &endptr, base);
 #else

@@ -71,7 +71,7 @@ parse_process_specifier(const char *process_spec,
 
   /* If we're lucky, long will turn out to be large enough to hold a
    * PID everywhere that Tor runs. */
-  pid_l = tor_parse_long(process_spec, 0, 1, LONG_MAX, &pid_ok, &pspec_next);
+  pid_l = tor_parse_long(process_spec, 10, 1, LONG_MAX, &pid_ok, &pspec_next);
 
   /* Reserve room in the ‘process specifier’ for additional
    * (platform-specific) identifying information beyond the PID, to

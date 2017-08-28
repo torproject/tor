@@ -2700,7 +2700,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
       }
       cp+=strlen("bw=");
 
-      out->bw_kb = tor_parse_long(cp, 0, 0, LONG_MAX, &parse_ok, &endptr);
+      out->bw_kb = tor_parse_long(cp, 10, 0, LONG_MAX, &parse_ok, &endptr);
       if (!parse_ok || (*endptr && !TOR_ISSPACE(*endptr))) {
         log_warn(LD_DIRSERV, "Invalid bandwidth in bandwidth file line: %s",
                  escaped(orig_line));

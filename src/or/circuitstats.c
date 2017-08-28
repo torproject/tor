@@ -939,7 +939,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       uint32_t count, k;
       build_time_t ms;
       int ok;
-      ms = (build_time_t)tor_parse_ulong(ms_str, 0, 0,
+      ms = (build_time_t)tor_parse_ulong(ms_str, 10, 0,
                                          CBT_BUILD_TIME_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_GENERAL, "Unable to parse circuit build times: "
@@ -949,7 +949,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
         smartlist_free(args);
         break;
       }
-      count = (uint32_t)tor_parse_ulong(count_str, 0, 0,
+      count = (uint32_t)tor_parse_ulong(count_str, 10, 0,
                                         UINT32_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_GENERAL, "Unable to parse circuit build times: "
