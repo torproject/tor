@@ -4,11 +4,12 @@
 #define ROUTERPARSE_PRIVATE
 #define HS_DESCRIPTOR_PRIVATE
 
+#include "or.h"
+#include "ed25519_cert.h" /* Trunnel interface. */
 #include "crypto_ed25519.h"
 #include "hs_descriptor.h"
 #include "routerparse.h"
 #include "util.h"
-#include "torcert.h"
 
 #include "fuzzing.h"
 
