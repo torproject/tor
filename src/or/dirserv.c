@@ -720,7 +720,12 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     log_info(LD_DIRSERV, "Dropping descriptor from %s (source: %s) because "
              "its key did not match an older RSA/Ed25519 keypair",
              router_describe(ri), source);
-    *msg = "Looks like your keypair does not match its older value.";
+    *msg = "Looks like your keypair has changed? This authority previously "
+      "recorded a different RSA identity for this Ed25519 identity (or vice "
+      "versa.) Did you replace or copy some of your key files, but not "
+      "the others? You should either restore the expected keypair, or "
+      "delete your keys and restart Tor to start your relay with a new "
+      "identity.";
     r = ROUTER_AUTHDIR_REJECTS;
     goto fail;
   }
