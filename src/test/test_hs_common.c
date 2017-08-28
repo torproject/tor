@@ -703,13 +703,14 @@ test_hid_serv_request_tracker(void *arg)
 {
   (void) arg;
   time_t retval;
-  routerstatus_t *hsdir = NULL, *hsdir2 = NULL;
+  routerstatus_t *hsdir = NULL, *hsdir2 = NULL, *hsdir3 = NULL;
   time_t now = approx_time();
 
   const char *req_key_str_first =
  "vd4zb6zesaubtrjvdqcr2w7x7lhw2up4Xnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
   const char *req_key_str_second =
  "g53o7iavcd62oihswhr24u6czmqws5kpXnw4526ThUNbL5o1go+EdUuEqlKxHkNbnK41pRzizzs";
+  const char *req_key_str_small = "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ";
 
   /*************************** basic test *******************************/
 
@@ -741,7 +742,7 @@ test_hid_serv_request_tracker(void *arg)
 
   /* Let's add another request for the same HS but on a different HSDir. */
   hsdir2 = tor_malloc_zero(sizeof(routerstatus_t));
-  memset(hsdir->identity_digest, 2, DIGEST_LEN);
+  memset(hsdir2->identity_digest, 2, DIGEST_LEN);
   retval = hs_lookup_last_hid_serv_request(hsdir2, req_key_str_first,
                                            now+3, 1);
   tt_int_op(retval, OP_EQ, now+3);
@@ -755,16 +756,25 @@ test_hid_serv_request_tracker(void *arg)
                                            now+2, 0);
   tt_int_op(retval, OP_EQ, 0);
 
+  /* Now let's add a smaller req key str */
+  hsdir3 = tor_malloc_zero(sizeof(routerstatus_t));
+  memset(hsdir3->identity_digest, 3, DIGEST_LEN);
+  retval = hs_lookup_last_hid_serv_request(hsdir3, req_key_str_small,
+                                           now+4, 1);
+  tt_int_op(retval, OP_EQ, now+4);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+
   /*************************** deleting entries **************************/
 
   /* Add another request with very short key */
   retval = hs_lookup_last_hid_serv_request(hsdir, "l",  now, 1);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
 
   /* Try deleting entries with a dummy key. Check that our previous requests
    * are still there */
   tor_capture_bugs_(1);
   hs_purge_hid_serv_from_last_hid_serv_requests("a");
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
   tor_end_capture_bugs_();
 
   /* Try another dummy key. Check that requests are still there */
@@ -773,16 +783,16 @@ test_hid_serv_request_tracker(void *arg)
     memset(dummy, 'Z', 2000);
     dummy[1999] = '\x00';
     hs_purge_hid_serv_from_last_hid_serv_requests(dummy);
-    tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+    tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
   }
 
   /* Another dummy key! */
   hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_second);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
 
   /* Now actually delete a request! */
   hs_purge_hid_serv_from_last_hid_serv_requests(req_key_str_first);
-  tt_int_op(strmap_size(request_tracker),OP_EQ, 1);
+  tt_int_op(strmap_size(request_tracker),OP_EQ, 2);
 
   /* Purge it all! */
   hs_purge_last_hid_serv_requests();
@@ -792,6 +802,7 @@ test_hid_serv_request_tracker(void *arg)
  done:
   tor_free(hsdir);
   tor_free(hsdir2);
+  tor_free(hsdir3);
 }
 
 static void
