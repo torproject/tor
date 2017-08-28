@@ -1357,7 +1357,7 @@ hs_hsdir_requery_period(const or_options_t *options)
  *
  * where 'hsdir_identity' is the identity digest of the HSDir node, and
  * 'hs_identity' is the descriptor ID of the HS in the v2 case, or the ed25519
- * identity public key of the HS in the v3 case. */
+ * blinded public key of the HS in the v3 case. */
 static strmap_t *last_hid_serv_requests_ = NULL;
 
 /** Returns last_hid_serv_requests_, initializing it to a new strmap if
@@ -1454,10 +1454,11 @@ hs_purge_hid_serv_from_last_hid_serv_requests(const char *req_key_str)
      * semantic, see #23305. */
 
     /* This strmap contains variable-sized elements so this is a basic length
-     * check on the strings we are about to compare. The "key" contains both
-     * the base32 HSDir identity digest and the requested key at the
-     * directory. The "req_key_str" can either be a base32 descriptor ID or a
-     * base64 blinded key which should be the second part of "key". */
+     * check on the strings we are about to compare. The key is variable sized
+     * since it's composed as follows:
+     *   key = base32(hsdir_identity) + base32(req_key_str)
+     * where 'req_key_str' is the descriptor ID of the HS in the v2 case, or
+     * the ed25519 blinded public key of the HS in the v3 case. */
     if (strlen(key) < REND_DESC_ID_V2_LEN_BASE32 + strlen(req_key_str)) {
       iter = strmap_iter_next(last_hid_serv_requests, iter);
       continue;
