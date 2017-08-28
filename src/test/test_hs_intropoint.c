@@ -48,10 +48,10 @@ new_establish_intro_cell(const char *circ_nonce,
   ip = service_intro_point_new(NULL, 0);
   tt_assert(ip);
   cell_len = hs_cell_build_establish_intro(circ_nonce, ip, buf);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
 
   cell_len = trn_cell_establish_intro_parse(&cell, buf, sizeof(buf));
-  tt_int_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
   tt_assert(cell);
   *cell_out = cell;
 
@@ -71,7 +71,7 @@ new_establish_intro_encoded_cell(const char *circ_nonce, uint8_t *cell_out)
   ip = service_intro_point_new(NULL, 0);
   tt_assert(ip);
   cell_len = hs_cell_build_establish_intro(circ_nonce, ip, cell_out);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
 
  done:
   service_intro_point_free(ip);
@@ -184,7 +184,7 @@ test_establish_intro_wrong_purpose(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
      attempt to parse it. */
   cell_len = new_establish_intro_encoded_cell(circ_nonce, cell_body);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
 
   /* Receive the cell. Should fail. */
   setup_full_capture_of_logs(LOG_INFO);
@@ -250,7 +250,7 @@ test_establish_intro_wrong_keytype2(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
    * attempt to parse it. */
   cell_len = new_establish_intro_encoded_cell(circ_nonce, cell_body);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
 
   /* Mutate the auth key type! :) */
   cell_body[0] = 42;
@@ -286,7 +286,7 @@ test_establish_intro_wrong_mac(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
    * attempt to parse it. */
   cell_len = new_establish_intro_cell(circ_nonce, &cell);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
   tt_assert(cell);
 
   /* Mangle one byte of the MAC. */
@@ -307,7 +307,7 @@ test_establish_intro_wrong_mac(void *arg)
     /* Encode payload so we can sign it. */
     cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
                                                cell);
-    tt_int_op(cell_len, OP_GT, 0);
+    tt_i64_op(cell_len, OP_GT, 0);
 
     retval = ed25519_sign_prefixed(&sig, cell_body,
                                    cell_len -
@@ -321,7 +321,7 @@ test_establish_intro_wrong_mac(void *arg)
     /* Re-encode with the new signature. */
     cell_len = trn_cell_establish_intro_encode(cell_body, sizeof(cell_body),
                                                cell);
-    tt_int_op(cell_len, OP_GT, 0);
+    tt_i64_op(cell_len, OP_GT, 0);
   }
 
   /* Receive the cell. Should fail because our MAC is wrong. */
@@ -358,7 +358,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
    * attempt to parse it. */
   cell_len = new_establish_intro_cell(circ_nonce, &cell);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
   tt_assert(cell);
 
   /* Mangle the auth key length. */
@@ -403,7 +403,7 @@ test_establish_intro_wrong_sig_len(void *arg)
   /* Create outgoing ESTABLISH_INTRO cell and extract its payload so that we
    * attempt to parse it. */
   cell_len = new_establish_intro_cell(circ_nonce, &cell);
-  tt_u64_op(cell_len, OP_GT, 0);
+  tt_i64_op(cell_len, OP_GT, 0);
   tt_assert(cell);
 
   /* Mangle the signature length. */
