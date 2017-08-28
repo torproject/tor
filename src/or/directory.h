@@ -188,7 +188,6 @@ STATIC char *accept_encoding_header(void);
 STATIC int allowed_anonymous_connection_compression_method(compress_method_t);
 STATIC void warn_disallowed_anonymous_compression_method(compress_method_t);
 
-typedef struct response_handler_args_t response_handler_args_t;
 STATIC int handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
                                           const response_handler_args_t *args);
 
