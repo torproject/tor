@@ -1571,8 +1571,8 @@ The following options are useful only for clients (that is, if
     live consensus). Only used by clients fetching from a list of fallback
     directory mirrors. This schedule is advanced by (potentially concurrent)
     connection attempts, unlike other schedules, which are advanced by
-    connection failures. (Default: 10, 11, 3600, 10800, 25200, 54000,
-    111600, 262800)
+    connection failures. (Default: 6, 11, 3600, 10800, 25200, 54000, 111600,
+    262800)
 
 [[ClientBootstrapConsensusFallbackDownloadSchedule]] **ClientBootstrapConsensusFallbackDownloadSchedule** __N__,__N__,__...__::
     Schedule for when clients should download consensuses from fallback
@@ -1602,7 +1602,7 @@ The following options are useful only for clients (that is, if
 
 [[ClientBootstrapConsensusMaxInProgressTries]] **ClientBootstrapConsensusMaxInProgressTries** __NUM__::
     Try this many simultaneous connections to download a consensus before
-    waiting for one to complete, timeout, or error out. (Default: 4)
+    waiting for one to complete, timeout, or error out. (Default: 3)
 
 SERVER OPTIONS
 --------------
@@ -2541,7 +2541,7 @@ The following options are used for running a testing Tor network.
 
 [[TestingBridgeDownloadSchedule]] **TestingBridgeDownloadSchedule** __N__,__N__,__...__::
     Schedule for when clients should download bridge descriptors. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 3600, 900, 900, 3600)
+    requires that **TestingTorNetwork** is set. (Default: 1200, 900, 900, 3600)
 
 [[TestingClientMaxIntervalWithoutRequest]] **TestingClientMaxIntervalWithoutRequest** __N__ **seconds**|**minutes**::
     When directory clients have only a few descriptors to request, they batch
