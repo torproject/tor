@@ -954,16 +954,23 @@ rend_log_intro_limit(const rend_service_t *service, int min_severity)
   }
   time_t intro_period_elapsed = time(NULL) - service->intro_period_started;
   tor_assert_nonfatal(intro_period_elapsed >= 0);
-  log_fn(severity, LD_REND, "Hidden service %s %s %d intro points in the last "
-         "%d seconds. Intro circuit launches are limited to %d per %d "
-         "seconds.",
-         service->service_id,
-         exceeded_limit ? "exceeded launch limit with" : "launched",
-         service->n_intro_circuits_launched,
-         (int)intro_period_elapsed,
-         rend_max_intro_circs_per_period(service->n_intro_points_wanted),
-         INTRO_CIRC_RETRY_PERIOD);
-  rend_service_dump_stats(severity);
+  {
+    char *msg;
+    static ratelim_t rlimit = RATELIM_INIT(INTRO_CIRC_RETRY_PERIOD);
+    if ((msg = rate_limit_log(&rlimit, approx_time()))) {
+      log_fn(severity, LD_REND,
+             "Hidden service %s %s %d intro points in the last %d seconds. "
+             "Intro circuit launches are limited to %d per %d seconds.%s",
+             service->service_id,
+             exceeded_limit ? "exceeded launch limit with" : "launched",
+             service->n_intro_circuits_launched,
+             (int)intro_period_elapsed,
+             rend_max_intro_circs_per_period(service->n_intro_points_wanted),
+             INTRO_CIRC_RETRY_PERIOD, msg);
+      rend_service_dump_stats(severity);
+      tor_free(msg);
+    }
+  }
 }
 
 /** Replace the old value of <b>service</b>-\>desc with one that reflects
@@ -3922,7 +3929,12 @@ rend_max_intro_circs_per_period(unsigned int n_intro_points_wanted)
   /* Allow all but one of the initial connections to fail and be
    * retried. (If all fail, we *want* to wait, because something is broken.) */
   tor_assert(n_intro_points_wanted <= NUM_INTRO_POINTS_MAX);
-  return (int)(2*n_intro_points_wanted + NUM_INTRO_POINTS_EXTRA);
+
+  /* For the normal use case, 3 intro points plus 2 extra for performance and
+   * allow that twice because once every 24h or so, we can do it twice for two
+   * descriptors that is the current one and the next one. So (3 + 2) * 2 ==
+   * 12 allowed attempts for one period. */
+  return ((n_intro_points_wanted + NUM_INTRO_POINTS_EXTRA) * 2);
 }
 
 /** For every service, check how many intro points it currently has, and:
