@@ -9,6 +9,11 @@
 
 #define CCE_MAGIC 0x17162253
 
+#ifdef _WIN32
+/* On Windows, unlink won't work if there's an active mmap. */
+#define MUST_UNMAP_TO_UNLINK
+#endif
+
 /**
  * A consensus_cache_entry_t is a reference-counted handle to an
  * item in a consensus_cache_t.  It can be mmapped into RAM, or not,
@@ -406,23 +411,36 @@ int
 consensus_cache_get_n_filenames_available(consensus_cache_t *cache)
 {
   tor_assert(cache);
-  int max = storage_dir_get_max_files(cache->dir);
+  int max = cache->max_entries;
   int used = smartlist_len(storage_dir_list(cache->dir));
+#ifdef MUST_UNMAP_TO_UNLINK
+  if (used > max)
+    return 0;
+#else
   tor_assert_nonfatal(max >= used);
+#endif
   return max - used;
 }
 
 /**
  * Delete every element of <b>cache</b> has been marked with
- * consensus_cache_entry_mark_for_removal.  If <b>force</b> is false,
- * retain those entries which are not in use except by the cache.
+ * consensus_cache_entry_mark_for_removal. If <b>force</b> is false,
+ * retain those entries which are in use by something other than the cache.
  */
 void
 consensus_cache_delete_pending(consensus_cache_t *cache, int force)
 {
   SMARTLIST_FOREACH_BEGIN(cache->entries, consensus_cache_entry_t *, ent) {
     tor_assert_nonfatal(ent->in_cache == cache);
-    if (! force) {
+    int force_ent = force;
+#ifdef MUST_UNMAP_TO_UNLINK
+    /* We cannot delete anything with an active mmap on win32, so no
+     * force-deletion. */
+    if (ent->map) {
+      force_ent = 0;
+    }
+#endif
+    if (! force_ent) {
       if (ent->refcnt > 1 || BUG(ent->in_cache == NULL)) {
         /* Somebody is using this entry right now */
         continue;
