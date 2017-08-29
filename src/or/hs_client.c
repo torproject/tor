@@ -646,6 +646,12 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
       /* If this pick is in the ExcludeNodes list, we keep its reference so if
        * we ever end up not being able to pick anything else and StrictNodes is
        * unset, we'll use it. */
+      if (ei_excluded) {
+        /* If something was already here free it. After the loop is gone we
+         * will examine the last excluded intro point, and that's fine since
+         * that's random anyway */
+        extend_info_free(ei_excluded);
+      }
       ei_excluded = ei;
       continue;
     }
@@ -662,6 +668,7 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
   if (options->StrictNodes) {
     log_warn(LD_REND, "Every introduction points are in the ExcludeNodes set "
              "and StrictNodes is set. We can't connect.");
+    extend_info_free(ei);
     ei = NULL;
   }
 
