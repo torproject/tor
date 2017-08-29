@@ -332,6 +332,8 @@ EXTRA_DIST += \
 	src/test/bt_test.py \
 	src/test/ntor_ref.py \
 	src/test/hs_ntor_ref.py \
+	src/test/hs_build_address.py \
+	src/test/hs_indexes.py \
 	src/test/fuzz_static_testcases.sh \
 	src/test/slownacl_curve25519.py \
 	src/test/zero_length_keys.sh \

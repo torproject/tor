@@ -1453,6 +1453,51 @@ helper_client_pick_hsdir(const ed25519_public_key_t *onion_identity_pk,
   ;
 }
 
+static void
+test_hs_indexes(void *arg)
+{
+  int ret;
+  uint64_t period_num = 42;
+  ed25519_public_key_t pubkey;
+
+  (void) arg;
+
+  /* Build the hs_index */
+  {
+    uint8_t hs_index[DIGEST256_LEN];
+    const char *b32_test_vector =
+      "37e5cbbd56a22823714f18f1623ece5983a0d64c78495a8cfab854245e5f9a8a";
+    char test_vector[DIGEST256_LEN];
+    ret = base16_decode(test_vector, sizeof(test_vector), b32_test_vector,
+                        strlen(b32_test_vector));
+    tt_int_op(ret, OP_EQ, sizeof(test_vector));
+    /* Our test vector uses a public key set to 32 bytes of \x42. */
+    memset(&pubkey, '\x42', sizeof(pubkey));
+    hs_build_hs_index(1, &pubkey, period_num, hs_index);
+    tt_mem_op(hs_index, OP_EQ, test_vector, sizeof(hs_index));
+  }
+
+  /* Build the hsdir_index */
+  {
+    uint8_t srv[DIGEST256_LEN];
+    uint8_t hsdir_index[DIGEST256_LEN];
+    const char *b32_test_vector =
+      "db475361014a09965e7e5e4d4a25b8f8d4b8f16cb1d8a7e95eed50249cc1a2d5";
+    char test_vector[DIGEST256_LEN];
+    ret = base16_decode(test_vector, sizeof(test_vector), b32_test_vector,
+                        strlen(b32_test_vector));
+    tt_int_op(ret, OP_EQ, sizeof(test_vector));
+    /* Our test vector uses a public key set to 32 bytes of \x42. */
+    memset(&pubkey, '\x42', sizeof(pubkey));
+    memset(srv, '\x43', sizeof(srv));
+    hs_build_hsdir_index(&pubkey, srv, period_num, hsdir_index);
+    tt_mem_op(hsdir_index, OP_EQ, test_vector, sizeof(hsdir_index));
+  }
+
+ done:
+  ;
+}
+
 #define EARLY_IN_SRV_TO_TP 0
 #define LATE_IN_SRV_TO_TP 1
 #define EARLY_IN_TP_TO_SRV 2
@@ -1751,6 +1796,9 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "client_service_hsdir_set_sync", test_client_service_hsdir_set_sync,
     TT_FORK, NULL, NULL },
+  { "hs_indexes", test_hs_indexes, TT_FORK,
+    NULL, NULL },
+
   END_OF_TESTCASES
 };
 
