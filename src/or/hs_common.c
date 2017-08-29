@@ -19,6 +19,7 @@
 #include "nodelist.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_client.h"
 #include "hs_ident.h"
 #include "hs_service.h"
 #include "policies.h"
@@ -1700,6 +1701,7 @@ hs_free_all(void)
   hs_circuitmap_free_all();
   hs_service_free_all();
   hs_cache_free_all();
+  hs_client_free_all();
 }
 
 /* For the given origin circuit circ, decrement the number of rendezvous

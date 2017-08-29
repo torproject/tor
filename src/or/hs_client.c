@@ -1251,3 +1251,11 @@ hs_client_reextend_intro_circuit(origin_circuit_t *circ)
   return ret;
 }
 
+/* Release all the storage held by the client subsystem. */
+void
+hs_client_free_all(void)
+{
+  /* Purge the hidden service request cache. */
+  hs_purge_last_hid_serv_requests();
+}
+
