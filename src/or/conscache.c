@@ -54,6 +54,11 @@ struct consensus_cache_t {
   storage_dir_t *dir;
   /** List of all the entries in the directory. */
   smartlist_t *entries;
+
+  /** The maximum number of entries that we'd like to allow in this cache.
+   * This is the same as the storagedir limit when MUST_UNMAP_TO_UNLINK is
+   * not defined. */
+  unsigned max_entries;
 };
 
 static void consensus_cache_clear(consensus_cache_t *cache);
@@ -71,6 +76,10 @@ consensus_cache_open(const char *subdir, int max_entries)
 {
   consensus_cache_t *cache = tor_malloc_zero(sizeof(consensus_cache_t));
   char *directory = get_datadir_fname(subdir);
+  cache->max_entries = max_entries;
+#ifdef MUST_UNMAP_TO_UNLINK
+  max_entries = 1000000;
+#endif
   cache->dir = storage_dir_new(directory, max_entries);
   tor_free(directory);
   if (!cache->dir) {
@@ -82,6 +91,19 @@ consensus_cache_open(const char *subdir, int max_entries)
   return cache;
 }
 
+/** Return true if it's okay to put more entries in this cache than
+ * its official file limit. */
+int
+consensus_cache_may_overallocate(consensus_cache_t *cache)
+{
+  (void) cache;
+#ifdef MUST_UNMAP_TO_UNLINK
+  return 1;
+#else
+  return 0;
+#endif
+}
+
 /**
  * Tell the sandbox (if any) configured by <b>cfg</b> to allow the
  * operations that <b>cache</b> will need.
@@ -90,6 +112,11 @@ int
 consensus_cache_register_with_sandbox(consensus_cache_t *cache,
                                       struct sandbox_cfg_elem **cfg)
 {
+#ifdef MUST_UNMAP_TO_UNLINK
+  /* Our sandbox doesn't support huge limits like we use here.
+   */
+  tor_assert_nonfatal_unreached();
+#endif
   return storage_dir_register_with_sandbox(cache->dir, cfg);
 }
 

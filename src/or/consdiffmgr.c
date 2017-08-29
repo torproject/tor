@@ -1136,7 +1136,7 @@ consdiffmgr_ensure_space_for_files(int n)
     return 0;
   }
   // Let's get more assertive: clean out unused stuff, and force-remove
-  // the files.
+  // the files that we can.
   consdiffmgr_cleanup();
   consensus_cache_delete_pending(cache, 1);
   const int n_to_remove = n - consensus_cache_get_n_filenames_available(cache);
@@ -1159,6 +1159,14 @@ consdiffmgr_ensure_space_for_files(int n)
   smartlist_free(objects);
 
   consensus_cache_delete_pending(cache, 1);
+
+  if (consensus_cache_may_overallocate(cache)) {
+    /* If we're allowed to throw extra files into the cache, let's do so
+     * rather getting upset.
+     */
+    return 0;
+  }
+
   if (BUG(n_marked < n_to_remove))
     return -1;
   else
