@@ -454,6 +454,7 @@ bridge_add_from_config(bridge_line_t *bridge_line)
     b->transport_name = bridge_line->transport_name;
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
   b->fetch_status.backoff = DL_SCHED_RANDOM_EXPONENTIAL;
+  b->fetch_status.increment_on = DL_SCHED_INCREMENT_ATTEMPT;
   b->socks_args = bridge_line->socks_args;
   if (!bridge_list)
     bridge_list = smartlist_new();
@@ -632,10 +633,13 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
         continue;
       }
 
-      /* schedule another fetch as if this one will fail, in case it does
-       * (we can't increment after a failure, because sometimes we use the
-       * bridge authority, and sometimes we use the bridge direct) */
-      download_status_failed(&bridge->fetch_status, 0);
+      /* schedule the next attempt
+       * we can't increment after a failure, because sometimes we use the
+       * bridge authority, and sometimes we use the bridge direct */
+      download_status_increment_attempt(
+                        &bridge->fetch_status,
+                        safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
+                        now);
 
       can_use_bridge_authority = !tor_digest_is_zero(bridge->identity) &&
                                  num_bridge_auths;
@@ -793,8 +797,14 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
         download_status_reset(&bridge->fetch_status);
         /* We have two quick attempts in the bridge schedule, and then slow
          * ones */
-        download_status_failed(&bridge->fetch_status, 0);
-        download_status_failed(&bridge->fetch_status, 0);
+        download_status_increment_attempt(
+                        &bridge->fetch_status,
+                        safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
+                        now);
+        download_status_increment_attempt(
+                        &bridge->fetch_status,
+                        safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
+                        now);
       }
 
       node = node_get_mutable_by_id(ri->cache_info.identity_digest);
