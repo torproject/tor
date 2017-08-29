@@ -2316,6 +2316,10 @@ upload_descriptor_to_all(const hs_service_t *service,
   hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
                             for_next_period, 0, responsible_dirs);
 
+  /** Clear list of previous hsdirs since we are about to upload to a new
+   *  list. Let's keep it up to date. */
+  service_desc_clear_previous_hsdirs(desc);
+
   /* For each responsible HSDir we have, initiate an upload command. */
   SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *,
                           hsdir_rs) {

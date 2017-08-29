@@ -613,10 +613,10 @@ test_desc_reupload_logic(void *arg)
   tt_int_op(service_desc_hsdirs_changed(service, desc), OP_EQ, 1);
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
-  /* Now order another upload and see how we end up with 7 hsdirs */
+  /* Now order another upload and see that we keep having 6 prev hsdirs */
   upload_descriptor_to_all(service, desc, 0);
   /* Check that previous hsdirs were populated */
-  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 7);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
   /* Now restore the HSDir hash ring to its original state by swapping back
      aaron for nora */
