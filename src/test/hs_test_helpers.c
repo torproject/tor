@@ -18,28 +18,29 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
   hs_desc_intro_point_t *intro_point = NULL;
   hs_desc_intro_point_t *ip = hs_desc_intro_point_new();
 
+  /* For a usable intro point we need at least two link specifiers: One legacy
+   * keyid and one ipv4 */
   {
-    hs_desc_link_specifier_t *ls = tor_malloc_zero(sizeof(*ls));
-    if (legacy) {
-      ls->type = LS_LEGACY_ID;
-      memcpy(ls->u.legacy_id, "0299F268FCA9D55CD157976D39AE92B4B455B3A8",
-             DIGEST_LEN);
-    } else {
-      ls->u.ap.port = 9001;
-      int family = tor_addr_parse(&ls->u.ap.addr, addr);
-      switch (family) {
-        case AF_INET:
-          ls->type = LS_IPV4;
+    hs_desc_link_specifier_t *ls_legacy = tor_malloc_zero(sizeof(*ls_legacy));
+    hs_desc_link_specifier_t *ls_v4 = tor_malloc_zero(sizeof(*ls_v4));
+    ls_legacy->type = LS_LEGACY_ID;
+    memcpy(ls_legacy->u.legacy_id, "0299F268FCA9D55CD157976D39AE92B4B455B3A8",
+           DIGEST_LEN);
+    ls_v4->u.ap.port = 9001;
+    int family = tor_addr_parse(&ls_v4->u.ap.addr, addr);
+    switch (family) {
+    case AF_INET:
+          ls_v4->type = LS_IPV4;
           break;
         case AF_INET6:
-          ls->type = LS_IPV6;
+          ls_v4->type = LS_IPV6;
           break;
         default:
           /* Stop the test, not suppose to have an error. */
           tt_int_op(family, OP_EQ, AF_INET);
-      }
     }
-    smartlist_add(ip->link_specifiers, ls);
+    smartlist_add(ip->link_specifiers, ls_legacy);
+    smartlist_add(ip->link_specifiers, ls_v4);
   }
 
   ret = ed25519_keypair_generate(&auth_kp, 0);
@@ -137,7 +138,7 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
     smartlist_add(desc->encrypted_data.intro_points,
               hs_helper_build_intro_point(signing_kp, now, "3.2.1.4", 1));
     smartlist_add(desc->encrypted_data.intro_points,
-              hs_helper_build_intro_point(signing_kp, now, "", 1));
+              hs_helper_build_intro_point(signing_kp, now, "5.6.7.8", 1));
   }
 
   descp = desc;
