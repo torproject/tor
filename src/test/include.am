@@ -275,6 +275,7 @@ noinst_HEADERS+= \
 	src/test/failing_routerdescs.inc \
 	src/test/ed25519_vectors.inc \
 	src/test/test_descriptors.inc \
+	src/test/test_hs_descriptor.inc \
 	src/test/vote_descriptors.inc
 
 noinst_PROGRAMS+= src/test/test-ntor-cl
