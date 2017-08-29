@@ -632,7 +632,9 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
         continue;
       }
 
-      /* schedule another fetch as if this one will fail, in case it does */
+      /* schedule another fetch as if this one will fail, in case it does
+       * (we can't increment after a failure, because sometimes we use the
+       * bridge authority, and sometimes we use the bridge direct) */
       download_status_failed(&bridge->fetch_status, 0);
 
       can_use_bridge_authority = !tor_digest_is_zero(bridge->identity) &&
@@ -787,8 +789,13 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
     if (bridge) { /* if we actually want to use this one */
       node_t *node;
       /* it's here; schedule its re-fetch for a long time from now. */
-      if (!from_cache)
+      if (!from_cache) {
         download_status_reset(&bridge->fetch_status);
+        /* We have two quick attempts in the bridge schedule, and then slow
+         * ones */
+        download_status_failed(&bridge->fetch_status, 0);
+        download_status_failed(&bridge->fetch_status, 0);
+      }
 
       node = node_get_mutable_by_id(ri->cache_info.identity_digest);
       tor_assert(node);

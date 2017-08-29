@@ -5663,8 +5663,8 @@ download_status_get_initial_delay_from_now(const download_status_t *dls)
  * (We find the zeroth element of the download schedule, and set
  * next_attempt_at to be the appropriate offset from 'now'. In most
  * cases this means setting it to 'now', so the item will be immediately
- * downloadable; in the case of bridge descriptors, the zeroth element
- * is an hour from now.) */
+ * downloadable; when using authorities with fallbacks, there is a few seconds'
+ * delay.) */
 void
 download_status_reset(download_status_t *dls)
 {

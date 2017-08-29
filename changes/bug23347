@@ -1,0 +1,6 @@
+  o Minor bug fixes (bridge client bootstrap):
+    - Make bridge clients download bridge descriptors immediately.
+      The bridge schedules were never correct, but we didn't realise until
+      the fix for 17750 made bridge clients hang for 15 minutes before
+      bootstrapping.
+      Fixes bug 23347. Not in any released version of Tor.
