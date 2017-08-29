@@ -1,8 +1,0 @@
-  o Minor bugfixes (Windows service):
-    - When running as a Windows service, set the ID of the main thread
-      correctly. Failure to do so made us fail to send log messages
-      to the controller in 0.2.1.16-rc, slowed down controller
-      event delivery in 0.2.7.3-rc and later, and crash with an assertion
-      failure in 0.3.1.1-alpha. Fixes bug 23081; bugfix on 0.2.1.6-alpha.
-      Patch and diagnosis from "Vort".
-

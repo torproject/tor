@@ -1,5 +1,0 @@
-  o Minor features (directory authority):
-    - Improve the message that authorities report to relays when
-      the RSA/Ed25519 key pair they present conflicts with a previously
-      pinned key. Closes ticket 22348.
-
