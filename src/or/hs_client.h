@@ -71,7 +71,13 @@ void hs_client_free_all(void);
 STATIC routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk);
 
-#endif
+STATIC extend_info_t *
+client_get_random_intro(const ed25519_public_key_t *service_pk);
+
+STATIC extend_info_t *
+desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip);
+
+#endif /* HS_CLIENT_PRIVATE */
 
 #endif /* TOR_HS_CLIENT_H */
 

@@ -521,7 +521,7 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
  * to a newly allocated extend_info_t object fully initialized. Return NULL if
  * we can't convert it for which chances are that we are missing or malformed
  * link specifiers. */
-static extend_info_t *
+STATIC extend_info_t *
 desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip)
 {
   extend_info_t *ei;
@@ -594,7 +594,7 @@ intro_point_is_usable(const ed25519_public_key_t *service_pk,
 /* Using a descriptor desc, return a newly allocated extend_info_t object of a
  * randomly picked introduction point from its list. Return NULL if none are
  * usable. */
-static extend_info_t *
+STATIC extend_info_t *
 client_get_random_intro(const ed25519_public_key_t *service_pk)
 {
   extend_info_t *ei = NULL, *ei_excluded = NULL;

@@ -8,6 +8,7 @@
 
 #define CRYPTO_PRIVATE
 #define MAIN_PRIVATE
+#define HS_CLIENT_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
@@ -17,23 +18,37 @@
 #include "test_helpers.h"
 #include "log_test_helpers.h"
 #include "rend_test_helpers.h"
+#include "hs_test_helpers.h"
 
 #include "config.h"
 #include "crypto.h"
 #include "channeltls.h"
+#include "routerset.h"
 
 #include "hs_circuit.h"
+#include "hs_client.h"
 #include "hs_ident.h"
+#include "hs_cache.h"
 #include "circuitlist.h"
 #include "circuitbuild.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "networkstatus.h"
 
 static int
 mock_connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
 {
   (void) ap_conn;
   return 0;
+}
+
+static networkstatus_t mock_ns;
+
+static networkstatus_t *
+mock_networkstatus_get_live_consensus(time_t now)
+{
+  (void) now;
+  return &mock_ns;
 }
 
 /* Test helper function: Setup a circuit and a stream with the same hidden
@@ -276,10 +291,171 @@ test_e2e_rend_circuit_setup(void *arg)
   circuit_free(TO_CIRCUIT(or_circ));
 }
 
+/** Test client logic for picking intro points from a descriptor. Also test how
+ *  ExcludeNodes and intro point failures affect picking intro points. */
+static void
+test_client_pick_intro(void *arg)
+{
+  int ret;
+  ed25519_keypair_t service_kp;
+  hs_descriptor_t *desc = NULL;
+
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  (void) arg;
+
+  hs_init();
+
+  /* Generate service keypair */
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&service_kp, 0));
+
+  /* Set time */
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+
+  update_approx_time(mock_ns.fresh_until-10);
+  time_t now = approx_time();
+
+  /* Test logic:
+   *
+   * 1) Add our desc with intro points to the HS cache.
+   *
+   * 2) Mark all descriptor intro points except _the chosen one_ as
+   *    failed. Then query the desc to get a random intro: check that we got
+   *    _the chosen one_. Then fail the chosen one as well, and see that no
+   *    intros are returned.
+   *
+   * 3) Then clean the intro state cache and get an intro point.
+   *
+   * 4) Try fetching an intro with the wrong service key: shouldn't work
+   *
+   * 5) Set StrictNodes and put all our intro points in ExcludeNodes: see that
+   *    nothing is returned.
+   */
+
+  /* 1) Add desc to HS cache */
+  {
+    char *encoded = NULL;
+    desc = hs_helper_build_hs_desc_with_ip(&service_kp);
+    ret = hs_desc_encode_descriptor(desc, &service_kp, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    /* store it */
+    hs_cache_store_as_client(encoded, &service_kp.pubkey);
+
+    /* fetch it to make sure it works */
+    const hs_descriptor_t *fetched_desc =
+      hs_cache_lookup_as_client(&service_kp.pubkey);
+    tt_assert(fetched_desc);
+    tt_mem_op(fetched_desc->subcredential, OP_EQ, desc->subcredential,
+              DIGEST256_LEN);
+    tt_assert(!tor_mem_is_zero((char*)fetched_desc->subcredential,
+                               DIGEST256_LEN));
+    tor_free(encoded);
+  }
+
+  /* 2) Mark all intro points except _the chosen one_ as failed. Then query the
+   *   desc and get a random intro: check that we got _the chosen one_. */
+  {
+    /* Pick the chosen intro point and get its ei */
+    hs_desc_intro_point_t *chosen_intro_point =
+      smartlist_get(desc->encrypted_data.intro_points, 0);
+    extend_info_t *chosen_intro_ei =
+      desc_intro_point_to_extend_info(chosen_intro_point);
+    tt_assert(chosen_intro_point);
+    tt_assert(chosen_intro_ei);
+
+    /* Now mark all other intro points as failed */
+    SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                            hs_desc_intro_point_t *, ip) {
+      /* Skip the chosen intro point */
+      if (ip == chosen_intro_point) {
+        continue;
+      }
+      ed25519_public_key_t *intro_auth_key = &ip->auth_key_cert->signed_key;
+      hs_cache_client_intro_state_note(&service_kp.pubkey,
+                                       intro_auth_key,
+                                       INTRO_POINT_FAILURE_GENERIC);
+    } SMARTLIST_FOREACH_END(ip);
+
+    /* Try to get a random intro: Should return the chosen one! */
+    extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
+    tor_assert(ip);
+    tt_assert(!tor_mem_is_zero((char*)ip->identity_digest, DIGEST_LEN));
+    tt_mem_op(ip->identity_digest, OP_EQ, chosen_intro_ei->identity_digest,
+              DIGEST_LEN);
+
+    extend_info_free(chosen_intro_ei);
+    extend_info_free(ip);
+
+    /* Now also mark the chosen one as failed: See that we can't get any intro
+       points anymore. */
+    hs_cache_client_intro_state_note(&service_kp.pubkey,
+                                &chosen_intro_point->auth_key_cert->signed_key,
+                                     INTRO_POINT_FAILURE_TIMEOUT);
+    ip = client_get_random_intro(&service_kp.pubkey);
+    tor_assert(!ip);
+  }
+
+  /* 3) Clean the intro state cache and get an intro point */
+  {
+    /* Pretend we are 5 mins in the future and order a cleanup of the intro
+     * state. This should clean up the intro point failures and allow us to get
+     * an intro. */
+    hs_cache_client_intro_state_clean(now + 5*60);
+
+    /* Get an intro. It should work! */
+    extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
+    tor_assert(ip);
+    extend_info_free(ip);
+  }
+
+  /* 4) Try fetching an intro with the wrong service key: shouldn't work */
+  {
+    ed25519_keypair_t dummy_kp;
+    tt_int_op(0, OP_EQ, ed25519_keypair_generate(&dummy_kp, 0));
+    extend_info_t *ip = client_get_random_intro(&dummy_kp.pubkey);
+    tor_assert(!ip);
+  }
+
+  /* 5) Set StrictNodes and put all our intro points in ExcludeNodes: see that
+   *    nothing is returned. */
+  {
+    get_options_mutable()->ExcludeNodes = routerset_new();
+    get_options_mutable()->StrictNodes = 1;
+    SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                            hs_desc_intro_point_t *, ip) {
+      extend_info_t *intro_ei = desc_intro_point_to_extend_info(ip);
+      if (intro_ei) {
+        char *ip_addr = tor_addr_to_str_dup(&intro_ei->addr);
+        tor_assert(ip_addr);
+        ret =routerset_parse(get_options_mutable()->ExcludeNodes, ip_addr, "");
+        tt_int_op(ret, OP_EQ, 0);
+        tor_free(ip_addr);
+        extend_info_free(intro_ei);
+      }
+    } SMARTLIST_FOREACH_END(ip);
+
+    extend_info_t *ip = client_get_random_intro(&service_kp.pubkey);
+    tt_assert(!ip);
+  }
+
+ done:
+  hs_descriptor_free(desc);
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup,
+    TT_FORK, NULL, NULL },
+  { "client_pick_intro", test_client_pick_intro,
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
