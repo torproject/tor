@@ -4563,6 +4563,9 @@ typedef struct {
    * consensuses around so that we can generate diffs from them.  If 0,
    * use the default. */
   int MaxConsensusAgeForDiffs;
+
+  /** List of files that were opened by %include in torrc and torrc-defaults */
+   smartlist_t *FilesOpenedByIncludes;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

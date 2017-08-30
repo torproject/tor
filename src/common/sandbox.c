@@ -151,6 +151,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(fstat64),
 #endif
     SCMP_SYS(futex),
+    SCMP_SYS(getdents),
     SCMP_SYS(getdents64),
     SCMP_SYS(getegid),
 #ifdef __NR_getegid32
