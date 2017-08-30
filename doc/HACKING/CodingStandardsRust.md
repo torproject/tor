@@ -19,8 +19,7 @@ live in `.../src/rust/yourcrate/yourcode.rs` and the public interface
 to it should be exported in `.../src/rust/yourcrate/lib.rs`.
 
 If your code is to be called from Tor C code, you MUST define a safe
-`ffi.rs` which ONLY copies `&[u8]`s (i.e. byte arrays) across the FFI
-boundary.
+`ffi.rs`.  See the "Safety" section further down for more details.
 
 For example, in a hypothetical `tor_addition` Rust module:
 
@@ -67,12 +66,12 @@ case-by-case basis.
 
 You MUST include `#[deny(missing_docs)]` in your crate.
 
-For example, a one-sentence, "first person" description of function
-behaviour (see requirements for documentation as described in
-`.../src/HACKING/CodingStandards.md`), then an `# Inputs` section for
-inputs or initialisation values, a `# Returns` section for return
-values/types, a `# Warning` section containing warnings for unsafe
-behaviours or panics that could happen.  For publicly accessible
+For function/method comments, you SHOULD include a one-sentence, "first person"
+description of function behaviour (see requirements for documentation as
+described in `.../src/HACKING/CodingStandards.md`), then an `# Inputs` section
+for inputs or initialisation values, a `# Returns` section for return
+values/types, a `# Warning` section containing warnings for unsafe behaviours or
+panics that could happen.  For publicly accessible
 types/constants/objects/functions/methods, you SHOULD also include an
 `# Examples` section with runnable doctests.
 
@@ -106,6 +105,12 @@ should put:
  Benchmarking
 --------------
 
+The external `test` crate can be used for most benchmarking.  However, using
+this crate requires nightly Rust.  Since we may want to switch to a more
+stable Rust compiler eventually, we shouldn't do things which will automatically
+break builds for stable compilers.  Therefore, you MUST feature-gate your
+benchmarks in the following manner.
+
 If you wish to benchmark some of your Rust code, you MUST put the
 following in the `[features]` section of your crate's `Cargo.toml`:
 
@@ -119,10 +124,7 @@ Next, in your crate's `lib.rs` you MUST put:
 
 This ensures that the external crate `test`, which contains utilities
 for basic benchmarks, is only used when running benchmarks via `cargo
-bench --features bench`.  (This is due to the `test` module requiring
-nightly Rust, and since we may want to switch to a more stable Rust
-compiler eventually we don't want to break builds for stable compilers
-by always requiring the `test` crate.)
+bench --features bench`.
 
 Finally, to write your benchmark code, in
 `.../src/rust/tor_addition/addition.rs` you SHOULD put:
