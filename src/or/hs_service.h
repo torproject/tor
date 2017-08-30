@@ -123,13 +123,6 @@ typedef struct hs_service_descriptor_t {
    * couldn't pick any nodes. */
   unsigned int missing_intro_points : 1;
 
-  /* List of identity digests for hidden service directories to which we
-   * couldn't upload this descriptor because we didn't have its router
-   * descriptor at the time. If this list is non-empty, only the relays in this
-   * list are re-tried to upload this descriptor when our directory information
-   * have been updated. */
-  smartlist_t *hsdir_missing_info;
-
   /** List of the responsible HSDirs (their b64ed identity digest) last time we
    *  uploaded this descriptor. If the set of responsible HSDirs is different
    *  from this list, this means we received new dirinfo and we need to
@@ -266,7 +259,6 @@ void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
                                          smartlist_t *dir_list);
 int hs_service_set_conn_addr_port(const origin_circuit_t *circ,
                                   edge_connection_t *conn);
-void hs_hsdir_set_changed_consider_reupload(void);
 
 void hs_service_dir_info_changed(void);
 void hs_service_run_scheduled_events(time_t now);

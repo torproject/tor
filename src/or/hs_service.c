@@ -972,8 +972,6 @@ service_descriptor_free(hs_service_descriptor_t *desc)
   hs_descriptor_free(desc->desc);
   memwipe(&desc->signing_kp, 0, sizeof(desc->signing_kp));
   memwipe(&desc->blinded_kp, 0, sizeof(desc->blinded_kp));
-  SMARTLIST_FOREACH(desc->hsdir_missing_info, char *, id, tor_free(id));
-  smartlist_free(desc->hsdir_missing_info);
   /* Cleanup all intro points. */
   digest256map_free(desc->intro_points.map, service_intro_point_free_);
   digestmap_free(desc->intro_points.failed_id, tor_free_);
@@ -993,7 +991,6 @@ service_descriptor_new(void)
   /* Initialize the intro points map. */
   sdesc->intro_points.map = digest256map_new();
   sdesc->intro_points.failed_id = digestmap_new();
-  sdesc->hsdir_missing_info = smartlist_new();
   sdesc->previous_hsdirs = smartlist_new();
   return sdesc;
 }
@@ -2324,18 +2321,6 @@ upload_descriptor_to_all(const hs_service_t *service,
     /* Getting responsible hsdir implies that the node_t object exists for the
      * routerstatus_t found in the consensus else we have a problem. */
     tor_assert(hsdir_node);
-    /* Do not upload to an HSDir we don't have a descriptor for. */
-    if (!node_has_descriptor(hsdir_node)) {
-      log_info(LD_REND, "Missing descriptor for HSDir %s. Not uploading "
-                        "descriptor. We'll try later once we have it.",
-               safe_str_client(node_describe(hsdir_node)));
-      /* Once we get new directory information, this HSDir will be retried if
-       * we ever get the descriptor. */
-      smartlist_add(desc->hsdir_missing_info,
-                    tor_memdup(hsdir_rs->identity_digest, DIGEST_LEN));
-      continue;
-    }
-
     /* Upload this descriptor to the chosen directory. */
     upload_descriptor_to_hsdir(service, desc, hsdir_node);
   } SMARTLIST_FOREACH_END(hsdir_rs);
@@ -2724,58 +2709,6 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
   return -1;
 }
 
-/* For a given service and a descriptor of that service, consider retrying to
- * upload the descriptor to any directories from which we had missing
- * information when originally tried to be uploaded. This is called when our
- * directory information has changed. */
-static void
-consider_hsdir_upload_retry(const hs_service_t *service,
-                            hs_service_descriptor_t *desc)
-{
-  smartlist_t *responsible_dirs = NULL;
-  smartlist_t *still_missing_dirs = NULL;
-
-  tor_assert(service);
-  tor_assert(desc);
-
-  responsible_dirs = smartlist_new();
-  still_missing_dirs = smartlist_new();
-
-  /* We first need to get responsible directories from the latest consensus so
-   * we can then make sure that the node that we were missing information for
-   * is still responsible for this descriptor. */
-  hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
-                            service->desc_next == desc, 0, responsible_dirs);
-
-  SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, rs) {
-    const node_t *node;
-    const char *id = rs->identity_digest;
-    if (!smartlist_contains_digest(desc->hsdir_missing_info, id)) {
-      continue;
-    }
-    /* We do need a node_t object and descriptor to perform an upload. If
-     * found, we remove the id from the missing dir list else we add it to the
-     * still missing dir list to keep track of id that are still missing. */
-    node = node_get_by_id(id);
-    if (node && node_has_descriptor(node)) {
-      upload_descriptor_to_hsdir(service, desc, node);
-      smartlist_remove(desc->hsdir_missing_info, id);
-    } else {
-      smartlist_add(still_missing_dirs, tor_memdup(id, DIGEST_LEN));
-    }
-  } SMARTLIST_FOREACH_END(rs);
-
-  /* Switch the still missing dir list with the current missing dir list in
-   * the descriptor. It is possible that the list ends up empty which is what
-   * we want if we have no more missing dir. */
-  SMARTLIST_FOREACH(desc->hsdir_missing_info, char *, id, tor_free(id));
-  smartlist_free(desc->hsdir_missing_info);
-  desc->hsdir_missing_info = still_missing_dirs;
-
-  /* No ownership of the routerstatus_t object in this list. */
-  smartlist_free(responsible_dirs);
-}
-
 /* Add to list every filename used by service. This is used by the sandbox
  * subsystem. */
 static void
@@ -2801,16 +2734,6 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* ========== */
 /* Public API */
 /* ========== */
-
-/* We just received a new batch of descriptors which might affect the shape of
- * the HSDir hash ring. Signal that we should reexamine the hash ring and
- * re-upload our HS descriptors if needed. */
-void
-hs_hsdir_set_changed_consider_reupload(void)
-{
-  log_info(LD_REND, "New dirinfo arrived: consider reuploading descriptor");
-  consider_republishing_hs_descriptors = 1;
-}
 
 /* Return the number of service we have configured and usable. */
 unsigned int
@@ -2981,22 +2904,14 @@ hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
 }
 
 /* Called when our internal view of the directory has changed. We might have
- * new descriptors for hidden service directories that we didn't have before
- * so try them if it's the case. */
+ * received a new batch of descriptors which might affect the shape of the
+ * HSDir hash ring. Signal that we should reexamine the hash ring and
+ * re-upload our HS descriptors if needed. */
 void
 hs_service_dir_info_changed(void)
 {
-  /* For each service we have, check every descriptor and consider retrying to
-   * upload it to directories that we might have had missing information
-   * previously that is missing a router descriptor. */
-  FOR_EACH_SERVICE_BEGIN(service) {
-    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      /* This cleans up the descriptor missing hsdir information list if a
-       * successful upload is made or if any of the directory aren't
-       * responsible anymore for the service descriptor. */
-      consider_hsdir_upload_retry(service, desc);
-    } FOR_EACH_DESCRIPTOR_END;
-  } FOR_EACH_SERVICE_END;
+  log_info(LD_REND, "New dirinfo arrived: consider reuploading descriptor");
+  consider_republishing_hs_descriptors = 1;
 }
 
 /* Called when we get an INTRODUCE2 cell on the circ. Respond to the cell and

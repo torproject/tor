@@ -1810,7 +1810,7 @@ router_dir_info_changed(void)
 {
   need_to_update_have_min_dir_info = 1;
   rend_hsdir_routers_changed();
-  hs_hsdir_set_changed_consider_reupload();
+  hs_service_dir_info_changed();
 }
 
 /** Return a string describing what we're missing before we have enough
