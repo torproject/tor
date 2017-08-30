@@ -140,6 +140,13 @@ Finally, to write your benchmark code, in
         }
     }
 
+ Fuzzing
+---------
+
+If you wish to fuzz parts of your code, please see the
+[`cargo fuzz`](https://github.com/rust-fuzz/cargo-fuzz) crate, which uses
+[libfuzzer-sys](https://github.com/rust-fuzz/libfuzzer-sys).
+
  Safety
 --------
 
@@ -241,9 +248,96 @@ Here are some additional bits of advice and rules:
 
 6. Type safety
 
-   Wherever possible and sensical, you SHOULD create new types, either as tuple
-   structs (e.g. `struct MyInteger(pub u32)`) or as type aliases (e.g. `pub type
-   MyInteger = u32`).
+   Wherever possible and sensical, you SHOULD create new types in a
+   manner which prevents type confusion or misuse.  For example,
+   rather than using an untyped mapping between strings and integers
+   like so:
+
+        use std::collections::HashMap;
+
+        pub fn get_elements_with_over_9000_points(map: &HashMap<String, usize>) -> Vec<String> {
+            ...
+        }
+
+   It would be safer to define a new type, such that some other usage
+   of `HashMap<String, usize>` cannot be confused for this type:
+
+        pub struct DragonBallZPowers(pub HashMap<String, usize>);
+
+        impl DragonBallZPowers {
+            pub fn over_nine_thousand<'a>(&'a self) -> Vec<&'a String> {
+                let mut powerful_enough: Vec<&'a String> = Vec::with_capacity(5);
+
+                for (character, power) in &self.0 {
+                    if *power > 9000 {
+                        powerful_enough.push(character);
+                    }
+                }
+                powerful_enough
+            }
+        }
+
+   Note the following code, which uses Rust's type aliasing, is valid
+   but it does NOT meet the desired type safety goals:
+
+        pub type Power = usize;
+
+        pub fn over_nine_thousand(power: &Power) -> bool {
+            if *power > 9000 {
+                return true;
+            }
+            false
+        }
+
+        // We can still do the following:
+        let his_power: usize = 9001;
+        over_nine_thousand(&his_power);
+
+7. Unsafe mucking around with lifetimes
+
+   Because lifetimes are technically, in type theory terms, a kind, i.e. a
+   family of types, individual lifetimes can be treated as types.  For example,
+   one can arbitrarily extend and shorten lifetime using `std::mem::transmute`:
+
+        struct R<'a>(&'a i32);
+
+        unsafe fn extend_lifetime<'b>(r: R<'b>) -> R<'static> {
+            std::mem::transmute::<R<'b>, R<'static>>(r)
+        }
+
+        unsafe fn shorten_invariant_lifetime<'b, 'c>(r: &'b mut R<'static>) -> &'b mut R<'c> {
+            std::mem::transmute::<&'b mut R<'static>, &'b mut R<'c>>(r)
+        }
+
+   Calling `extend_lifetime()` would cause an `R` passed into it to live forever
+   for the life of the program (the `'static` lifetime).  Similarly,
+   `shorten_invariant_lifetime()` could be used to take something meant to live
+   forever, and cause it to disappear!  This is incredibly unsafe.  If you're
+   going to be mucking around with lifetimes like this, first, you better have
+   an extremely good reason, and second, you may as be honest and explicit about
+   it, and for ferris' sake just use a raw pointer.
+
+   In short, just because lifetimes can be treated like types doesn't mean you
+   should do it.
+
+8. Doing excessively unsafe things when there's a safer alternative
+
+   Similarly to #7, often there are excessively unsafe ways to do a task and a
+   simpler, safer way.  You MUST choose the safer option where possible.
+
+   For example, `std::mem::transmute` can be abused in ways where casting with
+   `as` would be both simpler and safer:
+
+        // Don't do this
+        let ptr = &0;
+        let ptr_num_transmute = unsafe { std::mem::transmute::<&i32, usize>(ptr)};
+
+        // Use an `as` cast instead
+        let ptr_num_cast = ptr as *const i32 as usize;
+
+   In fact, using `std::mem::transmute` for *any* reason is a code smell and as
+   such SHOULD be avoided.
+
 
  Whitespace & Formatting
 -------------------------
