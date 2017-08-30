@@ -1546,7 +1546,6 @@ service_desc_note_upload(hs_service_descriptor_t *desc, const node_t *hsdir)
 
   if (!smartlist_contains_string(desc->previous_hsdirs, b64_digest)) {
     smartlist_add_strdup(desc->previous_hsdirs, b64_digest);
-    smartlist_sort_strings(desc->previous_hsdirs);
   }
 }
 
@@ -2366,9 +2365,8 @@ STATIC int
 service_desc_hsdirs_changed(const hs_service_t *service,
                             const hs_service_descriptor_t *desc)
 {
-  int retval = 0;
+  int should_reupload = 0;
   smartlist_t *responsible_dirs = smartlist_new();
-  smartlist_t *b64_responsible_dirs = smartlist_new();
 
   /* No desc upload has happened yet: it will happen eventually */
   if (!desc->previous_hsdirs || !smartlist_len(desc->previous_hsdirs)) {
@@ -2379,32 +2377,24 @@ service_desc_hsdirs_changed(const hs_service_t *service,
   hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
                             service->desc_next == desc, 0, responsible_dirs);
 
-  /* Make a second list with their b64ed identity digests, so that we can
-   * compare it with out previous list of hsdirs */
+  /* Check if any new hsdirs have been added to the responsible hsdirs set:
+   * Iterate over the list of new hsdirs, and reupload if any of them is not
+   * present in the list of previous hsdirs.
+   */
   SMARTLIST_FOREACH_BEGIN(responsible_dirs, const routerstatus_t *, hsdir_rs) {
     char b64_digest[BASE64_DIGEST_LEN+1] = {0};
     digest_to_base64(b64_digest, hsdir_rs->identity_digest);
-    smartlist_add_strdup(b64_responsible_dirs, b64_digest);
+
+    if (!smartlist_contains_string(desc->previous_hsdirs, b64_digest)) {
+      should_reupload = 1;
+      break;
+    }
   } SMARTLIST_FOREACH_END(hsdir_rs);
-
-  /* Sort this new smartlist so that we can compare it with the other one */
-  smartlist_sort_strings(b64_responsible_dirs);
-
-  /* Check whether the set of HSDirs changed */
-  if (!smartlist_strings_eq(b64_responsible_dirs, desc->previous_hsdirs)) {
-    log_info(LD_GENERAL, "Received new dirinfo and set of hsdirs changed!");
-    retval = 1;
-  } else {
-    log_debug(LD_GENERAL, "No change in hsdir set!");
-  }
 
  done:
   smartlist_free(responsible_dirs);
 
-  SMARTLIST_FOREACH(b64_responsible_dirs, char*, s, tor_free(s));
-  smartlist_free(b64_responsible_dirs);
-
-  return retval;
+  return should_reupload;
 }
 
 /* Return 1 if the given descriptor from the given service can be uploaded
