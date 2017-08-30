@@ -2290,6 +2290,16 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       if (want_onehop) flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
       if (need_uptime) flags |= CIRCLAUNCH_NEED_UPTIME;
       if (need_internal) flags |= CIRCLAUNCH_IS_INTERNAL;
+
+      /* If we are about to pick a v3 RP right now, make sure we pick a
+       * rendezvous point that supports the v3 protocol! */
+      if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_REND_JOINED &&
+          new_circ_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
+          ENTRY_TO_EDGE_CONN(conn)->hs_ident) {
+        flags |= CIRCLAUNCH_IS_V3_RP;
+        log_info(LD_GENERAL, "Getting rendezvous circuit to v3 service!");
+      }
+
       circ = circuit_launch_by_extend_info(new_circ_purpose, extend_info,
                                            flags);
     }

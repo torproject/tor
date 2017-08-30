@@ -24,6 +24,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "connection.h"
+#include "nodelist.h"
 #include "circpathbias.h"
 #include "connection.h"
 #include "hs_ntor.h"
@@ -461,9 +462,21 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
   tor_assert(circ);
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
 
+  const extend_info_t *rp_ei = circ->build_state->chosen_exit;
+
+  /* Check that we didn't accidentally choose a node that does not understand
+   * the v3 rendezvous protocol */
+  if (rp_ei) {
+    const node_t *rp_node = node_get_by_id(rp_ei->identity_digest);
+    if (rp_node) {
+      if (BUG(!node_supports_v3_rendezvous_point(rp_node))) {
+        return;
+      }
+    }
+  }
+
   log_info(LD_REND, "Rendezvous circuit has opened to %s.",
-           safe_str_client(
-                extend_info_describe(circ->build_state->chosen_exit)));
+           safe_str_client(extend_info_describe(rp_ei)));
 
   /* Ignore returned value, nothing we can really do. On failure, the circuit
    * will be marked for close. */

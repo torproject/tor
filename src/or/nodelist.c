@@ -863,6 +863,28 @@ node_supports_ed25519_hs_intro(const node_t *node)
   return 0;
 }
 
+/** Return true iff <b>node</b> supports to be a rendezvous point for hidden
+ * service version 3 (HSRend=2). */
+int
+node_supports_v3_rendezvous_point(const node_t *node)
+{
+  tor_assert(node);
+
+  if (node->rs) {
+    return node->rs->supports_v3_rendezvous_point;
+  }
+  if (node->ri) {
+    if (node->ri->protocol_list == NULL) {
+      return 0;
+    }
+    return protocol_list_supports_protocol(node->ri->protocol_list,
+                                           PRT_HSREND,
+                                           PROTOVER_HS_RENDEZVOUS_POINT_V3);
+  }
+  tor_assert_nonfatal_unreached_once();
+  return 0;
+}
+
 /** Return the RSA ID key's SHA1 digest for the provided node. */
 const uint8_t *
 node_get_rsa_id_digest(const node_t *node)
