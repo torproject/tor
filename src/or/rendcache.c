@@ -303,7 +303,7 @@ void
 rend_cache_purge(void)
 {
   if (rend_cache) {
-    log_info(LD_REND, "Purging HS descriptor cache");
+    log_info(LD_REND, "Purging HS v2 descriptor cache");
     strmap_free(rend_cache, rend_cache_entry_free_);
   }
   rend_cache = strmap_new();
@@ -315,7 +315,7 @@ void
 rend_cache_failure_purge(void)
 {
   if (rend_cache_failure) {
-    log_info(LD_REND, "Purging HS failure cache");
+    log_info(LD_REND, "Purging HS v2 failure cache");
     strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
   }
   rend_cache_failure = strmap_new();

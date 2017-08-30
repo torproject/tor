@@ -46,5 +46,7 @@ extend_info_t *hs_client_get_random_intro_from_edge(
 
 int hs_client_reextend_intro_circuit(origin_circuit_t *circ);
 
+void hs_client_purge_state(void);
+
 #endif /* TOR_HS_CLIENT_H */
 
