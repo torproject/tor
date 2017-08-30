@@ -362,15 +362,19 @@ test_desc_overlap_period_testnet(void *arg)
 
 static void
 helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
-                                  const uint8_t *identity,
-                                  const uint8_t *curr_hsdir_index,
+                                  int identity_idx,
                                   const char *nickname,
                                   int is_hsdir)
 {
   routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
   routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
-
+  uint8_t identity[DIGEST_LEN];
+  uint8_t curr_hsdir_index[DIGEST256_LEN];
   tor_addr_t ipv4_addr;
+
+  memset(identity, identity_idx, sizeof(identity));
+  memset(curr_hsdir_index, identity_idx, sizeof(curr_hsdir_index));
+
   memcpy(rs->identity_digest, identity, DIGEST_LEN);
   rs->is_hs_dir = is_hsdir;
   rs->supports_v3_hsdir = 1;
@@ -435,36 +439,15 @@ test_responsible_hsdirs(void *arg)
   ns = networkstatus_get_latest_consensus();
 
   { /* First router: HSdir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "let_me";
-    memset(identity, 1, sizeof(identity));
-    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+    helper_add_hsdir_to_networkstatus(ns, 1, "igor", 1);
   }
 
   { /* Second HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "show_you";
-    memset(identity, 2, sizeof(identity));
-    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+    helper_add_hsdir_to_networkstatus(ns, 2, "victor", 1);
   }
 
   { /* Third relay but not HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "how_to_dance";
-    memset(identity, 3, sizeof(identity));
-    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 0);
+    helper_add_hsdir_to_networkstatus(ns, 3, "spyro", 0);
   }
 
   ed25519_keypair_t kp;
@@ -580,25 +563,11 @@ test_desc_reupload_logic(void *arg)
 
   /* Now let's create our hash ring: */
   { /* First HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "let_me";
-    memset(identity, 1, sizeof(identity));
-    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+    helper_add_hsdir_to_networkstatus(ns, 1, "dingus", 1);
   }
 
   { /* Second HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "show_you";
-    memset(identity, 2, sizeof(identity));
-    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+    helper_add_hsdir_to_networkstatus(ns, 2, "clive", 1);
   }
 
   /* Now let's upload our desc to all hsdirs */
@@ -616,14 +585,7 @@ test_desc_reupload_logic(void *arg)
   /* Now change the HSDir hash ring by adding another node */
 
   { /* Third HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "how_to_dance";
-    memset(identity, 3, sizeof(identity));
-    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+    helper_add_hsdir_to_networkstatus(ns, 3, "ringo", 1);
   }
 
   /* Now call service_desc_hsdirs_changed() and see that it detected the hash
