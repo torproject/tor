@@ -7921,13 +7921,28 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
     memset(&options->OutboundBindAddresses, 0,
            sizeof(options->OutboundBindAddresses));
   }
-  parse_outbound_address_lines(options->OutboundBindAddress,
-                      OUTBOUND_ADDR_EXIT_AND_OR, options, validate_only, msg);
-  parse_outbound_address_lines(options->OutboundBindAddressOR,
-                      OUTBOUND_ADDR_OR, options, validate_only, msg);
-  parse_outbound_address_lines(options->OutboundBindAddressExit,
-                      OUTBOUND_ADDR_EXIT, options, validate_only, msg);
+
+  if (parse_outbound_address_lines(options->OutboundBindAddress,
+                                   OUTBOUND_ADDR_EXIT_AND_OR, options,
+                                   validate_only, msg) < 0) {
+    goto err;
+  }
+
+  if (parse_outbound_address_lines(options->OutboundBindAddressOR,
+                                   OUTBOUND_ADDR_OR, options, validate_only,
+                                   msg) < 0) {
+    goto err;
+  }
+
+  if (parse_outbound_address_lines(options->OutboundBindAddressExit,
+                                   OUTBOUND_ADDR_EXIT, options, validate_only,
+                                   msg)  < 0) {
+    goto err;
+  }
+
   return 0;
+ err:
+  return -1;
 }
 
 /** Load one of the geoip files, <a>family</a> determining which
