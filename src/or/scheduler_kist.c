@@ -24,6 +24,11 @@
  * Data structures and supporting functions
  *****************************************************************************/
 
+/* Indicate if we don't have the kernel support. This can happen if the kernel
+ * changed and it doesn't recognized the values passed to the syscalls needed
+ * by KIST. In that case, fallback to the naive approach. */
+static unsigned int kist_no_kernel_support = 0;
+
 /* Socket_table hash table stuff. The socket_table keeps track of per-socket
  * limit information imposed by kist and used by kist. */
 
@@ -174,9 +179,34 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   struct tcp_info tcp;
   socklen_t tcp_info_len = sizeof(tcp);
 
+  if (kist_no_kernel_support) {
+    goto fallback;
+  }
+
   /* Gather information */
-  getsockopt(sock, SOL_TCP, TCP_INFO, (void *)&(tcp), &tcp_info_len);
-  ioctl(sock, SIOCOUTQNSD, &(ent->notsent));
+  if (getsockopt(sock, SOL_TCP, TCP_INFO, (void *)&(tcp), &tcp_info_len) < 0) {
+    if (errno == EINVAL) {
+      /* Oops, this option is not provided by the kernel, we'll have to
+       * disable KIST entirely. This can happen if tor was built on a machine
+       * with the support previously or if the kernel was updated and lost the
+       * support. */
+      log_notice(LD_SCHED, "Looks like our kernel doesn't have the support "
+                           "for KIST anymore. Fallback to the naive approach. "
+                           "Set KISTSchedRunInterval=-1 to disable KIST.");
+      kist_no_kernel_support = 1;
+    }
+    goto fallback;
+  }
+  if (ioctl(sock, SIOCOUTQNSD, &(ent->notsent)) < 0) {
+    if (errno == EINVAL) {
+      log_notice(LD_SCHED, "Looks like our kernel doesn't have the support "
+                           "for KIST anymore. Fallback to the naive approach. "
+                           "Set KISTSchedRunInterval=-1 to disable KIST.");
+      /* Same reason as the above. */
+      kist_no_kernel_support = 1;
+    }
+    goto fallback;
+  }
   ent->cwnd = tcp.tcpi_snd_cwnd;
   ent->unacked = tcp.tcpi_unacked;
   ent->mss = tcp.tcpi_snd_mss;
@@ -193,6 +223,10 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   }
   ent->limit = tcp_space + extra_space;
   return;
+
+ fallback:
+  ent->cwnd = ent->unacked = ent->mss = ent->notsent = 0;
+  ent->limit = INT_MAX;
 }
 
 /* Given a socket that isn't in the table, add it.
