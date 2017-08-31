@@ -78,6 +78,12 @@ types/constants/objects/functions/methods, you SHOULD also include an
 You MUST document your module with _module docstring_ comments,
 i.e. `//!` at the beginning of each line.
 
+ Style
+-------
+
+You SHOULD consider breaking up large literal numbers with `_` when it makes it
+more human readable to do so, e.g. `let x: u64 = 100_000_000_000`.
+
  Testing
 ---------
 
@@ -147,6 +153,14 @@ If you wish to fuzz parts of your code, please see the
 [`cargo fuzz`](https://github.com/rust-fuzz/cargo-fuzz) crate, which uses
 [libfuzzer-sys](https://github.com/rust-fuzz/libfuzzer-sys).
 
+ Whitespace & Formatting
+-------------------------
+
+You MUST run `rustfmt` (https://github.com/rust-lang-nursery/rustfmt)
+on your code before your code will be merged.  You can install rustfmt
+by doing `cargo install rustfmt-nightly` and then run it with `cargo
+fmt`.
+
  Safety
 --------
 
@@ -162,6 +176,44 @@ Here are some additional bits of advice and rules:
    an inline comment stating how the unwrap will either 1) never fail,
    or 2) should fail (i.e. in a unittest).
 
+   You SHOULD NOT use `unwrap()` anywhere in which it is possible to handle the
+   potential error with either `expect()` or the eel operator, `?`.
+   For example, consider a function which parses a string into an integer:
+
+        fn parse_port_number(config_string: &str) -> u16 {
+            u16::from_str_radix(config_string, 10).unwrap()
+        }
+
+   There are numerous ways this can fail, and the `unwrap()` will cause the
+   whole program to byte the dust!  Instead, either you SHOULD use `expect()`
+   (or another equivalent function which will return an `Option` or a `Result`)
+   and change the return type to be compatible:
+
+        fn parse_port_number(config_string: &str) -> Option<u16> {
+            u16::from_str_radix(config_string, 10).expect("Couldn't parse port into a u16")
+        }
+
+   or you SHOULD use `or()` (or another similar method):
+
+        fn parse_port_number(config_string: &str) -> Option<u16> {
+            u16::from_str_radix(config_string, 10).or(Err("Couldn't parse port into a u16")
+        }
+
+   Using methods like `or()` can be particularly handy when you must do
+   something afterwards with the data, for example, if we wanted to guarantee
+   that the port is high.  Combining these methods with the eel operator (`?`)
+   makes this even easier:
+
+        fn parse_port_number(config_string: &str) -> Result<u16, Err> {
+            let port = u16::from_str_radix(config_string, 10).or(Err("Couldn't parse port into a u16"))?;
+
+            if port > 1024 {
+                return Ok(port);
+            } else {
+                return Err("Low ports not allowed");
+            }
+        }
+
 2. `unsafe`
 
    If you use `unsafe`, you MUST describe a contract in your
@@ -175,8 +227,8 @@ Here are some additional bits of advice and rules:
 
         #[no_mangle]
         pub unsafe extern "C" fn increment_and_combine_numbers(mut numbers: [u8; 4]) -> u32 {
-            for index in 0..numbers.len() {
-                numbers[index] += 1;
+            for number in &mut numbers {
+                *number += 1;
             }
             std::mem::transmute::<[u8; 4], u32>(numbers)
         }
@@ -218,15 +270,14 @@ Here are some additional bits of advice and rules:
       `from_raw()` and then deallocate in Rust can result in a
       [memory leak](https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_raw).
 
-     [It was determined](https://github.com/rust-lang/rust/pull/41074) that this
-     is safe to do if you use the same allocator in C and Rust and also specify
-     the memory alignment for CString (except that there is no way to specify
-     the alignment for CString).  It is believed that the alignment is always 1,
-     which would mean it's safe to dealloc the resulting `*mut c_char` in Tor's
-     C code.  However, the Rust developers are not willing to guarantee the
-     stability of, or a contract for, this behaviour, citing concerns that this
-     is potentially extremely and subtly unsafe.
-
+      [It was determined](https://github.com/rust-lang/rust/pull/41074) that this
+      is safe to do if you use the same allocator in C and Rust and also specify
+      the memory alignment for CString (except that there is no way to specify
+      the alignment for CString).  It is believed that the alignment is always 1,
+      which would mean it's safe to dealloc the resulting `*mut c_char` in Tor's
+      C code.  However, the Rust developers are not willing to guarantee the
+      stability of, or a contract for, this behaviour, citing concerns that this
+      is potentially extremely and subtly unsafe.
 
 4. Perform an allocation on the other side of the boundary
 
@@ -338,11 +389,42 @@ Here are some additional bits of advice and rules:
    In fact, using `std::mem::transmute` for *any* reason is a code smell and as
    such SHOULD be avoided.
 
+9. Casting integers with `as`
 
- Whitespace & Formatting
--------------------------
+   This is generally fine to do, but it has some behaviours which you should be
+   aware of.  Casting down chops off the high bits, e.g.:
 
-You MUST run `rustfmt` (https://github.com/rust-lang-nursery/rustfmt)
-on your code before your code will be merged.  You can install rustfmt
-by doing `cargo install rustfmt-nightly` and then run it with `cargo
-fmt`.
+        let x: u32 = 4294967295;
+        println!("{}", x as u16); // prints 65535
+
+   Some cases which you MUST NOT do include:
+
+   * Casting an `u128` down to an `f32` or vice versa (e.g.
+     `u128::MAX as f32` but this isn't only a problem with overflowing
+     as it is also undefined behaviour for `42.0f32 as u128`),
+
+   * Casting between integers and floats when the thing being cast
+     cannot fit into the type it is being casted into, e.g.:
+
+         println!("{}", 42949.0f32 as u8); // prints 197 in debug mode and 0 in release
+         println!("{}", 1.04E+17 as u8);   // prints 0 in both modes
+         println!("{}", (0.0/0.0) as i64); // prints whatever the heck LLVM wants
+
+     Because this behaviour is undefined, it can even produce segfaults in
+     safe Rust code.  For example, the following program built in release
+     mode segfaults:
+
+         #[inline(never)]
+         pub fn trigger_ub(sl: &[u8; 666]) -> &[u8] {
+             // Note that the float is out of the range of `usize`, invoking UB when casting.
+             let idx = 1e99999f64 as usize;
+             &sl[idx..] // The bound check is elided due to `idx` being of an undefined value.
+         }
+
+         fn main() {
+             println!("{}", trigger_ub(&[1; 666])[999999]); // ~ out of bound
+         }
+
+      And in debug mode panics with:
+
+         thread 'main' panicked at 'slice index starts at 140721821254240 but ends at 666', /checkout/src/libcore/slice/mod.rs:754:4
