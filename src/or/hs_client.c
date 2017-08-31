@@ -903,7 +903,10 @@ hs_client_decode_descriptor(const char *desc_str,
   ret = hs_desc_decode_descriptor(desc_str, subcredential, desc);
   memwipe(subcredential, 0, sizeof(subcredential));
   if (ret < 0) {
-    log_warn(LD_GENERAL, "Could not parse received descriptor as client");
+    log_warn(LD_GENERAL, "Could not parse received descriptor as client.");
+    if (get_options()->SafeLogging_ == SAFELOG_SCRUB_NONE) {
+      log_warn(LD_GENERAL, "%s", escaped(desc_str));
+    }
     goto err;
   }
 
