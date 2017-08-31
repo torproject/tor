@@ -215,17 +215,6 @@ get_run_sched_ev(void)
   return run_sched_ev;
 }
 
-/* Return true iff the scheduler subsystem should use KIST. */
-int
-scheduler_should_use_kist(void)
-{
-  int64_t run_freq = kist_scheduler_run_interval();
-  log_info(LD_SCHED, "Determined sched_run_interval should be %" PRId64 ". "
-                     "Will%s use KIST.",
-           run_freq, (run_freq > 0 ? "" : " not"));
-  return run_freq > 0;
-}
-
 /* Comparison function to use when sorting pending channels */
 MOCK_IMPL(int,
 scheduler_compare_channels, (const void *c1_v, const void *c2_v))

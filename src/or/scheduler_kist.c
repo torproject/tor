@@ -588,3 +588,26 @@ kist_scheduler_run_interval(const networkstatus_t *ns)
   return run_interval;
 }
 
+#ifdef HAVE_KIST_SUPPORT
+
+/* Return true iff the scheduler subsystem should use KIST. */
+int
+scheduler_should_use_kist(void)
+{
+  int64_t run_interval = kist_scheduler_run_interval(NULL);
+  log_info(LD_SCHED, "Determined sched_run_interval should be %" PRId64 ". "
+                     "Will%s use KIST.",
+           run_interval, (run_interval > 0 ? "" : " not"));
+  return run_interval > 0;
+}
+
+#else /* HAVE_KIST_SUPPORT */
+
+int
+scheduler_should_use_kist(void)
+{
+  return 0;
+}
+
+#endif /* HAVE_KIST_SUPPORT */
+

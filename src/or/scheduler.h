@@ -116,7 +116,6 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
 /*********************************
  * Defined in scheduler.c
  *********************************/
-int scheduler_should_use_kist(void);
 smartlist_t *get_channels_pending(void);
 struct event *get_run_sched_ev(void);
 MOCK_DECL(int, scheduler_compare_channels,
@@ -156,6 +155,7 @@ MOCK_DECL(int, channel_should_write_to_kernel,
 MOCK_DECL(void, channel_write_to_kernel, (channel_t *chan));
 MOCK_DECL(void, update_socket_info_impl, (socket_table_ent_t *ent));
 
+int scheduler_should_use_kist(void);
 scheduler_t *get_kist_scheduler(void);
 int32_t kist_scheduler_run_interval(const networkstatus_t *ns);
 

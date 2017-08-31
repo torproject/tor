@@ -792,6 +792,34 @@ AC_CHECK_MEMBERS([SSL.state], , ,
 [#include <openssl/ssl.h>
 ])
 
+dnl Define the set of checks for KIST scheduler support.
+AC_DEFUN([CHECK_KIST_SUPPORT],[
+  dnl KIST needs struct tcp_info and for certain members to exist.
+  AC_CHECK_MEMBERS(
+    [struct tcp_info.tcpi_unacked, struct tcp_info.tcpi_snd_mss],
+    , ,[[#include <netinet/tcp.h>]])
+  dnl KIST needs SIOCOUTQNSD to exist for an ioctl call.
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+                     #include <linux/sockios.h>
+                     #ifndef SIOCOUTQNSD
+                     #error
+                     #endif
+                     ])], have_siocoutqnsd=yes, have_siocoutqnsd=no)
+  if test "x$have_siocoutqnsd" = "xyes"; then
+    if test "x$ac_cv_member_struct_tcp_info_tcpi_unacked" = "xyes"; then
+      if test "x$ac_cv_member_struct_tcp_info_tcpi_snd_mss" = "xyes"; then
+        have_kist_support=yes
+      fi
+    fi
+  fi
+])
+dnl Now, trigger the check.
+CHECK_KIST_SUPPORT
+AS_IF([test "x$have_kist_support" = "xyes"],
+      [AC_DEFINE(HAVE_KIST_SUPPORT, 1, [Defined if KIST scheduler is supported
+                                        on this system])],
+      [AC_MSG_NOTICE([KIST scheduler can't be used. Missing support.])])
+
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
 CPPFLAGS="$save_CPPFLAGS"
