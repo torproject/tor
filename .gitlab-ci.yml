@@ -1,7 +1,9 @@
-build:
-  script:
+before_script:
     - "apt-get update -qq"
     - "apt-get upgrade -y"
+    
+build:
+  script:
     - "apt-get install -y --fix-missing git openssh-client asciidoc wget gcc g++ automake cmake make libglib2.0 libglib2.0-dev libigraph0 libigraph0-dev libevent-dev openssl libssl-dev"
     - "sh autogen.sh && ./configure && make"
     - "make check"
@@ -9,8 +11,6 @@ build:
 
 update:
   script: 
-    - "apt-get update -qq"
-    - "apt-get upgrade -y"
     - "apt-get install -y --fix-missing git openssh-client"
     -
     # Run ssh-agent (inside the build environment)
@@ -31,8 +31,9 @@ update:
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo "$SSH_SERVER_HOSTKEYS" > ~/.ssh/known_hosts'
     - echo "merging from torgit"
-    - git clone --bare https://git.torproject.org/tor.git
     - "cd tor" 
+    - "mkdir tor"
+    - git clone --bare https://git.torproject.org/tor.git
     - git checkout master
     - git config --global user.email "labadmin@oniongit.eu"
     - git config --global user.name "gitadmin"
