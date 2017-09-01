@@ -36,4 +36,4 @@ update:
     - "mkdir tor"
     - "cd tor" 
     - git clone --bare https://git.torproject.org/tor.git
-    - git push --mirror git@oniongit.eu:hiro/tor.git
+    - git push --mirror git@oniongit.eu:network/tor.git
