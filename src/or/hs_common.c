@@ -211,15 +211,26 @@ get_time_period_length(void)
   return (uint64_t) time_period_length;
 }
 
-/** Get the HS time period number at time <b>now</b> */
+/** Get the HS time period number at time <b>now</b>. If <b>now</b> is not set,
+ *  we try to get the time ourselves. */
 uint64_t
 hs_get_time_period_num(time_t now)
 {
   uint64_t time_period_num;
+  time_t current_time;
+
+  /* If no time is specified, set current time based on consensus time, and
+   * only fall back to system time if that fails. */
+  if (now != 0) {
+    current_time = now;
+  } else {
+    networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
+    current_time = ns ? ns->valid_after : approx_time();
+  }
 
   /* Start by calculating minutes since the epoch */
   uint64_t time_period_length = get_time_period_length();
-  uint64_t minutes_since_epoch = now / 60;
+  uint64_t minutes_since_epoch = current_time / 60;
 
   /* Apply the rotation offset as specified by prop224 (section
    * [TIME-PERIODS]), so that new time periods synchronize nicely with SRV

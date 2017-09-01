@@ -1376,7 +1376,7 @@ build_all_descriptors(time_t now)
       /* This means we just booted up because else this descriptor will never
        * be NULL as it should always point to the descriptor that was in
        * desc_next after rotation. */
-      build_service_descriptor(service, now, hs_get_time_period_num(now),
+      build_service_descriptor(service, now, hs_get_time_period_num(0),
                                &service->desc_current);
 
       log_info(LD_REND, "Hidden service %s current descriptor successfully "
@@ -1387,7 +1387,7 @@ build_all_descriptors(time_t now)
      * we are in the overlap period for the _next_ time period since it means
      * we either just booted or we just rotated our descriptors. */
     if (hs_overlap_mode_is_active(NULL, now) && service->desc_next == NULL) {
-      build_service_descriptor(service, now, hs_get_next_time_period_num(now),
+      build_service_descriptor(service, now, hs_get_next_time_period_num(0),
                                &service->desc_next);
       log_info(LD_REND, "Hidden service %s next descriptor successfully "
                         "built. Now scheduled for upload.",

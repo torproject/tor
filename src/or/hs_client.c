@@ -29,6 +29,7 @@
 #include "connection.h"
 #include "hs_ntor.h"
 #include "circuitbuild.h"
+#include "networkstatus.h"
 
 /* Get all connections that are waiting on a circuit and flag them back to
  * waiting for a hidden service descriptor for the given service key
@@ -110,7 +111,7 @@ static int
 directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
                                const routerstatus_t *hsdir)
 {
-  uint64_t current_time_period = hs_get_time_period_num(approx_time());
+  uint64_t current_time_period = hs_get_time_period_num(0);
   ed25519_public_key_t blinded_pubkey;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   hs_ident_dir_conn_t hs_conn_dir_ident;
@@ -162,7 +163,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 {
   int retval;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
-  uint64_t current_time_period = hs_get_time_period_num(approx_time());
+  uint64_t current_time_period = hs_get_time_period_num(0);
   smartlist_t *responsible_hsdirs;
   ed25519_public_key_t blinded_pubkey;
   routerstatus_t *hsdir_rs = NULL;
@@ -906,7 +907,7 @@ hs_client_decode_descriptor(const char *desc_str,
 
   /* Create subcredential for this HS so that we can decrypt */
   {
-    uint64_t current_time_period = hs_get_time_period_num(approx_time());
+    uint64_t current_time_period = hs_get_time_period_num(0);
     hs_build_blinded_pubkey(service_identity_pk, NULL, 0, current_time_period,
                             &blinded_pubkey);
     hs_get_subcredential(service_identity_pk, &blinded_pubkey, subcredential);

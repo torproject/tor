@@ -1043,8 +1043,6 @@ test_build_update_descriptors(void *arg)
 {
   int ret;
   time_t now = time(NULL);
-  uint64_t period_num = hs_get_time_period_num(now);
-  uint64_t next_period_num = hs_get_next_time_period_num(now);
   node_t *node;
   hs_service_t *service;
   hs_service_intro_point_t *ip_cur, *ip_next;
@@ -1055,8 +1053,19 @@ test_build_update_descriptors(void *arg)
   MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
   MOCK(get_or_state,
        get_or_state_replacement);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+
+  uint64_t period_num = hs_get_time_period_num(0);
+  uint64_t next_period_num = hs_get_next_time_period_num(0);
 
   /* Create a service without a current descriptor to trigger a build. */
   service = hs_service_new(get_options());
@@ -1203,7 +1212,16 @@ test_upload_descriptors(void *arg)
   MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
   MOCK(get_or_state,
        get_or_state_replacement);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Create a service with no descriptor. It's added to the global map. */
   service = hs_service_new(get_options());
