@@ -1483,7 +1483,7 @@ run_scheduled_events(time_t now)
 
   /* 12. launch diff computations.  (This is free if there are none to
    * launch.) */
-  if (server_mode(options)) {
+  if (dir_server_mode(options)) {
     consdiffmgr_rescan();
   }
 }
