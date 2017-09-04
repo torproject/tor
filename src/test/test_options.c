@@ -528,6 +528,8 @@ test_options_validate__outbound_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ, "Multiple outbound bind addresses configured: "
+                        "xxyy!!!sdfaf");
 
  done:
   free_options_test_data(tdata);
