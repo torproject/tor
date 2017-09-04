@@ -126,7 +126,7 @@ typedef struct hs_service_descriptor_t {
   /** List of the responsible HSDirs (their b64ed identity digest) last time we
    *  uploaded this descriptor. If the set of responsible HSDirs is different
    *  from this list, this means we received new dirinfo and we need to
-   *  reupload our descriptor. This list is always sorted lexicographically. */
+   *  reupload our descriptor. */
   smartlist_t *previous_hsdirs;
 } hs_service_descriptor_t;
 

@@ -21,6 +21,7 @@
 #include "networkstatus.h"
 #include "directory.h"
 #include "nodelist.h"
+#include "routerlist.h"
 #include "statefile.h"
 
 /** Test the validation of HS v3 addresses */
@@ -362,20 +363,26 @@ test_desc_overlap_period_testnet(void *arg)
 
 static void
 helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
-                                  const uint8_t *identity,
-                                  const uint8_t *curr_hsdir_index,
+                                  int identity_idx,
                                   const char *nickname,
                                   int is_hsdir)
 {
   routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
   routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
-
+  uint8_t identity[DIGEST_LEN];
+  uint8_t curr_hsdir_index[DIGEST256_LEN];
   tor_addr_t ipv4_addr;
+
+  memset(identity, identity_idx, sizeof(identity));
+  memset(curr_hsdir_index, identity_idx, sizeof(curr_hsdir_index));
+
   memcpy(rs->identity_digest, identity, DIGEST_LEN);
   rs->is_hs_dir = is_hsdir;
   rs->supports_v3_hsdir = 1;
+  strlcpy(rs->nickname, nickname, sizeof(rs->nickname));
   tor_addr_parse(&ipv4_addr, "1.2.3.4");
   ri->addr = tor_addr_to_ipv4h(&ipv4_addr);
+  rs->addr = tor_addr_to_ipv4h(&ipv4_addr);
   ri->nickname = tor_strdup(nickname);
   ri->protocol_list = tor_strdup("HSDir=1-2 LinkAuth=3");
   memcpy(ri->cache_info.identity_digest, identity, DIGEST_LEN);
@@ -388,7 +395,7 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   smartlist_add(ns->routerstatus_list, rs);
 
  done:
-  ;
+  routerinfo_free(ri);
 }
 
 static networkstatus_t *mock_ns = NULL;
@@ -412,6 +419,7 @@ mock_networkstatus_get_latest_consensus(void)
   mock_ns->valid_until = now+2;
   /* Create routerstatus list */
   mock_ns->routerstatus_list = smartlist_new();
+  mock_ns->type = NS_TYPE_CONSENSUS;
 
   return mock_ns;
 }
@@ -435,36 +443,15 @@ test_responsible_hsdirs(void *arg)
   ns = networkstatus_get_latest_consensus();
 
   { /* First router: HSdir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "let_me";
-    memset(identity, 1, sizeof(identity));
-    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+    helper_add_hsdir_to_networkstatus(ns, 1, "igor", 1);
   }
 
   { /* Second HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "show_you";
-    memset(identity, 2, sizeof(identity));
-    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+    helper_add_hsdir_to_networkstatus(ns, 2, "victor", 1);
   }
 
   { /* Third relay but not HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "how_to_dance";
-    memset(identity, 3, sizeof(identity));
-    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 0);
+    helper_add_hsdir_to_networkstatus(ns, 3, "spyro", 0);
   }
 
   ed25519_keypair_t kp;
@@ -579,32 +566,19 @@ test_desc_reupload_logic(void *arg)
   tt_int_op(hs_service_get_num_services(), OP_EQ, 1);
 
   /* Now let's create our hash ring: */
-  { /* First HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "let_me";
-    memset(identity, 1, sizeof(identity));
-    memset(curr_hsdir_index, 1, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
-  }
-
-  { /* Second HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "show_you";
-    memset(identity, 2, sizeof(identity));
-    memset(curr_hsdir_index, 2, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+  {
+    helper_add_hsdir_to_networkstatus(ns, 1, "dingus", 1);
+    helper_add_hsdir_to_networkstatus(ns, 2, "clive", 1);
+    helper_add_hsdir_to_networkstatus(ns, 3, "aaron", 1);
+    helper_add_hsdir_to_networkstatus(ns, 4, "lizzie", 1);
+    helper_add_hsdir_to_networkstatus(ns, 5, "daewon", 1);
+    helper_add_hsdir_to_networkstatus(ns, 6, "clarke", 1);
   }
 
   /* Now let's upload our desc to all hsdirs */
   upload_descriptor_to_all(service, desc, 0);
   /* Check that previous hsdirs were populated */
-  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 2);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
   /* Poison next upload time so that we can see if it was changed by
    * router_dir_info_changed(). No changes in hash ring so far, so the upload
@@ -613,23 +587,58 @@ test_desc_reupload_logic(void *arg)
   router_dir_info_changed();
   tt_int_op(desc->next_upload_time, OP_EQ, 42);
 
-  /* Now change the HSDir hash ring by adding another node */
+  /* Now change the HSDir hash ring by swapping nora for aaron.
+   * Start by clearing the hash ring */
+  {
+    SMARTLIST_FOREACH(ns->routerstatus_list,
+                      routerstatus_t *, rs, routerstatus_free(rs));
+    smartlist_clear(ns->routerstatus_list);
+    nodelist_free_all();
+    routerlist_free_all();
+  }
 
-  { /* Third HSDir */
-    uint8_t identity[DIGEST_LEN];
-    uint8_t curr_hsdir_index[DIGEST256_LEN];
-    char nickname[] = "how_to_dance";
-    memset(identity, 3, sizeof(identity));
-    memset(curr_hsdir_index, 3, sizeof(curr_hsdir_index));
-
-    helper_add_hsdir_to_networkstatus(ns, identity,
-                                      curr_hsdir_index, nickname, 1);
+  { /* Now add back all the nodes */
+    helper_add_hsdir_to_networkstatus(ns, 1, "dingus", 1);
+    helper_add_hsdir_to_networkstatus(ns, 2, "clive", 1);
+    helper_add_hsdir_to_networkstatus(ns, 4, "lizzie", 1);
+    helper_add_hsdir_to_networkstatus(ns, 5, "daewon", 1);
+    helper_add_hsdir_to_networkstatus(ns, 6, "clarke", 1);
+    helper_add_hsdir_to_networkstatus(ns, 7, "nora", 1);
   }
 
   /* Now call service_desc_hsdirs_changed() and see that it detected the hash
      ring change */
   time_t now = approx_time();
   tt_assert(now);
+  tt_int_op(service_desc_hsdirs_changed(service, desc), OP_EQ, 1);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
+
+  /* Now order another upload and see that we keep having 6 prev hsdirs */
+  upload_descriptor_to_all(service, desc, 0);
+  /* Check that previous hsdirs were populated */
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
+
+  /* Now restore the HSDir hash ring to its original state by swapping back
+     aaron for nora */
+  /* First clear up the hash ring */
+  {
+    SMARTLIST_FOREACH(ns->routerstatus_list,
+                      routerstatus_t *, rs, routerstatus_free(rs));
+    smartlist_clear(ns->routerstatus_list);
+    nodelist_free_all();
+    routerlist_free_all();
+  }
+
+  { /* Now populate the hash ring again */
+    helper_add_hsdir_to_networkstatus(ns, 1, "dingus", 1);
+    helper_add_hsdir_to_networkstatus(ns, 2, "clive", 1);
+    helper_add_hsdir_to_networkstatus(ns, 3, "aaron", 1);
+    helper_add_hsdir_to_networkstatus(ns, 4, "lizzie", 1);
+    helper_add_hsdir_to_networkstatus(ns, 5, "daewon", 1);
+    helper_add_hsdir_to_networkstatus(ns, 6, "clarke", 1);
+  }
+
+  /* Check that our algorithm catches this change of hsdirs */
   tt_int_op(service_desc_hsdirs_changed(service, desc), OP_EQ, 1);
 
   /* Now pretend that the descriptor changed, and order a reupload to all
@@ -639,9 +648,14 @@ test_desc_reupload_logic(void *arg)
 
   /* Now reupload again: see that the prev hsdir set got populated again. */
   upload_descriptor_to_all(service, desc, 0);
-  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 3);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
  done:
+  SMARTLIST_FOREACH(ns->routerstatus_list,
+                    routerstatus_t *, rs, routerstatus_free(rs));
+  smartlist_clear(ns->routerstatus_list);
+  networkstatus_vote_free(ns);
+  nodelist_free_all();
   hs_free_all();
 }
 
