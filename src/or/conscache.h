@@ -14,6 +14,7 @@ HANDLE_DECL(consensus_cache_entry, consensus_cache_entry_t, )
 consensus_cache_t *consensus_cache_open(const char *subdir, int max_entries);
 void consensus_cache_free(consensus_cache_t *cache);
 struct sandbox_cfg_elem;
+int consensus_cache_may_overallocate(consensus_cache_t *cache);
 int consensus_cache_register_with_sandbox(consensus_cache_t *cache,
                                           struct sandbox_cfg_elem **cfg);
 void consensus_cache_unmap_lazy(consensus_cache_t *cache, time_t cutoff);
