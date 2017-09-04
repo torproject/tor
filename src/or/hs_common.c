@@ -1206,12 +1206,16 @@ node_has_hsdir_index(const node_t *node, int is_for_next_period)
   if (BUG(node->hsdir_index == NULL) ||
       BUG(tor_mem_is_zero((const char*)node->hsdir_index->current,
                           DIGEST256_LEN))) {
+    log_warn(LD_BUG, "Zero current index (ri: %p, rs: %p, md: %p)",
+             node->ri, node->rs, node->md);
     return 0;
   }
 
   if (is_for_next_period &&
       BUG(tor_mem_is_zero((const char*)node->hsdir_index->next,
                           DIGEST256_LEN))) {
+    log_warn(LD_BUG, "Zero next index (ri: %p, rs: %p, md: %p)",
+             node->ri, node->rs, node->md);
     return 0;
   }
 

@@ -78,6 +78,7 @@ static smartlist_t *hs_service_staging_list;
 static int consider_republishing_hs_descriptors = 0;
 
 static void set_descriptor_revision_counter(hs_descriptor_t *hs_desc);
+static void move_descriptors(hs_service_t *src, hs_service_t *dst);
 
 /* Helper: Function to compare two objects in the service map. Return 1 if the
  * two service have the same master public identity key. */
@@ -714,37 +715,6 @@ close_service_circuits(hs_service_t *service)
   close_service_rp_circuits(service);
 }
 
-/* Move introduction points from the src descriptor to the dst descriptor. The
- * destination service intropoints are wiped out if any before moving. */
-static void
-move_descriptor_intro_points(hs_service_descriptor_t *src,
-                             hs_service_descriptor_t *dst)
-{
-  tor_assert(src);
-  tor_assert(dst);
-
-  digest256map_free(dst->intro_points.map, service_intro_point_free_);
-  dst->intro_points.map = src->intro_points.map;
-  /* Nullify the source. */
-  src->intro_points.map = NULL;
-}
-
-/* Move introduction points from the src service to the dst service. The
- * destination service intropoints are wiped out if any before moving. */
-static void
-move_intro_points(hs_service_t *src, hs_service_t *dst)
-{
-  tor_assert(src);
-  tor_assert(dst);
-
-  if (src->desc_current && dst->desc_current) {
-    move_descriptor_intro_points(src->desc_current, dst->desc_current);
-  }
-  if (src->desc_next && dst->desc_next) {
-    move_descriptor_intro_points(src->desc_next, dst->desc_next);
-  }
-}
-
 /* Move every ephemeral services from the src service map to the dst service
  * map. It is possible that a service can't be register to the dst map which
  * won't stop the process of moving them all but will trigger a log warn. */
@@ -785,6 +755,26 @@ service_escaped_dir(const hs_service_t *s)
                                     escaped(s->config.directory_path);
 }
 
+/** Move the hidden service state from <b>src</b> to <b>dst</b>. We do this
+ *  when we receive a SIGHUP: <b>dst</b> is the post-HUP service */
+static void
+move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
+{
+  tor_assert(src_service);
+  tor_assert(dst_service);
+
+  hs_service_state_t *src = &src_service->state;
+  hs_service_state_t *dst = &dst_service->state;
+
+  /* Let's do a shallow copy */
+  dst->intro_circ_retry_started_time = src->intro_circ_retry_started_time;
+  dst->num_intro_circ_launched = src->num_intro_circ_launched;
+  dst->in_overlap_period = src->in_overlap_period;
+  dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
+
+  src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
+}
+
 /* Register services that are in the staging list. Once this function returns,
  * the global service map will be set with the right content and all non
  * surviving services will be cleaned up. */
@@ -817,13 +807,15 @@ register_all_services(void)
      * transfer the intro points to it. */
     s = find_service(hs_service_map, &snew->keys.identity_pk);
     if (s) {
-      /* Pass ownership of intro points from s (the current service) to snew
-       * (the newly configured one). */
-      move_intro_points(s, snew);
+      /* Pass ownership of the descriptors from s (the current service) to
+       * snew (the newly configured one). */
+      move_descriptors(s, snew);
+      move_hs_state(s, snew);
       /* Remove the service from the global map because after this, we need to
        * go over the remaining service in that map that aren't surviving the
        * reload to close their circuits. */
       remove_service(hs_service_map, s);
+      hs_service_free(s);
     }
     /* Great, this service is now ready to be added to our new map. */
     if (BUG(register_service(new_service_map, snew) < 0)) {
@@ -996,6 +988,33 @@ service_descriptor_new(void)
   sdesc->hsdir_missing_info = smartlist_new();
   sdesc->previous_hsdirs = smartlist_new();
   return sdesc;
+}
+
+/* Move descriptor(s) from the src service to the dst service. We do this
+ * during SIGHUP when we re-create our hidden services. */
+static void
+move_descriptors(hs_service_t *src, hs_service_t *dst)
+{
+  tor_assert(src);
+  tor_assert(dst);
+
+  if (src->desc_current) {
+    /* Nothing should be there, but clean it up just in case */
+    if (BUG(dst->desc_current)) {
+      service_descriptor_free(dst->desc_current);
+    }
+    dst->desc_current = src->desc_current;
+    src->desc_current = NULL;
+  }
+
+  if (src->desc_next) {
+    /* Nothing should be there, but clean it up just in case */
+    if (BUG(dst->desc_next)) {
+      service_descriptor_free(dst->desc_next);
+    }
+    dst->desc_next = src->desc_next;
+    src->desc_next = NULL;
+  }
 }
 
 /* From the given service, remove all expired failing intro points for each
