@@ -1,10 +1,16 @@
-Changes in version 0.3.1.6-rc - 2017-0?-??
+Changes in version 0.3.1.6-rc - 2017-09-05
   Tor 0.3.1.6-rc fixes a few small bugs and annoyances in the 0.3.1
   release series.
 
   This is the first release candidate in the Tor 0.3.1 series. If we
   find no new bugs or regressions here, the first stable 0.3.1 release
   will be nearly identical to it.
+
+  o Major bugfixes (windows, directory cache):
+    - On windows, do not try to delete cached consensus documents and
+      diffs, until they unmapped from memory. Allow the diff storage
+      directory to grow larger in order to handle files that might need
+      to stay around longer. Fixes bug 22752; bugfix on 0.3.1.1-alpha.
 
   o Minor features (directory authority):
     - Improve the message that authorities report to relays when the
@@ -42,6 +48,12 @@ Changes in version 0.3.1.6-rc - 2017-0?-??
       to protocol warning because they can be failure from the network
       and are not relevant to the operator. Fixes bug 23078; bugfix on
       0.3.0.1-alpha and 0.3.0.2-alpha.
+
+  o Minor bugfixes (relay):
+    - When a relay is not running as a directory cache, it will no
+      longer generate compressed consensuses and consensus diff
+      information. Previously, this was a waste of disk and CPU. Fixes
+      bug 23275; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (robustness, error handling):
     - Improve our handling of the cases where OpenSSL encounters a
