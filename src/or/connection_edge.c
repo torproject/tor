@@ -127,7 +127,6 @@
 
 static int connection_ap_handshake_process_socks(entry_connection_t *conn);
 static int connection_ap_process_natd(entry_connection_t *conn);
-static int connection_ap_process_http_connect(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
@@ -1184,10 +1183,10 @@ consider_plaintext_ports(entry_connection_t *conn, uint16_t port)
  *  See connection_ap_handshake_rewrite_and_attach()'s
  *  documentation for arguments and return value.
  */
-int
-connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
-                                            origin_circuit_t *circ,
-                                            crypt_path_t *cpath)
+MOCK_IMPL(int,
+connection_ap_rewrite_and_attach_if_allowed,(entry_connection_t *conn,
+                                             origin_circuit_t *circ,
+                                             crypt_path_t *cpath))
 {
   const or_options_t *options = get_options();
 
@@ -2362,7 +2361,7 @@ connection_ap_process_natd(entry_connection_t *conn)
  * connection's socks_request field and try to attach the connection.  On
  * failure, send an HTTP reply, and mark the connection.
  */
-static int
+STATIC int
 connection_ap_process_http_connect(entry_connection_t *conn)
 {
   if (BUG(ENTRY_TO_CONN(conn)->state != AP_CONN_STATE_HTTP_CONNECT_WAIT))

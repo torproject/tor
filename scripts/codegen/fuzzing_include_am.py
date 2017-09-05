@@ -8,6 +8,7 @@ FUZZERS = """
 	extrainfo
 	hsdescv2
 	http
+        http-connect
 	iptsv2
 	microdesc
 	vrs

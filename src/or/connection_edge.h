@@ -89,9 +89,10 @@ int connection_ap_process_transparent(entry_connection_t *conn);
 
 int address_is_invalid_destination(const char *address, int client);
 
-int connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
-                                                origin_circuit_t *circ,
-                                                crypt_path_t *cpath);
+MOCK_DECL(int, connection_ap_rewrite_and_attach_if_allowed,
+                                                (entry_connection_t *conn,
+                                                 origin_circuit_t *circ,
+                                                 crypt_path_t *cpath));
 int connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                                                origin_circuit_t *circ,
                                                crypt_path_t *cpath);
@@ -187,6 +188,8 @@ typedef struct {
 
 STATIC void connection_ap_handshake_rewrite(entry_connection_t *conn,
                                             rewrite_result_t *out);
+
+STATIC int connection_ap_process_http_connect(entry_connection_t *conn);
 #endif
 
 #endif
