@@ -276,6 +276,14 @@ hs_get_next_time_period_num(time_t now)
   return hs_get_time_period_num(now) + 1;
 }
 
+/* Get the number of the _previous_ HS time period, given that the current
+ * time is <b>now</b>. */
+uint64_t
+hs_get_previous_time_period_num(time_t now)
+{
+  return hs_get_time_period_num(now) - 1;
+}
+
 /* Return the start time of the upcoming time period based on <b>now</b>. */
 time_t
 hs_get_start_time_of_next_time_period(time_t now)

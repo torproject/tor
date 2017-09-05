@@ -250,117 +250,6 @@ test_start_time_of_next_time_period(void *arg)
   ;
 }
 
-/** Test that our HS overlap period functions work properly. */
-static void
-test_desc_overlap_period(void *arg)
-{
-  (void) arg;
-  int retval;
-  time_t now = time(NULL);
-  networkstatus_t *dummy_consensus = NULL;
-
-  /* First try with a consensus just inside the overlap period */
-  dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 1);
-
-  /* Now increase the valid_after so that it goes to 11:00:00 UTC. Overlap
-     period is still active. */
-  dummy_consensus->valid_after += 3600*11;
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 1);
-
-  /* Now increase the valid_after so that it goes to 11:59:59 UTC. Overlap
-     period is still active. */
-  dummy_consensus->valid_after += 3599;
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 1);
-
-  /* Now increase the valid_after so that it drifts to noon, and check that
-     overlap mode is not active anymore. */
-  dummy_consensus->valid_after += 1;
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 0);
-
-  /* Check that overlap mode is also inactive at 23:59:59 UTC */
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 23:59:59 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 0);
-
- done:
-  tor_free(dummy_consensus);
-}
-
-/* Test the overlap period functions on a testnet with altered voting
- * schedule */
-static void
-test_desc_overlap_period_testnet(void *arg)
-{
-  int retval;
-  time_t now = approx_time();
-  networkstatus_t *dummy_consensus = NULL;
-  or_options_t *options = get_options_mutable();
-
-  (void) arg;
-
-  /* Set the testnet option and a 10-second voting interval */
-  options->TestingTorNetwork = 1;
-  options->V3AuthVotingInterval = 10;
-  options->TestingV3AuthInitialVotingInterval = 10;
-
-  dummy_consensus = tor_malloc_zero(sizeof(networkstatus_t));
-
-  /* A 10-second voting interval means that the lengths of an SRV run and of a
-   * time period are both 10*24 seconds (4 minutes). The SRV gets published at
-   * 00:00:00 and the TP starts at 00:02:00 (rotation offset: 2 mins). Those
-   * two minutes between SRV publish and TP start is the overlap period
-   * window. Let's test it: */
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:00:00 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 1);
-
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:01:59 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 1);
-
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:02:00 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 0);
-
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:04:00 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 1);
-
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:05:59 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 1);
-
-  retval = parse_rfc1123_time("Wed, 13 Apr 2016 00:06:00 UTC",
-                              &dummy_consensus->valid_after);
-  tt_int_op(retval, OP_EQ, 0);
-  retval = hs_overlap_mode_is_active(dummy_consensus, now);
-  tt_int_op(retval, OP_EQ, 0);
-
- done:
-  tor_free(dummy_consensus);
-}
-
 static void
 helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
                                   int identity_idx,
@@ -860,10 +749,6 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "start_time_of_next_time_period", test_start_time_of_next_time_period,
     TT_FORK, NULL, NULL },
-  { "desc_overlap_period", test_desc_overlap_period, TT_FORK,
-    NULL, NULL },
-  { "desc_overlap_period_testnet", test_desc_overlap_period_testnet, TT_FORK,
-    NULL, NULL },
   { "responsible_hsdirs", test_responsible_hsdirs, TT_FORK,
     NULL, NULL },
   { "desc_reupload_logic", test_desc_reupload_logic, TT_FORK,

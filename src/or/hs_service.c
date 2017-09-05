@@ -23,6 +23,7 @@
 #include "router.h"
 #include "routerkeys.h"
 #include "routerlist.h"
+#include "shared_random_state.h"
 #include "statefile.h"
 
 #include "hs_circuit.h"
@@ -769,7 +770,6 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
   /* Let's do a shallow copy */
   dst->intro_circ_retry_started_time = src->intro_circ_retry_started_time;
   dst->num_intro_circ_launched = src->num_intro_circ_launched;
-  dst->in_overlap_period = src->in_overlap_period;
   dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
 
   src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
@@ -1366,27 +1366,80 @@ build_service_descriptor(hs_service_t *service, time_t now,
   service_descriptor_free(desc);
 }
 
+/* Build both descriptors for the given service that has just booted up.
+ * Because it's a special case, it deserves its special function ;). */
+static void
+build_descriptors_for_new_service(hs_service_t *service, time_t now)
+{
+  uint64_t current_desc_tp, next_desc_tp;
+
+  tor_assert(service);
+  /* These are the conditions for a new service. */
+  tor_assert(!service->desc_current);
+  tor_assert(!service->desc_next);
+
+  /*
+   * +------------------------------------------------------------------+
+   * |                                                                  |
+   * | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   * | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   * |                                                                  |
+   * |  $==========|-----------$===========|-----------$===========|    |
+   * |                             ^         ^                          |
+   * |                             A         B                          |
+   * +------------------------------------------------------------------+
+   *
+   * Case A: The service boots up before a new time period, the current time
+   * period is thus TP#1 and the next is TP#2 which for both we have access to
+   * their SRVs.
+   *
+   * Case B: The service boots up inside TP#2, we can't use the TP#3 for the
+   * next descriptor because we don't have the SRV#3 so the current should be
+   * TP#1 and next TP#2.
+   */
+
+  if (hs_time_between_tp_and_srv(NULL, now)) {
+    /* Case B from the above, inside of the new time period. */
+    current_desc_tp = hs_get_previous_time_period_num(0); /* TP#1 */
+    next_desc_tp = hs_get_time_period_num(0);             /* TP#2 */
+  } else {
+    /* Case A from the above, outside of the new time period. */
+    current_desc_tp = hs_get_time_period_num(0);    /* TP#1 */
+    next_desc_tp = hs_get_next_time_period_num(0);  /* TP#2 */
+  }
+
+  /* Build descriptors. */
+  build_service_descriptor(service, now, current_desc_tp,
+                           &service->desc_current);
+  build_service_descriptor(service, now, next_desc_tp,
+                           &service->desc_next);
+  log_info(LD_REND, "Hidden service %s has just started. Both descriptors "
+                    "built. Now scheduled for upload.",
+           safe_str_client(service->onion_address));
+}
+
 /* Build descriptors for each service if needed. There are conditions to build
  * a descriptor which are details in the function. */
 STATIC void
 build_all_descriptors(time_t now)
 {
   FOR_EACH_SERVICE_BEGIN(service) {
-    if (service->desc_current == NULL) {
-      /* This means we just booted up because else this descriptor will never
-       * be NULL as it should always point to the descriptor that was in
-       * desc_next after rotation. */
-      build_service_descriptor(service, now, hs_get_time_period_num(0),
-                               &service->desc_current);
 
-      log_info(LD_REND, "Hidden service %s current descriptor successfully "
-                        "built. Now scheduled for upload.",
-               safe_str_client(service->onion_address));
+    /* A service booting up will have both descriptors to NULL. No other cases
+     * makes both descriptor non existent. */
+    if (service->desc_current == NULL && service->desc_next == NULL) {
+      build_descriptors_for_new_service(service, now);
+      continue;
     }
-    /* A next descriptor to NULL indicate that we need to build a fresh one if
-     * we are in the overlap period for the _next_ time period since it means
-     * we either just booted or we just rotated our descriptors. */
-    if (hs_overlap_mode_is_active(NULL, now) && service->desc_next == NULL) {
+
+    /* Reaching this point means we are pass bootup so at runtime. We should
+     * *never* have an empty current descriptor. If the next descriptor is
+     * empty, we'll try to build it for the next time period. This only
+     * happens when we rotate meaning that we are guaranteed to have a new SRV
+     * at that point for the next time period. */
+    tor_assert(service->desc_current);
+
+    if (service->desc_next == NULL) {
       build_service_descriptor(service, now, hs_get_next_time_period_num(0),
                                &service->desc_next);
       log_info(LD_REND, "Hidden service %s next descriptor successfully "
@@ -1716,10 +1769,62 @@ cleanup_intro_points(hs_service_t *service, time_t now)
   } FOR_EACH_DESCRIPTOR_END;
 }
 
-/** We just entered overlap period and we need to rotate our <b>service</b>
- *  descriptors */
+/* Set the next rotation time of the descriptors for the given service for the
+ * time now. */
 static void
-rotate_service_descriptors(hs_service_t *service)
+set_rotation_time(hs_service_t *service, time_t now)
+{
+  time_t valid_after;
+  const networkstatus_t *ns = networkstatus_get_live_consensus(now);
+  if (ns) {
+    valid_after = ns->valid_after;
+  } else {
+    valid_after = now;
+  }
+
+  tor_assert(service);
+  service->state.next_rotation_time =
+    sr_state_get_start_time_of_current_protocol_run(valid_after) +
+    sr_state_get_protocol_run_duration();
+
+  {
+    char fmt_time[ISO_TIME_LEN + 1];
+    format_local_iso_time(fmt_time, service->state.next_rotation_time);
+    log_info(LD_REND, "Next descriptor rotation time set to %s for %s",
+             fmt_time, safe_str_client(service->onion_address));
+  }
+}
+
+/* Return true iff the service should rotate its descriptor. The time now is
+ * only used to fetch the live consensus and if none can be found, this
+ * returns false. */
+static unsigned int
+should_rotate_descriptors(hs_service_t *service, time_t now)
+{
+  const networkstatus_t *ns;
+
+  tor_assert(service);
+
+  ns = networkstatus_get_live_consensus(now);
+  if (ns == NULL) {
+    goto no_rotation;
+  }
+
+  if (ns->valid_after >= service->state.next_rotation_time) {
+    goto rotation;
+  }
+
+ no_rotation:
+  return 0;
+ rotation:
+  return 1;
+}
+
+/* Rotate the service descriptors of the given service. The current descriptor
+ * will be freed, the next one put in as the current and finally the next
+ * descriptor pointer is NULLified. */
+static void
+rotate_service_descriptors(hs_service_t *service, time_t now)
 {
   if (service->desc_current) {
     /* Close all IP circuits for the descriptor. */
@@ -1732,37 +1837,13 @@ rotate_service_descriptors(hs_service_t *service)
    * a descriptor creation for it. */
   service->desc_current = service->desc_next;
   service->desc_next = NULL;
+
+  /* We've just rotated, set the next time for the rotation. */
+  set_rotation_time(service, now);
 }
 
-/** Return true if <b>service</b> **just** entered overlap mode. */
-static int
-service_just_entered_overlap_mode(const hs_service_t *service,
-                                  int overlap_mode_is_active)
-{
-  if (overlap_mode_is_active && !service->state.in_overlap_period) {
-    return 1;
-  }
-
-  return 0;
-}
-
-/** Return true if <b>service</b> **just** left overlap mode. */
-static int
-service_just_left_overlap_mode(const hs_service_t *service,
-                               int overlap_mode_is_active)
-{
-  if (!overlap_mode_is_active && service->state.in_overlap_period) {
-    return 1;
-  }
-
-  return 0;
-}
-
-/* Rotate descriptors for each service if needed. If we are just entering or
- * leaving the overlap period, rotate them that is point the previous
- * descriptor to the current and cleanup the previous one. A non existing
- * current descriptor will trigger a descriptor build for the next time
- * period. */
+/* Rotate descriptors for each service if needed. A non existing current
+ * descriptor will trigger a descriptor build for the next time period. */
 STATIC void
 rotate_all_descriptors(time_t now)
 {
@@ -1770,56 +1851,26 @@ rotate_all_descriptors(time_t now)
    *     be wise, to rotate service descriptors independently to hide that all
    *     those descriptors are on the same tor instance */
 
-  int overlap_mode_is_active = hs_overlap_mode_is_active(NULL, now);
-
   FOR_EACH_SERVICE_BEGIN(service) {
-    int service_entered_overlap = service_just_entered_overlap_mode(service,
-                                                      overlap_mode_is_active);
-    int service_left_overlap = service_just_left_overlap_mode(service,
-                                             overlap_mode_is_active);
-    /* This should not be possible */
-    if (BUG(service_entered_overlap && service_left_overlap)) {
-      return;
+
+    /* Note for a service booting up: Both descriptors are NULL in that case
+     * so this function might return true if we are in the timeframe for a
+     * rotation leading to basically swapping two NULL pointers which is
+     * harmless. However, the side effect is that triggering a rotation will
+     * update the service state and avoid doing anymore rotations after the
+     * two descriptors have been built. */
+    if (!should_rotate_descriptors(service, now)) {
+      continue;
     }
 
-    /* No changes in overlap mode: nothing to do here */
-    if (!service_entered_overlap && !service_left_overlap) {
-      return;
-    }
+    tor_assert(service->desc_current);
+    tor_assert(service->desc_next);
 
-    /* To get down there means that some change happened to overlap mode */
-    tor_assert(service_entered_overlap || service_left_overlap);
+    log_info(LD_REND, "Time to rotate our descriptors (%p / %p) for %s",
+             service->desc_current, service->desc_next,
+             safe_str_client(service->onion_address));
 
-    /* Update the overlap marks on this service */
-    if (service_entered_overlap) {
-      /* It's the first time the service encounters the overlap period so flag
-       * it in order to make sure we don't rotate at next check. */
-      service->state.in_overlap_period = 1;
-    } else if (service_left_overlap) {
-      service->state.in_overlap_period = 0;
-    }
-
-    if (service_entered_overlap) {
-      /* We just entered overlap period: recompute all HSDir indices. We need
-       * to do this otherwise nodes can get stuck with old HSDir indices until
-       * we fetch a new consensus, and we might need to reupload our desc
-       * before that. */
-      /* XXX find a better place than rotate_all_descriptors() to do this */
-      nodelist_recompute_all_hsdir_indices();
-    }
-
-    /* If we just entered or left overlap mode, rotate our descriptors */
-    log_info(LD_REND, "We just %s overlap period. About to rotate %s "
-             "descriptors (%p / %p).",
-             service_entered_overlap ? "entered" : "left",
-             safe_str_client(service->onion_address),
-             service->desc_current, service->desc_next);
-
-    /* If we have a next descriptor lined up, rotate the descriptors so that it
-     * becomes current. */
-    if (service->desc_next) {
-      rotate_service_descriptors(service);
-    }
+    rotate_service_descriptors(service, now);
   } FOR_EACH_SERVICE_END;
 }
 
@@ -1833,6 +1884,17 @@ run_housekeeping_event(time_t now)
    * simply moving things around or removing uneeded elements. */
 
   FOR_EACH_SERVICE_BEGIN(service) {
+
+    /* If the service is starting off, set the rotation time. We can't do that
+     * at configure time because the get_options() needs to be set for setting
+     * that time that uses the voting interval. */
+    if (service->state.next_rotation_time == 0) {
+      /* Set the next rotation time of the descriptors. If it's Oct 25th
+       * 23:47:00, the next rotation time is when the next SRV is computed
+       * which is at Oct 26th 00:00:00 that is in 13 minutes. */
+      set_rotation_time(service, now);
+    }
+
     /* Cleanup invalid intro points from the service descriptor. */
     cleanup_intro_points(service, now);
 
@@ -2504,9 +2566,8 @@ run_upload_descriptor_event(time_t now)
        * accurate because all circuits have been established. */
       build_desc_intro_points(service, desc, now);
 
-      /* If the service is in the overlap period and this descriptor is the
-       * next one, it has to be uploaded for the next time period meaning
-       * we'll use the next node_t hsdir_index to pick the HSDirs. */
+      /* The next descriptor needs the next time period for computing the
+       * corresponding hashring. */
       if (desc == service->desc_next) {
         for_next_period = 1;
       }
@@ -3091,6 +3152,7 @@ hs_service_new(const or_options_t *options)
   /* Allocate the CLIENT_PK replay cache in service state. */
   service->state.replay_cache_rend_cookie =
     replaycache_new(REND_REPLAY_TIME_INTERVAL, REND_REPLAY_TIME_INTERVAL);
+
   return service;
 }
 

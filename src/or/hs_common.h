@@ -195,6 +195,7 @@ void hs_get_subcredential(const ed25519_public_key_t *identity_pk,
                           const ed25519_public_key_t *blinded_pk,
                           uint8_t *subcred_out);
 
+uint64_t hs_get_previous_time_period_num(time_t now);
 uint64_t hs_get_time_period_num(time_t now);
 uint64_t hs_get_next_time_period_num(time_t now);
 time_t hs_get_start_time_of_next_time_period(time_t now);

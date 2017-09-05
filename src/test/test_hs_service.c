@@ -45,6 +45,7 @@
 #include "main.h"
 #include "rendservice.h"
 #include "statefile.h"
+#include "shared_random_state.h"
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
@@ -96,17 +97,6 @@ mock_relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
   (void) filename;
   (void) lineno;
   return 0;
-}
-
-/* Mock function that always return true so we can test the descriptor
- * creation of the next time period deterministically. */
-static int
-mock_hs_overlap_mode_is_active_true(const networkstatus_t *consensus,
-                                    time_t now)
-{
-  (void) consensus;
-  (void) now;
-  return 1;
 }
 
 /* Helper: from a set of options in conf, configure a service which will add
@@ -942,12 +932,12 @@ test_service_event(void *arg)
   UNMOCK(circuit_mark_for_close_);
 }
 
-/** Test that we rotate descriptors correctly in overlap period */
+/** Test that we rotate descriptors correctly. */
 static void
 test_rotate_descriptors(void *arg)
 {
   int ret;
-  time_t now = time(NULL);
+  time_t next_rotation_time;
   hs_service_t *service;
   hs_service_descriptor_t *desc_next;
   hs_service_intro_point_t *ip;
@@ -959,10 +949,11 @@ test_rotate_descriptors(void *arg)
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
 
-  /* Setup the valid_after time to be 13:00 UTC, not in overlap period. The
-   * overlap check doesn't care about the year. */
+  /* Descriptor rotation happens with a consensus with a new SRV. */
+
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
                            &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
@@ -973,61 +964,46 @@ test_rotate_descriptors(void *arg)
   ip = helper_create_service_ip();
   service_intro_point_add(service->desc_current->intro_points.map, ip);
 
-  /* Nothing should happen because we are not in the overlap period. */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
+  /* Tweak our service next rotation time so we can use a custom time. */
+  service->state.next_rotation_time = next_rotation_time =
+    mock_ns.valid_after + (11 * 60 * 60);
+
+  /* Nothing should happen, we are not at a new SRV. Our next rotation time
+   * should be untouched. */
+  rotate_all_descriptors(mock_ns.valid_after);
+  tt_u64_op(service->state.next_rotation_time, OP_EQ, next_rotation_time);
   tt_assert(service->desc_current);
   tt_int_op(digest256map_size(service->desc_current->intro_points.map),
             OP_EQ, 1);
 
-  /* Entering an overlap period. */
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 01:00:00 UTC",
+  /* Going right after a new SRV. */
+  ret = parse_rfc1123_time("Sat, 27 Oct 1985 01:00:00 UTC",
                            &mock_ns.valid_after);
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 02:00:00 UTC",
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 27 Oct 1985 02:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
+
   desc_next = service_descriptor_new();
-  desc_next->next_upload_time = 42; /* Our marker to recognize it. */
   service->desc_next = desc_next;
-  /* We should have our state flagged to be in the overlap period, our current
-   * descriptor cleaned up and the next descriptor becoming the current. */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 1);
+  /* Note down what to expect for the next rotation time which is 01:00 + 23h
+   * meaning 00:00:00. */
+  next_rotation_time = mock_ns.valid_after + (23 * 60 * 60);
+  /* We should have our next rotation time modified, our current descriptor
+   * cleaned up and the next descriptor becoming the current. */
+  rotate_all_descriptors(mock_ns.valid_after);
+  tt_u64_op(service->state.next_rotation_time, OP_EQ, next_rotation_time);
   tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
   tt_int_op(digest256map_size(service->desc_current->intro_points.map),
             OP_EQ, 0);
   tt_assert(service->desc_next == NULL);
+
   /* A second time should do nothing. */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 1);
+  rotate_all_descriptors(mock_ns.valid_after);
+  tt_u64_op(service->state.next_rotation_time, OP_EQ, next_rotation_time);
   tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
   tt_int_op(digest256map_size(service->desc_current->intro_points.map),
             OP_EQ, 0);
-  tt_assert(service->desc_next == NULL);
-
-  /* Now let's re-create desc_next and get out of overlap period. We should
-     test that desc_current gets replaced by desc_next, and desc_next becomes
-     NULL. */
-  desc_next = service_descriptor_new();
-  desc_next->next_upload_time = 240; /* Our marker to recognize it. */
-  service->desc_next = desc_next;
-
-  /* Going out of the overlap period. */
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC",
-                           &mock_ns.valid_after);
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
-                           &mock_ns.fresh_until);
-  /* This should reset the state and not touch the current descriptor. */
-  tt_int_op(ret, OP_EQ, 0);
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
-  tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
-  tt_assert(service->desc_next == NULL);
-
-  /* Calling rotate_all_descriptors() another time should do nothing */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
-  tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
   tt_assert(service->desc_next == NULL);
 
  done:
@@ -1050,7 +1026,6 @@ test_build_update_descriptors(void *arg)
   (void) arg;
 
   hs_init();
-  MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
   MOCK(get_or_state,
        get_or_state_replacement);
   MOCK(networkstatus_get_live_consensus,
@@ -1196,7 +1171,6 @@ test_build_update_descriptors(void *arg)
  done:
   hs_free_all();
   nodelist_free_all();
-  UNMOCK(hs_overlap_mode_is_active);
 }
 
 static void
@@ -1209,7 +1183,6 @@ test_upload_descriptors(void *arg)
   (void) arg;
 
   hs_init();
-  MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
   MOCK(get_or_state,
        get_or_state_replacement);
   MOCK(networkstatus_get_live_consensus,
@@ -1253,7 +1226,6 @@ test_upload_descriptors(void *arg)
 
  done:
   hs_free_all();
-  UNMOCK(hs_overlap_mode_is_active);
   UNMOCK(get_or_state);
 }
 
