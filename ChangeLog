@@ -1,3 +1,90 @@
+Changes in version 0.3.1.6-rc - 2017-09-05
+  Tor 0.3.1.6-rc fixes a few small bugs and annoyances in the 0.3.1
+  release series, including a bug that produced weird behavior on
+  Windows directory caches.
+
+  This is the first release candidate in the Tor 0.3.1 series. If we
+  find no new bugs or regressions here, the first stable 0.3.1 release
+  will be nearly identical to it.
+
+  o Major bugfixes (windows, directory cache):
+    - On Windows, do not try to delete cached consensus documents and
+      diffs before they are unmapped from memory--Windows won't allow
+      that. Instead, allow the consensus cache directory to grow larger,
+      to hold files that might need to stay around longer. Fixes bug
+      22752; bugfix on 0.3.1.1-alpha.
+
+  o Minor features (directory authority):
+    - Improve the message that authorities report to relays that present
+      RSA/Ed25519 keypairs that conflict with previously pinned keys.
+      Closes ticket 22348.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 3 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (testing):
+    - Add more tests for compression backend initialization. Closes
+      ticket 22286.
+
+  o Minor bugfixes (directory cache):
+    - Fix a memory leak when recovering space in the consensus cache.
+      Fixes bug 23139; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (hidden service):
+    - Increase the number of circuits that a service is allowed to
+      open over a specific period of time. The value was lower than it
+      should be (8 vs 12) in the normal case of 3 introduction points.
+      Fixes bug 22159; bugfix on 0.3.0.5-rc.
+    - Fix a BUG warning during HSv3 descriptor decoding that could be
+      cause by a specially crafted descriptor. Fixes bug 23233; bugfix
+      on 0.3.0.1-alpha. Bug found by "haxxpop".
+    - Rate-limit the log messages if we exceed the maximum number of
+      allowed intro circuits. Fixes bug 22159; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (logging, relay):
+    - Remove a forgotten debugging message when an introduction point
+      successfully establishes a hidden service prop224 circuit with
+      a client.
+    - Change three other log_warn() for an introduction point to
+      protocol warnings, because they can be failure from the network
+      and are not relevant to the operator. Fixes bug 23078; bugfix on
+      0.3.0.1-alpha and 0.3.0.2-alpha.
+
+  o Minor bugfixes (relay):
+    - When a relay is not running as a directory cache, it will no
+      longer generate compressed consensuses and consensus diff
+      information. Previously, this was a waste of disk and CPU. Fixes
+      bug 23275; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (robustness, error handling):
+    - Improve our handling of the cases where OpenSSL encounters a
+      memory error while encoding keys and certificates. We haven't
+      observed these errors in the wild, but if they do happen, we now
+      detect and respond better. Fixes bug 19418; bugfix on all versions
+      of Tor. Reported by Guido Vranken.
+
+  o Minor bugfixes (stability):
+    - Avoid crashing on a double-free when unable to load or process an
+      included file. Fixes bug 23155; bugfix on 0.3.1.1-alpha. Found
+      with the clang static analyzer.
+
+  o Minor bugfixes (testing):
+    - Fix an undersized buffer in test-memwipe.c. Fixes bug 23291;
+      bugfix on 0.2.7.2-alpha. Found and patched by Ties Stuij.
+    - Port the hs_ntor handshake test to work correctly with recent
+      versions of the pysha3 module. Fixes bug 23071; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (Windows service):
+    - When running as a Windows service, set the ID of the main thread
+      correctly. Failure to do so made us fail to send log messages to
+      the controller in 0.2.1.16-rc, slowed down controller event
+      delivery in 0.2.7.3-rc and later, and crash with an assertion
+      failure in 0.3.1.1-alpha. Fixes bug 23081; bugfix on 0.2.1.6-alpha.
+      Patch and diagnosis from "Vort".
+
+
 Changes in version 0.3.0.10 - 2017-08-02
    Tor 0.3.0.10 backports a collection of small-to-medium bugfixes
    from the current Tor alpha series. OpenBSD users and TPROXY users
