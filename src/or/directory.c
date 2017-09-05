@@ -1971,7 +1971,9 @@ parse_http_url(const char *headers, char **url)
   }
   if (strcmpstart(*url, "/tor/")) {
     char *new_url = NULL;
-    tor_asprintf(&new_url, "/tor/%s", *url);
+    tor_asprintf(&new_url, "/tor%s%s",
+                 *url[0] == '/' ? "" : "/",
+                 *url);
     tor_free(*url);
     *url = new_url;
   }
