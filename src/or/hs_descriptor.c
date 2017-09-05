@@ -167,7 +167,7 @@ desc_intro_point_free(hs_desc_intro_point_t *ip)
 }
 
 /* Free the content of the plaintext section of a descriptor. */
-static void
+STATIC void
 desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
 {
   if (!desc) {
