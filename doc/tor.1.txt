@@ -786,7 +786,8 @@ CLIENT OPTIONS
 --------------
 
 The following options are useful only for clients (that is, if
-**SocksPort**, **TransPort**, **DNSPort**, or **NATDPort** is non-zero):
+**SocksPort**, **HTTPTunnelPort**, **TransPort**, **DNSPort**, or
+**NATDPort** is non-zero):
 
 [[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__]::
     When set along with UseBridges, instructs Tor to use the relay at
@@ -1110,7 +1111,9 @@ The following options are useful only for clients (that is, if
         Unsupported and force-disabled when using Unix domain sockets.)
     **IsolateSOCKSAuth**;;
         Don't share circuits with streams for which different
-        SOCKS authentication was provided. (On by default;
+        SOCKS authentication was provided. (For HTTPTunnelPort
+        connections, this option looks at the Proxy-Authorization and
+        X-Tor-Stream-Isolation headers. On by default;
         you can disable it with **NoIsolateSOCKSAuth**.)
     **IsolateClientProtocol**;;
         Don't share circuits with streams using a different protocol.
@@ -1330,6 +1333,14 @@ The following options are useful only for clients (that is, if
     SocksPort/TransPort/NATDPort into "www.google.com" addresses that exit from
     the node "foo". Disabled by default since attacking websites and exit
     relays can use it to manipulate your path selection. (Default: 0)
+
+[[HTTPTunnelPort]] **HTTPTunnelPort**  \['address':]__port__|**auto** [_isolation flags_]::
+    Open this port to listen for proxy connections using the "HTTP CONNECT"
+    protocol instead of SOCKS. Set this to 0
+    0 if you don't want to allow "HTTP CONNECT" connections. Set the port
+    to "auto" to have Tor pick a port for you. This directive can be
+    specified multiple times to bind to multiple addresses/ports.  See
+    SOCKSPort for an explanation of isolation flags. (Default: 0)
 
 [[TransPort]] **TransPort**  \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for transparent proxy connections.  Set this to

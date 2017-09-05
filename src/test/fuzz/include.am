@@ -103,6 +103,14 @@ src_test_fuzz_fuzz_http_CFLAGS = $(FUZZING_CFLAGS)
 src_test_fuzz_fuzz_http_LDFLAGS = $(FUZZING_LDFLAG)
 src_test_fuzz_fuzz_http_LDADD = $(FUZZING_LIBS)
 
+src_test_fuzz_fuzz_http_connect_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_http_connect.c
+src_test_fuzz_fuzz_http_connect_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_http_connect_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_http_connect_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_http_connect_LDADD = $(FUZZING_LIBS)
+
 src_test_fuzz_fuzz_iptsv2_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \
 	src/test/fuzz/fuzz_iptsv2.c
@@ -135,6 +143,7 @@ FUZZERS = \
 	src/test/fuzz/fuzz-extrainfo \
 	src/test/fuzz/fuzz-hsdescv2 \
 	src/test/fuzz/fuzz-http \
+	src/test/fuzz/fuzz-http-connect \
 	src/test/fuzz/fuzz-iptsv2 \
 	src/test/fuzz/fuzz-microdesc \
 	src/test/fuzz/fuzz-vrs
@@ -191,6 +200,13 @@ src_test_fuzz_lf_fuzz_http_CFLAGS = $(LIBFUZZER_CFLAGS)
 src_test_fuzz_lf_fuzz_http_LDFLAGS = $(LIBFUZZER_LDFLAG)
 src_test_fuzz_lf_fuzz_http_LDADD = $(LIBFUZZER_LIBS)
 
+src_test_fuzz_lf_fuzz_http_connect_SOURCES = \
+	$(src_test_fuzz_fuzz_http_connect_SOURCES)
+src_test_fuzz_lf_fuzz_http_connect_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_http_connect_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_http_connect_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_http_connect_LDADD = $(LIBFUZZER_LIBS)
+
 src_test_fuzz_lf_fuzz_iptsv2_SOURCES = \
 	$(src_test_fuzz_fuzz_iptsv2_SOURCES)
 src_test_fuzz_lf_fuzz_iptsv2_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
@@ -220,6 +236,7 @@ LIBFUZZER_FUZZERS = \
 	src/test/fuzz/lf-fuzz-extrainfo \
 	src/test/fuzz/lf-fuzz-hsdescv2 \
 	src/test/fuzz/lf-fuzz-http \
+	src/test/fuzz/lf-fuzz-http-connect \
 	src/test/fuzz/lf-fuzz-iptsv2 \
 	src/test/fuzz/lf-fuzz-microdesc \
 	src/test/fuzz/lf-fuzz-vrs
@@ -266,6 +283,11 @@ src_test_fuzz_liboss_fuzz_http_a_SOURCES = \
 src_test_fuzz_liboss_fuzz_http_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
 src_test_fuzz_liboss_fuzz_http_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 
+src_test_fuzz_liboss_fuzz_http_connect_a_SOURCES = \
+	$(src_test_fuzz_fuzz_http_connect_SOURCES)
+src_test_fuzz_liboss_fuzz_http_connect_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_http_connect_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
+
 src_test_fuzz_liboss_fuzz_iptsv2_a_SOURCES = \
 	$(src_test_fuzz_fuzz_iptsv2_SOURCES)
 src_test_fuzz_liboss_fuzz_iptsv2_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
@@ -289,6 +311,7 @@ OSS_FUZZ_FUZZERS = \
 	src/test/fuzz/liboss-fuzz-extrainfo.a \
 	src/test/fuzz/liboss-fuzz-hsdescv2.a \
 	src/test/fuzz/liboss-fuzz-http.a \
+	src/test/fuzz/liboss-fuzz-http-connect.a \
 	src/test/fuzz/liboss-fuzz-iptsv2.a \
 	src/test/fuzz/liboss-fuzz-microdesc.a \
 	src/test/fuzz/liboss-fuzz-vrs.a

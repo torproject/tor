@@ -372,6 +372,7 @@ static config_var_t option_vars_[] = {
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
   V(HTTPSProxyAuthenticator,     STRING,   NULL),
+  VPORT(HTTPTunnelPort),
   V(IPv6Exit,                    BOOL,     "0"),
   VAR("ServerTransportPlugin",   LINELIST, ServerTransportPlugin,  NULL),
   V(ServerTransportListenAddr,   LINELIST, NULL),
@@ -2915,7 +2916,8 @@ options_validate_single_onion(or_options_t *options, char **msg)
   const int client_port_set = (options->SocksPort_set ||
                                options->TransPort_set ||
                                options->NATDPort_set ||
-                               options->DNSPort_set);
+                               options->DNSPort_set ||
+                               options->HTTPTunnelPort_set);
   if (rend_service_non_anonymous_mode_enabled(options) && client_port_set &&
       !options->Tor2webMode) {
     REJECT("HiddenServiceNonAnonymousMode is incompatible with using Tor as "
@@ -7000,6 +7002,15 @@ parse_ports(or_options_t *options, int validate_only,
     *msg = tor_strdup("Invalid NatdPort configuration");
     goto err;
   }
+  if (parse_port_config(ports,
+                        options->HTTPTunnelPort_lines,
+                        "HTTP Tunnel", CONN_TYPE_AP_HTTP_CONNECT_LISTENER,
+                        "127.0.0.1", 0,
+                        ((validate_only ? 0 : CL_PORT_WARN_NONLOCAL)
+                         | CL_PORT_TAKES_HOSTNAMES | gw_flag)) < 0) {
+    *msg = tor_strdup("Invalid HTTPTunnelPort configuration");
+    goto err;
+  }
   {
     unsigned control_port_flags = CL_PORT_NO_STREAM_OPTIONS |
       CL_PORT_WARN_NONLOCAL;
@@ -7077,6 +7088,8 @@ parse_ports(or_options_t *options, int validate_only,
     !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER, 1);
   options->NATDPort_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER, 1);
+  options->HTTPTunnelPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_AP_HTTP_CONNECT_LISTENER, 1);
   /* Use options->ControlSocket to test if a control socket is set */
   options->ControlPort_set =
     !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER, 0);

@@ -226,8 +226,10 @@ typedef enum {
 #define CONN_TYPE_EXT_OR 16
 /** Type for sockets listening for Extended ORPort connections. */
 #define CONN_TYPE_EXT_OR_LISTENER 17
+/** Type for sockets listening for HTTP CONNECT tunnel connections. */
+#define CONN_TYPE_AP_HTTP_CONNECT_LISTENER 18
 
-#define CONN_TYPE_MAX_ 17
+#define CONN_TYPE_MAX_ 19
 /* !!!! If _CONN_TYPE_MAX is ever over 31, we must grow the type field in
  * connection_t. */
 
@@ -348,7 +350,9 @@ typedef enum {
 /** State for a transparent natd connection: waiting for original
  * destination. */
 #define AP_CONN_STATE_NATD_WAIT 12
-#define AP_CONN_STATE_MAX_ 12
+/** State for an HTTP tunnel: waiting for an HTTP CONNECT command. */
+#define AP_CONN_STATE_HTTP_CONNECT_WAIT 13
+#define AP_CONN_STATE_MAX_ 13
 
 /** True iff the AP_CONN_STATE_* value <b>s</b> means that the corresponding
  * edge connection is not attached to any circuit. */
@@ -648,6 +652,10 @@ typedef enum {
 /** The target address is in a private network (like 127.0.0.1 or 10.0.0.1);
  * you don't want to do that over a randomly chosen exit */
 #define END_STREAM_REASON_PRIVATE_ADDR 262
+/** This is an HTTP tunnel connection and the client used or misused HTTP in a
+ * way we can't handle.
+ */
+#define END_STREAM_REASON_HTTPPROTOCOL 263
 
 /** Bitwise-and this value with endreason to mask out all flags. */
 #define END_STREAM_REASON_MASK 511
@@ -3696,6 +3704,8 @@ typedef struct {
   } TransProxyType_parsed;
   config_line_t *NATDPort_lines; /**< Ports to listen on for transparent natd
                             * connections. */
+  /** Ports to listen on for HTTP Tunnel connections. */
+  config_line_t *HTTPTunnelPort_lines;
   config_line_t *ControlPort_lines; /**< Ports to listen on for control
                                * connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
@@ -3722,7 +3732,8 @@ typedef struct {
    * configured in one of the _lines options above.
    * For client ports, also true if there is a unix socket configured.
    * If you are checking for client ports, you may want to use:
-   *   SocksPort_set || TransPort_set || NATDPort_set || DNSPort_set
+   *   SocksPort_set || TransPort_set || NATDPort_set || DNSPort_set ||
+   *   HTTPTunnelPort_set
    * rather than SocksPort_set.
    *
    * @{
@@ -3735,6 +3746,7 @@ typedef struct {
   unsigned int DirPort_set : 1;
   unsigned int DNSPort_set : 1;
   unsigned int ExtORPort_set : 1;
+  unsigned int HTTPTunnelPort_set : 1;
   /**@}*/
 
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */

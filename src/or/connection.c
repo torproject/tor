@@ -162,7 +162,8 @@ static smartlist_t *outgoing_addrs = NULL;
     case CONN_TYPE_CONTROL_LISTENER: \
     case CONN_TYPE_AP_TRANS_LISTENER: \
     case CONN_TYPE_AP_NATD_LISTENER: \
-    case CONN_TYPE_AP_DNS_LISTENER
+    case CONN_TYPE_AP_DNS_LISTENER: \
+    case CONN_TYPE_AP_HTTP_CONNECT_LISTENER
 
 /**************************************************************/
 
@@ -189,6 +190,7 @@ conn_type_to_string(int type)
     case CONN_TYPE_CONTROL: return "Control";
     case CONN_TYPE_EXT_OR: return "Extended OR";
     case CONN_TYPE_EXT_OR_LISTENER: return "Extended OR listener";
+    case CONN_TYPE_AP_HTTP_CONNECT_LISTENER: return "HTTP tunnel listener";
     default:
       log_warn(LD_BUG, "unknown connection type %d", type);
       tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
@@ -1706,6 +1708,8 @@ connection_init_accepted_conn(connection_t *conn,
           TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_NATD_WAIT;
           break;
+        case CONN_TYPE_AP_HTTP_CONNECT_LISTENER:
+          conn->state = AP_CONN_STATE_HTTP_CONNECT_WAIT;
       }
       break;
     case CONN_TYPE_DIR:
@@ -3398,6 +3402,7 @@ connection_handle_read_impl(connection_t *conn)
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_AP_TRANS_LISTENER:
     case CONN_TYPE_AP_NATD_LISTENER:
+    case CONN_TYPE_AP_HTTP_CONNECT_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_AP);
     case CONN_TYPE_DIR_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_DIR);
@@ -4313,6 +4318,7 @@ connection_is_listener(connection_t *conn)
       conn->type == CONN_TYPE_AP_TRANS_LISTENER ||
       conn->type == CONN_TYPE_AP_DNS_LISTENER ||
       conn->type == CONN_TYPE_AP_NATD_LISTENER ||
+      conn->type == CONN_TYPE_AP_HTTP_CONNECT_LISTENER ||
       conn->type == CONN_TYPE_DIR_LISTENER ||
       conn->type == CONN_TYPE_CONTROL_LISTENER)
     return 1;

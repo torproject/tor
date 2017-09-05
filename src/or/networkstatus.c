@@ -1683,7 +1683,8 @@ any_client_port_set(const or_options_t *options)
           options->TransPort_set ||
           options->NATDPort_set ||
           options->ControlPort_set ||
-          options->DNSPort_set);
+          options->DNSPort_set ||
+          options->HTTPTunnelPort_set);
 }
 
 /**
