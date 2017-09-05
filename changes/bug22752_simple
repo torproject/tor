@@ -1,6 +1,0 @@
-  o Major bugfixes (windows, directory cache):
-    - On windows, do not try to delete cached consensus documents and
-      diffs, until they unmapped from memory. Allow the diff storage
-      directory to grow larger in order to handle files that might
-      need to stay around longer.  Fixes bug 22752; bugfix on
-      0.3.1.1-alpha.

@@ -1,3 +1,0 @@
-  o Minor features (tests):
-    - Add a couple more tests for compression backend initialization.
-      Closes ticket 22286.

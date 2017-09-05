@@ -1,7 +1,0 @@
-  o Minor bugfixes (logging, relay):
-    - Remove a log_warn() that has been forgotten when an introduction point
-      successfully established a hidden service prop224 circuit with a client.
-    - Three other log_warn() for an introduction point have been changed to
-      protocol warning because they can be failure from the network and are
-      not relevant to the operator. Fixes bug 23078; bugfix on
-      tor-0.3.0.1-alpha and tor-0.3.0.2-alpha.

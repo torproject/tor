@@ -1,5 +1,0 @@
-  o Minor bugfixes (relay):
-    - When a relay is not running as a directory cache, it will no longer
-      generate compressed consensuses and consensus diff information.
-      Previously, this was a waste of disk and CPU.  Fixes bug 23275;
-      bugfix on 0.3.1.1-alpha.

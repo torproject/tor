@@ -1,7 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - A service is allowed to open a maximum number of circuits for a specific
-      period of time. That value was lower than it should be (8 vs 12) in the
-      normal case of 3 introduction points. Fixes bug 22159.; bugfix on
-      tor-0.3.0.5-rc.
-    - Rate limit the log if we ever go above the maximum number of allowed
-      intro circuits. Fixes bug 22159.; bugfix on tor-0.3.1.1-alpha.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (stability):
-    - Avoid crashing on double-free when unable to load or process
-      an included file. Fixes bug 23155; bugfix on 0.3.1.1-alpha.
-      Found with the clang static analyzer.

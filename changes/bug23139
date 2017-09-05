@@ -1,3 +1,0 @@
-  o Minor bugfixes (directory cache):
-    - Fix a memory leak in the code that recovers space in the consensus
-      directory cache. Fixes bug 23139; bugfix on 0.3.1.1-alpha.
