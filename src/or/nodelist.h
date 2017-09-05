@@ -136,5 +136,16 @@ void router_dir_info_changed(void);
 const char *get_dir_info_status_string(void);
 int count_loading_descriptors_progress(void);
 
+#ifdef NODELIST_PRIVATE
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC void
+node_set_hsdir_index(node_t *node, const networkstatus_t *ns);
+
+#endif /* TOR_UNIT_TESTS */
+
+#endif /* NODELIST_PRIVATE */
+
 #endif
 

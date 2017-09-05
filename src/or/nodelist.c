@@ -38,6 +38,8 @@
  * used for authorities and fallback directories.)
  */
 
+#define NODELIST_PRIVATE
+
 #include "or.h"
 #include "address.h"
 #include "config.h"
@@ -176,7 +178,7 @@ node_get_or_create(const char *identity_digest)
 /* For a given <b>node</b> for the consensus <b>ns</b>, set the hsdir index
  * for the node, both current and next if possible. This can only fails if the
  * node_t ed25519 identity key can't be found which would be a bug. */
-static void
+STATIC void
 node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
 {
   time_t now = approx_time();
