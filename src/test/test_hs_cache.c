@@ -15,6 +15,7 @@
 #include "rendcache.h"
 #include "directory.h"
 #include "connection.h"
+#include "proto_http.h"
 
 #include "hs_test_helpers.h"
 #include "test_helpers.h"

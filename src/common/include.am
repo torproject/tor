@@ -81,6 +81,7 @@ src_common_libor_ctime_testing_a_CFLAGS = @CFLAGS_CONSTTIME@ $(TEST_CFLAGS)
 LIBOR_A_SRC = \
   src/common/address.c					\
   src/common/backtrace.c				\
+  src/common/buffers.c					\
   src/common/compat.c					\
   src/common/compat_threads.c				\
   src/common/compat_time.c				\
@@ -110,6 +111,7 @@ src/common/src_common_libor_testing_a-log.$(OBJEXT) \
 
 LIBOR_CRYPTO_A_SRC = \
   src/common/aes.c		\
+  src/common/buffers_tls.c	\
   src/common/compress.c	\
   src/common/compress_lzma.c	\
   src/common/compress_none.c	\
@@ -147,6 +149,8 @@ src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 COMMONHEADERS = \
   src/common/address.h				\
   src/common/backtrace.h			\
+  src/common/buffers.h				\
+  src/common/buffers_tls.h			\
   src/common/aes.h				\
   src/common/ciphers.inc			\
   src/common/compat.h				\

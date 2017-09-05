@@ -847,7 +847,7 @@ channel_tls_write_packed_cell_method(channel_t *chan,
   tor_assert(packed_cell);
 
   if (tlschan->conn) {
-    connection_write_to_buf(packed_cell->body, cell_network_size,
+    connection_buf_add(packed_cell->body, cell_network_size,
                             TO_CONN(tlschan->conn));
 
     /* This is where the cell is finished; used to be done from relay.c */

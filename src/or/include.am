@@ -20,7 +20,6 @@ EXTRA_DIST+= src/or/ntmain.c src/or/Makefile.nmake
 LIBTOR_A_SOURCES = \
 	src/or/addressmap.c				\
 	src/or/bridges.c				\
-	src/or/buffers.c				\
 	src/or/channel.c				\
 	src/or/channelpadding.c				\
 	src/or/channeltls.c				\
@@ -79,6 +78,11 @@ LIBTOR_A_SOURCES = \
 	src/or/parsecommon.c			\
 	src/or/periodic.c				\
 	src/or/protover.c				\
+	src/or/proto_cell.c				\
+	src/or/proto_control0.c				\
+	src/or/proto_ext_or.c				\
+	src/or/proto_http.c				\
+	src/or/proto_socks.c				\
 	src/or/policies.c				\
 	src/or/reasons.c				\
 	src/or/relay.c					\
@@ -150,7 +154,6 @@ endif
 ORHEADERS = \
 	src/or/addressmap.h				\
 	src/or/bridges.h				\
-	src/or/buffers.h				\
 	src/or/channel.h				\
 	src/or/channelpadding.h				\
 	src/or/channeltls.h				\
@@ -215,6 +218,11 @@ ORHEADERS = \
 	src/or/periodic.h				\
 	src/or/policies.h				\
 	src/or/protover.h				\
+	src/or/proto_cell.h				\
+	src/or/proto_control0.h				\
+	src/or/proto_ext_or.h				\
+	src/or/proto_http.h				\
+	src/or/proto_socks.h				\
 	src/or/reasons.h				\
 	src/or/relay.h					\
 	src/or/rendcache.h				\

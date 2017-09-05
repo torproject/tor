@@ -82,6 +82,7 @@
 #include "main.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "proto_socks.h"
 #include "reasons.h"
 #include "relay.h"
 #include "rendclient.h"
@@ -2275,7 +2276,7 @@ connection_ap_handshake_process_socks(entry_connection_t *conn)
 
   if (socks->replylen) {
     had_reply = 1;
-    connection_write_to_buf((const char*)socks->reply, socks->replylen,
+    connection_buf_add((const char*)socks->reply, socks->replylen,
                             base_conn);
     socks->replylen = 0;
     if (sockshere == -1) {
@@ -2372,7 +2373,7 @@ connection_ap_process_natd(entry_connection_t *conn)
 
   /* look for LF-terminated "[DEST ip_addr port]"
    * where ip_addr is a dotted-quad and port is in string form */
-  err = connection_fetch_from_buf_line(ENTRY_TO_CONN(conn), tmp_buf, &tlen);
+  err = connection_buf_get_line(ENTRY_TO_CONN(conn), tmp_buf, &tlen);
   if (err == 0)
     return 0;
   if (err < 0) {
@@ -3040,7 +3041,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
     return;
   }
   if (replylen) { /* we already have a reply in mind */
-    connection_write_to_buf(reply, replylen, ENTRY_TO_CONN(conn));
+    connection_buf_add(reply, replylen, ENTRY_TO_CONN(conn));
     conn->socks_request->has_finished = 1;
     return;
   }
@@ -3048,7 +3049,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
     memset(buf,0,SOCKS4_NETWORK_LEN);
     buf[1] = (status==SOCKS5_SUCCEEDED ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */
-    connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, ENTRY_TO_CONN(conn));
+    connection_buf_add(buf, SOCKS4_NETWORK_LEN, ENTRY_TO_CONN(conn));
   } else if (conn->socks_request->socks_version == 5) {
     size_t buf_len;
     memset(buf,0,sizeof(buf));
@@ -3067,7 +3068,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
       /* 4 bytes for the header, 2 bytes for the port, 16 for the address. */
       buf_len = 22;
     }
-    connection_write_to_buf(buf,buf_len,ENTRY_TO_CONN(conn));
+    connection_buf_add(buf,buf_len,ENTRY_TO_CONN(conn));
   }
   /* If socks_version isn't 4 or 5, don't send anything.
    * This can happen in the case of AP bridges. */

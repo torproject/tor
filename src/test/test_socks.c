@@ -6,6 +6,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "config.h"
+#include "proto_socks.h"
 #include "test.h"
 
 typedef struct socks_test_data_t {
@@ -43,7 +44,7 @@ static const struct testcase_setup_t socks_setup = {
   buf_t *buf = testdata->buf;                   \
   socks_request_t *socks = testdata->req;
 #define ADD_DATA(buf, s)                                        \
-  write_to_buf(s, sizeof(s)-1, buf)
+  buf_add(buf, s, sizeof(s)-1)
 
 static void
 socks_request_clear(socks_request_t *socks)

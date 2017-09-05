@@ -1912,11 +1912,11 @@ directory_send_command(dir_connection_t *conn,
 
   request_len = strlen(request);
   total_request_len += request_len;
-  connection_write_to_buf(request, request_len, TO_CONN(conn));
+  connection_buf_add(request, request_len, TO_CONN(conn));
 
   url_len = strlen(url);
   total_request_len += url_len;
-  connection_write_to_buf(url, url_len, TO_CONN(conn));
+  connection_buf_add(url, url_len, TO_CONN(conn));
   tor_free(url);
 
   if (!strcmp(httpcommand, "POST") || payload) {
@@ -1933,11 +1933,11 @@ directory_send_command(dir_connection_t *conn,
 
   request_len = strlen(request);
   total_request_len += request_len;
-  connection_write_to_buf(request, request_len, TO_CONN(conn));
+  connection_buf_add(request, request_len, TO_CONN(conn));
 
   if (payload) {
     /* then send the payload afterwards too */
-    connection_write_to_buf(payload, payload_len, TO_CONN(conn));
+    connection_buf_add(payload, payload_len, TO_CONN(conn));
     total_request_len += payload_len;
   }
 
@@ -3466,7 +3466,7 @@ write_http_status_line(dir_connection_t *conn, int status,
     return;
   }
   log_debug(LD_DIRSERV,"Wrote status 'HTTP/1.0 %d %s'", status, reason_phrase);
-  connection_write_to_buf(buf, strlen(buf), TO_CONN(conn));
+  connection_buf_add(buf, strlen(buf), TO_CONN(conn));
 }
 
 /** Write the header for an HTTP/1.0 response onto <b>conn</b>-\>outbuf,
@@ -3539,7 +3539,7 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
     memcpy(cp, "\r\n", 3);
   else
     tor_assert(0);
-  connection_write_to_buf(tmp, strlen(tmp), TO_CONN(conn));
+  connection_buf_add(tmp, strlen(tmp), TO_CONN(conn));
 }
 
 /** As write_http_response_header_impl, but sets encoding and content-typed
@@ -3902,7 +3902,7 @@ handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
      *  this page no matter what.] */
     write_http_response_header_impl(conn, dlen, "text/html", "identity",
                                     NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
-    connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
+    connection_buf_add(frontpage, dlen, TO_CONN(conn));
   } else {
     write_http_status_line(conn, 404, "Not found");
   }
@@ -4539,15 +4539,15 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
         conn->compress_state = tor_compress_new(1, compress_method,
                            choose_compression_level(estimated_len));
         SMARTLIST_FOREACH(items, const char *, c,
-                 connection_write_to_buf_compress(c, strlen(c), conn, 0));
-        connection_write_to_buf_compress("", 0, conn, 1);
+                 connection_buf_add_compress(c, strlen(c), conn, 0));
+        connection_buf_add_compress("", 0, conn, 1);
       } else {
         SMARTLIST_FOREACH(items, const char *, c,
-                         connection_write_to_buf(c, strlen(c), TO_CONN(conn)));
+                         connection_buf_add(c, strlen(c), TO_CONN(conn)));
       }
     } else {
       SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
-          connection_write_to_buf(compress_method != NO_METHOD ?
+          connection_buf_add(compress_method != NO_METHOD ?
                                     d->dir_compressed : d->dir,
                                   compress_method != NO_METHOD ?
                                     d->dir_compressed_len : d->dir_len,
@@ -4795,14 +4795,14 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
       conn->compress_state = tor_compress_new(1, compress_method,
                                               choose_compression_level(len));
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-            connection_write_to_buf_compress(
+            connection_buf_add_compress(
                 c->cache_info.signed_descriptor_body,
                 c->cache_info.signed_descriptor_len,
                 conn, 0));
-      connection_write_to_buf_compress("", 0, conn, 1);
+      connection_buf_add_compress("", 0, conn, 1);
     } else {
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-            connection_write_to_buf(c->cache_info.signed_descriptor_body,
+            connection_buf_add(c->cache_info.signed_descriptor_body,
                                     c->cache_info.signed_descriptor_len,
                                     TO_CONN(conn)));
     }
@@ -4831,7 +4831,7 @@ handle_get_hs_descriptor_v2(dir_connection_t *conn,
       switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
         case 1: /* valid */
           write_http_response_header(conn, strlen(descp), NO_METHOD, 0);
-          connection_write_to_buf(descp, strlen(descp), TO_CONN(conn));
+          connection_buf_add(descp, strlen(descp), TO_CONN(conn));
           break;
         case 0: /* well-formed but not present */
           write_http_status_line(conn, 404, "Not found");
@@ -4883,7 +4883,7 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
 
   /* Found requested descriptor! Pass it to this nice client. */
   write_http_response_header(conn, strlen(desc_str), NO_METHOD, 0);
-  connection_write_to_buf(desc_str, strlen(desc_str), TO_CONN(conn));
+  connection_buf_add(desc_str, strlen(desc_str), TO_CONN(conn));
 
  done:
   return 0;
@@ -4922,7 +4922,7 @@ handle_get_networkstatus_bridges(dir_connection_t *conn,
     status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
     size_t dlen = strlen(status);
     write_http_response_header(conn, dlen, NO_METHOD, 0);
-    connection_write_to_buf(status, dlen, TO_CONN(conn));
+    connection_buf_add(status, dlen, TO_CONN(conn));
     tor_free(status);
     goto done;
   }
@@ -4939,7 +4939,7 @@ handle_get_robots(dir_connection_t *conn, const get_handler_args_t *args)
     const char robots[] = "User-agent: *\r\nDisallow: /\r\n";
     size_t len = strlen(robots);
     write_http_response_header(conn, len, NO_METHOD, ROBOTS_CACHE_LIFETIME);
-    connection_write_to_buf(robots, len, TO_CONN(conn));
+    connection_buf_add(robots, len, TO_CONN(conn));
   }
   return 0;
 }

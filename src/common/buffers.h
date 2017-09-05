@@ -12,7 +12,14 @@
 #ifndef TOR_BUFFERS_H
 #define TOR_BUFFERS_H
 
+#include "compat.h"
+#include "compat.h"
+#include "torint.h"
 #include "testsupport.h"
+
+typedef struct buf_t buf_t;
+
+struct tor_compress_state_t;
 
 buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
@@ -28,50 +35,39 @@ size_t buf_slack(const buf_t *buf);
 uint32_t buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now);
 size_t buf_get_total_allocation(void);
 
-int read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
-                int *socket_error);
-int read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf);
+int buf_read_from_socket(buf_t *buf, tor_socket_t s, size_t at_most,
+                         int *reached_eof,
+                         int *socket_error);
 
-int flush_buf(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen);
-int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen);
+int buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
+                        size_t *buf_flushlen);
 
-int write_to_buf(const char *string, size_t string_len, buf_t *buf);
-int write_to_buf_compress(buf_t *buf, tor_compress_state_t *state,
+int buf_add(buf_t *buf, const char *string, size_t string_len);
+int buf_add_compress(buf_t *buf, struct tor_compress_state_t *state,
                           const char *data, size_t data_len, int done);
-int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
-int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
-int fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto);
-int fetch_from_buf_http(buf_t *buf,
-                        char **headers_out, size_t max_headerlen,
-                        char **body_out, size_t *body_used, size_t max_bodylen,
-                        int force_complete);
-socks_request_t *socks_request_new(void);
-void socks_request_free(socks_request_t *req);
-int fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
-                         int log_sockstype, int safe_socks);
-int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);
-int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
+int buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
+void buf_peek(const buf_t *buf, char *string, size_t string_len);
+void buf_drain(buf_t *buf, size_t n);
+int buf_get_bytes(buf_t *buf, char *string, size_t string_len);
+int buf_get_line(buf_t *buf, char *data_out, size_t *data_len);
 
-int peek_buf_has_control0_command(buf_t *buf);
 #define PEEK_BUF_STARTSWITH_MAX 16
-int peek_buf_startswith(const buf_t *buf, const char *cmd);
-int peek_buf_has_http_command(const buf_t *buf);
-
-int fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out);
+int buf_peek_startswith(const buf_t *buf, const char *cmd);
 
 int buf_set_to_copy(buf_t **output,
                     const buf_t *input);
 
-void assert_buf_ok(buf_t *buf);
+void buf_assert_ok(buf_t *buf);
+
+int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
+void buf_pullup(buf_t *buf, size_t bytes,
+                const char **head_out, size_t *len_out);
 
 #ifdef BUFFERS_PRIVATE
-STATIC int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
-STATIC void buf_pullup(buf_t *buf, size_t bytes);
 #ifdef TOR_UNIT_TESTS
-void buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz);
 buf_t *buf_new_with_data(const char *cp, size_t sz);
 #endif
-STATIC size_t preferred_chunk_size(size_t target);
+ATTR_UNUSED STATIC size_t preferred_chunk_size(size_t target);
 
 #define DEBUG_CHUNK_ALLOC
 /** A single chunk on a buffer. */
@@ -101,11 +97,28 @@ struct buf_t {
   chunk_t *head; /**< First chunk in the list, or NULL for none. */
   chunk_t *tail; /**< Last chunk in the list, or NULL for none. */
 };
-#endif
 
-#ifdef BUFFERS_PRIVATE
-STATIC int buf_http_find_content_length(const char *headers, size_t headerlen,
-                                        size_t *result_out);
+chunk_t *buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped);
+/** If a read onto the end of a chunk would be smaller than this number, then
+ * just start a new chunk. */
+#define MIN_READ_LEN 8
+
+/** Return the number of bytes that can be written onto <b>chunk</b> without
+ * running out of space. */
+static inline size_t
+CHUNK_REMAINING_CAPACITY(const chunk_t *chunk)
+{
+  return (chunk->mem + chunk->memlen) - (chunk->data + chunk->datalen);
+}
+
+/** Return the next character in <b>chunk</b> onto which data can be appended.
+ * If the chunk is full, this might be off the end of chunk->mem. */
+static inline char *
+CHUNK_WRITE_PTR(chunk_t *chunk)
+{
+  return chunk->data + chunk->datalen;
+}
+
 #endif
 
 #endif

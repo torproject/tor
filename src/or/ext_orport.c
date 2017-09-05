@@ -23,8 +23,9 @@
 #include "ext_orport.h"
 #include "control.h"
 #include "config.h"
-#include "util.h"
 #include "main.h"
+#include "proto_ext_or.h"
+#include "util.h"
 
 /** Allocate and return a structure capable of holding an Extended
  *  ORPort message of body length <b>len</b>. */
@@ -69,10 +70,10 @@ connection_write_ext_or_command(connection_t *conn,
     return -1;
   set_uint16(header, htons(command));
   set_uint16(header+2, htons(bodylen));
-  connection_write_to_buf(header, 4, conn);
+  connection_buf_add(header, 4, conn);
   if (bodylen) {
     tor_assert(body);
-    connection_write_to_buf(body, bodylen, conn);
+    connection_buf_add(body, bodylen, conn);
   }
   return 0;
 }
@@ -170,7 +171,7 @@ connection_ext_or_auth_neg_auth_type(connection_t *conn)
   if (connection_get_inbuf_len(conn) < 1)
     return 0;
 
-  if (connection_fetch_from_buf(authtype, 1, conn) < 0)
+  if (connection_buf_get_bytes(authtype, 1, conn) < 0)
     return -1;
 
   log_debug(LD_GENERAL, "Client wants us to use %d auth type", authtype[0]);
@@ -310,7 +311,7 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
   if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_NONCE_LEN)
     return 0;
 
-  if (connection_fetch_from_buf(client_nonce,
+  if (connection_buf_get_bytes(client_nonce,
                                 EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0)
     return -1;
 
@@ -325,7 +326,7 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
                             &reply, &reply_len) < 0)
     return -1;
 
-  connection_write_to_buf(reply, reply_len, conn);
+  connection_buf_add(reply, reply_len, conn);
 
   memwipe(reply, 0, reply_len);
   tor_free(reply);
@@ -347,9 +348,9 @@ static void
 connection_ext_or_auth_send_result(connection_t *conn, int success)
 {
   if (success)
-    connection_write_to_buf("\x01", 1, conn);
+    connection_buf_add("\x01", 1, conn);
   else
-    connection_write_to_buf("\x00", 1, conn);
+    connection_buf_add("\x00", 1, conn);
 }
 
 /** Receive the client's hash from <b>conn</b>, validate that it's
@@ -367,7 +368,7 @@ connection_ext_or_auth_handle_client_hash(connection_t *conn)
   if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_HASH_LEN)
     return 0;
 
-  if (connection_fetch_from_buf(provided_client_hash,
+  if (connection_buf_get_bytes(provided_client_hash,
                                 EXT_OR_PORT_AUTH_HASH_LEN, conn) < 0)
     return -1;
 
@@ -637,7 +638,7 @@ connection_ext_or_start_auth(or_connection_t *or_conn)
   log_debug(LD_GENERAL,
            "ExtORPort authentication: Sending supported authentication types");
 
-  connection_write_to_buf((const char *)authtypes, sizeof(authtypes), conn);
+  connection_buf_add((const char *)authtypes, sizeof(authtypes), conn);
   conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE;
 
   return 0;

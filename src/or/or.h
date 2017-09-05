@@ -1179,10 +1179,7 @@ typedef struct {
   uint16_t length; /**< How long is the payload body? */
 } relay_header_t;
 
-typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
-
-#define buf_t buf_t
 
 typedef struct entry_port_cfg_t {
   /* Client port types (socks, dns, trans, natd) only: */
@@ -1242,6 +1239,8 @@ typedef struct server_port_cfg_t {
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
 #define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
+
+struct buf_t;
 
 /** Description of a connection to another host or process, and associated
  * data.
@@ -1314,8 +1313,9 @@ typedef struct connection_t {
 
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
-  buf_t *inbuf; /**< Buffer holding data read over this connection. */
-  buf_t *outbuf; /**< Buffer holding data to write over this connection. */
+  struct buf_t *inbuf; /**< Buffer holding data read over this connection. */
+  struct buf_t *outbuf; /**< Buffer holding data to write over this
+                         * connection. */
   size_t outbuf_flushlen; /**< How much data should we try to flush from the
                            * outbuf? */
   time_t timestamp_lastread; /**< When was the last time libevent said we could
@@ -1722,11 +1722,11 @@ typedef struct entry_connection_t {
   /** For AP connections only: buffer for data that we have sent
    * optimistically, which we might need to re-send if we have to
    * retry this connection. */
-  buf_t *pending_optimistic_data;
+  struct buf_t *pending_optimistic_data;
   /* For AP connections only: buffer for data that we previously sent
   * optimistically which we are currently re-sending as we retry this
   * connection. */
-  buf_t *sending_optimistic_data;
+  struct buf_t *sending_optimistic_data;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */
