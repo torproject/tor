@@ -82,6 +82,7 @@
 #include "main.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "proto_http.h"
 #include "proto_socks.h"
 #include "reasons.h"
 #include "relay.h"
@@ -2516,7 +2517,7 @@ connection_ap_process_http_connect(entry_connection_t *conn)
   if (BUG(errmsg == NULL))
     errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
   log_warn(LD_EDGE, "Saying %s", escaped(errmsg));
-  connection_write_to_buf(errmsg, strlen(errmsg), ENTRY_TO_CONN(conn));
+  connection_buf_add(errmsg, strlen(errmsg), ENTRY_TO_CONN(conn));
   connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_HTTPPROTOCOL|
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -3159,7 +3160,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
     if (!response) {
       response = "HTTP/1.0 400 Bad Request\r\n\r\n";
     }
-    connection_write_to_buf(response, strlen(response), ENTRY_TO_CONN(conn));
+    connection_buf_add(response, strlen(response), ENTRY_TO_CONN(conn));
   } else if (conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
     buf[1] = (status==SOCKS5_SUCCEEDED ? SOCKS4_GRANTED : SOCKS4_REJECT);

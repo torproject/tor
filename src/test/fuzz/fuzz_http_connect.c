@@ -12,6 +12,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "proto_socks.h"
 #include "torlog.h"
 
 #include "fuzzing.h"
