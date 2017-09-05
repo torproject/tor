@@ -1969,7 +1969,7 @@ parse_http_url(const char *headers, char **url)
   if (parse_http_command(headers, &command, url) < 0) {
     return -1;
   }
-  if (!strcmpstart(*url, "/tor/")) {
+  if (strcmpstart(*url, "/tor/")) {
     char *new_url = NULL;
     tor_asprintf(&new_url, "/tor/%s", *url);
     tor_free(*url);
