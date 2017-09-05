@@ -173,8 +173,8 @@ chunk_grow(chunk_t *chunk, size_t sz)
 
 /** Return the allocation size we'd like to use to hold <b>target</b>
  * bytes. */
-STATIC size_t
-preferred_chunk_size(size_t target)
+size_t
+buf_preferred_chunk_size(size_t target)
 {
   tor_assert(target <= SIZE_T_CEILING - CHUNK_OVERHEAD);
   if (CHUNK_ALLOC_SIZE(target) >= MAX_CHUNK_ALLOC)
@@ -228,7 +228,7 @@ buf_pullup(buf_t *buf, size_t bytes, const char **head_out, size_t *len_out)
     size_t newsize;
     /* We need to grow the chunk. */
     chunk_repack(buf->head);
-    newsize = CHUNK_SIZE_WITH_ALLOC(preferred_chunk_size(capacity));
+    newsize = CHUNK_SIZE_WITH_ALLOC(buf_preferred_chunk_size(capacity));
     newhead = chunk_grow(buf->head, newsize);
     tor_assert(newhead->memlen >= capacity);
     if (newhead != buf->head) {
@@ -344,7 +344,7 @@ buf_t *
 buf_new_with_capacity(size_t size)
 {
   buf_t *b = buf_new();
-  b->default_chunk_size = preferred_chunk_size(size);
+  b->default_chunk_size = buf_preferred_chunk_size(size);
   return b;
 }
 
@@ -469,7 +469,7 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
   } else if (capped && CHUNK_ALLOC_SIZE(capacity) > MAX_CHUNK_ALLOC) {
     chunk = chunk_new_with_alloc_size(MAX_CHUNK_ALLOC);
   } else {
-    chunk = chunk_new_with_alloc_size(preferred_chunk_size(capacity));
+    chunk = chunk_new_with_alloc_size(buf_preferred_chunk_size(capacity));
   }
 
   chunk->inserted_time = (uint32_t)monotime_coarse_absolute_msec();

@@ -67,7 +67,7 @@ void buf_pullup(buf_t *buf, size_t bytes,
 #ifdef TOR_UNIT_TESTS
 buf_t *buf_new_with_data(const char *cp, size_t sz);
 #endif
-ATTR_UNUSED STATIC size_t preferred_chunk_size(size_t target);
+size_t buf_preferred_chunk_size(size_t target);
 
 #define DEBUG_CHUNK_ALLOC
 /** A single chunk on a buffer. */
