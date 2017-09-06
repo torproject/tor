@@ -2843,8 +2843,10 @@ options_validate_cb(void *old_options, void *options, void *default_options,
  * an absolute path that <b>filepath</b> will resolve to.
  *
  * In case <b>filepath</b> is absolute, do nothing.
+ *
+ * Return 1 if there were relative paths; 0 otherwise.
  */
-static void
+static int
 warn_if_option_path_is_relative(const char *option,
                                 char *filepath)
 {
@@ -2853,39 +2855,45 @@ warn_if_option_path_is_relative(const char *option,
     COMPLAIN("Path for %s (%s) is relative and will resolve to %s."
              " Is this what you wanted?", option, filepath, abs_path);
     tor_free(abs_path);
+    return 1;
   }
+  return 0;
 }
 
 /** Scan <b>options</b> for occurances of relative file/directory
  * path and log a warning whenever it is found.
+ *
+ * Return 1 if there were relative paths; 0 otherwise.
  */
-static void
+static int
 warn_about_relative_paths(or_options_t *options)
 {
   tor_assert(options);
+  int n = 0;
 
-  warn_if_option_path_is_relative("CookieAuthFile",
-                                  options->CookieAuthFile);
-  warn_if_option_path_is_relative("ExtORPortCookieAuthFile",
-                                  options->ExtORPortCookieAuthFile);
-  warn_if_option_path_is_relative("DirPortFrontPage",
-                                  options->DirPortFrontPage);
-  warn_if_option_path_is_relative("V3BandwidthsFile",
-                                  options->V3BandwidthsFile);
-  warn_if_option_path_is_relative("ControlPortWriteToFile",
-                                  options->ControlPortWriteToFile);
-  warn_if_option_path_is_relative("GeoIPFile",options->GeoIPFile);
-  warn_if_option_path_is_relative("GeoIPv6File",options->GeoIPv6File);
-  warn_if_option_path_is_relative("Log",options->DebugLogFile);
-  warn_if_option_path_is_relative("AccelDir",options->AccelDir);
-  warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
-  warn_if_option_path_is_relative("PidFile",options->PidFile);
+  n += warn_if_option_path_is_relative("CookieAuthFile",
+                                       options->CookieAuthFile);
+  n += warn_if_option_path_is_relative("ExtORPortCookieAuthFile",
+                                       options->ExtORPortCookieAuthFile);
+  n += warn_if_option_path_is_relative("DirPortFrontPage",
+                                       options->DirPortFrontPage);
+  n += warn_if_option_path_is_relative("V3BandwidthsFile",
+                                       options->V3BandwidthsFile);
+  n += warn_if_option_path_is_relative("ControlPortWriteToFile",
+                                       options->ControlPortWriteToFile);
+  n += warn_if_option_path_is_relative("GeoIPFile",options->GeoIPFile);
+  n += warn_if_option_path_is_relative("GeoIPv6File",options->GeoIPv6File);
+  n += warn_if_option_path_is_relative("Log",options->DebugLogFile);
+  n += warn_if_option_path_is_relative("AccelDir",options->AccelDir);
+  n += warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
+  n += warn_if_option_path_is_relative("PidFile",options->PidFile);
 
   for (config_line_t *hs_line = options->RendConfigLines; hs_line;
        hs_line = hs_line->next) {
     if (!strcasecmp(hs_line->key, "HiddenServiceDir"))
-      warn_if_option_path_is_relative("HiddenServiceDir",hs_line->value);
+      n += warn_if_option_path_is_relative("HiddenServiceDir",hs_line->value);
   }
+  return n != 0;
 }
 
 /* Validate options related to single onion services.
@@ -2989,7 +2997,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
    * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
   options->UseEntryGuards = options->UseEntryGuards_option;
 
-  warn_about_relative_paths(options);
+  if (warn_about_relative_paths(options) && options->RunAsDaemon) {
+    REJECT("You have specified at least one relative path (see above) "
+           "with the RunAsDaemon option. RunAsDaemon is not compatible "
+           "with relative paths.");
+  }
 
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||
