@@ -465,7 +465,7 @@ test_desc_reupload_logic(void *arg)
   }
 
   /* Now let's upload our desc to all hsdirs */
-  upload_descriptor_to_all(service, desc, 0);
+  upload_descriptor_to_all(service, desc);
   /* Check that previous hsdirs were populated */
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
@@ -503,7 +503,7 @@ test_desc_reupload_logic(void *arg)
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
   /* Now order another upload and see that we keep having 6 prev hsdirs */
-  upload_descriptor_to_all(service, desc, 0);
+  upload_descriptor_to_all(service, desc);
   /* Check that previous hsdirs were populated */
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
@@ -536,7 +536,7 @@ test_desc_reupload_logic(void *arg)
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 0);
 
   /* Now reupload again: see that the prev hsdir set got populated again. */
-  upload_descriptor_to_all(service, desc, 0);
+  upload_descriptor_to_all(service, desc);
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
  done:
@@ -740,6 +740,55 @@ test_parse_extended_hostname(void *arg)
  done: ;
 }
 
+static void
+test_time_between_tp_and_srv(void *arg)
+{
+  int ret;
+  networkstatus_t ns;
+  (void) arg;
+
+  /* This function should be returning true where "^" are:
+   *
+   *    +------------------------------------------------------------------+
+   *    |                                                                  |
+   *    | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   *    | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   *    |                                                                  |
+   *    |  $==========|-----------$===========|-----------$===========|    |
+   *    |             ^^^^^^^^^^^^            ^^^^^^^^^^^^                 |
+   *    |                                                                  |
+   *    +------------------------------------------------------------------+
+   */
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 00:00:00 UTC", &ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = hs_time_between_tp_and_srv(&ns, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 11:00:00 UTC", &ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = hs_time_between_tp_and_srv(&ns, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC", &ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = hs_time_between_tp_and_srv(&ns, 0);
+  tt_int_op(ret, OP_EQ, 1);
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 23:00:00 UTC", &ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = hs_time_between_tp_and_srv(&ns, 0);
+  tt_int_op(ret, OP_EQ, 1);
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 00:00:00 UTC", &ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = hs_time_between_tp_and_srv(&ns, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+ done:
+  ;
+}
+
 struct testcase_t hs_common_tests[] = {
   { "build_address", test_build_address, TT_FORK,
     NULL, NULL },
@@ -758,6 +807,8 @@ struct testcase_t hs_common_tests[] = {
   { "hid_serv_request_tracker", test_hid_serv_request_tracker, TT_FORK,
     NULL, NULL },
   { "parse_extended_hostname", test_parse_extended_hostname, TT_FORK,
+    NULL, NULL },
+  { "time_between_tp_and_srv", test_time_between_tp_and_srv, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES

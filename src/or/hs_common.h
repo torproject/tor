@@ -142,10 +142,12 @@ typedef struct rend_service_port_config_t {
 /* Hidden service directory index used in a node_t which is set once we set
  * the consensus. */
 typedef struct hsdir_index_t {
-  /* Index to use when fetching a descriptor. */
+  /* HSDir index to use when fetching a descriptor. */
   uint8_t fetch[DIGEST256_LEN];
 
-  /* Index to store the first and second descriptor. */
+  /* HSDir index used by services to store their first and second
+   * descriptor. The first descriptor is the one that uses older TP and SRV
+   * values than the second one. */
   uint8_t store_first[DIGEST256_LEN];
   uint8_t store_second[DIGEST256_LEN];
 } hsdir_index_t;
@@ -202,7 +204,7 @@ time_t hs_get_start_time_of_next_time_period(time_t now);
 
 link_specifier_t *hs_link_specifier_dup(const link_specifier_t *lspec);
 
-MOCK_DECL(int, hs_overlap_mode_is_active,
+MOCK_DECL(int, hs_time_between_tp_and_srv,
           (const networkstatus_t *consensus, time_t now));
 
 uint8_t *hs_get_current_srv(uint64_t time_period_num,
@@ -222,8 +224,8 @@ int32_t hs_get_hsdir_spread_fetch(void);
 int32_t hs_get_hsdir_spread_store(void);
 
 void hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
-                               uint64_t time_period_num, int is_next_period,
-                               int is_client, smartlist_t *responsible_dirs);
+                              uint64_t time_period_num, int is_next_period,
+                              int for_fetching, smartlist_t *responsible_dirs);
 routerstatus_t *hs_pick_hsdir(smartlist_t *responsible_dirs,
                               const char *req_key_str);
 

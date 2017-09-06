@@ -162,6 +162,7 @@ static routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 {
   int retval;
+  unsigned int is_new_tp = 0;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   uint64_t current_time_period = hs_get_time_period_num(0);
   smartlist_t *responsible_hsdirs;
@@ -182,8 +183,9 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
   }
 
   /* Get responsible hsdirs of service for this time period */
-  hs_get_responsible_hsdirs(&blinded_pubkey, current_time_period, 0, 1,
-                            responsible_hsdirs);
+  is_new_tp = hs_time_between_tp_and_srv(NULL, time(NULL));
+  hs_get_responsible_hsdirs(&blinded_pubkey, current_time_period,
+                            is_new_tp, 1, responsible_hsdirs);
 
   log_debug(LD_REND, "Found %d responsible HSDirs and about to pick one.",
            smartlist_len(responsible_hsdirs));

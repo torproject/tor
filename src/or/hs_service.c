@@ -2380,19 +2380,23 @@ set_descriptor_revision_counter(hs_descriptor_t *hs_desc)
  * if PublishHidServDescriptors is false. */
 STATIC void
 upload_descriptor_to_all(const hs_service_t *service,
-                         hs_service_descriptor_t *desc, int for_next_period)
+                         hs_service_descriptor_t *desc)
 {
+  unsigned int is_new_tp = 0;
   smartlist_t *responsible_dirs = NULL;
 
   tor_assert(service);
   tor_assert(desc);
 
+  /* Do we have a new TP that is are we between a new time period and the next
+   * SRV creation? */
+  is_new_tp = hs_time_between_tp_and_srv(NULL, approx_time());
   /* Get our list of responsible HSDir. */
   responsible_dirs = smartlist_new();
   /* The parameter 0 means that we aren't a client so tell the function to use
    * the spread store consensus paremeter. */
   hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
-                            for_next_period, 0, responsible_dirs);
+                            is_new_tp, 0, responsible_dirs);
 
   /** Clear list of previous hsdirs since we are about to upload to a new
    *  list. Let's keep it up to date. */
@@ -2539,8 +2543,6 @@ run_upload_descriptor_event(time_t now)
   /* Run v3+ check. */
   FOR_EACH_SERVICE_BEGIN(service) {
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      int for_next_period = 0;
-
       /* If we were asked to re-examine the hash ring, and it changed, then
          schedule an upload */
       if (consider_republishing_hs_descriptors &&
@@ -2566,12 +2568,7 @@ run_upload_descriptor_event(time_t now)
        * accurate because all circuits have been established. */
       build_desc_intro_points(service, desc, now);
 
-      /* The next descriptor needs the next time period for computing the
-       * corresponding hashring. */
-      if (desc == service->desc_next) {
-        for_next_period = 1;
-      }
-      upload_descriptor_to_all(service, desc, for_next_period);
+      upload_descriptor_to_all(service, desc);
     } FOR_EACH_DESCRIPTOR_END;
   } FOR_EACH_SERVICE_END;
 

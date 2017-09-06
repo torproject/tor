@@ -208,8 +208,7 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
   /* We always use the current time period for fetching descs */
   fetch_tp = current_time_period_num;
 
-  /* Now extract the needed SRVs and time periods for building hsdir indices */
-  if (!hs_overlap_mode_is_active(ns, now)) {
+  if (hs_time_between_tp_and_srv(ns, now)) {
     fetch_srv = hs_get_current_srv(fetch_tp, ns);
 
     store_first_tp = hs_get_previous_time_period_num(0);

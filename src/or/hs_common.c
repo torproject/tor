@@ -589,7 +589,7 @@ compute_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
  *  would have to do it thousands of times in a row, we always cache the
  *  computer disaster SRV (and its corresponding time period num) in case we
  *  want to reuse it soon after. We need to cache two SRVs, one for each active
- *  time period (in case of overlap mode).
+ *  time period.
  */
 static uint8_t cached_disaster_srv[2][DIGEST256_LEN];
 static uint64_t cached_time_period_nums[2] = {0};
@@ -1034,10 +1034,22 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
   memwipe(param, 0, sizeof(param));
 }
 
-/* Return true if overlap mode is active given the date in consensus. If
- * consensus is NULL, then we use the latest live consensus we can find. */
+/* Return true if we are currently in the time segment between a new time
+ * period and a new SRV (in the real network that happens between 12:00 and
+ * 00:00 UTC). Here is a diagram showing exactly when this returns true:
+ *
+ *    +------------------------------------------------------------------+
+ *    |                                                                  |
+ *    | 00:00      12:00       00:00       12:00       00:00       12:00 |
+ *    | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+ *    |                                                                  |
+ *    |  $==========|-----------$===========|-----------$===========|    |
+ *    |             ^^^^^^^^^^^^            ^^^^^^^^^^^^                 |
+ *    |                                                                  |
+ *    +------------------------------------------------------------------+
+ */
 MOCK_IMPL(int,
-hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
+hs_time_between_tp_and_srv, (const networkstatus_t *consensus, time_t now))
 {
   time_t valid_after;
   time_t srv_start_time, tp_start_time;
@@ -1049,19 +1061,18 @@ hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
     }
   }
 
-  /* We consider to be in overlap mode when we are in the period of time
-   * between a fresh SRV and the beginning of the new time period (in the
-   * normal network this is between 00:00 (inclusive) and 12:00 UTC
-   * (exclusive)) */
+  /* Get start time of next TP and of current SRV protocol run, and check if we
+   * are between them. */
   valid_after = consensus->valid_after;
-  srv_start_time =sr_state_get_start_time_of_current_protocol_run(valid_after);
+  srv_start_time =
+    sr_state_get_start_time_of_current_protocol_run(valid_after);
   tp_start_time = hs_get_start_time_of_next_time_period(srv_start_time);
 
   if (valid_after >= srv_start_time && valid_after < tp_start_time) {
-    return 1;
+    return 0;
   }
 
-  return 0;
+  return 1;
 }
 
 /* Return 1 if any virtual port in ports needs a circuit with good uptime.
@@ -1267,9 +1278,9 @@ node_has_hsdir_index(const node_t *node)
 /* For a given blinded key and time period number, get the responsible HSDir
  * and put their routerstatus_t object in the responsible_dirs list. If
  * is_next_period is true, the next hsdir_index of the node_t is used. If
- * is_client is true, the spread fetch consensus parameter is used else the
- * spread store is used which is only for upload. This function can't fail but
- * it is possible that the responsible_dirs list contains fewer nodes than
+ * 'for_fetching' is true, the spread fetch consensus parameter is used else
+ * the spread store is used which is only for upload. This function can't fail
+ * but it is possible that the responsible_dirs list contains fewer nodes than
  * expected.
  *
  * This function goes over the latest consensus routerstatus list and sorts it
@@ -1277,8 +1288,8 @@ node_has_hsdir_index(const node_t *node)
  * node. All of this makes it a bit CPU intensive so use it wisely. */
 void
 hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
-                          uint64_t time_period_num, int is_next_period,
-                          int is_client, smartlist_t *responsible_dirs)
+                          uint64_t time_period_num, int is_new_tp,
+                          int for_fetching, smartlist_t *responsible_dirs)
 {
   smartlist_t *sorted_nodes;
   /* The compare function used for the smartlist bsearch. We have two
@@ -1322,10 +1333,10 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   /* First thing we have to do is sort all node_t by hsdir_index. The
    * is_next_period tells us if we want the current or the next one. Set the
    * bsearch compare function also while we are at it. */
-  if (is_client) {
+  if (for_fetching) {
     smartlist_sort(sorted_nodes, compare_node_fetch_hsdir_index);
     cmp_fct = compare_digest_to_fetch_hsdir_index;
-  } else if (is_next_period) {
+  } else if (is_new_tp) {
     smartlist_sort(sorted_nodes, compare_node_store_second_hsdir_index);
     cmp_fct = compare_digest_to_store_second_hsdir_index;
   } else {
@@ -1341,8 +1352,8 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
     uint8_t hs_index[DIGEST256_LEN] = {0};
     /* Number of node to add to the responsible dirs list depends on if we are
      * trying to fetch or store. A client always fetches. */
-    int n_to_add = (is_client) ? hs_get_hsdir_spread_fetch() :
-                                 hs_get_hsdir_spread_store();
+    int n_to_add = (for_fetching) ? hs_get_hsdir_spread_fetch() :
+                                    hs_get_hsdir_spread_store();
 
     /* Get the index that we should use to select the node. */
     hs_build_hs_index(replica, blinded_pk, time_period_num, hs_index);

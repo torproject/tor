@@ -337,8 +337,7 @@ STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_);
 
 STATIC void upload_descriptor_to_all(const hs_service_t *service,
-                                     hs_service_descriptor_t *desc,
-                                     int for_next_period);
+                                     hs_service_descriptor_t *desc);
 
 STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
                                          time_t now,
