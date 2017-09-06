@@ -4097,6 +4097,20 @@ channel_mark_client(channel_t *chan)
 }
 
 /**
+ * Clear the client flag
+ *
+ * Mark a channel as being _not_ from a client
+ */
+
+void
+channel_clear_client(channel_t *chan)
+{
+  tor_assert(chan);
+
+  chan->is_client = 0;
+}
+
+/**
  * Get the canonical flag for a channel
  *
  * This returns the is_canonical for a channel; this flag is determined by

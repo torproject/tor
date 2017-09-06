@@ -331,7 +331,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     // Needed for chutney: Sometimes relays aren't in the consensus yet, and
     // get marked as clients. This resets their channels once they appear.
     // Probably useful for normal operation wrt relay flapping, too.
-    chan->is_client = 0;
+    channel_clear_client(chan);
   } else {
     channel_mark_client(chan);
   }

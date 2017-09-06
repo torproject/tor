@@ -671,6 +671,7 @@ int channel_is_local(channel_t *chan);
 int channel_is_incoming(channel_t *chan);
 int channel_is_outgoing(channel_t *chan);
 void channel_mark_client(channel_t *chan);
+void channel_clear_client(channel_t *chan);
 int channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info);
 int channel_matches_target_addr_for_extend(channel_t *chan,
                                            const tor_addr_t *target);
