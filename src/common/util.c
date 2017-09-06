@@ -3691,8 +3691,9 @@ finish_daemon(const char *cp)
 #endif
 
 /** Write the current process ID, followed by NL, into <b>filename</b>.
+ * Return 0 on success, -1 on failure.
  */
-void
+int
 write_pidfile(const char *filename)
 {
   FILE *pidfile;
@@ -3700,13 +3701,19 @@ write_pidfile(const char *filename)
   if ((pidfile = fopen(filename, "w")) == NULL) {
     log_warn(LD_FS, "Unable to open \"%s\" for writing: %s", filename,
              strerror(errno));
+    return -1;
   } else {
 #ifdef _WIN32
-    fprintf(pidfile, "%d\n", (int)_getpid());
+    int pid = (int)_getpid();
 #else
-    fprintf(pidfile, "%d\n", (int)getpid());
+    int pid = (int)getpid();
 #endif
-    fclose(pidfile);
+    int rv = 0;
+    if (fprintf(pidfile, "%d\n", pid) < 0)
+      rv = -1;
+    if (fclose(pidfile) < 0)
+      rv = -1;
+    return rv;
   }
 }
 
