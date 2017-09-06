@@ -766,6 +766,9 @@ static int have_parsed_cmdline = 0;
 static char *global_dirfrontpagecontents = NULL;
 /** List of port_cfg_t for all configured ports. */
 static smartlist_t *configured_ports = NULL;
+/** True iff we're currently validating options, and any calls to
+ * get_options() are likely to be bugs. */
+static int in_option_validation = 0;
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
 MOCK_IMPL(const char*,
@@ -779,6 +782,7 @@ MOCK_IMPL(or_options_t *,
 get_options_mutable, (void))
 {
   tor_assert(global_options);
+  tor_assert_nonfatal(! in_option_validation);
   return global_options;
 }
 
@@ -2304,24 +2308,35 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
     return r;
   }
 
+  setopt_err_t rv;
+
+  in_option_validation = 1;
+
   if (options_validate(get_options_mutable(), trial_options,
                        global_default_options, 1, msg) < 0) {
     or_options_free(trial_options);
-    return SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
+    rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
+    goto done;
   }
 
   if (options_transition_allowed(get_options(), trial_options, msg) < 0) {
     or_options_free(trial_options);
-    return SETOPT_ERR_TRANSITION;
+    rv = SETOPT_ERR_TRANSITION;
+    goto done;
   }
+  in_option_validation = 0;
 
   if (set_options(trial_options, msg)<0) {
     or_options_free(trial_options);
-    return SETOPT_ERR_SETTING;
+    rv = SETOPT_ERR_SETTING;
+    goto done;
   }
 
   /* we liked it. put it in place. */
-  return SETOPT_OK;
+  rv = SETOPT_OK;
+ done:
+  in_option_validation = 0;
+  return rv;
 }
 
 /** Print a usage message for tor. */
@@ -2824,8 +2839,11 @@ static int
 options_validate_cb(void *old_options, void *options, void *default_options,
                     int from_setconf, char **msg)
 {
-  return options_validate(old_options, options, default_options,
+  in_option_validation = 1;
+  int rv = options_validate(old_options, options, default_options,
                           from_setconf, msg);
+  in_option_validation = 0;
+  return rv;
 }
 
 #define REJECT(arg) \
@@ -5200,6 +5218,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   newoptions->IncludeUsed = cf_has_include;
+  in_option_validation = 1;
 
   /* Validate newoptions */
   if (options_validate(oldoptions, newoptions, newdefaultoptions,
@@ -5212,17 +5231,20 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     err = SETOPT_ERR_TRANSITION;
     goto err;
   }
+  in_option_validation = 0;
 
   if (set_options(newoptions, msg)) {
     err = SETOPT_ERR_SETTING;
     goto err; /* frees and replaces old options */
   }
+
   or_options_free(global_default_options);
   global_default_options = newdefaultoptions;
 
   return SETOPT_OK;
 
  err:
+  in_option_validation = 0;
   or_options_free(newoptions);
   or_options_free(newdefaultoptions);
   if (*msg) {
