@@ -838,6 +838,28 @@ buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
   return (int)cp;
 }
 
+/** Moves all data from <b>buf_in</b> to <b>buf_out</b>, without copying.
+ */
+void
+buf_move_all(buf_t *buf_out, buf_t *buf_in)
+{
+  tor_assert(buf_out);
+  if (!buf_in)
+    return;
+
+  if (buf_out->head == NULL) {
+    buf_out->head = buf_in->head;
+    buf_out->tail = buf_in->tail;
+  } else {
+    buf_out->tail->next = buf_in->head;
+    buf_out->tail = buf_in->tail;
+  }
+
+  buf_out->datalen += buf_in->datalen;
+  buf_in->head = buf_in->tail = NULL;
+  buf_in->datalen = 0;
+}
+
 /** Internal structure: represents a position in a buffer. */
 typedef struct buf_pos_t {
   const chunk_t *chunk; /**< Which chunk are we pointing to? */
