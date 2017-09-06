@@ -3332,9 +3332,10 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
                                                     NULL);
   rend_cookie = circuit->rend_data->rend_cookie;
 
-  /* Declare the circuit dirty to avoid reuse, and for path-bias */
-  if (!circuit->base_.timestamp_dirty)
-    circuit->base_.timestamp_dirty = time(NULL);
+  /* Declare the circuit dirty to avoid reuse, and for path-bias. We set the
+   * timestamp regardless of its content because that circuit could have been
+   * cannibalized so in any cases, we are about to use that circuit more. */
+  circuit->base_.timestamp_dirty = time(NULL);
 
   /* This may be redundant */
   pathbias_count_use_attempt(circuit);
