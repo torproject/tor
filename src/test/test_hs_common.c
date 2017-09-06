@@ -390,8 +390,8 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
   tt_assert(node);
   node->rs = rs;
-  memcpy(node->hsdir_index->current, curr_hsdir_index,
-         sizeof(node->hsdir_index->current));
+  memcpy(node->hsdir_index->fetch, curr_hsdir_index,
+         sizeof(node->hsdir_index->fetch));
   smartlist_add(ns->routerstatus_list, rs);
 
  done:

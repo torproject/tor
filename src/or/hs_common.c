@@ -99,42 +99,65 @@ add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
 /* Helper function: The key is a digest that we compare to a node_t object
  * current hsdir_index. */
 static int
-compare_digest_to_current_hsdir_index(const void *_key, const void **_member)
+compare_digest_to_fetch_hsdir_index(const void *_key, const void **_member)
 {
   const char *key = _key;
   const node_t *node = *_member;
-  return tor_memcmp(key, node->hsdir_index->current, DIGEST256_LEN);
+  return tor_memcmp(key, node->hsdir_index->fetch, DIGEST256_LEN);
 }
 
 /* Helper function: The key is a digest that we compare to a node_t object
  * next hsdir_index. */
 static int
-compare_digest_to_next_hsdir_index(const void *_key, const void **_member)
+compare_digest_to_store_first_hsdir_index(const void *_key,
+                                          const void **_member)
 {
   const char *key = _key;
   const node_t *node = *_member;
-  return tor_memcmp(key, node->hsdir_index->next, DIGEST256_LEN);
+  return tor_memcmp(key, node->hsdir_index->store_first, DIGEST256_LEN);
+}
+
+/* Helper function: The key is a digest that we compare to a node_t object
+ * next hsdir_index. */
+static int
+compare_digest_to_store_second_hsdir_index(const void *_key,
+                                          const void **_member)
+{
+  const char *key = _key;
+  const node_t *node = *_member;
+  return tor_memcmp(key, node->hsdir_index->store_second, DIGEST256_LEN);
 }
 
 /* Helper function: Compare two node_t objects current hsdir_index. */
 static int
-compare_node_current_hsdir_index(const void **a, const void **b)
+compare_node_fetch_hsdir_index(const void **a, const void **b)
 {
   const node_t *node1= *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index->current,
-                    node2->hsdir_index->current,
+  return tor_memcmp(node1->hsdir_index->fetch,
+                    node2->hsdir_index->fetch,
                     DIGEST256_LEN);
 }
 
 /* Helper function: Compare two node_t objects next hsdir_index. */
 static int
-compare_node_next_hsdir_index(const void **a, const void **b)
+compare_node_store_first_hsdir_index(const void **a, const void **b)
 {
   const node_t *node1= *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index->next,
-                    node2->hsdir_index->next,
+  return tor_memcmp(node1->hsdir_index->store_first,
+                    node2->hsdir_index->store_first,
+                    DIGEST256_LEN);
+}
+
+/* Helper function: Compare two node_t objects next hsdir_index. */
+static int
+compare_node_store_second_hsdir_index(const void **a, const void **b)
+{
+  const node_t *node1= *a;
+  const node_t *node2 = *b;
+  return tor_memcmp(node1->hsdir_index->store_second,
+                    node2->hsdir_index->store_second,
                     DIGEST256_LEN);
 }
 
@@ -1200,10 +1223,9 @@ hs_get_hsdir_spread_store(void)
 }
 
 /** <b>node</b> is an HSDir so make sure that we have assigned an hsdir index.
- *  If <b>is_for_next_period</b> is set, also check the next HSDir index field.
  *  Return 0 if everything is as expected, else return -1. */
 static int
-node_has_hsdir_index(const node_t *node, int is_for_next_period)
+node_has_hsdir_index(const node_t *node)
 {
   tor_assert(node_supports_v3_hsdir(node));
 
@@ -1215,19 +1237,19 @@ node_has_hsdir_index(const node_t *node, int is_for_next_period)
 
   /* At this point, since the node has a desc, this node must also have an
    * hsdir index. If not, something went wrong, so BUG out. */
-  if (BUG(node->hsdir_index == NULL) ||
-      BUG(tor_mem_is_zero((const char*)node->hsdir_index->current,
-                          DIGEST256_LEN))) {
-    log_warn(LD_BUG, "Zero current index (ri: %p, rs: %p, md: %p)",
-             node->ri, node->rs, node->md);
+  if (BUG(node->hsdir_index == NULL)) {
     return 0;
   }
-
-  if (is_for_next_period &&
-      BUG(tor_mem_is_zero((const char*)node->hsdir_index->next,
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->fetch,
                           DIGEST256_LEN))) {
-    log_warn(LD_BUG, "Zero next index (ri: %p, rs: %p, md: %p)",
-             node->ri, node->rs, node->md);
+    return 0;
+  }
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->store_first,
+                          DIGEST256_LEN))) {
+    return 0;
+  }
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->store_second,
+                          DIGEST256_LEN))) {
     return 0;
   }
 
@@ -1275,7 +1297,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
       node_t *n = node_get_mutable_by_id(rs->identity_digest);
       tor_assert(n);
       if (node_supports_v3_hsdir(n) && rs->is_hs_dir) {
-        if (!node_has_hsdir_index(n, is_next_period)) {
+        if (!node_has_hsdir_index(n)) {
           log_info(LD_GENERAL, "Node %s was found without hsdir index.",
                    node_describe(n));
           continue;
@@ -1292,12 +1314,15 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   /* First thing we have to do is sort all node_t by hsdir_index. The
    * is_next_period tells us if we want the current or the next one. Set the
    * bsearch compare function also while we are at it. */
-  if (is_next_period) {
-    smartlist_sort(sorted_nodes, compare_node_next_hsdir_index);
-    cmp_fct = compare_digest_to_next_hsdir_index;
+  if (is_client) {
+    smartlist_sort(sorted_nodes, compare_node_fetch_hsdir_index);
+    cmp_fct = compare_digest_to_fetch_hsdir_index;
+  } else if (is_next_period) {
+    smartlist_sort(sorted_nodes, compare_node_store_second_hsdir_index);
+    cmp_fct = compare_digest_to_store_second_hsdir_index;
   } else {
-    smartlist_sort(sorted_nodes, compare_node_current_hsdir_index);
-    cmp_fct = compare_digest_to_current_hsdir_index;
+    smartlist_sort(sorted_nodes, compare_node_store_first_hsdir_index);
+    cmp_fct = compare_digest_to_store_first_hsdir_index;
   }
 
   /* For all replicas, we'll select a set of HSDirs using the consensus

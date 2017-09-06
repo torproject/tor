@@ -142,10 +142,12 @@ typedef struct rend_service_port_config_t {
 /* Hidden service directory index used in a node_t which is set once we set
  * the consensus. */
 typedef struct hsdir_index_t {
-  /* The hsdir index for the current time period. */
-  uint8_t current[DIGEST256_LEN];
-  /* The hsdir index for the next time period. */
-  uint8_t next[DIGEST256_LEN];
+  /* Index to use when fetching a descriptor. */
+  uint8_t fetch[DIGEST256_LEN];
+
+  /* Index to store the first and second descriptor. */
+  uint8_t store_first[DIGEST256_LEN];
+  uint8_t store_second[DIGEST256_LEN];
 } hsdir_index_t;
 
 void hs_init(void);
