@@ -666,7 +666,7 @@ int channel_is_bad_for_new_circs(channel_t *chan);
 void channel_mark_bad_for_new_circs(channel_t *chan);
 int channel_is_canonical(channel_t *chan);
 int channel_is_canonical_is_reliable(channel_t *chan);
-int channel_is_client(channel_t *chan);
+int channel_is_client(const channel_t *chan);
 int channel_is_local(channel_t *chan);
 int channel_is_incoming(channel_t *chan);
 int channel_is_outgoing(channel_t *chan);

@@ -4075,7 +4075,7 @@ channel_mark_bad_for_new_circs(channel_t *chan)
  */
 
 int
-channel_is_client(channel_t *chan)
+channel_is_client(const channel_t *chan)
 {
   tor_assert(chan);
 
