@@ -155,6 +155,7 @@ connection_buf_add_compress(const char *string, size_t len,
 {
   connection_write_to_buf_impl_(string, len, TO_CONN(conn), done ? -1 : 1);
 }
+void connection_buf_add_buf(connection_t *conn, buf_t *buf);
 
 /* DOCDOC connection_get_inbuf_len */
 static size_t connection_get_inbuf_len(connection_t *conn);
