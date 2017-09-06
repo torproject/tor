@@ -3459,9 +3459,6 @@ typedef struct or_circuit_t {
   /* We have already received an INTRODUCE1 cell on this circuit. */
   unsigned int already_received_introduce1 : 1;
 
-  /** True iff this circuit was made with a CREATE_FAST cell. */
-  unsigned int is_first_hop : 1;
-
   /** If set, this circuit carries HS traffic. Consider it in any HS
    *  statistics. */
   unsigned int circuit_carries_hs_traffic_stats : 1;

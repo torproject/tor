@@ -1611,12 +1611,12 @@ onionskin_answer(or_circuit_t *circ,
 
   memcpy(circ->rend_circ_nonce, rend_circ_nonce, DIGEST_LEN);
 
-  circ->is_first_hop = (created_cell->cell_type == CELL_CREATED_FAST);
+  int used_create_fast = (created_cell->cell_type == CELL_CREATED_FAST);
 
   append_cell_to_circuit_queue(TO_CIRCUIT(circ),
                                circ->p_chan, &cell, CELL_DIRECTION_IN, 0);
   log_debug(LD_CIRC,"Finished sending '%s' cell.",
-            circ->is_first_hop ? "created_fast" : "created");
+            used_create_fast ? "created_fast" : "created");
 
   /* Ignore the local bit when ExtendAllowPrivateAddresses is set:
    * it violates the assumption that private addresses are local.

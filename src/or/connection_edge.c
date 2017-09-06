@@ -3413,7 +3413,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     port = bcell.port;
 
     if (or_circ && or_circ->p_chan) {
-      if ((or_circ->is_first_hop ||
+      const int client_chan = channel_is_client(or_circ->p_chan);
+      if ((client_chan ||
            (!connection_or_digest_is_known_relay(
                 or_circ->p_chan->identity_digest) &&
           should_refuse_unknown_exits(options)))) {
@@ -3423,10 +3424,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "Attempt by %s to open a stream %s. Closing.",
                safe_str(channel_get_canonical_remote_descr(or_circ->p_chan)),
-               or_circ->is_first_hop ? "on first hop of circuit" :
-                                       "from unknown relay");
+               client_chan ? "on first hop of circuit" :
+                             "from unknown relay");
         relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                      or_circ->is_first_hop ?
+                                      client_chan ?
                                         END_STREAM_REASON_TORPROTOCOL :
                                         END_STREAM_REASON_MISC,
                                       NULL);
