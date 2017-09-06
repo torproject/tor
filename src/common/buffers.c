@@ -710,6 +710,53 @@ buf_add(buf_t *buf, const char *string, size_t string_len)
   return (int)buf->datalen;
 }
 
+/** Add a nul-terminated <b>string</b> to <b>buf</b>, not including the
+ * terminating NUL. */
+void
+buf_add_string(buf_t *buf, const char *string)
+{
+  buf_add(buf, string, strlen(string));
+}
+
+/** As tor_snprintf, but write the results into a buf_t */
+void
+buf_add_printf(buf_t *buf, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  buf_add_vprintf(buf, format, ap);
+  va_end(ap);
+}
+
+/** As tor_vsnprintf, but write the results into a buf_t. */
+void
+buf_add_vprintf(buf_t *buf, const char *format, va_list args)
+{
+  /* XXXX Faster implementations are easy enough, but let's optimize later */
+  char *tmp;
+  tor_vasprintf(&tmp, format, args);
+  buf_add(buf, tmp, strlen(tmp));
+  tor_free(tmp);
+}
+
+/** Return a heap-allocated string containing the contents of <b>buf</b>, plus
+ * a NUL byte. If <b>sz_out</b> is provided, set *<b>sz_out</b> to the length
+ * of the returned string, not including the terminating NUL. */
+char *
+buf_extract(buf_t *buf, size_t *sz_out)
+{
+  tor_assert(buf);
+
+  size_t sz = buf_datalen(buf);
+  char *result;
+  result = tor_malloc(sz+1);
+  buf_peek(buf, result, sz);
+  result[sz] = 0;
+  if (sz_out)
+    *sz_out = sz;
+  return result;
+}
+
 /** Helper: copy the first <b>string_len</b> bytes from <b>buf</b>
  * onto <b>string</b>.
  */
