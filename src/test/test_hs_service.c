@@ -1022,6 +1022,7 @@ test_build_update_descriptors(void *arg)
   node_t *node;
   hs_service_t *service;
   hs_service_intro_point_t *ip_cur, *ip_next;
+  routerinfo_t ri;
 
   (void) arg;
 
@@ -1033,9 +1034,9 @@ test_build_update_descriptors(void *arg)
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 03:00:00 UTC",
                            &mock_ns.valid_after);
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
 
@@ -1085,7 +1086,6 @@ test_build_update_descriptors(void *arg)
 
   /* Now, we'll setup a node_t. */
   {
-    routerinfo_t ri;
     tor_addr_t ipv4_addr;
     curve25519_secret_key_t curve25519_secret_key;
 
