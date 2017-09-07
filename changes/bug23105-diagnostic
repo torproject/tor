@@ -1,0 +1,4 @@
+  o Minor features (diagnostic):
+    - Add a stack trace to the bug warnings that can be logged when
+      trying to send an outgoing relay cell with n_chan == 0.
+      Diagnostic attempt for bug 23105.
