@@ -249,7 +249,25 @@ end-users that they aren't expected to understand the message (perhaps
 with a string like "internal error"). Option (A) is to be preferred to
 option (B).
 
+Assertions In Tor
+-----------------
 
+Assertions should be used for bug-detection only.  Don't use assertions to
+detect bad user inputs, network errors, resource exhaustion, or similar
+issues.
+
+Tor is always built with assertions enabled, so try to only use
+`tor_assert()` for cases where you are absolutely sure that crashing is the
+least bad option.  Many bugs have been caused by use of `tor_assert()` when
+another kind of check would have been safer.
+
+If you're writing an assertion to test for a bug that you _can_ recover from,
+use `tor_assert_nonfatal()` in place of `tor_assert()`.  If you'd like to
+write a conditional that incorporates a nonfatal assertion, use the `BUG()`
+macro, as in:
+
+	if (BUG(ptr == NULL))
+		return -1;
 
 Doxygen comment conventions
 ---------------------------
