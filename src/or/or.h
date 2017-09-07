@@ -4160,13 +4160,6 @@ typedef struct {
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
 
-  /** If true, we convert "www.google.com.foo.exit" addresses on the
-   * socks/trans/natd ports into "www.google.com" addresses that
-   * exit from the node "foo". Disabled by default since attacking
-   * websites and exit relays can use it to manipulate your path
-   * selection. */
-  int AllowDotExit;
-
   /** If true, we're configured to collect statistics on clients
    * requesting network statuses from us as directory. */
   int DirReqStatistics_option;

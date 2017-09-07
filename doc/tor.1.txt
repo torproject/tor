@@ -924,7 +924,7 @@ The following options are useful only for clients (that is, if
     The ExcludeNodes option overrides this option: any node listed in both
     ExitNodes and ExcludeNodes is treated as excluded. +
  +
-    The .exit address notation, if enabled via AllowDotExit, overrides
+    The .exit address notation, if enabled via MapAddress, overrides
     this option.
 
 [[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
@@ -1327,12 +1327,6 @@ The following options are useful only for clients (that is, if
     characters (like @ and :) rather than sending them to an exit node to be
     resolved. This helps trap accidental attempts to resolve URLs and so on.
     (Default: 0)
-
-[[AllowDotExit]] **AllowDotExit** **0**|**1**::
-    If enabled, we convert "www.google.com.foo.exit" addresses on the
-    SocksPort/TransPort/NATDPort into "www.google.com" addresses that exit from
-    the node "foo". Disabled by default since attacking websites and exit
-    relays can use it to manipulate your path selection. (Default: 0)
 
 [[HTTPTunnelPort]] **HTTPTunnelPort**  \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for proxy connections using the "HTTP CONNECT"

@@ -206,7 +206,7 @@ static config_var_t option_vars_[] = {
   VAR("AccountingRule",          STRING,   AccountingRule_option,  "max"),
   V(AccountingStart,             STRING,   NULL),
   V(Address,                     STRING,   NULL),
-  V(AllowDotExit,                BOOL,     "0"),
+  OBSOLETE("AllowDotExit"),
   OBSOLETE("AllowInvalidNodes"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
   OBSOLETE("AllowSingleHopCircuits"),
@@ -671,8 +671,6 @@ static const config_var_t testing_tor_network_defaults[] = {
 
 static const config_deprecation_t option_deprecation_notes_[] = {
   /* Deprecated since 0.2.9.2-alpha... */
-  { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
-    "a wide variety of application-level attacks." },
   { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
     "easier to fingerprint, and may open you to esoteric attacks." },
   /* End of options deprecated since 0.2.9.2-alpha. */
