@@ -70,6 +70,7 @@ uptime-*.json
 /Tor*Bundle.dmg
 /tor-*-win32.exe
 /coverage_html/
+/callgraph/
 
 # /contrib/
 /contrib/dist/tor.sh

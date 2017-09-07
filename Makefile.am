@@ -224,6 +224,10 @@ check-changes:
 update-versions:
 	$(PERL) $(top_builddir)/scripts/maint/updateVersions.pl
 
+.PHONY: callgraph
+callgraph:
+	$(top_builddir)/scripts/maint/run_calltool.sh
+
 version:
 	@echo "Tor @VERSION@"
 	@if test -d "$(top_srcdir)/.git" && test -x "`which git 2>&1;true`"; then \
