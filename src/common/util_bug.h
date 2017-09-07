@@ -5,6 +5,32 @@
 
 /**
  * \file util_bug.h
+ *
+ * \brief Macros to manage assertions, fatal and non-fatal.
+ *
+ * Guidelines: All the different kinds of assertion in this file are for
+ * bug-checking only. Don't write code that can assert based on bad inputs.
+ *
+ * We provide two kinds of assertion here: "fatal" and "nonfatal". Use
+ * nonfatal assertions for any bug you can reasonably recover from -- and
+ * please, try to recover!  Many severe bugs in Tor have been caused by using
+ * a regular assertion when a nonfatal assertion would have been better.
+ *
+ * If you need to check a condition with a nonfatal assertion, AND recover
+ * from that same condition, consider using the BUG() macro inside a
+ * conditional.  For example:
+ *
+ * <code>
+ *  // wrong -- use tor_assert_nonfatal() if you just want an assertion.
+ *  BUG(ptr == NULL);
+ *
+ *  // okay, but needlessly verbose
+ *  tor_assert_nonfatal(ptr != NULL);
+ *  if (ptr == NULL) { ... }
+ *
+ *  // this is how we do it:
+ *  if (BUG(ptr == NULL)) { ... }
+ * </code>
  **/
 
 #ifndef TOR_UTIL_BUG_H
