@@ -11,7 +11,7 @@ fi
 
 mkdir -p callgraph
 
-SUBITEMS="fn_invgraph fn_scc fn_scc_weaklinks module_graph module_invgraph module_scc module_scc_weaklinks"
+SUBITEMS="fn_graph fn_invgraph fn_scc fn_scc_weaklinks module_graph module_invgraph module_scc module_scc_weaklinks"
 
 for calculation in $SUBITEMS; do
   echo "======== $calculation"
