@@ -1609,6 +1609,30 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
   return NULL;
 }
 
+/** We might cannibalize this circuit: Return true if its last hop can be used
+ *  as a v3 rendezvous point. */
+static int
+circuit_can_be_cannibalized_for_v3_rp(const origin_circuit_t *circ)
+{
+  if (!circ->build_state) {
+    return 0;
+  }
+
+  extend_info_t *chosen_exit = circ->build_state->chosen_exit;
+  if (BUG(!chosen_exit)) {
+    return 0;
+  }
+
+  const node_t *rp_node = node_get_by_id(chosen_exit->identity_digest);
+  if (rp_node) {
+    if (node_supports_v3_rendezvous_point(rp_node)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 /** Return a circuit that is open, is CIRCUIT_PURPOSE_C_GENERAL,
  * has a timestamp_dirty value of 0, has flags matching the CIRCLAUNCH_*
  * flags in <b>flags</b>, and if info is defined, does not already use info
@@ -1691,6 +1715,14 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
             hop = hop->next;
           } while (hop != circ->cpath);
         }
+
+        if ((flags & CIRCLAUNCH_IS_V3_RP) &&
+            !circuit_can_be_cannibalized_for_v3_rp(circ)) {
+          log_debug(LD_GENERAL, "Skipping uncannibalizable circuit for v3 "
+                    "rendezvous point.");
+          goto next;
+        }
+
         if (!best || (best->build_state->need_uptime && !need_uptime))
           best = circ;
       next: ;

@@ -21,6 +21,8 @@
 #define PROTOVER_HSDIR_V3 2
 /** The protover version number that signifies HSv3 intro point support */
 #define PROTOVER_HS_INTRO_V3 4
+/** The protover version number that signifies HSv3 rendezvous point support */
+#define PROTOVER_HS_RENDEZVOUS_POINT_V3 2
 
 /** List of recognized subprotocols. */
 typedef enum protocol_type_t {

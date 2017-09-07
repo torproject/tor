@@ -2329,6 +2329,11 @@ typedef struct routerstatus_t {
    * requires HSDir=2. */
   unsigned int supports_v3_hsdir : 1;
 
+  /** True iff this router has a protocol list that allows it to be an hidden
+   * service rendezvous point supporting version 3 as seen in proposal 224.
+   * This requires HSRend=2. */
+  unsigned int supports_v3_rendezvous_point: 1;
+
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
   unsigned int bw_is_unmeasured:1; /**< This is a consensus entry, with
@@ -5393,7 +5398,10 @@ typedef enum {
   CRN_PREF_ADDR = 1<<7,
   /* On clients, only provide nodes that we can connect to directly, based on
    * our firewall rules */
-  CRN_DIRECT_CONN = 1<<8
+  CRN_DIRECT_CONN = 1<<8,
+  /* On clients, only provide nodes with HSRend >= 2 protocol version which
+   * is required for hidden service version >= 3. */
+  CRN_RENDEZVOUS_V3 = 1<<9,
 } router_crn_flags_t;
 
 /** Return value for router_add_to_routerlist() and dirserv_add_descriptor() */

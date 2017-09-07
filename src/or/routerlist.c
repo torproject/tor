@@ -2799,6 +2799,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int need_desc = (flags & CRN_NEED_DESC) != 0;
   const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
   const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
+  const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
 
   smartlist_t *sl=smartlist_new(),
     *excludednodes=smartlist_new();
@@ -2810,12 +2811,19 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   rule = weight_for_exit ? WEIGHT_FOR_EXIT :
     (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
-  /* Exclude relays that allow single hop exit circuits. This is an obsolete
-   * option since 0.2.9.2-alpha and done by default in 0.3.1.0-alpha. */
-  SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
+  SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
     if (node_allows_single_hop_exits(node)) {
+      /* Exclude relays that allow single hop exit circuits. This is an
+       * obsolete option since 0.2.9.2-alpha and done by default in
+       * 0.3.1.0-alpha. */
       smartlist_add(excludednodes, node);
-    });
+    } else if (rendezvous_v3 &&
+               !node_supports_v3_rendezvous_point(node)) {
+      /* Exclude relays that do not support to rendezvous for a hidden service
+       * version 3. */
+      smartlist_add(excludednodes, node);
+    }
+  } SMARTLIST_FOREACH_END(node);
 
   if ((r = routerlist_find_my_routerinfo()))
     routerlist_add_node_and_family(excludednodes, r);

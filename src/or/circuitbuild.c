@@ -71,7 +71,8 @@ static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
 static int circuit_deliver_create_cell(circuit_t *circ,
                                        const create_cell_t *create_cell,
                                        int relayed);
-static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
+static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit,
+                                 int is_hs_v3_rp_circuit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
@@ -505,10 +506,15 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit_ei, int flags)
 {
   origin_circuit_t *circ;
   int err_reason = 0;
+  int is_hs_v3_rp_circuit = 0;
+
+  if (flags & CIRCLAUNCH_IS_V3_RP) {
+    is_hs_v3_rp_circuit = 1;
+  }
 
   circ = origin_circuit_init(purpose, flags);
 
-  if (onion_pick_cpath_exit(circ, exit_ei) < 0 ||
+  if (onion_pick_cpath_exit(circ, exit_ei, is_hs_v3_rp_circuit) < 0 ||
       onion_populate_cpath(circ) < 0) {
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NOPATH);
     return NULL;
@@ -2156,7 +2162,8 @@ pick_rendezvous_node(router_crn_flags_t flags)
  */
 static const node_t *
 choose_good_exit_server(uint8_t purpose,
-                        int need_uptime, int need_capacity, int is_internal)
+                        int need_uptime, int need_capacity, int is_internal,
+                        int need_hs_v3)
 {
   const or_options_t *options = get_options();
   router_crn_flags_t flags = CRN_NEED_DESC;
@@ -2164,6 +2171,8 @@ choose_good_exit_server(uint8_t purpose,
     flags |= CRN_NEED_UPTIME;
   if (need_capacity)
     flags |= CRN_NEED_CAPACITY;
+  if (need_hs_v3)
+    flags |= CRN_RENDEZVOUS_V3;
 
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
@@ -2263,9 +2272,15 @@ warn_if_last_router_excluded(origin_circuit_t *circ,
 
 /** Decide a suitable length for circ's cpath, and pick an exit
  * router (or use <b>exit</b> if provided). Store these in the
- * cpath. Return 0 if ok, -1 if circuit should be closed. */
+ * cpath.
+ *
+ * If <b>is_hs_v3_rp_circuit</b> is set, then this exit should be suitable to
+ * be used as an HS v3 rendezvous point.
+ *
+ * Return 0 if ok, -1 if circuit should be closed. */
 static int
-onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
+onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
+                      int is_hs_v3_rp_circuit)
 {
   cpath_build_state_t *state = circ->build_state;
 
@@ -2289,7 +2304,8 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
   } else { /* we have to decide one */
     const node_t *node =
       choose_good_exit_server(circ->base_.purpose, state->need_uptime,
-                              state->need_capacity, state->is_internal);
+                              state->need_capacity, state->is_internal,
+                              is_hs_v3_rp_circuit);
     if (!node) {
       log_warn(LD_CIRC,"Failed to choose an exit server");
       return -1;
