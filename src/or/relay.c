@@ -48,6 +48,7 @@
 #define RELAY_PRIVATE
 #include "or.h"
 #include "addressmap.h"
+#include "backtrace.h"
 #include "buffers.h"
 #include "channel.h"
 #include "circpathbias.h"
@@ -500,11 +501,13 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     if (!chan) {
       log_warn(LD_BUG,"outgoing relay cell sent from %s:%d has n_chan==NULL."
                " Dropping.", filename, lineno);
+      log_backtrace(LOG_WARN,LD_BUG,"");
       return 0; /* just drop it */
     }
     if (!CIRCUIT_IS_ORIGIN(circ)) {
       log_warn(LD_BUG,"outgoing relay cell sent from %s:%d on non-origin "
                "circ. Dropping.", filename, lineno);
+      log_backtrace(LOG_WARN,LD_BUG,"");
       return 0; /* just drop it */
     }
 
