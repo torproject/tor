@@ -4203,7 +4203,7 @@ typedef struct {
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
    * Helps avoid some cross-site attacks. */
-  int ClientDNSRejectInternalAddresses;
+  int TestingClientDNSRejectInternalAddresses;
 
   /** If true, do not accept any requests to connect to internal addresses
    * over randomly chosen exits. */

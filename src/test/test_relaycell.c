@@ -112,7 +112,7 @@ test_relaycell_resolved(void *arg)
   MOCK(connection_mark_unattached_ap_, mark_unattached_mock);
   MOCK(connection_ap_handshake_socks_resolved, socks_resolved_mock);
 
-  options->ClientDNSRejectInternalAddresses = 0;
+  options->TestingClientDNSRejectInternalAddresses = 0;
 
   SET_CELL(/* IPv4: 127.0.1.2, ttl 256 */
            "\x04\x04\x7f\x00\x01\x02\x00\x00\x01\x00"
@@ -151,7 +151,7 @@ test_relaycell_resolved(void *arg)
 
   /* But we may be discarding private answers. */
   MOCK_RESET();
-  options->ClientDNSRejectInternalAddresses = 1;
+  options->TestingClientDNSRejectInternalAddresses = 1;
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
   tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|

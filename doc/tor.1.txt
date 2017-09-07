@@ -1408,12 +1408,6 @@ The following options are useful only for clients (that is, if
     addresses/ports. See SocksPort for an explanation of isolation
     flags. (Default: 0)
 
-[[ClientDNSRejectInternalAddresses]] **ClientDNSRejectInternalAddresses** **0**|**1**::
-    If true, Tor does not believe any anonymously retrieved DNS answer that
-    tells it that an address resolves to an internal address (like 127.0.0.1 or
-    192.168.0.1). This option prevents certain browser-based attacks; don't
-    turn it off unless you know what you're doing. (Default: 1)
-
 [[ClientRejectInternalAddresses]] **ClientRejectInternalAddresses** **0**|**1**::
     If true, Tor does not try to fulfill requests to connect to an internal
     address (like 127.0.0.1 or 192.168.0.1) __unless a exit node is
@@ -2468,7 +2462,7 @@ The following options are used for running a testing Tor network.
           4 (for 40 seconds), 8, 16, 32, 60
        ClientBootstrapConsensusMaxDownloadTries 80
        ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries 80
-       ClientDNSRejectInternalAddresses 0
+       TestingClientDNSRejectInternalAddresses 0
        ClientRejectInternalAddresses 0
        CountPrivateBandwidth 1
        ExitPolicyRejectPrivate 0
@@ -2669,6 +2663,13 @@ The following options are used for running a testing Tor network.
     How early before the official expiration of a an Ed25519 signing key do
     we replace it and issue a new key?
     (Default: 3 hours for link and auth; 1 day for signing.)
+
+[[ClientDNSRejectInternalAddresses]] [[TestingClientDNSRejectInternalAddresses]] **TestingClientDNSRejectInternalAddresses** **0**|**1**::
+    If true, Tor does not believe any anonymously retrieved DNS answer that
+    tells it that an address resolves to an internal address (like 127.0.0.1 or
+    192.168.0.1). This option prevents certain browser-based attacks; don't
+    turn it off unless you know what you're doing. (Default: 1)
+
 
 NON-PERSISTENT OPTIONS
 ----------------------
