@@ -81,6 +81,7 @@
 #include "hibernate.h"
 #include "hs_cache.h"
 #include "hs_circuitmap.h"
+#include "hs_client.h"
 #include "keypin.h"
 #include "main.h"
 #include "microdesc.h"
@@ -1144,7 +1145,7 @@ signewnym_impl(time_t now)
 
   circuit_mark_all_dirty_circs_as_unusable();
   addressmap_clear_transient();
-  rend_client_purge_state();
+  hs_client_purge_state();
   time_of_last_signewnym = now;
   signewnym_is_pending = 0;
 

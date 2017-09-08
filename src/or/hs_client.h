@@ -46,6 +46,8 @@ extend_info_t *hs_client_get_random_intro_from_edge(
 
 int hs_client_reextend_intro_circuit(origin_circuit_t *circ);
 
+void hs_client_purge_state(void);
+
 void hs_client_free_all(void);
 
 #ifdef HS_CLIENT_PRIVATE

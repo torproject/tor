@@ -33,6 +33,30 @@
 #include "circuitbuild.h"
 #include "networkstatus.h"
 
+/* Cancel all descriptor fetches currently in progress. */
+static void
+cancel_descriptor_fetches(void)
+{
+  smartlist_t *conns =
+    connection_list_by_type_state(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    const hs_ident_dir_conn_t *ident = TO_DIR_CONN(conn)->hs_ident;
+    if (BUG(ident == NULL)) {
+      /* A directory connection fetching a service descriptor can't have an
+       * empty hidden service identifier. */
+      continue;
+    }
+    log_debug(LD_REND, "Marking for close a directory connection fetching "
+                       "a hidden service descriptor for service %s.",
+              safe_str_client(ed25519_fmt(&ident->identity_pk)));
+    connection_mark_for_close(conn);
+  } SMARTLIST_FOREACH_END(conn);
+
+  /* No ownership of the objects in this list. */
+  smartlist_free(conns);
+  log_info(LD_REND, "Hidden service client descriptor fetches cancelled.");
+}
+
 /* Get all connections that are waiting on a circuit and flag them back to
  * waiting for a hidden service descriptor for the given service key
  * service_identity_pk. */
@@ -1273,5 +1297,26 @@ hs_client_free_all(void)
 {
   /* Purge the hidden service request cache. */
   hs_purge_last_hid_serv_requests();
+}
+
+/* Purge all potentially remotely-detectable state held in the hidden
+ * service client code. Called on SIGNAL NEWNYM. */
+void
+hs_client_purge_state(void)
+{
+  /* v2 subsystem. */
+  rend_client_purge_state();
+
+  /* Cancel all descriptor fetches. Do this first so once done we are sure
+   * that our descriptor cache won't modified. */
+  cancel_descriptor_fetches();
+  /* Purge the introduction point state cache. */
+  hs_cache_client_intro_state_purge();
+  /* Purge the descriptor cache. */
+  hs_cache_purge_as_client();
+  /* Purge the last hidden service request cache. */
+  hs_purge_last_hid_serv_requests();
+
+  log_info(LD_REND, "Hidden service client state has been purged.");
 }
 

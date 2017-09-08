@@ -4124,14 +4124,25 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
     return ret_conns; \
   STMT_END
 
-/* Return a list of connections that aren't close and matches the given state.
- * The returned list can be empty and must be freed using smartlist_free().
- * The caller does NOT have owernship of the objects in the list so it must
- * not free them nor reference them as they can disapear. */
+/* Return a list of connections that aren't close and matches the given type
+ * and state. The returned list can be empty and must be freed using
+ * smartlist_free(). The caller does NOT have owernship of the objects in the
+ * list so it must not free them nor reference them as they can disappear. */
 smartlist_t *
 connection_list_by_type_state(int type, int state)
 {
   CONN_GET_ALL_TEMPLATE(conn, (conn->type == type && conn->state == state));
+}
+
+/* Return a list of connections that aren't close and matches the given type
+ * and purpose. The returned list can be empty and must be freed using
+ * smartlist_free(). The caller does NOT have owernship of the objects in the
+ * list so it must not free them nor reference them as they can disappear. */
+smartlist_t *
+connection_list_by_type_purpose(int type, int purpose)
+{
+  CONN_GET_ALL_TEMPLATE(conn,
+                        (conn->type == type && conn->purpose == purpose));
 }
 
 /** Return a connection_t * from get_connection_array() that satisfies test on

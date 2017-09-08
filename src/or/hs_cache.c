@@ -726,6 +726,23 @@ hs_cache_clean_as_client(time_t now)
   cache_clean_v3_as_client(now);
 }
 
+/* Purge the client descriptor cache. */
+void
+hs_cache_purge_as_client(void)
+{
+  DIGEST256MAP_FOREACH_MODIFY(hs_cache_v3_client, key,
+                              hs_cache_client_descriptor_t *, entry) {
+    size_t entry_size = cache_get_client_entry_size(entry);
+    MAP_DEL_CURRENT(key);
+    cache_client_desc_free(entry);
+    /* Update our OOM. We didn't use the remove() function because we are in
+     * a loop so we have to explicitely decrement. */
+    rend_cache_decrement_allocation(entry_size);
+  } DIGEST256MAP_FOREACH_END;
+
+  log_info(LD_REND, "Hidden service client descriptor cache purged.");
+}
+
 /* For a given service identity public key and an introduction authentication
  * key, note the given failure in the client intro state cache. */
 void
@@ -777,6 +794,20 @@ hs_cache_client_intro_state_clean(time_t now)
       MAP_DEL_CURRENT(key);
     }
   } DIGEST256MAP_FOREACH_END;
+}
+
+/* Purge the client introduction state cache. */
+void
+hs_cache_client_intro_state_purge(void)
+{
+  DIGEST256MAP_FOREACH_MODIFY(hs_cache_client_intro_state, key,
+                              hs_cache_client_intro_state_t *, cache) {
+    MAP_DEL_CURRENT(key);
+    cache_client_intro_state_free(cache);
+  } DIGEST256MAP_FOREACH_END;
+
+  log_info(LD_REND, "Hidden service client introduction point state "
+                    "cache purged.");
 }
 
 /**************** Generics *********************************/
