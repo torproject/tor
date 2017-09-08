@@ -1277,18 +1277,18 @@ node_has_hsdir_index(const node_t *node)
 
 /* For a given blinded key and time period number, get the responsible HSDir
  * and put their routerstatus_t object in the responsible_dirs list. If
- * is_next_period is true, the next hsdir_index of the node_t is used. If
- * 'for_fetching' is true, the spread fetch consensus parameter is used else
- * the spread store is used which is only for upload. This function can't fail
- * but it is possible that the responsible_dirs list contains fewer nodes than
- * expected.
+ * 'use_second_hsdir_index' is true, use the second hsdir_index of the node_t
+ * is used. If 'for_fetching' is true, the spread fetch consensus parameter is
+ * used else the spread store is used which is only for upload. This function
+ * can't fail but it is possible that the responsible_dirs list contains fewer
+ * nodes than expected.
  *
  * This function goes over the latest consensus routerstatus list and sorts it
  * by their node_t hsdir_index then does a binary search to find the closest
  * node. All of this makes it a bit CPU intensive so use it wisely. */
 void
 hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
-                          uint64_t time_period_num, int is_new_tp,
+                          uint64_t time_period_num, int use_second_hsdir_index,
                           int for_fetching, smartlist_t *responsible_dirs)
 {
   smartlist_t *sorted_nodes;
@@ -1336,7 +1336,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   if (for_fetching) {
     smartlist_sort(sorted_nodes, compare_node_fetch_hsdir_index);
     cmp_fct = compare_digest_to_fetch_hsdir_index;
-  } else if (is_new_tp) {
+  } else if (use_second_hsdir_index) {
     smartlist_sort(sorted_nodes, compare_node_store_second_hsdir_index);
     cmp_fct = compare_digest_to_store_second_hsdir_index;
   } else {
