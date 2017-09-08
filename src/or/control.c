@@ -3591,12 +3591,15 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   int cache = 0; /* eventually, we may switch this to 1 */
 
   const char *cp = memchr(body, '\n', len);
-  smartlist_t *args = smartlist_new();
-  tor_assert(cp);
+
+  if (cp == NULL) {
+    connection_printf_to_buf(conn, "251 Empty body\r\n");
+    return 0;
+  }
   ++cp;
 
   char *cmdline = tor_memdup_nulterm(body, cp-body);
-
+  smartlist_t *args = smartlist_new();
   smartlist_split_string(args, cmdline, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(args, char *, option) {
@@ -4189,13 +4192,18 @@ handle_control_hspost(control_connection_t *conn,
                       const char *body)
 {
   static const char *opt_server = "SERVER=";
-  smartlist_t *args = smartlist_new();
   smartlist_t *hs_dirs = NULL;
   const char *encoded_desc = body;
   size_t encoded_desc_len = len;
 
   char *cp = memchr(body, '\n', len);
+  if (cp == NULL) {
+    connection_printf_to_buf(conn, "251 Empty body\r\n");
+    return 0;
+  }
   char *argline = tor_strndup(body, cp-body);
+
+  smartlist_t *args = smartlist_new();
 
   /* If any SERVER= options were specified, try parse the options line */
   if (!strcasecmpstart(argline, opt_server)) {
