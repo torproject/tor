@@ -1,0 +1,4 @@
+  o Minor features (controller):
+    - Added new GETINFO targets ip-to-country/{ipv4,ipv6}-available, so
+      controllers can tell whether the geoip databases are loaded.
+      Closes ticket 23237.

@@ -1665,6 +1665,15 @@ getinfo_helper_geoip(control_connection_t *control_conn,
     sa_family_t family;
     tor_addr_t addr;
     question += strlen("ip-to-country/");
+
+    if (!strcmp(question, "ipv4-available") ||
+        !strcmp(question, "ipv6-available")) {
+      family = !strcmp(question, "ipv4-available") ? AF_INET : AF_INET6;
+      const int available = geoip_is_loaded(family);
+      tor_asprintf(answer, "%d", !! available);
+      return 0;
+    }
+
     family = tor_addr_parse(&addr, question);
     if (family != AF_INET && family != AF_INET6) {
       *errmsg = "Invalid address family";
