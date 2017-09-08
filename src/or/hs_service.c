@@ -2382,21 +2382,17 @@ STATIC void
 upload_descriptor_to_all(const hs_service_t *service,
                          hs_service_descriptor_t *desc)
 {
-  unsigned int is_new_tp = 0;
   smartlist_t *responsible_dirs = NULL;
 
   tor_assert(service);
   tor_assert(desc);
 
-  /* Do we have a new TP that is are we between a new time period and the next
-   * SRV creation? */
-  is_new_tp = hs_in_period_between_tp_and_srv(NULL, approx_time());
   /* Get our list of responsible HSDir. */
   responsible_dirs = smartlist_new();
   /* The parameter 0 means that we aren't a client so tell the function to use
    * the spread store consensus paremeter. */
   hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
-                            is_new_tp, 0, responsible_dirs);
+                            service->desc_next == desc, 0, responsible_dirs);
 
   /** Clear list of previous hsdirs since we are about to upload to a new
    *  list. Let's keep it up to date. */

@@ -146,8 +146,8 @@ typedef struct hsdir_index_t {
   uint8_t fetch[DIGEST256_LEN];
 
   /* HSDir index used by services to store their first and second
-   * descriptor. The first descriptor is the one that uses older TP and SRV
-   * values than the second one. */
+   * descriptor. The first descriptor is chronologically older than the second
+   * one and uses older TP and SRV values. */
   uint8_t store_first[DIGEST256_LEN];
   uint8_t store_second[DIGEST256_LEN];
 } hsdir_index_t;
