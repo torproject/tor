@@ -45,6 +45,7 @@
 #include "main.h"
 #include "rendservice.h"
 #include "statefile.h"
+#include "shared_random_state.h"
 
 /* Trunnel */
 #include "hs/cell_establish_intro.h"
@@ -96,17 +97,6 @@ mock_relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
   (void) filename;
   (void) lineno;
   return 0;
-}
-
-/* Mock function that always return true so we can test the descriptor
- * creation of the next time period deterministically. */
-static int
-mock_hs_overlap_mode_is_active_true(const networkstatus_t *consensus,
-                                    time_t now)
-{
-  (void) consensus;
-  (void) now;
-  return 1;
 }
 
 /* Helper: from a set of options in conf, configure a service which will add
@@ -942,27 +932,30 @@ test_service_event(void *arg)
   UNMOCK(circuit_mark_for_close_);
 }
 
-/** Test that we rotate descriptors correctly in overlap period */
+/** Test that we rotate descriptors correctly. */
 static void
 test_rotate_descriptors(void *arg)
 {
   int ret;
-  time_t now = time(NULL);
+  time_t next_rotation_time, now = time(NULL);
   hs_service_t *service;
   hs_service_descriptor_t *desc_next;
-  hs_service_intro_point_t *ip;
 
   (void) arg;
 
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+
   hs_init();
+  MOCK(get_or_state, get_or_state_replacement);
   MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
 
-  /* Setup the valid_after time to be 13:00 UTC, not in overlap period. The
-   * overlap check doesn't care about the year. */
+  /* Descriptor rotation happens with a consensus with a new SRV. */
+
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
                            &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
@@ -970,68 +963,67 @@ test_rotate_descriptors(void *arg)
   /* Create a service with a default descriptor and state. It's added to the
    * global map. */
   service = helper_create_service();
-  ip = helper_create_service_ip();
-  service_intro_point_add(service->desc_current->intro_points.map, ip);
-
-  /* Nothing should happen because we are not in the overlap period. */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
+  service_descriptor_free(service->desc_current);
+  service->desc_current = NULL;
+  /* This triggers a build for both descriptors. The time now is only used in
+   * the descriptor certificate which is important to be now else the decoding
+   * will complain that the cert has expired if we use valid_after. */
+  build_all_descriptors(now);
   tt_assert(service->desc_current);
-  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
-            OP_EQ, 1);
+  tt_assert(service->desc_next);
 
-  /* Entering an overlap period. */
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 01:00:00 UTC",
+  /* Tweak our service next rotation time so we can use a custom time. */
+  service->state.next_rotation_time = next_rotation_time =
+    mock_ns.valid_after + (11 * 60 * 60);
+
+  /* Nothing should happen, we are not at a new SRV. Our next rotation time
+   * should be untouched. */
+  rotate_all_descriptors(mock_ns.valid_after);
+  tt_u64_op(service->state.next_rotation_time, OP_EQ, next_rotation_time);
+  tt_assert(service->desc_current);
+  tt_assert(service->desc_next);
+  tt_u64_op(service->desc_current->time_period_num, OP_EQ,
+            hs_get_previous_time_period_num(0));
+  tt_u64_op(service->desc_next->time_period_num, OP_EQ,
+            hs_get_time_period_num(0));
+  /* Keep a reference so we can compare it after rotation to the current. */
+  desc_next = service->desc_next;
+
+  /* Going right after a new SRV. */
+  ret = parse_rfc1123_time("Sat, 27 Oct 1985 01:00:00 UTC",
                            &mock_ns.valid_after);
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 02:00:00 UTC",
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 27 Oct 1985 02:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  desc_next = service_descriptor_new();
-  desc_next->next_upload_time = 42; /* Our marker to recognize it. */
-  service->desc_next = desc_next;
-  /* We should have our state flagged to be in the overlap period, our current
-   * descriptor cleaned up and the next descriptor becoming the current. */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 1);
+
+  /* Note down what to expect for the next rotation time which is 01:00 + 23h
+   * meaning 00:00:00. */
+  next_rotation_time = mock_ns.valid_after + (23 * 60 * 60);
+  /* We should have our next rotation time modified, our current descriptor
+   * cleaned up and the next descriptor becoming the current. */
+  rotate_all_descriptors(mock_ns.valid_after);
+  tt_u64_op(service->state.next_rotation_time, OP_EQ, next_rotation_time);
   tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
-  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
-            OP_EQ, 0);
   tt_assert(service->desc_next == NULL);
+
   /* A second time should do nothing. */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 1);
-  tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
-  tt_int_op(digest256map_size(service->desc_current->intro_points.map),
-            OP_EQ, 0);
-  tt_assert(service->desc_next == NULL);
-
-  /* Now let's re-create desc_next and get out of overlap period. We should
-     test that desc_current gets replaced by desc_next, and desc_next becomes
-     NULL. */
-  desc_next = service_descriptor_new();
-  desc_next->next_upload_time = 240; /* Our marker to recognize it. */
-  service->desc_next = desc_next;
-
-  /* Going out of the overlap period. */
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC",
-                           &mock_ns.valid_after);
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
-                           &mock_ns.fresh_until);
-  /* This should reset the state and not touch the current descriptor. */
-  tt_int_op(ret, OP_EQ, 0);
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
+  rotate_all_descriptors(mock_ns.valid_after);
+  tt_u64_op(service->state.next_rotation_time, OP_EQ, next_rotation_time);
   tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
   tt_assert(service->desc_next == NULL);
 
-  /* Calling rotate_all_descriptors() another time should do nothing */
-  rotate_all_descriptors(now);
-  tt_int_op(service->state.in_overlap_period, OP_EQ, 0);
+  build_all_descriptors(now);
   tt_mem_op(service->desc_current, OP_EQ, desc_next, sizeof(*desc_next));
-  tt_assert(service->desc_next == NULL);
+  tt_u64_op(service->desc_current->time_period_num, OP_EQ,
+            hs_get_time_period_num(0));
+  tt_u64_op(service->desc_next->time_period_num, OP_EQ,
+            hs_get_next_time_period_num(0));
+  tt_assert(service->desc_next);
 
  done:
   hs_free_all();
+  UNMOCK(get_or_state);
   UNMOCK(circuit_mark_for_close_);
   UNMOCK(networkstatus_get_live_consensus);
 }
@@ -1043,38 +1035,46 @@ test_build_update_descriptors(void *arg)
 {
   int ret;
   time_t now = time(NULL);
-  uint64_t period_num = hs_get_time_period_num(now);
-  uint64_t next_period_num = hs_get_next_time_period_num(now);
   node_t *node;
   hs_service_t *service;
   hs_service_intro_point_t *ip_cur, *ip_next;
+  routerinfo_t ri;
 
   (void) arg;
 
   hs_init();
-  MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
+
   MOCK(get_or_state,
        get_or_state_replacement);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
-  /* Create a service without a current descriptor to trigger a build. */
-  service = hs_service_new(get_options());
-  tt_assert(service);
-  service->config.version = HS_VERSION_THREE;
-  ed25519_secret_key_generate(&service->keys.identity_sk, 0);
-  ed25519_public_key_generate(&service->keys.identity_pk,
-                              &service->keys.identity_sk);
-  /* Register service to global map. */
-  ret = register_service(get_hs_service_map(), service);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 03:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
+                           &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
 
+  /* Create a service without a current descriptor to trigger a build. */
+  service = helper_create_service();
+  tt_assert(service);
+  /* Unfortunately, the helper creates a dummy descriptor so get rid of it. */
+  service_descriptor_free(service->desc_current);
+  service->desc_current = NULL;
+
+  /* We have a fresh service so this should trigger a build for both
+   * descriptors for specific time period that we'll test. */
   build_all_descriptors(now);
   /* Check *current* descriptor. */
   tt_assert(service->desc_current);
   tt_assert(service->desc_current->desc);
   tt_assert(service->desc_current->intro_points.map);
-  tt_u64_op(service->desc_current->time_period_num, OP_EQ, period_num);
+  /* The current time period is the one expected when starting at 03:00. */
+  tt_u64_op(service->desc_current->time_period_num, OP_EQ,
+            hs_get_time_period_num(0));
   /* This should be untouched, the update descriptor process changes it. */
   tt_u64_op(service->desc_current->next_upload_time, OP_EQ, 0);
 
@@ -1083,7 +1083,8 @@ test_build_update_descriptors(void *arg)
   tt_assert(service->desc_next->desc);
   tt_assert(service->desc_next->intro_points.map);
   tt_assert(service->desc_current != service->desc_next);
-  tt_u64_op(service->desc_next->time_period_num, OP_EQ, next_period_num);
+  tt_u64_op(service->desc_next->time_period_num, OP_EQ,
+            hs_get_next_time_period_num(0));
   /* This should be untouched, the update descriptor process changes it. */
   tt_u64_op(service->desc_next->next_upload_time, OP_EQ, 0);
 
@@ -1101,7 +1102,6 @@ test_build_update_descriptors(void *arg)
 
   /* Now, we'll setup a node_t. */
   {
-    routerinfo_t ri;
     tor_addr_t ipv4_addr;
     curve25519_secret_key_t curve25519_secret_key;
 
@@ -1184,10 +1184,64 @@ test_build_update_descriptors(void *arg)
   tt_u64_op(ip_cur->time_to_expire, OP_LE, now +
             INTRO_POINT_LIFETIME_MAX_SECONDS);
 
+  /* Now, we will try to set up a service after a new time period has started
+   * and see if it behaves as expected. */
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Create a service without a current descriptor to trigger a build. */
+  service = helper_create_service();
+  tt_assert(service);
+  /* Unfortunately, the helper creates a dummy descriptor so get rid of it. */
+  service_descriptor_free(service->desc_current);
+  service->desc_current = NULL;
+
+  /* We have a fresh service so this should trigger a build for both
+   * descriptors for specific time period that we'll test. */
+  build_all_descriptors(now);
+  /* Check *current* descriptor. */
+  tt_assert(service->desc_current);
+  tt_assert(service->desc_current->desc);
+  tt_assert(service->desc_current->intro_points.map);
+  /* This should be for the previous time period. */
+  tt_u64_op(service->desc_current->time_period_num, OP_EQ,
+            hs_get_previous_time_period_num(0));
+  /* This should be untouched, the update descriptor process changes it. */
+  tt_u64_op(service->desc_current->next_upload_time, OP_EQ, 0);
+
+  /* Check *next* descriptor. */
+  tt_assert(service->desc_next);
+  tt_assert(service->desc_next->desc);
+  tt_assert(service->desc_next->intro_points.map);
+  tt_assert(service->desc_current != service->desc_next);
+  tt_u64_op(service->desc_next->time_period_num, OP_EQ,
+            hs_get_time_period_num(0));
+  /* This should be untouched, the update descriptor process changes it. */
+  tt_u64_op(service->desc_next->next_upload_time, OP_EQ, 0);
+
+  /* Let's remove the next descriptor to simulate a rotation. */
+  service_descriptor_free(service->desc_next);
+  service->desc_next = NULL;
+
+  build_all_descriptors(now);
+  /* Check *next* descriptor. */
+  tt_assert(service->desc_next);
+  tt_assert(service->desc_next->desc);
+  tt_assert(service->desc_next->intro_points.map);
+  tt_assert(service->desc_current != service->desc_next);
+  tt_u64_op(service->desc_next->time_period_num, OP_EQ,
+            hs_get_next_time_period_num(0));
+  /* This should be untouched, the update descriptor process changes it. */
+  tt_u64_op(service->desc_next->next_upload_time, OP_EQ, 0);
+
  done:
   hs_free_all();
   nodelist_free_all();
-  UNMOCK(hs_overlap_mode_is_active);
 }
 
 static void
@@ -1200,10 +1254,18 @@ test_upload_descriptors(void *arg)
   (void) arg;
 
   hs_init();
-  MOCK(hs_overlap_mode_is_active, mock_hs_overlap_mode_is_active_true);
   MOCK(get_or_state,
        get_or_state_replacement);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* Create a service with no descriptor. It's added to the global map. */
   service = hs_service_new(get_options());
@@ -1235,7 +1297,6 @@ test_upload_descriptors(void *arg)
 
  done:
   hs_free_all();
-  UNMOCK(hs_overlap_mode_is_active);
   UNMOCK(get_or_state);
 }
 

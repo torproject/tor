@@ -38,6 +38,8 @@
  * used for authorities and fallback directories.)
  */
 
+#define NODELIST_PRIVATE
+
 #include "or.h"
 #include "address.h"
 #include "config.h"
@@ -176,13 +178,14 @@ node_get_or_create(const char *identity_digest)
 /* For a given <b>node</b> for the consensus <b>ns</b>, set the hsdir index
  * for the node, both current and next if possible. This can only fails if the
  * node_t ed25519 identity key can't be found which would be a bug. */
-static void
+STATIC void
 node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
 {
   time_t now = approx_time();
   const ed25519_public_key_t *node_identity_pk;
-  uint8_t *next_hsdir_index_srv = NULL, *current_hsdir_index_srv = NULL;
+  uint8_t *fetch_srv = NULL, *store_first_srv = NULL, *store_second_srv = NULL;
   uint64_t next_time_period_num, current_time_period_num;
+  uint64_t fetch_tp, store_first_tp, store_second_tp;
 
   tor_assert(node);
   tor_assert(ns);
@@ -200,41 +203,59 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
     goto done;
   }
 
-  /* Get the current and next time period number, we might use them both. */
-  current_time_period_num = hs_get_time_period_num(now);
-  next_time_period_num = hs_get_next_time_period_num(now);
+  /* Get the current and next time period number. */
+  current_time_period_num = hs_get_time_period_num(0);
+  next_time_period_num = hs_get_next_time_period_num(0);
 
-  if (hs_overlap_mode_is_active(ns, now)) {
-    /* We are in overlap mode, this means that our consensus has just cycled
-     * from current SRV to previous SRV so for the _next_ upcoming time
-     * period, we have to use the current SRV and use the previous SRV for the
-     * current time period. If the current or previous SRV can't be found, the
-     * disaster one is returned. */
-    next_hsdir_index_srv = hs_get_current_srv(next_time_period_num, ns);
-    /* The following can be confusing so again, in overlap mode, we use our
-     * previous SRV for our _current_ hsdir index. */
-    current_hsdir_index_srv = hs_get_previous_srv(current_time_period_num, ns);
+  /* We always use the current time period for fetching descs */
+  fetch_tp = current_time_period_num;
+
+  /* Now extract the needed SRVs and time periods for building hsdir indices */
+  if (hs_in_period_between_tp_and_srv(ns, now)) {
+    fetch_srv = hs_get_current_srv(fetch_tp, ns);
+
+    store_first_tp = hs_get_previous_time_period_num(0);
+    store_second_tp = current_time_period_num;
   } else {
-    /* If NOT in overlap mode, we only need to compute the current hsdir index
-     * for the ongoing time period and thus the current SRV. If it can't be
-     * found, the disaster one is returned. */
-    current_hsdir_index_srv = hs_get_current_srv(current_time_period_num, ns);
+    fetch_srv = hs_get_previous_srv(fetch_tp, ns);
+
+    store_first_tp = current_time_period_num;
+    store_second_tp = next_time_period_num;
   }
 
-  /* Build the current hsdir index. */
-  hs_build_hsdir_index(node_identity_pk, current_hsdir_index_srv,
-                       current_time_period_num, node->hsdir_index->current);
-  if (next_hsdir_index_srv) {
-    /* Build the next hsdir index if we have a next SRV that we can use. */
-    hs_build_hsdir_index(node_identity_pk, next_hsdir_index_srv,
-                         next_time_period_num, node->hsdir_index->next);
+  /* We always use the old SRV for storing the first descriptor and the latest
+   * SRV for storing the second descriptor */
+  store_first_srv = hs_get_previous_srv(store_first_tp, ns);
+  store_second_srv = hs_get_current_srv(store_second_tp, ns);
+
+  /* Build the fetch index. */
+  hs_build_hsdir_index(node_identity_pk, fetch_srv, fetch_tp,
+                       node->hsdir_index->fetch);
+
+  /* If we are in the time segment between SRV#N and TP#N, the fetch index is
+     the same as the first store index */
+  if (!hs_in_period_between_tp_and_srv(ns, now)) {
+    memcpy(node->hsdir_index->store_first, node->hsdir_index->fetch,
+           sizeof(node->hsdir_index->store_first));
   } else {
-    memset(node->hsdir_index->next, 0, sizeof(node->hsdir_index->next));
+    hs_build_hsdir_index(node_identity_pk, store_first_srv, store_first_tp,
+                         node->hsdir_index->store_first);
+  }
+
+  /* If we are in the time segment between TP#N and SRV#N+1, the fetch index is
+     the same as the second store index */
+  if (hs_in_period_between_tp_and_srv(ns, now)) {
+    memcpy(node->hsdir_index->store_second, node->hsdir_index->fetch,
+           sizeof(node->hsdir_index->store_second));
+  } else {
+    hs_build_hsdir_index(node_identity_pk, store_second_srv, store_second_tp,
+                         node->hsdir_index->store_second);
   }
 
  done:
-  tor_free(current_hsdir_index_srv);
-  tor_free(next_hsdir_index_srv);
+  tor_free(fetch_srv);
+  tor_free(store_first_srv);
+  tor_free(store_second_srv);
   return;
 }
 

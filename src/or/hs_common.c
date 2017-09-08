@@ -99,42 +99,65 @@ add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
 /* Helper function: The key is a digest that we compare to a node_t object
  * current hsdir_index. */
 static int
-compare_digest_to_current_hsdir_index(const void *_key, const void **_member)
+compare_digest_to_fetch_hsdir_index(const void *_key, const void **_member)
 {
   const char *key = _key;
   const node_t *node = *_member;
-  return tor_memcmp(key, node->hsdir_index->current, DIGEST256_LEN);
+  return tor_memcmp(key, node->hsdir_index->fetch, DIGEST256_LEN);
 }
 
 /* Helper function: The key is a digest that we compare to a node_t object
  * next hsdir_index. */
 static int
-compare_digest_to_next_hsdir_index(const void *_key, const void **_member)
+compare_digest_to_store_first_hsdir_index(const void *_key,
+                                          const void **_member)
 {
   const char *key = _key;
   const node_t *node = *_member;
-  return tor_memcmp(key, node->hsdir_index->next, DIGEST256_LEN);
+  return tor_memcmp(key, node->hsdir_index->store_first, DIGEST256_LEN);
+}
+
+/* Helper function: The key is a digest that we compare to a node_t object
+ * next hsdir_index. */
+static int
+compare_digest_to_store_second_hsdir_index(const void *_key,
+                                          const void **_member)
+{
+  const char *key = _key;
+  const node_t *node = *_member;
+  return tor_memcmp(key, node->hsdir_index->store_second, DIGEST256_LEN);
 }
 
 /* Helper function: Compare two node_t objects current hsdir_index. */
 static int
-compare_node_current_hsdir_index(const void **a, const void **b)
+compare_node_fetch_hsdir_index(const void **a, const void **b)
 {
   const node_t *node1= *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index->current,
-                    node2->hsdir_index->current,
+  return tor_memcmp(node1->hsdir_index->fetch,
+                    node2->hsdir_index->fetch,
                     DIGEST256_LEN);
 }
 
 /* Helper function: Compare two node_t objects next hsdir_index. */
 static int
-compare_node_next_hsdir_index(const void **a, const void **b)
+compare_node_store_first_hsdir_index(const void **a, const void **b)
 {
   const node_t *node1= *a;
   const node_t *node2 = *b;
-  return tor_memcmp(node1->hsdir_index->next,
-                    node2->hsdir_index->next,
+  return tor_memcmp(node1->hsdir_index->store_first,
+                    node2->hsdir_index->store_first,
+                    DIGEST256_LEN);
+}
+
+/* Helper function: Compare two node_t objects next hsdir_index. */
+static int
+compare_node_store_second_hsdir_index(const void **a, const void **b)
+{
+  const node_t *node1= *a;
+  const node_t *node2 = *b;
+  return tor_memcmp(node1->hsdir_index->store_second,
+                    node2->hsdir_index->store_second,
                     DIGEST256_LEN);
 }
 
@@ -211,15 +234,26 @@ get_time_period_length(void)
   return (uint64_t) time_period_length;
 }
 
-/** Get the HS time period number at time <b>now</b> */
+/** Get the HS time period number at time <b>now</b>. If <b>now</b> is not set,
+ *  we try to get the time ourselves. */
 uint64_t
 hs_get_time_period_num(time_t now)
 {
   uint64_t time_period_num;
+  time_t current_time;
+
+  /* If no time is specified, set current time based on consensus time, and
+   * only fall back to system time if that fails. */
+  if (now != 0) {
+    current_time = now;
+  } else {
+    networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
+    current_time = ns ? ns->valid_after : approx_time();
+  }
 
   /* Start by calculating minutes since the epoch */
   uint64_t time_period_length = get_time_period_length();
-  uint64_t minutes_since_epoch = now / 60;
+  uint64_t minutes_since_epoch = current_time / 60;
 
   /* Apply the rotation offset as specified by prop224 (section
    * [TIME-PERIODS]), so that new time periods synchronize nicely with SRV
@@ -240,6 +274,14 @@ uint64_t
 hs_get_next_time_period_num(time_t now)
 {
   return hs_get_time_period_num(now) + 1;
+}
+
+/* Get the number of the _previous_ HS time period, given that the current
+ * time is <b>now</b>. */
+uint64_t
+hs_get_previous_time_period_num(time_t now)
+{
+  return hs_get_time_period_num(now) - 1;
 }
 
 /* Return the start time of the upcoming time period based on <b>now</b>. */
@@ -547,7 +589,7 @@ compute_disaster_srv(uint64_t time_period_num, uint8_t *srv_out)
  *  would have to do it thousands of times in a row, we always cache the
  *  computer disaster SRV (and its corresponding time period num) in case we
  *  want to reuse it soon after. We need to cache two SRVs, one for each active
- *  time period (in case of overlap mode).
+ *  time period.
  */
 static uint8_t cached_disaster_srv[2][DIGEST256_LEN];
 static uint64_t cached_time_period_nums[2] = {0};
@@ -992,10 +1034,22 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
   memwipe(param, 0, sizeof(param));
 }
 
-/* Return true if overlap mode is active given the date in consensus. If
- * consensus is NULL, then we use the latest live consensus we can find. */
+/* Return true if we are currently in the time segment between a new time
+ * period and a new SRV (in the real network that happens between 12:00 and
+ * 00:00 UTC). Here is a diagram showing exactly when this returns true:
+ *
+ *    +------------------------------------------------------------------+
+ *    |                                                                  |
+ *    | 00:00      12:00       00:00       12:00       00:00       12:00 |
+ *    | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+ *    |                                                                  |
+ *    |  $==========|-----------$===========|-----------$===========|    |
+ *    |             ^^^^^^^^^^^^            ^^^^^^^^^^^^                 |
+ *    |                                                                  |
+ *    +------------------------------------------------------------------+
+ */
 MOCK_IMPL(int,
-hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
+hs_in_period_between_tp_and_srv,(const networkstatus_t *consensus, time_t now))
 {
   time_t valid_after;
   time_t srv_start_time, tp_start_time;
@@ -1007,19 +1061,18 @@ hs_overlap_mode_is_active, (const networkstatus_t *consensus, time_t now))
     }
   }
 
-  /* We consider to be in overlap mode when we are in the period of time
-   * between a fresh SRV and the beginning of the new time period (in the
-   * normal network this is between 00:00 (inclusive) and 12:00 UTC
-   * (exclusive)) */
+  /* Get start time of next TP and of current SRV protocol run, and check if we
+   * are between them. */
   valid_after = consensus->valid_after;
-  srv_start_time =sr_state_get_start_time_of_current_protocol_run(valid_after);
+  srv_start_time =
+    sr_state_get_start_time_of_current_protocol_run(valid_after);
   tp_start_time = hs_get_start_time_of_next_time_period(srv_start_time);
 
   if (valid_after >= srv_start_time && valid_after < tp_start_time) {
-    return 1;
+    return 0;
   }
 
-  return 0;
+  return 1;
 }
 
 /* Return 1 if any virtual port in ports needs a circuit with good uptime.
@@ -1189,10 +1242,9 @@ hs_get_hsdir_spread_store(void)
 }
 
 /** <b>node</b> is an HSDir so make sure that we have assigned an hsdir index.
- *  If <b>is_for_next_period</b> is set, also check the next HSDir index field.
  *  Return 0 if everything is as expected, else return -1. */
 static int
-node_has_hsdir_index(const node_t *node, int is_for_next_period)
+node_has_hsdir_index(const node_t *node)
 {
   tor_assert(node_supports_v3_hsdir(node));
 
@@ -1204,19 +1256,19 @@ node_has_hsdir_index(const node_t *node, int is_for_next_period)
 
   /* At this point, since the node has a desc, this node must also have an
    * hsdir index. If not, something went wrong, so BUG out. */
-  if (BUG(node->hsdir_index == NULL) ||
-      BUG(tor_mem_is_zero((const char*)node->hsdir_index->current,
-                          DIGEST256_LEN))) {
-    log_warn(LD_BUG, "Zero current index (ri: %p, rs: %p, md: %p)",
-             node->ri, node->rs, node->md);
+  if (BUG(node->hsdir_index == NULL)) {
     return 0;
   }
-
-  if (is_for_next_period &&
-      BUG(tor_mem_is_zero((const char*)node->hsdir_index->next,
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->fetch,
                           DIGEST256_LEN))) {
-    log_warn(LD_BUG, "Zero next index (ri: %p, rs: %p, md: %p)",
-             node->ri, node->rs, node->md);
+    return 0;
+  }
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->store_first,
+                          DIGEST256_LEN))) {
+    return 0;
+  }
+  if (BUG(tor_mem_is_zero((const char*)node->hsdir_index->store_second,
+                          DIGEST256_LEN))) {
     return 0;
   }
 
@@ -1225,19 +1277,19 @@ node_has_hsdir_index(const node_t *node, int is_for_next_period)
 
 /* For a given blinded key and time period number, get the responsible HSDir
  * and put their routerstatus_t object in the responsible_dirs list. If
- * is_next_period is true, the next hsdir_index of the node_t is used. If
- * is_client is true, the spread fetch consensus parameter is used else the
- * spread store is used which is only for upload. This function can't fail but
- * it is possible that the responsible_dirs list contains fewer nodes than
- * expected.
+ * 'use_second_hsdir_index' is true, use the second hsdir_index of the node_t
+ * is used. If 'for_fetching' is true, the spread fetch consensus parameter is
+ * used else the spread store is used which is only for upload. This function
+ * can't fail but it is possible that the responsible_dirs list contains fewer
+ * nodes than expected.
  *
  * This function goes over the latest consensus routerstatus list and sorts it
  * by their node_t hsdir_index then does a binary search to find the closest
  * node. All of this makes it a bit CPU intensive so use it wisely. */
 void
 hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
-                          uint64_t time_period_num, int is_next_period,
-                          int is_client, smartlist_t *responsible_dirs)
+                          uint64_t time_period_num, int use_second_hsdir_index,
+                          int for_fetching, smartlist_t *responsible_dirs)
 {
   smartlist_t *sorted_nodes;
   /* The compare function used for the smartlist bsearch. We have two
@@ -1264,7 +1316,7 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
       node_t *n = node_get_mutable_by_id(rs->identity_digest);
       tor_assert(n);
       if (node_supports_v3_hsdir(n) && rs->is_hs_dir) {
-        if (!node_has_hsdir_index(n, is_next_period)) {
+        if (!node_has_hsdir_index(n)) {
           log_info(LD_GENERAL, "Node %s was found without hsdir index.",
                    node_describe(n));
           continue;
@@ -1281,12 +1333,15 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   /* First thing we have to do is sort all node_t by hsdir_index. The
    * is_next_period tells us if we want the current or the next one. Set the
    * bsearch compare function also while we are at it. */
-  if (is_next_period) {
-    smartlist_sort(sorted_nodes, compare_node_next_hsdir_index);
-    cmp_fct = compare_digest_to_next_hsdir_index;
+  if (for_fetching) {
+    smartlist_sort(sorted_nodes, compare_node_fetch_hsdir_index);
+    cmp_fct = compare_digest_to_fetch_hsdir_index;
+  } else if (use_second_hsdir_index) {
+    smartlist_sort(sorted_nodes, compare_node_store_second_hsdir_index);
+    cmp_fct = compare_digest_to_store_second_hsdir_index;
   } else {
-    smartlist_sort(sorted_nodes, compare_node_current_hsdir_index);
-    cmp_fct = compare_digest_to_current_hsdir_index;
+    smartlist_sort(sorted_nodes, compare_node_store_first_hsdir_index);
+    cmp_fct = compare_digest_to_store_first_hsdir_index;
   }
 
   /* For all replicas, we'll select a set of HSDirs using the consensus
@@ -1297,8 +1352,8 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
     uint8_t hs_index[DIGEST256_LEN] = {0};
     /* Number of node to add to the responsible dirs list depends on if we are
      * trying to fetch or store. A client always fetches. */
-    int n_to_add = (is_client) ? hs_get_hsdir_spread_fetch() :
-                                 hs_get_hsdir_spread_store();
+    int n_to_add = (for_fetching) ? hs_get_hsdir_spread_fetch() :
+                                    hs_get_hsdir_spread_store();
 
     /* Get the index that we should use to select the node. */
     hs_build_hs_index(replica, blinded_pk, time_period_num, hs_index);

@@ -196,16 +196,16 @@ typedef struct hs_service_state_t {
    * should never go over MAX_INTRO_CIRCS_PER_PERIOD. */
   unsigned int num_intro_circ_launched;
 
-  /* Indicate that the service has entered the overlap period. We use this
-   * flag to check for descriptor rotation. */
-  unsigned int in_overlap_period : 1;
-
   /* Replay cache tracking the REND_COOKIE found in INTRODUCE2 cell to detect
    * repeats. Clients may send INTRODUCE1 cells for the same rendezvous point
    * through two or more different introduction points; when they do, this
    * keeps us from launching multiple simultaneous attempts to connect to the
    * same rend point. */
   replaycache_t *replay_cache_rend_cookie;
+
+  /* When is the next time we should rotate our descriptors. This is has to be
+   * done at the start time of the next SRV protocol run. */
+  time_t next_rotation_time;
 } hs_service_state_t;
 
 /* Representation of a service running on this tor instance. */
@@ -229,8 +229,7 @@ typedef struct hs_service_t {
 
   /* Current descriptor. */
   hs_service_descriptor_t *desc_current;
-  /* Next descriptor that we need for the overlap period for which we have to
-   * keep two sets of opened introduction point circuits. */
+  /* Next descriptor. */
   hs_service_descriptor_t *desc_next;
 
   /* XXX: Credential (client auth.) #20700. */
@@ -338,8 +337,7 @@ STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_);
 
 STATIC void upload_descriptor_to_all(const hs_service_t *service,
-                                     hs_service_descriptor_t *desc,
-                                     int for_next_period);
+                                     hs_service_descriptor_t *desc);
 
 STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
                                          time_t now,
