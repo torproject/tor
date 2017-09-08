@@ -558,7 +558,10 @@ rend_service_prune_list_impl_(void)
    * matching surviving configured service. If not, close the circuit. */
   while ((ocirc = circuit_get_next_service_intro_circ(ocirc))) {
     int keep_it = 0;
-    tor_assert(ocirc->rend_data);
+    if (ocirc->rend_data == NULL) {
+      /* This is a v3 circuit, ignore it. */
+      continue;
+    }
     SMARTLIST_FOREACH_BEGIN(surviving_services, const rend_service_t *, s) {
       if (rend_circuit_pk_digest_eq(ocirc, (uint8_t *) s->pk_digest)) {
         /* Keep this circuit as we have a matching configured service. */
@@ -915,8 +918,8 @@ rend_service_del_ephemeral(const char *service_id)
         (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
          circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
       origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
-      tor_assert(oc->rend_data);
-      if (!rend_circuit_pk_digest_eq(oc, (uint8_t *) s->pk_digest)) {
+      if (oc->rend_data == NULL ||
+          !rend_circuit_pk_digest_eq(oc, (uint8_t *) s->pk_digest)) {
         continue;
       }
       log_debug(LD_REND, "Closing intro point %s for service %s.",
@@ -4260,7 +4263,6 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   tor_assert(circ->rend_data);
   log_debug(LD_REND,"beginning to hunt for addr/port");
-  /* XXX: This is version 2 specific (only one supported). */
   rend_pk_digest = (char *) rend_data_get_pk_digest(circ->rend_data, NULL);
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                 rend_pk_digest, REND_SERVICE_ID_LEN);
