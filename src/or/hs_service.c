@@ -1398,7 +1398,7 @@ build_descriptors_for_new_service(hs_service_t *service, time_t now)
    * TP#1 and next TP#2.
    */
 
-  if (hs_time_between_tp_and_srv(NULL, now)) {
+  if (hs_in_period_between_tp_and_srv(NULL, now)) {
     /* Case B from the above, inside of the new time period. */
     current_desc_tp = hs_get_previous_time_period_num(0); /* TP#1 */
     next_desc_tp = hs_get_time_period_num(0);             /* TP#2 */
@@ -2390,7 +2390,7 @@ upload_descriptor_to_all(const hs_service_t *service,
 
   /* Do we have a new TP that is are we between a new time period and the next
    * SRV creation? */
-  is_new_tp = hs_time_between_tp_and_srv(NULL, approx_time());
+  is_new_tp = hs_in_period_between_tp_and_srv(NULL, approx_time());
   /* Get our list of responsible HSDir. */
   responsible_dirs = smartlist_new();
   /* The parameter 0 means that we aren't a client so tell the function to use

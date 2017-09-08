@@ -183,7 +183,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
   }
 
   /* Get responsible hsdirs of service for this time period */
-  is_new_tp = hs_time_between_tp_and_srv(NULL, time(NULL));
+  is_new_tp = hs_in_period_between_tp_and_srv(NULL, time(NULL));
   hs_get_responsible_hsdirs(&blinded_pubkey, current_time_period,
                             is_new_tp, 1, responsible_hsdirs);
 

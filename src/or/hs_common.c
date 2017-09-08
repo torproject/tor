@@ -1049,7 +1049,7 @@ hs_build_blinded_keypair(const ed25519_keypair_t *kp,
  *    +------------------------------------------------------------------+
  */
 MOCK_IMPL(int,
-hs_time_between_tp_and_srv, (const networkstatus_t *consensus, time_t now))
+hs_in_period_between_tp_and_srv,(const networkstatus_t *consensus, time_t now))
 {
   time_t valid_after;
   time_t srv_start_time, tp_start_time;

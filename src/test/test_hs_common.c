@@ -786,27 +786,27 @@ test_time_between_tp_and_srv(void *arg)
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 00:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
-  ret = hs_time_between_tp_and_srv(&ns, 0);
+  ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 11:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
-  ret = hs_time_between_tp_and_srv(&ns, 0);
+  ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
-  ret = hs_time_between_tp_and_srv(&ns, 0);
+  ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 1);
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 23:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
-  ret = hs_time_between_tp_and_srv(&ns, 0);
+  ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 1);
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 00:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
-  ret = hs_time_between_tp_and_srv(&ns, 0);
+  ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
  done:
@@ -1065,7 +1065,8 @@ typedef struct reachability_cfg_t {
 
   /* Is the client and service expected to be in a new time period. After
    * setting the consensus time, the reachability test checks
-   * hs_time_between_tp_and_srv() and test the returned value against this. */
+   * hs_in_period_between_tp_and_srv() and test the returned value against
+   * this. */
   unsigned int service_in_new_tp;
   unsigned int client_in_new_tp;
 
@@ -1300,9 +1301,9 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                       &mock_client_ns->fresh_until);
 
   /* New time period checks for this scenario. */
-  tt_int_op(hs_time_between_tp_and_srv(mock_service_ns, 0), OP_EQ,
+  tt_int_op(hs_in_period_between_tp_and_srv(mock_service_ns, 0), OP_EQ,
             cfg->service_in_new_tp);
-  tt_int_op(hs_time_between_tp_and_srv(mock_client_ns, 0), OP_EQ,
+  tt_int_op(hs_in_period_between_tp_and_srv(mock_client_ns, 0), OP_EQ,
             cfg->client_in_new_tp);
 
   /* Set the SRVs for this scenario. */

@@ -210,7 +210,8 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
   /* We always use the current time period for fetching descs */
   fetch_tp = current_time_period_num;
 
-  if (hs_time_between_tp_and_srv(ns, now)) {
+  /* Now extract the needed SRVs and time periods for building hsdir indices */
+  if (hs_in_period_between_tp_and_srv(ns, now)) {
     fetch_srv = hs_get_current_srv(fetch_tp, ns);
 
     store_first_tp = hs_get_previous_time_period_num(0);
@@ -233,7 +234,7 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
 
   /* If we are in the time segment between SRV#N and TP#N, the fetch index is
      the same as the first store index */
-  if (!hs_time_between_tp_and_srv(ns, now)) {
+  if (!hs_in_period_between_tp_and_srv(ns, now)) {
     memcpy(node->hsdir_index->store_first, node->hsdir_index->fetch,
            sizeof(node->hsdir_index->store_first));
   } else {
@@ -243,7 +244,7 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
 
   /* If we are in the time segment between TP#N and SRV#N+1, the fetch index is
      the same as the second store index */
-  if (hs_time_between_tp_and_srv(ns, now)) {
+  if (hs_in_period_between_tp_and_srv(ns, now)) {
     memcpy(node->hsdir_index->store_second, node->hsdir_index->fetch,
            sizeof(node->hsdir_index->store_second));
   } else {
