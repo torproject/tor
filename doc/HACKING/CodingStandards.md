@@ -178,6 +178,66 @@ We don't call `memcmp()` directly.  Use `fast_memeq()`, `fast_memneq()`,
 Also see a longer list of functions to avoid in:
 https://people.torproject.org/~nickm/tor-auto/internal/this-not-that.html
 
+Floating point math is hard
+---------------------------
+
+Floating point arithmetic as typically implemented by computers is
+very counterintuitive.  Failure to adequately analyze floating point
+usage can result in surprising behavior and even security
+vulnerabilities!
+
+General advice:
+
+   - Don't use floating point.
+   - If you must use floating point, document how the limits of
+     floating point precision and calculation accuracy affect function
+     outputs.
+   - Try to do as much as possible of your calculations using integers
+     (possibly acting as fixed-point numbers) and convert to floating
+     point for display.
+   - If you must send floating point numbers on the wire, serialize
+     them in a platform-independent way.  Tor avoids exchanging
+     floating-point values, but when it does, it uses ASCII numerals,
+     with a decimal point (".").
+   - Binary fractions behave very differently from decimal fractions.
+     Make sure you understand how these differences affect your
+     calculations.
+   - Every floating point arithmetic operation is an opportunity to
+     lose precision, overflow, underflow, or otherwise produce
+     undesired results.  Addition and subtraction tend to be worse
+     than multiplication and division (due to things like catastrophic
+     cancellation).  Try to arrange your calculations to minimize such
+     effects.
+   - Changing the order of operations changes the results of many
+     floating-point calculations.  Be careful when you simplify
+     calculations!  If the order is significant, document it using a
+     code comment.
+   - Comparing most floating point values for equality is unreliable.
+     Avoid using `==`, instead, use `>=` or `<=`.  If you use an
+     epsilon value, make sure it's appropriate for the ranges in
+     question.
+   - Different environments (including compiler flags and per-thread
+     state on a single platform!) can get different results from the
+     same floating point calculations.  This means you can't use
+     floats in anything that needs to be deterministic, like consensus
+     generation.  This also makes reliable unit tests of
+     floating-point outputs hard to write.
+
+For additional useful advice (and a little bit of background), see
+[What Every Programmer Should Know About Floating-Point
+Arithmetic](http://floating-point-gui.de/).
+
+A list of notable (and surprising) facts about floating point
+arithmetic is at [Floating-point
+complexities](https://randomascii.wordpress.com/2012/04/05/floating-point-complexities/).
+Most of that [series of posts on floating
+point](https://randomascii.wordpress.com/category/floating-point/) is
+helpful.
+
+For more detailed (and math-intensive) background, see [What Every
+Computer Scientist Should Know About Floating-Point
+Arithmetic](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html).
+
 Other C conventions
 -------------------
 
