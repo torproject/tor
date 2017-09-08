@@ -7,6 +7,7 @@
  */
 
 #define HS_COMMON_PRIVATE
+#define HS_CLIENT_PRIVATE
 #define HS_SERVICE_PRIVATE
 #define NODELIST_PRIVATE
 
@@ -17,6 +18,7 @@
 
 #include "connection_edge.h"
 #include "hs_common.h"
+#include "hs_client.h"
 #include "hs_service.h"
 #include "config.h"
 #include "networkstatus.h"
@@ -333,6 +335,17 @@ mock_networkstatus_get_latest_consensus(void)
   mock_ns->routerstatus_list = smartlist_new();
   mock_ns->type = NS_TYPE_CONSENSUS;
 
+  return mock_ns;
+}
+
+static networkstatus_t *
+mock_networkstatus_get_live_consensus(time_t now)
+{
+  (void) now;
+
+  tt_assert(mock_ns);
+
+ done:
   return mock_ns;
 }
 
@@ -1416,6 +1429,228 @@ test_reachability(void *arg)
   }
 }
 
+/** Pick an HSDir for service with <b>onion_identity_pk</b> as a client. Put
+ *  its identity digest in <b>hsdir_digest_out</b>. */
+static void
+helper_client_pick_hsdir(const ed25519_public_key_t *onion_identity_pk,
+                        char *hsdir_digest_out)
+{
+  tt_assert(onion_identity_pk);
+
+  routerstatus_t *client_hsdir = pick_hsdir_v3(onion_identity_pk);
+  tt_assert(client_hsdir);
+  digest_to_base64(hsdir_digest_out, client_hsdir->identity_digest);
+
+ done:
+  ;
+}
+
+/** Set the consensus and system time based on <b>between_srv_and_tp</b>. If
+ *  <b>between_srv_and_tp</b> is set, then set the time to be inside the time
+ *  segment between SRV#N and TP#N. */
+static time_t
+helper_set_consensus_and_system_time(networkstatus_t *ns,
+                                     int between_srv_and_tp)
+{
+  time_t real_time;
+
+  /* The period between SRV#N and TP#N is from 00:00 to 12:00 UTC. Consensus
+   * valid_after is what matters here, the rest is just to specify the voting
+   * period correctly. */
+  if (between_srv_and_tp) {
+    parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC", &ns->valid_after);
+    parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC", &ns->fresh_until);
+    parse_rfc1123_time("Wed, 13 Apr 2016 14:00:00 UTC", &ns->valid_until);
+  } else {
+    parse_rfc1123_time("Wed, 13 Apr 2016 13:00:00 UTC", &ns->valid_after);
+    parse_rfc1123_time("Wed, 13 Apr 2016 14:00:00 UTC", &ns->fresh_until);
+    parse_rfc1123_time("Wed, 13 Apr 2016 16:00:00 UTC", &ns->valid_until);
+  }
+
+  /* Set system time: pretend to be just 2 minutes before consensus expiry */
+  real_time = ns->valid_until - 120;
+  update_approx_time(real_time);
+  return real_time;
+}
+
+/** Helper function that carries out the actual test for
+ *  test_client_service_sync() */
+static void
+helper_test_hsdir_sync(networkstatus_t *ns,
+                       int service_between_srv_and_tp,
+                       int client_between_srv_and_tp,
+                       int client_fetches_next_desc)
+{
+  hs_service_descriptor_t *desc;
+  int retval;
+
+  /** Test logic:
+   *   1) Initialize service time: consensus and system time.
+   *   1.1) Initialize service hash ring
+   *   2) Initialize service and publish descriptors.
+   *   3) Initialize client time: consensus and system time.
+   *   3.1) Initialize client hash ring
+   *   4) Try to fetch descriptor as client, and CHECK that the HSDir picked by
+   *      the client was also picked by service.
+   */
+
+  cleanup_nodelist();
+  smartlist_clear(ns->routerstatus_list);
+
+  /* 1) Initialize service time: consensus and real time */
+  time_t now = helper_set_consensus_and_system_time(ns,
+                                                   service_between_srv_and_tp);
+  helper_initialize_big_hash_ring(ns);
+
+  /* 2) Initialize service */
+  hs_service_t *service = helper_init_service(now);
+  desc = client_fetches_next_desc ? service->desc_next : service->desc_current;
+
+  /* Now let's upload our desc to all hsdirs */
+  upload_descriptor_to_all(service, desc);
+  /* Check that previous hsdirs were populated */
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
+
+  /* 3) Initialize client time */
+  now = helper_set_consensus_and_system_time(ns, client_between_srv_and_tp);
+
+  cleanup_nodelist();
+  smartlist_clear(ns->routerstatus_list);
+  helper_initialize_big_hash_ring(ns);
+
+  /* 4) Fetch desc as client */
+  char client_hsdir_b64_digest[BASE64_DIGEST_LEN+1] = {0};
+  helper_client_pick_hsdir(&service->keys.identity_pk,
+                          client_hsdir_b64_digest);
+
+  /* CHECK: Go through the hsdirs chosen by the service and make sure that it
+   * contains the one picked by the client! */
+  retval = smartlist_contains_string(desc->previous_hsdirs,
+                                     client_hsdir_b64_digest);
+  tt_int_op(retval, OP_EQ, 1);
+
+ done:
+  /* At the end: free all services and initialize the subsystem again, we will
+   * need it for next scenario. */
+  hs_service_free_all();
+  hs_service_init();
+}
+
+/** This test ensures that client and service will pick the same HSDirs, under
+ *  various timing scenarios:
+ *  a) Scenario where both client and service are in the time segment between
+ *     SRV#N and TP#N:
+ *  b) Scenario where both client and service are in the time segment between
+ *     TP#N and SRV#N+1.
+ *  c) Scenario where service is between SRV#N and TP#N, but client is between
+ *     TP#N and SRV#N+1.
+ *  d) Scenario where service is between TP#N and SRV#N+1, but client is
+ *     between SRV#N and TP#N.
+ *
+ * This test is important because it tests that upload_descriptor_to_all() is
+ * in synch with pick_hsdir_v3(). That's not the case for the
+ * test_reachability() test which only compares the responsible hsdir sets.
+ */
+static void
+test_client_service_hsdir_set_sync(void *arg)
+{
+  networkstatus_t *ns = NULL;
+
+  (void) arg;
+
+  MOCK(networkstatus_get_latest_consensus,
+       mock_networkstatus_get_latest_consensus);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+  MOCK(hs_desc_encode_descriptor,
+       mock_hs_desc_encode_descriptor);
+  MOCK(directory_initiate_request,
+       mock_directory_initiate_request);
+
+  hs_init();
+
+  /* Initialize a big hash ring: we want it to be big so that client and
+   * service cannot accidentally select the same HSDirs */
+  ns = networkstatus_get_latest_consensus();
+  tt_assert(ns);
+
+  /** Now test the various synch scenarios. See the helper function for more
+      details: */
+
+  /*  a) Scenario where both client and service are in the time segment between
+   *     SRV#N and TP#N. At this time the client fetches the first HS desc:
+   *
+   *  +------------------------------------------------------------------+
+   *  |                                                                  |
+   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   *  |                                                                  |
+   *  |  $==========|-----------$===========|----------$===========|     |
+   *  |                                  ^ ^                             |
+   *  |                                  S C                             |
+   *  +------------------------------------------------------------------+
+   */
+  helper_test_hsdir_sync(ns, 1, 1, 0);
+
+  /*  b) Scenario where both client and service are in the time segment between
+   *     TP#N and SRV#N+1. At this time the client fetches the second HS
+   *     desc:
+   *
+   *  +------------------------------------------------------------------+
+   *  |                                                                  |
+   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   *  |                                                                  |
+   *  |  $==========|-----------$===========|-----------$===========|    |
+   *  |                      ^ ^                                         |
+   *  |                      S C                                         |
+   *  +------------------------------------------------------------------+
+   */
+  helper_test_hsdir_sync(ns, 0, 0, 1);
+
+  /*  c) Scenario where service is between SRV#N and TP#N, but client is
+   *     between TP#N and SRV#N+1. Client is forward in time so it fetches the
+   *     second HS desc.
+   *
+   *  +------------------------------------------------------------------+
+   *  |                                                                  |
+   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   *  |                                                                  |
+   *  |  $==========|-----------$===========|-----------$===========|    |
+   *  |                                    ^ ^                           |
+   *  |                                    S C                           |
+   *  +------------------------------------------------------------------+
+   */
+  helper_test_hsdir_sync(ns, 1, 0, 1);
+
+  /*  d) Scenario where service is between TP#N and SRV#N+1, but client is
+   *     between SRV#N and TP#N. Client is backwards in time so it fetches the
+   *     first HS desc.
+   *
+   *  +------------------------------------------------------------------+
+   *  |                                                                  |
+   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   *  |                                                                  |
+   *  |  $==========|-----------$===========|-----------$===========|    |
+   *  |                                    ^ ^                           |
+   *  |                                    C S                           |
+   *  +------------------------------------------------------------------+
+   */
+  helper_test_hsdir_sync(ns, 0, 1, 0);
+
+ done:
+  SMARTLIST_FOREACH(ns->routerstatus_list,
+                    routerstatus_t *, rs, routerstatus_free(rs));
+  smartlist_clear(ns->routerstatus_list);
+  networkstatus_vote_free(ns);
+  nodelist_free_all();
+  hs_free_all();
+}
+
 struct testcase_t hs_common_tests[] = {
   { "build_address", test_build_address, TT_FORK,
     NULL, NULL },
@@ -1439,7 +1674,8 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "reachability", test_reachability, TT_FORK,
     NULL, NULL },
-
+  { "client_service_hsdir_set_sync", test_client_service_hsdir_set_sync,
+    TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

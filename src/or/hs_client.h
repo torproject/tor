@@ -48,5 +48,12 @@ int hs_client_reextend_intro_circuit(origin_circuit_t *circ);
 
 void hs_client_free_all(void);
 
+#ifdef HS_CLIENT_PRIVATE
+
+STATIC routerstatus_t *
+pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk);
+
+#endif
+
 #endif /* TOR_HS_CLIENT_H */
 

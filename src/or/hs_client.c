@@ -6,6 +6,8 @@
  * \brief Implement next generation hidden service client functionality
  **/
 
+#define HS_CLIENT_PRIVATE
+
 #include "or.h"
 #include "hs_circuit.h"
 #include "hs_ident.h"
@@ -158,7 +160,7 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
 
 /** Return the HSDir we should use to fetch the descriptor of the hidden
  *  service with identity key <b>onion_identity_pk</b>. */
-static routerstatus_t *
+STATIC routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 {
   int retval;
