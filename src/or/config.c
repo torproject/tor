@@ -1772,9 +1772,13 @@ options_act(const or_options_t *old_options)
   }
 
   /* Write our PID to the PID file. If we do not have write permissions we
-   * will log a warning */
+   * will log a warning and exit. */
   if (options->PidFile && !sandbox_is_active()) {
-    write_pidfile(options->PidFile);
+    if (write_pidfile(options->PidFile) < 0) {
+      log_err(LD_CONFIG, "Unable to write PIDFile %s",
+              escaped(options->PidFile));
+      return -1;
+    }
   }
 
   /* Register addressmap directives */
