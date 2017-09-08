@@ -673,9 +673,6 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
                ri->nickname, source, (int)ri->cache_info.signed_descriptor_len,
                MAX_DESCRIPTOR_UPLOAD_SIZE);
     *msg = "Router descriptor was too large.";
-    control_event_or_authdir_new_descriptor("REJECTED",
-               ri->cache_info.signed_descriptor_body,
-                                            desclen, *msg);
     r = ROUTER_AUTHDIR_REJECTS;
     goto fail;
   }
@@ -694,9 +691,6 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
              router_describe(ri), source);
     *msg = "Not replacing router descriptor; no information has changed since "
       "the last one with this identity.";
-    control_event_or_authdir_new_descriptor("DROPPED",
-                         ri->cache_info.signed_descriptor_body,
-                                            desclen, *msg);
     r = ROUTER_IS_ALREADY_KNOWN;
     goto fail;
   }
@@ -709,9 +703,6 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     if (ed25519_validate_pubkey(pkey) < 0) {
       log_warn(LD_DIRSERV, "Received bad key from %s (source %s)",
                router_describe(ri), source);
-      control_event_or_authdir_new_descriptor("REJECTED",
-                                         ri->cache_info.signed_descriptor_body,
-                                         desclen, *msg);
       routerinfo_free(ri);
       return ROUTER_AUTHDIR_REJECTS;
     }
@@ -754,14 +745,11 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   r = router_add_to_routerlist(ri, msg, 0, 0);
   if (!WRA_WAS_ADDED(r)) {
     /* unless the routerinfo was fine, just out-of-date */
-    if (WRA_WAS_REJECTED(r))
-      control_event_or_authdir_new_descriptor("REJECTED", desc, desclen, *msg);
     log_info(LD_DIRSERV,
              "Did not add descriptor from '%s' (source: %s): %s.",
              nickname, source, *msg ? *msg : "(no message)");
   } else {
     smartlist_t *changed;
-    control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
 
     changed = smartlist_new();
     smartlist_add(changed, ri);
