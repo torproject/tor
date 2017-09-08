@@ -290,14 +290,9 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
         base16_encode(elt+1, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
       }
     } else { /* ! verbose_names */
-      node = node_get_by_id(id);
-      if (node && node_is_named(node)) {
-        elt = tor_strdup(node_get_nickname(node));
-      } else {
-        elt = tor_malloc(HEX_DIGEST_LEN+2);
-        elt[0] = '$';
-        base16_encode(elt+1, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
-      }
+      elt = tor_malloc(HEX_DIGEST_LEN+2);
+      elt[0] = '$';
+      base16_encode(elt+1, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
     }
     tor_assert(elt);
     if (verbose) {

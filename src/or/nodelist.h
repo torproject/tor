@@ -18,7 +18,14 @@
 
 node_t *node_get_mutable_by_id(const char *identity_digest);
 MOCK_DECL(const node_t *, node_get_by_id, (const char *identity_digest));
-const node_t *node_get_by_hex_id(const char *identity_digest);
+node_t *node_get_mutable_by_ed25519_id(const ed25519_public_key_t *ed_id);
+MOCK_DECL(const node_t *, node_get_by_ed25519_id,
+          (const ed25519_public_key_t *ed_id));
+
+#define NNF_NO_WARN_UNNAMED (1u<<0)
+
+const node_t *node_get_by_hex_id(const char *identity_digest,
+                                 unsigned flags);
 node_t *nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out);
 node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(networkstatus_t *ns);
@@ -34,12 +41,11 @@ void nodelist_free_all(void);
 void nodelist_assert_ok(void);
 
 MOCK_DECL(const node_t *, node_get_by_nickname,
-    (const char *nickname, int warn_if_unnamed));
+          (const char *nickname, unsigned flags));
 void node_get_verbose_nickname(const node_t *node,
                                char *verbose_name_out);
 void node_get_verbose_nickname_by_id(const char *id_digest,
                                 char *verbose_name_out);
-int node_is_named(const node_t *node);
 int node_is_dir(const node_t *node);
 int node_has_descriptor(const node_t *node);
 int node_get_purpose(const node_t *node);

@@ -794,21 +794,6 @@ router_get_consensus_status_by_id(const char *digest)
   return router_get_mutable_consensus_status_by_id(digest);
 }
 
-/** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
- * the corresponding routerstatus_t, or NULL if none exists.  Warn the
- * user if <b>warn_if_unnamed</b> is set, and they have specified a router by
- * nickname, but the Named flag isn't set for that router. */
-const routerstatus_t *
-router_get_consensus_status_by_nickname(const char *nickname,
-                                        int warn_if_unnamed)
-{
-  const node_t *node = node_get_by_nickname(nickname, warn_if_unnamed);
-  if (node)
-    return node->rs;
-  else
-    return NULL;
-}
-
 /** Return the identity digest that's mapped to officially by
  * <b>nickname</b>. */
 const char *
@@ -2556,7 +2541,8 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     }
     status = router_get_consensus_status_by_id(d);
   } else if (!strcmpstart(question, "ns/name/")) {
-    status = router_get_consensus_status_by_nickname(question+8, 0);
+    const node_t *n = node_get_by_nickname(question+8, 0);
+    status = n ? n->rs : NULL;
   } else if (!strcmpstart(question, "ns/purpose/")) {
     *answer = networkstatus_getinfo_by_purpose(question+11, time(NULL));
     return *answer ? 0 : -1;

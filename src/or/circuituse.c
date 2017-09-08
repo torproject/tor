@@ -2121,7 +2121,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     } else {
       /* XXXX Duplicates checks in connection_ap_handshake_attach_circuit:
        * refactor into a single function. */
-      const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 1);
+      const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 0);
       int opt = conn->chosen_exit_optional;
       if (node && !connection_ap_can_use_exit(conn, node)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
@@ -2204,7 +2204,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       if (conn->chosen_exit_name) {
         const node_t *r;
         int opt = conn->chosen_exit_optional;
-        r = node_get_by_nickname(conn->chosen_exit_name, 1);
+        r = node_get_by_nickname(conn->chosen_exit_name, 0);
         if (r && node_has_descriptor(r)) {
           /* We might want to connect to an IPv6 bridge for loading
              descriptors so we use the preferred address rather than
@@ -2620,7 +2620,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
      * open to that exit. See what exit we meant, and whether we can use it.
      */
     if (conn->chosen_exit_name) {
-      const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 1);
+      const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 0);
       int opt = conn->chosen_exit_optional;
       if (!node && !want_onehop) {
         /* We ran into this warning when trying to extend a circuit to a

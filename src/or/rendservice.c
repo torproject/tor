@@ -2122,7 +2122,7 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
   if (intro->version == 0 || intro->version == 1) {
     rp_nickname = (const char *)(intro->u.v0_v1.rp);
 
-    node = node_get_by_nickname(rp_nickname, 0);
+    node = node_get_by_nickname(rp_nickname, NNF_NO_WARN_UNNAMED);
     if (!node) {
       if (err_msg_out) {
         tor_asprintf(&err_msg,

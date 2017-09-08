@@ -885,6 +885,7 @@ test_service_event(void *arg)
      * times we should retry a circuit. For this, we need to have a node_t
      * that matches the identity of this IP. */
     routerinfo_t ri;
+    memset(&ri, 0, sizeof(ri));
     ip = helper_create_service_ip();
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     memset(ri.cache_info.identity_digest, 'A', DIGEST_LEN);

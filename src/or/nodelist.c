@@ -94,7 +94,14 @@ typedef struct nodelist_t {
   smartlist_t *nodes;
   /* Hash table to map from node ID digest to node. */
   HT_HEAD(nodelist_map, node_t) nodes_by_id;
-
+  /* Hash table to map from node Ed25519 ID to node.
+   *
+   * Whenever a node's routerinfo or microdescriptor is about to change,
+   * you should remove it from this map with node_remove_from_ed25519_map().
+   * Whenever a node's routerinfo or microdescriptor has just chaned,
+   * you should add it to this map with node_add_to_ed25519_map().
+   */
+  HT_HEAD(nodelist_ed_map, node_t) nodes_by_ed_id;
 } nodelist_t;
 
 static inline unsigned int
@@ -113,6 +120,23 @@ HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq)
 HT_GENERATE2(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq,
              0.6, tor_reallocarray_, tor_free_)
 
+static inline unsigned int
+node_ed_id_hash(const node_t *node)
+{
+  return (unsigned) siphash24g(node->ed25519_id.pubkey, ED25519_PUBKEY_LEN);
+}
+
+static inline unsigned int
+node_ed_id_eq(const node_t *node1, const node_t *node2)
+{
+  return ed25519_pubkey_eq(&node1->ed25519_id, &node2->ed25519_id);
+}
+
+HT_PROTOTYPE(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
+             node_ed_id_eq)
+HT_GENERATE2(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
+             node_ed_id_eq, 0.6, tor_reallocarray_, tor_free_)
+
 /** The global nodelist. */
 static nodelist_t *the_nodelist=NULL;
 
@@ -123,6 +147,7 @@ init_nodelist(void)
   if (PREDICT_UNLIKELY(the_nodelist == NULL)) {
     the_nodelist = tor_malloc_zero(sizeof(nodelist_t));
     HT_INIT(nodelist_map, &the_nodelist->nodes_by_id);
+    HT_INIT(nodelist_ed_map, &the_nodelist->nodes_by_ed_id);
     the_nodelist->nodes = smartlist_new();
   }
 }
@@ -140,12 +165,35 @@ node_get_mutable_by_id(const char *identity_digest)
   return node;
 }
 
+/** As node_get_by_ed25519_id, but returns a non-const pointer */
+node_t *
+node_get_mutable_by_ed25519_id(const ed25519_public_key_t *ed_id)
+{
+  node_t search, *node;
+  if (PREDICT_UNLIKELY(the_nodelist == NULL))
+    return NULL;
+  if (BUG(ed_id == NULL) || BUG(ed25519_public_key_is_zero(ed_id)))
+    return NULL;
+
+  memcpy(&search.ed25519_id, ed_id, sizeof(search.ed25519_id));
+  node = HT_FIND(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, &search);
+  return node;
+}
+
 /** Return the node_t whose identity is <b>identity_digest</b>, or NULL
  * if no such node exists. */
 MOCK_IMPL(const node_t *,
 node_get_by_id,(const char *identity_digest))
 {
   return node_get_mutable_by_id(identity_digest);
+}
+
+/** Return the node_t whose ed25519 identity is <b>ed_id</b>, or NULL
+ * if no such node exists. */
+MOCK_IMPL(const node_t *,
+node_get_by_ed25519_id,(const ed25519_public_key_t *ed_id))
+{
+  return node_get_mutable_by_ed25519_id(ed_id);
 }
 
 /** Internal: return the node_t whose identity_digest is
@@ -173,6 +221,67 @@ node_get_or_create(const char *identity_digest)
   node->country = -1;
 
   return node;
+}
+
+/** Remove <b>node</b> from the ed25519 map (if it present), and
+ * set its ed25519_id field to zero. */
+static int
+node_remove_from_ed25519_map(node_t *node)
+{
+  tor_assert(the_nodelist);
+  tor_assert(node);
+
+  if (ed25519_public_key_is_zero(&node->ed25519_id)) {
+    return 0;
+  }
+
+  int rv = 0;
+  node_t *search =
+    HT_FIND(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  if (BUG(search != node)) {
+    goto clear_and_return;
+  }
+
+  search = HT_REMOVE(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  tor_assert(search == node);
+  rv = 1;
+
+ clear_and_return:
+  memset(&node->ed25519_id, 0, sizeof(node->ed25519_id));
+  return rv;
+}
+
+/** If <b>node</b> has an ed25519 id, and it is not already in the ed25519 id
+ * map, set its ed25519_id field, and add it to the ed25519 map.
+ */
+static int
+node_add_to_ed25519_map(node_t *node)
+{
+  tor_assert(the_nodelist);
+  tor_assert(node);
+
+  if (! ed25519_public_key_is_zero(&node->ed25519_id)) {
+    return 0;
+  }
+
+  const ed25519_public_key_t *key = node_get_ed25519_id(node);
+  if (!key) {
+    return 0;
+  }
+
+  node_t *old;
+  memcpy(&node->ed25519_id, key, sizeof(node->ed25519_id));
+  old = HT_FIND(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  if (BUG(old)) {
+    /* XXXX order matters here, and this may mean that authorities aren't
+     * pinning. */
+    if (old != node)
+      memset(&node->ed25519_id, 0, sizeof(node->ed25519_id));
+    return 0;
+  }
+
+  HT_INSERT(nodelist_ed_map, &the_nodelist->nodes_by_ed_id, node);
+  return 1;
 }
 
 /* For a given <b>node</b> for the consensus <b>ns</b>, set the hsdir index
@@ -304,6 +413,8 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
   id_digest = ri->cache_info.identity_digest;
   node = node_get_or_create(id_digest);
 
+  node_remove_from_ed25519_map(node);
+
   if (node->ri) {
     if (!routers_have_same_or_addrs(node->ri, ri)) {
       node_addrs_changed(node);
@@ -316,6 +427,8 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
       *ri_old_out = NULL;
   }
   node->ri = ri;
+
+  node_add_to_ed25519_map(node);
 
   if (node->country == -1)
     node_set_country(node);
@@ -360,8 +473,10 @@ nodelist_add_microdesc(microdesc_t *md)
     return NULL;
   node = node_get_mutable_by_id(rs->identity_digest);
   if (node) {
+    node_remove_from_ed25519_map(node);
     if (node->md)
       node->md->held_by_nodes--;
+
     node->md = md;
     md->held_by_nodes++;
     /* Setting the HSDir index requires the ed25519 identity key which can
@@ -370,7 +485,9 @@ nodelist_add_microdesc(microdesc_t *md)
     if (rs->supports_v3_hsdir) {
       node_set_hsdir_index(node, ns);
     }
+    node_add_to_ed25519_map(node);
   }
+
   return node;
 }
 
@@ -398,12 +515,14 @@ nodelist_set_consensus(networkstatus_t *ns)
     if (ns->flavor == FLAV_MICRODESC) {
       if (node->md == NULL ||
           tor_memneq(node->md->digest,rs->descriptor_digest,DIGEST256_LEN)) {
+        node_remove_from_ed25519_map(node);
         if (node->md)
           node->md->held_by_nodes--;
         node->md = microdesc_cache_lookup_by_digest256(NULL,
                                                        rs->descriptor_digest);
         if (node->md)
           node->md->held_by_nodes++;
+        node_add_to_ed25519_map(node);
       }
     }
 
@@ -468,6 +587,9 @@ nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md)
   if (node && node->md == md) {
     node->md = NULL;
     md->held_by_nodes--;
+    if (! node_get_ed25519_id(node)) {
+      node_remove_from_ed25519_map(node);
+    }
   }
 }
 
@@ -496,6 +618,7 @@ nodelist_drop_node(node_t *node, int remove_from_ht)
     tmp = HT_REMOVE(nodelist_map, &the_nodelist->nodes_by_id, node);
     tor_assert(tmp == node);
   }
+  node_remove_from_ed25519_map(node);
 
   idx = node->nodelist_idx;
   tor_assert(idx >= 0);
@@ -579,6 +702,7 @@ nodelist_free_all(void)
     return;
 
   HT_CLEAR(nodelist_map, &the_nodelist->nodes_by_id);
+  HT_CLEAR(nodelist_ed_map, &the_nodelist->nodes_by_ed_id);
   SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
     node->nodelist_idx = -1;
     node_free(node);
@@ -643,8 +767,26 @@ nodelist_assert_ok(void)
     tor_assert(node_sl_idx == node->nodelist_idx);
   } SMARTLIST_FOREACH_END(node);
 
+  /* Every node listed with an ed25519 identity should be listed by that
+   * identity.
+   */
+  SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
+    if (!ed25519_public_key_is_zero(&node->ed25519_id)) {
+      tor_assert(node == node_get_by_ed25519_id(&node->ed25519_id));
+    }
+  } SMARTLIST_FOREACH_END(node);
+
+  node_t **idx;
+  HT_FOREACH(idx, nodelist_ed_map, &the_nodelist->nodes_by_ed_id) {
+    node_t *node = *idx;
+    tor_assert(node == node_get_by_ed25519_id(&node->ed25519_id));
+  }
+
   tor_assert((long)smartlist_len(the_nodelist->nodes) ==
              (long)HT_SIZE(&the_nodelist->nodes_by_id));
+
+  tor_assert((long)smartlist_len(the_nodelist->nodes) >=
+             (long)HT_SIZE(&the_nodelist->nodes_by_ed_id));
 
   digestmap_free(dm, NULL);
 }
@@ -662,28 +804,23 @@ nodelist_get_list,(void))
 /** Given a hex-encoded nickname of the format DIGEST, $DIGEST, $DIGEST=name,
  * or $DIGEST~name, return the node with the matching identity digest and
  * nickname (if any).  Return NULL if no such node exists, or if <b>hex_id</b>
- * is not well-formed. */
+ * is not well-formed. DOCDOC flags */
 const node_t *
-node_get_by_hex_id(const char *hex_id)
+node_get_by_hex_id(const char *hex_id, unsigned flags)
 {
   char digest_buf[DIGEST_LEN];
   char nn_buf[MAX_NICKNAME_LEN+1];
   char nn_char='\0';
 
+  (void) flags; // XXXX
+
   if (hex_digest_nickname_decode(hex_id, digest_buf, &nn_char, nn_buf)==0) {
     const node_t *node = node_get_by_id(digest_buf);
     if (!node)
       return NULL;
-    if (nn_char) {
-      const char *real_name = node_get_nickname(node);
-      if (!real_name || strcasecmp(real_name, nn_buf))
-        return NULL;
-      if (nn_char == '=') {
-        const char *named_id =
-          networkstatus_get_router_digest_by_nickname(nn_buf);
-        if (!named_id || tor_memneq(named_id, digest_buf, DIGEST_LEN))
-          return NULL;
-      }
+    if (nn_char == '=') {
+      /* "=" indicates a Named relay, but there aren't any of those now. */
+      return NULL;
     }
     return node;
   }
@@ -692,19 +829,21 @@ node_get_by_hex_id(const char *hex_id)
 }
 
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
- * the corresponding node_t, or NULL if none exists.  Warn the user if
- * <b>warn_if_unnamed</b> is set, and they have specified a router by
- * nickname, but the Named flag isn't set for that router. */
+ * the corresponding node_t, or NULL if none exists. Warn the user if they
+ * have specified a router by nickname, unless the NNF_NO_WARN_UNNAMED bit is
+ * set in <b>flags</b>. */
 MOCK_IMPL(const node_t *,
-node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
+node_get_by_nickname,(const char *nickname, unsigned flags))
 {
+  const int warn_if_unnamed = !(flags & NNF_NO_WARN_UNNAMED);
+
   if (!the_nodelist)
     return NULL;
 
   /* Handle these cases: DIGEST, $DIGEST, $DIGEST=name, $DIGEST~name. */
   {
     const node_t *node;
-    if ((node = node_get_by_hex_id(nickname)) != NULL)
+    if ((node = node_get_by_hex_id(nickname, flags)) != NULL)
       return node;
   }
 
@@ -779,22 +918,34 @@ node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
 const ed25519_public_key_t *
 node_get_ed25519_id(const node_t *node)
 {
+  const ed25519_public_key_t *ri_pk = NULL;
+  const ed25519_public_key_t *md_pk = NULL;
   if (node->ri) {
     if (node->ri->cache_info.signing_key_cert) {
-      const ed25519_public_key_t *pk =
-        &node->ri->cache_info.signing_key_cert->signing_key;
-      if (BUG(ed25519_public_key_is_zero(pk)))
-        goto try_the_md;
-      return pk;
+      ri_pk = &node->ri->cache_info.signing_key_cert->signing_key;
+      if (BUG(ed25519_public_key_is_zero(ri_pk)))
+        ri_pk = NULL;
     }
   }
- try_the_md:
+
   if (node->md) {
     if (node->md->ed25519_identity_pkey) {
-      return node->md->ed25519_identity_pkey;
+      md_pk = node->md->ed25519_identity_pkey;
     }
   }
-  return NULL;
+
+  if (ri_pk && md_pk) {
+    if (ed25519_pubkey_eq(ri_pk, md_pk)) {
+      return ri_pk;
+    } else {
+      log_warn(LD_GENERAL, "Inconsistent ed25519 identities in the nodelist");
+      return NULL;
+    }
+  } else if (ri_pk) {
+    return ri_pk;
+  } else {
+    return md_pk;
+  }
 }
 
 /** Return true iff this node's Ed25519 identity matches <b>id</b>.
@@ -927,21 +1078,6 @@ node_get_nickname(const node_t *node)
     return NULL;
 }
 
-/** Return true iff the nickname of <b>node</b> is canonical, based on the
- * latest consensus. */
-int
-node_is_named(const node_t *node)
-{
-  const char *named_id;
-  const char *nickname = node_get_nickname(node);
-  if (!nickname)
-    return 0;
-  named_id = networkstatus_get_router_digest_by_nickname(nickname);
-  if (!named_id)
-    return 0;
-  return tor_memeq(named_id, node->identity, DIGEST_LEN);
-}
-
 /** Return true iff <b>node</b> appears to be a directory authority or
  * directory cache */
 int
@@ -989,13 +1125,12 @@ node_get_verbose_nickname(const node_t *node,
                           char *verbose_name_out)
 {
   const char *nickname = node_get_nickname(node);
-  int is_named = node_is_named(node);
   verbose_name_out[0] = '$';
   base16_encode(verbose_name_out+1, HEX_DIGEST_LEN+1, node->identity,
                 DIGEST_LEN);
   if (!nickname)
     return;
-  verbose_name_out[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
+  verbose_name_out[1+HEX_DIGEST_LEN] = '~';
   strlcpy(verbose_name_out+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
 }
 
@@ -1550,8 +1685,7 @@ node_nickname_matches(const node_t *node, const char *nickname)
     return 1;
   return hex_digest_nickname_matches(nickname,
                                      node->identity,
-                                     n,
-                                     node_is_named(node));
+                                     n);
 }
 
 /** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
@@ -1653,7 +1787,7 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
     SMARTLIST_FOREACH_BEGIN(declared_family, const char *, name) {
       const node_t *node2;
       const smartlist_t *family2;
-      if (!(node2 = node_get_by_nickname(name, 0)))
+      if (!(node2 = node_get_by_nickname(name, NNF_NO_WARN_UNNAMED)))
         continue;
       if (!(family2 = node_get_declared_family(node2)))
         continue;

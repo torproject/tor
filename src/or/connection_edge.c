@@ -1086,7 +1086,8 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
     if (!entry_conn->chosen_exit_optional &&
         !entry_conn->chosen_exit_retries)
       continue;
-    r1 = node_get_by_nickname(entry_conn->chosen_exit_name, 0);
+    r1 = node_get_by_nickname(entry_conn->chosen_exit_name,
+                              NNF_NO_WARN_UNNAMED);
     r2 = node_get_by_id(info->identity_digest);
     if (!r1 || !r2 || r1 != r2)
       continue;
@@ -1694,7 +1695,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       if (s[1] != '\0') {
         /* Looks like a real .exit one. */
         conn->chosen_exit_name = tor_strdup(s+1);
-        node = node_get_by_nickname(conn->chosen_exit_name, 1);
+        node = node_get_by_nickname(conn->chosen_exit_name, 0);
 
         if (exit_source == ADDRMAPSRC_TRACKEXIT) {
           /* We 5 tries before it expires the addressmap */
@@ -1715,7 +1716,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
        * form that means (foo's address).foo.exit. */
 
       conn->chosen_exit_name = tor_strdup(socks->address);
-      node = node_get_by_nickname(conn->chosen_exit_name, 1);
+      node = node_get_by_nickname(conn->chosen_exit_name, 0);
       if (node) {
         *socks->address = 0;
         node_get_address_string(node, socks->address, sizeof(socks->address));
@@ -3819,7 +3820,7 @@ connection_ap_can_use_exit(const entry_connection_t *conn,
    */
   if (conn->chosen_exit_name) {
     const node_t *chosen_exit =
-      node_get_by_nickname(conn->chosen_exit_name, 1);
+      node_get_by_nickname(conn->chosen_exit_name, 0);
     if (!chosen_exit || tor_memneq(chosen_exit->identity,
                                exit_node->identity, DIGEST_LEN)) {
       /* doesn't match */

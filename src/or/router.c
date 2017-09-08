@@ -2287,7 +2287,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
        if (!strcasecmp(name, options->Nickname))
          continue; /* Don't list ourself, that's redundant */
        else
-         member = node_get_by_nickname(name, 1);
+         member = node_get_by_nickname(name, 0);
        if (!member) {
          int is_legal = is_legal_nickname_or_hexdigest(name);
          if (!smartlist_contains_string(warned_nonexistent_family, name) &&

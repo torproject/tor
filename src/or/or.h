@@ -2459,12 +2459,21 @@ typedef struct node_t {
 
   /** Used to look up the node_t by its identity digest. */
   HT_ENTRY(node_t) ht_ent;
+  /** Used to look up the node_t by its ed25519 identity digest. */
+  HT_ENTRY(node_t) ed_ht_ent;
   /** Position of the node within the list of nodes */
   int nodelist_idx;
 
   /** The identity digest of this node_t.  No more than one node_t per
    * identity may exist at a time. */
   char identity[DIGEST_LEN];
+
+  /** The ed25519 identity of this node_t. This field is nonzero iff we
+   * currently have an ed25519 identity for this node in either md or ri,
+   * _and_ this node has been inserted to the ed25519-to-node map in the
+   * nodelist.
+   */
+  ed25519_public_key_t ed25519_id;
 
   microdesc_t *md;
   routerinfo_t *ri;

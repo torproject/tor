@@ -214,7 +214,7 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
       dot--;
     if (*dot == '.') dot++;
     nodename = tor_strndup(dot, len-5-(dot-target));;
-    node = node_get_by_nickname(nodename, 0);
+    node = node_get_by_nickname(nodename, NNF_NO_WARN_UNNAMED);
     tor_free(nodename);
     if (!node ||
         (allow_nodes && !routerset_contains_node(allow_nodes, node)) ||

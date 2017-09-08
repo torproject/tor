@@ -1898,7 +1898,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
   (void) control_conn;
   if (!strcmpstart(question, "desc/id/")) {
     const routerinfo_t *ri = NULL;
-    const node_t *node = node_get_by_hex_id(question+strlen("desc/id/"));
+    const node_t *node = node_get_by_hex_id(question+strlen("desc/id/"), 0);
     if (node)
       ri = node->ri;
     if (ri) {
@@ -1917,7 +1917,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     /* XXX Setting 'warn_if_unnamed' here is a bit silly -- the
      * warning goes to the user, not to the controller. */
     const node_t *node =
-      node_get_by_nickname(question+strlen("desc/name/"), 1);
+      node_get_by_nickname(question+strlen("desc/name/"), 0);
     if (node)
       ri = node->ri;
     if (ri) {
@@ -2003,7 +2003,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
       return -1;
     }
   } else if (!strcmpstart(question, "md/id/")) {
-    const node_t *node = node_get_by_hex_id(question+strlen("md/id/"));
+    const node_t *node = node_get_by_hex_id(question+strlen("md/id/"), 0);
     const microdesc_t *md = NULL;
     if (node) md = node->md;
     if (md && md->body) {
@@ -2012,7 +2012,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
   } else if (!strcmpstart(question, "md/name/")) {
     /* XXX Setting 'warn_if_unnamed' here is a bit silly -- the
      * warning goes to the user, not to the controller. */
-    const node_t *node = node_get_by_nickname(question+strlen("md/name/"), 1);
+    const node_t *node = node_get_by_nickname(question+strlen("md/name/"), 0);
     /* XXXX duplicated code */
     const microdesc_t *md = NULL;
     if (node) md = node->md;
@@ -2025,7 +2025,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
   } else if (!strcmpstart(question, "desc-annotations/id/")) {
     const routerinfo_t *ri = NULL;
     const node_t *node =
-      node_get_by_hex_id(question+strlen("desc-annotations/id/"));
+      node_get_by_hex_id(question+strlen("desc-annotations/id/"), 0);
     if (node)
       ri = node->ri;
     if (ri) {
@@ -3406,7 +3406,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   nodes = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(router_nicknames, const char *, n) {
-    const node_t *node = node_get_by_nickname(n, 1);
+    const node_t *node = node_get_by_nickname(n, 0);
     if (!node) {
       connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
       goto done;
@@ -4173,7 +4173,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
       const char *server;
 
       server = arg + strlen(opt_server);
-      node = node_get_by_hex_id(server);
+      node = node_get_by_hex_id(server, 0);
       if (!node) {
         connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
                                  server);
@@ -4259,7 +4259,7 @@ handle_control_hspost(control_connection_t *conn,
     SMARTLIST_FOREACH_BEGIN(args, const char *, arg) {
       if (!strcasecmpstart(arg, opt_server)) {
         const char *server = arg + strlen(opt_server);
-        const node_t *node = node_get_by_hex_id(server);
+        const node_t *node = node_get_by_hex_id(server, 0);
 
         if (!node || !node->rs) {
           connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",

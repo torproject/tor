@@ -2934,7 +2934,7 @@ hex_digest_nickname_decode(const char *hexdigest,
  * <b>hexdigest</b> is malformed, or it doesn't match.  */
 int
 hex_digest_nickname_matches(const char *hexdigest, const char *identity_digest,
-                            const char *nickname, int is_named)
+                            const char *nickname)
 {
   char digest[DIGEST_LEN];
   char nn_char='\0';
@@ -2943,12 +2943,14 @@ hex_digest_nickname_matches(const char *hexdigest, const char *identity_digest,
   if (hex_digest_nickname_decode(hexdigest, digest, &nn_char, nn_buf) == -1)
     return 0;
 
-  if (nn_char == '=' || nn_char == '~') {
-    if (!nickname)
+  if (nn_char == '=') {
+    return 0;
+  }
+
+  if (nn_char == '~') {
+    if (!nickname)     // XXX This seems wrong. -NM
       return 0;
     if (strcasecmp(nn_buf, nickname))
-      return 0;
-    if (nn_char == '=' && !is_named)
       return 0;
   }
 
