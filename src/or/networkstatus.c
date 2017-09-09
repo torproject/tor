@@ -804,16 +804,6 @@ networkstatus_get_router_digest_by_nickname(const char *nickname)
   return strmap_get_lc(named_server_map, nickname);
 }
 
-/** Return true iff <b>nickname</b> is disallowed from being the nickname
- * of any server. */
-int
-networkstatus_nickname_is_unnamed(const char *nickname)
-{
-  if (!unnamed_server_map)
-    return 0;
-  return strmap_get_lc(unnamed_server_map, nickname) != NULL;
-}
-
 /** How frequently do directory authorities re-download fresh networkstatus
  * documents? */
 #define AUTHORITY_NS_CACHE_INTERVAL (10*60)

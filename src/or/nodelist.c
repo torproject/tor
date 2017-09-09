@@ -859,14 +859,6 @@ node_get_by_nickname,(const char *nickname, unsigned flags))
       return node_get_by_id(named_id);
   }
 
-  /* Is it marked as owned-by-someone-else? */
-  if (networkstatus_nickname_is_unnamed(nickname)) {
-    log_info(LD_GENERAL, "The name %s is listed as Unnamed: there is some "
-             "router that holds it, but not one listed in the current "
-             "consensus.", escaped(nickname));
-    return NULL;
-  }
-
   /* Okay, so the name is not canonical for anybody. */
   {
     smartlist_t *matches = smartlist_new();
