@@ -1018,7 +1018,7 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
     if (cached_desc && hs_client_any_intro_points_usable(identity_pk,
                                                          cached_desc)) {
       log_warn(LD_GENERAL, "We would fetch a v3 hidden service descriptor "
-                            "but we already have a useable descriprot.");
+                            "but we already have a usable descriptor.");
       return 0;
     }
   }
