@@ -407,9 +407,20 @@ hs_circuitmap_get_rend_circ_service_side(const uint8_t *cookie)
 }
 
 /* Public function: Return client-side rendezvous circuit with rendezvous
- * <b>cookie</b>. It will first lookup for the CIRCUIT_PURPOSE_C_REND_READY
- * purpose and then try for CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED and then
- * finally tries for CIRCUIT_PURPOSE_C_ESTABLISH_REND.
+ * <b>cookie</b>. It will look for circuits with the following purposes:
+
+ * a) CIRCUIT_PURPOSE_C_REND_READY: Established rend circuit (received
+ *    RENDEZVOUS_ESTABLISHED). Waiting for RENDEZVOUS2 from service, and for
+ *    INTRODUCE_ACK from intro point.
+ *
+ * b) CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED: Established rend circuit and
+ *    introduce circuit acked. Waiting for RENDEZVOUS2 from service.
+ *
+ * c) CIRCUIT_PURPOSE_C_REND_JOINED: Established rend circuit and received
+ *    RENDEZVOUS2 from service.
+ *
+ * d) CIRCUIT_PURPOSE_C_ESTABLISH_REND: Rend circuit open but not yet
+ *    established.
  *
  * Return NULL if no such circuit is found in the circuitmap. */
 origin_circuit_t *
@@ -427,6 +438,13 @@ hs_circuitmap_get_rend_circ_client_side(const uint8_t *cookie)
   circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_REND_CLIENT_SIDE,
                                           REND_TOKEN_LEN, cookie,
                                  CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
+  if (circ) {
+    return circ;
+  }
+
+  circ = hs_circuitmap_get_origin_circuit(HS_TOKEN_REND_CLIENT_SIDE,
+                                          REND_TOKEN_LEN, cookie,
+                                          CIRCUIT_PURPOSE_C_REND_JOINED);
   if (circ) {
     return circ;
   }
