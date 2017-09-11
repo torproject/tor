@@ -276,6 +276,35 @@ test_protover_all_supported(void *arg)
 }
 
 static void
+test_protover_supports_version(void *arg)
+{
+  (void)arg;
+
+  tt_assert(protocol_list_supports_protocol("Link=3-6", PRT_LINK, 3));
+  tt_assert(protocol_list_supports_protocol("Link=3-6", PRT_LINK, 6));
+  tt_assert(!protocol_list_supports_protocol("Link=3-6", PRT_LINK, 7));
+  tt_assert(!protocol_list_supports_protocol("Link=3-6", PRT_LINKAUTH, 3));
+
+  tt_assert(!protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
+                                            PRT_LINKAUTH, 2));
+  tt_assert(protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
+                                            PRT_LINKAUTH, 3));
+  tt_assert(!protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 4));
+  tt_assert(!protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 4));
+  tt_assert(protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 3));
+  tt_assert(protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 2));
+
+  tt_assert(!protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                                      PRT_DESC, 2));
+ done:
+ ;
+}
+
+static void
 test_protover_vote_roundtrip(void *args)
 {
   (void) args;
@@ -360,6 +389,7 @@ struct testcase_t protover_tests[] = {
   PV_TEST(parse_fail, 0),
   PV_TEST(vote, 0),
   PV_TEST(all_supported, 0),
+  PV_TEST(supports_version, 0),
   PV_TEST(vote_roundtrip, 0),
   END_OF_TESTCASES
 };
