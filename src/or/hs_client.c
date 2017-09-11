@@ -746,6 +746,14 @@ handle_introduce_ack_success(origin_circuit_t *intro_circ)
   }
 
   assert_circ_anonymity_ok(rend_circ, get_options());
+
+  /* It is possible to get a RENDEZVOUS2 cell before the INTRODUCE_ACK which
+   * means that the circuit will be joined and already transmitting data. In
+   * that case, simply skip the purpose change and close the intro circuit
+   * like it should be. */
+  if (TO_CIRCUIT(rend_circ)->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+    goto end;
+  }
   circuit_change_purpose(TO_CIRCUIT(rend_circ),
                          CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
   /* Set timestamp_dirty, because circuit_expire_building expects it to
