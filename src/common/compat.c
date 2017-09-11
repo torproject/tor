@@ -1718,19 +1718,24 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     int bad = 1;
 #ifdef OPEN_MAX
-    if (errno == EINVAL && OPEN_MAX < rlim.rlim_cur) {
+    uint64_t try_limit = OPEN_MAX - ULIMIT_BUFFER;
+    if (errno == EINVAL && try_limit < rlim.rlim_cur) {
       /* On some platforms, OPEN_MAX is the real limit, and getrlimit() is
        * full of nasty lies.  I'm looking at you, OSX 10.5.... */
-      rlim.rlim_cur = OPEN_MAX;
+      rlim.rlim_cur = try_limit;
       if (setrlimit(RLIMIT_NOFILE, &rlim) == 0) {
         if (rlim.rlim_cur < (rlim_t)limit) {
           log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
-                 "OPEN_MAX, and ConnLimit is %lu.  Changing ConnLimit; sorry.",
-                   (unsigned long)OPEN_MAX, (unsigned long)limit);
+                   "OPEN_MAX (%lu), and ConnLimit is %lu.  Changing "
+                   "ConnLimit; sorry.",
+                   (unsigned long)try_limit, (unsigned long)OPEN_MAX,
+                   (unsigned long)limit);
         } else {
-          log_info(LD_CONFIG, "Dropped connection limit to OPEN_MAX (%lu); "
-                   "Apparently, %lu was too high and rlimit lied to us.",
-                   (unsigned long)OPEN_MAX, (unsigned long)rlim.rlim_max);
+          log_info(LD_CONFIG, "Dropped connection limit to %lu based on "
+                   "OPEN_MAX (%lu); Apparently, %lu was too high and rlimit "
+                   "lied to us.",
+                   (unsigned long)try_limit, (unsigned long)OPEN_MAX,
+                   (unsigned long)rlim.rlim_max);
         }
         bad = 0;
       }
