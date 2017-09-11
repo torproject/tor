@@ -886,7 +886,7 @@ connection_or_check_canonicity(or_connection_t *conn, int started_here)
 
   const node_t *r = node_get_by_id(id_digest);
   if (r &&
-      node_supports_ed25519_link_authentication(r) &&
+      node_supports_ed25519_link_authentication(r, 1) &&
       ! node_ed25519_id_matches(r, ed_id)) {
     /* If this node is capable of proving an ed25519 ID,
      * we can't call this a canonical connection unless both IDs match. */

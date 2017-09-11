@@ -962,23 +962,29 @@ node_ed25519_id_matches(const node_t *node, const ed25519_public_key_t *id)
 }
 
 /** Return true iff <b>node</b> supports authenticating itself
- * by ed25519 ID during the link handshake in a way that we can understand
- * when we probe it. */
+ * by ed25519 ID during the link handshake.  If <b>compatible_with_us</b>,
+ * it needs to be using a link authentication method that we understand.
+ * If not, any plausible link authentication method will do. */
 int
-node_supports_ed25519_link_authentication(const node_t *node)
+node_supports_ed25519_link_authentication(const node_t *node,
+                                          int compatible_with_us)
 {
-  /* XXXX Oh hm. What if some day in the future there are link handshake
-   * versions that aren't 3 but which are ed25519 */
   if (! node_get_ed25519_id(node))
     return 0;
   if (node->ri) {
     const char *protos = node->ri->protocol_list;
     if (protos == NULL)
       return 0;
-    return protocol_list_supports_protocol(protos, PRT_LINKAUTH, 3);
+    if (compatible_with_us)
+      return protocol_list_supports_protocol(protos, PRT_LINKAUTH, 3);
+    else
+      return protocol_list_supports_protocol_or_later(protos, PRT_LINKAUTH, 3);
   }
   if (node->rs) {
-    return node->rs->supports_ed25519_link_handshake;
+    if (compatible_with_us)
+      return node->rs->supports_ed25519_link_handshake_compat;
+    else
+      return node->rs->supports_ed25519_link_handshake_any;
   }
   tor_assert_nonfatal_unreached_once();
   return 0;
