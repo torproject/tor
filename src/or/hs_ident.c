@@ -65,6 +65,22 @@ hs_ident_dir_conn_free(hs_ident_dir_conn_t *ident)
   tor_free(ident);
 }
 
+/* Initialized the allocated ident object with identity_pk and blinded_pk.
+ * None of them can be NULL since a valid directory connection identifier must
+ * have all fields set. */
+void
+hs_ident_dir_conn_init(const ed25519_public_key_t *identity_pk,
+                       const ed25519_public_key_t *blinded_pk,
+                       hs_ident_dir_conn_t *ident)
+{
+  tor_assert(identity_pk);
+  tor_assert(blinded_pk);
+  tor_assert(ident);
+
+  ed25519_pubkey_copy(&ident->identity_pk, identity_pk);
+  ed25519_pubkey_copy(&ident->blinded_pk, blinded_pk);
+}
+
 /* Return a newly allocated edge connection identifier. The given public key
  * identity_pk is copied into the identifier. */
 hs_ident_edge_conn_t *

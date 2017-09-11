@@ -14,6 +14,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "connection.h"
 #include "directory.h"
 #include "main.h"
 #include "networkstatus.h"
@@ -639,6 +640,41 @@ count_desc_circuit_established(const hs_service_descriptor_t *desc)
   } DIGEST256MAP_FOREACH_END;
 
   return count;
+}
+
+/* For a given service and descriptor of that service, close all active
+ * directory connections. */
+static void
+close_directory_connections(const hs_service_t *service,
+                            const hs_service_descriptor_t *desc)
+{
+  unsigned int count = 0;
+  smartlist_t *dir_conns;
+
+  tor_assert(service);
+  tor_assert(desc);
+
+  /* Close pending HS desc upload connections for the blinded key of 'desc'. */
+  dir_conns = connection_list_by_type_purpose(CONN_TYPE_DIR,
+                                              DIR_PURPOSE_UPLOAD_HSDESC);
+  SMARTLIST_FOREACH_BEGIN(dir_conns, connection_t *, conn) {
+    dir_connection_t *dir_conn = TO_DIR_CONN(conn);
+    if (ed25519_pubkey_eq(&dir_conn->hs_ident->identity_pk,
+                          &service->keys.identity_pk) &&
+        ed25519_pubkey_eq(&dir_conn->hs_ident->blinded_pk,
+                          &desc->blinded_kp.pubkey)) {
+      connection_mark_for_close(conn);
+      count++;
+      continue;
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+  log_info(LD_REND, "Closed %u active service directory connections for "
+                    "descriptor %s of service %s",
+           count, safe_str_client(ed25519_fmt(&desc->blinded_kp.pubkey)),
+           safe_str_client(service->onion_address));
+  /* We don't have ownership of the objects in this list. */
+  smartlist_free(dir_conns);
 }
 
 /* Close all rendezvous circuits for the given service. */
@@ -2137,7 +2173,9 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
   }
 
   /* Setup the connection identifier. */
-  ed25519_pubkey_copy(&ident.identity_pk, &service->keys.identity_pk);
+  hs_ident_dir_conn_init(&service->keys.identity_pk, &desc->blinded_kp.pubkey,
+                         &ident);
+
   /* This is our resource when uploading which is used to construct the URL
    * with the version number: "/tor/hs/<version>/publish". */
   tor_snprintf(version_str, sizeof(version_str), "%u",
@@ -2386,6 +2424,13 @@ upload_descriptor_to_all(const hs_service_t *service,
 
   tor_assert(service);
   tor_assert(desc);
+
+  /* We'll first cancel any directory request that are ongoing for this
+   * descriptor. It is possible that we can trigger multiple uploads in a
+   * short time frame which can lead to a race where the second upload arrives
+   * before the first one leading to a 400 malformed descriptor response from
+   * the directory. Closing all pending requests avoids that. */
+  close_directory_connections(service, desc);
 
   /* Get our list of responsible HSDir. */
   responsible_dirs = smartlist_new();

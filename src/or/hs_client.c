@@ -156,7 +156,8 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   }
 
   /* Copy onion pk to a dir_ident so that we attach it to the dir conn */
-  ed25519_pubkey_copy(&hs_conn_dir_ident.identity_pk, onion_identity_pk);
+  hs_ident_dir_conn_init(onion_identity_pk, &blinded_pubkey,
+                         &hs_conn_dir_ident);
 
   /* Setup directory request */
   directory_request_t *req =
