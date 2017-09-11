@@ -2475,7 +2475,8 @@ The following options are used for running a testing Tor network.
        TestingClientDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
        TestingServerConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
        TestingClientConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
-       TestingBridgeDownloadSchedule 0, 5, 10, 30, 60
+       TestingBridgeDownloadSchedule 10, 30, 60
+       TestingBridgeBootstrapDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
        TestingClientMaxIntervalWithoutRequest 5 seconds
        TestingDirConnectionMaxStall 30 seconds
        TestingConsensusMaxDownloadTries 80
@@ -2540,9 +2541,16 @@ The following options are used for running a testing Tor network.
     1800, 3600, 3600, 3600, 10800, 21600, 43200)
 
 [[TestingBridgeDownloadSchedule]] **TestingBridgeDownloadSchedule** __N__,__N__,__...__::
-    Schedule for when clients should download bridge descriptors. Changing this
-    requires that **TestingTorNetwork** is set. (Default: 0, 8, 3600, 10800,
-    25200, 54000, 111600, 262800)
+    Schedule for when clients should download each bridge descriptor when they
+    know that one or more of their configured bridges are running. Changing
+    this requires that **TestingTorNetwork** is set. (Default: 10800, 25200,
+    54000, 111600, 262800)
+
+[[TestingBridgeBootstrapDownloadSchedule]] **TestingBridgeBootstrapDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when clients should download each bridge descriptor when they
+    have just started, or when they can not contact any of their bridges.
+    Changing this requires that **TestingTorNetwork** is set. (Default: 0, 30,
+    90, 600, 3600, 10800, 25200, 54000, 111600, 262800)
 
 [[TestingClientMaxIntervalWithoutRequest]] **TestingClientMaxIntervalWithoutRequest** __N__ **seconds**|**minutes**::
     When directory clients have only a few descriptors to request, they batch

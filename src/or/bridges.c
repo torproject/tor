@@ -794,17 +794,10 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       node_t *node;
       /* it's here; schedule its re-fetch for a long time from now. */
       if (!from_cache) {
+        /* This schedules the re-fetch at a constant interval, which produces
+         * a pattern of bridge traffic. But it's better than trying all
+         * configured briges several times in the first few minutes. */
         download_status_reset(&bridge->fetch_status);
-        /* We have two quick attempts in the bridge schedule, and then slow
-         * ones */
-        download_status_increment_attempt(
-                        &bridge->fetch_status,
-                        safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
-                        now);
-        download_status_increment_attempt(
-                        &bridge->fetch_status,
-                        safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
-                        now);
       }
 
       node = node_get_mutable_by_id(ri->cache_info.identity_digest);
@@ -837,8 +830,8 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
  * We use this function to decide if we're ready to start building
  * circuits through our bridges, or if we need to wait until the
  * directory "server/authority" requests finish. */
-int
-any_bridge_descriptors_known(void)
+MOCK_IMPL(int,
+any_bridge_descriptors_known, (void))
 {
   tor_assert(get_options()->UseBridges);
 

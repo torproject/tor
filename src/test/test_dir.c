@@ -18,6 +18,7 @@
 #define RELAY_PRIVATE
 
 #include "or.h"
+#include "bridges.h"
 #include "confparse.h"
 #include "config.h"
 #include "control.h"
@@ -4245,7 +4246,7 @@ test_dir_download_status_increment(void *arg)
   /* Put it in the options */
   mock_options = &test_options;
   reset_options(mock_options, &mock_get_options_calls);
-  mock_options->TestingBridgeDownloadSchedule = schedule;
+  mock_options->TestingBridgeBootstrapDownloadSchedule = schedule;
   mock_options->TestingClientDownloadSchedule = schedule;
 
   MOCK(get_options, mock_get_options);
@@ -4425,6 +4426,7 @@ test_dir_download_status_increment(void *arg)
 
   /* Check that failure increments do happen on attempt-based schedules,
    * but that the retry is set at the end of time */
+  mock_options->UseBridges = 1;
   mock_get_options_calls = 0;
   next_at = download_status_increment_failure(&dls_attempt, 404, "test", 0,
                                               current_time);
@@ -4539,6 +4541,7 @@ test_dir_download_status_increment(void *arg)
   tt_int_op(download_status_get_n_failures(&dls_attempt), OP_EQ, 0);
   tt_int_op(download_status_get_n_attempts(&dls_attempt), OP_EQ, 0);
   tt_int_op(mock_get_options_calls, OP_GE, 1);
+  mock_options->UseBridges = 0;
 
   /* Check that attempt increments don't happen on failure-based schedules,
    * and that the attempt is set at the end of time */
@@ -5859,9 +5862,17 @@ mock_networkstatus_consensus_can_use_extra_fallbacks(
   return mock_networkstatus_consensus_can_use_extra_fallbacks_value;
 }
 
-/* data is a 2 character nul-terminated string.
+static int mock_any_bridge_descriptors_known_value = 0;
+static int
+mock_any_bridge_descriptors_known(void)
+{
+  return mock_any_bridge_descriptors_known_value;
+}
+
+/* data is a 3 character nul-terminated string.
  * If data[0] is 'b', set bootstrapping, anything else means not bootstrapping
  * If data[1] is 'f', set extra fallbacks, anything else means no extra
+ * If data[2] is 'f', set running bridges, anything else means no extra
  * fallbacks.
  */
 static void
@@ -5869,7 +5880,7 @@ test_dir_find_dl_schedule(void* data)
 {
   const char *str = (const char *)data;
 
-  tt_assert(strlen(data) == 2);
+  tt_assert(strlen(data) == 3);
 
   if (str[0] == 'b') {
     mock_networkstatus_consensus_is_bootstrapping_value = 1;
@@ -5883,15 +5894,23 @@ test_dir_find_dl_schedule(void* data)
     mock_networkstatus_consensus_can_use_extra_fallbacks_value = 0;
   }
 
+  if (str[2] == 'r') {
+    mock_any_bridge_descriptors_known_value = 1;
+  } else {
+    mock_any_bridge_descriptors_known_value = 0;
+  }
+
   MOCK(networkstatus_consensus_is_bootstrapping,
        mock_networkstatus_consensus_is_bootstrapping);
   MOCK(networkstatus_consensus_can_use_extra_fallbacks,
        mock_networkstatus_consensus_can_use_extra_fallbacks);
+  MOCK(any_bridge_descriptors_known,
+       mock_any_bridge_descriptors_known);
 
   download_status_t dls;
   smartlist_t server, client, server_cons, client_cons;
   smartlist_t client_boot_auth_only_cons, client_boot_auth_cons;
-  smartlist_t client_boot_fallback_cons, bridge;
+  smartlist_t client_boot_fallback_cons, bridge, bridge_bootstrap;
 
   mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
@@ -5908,6 +5927,7 @@ test_dir_find_dl_schedule(void* data)
   mock_options->ClientBootstrapConsensusFallbackDownloadSchedule =
     &client_boot_fallback_cons;
   mock_options->TestingBridgeDownloadSchedule = &bridge;
+  mock_options->TestingBridgeBootstrapDownloadSchedule = &bridge_bootstrap;
 
   dls.schedule = DL_SCHED_GENERIC;
   /* client */
@@ -5996,11 +6016,17 @@ test_dir_find_dl_schedule(void* data)
   dls.schedule = DL_SCHED_BRIDGE;
   /* client */
   mock_options->ClientOnly = 1;
-  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
+  mock_options->UseBridges = 1;
+  if (any_bridge_descriptors_known()) {
+    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
+  } else {
+    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge_bootstrap);
+  }
 
  done:
   UNMOCK(networkstatus_consensus_is_bootstrapping);
   UNMOCK(networkstatus_consensus_can_use_extra_fallbacks);
+  UNMOCK(any_bridge_descriptors_known);
   UNMOCK(get_options);
   tor_free(mock_options);
   mock_options = NULL;
@@ -6165,10 +6191,14 @@ struct testcase_t dir_tests[] = {
   DIR(dump_unparseable_descriptors, 0),
   DIR(populate_dump_desc_fifo, 0),
   DIR(populate_dump_desc_fifo_2, 0),
-  DIR_ARG(find_dl_schedule, TT_FORK, "bf"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "ba"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "cf"),
-  DIR_ARG(find_dl_schedule, TT_FORK, "ca"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "bfd"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "bad"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "cfd"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "cad"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "bfr"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "bar"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "cfr"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "car"),
   DIR(assumed_flags, 0),
   DIR(networkstatus_compute_bw_weights_v10, 0),
   END_OF_TESTCASES
