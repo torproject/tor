@@ -455,6 +455,8 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
   b->fetch_status.backoff = DL_SCHED_RANDOM_EXPONENTIAL;
   b->fetch_status.increment_on = DL_SCHED_INCREMENT_ATTEMPT;
+  /* This will fail if UseBridges is not set */
+  download_status_reset(&b->fetch_status);
   b->socks_args = bridge_line->socks_args;
   if (!bridge_list)
     bridge_list = smartlist_new();
