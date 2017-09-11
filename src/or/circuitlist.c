@@ -1912,6 +1912,10 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
     circuits_pending_close = smartlist_new();
 
   smartlist_add(circuits_pending_close, circ);
+
+  log_info(LD_GENERAL, "Circuit %u marked for close at %s:%d (orig reason: "
+                       "%u, new reason: %u)",
+           circ->n_circ_id, file, line, orig_reason, reason);
 }
 
 /** Called immediately before freeing a marked circuit <b>circ</b> from
