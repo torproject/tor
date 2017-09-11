@@ -22,5 +22,9 @@ void timer_free(tor_timer_t *t);
 void timers_initialize(void);
 void timers_shutdown(void);
 
+#ifdef TOR_TIMERS_PRIVATE
+STATIC void timers_run_pending(void);
+#endif
+
 #endif
 
