@@ -29,6 +29,8 @@
 
 #include "orconfig.h"
 
+#define TOR_TIMERS_PRIVATE
+
 #include "compat.h"
 #include "compat_libevent.h"
 #include "timers.h"
@@ -148,6 +150,21 @@ libevent_timer_reschedule(void)
   event_add(global_timer_event, &d);
 }
 
+/** Run the callback of every timer that has expired, based on the current
+ * output of monotime_get(). */
+STATIC void
+timers_run_pending(void)
+{
+  monotime_t now;
+  monotime_get(&now);
+  timer_advance_to_cur_time(&now);
+
+  tor_timer_t *t;
+  while ((t = timeouts_get(global_timeouts))) {
+    t->callback.cb(t, t->callback.arg, &now);
+  }
+}
+
 /**
  * Invoked when the libevent timer has expired: see which tor_timer_t events
  * have fired, activate their callbacks, and reschedule the libevent timer.
@@ -159,14 +176,7 @@ libevent_timer_callback(evutil_socket_t fd, short what, void *arg)
   (void)what;
   (void)arg;
 
-  monotime_t now;
-  monotime_get(&now);
-  timer_advance_to_cur_time(&now);
-
-  tor_timer_t *t;
-  while ((t = timeouts_get(global_timeouts))) {
-    t->callback.cb(t, t->callback.arg, &now);
-  }
+  timers_run_pending();
 
   libevent_timer_reschedule();
 }
