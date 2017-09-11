@@ -1,0 +1,4 @@
+  o Minor bugfixes (file limits):
+    - When setting the maximum number of connections allowed by the OS,
+      always allow some extra file descriptors for other files.
+      Fixes bug 22797; bugfix on 0.2.0.10-alpha.
