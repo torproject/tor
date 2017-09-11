@@ -859,6 +859,7 @@ connection_ap_process_end_not_open(
           break; /* break means it'll close, below */
         /* Else fall through: expire this circuit, clear the
          * chosen_exit_name field, and try again. */
+        /* Falls through. */
       case END_STREAM_REASON_RESOLVEFAILED:
       case END_STREAM_REASON_TIMEOUT:
       case END_STREAM_REASON_MISC:
