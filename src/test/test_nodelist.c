@@ -197,8 +197,8 @@ test_nodelist_ed_id(void *arg)
     tor_free(ri[i]->cache_info.signing_key_cert);
     tor_free(ri[i]);
   }
-  smartlist_free(ns->routerstatus_list);
-  tor_free(ns);
+  smartlist_clear(ns->routerstatus_list);
+  networkstatus_vote_free(ns);
   UNMOCK(networkstatus_get_latest_consensus);
   UNMOCK(networkstatus_get_latest_consensus_by_flavor);
 }

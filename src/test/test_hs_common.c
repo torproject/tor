@@ -1494,9 +1494,6 @@ helper_test_hsdir_sync(networkstatus_t *ns,
    *      the client was also picked by service.
    */
 
-  cleanup_nodelist();
-  smartlist_clear(ns->routerstatus_list);
-
   /* 1) Initialize service time: consensus and real time */
   time_t now = helper_set_consensus_and_system_time(ns,
                                                    service_between_srv_and_tp);
@@ -1508,6 +1505,8 @@ helper_test_hsdir_sync(networkstatus_t *ns,
 
   /* Now let's upload our desc to all hsdirs */
   upload_descriptor_to_all(service, desc);
+  /* Cleanup right now so we don't memleak on error. */
+  cleanup_nodelist();
   /* Check that previous hsdirs were populated */
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
@@ -1515,6 +1514,8 @@ helper_test_hsdir_sync(networkstatus_t *ns,
   now = helper_set_consensus_and_system_time(ns, client_between_srv_and_tp);
 
   cleanup_nodelist();
+  SMARTLIST_FOREACH(ns->routerstatus_list,
+                    routerstatus_t *, rs, routerstatus_free(rs));
   smartlist_clear(ns->routerstatus_list);
   helper_initialize_big_hash_ring(ns);
 
@@ -1522,6 +1523,8 @@ helper_test_hsdir_sync(networkstatus_t *ns,
   char client_hsdir_b64_digest[BASE64_DIGEST_LEN+1] = {0};
   helper_client_pick_hsdir(&service->keys.identity_pk,
                           client_hsdir_b64_digest);
+  /* Cleanup right now so we don't memleak on error. */
+  cleanup_nodelist();
 
   /* CHECK: Go through the hsdirs chosen by the service and make sure that it
    * contains the one picked by the client! */
@@ -1534,6 +1537,9 @@ helper_test_hsdir_sync(networkstatus_t *ns,
    * need it for next scenario. */
   hs_service_free_all();
   hs_service_init();
+  SMARTLIST_FOREACH(ns->routerstatus_list,
+                    routerstatus_t *, rs, routerstatus_free(rs));
+  smartlist_clear(ns->routerstatus_list);
 }
 
 /** This test ensures that client and service will pick the same HSDirs, under
@@ -1643,9 +1649,6 @@ test_client_service_hsdir_set_sync(void *arg)
   helper_test_hsdir_sync(ns, 0, 1, 0);
 
  done:
-  SMARTLIST_FOREACH(ns->routerstatus_list,
-                    routerstatus_t *, rs, routerstatus_free(rs));
-  smartlist_clear(ns->routerstatus_list);
   networkstatus_vote_free(ns);
   nodelist_free_all();
   hs_free_all();
