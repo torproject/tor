@@ -5,6 +5,18 @@
 # This script is used for running a bunch of clang scan-build checkers
 # on Tor.
 
+CHECKERS=""
+
+scan-build \
+    $CHECKERS \
+    ./configure
+
+make clean
+
+scan-build \
+    $CHECKERS \
+    make -j5 -k
+
 CHECKERS="\
     -disable-checker deadcode.DeadStores \
     -enable-checker alpha.core.CastSize \
@@ -24,15 +36,6 @@ CHECKERS="\
     -enable-checker alpha.core.PointerArithm \
     -enable-checker alpha.core.TestAfterDivZero \
 "
-
-scan-build \
-    $CHECKERS \
-    ./configure
-
-scan-build \
-    $CHECKERS \
-    make -j2 -k
-
 
 # This one gives a false positive on every strcmp.
 #    -enable-checker alpha.core.PointerSub
