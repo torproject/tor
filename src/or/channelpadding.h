@@ -13,6 +13,11 @@
 
 #include "channelpadding_negotiation.h"
 
+#define CHANNELPADDING_TOR2WEB_PARAM  "nf_pad_tor2web"
+#define CHANNELPADDING_TOR2WEB_DEFAULT 1
+#define CHANNELPADDING_SOS_PARAM  "nf_pad_single_onion"
+#define CHANNELPADDING_SOS_DEFAULT 1
+
 typedef enum {
   CHANNELPADDING_WONTPAD,
   CHANNELPADDING_PADLATER,
