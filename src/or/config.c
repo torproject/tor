@@ -587,7 +587,16 @@ static config_var_t option_vars_[] = {
    * blackholed. Clients will try 3 directories simultaneously.
    * (Relays never use simultaneous connections.) */
   V(ClientBootstrapConsensusMaxInProgressTries, UINT, "3"),
-  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "1200, 900, 900, 3600"),
+  /* When a client has any running bridges, check each bridge occasionally,
+    * whether or not that bridge is actually up. */
+  V(TestingBridgeDownloadSchedule, CSV_INTERVAL,
+    "10800, 25200, 54000, 111600, 262800"),
+  /* When a client is just starting, or has no running bridges, check each
+   * bridge a few times quickly, and then try again later. These schedules
+   * are much longer than the other schedules, because we try each and every
+   * configured bridge with this schedule. */
+  V(TestingBridgeBootstrapDownloadSchedule, CSV_INTERVAL,
+    "0, 30, 90, 600, 3600, 10800, 25200, 54000, 111600, 262800"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "10 minutes"),
   V(TestingDirConnectionMaxStall, INTERVAL, "5 minutes"),
   V(TestingConsensusMaxDownloadTries, UINT, "8"),
@@ -649,7 +658,9 @@ static const config_var_t testing_tor_network_defaults[] = {
                                  "15, 20, 30, 60"),
   V(TestingClientConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
                                  "15, 20, 30, 60"),
-  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "60, 30, 30, 60"),
+  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "10, 30, 60"),
+  V(TestingBridgeBootstrapDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
+                                 "15, 20, 30, 60"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "5 seconds"),
   V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
   V(TestingConsensusMaxDownloadTries, UINT, "80"),
@@ -4098,6 +4109,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingServerConsensusDownloadSchedule);
   CHECK_DEFAULT(TestingClientConsensusDownloadSchedule);
   CHECK_DEFAULT(TestingBridgeDownloadSchedule);
+  CHECK_DEFAULT(TestingBridgeBootstrapDownloadSchedule);
   CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
   CHECK_DEFAULT(TestingDirConnectionMaxStall);
   CHECK_DEFAULT(TestingConsensusMaxDownloadTries);

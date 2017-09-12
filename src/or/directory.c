@@ -5362,7 +5362,14 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
         }
       }
     case DL_SCHED_BRIDGE:
-      return options->TestingBridgeDownloadSchedule;
+      /* A bridge client downloading bridge descriptors */
+      if (any_bridge_descriptors_known()) {
+        /* A bridge client with one or more running bridges */
+        return options->TestingBridgeDownloadSchedule;
+      } else {
+        /* A bridge client with no running bridges */
+        return options->TestingBridgeBootstrapDownloadSchedule;
+      }
     default:
       tor_assert(0);
   }
@@ -5683,8 +5690,8 @@ download_status_get_initial_delay_from_now(const download_status_t *dls)
  * (We find the zeroth element of the download schedule, and set
  * next_attempt_at to be the appropriate offset from 'now'. In most
  * cases this means setting it to 'now', so the item will be immediately
- * downloadable; in the case of bridge descriptors, the zeroth element
- * is an hour from now.) */
+ * downloadable; when using authorities with fallbacks, there is a few seconds'
+ * delay.) */
 void
 download_status_reset(download_status_t *dls)
 {

@@ -917,6 +917,7 @@ test_entry_guard_node_filter(void *arg)
   routerset_parse(get_options_mutable()->ExcludeNodes, "144.144.0.0/16", "");
 
   /* 4: Bridge. */
+  get_options_mutable()->UseBridges = 1;
   sweep_bridge_list();
   bl = tor_malloc_zero(sizeof(bridge_line_t));
   tor_addr_from_ipv4h(&bl->addr, n[4]->rs->addr);
@@ -924,6 +925,7 @@ test_entry_guard_node_filter(void *arg)
   memcpy(bl->digest, n[4]->identity, 20);
   bridge_add_from_config(bl);
   bl = NULL; // prevent free.
+  get_options_mutable()->UseBridges = 0;
 
   /* 5: Unreachable. This stays in the filter, but isn't in usable-filtered */
   g[5]->last_tried_to_connect = approx_time(); // prevent retry.

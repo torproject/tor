@@ -4340,6 +4340,10 @@ typedef struct {
    * altered on testing networks. */
   smartlist_t *TestingBridgeDownloadSchedule;
 
+  /** Schedule for when clients should download bridge descriptors when they
+   * have no running bridges.  Only altered on testing networks. */
+  smartlist_t *TestingBridgeBootstrapDownloadSchedule;
+
   /** When directory clients have only a few descriptors to request, they
    * batch them until they have more, or until this amount of time has
    * passed.  Only altered on testing networks. */

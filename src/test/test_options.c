@@ -2232,6 +2232,7 @@ test_options_validate__testing(void *ignored)
   ENSURE_DEFAULT(TestingServerConsensusDownloadSchedule, 3000);
   ENSURE_DEFAULT(TestingClientConsensusDownloadSchedule, 3000);
   ENSURE_DEFAULT(TestingBridgeDownloadSchedule, 3000);
+  ENSURE_DEFAULT(TestingBridgeBootstrapDownloadSchedule, 3000);
   ENSURE_DEFAULT(TestingClientMaxIntervalWithoutRequest, 3000);
   ENSURE_DEFAULT(TestingDirConnectionMaxStall, 3000);
   ENSURE_DEFAULT(TestingConsensusMaxDownloadTries, 3000);
