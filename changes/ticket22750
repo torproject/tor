@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging, sandbox):
-    - Use the correct system call in sandbox error messages. Fixes bug
-      22750; bugfix on 0.2.5.1-alpha.
