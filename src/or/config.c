@@ -2313,17 +2313,18 @@ options_trial_assign(config_line_t *list, unsigned flags, char **msg)
   }
 
   setopt_err_t rv;
+  or_options_t *cur_options = get_options_mutable();
 
   in_option_validation = 1;
 
-  if (options_validate(get_options_mutable(), trial_options,
+  if (options_validate(cur_options, trial_options,
                        global_default_options, 1, msg) < 0) {
     or_options_free(trial_options);
     rv = SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
     goto done;
   }
 
-  if (options_transition_allowed(get_options(), trial_options, msg) < 0) {
+  if (options_transition_allowed(cur_options, trial_options, msg) < 0) {
     or_options_free(trial_options);
     rv = SETOPT_ERR_TRANSITION;
     goto done;
