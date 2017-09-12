@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Remove some of the code that once supported "Named" and "Unnamed"
+      routers.  Authorities no longer vote for these flags. Closes ticket
+      23478.
+
