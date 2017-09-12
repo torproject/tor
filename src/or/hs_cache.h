@@ -103,8 +103,10 @@ typedef struct hs_cache_client_descriptor_t {
   /* This object is indexed using the service identity public key */
   ed25519_public_key_t key;
 
-  /* When was this entry created. Used to expire entries. */
-  time_t created_ts;
+  /* When will this entry expire? We expire cached client descriptors in the
+   * start of the next time period, since that's when clients need to start
+   * using the next blinded key of the service. */
+  time_t expiration_ts;
 
   /* The cached descriptor, this object is the owner. It can't be NULL. A
    * cache object without a valid descriptor is not possible. */
