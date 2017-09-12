@@ -677,6 +677,8 @@ test_intro_established(void *arg)
 
   circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
                                       flags);
+  tt_assert(circ);
+
   /* Test a wrong purpose. */
   TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_S_INTRO;
   setup_full_capture_of_logs(LOG_WARN);
@@ -724,7 +726,8 @@ test_intro_established(void *arg)
   tt_int_op(TO_CIRCUIT(circ)->purpose, OP_EQ, CIRCUIT_PURPOSE_S_INTRO);
 
  done:
-  circuit_free(TO_CIRCUIT(circ));
+  if (circ)
+    circuit_free(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }
@@ -793,6 +796,7 @@ test_introduce2(void *arg)
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
   circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_INTRO, flags);
+  tt_assert(circ);
 
   /* Test a wrong purpose. */
   TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_S_ESTABLISH_INTRO;
@@ -844,7 +848,8 @@ test_introduce2(void *arg)
  done:
   or_state_free(dummy_state);
   dummy_state = NULL;
-  circuit_free(TO_CIRCUIT(circ));
+  if (circ)
+    circuit_free(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }

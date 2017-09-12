@@ -203,7 +203,8 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
 
  done:
   connection_free_(conn);
-  tor_free(TO_CIRCUIT(or_circ)->n_chan);
+  if (or_circ)
+    tor_free(TO_CIRCUIT(or_circ)->n_chan);
   circuit_free(TO_CIRCUIT(or_circ));
 }
 
@@ -212,7 +213,7 @@ static void
 test_e2e_rend_circuit_setup(void *arg)
 {
   uint8_t ntor_key_seed[DIGEST256_LEN] = {0};
-  origin_circuit_t *or_circ;
+  origin_circuit_t *or_circ = NULL;
   int retval;
   connection_t *conn = NULL;
 
@@ -272,7 +273,8 @@ test_e2e_rend_circuit_setup(void *arg)
 
  done:
   connection_free_(conn);
-  tor_free(TO_CIRCUIT(or_circ)->n_chan);
+  if (or_circ)
+    tor_free(TO_CIRCUIT(or_circ)->n_chan);
   circuit_free(TO_CIRCUIT(or_circ));
 }
 
