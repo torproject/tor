@@ -18,9 +18,10 @@ does, not what it should do.
    ; specified in RFC5234.
 
    ; A file is interpreted as every Entry in the file, in order.
-   TorrcFile = *Line
+   TorrcFile = *Line [ UnterminatedLine ]
 
-   Line = BlankLine / Entry
+   Line = BlankLine LF / Entry LF
+   UnterminatedLine = BlankLine / Entry
 
    BlankLine =  *WSP OptComment LF
    BlankLine =/ *WSP LF
@@ -68,6 +69,12 @@ does, not what it should do.
 
    ; Anything besides NUL and LF
    NonLF = %x01-%x09 / %x0b - %xff
+
+   ; Note that on windows, we open our configuration files in "text" mode,
+   ; which causes CRLF pairs to be interpreted as LF.  So, on windows:
+   ;         LF = [ %x0d ] %x0a
+   ; but everywhere else,
+   LF = %0x0a
 
    OCTDIG = '0' - '7'
 
