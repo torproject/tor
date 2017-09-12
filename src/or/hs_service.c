@@ -2978,8 +2978,14 @@ hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
 void
 hs_service_dir_info_changed(void)
 {
-  log_info(LD_REND, "New dirinfo arrived: consider reuploading descriptor");
-  consider_republishing_hs_descriptors = 1;
+  if (hs_service_get_num_services() > 0) {
+    /* New directory information usually goes every consensus so rate limit
+     * every 30 minutes to not be too conservative. */
+    static struct ratelim_t dir_info_changed_ratelim = RATELIM_INIT(30 * 60);
+    log_fn_ratelim(&dir_info_changed_ratelim, LOG_INFO, LD_REND,
+                   "New dirinfo arrived: consider reuploading descriptor");
+    consider_republishing_hs_descriptors = 1;
+  }
 }
 
 /* Called when we get an INTRODUCE2 cell on the circ. Respond to the cell and

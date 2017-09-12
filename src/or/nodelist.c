@@ -300,14 +300,16 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
   tor_assert(ns);
 
   if (!networkstatus_is_live(ns, now)) {
-    log_info(LD_GENERAL, "Not setting hsdir index with a non-live consensus.");
+    static struct ratelim_t live_consensus_ratelim = RATELIM_INIT(30 * 60);
+    log_fn_ratelim(&live_consensus_ratelim, LOG_INFO, LD_GENERAL,
+                   "Not setting hsdir index with a non-live consensus.");
     goto done;
   }
 
   node_identity_pk = node_get_ed25519_id(node);
   if (node_identity_pk == NULL) {
     log_debug(LD_GENERAL, "ed25519 identity public key not found when "
-              "trying to build the hsdir indexes for node %s",
+                          "trying to build the hsdir indexes for node %s",
               node_describe(node));
     goto done;
   }
