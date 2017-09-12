@@ -65,6 +65,8 @@
 #include "routerlist.h"
 #include "scheduler.h"
 #include "compat_time.h"
+#include "networkstatus.h"
+#include "rendservice.h"
 
 /* Global lists of channels */
 
@@ -2731,12 +2733,25 @@ channel_do_open_actions(channel_t *chan)
   /* Disable or reduce padding according to user prefs. */
   if (chan->padding_enabled || get_options()->ConnectionPadding == 1) {
     if (!get_options()->ConnectionPadding) {
+      /* Disable if torrc disabled */
       channelpadding_disable_padding_on_channel(chan);
-    }
-
-    /* Padding can be forced and/or reduced by clients, regardless of if
-     * the channel supports it */
-    if (get_options()->ReducedConnectionPadding) {
+    } else if (get_options()->Tor2webMode &&
+            !networkstatus_get_param(NULL,
+                                     CHANNELPADDING_TOR2WEB_PARAM,
+                                     CHANNELPADDING_TOR2WEB_DEFAULT, 0, 1)) {
+      /* Disable if we're using tor2web and the consensus disabled padding
+       * for tor2web */
+      channelpadding_disable_padding_on_channel(chan);
+    } else if (rend_service_allow_non_anonymous_connection(get_options()) &&
+               !networkstatus_get_param(NULL,
+                                        CHANNELPADDING_SOS_PARAM,
+                                        CHANNELPADDING_SOS_DEFAULT, 0, 1)) {
+      /* Disable if we're using RSOS and the consensus disabled padding
+       * for RSOS*/
+      channelpadding_disable_padding_on_channel(chan);
+    } else if (get_options()->ReducedConnectionPadding) {
+      /* Padding can be forced and/or reduced by clients, regardless of if
+       * the channel supports it */
       channelpadding_reduce_padding_on_channel(chan);
     }
   }
