@@ -425,7 +425,7 @@ test_service_intro_point(void *arg)
   /* Test functions that uses a service intropoints map with that previously
    * created object (non legacy). */
   {
-    uint8_t garbage[DIGEST256_LEN] = {0};
+    ed25519_public_key_t garbage = { {0} };
     hs_service_intro_point_t *query;
 
     service = hs_service_new(get_options());
@@ -436,8 +436,7 @@ test_service_intro_point(void *arg)
     service_intro_point_add(service->desc_current->intro_points.map, ip);
     query = service_intro_point_find(service, &ip->auth_key_kp.pubkey);
     tt_mem_op(query, OP_EQ, ip, sizeof(hs_service_intro_point_t));
-    query = service_intro_point_find(service,
-                                     (const ed25519_public_key_t *) garbage);
+    query = service_intro_point_find(service, &garbage);
     tt_ptr_op(query, OP_EQ, NULL);
 
     /* While at it, can I find the descriptor with the intro point? */
