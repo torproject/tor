@@ -624,7 +624,6 @@ static config_var_t option_vars_[] = {
 /** Override default values with these if the user sets the TestingTorNetwork
  * option. */
 static const config_var_t testing_tor_network_defaults[] = {
-  V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
   V(DirAllowPrivateAddresses,    BOOL,     "1"),
   V(EnforceDistinctSubnets,      BOOL,     "0"),
   V(AssumeReachable,             BOOL,     "1"),
@@ -648,7 +647,6 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingV3AuthInitialVotingInterval, INTERVAL, "150 seconds"),
   V(TestingV3AuthInitialVoteDelay, INTERVAL, "20 seconds"),
   V(TestingV3AuthInitialDistDelay, INTERVAL, "20 seconds"),
-  V(TestingV3AuthVotingStartOffset, INTERVAL, "0"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
