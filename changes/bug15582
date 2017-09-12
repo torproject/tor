@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Avoid compiler warnings in the unit tests for running tor_sscanf()
+      with wide string outputs. Fixes bug 15582; bugfix on 0.2.6.2-alpha.
+
