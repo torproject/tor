@@ -80,6 +80,7 @@
 #include "hs_client.h"
 #include "hs_circuit.h"
 #include "main.h"
+#include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
 #include "proto_http.h"
@@ -1561,18 +1562,37 @@ connection_ap_handle_onion(entry_connection_t *conn,
     if (addresstype == ONION_V2_HOSTNAME) {
       tor_assert(edge_conn->rend_data);
       rend_client_refetch_v2_renddesc(edge_conn->rend_data);
+      /* Whatever the result of the refetch, we don't go further. */
+      return 0;
     } else {
       tor_assert(addresstype == ONION_V3_HOSTNAME);
       tor_assert(edge_conn->hs_ident);
-      hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
+      /* Attempt to fetch the hsv3 descriptor. Check the retval to see how it
+       * went and act accordingly. */
+      int ret = hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
+      switch (ret) {
+      case HS_CLIENT_FETCH_MISSING_INFO:
+        /* By going to the end, the connection is put in waiting for a circuit
+         * state which means that it will be retried and consider as a pending
+         * connection. */
+        goto end;
+      case HS_CLIENT_FETCH_LAUNCHED:
+      case HS_CLIENT_FETCH_HAVE_DESC:
+        return 0;
+      case HS_CLIENT_FETCH_ERROR:
+      case HS_CLIENT_FETCH_NO_HSDIRS:
+      case HS_CLIENT_FETCH_NOT_ALLOWED:
+        /* Can't proceed further and better close the SOCKS request. */
+        return -1;
+      }
     }
-    return 0;
   }
 
   /* We have the descriptor!  So launch a connection to the HS. */
-  base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
   log_info(LD_REND, "Descriptor is here. Great.");
 
+ end:
+  base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
   /* We'll try to attach it at the next event loop, or whenever
    * we call connection_ap_attach_pending() */
   connection_ap_mark_as_pending_circuit(conn);

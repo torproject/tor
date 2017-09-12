@@ -815,7 +815,7 @@ test_entryconn_rewrite_onion_v3(void *arg)
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check connection state after rewrite */
-  tt_int_op(ENTRY_TO_CONN(conn)->state, OP_EQ, AP_CONN_STATE_RENDDESC_WAIT);
+  tt_int_op(ENTRY_TO_CONN(conn)->state, OP_EQ, AP_CONN_STATE_CIRCUIT_WAIT);
   /* check that the address got rewritten */
   tt_str_op(conn->socks_request->address, OP_EQ,
             "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad");

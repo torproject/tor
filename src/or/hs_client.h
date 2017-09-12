@@ -13,6 +13,22 @@
 #include "hs_descriptor.h"
 #include "hs_ident.h"
 
+/* Status code of a descriptor fetch request. */
+typedef enum {
+  /* Something internally went wrong. */
+  HS_CLIENT_FETCH_ERROR        = -1,
+  /* The fetch request has been launched successfully. */
+  HS_CLIENT_FETCH_LAUNCHED     = 0,
+  /* We already have a usable descriptor. No fetch. */
+  HS_CLIENT_FETCH_HAVE_DESC    = 1,
+  /* No more HSDir available to query. */
+  HS_CLIENT_FETCH_NO_HSDIRS    = 2,
+  /* The fetch request is not allowed. */
+  HS_CLIENT_FETCH_NOT_ALLOWED  = 3,
+  /* We are missing information to be able to launch a request. */
+  HS_CLIENT_FETCH_MISSING_INFO = 4,
+} hs_client_fetch_status_t;
+
 void hs_client_note_connection_attempt_succeeded(
                                        const edge_connection_t *conn);
 

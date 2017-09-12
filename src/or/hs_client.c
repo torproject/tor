@@ -152,7 +152,7 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   /* ...and base64 it. */
   retval = ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
   if (BUG(retval < 0)) {
-    return -1;
+    return HS_CLIENT_FETCH_ERROR;
   }
 
   /* Copy onion pk to a dir_ident so that we attach it to the dir conn */
@@ -180,7 +180,7 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   memwipe(base64_blinded_pubkey, 0, sizeof(base64_blinded_pubkey));
   memwipe(&hs_conn_dir_ident, 0, sizeof(hs_conn_dir_ident));
 
-  return 1;
+  return HS_CLIENT_FETCH_LAUNCHED;
 }
 
 /** Return the HSDir we should use to fetch the descriptor of the hidden
@@ -236,7 +236,7 @@ fetch_v3_desc(const ed25519_public_key_t *onion_identity_pk)
   hsdir_rs = pick_hsdir_v3(onion_identity_pk);
   if (!hsdir_rs) {
     log_info(LD_REND, "Couldn't pick a v3 hsdir.");
-    return 0;
+    return HS_CLIENT_FETCH_NO_HSDIRS;
   }
 
   return directory_launch_v3_desc_fetch(onion_identity_pk, hsdir_rs);
@@ -998,8 +998,7 @@ hs_client_any_intro_points_usable(const ed25519_public_key_t *service_pk,
 /** Launch a connection to a hidden service directory to fetch a hidden
  * service descriptor using <b>identity_pk</b> to get the necessary keys.
  *
- * On success, 1 is returned. If no hidden service is left to ask, return 0.
- * On error, -1 is returned. (retval is only used by unittests right now) */
+ * A hs_client_fetch_status_t code is returned. */
 int
 hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
 {
@@ -1009,7 +1008,23 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
   if (!get_options()->FetchHidServDescriptors) {
     log_warn(LD_REND, "We received an onion address for a hidden service "
                       "descriptor but we are configured to not fetch.");
-    return 0;
+    return HS_CLIENT_FETCH_NOT_ALLOWED;
+  }
+
+  /* Without a live consensus we can't do any client actions. It is needed to
+   * compute the hashring for a service. */
+  if (!networkstatus_get_live_consensus(approx_time())) {
+    log_info(LD_REND, "Can't fetch descriptor for service %s because we "
+                      "are missing a live consensus. Stalling connection.",
+               safe_str_client(ed25519_fmt(identity_pk)));
+    return HS_CLIENT_FETCH_MISSING_INFO;
+  }
+
+  if (!router_have_minimum_dir_info()) {
+    log_info(LD_REND, "Can't fetch descriptor for service %s because we "
+                      "dont have enough descriptors. Stalling connection.",
+               safe_str_client(ed25519_fmt(identity_pk)));
+    return HS_CLIENT_FETCH_MISSING_INFO;
   }
 
   /* Check if fetching a desc for this HS is useful to us right now */
@@ -1019,8 +1034,8 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
     if (cached_desc && hs_client_any_intro_points_usable(identity_pk,
                                                          cached_desc)) {
       log_info(LD_GENERAL, "We would fetch a v3 hidden service descriptor "
-                            "but we already have a usable descriptor.");
-      return 0;
+                           "but we already have a usable descriptor.");
+      return HS_CLIENT_FETCH_HAVE_DESC;
     }
   }
 
