@@ -2422,10 +2422,10 @@ cpath_get_n_hops(crypt_path_t **head_ptr)
   }
 
   tmp = *head_ptr;
-  if (tmp) {
+  do {
     n_hops++;
-    tmp = (*head_ptr)->next;
-  }
+    tmp = tmp->next;
+  } while (tmp != *head_ptr);
 
   return n_hops;
 }
