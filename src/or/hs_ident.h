@@ -96,6 +96,11 @@ typedef struct hs_ident_dir_conn_t {
    * in the onion address. */
   ed25519_public_key_t identity_pk;
 
+  /* The blinded public key used to uniquely identify the descriptor that this
+   * directory connection identifier is for. Only used by the service-side code
+   * to fine control descriptor uploads. */
+  ed25519_public_key_t blinded_pk;
+
   /* XXX: Client authorization. */
 } hs_ident_dir_conn_t;
 
@@ -120,6 +125,9 @@ hs_ident_circuit_t *hs_ident_circuit_dup(const hs_ident_circuit_t *src);
 /* Directory connection identifier API. */
 hs_ident_dir_conn_t *hs_ident_dir_conn_dup(const hs_ident_dir_conn_t *src);
 void hs_ident_dir_conn_free(hs_ident_dir_conn_t *ident);
+void hs_ident_dir_conn_init(const ed25519_public_key_t *identity_pk,
+                            const ed25519_public_key_t *blinded_pk,
+                            hs_ident_dir_conn_t *ident);
 
 /* Edge connection identifier API. */
 hs_ident_edge_conn_t *hs_ident_edge_conn_new(
