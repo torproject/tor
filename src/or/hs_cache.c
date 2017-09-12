@@ -234,8 +234,7 @@ cache_clean_v3_as_dir(time_t now, time_t global_cutoff)
     /* Logging. */
     {
       char key_b64[BASE64_DIGEST256_LEN + 1];
-      base64_encode(key_b64, sizeof(key_b64), (const char *) key,
-                    DIGEST256_LEN, 0);
+      digest256_to_base64(key_b64, (const char *) key);
       log_info(LD_REND, "Removing v3 descriptor '%s' from HSDir cache",
                safe_str_client(key_b64));
     }
@@ -655,8 +654,7 @@ cache_clean_v3_as_client(time_t now)
     /* Logging. */
     {
       char key_b64[BASE64_DIGEST256_LEN + 1];
-      base64_encode(key_b64, sizeof(key_b64), (const char *) key,
-                    DIGEST256_LEN, 0);
+      digest256_to_base64(key_b64, (const char *) key);
       log_info(LD_REND, "Removing hidden service v3 descriptor '%s' "
                         "from client cache",
                safe_str_client(key_b64));
