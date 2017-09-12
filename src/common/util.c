@@ -2334,8 +2334,8 @@ check_private_dir,(const char *dirname, cpd_check_t check,
 
     log_warn(LD_FS, "%s is not owned by this user (%s, %d) but by "
         "%s (%d). Perhaps you are running Tor as the wrong user?",
-                         dirname, process_ownername, (int)running_uid,
-                         pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
+             dirname, process_ownername, (int)running_uid,
+             pw_uid ? pw_uid->pw_name : "<unknown>", (int)st.st_uid);
 
     tor_free(process_ownername);
     close(fd);
