@@ -445,7 +445,7 @@ tor_log2(uint64_t u64)
     r += 2;
   }
   if (u64 >= (U64_LITERAL(1)<<1)) {
-    u64 >>= 1;
+    // u64 >>= 1; // not using this any more.
     r += 1;
   }
   return r;

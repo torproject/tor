@@ -90,6 +90,7 @@ test_cert_encoding(void *arg)
     pos += b64_cert_len;
     tt_int_op(strcmpstart(pos, "-----END ED25519 CERT-----"), OP_EQ, 0);
     pos += strlen("-----END ED25519 CERT-----");
+    tt_str_op(pos, OP_EQ, "");
   }
 
  done:
