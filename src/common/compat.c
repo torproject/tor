@@ -2235,35 +2235,33 @@ switch_id(const char *user, const unsigned flags)
 int
 tor_disable_debugger_attach(void)
 {
-  int r, attempted;
-  r = -1;
-  attempted = 0;
+  int r = -1;
   log_debug(LD_CONFIG,
             "Attemping to disable debugger attachment to Tor for "
             "unprivileged users.");
 #if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && defined(HAVE_PRCTL)
 #ifdef PR_SET_DUMPABLE
-  attempted = 1;
+#define TRIED_TO_DISABLE
   r = prctl(PR_SET_DUMPABLE, 0);
 #endif
-#endif
-#if defined(__APPLE__) && defined(PT_DENY_ATTACH)
-  if (r < 0) {
-    attempted = 1;
-    r = ptrace(PT_DENY_ATTACH, 0, 0, 0);
-  }
+#elif defined(__APPLE__) && defined(PT_DENY_ATTACH)
+#define TRIED_TO_DISABLE
+  r = ptrace(PT_DENY_ATTACH, 0, 0, 0);
 #endif
 
   // XXX: TODO - Mac OS X has dtrace and this may be disabled.
   // XXX: TODO - Windows probably has something similar
-  if (r == 0 && attempted) {
+#ifdef TRIED_TO_DISABLE
+  if (r == 0) {
     log_debug(LD_CONFIG,"Debugger attachment disabled for "
               "unprivileged users.");
     return 1;
-  } else if (attempted) {
+  } else {
     log_warn(LD_CONFIG, "Unable to disable debugger attaching: %s",
              strerror(errno));
   }
+#endif
+#undef TRIED_TO_DISABLE
   return r;
 }
 

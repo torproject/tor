@@ -659,8 +659,6 @@ save_transport_to_state(const char *transport,
     *next = line = tor_malloc_zero(sizeof(config_line_t));
     line->key = tor_strdup("TransportProxy");
     tor_asprintf(&line->value, "%s %s", transport, fmt_addrport(addr, port));
-
-    next = &(line->next);
   }
 
   if (!get_options()->AvoidDiskWrites)

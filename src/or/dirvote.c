@@ -541,8 +541,8 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   if (cur_n > most_n ||
       (cur && cur_n == most_n && cur->status.published_on > most_published)) {
     most = cur;
-    most_n = cur_n;
-    most_published = cur->status.published_on;
+    // most_n = cur_n; // unused after this point.
+    // most_published = cur->status.published_on; // unused after this point.
   }
 
   tor_assert(most);

@@ -1269,6 +1269,7 @@ test_upload_descriptors(void *arg)
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
                            &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
@@ -1344,6 +1345,7 @@ test_revision_counter_state(void *arg)
                                                  &desc_two->blinded_kp.pubkey,
                                                                &service_found);
   tt_int_op(service_found, OP_EQ, 0);
+  tt_u64_op(cached_rev_counter, OP_EQ, 0);
 
   /* Now let's try with the right pubkeys */
   cached_rev_counter =check_state_line_for_service_rev_counter(state_line_one,

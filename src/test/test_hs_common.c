@@ -708,6 +708,7 @@ test_hid_serv_request_tracker(void *arg)
 
   /* Add another request with very short key */
   retval = hs_lookup_last_hid_serv_request(hsdir, "l",  now, 1);
+  tt_int_op(retval, OP_EQ, now);
   tt_int_op(strmap_size(request_tracker),OP_EQ, 3);
 
   /* Try deleting entries with a dummy key. Check that our previous requests
@@ -1511,7 +1512,7 @@ helper_test_hsdir_sync(networkstatus_t *ns,
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
   /* 3) Initialize client time */
-  now = helper_set_consensus_and_system_time(ns, client_between_srv_and_tp);
+  helper_set_consensus_and_system_time(ns, client_between_srv_and_tp);
 
   cleanup_nodelist();
   SMARTLIST_FOREACH(ns->routerstatus_list,

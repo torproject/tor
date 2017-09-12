@@ -3610,7 +3610,7 @@ start_daemon(void)
   } else { /* Child */
     close(daemon_filedes[0]); /* we only write */
 
-    pid = setsid(); /* Detach from controlling terminal */
+    (void) setsid(); /* Detach from controlling terminal */
     /*
      * Fork one more time, so the parent (the session group leader) can exit.
      * This means that we, as a non-session group leader, can never regain a
@@ -4308,7 +4308,6 @@ tor_spawn_background(const char *const filename, const char **argv,
   int stderr_pipe[2];
   int stdin_pipe[2];
   int fd, retval;
-  ssize_t nbytes;
   process_handle_t *process_handle;
   int status;
 
@@ -4329,7 +4328,7 @@ tor_spawn_background(const char *const filename, const char **argv,
      and we are not allowed to use unsafe functions between fork and exec */
   error_message_length = strlen(error_message);
 
-  child_state = CHILD_STATE_PIPE;
+  // child_state = CHILD_STATE_PIPE;
 
   /* Set up pipe for redirecting stdout, stderr, and stdin of child */
   retval = pipe(stdout_pipe);
@@ -4366,7 +4365,7 @@ tor_spawn_background(const char *const filename, const char **argv,
     return status;
   }
 
-  child_state = CHILD_STATE_MAXFD;
+  // child_state = CHILD_STATE_MAXFD;
 
 #ifdef _SC_OPEN_MAX
   if (-1 == max_fd) {
@@ -4381,7 +4380,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   max_fd = DEFAULT_MAX_FD;
 #endif
 
-  child_state = CHILD_STATE_FORK;
+  // child_state = CHILD_STATE_FORK;
 
   pid = fork();
   if (0 == pid) {
@@ -4417,7 +4416,7 @@ tor_spawn_background(const char *const filename, const char **argv,
     if (-1 == retval)
       goto error;
 
-    child_state = CHILD_STATE_CLOSEFD;
+    // child_state = CHILD_STATE_CLOSEFD;
 
     close(stderr_pipe[0]);
     close(stderr_pipe[1]);
@@ -4433,7 +4432,7 @@ tor_spawn_background(const char *const filename, const char **argv,
       close(fd);
     }
 
-    child_state = CHILD_STATE_EXEC;
+    // child_state = CHILD_STATE_EXEC;
 
     /* Call the requested program. We need the cast because
        execvp doesn't define argv as const, even though it
@@ -4452,7 +4451,8 @@ tor_spawn_background(const char *const filename, const char **argv,
   error:
     {
       /* XXX: are we leaking fds from the pipe? */
-      int n;
+      int n, err=0;
+      ssize_t nbytes;
 
       n = format_helper_exit_status(child_state, errno, hex_errno);
 
@@ -4461,13 +4461,14 @@ tor_spawn_background(const char *const filename, const char **argv,
            value, but there is nothing we can do if it fails */
         /* TODO: Don't use STDOUT, use a pipe set up just for this purpose */
         nbytes = write(STDOUT_FILENO, error_message, error_message_length);
+        err = (nbytes < 0);
         nbytes = write(STDOUT_FILENO, hex_errno, n);
+        err += (nbytes < 0);
       }
+
+      _exit(err?254:255);
     }
 
-    (void) nbytes;
-
-    _exit(255);
     /* Never reached, but avoids compiler warning */
     return status; // LCOV_EXCL_LINE
   }
@@ -4534,7 +4535,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   }
 
   *process_handle_out = process_handle;
-  return process_handle->status;
+  return status;
 #endif // _WIN32
 }
 

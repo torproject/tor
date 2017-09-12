@@ -1406,6 +1406,7 @@ test_crypto_digests(void *arg)
              AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);
 
   r = crypto_pk_get_common_digests(k, &pkey_digests);
+  tt_int_op(r, OP_EQ, 0);
 
   tt_mem_op(hex_str(pkey_digests.d[DIGEST_SHA1], DIGEST_LEN),OP_EQ,
              AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);

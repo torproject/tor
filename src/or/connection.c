@@ -3062,9 +3062,11 @@ connection_buckets_decrement(connection_t *conn, time_t now,
              (unsigned long)num_read, (unsigned long)num_written,
              conn_type_to_string(conn->type),
              conn_state_to_string(conn->type, conn->state));
-    if (num_written >= INT_MAX) num_written = 1;
-    if (num_read >= INT_MAX) num_read = 1;
-    tor_fragile_assert();
+    tor_assert_nonfatal_unreached();
+    if (num_written >= INT_MAX)
+      num_written = 1;
+    if (num_read >= INT_MAX)
+      num_read = 1;
   }
 
   record_num_bytes_transferred_impl(conn, now, num_read, num_written);
@@ -3593,10 +3595,8 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
             connection_start_reading(conn);
         }
         /* we're already reading, one hopes */
-        result = 0;
         break;
       case TOR_TLS_DONE: /* no data read, so nothing to process */
-        result = 0;
         break; /* so we call bucket_decrement below */
       default:
         break;

@@ -659,6 +659,7 @@ test_options_validate__logs(void *ignored)
   tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
   tt_str_op(tdata->opt->Logs->value, OP_EQ, "notice stdout");
   tor_free(msg);
+  tt_int_op(ret, OP_EQ, -1);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -669,6 +670,7 @@ test_options_validate__logs(void *ignored)
   tt_str_op(tdata->opt->Logs->key, OP_EQ, "Log");
   tt_str_op(tdata->opt->Logs->value, OP_EQ, "warn stdout");
   tor_free(msg);
+  tt_int_op(ret, OP_EQ, -1);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -678,6 +680,7 @@ test_options_validate__logs(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
+  tt_int_op(ret, OP_EQ, -1);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -686,6 +689,7 @@ test_options_validate__logs(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 1, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
+  tt_int_op(ret, OP_EQ, -1);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -694,6 +698,7 @@ test_options_validate__logs(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_assert(!tdata->opt->Logs);
   tor_free(msg);
+  tt_int_op(ret, OP_EQ, -1);
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("");
@@ -703,6 +708,7 @@ test_options_validate__logs(void *ignored)
   tdata->opt->Logs = cl;
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op((intptr_t)tdata->opt->Logs, OP_EQ, (intptr_t)cl);
+  tt_int_op(ret, OP_EQ, -1);
 
  done:
   quiet_level = orig_quiet_level;

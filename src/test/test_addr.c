@@ -760,7 +760,9 @@ test_addr_ip6_helpers(void *arg)
 
   /* get interface addresses */
   r = get_interface_address6(LOG_DEBUG, AF_INET, &t1);
+  tt_int_op(r, OP_LE, 0); // "it worked or it didn't"
   i = get_interface_address6(LOG_DEBUG, AF_INET6, &t2);
+  tt_int_op(i, OP_LE, 0); // "it worked or it didn't"
 
   TT_BLATHER(("v4 address: %s (family=%d)", fmt_addr(&t1),
               tor_addr_family(&t1)));

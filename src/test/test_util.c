@@ -2179,10 +2179,13 @@ test_util_parse_integer(void *arg)
   tt_int_op(1,OP_EQ, i);
   tt_assert(DBL_TO_U64(d) == 0);
   d = tor_parse_double(" ", 0, (double)UINT64_MAX,&i,NULL);
+  tt_double_op(fabs(d), OP_LT, 1e-10);
   tt_int_op(0,OP_EQ, i);
   d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,NULL);
+  tt_double_op(fabs(d), OP_LT, 1e-10);
   tt_int_op(0,OP_EQ, i);
   d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,&cp);
+  tt_double_op(fabs(d), OP_LT, 1e-10);
   tt_int_op(1,OP_EQ, i);
   d = tor_parse_double("-.0", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
