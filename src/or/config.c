@@ -5210,6 +5210,12 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   return SETOPT_OK;
 
  err:
+  if (opened_files) {
+    SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
+    smartlist_free(opened_files);
+  }
+  // may have been set to opened_files, avoid double free
+  newoptions->FilesOpenedByIncludes = NULL;
   or_options_free(newoptions);
   or_options_free(newdefaultoptions);
   if (*msg) {
