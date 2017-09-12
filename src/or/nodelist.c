@@ -850,15 +850,6 @@ node_get_by_nickname,(const char *nickname, unsigned flags))
   if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME))
     return NULL;
 
-  /* Okay, so if we get here, the nickname is just a nickname.  Is there
-   * a binding for it in the consensus? */
-  {
-    const char *named_id =
-      networkstatus_get_router_digest_by_nickname(nickname);
-    if (named_id)
-      return node_get_by_id(named_id);
-  }
-
   /* Okay, so the name is not canonical for anybody. */
   {
     smartlist_t *matches = smartlist_new();

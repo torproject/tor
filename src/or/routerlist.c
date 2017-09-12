@@ -2957,18 +2957,6 @@ hex_digest_nickname_matches(const char *hexdigest, const char *identity_digest,
   return tor_memeq(digest, identity_digest, DIGEST_LEN);
 }
 
-/** Return true iff <b>router</b> is listed as named in the current
- * consensus. */
-int
-router_is_named(const routerinfo_t *router)
-{
-  const char *digest =
-    networkstatus_get_router_digest_by_nickname(router->nickname);
-
-  return (digest &&
-          tor_memeq(digest, router->cache_info.identity_digest, DIGEST_LEN));
-}
-
 /** Return true iff <b>digest</b> is the digest of the identity key of a
  * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
  * is zero (NO_DIRINFO), or ALL_DIRINFO, any authority is okay. */

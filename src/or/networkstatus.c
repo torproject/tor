@@ -66,12 +66,6 @@
 #include "torcert.h"
 #include "channelpadding.h"
 
-/** Map from lowercase nickname to identity digest of named server, if any. */
-static strmap_t *named_server_map = NULL;
-/** Map from lowercase nickname to (void*)1 for all names that are listed
- * as unnamed for some server in the consensus. */
-static strmap_t *unnamed_server_map = NULL;
-
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
 STATIC networkstatus_t *current_ns_consensus = NULL;
@@ -142,7 +136,6 @@ static int have_warned_about_old_version = 0;
  * listed by the authorities. */
 static int have_warned_about_new_version = 0;
 
-static void routerstatus_list_update_named_server_map(void);
 static void update_consensus_bootstrap_multiple_downloads(
                                                   time_t now,
                                                   const or_options_t *options);
@@ -248,13 +241,6 @@ router_reload_consensus_networkstatus(void)
       }
       tor_free(s);
     }
-  }
-
-  if (!networkstatus_get_latest_consensus()) {
-    if (!named_server_map)
-      named_server_map = strmap_new();
-    if (!unnamed_server_map)
-      unnamed_server_map = strmap_new();
   }
 
   update_certificate_downloads(time(NULL));
@@ -792,16 +778,6 @@ const routerstatus_t *
 router_get_consensus_status_by_id(const char *digest)
 {
   return router_get_mutable_consensus_status_by_id(digest);
-}
-
-/** Return the identity digest that's mapped to officially by
- * <b>nickname</b>. */
-const char *
-networkstatus_get_router_digest_by_nickname(const char *nickname)
-{
-  if (!named_server_map)
-    return NULL;
-  return strmap_get_lc(named_server_map, nickname);
 }
 
 /** How frequently do directory authorities re-download fresh networkstatus
@@ -1960,7 +1936,6 @@ networkstatus_set_current_consensus(const char *consensus,
     update_consensus_networkstatus_fetch_time(now);
 
     dirvote_recalculate_timing(options, now);
-    routerstatus_list_update_named_server_map();
 
     /* Update ewma and adjust policy if needed; first cache the old value */
     old_ewma_enabled = cell_ewma_enabled();
@@ -2127,31 +2102,6 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
            recommended);
     }
   }
-}
-
-/** Update our view of the list of named servers from the most recently
- * retrieved networkstatus consensus. */
-static void
-routerstatus_list_update_named_server_map(void)
-{
-  networkstatus_t *ns = networkstatus_get_latest_consensus();
-  if (!ns)
-    return;
-
-  strmap_free(named_server_map, tor_free_);
-  named_server_map = strmap_new();
-  strmap_free(unnamed_server_map, NULL);
-  unnamed_server_map = strmap_new();
-  smartlist_t *rslist = ns->routerstatus_list;
-  SMARTLIST_FOREACH_BEGIN(rslist, const routerstatus_t *, rs) {
-      if (rs->is_named) {
-        strmap_set_lc(named_server_map, rs->nickname,
-                      tor_memdup(rs->identity_digest, DIGEST_LEN));
-      }
-      if (rs->is_unnamed) {
-        strmap_set_lc(unnamed_server_map, rs->nickname, (void*)1);
-      }
-  } SMARTLIST_FOREACH_END(rs);
 }
 
 /** Given a list <b>routers</b> of routerinfo_t *, update each status field
@@ -2639,8 +2589,5 @@ networkstatus_free_all(void)
     }
     tor_free(waiting->body);
   }
-
-  strmap_free(named_server_map, tor_free_);
-  strmap_free(unnamed_server_map, NULL);
 }
 

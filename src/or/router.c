@@ -3497,7 +3497,7 @@ router_get_description(char *buf, const routerinfo_t *ri)
     return "<null>";
   return format_node_description(buf,
                                  ri->cache_info.identity_digest,
-                                 router_is_named(ri),
+                                 0,
                                  ri->nickname,
                                  NULL,
                                  ri->addr);
@@ -3623,21 +3623,16 @@ extend_info_describe(const extend_info_t *ei)
  * verbose representation of the identity of <b>router</b>.  The format is:
  *  A dollar sign.
  *  The upper-case hexadecimal encoding of the SHA1 hash of router's identity.
- *  A "=" if the router is named; a "~" if it is not.
+ *  A "=" if the router is named (no longer implemented); a "~" if it is not.
  *  The router's nickname.
  **/
 void
 router_get_verbose_nickname(char *buf, const routerinfo_t *router)
 {
-  const char *good_digest = networkstatus_get_router_digest_by_nickname(
-                                                         router->nickname);
-  int is_named = good_digest && tor_memeq(good_digest,
-                                        router->cache_info.identity_digest,
-                                        DIGEST_LEN);
   buf[0] = '$';
   base16_encode(buf+1, HEX_DIGEST_LEN+1, router->cache_info.identity_digest,
                 DIGEST_LEN);
-  buf[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
+  buf[1+HEX_DIGEST_LEN] = '~';
   strlcpy(buf+1+HEX_DIGEST_LEN+1, router->nickname, MAX_NICKNAME_LEN+1);
 }
 

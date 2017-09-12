@@ -80,7 +80,6 @@ const node_t *router_choose_random_node(smartlist_t *excludedsmartlist,
                                         struct routerset_t *excludedset,
                                         router_crn_flags_t flags);
 
-int router_is_named(const routerinfo_t *router);
 int router_digest_is_trusted_dir_type(const char *digest,
                                       dirinfo_type_t type);
 #define router_digest_is_trusted_dir(d) \
