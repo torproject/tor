@@ -77,7 +77,7 @@ test_validate_address(void *arg)
 
   /* Valid address. */
   ret = hs_address_is_valid(
-           "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad");
+           "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
   tt_int_op(ret, OP_EQ, 1);
 
  done:
@@ -90,19 +90,23 @@ mock_write_str_to_file(const char *path, const char *str, int bin)
   (void)bin;
   tt_str_op(path, OP_EQ, "/double/five"PATH_SEPARATOR"squared");
   tt_str_op(str, OP_EQ,
-           "ijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbezhid.onion\n");
+           "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion\n");
 
  done:
   return 0;
 }
 
-/** Test building HS v3 onion addresses */
+/** Test building HS v3 onion addresses. Uses test vectors from the
+ *  ./hs_build_address.py script. */
 static void
 test_build_address(void *arg)
 {
   int ret;
   char onion_addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   ed25519_public_key_t pubkey;
+  /* hex-encoded ed25519 pubkey used in hs_build_address.py */
+  char pubkey_hex[] =
+    "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
   hs_service_t *service = NULL;
 
   (void) arg;
@@ -112,11 +116,11 @@ test_build_address(void *arg)
   /* The following has been created with hs_build_address.py script that
    * follows proposal 224 specification to build an onion address. */
   static const char *test_addr =
-    "ijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbeeqscijbezhid";
+    "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid";
 
-  /* Let's try to build the same onion address that the script can do. Key is
-   * a long set of very random \x42 :). */
-  memset(&pubkey, '\x42', sizeof(pubkey));
+  /* Let's try to build the same onion address as the script */
+  base16_decode((char*)pubkey.pubkey, sizeof(pubkey.pubkey),
+                pubkey_hex, strlen(pubkey_hex));
   hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
   tt_str_op(test_addr, OP_EQ, onion_addr);
   /* Validate that address. */
@@ -474,9 +478,13 @@ test_desc_reupload_logic(void *arg)
   /* Let's start by building our descriptor and service */
   hs_service_descriptor_t *desc = service_descriptor_new();
   hs_service_t *service = NULL;
+  /* hex-encoded ed25519 pubkey used in hs_build_address.py */
+  char pubkey_hex[] =
+    "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
   char onion_addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   ed25519_public_key_t pubkey;
-  memset(&pubkey, '\x42', sizeof(pubkey));
+  base16_decode((char*)pubkey.pubkey, sizeof(pubkey.pubkey),
+                pubkey_hex, strlen(pubkey_hex));
   hs_build_address(&pubkey, HS_VERSION_THREE, onion_addr);
   service = tor_malloc_zero(sizeof(hs_service_t));
   memcpy(service->onion_address, onion_addr, sizeof(service->onion_address));
@@ -758,7 +766,7 @@ test_parse_extended_hostname(void *arg)
   char address6[] = "foo.bar.abcdefghijklmnop.onion";
   char address7[] = ".abcdefghijklmnop.onion";
   char address8[] =
-    "www.p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad.onion";
+    "www.25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion";
 
   tt_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
   tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address2));
@@ -772,7 +780,7 @@ test_parse_extended_hostname(void *arg)
   tt_assert(BAD_HOSTNAME == parse_extended_hostname(address7));
   tt_assert(ONION_V3_HOSTNAME == parse_extended_hostname(address8));
   tt_str_op(address8, OP_EQ,
-            "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad");
+            "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
 
  done: ;
 }
