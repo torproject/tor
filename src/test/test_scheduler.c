@@ -845,7 +845,9 @@ test_scheduler_channel_states(void *arg)
 {
   (void)arg;
   perform_channel_state_tests(-1); // vanilla
+#ifdef HAVE_KIST_SUPPORT
   perform_channel_state_tests(11); // kist
+#endif
 }
 
 static void
@@ -865,7 +867,11 @@ test_scheduler_initfree(void *arg)
   tt_ptr_op(run_sched_ev, !=, NULL);
   /* We have specified nothing in the torrc and there's no consensus so the
    * KIST scheduler is what should be in use */
+#ifdef HAVE_KIST_SUPPORT
   tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
+#else
+  tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
+#endif
   tt_int_op(sched_run_interval, ==, 10);
 
   scheduler_free_all();
@@ -901,7 +907,11 @@ test_scheduler_should_use_kist(void *arg)
   mocked_options.KISTSchedRunInterval = 1234;
   res_should = scheduler_should_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
+#ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
+#else /* HAVE_KIST_SUPPORT */
+  tt_int_op(res_should, ==, 0);
+#endif /* HAVE_KIST_SUPPORT */
   tt_int_op(res_freq, ==, 1234);
 
   /* Test defer to consensus, but no consensus available */
@@ -909,7 +919,11 @@ test_scheduler_should_use_kist(void *arg)
   mocked_options.KISTSchedRunInterval = 0;
   res_should = scheduler_should_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
+#ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
+#else /* HAVE_KIST_SUPPORT */
+  tt_int_op(res_should, ==, 0);
+#endif /* HAVE_KIST_SUPPORT */
   tt_int_op(res_freq, ==, 10);
 
   /* Test defer to consensus, and kist consensus available */
@@ -918,7 +932,11 @@ test_scheduler_should_use_kist(void *arg)
   mocked_options.KISTSchedRunInterval = 0;
   res_should = scheduler_should_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
+#ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
+#else /* HAVE_KIST_SUPPORT */
+  tt_int_op(res_should, ==, 0);
+#endif /* HAVE_KIST_SUPPORT */
   tt_int_op(res_freq, ==, 12);
   UNMOCK(networkstatus_get_param);
 
@@ -961,7 +979,11 @@ test_scheduler_ns_changed(void *arg)
   MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
   scheduler_notify_networkstatus_changed(NULL, NULL);
   UNMOCK(networkstatus_get_param);
+#ifdef HAVE_KIST_SUPPORT
   tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
+#else
+  tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
+#endif
 
   /* Change from kist to vanilla via consensus */
   the_scheduler = get_kist_scheduler();
@@ -975,7 +997,11 @@ test_scheduler_ns_changed(void *arg)
   MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
   scheduler_notify_networkstatus_changed(NULL, NULL);
   UNMOCK(networkstatus_get_param);
+#ifdef HAVE_KIST_SUPPORT
   tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
+#else
+  tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
+#endif
 
   /* Doesn't change when using vanilla */
   the_scheduler = get_vanilla_scheduler();

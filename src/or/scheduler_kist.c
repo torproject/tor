@@ -17,8 +17,10 @@
 
 #define TLS_PER_CELL_OVERHEAD 29
 
+#ifdef HAVE_KIST_SUPPORT
 /* Kernel interface needed for KIST. */
 #include <linux/sockios.h>
+#endif /* HAVE_KIST_SUPPORT */
 
 /*****************************************************************************
  * Data structures and supporting functions
@@ -27,7 +29,9 @@
 /* Indicate if we don't have the kernel support. This can happen if the kernel
  * changed and it doesn't recognized the values passed to the syscalls needed
  * by KIST. In that case, fallback to the naive approach. */
+#ifdef HAVE_KIST_SUPPORT
 static unsigned int kist_no_kernel_support = 0;
+#endif /* HAVE_KIST_SUPPORT */
 
 /* Socket_table hash table stuff. The socket_table keeps track of per-socket
  * limit information imposed by kist and used by kist. */
@@ -182,6 +186,7 @@ free_socket_info_by_chan(socket_table_t *table, const channel_t *chan)
 MOCK_IMPL(void,
 update_socket_info_impl, (socket_table_ent_t *ent))
 {
+#ifdef HAVE_KIST_SUPPORT
   int64_t tcp_space, extra_space;
   const tor_socket_t sock =
     TO_CONN(BASE_CHAN_TO_TLS((channel_t *) ent->chan)->conn)->s;
@@ -243,6 +248,10 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   }
   ent->limit = tcp_space + extra_space;
   return;
+
+#else /* HAVE_KIST_SUPPORT */
+  goto fallback;
+#endif /* HAVE_KIST_SUPPORT */
 
  fallback:
   /* If all of a sudden we don't have kist support, we just zero out all the
