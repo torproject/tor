@@ -332,7 +332,9 @@ socket_can_write(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  tor_assert(ent);
+  IF_BUG_ONCE(!ent) {
+    return 1; // Just return true, saying that kist wouldn't limit the socket
+  }
 
   int64_t kist_limit_space =
     (int64_t) (ent->limit - ent->written) /
@@ -346,7 +348,9 @@ update_socket_info(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  tor_assert(ent);
+  IF_BUG_ONCE(!ent) {
+    return; // Whelp. Entry didn't exist for some reason so nothing to do.
+  }
   update_socket_info_impl(ent);
 }
 
@@ -356,7 +360,9 @@ update_socket_written(socket_table_t *table, channel_t *chan, size_t bytes)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  tor_assert(ent);
+  IF_BUG_ONCE(!ent) {
+    return; // Whelp. Entry didn't exist so nothing to do.
+  }
 
   log_debug(LD_SCHED, "chan=%" PRIu64 " wrote %lu bytes, old was %" PRIi64,
             chan->global_identifier, bytes, ent->written);
@@ -396,7 +402,9 @@ static int
 have_work(void)
 {
   smartlist_t *cp = get_channels_pending();
-  tor_assert(cp);
+  IF_BUG_ONCE(!cp) {
+    return 0; // channels_pending doesn't exist so... no work?
+  }
   return smartlist_len(cp) > 0;
 }
 
@@ -441,7 +449,13 @@ static void
 kist_scheduler_init(void)
 {
   kist_scheduler_on_new_options();
-  tor_assert(sched_run_interval > 0);
+  IF_BUG_ONCE(sched_run_interval <= 0) {
+    log_warn(LD_SCHED, "We are initing the KIST scheduler and noticed the "
+             "KISTSchedRunInterval is telling us to not use KIST. That's "
+             "weird! We'll continue using KIST, but at %dms.",
+             KIST_SCHED_RUN_INTERVAL_DEFAULT);
+    sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT;
+  }
 }
 
 /* Function of the scheduler interface: schedule() */
@@ -452,7 +466,13 @@ kist_scheduler_schedule(void)
   struct timeval next_run;
   int32_t diff;
   struct event *ev = get_run_sched_ev();
-  tor_assert(ev);
+  IF_BUG_ONCE(!ev) {
+    log_warn(LD_SCHED, "Wow we don't have a scheduler event. That's really "
+             "weird! We can't really schedule a scheduling run with libevent "
+             "without it. So we're going to stop trying now and hope we have "
+             "one next time. If we never get one, we're broken.");
+    return;
+  }
   if (!have_work()) {
     return;
   }
@@ -496,7 +516,12 @@ kist_scheduler_run(void)
     /* get best channel */
     chan = smartlist_pqueue_pop(cp, scheduler_compare_channels,
                                 offsetof(channel_t, sched_heap_idx));
-    tor_assert(chan);
+    IF_BUG_ONCE(!chan) {
+      /* Some-freaking-how a NULL got into the channels_pending. That should
+       * never happen, but it should be harmless to ignore it and keep looping.
+       */
+      continue;
+    }
     outbuf_table_add(&outbuf_table, chan);
 
     /* if we have switched to a new channel, consider writing the previous

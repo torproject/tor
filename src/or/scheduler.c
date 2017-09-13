@@ -184,13 +184,19 @@ scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
 
   log_debug(LD_SCHED, "Scheduler event callback called");
 
-  tor_assert(run_sched_ev);
-
   /* Run the scheduler. This is a mandatory function. */
+
+  /* We might as well assert on this. If this function doesn't exist, no cells
+   * are getting scheduled. Things are very broken. scheduler_t says the run()
+   * function is mandatory. */
   tor_assert(the_scheduler->run);
   the_scheduler->run();
 
   /* Schedule itself back in if it has more work. */
+
+  /* Again, might as well assert on this mandatory scheduler_t function. If it
+   * doesn't exist, there's no way to tell libevent to run the scheduler again
+   * in the future. */
   tor_assert(the_scheduler->schedule);
   the_scheduler->schedule();
 }
@@ -224,14 +230,18 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
   const circuitmux_policy_t *p1, *p2;
   uintptr_t p1_i, p2_i;
 
-  tor_assert(c1_v);
-  tor_assert(c2_v);
-
   c1 = (const channel_t *)(c1_v);
   c2 = (const channel_t *)(c2_v);
 
-  tor_assert(c1);
-  tor_assert(c2);
+  IF_BUG_ONCE(!c1 || !c2) {
+    if (c1 && !c2) {
+      return -1;
+    } else if (c2 && !c1) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
 
   if (c1 != c2) {
     if (circuitmux_get_policy(c1->cmux) ==
@@ -368,9 +378,12 @@ scheduler_free_all(void)
 MOCK_IMPL(void,
 scheduler_channel_doesnt_want_writes,(channel_t *chan))
 {
-  tor_assert(chan);
-
-  tor_assert(channels_pending);
+  IF_BUG_ONCE(!chan) {
+    return;
+  }
+  IF_BUG_ONCE(!channels_pending) {
+    return;
+  }
 
   /* If it's already in pending, we can put it in waiting_to_write */
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
@@ -408,8 +421,12 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
 MOCK_IMPL(void,
 scheduler_channel_has_waiting_cells,(channel_t *chan))
 {
-  tor_assert(chan);
-  tor_assert(channels_pending);
+  IF_BUG_ONCE(!chan) {
+    return;
+  }
+  IF_BUG_ONCE(!channels_pending) {
+    return;
+  }
 
   /* First, check if this one also writeable */
   if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
@@ -456,7 +473,13 @@ scheduler_init(void)
 {
   log_debug(LD_SCHED, "Initting scheduler");
 
-  tor_assert(!run_sched_ev);
+  // Two '!' because we really do want to check if the pointer is non-NULL
+  IF_BUG_ONCE(!!run_sched_ev) {
+    log_warn(LD_SCHED, "We should not already have a libevent scheduler event."
+             "I'll clean the old one up, but this is odd.");
+    tor_event_free(run_sched_ev);
+    run_sched_ev = NULL;
+  }
   run_sched_ev = tor_event_new(tor_libevent_get_base(), -1,
                                0, scheduler_evt_callback, NULL);
   channels_pending = smartlist_new();
@@ -473,8 +496,12 @@ scheduler_init(void)
 MOCK_IMPL(void,
 scheduler_release_channel,(channel_t *chan))
 {
-  tor_assert(chan);
-  tor_assert(channels_pending);
+  IF_BUG_ONCE(!chan) {
+    return;
+  }
+  IF_BUG_ONCE(!channels_pending) {
+    return;
+  }
 
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
     if (smartlist_pos(channels_pending, chan) == -1) {
@@ -500,8 +527,12 @@ scheduler_release_channel,(channel_t *chan))
 void
 scheduler_channel_wants_writes(channel_t *chan)
 {
-  tor_assert(chan);
-  tor_assert(channels_pending);
+  IF_BUG_ONCE(!chan) {
+    return;
+  }
+  IF_BUG_ONCE(!channels_pending) {
+    return;
+  }
 
   /* If it's already in waiting_to_write, we can put it in pending */
   if (chan->scheduler_state == SCHED_CHAN_WAITING_TO_WRITE) {
@@ -544,7 +575,9 @@ scheduler_channel_wants_writes(channel_t *chan)
 void
 scheduler_touch_channel(channel_t *chan)
 {
-  tor_assert(chan);
+  IF_BUG_ONCE(!chan) {
+    return;
+  }
 
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
     /* Remove and re-add it */

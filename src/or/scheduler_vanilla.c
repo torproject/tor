@@ -29,7 +29,9 @@ static int
 have_work(void)
 {
   smartlist_t *cp = get_channels_pending();
-  tor_assert(cp);
+  IF_BUG_ONCE(!cp) {
+    return 0; // channels_pending doesn't exist so... no work?
+  }
   return smartlist_len(cp) > 0;
 }
 
@@ -42,7 +44,13 @@ vanilla_scheduler_schedule(void)
     return;
   }
   struct event *ev = get_run_sched_ev();
-  tor_assert(ev);
+  IF_BUG_ONCE(!ev) {
+    log_warn(LD_SCHED, "Wow we don't have a scheduler event. That's really "
+             "weird! We can't really schedule a scheduling run with libevent "
+             "without it. So we're going to stop trying now and hope we have "
+             "one next time. If we never get one, we're broken.");
+    return;
+  }
   event_active(ev, EV_TIMEOUT, 1);
 }
 
@@ -64,7 +72,12 @@ vanilla_scheduler_run(void)
     chan = smartlist_pqueue_pop(cp,
                                 scheduler_compare_channels,
                                 offsetof(channel_t, sched_heap_idx));
-    tor_assert(chan);
+    IF_BUG_ONCE(!chan) {
+      /* Some-freaking-how a NULL got into the channels_pending. That should
+       * never happen, but it should be harmless to ignore it and keep looping.
+       */
+      continue;
+    }
 
     /* Figure out how many cells we can write */
     n_cells = channel_num_cells_writeable(chan);
