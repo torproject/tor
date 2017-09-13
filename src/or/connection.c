@@ -5221,7 +5221,7 @@ clock_skew_warning(const connection_t *conn, long apparent_skew, int trusted,
                    const char *source)
 {
   char dbuf[64];
-  char *ext_source = NULL;
+  char *ext_source = NULL, *warn = NULL;
   format_time_interval(dbuf, sizeof(dbuf), apparent_skew);
   if (conn)
     tor_asprintf(&ext_source, "%s:%s:%d", source, conn->address, conn->port);
@@ -5235,9 +5235,14 @@ clock_skew_warning(const connection_t *conn, long apparent_skew, int trusted,
          apparent_skew > 0 ? "ahead" : "behind", dbuf,
          apparent_skew > 0 ? "behind" : "ahead",
          (!conn || trusted) ? "" : ", or they are sending us the wrong time");
-  if (trusted)
+  if (trusted) {
     control_event_general_status(LOG_WARN, "CLOCK_SKEW SKEW=%ld SOURCE=%s",
                                  apparent_skew, ext_source);
+    tor_asprintf(&warn, "Clock skew %ld in %s from %s", apparent_skew,
+                 received, source);
+    control_event_bootstrap_problem(warn, "CLOCK_SKEW", conn, 1);
+  }
+  tor_free(warn);
   tor_free(ext_source);
 }
 
