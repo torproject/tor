@@ -62,10 +62,10 @@ typedef struct scheduler_s {
 
   /* (Optional) To be called whenever Tor finds out about a new consensus.
    * First the scheduling system as a whole will react to the new consensus
-   * and change the scheduler if needed. After that, whatever is the (possibly
-   * new) scheduler will call this so it has the chance to react to the new
-   * consensus too. If there's a consensus parameter that your scheduler wants
-   * to keep an eye on, this is where you should check for it.  */
+   * and change the scheduler if needed. After that, the current scheduler
+   * (which might be new) will call this so it has the chance to react to the
+   * new consensus too. If there's a consensus parameter that your scheduler
+   * wants to keep an eye on, this is where you should check for it.  */
   void (*on_new_consensus)(const networkstatus_t *old_c,
                            const networkstatus_t *new_c);
 

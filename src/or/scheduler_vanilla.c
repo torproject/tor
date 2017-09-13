@@ -17,6 +17,7 @@
 /* Maximum cells to flush in a single call to channel_flush_some_cells(); */
 #define MAX_FLUSH_CELLS 1000
 
+/* Stores the vanilla scheduler function pointers. */
 static scheduler_t *vanilla_scheduler = NULL;
 
 /*****************************************************************************

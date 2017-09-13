@@ -86,9 +86,16 @@ HT_GENERATE2(outbuf_table_s, outbuf_table_ent_s, node, outbuf_table_ent_hash,
  * Other internal data
  *****************************************************************************/
 
-static struct timeval scheduler_last_run = {0, 0};
+/* Store the last time the scheduler was run so we can decide when to next run
+ * the scheduler based on it. */
+static monotime_t scheduler_last_run;
+/* This is a factor for the extra_space calculation in kist per-socket limits.
+ * It is the number of extra congestion windows we want to write to the kernel.
+ */
 static double sock_buf_size_factor = 1.0;
+/* How often the scheduler runs. */
 STATIC int32_t sched_run_interval = 10;
+/* Stores the kist scheduler function pointers. */
 static scheduler_t *kist_scheduler = NULL;
 
 /*****************************************************************************
@@ -170,6 +177,8 @@ free_socket_info_by_chan(socket_table_t *table, const channel_t *chan)
   free_socket_info_by_ent(ent, NULL);
 }
 
+/* Perform system calls for the given socket in order to calculate kist's
+ * per-socket limit as documented in the function body. */
 MOCK_IMPL(void,
 update_socket_info_impl, (socket_table_ent_t *ent))
 {
@@ -191,8 +200,9 @@ update_socket_info_impl, (socket_table_ent_t *ent))
        * with the support previously or if the kernel was updated and lost the
        * support. */
       log_notice(LD_SCHED, "Looks like our kernel doesn't have the support "
-                           "for KIST anymore. Fallback to the naive approach. "
-                           "Set KISTSchedRunInterval=-1 to disable KIST.");
+                           "for KIST anymore. We will fallback to the naive "
+                           "approach. Set KISTSchedRunInterval=-1 to disable "
+                           "KIST.");
       kist_no_kernel_support = 1;
     }
     goto fallback;
@@ -200,8 +210,9 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   if (ioctl(sock, SIOCOUTQNSD, &(ent->notsent)) < 0) {
     if (errno == EINVAL) {
       log_notice(LD_SCHED, "Looks like our kernel doesn't have the support "
-                           "for KIST anymore. Fallback to the naive approach. "
-                           "Set KISTSchedRunInterval=-1 to disable KIST.");
+                           "for KIST anymore. We will fallback to the naive "
+                           "approach. Set KISTSchedRunInterval=-1 to disable "
+                           "KIST.");
       /* Same reason as the above. */
       kist_no_kernel_support = 1;
     }
@@ -211,10 +222,19 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   ent->unacked = tcp.tcpi_unacked;
   ent->mss = tcp.tcpi_snd_mss;
 
+  /* TCP space is the number of bytes would could give to the kernel and it
+   * would be able to immediately push them to the network. */
   tcp_space = (ent->cwnd - ent->unacked) * ent->mss;
   if (tcp_space < 0) {
     tcp_space = 0;
   }
+  /* Imagine we have filled up tcp_space already for a socket and the scheduler
+   * isn't going to run again for a while. We should write a little extra to the
+   * kernel so it has some data to send between scheduling runs if it gets ACKs
+   * back so it doesn't sit idle. With the suggested sock_buf_size_factor of
+   * 1.0, a socket can have at most 2*cwnd data in the kernel: 1 cwnd on the
+   * wire waiting for ACKs and 1 cwnd ready and waiting to be sent when those
+   * ACKs come. */
   extra_space =
     clamp_double_to_int64((ent->cwnd * ent->mss) * sock_buf_size_factor) -
     ent->notsent;
@@ -225,6 +245,12 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   return;
 
  fallback:
+  /* If all of a sudden we don't have kist support, we just zero out all the
+   * variables for this socket since we don't know what they should be.
+   * We also effectively allow the socket write as much as it wants to the
+   * kernel, effectively returning it to vanilla scheduler behavior. Writes
+   * are still limited by the lower layers of Tor: socket blocking, full
+   * outbuf, etc. */
   ent->cwnd = ent->unacked = ent->mss = ent->notsent = 0;
   ent->limit = INT_MAX;
 }
@@ -391,7 +417,7 @@ kist_scheduler_on_new_consensus(const networkstatus_t *old_c,
   set_scheduler_run_interval(new_c);
 }
 
-/* Function of the scheduler interface: run() */
+/* Function of the scheduler interface: on_new_options() */
 static void
 kist_scheduler_on_new_options(void)
 {
@@ -413,15 +439,16 @@ kist_scheduler_init(void)
 static void
 kist_scheduler_schedule(void)
 {
-  struct timeval now, next_run;
+  struct monotime_t now;
+  struct timeval next_run;
   int32_t diff;
   struct event *ev = get_run_sched_ev();
   tor_assert(ev);
   if (!have_work()) {
     return;
   }
-  tor_gettimeofday(&now);
-  diff = (int32_t) tv_mdiff(&scheduler_last_run, &now);
+  monotime_get(&now);
+  diff = (int32_t) monotime_diff_msec(&scheduler_last_run, &now);
   if (diff < sched_run_interval) {
     next_run.tv_sec = 0;
     /* 1000 for ms -> us */
@@ -465,7 +492,9 @@ kist_scheduler_run(void)
 
     /* if we have switched to a new channel, consider writing the previous
      * channel's outbuf to the kernel. */
-    if (!prev_chan) prev_chan = chan;
+    if (!prev_chan) {
+      prev_chan = chan;
+    }
     if (prev_chan != chan) {
       if (channel_should_write_to_kernel(&outbuf_table, prev_chan)) {
         channel_write_to_kernel(prev_chan);
@@ -522,9 +551,17 @@ kist_scheduler_run(void)
 
       /* Case 3: cells to send, but cannot write */
 
+      /*
+       * We want to write, but can't. If we left the channel in
+       * channels_pending, we would never exit the scheduling loop. We need to
+       * add it to a temporary list of channels to be added to channels_pending
+       * after the scheduling loop is over. They can hopefully be taken care of
+       * in the next scheduling round.
+       */
       chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
-      if (!to_readd)
+      if (!to_readd) {
         to_readd = smartlist_new();
+      }
       smartlist_add(to_readd, chan);
       log_debug(LD_SCHED, "chan=%" PRIu64 " now waiting_to_write",
                 chan->global_identifier);
@@ -560,7 +597,7 @@ kist_scheduler_run(void)
     smartlist_free(to_readd);
   }
 
-  tor_gettimeofday(&scheduler_last_run);
+  monotime_get(&scheduler_last_run);
 }
 
 /*****************************************************************************
@@ -593,7 +630,7 @@ get_kist_scheduler(void)
 /* Maximum interval that KIST runs (in ms). */
 #define KIST_SCHED_RUN_INTERVAL_MAX 100
 
-/* Check the torrc for the configured KIST scheduler run frequency.
+/* Check the torrc for the configured KIST scheduler run interval.
  * - If torrc < 0, then return the negative torrc value (shouldn't even be
  *   using KIST)
  * - If torrc > 0, then return the positive torrc value (should use KIST, and

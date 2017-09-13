@@ -289,8 +289,8 @@ set_scheduler(void)
     if (old_scheduler && old_scheduler->free_all) {
       old_scheduler->free_all();
     }
-    /* We don't clean up the old one, we keep any type of scheduler we've
-     * allocated so we can do an easy switch back. */
+    /* We don't clean up the old scheduler_t. We keep any type of scheduler
+     * we've allocated so we can do an easy switch back. */
 
     /* Initialize the new scheduler. */
     if (scheduler->init) {
