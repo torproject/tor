@@ -6754,27 +6754,25 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
 }
 
 /** Called when Tor has failed to make bootstrapping progress in a way
- * that indicates a problem. <b>warn</b> gives a hint as to why, and
- * <b>reason</b> provides an "or_conn_end_reason" tag.  <b>or_conn</b>
- * is the connection that caused this problem.
+ * that indicates a problem. <b>warn</b> gives a human-readable hint
+ * as to why, and <b>reason</b> provides a controller-facing short
+ * tag.  <b>conn</b> is the connection that caused this problem and
+ * can be NULL if a connection cannot be easily identified.
  */
-MOCK_IMPL(void,
-control_event_bootstrap_problem, (const char *warn, int reason,
-                                  or_connection_t *or_conn))
+void
+control_event_bootstrap_problem(const char *warn, const char *reason,
+                                const connection_t *conn, int dowarn)
 {
   int status = bootstrap_percent;
   const char *tag = "", *summary = "";
   char buf[BOOTSTRAP_MSG_LEN];
   const char *recommendation = "ignore";
   int severity;
+  char *or_id = NULL, *hostaddr = NULL;
+  or_connection_t *or_conn = NULL;
 
   /* bootstrap_percent must not be in "undefined" state here. */
   tor_assert(status >= 0);
-
-  if (or_conn->have_noted_bootstrap_problem)
-    return;
-
-  or_conn->have_noted_bootstrap_problem = 1;
 
   if (bootstrap_percent == 100)
     return; /* already bootstrapped; nothing to be done here. */
@@ -6782,52 +6780,86 @@ control_event_bootstrap_problem, (const char *warn, int reason,
   bootstrap_problems++;
 
   if (bootstrap_problems >= BOOTSTRAP_PROBLEM_THRESHOLD)
-    recommendation = "warn";
-
-  if (reason == END_OR_CONN_REASON_NO_ROUTE)
-    recommendation = "warn";
-
-  /* If we are using bridges and all our OR connections are now
-     closed, it means that we totally failed to connect to our
-     bridges. Throw a warning. */
-  if (get_options()->UseBridges && !any_other_active_or_conns(or_conn))
-    recommendation = "warn";
+    dowarn = 1;
 
   if (we_are_hibernating())
-    recommendation = "ignore";
+    dowarn = 0;
 
   while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
   status = bootstrap_percent; /* set status back to the actual number */
 
-  severity = !strcmp(recommendation, "warn") ? LOG_WARN : LOG_INFO;
+  severity = dowarn ? LOG_WARN : LOG_INFO;
+
+  if (dowarn)
+    recommendation = "warn";
+
+  if (conn && conn->type == CONN_TYPE_OR) {
+    /* XXX TO_OR_CONN can't deal with const */
+    or_conn = TO_OR_CONN((connection_t *)conn);
+    or_id = tor_strdup(hex_str(or_conn->identity_digest, DIGEST_LEN));
+  } else {
+    or_id = tor_strdup("?");
+  }
+
+  if (conn)
+    tor_asprintf(&hostaddr, "%s:%d", conn->address, (int)conn->port);
+  else
+    hostaddr = tor_strdup("?");
 
   log_fn(severity,
          LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
-         "count %d; recommendation %s; host %s at %s:%d)",
-         status, summary, warn,
-         orconn_end_reason_to_control_string(reason),
+         "count %d; recommendation %s; host %s at %s)",
+         status, summary, warn, reason,
          bootstrap_problems, recommendation,
-         hex_str(or_conn->identity_digest, DIGEST_LEN),
-         or_conn->base_.address,
-         or_conn->base_.port);
+         or_id, hostaddr);
 
   connection_or_report_broken_states(severity, LD_HANDSHAKE);
 
   tor_snprintf(buf, sizeof(buf),
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
-      "COUNT=%d RECOMMENDATION=%s HOSTID=\"%s\" HOSTADDR=\"%s:%d\"",
-      bootstrap_percent, tag, summary, warn,
-      orconn_end_reason_to_control_string(reason), bootstrap_problems,
+      "COUNT=%d RECOMMENDATION=%s HOSTID=\"%s\" HOSTADDR=\"%s\"",
+      bootstrap_percent, tag, summary, warn, reason, bootstrap_problems,
       recommendation,
-      hex_str(or_conn->identity_digest, DIGEST_LEN),
-      or_conn->base_.address,
-      (int)or_conn->base_.port);
+      or_id, hostaddr);
 
   tor_snprintf(last_sent_bootstrap_message,
                sizeof(last_sent_bootstrap_message),
                "WARN %s", buf);
   control_event_client_status(LOG_WARN, "%s", buf);
+
+  tor_free(hostaddr);
+  tor_free(or_id);
+}
+
+/** Called when Tor has failed to make bootstrapping progress in a way
+ * that indicates a problem. <b>warn</b> gives a hint as to why, and
+ * <b>reason</b> provides an "or_conn_end_reason" tag.  <b>or_conn</b>
+ * is the connection that caused this problem.
+ */
+MOCK_IMPL(void,
+control_event_bootstrap_prob_or, (const char *warn, int reason,
+                                  or_connection_t *or_conn))
+{
+  int dowarn = 0;
+
+  if (or_conn->have_noted_bootstrap_problem)
+    return;
+
+  or_conn->have_noted_bootstrap_problem = 1;
+
+  if (reason == END_OR_CONN_REASON_NO_ROUTE)
+    dowarn = 1;
+
+  /* If we are using bridges and all our OR connections are now
+     closed, it means that we totally failed to connect to our
+     bridges. Throw a warning. */
+  if (get_options()->UseBridges && !any_other_active_or_conns(or_conn))
+    dowarn = 1;
+
+  control_event_bootstrap_problem(warn,
+                                  orconn_end_reason_to_control_string(reason),
+                                  TO_CONN(or_conn), dowarn);
 }
 
 /** We just generated a new summary of which countries we've seen clients

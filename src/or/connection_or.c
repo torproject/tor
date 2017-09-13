@@ -727,7 +727,7 @@ connection_or_about_to_close(or_connection_t *or_conn)
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                                      reason);
         if (!authdir_mode_tests_reachability(options))
-          control_event_bootstrap_problem(
+          control_event_bootstrap_prob_or(
                 orconn_end_reason_to_control_string(reason),
                 reason, or_conn);
       }
@@ -1113,7 +1113,7 @@ connection_or_connect_failed(or_connection_t *conn,
 {
   control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED, reason);
   if (!authdir_mode_tests_reachability(get_options()))
-    control_event_bootstrap_problem(msg, reason, conn);
+    control_event_bootstrap_prob_or(msg, reason, conn);
 }
 
 /** <b>conn</b> got an error in connection_handle_read_impl() or
@@ -1236,7 +1236,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
                fmt_addrport(&TO_CONN(conn)->addr, TO_CONN(conn)->port),
                transport_name, transport_name);
 
-      control_event_bootstrap_problem(
+      control_event_bootstrap_prob_or(
                                 "Can't connect to bridge",
                                 END_OR_CONN_REASON_PT_MISSING,
                                 conn);
@@ -1714,7 +1714,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
                                  END_OR_CONN_REASON_OR_IDENTITY);
     if (!authdir_mode_tests_reachability(options))
-      control_event_bootstrap_problem(
+      control_event_bootstrap_prob_or(
                                 "Unexpected identity in router certificate",
                                 END_OR_CONN_REASON_OR_IDENTITY,
                                 conn);
