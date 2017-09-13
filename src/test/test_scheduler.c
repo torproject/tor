@@ -408,7 +408,7 @@ perform_channel_state_tests(int KISTSchedRunInterval)
    * Disable scheduler_run so we can just check the state transitions
    * without having to make everything it might call work too.
    */
-  scheduler->run = scheduler_run_noop_mock;
+  the_scheduler->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 
@@ -616,8 +616,8 @@ test_scheduler_loop_vanilla(void *arg)
    * Disable scheduler_run so we can just check the state transitions
    * without having to make everything it might call work too.
    */
-  run_func_ptr = scheduler->run;
-  scheduler->run = scheduler_run_noop_mock;
+  run_func_ptr = the_scheduler->run;
+  the_scheduler->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 
@@ -807,19 +807,19 @@ test_scheduler_loop_kist(void *arg)
   scheduler_channel_wants_writes(ch2);
   channel_flush_some_cells_mock_set(ch2, 5);
 
-  scheduler->run();
+  the_scheduler->run();
 
   scheduler_channel_has_waiting_cells(ch1);
   channel_flush_some_cells_mock_set(ch1, 5);
 
-  scheduler->run();
+  the_scheduler->run();
 
   scheduler_channel_has_waiting_cells(ch1);
   channel_flush_some_cells_mock_set(ch1, 5);
   scheduler_channel_has_waiting_cells(ch2);
   channel_flush_some_cells_mock_set(ch2, 5);
 
-  scheduler->run();
+  the_scheduler->run();
 
   channel_flush_some_cells_mock_free_all();
   tt_int_op(1,==,1);
@@ -865,7 +865,7 @@ test_scheduler_initfree(void *arg)
   tt_ptr_op(run_sched_ev, !=, NULL);
   /* We have specified nothing in the torrc and there's no consensus so the
    * KIST scheduler is what should be in use */
-  tt_ptr_op(scheduler, ==, get_kist_scheduler());
+  tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
   tt_int_op(sched_run_interval, ==, 10);
 
   scheduler_free_all();
@@ -954,35 +954,35 @@ test_scheduler_ns_changed(void *arg)
   MOCK(get_options, mock_get_options);
   clear_options();
 
-  tt_ptr_op(scheduler, ==, NULL);
+  tt_ptr_op(the_scheduler, ==, NULL);
 
   /* Change from vanilla to kist via consensus */
-  scheduler = get_vanilla_scheduler();
+  the_scheduler = get_vanilla_scheduler();
   MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
   scheduler_notify_networkstatus_changed(NULL, NULL);
   UNMOCK(networkstatus_get_param);
-  tt_ptr_op(scheduler, ==, get_kist_scheduler());
+  tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
 
   /* Change from kist to vanilla via consensus */
-  scheduler = get_kist_scheduler();
+  the_scheduler = get_kist_scheduler();
   MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
   scheduler_notify_networkstatus_changed(NULL, NULL);
   UNMOCK(networkstatus_get_param);
-  tt_ptr_op(scheduler, ==, get_vanilla_scheduler());
+  tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
 
   /* Doesn't change when using KIST */
-  scheduler = get_kist_scheduler();
+  the_scheduler = get_kist_scheduler();
   MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
   scheduler_notify_networkstatus_changed(NULL, NULL);
   UNMOCK(networkstatus_get_param);
-  tt_ptr_op(scheduler, ==, get_kist_scheduler());
+  tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
 
   /* Doesn't change when using vanilla */
-  scheduler = get_vanilla_scheduler();
+  the_scheduler = get_vanilla_scheduler();
   MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
   scheduler_notify_networkstatus_changed(NULL, NULL);
   UNMOCK(networkstatus_get_param);
-  tt_ptr_op(scheduler, ==, get_vanilla_scheduler());
+  tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
 
  done:
   UNMOCK(get_options);

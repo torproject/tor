@@ -148,7 +148,7 @@
  * outside the scheduling system)
  *****************************************************************************/
 
-STATIC scheduler_t *scheduler;
+STATIC scheduler_t *the_scheduler;
 
 /*
  * We keep a list of channels that are pending - i.e, have cells to write
@@ -187,12 +187,12 @@ scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
   tor_assert(run_sched_ev);
 
   /* Run the scheduler. This is a mandatory function. */
-  tor_assert(scheduler->run);
-  scheduler->run();
+  tor_assert(the_scheduler->run);
+  the_scheduler->run();
 
   /* Schedule itself back in if it has more work. */
-  tor_assert(scheduler->schedule);
-  scheduler->schedule();
+  tor_assert(the_scheduler->schedule);
+  the_scheduler->schedule();
 }
 
 /*****************************************************************************
@@ -275,16 +275,16 @@ set_scheduler(void)
   int have_kist = 0;
 
   /* Switch, if needed */
-  scheduler_t *old_scheduler = scheduler;
+  scheduler_t *old_scheduler = the_scheduler;
   if (scheduler_should_use_kist()) {
-    scheduler = get_kist_scheduler();
+    the_scheduler = get_kist_scheduler();
     have_kist = 1;
   } else {
-    scheduler = get_vanilla_scheduler();
+    the_scheduler = get_vanilla_scheduler();
   }
-  tor_assert(scheduler);
+  tor_assert(the_scheduler);
 
-  if (old_scheduler != scheduler) {
+  if (old_scheduler != the_scheduler) {
     /* Allow the old scheduler to clean up, if needed. */
     if (old_scheduler && old_scheduler->free_all) {
       old_scheduler->free_all();
@@ -293,8 +293,8 @@ set_scheduler(void)
      * we've allocated so we can do an easy switch back. */
 
     /* Initialize the new scheduler. */
-    if (scheduler->init) {
-      scheduler->init();
+    if (the_scheduler->init) {
+      the_scheduler->init();
     }
     log_notice(LD_CONFIG, "Using the %s scheduler.",
                have_kist ? "KIST" : "vanilla");
@@ -312,8 +312,8 @@ scheduler_conf_changed(void)
   set_scheduler();
 
   /* Then tell the (possibly new) scheduler that we have new options. */
-  if (scheduler->on_new_options) {
-    scheduler->on_new_options();
+  if (the_scheduler->on_new_options) {
+    the_scheduler->on_new_options();
   }
 }
 
@@ -325,8 +325,8 @@ scheduler_notify_networkstatus_changed(const networkstatus_t *old_c,
                                        const networkstatus_t *new_c)
 {
   /* Then tell the (possibly new) scheduler that we have a new consensus */
-  if (scheduler->on_new_consensus) {
-    scheduler->on_new_consensus(old_c, new_c);
+  if (the_scheduler->on_new_consensus) {
+    the_scheduler->on_new_consensus(old_c, new_c);
   }
   /* Maybe the consensus param made us change the scheduler. */
   set_scheduler();
@@ -356,11 +356,11 @@ scheduler_free_all(void)
     channels_pending = NULL;
   }
 
-  if (scheduler && scheduler->free_all) {
-    scheduler->free_all();
+  if (the_scheduler && the_scheduler->free_all) {
+    the_scheduler->free_all();
   }
-  tor_free(scheduler);
-  scheduler = NULL;
+  tor_free(the_scheduler);
+  the_scheduler = NULL;
 }
 
 /** Mark a channel as no longer ready to accept writes */
@@ -429,7 +429,7 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
               U64_PRINTF_ARG(chan->global_identifier), chan);
     /* If we made a channel pending, we potentially have scheduling work to
      * do. */
-    scheduler->schedule();
+    the_scheduler->schedule();
   } else {
     /*
      * It's not in waiting_for_cells, so it can't become pending; it's
@@ -487,8 +487,8 @@ scheduler_release_channel,(channel_t *chan))
                               offsetof(channel_t, sched_heap_idx),
                               chan);
     }
-    if (scheduler->on_channel_free) {
-      scheduler->on_channel_free(chan);
+    if (the_scheduler->on_channel_free) {
+      the_scheduler->on_channel_free(chan);
     }
   }
 
@@ -520,7 +520,7 @@ scheduler_channel_wants_writes(channel_t *chan)
               "to pending",
               U64_PRINTF_ARG(chan->global_identifier), chan);
     /* We just made a channel pending, we have scheduling work to do. */
-    scheduler->schedule();
+    the_scheduler->schedule();
   } else {
     /*
      * It's not in SCHED_CHAN_WAITING_TO_WRITE, so it can't become pending;
