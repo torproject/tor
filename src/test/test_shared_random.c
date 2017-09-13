@@ -1231,6 +1231,8 @@ test_keep_commit(void *arg)
     state = get_sr_state();
   }
 
+  crypto_rand((char*)fp, sizeof(fp));
+
   /* Test this very important function that tells us if we should keep a
    * commit or not in our state. Most of it depends on the phase and what's
    * in the commit so we'll change the commit as we go. */

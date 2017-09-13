@@ -430,7 +430,7 @@ key_to_string(EVP_PKEY *key)
 static int
 get_fingerprint(EVP_PKEY *pkey, char *out)
 {
-  int r = 1;
+  int r = -1;
   crypto_pk_t *pk = crypto_new_pk_from_rsa_(EVP_PKEY_get1_RSA(pkey));
   if (pk) {
     r = crypto_pk_get_fingerprint(pk, out, 0);
@@ -443,7 +443,7 @@ get_fingerprint(EVP_PKEY *pkey, char *out)
 static int
 get_digest(EVP_PKEY *pkey, char *out)
 {
-  int r = 1;
+  int r = -1;
   crypto_pk_t *pk = crypto_new_pk_from_rsa_(EVP_PKEY_get1_RSA(pkey));
   if (pk) {
     r = crypto_pk_get_digest(pk, out);
@@ -472,8 +472,12 @@ generate_certificate(void)
   char signature[1024]; /* handles up to 8192-bit keys. */
   int r;
 
-  get_fingerprint(identity_key, fingerprint);
-  get_digest(identity_key, id_digest);
+  if (get_fingerprint(identity_key, fingerprint) < 0) {
+    return -1;
+  }
+  if (get_digest(identity_key, id_digest)) {
+    return -1;
+  }
 
   tor_localtime_r(&now, &tm);
   tm.tm_mon += months_lifetime;

@@ -2580,6 +2580,7 @@ tor_inet_pton(int af, const char *src, void *dst)
     int gapPos = -1, i, setWords=0;
     const char *dot = strchr(src, '.');
     const char *eow; /* end of words. */
+    memset(words, 0xf8, sizeof(words));
     if (dot == src)
       return 0;
     else if (!dot)

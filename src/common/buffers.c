@@ -907,6 +907,8 @@ buf_peek_startswith(const buf_t *buf, const char *cmd)
 {
   char tmp[PEEK_BUF_STARTSWITH_MAX];
   size_t clen = strlen(cmd);
+  if (clen == 0)
+    return 1;
   if (BUG(clen > sizeof(tmp)))
     return 0;
   if (buf->datalen < clen)

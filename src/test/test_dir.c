@@ -3370,7 +3370,7 @@ mock_get_options(void)
 static void
 reset_routerstatus(routerstatus_t *rs,
                    const char *hex_identity_digest,
-                   int32_t ipv4_addr)
+                   uint32_t ipv4_addr)
 {
   memset(rs, 0, sizeof(routerstatus_t));
   base16_decode(rs->identity_digest, sizeof(rs->identity_digest),

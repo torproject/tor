@@ -2595,6 +2595,8 @@ test_crypto_ed25519_testvectors(void *arg)
     ed25519_signature_t sig;
     int sign;
 
+    memset(&curvekp, 0xd0, sizeof(curvekp));
+
 #define DECODE(p,s) base16_decode((char*)(p),sizeof(p),(s),strlen(s))
 #define EQ(a,h) test_memeq_hex((const char*)(a), (h))
 

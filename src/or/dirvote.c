@@ -3993,14 +3993,15 @@ dirvote_format_all_microdesc_vote_lines(const routerinfo_t *ri, time_t now,
   while ((ep = entries)) {
     char buf[128];
     vote_microdesc_hash_t *h;
-    dirvote_format_microdesc_vote_line(buf, sizeof(buf), ep->md,
-                                       ep->low, ep->high);
-    h = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
-    h->microdesc_hash_line = tor_strdup(buf);
-    h->next = result;
-    result = h;
-    ep->md->last_listed = now;
-    smartlist_add(microdescriptors_out, ep->md);
+    if (dirvote_format_microdesc_vote_line(buf, sizeof(buf), ep->md,
+                                           ep->low, ep->high) >= 0) {
+      h = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+      h->microdesc_hash_line = tor_strdup(buf);
+      h->next = result;
+      result = h;
+      ep->md->last_listed = now;
+      smartlist_add(microdescriptors_out, ep->md);
+    }
     entries = ep->next;
     tor_free(ep);
   }
