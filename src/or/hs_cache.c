@@ -20,6 +20,9 @@
 
 #include "hs_cache.h"
 
+static int cached_client_descriptor_has_expired(time_t now,
+           const hs_cache_client_descriptor_t *cached_desc);
+
 /********************** Directory HS cache ******************/
 
 /* Directory descriptor cache. Map indexed by blinded key. */
@@ -356,12 +359,27 @@ store_v3_desc_as_client(hs_cache_client_descriptor_t *desc)
   rend_cache_increment_allocation(cache_get_client_entry_size(desc));
 }
 
-/* Query our cache and return the entry or NULL if not found. */
+/* Query our cache and return the entry or NULL if not found or if expired. */
 STATIC hs_cache_client_descriptor_t *
 lookup_v3_desc_as_client(const uint8_t *key)
 {
+  time_t now = approx_time();
+  hs_cache_client_descriptor_t *cached_desc;
+
   tor_assert(key);
-  return digest256map_get(hs_cache_v3_client, key);
+
+  /* Do the lookup */
+  cached_desc = digest256map_get(hs_cache_v3_client, key);
+  if (!cached_desc) {
+    return NULL;
+  }
+
+  /* Don't return expired entries */
+  if (cached_client_descriptor_has_expired(now, cached_desc)) {
+    return NULL;
+  }
+
+  return cached_desc;
 }
 
 /* Parse the encoded descriptor in <b>desc_str</b> using
@@ -388,7 +406,10 @@ cache_client_desc_new(const char *desc_str,
   /* All is good: make a cache object for this descriptor */
   client_desc = tor_malloc_zero(sizeof(hs_cache_client_descriptor_t));
   ed25519_pubkey_copy(&client_desc->key, service_identity_pk);
-  client_desc->created_ts = approx_time();
+  /* Set expiration time for this cached descriptor to be the start of the next
+   * time period since that's when clients need to start using the next blinded
+   * pk of the service (and hence will need its next descriptor). */
+  client_desc->expiration_ts = hs_get_start_time_of_next_time_period(0);
   client_desc->desc = desc;
   client_desc->encoded_desc = tor_strdup(desc_str);
 
@@ -603,9 +624,8 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   if (cache_entry != NULL) {
     /* If we have an entry in our cache that has a revision counter greater
      * than the one we just fetched, discard the one we fetched. */
-    if (cache_entry->desc->plaintext_data.revision_counter >
-        client_desc->desc->plaintext_data.revision_counter) {
-      log_info(LD_REND, "We already have fresher descriptor. Ignoring.");
+    if (BUG(cache_entry->desc->plaintext_data.revision_counter >
+            client_desc->desc->plaintext_data.revision_counter)) {
       cache_client_desc_free(client_desc);
       goto done;
     }
@@ -621,7 +641,30 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   return 0;
 }
 
-/* Clean the client cache using now as the current time. Return the total size
+/* Return true iff the cached client descriptor at <b>cached_desc</b has
+ * expired. */
+static int
+cached_client_descriptor_has_expired(time_t now,
+                               const hs_cache_client_descriptor_t *cached_desc)
+{
+  /* We use the current consensus time to see if we should expire this
+   * descriptor since we use consensus time for all other parts of the protocol
+   * as well (e.g. to build the blinded key and compute time periods). */
+  const networkstatus_t *ns = networkstatus_get_live_consensus(now);
+  /* If we don't have a recent consensus, consider this entry expired since we
+   * will want to fetch a new HS desc when we get a live consensus. */
+  if (!ns) {
+    return 1;
+  }
+
+  if (cached_desc->expiration_ts <= ns->valid_after) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/* clean the client cache using now as the current time. Return the total size
  * of removed bytes from the cache. */
 static size_t
 cache_clean_v3_as_client(time_t now)
@@ -635,11 +678,9 @@ cache_clean_v3_as_client(time_t now)
   DIGEST256MAP_FOREACH_MODIFY(hs_cache_v3_client, key,
                               hs_cache_client_descriptor_t *, entry) {
     size_t entry_size;
-    time_t cutoff = now - rend_cache_max_entry_lifetime();
 
-    /* If the entry has been created _after_ the cutoff, not expired so
-     * continue to the next entry in our v3 cache. */
-    if (entry->created_ts > cutoff) {
+    /* If the entry has not expired, continue to the next cached entry */
+    if (!cached_client_descriptor_has_expired(now, entry)) {
       continue;
     }
     /* Here, our entry has expired, remove and free. */

@@ -235,7 +235,7 @@ get_time_period_length(void)
 }
 
 /** Get the HS time period number at time <b>now</b>. If <b>now</b> is not set,
- *  we try to get the time ourselves. */
+ *  we try to get the time ourselves from a live consensus. */
 uint64_t
 hs_get_time_period_num(time_t now)
 {
@@ -269,22 +269,26 @@ hs_get_time_period_num(time_t now)
 }
 
 /** Get the number of the _upcoming_ HS time period, given that the current
- *  time is <b>now</b>. */
+ *  time is <b>now</b>. If <b>now</b> is not set, we try to get the time from a
+ *  live consensus. */
 uint64_t
 hs_get_next_time_period_num(time_t now)
 {
   return hs_get_time_period_num(now) + 1;
 }
 
-/* Get the number of the _previous_ HS time period, given that the current
- * time is <b>now</b>. */
+/* Get the number of the _previous_ HS time period, given that the current time
+ * is <b>now</b>. If <b>now</b> is not set, we try to get the time from a live
+ * consensus. */
 uint64_t
 hs_get_previous_time_period_num(time_t now)
 {
   return hs_get_time_period_num(now) - 1;
 }
 
-/* Return the start time of the upcoming time period based on <b>now</b>. */
+/* Return the start time of the upcoming time period based on <b>now</b>. If
+   <b>now</b> is not set, we try to get the time ourselves from a live
+   consensus. */
 time_t
 hs_get_start_time_of_next_time_period(time_t now)
 {

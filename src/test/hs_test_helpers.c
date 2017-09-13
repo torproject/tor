@@ -104,7 +104,7 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
   memcpy(&desc->plaintext_data.signing_pubkey, &signing_kp->pubkey,
          sizeof(ed25519_public_key_t));
 
-  uint64_t current_time_period = hs_get_time_period_num(approx_time());
+  uint64_t current_time_period = hs_get_time_period_num(0);
   hs_build_blinded_keypair(signing_kp, NULL, 0,
                            current_time_period, &blinded_kp);
   /* Copy only the public key into the descriptor. */

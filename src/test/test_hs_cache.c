@@ -14,6 +14,7 @@
 #include "hs_cache.h"
 #include "rendcache.h"
 #include "directory.h"
+#include "networkstatus.h"
 #include "connection.h"
 #include "proto_http.h"
 
@@ -433,6 +434,15 @@ test_hsdir_revision_counter_check(void *arg)
   tor_free(published_desc_str);
 }
 
+static networkstatus_t mock_ns;
+
+static networkstatus_t *
+mock_networkstatus_get_live_consensus(time_t now)
+{
+  (void) now;
+  return &mock_ns;
+}
+
 /** Test that we can store HS descriptors in the client HS cache. */
 static void
 test_client_cache(void *arg)
@@ -441,7 +451,7 @@ test_client_cache(void *arg)
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *published_desc = NULL;
   char *published_desc_str = NULL;
-
+  uint8_t wanted_subcredential[DIGEST256_LEN];
   response_handler_args_t *args = NULL;
   dir_connection_t *conn = NULL;
 
@@ -449,6 +459,17 @@ test_client_cache(void *arg)
 
   /* Initialize HSDir cache subsystem */
   init_test();
+
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  /* Set consensus time */
+  parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  parse_rfc1123_time("Sat, 26 Oct 1985 16:00:00 UTC",
+                           &mock_ns.valid_until);
 
   /* Generate a valid descriptor with normal values. */
   {
@@ -459,6 +480,8 @@ test_client_cache(void *arg)
     retval = hs_desc_encode_descriptor(published_desc, &signing_kp,
                                        &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
+    memcpy(wanted_subcredential, published_desc->subcredential, DIGEST256_LEN);
+    tt_assert(!tor_mem_is_zero((char*)wanted_subcredential, DIGEST256_LEN));
   }
 
   /* Test handle_response_fetch_hsdesc_v3() */
@@ -478,12 +501,36 @@ test_client_cache(void *arg)
   retval = handle_response_fetch_hsdesc_v3(conn, args);
   tt_int_op(retval, == , 0);
 
-  /* fetch the descriptor and make sure it's there */
+  /* Progress time a bit and attempt to clean cache: our desc should not be
+   * cleaned since we still in the same TP. */
   {
-    hs_cache_client_descriptor_t *cached_desc = NULL;
-    cached_desc = lookup_v3_desc_as_client(signing_kp.pubkey.pubkey);
+    parse_rfc1123_time("Sat, 27 Oct 1985 02:00:00 UTC",
+                       &mock_ns.valid_after);
+    parse_rfc1123_time("Sat, 27 Oct 1985 03:00:00 UTC",
+                       &mock_ns.fresh_until);
+    parse_rfc1123_time("Sat, 27 Oct 1985 05:00:00 UTC",
+                       &mock_ns.valid_until);
+
+    /* fetch the descriptor and make sure it's there */
+    const hs_descriptor_t *cached_desc = NULL;
+    cached_desc = hs_cache_lookup_as_client(&signing_kp.pubkey);
     tt_assert(cached_desc);
-    tt_str_op(cached_desc->encoded_desc, OP_EQ, published_desc_str);
+    tt_mem_op(cached_desc->subcredential, OP_EQ, wanted_subcredential,
+              DIGEST256_LEN);
+  }
+
+  /* Progress time to next TP and check that desc was cleaned */
+  {
+    parse_rfc1123_time("Sat, 27 Oct 1985 12:00:00 UTC",
+                       &mock_ns.valid_after);
+    parse_rfc1123_time("Sat, 27 Oct 1985 13:00:00 UTC",
+                       &mock_ns.fresh_until);
+    parse_rfc1123_time("Sat, 27 Oct 1985 15:00:00 UTC",
+                       &mock_ns.valid_until);
+
+    const hs_descriptor_t *cached_desc = NULL;
+    cached_desc = hs_cache_lookup_as_client(&signing_kp.pubkey);
+    tt_assert(!cached_desc);
   }
 
  done:
