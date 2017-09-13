@@ -3112,6 +3112,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeNodes);
   }
 
+  if (options->KISTSockBufSizeFactor < 0) {
+    REJECT("KISTSockBufSizeFactor must be at least 0");
+  }
+  /* Don't need to validate that the Interval is less than anything because
+   * zero is valid and all negative values are valid. */
+  if (options->KISTSchedRunInterval > KIST_SCHED_RUN_INTERVAL_MAX) {
+    char *buf = tor_calloc(80, sizeof(char));
+    tor_snprintf(buf, 80, "KISTSchedRunInterval must not be more than %d (ms)",
+                 KIST_SCHED_RUN_INTERVAL_MAX);
+    *msg = buf;
+    return -1;
+  }
+
   if (options->NodeFamilies) {
     options->NodeFamilySets = smartlist_new();
     for (cl = options->NodeFamilies; cl; cl = cl->next) {

@@ -83,6 +83,20 @@ typedef struct scheduler_s {
 } scheduler_t;
 
 /*****************************************************************************
+ * Globally visible scheduler variables/values
+ *
+ * These are variables/constants that all of Tor should be able to see.
+ *****************************************************************************/
+
+/* Default interval that KIST runs (in ms). */
+#define KIST_SCHED_RUN_INTERVAL_DEFAULT 10
+/* Minimum interval that KIST runs. This value disables KIST. */
+#define KIST_SCHED_RUN_INTERVAL_MIN 0
+/* Maximum interval that KIST runs (in ms). */
+#define KIST_SCHED_RUN_INTERVAL_MAX 100
+
+
+/*****************************************************************************
  * Globally visible scheduler functions
  *
  * These functions are how the rest of Tor communicates with the scheduling

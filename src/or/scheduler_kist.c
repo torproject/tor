@@ -623,13 +623,6 @@ get_kist_scheduler(void)
   return kist_scheduler;
 }
 
-/* Default interval that KIST runs (in ms). */
-#define KIST_SCHED_RUN_INTERVAL_DEFAULT 10
-/* Minimum interval that KIST runs. This value disables KIST. */
-#define KIST_SCHED_RUN_INTERVAL_MIN 0
-/* Maximum interval that KIST runs (in ms). */
-#define KIST_SCHED_RUN_INTERVAL_MAX 100
-
 /* Check the torrc for the configured KIST scheduler run interval.
  * - If torrc < 0, then return the negative torrc value (shouldn't even be
  *   using KIST)
