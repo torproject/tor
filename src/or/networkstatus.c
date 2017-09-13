@@ -1989,14 +1989,16 @@ networkstatus_set_current_consensus(const char *consensus,
     char tbuf[ISO_TIME_LEN+1];
     char dbuf[64];
     long delta = now - c->valid_after;
+    char *flavormsg = NULL;
     format_iso_time(tbuf, c->valid_after);
     format_time_interval(dbuf, sizeof(dbuf), delta);
     log_warn(LD_GENERAL, "Our clock is %s behind the time published in the "
              "consensus network status document (%s UTC).  Tor needs an "
              "accurate clock to work correctly. Please check your time and "
              "date settings!", dbuf, tbuf);
-    control_event_general_status(LOG_WARN,
-                    "CLOCK_SKEW MIN_SKEW=%ld SOURCE=CONSENSUS", delta);
+    tor_asprintf(&flavormsg, "%s flavor consensus", flavor);
+    clock_skew_warning(NULL, delta, 1, LD_GENERAL, flavormsg, "CONSENSUS");
+    tor_free(flavormsg);
   }
 
   router_dir_info_changed();
