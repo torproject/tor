@@ -293,10 +293,17 @@ select_scheduler(void)
       goto end;
     case SCHEDULER_KIST:
       if (!scheduler_can_use_kist()) {
-        log_warn(LD_SCHED, "Scheduler KIST can't be used. Consider removing "
-                           "it from Schedulers or if you have a tor built "
-                           "with KIST support, you should make sure "
-                           "KISTSchedRunInterval is a non zero value");
+#ifdef HAVE_KIST_SUPPORT
+        if (get_options()->KISTSchedRunInterval == -1) {
+          log_info(LD_SCHED, "Scheduler type KIST can not be used. It is "
+                             "disabled because KISTSchedRunInterval=-1");
+        } else {
+          log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
+                               "the consensus.");
+        }
+#else /* HAVE_KIST_SUPPORT */
+        log_info(LD_SCHED, "Scheduler type KIST not built in");
+#endif /* HAVE_KIST_SUPPORT */
         continue;
       }
       the_scheduler = get_kist_scheduler();
