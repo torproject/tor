@@ -26,7 +26,7 @@ Changes in version 0.2.9.12 - 2017-09-18
   o Major bugfixes (openbsd, denial-of-service, backport from 0.3.1.5-alpha):
     - Avoid an assertion failure bug affecting our implementation of
       inet_pton(AF_INET6) on certain OpenBSD systems whose strtol()
-      handling of "0xfoo" differs from what we had expected. Fixes bug
+      handling of "0xx" differs from what we had expected. Fixes bug
       22789; bugfix on 0.2.3.8-alpha. Also tracked as TROVE-2017-007.
 
   o Minor features (code style, backport from 0.3.1.3-alpha):
@@ -110,7 +110,7 @@ Changes in version 0.2.9.12 - 2017-09-18
       parsing between POSIX-based and Windows platforms. Fixes bug 21507
       and part of 21508; bugfix on 0.0.8pre1.
 
-  o Build features:
+  o Build features (backport from 0.3.1.5-alpha):
     - Tor's repository now includes a Travis Continuous Integration (CI)
       configuration file (.travis.yml). This is meant to help new
       developers and contributors who fork Tor to a Github repository be
