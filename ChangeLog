@@ -1,11 +1,11 @@
-Changes in version 0.3.1.7 - 2017-09-??
+Changes in version 0.3.1.7 - 2017-09-18
   Tor 0.3.1.7 is the first stable release in the 0.3.1 series.
 
   With the 0.3.1 series, Tor now serves and downloads directory
   information in more compact formats, to save on bandwidth overhead. It
   also contains a new padding system to resist netflow-based traffic
   analysis, and experimental support for building parts of Tor in Rust
-  (though no parts of Tor are in rust yet). There are also numerous
+  (though no parts of Tor are in Rust yet). There are also numerous
   small features, bugfixes on earlier release series, and groundwork for
   the hidden services revamp of 0.3.2.
 
@@ -40,7 +40,7 @@ Changes in version 0.3.1.7 - 2017-09-??
       Country database.
 
   o Minor bugfixes (compilation):
-    - Avoid compiler warnings in the unit tests for running tor_sscanf()
+    - Avoid compiler warnings in the unit tests for calling tor_sscanf()
       with wide string outputs. Fixes bug 15582; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (controller):
@@ -50,9 +50,9 @@ Changes in version 0.3.1.7 - 2017-09-??
       body. Fixes part of bug 22644; bugfix on 0.2.0.1-alpha.
 
   o Minor bugfixes (unit tests):
-    - Fix a channelpadding unit test failure on extremely slow systems
-      by using mocked time instead of actual time. Fixes bug 23077;
-      bugfix on 0.3.1.1-alpha.
+    - Fix a channelpadding unit test failure on slow systems by using
+      mocked time instead of actual time. Fixes bug 23077; bugfix
+      on 0.3.1.1-alpha.
 
 
 Changes in version 0.3.1.6-rc - 2017-09-05
