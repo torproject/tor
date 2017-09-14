@@ -3607,7 +3607,7 @@ routerstatus_describe(const routerstatus_t *rs)
   return routerstatus_get_description(buf, rs);
 }
 
-/** Return a human-readable description of the extend_info_t <b>ri</b>.
+/** Return a human-readable description of the extend_info_t <b>ei</b>.
  *
  * This function is not thread-safe.  Each call to this function invalidates
  * previous values returned by this function.
