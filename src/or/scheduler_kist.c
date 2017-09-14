@@ -51,7 +51,7 @@ socket_table_ent_hash(const socket_table_ent_t *ent)
 static unsigned
 socket_table_ent_eq(const socket_table_ent_t *a, const socket_table_ent_t *b)
 {
-  return a->chan->global_identifier == b->chan->global_identifier;
+  return a->chan == b->chan;
 }
 
 typedef HT_HEAD(socket_table_s, socket_table_ent_s) socket_table_t;
