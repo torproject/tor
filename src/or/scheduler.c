@@ -547,11 +547,11 @@ scheduler_release_channel,(channel_t *chan))
                               offsetof(channel_t, sched_heap_idx),
                               chan);
     }
-    if (the_scheduler->on_channel_free) {
-      the_scheduler->on_channel_free(chan);
-    }
   }
 
+  if (the_scheduler->on_channel_free) {
+    the_scheduler->on_channel_free(chan);
+  }
   chan->scheduler_state = SCHED_CHAN_IDLE;
 }
 
