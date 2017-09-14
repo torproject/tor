@@ -401,7 +401,8 @@ fixed_get_uname(void)
   "ClientUseIPv4 1\n"                                                     \
   "VirtualAddrNetworkIPv4 127.192.0.0/10\n"                             \
   "VirtualAddrNetworkIPv6 [FE80::]/10\n"                                \
-  "UseEntryGuards 1\n"
+  "UseEntryGuards 1\n"                                                  \
+  "Schedulers Vanilla\n"
 
 typedef struct {
   or_options_t *old_opt;

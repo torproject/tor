@@ -43,8 +43,32 @@ mock_get_options(void)
 }
 
 static void
+cleanup_scheduler_options(void)
+{
+  if (mocked_options.SchedulerTypes_) {
+    SMARTLIST_FOREACH(mocked_options.SchedulerTypes_, int *, i, tor_free(i));
+    smartlist_free(mocked_options.SchedulerTypes_);
+    mocked_options.SchedulerTypes_ = NULL;
+  }
+}
+
+static void
+set_scheduler_options(int val)
+{
+  int *type;
+
+  if (mocked_options.SchedulerTypes_ == NULL) {
+    mocked_options.SchedulerTypes_ = smartlist_new();
+  }
+  type = tor_malloc_zero(sizeof(int));
+  *type = val;
+  smartlist_add(mocked_options.SchedulerTypes_, type);
+}
+
+static void
 clear_options(void)
 {
+  cleanup_scheduler_options();
   memset(&mocked_options, 0, sizeof(mocked_options));
 }
 
@@ -385,7 +409,7 @@ update_socket_info_impl_mock(socket_table_ent_t *ent)
 }
 
 static void
-perform_channel_state_tests(int KISTSchedRunInterval)
+perform_channel_state_tests(int KISTSchedRunInterval, int sched_type)
 {
   channel_t *ch1 = NULL, *ch2 = NULL;
   int old_count;
@@ -394,6 +418,7 @@ perform_channel_state_tests(int KISTSchedRunInterval)
   MOCK(get_options, mock_get_options);
   clear_options();
   mocked_options.KISTSchedRunInterval = KISTSchedRunInterval;
+  set_scheduler_options(sched_type);
 
   /* Set up libevent and scheduler */
   mock_event_init();
@@ -501,6 +526,7 @@ perform_channel_state_tests(int KISTSchedRunInterval)
   UNMOCK(scheduler_compare_channels);
   UNMOCK(tor_libevent_get_base);
   UNMOCK(get_options);
+  cleanup_scheduler_options();
 
   return;
 }
@@ -600,6 +626,7 @@ test_scheduler_loop_vanilla(void *arg)
   /* setup options so we're sure about what sched we are running */
   MOCK(get_options, mock_get_options);
   clear_options();
+  set_scheduler_options(SCHEDULER_VANILLA);
   mocked_options.KISTSchedRunInterval = -1;
 
   /* Set up libevent and scheduler */
@@ -761,6 +788,7 @@ test_scheduler_loop_vanilla(void *arg)
  done:
   tor_free(ch1);
   tor_free(ch2);
+  cleanup_scheduler_options();
 
   UNMOCK(channel_flush_some_cells);
   UNMOCK(scheduler_compare_channels);
@@ -772,6 +800,11 @@ static void
 test_scheduler_loop_kist(void *arg)
 {
   (void) arg;
+
+#ifndef HAVE_KIST_SUPPORT
+  return;
+#endif
+
   channel_t *ch1 = new_fake_channel(), *ch2 = new_fake_channel();
 
   /* setup options so we're sure about what sched we are running */
@@ -783,6 +816,7 @@ test_scheduler_loop_kist(void *arg)
   MOCK(update_socket_info_impl, update_socket_info_impl_mock);
   clear_options();
   mocked_options.KISTSchedRunInterval = 11;
+  set_scheduler_options(SCHEDULER_KIST);
   scheduler_init();
 
   tt_assert(ch1);
@@ -844,9 +878,10 @@ static void
 test_scheduler_channel_states(void *arg)
 {
   (void)arg;
-  perform_channel_state_tests(-1); // vanilla
+  perform_channel_state_tests(-1, SCHEDULER_VANILLA);
+  perform_channel_state_tests(11, SCHEDULER_KIST_LITE);
 #ifdef HAVE_KIST_SUPPORT
-  perform_channel_state_tests(11); // kist
+  perform_channel_state_tests(11, SCHEDULER_KIST);
 #endif
 }
 
@@ -860,6 +895,10 @@ test_scheduler_initfree(void *arg)
 
   mock_event_init();
   MOCK(tor_libevent_get_base, tor_libevent_get_base_mock);
+  MOCK(get_options, mock_get_options);
+  set_scheduler_options(SCHEDULER_KIST);
+  set_scheduler_options(SCHEDULER_KIST_LITE);
+  set_scheduler_options(SCHEDULER_VANILLA);
 
   scheduler_init();
 
@@ -867,11 +906,7 @@ test_scheduler_initfree(void *arg)
   tt_ptr_op(run_sched_ev, !=, NULL);
   /* We have specified nothing in the torrc and there's no consensus so the
    * KIST scheduler is what should be in use */
-#ifdef HAVE_KIST_SUPPORT
   tt_ptr_op(the_scheduler, ==, get_kist_scheduler());
-#else
-  tt_ptr_op(the_scheduler, ==, get_vanilla_scheduler());
-#endif
   tt_int_op(sched_run_interval, ==, 10);
 
   scheduler_free_all();
@@ -883,6 +918,8 @@ test_scheduler_initfree(void *arg)
   tt_ptr_op(run_sched_ev, ==, NULL);
 
  done:
+  UNMOCK(get_options);
+  cleanup_scheduler_options();
   return;
 }
 
@@ -971,6 +1008,8 @@ test_scheduler_ns_changed(void *arg)
 
   MOCK(get_options, mock_get_options);
   clear_options();
+  set_scheduler_options(SCHEDULER_KIST);
+  set_scheduler_options(SCHEDULER_VANILLA);
 
   tt_ptr_op(the_scheduler, ==, NULL);
 
@@ -1012,6 +1051,7 @@ test_scheduler_ns_changed(void *arg)
 
  done:
   UNMOCK(get_options);
+  cleanup_scheduler_options();
   return;
 }
 

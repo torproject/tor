@@ -273,6 +273,16 @@ select_scheduler(void)
 {
   const char *chosen_sched_type = NULL;
 
+#ifdef TOR_UNIT_TESTS
+  /* This is hella annoying to set in the options for every test that passes
+   * through the scheduler and there are many so if we don't explicitely have
+   * a list of types set, just put the vanilla one. */
+  if (get_options()->SchedulerTypes_ == NULL) {
+    the_scheduler = get_vanilla_scheduler();
+    return;
+  }
+#endif
+
   /* This list is ordered that is first entry has the first priority. Thus, as
    * soon as we find a scheduler type that we can use, we use it and stop. */
   SMARTLIST_FOREACH_BEGIN(get_options()->SchedulerTypes_, int *, type) {
