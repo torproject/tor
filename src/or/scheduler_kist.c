@@ -245,13 +245,14 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   if (tcp_space < 0) {
     tcp_space = 0;
   }
-  /* Imagine we have filled up tcp_space already for a socket and the scheduler
-   * isn't going to run again for a while. We should write a little extra to the
-   * kernel so it has some data to send between scheduling runs if it gets ACKs
-   * back so it doesn't sit idle. With the suggested sock_buf_size_factor of
-   * 1.0, a socket can have at most 2*cwnd data in the kernel: 1 cwnd on the
-   * wire waiting for ACKs and 1 cwnd ready and waiting to be sent when those
-   * ACKs come. */
+
+  /* Imagine we have filled up tcp_space already for a socket and the
+   * scheduler isn't going to run again for a while. We should write a little
+   * extra to the kernel so it has some data to send between scheduling runs
+   * if it gets ACKs back so it doesn't sit idle. With the suggested
+   * sock_buf_size_factor of 1.0, a socket can have at most 2*cwnd data in the
+   * kernel: 1 cwnd on the wire waiting for ACKs and 1 cwnd ready and waiting
+   * to be sent when those ACKs come. */
   extra_space =
     clamp_double_to_int64((ent->cwnd * ent->mss) * sock_buf_size_factor) -
     ent->notsent;
