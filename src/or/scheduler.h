@@ -147,7 +147,7 @@ void scheduler_ev_add(const struct timeval *next_run);
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *channels_pending;
 extern struct event *run_sched_ev;
-extern scheduler_t *the_scheduler;
+extern const scheduler_t *the_scheduler;
 void scheduler_touch_channel(channel_t *chan);
 #endif /* TOR_UNIT_TESTS */
 

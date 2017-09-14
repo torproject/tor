@@ -17,9 +17,6 @@
 /* Maximum cells to flush in a single call to channel_flush_some_cells(); */
 #define MAX_FLUSH_CELLS 1000
 
-/* Stores the vanilla scheduler function pointers. */
-static scheduler_t *vanilla_scheduler = NULL;
-
 /*****************************************************************************
  * Externally called function implementations
  *****************************************************************************/
@@ -180,20 +177,20 @@ vanilla_scheduler_run(void)
             n_chans_before - n_chans_after, n_chans_before);
 }
 
+/* Stores the vanilla scheduler function pointers. */
+static scheduler_t vanilla_scheduler = {
+  .free_all = NULL,
+  .on_channel_free = NULL,
+  .init = NULL,
+  .on_new_consensus = NULL,
+  .schedule = vanilla_scheduler_schedule,
+  .run = vanilla_scheduler_run,
+  .on_new_options = NULL,
+};
+
 scheduler_t *
 get_vanilla_scheduler(void)
 {
-  if (!vanilla_scheduler) {
-    log_debug(LD_SCHED, "Initializing vanilla scheduler struct");
-    vanilla_scheduler = tor_malloc_zero(sizeof(*vanilla_scheduler));
-    vanilla_scheduler->free_all = NULL;
-    vanilla_scheduler->on_channel_free = NULL;
-    vanilla_scheduler->init = NULL;
-    vanilla_scheduler->on_new_consensus = NULL;
-    vanilla_scheduler->schedule = vanilla_scheduler_schedule;
-    vanilla_scheduler->run = vanilla_scheduler_run;
-    vanilla_scheduler->on_new_options = NULL;
-  }
-  return vanilla_scheduler;
+  return &vanilla_scheduler;
 }
 

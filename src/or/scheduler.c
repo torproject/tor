@@ -148,7 +148,7 @@
  * outside the scheduling system)
  *****************************************************************************/
 
-STATIC scheduler_t *the_scheduler;
+STATIC const scheduler_t *the_scheduler;
 
 /*
  * We keep a list of channels that are pending - i.e, have cells to write
@@ -317,7 +317,7 @@ select_scheduler(void)
 static void
 set_scheduler(void)
 {
-  scheduler_t *old_scheduler = the_scheduler;
+  const scheduler_t *old_scheduler = the_scheduler;
 
   /* From the options, select the scheduler type to set. */
   select_scheduler();
@@ -395,7 +395,6 @@ scheduler_free_all(void)
   if (the_scheduler && the_scheduler->free_all) {
     the_scheduler->free_all();
   }
-  tor_free(the_scheduler);
   the_scheduler = NULL;
 }
 

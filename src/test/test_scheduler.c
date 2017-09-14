@@ -408,7 +408,7 @@ perform_channel_state_tests(int KISTSchedRunInterval)
    * Disable scheduler_run so we can just check the state transitions
    * without having to make everything it might call work too.
    */
-  the_scheduler->run = scheduler_run_noop_mock;
+  ((scheduler_t *) the_scheduler)->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 
@@ -617,7 +617,7 @@ test_scheduler_loop_vanilla(void *arg)
    * without having to make everything it might call work too.
    */
   run_func_ptr = the_scheduler->run;
-  the_scheduler->run = scheduler_run_noop_mock;
+  ((scheduler_t *) the_scheduler)->run = scheduler_run_noop_mock;
 
   tt_int_op(smartlist_len(channels_pending), OP_EQ, 0);
 

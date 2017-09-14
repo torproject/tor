@@ -103,8 +103,6 @@ static monotime_t scheduler_last_run;
 static double sock_buf_size_factor = 1.0;
 /* How often the scheduler runs. */
 STATIC int32_t sched_run_interval = 10;
-/* Stores the kist scheduler function pointers. */
-static scheduler_t *kist_scheduler = NULL;
 
 /*****************************************************************************
  * Internally called function implementations
@@ -637,23 +635,23 @@ kist_scheduler_run(void)
  * Externally called function implementations not called through scheduler_t
  *****************************************************************************/
 
+/* Stores the kist scheduler function pointers. */
+static scheduler_t kist_scheduler = {
+  .free_all = kist_free_all,
+  .on_channel_free = kist_on_channel_free,
+  .init = kist_scheduler_init,
+  .on_new_consensus = kist_scheduler_on_new_consensus,
+  .schedule = kist_scheduler_schedule,
+  .run = kist_scheduler_run,
+  .on_new_options = kist_scheduler_on_new_options,
+};
+
 /* Return the KIST scheduler object. If it didn't exists, return a newly
  * allocated one but init() is not called. */
 scheduler_t *
 get_kist_scheduler(void)
 {
-  if (!kist_scheduler) {
-    log_debug(LD_SCHED, "Allocating kist scheduler struct");
-    kist_scheduler = tor_malloc_zero(sizeof(*kist_scheduler));
-    kist_scheduler->free_all = kist_free_all;
-    kist_scheduler->on_channel_free = kist_on_channel_free;
-    kist_scheduler->init = kist_scheduler_init;
-    kist_scheduler->on_new_consensus = kist_scheduler_on_new_consensus;
-    kist_scheduler->schedule = kist_scheduler_schedule;
-    kist_scheduler->run = kist_scheduler_run;
-    kist_scheduler->on_new_options = kist_scheduler_on_new_options;
-  }
-  return kist_scheduler;
+  return &kist_scheduler;
 }
 
 /* Check the torrc for the configured KIST scheduler run interval.
