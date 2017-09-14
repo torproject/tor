@@ -137,7 +137,7 @@ Changes in version 0.3.1.7 - 2017-09-18
   o Major bugfixes (openbsd, denial-of-service):
     - Avoid an assertion failure bug affecting our implementation of
       inet_pton(AF_INET6) on certain OpenBSD systems whose strtol()
-      handling of "0xfoo" differs from what we had expected. Fixes bug
+      handling of "0xx" differs from what we had expected. Fixes bug
       22789; bugfix on 0.2.3.8-alpha. Also tracked as TROVE-2017-007.
 
   o Major bugfixes (relay, link handshake):
@@ -174,11 +174,6 @@ Changes in version 0.3.1.7 - 2017-09-18
   o Minor features (bridge authority):
     - Add "fingerprint" lines to the networkstatus-bridges file produced
       by bridge authorities. Closes ticket 22207.
-
-  o Minor features (bug mitigation, diagnostics, logging):
-    - Avoid an assertion failure, and log a better error message, when
-      unable to remove a file from the consensus cache on Windows.
-      Attempts to mitigate and diagnose bug 22752.
 
   o Minor features (code style):
     - Add "Falls through" comments to our codebase, in order to silence
@@ -225,6 +220,9 @@ Changes in version 0.3.1.7 - 2017-09-18
       generate RSA->Ed25519 cross-certificates dated in the 1970s. We
       think this is happening because of incorrect system clocks, but
       we'd like to know for certain. Diagnostic for bug 22466.
+    - Avoid an assertion failure, and log a better error message, when
+      unable to remove a file from the consensus cache on Windows.
+      Attempts to mitigate and diagnose bug 22752.
 
   o Minor features (directory authority):
     - Improve the message that authorities report to relays that present
@@ -248,12 +246,6 @@ Changes in version 0.3.1.7 - 2017-09-18
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the September 6 2017 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the August 3 2017 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the July 4 2017 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the June 8 2017 Maxmind GeoLite2
       Country database.
 
   o Minor features (hidden services, logging):
@@ -464,7 +456,7 @@ Changes in version 0.3.1.7 - 2017-09-18
       always allow some extra file descriptors for other files. Fixes
       bug 22797; bugfix on 0.2.0.10-alpha.
 
-  o Minor bugfixes (hidden service):
+  o Minor bugfixes (hidden services):
     - Increase the number of circuits that a service is allowed to
       open over a specific period of time. The value was lower than it
       should be (8 vs 12) in the normal case of 3 introduction points.
@@ -472,8 +464,6 @@ Changes in version 0.3.1.7 - 2017-09-18
     - Fix a BUG warning during HSv3 descriptor decoding that could be
       cause by a specially crafted descriptor. Fixes bug 23233; bugfix
       on 0.3.0.1-alpha. Bug found by "haxxpop".
-
-  o Minor bugfixes (hidden services):
     - Stop printing a cryptic warning when a hidden service gets a
       request to connect to a virtual port that it hasn't configured.
       Fixes bug 16706; bugfix on 0.2.6.3-alpha.
@@ -511,6 +501,10 @@ Changes in version 0.3.1.7 - 2017-09-18
     - Log a better message when a directory authority replies to an
       upload with an unexpected status code. Fixes bug 11121; bugfix
       on 0.1.0.1-rc.
+    - Downgrade a log statement about unexpected relay cells from "bug"
+      to "protocol warning", because there is at least one use case
+      where it can be triggered by a buggy tor implementation. Fixes bug
+      21293; bugfix on 0.1.1.14-alpha.
 
   o Minor bugfixes (logging, relay):
     - Remove a forgotten debugging message when an introduction point
@@ -521,16 +515,12 @@ Changes in version 0.3.1.7 - 2017-09-18
       and are not relevant to the operator. Fixes bug 23078; bugfix on
       0.3.0.1-alpha and 0.3.0.2-alpha.
 
-  o Minor bugfixes (memory leak):
+  o Minor bugfixes (memory leaks):
     - Fix a small memory leak at exit from the backtrace handler code.
       Fixes bug 21788; bugfix on 0.2.5.2-alpha. Patch from Daniel Pinto.
-
-  o Minor bugfixes (memory leak, directory authority):
     - When directory authorities reject a router descriptor due to
       keypinning, free the router descriptor rather than leaking the
       memory. Fixes bug 22370; bugfix on 0.2.7.2-alpha.
-
-  o Minor bugfixes (memory leaks):
     - Fix a small memory leak when validating a configuration that uses
       two or more AF_UNIX sockets for the same port type. Fixes bug
       23053; bugfix on 0.2.6.3-alpha. This is CID 1415725.
@@ -543,12 +533,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       22720; bugfix on versions 0.2.1.6-alpha, 0.2.2.28-beta, and
       0.2.7.2-alpha respectively. Reported by "f55jwk4f"; patch
       from "huyvq".
-
-  o Minor bugfixes (protocol, logging):
-    - Downgrade a log statement about unexpected relay cells from "bug"
-      to "protocol warning", because there is at least one use case
-      where it can be triggered by a buggy tor implementation. Fixes bug
-      21293; bugfix on 0.1.1.14-alpha.
 
   o Minor bugfixes (robustness, error handling):
     - Improve our handling of the cases where OpenSSL encounters a
@@ -569,8 +553,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       Previously, this only worked on systems which had bash installed,
       due to some bash-specific code in the script. Fixes bug 19699;
       bugfix on 0.3.0.4-rc. Follow-up to ticket 21581.
-
-  o Minor bugfixes (unit tests):
     - Fix a memory leak in the link-handshake/certs_ok_ed25519 test.
       Fixes bug 22803; bugfix on 0.3.0.1-alpha.
     - The unit tests now pass on systems where localhost is misconfigured
