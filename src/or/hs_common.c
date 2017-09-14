@@ -918,18 +918,27 @@ hs_address_is_valid(const char *address)
   uint8_t version;
   uint8_t checksum[HS_SERVICE_ADDR_CHECKSUM_LEN_USED];
   uint8_t target_checksum[DIGEST256_LEN];
-  ed25519_public_key_t key;
+  ed25519_public_key_t service_pubkey;
 
   /* Parse the decoded address into the fields we need. */
-  if (hs_parse_address(address, &key, checksum, &version) < 0) {
+  if (hs_parse_address(address, &service_pubkey, checksum, &version) < 0) {
     goto invalid;
   }
 
   /* Get the checksum it's suppose to be and compare it with what we have
    * encoded in the address. */
-  build_hs_checksum(&key, version, target_checksum);
+  build_hs_checksum(&service_pubkey, version, target_checksum);
   if (tor_memcmp(checksum, target_checksum, sizeof(checksum))) {
     log_warn(LD_REND, "Service address %s invalid checksum.",
+             escaped_safe_str(address));
+    goto invalid;
+  }
+
+  /* Validate that this pubkey does not have a torsion component. We need to do
+   * this on the prop224 client-side so that attackers can't give equivalent
+   * forms of an onion address to users. */
+  if (ed25519_validate_pubkey(&service_pubkey) < 0) {
+    log_warn(LD_REND, "Service address %s has bad pubkey .",
              escaped_safe_str(address));
     goto invalid;
   }

@@ -21,8 +21,9 @@ if TEST_VALUE != sha3.sha3_256(b"Hello World").hexdigest():
 # Checksum is built like so:
 #   CHECKSUM = SHA3(".onion checksum" || PUBKEY || VERSION)
 PREFIX = ".onion checksum".encode()
-# 32 bytes ed25519 pubkey.
-PUBKEY = ("\x42" * 32).encode()
+# 32 bytes ed25519 pubkey from first test vector of
+# https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-02#section-6
+PUBKEY = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a".decode('hex')
 # Version 3 is proposal224
 VERSION = 3
 

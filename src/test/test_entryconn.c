@@ -801,7 +801,7 @@ test_entryconn_rewrite_onion_v3(void *arg)
   /* Make a SOCKS request */
   conn->socks_request->command = SOCKS_COMMAND_CONNECT;
   strlcpy(conn->socks_request->address,
-          "git.p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad.onion",
+          "git.25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion",
           sizeof(conn->socks_request->address));
 
   /* Make an onion connection using the SOCKS request */
@@ -818,7 +818,7 @@ test_entryconn_rewrite_onion_v3(void *arg)
   tt_int_op(ENTRY_TO_CONN(conn)->state, OP_EQ, AP_CONN_STATE_CIRCUIT_WAIT);
   /* check that the address got rewritten */
   tt_str_op(conn->socks_request->address, OP_EQ,
-            "p3xnclpu4mu22dwaurjtsybyqk4xfjmcfz6z62yl24uwmhjatiwnlnad");
+            "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
   /* check that HS information got attached to the connection */
   tt_assert(ENTRY_TO_EDGE_CONN(conn)->hs_ident);
   tt_assert(!ENTRY_TO_EDGE_CONN(conn)->rend_data);
