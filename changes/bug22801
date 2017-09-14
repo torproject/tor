@@ -1,5 +1,0 @@
-  o Minor bugfixes (compilation):
-    - When building with certain versions the mingw C header files, avoid
-      float-conversion warnings when calling the C functions isfinite(),
-      isnan(), and signbit(). Fixes bug 22801; bugfix on 0.2.8.1-alpha.
-

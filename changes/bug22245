@@ -1,5 +1,0 @@
-  o Minor bugfixes (bandwidth accounting):
-    - Roll over monthly accounting at the configured hour and minute,
-      rather than always at 00:00.
-      Fixes bug 22245; bugfix on 0.0.9rc1.
-      Found by Andrey Karpov with PVS-Studio.

@@ -1,3 +1,0 @@
-  o Minor bugfixes (Compilation):
-    - Fix warnings when building with libscrypt and openssl scrypt support
-      on Clang. Fixes bug 22916; bugfix on 0.2.7.2-alpha.
