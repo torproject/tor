@@ -82,6 +82,15 @@ typedef struct scheduler_s {
   void (*on_new_options)(void);
 } scheduler_t;
 
+/** Scheduler type, we build an ordered list with those values from the
+ * parsed strings in Schedulers. The reason to do such a thing is so we can
+ * quickly and without parsing strings select the scheduler at anytime. */
+typedef enum {
+  SCHEDULER_VANILLA =   1,
+  SCHEDULER_KIST =      2,
+  SCHEDULER_KIST_LITE = 3,
+} scheduler_types_t;
+
 /*****************************************************************************
  * Globally visible scheduler variables/values
  *
@@ -94,7 +103,6 @@ typedef struct scheduler_s {
 #define KIST_SCHED_RUN_INTERVAL_MIN 0
 /* Maximum interval that KIST runs (in ms). */
 #define KIST_SCHED_RUN_INTERVAL_MAX 100
-
 
 /*****************************************************************************
  * Globally visible scheduler functions
@@ -169,7 +177,9 @@ MOCK_DECL(int, channel_should_write_to_kernel,
 MOCK_DECL(void, channel_write_to_kernel, (channel_t *chan));
 MOCK_DECL(void, update_socket_info_impl, (socket_table_ent_t *ent));
 
-int scheduler_should_use_kist(void);
+int scheduler_can_use_kist(void);
+void scheduler_kist_set_full_mode(void);
+void scheduler_kist_set_lite_mode(void);
 scheduler_t *get_kist_scheduler(void);
 int32_t kist_scheduler_run_interval(const networkstatus_t *ns);
 

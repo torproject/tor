@@ -274,6 +274,48 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
  * Functions that can be accessed from anywhere in Tor.
  *****************************************************************************/
 
+/* Using the global options, select the scheduler we should be using. */
+static void
+select_scheduler(void)
+{
+  const char *chosen_sched_type = NULL;
+
+  /* This list is ordered that is first entry has the first priority. Thus, as
+   * soon as we find a scheduler type that we can use, we use it and stop. */
+  SMARTLIST_FOREACH_BEGIN(get_options()->SchedulerTypes_, int *, type) {
+    switch (*type) {
+    case SCHEDULER_VANILLA:
+      the_scheduler = get_vanilla_scheduler();
+      chosen_sched_type = "Vanilla";
+      goto end;
+    case SCHEDULER_KIST:
+      if (!scheduler_can_use_kist()) {
+        log_warn(LD_SCHED, "Scheduler KIST can't be used. Consider removing "
+                           "it from Schedulers or if you have a tor built "
+                           "with KIST support, you should make sure "
+                           "KISTSchedRunInterval is a non zero value");
+        continue;
+      }
+      the_scheduler = get_kist_scheduler();
+      chosen_sched_type = "KIST";
+      scheduler_kist_set_full_mode();
+      goto end;
+    case SCHEDULER_KIST_LITE:
+      chosen_sched_type = "KISTLite";
+      the_scheduler = get_kist_scheduler();
+      scheduler_kist_set_lite_mode();
+      goto end;
+    default:
+      /* Our option validation should have caught this. */
+      tor_assert_unreached();
+    }
+  } SMARTLIST_FOREACH_END(type);
+
+ end:
+  log_notice(LD_CONFIG, "Scheduler type %s has been enabled.",
+             chosen_sched_type);
+}
+
 /*
  * Little helper function called from a few different places. It changes the
  * scheduler implementation, if necessary. And if it did, it then tells the
@@ -282,17 +324,10 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
 static void
 set_scheduler(void)
 {
-  int have_kist = 0;
-
-  /* Switch, if needed */
   scheduler_t *old_scheduler = the_scheduler;
-  if (scheduler_should_use_kist()) {
-    the_scheduler = get_kist_scheduler();
-    have_kist = 1;
-  } else {
-    the_scheduler = get_vanilla_scheduler();
-  }
-  tor_assert(the_scheduler);
+
+  /* From the options, select the scheduler type to set. */
+  select_scheduler();
 
   if (old_scheduler != the_scheduler) {
     /* Allow the old scheduler to clean up, if needed. */
@@ -306,8 +341,6 @@ set_scheduler(void)
     if (the_scheduler->init) {
       the_scheduler->init();
     }
-    log_notice(LD_CONFIG, "Using the %s scheduler.",
-               have_kist ? "KIST" : "vanilla");
   }
 }
 

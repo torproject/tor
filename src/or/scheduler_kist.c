@@ -26,12 +26,18 @@
  * Data structures and supporting functions
  *****************************************************************************/
 
+#ifdef HAVE_KIST_SUPPORT
+/* Indicate if KIST lite mode is on or off. We can disable it at runtime.
+ * Important to have because of the KISTLite -> KIST possible transition. */
+static unsigned int kist_lite_mode = 0;
 /* Indicate if we don't have the kernel support. This can happen if the kernel
  * changed and it doesn't recognized the values passed to the syscalls needed
  * by KIST. In that case, fallback to the naive approach. */
-#ifdef HAVE_KIST_SUPPORT
 static unsigned int kist_no_kernel_support = 0;
-#endif /* HAVE_KIST_SUPPORT */
+#else
+static unsigned int kist_no_kernel_support = 1;
+static unsigned int kist_lite_mode = 1;
+#endif
 
 /* Socket_table hash table stuff. The socket_table keeps track of per-socket
  * limit information imposed by kist and used by kist. */
@@ -193,7 +199,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   struct tcp_info tcp;
   socklen_t tcp_info_len = sizeof(tcp);
 
-  if (kist_no_kernel_support) {
+  if (kist_no_kernel_support || kist_lite_mode) {
     goto fallback;
   }
 
@@ -686,15 +692,40 @@ kist_scheduler_run_interval(const networkstatus_t *ns)
   return run_interval;
 }
 
+/* Set KISTLite mode that is KIST without kernel support. */
+void
+scheduler_kist_set_lite_mode(void)
+{
+  kist_lite_mode = 1;
+  log_info(LD_SCHED,
+           "Setting KIST scheduler without kernel support (KISTLite mode)");
+}
+
+/* Set KIST mode that is KIST with kernel support. */
+void
+scheduler_kist_set_full_mode(void)
+{
+  kist_lite_mode = 0;
+  log_info(LD_SCHED,
+           "Setting KIST scheduler with kernel support (KIST mode)");
+}
+
 #ifdef HAVE_KIST_SUPPORT
 
 /* Return true iff the scheduler subsystem should use KIST. */
 int
-scheduler_should_use_kist(void)
+scheduler_can_use_kist(void)
 {
+  if (kist_no_kernel_support) {
+    /* We have no kernel support so we can't use KIST. */
+    return 0;
+  }
+
+  /* We do have the support, time to check if we can get the interval that the
+   * consensus can be disabling. */
   int64_t run_interval = kist_scheduler_run_interval(NULL);
-  log_info(LD_SCHED, "Determined sched_run_interval should be %" PRId64 ". "
-                     "Will%s use KIST.",
+  log_debug(LD_SCHED, "Determined KIST sched_run_interval should be "
+                      "%" PRId64 ". Can%s use KIST.",
            run_interval, (run_interval > 0 ? "" : " not"));
   return run_interval > 0;
 }
@@ -702,7 +733,7 @@ scheduler_should_use_kist(void)
 #else /* HAVE_KIST_SUPPORT */
 
 int
-scheduler_should_use_kist(void)
+scheduler_can_use_kist(void)
 {
   return 0;
 }

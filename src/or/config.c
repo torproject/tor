@@ -491,6 +491,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("SchedulerMaxFlushCells__"),
   V(KISTSchedRunInterval,        MSEC_INTERVAL, "0 msec"),
   V(KISTSockBufSizeFactor,       DOUBLE,   "1.0"),
+  V(Schedulers,                  CSV,      "KIST,KISTLite,Vanilla"),
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   OBSOLETE("SocksListenAddress"),
   V(SocksPolicy,                 LINELIST, NULL),
@@ -906,6 +907,10 @@ or_options_free(or_options_t *options)
     SMARTLIST_FOREACH(options->NodeFamilySets, routerset_t *,
                       rs, routerset_free(rs));
     smartlist_free(options->NodeFamilySets);
+  }
+  if (options->SchedulerTypes_) {
+    SMARTLIST_FOREACH(options->SchedulerTypes_, int *, i, tor_free(i));
+    smartlist_free(options->SchedulerTypes_);
   }
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
@@ -2888,6 +2893,61 @@ warn_about_relative_paths(or_options_t *options)
   }
 }
 
+/* Validate options related to the scheduler. From the Schedulers list, the
+ * SchedulerTypes_ list is created with int values so once we select the
+ * scheduler, which can happen anytime at runtime, we don't have to parse
+ * strings and thus be quick.
+ *
+ * Return 0 on success else -1 and msg is set with an error message. */
+static int
+options_validate_scheduler(or_options_t *options, char **msg)
+{
+  tor_assert(options);
+  tor_assert(msg);
+
+  if (!options->Schedulers || smartlist_len(options->Schedulers) == 0) {
+    REJECT("Empty Schedulers list. Either remove the option so the defaults "
+           "can be used or set at least one value.");
+  }
+  /* Ok, we do have scheduler types, validate them. */
+  options->SchedulerTypes_ = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(options->Schedulers, const char *, type) {
+    int *sched_type;
+    if (!strcasecmp("KISTLite", type)) {
+      sched_type = tor_malloc_zero(sizeof(int));
+      *sched_type = SCHEDULER_KIST_LITE;
+      smartlist_add(options->SchedulerTypes_, sched_type);
+    } else if (!strcasecmp("KIST", type)) {
+      sched_type = tor_malloc_zero(sizeof(int));
+      *sched_type = SCHEDULER_KIST;
+      smartlist_add(options->SchedulerTypes_, sched_type);
+    } else if (!strcasecmp("Vanilla", type)) {
+      sched_type = tor_malloc_zero(sizeof(int));
+      *sched_type = SCHEDULER_VANILLA;
+      smartlist_add(options->SchedulerTypes_, sched_type);
+    } else {
+      tor_asprintf(msg, "Unknown type %s in option Schedulers. "
+                        "Possible values are KIST, KISTLite and Vanilla.",
+                   escaped(type));
+      return -1;
+    }
+  } SMARTLIST_FOREACH_END(type);
+
+  if (options->KISTSockBufSizeFactor < 0) {
+    REJECT("KISTSockBufSizeFactor must be at least 0");
+  }
+
+  /* Don't need to validate that the Interval is less than anything because
+   * zero is valid and all negative values are valid. */
+  if (options->KISTSchedRunInterval > KIST_SCHED_RUN_INTERVAL_MAX) {
+    tor_asprintf(msg, "KISTSchedRunInterval must not be more than %d (ms)",
+                 KIST_SCHED_RUN_INTERVAL_MAX);
+    return -1;
+  }
+
+  return 0;
+}
+
 /* Validate options related to single onion services.
  * Modifies some options that are incompatible with single onion services.
  * On failure returns -1, and sets *msg to an error string.
@@ -3110,19 +3170,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->ExcludeExitNodesUnion_ = routerset_new();
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeExitNodes);
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeNodes);
-  }
-
-  if (options->KISTSockBufSizeFactor < 0) {
-    REJECT("KISTSockBufSizeFactor must be at least 0");
-  }
-  /* Don't need to validate that the Interval is less than anything because
-   * zero is valid and all negative values are valid. */
-  if (options->KISTSchedRunInterval > KIST_SCHED_RUN_INTERVAL_MAX) {
-    char *buf = tor_calloc(80, sizeof(char));
-    tor_snprintf(buf, 80, "KISTSchedRunInterval must not be more than %d (ms)",
-                 KIST_SCHED_RUN_INTERVAL_MAX);
-    *msg = buf;
-    return -1;
   }
 
   if (options->NodeFamilies) {
@@ -4240,6 +4287,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->BridgeRelay == 1 && ! options->ORPort_set)
       REJECT("BridgeRelay is 1, ORPort is not set. This is an invalid "
              "combination.");
+
+  if (options_validate_scheduler(options, msg) < 0) {
+    return -1;
+  }
 
   return 0;
 }

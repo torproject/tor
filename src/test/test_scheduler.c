@@ -887,7 +887,7 @@ test_scheduler_initfree(void *arg)
 }
 
 static void
-test_scheduler_should_use_kist(void *arg)
+test_scheduler_can_use_kist(void *arg)
 {
   (void)arg;
 
@@ -897,7 +897,7 @@ test_scheduler_should_use_kist(void *arg)
   /* Test force disabling of KIST */
   clear_options();
   mocked_options.KISTSchedRunInterval = -1;
-  res_should = scheduler_should_use_kist();
+  res_should = scheduler_can_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
   tt_int_op(res_should, ==, 0);
   tt_int_op(res_freq, ==, -1);
@@ -905,7 +905,7 @@ test_scheduler_should_use_kist(void *arg)
   /* Test force enabling of KIST */
   clear_options();
   mocked_options.KISTSchedRunInterval = 1234;
-  res_should = scheduler_should_use_kist();
+  res_should = scheduler_can_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
 #ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
@@ -917,7 +917,7 @@ test_scheduler_should_use_kist(void *arg)
   /* Test defer to consensus, but no consensus available */
   clear_options();
   mocked_options.KISTSchedRunInterval = 0;
-  res_should = scheduler_should_use_kist();
+  res_should = scheduler_can_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
 #ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
@@ -930,7 +930,7 @@ test_scheduler_should_use_kist(void *arg)
   MOCK(networkstatus_get_param, mock_kist_networkstatus_get_param);
   clear_options();
   mocked_options.KISTSchedRunInterval = 0;
-  res_should = scheduler_should_use_kist();
+  res_should = scheduler_can_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
 #ifdef HAVE_KIST_SUPPORT
   tt_int_op(res_should, ==, 1);
@@ -944,7 +944,7 @@ test_scheduler_should_use_kist(void *arg)
   MOCK(networkstatus_get_param, mock_vanilla_networkstatus_get_param);
   clear_options();
   mocked_options.KISTSchedRunInterval = 0;
-  res_should = scheduler_should_use_kist();
+  res_should = scheduler_can_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
   tt_int_op(res_should, ==, 0);
   tt_int_op(res_freq, ==, -1);
@@ -1023,7 +1023,7 @@ struct testcase_t scheduler_tests[] = {
   { "loop_vanilla", test_scheduler_loop_vanilla, TT_FORK, NULL, NULL },
   { "loop_kist", test_scheduler_loop_kist, TT_FORK, NULL, NULL },
   { "ns_changed", test_scheduler_ns_changed, TT_FORK, NULL, NULL},
-  { "should_use_kist", test_scheduler_should_use_kist, TT_FORK, NULL, NULL },
+  { "should_use_kist", test_scheduler_can_use_kist, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

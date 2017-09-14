@@ -4616,6 +4616,12 @@ typedef struct {
 
   /** A multiplier for the KIST per-socket limit calculation. */
   double KISTSockBufSizeFactor;
+
+  /** The list of scheduler type string ordered by priority that is first one
+   * has to be tried first. Default: KIST,KISTLite,Vanilla */
+  smartlist_t *Schedulers;
+  /* An ordered list of scheduler_types mapped from Schedulers. */
+  smartlist_t *SchedulerTypes_;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
