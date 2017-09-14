@@ -116,6 +116,12 @@ static scheduler_t *kist_scheduler = NULL;
 static inline size_t
 channel_outbuf_length(channel_t *chan)
 {
+  /* In theory, this can not happen because we can not scheduler a channel
+   * without a connection that has its outbuf initialized. Just in case, bug
+   * on this so we can understand a bit more why it happened. */
+  if (BUG(BASE_CHAN_TO_TLS(chan)->conn == NULL)) {
+    return 0;
+  }
   return buf_datalen(TO_CONN(BASE_CHAN_TO_TLS(chan)->conn)->outbuf);
 }
 
