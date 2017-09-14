@@ -3482,7 +3482,7 @@ write_http_status_line(dir_connection_t *conn, int status,
   char *buf = NULL;
   char *datestring = NULL;
 
-  if (!reason_phrase) { /* bullet-proofing */
+  IF_BUG_ONCE(!reason_phrase) { /* bullet-proofing */
     reason_phrase = "unspecified";
   }
 
