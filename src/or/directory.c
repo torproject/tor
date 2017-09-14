@@ -3480,8 +3480,10 @@ write_http_status_line(dir_connection_t *conn, int status,
                        const char *reason_phrase)
 {
   char buf[256];
+  if (!reason_phrase)
+    reason_phrase = "unspecified";
   if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n",
-      status, reason_phrase ? reason_phrase : "OK") < 0) {
+      status, reason_phrase) < 0) {
     log_warn(LD_BUG,"status line too long.");
     return;
   }
