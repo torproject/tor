@@ -497,14 +497,14 @@ test_ext_or_handshake(void *arg)
            "te road There is always another ", 64);
   /* Send the wrong response. */
   WRITE("not with a bang but a whimper...", 32);
-  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  MOCK(control_event_bootstrap_prob_or, ignore_bootstrap_problem);
   tt_int_op(-1, OP_EQ, connection_ext_or_process_inbuf(conn));
   CONTAINS("\x00", 1);
   tt_assert(TO_CONN(conn)->marked_for_close);
   /* XXXX Hold-open-until-flushed. */
   close_closeable_connections();
   conn = NULL;
-  UNMOCK(control_event_bootstrap_problem);
+  UNMOCK(control_event_bootstrap_prob_or);
 
   MOCK(connection_start_reading, note_read_started);
   MOCK(connection_stop_reading, note_read_stopped);
@@ -552,26 +552,26 @@ test_ext_or_handshake(void *arg)
   do_ext_or_handshake(conn);
   /* USERADDR command with an extra NUL byte */
   WRITE("\x00\x01\x00\x0d""1.2.3.4:5678\x00", 17);
-  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  MOCK(control_event_bootstrap_prob_or, ignore_bootstrap_problem);
   tt_int_op(-1, OP_EQ, connection_ext_or_process_inbuf(conn));
   CONTAINS("", 0);
   tt_assert(TO_CONN(conn)->marked_for_close);
   close_closeable_connections();
   conn = NULL;
-  UNMOCK(control_event_bootstrap_problem);
+  UNMOCK(control_event_bootstrap_prob_or);
 
   /* Now fail the TRANSPORT command. */
   conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
   do_ext_or_handshake(conn);
   /* TRANSPORT command with an extra NUL byte */
   WRITE("\x00\x02\x00\x08""rfc1149\x00", 12);
-  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  MOCK(control_event_bootstrap_prob_or, ignore_bootstrap_problem);
   tt_int_op(-1, OP_EQ, connection_ext_or_process_inbuf(conn));
   CONTAINS("", 0);
   tt_assert(TO_CONN(conn)->marked_for_close);
   close_closeable_connections();
   conn = NULL;
-  UNMOCK(control_event_bootstrap_problem);
+  UNMOCK(control_event_bootstrap_prob_or);
 
   /* Now fail the TRANSPORT command. */
   conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
@@ -579,13 +579,13 @@ test_ext_or_handshake(void *arg)
   /* TRANSPORT command with transport name with symbols (not a
      C-identifier) */
   WRITE("\x00\x02\x00\x07""rf*1149", 11);
-  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  MOCK(control_event_bootstrap_prob_or, ignore_bootstrap_problem);
   tt_int_op(-1, OP_EQ, connection_ext_or_process_inbuf(conn));
   CONTAINS("", 0);
   tt_assert(TO_CONN(conn)->marked_for_close);
   close_closeable_connections();
   conn = NULL;
-  UNMOCK(control_event_bootstrap_problem);
+  UNMOCK(control_event_bootstrap_prob_or);
 
  done:
   UNMOCK(connection_write_to_buf_impl_);

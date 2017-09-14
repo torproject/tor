@@ -1,0 +1,4 @@
+  o Major bugfixes (usability, control port):
+    - Report trusted clock skew indications as bootstrap errors, so
+      controllers can more easily alert users.  Fixes bug 23506;
+      bugfix on 0.1.2.6-alpha.
