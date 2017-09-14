@@ -30,9 +30,7 @@ Changes in version 0.3.1.7 - 2017-09-18
 
   o New dependencies:
     - To build with zstd and lzma support, Tor now requires the
-      pkg-config tool at build time. (This requirement was new in
-      0.3.1.1-alpha, but was not noted at the time. Noting it here to
-      close ticket 22623.)
+      pkg-config tool at build time.
 
   o Major features (build system, continuous integration):
     - Tor's repository now includes a Travis Continuous Integration (CI)
@@ -108,11 +106,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       Fixes bug 22753; bugfix on 0.3.0.1-alpha. Tracked as TROVE-2017-
       006 and CVE-2017-0377.
 
-  o Major bugfixes (compression, zstd):
-    - Correctly detect a full buffer when decompressing a large zstd-
-      compressed input. Previously, we would sometimes treat a full
-      buffer as an error. Fixes bug 22628; bugfix on 0.3.1.1-alpha.
-
   o Major bugfixes (connection usage):
     - We use NETINFO cells to try to determine if both relays involved
       in a connection will agree on the canonical status of that
@@ -127,18 +120,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       connections to other relays. If the number of connections per
       relay is unexpectedly large, this log message is at notice level.
       Otherwise it is at info.
-
-  o Major bugfixes (crash, relay):
-    - Fix a memory-corruption bug in relays that set MyFamily.
-      Previously, they would double-free MyFamily elements when making
-      the next descriptor or when changing their configuration. Fixes
-      bug 22368; bugfix on 0.3.1.1-alpha.
-
-  o Major bugfixes (directory protocol):
-    - Ensure that we send "304 Not modified" as HTTP status code when a
-      client is attempting to fetch a consensus or consensus diff, and
-      the best one we can send them is one they already have. Fixes bug
-      22702; bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (entry guards):
     - When starting with an old consensus, do not add new entry guards
@@ -168,13 +149,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       make the link handshake fail. Fixes one case of bug 22460; bugfix
       on 0.2.3.6-alpha.
 
-  o Major bugfixes (relay, performance):
-    - Perform circuit handshake operations at a higher priority than we
-      use for consensus diff creation and compression. This should
-      prevent circuits from starving when a relay or bridge receives a
-      new consensus, especially on lower-powered machines. Fixes bug
-      22883; bugfix on 0.3.1.1-alpha.
-
   o Major bugfixes (relays, key management):
     - Regenerate link and authentication certificates whenever the key
       that signs them changes; also, regenerate link certificates
@@ -189,17 +163,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       if the TLS context rotated after we began the TLS handshake but
       before we sent the CERTS cell. Fixes a case of bug 22460; bugfix
       on 0.3.0.1-alpha.
-
-  o Major bugfixes (torrc, crash):
-    - Fix a crash bug when using %include in torrc. Fixes bug 22417;
-      bugfix on 0.3.1.1-alpha. Patch by Daniel Pinto.
-
-  o Major bugfixes (windows, directory cache):
-    - On Windows, do not try to delete cached consensus documents and
-      diffs before they are unmapped from memory--Windows won't allow
-      that. Instead, allow the consensus cache directory to grow larger,
-      to hold files that might need to stay around longer. Fixes bug
-      22752; bugfix on 0.3.1.1-alpha.
 
   o Minor features (security, windows):
     - Enable a couple of pieces of Windows hardening: one
@@ -374,32 +337,17 @@ Changes in version 0.3.1.7 - 2017-09-18
       rather than always at 00:00. Fixes bug 22245; bugfix on 0.0.9rc1.
       Found by Andrey Karpov with PVS-Studio.
 
-  o Minor bugfixes (build system, rust):
-    - Fix a problem where Rust toolchains were not being found when
-      building without --enable-cargo-online-mode, due to setting the
-      $HOME environment variable instead of $CARGO_HOME. Fixes bug
-      22830; bugfix on 0.3.1.1-alpha. Fix by Chelsea Komlo.
-
   o Minor bugfixes (code correctness):
     - Accurately identify client connections by their lack of peer
       authentication. This means that we bail out earlier if asked to
       extend to a client. Follow-up to 21407. Fixes bug 21406; bugfix
       on 0.2.4.23.
 
-  o Minor bugfixes (compatibility, zstd):
-    - Write zstd epilogues correctly when the epilogue requires
-      reallocation of the output buffer, even with zstd 1.3.0.
-      (Previously, we worked on 1.2.0 and failed with 1.3.0). Fixes bug
-      22927; bugfix on 0.3.1.1-alpha.
-
   o Minor bugfixes (compilation warnings):
     - Suppress -Wdouble-promotion warnings with clang 4.0. Fixes bug
       22915; bugfix on 0.2.8.1-alpha.
     - Fix warnings when building with libscrypt and openssl scrypt
       support on Clang. Fixes bug 22916; bugfix on 0.2.7.2-alpha.
-    - Compile correctly when both openssl 1.1.0 and libscrypt are
-      detected. Previously this would cause an error. Fixes bug 22892;
-      bugfix on 0.3.1.1-alpha.
     - When building with certain versions of the mingw C header files,
       avoid float-conversion warnings when calling the C functions
       isfinite(), isnan(), and signbit(). Fixes bug 22801; bugfix
@@ -410,19 +358,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       with wide string outputs. Fixes bug 15582; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (compression):
-    - When compressing or decompressing a buffer, check for a failure to
-      create a compression object. Fixes bug 22626; bugfix
-      on 0.3.1.1-alpha.
-    - When decompressing a buffer, check for extra data after the end of
-      the compressed data. Fixes bug 22629; bugfix on 0.3.1.1-alpha.
-    - When decompressing an object received over an anonymous directory
-      connection, if we have already decompressed it using an acceptable
-      compression method, do not reject it for looking like an
-      unacceptable compression method. Fixes part of bug 22670; bugfix
-      on 0.3.1.1-alpha.
-    - When serving directory votes compressed with zlib, do not claim to
-      have compressed them with zstd. Fixes bug 22669; bugfix
-      on 0.3.1.1-alpha.
     - When spooling compressed data to an output buffer, don't try to
       spool more data when there is no more data to spool and we are not
       trying to flush the input. Previously, we would sometimes launch
@@ -501,14 +436,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       initialized by a bridge authority with an incomplete configuration
       file. Fixes bug 21586; bugfix on 0.2.9.8.
 
-  o Minor bugfixes (directory cache):
-    - Fix a memory leak when recovering space in the consensus cache.
-      Fixes bug 23139; bugfix on 0.3.1.1-alpha.
-
-  o Minor bugfixes (directory protocol):
-    - Check for libzstd >= 1.1, because older versions lack the
-      necessary streaming API. Fixes bug 22413; bugfix on 0.3.1.1-alpha.
-
   o Minor bugfixes (error reporting, windows):
     - When formatting Windows error messages, use the English format to
       avoid codepage issues. Fixes bug 22520; bugfix on 0.1.2.8-alpha.
@@ -545,8 +472,6 @@ Changes in version 0.3.1.7 - 2017-09-18
     - Fix a BUG warning during HSv3 descriptor decoding that could be
       cause by a specially crafted descriptor. Fixes bug 23233; bugfix
       on 0.3.0.1-alpha. Bug found by "haxxpop".
-    - Rate-limit the log messages if we exceed the maximum number of
-      allowed intro circuits. Fixes bug 22159; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (hidden services):
     - Stop printing a cryptic warning when a hidden service gets a
@@ -571,10 +496,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       starting with the seccomp2 sandbox and an unexpected set of
       permissions on the data directory or its contents. Fixes bug
       22516; bugfix on 0.2.5.4-alpha.
-    - Fix a crash in the LZMA module, when the sandbox was enabled, and
-      liblzma would allocate more than 16 MB of memory. We solve this by
-      bumping the mprotect() limit in the sandbox module from 16 MB to
-      20 MB. Fixes bug 22751; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (logging):
     - When decompressing, do not warn if we fail to decompress using a
@@ -587,11 +508,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       severity. In every case that can reach it, either a better warning
       has already been logged, or no warning is warranted. Fixes bug
       22356; bugfix on 0.2.6.3-alpha.
-    - Demote a warn that was caused by libevent delays to info if
-      netflow padding is less than 4.5 seconds late, or to notice
-      if it is more (4.5 seconds is the amount of time that a netflow
-      record might be emitted after, if we chose the maximum timeout).
-      Fixes bug 22212; bugfix on 0.3.1.1-alpha.
     - Log a better message when a directory authority replies to an
       upload with an unexpected status code. Fixes bug 11121; bugfix
       on 0.1.0.1-rc.
@@ -634,12 +550,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       where it can be triggered by a buggy tor implementation. Fixes bug
       21293; bugfix on 0.1.1.14-alpha.
 
-  o Minor bugfixes (relay):
-    - When a relay is not running as a directory cache, it will no
-      longer generate compressed consensuses and consensus diff
-      information. Previously, this was a waste of disk and CPU. Fixes
-      bug 23275; bugfix on 0.3.1.1-alpha.
-
   o Minor bugfixes (robustness, error handling):
     - Improve our handling of the cases where OpenSSL encounters a
       memory error while encoding keys and certificates. We haven't
@@ -647,23 +557,9 @@ Changes in version 0.3.1.7 - 2017-09-18
       detect and respond better. Fixes bug 19418; bugfix on all versions
       of Tor. Reported by Guido Vranken.
 
-  o Minor bugfixes (stability):
-    - Avoid crashing on a double-free when unable to load or process an
-      included file. Fixes bug 23155; bugfix on 0.3.1.1-alpha. Found
-      with the clang static analyzer.
-
-  o Minor bugfixes (storage directories):
-    - Always check for underflows in the cached storage directory usage.
-      If the usage does underflow, re-calculate it. Also, avoid a
-      separate underflow when the usage is not known. Fixes bug 22424;
-      bugfix on 0.3.1.1-alpha.
-
   o Minor bugfixes (testing):
     - Fix an undersized buffer in test-memwipe.c. Fixes bug 23291;
       bugfix on 0.2.7.2-alpha. Found and patched by Ties Stuij.
-    - Port the hs_ntor handshake test to work correctly with recent
-      versions of the pysha3 module. Fixes bug 23071; bugfix
-      on 0.3.1.1-alpha.
     - Use unbuffered I/O for utility functions around the
       process_handle_t type. This fixes unit test failures reported on
       OpenBSD and FreeBSD. Fixes bug 21654; bugfix on 0.2.3.1-alpha.
@@ -675,13 +571,6 @@ Changes in version 0.3.1.7 - 2017-09-18
       bugfix on 0.3.0.4-rc. Follow-up to ticket 21581.
 
   o Minor bugfixes (unit tests):
-    - Fix a channelpadding unit test failure on slow systems by using
-      mocked time instead of actual time. Fixes bug 23077; bugfix
-      on 0.3.1.1-alpha.
-    - test_consdiff_base64cmp would fail on OS X because while OS X
-      follows the standard of (less than zero/zero/greater than zero),
-      it doesn't follow the convention of (-1/0/+1). Make the test
-      comply with the standard. Fixes bug 22870; bugfix on 0.3.1.1-alpha.
     - Fix a memory leak in the link-handshake/certs_ok_ed25519 test.
       Fixes bug 22803; bugfix on 0.3.0.1-alpha.
     - The unit tests now pass on systems where localhost is misconfigured
