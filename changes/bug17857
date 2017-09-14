@@ -2,5 +2,5 @@
     - Create a pair of consensus parameters nf_pad_tor2web and
       nf_pad_single_onion that allow us to disable netflow padding in the
       consensus for non-anonymous connections, in case the overhead is high.
-      Closes #17857.
+      Closes ticket 17857.
 
