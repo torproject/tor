@@ -3476,7 +3476,7 @@ connection_dir_about_to_close(dir_connection_t *dir_conn)
  * <b>status</b> and <b>reason_phrase</b>. Write it to <b>conn</b>.
  */
 static void
-write_http_status_line(dir_connection_t *conn, int status,
+write_short_http_response(dir_connection_t *conn, int status,
                        const char *reason_phrase)
 {
   char *buf = NULL;
@@ -3849,7 +3849,7 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
   conn->base_.state = DIR_CONN_STATE_SERVER_WRITING;
 
   if (parse_http_url(headers, &url) < 0) {
-    write_http_status_line(conn, 400, "Bad request");
+    write_short_http_response(conn, 400, "Bad request");
     return 0;
   }
   if ((header = http_get_header(headers, "If-Modified-Since: "))) {
@@ -3910,7 +3910,7 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
   }
 
   /* we didn't recognize the url */
-  write_http_status_line(conn, 404, "Not found");
+  write_short_http_response(conn, 404, "Not found");
   result = 0;
 
  done:
@@ -3938,7 +3938,7 @@ handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
                                     NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
     connection_buf_add(frontpage, dlen, TO_CONN(conn));
   } else {
-    write_http_status_line(conn, 404, "Not found");
+    write_short_http_response(conn, 404, "Not found");
   }
   return 0;
 }
@@ -4320,13 +4320,13 @@ handle_get_current_consensus(dir_connection_t *conn,
   parsed_consensus_request_t req;
 
   if (parse_consensus_request(&req, args) < 0) {
-    write_http_status_line(conn, 404, "Couldn't parse request");
+    write_short_http_response(conn, 404, "Couldn't parse request");
     goto done;
   }
 
   if (digest_list_contains_best_consensus(req.flav,
                                           req.diff_from_digests)) {
-    write_http_status_line(conn, 304, "Not modified");
+    write_short_http_response(conn, 304, "Not modified");
     geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
     goto done;
   }
@@ -4341,7 +4341,7 @@ handle_get_current_consensus(dir_connection_t *conn,
   }
 
   if (req.diff_only && !cached_consensus) {
-    write_http_status_line(conn, 404, "No such diff available");
+    write_short_http_response(conn, 404, "No such diff available");
     // XXXX warn_consensus_is_too_old(v, req.flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     goto done;
@@ -4364,7 +4364,7 @@ handle_get_current_consensus(dir_connection_t *conn,
 
   if (cached_consensus && have_valid_until &&
       !networkstatus_valid_until_is_reasonably_live(valid_until, now)) {
-    write_http_status_line(conn, 404, "Consensus is too old");
+    write_short_http_response(conn, 404, "Consensus is too old");
     warn_consensus_is_too_old(cached_consensus, req.flavor, now);
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     goto done;
@@ -4372,7 +4372,7 @@ handle_get_current_consensus(dir_connection_t *conn,
 
   if (cached_consensus && req.want_fps &&
       !client_likes_consensus(cached_consensus, req.want_fps)) {
-    write_http_status_line(conn, 404, "Consensus not signed by sufficient "
+    write_short_http_response(conn, 404, "Consensus not signed by sufficient "
                            "number of requested authorities");
     geoip_note_ns_response(GEOIP_REJECT_NOT_ENOUGH_SIGS);
     goto done;
@@ -4398,11 +4398,11 @@ handle_get_current_consensus(dir_connection_t *conn,
                                               &n_expired);
 
   if (!smartlist_len(conn->spool) && !n_expired) {
-    write_http_status_line(conn, 404, "Not found");
+    write_short_http_response(conn, 404, "Not found");
     geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
     goto done;
   } else if (!smartlist_len(conn->spool)) {
-    write_http_status_line(conn, 304, "Not modified");
+    write_short_http_response(conn, 304, "Not modified");
     geoip_note_ns_response(GEOIP_REJECT_NOT_MODIFIED);
     goto done;
   }
@@ -4411,7 +4411,7 @@ handle_get_current_consensus(dir_connection_t *conn,
     log_debug(LD_DIRSERV,
               "Client asked for network status lists, but we've been "
               "writing too many bytes lately. Sending 503 Dir busy.");
-    write_http_status_line(conn, 503, "Directory busy, try again later");
+    write_short_http_response(conn, 503, "Directory busy, try again later");
     geoip_note_ns_response(GEOIP_REJECT_BUSY);
     goto done;
   }
@@ -4524,7 +4524,7 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       smartlist_free(fps);
     }
     if (!smartlist_len(dir_items) && !smartlist_len(items)) {
-      write_http_status_line(conn, 404, "Not found");
+      write_short_http_response(conn, 404, "Not found");
       goto vote_done;
     }
 
@@ -4561,7 +4561,7 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
       });
 
     if (global_write_bucket_low(TO_CONN(conn), estimated_len, 2)) {
-      write_http_status_line(conn, 503, "Directory busy, try again later");
+      write_short_http_response(conn, 503, "Directory busy, try again later");
       goto vote_done;
     }
     write_http_response_header(conn, body_len ? body_len : -1,
@@ -4618,14 +4618,14 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
                                                 compress_method != NO_METHOD,
                                                 &size_guess, NULL);
     if (smartlist_len(conn->spool) == 0) {
-      write_http_status_line(conn, 404, "Not found");
+      write_short_http_response(conn, 404, "Not found");
       goto done;
     }
     if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
       log_info(LD_DIRSERV,
                "Client asked for server descriptors, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
-      write_http_status_line(conn, 503, "Directory busy, try again later");
+      write_short_http_response(conn, 503, "Directory busy, try again later");
       goto done;
     }
 
@@ -4717,13 +4717,14 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
     if (res < 0 || size_guess == 0 || smartlist_len(conn->spool) == 0) {
       if (msg == NULL)
         msg = "Not found";
-      write_http_status_line(conn, 404, msg);
+      write_short_http_response(conn, 404, msg);
     } else {
       if (global_write_bucket_low(TO_CONN(conn), size_guess, 2)) {
         log_info(LD_DIRSERV,
                  "Client asked for server descriptors, but we've been "
                  "writing too many bytes lately. Sending 503 Dir busy.");
-        write_http_status_line(conn, 503, "Directory busy, try again later");
+        write_short_http_response(conn, 503,
+                                  "Directory busy, try again later");
         dir_conn_clear_spool(conn);
         goto done;
       }
@@ -4796,18 +4797,18 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
       });
       smartlist_free(fp_sks);
     } else {
-      write_http_status_line(conn, 400, "Bad request");
+      write_short_http_response(conn, 400, "Bad request");
       goto keys_done;
     }
     if (!smartlist_len(certs)) {
-      write_http_status_line(conn, 404, "Not found");
+      write_short_http_response(conn, 404, "Not found");
       goto keys_done;
     }
     SMARTLIST_FOREACH(certs, authority_cert_t *, c,
       if (c->cache_info.published_on < if_modified_since)
         SMARTLIST_DEL_CURRENT(certs, c));
     if (!smartlist_len(certs)) {
-      write_http_status_line(conn, 304, "Not modified");
+      write_short_http_response(conn, 304, "Not modified");
       goto keys_done;
     }
     len = 0;
@@ -4817,7 +4818,7 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
     if (global_write_bucket_low(TO_CONN(conn),
                                 compress_method != NO_METHOD ? len/2 : len,
                                 2)) {
-      write_http_status_line(conn, 503, "Directory busy, try again later");
+      write_short_http_response(conn, 503, "Directory busy, try again later");
       goto keys_done;
     }
 
@@ -4868,19 +4869,19 @@ handle_get_hs_descriptor_v2(dir_connection_t *conn,
           connection_buf_add(descp, strlen(descp), TO_CONN(conn));
           break;
         case 0: /* well-formed but not present */
-          write_http_status_line(conn, 404, "Not found");
+          write_short_http_response(conn, 404, "Not found");
           break;
         case -1: /* not well-formed */
-          write_http_status_line(conn, 400, "Bad request");
+          write_short_http_response(conn, 400, "Bad request");
           break;
       }
     } else { /* not well-formed */
-      write_http_status_line(conn, 400, "Bad request");
+      write_short_http_response(conn, 400, "Bad request");
     }
     goto done;
   } else {
     /* Not encrypted! */
-    write_http_status_line(conn, 404, "Not found");
+    write_short_http_response(conn, 404, "Not found");
   }
  done:
   return 0;
@@ -4899,7 +4900,7 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
 
   /* Reject unencrypted dir connections */
   if (!connection_dir_is_encrypted(conn)) {
-    write_http_status_line(conn, 404, "Not found");
+    write_short_http_response(conn, 404, "Not found");
     goto done;
   }
 
@@ -4911,7 +4912,7 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
   retval = hs_cache_lookup_as_dir(HS_VERSION_THREE,
                                   pubkey_str, &desc_str);
   if (retval <= 0 || desc_str == NULL) {
-    write_http_status_line(conn, 404, "Not found");
+    write_short_http_response(conn, 404, "Not found");
     goto done;
   }
 
@@ -4946,7 +4947,7 @@ handle_get_networkstatus_bridges(dir_connection_t *conn,
     if (!header ||
         tor_memneq(digest,
                    options->BridgePassword_AuthDigest_, DIGEST256_LEN)) {
-      write_http_status_line(conn, 404, "Not found");
+      write_short_http_response(conn, 404, "Not found");
       tor_free(header);
       goto done;
     }
@@ -5081,12 +5082,12 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
   if (!public_server_mode(options)) {
     log_info(LD_DIR, "Rejected dir post request from %s "
              "since we're not a public relay.", conn->base_.address);
-    write_http_status_line(conn, 503, "Not acting as a public relay");
+    write_short_http_response(conn, 503, "Not acting as a public relay");
     goto done;
   }
 
   if (parse_http_url(headers, &url) < 0) {
-    write_http_status_line(conn, 400, "Bad request");
+    write_short_http_response(conn, 400, "Bad request");
     return 0;
   }
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", escaped(url));
@@ -5097,10 +5098,10 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     if (rend_cache_store_v2_desc_as_dir(body) < 0) {
       log_warn(LD_REND, "Rejected v2 rend descriptor (body size %d) from %s.",
                (int)body_len, conn->base_.address);
-      write_http_status_line(conn, 400,
+      write_short_http_response(conn, 400,
                              "Invalid v2 service descriptor rejected");
     } else {
-      write_http_status_line(conn, 200, "Service descriptor (v2) stored");
+      write_short_http_response(conn, 200, "Service descriptor (v2) stored");
       log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
     }
     goto done;
@@ -5117,14 +5118,14 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     if (code != 200) {
       msg = "Invalid HS descriptor. Rejected.";
     }
-    write_http_status_line(conn, code, msg);
+    write_short_http_response(conn, code, msg);
     goto done;
   }
 
   if (!authdir_mode(options)) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
-    write_http_status_line(conn, 400, "Nonauthoritative directory does not "
+    write_short_http_response(conn, 400, "Nonauthoritative directory does not "
                            "accept posted server descriptors");
     goto done;
   }
@@ -5139,7 +5140,7 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     tor_assert(msg);
 
     if (r == ROUTER_ADDED_SUCCESSFULLY) {
-      write_http_status_line(conn, 200, msg);
+      write_short_http_response(conn, 200, msg);
     } else if (WRA_WAS_OUTDATED(r)) {
       write_http_response_header_impl(conn, -1, NULL, NULL,
                                       "X-Descriptor-Not-New: Yes\r\n", -1);
@@ -5148,7 +5149,7 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
                "Rejected router descriptor or extra-info from %s "
                "(\"%s\").",
                conn->base_.address, msg);
-      write_http_status_line(conn, 400, msg);
+      write_short_http_response(conn, 400, msg);
     }
     goto done;
   }
@@ -5158,12 +5159,12 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     const char *msg = "OK";
     int status;
     if (dirvote_add_vote(body, &msg, &status)) {
-      write_http_status_line(conn, status, "Vote stored");
+      write_short_http_response(conn, status, "Vote stored");
     } else {
       tor_assert(msg);
       log_warn(LD_DIRSERV, "Rejected vote from %s (\"%s\").",
                conn->base_.address, msg);
-      write_http_status_line(conn, status, msg);
+      write_short_http_response(conn, status, msg);
     }
     goto done;
   }
@@ -5172,17 +5173,18 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
       !strcmp(url,"/tor/post/consensus-signature")) { /* sigs on consensus. */
     const char *msg = NULL;
     if (dirvote_add_signatures(body, conn->base_.address, &msg)>=0) {
-      write_http_status_line(conn, 200, msg?msg:"Signatures stored");
+      write_short_http_response(conn, 200, msg?msg:"Signatures stored");
     } else {
       log_warn(LD_DIR, "Unable to store signatures posted by %s: %s",
                conn->base_.address, msg?msg:"???");
-      write_http_status_line(conn, 400, msg?msg:"Unable to store signatures");
+      write_short_http_response(conn, 400,
+                                msg?msg:"Unable to store signatures");
     }
     goto done;
   }
 
   /* we didn't recognize the url */
-  write_http_status_line(conn, 404, "Not found");
+  write_short_http_response(conn, 404, "Not found");
 
  done:
   tor_free(url);
