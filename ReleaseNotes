@@ -2,6 +2,782 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.3.1.7 - 2017-09-18
+  Tor 0.3.1.7 is the first stable release in the 0.3.1 series.
+
+  With the 0.3.1 series, Tor now serves and downloads directory
+  information in more compact formats, to save on bandwidth overhead. It
+  also contains a new padding system to resist netflow-based traffic
+  analysis, and experimental support for building parts of Tor in Rust
+  (though no parts of Tor are in Rust yet). There are also numerous
+  small features, bugfixes on earlier release series, and groundwork for
+  the hidden services revamp of 0.3.2.
+
+  Per our stable release policy, we plan to support the Tor 0.3.0
+  release series for at least the next nine months, or for three months
+  after the first stable release of the 0.3.1 series: whichever is
+  longer. If you need a release with long-term support, we recommend
+  that you stay with the 0.2.9 series.
+
+  Per our stable release policy, we plan to support each stable release
+  series for at least the next nine months, or for three months after
+  the first stable release of the next series: whichever is longer. If
+  you need a release with long-term support, we recommend that you stay
+  with the 0.2.9 series.
+
+  Below is a list of the changes since 0.3.0. For a list of all
+  changes since 0.3.1.6-rc, see the ChangeLog file.
+
+  o New dependencies:
+    - To build with zstd and lzma support, Tor now requires the
+      pkg-config tool at build time. (This requirement was new in
+      0.3.1.1-alpha, but was not noted at the time. Noting it here to
+      close ticket 22623.)
+
+  o Major features (build system, continuous integration):
+    - Tor's repository now includes a Travis Continuous Integration (CI)
+      configuration file (.travis.yml). This is meant to help new
+      developers and contributors who fork Tor to a Github repository be
+      better able to test their changes, and understand what we expect
+      to pass. To use this new build feature, you must fork Tor to your
+      Github account, then go into the "Integrations" menu in the
+      repository settings for your fork and enable Travis, then push
+      your changes. Closes ticket 22636.
+
+  o Major features (directory protocol):
+    - Tor relays and authorities can now serve clients an abbreviated
+      version of the consensus document, containing only the changes
+      since an older consensus document that the client holds. Clients
+      now request these documents when available. When both client and
+      server use this new protocol, they will use far less bandwidth (up
+      to 94% less) to keep the client's consensus up-to-date. Implements
+      proposal 140; closes ticket 13339. Based on work by Daniel Martí.
+    - Tor can now compress directory traffic with lzma or with zstd
+      compression algorithms, which can deliver better bandwidth
+      performance. Because lzma is computationally expensive, it's only
+      used for documents that can be compressed once and served many
+      times. Support for these algorithms requires that tor is built
+      with the libzstd and/or liblzma libraries available. Implements
+      proposal 278; closes ticket 21662.
+    - Relays now perform the more expensive compression operations, and
+      consensus diff generation, in worker threads. This separation
+      avoids delaying the main thread when a new consensus arrives.
+
+  o Major features (experimental):
+    - Tor can now build modules written in Rust. To turn this on, pass
+      the "--enable-rust" flag to the configure script. It's not time to
+      get excited yet: currently, there is no actual Rust functionality
+      beyond some simple glue code, and a notice at startup to tell you
+      that Rust is running. Still, we hope that programmers and
+      packagers will try building Tor with Rust support, so that we can
+      find issues and solve portability problems. Closes ticket 22106.
+
+  o Major features (traffic analysis resistance):
+    - Connections between clients and relays now send a padding cell in
+      each direction every 1.5 to 9.5 seconds (tunable via consensus
+      parameters). This padding will not resist specialized
+      eavesdroppers, but it should be enough to make many ISPs' routine
+      network flow logging less useful in traffic analysis against
+      Tor users.
+
+      Padding is negotiated using Tor's link protocol, so both relays
+      and clients must upgrade for this to take effect. Clients may
+      still send padding despite the relay's version by setting
+      ConnectionPadding 1 in torrc, and may disable padding by setting
+      ConnectionPadding 0 in torrc. Padding may be minimized for mobile
+      users with the torrc option ReducedConnectionPadding. Implements
+      Proposal 251 and Section 2 of Proposal 254; closes ticket 16861.
+    - Relays will publish 24 hour totals of padding and non-padding cell
+      counts to their extra-info descriptors, unless PaddingStatistics 0
+      is set in torrc. These 24 hour totals are also rounded to
+      multiples of 10000.
+
+  o Major bugfixes (hidden service, relay, security):
+    - Fix a remotely triggerable assertion failure when a hidden service
+      handles a malformed BEGIN cell. Fixes bug 22493, tracked as
+      TROVE-2017-004 and as CVE-2017-0375; bugfix on 0.3.0.1-alpha.
+    - Fix a remotely triggerable assertion failure caused by receiving a
+      BEGIN_DIR cell on a hidden service rendezvous circuit. Fixes bug
+      22494, tracked as TROVE-2017-005 and CVE-2017-0376; bugfix
+      on 0.2.2.1-alpha.
+
+  o Major bugfixes (path selection, security):
+    - When choosing which guard to use for a circuit, avoid the exit's
+      family along with the exit itself. Previously, the new guard
+      selection logic avoided the exit, but did not consider its family.
+      Fixes bug 22753; bugfix on 0.3.0.1-alpha. Tracked as TROVE-2017-
+      006 and CVE-2017-0377.
+
+  o Major bugfixes (compression, zstd):
+    - Correctly detect a full buffer when decompressing a large zstd-
+      compressed input. Previously, we would sometimes treat a full
+      buffer as an error. Fixes bug 22628; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (connection usage):
+    - We use NETINFO cells to try to determine if both relays involved
+      in a connection will agree on the canonical status of that
+      connection. We prefer the connections where this is the case for
+      extend cells, and try to close connections where relays disagree
+      on their canonical status early. Also, we now prefer the oldest
+      valid connection for extend cells. These two changes should reduce
+      the number of long-term connections that are kept open between
+      relays. Fixes bug 17604; bugfix on 0.2.5.5-alpha.
+    - Relays now log hourly statistics (look for
+      "channel_check_for_duplicates" lines) on the total number of
+      connections to other relays. If the number of connections per
+      relay is unexpectedly large, this log message is at notice level.
+      Otherwise it is at info.
+
+  o Major bugfixes (crash, relay):
+    - Fix a memory-corruption bug in relays that set MyFamily.
+      Previously, they would double-free MyFamily elements when making
+      the next descriptor or when changing their configuration. Fixes
+      bug 22368; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (directory protocol):
+    - Ensure that we send "304 Not modified" as HTTP status code when a
+      client is attempting to fetch a consensus or consensus diff, and
+      the best one we can send them is one they already have. Fixes bug
+      22702; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (entry guards):
+    - When starting with an old consensus, do not add new entry guards
+      unless the consensus is "reasonably live" (under 1 day old). Fixes
+      one root cause of bug 22400; bugfix on 0.3.0.1-alpha.
+    - Don't block bootstrapping when a primary bridge is offline and we
+      can't get its descriptor. Fixes bug 22325; fixes one case of bug
+      21969; bugfix on 0.3.0.3-alpha.
+
+  o Major bugfixes (linux TPROXY support):
+    - Fix a typo that had prevented TPROXY-based transparent proxying
+      from working under Linux. Fixes bug 18100; bugfix on 0.2.6.3-alpha.
+      Patch from "d4fq0fQAgoJ".
+
+  o Major bugfixes (openbsd, denial-of-service):
+    - Avoid an assertion failure bug affecting our implementation of
+      inet_pton(AF_INET6) on certain OpenBSD systems whose strtol()
+      handling of "0xfoo" differs from what we had expected. Fixes bug
+      22789; bugfix on 0.2.3.8-alpha. Also tracked as TROVE-2017-007.
+
+  o Major bugfixes (relay, link handshake):
+    - When performing the v3 link handshake on a TLS connection, report
+      that we have the x509 certificate that we actually used on that
+      connection, even if we have changed certificates since that
+      connection was first opened. Previously, we would claim to have
+      used our most recent x509 link certificate, which would sometimes
+      make the link handshake fail. Fixes one case of bug 22460; bugfix
+      on 0.2.3.6-alpha.
+
+  o Major bugfixes (relay, performance):
+    - Perform circuit handshake operations at a higher priority than we
+      use for consensus diff creation and compression. This should
+      prevent circuits from starving when a relay or bridge receives a
+      new consensus, especially on lower-powered machines. Fixes bug
+      22883; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (relays, key management):
+    - Regenerate link and authentication certificates whenever the key
+      that signs them changes; also, regenerate link certificates
+      whenever the signed key changes. Previously, these processes were
+      only weakly coupled, and we relays could (for minutes to hours)
+      wind up with an inconsistent set of keys and certificates, which
+      other relays would not accept. Fixes two cases of bug 22460;
+      bugfix on 0.3.0.1-alpha.
+    - When sending an Ed25519 signing->link certificate in a CERTS cell,
+      send the certificate that matches the x509 certificate that we
+      used on the TLS connection. Previously, there was a race condition
+      if the TLS context rotated after we began the TLS handshake but
+      before we sent the CERTS cell. Fixes a case of bug 22460; bugfix
+      on 0.3.0.1-alpha.
+
+  o Major bugfixes (torrc, crash):
+    - Fix a crash bug when using %include in torrc. Fixes bug 22417;
+      bugfix on 0.3.1.1-alpha. Patch by Daniel Pinto.
+
+  o Major bugfixes (windows, directory cache):
+    - On Windows, do not try to delete cached consensus documents and
+      diffs before they are unmapped from memory--Windows won't allow
+      that. Instead, allow the consensus cache directory to grow larger,
+      to hold files that might need to stay around longer. Fixes bug
+      22752; bugfix on 0.3.1.1-alpha.
+
+  o Minor features (security, windows):
+    - Enable a couple of pieces of Windows hardening: one
+      (HeapEnableTerminationOnCorruption) that has been on-by-default
+      since Windows 8, and unavailable before Windows 7; and one
+      (PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION) which we believe doesn't
+      affect us, but shouldn't do any harm. Closes ticket 21953.
+
+  o Minor features (bridge authority):
+    - Add "fingerprint" lines to the networkstatus-bridges file produced
+      by bridge authorities. Closes ticket 22207.
+
+  o Minor features (bug mitigation, diagnostics, logging):
+    - Avoid an assertion failure, and log a better error message, when
+      unable to remove a file from the consensus cache on Windows.
+      Attempts to mitigate and diagnose bug 22752.
+
+  o Minor features (code style):
+    - Add "Falls through" comments to our codebase, in order to silence
+      GCC 7's -Wimplicit-fallthrough warnings. Patch from Andreas
+      Stieger. Closes ticket 22446.
+
+  o Minor features (config options):
+    - Allow "%include" directives in torrc configuration files. These
+      directives import the settings from other files, or from all the
+      files in a directory. Closes ticket 1922. Code by Daniel Pinto.
+    - Make SAVECONF return an error when overwriting a torrc that has
+      includes. Using SAVECONF with the FORCE option will allow it to
+      overwrite torrc even if includes are used. Related to ticket 1922.
+    - Add "GETINFO config-can-saveconf" to tell controllers if SAVECONF
+      will work without the FORCE option. Related to ticket 1922.
+
+  o Minor features (controller):
+    - Warn the first time that a controller requests data in the long-
+      deprecated 'GETINFO network-status' format. Closes ticket 21703.
+
+  o Minor features (defaults):
+    - The default value for UseCreateFast is now 0: clients which
+      haven't yet received a consensus document will now use a proper
+      ntor handshake to talk to their directory servers whenever they
+      can. Closes ticket 21407.
+    - Onion key rotation and expiry intervals are now defined as a
+      network consensus parameter, per proposal 274. The default
+      lifetime of an onion key is increased from 7 to 28 days. Old onion
+      keys will expire after 7 days by default. This change will make
+      consensus diffs much smaller, and save significant bandwidth.
+      Closes ticket 21641.
+
+  o Minor features (defensive programming):
+    - Create a pair of consensus parameters, nf_pad_tor2web and
+      nf_pad_single_onion, to disable netflow padding in the consensus
+      for non-anonymous connections in case the overhead is high. Closes
+      ticket 17857.
+
+  o Minor features (diagnostic):
+    - Add a stack trace to the bug warnings that can be logged when
+      trying to send an outgoing relay cell with n_chan == 0. Diagnostic
+      attempt for bug 23105.
+    - Add logging messages to try to diagnose a rare bug that seems to
+      generate RSA->Ed25519 cross-certificates dated in the 1970s. We
+      think this is happening because of incorrect system clocks, but
+      we'd like to know for certain. Diagnostic for bug 22466.
+
+  o Minor features (directory authority):
+    - Improve the message that authorities report to relays that present
+      RSA/Ed25519 keypairs that conflict with previously pinned keys.
+      Closes ticket 22348.
+
+  o Minor features (directory cache, consensus diff):
+    - Add a new MaxConsensusAgeForDiffs option to allow directory cache
+      operators with low-resource environments to adjust the number of
+      consensuses they'll store and generate diffs from. Most cache
+      operators should leave it unchanged. Helps to work around
+      bug 22883.
+
+  o Minor features (fallback directory list):
+    - Update the fallback directory mirror whitelist and blacklist based
+      on operator emails. Closes task 21121.
+    - Replace the 177 fallbacks originally introduced in Tor 0.2.9.8 in
+      December 2016 (of which ~126 were still functional) with a list of
+      151 fallbacks (32 new, 119 unchanged, 58 removed) generated in May
+      2017. Resolves ticket 21564.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the September 6 2017 Maxmind GeoLite2
+      Country database.
+    - Update geoip and geoip6 to the August 3 2017 Maxmind GeoLite2
+      Country database.
+    - Update geoip and geoip6 to the July 4 2017 Maxmind GeoLite2
+      Country database.
+    - Update geoip and geoip6 to the June 8 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (hidden services, logging):
+    - Log a message when a hidden service descriptor has fewer
+      introduction points than specified in
+      HiddenServiceNumIntroductionPoints. Closes tickets 21598.
+    - Log a message when a hidden service reaches its introduction point
+      circuit limit, and when that limit is reset. Follow up to ticket
+      21594; closes ticket 21622.
+    - Warn user if multiple entries in EntryNodes and at least one
+      HiddenService are used together. Pinning EntryNodes along with a
+      hidden service can be possibly harmful; for instance see ticket
+      14917 or 21155. Closes ticket 21155.
+
+  o Minor features (linux seccomp2 sandbox):
+    - We now have a document storage backend compatible with the Linux
+      seccomp2 sandbox. This backend is used for consensus documents and
+      diffs between them; in the long term, we'd like to use it for
+      unparseable directory material too. Closes ticket 21645
+    - Increase the maximum allowed size passed to mprotect(PROT_WRITE)
+      from 1MB to 16MB. This was necessary with the glibc allocator in
+      order to allow worker threads to allocate more memory -- which in
+      turn is necessary because of our new use of worker threads for
+      compression. Closes ticket 22096.
+
+  o Minor features (logging):
+    - Log files are no longer created world-readable by default.
+      (Previously, most distributors would store the logs in a non-
+      world-readable location to prevent inappropriate access. This
+      change is an extra precaution.) Closes ticket 21729; patch
+      from toralf.
+
+  o Minor features (performance):
+    - Our Keccak (SHA-3) implementation now accesses memory more
+      efficiently, especially on little-endian systems. Closes
+      ticket 21737.
+    - Add an O(1) implementation of channel_find_by_global_id(), to
+      speed some controller functions.
+
+  o Minor features (relay, configuration):
+    - The MyFamily option may now be repeated as many times as desired,
+      for relays that want to configure large families. Closes ticket
+      4998; patch by Daniel Pinto.
+
+  o Minor features (relay, performance):
+    - Always start relays with at least two worker threads, to prevent
+      priority inversion on slow tasks. Part of the fix for bug 22883.
+    - Allow background work to be queued with different priorities, so
+      that a big pile of slow low-priority jobs will not starve out
+      higher priority jobs. This lays the groundwork for a fix for
+      bug 22883.
+
+  o Minor features (safety):
+    - Add an explicit check to extrainfo_parse_entry_from_string() for
+      NULL inputs. We don't believe this can actually happen, but it may
+      help silence a warning from the Clang analyzer. Closes
+      ticket 21496.
+
+  o Minor features (testing):
+    - Add more tests for compression backend initialization. Closes
+      ticket 22286.
+    - Add a "--disable-memory-sentinels" feature to help with fuzzing.
+      When Tor is compiled with this option, we disable a number of
+      redundant memory-safety failsafes that are intended to stop bugs
+      from becoming security issues. This makes it easier to hunt for
+      bugs that would be security issues without the failsafes turned
+      on. Closes ticket 21439.
+    - Add a general event-tracing instrumentation support to Tor. This
+      subsystem will enable developers and researchers to add fine-
+      grained instrumentation to their Tor instances, for use when
+      examining Tor network performance issues. There are no trace
+      events yet, and event-tracing is off by default unless enabled at
+      compile time. Implements ticket 13802.
+    - Improve our version parsing tests: add tests for typical version
+      components, add tests for invalid versions, including numeric
+      range and non-numeric prefixes. Unit tests 21278, 21450, and
+      21507. Partially implements 21470.
+
+  o Minor bugfixes (bandwidth accounting):
+    - Roll over monthly accounting at the configured hour and minute,
+      rather than always at 00:00. Fixes bug 22245; bugfix on 0.0.9rc1.
+      Found by Andrey Karpov with PVS-Studio.
+
+  o Minor bugfixes (build system, rust):
+    - Fix a problem where Rust toolchains were not being found when
+      building without --enable-cargo-online-mode, due to setting the
+      $HOME environment variable instead of $CARGO_HOME. Fixes bug
+      22830; bugfix on 0.3.1.1-alpha. Fix by Chelsea Komlo.
+
+  o Minor bugfixes (code correctness):
+    - Accurately identify client connections by their lack of peer
+      authentication. This means that we bail out earlier if asked to
+      extend to a client. Follow-up to 21407. Fixes bug 21406; bugfix
+      on 0.2.4.23.
+
+  o Minor bugfixes (compatibility, zstd):
+    - Write zstd epilogues correctly when the epilogue requires
+      reallocation of the output buffer, even with zstd 1.3.0.
+      (Previously, we worked on 1.2.0 and failed with 1.3.0). Fixes bug
+      22927; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (compilation warnings):
+    - Suppress -Wdouble-promotion warnings with clang 4.0. Fixes bug
+      22915; bugfix on 0.2.8.1-alpha.
+    - Fix warnings when building with libscrypt and openssl scrypt
+      support on Clang. Fixes bug 22916; bugfix on 0.2.7.2-alpha.
+    - Compile correctly when both openssl 1.1.0 and libscrypt are
+      detected. Previously this would cause an error. Fixes bug 22892;
+      bugfix on 0.3.1.1-alpha.
+    - When building with certain versions of the mingw C header files,
+      avoid float-conversion warnings when calling the C functions
+      isfinite(), isnan(), and signbit(). Fixes bug 22801; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (compilation):
+    - Avoid compiler warnings in the unit tests for calling tor_sscanf()
+      with wide string outputs. Fixes bug 15582; bugfix on 0.2.6.2-alpha.
+
+  o Minor bugfixes (compression):
+    - When compressing or decompressing a buffer, check for a failure to
+      create a compression object. Fixes bug 22626; bugfix
+      on 0.3.1.1-alpha.
+    - When decompressing a buffer, check for extra data after the end of
+      the compressed data. Fixes bug 22629; bugfix on 0.3.1.1-alpha.
+    - When decompressing an object received over an anonymous directory
+      connection, if we have already decompressed it using an acceptable
+      compression method, do not reject it for looking like an
+      unacceptable compression method. Fixes part of bug 22670; bugfix
+      on 0.3.1.1-alpha.
+    - When serving directory votes compressed with zlib, do not claim to
+      have compressed them with zstd. Fixes bug 22669; bugfix
+      on 0.3.1.1-alpha.
+    - When spooling compressed data to an output buffer, don't try to
+      spool more data when there is no more data to spool and we are not
+      trying to flush the input. Previously, we would sometimes launch
+      compression requests with nothing to do, which interferes with our
+      22672 checks. Fixes bug 22719; bugfix on 0.2.0.16-alpha.
+
+  o Minor bugfixes (configuration):
+    - Do not crash when starting with LearnCircuitBuildTimeout 0. Fixes
+      bug 22252; bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (connection lifespan):
+    - Allow more control over how long TLS connections are kept open:
+      unify CircuitIdleTimeout and PredictedPortsRelevanceTime into a
+      single option called CircuitsAvailableTimeout. Also, allow the
+      consensus to control the default values for both this preference
+      and the lifespan of relay-to-relay connections. Fixes bug 17592;
+      bugfix on 0.2.5.5-alpha.
+    - Increase the initial circuit build timeout testing frequency, to
+      help ensure that ReducedConnectionPadding clients finish learning
+      a timeout before their orconn would expire. The initial testing
+      rate was set back in the days of TAP and before the Tor Browser
+      updater, when we had to be much more careful about new clients
+      making lots of circuits. With this change, a circuit build timeout
+      is learned in about 15-20 minutes, instead of 100-120 minutes.
+
+  o Minor bugfixes (controller):
+    - Do not crash when receiving a HSPOST command with an empty body.
+      Fixes part of bug 22644; bugfix on 0.2.7.1-alpha.
+    - Do not crash when receiving a POSTDESCRIPTOR command with an empty
+      body. Fixes part of bug 22644; bugfix on 0.2.0.1-alpha.
+    - GETINFO onions/current and onions/detached no longer respond with
+      551 on empty lists. Fixes bug 21329; bugfix on 0.2.7.1-alpha.
+    - Trigger HS descriptor events on the control port when the client
+      fails to pick a hidden service directory for a hidden service.
+      This can happen if all the hidden service directories are in
+      ExcludeNodes, or they have all been queried within the last 15
+      minutes. Fixes bug 22042; bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (correctness):
+    - Avoid undefined behavior when parsing IPv6 entries from the geoip6
+      file. Fixes bug 22490; bugfix on 0.2.4.6-alpha.
+
+  o Minor bugfixes (coverity build support):
+    - Avoid Coverity build warnings related to our BUG() macro. By
+      default, Coverity treats BUG() as the Linux kernel does: an
+      instant abort(). We need to override that so our BUG() macro
+      doesn't prevent Coverity from analyzing functions that use it.
+      Fixes bug 23030; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (defensive programming):
+    - Detect and break out of infinite loops in our compression code. We
+      don't think that any such loops exist now, but it's best to be
+      safe. Closes ticket 22672.
+    - Fix a memset() off the end of an array when packing cells. This
+      bug should be harmless in practice, since the corrupted bytes are
+      still in the same structure, and are always padding bytes,
+      ignored, or immediately overwritten, depending on compiler
+      behavior. Nevertheless, because the memset()'s purpose is to make
+      sure that any other cell-handling bugs can't expose bytes to the
+      network, we need to fix it. Fixes bug 22737; bugfix on
+      0.2.4.11-alpha. Fixes CID 1401591.
+
+  o Minor bugfixes (directory authority):
+    - When a directory authority rejects a descriptor or extrainfo with
+      a given digest, mark that digest as undownloadable, so that we do
+      not attempt to download it again over and over. We previously
+      tried to avoid downloading such descriptors by other means, but we
+      didn't notice if we accidentally downloaded one anyway. This
+      behavior became problematic in 0.2.7.2-alpha, when authorities
+      began pinning Ed25519 keys. Fixes bug 22349; bugfix
+      on 0.2.1.19-alpha.
+    - When rejecting a router descriptor for running an obsolete version
+      of Tor without ntor support, warn about the obsolete tor version,
+      not the missing ntor key. Fixes bug 20270; bugfix on 0.2.9.3-alpha.
+    - Prevent the shared randomness subsystem from asserting when
+      initialized by a bridge authority with an incomplete configuration
+      file. Fixes bug 21586; bugfix on 0.2.9.8.
+
+  o Minor bugfixes (directory cache):
+    - Fix a memory leak when recovering space in the consensus cache.
+      Fixes bug 23139; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (directory protocol):
+    - Check for libzstd >= 1.1, because older versions lack the
+      necessary streaming API. Fixes bug 22413; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (error reporting, windows):
+    - When formatting Windows error messages, use the English format to
+      avoid codepage issues. Fixes bug 22520; bugfix on 0.1.2.8-alpha.
+      Patch from "Vort".
+
+  o Minor bugfixes (exit-side DNS):
+    - Fix an untriggerable assertion that checked the output of a
+      libevent DNS error, so that the assertion actually behaves as
+      expected. Fixes bug 22244; bugfix on 0.2.0.20-rc. Found by Andrey
+      Karpov using PVS-Studio.
+
+  o Minor bugfixes (fallback directories):
+    - Make the usage example in updateFallbackDirs.py actually work, and
+      explain what it does. Fixes bug 22270; bugfix on 0.3.0.3-alpha.
+    - Decrease the guard flag average required to be a fallback. This
+      allows us to keep relays that have their guard flag removed when
+      they restart. Fixes bug 20913; bugfix on 0.2.8.1-alpha.
+    - Decrease the minimum number of fallbacks to 100. Fixes bug 20913;
+      bugfix on 0.2.8.1-alpha.
+    - Make sure fallback directory mirrors have the same address, port,
+      and relay identity key for at least 30 days before they are
+      selected. Fixes bug 20913; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (file limits, osx):
+    - When setting the maximum number of connections allowed by the OS,
+      always allow some extra file descriptors for other files. Fixes
+      bug 22797; bugfix on 0.2.0.10-alpha.
+
+  o Minor bugfixes (hidden service):
+    - Increase the number of circuits that a service is allowed to
+      open over a specific period of time. The value was lower than it
+      should be (8 vs 12) in the normal case of 3 introduction points.
+      Fixes bug 22159; bugfix on 0.3.0.5-rc.
+    - Fix a BUG warning during HSv3 descriptor decoding that could be
+      cause by a specially crafted descriptor. Fixes bug 23233; bugfix
+      on 0.3.0.1-alpha. Bug found by "haxxpop".
+    - Rate-limit the log messages if we exceed the maximum number of
+      allowed intro circuits. Fixes bug 22159; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (hidden services):
+    - Stop printing a cryptic warning when a hidden service gets a
+      request to connect to a virtual port that it hasn't configured.
+      Fixes bug 16706; bugfix on 0.2.6.3-alpha.
+    - Simplify hidden service descriptor creation by using an existing
+      flag to check if an introduction point is established. Fixes bug
+      21599; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (link handshake):
+    - Lower the lifetime of the RSA->Ed25519 cross-certificate to six
+      months, and regenerate it when it is within one month of expiring.
+      Previously, we had generated this certificate at startup with a
+      ten-year lifetime, but that could lead to weird behavior when Tor
+      was started with a grossly inaccurate clock. Mitigates bug 22466;
+      mitigation on 0.3.0.1-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Avoid a sandbox failure when trying to re-bind to a socket and
+      mark it as IPv6-only. Fixes bug 20247; bugfix on 0.2.5.1-alpha.
+    - Permit the fchmod system call, to avoid crashing on startup when
+      starting with the seccomp2 sandbox and an unexpected set of
+      permissions on the data directory or its contents. Fixes bug
+      22516; bugfix on 0.2.5.4-alpha.
+    - Fix a crash in the LZMA module, when the sandbox was enabled, and
+      liblzma would allocate more than 16 MB of memory. We solve this by
+      bumping the mprotect() limit in the sandbox module from 16 MB to
+      20 MB. Fixes bug 22751; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (logging):
+    - When decompressing, do not warn if we fail to decompress using a
+      compression method that we merely guessed. Fixes part of bug
+      22670; bugfix on 0.1.1.14-alpha.
+    - When decompressing, treat mismatch between content-encoding and
+      actual compression type as a protocol warning. Fixes part of bug
+      22670; bugfix on 0.1.1.9-alpha.
+    - Downgrade "assigned_to_cpuworker failed" message to info-level
+      severity. In every case that can reach it, either a better warning
+      has already been logged, or no warning is warranted. Fixes bug
+      22356; bugfix on 0.2.6.3-alpha.
+    - Demote a warn that was caused by libevent delays to info if
+      netflow padding is less than 4.5 seconds late, or to notice
+      if it is more (4.5 seconds is the amount of time that a netflow
+      record might be emitted after, if we chose the maximum timeout).
+      Fixes bug 22212; bugfix on 0.3.1.1-alpha.
+    - Log a better message when a directory authority replies to an
+      upload with an unexpected status code. Fixes bug 11121; bugfix
+      on 0.1.0.1-rc.
+
+  o Minor bugfixes (logging, relay):
+    - Remove a forgotten debugging message when an introduction point
+      successfully establishes a hidden service prop224 circuit with
+      a client.
+    - Change three other log_warn() for an introduction point to
+      protocol warnings, because they can be failure from the network
+      and are not relevant to the operator. Fixes bug 23078; bugfix on
+      0.3.0.1-alpha and 0.3.0.2-alpha.
+
+  o Minor bugfixes (memory leak):
+    - Fix a small memory leak at exit from the backtrace handler code.
+      Fixes bug 21788; bugfix on 0.2.5.2-alpha. Patch from Daniel Pinto.
+
+  o Minor bugfixes (memory leak, directory authority):
+    - When directory authorities reject a router descriptor due to
+      keypinning, free the router descriptor rather than leaking the
+      memory. Fixes bug 22370; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (memory leaks):
+    - Fix a small memory leak when validating a configuration that uses
+      two or more AF_UNIX sockets for the same port type. Fixes bug
+      23053; bugfix on 0.2.6.3-alpha. This is CID 1415725.
+
+  o Minor bugfixes (process behavior):
+    - When exiting because of an error, always exit with a nonzero exit
+      status. Previously, we would fail to report an error in our exit
+      status in cases related to __OwningControllerProcess failure,
+      lockfile contention, and Ed25519 key initialization. Fixes bug
+      22720; bugfix on versions 0.2.1.6-alpha, 0.2.2.28-beta, and
+      0.2.7.2-alpha respectively. Reported by "f55jwk4f"; patch
+      from "huyvq".
+
+  o Minor bugfixes (protocol, logging):
+    - Downgrade a log statement about unexpected relay cells from "bug"
+      to "protocol warning", because there is at least one use case
+      where it can be triggered by a buggy tor implementation. Fixes bug
+      21293; bugfix on 0.1.1.14-alpha.
+
+  o Minor bugfixes (relay):
+    - When a relay is not running as a directory cache, it will no
+      longer generate compressed consensuses and consensus diff
+      information. Previously, this was a waste of disk and CPU. Fixes
+      bug 23275; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (robustness, error handling):
+    - Improve our handling of the cases where OpenSSL encounters a
+      memory error while encoding keys and certificates. We haven't
+      observed these errors in the wild, but if they do happen, we now
+      detect and respond better. Fixes bug 19418; bugfix on all versions
+      of Tor. Reported by Guido Vranken.
+
+  o Minor bugfixes (stability):
+    - Avoid crashing on a double-free when unable to load or process an
+      included file. Fixes bug 23155; bugfix on 0.3.1.1-alpha. Found
+      with the clang static analyzer.
+
+  o Minor bugfixes (storage directories):
+    - Always check for underflows in the cached storage directory usage.
+      If the usage does underflow, re-calculate it. Also, avoid a
+      separate underflow when the usage is not known. Fixes bug 22424;
+      bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Fix an undersized buffer in test-memwipe.c. Fixes bug 23291;
+      bugfix on 0.2.7.2-alpha. Found and patched by Ties Stuij.
+    - Port the hs_ntor handshake test to work correctly with recent
+      versions of the pysha3 module. Fixes bug 23071; bugfix
+      on 0.3.1.1-alpha.
+    - Use unbuffered I/O for utility functions around the
+      process_handle_t type. This fixes unit test failures reported on
+      OpenBSD and FreeBSD. Fixes bug 21654; bugfix on 0.2.3.1-alpha.
+    - Make display of captured unit test log messages consistent. Fixes
+      bug 21510; bugfix on 0.2.9.3-alpha.
+    - Make test-network.sh always call chutney's test-network.sh.
+      Previously, this only worked on systems which had bash installed,
+      due to some bash-specific code in the script. Fixes bug 19699;
+      bugfix on 0.3.0.4-rc. Follow-up to ticket 21581.
+
+  o Minor bugfixes (unit tests):
+    - Fix a channelpadding unit test failure on slow systems by using
+      mocked time instead of actual time. Fixes bug 23077; bugfix
+      on 0.3.1.1-alpha.
+    - test_consdiff_base64cmp would fail on OS X because while OS X
+      follows the standard of (less than zero/zero/greater than zero),
+      it doesn't follow the convention of (-1/0/+1). Make the test
+      comply with the standard. Fixes bug 22870; bugfix on 0.3.1.1-alpha.
+    - Fix a memory leak in the link-handshake/certs_ok_ed25519 test.
+      Fixes bug 22803; bugfix on 0.3.0.1-alpha.
+    - The unit tests now pass on systems where localhost is misconfigured
+      to some IPv4 address other than 127.0.0.1. Fixes bug 6298; bugfix
+      on 0.0.9pre2.
+
+  o Minor bugfixes (voting consistency):
+    - Reject version numbers with non-numeric prefixes (such as +, -, or
+      whitespace). Disallowing whitespace prevents differential version
+      parsing between POSIX-based and Windows platforms. Fixes bug 21507
+      and part of 21508; bugfix on 0.0.8pre1.
+
+  o Minor bugfixes (Windows service):
+    - When running as a Windows service, set the ID of the main thread
+      correctly. Failure to do so made us fail to send log messages to
+      the controller in 0.2.1.16-rc, slowed down controller event
+      delivery in 0.2.7.3-rc and later, and crash with an assertion
+      failure in 0.3.1.1-alpha. Fixes bug 23081; bugfix on 0.2.1.6-alpha.
+      Patch and diagnosis from "Vort".
+
+  o Minor bugfixes (windows, relay):
+    - Resolve "Failure from drain_fd: No error" warnings on Windows
+      relays. Fixes bug 21540; bugfix on 0.2.6.3-alpha.
+
+  o Code simplification and refactoring:
+    - Break up the 630-line function connection_dir_client_reached_eof()
+      into a dozen smaller functions. This change should help
+      maintainability and readability of the client directory code.
+    - Isolate our use of the openssl headers so that they are only
+      included from our crypto wrapper modules, and from tests that
+      examine those modules' internals. Closes ticket 21841.
+    - Simplify our API to launch directory requests, making it more
+      extensible and less error-prone. Now it's easier to add extra
+      headers to directory requests. Closes ticket 21646.
+    - Our base64 decoding functions no longer overestimate the output
+      space that they need when parsing unpadded inputs. Closes
+      ticket 17868.
+    - Remove unused "ROUTER_ADDED_NOTIFY_GENERATOR" internal value.
+      Resolves ticket 22213.
+    - The logic that directory caches use to spool request to clients,
+      serving them one part at a time so as not to allocate too much
+      memory, has been refactored for consistency. Previously there was
+      a separate spooling implementation per type of spoolable data. Now
+      there is one common spooling implementation, with extensible data
+      types. Closes ticket 21651.
+    - Tor's compression module now supports multiple backends. Part of
+      the implementation for proposal 278; closes ticket 21663.
+
+  o Documentation:
+    - Add a manpage description for the key-pinning-journal file. Closes
+      ticket 22347.
+    - Correctly note that bandwidth accounting values are stored in the
+      state file, and the bw_accounting file is now obsolete. Closes
+      ticket 16082.
+    - Document more of the files in the Tor data directory, including
+      cached-extrainfo, secret_onion_key{,_ntor}.old, hidserv-stats,
+      approved-routers, sr-random, and diff-cache. Found while fixing
+      ticket 22347.
+    - Clarify the manpage for the (deprecated) torify script. Closes
+      ticket 6892.
+    - Clarify the behavior of the KeepAliveIsolateSOCKSAuth sub-option.
+      Closes ticket 21873.
+    - Correct documentation about the default DataDirectory value.
+      Closes ticket 21151.
+    - Document the default behavior of NumEntryGuards and
+      NumDirectoryGuards correctly. Fixes bug 21715; bugfix
+      on 0.3.0.1-alpha.
+    - Document key=value pluggable transport arguments for Bridge lines
+      in torrc. Fixes bug 20341; bugfix on 0.2.5.1-alpha.
+    - Note that bandwidth-limiting options don't affect TCP headers or
+      DNS. Closes ticket 17170.
+
+  o Removed features (configuration options, all in ticket 22060):
+    - These configuration options are now marked Obsolete, and no longer
+      have any effect: AllowInvalidNodes, AllowSingleHopCircuits,
+      AllowSingleHopExits, ExcludeSingleHopRelays, FastFirstHopPK,
+      TLSECGroup, WarnUnsafeSocks. They were first marked as deprecated
+      in 0.2.9.2-alpha and have now been removed. The previous default
+      behavior is now always chosen; the previous (less secure) non-
+      default behavior is now unavailable.
+    - CloseHSClientCircuitsImmediatelyOnTimeout and
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout were deprecated in
+      0.2.9.2-alpha and now have been removed. HS circuits never close
+      on circuit build timeout; they have a longer timeout period.
+    - {Control,DNS,Dir,Socks,Trans,NATD,OR}ListenAddress were deprecated
+      in 0.2.9.2-alpha and now have been removed. Use the ORPort option
+      (and others) to configure listen-only and advertise-only addresses.
+
+  o Removed features (tools):
+    - We've removed the tor-checkkey tool from src/tools. Long ago, we
+      used it to help people detect RSA keys that were generated by
+      versions of Debian affected by CVE-2008-0166. But those keys have
+      been out of circulation for ages, and this tool is no longer
+      required. Closes ticket 21842.
+
+
 Changes in version 0.3.0.8 - 2017-06-08
   Tor 0.3.0.8 fixes a pair of bugs that would allow an attacker to
   remotely crash a hidden service with an assertion failure. Anyone
