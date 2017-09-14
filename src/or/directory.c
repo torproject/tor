@@ -3479,14 +3479,28 @@ static void
 write_http_status_line(dir_connection_t *conn, int status,
                        const char *reason_phrase)
 {
-  char buf[256];
-  if (!reason_phrase)
+  char buf[256+RFC1123_TIME_LEN+1];
+  char *datestring = NULL;
+
+  if (!reason_phrase) { /* bullet-proofing */
     reason_phrase = "unspecified";
-  if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n",
-      status, reason_phrase) < 0) {
+  }
+
+  if (server_mode(get_options())) {
+    /* include the Date: header, but only if we're a relay or bridge */
+    char datebuf[RFC1123_TIME_LEN+1];
+    format_rfc1123_time(datebuf, time(NULL));
+    tor_asprintf(&datestring, "Date: %s\r\n", datebuf);
+  }
+
+  if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n%s\r\n",
+      status, reason_phrase, datestring?datestring:"") < 0) {
     log_warn(LD_BUG,"status line too long.");
+    tor_free(datestring);
     return;
   }
+  tor_free(datestring);
+
   log_debug(LD_DIRSERV,"Wrote status 'HTTP/1.0 %d %s'", status, reason_phrase);
   connection_buf_add(buf, strlen(buf), TO_CONN(conn));
 }
