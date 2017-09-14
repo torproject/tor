@@ -1,3 +1,43 @@
+Changes in version 0.3.0.11 - 2017-09-18
+   Tor 0.3.0.11 backports a collection of bugfixes from Tor the 0.3.1
+   series.
+
+   MORE HERE.
+
+  o Minor features (code style, backport from 0.3.1.7):
+    - Add "Falls through" comments to our codebase, in order to silence
+      GCC 7's -Wimplicit-fallthrough warnings. Patch from Andreas
+      Stieger. Closes ticket 22446.
+
+  o Minor features:
+    - Update geoip and geoip6 to the September 6 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation, backport from 0.3.1.7):
+    - Avoid compiler warnings in the unit tests for calling tor_sscanf()
+      with wide string outputs. Fixes bug 15582; bugfix on 0.2.6.2-alpha.
+
+  o Minor bugfixes (controller, backport from 0.3.1.7):
+    - Do not crash when receiving a HSPOST command with an empty body.
+      Fixes part of bug 22644; bugfix on 0.2.7.1-alpha.
+    - Do not crash when receiving a POSTDESCRIPTOR command with an empty
+      body. Fixes part of bug 22644; bugfix on 0.2.0.1-alpha.
+
+  o Minor bugfixes (file limits, osx, backport from 0.3.1.5-alpha):
+    - When setting the maximum number of connections allowed by the OS,
+      always allow some extra file descriptors for other files. Fixes
+      bug 22797; bugfix on 0.2.0.10-alpha.
+
+  o Minor bugfixes (logging, relay, backport from 0.3.1.6-rc):
+    - Remove a forgotten debugging message when an introduction point
+      successfully establishes a hidden service prop224 circuit with
+      a client.
+    - Change three other log_warn() for an introduction point to
+      protocol warnings, because they can be failure from the network
+      and are not relevant to the operator. Fixes bug 23078; bugfix on
+      0.3.0.1-alpha and 0.3.0.2-alpha.
+
+
 Changes in version 0.3.0.10 - 2017-08-02
    Tor 0.3.0.10 backports a collection of small-to-medium bugfixes
    from the current Tor alpha series. OpenBSD users and TPROXY users
