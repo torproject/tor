@@ -85,8 +85,6 @@ outbuf_table_ent_eq(const outbuf_table_ent_t *a, const outbuf_table_ent_t *b)
   return a->chan->global_identifier == b->chan->global_identifier;
 }
 
-static outbuf_table_t outbuf_table = HT_INITIALIZER();
-
 HT_PROTOTYPE(outbuf_table_s, outbuf_table_ent_s, node, outbuf_table_ent_hash,
              outbuf_table_ent_eq)
 HT_GENERATE2(outbuf_table_s, outbuf_table_ent_s, node, outbuf_table_ent_hash,
@@ -143,13 +141,6 @@ free_outbuf_info_by_ent(outbuf_table_ent_t *ent, void *data)
             ent->chan->global_identifier);
   tor_free(ent);
   return 1; /* So HT_FOREACH_FN will remove the element */
-}
-
-/* Clean up outbuf_table. Probably because the KIST sched impl is going away */
-static void
-free_all_outbuf_info(void)
-{
-  HT_FOREACH_FN(outbuf_table_s, &outbuf_table, free_outbuf_info_by_ent, NULL);
 }
 
 /* Free the given socket table entry ent. */
@@ -425,7 +416,6 @@ have_work(void)
 static void
 kist_free_all(void)
 {
-  free_all_outbuf_info();
   free_all_socket_info();
 }
 
@@ -507,6 +497,8 @@ kist_scheduler_run(void)
   /* Channels to be readding to pending at the end */
   smartlist_t *to_readd = NULL;
   smartlist_t *cp = get_channels_pending();
+
+  outbuf_table_t outbuf_table = HT_INITIALIZER();
 
   /* For each pending channel, collect new kernel information */
   SMARTLIST_FOREACH_BEGIN(cp, const channel_t *, pchan) {
@@ -618,7 +610,8 @@ kist_scheduler_run(void)
   /* Write the outbuf of any channels that still have data */
   HT_FOREACH_FN(outbuf_table_s, &outbuf_table, each_channel_write_to_kernel,
                 NULL);
-  free_all_outbuf_info();
+  /* We are done with it. */
+  HT_FOREACH_FN(outbuf_table_s, &outbuf_table, free_outbuf_info_by_ent, NULL);
   HT_CLEAR(outbuf_table_s, &outbuf_table);
 
   log_debug(LD_SCHED, "len pending=%d, len to_readd=%d",
