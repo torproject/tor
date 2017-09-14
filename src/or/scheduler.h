@@ -139,9 +139,10 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
  * Defined in scheduler.c
  *********************************/
 smartlist_t *get_channels_pending(void);
-struct event *get_run_sched_ev(void);
 MOCK_DECL(int, scheduler_compare_channels,
           (const void *c1_v, const void *c2_v));
+void scheduler_ev_active(int flags);
+void scheduler_ev_add(const struct timeval *next_run);
 
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *channels_pending;

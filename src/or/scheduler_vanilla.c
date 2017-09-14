@@ -43,15 +43,9 @@ vanilla_scheduler_schedule(void)
   if (!have_work()) {
     return;
   }
-  struct event *ev = get_run_sched_ev();
-  IF_BUG_ONCE(!ev) {
-    log_warn(LD_SCHED, "Wow we don't have a scheduler event. That's really "
-             "weird! We can't really schedule a scheduling run with libevent "
-             "without it. So we're going to stop trying now and hope we have "
-             "one next time. If we never get one, we're broken.");
-    return;
-  }
-  event_active(ev, EV_TIMEOUT, 1);
+
+  /* Activate our event so it can process channels. */
+  scheduler_ev_active(EV_TIMEOUT);
 }
 
 static void

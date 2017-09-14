@@ -471,14 +471,7 @@ kist_scheduler_schedule(void)
   struct monotime_t now;
   struct timeval next_run;
   int32_t diff;
-  struct event *ev = get_run_sched_ev();
-  IF_BUG_ONCE(!ev) {
-    log_warn(LD_SCHED, "Wow we don't have a scheduler event. That's really "
-             "weird! We can't really schedule a scheduling run with libevent "
-             "without it. So we're going to stop trying now and hope we have "
-             "one next time. If we never get one, we're broken.");
-    return;
-  }
+
   if (!have_work()) {
     return;
   }
@@ -489,9 +482,9 @@ kist_scheduler_schedule(void)
     /* 1000 for ms -> us */
     next_run.tv_usec = (sched_run_interval - diff) * 1000;
     /* Readding an event reschedules it. It does not duplicate it. */
-    event_add(ev, &next_run);
+    scheduler_ev_add(&next_run);
   } else {
-    event_active(ev, EV_TIMEOUT, 1);
+    scheduler_ev_active(EV_TIMEOUT);
   }
 }
 

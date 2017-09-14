@@ -214,13 +214,6 @@ get_channels_pending(void)
   return channels_pending;
 }
 
-/* Return our libevent scheduler event. */
-struct event *
-get_run_sched_ev(void)
-{
-  return run_sched_ev;
-}
-
 /* Comparison function to use when sorting pending channels */
 MOCK_IMPL(int,
 scheduler_compare_channels, (const void *c1_v, const void *c2_v))
@@ -494,6 +487,24 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
                 U64_PRINTF_ARG(chan->global_identifier), chan);
     }
   }
+}
+
+/* Add the scheduler event to the set of pending events with next_run being
+ * the time up to libevent should wait before triggering the event. */
+void
+scheduler_ev_add(const struct timeval *next_run)
+{
+  tor_assert(run_sched_ev);
+  tor_assert(next_run);
+  event_add(run_sched_ev, next_run);
+}
+
+/* Make the scheduler event active with the given flags. */
+void
+scheduler_ev_active(int flags)
+{
+  tor_assert(run_sched_ev);
+  event_active(run_sched_ev, flags, 1);
 }
 
 /*
