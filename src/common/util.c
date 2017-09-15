@@ -477,7 +477,7 @@ round_to_power_of_2(uint64_t u64)
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
  * <b>divisor</b> == 0.  If no such x can be expressed as an unsigned, return
- * UINT_MAX */
+ * UINT_MAX. Asserts if divisor is zero. */
 unsigned
 round_to_next_multiple_of(unsigned number, unsigned divisor)
 {
@@ -491,7 +491,7 @@ round_to_next_multiple_of(unsigned number, unsigned divisor)
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
  * <b>divisor</b> == 0. If no such x can be expressed as a uint32_t, return
- * UINT32_MAX */
+ * UINT32_MAX. Asserts if divisor is zero. */
 uint32_t
 round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor)
 {
@@ -506,7 +506,7 @@ round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor)
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
  * <b>divisor</b> == 0. If no such x can be expressed as a uint64_t, return
- * UINT64_MAX */
+ * UINT64_MAX. Asserts if divisor is zero. */
 uint64_t
 round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
 {
