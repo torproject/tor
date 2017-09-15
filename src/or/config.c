@@ -6120,6 +6120,8 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   dirinfo_type_t type = 0;
   double weight = 1.0;
 
+  memset(v3_digest, 0, sizeof(v3_digest));
+
   items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);

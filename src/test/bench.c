@@ -200,6 +200,7 @@ bench_onion_ntor_impl(void)
   curve25519_public_key_generate(&keypair2.pubkey, &keypair2.seckey);
   dimap_add_entry(&keymap, keypair1.pubkey.public_key, &keypair1);
   dimap_add_entry(&keymap, keypair2.pubkey.public_key, &keypair2);
+  crypto_rand((char *)nodeid, sizeof(nodeid));
 
   reset_perftime();
   start = perftime();

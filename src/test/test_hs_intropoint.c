@@ -783,7 +783,7 @@ static void
 test_received_introduce1_handling(void *arg)
 {
   int ret;
-  uint8_t *request = NULL, buf[128];
+  uint8_t *request = NULL, buf[128];;
   trn_cell_introduce1_t *cell = NULL;
   or_circuit_t *circ = NULL;
 
@@ -796,6 +796,7 @@ test_received_introduce1_handling(void *arg)
   /* Too small request length. An INTRODUCE1 expect at the very least a
    * DIGEST_LEN size. */
   {
+    memset(buf, 0, sizeof(buf));
     circ = helper_create_intro_circuit();
     ret = hs_intro_received_introduce1(circ, buf, DIGEST_LEN - 1);
     tt_int_op(ret, OP_EQ, -1);
@@ -809,6 +810,7 @@ test_received_introduce1_handling(void *arg)
   {
     circ = helper_create_intro_circuit();
     uint8_t test[2]; /* Too small request. */
+    memset(test, 0, sizeof(test));
     ret = handle_introduce1(circ, test, sizeof(test));
     tor_free(circ->p_chan);
     circuit_free(TO_CIRCUIT(circ));

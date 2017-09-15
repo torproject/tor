@@ -261,13 +261,11 @@ circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
     if (circ->n_mux == cmux) {
       next_p = &(circ->next_active_on_n_chan);
       prev_p = &(circ->prev_active_on_n_chan);
-      direction = CELL_DIRECTION_OUT;
     } else {
       or_circ = TO_OR_CIRCUIT(circ);
       tor_assert(or_circ->p_mux == cmux);
       next_p = &(or_circ->next_active_on_p_chan);
       prev_p = &(or_circ->prev_active_on_p_chan);
-      direction = CELL_DIRECTION_IN;
     }
   }
   tor_assert(next_p);
@@ -1655,7 +1653,6 @@ circuitmux_assert_okay_pass_one(circuitmux_t *cmux)
   circid_t circ_id;
   circuit_t *circ;
   or_circuit_t *or_circ;
-  unsigned int circ_is_active;
   circuit_t **next_p, **prev_p;
   unsigned int n_circuits, n_active_circuits, n_cells;
 
@@ -1679,8 +1676,6 @@ circuitmux_assert_okay_pass_one(circuitmux_t *cmux)
     tor_assert(chan);
     circ = circuit_get_by_circid_channel_even_if_marked(circ_id, chan);
     tor_assert(circ);
-    /* Clear the circ_is_active bit to start */
-    circ_is_active = 0;
 
     /* Assert that we know which direction this is going */
     tor_assert((*i)->muxinfo.direction == CELL_DIRECTION_OUT ||
@@ -1707,7 +1702,7 @@ circuitmux_assert_okay_pass_one(circuitmux_t *cmux)
      * Should this circuit be active?  I.e., does the mux know about > 0
      * cells on it?
      */
-    circ_is_active = ((*i)->muxinfo.cell_count > 0);
+    const int circ_is_active = ((*i)->muxinfo.cell_count > 0);
 
     /* It should be in the linked list iff it's active */
     if (circ_is_active) {
@@ -1759,7 +1754,6 @@ circuitmux_assert_okay_pass_two(circuitmux_t *cmux)
   circuit_t **next_p, **prev_p;
   channel_t *chan;
   unsigned int n_active_circuits = 0;
-  cell_direction_t direction;
   chanid_circid_muxinfo_t search, *hashent = NULL;
 
   tor_assert(cmux);
@@ -1778,7 +1772,7 @@ circuitmux_assert_okay_pass_two(circuitmux_t *cmux)
     curr_or_circ = NULL;
     next_circ = NULL;
     next_p = prev_p = NULL;
-    direction = 0;
+    cell_direction_t direction;
 
     /* Figure out if this is n_mux or p_mux */
     if (cmux == curr_circ->n_mux) {

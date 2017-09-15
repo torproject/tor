@@ -704,6 +704,7 @@ test_config_parse_transport_plugin_line(void *arg)
   tt_int_op(r, OP_LT, 0);
   r = parse_transport_line(options,
       "transport_1,transport_2 proxy 1.2.3.4:567", 1, 1);
+  tt_int_op(r, OP_LT, 0);
   /* No port error exit */
   r = parse_transport_line(options,
       "transport_1 socks5 1.2.3.4", 1, 0);

@@ -2934,7 +2934,7 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   }
 
   Wgg /= weight_scale;
-  Wgm /= weight_scale;
+  Wgm /= weight_scale; (void) Wgm; // unused from here on.
   Wgd /= weight_scale;
 
   Wmg /= weight_scale;
@@ -2942,8 +2942,8 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   Wme /= weight_scale;
   Wmd /= weight_scale;
 
-  Weg /= weight_scale;
-  Wem /= weight_scale;
+  Weg /= weight_scale; (void) Weg; // unused from here on.
+  Wem /= weight_scale; (void) Wem; // unused from here on.
   Wee /= weight_scale;
   Wed /= weight_scale;
 

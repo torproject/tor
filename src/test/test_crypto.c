@@ -1406,6 +1406,7 @@ test_crypto_digests(void *arg)
              AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);
 
   r = crypto_pk_get_common_digests(k, &pkey_digests);
+  tt_int_op(r, OP_EQ, 0);
 
   tt_mem_op(hex_str(pkey_digests.d[DIGEST_SHA1], DIGEST_LEN),OP_EQ,
              AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);
@@ -2593,6 +2594,8 @@ test_crypto_ed25519_testvectors(void *arg)
     uint8_t blinding_param[32];
     ed25519_signature_t sig;
     int sign;
+
+    memset(&curvekp, 0xd0, sizeof(curvekp));
 
 #define DECODE(p,s) base16_decode((char*)(p),sizeof(p),(s),strlen(s))
 #define EQ(a,h) test_memeq_hex((const char*)(a), (h))

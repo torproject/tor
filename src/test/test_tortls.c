@@ -1378,6 +1378,7 @@ test_tortls_evaluate_ecgroup_for_tls(void *ignored)
 
   ret = evaluate_ecgroup_for_tls("P224");
   //  tt_int_op(ret, OP_EQ, 1); This varies between machines
+  tt_assert(ret == 0 || ret == 1);
 
  done:
   (void)0;

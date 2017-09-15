@@ -696,7 +696,6 @@ rend_config_service(const config_line_t *line_,
        * of authorized clients. */
       smartlist_t *type_names_split, *clients;
       const char *authname;
-      int num_clients;
       if (service->auth_type != REND_NO_AUTH) {
         log_warn(LD_CONFIG, "Got multiple HiddenServiceAuthorizeClient "
                  "lines for a single service.");
@@ -740,14 +739,15 @@ rend_config_service(const config_line_t *line_,
       SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
       smartlist_free(type_names_split);
       /* Remove duplicate client names. */
-      num_clients = smartlist_len(clients);
-      smartlist_sort_strings(clients);
-      smartlist_uniq_strings(clients);
-      if (smartlist_len(clients) < num_clients) {
-        log_info(LD_CONFIG, "HiddenServiceAuthorizeClient contains %d "
-                            "duplicate client name(s); removing.",
-                 num_clients - smartlist_len(clients));
-        num_clients = smartlist_len(clients);
+      {
+        int num_clients = smartlist_len(clients);
+        smartlist_sort_strings(clients);
+        smartlist_uniq_strings(clients);
+        if (smartlist_len(clients) < num_clients) {
+          log_info(LD_CONFIG, "HiddenServiceAuthorizeClient contains %d "
+                   "duplicate client name(s); removing.",
+                   num_clients - smartlist_len(clients));
+        }
       }
       SMARTLIST_FOREACH_BEGIN(clients, const char *, client_name)
       {

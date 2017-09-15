@@ -161,6 +161,7 @@ get_token_arguments(memarea_t *area, directory_token_t *tok,
   char *cp = mem;
   int j = 0;
   char *args[MAX_ARGS];
+  memset(args, 0, sizeof(args));
   while (*cp) {
     if (j == MAX_ARGS)
       return -1;

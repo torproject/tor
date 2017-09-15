@@ -3837,7 +3837,6 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
   char *url, *url_mem, *header;
   time_t if_modified_since = 0;
   int zlib_compressed_in_url;
-  size_t url_len;
   unsigned compression_methods_supported;
 
   /* We ignore the body of a GET request. */
@@ -3868,12 +3867,13 @@ directory_handle_command_get,(dir_connection_t *conn, const char *headers,
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", escaped(url));
 
   url_mem = url;
-  url_len = strlen(url);
+  {
+    size_t url_len = strlen(url);
 
-  zlib_compressed_in_url = url_len > 2 && !strcmp(url+url_len-2, ".z");
-  if (zlib_compressed_in_url) {
-    url[url_len-2] = '\0';
-    url_len -= 2;
+    zlib_compressed_in_url = url_len > 2 && !strcmp(url+url_len-2, ".z");
+    if (zlib_compressed_in_url) {
+      url[url_len-2] = '\0';
+    }
   }
 
   if ((header = http_get_header(headers, "Accept-Encoding: "))) {

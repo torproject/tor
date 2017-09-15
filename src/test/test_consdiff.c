@@ -19,28 +19,29 @@ test_consdiff_smartlist_slice(void *arg)
 {
   smartlist_t *sl = smartlist_new();
   smartlist_slice_t *sls;
+  int items[6] = {0,0,0,0,0,0};
 
   /* Create a regular smartlist. */
   (void)arg;
-  smartlist_add(sl, (void*)1);
-  smartlist_add(sl, (void*)2);
-  smartlist_add(sl, (void*)3);
-  smartlist_add(sl, (void*)4);
-  smartlist_add(sl, (void*)5);
+  smartlist_add(sl, &items[1]);
+  smartlist_add(sl, &items[2]);
+  smartlist_add(sl, &items[3]);
+  smartlist_add(sl, &items[4]);
+  smartlist_add(sl, &items[5]);
 
   /* See if the slice was done correctly. */
   sls = smartlist_slice(sl, 2, 5);
   tt_ptr_op(sl, OP_EQ, sls->list);
-  tt_ptr_op((void*)3, OP_EQ, smartlist_get(sls->list, sls->offset));
-  tt_ptr_op((void*)5, OP_EQ,
+  tt_ptr_op(&items[3], OP_EQ, smartlist_get(sls->list, sls->offset));
+  tt_ptr_op(&items[5], OP_EQ,
       smartlist_get(sls->list, sls->offset + (sls->len-1)));
   tor_free(sls);
 
   /* See that using -1 as the end does get to the last element. */
   sls = smartlist_slice(sl, 2, -1);
   tt_ptr_op(sl, OP_EQ, sls->list);
-  tt_ptr_op((void*)3, OP_EQ, smartlist_get(sls->list, sls->offset));
-  tt_ptr_op((void*)5, OP_EQ,
+  tt_ptr_op(&items[3], OP_EQ, smartlist_get(sls->list, sls->offset));
+  tt_ptr_op(&items[5], OP_EQ,
       smartlist_get(sls->list, sls->offset + (sls->len-1)));
 
  done:

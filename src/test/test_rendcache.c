@@ -58,6 +58,7 @@ test_rend_cache_lookup_entry(void *data)
   tt_int_op(ret, OP_EQ, 0);
 
   ret = rend_cache_lookup_entry(service_id, 2, &entry);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(entry);
   tt_int_op(entry->len, OP_EQ, strlen(desc_holder->desc_str));
   tt_str_op(entry->desc, OP_EQ, desc_holder->desc_str);

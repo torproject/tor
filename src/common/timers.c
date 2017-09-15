@@ -191,7 +191,7 @@ timers_initialize(void)
   if (BUG(global_timeouts))
     return; // LCOV_EXCL_LINE
 
-  timeout_error_t err;
+  timeout_error_t err = 0;
   global_timeouts = timeouts_open(0, &err);
   if (!global_timeouts) {
     // LCOV_EXCL_START -- this can only fail on malloc failure.
