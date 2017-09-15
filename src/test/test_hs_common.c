@@ -1614,7 +1614,6 @@ helper_test_hsdir_sync(networkstatus_t *ns,
    * exhausted all of them: */
   tt_assert(!pick_hsdir_v3(&service->keys.identity_pk));
 
-
  done:
   /* At the end: free all services and initialize the subsystem again, we will
    * need it for next scenario. */
@@ -1763,7 +1762,6 @@ test_client_service_hsdir_set_sync(void *arg)
    *  +------------------------------------------------------------------+
    */
   helper_test_hsdir_sync(ns, LATE_IN_TP_TO_SRV, EARLY_IN_SRV_TO_TP, 1);
-
 
  done:
   networkstatus_vote_free(ns);
