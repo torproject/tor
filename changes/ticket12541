@@ -1,0 +1,23 @@
+  o Major feature (scheduler, channel):
+    - Introducing the KIST scheduler which stands for Kernel Informed Socket
+      Transport. It is only available on Linux systems. This comes from a
+      researched and published paper you can find here:
+
+      http://www.robgjansen.com/publications/kist-sec2014.pdf
+      https://arxiv.org/abs/1709.01044
+      
+      This is also a major refactoring of the entire scheduler subsystem in
+      order for it to be more modular and thus much more easier to add more
+      scheduler type later. The current scheduler has been named "Vanilla" but
+      we favor KIST if available in this version.
+
+      A new torrc option has been added and named "Schedulers type1,type2,..."
+      which allows a user to select which scheduler type it wants tor to use.
+      It is also possible to change it at runtime. It is an ordered list by
+      priority. KIST might not be available on all platforms so there is a
+      fallback to "KISTLite" that uses the same mechanisms but without the
+      kernel support. 
+
+      The current default values are: Schedulers KIST,KISTLite,Vanilla.
+
+      Closes ticket 12541.
