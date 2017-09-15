@@ -2696,7 +2696,7 @@ channel_do_open_actions(channel_t *chan)
     router_set_status(chan->identity_digest, 1);
   } else {
     /* only report it to the geoip module if it's not a known router */
-    if (!router_get_by_id_digest(chan->identity_digest)) {
+    if (!connection_or_digest_is_known_relay(chan->identity_digest)) {
       if (channel_get_addr_if_possible(chan, &remote_addr)) {
         char *transport_name = NULL;
         if (chan->get_transport_name(chan, &transport_name) < 0)
