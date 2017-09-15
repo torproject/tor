@@ -1290,7 +1290,7 @@ test_tortls_get_tlssecrets(void *ignored)
 {
   (void)ignored;
   int ret;
-  uint8_t *secret_out = tor_malloc_zero(DIGEST256_LEN);;
+  uint8_t *secret_out = tor_malloc_zero(DIGEST256_LEN);
   tor_tls_t *tls;
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = tor_malloc_zero(sizeof(SSL));

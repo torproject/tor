@@ -3485,7 +3485,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->RendPostPeriod < min_rendpostperiod) {
     log_warn(LD_CONFIG, "RendPostPeriod option is too short; "
              "raising to %d seconds.", min_rendpostperiod);
-    options->RendPostPeriod = min_rendpostperiod;;
+    options->RendPostPeriod = min_rendpostperiod;
   }
 
   if (options->RendPostPeriod > MAX_DIR_PERIOD) {

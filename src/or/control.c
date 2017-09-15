@@ -5846,7 +5846,7 @@ control_event_circuit_cell_stats(void)
   if (!get_options()->TestingEnableCellStatsEvent ||
       !EVENT_IS_INTERESTING(EVENT_CELL_STATS))
     return 0;
-  cell_stats = tor_malloc(sizeof(cell_stats_t));;
+  cell_stats = tor_malloc(sizeof(cell_stats_t));
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!circ->testing_cell_stats)
       continue;

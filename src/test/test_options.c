@@ -282,7 +282,7 @@ test_have_enough_mem_for_dircache(void *arg)
   or_options_t *opt=NULL;
   or_options_t *dflt=NULL;
   config_line_t *cl=NULL;
-  char *msg=NULL;;
+  char *msg=NULL;
   int r;
   const char *configuration = "ORPort 8080\nDirCache 1", *expect_errmsg;
 

@@ -213,7 +213,7 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
     while (dot > target && *dot != '.')
       dot--;
     if (*dot == '.') dot++;
-    nodename = tor_strndup(dot, len-5-(dot-target));;
+    nodename = tor_strndup(dot, len-5-(dot-target));
     node = node_get_by_nickname(nodename, NNF_NO_WARN_UNNAMED);
     tor_free(nodename);
     if (!node ||

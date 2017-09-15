@@ -3745,119 +3745,119 @@ test_config_port_cfg_line_extract_addrport(void *arg)
 
   tt_int_op(port_cfg_line_extract_addrport("", &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, "");;
+  tt_str_op(a, OP_EQ, "");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("hello", &a, &unixy, &rest),
             OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, "hello");;
+  tt_str_op(a, OP_EQ, "hello");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport(" flipperwalt gersplut",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(a, OP_EQ, "flipperwalt");
   tt_str_op(rest, OP_EQ, "gersplut");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport(" flipperwalt \t gersplut",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(a, OP_EQ, "flipperwalt");
   tt_str_op(rest, OP_EQ, "gersplut");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("flipperwalt \t gersplut",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(a, OP_EQ, "flipperwalt");
   tt_str_op(rest, OP_EQ, "gersplut");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:flipperwalt \t gersplut",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(a, OP_EQ, "flipperwalt");
   tt_str_op(rest, OP_EQ, "gersplut");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("lolol",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(a, OP_EQ, "lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:lolol",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(a, OP_EQ, "lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:lolol ",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(a, OP_EQ, "lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport(" unix:lolol",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(a, OP_EQ, "lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("foobar:lolol",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, "foobar:lolol");;
+  tt_str_op(a, OP_EQ, "foobar:lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport(":lolol",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 0);
-  tt_str_op(a, OP_EQ, ":lolol");;
+  tt_str_op(a, OP_EQ, ":lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:\"lolol\"",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(a, OP_EQ, "lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:\"lolol\" ",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(a, OP_EQ, "lolol");
   tt_str_op(rest, OP_EQ, "");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:\"lolol\" foo ",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(a, OP_EQ, "lolol");
   tt_str_op(rest, OP_EQ, "foo ");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:\"lol ol\" foo ",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lol ol");;
+  tt_str_op(a, OP_EQ, "lol ol");
   tt_str_op(rest, OP_EQ, "foo ");
   tor_free(a);
 
   tt_int_op(port_cfg_line_extract_addrport("unix:\"lol\\\" ol\" foo ",
                                            &a, &unixy, &rest), OP_EQ, 0);
   tt_int_op(unixy, OP_EQ, 1);
-  tt_str_op(a, OP_EQ, "lol\" ol");;
+  tt_str_op(a, OP_EQ, "lol\" ol");
   tt_str_op(rest, OP_EQ, "foo ");
   tor_free(a);
 

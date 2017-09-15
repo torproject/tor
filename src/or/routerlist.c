@@ -2306,7 +2306,7 @@ routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
 {
   /* XXXX MOVE ? */
   node_t fake_node;
-  const node_t *node = node_get_by_id(router->cache_info.identity_digest);;
+  const node_t *node = node_get_by_id(router->cache_info.identity_digest);
   if (node == NULL) {
     memset(&fake_node, 0, sizeof(fake_node));
     fake_node.ri = (routerinfo_t *)router;

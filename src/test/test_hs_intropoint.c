@@ -170,7 +170,7 @@ test_establish_intro_wrong_purpose(void *arg)
   ssize_t cell_len = 0;
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void)arg;
 
@@ -211,7 +211,7 @@ static void
 test_establish_intro_wrong_keytype(void *arg)
 {
   int retval;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
   char circ_nonce[DIGEST_LEN] = {0};
 
   (void) arg;
@@ -239,7 +239,7 @@ test_establish_intro_wrong_keytype2(void *arg)
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
 
@@ -275,7 +275,7 @@ test_establish_intro_wrong_mac(void *arg)
   ssize_t cell_len = 0;
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   trn_cell_establish_intro_t *cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
 
@@ -347,7 +347,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
   ssize_t cell_len = 0;
   size_t bad_auth_key_len = ED25519_PUBKEY_LEN - 1;
   trn_cell_establish_intro_t *cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
 
@@ -392,7 +392,7 @@ test_establish_intro_wrong_sig_len(void *arg)
   ssize_t cell_len = 0;
   size_t bad_sig_len = ED25519_SIG_LEN - 1;
   trn_cell_establish_intro_t *cell = NULL;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
 
@@ -435,7 +435,7 @@ test_establish_intro_wrong_sig(void *arg)
   char circ_nonce[DIGEST_LEN] = {0};
   uint8_t cell_body[RELAY_PAYLOAD_SIZE];
   ssize_t cell_len = 0;
-  or_circuit_t *intro_circ = or_circuit_new(0,NULL);;
+  or_circuit_t *intro_circ = or_circuit_new(0,NULL);
 
   (void) arg;
 
@@ -783,7 +783,7 @@ static void
 test_received_introduce1_handling(void *arg)
 {
   int ret;
-  uint8_t *request = NULL, buf[128];;
+  uint8_t *request = NULL, buf[128];
   trn_cell_introduce1_t *cell = NULL;
   or_circuit_t *circ = NULL;
 

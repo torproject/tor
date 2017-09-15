@@ -1522,7 +1522,7 @@ test_entry_guard_retry_unreachable(void *arg)
   entry_guards_expand_sample(gs);
   /* Let's say that we have two guards, and they're down.
    */
-  time_t start = approx_time();;
+  time_t start = approx_time();
   entry_guard_t *g1 = smartlist_get(gs->sampled_entry_guards, 0);
   entry_guard_t *g2 = smartlist_get(gs->sampled_entry_guards, 1);
   entry_guard_t *g3 = smartlist_get(gs->sampled_entry_guards, 2);

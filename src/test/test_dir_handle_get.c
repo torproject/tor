@@ -870,7 +870,7 @@ test_dir_handle_get_server_descriptors_authority(void* data)
   mock_routerinfo->cache_info.signed_descriptor_body =
     tor_strdup(TEST_DESCRIPTOR);
   mock_routerinfo->cache_info.signed_descriptor_len =
-    strlen(TEST_DESCRIPTOR) - annotation_len;;
+    strlen(TEST_DESCRIPTOR) - annotation_len;
   mock_routerinfo->cache_info.annotations_len = annotation_len;
   mock_routerinfo->cache_info.published_on = time(NULL);
 
