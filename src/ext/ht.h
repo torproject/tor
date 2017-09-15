@@ -150,6 +150,8 @@
 #define HT_CLEAR(name, head)         name##_HT_CLEAR(head)
 #define HT_INIT(name, head)          name##_HT_INIT(head)
 #define HT_REP_IS_BAD_(name, head)    name##_HT_REP_IS_BAD_(head)
+#define HT_FOREACH_FN(name, head, fn, data) \
+   name##_HT_FOREACH_FN((head), (fn), (data))
 /* Helper: */
 static inline unsigned
 ht_improve_hash(unsigned h)

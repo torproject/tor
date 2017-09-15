@@ -2603,8 +2603,8 @@ channel_flush_cells(channel_t *chan)
  * available.
  */
 
-int
-channel_more_to_flush(channel_t *chan)
+MOCK_IMPL(int,
+channel_more_to_flush, (channel_t *chan))
 {
   tor_assert(chan);
 
@@ -4841,8 +4841,6 @@ channel_update_xmit_queue_size(channel_t *chan)
                 U64_FORMAT ", new size is " U64_FORMAT,
                 U64_PRINTF_ARG(adj), U64_PRINTF_ARG(chan->global_identifier),
                 U64_PRINTF_ARG(estimated_total_queue_size));
-      /* Tell the scheduler we're increasing the queue size */
-      scheduler_adjust_queue_size(chan, 1, adj);
     }
   } else if (queued < chan->bytes_queued_for_xmit) {
     adj = chan->bytes_queued_for_xmit - queued;
@@ -4865,8 +4863,6 @@ channel_update_xmit_queue_size(channel_t *chan)
                 U64_FORMAT ", new size is " U64_FORMAT,
                 U64_PRINTF_ARG(adj), U64_PRINTF_ARG(chan->global_identifier),
                 U64_PRINTF_ARG(estimated_total_queue_size));
-      /* Tell the scheduler we're decreasing the queue size */
-      scheduler_adjust_queue_size(chan, -1, adj);
     }
   }
 }

@@ -568,7 +568,7 @@ MOCK_DECL(ssize_t, channel_flush_some_cells,
           (channel_t *chan, ssize_t num_cells));
 
 /* Query if data available on this channel */
-int channel_more_to_flush(channel_t *chan);
+MOCK_DECL(int, channel_more_to_flush, (channel_t *chan));
 
 /* Notify flushed outgoing for dirreq handling */
 void channel_notify_flushed(channel_t *chan);

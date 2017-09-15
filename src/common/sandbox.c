@@ -653,6 +653,25 @@ sb_socketpair(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+#ifdef HAVE_KIST_SUPPORT
+
+#include <linux/sockios.h>
+
+static int
+sb_ioctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  (void) filter;
+
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(ioctl),
+                          SCMP_CMP(1, SCMP_CMP_EQ, SIOCOUTQNSD));
+  if (rc)
+    return rc;
+  return 0;
+}
+
+#endif /* HAVE_KIST_SUPPORT */
+
 /**
  * Function responsible for setting up the setsockopt syscall for
  * the seccomp filter sandbox.
@@ -756,6 +775,15 @@ sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
       SCMP_CMP(1, SCMP_CMP_EQ, SOL_IPV6),
       SCMP_CMP(2, SCMP_CMP_EQ, IP6T_SO_ORIGINAL_DST));
+  if (rc)
+    return rc;
+#endif
+
+#ifdef HAVE_KIST_SUPPORT
+#include <netinet/tcp.h>
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_TCP),
+      SCMP_CMP(2, SCMP_CMP_EQ, TCP_INFO));
   if (rc)
     return rc;
 #endif
@@ -1060,7 +1088,11 @@ static sandbox_filter_func_t filter_func[] = {
     sb_socket,
     sb_setsockopt,
     sb_getsockopt,
-    sb_socketpair
+    sb_socketpair,
+
+#ifdef HAVE_KIST_SUPPORT
+    sb_ioctl,
+#endif
 };
 
 const char *
