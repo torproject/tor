@@ -433,11 +433,15 @@ test_client_pick_intro(void *arg)
                             hs_desc_intro_point_t *, ip) {
       extend_info_t *intro_ei = desc_intro_point_to_extend_info(ip);
       if (intro_ei) {
-        char *ip_addr = tor_addr_to_str_dup(&intro_ei->addr);
-        tor_assert(ip_addr);
-        ret =routerset_parse(get_options_mutable()->ExcludeNodes, ip_addr, "");
+        const char *ptr;
+        char ip_addr[TOR_ADDR_BUF_LEN];
+        /* We need to decorate in case it is an IPv6 else routerset_parse()
+         * doesn't like it. */
+        ptr = tor_addr_to_str(ip_addr, &intro_ei->addr, sizeof(ip_addr), 1);
+        tt_assert(ptr == ip_addr);
+        ret = routerset_parse(get_options_mutable()->ExcludeNodes,
+                              ip_addr, "");
         tt_int_op(ret, OP_EQ, 0);
-        tor_free(ip_addr);
         extend_info_free(intro_ei);
       }
     } SMARTLIST_FOREACH_END(ip);
