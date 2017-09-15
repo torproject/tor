@@ -375,6 +375,10 @@ socket_can_write(socket_table_t *table, const channel_t *chan)
     return 1; // Just return true, saying that kist wouldn't limit the socket
   }
 
+  /* We previously caclulated a write limit for this socket. In the below
+   * calculation, first determine how much room is left in bytes. Then divide
+   * that by the amount of space a cell takes. If there's room for at least 1
+   * cell, then KIST will allow the socket to write. */
   int64_t kist_limit_space =
     (int64_t) (ent->limit - ent->written) /
     (CELL_MAX_NETWORK_SIZE + TLS_PER_CELL_OVERHEAD);
