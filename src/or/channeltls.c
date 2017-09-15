@@ -1680,6 +1680,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   long apparent_skew = 0;
   tor_addr_t my_apparent_addr = TOR_ADDR_NULL;
+  int started_here = 0;
+  const char *identity_digest = NULL;
 
   tor_assert(cell);
   tor_assert(chan);
@@ -1699,10 +1701,12 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   }
   tor_assert(chan->conn->handshake_state &&
              chan->conn->handshake_state->received_versions);
+  started_here = connection_or_nonopen_was_started_here(chan->conn);
+  identity_digest = chan->conn->identity_digest;
 
   if (chan->conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3) {
     tor_assert(chan->conn->link_proto >= 3);
-    if (chan->conn->handshake_state->started_here) {
+    if (started_here) {
       if (!(chan->conn->handshake_state->authenticated)) {
         log_fn(LOG_PROTOCOL_WARN, LD_OR,
                "Got a NETINFO cell from server, "
@@ -1813,7 +1817,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
              "they will not consider this connection canonical. They "
              "think we are at %s, but we think its %s.",
              safe_str(descr),
-             safe_str(hex_str(chan->conn->identity_digest, DIGEST_LEN)),
+             safe_str(hex_str(identity_digest, DIGEST_LEN)),
              safe_str(tor_addr_is_null(&my_apparent_addr) ?
              "<none>" : fmt_and_decorate_addr(&my_apparent_addr)),
              safe_str(fmt_addr32(me->addr)));
@@ -1857,8 +1861,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
              safe_str_client(chan->conn->base_.address),
              chan->conn->base_.port,
              (int)(chan->conn->link_proto),
-             hex_str(TLS_CHAN_TO_BASE(chan)->identity_digest,
-                     DIGEST_LEN),
+             hex_str(identity_digest, DIGEST_LEN),
              tor_addr_is_null(&my_apparent_addr) ?
              "<none>" : fmt_and_decorate_addr(&my_apparent_addr));
   }
@@ -1929,7 +1932,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   int n_certs, i;
   certs_cell_t *cc = NULL;
 
-  int send_netinfo = 0;
+  int send_netinfo = 0, started_here = 0;
 
   memset(x509_certs, 0, sizeof(x509_certs));
   memset(ed_certs, 0, sizeof(ed_certs));
@@ -1946,6 +1949,11 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
     connection_or_close_for_error(chan->conn, 0);               \
     goto err;                                                   \
   } while (0)
+
+  /* Can't use connection_or_nonopen_was_started_here(); its conn->tls
+   * check looks like it breaks
+   * test_link_handshake_recv_certs_ok_server().  */
+  started_here = chan->conn->handshake_state->started_here;
 
   if (chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
     ERR("We're not doing a v3 handshake!");
@@ -2060,7 +2068,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   /* Note that this warns more loudly about time and validity if we were
    * _trying_ to connect to an authority, not necessarily if we _did_ connect
    * to one. */
-  if (chan->conn->handshake_state->started_here &&
+  if (started_here &&
       router_digest_is_trusted_dir(TLS_CHAN_TO_BASE(chan)->identity_digest))
     severity = LOG_WARN;
   else
@@ -2078,7 +2086,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   if (!checked_rsa_id)
     ERR("Invalid certificate chain!");
 
-  if (chan->conn->handshake_state->started_here) {
+  if (started_here) {
     /* No more information is needed. */
 
     chan->conn->handshake_state->authenticated = 1;
