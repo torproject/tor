@@ -37,7 +37,6 @@ static unsigned int kist_lite_mode = 0;
  * by KIST. In that case, fallback to the naive approach. */
 static unsigned int kist_no_kernel_support = 0;
 #else /* !(defined(HAVE_KIST_SUPPORT)) */
-static unsigned int kist_no_kernel_support = 1;
 static unsigned int kist_lite_mode = 1;
 #endif /* defined(HAVE_KIST_SUPPORT) */
 
