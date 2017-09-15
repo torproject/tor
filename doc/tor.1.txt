@@ -790,16 +790,16 @@ GENERAL OPTIONS
     (Default: KIST,KISTLite,Vanilla)
  +
     The possible scheduler types are:
-+
-    KIST: Kernel Informed Socket Transport. Tor will use the kernel tcp
+ +
+    **KIST**: Kernel Informed Socket Transport. Tor will use the kernel tcp
     information stack per-socket to make an informed decision on if it should
     send or not the data. (Only available on Linux)
-+
-    KISTLite: Same as KIST but without kernel support which means that tor
+ +
+    **KISTLite**: Same as KIST but without kernel support which means that tor
     will use all the same mecanics as KIST but without the TCP information the
     kernel can provide.
-+
-    Vanilla: The scheduler that tor has always used that is do as much as
+ +
+    **Vanilla**: The scheduler that tor has always used that is do as much as
     possible or AMAP.
 
 [[KISTSchedRunInterval]] **KISTSchedRunInterval** __NUM__ **msec**::
