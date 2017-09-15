@@ -90,7 +90,7 @@ if [ "$CASE1" = 1 ]; then
   echo "==== Case 1: Test --key-expiration without argument and ensure usage"
   echo "             instructions are printed."
 
-  ${TOR} ${QUIETLY} --key-expiration 2>"$FN"
+  ${TOR} ${QUIETLY} --key-expiration 2>"$FN" || true
   grep "No valid argument to --key-expiration found!" "$FN" >/dev/null || \
     die "Tor didn't mention supported --key-expiration argmuents"
 
