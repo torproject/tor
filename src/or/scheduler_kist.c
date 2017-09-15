@@ -230,27 +230,62 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   ent->unacked = tcp.tcpi_unacked;
   ent->mss = tcp.tcpi_snd_mss;
 
-  /* TCP space is the number of bytes would could give to the kernel and it
-   * would be able to immediately push them to the network. */
+  /* In order to reduce outbound kernel queuing delays and thus improve Tor's
+   * ability to prioritize circuits, KIST wants to set a socket write limit that
+   * is near the amount that the socket would be able to immediately send into
+   * the Internet.
+   *
+   * We first calculate how much the socket could send immediately (assuming
+   * completely full packets) according to the congestion window and the number
+   * of unacked packets.
+   *
+   * Then we add a little extra space in a controlled way. We do this so any
+   * when the kernel gets ACKs back for data currently sitting in the "TCP
+   * space", it will already have some more data to send immediately. It will
+   * not have to wait for the scheduler to run again. The amount of extra space
+   * is a factor of the current congestion window. With the suggested
+   * sock_buf_size_factor value of 1.0, we allow at most 2*cwnd bytes to sit in
+   * the kernel: 1 cwnd on the wire waiting for ACKs and 1 cwnd ready and
+   * waiting to be sent when those ACKs finally come.
+   *
+   * In the below diagram, we see some bytes in the TCP-space (denoted by '*')
+   * that have be sent onto the wire and are waiting for ACKs. We have a little
+   * more room in "TCP space" that we can fill with data that will be
+   * immediately sent. We also see the "extra space" KIST calculates. The sum
+   * of the empty "TCP space" and the "extra space" is the kist-imposed write
+   * limit for this socket.
+   *
+   * <----------------kernel-outbound-socket-queue----------------|
+   * <*********---------------------------------------------------|
+   * <----TCP-space-----|----extra-space-----|
+   * <------------------|
+   *                    ^ ((cwnd - unacked) * mss) bytes
+   *                    |--------------------|
+   *                                         ^ ((cwnd * mss) * factor) bytes
+   */
+
+   /* Assuming all these values from the kernel are uint32_t still, they will
+   * always fit into a int64_t tcp_space variable. */
   tcp_space = (ent->cwnd - ent->unacked) * ent->mss;
   if (tcp_space < 0) {
     tcp_space = 0;
   }
 
-  /* Imagine we have filled up tcp_space already for a socket and the
-   * scheduler isn't going to run again for a while. We should write a little
-   * extra to the kernel so it has some data to send between scheduling runs
-   * if it gets ACKs back so it doesn't sit idle. With the suggested
-   * sock_buf_size_factor of 1.0, a socket can have at most 2*cwnd data in the
-   * kernel: 1 cwnd on the wire waiting for ACKs and 1 cwnd ready and waiting
-   * to be sent when those ACKs come. */
+  /* The clamp_double_to_int64 makes sure the first part fits into an int64_t.
+   * In fact, if sock_buf_size_factor is still forced to be >= 0 in config.c,
+   * then it will be positive for sure. Then we subtract a uint32_t. At worst
+   * we end up negative, but then we just set extra_space to 0 in the sanity
+   * check.*/
   extra_space =
     clamp_double_to_int64((ent->cwnd * ent->mss) * sock_buf_size_factor) -
     ent->notsent;
   if (extra_space < 0) {
     extra_space = 0;
   }
-  ent->limit = tcp_space + extra_space;
+
+  /* Finally we set the limit. Adding two positive int64_t together will always
+   * fit in an uint64_t. */
+  ent->limit = (uint64_t)tcp_space + (uint64_t)extra_space;
   return;
 
 #else /* HAVE_KIST_SUPPORT */
