@@ -1827,8 +1827,9 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   /** Warn when we get a netinfo skew with at least this value. */
 #define NETINFO_NOTICE_SKEW 3600
   if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
-      router_get_by_id_digest(chan->conn->identity_digest)) {
-    int trusted = router_digest_is_trusted_dir(chan->conn->identity_digest);
+      (started_here ||
+       connection_or_digest_is_known_relay(identity_digest))) {
+    int trusted = router_digest_is_trusted_dir(identity_digest);
     clock_skew_warning(TO_CONN(chan->conn), apparent_skew, trusted, LD_GENERAL,
                        "NETINFO cell", "OR");
   }
