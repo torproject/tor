@@ -1,0 +1,36 @@
+  o Major features (next-generation onion services):
+    - Tor now supports the next-generation onion services protocol for clients
+      and services! As part of this release, the core of proposal 224 has been
+      implemented and is available for experimentation and testing by our
+      users. This newer version of onion services (v3) features various
+      improvements over the legacy system:
+        a) Better crypto (replaced SHA1/DH/RSA1024 with SHA3/ed25519/curve25519)
+        b) Improved directory protocol leaking less to directory servers.
+        c) Improved directory protocol with smaller surface for targeted attacks.
+        d) Better onion address security against impersonation.
+        e) More extensible introduction/rendezvous protocol.
+        f) A cleaner and more modular codebase.
+
+      Furthermore, as part of this update, onion addresses increase in length
+      and are now 56 characters long:
+         4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad.onion
+
+      In the future, we will be releasing more options and features but we
+      first need a testing period, so that the current codebase matures and
+      becomes more robust. Here are some of the features we have planned:
+        1) Offline keys for onion services
+        2) Advanced client authorization for onion services
+        3) Improved guard algorithm for onion services
+        4) Next-gen onion service statistics
+
+      Please see our proposal for more details:
+        https://gitweb.torproject.org/torspec.git/tree/proposals/224-rend-spec-ng.txt
+
+      The default version for onion services remains v2 (the legacy system)
+      until this new codebase gets tested and hardened.
+
+      Service operators who want to experiment with the new system can use the
+      'HiddenServiceVersion 3' torrc directive along with the regular onion
+      service configuration options.
+
+      We will publish a blog post about this new feature soon! Enjoy!
