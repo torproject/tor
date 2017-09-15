@@ -4,7 +4,6 @@
 #define SCHEDULER_KIST_PRIVATE
 
 #include <event2/event.h>
-#include <netinet/tcp.h>
 
 #include "or.h"
 #include "buffers.h"
@@ -21,6 +20,7 @@
 
 #ifdef HAVE_KIST_SUPPORT
 /* Kernel interface needed for KIST. */
+#include <netinet/tcp.h>
 #include <linux/sockios.h>
 #endif /* HAVE_KIST_SUPPORT */
 
