@@ -1453,31 +1453,102 @@ helper_client_pick_hsdir(const ed25519_public_key_t *onion_identity_pk,
   ;
 }
 
-/** Set the consensus and system time based on <b>between_srv_and_tp</b>. If
- *  <b>between_srv_and_tp</b> is set, then set the time to be inside the time
- *  segment between SRV#N and TP#N. */
-static time_t
-helper_set_consensus_and_system_time(networkstatus_t *ns,
-                                     int between_srv_and_tp)
+static void
+test_hs_indexes(void *arg)
 {
-  time_t real_time;
+  int ret;
+  uint64_t period_num = 42;
+  ed25519_public_key_t pubkey;
+
+  (void) arg;
+
+  /* Build the hs_index */
+  {
+    uint8_t hs_index[DIGEST256_LEN];
+    const char *b32_test_vector =
+      "37e5cbbd56a22823714f18f1623ece5983a0d64c78495a8cfab854245e5f9a8a";
+    char test_vector[DIGEST256_LEN];
+    ret = base16_decode(test_vector, sizeof(test_vector), b32_test_vector,
+                        strlen(b32_test_vector));
+    tt_int_op(ret, OP_EQ, sizeof(test_vector));
+    /* Our test vector uses a public key set to 32 bytes of \x42. */
+    memset(&pubkey, '\x42', sizeof(pubkey));
+    hs_build_hs_index(1, &pubkey, period_num, hs_index);
+    tt_mem_op(hs_index, OP_EQ, test_vector, sizeof(hs_index));
+  }
+
+  /* Build the hsdir_index */
+  {
+    uint8_t srv[DIGEST256_LEN];
+    uint8_t hsdir_index[DIGEST256_LEN];
+    const char *b32_test_vector =
+      "db475361014a09965e7e5e4d4a25b8f8d4b8f16cb1d8a7e95eed50249cc1a2d5";
+    char test_vector[DIGEST256_LEN];
+    ret = base16_decode(test_vector, sizeof(test_vector), b32_test_vector,
+                        strlen(b32_test_vector));
+    tt_int_op(ret, OP_EQ, sizeof(test_vector));
+    /* Our test vector uses a public key set to 32 bytes of \x42. */
+    memset(&pubkey, '\x42', sizeof(pubkey));
+    memset(srv, '\x43', sizeof(srv));
+    hs_build_hsdir_index(&pubkey, srv, period_num, hsdir_index);
+    tt_mem_op(hsdir_index, OP_EQ, test_vector, sizeof(hsdir_index));
+  }
+
+ done:
+  ;
+}
+
+#define EARLY_IN_SRV_TO_TP 0
+#define LATE_IN_SRV_TO_TP 1
+#define EARLY_IN_TP_TO_SRV 2
+#define LATE_IN_TP_TO_SRV 3
+
+/** Set the consensus and system time based on <b>position</b>. See the
+ *    following diagram for details:
+ *
+ *  +------------------------------------------------------------------+
+ *  |                                                                  |
+ *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+ *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+ *  |                                                                  |
+ *  |  $==========|-----------$===========|----------$===========|     |
+ *  |                                                                  |
+ *  |                                                                  |
+ *  +------------------------------------------------------------------+
+ */
+static time_t
+helper_set_consensus_and_system_time(networkstatus_t *ns, int position)
+{
+  time_t real_time = 0;
 
   /* The period between SRV#N and TP#N is from 00:00 to 12:00 UTC. Consensus
    * valid_after is what matters here, the rest is just to specify the voting
    * period correctly. */
-  if (between_srv_and_tp) {
+  if (position == LATE_IN_SRV_TO_TP) {
     parse_rfc1123_time("Wed, 13 Apr 2016 11:00:00 UTC", &ns->valid_after);
     parse_rfc1123_time("Wed, 13 Apr 2016 12:00:00 UTC", &ns->fresh_until);
     parse_rfc1123_time("Wed, 13 Apr 2016 14:00:00 UTC", &ns->valid_until);
-  } else {
+  } else if (position == EARLY_IN_TP_TO_SRV) {
     parse_rfc1123_time("Wed, 13 Apr 2016 13:00:00 UTC", &ns->valid_after);
     parse_rfc1123_time("Wed, 13 Apr 2016 14:00:00 UTC", &ns->fresh_until);
     parse_rfc1123_time("Wed, 13 Apr 2016 16:00:00 UTC", &ns->valid_until);
+  } else if (position == LATE_IN_TP_TO_SRV) {
+    parse_rfc1123_time("Wed, 13 Apr 2016 23:00:00 UTC", &ns->valid_after);
+    parse_rfc1123_time("Wed, 14 Apr 2016 00:00:00 UTC", &ns->fresh_until);
+    parse_rfc1123_time("Wed, 14 Apr 2016 02:00:00 UTC", &ns->valid_until);
+  } else if (position == EARLY_IN_SRV_TO_TP) {
+    parse_rfc1123_time("Wed, 14 Apr 2016 01:00:00 UTC", &ns->valid_after);
+    parse_rfc1123_time("Wed, 14 Apr 2016 02:00:00 UTC", &ns->fresh_until);
+    parse_rfc1123_time("Wed, 14 Apr 2016 04:00:00 UTC", &ns->valid_until);
+  } else {
+    tt_assert(0);
   }
 
   /* Set system time: pretend to be just 2 minutes before consensus expiry */
   real_time = ns->valid_until - 120;
   update_approx_time(real_time);
+
+ done:
   return real_time;
 }
 
@@ -1485,8 +1556,7 @@ helper_set_consensus_and_system_time(networkstatus_t *ns,
  *  test_client_service_sync() */
 static void
 helper_test_hsdir_sync(networkstatus_t *ns,
-                       int service_between_srv_and_tp,
-                       int client_between_srv_and_tp,
+                       int service_position, int client_position,
                        int client_fetches_next_desc)
 {
   hs_service_descriptor_t *desc;
@@ -1503,8 +1573,7 @@ helper_test_hsdir_sync(networkstatus_t *ns,
    */
 
   /* 1) Initialize service time: consensus and real time */
-  time_t now = helper_set_consensus_and_system_time(ns,
-                                                   service_between_srv_and_tp);
+  time_t now = helper_set_consensus_and_system_time(ns, service_position);
   helper_initialize_big_hash_ring(ns);
 
   /* 2) Initialize service */
@@ -1519,7 +1588,7 @@ helper_test_hsdir_sync(networkstatus_t *ns,
   tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
 
   /* 3) Initialize client time */
-  now = helper_set_consensus_and_system_time(ns, client_between_srv_and_tp);
+  now = helper_set_consensus_and_system_time(ns, client_position);
 
   cleanup_nodelist();
   SMARTLIST_FOREACH(ns->routerstatus_list,
@@ -1527,22 +1596,28 @@ helper_test_hsdir_sync(networkstatus_t *ns,
   smartlist_clear(ns->routerstatus_list);
   helper_initialize_big_hash_ring(ns);
 
-  /* 4) Fetch desc as client */
-  char client_hsdir_b64_digest[BASE64_DIGEST_LEN+1] = {0};
-  helper_client_pick_hsdir(&service->keys.identity_pk,
-                          client_hsdir_b64_digest);
-  /* Cleanup right now so we don't memleak on error. */
-  cleanup_nodelist();
+  /* 4) Pick 6 HSDirs as a client and check that they were also chosen by the
+        service. */
+  for (int y = 0 ; y < 6 ; y++) {
+    char client_hsdir_b64_digest[BASE64_DIGEST_LEN+1] = {0};
+    helper_client_pick_hsdir(&service->keys.identity_pk,
+                             client_hsdir_b64_digest);
 
-  /* CHECK: Go through the hsdirs chosen by the service and make sure that it
-   * contains the one picked by the client! */
-  retval = smartlist_contains_string(desc->previous_hsdirs,
-                                     client_hsdir_b64_digest);
-  tt_int_op(retval, OP_EQ, 1);
+    /* CHECK: Go through the hsdirs chosen by the service and make sure that it
+     * contains the one picked by the client! */
+    retval = smartlist_contains_string(desc->previous_hsdirs,
+                                       client_hsdir_b64_digest);
+    tt_int_op(retval, OP_EQ, 1);
+  }
+
+  /* Finally, try to pick a 7th hsdir and see that NULL is returned since we
+   * exhausted all of them: */
+  tt_assert(!pick_hsdir_v3(&service->keys.identity_pk));
 
  done:
   /* At the end: free all services and initialize the subsystem again, we will
    * need it for next scenario. */
+  cleanup_nodelist();
   hs_service_free_all();
   hs_service_init();
   SMARTLIST_FOREACH(ns->routerstatus_list,
@@ -1606,7 +1681,7 @@ test_client_service_hsdir_set_sync(void *arg)
    *  |                                  S C                             |
    *  +------------------------------------------------------------------+
    */
-  helper_test_hsdir_sync(ns, 1, 1, 0);
+  helper_test_hsdir_sync(ns, LATE_IN_SRV_TO_TP, LATE_IN_SRV_TO_TP, 0);
 
   /*  b) Scenario where both client and service are in the time segment between
    *     TP#N and SRV#N+1. At this time the client fetches the second HS
@@ -1622,7 +1697,7 @@ test_client_service_hsdir_set_sync(void *arg)
    *  |                      S C                                         |
    *  +------------------------------------------------------------------+
    */
-  helper_test_hsdir_sync(ns, 0, 0, 1);
+  helper_test_hsdir_sync(ns, LATE_IN_TP_TO_SRV, LATE_IN_TP_TO_SRV, 1);
 
   /*  c) Scenario where service is between SRV#N and TP#N, but client is
    *     between TP#N and SRV#N+1. Client is forward in time so it fetches the
@@ -1638,7 +1713,7 @@ test_client_service_hsdir_set_sync(void *arg)
    *  |                                    S C                           |
    *  +------------------------------------------------------------------+
    */
-  helper_test_hsdir_sync(ns, 1, 0, 1);
+  helper_test_hsdir_sync(ns, LATE_IN_SRV_TO_TP, EARLY_IN_TP_TO_SRV, 1);
 
   /*  d) Scenario where service is between TP#N and SRV#N+1, but client is
    *     between SRV#N and TP#N. Client is backwards in time so it fetches the
@@ -1654,7 +1729,39 @@ test_client_service_hsdir_set_sync(void *arg)
    *  |                                    C S                           |
    *  +------------------------------------------------------------------+
    */
-  helper_test_hsdir_sync(ns, 0, 1, 0);
+  helper_test_hsdir_sync(ns, EARLY_IN_TP_TO_SRV, LATE_IN_SRV_TO_TP, 0);
+
+  /*  e) Scenario where service is between SRV#N and TP#N, but client is
+   *     between TP#N-1 and SRV#3. Client is backwards in time so it fetches
+   *     the first HS desc.
+   *
+   *  +------------------------------------------------------------------+
+   *  |                                                                  |
+   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   *  |                                                                  |
+   *  |  $==========|-----------$===========|-----------$===========|    |
+   *  |                        ^ ^                                       |
+   *  |                        C S                                       |
+   *  +------------------------------------------------------------------+
+   */
+  helper_test_hsdir_sync(ns, EARLY_IN_SRV_TO_TP, LATE_IN_TP_TO_SRV, 0);
+
+  /*  f) Scenario where service is between TP#N and SRV#N+1, but client is
+   *     between SRV#N+1 and TP#N+1. Client is forward in time so it fetches
+   *     the second HS desc.
+   *
+   *  +------------------------------------------------------------------+
+   *  |                                                                  |
+   *  | 00:00      12:00       00:00       12:00       00:00       12:00 |
+   *  | SRV#1      TP#1        SRV#2       TP#2        SRV#3       TP#3  |
+   *  |                                                                  |
+   *  |  $==========|-----------$===========|-----------$===========|    |
+   *  |                        ^ ^                                       |
+   *  |                        S C                                       |
+   *  +------------------------------------------------------------------+
+   */
+  helper_test_hsdir_sync(ns, LATE_IN_TP_TO_SRV, EARLY_IN_SRV_TO_TP, 1);
 
  done:
   networkstatus_vote_free(ns);
@@ -1687,6 +1794,9 @@ struct testcase_t hs_common_tests[] = {
     NULL, NULL },
   { "client_service_hsdir_set_sync", test_client_service_hsdir_set_sync,
     TT_FORK, NULL, NULL },
+  { "hs_indexes", test_hs_indexes, TT_FORK,
+    NULL, NULL },
+
   END_OF_TESTCASES
 };
 
