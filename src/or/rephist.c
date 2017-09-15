@@ -947,9 +947,9 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
     base16_encode(dbuf, sizeof(dbuf), digest, DIGEST_LEN);
 
     if (missing_means_down && hist->start_of_run &&
-        !router_get_by_id_digest(digest)) {
+        !connection_or_digest_is_known_relay(digest)) {
       /* We think this relay is running, but it's not listed in our
-       * routerlist. Somehow it fell out without telling us it went
+       * consensus. Somehow it fell out without telling us it went
        * down. Complain and also correct it. */
       log_info(LD_HIST,
                "Relay '%s' is listed as up in rephist, but it's not in "
