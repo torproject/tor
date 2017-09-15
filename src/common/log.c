@@ -444,11 +444,11 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
     if (m != msg_after_prefix) {
       tor_free(m);
     }
-#else
+#else /* !(defined(MAXLINE)) */
     /* We have syslog but not MAXLINE.  That's promising! */
     syslog(severity, "%s", msg_after_prefix);
-#endif
-#endif
+#endif /* defined(MAXLINE) */
+#endif /* defined(HAVE_SYSLOG_H) */
   } else if (lf->callback) {
     if (domain & LD_NOCB) {
       if (!*callbacks_deferred && pending_cb_messages) {
@@ -807,7 +807,7 @@ close_log(logfile_t *victim)
       /* There are no other syslogs; close the logging facility. */
       closelog();
     }
-#endif
+#endif /* defined(HAVE_SYSLOG_H) */
   }
 }
 
@@ -1144,7 +1144,7 @@ add_syslog_log(const log_severity_list_t *severity,
   UNLOCK_LOGS();
   return 0;
 }
-#endif
+#endif /* defined(HAVE_SYSLOG_H) */
 
 /** If <b>level</b> is a valid log severity, return the corresponding
  * numeric value.  Otherwise, return -1. */

@@ -1069,7 +1069,7 @@ test_options_validate__transproxy(void *ignored)
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_PF_DIVERT);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without "
             "any valid TransPort.");
-#endif
+#endif /* !defined(OpenBSD) && !defined( DARWIN ) */
   tor_free(msg);
 
   // Test tproxy trans proxy
@@ -1084,7 +1084,7 @@ test_options_validate__transproxy(void *ignored)
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_TPROXY);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
             "TransPort.");
-#endif
+#endif /* !defined(__linux__) */
   tor_free(msg);
 
   // Test ipfw trans proxy
@@ -1100,7 +1100,7 @@ test_options_validate__transproxy(void *ignored)
   tt_int_op(tdata->opt->TransProxyType_parsed, OP_EQ, TPT_IPFW);
   tt_str_op(msg, OP_EQ, "Cannot use TransProxyType without any valid "
             "TransPort.");
-#endif
+#endif /* !defined(KERNEL_MAY_SUPPORT_IPFW) */
   tor_free(msg);
 
   // Test unknown trans proxy
@@ -1145,19 +1145,19 @@ test_options_validate__transproxy(void *ignored)
   if (msg) {
     TT_DIE(("Expected NULL but got '%s'", msg));
   }
-#endif
+#endif /* defined(__linux__) || ... */
 
   // Assert that a test has run for some TransProxyType
   tt_assert(tdata);
 
-#else
+#else /* !(defined(USE_TRANSPARENT)) */
   tdata = get_options_test_data("TransPort 127.0.0.1:555\n");
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "TransPort is disabled in this build.");
   tor_free(msg);
-#endif
+#endif /* defined(USE_TRANSPARENT) */
 
  done:
   free_options_test_data(tdata);
@@ -3346,7 +3346,7 @@ test_options_validate__control(void *ignored)
             "can reconfigure your Tor.  That's bad!  You should upgrade your "
             "Tor controller as soon as possible.\n");
   tor_free(msg);
-#endif
+#endif /* defined(HAVE_SYS_UN_H) */
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES

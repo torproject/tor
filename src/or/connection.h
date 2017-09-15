@@ -286,7 +286,7 @@ MOCK_DECL(STATIC int,connection_connect_sockaddr,
 MOCK_DECL(STATIC void, kill_conn_list_for_oos, (smartlist_t *conns));
 MOCK_DECL(STATIC smartlist_t *, pick_oos_victims, (int n));
 
-#endif
+#endif /* defined(CONNECTION_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CONNECTION_H) */
 

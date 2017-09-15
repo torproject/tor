@@ -20,7 +20,7 @@ waitpid_callback_t *set_waitpid_callback(pid_t pid,
                                          void (*fn)(int, void *), void *arg);
 void clear_waitpid_callback(waitpid_callback_t *ent);
 void notify_pending_waitpid_callbacks(void);
-#endif
+#endif /* !defined(_WIN32) */
 
-#endif
+#endif /* !defined(TOR_UTIL_PROCESS_H) */
 

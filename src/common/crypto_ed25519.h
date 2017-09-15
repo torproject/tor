@@ -138,5 +138,5 @@ void crypto_ed25519_testing_restore_impl(void);
 MOCK_DECL(STATIC int, ed25519_impl_spot_check, (void));
 #endif
 
-#endif
+#endif /* !defined(TOR_CRYPTO_ED25519_H) */
 

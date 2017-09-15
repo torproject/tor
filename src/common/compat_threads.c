@@ -126,7 +126,7 @@ read_ni(int fd, void *buf, size_t n)
   }
   return r;
 }
-#endif
+#endif /* defined(HAVE_EVENTFD) || defined(HAVE_PIPE) */
 
 /** As send(), but retry on EINTR, and return the negative error code on
  * error. */
@@ -186,7 +186,7 @@ eventfd_drain(int fd)
     return r;
   return 0;
 }
-#endif
+#endif /* defined(HAVE_EVENTFD) */
 
 #ifdef HAVE_PIPE
 /** Send a byte over a pipe. Return 0 on success or EAGAIN; -1 on error */
@@ -214,7 +214,7 @@ pipe_drain(int fd)
   /* A value of r = 0 means EOF on the fd so successfully drained. */
   return 0;
 }
-#endif
+#endif /* defined(HAVE_PIPE) */
 
 /** Send a byte on socket <b>fd</b>t.  Return 0 on success or EAGAIN,
  * -1 on error. */
@@ -276,7 +276,7 @@ alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags)
     socks_out->drain_fn = eventfd_drain;
     return 0;
   }
-#endif
+#endif /* defined(HAVE_EVENTFD) */
 
 #ifdef HAVE_PIPE2
   /* Now we're going to try pipes. First type the pipe2() syscall, if we
@@ -289,7 +289,7 @@ alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags)
     socks_out->drain_fn = pipe_drain;
     return 0;
   }
-#endif
+#endif /* defined(HAVE_PIPE2) */
 
 #ifdef HAVE_PIPE
   /* Now try the regular pipe() syscall.  Pipes have a bit lower overhead than
@@ -313,7 +313,7 @@ alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags)
     socks_out->drain_fn = pipe_drain;
     return 0;
   }
-#endif
+#endif /* defined(HAVE_PIPE) */
 
   /* If nothing else worked, fall back on socketpair(). */
   if (!(flags & ASOCKS_NOSOCKETPAIR) &&

@@ -43,5 +43,5 @@ int digest_from_base64(char *digest, const char *d64);
 int digest256_to_base64(char *d64, const char *digest);
 int digest256_from_base64(char *digest, const char *d64);
 
-#endif
+#endif /* !defined(TOR_CRYPTO_FORMAT_H) */
 

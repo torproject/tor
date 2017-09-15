@@ -39,7 +39,7 @@
 #define check() STMT_BEGIN buf_assert_ok(buf); STMT_END
 #else
 #define check() STMT_NIL
-#endif
+#endif /* defined(PARANOIA) */
 
 /* Implementation notes:
  *
@@ -98,7 +98,7 @@
     DBG_S(tor_assert(a == b));                                          \
     memset(a,0,SENTINEL_LEN);                                           \
   } while (0)
-#endif
+#endif /* defined(DISABLE_MEMORY_SENTINELS) */
 
 /** Move all bytes stored in <b>chunk</b> to the front of <b>chunk</b>->mem,
  * to free up space at the end. */
@@ -311,7 +311,7 @@ buf_new_with_data(const char *cp, size_t sz)
 
   return buf;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Remove the first <b>n</b> bytes from buf. */
 void

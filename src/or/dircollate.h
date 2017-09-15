@@ -62,7 +62,7 @@ struct dircollator_s {
    * identity digests .*/
   smartlist_t *all_rsa_sha1_lst;
 };
-#endif
+#endif /* defined(DIRCOLLATE_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_DIRCOLLATE_H) */
 

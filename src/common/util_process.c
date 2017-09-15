@@ -154,5 +154,5 @@ notify_pending_waitpid_callbacks(void)
   }
 }
 
-#endif
+#endif /* !defined(_WIN32) */
 

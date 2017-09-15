@@ -527,12 +527,12 @@ launch_managed_proxy(managed_proxy_t *mp)
                                 (const char **)mp->argv,
                                 env,
                                 &mp->process_handle);
-#else
+#else /* !(defined(_WIN32)) */
   retval = tor_spawn_background(mp->argv[0],
                                 (const char **)mp->argv,
                                 env,
                                 &mp->process_handle);
-#endif
+#endif /* defined(_WIN32) */
 
   process_environment_free(env);
 

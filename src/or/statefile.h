@@ -24,5 +24,5 @@ STATIC void or_state_free(or_state_t *state);
 STATIC or_state_t *or_state_new(void);
 #endif
 
-#endif
+#endif /* !defined(TOR_STATEFILE_H) */
 

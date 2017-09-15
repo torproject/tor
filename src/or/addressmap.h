@@ -59,7 +59,7 @@ typedef struct virtual_addr_conf_t {
 
 STATIC void get_random_virtual_addr(const virtual_addr_conf_t *conf,
                                     tor_addr_t *addr_out);
-#endif
+#endif /* defined(ADDRESSMAP_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_ADDRESSMAP_H) */
 

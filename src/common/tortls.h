@@ -161,7 +161,7 @@ STATIC int tor_tls_session_secret_cb(struct ssl_st *ssl, void *secret,
                             void *arg);
 STATIC int find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m,
                              uint16_t cipher);
-#endif
+#endif /* defined(TORTLS_OPENSSL_PRIVATE) */
 MOCK_DECL(STATIC struct x509_st *, tor_tls_create_certificate,
                                                    (crypto_pk_t *rsa,
                                                     crypto_pk_t *rsa_sign,
@@ -192,9 +192,9 @@ STATIC tor_x509_cert_t *tor_x509_cert_replace_expiration(
                                                const tor_x509_cert_t *inp,
                                                time_t new_expiration_time,
                                                crypto_pk_t *signing_key);
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif /* endif TORTLS_PRIVATE */
+#endif /* defined(TORTLS_PRIVATE) */
 
 tor_x509_cert_t *tor_x509_cert_dup(const tor_x509_cert_t *cert);
 const char *tor_tls_err_to_string(int err);
@@ -288,5 +288,5 @@ const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 
 int evaluate_ecgroup_for_tls(const char *ecgroup);
 
-#endif
+#endif /* !defined(TOR_TORTLS_H) */
 

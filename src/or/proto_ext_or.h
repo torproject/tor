@@ -13,5 +13,5 @@ struct ext_or_cmt_t;
 int fetch_ext_or_command_from_buf(struct buf_t *buf,
                                   struct ext_or_cmd_t **out);
 
-#endif
+#endif /* !defined(TOR_PROTO_EXT_OR_H) */
 

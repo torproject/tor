@@ -54,7 +54,7 @@ STATIC void circuit_build_times_reset(circuit_build_times_t *cbt);
 /* Network liveness functions */
 STATIC int circuit_build_times_network_check_changed(
                                              circuit_build_times_t *cbt);
-#endif
+#endif /* defined(CIRCUITSTATS_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
@@ -63,7 +63,7 @@ double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
 void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
                                        double quantile, double time_ms);
 void circuitbuild_running_unit_tests(void);
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /* Network liveness functions */
 void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
@@ -95,7 +95,7 @@ struct circuit_build_times_s {
   /** How long we wait before actually closing the circuit. */
   double close_ms;
 };
-#endif
+#endif /* defined(CIRCUITSTATS_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CIRCUITSTATS_H) */
 

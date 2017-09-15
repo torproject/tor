@@ -39,5 +39,5 @@ size_t tor_zstd_get_total_allocation(void);
 
 void tor_zstd_init(void);
 
-#endif // TOR_COMPRESS_ZSTD_H.
+#endif /* !defined(TOR_COMPRESS_ZSTD_H) */
 

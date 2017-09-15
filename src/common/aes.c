@@ -70,7 +70,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #define USE_EVP_AES_CTR
 
-#endif
+#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_V_NOPATCH(1,1,0) || ... */
 
 /* We have 2 strategies for getting the AES block cipher: Via OpenSSL's
  * AES_encrypt function, or via OpenSSL's EVP_EncryptUpdate function.
@@ -142,7 +142,7 @@ evaluate_ctr_for_aes(void)
 {
   return 0;
 }
-#else
+#else /* !(defined(USE_EVP_AES_CTR)) */
 
 /*======================================================================*/
 /* Interface to AES code, and counter implementation */
@@ -163,7 +163,7 @@ struct aes_cnt_cipher {
   uint32_t counter2;
   uint32_t counter1;
   uint32_t counter0;
-#endif
+#endif /* !defined(WORDS_BIGENDIAN) */
 
   union {
     /** The counter, in big-endian order, as bytes. */
@@ -212,7 +212,7 @@ evaluate_evp_for_aes(int force_val)
     log_info(LD_CRYPTO, "No AES engine found; using AES_* functions.");
     should_use_EVP = 0;
   }
-#endif
+#endif /* defined(DISABLE_ENGINES) */
 
   return 0;
 }
@@ -312,7 +312,7 @@ aes_set_key(aes_cnt_cipher_t *cipher, const uint8_t *key, int key_bits)
   cipher->counter1 = 0;
   cipher->counter2 = 0;
   cipher->counter3 = 0;
-#endif
+#endif /* defined(USING_COUNTER_VARS) */
 
   memset(cipher->ctr_buf.buf, 0, sizeof(cipher->ctr_buf.buf));
 
@@ -341,7 +341,7 @@ aes_cipher_free(aes_cnt_cipher_t *cipher)
   STMT_END
 #else
 #define UPDATE_CTR_BUF(c, n)
-#endif
+#endif /* defined(USING_COUNTER_VARS) */
 
 /* Helper function to use EVP with openssl's counter-mode wrapper. */
 static void
@@ -396,10 +396,10 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const uint8_t *iv)
   cipher->counter2 = ntohl(get_uint32(iv+4));
   cipher->counter1 = ntohl(get_uint32(iv+8));
   cipher->counter0 = ntohl(get_uint32(iv+12));
-#endif
+#endif /* defined(USING_COUNTER_VARS) */
   cipher->pos = 0;
   memcpy(cipher->ctr_buf.buf, iv, 16);
 }
 
-#endif
+#endif /* defined(USE_EVP_AES_CTR) */
 

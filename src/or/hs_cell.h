@@ -118,5 +118,5 @@ int hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
 /* Util API. */
 void hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data);
 
-#endif /* TOR_HS_CELL_H */
+#endif /* !defined(TOR_HS_CELL_H) */
 

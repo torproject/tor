@@ -73,7 +73,7 @@ STATIC int handle_introduce1(or_circuit_t *client_circ,
 STATIC int validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell);
 STATIC int circuit_is_suitable_for_introduce1(const or_circuit_t *circ);
 
-#endif /* HS_INTROPOINT_PRIVATE */
+#endif /* defined(HS_INTROPOINT_PRIVATE) */
 
-#endif /* TOR_HS_INTRO_H */
+#endif /* !defined(TOR_HS_INTRO_H) */
 

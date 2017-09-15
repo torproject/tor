@@ -226,10 +226,10 @@ dnsserv_launch_request(const char *name, int reverse,
     TO_CONN(conn)->port = control_conn->base_.port;
     TO_CONN(conn)->address = tor_addr_to_str_dup(&control_conn->base_.addr);
   }
-#else
+#else /* !(defined(AF_UNIX)) */
   TO_CONN(conn)->port = control_conn->base_.port;
   TO_CONN(conn)->address = tor_addr_to_str_dup(&control_conn->base_.addr);
-#endif
+#endif /* defined(AF_UNIX) */
 
   if (reverse)
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;

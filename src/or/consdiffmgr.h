@@ -68,7 +68,7 @@ STATIC int cdm_entry_get_sha3_value(uint8_t *digest_out,
                                     const char *label);
 STATIC int uncompress_or_copy(char **out, size_t *outlen,
                               consensus_cache_entry_t *ent);
-#endif
+#endif /* defined(CONSDIFFMGR_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CONSDIFFMGR_H) */
 

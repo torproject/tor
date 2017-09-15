@@ -440,7 +440,7 @@ directory_get_from_hs_dir(const char *desc_id,
   const int how_to_fetch = tor2web_mode ? DIRIND_ONEHOP : DIRIND_ANONYMOUS;
 #else
   const int how_to_fetch = DIRIND_ANONYMOUS;
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
   tor_assert(desc_id);
   tor_assert(rend_query);
@@ -1218,7 +1218,7 @@ rend_client_allow_non_anonymous_connection(const or_options_t *options)
 #else
   (void)options;
   return 0;
-#endif
+#endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
 }
 
 /* At compile-time, was non-anonymous mode enabled via
@@ -1233,6 +1233,6 @@ rend_client_non_anonymous_mode_enabled(const or_options_t *options)
   return 1;
 #else
   return 0;
-#endif
+#endif /* defined(NON_ANONYMOUS_MODE_ENABLED) */
 }
 

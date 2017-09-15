@@ -16,5 +16,5 @@ int crypto_unpwbox(uint8_t **out, size_t *outlen_out,
                    const uint8_t *inp, size_t input_len,
                    const char *secret, size_t secret_len);
 
-#endif
+#endif /* !defined(CRYPTO_PWBOX_H_INCLUDED_) */
 

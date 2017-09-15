@@ -346,12 +346,12 @@ STATIC int crypto_strongest_rand_raw(uint8_t *out, size_t out_len);
 extern int break_strongest_rng_syscall;
 extern int break_strongest_rng_fallback;
 #endif
-#endif
+#endif /* defined(CRYPTO_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 void crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src);
 digest_algorithm_t crypto_digest_get_algorithm(crypto_digest_t *digest);
 #endif
 
-#endif
+#endif /* !defined(TOR_CRYPTO_H) */
 

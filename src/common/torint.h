@@ -34,8 +34,8 @@
       does the same thing (but doesn't defined __FreeBSD__).
      */
 #include <machine/limits.h>
-#endif
-#endif
+#endif /* !defined(__FreeBSD__) && !defined(__FreeBSD_kernel__) */
+#endif /* defined(HAVE_MACHINE_LIMITS_H) */
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
@@ -80,7 +80,7 @@ typedef signed char int8_t;
 typedef unsigned char uint8_t;
 #define HAVE_UINT8_T
 #endif
-#endif
+#endif /* (SIZEOF_CHAR == 1) */
 
 #if (SIZEOF_SHORT == 2)
 #ifndef HAVE_INT16_T
@@ -91,7 +91,7 @@ typedef signed short int16_t;
 typedef unsigned short uint16_t;
 #define HAVE_UINT16_T
 #endif
-#endif
+#endif /* (SIZEOF_SHORT == 2) */
 
 #if (SIZEOF_INT == 2)
 #ifndef HAVE_INT16_T
@@ -129,7 +129,7 @@ typedef unsigned int uint32_t;
 #ifndef INT32_MIN
 #define INT32_MIN (-2147483647-1)
 #endif
-#endif
+#endif /* (SIZEOF_INT == 2) || ... */
 
 #if (SIZEOF_LONG == 4)
 #ifndef HAVE_INT32_T
@@ -142,7 +142,7 @@ typedef unsigned long uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX 0xfffffffful
 #endif
-#endif
+#endif /* !defined(HAVE_UINT32_T) */
 #elif (SIZEOF_LONG == 8)
 #ifndef HAVE_INT64_T
 typedef signed long int64_t;
@@ -155,7 +155,7 @@ typedef unsigned long uint64_t;
 #ifndef UINT64_MAX
 #define UINT64_MAX 0xfffffffffffffffful
 #endif
-#endif
+#endif /* (SIZEOF_LONG == 4) || ... */
 
 #if (SIZEOF_LONG_LONG == 8)
 #ifndef HAVE_INT64_T
@@ -172,7 +172,7 @@ typedef unsigned long long uint64_t;
 #ifndef INT64_MAX
 #define INT64_MAX 0x7fffffffffffffffll
 #endif
-#endif
+#endif /* (SIZEOF_LONG_LONG == 8) */
 
 #if (SIZEOF___INT64 == 8)
 #ifndef HAVE_INT64_T
@@ -189,7 +189,7 @@ typedef unsigned __int64 uint64_t;
 #ifndef INT64_MAX
 #define INT64_MAX 0x7fffffffffffffffi64
 #endif
-#endif
+#endif /* (SIZEOF___INT64 == 8) */
 
 #ifndef INT64_MIN
 #define INT64_MIN ((- INT64_MAX) - 1)
@@ -202,8 +202,8 @@ typedef unsigned __int64 uint64_t;
 #define SIZE_MAX UINT32_MAX
 #else
 #error "Can't define SIZE_MAX"
-#endif
-#endif
+#endif /* SIZEOF_SIZE_T == 8 || ... */
+#endif /* !defined(SIZE_MAX) */
 
 #ifndef HAVE_SSIZE_T
 #if SIZEOF_SIZE_T == 8
@@ -212,8 +212,8 @@ typedef int64_t ssize_t;
 typedef int32_t ssize_t;
 #else
 #error "Can't define ssize_t."
-#endif
-#endif
+#endif /* SIZEOF_SIZE_T == 8 || ... */
+#endif /* !defined(HAVE_SSIZE_T) */
 
 #if (SIZEOF_VOID_P > 4 && SIZEOF_VOID_P <= 8)
 #ifndef HAVE_INTPTR_T
@@ -235,7 +235,7 @@ typedef uint32_t uintptr_t;
 #endif
 #else
 #error "void * is either >8 bytes or <= 2.  In either case, I am confused."
-#endif
+#endif /* (SIZEOF_VOID_P > 4 && SIZEOF_VOID_P <= 8) || ... */
 
 #ifndef HAVE_INT8_T
 #error "Missing type int8_t"
@@ -275,8 +275,8 @@ typedef uint32_t uintptr_t;
 #define LONG_MAX 0x7fffffffffffffffL
 #else
 #error "Can't define LONG_MAX"
-#endif
-#endif
+#endif /* (SIZEOF_LONG == 4) || ... */
+#endif /* !defined(LONG_MAX) */
 
 #ifndef INT_MAX
 #if (SIZEOF_INT == 4)
@@ -285,8 +285,8 @@ typedef uint32_t uintptr_t;
 #define INT_MAX 0x7fffffffffffffffL
 #else
 #error "Can't define INT_MAX"
-#endif
-#endif
+#endif /* (SIZEOF_INT == 4) || ... */
+#endif /* !defined(INT_MAX) */
 
 #ifndef UINT_MAX
 #if (SIZEOF_INT == 2)
@@ -297,8 +297,8 @@ typedef uint32_t uintptr_t;
 #define UINT_MAX 0xffffffffffffffffu
 #else
 #error "Can't define UINT_MAX"
-#endif
-#endif
+#endif /* (SIZEOF_INT == 2) || ... */
+#endif /* !defined(UINT_MAX) */
 
 #ifndef SHORT_MAX
 #if (SIZEOF_SHORT == 2)
@@ -307,8 +307,8 @@ typedef uint32_t uintptr_t;
 #define SHORT_MAX 0x7fffffff
 #else
 #error "Can't define SHORT_MAX"
-#endif
-#endif
+#endif /* (SIZEOF_SHORT == 2) || ... */
+#endif /* !defined(SHORT_MAX) */
 
 #ifndef TIME_MAX
 
@@ -320,9 +320,9 @@ typedef uint32_t uintptr_t;
 #define TIME_MAX ((time_t)INT64_MAX)
 #else
 #error "Can't define TIME_MAX"
-#endif
+#endif /* (SIZEOF_TIME_T == SIZEOF_INT) || ... */
 
-#endif /* ifndef(TIME_MAX) */
+#endif /* !defined(TIME_MAX) */
 
 #ifndef TIME_MIN
 
@@ -334,9 +334,9 @@ typedef uint32_t uintptr_t;
 #define TIME_MIN ((time_t)INT64_MIN)
 #else
 #error "Can't define TIME_MIN"
-#endif
+#endif /* (SIZEOF_TIME_T == SIZEOF_INT) || ... */
 
-#endif /* ifndef(TIME_MIN) */
+#endif /* !defined(TIME_MIN) */
 
 #ifndef SIZE_MAX
 #if (SIZEOF_SIZE_T == 4)
@@ -345,8 +345,8 @@ typedef uint32_t uintptr_t;
 #define SIZE_MAX UINT64_MAX
 #else
 #error "Can't define SIZE_MAX"
-#endif
-#endif
+#endif /* (SIZEOF_SIZE_T == 4) || ... */
+#endif /* !defined(SIZE_MAX) */
 
 #ifndef SSIZE_MAX
 #if (SIZEOF_SIZE_T == 4)
@@ -355,13 +355,13 @@ typedef uint32_t uintptr_t;
 #define SSIZE_MAX INT64_MAX
 #else
 #error "Can't define SSIZE_MAX"
-#endif
-#endif
+#endif /* (SIZEOF_SIZE_T == 4) || ... */
+#endif /* !defined(SSIZE_MAX) */
 
 /** Any ssize_t larger than this amount is likely to be an underflow. */
 #define SSIZE_T_CEILING ((ssize_t)(SSIZE_MAX-16))
 /** Any size_t larger than this amount is likely to be an underflow. */
 #define SIZE_T_CEILING  ((size_t)(SSIZE_MAX-16))
 
-#endif /* __TORINT_H */
+#endif /* !defined(TOR_TORINT_H) */
 

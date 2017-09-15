@@ -26,7 +26,7 @@ struct channel_tls_s {
   or_connection_t *conn;
 };
 
-#endif /* TOR_CHANNEL_INTERNAL_ */
+#endif /* defined(TOR_CHANNEL_INTERNAL_) */
 
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                                 const char *id_digest,
@@ -69,7 +69,7 @@ STATIC void channel_tls_process_auth_challenge_cell(var_cell_t *cell,
 STATIC void channel_tls_common_init(channel_tls_t *tlschan);
 STATIC void channel_tls_process_authenticate_cell(var_cell_t *cell,
                                                   channel_tls_t *tlschan);
-#endif
+#endif /* defined(CHANNELTLS_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CHANNELTLS_H) */
 

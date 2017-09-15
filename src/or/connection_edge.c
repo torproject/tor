@@ -115,7 +115,7 @@
 #define TRANS_NETFILTER
 #define TRANS_NETFILTER_IPV6
 #endif
-#endif
+#endif /* defined(HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H) */
 
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
 #include <net/if.h>
@@ -661,7 +661,7 @@ connection_ap_about_to_close(entry_connection_t *entry_conn)
     connection_ap_warn_and_unmark_if_pending_circ(entry_conn,
                                                   "about_to_close");
   }
-#endif
+#endif /* 1 */
 
   control_event_stream_bandwidth(edge_conn);
   control_event_stream_status(entry_conn, STREAM_EVENT_CLOSED,
@@ -871,9 +871,9 @@ connection_ap_rescan_and_attach_pending(void)
     entry_conn->marked_pending_circ_line = 0;   \
     entry_conn->marked_pending_circ_file = 0;   \
   } while (0)
-#else
+#else /* !(defined(DEBUGGING_17659)) */
 #define UNMARK() do { } while (0)
-#endif
+#endif /* defined(DEBUGGING_17659) */
 
 /** Tell any AP streams that are listed as waiting for a new circuit to try
  * again.  If there is an available circuit for a stream, attach it. Otherwise,
@@ -979,7 +979,7 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
     log_warn(LD_BUG, "(Previously called from %s:%d.)\n",
              f2 ? f2 : "<NULL>",
              entry_conn->marked_pending_circ_line);
-#endif
+#endif /* defined(DEBUGGING_17659) */
     log_backtrace(LOG_WARN, LD_BUG, "To debug, this may help");
     return;
   }
@@ -1791,7 +1791,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
       return -1;
     }
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
     /* socks->address is a non-onion hostname or IP address.
      * If we can't do any non-onion requests, refuse the connection.
@@ -2067,7 +2067,7 @@ get_pf_socket(void)
 #else
   /* works on NetBSD and FreeBSD */
   pf = tor_open_cloexec("/dev/pf", O_RDWR, 0);
-#endif
+#endif /* defined(OpenBSD) */
 
   if (pf < 0) {
     log_warn(LD_NET, "open(\"/dev/pf\") failed: %s", strerror(errno));
@@ -2077,7 +2077,7 @@ get_pf_socket(void)
   pf_socket = pf;
   return pf_socket;
 }
-#endif
+#endif /* defined(TRANS_PF) */
 
 #if defined(TRANS_NETFILTER) || defined(TRANS_PF) || \
   defined(TRANS_TPROXY)
@@ -2100,7 +2100,7 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
     }
     goto done;
   }
-#endif
+#endif /* defined(TRANS_TPROXY) */
 
 #ifdef TRANS_NETFILTER
   int rv = -1;
@@ -2110,13 +2110,13 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
       rv = getsockopt(ENTRY_TO_CONN(conn)->s, SOL_IP, SO_ORIGINAL_DST,
                   (struct sockaddr*)&orig_dst, &orig_dst_len);
       break;
-#endif
+#endif /* defined(TRANS_NETFILTER_IPV4) */
 #ifdef TRANS_NETFILTER_IPV6
     case AF_INET6:
       rv = getsockopt(ENTRY_TO_CONN(conn)->s, SOL_IPV6, IP6T_SO_ORIGINAL_DST,
                   (struct sockaddr*)&orig_dst, &orig_dst_len);
       break;
-#endif
+#endif /* defined(TRANS_NETFILTER_IPV6) */
     default:
       log_warn(LD_BUG,
                "Received transparent data from an unsuported socket family %d",
@@ -2142,7 +2142,7 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
   (void)req;
   log_warn(LD_BUG, "Unable to determine destination from socket.");
   return -1;
-#endif
+#endif /* defined(TRANS_NETFILTER) || ... */
 
  done:
   tor_addr_from_sockaddr(&addr, (struct sockaddr*)&orig_dst, &req->port);
@@ -2150,7 +2150,7 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
 
   return 0;
 }
-#endif
+#endif /* defined(TRANS_NETFILTER) || defined(TRANS_PF) || ... */
 
 #ifdef TRANS_PF
 static int
@@ -2184,7 +2184,7 @@ destination_from_pf(entry_connection_t *conn, socks_request_t *req)
 
     return 0;
   }
-#endif
+#endif /* defined(__FreeBSD__) */
 
   memset(&pnl, 0, sizeof(pnl));
   pnl.proto           = IPPROTO_TCP;
@@ -2233,7 +2233,7 @@ destination_from_pf(entry_connection_t *conn, socks_request_t *req)
 
   return 0;
 }
-#endif
+#endif /* defined(TRANS_PF) */
 
 /** Fetch the original destination address and port from a
  * system-specific interface and put them into a
@@ -2269,7 +2269,7 @@ connection_ap_get_original_destination(entry_connection_t *conn,
   log_warn(LD_BUG, "Called connection_ap_get_original_destination, but no "
            "transparent proxy method was configured.");
   return -1;
-#endif
+#endif /* defined(TRANS_NETFILTER) || ... */
 }
 
 /** connection_edge_process_inbuf() found a conn in state

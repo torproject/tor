@@ -26,5 +26,5 @@ void timers_shutdown(void);
 STATIC void timers_run_pending(void);
 #endif
 
-#endif
+#endif /* !defined(TOR_TIMERS_H) */
 

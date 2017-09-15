@@ -86,9 +86,9 @@ STATIC const node_t *pick_tor2web_rendezvous_node(router_crn_flags_t flags,
                                                   const or_options_t *options);
 unsigned int cpath_get_n_hops(crypt_path_t **head_ptr);
 
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS) */
 
-#endif
+#endif /* defined(CIRCUITBUILD_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CIRCUITBUILD_H) */
 

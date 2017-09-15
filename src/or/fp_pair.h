@@ -41,5 +41,5 @@ void fp_pair_map_assert_ok(const fp_pair_map_t *map);
 
 #undef DECLARE_MAP_FNS
 
-#endif
+#endif /* !defined(_TOR_FP_PAIR_H) */
 

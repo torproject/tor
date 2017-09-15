@@ -149,5 +149,5 @@
     }                                                                   \
   }
 
-#endif /* TOR_HANDLE_H */
+#endif /* !defined(TOR_HANDLE_H) */
 

@@ -37,7 +37,7 @@
 #include <sys/ucontext.h>
 #elif defined(HAVE_UCONTEXT_H)
 #include <ucontext.h>
-#endif
+#endif /* defined(HAVE_CYGWIN_SIGNAL_H) || ... */
 
 #define EXPOSE_CLEAN_BACKTRACE
 #include "backtrace.h"
@@ -81,16 +81,16 @@ clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx)
   const size_t n = 2;
 #else
   const size_t n = 1;
-#endif
+#endif /* defined(__linux__) || ... */
   if (depth <= n)
     return;
 
   stack[n] = (void*) ctx->PC_FROM_UCONTEXT;
-#else
+#else /* !(defined(PC_FROM_UCONTEXT)) */
   (void) depth;
   (void) ctx;
   (void) stack;
-#endif
+#endif /* defined(PC_FROM_UCONTEXT) */
 }
 
 /** Log a message <b>msg</b> at <b>severity</b> in <b>domain</b>, and follow
@@ -202,7 +202,7 @@ remove_bt_handler(void)
 {
   tor_mutex_uninit(&cb_buf_mutex);
 }
-#endif
+#endif /* defined(USE_BACKTRACE) */
 
 #ifdef NO_BACKTRACE_IMPL
 void
@@ -221,7 +221,7 @@ static void
 remove_bt_handler(void)
 {
 }
-#endif
+#endif /* defined(NO_BACKTRACE_IMPL) */
 
 /** Set up code to handle generating error messages on crashes. */
 int

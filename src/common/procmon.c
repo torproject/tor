@@ -36,7 +36,7 @@ typedef int pid_t;
 #define PID_T_FORMAT I64_FORMAT
 #else
 #error Unknown: SIZEOF_PID_T
-#endif
+#endif /* (0 == SIZEOF_PID_T) && defined(_WIN32) || ... */
 
 /* Define to 1 if process-termination monitors on this OS and Libevent
    version must poll for process termination themselves. */
@@ -114,7 +114,7 @@ struct tor_process_monitor_t {
   HANDLE hproc;
   /* XXXX We should have Libevent watch hproc for us,
    * if/when some version of Libevent can be told to do so. */
-#endif
+#endif /* defined(_WIN32) */
 
   /* XXXX On Linux, we can and should receive the 22nd
    * (space-delimited) field (‘starttime’) of /proc/$PID/stat from the
@@ -219,7 +219,7 @@ tor_process_monitor_new(struct event_base *base,
              "try again later.",
              procmon->pid);
   }
-#endif
+#endif /* defined(_WIN32) */
 
   procmon->cb = cb;
   procmon->cb_arg = cb_arg;
@@ -232,9 +232,9 @@ tor_process_monitor_new(struct event_base *base,
    * tor_evtimer_new never returns NULL. */
 
   evtimer_add(procmon->e, &poll_interval_tv);
-#else
+#else /* !(defined(PROCMON_POLLS)) */
 #error OOPS?
-#endif
+#endif /* defined(PROCMON_POLLS) */
 
   return procmon;
  err:
@@ -306,11 +306,11 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
       tor_free(errmsg);
     }
   }
-#else
+#else /* !(defined(_WIN32)) */
   /* Unix makes this part easy, if a bit racy. */
   its_dead_jim = kill(procmon->pid, 0);
   its_dead_jim = its_dead_jim && (errno == ESRCH);
-#endif
+#endif /* defined(_WIN32) */
 
   tor_log(its_dead_jim ? LOG_NOTICE : LOG_INFO,
       procmon->log_domain, "Monitored process "PID_T_FORMAT" is %s.",
@@ -321,7 +321,7 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
     procmon->cb(procmon->cb_arg);
   }
 }
-#endif
+#endif /* defined(PROCMON_POLLS) */
 
 /** Free the process-termination monitor <b>procmon</b>. */
 void

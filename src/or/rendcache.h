@@ -115,8 +115,8 @@ extern strmap_t *rend_cache;
 extern strmap_t *rend_cache_failure;
 extern digestmap_t *rend_cache_v2_dir;
 extern size_t rend_cache_total_allocation;
-#endif
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* defined(RENDCACHE_PRIVATE) */
 
-#endif /* TOR_RENDCACHE_H */
+#endif /* !defined(TOR_RENDCACHE_H) */
 

@@ -39,7 +39,7 @@
 #include <direct.h>
 #else
 #include <dirent.h>
-#endif
+#endif /* defined(_WIN32) */
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 DISABLE_GCC_WARNING(overlength-strings)
@@ -1795,7 +1795,7 @@ status_vote_current_consensus_ns_test(char **header, char **body,
   dirserv_set_cached_consensus_networkstatus(NETWORK_STATUS, "ns", &digests,
                                              sha3,
                                              time(NULL));
-#endif
+#endif /* 0 */
   networkstatus_t *ns = tor_malloc_zero(sizeof(networkstatus_t));
   ns->type = NS_TYPE_CONSENSUS;
   ns->flavor = FLAV_NS;

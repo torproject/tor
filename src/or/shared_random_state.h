@@ -139,14 +139,14 @@ STATIC void new_protocol_run(time_t valid_after);
 STATIC void state_rotate_srv(void);
 STATIC int is_phase_transition(sr_phase_t next_phase);
 
-#endif /* SHARED_RANDOM_STATE_PRIVATE */
+#endif /* defined(SHARED_RANDOM_STATE_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 
 STATIC void set_sr_phase(sr_phase_t phase);
 STATIC sr_state_t *get_sr_state(void);
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif /* TOR_SHARED_RANDOM_STATE_H */
+#endif /* !defined(TOR_SHARED_RANDOM_STATE_H) */
 

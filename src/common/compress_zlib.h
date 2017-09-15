@@ -39,5 +39,5 @@ size_t tor_zlib_get_total_allocation(void);
 
 void tor_zlib_init(void);
 
-#endif // TOR_COMPRESS_ZLIB_H.
+#endif /* !defined(TOR_COMPRESS_ZLIB_H) */
 

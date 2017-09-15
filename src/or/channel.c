@@ -701,7 +701,7 @@ channel_remove_from_digest_map(channel_t *chan)
 
     return;
   }
-#endif
+#endif /* 0 */
 
   /* Pull it out of its list, wherever that list is */
   TOR_LIST_REMOVE(chan, next_with_same_id);
@@ -1832,7 +1832,7 @@ cell_queue_entry_is_padding(cell_queue_entry_t *q)
 
   return 0;
 }
-#endif
+#endif /* 0 */
 
 /**
  * Allocate a new cell queue entry for a fixed-size cell

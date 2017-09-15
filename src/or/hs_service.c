@@ -910,7 +910,7 @@ write_address_to_file(const hs_service_t *service, const char *fname_)
                       "group-readable.", escaped(fname));
     }
   }
-#endif /* _WIN32 */
+#endif /* !defined(_WIN32) */
 
   /* Success. */
   ret = 0;
@@ -3309,5 +3309,5 @@ get_first_service(void)
   return *obj;
 }
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 

@@ -151,7 +151,7 @@ crypto_ed25519_testing_restore_impl(void)
   ed25519_impl = saved_ed25519_impl;
   saved_ed25519_impl = NULL;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Initialize a new ed25519 secret key in <b>seckey_out</b>.  If

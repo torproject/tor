@@ -251,7 +251,7 @@ MOCK_DECL(STATIC void, initiate_descriptor_downloads,
 STATIC int router_is_already_dir_fetching(const tor_addr_port_t *ap,
                                           int serverdesc, int microdesc);
 
-#endif
+#endif /* defined(ROUTERLIST_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_ROUTERLIST_H) */
 

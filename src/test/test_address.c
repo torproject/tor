@@ -21,7 +21,7 @@
 #include <sys/ioctl.h>
 #endif
 #include <net/if.h>
-#endif
+#endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #include "or.h"
 #include "address.h"
@@ -305,7 +305,7 @@ test_address_get_if_addrs_ifaddrs(void *arg)
   return;
 }
 
-#endif
+#endif /* defined(HAVE_IFADDRS_TO_SMARTLIST) */
 
 #ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
 
@@ -421,7 +421,7 @@ test_address_ip_adapter_addresses_to_smartlist(void *arg)
   tor_free(sockaddr_to_check);
   return;
 }
-#endif
+#endif /* defined(HAVE_IP_ADAPTER_TO_SMARTLIST) */
 
 #ifdef HAVE_IFCONF_TO_SMARTLIST
 
@@ -543,7 +543,7 @@ test_address_get_if_addrs_ioctl(void *arg)
   return;
 }
 
-#endif
+#endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #define FAKE_SOCKET_FD (42)
 
@@ -706,7 +706,7 @@ test_address_udp_socket_trick_blackbox(void *arg)
   tt_assert( (retval == -1 && retval_reference == -1) ||
              (tor_addr_compare(&addr6,&addr6_to_check,CMP_EXACT) == 0) );
 
-#else
+#else /* !(0) */
   /* Both of the blackbox test cases fail horribly if:
    *  * The host has no external addreses.
    *  * There are multiple interfaces with either AF_INET or AF_INET6.
@@ -721,7 +721,7 @@ test_address_udp_socket_trick_blackbox(void *arg)
   (void)addr6_to_check;
   (void)addr6;
   (void) retval_reference;
-#endif
+#endif /* 0 */
 
   /* When family is neither AF_INET nor AF_INET6, we want _hack to
    * fail and return -1.

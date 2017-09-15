@@ -1566,7 +1566,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
 
   log_info(LD_CIRC, "finished");
   return 0;
-#endif
+#endif /* 0 */
 }
 
 /** Given a response payload and keys, initialize, then send a created
@@ -2104,7 +2104,7 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
 
   return rp_node;
 }
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS) */
 
 /* Pick a Rendezvous Point for our HS circuits according to <b>flags</b>. */
 static const node_t *
@@ -2140,7 +2140,7 @@ pick_rendezvous_node(router_crn_flags_t flags)
              "Unable to find a random rendezvous point that is reachable via "
              "a direct connection, falling back to a 3-hop path.");
   }
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
   return router_choose_random_node(NULL, options->ExcludeNodes, flags);
 }
@@ -2430,7 +2430,7 @@ cpath_get_n_hops(crypt_path_t **head_ptr)
   return n_hops;
 }
 
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** A helper function used by onion_extend_cpath(). Use <b>purpose</b>
  * and <b>state</b> and the cpath <b>head</b> (currently populated only

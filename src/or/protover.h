@@ -75,7 +75,7 @@ STATIC void proto_entry_free(proto_entry_t *entry);
 STATIC char *encode_protocol_list(const smartlist_t *sl);
 STATIC const char *protocol_type_to_str(protocol_type_t pr);
 STATIC int str_to_protocol_type(const char *s, protocol_type_t *pr_out);
-#endif
+#endif /* defined(PROTOVER_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_PROTOVER_H) */
 

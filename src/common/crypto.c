@@ -20,7 +20,7 @@
 /* Windows defines this; so does OpenSSL 0.9.8h and later. We don't actually
  * use either definition. */
 #undef OCSP_RESPONSE
-#endif
+#endif /* defined(_WIN32) */
 
 #define CRYPTO_PRIVATE
 #include "crypto.h"
@@ -50,7 +50,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #else
 #pragma GCC diagnostic warning "-Wredundant-decls"
 #endif
-#endif
+#endif /* __GNUC__ && GCC_VERSION >= 402 */
 
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
@@ -101,7 +101,7 @@ ENABLE_GCC_WARNING(redundant-decls)
  * pointless, so let's not.
  */
 #define NEW_THREAD_API
-#endif
+#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && ... */
 
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
@@ -114,7 +114,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 static tor_mutex_t **openssl_mutexes_ = NULL;
 /** How many mutexes have we allocated for use by OpenSSL? */
 static int n_openssl_mutexes_ = 0;
-#endif
+#endif /* !defined(NEW_THREAD_API) */
 
 /** A public key, or a public/private key-pair. */
 struct crypto_pk_t
@@ -198,7 +198,7 @@ log_engine(const char *fn, ENGINE *e)
     log_info(LD_CRYPTO, "Using default implementation for %s", fn);
   }
 }
-#endif
+#endif /* !defined(DISABLE_ENGINES) */
 
 #ifndef DISABLE_ENGINES
 /** Try to load an engine in a shared library via fully qualified path.
@@ -218,7 +218,7 @@ try_load_engine(const char *path, const char *engine)
   }
   return e;
 }
-#endif
+#endif /* !defined(DISABLE_ENGINES) */
 
 /* Returns a trimmed and human-readable version of an openssl version string
 * <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10
@@ -394,7 +394,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 #else
       log_engine("ECDH", ENGINE_get_default_ECDH());
       log_engine("ECDSA", ENGINE_get_default_ECDSA());
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
       log_engine("RAND", ENGINE_get_default_RAND());
       log_engine("RAND (which we will not use)", ENGINE_get_default_RAND());
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
@@ -412,7 +412,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
       log_engine("AES-256-GCM", ENGINE_get_cipher_engine(NID_aes_256_gcm));
 #endif
 
-#endif
+#endif /* defined(DISABLE_ENGINES) */
     } else {
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
@@ -450,9 +450,9 @@ crypto_pk_private_ok(const crypto_pk_t *k)
   const BIGNUM *p, *q;
   RSA_get0_factors(k->key, &p, &q);
   return p != NULL; /* XXX/yawning: Should we check q? */
-#else
+#else /* !(defined(OPENSSL_1_1_API)) */
   return k && k->key && k->key->p;
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
 }
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. */
@@ -884,7 +884,7 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
   RSA_get0_key(env->key, &n, &e, &d);
 #else
   e = env->key->e;
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
   return BN_is_word(e, 65537);
 }
 
@@ -918,7 +918,7 @@ crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b)
   a_e = a->key->e;
   b_n = b->key->n;
   b_e = b->key->e;
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
 
   tor_assert(a_n != NULL && a_e != NULL);
   tor_assert(b_n != NULL && b_e != NULL);
@@ -967,10 +967,10 @@ crypto_pk_num_bits(crypto_pk_t *env)
   tor_assert(n != NULL);
 
   return RSA_bits(env->key);
-#else
+#else /* !(defined(OPENSSL_1_1_API)) */
   tor_assert(env->key->n);
   return BN_num_bits(env->key->n);
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
 }
 
 /** Increase the reference count of <b>env</b>, and return it.
@@ -997,7 +997,7 @@ crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src)
   RSA_free(dest->key);
   dest->key = RSAPrivateKey_dup(src->key);
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Make a real honest-to-goodness copy of <b>env</b>, and return it.
  * Returns NULL on failure. */
@@ -1871,7 +1871,7 @@ crypto_digest_get_algorithm(crypto_digest_t *digest)
   return digest->algorithm;
 }
 
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Return the number of bytes we need to malloc in order to get a
@@ -2255,12 +2255,12 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
     goto out;
   if (!DH_set0_pqg(dh, dh_p, NULL, dh_g))
     goto out;
-#else
+#else /* !(defined(OPENSSL_1_1_API)) */
   if (!(dh->p = BN_dup(p)))
     goto out;
   if (!(dh->g = BN_dup(g)))
     goto out;
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
 
   /* Perform the validation. */
   int codes = 0;
@@ -2431,7 +2431,7 @@ crypto_dh_new(int dh_type)
 
   if (!DH_set_length(res->dh, DH_PRIVATE_KEY_BITS))
     goto err;
-#else
+#else /* !(defined(OPENSSL_1_1_API)) */
   if (dh_type == DH_TYPE_TLS) {
     if (!(res->dh->p = BN_dup(dh_param_p_tls)))
       goto err;
@@ -2444,7 +2444,7 @@ crypto_dh_new(int dh_type)
     goto err;
 
   res->dh->length = DH_PRIVATE_KEY_BITS;
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
 
   return res;
  err:
@@ -2506,7 +2506,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
              "the-universe chances really do happen.  Treating as a failure.");
     return -1;
   }
-#else
+#else /* !(defined(OPENSSL_1_1_API)) */
   if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
     /* LCOV_EXCL_START
      * If this happens, then openssl's DH implementation is busted. */
@@ -2519,7 +2519,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     goto again;
     /* LCOV_EXCL_STOP */
   }
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
   return 0;
 }
 
@@ -2540,7 +2540,7 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
   DH_get0_key(dh->dh, &dh_pub, &dh_priv);
 #else
   dh_pub = dh->dh->pub_key;
-#endif
+#endif /* defined(OPENSSL_1_1_API) */
 
   if (!dh_pub) {
     if (crypto_dh_generate_public(dh)<0)
@@ -2883,7 +2883,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
   return getentropy(out, out_len);
 #else
   (void) out;
-#endif
+#endif /* defined(_WIN32) || ... */
 
   /* This platform doesn't have a supported syscall based random. */
   return -1;
@@ -2907,7 +2907,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
   (void)out;
   (void)out_len;
   return -1;
-#else
+#else /* !(defined(_WIN32)) */
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
@@ -2935,7 +2935,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
   }
 
   return -1;
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
@@ -3184,7 +3184,7 @@ crypto_rand_double(void)
 #define UINT_MAX_AS_DOUBLE 1.8446744073709552e+19
 #else
 #error SIZEOF_INT is neither 4 nor 8
-#endif
+#endif /* SIZEOF_INT == 4 || ... */
   return ((double)u) / UINT_MAX_AS_DOUBLE;
 }
 
@@ -3313,7 +3313,7 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    **/
 
   OPENSSL_cleanse(mem, sz);
-#endif
+#endif /* defined(SecureZeroMemory) || defined(HAVE_SECUREZEROMEMORY) || ... */
 
   /* Just in case some caller of memwipe() is relying on getting a buffer
    * filled with a particular value, fill the buffer.
@@ -3355,7 +3355,7 @@ tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
 {
   CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
 }
-#endif
+#endif /* !defined(NEW_THREAD_API) */
 
 #if 0
 /* This code is disabled, because OpenSSL never actually uses these callbacks.
@@ -3405,7 +3405,7 @@ openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
   tor_mutex_free(v->lock);
   tor_free(v);
 }
-#endif
+#endif /* 0 */
 
 /** @{ */
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
@@ -3422,7 +3422,7 @@ setup_openssl_threading(void)
     openssl_mutexes_[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(openssl_locking_cb_);
   CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
-#endif
+#endif /* !defined(NEW_THREAD_API) */
 #if 0
   CRYPTO_set_dynlock_create_callback(openssl_dynlock_create_cb_);
   CRYPTO_set_dynlock_lock_callback(openssl_dynlock_lock_cb_);
@@ -3469,7 +3469,7 @@ crypto_global_cleanup(void)
     }
     tor_free(ms);
   }
-#endif
+#endif /* !defined(NEW_THREAD_API) */
 
   tor_free(crypto_openssl_version_str);
   tor_free(crypto_openssl_header_version_str);
@@ -3488,5 +3488,5 @@ crypto_use_tor_alloc_functions(void)
   int r = CRYPTO_set_mem_ex_functions(tor_malloc_, tor_realloc_, tor_free_);
   return r ? 0 : -1;
 }
-#endif
+#endif /* defined(USE_DMALLOC) */
 

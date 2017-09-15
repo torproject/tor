@@ -1751,7 +1751,7 @@ entry_guards_update_primary(guard_selection_t *gs)
                    bool_eq(guard->is_primary,
                            smartlist_contains(new_primary_guards, guard)));
   });
-#endif
+#endif /* 1 */
 
   int any_change = 0;
   if (smartlist_len(gs->primary_entry_guards) !=

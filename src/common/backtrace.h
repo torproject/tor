@@ -15,7 +15,7 @@ void clean_up_backtrace_handler(void);
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 void clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx);
 #endif
-#endif
+#endif /* defined(EXPOSE_CLEAN_BACKTRACE) */
 
-#endif
+#endif /* !defined(TOR_BACKTRACE_H) */
 

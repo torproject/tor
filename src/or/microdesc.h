@@ -50,5 +50,5 @@ int we_fetch_microdescriptors(const or_options_t *options);
 int we_fetch_router_descriptors(const or_options_t *options);
 int we_use_microdescriptors_for_circuits(const or_options_t *options);
 
-#endif
+#endif /* !defined(TOR_MICRODESC_H) */
 

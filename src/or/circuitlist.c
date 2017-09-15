@@ -1434,7 +1434,7 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
       smartlist_free(detached_2);
     }
   }
-#endif
+#endif /* defined(DEBUG_CIRCUIT_UNLINK_ALL) */
 
   SMARTLIST_FOREACH_BEGIN(detached, circuit_t *, circ) {
     int mark = 0;

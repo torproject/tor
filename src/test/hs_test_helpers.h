@@ -21,5 +21,5 @@ void
 hs_helper_get_subcred_from_identity_keypair(ed25519_keypair_t *signing_kp,
                                             uint8_t *subcred_out);
 
-#endif /* TOR_HS_TEST_HELPERS_H */
+#endif /* !defined(TOR_HS_TEST_HELPERS_H) */
 

@@ -175,5 +175,5 @@ int pubsub_notify_(pubsub_topic_t *topic, pubsub_notify_fn_t notify_fn,
     pubsub_clear_(&name##_topic_);                                      \
   }
 
-#endif /* TOR_PUBSUB_H */
+#endif /* !defined(TOR_PUBSUB_H) */
 

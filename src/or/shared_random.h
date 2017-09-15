@@ -160,7 +160,7 @@ STATIC int should_keep_commit(const sr_commit_t *commit,
                               sr_phase_t phase);
 STATIC void save_commit_during_reveal_phase(const sr_commit_t *commit);
 
-#endif /* SHARED_RANDOM_PRIVATE */
+#endif /* defined(SHARED_RANDOM_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 
@@ -168,5 +168,5 @@ void set_num_srv_agreements(int32_t value);
 
 #endif /* TOR_UNIT_TESTS */
 
-#endif /* TOR_SHARED_RANDOM_H */
+#endif /* !defined(TOR_SHARED_RANDOM_H) */
 

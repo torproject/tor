@@ -122,9 +122,9 @@
  * Coverity. Here's a kludge to unconfuse it.
  */
 #   define __INCLUDE_LEVEL__ 2
-#   endif
+#endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
 #include <systemd/sd-daemon.h>
-#endif
+#endif /* defined(HAVE_SYSTEMD) */
 
 void evdns_shutdown(int);
 
@@ -742,7 +742,7 @@ conn_read_callback(evutil_socket_t fd, short event, void *_conn)
                "(fd %d); removing",
                conn_type_to_string(conn->type), (int)conn->s);
       tor_fragile_assert();
-#endif
+#endif /* !defined(_WIN32) */
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(TO_EDGE_CONN(conn));
       connection_mark_for_close(conn);
@@ -2227,7 +2227,7 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
   (void)arg;
   sd_notify(0, "WATCHDOG=1");
 }
-#endif
+#endif /* defined(HAVE_SYSTEMD_209) */
 
 /** Timer: used to invoke refill_callback(). */
 static periodic_timer_t *refill_timer = NULL;
@@ -2291,7 +2291,7 @@ got_libevent_error(void)
   }
   return 0;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 #define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
 
@@ -2565,7 +2565,7 @@ do_main_loop(void)
       tor_assert(systemd_watchdog_timer);
     }
   }
-#endif
+#endif /* defined(HAVE_SYSTEMD_209) */
 
   if (!refill_timer) {
     struct timeval refill_interval;
@@ -2593,7 +2593,7 @@ do_main_loop(void)
       log_info(LD_GENERAL, "Systemd NOTIFY_SOCKET not present.");
     }
   }
-#endif
+#endif /* defined(HAVE_SYSTEMD) */
 
   return run_main_loop_until_done();
 }
@@ -2646,7 +2646,7 @@ run_main_loop_once(void)
       log_warn(LD_NET, "EINVAL from libevent: should you upgrade libevent?");
       if (got_libevent_error())
         return -1;
-#endif
+#endif /* !defined(_WIN32) */
     } else {
       tor_assert_nonfatal_once(! ERRNO_IS_EINPROGRESS(e));
       log_debug(LD_NET,"libevent call interrupted.");
@@ -3002,7 +3002,7 @@ handle_signals(int is_parent)
 #ifdef SIGXFSZ
     sigaction(SIGXFSZ, &action, NULL);
 #endif
-#endif
+#endif /* !defined(_WIN32) */
   }
 }
 
@@ -3730,7 +3730,7 @@ tor_main(int argc, char *argv[])
       setdeppolicy(3);
     }
   }
-#endif
+#endif /* defined(_WIN32) */
 
   configure_backtrace_handler(get_version());
 
@@ -3746,14 +3746,14 @@ tor_main(int argc, char *argv[])
     int r = crypto_use_tor_alloc_functions();
     tor_assert(r == 0);
   }
-#endif
+#endif /* defined(USE_DMALLOC) */
 #ifdef NT_SERVICE
   {
      int done = 0;
      result = nt_service_parse_options(argc, argv, &done);
      if (done) return result;
   }
-#endif
+#endif /* defined(NT_SERVICE) */
   if (tor_init(argc, argv)<0)
     return -1;
 

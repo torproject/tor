@@ -76,7 +76,7 @@ set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
   return 0;
 }
 
-#else /* defined(HAVE_SYS_UN_H) */
+#else /* !(defined(HAVE_SYS_UN_H)) */
 
 static int
 set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
@@ -94,7 +94,7 @@ add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
   return -ENOSYS;
 }
 
-#endif /* HAVE_SYS_UN_H */
+#endif /* defined(HAVE_SYS_UN_H) */
 
 /* Helper function: The key is a digest that we compare to a node_t object
  * current hsdir_index. */
@@ -641,7 +641,7 @@ get_second_cached_disaster_srv(void)
   return cached_disaster_srv[1];
 }
 
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /* When creating a blinded key, we need a parameter which construction is as
  * follow: H(pubkey | [secret] | ed25519-basepoint | nonce).

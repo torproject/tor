@@ -75,7 +75,7 @@ lzma_error_str(lzma_ret error)
       return "Unknown LZMA error";
   }
 }
-#endif // HAVE_LZMA.
+#endif /* defined(HAVE_LZMA) */
 
 /** Return 1 if LZMA compression is supported; otherwise 0. */
 int
@@ -161,7 +161,7 @@ tor_lzma_state_size_precalc(int compress, compression_level_t level)
  err:
   return 0; // LCOV_EXCL_LINE
 }
-#endif // HAVE_LZMA.
+#endif /* defined(HAVE_LZMA) */
 
 /** Construct and return a tor_lzma_compress_state_t object using
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
@@ -215,13 +215,13 @@ tor_lzma_compress_new(int compress,
  err:
   tor_free(result); // LCOV_EXCL_LINE
   return NULL;
-#else // HAVE_LZMA.
+#else /* !(defined(HAVE_LZMA)) */
   (void)compress;
   (void)method;
   (void)level;
 
   return NULL;
-#endif // HAVE_LZMA.
+#endif /* defined(HAVE_LZMA) */
 }
 
 /** Compress/decompress some bytes using <b>state</b>.  Read up to
@@ -306,7 +306,7 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
                lzma_error_str(retval));
       return TOR_COMPRESS_ERROR;
   }
-#else // HAVE_LZMA.
+#else /* !(defined(HAVE_LZMA)) */
   (void)state;
   (void)out;
   (void)out_len;
@@ -314,7 +314,7 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
   (void)in_len;
   (void)finish;
   return TOR_COMPRESS_ERROR;
-#endif // HAVE_LZMA.
+#endif /* defined(HAVE_LZMA) */
 }
 
 /** Deallocate <b>state</b>. */

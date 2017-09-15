@@ -86,7 +86,7 @@ tor_memcmp(const void *a, const void *b, size_t len)
   }
 
   return retval;
-#endif /* timingsafe_memcmp */
+#endif /* defined(HAVE_TIMINGSAFE_MEMCMP) */
 }
 
 /**
@@ -238,7 +238,7 @@ gt_i64_timei(uint64_t a, uint64_t b)
   int res = diff >> 63;
   return res & 1;
 }
-#endif
+#endif /* SIZEOF_VOID_P == 8 */
 
 /**
  * Given an array of list of <b>n_entries</b> uint64_t values, whose sum is

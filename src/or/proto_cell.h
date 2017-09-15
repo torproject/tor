@@ -13,5 +13,5 @@ struct var_cell_t;
 int fetch_var_cell_from_buf(struct buf_t *buf, struct var_cell_t **out,
                             int linkproto);
 
-#endif
+#endif /* !defined(TOR_PROTO_CELL_H) */
 

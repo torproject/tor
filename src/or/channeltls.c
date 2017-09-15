@@ -1044,7 +1044,7 @@ channel_tls_time_process_cell(cell_t *cell, channel_tls_t *chan, int *time,
 
   *time += time_passed;
 }
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
 /**
  * Handle an incoming cell on a channel_tls_t
@@ -1072,9 +1072,9 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
     channel_tls_time_process_cell(cl, cn, & tp ## time ,            \
                              channel_tls_process_ ## tp ## _cell);  \
     } STMT_END
-#else
+#else /* !(defined(KEEP_TIMING_STATS)) */
 #define PROCESS_CELL(tp, cl, cn) channel_tls_process_ ## tp ## _cell(cl, cn)
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
   tor_assert(cell);
   tor_assert(conn);
@@ -1204,7 +1204,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
     /* remember which second it is, for next time */
     current_second = now;
   }
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
   tor_assert(var_cell);
   tor_assert(conn);
@@ -1579,7 +1579,7 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
       connection_or_close_normally(chan->conn, 1);
       return;
     }
-#endif
+#endif /* defined(DISABLE_V3_LINKPROTO_SERVERSIDE) */
 
     if (send_versions) {
       if (connection_or_send_versions(chan->conn, 1) < 0) {

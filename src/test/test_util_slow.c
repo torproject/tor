@@ -22,14 +22,14 @@
 #else
 #define TEST_CHILD (BUILDDIR "/src/test/test-child")
 #define EOL "\n"
-#endif
+#endif /* defined(_WIN32) */
 
 #ifdef _WIN32
 /* I've assumed Windows doesn't have the gap between fork and exec
  * that causes the race condition on unix-like platforms */
 #define MATCH_PROCESS_STATUS(s1,s2)         ((s1) == (s2))
 
-#else
+#else /* !(defined(_WIN32)) */
 /* work around a race condition of the timing of SIGCHLD handler updates
  * to the process_handle's fields, and checks of those fields
  *
@@ -46,7 +46,7 @@
      ||((s2) == PROCESS_STATUS_RUNNING_OR_NOTRUNNING      \
         && IS_RUNNING_OR_NOTRUNNING(s1)))
 
-#endif // _WIN32
+#endif /* defined(_WIN32) */
 
 /** Helper function for testing tor_spawn_background */
 static void
@@ -102,7 +102,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
    * that is, PROCESS_STATUS_RUNNING_OR_NOTRUNNING */
   tt_assert(process_handle->waitpid_cb != NULL
               || expected_status == PROCESS_STATUS_RUNNING_OR_NOTRUNNING);
-#endif
+#endif /* !defined(_WIN32) */
 
 #ifdef _WIN32
   tt_assert(process_handle->stdout_pipe != INVALID_HANDLE_VALUE);
@@ -112,7 +112,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   tt_assert(process_handle->stdout_pipe >= 0);
   tt_assert(process_handle->stderr_pipe >= 0);
   tt_assert(process_handle->stdin_pipe >= 0);
-#endif
+#endif /* defined(_WIN32) */
 
   /* Check stdout */
   pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
@@ -178,7 +178,7 @@ test_util_spawn_background_fail(void *ptr)
   /* TODO: Once we can signal failure to exec, set this to be
    * PROCESS_STATUS_RUNNING_OR_ERROR */
   const int expected_status = PROCESS_STATUS_RUNNING_OR_NOTRUNNING;
-#endif
+#endif /* defined(_WIN32) */
 
   memset(expected_out, 0xf0, sizeof(expected_out));
   memset(code, 0xf0, sizeof(code));
@@ -244,7 +244,7 @@ test_util_spawn_background_partial_read_impl(int exit_early)
     tt_assert(!eof);
     pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL, &eof);
-#endif
+#endif /* defined(_WIN32) */
     log_info(LD_GENERAL, "tor_read_all_handle() returned %d", (int)pos);
 
     /* We would have blocked, keep on trying */
@@ -270,7 +270,7 @@ test_util_spawn_background_partial_read_impl(int exit_early)
                             sizeof(stdout_buf) - 1,
                             process_handle);
   tt_int_op(0,OP_EQ, pos);
-#else
+#else /* !(defined(_WIN32)) */
   if (!eof) {
     /* We should have got all the data, but maybe not the EOF flag */
     pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
@@ -280,7 +280,7 @@ test_util_spawn_background_partial_read_impl(int exit_early)
     tt_assert(eof);
   }
   /* Otherwise, we got the EOF on the last read */
-#endif
+#endif /* defined(_WIN32) */
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
@@ -351,7 +351,7 @@ test_util_spawn_background_waitpid_notify(void *arg)
   }
   tt_int_op(ms_timer, OP_GT, 0);
   tt_ptr_op(process_handle->waitpid_cb, OP_EQ, NULL);
-#endif
+#endif /* !defined(_WIN32) */
 
   ms_timer = 30*1000;
   while (((retval = tor_get_exit_code(process_handle, 0, &exit_code))

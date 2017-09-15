@@ -47,5 +47,5 @@ int storage_dir_shrink(storage_dir_t *d,
 int storage_dir_remove_all(storage_dir_t *d);
 int storage_dir_get_max_files(storage_dir_t *d);
 
-#endif
+#endif /* !defined(TOR_STORAGEDIR_H) */
 

@@ -101,5 +101,5 @@ void or_handshake_certs_check_both(int severity,
 
 int tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out);
 
-#endif
+#endif /* !defined(TORCERT_H_INCLUDED) */
 

@@ -137,8 +137,8 @@ STATIC int networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
                                                 const char *flavor);
 extern networkstatus_t *current_ns_consensus;
 extern networkstatus_t *current_md_consensus;
-#endif
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* defined(NETWORKSTATUS_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_NETWORKSTATUS_H) */
 

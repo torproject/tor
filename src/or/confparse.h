@@ -129,5 +129,5 @@ const char *config_expand_abbrev(const config_format_t *fmt,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
 
-#endif
+#endif /* !defined(TOR_CONFPARSE_H) */
 

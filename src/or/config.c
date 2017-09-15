@@ -114,9 +114,9 @@
  * Coverity. Here's a kludge to unconfuse it.
  */
 #   define __INCLUDE_LEVEL__ 2
-#   endif
+#endif /* defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__) */
 #include <systemd/sd-daemon.h>
-#endif
+#endif /* defined(HAVE_SYSTEMD) */
 
 /* Prefix used to indicate a Unix socket in a FooPort configuration. */
 static const char unix_socket_prefix[] = "unix:";
@@ -345,7 +345,7 @@ static config_var_t option_vars_[] = {
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
   V(GeoIPv6File,                 FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip6"),
-#endif
+#endif /* defined(_WIN32) */
   OBSOLETE("Group"),
   V(GuardLifetime,               INTERVAL, "0 minutes"),
   V(HardwareAccel,               BOOL,     "0"),
@@ -1250,13 +1250,13 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                       "on this OS/with this build.");
     goto rollback;
   }
-#else
+#else /* !(!defined(HAVE_SYS_UN_H)) */
   if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
     *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
                       "a ControlSocket makes no sense.");
     goto rollback;
   }
-#endif
+#endif /* !defined(HAVE_SYS_UN_H) */
 
   if (running_tor) {
     int n_ports=0;
@@ -1333,7 +1333,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
       goto rollback;
     }
   }
-#endif
+#endif /* defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H) */
 
   /* Attempt to lock all current and future memory with mlockall() only once */
   if (options->DisableAllSwap) {
@@ -1385,7 +1385,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                options->DataDirectory, strerror(errno));
     }
   }
-#endif
+#endif /* !defined(_WIN32) */
 
   /* Bail out at this point if we're not going to be a client or server:
    * we don't run Tor itself. */
@@ -1667,7 +1667,7 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 /* LCOV_EXCL_STOP */
-#else
+#else /* !(defined(ENABLE_TOR2WEB_MODE)) */
   if (options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
             "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
@@ -1675,7 +1675,7 @@ options_act(const or_options_t *old_options)
             "--enable-tor2web-mode option.");
     return -1;
   }
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
   /* If we are a bridge with a pluggable transport proxy but no
      Extended ORPort, inform the user that they are missing out. */
@@ -2868,7 +2868,7 @@ options_validate_cb(void *old_options, void *options, void *default_options,
 #else
 #define COMPLAIN(args, ...)                                     \
   STMT_BEGIN log_warn(LD_CONFIG, args, ##__VA_ARGS__); STMT_END
-#endif
+#endif /* defined(__GNUC__) && __GNUC__ <= 3 */
 
 /** Log a warning message iff <b>filepath</b> is not absolute.
  * Warning message must contain option name <b>option</b> and
@@ -3171,7 +3171,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_PF_DIVERT;
-#endif
+#endif /* !defined(OpenBSD) && !defined( DARWIN ) */
     } else if (!strcasecmp(options->TransProxyType, "tproxy")) {
 #if !defined(__linux__)
       REJECT("TPROXY is a Linux-specific feature.");
@@ -3185,7 +3185,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_IPFW;
-#endif
+#endif /* !defined(KERNEL_MAY_SUPPORT_IPFW) */
     } else {
       REJECT("Unrecognized value for TransProxyType");
     }
@@ -3195,10 +3195,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
       REJECT("Cannot use TransProxyType without any valid TransPort.");
     }
   }
-#else
+#else /* !(defined(USE_TRANSPARENT)) */
   if (options->TransPort_set)
     REJECT("TransPort is disabled in this build.");
-#endif
+#endif /* defined(USE_TRANSPARENT) */
 
   if (options->TokenBucketRefillInterval <= 0
       || options->TokenBucketRefillInterval > 1000) {
@@ -3519,7 +3519,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "Tor2WebMode is enabled; disabling UseEntryGuards.");
     options->UseEntryGuards = 0;
   }
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
   if (options->Tor2webRendezvousPoints && !options->Tor2webMode) {
     REJECT("Tor2webRendezvousPoints cannot be set without Tor2webMode.");
@@ -4367,7 +4367,7 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
 #else
       /* (presumably) 32-bit system. Let's hope for 1 GB. */
       result = ONE_GIGABYTE;
-#endif
+#endif /* SIZEOF_VOID_P >= 8 */
     } else {
       /* We detected it, so let's pick 3/4 of the total RAM as our limit. */
       const uint64_t avail = (ram / 4) * 3;
@@ -4700,7 +4700,7 @@ get_windows_conf_root(void)
   path[sizeof(path)-1] = '\0';
 #else
   strlcpy(path,tpath,sizeof(path));
-#endif
+#endif /* defined(UNICODE) */
 
   /* Now we need to free the memory that the path-idl was stored in.  In
    * typical Windows fashion, we can't just call 'free()' on it. */
@@ -4716,7 +4716,7 @@ get_windows_conf_root(void)
   is_set = 1;
   return path;
 }
-#endif
+#endif /* defined(_WIN32) */
 
 /** Return the default location for our torrc file (if <b>defaults_file</b> is
  * false), or for the torrc-defaults file (if <b>defaults_file</b> is true). */
@@ -4740,7 +4740,7 @@ get_default_conf_file(int defaults_file)
   }
 #else
   return defaults_file ? CONFDIR "/torrc-defaults" : CONFDIR "/torrc";
-#endif
+#endif /* defined(DISABLE_SYSTEM_TORRC) || ... */
 }
 
 /** Verify whether lst is a list of strings containing valid-looking
@@ -4891,9 +4891,9 @@ find_torrc_filename(config_line_t *cmd_arg,
       } else {
         fname = dflt ? tor_strdup(dflt) : NULL;
       }
-#else
+#else /* !(!defined(_WIN32)) */
       fname = dflt ? tor_strdup(dflt) : NULL;
-#endif
+#endif /* !defined(_WIN32) */
     }
   }
   return fname;
@@ -5524,7 +5524,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
       }
 #else
       log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
-#endif
+#endif /* defined(HAVE_SYSLOG_H) */
       goto cleanup;
     }
 
@@ -6735,7 +6735,7 @@ parse_port_config(smartlist_t *out,
         } else if (!strcasecmp(elt, "AllAddrs")) {
 
           all_addrs = 1;
-#endif
+#endif /* 0 */
         } else if (!strcasecmp(elt, "IPv4Only")) {
           bind_ipv4_only = 1;
         } else if (!strcasecmp(elt, "IPv6Only")) {
@@ -7518,7 +7518,7 @@ normalize_data_directory(or_options_t *options)
   strlcpy(p,get_windows_conf_root(),MAX_PATH);
   options->DataDirectory = p;
   return 0;
-#else
+#else /* !(defined(_WIN32)) */
   const char *d = options->DataDirectory;
   if (!d)
     d = "~/.tor";
@@ -7544,7 +7544,7 @@ normalize_data_directory(or_options_t *options)
    options->DataDirectory = fn;
  }
  return 0;
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Check and normalize the value of options->DataDirectory; return 0 if it
@@ -8075,10 +8075,10 @@ config_load_geoip_file_(sa_family_t family,
   }
   geoip_load_file(family, fname);
   tor_free(free_fname);
-#else
+#else /* !(defined(_WIN32)) */
   (void)default_fname;
   geoip_load_file(family, fname);
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Load geoip files for IPv4 and IPv6 if <a>options</a> and
@@ -8153,9 +8153,9 @@ init_cookie_authentication(const char *fname, const char *header,
       log_warn(LD_FS,"Unable to make %s group-readable.", escaped(fname));
     }
   }
-#else
+#else /* !(!defined(_WIN32)) */
   (void) group_readable;
-#endif
+#endif /* !defined(_WIN32) */
 
   /* Success! */
   log_info(LD_GENERAL, "Generated auth cookie file in '%s'.", escaped(fname));

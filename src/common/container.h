@@ -74,11 +74,11 @@ static inline void smartlist_set(smartlist_t *sl, int idx, void *val) {
   tor_assert(sl->num_used > idx);
   sl->list[idx] = val;
 }
-#else
+#else /* !(defined(DEBUG_SMARTLIST)) */
 #define smartlist_len(sl) ((sl)->num_used)
 #define smartlist_get(sl, idx) ((sl)->list[idx])
 #define smartlist_set(sl, idx, val) ((sl)->list[idx] = (val))
-#endif
+#endif /* defined(DEBUG_SMARTLIST) */
 
 /** Exchange the elements at indices <b>idx1</b> and <b>idx2</b> of the
  * smartlist <b>sl</b>. */
@@ -580,7 +580,7 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
 #define BITARRAY_SHIFT 6
 #else
 #error "int is neither 4 nor 8 bytes. I can't deal with that."
-#endif
+#endif /* SIZEOF_INT == 4 || ... */
 #define BITARRAY_MASK ((1u<<BITARRAY_SHIFT)-1)
 
 /** A random-access array of one-bit-wide elements. */
@@ -723,5 +723,5 @@ third_quartile_uint32(uint32_t *array, int n_elements)
   return find_nth_uint32(array, n_elements, (n_elements*3)/4);
 }
 
-#endif
+#endif /* !defined(TOR_CONTAINER_H) */
 

@@ -20,7 +20,7 @@
 #define USE_PTHREADS
 #else
 #error "No threading system was found"
-#endif
+#endif /* defined(_WIN32) || ... */
 
 int spawn_func(void (*func)(void *), void *data);
 void spawn_exit(void) ATTR_NORETURN;
@@ -41,7 +41,7 @@ typedef struct tor_mutex_t {
 #else
   /** No-threads only: Dummy variable so that tor_mutex_t takes up space. */
   int _unused;
-#endif
+#endif /* defined(USE_WIN32_THREADS) || ... */
 } tor_mutex_t;
 
 tor_mutex_t *tor_mutex_new(void);
@@ -73,7 +73,7 @@ typedef struct tor_cond_t {
   int generation;
 #else
 #error no known condition implementation.
-#endif
+#endif /* defined(USE_PTHREADS) || ... */
 } tor_cond_t;
 
 tor_cond_t *tor_cond_new(void);
@@ -161,5 +161,5 @@ void atomic_counter_add(atomic_counter_t *counter, size_t add);
 void atomic_counter_sub(atomic_counter_t *counter, size_t sub);
 size_t atomic_counter_get(atomic_counter_t *counter);
 
-#endif
+#endif /* !defined(TOR_COMPAT_THREADS_H) */
 

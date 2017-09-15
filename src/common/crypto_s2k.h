@@ -67,7 +67,7 @@ STATIC int secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
                                      const uint8_t *spec, size_t spec_len,
                                      const char *secret, size_t secret_len,
                                      int type);
-#endif
+#endif /* defined(CRYPTO_S2K_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CRYPTO_S2K_H_INCLUDED) */
 

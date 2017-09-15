@@ -55,7 +55,7 @@ struct ntor_handshake_state_t {
   curve25519_public_key_t pubkey_X;
   /** @} */
 };
-#endif
+#endif /* defined(ONION_NTOR_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_ONION_NTOR_H) */
 

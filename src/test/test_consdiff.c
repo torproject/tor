@@ -1107,7 +1107,7 @@ test_consdiff_apply_diff(void *arg)
   tt_ptr_op(NULL, OP_EQ, cons2);
   expect_log_msg_containing("Could not compute digests of the consensus "
                             "resulting from applying a consensus diff.");
-#endif
+#endif /* 0 */
 
   /* Very simple test, only to see that nothing errors. */
   smartlist_clear(diff);

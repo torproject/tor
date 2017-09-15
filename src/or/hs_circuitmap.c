@@ -87,7 +87,7 @@ get_hs_circuitmap(void)
   return the_hs_circuitmap;
 }
 
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /****************** HS circuitmap utility functions **************************/
 

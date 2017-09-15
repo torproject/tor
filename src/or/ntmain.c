@@ -502,7 +502,7 @@ nt_service_command_line(int *using_default_torrc)
   tor_exe_ascii[sizeof(tor_exe_ascii)-1] = '\0';
 #else
   strlcpy(tor_exe_ascii, tor_exe, sizeof(tor_exe_ascii));
-#endif
+#endif /* defined(UNICODE) */
 
   /* Allocate a string for the NT service command line and */
   /* Format the service command */
@@ -778,5 +778,5 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
   return 0;
 }
 
-#endif
+#endif /* defined(_WIN32) */
 

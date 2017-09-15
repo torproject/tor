@@ -1134,7 +1134,7 @@ init_mock_ed_keys(const crypto_pk_t *rsa_identity_key)
 }
 #undef MAKEKEY
 #undef MAKECERT
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Print the ISO8601-formated <b>expiration</b> for a certificate with
@@ -1262,7 +1262,7 @@ get_master_identity_keypair(void)
 {
   return master_identity_key;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 const ed25519_keypair_t *
 get_master_signing_keypair(void)

@@ -36,10 +36,10 @@ static unsigned int kist_lite_mode = 0;
  * changed and it doesn't recognized the values passed to the syscalls needed
  * by KIST. In that case, fallback to the naive approach. */
 static unsigned int kist_no_kernel_support = 0;
-#else
+#else /* !(defined(HAVE_KIST_SUPPORT)) */
 static unsigned int kist_no_kernel_support = 1;
 static unsigned int kist_lite_mode = 1;
-#endif
+#endif /* defined(HAVE_KIST_SUPPORT) */
 
 /* Socket_table hash table stuff. The socket_table keeps track of per-socket
  * limit information imposed by kist and used by kist. */
@@ -289,9 +289,9 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   ent->limit = (uint64_t)tcp_space + (uint64_t)extra_space;
   return;
 
-#else /* HAVE_KIST_SUPPORT */
+#else /* !(defined(HAVE_KIST_SUPPORT)) */
   goto fallback;
-#endif /* HAVE_KIST_SUPPORT */
+#endif /* defined(HAVE_KIST_SUPPORT) */
 
  fallback:
   /* If all of a sudden we don't have kist support, we just zero out all the
@@ -764,7 +764,7 @@ scheduler_can_use_kist(void)
   return run_interval > 0;
 }
 
-#else /* HAVE_KIST_SUPPORT */
+#else /* !(defined(HAVE_KIST_SUPPORT)) */
 
 int
 scheduler_can_use_kist(void)
@@ -772,5 +772,5 @@ scheduler_can_use_kist(void)
   return 0;
 }
 
-#endif /* HAVE_KIST_SUPPORT */
+#endif /* defined(HAVE_KIST_SUPPORT) */
 

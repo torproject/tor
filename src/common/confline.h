@@ -49,5 +49,5 @@ void config_free_lines(config_line_t *front);
 const char *parse_config_line_from_str_verbose(const char *line,
                                        char **key_out, char **value_out,
                                        const char **err_out);
-#endif
+#endif /* !defined(TOR_CONFLINE_H) */
 

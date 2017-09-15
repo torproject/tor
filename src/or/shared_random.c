@@ -1447,5 +1447,5 @@ set_num_srv_agreements(int32_t value)
   num_srv_agreements_from_vote = value;
 }
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 

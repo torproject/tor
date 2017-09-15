@@ -63,5 +63,5 @@ int hs_ntor_client_rendezvous2_mac_is_good(
                         const hs_ntor_rend_cell_keys_t *hs_ntor_rend_cell_keys,
                         const uint8_t *rcvd_mac);
 
-#endif
+#endif /* !defined(TOR_HS_NTOR_H) */
 

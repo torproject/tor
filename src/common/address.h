@@ -44,7 +44,7 @@
 #endif
 
 // TODO win32 specific includes
-#endif // ADDRESS_PRIVATE
+#endif /* defined(ADDRESS_PRIVATE) */
 
 /** The number of bits from an address to consider while doing a masked
  * comparison. */
@@ -358,23 +358,23 @@ STATIC smartlist_t *ifaddrs_to_smartlist(const struct ifaddrs *ifa,
                                          sa_family_t family);
 STATIC smartlist_t *get_interface_addresses_ifaddrs(int severity,
                                                     sa_family_t family);
-#endif
+#endif /* defined(HAVE_IFADDRS_TO_SMARTLIST) */
 
 #ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
 STATIC smartlist_t *ip_adapter_addresses_to_smartlist(
                                         const IP_ADAPTER_ADDRESSES *addresses);
 STATIC smartlist_t *get_interface_addresses_win32(int severity,
                                                   sa_family_t family);
-#endif
+#endif /* defined(HAVE_IP_ADAPTER_TO_SMARTLIST) */
 
 #ifdef HAVE_IFCONF_TO_SMARTLIST
 STATIC smartlist_t *ifreq_to_smartlist(char *ifr,
                                        size_t buflen);
 STATIC smartlist_t *get_interface_addresses_ioctl(int severity,
                                                   sa_family_t family);
-#endif
+#endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
-#endif // ADDRESS_PRIVATE
+#endif /* defined(ADDRESS_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_ADDRESS_H) */
 

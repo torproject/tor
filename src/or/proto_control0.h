@@ -10,5 +10,5 @@
 struct buf_t;
 int peek_buf_has_control0_command(struct buf_t *buf);
 
-#endif
+#endif /* !defined(TOR_PROTO_CONTROL0_H) */
 

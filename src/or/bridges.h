@@ -66,5 +66,5 @@ MOCK_DECL(download_status_t *, get_bridge_dl_status_by_id,
 
 void bridges_free_all(void);
 
-#endif
+#endif /* !defined(TOR_BRIDGES_H) */
 

@@ -88,8 +88,8 @@ static struct event_base *the_event_base = NULL;
   (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1040)
 #else
 #define MACOSX_KQUEUE_IS_BROKEN 0
-#endif
-#endif
+#endif /* defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) */
+#endif /* defined(__APPLE__) */
 
 /** Initialize the Libevent library and set up the event base. */
 void
@@ -250,7 +250,7 @@ tor_gettimeofday_cache_clear(void)
 {
   event_base_update_cache_time(the_event_base);
 }
-#else
+#else /* !(defined(LIBEVENT_VERSION_NUMBER) &&         ...) */
 /** Cache the current hi-res time; the cache gets reset when libevent
  * calls us. */
 static struct timeval cached_time_hires = {0, 0};
@@ -290,6 +290,6 @@ tor_libevent_postfork(void)
   int r = event_reinit(tor_libevent_get_base());
   tor_assert(r == 0);
 }
-#endif
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
+#endif /* defined(LIBEVENT_VERSION_NUMBER) &&         ... */
 

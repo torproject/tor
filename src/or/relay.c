@@ -818,7 +818,7 @@ connection_edge_send_command(edge_connection_t *fromconn,
   if (linked_conn && linked_conn->type == CONN_TYPE_DIR) {
     ++(TO_DIR_CONN(linked_conn)->data_cells_sent);
   }
-#endif
+#endif /* defined(MEASUREMENTS_21206) */
 
   return relay_send_command_from_edge(fromconn->stream_id, circ,
                                       relay_command, payload,
@@ -1685,7 +1685,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (linked_conn && linked_conn->type == CONN_TYPE_DIR) {
         ++(TO_DIR_CONN(linked_conn)->data_cells_received);
       }
-#endif
+#endif /* defined(MEASUREMENTS_21206) */
 
       if (!optimistic_data) {
         /* Only send a SENDME if we're not getting optimistic data; otherwise
@@ -2383,7 +2383,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
      assert_circuit_mux_okay(chan)
 #else
 #define assert_cmux_ok_paranoid(chan)
-#endif
+#endif /* defined(ACTIVE_CIRCUITS_PARANOIA) */
 
 /** The total number of cells we have allocated. */
 static size_t total_cells_allocated = 0;
@@ -2851,7 +2851,7 @@ get_max_middle_cells(void)
 {
   return ORCIRC_MAX_MIDDLE_CELLS;
 }
-#endif
+#endif /* 0 */
 
 /** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>chan</b>
  * transmitting in <b>direction</b>. */
@@ -2961,7 +2961,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
       }
     }
   }
-#endif
+#endif /* 0 */
 
   cell_queue_append_packed_copy(circ, queue, exitward, cell,
                                 chan->wide_circ_ids, 1);

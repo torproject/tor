@@ -20,5 +20,5 @@ void memarea_get_stats(memarea_t *area,
                        size_t *allocated_out, size_t *used_out);
 void memarea_assert_ok(memarea_t *area);
 
-#endif
+#endif /* !defined(TOR_MEMAREA_H) */
 

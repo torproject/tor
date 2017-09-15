@@ -1391,5 +1391,5 @@ get_sr_state(void)
   return sr_state;
 }
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 

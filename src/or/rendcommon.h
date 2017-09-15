@@ -68,7 +68,7 @@ void assert_circ_anonymity_ok(const origin_circuit_t *circ,
 STATIC int
 rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc);
 
-#endif
+#endif /* defined(RENDCOMMON_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_RENDCOMMON_H) */
 

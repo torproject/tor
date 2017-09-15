@@ -77,7 +77,7 @@ client_get_random_intro(const ed25519_public_key_t *service_pk);
 STATIC extend_info_t *
 desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip);
 
-#endif /* HS_CLIENT_PRIVATE */
+#endif /* defined(HS_CLIENT_PRIVATE) */
 
-#endif /* TOR_HS_CLIENT_H */
+#endif /* !defined(TOR_HS_CLIENT_H) */
 

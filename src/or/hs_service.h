@@ -346,9 +346,9 @@ STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
 STATIC int service_desc_hsdirs_changed(const hs_service_t *service,
                                 const hs_service_descriptor_t *desc);
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif /* HS_SERVICE_PRIVATE */
+#endif /* defined(HS_SERVICE_PRIVATE) */
 
-#endif /* TOR_HS_SERVICE_H */
+#endif /* !defined(TOR_HS_SERVICE_H) */
 

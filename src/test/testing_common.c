@@ -33,7 +33,7 @@ const char tor_git_revision[] = "";
 #include <direct.h>
 #else
 #include <dirent.h>
-#endif
+#endif /* defined(_WIN32) */
 
 #include "or.h"
 
@@ -84,7 +84,7 @@ setup_directory(void)
                  (int)getpid(), rnd32);
     r = mkdir(temp_dir);
   }
-#else
+#else /* !(defined(_WIN32)) */
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s",
                (int) getpid(), rnd32);
   r = mkdir(temp_dir, 0700);
@@ -92,7 +92,7 @@ setup_directory(void)
     /* undo sticky bit so tests don't get confused. */
     r = chown(temp_dir, getuid(), getgid());
   }
-#endif
+#endif /* defined(_WIN32) */
   if (r) {
     fprintf(stderr, "Can't create directory %s:", temp_dir);
     perror("");
@@ -241,7 +241,7 @@ main(int c, const char **v)
     int r = crypto_use_tor_alloc_functions();
     tor_assert(r == 0);
   }
-#endif
+#endif /* defined(USE_DMALLOC) */
 
   update_approx_time(time(NULL));
   options = options_new();

@@ -128,7 +128,7 @@ command_time_process_cell(cell_t *cell, channel_t *chan, int *time,
   }
   *time += time_passed;
 }
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
 /** Process a <b>cell</b> that was just received on <b>chan</b>. Keep internal
  * statistics about how many of each cell we've processed so far
@@ -165,7 +165,7 @@ command_process_cell(channel_t *chan, cell_t *cell)
     /* remember which second it is, for next time */
     current_second = now;
   }
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
 #ifdef KEEP_TIMING_STATS
 #define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
@@ -173,9 +173,9 @@ command_process_cell(channel_t *chan, cell_t *cell)
     command_time_process_cell(cl, cn, & tp ## time ,            \
                               command_process_ ## tp ## _cell);  \
   } STMT_END
-#else
+#else /* !(defined(KEEP_TIMING_STATS)) */
 #define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
-#endif
+#endif /* defined(KEEP_TIMING_STATS) */
 
   switch (cell->command) {
     case CELL_CREATE:

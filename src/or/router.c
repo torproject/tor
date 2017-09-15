@@ -1945,7 +1945,7 @@ router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
       desc_routerinfo->ipv6_exit_policy &&
       compare_tor_addr_to_short_policy(addr, port,
                                me->ipv6_exit_policy) != ADDR_POLICY_ACCEPTED;
-#endif
+#endif /* 0 */
   } else {
     return -1;
   }
@@ -3047,7 +3047,7 @@ router_dump_router_to_string(routerinfo_t *router,
     tor_free(s_dup);
     routerinfo_free(ri_tmp);
   }
-#endif
+#endif /* defined(DEBUG_ROUTER_DUMP_ROUTER_TO_STRING) */
 
   goto done;
 

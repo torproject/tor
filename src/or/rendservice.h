@@ -131,9 +131,9 @@ STATIC void set_rend_service_list(smartlist_t *new_list);
 STATIC void set_rend_rend_service_staging_list(smartlist_t *new_list);
 STATIC void rend_service_prune_list_impl_(void);
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif /* RENDSERVICE_PRIVATE */
+#endif /* defined(RENDSERVICE_PRIVATE) */
 
 int rend_num_services(void);
 int rend_config_service(const config_line_t *line_,
@@ -214,5 +214,5 @@ int rend_service_allow_non_anonymous_connection(const or_options_t *options);
 int rend_service_reveal_startup_time(const or_options_t *options);
 int rend_service_non_anonymous_mode_enabled(const or_options_t *options);
 
-#endif
+#endif /* !defined(TOR_RENDSERVICE_H) */
 

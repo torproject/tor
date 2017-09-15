@@ -98,5 +98,5 @@ typedef struct cached_resolve_t {
   int minheap_idx;
 } cached_resolve_t;
 
-#endif
+#endif /* !defined(TOR_DNS_STRUCTS_H) */
 

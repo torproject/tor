@@ -275,7 +275,7 @@ select_scheduler(void)
     the_scheduler = get_vanilla_scheduler();
     return;
   }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
   /* This list is ordered that is first entry has the first priority. Thus, as
    * soon as we find a scheduler type that we can use, we use it and stop. */
@@ -295,9 +295,9 @@ select_scheduler(void)
           log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
                                "the consensus.");
         }
-#else /* HAVE_KIST_SUPPORT */
+#else /* !(defined(HAVE_KIST_SUPPORT)) */
         log_info(LD_SCHED, "Scheduler type KIST not built in");
-#endif /* HAVE_KIST_SUPPORT */
+#endif /* defined(HAVE_KIST_SUPPORT) */
         continue;
       }
       the_scheduler = get_kist_scheduler();
@@ -647,5 +647,5 @@ scheduler_touch_channel(channel_t *chan)
   /* else no-op, since it isn't in the queue */
 }
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 

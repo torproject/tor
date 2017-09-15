@@ -288,7 +288,7 @@ config_process_include(const char *path, int recursion_level, int extended,
     return -1;
   }
   tor_free(unquoted_path);
-#endif
+#endif /* 0 */
   smartlist_t *config_files = config_get_file_list(path);
   if (!config_files) {
     return -1;

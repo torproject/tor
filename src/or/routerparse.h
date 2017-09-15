@@ -133,9 +133,9 @@ MOCK_DECL(STATIC int, router_compute_hash_final,(char *digest,
                            digest_algorithm_t alg));
 MOCK_DECL(STATIC int, signed_digest_equals,
           (const uint8_t *d1, const uint8_t *d2, size_t len));
-#endif
+#endif /* defined(ROUTERPARSE_PRIVATE) */
 
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"
 
-#endif
+#endif /* !defined(TOR_ROUTERPARSE_H) */
 

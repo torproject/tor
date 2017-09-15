@@ -101,5 +101,5 @@ void mock_dump_saved_logs(void);
   assert_log_predicate(!mock_saved_log_has_entry(), \
                 "expected log to not contain entries");
 
-#endif
+#endif /* !defined(TOR_LOG_TEST_HELPERS_H) */
 

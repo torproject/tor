@@ -149,7 +149,7 @@ extern smartlist_t *channels_pending;
 extern struct event *run_sched_ev;
 extern const scheduler_t *the_scheduler;
 void scheduler_touch_channel(channel_t *chan);
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /*********************************
  * Defined in scheduler_kist.c
@@ -190,7 +190,7 @@ int32_t kist_scheduler_run_interval(const networkstatus_t *ns);
 extern int32_t sched_run_interval;
 #endif /* TOR_UNIT_TESTS */
 
-#endif /* SCHEDULER_KIST_PRIVATE */
+#endif /* defined(SCHEDULER_KIST_PRIVATE) */
 
 /*********************************
  * Defined in scheduler_vanilla.c
@@ -198,7 +198,7 @@ extern int32_t sched_run_interval;
 
 scheduler_t *get_vanilla_scheduler(void);
 
-#endif /* SCHEDULER_PRIVATE_ */
+#endif /* defined(SCHEDULER_PRIVATE_) */
 
-#endif /* TOR_SCHEDULER_H */
+#endif /* !defined(TOR_SCHEDULER_H) */
 

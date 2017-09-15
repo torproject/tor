@@ -118,5 +118,5 @@ void connection_or_group_set_badness_(smartlist_t *group, int force);
 extern int certs_cell_ed25519_disabled_for_testing;
 #endif
 
-#endif
+#endif /* !defined(TOR_CONNECTION_OR_H) */
 

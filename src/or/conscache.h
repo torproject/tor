@@ -58,5 +58,5 @@ int consensus_cache_entry_get_body(const consensus_cache_entry_t *ent,
 int consensus_cache_entry_is_mapped(consensus_cache_entry_t *ent);
 #endif
 
-#endif
+#endif /* !defined(TOR_CONSCACHE_H) */
 

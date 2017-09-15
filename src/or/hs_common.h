@@ -266,9 +266,9 @@ STATIC uint64_t get_time_period_length(void);
 STATIC uint8_t *get_first_cached_disaster_srv(void);
 STATIC uint8_t *get_second_cached_disaster_srv(void);
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif /* HS_COMMON_PRIVATE */
+#endif /* defined(HS_COMMON_PRIVATE) */
 
-#endif /* TOR_HS_COMMON_H */
+#endif /* !defined(TOR_HS_COMMON_H) */
 

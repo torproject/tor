@@ -423,7 +423,7 @@ test_dir_formats(void *arg)
     add_fingerprint_to_dir(buf, fingerprint_list, 0);
   }
 
-#endif
+#endif /* 0 */
   dirserv_free_fingerprint_list();
 
  done:

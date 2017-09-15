@@ -593,7 +593,7 @@ control_ports_write_to_file(void)
       smartlist_add_asprintf(lines, "UNIX_PORT=%s\n", conn->address);
       continue;
     }
-#endif
+#endif /* defined(AF_UNIX) */
     smartlist_add_asprintf(lines, "PORT=%s:%d\n", conn->address, conn->port);
   } SMARTLIST_FOREACH_END(conn);
 
@@ -610,7 +610,7 @@ control_ports_write_to_file(void)
                options->ControlPortWriteToFile);
     }
   }
-#endif
+#endif /* !defined(_WIN32) */
   tor_free(joined);
   SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
   smartlist_free(lines);
@@ -1749,7 +1749,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     #else
       int myUid = geteuid();
       tor_asprintf(answer, "%d", myUid);
-    #endif
+#endif /* defined(_WIN32) */
   } else if (!strcmp(question, "process/user")) {
     #ifdef _WIN32
       *answer = tor_strdup("");
@@ -1762,7 +1762,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       } else {
         *answer = tor_strdup("");
       }
-    #endif
+#endif /* defined(_WIN32) */
   } else if (!strcmp(question, "process/descriptor-limit")) {
     int max_fds = get_max_sockets();
     tor_asprintf(answer, "%d", max_fds);
@@ -7317,5 +7317,5 @@ control_testing_set_global_event_mask(uint64_t mask)
 {
   global_event_mask = mask;
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 

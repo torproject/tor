@@ -45,7 +45,7 @@
 #else
 #define DMALLOC_PARAMS
 #define DMALLOC_ARGS
-#endif
+#endif /* defined(USE_DMALLOC) */
 
 /* Memory management */
 void *tor_malloc_(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
@@ -72,7 +72,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
       (p)=NULL;                                     \
     }                                               \
   STMT_END
-#else
+#else /* !(defined(USE_DMALLOC)) */
 /** Release memory allocated by tor_malloc, tor_realloc, tor_strdup, etc.
  * Unlike the free() function, tor_free() will still work on NULL pointers,
  * and it sets the pointer value to NULL after freeing it.
@@ -86,7 +86,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
       (p)=NULL;                                                \
     }                                                          \
   STMT_END
-#endif
+#endif /* defined(USE_DMALLOC) */
 
 #define tor_malloc(size)       tor_malloc_(size DMALLOC_ARGS)
 #define tor_malloc_zero(size)  tor_malloc_zero_(size DMALLOC_ARGS)
@@ -261,7 +261,7 @@ int format_time_interval(char *out, size_t out_len, long interval);
 #else
 time_t approx_time(void);
 void update_approx_time(time_t now);
-#endif
+#endif /* defined(TIME_IS_FAST) */
 
 /* Rate-limiter */
 
@@ -451,7 +451,7 @@ struct process_handle_t {
   HANDLE stdout_pipe;
   HANDLE stderr_pipe;
   PROCESS_INFORMATION pid;
-#else
+#else /* !(defined(_WIN32)) */
   int stdin_pipe;
   int stdout_pipe;
   int stderr_pipe;
@@ -462,9 +462,9 @@ struct process_handle_t {
   struct waitpid_callback_t *waitpid_cb;
   /** The exit status reported by waitpid. */
   int waitpid_exit_status;
-#endif // _WIN32
+#endif /* defined(_WIN32) */
 };
-#endif
+#endif /* defined(UTIL_PRIVATE) */
 
 /* Return values of tor_get_exit_code() */
 #define PROCESS_EXIT_RUNNING 1
@@ -480,7 +480,7 @@ ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count,
 ssize_t tor_read_all_handle(int fd, char *buf, size_t count,
                             const process_handle_t *process,
                             int *eof);
-#endif
+#endif /* defined(_WIN32) */
 ssize_t tor_read_all_from_process_stdout(
     const process_handle_t *process_handle, char *buf, size_t count);
 ssize_t tor_read_all_from_process_stderr(
@@ -502,7 +502,7 @@ tor_get_lines_from_handle,(HANDLE *handle,
 MOCK_DECL(struct smartlist_t *,
 tor_get_lines_from_handle,(int fd,
                            enum stream_status *stream_status));
-#endif
+#endif /* defined(_WIN32) */
 
 int
 tor_terminate_process(process_handle_t *process_handle);
@@ -539,13 +539,13 @@ STATIC int format_helper_exit_status(unsigned char child_state,
    leading minus) and newline (no null) */
 #define HEX_ERRNO_SIZE (sizeof(char) * 2 + 1 + \
                         1 + sizeof(int) * 2 + 1)
-#endif
+#endif /* !defined(_WIN32) */
 
-#endif
+#endif /* defined(UTIL_PRIVATE) */
 
 int size_mul_check(const size_t x, const size_t y);
 
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
 
-#endif
+#endif /* !defined(TOR_UTIL_H) */
 

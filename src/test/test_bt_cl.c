@@ -38,7 +38,7 @@ crash(int x)
                          * don't need to see us dereference NULL. */
 #else
     *(volatile int *)0 = 0;
-#endif
+#endif /* defined(__clang_analyzer__) || defined(__COVERITY__) */
   } else if (crashtype == 1) {
     tor_assert(1 == 0);
   } else if (crashtype == -1) {

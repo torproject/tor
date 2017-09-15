@@ -20,7 +20,7 @@
 #include <direct.h>
 #else
 #include <dirent.h>
-#endif
+#endif /* defined(_WIN32) */
 
 /* These macros pull in declarations for some functions and structures that
  * are typically file-private. */

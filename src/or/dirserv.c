@@ -338,7 +338,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
         }
         return FP_REJECT;
       }
-#endif
+#endif /* defined(DISABLE_DISABLING_ED25519) */
     }
   }
 

@@ -814,7 +814,7 @@ parse_virtual_addr_network(const char *val, sa_family_t family,
                    ipv6?"IPv6":"");
     return -1;
   }
-#endif
+#endif /* 0 */
 
   if (bits > max_prefix_bits) {
     if (msg)
@@ -1044,7 +1044,7 @@ addressmap_register_virtual_address(int type, char *new_address)
              safe_str_client(*addrp),
              safe_str_client(new_address));
   }
-#endif
+#endif /* 0 */
 
   return *addrp;
 }

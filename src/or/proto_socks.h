@@ -16,5 +16,5 @@ int fetch_from_buf_socks(struct buf_t *buf, socks_request_t *req,
                          int log_sockstype, int safe_socks);
 int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);
 
-#endif
+#endif /* !defined(TOR_PROTO_SOCKS_H) */
 

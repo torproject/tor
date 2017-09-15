@@ -242,7 +242,7 @@ test_libscrypt_eq_openssl(void *arg)
   done:
   return;
 }
-#endif
+#endif /* defined(HAVE_LIBSCRYPT) && defined(HAVE_EVP_PBE_SCRYPT) */
 
 static void
 test_crypto_s2k_errors(void *arg)
@@ -283,7 +283,7 @@ test_crypto_s2k_errors(void *arg)
                                                  "ABC", 3, 0));
   tt_int_op(S2K_TRUNCATED, OP_EQ, secret_to_key_new(buf, 50, &sz,
                                                  "ABC", 3, S2K_FLAG_LOW_MEM));
-#endif
+#endif /* defined(HAVE_LIBSCRYPT) */
   tt_int_op(S2K_TRUNCATED, OP_EQ, secret_to_key_new(buf, 37, &sz,
                                               "ABC", 3, S2K_FLAG_USE_PBKDF2));
   tt_int_op(S2K_TRUNCATED, OP_EQ, secret_to_key_new(buf, 29, &sz,
@@ -318,7 +318,7 @@ test_crypto_s2k_errors(void *arg)
   tt_int_op(S2K_BAD_PARAMS, OP_EQ,
             secret_to_key_derivekey(buf2, sizeof(buf2),
                                     buf, 19, "ABC", 3));
-#endif
+#endif /* defined(HAVE_LIBSCRYPT) */
 
  done:
   ;
@@ -600,7 +600,7 @@ struct testcase_t slow_crypto_tests[] = {
 #ifdef HAVE_EVP_PBE_SCRYPT
   { "libscrypt_eq_openssl", test_libscrypt_eq_openssl, 0, NULL, NULL },
 #endif
-#endif
+#endif /* defined(HAVE_LIBSCRYPT) */
   { "s2k_pbkdf2", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"pbkdf2" },
   { "s2k_rfc2440_general", test_crypto_s2k_general, 0, &passthrough_setup,

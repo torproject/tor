@@ -121,7 +121,7 @@ STATIC size_t cache_clean_v3_as_dir(time_t now, time_t global_cutoff);
 STATIC hs_cache_client_descriptor_t *
 lookup_v3_desc_as_client(const uint8_t *key);
 
-#endif /* HS_CACHE_PRIVATE */
+#endif /* defined(HS_CACHE_PRIVATE) */
 
-#endif /* TOR_HS_CACHE_H */
+#endif /* !defined(TOR_HS_CACHE_H) */
 

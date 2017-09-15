@@ -225,7 +225,7 @@ MOCK_DECL(STATIC void,
           queue_control_event_string,(uint16_t event, char *msg));
 
 void control_testing_set_global_event_mask(uint64_t mask);
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Helper structure: temporarily stores cell statistics for a circuit. */
 typedef struct cell_stats_t {
@@ -292,7 +292,7 @@ STATIC int getinfo_helper_dir(
     const char *question, char **answer,
     const char **errmsg);
 
-#endif
+#endif /* defined(CONTROL_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CONTROL_H) */
 

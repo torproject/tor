@@ -20,7 +20,7 @@
 #define umask(mask) ((void)0)
 #else
 #define tt_int_op_nowin(a,op,b) tt_int_op((a),op,(b))
-#endif
+#endif /* defined(_WIN32) */
 
 /** Run unit tests for private dir permission enforcement logic. */
 static void

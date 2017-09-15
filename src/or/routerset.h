@@ -82,6 +82,6 @@ struct routerset_t {
    * reloaded. */
   bitarray_t *countries;
 };
-#endif
-#endif
+#endif /* defined(ROUTERSET_PRIVATE) */
+#endif /* !defined(TOR_ROUTERSET_H) */
 

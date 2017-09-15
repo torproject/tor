@@ -21,5 +21,5 @@ int rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
 int rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
                         size_t request_len);
 
-#endif
+#endif /* !defined(TOR_RENDMID_H) */
 

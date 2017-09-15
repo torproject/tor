@@ -50,5 +50,5 @@ void rend_service_authorization_free_all(void);
 int rend_client_allow_non_anonymous_connection(const or_options_t *options);
 int rend_client_non_anonymous_mode_enabled(const or_options_t *options);
 
-#endif
+#endif /* !defined(TOR_RENDCLIENT_H) */
 

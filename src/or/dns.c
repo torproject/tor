@@ -102,7 +102,7 @@ static void assert_cache_ok_(void);
 #define assert_cache_ok() assert_cache_ok_()
 #else
 #define assert_cache_ok() STMT_NIL
-#endif
+#endif /* defined(DEBUG_DNS_CACHE) */
 static void assert_resolve_ok(cached_resolve_t *resolve);
 
 /** Hash table of cached_resolve objects. */
@@ -961,14 +961,14 @@ assert_connection_edge_not_dns_pending(edge_connection_t *conn)
   for (pend = resolve->pending_connections; pend; pend = pend->next) {
     tor_assert(pend->conn != conn);
   }
-#else
+#else /* !(1) */
   cached_resolve_t **resolve;
   HT_FOREACH(resolve, cache_map, &cache_root) {
     for (pend = (*resolve)->pending_connections; pend; pend = pend->next) {
       tor_assert(pend->conn != conn);
     }
   }
-#endif
+#endif /* 1 */
 }
 
 /** Log an error and abort if any connection waiting for a DNS resolve is
@@ -1396,7 +1396,7 @@ configure_nameservers(int force)
       evdns_base_load_hosts(the_evdns_base,
           sandbox_intern_string("/etc/hosts"));
     }
-#endif
+#endif /* defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP) */
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
     if ((r = evdns_base_resolv_conf_parse(the_evdns_base, flags,
         sandbox_intern_string(conf_fname)))) {
@@ -1434,7 +1434,7 @@ configure_nameservers(int force)
     tor_free(resolv_conf_fname);
     resolv_conf_mtime = 0;
   }
-#endif
+#endif /* defined(_WIN32) */
 
 #define SET(k,v)  evdns_base_set_option(the_evdns_base, (k), (v))
 
@@ -2033,7 +2033,7 @@ assert_resolve_ok(cached_resolve_t *resolve)
       tor_assert(!resolve->hostname);
     else
       tor_assert(!resolve->result_ipv4.addr_ipv4);
-#endif
+#endif /* 0 */
     /*XXXXX ADD MORE */
   }
 }
@@ -2097,7 +2097,7 @@ assert_cache_ok_(void)
     });
 }
 
-#endif
+#endif /* defined(DEBUG_DNS_CACHE) */
 
 cached_resolve_t *
 dns_get_cache_entry(cached_resolve_t *query)

@@ -59,5 +59,5 @@ replyqueue_t *replyqueue_new(uint32_t alertsocks_flags);
 tor_socket_t replyqueue_get_socket(replyqueue_t *rq);
 void replyqueue_process(replyqueue_t *queue);
 
-#endif
+#endif /* !defined(TOR_WORKQUEUE_H) */
 

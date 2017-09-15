@@ -86,7 +86,7 @@ STATIC size_t n_cells_in_circ_queues(const circuit_t *c);
 STATIC uint32_t circuit_max_queued_data_age(const circuit_t *c, uint32_t now);
 STATIC uint32_t circuit_max_queued_cell_age(const circuit_t *c, uint32_t now);
 STATIC uint32_t circuit_max_queued_item_age(const circuit_t *c, uint32_t now);
-#endif
+#endif /* defined(CIRCUITLIST_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CIRCUITLIST_H) */
 

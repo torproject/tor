@@ -367,7 +367,7 @@ test_util_time(void *arg)
    * calculations internally, then catches the overflow. */
 #define TV_SEC_MAX TIME_MAX
 #define TV_SEC_MIN TIME_MIN
-#endif
+#endif /* defined(_WIN32) */
 
 /* Assume tv_usec is an unsigned integer until proven otherwise */
 #define TV_USEC_MAX UINT_MAX
@@ -641,7 +641,7 @@ test_util_time(void *arg)
   tt_int_op(t_res, OP_EQ, tor_timegm(&a_time));
   tor_gmtime_r(&t_res, &b_time);
   TM_EQUAL(a_time, b_time);
-#endif
+#endif /* SIZEOF_TIME_T == 4 || ... */
 
   /* Test tor_timegm out of range */
 
@@ -689,7 +689,7 @@ test_util_time(void *arg)
     CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
     CHECK_TIMEGM_ARG_OUT_OF_RANGE();
-#endif
+#endif /* SIZEOF_INT == 4 || SIZEOF_INT == 8 */
 
 #if SIZEOF_INT == 8
     a_time.tm_year = -1*(1 << 48);
@@ -711,7 +711,7 @@ test_util_time(void *arg)
     CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
     CHECK_TIMEGM_ARG_OUT_OF_RANGE();
-#endif
+#endif /* SIZEOF_INT == 8 */
 
   /* Wrong year >= INT32_MAX - 1900 */
 #if SIZEOF_INT == 4 || SIZEOF_INT == 8
@@ -724,7 +724,7 @@ test_util_time(void *arg)
     CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
     CHECK_TIMEGM_ARG_OUT_OF_RANGE();
-#endif
+#endif /* SIZEOF_INT == 4 || SIZEOF_INT == 8 */
 
 #if SIZEOF_INT == 8
     /* one of the largest tm_year values my 64 bit system supports */
@@ -752,7 +752,7 @@ test_util_time(void *arg)
     CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
     CHECK_TIMEGM_ARG_OUT_OF_RANGE();
-#endif
+#endif /* SIZEOF_INT == 8 */
 
   /* month */
   a_time.tm_year = 2007-1900;  /* restore valid year */
@@ -888,7 +888,7 @@ test_util_time(void *arg)
       teardown_capture_of_logs();
     }
   }
-#endif
+#endif /* SIZEOF_TIME_T == 8 */
 
   /* time_t >= INT_MAX yields a year clamped to 2037 or 9999,
    * depending on whether the implementation of the system gmtime(_r)
@@ -904,7 +904,7 @@ test_util_time(void *arg)
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (2038-1900));
   }
-#endif
+#endif /* SIZEOF_TIME_T == 4 || SIZEOF_TIME_T == 8 */
 
 #if SIZEOF_TIME_T == 8
   {
@@ -929,7 +929,7 @@ test_util_time(void *arg)
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (9999-1900));
   }
-#endif
+#endif /* SIZEOF_TIME_T == 8 */
 
   /* Test {format,parse}_rfc1123_time */
 
@@ -974,7 +974,7 @@ test_util_time(void *arg)
   i = parse_rfc1123_time(timestr, &t_res);
   tt_int_op(0,OP_EQ, i);
   tt_int_op(t_res,OP_EQ, (time_t)2150000000UL);
-#endif
+#endif /* SIZEOF_TIME_T == 4 || ... */
 
   /* The timezone doesn't matter */
   t_res = 0;
@@ -1046,7 +1046,7 @@ test_util_time(void *arg)
 #elif SIZEOF_TIME_T == 8
   tt_int_op(0,OP_EQ, i);
   tt_int_op(t_res,OP_EQ, (time_t)2150000000UL);
-#endif
+#endif /* SIZEOF_TIME_T == 4 || ... */
 
   tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-zz 99-99x99", &t_res));
   tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-32 00:00:00", &t_res));
@@ -1129,7 +1129,7 @@ test_util_time(void *arg)
   /* This SHOULD work on windows too; see bug #18665 */
   tt_str_op("2038-02-17 06:13:20",OP_EQ, timestr);
 #endif
-#endif
+#endif /* SIZEOF_TIME_T == 4 || ... */
 
 #undef CAPTURE
 #undef CHECK_TIMEGM_ARG_OUT_OF_RANGE
@@ -1224,7 +1224,7 @@ test_util_parse_http_time(void *arg)
   tt_int_op(0,OP_EQ,parse_http_time("Wed, 17 Feb 2038 06:13:20 GMT", &a_time));
   tt_int_op((time_t)2150000000UL,OP_EQ, tor_timegm(&a_time));
   T("2038-02-17 06:13:20");
-#endif
+#endif /* SIZEOF_TIME_T == 4 || ... */
 
   tt_int_op(-1,OP_EQ, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
   tt_int_op(-1,OP_EQ, parse_http_time("2011-03-32 00:00:00 GMT", &a_time));
@@ -1471,7 +1471,7 @@ test_util_config_line_comment_character(void *arg)
   tor_free(k); tor_free(v);
 
   test_streq(str, "");
-#endif
+#endif /* 0 */
 
  done:
   tor_free(k);
@@ -1602,7 +1602,7 @@ test_util_config_line_escaped_content(void *arg)
   str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str, OP_EQ, NULL);
   tor_free(k); tor_free(v);
-#endif
+#endif /* 0 */
 
   str = buf6;
 
@@ -1786,7 +1786,7 @@ test_util_expand_filename(void *arg)
  done:
   tor_free(str);
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 /** Test tor_escape_str_for_pt_args(). */
 static void
@@ -2552,7 +2552,7 @@ test_util_mmap(void *arg)
   tt_str_op(mapping->data,OP_EQ, "Short file.");
   tt_int_op(0, OP_EQ, tor_munmap_file(mapping));
   mapping = NULL;
-#endif
+#endif /* defined(_WIN32) */
 
   /* Now a zero-length file. */
   write_str_to_file(fname1, "", 1);
@@ -2881,7 +2881,7 @@ test_util_sscanf(void *arg)
   r = tor_sscanf("9223372036854775808. -9223372036854775809.",
                  "%d. %d.", &int1, &int2);
   tt_int_op(r,OP_EQ, 0);
-#endif
+#endif /* SIZEOF_INT == 4 || ... */
 
 #if SIZEOF_LONG == 4
   /* %lu */
@@ -2976,7 +2976,7 @@ test_util_sscanf(void *arg)
   r = tor_sscanf("9223372036854775808. -9223372036854775809.",
                  "%ld. %ld.", &lng1, &lng2);
   tt_int_op(r,OP_EQ, 0);
-#endif
+#endif /* SIZEOF_LONG == 4 || ... */
 
   r = tor_sscanf("123.456 .000007 -900123123.2000787 00003.2",
                  "%lf %lf %lf %lf", &d1,&d2,&d3,&d4);
@@ -3003,7 +3003,7 @@ strnlen(const char *s, size_t len)
     return len;
   return p - s;
 }
-#endif
+#endif /* !defined(HAVE_STRNLEN) */
 
 static void
 test_util_format_time_interval(void *arg)
@@ -3370,7 +3370,7 @@ test_util_format_time_interval(void *arg)
   tt_ci_char_op(label_m[0],OP_EQ, 'm');
   /* and 7 or 8 seconds - ignored */
 
-#endif
+#endif /* SIZEOF_LONG == 4 || SIZEOF_LONG == 8 */
 
 #if SIZEOF_LONG == 8
 
@@ -3408,7 +3408,7 @@ test_util_format_time_interval(void *arg)
   tt_ci_char_op(label_m[0],OP_EQ, 'm');
   /* and 7 or 8 seconds - ignored */
 
-#endif
+#endif /* SIZEOF_LONG == 8 */
 
  done:
   ;
@@ -3451,7 +3451,7 @@ test_util_path_is_relative(void *arg)
   tt_int_op(0,OP_EQ, path_is_relative("\\dir"));
   tt_int_op(0,OP_EQ, path_is_relative("a:\\dir"));
   tt_int_op(0,OP_EQ, path_is_relative("z:\\dir"));
-#endif
+#endif /* defined(_WIN32) */
 
  done:
   ;
@@ -3471,7 +3471,7 @@ test_util_memarea(void *arg)
      malloc(), which is free to lay out memory most any way it wants. */
   if (1)
     tt_skip();
-#endif
+#endif /* defined(DISABLE_MEMORY_SENTINELS) */
 
   (void)arg;
   tt_assert(area);
@@ -3993,7 +3993,7 @@ test_util_load_win_lib(void *ptr)
   if (h)
     FreeLibrary(h);
 }
-#endif
+#endif /* defined(_WIN32) */
 
 #ifndef _WIN32
 static void
@@ -4045,7 +4045,7 @@ test_util_exit_status(void *ptr)
   tt_int_op(n,OP_EQ, strlen(hex_errno));
   tt_int_op(n,OP_EQ, HEX_ERRNO_SIZE);
 
-#endif
+#endif /* SIZEOF_INT == 4 || ... */
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0x7F, 0, hex_errno);
@@ -4063,7 +4063,7 @@ test_util_exit_status(void *ptr)
  done:
   ;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 #ifndef _WIN32
 static void
@@ -4191,7 +4191,7 @@ test_util_string_from_pipe(void *ptr)
     close(test_pipe[1]);
 }
 
-#endif // _WIN32
+#endif /* !defined(_WIN32) */
 
 /**
  * Test for format_hex_number_sigsafe()
@@ -5213,7 +5213,7 @@ fd_is_cloexec(tor_socket_t fd)
   int flags = fcntl(fd, F_GETFD, 0);
   return (flags & FD_CLOEXEC) == FD_CLOEXEC;
 }
-#endif
+#endif /* defined(FD_CLOEXEC) */
 
 #ifndef _WIN32
 #define CAN_CHECK_NONBLOCK
@@ -5223,7 +5223,7 @@ fd_is_nonblocking(tor_socket_t fd)
   int flags = fcntl(fd, F_GETFL, 0);
   return (flags & O_NONBLOCK) == O_NONBLOCK;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 #define ERRNO_IS_EPROTO(e)    (e == SOCK_ERRNO(EPROTONOSUPPORT))
 #define SOCK_ERR_IS_EPROTO(s) ERRNO_IS_EPROTO(tor_socket_errno(s))
@@ -5267,13 +5267,13 @@ test_util_socket(void *arg)
   tt_int_op(fd_is_cloexec(fd2), OP_EQ, 0);
   tt_int_op(fd_is_cloexec(fd3), OP_EQ, 1);
   tt_int_op(fd_is_cloexec(fd4), OP_EQ, 1);
-#endif
+#endif /* defined(CAN_CHECK_CLOEXEC) */
 #ifdef CAN_CHECK_NONBLOCK
   tt_int_op(fd_is_nonblocking(fd1), OP_EQ, 0);
   tt_int_op(fd_is_nonblocking(fd2), OP_EQ, 1);
   tt_int_op(fd_is_nonblocking(fd3), OP_EQ, 0);
   tt_int_op(fd_is_nonblocking(fd4), OP_EQ, 1);
-#endif
+#endif /* defined(CAN_CHECK_NONBLOCK) */
 
   tor_assert(tor_close_socket == tor_close_socket__real);
 
@@ -5329,7 +5329,7 @@ is_there_a_localhost(int family)
 
   return result;
 }
-#endif
+#endif /* 0 */
 
 /* Test for socketpair and ersatz_socketpair().  We test them both, since
  * the latter is a tolerably good way to exersize tor_accept_socket(). */
@@ -5356,7 +5356,7 @@ test_util_socketpair(void *arg)
      * Assume we're on a machine without 127.0.0.1 or ::1 and give up now. */
     tt_skip();
   }
-#endif
+#endif /* defined(__FreeBSD__) */
   tt_int_op(0, OP_EQ, socketpair_result);
 
   tt_assert(SOCKET_OK(fds[0]));
@@ -5517,7 +5517,7 @@ test_util_get_avail_disk_space(void *arg)
 #else
   tt_i64_op(val, OP_GT, 0); /* You have some space. */
   tt_i64_op(val, OP_LT, ((int64_t)1)<<56); /* You don't have a zebibyte */
-#endif
+#endif /* !defined(HAVE_STATVFS) && !defined(_WIN32) */
 
  done:
   ;
@@ -5627,7 +5627,7 @@ test_util_pwdb(void *arg)
   tor_free(dir);
   teardown_capture_of_logs();
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 static void
 test_util_calloc_check(void *arg)
@@ -5805,7 +5805,7 @@ test_util_htonll(void *arg)
 #else
   tt_u64_op(res_le, OP_EQ, tor_htonll(0x8877665544332211));
   tt_u64_op(res_le, OP_EQ, tor_ntohll(0x8877665544332211));
-#endif
+#endif /* defined(WORDS_BIGENDIAN) */
 
  done:
   ;
@@ -5912,7 +5912,7 @@ test_util_get_unquoted_path(void *arg)
 #define UTIL_TEST_NO_WIN(n, f) UTIL_TEST(n, (f))
 #define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_LEGACY_NO_WIN(n) UTIL_LEGACY(n)
-#endif
+#endif /* defined(_WIN32) */
 
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),

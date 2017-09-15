@@ -149,9 +149,9 @@ int count_loading_descriptors_progress(void);
 STATIC void
 node_set_hsdir_index(node_t *node, const networkstatus_t *ns);
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif /* NODELIST_PRIVATE */
+#endif /* defined(NODELIST_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_NODELIST_H) */
 

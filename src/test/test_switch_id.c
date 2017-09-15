@@ -71,7 +71,7 @@ check_can_bind_low_ports(void)
 
   return -1;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 int
 main(int argc, char **argv)
@@ -83,7 +83,7 @@ main(int argc, char **argv)
 
   fprintf(stderr, "This test is not supported on your OS.\n");
   return 77;
-#else
+#else /* !(defined(_WIN32)) */
   const char *username;
   const char *testname;
   if (argc != 3) {
@@ -174,7 +174,7 @@ main(int argc, char **argv)
         }
         cap_free(caps);
       }
-#endif
+#endif /* defined(HAVE_LINUX_CAPABILITIES) */
       break;
     default:
       fprintf(stderr, "Unsupported test '%s'\n", testname);
@@ -187,6 +187,6 @@ main(int argc, char **argv)
   }
 
   return (okay ? 0 : 1);
-#endif
+#endif /* defined(_WIN32) */
 }
 

@@ -70,7 +70,7 @@ void tor_libevent_postfork(void);
 
 STATIC void
 libevent_logging_callback(int severity, const char *msg);
-#endif
+#endif /* defined(COMPAT_LIBEVENT_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_COMPAT_LIBEVENT_H) */
 

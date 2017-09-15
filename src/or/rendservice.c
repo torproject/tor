@@ -1459,7 +1459,7 @@ rend_service_load_keys(rend_service_t *s)
       log_warn(LD_FS,"Unable to make hidden hostname file %s group-readable.",
                fname);
   }
-#endif
+#endif /* !defined(_WIN32) */
 
   /* If client authorization is configured, load or generate keys. */
   if (s->auth_type != REND_NO_AUTH) {
@@ -4370,5 +4370,5 @@ set_rend_rend_service_staging_list(smartlist_t *new_list)
   rend_service_staging_list = new_list;
 }
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */
 

@@ -64,7 +64,7 @@
 #include <process.h>
 #include <direct.h>
 #include <windows.h>
-#endif
+#endif /* defined(_WIN32) */
 
 #include "crypto.h"
 #include "crypto_format.h"
@@ -1834,7 +1834,7 @@ typedef struct dir_connection_t {
 
   /** Number of RELAY_DATA cells sent. */
   uint32_t data_cells_sent;
-#endif
+#endif /* defined(MEASUREMENTS_21206) */
 } dir_connection_t;
 
 /** Subtype of connection_t for an connection to a controller. */
@@ -5051,7 +5051,7 @@ typedef struct measured_bw_line_t {
   long int bw_kb;
 } measured_bw_line_t;
 
-#endif
+#endif /* defined(DIRSERV_PRIVATE) */
 
 /********************************* dirvote.c ************************/
 
@@ -5464,5 +5464,5 @@ typedef struct tor_version_t {
   char git_tag[DIGEST_LEN];
 } tor_version_t;
 
-#endif
+#endif /* !defined(TOR_OR_H) */
 

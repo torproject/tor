@@ -285,7 +285,7 @@ test_entryconn_rewrite_automap_reverse(void *arg)
  done:
   connection_free_(ENTRY_TO_CONN(ec2));
 }
-#endif
+#endif /* 0 */
 
 /* Rewrite because of cached DNS entry. */
 static void

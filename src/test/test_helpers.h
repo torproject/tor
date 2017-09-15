@@ -28,5 +28,5 @@ or_options_t *helper_parse_options(const char *conf);
 
 extern const char TEST_DESCRIPTORS[];
 
-#endif /* TOR_TEST_HELPERS_H */
+#endif /* !defined(TOR_TEST_HELPERS_H) */
 

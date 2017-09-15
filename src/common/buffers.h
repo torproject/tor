@@ -119,7 +119,7 @@ CHUNK_WRITE_PTR(chunk_t *chunk)
   return chunk->data + chunk->datalen;
 }
 
-#endif
+#endif /* defined(BUFFERS_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_BUFFERS_H) */
 

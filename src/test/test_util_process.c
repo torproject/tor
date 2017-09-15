@@ -67,7 +67,7 @@ test_util_process_clear_waitpid_callback(void *ignored)
  done:
   teardown_capture_of_logs();
 }
-#endif /* _WIN32 */
+#endif /* !defined(_WIN32) */
 
 #ifndef _WIN32
 #define TEST(name) { #name, test_util_process_##name, 0, NULL, NULL }

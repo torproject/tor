@@ -310,7 +310,7 @@ struct circuit_guard_state_t {
    */
   entry_guard_restriction_t *restrictions;
 };
-#endif
+#endif /* defined(ENTRYNODES_PRIVATE) */
 
 /* Common entry points for old and new guard code */
 int guards_update_all(void);
@@ -335,7 +335,7 @@ int num_live_entry_guards_for_guard_selection(
     guard_selection_t *gs,
     int for_directory);
 int num_live_entry_guards(int for_directory);
-#endif
+#endif /* 1 */
 
 const node_t *entry_guard_find_node(const entry_guard_t *guard);
 const char *entry_guard_get_rsa_id_digest(const entry_guard_t *guard);
@@ -550,7 +550,7 @@ STATIC unsigned entry_guards_note_guard_success(guard_selection_t *gs,
                                                 unsigned old_state);
 STATIC int entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b);
 STATIC char *getinfo_helper_format_single_entry_guard(const entry_guard_t *e);
-#endif
+#endif /* defined(ENTRYNODES_PRIVATE) */
 
 void remove_all_entry_guards_for_guard_selection(guard_selection_t *gs);
 void remove_all_entry_guards(void);
@@ -597,5 +597,5 @@ guard_get_guardfraction_bandwidth(guardfraction_bandwidth_t *guardfraction_bw,
                                   int orig_bandwidth,
                                   uint32_t guardfraction_percentage);
 
-#endif
+#endif /* !defined(TOR_ENTRYNODES_H) */
 

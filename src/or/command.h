@@ -27,5 +27,5 @@ extern uint64_t stats_n_created_cells_processed;
 extern uint64_t stats_n_relay_cells_processed;
 extern uint64_t stats_n_destroy_cells_processed;
 
-#endif
+#endif /* !defined(TOR_COMMAND_H) */
 

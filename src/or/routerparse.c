@@ -388,9 +388,9 @@ static int check_signature_token(const char *digest,
   log_debug(LD_MM, "Area for %s has %lu allocated; using %lu.",   \
             name, (unsigned long)alloc, (unsigned long)used);     \
   STMT_END
-#else
+#else /* !(defined(DEBUG_AREA_ALLOC)) */
 #define DUMP_AREA(a,name) STMT_NIL
-#endif
+#endif /* defined(DEBUG_AREA_ALLOC) */
 
 /* Dump mechanism for unparseable descriptors */
 
@@ -701,7 +701,7 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
     goto done;
     /* LCOV_EXCL_STOP */
   }
-#endif
+#endif /* SIZE_MAX > UINT64_MAX */
   if (BUG(st.st_size < 0)) {
     /* LCOV_EXCL_START
      * Should be impossible, since the OS isn't supposed to be b0rken. */
@@ -1425,9 +1425,9 @@ dump_distinct_digest_count(int severity)
     verified_digests = digestmap_new();
   tor_log(severity, LD_GENERAL, "%d *distinct* router digests verified",
       digestmap_size(verified_digests));
-#else
+#else /* !(defined(COUNT_DISTINCT_DIGESTS)) */
   (void)severity; /* suppress "unused parameter" warning */
-#endif
+#endif /* defined(COUNT_DISTINCT_DIGESTS) */
 }
 
 /** Try to find an IPv6 OR port in <b>list</b> of directory_token_t's

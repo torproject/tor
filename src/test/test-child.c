@@ -8,7 +8,7 @@
 #include <windows.h>
 #else
 #include <unistd.h>
-#endif
+#endif /* defined(_WIN32) */
 #include <string.h>
 
 #ifdef _WIN32

@@ -659,7 +659,7 @@ consdiffmgr_find_diff_from(consensus_cache_entry_t **entry_out,
   smartlist_free(matches);
 
   return result;
-#endif
+#endif /* 0 */
 }
 
 /**

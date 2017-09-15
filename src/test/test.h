@@ -55,7 +55,7 @@
 #else
 #define U64_PRINTF_TYPE unsigned long long
 #define I64_PRINTF_TYPE long long
-#endif
+#endif /* defined(_MSC_VER) */
 
 #define tt_size_op(a,op,b)                                              \
   tt_assert_test_fmt_type(a,b,#a" "#op" "#b,size_t,(val1_ op val2_),    \
@@ -269,5 +269,5 @@ extern const char AUTHORITY_SIGNKEY_3[];
 extern const char AUTHORITY_SIGNKEY_C_DIGEST[];
 extern const char AUTHORITY_SIGNKEY_C_DIGEST256[];
 
-#endif
+#endif /* !defined(TOR_TEST_H) */
 

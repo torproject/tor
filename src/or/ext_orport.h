@@ -36,7 +36,7 @@ STATIC int handle_client_auth_nonce(const char *client_nonce,
 extern uint8_t *ext_or_auth_cookie;
 extern int ext_or_auth_cookie_is_set;
 #endif
-#endif
+#endif /* defined(EXT_ORPORT_PRIVATE) */
 
-#endif
+#endif /* !defined(EXT_ORPORT_H) */
 

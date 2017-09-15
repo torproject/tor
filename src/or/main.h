@@ -95,7 +95,7 @@ STATIC void teardown_periodic_events(void);
 #ifdef TOR_UNIT_TESTS
 extern smartlist_t *connection_array;
 #endif
-#endif
+#endif /* defined(MAIN_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_MAIN_H) */
 

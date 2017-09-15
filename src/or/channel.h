@@ -487,7 +487,7 @@ STATIC void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
 
 void channel_write_cell_generic_(channel_t *chan, const char *cell_type,
                                  void *cell, cell_queue_entry_t *q);
-#endif
+#endif /* defined(CHANNEL_PRIVATE_) */
 
 /* Channel operations for subclasses and internal use only */
 
@@ -580,7 +580,7 @@ void channel_do_open_actions(channel_t *chan);
 extern uint64_t estimated_total_queue_size;
 #endif
 
-#endif
+#endif /* defined(TOR_CHANNEL_INTERNAL_) */
 
 /* Helper functions to perform operations on channels */
 
@@ -719,5 +719,5 @@ int packed_cell_is_destroy(channel_t *chan,
 /* Declare the handle helpers */
 HANDLE_DECL(channel, channel_s,)
 
-#endif
+#endif /* !defined(TOR_CHANNEL_H) */
 

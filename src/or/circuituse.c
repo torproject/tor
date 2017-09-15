@@ -410,7 +410,7 @@ circuit_conforms_to_options(const origin_circuit_t *circ,
 
   return 1;
 }
-#endif
+#endif /* 0 */
 
 /** Close all circuits that start at us, aren't open, and were born
  * at least CircuitBuildTimeout seconds ago.
@@ -634,7 +634,7 @@ circuit_expire_building(void)
                victim->n_circ_id,
                (int)(now - victim->timestamp_dirty));
     }
-#endif
+#endif /* 0 */
 
     /* if circ is !open, or if it's open but purpose is a non-finished
      * intro or rend, then mark it for close */
@@ -1339,7 +1339,7 @@ circuit_expire_old_circs_as_needed(time_t now)
       log_fn(LOG_INFO,"Creating a new testing circuit.");
       circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, 0);
     }
-#endif
+#endif /* 0 */
   }
 }
 
@@ -2282,7 +2282,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
          new_circ_purpose == CIRCUIT_PURPOSE_C_INTRODUCING)) {
       want_onehop = 1;
     }
-#endif
+#endif /* defined(ENABLE_TOR2WEB_MODE) */
 
     /* Determine what kind of a circuit to launch, and actually launch it. */
     {

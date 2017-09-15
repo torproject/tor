@@ -34,5 +34,5 @@ int onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
                                 size_t key_out_len,
                                 const char **msg_out);
 
-#endif
+#endif /* !defined(TOR_ONION_TAP_H) */
 

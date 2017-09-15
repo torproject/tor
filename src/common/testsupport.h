@@ -10,7 +10,7 @@
 #else
 #define STATIC static
 #define EXTERN(type, name)
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Quick and dirty macros to implement test mocking.
  *
@@ -76,15 +76,15 @@
   do {                                          \
     func = func ##__real;                       \
   } while (0)
-#else
+#else /* !(defined(TOR_UNIT_TESTS)) */
 #define MOCK_DECL(rv, funcname, arglist) \
   rv funcname arglist
 #define MOCK_DECL_ATTR(rv, funcname, arglist, attr) \
   rv funcname arglist attr
 #define MOCK_IMPL(rv, funcname, arglist) \
   rv funcname arglist
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 /** @} */
 
-#endif
+#endif /* !defined(TOR_TESTSUPPORT_H) */
 

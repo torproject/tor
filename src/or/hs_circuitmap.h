@@ -99,7 +99,7 @@ struct hs_token_s {
   uint8_t *token;
 };
 
-#endif /* HS_CIRCUITMAP_PRIVATE */
+#endif /* defined(HS_CIRCUITMAP_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 
@@ -107,5 +107,5 @@ hs_circuitmap_ht *get_hs_circuitmap(void);
 
 #endif /* TOR_UNIT_TESTS */
 
-#endif /* TOR_HS_CIRCUITMAP_H */
+#endif /* !defined(TOR_HS_CIRCUITMAP_H) */
 

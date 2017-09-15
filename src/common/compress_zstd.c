@@ -38,7 +38,7 @@ memory_level(compression_level_t level)
     case LOW_COMPRESSION: return 7;
   }
 }
-#endif // HAVE_ZSTD.
+#endif /* defined(HAVE_ZSTD) */
 
 /** Return 1 if Zstandard compression is supported; otherwise 0. */
 int
@@ -68,9 +68,9 @@ tor_zstd_get_version_str(void)
                version_number % 100);
 
   return version_str;
-#else
+#else /* !(defined(HAVE_ZSTD)) */
   return NULL;
-#endif
+#endif /* defined(HAVE_ZSTD) */
 }
 
 /** Return a string representation of the version of the version of libzstd
@@ -95,7 +95,7 @@ struct tor_zstd_compress_state_t {
     /** Decompression stream. Used when <b>compress</b> is false. */
     ZSTD_DStream *decompress_stream;
   } u; /**< Zstandard stream objects. */
-#endif // HAVE_ZSTD.
+#endif /* defined(HAVE_ZSTD) */
 
   int compress; /**< True if we are compressing; false if we are inflating */
   int have_called_end; /**< True if we are compressing and we've called
@@ -171,7 +171,7 @@ tor_zstd_state_size_precalc(int compress, int preset)
 
   return memory_usage;
 }
-#endif // HAVE_ZSTD.
+#endif /* defined(HAVE_ZSTD) */
 
 /** Construct and return a tor_zstd_compress_state_t object using
  * <b>method</b>. If <b>compress</b>, it's for compression; otherwise it's for
@@ -248,13 +248,13 @@ tor_zstd_compress_new(int compress,
   tor_free(result);
   return NULL;
   // LCOV_EXCL_STOP
-#else // HAVE_ZSTD.
+#else /* !(defined(HAVE_ZSTD)) */
   (void)compress;
   (void)method;
   (void)level;
 
   return NULL;
-#endif // HAVE_ZSTD.
+#endif /* defined(HAVE_ZSTD) */
 }
 
 /** Compress/decompress some bytes using <b>state</b>.  Read up to
@@ -385,7 +385,7 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
       return TOR_COMPRESS_OK;
   }
 
-#else // HAVE_ZSTD.
+#else /* !(defined(HAVE_ZSTD)) */
   (void)state;
   (void)out;
   (void)out_len;
@@ -394,7 +394,7 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
   (void)finish;
 
   return TOR_COMPRESS_ERROR;
-#endif // HAVE_ZSTD.
+#endif /* defined(HAVE_ZSTD) */
 }
 
 /** Deallocate <b>state</b>. */
@@ -412,7 +412,7 @@ tor_zstd_compress_free(tor_zstd_compress_state_t *state)
   } else {
     ZSTD_freeDStream(state->u.decompress_stream);
   }
-#endif // HAVE_ZSTD.
+#endif /* defined(HAVE_ZSTD) */
 
   tor_free(state);
 }

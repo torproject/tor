@@ -39,5 +39,5 @@ size_t tor_lzma_get_total_allocation(void);
 
 void tor_lzma_init(void);
 
-#endif // TOR_COMPRESS_LZMA_H.
+#endif /* !defined(TOR_COMPRESS_LZMA_H) */
 

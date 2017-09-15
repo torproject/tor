@@ -436,7 +436,7 @@ static int next_key_idx_1024;
 #define N_PREGEN_KEYS_2048 ARRAY_LENGTH(PREGEN_KEYS_2048)
 static crypto_pk_t *pregen_keys_2048[N_PREGEN_KEYS_2048];
 static int next_key_idx_2048;
-#endif
+#endif /* defined(USE_PREGENERATED_RSA_KEYS) */
 
 /** Generate and return a new keypair for use in unit tests.  If we're using
  * the key cache optimization, we might reuse keys. "idx" is ignored.
@@ -466,14 +466,14 @@ pk_generate_internal(int bits)
   *idxp += crypto_rand_int_range(1,3);
   *idxp %= n_pregen;
   return crypto_pk_dup_key(pregen_array[*idxp]);
-#else
+#else /* !(defined(USE_PREGENERATED_RSA_KEYS)) */
   crypto_pk_t *result;
   int res;
   result = crypto_pk_new();
   res = crypto_pk_generate_key_with_bits__real(result, bits);
   tor_assert(!res);
   return result;
-#endif
+#endif /* defined(USE_PREGENERATED_RSA_KEYS) */
 }
 
 crypto_pk_t *
@@ -496,7 +496,7 @@ crypto_pk_generate_key_with_bits__get_cached(crypto_pk_t *env, int bits)
   }
   return 0;
 }
-#endif
+#endif /* defined(USE_PREGENERATED_RSA_KEYS) */
 
 /** Free all storage used for the cached key optimization. */
 void
@@ -516,7 +516,7 @@ free_pregenerated_keys(void)
       pregen_keys_2048[idx] = NULL;
     }
   }
-#endif
+#endif /* defined(USE_PREGENERATED_RSA_KEYS) */
 }
 
 void
@@ -541,6 +541,6 @@ init_pregenerated_keys(void)
 
   MOCK(crypto_pk_generate_key_with_bits,
        crypto_pk_generate_key_with_bits__get_cached);
-#endif
+#endif /* defined(USE_PREGENERATED_RSA_KEYS) */
 }
 

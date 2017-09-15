@@ -1628,7 +1628,7 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
   }
   return current_md_consensus ? 0 : -1;
 }
-#endif //TOR_UNIT_TESTS
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /**
  * Return true if any option is set in <b>options</b> to make us behave

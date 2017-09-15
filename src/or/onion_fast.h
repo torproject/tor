@@ -35,5 +35,5 @@ int fast_client_handshake(const fast_handshake_state_t *handshake_state,
                           size_t key_out_len,
                           const char **msg_out);
 
-#endif
+#endif /* !defined(TOR_ONION_FAST_H) */
 

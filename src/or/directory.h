@@ -194,7 +194,7 @@ STATIC void warn_disallowed_anonymous_compression_method(compress_method_t);
 STATIC int handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
                                           const response_handler_args_t *args);
 
-#endif
+#endif /* defined(DIRECTORY_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 /* Used only by test_dir.c and test_hs_cache.c */
@@ -232,7 +232,7 @@ STATIC int parse_hs_version_from_post(const char *url, const char *prefix,
                                       const char **end_pos);
 
 STATIC unsigned parse_accept_encoding_header(const char *h);
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #if defined(TOR_UNIT_TESTS) || defined(DIRECTORY_PRIVATE)
 /* Used only by directory.c and test_dir.c */
@@ -242,7 +242,7 @@ STATIC unsigned parse_accept_encoding_header(const char *h);
 /* no more than triple the previous delay */
 #define DIR_TEST_NET_RANDOM_MULTIPLIER (2)
 
-#endif
+#endif /* defined(TOR_UNIT_TESTS) || defined(DIRECTORY_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_DIRECTORY_H) */
 

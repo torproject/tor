@@ -92,7 +92,7 @@ MOCK_DECL(STATIC int,
 MOCK_DECL(STATIC int,
           consensus_digest_eq,(const uint8_t *d1,
                                const uint8_t *d2));
-#endif
+#endif /* defined(CONSDIFF_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CONSDIFF_H) */
 

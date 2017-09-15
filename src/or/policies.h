@@ -141,7 +141,7 @@ STATIC const tor_addr_port_t * fascist_firewall_choose_address(
                                           firewall_connection_t fw_connection,
                                           int pref_only, int pref_ipv6);
 
-#endif
+#endif /* defined(POLICIES_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_POLICIES_H) */
 

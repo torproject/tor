@@ -31,11 +31,11 @@
 #include <process.h>
 #include <tchar.h>
 #include <winbase.h>
-#else
+#else /* !(defined(_WIN32)) */
 #include <dirent.h>
 #include <pwd.h>
 #include <grp.h>
-#endif
+#endif /* defined(_WIN32) */
 
 /* math.h needs this on Linux */
 #ifndef _USE_ISOC99_
@@ -84,8 +84,8 @@
  * scold us for being so stupid as to autodetect its presence.  To be fair,
  * they've done this since 1996, when autoconf was only 5 years old. */
 #include <malloc.h>
-#endif
-#endif
+#endif /* !defined(OpenBSD) && !defined(__FreeBSD__) */
+#endif /* defined(HAVE_MALLOC_H) */
 #ifdef HAVE_MALLOC_NP_H
 #include <malloc_np.h>
 #endif
@@ -116,12 +116,12 @@
          dmalloc_strndup(file, line, (string), -1, xalloc_b)
  #else
  #error "No dmalloc_strdup or equivalent"
- #endif
+#endif /* defined(HAVE_DMALLOC_STRDUP) || ... */
 
-#else /* not using dmalloc */
+#else /* !(defined(USE_DMALLOC)) */
 
  #define DMALLOC_FN_ARGS
-#endif
+#endif /* defined(USE_DMALLOC) */
 
 /** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
  * result.  On error, log and terminate the process.  (Same as malloc(size),
@@ -142,7 +142,7 @@ tor_malloc_(size_t size DMALLOC_PARAMS)
   if (size==0) {
     size=1;
   }
-#endif
+#endif /* !defined(MALLOC_ZERO_WORKS) */
 
 #ifdef USE_DMALLOC
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
@@ -233,7 +233,7 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
   if (size==0) {
     size=1;
   }
-#endif
+#endif /* !defined(MALLOC_ZERO_WORKS) */
 
 #ifdef USE_DMALLOC
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
@@ -362,16 +362,16 @@ tor_log_mallinfo(int severity)
       mi.arena, mi.ordblks, mi.smblks, mi.hblks,
       mi.hblkhd, mi.usmblks, mi.fsmblks, mi.uordblks, mi.fordblks,
       mi.keepcost);
-#else
+#else /* !(defined(HAVE_MALLINFO)) */
   (void)severity;
-#endif
+#endif /* defined(HAVE_MALLINFO) */
 #ifdef USE_DMALLOC
   dmalloc_log_changed(0, /* Since the program started. */
                       1, /* Log info about non-freed pointers. */
                       0, /* Do not log info about freed pointers. */
                       0  /* Do not log individual pointers. */
                       );
-#endif
+#endif /* defined(USE_DMALLOC) */
 }
 ENABLE_GCC_WARNING(aggregate-return)
 
@@ -401,7 +401,7 @@ tor_lround(double d)
   return (long)rint(d);
 #else
   return (long)(d > 0 ? d + 0.5 : ceil(d - 0.5));
-#endif
+#endif /* defined(HAVE_LROUND) || ... */
 }
 
 /** Return the 64-bit integer closest to d.  We define this wrapper here so
@@ -416,7 +416,7 @@ tor_llround(double d)
   return (int64_t)rint(d);
 #else
   return (int64_t)(d > 0 ? d + 0.5 : ceil(d - 0.5));
-#endif
+#endif /* defined(HAVE_LLROUND) || ... */
 }
 
 /** Returns floor(log2(u64)).  If u64 is 0, (incorrectly) returns 0. */
@@ -1238,7 +1238,7 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   r = (uint64_t)strtoul(s, &endptr, base);
 #else
 #error "I don't know how to parse 64-bit numbers."
-#endif
+#endif /* defined(HAVE_STRTOULL) || ... */
 
   CHECK_STRTOX_RESULT();
 }
@@ -1636,7 +1636,7 @@ tor_timegm(const struct tm *tm, time_t *time_out)
     log_warn(LD_BUG, "Result does not fit in tor_timegm");
     return -1;
   }
-#endif
+#endif /* SIZEOF_TIME_T < 8 */
   *time_out = (time_t)seconds;
   return 0;
 }
@@ -2014,7 +2014,7 @@ update_approx_time(time_t now)
 {
   cached_approx_time = now;
 }
-#endif
+#endif /* !defined(TIME_IS_FAST) */
 
 /* =====
  * Rate limiting
@@ -2143,9 +2143,9 @@ clean_name_for_stat(char *name)
       return;
     name[len-1]='\0';
   }
-#else
+#else /* !(defined(_WIN32)) */
   (void)name;
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Wrapper for unlink() to make it mockable for the test suite; returns 0
@@ -2419,7 +2419,7 @@ check_private_dir,(const char *dirname, cpd_check_t check,
     }
   }
   close(fd);
-#else
+#else /* !(!defined(_WIN32)) */
   /* Win32 case: we can't open() a directory. */
   (void)effective_user;
 
@@ -2453,7 +2453,7 @@ check_private_dir,(const char *dirname, cpd_check_t check,
     return -1;
   }
 
-#endif
+#endif /* !defined(_WIN32) */
   return 0;
 }
 
@@ -2473,7 +2473,7 @@ write_str_to_file,(const char *fname, const char *str, int bin))
              "We're writing a text string that already contains a CR to %s",
              escaped(fname));
   }
-#endif
+#endif /* defined(_WIN32) */
   return write_bytes_to_file(fname, str, strlen(str), bin);
 }
 
@@ -2873,7 +2873,7 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
       errno = save_errno;
     return string;
   }
-#endif
+#endif /* !defined(_WIN32) */
 
   if ((uint64_t)(statbuf.st_size)+1 >= SIZE_T_CEILING) {
     close(fd);
@@ -2906,7 +2906,7 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
   if (!bin) {
     statbuf.st_size = (size_t) r;
   } else
-#endif
+#endif /* defined(_WIN32) || defined(__CYGWIN__) */
     if (r != statbuf.st_size) {
       /* Unless we're using text mode on win32, we'd better have an exact
        * match for size. */
@@ -3090,7 +3090,7 @@ expand_filename(const char *filename)
    *     Chapter+3.+Input+Validation/3.7+Validating+Filenames+and+Paths/
    */
   return tor_strdup(filename);
-#else
+#else /* !(defined(_WIN32)) */
   if (*filename == '~') {
     char *home, *result=NULL;
     const char *rest;
@@ -3120,10 +3120,10 @@ expand_filename(const char *filename)
       }
       tor_free(username);
       rest = slash ? (slash+1) : "";
-#else
+#else /* !(defined(HAVE_PWD_H)) */
       log_warn(LD_CONFIG, "Couldn't expand homedir on system without pwd.h");
       return tor_strdup(filename);
-#endif
+#endif /* defined(HAVE_PWD_H) */
     }
     tor_assert(home);
     /* Remove trailing slash. */
@@ -3136,7 +3136,7 @@ expand_filename(const char *filename)
   } else {
     return tor_strdup(filename);
   }
-#endif
+#endif /* defined(_WIN32) */
 }
 
 #define MAX_SCANF_WIDTH 9999
@@ -3505,7 +3505,7 @@ tor_listdir, (const char *dirname))
     name[sizeof(name)-1] = '\0';
 #else
     strlcpy(name,findData.cFileName,sizeof(name));
-#endif
+#endif /* defined(UNICODE) */
     if (strcmp(name, ".") &&
         strcmp(name, "..")) {
       smartlist_add_strdup(result, name);
@@ -3522,7 +3522,7 @@ tor_listdir, (const char *dirname))
   }
   FindClose(handle);
   tor_free(pattern);
-#else
+#else /* !(defined(_WIN32)) */
   const char *prot_dname = sandbox_intern_string(dirname);
   DIR *d;
   struct dirent *de;
@@ -3537,7 +3537,7 @@ tor_listdir, (const char *dirname))
     smartlist_add_strdup(result, de->d_name);
   }
   closedir(d);
-#endif
+#endif /* defined(_WIN32) */
   return result;
 }
 
@@ -3553,7 +3553,7 @@ path_is_relative(const char *filename)
   else if (filename && strlen(filename)>3 && TOR_ISALPHA(filename[0]) &&
            filename[1] == ':' && filename[2] == '\\')
     return 0;
-#endif
+#endif /* defined(_WIN32) */
   else
     return 1;
 }
@@ -3683,7 +3683,7 @@ finish_daemon(const char *desired_cwd)
   }
   close(daemon_filedes[1]);
 }
-#else
+#else /* !(!defined(_WIN32)) */
 /* defined(_WIN32) */
 void
 start_daemon(void)
@@ -3694,7 +3694,7 @@ finish_daemon(const char *cp)
 {
   (void)cp;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 /** Write the current process ID, followed by NL, into <b>filename</b>.
  * Return 0 on success, -1 on failure.
@@ -3736,7 +3736,7 @@ load_windows_system_library(const TCHAR *library_name)
   _tcscat(path, library_name);
   return LoadLibrary(path);
 }
-#endif
+#endif /* defined(_WIN32) */
 
 /** Format a single argument for being put on a Windows command line.
  * Returns a newly allocated string */
@@ -4031,7 +4031,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  done:
   return res;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
 #define DEFAULT_MAX_FD 256
@@ -4055,12 +4055,12 @@ tor_terminate_process(process_handle_t *process_handle)
     else
       return 0;
   }
-#else /* Unix */
+#else /* !(defined(_WIN32)) */
   if (process_handle->waitpid_cb) {
     /* We haven't got a waitpid yet, so we can just kill off the process. */
     return kill(process_handle->pid, SIGTERM);
   }
-#endif
+#endif /* defined(_WIN32) */
 
   return 0; /* We didn't need to kill the process, so report success */
 }
@@ -4082,14 +4082,14 @@ tor_process_get_stdout_pipe(process_handle_t *process_handle)
 {
   return process_handle->stdout_pipe;
 }
-#else
+#else /* !(defined(_WIN32)) */
 /* DOCDOC tor_process_get_stdout_pipe */
 int
 tor_process_get_stdout_pipe(process_handle_t *process_handle)
 {
   return process_handle->stdout_pipe;
 }
-#endif
+#endif /* defined(_WIN32) */
 
 /* DOCDOC process_handle_new */
 static process_handle_t *
@@ -4105,7 +4105,7 @@ process_handle_new(void)
   out->stdin_pipe = -1;
   out->stdout_pipe = -1;
   out->stderr_pipe = -1;
-#endif
+#endif /* defined(_WIN32) */
 
   return out;
 }
@@ -4125,7 +4125,7 @@ process_handle_waitpid_cb(int status, void *arg)
     process_handle->status = PROCESS_STATUS_NOTRUNNING;
   process_handle->waitpid_cb = 0;
 }
-#endif
+#endif /* !defined(_WIN32) */
 
 /**
  * @name child-process states
@@ -4308,7 +4308,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   /* TODO: Close pipes on exit */
   *process_handle_out = process_handle;
   return status;
-#else // _WIN32
+#else /* !(defined(_WIN32)) */
   pid_t pid;
   int stdout_pipe[2];
   int stderr_pipe[2];
@@ -4383,9 +4383,9 @@ tor_spawn_background(const char *const filename, const char **argv,
                "Cannot find maximum file descriptor, assuming %d", max_fd);
     }
   }
-#else
+#else /* !(defined(_SC_OPEN_MAX)) */
   max_fd = DEFAULT_MAX_FD;
-#endif
+#endif /* defined(_SC_OPEN_MAX) */
 
   child_state = CHILD_STATE_FORK;
 
@@ -4400,7 +4400,7 @@ tor_spawn_background(const char *const filename, const char **argv,
      * than nothing.
      */
     prctl(PR_SET_PDEATHSIG, SIGTERM);
-#endif
+#endif /* defined(HAVE_SYS_PRCTL_H) && defined(__linux__) */
 
     child_state = CHILD_STATE_DUPOUT;
 
@@ -4541,7 +4541,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   *process_handle_out = process_handle;
   return process_handle->status;
-#endif // _WIN32
+#endif /* defined(_WIN32) */
 }
 
 /** Destroy all resources allocated by the process handle in
@@ -4583,13 +4583,13 @@ tor_process_handle_destroy,(process_handle_t *process_handle,
 
   if (process_handle->stdin_pipe)
     CloseHandle(process_handle->stdin_pipe);
-#else
+#else /* !(defined(_WIN32)) */
   close(process_handle->stdout_pipe);
   close(process_handle->stderr_pipe);
   close(process_handle->stdin_pipe);
 
   clear_waitpid_callback(process_handle->waitpid_cb);
-#endif
+#endif /* defined(_WIN32) */
 
   memset(process_handle, 0x0f, sizeof(process_handle_t));
   tor_free(process_handle);
@@ -4642,7 +4642,7 @@ tor_get_exit_code(process_handle_t *process_handle,
       return PROCESS_EXIT_ERROR;
     }
   }
-#else
+#else /* !(defined(_WIN32)) */
   int stat_loc;
   int retval;
 
@@ -4677,7 +4677,7 @@ tor_get_exit_code(process_handle_t *process_handle,
 
   if (exit_code != NULL)
     *exit_code = WEXITSTATUS(stat_loc);
-#endif // _WIN32
+#endif /* defined(_WIN32) */
 
   return PROCESS_EXIT_EXITED;
 }
@@ -4917,7 +4917,7 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count,
   }
   return (ssize_t)numread;
 }
-#else
+#else /* !(defined(_WIN32)) */
 /** Read from a handle <b>fd</b> into <b>buf</b>, up to <b>count</b> bytes.  If
  * <b>process</b> is NULL, the function will return immediately if there is
  * nothing more to read. Otherwise data will be read until end of file, or
@@ -4962,7 +4962,7 @@ tor_read_all_handle(int fd, char *buf, size_t count,
   log_debug(LD_GENERAL, "read() read %d bytes from handle", (int)numread);
   return (ssize_t)numread;
 }
-#endif
+#endif /* defined(_WIN32) */
 
 /** Read from stdout of a process until the process exits. */
 ssize_t
@@ -4975,7 +4975,7 @@ tor_read_all_from_process_stdout(const process_handle_t *process_handle,
 #else
   return tor_read_all_handle(process_handle->stdout_pipe, buf, count,
                              process_handle, NULL);
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Read from stdout of a process until the process exits. */
@@ -4989,7 +4989,7 @@ tor_read_all_from_process_stderr(const process_handle_t *process_handle,
 #else
   return tor_read_all_handle(process_handle->stderr_pipe, buf, count,
                              process_handle, NULL);
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /** Split buf into lines, and add to smartlist. The buffer <b>buf</b> will be
@@ -5178,7 +5178,7 @@ log_from_handle(HANDLE *pipe, int severity)
   return 0;
 }
 
-#else
+#else /* !(defined(_WIN32)) */
 
 /** Return a smartlist containing lines outputted from
  *  <b>fd</b>. Return NULL on error, and set
@@ -5243,7 +5243,7 @@ log_from_pipe(int fd, int severity, const char *executable,
   /* We should never get here */
   return -1;
 }
-#endif
+#endif /* defined(_WIN32) */
 
 /** Reads from <b>fd</b> and stores input in <b>buf_out</b> making
  *  sure it's below <b>count</b> bytes.
@@ -5495,7 +5495,7 @@ tor_check_port_forwarding(const char *filename,
     status = tor_spawn_background(NULL, argv, NULL, &child_handle);
 #else
     status = tor_spawn_background(filename, argv, NULL, &child_handle);
-#endif
+#endif /* defined(_WIN32) */
 
     tor_free_((void*)argv);
     argv=NULL;
@@ -5521,7 +5521,7 @@ tor_check_port_forwarding(const char *filename,
 #else
     stderr_status = log_from_pipe(child_handle->stderr_pipe,
                                   LOG_INFO, filename, &retval);
-#endif
+#endif /* defined(_WIN32) */
     if (handle_fw_helper_output(filename, child_handle) < 0) {
       log_warn(LD_GENERAL, "Failed to handle fw helper output.");
       stdout_status = -1;
@@ -5546,13 +5546,13 @@ tor_check_port_forwarding(const char *filename,
        * between log_from_handle and tor_get_exit_code? */
       retval = 1;
     }
-#else
+#else /* !(defined(_WIN32)) */
     else if (1 == stdout_status || 1 == stderr_status)
       /* stdout or stderr was closed, the process probably
        * exited. It will be reaped by waitpid() in main.c */
       /* TODO: Do something with the process return value */
       retval = 1;
-#endif
+#endif /* defined(_WIN32) */
     else
       /* Both are fine */
       retval = 0;
@@ -5632,7 +5632,7 @@ clamp_double_to_int64(double number)
 */
 #define PROBLEMATIC_FLOAT_CONVERSION_WARNING
 DISABLE_GCC_WARNING(float-conversion)
-#endif
+#endif /* defined(MINGW_ANY) && GCC_VERSION >= 409 */
 
 /*
   With clang 4.0 we apparently run into "double promotion" warnings here,
@@ -5643,7 +5643,7 @@ DISABLE_GCC_WARNING(float-conversion)
 #define PROBLEMATIC_DOUBLE_PROMOTION_WARNING
 DISABLE_GCC_WARNING(double-promotion)
 #endif
-#endif
+#endif /* defined(__clang__) */
 
   /* NaN is a special case that can't be used with the logic below. */
   if (isnan(number)) {
@@ -5690,7 +5690,7 @@ tor_htonll(uint64_t a)
   /* Little endian. The worst... */
   return htonl((uint32_t)(a>>32)) |
     (((uint64_t)htonl((uint32_t)a))<<32);
-#endif /* WORDS_BIGENDIAN */
+#endif /* defined(WORDS_BIGENDIAN) */
 }
 
 /** Return a uint64_t value from <b>a</b> in host byte order. */

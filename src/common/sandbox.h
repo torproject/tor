@@ -23,7 +23,7 @@
  */
 #define SYS_SECCOMP 1
 
-#endif
+#endif /* !defined(SYS_SECCOMP) */
 
 #if defined(HAVE_SECCOMP_H) && defined(__linux__)
 #define USE_LIBSECCOMP
@@ -101,7 +101,7 @@ typedef struct {
   sandbox_cfg_t *filter_dynamic;
 } sandbox_t;
 
-#endif // USE_LIBSECCOMP
+#endif /* defined(USE_LIBSECCOMP) */
 
 #ifdef USE_LIBSECCOMP
 /** Pre-calls getaddrinfo in order to pre-record result. */
@@ -114,7 +114,7 @@ int sandbox_getaddrinfo(const char *name, const char *servname,
                         struct addrinfo **res);
 void sandbox_freeaddrinfo(struct addrinfo *addrinfo);
 void sandbox_free_getaddrinfo_cache(void);
-#else
+#else /* !(defined(USE_LIBSECCOMP)) */
 #define sandbox_getaddrinfo(name, servname, hints, res)  \
   getaddrinfo((name),(servname), (hints),(res))
 #define sandbox_add_addrinfo(name) \
@@ -122,16 +122,16 @@ void sandbox_free_getaddrinfo_cache(void);
 #define sandbox_freeaddrinfo(addrinfo) \
   freeaddrinfo((addrinfo))
 #define sandbox_free_getaddrinfo_cache()
-#endif
+#endif /* defined(USE_LIBSECCOMP) */
 
 #ifdef USE_LIBSECCOMP
 /** Returns a registered protected string used with the sandbox, given that
  * it matches the parameter.
  */
 const char* sandbox_intern_string(const char *param);
-#else
+#else /* !(defined(USE_LIBSECCOMP)) */
 #define sandbox_intern_string(s) (s)
-#endif
+#endif /* defined(USE_LIBSECCOMP) */
 
 /** Creates an empty sandbox configuration file.*/
 sandbox_cfg_t * sandbox_cfg_new(void);
@@ -170,5 +170,5 @@ int sandbox_is_active(void);
 
 void sandbox_disable_getaddrinfo_cache(void);
 
-#endif /* SANDBOX_H_ */
+#endif /* !defined(SANDBOX_H_) */
 

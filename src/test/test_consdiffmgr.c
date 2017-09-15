@@ -230,7 +230,7 @@ test_consdiffmgr_init_failure(void *arg)
  done:
   tor_end_capture_bugs_();
 }
-#endif
+#endif /* 0 */
 
 static void
 test_consdiffmgr_sha3_helper(void *arg)

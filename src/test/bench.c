@@ -58,7 +58,7 @@ perftime(void)
   return timespec_to_nsec(&ts) - nanostart;
 }
 
-#else
+#else /* !(defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)) */
 static struct timeval tv_start = { 0, 0 };
 static void
 reset_perftime(void)
@@ -73,7 +73,7 @@ perftime(void)
   timersub(&now, &tv_start, &out);
   return ((uint64_t)out.tv_sec)*1000000000 + out.tv_usec*1000;
 }
-#endif
+#endif /* defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID) */
 
 #define NANOCOUNT(start,end,iters) \
   ( ((double)((end)-(start))) / (iters) )

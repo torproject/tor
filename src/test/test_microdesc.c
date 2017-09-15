@@ -19,7 +19,7 @@
 #include <direct.h>
 #else
 #include <dirent.h>
-#endif
+#endif /* defined(_WIN32) */
 
 static const char test_md1[] =
   "onion-key\n"

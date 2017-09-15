@@ -704,7 +704,7 @@ connection_free,(connection_t *conn))
     connection_ap_warn_and_unmark_if_pending_circ(TO_ENTRY_CONN(conn),
                                                   "connection_free");
   }
-#endif
+#endif /* 1 */
   connection_unregister_events(conn);
   connection_free_(conn);
 }
@@ -928,7 +928,7 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
   *len_out = sizeof(struct sockaddr_un);
   return sockaddr;
 }
-#else
+#else /* !(defined(HAVE_SYS_UN_H) || defined(RUNNING_DOXYGEN)) */
 static struct sockaddr *
 create_unix_sockaddr(const char *listenaddress, char **readable_address,
                      socklen_t *len_out)
@@ -941,7 +941,7 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
   tor_fragile_assert();
   return NULL;
 }
-#endif /* HAVE_SYS_UN_H */
+#endif /* defined(HAVE_SYS_UN_H) || defined(RUNNING_DOXYGEN) */
 
 /** Warn that an accept or a connect has failed because we're running out of
  * TCP sockets we can use on current system.  Rate-limit these warnings so
@@ -1056,7 +1056,7 @@ check_location_for_unix_socket(const or_options_t *options, const char *path,
   tor_free(p);
   return r;
 }
-#endif
+#endif /* defined(HAVE_SYS_UN_H) */
 
 /** Tell the TCP stack that it shouldn't wait for a long time after
  * <b>sock</b> has closed before reusing its port. Return 0 on success,
@@ -1079,7 +1079,7 @@ make_socket_reuseable(tor_socket_t sock)
     return -1;
   }
   return 0;
-#endif
+#endif /* defined(_WIN32) */
 }
 
 #ifdef _WIN32
@@ -1100,12 +1100,12 @@ make_win32_socket_exclusive(tor_socket_t sock)
     return -1;
   }
   return 0;
-#else
+#else /* !(defined(SO_EXCLUSIVEADDRUSE)) */
   (void) sock;
   return 0;
-#endif
+#endif /* defined(SO_EXCLUSIVEADDRUSE) */
 }
-#endif
+#endif /* defined(_WIN32) */
 
 /** Max backlog to pass to listen.  We start at */
 static int listen_limit = INT_MAX;
@@ -1195,7 +1195,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                conn_type_to_string(type),
                tor_socket_strerror(errno));
     }
-#endif
+#endif /* defined(_WIN32) */
 
 #if defined(USE_TRANSPARENT) && defined(IP_TRANSPARENT)
     if (options->TransProxyType_parsed == TPT_TPROXY &&
@@ -1212,7 +1212,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                  tor_socket_strerror(e), extra);
       }
     }
-#endif
+#endif /* defined(USE_TRANSPARENT) && defined(IP_TRANSPARENT) */
 
 #ifdef IPV6_V6ONLY
     if (listensockaddr->sa_family == AF_INET6) {
@@ -1227,7 +1227,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         /* Keep going; probably not harmful. */
       }
     }
-#endif
+#endif /* defined(IPV6_V6ONLY) */
 
     if (bind(s,listensockaddr,socklen) < 0) {
       const char *helpfulhint = "";
@@ -1330,7 +1330,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         goto err;
       }
     }
-#endif
+#endif /* defined(HAVE_PWD_H) */
 
     {
       unsigned mode;
@@ -1361,7 +1361,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
     }
-#endif /* HAVE_SYS_UN_H */
+#endif /* defined(HAVE_SYS_UN_H) */
   } else {
     log_err(LD_BUG, "Got unexpected address family %d.",
             listensockaddr->sa_family);
@@ -2626,7 +2626,7 @@ retry_listener_ports(smartlist_t *old_conns,
     if (port->is_unix_addr && !geteuid() && (options->User) &&
         strcmp(options->User, "root"))
       continue;
-#endif
+#endif /* !defined(_WIN32) */
 
     if (port->is_unix_addr) {
       listensockaddr = (struct sockaddr *)

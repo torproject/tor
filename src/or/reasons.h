@@ -28,5 +28,5 @@ const char *socks5_response_code_to_string(uint8_t code);
 const char *bandwidth_weight_rule_to_string(enum bandwidth_weight_rule_t rule);
 const char *end_reason_to_http_connect_response_line(int endreason);
 
-#endif
+#endif /* !defined(TOR_REASONS_H) */
 

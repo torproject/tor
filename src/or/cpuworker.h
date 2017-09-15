@@ -33,5 +33,5 @@ void cpuworker_log_onionskin_overhead(int severity, int onionskin_type,
                                       const char *onionskin_type_name);
 void cpuworker_cancel_circ_handshake(or_circuit_t *circ);
 
-#endif
+#endif /* !defined(TOR_CPUWORKER_H) */
 

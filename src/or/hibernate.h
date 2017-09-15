@@ -53,7 +53,7 @@ typedef enum {
 #ifdef TOR_UNIT_TESTS
 void hibernate_set_state_for_testing_(hibernate_state_t newstate);
 #endif
-#endif
+#endif /* defined(HIBERNATE_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_HIBERNATE_H) */
 

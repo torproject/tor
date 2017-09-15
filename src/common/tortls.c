@@ -76,7 +76,7 @@ ENABLE_GCC_WARNING(redundant-decls)
  * SSL3 safely at the same time.
  */
 #define DISABLE_SSL3_HANDSHAKE
-#endif
+#endif /* OPENSSL_VERSION_NUMBER <  OPENSSL_V(1,0,0,'f') */
 
 /* We redefine these so that we can run correctly even if the vendor gives us
  * a version of OpenSSL that does not match its header files.  (Apple: I am
@@ -390,7 +390,7 @@ tor_tls_init(void)
                    "when configuring it) would make ECDH much faster.");
     }
     /* LCOV_EXCL_STOP */
-#endif
+#endif /* (SIZEOF_VOID_P >= 8 &&                              ... */
 
     tor_tls_allocate_tor_tls_object_ex_data_index();
 
@@ -1134,7 +1134,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
    * with existing Tors. */
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
     goto error;
-#endif
+#endif /* 0 */
 
   /* Tell OpenSSL to use TLS 1.0 or later but not SSL2 or SSL3. */
 #ifdef HAVE_TLS_METHOD
@@ -1143,7 +1143,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
 #else
   if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
     goto error;
-#endif
+#endif /* defined(HAVE_TLS_METHOD) */
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv3);
 
@@ -1193,7 +1193,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   if (result->ctx->comp_methods)
     result->ctx->comp_methods = NULL;
 #endif
-#endif
+#endif /* OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0) */
 
 #ifdef SSL_MODE_RELEASE_BUFFERS
   SSL_CTX_set_mode(result->ctx, SSL_MODE_RELEASE_BUFFERS);
@@ -1354,7 +1354,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
       tor_assert((SSL_CIPHER_get_id(c) & 0xffff) == cipher);
     return c != NULL;
   }
-#else
+#else /* !(defined(HAVE_SSL_CIPHER_FIND)) */
 
 # if defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
   if (m && m->get_cipher_by_char) {
@@ -1368,7 +1368,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
       tor_assert((c->id & 0xffff) == cipher);
     return c != NULL;
   }
-# endif
+#endif /* defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR) */
 # ifndef OPENSSL_1_1_API
   if (m && m->get_cipher && m->num_ciphers) {
     /* It would seem that some of the "let's-clean-up-openssl" forks have
@@ -1384,12 +1384,12 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     }
     return 0;
   }
-# endif
+#endif /* !defined(OPENSSL_1_1_API) */
   (void) ssl;
   (void) m;
   (void) cipher;
   return 1; /* No way to search */
-#endif
+#endif /* defined(HAVE_SSL_CIPHER_FIND) */
 }
 
 /** Remove from v2_cipher_list every cipher that we don't support, so that
@@ -1517,7 +1517,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
     return CIPHERS_ERR;
   }
   ciphers = session->ciphers;
-#endif
+#endif /* defined(HAVE_SSL_GET_CLIENT_CIPHERS) */
 
   return tor_tls_classify_client_ciphers(ssl, ciphers) >= CIPHERS_V2;
 }
@@ -1648,7 +1648,7 @@ tor_tls_new(int sock, int isServer)
     SSL_set_tlsext_host_name(result->ssl, fake_hostname);
     tor_free(fake_hostname);
   }
-#endif
+#endif /* defined(SSL_set_tlsext_host_name) */
 
   if (!SSL_set_cipher_list(result->ssl,
                      isServer ? SERVER_CIPHER_LIST : CLIENT_CIPHER_LIST)) {
@@ -1775,7 +1775,7 @@ tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
   tor_assert(0 != (options & SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
 #else
   (void) tls;
-#endif
+#endif /* defined(SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION) && ... */
 }
 
 /** Return whether this tls initiated the connect (client) or
@@ -2311,7 +2311,7 @@ tor_x509_cert_replace_expiration(const tor_x509_cert_t *inp,
   EVP_PKEY_free(pk);
   return tor_x509_cert_new(newc);
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Return the number of bytes available for reading from <b>tls</b>.
  */
@@ -2355,10 +2355,10 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
   if (BIO_method_type(wbio) == BIO_TYPE_BUFFER &&
         (tmpbio = BIO_next(wbio)) != NULL)
     wbio = tmpbio;
-#else
+#else /* !(OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5)) */
   if (wbio->method == BIO_f_buffer() && (tmpbio = BIO_next(wbio)) != NULL)
     wbio = tmpbio;
-#endif
+#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) */
   w = (unsigned long) BIO_number_written(wbio);
 
   /* We are ok with letting these unsigned ints go "negative" here:
@@ -2437,7 +2437,7 @@ SSL_get_client_random(SSL *s, uint8_t *out, size_t len)
   memcpy(out, s->s3->client_random, len);
   return len;
 }
-#endif
+#endif /* !defined(HAVE_SSL_GET_CLIENT_RANDOM) */
 
 #ifndef HAVE_SSL_GET_SERVER_RANDOM
 static size_t
@@ -2450,7 +2450,7 @@ SSL_get_server_random(SSL *s, uint8_t *out, size_t len)
   memcpy(out, s->s3->server_random, len);
   return len;
 }
-#endif
+#endif /* !defined(HAVE_SSL_GET_SERVER_RANDOM) */
 
 #ifndef HAVE_SSL_SESSION_GET_MASTER_KEY
 STATIC size_t
@@ -2464,7 +2464,7 @@ SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out, size_t len)
   memcpy(out, s->master_key, len);
   return len;
 }
-#endif
+#endif /* !defined(HAVE_SSL_SESSION_GET_MASTER_KEY) */
 
 /** Set the DIGEST256_LEN buffer at <b>secrets_out</b> to the value used in
  * the v3 handshake to prove that the client knows the TLS secrets for the
@@ -2573,7 +2573,7 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
   (void)wbuf_bytes;
 
   return -1;
-#else
+#else /* !(OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)) */
   if (tls->ssl->s3->rbuf.buf)
     *rbuf_capacity = tls->ssl->s3->rbuf.len;
   else
@@ -2585,7 +2585,7 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
   *rbuf_bytes = tls->ssl->s3->rbuf.left;
   *wbuf_bytes = tls->ssl->s3->wbuf.left;
   return 0;
-#endif
+#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) */
 }
 
 /** Check whether the ECC group requested is supported by the current OpenSSL

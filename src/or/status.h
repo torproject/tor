@@ -14,5 +14,5 @@ STATIC char *secs_to_uptime(long secs);
 STATIC char *bytes_to_usage(uint64_t bytes);
 #endif
 
-#endif
+#endif /* !defined(TOR_STATUS_H) */
 

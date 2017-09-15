@@ -81,5 +81,5 @@ const ed25519_keypair_t *get_master_identity_keypair(void);
 void init_mock_ed_keys(const crypto_pk_t *rsa_identity_key);
 #endif
 
-#endif
+#endif /* !defined(TOR_ROUTERKEYS_H) */
 

@@ -143,5 +143,5 @@ void rep_hist_reset_padding_counts(void);
 void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
 
-#endif
+#endif /* !defined(TOR_REPHIST_H) */
 

@@ -53,7 +53,7 @@ struct timeout_cb {
 #else
 /* We're not exposing any of the functions outside this file. */
 #define TIMEOUT_PUBLIC static
-#endif
+#endif /* defined(__GNUC__) */
 /* We're not using periodic events. */
 #define TIMEOUT_DISABLE_INTERVALS
 /* We always know the global_timeouts object, so we don't need each timeout

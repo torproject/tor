@@ -24,5 +24,5 @@ const char *rust_str_get(const rust_str_t);
 
 rust_str_t rust_welcome_string(void);
 
-#endif
+#endif /* !defined(TOR_RUST_COMPAT_H) */
 

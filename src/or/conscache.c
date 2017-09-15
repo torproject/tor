@@ -15,7 +15,7 @@
  * changes throughout our logic.
  */
 #define MUST_UNMAP_TO_UNLINK
-#endif
+#endif /* defined(_WIN32) */
 
 /**
  * A consensus_cache_entry_t is a reference-counted handle to an
@@ -90,11 +90,11 @@ consensus_cache_open(const char *subdir, int max_entries)
    */
 #define VERY_LARGE_STORAGEDIR_LIMIT (1000*1000)
   storagedir_max_entries = VERY_LARGE_STORAGEDIR_LIMIT;
-#else
+#else /* !(defined(MUST_UNMAP_TO_UNLINK)) */
   /* Otherwise, we can just tell the storagedir to use the same limits
    * as this cache. */
   storagedir_max_entries = max_entries;
-#endif
+#endif /* defined(MUST_UNMAP_TO_UNLINK) */
 
   cache->dir = storage_dir_new(directory, storagedir_max_entries);
   tor_free(directory);
@@ -145,7 +145,7 @@ consensus_cache_register_with_sandbox(consensus_cache_t *cache,
    * conditional.
    */
   tor_assert_nonfatal_unreached();
-#endif
+#endif /* defined(MUST_UNMAP_TO_UNLINK) */
   return storage_dir_register_with_sandbox(cache->dir, cfg);
 }
 
@@ -474,7 +474,7 @@ consensus_cache_get_n_filenames_available(consensus_cache_t *cache)
     return 0;
 #else
   tor_assert_nonfatal(max >= used);
-#endif
+#endif /* defined(MUST_UNMAP_TO_UNLINK) */
   return max - used;
 }
 
@@ -495,7 +495,7 @@ consensus_cache_delete_pending(consensus_cache_t *cache, int force)
     if (ent->map) {
       force_ent = 0;
     }
-#endif
+#endif /* defined(MUST_UNMAP_TO_UNLINK) */
     if (! force_ent) {
       if (ent->refcnt > 1 || BUG(ent->in_cache == NULL)) {
         /* Somebody is using this entry right now */
@@ -611,5 +611,5 @@ consensus_cache_entry_is_mapped(consensus_cache_entry_t *ent)
     return 0;
   }
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 

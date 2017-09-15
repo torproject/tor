@@ -20,5 +20,5 @@
 
 int hs_config_service_all(const or_options_t *options, int validate_only);
 
-#endif /* TOR_HS_CONFIG_H */
+#endif /* !defined(TOR_HS_CONFIG_H) */
 

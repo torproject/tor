@@ -33,5 +33,5 @@ void periodic_event_setup(periodic_event_item_t *event);
 void periodic_event_destroy(periodic_event_item_t *event);
 void periodic_event_reschedule(periodic_event_item_t *event);
 
-#endif
+#endif /* !defined(TOR_PERIODIC_H) */
 

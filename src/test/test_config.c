@@ -279,7 +279,7 @@ test_config_check_or_create_data_subdir(void *arg)
   tt_assert(!is_private_dir(subpath));
   tt_assert(!check_or_create_data_subdir(subdir));
   tt_assert(is_private_dir(subpath));
-#endif
+#endif /* !defined (_WIN32) */
 
  done:
   rmdir(subpath);
@@ -4004,7 +4004,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
   tt_int_op(port_cfg->entry_cfg.cache_ipv4_answers, OP_EQ, 1);
   tt_int_op(port_cfg->entry_cfg.prefer_ipv6_virtaddr, OP_EQ, 1);
-#endif
+#endif /* defined(_WIN32) */
 
   // Test failure if we have no ipv4 and no ipv6 and no onion (DNS only)
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
@@ -4076,7 +4076,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
-#endif
+#endif /* defined(_WIN32) */
 
   // Test success with quoted unix: address.
   config_free_lines(config_port_valid); config_port_valid = NULL;
@@ -4098,7 +4098,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
-#endif
+#endif /* defined(_WIN32) */
 
   // Test failure with broken quoted unix: address.
   config_free_lines(config_port_valid); config_port_valid = NULL;
@@ -4143,7 +4143,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
-#endif
+#endif /* defined(_WIN32) */
 
   // Test success with no ipv4 but take ipv6
   config_free_lines(config_port_valid); config_port_valid = NULL;
@@ -4162,7 +4162,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 1);
-#endif
+#endif /* defined(_WIN32) */
 
   // Test success with both ipv4 and ipv6
   config_free_lines(config_port_valid); config_port_valid = NULL;
@@ -4181,7 +4181,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 1);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 1);
-#endif
+#endif /* defined(_WIN32) */
 
   // Test failure if we specify world writable for an IP Port
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
@@ -4645,7 +4645,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->is_group_writable, OP_EQ, 1);
-#endif
+#endif /* defined(_WIN32) */
 
  done:
   if (slout)

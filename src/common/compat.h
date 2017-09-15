@@ -50,8 +50,8 @@
  * clang rejects because it is off the end of a less-than-3. Clang hates this,
  * even though those references never actually happen. */
 #    undef strcmp
-#  endif
-#endif
+#endif /* __has_feature(address_sanitizer) */
+#endif /* defined(__has_feature) */
 
 #include <stdio.h>
 #include <errno.h>
@@ -76,13 +76,13 @@
    __attribute__ ((format(printf, formatIdx, firstArg)))
 #else
 #define CHECK_PRINTF(formatIdx, firstArg)
-#endif
+#endif /* defined(__GNUC__) */
 #ifdef __GNUC__
 #define CHECK_SCANF(formatIdx, firstArg) \
    __attribute__ ((format(scanf, formatIdx, firstArg)))
 #else
 #define CHECK_SCANF(formatIdx, firstArg)
-#endif
+#endif /* defined(__GNUC__) */
 
 /* What GCC do we have? */
 #ifdef __GNUC__
@@ -109,18 +109,18 @@
           PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
 #    define ENABLE_GCC_WARNING(warningopt) \
           PRAGMA_DIAGNOSTIC_(pop)
-#  else
+#else /* !(defined(__clang__) || GCC_VERSION >= 406) */
 /* older version of gcc: no push/pop support. */
 #    define DISABLE_GCC_WARNING(warningopt) \
          PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
 #    define ENABLE_GCC_WARNING(warningopt) \
          PRAGMA_DIAGNOSTIC_(warning PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
-#  endif
-#else /* ifdef __GNUC__ */
+#endif /* defined(__clang__) || GCC_VERSION >= 406 */
+#else /* !(defined(__GNUC__)) */
 /* not gcc at all */
 # define DISABLE_GCC_WARNING(warning)
 # define ENABLE_GCC_WARNING(warning)
-#endif
+#endif /* defined(__GNUC__) */
 
 /* inline is __inline on windows. */
 #ifdef _WIN32
@@ -142,9 +142,9 @@
 #define __func__ __FUNC__
 #else
 #define __func__ "???"
-#endif
-#endif /* ifndef MAVE_MACRO__func__ */
-#endif /* if not windows */
+#endif /* defined(HAVE_MACRO__FUNCTION__) || ... */
+#endif /* !defined(HAVE_MACRO__func__) */
+#endif /* defined(_MSC_VER) */
 
 #define U64_TO_DBL(x) ((double) (x))
 #define DBL_TO_U64(x) ((uint64_t) (x))
@@ -157,7 +157,7 @@
  * problems), but if enumerated types are unsigned, we must use unsigned,
  * so that the loss of precision doesn't make large values negative. */
 #define ENUM_BF(t) t
-#endif
+#endif /* defined(ENUM_VALS_ARE_SIGNED) */
 
 /* GCC has several useful attributes. */
 #if defined(__GNUC__) && __GNUC__ >= 3
@@ -194,7 +194,7 @@
  * taken.  This can generate slightly better code with some CPUs.
  */
 #define PREDICT_UNLIKELY(exp) __builtin_expect(!!(exp), 0)
-#else
+#else /* !(defined(__GNUC__) && __GNUC__ >= 3) */
 #define ATTR_NORETURN
 #define ATTR_CONST
 #define ATTR_MALLOC
@@ -204,7 +204,7 @@
 #define ATTR_WUR
 #define PREDICT_LIKELY(exp) (exp)
 #define PREDICT_UNLIKELY(exp) (exp)
-#endif
+#endif /* defined(__GNUC__) && __GNUC__ >= 3 */
 
 /** Expands to a syntactically valid empty statement.  */
 #define STMT_NIL (void)0
@@ -224,7 +224,7 @@
 #else
 #define STMT_BEGIN do {
 #define STMT_END } while (0)
-#endif
+#endif /* defined(__GNUC__) || ... */
 
 /* Some tools (like coccinelle) don't like to see operators as macro
  * arguments. */
@@ -251,7 +251,7 @@
  */
 #undef strlcat
 #undef strlcpy
-#endif
+#endif /* defined __APPLE__ */
 
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
@@ -272,14 +272,14 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #define I64_PRINTF_ARG(a) (a)
 #define I64_SCANF_ARG(a) (a)
 #define I64_LITERAL(n) (n ## i64)
-#else
+#else /* !(defined(_MSC_VER)) */
 #define U64_PRINTF_ARG(a) ((long long unsigned int)(a))
 #define U64_SCANF_ARG(a) ((long long unsigned int*)(a))
 #define U64_LITERAL(n) (n ## llu)
 #define I64_PRINTF_ARG(a) ((long long signed int)(a))
 #define I64_SCANF_ARG(a) ((long long signed int*)(a))
 #define I64_LITERAL(n) (n ## ll)
-#endif
+#endif /* defined(_MSC_VER) */
 
 #if defined(__MINGW32__) || defined(__MINGW64__)
 #define MINGW_ANY
@@ -290,10 +290,10 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
  * scanf() function.  See also U64_PRINTF_ARG and U64_SCANF_ARG. */
 #define U64_FORMAT "%I64u"
 #define I64_FORMAT "%I64d"
-#else
+#else /* !(defined(_MSC_VER) || defined(MINGW_ANY)) */
 #define U64_FORMAT "%llu"
 #define I64_FORMAT "%lld"
-#endif
+#endif /* defined(_MSC_VER) || defined(MINGW_ANY) */
 
 #if (SIZEOF_INTPTR_T == SIZEOF_INT)
 #define INTPTR_T_FORMAT "%d"
@@ -306,7 +306,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #define INTPTR_PRINTF_ARG(x) I64_PRINTF_ARG(x)
 #else
 #error Unknown: SIZEOF_INTPTR_T
-#endif
+#endif /* (SIZEOF_INTPTR_T == SIZEOF_INT) || ... */
 
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
  * tor_munmap_file. */
@@ -320,7 +320,7 @@ typedef struct tor_mmap_t {
                         * size, rounded up to the nearest page.) */
 #elif defined _WIN32
   HANDLE mmap_handle;
-#endif
+#endif /* defined(HAVE_SYS_MMAN_H) || ... */
 
 } tor_mmap_t;
 
@@ -382,7 +382,7 @@ const char *tor_fix_source_file(const char *fname);
 #else
 #define SHORT_FILE__ (__FILE__)
 #define tor_fix_source_file(s) (s)
-#endif
+#endif /* defined(_WIN32) */
 
 /* ===== Time compatibility */
 
@@ -401,7 +401,7 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
       (tvout)->tv_sec++;                                \
     }                                                   \
   } while (0)
-#endif
+#endif /* !defined(timeradd) */
 
 #ifndef timersub
 /** Replacement for timersub on platforms that do not have it: sets tvout to
@@ -415,7 +415,7 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
       (tvout)->tv_sec--;                                \
     }                                                   \
   } while (0)
-#endif
+#endif /* !defined(timersub) */
 
 #ifndef timercmp
 /** Replacement for timercmp on platforms that do not have it: returns true
@@ -429,7 +429,7 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
   (((tv1)->tv_sec == (tv2)->tv_sec) ?           \
    ((tv1)->tv_usec op (tv2)->tv_usec) :         \
    ((tv1)->tv_sec op (tv2)->tv_sec))
-#endif
+#endif /* !defined(timercmp) */
 
 /* ===== File compatibility */
 int tor_open_cloexec(const char *path, int flags, unsigned mode);
@@ -471,7 +471,7 @@ typedef int socklen_t;
 #define TOR_SOCKET_T_FORMAT INTPTR_T_FORMAT
 #define SOCKET_OK(s) ((SOCKET)(s) != INVALID_SOCKET)
 #define TOR_INVALID_SOCKET INVALID_SOCKET
-#else
+#else /* !(defined(_WIN32)) */
 /** Type used for a network socket. */
 #define tor_socket_t int
 #define TOR_SOCKET_T_FORMAT "%d"
@@ -479,7 +479,7 @@ typedef int socklen_t;
 #define SOCKET_OK(s) ((s) >= 0)
 /** Error/uninitialized value for a tor_socket_t. */
 #define TOR_INVALID_SOCKET (-1)
-#endif
+#endif /* defined(_WIN32) */
 
 int tor_close_socket_simple(tor_socket_t s);
 MOCK_DECL(int, tor_close_socket, (tor_socket_t s));
@@ -526,7 +526,7 @@ struct in6_addr
 #define s6_addr16 in6_u.u6_addr16
 #define s6_addr32 in6_u.u6_addr32
 };
-#endif
+#endif /* !defined(HAVE_STRUCT_IN6_ADDR) */
 
 /** @{ */
 /** Many BSD variants seem not to define these. */
@@ -538,7 +538,7 @@ struct in6_addr
 #ifndef s6_addr32
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
-#endif
+#endif /* defined(__APPLE__) || defined(__darwin__) || ... */
 /** @} */
 
 #ifndef HAVE_SA_FAMILY_T
@@ -570,7 +570,7 @@ struct sockaddr_in6 {
   struct in6_addr sin6_addr;
   // uint32_t sin6_scope_id;
 };
-#endif
+#endif /* !defined(HAVE_STRUCT_SOCKADDR_IN6) */
 
 MOCK_DECL(int,tor_gethostname,(char *name, size_t namelen));
 int tor_inet_aton(const char *cp, struct in_addr *addr) ATTR_NONNULL((1,2));
@@ -611,14 +611,14 @@ int network_init(void);
 #define ERRNO_IS_EINTR(e)            ((e) == WSAEINTR || 0)
 int tor_socket_errno(tor_socket_t sock);
 const char *tor_socket_strerror(int e);
-#else
+#else /* !(defined(_WIN32)) */
 #define SOCK_ERRNO(e) e
 #if EAGAIN == EWOULDBLOCK
 /* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || 0)
 #else
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == EWOULDBLOCK)
-#endif
+#endif /* EAGAIN == EWOULDBLOCK */
 #define ERRNO_IS_EINTR(e)            ((e) == EINTR || 0)
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS || 0)
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS || 0)
@@ -629,7 +629,7 @@ const char *tor_socket_strerror(int e);
 #define ERRNO_IS_EADDRINUSE(e)       (((e) == EADDRINUSE) || 0)
 #define tor_socket_errno(sock)       (errno)
 #define tor_socket_strerror(e)       strerror(e)
-#endif
+#endif /* defined(_WIN32) */
 
 /** Specified SOCKS5 status codes. */
 typedef enum {
@@ -732,7 +732,7 @@ char *format_win32_error(DWORD err);
 #define VER_SUITE_SINGLEUSERTS 0x00000100
 #endif
 
-#endif
+#endif /* defined(_WIN32) */
 
 #ifdef COMPAT_PRIVATE
 #if !defined(HAVE_SOCKETPAIR) || defined(_WIN32) || defined(TOR_UNIT_TESTS)
@@ -740,12 +740,12 @@ char *format_win32_error(DWORD err);
 STATIC int tor_ersatz_socketpair(int family, int type, int protocol,
                                    tor_socket_t fd[2]);
 #endif
-#endif
+#endif /* defined(COMPAT_PRIVATE) */
 
 ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 
 /* This needs some of the declarations above so we include it here. */
 #include "compat_threads.h"
 
-#endif
+#endif /* !defined(TOR_COMPAT_H) */
 

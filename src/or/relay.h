@@ -104,7 +104,7 @@ STATIC packed_cell_t *packed_cell_new(void);
 STATIC packed_cell_t *cell_queue_pop(cell_queue_t *queue);
 STATIC size_t cell_queues_get_total_allocation(void);
 STATIC int cell_queues_check_size(void);
-#endif
+#endif /* defined(RELAY_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_RELAY_H) */
 

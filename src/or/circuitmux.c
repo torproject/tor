@@ -185,7 +185,7 @@ struct chanid_circid_muxinfo_t {
   circuitmux_assert_okay(cmux)
 #else
 #define circuitmux_assert_okay_paranoid(cmux)
-#endif
+#endif /* defined(CMUX_PARANOIA) */
 
 /*
  * Static function declarations

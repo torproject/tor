@@ -290,9 +290,9 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       if (rv != 0)
         return S2K_FAILED;
       return (int)key_out_len;
-#else
+#else /* !(defined(HAVE_SCRYPT)) */
       return S2K_NO_SCRYPT_SUPPORT;
-#endif
+#endif /* defined(HAVE_SCRYPT) */
     }
     default:
       return S2K_BAD_ALGORITHM;

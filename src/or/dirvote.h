@@ -242,7 +242,7 @@ STATIC int
 networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
                                      int64_t M, int64_t E, int64_t D,
                                      int64_t T, int64_t weight_scale);
-#endif
+#endif /* defined(DIRVOTE_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_DIRVOTE_H) */
 

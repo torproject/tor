@@ -449,7 +449,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
 #else
   mkdir(dir, 0700);
   mkdir(get_fname("test_ed_keys_init_all/keys"), 0700);
-#endif
+#endif /* defined(_WIN32) */
 
   options->DataDirectory = dir;
 

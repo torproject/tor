@@ -23,5 +23,5 @@ void aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len);
 int evaluate_evp_for_aes(int force_value);
 int evaluate_ctr_for_aes(void);
 
-#endif
+#endif /* !defined(TOR_AES_H) */
 

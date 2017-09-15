@@ -43,7 +43,7 @@ int curve25519_donna(uint8_t *mypublic,
 #elif defined(HAVE_NACL_CRYPTO_SCALARMULT_CURVE25519_H)
 #include <nacl/crypto_scalarmult_curve25519.h>
 #endif
-#endif
+#endif /* defined(USE_CURVE25519_NACL) */
 
 static void pick_curve25519_basepoint_impl(void);
 
@@ -72,7 +72,7 @@ curve25519_impl(uint8_t *output, const uint8_t *secret,
   r = crypto_scalarmult_curve25519(output, secret, bp);
 #else
 #error "No implementation of curve25519 is available."
-#endif
+#endif /* defined(USE_CURVE25519_DONNA) || ... */
   memwipe(bp, 0, sizeof(bp));
   return r;
 }

@@ -202,7 +202,7 @@ STATIC int parse_port_config(smartlist_t *out,
                   const char *defaultaddr,
                   int defaultport,
                   const unsigned flags);
-#endif
+#endif /* defined(CONFIG_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_CONFIG_H) */
 

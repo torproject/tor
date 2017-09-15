@@ -182,7 +182,7 @@ STATIC int dirserv_has_measured_bw(const char *node_id);
 STATIC int
 dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
                                       smartlist_t *vote_routerstatuses);
-#endif
+#endif /* defined(DIRSERV_PRIVATE) */
 
 int dirserv_read_measured_bandwidths(const char *from_file,
                                      smartlist_t *routerstatuses);
@@ -204,5 +204,5 @@ void dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
 void dirserv_spool_sort(dir_connection_t *conn);
 void dir_conn_clear_spool(dir_connection_t *conn);
 
-#endif
+#endif /* !defined(TOR_DIRSERV_H) */
 

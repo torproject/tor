@@ -23,5 +23,5 @@ void dnsserv_reject_request(entry_connection_t *conn);
 int dnsserv_launch_request(const char *name, int is_reverse,
                            control_connection_t *control_conn);
 
-#endif
+#endif /* !defined(TOR_DNSSERV_H) */
 

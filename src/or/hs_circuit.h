@@ -59,5 +59,5 @@ int hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
 int hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
                                           const uint8_t *rend_cell_body);
 
-#endif /* TOR_HS_CIRCUIT_H */
+#endif /* !defined(TOR_HS_CIRCUIT_H) */
 

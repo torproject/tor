@@ -82,7 +82,7 @@ STATIC int needs_hs_client_circuits(time_t now,
 
 STATIC int needs_circuits_for_build(int num);
 
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
-#endif
+#endif /* !defined(TOR_CIRCUITUSE_H) */
 

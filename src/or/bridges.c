@@ -310,7 +310,7 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
     memcpy(&bridge->ed25519_identity, ed_id, sizeof(*ed_id));
     learned = 1;
   }
-#endif
+#endif /* 0 */
   if (learned) {
     char *transport_info = NULL;
     const char *transport_name =

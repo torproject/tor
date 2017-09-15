@@ -33,7 +33,7 @@
 #include <process.h>
 #include <windows.h>
 #include <iphlpapi.h>
-#endif
+#endif /* defined(_WIN32) */
 
 #include "compat.h"
 #include "util.h"
@@ -198,7 +198,7 @@ tor_sockaddr_to_str(const struct sockaddr *sa)
     tor_asprintf(&result, "unix:%s", s_un->sun_path);
     return result;
   }
-#endif
+#endif /* defined(HAVE_SYS_UN_H) */
   if (sa->sa_family == AF_UNSPEC)
     return tor_strdup("unspec");
 
@@ -305,7 +305,7 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
       return result;
     }
     return (err == EAI_AGAIN) ? 1 : -1;
-#else
+#else /* !(defined(HAVE_GETADDRINFO)) */
     struct hostent *ent;
     int err;
 #ifdef HAVE_GETHOSTBYNAME_R_6_ARG
@@ -330,7 +330,7 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
 #else
     err = h_errno;
 #endif
-#endif /* endif HAVE_GETHOSTBYNAME_R_6_ARG. */
+#endif /* defined(HAVE_GETHOSTBYNAME_R_6_ARG) || ... */
     if (ent) {
       if (ent->h_addrtype == AF_INET) {
         tor_addr_from_in(addr, (struct in_addr*) ent->h_addr);
@@ -346,7 +346,7 @@ tor_addr_lookup,(const char *name, uint16_t family, tor_addr_t *addr))
 #else
     return (err == TRY_AGAIN) ? 1 : -1;
 #endif
-#endif
+#endif /* defined(HAVE_GETADDRINFO) */
   }
 }
 
@@ -1409,7 +1409,7 @@ get_interface_addresses_ifaddrs(int severity, sa_family_t family)
 
   return result;
 }
-#endif
+#endif /* defined(HAVE_IFADDRS_TO_SMARTLIST) */
 
 #ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
 
@@ -1500,7 +1500,7 @@ get_interface_addresses_win32(int severity, sa_family_t family)
   return result;
 }
 
-#endif
+#endif /* defined(HAVE_IP_ADAPTER_TO_SMARTLIST) */
 
 #ifdef HAVE_IFCONF_TO_SMARTLIST
 
@@ -1602,7 +1602,7 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
   tor_free(ifc.ifc_buf);
   return result;
 }
-#endif
+#endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 /** Try to ask our network interfaces what addresses they are bound to.
  * Return a new smartlist of tor_addr_t on success, and NULL on failure.

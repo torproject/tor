@@ -167,7 +167,7 @@ stream_end_reason_to_socks5_response(int reason)
 #else
 #define E_CASE(s) case s
 #define S_CASE(s) case s
-#endif
+#endif /* defined(_WIN32) */
 
 /** Given an errno from a failed exit connection, return a reason code
  * appropriate for use in a RELAY END cell. */

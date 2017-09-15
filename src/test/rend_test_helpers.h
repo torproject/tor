@@ -12,5 +12,5 @@ void create_descriptor(rend_service_descriptor_t **generated,
                        char **service_id, int intro_points);
 rend_data_t *mock_rend_data(const char *onion_address);
 
-#endif
+#endif /* !defined(TOR_REND_TEST_HELPERS_H) */
 

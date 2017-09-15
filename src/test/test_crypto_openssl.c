@@ -38,7 +38,7 @@ test_crypto_rng_engine(void *arg)
 #else
   tt_assert(RAND_get_rand_method() == &dummy_method);
   tt_int_op(1, OP_EQ, crypto_force_rand_ssleay());
-#endif
+#endif /* defined(LIBRESSL_VERSION_NUMBER) */
   tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
 
   /* Make sure we aren't calling dummy_method */

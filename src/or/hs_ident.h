@@ -137,5 +137,5 @@ void hs_ident_edge_conn_free(hs_ident_edge_conn_t *ident);
 /* Validators */
 int hs_ident_intro_circ_is_valid(const hs_ident_circuit_t *ident);
 
-#endif /* TOR_HS_IDENT_H */
+#endif /* !defined(TOR_HS_IDENT_H) */
 

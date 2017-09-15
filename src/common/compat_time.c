@@ -28,7 +28,7 @@
 /* as fallback implementation for tor_sleep_msec */
 #include <sys/select.h>
 #endif
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #ifdef __APPLE__
 #include <mach/mach_time.h>
@@ -64,9 +64,9 @@ tor_sleep_msec(int msec)
   select(0, NULL, NULL, NULL, &tv);
 #else
   sleep(CEIL_DIV(msec, 1000));
-#endif
+#endif /* defined(_WIN32) || ... */
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Set *timeval to the current time of day.  On error, log and terminate.
  * (Same as gettimeofday(timeval,NULL), but never returns -1.)
@@ -112,7 +112,7 @@ tor_gettimeofday(struct timeval *timeval)
   timeval->tv_usec = tb.millitm * 1000;
 #else
 #error "No way to get time."
-#endif
+#endif /* defined(_WIN32) || ... */
   return;
 }
 
@@ -187,8 +187,8 @@ monotime_coarse_set_mock_time_nsec(int64_t nsec)
   tor_assert_nonfatal(monotime_mocking_enabled == 1);
   mock_time_nsec_coarse = nsec;
 }
-#endif
-#endif
+#endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /* "ratchet" functions for monotonic time. */
 
@@ -235,7 +235,7 @@ ratchet_coarse_performance_counter(const int64_t count_raw)
   last_tick_count = count;
   return count;
 }
-#endif
+#endif /* defined(_WIN32) || defined(TOR_UNIT_TESTS) */
 
 #if defined(MONOTIME_USING_GETTIMEOFDAY) || defined(TOR_UNIT_TESTS)
 static struct timeval last_timeofday = { 0, 0 };
@@ -259,7 +259,7 @@ ratchet_timeval(const struct timeval *timeval_raw, struct timeval *out)
     memcpy(&last_timeofday, out, sizeof(struct timeval));
   }
 }
-#endif
+#endif /* defined(MONOTIME_USING_GETTIMEOFDAY) || defined(TOR_UNIT_TESTS) */
 
 #ifdef TOR_UNIT_TESTS
 /** For testing: reset all the ratchets */
@@ -271,7 +271,7 @@ monotime_reset_ratchets_for_testing(void)
   memset(&last_timeofday, 0, sizeof(struct timeval));
   memset(&timeofday_offset, 0, sizeof(struct timeval));
 }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #ifdef __APPLE__
 
@@ -301,7 +301,7 @@ monotime_get(monotime_t *out)
       / mach_time_info.numer;
     return;
   }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
   out->abstime_ = mach_absolute_time();
 }
 
@@ -332,7 +332,7 @@ monotime_diff_nsec(const monotime_t *start,
  * an old Linux kernel. In that case, we will fall back to CLOCK_MONOTONIC.
  */
 static int clock_monotonic_coarse = CLOCK_MONOTONIC_COARSE;
-#endif
+#endif /* defined(CLOCK_MONOTONIC_COARSE) */
 
 static void
 monotime_init_internal(void)
@@ -344,7 +344,7 @@ monotime_init_internal(void)
              "falling back to CLOCK_MONOTONIC.", strerror(errno));
     clock_monotonic_coarse = CLOCK_MONOTONIC;
   }
-#endif
+#endif /* defined(CLOCK_MONOTONIC_COARSE) */
 }
 
 void
@@ -356,7 +356,7 @@ monotime_get(monotime_t *out)
     out->ts_.tv_nsec = (int) (mock_time_nsec % ONE_BILLION);
     return;
   }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
   int r = clock_gettime(CLOCK_MONOTONIC, &out->ts_);
   tor_assert(r == 0);
 }
@@ -371,7 +371,7 @@ monotime_coarse_get(monotime_coarse_t *out)
     out->ts_.tv_nsec = (int) (mock_time_nsec_coarse % ONE_BILLION);
     return;
   }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
   int r = clock_gettime(clock_monotonic_coarse, &out->ts_);
   if (PREDICT_UNLIKELY(r < 0) &&
       errno == EINVAL &&
@@ -386,7 +386,7 @@ monotime_coarse_get(monotime_coarse_t *out)
 
   tor_assert(r == 0);
 }
-#endif
+#endif /* defined(CLOCK_MONOTONIC_COARSE) */
 
 int64_t
 monotime_diff_nsec(const monotime_t *start,
@@ -462,7 +462,7 @@ monotime_get(monotime_t *out)
       / nsec_per_tick_numer;
     return;
   }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
   /* Alas, QueryPerformanceCounter is not always monotonic: see bug list at
 
@@ -486,7 +486,7 @@ monotime_coarse_get(monotime_coarse_t *out)
     out->tick_count_ = mock_time_nsec_coarse / ONE_MILLION;
     return;
   }
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
   if (GetTickCount64_fn) {
     out->tick_count_ = (int64_t)GetTickCount64_fn();
@@ -570,7 +570,7 @@ monotime_diff_nsec(const monotime_t *start,
 /* end of "MONOTIME_USING_GETTIMEOFDAY" */
 #else
 #error "No way to implement monotonic timers."
-#endif
+#endif /* defined(__APPLE__) || ... */
 
 /**
  * Initialize the monotonic timer subsystem. Must be called before any
@@ -653,5 +653,5 @@ monotime_coarse_absolute_msec(void)
 {
   return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
-#endif
+#endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 
