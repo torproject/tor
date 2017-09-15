@@ -2342,21 +2342,27 @@ check_private_dir,(const char *dirname, cpd_check_t check,
     running_gid = getgid();
   }
   if (st.st_uid != running_uid) {
-    const struct passwd *pw_uid = NULL;
-    char *process_ownername = NULL;
+    char *process_ownername = NULL, *file_ownername = NULL;
 
-    pw_uid = tor_getpwuid(running_uid);
-    process_ownername = pw_uid ? tor_strdup(pw_uid->pw_name) :
-      tor_strdup("<unknown>");
+    {
+      const struct passwd *pw_running = tor_getpwuid(running_uid);
+      process_ownername = pw_running ? tor_strdup(pw_running->pw_name) :
+        tor_strdup("<unknown>");
+    }
 
-    pw_uid = tor_getpwuid(st.st_uid);
+    {
+      const struct passwd *pw_stat = tor_getpwuid(st.st_uid);
+      file_ownername = pw_stat ? tor_strdup(pw_stat->pw_name) :
+        tor_strdup("<unknown>");
+    }
 
     log_warn(LD_FS, "%s is not owned by this user (%s, %d) but by "
         "%s (%d). Perhaps you are running Tor as the wrong user?",
-                         dirname, process_ownername, (int)running_uid,
-                         pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
+             dirname, process_ownername, (int)running_uid,
+             file_ownername, (int)st.st_uid);
 
     tor_free(process_ownername);
+    tor_free(file_ownername);
     close(fd);
     return -1;
   }
