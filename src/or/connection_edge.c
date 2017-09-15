@@ -1237,10 +1237,9 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
   /* Check for whether this is a .exit address.  By default, those are
    * disallowed when they're coming straight from the client, but you're
    * allowed to have them in MapAddress commands and so forth. */
-  if (!strcmpend(socks->address, ".exit") && !options->AllowDotExit) {
+  if (!strcmpend(socks->address, ".exit")) {
     log_warn(LD_APP, "The  \".exit\" notation is disabled in Tor due to "
-             "security risks. Set AllowDotExit in your torrc to enable "
-             "it (at your own risk).");
+             "security risks.");
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
     out->end_reason = END_STREAM_REASON_TORPROTOCOL;
@@ -1674,23 +1673,23 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     const node_t *node = NULL;
 
     /* If this .exit was added by an AUTOMAP, then it came straight from
-     * a user.  Make sure that options->AllowDotExit permits that! */
-    if (exit_source == ADDRMAPSRC_AUTOMAP && !options->AllowDotExit) {
-      /* Whoops; this one is stale.  It must have gotten added earlier,
-       * when AllowDotExit was on. */
-      log_warn(LD_APP,"Stale automapped address for '%s.exit', with "
-               "AllowDotExit disabled. Refusing.",
+     * a user.  That's not safe. */
+    if (exit_source == ADDRMAPSRC_AUTOMAP) {
+      /* Whoops; this one is stale.  It must have gotten added earlier?
+       * (Probably this is not possible, since AllowDotExit no longer
+       * exists.) */
+      log_warn(LD_APP,"Stale automapped address for '%s.exit'. Refusing.",
                safe_str_client(socks->address));
       control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                   escaped(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      tor_assert_nonfatal_unreached();
       return -1;
     }
 
     /* Double-check to make sure there are no .exits coming from
      * impossible/weird sources. */
-    if (exit_source == ADDRMAPSRC_DNS ||
-        (exit_source == ADDRMAPSRC_NONE && !options->AllowDotExit)) {
+    if (exit_source == ADDRMAPSRC_DNS || exit_source == ADDRMAPSRC_NONE) {
       /* It shouldn't be possible to get a .exit address from any of these
        * sources. */
       log_warn(LD_BUG,"Address '%s.exit', with impossible source for the "

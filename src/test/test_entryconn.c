@@ -76,7 +76,6 @@ test_entryconn_rewrite_bad_dotexit(void *arg)
   entry_connection_t *ec = arg;
   rewrite_result_t rr;
 
-  get_options_mutable()->AllowDotExit = 0;
   tt_assert(ec->socks_request);
   strlcpy(ec->socks_request->address, "www.TORproject.org.foo.exit",
           sizeof(ec->socks_request->address));
@@ -480,7 +479,7 @@ test_entryconn_rewrite_reject_internal_reverse(void *arg)
   ;
 }
 
-/* Rewrite into .exit because of virtual address mapping */
+/* Rewrite into .exit because of virtual address mapping.  */
 static void
 test_entryconn_rewrite_automap_exit(void *arg)
 {
@@ -491,43 +490,21 @@ test_entryconn_rewrite_automap_exit(void *arg)
 
   ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
-  get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AllowDotExit = 1;
   smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
                 ".EXIT");
   parse_virtual_addr_network("127.1.0.0/16", AF_INET, 0, &msg);
 
-  /* Automap this on resolve. */
+  /* Try to automap this on resolve. */
   strlcpy(ec->socks_request->address, "website.example.exit",
           sizeof(ec->socks_request->address));
   ec->socks_request->command = SOCKS_COMMAND_RESOLVE;
   connection_ap_handshake_rewrite(ec, &rr);
 
-  tt_int_op(rr.automap, OP_EQ, 1);
-  tt_int_op(rr.should_close, OP_EQ, 0);
-  tt_int_op(rr.end_reason, OP_EQ, 0);
-  tt_i64_op(rr.map_expires, OP_EQ, TIME_MAX);
-  tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
-  tt_str_op(rr.orig_address, OP_EQ, "website.example.exit");
-  tt_str_op(ec->original_dest_address, OP_EQ, "website.example.exit");
-
-  tt_assert(!strcmpstart(ec->socks_request->address,"127.1."));
-
-  /* Connect to it and make sure we get the original address back. */
-  strlcpy(ec2->socks_request->address, ec->socks_request->address,
-          sizeof(ec2->socks_request->address));
-
-  ec2->socks_request->command = SOCKS_COMMAND_CONNECT;
-  connection_ap_handshake_rewrite(ec2, &rr);
-
+  /* Make sure it isn't allowed -- there is no longer an AllowDotExit
+   * option. */
   tt_int_op(rr.automap, OP_EQ, 0);
-  tt_int_op(rr.should_close, OP_EQ, 0);
-  tt_int_op(rr.end_reason, OP_EQ, 0);
-  tt_i64_op(rr.map_expires, OP_EQ, TIME_MAX);
-  tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_AUTOMAP);
-  tt_str_op(rr.orig_address, OP_EQ, ec->socks_request->address);
-  tt_str_op(ec2->original_dest_address, OP_EQ, ec->socks_request->address);
-  tt_str_op(ec2->socks_request->address, OP_EQ, "website.example.exit");
+  tt_int_op(rr.should_close, OP_EQ, 1);
+  tt_int_op(rr.end_reason, OP_EQ, END_STREAM_REASON_TORPROTOCOL);
 
  done:
   connection_free_(ENTRY_TO_CONN(ec2));
@@ -577,7 +554,6 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   ec4 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AllowDotExit = 1;
   smartlist_add_strdup(get_options_mutable()->AutomapHostsSuffixes,
                 ".onion");
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
