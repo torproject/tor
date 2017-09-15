@@ -28,7 +28,7 @@
 #include <time.h>
 #endif
 
-#if !defined(HAVE_GETTIMEOFDAY) && !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)
+#if !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)
 /** Implementation of timeval for platforms that don't have it. */
 struct timeval {
   time_t tv_sec;
@@ -54,7 +54,8 @@ typedef struct monotime_t {
 #endif
 } monotime_t;
 
-#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC_COARSE)
+#if defined(CLOCK_MONOTONIC_COARSE) && \
+  defined(HAVE_CLOCK_GETTIME)
 #define MONOTIME_COARSE_FN_IS_DIFFERENT
 #define monotime_coarse_t monotime_t
 #elif defined(_WIN32)

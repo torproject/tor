@@ -2079,7 +2079,8 @@ get_pf_socket(void)
 }
 #endif
 
-#if defined(TRANS_NETFILTER) || defined(TRANS_PF) || defined(TRANS_TPROXY)
+#if defined(TRANS_NETFILTER) || defined(TRANS_PF) || \
+  defined(TRANS_TPROXY)
 /** Try fill in the address of <b>req</b> from the socket configured
  * with <b>conn</b>. */
 static int

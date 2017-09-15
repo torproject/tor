@@ -281,7 +281,11 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #define I64_LITERAL(n) (n ## ll)
 #endif
 
-#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#define MINGW_ANY
+#endif
+
+#if defined(_MSC_VER) || defined(MINGW_ANY)
 /** The formatting string used to put a uint64_t value in a printf() or
  * scanf() function.  See also U64_PRINTF_ARG and U64_SCANF_ARG. */
 #define U64_FORMAT "%I64u"
@@ -526,8 +530,8 @@ struct in6_addr
 
 /** @{ */
 /** Many BSD variants seem not to define these. */
-#if defined(__APPLE__) || defined(__darwin__) || defined(__FreeBSD__) \
-    || defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__APPLE__) || defined(__darwin__) || \
+  defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #ifndef s6_addr16
 #define s6_addr16 __u6_addr.__u6_addr16
 #endif

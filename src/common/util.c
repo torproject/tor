@@ -5623,7 +5623,7 @@ clamp_double_to_int64(double number)
 {
   int exponent;
 
-#if (defined(__MINGW32__) || defined(__MINGW64__)) && GCC_VERSION >= 409
+#if defined(MINGW_ANY) && GCC_VERSION >= 409
 /*
   Mingw's math.h uses gcc's __builtin_choose_expr() facility to declare
   isnan, isfinite, and signbit.  But as implemented in at least some

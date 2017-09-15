@@ -212,7 +212,8 @@ tor_rename(const char *path_old, const char *path_new)
 #define COMPAT_HAS_MMAN_AND_PAGESIZE
 #endif
 
-#if defined(COMPAT_HAS_MMAN_AND_PAGESIZE) || defined(RUNNING_DOXYGEN)
+#if defined(COMPAT_HAS_MMAN_AND_PAGESIZE) || \
+  defined(RUNNING_DOXYGEN)
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
  * "empty file". */
@@ -1316,7 +1317,8 @@ tor_accept_socket_with_extensions(tor_socket_t sockfd, struct sockaddr *addr,
     return TOR_INVALID_SOCKET;
   }
 
-#if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC) && defined(SOCK_NONBLOCK)
+#if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC) \
+  && defined(SOCK_NONBLOCK)
   int ext_flags = (cloexec ? SOCK_CLOEXEC : 0) |
                   (nonblock ? SOCK_NONBLOCK : 0);
   s = accept4(sockfd, addr, len, ext_flags);
@@ -2193,8 +2195,8 @@ switch_id(const char *user, const unsigned flags)
 
   have_already_switched_id = 1; /* mark success so we never try again */
 
-#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && defined(HAVE_PRCTL)
-#ifdef PR_SET_DUMPABLE
+#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && \
+  defined(HAVE_PRCTL) && defined(PR_SET_DUMPABLE)
   if (pw->pw_uid) {
     /* Re-enable core dumps if we're not running as root. */
     log_info(LD_CONFIG, "Re-enabling coredumps");
@@ -2202,7 +2204,6 @@ switch_id(const char *user, const unsigned flags)
       log_warn(LD_CONFIG, "Unable to re-enable coredumps: %s",strerror(errno));
     }
   }
-#endif
 #endif
   return 0;
 
@@ -2241,11 +2242,10 @@ tor_disable_debugger_attach(void)
   log_debug(LD_CONFIG,
             "Attemping to disable debugger attachment to Tor for "
             "unprivileged users.");
-#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && defined(HAVE_PRCTL)
-#ifdef PR_SET_DUMPABLE
+#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) \
+  && defined(HAVE_PRCTL) && defined(PR_SET_DUMPABLE)
   attempted = 1;
   r = prctl(PR_SET_DUMPABLE, 0);
-#endif
 #endif
 #if defined(__APPLE__) && defined(PT_DENY_ATTACH)
   if (r < 0) {
@@ -3050,6 +3050,10 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
 #endif
 
 #if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
+#define HAVE_UNIX_MLOCKALL
+#endif
+
+#ifdef HAVE_UNIX_MLOCKALL
 /** Attempt to raise the current and max rlimit to infinity for our process.
  * This only needs to be done once and can probably only be done when we have
  * not already dropped privileges.
@@ -3105,7 +3109,7 @@ tor_mlockall(void)
    * http://msdn.microsoft.com/en-us/library/aa366895(VS.85).aspx
    */
 
-#if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
+#ifdef HAVE_UNIX_MLOCKALL
   if (tor_set_max_memlock() == 0) {
     log_debug(LD_GENERAL, "RLIMIT_MEMLOCK is now set to RLIM_INFINITY.");
   }
