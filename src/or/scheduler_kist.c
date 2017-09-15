@@ -231,9 +231,9 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   ent->mss = tcp.tcpi_snd_mss;
 
   /* In order to reduce outbound kernel queuing delays and thus improve Tor's
-   * ability to prioritize circuits, KIST wants to set a socket write limit that
-   * is near the amount that the socket would be able to immediately send into
-   * the Internet.
+   * ability to prioritize circuits, KIST wants to set a socket write limit
+   * that is near the amount that the socket would be able to immediately send
+   * into the Internet.
    *
    * We first calculate how much the socket could send immediately (assuming
    * completely full packets) according to the congestion window and the number
