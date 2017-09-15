@@ -1,0 +1,3 @@
+  o Minor features (controller):
+    - Adds a timestamp field to the CIRC_BW and STREAM_BW bandwidth
+      events. Closes ticket 19254. Patch by "DonnchaC".
