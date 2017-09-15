@@ -224,18 +224,11 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
   const circuitmux_policy_t *p1, *p2;
   uintptr_t p1_i, p2_i;
 
+  tor_assert(c1_v);
+  tor_assert(c2_v);
+
   c1 = (const channel_t *)(c1_v);
   c2 = (const channel_t *)(c2_v);
-
-  IF_BUG_ONCE(!c1 || !c2) {
-    if (c1 && !c2) {
-      return -1;
-    } else if (c2 && !c1) {
-      return 1;
-    } else {
-      return -1;
-    }
-  }
 
   if (c1 != c2) {
     if (circuitmux_get_policy(c1->cmux) ==
