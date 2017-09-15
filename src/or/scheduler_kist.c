@@ -266,7 +266,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
 
    /* Assuming all these values from the kernel are uint32_t still, they will
    * always fit into a int64_t tcp_space variable. */
-  tcp_space = (ent->cwnd - ent->unacked) * ent->mss;
+  tcp_space = (ent->cwnd - ent->unacked) * (int64_t)ent->mss;
   if (tcp_space < 0) {
     tcp_space = 0;
   }
@@ -277,7 +277,8 @@ update_socket_info_impl, (socket_table_ent_t *ent))
    * we end up negative, but then we just set extra_space to 0 in the sanity
    * check.*/
   extra_space =
-    clamp_double_to_int64((ent->cwnd * ent->mss) * sock_buf_size_factor) -
+    clamp_double_to_int64(
+                 (ent->cwnd * (int64_t)ent->mss) * sock_buf_size_factor) -
     ent->notsent;
   if (extra_space < 0) {
     extra_space = 0;
