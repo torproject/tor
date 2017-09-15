@@ -1,0 +1,5 @@
+  o Minor bugfixes (usability, control port):
+    - Stop making an unnecessary routerlist check in NETINFO clock
+      skew detection; this was preventing clients from reporting
+      NETINFO clock skew to controllers.  Fixes bug 23532; bugfix on
+      0.2.4.4-alpha.
