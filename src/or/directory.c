@@ -5379,7 +5379,7 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
       }
     case DL_SCHED_BRIDGE:
       /* A bridge client downloading bridge descriptors */
-      if (any_bridge_descriptors_known()) {
+      if (options->UseBridges && any_bridge_descriptors_known()) {
         /* A bridge client with one or more running bridges */
         return options->TestingBridgeDownloadSchedule;
       } else {
