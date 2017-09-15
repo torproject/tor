@@ -408,7 +408,7 @@ update_socket_written(socket_table_t *table, channel_t *chan, size_t bytes)
   }
 
   log_debug(LD_SCHED, "chan=%" PRIu64 " wrote %lu bytes, old was %" PRIi64,
-            chan->global_identifier, bytes, ent->written);
+            chan->global_identifier, (unsigned long) bytes, ent->written);
 
   ent->written += bytes;
 }
@@ -436,7 +436,8 @@ MOCK_IMPL(int, channel_should_write_to_kernel,
 MOCK_IMPL(void, channel_write_to_kernel, (channel_t *chan))
 {
   log_debug(LD_SCHED, "Writing %lu bytes to kernel for chan %" PRIu64,
-            channel_outbuf_length(chan), chan->global_identifier);
+            (unsigned long)channel_outbuf_length(chan),
+            chan->global_identifier);
   connection_handle_write(TO_CONN(BASE_CHAN_TO_TLS(chan)->conn), 0);
 }
 
