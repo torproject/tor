@@ -1,6 +1,8 @@
 /* Copyright (c) 2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define SCHEDULER_KIST_PRIVATE
+
 #include <event2/event.h>
 #include <netinet/tcp.h>
 

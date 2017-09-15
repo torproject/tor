@@ -155,6 +155,8 @@ void scheduler_touch_channel(channel_t *chan);
  * Defined in scheduler_kist.c
  *********************************/
 
+#ifdef SCHEDULER_KIST_PRIVATE
+
 /* Socke table entry which holds information of a channel's socket and kernel
  * TCP information. Only used by KIST. */
 typedef struct socket_table_ent_s {
@@ -187,6 +189,8 @@ int32_t kist_scheduler_run_interval(const networkstatus_t *ns);
 #ifdef TOR_UNIT_TESTS
 extern int32_t sched_run_interval;
 #endif /* TOR_UNIT_TESTS */
+
+#endif /* SCHEDULER_KIST_PRIVATE */
 
 /*********************************
  * Defined in scheduler_vanilla.c

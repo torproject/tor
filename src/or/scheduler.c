@@ -6,6 +6,7 @@
 
 #include "compat_libevent.h"
 #define SCHEDULER_PRIVATE_
+#define SCHEDULER_KIST_PRIVATE
 #include "scheduler.h"
 
 #include <event2/event.h>

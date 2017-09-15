@@ -6,6 +6,7 @@
 #include <math.h>
 #include <event2/event.h>
 
+#define SCHEDULER_KIST_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define CHANNEL_PRIVATE_
 #include "or.h"
