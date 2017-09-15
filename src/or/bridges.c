@@ -836,7 +836,9 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
 MOCK_IMPL(int,
 any_bridge_descriptors_known, (void))
 {
-  tor_assert(get_options()->UseBridges);
+  if (BUG(!get_options()->UseBridges)) {
+    return 0;
+  }
 
   if (!bridge_list)
     return 0;
