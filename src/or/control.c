@@ -2158,7 +2158,7 @@ download_status_to_string(const download_status_t *dl)
 
   if (dl) {
     /* Get some substrings of the eventual output ready */
-    format_iso_time(tbuf, dl->next_attempt_at);
+    format_iso_time(tbuf, download_status_get_next_attempt_at(dl));
 
     switch (dl->schedule) {
       case DL_SCHED_GENERIC:
