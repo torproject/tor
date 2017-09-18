@@ -1,0 +1,5 @@
+  o Deprecated features:
+    - The ReachableDirAddresses and ClientPreferIPv6DirPort options
+      are now deprecated; they do not apply to relays, and they
+      have had no effect on clients since 0.2.8.x. Closes ticket 19704.
+

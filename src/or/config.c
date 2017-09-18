@@ -689,6 +689,10 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "to your directory server, which your Tor probably wasn't using." },
   { "HTTPProxyAuthenticator", "HTTPProxy is deprecated in favor of HTTPSProxy "
     "which should be used with HTTPSProxyAuthenticator." },
+  { "ReachableDirAddresses", "It has no effect on relays, and has had no "
+    "effect on clients since 0.2.8." },
+  { "ClientPreferIPv6DirPort", "It has no effect on relays, and has had no "
+    "effect on clients since 0.2.8." },
   /* End of options deprecated since 0.3.2.0-alpha. */
 
   { NULL, NULL }

@@ -1008,7 +1008,8 @@ The following options are useful only for clients (that is, if
     these restrictions when fetching directory information, using standard HTTP
     GET requests. If not set explicitly then the value of
     **ReachableAddresses** is used. If **HTTPProxy** is set then these
-    connections will go through that proxy.
+    connections will go through that proxy.   (DEPRECATED: This option has
+    had no effect for some time.)
 
 [[ReachableORAddresses]] **ReachableORAddresses** __ADDR__[/__MASK__][:__PORT__]...::
     Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
@@ -1571,7 +1572,8 @@ The following options are useful only for clients (that is, if
     server has both. (Tor also prefers an IPv6 DirPort if IPv4Client is set to
     0.) If this option is set to auto, clients prefer IPv4. Other things may
     influence the choice. This option breaks a tie to the favor of IPv6.
-    (Default: auto)
+    (Default: auto)  (DEPRECATED: This option has had no effect for some
+    time.)
 
 [[ClientPreferIPv6ORPort]] **ClientPreferIPv6ORPort** **0**|**1**|**auto**::
     If this option is set to 1, Tor prefers an OR port with an IPv6
