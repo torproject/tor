@@ -75,20 +75,21 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       wrong. Fixes bug 23506; bugfix on 0.1.2.6-alpha.
 
   o Minor features (bug detection):
-    - Log a warning message, with stack trace, for any attempt to call
-      get_options() during option validation. Closes ticket 22281.
+    - Log a warning message with a stack trace for any attempt to call
+      get_options() during option validation. This pattern has caused
+      subtle bugs in the past. Closes ticket 22281.
 
   o Minor features (client):
-    - You can now use Tor as a tunneled HTTP proxy: use the
+    - You can now use Tor as a tunneled HTTP proxy: use the new
       HTTPTunnelPort option to open a port that accepts HTTP CONNECT
       requests. Closes ticket 22407.
-    - Add an extra check to make sure that we always use the new guard
+    - Add an extra check to make sure that we always use the newer guard
       selection code for picking our guards. Closes ticket 22779.
-    - When downloading (micro)descriptors, don't split the list of
-      descriptors into multiple requests unless there are at least 32
-      descriptors that we want. Previously, we split at 4, not 32, which
-      could lead to significant overhead in HTTP request size and
-      degradation in compression performance. Closes ticket 23220.
+    - When downloading (micro)descriptors, don't split the list into
+      multiple requests unless we want at least 32 descriptors.
+      Previously, we split at 4, not 32, which led to significant
+      overhead in HTTP request size and degradation in compression
+      performance. Closes ticket 23220.
 
   o Minor features (command line):
     - Add a new commandline option, --key-expiration, which prints when
@@ -96,17 +97,18 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       17639; patch by Isis Lovecruft.
 
   o Minor features (control port):
-    - If the control port is used as the HTTP proxy, responds with a
-      meaningful "This is the Tor control port" message, and log the
-      event. Closes ticket 1667. Patch from Ravi Chandra Padmala.
-    - Provide better error message for GETINFO desc/(id|name) when
-      microdescriptors are in use and router descriptors are not
-      fetched. Closes ticket 5847. Patch by Kevin Butler.
-    - Add GETINFO desc/download-enabled and md/download-enabled, to
-      inform the controller whether try to download router descriptors
-      and microdescriptors respectively. Closes ticket 22684.
-    - Added new GETINFO targets ip-to-country/{ipv4,ipv6}-available, so
-      controllers can tell whether the geoip databases are loaded.
+    - If an application tries to use the control port as an HTTP proxy,
+      respond with a meaningful "This is the Tor control port" message,
+      and log the event. Closes ticket 1667. Patch from Ravi
+      Chandra Padmala.
+    - Provide better error message for GETINFO desc/(id|name) when not
+      fetching router descriptors. Closes ticket 5847. Patch by
+      Kevin Butler.
+    - Add GETINFO "{desc,md}/download-enabled", to inform the controller
+      whether Tor will try to download router descriptors and
+      microdescriptors respectively. Closes ticket 22684.
+    - Added new GETINFO targets "ip-to-country/{ipv4,ipv6}-available",
+      so controllers can tell whether the geoip databases are loaded.
       Closes ticket 23237.
     - Adds a timestamp field to the CIRC_BW and STREAM_BW bandwidth
       events. Closes ticket 19254. Patch by "DonnchaC".
@@ -115,41 +117,40 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
     - Developers can now generate a call-graph for Tor using the
       "calltool" python program, which post-processes object dumps. It
       should work okay on many Linux and OSX platforms, and might work
-      elsewhere too. To run this, install calltool from
+      elsewhere too. To run it, install calltool from
       https://gitweb.torproject.org/user/nickm/calltool.git and run
       "make callgraph". Closes ticket 19307.
 
   o Minor features (ed25519):
     - Add validation function to checks for torsion components in
-      ed25119 public keys, used by prop224 client-side code. Closes
+      ed25519 public keys, used by prop224 client-side code. Closes
       ticket 22006. Math help by Ian Goldberg.
 
   o Minor features (exit relay, DNS):
     - Improve the clarity and safety of the log message from evdns when
-      receiving an apparent spoofed DNS reply. Closes ticket 3056.
+      receiving an apparently spoofed DNS reply. Closes ticket 3056.
 
   o Minor features (integration, hardening):
-    - Added a new NoExec option, to prevent Tor from running other
+    - Add a new NoExec option to prevent Tor from running other
       programs. When this option is set to 1, Tor will never try to run
       another program, regardless of the settings of
       PortForwardingHelper, ClientTransportPlugin, or
       ServerTransportPlugin. Once NoExec is set, it cannot be disabled
       without restarting Tor. Closes ticket 22976.
 
-  o Minor features (linux seccomp2 sandbox):
-    - If the sandbox filter fails to load, suggest to the user that
-      their kernel might not support seccomp2. Closes ticket 23090.
-
-  o Minor features (logging, UI):
+  o Minor features (logging):
     - Improve the warning message for specifying a relay by nickname.
       The previous message implied that nickname registration was still
       part of the Tor network design, which it isn't. Closes
       ticket 20488.
+    - If the sandbox filter fails to load, suggest to the user that
+      their kernel might not support seccomp2. Closes ticket 23090.
 
   o Minor features (portability):
-    - Check at configure time whether uint8_t is unsigned char. Lots of
-      existing code already assumes this, and there could be strict
-      aliasing issues if they aren't the same type. Closes ticket 22410.
+    - Check at configure time whether uint8_t is the same type as
+      unsigned char. Lots of existing code already makes this
+      assumption, and there could be strict aliasing issues if the
+      assumption is violated. Closes ticket 22410.
 
   o Minor features (relay, configuration):
     - Reject attempts to use relative file paths when RunAsDaemon is
@@ -193,30 +194,27 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       Previously we used ntohs(), which happens to behave the same on
       all the platforms we support, but which isn't really correct.
       Fixes bug 23106; bugfix on 0.2.4.8-alpha.
-    - Make the controller's write_escaped_data() function robust to
-      extremely long inputs. Right now, it doesn't actually receive any
-      extremely long inputs, so this is for defense in depth. Fixes bug
-      19281; bugfix on 0.1.1.1-alpha. Reported by Guido Vranken.
+    - For defense-in-depth, make the controller's write_escaped_data()
+      function robust to extremely long inputs. Fixes bug 19281; bugfix
+      on 0.1.1.1-alpha. Reported by Guido Vranken.
 
   o Minor bugfixes (compilation):
-    - Fix unused variable warnings in donna's Curve25519 SSE2 code.
+    - Fix unused-variable warnings in donna's Curve25519 SSE2 code.
       Fixes bug 22895; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (consensus expiry):
-    - Tor would reconsider updating its directory information every 2
-      minutes instead of only doing it for a consensus that is more than
-      24 hours old (badly expired). This specific check is done in the
-      tor main loop callback that validates if we have an expired
-      consensus. Fixes bug 23091; bugfix on 0.2.0.19-alpha.
+    - Check for adequate directory information correctly. Previously, Tor
+      would reconsider whether it had sufficient directory information
+      every 2 minutes. Fixes bug 23091; bugfix on 0.2.0.19-alpha.
 
   o Minor bugfixes (directory protocol):
     - Directory servers now include a "Date:" http header for response
       codes other than 200. Clients starting with a skewed clock and a
       recent consensus were getting "304 Not modified" responses from
-      directory authorities, so without a Date header the client would
-      never hear about a wrong clock. Fixes bug 23499; bugfix
+      directory authorities, so without the Date header, the client
+      would never hear about a wrong clock. Fixes bug 23499; bugfix
       on 0.0.8rc1.
-    - Make clients wait for 6 seconds before trying to download their
+    - Make clients wait for 6 seconds before trying to download a
       consensus from an authority. Fixes bug 17750; bugfix
       on 0.2.8.1-alpha.
 
@@ -228,7 +226,7 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
   o Minor bugfixes (format strictness):
     - Restrict several data formats to decimal. Previously, the
       BuildTimeHistogram entries in the state file, the "bw=" entries in
-      the bandwidth authority file, and process IDs passed to the
+      the bandwidth authority file, and the process IDs passed to the
       __OwningControllerProcess option could all be specified in hex or
       octal as well as in decimal. This was not an intentional feature.
       Fixes bug 22802; bugfixes on 0.2.2.1-alpha, 0.2.2.2-alpha,
@@ -258,22 +256,21 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       actual name of the user owning the directory. Previously, we'd log
       the name of the process owner twice. Fixes bug 23487; bugfix
       on 0.2.9.1-alpha.
-    - torspec says hop counts are 1-based, so fix two log messages that
-      mistakenly logged 0-based hop counts. Fixes bug 18982; bugfix on
-      0.2.6.2-alpha and 0.2.4.5-alpha. Patch by teor. Credit to Xiaofan
-      Li for reporting this issue.
+    - The tor specification says hop counts are 1-based, so fix two log
+      messages that mistakenly logged 0-based hop counts. Fixes bug
+      18982; bugfix on 0.2.6.2-alpha and 0.2.4.5-alpha. Patch by teor.
+      Credit to Xiaofan Li for reporting this issue.
 
   o Minor bugfixes (portability):
-    - Stop using the PATH_MAX variable. The variable is not defined in
-      GNU Hurd which prevents Tor from being built. Fixes bug 23098;
-      bugfix on 0.3.1.1-alpha.
+    - Stop using the PATH_MAX variable, which is not defined on GNU
+      Hurd. Fixes bug 23098; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (relay):
     - When uploading our descriptor for the first time after startup,
       report the reason for uploading as "Tor just started" rather than
       leaving it blank. Fixes bug 22885; bugfix on 0.2.3.4-alpha.
     - Avoid unnecessary calls to directory_fetches_from_authorities() on
-      relays. This avoids spurious address resolutions and descriptor
+      relays, to prevent spurious address resolutions and descriptor
       rebuilds. This is a mitigation for bug 21789. Fixes bug 23470;
       bugfix on in 0.2.8.1-alpha.
 
@@ -295,7 +292,7 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       function from the general code to handle channel state
       transitions. This change simplifies our callgraph, reducing the
       size of the largest strongly connected component by roughly a
-      factor of two. Closes ticket 22608
+      factor of two. Closes ticket 22608.
     - Remove dead code for largely unused statistics on the number of
       times we've attempted various public key operations. Fixes bug
       19871; bugfix on 0.1.2.4-alpha. Fix by Isis Lovecruft.
@@ -306,7 +303,7 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       routers. Authorities no longer vote for these flags. Closes
       ticket 22215.
     - Rename the obsolete malleable hybrid_encrypt functions used in TAP
-      and old hidden services to indicate that they aren't suitable for
+      and old hidden services, to indicate that they aren't suitable for
       new protocols or formats. Closes ticket 23026.
     - Replace our STRUCT_OFFSET() macro with offsetof(). Closes ticket
       22521. Patch from Neel Chauhan.
