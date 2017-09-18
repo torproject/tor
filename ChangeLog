@@ -2,64 +2,77 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
   Tor 0.3.2.1-alpha is the first release in the 0.3.2.x series. It
   includes support for our next-generation ("v3") onion service
   protocol, and adds a new circuit scheduler for more responsive
-  forwarding decisions from relays.  There are also numerous other
-  small features and bugfixes here.
+  forwarding decisions from relays. There are also numerous other small
+  features and bugfixes here.
 
   Below are the changes since Tor 0.3.1.7.
 
   o Major feature (scheduler, channel):
-    - Introducing the KIST scheduler which stands for Kernel Informed
-      Socket Transport. It is only available on Linux systems. This
-      comes from a researched and published paper you can find
-      here: http://www.robgjansen.com/publications/kist-sec2014.pdf
-      https://arxiv.org/abs/1709.01044 This is also a major refactoring
-      of the entire scheduler subsystem in order for it to be more
-      modular and thus much more easier to add more scheduler type
-      later. The current scheduler has been named "Vanilla" but we favor
-      KIST if available in this version. A new torrc option has been
-      added and named "Schedulers type1,type2,..." which allows a user
-      to select which scheduler type it wants tor to use. It is also
-      possible to change it at runtime. It is an ordered list by
-      priority. KIST might not be available on all platforms so there is
-      a fallback to "KISTLite" that uses the same mechanisms but without
-      the kernel support. The current default values are: Schedulers
-      KIST,KISTLite,Vanilla. Closes ticket 12541.
+    - Clients and relays now use new schedulers to decide which circuits
+      should deliver cells first. The first type is called "KIST"
+      ("Kernel Informed Socket Transport"), and is only available on
+      Linux-like systems: it uses feedback from the kernel to prevent
+      the kernel's TCP buffers from growing too full. The second new
+      scheduler type is called "KISTLite": it behaves the same as KIST,
+      but runs on systems without kernel support for inspecting TCP
+      implementation details. The old scheduler is still available,
+      under the name "Vanilla". To change the default scheduler
+      preference order, use the new "Schedulers" option. (The default
+      preference order is "KIST,KISTLite,Vanilla".)
+
+      Matt Traudt implemented KIST, based on research by Rob Jansen,
+      John Geddes, Christ Wacek, Micah Sherr, and Paul Syverson. For
+      more information, see the design paper at
+      http://www.robgjansen.com/publications/kist-sec2014.pdf and the
+      followup implementation paper at https://arxiv.org/abs/1709.01044.
+      Closes ticket 12541.
 
   o Major features (next-generation onion services):
     - Tor now supports the next-generation onion services protocol for
       clients and services! As part of this release, the core of
       proposal 224 has been implemented and is available for
       experimentation and testing by our users. This newer version of
-      onion services (v3) features various improvements over the legacy
-      system: a) Better crypto (replaced SHA1/DH/RSA1024 with
-      SHA3/ed25519/curve25519) b) Improved directory protocol leaking
-      less to directory servers. c) Improved directory protocol with
-      smaller surface for targeted attacks. d) Better onion address
-      security against impersonation. e) More extensible
-      introduction/rendezvous protocol. f) A cleaner and more modular
-      codebase. Furthermore, as part of this update, onion addresses
-      increase in length and are now 56 characters long:
-      4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad.onion In
-      the future, we will be releasing more options and features but we
-      first need a testing period, so that the current codebase matures
-      and becomes more robust. Here are some of the features we have
-      planned: 1) Offline keys for onion services 2) Advanced client
-      authorization for onion services 3) Improved guard algorithm for
-      onion services 4) Next-gen onion service statistics Please see our
-      proposal for more details:
-      https://gitweb.torproject.org/torspec.git/tree/proposals/224-rend-spec-ng.txt
-      The default version for onion services remains v2 (the legacy
-      system) until this new codebase gets tested and hardened. Service
-      operators who want to experiment with the new system can use the
-      'HiddenServiceVersion 3' torrc directive along with the regular
-      onion service configuration options. We will publish a blog post
-      about this new feature soon! Enjoy!
+      onion services ("v3") features many improvements over the legacy
+      system, including:
+
+      a) Better crypto (replaced SHA1/DH/RSA1024
+      with SHA3/ed25519/curve25519)
+
+      b) Improved directory protocol, leaking much less information to
+      directory servers.
+
+      c) Improved directory protocol, with smaller surface for
+      targeted attacks.
+
+      d) Better onion address security against impersonation.
+
+      e) More extensible introduction/rendezvous protocol.
+
+      f) A cleaner and more modular codebase.
+
+      You can identify a next-generation onion address by its length:
+      they are56 characters long, as in
+      "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad.onion".
+
+      In the future, we will release more options and features for v3
+      onion services, but we first need a testing period, so that the
+      current codebase matures and becomes more robust. Planned features
+      include: offline keys, advanced client authorization, improved
+      guard algorithms, and statistics. For full details, see
+      proposal 224.
+
+      Legacy ("v2") onion services will still work for the forseeable
+      future, and will remain the default until this new codebase gets
+      tested and hardened. Service operators who want to experiment with
+      the new system can use the 'HiddenServiceVersion 3' torrc
+      directive along with the regular onion service configuration
+      options. We will publish a blog post about this new feature
+      soon! Enjoy!
 
   o Major bugfixes (usability, control port):
     - Report trusted clock skew indications as bootstrap errors, so
       controllers can more easily alert users when their clocks are
-      wrong. Fixes bug 23506; bugfix
-      on 0.1.2.6-alpha.
+      wrong. Fixes bug 23506; bugfix on 0.1.2.6-alpha.
 
   o Minor features (bug detection):
     - Log a warning message, with stack trace, for any attempt to call
