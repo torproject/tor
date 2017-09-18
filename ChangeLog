@@ -51,7 +51,7 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       f) A cleaner and more modular codebase.
 
       You can identify a next-generation onion address by its length:
-      they are56 characters long, as in
+      they are 56 characters long, as in
       "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad.onion".
 
       In the future, we will release more options and features for v3
@@ -61,7 +61,7 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       guard algorithms, and statistics. For full details, see
       proposal 224.
 
-      Legacy ("v2") onion services will still work for the forseeable
+      Legacy ("v2") onion services will still work for the foreseeable
       future, and will remain the default until this new codebase gets
       tested and hardened. Service operators who want to experiment with
       the new system can use the 'HiddenServiceVersion 3' torrc
