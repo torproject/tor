@@ -464,8 +464,6 @@ generate_certificate(void)
   char expires[ISO_TIME_LEN+1];
   char id_digest[DIGEST_LEN];
   char fingerprint[FINGERPRINT_LEN+1];
-  char *ident = key_to_string(identity_key);
-  char *signing = key_to_string(signing_key);
   FILE *f;
   size_t signed_len;
   char digest[DIGEST_LEN];
@@ -478,6 +476,8 @@ generate_certificate(void)
   if (get_digest(identity_key, id_digest)) {
     return -1;
   }
+  char *ident = key_to_string(identity_key);
+  char *signing = key_to_string(signing_key);
 
   tor_localtime_r(&now, &tm);
   tm.tm_mon += months_lifetime;
