@@ -684,16 +684,19 @@ static const config_var_t testing_tor_network_defaults[] = {
 #undef OBSOLETE
 
 static const config_deprecation_t option_deprecation_notes_[] = {
-  /* Deprecated since 0.3.2.0-alpha. */
+  /* Deprecated since 0.3.2.1-alpha. */
   { "HTTPProxy", "It only applies to direct unencrypted HTTP connections "
     "to your directory server, which your Tor probably wasn't using." },
   { "HTTPProxyAuthenticator", "HTTPProxy is deprecated in favor of HTTPSProxy "
     "which should be used with HTTPSProxyAuthenticator." },
+  /* End of options deprecated since 0.3.2.1-alpha */
+
+  /* Options deprecated since 0.3.2.2-alpha */
   { "ReachableDirAddresses", "It has no effect on relays, and has had no "
     "effect on clients since 0.2.8." },
   { "ClientPreferIPv6DirPort", "It has no effect on relays, and has had no "
     "effect on clients since 0.2.8." },
-  /* End of options deprecated since 0.3.2.0-alpha. */
+  /* End of options deprecated since 0.3.2.2-alpha. */
 
   { NULL, NULL }
 };
