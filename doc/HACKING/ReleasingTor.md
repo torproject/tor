@@ -153,6 +153,7 @@ new Tor release:
        - {mike} at tig dot as
        - {tails-rm} at boum dot org
        - {simon} at sdeziel.info
+       - {yuri} at rawbw.com
 
 4. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
