@@ -1,4 +1,0 @@
-  o Minor bugfixes (relay):
-    - Inform the geoip and rephist modules about all requests, even
-      on relays that are only fetching microdescriptors. Fixes a bug related
-      to 21585; bugfix on 0.3.0.1-alpha.
