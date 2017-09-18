@@ -507,16 +507,25 @@ kist_scheduler_schedule(void)
 {
   struct monotime_t now;
   struct timeval next_run;
-  int32_t diff;
+  int64_t diff;
 
   if (!have_work()) {
     return;
   }
   monotime_get(&now);
-  diff = (int32_t) monotime_diff_msec(&scheduler_last_run, &now);
+
+  /* If time is really monotonic, we can never have now being smaller than the
+   * last scheduler run. The scheduler_last_run at first is set to 0. */
+  diff = monotime_diff_msec(&scheduler_last_run, &now);
+  IF_BUG_ONCE(diff < 0) {
+    diff = 0;
+  }
   if (diff < sched_run_interval) {
     next_run.tv_sec = 0;
-    /* 1000 for ms -> us */
+    /* Takes 1000 ms -> us. This will always be valid because diff can NOT be
+     * negative and can NOT be smaller than sched_run_interval so values can
+     * only go from 1000 usec (diff set to interval - 1) to 100000 usec (diff
+     * set to 0) for the maximum allowed run interval (100ms). */
     next_run.tv_usec = (sched_run_interval - diff) * 1000;
     /* Readding an event reschedules it. It does not duplicate it. */
     scheduler_ev_add(&next_run);
