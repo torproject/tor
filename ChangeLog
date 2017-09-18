@@ -8,17 +8,17 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
   Below are the changes since Tor 0.3.1.7.
 
   o Major feature (scheduler, channel):
-    - Clients and relays now use new schedulers to decide which circuits
-      should deliver cells first. The first type is called "KIST"
-      ("Kernel Informed Socket Transport"), and is only available on
-      Linux-like systems: it uses feedback from the kernel to prevent
-      the kernel's TCP buffers from growing too full. The second new
-      scheduler type is called "KISTLite": it behaves the same as KIST,
-      but runs on systems without kernel support for inspecting TCP
-      implementation details. The old scheduler is still available,
-      under the name "Vanilla". To change the default scheduler
-      preference order, use the new "Schedulers" option. (The default
-      preference order is "KIST,KISTLite,Vanilla".)
+    - Tor now uses new schedulers to decide which circuits should
+      deliver cells first, in order to improve congestion at relays. The
+      first type is called "KIST" ("Kernel Informed Socket Transport"),
+      and is only available on Linux-like systems: it uses feedback from
+      the kernel to prevent the kernel's TCP buffers from growing too
+      full. The second new scheduler type is called "KISTLite": it
+      behaves the same as KIST, but runs on systems without kernel
+      support for inspecting TCP implementation details. The old
+      scheduler is still available, under the name "Vanilla". To change
+      the default scheduler preference order, use the new "Schedulers"
+      option. (The default preference order is "KIST,KISTLite,Vanilla".)
 
       Matt Traudt implemented KIST, based on research by Rob Jansen,
       John Geddes, Christ Wacek, Micah Sherr, and Paul Syverson. For
