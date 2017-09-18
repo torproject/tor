@@ -506,7 +506,11 @@ scheduler_ev_add(const struct timeval *next_run)
 {
   tor_assert(run_sched_ev);
   tor_assert(next_run);
-  event_add(run_sched_ev, next_run);
+  if (BUG(event_add(run_sched_ev, next_run) < 0)) {
+    log_warn(LD_SCHED, "Adding to libevent failed. Next run time was set to: "
+                       "%ld.%06ld", next_run->tv_sec, next_run->tv_usec);
+    return;
+  }
 }
 
 /* Make the scheduler event active with the given flags. */
