@@ -83,11 +83,11 @@ from ntor_ref import hash_nil
 from ntor_ref import PrivateKey
 
 # String constants used in this protocol
-PROTOID = "tor-hs-ntor-curve25519-sha3-256-1"
-T_HSENC    = PROTOID + ":hs_key_extract"
-T_HSVERIFY = PROTOID + ":hs_verify"
-T_HSMAC    = PROTOID + ":hs_mac"
-M_HSEXPAND = PROTOID + ":hs_key_expand"
+PROTOID = b"tor-hs-ntor-curve25519-sha3-256-1"
+T_HSENC    = PROTOID + b":hs_key_extract"
+T_HSVERIFY = PROTOID + b":hs_verify"
+T_HSMAC    = PROTOID + b":hs_mac"
+M_HSEXPAND = PROTOID + b":hs_key_expand"
 
 INTRO_SECRET_LEN = 161
 REND_SECRET_LEN = 225
@@ -191,7 +191,7 @@ def service_part1(intro_auth_pubkey_str, client_enc_pubkey, intro_enc_privkey, i
 
     ntor_key_seed = mac(rend_secret_hs_input, T_HSENC)
     verify = mac(rend_secret_hs_input, T_HSVERIFY)
-    auth_input = verify + intro_auth_pubkey_str + intro_enc_pubkey.serialize() + service_ephemeral_pubkey.serialize() + client_enc_pubkey.serialize() + PROTOID + "Server"
+    auth_input = verify + intro_auth_pubkey_str + intro_enc_pubkey.serialize() + service_ephemeral_pubkey.serialize() + client_enc_pubkey.serialize() + PROTOID + b"Server"
     assert(len(auth_input) == AUTH_INPUT_LEN)
     auth_input_mac = mac(auth_input, T_HSMAC)
 
@@ -218,7 +218,7 @@ def client_part2(intro_auth_pubkey_str, client_ephemeral_enc_pubkey, client_ephe
 
     ntor_key_seed = mac(rend_secret_hs_input, T_HSENC)
     verify = mac(rend_secret_hs_input, T_HSVERIFY)
-    auth_input = verify + intro_auth_pubkey_str + intro_enc_pubkey.serialize() + service_ephemeral_rend_pubkey.serialize() + client_ephemeral_enc_pubkey.serialize() + PROTOID + "Server"
+    auth_input = verify + intro_auth_pubkey_str + intro_enc_pubkey.serialize() + service_ephemeral_rend_pubkey.serialize() + client_ephemeral_enc_pubkey.serialize() + PROTOID + b"Server"
     assert(len(auth_input) == AUTH_INPUT_LEN)
     auth_input_mac = mac(auth_input, T_HSMAC)
 
@@ -294,7 +294,7 @@ def do_pure_python_ntor_test():
     assert(client_ntor_key_seed == service_ntor_key_seed)
     assert(client_auth_input_mac == service_auth_input_mac)
 
-    print "DONE: python dance [%s]" % repr(client_auth_input_mac)
+    print("DONE: python dance [%s]" % repr(client_auth_input_mac))
 
 # Perform a pure little-t-tor integration test.
 def do_little_t_tor_ntor_test():
@@ -334,7 +334,7 @@ def do_little_t_tor_ntor_test():
     assert(client_ntor_key_seed == service_ntor_key_seed)
     assert(client_ntor_auth_mac == service_ntor_auth_mac)
 
-    print "DONE: tor dance [%s]" % repr(client_ntor_auth_mac)
+    print("DONE: tor dance [%s]" % repr(client_ntor_auth_mac))
 
 """
 Do mixed test as follows:
@@ -379,7 +379,7 @@ def do_first_mixed_test():
     assert(client_auth_input_mac == service_ntor_auth_mac)
     assert(client_ntor_key_seed == service_ntor_key_seed)
 
-    print "DONE: 1st mixed dance [%s]" % repr(client_auth_input_mac)
+    print("DONE: 1st mixed dance [%s]" % repr(client_auth_input_mac))
 
 """
 Do mixed test as follows:
@@ -413,7 +413,7 @@ def do_second_mixed_test():
     assert(client_ntor_key_seed == service_ntor_key_seed)
     assert(client_ntor_auth_mac == service_ntor_auth_mac)
 
-    print "DONE: 2nd mixed dance [%s]" % repr(client_ntor_auth_mac)
+    print("DONE: 2nd mixed dance [%s]" % repr(client_ntor_auth_mac))
 
 def do_mixed_tests():
     do_first_mixed_test()
