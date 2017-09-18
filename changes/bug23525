@@ -1,6 +1,0 @@
-  o Minor bugfixes (control port):
-    - Make download status next attempts reported over the control port
-      consistent with the time used by tor. This issue only occurs if a
-      download status has not been reset before it is queried over the
-      control port.
-      Fixes 23525, not in any released version of tor.

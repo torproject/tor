@@ -1,4 +1,4 @@
-  o Deprecation (config):
-    - Deprecate HTTPProxy/HTTPProxyAuthenticator config options. It only
+  o Deprecated features:
+    - Deprecate HTTPProxy/HTTPProxyAuthenticator config options. They only
       applies to direct unencrypted HTTP connections to your directory server,
-      which your Tor probably isn't using. Fixes bug 20575.
+      which your Tor probably isn't using. Closes ticket 20575.

@@ -1,4 +1,4 @@
   o Minor bugfixes (test):
-    - Fix a broken OutboundAddress option unit test because the parsing
-      function was never returning an error on failure. Fixes bug #23366.;
-      bugfix on tor-0.3.0.3-alpha.
+    - Fix a broken unit test for the OutboundAddress option: the parsing
+      function was never returning an error on failure. Fixes bug 23366;
+      bugfix on 0.3.0.3-alpha.

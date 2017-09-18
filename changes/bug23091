@@ -3,4 +3,4 @@
       instead of only doing it for a consensus that is more than 24 hours old
       (badly expired). This specific check is done in the tor main loop
       callback that validates if we have an expired consensus. Fixes bug
-      23091; bugfix on tor-0.2.0.19-alpha.
+      23091; bugfix on 0.2.0.19-alpha.

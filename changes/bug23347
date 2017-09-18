@@ -1,9 +1,0 @@
-  o Minor fixes (bridge client bootstrap):
-    - Make bridge clients with no running bridges try to download
-      bridge descriptors immediately. But when bridge clients have
-      running bridges, make them wait at least 3 hours before
-      refreshing recently received bridge descriptors.
-      Download schedules used to start with an implicit 0, but the
-      fix for 17750 changed this undocumented behaviour, and made
-      bridge clients hang for 15 minutes before bootstrapping.
-      Fixes bug 23347, not in any released version of Tor.

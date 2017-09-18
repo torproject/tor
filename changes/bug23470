@@ -1,6 +1,5 @@
   o Minor bugfix (relay address resolution):
     - Avoid unnecessary calls to directory_fetches_from_authorities()
       on relays. This avoids spurious address resolutions and
-      descriptor rebuilds. This is a mitigation for 21789. The original
-      bug was introduced in commit 35bbf2e as part of prop210.
-      Fixes 23470 in 0.2.8.1-alpha.
+      descriptor rebuilds. This is a mitigation for bug 21789.
+      Fixes bug 23470; bugfix on in 0.2.8.1-alpha.
