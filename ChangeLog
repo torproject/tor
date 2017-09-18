@@ -9,11 +9,10 @@ Changes in version 0.3.1.7 - 2017-09-18
   small features, bugfixes on earlier release series, and groundwork for
   the hidden services revamp of 0.3.2.
 
-  Per our stable release policy, we plan to support the Tor 0.3.0
-  release series for at least the next nine months, or for three months
-  after the first stable release of the 0.3.1 series: whichever is
-  longer. If you need a release with long-term support, we recommend
-  that you stay with the 0.2.9 series.
+  This release also includes a fix for TROVE-2017-008, a security bug
+  that affects hidden services running with the SafeLogging option
+  disabled. For more information, see
+  https://trac.torproject.org/projects/tor/ticket/23490
 
   Per our stable release policy, we plan to support each stable release
   series for at least the next nine months, or for three months after
@@ -23,6 +22,12 @@ Changes in version 0.3.1.7 - 2017-09-18
 
   Below is a list of the changes since 0.3.1.6-rc. For a list of all
   changes since 0.3.0, see the ReleaseNotes file.
+
+  o Major bugfixes (security, hidden services, loggging):
+    - Fix a bug where we could log uninitialized stack when a certain
+      hidden service error occurred while SafeLogging was disabled.
+      Fixes bug #23490; bugfix on 0.2.7.2-alpha. This is also tracked as
+      TROVE-2017-008 and CVE-2017-0380.
 
   o Minor features (defensive programming):
     - Create a pair of consensus parameters, nf_pad_tor2web and
@@ -48,6 +53,11 @@ Changes in version 0.3.1.7 - 2017-09-18
       Fixes part of bug 22644; bugfix on 0.2.7.1-alpha.
     - Do not crash when receiving a POSTDESCRIPTOR command with an empty
       body. Fixes part of bug 22644; bugfix on 0.2.0.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Inform the geoip and rephist modules about all requests, even on
+      relays that are only fetching microdescriptors. Fixes a bug
+      related to 21585; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (unit tests):
     - Fix a channelpadding unit test failure on slow systems by using

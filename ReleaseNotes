@@ -13,11 +13,10 @@ Changes in version 0.3.1.7 - 2017-09-18
   small features, bugfixes on earlier release series, and groundwork for
   the hidden services revamp of 0.3.2.
 
-  Per our stable release policy, we plan to support the Tor 0.3.0
-  release series for at least the next nine months, or for three months
-  after the first stable release of the 0.3.1 series: whichever is
-  longer. If you need a release with long-term support, we recommend
-  that you stay with the 0.2.9 series.
+  This release also includes a fix for TROVE-2017-008, a security bug
+  that affects hidden services running with the SafeLogging option
+  disabled. For more information, see
+  https://trac.torproject.org/projects/tor/ticket/23490
 
   Per our stable release policy, we plan to support each stable release
   series for at least the next nine months, or for three months after
@@ -31,6 +30,12 @@ Changes in version 0.3.1.7 - 2017-09-18
   o New dependencies:
     - To build with zstd and lzma support, Tor now requires the
       pkg-config tool at build time.
+
+  o Major bugfixes (security, hidden services, loggging):
+    - Fix a bug where we could log uninitialized stack when a certain
+      hidden service error occurred while SafeLogging was disabled.
+      Fixes bug #23490; bugfix on 0.2.7.2-alpha.
+      This is also tracked as TROVE-2017-008 and CVE-2017-0380.
 
   o Major features (build system, continuous integration):
     - Tor's repository now includes a Travis Continuous Integration (CI)
@@ -514,6 +519,11 @@ Changes in version 0.3.1.7 - 2017-09-18
       protocol warnings, because they can be failure from the network
       and are not relevant to the operator. Fixes bug 23078; bugfix on
       0.3.0.1-alpha and 0.3.0.2-alpha.
+
+  o Minor bugfixes (relay):
+    - Inform the geoip and rephist modules about all requests, even on
+      relays that are only fetching microdescriptors. Fixes a bug
+      related to 21585; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (memory leaks):
     - Fix a small memory leak at exit from the backtrace handler code.
