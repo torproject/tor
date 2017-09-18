@@ -1,0 +1,5 @@
+  o Major bugfixes (security, hidden services, loggging):
+    - Fix a bug where we could log uninitialized stack when a certain
+      hidden service error occurred while SafeLogging was disabled.
+      Fixes bug #23490; bugfix on 0.2.7.2-alpha.
+      This is also tracked as TROVE-2017-008 and CVE-2017-0380.
