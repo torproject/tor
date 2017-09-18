@@ -526,7 +526,7 @@ kist_scheduler_schedule(void)
      * negative and can NOT be smaller than sched_run_interval so values can
      * only go from 1000 usec (diff set to interval - 1) to 100000 usec (diff
      * set to 0) for the maximum allowed run interval (100ms). */
-    next_run.tv_usec = (sched_run_interval - diff) * 1000;
+    next_run.tv_usec = (int) ((sched_run_interval - diff) * 1000);
     /* Readding an event reschedules it. It does not duplicate it. */
     scheduler_ev_add(&next_run);
   } else {
