@@ -1,5 +1,16 @@
 Changes in version 0.2.8.15 - 2017-09-18
-  BLURB
+  Tor 0.2.8.15 backports a collection of bugfixes from later
+  Tor series.
+
+  Most significantly, it includes a fix for TROVE-2017-008, a
+  security bug that affects hidden services running with the
+  SafeLogging option disabled. For more information, see
+  https://trac.torproject.org/projects/tor/ticket/23490
+
+  Note that Tor 0.2.8.x will no longer be supported after 1 Jan
+  2018.  We suggest that you upgrade to the latest stable release if
+  possible.  If you can't, we recommend that you upgrade at least to
+  0.2.9, which will be supported until 2020.
 
   o Major bugfixes (openbsd, denial-of-service, backport from 0.3.1.5-alpha):
     - Avoid an assertion failure bug affecting our implementation of
