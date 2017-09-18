@@ -1,5 +1,0 @@
-  o Minor features (control):
-    - Add GETINFO desc/download-enabled and md/download-enabled, to
-      inform the controller whether try to download router descriptors
-      and microdescriptors respectively. Closes ticket 22684.
-

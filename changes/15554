@@ -1,4 +1,0 @@
-  o Minor features (testing):
-    - Add a unit test to verify that we can parse a hardcoded v2
-      hidden service descriptor. Closes ticket 15554.
-

@@ -1,6 +1,0 @@
-  o Minor bugfixes (directories):
-    - Directory servers now include a "Date:" http header for response
-      codes other than 200. Clients starting with a skewed clock and a
-      recent consensus were getting "304 Not modified" responses from
-      directory authorities, so without a Date header the client would
-      never hear about a wrong clock. Fixes bug 23499; bugfix on 0.0.8rc1.

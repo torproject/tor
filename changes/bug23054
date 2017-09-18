@@ -1,4 +1,0 @@
-  o Minor features (static analysis):
-    - The BUG() macro has been changed slightly so that Coverity no
-      longer complains about dead code if the bug is impossible. Closes
-      ticket 23054.

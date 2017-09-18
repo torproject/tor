@@ -1,5 +1,0 @@
-  o Minor features (logging, UI):
-    - Improve the warning message for specifying a relay by nickname.
-      The previous message implied that nickname registration was still
-      part of the Tor network design, which it isn't. Closes ticket 20488.
-

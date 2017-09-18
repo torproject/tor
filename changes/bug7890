@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging):
-    - Use a more comprehensible log message when telling the user they've
-      excluded every running exit node. Fixes bug 7890; bugfix on
-      0.2.2.25-alpha.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (heartbeat):
-    - If we fail to write a heartbeat message, schedule a retry for the minimum
-      heartbeat interval number of seconds in the future. Fixes bug 19476;
-      bugfix on 0.2.3.1-alpha.

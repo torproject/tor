@@ -1,4 +1,0 @@
-  o Minor features (ed25519):
-    - Add validation function to checks for torsion components in ed25119
-      public keys, used by prop224 client-side
-      code. Closes ticket 22006. Math help by Ian Goldberg.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging):
-    - Remove duplicate log messages regarding opening non-local SocksPorts
-      upon parsing config and opening listeners at startup. Fixes bug 4019;
-      bugfix on 0.2.3.3-alpha.

@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Rename the obsolete malleable hybrid_encrypt functions used in
-      TAP and old hidden services to indicate that they aren't suitable
-      for new protocols or formats. Closes ticket 23026.

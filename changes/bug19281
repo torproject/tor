@@ -1,5 +1,0 @@
-  o Minor bugfixes (correctness, controller):
-    - Make the controller's write_escaped_data() function robust to extremely
-      long inputs. Right now, it doesn't actually receive any extremely
-      long inputs, so this is for defense in depth. Fixes bug 19281;
-      bugfix on 0.1.1.1-alpha. Reported by Guido Vranken.

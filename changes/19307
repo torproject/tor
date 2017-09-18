@@ -1,7 +1,0 @@
-  o Minor features (development support):
-    - Developers can now generate a call-graph for Tor using the
-      "calltool" python program, which post-processes object dumps.  It
-      should work okay on many Linux and OSX platforms, and might work
-      elsewhere too.  To run this, install calltool from
-      https://gitweb.torproject.org/user/nickm/calltool.git and run
-      "make callgraph". Closes ticket 19307.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (code correctness):
-    - Call htons() in extend_cell_format() for encoding a 16-bit
-      value. Previously we used ntohs(), which happens to behave the
-      same on all the platforms we support, but which isn't really
-      correct. Fixes bug 23106; bugfix on 0.2.4.8-alpha.

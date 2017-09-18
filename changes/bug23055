@@ -1,4 +1,0 @@
-  o Minor bugfixes (certificate handling):
-    - Fix a time handling bug in Tor certificates set to expire after
-      the year 2106. Fixes bug 23055; bugfix on 0.3.0.1-alpha.
-      Found by Coverity as CID 1415728.

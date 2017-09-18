@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging):
-    - When logging the number of descriptors we intend to download per
-      directory request, do not log a number higher than then the
-      number of descriptors we're fetching in total. Fixes bug 19648;
-      bugfix on 0.1.1.8-alpha.

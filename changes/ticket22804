@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-
-    - Split the enormous circuit_send_next_onion_skin() function into
-      multiple subfunctions. Closes ticket 22804.

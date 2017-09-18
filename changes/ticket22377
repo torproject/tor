@@ -1,4 +1,0 @@
-  o Removed features:
-    - The controller API no longer includes an AUTHDIR_NEWDESCS event:
-      nobody was using it any longer. Closes ticket 22377.
-

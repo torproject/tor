@@ -1,3 +1,0 @@
-  o Minor features (bug detection):
-    - Log a warning message, with stack trace, for any attempt to call
-      get_options() during option validation. Closes ticket 22281.

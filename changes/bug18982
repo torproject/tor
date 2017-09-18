@@ -1,6 +1,0 @@
-  o Minor bugfixes (circuit logging):
-    - torspec says hop counts are 1-based, so fix two log messages
-      that mistakenly logged 0-based hop counts.
-      Fixes bug 18982; bugfix on 0.2.6.2-alpha
-      and 0.2.4.5-alpha. Patch by teor.
-      Credit to Xiaofan Li for reporting this issue.

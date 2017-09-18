@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Extract the code for handling newly-open channels into a separate
-      function from the general code to handle channel state transitions.
-      This change simplifies our callgraph, reducing the size of the largest
-      strongly connected component by roughly a factor of two.
-      Closes ticket 22608

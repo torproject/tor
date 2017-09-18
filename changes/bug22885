@@ -1,5 +1,0 @@
-  o Minor bugfixes (relay):
-    - When uploading our descriptor for the first time after startup,
-      report the reason for uploading as "Tor just started" rather than
-      leaving it blank. Fixes bug 22885; bugfix on 0.2.3.4-alpha.
-

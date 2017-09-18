@@ -1,4 +1,0 @@
-  o Minor features (command line):
-    - Add a new commandline option, --key-expiration, which prints when
-      the current signing key is going to expire. Implements ticket
-      17639; patch by Isis Lovecruft.

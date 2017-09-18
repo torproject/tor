@@ -1,4 +1,0 @@
-  o Minor bugfixes (crypto):
-    - Properly detect and refuse to blind bad ed25519 keys. The key blinding
-      code is currently unused, so this bug does not affect tor clients or
-      services on the network. Fixes bug 22746; bugfix on 0.2.6.1-alpha.

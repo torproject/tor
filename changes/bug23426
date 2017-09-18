@@ -1,4 +1,0 @@
-  o Removed features:
-    - The AllowDotExit option has been removed as unsafe.  It has
-      been deprecated since 0.2.9.2-alpha.  Closes ticket 23426.
-

@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging):
-    - When warning about a directory owned by the wrong user, log the actual
-      name of the user owning the directory.  Previously, we'd log the name
-      of the process owner twice. Fixes bug 23487; bugfix on 0.2.9.1-alpha.
-

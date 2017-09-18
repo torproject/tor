@@ -1,4 +1,0 @@
-  o Minor bugfixes (tests):
-    - Fix a signed-integer overflow in the unit tests for
-      dir/download_status_random_backoff, which was untriggered until we
-      fixed bug 17750.  Fixes bug 22924; bugfix on 0.2.9.1-alpha.

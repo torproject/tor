@@ -1,7 +1,0 @@
-  o Minor features (client directory bandwidth tuning):
-
-    - When downloading (micro)descriptors, don't split the list of
-      descriptors into multiple requests unless there are at least 32
-      descriptors that we want. Previously, we split at 4, not 32, which
-      could lead to significant overhead in HTTP request size and
-      degradation in compression performance. Closes ticket 23220.

@@ -1,8 +1,0 @@
-  o Minor features (integration, hardening):
-    - Added a new NoExec option, to prevent Tor from running
-      other programs. When this option is set to 1,
-      Tor will never try to run another program, regardless of
-      the settings of PortForwardingHelper, ClientTransportPlugin,
-      or ServerTransportPlugin. Once NoExec is set, it cannot be
-      disabled without restarting Tor.
-      Closes ticket 22976.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (portability):
-    - Stop using the PATH_MAX variable. The variable is not defined in
-      GNU Hurd which prevents Tor from being built. Fixes bug 23098;
-      bugfix on 0.3.1.1-alpha.

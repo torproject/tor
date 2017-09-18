@@ -1,5 +1,0 @@
-  o Minor features (control port):
-    - Provide better error message for GETINFO desc/(id|name) when
-      microdescriptors are in use and router descriptors are not fetched.
-      Closes ticket 5847. Patch by Kevin Butler.
-

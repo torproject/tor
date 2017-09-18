@@ -1,3 +1,0 @@
-  o Minor features (exit relay, DNS):
-    - Improve the clarity and safety of the log message from evdns when
-      receiving an apparent spoofed DNS reply. Closes ticket 3056.

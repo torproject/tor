@@ -1,7 +1,0 @@
-  o Minor bugfixes (client, usability):
-    - Refrain from needlessly rejecting SOCKS5-with-hostnames and SOCKS4a
-      requests that contain IP address strings, even when SafeSocks in
-      enabled, as this prevents user from connecting to known IP addresses
-      without relying on DNS for resolving. SafeSocks still rejects SOCKS
-      connections that connect to IP addresses when those addresses are _not_
-      encoded as hostnames. Fixes bug 22461; bugfix on Tor 0.2.6.2-alpha.

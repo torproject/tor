@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove dead code for largely unused statistics on the number of
-      times we've attempted various public key operations. Fixes bug
-      19871; bugfix on 0.1.2.4-alpha. Fix by Isis Lovecruft.

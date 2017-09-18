@@ -1,5 +1,0 @@
-  o Minor features (relay, configuration):
-    - Reject attempts to use relative file paths when RunAsDaemon is set.
-      Previously, Tor would accept these, but the directory-changing step
-      of RunAsDaemon would give strange and/or confusing results.
-      Closes ticket 22731.

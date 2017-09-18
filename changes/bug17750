@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory downloads):
-    - Make clients wait for 6 seconds before trying to download their
-      consensus from an authority.
-      Fixes bug 17750; bugfix on 0.2.8.1-alpha.

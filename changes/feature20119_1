@@ -1,3 +1,0 @@
-  o Minor features (startup, safety):
-    - When configured to write a PID file, Tor now exits if it is unable to
-      do so.  Previously, it would warn and continue. Closes ticket 20119.

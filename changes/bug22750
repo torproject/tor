@@ -1,5 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox, logging):
-    - Fix some messages on unexpected errors from the seccomp2
-      library.  Fixes bug 22750; bugfix on 0.2.5.1-alpha.  Patch
-      from "cypherpunks".
-

@@ -1,4 +1,0 @@
-  o Testing:
-    - The default chutney network tests now include tests for the
-      v3 hidden service design. Make sure you have the latest
-      version of chutney if you want to run these. Closes ticket 22437.

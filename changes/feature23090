@@ -1,3 +1,0 @@
-  o Minor features (linux seccomp2 sandbox):
-    - If the sandbox filter fails to load, suggest to the user that their
-      kernel might not support seccomp2. Closes ticket 23090.

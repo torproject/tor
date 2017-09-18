@@ -1,4 +1,0 @@
-  o Minor features (client, entry guards):
-    - Add an extra check to make sure that we always use the
-      new guard selection code for picking our guards. Closes
-      ticket 22779.

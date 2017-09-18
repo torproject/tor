@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Replace our STRUCT_OFFSET() macro with offsetof(). Closes
-      ticket 22521. Patch from Neel Chauhan.

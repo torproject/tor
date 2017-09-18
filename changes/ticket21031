@@ -1,5 +1,0 @@
-  o Removed features:
-    - The ClientDNSRejectInternalAddresses flag can no longer be set on
-      non-testing networks. It has been deprecated since 0.2.9.2-alpha.
-      Closes ticket 21031.
-

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove several now-obsolete functions for asking about old variants
-      directory authority status. Closes ticket 22311; patch from "huyvq".

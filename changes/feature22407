@@ -1,5 +1,0 @@
-  o Minor features (client):
-    - You can now use Tor as a tunneled HTTP proxy: use the HTTPTunnelPort
-      option to open a port that accepts HTTP CONNECT requests.
-      Closes ticket 22407.
-

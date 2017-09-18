@@ -1,4 +1,0 @@
-  o Minor features (portability):
-    - Check at configure time whether uint8_t is unsigned char.  Lots
-      of existing code already assumes this, and there could be strict
-      aliasing issues if they aren't the same type. Closes ticket 22410.

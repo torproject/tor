@@ -1,4 +1,0 @@
-  o Minor bugfixes (DoS-resistance):
-    - If future code asks if there are any running bridges, without checking
-      if bridges are enabled, log a BUG warning rather than crashing.
-      Fixes bug 23524; bugfix on 0.3.0.1-alpha.

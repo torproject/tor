@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Use our test macros more consistently, to produce more useful
-      error messages when our unit tests fail.  Add coccinelle patches 
-      to allow us to re-check for test macro uses. Closes ticket 22497.
