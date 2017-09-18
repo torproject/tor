@@ -1,5 +1,11 @@
 Changes in version 0.2.9.12 - 2017-09-18
-  BLURB
+  Tor 0.2.9.12 backports a collection of bugfixes from later
+  Tor series.
+
+  Most significantly, it includes a fix for TROVE-2017-008, a
+  security bug that affects hidden services running with the
+  SafeLogging option disabled. For more information, see
+  https://trac.torproject.org/projects/tor/ticket/23490
 
   o Major features (security, backport from 0.3.0.2-alpha):
     - Change the algorithm used to decide DNS TTLs on client and server
