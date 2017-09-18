@@ -8,7 +8,11 @@ new Tor release:
 === 0. Preliminaries
 
 1. Get at least three of weasel/arma/Sebastian/Sina to put the new
-   version number in their approved versions list.
+   version number in their approved versions list.  Give them a few
+   days to do this if you can.
+
+2. If this is going to be an important security release, give the packagers
+   some advance warning: See this list of packagers in IV.3 below.
 
 
 === I. Make sure it works
@@ -26,19 +30,24 @@ new Tor release:
 
    What about Coverity Scan?
 
+   What about clan scan-build?
+
    Does 'make distcheck' complain?
 
-   How about 'make test-stem' and 'make test-network'?
+   How about 'make test-stem' and 'make test-network' and
+   `make test-network-full`?
 
        - Are all those tests still happy with --enable-expensive-hardening ?
 
    Any memory leaks?
 
 
-=== II. Write a changelog.
+=== II. Write a changelog
 
 
-1. Gather the `changes/*` files into a changelog entry, rewriting many
+1a. (Alpha release variant)
+
+   Gather the `changes/*` files into a changelog entry, rewriting many
    of them and reordering to focus on what users and funders would find
    interesting and understandable.
 
@@ -83,6 +92,15 @@ new Tor release:
 
    4. Run `./scripts/maint/format_changelog.py --inplace` to make it prettier
 
+1b. (old-stable release variant)
+
+   For stable releases that backport things from later, we try to compose
+   their releases, we try to make sure that we keep the changelog entries
+   identical to their original versions, with a 'backport from 0.x.y.z'
+   note added to each section.  So in this case, once you have the items
+   from the changes files copied together, don't use them to build a new
+   changelog: instead, look up the corrected versions that were merged
+   into ChangeLog in the master branch, and use those.
 
 2. Compose a short release blurb to highlight the user-facing
    changes. Insert said release blurb into the ChangeLog stanza. If it's
@@ -109,7 +127,7 @@ new Tor release:
 === III. Making the source release.
 
 1. In `maint-0.?.x`, bump the version number in `configure.ac` and run
-   `scripts/maint/updateVersions.pl` to update version numbers in other
+   `perl scripts/maint/updateVersions.pl` to update version numbers in other
    places, and commit.  Then merge `maint-0.?.x` into `release-0.?.x`.
 
    (NOTE: To bump the version number, edit `configure.ac`, and then run
@@ -165,7 +183,7 @@ new Tor release:
 5. Mail the release blurb and ChangeLog to tor-talk (development release) or
    tor-announce (stable).
 
-   Post the changelog on the the blog as well. You can generate a
+   Post the changelog on the blog as well. You can generate a
    blog-formatted version of the changelog with the -B option to
    format-changelog.
 
