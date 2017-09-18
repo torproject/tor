@@ -1,5 +1,9 @@
 Changes in version 0.3.2.1-alpha - 2017-09-18
-  BLURB
+  Tor 0.3.2.1-alpha is the first release in the 0.3.2.x series. It
+  includes support for our next-generation ("v3") onion service
+  protocol, and adds a new circuit scheduler for more responsive
+  forwarding decisions from relays.  There are also numerous other
+  small features and bugfixes here.
 
   Below are the changes since Tor 0.3.1.7.
 
@@ -53,28 +57,25 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
 
   o Major bugfixes (usability, control port):
     - Report trusted clock skew indications as bootstrap errors, so
-      controllers can more easily alert users. Fixes bug 23506; bugfix
+      controllers can more easily alert users when their clocks are
+      wrong. Fixes bug 23506; bugfix
       on 0.1.2.6-alpha.
 
   o Minor features (bug detection):
     - Log a warning message, with stack trace, for any attempt to call
       get_options() during option validation. Closes ticket 22281.
 
-  o Minor features (client directory bandwidth tuning):
+  o Minor features (client):
+    - You can now use Tor as a tunneled HTTP proxy: use the
+      HTTPTunnelPort option to open a port that accepts HTTP CONNECT
+      requests. Closes ticket 22407.
+    - Add an extra check to make sure that we always use the new guard
+      selection code for picking our guards. Closes ticket 22779.
     - When downloading (micro)descriptors, don't split the list of
       descriptors into multiple requests unless there are at least 32
       descriptors that we want. Previously, we split at 4, not 32, which
       could lead to significant overhead in HTTP request size and
       degradation in compression performance. Closes ticket 23220.
-
-  o Minor features (client):
-    - You can now use Tor as a tunneled HTTP proxy: use the
-      HTTPTunnelPort option to open a port that accepts HTTP CONNECT
-      requests. Closes ticket 22407.
-
-  o Minor features (client, entry guards):
-    - Add an extra check to make sure that we always use the new guard
-      selection code for picking our guards. Closes ticket 22779.
 
   o Minor features (command line):
     - Add a new commandline option, --key-expiration, which prints when
@@ -88,13 +89,9 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
     - Provide better error message for GETINFO desc/(id|name) when
       microdescriptors are in use and router descriptors are not
       fetched. Closes ticket 5847. Patch by Kevin Butler.
-
-  o Minor features (control):
     - Add GETINFO desc/download-enabled and md/download-enabled, to
       inform the controller whether try to download router descriptors
       and microdescriptors respectively. Closes ticket 22684.
-
-  o Minor features (controller):
     - Added new GETINFO targets ip-to-country/{ipv4,ipv6}-available, so
       controllers can tell whether the geoip databases are loaded.
       Closes ticket 23237.
@@ -158,25 +155,16 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       ticket 23054.
 
   o Minor features (testing):
+    - The default chutney network tests now include tests for the v3
+      hidden service design. Make sure you have the latest version of
+      chutney if you want to run these. Closes ticket 22437.
     - Add a unit test to verify that we can parse a hardcoded v2 hidden
       service descriptor. Closes ticket 15554.
-
-  o Minor bugfix (relay address resolution):
-    - Avoid unnecessary calls to directory_fetches_from_authorities() on
-      relays. This avoids spurious address resolutions and descriptor
-      rebuilds. This is a mitigation for bug 21789. Fixes bug 23470;
-      bugfix on in 0.2.8.1-alpha.
 
   o Minor bugfixes (certificate handling):
     - Fix a time handling bug in Tor certificates set to expire after
       the year 2106. Fixes bug 23055; bugfix on 0.3.0.1-alpha. Found by
       Coverity as CID 1415728.
-
-  o Minor bugfixes (circuit logging):
-    - torspec says hop counts are 1-based, so fix two log messages that
-      mistakenly logged 0-based hop counts. Fixes bug 18982; bugfix on
-      0.2.6.2-alpha and 0.2.4.5-alpha. Patch by teor. Credit to Xiaofan
-      Li for reporting this issue.
 
   o Minor bugfixes (client, usability):
     - Refrain from needlessly rejecting SOCKS5-with-hostnames and
@@ -192,6 +180,10 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       Previously we used ntohs(), which happens to behave the same on
       all the platforms we support, but which isn't really correct.
       Fixes bug 23106; bugfix on 0.2.4.8-alpha.
+    - Make the controller's write_escaped_data() function robust to
+      extremely long inputs. Right now, it doesn't actually receive any
+      extremely long inputs, so this is for defense in depth. Fixes bug
+      19281; bugfix on 0.1.1.1-alpha. Reported by Guido Vranken.
 
   o Minor bugfixes (compilation):
     - Fix unused variable warnings in donna's Curve25519 SSE2 code.
@@ -204,27 +196,13 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       tor main loop callback that validates if we have an expired
       consensus. Fixes bug 23091; bugfix on 0.2.0.19-alpha.
 
-  o Minor bugfixes (correctness, controller):
-    - Make the controller's write_escaped_data() function robust to
-      extremely long inputs. Right now, it doesn't actually receive any
-      extremely long inputs, so this is for defense in depth. Fixes bug
-      19281; bugfix on 0.1.1.1-alpha. Reported by Guido Vranken.
-
-  o Minor bugfixes (crypto):
-    - Properly detect and refuse to blind bad ed25519 keys. The key
-      blinding code is currently unused, so this bug does not affect tor
-      clients or services on the network. Fixes bug 22746; bugfix
-      on 0.2.6.1-alpha.
-
-  o Minor bugfixes (directories):
+  o Minor bugfixes (directory protocol):
     - Directory servers now include a "Date:" http header for response
       codes other than 200. Clients starting with a skewed clock and a
       recent consensus were getting "304 Not modified" responses from
       directory authorities, so without a Date header the client would
       never hear about a wrong clock. Fixes bug 23499; bugfix
       on 0.0.8rc1.
-
-  o Minor bugfixes (directory downloads):
     - Make clients wait for 6 seconds before trying to download their
       consensus from an authority. Fixes bug 17750; bugfix
       on 0.2.8.1-alpha.
@@ -267,6 +245,10 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       actual name of the user owning the directory. Previously, we'd log
       the name of the process owner twice. Fixes bug 23487; bugfix
       on 0.2.9.1-alpha.
+    - torspec says hop counts are 1-based, so fix two log messages that
+      mistakenly logged 0-based hop counts. Fixes bug 18982; bugfix on
+      0.2.6.2-alpha and 0.2.4.5-alpha. Patch by teor. Credit to Xiaofan
+      Li for reporting this issue.
 
   o Minor bugfixes (portability):
     - Stop using the PATH_MAX variable. The variable is not defined in
@@ -277,13 +259,15 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
     - When uploading our descriptor for the first time after startup,
       report the reason for uploading as "Tor just started" rather than
       leaving it blank. Fixes bug 22885; bugfix on 0.2.3.4-alpha.
+    - Avoid unnecessary calls to directory_fetches_from_authorities() on
+      relays. This avoids spurious address resolutions and descriptor
+      rebuilds. This is a mitigation for bug 21789. Fixes bug 23470;
+      bugfix on in 0.2.8.1-alpha.
 
-  o Minor bugfixes (test):
+  o Minor bugfixes (tests):
     - Fix a broken unit test for the OutboundAddress option: the parsing
       function was never returning an error on failure. Fixes bug 23366;
       bugfix on 0.3.0.3-alpha.
-
-  o Minor bugfixes (tests):
     - Fix a signed-integer overflow in the unit tests for
       dir/download_status_random_backoff, which was untriggered until we
       fixed bug 17750. Fixes bug 22924; bugfix on 0.2.9.1-alpha.
@@ -345,11 +329,6 @@ Changes in version 0.3.2.1-alpha - 2017-09-18
       Closes ticket 21031.
     - The controller API no longer includes an AUTHDIR_NEWDESCS event:
       nobody was using it any longer. Closes ticket 22377.
-
-  o Testing:
-    - The default chutney network tests now include tests for the v3
-      hidden service design. Make sure you have the latest version of
-      chutney if you want to run these. Closes ticket 22437.
 
 
 Changes in version 0.2.8.15 - 2017-09-18
