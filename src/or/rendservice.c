@@ -3278,6 +3278,8 @@ rend_service_intro_established(origin_circuit_t *circuit,
              (unsigned)circuit->base_.n_circ_id);
     goto err;
   }
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32 + 1,
+                rend_pk_digest, REND_SERVICE_ID_LEN);
   /* We've just successfully established a intro circuit to one of our
    * introduction point, account for it. */
   intro = find_intro_point(circuit);
@@ -3294,8 +3296,6 @@ rend_service_intro_established(origin_circuit_t *circuit,
   service->desc_is_dirty = time(NULL);
   circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_S_INTRO);
 
-  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32 + 1,
-                rend_pk_digest, REND_SERVICE_ID_LEN);
   log_info(LD_REND,
            "Received INTRO_ESTABLISHED cell on circuit %u for service %s",
            (unsigned)circuit->base_.n_circ_id, serviceid);
