@@ -123,6 +123,10 @@ for my $fn (@ARGV) {
             if (/([^\s'])\{/) {
                 msg "       $1\{:$fn:$.\n";
             }
+            ## Warn about double semi-colons at the end of a line.
+            if (/;;$/) {
+                msg "       double semi-colons at the end of $. in $fn\n"
+            }            
             ## Warn about multiple internal spaces.
             #if (/[^\s,:]\s{2,}[^\s\\=]/) {
             #    msg "     X  X:$fn:$.\n";
