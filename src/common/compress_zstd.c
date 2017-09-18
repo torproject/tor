@@ -62,10 +62,10 @@ tor_zstd_get_version_str(void)
 
   version_number = ZSTD_versionNumber();
   tor_snprintf(version_str, sizeof(version_str),
-               "%lu.%lu.%lu",
-               version_number / 10000 % 100,
-               version_number / 100 % 100,
-               version_number % 100);
+               "%d.%d.%d",
+               (int) version_number / 10000 % 100,
+               (int) version_number / 100 % 100,
+               (int) version_number % 100);
 
   return version_str;
 #else
