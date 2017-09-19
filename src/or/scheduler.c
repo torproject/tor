@@ -371,12 +371,13 @@ void
 scheduler_notify_networkstatus_changed(const networkstatus_t *old_c,
                                        const networkstatus_t *new_c)
 {
+  /* Maybe the consensus param made us change the scheduler. */
+  set_scheduler();
+
   /* Then tell the (possibly new) scheduler that we have a new consensus */
   if (the_scheduler->on_new_consensus) {
     the_scheduler->on_new_consensus(old_c, new_c);
   }
-  /* Maybe the consensus param made us change the scheduler. */
-  set_scheduler();
 }
 
 /*

@@ -1,0 +1,4 @@
+  o Minor bugfixes (scheduler):
+    - When switching schedulers due to a consensus change, we didn't give the new
+      scheduler a chance to react to the consensus. Fix that. Fixes bug 23537;
+      bugfix on 0.3.2.1-alpha
