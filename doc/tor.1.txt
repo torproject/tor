@@ -251,7 +251,9 @@ GENERAL OPTIONS
 [[ClientTransportPlugin]] **ClientTransportPlugin** __transport__ socks4|socks5 __IP__:__PORT__::
 **ClientTransportPlugin** __transport__ exec __path-to-binary__ [options]::
     In its first form, when set along with a corresponding Bridge line, the Tor
-    client forwards its traffic to a SOCKS-speaking proxy on "IP:PORT". It's the
+    client forwards its traffic to a SOCKS-speaking proxy on "IP:PORT".
+    (IPv4 addresses should written as-is; IPv6 addresses should be wrapped in
+    square brackets.) It's the
     duty of that proxy to properly forward the traffic to the bridge. +
  +
     In its second form, when set along with a corresponding Bridge line, the Tor
@@ -268,7 +270,8 @@ GENERAL OPTIONS
 [[ServerTransportListenAddr]] **ServerTransportListenAddr** __transport__ __IP__:__PORT__::
     When this option is set, Tor will suggest __IP__:__PORT__ as the
     listening address of any pluggable transport proxy that tries to
-    launch __transport__.
+    launch __transport__. (IPv4 addresses should written as-is; IPv6
+    addresses should be wrapped in square brackets.)
 
 [[ServerTransportOptions]] **ServerTransportOptions** __transport__ __k=v__ __k=v__ ...::
     When this option is set, Tor will pass the __k=v__ parameters to
@@ -412,7 +415,7 @@ GENERAL OPTIONS
     DataDirectory. If the option is set to 1, make the DataDirectory readable
     by the default GID. (Default: 0)
 
-[[FallbackDir]] **FallbackDir** __ipv4address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=__ipv6address__:__orport__]::
+[[FallbackDir]] **FallbackDir** __ipv4address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=**[**__ipv6address__**]**:__orport__]::
     When we're unable to connect to any directory cache for directory info
     (usually because we don't know about any yet) we try a directory authority.
     Clients also simultaneously try a FallbackDir, to avoid hangs on client
@@ -442,7 +445,8 @@ GENERAL OPTIONS
     with probability proportional to that weight (default 1.0). If a
     flag "v3ident=**fp**" is given, the dirserver is a v3 directory authority
     whose v3 long-term signing key has the fingerprint **fp**. Lastly,
-    if an "ipv6=__ipv6address__:__orport__" flag is present, then the directory
+    if an "ipv6=**[**__ipv6address__**]**:__orport__" flag is present, then
+    the directory
     authority is listening for IPv6 connections on the indicated IPv6 address
     and OR Port. +
  +
@@ -656,6 +660,7 @@ GENERAL OPTIONS
     is only useful when you have multiple network interfaces, and you want all
     of Tor's outgoing connections to use a single one. This option may
     be used twice, once with an IPv4 address and once with an IPv6 address.
+    IPv6 addresses should be wrapped in square brackets.
     This setting will be ignored for connections to the loopback addresses
     (127.0.0.0/8 and ::1).
 
@@ -664,14 +669,17 @@ GENERAL OPTIONS
     originate from the IP address specified. This option overrides
     **OutboundBindAddress** for the same IP version. This option may
     be used twice, once with an IPv4 address and once with an IPv6
-    address. This setting will be ignored for connections to the loopback
+    address. IPv6 addresses should be wrapped in square brackets.
+    This setting will be ignored for connections to the loopback
     addresses (127.0.0.0/8 and ::1).
 
 [[OutboundBindAddressExit]] **OutboundBindAddressExit** __IP__::
     Make all outbound exit connections originate from the IP address
     specified. This option overrides **OutboundBindAddress** for the
     same IP version. This option may be used twice, once with an IPv4
-    address and once with an IPv6 address. This setting will be ignored
+    address and once with an IPv6 address.
+    IPv6 addresses should be wrapped in square brackets.
+    This setting will be ignored
     for connections to the loopback addresses (127.0.0.0/8 and ::1).
 
 [[PidFile]] **PidFile** __FILE__::
