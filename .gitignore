@@ -177,6 +177,7 @@ uptime-*.json
 /src/rust/.cargo/config
 /src/rust/.cargo/registry
 /src/rust/target
+/src/rust/registry
 
 # /src/test
 /src/test/Makefile
