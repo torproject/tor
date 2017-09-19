@@ -949,7 +949,8 @@ sr_compute_srv(void)
   /* Computing a shared random value in the commit phase is very wrong. This
    * should only happen at the very end of the reveal phase when a new
    * protocol run is about to start. */
-  tor_assert(sr_state_get_phase() == SR_PHASE_REVEAL);
+  if (BUG(sr_state_get_phase() != SR_PHASE_REVEAL))
+    return;
   state_commits = sr_state_get_commits();
 
   commits = smartlist_new();

@@ -594,8 +594,10 @@ disk_state_update(void)
 {
   config_line_t **next, *line;
 
-  tor_assert(sr_disk_state);
-  tor_assert(sr_state);
+  if (BUG(!sr_disk_state))
+    return;
+  if (BUG(!sr_state))
+    return;
 
   /* Reset current disk state. */
   disk_state_reset();
@@ -759,7 +761,8 @@ disk_state_save_to_disk(void)
 STATIC void
 reset_state_for_new_protocol_run(time_t valid_after)
 {
-  tor_assert(sr_state);
+  if (BUG(!sr_state))
+    return;
 
   /* Keep counters in track */
   sr_state->n_reveal_rounds = 0;
@@ -1091,7 +1094,8 @@ sr_state_update(time_t valid_after)
 {
   sr_phase_t next_phase;
 
-  tor_assert(sr_state);
+  if (BUG(!sr_state))
+    return;
 
   /* Don't call this function twice in the same voting period. */
   if (valid_after <= sr_state->valid_after) {
@@ -1130,7 +1134,8 @@ sr_state_update(time_t valid_after)
   /* Count the current round */
   if (sr_state->phase == SR_PHASE_COMMIT) {
     /* invariant check: we've not entered reveal phase yet */
-    tor_assert(sr_state->n_reveal_rounds == 0);
+    if (BUG(sr_state->n_reveal_rounds != 0))
+      return;
     sr_state->n_commit_rounds++;
   } else {
     sr_state->n_reveal_rounds++;
@@ -1320,7 +1325,8 @@ sr_state_init(int save_to_disk, int read_from_disk)
 void
 set_sr_phase(sr_phase_t phase)
 {
-  tor_assert(sr_state);
+  if (BUG(!sr_state))
+    return;
   sr_state->phase = phase;
 }
 
