@@ -907,20 +907,23 @@ hibernate_go_dormant(time_t now)
   while ((conn = connection_get_by_type(CONN_TYPE_OR)) ||
          (conn = connection_get_by_type(CONN_TYPE_AP)) ||
          (conn = connection_get_by_type(CONN_TYPE_EXIT))) {
-    if (CONN_IS_EDGE(conn))
+    if (CONN_IS_EDGE(conn)) {
       connection_edge_end(TO_EDGE_CONN(conn), END_STREAM_REASON_HIBERNATING);
+    }
     log_info(LD_NET,"Closing conn type %d", conn->type);
-    if (conn->type == CONN_TYPE_AP) /* send socks failure if needed */
+    if (conn->type == CONN_TYPE_AP) {
+      /* send socks failure if needed */
       connection_mark_unattached_ap(TO_ENTRY_CONN(conn),
                                     END_STREAM_REASON_HIBERNATING);
-    else if (conn->type == CONN_TYPE_OR) {
+    } else if (conn->type == CONN_TYPE_OR) {
       if (TO_OR_CONN(conn)->chan) {
         connection_or_close_normally(TO_OR_CONN(conn), 0);
       } else {
          connection_mark_for_close(conn);
       }
-    } else
+    } else {
       connection_mark_for_close(conn);
+    }
   }
 
   if (now < interval_wakeup_time)
