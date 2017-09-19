@@ -35,7 +35,7 @@
  * thus could only prioritize circuits against others on the same connection.
  *
  * Then in response to the KIST paper[0], Tor implemented a global
- * circuit scheduler. It was supposed to prioritize circuits across man
+ * circuit scheduler. It was supposed to prioritize circuits across many
  * channels, but wasn't effective. It is preserved in scheduler_vanilla.c.
  *
  * [0]: http://www.robgjansen.com/publications/kist-sec2014.pdf
@@ -95,7 +95,7 @@
  *       <ul>
  *       <li>Not open for writes/no cells by arrival of cells on an attached
  *         circuit
- *       <li> Open for writes/has cells by filling an output buffer without
+ *       <li>Open for writes/has cells by filling an output buffer without
  *         draining all cells from attached circuits
  *       </ul>
  *    <li> Transitions to:
@@ -112,9 +112,9 @@
  *       SCHED_CHAN_PENDING.
  *     <li>Transitions from:
  *       <ul>
- *       <li> Not open for writes/has cells by the connection_or_flushed_some()
+ *       <li>Not open for writes/has cells by the connection_or_flushed_some()
  *         path
- *       <li> Open for writes/no cells by the append_cell_to_circuit_queue()
+ *       <li>Open for writes/no cells by the append_cell_to_circuit_queue()
  *         path
  *       </ul>
  *     <li> Transitions to:
@@ -149,9 +149,10 @@
  * outside the scheduling system)
  *****************************************************************************/
 
+/** DOCDOC */
 STATIC const scheduler_t *the_scheduler;
 
-/*
+/**
  * We keep a list of channels that are pending - i.e, have cells to write
  * and can accept them to send. The enum scheduler_state in channel_t
  * is reserved for our use.
@@ -160,7 +161,7 @@ STATIC const scheduler_t *the_scheduler;
  */
 STATIC smartlist_t *channels_pending = NULL;
 
-/*
+/**
  * This event runs the scheduler from its callback, and is manually
  * activated whenever a channel enters open for writes/cells to send.
  */
@@ -172,7 +173,7 @@ STATIC struct event *run_sched_ev = NULL;
  * Functions that can only be accessed from this file.
  *****************************************************************************/
 
-/*
+/**
  * Scheduler event callback; this should get triggered once per event loop
  * if any scheduling work was created during the event loop.
  */
@@ -208,14 +209,14 @@ scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
  * Functions that can only be accessed from scheduler*.c
  *****************************************************************************/
 
-/* Return the pending channel list. */
+/** Return the pending channel list. */
 smartlist_t *
 get_channels_pending(void)
 {
   return channels_pending;
 }
 
-/* Comparison function to use when sorting pending channels */
+/** Comparison function to use when sorting pending channels. */
 MOCK_IMPL(int,
 scheduler_compare_channels, (const void *c1_v, const void *c2_v))
 {
@@ -261,7 +262,7 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
  * Functions that can be accessed from anywhere in Tor.
  *****************************************************************************/
 
-/* Using the global options, select the scheduler we should be using. */
+/** Using the global options, select the scheduler we should be using. */
 static void
 select_scheduler(void)
 {
@@ -269,7 +270,7 @@ select_scheduler(void)
 
 #ifdef TOR_UNIT_TESTS
   /* This is hella annoying to set in the options for every test that passes
-   * through the scheduler and there are many so if we don't explicitely have
+   * through the scheduler and there are many so if we don't explicitly have
    * a list of types set, just put the vanilla one. */
   if (get_options()->SchedulerTypes_ == NULL) {
     the_scheduler = get_vanilla_scheduler();
@@ -320,8 +321,8 @@ select_scheduler(void)
              chosen_sched_type);
 }
 
-/*
- * Little helper function called from a few different places. It changes the
+/**
+ * Helper function called from a few different places. It changes the
  * scheduler implementation, if necessary. And if it did, it then tells the
  * old one to free its state and the new one to initialize.
  */
@@ -338,8 +339,6 @@ set_scheduler(void)
     if (old_scheduler && old_scheduler->free_all) {
       old_scheduler->free_all();
     }
-    /* We don't clean up the old scheduler_t. We keep any type of scheduler
-     * we've allocated so we can do an easy switch back. */
 
     /* Initialize the new scheduler. */
     if (the_scheduler->init) {
@@ -348,7 +347,7 @@ set_scheduler(void)
   }
 }
 
-/*
+/**
  * This is how the scheduling system is notified of Tor's configuration
  * changing. For example: a SIGHUP was issued.
  */
@@ -364,7 +363,7 @@ scheduler_conf_changed(void)
   }
 }
 
-/*
+/**
  * Whenever we get a new consensus, this function is called.
  */
 void
@@ -380,7 +379,7 @@ scheduler_notify_networkstatus_changed(const networkstatus_t *old_c,
   }
 }
 
-/*
+/**
  * Free everything scheduling-related from main.c. Note this is only called
  * when Tor is shutting down, while scheduler_t->free_all() is called both when
  * Tor is shutting down and when we are switching schedulers.
@@ -399,7 +398,7 @@ scheduler_free_all(void)
   }
 
   if (channels_pending) {
-    /* We don't have ownership of the object in this list. */
+    /* We don't have ownership of the objects in this list. */
     smartlist_free(channels_pending);
     channels_pending = NULL;
   }
@@ -410,8 +409,7 @@ scheduler_free_all(void)
   the_scheduler = NULL;
 }
 
-/** Mark a channel as no longer ready to accept writes */
-
+/** Mark a channel as no longer ready to accept writes. */
 MOCK_IMPL(void,
 scheduler_channel_doesnt_want_writes,(channel_t *chan))
 {
@@ -453,8 +451,7 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
   }
 }
 
-/** Mark a channel as having waiting cells */
-
+/** Mark a channel as having waiting cells. */
 MOCK_IMPL(void,
 scheduler_channel_has_waiting_cells,(channel_t *chan))
 {
@@ -465,7 +462,7 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
     return;
   }
 
-  /* First, check if this one also writeable */
+  /* First, check if it's also writeable */
   if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
     /*
      * It's in channels_waiting_for_cells, so it shouldn't be in any of
@@ -500,8 +497,8 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
   }
 }
 
-/* Add the scheduler event to the set of pending events with next_run being
- * the time up to libevent should wait before triggering the event. */
+/** Add the scheduler event to the set of pending events with next_run being
+ * the longest time libevent should wait before triggering the event. */
 void
 scheduler_ev_add(const struct timeval *next_run)
 {
@@ -514,7 +511,7 @@ scheduler_ev_add(const struct timeval *next_run)
   }
 }
 
-/* Make the scheduler event active with the given flags. */
+/** Make the scheduler event active with the given flags. */
 void
 scheduler_ev_active(int flags)
 {

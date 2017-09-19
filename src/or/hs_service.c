@@ -1917,7 +1917,7 @@ STATIC void
 run_housekeeping_event(time_t now)
 {
   /* Note that nothing here opens circuit(s) nor uploads descriptor(s). We are
-   * simply moving things around or removing uneeded elements. */
+   * simply moving things around or removing unneeded elements. */
 
   FOR_EACH_SERVICE_BEGIN(service) {
 
