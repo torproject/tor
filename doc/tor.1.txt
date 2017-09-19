@@ -412,7 +412,7 @@ GENERAL OPTIONS
     DataDirectory. If the option is set to 1, make the DataDirectory readable
     by the default GID. (Default: 0)
 
-[[FallbackDir]] **FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=__address__:__orport__]::
+[[FallbackDir]] **FallbackDir** __ipv4address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=__ipv6address__:__orport__]::
     When we're unable to connect to any directory cache for directory info
     (usually because we don't know about any yet) we try a directory authority.
     Clients also simultaneously try a FallbackDir, to avoid hangs on client
@@ -428,7 +428,7 @@ GENERAL OPTIONS
     FallbackDir line is present, it replaces the hard-coded FallbackDirs,
     regardless of the value of UseDefaultFallbackDirs.) (Default: 1)
 
-[[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__::
+[[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __fingerprint__::
     Use a nonstandard authoritative directory server at the provided address
     and port, with the specified key fingerprint. This option can be repeated
     many times, for multiple authoritative directory servers. Flags are
@@ -442,11 +442,11 @@ GENERAL OPTIONS
     with probability proportional to that weight (default 1.0). If a
     flag "v3ident=**fp**" is given, the dirserver is a v3 directory authority
     whose v3 long-term signing key has the fingerprint **fp**. Lastly,
-    if an "ipv6=__address__:__orport__" flag is present, then the directory
+    if an "ipv6=__ipv6address__:__orport__" flag is present, then the directory
     authority is listening for IPv6 connections on the indicated IPv6 address
     and OR Port. +
  +
-    Tor will contact the authority at __address__ to
+    Tor will contact the authority at __ipv4address__ to
     download directory documents. The provided __port__ value is a dirport;
     clients ignore this in favor of the specified "orport=" value.  If an
     IPv6 ORPort is supplied, Tor will
@@ -464,9 +464,9 @@ GENERAL OPTIONS
     chosen with their regular weights, multiplied by this number, which
     should be 1.0 or less. (Default: 1.0)
 
-[[AlternateDirAuthority]] **AlternateDirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
+[[AlternateDirAuthority]] **AlternateDirAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __fingerprint__ +
 
-[[AlternateBridgeAuthority]] **AlternateBridgeAuthority** [__nickname__] [**flags**] __address__:__port__ __ fingerprint__::
+[[AlternateBridgeAuthority]] **AlternateBridgeAuthority** [__nickname__] [**flags**] __ipv4address__:__port__ __ fingerprint__::
     These options behave as DirAuthority, but they replace fewer of the
     default directory authorities. Using
     AlternateDirAuthority replaces the default Tor directory authorities, but
@@ -994,7 +994,7 @@ The following options are useful only for clients (that is, if
     **FascistFirewall** is set. This option is deprecated; use ReachableAddresses
     instead. (Default: 80, 443)
 
-[[ReachableAddresses]] **ReachableAddresses** __ADDR__[/__MASK__][:__PORT__]...::
+[[ReachableAddresses]] **ReachableAddresses** __IP__[/__MASK__][:__PORT__]...::
     A comma-separated list of IP addresses and ports that your firewall allows
     you to connect to. The format is as for the addresses in ExitPolicy, except
     that "accept" is understood unless "reject" is explicitly provided. For
@@ -1003,7 +1003,7 @@ The following options are useful only for clients (that is, if
     99, rejects port 80 connections to net 18, and accepts connections to port
     80 otherwise. (Default: \'accept \*:*'.)
 
-[[ReachableDirAddresses]] **ReachableDirAddresses** __ADDR__[/__MASK__][:__PORT__]...::
+[[ReachableDirAddresses]] **ReachableDirAddresses** __IP__[/__MASK__][:__PORT__]...::
     Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
     these restrictions when fetching directory information, using standard HTTP
     GET requests. If not set explicitly then the value of
@@ -1011,7 +1011,7 @@ The following options are useful only for clients (that is, if
     connections will go through that proxy.   (DEPRECATED: This option has
     had no effect for some time.)
 
-[[ReachableORAddresses]] **ReachableORAddresses** __ADDR__[/__MASK__][:__PORT__]...::
+[[ReachableORAddresses]] **ReachableORAddresses** __IP__[/__MASK__][:__PORT__]...::
     Like **ReachableAddresses**, a list of addresses and ports. Tor will obey
     these restrictions when connecting to Onion Routers, using TLS/SSL. If not
     set explicitly then the value of **ReachableAddresses** is used. If
@@ -1334,9 +1334,9 @@ The following options are useful only for clients (that is, if
     helps to determine whether an application using Tor is possibly leaking
     DNS requests. (Default: 0)
 
-[[VirtualAddrNetworkIPv4]] **VirtualAddrNetworkIPv4** __Address__/__bits__ +
+[[VirtualAddrNetworkIPv4]] **VirtualAddrNetworkIPv4** __IPv4Address__/__bits__ +
 
-[[VirtualAddrNetworkIPv6]] **VirtualAddrNetworkIPv6** [__Address__]/__bits__::
+[[VirtualAddrNetworkIPv6]] **VirtualAddrNetworkIPv6** [__IPv6Address__]/__bits__::
     When Tor needs to assign a virtual (unused) address because of a MAPADDRESS
     command from the controller or the AutomapHostsOnResolve feature, Tor
     picks an unassigned address from this range. (Defaults:
@@ -1955,7 +1955,7 @@ is non-zero):
     correct this. This option only affects name lookups that your server does
     on behalf of clients. (Default: 1)
 
-[[ServerDNSTestAddresses]] **ServerDNSTestAddresses** __address__,__address__,__...__::
+[[ServerDNSTestAddresses]] **ServerDNSTestAddresses** __hostname__,__hostname__,__...__::
     When we're detecting DNS hijacking, make sure that these __valid__ addresses
     aren't getting redirected. If they are, then our DNS is completely useless,
     and we'll reset our exit policy to "reject \*:*". This option only affects
