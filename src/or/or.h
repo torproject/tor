@@ -747,15 +747,15 @@ typedef enum {
 #define REND_NUMBER_OF_CONSECUTIVE_REPLICAS 3
 
 /** Length of v2 descriptor ID (32 base32 chars = 160 bits). */
-#define REND_DESC_ID_V2_LEN_BASE32 32
+#define REND_DESC_ID_V2_LEN_BASE32 BASE32_DIGEST_LEN
 
 /** Length of the base32-encoded secret ID part of versioned hidden service
  * descriptors. */
-#define REND_SECRET_ID_PART_LEN_BASE32 32
+#define REND_SECRET_ID_PART_LEN_BASE32 BASE32_DIGEST_LEN
 
 /** Length of the base32-encoded hash of an introduction point's
  * identity key. */
-#define REND_INTRO_POINT_ID_LEN_BASE32 32
+#define REND_INTRO_POINT_ID_LEN_BASE32 BASE32_DIGEST_LEN
 
 /** Length of the descriptor cookie that is used for client authorization
  * to hidden services. */

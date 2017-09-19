@@ -1453,7 +1453,7 @@ hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
                                 const char *req_key_str,
                                 time_t now, int set)
 {
-  char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+  char hsdir_id_base32[BASE32_DIGEST_LEN + 1];
   char *hsdir_desc_comb_id = NULL;
   time_t *last_request_ptr;
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();

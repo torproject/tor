@@ -73,6 +73,9 @@
 /** Length of our DH keys. */
 #define DH_BYTES (1024/8)
 
+/** Length of a sha1 message digest when encoded in base32 with trailing =
+ * signs removed. */
+#define BASE32_DIGEST_LEN 32
 /** Length of a sha1 message digest when encoded in base64 with trailing =
  * signs removed. */
 #define BASE64_DIGEST_LEN 27
