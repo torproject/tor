@@ -820,6 +820,15 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
                         sizeof(circ->hs_ident->rendezvous_handshake_info),
                         payload);
 
+  /* Pad the payload with random bytes so it matches the size of a legacy cell
+   * which is normally always bigger. Also, the size of a legacy cell is
+   * always smaller than the RELAY_PAYLOAD_SIZE so this is safe. */
+  if (payload_len < HS_LEGACY_RENDEZVOUS_CELL_SIZE) {
+    crypto_rand((char *) payload + payload_len,
+                HS_LEGACY_RENDEZVOUS_CELL_SIZE - payload_len);
+    payload_len = HS_LEGACY_RENDEZVOUS_CELL_SIZE;
+  }
+
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
                                    RELAY_COMMAND_RENDEZVOUS1,
                                    (const char *) payload, payload_len,
