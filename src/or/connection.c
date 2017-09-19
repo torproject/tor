@@ -812,7 +812,7 @@ connection_mark_for_close_(connection_t *conn, int line, const char *file)
  * CONN_TYPE_OR checks; this should be called when you either are sure that
  * if this is an or_connection_t the controlling channel has been notified
  * (e.g. with connection_or_notify_error()), or you actually are the
- * connection_or_close_for_error() or connection_or_close_normally function.
+ * connection_or_close_for_error() or connection_or_close_normally() function.
  * For all other cases, use connection_mark_and_flush() instead, which
  * checks for or_connection_t properly, instead.  See below.
  */
