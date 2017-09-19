@@ -8,6 +8,7 @@
 #define SCHEDULER_PRIVATE_
 #define SCHEDULER_KIST_PRIVATE
 #include "scheduler.h"
+#include "main.h"
 
 #include <event2/event.h>
 
@@ -267,6 +268,7 @@ static void
 select_scheduler(void)
 {
   const char *chosen_sched_type = NULL;
+  scheduler_t *new_scheduler = NULL;
 
 #ifdef TOR_UNIT_TESTS
   /* This is hella annoying to set in the options for every test that passes
@@ -283,7 +285,7 @@ select_scheduler(void)
   SMARTLIST_FOREACH_BEGIN(get_options()->SchedulerTypes_, int *, type) {
     switch (*type) {
     case SCHEDULER_VANILLA:
-      the_scheduler = get_vanilla_scheduler();
+      new_scheduler = get_vanilla_scheduler();
       chosen_sched_type = "Vanilla";
       goto end;
     case SCHEDULER_KIST:
@@ -301,13 +303,13 @@ select_scheduler(void)
 #endif /* defined(HAVE_KIST_SUPPORT) */
         continue;
       }
-      the_scheduler = get_kist_scheduler();
+      new_scheduler = get_kist_scheduler();
       chosen_sched_type = "KIST";
       scheduler_kist_set_full_mode();
       goto end;
     case SCHEDULER_KIST_LITE:
       chosen_sched_type = "KISTLite";
-      the_scheduler = get_kist_scheduler();
+      new_scheduler = get_kist_scheduler();
       scheduler_kist_set_lite_mode();
       goto end;
     default:
@@ -317,6 +319,20 @@ select_scheduler(void)
   } SMARTLIST_FOREACH_END(type);
 
  end:
+  if (new_scheduler == NULL) {
+    log_err(LD_SCHED, "Tor was unable to select a scheduler type. Please "
+                      "make sure Schedulers is correctly configured with "
+                      "what Tor does support.");
+    /* We weren't able to choose a scheduler which means that none of the ones
+     * set in Schedulers are supported or usable. We will respect the user
+     * wishes of using what it has been configured and don't do a sneaky
+     * fallback. Because this can be changed at runtime, we have to stop tor
+     * right now. */
+    exit(1);
+  }
+
+  /* Set the chosen scheduler. */
+  the_scheduler = new_scheduler;
   log_notice(LD_CONFIG, "Scheduler type %s has been enabled.",
              chosen_sched_type);
 }
@@ -333,6 +349,7 @@ set_scheduler(void)
 
   /* From the options, select the scheduler type to set. */
   select_scheduler();
+  tor_assert(the_scheduler);
 
   if (old_scheduler != the_scheduler) {
     /* Allow the old scheduler to clean up, if needed. */
