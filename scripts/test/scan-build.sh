@@ -56,7 +56,15 @@ scan-build \
     $CHECKERS \
     ./configure
 
-make clean
+scan-build \
+    make clean
+
+# Make this not get scanned for dead assignments, since it has lots of
+# dead assignments we don't care about.
+scan-build \
+    $CHECKERS \
+    -disable-checker deadcode.DeadStores \
+    make -j5 -k ./src/ext/ed25519/ref10/libed25519_ref10.a
 
 scan-build \
     $CHECKERS $OUTPUTARG \
