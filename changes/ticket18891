@@ -1,0 +1,3 @@
+  o Documentation:
+    - Clarify that the Address option is entirely about setting an
+      advertised IPv4 address. Closes ticket 18891.

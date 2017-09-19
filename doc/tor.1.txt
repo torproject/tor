@@ -1642,12 +1642,13 @@ The following options are useful only for servers (that is, if ORPort
 is non-zero):
 
 [[Address]] **Address** __address__::
-    The IP address or fully qualified domain name of this server (e.g.
-    moria.mit.edu). You can leave this unset, and Tor will guess your IP
-    address.  This IP address is the one used to tell clients and other
-    servers where to find your Tor server; it doesn't affect the IP that your
-    Tor client binds to.  To bind to a different address, use the
-    *ListenAddress and OutboundBindAddress options.
+    The IPv4 address of this server, or a fully qualified domain name of
+    this server that resolves to an IPv4 address.  You can leave this
+    unset, and Tor will try to guess your IPv4 address.  This IPv4
+    address is the one used to tell clients and other servers where to
+    find your Tor server; it doesn't affect the address that your server
+    binds to.  To bind to a different address, use the ORPort and
+    OutboundBindAddress options.
 
 [[AssumeReachable]] **AssumeReachable** **0**|**1**::
     This option is used when bootstrapping a new Tor network. If set to 1,
