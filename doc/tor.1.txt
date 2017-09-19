@@ -2989,6 +2989,11 @@ __HiddenServiceDirectory__**/hostname**::
     The <base32-encoded-fingerprint>.onion domain name for this hidden service.
     If the hidden service is restricted to authorized clients only, this file
     also contains authorization data for all clients.
+ +
+    Note that clients will ignore any extra subdomains prepended to a hidden
+    service hostname. So if you have "xyz.onion" as your hostname, you
+    can tell clients to connect to "www.xyz.onion" or "irc.xyz.onion"
+    for virtual-hosting purposes.
 
 __HiddenServiceDirectory__**/private_key**::
     The private key for this hidden service.
