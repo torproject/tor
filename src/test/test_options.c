@@ -1132,25 +1132,22 @@ test_options_validate__transproxy(void *ignored)
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  if (msg) {
-    TT_DIE(("Expected NULL but got '%s'", msg));
-  }
+  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tor_free(msg);
 #elif defined(OpenBSD)
   tdata = get_options_test_data("TransProxyType pf-divert\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  if (msg) {
-    TT_DIE(("Expected NULL but got '%s'", msg));
-  }
+  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tor_free(msg);
 #elif defined(__NetBSD__)
   tdata = get_options_test_data("TransProxyType default\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  if (msg) {
-    TT_DIE(("Expected NULL but got '%s'", msg));
-  }
+  tt_str_op(msg, OP_EQ, "ConnLimit must be greater than 0, but was set to 0");
+  tor_free(msg);
 #endif /* defined(__linux__) || ... */
 
   // Assert that a test has run for some TransProxyType
