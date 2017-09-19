@@ -1,0 +1,3 @@
+  o Documentation (hidden service, man page):
+    - HiddenServiceVersion man page entry wasn't mentionning the now supported
+      version 3. Fixes ticket 23580.; bugfix on 0.3.2.1-alpha.

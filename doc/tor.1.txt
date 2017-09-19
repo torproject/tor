@@ -2382,7 +2382,7 @@ The following options are used to configure a hidden service.
 
 [[HiddenServiceVersion]] **HiddenServiceVersion** __version__,__version__,__...__::
     A list of rendezvous service descriptor versions to publish for the hidden
-    service. Currently, only version 2 is supported. (Default: 2)
+    service. Currently, version 2 and 3 are supported. (Default: 2)
 
 [[HiddenServiceAuthorizeClient]] **HiddenServiceAuthorizeClient** __auth-type__ __client-name__,__client-name__,__...__::
     If configured, the hidden service is accessible for authorized clients
