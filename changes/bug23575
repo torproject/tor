@@ -1,0 +1,4 @@
+  o Minor bugfixes (scheduler):
+    - Avoid a compilation warning on macOS in scheduler_ev_add() caused by
+      a different tv_usec data type.
+      Fixes 23575 on 0.3.2.1-alpha.
