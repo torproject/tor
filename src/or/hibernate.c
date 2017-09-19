@@ -34,6 +34,7 @@ hibernating, phase 2:
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "connection_or.h"
 #include "control.h"
 #include "hibernate.h"
 #include "main.h"
@@ -914,7 +915,7 @@ hibernate_go_dormant(time_t now)
                                     END_STREAM_REASON_HIBERNATING);
     else if (conn->type == CONN_TYPE_OR) {
       if (TO_OR_CONN(conn)->chan) {
-        channel_mark_for_close(TLS_CHAN_TO_BASE(TO_OR_CONN(conn)->chan));
+        connection_or_close_normally(TO_OR_CONN(conn), 0);
       } else {
          connection_mark_for_close(conn);
       }

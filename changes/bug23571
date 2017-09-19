@@ -1,0 +1,3 @@
+  o Minor bugfixes (hibernation):
+    - When hibernating, close connections normally and allow them to flush.
+      Bugfix on 7267 in 0.2.4.7-alpha.
