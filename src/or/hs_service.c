@@ -214,6 +214,37 @@ service_clear_config(hs_service_config_t *config)
   memset(config, 0, sizeof(*config));
 }
 
+/* Helper function to return a human readable description of the given intro
+ * point object.
+ *
+ * This function is not thread-safe. Each call to this invalidates the
+ * previous values returned by it. */
+static const char *
+describe_intro_point(const hs_service_intro_point_t *ip)
+{
+  /* Hex identity digest of the IP prefixed by the $ sign and ends with NUL
+   * byte hence the plus two. */
+  static char buf[HEX_DIGEST_LEN + 2];
+  const char *legacy_id = NULL;
+
+  SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
+                          const hs_desc_link_specifier_t *, lspec) {
+    if (lspec->type == LS_LEGACY_ID) {
+      legacy_id = (const char *) lspec->u.legacy_id;
+      break;
+    }
+  } SMARTLIST_FOREACH_END(lspec);
+
+  /* For now, we only print the identity digest but we could improve this with
+   * much more information such as the ed25519 identity has well. */
+  buf[0] = '$';
+  if (legacy_id) {
+    base16_encode(buf + 1, HEX_DIGEST_LEN + 1, legacy_id, DIGEST_LEN);
+  }
+
+  return buf;
+}
+
 /* Return the lower bound of maximum INTRODUCE2 cells per circuit before we
  * rotate intro point (defined by a consensus parameter or the default
  * value). */
@@ -1783,6 +1814,13 @@ cleanup_intro_points(hs_service_t *service, time_t now)
        * reached the maximum number of retry with a non existing circuit. */
       if (has_expired || node == NULL ||
           ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
+        log_info(LD_REND, "Intro point %s%s (retried: %u times). "
+                          "Removing it.",
+                 describe_intro_point(ip),
+                 has_expired ? " has expired" :
+                    (node == NULL) ?  " fell off the consensus" : "",
+                 ip->circuit_retries);
+
         /* Remove intro point from descriptor map. We'll add it to the failed
          * map if we retried it too many times. */
         MAP_DEL_CURRENT(key);
