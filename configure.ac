@@ -612,11 +612,12 @@ AC_ARG_WITH(ssl-dir,
       fi
   ])
 
+AC_MSG_NOTICE([Now, we'll look for OpenSSL >= 1.0.1])
 TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI],
-    [#include <openssl/rand.h>],
-    [void RAND_add(const void *buf, int num, double entropy);],
-    [RAND_add((void*)0,0,0);], [],
-    [/usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /opt/openssl])
+    [#include <openssl/ssl.h>],
+    [struct ssl_method_st; const struct ssl_method_st *TLSv1_1_method(void);],
+    [TLSv1_1_method();], [],
+    [/usr/local/opt/openssl /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /opt/openssl])
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
 
