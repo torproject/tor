@@ -1,0 +1,4 @@
+  o Minor bugfixes (unit tests):
+    - Fix additional channelpadding unit test failures by using mocked time
+      instead of actual time for all tests. Fixes bug 23608;
+      bugfix on 0.3.1.1-alpha.
