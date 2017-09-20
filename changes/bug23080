@@ -1,0 +1,5 @@
+  o Minor features (spec conformance, bridge, diagnostic):
+    - When handling the USERADDR command on an ExtOrPort, warn when the
+      transports provides a USERADDR with no port. In a future version,
+      USERADDR commands of this format may be rejected. Detects problems
+      related to ticket 23080.

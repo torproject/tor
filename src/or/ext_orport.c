@@ -460,6 +460,11 @@ connection_ext_or_handle_cmd_useraddr(connection_t *conn,
   tor_free(addr_str);
   if (res<0)
     return -1;
+  if (port == 0) {
+    log_warn(LD_GENERAL, "Server transport proxy gave us an empty port "
+             "in ExtORPort UserAddr command.");
+    // return -1; // enable this if nothing breaks after a while.
+  }
 
   res = tor_addr_parse(&addr, address_part);
   tor_free(address_part);
