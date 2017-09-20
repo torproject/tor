@@ -1418,7 +1418,7 @@ typedef struct listener_connection_t {
  * session as described in RFC 5705.
  *
  * Not used by today's tors, since everything that supports this
- * also supports ED25519_SHA3_5705, which is better.
+ * also supports ED25519_SHA256_5705, which is better.
  **/
 #define AUTHTYPE_RSA_SHA256_RFC5705 2
 /** As AUTHTYPE_RSA_SHA256_RFC5705, but uses an Ed25519 identity key to
