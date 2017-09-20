@@ -404,8 +404,8 @@ or_state_load(void)
     log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);
     /* Warn the user if their clock has been set backwards,
      * they could be tricked into using old consensuses */
-    time_t apparent_skew = new_state->LastWritten - time(NULL);
-    if (apparent_skew > 0)
+    time_t apparent_skew = time(NULL) - new_state->LastWritten;
+    if (apparent_skew < 0)
       clock_skew_warning(NULL, (long)apparent_skew, 1, LD_GENERAL,
                          "local state file", fname);
   } else {
