@@ -75,7 +75,7 @@ static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit,
                                  int is_hs_v3_rp_circuit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
-static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
+STATIC int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
 static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
@@ -2586,7 +2586,7 @@ onion_extend_cpath(origin_circuit_t *circ)
 /** Create a new hop, annotate it with information about its
  * corresponding router <b>choice</b>, and append it to the
  * end of the cpath <b>head_ptr</b>. */
-static int
+STATIC int
 onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 {
   crypt_path_t *hop = tor_malloc_zero(sizeof(crypt_path_t));

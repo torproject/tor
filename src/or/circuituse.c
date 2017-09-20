@@ -585,7 +585,8 @@ circuit_expire_building(void)
                    TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
                    -1,
                  circuit_state_to_string(victim->state),
-                 channel_state_to_string(victim->n_chan->state));
+                 victim->n_chan ?
+                    channel_state_to_string(victim->n_chan->state) : "none");
 
           /* We count the timeout here for CBT, because technically this
            * was a timeout, and the timeout value needs to reset if we
@@ -610,7 +611,8 @@ circuit_expire_building(void)
                    TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
                    -1,
                  circuit_state_to_string(victim->state),
-                 channel_state_to_string(victim->n_chan->state),
+                 victim->n_chan ?
+                    channel_state_to_string(victim->n_chan->state) : "none",
                  (long)build_close_ms);
       }
     }
