@@ -1027,6 +1027,11 @@ circuit_free(circuit_t *circ)
    * "active" checks will be violated. */
   cell_queue_clear(&circ->n_chan_cells);
 
+  log_info(LD_CIRC, "Circuit %u (id: %" PRIu32 ") has been freed.",
+           circ->n_circ_id,
+           CIRCUIT_IS_ORIGIN(circ) ?
+              TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
+
   if (should_free) {
     memwipe(mem, 0xAA, memlen); /* poison memory */
     tor_free(mem);
@@ -1913,9 +1918,12 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
 
   smartlist_add(circuits_pending_close, circ);
 
-  log_info(LD_GENERAL, "Circuit %u marked for close at %s:%d (orig reason: "
-                       "%u, new reason: %u)",
-           circ->n_circ_id, file, line, orig_reason, reason);
+  log_info(LD_GENERAL, "Circuit %u (id: %" PRIu32 ") marked for close at "
+                       "%s:%d (orig reason: %u, new reason: %u)",
+           circ->n_circ_id,
+           CIRCUIT_IS_ORIGIN(circ) ?
+              TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
+           file, line, orig_reason, reason);
 }
 
 /** Called immediately before freeing a marked circuit <b>circ</b> from

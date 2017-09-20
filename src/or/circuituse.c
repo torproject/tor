@@ -1752,13 +1752,17 @@ circuit_build_failed(origin_circuit_t *circ)
         already_marked = 1;
       }
       log_info(LD_OR,
-               "Our circuit failed to get a response from the first hop "
-               "(%s). I'm going to try to rotate to a better connection.",
+               "Our circuit %u (id: %" PRIu32 ") failed to get a response "
+               "from the first hop (%s). I'm going to try to rotate to a "
+               "better connection.",
+               TO_CIRCUIT(circ)->n_circ_id, circ->global_identifier,
                channel_get_canonical_remote_descr(n_chan));
       n_chan->is_bad_for_new_circs = 1;
     } else {
       log_info(LD_OR,
-               "Our circuit died before the first hop with no connection");
+               "Our circuit %u (id: %" PRIu32 ") died before the first hop "
+               "with no connection",
+               TO_CIRCUIT(circ)->n_circ_id, circ->global_identifier);
     }
     if (n_chan_id && !already_marked) {
       /* New guard API: we failed. */
