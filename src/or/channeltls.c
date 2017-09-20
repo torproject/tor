@@ -1793,12 +1793,11 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
       return;
     }
     /* A relay can connect from anywhere and be canonical, so
-     * long as it tells you from where it came. This may be a bit
-     * concerning.. Luckily we have another check in
-     * channel_tls_matches_target_method() to ensure that extends
-     * only go to the IP they ask for.
-     *
-     * XXX: Bleh. That check is not used if the connection is canonical.
+     * long as it tells you from where it came. This may sound a bit
+     * concerning... but that's what "canonical" means: that the
+     * address is one that the relay itself has claimed.  The relay
+     * might be doing something funny, but nobody else is doing a MITM
+     * on the relay's TCP.
      */
     if (tor_addr_eq(&addr, &(chan->conn->real_addr))) {
       connection_or_set_canonical(chan->conn, 1);
