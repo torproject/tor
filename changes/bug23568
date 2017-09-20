@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Fix a compilation warning when building with zstd support
+      on 32-bit platforms. Fixes bug 23568; bugfix on 0.3.1.1-alpha.
+      Found and fixed by Andreas Stieger.
