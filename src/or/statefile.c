@@ -34,6 +34,7 @@
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
+#include "control.h"
 #include "entrynodes.h"
 #include "hibernate.h"
 #include "rephist.h"
@@ -405,9 +406,14 @@ or_state_load(void)
     /* Warn the user if their clock has been set backwards,
      * they could be tricked into using old consensuses */
     time_t apparent_skew = time(NULL) - new_state->LastWritten;
-    if (apparent_skew < 0)
+    if (apparent_skew < 0) {
+      /* Initialize bootstrap event reporting because we might call
+       * clock_skew_warning() before the bootstrap state is
+       * initialized, causing an asserttion failure. */
+      control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
       clock_skew_warning(NULL, (long)apparent_skew, 1, LD_GENERAL,
                          "local state file", fname);
+    }
   } else {
     log_info(LD_GENERAL, "Initialized state");
   }
