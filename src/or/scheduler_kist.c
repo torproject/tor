@@ -28,18 +28,6 @@
  * Data structures and supporting functions
  *****************************************************************************/
 
-#ifdef HAVE_KIST_SUPPORT
-/* Indicate if KIST lite mode is on or off. We can disable it at runtime.
- * Important to have because of the KISTLite -> KIST possible transition. */
-static unsigned int kist_lite_mode = 0;
-/* Indicate if we don't have the kernel support. This can happen if the kernel
- * changed and it doesn't recognized the values passed to the syscalls needed
- * by KIST. In that case, fallback to the naive approach. */
-static unsigned int kist_no_kernel_support = 0;
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
-static unsigned int kist_lite_mode = 1;
-#endif /* defined(HAVE_KIST_SUPPORT) */
-
 /* Socket_table hash table stuff. The socket_table keeps track of per-socket
  * limit information imposed by kist and used by kist. */
 
@@ -104,6 +92,18 @@ static monotime_t scheduler_last_run;
 static double sock_buf_size_factor = 1.0;
 /* How often the scheduler runs. */
 STATIC int32_t sched_run_interval = 10;
+
+#ifdef HAVE_KIST_SUPPORT
+/* Indicate if KIST lite mode is on or off. We can disable it at runtime.
+ * Important to have because of the KISTLite -> KIST possible transition. */
+static unsigned int kist_lite_mode = 0;
+/* Indicate if we don't have the kernel support. This can happen if the kernel
+ * changed and it doesn't recognized the values passed to the syscalls needed
+ * by KIST. In that case, fallback to the naive approach. */
+static unsigned int kist_no_kernel_support = 0;
+#else /* !(defined(HAVE_KIST_SUPPORT)) */
+static unsigned int kist_lite_mode = 1;
+#endif /* defined(HAVE_KIST_SUPPORT) */
 
 /*****************************************************************************
  * Internally called function implementations
@@ -256,8 +256,8 @@ update_socket_info_impl, (socket_table_ent_t *ent))
    *
    * <----------------kernel-outbound-socket-queue----------------|
    * <*********---------------------------------------------------|
-   * <----TCP-space-----|----extra-space-----|
-   * <------------------|
+   * |----TCP-space-----|----extra-space-----|
+   * |------------------|
    *                    ^ ((cwnd - unacked) * mss) bytes
    *                    |--------------------|
    *                                         ^ ((cwnd * mss) * factor) bytes
@@ -304,7 +304,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
 }
 
 /* Given a socket that isn't in the table, add it.
- * Given a socket that is in the table, reinit values that need init-ing
+ * Given a socket that is in the table, re-init values that need init-ing
  * every scheduling run
  */
 static void
@@ -364,8 +364,7 @@ set_scheduler_run_interval(const networkstatus_t *ns)
   }
 }
 
-/* Return true iff the channel associated socket can write to the kernel that
- * is hasn't reach the limit. */
+/* Return true iff the channel hasn’t hit its kist-imposed write limit yet */
 static int
 socket_can_write(socket_table_t *table, const channel_t *chan)
 {
@@ -375,7 +374,7 @@ socket_can_write(socket_table_t *table, const channel_t *chan)
     return 1; // Just return true, saying that kist wouldn't limit the socket
   }
 
-  /* We previously caclulated a write limit for this socket. In the below
+  /* We previously calculated a write limit for this socket. In the below
    * calculation, first determine how much room is left in bytes. Then divide
    * that by the amount of space a cell takes. If there's room for at least 1
    * cell, then KIST will allow the socket to write. */
@@ -397,7 +396,7 @@ update_socket_info(socket_table_t *table, const channel_t *chan)
   update_socket_info_impl(ent);
 }
 
-/* Increament the channel's socket written value by the number of bytes. */
+/* Increment the channel's socket written value by the number of bytes. */
 static void
 update_socket_written(socket_table_t *table, channel_t *chan, size_t bytes)
 {
@@ -523,11 +522,11 @@ kist_scheduler_schedule(void)
   if (diff < sched_run_interval) {
     next_run.tv_sec = 0;
     /* Takes 1000 ms -> us. This will always be valid because diff can NOT be
-     * negative and can NOT be smaller than sched_run_interval so values can
+     * negative and can NOT be bigger than sched_run_interval so values can
      * only go from 1000 usec (diff set to interval - 1) to 100000 usec (diff
      * set to 0) for the maximum allowed run interval (100ms). */
     next_run.tv_usec = (int) ((sched_run_interval - diff) * 1000);
-    /* Readding an event reschedules it. It does not duplicate it. */
+    /* Re-adding an event reschedules it. It does not duplicate it. */
     scheduler_ev_add(&next_run);
   } else {
     scheduler_ev_active(EV_TIMEOUT);
@@ -543,7 +542,7 @@ kist_scheduler_run(void)
   /* The last distinct chan served in a sched loop. */
   channel_t *prev_chan = NULL;
   int flush_result; // temporarily store results from flush calls
-  /* Channels to be readding to pending at the end */
+  /* Channels to be re-adding to pending at the end */
   smartlist_t *to_readd = NULL;
   smartlist_t *cp = get_channels_pending();
 
@@ -667,7 +666,7 @@ kist_scheduler_run(void)
             smartlist_len(cp),
             (to_readd ? smartlist_len(to_readd) : -1));
 
-  /* Readd any channels we need to */
+  /* Re-add any channels we need to */
   if (to_readd) {
     SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
       readd_chan->scheduler_state = SCHED_CHAN_PENDING;

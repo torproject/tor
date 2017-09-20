@@ -53,7 +53,7 @@ typedef struct scheduler_s {
    * we should do whatever we need to do in order to move some cells from
    * their circuit queues to output buffers in an intelligent manner. We
    * should do this quickly. When we are done, we'll try to schedule() ourself
-   * if more work needs to be done to setup the next scehduling run. */
+   * if more work needs to be done to setup the next scheduling run. */
   void (*run)(void);
 
   /*
@@ -157,7 +157,7 @@ void scheduler_touch_channel(channel_t *chan);
 
 #ifdef SCHEDULER_KIST_PRIVATE
 
-/* Socke table entry which holds information of a channel's socket and kernel
+/* Socket table entry which holds information of a channel's socket and kernel
  * TCP information. Only used by KIST. */
 typedef struct socket_table_ent_s {
   HT_ENTRY(socket_table_ent_s) node;

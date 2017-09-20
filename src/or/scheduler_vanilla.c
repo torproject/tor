@@ -32,7 +32,7 @@ have_work(void)
   return smartlist_len(cp) > 0;
 }
 
-/** Retrigger the scheduler in a way safe to use from the callback */
+/** Re-trigger the scheduler in a way safe to use from the callback */
 
 static void
 vanilla_scheduler_schedule(void)

@@ -25,7 +25,7 @@
  * - "Scheduler implementation": a scheduler_t. The scheduling system has one
  *   active scheduling implementation at a time.
  *
- * In this file you will find state that any scheduler implmentation can have
+ * In this file you will find state that any scheduler implementation can have
  * access to as well as the functions the rest of Tor uses to interact with the
  * scheduling system.
  *
