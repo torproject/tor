@@ -1648,7 +1648,7 @@ launch_resolve,(cached_resolve_t *resolve))
   tor_addr_t a;
   int r;
 
-  if (get_options()->DisableNetwork)
+  if (net_is_disabled())
     return -1;
 
   /* What? Nameservers not configured?  Sounds like a bug. */
@@ -1883,7 +1883,7 @@ launch_test_addresses(evutil_socket_t fd, short event, void *args)
   (void)event;
   (void)args;
 
-  if (options->DisableNetwork)
+  if (net_is_disabled())
     return;
 
   log_info(LD_EXIT, "Launching checks to see whether our nameservers like to "

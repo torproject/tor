@@ -4531,7 +4531,7 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 void
 update_all_descriptor_downloads(time_t now)
 {
-  if (get_options()->DisableNetwork)
+  if (should_delay_dir_fetches(get_options(), NULL))
     return;
   update_router_descriptor_downloads(now);
   update_microdesc_downloads(now);

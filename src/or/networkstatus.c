@@ -52,6 +52,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "entrynodes.h"
+#include "hibernate.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -1205,6 +1206,14 @@ should_delay_dir_fetches(const or_options_t *options, const char **msg_out)
       *msg_out = "DisableNetwork is set.";
     }
     log_info(LD_DIR, "Delaying dir fetches (DisableNetwork is set)");
+    return 1;
+  }
+
+  if (we_are_hibernating()) {
+    if (msg_out) {
+      *msg_out = "We are hibernating or shutting down.";
+    }
+    log_info(LD_DIR, "Delaying dir fetches (Hibernating or shutting down)");
     return 1;
   }
 

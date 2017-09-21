@@ -1746,7 +1746,11 @@ connection_connect_sockaddr,(connection_t *conn,
 
   if (get_options()->DisableNetwork) {
     /* We should never even try to connect anyplace if DisableNetwork is set.
-     * Warn if we do, and refuse to make the connection. */
+     * Warn if we do, and refuse to make the connection.
+     *
+     * We only check DisableNetwork here, not we_are_hibernating(), since
+     * we'll still try to fulfill client requests sometimes in the latter case
+     * (if it is soft hibernation) */
     static ratelim_t disablenet_violated = RATELIM_INIT(30*60);
     *socket_error = SOCK_ERRNO(ENETUNREACH);
     log_fn_ratelim(&disablenet_violated, LOG_WARN, LD_BUG,
