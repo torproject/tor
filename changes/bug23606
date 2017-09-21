@@ -1,0 +1,4 @@
+  o Minor bugfixes (bootstrapping):
+    - When warning about state file clock skew, report the correct
+      direction for the detected skew.  Fixes bug 23606; bugfix on
+      0.2.8.1-alpha.
