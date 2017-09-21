@@ -1,4 +1,5 @@
   o Minor bugfixes (hidden service, relay):
     - Avoid a possible double close of a circuit by the intro point on error
-      of sending the INTRO_ESTABLISHED cell. Fixes ticket 23610.; bugfix on
-      0.3.2.1-alpha.
+      of sending the INTRO_ESTABLISHED cell. Fixes ticket 23610; bugfix on
+      0.3.0.1-alpha.
+
