@@ -1,0 +1,4 @@
+  o Minor features (build):
+    - The "check-changes" feature is now part of the "make check"
+      tests; we'll use it to try to prevent misformed changes files
+      from accumulating.  Closes ticket 23564.
