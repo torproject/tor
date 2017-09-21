@@ -1185,8 +1185,10 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
 
     log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
 
-    /* Restart their timeout values, so they get a fair shake at connecting to
-     * the hidden service. XXX: Improve comment on why this is needed. */
+    /* Because the connection can now proceed to opening circuit and
+     * ultimately connect to the service, reset those timestamp so the
+     * connection is considered "fresh" and can continue without being closed
+     * too early. */
     base_conn->timestamp_created = now;
     base_conn->timestamp_lastread = now;
     base_conn->timestamp_lastwritten = now;
