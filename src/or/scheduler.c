@@ -223,65 +223,6 @@ scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
   the_scheduler->schedule();
 }
 
-/*****************************************************************************
- * Scheduling system private function definitions
- *
- * Functions that can only be accessed from scheduler*.c
- *****************************************************************************/
-
-/** Return the pending channel list. */
-smartlist_t *
-get_channels_pending(void)
-{
-  return channels_pending;
-}
-
-/** Comparison function to use when sorting pending channels. */
-MOCK_IMPL(int,
-scheduler_compare_channels, (const void *c1_v, const void *c2_v))
-{
-  const channel_t *c1 = NULL, *c2 = NULL;
-  /* These are a workaround for -Wbad-function-cast throwing a fit */
-  const circuitmux_policy_t *p1, *p2;
-  uintptr_t p1_i, p2_i;
-
-  tor_assert(c1_v);
-  tor_assert(c2_v);
-
-  c1 = (const channel_t *)(c1_v);
-  c2 = (const channel_t *)(c2_v);
-
-  if (c1 != c2) {
-    if (circuitmux_get_policy(c1->cmux) ==
-        circuitmux_get_policy(c2->cmux)) {
-      /* Same cmux policy, so use the mux comparison */
-      return circuitmux_compare_muxes(c1->cmux, c2->cmux);
-    } else {
-      /*
-       * Different policies; not important to get this edge case perfect
-       * because the current code never actually gives different channels
-       * different cmux policies anyway.  Just use this arbitrary but
-       * definite choice.
-       */
-      p1 = circuitmux_get_policy(c1->cmux);
-      p2 = circuitmux_get_policy(c2->cmux);
-      p1_i = (uintptr_t)p1;
-      p2_i = (uintptr_t)p2;
-
-      return (p1_i < p2_i) ? -1 : 1;
-    }
-  } else {
-    /* c1 == c2, so always equal */
-    return 0;
-  }
-}
-
-/*****************************************************************************
- * Scheduling system global functions
- *
- * Functions that can be accessed from anywhere in Tor.
- *****************************************************************************/
-
 /** Using the global options, select the scheduler we should be using. */
 static void
 select_scheduler(void)
@@ -399,6 +340,65 @@ set_scheduler(void)
                get_scheduler_type_string(the_scheduler->type));
   }
 }
+
+/*****************************************************************************
+ * Scheduling system private function definitions
+ *
+ * Functions that can only be accessed from scheduler*.c
+ *****************************************************************************/
+
+/** Return the pending channel list. */
+smartlist_t *
+get_channels_pending(void)
+{
+  return channels_pending;
+}
+
+/** Comparison function to use when sorting pending channels. */
+MOCK_IMPL(int,
+scheduler_compare_channels, (const void *c1_v, const void *c2_v))
+{
+  const channel_t *c1 = NULL, *c2 = NULL;
+  /* These are a workaround for -Wbad-function-cast throwing a fit */
+  const circuitmux_policy_t *p1, *p2;
+  uintptr_t p1_i, p2_i;
+
+  tor_assert(c1_v);
+  tor_assert(c2_v);
+
+  c1 = (const channel_t *)(c1_v);
+  c2 = (const channel_t *)(c2_v);
+
+  if (c1 != c2) {
+    if (circuitmux_get_policy(c1->cmux) ==
+        circuitmux_get_policy(c2->cmux)) {
+      /* Same cmux policy, so use the mux comparison */
+      return circuitmux_compare_muxes(c1->cmux, c2->cmux);
+    } else {
+      /*
+       * Different policies; not important to get this edge case perfect
+       * because the current code never actually gives different channels
+       * different cmux policies anyway.  Just use this arbitrary but
+       * definite choice.
+       */
+      p1 = circuitmux_get_policy(c1->cmux);
+      p2 = circuitmux_get_policy(c2->cmux);
+      p1_i = (uintptr_t)p1;
+      p2_i = (uintptr_t)p2;
+
+      return (p1_i < p2_i) ? -1 : 1;
+    }
+  } else {
+    /* c1 == c2, so always equal */
+    return 0;
+  }
+}
+
+/*****************************************************************************
+ * Scheduling system global functions
+ *
+ * Functions that can be accessed from anywhere in Tor.
+ *****************************************************************************/
 
 /**
  * This is how the scheduling system is notified of Tor's configuration
