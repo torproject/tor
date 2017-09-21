@@ -96,16 +96,13 @@ you can use `git describe --contains <sha1 of commit>`.
 If at all possible, try to create this file in the same commit where you are
 making the change.  Please give it a distinctive name that no other branch will
 use for the lifetime of your change. To verify the format of the changes file,
-you can use `make check-changes`.
+you can use `make check-changes`.  This is run automatically as part of
+`make check` -- if it fails, we must fix it before we release.  These
+checks are implemented in `scripts/maint/lintChanges.py`.
 
 When we go to make a release, we will concatenate all the entries
 in changes to make a draft changelog, and clear the directory. We'll
 then edit the draft changelog into a nice readable format.
-
-To make sure that stuff is in the right format, we use
-scripts/maint/lintChanges.py to check the changes files for
-(superficial) validity.  You can run this script on your own changes
-files!
 
 What needs a changes file?
 
