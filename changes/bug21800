@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Capture and detect several "Result does not fit" warnings
+      in unit tests on platforms with 32-bit time_t. Fixes bug 21800;
+      bugfix on 0.2.9.3-alpha.

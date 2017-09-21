@@ -635,7 +635,10 @@ test_util_time(void *arg)
    * time_t */
   a_time.tm_year = 2039-1900;
 #if SIZEOF_TIME_T == 4
+  setup_capture_of_logs(LOG_WARN);
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  expect_single_log_msg_containing("Result does not fit in tor_timegm");
+  teardown_capture_of_logs();
 #elif SIZEOF_TIME_T == 8
   t_res = 2178252895UL;
   tt_int_op(t_res, OP_EQ, tor_timegm(&a_time));
@@ -965,7 +968,9 @@ test_util_time(void *arg)
   strlcpy(timestr, "Wed, 17 Feb 2038 06:13:20 GMT", sizeof(timestr));
 
   t_res = 0;
+  CAPTURE();
   i = parse_rfc1123_time(timestr, &t_res);
+  CHECK_TIMEGM_WARNING("does not fit in tor_timegm");
   tt_int_op(-1,OP_EQ, i);
 #elif SIZEOF_TIME_T == 8
   tt_str_op("Wed, 17 Feb 2038 06:13:20 GMT",OP_EQ, timestr);
@@ -1042,7 +1047,9 @@ test_util_time(void *arg)
   t_res = 0;
   i = parse_iso_time("2038-02-17 06:13:20", &t_res);
 #if SIZEOF_TIME_T == 4
+  CAPTURE();
   tt_int_op(-1,OP_EQ, i);
+  CHECK_TIMEGM_WARNING("does not fit in tor_timegm");
 #elif SIZEOF_TIME_T == 8
   tt_int_op(0,OP_EQ, i);
   tt_int_op(t_res,OP_EQ, (time_t)2150000000UL);
@@ -1218,8 +1225,11 @@ test_util_parse_http_time(void *arg)
 #if SIZEOF_TIME_T == 4
   /* parse_http_time should indicate failure on overflow, but it doesn't yet.
    * Hopefully #18480 will improve the failure semantics in this case. */
+  setup_capture_of_logs(LOG_WARN);
   tt_int_op(0,OP_EQ,parse_http_time("Wed, 17 Feb 2038 06:13:20 GMT", &a_time));
   tt_int_op((time_t)-1,OP_EQ, tor_timegm(&a_time));
+  expect_single_log_msg_containing("does not fit in tor_timegm");
+  teardown_capture_of_logs();
 #elif SIZEOF_TIME_T == 8
   tt_int_op(0,OP_EQ,parse_http_time("Wed, 17 Feb 2038 06:13:20 GMT", &a_time));
   tt_int_op((time_t)2150000000UL,OP_EQ, tor_timegm(&a_time));
@@ -1237,7 +1247,7 @@ test_util_parse_http_time(void *arg)
 
 #undef T
  done:
-  ;
+  teardown_capture_of_logs();
 }
 
 static void
