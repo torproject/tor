@@ -275,6 +275,7 @@ test_channelpadding_timers(void *arg)
 {
   channelpadding_decision_t decision;
   channel_t *chans[CHANNELS_TO_TEST];
+  int64_t new_time;
   (void)arg;
 
   tor_libevent_postfork();
@@ -282,6 +283,10 @@ test_channelpadding_timers(void *arg)
   connection_array = smartlist_new();
 
   monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1);
+  monotime_coarse_set_mock_time_nsec(1);
+
   timers_initialize();
   channelpadding_new_consensus_params(NULL);
 
@@ -339,8 +344,10 @@ test_channelpadding_timers(void *arg)
     }
 
     // Wait for the timers and then kill the event loop.
-    dont_stop_libevent = 1;
-    dummy_nop_timer();
+    new_time = (monotime_coarse_absolute_msec()+1001)*NSEC_PER_MSEC;
+    monotime_coarse_set_mock_time_nsec(new_time);
+    monotime_set_mock_time_nsec(new_time);
+    timers_run_pending();
 
     tt_int_op(tried_to_write_cell, OP_EQ, CHANNELS_TO_TEST);
 
@@ -357,6 +364,7 @@ test_channelpadding_timers(void *arg)
   smartlist_free(connection_array);
 
   timers_shutdown();
+  monotime_disable_test_mocking();
   channel_free_all();
 
   return;
@@ -366,13 +374,17 @@ void
 test_channelpadding_killonehop(void *arg)
 {
   channelpadding_decision_t decision;
+  int64_t new_time;
   (void)arg;
   tor_libevent_postfork();
 
   routerstatus_t *relay = tor_malloc_zero(sizeof(routerstatus_t));
   monotime_init();
-  timers_initialize();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1);
+  monotime_coarse_set_mock_time_nsec(1);
 
+  timers_initialize();
   setup_mock_consensus();
   setup_mock_network();
 
@@ -396,7 +408,10 @@ test_channelpadding_killonehop(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  event_base_loop(tor_libevent_get_base(), 0);
+  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  monotime_coarse_set_mock_time_nsec(new_time);
+  monotime_set_mock_time_nsec(new_time);
+  timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
 
@@ -415,7 +430,10 @@ test_channelpadding_killonehop(void *arg)
   tt_assert(relay3_client->pending_padding_callback);
 
   // Wait for the timer
-  event_base_loop(tor_libevent_get_base(), 0);
+  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  monotime_coarse_set_mock_time_nsec(new_time);
+  monotime_set_mock_time_nsec(new_time);
+  timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
 
@@ -461,7 +479,10 @@ test_channelpadding_killonehop(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  event_base_loop(tor_libevent_get_base(), 0);
+  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  monotime_coarse_set_mock_time_nsec(new_time);
+  monotime_set_mock_time_nsec(new_time);
+  timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
 
@@ -481,7 +502,10 @@ test_channelpadding_killonehop(void *arg)
   tt_assert(relay3_client->pending_padding_callback);
 
   // Wait for the timer
-  event_base_loop(tor_libevent_get_base(), 0);
+  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  monotime_coarse_set_mock_time_nsec(new_time);
+  monotime_set_mock_time_nsec(new_time);
+  timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
 
@@ -508,6 +532,7 @@ test_channelpadding_killonehop(void *arg)
   tor_free(relay);
 
   timers_shutdown();
+  monotime_disable_test_mocking();
   channel_free_all();
 }
 
@@ -749,6 +774,9 @@ test_channelpadding_negotiation(void *arg)
    * 4. Test channelpadding_reduced_padding
    */
   monotime_init();
+  monotime_enable_test_mocking();
+  monotime_set_mock_time_nsec(1);
+  monotime_coarse_set_mock_time_nsec(1);
   timers_initialize();
   setup_mock_consensus();
   setup_mock_network();
@@ -855,6 +883,7 @@ test_channelpadding_negotiation(void *arg)
   free_mock_consensus();
 
   timers_shutdown();
+  monotime_disable_test_mocking();
   channel_free_all();
 
   return;
