@@ -216,9 +216,11 @@ check-logs:
 
 .PHONY: check-changes
 check-changes:
+if USEPYTHON
 	@if test -d "$(top_srcdir)/changes"; then \
 		$(PYTHON) $(top_srcdir)/scripts/maint/lintChanges.py $(top_srcdir)/changes; \
 		fi
+endif
 
 .PHONY: update-versions
 update-versions:
