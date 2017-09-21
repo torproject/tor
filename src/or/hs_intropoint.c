@@ -254,7 +254,11 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   goto done;
 
  err:
-  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+  /* When sending the intro establish ack, on error the circuit can be marked
+   * as closed so avoid a double close. */
+  if (!TO_CIRCUIT(circ)->marked_for_close) {
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+  }
 
  done:
   trn_cell_establish_intro_free(parsed_cell);
