@@ -174,6 +174,25 @@ STATIC struct event *run_sched_ev = NULL;
  * Functions that can only be accessed from this file.
  *****************************************************************************/
 
+/** Return a human readable string for the given scheduler type. */
+static const char *
+get_scheduler_type_string(scheduler_types_t type)
+{
+  switch(type) {
+  case SCHEDULER_VANILLA:
+    return "Vanilla";
+  case SCHEDULER_KIST:
+    return "KIST";
+  case SCHEDULER_KIST_LITE:
+    return "KISTLite";
+  case SCHEDULER_NONE:
+    /* fallthrough */
+  default:
+    tor_assert_unreached();
+    return "(N/A)";
+  }
+}
+
 /**
  * Scheduler event callback; this should get triggered once per event loop
  * if any scheduling work was created during the event loop.
@@ -312,6 +331,8 @@ select_scheduler(void)
       new_scheduler = get_kist_scheduler();
       scheduler_kist_set_lite_mode();
       goto end;
+    case SCHEDULER_NONE:
+      /* fallthrough */
     default:
       /* Our option validation should have caught this. */
       tor_assert_unreached();
@@ -333,8 +354,6 @@ select_scheduler(void)
 
   /* Set the chosen scheduler. */
   the_scheduler = new_scheduler;
-  log_notice(LD_CONFIG, "Scheduler type %s has been enabled.",
-             chosen_sched_type);
 }
 
 /**
@@ -346,11 +365,21 @@ static void
 set_scheduler(void)
 {
   const scheduler_t *old_scheduler = the_scheduler;
+  scheduler_types_t old_scheduler_type = SCHEDULER_NONE;
+
+  /* We keep track of the type in order to log only if the type switched. We
+   * can't just use the scheduler pointers because KIST and KISTLite share the
+   * same object. */
+  if (the_scheduler) {
+    old_scheduler_type = the_scheduler->type;
+  }
 
   /* From the options, select the scheduler type to set. */
   select_scheduler();
   tor_assert(the_scheduler);
 
+  /* We look at the pointer difference in case the old sched and new sched
+   * share the same scheduler object, as is the case with KIST and KISTLite. */
   if (old_scheduler != the_scheduler) {
     /* Allow the old scheduler to clean up, if needed. */
     if (old_scheduler && old_scheduler->free_all) {
@@ -361,6 +390,13 @@ set_scheduler(void)
     if (the_scheduler->init) {
       the_scheduler->init();
     }
+  }
+
+  /* Finally we notice log if we switched schedulers. We use the type in case
+   * two schedulers share a scheduler object. */
+  if (old_scheduler_type != the_scheduler->type) {
+    log_notice(LD_CONFIG, "Scheduler type %s has been enabled.",
+               get_scheduler_type_string(the_scheduler->type));
   }
 }
 
