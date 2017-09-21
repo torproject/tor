@@ -1,4 +1,4 @@
-  o Minor bugfixes (hidden service, circuit):
+  o Minor features (hidden service, circuit, logging):
     - Improve logging of many callsite in the circuit subsystem to print the
       circuit identifier(s).
     - Log when we cleanup an intro point from a service so we know when and
