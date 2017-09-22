@@ -1514,7 +1514,7 @@ circuit_expire_old_circuits_clientside(void)
 #define IDLE_ONE_HOP_CIRC_TIMEOUT 60
 
 /** Find each non-origin circuit that has been unused for too long,
- * has no streams on it, used a create_fast, and ends here: mark it
+ * has no streams on it, came from a client, and ends here: mark it
  * for close.
  */
 void
@@ -1530,9 +1530,9 @@ circuit_expire_old_circuits_serverside(time_t now)
     /* If the circuit has been idle for too long, and there are no streams
      * on it, and it ends here, and it used a create_fast, mark it for close.
      */
-    if (or_circ->is_first_hop && !circ->n_chan &&
+    if (or_circ->p_chan && channel_is_client(or_circ->p_chan) &&
+        !circ->n_chan &&
         !or_circ->n_streams && !or_circ->resolving_streams &&
-        or_circ->p_chan &&
         channel_when_last_xmit(or_circ->p_chan) <= cutoff) {
       log_info(LD_CIRC, "Closing circ_id %u (empty %d secs ago)",
                (unsigned)or_circ->p_circ_id,

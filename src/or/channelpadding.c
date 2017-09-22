@@ -71,7 +71,7 @@ static int consensus_nf_pad_single_onion;
  *  its a client, use that. Then finally verify in the consensus).
  */
 #define CHANNEL_IS_CLIENT(chan, options) \
-  (!public_server_mode((options)) || (chan)->is_client || \
+  (!public_server_mode((options)) || channel_is_client(chan) || \
       !connection_or_digest_is_known_relay((chan)->identity_digest))
 
 /**

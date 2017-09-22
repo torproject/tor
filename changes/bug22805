@@ -1,0 +1,10 @@
+  o Minor features (relay):
+    - When choosing which circuits can be expired as unused, consider
+      circuits from clients even if those clients used regular CREATE
+      cells to make them; and do not consider circuits from relays even if
+      they were made with CREATE_FAST. Part of ticket 22805.
+
+  o Code simplification and refactoring:
+    - Remove various ways of testing circuits and connections for
+      "clientness"; instead, favor channel_is_client().
+      Part of ticket 22805.

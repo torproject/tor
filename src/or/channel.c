@@ -4090,7 +4090,7 @@ channel_mark_bad_for_new_circs(channel_t *chan)
  */
 
 int
-channel_is_client(channel_t *chan)
+channel_is_client(const channel_t *chan)
 {
   tor_assert(chan);
 
@@ -4109,6 +4109,20 @@ channel_mark_client(channel_t *chan)
   tor_assert(chan);
 
   chan->is_client = 1;
+}
+
+/**
+ * Clear the client flag
+ *
+ * Mark a channel as being _not_ from a client
+ */
+
+void
+channel_clear_client(channel_t *chan)
+{
+  tor_assert(chan);
+
+  chan->is_client = 0;
 }
 
 /**
