@@ -19,6 +19,8 @@ Top-level smell-checks
 
 - Does `make check-spaces` pass?
 
+- Does `make check-changes` pass?
+
 - Does it have a reasonable amount of tests?  Do they pass?  Do they leak
   memory?
 
@@ -32,6 +34,7 @@ Top-level smell-checks
 
 - If this changes Tor's behavior on the wire, is there a design proposal?
 
+- If this changes anything in the code, is there a "changes" file?
 
 
 Let's look at the code!

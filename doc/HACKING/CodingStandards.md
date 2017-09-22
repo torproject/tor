@@ -100,6 +100,26 @@ you can use `make check-changes`.  This is run automatically as part of
 `make check` -- if it fails, we must fix it before we release.  These
 checks are implemented in `scripts/maint/lintChanges.py`.
 
+Changes file style guide:
+  * Changes files begin with "  o Header (subheading):".  The header
+    should usually be "Minor/Major bugfixes/features". The subheading is a
+    particular area within Tor.  See the ChangeLog for examples.
+
+  * Make everything terse.
+
+  * Write from the user's point of view: describe the user-visible changes
+    right away.
+
+  * Mention configuration options by name.  If they're rare or unusual,
+    remind people what they're for.
+
+  * Describe changes in the present tense and in the imperative: not past.
+
+  * Every bugfix should have a sentence of the form "Fixes bug 1234; bugfix
+    on 0.1.2.3-alpha", describing what bug was fixed and where it came from.
+
+  * "Relays", not "servers", "nodes", or "Tor relays".
+
 When we go to make a release, we will concatenate all the entries
 in changes to make a draft changelog, and clear the directory. We'll
 then edit the draft changelog into a nice readable format.
