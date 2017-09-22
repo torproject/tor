@@ -1,4 +1,4 @@
-/* * Copyright (c) 2013-2017, The Tor Project, Inc. */
+/* Copyright (c) 2013-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "or.h"
@@ -178,7 +178,7 @@ STATIC struct event *run_sched_ev = NULL;
 static const char *
 get_scheduler_type_string(scheduler_types_t type)
 {
-  switch(type) {
+  switch (type) {
   case SCHEDULER_VANILLA:
     return "Vanilla";
   case SCHEDULER_KIST:
