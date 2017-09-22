@@ -635,7 +635,7 @@ test_util_time(void *arg)
    * time_t */
   a_time.tm_year = 2039-1900;
 #if SIZEOF_TIME_T == 4
-  setup_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
   expect_single_log_msg_containing("Result does not fit in tor_timegm");
   teardown_capture_of_logs();
@@ -654,8 +654,7 @@ test_util_time(void *arg)
     setup_full_capture_of_logs(LOG_WARN);                       \
   } while (0)
 #define CHECK_TIMEGM_WARNING(msg) do { \
-    expect_log_msg_containing(msg);                                     \
-    tt_int_op(1, OP_EQ, smartlist_len(mock_saved_logs()));              \
+    expect_single_log_msg_containing(msg);                              \
     teardown_capture_of_logs();                                         \
   } while (0)
 
@@ -1226,7 +1225,7 @@ test_util_parse_http_time(void *arg)
 #if SIZEOF_TIME_T == 4
   /* parse_http_time should indicate failure on overflow, but it doesn't yet.
    * Hopefully #18480 will improve the failure semantics in this case. */
-  setup_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(0,OP_EQ,parse_http_time("Wed, 17 Feb 2038 06:13:20 GMT", &a_time));
   tt_int_op((time_t)-1,OP_EQ, tor_timegm(&a_time));
   expect_single_log_msg_containing("does not fit in tor_timegm");
