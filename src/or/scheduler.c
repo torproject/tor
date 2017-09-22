@@ -227,7 +227,6 @@ scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
 static void
 select_scheduler(void)
 {
-  const char *chosen_sched_type = NULL;
   scheduler_t *new_scheduler = NULL;
 
 #ifdef TOR_UNIT_TESTS
@@ -246,7 +245,6 @@ select_scheduler(void)
     switch (*type) {
     case SCHEDULER_VANILLA:
       new_scheduler = get_vanilla_scheduler();
-      chosen_sched_type = "Vanilla";
       goto end;
     case SCHEDULER_KIST:
       if (!scheduler_can_use_kist()) {
@@ -264,11 +262,9 @@ select_scheduler(void)
         continue;
       }
       new_scheduler = get_kist_scheduler();
-      chosen_sched_type = "KIST";
       scheduler_kist_set_full_mode();
       goto end;
     case SCHEDULER_KIST_LITE:
-      chosen_sched_type = "KISTLite";
       new_scheduler = get_kist_scheduler();
       scheduler_kist_set_lite_mode();
       goto end;
