@@ -1045,12 +1045,13 @@ test_util_time(void *arg)
   /* This value is out of range with 32 bit time_t, but in range for 64 bit
    * time_t */
   t_res = 0;
-  i = parse_iso_time("2038-02-17 06:13:20", &t_res);
 #if SIZEOF_TIME_T == 4
   CAPTURE();
+  i = parse_iso_time("2038-02-17 06:13:20", &t_res);
   tt_int_op(-1,OP_EQ, i);
   CHECK_TIMEGM_WARNING("does not fit in tor_timegm");
 #elif SIZEOF_TIME_T == 8
+  i = parse_iso_time("2038-02-17 06:13:20", &t_res);
   tt_int_op(0,OP_EQ, i);
   tt_int_op(t_res,OP_EQ, (time_t)2150000000UL);
 #endif /* SIZEOF_TIME_T == 4 || ... */
