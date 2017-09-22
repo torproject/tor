@@ -174,6 +174,25 @@ STATIC struct event *run_sched_ev = NULL;
  * Functions that can only be accessed from this file.
  *****************************************************************************/
 
+/** Return a human readable string for the given scheduler type. */
+static const char *
+get_scheduler_type_string(scheduler_types_t type)
+{
+  switch(type) {
+  case SCHEDULER_VANILLA:
+    return "Vanilla";
+  case SCHEDULER_KIST:
+    return "KIST";
+  case SCHEDULER_KIST_LITE:
+    return "KISTLite";
+  case SCHEDULER_NONE:
+    /* fallthrough */
+  default:
+    tor_assert_unreached();
+    return "(N/A)";
+  }
+}
+
 /**
  * Scheduler event callback; this should get triggered once per event loop
  * if any scheduling work was created during the event loop.
@@ -202,6 +221,124 @@ scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
    * in the future. */
   tor_assert(the_scheduler->schedule);
   the_scheduler->schedule();
+}
+
+/** Using the global options, select the scheduler we should be using. */
+static void
+select_scheduler(void)
+{
+  const char *chosen_sched_type = NULL;
+  scheduler_t *new_scheduler = NULL;
+
+#ifdef TOR_UNIT_TESTS
+  /* This is hella annoying to set in the options for every test that passes
+   * through the scheduler and there are many so if we don't explicitly have
+   * a list of types set, just put the vanilla one. */
+  if (get_options()->SchedulerTypes_ == NULL) {
+    the_scheduler = get_vanilla_scheduler();
+    return;
+  }
+#endif /* defined(TOR_UNIT_TESTS) */
+
+  /* This list is ordered that is first entry has the first priority. Thus, as
+   * soon as we find a scheduler type that we can use, we use it and stop. */
+  SMARTLIST_FOREACH_BEGIN(get_options()->SchedulerTypes_, int *, type) {
+    switch (*type) {
+    case SCHEDULER_VANILLA:
+      new_scheduler = get_vanilla_scheduler();
+      chosen_sched_type = "Vanilla";
+      goto end;
+    case SCHEDULER_KIST:
+      if (!scheduler_can_use_kist()) {
+#ifdef HAVE_KIST_SUPPORT
+        if (get_options()->KISTSchedRunInterval == -1) {
+          log_info(LD_SCHED, "Scheduler type KIST can not be used. It is "
+                             "disabled because KISTSchedRunInterval=-1");
+        } else {
+          log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
+                               "the consensus.");
+        }
+#else /* !(defined(HAVE_KIST_SUPPORT)) */
+        log_info(LD_SCHED, "Scheduler type KIST not built in");
+#endif /* defined(HAVE_KIST_SUPPORT) */
+        continue;
+      }
+      new_scheduler = get_kist_scheduler();
+      chosen_sched_type = "KIST";
+      scheduler_kist_set_full_mode();
+      goto end;
+    case SCHEDULER_KIST_LITE:
+      chosen_sched_type = "KISTLite";
+      new_scheduler = get_kist_scheduler();
+      scheduler_kist_set_lite_mode();
+      goto end;
+    case SCHEDULER_NONE:
+      /* fallthrough */
+    default:
+      /* Our option validation should have caught this. */
+      tor_assert_unreached();
+    }
+  } SMARTLIST_FOREACH_END(type);
+
+ end:
+  if (new_scheduler == NULL) {
+    log_err(LD_SCHED, "Tor was unable to select a scheduler type. Please "
+                      "make sure Schedulers is correctly configured with "
+                      "what Tor does support.");
+    /* We weren't able to choose a scheduler which means that none of the ones
+     * set in Schedulers are supported or usable. We will respect the user
+     * wishes of using what it has been configured and don't do a sneaky
+     * fallback. Because this can be changed at runtime, we have to stop tor
+     * right now. */
+    exit(1);
+  }
+
+  /* Set the chosen scheduler. */
+  the_scheduler = new_scheduler;
+}
+
+/**
+ * Helper function called from a few different places. It changes the
+ * scheduler implementation, if necessary. And if it did, it then tells the
+ * old one to free its state and the new one to initialize.
+ */
+static void
+set_scheduler(void)
+{
+  const scheduler_t *old_scheduler = the_scheduler;
+  scheduler_types_t old_scheduler_type = SCHEDULER_NONE;
+
+  /* We keep track of the type in order to log only if the type switched. We
+   * can't just use the scheduler pointers because KIST and KISTLite share the
+   * same object. */
+  if (the_scheduler) {
+    old_scheduler_type = the_scheduler->type;
+  }
+
+  /* From the options, select the scheduler type to set. */
+  select_scheduler();
+  tor_assert(the_scheduler);
+
+  /* We look at the pointer difference in case the old sched and new sched
+   * share the same scheduler object, as is the case with KIST and KISTLite. */
+  if (old_scheduler != the_scheduler) {
+    /* Allow the old scheduler to clean up, if needed. */
+    if (old_scheduler && old_scheduler->free_all) {
+      old_scheduler->free_all();
+    }
+
+    /* Initialize the new scheduler. */
+    if (the_scheduler->init) {
+      the_scheduler->init();
+    }
+  }
+
+  /* Finally we notice log if we switched schedulers. We use the type in case
+   * two schedulers share a scheduler object. */
+  if (old_scheduler_type != the_scheduler->type) {
+    log_notice(LD_CONFIG, "Scheduler type %s has been enabled.",
+               get_scheduler_type_string(the_scheduler->type));
+  }
 }
 
 /*****************************************************************************
@@ -262,107 +399,6 @@ scheduler_compare_channels, (const void *c1_v, const void *c2_v))
  *
  * Functions that can be accessed from anywhere in Tor.
  *****************************************************************************/
-
-/** Using the global options, select the scheduler we should be using. */
-static void
-select_scheduler(void)
-{
-  const char *chosen_sched_type = NULL;
-  scheduler_t *new_scheduler = NULL;
-
-#ifdef TOR_UNIT_TESTS
-  /* This is hella annoying to set in the options for every test that passes
-   * through the scheduler and there are many so if we don't explicitly have
-   * a list of types set, just put the vanilla one. */
-  if (get_options()->SchedulerTypes_ == NULL) {
-    the_scheduler = get_vanilla_scheduler();
-    return;
-  }
-#endif /* defined(TOR_UNIT_TESTS) */
-
-  /* This list is ordered that is first entry has the first priority. Thus, as
-   * soon as we find a scheduler type that we can use, we use it and stop. */
-  SMARTLIST_FOREACH_BEGIN(get_options()->SchedulerTypes_, int *, type) {
-    switch (*type) {
-    case SCHEDULER_VANILLA:
-      new_scheduler = get_vanilla_scheduler();
-      chosen_sched_type = "Vanilla";
-      goto end;
-    case SCHEDULER_KIST:
-      if (!scheduler_can_use_kist()) {
-#ifdef HAVE_KIST_SUPPORT
-        if (get_options()->KISTSchedRunInterval == -1) {
-          log_info(LD_SCHED, "Scheduler type KIST can not be used. It is "
-                             "disabled because KISTSchedRunInterval=-1");
-        } else {
-          log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
-                               "the consensus.");
-        }
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
-        log_info(LD_SCHED, "Scheduler type KIST not built in");
-#endif /* defined(HAVE_KIST_SUPPORT) */
-        continue;
-      }
-      new_scheduler = get_kist_scheduler();
-      chosen_sched_type = "KIST";
-      scheduler_kist_set_full_mode();
-      goto end;
-    case SCHEDULER_KIST_LITE:
-      chosen_sched_type = "KISTLite";
-      new_scheduler = get_kist_scheduler();
-      scheduler_kist_set_lite_mode();
-      goto end;
-    default:
-      /* Our option validation should have caught this. */
-      tor_assert_unreached();
-    }
-  } SMARTLIST_FOREACH_END(type);
-
- end:
-  if (new_scheduler == NULL) {
-    log_err(LD_SCHED, "Tor was unable to select a scheduler type. Please "
-                      "make sure Schedulers is correctly configured with "
-                      "what Tor does support.");
-    /* We weren't able to choose a scheduler which means that none of the ones
-     * set in Schedulers are supported or usable. We will respect the user
-     * wishes of using what it has been configured and don't do a sneaky
-     * fallback. Because this can be changed at runtime, we have to stop tor
-     * right now. */
-    exit(1);
-  }
-
-  /* Set the chosen scheduler. */
-  the_scheduler = new_scheduler;
-  log_notice(LD_CONFIG, "Scheduler type %s has been enabled.",
-             chosen_sched_type);
-}
-
-/**
- * Helper function called from a few different places. It changes the
- * scheduler implementation, if necessary. And if it did, it then tells the
- * old one to free its state and the new one to initialize.
- */
-static void
-set_scheduler(void)
-{
-  const scheduler_t *old_scheduler = the_scheduler;
-
-  /* From the options, select the scheduler type to set. */
-  select_scheduler();
-  tor_assert(the_scheduler);
-
-  if (old_scheduler != the_scheduler) {
-    /* Allow the old scheduler to clean up, if needed. */
-    if (old_scheduler && old_scheduler->free_all) {
-      old_scheduler->free_all();
-    }
-
-    /* Initialize the new scheduler. */
-    if (the_scheduler->init) {
-      the_scheduler->init();
-    }
-  }
-}
 
 /**
  * This is how the scheduling system is notified of Tor's configuration

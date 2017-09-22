@@ -179,6 +179,7 @@ vanilla_scheduler_run(void)
 
 /* Stores the vanilla scheduler function pointers. */
 static scheduler_t vanilla_scheduler = {
+  .type = SCHEDULER_VANILLA,
   .free_all = NULL,
   .on_channel_free = NULL,
   .init = NULL,

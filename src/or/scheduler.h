@@ -13,7 +13,17 @@
 #include "channel.h"
 #include "testsupport.h"
 
-/*
+/** Scheduler type, we build an ordered list with those values from the
+ * parsed strings in Schedulers. The reason to do such a thing is so we can
+ * quickly and without parsing strings select the scheduler at anytime. */
+typedef enum {
+  SCHEDULER_NONE =     -1,
+  SCHEDULER_VANILLA =   1,
+  SCHEDULER_KIST =      2,
+  SCHEDULER_KIST_LITE = 3,
+} scheduler_types_t;
+
+/**
  * A scheduler implementation is a collection of function pointers. If you
  * would like to add a new scheduler called foo, create scheduler_foo.c,
  * implement at least the mandatory ones, and implement get_foo_scheduler()
@@ -31,6 +41,10 @@
  * is shutting down), then set that function pointer to NULL.
  */
 typedef struct scheduler_s {
+  /* Scheduler type. This is used for logging when the scheduler is switched
+   * during runtime. */
+  scheduler_types_t type;
+
   /* (Optional) To be called when we want to prepare a scheduler for use.
    * Perhaps Tor just started and we are the lucky chosen scheduler, or
    * perhaps Tor is switching to this scheduler. No matter the case, this is
@@ -81,15 +95,6 @@ typedef struct scheduler_s {
    * options so that it doesn't have to call get_options() all the time. */
   void (*on_new_options)(void);
 } scheduler_t;
-
-/** Scheduler type, we build an ordered list with those values from the
- * parsed strings in Schedulers. The reason to do such a thing is so we can
- * quickly and without parsing strings select the scheduler at anytime. */
-typedef enum {
-  SCHEDULER_VANILLA =   1,
-  SCHEDULER_KIST =      2,
-  SCHEDULER_KIST_LITE = 3,
-} scheduler_types_t;
 
 /*****************************************************************************
  * Globally visible scheduler variables/values

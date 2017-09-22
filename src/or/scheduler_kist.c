@@ -687,6 +687,7 @@ kist_scheduler_run(void)
 
 /* Stores the kist scheduler function pointers. */
 static scheduler_t kist_scheduler = {
+  .type = SCHEDULER_KIST,
   .free_all = kist_free_all,
   .on_channel_free = kist_on_channel_free,
   .init = kist_scheduler_init,
@@ -738,6 +739,7 @@ void
 scheduler_kist_set_lite_mode(void)
 {
   kist_lite_mode = 1;
+  kist_scheduler.type = SCHEDULER_KIST_LITE;
   log_info(LD_SCHED,
            "Setting KIST scheduler without kernel support (KISTLite mode)");
 }
@@ -747,6 +749,7 @@ void
 scheduler_kist_set_full_mode(void)
 {
   kist_lite_mode = 0;
+  kist_scheduler.type = SCHEDULER_KIST;
   log_info(LD_SCHED,
            "Setting KIST scheduler with kernel support (KIST mode)");
 }
