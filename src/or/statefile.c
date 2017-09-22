@@ -409,7 +409,7 @@ or_state_load(void)
     if (apparent_skew < 0) {
       /* Initialize bootstrap event reporting because we might call
        * clock_skew_warning() before the bootstrap state is
-       * initialized, causing an asserttion failure. */
+       * initialized, causing an assertion failure. */
       control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
       clock_skew_warning(NULL, (long)apparent_skew, 1, LD_GENERAL,
                          "local state file", fname);
