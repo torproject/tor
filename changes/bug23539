@@ -1,0 +1,4 @@
+  o Minor bugfixes (scheduler, KIST):
+    - Make the KISTSchedRunInterval option a non negative value. With this,
+      the way to disable KIST through the consensus is to set it to 0.
+      Fixes bug 23539; bugfix on 0.3.2.1-alpha.

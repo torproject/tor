@@ -84,7 +84,7 @@ mock_vanilla_networkstatus_get_param(
   (void)max_val;
   // only support KISTSchedRunInterval right now
   tor_assert(strcmp(param_name, "KISTSchedRunInterval")==0);
-  return -1;
+  return 0;
 }
 
 static int32_t
@@ -628,7 +628,7 @@ test_scheduler_loop_vanilla(void *arg)
   MOCK(get_options, mock_get_options);
   clear_options();
   set_scheduler_options(SCHEDULER_VANILLA);
-  mocked_options.KISTSchedRunInterval = -1;
+  mocked_options.KISTSchedRunInterval = 0;
 
   /* Set up libevent and scheduler */
 
@@ -932,14 +932,6 @@ test_scheduler_can_use_kist(void *arg)
   int res_should, res_freq;
   MOCK(get_options, mock_get_options);
 
-  /* Test force disabling of KIST */
-  clear_options();
-  mocked_options.KISTSchedRunInterval = -1;
-  res_should = scheduler_can_use_kist();
-  res_freq = kist_scheduler_run_interval(NULL);
-  tt_int_op(res_should, ==, 0);
-  tt_int_op(res_freq, ==, -1);
-
   /* Test force enabling of KIST */
   clear_options();
   mocked_options.KISTSchedRunInterval = 1234;
@@ -985,7 +977,7 @@ test_scheduler_can_use_kist(void *arg)
   res_should = scheduler_can_use_kist();
   res_freq = kist_scheduler_run_interval(NULL);
   tt_int_op(res_should, ==, 0);
-  tt_int_op(res_freq, ==, -1);
+  tt_int_op(res_freq, ==, 0);
   UNMOCK(networkstatus_get_param);
 
  done:

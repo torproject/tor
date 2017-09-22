@@ -249,13 +249,8 @@ select_scheduler(void)
     case SCHEDULER_KIST:
       if (!scheduler_can_use_kist()) {
 #ifdef HAVE_KIST_SUPPORT
-        if (get_options()->KISTSchedRunInterval == -1) {
-          log_info(LD_SCHED, "Scheduler type KIST can not be used. It is "
-                             "disabled because KISTSchedRunInterval=-1");
-        } else {
-          log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
-                               "the consensus.");
-        }
+        log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
+                             "the consensus or no kernel support.");
 #else /* !(defined(HAVE_KIST_SUPPORT)) */
         log_info(LD_SCHED, "Scheduler type KIST not built in");
 #endif /* defined(HAVE_KIST_SUPPORT) */
