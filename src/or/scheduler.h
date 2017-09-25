@@ -189,7 +189,7 @@ int scheduler_can_use_kist(void);
 void scheduler_kist_set_full_mode(void);
 void scheduler_kist_set_lite_mode(void);
 scheduler_t *get_kist_scheduler(void);
-uint32_t kist_scheduler_run_interval(const networkstatus_t *ns);
+int kist_scheduler_run_interval(const networkstatus_t *ns);
 
 #ifdef TOR_UNIT_TESTS
 extern int32_t sched_run_interval;

@@ -4615,7 +4615,7 @@ typedef struct {
    * not use the KIST scheduler but use the old vanilla scheduler instead. If
    * zero, do what the consensus says and fall back to using KIST as if this is
    * set to "10 msec" if the consensus doesn't say anything. */
-  uint32_t KISTSchedRunInterval;
+  int KISTSchedRunInterval;
 
   /** A multiplier for the KIST per-socket limit calculation. */
   double KISTSockBufSizeFactor;
