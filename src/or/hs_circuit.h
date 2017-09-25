@@ -59,5 +59,15 @@ int hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
 int hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
                                           const uint8_t *rend_cell_body);
 
+#ifdef HS_CIRCUIT_PRIVATE
+
+STATIC hs_ident_circuit_t *
+create_rp_circuit_identifier(const hs_service_t *service,
+                             const uint8_t *rendezvous_cookie,
+                             const curve25519_public_key_t *server_pk,
+                             const hs_ntor_rend_cell_keys_t *keys);
+
+#endif
+
 #endif /* !defined(TOR_HS_CIRCUIT_H) */
 

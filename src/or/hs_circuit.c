@@ -5,6 +5,8 @@
  * \file hs_circuit.c
  **/
 
+#define HS_CIRCUIT_PRIVATE
+
 #include "or.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
@@ -18,10 +20,10 @@
 #include "router.h"
 
 #include "hs_cell.h"
-#include "hs_circuit.h"
 #include "hs_ident.h"
 #include "hs_ntor.h"
 #include "hs_service.h"
+#include "hs_circuit.h"
 
 /* Trunnel. */
 #include "ed25519_cert.h"
@@ -235,7 +237,7 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
 
 /* From a given service, rendezvous cookie and handshake info, create a
  * rendezvous point circuit identifier. This can't fail. */
-static hs_ident_circuit_t *
+STATIC hs_ident_circuit_t *
 create_rp_circuit_identifier(const hs_service_t *service,
                              const uint8_t *rendezvous_cookie,
                              const curve25519_public_key_t *server_pk,
@@ -819,6 +821,15 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
                         circ->hs_ident->rendezvous_handshake_info,
                         sizeof(circ->hs_ident->rendezvous_handshake_info),
                         payload);
+
+  /* Pad the payload with random bytes so it matches the size of a legacy cell
+   * which is normally always bigger. Also, the size of a legacy cell is
+   * always smaller than the RELAY_PAYLOAD_SIZE so this is safe. */
+  if (payload_len < HS_LEGACY_RENDEZVOUS_CELL_SIZE) {
+    crypto_rand((char *) payload + payload_len,
+                HS_LEGACY_RENDEZVOUS_CELL_SIZE - payload_len);
+    payload_len = HS_LEGACY_RENDEZVOUS_CELL_SIZE;
+  }
 
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
                                    RELAY_COMMAND_RENDEZVOUS1,

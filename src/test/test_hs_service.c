@@ -14,10 +14,12 @@
 #define HS_COMMON_PRIVATE
 #define HS_SERVICE_PRIVATE
 #define HS_INTROPOINT_PRIVATE
+#define HS_CIRCUIT_PRIVATE
 #define MAIN_PRIVATE
 #define NETWORKSTATUS_PRIVATE
 #define STATEFILE_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
+#define HS_CLIENT_PRIVATE
 
 #include "test.h"
 #include "test_helpers.h"
@@ -37,11 +39,12 @@
 
 #include "hs_common.h"
 #include "hs_config.h"
-#include "hs_circuit.h"
 #include "hs_ident.h"
 #include "hs_intropoint.h"
 #include "hs_ntor.h"
+#include "hs_circuit.h"
 #include "hs_service.h"
+#include "hs_client.h"
 #include "main.h"
 #include "rendservice.h"
 #include "statefile.h"
@@ -1366,6 +1369,130 @@ test_revision_counter_state(void *arg)
   service_descriptor_free(desc_two);
 }
 
+/** Global vars used by test_rendezvous1_parsing() */
+char rend1_payload[RELAY_PAYLOAD_SIZE];
+size_t rend1_payload_len = 0;
+
+/** Mock for relay_send_command_from_edge() to send a RENDEZVOUS1 cell. Instead
+ *  of sending it to the network, instead save it to the global `rend1_payload`
+ *  variable so that we can inspect it in the test_rendezvous1_parsing()
+ *  test. */
+static int
+mock_relay_send_rendezvous1(streamid_t stream_id, circuit_t *circ,
+                            uint8_t relay_command, const char *payload,
+                            size_t payload_len,
+                            crypt_path_t *cpath_layer,
+                            const char *filename, int lineno)
+{
+  (void) stream_id;
+  (void) circ;
+  (void) relay_command;
+  (void) cpath_layer;
+  (void) filename;
+  (void) lineno;
+
+  memcpy(rend1_payload, payload, payload_len);
+  rend1_payload_len = payload_len;
+
+  return 0;
+}
+
+/** Send a RENDEZVOUS1 as a service, and parse it as a client. */
+static void
+test_rendezvous1_parsing(void *arg)
+{
+  int retval;
+  static const char *test_addr =
+    "4acth47i6kxnvkewtm6q7ib2s3ufpo5sqbsnzjpbi7utijcltosqemad.onion";
+  hs_service_t *service = NULL;
+  origin_circuit_t *service_circ = NULL;
+  origin_circuit_t *client_circ = NULL;
+  ed25519_keypair_t ip_auth_kp;
+  curve25519_keypair_t ephemeral_kp;
+  curve25519_keypair_t client_kp;
+  curve25519_keypair_t ip_enc_kp;
+  int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+
+  (void) arg;
+
+  MOCK(relay_send_command_from_edge_, mock_relay_send_rendezvous1);
+
+  {
+    /* Let's start by setting up the service that will start the rend */
+    service = tor_malloc_zero(sizeof(hs_service_t));
+    ed25519_secret_key_generate(&service->keys.identity_sk, 0);
+    ed25519_public_key_generate(&service->keys.identity_pk,
+                                &service->keys.identity_sk);
+    memcpy(service->onion_address, test_addr, sizeof(service->onion_address));
+    tt_assert(service);
+  }
+
+  {
+    /* Now let's set up the service rendezvous circuit and its keys. */
+    service_circ = helper_create_origin_circuit(CIRCUIT_PURPOSE_S_CONNECT_REND,
+                                                flags);
+    tor_free(service_circ->hs_ident);
+    hs_ntor_rend_cell_keys_t hs_ntor_rend_cell_keys;
+    uint8_t rendezvous_cookie[HS_REND_COOKIE_LEN];
+    curve25519_keypair_generate(&ip_enc_kp, 0);
+    curve25519_keypair_generate(&ephemeral_kp, 0);
+    curve25519_keypair_generate(&client_kp, 0);
+    ed25519_keypair_generate(&ip_auth_kp, 0);
+    retval = hs_ntor_service_get_rendezvous1_keys(&ip_auth_kp.pubkey,
+                                                  &ip_enc_kp,
+                                                  &ephemeral_kp,
+                                                  &client_kp.pubkey,
+                                                  &hs_ntor_rend_cell_keys);
+    tt_int_op(retval, OP_EQ, 0);
+
+    memset(rendezvous_cookie, 2, sizeof(rendezvous_cookie));
+    service_circ->hs_ident =
+      create_rp_circuit_identifier(service, rendezvous_cookie,
+                                   &ephemeral_kp.pubkey,
+                                   &hs_ntor_rend_cell_keys);
+  }
+
+  /* Send out the RENDEZVOUS1 and make sure that our mock func worked */
+  tt_assert(tor_mem_is_zero(rend1_payload, 32));
+  hs_circ_service_rp_has_opened(service, service_circ);
+  tt_assert(!tor_mem_is_zero(rend1_payload, 32));
+  tt_int_op(rend1_payload_len, OP_EQ, HS_LEGACY_RENDEZVOUS_CELL_SIZE);
+
+  /******************************/
+
+  /** Now let's create the client rendezvous circuit */
+  client_circ =
+    helper_create_origin_circuit(CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED,
+                                 flags);
+  /* fix up its circ ident */
+  ed25519_pubkey_copy(&client_circ->hs_ident->intro_auth_pk,
+                      &ip_auth_kp.pubkey);
+  memcpy(&client_circ->hs_ident->rendezvous_client_kp,
+         &client_kp, sizeof(client_circ->hs_ident->rendezvous_client_kp));
+  memcpy(&client_circ->hs_ident->intro_enc_pk.public_key,
+         &ip_enc_kp.pubkey.public_key,
+         sizeof(client_circ->hs_ident->intro_enc_pk.public_key));
+
+  /* Now parse the rendezvous2 circuit and make sure it was fine. We are
+   * skipping 20 bytes off its payload, since that's the rendezvous cookie
+   * which is only present in REND1. */
+  retval = handle_rendezvous2(client_circ,
+                              (uint8_t*)rend1_payload+20,
+                              rend1_payload_len-20);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* TODO: We are only simulating client/service here. We could also simulate
+   * the rendezvous point by plugging in rend_mid_establish_rendezvous(). We
+   * would need an extra circuit and some more stuff but it's doable. */
+
+ done:
+  circuit_free(TO_CIRCUIT(service_circ));
+  circuit_free(TO_CIRCUIT(client_circ));
+  hs_service_free(service);
+  hs_free_all();
+  UNMOCK(relay_send_command_from_edge_);
+}
+
 struct testcase_t hs_service_tests[] = {
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup, TT_FORK,
     NULL, NULL },
@@ -1394,6 +1521,8 @@ struct testcase_t hs_service_tests[] = {
   { "upload_descriptors", test_upload_descriptors, TT_FORK,
     NULL, NULL },
   { "revision_counter_state", test_revision_counter_state, TT_FORK,
+    NULL, NULL },
+  { "rendezvous1_parsing", test_rendezvous1_parsing, TT_FORK,
     NULL, NULL },
 
   END_OF_TESTCASES
