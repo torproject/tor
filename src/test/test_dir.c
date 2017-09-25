@@ -6140,6 +6140,29 @@ test_dir_post_parsing(void *arg)
   ;
 }
 
+static void
+test_dir_platform_str(void *arg)
+{
+  char platform[256];
+  (void)arg;
+  platform[0] = 0;
+  get_platform_str(platform, sizeof(platform));
+  tt_int_op((int)strlen(platform), OP_GT, 0);
+  tt_assert(!strcmpstart(platform, "Tor "));
+
+  tor_version_t ver;
+  // make sure this is a tor version, a real actual tor version.
+  tt_int_op(tor_version_parse_platform(platform, &ver, 1), OP_EQ, 1);
+
+  TT_BLATHER(("%d.%d.%d.%d", ver.major, ver.minor, ver.micro, ver.patchlevel));
+
+  // Handle an example version.
+  tt_int_op(tor_version_parse_platform(
+        "Tor 0.3.3.3 (foo) (git-xyzzy) on a potato", &ver, 1), OP_EQ, 1);
+ done:
+  ;
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -6205,6 +6228,7 @@ struct testcase_t dir_tests[] = {
   DIR_ARG(find_dl_schedule, TT_FORK, "car"),
   DIR(assumed_flags, 0),
   DIR(networkstatus_compute_bw_weights_v10, 0),
+  DIR(platform_str, 0),
   END_OF_TESTCASES
 };
 
