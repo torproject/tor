@@ -1149,9 +1149,9 @@ test_build_update_descriptors(void *arg)
   tor_free(node->ri->onion_curve25519_pkey); /* Avoid memleak. */
   tor_free(node->ri->cache_info.signing_key_cert);
   crypto_pk_free(node->ri->onion_pkey);
-  expect_log_msg_containing("just picked 1 intro points and wanted 3. It "
-                            "currently has 0 intro points. Launching "
-                            "ESTABLISH_INTRO circuit shortly.");
+  expect_log_msg_containing("just picked 1 intro points and wanted 3 for next "
+                            "descriptor. It currently has 0 intro points. "
+                            "Launching ESTABLISH_INTRO circuit shortly.");
   teardown_capture_of_logs();
   tt_int_op(digest256map_size(service->desc_current->intro_points.map),
             OP_EQ, 1);
