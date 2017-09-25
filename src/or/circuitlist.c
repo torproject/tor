@@ -1919,7 +1919,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
   smartlist_add(circuits_pending_close, circ);
 
   log_info(LD_GENERAL, "Circuit %u (id: %" PRIu32 ") marked for close at "
-                       "%s:%d (orig reason: %u, new reason: %u)",
+                       "%s:%d (orig reason: %d, new reason: %d)",
            circ->n_circ_id,
            CIRCUIT_IS_ORIGIN(circ) ?
               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
