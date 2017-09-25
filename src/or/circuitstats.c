@@ -910,7 +910,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   int tot_values = 0;
   uint32_t loaded_cnt = 0, N = 0;
   config_line_t *line;
-  unsigned int i;
+  int i;
   build_time_t *loaded_times;
   int err = 0;
   circuit_build_times_init(cbt);
@@ -960,8 +960,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
         break;
       }
 
-      if (loaded_cnt+count+state->CircuitBuildAbandonedCount
-            > state->TotalBuildTimes) {
+      if (loaded_cnt+count+ (unsigned)state->CircuitBuildAbandonedCount
+          > (unsigned) state->TotalBuildTimes) {
         log_warn(LD_CIRC,
                  "Too many build times in state file. "
                  "Stopping short before %d",
@@ -986,7 +986,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
     loaded_times[loaded_cnt++] = CBT_BUILD_ABANDONED;
   }
 
-  if (loaded_cnt != state->TotalBuildTimes) {
+  if (loaded_cnt != (unsigned)state->TotalBuildTimes) {
     log_warn(LD_CIRC,
             "Corrupt state file? Build times count mismatch. "
             "Read %d times, but file says %d", loaded_cnt,
