@@ -174,18 +174,26 @@ static config_abbrev_t option_abbrevs_[] = {
   { NULL, NULL, 0, 0},
 };
 
+/** dummy instance of or_options_t, used for type-checking its
+ * members with CONF_CHECK_VAR_TYPE. */
+DUMMY_TYPECHECK_INSTANCE(or_options_t);
+
 /** An entry for config_vars: "The option <b>name</b> has type
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
  */
 #define VAR(name,conftype,member,initvalue)                             \
   { name, CONFIG_TYPE_ ## conftype, offsetof(or_options_t, member),     \
-      initvalue }
+      initvalue CONF_TEST_MEMBERS(or_options_t, conftype, member) }
 /** As VAR, but the option name and member name are the same. */
 #define V(member,conftype,initvalue)                                    \
   VAR(#member, conftype, member, initvalue)
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
+#ifdef TOR_UNIT_TESTS
+#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL, {.INT=NULL} }
+#else
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
+#endif
 
 /**
  * Macro to declare *Port options.  Each one comes in three entries.
@@ -621,7 +629,7 @@ static config_var_t option_vars_[] = {
   V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
 
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+  END_OF_CONFIG_VARS
 };
 
 /** Override default values with these if the user sets the TestingTorNetwork
@@ -676,7 +684,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "1"),
   V(RendPostPeriod,              INTERVAL, "2 minutes"),
 
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+  END_OF_CONFIG_VARS
 };
 
 #undef VAR
