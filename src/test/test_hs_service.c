@@ -1370,8 +1370,8 @@ test_revision_counter_state(void *arg)
 }
 
 /** Global vars used by test_rendezvous1_parsing() */
-char rend1_payload[RELAY_PAYLOAD_SIZE];
-size_t rend1_payload_len = 0;
+static char rend1_payload[RELAY_PAYLOAD_SIZE];
+static size_t rend1_payload_len = 0;
 
 /** Mock for relay_send_command_from_edge() to send a RENDEZVOUS1 cell. Instead
  *  of sending it to the network, instead save it to the global `rend1_payload`
