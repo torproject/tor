@@ -926,11 +926,15 @@ circuit_clear_testing_cell_stats(circuit_t *circ)
 STATIC void
 circuit_free(circuit_t *circ)
 {
+  circid_t n_circ_id = 0;
   void *mem;
   size_t memlen;
   int should_free = 1;
   if (!circ)
     return;
+
+  /* We keep a copy of this so we can log its value before it gets unset. */
+  n_circ_id = circ->n_circ_id;
 
   circuit_clear_testing_cell_stats(circ);
 
@@ -1028,7 +1032,7 @@ circuit_free(circuit_t *circ)
   cell_queue_clear(&circ->n_chan_cells);
 
   log_info(LD_CIRC, "Circuit %u (id: %" PRIu32 ") has been freed.",
-           circ->n_circ_id,
+           n_circ_id,
            CIRCUIT_IS_ORIGIN(circ) ?
               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0);
 
