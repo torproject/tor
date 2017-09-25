@@ -1904,8 +1904,9 @@ circuit_launch_by_extend_info(uint8_t purpose,
       uint8_t old_purpose = circ->base_.purpose;
       struct timeval old_timestamp_began = circ->base_.timestamp_began;
 
-      log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
-               build_state_get_exit_nickname(circ->build_state), purpose,
+      log_info(LD_CIRC, "Cannibalizing circ %u (id: %" PRIu32 ") for "
+                        "purpose %d (%s)",
+               TO_CIRCUIT(circ)->n_circ_id, circ->global_identifier, purpose,
                circuit_purpose_to_string(purpose));
 
       if ((purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
