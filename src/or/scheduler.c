@@ -178,7 +178,7 @@ STATIC struct event *run_sched_ev = NULL;
 static const char *
 get_scheduler_type_string(scheduler_types_t type)
 {
-  switch(type) {
+  switch (type) {
   case SCHEDULER_VANILLA:
     return "Vanilla";
   case SCHEDULER_KIST:
