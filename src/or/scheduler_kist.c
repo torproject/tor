@@ -91,7 +91,7 @@ static monotime_t scheduler_last_run;
  */
 static double sock_buf_size_factor = 1.0;
 /* How often the scheduler runs. */
-STATIC int32_t sched_run_interval = 10;
+STATIC int sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT;
 
 #ifdef HAVE_KIST_SUPPORT
 /* Indicate if KIST lite mode is on or off. We can disable it at runtime.
@@ -208,8 +208,8 @@ update_socket_info_impl, (socket_table_ent_t *ent))
        * support. */
       log_notice(LD_SCHED, "Looks like our kernel doesn't have the support "
                            "for KIST anymore. We will fallback to the naive "
-                           "approach. Set KISTSchedRunInterval=-1 to disable "
-                           "KIST.");
+                           "approach. Remove KIST from the Schedulers list "
+                           "to disable.");
       kist_no_kernel_support = 1;
     }
     goto fallback;
@@ -218,8 +218,8 @@ update_socket_info_impl, (socket_table_ent_t *ent))
     if (errno == EINVAL) {
       log_notice(LD_SCHED, "Looks like our kernel doesn't have the support "
                            "for KIST anymore. We will fallback to the naive "
-                           "approach. Set KISTSchedRunInterval=-1 to disable "
-                           "KIST.");
+                           "approach. Remove KIST from the Schedulers list "
+                           "to disable.");
       /* Same reason as the above. */
       kist_no_kernel_support = 1;
     }
@@ -355,7 +355,7 @@ outbuf_table_remove(outbuf_table_t *table, channel_t *chan)
 static void
 set_scheduler_run_interval(const networkstatus_t *ns)
 {
-  int32_t old_sched_run_interval = sched_run_interval;
+  int old_sched_run_interval = sched_run_interval;
   sched_run_interval = kist_scheduler_run_interval(ns);
   if (old_sched_run_interval != sched_run_interval) {
     log_info(LD_SCHED, "Scheduler KIST changing its running interval "
@@ -491,10 +491,10 @@ static void
 kist_scheduler_init(void)
 {
   kist_scheduler_on_new_options();
-  IF_BUG_ONCE(sched_run_interval <= 0) {
+  IF_BUG_ONCE(sched_run_interval == 0) {
     log_warn(LD_SCHED, "We are initing the KIST scheduler and noticed the "
              "KISTSchedRunInterval is telling us to not use KIST. That's "
-             "weird! We'll continue using KIST, but at %dms.",
+             "weird! We'll continue using KIST, but at %" PRId32 "ms.",
              KIST_SCHED_RUN_INTERVAL_DEFAULT);
     sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT;
   }
@@ -705,33 +705,34 @@ get_kist_scheduler(void)
   return &kist_scheduler;
 }
 
-/* Check the torrc for the configured KIST scheduler run interval.
- * - If torrc < 0, then return the negative torrc value (shouldn't even be
- *   using KIST)
+/* Check the torrc (and maybe consensus) for the configured KIST scheduler run
+ * interval.
  * - If torrc > 0, then return the positive torrc value (should use KIST, and
  *   should use the set value)
  * - If torrc == 0, then look in the consensus for what the value should be.
- *   - If == 0, then return -1 (don't use KIST)
+ *   - If == 0, then return 0 (don't use KIST)
  *   - If > 0, then return the positive consensus value
- *   - If consensus doesn't say anything, return 10 milliseconds
+ *   - If consensus doesn't say anything, return 10 milliseconds, default.
  */
-int32_t
+int
 kist_scheduler_run_interval(const networkstatus_t *ns)
 {
-  int32_t run_interval = (int32_t)get_options()->KISTSchedRunInterval;
+  int run_interval = get_options()->KISTSchedRunInterval;
+
   if (run_interval != 0) {
-    log_debug(LD_SCHED, "Found KISTSchedRunInterval in torrc. Using that.");
+    log_debug(LD_SCHED, "Found KISTSchedRunInterval=%" PRId32 " in torrc. "
+                        "Using that.", run_interval);
     return run_interval;
   }
 
-  log_debug(LD_SCHED, "Turning to the consensus for KISTSchedRunInterval");
-  run_interval = networkstatus_get_param(ns, "KISTSchedRunInterval",
-                                         KIST_SCHED_RUN_INTERVAL_DEFAULT,
-                                         KIST_SCHED_RUN_INTERVAL_MIN,
-                                         KIST_SCHED_RUN_INTERVAL_MAX);
-  if (run_interval <= 0)
-    return -1;
-  return run_interval;
+  log_debug(LD_SCHED, "KISTSchedRunInterval=0, turning to the consensus.");
+
+  /* Will either be the consensus value or the default. Note that 0 can be
+   * returned which means the consensus wants us to NOT use KIST. */
+  return networkstatus_get_param(ns, "KISTSchedRunInterval",
+                                 KIST_SCHED_RUN_INTERVAL_DEFAULT,
+                                 KIST_SCHED_RUN_INTERVAL_MIN,
+                                 KIST_SCHED_RUN_INTERVAL_MAX);
 }
 
 /* Set KISTLite mode that is KIST without kernel support. */
@@ -767,9 +768,9 @@ scheduler_can_use_kist(void)
 
   /* We do have the support, time to check if we can get the interval that the
    * consensus can be disabling. */
-  int64_t run_interval = kist_scheduler_run_interval(NULL);
+  int run_interval = kist_scheduler_run_interval(NULL);
   log_debug(LD_SCHED, "Determined KIST sched_run_interval should be "
-                      "%" PRId64 ". Can%s use KIST.",
+                      "%" PRId32 ". Can%s use KIST.",
            run_interval, (run_interval > 0 ? "" : " not"));
   return run_interval > 0;
 }
