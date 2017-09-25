@@ -845,7 +845,7 @@ handle_introduce_ack(origin_circuit_t *circ, const uint8_t *payload,
 /* Called when we get a RENDEZVOUS2 cell on the rendezvous circuit circ. The
  * encoded cell is in payload of length payload_len. Return 0 on success or a
  * negative value on error. On error, the circuit is marked for close. */
-static int
+STATIC int
 handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
                    size_t payload_len)
 {

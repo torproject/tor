@@ -5,6 +5,8 @@
  * \file hs_circuit.c
  **/
 
+#define HS_CIRCUIT_PRIVATE
+
 #include "or.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
@@ -18,10 +20,10 @@
 #include "router.h"
 
 #include "hs_cell.h"
-#include "hs_circuit.h"
 #include "hs_ident.h"
 #include "hs_ntor.h"
 #include "hs_service.h"
+#include "hs_circuit.h"
 
 /* Trunnel. */
 #include "ed25519_cert.h"
@@ -235,7 +237,7 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
 
 /* From a given service, rendezvous cookie and handshake info, create a
  * rendezvous point circuit identifier. This can't fail. */
-static hs_ident_circuit_t *
+STATIC hs_ident_circuit_t *
 create_rp_circuit_identifier(const hs_service_t *service,
                              const uint8_t *rendezvous_cookie,
                              const curve25519_public_key_t *server_pk,

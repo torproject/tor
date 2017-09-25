@@ -77,6 +77,9 @@ client_get_random_intro(const ed25519_public_key_t *service_pk);
 STATIC extend_info_t *
 desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip);
 
+STATIC int handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
+                              size_t payload_len);
+
 #endif /* defined(HS_CLIENT_PRIVATE) */
 
 #endif /* !defined(TOR_HS_CLIENT_H) */
