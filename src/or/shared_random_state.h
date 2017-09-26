@@ -77,7 +77,7 @@ typedef struct sr_state_t {
 typedef struct sr_disk_state_t {
   uint32_t magic_;
   /* Version of the protocol. */
-  uint32_t Version;
+  int Version;
   /* Version of our running tor. */
   char *TorVersion;
   /* Creation time of this state */

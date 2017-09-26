@@ -40,10 +40,14 @@ static const char dstate_commit_key[] = "Commit";
 static const char dstate_prev_srv_key[] = "SharedRandPreviousValue";
 static const char dstate_cur_srv_key[] = "SharedRandCurrentValue";
 
+/** dummy instance of sr_disk_state_t, used for type-checking its
+ * members with CONF_CHECK_VAR_TYPE. */
+DUMMY_TYPECHECK_INSTANCE(sr_disk_state_t);
+
 /* These next two are duplicates or near-duplicates from config.c */
 #define VAR(name, conftype, member, initvalue)                              \
   { name, CONFIG_TYPE_ ## conftype, offsetof(sr_disk_state_t, member),      \
-    initvalue }
+      initvalue CONF_TEST_MEMBERS(sr_disk_state_t, conftype, member) }
 /* As VAR, but the option name and member name are the same. */
 #define V(member, conftype, initvalue) \
   VAR(#member, conftype, member, initvalue)
@@ -70,7 +74,7 @@ static config_var_t state_vars[] = {
   V(SharedRandValues,           LINELIST_V, NULL),
   VAR("SharedRandPreviousValue",LINELIST_S, SharedRandValues, NULL),
   VAR("SharedRandCurrentValue", LINELIST_S, SharedRandValues, NULL),
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+  END_OF_CONFIG_VARS
 };
 
 /* "Extra" variable in the state that receives lines we can't parse. This
@@ -78,6 +82,7 @@ static config_var_t state_vars[] = {
 static config_var_t state_extra_var = {
   "__extra", CONFIG_TYPE_LINELIST,
   offsetof(sr_disk_state_t, ExtraLines), NULL
+  CONF_TEST_MEMBERS(sr_disk_state_t, LINELIST, ExtraLines)
 };
 
 /* Configuration format of sr_disk_state_t. */

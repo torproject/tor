@@ -54,10 +54,14 @@ static config_abbrev_t state_abbrevs_[] = {
   { NULL, NULL, 0, 0},
 };
 
+/** dummy instance of or_state_t, used for type-checking its
+ * members with CONF_CHECK_VAR_TYPE. */
+DUMMY_TYPECHECK_INSTANCE(or_state_t);
+
 /*XXXX these next two are duplicates or near-duplicates from config.c */
 #define VAR(name,conftype,member,initvalue)                             \
   { name, CONFIG_TYPE_ ## conftype, offsetof(or_state_t, member),       \
-      initvalue }
+      initvalue CONF_TEST_MEMBERS(or_state_t, conftype, member) }
 /** As VAR, but the option name and member name are the same. */
 #define V(member,conftype,initvalue)                                    \
   VAR(#member, conftype, member, initvalue)
@@ -116,7 +120,8 @@ static config_var_t state_vars_[] = {
   V(CircuitBuildAbandonedCount,       UINT,     "0"),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+
+  END_OF_CONFIG_VARS
 };
 
 #undef VAR
@@ -135,6 +140,7 @@ static int or_state_validate_cb(void *old_options, void *options,
  * lets us preserve options from versions of Tor newer than us. */
 static config_var_t state_extra_var = {
   "__extra", CONFIG_TYPE_LINELIST, offsetof(or_state_t, ExtraLines), NULL
+  CONF_TEST_MEMBERS(or_state_t, LINELIST, ExtraLines)
 };
 
 /** Configuration format for or_state_t. */
