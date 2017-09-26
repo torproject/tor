@@ -3704,8 +3704,8 @@ typedef struct {
   config_line_t *SocksPort_lines;
   /** Ports to listen on for transparent pf/netfilter connections. */
   config_line_t *TransPort_lines;
-  const char *TransProxyType; /**< What kind of transparent proxy
-                               * implementation are we using? */
+  char *TransProxyType; /**< What kind of transparent proxy
+                         * implementation are we using? */
   /** Parsed value of TransProxyType. */
   enum {
     TPT_DEFAULT,
