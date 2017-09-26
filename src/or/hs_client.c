@@ -100,7 +100,7 @@ purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
    * from the previous time period. That is fine because they will expire at
    * some point and we don't care about those anymore. */
   hs_build_blinded_pubkey(identity_pk, NULL, 0,
-                          hs_get_time_period_num(approx_time()), &blinded_pk);
+                          hs_get_time_period_num(0), &blinded_pk);
   if (BUG(ed25519_public_to_base64(base64_blinded_pk, &blinded_pk) < 0)) {
     return;
   }
