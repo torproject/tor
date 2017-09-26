@@ -135,7 +135,9 @@ typedef struct config_var_t {
 #else
 #define CONF_TEST_MEMBERS(tp, conftype, member)
 #define END_OF_CONFIG_VARS { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
-#define DUMMY_TYPECHECK_INSTANCE(tp)
+/* Repeatedly declarable incomplete struct to absorb redundant semicolons */
+#define DUMMY_TYPECHECK_INSTANCE(tp)            \
+  struct tor_semicolon_eater
 #endif
 
 /** Type of a callback to validate whether a given configuration is
