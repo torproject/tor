@@ -108,6 +108,34 @@ purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
   hs_purge_hid_serv_from_last_hid_serv_requests(base64_blinded_pk);
 }
 
+/* Return true iff there is at least one pending directory descriptor request
+ * for the service identity_pk. */
+static int
+directory_request_is_pending(const ed25519_public_key_t *identity_pk)
+{
+  int ret = 0;
+  smartlist_t *conns =
+    connection_list_by_type_purpose(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    const hs_ident_dir_conn_t *ident = TO_DIR_CONN(conn)->hs_ident;
+    if (BUG(ident == NULL)) {
+      /* A directory connection fetching a service descriptor can't have an
+       * empty hidden service identifier. */
+      continue;
+    }
+    if (!ed25519_pubkey_eq(identity_pk, &ident->identity_pk)) {
+      continue;
+    }
+    ret = 1;
+    break;
+  } SMARTLIST_FOREACH_END(conn);
+
+  /* No ownership of the objects in this list. */
+  smartlist_free(conns);
+  return ret;
+}
+
 /* A v3 HS circuit successfully connected to the hidden service. Update the
  * stream state at <b>hs_conn_ident</b> appropriately. */
 static void
@@ -1044,6 +1072,12 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
                            "but we already have a usable descriptor.");
       return HS_CLIENT_FETCH_HAVE_DESC;
     }
+  }
+
+  /* Don't try to refetch while we have a pending request for it. */
+  if (directory_request_is_pending(identity_pk)) {
+    log_info(LD_REND, "Already a pending directory request. Waiting on it.");
+    return HS_CLIENT_FETCH_PENDING;
   }
 
   return fetch_v3_desc(identity_pk);

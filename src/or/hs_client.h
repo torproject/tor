@@ -27,6 +27,8 @@ typedef enum {
   HS_CLIENT_FETCH_NOT_ALLOWED  = 3,
   /* We are missing information to be able to launch a request. */
   HS_CLIENT_FETCH_MISSING_INFO = 4,
+  /* There is a pending fetch for the requested service. */
+  HS_CLIENT_FETCH_PENDING      = 5,
 } hs_client_fetch_status_t;
 
 void hs_client_note_connection_attempt_succeeded(
