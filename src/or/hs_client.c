@@ -131,9 +131,9 @@ note_connection_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
 }
 
 /* Given the pubkey of a hidden service in <b>onion_identity_pk</b>, fetch its
- * descriptor by launching a dir connection to <b>hsdir</b>. Return 1 on
- * success or -1 on error. */
-static int
+ * descriptor by launching a dir connection to <b>hsdir</b>. Return a
+ * hs_client_fetch_status_t status code depending on how it went. */
+static hs_client_fetch_status_t
 directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
                                const routerstatus_t *hsdir)
 {
@@ -224,9 +224,9 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 
 /** Fetch a v3 descriptor using the given <b>onion_identity_pk</b>.
  *
- * On success, 1 is returned. If no hidden service is left to ask, return 0.
- * On error, -1 is returned. */
-static int
+ * On success, HS_CLIENT_FETCH_LAUNCHED is returned. Otherwise, an error from
+ * hs_client_fetch_status_t is returned. */
+static hs_client_fetch_status_t
 fetch_v3_desc(const ed25519_public_key_t *onion_identity_pk)
 {
   routerstatus_t *hsdir_rs =NULL;
