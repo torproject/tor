@@ -351,8 +351,8 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
  *
  * On success, HS_CLIENT_FETCH_LAUNCHED is returned. Otherwise, an error from
  * hs_client_fetch_status_t is returned. */
-static hs_client_fetch_status_t
-fetch_v3_desc(const ed25519_public_key_t *onion_identity_pk)
+MOCK_IMPL(STATIC hs_client_fetch_status_t,
+fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk))
 {
   routerstatus_t *hsdir_rs =NULL;
 
