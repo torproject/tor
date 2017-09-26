@@ -1,0 +1,5 @@
+  o Minor bugfixes (hidden service v3):
+    - Don't non fatal assert if we can't the introduction point extend
+      information when launching circuits. In rare cases, this could happened
+      but tor would recover gracefully. This is to avoid a non fatal assert in
+      the logs. Fixes ticket 23159.; bugfix on 0.3.2.1-alpha.

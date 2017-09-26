@@ -2034,13 +2034,9 @@ launch_intro_point_circuits(hs_service_t *service)
 
       ei = get_extend_info_from_intro_point(ip, direct_conn);
       if (ei == NULL) {
-        if (!direct_conn) {
-          /* In case of a multi-hop connection, it should never happen that we
-           * can't get the extend info from the node. Avoid connection and
-           * remove intro point from descriptor in order to recover from this
-           * potential bug. */
-          tor_assert_nonfatal(ei);
-        }
+        /* This is possible if we can get a node_t but not the extend info out
+         * of it. In this case, we remove the intro point and a new one will
+         * be picked at the next main loop callback. */
         MAP_DEL_CURRENT(key);
         service_intro_point_free(ip);
         continue;
