@@ -1570,6 +1570,8 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
   if (ip == NULL) {
     goto err;
   }
+
+  log_info(LD_REND, "Picked intro point: %s", extend_info_describe(info));
   extend_info_free(info);
   return ip;
  err:
@@ -1725,11 +1727,12 @@ update_service_descriptor(hs_service_t *service,
                                                                  desc);
     if (num_new_intro_points != 0) {
       log_info(LD_REND, "Service %s just picked %u intro points and wanted "
-                        "%u. It currently has %d intro points. "
-                        "Launching ESTABLISH_INTRO circuit shortly.",
+                        "%u for %s descriptor. It currently has %d intro "
+                        "points. Launching ESTABLISH_INTRO circuit shortly.",
                safe_str_client(service->onion_address),
                num_new_intro_points,
                service->config.num_intro_points - num_intro_points,
+               (desc == service->desc_current) ? "current" : "next",
                num_intro_points);
       /* We'll build those introduction point into the descriptor once we have
        * confirmation that the circuits are opened and ready. However,
@@ -2046,7 +2049,7 @@ launch_intro_point_circuits(hs_service_t *service)
       /* Launch a circuit to the intro point. */
       ip->circuit_retries++;
       if (hs_circ_launch_intro_point(service, ip, ei) < 0) {
-        log_warn(LD_REND, "Unable to launch intro circuit to node %s "
+        log_info(LD_REND, "Unable to launch intro circuit to node %s "
                           "for service %s.",
                  safe_str_client(extend_info_describe(ei)),
                  safe_str_client(service->onion_address));
