@@ -699,9 +699,11 @@ parse_socks_client(const uint8_t *data, size_t datalen,
       return 1;
   }
 
-  /* shouldn't get here... */
+  /* LCOV_EXCL_START */
+  /* shouldn't get here if the input state is one we know about... */
   tor_assert(0);
 
   return -1;
+  /* LCOV_EXCL_STOP */
 }
 

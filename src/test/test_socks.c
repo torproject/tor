@@ -656,6 +656,233 @@ test_socks_truncated(void *ptr)
   ;
 }
 
+/* Check our client-side socks4 parsing (that is to say, our parsing of
+ * server responses).
+ */
+static void
+test_socks_client_v4(void *arg)
+{
+  (void)arg;
+  buf_t *buf = buf_new();
+  char *reason = NULL;
+
+  /* Legit socks4 response, success */
+  ADD_DATA(buf, "\x04\x5a\x20\x25\x01\x02\x03\x04");
+  tt_int_op(1, OP_EQ,
+            fetch_from_buf_socks_client(buf, PROXY_SOCKS4_WANT_CONNECT_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  /* Legit socks4 response, failure. */
+  ADD_DATA(buf, "\x04\x5b\x20\x25\x01\x02\x03\x04");
+  tt_int_op(-1, OP_EQ,
+            fetch_from_buf_socks_client(buf, PROXY_SOCKS4_WANT_CONNECT_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_NE, NULL);
+  tt_str_op(reason, OP_EQ, "server rejected connection");
+
+ done:
+  buf_free(buf);
+  tor_free(reason);
+}
+
+/* Check our client-side socks5 authentication-negotiation parsing (that is to
+ * say, our parsing of server responses).
+ */
+static void
+test_socks_client_v5_auth(void *arg)
+{
+  (void)arg;
+  buf_t *buf = buf_new();
+  char *reason = NULL;
+
+  /* Legit socks5 responses, got a method we like. */
+  ADD_DATA(buf, "\x05\x00");
+  tt_int_op(1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_AUTH_METHOD_NONE,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  /* Same, but we wanted something else. */
+  ADD_DATA(buf, "\x05\x00");
+  tt_int_op(1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  /* Same, and they offered a password. */
+  ADD_DATA(buf, "\x05\x02");
+  tt_int_op(2, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  /* They rejected our method, or selected something we don't know. */
+  ADD_DATA(buf, "\x05\xff");
+  tt_int_op(-1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_AUTH_METHOD_NONE,
+                                        &reason));
+  tt_str_op(reason, OP_EQ, "server doesn't support any of our available "
+            "authentication methods");
+  buf_clear(buf);
+  tor_free(reason);
+  ADD_DATA(buf, "\x05\xff");
+  tt_int_op(-1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929,
+                                        &reason));
+  tt_str_op(reason, OP_EQ, "server doesn't support any of our available "
+            "authentication methods");
+  tor_free(reason);
+  buf_clear(buf);
+
+  /* Now check for authentication responses: check success and failure. */
+  ADD_DATA(buf, "\x01\x00");
+  tt_int_op(1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_AUTH_RFC1929_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  ADD_DATA(buf, "\x01\xf0");
+  tt_int_op(-1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_AUTH_RFC1929_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_NE, NULL);
+  tt_str_op(reason, OP_EQ, "authentication failed");
+
+ done:
+  buf_free(buf);
+  tor_free(reason);
+}
+
+/* Check our client-side socks5 connect parsing (that is to say, our parsing
+ * of server responses).
+ */
+static void
+test_socks_client_v5_connect(void *arg)
+{
+  (void)arg;
+  buf_t *buf = buf_new();
+  char *reason = NULL;
+
+  /* Legit socks5 responses, success, ipv4. */
+  ADD_DATA(buf, "\x05\x00\x00\x01\x01\x02\x03\x04\x00\x05");
+  tt_int_op(1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_CONNECT_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  /* Legit socks5 responses, success, ipv6. */
+  ADD_DATA(buf, "\x05\x00\x00\x04"
+           "abcdefghijklmnop"
+           "\x00\x05");
+  tt_int_op(1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_CONNECT_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  /* Legit socks5 responses, success, hostname. */
+  ADD_DATA(buf, "\x05\x00\x00\x03\x12"
+           "gopher.example.com"
+           "\x00\x05");
+  tt_int_op(1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_CONNECT_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_EQ, NULL);
+  tt_int_op(buf_datalen(buf), OP_EQ, 0);
+
+  /* Legit socks5 responses, failure, hostname. */
+  ADD_DATA(buf, "\x05\x03\x00\x03\x12"
+           "gopher.example.com"
+           "\x00\x05");
+  tt_int_op(-1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_CONNECT_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_NE, NULL);
+  tt_str_op(reason, OP_EQ, "Network unreachable");
+  tor_free(reason);
+  buf_clear(buf);
+
+  /* Bogus socks5 responses: what is address type 0x17? */
+  ADD_DATA(buf, "\x05\x03\x00\x17\x12 blah blah");
+  tt_int_op(-1, OP_EQ,
+            fetch_from_buf_socks_client(buf,
+                                        PROXY_SOCKS5_WANT_CONNECT_OK,
+                                        &reason));
+  tt_ptr_op(reason, OP_NE, NULL);
+  tt_str_op(reason, OP_EQ, "invalid response to connect request");
+  buf_clear(buf);
+
+ done:
+  buf_free(buf);
+  tor_free(reason);
+}
+
+static void
+test_socks_client_truncated(void *arg)
+{
+  (void)arg;
+  buf_t *buf = buf_new();
+  char *reason = NULL;
+
+#define S(str) str, (sizeof(str)-1)
+  const struct {
+    int state;
+    const char *body;
+    size_t len;
+  } replies[] = {
+    { PROXY_SOCKS4_WANT_CONNECT_OK, S("\x04\x5a\x20\x25\x01\x02\x03\x04") },
+    { PROXY_SOCKS4_WANT_CONNECT_OK, S("\x04\x5b\x20\x25\x01\x02\x03\x04") },
+    { PROXY_SOCKS5_WANT_AUTH_METHOD_NONE, S("\x05\x00") },
+    { PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929, S("\x05\x00") },
+    { PROXY_SOCKS5_WANT_AUTH_RFC1929_OK, S("\x01\x00") },
+    { PROXY_SOCKS5_WANT_CONNECT_OK,
+      S("\x05\x00\x00\x01\x01\x02\x03\x04\x00\x05") },
+    { PROXY_SOCKS5_WANT_CONNECT_OK,
+      S("\x05\x00\x00\x04" "abcdefghijklmnop" "\x00\x05") },
+    { PROXY_SOCKS5_WANT_CONNECT_OK,
+      S("\x05\x00\x00\x03\x12" "gopher.example.com" "\x00\x05") },
+    { PROXY_SOCKS5_WANT_CONNECT_OK,
+      S("\x05\x03\x00\x03\x12" "gopher.example.com""\x00\x05") },
+    { PROXY_SOCKS5_WANT_CONNECT_OK,
+      S("\x05\x03\x00\x17") },
+  };
+  unsigned i, j;
+  for (i = 0; i < ARRAY_LENGTH(replies); ++i) {
+    for (j = 0; j < replies[i].len; ++j) {
+      TT_BLATHER(("Checking command %u, length %u", i, j));
+      buf_add(buf, replies[i].body, j);
+      /* This should return 0 meaning "not done yet" */
+      tt_int_op(0, OP_EQ,
+                fetch_from_buf_socks_client(buf, replies[i].state, &reason));
+      tt_uint_op(j, OP_EQ, buf_datalen(buf)); /* Nothing was drained */
+      buf_clear(buf);
+      tt_ptr_op(reason, OP_EQ, NULL);
+    }
+  }
+
+ done:
+  tor_free(reason);
+  buf_free(buf);
+}
+
 #define SOCKSENT(name)                                  \
   { #name, test_socks_##name, TT_FORK, &socks_setup, NULL }
 
@@ -674,6 +901,11 @@ struct testcase_t socks_tests[] = {
   SOCKSENT(5_malformed_commands),
 
   SOCKSENT(truncated),
+
+  { "client/v4", test_socks_client_v4, TT_FORK, NULL, NULL },
+  { "client/v5_auth", test_socks_client_v5_auth, TT_FORK, NULL, NULL },
+  { "client/v5_connect", test_socks_client_v5_connect, TT_FORK, NULL, NULL },
+  { "client/truncated", test_socks_client_truncated, TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };
