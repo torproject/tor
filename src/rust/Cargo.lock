@@ -6,9 +6,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "c_string"
+version = "0.0.1"
+dependencies = [
+ "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "external"
+version = "0.0.1"
+dependencies = [
+ "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "protover"
+version = "0.0.1"
+dependencies = [
+ "external 0.0.1",
+ "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smartlist 0.0.1",
+ "tor_util 0.0.1",
+]
+
+[[package]]
+name = "smartlist"
+version = "0.0.1"
+dependencies = [
+ "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [metadata]
 "checksum libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)" = "babb8281da88cba992fa1f4ddec7d63ed96280a1a53ec9b919fd37b53d71e502"

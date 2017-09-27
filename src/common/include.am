@@ -94,6 +94,7 @@ LIBOR_A_SRC = \
   src/common/util_bug.c					\
   src/common/util_format.c				\
   src/common/util_process.c				\
+  src/common/rust_types.c				\
   src/common/sandbox.c					\
   src/common/storagedir.c				\
   src/common/workqueue.c				\
@@ -179,6 +180,7 @@ COMMONHEADERS = \
   src/common/procmon.h				\
   src/common/pubsub.h				\
   src/common/sandbox.h				\
+  src/common/rust_types.h				\
   src/common/storagedir.h			\
   src/common/testsupport.h			\
   src/common/timers.h				\

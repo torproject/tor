@@ -1,0 +1,12 @@
+EXTRA_DIST +=\
+	src/rust/c_string/Cargo.toml \
+	src/rust/c_string/ffi.rs
+
+src/rust/target/release/@TOR_RUST_C_STRING_STATIC_NAME@: FORCE
+	( cd "$(abs_top_srcdir)/src/rust/c_string" ; \
+		CARGO_TARGET_DIR="$(abs_top_builddir)/src/rust/target" \
+    CARGO_HOME="$(abs_top_builddir)/src/rust" \
+		$(CARGO) build --release --quiet $(CARGO_ONLINE) )
+
+FORCE:
+

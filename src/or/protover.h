@@ -70,11 +70,15 @@ typedef struct proto_entry_t {
   smartlist_t *ranges;
 } proto_entry_t;
 
+#if !defined(HAVE_RUST) && defined(TOR_UNIT_TESTS)
 STATIC smartlist_t *parse_protocol_list(const char *s);
-STATIC void proto_entry_free(proto_entry_t *entry);
 STATIC char *encode_protocol_list(const smartlist_t *sl);
 STATIC const char *protocol_type_to_str(protocol_type_t pr);
 STATIC int str_to_protocol_type(const char *s, protocol_type_t *pr_out);
+STATIC void proto_entry_free(proto_entry_t *entry);
+
+#endif
+
 #endif /* defined(PROTOVER_PRIVATE) */
 
 #endif /* !defined(TOR_PROTOVER_H) */
