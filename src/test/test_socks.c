@@ -405,6 +405,48 @@ test_socks_5_authenticate_with_data(void *ptr)
   ;
 }
 
+/** Try to negotiate an unsupported authentication type */
+static void
+test_socks_5_auth_unsupported_type(void *ptr)
+{
+  SOCKS_TEST_INIT();
+
+  /* None of these authentication types are recognized. */
+  ADD_DATA(buf, "\x05\x03\x99\x21\x10");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
+            OP_EQ, -1);
+  tt_int_op(0,OP_EQ, socks->socks_version);
+  tt_int_op(2,OP_EQ, socks->replylen);
+  tt_int_op(5,OP_EQ, socks->reply[0]);
+  tt_int_op(0xff,OP_EQ, socks->reply[1]);
+
+ done:
+  ;
+}
+
+/** Try to negotiate an unsupported version of username/password auth. */
+static void
+test_socks_5_auth_unsupported_version(void *ptr)
+{
+  SOCKS_TEST_INIT();
+
+  /* Negotiate username/password */
+  ADD_DATA(buf, "\x05\x01\x02");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
+            OP_EQ, 0);
+  tt_int_op(0,OP_EQ, buf_datalen(buf)); /* buf should be drained */
+  /* Now, suggest an unrecognized username/password version */
+  ADD_DATA(buf, "\x02\x05" "hello" "\x05" "world");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
+            OP_EQ, -1);
+
+ done:
+  ;
+}
+
 /** Perform SOCKS 5 authentication before method negotiated */
 static void
 test_socks_5_auth_before_negotiation(void *ptr)
@@ -606,6 +648,8 @@ struct testcase_t socks_tests[] = {
   SOCKSENT(5_unsupported_commands),
   SOCKSENT(5_supported_commands),
   SOCKSENT(5_no_authenticate),
+  SOCKSENT(5_auth_unsupported_type),
+  SOCKSENT(5_auth_unsupported_version),
   SOCKSENT(5_auth_before_negotiation),
   SOCKSENT(5_authenticate),
   SOCKSENT(5_authenticate_with_data),
