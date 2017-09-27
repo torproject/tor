@@ -591,8 +591,23 @@ kist_scheduler_run(void)
       if (flush_result > 0) {
         update_socket_written(&socket_table, chan, flush_result *
                               (CELL_MAX_NETWORK_SIZE + TLS_PER_CELL_OVERHEAD));
+      } else {
+        /* XXX: This can happen because tor sometimes does flush in an
+         * opportunistic way cells from the circuit to the outbuf so the
+         * channel can end up here without having anything to flush nor needed
+         * to write to the kernel. Hopefully we'll fix that soon but for now
+         * we have to handle this case which happens kind of often. */
+        log_debug(LD_SCHED,
+                 "We didn't flush anything on a chan that we think "
+                 "can write and wants to write. The channel's state is '%s' "
+                 "and in scheduler state %d. We're going to mark it as "
+                 "waiting_for_cells (as that's most likely the issue) and "
+                 "stop scheduling it this round.",
+                 channel_state_to_string(chan->state),
+                 chan->scheduler_state);
+        chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
+        continue;
       }
-      /* XXX What if we didn't flush? */
     }
 
     /* Decide what to do with the channel now */
