@@ -8,11 +8,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "buffers_tls.h"
-#include "ext_orport.h"
-#include "proto_cell.h"
-#include "proto_ext_or.h"
 #include "proto_http.h"
-#include "proto_control0.h"
 #include "proto_socks.h"
 #include "test.h"
 
@@ -366,79 +362,6 @@ test_buffer_copy(void *arg)
     buf_free(buf);
   if (buf2)
     buf_free(buf2);
-}
-
-static void
-test_buffer_ext_or_cmd(void *arg)
-{
-  ext_or_cmd_t *cmd = NULL;
-  buf_t *buf = buf_new();
-  char *tmp = NULL;
-  (void) arg;
-
-  /* Empty -- should give "not there. */
-  tt_int_op(0, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tt_ptr_op(NULL, OP_EQ, cmd);
-
-  /* Three bytes: shouldn't work. */
-  buf_add(buf, "\x00\x20\x00", 3);
-  tt_int_op(0, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tt_ptr_op(NULL, OP_EQ, cmd);
-  tt_int_op(3, OP_EQ, buf_datalen(buf));
-
-  /* 0020 0000: That's a nil command. It should work. */
-  buf_add(buf, "\x00", 1);
-  tt_int_op(1, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tt_ptr_op(NULL, OP_NE, cmd);
-  tt_int_op(0x20, OP_EQ, cmd->cmd);
-  tt_int_op(0, OP_EQ, cmd->len);
-  tt_int_op(0, OP_EQ, buf_datalen(buf));
-  ext_or_cmd_free(cmd);
-  cmd = NULL;
-
-  /* Now try a length-6 command with one byte missing. */
-  buf_add(buf, "\x10\x21\x00\x06""abcde", 9);
-  tt_int_op(0, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tt_ptr_op(NULL, OP_EQ, cmd);
-  buf_add(buf, "f", 1);
-  tt_int_op(1, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tt_ptr_op(NULL, OP_NE, cmd);
-  tt_int_op(0x1021, OP_EQ, cmd->cmd);
-  tt_int_op(6, OP_EQ, cmd->len);
-  tt_mem_op("abcdef", OP_EQ, cmd->body, 6);
-  tt_int_op(0, OP_EQ, buf_datalen(buf));
-  ext_or_cmd_free(cmd);
-  cmd = NULL;
-
-  /* Now try a length-10 command with 4 extra bytes. */
-  buf_add(buf, "\xff\xff\x00\x0aloremipsum\x10\x00\xff\xff", 18);
-  tt_int_op(1, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tt_ptr_op(NULL, OP_NE, cmd);
-  tt_int_op(0xffff, OP_EQ, cmd->cmd);
-  tt_int_op(10, OP_EQ, cmd->len);
-  tt_mem_op("loremipsum", OP_EQ, cmd->body, 10);
-  tt_int_op(4, OP_EQ, buf_datalen(buf));
-  ext_or_cmd_free(cmd);
-  cmd = NULL;
-
-  /* Finally, let's try a maximum-length command. We already have the header
-   * waiting. */
-  tt_int_op(0, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tmp = tor_malloc_zero(65535);
-  buf_add(buf, tmp, 65535);
-  tt_int_op(1, OP_EQ, fetch_ext_or_command_from_buf(buf, &cmd));
-  tt_ptr_op(NULL, OP_NE, cmd);
-  tt_int_op(0x1000, OP_EQ, cmd->cmd);
-  tt_int_op(0xffff, OP_EQ, cmd->len);
-  tt_mem_op(tmp, OP_EQ, cmd->body, 65535);
-  tt_int_op(0, OP_EQ, buf_datalen(buf));
-  ext_or_cmd_free(cmd);
-  cmd = NULL;
-
- done:
-  ext_or_cmd_free(cmd);
-  buf_free(buf);
-  tor_free(tmp);
 }
 
 static void
@@ -872,7 +795,6 @@ struct testcase_t buffer_tests[] = {
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
   { "pullup", test_buffer_pullup, TT_FORK, NULL, NULL },
   { "startswith", test_buffer_peek_startswith, 0, NULL, NULL },
-  { "ext_or_cmd", test_buffer_ext_or_cmd, TT_FORK, NULL, NULL },
   { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
     NULL, NULL },
   { "time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL },
