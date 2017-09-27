@@ -204,6 +204,24 @@ test_socks_5_supported_commands(void *ptr)
   tt_int_op(0,OP_EQ, buf_datalen(buf));
   socks_request_clear(socks);
 
+  /* SOCKS 5 Send CONNECT [01] to one of the ipv6 addresses for
+     torproject.org:80 */
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\x01\x00\x04"
+           "\x20\x02\x41\xb8\x02\x02\x0d\xeb\x02\x13\x21\xff\xfe\x20\x14\x26"
+           "\x00\x50");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks),OP_EQ, 1);
+  tt_int_op(5,OP_EQ, socks->socks_version);
+  tt_int_op(2,OP_EQ, socks->replylen);
+  tt_int_op(5,OP_EQ, socks->reply[0]);
+  tt_int_op(0,OP_EQ, socks->reply[1]);
+  tt_str_op("[2002:41b8:202:deb:213:21ff:fe20:1426]",OP_EQ, socks->address);
+  tt_int_op(80,OP_EQ, socks->port);
+
+  tt_int_op(0,OP_EQ, buf_datalen(buf));
+  socks_request_clear(socks);
+
   /* SOCKS 5 Send CONNECT [01] to FQDN torproject.org:4369 */
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\x01\x00\x03\x0Etorproject.org\x11\x11");
