@@ -8,6 +8,7 @@
 #include "config.h"
 #include "proto_socks.h"
 #include "test.h"
+#include "log_test_helpers.h"
 
 typedef struct socks_test_data_t {
   socks_request_t *req;
@@ -98,8 +99,7 @@ test_socks_4_supported_commands(void *ptr)
 
   /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 with userid*/
   ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x04me\x00");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                 get_options()->SafeSocks),
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
             OP_EQ, 1);
   tt_int_op(4,OP_EQ, socks->socks_version);
   tt_int_op(0,OP_EQ, socks->replylen); /* XXX: shouldn't tor reply? */
@@ -116,7 +116,7 @@ test_socks_4_supported_commands(void *ptr)
 
   /* SOCKS 4a Send RESOLVE [F0] request for torproject.org */
   ADD_DATA(buf, "\x04\xF0\x01\x01\x00\x00\x00\x02me\x00torproject.org\x00");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1,
                                  get_options()->SafeSocks),
             OP_EQ, 1);
   tt_int_op(4,OP_EQ, socks->socks_version);
@@ -127,6 +127,83 @@ test_socks_4_supported_commands(void *ptr)
 
  done:
   ;
+}
+
+static void
+test_socks_4_bad_arguments(void *ptr)
+{
+  SOCKS_TEST_INIT();
+  setup_capture_of_logs(LOG_DEBUG);
+
+  /* Try with 0 IPv4 address */
+  ADD_DATA(buf, "\x04\x01\x00\x50\x00\x00\x00\x00\x00");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
+            OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("Port or DestIP is zero.");
+  mock_clean_saved_logs();
+
+  /* Try with 0 port */
+  ADD_DATA(buf, "\x04\x01\x00\x00\x01\x02\x03\x04\x00");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                 get_options()->SafeSocks),
+            OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("Port or DestIP is zero.");
+  mock_clean_saved_logs();
+
+  /* Try with 2000-byte username (!) */
+  ADD_DATA(buf, "\x04\x01\x00\x50\x01\x02\x03\x04");
+  int i;
+  for (i = 0; i < 200; ++i) {
+    ADD_DATA(buf, "1234567890");
+  }
+  ADD_DATA(buf, "\x00");
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
+            OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("user name too long; rejecting.");
+  mock_clean_saved_logs();
+
+  /* Try with 2000-byte hostname */
+  ADD_DATA(buf, "\x04\x01\x00\x50\x00\x00\x00\x01\x00");
+  for (i = 0; i < 200; ++i) {
+    ADD_DATA(buf, "1234567890");
+  }
+  ADD_DATA(buf, "\x00");
+  {
+    const char *p;
+    size_t s;
+    buf_pullup(buf, 9999, &p, &s);
+  }
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
+            OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("Destaddr too long. Rejecting.");
+  mock_clean_saved_logs();
+
+  /* Try with 2000-byte hostname, not terminated. */
+  ADD_DATA(buf, "\x04\x01\x00\x50\x00\x00\x00\x01\x00");
+  for (i = 0; i < 200; ++i) {
+    ADD_DATA(buf, "1234567890");
+  }
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0),
+            OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("Destaddr too long.");
+  mock_clean_saved_logs();
+
+  /* Socks4, bogus hostname */
+  ADD_DATA(buf, "\x04\x01\x00\x50\x00\x00\x00\x01\x00" "---\x00" );
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0), OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("Your application (using socks4 to port 80) "
+                            "gave Tor a malformed hostname: ");
+  mock_clean_saved_logs();
+
+ done:
+  teardown_capture_of_logs();
 }
 
 /**  Perform unsupported SOCKS 5 commands */
@@ -225,7 +302,7 @@ test_socks_5_supported_commands(void *ptr)
   /* SOCKS 5 Send CONNECT [01] to FQDN torproject.org:4369 */
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\x01\x00\x03\x0Etorproject.org\x11\x11");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1,
                                    get_options()->SafeSocks),OP_EQ, 1);
 
   tt_int_op(5,OP_EQ, socks->socks_version);
@@ -557,6 +634,25 @@ test_socks_5_malformed_commands(void *ptr)
   ;
 }
 
+static void
+test_socks_5_bad_arguments(void *ptr)
+{
+  SOCKS_TEST_INIT();
+  setup_capture_of_logs(LOG_DEBUG);
+
+  /* Socks5, bogus hostname */
+  ADD_DATA(buf, "\x05\x01\x00" "\x05\x01\x00\x03\x03" "---" "\x00\x50" );
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0), OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("Your application (using socks5 to port 80) "
+                            "gave Tor a malformed hostname: ");
+  mock_clean_saved_logs();
+  socks_request_clear(socks);
+
+ done:
+  teardown_capture_of_logs();
+}
+
 /** check for correct behavior when the socks command has not arrived. */
 static void
 test_socks_truncated(void *ptr)
@@ -654,6 +750,25 @@ test_socks_truncated(void *ptr)
   }
   done:
   ;
+}
+
+static void
+test_socks_wrong_protocol(void *ptr)
+{
+  SOCKS_TEST_INIT();
+  setup_capture_of_logs(LOG_DEBUG);
+
+  /* HTTP request. */
+  ADD_DATA(buf, "GET /index.html HTTP/1.0" );
+  tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0), OP_EQ, -1);
+  buf_clear(buf);
+  expect_log_msg_containing("Socks version 71 not recognized. "
+                            "(Tor is not an http proxy.)");
+  mock_clean_saved_logs();
+  socks_request_clear(socks);
+
+ done:
+  teardown_capture_of_logs();
 }
 
 /* Check our client-side socks4 parsing (that is to say, our parsing of
@@ -889,6 +1004,7 @@ test_socks_client_truncated(void *arg)
 struct testcase_t socks_tests[] = {
   SOCKSENT(4_unsupported_commands),
   SOCKSENT(4_supported_commands),
+  SOCKSENT(4_bad_arguments),
 
   SOCKSENT(5_unsupported_commands),
   SOCKSENT(5_supported_commands),
@@ -899,8 +1015,11 @@ struct testcase_t socks_tests[] = {
   SOCKSENT(5_authenticate),
   SOCKSENT(5_authenticate_with_data),
   SOCKSENT(5_malformed_commands),
+  SOCKSENT(5_bad_arguments),
 
   SOCKSENT(truncated),
+
+  SOCKSENT(wrong_protocol),
 
   { "client/v4", test_socks_client_v4, TT_FORK, NULL, NULL },
   { "client/v5_auth", test_socks_client_v5_auth, TT_FORK, NULL, NULL },
