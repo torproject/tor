@@ -1,0 +1,7 @@
+  o Minor bugfixes (hidden service client):
+    - When getting multiple SOCKS request for the same .onion address, don't
+      trigger multiple descriptor fetches.
+    - When the descriptor fetch fails with an internal error, no more HSDir to
+      query or we aren't allowed to fetch (FetchHidServDescriptors 0), close
+      all pending SOCKS request for that .onion. Fixes bug 23653; bugfix on
+      0.3.2.1-alpha.
