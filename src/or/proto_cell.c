@@ -66,6 +66,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
   length = ntohs(get_uint16(hdr + circ_id_len + 1));
   if (buf_datalen(buf) < (size_t)(header_len+length))
     return 1;
+
   result = var_cell_new(length);
   result->command = command;
   if (wide_circ_ids)
