@@ -555,9 +555,9 @@ tor_compress_process(tor_compress_state_t *state,
                                      finish);
       break;
     case LZMA_METHOD:
-      rv =tor_lzma_compress_process(state->u.lzma_state,
-                                    out, out_len, in, in_len,
-                                    finish);
+      rv = tor_lzma_compress_process(state->u.lzma_state,
+                                     out, out_len, in, in_len,
+                                     finish);
       break;
     case ZSTD_METHOD:
       rv = tor_zstd_compress_process(state->u.zstd_state,
