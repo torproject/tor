@@ -5372,6 +5372,41 @@ test_config_include_flag_defaults_only(void *data)
   tor_free(dir);
 }
 
+static void
+test_config_dup_and_filter(void *arg)
+{
+  (void)arg;
+  /* Test normal input. */
+  config_line_t *line = NULL;
+  config_line_append(&line, "abc", "def");
+  config_line_append(&line, "ghi", "jkl");
+  config_line_append(&line, "ABCD", "mno");
+
+  config_line_t *line_dup = config_lines_dup_and_filter(line, "aBc");
+  tt_ptr_op(line_dup, OP_NE, NULL);
+  tt_ptr_op(line_dup->next, OP_NE, NULL);
+  tt_ptr_op(line_dup->next->next, OP_EQ, NULL);
+
+  tt_str_op(line_dup->key, OP_EQ, "abc");
+  tt_str_op(line_dup->value, OP_EQ, "def");
+  tt_str_op(line_dup->next->key, OP_EQ, "ABCD");
+  tt_str_op(line_dup->next->value, OP_EQ, "mno");
+
+  /* empty output */
+  config_free_lines(line_dup);
+  line_dup = config_lines_dup_and_filter(line, "skdjfsdkljf");
+  tt_ptr_op(line_dup, OP_EQ, NULL);
+
+  /* empty input */
+  config_free_lines(line_dup);
+  line_dup = config_lines_dup_and_filter(NULL, "abc");
+  tt_ptr_op(line_dup, OP_EQ, NULL);
+
+ done:
+  config_free_lines(line);
+  config_free_lines(line_dup);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5411,6 +5446,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(include_flag_both_without, TT_FORK),
   CONFIG_TEST(include_flag_torrc_only, TT_FORK),
   CONFIG_TEST(include_flag_defaults_only, TT_FORK),
+  CONFIG_TEST(dup_and_filter, 0),
   END_OF_TESTCASES
 };
 
