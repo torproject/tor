@@ -964,7 +964,7 @@ buf_get_line(buf_t *buf, char *data_out, size_t *data_len)
   return 1;
 }
 
-/** Compress on uncompress the <b>data_len</b> bytes in <b>data</b> using the
+/** Compress or uncompress the <b>data_len</b> bytes in <b>data</b> using the
  * compression state <b>state</b>, appending the result to <b>buf</b>.  If
  * <b>done</b> is true, flush the data in the state and finish the
  * compression/uncompression.  Return -1 on failure, 0 on success. */
