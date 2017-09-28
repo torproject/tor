@@ -546,6 +546,13 @@ tor_compress_process(tor_compress_state_t *state,
   const size_t out_len_orig = *out_len;
   tor_compress_output_t rv;
 
+  if (*out_len == 0 && (*in_len > 0 || finish)) {
+    // If we still have input data, but no space for output data, we might as
+    // well return early and let the caller do the reallocation of the out
+    // variable.
+    return TOR_COMPRESS_BUFFER_FULL;
+  }
+
   switch (state->method) {
     case GZIP_METHOD:
     case ZLIB_METHOD:
