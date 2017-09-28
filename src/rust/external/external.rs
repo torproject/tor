@@ -24,6 +24,6 @@ pub fn c_tor_version_as_new_as(platform: &str, cutoff: &str) -> bool {
     let result: c_int;
     unsafe {
         result = tor_version_as_new_as(c_platform.as_ptr(), c_cutoff.as_ptr());
-        result == 1
     }
+    result == 1
 }

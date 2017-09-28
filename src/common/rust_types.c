@@ -26,7 +26,7 @@ move_rust_str_to_c_and_free(rust_str_ref_t src, char **dest)
   }
 
   if (!dest) {
-    log_warn(LD_BUG, "Received a null pointer from caller to protover rust. "
+    log_warn(LD_BUG, "Received a null pointer from caller to rust. "
              "This results in a memory leak due to not freeing the rust "
              "string that was meant to be copied..");
     return;
