@@ -2578,6 +2578,7 @@ test_util_decompress_dos_impl(compress_method_t method)
 
  done:
   teardown_capture_of_logs();
+  tor_free(input);
   tor_free(result);
   tor_free(result2);
 }
