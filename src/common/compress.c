@@ -164,7 +164,7 @@ tor_compress_impl(int compress,
           goto err;
         }
         if (out_alloc >= SIZE_T_CEILING / 2) {
-          log_warn(LD_GENERAL, "While %scompresing data: ran out of space.",
+          log_warn(LD_GENERAL, "While %scompressing data: ran out of space.",
                    compress?"":"un");
           goto err;
         }
@@ -185,7 +185,7 @@ tor_compress_impl(int compress,
       }
       case TOR_COMPRESS_ERROR:
         log_fn(protocol_warn_level, LD_GENERAL,
-               "Error while %scompresing data: bad input?",
+               "Error while %scompressing data: bad input?",
                compress?"":"un");
         goto err; // bad data.
 
