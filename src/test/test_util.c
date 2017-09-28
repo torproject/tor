@@ -6086,8 +6086,7 @@ struct testcase_t util_tests[] = {
   COMPRESS_DOS(zlib, "deflate"),
   COMPRESS_DOS(gzip, "gzip"),
   COMPRESS_DOS(lzma, "x-tor-lzma"),
-  // Disabled for now, since it triggers #23551
-  // COMPRESS_DOS(zstd, "x-zstd"),
+  COMPRESS_DOS(zstd, "x-zstd"),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),
