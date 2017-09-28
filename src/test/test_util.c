@@ -2481,6 +2481,125 @@ test_util_decompress_concatenated(void *arg)
 }
 
 static void
+test_util_decompress_junk_impl(compress_method_t method)
+{
+  char input[4096];
+  char *result = NULL, *result2 = NULL;
+  size_t szr, szr2, sz;
+  int r;
+
+  /* This shouldn't be a compressed string according to any method. */
+  strlcpy(input, "This shouldn't be a compressed string by any means.",
+          sizeof(input));
+  sz = strlen(input);
+  setup_capture_of_logs(LOG_WARN);
+  r = tor_uncompress(&result, &szr, input, sz, method, 0, LOG_WARN);
+  tt_int_op(r, OP_EQ, -1);
+  tt_ptr_op(result, OP_EQ, NULL);
+  expect_log_msg_containing("Error while uncompressing data: bad input?");
+  mock_clean_saved_logs();
+
+  /* Now try again, with a compressed object that starts out good and turns to
+     junk. */
+  crypto_rand(input, sizeof(input));
+  r = tor_compress(&result, &szr, input, sizeof(input), method);
+  tt_int_op(r, OP_EQ, 0);
+  crypto_rand(result+szr/2, szr-(szr/2)); // trash the 2nd half of the result
+  r = tor_uncompress(&result2, &szr2, result, szr, method, 0, LOG_WARN);
+  tt_int_op(r, OP_EQ, -1);
+  expect_log_msg_containing("Error while uncompressing data: bad input?");
+
+ done:
+  teardown_capture_of_logs();
+  tor_free(result);
+  tor_free(result2);
+}
+
+static void
+test_util_decompress_junk(void *arg)
+{
+  const char *methodname = arg;
+  tt_assert(methodname);
+
+  compress_method_t method = compression_method_get_by_name(methodname);
+  tt_int_op(method, OP_NE, UNKNOWN_METHOD);
+  if (! tor_compress_supports_method(method)) {
+    tt_skip();
+  }
+
+  test_util_decompress_junk_impl(method);
+ done:
+  ;
+}
+
+/* mock replacement for tor_compress_is_compression_bomb that doesn't
+ * believe in compression bombs. */
+static int
+mock_is_never_compression_bomb(size_t in, size_t out)
+{
+  (void)in;
+  (void) out;
+  return 0;
+}
+
+static void
+test_util_decompress_dos_impl(compress_method_t method)
+{
+  char *input;
+  char *result = NULL, *result2 = NULL;
+  size_t szr, szr2;
+  int r;
+
+  const size_t big = 1024*1024;
+  /* one megabyte of 0s. */
+  input = tor_malloc_zero(big);
+
+  /* Compress it into "result": it should fail. */
+  setup_full_capture_of_logs(LOG_WARN);
+  r = tor_compress(&result, &szr, input, big, method);
+  tt_int_op(r, OP_EQ, -1);
+  expect_log_msg_containing(
+                 "other Tors would think this was a compression bomb");
+  teardown_capture_of_logs();
+
+  /* Try again, but this time suppress compression-bomb detection */
+  MOCK(tor_compress_is_compression_bomb, mock_is_never_compression_bomb);
+  r = tor_compress(&result, &szr, input, big, method);
+  UNMOCK(tor_compress_is_compression_bomb);
+  tt_int_op(r, OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+
+  /* We should refuse to uncomrpess it again, since it looks like a
+   * compression bomb. */
+  setup_capture_of_logs(LOG_WARN);
+  r = tor_uncompress(&result2, &szr2, result, szr, method, 0, LOG_WARN);
+  tt_int_op(r, OP_EQ, -1);
+  expect_log_msg_containing("bomb; abandoning stream");
+
+ done:
+  teardown_capture_of_logs();
+  tor_free(result);
+  tor_free(result2);
+}
+
+static void
+test_util_decompress_dos(void *arg)
+{
+  const char *methodname = arg;
+  tt_assert(methodname);
+
+  compress_method_t method = compression_method_get_by_name(methodname);
+  tt_int_op(method, OP_NE, UNKNOWN_METHOD);
+  if (! tor_compress_supports_method(method)) {
+    tt_skip();
+  }
+
+  test_util_decompress_dos_impl(method);
+ done:
+  ;
+}
+
+static void
 test_util_gzip_compression_bomb(void *arg)
 {
   /* A 'compression bomb' is a very small object that uncompresses to a huge
@@ -5917,6 +6036,16 @@ test_util_get_unquoted_path(void *arg)
     &passthrough_setup,                                                 \
     (char*)(identifier) }
 
+#define COMPRESS_JUNK(name, identifier)                                 \
+  { "compress_junk/" #name, test_util_decompress_junk, 0,               \
+    &passthrough_setup,                                                 \
+    (char*)(identifier) }
+
+#define COMPRESS_DOS(name, identifier)                                  \
+  { "compress_dos/" #name, test_util_decompress_dos, 0,                 \
+    &passthrough_setup,                                                 \
+    (char*)(identifier) }
+
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
@@ -5951,6 +6080,14 @@ struct testcase_t util_tests[] = {
   COMPRESS_CONCAT(lzma, "x-tor-lzma"),
   COMPRESS_CONCAT(zstd, "x-zstd"),
   COMPRESS_CONCAT(none, "identity"),
+  COMPRESS_JUNK(zlib, "deflate"),
+  COMPRESS_JUNK(gzip, "gzip"),
+  COMPRESS_JUNK(lzma, "x-tor-lzma"),
+  COMPRESS_DOS(zlib, "deflate"),
+  COMPRESS_DOS(gzip, "gzip"),
+  COMPRESS_DOS(lzma, "x-tor-lzma"),
+  // Disabled for now, since it triggers #23551
+  // COMPRESS_DOS(zstd, "x-zstd"),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),

@@ -45,7 +45,8 @@ int tor_uncompress(char **out, size_t *out_len,
 
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
-int tor_compress_is_compression_bomb(size_t size_in, size_t size_out);
+MOCK_DECL(int,tor_compress_is_compression_bomb,(size_t size_in,
+                                                size_t size_out));
 
 int tor_compress_supports_method(compress_method_t method);
 unsigned tor_compress_get_supported_method_bitmask(void);

@@ -51,8 +51,8 @@ static atomic_counter_t total_compress_allocation;
 
 /** Return true if uncompressing an input of size <b>in_size</b> to an input of
  * size at least <b>size_out</b> looks like a compression bomb. */
-int
-tor_compress_is_compression_bomb(size_t size_in, size_t size_out)
+MOCK_IMPL(int,
+tor_compress_is_compression_bomb,(size_t size_in, size_t size_out))
 {
   if (size_in == 0 || size_out < CHECK_FOR_COMPRESSION_BOMB_AFTER)
     return 0;
