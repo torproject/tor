@@ -1,0 +1,4 @@
+  o Minor bugfixes (bridges):
+    - Overwrite the bridge address earlier in the process of directly
+      retrieving its descriptor, to make sure we reach it on the configured
+      address.  Fixes bug 20532; bugfix on 0.2.0.10-alpha.
