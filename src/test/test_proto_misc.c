@@ -207,10 +207,56 @@ test_proto_ext_or_cmd(void *arg)
   tor_free(tmp);
 }
 
+static void
+test_proto_line(void *arg)
+{
+  (void)arg;
+  char tmp[60];
+  buf_t *buf = buf_new();
+#define S(str) str, sizeof(str)-1
+  const struct {
+    const char *input;
+    size_t input_len;
+    size_t line_len;
+    const char *output;
+    int returnval;
+  } cases[] = {
+    { S("Hello world"), 0, NULL, 0 },
+    { S("Hello world\n"), 12, "Hello world\n", 1 },
+    { S("Hello world\nMore"), 12, "Hello world\n", 1 },
+    { S("\n oh hello world\nMore"), 1, "\n", 1 },
+    { S("Hello worpd\n\nMore"), 12, "Hello worpd\n", 1 },
+    { S("------------------------------------------------------------\n"), 0,
+      NULL, -1 },
+  };
+  unsigned i;
+  for (i = 0; i < ARRAY_LENGTH(cases); ++i) {
+    buf_add(buf, cases[i].input, cases[i].input_len);
+    memset(tmp, 0xfe, sizeof(tmp));
+    size_t sz = sizeof(tmp);
+    int rv = buf_get_line(buf, tmp, &sz);
+    tt_int_op(rv, OP_EQ, cases[i].returnval);
+    if (rv == 1) {
+      tt_int_op(sz, OP_LT, sizeof(tmp));
+      tt_mem_op(cases[i].output, OP_EQ, tmp, sz+1);
+      tt_int_op(buf_datalen(buf), OP_EQ, cases[i].input_len - strlen(tmp));
+      tt_int_op(sz, OP_EQ, cases[i].line_len);
+    } else {
+      tt_int_op(buf_datalen(buf), OP_EQ, cases[i].input_len);
+      // tt_int_op(sz, OP_EQ, sizeof(tmp));
+    }
+    buf_clear(buf);
+  }
+
+ done:
+  buf_free(buf);
+}
+
 struct testcase_t proto_misc_tests[] = {
   { "var_cell", test_proto_var_cell, 0, NULL, NULL },
   { "control0", test_proto_control0, 0, NULL, NULL },
   { "ext_or_cmd", test_proto_ext_or_cmd, TT_FORK, NULL, NULL },
+  { "line", test_proto_line, 0, NULL, NULL },
 
   END_OF_TESTCASES
 };
