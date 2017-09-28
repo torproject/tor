@@ -342,7 +342,8 @@ config_lines_dup(const config_line_t *inp)
 }
 
 /** Return a newly allocated deep copy of the lines in <b>inp</b>,
- * but only the ones that match <b>key</b>. */
+ * but only the ones whose keys begin with <b>key</b> (case-insensitive).
+ * If <b>key</b> is NULL, do not filter. */
 config_line_t *
 config_lines_dup_and_filter(const config_line_t *inp,
                             const char *key)
