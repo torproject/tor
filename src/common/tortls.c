@@ -444,8 +444,9 @@ tor_x509_name_new(const char *cname)
     goto error;
   /* LCOV_EXCL_BR_STOP */
   return name;
- error:
+
   /* LCOV_EXCL_START : these lines will only execute on out of memory errors*/
+ error:
   X509_NAME_free(name);
   return NULL;
   /* LCOV_EXCL_STOP */

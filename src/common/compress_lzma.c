@@ -158,8 +158,10 @@ tor_lzma_state_size_precalc(int compress, compression_level_t level)
 
   return (size_t)memory_usage;
 
+ // LCOV_EXCL_START
  err:
-  return 0; // LCOV_EXCL_LINE
+  return 0;
+ // LCOV_EXCL_STOP
 }
 #endif /* defined(HAVE_LZMA) */
 
@@ -212,9 +214,11 @@ tor_lzma_compress_new(int compress,
   atomic_counter_add(&total_lzma_allocation, result->allocation);
   return result;
 
+ /* LCOV_EXCL_START */
  err:
-  tor_free(result); // LCOV_EXCL_LINE
+  tor_free(result);
   return NULL;
+ /* LCOV_EXCL_STOP */
 #else /* !(defined(HAVE_LZMA)) */
   (void)compress;
   (void)method;

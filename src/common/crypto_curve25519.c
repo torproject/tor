@@ -318,8 +318,11 @@ curve25519_basepoint_spot_check(void)
   }
 
   goto end;
+ // LCOV_EXCL_START -- we can only hit this code if there is a bug in our
+ // curve25519-basepoint implementation.
  fail:
   r = -1;
+ // LCOV_EXCL_STOP
  end:
   curve25519_use_ed = save_use_ed;
   return r;

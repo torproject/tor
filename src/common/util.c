@@ -2980,8 +2980,9 @@ unescape_string(const char *s, char **result, size_t *size_out)
         *out = '\0';
         if (size_out) *size_out = out - *result;
         return cp+1;
-      case '\0':
+
         /* LCOV_EXCL_START -- we caught this in parse_config_from_line. */
+      case '\0':
         tor_fragile_assert();
         tor_free(*result);
         return NULL;
@@ -3029,8 +3030,9 @@ unescape_string(const char *s, char **result, size_t *size_out)
             *out++ = cp[1];
             cp += 2;
             break;
-          default:
+
             /* LCOV_EXCL_START */
+          default:
             /* we caught this above in the initial loop. */
             tor_assert_nonfatal_unreached();
             tor_free(*result); return NULL;

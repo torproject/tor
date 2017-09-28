@@ -86,9 +86,11 @@ secret_to_key_key_len(uint8_t type)
       return DIGEST_LEN;
     case S2K_TYPE_SCRYPT:
       return DIGEST256_LEN;
+    // LCOV_EXCL_START
     default:
-      tor_fragile_assert(); // LCOV_EXCL_LINE
-      return -1;            // LCOV_EXCL_LINE
+      tor_fragile_assert();
+      return -1;
+    // LCOV_EXCL_STOP
   }
 }
 
@@ -169,9 +171,11 @@ make_specifier(uint8_t *spec_out, uint8_t type, unsigned flags)
       /* r = 8; p = 2. */
       spec_out[SCRYPT_SPEC_LEN-1] = (3u << 4) | (1u << 0);
       break;
+    // LCOV_EXCL_START - we should have returned above.
     default:
-      tor_fragile_assert(); // LCOV_EXCL_LINE - we should have returned above.
+      tor_fragile_assert();
       return S2K_BAD_ALGORITHM;
+    // LCOV_EXCL_STOP
   }
 
   return speclen;

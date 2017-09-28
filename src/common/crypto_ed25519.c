@@ -293,9 +293,12 @@ ed25519_sign_prefixed,(ed25519_signature_t *signature_out,
 
   prefixed_msg = get_prefixed_msg(msg, msg_len, prefix_str,
                                   &prefixed_msg_len);
-  if (!prefixed_msg) {
+  if (BUG(!prefixed_msg)) {
+    /* LCOV_EXCL_START -- only possible when the message and prefix are
+     * ridiculously huge */
     log_warn(LD_GENERAL, "Failed to get prefixed msg.");
     return -1;
+    /* LCOV_EXCL_STOP */
   }
 
   retval = ed25519_sign(signature_out,
@@ -338,9 +341,12 @@ ed25519_checksig_prefixed(const ed25519_signature_t *signature,
 
   prefixed_msg = get_prefixed_msg(msg, msg_len, prefix_str,
                                   &prefixed_msg_len);
-  if (!prefixed_msg) {
+  if (BUG(!prefixed_msg)) {
+    /* LCOV_EXCL_START -- only possible when the message and prefix are
+     * ridiculously huge */
     log_warn(LD_GENERAL, "Failed to get prefixed msg.");
     return -1;
+    /* LCOV_EXCL_STOP */
   }
 
   retval = ed25519_checksig(signature,
@@ -718,8 +724,11 @@ ed25519_impl_spot_check,(void))
    */
   goto end;
 
+ // LCOV_EXCL_START -- We can only reach this if our ed25519 implementation is
+ // broken.
  fail:
   r = -1;
+ // LCOV_EXCL_STOP
  end:
   return r;
 }

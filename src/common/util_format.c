@@ -266,10 +266,13 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
     ENCODE_N(3);
     ENCODE_PAD();
     break;
+  // LCOV_EXCL_START -- we can't reach this point, because we enforce
+  // 0 <= ncov_idx < 3 in the loop above.
   default:
     /* Something went catastrophically wrong. */
-    tor_fragile_assert(); // LCOV_EXCL_LINE
+    tor_fragile_assert();
     return -1;
+  // LCOV_EXCL_STOP
   }
 
 #undef ENCODE_N

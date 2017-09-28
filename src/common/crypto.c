@@ -1798,8 +1798,8 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
       return "sha3-256";
     case DIGEST_SHA3_512:
       return "sha3-512";
-    default:
       // LCOV_EXCL_START
+    default:
       tor_fragile_assert();
       return "??unknown_digest??";
       // LCOV_EXCL_STOP
@@ -2447,9 +2447,10 @@ crypto_dh_new(int dh_type)
 #endif /* defined(OPENSSL_1_1_API) */
 
   return res;
- err:
+
   /* LCOV_EXCL_START
    * This error condition is only reached when an allocation fails */
+ err:
   crypto_log_errors(LOG_WARN, "creating DH object");
   if (res->dh) DH_free(res->dh); /* frees p and g too */
   tor_free(res);

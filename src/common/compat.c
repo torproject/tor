@@ -3350,8 +3350,8 @@ get_total_system_memory_impl(void)
   tor_free(s);
   return result * 1024;
 
- err:
   /* LCOV_EXCL_START Can't reach this unless proc is broken. */
+ err:
   tor_free(s);
   close(fd);
   return 0;

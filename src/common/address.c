@@ -907,8 +907,8 @@ tor_addr_is_loopback(const tor_addr_t *addr)
       return (tor_addr_to_ipv4h(addr) & 0xff000000) == 0x7f000000;
     case AF_UNSPEC:
       return 0;
-    default:
       /* LCOV_EXCL_START */
+    default:
       tor_fragile_assert();
       return 0;
       /* LCOV_EXCL_STOP */
@@ -1031,8 +1031,10 @@ tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src)
       memcpy(dest->addr.in6_addr.s6_addr, src->addr.in6_addr.s6_addr, 16);
     case AF_UNSPEC:
       break;
+      // LCOV_EXCL_START
     default:
-      tor_fragile_assert(); // LCOV_EXCL_LINE
+      tor_fragile_assert();
+      // LCOV_EXCL_STOP
     }
 }
 
@@ -1138,8 +1140,8 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
           return 0;
         else
           return 1;
-      default:
         /* LCOV_EXCL_START */
+      default:
         tor_fragile_assert();
         return 0;
         /* LCOV_EXCL_STOP */
@@ -1194,8 +1196,8 @@ tor_addr_hash(const tor_addr_t *addr)
     return 0x4e4d5342;
   case AF_INET6:
     return siphash24g(&addr->addr.in6_addr.s6_addr, 16);
-  default:
     /* LCOV_EXCL_START */
+  default:
     tor_fragile_assert();
     return 0;
     /* LCOV_EXCL_STOP */

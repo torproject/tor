@@ -188,8 +188,9 @@ tor_compress_impl(int compress,
                "Error while %scompresing data: bad input?",
                compress?"":"un");
         goto err; // bad data.
-      default:
+
         // LCOV_EXCL_START
+      default:
         tor_assert_nonfatal_unreached();
         goto err;
         // LCOV_EXCL_STOP
