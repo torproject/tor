@@ -4949,6 +4949,41 @@ test_config_include_empty_file_folder(void *data)
   tor_free(dir);
 }
 
+#ifndef _WIN32
+static void
+test_config_include_no_permission(void *data)
+{
+  (void)data;
+  config_line_t *result = NULL;
+
+  char *folder_path = NULL;
+  char *dir = tor_strdup(get_fname("test_include_forbidden_folder"));
+  tt_ptr_op(dir, OP_NE, NULL);
+
+  tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
+
+  tor_asprintf(&folder_path, "%s"PATH_SEPARATOR"forbidden_dir", dir);
+  tt_int_op(mkdir(folder_path, 0100), OP_EQ, 0);
+
+  char torrc_contents[1000];
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s\n",
+               folder_path);
+
+  int include_used;
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
+            OP_EQ, -1);
+  tt_ptr_op(result, OP_EQ, NULL);
+
+ done:
+  config_free_lines(result);
+  tor_free(folder_path);
+  if (dir)
+    chmod(dir, 0700);
+  tor_free(dir);
+}
+#endif
+
 static void
 test_config_include_recursion_before_after(void *data)
 {
@@ -5437,6 +5472,9 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(include_does_not_exist, 0),
   CONFIG_TEST(include_error_in_included_file, 0),
   CONFIG_TEST(include_empty_file_folder, 0),
+#ifndef _WIN32
+  CONFIG_TEST(include_no_permission, 0),
+#endif
   CONFIG_TEST(include_recursion_before_after, 0),
   CONFIG_TEST(include_recursion_after_only, 0),
   CONFIG_TEST(include_folder_order, 0),
