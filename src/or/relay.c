@@ -500,7 +500,15 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     chan = circ->n_chan;
     if (!chan) {
       log_warn(LD_BUG,"outgoing relay cell sent from %s:%d has n_chan==NULL."
-               " Dropping.", filename, lineno);
+               " Dropping. Circuit is in state %s (%d), and is "
+               "%smarked for close. (%s:%d, %d)", filename, lineno,
+               circuit_state_to_string(circ->state), circ->state,
+               circ->marked_for_close ? "" : "not ",
+               circ->marked_for_close_file?circ->marked_for_close_file:"",
+               circ->marked_for_close, circ->marked_for_close_reason);
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        circuit_log_path(LOG_WARN, LD_BUG, TO_ORIGIN_CIRCUIT(circ));
+      }
       log_backtrace(LOG_WARN,LD_BUG,"");
       return 0; /* just drop it */
     }
