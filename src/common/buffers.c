@@ -648,8 +648,12 @@ buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
   size_t flushed = 0;
   tor_assert(buf_flushlen);
   tor_assert(SOCKET_OK(s));
-  tor_assert(*buf_flushlen <= buf->datalen);
-  tor_assert(sz <= *buf_flushlen);
+  if (BUG(*buf_flushlen > buf->datalen)) {
+    *buf_flushlen = buf->datalen;
+  }
+  if (BUG(sz > *buf_flushlen)) {
+    sz = *buf_flushlen;
+  }
 
   check();
   while (sz) {
