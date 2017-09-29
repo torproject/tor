@@ -490,6 +490,16 @@ kist_scheduler_on_new_options(void)
 static void
 kist_scheduler_init(void)
 {
+  /* When initializing the scheduler, the last run could be 0 because it is
+   * declared static or a value in the past that was set when it was last
+   * used. In both cases, we want to initialize it to now so we don't risk
+   * using the value 0 which doesn't play well with our monotonic time
+   * interface.
+   *
+   * One side effect is that the first scheduler run will be at the next tick
+   * that is in now + 10 msec (KIST_SCHED_RUN_INTERVAL_DEFAULT) by default. */
+  monotime_get(&scheduler_last_run);
+
   kist_scheduler_on_new_options();
   IF_BUG_ONCE(sched_run_interval == 0) {
     log_warn(LD_SCHED, "We are initing the KIST scheduler and noticed the "

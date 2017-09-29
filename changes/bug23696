@@ -1,0 +1,3 @@
+  o Minor bugfixes (scheduler, kist):
+    - Properly initialize the scheduler last run time counter so it is not 0
+      at the first tick. Fixes bug 23696; bugfix on 0.3.2.1-alpha.
