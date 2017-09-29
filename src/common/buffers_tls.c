@@ -142,8 +142,12 @@ buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
   size_t flushed = 0;
   ssize_t sz;
   tor_assert(buf_flushlen);
-  tor_assert(*buf_flushlen <= buf->datalen);
-  tor_assert(flushlen <= *buf_flushlen);
+  if (BUG(*buf_flushlen > buf->datalen)) {
+    *buf_flushlen = buf->datalen;
+  }
+  if (BUG(flushlen > *buf_flushlen)) {
+    flushlen = *buf_flushlen;
+  }
   sz = (ssize_t) flushlen;
 
   /* we want to let tls write even if flushlen is zero, because it might
