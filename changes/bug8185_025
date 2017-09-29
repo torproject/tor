@@ -1,0 +1,6 @@
+  o Minor bugfixes (logging, relay shutdown, annoyance):
+    - When a circuit is marked for close, do not attempt to package any cells
+      for channels on that circuit. Previously, we would detect this
+      condition lower in the call stack, when we noticed that the circuit had
+      no attached channel, and log an annoying message. Fixes bug 8185;
+      bugfix on 0.2.5.4-alpha.

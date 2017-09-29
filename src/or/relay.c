@@ -506,6 +506,11 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
 {
   channel_t *chan; /* where to send the cell */
 
+  if (circ->marked_for_close) {
+    /* Circuit is marked; send nothing. */
+    return 0;
+  }
+
   if (cell_direction == CELL_DIRECTION_OUT) {
     crypt_path_t *thishop; /* counter for repeated crypts */
     chan = circ->n_chan;
@@ -821,6 +826,12 @@ connection_edge_send_command(edge_connection_t *fromconn,
       fromconn->end_reason = END_STREAM_REASON_INTERNAL;
       connection_mark_for_close(TO_CONN(fromconn));
     }
+    return -1;
+  }
+
+  if (circ->marked_for_close) {
+    /* The circuit has been marked, but not freed yet. When it's freed, it
+     * will mark this connection for close. */
     return -1;
   }
 
