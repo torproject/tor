@@ -1,3 +1,181 @@
+Changes in version 0.3.2.2-alpha - 2017-09-29
+  Tor-0.3.2.2-alpha is the second release in the 0.3.2 series. This
+  release fixes several minor bugs in the new scheduler and next-
+  generation onion services; both features were newly added in the 0.3.2
+  series. Other fixes in this alpha include several fixes for non-fatal
+  tracebacks which would appear in logs.
+
+  With the aim to stabilise the 0.3.2 series by 15 December 2017, this
+  alpha does not contain any substantial new features. Minor features
+  include better testing and logging.
+
+  The following comprises the complete list of changes included
+  in tor-0.3.2.2-alpha:
+
+  o Major bugfixes (relay, crash, assertion failure):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
+  o Major bugfixes (scheduler):
+    - If a channel is put into the scheduler's pending list, then it
+      starts closing, and then if the scheduler runs before it finishes
+      closing, the scheduler will get stuck trying to flush its cells
+      while the lower layers refuse to cooperate. Fix that race
+      condition by given the scheduler an escape method. Fixes bug
+      23676; bugfix on 0.3.2.1-alpha
+
+  o Minor features (build, compilation):
+    - The "check-changes" feature is now part of the "make check" tests;
+      we'll use it to try to prevent misformed changes files from
+      accumulating. Closes ticket 23564.
+    - Tor builds should now fail if there are any mismatches between the
+      C type representing a configuration variable and the C type the
+      data-driven parser uses to store a value there. Previously, we
+      needed to check these by hand, which sometimes led to mistakes.
+      Closes ticket 23643.
+
+  o Minor features (directory authorities):
+    - Remove longclaw's IPv6 address, as it will soon change. Authority
+      IPv6 addresses were originally added in 0.2.8.1-alpha. This leaves
+      3/8 directory authorities with IPv6 addresses, but there are also
+      52 fallback directory mirrors with IPv6 addresses. Resolves 19760.
+
+  o Minor features (hidden service, circuit, logging):
+    - Improve logging of many callsite in the circuit subsystem to print
+      the circuit identifier(s).
+    - Log when we cleanup an intro point from a service so we know when
+      and for what reason it happened. Closes ticket 23604.
+
+  o Minor features (logging):
+    - Log more circuit information whenever we are about to try to
+      package a relay cell on a circuit with a nonexistent n_chan.
+      Attempt to diagnose ticket 8185.
+    - Improve info-level log identification of particular circuits, to
+      help with debugging. Closes ticket 23645.
+
+  o Minor features (relay):
+    - When choosing which circuits can be expired as unused, consider
+      circuits from clients even if those clients used regular CREATE
+      cells to make them; and do not consider circuits from relays even
+      if they were made with CREATE_FAST. Part of ticket 22805.
+
+  o Minor features (robustness):
+    - Change several fatal assertions when flushing buffers into non-
+      fatal assertions, to prevent any recurrence of 23690.
+
+  o Minor features (spec conformance, bridge, diagnostic):
+    - When handling the USERADDR command on an ExtOrPort, warn when the
+      transports provides a USERADDR with no port. In a future version,
+      USERADDR commands of this format may be rejected. Detects problems
+      related to ticket 23080.
+
+  o Minor features (testing):
+    - Add a unit test to make sure that our own generated platform
+      string will be accepted by directory authorities. Closes
+      ticket 22109.
+
+  o Minor bugfixes (bootstrapping):
+    - When warning about state file clock skew, report the correct
+      direction for the detected skew. Fixes bug 23606; bugfix
+      on 0.2.8.1-alpha.
+    - Avoid an assertion failure when logging a state file clock skew
+      very early in bootstrapping. Fixes bug 23607; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (build, compilation):
+    - Fix a compilation warning when building with zstd support on
+      32-bit platforms. Fixes bug 23568; bugfix on 0.3.1.1-alpha. Found
+      and fixed by Andreas Stieger.
+    - When searching for OpenSSL, don't accept any OpenSSL library that
+      lacks TLSv1_1_method(): Tor doesn't build with those versions.
+      Additionally, look in /usr/local/opt/openssl, if it's present.
+      These changes together repair the default build on OSX systems
+      with Homebrew installed. Fixes bug 23602; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (compression):
+    - Handle a pathological case when decompressing Zstandard data when
+      the output buffer size is zero. Fixes bug 23551; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (documentation):
+    - Fix manpage to not refer to the obsolete (and misspelled)
+      UseEntryGuardsAsDirectoryGuards parameter in the description of
+      NumDirectoryGuards. Fixes bug 23611; bugfix on 0.2.4.8-alpha.
+
+  o Minor bugfixes (hidden service v3):
+    - Don't log an assertion failure when we can't find the right
+      information to extend to an introduction point. In rare cases,
+      this could happen, causing a warning, even though tor would
+      recover gracefully. Fixes bug 23159; bugfix on 0.3.2.1-alpha.
+    - Pad RENDEZVOUS cell up to the size of the legacy cell which is
+      much bigger so the rendezvous point can't distinguish which hidden
+      service protocol is being used. Fixes bug 23420; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (hidden service, relay):
+    - Avoid a possible double close of a circuit by the intro point on
+      error of sending the INTRO_ESTABLISHED cell. Fixes bug 23610;
+      bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (logging, relay shutdown, annoyance):
+    - When a circuit is marked for close, do not attempt to package any
+      cells for channels on that circuit. Previously, we would detect
+      this condition lower in the call stack, when we noticed that the
+      circuit had no attached channel, and log an annoying message.
+      Fixes bug 8185; bugfix on 0.2.5.4-alpha.
+
+  o Minor bugfixes (scheduler):
+    - When switching schedulers due to a consensus change, we didn't
+      give the new scheduler a chance to react to the consensus. Fix
+      that. Fixes bug 23537; bugfix on 0.3.2.1-alpha
+    - Make the KISTSchedRunInterval option a non negative value. With
+      this, the way to disable KIST through the consensus is to set it
+      to 0. Fixes bug 23539; bugfix on 0.3.2.1-alpha.
+    - Only notice log the selected scheduler when we switch scheduler
+      types. Fixes bug 23552; bugfix on 0.3.2.1-alpha.
+    - Avoid a compilation warning on macOS in scheduler_ev_add() caused
+      by a different tv_usec data type. Fixes bug 23575; bugfix
+      on 0.3.2.1-alpha.
+    - Make a hard exit if tor is unable to pick a scheduler which can
+      happen if the user specifies a scheduler type that is not
+      supported and not other types in Schedulers. Fixes bug 23581;
+      bugfix on 0.3.2.1-alpha.
+    - Properly initialize the scheduler last run time counter so it is
+      not 0 at the first tick. Fixes bug 23696; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Capture and detect several "Result does not fit" warnings in unit
+      tests on platforms with 32-bit time_t. Fixes bug 21800; bugfix
+      on 0.2.9.3-alpha.
+    - Fix additional channelpadding unit test failures by using mocked
+      time instead of actual time for all tests. Fixes bug 23608; bugfix
+      on 0.3.1.1-alpha.
+    - The removal of some old scheduler options caused some tests to
+      fail on BSD systems. Assume current behavior is correct and make
+      the tests pass again. Fixes bug 23566; bugfix on 0.3.2.1-alpha.
+
+  o Code simplification and refactoring:
+    - Remove various ways of testing circuits and connections for
+      "clientness"; instead, favor channel_is_client(). Part of
+      ticket 22805.
+
+  o Deprecated features:
+    - The ReachableDirAddresses and ClientPreferIPv6DirPort options are
+      now deprecated; they do not apply to relays, and they have had no
+      effect on clients since 0.2.8.x. Closes ticket 19704.
+
+  o Documentation:
+    - HiddenServiceVersion man page entry wasn't mentioning the now
+      supported version 3. Fixes ticket 23580; bugfix on 0.3.2.1-alpha.
+    - Clarify that the Address option is entirely about setting an
+      advertised IPv4 address. Closes ticket 18891.
+    - Clarify the manpage's use of the term "address" to clarify what
+      kind of address is intended. Closes ticket 21405.
+    - Document that onion service subdomains are allowed, and ignored.
+      Closes ticket 18736.
+
+
 Changes in version 0.3.2.1-alpha - 2017-09-18
   Tor 0.3.2.1-alpha is the first release in the 0.3.2.x series. It
   includes support for our next-generation ("v3") onion service
