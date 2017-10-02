@@ -91,6 +91,9 @@ coverage percentage.
 For a summary of the test coverage for each _function_, run
 `./scripts/test/cov-display -f ${TMPDIR}/*`.
 
+For more details on using gcov, including the helper scripts in
+scripts/test, see HelpfulTools.md.
+
 ### Comparing test coverage
 
 Sometimes it's useful to compare test coverage for a branch you're writing to
@@ -117,7 +120,8 @@ with LCOV_EXCL_START... LCOV_EXCL_STOP.  Note that older versions of
 lcov don't understand these lines.
 
 You can post-process .gcov files to make these lines 'unreached' by
-running ./scripts/test/cov-exclude on them.
+running ./scripts/test/cov-exclude on them.  It marks excluded
+unreached lines with 'x', and excluded reached lines with '!!!'.
 
 Note: you should never do this unless the line is meant to 100%
 unreachable by actual code.

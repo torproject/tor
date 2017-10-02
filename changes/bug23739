@@ -1,0 +1,3 @@
+  o Minor bugfixes (documentation):
+    - Document better how to read gcov and what our postprocessing scripts do.
+      Fixes bug 23739; bugfix on 0.2.9.1-alpha.
