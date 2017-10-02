@@ -2300,11 +2300,14 @@ update_router_have_minimum_dir_info(void)
 
   using_md = consensus->flavor == FLAV_MICRODESC;
 
-  if (! entry_guards_have_enough_dir_info_to_build_circuits()) {
-    strlcpy(dir_info_status, "We're missing descriptors for some of our "
-            "primary entry guards", sizeof(dir_info_status));
-    res = 0;
-    goto done;
+  { /* Check entry guard dirinfo status */
+    char *guard_error = entry_guards_get_dir_info_status_str();
+    if (guard_error) {
+      strlcpy(dir_info_status, guard_error, sizeof(dir_info_status));
+      tor_free(guard_error);
+      res = 0;
+      goto done;
+    }
   }
 
   /* Check fraction of available paths */

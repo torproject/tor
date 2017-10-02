@@ -3440,15 +3440,16 @@ guards_retry_optimistic(const or_options_t *options)
 }
 
 /**
- * Return true iff we know enough directory information to construct
- * circuits through all of the primary guards we'd currently use.
- */
-int
-guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
+ * Check if we are missing any crucial dirinfo for the guard subsystem to
+ * work. Return NULL if everything went well, otherwise return a newly
+ * allocated string with an informative error message. */
+char *
+guard_selection_get_dir_info_status_str(guard_selection_t *gs)
 {
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
+  char *ret_str = NULL;
   int n_missing_descriptors = 0;
   int n_considered = 0;
   int num_primary_to_check;
@@ -3470,15 +3471,25 @@ guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
       break;
   } SMARTLIST_FOREACH_END(guard);
 
-  return n_missing_descriptors == 0;
+  /* If we are not missing any descriptors, return NULL. */
+  if (!n_missing_descriptors) {
+    return NULL;
+  }
+
+  /* otherwise return a helpful error string */
+  tor_asprintf(&ret_str, "We're missing descriptors for %d/%d of our "
+               "primary entry guards",
+               n_missing_descriptors, num_primary_to_check);
+
+  return ret_str;
 }
 
 /** As guard_selection_have_enough_dir_info_to_build_circuits, but uses
  * the default guard selection. */
-int
-entry_guards_have_enough_dir_info_to_build_circuits(void)
+char *
+entry_guards_get_dir_info_status_str(void)
 {
-  return guard_selection_have_enough_dir_info_to_build_circuits(
+  return guard_selection_get_dir_info_status_str(
                                         get_guard_selection_info());
 }
 
