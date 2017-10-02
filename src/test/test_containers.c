@@ -1106,7 +1106,7 @@ test_container_fp_pair_map(void *arg)
   tt_int_op(fp_pair_map_size(map),OP_EQ, 4);
   fp_pair_map_assert_ok(map);
   fp_pair_map_set(map, &fp5, v104);
-  fp_pair_map_set(map, &fp6, v105);
+  fp_pair_map_set_by_digests(map, fp6.first, fp6.second, v105);
   fp_pair_map_assert_ok(map);
 
   /* Test iterator. */
@@ -1124,7 +1124,8 @@ test_container_fp_pair_map(void *arg)
 
   /* Make sure we removed fp2, but not the others. */
   tt_ptr_op(fp_pair_map_get(map, &fp2),OP_EQ, NULL);
-  tt_ptr_op(fp_pair_map_get(map, &fp5),OP_EQ, v104);
+  tt_ptr_op(fp_pair_map_get_by_digests(map, fp5.first, fp5.second),
+            OP_EQ, v104);
 
   fp_pair_map_assert_ok(map);
   /* Clean up after ourselves. */
