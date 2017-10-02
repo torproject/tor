@@ -1,4 +1,0 @@
-  o Minor bugfixes (documentation):
-    - Fix manpage to not refer to the obsolete (and misspelled)
-      UseEntryGuardsAsDirectoryGuards parameter in the description of
-      NumDirectoryGuards.  Fixes bug 23611; bugfix on 0.2.4.8-alpha.

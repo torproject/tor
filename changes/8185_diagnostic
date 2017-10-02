@@ -1,4 +1,0 @@
-  o Minor features (logging diagnostic):
-    - Log more circuit information whenever we are about to try to
-      package a relay cell on a circuit with a nonexistent n_chan.
-      Attempt to diagnose ticket 8185.

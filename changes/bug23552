@@ -1,3 +1,0 @@
-  o Minor bugfixes (scheduler):
-    - Only notice log the selected scheduler when we switch scheduler types.
-      Fixes bug 23552; bugfix on 0.3.2.1-alpha.

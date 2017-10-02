@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Don't log an assertion failure when we can't find the right information
-      to extend to an introduction point. In rare cases, this could happen,
-      causing a warning, even though tor would recover gracefully.
-      Fixes bug 23159; bugfix on 0.3.2.1-alpha.

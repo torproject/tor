@@ -1,4 +1,0 @@
-  o Minor bugfixes (scheduler):
-    - Make a hard exit if tor is unable to pick a scheduler which can happen
-      if the user specifies a scheduler type that is not supported and not
-      other types in Schedulers. Fixes bug 23581; bugfix on 0.3.2.1-alpha.

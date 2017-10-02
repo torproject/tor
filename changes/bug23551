@@ -1,3 +1,0 @@
-  o Minor bugfixes (compression):
-    - Handle a pathological case when decompressing Zstandard data when the
-      output buffer size is zero. Fixes bug 23551; bugfix on 0.3.1.1-alpha.

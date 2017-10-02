@@ -1,4 +1,0 @@
-  o Minor features (robustness):
-    - Change several fatal assertions when flushing buffers into
-      non-fatal assertions, to prevent any recurrence of 23690.
-

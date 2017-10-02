@@ -1,4 +1,0 @@
-  o Minor bugfixes (tests):
-    - The removal of some old scheduler options caused some tests to fail on
-      BSD systems. Assume current behavior is correct and make the tests pass
-      again. Fixes bug 23566; bugfix on 0.3.2.1-alpha.

@@ -1,3 +1,0 @@
-  o Minor features (logging):
-    - Improve info-level log identification of particular circuits,
-      to help with debugging. Closes ticket 23645.

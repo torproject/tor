@@ -1,4 +1,0 @@
-  o Minor bugfixes (bootstrapping):
-    - Avoid an assertion failure when logging a state file clock skew
-      very early in bootstrapping.  Fixes bug 23607; bugfix on
-      0.3.2.1-alpha.

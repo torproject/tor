@@ -1,6 +1,0 @@
-  o Minor features (compilation, testing):
-    - Tor builds should now fail if there are any mismatches between the C
-      type representing a configuration variable and the C type the
-      data-driven parser uses to store a value there.  Previously, we needed
-      to check these by hand, which sometimes led to mistakes. Closes ticket
-      23643.

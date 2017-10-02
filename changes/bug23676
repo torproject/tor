@@ -1,6 +1,0 @@
-  o Major bugfixes (scheduler):
-    If a channel is put into the scheduler's pending list, then it starts
-    closing, and then if the scheduler runs before it finishes closing, the
-    scheduler will get stuck trying to flush its cells while the lower layers
-    refuse to cooperate. Fix that race condition by given the scheduler an
-    escape method. Fixes bug 23676; bugfix on 0.3.2.1-alpha

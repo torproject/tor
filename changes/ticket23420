@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Pad RENDEZVOUS cell up to the size of the legacy cell which is much
-      bigger so the rendezvous point can't distinguish which hidden service
-      protocol is being used. Fixes bug 23420; bugfix on 0.3.2.1-alpha.

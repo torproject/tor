@@ -1,3 +1,0 @@
-  o Documentation:
-    - Document that onion service subdomains are allowed, and ignored.
-      Closes ticket 18736.

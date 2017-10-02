@@ -1,6 +1,0 @@
-  o Minor bugfixes (build):
-    - When searching for OpenSSL, don't accept any OpenSSL library that lacks
-      TLSv1_1_method(): Tor doesn't build with those versions.  Additionally,
-      look in /usr/local/opt/openssl, if it's present.  These changes
-      together repair the default build on OSX systems with Homebrew
-      installed. Fixes bug 23602; bugfix on 0.2.7.2-alpha.
