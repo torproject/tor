@@ -76,29 +76,38 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
   ed25519_signature_t signature;
   if (ed25519_sign(&signature, encoded,
                    real_len-ED25519_SIG_LEN, signing_key)<0) {
+    /* LCOV_EXCL_START */
     log_warn(LD_BUG, "Can't sign certificate");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
   memcpy(sig, signature.sig, ED25519_SIG_LEN);
 
   torcert = tor_cert_parse(encoded, real_len);
   if (! torcert) {
+    /* LCOV_EXCL_START */
     log_warn(LD_BUG, "Generated a certificate we cannot parse");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
 
   if (tor_cert_checksig(torcert, &signing_key->pubkey, now) < 0) {
+    /* LCOV_EXCL_START */
     log_warn(LD_BUG, "Generated a certificate whose signature we can't check");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
 
   tor_free(encoded);
 
   goto done;
 
+ /* LCOV_EXCL_START */
  err:
   tor_cert_free(torcert);
   torcert = NULL;
+ /* LCOV_EXCL_STOP */
+
  done:
   ed25519_cert_free(cert);
   tor_free(encoded);
@@ -675,8 +684,10 @@ tor_cert_encode_ed22519(const tor_cert_t *cert, char **cert_str_out)
   if (base64_encode(ed_cert_b64, ed_cert_b64_len,
                     (const char *) cert->encoded, cert->encoded_len,
                     BASE64_ENCODE_MULTILINE) < 0) {
+    /* LCOV_EXCL_START */
     log_err(LD_BUG, "Couldn't base64-encode ed22519 cert!");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
 
   /* Put everything together in a NUL terminated string. */
