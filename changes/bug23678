@@ -1,0 +1,7 @@
+  o Minor bugfixes (warnings):
+    - When we get an HTTP request on a SOCKS port, tell the user about
+      the new HTTPTunnelPort option. Previously, we would give a
+      "Tor is not an HTTP Proxy" message, which stopped being true when
+      HTTPTunnelPort was introduced. Fixes bug 23678; bugfix on
+      0.3.2.1-alpha.
+
