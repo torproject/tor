@@ -1,5 +1,5 @@
 Changes in version 0.3.2.2-alpha - 2017-09-29
-  Tor-0.3.2.2-alpha is the second release in the 0.3.2 series. This
+  Tor 0.3.2.2-alpha is the second release in the 0.3.2 series. This
   release fixes several minor bugs in the new scheduler and next-
   generation onion services; both features were newly added in the 0.3.2
   series. Other fixes in this alpha include several fixes for non-fatal
@@ -22,8 +22,8 @@ Changes in version 0.3.2.2-alpha - 2017-09-29
       starts closing, and then if the scheduler runs before it finishes
       closing, the scheduler will get stuck trying to flush its cells
       while the lower layers refuse to cooperate. Fix that race
-      condition by given the scheduler an escape method. Fixes bug
-      23676; bugfix on 0.3.2.1-alpha
+      condition by giving the scheduler an escape method. Fixes bug
+      23676; bugfix on 0.3.2.1-alpha.
 
   o Minor features (build, compilation):
     - The "check-changes" feature is now part of the "make check" tests;
@@ -128,7 +128,7 @@ Changes in version 0.3.2.2-alpha - 2017-09-29
   o Minor bugfixes (scheduler):
     - When switching schedulers due to a consensus change, we didn't
       give the new scheduler a chance to react to the consensus. Fix
-      that. Fixes bug 23537; bugfix on 0.3.2.1-alpha
+      that. Fixes bug 23537; bugfix on 0.3.2.1-alpha.
     - Make the KISTSchedRunInterval option a non negative value. With
       this, the way to disable KIST through the consensus is to set it
       to 0. Fixes bug 23539; bugfix on 0.3.2.1-alpha.
