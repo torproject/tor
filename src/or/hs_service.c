@@ -981,7 +981,8 @@ load_service_keys(hs_service_t *service)
   fname = hs_path_from_filename(config->directory_path, fname_keyfile_prefix);
   /* Don't ask for key creation, we want to know if we were able to load it or
    * we had to generate it. Better logging! */
-  kp = ed_key_init_from_file(fname, 0, LOG_INFO, NULL, 0, 0, 0, NULL);
+  kp = ed_key_init_from_file(fname, INIT_ED_KEY_SPLIT, LOG_INFO, NULL, 0, 0,
+                             0, NULL);
   if (!kp) {
     log_info(LD_REND, "Unable to load keys from %s. Generating it...", fname);
     /* We'll now try to generate the keys and for it we want the strongest
