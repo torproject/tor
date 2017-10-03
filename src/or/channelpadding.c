@@ -20,7 +20,6 @@
 #include "rephist.h"
 #include "router.h"
 #include "compat_time.h"
-#include <event2/event.h>
 #include "rendservice.h"
 
 STATIC int32_t channelpadding_get_netflow_inactive_timeout_ms(
