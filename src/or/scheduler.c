@@ -9,6 +9,9 @@
 #define SCHEDULER_KIST_PRIVATE
 #include "scheduler.h"
 #include "main.h"
+#include "buffers.h"
+#define TOR_CHANNEL_INTERNAL_
+#include "channeltls.h"
 
 #include <event2/event.h>
 
@@ -665,6 +668,32 @@ scheduler_channel_wants_writes(channel_t *chan)
                 U64_PRINTF_ARG(chan->global_identifier), chan);
     }
   }
+}
+
+/* Log warn the given channel and extra scheduler context as well. This is
+ * used by SCHED_BUG() in order to be able to extract as much information as
+ * we can when we hit a bug. Channel chan can be NULL. */
+void
+scheduler_bug_occurred(const channel_t *chan)
+{
+  char buf[128];
+
+  if (chan != NULL) {
+    const size_t outbuf_len =
+      buf_datalen(TO_CONN(BASE_CHAN_TO_TLS((channel_t *) chan)->conn)->outbuf);
+    tor_snprintf(buf, sizeof(buf),
+                 "Channel %" PRIu64 " in state %s and scheduler state %d."
+                 " Num cells on cmux: %d. Connection outbuf len: %lu.",
+                 chan->global_identifier,
+                 channel_state_to_string(chan->state),
+                 chan->scheduler_state, circuitmux_num_cells(chan->cmux),
+                 outbuf_len);
+  }
+
+  log_warn(LD_BUG, "%s Num pending channels: %d. Channel in pending list: %s",
+           (chan != NULL) ? buf : "No channel in bug context.",
+           smartlist_len(channels_pending),
+           (smartlist_pos(channels_pending, chan) == -1) ? "no" : "yes");
 }
 
 #ifdef TOR_UNIT_TESTS
