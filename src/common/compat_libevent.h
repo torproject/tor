@@ -34,6 +34,17 @@ void periodic_timer_free_(periodic_timer_t *);
 #define periodic_timer_free(t) \
   FREE_AND_NULL(periodic_timer_t, periodic_timer_free_, (t))
 
+typedef struct mainloop_event_t mainloop_event_t;
+mainloop_event_t *mainloop_event_new(void (*cb)(mainloop_event_t *, void *),
+                                     void *userdata);
+void mainloop_event_activate(mainloop_event_t *event);
+int mainloop_event_schedule(mainloop_event_t *event,
+                            const struct timeval *delay);
+void mainloop_event_cancel(mainloop_event_t *event);
+void mainloop_event_free_(mainloop_event_t *event);
+#define mainloop_event_free(event) \
+  FREE_AND_NULL(mainloop_event_t, mainloop_event_free_, (event))
+
 #define tor_event_base_loopexit event_base_loopexit
 #define tor_event_base_loopbreak event_base_loopbreak
 

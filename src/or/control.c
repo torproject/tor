@@ -83,8 +83,6 @@
 #include <sys/resource.h>
 #endif
 
-#include <event2/event.h>
-
 #include "crypto_s2k.h"
 #include "procmon.h"
 
@@ -216,7 +214,7 @@ static void orconn_target_get_name(char *buf, size_t len,
 static int get_cached_network_liveness(void);
 static void set_cached_network_liveness(int liveness);
 
-static void flush_queued_events_cb(evutil_socket_t fd, short what, void *arg);
+static void flush_queued_events_cb(mainloop_event_t *event, void *arg);
 
 static char * download_status_to_string(const download_status_t *dl);
 
@@ -691,7 +689,7 @@ static tor_mutex_t *queued_control_events_lock = NULL;
 
 /** An event that should fire in order to flush the contents of
  * queued_control_events. */
-static struct event *flush_queued_events_event = NULL;
+static mainloop_event_t *flush_queued_events_event = NULL;
 
 void
 control_initialize_event_queue(void)
@@ -703,9 +701,8 @@ control_initialize_event_queue(void)
   if (flush_queued_events_event == NULL) {
     struct event_base *b = tor_libevent_get_base();
     if (b) {
-      flush_queued_events_event = tor_event_new(b,
-                                              -1, 0, flush_queued_events_cb,
-                                              NULL);
+      flush_queued_events_event =
+        mainloop_event_new(flush_queued_events_cb, NULL);
       tor_assert(flush_queued_events_event);
     }
   }
@@ -781,7 +778,7 @@ queue_control_event_string,(uint16_t event, char *msg))
    */
   if (activate_event) {
     tor_assert(flush_queued_events_event);
-    event_active(flush_queued_events_event, EV_READ, 1);
+    mainloop_event_activate(flush_queued_events_event);
   }
 }
 
@@ -863,10 +860,9 @@ queued_events_flush_all(int force)
 /** Libevent callback: Flushes pending events to controllers that are
  * interested in them. */
 static void
-flush_queued_events_cb(evutil_socket_t fd, short what, void *arg)
+flush_queued_events_cb(mainloop_event_t *event, void *arg)
 {
-  (void) fd;
-  (void) what;
+  (void) event;
   (void) arg;
   queued_events_flush_all(0);
 }
@@ -7608,7 +7604,7 @@ control_free_all(void)
     smartlist_free(queued_events);
   }
   if (flush_queued_events_event) {
-    tor_event_free(flush_queued_events_event);
+    mainloop_event_free(flush_queued_events_event);
     flush_queued_events_event = NULL;
   }
   bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;

@@ -1060,9 +1060,8 @@ conn_close_if_marked(int i)
  * reason.
  */
 static void
-directory_all_unreachable_cb(evutil_socket_t fd, short event, void *arg)
+directory_all_unreachable_cb(mainloop_event_t *event, void *arg)
 {
-  (void)fd;
   (void)event;
   (void)arg;
 
@@ -1082,7 +1081,7 @@ directory_all_unreachable_cb(evutil_socket_t fd, short event, void *arg)
   control_event_general_error("DIR_ALL_UNREACHABLE");
 }
 
-static struct event *directory_all_unreachable_cb_event = NULL;
+static mainloop_event_t *directory_all_unreachable_cb_event = NULL;
 
 /** We've just tried every dirserver we know about, and none of
  * them were reachable. Assume the network is down. Change state
@@ -1099,12 +1098,11 @@ directory_all_unreachable(time_t now)
 
   if (!directory_all_unreachable_cb_event) {
     directory_all_unreachable_cb_event =
-      tor_event_new(tor_libevent_get_base(),
-                    -1, EV_READ, directory_all_unreachable_cb, NULL);
+      mainloop_event_new(directory_all_unreachable_cb, NULL);
     tor_assert(directory_all_unreachable_cb_event);
   }
 
-  event_active(directory_all_unreachable_cb_event, EV_READ, 1);
+  mainloop_event_activate(directory_all_unreachable_cb_event);
 }
 
 /** This function is called whenever we successfully pull down some new
@@ -3525,6 +3523,7 @@ tor_free_all(int postfork)
   periodic_timer_free(refill_timer);
   tor_event_free(shutdown_did_not_work_event);
   tor_event_free(initialize_periodic_events_event);
+  mainloop_event_free(directory_all_unreachable_cb_event);
 
 #ifdef HAVE_SYSTEMD_209
   periodic_timer_free(systemd_watchdog_timer);

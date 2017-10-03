@@ -13,8 +13,6 @@
 #define TOR_CHANNEL_INTERNAL_
 #include "channeltls.h"
 
-#include <event2/event.h>
-
 /**
  * \file scheduler.c
  * \brief Channel scheduling system: decides which channels should send and
@@ -169,7 +167,7 @@ STATIC smartlist_t *channels_pending = NULL;
  * This event runs the scheduler from its callback, and is manually
  * activated whenever a channel enters open for writes/cells to send.
  */
-STATIC struct event *run_sched_ev = NULL;
+STATIC struct mainloop_event_t *run_sched_ev = NULL;
 
 static int have_logged_kist_suddenly_disabled = 0;
 
@@ -203,10 +201,9 @@ get_scheduler_type_string(scheduler_types_t type)
  * if any scheduling work was created during the event loop.
  */
 static void
-scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
+scheduler_evt_callback(mainloop_event_t *event, void *arg)
 {
-  (void) fd;
-  (void) events;
+  (void) event;
   (void) arg;
 
   log_debug(LD_SCHED, "Scheduler event callback called");
@@ -487,10 +484,7 @@ scheduler_free_all(void)
   log_debug(LD_SCHED, "Shutting down scheduler");
 
   if (run_sched_ev) {
-    if (event_del(run_sched_ev) < 0) {
-      log_warn(LD_BUG, "Problem deleting run_sched_ev");
-    }
-    tor_event_free(run_sched_ev);
+    mainloop_event_free(run_sched_ev);
     run_sched_ev = NULL;
   }
 
@@ -589,7 +583,7 @@ scheduler_ev_add(const struct timeval *next_run)
 {
   tor_assert(run_sched_ev);
   tor_assert(next_run);
-  if (BUG(event_add(run_sched_ev, next_run) < 0)) {
+  if (BUG(mainloop_event_schedule(run_sched_ev, next_run) < 0)) {
     log_warn(LD_SCHED, "Adding to libevent failed. Next run time was set to: "
                        "%ld.%06ld", next_run->tv_sec, (long)next_run->tv_usec);
     return;
@@ -598,10 +592,10 @@ scheduler_ev_add(const struct timeval *next_run)
 
 /** Make the scheduler event active with the given flags. */
 void
-scheduler_ev_active(int flags)
+scheduler_ev_active(void)
 {
   tor_assert(run_sched_ev);
-  event_active(run_sched_ev, flags, 1);
+  mainloop_event_activate(run_sched_ev);
 }
 
 /*
@@ -618,11 +612,10 @@ scheduler_init(void)
   IF_BUG_ONCE(!!run_sched_ev) {
     log_warn(LD_SCHED, "We should not already have a libevent scheduler event."
              "I'll clean the old one up, but this is odd.");
-    tor_event_free(run_sched_ev);
+    mainloop_event_free(run_sched_ev);
     run_sched_ev = NULL;
   }
-  run_sched_ev = tor_event_new(tor_libevent_get_base(), -1,
-                               0, scheduler_evt_callback, NULL);
+  run_sched_ev = mainloop_event_new(scheduler_evt_callback, NULL);
   channels_pending = smartlist_new();
 
   set_scheduler();
