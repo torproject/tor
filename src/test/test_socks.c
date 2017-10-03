@@ -763,7 +763,7 @@ test_socks_wrong_protocol(void *ptr)
   tt_int_op(fetch_from_buf_socks(buf, socks, 1, 0), OP_EQ, -1);
   buf_clear(buf);
   expect_log_msg_containing("Socks version 71 not recognized. "
-                            "(Tor is not an http proxy.)");
+                            "(This port is not an HTTP proxy;");
   mock_clean_saved_logs();
   socks_request_clear(socks);
 
