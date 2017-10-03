@@ -27,6 +27,8 @@ typedef enum {
   HS_CLIENT_FETCH_NOT_ALLOWED  = 3,
   /* We are missing information to be able to launch a request. */
   HS_CLIENT_FETCH_MISSING_INFO = 4,
+  /* There is a pending fetch for the requested service. */
+  HS_CLIENT_FETCH_PENDING      = 5,
 } hs_client_fetch_status_t;
 
 void hs_client_note_connection_attempt_succeeded(
@@ -79,6 +81,9 @@ desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip);
 
 STATIC int handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
                               size_t payload_len);
+
+MOCK_DECL(STATIC hs_client_fetch_status_t,
+          fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk));
 
 #endif /* defined(HS_CLIENT_PRIVATE) */
 

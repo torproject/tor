@@ -1576,6 +1576,7 @@ connection_ap_handle_onion(entry_connection_t *conn,
          * connection. */
         goto end;
       case HS_CLIENT_FETCH_LAUNCHED:
+      case HS_CLIENT_FETCH_PENDING:
       case HS_CLIENT_FETCH_HAVE_DESC:
         return 0;
       case HS_CLIENT_FETCH_ERROR:

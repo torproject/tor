@@ -23,6 +23,8 @@
 #include "config.h"
 #include "crypto.h"
 #include "channeltls.h"
+#include "main.h"
+#include "nodelist.h"
 #include "routerset.h"
 
 #include "hs_circuit.h"
@@ -43,6 +45,14 @@ mock_connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
 }
 
 static networkstatus_t mock_ns;
+
+/* Always return NULL. */
+static networkstatus_t *
+mock_networkstatus_get_live_consensus_false(time_t now)
+{
+  (void) now;
+  return NULL;
+}
 
 static networkstatus_t *
 mock_networkstatus_get_live_consensus(time_t now)
@@ -456,12 +466,133 @@ test_client_pick_intro(void *arg)
   hs_descriptor_free(desc);
 }
 
+static int
+mock_router_have_minimum_dir_info_false(void)
+{
+  return 0;
+}
+static int
+mock_router_have_minimum_dir_info_true(void)
+{
+  return 1;
+}
+
+static hs_client_fetch_status_t
+mock_fetch_v3_desc_error(const ed25519_public_key_t *key)
+{
+  (void) key;
+  return HS_CLIENT_FETCH_ERROR;
+}
+
+static void
+mock_connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
+                                    int line, const char *file)
+{
+  (void) line;
+  (void) file;
+  conn->edge_.end_reason = endreason;
+}
+
+static void
+test_descriptor_fetch(void *arg)
+{
+  int ret;
+  entry_connection_t *ec = NULL;
+  ed25519_public_key_t service_pk;
+  ed25519_secret_key_t service_sk;
+
+  (void) arg;
+
+  hs_init();
+  memset(&service_sk, 'A', sizeof(service_sk));
+  ret = ed25519_public_key_generate(&service_pk, &service_sk);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Initialize this so get_voting_interval() doesn't freak out. */
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+
+  ec = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  tt_assert(ec);
+  ENTRY_TO_EDGE_CONN(ec)->hs_ident = hs_ident_edge_conn_new(&service_pk);
+  tt_assert(ENTRY_TO_EDGE_CONN(ec)->hs_ident);
+  TO_CONN(ENTRY_TO_EDGE_CONN(ec))->state = AP_CONN_STATE_RENDDESC_WAIT;
+  smartlist_add(get_connection_array(), &ec->edge_.base_);
+
+  /* 1. FetchHidServDescriptors is false so we shouldn't be able to fetch. */
+  get_options_mutable()->FetchHidServDescriptors = 0;
+  ret = hs_client_refetch_hsdesc(&service_pk);
+  tt_int_op(ret, OP_EQ, HS_CLIENT_FETCH_NOT_ALLOWED);
+  get_options_mutable()->FetchHidServDescriptors = 1;
+
+  /* 2. We don't have a live consensus. */
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus_false);
+  ret = hs_client_refetch_hsdesc(&service_pk);
+  UNMOCK(networkstatus_get_live_consensus);
+  tt_int_op(ret, OP_EQ, HS_CLIENT_FETCH_MISSING_INFO);
+
+  /* From now on, return a live consensus. */
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  /* 3. Not enough dir information. */
+  MOCK(router_have_minimum_dir_info,
+       mock_router_have_minimum_dir_info_false);
+  ret = hs_client_refetch_hsdesc(&service_pk);
+  UNMOCK(router_have_minimum_dir_info);
+  tt_int_op(ret, OP_EQ, HS_CLIENT_FETCH_MISSING_INFO);
+
+  /* From now on, we do have enough directory information. */
+  MOCK(router_have_minimum_dir_info,
+       mock_router_have_minimum_dir_info_true);
+
+  /* 4. We do have a pending directory request. */
+  {
+    dir_connection_t *dir_conn = dir_connection_new(AF_INET);
+    dir_conn->hs_ident = tor_malloc_zero(sizeof(hs_ident_dir_conn_t));
+    TO_CONN(dir_conn)->purpose = DIR_PURPOSE_FETCH_HSDESC;
+    ed25519_pubkey_copy(&dir_conn->hs_ident->identity_pk, &service_pk);
+    smartlist_add(get_connection_array(), TO_CONN(dir_conn));
+    ret = hs_client_refetch_hsdesc(&service_pk);
+    smartlist_remove(get_connection_array(), TO_CONN(dir_conn));
+    connection_free_(TO_CONN(dir_conn));
+    tt_int_op(ret, OP_EQ, HS_CLIENT_FETCH_PENDING);
+  }
+
+  /* 5. We'll trigger an error on the fetch_desc_v3 and force to close all
+   *    pending SOCKS request. */
+  MOCK(router_have_minimum_dir_info,
+       mock_router_have_minimum_dir_info_true);
+  MOCK(fetch_v3_desc, mock_fetch_v3_desc_error);
+  MOCK(connection_mark_unattached_ap_,
+       mock_connection_mark_unattached_ap_);
+  ret = hs_client_refetch_hsdesc(&service_pk);
+  UNMOCK(fetch_v3_desc);
+  UNMOCK(connection_mark_unattached_ap_);
+  tt_int_op(ret, OP_EQ, HS_CLIENT_FETCH_ERROR);
+  /* The close waiting for descriptor function has been called. */
+  tt_int_op(ec->edge_.end_reason, OP_EQ, END_STREAM_REASON_RESOLVEFAILED);
+
+ done:
+  connection_free_(ENTRY_TO_CONN(ec));
+  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(router_have_minimum_dir_info);
+  hs_free_all();
+}
+
 struct testcase_t hs_client_tests[] = {
   { "e2e_rend_circuit_setup_legacy", test_e2e_rend_circuit_setup_legacy,
     TT_FORK, NULL, NULL },
   { "e2e_rend_circuit_setup", test_e2e_rend_circuit_setup,
     TT_FORK, NULL, NULL },
   { "client_pick_intro", test_client_pick_intro,
+    TT_FORK, NULL, NULL },
+  { "descriptor_fetch", test_descriptor_fetch,
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };

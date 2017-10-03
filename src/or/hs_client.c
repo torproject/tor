@@ -32,6 +32,58 @@
 #include "hs_ntor.h"
 #include "circuitbuild.h"
 #include "networkstatus.h"
+#include "reasons.h"
+
+/* Return a human-readable string for the client fetch status code. */
+static const char *
+fetch_status_to_string(hs_client_fetch_status_t status)
+{
+  switch (status) {
+  case HS_CLIENT_FETCH_ERROR:
+    return "Internal error";
+  case HS_CLIENT_FETCH_LAUNCHED:
+    return "Descriptor fetch launched";
+  case HS_CLIENT_FETCH_HAVE_DESC:
+    return "Already have descriptor";
+  case HS_CLIENT_FETCH_NO_HSDIRS:
+    return "No more HSDir available to query";
+  case HS_CLIENT_FETCH_NOT_ALLOWED:
+    return "Fetching descriptors is not allowed";
+  case HS_CLIENT_FETCH_MISSING_INFO:
+    return "Missing directory information";
+  case HS_CLIENT_FETCH_PENDING:
+    return "Pending descriptor fetch";
+  default:
+    return "(Unknown client fetch status code)";
+  }
+}
+
+/* Return true iff tor should close the SOCKS request(s) for the descriptor
+ * fetch that ended up with this given status code. */
+static int
+fetch_status_should_close_socks(hs_client_fetch_status_t status)
+{
+  switch (status) {
+  case HS_CLIENT_FETCH_NO_HSDIRS:
+    /* No more HSDir to query, we can't complete the SOCKS request(s). */
+  case HS_CLIENT_FETCH_ERROR:
+    /* The fetch triggered an internal error. */
+  case HS_CLIENT_FETCH_NOT_ALLOWED:
+    /* Client is not allowed to fetch (FetchHidServDescriptors 0). */
+    goto close;
+  case HS_CLIENT_FETCH_MISSING_INFO:
+  case HS_CLIENT_FETCH_HAVE_DESC:
+  case HS_CLIENT_FETCH_PENDING:
+  case HS_CLIENT_FETCH_LAUNCHED:
+    /* The rest doesn't require tor to close the SOCKS request(s). */
+    goto no_close;
+  }
+
+ no_close:
+  return 0;
+ close:
+  return 1;
+}
 
 /* Cancel all descriptor fetches currently in progress. */
 static void
@@ -100,12 +152,85 @@ purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
    * from the previous time period. That is fine because they will expire at
    * some point and we don't care about those anymore. */
   hs_build_blinded_pubkey(identity_pk, NULL, 0,
-                          hs_get_time_period_num(approx_time()), &blinded_pk);
+                          hs_get_time_period_num(0), &blinded_pk);
   if (BUG(ed25519_public_to_base64(base64_blinded_pk, &blinded_pk) < 0)) {
     return;
   }
   /* Purge last hidden service request from cache for this blinded key. */
   hs_purge_hid_serv_from_last_hid_serv_requests(base64_blinded_pk);
+}
+
+/* Return true iff there is at least one pending directory descriptor request
+ * for the service identity_pk. */
+static int
+directory_request_is_pending(const ed25519_public_key_t *identity_pk)
+{
+  int ret = 0;
+  smartlist_t *conns =
+    connection_list_by_type_purpose(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    const hs_ident_dir_conn_t *ident = TO_DIR_CONN(conn)->hs_ident;
+    if (BUG(ident == NULL)) {
+      /* A directory connection fetching a service descriptor can't have an
+       * empty hidden service identifier. */
+      continue;
+    }
+    if (!ed25519_pubkey_eq(identity_pk, &ident->identity_pk)) {
+      continue;
+    }
+    ret = 1;
+    break;
+  } SMARTLIST_FOREACH_END(conn);
+
+  /* No ownership of the objects in this list. */
+  smartlist_free(conns);
+  return ret;
+}
+
+/* We failed to fetch a descriptor for the service with <b>identity_pk</b>
+ * because of <b>status</b>. Find all pending SOCKS connections for this
+ * service that are waiting on the descriptor and close them with
+ * <b>reason</b>. */
+static void
+close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
+                                       hs_client_fetch_status_t status,
+                                       int reason)
+{
+  unsigned int count = 0;
+  time_t now = approx_time();
+  smartlist_t *conns =
+    connection_list_by_type_state(CONN_TYPE_AP, AP_CONN_STATE_RENDDESC_WAIT);
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+    entry_connection_t *entry_conn = TO_ENTRY_CONN(base_conn);
+    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+
+    /* Only consider the entry connections that matches the service for which
+     * we tried to get the descriptor */
+    if (!edge_conn->hs_ident ||
+        !ed25519_pubkey_eq(identity_pk,
+                           &edge_conn->hs_ident->identity_pk)) {
+      continue;
+    }
+    assert_connection_ok(base_conn, now);
+    /* Unattach the entry connection which will close for the reason. */
+    connection_mark_unattached_ap(entry_conn, reason);
+    count++;
+  } SMARTLIST_FOREACH_END(base_conn);
+
+  if (count > 0) {
+    char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+    hs_build_address(identity_pk, HS_VERSION_THREE, onion_address);
+    log_notice(LD_REND, "Closed %u streams for service %s.onion "
+                        "for reason %s. Fetch status: %s.",
+               count, safe_str_client(onion_address),
+               stream_end_reason_to_string(reason),
+               fetch_status_to_string(status));
+  }
+
+  /* No ownership of the object(s) in this list. */
+  smartlist_free(conns);
 }
 
 /* A v3 HS circuit successfully connected to the hidden service. Update the
@@ -131,9 +256,9 @@ note_connection_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
 }
 
 /* Given the pubkey of a hidden service in <b>onion_identity_pk</b>, fetch its
- * descriptor by launching a dir connection to <b>hsdir</b>. Return 1 on
- * success or -1 on error. */
-static int
+ * descriptor by launching a dir connection to <b>hsdir</b>. Return a
+ * hs_client_fetch_status_t status code depending on how it went. */
+static hs_client_fetch_status_t
 directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
                                const routerstatus_t *hsdir)
 {
@@ -224,10 +349,10 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 
 /** Fetch a v3 descriptor using the given <b>onion_identity_pk</b>.
  *
- * On success, 1 is returned. If no hidden service is left to ask, return 0.
- * On error, -1 is returned. */
-static int
-fetch_v3_desc(const ed25519_public_key_t *onion_identity_pk)
+ * On success, HS_CLIENT_FETCH_LAUNCHED is returned. Otherwise, an error from
+ * hs_client_fetch_status_t is returned. */
+MOCK_IMPL(STATIC hs_client_fetch_status_t,
+fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk))
 {
   routerstatus_t *hsdir_rs =NULL;
 
@@ -1009,6 +1134,8 @@ hs_client_any_intro_points_usable(const ed25519_public_key_t *service_pk,
 int
 hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
 {
+  int ret;
+
   tor_assert(identity_pk);
 
   /* Are we configured to fetch descriptors? */
@@ -1046,7 +1173,23 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
     }
   }
 
-  return fetch_v3_desc(identity_pk);
+  /* Don't try to refetch while we have a pending request for it. */
+  if (directory_request_is_pending(identity_pk)) {
+    log_info(LD_REND, "Already a pending directory request. Waiting on it.");
+    return HS_CLIENT_FETCH_PENDING;
+  }
+
+  /* Try to fetch the desc and if we encounter an unrecoverable error, mark the
+   * desc as unavailable for now. */
+  ret = fetch_v3_desc(identity_pk);
+  if (fetch_status_should_close_socks(ret)) {
+    close_all_socks_conns_waiting_for_desc(identity_pk, ret,
+                                           END_STREAM_REASON_RESOLVEFAILED);
+    /* Remove HSDir fetch attempts so that we can retry later if the user
+     * wants us to regardless of if we closed any connections. */
+    purge_hid_serv_request(identity_pk);
+  }
+  return ret;
 }
 
 /* This is called when we are trying to attach an AP connection to these
