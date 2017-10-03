@@ -572,8 +572,11 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
 int entries_known_but_down(const or_options_t *options);
 void entries_retry_all(const or_options_t *options);
 
-char *entry_guards_get_dir_info_status_str(void);
-char *guard_selection_get_dir_info_status_str(guard_selection_t *gs);
+char *entry_guards_get_dir_info_status_str(int using_mds,
+                                           int num_present, int num_usable);
+char *guard_selection_get_dir_info_status_str(guard_selection_t *gs,
+                                              int using_mds,
+                                              int num_present, int num_usable);
 
 void entry_guards_free_all(void);
 

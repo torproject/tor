@@ -2282,6 +2282,7 @@ update_router_have_minimum_dir_info(void)
 {
   time_t now = time(NULL);
   int res;
+  int num_present=0, num_usable=0;
   const or_options_t *options = get_options();
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
@@ -2303,7 +2304,6 @@ update_router_have_minimum_dir_info(void)
   /* Check fraction of available paths */
   {
     char *status = NULL;
-    int num_present=0, num_usable=0;
     double paths = compute_frac_paths_available(consensus, options, now,
                                                 &num_present, &num_usable,
                                                 &status);
@@ -2325,7 +2325,9 @@ update_router_have_minimum_dir_info(void)
   }
 
   { /* Check entry guard dirinfo status */
-    char *guard_error = entry_guards_get_dir_info_status_str();
+    char *guard_error = entry_guards_get_dir_info_status_str(using_md,
+                                                             num_present,
+                                                             num_usable);
     if (guard_error) {
       strlcpy(dir_info_status, guard_error, sizeof(dir_info_status));
       tor_free(guard_error);
@@ -2333,7 +2335,6 @@ update_router_have_minimum_dir_info(void)
       goto done;
     }
   }
-
 
  done:
 
