@@ -30,8 +30,6 @@
 #include "router.h"
 #include "workqueue.h"
 
-#include <event2/event.h>
-
 static void queue_pending_tasks(void);
 
 typedef struct worker_state_s {
@@ -69,21 +67,11 @@ worker_state_free_void(void *arg)
 
 static replyqueue_t *replyqueue = NULL;
 static threadpool_t *threadpool = NULL;
-static struct event *reply_event = NULL;
 
 static tor_weak_rng_t request_sample_rng = TOR_WEAK_RNG_INIT;
 
 static int total_pending_tasks = 0;
 static int max_pending_tasks = 128;
-
-static void
-replyqueue_process_cb(evutil_socket_t sock, short events, void *arg)
-{
-  replyqueue_t *rq = arg;
-  (void) sock;
-  (void) events;
-  replyqueue_process(rq);
-}
 
 /** Initialize the cpuworker subsystem. It is OK to call this more than once
  * during Tor's lifetime.
@@ -93,14 +81,6 @@ cpu_init(void)
 {
   if (!replyqueue) {
     replyqueue = replyqueue_new(0);
-  }
-  if (!reply_event) {
-    reply_event = tor_event_new(tor_libevent_get_base(),
-                                replyqueue_get_socket(replyqueue),
-                                EV_READ|EV_PERSIST,
-                                replyqueue_process_cb,
-                                replyqueue);
-    event_add(reply_event, NULL);
   }
   if (!threadpool) {
     /*
@@ -115,7 +95,12 @@ cpu_init(void)
                                 worker_state_new,
                                 worker_state_free_void,
                                 NULL);
+
+    int r = threadpool_register_reply_event(threadpool, NULL);
+
+    tor_assert(r == 0);
   }
+
   /* Total voodoo. Can we make this more sensible? */
   max_pending_tasks = get_num_cpus(get_options()) * 64;
   crypto_seed_weak_rng(&request_sample_rng);
