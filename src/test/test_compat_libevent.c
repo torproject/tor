@@ -10,7 +10,6 @@
 #include "compat_libevent.h"
 
 #include <event2/event.h>
-#include <event2/thread.h>
 
 #include "log_test_helpers.h"
 
