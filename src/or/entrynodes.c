@@ -3446,7 +3446,7 @@ guards_retry_optimistic(const or_options_t *options)
  * the genreal descriptor information <b>using_mds</b>, <b>num_present</b> and
  * <b>num_usable</b> to improve the error message. */
 char *
-guard_selection_get_dir_info_status_str(guard_selection_t *gs,
+guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
                                         int using_mds,
                                         int num_present, int num_usable)
 {
@@ -3492,10 +3492,11 @@ guard_selection_get_dir_info_status_str(guard_selection_t *gs,
 /** As guard_selection_have_enough_dir_info_to_build_circuits, but uses
  * the default guard selection. */
 char *
-entry_guards_get_dir_info_status_str(int using_mds,
+entry_guards_get_err_str_if_dir_info_missing(int using_mds,
                                      int num_present, int num_usable)
 {
-  return guard_selection_get_dir_info_status_str(get_guard_selection_info(),
+  return guard_selection_get_err_str_if_dir_info_missing(
+                                                 get_guard_selection_info(),
                                                  using_mds,
                                                  num_present, num_usable);
 }

@@ -572,9 +572,9 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
 int entries_known_but_down(const or_options_t *options);
 void entries_retry_all(const or_options_t *options);
 
-char *entry_guards_get_dir_info_status_str(int using_mds,
+char *entry_guards_get_err_str_if_dir_info_missing(int using_mds,
                                            int num_present, int num_usable);
-char *guard_selection_get_dir_info_status_str(guard_selection_t *gs,
+char *guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
                                               int using_mds,
                                               int num_present, int num_usable);
 

@@ -2325,7 +2325,7 @@ update_router_have_minimum_dir_info(void)
   }
 
   { /* Check entry guard dirinfo status */
-    char *guard_error = entry_guards_get_dir_info_status_str(using_md,
+    char *guard_error = entry_guards_get_err_str_if_dir_info_missing(using_md,
                                                              num_present,
                                                              num_usable);
     if (guard_error) {
