@@ -65,7 +65,7 @@ mock_channel_write_cell_relay2(channel_t *chan, cell_t *cell)
   (void)chan;
   tried_to_write_cell++;
   channel_tls_handle_cell(cell, ((channel_tls_t*)relay1_relay2)->conn);
-  event_base_loopbreak(tor_libevent_get_base());
+  tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
 
@@ -75,7 +75,7 @@ mock_channel_write_cell_relay1(channel_t *chan, cell_t *cell)
   (void)chan;
   tried_to_write_cell++;
   channel_tls_handle_cell(cell, ((channel_tls_t*)relay2_relay1)->conn);
-  event_base_loopbreak(tor_libevent_get_base());
+  tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
 
@@ -85,7 +85,7 @@ mock_channel_write_cell_relay3(channel_t *chan, cell_t *cell)
   (void)chan;
   tried_to_write_cell++;
   channel_tls_handle_cell(cell, ((channel_tls_t*)client_relay3)->conn);
-  event_base_loopbreak(tor_libevent_get_base());
+  tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
 
@@ -95,7 +95,7 @@ mock_channel_write_cell_client(channel_t *chan, cell_t *cell)
   (void)chan;
   tried_to_write_cell++;
   channel_tls_handle_cell(cell, ((channel_tls_t*)relay3_client)->conn);
-  event_base_loopbreak(tor_libevent_get_base());
+  tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
 
@@ -105,7 +105,7 @@ mock_channel_write_cell(channel_t *chan, cell_t *cell)
   tried_to_write_cell++;
   channel_tls_handle_cell(cell, ((channel_tls_t*)chan)->conn);
   if (!dont_stop_libevent)
-    event_base_loopbreak(tor_libevent_get_base());
+    tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return 0;
 }
 
@@ -246,7 +246,7 @@ static void
 dummy_timer_cb(tor_timer_t *t, void *arg, const monotime_t *now_mono)
 {
   (void)t; (void)arg; (void)now_mono;
-  event_base_loopbreak(tor_libevent_get_base());
+  tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   return;
 }
 

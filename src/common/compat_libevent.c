@@ -363,6 +363,38 @@ tor_libevent_free_all(void)
   the_event_base = NULL;
 }
 
+/**
+ * Run the event loop for the provided event_base, handling events until
+ * something stops it.  If <b>once</b> is set, then just poll-and-run
+ * once, then exit.  Return 0 on success, -1 if an error occurred, or 1
+ * if we exited because no events were pending or active.
+ *
+ * This isn't reentrant or multithreaded.
+ */
+int
+tor_libevent_run_event_loop(struct event_base *base, int once)
+{
+  const int flags = once ? EVLOOP_ONCE : 0;
+  return event_base_loop(base, flags);
+}
+
+/** Tell the event loop to exit after <b>delay</b>.  If <b>delay</b> is NULL,
+ * instead exit after we're done running the currently active events. */
+void
+tor_libevent_exit_loop_after_delay(struct event_base *base,
+                                   const struct timeval *delay)
+{
+  event_base_loopexit(base, delay);
+}
+
+/** Tell the event loop to exit after running whichever callback is currently
+ * active. */
+void
+tor_libevent_exit_loop_after_callback(struct event_base *base)
+{
+  event_base_loopbreak(base);
+}
+
 #if defined(LIBEVENT_VERSION_NUMBER) &&         \
   LIBEVENT_VERSION_NUMBER >= V(2,1,1) &&        \
   !defined(TOR_UNIT_TESTS)

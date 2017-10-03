@@ -719,7 +719,7 @@ tell_event_loop_to_run_external_code(void)
 {
   if (!called_loop_once) {
     struct timeval tv = { 0, 0 };
-    tor_event_base_loopexit(tor_libevent_get_base(), &tv);
+    tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &tv);
     called_loop_once = 1; /* hack to avoid adding more exit events */
   }
 }
@@ -779,8 +779,9 @@ tor_shutdown_event_loop_and_exit(int exitcode)
                   shutdown_did_not_work_callback, NULL);
   event_add(shutdown_did_not_work_event, &ten_seconds);
 
-  /* Unlike loopexit, loopbreak prevents other callbacks from running. */
-  tor_event_base_loopbreak(tor_libevent_get_base());
+  /* Unlike exit_loop_after_delay(), exit_loop_after_callback
+   * prevents other callbacks from running. */
+  tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
 }
 
 /** Return true iff tor_shutdown_event_loop_and_exit() has been called. */

@@ -230,7 +230,7 @@ add_n_work_items(threadpool_t *tp, int n)
     ent = add_work(tp);
     if (! ent) {
       puts("Z");
-      tor_event_base_loopexit(tor_libevent_get_base(), NULL);
+      tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), NULL);
       return -1;
     }
     if (n_try_cancel < opt_n_cancel &&
@@ -308,7 +308,7 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
                           handle_reply_shutdown, NULL);
     {
       struct timeval limit = { 2, 0 };
-      tor_event_base_loopexit(tor_libevent_get_base(), &limit);
+      tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &limit);
     }
   }
 }
@@ -433,7 +433,7 @@ main(int argc, char **argv)
 
   {
     struct timeval limit = { 180, 0 };
-    tor_event_base_loopexit(tor_libevent_get_base(), &limit);
+    tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &limit);
   }
 
   event_base_loop(tor_libevent_get_base(), 0);

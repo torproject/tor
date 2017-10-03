@@ -45,9 +45,6 @@ void mainloop_event_free_(mainloop_event_t *event);
 #define mainloop_event_free(event) \
   FREE_AND_NULL(mainloop_event_t, mainloop_event_free_, (event))
 
-#define tor_event_base_loopexit event_base_loopexit
-#define tor_event_base_loopbreak event_base_loopbreak
-
 /** Defines a configuration for using libevent with Tor: passed as an argument
  * to tor_libevent_initialize() to describe how we want to set up. */
 typedef struct tor_libevent_cfg {
@@ -74,6 +71,10 @@ void tor_gettimeofday_cache_clear(void);
 void tor_gettimeofday_cache_set(const struct timeval *tv);
 void tor_libevent_postfork(void);
 #endif
+
+void tor_libevent_exit_loop_after_delay(struct event_base *base,
+                                        const struct timeval *delay);
+void tor_libevent_exit_loop_after_callback(struct event_base *base);
 
 #ifdef COMPAT_LIBEVENT_PRIVATE
 

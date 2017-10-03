@@ -24,8 +24,6 @@
 #include "main.h"
 #include "ntmain.h"
 
-#include <event2/event.h>
-
 #include <windows.h>
 #define GENSRV_SERVICENAME  "tor"
 #define GENSRV_DISPLAYNAME  "Tor Win32 Service"
@@ -245,7 +243,8 @@ nt_service_control(DWORD request)
           log_notice(LD_GENERAL,
                      "Got stop/shutdown request; shutting down cleanly.");
           service_status.dwCurrentState = SERVICE_STOP_PENDING;
-          event_base_loopexit(tor_libevent_get_base(), &exit_now);
+          tor_libevent_exit_loop_after_delay(tor_libevent_get_base(),
+                                             &exit_now);
           return;
   }
   service_fns.SetServiceStatus_fn(hStatus, &service_status);

@@ -50,7 +50,7 @@ timer_cb(tor_timer_t *t, void *arg, const monotime_t *now_mono)
 
   // printf("%d / %d\n",n_fired, N_TIMERS);
   if (n_fired == n_active_timers) {
-    event_base_loopbreak(tor_libevent_get_base());
+    tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   }
 }
 
