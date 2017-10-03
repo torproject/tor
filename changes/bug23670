@@ -1,0 +1,3 @@
+  o Minor features (entry guards):
+    - Improve logs issued when we are missing descriptors of primary guards.
+      Resolves ticket 23670.

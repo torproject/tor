@@ -1639,6 +1639,27 @@ test_entry_guard_manage_primary(void *arg)
     tt_ptr_op(g, OP_EQ, smartlist_get(prev_guards, g_sl_idx));
   });
 
+  /* Do some dirinfo checks */
+  {
+    /* Check that we have all required dirinfo for the primaries (that's done
+     * in big_fake_network_setup()) */
+    char *dir_info_str =
+      guard_selection_get_err_str_if_dir_info_missing(gs, 0, 0, 0);
+    tt_assert(!dir_info_str);
+
+    /* Now artificially remove the first primary's descriptor and re-check */
+    entry_guard_t *first_primary;
+    first_primary = smartlist_get(gs->primary_entry_guards, 0);
+    /* Change the first primary's identity digest so that the mocked functions
+     * can't find its descriptor */
+    memset(first_primary->identity, 9, sizeof(first_primary->identity));
+    dir_info_str =guard_selection_get_err_str_if_dir_info_missing(gs, 1, 2, 3);
+    tt_str_op(dir_info_str, OP_EQ,
+              "We're missing descriptors for 1/2 of our primary entry guards "
+              "(total microdescriptors: 2/3).");
+    tor_free(dir_info_str);
+  }
+
  done:
   guard_selection_free(gs);
   smartlist_free(prev_guards);

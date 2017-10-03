@@ -3440,15 +3440,20 @@ guards_retry_optimistic(const or_options_t *options)
 }
 
 /**
- * Return true iff we know enough directory information to construct
- * circuits through all of the primary guards we'd currently use.
- */
-int
-guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
+ * Check if we are missing any crucial dirinfo for the guard subsystem to
+ * work. Return NULL if everything went well, otherwise return a newly
+ * allocated string with an informative error message. In the latter case, use
+ * the genreal descriptor information <b>using_mds</b>, <b>num_present</b> and
+ * <b>num_usable</b> to improve the error message. */
+char *
+guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
+                                        int using_mds,
+                                        int num_present, int num_usable)
 {
   if (!gs->primary_guards_up_to_date)
     entry_guards_update_primary(gs);
 
+  char *ret_str = NULL;
   int n_missing_descriptors = 0;
   int n_considered = 0;
   int num_primary_to_check;
@@ -3470,16 +3475,30 @@ guard_selection_have_enough_dir_info_to_build_circuits(guard_selection_t *gs)
       break;
   } SMARTLIST_FOREACH_END(guard);
 
-  return n_missing_descriptors == 0;
+  /* If we are not missing any descriptors, return NULL. */
+  if (!n_missing_descriptors) {
+    return NULL;
+  }
+
+  /* otherwise return a helpful error string */
+  tor_asprintf(&ret_str, "We're missing descriptors for %d/%d of our "
+               "primary entry guards (total %sdescriptors: %d/%d).",
+               n_missing_descriptors, num_primary_to_check,
+               using_mds?"micro":"", num_present, num_usable);
+
+  return ret_str;
 }
 
 /** As guard_selection_have_enough_dir_info_to_build_circuits, but uses
  * the default guard selection. */
-int
-entry_guards_have_enough_dir_info_to_build_circuits(void)
+char *
+entry_guards_get_err_str_if_dir_info_missing(int using_mds,
+                                     int num_present, int num_usable)
 {
-  return guard_selection_have_enough_dir_info_to_build_circuits(
-                                        get_guard_selection_info());
+  return guard_selection_get_err_str_if_dir_info_missing(
+                                                 get_guard_selection_info(),
+                                                 using_mds,
+                                                 num_present, num_usable);
 }
 
 /** Free one guard selection context */

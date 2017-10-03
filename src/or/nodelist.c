@@ -2282,6 +2282,7 @@ update_router_have_minimum_dir_info(void)
 {
   time_t now = time(NULL);
   int res;
+  int num_present=0, num_usable=0;
   const or_options_t *options = get_options();
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
@@ -2300,17 +2301,9 @@ update_router_have_minimum_dir_info(void)
 
   using_md = consensus->flavor == FLAV_MICRODESC;
 
-  if (! entry_guards_have_enough_dir_info_to_build_circuits()) {
-    strlcpy(dir_info_status, "We're missing descriptors for some of our "
-            "primary entry guards", sizeof(dir_info_status));
-    res = 0;
-    goto done;
-  }
-
   /* Check fraction of available paths */
   {
     char *status = NULL;
-    int num_present=0, num_usable=0;
     double paths = compute_frac_paths_available(consensus, options, now,
                                                 &num_present, &num_usable,
                                                 &status);
@@ -2329,6 +2322,18 @@ update_router_have_minimum_dir_info(void)
 
     tor_free(status);
     res = 1;
+  }
+
+  { /* Check entry guard dirinfo status */
+    char *guard_error = entry_guards_get_err_str_if_dir_info_missing(using_md,
+                                                             num_present,
+                                                             num_usable);
+    if (guard_error) {
+      strlcpy(dir_info_status, guard_error, sizeof(dir_info_status));
+      tor_free(guard_error);
+      res = 0;
+      goto done;
+    }
   }
 
  done:
