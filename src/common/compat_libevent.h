@@ -72,6 +72,7 @@ void tor_gettimeofday_cache_set(const struct timeval *tv);
 void tor_libevent_postfork(void);
 #endif
 
+int tor_libevent_run_event_loop(struct event_base *base, int once);
 void tor_libevent_exit_loop_after_delay(struct event_base *base,
                                         const struct timeval *delay);
 void tor_libevent_exit_loop_after_callback(struct event_base *base);

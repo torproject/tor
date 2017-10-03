@@ -15,7 +15,6 @@
 #include "channelpadding.h"
 #include "compat_libevent.h"
 #include "config.h"
-#include <event2/event.h>
 #include "compat_time.h"
 #include "main.h"
 #include "networkstatus.h"
@@ -264,7 +263,8 @@ dummy_nop_timer(void)
 
   timer_schedule(dummy_timer, &timeout);
 
-  event_base_loop(tor_libevent_get_base(), 0);
+  tor_libevent_run_event_loop(tor_libevent_get_base(), 0);
+
   timer_free(dummy_timer);
 }
 

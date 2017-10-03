@@ -436,7 +436,7 @@ main(int argc, char **argv)
     tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &limit);
   }
 
-  event_base_loop(tor_libevent_get_base(), 0);
+  tor_libevent_run_event_loop(tor_libevent_get_base(), 0);
 
   if (n_sent != opt_n_items || n_received+n_successful_cancel != n_sent) {
     printf("%d vs %d\n", n_sent, opt_n_items);

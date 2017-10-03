@@ -2832,8 +2832,8 @@ run_main_loop_once(void)
    * an event, or the second ends, or until we have some active linked
    * connections to trigger events for.  Libevent will wait till one
    * of these happens, then run all the appropriate callbacks. */
-  loop_result = event_base_loop(tor_libevent_get_base(),
-                                called_loop_once ? EVLOOP_ONCE : 0);
+  loop_result = tor_libevent_run_event_loop(tor_libevent_get_base(),
+                                            called_loop_once);
 
   if (get_options()->MainloopStats) {
     /* Update our main loop counters. */
