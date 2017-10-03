@@ -160,23 +160,23 @@ static const char SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG[] =
   "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
   "<html>\n"
   "<head>\n"
-  "<title>Tor is not an HTTP Proxy</title>\n"
+  "<title>This is a SOCKS Proxy, Not An HTTP Proxy</title>\n"
   "</head>\n"
   "<body>\n"
-  "<h1>Tor is not an HTTP Proxy</h1>\n"
+  "<h1>This is a SOCKs proxy, not an HTTP proxy.</h1>\n"
   "<p>\n"
-  "It appears you have configured your web browser to use Tor as "
-  "an HTTP proxy.\n\n"
-  "This is not correct: Tor is a SOCKS proxy, not an HTTP proxy.\n"
+  "It appears you have configured your web browser to use this Tor port as\n"
+  "an HTTP proxy.\n"
+  "</p><p>\n"
+  "This is not correct: This port is configured as a SOCKS proxy, not\n"
+  "an HTTP proxy. If you need an HTTP proxy tunnel, use the HTTPTunnelPort\n"
+  "configuration option in place of, or in addition to, SOCKSPort.\n"
   "Please configure your client accordingly.\n"
   "</p>\n"
   "<p>\n"
   "See <a href=\"https://www.torproject.org/documentation.html\">"
   "https://www.torproject.org/documentation.html</a> for more "
   "information.\n"
-  "<!-- Plus this comment, to make the body response more than 512 bytes, so "
-  "     IE will be willing to display it. Comment comment comment comment "
-  "     comment comment comment comment comment comment comment comment.-->\n"
   "</p>\n"
   "</body>\n"
   "</html>\n";
@@ -544,7 +544,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       /* fall through */
     default: /* version is not socks4 or socks5 */
       log_warn(LD_APP,
-               "Socks version %d not recognized. (Tor is not an http proxy.)",
+               "Socks version %d not recognized. (This port is not an "
+               "HTTP proxy; did you want to use HTTPTunnelPort?)",
                *(data));
       {
         /* Tell the controller the first 8 bytes. */
