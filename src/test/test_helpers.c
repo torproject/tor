@@ -155,7 +155,7 @@ mock_tor_addr_lookup__fail_on_bad_addrs(const char *name,
 
 /* Helper for test_conn_get_connection() */
 static int
-fake_close_socket(evutil_socket_t sock)
+fake_close_socket(tor_socket_t sock)
 {
   (void)sock;
   return 0;

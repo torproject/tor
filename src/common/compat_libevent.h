@@ -7,8 +7,6 @@
 #include "orconfig.h"
 #include "testsupport.h"
 
-#include <event2/event.h>
-
 void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);
 
@@ -18,6 +16,9 @@ void suppress_libevent_log_msg(const char *msg);
 #define tor_evdns_add_server_port(sock, tcp, cb, data) \
   evdns_add_server_port_with_base(tor_libevent_get_base(), \
   (sock),(tcp),(cb),(data));
+
+struct event;
+struct event_base;
 
 void tor_event_free_(struct event *ev);
 #define tor_event_free(ev) \
