@@ -2300,16 +2300,6 @@ update_router_have_minimum_dir_info(void)
 
   using_md = consensus->flavor == FLAV_MICRODESC;
 
-  { /* Check entry guard dirinfo status */
-    char *guard_error = entry_guards_get_dir_info_status_str();
-    if (guard_error) {
-      strlcpy(dir_info_status, guard_error, sizeof(dir_info_status));
-      tor_free(guard_error);
-      res = 0;
-      goto done;
-    }
-  }
-
   /* Check fraction of available paths */
   {
     char *status = NULL;
@@ -2333,6 +2323,17 @@ update_router_have_minimum_dir_info(void)
     tor_free(status);
     res = 1;
   }
+
+  { /* Check entry guard dirinfo status */
+    char *guard_error = entry_guards_get_dir_info_status_str();
+    if (guard_error) {
+      strlcpy(dir_info_status, guard_error, sizeof(dir_info_status));
+      tor_free(guard_error);
+      res = 0;
+      goto done;
+    }
+  }
+
 
  done:
 
