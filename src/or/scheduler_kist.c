@@ -572,7 +572,7 @@ kist_scheduler_run(void)
     /* get best channel */
     chan = smartlist_pqueue_pop(cp, scheduler_compare_channels,
                                 offsetof(channel_t, sched_heap_idx));
-    IF_BUG_ONCE(!chan) {
+    if (SCHED_BUG(!chan, NULL)) {
       /* Some-freaking-how a NULL got into the channels_pending. That should
        * never happen, but it should be harmless to ignore it and keep looping.
        */
