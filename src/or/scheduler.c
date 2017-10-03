@@ -607,7 +607,7 @@ scheduler_release_channel,(channel_t *chan))
   }
 
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
-    if (smartlist_pos(channels_pending, chan) == -1) {
+    if (SCHED_BUG(smartlist_pos(channels_pending, chan) == -1, chan)) {
       log_warn(LD_SCHED, "Scheduler asked to release channel %" PRIu64 " "
                          "but it wasn't in channels_pending",
                chan->global_identifier);
