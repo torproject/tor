@@ -1,13 +1,17 @@
 before_script:
-    - "apt-get update -qq"
-    - "apt-get upgrade -y"
+    - apt-get update -qq
+    - apt-get upgrade -qy
 
 build:
   script:
-    - "apt-get install -y --fix-missing git openssh-client asciidoc wget gcc g++ automake cmake make libglib2.0 libglib2.0-dev libigraph0 libigraph0-dev libevent-dev openssl libssl-dev"
-    - "sh autogen.sh && ./configure && make"
-    - "make check"
-    - "make install"
+    - apt-get install -qy --fix-missing automake build-essential
+      libevent-dev libssl-dev zlib1g-dev
+      libseccomp-dev liblzma-dev libscrypt-dev
+    - ./autogen.sh
+    - ./configure --disable-asciidoc --enable-fatal-warnings
+      --disable-silent-rules
+    - make check || (e=$?; cat test-suite.log; exit $e)
+    - make install
 
 update:
   only:
