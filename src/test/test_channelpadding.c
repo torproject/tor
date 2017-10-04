@@ -193,7 +193,8 @@ static void
 setup_mock_network(void)
 {
   routerstatus_t *relay;
-  connection_array = smartlist_new();
+  if (!connection_array)
+    connection_array = smartlist_new();
 
   relay1_relay2 = (channel_t*)new_fake_channeltls(2);
   relay1_relay2->write_cell = mock_channel_write_cell_relay1;
@@ -280,7 +281,8 @@ test_channelpadding_timers(void *arg)
 
   tor_libevent_postfork();
 
-  connection_array = smartlist_new();
+  if (!connection_array)
+    connection_array = smartlist_new();
 
   monotime_init();
   monotime_enable_test_mocking();
@@ -570,7 +572,8 @@ test_channelpadding_consensus(void *arg)
   monotime_coarse_set_mock_time_nsec(1);
   timers_initialize();
 
-  connection_array = smartlist_new();
+  if (!connection_array)
+    connection_array = smartlist_new();
   chan = (channel_t*)new_fake_channeltls(0);
   channel_timestamp_active(chan);
 
@@ -928,7 +931,8 @@ test_channelpadding_decide_to_pad_channel(void *arg)
    */
   channel_t *chan;
   int64_t new_time;
-  connection_array = smartlist_new();
+  if (!connection_array)
+    connection_array = smartlist_new();
   (void)arg;
 
   tor_libevent_postfork();

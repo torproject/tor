@@ -1571,10 +1571,10 @@ connection_ap_handle_onion(entry_connection_t *conn,
       int ret = hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
       switch (ret) {
       case HS_CLIENT_FETCH_MISSING_INFO:
-        /* By going to the end, the connection is put in waiting for a circuit
-         * state which means that it will be retried and consider as a pending
-         * connection. */
-        goto end;
+        /* Keeping the connection in descriptor wait state is fine because
+         * once we get enough dirinfo or a new live consensus, the HS client
+         * subsystem is notified and every connection in that state will
+         * trigger a fetch for the service key. */
       case HS_CLIENT_FETCH_LAUNCHED:
       case HS_CLIENT_FETCH_PENDING:
       case HS_CLIENT_FETCH_HAVE_DESC:
@@ -1591,7 +1591,6 @@ connection_ap_handle_onion(entry_connection_t *conn,
   /* We have the descriptor!  So launch a connection to the HS. */
   log_info(LD_REND, "Descriptor is here. Great.");
 
- end:
   base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
   /* We'll try to attach it at the next event loop, or whenever
    * we call connection_ap_attach_pending() */

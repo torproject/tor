@@ -48,6 +48,7 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hs_common.h"
+#include "hs_client.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -1973,6 +1974,7 @@ router_dir_info_changed(void)
   need_to_update_have_min_dir_info = 1;
   rend_hsdir_routers_changed();
   hs_service_dir_info_changed();
+  hs_client_dir_info_changed();
 }
 
 /** Return a string describing what we're missing before we have enough

@@ -233,6 +233,55 @@ close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
   smartlist_free(conns);
 }
 
+/* Find all pending SOCKS connection waiting for a descriptor and retry them
+ * all. This is called when the directory information changed. */
+static void
+retry_all_socks_conn_waiting_for_desc(void)
+{
+  smartlist_t *conns =
+    connection_list_by_type_state(CONN_TYPE_AP, AP_CONN_STATE_RENDDESC_WAIT);
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+    hs_client_fetch_status_t status;
+    const edge_connection_t *edge_conn =
+      ENTRY_TO_EDGE_CONN(TO_ENTRY_CONN(base_conn));
+
+    /* Ignore non HS or non v3 connection. */
+    if (edge_conn->hs_ident == NULL) {
+      continue;
+    }
+    /* In this loop, we will possibly try to fetch a descriptor for the
+     * pending connections because we just got more directory information.
+     * However, the refetch process can cleanup all SOCKS request so the same
+     * service if an internal error happens. Thus, we can end up with closed
+     * connections in our list. */
+    if (base_conn->marked_for_close) {
+      continue;
+    }
+
+    /* XXX: There is an optimization we could do which is that for a service
+     * key, we could check if we can fetch and remember that decision. */
+
+    /* Order a refetch in case it works this time. */
+    status = hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
+    if (BUG(status == HS_CLIENT_FETCH_HAVE_DESC)) {
+      /* This case is unique because it can NOT happen in theory. Once we get
+       * a new descriptor, the HS client subsystem is notified immediately and
+       * the connections waiting for it are handled which means the state will
+       * change from renddesc wait state. Log this and continue to next
+       * connection. */
+      continue;
+    }
+    /* In the case of an error, either all SOCKS connections have been
+     * closed or we are still missing directory information. Leave the
+     * connection in renddesc wait state so when we get more info, we'll be
+     * able to try it again. */
+  } SMARTLIST_FOREACH_END(base_conn);
+
+  /* We don't have ownership of those objects. */
+  smartlist_free(conns);
+}
+
 /* A v3 HS circuit successfully connected to the hidden service. Update the
  * stream state at <b>hs_conn_ident</b> appropriately. */
 static void
@@ -1527,5 +1576,15 @@ hs_client_purge_state(void)
   hs_purge_last_hid_serv_requests();
 
   log_info(LD_REND, "Hidden service client state has been purged.");
+}
+
+/* Called when our directory information has changed. */
+void
+hs_client_dir_info_changed(void)
+{
+  /* We have possibly reached the minimum directory information or new
+   * consensus so retry all pending SOCKS connection in
+   * AP_CONN_STATE_RENDDESC_WAIT state in order to fetch the descriptor. */
+  retry_all_socks_conn_waiting_for_desc();
 }
 
