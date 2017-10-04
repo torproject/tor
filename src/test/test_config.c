@@ -4957,7 +4957,11 @@ test_config_include_no_permission(void *data)
   config_line_t *result = NULL;
 
   char *folder_path = NULL;
-  char *dir = tor_strdup(get_fname("test_include_forbidden_folder"));
+  char *dir = NULL;
+  if (geteuid() == 0)
+    tt_skip();
+
+  dir = tor_strdup(get_fname("test_include_forbidden_folder"));
   tt_ptr_op(dir, OP_NE, NULL);
 
   tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
