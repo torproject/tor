@@ -1029,6 +1029,73 @@ handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
   return ret;
 }
 
+/* Return true iff the client can fetch a descriptor for this service public
+ * identity key and status_out if not NULL is untouched. If the client can
+ * _not_ fetch the descriptor and if status_out is not NULL, it is set with
+ * the fetch status code. */
+static unsigned int
+can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
+                        hs_client_fetch_status_t *status_out)
+{
+  hs_client_fetch_status_t status;
+
+  tor_assert(identity_pk);
+
+  /* Are we configured to fetch descriptors? */
+  if (!get_options()->FetchHidServDescriptors) {
+    log_warn(LD_REND, "We received an onion address for a hidden service "
+                      "descriptor but we are configured to not fetch.");
+    status = HS_CLIENT_FETCH_NOT_ALLOWED;
+    goto cannot;
+  }
+
+  /* Without a live consensus we can't do any client actions. It is needed to
+   * compute the hashring for a service. */
+  if (!networkstatus_get_live_consensus(approx_time())) {
+    log_info(LD_REND, "Can't fetch descriptor for service %s because we "
+                      "are missing a live consensus. Stalling connection.",
+             safe_str_client(ed25519_fmt(identity_pk)));
+    status = HS_CLIENT_FETCH_MISSING_INFO;
+    goto cannot;
+  }
+
+  if (!router_have_minimum_dir_info()) {
+    log_info(LD_REND, "Can't fetch descriptor for service %s because we "
+                      "dont have enough descriptors. Stalling connection.",
+             safe_str_client(ed25519_fmt(identity_pk)));
+    status = HS_CLIENT_FETCH_MISSING_INFO;
+    goto cannot;
+  }
+
+  /* Check if fetching a desc for this HS is useful to us right now */
+  {
+    const hs_descriptor_t *cached_desc = NULL;
+    cached_desc = hs_cache_lookup_as_client(identity_pk);
+    if (cached_desc && hs_client_any_intro_points_usable(identity_pk,
+                                                         cached_desc)) {
+      log_info(LD_GENERAL, "We would fetch a v3 hidden service descriptor "
+                           "but we already have a usable descriptor.");
+      status = HS_CLIENT_FETCH_HAVE_DESC;
+      goto cannot;
+    }
+  }
+
+  /* Don't try to refetch while we have a pending request for it. */
+  if (directory_request_is_pending(identity_pk)) {
+    log_info(LD_REND, "Already a pending directory request. Waiting on it.");
+    status = HS_CLIENT_FETCH_PENDING;
+    goto cannot;
+  }
+
+  /* Yes, client can fetch! */
+  return 1;
+ cannot:
+  if (status_out) {
+    *status_out = status;
+  }
+  return 0;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
@@ -1134,62 +1201,25 @@ hs_client_any_intro_points_usable(const ed25519_public_key_t *service_pk,
 int
 hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
 {
-  int ret;
+  hs_client_fetch_status_t status;
 
   tor_assert(identity_pk);
 
-  /* Are we configured to fetch descriptors? */
-  if (!get_options()->FetchHidServDescriptors) {
-    log_warn(LD_REND, "We received an onion address for a hidden service "
-                      "descriptor but we are configured to not fetch.");
-    return HS_CLIENT_FETCH_NOT_ALLOWED;
+  if (!can_client_refetch_desc(identity_pk, &status)) {
+    return status;
   }
 
-  /* Without a live consensus we can't do any client actions. It is needed to
-   * compute the hashring for a service. */
-  if (!networkstatus_get_live_consensus(approx_time())) {
-    log_info(LD_REND, "Can't fetch descriptor for service %s because we "
-                      "are missing a live consensus. Stalling connection.",
-               safe_str_client(ed25519_fmt(identity_pk)));
-    return HS_CLIENT_FETCH_MISSING_INFO;
-  }
-
-  if (!router_have_minimum_dir_info()) {
-    log_info(LD_REND, "Can't fetch descriptor for service %s because we "
-                      "dont have enough descriptors. Stalling connection.",
-               safe_str_client(ed25519_fmt(identity_pk)));
-    return HS_CLIENT_FETCH_MISSING_INFO;
-  }
-
-  /* Check if fetching a desc for this HS is useful to us right now */
-  {
-    const hs_descriptor_t *cached_desc = NULL;
-    cached_desc = hs_cache_lookup_as_client(identity_pk);
-    if (cached_desc && hs_client_any_intro_points_usable(identity_pk,
-                                                         cached_desc)) {
-      log_info(LD_GENERAL, "We would fetch a v3 hidden service descriptor "
-                           "but we already have a usable descriptor.");
-      return HS_CLIENT_FETCH_HAVE_DESC;
-    }
-  }
-
-  /* Don't try to refetch while we have a pending request for it. */
-  if (directory_request_is_pending(identity_pk)) {
-    log_info(LD_REND, "Already a pending directory request. Waiting on it.");
-    return HS_CLIENT_FETCH_PENDING;
-  }
-
-  /* Try to fetch the desc and if we encounter an unrecoverable error, mark the
-   * desc as unavailable for now. */
-  ret = fetch_v3_desc(identity_pk);
-  if (fetch_status_should_close_socks(ret)) {
-    close_all_socks_conns_waiting_for_desc(identity_pk, ret,
+  /* Try to fetch the desc and if we encounter an unrecoverable error, mark
+   * the desc as unavailable for now. */
+  status = fetch_v3_desc(identity_pk);
+  if (fetch_status_should_close_socks(status)) {
+    close_all_socks_conns_waiting_for_desc(identity_pk, status,
                                            END_STREAM_REASON_RESOLVEFAILED);
     /* Remove HSDir fetch attempts so that we can retry later if the user
      * wants us to regardless of if we closed any connections. */
     purge_hid_serv_request(identity_pk);
   }
-  return ret;
+  return status;
 }
 
 /* This is called when we are trying to attach an AP connection to these
