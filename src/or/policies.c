@@ -81,7 +81,8 @@ static int policies_parse_exit_policy_internal(
                                       const smartlist_t *configured_addresses,
                                       int reject_interface_addresses,
                                       int reject_configured_port_addresses,
-                                      int add_default_policy);
+                                      int add_default_policy,
+                                      int add_reduced_policy);
 
 /** Replace all "private" entries in *<b>policy</b> with their expanded
  * equivalents. */
@@ -1877,6 +1878,24 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
   "reject *:563,reject *:1214,reject *:4661-4666,"                  \
   "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
+#define REDUCED_EXIT_POLICY                                                   \
+  "accept *:20-23,accept *:43,accept *:53,accept *:79-81,accept *:88,"        \
+  "accept *:110,accept *:143,accept *:194,accept *:220,accept *:389,"         \
+  "accept *:443,accept *:464,accept *:465,accept *:531,accept *:543-544,"     \
+  "accept *:554,accept *:563,accept *:587,accept *:636,accept *:706,"         \
+  "accept *:749,accept *:873,accept *:902-904,accept *:981,accept *:989-995," \
+  "accept *:1194,accept *:1220,accept *:1293,accept *:1500,accept *:1533,"    \
+  "accept *:1677,accept *:1723,accept *:1755,accept *:1863,"                  \
+  "accept *:2082-2083,accept *:2086-2087,accept *:2095-2096,"                 \
+  "accept *:2102-2104,accept *:3128,accept *:3389,accept *:3690,"             \
+  "accept *:4321,accept *:4643,accept *:5050,accept *:5190,"                  \
+  "accept *:5222-5223,accept *:5228,accept *:5900,accept *:6660-6669,"        \
+  "accept *:6679,accept *:6697,accept *:8000,accept *:8008,accept *:8074,"    \
+  "accept *:8080,accept *:8082,accept *:8087-8088,accept *:8232-8233,"        \
+  "accept *:8332-8333,accept *:8443,accept *:8888,accept *:9418,"             \
+  "accept *:9999,accept *:10000,accept *:11371,accept *:19294,"               \
+  "accept *:19638,accept *:50002,accept *:64738,reject *:*"
+
 /** Parse the exit policy <b>cfg</b> into the linked list *<b>dest</b>.
  *
  * If <b>ipv6_exit</b> is false, prepend "reject *6:*" to the policy.
@@ -1912,7 +1931,8 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
                                     const smartlist_t *configured_addresses,
                                     int reject_interface_addresses,
                                     int reject_configured_port_addresses,
-                                    int add_default_policy)
+                                    int add_default_policy,
+                                    int add_reduced_policy)
 {
   if (!ipv6_exit) {
     append_exit_policy_string(dest, "reject *6:*");
@@ -1938,7 +1958,9 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
    * effect, and are most likely an error. */
   policies_log_first_redundant_entry(*dest);
 
-  if (add_default_policy) {
+  if (add_reduced_policy) {
+    append_exit_policy_string(dest, REDUCED_EXIT_POLICY);
+  } else if (add_default_policy) {
     append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
   } else {
     append_exit_policy_string(dest, "reject *4:*");
@@ -1979,13 +2001,15 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   int add_default = (options & EXIT_POLICY_ADD_DEFAULT) ? 1 : 0;
   int reject_local_interfaces = (options &
                                  EXIT_POLICY_REJECT_LOCAL_INTERFACES) ? 1 : 0;
+  int add_reduced = (options & EXIT_POLICY_ADD_REDUCED) ? 1 : 0;
 
   return policies_parse_exit_policy_internal(cfg,dest,ipv6_enabled,
                                              reject_private,
                                              configured_addresses,
                                              reject_local_interfaces,
                                              reject_local_interfaces,
-                                             add_default);
+                                             add_default,
+                                             add_reduced);
 }
 
 /** Helper function that adds a copy of addr to a smartlist as long as it is
@@ -2094,8 +2118,12 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
     parser_cfg |= EXIT_POLICY_REJECT_PRIVATE;
   }
 
-  if (!or_options->BridgeRelay) {
+  if (!or_options->BridgeRelay && !or_options->ReducedExitPolicy) {
     parser_cfg |= EXIT_POLICY_ADD_DEFAULT;
+  }
+
+  if (or_options->ReducedExitPolicy) {
+    parser_cfg |= EXIT_POLICY_ADD_REDUCED;
   }
 
   if (or_options->ExitPolicyRejectLocalInterfaces) {

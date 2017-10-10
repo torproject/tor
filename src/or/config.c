@@ -485,6 +485,7 @@ static config_var_t option_vars_[] = {
   V(RendPostPeriod,              INTERVAL, "1 hour"),
   V(RephistTrackTime,            INTERVAL, "24 hours"),
   V(RunAsDaemon,                 BOOL,     "0"),
+  V(ReducedExitPolicy,           BOOL,     "0"),
   OBSOLETE("RunTesting"), // currently unused
   V(Sandbox,                     BOOL,     "0"),
   V(SafeLogging,                 STRING,   "1"),
