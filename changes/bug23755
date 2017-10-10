@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Stop unconditionally mirroring the tor repository in GitLab CI.
+      This prevented developers from enabling GitLab CI on master.
+      Fixes bug 23755; bugfix on 0.3.2.2-alpha.

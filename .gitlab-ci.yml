@@ -10,6 +10,8 @@ build:
     - "make install"
 
 update:
+  only:
+    - schedules
   script: 
     - "apt-get install -y --fix-missing git openssh-client"
     
