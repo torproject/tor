@@ -16,14 +16,15 @@ pub fn c_tor_version_as_new_as(platform: &str, cutoff: &str) -> bool {
         Ok(n) => n,
         Err(_) => return false,
     };
+
     let c_cutoff = match CString::new(cutoff) {
         Ok(n) => n,
         Err(_) => return false,
     };
 
-    let result: c_int;
-    unsafe {
-        result = tor_version_as_new_as(c_platform.as_ptr(), c_cutoff.as_ptr());
-    }
+    let result: c_int = unsafe {
+        tor_version_as_new_as(c_platform.as_ptr(), c_cutoff.as_ptr())
+    };
+
     result == 1
 }

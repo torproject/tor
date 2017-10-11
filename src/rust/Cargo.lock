@@ -6,13 +6,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "c_string"
-version = "0.0.1"
-dependencies = [
- "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "external"
 version = "0.0.1"
 dependencies = [
@@ -31,11 +24,19 @@ dependencies = [
  "external 0.0.1",
  "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "smartlist 0.0.1",
+ "tor_allocate 0.0.1",
  "tor_util 0.0.1",
 ]
 
 [[package]]
 name = "smartlist"
+version = "0.0.1"
+dependencies = [
+ "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "tor_allocate"
 version = "0.0.1"
 dependencies = [
  "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",

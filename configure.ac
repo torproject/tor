@@ -441,11 +441,9 @@ if test "x$enable_rust" = "xyes"; then
   if test "$bwin32" = "true"; then
     TOR_RUST_UTIL_STATIC_NAME=tor_util.lib
     TOR_RUST_PROTOVER_STATIC_NAME=libprotover.lib
-    TOR_RUST_C_STRING_STATIC_NAME=libc_string.lib
   else
     TOR_RUST_UTIL_STATIC_NAME=libtor_util.a
     TOR_RUST_PROTOVER_STATIC_NAME=libprotover.a
-    TOR_RUST_C_STRING_STATIC_NAME=libc_string.a
   fi
 
   AC_SUBST(TOR_RUST_UTIL_STATIC_NAME)

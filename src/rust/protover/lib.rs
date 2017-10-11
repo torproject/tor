@@ -27,6 +27,7 @@
 extern crate libc;
 extern crate smartlist;
 extern crate external;
+extern crate tor_allocate;
 
 mod protover;
 pub mod ffi;

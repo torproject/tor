@@ -1,6 +1,5 @@
 include src/rust/tor_util/include.am
 include src/rust/protover/include.am
-include src/rust/c_string/include.am
 
 EXTRA_DIST +=\
 	src/rust/Cargo.toml \

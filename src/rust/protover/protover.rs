@@ -364,7 +364,7 @@ fn expand_version_range(range: &str) -> Result<Vec<u32>, &'static str> {
         "cannot parse protocol range upper bound",
     ))?;
 
-    Ok((lower...higher).collect())
+    Ok((lower..=higher).collect())
 }
 
 /// Checks to see if there is a continuous range of integers, starting at the
