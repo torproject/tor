@@ -42,5 +42,13 @@ dependencies = [
  "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
+[[package]]
+name = "tor_rust"
+version = "0.1.0"
+dependencies = [
+ "protover 0.0.1",
+ "tor_util 0.0.1",
+]
+
 [metadata]
 "checksum libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)" = "babb8281da88cba992fa1f4ddec7d63ed96280a1a53ec9b919fd37b53d71e502"

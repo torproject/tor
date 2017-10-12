@@ -439,16 +439,12 @@ if test "x$enable_rust" = "xyes"; then
   dnl For now both MSVC and MinGW rust libraries will output static libs with
   dnl the MSVC naming convention.
   if test "$bwin32" = "true"; then
-    TOR_RUST_UTIL_STATIC_NAME=tor_util.lib
-    TOR_RUST_PROTOVER_STATIC_NAME=libprotover.lib
+    TOR_RUST_STATIC_NAME=tor_rust.lib
   else
-    TOR_RUST_UTIL_STATIC_NAME=libtor_util.a
-    TOR_RUST_PROTOVER_STATIC_NAME=libprotover.a
+    TOR_RUST_STATIC_NAME=libtor_rust.a
   fi
 
-  AC_SUBST(TOR_RUST_UTIL_STATIC_NAME)
-  AC_SUBST(TOR_RUST_PROTOVER_STATIC_NAME)
-  AC_SUBST(TOR_RUST_C_STRING_STATIC_NAME)
+  AC_SUBST(TOR_RUST_STATIC_NAME)
   AC_SUBST(CARGO_ONLINE)
   AC_SUBST(RUST_DL)
 

@@ -1,0 +1,16 @@
+[package]
+authors = ["The Tor Project"]
+name = "tor_rust"
+version = "0.1.0"
+
+[lib]
+name = "tor_rust"
+path = "lib.rs"
+crate_type = ["rlib", "staticlib"]
+
+[dependencies.tor_util]
+path = "../tor_util"
+
+[dependencies.protover]
+path = "../protover"
+
