@@ -8,7 +8,7 @@ use std::ffi::CString;
 
 use protover::*;
 use smartlist::*;
-use tor_allocate::allocate_string;
+use tor_allocate::allocate_and_copy_string;
 
 /// Translate C enums to Rust Proto enums, using the integer value of the C
 /// enum to map to its associated Rust enum
@@ -124,17 +124,17 @@ pub extern "C" fn protover_compute_vote(
 ) -> *mut c_char {
 
     if list.is_null() {
-        let mut empty = String::new();
-        return allocate_string(&mut empty);
+        let empty = String::new();
+        return allocate_and_copy_string(&empty);
     }
 
     // Dereference of raw pointer requires an unsafe block. The pointer is
     // checked above to ensure it is not null.
     let data: Vec<String> = unsafe { (*list).get_list() };
 
-    let mut vote = compute_vote(data, threshold);
+    let vote = compute_vote(data, threshold);
 
-    allocate_string(&mut vote)
+    allocate_and_copy_string(&vote)
 }
 
 /// Provide an interface for C to translate arguments and return types for
@@ -162,10 +162,10 @@ pub extern "C" fn protover_compute_for_old_tor(
 ) -> *mut c_char {
     // Not handling errors when unwrapping as the content is controlled
     // and is an empty string
-    let mut empty = String::new();
+    let empty = String::new();
 
     if version.is_null() {
-        return allocate_string(&mut empty);
+        return allocate_and_copy_string(&empty);
     }
 
     // Require an unsafe block to read the version from a C string. The pointer
@@ -174,10 +174,10 @@ pub extern "C" fn protover_compute_for_old_tor(
 
     let version = match c_str.to_str() {
         Ok(n) => n,
-        Err(_) => return allocate_string(&mut empty),
+        Err(_) => return allocate_and_copy_string(&empty),
     };
 
-    let mut supported = compute_for_old_tor(&version);
+    let supported = compute_for_old_tor(&version);
 
-    allocate_string(&mut supported)
+    allocate_and_copy_string(&supported)
 }

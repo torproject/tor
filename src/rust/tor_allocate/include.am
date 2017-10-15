@@ -1,0 +1,13 @@
+EXTRA_DIST +=\
+	src/rust/tor_allocate/Cargo.toml \
+	src/rust/tor_allocate/lib.rs \
+	src/rust/tor_allocate/tor_allocate.rs
+
+src/rust/target/release/@TOR_RUST_C_STRING_STATIC_NAME@: FORCE
+	( cd "$(abs_top_srcdir)/src/rust/tor_allocate" ; \
+		CARGO_TARGET_DIR="$(abs_top_builddir)/src/rust/target" \
+    CARGO_HOME="$(abs_top_builddir)/src/rust" \
+		$(CARGO) build --release --quiet $(CARGO_ONLINE) )
+
+FORCE:
+
