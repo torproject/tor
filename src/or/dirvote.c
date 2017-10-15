@@ -1315,8 +1315,9 @@ compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
- * voting quorum, generate the text of a new v3 consensus vote, and return the
- * value in a newly allocated string.
+ * voting quorum, generate the text of a new v3 consensus or microdescriptor
+ * consensus (depending on <b>flavor</b>), and return the value in a newly
+ * allocated string.
  *
  * Note: this function DOES NOT check whether the votes are from
  * recognized authorities.   (dirvote_add_vote does that.)
