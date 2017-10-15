@@ -59,7 +59,7 @@
 #define MIN_SUPPORTED_CONSENSUS_METHOD 13
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 26
+#define MAX_SUPPORTED_CONSENSUS_METHOD 27
 
 /** Lowest consensus method where microdesc consensuses omit any entry
  * with no microdesc. */
@@ -118,6 +118,10 @@
 /** Lowest consensus method where authorities initialize bandwidth weights to 1
  * instead of 0. See #14881 */
 #define MIN_METHOD_FOR_INIT_BW_WEIGHTS_ONE 26
+
+/** Lowest consensus method where the microdesc consensus contains relay IPv6
+ * addresses. See #23826 and #20916. */
+#define MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS 27
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not

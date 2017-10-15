@@ -1949,8 +1949,10 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
 
-  /* V3 microdesc consensuses don't have "a" lines. */
-  if (format == NS_V3_CONSENSUS_MICRODESC)
+  /* V3 microdesc consensuses only have "a" lines in later consensus methods
+   */
+  if (format == NS_V3_CONSENSUS_MICRODESC &&
+      consensus_method < MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS)
     goto done;
 
   /* Possible "a" line. At most one for now. */
@@ -1959,7 +1961,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                            fmt_addrport(&rs->ipv6_addr, rs->ipv6_orport));
   }
 
-  if (format == NS_V3_CONSENSUS)
+  if (format == NS_V3_CONSENSUS || format == NS_V3_CONSENSUS_MICRODESC)
     goto done;
 
   smartlist_add_asprintf(chunks,
