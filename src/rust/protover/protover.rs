@@ -1,10 +1,8 @@
 use external::c_tor_version_as_new_as;
 
 use std::str::FromStr;
-use std::str::SplitN;
 use std::fmt;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::string::String;
 
 /// The first version of Tor that included "proto" entries in its descriptors.
@@ -191,14 +189,14 @@ fn get_versions(version_string: &str) -> Result<HashSet<u32>, &'static str> {
 fn get_proto_and_vers<'a>(
     protocol_entry: &'a str,
 ) -> Result<(Proto, HashSet<u32>), &'static str> {
-    let mut parts: SplitN<'a, &str> = protocol_entry.splitn(2, "=");
+    let mut parts = protocol_entry.splitn(2, "=");
 
-    let proto: &str = match parts.next() {
+    let proto = match parts.next() {
         Some(n) => n,
         None => return Err("invalid protover entry"),
     };
 
-    let vers: &str = match parts.next() {
+    let vers = match parts.next() {
         Some(n) => n,
         None => return Err("invalid protover entry"),
     };
@@ -272,7 +270,7 @@ fn contains_only_supported_protocols(proto_entry: &str) -> bool {
 /// assert_eq!("Link=5-6", unsupported);
 ///
 pub fn all_supported(protocols: &str) -> (bool, String) {
-    let unsupported: Vec<&str> = protocols
+    let unsupported = protocols
         .split_whitespace()
         .filter(|v| !contains_only_supported_protocols(v))
         .collect::<Vec<&str>>();
@@ -348,19 +346,19 @@ fn expand_version_range(range: &str) -> Result<Vec<u32>, &'static str> {
 
     let mut parts = range.split("-");
 
-    let lower_string: &str = parts.next().ok_or(
+    let lower_string = parts.next().ok_or(
         "cannot parse protocol range lower bound",
     )?;
 
-    let lower: u32 = u32::from_str_radix(lower_string, 10).or(Err(
+    let lower = u32::from_str_radix(lower_string, 10).or(Err(
         "cannot parse protocol range lower bound",
     ))?;
 
-    let higher_string: &str = parts.next().ok_or(
+    let higher_string = parts.next().ok_or(
         "cannot parse protocol range upper bound",
     )?;
 
-    let higher: u32 = u32::from_str_radix(higher_string, 10).or(Err(
+    let higher = u32::from_str_radix(higher_string, 10).or(Err(
         "cannot parse protocol range upper bound",
     ))?;
 
@@ -391,7 +389,7 @@ fn find_range(list: &Vec<u32>) -> (bool, u32) {
     }
 
     let mut iterable = list.iter().peekable();
-    let mut range_end: u32 = match iterable.next() {
+    let mut range_end = match iterable.next() {
         Some(n) => *n,
         None => return (false, 0),
     };
@@ -478,20 +476,20 @@ fn contract_protocol_list<'a>(supported_set: &'a HashSet<u32>) -> String {
 fn parse_protocols_from_string_with_no_validation<'a>(
     protocol_string: &'a str,
 ) -> Result<HashMap<String, HashSet<u32>>, &'static str> {
-    let protocols: &[&'a str] =
-        &protocol_string.split(" ").collect::<Vec<&'a str>>()[..];
+    let protocols = &protocol_string.split(" ")
+                                    .collect::<Vec<&'a str>>()[..];
 
     let mut parsed: HashMap<String, HashSet<u32>> = HashMap::new();
 
     for subproto in protocols {
-        let mut parts: SplitN<'a, &str> = subproto.splitn(2, "=");
+        let mut parts = subproto.splitn(2, "=");
 
-        let name: &str = match parts.next() {
+        let name = match parts.next() {
             Some(n) => n,
             None => return Err("invalid protover entry"),
         };
 
-        let vers: &str = match parts.next() {
+        let vers = match parts.next() {
             Some(n) => n,
             None => return Err("invalid protover entry"),
         };
