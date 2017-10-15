@@ -1,0 +1,3 @@
+  o Minor bugfixes (memory safety):
+    - Clear the address when node_get_prim_orport() returns early.
+      Fixes bug 23874; bugfix on 0.2.8.2-alpha.
