@@ -2193,7 +2193,9 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
 char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
-  return routerstatus_format_entry(rs, NULL, NULL, NS_CONTROL_PORT, NULL);
+  return routerstatus_format_entry(rs, NULL, NULL, NS_CONTROL_PORT,
+                                   ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,
+                                   NULL);
 }
 
 /** Alloc and return a string describing routerstatuses for the most

@@ -150,6 +150,7 @@ char *routerstatus_format_entry(
                               const char *version,
                               const char *protocols,
                               routerstatus_format_type_t format,
+                              int consensus_method,
                               const vote_routerstatus_t *vrs);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
