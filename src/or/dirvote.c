@@ -3831,7 +3831,10 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     smartlist_add_asprintf(chunks, "ntor-onion-key %s", kbuf);
   }
 
+  /* We originally put a lines in the micrdescriptors, but then we worked out
+   * that we needed them in the microdesc consensus. See #20916. */
   if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
+      consensus_method < MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC &&
       !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
     smartlist_add_asprintf(chunks, "a %s\n",
                            fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
@@ -3940,7 +3943,9 @@ static const struct consensus_method_range_t {
   {MIN_METHOD_FOR_P6_LINES, MIN_METHOD_FOR_NTOR_KEY - 1},
   {MIN_METHOD_FOR_NTOR_KEY, MIN_METHOD_FOR_ID_HASH_IN_MD - 1},
   {MIN_METHOD_FOR_ID_HASH_IN_MD, MIN_METHOD_FOR_ED25519_ID_IN_MD - 1},
-  {MIN_METHOD_FOR_ED25519_ID_IN_MD, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {MIN_METHOD_FOR_ED25519_ID_IN_MD,
+    MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC - 1},
+  {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC, MAX_SUPPORTED_CONSENSUS_METHOD},
   {-1, -1}
 };
 
