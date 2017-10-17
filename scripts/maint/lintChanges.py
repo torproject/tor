@@ -21,7 +21,8 @@ KNOWN_GROUPS = set([
     "Documentation",
     "Code simplification and refactoring",
     "Removed features",
-    "Deprecated features"])
+    "Deprecated features",
+    "Directory authority changes"])
 
 NEEDS_SUBCATEGORIES = set([
     "Minor bugfix",
