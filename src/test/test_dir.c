@@ -3617,6 +3617,7 @@ test_dir_download_status_random_backoff(void *arg)
 
   /* Check the random backoff cases */
   old_increment = 0;
+  int n_attempts = 0;
   do {
     increment = download_status_schedule_get_delay(&dls_random,
                                                    NULL,
@@ -3625,9 +3626,9 @@ test_dir_download_status_random_backoff(void *arg)
     /* Test */
     tt_int_op(increment, OP_GE, min_delay);
     tt_int_op(increment, OP_LE, max_delay);
-    tt_int_op(increment, OP_GE, old_increment);
-    /* We at most quadruple, and maybe add one */
-    tt_int_op(increment, OP_LE, 4 * old_increment + 1);
+
+    if (old_increment)
+      tt_int_op(increment, OP_LE, old_increment * 3);
 
     /* Advance */
     current_time += increment;
@@ -3636,10 +3637,42 @@ test_dir_download_status_random_backoff(void *arg)
 
     /* Try another maybe */
     old_increment = increment;
-  } while (increment < max_delay);
+  } while (increment < max_delay && ++n_attempts < 1000);
 
  done:
   return;
+}
+
+static void
+test_dir_download_status_random_backoff_ranges(void *arg)
+{
+  (void)arg;
+  int lo, hi;
+  next_random_exponential_delay_range(&lo, &hi, 0, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 11);
+
+  next_random_exponential_delay_range(&lo, &hi, 6, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 6*3);
+
+  next_random_exponential_delay_range(&lo, &hi, 13, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 13 * 3);
+
+  next_random_exponential_delay_range(&lo, &hi, 37, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 111);
+
+  next_random_exponential_delay_range(&lo, &hi, 123, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 369);
+
+  next_random_exponential_delay_range(&lo, &hi, INT_MAX-5, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, INT_MAX);
+ done:
+  ;
 }
 
 static void
@@ -5475,6 +5508,7 @@ struct testcase_t dir_tests[] = {
   DIR(packages, 0),
   DIR(download_status_schedule, 0),
   DIR(download_status_random_backoff, 0),
+  DIR(download_status_random_backoff_ranges, 0),
   DIR(download_status_increment, 0),
   DIR(authdir_type_to_string, 0),
   DIR(conn_purpose_to_string, 0),
