@@ -9,9 +9,6 @@
 #include "crypto.h"
 #include "crypto_ed25519.h"
 
-extern const char tor_git_revision[];
-const char tor_git_revision[] = "";
-
 static or_options_t *mock_options = NULL;
 static const or_options_t *
 mock_get_options(void)
