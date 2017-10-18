@@ -45,3 +45,8 @@ src_tools_tor_cov_gencert_LDADD = src/common/libor-testing.a \
 endif
 
 EXTRA_DIST += src/tools/tor-fw-helper/README
+
+if BUILD_LIBTORRUNNER
+noinst_LIBRARIES += src/tools/libtorrunner.a
+src_tools_libtorrunner_a_SOURCES = src/tools/tor_runner.c src/or/tor_api.c
+endif
