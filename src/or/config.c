@@ -562,6 +562,7 @@ static config_var_t option_vars_[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
+  VAR("__OwningControllerFD",INT,OwningControllerFD, "-1"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(TestingServerDownloadSchedule, CSV_INTERVAL, "0, 0, 0, 60, 60, 120, "
                                  "300, 900, 2147483647"),
@@ -1728,6 +1729,24 @@ options_act(const or_options_t *old_options)
     log_warn(LD_BUG, "Previously validated client authorization for "
                      "hidden services could not be added!");
     return -1;
+  }
+
+  if (running_tor && !old_options && options->OwningControllerFD != -1) {
+#ifdef _WIN32
+    log_warn(LD_CONFIG, "OwningControllerFD is not supported on Windows. "
+             "If you neeed it, tell the Tor developers.");
+    return -1;
+#else
+    const unsigned ctrl_flags =
+      CC_LOCAL_FD_IS_OWNER |
+      CC_LOCAL_FD_IS_AUTHENTICATED;
+    tor_socket_t ctrl_sock = (tor_socket_t)options->OwningControllerFD;
+    if (control_connection_add_local_fd(ctrl_sock, ctrl_flags) < 0) {
+      log_warn(LD_CONFIG, "Could not add local controller connection with "
+               "given FD.");
+      return -1;
+    }
+#endif
   }
 
   /* Load state */
@@ -4569,6 +4588,12 @@ options_transition_allowed(const or_options_t *old,
   if (old->NoExec && !new_val->NoExec) {
     *msg = tor_strdup("While Tor is running, disabling "
                       "NoExec is not allowed.");
+    return -1;
+  }
+
+  if (old->OwningControllerFD != new_val->OwningControllerFD) {
+    *msg = tor_strdup("While Tor is running, changing OwningControllerFD "
+                      "is not allowed.");
     return -1;
   }
 

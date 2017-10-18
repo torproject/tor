@@ -4066,6 +4066,8 @@ typedef struct {
   /** Process specifier for a controller that ‘owns’ this Tor
    * instance.  Tor will terminate if its owning controller does. */
   char *OwningControllerProcess;
+  /** FD specifier for a controller that owns this Tor instance. */
+  int OwningControllerFD;
 
   int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
                            * long do we wait before exiting? */
