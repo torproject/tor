@@ -1186,7 +1186,7 @@ mark_socket_open(tor_socket_t s)
   bitarray_set(open_sockets, s);
 }
 #else /* !(defined(DEBUG_SOCKET_COUNTING)) */
-#define mark_socket_open(s) STMT_NIL
+#define mark_socket_open(s) ((void) (s))
 #endif /* defined(DEBUG_SOCKET_COUNTING) */
 /** @} */
 
