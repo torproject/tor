@@ -105,6 +105,7 @@ LIBTOR_A_SOURCES = \
 	src/or/statefile.c				\
 	src/or/status.c					\
 	src/or/torcert.c				\
+	src/or/tor_api.c				\
 	src/or/onion_ntor.c				\
 	$(tor_platform_source)
 
@@ -245,9 +246,13 @@ ORHEADERS = \
 	src/or/scheduler.h				\
 	src/or/statefile.h				\
 	src/or/status.h					\
-	src/or/torcert.h
+	src/or/torcert.h				\
+	src/or/tor_api_internal.h
 
-noinst_HEADERS+= $(ORHEADERS) micro-revision.i
+# This may someday want to be an installed file?
+noinst_HEADERS += src/or/tor_api.h
+
+noinst_HEADERS += $(ORHEADERS) micro-revision.i
 
 micro-revision.i: FORCE
 	$(AM_V_at)rm -f micro-revision.tmp; \
