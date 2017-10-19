@@ -195,7 +195,7 @@ nt_service_loadlibrary(void)
   return;
  err:
   printf("Unable to load library support for NT services: exiting.\n");
-  exit(1);
+  exit(1); // exit ok: ntmain can't read libraries
 }
 
 /** If we're compiled to run as an NT service, and the service wants to

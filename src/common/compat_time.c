@@ -90,7 +90,7 @@ tor_gettimeofday(struct timeval *timeval)
   if (ft.ft_64 < EPOCH_BIAS) {
     /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"System time is before 1970; failing.");
-    exit(1);
+    exit(1); // exit ok: system clock is broken.
     /* LCOV_EXCL_STOP */
   }
   ft.ft_64 -= EPOCH_BIAS;
@@ -102,7 +102,7 @@ tor_gettimeofday(struct timeval *timeval)
     log_err(LD_GENERAL,"gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
        or segfaulted.*/
-    exit(1);
+    exit(1); // exit ok: gettimeofday failed.
     /* LCOV_EXCL_STOP */
   }
 #elif defined(HAVE_FTIME)

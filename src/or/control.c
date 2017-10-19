@@ -6572,7 +6572,7 @@ monitor_owning_controller_process(const char *process_spec)
             msg);
     owning_controller_process_spec = NULL;
     tor_cleanup();
-    exit(1);
+    exit(1); // XXXX bad exit: or questionable, at least.
   }
 }
 

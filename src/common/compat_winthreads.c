@@ -52,7 +52,7 @@ spawn_exit(void)
   //we should never get here. my compiler thinks that _endthread returns, this
   //is an attempt to fool it.
   tor_assert(0);
-  _exit(0);
+  _exit(0); // exit ok: unreachable.
   // LCOV_EXCL_STOP
 }
 

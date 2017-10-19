@@ -819,7 +819,7 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
                hibernate_state == HIBERNATE_STATE_EXITING ?
                "a second time" : "while hibernating");
     tor_cleanup();
-    exit(0);
+    exit(0); // XXXX bad exit
   }
 
   if (new_state == HIBERNATE_STATE_LOWBANDWIDTH &&
@@ -981,7 +981,7 @@ consider_hibernation(time_t now)
     if (shutdown_time <= now) {
       log_notice(LD_GENERAL, "Clean shutdown finished. Exiting.");
       tor_cleanup();
-      exit(0);
+      exit(0); // XXXX bad exit
     }
     return; /* if exiting soon, don't worry about bandwidth limits */
   }

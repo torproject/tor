@@ -1756,7 +1756,7 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 #endif
 
 #if defined(DEBUGGING_CLOSE)
-  _exit(1);
+  _exit(1); // exit ok: programming error has led to sandbox failure.
 #endif // DEBUGGING_CLOSE
 }
 

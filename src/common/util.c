@@ -156,7 +156,7 @@ tor_malloc_(size_t size DMALLOC_PARAMS)
     /* If these functions die within a worker process, they won't call
      * spawn_exit, but that's ok, since the parent will run out of memory soon
      * anyway. */
-    exit(1);
+    exit(1); // exit ok: alloc failed.
     /* LCOV_EXCL_STOP */
   }
   return result;
@@ -244,7 +244,7 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
   if (PREDICT_UNLIKELY(result == NULL)) {
     /* LCOV_EXCL_START */
     log_err(LD_MM,"Out of memory on realloc(). Dying.");
-    exit(1);
+    exit(1); // exit ok: alloc failed.
     /* LCOV_EXCL_STOP */
   }
   return result;
@@ -282,7 +282,7 @@ tor_strdup_(const char *s DMALLOC_PARAMS)
   if (PREDICT_UNLIKELY(duplicate == NULL)) {
     /* LCOV_EXCL_START */
     log_err(LD_MM,"Out of memory on strdup(). Dying.");
-    exit(1);
+    exit(1); // exit ok: alloc failed.
     /* LCOV_EXCL_STOP */
   }
   return duplicate;
@@ -3590,14 +3590,14 @@ start_daemon(void)
   if (pipe(daemon_filedes)) {
     /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"pipe failed; exiting. Error was %s", strerror(errno));
-    exit(1);
+    exit(1); // exit ok: during daemonize, pipe failed.
     /* LCOV_EXCL_STOP */
   }
   pid = fork();
   if (pid < 0) {
     /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"fork failed. Exiting.");
-    exit(1);
+    exit(1); // exit ok: during daemonize, fork failed
     /* LCOV_EXCL_STOP */
   }
   if (pid) {  /* Parent */
@@ -3612,9 +3612,9 @@ start_daemon(void)
     }
     fflush(stdout);
     if (ok == 1)
-      exit(0);
+      exit(0); // exit ok: during daemonize, daemonizing.
     else
-      exit(1); /* child reported error */
+      exit(1); /* child reported error. exit ok: daemonize failed. */
   } else { /* Child */
     close(daemon_filedes[0]); /* we only write */
 
@@ -3626,7 +3626,7 @@ start_daemon(void)
      * _Advanced Programming in the Unix Environment_.
      */
     if (fork() != 0) {
-      exit(0);
+      exit(0); // exit ok: during daemonize, fork failed (2)
     }
     set_main_thread(); /* We are now the main thread. */
 
@@ -3655,14 +3655,14 @@ finish_daemon(const char *desired_cwd)
    /* Don't hold the wrong FS mounted */
   if (chdir(desired_cwd) < 0) {
     log_err(LD_GENERAL,"chdir to \"%s\" failed. Exiting.",desired_cwd);
-    exit(1);
+    exit(1); // exit ok: during daemonize, chdir failed.
   }
 
   nullfd = tor_open_cloexec("/dev/null", O_RDWR, 0);
   if (nullfd < 0) {
     /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"/dev/null can't be opened. Exiting.");
-    exit(1);
+    exit(1); // exit ok: during daemonize, couldn't open /dev/null
     /* LCOV_EXCL_STOP */
   }
   /* close fds linking to invoking terminal, but
@@ -3674,7 +3674,7 @@ finish_daemon(const char *desired_cwd)
       dup2(nullfd,2) < 0) {
     /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"dup2 failed. Exiting.");
-    exit(1);
+    exit(1); // exit ok: during daemonize, dup2 failed.
     /* LCOV_EXCL_STOP */
   }
   if (nullfd > 2)
@@ -4474,7 +4474,7 @@ tor_spawn_background(const char *const filename, const char **argv,
         err += (nbytes < 0);
       }
 
-      _exit(err?254:255);
+      _exit(err?254:255); // exit ok: in child.
     }
 
     /* Never reached, but avoids compiler warning */

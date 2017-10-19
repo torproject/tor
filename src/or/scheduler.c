@@ -281,7 +281,7 @@ select_scheduler(void)
      * wishes of using what it has been configured and don't do a sneaky
      * fallback. Because this can be changed at runtime, we have to stop tor
      * right now. */
-    exit(1);
+    exit(1); // XXXX bad exit
   }
 
   /* Set the chosen scheduler. */

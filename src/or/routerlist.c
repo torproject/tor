@@ -3082,7 +3082,7 @@ signed_descriptor_get_body_impl(const signed_descriptor_t *desc,
       log_err(LD_DIR, "We couldn't read a descriptor that is supposedly "
               "mmaped in our cache.  Is another process running in our data "
               "directory?  Exiting.");
-      exit(1);
+      exit(1); // XXXX bad exit: should recover.
     }
   }
   if (!r) /* no mmap, or not in cache. */
@@ -3096,7 +3096,7 @@ signed_descriptor_get_body_impl(const signed_descriptor_t *desc,
       log_err(LD_DIR, "descriptor at %p begins with unexpected string %s.  "
               "Is another process running in our data directory?  Exiting.",
               desc, escaped(cp));
-      exit(1);
+      exit(1); // XXXX bad exit: should recover.
     }
   }
 

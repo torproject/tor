@@ -1555,7 +1555,7 @@ check_ed_keys_callback(time_t now, const or_options_t *options)
           generate_ed_link_cert(options, now, new_signing_key > 0)) {
         log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
         tor_cleanup();
-        exit(1);
+        exit(1); // XXXX bad exit
       }
     }
     return 30;
@@ -2709,13 +2709,13 @@ process_signal(int sig)
     case SIGTERM:
       log_notice(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
       tor_cleanup();
-      exit(0);
+      exit(0); // XXXX bad exit
       break;
     case SIGINT:
       if (!server_mode(get_options())) { /* do it now */
         log_notice(LD_GENERAL,"Interrupt: exiting cleanly.");
         tor_cleanup();
-        exit(0);
+        exit(0); // XXXX bad exit
       }
 #ifdef HAVE_SYSTEMD
       sd_notify(0, "STOPPING=1");
@@ -2745,7 +2745,7 @@ process_signal(int sig)
       if (do_hup() < 0) {
         log_warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
         tor_cleanup();
-        exit(1);
+        exit(1); // XXXX bad exit
       }
 #ifdef HAVE_SYSTEMD
       sd_notify(0, "READY=1");
@@ -3198,7 +3198,7 @@ try_locking(const or_options_t *options, int err_if_locked)
         r = try_locking(options, 0);
         if (r<0) {
           log_err(LD_GENERAL, "No, it's still there.  Exiting.");
-          exit(1);
+          exit(1); // XXXX bad exit
         }
         return r;
       }

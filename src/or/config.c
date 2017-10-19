@@ -837,7 +837,7 @@ set_options(or_options_t *new_val, char **msg)
   if (options_act(old_options) < 0) { /* acting on the options failed. die. */
     log_err(LD_BUG,
             "Acting on config options left us in a broken state. Dying.");
-    exit(1);
+    exit(1); // XXXX bad exit
   }
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
@@ -5008,22 +5008,22 @@ options_init_from_torrc(int argc, char **argv)
   if (config_line_find(cmdline_only_options, "-h") ||
       config_line_find(cmdline_only_options, "--help")) {
     print_usage();
-    exit(0);
+    exit(0); // XXXX bad exit, though probably harmless
   }
   if (config_line_find(cmdline_only_options, "--list-torrc-options")) {
     /* For validating whether we've documented everything. */
     list_torrc_options();
-    exit(0);
+    exit(0); // XXXX bad exit, though probably harmless
   }
   if (config_line_find(cmdline_only_options, "--list-deprecated-options")) {
     /* For validating whether what we have deprecated really exists. */
     list_deprecated_options();
-    exit(0);
+    exit(0); // XXXX bad exit, though probably harmless
   }
 
   if (config_line_find(cmdline_only_options, "--version")) {
     printf("Tor version %s.\n",get_version());
-    exit(0);
+    exit(0); // XXXX bad exit, though probably harmless
   }
 
   if (config_line_find(cmdline_only_options, "--library-versions")) {
@@ -5051,7 +5051,7 @@ options_init_from_torrc(int argc, char **argv)
                         tor_compress_header_version_str(ZSTD_METHOD));
     }
     //TODO: Hex versions?
-    exit(0);
+    exit(0); // XXXX bad exit, though probably harmless
   }
 
   command = CMD_RUN_TOR;
@@ -5112,7 +5112,7 @@ options_init_from_torrc(int argc, char **argv)
       get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_OFF;
     } else {
       log_err(LD_CONFIG, "--no-passphrase specified without --keygen!");
-      exit(1);
+      exit(1); // XXXX bad exit
     }
   }
 
@@ -5121,7 +5121,7 @@ options_init_from_torrc(int argc, char **argv)
       get_options_mutable()->change_key_passphrase = 1;
     } else {
       log_err(LD_CONFIG, "--newpass specified without --keygen!");
-      exit(1);
+      exit(1); // XXXX bad exit
     }
   }
 
@@ -5131,17 +5131,17 @@ options_init_from_torrc(int argc, char **argv)
     if (fd_line) {
       if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
         log_err(LD_CONFIG, "--no-passphrase specified with --passphrase-fd!");
-        exit(1);
+        exit(1); // XXXX bad exit
       } else if (command != CMD_KEYGEN) {
         log_err(LD_CONFIG, "--passphrase-fd specified without --keygen!");
-        exit(1);
+        exit(1); // XXXX bad exit
       } else {
         const char *v = fd_line->value;
         int ok = 1;
         long fd = tor_parse_long(v, 10, 0, INT_MAX, &ok, NULL);
         if (fd < 0 || ok == 0) {
           log_err(LD_CONFIG, "Invalid --passphrase-fd value %s", escaped(v));
-          exit(1);
+          exit(1); // XXXX bad exit
         }
         get_options_mutable()->keygen_passphrase_fd = (int)fd;
         get_options_mutable()->use_keygen_passphrase_fd = 1;
@@ -5156,7 +5156,7 @@ options_init_from_torrc(int argc, char **argv)
     if (key_line) {
       if (command != CMD_KEYGEN) {
         log_err(LD_CONFIG, "--master-key without --keygen!");
-        exit(1);
+        exit(1); // XXXX bad exit
       } else {
         get_options_mutable()->master_key_fname = tor_strdup(key_line->value);
       }

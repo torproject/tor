@@ -1671,7 +1671,7 @@ handle_missing_protocol_warning_impl(const networkstatus_t *c,
   }
   tor_free(protocol_warning);
   if (should_exit)
-    exit(1);
+    exit(1); // XXXX bad exit: should return from main.
 }
 
 /** Called when we have received a networkstatus <b>c</b>. If there are
