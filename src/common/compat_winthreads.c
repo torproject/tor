@@ -48,10 +48,12 @@ void
 spawn_exit(void)
 {
   _endthread();
+  // LCOV_EXCL_START
   //we should never get here. my compiler thinks that _endthread returns, this
   //is an attempt to fool it.
   tor_assert(0);
   _exit(0);
+  // LCOV_EXCL_STOP
 }
 
 void
