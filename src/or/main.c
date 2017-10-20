@@ -656,6 +656,22 @@ tell_event_loop_to_run_external_code(void)
   }
 }
 
+/** Failsafe measure that should never actually be necessary: If
+ * tor_shutdown_event_loop_and_exit() somehow doesn't successfully exit the
+ * event loop, then this callback will kill Tor with an assertion failure
+ * seconds later
+ */
+static void
+shutdown_did_not_work_callback(evutil_socket_t fd, short event, void *arg)
+{
+  // LCOV_EXCL_START
+  (void) fd;
+  (void) event;
+  (void) arg;
+  tor_assert_unreached();
+  // LCOV_EXCL_STOP
+}
+
 /**
  * After finishing the current callback (if any), shut down the main loop,
  * clean up the process, and exit with <b>exitcode</b>.
@@ -668,6 +684,13 @@ tor_shutdown_event_loop_and_exit(int exitcode)
 
   main_loop_should_exit = 1;
   main_loop_exit_value = exitcode;
+
+  /* Die with an assertion failure in ten seconds, if for some reason we don't
+   * exit normally. */
+  struct timeval ten_seconds = { 10, 0 };
+  event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT,
+                  shutdown_did_not_work_callback, NULL,
+                  &ten_seconds);
 
   /* Unlike loopexit, loopbreak prevents other callbacks from running. */
   tor_event_base_loopbreak(tor_libevent_get_base());
