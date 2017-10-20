@@ -1609,8 +1609,7 @@ check_ed_keys_callback(time_t now, const or_options_t *options)
       if (new_signing_key < 0 ||
           generate_ed_link_cert(options, now, new_signing_key > 0)) {
         log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
-        tor_cleanup();
-        exit(1); // XXXX bad exit
+        tor_shutdown_event_loop_and_exit(1);
       }
     }
     return 30;
