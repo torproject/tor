@@ -3265,7 +3265,7 @@ try_locking(const or_options_t *options, int err_if_locked)
         r = try_locking(options, 0);
         if (r<0) {
           log_err(LD_GENERAL, "No, it's still there.  Exiting.");
-          exit(1); // XXXX bad exit
+          return -1;
         }
         return r;
       }
