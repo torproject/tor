@@ -818,8 +818,8 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
     log_notice(LD_GENERAL,"SIGINT received %s; exiting now.",
                hibernate_state == HIBERNATE_STATE_EXITING ?
                "a second time" : "while hibernating");
-    tor_cleanup();
-    exit(0); // XXXX bad exit
+    tor_shutdown_event_loop_and_exit(0);
+    return;
   }
 
   if (new_state == HIBERNATE_STATE_LOWBANDWIDTH &&
@@ -980,8 +980,7 @@ consider_hibernation(time_t now)
     tor_assert(shutdown_time);
     if (shutdown_time <= now) {
       log_notice(LD_GENERAL, "Clean shutdown finished. Exiting.");
-      tor_cleanup();
-      exit(0); // XXXX bad exit
+      tor_shutdown_event_loop_and_exit(0);
     }
     return; /* if exiting soon, don't worry about bandwidth limits */
   }

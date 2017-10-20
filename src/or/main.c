@@ -2776,14 +2776,13 @@ process_signal(int sig)
     {
     case SIGTERM:
       log_notice(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
-      tor_cleanup();
-      exit(0); // XXXX bad exit
+      tor_shutdown_event_loop_and_exit(0);
       break;
     case SIGINT:
       if (!server_mode(get_options())) { /* do it now */
         log_notice(LD_GENERAL,"Interrupt: exiting cleanly.");
-        tor_cleanup();
-        exit(0); // XXXX bad exit
+        tor_shutdown_event_loop_and_exit(0);
+        return;
       }
 #ifdef HAVE_SYSTEMD
       sd_notify(0, "STOPPING=1");
@@ -2812,8 +2811,8 @@ process_signal(int sig)
 #endif
       if (do_hup() < 0) {
         log_warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
-        tor_cleanup();
-        exit(1); // XXXX bad exit
+        tor_shutdown_event_loop_and_exit(1);
+        return;
       }
 #ifdef HAVE_SYSTEMD
       sd_notify(0, "READY=1");
