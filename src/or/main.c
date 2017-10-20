@@ -2420,10 +2420,18 @@ do_hup(void)
   /* first, reload config variables, in case they've changed */
   if (options->ReloadTorrcOnSIGHUP) {
     /* no need to provide argc/v, they've been cached in init_from_config */
-    if (options_init_from_torrc(0, NULL) < 0) {
+    int init_rv = options_init_from_torrc(0, NULL);
+    if (init_rv < 0) {
       log_err(LD_CONFIG,"Reading config failed--see warnings above. "
               "For usage, try -h.");
       return -1;
+    } else if (BUG(init_rv > 0)) {
+      // LCOV_EXCL_START
+      /* This should be impossible: the only "return 1" cases in
+       * options_init_from_torrc are ones caused by command-line arguments;
+       * but they can't change while Tor is running. */
+      return -1;
+      // LCOV_EXCL_STOP
     }
     options = get_options(); /* they have changed now */
     /* Logs are only truncated the first time they are opened, but were
@@ -3085,7 +3093,8 @@ activate_signal(int signal_num)
   }
 }
 
-/** Main entry point for the Tor command-line client.
+/** Main entry point for the Tor command-line client.  Return 0 on "success",
+ * negative on "failure", and positive on "success and exit".
  */
 int
 tor_init(int argc, char *argv[])
@@ -3192,9 +3201,14 @@ tor_init(int argc, char *argv[])
   }
   atexit(exit_function);
 
-  if (options_init_from_torrc(argc,argv) < 0) {
+  int init_rv = options_init_from_torrc(argc,argv);
+  if (init_rv < 0) {
     log_err(LD_CONFIG,"Reading config failed--see warnings above.");
     return -1;
+  } else if (init_rv > 0) {
+    // We succeeded, and should exit anyway -- probably the user just said
+    // "--version" or something like that.
+    return 1;
   }
 
   /* The options are now initialised */
@@ -3820,8 +3834,13 @@ tor_main(int argc, char *argv[])
      if (done) return result;
   }
 #endif /* defined(NT_SERVICE) */
-  if (tor_init(argc, argv)<0)
-    return -1;
+  {
+    int init_rv = tor_init(argc, argv);
+    if (init_rv < 0)
+      return -1;
+    else if (init_rv > 0)
+      return 0;
+  }
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
     sandbox_cfg_t* cfg = sandbox_init_filter();
