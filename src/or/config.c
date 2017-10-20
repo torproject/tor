@@ -835,9 +835,12 @@ set_options(or_options_t *new_val, char **msg)
     return -1;
   }
   if (options_act(old_options) < 0) { /* acting on the options failed. die. */
-    log_err(LD_BUG,
-            "Acting on config options left us in a broken state. Dying.");
-    exit(1); // XXXX bad exit
+    if (! tor_event_loop_shutdown_is_pending()) {
+      log_err(LD_BUG,
+              "Acting on config options left us in a broken state. Dying.");
+      tor_shutdown_event_loop_and_exit(1);
+    }
+    return -1;
   }
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
@@ -1664,8 +1667,11 @@ options_act(const or_options_t *old_options)
       return -1;
   }
 
-  if (consider_adding_dir_servers(options, old_options) < 0)
+  if (consider_adding_dir_servers(options, old_options) < 0) {
+    // XXXX This should get validated earlier, and committed here, to
+    // XXXX lower opportunities for reaching an error case.
     return -1;
+  }
 
   if (rend_non_anonymous_mode_enabled(options)) {
     log_warn(LD_GENERAL, "This copy of Tor was compiled or configured to run "
@@ -1674,6 +1680,7 @@ options_act(const or_options_t *old_options)
 
 #ifdef ENABLE_TOR2WEB_MODE
 /* LCOV_EXCL_START */
+  // XXXX This should move into options_validate()
   if (!options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
             "'tor2web mode'. It can only be run with the Tor2webMode torrc "
@@ -1682,6 +1689,7 @@ options_act(const or_options_t *old_options)
   }
 /* LCOV_EXCL_STOP */
 #else /* !(defined(ENABLE_TOR2WEB_MODE)) */
+  // XXXX This should move into options_validate()
   if (options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
             "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
@@ -1850,7 +1858,7 @@ options_act(const or_options_t *old_options)
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
-    log_warn(LD_CONFIG,"Error in accounting options");
+    log_warn(LD_BUG,"Error in previously validated accounting options");
     return -1;
   }
   if (accounting_is_enabled(options))
@@ -1874,6 +1882,7 @@ options_act(const or_options_t *old_options)
     char *http_authenticator;
     http_authenticator = alloc_http_authenticator(options->BridgePassword);
     if (!http_authenticator) {
+      // XXXX This should get validated in options_validate().
       log_warn(LD_BUG, "Unable to allocate HTTP authenticator. Not setting "
                "BridgePassword.");
       return -1;
@@ -1886,7 +1895,8 @@ options_act(const or_options_t *old_options)
   }
 
   if (parse_outbound_addresses(options, 0, &msg) < 0) {
-    log_warn(LD_BUG, "Failed parsing outbound bind addresses: %s", msg);
+    log_warn(LD_BUG, "Failed parsing previously validated outbound "
+             "bind addresses: %s", msg);
     tor_free(msg);
     return -1;
   }
