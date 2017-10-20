@@ -639,7 +639,7 @@ connection_should_read_from_linked_conn(connection_t *conn)
  * runs out of events, now we've changed our mind: tell it we want it to
  * finish. */
 void
-tell_event_loop_to_finish(void)
+tell_event_loop_to_run_external_code(void)
 {
   if (!called_loop_once) {
     struct timeval tv = { 0, 0 };
@@ -663,7 +663,7 @@ connection_start_reading_from_linked_conn(connection_t *conn)
     /* make sure that the event_base_loop() function exits at
      * the end of its run through the current connections, so we can
      * activate read events for linked connections. */
-    tell_event_loop_to_finish();
+    tell_event_loop_to_run_external_code();
   } else {
     tor_assert(smartlist_contains(active_linked_connection_lst, conn));
   }
