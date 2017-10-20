@@ -1717,9 +1717,11 @@ options_act(const or_options_t *old_options)
     for (cl = options->Bridges; cl; cl = cl->next) {
       bridge_line_t *bridge_line = parse_bridge_line(cl->value);
       if (!bridge_line) {
+        // LCOV_EXCL_START
         log_warn(LD_BUG,
                  "Previously validated Bridge line could not be added!");
         return -1;
+        // LCOV_EXCL_STOP
       }
       bridge_add_from_config(bridge_line);
     }
@@ -1727,15 +1729,19 @@ options_act(const or_options_t *old_options)
   }
 
   if (running_tor && hs_config_service_all(options, 0)<0) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG,
        "Previously validated hidden services line could not be added!");
     return -1;
+    // LCOV_EXCL_STOP
   }
 
   if (running_tor && rend_parse_service_authorization(options, 0) < 0) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG, "Previously validated client authorization for "
                      "hidden services could not be added!");
     return -1;
+    // LCOV_EXCL_STOP
   }
 
   /* Load state */
@@ -1758,10 +1764,12 @@ options_act(const or_options_t *old_options)
     if (options->ClientTransportPlugin) {
       for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
         if (parse_transport_line(options, cl->value, 0, 0) < 0) {
+          // LCOV_EXCL_START
           log_warn(LD_BUG,
                    "Previously validated ClientTransportPlugin line "
                    "could not be added!");
           return -1;
+          // LCOV_EXCL_STOP
         }
       }
     }
@@ -1769,10 +1777,12 @@ options_act(const or_options_t *old_options)
     if (options->ServerTransportPlugin && server_mode(options)) {
       for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
         if (parse_transport_line(options, cl->value, 0, 1) < 0) {
+          // LCOV_EXCL_START
           log_warn(LD_BUG,
                    "Previously validated ServerTransportPlugin line "
                    "could not be added!");
           return -1;
+          // LCOV_EXCL_STOP
         }
       }
     }
@@ -1858,8 +1868,10 @@ options_act(const or_options_t *old_options)
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG,"Error in previously validated accounting options");
     return -1;
+    // LCOV_EXCL_STOP
   }
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
@@ -1895,10 +1907,12 @@ options_act(const or_options_t *old_options)
   }
 
   if (parse_outbound_addresses(options, 0, &msg) < 0) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG, "Failed parsing previously validated outbound "
              "bind addresses: %s", msg);
     tor_free(msg);
     return -1;
+    // LCOV_EXCL_STOP
   }
 
   config_maybe_load_geoip_files_(options, old_options);
