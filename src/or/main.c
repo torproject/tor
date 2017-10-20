@@ -192,6 +192,14 @@ static smartlist_t *active_linked_connection_lst = NULL;
  * <b>loop_once</b>. If so, there's no need to trigger a loopexit in order
  * to handle linked connections. */
 static int called_loop_once = 0;
+/** Flag: if true, it's time to shut down, so the main loop should exit as
+ * soon as possible.
+ */
+static int main_loop_should_exit = 0;
+/** The return value that the main loop should yield when it exits, if
+ * main_loop_should_exit is true.
+ */
+static int main_loop_exit_value = 0;
 
 /** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working.  We set it to 0 when
@@ -646,6 +654,30 @@ tell_event_loop_to_run_external_code(void)
     tor_event_base_loopexit(tor_libevent_get_base(), &tv);
     called_loop_once = 1; /* hack to avoid adding more exit events */
   }
+}
+
+/**
+ * After finishing the current callback (if any), shut down the main loop,
+ * clean up the process, and exit with <b>exitcode</b>.
+ */
+void
+tor_shutdown_event_loop_and_exit(int exitcode)
+{
+  if (main_loop_should_exit)
+    return; /* Ignore multiple calls to this function. */
+
+  main_loop_should_exit = 1;
+  main_loop_exit_value = exitcode;
+
+  /* Unlike loopexit, loopbreak prevents other callbacks from running. */
+  tor_event_base_loopbreak(tor_libevent_get_base());
+}
+
+/** Return true iff tor_shutdown_event_loop_and_exit() has been called. */
+int
+tor_event_loop_shutdown_is_pending(void)
+{
+  return main_loop_should_exit;
 }
 
 /** Helper: Tell the main loop to begin reading bytes into <b>conn</b> from
@@ -2595,6 +2627,9 @@ do_main_loop(void)
   }
 #endif /* defined(HAVE_SYSTEMD) */
 
+  main_loop_should_exit = 0;
+  main_loop_exit_value = 0;
+
   return run_main_loop_until_done();
 }
 
@@ -2608,6 +2643,9 @@ run_main_loop_once(void)
   int loop_result;
 
   if (nt_service_is_stopping())
+    return 0;
+
+  if (main_loop_should_exit)
     return 0;
 
 #ifndef _WIN32
@@ -2656,6 +2694,9 @@ run_main_loop_once(void)
     }
   }
 
+  if (main_loop_should_exit)
+    return 0;
+
   /* And here is where we put callbacks that happen "every time the event loop
    * runs."  They must be very fast, or else the whole Tor process will get
    * slowed down.
@@ -2684,7 +2725,11 @@ run_main_loop_until_done(void)
   do {
     loop_result = run_main_loop_once();
   } while (loop_result == 1);
-  return loop_result;
+
+  if (main_loop_should_exit)
+    return main_loop_exit_value;
+  else
+    return loop_result;
 }
 
 /** Libevent callback: invoked when we get a signal.
