@@ -1,50 +1,62 @@
 use std::slice;
-use libc::c_char;
+use libc::{c_char, c_int};
 use std::ffi::CStr;
 
 /// Smartlists are a type used in C code in tor to define a collection of a
 /// generic type, which has a capacity and a number used. Each Smartlist
 /// defines how to extract the list of values from the underlying C structure
-/// Implementations are required to have a C representation
+///
+/// Implementations are required to have a C representation, as this module
+/// serves purely to translate smartlists as defined in tor to vectors in Rust.
 pub trait Smartlist<T> {
     fn get_list(&self) -> Vec<T>;
 }
+
 #[repr(C)]
 pub struct Stringlist {
     pub list: *const *const c_char,
-    pub num_used: u8,
-    pub capacity: u8,
+    pub num_used: c_int,
+    pub capacity: c_int,
 }
 
 impl Smartlist<String> for Stringlist {
     fn get_list(&self) -> Vec<String> {
         let empty: Vec<String> = Vec::new();
-        let mut v: Vec<String> = Vec::new();
+        let mut rust_list: Vec<String> = Vec::new();
 
-        if self.list.is_null() {
+        if self.list.is_null() || self.num_used == 0 {
             return empty;
         }
 
         // unsafe, as we need to extract the smartlist list into a vector of
         // pointers, and then transform each element into a Rust string.
-        unsafe {
-            let elems =
-                slice::from_raw_parts(self.list, self.num_used as usize);
+        let elems: &[*const i8] = unsafe {
+            slice::from_raw_parts(self.list, self.num_used as usize)
+        };
 
-            for i in elems.iter() {
-                let c_str = CStr::from_ptr(*i);
-                let r_str = match c_str.to_str() {
-                    Ok(n) => n,
-                    Err(_) => return empty,
-                };
-                v.push(String::from(r_str));
+        for elem in elems.iter() {
+            if elem.is_null() {
+                continue;
             }
+
+            // unsafe, as we need to create a cstring from the referenced
+            // element
+            let c_string = unsafe { CStr::from_ptr(*elem) };
+
+            let r_string = match c_string.to_str() {
+                Ok(n) => n,
+                Err(_) => return empty,
+            };
+
+            rust_list.push(String::from(r_string));
         }
 
-        v
+        rust_list
     }
 }
 
+// TODO: CHK: this module maybe should be tested from a test in C with a
+// smartlist as defined in tor.
 #[cfg(test)]
 mod test {
     #[test]
@@ -83,9 +95,10 @@ mod test {
             let p_args: Vec<_> =
                 c_strings.iter().map(|arg| arg.as_ptr()).collect();
 
-            // then, collect a pointer for the list itself
             let p: *const *const c_char = p_args.as_ptr();
 
+            // This is the representation that we expect when receiving a
+            // smartlist at the Rust/C FFI layer.
             let sl = Stringlist {
                 list: p,
                 num_used: 2,
