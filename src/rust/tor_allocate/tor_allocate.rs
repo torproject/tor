@@ -26,9 +26,9 @@ extern "C" fn tor_malloc_ ( size: usize) ->  *mut c_void {
 /// A `String` that should be freed by tor_free in C
 ///
 pub fn allocate_and_copy_string(src: &String) -> *mut c_char {
-    let bytes = s.as_bytes();
+    let bytes = src.as_bytes();
 
-    let size = s.len();
+    let size = bytes.len();
     let size_with_null_byte = size + 1;
 
     let dest = unsafe { tor_malloc_(size_with_null_byte) as *mut u8 };

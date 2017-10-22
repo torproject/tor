@@ -1225,7 +1225,6 @@ struct testgroup_t testgroups[] = {
   { "routerkeys/", routerkeys_tests },
   { "routerlist/", routerlist_tests },
   { "routerset/" , routerset_tests },
-  { "rust/", rust_tests },
   { "scheduler/", scheduler_tests },
   { "socks/", socks_tests },
   { "shared-random/", sr_tests },

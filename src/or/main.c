@@ -60,7 +60,6 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "command.h"
-#include "compat_rust.h"
 #include "compress.h"
 #include "config.h"
 #include "confparse.h"
@@ -127,6 +126,10 @@
 #endif /* defined(HAVE_SYSTEMD) */
 
 void evdns_shutdown(int);
+
+// helper function defined in Rust to output a log message indicating if tor is
+// running with Rust enabled. See src/rust/tor_util
+char *rust_welcome_string(void);
 
 /********* PROTOTYPES **********/
 
@@ -3111,14 +3114,13 @@ tor_init(int argc, char *argv[])
                  "Expect more bugs than usual.");
   }
 
-  {
-    rust_str_t rust_str = rust_welcome_string();
-    const char *s = rust_str_get(rust_str);
-    if (strlen(s) > 0) {
-      log_notice(LD_GENERAL, "%s", s);
-    }
-    rust_str_free(rust_str);
+#ifdef HAVE_RUST
+  char *rust_str = rust_welcome_string();
+  if (rust_str != NULL && strlen(rust_str) > 0) {
+    log_notice(LD_GENERAL, "%s", rust_str);
   }
+  tor_free(rust_str);
+#endif
 
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");
