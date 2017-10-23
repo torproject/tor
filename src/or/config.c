@@ -6350,8 +6350,26 @@ warn_client_dns_cache(const char *option, int disabling)
       "to your destination.");
 }
 
-/** Warn if <b>bd</b> is an unrecognized bridge distribution setting;
- * return -1 if it is invalid. */
+/**
+ * Validate the configured bridge distribution method from a BridgeDistribution
+ * config line.
+ *
+ * The input <b>bd</b>, is a string taken from the BridgeDistribution config
+ * line (if present).  If the option wasn't set, return 0 immediately.  The
+ * BridgeDistribution option is then validated.  Currently valid, recognised
+ * options are:
+ *
+ * - "none"
+ * - "any"
+ * - "https"
+ * - "email"
+ * - "moat"
+ * - "hyphae"
+ *
+ * If the option string is unrecognised, a warning will be logged and 0 is
+ * returned.  If the option string contains an invalid character, -1 is
+ * returned.
+ **/
 static int
 check_bridge_distribution_setting(const char *bd)
 {
