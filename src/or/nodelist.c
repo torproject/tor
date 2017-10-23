@@ -1116,6 +1116,11 @@ node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
   node_assert_ok(node);
   tor_assert(ap_out);
 
+  /* Clear the address, as a safety precaution if calling functions ignore the
+   * return value */
+  tor_addr_make_null(&ap_out->addr, AF_INET);
+  ap_out->port = 0;
+
   /* Check ri first, because rewrite_node_address_for_bridge() updates
    * node->ri with the configured bridge address. */
 
