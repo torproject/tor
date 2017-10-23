@@ -2867,9 +2867,13 @@ router_dump_router_to_string(routerinfo_t *router,
     smartlist_add_asprintf(chunks, "contact %s\n", ci);
   }
 
-  if (options->BridgeRelay && options->BridgeDistribution &&
-      strlen(options->BridgeDistribution)) {
-    const char *bd = options->BridgeDistribution;
+  if (options->BridgeRelay) {
+    const char *bd;
+    if (options->BridgeDistribution && strlen(options->BridgeDistribution)) {
+      bd = options->BridgeDistribution;
+    } else {
+      bd = "any";
+    }
     if (strchr(bd, '\n') || strchr(bd, '\r'))
       bd = escaped(bd);
     smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n", bd);
