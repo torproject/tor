@@ -1,0 +1,5 @@
+  o Major bugfixes (relay, crash, assertion failure):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
