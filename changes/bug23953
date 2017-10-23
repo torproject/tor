@@ -1,0 +1,3 @@
+  o Minor features (performance):
+    - Use stdatomic.h where available, rather than mutexes, to implement
+      atomic_counter_t. Closes ticket 23953.
