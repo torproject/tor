@@ -654,7 +654,6 @@ static int parse_ports(or_options_t *options, int validate_only,
 static int check_server_ports(const smartlist_t *ports,
                               const or_options_t *options,
                               int *num_low_ports_out);
-static int check_bridge_distribution_setting(const char *bd);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
@@ -6370,7 +6369,7 @@ warn_client_dns_cache(const char *option, int disabling)
  * returned.  If the option string contains an invalid character, -1 is
  * returned.
  **/
-static int
+STATIC int
 check_bridge_distribution_setting(const char *bd)
 {
   if (bd == NULL)
