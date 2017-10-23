@@ -3282,14 +3282,12 @@ static void
 write_http_status_line(dir_connection_t *conn, int status,
                        const char *reason_phrase)
 {
-  char buf[256];
-  if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n",
-      status, reason_phrase ? reason_phrase : "OK") < 0) {
-    log_warn(LD_BUG,"status line too long.");
-    return;
-  }
+  char *buf = NULL;
+  tor_asprintf(&buf, "HTTP/1.0 %d %s\r\n\r\n",
+               status, reason_phrase ? reason_phrase : "OK");
   log_debug(LD_DIRSERV,"Wrote status 'HTTP/1.0 %d %s'", status, reason_phrase);
   connection_write_to_buf(buf, strlen(buf), TO_CONN(conn));
+  tor_free(buf);
 }
 
 /** Write the header for an HTTP/1.0 response onto <b>conn</b>-\>outbuf,

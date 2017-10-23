@@ -1,0 +1,3 @@
+  o Minor bugfixes (directory authority, backport from 0.3.2.1-alpha):
+    - Remove the length limit on HTTP status lines that authorities can send
+      in their replies. Fixes bug 23499; bugfix on 0.3.1.6-rc.
