@@ -2,5 +2,8 @@
     - Bridge relays can now set the BridgeDistribution config option to
       add a "bridge-distribution-request" line to their bridge descriptor,
       which tells BridgeDB how they'd like their bridge address to be
-      given out. Implements tickets 18329.
+      given out. (Note that as of Oct 2017, BridgeDB does not yet implement
+      this feature.) As a side benefit, this feature provides a way
+      to distinguish bridge descriptors from non-bridge descriptors.
+      Implements tickets 18329.
 
