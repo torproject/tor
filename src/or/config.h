@@ -31,6 +31,7 @@ const char *safe_str_client(const char *address);
 const char *safe_str(const char *address);
 const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
+int get_protocol_warning_severity_level(void);
 const char *get_version(void);
 const char *get_short_version(void);
 setopt_err_t options_trial_assign(config_line_t *list, unsigned flags,

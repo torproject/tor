@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay):
+    - Avoid a BUG warning when receiving a dubious CREATE cell while
+      an option transition is in progress. Fixes bug 23952; bugfix on
+      0.3.2.1-alpha.
