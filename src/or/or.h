@@ -2234,12 +2234,12 @@ typedef struct {
  * uploaded it. */
 #define ROUTER_PURPOSE_GENERAL 0
 /** Tor should avoid using this router for circuit-building: we got it
- * from a crontroller.  If the controller wants to use it, it'll have to
+ * from a controller.  If the controller wants to use it, it'll have to
  * ask for it by identity. */
 #define ROUTER_PURPOSE_CONTROLLER 1
 /** Tor should use this router only for bridge positions in circuits: we got
  * it via a directory request from the bridge itself, or a bridge
- * authority. x*/
+ * authority. */
 #define ROUTER_PURPOSE_BRIDGE 2
 /** Tor should not use this router; it was marked in cached-descriptors with
  * a purpose we didn't recognize. */
