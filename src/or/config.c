@@ -253,6 +253,7 @@ static config_var_t option_vars_[] = {
   V(BridgePassword,              STRING,   NULL),
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
+  V(BridgeDistribution,          STRING,   NULL),
   V(CellStatistics,              BOOL,     "0"),
   V(PaddingStatistics,           BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
@@ -731,7 +732,6 @@ static int parse_ports(or_options_t *options, int validate_only,
 static int check_server_ports(const smartlist_t *ports,
                               const or_options_t *options,
                               int *num_low_ports_out);
-
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
@@ -3512,6 +3512,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Relays cannot set ReducedConnectionPadding. ");
   }
 
+  if (options->BridgeDistribution) {
+    if (!options->BridgeRelay) {
+      REJECT("You set BridgeDistribution, but you didn't set BridgeRelay!");
+    }
+    if (check_bridge_distribution_setting(options->BridgeDistribution) < 0) {
+      REJECT("Invalid BridgeDistribution value.");
+    }
+  }
+
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
                         "least 0 seconds. Changing to 0.");
@@ -4686,6 +4695,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       get_effective_bwburst(old_options) !=
         get_effective_bwburst(new_options) ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
+      !opt_streq(old_options->BridgeDistribution,
+                 new_options->BridgeDistribution) ||
       !config_lines_eq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
       old_options->AccountingMax != new_options->AccountingMax ||
@@ -6581,6 +6592,55 @@ warn_client_dns_cache(const char *option, int disabling)
       "an IP address, cacheing that address would make you visit "
       "an address of the attacker's choice every time you connected "
       "to your destination.");
+}
+
+/**
+ * Validate the configured bridge distribution method from a BridgeDistribution
+ * config line.
+ *
+ * The input <b>bd</b>, is a string taken from the BridgeDistribution config
+ * line (if present).  If the option wasn't set, return 0 immediately.  The
+ * BridgeDistribution option is then validated.  Currently valid, recognised
+ * options are:
+ *
+ * - "none"
+ * - "any"
+ * - "https"
+ * - "email"
+ * - "moat"
+ * - "hyphae"
+ *
+ * If the option string is unrecognised, a warning will be logged and 0 is
+ * returned.  If the option string contains an invalid character, -1 is
+ * returned.
+ **/
+STATIC int
+check_bridge_distribution_setting(const char *bd)
+{
+  if (bd == NULL)
+    return 0;
+
+  const char *RECOGNIZED[] = {
+    "none", "any", "https", "email", "moat", "hyphae"
+  };
+  unsigned i;
+  for (i = 0; i < ARRAY_LENGTH(RECOGNIZED); ++i) {
+    if (!strcmp(bd, RECOGNIZED[i]))
+      return 0;
+  }
+
+  const char *cp = bd;
+  //  Method = (KeywordChar | "_") +
+  while (TOR_ISALNUM(*cp) || *cp == '-' || *cp == '_')
+    ++cp;
+
+  if (*cp == 0) {
+    log_warn(LD_CONFIG, "Unrecognized BridgeDistribution value %s. I'll "
+           "assume you know what you are doing...", escaped(bd));
+    return 0; // we reached the end of the string; all is well
+  } else {
+    return -1; // we found a bad character in the string.
+  }
 }
 
 /**

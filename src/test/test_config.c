@@ -5446,6 +5446,73 @@ test_config_dup_and_filter(void *arg)
   config_free_lines(line_dup);
 }
 
+/* If we're not configured to be a bridge, but we set
+ * BridgeDistribution, then options_validate () should return -1. */
+static void
+test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
+{
+  or_options_t* options = get_options_mutable();
+  or_options_t* old_options = options;
+  or_options_t* default_options = options;
+  char* message = (char*)("");
+  int ret;
+
+  (void)arg;
+
+  options->BridgeRelay = 0;
+  options->BridgeDistribution = (char*)("https");
+
+  ret = options_validate(old_options, options, default_options, 0, &message);
+
+  tt_int_op(ret, OP_EQ, -1);
+ done:
+  return;
+}
+
+/* If the BridgeDistribution setting was valid, 0 should be returned. */
+static void
+test_config_check_bridge_distribution_setting_valid(void *arg)
+{
+  int ret = check_bridge_distribution_setting("https");
+
+  (void)arg;
+
+  tt_int_op(ret, OP_EQ, 0);
+ done:
+  return;
+}
+
+/* If the BridgeDistribution setting was invalid, -1 should be returned. */
+static void
+test_config_check_bridge_distribution_setting_invalid(void *arg)
+{
+  int ret = check_bridge_distribution_setting("hyphens-are-allowed");
+
+  (void)arg;
+
+  tt_int_op(ret, OP_EQ, 0);
+
+  ret = check_bridge_distribution_setting("asterisks*are*forbidden");
+
+  tt_int_op(ret, OP_EQ, -1);
+ done:
+  return;
+}
+
+/* If the BridgeDistribution setting was unrecognised, a warning should be
+ * logged and 0 should be returned. */
+static void
+test_config_check_bridge_distribution_setting_unrecognised(void *arg)
+{
+  int ret = check_bridge_distribution_setting("unicorn");
+
+  (void)arg;
+
+  tt_int_op(ret, OP_EQ, 0);
+ done:
+  return;
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5489,6 +5556,10 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(include_flag_torrc_only, TT_FORK),
   CONFIG_TEST(include_flag_defaults_only, TT_FORK),
   CONFIG_TEST(dup_and_filter, 0),
+  CONFIG_TEST(check_bridge_distribution_setting_not_a_bridge, TT_FORK),
+  CONFIG_TEST(check_bridge_distribution_setting_valid, 0),
+  CONFIG_TEST(check_bridge_distribution_setting_invalid, 0),
+  CONFIG_TEST(check_bridge_distribution_setting_unrecognised, 0),
   END_OF_TESTCASES
 };
 
