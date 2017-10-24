@@ -203,6 +203,8 @@ STATIC int parse_port_config(smartlist_t *out,
                   const char *defaultaddr,
                   int defaultport,
                   const unsigned flags);
+
+STATIC int check_bridge_distribution_setting(const char *bd);
 #endif /* defined(CONFIG_PRIVATE) */
 
 #endif /* !defined(TOR_CONFIG_H) */

@@ -1670,6 +1670,17 @@ is non-zero):
     server descriptor to the bridge database, rather than
     to the public directory authorities.
 
+[[BridgeDistribution]] **BridgeDistribution** __string__::
+    If set along with BridgeRelay, Tor will include a new line in its
+    bridge descriptor which indicates to the BridgeDB service how it
+    would like its bridge address to be given out. Set it to "none" if
+    you want BridgeDB to avoid distributing your bridge address, or "any" to
+    let BridgeDB decide. (Default: any)
+ +
+    Note: as of Oct 2017, the BridgeDB part of this option is not yet
+    implemented.  Until BridgeDB is updated to obey this option, your
+    bridge will make this request, but it will not (yet) be obeyed.
+
 [[ContactInfo]] **ContactInfo** __email_address__::
     Administrative contact information for this relay or bridge. This line
     can be used to contact you if your relay or bridge is misconfigured or
