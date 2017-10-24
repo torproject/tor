@@ -3,6 +3,10 @@ Changes in version 0.2.8.16 - 2017-10-2?
   series, including a bugfix for a crash issue that had affected relays
   under memory pressure. It also adds a new directory authority, Bastet.
 
+  Note: the Tor 0.2.8 series will no longer be supported after 1 Jan
+  2018. If you need a release with long-term support, please stick with
+  the 0.2.9 series. Otherwise, please upgrade to 0.3.1 or later.
+
   o Directory authority changes:
     - Add "Bastet" as a ninth directory authority to the default list.
       Closes ticket 23910.
