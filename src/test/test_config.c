@@ -4927,9 +4927,13 @@ test_config_check_bridge_distribution_setting_valid(void *arg) {
 /* If the BridgeDistribution setting was invalid, -1 should be returned. */
 static void
 test_config_check_bridge_distribution_setting_invalid(void *arg) {
-  int ret = check_bridge_distribution_setting("hyphens-are-not-allowed");
+  int ret = check_bridge_distribution_setting("hyphens-are-allowed");
 
   (void)arg;
+
+  tt_int_op(ret, OP_EQ, 0);
+
+  ret = check_bridge_distribution_setting("asterisks*are*forbidden");
 
   tt_int_op(ret, OP_EQ, -1);
  done:
