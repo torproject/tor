@@ -1030,6 +1030,23 @@ escaped_safe_str(const char *address)
     return escaped(address);
 }
 
+/**
+ * The severity level that should be used for warnings of severity
+ * LOG_PROTOCOL_WARN.
+ *
+ * We keep this outside the options, in case somebody needs to use
+ * LOG_PROTOCOL_WARN while an option transition is happening.
+ */
+static int protocol_warning_severity_level = LOG_WARN;
+
+/** Return the severity level that should be used for warnings of severity
+ * LOG_PROTOCOL_WARN. */
+int
+get_protocol_warning_severity_level(void)
+{
+  return protocol_warning_severity_level;
+}
+
 /** List of default directory authorities */
 
 static const char *default_authorities[] = {
@@ -1666,6 +1683,11 @@ options_act(const or_options_t *old_options)
     if (try_locking(options, 1) < 0)
       return -1;
   }
+
+  if (options->ProtocolWarnings)
+    protocol_warning_severity_level = LOG_WARN;
+  else
+    protocol_warning_severity_level = LOG_INFO;
 
   if (consider_adding_dir_servers(options, old_options) < 0)
     return -1;

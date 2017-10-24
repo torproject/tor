@@ -4079,8 +4079,6 @@ typedef struct {
   int Sandbox; /**< Boolean: should sandboxing be enabled? */
   int SafeSocks; /**< Boolean: should we outright refuse application
                   * connections that use socks4 or socks5-with-local-dns? */
-#define LOG_PROTOCOL_WARN (get_options()->ProtocolWarnings ? \
-                           LOG_WARN : LOG_INFO)
   int ProtocolWarnings; /**< Boolean: when other parties screw up the Tor
                          * protocol, is it a warn or an info in our logs? */
   int TestSocks; /**< Boolean: when we get a socks connection, do we loudly
@@ -4626,6 +4624,8 @@ typedef struct {
   /* An ordered list of scheduler_types mapped from Schedulers. */
   smartlist_t *SchedulerTypes_;
 } or_options_t;
+
+#define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())
 
 /** Persistent state for an onion router, as saved to disk. */
 typedef struct {
