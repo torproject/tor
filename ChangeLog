@@ -1,3 +1,30 @@
+Changes in version 0.2.8.16 - 2017-10-2?
+  Tor 0.2.8.16 backports a collection of bugfixes from later Tor release
+  series, including a bugfix for a crash issue that had affected relays
+  under memory pressure. It also adds a new directory authority, Bastet.
+
+  o Directory authority changes:
+    - Add "Bastet" as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Major bugfixes (relay, crash, assertion failure, backport from 0.3.2.2-alpha):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
+  o Minor features (directory authorities, backport from 0.3.2.2-alpha):
+    - Remove longclaw's IPv6 address, as it will soon change. Authority
+      IPv6 addresses were originally added in 0.2.8.1-alpha. This leaves
+      3/8 directory authorities with IPv6 addresses, but there are also
+      52 fallback directory mirrors with IPv6 addresses. Resolves 19760.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+
 Changes in version 0.2.8.15 - 2017-09-18
   Tor 0.2.8.15 backports a collection of bugfixes from later
   Tor series.
