@@ -22,7 +22,8 @@ NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
 static routerinfo_t* mock_routerinfo;
 
 static const routerinfo_t*
-NS(router_get_my_routerinfo)(void) {
+NS(router_get_my_routerinfo)(void)
+{
   crypto_pk_t* ident_key;
   crypto_pk_t* tap_key;
   time_t now;
@@ -57,7 +58,8 @@ NS(router_get_my_routerinfo)(void) {
 /* If no distribution option was set, then check_bridge_distribution_setting()
  * should have set it to "any". */
 static void
-test_router_dump_router_to_string_no_bridge_distribution_method(void *arg) {
+test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
+{
   const char* needle = "bridge-distribution-request any";
   or_options_t* options = get_options_mutable();
   routerinfo_t* router = NULL;
@@ -107,3 +109,4 @@ struct testcase_t router_tests[] = {
   ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
   END_OF_TESTCASES
 };
+

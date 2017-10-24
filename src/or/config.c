@@ -3355,7 +3355,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
                         "least 0 seconds. Changing to 0.");

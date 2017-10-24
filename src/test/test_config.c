@@ -4893,7 +4893,8 @@ test_config_parse_port_config__ports__server_options(void *data)
 /* If we're not configured to be a bridge, but we set
  * BridgeDistribution, then options_validate () should return -1. */
 static void
-test_config_check_bridge_distribution_setting_not_a_bridge(void *arg) {
+test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
+{
   or_options_t* options = get_options_mutable();
   or_options_t* old_options = options;
   or_options_t* default_options = options;
@@ -4914,7 +4915,8 @@ test_config_check_bridge_distribution_setting_not_a_bridge(void *arg) {
 
 /* If the BridgeDistribution setting was valid, 0 should be returned. */
 static void
-test_config_check_bridge_distribution_setting_valid(void *arg) {
+test_config_check_bridge_distribution_setting_valid(void *arg)
+{
   int ret = check_bridge_distribution_setting("https");
 
   (void)arg;
@@ -4926,7 +4928,8 @@ test_config_check_bridge_distribution_setting_valid(void *arg) {
 
 /* If the BridgeDistribution setting was invalid, -1 should be returned. */
 static void
-test_config_check_bridge_distribution_setting_invalid(void *arg) {
+test_config_check_bridge_distribution_setting_invalid(void *arg)
+{
   int ret = check_bridge_distribution_setting("hyphens-are-allowed");
 
   (void)arg;
@@ -4943,7 +4946,8 @@ test_config_check_bridge_distribution_setting_invalid(void *arg) {
 /* If the BridgeDistribution setting was unrecognised, a warning should be
  * logged and 0 should be returned. */
 static void
-test_config_check_bridge_distribution_setting_unrecognised(void *arg) {
+test_config_check_bridge_distribution_setting_unrecognised(void *arg)
+{
   int ret = check_bridge_distribution_setting("unicorn");
 
   (void)arg;
