@@ -2245,7 +2245,7 @@ typedef struct {
  * a purpose we didn't recognize. */
 #define ROUTER_PURPOSE_UNKNOWN 255
 
-  /* In what way did we find out about this router?  One of ROUTER_PURPOSE_*.
+  /** In what way did we find out about this router?  One of ROUTER_PURPOSE_*.
    * Routers of different purposes are kept segregated and used for different
    * things; see notes on ROUTER_PURPOSE_* macros above.
    */
