@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (bridge):
     - Bridge relays can now set the BridgeDistribution config option to
       add a "bridge-distribution-request" line to their bridge descriptor,
       which tells BridgeDB how they'd like their bridge address to be
