@@ -1,7 +1,0 @@
-  o Major bugfixes (openbsd, denial-of-service):
-    - Avoid an assertion failure bug affecting our implementation of
-      inet_pton(AF_INET6) on certain OpenBSD systems whose strtol()
-      handling of "0xfoo" differs from what we had expected.
-      Fixes bug 22789; bugfix on 0.2.3.8-alpha. Also tracked as
-      TROVE-2017-007.
-
