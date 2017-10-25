@@ -475,6 +475,30 @@ rend_service_port_config_free(rend_service_port_config_t *p)
   tor_free(p);
 }
 
+/* Copy relevant data from service src to dst while pruning the service lists.
+ * This should only be called during the pruning process which takes existing
+ * services and copy their data to the newly configured services. The src
+ * service replaycache will be set to NULL after this call. */
+static void
+copy_service_on_prunning(rend_service_t *dst, rend_service_t *src)
+{
+  tor_assert(dst);
+  tor_assert(src);
+
+  /* Keep the timestamps for when the content changed and the next upload
+   * time so we can properly upload the descriptor if needed for the new
+   * service object. */
+  dst->desc_is_dirty = src->desc_is_dirty;
+  dst->next_upload_time = src->next_upload_time;
+  /* Move the replaycache to the new object. */
+  dst->accepted_intro_dh_parts = src->accepted_intro_dh_parts;
+  src->accepted_intro_dh_parts = NULL;
+  /* Copy intro point information to destination service. */
+  dst->intro_period_started = src->intro_period_started;
+  dst->n_intro_circuits_launched = src->n_intro_circuits_launched;
+  dst->n_intro_points_wanted = src->n_intro_points_wanted;
+}
+
 /* Helper: Actual implementation of the pruning on reload which we've
  * decoupled in order to make the unit test workeable without ugly hacks.
  * Furthermore, this function does NOT free any memory but will nullify the
@@ -548,6 +572,10 @@ rend_service_prune_list_impl_(void)
       smartlist_clear(old->intro_nodes);
       smartlist_add_all(new->expiring_nodes, old->expiring_nodes);
       smartlist_clear(old->expiring_nodes);
+
+      /* Copy needed information from old to new. */
+      copy_service_on_prunning(new, old);
+
       /* This regular service will survive the closing IPs step after. */
       smartlist_add(surviving_services, old);
       break;
