@@ -3459,7 +3459,7 @@ Changes in version 0.3.0.1-alpha - 2016-12-19
       initial code by Alec Heifetz.
     - Relays now support the HSDir version 3 protocol, so that they can
       can store and serve v3 descriptors. This is part of the next-
-      generation onion service work detailled in proposal 224. Closes
+      generation onion service work detailed in proposal 224. Closes
       ticket 17238.
 
   o Major features (protocol, ed25519 identity keys):
