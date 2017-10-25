@@ -508,8 +508,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   tt_int_op(retval, OP_EQ, 0);
 
   /* Make sure that our primary guard was chosen */
-  /* BUG #23862 falls back to dirserver list!! */
-  expect_log_msg_containing("falling back to dirserver list");
+  expect_log_msg_containing("Selected primary guard router3");
 
  done:
   tor_free(consensus_text_md);
