@@ -2237,8 +2237,6 @@ load_downloaded_routers(const char *body, smartlist_t *which,
   return added;
 }
 
-static int handle_response_fetch_consensus(dir_connection_t *,
-                                           const response_handler_args_t *);
 static int handle_response_fetch_certificate(dir_connection_t *,
                                              const response_handler_args_t *);
 static int handle_response_fetch_status_vote(dir_connection_t *,
@@ -2585,7 +2583,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
  * consensus document by checking the consensus, storing it, and marking
  * router requests as reachable.
  **/
-static int
+STATIC int
 handle_response_fetch_consensus(dir_connection_t *conn,
                                 const response_handler_args_t *args)
 {

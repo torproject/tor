@@ -488,6 +488,10 @@ STATIC entry_guard_t *get_sampled_guard_with_id(guard_selection_t *gs,
 
 MOCK_DECL(STATIC time_t, randomize_time, (time_t now, time_t max_backdate));
 
+MOCK_DECL(STATIC circuit_guard_state_t *,
+          circuit_guard_state_new,(entry_guard_t *guard, unsigned state,
+                                   entry_guard_restriction_t *rst));
+
 STATIC entry_guard_t *entry_guard_add_to_sample(guard_selection_t *gs,
                                                 const node_t *node);
 STATIC entry_guard_t *entry_guards_expand_sample(guard_selection_t *gs);
