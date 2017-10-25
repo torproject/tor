@@ -968,6 +968,15 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 {
   const or_options_t *options = get_options();
 
+  /* if we have enough dir info, then update our guard status with
+   * whatever we just learned. */
+  int invalidate_circs = guards_update_all();
+
+  if (invalidate_circs) {
+    circuit_mark_all_unused_circs();
+    circuit_mark_all_dirty_circs_as_unusable();
+  }
+
   if (!router_have_minimum_dir_info()) {
     int quiet = suppress_logs || from_cache ||
                 directory_too_idle_to_fetch_descriptors(options, now);
@@ -979,15 +988,6 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
   } else {
     if (directory_fetches_from_authorities(options)) {
       update_all_descriptor_downloads(now);
-    }
-
-    /* if we have enough dir info, then update our guard status with
-     * whatever we just learned. */
-    int invalidate_circs = guards_update_all();
-
-    if (invalidate_circs) {
-      circuit_mark_all_unused_circs();
-      circuit_mark_all_dirty_circs_as_unusable();
     }
 
     /* Don't even bother trying to get extrainfo until the rest of our
