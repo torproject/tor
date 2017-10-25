@@ -2,6 +2,245 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.5.15 - 2017-10-25
+  Tor 0.2.5.15 backports a collection of bugfixes from later Tor release
+  series. It also adds a new directory authority, Bastet.
+
+  Note: the Tor 0.2.5 series will no longer be supported after 1 May
+  2018. If you need a release with long-term support, please upgrade to
+  the 0.2.9 series. Otherwise, please upgrade to 0.3.1 or later.
+
+  o Directory authority changes:
+    - Add "Bastet" as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Major bugfixes (openbsd, denial-of-service, backport from 0.3.1.5-alpha):
+    - Avoid an assertion failure bug affecting our implementation of
+      inet_pton(AF_INET6) on certain OpenBSD systems whose strtol()
+      handling of "0xx" differs from what we had expected. Fixes bug
+      22789; bugfix on 0.2.3.8-alpha. Also tracked as TROVE-2017-007.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (defensive programming, undefined behavior, backport from 0.3.1.4-alpha):
+    - Fix a memset() off the end of an array when packing cells. This
+      bug should be harmless in practice, since the corrupted bytes are
+      still in the same structure, and are always padding bytes,
+      ignored, or immediately overwritten, depending on compiler
+      behavior. Nevertheless, because the memset()'s purpose is to make
+      sure that any other cell-handling bugs can't expose bytes to the
+      network, we need to fix it. Fixes bug 22737; bugfix on
+      0.2.4.11-alpha. Fixes CID 1401591.
+
+  o Build features (backport from 0.3.1.5-alpha):
+    - Tor's repository now includes a Travis Continuous Integration (CI)
+      configuration file (.travis.yml). This is meant to help new
+      developers and contributors who fork Tor to a Github repository be
+      better able to test their changes, and understand what we expect
+      to pass. To use this new build feature, you must fork Tor to your
+      Github account, then go into the "Integrations" menu in the
+      repository settings for your fork and enable Travis, then push
+      your changes. Closes ticket 22636.
+
+
+Changes in version 0.2.8.16 - 2017-10-25
+  Tor 0.2.8.16 backports a collection of bugfixes from later Tor release
+  series, including a bugfix for a crash issue that had affected relays
+  under memory pressure. It also adds a new directory authority, Bastet.
+
+  Note: the Tor 0.2.8 series will no longer be supported after 1 Jan
+  2018. If you need a release with long-term support, please stick with
+  the 0.2.9 series. Otherwise, please upgrade to 0.3.1 or later.
+
+  o Directory authority changes:
+    - Add "Bastet" as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Major bugfixes (relay, crash, assertion failure, backport from 0.3.2.2-alpha):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
+  o Minor features (directory authorities, backport from 0.3.2.2-alpha):
+    - Remove longclaw's IPv6 address, as it will soon change. Authority
+      IPv6 addresses were originally added in 0.2.8.1-alpha. This leaves
+      3/8 directory authorities with IPv6 addresses, but there are also
+      52 fallback directory mirrors with IPv6 addresses. Resolves 19760.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+
+Changes in version 0.2.9.13 - 2017-10-25
+  Tor 0.2.9.13 backports a collection of bugfixes from later Tor release
+  series, including a bugfix for a crash issue that had affected relays
+  under memory pressure. It also adds a new directory authority, Bastet.
+
+  o Directory authority changes:
+    - Add "Bastet" as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Major bugfixes (relay, crash, assertion failure, backport from 0.3.2.2-alpha):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
+  o Minor features (directory authorities, backport from 0.3.2.2-alpha):
+    - Remove longclaw's IPv6 address, as it will soon change. Authority
+      IPv6 addresses were originally added in 0.2.8.1-alpha. This leaves
+      3/8 directory authorities with IPv6 addresses, but there are also
+      52 fallback directory mirrors with IPv6 addresses. Resolves 19760.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (directory authority, backport from 0.3.1.5-alpha):
+    - When a directory authority rejects a descriptor or extrainfo with
+      a given digest, mark that digest as undownloadable, so that we do
+      not attempt to download it again over and over. We previously
+      tried to avoid downloading such descriptors by other means, but we
+      didn't notice if we accidentally downloaded one anyway. This
+      behavior became problematic in 0.2.7.2-alpha, when authorities
+      began pinning Ed25519 keys. Fixes bug 22349; bugfix
+      on 0.2.1.19-alpha.
+
+  o Minor bugfixes (memory safety, backport from 0.3.2.3-alpha):
+    - Clear the address when node_get_prim_orport() returns early.
+      Fixes bug 23874; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (Windows service, backport from 0.3.1.6-rc):
+    - When running as a Windows service, set the ID of the main thread
+      correctly. Failure to do so made us fail to send log messages to
+      the controller in 0.2.1.16-rc, slowed down controller event
+      delivery in 0.2.7.3-rc and later, and crash with an assertion
+      failure in 0.3.1.1-alpha. Fixes bug 23081; bugfix on 0.2.1.6-alpha.
+      Patch and diagnosis from "Vort".
+
+
+Changes in version 0.3.0.12 - 2017-10-25
+  Tor 0.3.0.12 backports a collection of bugfixes from later Tor release
+  series, including a bugfix for a crash issue that had affected relays
+  under memory pressure. It also adds a new directory authority, Bastet.
+
+  Note: the Tor 0.3.0 series will no longer be supported after 26 Jan
+  2018. If you need a release with long-term support, please stick with
+  the 0.2.9 series. Otherwise, please upgrade to 0.3.1 or later.
+
+  o Directory authority changes:
+    - Add "Bastet" as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Major bugfixes (relay, crash, assertion failure, backport from 0.3.2.2-alpha):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
+  o Minor features (directory authorities, backport from 0.3.2.2-alpha):
+    - Remove longclaw's IPv6 address, as it will soon change. Authority
+      IPv6 addresses were originally added in 0.2.8.1-alpha. This leaves
+      3/8 directory authorities with IPv6 addresses, but there are also
+      52 fallback directory mirrors with IPv6 addresses. Resolves 19760.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (directory authority, backport from 0.3.1.5-alpha):
+    - When a directory authority rejects a descriptor or extrainfo with
+      a given digest, mark that digest as undownloadable, so that we do
+      not attempt to download it again over and over. We previously
+      tried to avoid downloading such descriptors by other means, but we
+      didn't notice if we accidentally downloaded one anyway. This
+      behavior became problematic in 0.2.7.2-alpha, when authorities
+      began pinning Ed25519 keys. Fixes bug 22349; bugfix
+      on 0.2.1.19-alpha.
+
+  o Minor bugfixes (hidden service, relay, backport from 0.3.2.2-alpha):
+    - Avoid a possible double close of a circuit by the intro point on
+      error of sending the INTRO_ESTABLISHED cell. Fixes bug 23610;
+      bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (memory safety, backport from 0.3.2.3-alpha):
+    - Clear the address when node_get_prim_orport() returns early.
+      Fixes bug 23874; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (Windows service, backport from 0.3.1.6-rc):
+    - When running as a Windows service, set the ID of the main thread
+      correctly. Failure to do so made us fail to send log messages to
+      the controller in 0.2.1.16-rc, slowed down controller event
+      delivery in 0.2.7.3-rc and later, and crash with an assertion
+      failure in 0.3.1.1-alpha. Fixes bug 23081; bugfix on 0.2.1.6-alpha.
+      Patch and diagnosis from "Vort".
+
+
+Changes in version 0.3.1.8 - 2017-10-25
+  Tor 0.3.1.7 is the second stable release in the 0.3.1 series.
+  It includes several bugfixes, including a bugfix for a crash issue
+  that had affected relays under memory pressure. It also adds
+  a new directory authority, Bastet.
+
+  o Directory authority changes:
+    - Add "Bastet" as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Major bugfixes (relay, crash, assertion failure, backport from 0.3.2.2-alpha):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
+  o Minor features (directory authorities, backport from 0.3.2.2-alpha):
+    - Remove longclaw's IPv6 address, as it will soon change. Authority
+      IPv6 addresses were originally added in 0.2.8.1-alpha. This leaves
+      3/8 directory authorities with IPv6 addresses, but there are also
+      52 fallback directory mirrors with IPv6 addresses. Resolves 19760.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation, backport from 0.3.2.2-alpha):
+    - Fix a compilation warning when building with zstd support on
+      32-bit platforms. Fixes bug 23568; bugfix on 0.3.1.1-alpha. Found
+      and fixed by Andreas Stieger.
+
+  o Minor bugfixes (compression, backport from 0.3.2.2-alpha):
+    - Handle a pathological case when decompressing Zstandard data when
+      the output buffer size is zero. Fixes bug 23551; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (directory authority, backport from 0.3.2.1-alpha):
+    - Remove the length limit on HTTP status lines that authorities can
+      send in their replies. Fixes bug 23499; bugfix on 0.3.1.6-rc.
+
+  o Minor bugfixes (hidden service, relay, backport from 0.3.2.2-alpha):
+    - Avoid a possible double close of a circuit by the intro point on
+      error of sending the INTRO_ESTABLISHED cell. Fixes bug 23610;
+      bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (memory safety, backport from 0.3.2.3-alpha):
+    - Clear the address when node_get_prim_orport() returns early.
+      Fixes bug 23874; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (unit tests, backport from 0.3.2.2-alpha):
+    - Fix additional channelpadding unit test failures by using mocked
+      time instead of actual time for all tests. Fixes bug 23608; bugfix
+      on 0.3.1.1-alpha.
+
+
 Changes in version 0.2.8.15 - 2017-09-18
   Tor 0.2.8.15 backports a collection of bugfixes from later
   Tor series.
