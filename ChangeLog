@@ -1,4 +1,4 @@
-Changes in version 0.2.5.15 - 2017-10-0?
+Changes in version 0.2.5.15 - 2017-10-25
   Tor 0.2.5.15 backports a collection of bugfixes from later Tor release
   series. It also adds a new directory authority, Bastet.
 
