@@ -1,4 +1,4 @@
-Changes in version 0.3.0.12 - 2017-10-2?
+Changes in version 0.3.0.12 - 2017-10-25
   Tor 0.3.0.12 backports a collection of bugfixes from later Tor release
   series, including a bugfix for a crash issue that had affected relays
   under memory pressure. It also adds a new directory authority, Bastet.
