@@ -2,6 +2,62 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.3.1.8 - 2017-10-25
+  Tor 0.3.1.7 is the second stable release in the 0.3.1 series.
+  It includes several bugfixes, including a bugfix for a crash issue
+  that had affected relays under memory pressure. It also adds
+  a new directory authority, Bastet.
+
+  o Directory authority changes:
+    - Add "Bastet" as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Major bugfixes (relay, crash, assertion failure, backport from 0.3.2.2-alpha):
+    - Fix a timing-based assertion failure that could occur when the
+      circuit out-of-memory handler freed a connection's output buffer.
+      Fixes bug 23690; bugfix on 0.2.6.1-alpha.
+
+  o Minor features (directory authorities, backport from 0.3.2.2-alpha):
+    - Remove longclaw's IPv6 address, as it will soon change. Authority
+      IPv6 addresses were originally added in 0.2.8.1-alpha. This leaves
+      3/8 directory authorities with IPv6 addresses, but there are also
+      52 fallback directory mirrors with IPv6 addresses. Resolves 19760.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation, backport from 0.3.2.2-alpha):
+    - Fix a compilation warning when building with zstd support on
+      32-bit platforms. Fixes bug 23568; bugfix on 0.3.1.1-alpha. Found
+      and fixed by Andreas Stieger.
+
+  o Minor bugfixes (compression, backport from 0.3.2.2-alpha):
+    - Handle a pathological case when decompressing Zstandard data when
+      the output buffer size is zero. Fixes bug 23551; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (directory authority, backport from 0.3.2.1-alpha):
+    - Remove the length limit on HTTP status lines that authorities can
+      send in their replies. Fixes bug 23499; bugfix on 0.3.1.6-rc.
+
+  o Minor bugfixes (hidden service, relay, backport from 0.3.2.2-alpha):
+    - Avoid a possible double close of a circuit by the intro point on
+      error of sending the INTRO_ESTABLISHED cell. Fixes bug 23610;
+      bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (memory safety, backport from 0.3.2.3-alpha):
+    - Clear the address when node_get_prim_orport() returns early.
+      Fixes bug 23874; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (unit tests, backport from 0.3.2.2-alpha):
+    - Fix additional channelpadding unit test failures by using mocked
+      time instead of actual time for all tests. Fixes bug 23608; bugfix
+      on 0.3.1.1-alpha.
+
+
 Changes in version 0.3.1.7 - 2017-09-18
   Tor 0.3.1.7 is the first stable release in the 0.3.1 series.
 
