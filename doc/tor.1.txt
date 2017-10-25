@@ -2345,9 +2345,29 @@ on the public Tor network.
 
 [[AuthDirHasIPv6Connectivity]] **AuthDirHasIPv6Connectivity** **0**|**1**::
     Authoritative directories only. When set to 0, OR ports with an
-    IPv6 address are being accepted without reachability testing.
-    When set to 1, IPv6 OR ports are being tested just like IPv4 OR
-    ports. (Default: 0)
+    IPv6 address are not included in the authority's votes. When set to 1,
+    IPv6 OR ports are tested for reachability like IPv4 OR ports. If the
+    reachability test succeeds, the authority votes for the IPv6 ORPort, and
+    votes Running for the relay. If the reachability test fails, the authority
+    does not vote for the IPv6 ORPort, and does not vote Running (Default: 0)  +
++
+    The content of the consensus depends on the number of voting authorities
+    that set AuthDirHasIPv6Connectivity:
+
+      If no authorities set AuthDirHasIPv6Connectivity 1, there will be no
+      IPv6 ORPorts in the consensus.
+
+      If a minority of authorities set AuthDirHasIPv6Connectivity 1,
+      unreachable IPv6 ORPorts will be removed from the consensus. But the
+      majority of IPv4-only authorities will still vote the relay as Running.
+      Reachable IPv6 ORPort lines will be included in the consensus
+
+      If a majority of voting authorities set AuthDirHasIPv6Connectivity 1,
+      relays with unreachable IPv6 ORPorts will not be listed as Running.
+      Reachable IPv6 ORPort lines will be included in the consensus
+      (To ensure that any valid majority will vote relays with unreachable
+      IPv6 ORPorts not Running, 75% of authorities must set
+      AuthDirHasIPv6Connectivity 1.)
 
 [[MinMeasuredBWsForAuthToIgnoreAdvertised]] **MinMeasuredBWsForAuthToIgnoreAdvertised** __N__::
     A total value, in abstract bandwidth units, describing how much
