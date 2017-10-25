@@ -3,7 +3,7 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.3.1.8 - 2017-10-25
-  Tor 0.3.1.7 is the second stable release in the 0.3.1 series.
+  Tor 0.3.1.8 is the second stable release in the 0.3.1 series.
   It includes several bugfixes, including a bugfix for a crash issue
   that had affected relays under memory pressure. It also adds
   a new directory authority, Bastet.
