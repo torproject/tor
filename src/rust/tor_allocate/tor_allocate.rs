@@ -25,6 +25,10 @@ extern "C" fn tor_malloc_ ( size: usize) ->  *mut c_void {
 ///
 /// A `*mut c_char` that should be freed by tor_free in C
 ///
+/// Allow unused unsafe as at compile-time, we get warnings that unsafe is not
+/// needed even though this calls tor_malloc in C.
+///
+#[allow(unused_unsafe)]
 pub fn allocate_and_copy_string(src: &String) -> *mut c_char {
     let bytes: &[u8] = src.as_bytes();
 
