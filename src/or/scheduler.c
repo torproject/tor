@@ -690,10 +690,21 @@ scheduler_bug_occurred(const channel_t *chan)
                  outbuf_len);
   }
 
-  log_warn(LD_BUG, "%s Num pending channels: %d. Channel in pending list: %s",
-           (chan != NULL) ? buf : "No channel in bug context.",
-           smartlist_len(channels_pending),
-           (smartlist_pos(channels_pending, chan) == -1) ? "no" : "yes");
+  {
+    char *msg;
+    /* Rate limit every 60 seconds. If we start seeing this every 60 sec, we
+     * know something is stuck/wrong. It *should* be loud but not too much. */
+    static ratelim_t rlimit = RATELIM_INIT(60);
+    if ((msg = rate_limit_log(&rlimit, approx_time()))) {
+      log_warn(LD_BUG, "%s Num pending channels: %d. "
+                       "Channel in pending list: %s.%s",
+               (chan != NULL) ? buf : "No channel in bug context.",
+               smartlist_len(channels_pending),
+               (smartlist_pos(channels_pending, chan) == -1) ? "no" : "yes",
+               msg);
+      tor_free(msg);
+    }
+  }
 }
 
 #ifdef TOR_UNIT_TESTS
