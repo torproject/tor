@@ -142,7 +142,8 @@ fn tor_supported() -> Result<HashMap<Proto, HashSet<u32>>, &'static str> {
 /// This function will error if:
 ///
 /// * the `version_string` is empty or contains an equals (`"="`) sign,
-/// * the expansion of a version range produces an error (see `expand_version_range`),
+/// * the expansion of a version range produces an error (see
+///  `expand_version_range`),
 /// * any single version number is not parseable as an `u32` in radix 10, or
 /// * there are greater than 2^16 version numbers to expand.
 ///
@@ -293,10 +294,12 @@ pub fn all_supported(protocols: &str) -> (bool, String) {
 /// ```
 /// use protover::*;
 ///
-/// let is_supported = protover_string_supports_protocol("Link=3-4 Cons=1", Proto::Cons,1);
+/// let is_supported = protover_string_supports_protocol("Link=3-4 Cons=1",
+///                                                      Proto::Cons,1);
 /// assert_eq!(true, is_supported);
 ///
-/// let is_not_supported = protover_string_supports_protocol("Link=3-4 Cons=1", Proto::Cons,5);
+/// let is_not_supported = protover_string_supports_protocol("Link=3-4 Cons=1",
+///                                                           Proto::Cons,5);
 /// assert_eq!(false, is_not_supported)
 /// ```
 pub fn protover_string_supports_protocol(
@@ -363,7 +366,7 @@ fn expand_version_range(range: &str) -> Result<Vec<u32>, &'static str> {
     ))?;
 
     // We can use inclusive range syntax when it becomes stable.
-    Ok((lower..higher+1).collect())
+    Ok((lower..higher + 1).collect())
 }
 
 /// Checks to see if there is a continuous range of integers, starting at the
@@ -477,8 +480,7 @@ fn contract_protocol_list<'a>(supported_set: &'a HashSet<u32>) -> String {
 fn parse_protocols_from_string_with_no_validation<'a>(
     protocol_string: &'a str,
 ) -> Result<HashMap<String, HashSet<u32>>, &'static str> {
-    let protocols = &protocol_string.split(" ")
-                                    .collect::<Vec<&'a str>>()[..];
+    let protocols = &protocol_string.split(" ").collect::<Vec<&'a str>>()[..];
 
     let mut parsed: HashMap<String, HashSet<u32>> = HashMap::new();
 

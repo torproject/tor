@@ -3,13 +3,13 @@ use std::{ptr, slice, mem};
 
 #[cfg(not(test))]
 extern "C" {
-    fn tor_malloc_ ( size: usize) ->  *mut c_void;
+    fn tor_malloc_(size: usize) -> *mut c_void;
 }
 
 // Defined only for tests, used for testing purposes, so that we don't need
 // to link to tor C files. Uses the system allocator
 #[cfg(test)]
-extern "C" fn tor_malloc_ ( size: usize) ->  *mut c_void {
+extern "C" fn tor_malloc_(size: usize) -> *mut c_void {
     use libc::malloc;
     unsafe { malloc(size) }
 }
@@ -32,7 +32,7 @@ extern "C" fn tor_malloc_ ( size: usize) ->  *mut c_void {
 pub fn allocate_and_copy_string(src: &String) -> *mut c_char {
     let bytes: &[u8] = src.as_bytes();
 
-    let size =  mem::size_of_val::<[u8]>(bytes);
+    let size = mem::size_of_val::<[u8]>(bytes);
     let size_one_byte = mem::size_of::<u8>();
 
     // handle integer overflow when adding one to the calculated length
@@ -51,7 +51,7 @@ pub fn allocate_and_copy_string(src: &String) -> *mut c_char {
 
     // set the last byte as null, using the ability to index into a slice
     // rather than doing pointer arithmatic
-    let slice = unsafe { slice::from_raw_parts_mut(dest, size_with_null_byte)};
+    let slice = unsafe { slice::from_raw_parts_mut(dest, size_with_null_byte) };
     slice[size] = 0; // add a null terminator
 
     dest as *mut c_char
@@ -70,9 +70,8 @@ mod test {
         let empty = String::new();
         let allocated_empty = allocate_and_copy_string(&empty);
 
-        let allocated_empty_rust = unsafe {
-            CStr::from_ptr(allocated_empty).to_str().unwrap()
-        };
+        let allocated_empty_rust =
+            unsafe { CStr::from_ptr(allocated_empty).to_str().unwrap() };
 
         assert_eq!("", allocated_empty_rust);
 
@@ -89,9 +88,8 @@ mod test {
         let empty = String::from("foo bar biz");
         let allocated_empty = allocate_and_copy_string(&empty);
 
-        let allocated_empty_rust = unsafe {
-            CStr::from_ptr(allocated_empty).to_str().unwrap()
-        };
+        let allocated_empty_rust =
+            unsafe { CStr::from_ptr(allocated_empty).to_str().unwrap() };
 
         assert_eq!("foo bar biz", allocated_empty_rust);
 

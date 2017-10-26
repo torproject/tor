@@ -15,7 +15,9 @@ use tor_allocate::allocate_and_copy_string;
 /// ```
 #[no_mangle]
 pub extern "C" fn rust_welcome_string() -> *mut c_char {
-    let rust_welcome = String::from("Tor is running with Rust integration. Please report \
-                          any bugs you encouter.");
+    let rust_welcome = String::from(
+        "Tor is running with Rust integration. Please report \
+         any bugs you encouter.",
+    );
     allocate_and_copy_string(&rust_welcome)
 }

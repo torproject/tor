@@ -1,7 +1,7 @@
 extern crate protover;
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_single_version_returns_set_of_one(){
+fn parse_protocol_list_with_single_proto_and_single_version() {
     let protocol = "Cons=1";
     let (is_supported, unsupported) = protover::all_supported(protocol);
     assert_eq!(true, is_supported);
@@ -9,7 +9,7 @@ fn parse_protocol_list_with_single_protocol_and_single_version_returns_set_of_on
 }
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_multiple_versions_returns_set_of_one(){
+fn parse_protocol_list_with_single_protocol_and_multiple_versions() {
     let protocol = "Cons=1-2";
     let (is_supported, unsupported) = protover::all_supported(protocol);
     assert_eq!(true, is_supported);
@@ -17,7 +17,7 @@ fn parse_protocol_list_with_single_protocol_and_multiple_versions_returns_set_of
 }
 
 #[test]
-fn parse_protocol_list_with_different_single_protocol_and_single_version_returns_set_of_one(){
+fn parse_protocol_list_with_different_single_protocol_and_single_version() {
     let protocol = "HSDir=1";
     let (is_supported, unsupported) = protover::all_supported(protocol);
     assert_eq!(true, is_supported);
@@ -25,7 +25,7 @@ fn parse_protocol_list_with_different_single_protocol_and_single_version_returns
 }
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_supported_version_returns_set_of_one(){
+fn parse_protocol_list_with_single_protocol_and_supported_version() {
     let protocol = "Desc=2";
     let (is_supported, unsupported) = protover::all_supported(protocol);
     assert_eq!(true, is_supported);
@@ -33,7 +33,7 @@ fn parse_protocol_list_with_single_protocol_and_supported_version_returns_set_of
 }
 
 #[test]
-fn parse_protocol_list_with_two_protocols_and_single_version_returns_set_of_one(){
+fn parse_protocol_list_with_two_protocols_and_single_version() {
     let protocols = "Cons=1 HSDir=1";
     let (is_supported, unsupported) = protover::all_supported(protocols);
     assert_eq!(true, is_supported);
@@ -42,7 +42,7 @@ fn parse_protocol_list_with_two_protocols_and_single_version_returns_set_of_one(
 
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_two_nonsequential_versions_returns_set_of_two(){
+fn parse_protocol_list_with_single_protocol_and_two_nonsequential_versions() {
     let protocol = "Desc=1,2";
     let (is_supported, unsupported) = protover::all_supported(protocol);
     assert_eq!(true, is_supported);
@@ -51,7 +51,7 @@ fn parse_protocol_list_with_single_protocol_and_two_nonsequential_versions_retur
 
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_two_sequential_versions_returns_set_of_two(){
+fn parse_protocol_list_with_single_protocol_and_two_sequential_versions() {
     let protocol = "Desc=1-2";
     let (is_supported, unsupported) = protover::all_supported(protocol);
     assert_eq!(true, is_supported);
@@ -169,7 +169,7 @@ fn protover_string_supports_protocol_returns_false_for_single_unsupported() {
 }
 
 #[test]
-fn protover_string_supports_protocol_returns_false_when_protocol_name_is_not_in_map(){
+fn protover_string_supports_protocol_returns_false_for_unsupported() {
     let protocols = "Link=3-4";
     let is_supported = protover::protover_string_supports_protocol(
         protocols,
