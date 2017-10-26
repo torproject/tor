@@ -1564,6 +1564,10 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
    * protocol */
   if (!node_supports_ed25519_link_authentication(node)) {
     tor_assert_nonfatal(ed25519_public_key_is_zero(&info->ed_identity));
+  } else {
+    /* Make sure we *do* have an ed key if we support the link authentication.
+     * Sending an empty key would result in a failure to extend. */
+    tor_assert_nonfatal(!ed25519_public_key_is_zero(&info->ed_identity));
   }
 
   /* Create our objects and populate them with the node information. */
