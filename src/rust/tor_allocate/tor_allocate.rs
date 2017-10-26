@@ -1,5 +1,5 @@
 use libc::{c_char, c_void};
-use std::{ptr, slice};
+use std::{ptr, slice, mem};
 
 #[cfg(not(test))]
 extern "C" {
@@ -19,29 +19,35 @@ extern "C" fn tor_malloc_ ( size: usize) ->  *mut c_void {
 ///
 /// # Inputs
 ///
-/// * `src`, a reference to a String that will be copied.
+/// * `src`, a reference to a String.
 ///
 /// # Returns
 ///
-/// A `String` that should be freed by tor_free in C
+/// A `*mut c_char` that should be freed by tor_free in C
 ///
 pub fn allocate_and_copy_string(src: &String) -> *mut c_char {
-    let bytes = src.as_bytes();
+    let bytes: &[u8] = src.as_bytes();
 
-    let size = bytes.len();
-    let size_with_null_byte = size + 1;
+    let size =  mem::size_of_val::<[u8]>(bytes);
+    let size_one_byte = mem::size_of::<u8>();
+
+    // handle integer overflow when adding one to the calculated length
+    let size_with_null_byte = match size.checked_add(size_one_byte) {
+        Some(n) => n,
+        None => return ptr::null_mut(),
+    };
 
     let dest = unsafe { tor_malloc_(size_with_null_byte) as *mut u8 };
 
     if dest.is_null() {
-        return dest as *mut c_char;
+        return ptr::null_mut();
     }
 
     unsafe { ptr::copy_nonoverlapping(bytes.as_ptr(), dest, size) };
 
     // set the last byte as null, using the ability to index into a slice
     // rather than doing pointer arithmatic
-    let slice = unsafe { slice::from_raw_parts_mut(dest, size_with_null_byte) };
+    let slice = unsafe { slice::from_raw_parts_mut(dest, size_with_null_byte)};
     slice[size] = 0; // add a null terminator
 
     dest as *mut c_char
