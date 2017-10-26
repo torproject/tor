@@ -6,13 +6,17 @@
 #include <time.h>
 
 #define DIRVOTE_PRIVATE
+#define ENTRYNODES_PRIVATE
+#define DIRECTORY_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define CONNECTION_PRIVATE
 #define ROUTERLIST_PRIVATE
 #define TOR_UNIT_TESTING
 #include "or.h"
 #include "config.h"
 #include "connection.h"
 #include "container.h"
+#include "control.h"
 #include "directory.h"
 #include "dirvote.h"
 #include "entrynodes.h"
@@ -22,10 +26,13 @@
 #include "policies.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerset.h"
 #include "routerparse.h"
 #include "shared_random.h"
+#include "statefile.h"
 #include "test.h"
 #include "test_dir_common.h"
+#include "log_test_helpers.h"
 
 void construct_consensus(char **consensus_text_md);
 
@@ -411,6 +418,106 @@ test_router_pick_directory_server_impl(void *arg)
   networkstatus_vote_free(con_md);
 }
 
+static or_state_t *dummy_state = NULL;
+static or_state_t *
+get_or_state_replacement(void)
+{
+  return dummy_state;
+}
+
+static void
+mock_directory_initiate_request(directory_request_t *req)
+{
+  (void)req;
+  return;
+}
+
+static circuit_guard_state_t *
+mock_circuit_guard_state_new(entry_guard_t *guard, unsigned state,
+                        entry_guard_restriction_t *rst)
+{
+  (void) guard;
+  (void) state;
+  (void) rst;
+  return NULL;
+}
+
+/** Test that we will use our directory guards to fetch mds even if we don't
+ *  have any dirinfo (tests bug #23862). */
+static void
+test_directory_guard_fetch_with_no_dirinfo(void *arg)
+{
+  int retval;
+  char *consensus_text_md = NULL;
+  or_options_t *options = get_options_mutable();
+
+  (void) arg;
+
+  /* Initialize the SRV subsystem */
+  sr_init(0);
+
+  /* Initialize the entry node configuration from the ticket */
+  options->UseEntryGuards = 1;
+  options->StrictNodes = 1;
+  get_options_mutable()->EntryNodes = routerset_new();
+  routerset_parse(get_options_mutable()->EntryNodes,
+                  "2121212121212121212121212121212121212121", "foo");
+
+  /* Mock some functions */
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+  MOCK(get_or_state, get_or_state_replacement);
+  MOCK(directory_initiate_request, mock_directory_initiate_request);
+  /* we need to mock this one to avoid memleaks */
+  MOCK(circuit_guard_state_new, mock_circuit_guard_state_new);
+
+  /* Call guards_update_all() to simulate loading our state file (see
+   * entry_guards_load_guards_from_state() and ticket #23989). */
+  guards_update_all();
+
+  /* Test logic: Simulate the arrival of a new consensus when we have no
+   * dirinfo at all. Tor will need to fetch the mds from the consensus. Make
+   * sure that Tor will use the specified entry guard instead of relying on the
+   * fallback directories. */
+
+  /* Fixup the dirconn that will deliver the consensus */
+  dir_connection_t *conn = dir_connection_new(AF_INET);
+  tor_addr_from_ipv4h(&conn->base_.addr, 0x7f000001);
+  conn->base_.port = 8800;
+  TO_CONN(conn)->address = tor_strdup("127.0.0.1");
+  conn->base_.purpose = DIR_PURPOSE_FETCH_CONSENSUS;
+  conn->requested_resource = tor_strdup("ns");
+
+  /* Construct a consensus */
+  construct_consensus(&consensus_text_md);
+  tt_assert(consensus_text_md);
+
+  /* Place the consensus in the dirconn */
+  response_handler_args_t args;
+  memset(&args, 0, sizeof(response_handler_args_t));
+  args.status_code = 200;
+  args.body = consensus_text_md;
+  args.body_len = strlen(consensus_text_md);
+
+  /* Update approx time so that the consensus is considered live */
+  update_approx_time(time(NULL)+1010);
+
+  setup_capture_of_logs(LOG_DEBUG);
+
+  /* Now handle the consensus */
+  retval = handle_response_fetch_consensus(conn, &args);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Make sure that our primary guard was chosen */
+  expect_log_msg_containing("Selected primary guard router3");
+
+ done:
+  tor_free(consensus_text_md);
+  tor_free(dummy_state);
+  connection_free_(TO_CONN(conn));
+  entry_guards_free_all();
+  teardown_capture_of_logs();
+}
+
 static connection_t *mocked_connection = NULL;
 
 /* Mock connection_get_by_type_addr_port_purpose by returning
@@ -494,6 +601,8 @@ struct testcase_t routerlist_tests[] = {
   NODE(launch_descriptor_downloads, 0),
   NODE(router_is_already_dir_fetching, TT_FORK),
   ROUTER(pick_directory_server_impl, TT_FORK),
+  { "directory_guard_fetch_with_no_dirinfo",
+    test_directory_guard_fetch_with_no_dirinfo, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

@@ -2126,9 +2126,9 @@ circuit_guard_state_free(circuit_guard_state_t *state)
 
 /** Allocate and return a new circuit_guard_state_t to track the result
  * of using <b>guard</b> for a given operation. */
-static circuit_guard_state_t *
-circuit_guard_state_new(entry_guard_t *guard, unsigned state,
-                        entry_guard_restriction_t *rst)
+MOCK_IMPL(STATIC circuit_guard_state_t *,
+circuit_guard_state_new,(entry_guard_t *guard, unsigned state,
+                         entry_guard_restriction_t *rst))
 {
   circuit_guard_state_t *result;
 

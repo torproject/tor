@@ -1720,7 +1720,7 @@ networkstatus_set_current_consensus(const char *consensus,
 {
   networkstatus_t *c=NULL;
   int r, result = -1;
-  time_t now = time(NULL);
+  time_t now = approx_time();
   const or_options_t *options = get_options();
   char *unverified_fname = NULL, *consensus_fname = NULL;
   int flav = networkstatus_parse_flavor_name(flavor);
