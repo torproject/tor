@@ -55,10 +55,12 @@ int
 fuzz_main(const uint8_t *data, size_t sz)
 {
   hs_descriptor_t *desc = NULL;
+  uint8_t subcredential[DIGEST256_LEN];
 
   char *fuzzing_data = tor_memdup_nulterm(data, sz);
+  memset(subcredential, 'A', sizeof(subcredential));
 
-  hs_desc_decode_descriptor(fuzzing_data, NULL, &desc);
+  hs_desc_decode_descriptor(fuzzing_data, subcredential, &desc);
   if (desc) {
     log_debug(LD_GENERAL, "Decoding okay");
     hs_descriptor_free(desc);
