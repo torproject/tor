@@ -1,0 +1,5 @@
+  o Minor bugfixes (entry guards):
+    - Tor now updates its guard state when it reads a consensus regardless of
+      whether it's missing descriptors. That makes tor use its primary guards
+      to fetch descriptors in some edge cases where it would have used fallback
+      directories in the past. Fixes bug 23862; bugfix on 0.3.0.1-alpha.
