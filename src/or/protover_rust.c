@@ -13,7 +13,7 @@
 #ifdef HAVE_RUST
 
 /* Define for compatibility, used in main.c */
-void protover_free_all(void) {};
+void protover_free_all(void) {}
 
 #endif
 
