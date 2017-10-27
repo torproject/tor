@@ -2787,44 +2787,6 @@ dirvote_get_start_of_next_interval(time_t now, int interval, int offset)
   return next;
 }
 
-/* Using the time <b>now</b>, return the next voting valid-after time. */
-time_t
-get_next_valid_after_time(time_t now)
-{
-  time_t next_valid_after_time;
-  const or_options_t *options = get_options();
-  voting_schedule_t *new_voting_schedule =
-    get_voting_schedule(options, now, LOG_INFO);
-  tor_assert(new_voting_schedule);
-
-  next_valid_after_time = new_voting_schedule->interval_starts;
-  voting_schedule_free(new_voting_schedule);
-
-  return next_valid_after_time;
-}
-
-static voting_schedule_t voting_schedule;
-
-/** Set voting_schedule to hold the timing for the next vote we should be
- * doing. */
-void
-dirvote_recalculate_timing(const or_options_t *options, time_t now)
-{
-  voting_schedule_t *new_voting_schedule;
-
-  if (!authdir_mode_v3(options)) {
-    return;
-  }
-
-  /* get the new voting schedule */
-  new_voting_schedule = get_voting_schedule(options, now, LOG_NOTICE);
-  tor_assert(new_voting_schedule);
-
-  /* Fill in the global static struct now */
-  memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
-  voting_schedule_free(new_voting_schedule);
-}
-
 /* Populate and return a new voting_schedule_t that can be used to schedule
  * voting. The object is allocated on the heap and it's the responsibility of
  * the caller to free it. Can't fail. */
@@ -2889,6 +2851,44 @@ voting_schedule_free(voting_schedule_t *voting_schedule_to_free)
   if (!voting_schedule_to_free)
     return;
   tor_free(voting_schedule_to_free);
+}
+
+static voting_schedule_t voting_schedule;
+
+/* Using the time <b>now</b>, return the next voting valid-after time. */
+time_t
+get_next_valid_after_time(time_t now)
+{
+  time_t next_valid_after_time;
+  const or_options_t *options = get_options();
+  voting_schedule_t *new_voting_schedule =
+    get_voting_schedule(options, now, LOG_INFO);
+  tor_assert(new_voting_schedule);
+
+  next_valid_after_time = new_voting_schedule->interval_starts;
+  voting_schedule_free(new_voting_schedule);
+
+  return next_valid_after_time;
+}
+
+/** Set voting_schedule to hold the timing for the next vote we should be
+ * doing. */
+void
+dirvote_recalculate_timing(const or_options_t *options, time_t now)
+{
+  voting_schedule_t *new_voting_schedule;
+
+  if (!authdir_mode_v3(options)) {
+    return;
+  }
+
+  /* get the new voting schedule */
+  new_voting_schedule = get_voting_schedule(options, now, LOG_NOTICE);
+  tor_assert(new_voting_schedule);
+
+  /* Fill in the global static struct now */
+  memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
+  voting_schedule_free(new_voting_schedule);
 }
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
