@@ -1,3 +1,6 @@
+/* Copyright (c) 2016-2017, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
 #define SHARED_RANDOM_PRIVATE
 #define SHARED_RANDOM_STATE_PRIVATE
 #define CONFIG_PRIVATE

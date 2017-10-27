@@ -1,3 +1,6 @@
+/* Copyright (c) 2016-2017, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
 #define TOR_CHANNEL_INTERNAL_
 #define MAIN_PRIVATE
 #define NETWORKSTATUS_PRIVATE

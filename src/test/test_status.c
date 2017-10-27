@@ -1,3 +1,6 @@
+/* Copyright (c) 2014-2017, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
 #define STATUS_PRIVATE
 #define HIBERNATE_PRIVATE
 #define LOG_PRIVATE

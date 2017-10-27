@@ -1,3 +1,6 @@
+/* Copyright (c) 2014-2017, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
 #define ROUTERSET_PRIVATE
 
 #include "or.h"

@@ -1,3 +1,6 @@
+/* Copyright (c) 2014-2017, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
 #include "or.h"
 #include "test.h"
 #define HIBERNATE_PRIVATE
