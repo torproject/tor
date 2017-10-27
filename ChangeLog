@@ -1,3 +1,104 @@
+Changes in version 0.3.2.3-alpha - 2017-10-??
+  Tor 0.3.2.3-alpha is the third release in the 0.3.2 series. BLURB
+  BLURB BLURB.
+
+  o Directory authority changes:
+    - Add bastet as a ninth directory authority to the default list.
+      Closes ticket 23910.
+    - The directory authority "Longclaw" has changed its IP address.
+      Closes ticket 23592.
+
+  o Minor features (bridge):
+    - Bridge relays can now set the BridgeDistribution config option to
+      add a "bridge-distribution-request" line to their bridge
+      descriptor, which tells BridgeDB how they'd like their bridge
+      address to be given out. (Note that as of Oct 2017, BridgeDB does
+      not yet implement this feature.) As a side benefit, this feature
+      provides a way to distinguish bridge descriptors from non-bridge
+      descriptors. Implements tickets 18329.
+
+  o Minor features (client, entry guards):
+    - Improve log messages when missing descriptors for primary
+      guards. Resolves ticket 23670.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (bridge):
+    - Overwrite the bridge address earlier in the process of directly
+      retrieving its descriptor, to make sure we reach it on the
+      configured address. Fixes bug 20532; bugfix on 0.2.0.10-alpha.
+
+  o Minor bugfixes (documentation):
+    - Document better how to read gcov and what our postprocessing
+      scripts do. Fixes bug 23739; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (entry guards):
+    - Tor now updates its guard state when it reads a consensus
+      regardless of whether it's missing descriptors. That makes tor use
+      its primary guards to fetch descriptors in some edge cases where
+      it would have used fallback directories in the past. Fixes bug
+      23862; bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (hidden service client):
+    - When getting multiple SOCKS request for the same .onion address,
+      don't trigger multiple descriptor fetches.
+    - When the descriptor fetch fails with an internal error, no more
+      HSDir to query or we aren't allowed to fetch
+      (FetchHidServDescriptors 0), close all pending SOCKS request for
+      that .onion. Fixes bug 23653; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (hidden service v2):
+    - When reloading tor (HUP) configured with hidden service(s), some
+      information weren't copy to the new service object. One problem
+      with this was that tor would wait at least the RendPostPeriod time
+      before uploading the descriptor if the reload happened before the
+      descriptor needed to be published. Fixes bug 23790; bugfix
+      on 0.2.1.9-alpha.
+
+  o Minor bugfixes (hidden service):
+    - Always make sure the hidden service generate the public key file
+      if it is missing. Prior to this, if the public key was deleted
+      from disk, it wouldn't get recreated. Fixes bug 23748; bugfix on
+      0.3.2.2-alpha. Patch from "cathugger".
+    - Make sure that we have a usable ed25519 key when the intro point
+      relay does support ed25519 link authentication. We do check for an
+      empty key when the relay does not support it so this makes it nice
+      and symmetric. Fixes bug 24002; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (memory safety):
+    - Clear the address when node_get_prim_orport() returns early. Fixes
+      bug 23874; bugfix on 0.2.8.2-alpha.
+
+  o Minor bugfixes (relay):
+    - Avoid a BUG warning when receiving a dubious CREATE cell while an
+      option transition is in progress. Fixes bug 23952; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Adjust the GitLab CI configuration to more closely match that of
+      Travis CI. Fixes bug 23757; bugfix on 0.3.2.2-alpha.
+    - Prevent scripts/test/coverage from attempting to move gcov output
+      to the root directory. Fixes bug 23741; bugfix on 0.2.5.1-alpha.
+    - Skip a test that would fail if run as root (because it expects a
+      permissions error). This affects some continuous integration
+      setups. Fixes bug 23758; bugfix on 0.3.2.2-alpha.
+    - Stop unconditionally mirroring the tor repository in GitLab CI.
+      This prevented developers from enabling GitLab CI on master. Fixes
+      bug 23755; bugfix on 0.3.2.2-alpha.
+    - Fix the hidden service v3 descriptor decoding fuzzing to use the
+      latest decoding API correctly. Fixes bug 21509; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (warnings):
+    - When we get an HTTP request on a SOCKS port, tell the user about
+      the new HTTPTunnelPort option. Previously, we would give a "Tor is
+      not an HTTP Proxy" message, which stopped being true when
+      HTTPTunnelPort was introduced. Fixes bug 23678; bugfix
+      on 0.3.2.1-alpha.
+
+
 Changes in version 0.3.2.2-alpha - 2017-09-29
   Tor 0.3.2.2-alpha is the second release in the 0.3.2 series. This
   release fixes several minor bugs in the new scheduler and next-

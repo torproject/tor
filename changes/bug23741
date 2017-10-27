@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Prevent scripts/test/coverage from attempting to move gcov
-      output to the root directory.  Fixes bug 23741; bugfix on
-      0.2.5.1-alpha.
