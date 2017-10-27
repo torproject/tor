@@ -246,3 +246,8 @@ mostlyclean-local:
 clean-local:
 	rm -rf $(top_builddir)/src/rust/target
 	rm -rf $(top_builddir)/src/rust/.cargo/registry
+
+if USE_RUST
+distclean-local: distclean-rust
+endif
+
