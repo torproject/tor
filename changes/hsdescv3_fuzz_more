@@ -1,0 +1,3 @@
+  o Minor features (testing):
+    - Our fuzzing tests now test the encrypted portions of the
+      v3 hidden service descriptors.  Implements more of 21509.

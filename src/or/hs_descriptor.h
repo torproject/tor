@@ -261,6 +261,13 @@ STATIC size_t decode_superencrypted(const char *message, size_t message_len,
                                    uint8_t **encrypted_out);
 STATIC void desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc);
 
+MOCK_DECL(STATIC size_t, decrypt_desc_layer,(const hs_descriptor_t *desc,
+                                             const uint8_t *encrypted_blob,
+                                             size_t encrypted_blob_size,
+                                             int is_superencrypted_layer,
+                                             char **decrypted_out));
+
+
 #endif /* defined(HS_DESCRIPTOR_PRIVATE) */
 
 #endif /* !defined(TOR_HS_DESCRIPTOR_H) */

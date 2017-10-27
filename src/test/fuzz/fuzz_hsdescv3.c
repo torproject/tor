@@ -35,12 +35,31 @@ mock_rsa_ed25519_crosscert_check(const uint8_t *crosscert,
   return 0;
 }
 
+static size_t
+mock_decrypt_desc_layer(const hs_descriptor_t *desc,
+                        const uint8_t *encrypted_blob,
+                        size_t encrypted_blob_size,
+                        int is_superencrypted_layer,
+                        char **decrypted_out)
+{
+  (void)is_superencrypted_layer;
+  (void)desc;
+  const size_t overhead = HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN;
+  if (encrypted_blob_size < overhead)
+    return 0;
+  *decrypted_out = tor_memdup_nulterm(
+                   encrypted_blob + HS_DESC_ENCRYPTED_SALT_LEN,
+                   encrypted_blob_size - overhead);
+  return strlen(*decrypted_out);
+}
+
 int
 fuzz_init(void)
 {
   disable_signature_checking();
   MOCK(dump_desc, mock_dump_desc__nodump);
   MOCK(rsa_ed25519_crosscert_check, mock_rsa_ed25519_crosscert_check);
+  MOCK(decrypt_desc_layer, mock_decrypt_desc_layer);
   ed25519_init();
   return 0;
 }
