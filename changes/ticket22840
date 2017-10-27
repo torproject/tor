@@ -1,0 +1,8 @@
+  o Major features (Rust experimentation):
+    - Tor now ships with an optional implementation of one of its smaller
+      modules (protover.c) in the Rust programming language.  To try it
+      out, install a Rust build environment, and configure Tor with
+      "--enable-rust --enable-cargo-online-mode".  This should not
+      cause any user-visible changes, but should help us gain more experience
+      with Rust, and plan future Rust integration work.
+      Implementation by Chelsea Komlo. Closes ticket 22840.
