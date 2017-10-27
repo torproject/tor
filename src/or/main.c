@@ -691,6 +691,7 @@ tor_shutdown_event_loop_and_exit(int exitcode)
 
   /* Die with an assertion failure in ten seconds, if for some reason we don't
    * exit normally. */
+  /* XXXX We should consider this code if it's never used. */
   struct timeval ten_seconds = { 10, 0 };
   event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT,
                   shutdown_did_not_work_callback, NULL,
