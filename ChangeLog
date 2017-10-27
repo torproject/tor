@@ -1,9 +1,10 @@
-Changes in version 0.3.2.3-alpha - 2017-10-??
-  Tor 0.3.2.3-alpha is the third release in the 0.3.2 series. BLURB
-  BLURB BLURB.
+Changes in version 0.3.2.3-alpha - 2017-10-27
+  Tor 0.3.2.3-alpha is the third release in the 0.3.2 series. It fixes
+  numerous small bugs in earlier versions of 0.3.2.x, and adds a new
+  directory authority, Bastet.
 
   o Directory authority changes:
-    - Add bastet as a ninth directory authority to the default list.
+    - Add "Bastet" as a ninth directory authority to the default list.
       Closes ticket 23910.
     - The directory authority "Longclaw" has changed its IP address.
       Closes ticket 23592.
@@ -18,58 +19,54 @@ Changes in version 0.3.2.3-alpha - 2017-10-??
       descriptors. Implements tickets 18329.
 
   o Minor features (client, entry guards):
-    - Improve log messages when missing descriptors for primary
-      guards. Resolves ticket 23670.
+    - Improve log messages when missing descriptors for primary guards.
+      Resolves ticket 23670.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the October 4 2017 Maxmind GeoLite2
       Country database.
 
   o Minor bugfixes (bridge):
-    - Overwrite the bridge address earlier in the process of directly
-      retrieving its descriptor, to make sure we reach it on the
-      configured address. Fixes bug 20532; bugfix on 0.2.0.10-alpha.
+    - Overwrite the bridge address earlier in the process of retrieving
+      its descriptor, to make sure we reach it on the configured
+      address. Fixes bug 20532; bugfix on 0.2.0.10-alpha.
 
   o Minor bugfixes (documentation):
-    - Document better how to read gcov and what our postprocessing
+    - Document better how to read gcov, and what our gcov postprocessing
       scripts do. Fixes bug 23739; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (entry guards):
     - Tor now updates its guard state when it reads a consensus
       regardless of whether it's missing descriptors. That makes tor use
       its primary guards to fetch descriptors in some edge cases where
-      it would have used fallback directories in the past. Fixes bug
+      it would previously have used fallback directories. Fixes bug
       23862; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (hidden service client):
-    - When getting multiple SOCKS request for the same .onion address,
-      don't trigger multiple descriptor fetches.
-    - When the descriptor fetch fails with an internal error, no more
-      HSDir to query or we aren't allowed to fetch
-      (FetchHidServDescriptors 0), close all pending SOCKS request for
-      that .onion. Fixes bug 23653; bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (hidden service v2):
-    - When reloading tor (HUP) configured with hidden service(s), some
-      information weren't copy to the new service object. One problem
-      with this was that tor would wait at least the RendPostPeriod time
-      before uploading the descriptor if the reload happened before the
-      descriptor needed to be published. Fixes bug 23790; bugfix
-      on 0.2.1.9-alpha.
+    - When handling multiple SOCKS request for the same .onion address,
+      only fetch the service descriptor once.
+    - When a descriptor fetch fails with a non-recoverable error, close
+      all pending SOCKS requests for that .onion. Fixes bug 23653;
+      bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (hidden service):
-    - Always make sure the hidden service generate the public key file
-      if it is missing. Prior to this, if the public key was deleted
-      from disk, it wouldn't get recreated. Fixes bug 23748; bugfix on
-      0.3.2.2-alpha. Patch from "cathugger".
+    - Always regenerate missing hidden service public key files. Prior
+      to this, if the public key was deleted from disk, it wouldn't get
+      recreated. Fixes bug 23748; bugfix on 0.3.2.2-alpha. Patch
+      from "cathugger".
     - Make sure that we have a usable ed25519 key when the intro point
-      relay does support ed25519 link authentication. We do check for an
-      empty key when the relay does not support it so this makes it nice
-      and symmetric. Fixes bug 24002; bugfix on 0.3.2.1-alpha.
+      relay supports ed25519 link authentication. Fixes bug 24002;
+      bugfix on 0.3.2.1-alpha.
 
-  o Minor bugfixes (memory safety):
-    - Clear the address when node_get_prim_orport() returns early. Fixes
-      bug 23874; bugfix on 0.2.8.2-alpha.
+  o Minor bugfixes (hidden service, v2):
+    - When reloading a configured with hidden service(s), copy all
+      information from the old service object. Previously, some data was
+      omitted, causing delays in descriptor upload, and other bugs.
+      Fixes bug 23790; bugfix on 0.2.1.9-alpha.
+
+  o Minor bugfixes (memory safety, defensive programming):
+    - Clear the target address when node_get_prim_orport() returns
+      early. Fixes bug 23874; bugfix on 0.2.8.2-alpha.
 
   o Minor bugfixes (relay):
     - Avoid a BUG warning when receiving a dubious CREATE cell while an
@@ -81,9 +78,10 @@ Changes in version 0.3.2.3-alpha - 2017-10-??
       Travis CI. Fixes bug 23757; bugfix on 0.3.2.2-alpha.
     - Prevent scripts/test/coverage from attempting to move gcov output
       to the root directory. Fixes bug 23741; bugfix on 0.2.5.1-alpha.
-    - Skip a test that would fail if run as root (because it expects a
-      permissions error). This affects some continuous integration
-      setups. Fixes bug 23758; bugfix on 0.3.2.2-alpha.
+    - When running unit tests as root, skip a test that would fail
+      because it expects a permissions error. This affects some
+      continuous integration setups. Fixes bug 23758; bugfix
+      on 0.3.2.2-alpha.
     - Stop unconditionally mirroring the tor repository in GitLab CI.
       This prevented developers from enabling GitLab CI on master. Fixes
       bug 23755; bugfix on 0.3.2.2-alpha.
