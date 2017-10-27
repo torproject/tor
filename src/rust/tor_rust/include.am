@@ -1,7 +1,6 @@
 EXTRA_DIST +=\
 	src/rust/tor_rust/Cargo.toml \
-	src/rust/tor_rust/lib.rs \
-	src/rust/tor_rust/tor_rust.rs
+	src/rust/tor_rust/lib.rs
 
 src/rust/target/release/@TOR_RUST_STATIC_NAME@: FORCE
 	( cd "$(abs_top_srcdir)/src/rust/tor_rust" ; \
