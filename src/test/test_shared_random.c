@@ -273,13 +273,8 @@ test_get_start_time_functions(void *arg)
   tt_assert(start_time_of_protocol_run);
 
   /* Check that the round start time of the beginning of the run, is itself */
-  tt_int_op(get_start_time_of_current_round(start_time_of_protocol_run), OP_EQ,
+  tt_int_op(get_start_time_of_current_round(), OP_EQ,
             start_time_of_protocol_run);
-
-  /* Check that even if we increment the start time, we still get the start
-     time of the run as the beginning of the round. */
-  tt_int_op(get_start_time_of_current_round(start_time_of_protocol_run+1),
-            OP_EQ, start_time_of_protocol_run);
 
  done: ;
 }
@@ -311,7 +306,7 @@ mock_networkstatus_get_live_consensus(time_t now)
   return mock_consensus;
 }
 
-/** Test the get_next_valid_after_time() function. */
+/** Test the dirvote_get_next_valid_after_time() function. */
 static void
 test_get_next_valid_after_time(void *arg)
 {
@@ -324,7 +319,7 @@ test_get_next_valid_after_time(void *arg)
 
   {
     /* Setup a fake consensus just to get the times out of it, since
-       get_next_valid_after_time() needs them. */
+       dirvote_get_next_valid_after_time() needs them. */
     mock_consensus = tor_malloc_zero(sizeof(networkstatus_t));
 
     retval = parse_rfc1123_time("Mon, 13 Jan 2016 16:00:00 UTC",
@@ -344,7 +339,7 @@ test_get_next_valid_after_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    valid_after_time = get_next_valid_after_time(current_time);
+    valid_after_time = dirvote_get_next_valid_after_time();
 
     /* Compare it with the correct result */
     format_iso_time(tbuf, valid_after_time);
@@ -356,7 +351,7 @@ test_get_next_valid_after_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    valid_after_time = get_next_valid_after_time(current_time);
+    valid_after_time = dirvote_get_next_valid_after_time();
 
     /* Compare it with the correct result */
     format_iso_time(tbuf, valid_after_time);
@@ -367,7 +362,7 @@ test_get_next_valid_after_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:30:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    valid_after_time = get_next_valid_after_time(current_time);
+    valid_after_time = dirvote_get_next_valid_after_time();
 
     /* Compare it with the correct result */
     format_iso_time(tbuf, valid_after_time);

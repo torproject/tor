@@ -2790,7 +2790,7 @@ dirvote_get_start_of_next_interval(time_t now, int interval, int offset)
 /* Populate and return a new voting_schedule_t that can be used to schedule
  * voting. The object is allocated on the heap and it's the responsibility of
  * the caller to free it. Can't fail. */
-voting_schedule_t *
+static voting_schedule_t *
 get_voting_schedule(const or_options_t *options, time_t now, int severity)
 {
   int interval, vote_delay, dist_delay;
@@ -2845,7 +2845,7 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
 
 /** Frees a voting_schedule_t. This should be used instead of the generic
  * tor_free. */
-void
+static void
 voting_schedule_free(voting_schedule_t *voting_schedule_to_free)
 {
   if (!voting_schedule_to_free)
@@ -2857,18 +2857,9 @@ static voting_schedule_t voting_schedule;
 
 /* Using the time <b>now</b>, return the next voting valid-after time. */
 time_t
-get_next_valid_after_time(time_t now)
+dirvote_get_next_valid_after_time(void)
 {
-  time_t next_valid_after_time;
-  const or_options_t *options = get_options();
-  voting_schedule_t *new_voting_schedule =
-    get_voting_schedule(options, now, LOG_INFO);
-  tor_assert(new_voting_schedule);
-
-  next_valid_after_time = new_voting_schedule->interval_starts;
-  voting_schedule_free(new_voting_schedule);
-
-  return next_valid_after_time;
+  return voting_schedule.interval_starts;
 }
 
 /** Set voting_schedule to hold the timing for the next vote we should be

@@ -170,18 +170,13 @@ typedef struct {
   int have_published_consensus;
 } voting_schedule_t;
 
-voting_schedule_t *get_voting_schedule(const or_options_t *options,
-                                       time_t now, int severity);
-
-void voting_schedule_free(voting_schedule_t *voting_schedule_to_free);
-
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
 time_t dirvote_get_start_of_next_interval(time_t now,
                                           int interval,
                                           int offset);
 void dirvote_recalculate_timing(const or_options_t *options, time_t now);
 void dirvote_act(const or_options_t *options, time_t now);
-time_t get_next_valid_after_time(time_t now);
+time_t dirvote_get_next_valid_after_time(void);
 
 /* invoked on timers and by outside triggers. */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
