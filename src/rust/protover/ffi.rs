@@ -1,3 +1,6 @@
+// Copyright (c) 2016-2017, The Tor Project, Inc. */
+// See LICENSE for licensing information */
+
 //! FFI functions, only to be called from C.
 //!
 //! Equivalent C versions of this api are in `src/or/protover.c`

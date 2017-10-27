@@ -1,3 +1,6 @@
+// Copyright (c) 2016-2017, The Tor Project, Inc. */
+// See LICENSE for licensing information */
+
 use std::slice;
 use libc::{c_char, c_int};
 use std::ffi::CStr;

@@ -1,3 +1,6 @@
+// Copyright (c) 2016-2017, The Tor Project, Inc. */
+// See LICENSE for licensing information */
+
 //! FFI functions to announce Rust support during tor startup, only to be
 //! called from C.
 //!

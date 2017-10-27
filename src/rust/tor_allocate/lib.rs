@@ -1,3 +1,6 @@
+// Copyright (c) 2016-2017, The Tor Project, Inc. */
+// See LICENSE for licensing information */
+
 //! Allocation helper functions that allow data to be allocated in Rust
 //! using tor's specified allocator. In doing so, this can be later freed
 //! from C.

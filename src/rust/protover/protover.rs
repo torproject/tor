@@ -1,3 +1,6 @@
+// Copyright (c) 2016-2017, The Tor Project, Inc. */
+// See LICENSE for licensing information */
+
 use external::c_tor_version_as_new_as;
 
 use std::str::FromStr;
