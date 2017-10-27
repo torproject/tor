@@ -12,6 +12,13 @@ static void
 test_protover_parse(void *arg)
 {
   (void) arg;
+#ifdef HAVE_RUST
+  /** This test is disabled on rust builds, because it only exists to test
+   * internal C functions. */
+  tt_skip();
+ done:
+  ;
+#else
   char *re_encoded = NULL;
 
   const char *orig = "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900";
@@ -78,12 +85,18 @@ test_protover_parse(void *arg)
     SMARTLIST_FOREACH(elts, proto_entry_t *, ent, proto_entry_free(ent));
   smartlist_free(elts);
   tor_free(re_encoded);
+#endif
 }
 
 static void
 test_protover_parse_fail(void *arg)
 {
   (void)arg;
+#ifdef HAVE_RUST
+  /** This test is disabled on rust builds, because it only exists to test
+   * internal C functions. */
+  tt_skip();
+#else
   smartlist_t *elts;
 
   /* random junk */
@@ -109,7 +122,7 @@ test_protover_parse_fail(void *arg)
   /* Broken range */
   elts = parse_protocol_list("Link=1,9-8,3");
   tt_ptr_op(elts, OP_EQ, NULL);
-
+#endif
  done:
   ;
 }
@@ -182,6 +195,32 @@ test_protover_all_supported(void *arg)
   tor_free(msg);
 }
 
+static void
+test_protover_list_supports_protocol_returns_true(void *arg)
+{
+  (void)arg;
+
+  const char *protocols = "Link=1";
+  int is_supported = protocol_list_supports_protocol(protocols, PRT_LINK, 1);
+  tt_int_op(is_supported, OP_EQ, 1);
+
+ done:
+  ;
+}
+
+static void
+test_protover_list_supports_protocol_for_unsupported_returns_false(void *arg)
+{
+  (void)arg;
+
+  const char *protocols = "Link=1";
+  int is_supported = protocol_list_supports_protocol(protocols, PRT_LINK, 10);
+  tt_int_op(is_supported, OP_EQ, 0);
+
+ done:
+  ;
+}
+
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
 
@@ -190,6 +229,8 @@ struct testcase_t protover_tests[] = {
   PV_TEST(parse_fail, 0),
   PV_TEST(vote, 0),
   PV_TEST(all_supported, 0),
+  PV_TEST(list_supports_protocol_for_unsupported_returns_false, 0),
+  PV_TEST(list_supports_protocol_returns_true, 0),
   END_OF_TESTCASES
 };
 

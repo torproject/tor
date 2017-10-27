@@ -1,5 +1,5 @@
 [workspace]
-members = ["tor_util"]
+members = ["tor_util", "protover", "smartlist", "external", "tor_allocate", "tor_rust"]
 
 [profile.release]
 debug = true

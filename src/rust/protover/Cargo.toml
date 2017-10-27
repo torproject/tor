@@ -1,0 +1,25 @@
+[package]
+authors = ["The Tor Project"]
+version = "0.0.1"
+name = "protover"
+
+[dependencies]
+libc = "0.2.22"
+
+[dependencies.smartlist]
+path = "../smartlist"
+
+[dependencies.external]
+path = "../external"
+
+[dependencies.tor_util]
+path = "../tor_util"
+
+[dependencies.tor_allocate]
+path = "../tor_allocate"
+
+[lib]
+name = "protover"
+path = "lib.rs"
+crate_type = ["rlib", "staticlib"]
+

@@ -78,6 +78,7 @@ LIBTOR_A_SOURCES = \
 	src/or/parsecommon.c			\
 	src/or/periodic.c				\
 	src/or/protover.c				\
+	src/or/protover_rust.c				\
 	src/or/proto_cell.c				\
 	src/or/proto_control0.c				\
 	src/or/proto_ext_or.c				\

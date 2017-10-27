@@ -1,0 +1,13 @@
+[package]
+authors = ["The Tor Project"]
+version = "0.0.1"
+name = "tor_allocate"
+
+[dependencies]
+libc = "0.2.22"
+
+[lib]
+name = "tor_allocate"
+path = "lib.rs"
+crate_type = ["rlib", "staticlib"]
+

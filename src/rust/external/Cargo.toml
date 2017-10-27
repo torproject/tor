@@ -1,0 +1,13 @@
+[package]
+authors = ["The Tor Project"]
+version = "0.0.1"
+name = "external"
+
+[dependencies]
+libc = "0.2.22"
+
+[lib]
+name = "external"
+path = "lib.rs"
+crate_type = ["rlib", "staticlib"]
+

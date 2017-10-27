@@ -1,4 +1,4 @@
-include src/rust/tor_util/include.am
+include src/rust/tor_rust/include.am
 
 EXTRA_DIST +=\
 	src/rust/Cargo.toml \
