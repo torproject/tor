@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - Make sure that we have a usable ed25519 key when the intro point relay
-      does support ed25519 link authentication. We do check for an empty key
-      when the relay does not support it so this makes it nice and symmetric.
-      Fixes bug 24002; bugfix on 0.3.2.1-alpha.

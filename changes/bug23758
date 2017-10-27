@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Skip a test that would fail if run as root (because it expects a
-      permissions error).  This affects some continuous integration setups.
-      Fixes bug 23758; bugfix on 0.3.2.2-alpha.

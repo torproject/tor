@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Adjust the GitLab CI configuration to more closely match that of Travis
-      CI. Fixes bug 23757; bugfix on 0.3.2.2-alpha.
-

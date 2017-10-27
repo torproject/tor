@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - Always make sure the hidden service generate the public key file if it
-      is missing. Prior to this, if the public key was deleted from disk, it
-      wouldn't get recreated. Fixes bug 23748; bugfix on 0.3.2.2-alpha.
-      Patch from "cathugger".

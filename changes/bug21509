@@ -1,3 +1,0 @@
-  o Minor bugfixes (hidden service v3, fuzzing):
-    - Fix the hidden service v3 descriptor decoding fuzzing to use the latest
-      decoding API correctly. Fixes bug 21509; bugfix on 0.3.2.1-alpha.
