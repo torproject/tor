@@ -59,10 +59,10 @@ Changes in version 0.3.2.3-alpha - 2017-10-27
       bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (hidden service, v2):
-    - When reloading a configured with hidden service(s), copy all
-      information from the old service object. Previously, some data was
-      omitted, causing delays in descriptor upload, and other bugs.
-      Fixes bug 23790; bugfix on 0.2.1.9-alpha.
+    - When reloading configured hidden services, copy all information
+      from the old service object. Previously, some data was omitted,
+      causing delays in descriptor upload, and other bugs. Fixes bug
+      23790; bugfix on 0.2.1.9-alpha.
 
   o Minor bugfixes (memory safety, defensive programming):
     - Clear the target address when node_get_prim_orport() returns
