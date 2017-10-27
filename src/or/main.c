@@ -143,6 +143,8 @@ static void connection_start_reading_from_linked_conn(connection_t *conn);
 static int connection_should_read_from_linked_conn(connection_t *conn);
 static int run_main_loop_until_done(void);
 static void process_signal(int sig);
+static void shutdown_did_not_work_callback(evutil_socket_t fd, short event,
+                                           void *arg) ATTR_NORETURN;
 
 /********* START VARIABLES **********/
 int global_read_bucket; /**< Max number of bytes I can read this second. */
