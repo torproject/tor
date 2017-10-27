@@ -648,7 +648,8 @@ connection_should_read_from_linked_conn(connection_t *conn)
 
 /** If we called event_base_loop() and told it to never stop until it
  * runs out of events, now we've changed our mind: tell it we want it to
- * finish. */
+ * exit once the current round of callbacks is done, so that we can
+ * run external code, and then return to the main loop. */
 void
 tell_event_loop_to_run_external_code(void)
 {
