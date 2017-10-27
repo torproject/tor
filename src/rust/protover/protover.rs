@@ -429,8 +429,9 @@ fn find_range(list: &Vec<u32>) -> (bool, u32) {
 /// A `String` representation of this set in ascending order.
 ///
 fn contract_protocol_list<'a>(supported_set: &'a HashSet<u32>) -> String {
-    let mut supported_clone = supported_set.clone();
-    let mut supported: Vec<u32> = supported_clone.drain().collect();
+    let mut supported: Vec<u32> = supported_set.iter()
+                                               .map(|x| *x)
+                                               .collect();
     supported.sort();
 
     let mut final_output: Vec<String> = Vec::new();
