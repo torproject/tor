@@ -30,6 +30,7 @@ periodic_timer_t *periodic_timer_new(struct event_base *base,
 void periodic_timer_free(periodic_timer_t *);
 
 #define tor_event_base_loopexit event_base_loopexit
+#define tor_event_base_loopbreak event_base_loopbreak
 
 /** Defines a configuration for using libevent with Tor: passed as an argument
  * to tor_libevent_initialize() to describe how we want to set up. */

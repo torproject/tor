@@ -195,6 +195,14 @@ static smartlist_t *active_linked_connection_lst = NULL;
  * <b>loop_once</b>. If so, there's no need to trigger a loopexit in order
  * to handle linked connections. */
 static int called_loop_once = 0;
+/** Flag: if true, it's time to shut down, so the main loop should exit as
+ * soon as possible.
+ */
+static int main_loop_should_exit = 0;
+/** The return value that the main loop should yield when it exits, if
+ * main_loop_should_exit is true.
+ */
+static int main_loop_exit_value = 0;
 
 /** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working.  We set it to 0 when
@@ -642,13 +650,60 @@ connection_should_read_from_linked_conn(connection_t *conn)
  * runs out of events, now we've changed our mind: tell it we want it to
  * finish. */
 void
-tell_event_loop_to_finish(void)
+tell_event_loop_to_run_external_code(void)
 {
   if (!called_loop_once) {
     struct timeval tv = { 0, 0 };
     tor_event_base_loopexit(tor_libevent_get_base(), &tv);
     called_loop_once = 1; /* hack to avoid adding more exit events */
   }
+}
+
+/** Failsafe measure that should never actually be necessary: If
+ * tor_shutdown_event_loop_and_exit() somehow doesn't successfully exit the
+ * event loop, then this callback will kill Tor with an assertion failure
+ * seconds later
+ */
+static void
+shutdown_did_not_work_callback(evutil_socket_t fd, short event, void *arg)
+{
+  // LCOV_EXCL_START
+  (void) fd;
+  (void) event;
+  (void) arg;
+  tor_assert_unreached();
+  // LCOV_EXCL_STOP
+}
+
+/**
+ * After finishing the current callback (if any), shut down the main loop,
+ * clean up the process, and exit with <b>exitcode</b>.
+ */
+void
+tor_shutdown_event_loop_and_exit(int exitcode)
+{
+  if (main_loop_should_exit)
+    return; /* Ignore multiple calls to this function. */
+
+  main_loop_should_exit = 1;
+  main_loop_exit_value = exitcode;
+
+  /* Die with an assertion failure in ten seconds, if for some reason we don't
+   * exit normally. */
+  struct timeval ten_seconds = { 10, 0 };
+  event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT,
+                  shutdown_did_not_work_callback, NULL,
+                  &ten_seconds);
+
+  /* Unlike loopexit, loopbreak prevents other callbacks from running. */
+  tor_event_base_loopbreak(tor_libevent_get_base());
+}
+
+/** Return true iff tor_shutdown_event_loop_and_exit() has been called. */
+int
+tor_event_loop_shutdown_is_pending(void)
+{
+  return main_loop_should_exit;
 }
 
 /** Helper: Tell the main loop to begin reading bytes into <b>conn</b> from
@@ -666,7 +721,7 @@ connection_start_reading_from_linked_conn(connection_t *conn)
     /* make sure that the event_base_loop() function exits at
      * the end of its run through the current connections, so we can
      * activate read events for linked connections. */
-    tell_event_loop_to_finish();
+    tell_event_loop_to_run_external_code();
   } else {
     tor_assert(smartlist_contains(active_linked_connection_lst, conn));
   }
@@ -1557,8 +1612,7 @@ check_ed_keys_callback(time_t now, const or_options_t *options)
       if (new_signing_key < 0 ||
           generate_ed_link_cert(options, now, new_signing_key > 0)) {
         log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
-        tor_cleanup();
-        exit(1); // XXXX bad exit
+        tor_shutdown_event_loop_and_exit(1);
       }
     }
     return 30;
@@ -2369,10 +2423,18 @@ do_hup(void)
   /* first, reload config variables, in case they've changed */
   if (options->ReloadTorrcOnSIGHUP) {
     /* no need to provide argc/v, they've been cached in init_from_config */
-    if (options_init_from_torrc(0, NULL) < 0) {
+    int init_rv = options_init_from_torrc(0, NULL);
+    if (init_rv < 0) {
       log_err(LD_CONFIG,"Reading config failed--see warnings above. "
               "For usage, try -h.");
       return -1;
+    } else if (BUG(init_rv > 0)) {
+      // LCOV_EXCL_START
+      /* This should be impossible: the only "return 1" cases in
+       * options_init_from_torrc are ones caused by command-line arguments;
+       * but they can't change while Tor is running. */
+      return -1;
+      // LCOV_EXCL_STOP
     }
     options = get_options(); /* they have changed now */
     /* Logs are only truncated the first time they are opened, but were
@@ -2598,6 +2660,9 @@ do_main_loop(void)
   }
 #endif /* defined(HAVE_SYSTEMD) */
 
+  main_loop_should_exit = 0;
+  main_loop_exit_value = 0;
+
   return run_main_loop_until_done();
 }
 
@@ -2611,6 +2676,9 @@ run_main_loop_once(void)
   int loop_result;
 
   if (nt_service_is_stopping())
+    return 0;
+
+  if (main_loop_should_exit)
     return 0;
 
 #ifndef _WIN32
@@ -2659,6 +2727,9 @@ run_main_loop_once(void)
     }
   }
 
+  if (main_loop_should_exit)
+    return 0;
+
   /* And here is where we put callbacks that happen "every time the event loop
    * runs."  They must be very fast, or else the whole Tor process will get
    * slowed down.
@@ -2687,7 +2758,11 @@ run_main_loop_until_done(void)
   do {
     loop_result = run_main_loop_once();
   } while (loop_result == 1);
-  return loop_result;
+
+  if (main_loop_should_exit)
+    return main_loop_exit_value;
+  else
+    return loop_result;
 }
 
 /** Libevent callback: invoked when we get a signal.
@@ -2711,14 +2786,13 @@ process_signal(int sig)
     {
     case SIGTERM:
       log_notice(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
-      tor_cleanup();
-      exit(0); // XXXX bad exit
+      tor_shutdown_event_loop_and_exit(0);
       break;
     case SIGINT:
       if (!server_mode(get_options())) { /* do it now */
         log_notice(LD_GENERAL,"Interrupt: exiting cleanly.");
-        tor_cleanup();
-        exit(0); // XXXX bad exit
+        tor_shutdown_event_loop_and_exit(0);
+        return;
       }
 #ifdef HAVE_SYSTEMD
       sd_notify(0, "STOPPING=1");
@@ -2747,8 +2821,8 @@ process_signal(int sig)
 #endif
       if (do_hup() < 0) {
         log_warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
-        tor_cleanup();
-        exit(1); // XXXX bad exit
+        tor_shutdown_event_loop_and_exit(1);
+        return;
       }
 #ifdef HAVE_SYSTEMD
       sd_notify(0, "READY=1");
@@ -3022,7 +3096,8 @@ activate_signal(int signal_num)
   }
 }
 
-/** Main entry point for the Tor command-line client.
+/** Main entry point for the Tor command-line client.  Return 0 on "success",
+ * negative on "failure", and positive on "success and exit".
  */
 int
 tor_init(int argc, char *argv[])
@@ -3128,9 +3203,14 @@ tor_init(int argc, char *argv[])
   }
   atexit(exit_function);
 
-  if (options_init_from_torrc(argc,argv) < 0) {
+  int init_rv = options_init_from_torrc(argc,argv);
+  if (init_rv < 0) {
     log_err(LD_CONFIG,"Reading config failed--see warnings above.");
     return -1;
+  } else if (init_rv > 0) {
+    // We succeeded, and should exit anyway -- probably the user just said
+    // "--version" or something like that.
+    return 1;
   }
 
   /* The options are now initialised */
@@ -3200,7 +3280,7 @@ try_locking(const or_options_t *options, int err_if_locked)
         r = try_locking(options, 0);
         if (r<0) {
           log_err(LD_GENERAL, "No, it's still there.  Exiting.");
-          exit(1); // XXXX bad exit
+          return -1;
         }
         return r;
       }
@@ -3756,8 +3836,13 @@ tor_main(int argc, char *argv[])
      if (done) return result;
   }
 #endif /* defined(NT_SERVICE) */
-  if (tor_init(argc, argv)<0)
-    return -1;
+  {
+    int init_rv = tor_init(argc, argv);
+    if (init_rv < 0)
+      return -1;
+    else if (init_rv > 0)
+      return 0;
+  }
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
     sandbox_cfg_t* cfg = sandbox_init_filter();

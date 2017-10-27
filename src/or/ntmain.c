@@ -318,7 +318,7 @@ nt_service_main(void)
     printf("Service error %d : %s\n", (int) result, errmsg);
     tor_free(errmsg);
     if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
-      if (tor_init(backup_argc, backup_argv) < 0)
+      if (tor_init(backup_argc, backup_argv))
         return;
       switch (get_options()->command) {
       case CMD_RUN_TOR:

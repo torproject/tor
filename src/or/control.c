@@ -6571,8 +6571,7 @@ monitor_owning_controller_process(const char *process_spec)
             "owning controller: %s.  Exiting.",
             msg);
     owning_controller_process_spec = NULL;
-    tor_cleanup();
-    exit(1); // XXXX bad exit: or questionable, at least.
+    tor_shutdown_event_loop_and_exit(1);
   }
 }
 

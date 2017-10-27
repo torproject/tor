@@ -45,7 +45,9 @@ int connection_is_writing(connection_t *conn);
 MOCK_DECL(void,connection_stop_writing,(connection_t *conn));
 MOCK_DECL(void,connection_start_writing,(connection_t *conn));
 
-void tell_event_loop_to_finish(void);
+void tell_event_loop_to_run_external_code(void);
+void tor_shutdown_event_loop_and_exit(int exitcode);
+int tor_event_loop_shutdown_is_pending(void);
 
 void connection_stop_reading_from_linked_conn(connection_t *conn);
 

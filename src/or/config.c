@@ -835,9 +835,12 @@ set_options(or_options_t *new_val, char **msg)
     return -1;
   }
   if (options_act(old_options) < 0) { /* acting on the options failed. die. */
-    log_err(LD_BUG,
-            "Acting on config options left us in a broken state. Dying.");
-    exit(1); // XXXX bad exit
+    if (! tor_event_loop_shutdown_is_pending()) {
+      log_err(LD_BUG,
+              "Acting on config options left us in a broken state. Dying.");
+      tor_shutdown_event_loop_and_exit(1);
+    }
+    return -1;
   }
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
@@ -1689,8 +1692,11 @@ options_act(const or_options_t *old_options)
   else
     protocol_warning_severity_level = LOG_INFO;
 
-  if (consider_adding_dir_servers(options, old_options) < 0)
+  if (consider_adding_dir_servers(options, old_options) < 0) {
+    // XXXX This should get validated earlier, and committed here, to
+    // XXXX lower opportunities for reaching an error case.
     return -1;
+  }
 
   if (rend_non_anonymous_mode_enabled(options)) {
     log_warn(LD_GENERAL, "This copy of Tor was compiled or configured to run "
@@ -1699,6 +1705,7 @@ options_act(const or_options_t *old_options)
 
 #ifdef ENABLE_TOR2WEB_MODE
 /* LCOV_EXCL_START */
+  // XXXX This should move into options_validate()
   if (!options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
             "'tor2web mode'. It can only be run with the Tor2webMode torrc "
@@ -1707,6 +1714,7 @@ options_act(const or_options_t *old_options)
   }
 /* LCOV_EXCL_STOP */
 #else /* !(defined(ENABLE_TOR2WEB_MODE)) */
+  // XXXX This should move into options_validate()
   if (options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
             "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
@@ -1734,9 +1742,11 @@ options_act(const or_options_t *old_options)
     for (cl = options->Bridges; cl; cl = cl->next) {
       bridge_line_t *bridge_line = parse_bridge_line(cl->value);
       if (!bridge_line) {
+        // LCOV_EXCL_START
         log_warn(LD_BUG,
                  "Previously validated Bridge line could not be added!");
         return -1;
+        // LCOV_EXCL_STOP
       }
       bridge_add_from_config(bridge_line);
     }
@@ -1744,15 +1754,19 @@ options_act(const or_options_t *old_options)
   }
 
   if (running_tor && hs_config_service_all(options, 0)<0) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG,
        "Previously validated hidden services line could not be added!");
     return -1;
+    // LCOV_EXCL_STOP
   }
 
   if (running_tor && rend_parse_service_authorization(options, 0) < 0) {
+    // LCOV_EXCL_START
     log_warn(LD_BUG, "Previously validated client authorization for "
                      "hidden services could not be added!");
     return -1;
+    // LCOV_EXCL_STOP
   }
 
   /* Load state */
@@ -1775,10 +1789,12 @@ options_act(const or_options_t *old_options)
     if (options->ClientTransportPlugin) {
       for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
         if (parse_transport_line(options, cl->value, 0, 0) < 0) {
+          // LCOV_EXCL_START
           log_warn(LD_BUG,
                    "Previously validated ClientTransportPlugin line "
                    "could not be added!");
           return -1;
+          // LCOV_EXCL_STOP
         }
       }
     }
@@ -1786,10 +1802,12 @@ options_act(const or_options_t *old_options)
     if (options->ServerTransportPlugin && server_mode(options)) {
       for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
         if (parse_transport_line(options, cl->value, 0, 1) < 0) {
+          // LCOV_EXCL_START
           log_warn(LD_BUG,
                    "Previously validated ServerTransportPlugin line "
                    "could not be added!");
           return -1;
+          // LCOV_EXCL_STOP
         }
       }
     }
@@ -1875,8 +1893,10 @@ options_act(const or_options_t *old_options)
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
-    log_warn(LD_CONFIG,"Error in accounting options");
+    // LCOV_EXCL_START
+    log_warn(LD_BUG,"Error in previously validated accounting options");
     return -1;
+    // LCOV_EXCL_STOP
   }
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
@@ -1899,6 +1919,7 @@ options_act(const or_options_t *old_options)
     char *http_authenticator;
     http_authenticator = alloc_http_authenticator(options->BridgePassword);
     if (!http_authenticator) {
+      // XXXX This should get validated in options_validate().
       log_warn(LD_BUG, "Unable to allocate HTTP authenticator. Not setting "
                "BridgePassword.");
       return -1;
@@ -1911,9 +1932,12 @@ options_act(const or_options_t *old_options)
   }
 
   if (parse_outbound_addresses(options, 0, &msg) < 0) {
-    log_warn(LD_BUG, "Failed parsing outbound bind addresses: %s", msg);
+    // LCOV_EXCL_START
+    log_warn(LD_BUG, "Failed parsing previously validated outbound "
+             "bind addresses: %s", msg);
     tor_free(msg);
     return -1;
+    // LCOV_EXCL_STOP
   }
 
   config_maybe_load_geoip_files_(options, old_options);
@@ -5017,7 +5041,8 @@ load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the file
  * call options_init_from_string() to load the config.
- * Return 0 if success, -1 if failure. */
+ * Return 0 if success, -1 if failure, and 1 if we succeeded but should exit
+ * anyway. */
 int
 options_init_from_torrc(int argc, char **argv)
 {
@@ -5044,22 +5069,22 @@ options_init_from_torrc(int argc, char **argv)
   if (config_line_find(cmdline_only_options, "-h") ||
       config_line_find(cmdline_only_options, "--help")) {
     print_usage();
-    exit(0); // XXXX bad exit, though probably harmless
+    return 1;
   }
   if (config_line_find(cmdline_only_options, "--list-torrc-options")) {
     /* For validating whether we've documented everything. */
     list_torrc_options();
-    exit(0); // XXXX bad exit, though probably harmless
+    return 1;
   }
   if (config_line_find(cmdline_only_options, "--list-deprecated-options")) {
     /* For validating whether what we have deprecated really exists. */
     list_deprecated_options();
-    exit(0); // XXXX bad exit, though probably harmless
+    return 1;
   }
 
   if (config_line_find(cmdline_only_options, "--version")) {
     printf("Tor version %s.\n",get_version());
-    exit(0); // XXXX bad exit, though probably harmless
+    return 1;
   }
 
   if (config_line_find(cmdline_only_options, "--library-versions")) {
@@ -5087,7 +5112,7 @@ options_init_from_torrc(int argc, char **argv)
                         tor_compress_header_version_str(ZSTD_METHOD));
     }
     //TODO: Hex versions?
-    exit(0); // XXXX bad exit, though probably harmless
+    return 1;
   }
 
   command = CMD_RUN_TOR;
@@ -5148,7 +5173,8 @@ options_init_from_torrc(int argc, char **argv)
       get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_OFF;
     } else {
       log_err(LD_CONFIG, "--no-passphrase specified without --keygen!");
-      exit(1); // XXXX bad exit
+      retval = -1;
+      goto err;
     }
   }
 
@@ -5157,7 +5183,8 @@ options_init_from_torrc(int argc, char **argv)
       get_options_mutable()->change_key_passphrase = 1;
     } else {
       log_err(LD_CONFIG, "--newpass specified without --keygen!");
-      exit(1); // XXXX bad exit
+      retval = -1;
+      goto err;
     }
   }
 
@@ -5167,17 +5194,20 @@ options_init_from_torrc(int argc, char **argv)
     if (fd_line) {
       if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
         log_err(LD_CONFIG, "--no-passphrase specified with --passphrase-fd!");
-        exit(1); // XXXX bad exit
+        retval = -1;
+        goto err;
       } else if (command != CMD_KEYGEN) {
         log_err(LD_CONFIG, "--passphrase-fd specified without --keygen!");
-        exit(1); // XXXX bad exit
+        retval = -1;
+        goto err;
       } else {
         const char *v = fd_line->value;
         int ok = 1;
         long fd = tor_parse_long(v, 10, 0, INT_MAX, &ok, NULL);
         if (fd < 0 || ok == 0) {
           log_err(LD_CONFIG, "Invalid --passphrase-fd value %s", escaped(v));
-          exit(1); // XXXX bad exit
+          retval = -1;
+          goto err;
         }
         get_options_mutable()->keygen_passphrase_fd = (int)fd;
         get_options_mutable()->use_keygen_passphrase_fd = 1;
@@ -5192,7 +5222,8 @@ options_init_from_torrc(int argc, char **argv)
     if (key_line) {
       if (command != CMD_KEYGEN) {
         log_err(LD_CONFIG, "--master-key without --keygen!");
-        exit(1); // XXXX bad exit
+        retval = -1;
+        goto err;
       } else {
         get_options_mutable()->master_key_fname = tor_strdup(key_line->value);
       }
