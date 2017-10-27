@@ -5,9 +5,11 @@ crates="protover tor_util smartlist tor_allocate"
 
 exitcode=0
 
+set -e
+
 for crate in $crates; do
     cd "${abs_top_srcdir:-.}/src/rust/${crate}"
-    CARGO_TARGET_DIR="${abs_top_builddir}/src/rust/target" CARGO_HOME="${abs_top_builddir}/src/rust" "${CARGO:-cargo}" test ${CARGO_ONLINE-"--frozen"} || exitcode=1
+    CARGO_TARGET_DIR="${abs_top_builddir:-../../..}/src/rust/target" CARGO_HOME="${abs_top_builddir:-../../..}/src/rust" "${CARGO:-cargo}" test ${CARGO_ONLINE-"--frozen"} || exitcode=1
     cd -
 done
 
