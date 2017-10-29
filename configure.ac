@@ -527,7 +527,7 @@ struct event_base *event_base_new(void);],
 #ifdef _WIN32
 {WSADATA d; WSAStartup(0x101,&d); }
 #endif
-event_base_new();
+event_base_free(event_base_new());
 ], [--with-libevent-dir], [/opt/libevent])
 
 dnl Determine the incantation needed to link libevent.
