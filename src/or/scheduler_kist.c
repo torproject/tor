@@ -158,6 +158,7 @@ static void
 free_all_socket_info(void)
 {
   HT_FOREACH_FN(socket_table_s, &socket_table, free_socket_info_by_ent, NULL);
+  HT_CLEAR(socket_table_s, &socket_table);
 }
 
 static socket_table_ent_t *
