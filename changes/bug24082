@@ -1,0 +1,3 @@
+  o Minor bugfixes (testing):
+    - Fix a spurious fuzzing-only use of an uninitialized value.
+      Found by Brian Carpenter. Fixes bug 24082; bugfix on 0.3.0.3-alpha.

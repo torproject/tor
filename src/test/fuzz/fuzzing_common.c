@@ -107,7 +107,7 @@ global_init(void)
   configure_backtrace_handler(get_version());
 
   /* set up the options. */
-  mock_options = tor_malloc(sizeof(or_options_t));
+  mock_options = tor_malloc_zero(sizeof(or_options_t));
   MOCK(get_options, mock_get_options);
 
   /* Make BUG() and nonfatal asserts crash */
