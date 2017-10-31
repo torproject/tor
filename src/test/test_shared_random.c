@@ -131,7 +131,15 @@ test_get_sr_protocol_phase(void *arg)
   ;
 }
 
-static networkstatus_t *mock_consensus = NULL;
+static networkstatus_t mock_consensus;
+
+/* Mock function to immediately return our local 'mock_consensus'. */
+static networkstatus_t *
+mock_networkstatus_get_live_consensus(time_t now)
+{
+  (void) now;
+  return &mock_consensus;
+}
 
 static void
 test_get_state_valid_until_time(void *arg)
@@ -143,11 +151,23 @@ test_get_state_valid_until_time(void *arg)
 
   (void) arg;
 
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  retval = parse_rfc1123_time("Mon, 20 Apr 2015 01:00:00 UTC",
+                              &mock_consensus.fresh_until);
+  tt_int_op(retval, OP_EQ, 0);
+
+  retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
+                              &mock_consensus.valid_after);
+  tt_int_op(retval, OP_EQ, 0);
+
   {
     /* Get the valid until time if called at 00:00:01 */
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     /* Compare it with the correct result */
@@ -159,6 +179,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 19:22:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -169,6 +190,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -179,6 +201,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -186,7 +209,7 @@ test_get_state_valid_until_time(void *arg)
   }
 
  done:
-  ;
+  UNMOCK(networkstatus_get_live_consensus);
 }
 
 /** Test the function that calculates the start time of the current SRV
@@ -200,11 +223,23 @@ test_get_start_time_of_current_run(void *arg)
 
   (void) arg;
 
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  retval = parse_rfc1123_time("Mon, 20 Apr 2015 01:00:00 UTC",
+                              &mock_consensus.fresh_until);
+  tt_int_op(retval, OP_EQ, 0);
+
+  retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
+                              &mock_consensus.valid_after);
+  tt_int_op(retval, OP_EQ, 0);
+
   {
     /* Get start time if called at 00:00:01 */
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -217,6 +252,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:59 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -229,6 +265,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -236,6 +273,10 @@ test_get_start_time_of_current_run(void *arg)
     format_iso_time(tbuf, run_start_time);
     tt_str_op("2015-04-20 00:00:00", OP_EQ, tbuf);
   }
+
+  /* Next test is testing it without a consensus to use the testing voting
+   * interval . */
+  UNMOCK(networkstatus_get_live_consensus);
 
   /* Now let's alter the voting schedule and check the correctness of the
    * function. Voting interval of 10 seconds, means that an SRV protocol run
@@ -246,8 +287,8 @@ test_get_start_time_of_current_run(void *arg)
     options->TestingV3AuthInitialVotingInterval = 10;
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:15:32 UTC",
                                 &current_time);
-
     tt_int_op(retval, OP_EQ, 0);
+    dirvote_recalculate_timing(get_options(), current_time);
     run_start_time =
       sr_state_get_start_time_of_current_protocol_run(current_time);
 
@@ -266,8 +307,21 @@ static void
 test_get_start_time_functions(void *arg)
 {
   (void) arg;
-  time_t now = approx_time();
+  int retval;
 
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  retval = parse_rfc1123_time("Mon, 20 Apr 2015 01:00:00 UTC",
+                              &mock_consensus.fresh_until);
+  tt_int_op(retval, OP_EQ, 0);
+
+  retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
+                              &mock_consensus.valid_after);
+  tt_int_op(retval, OP_EQ, 0);
+  time_t now = mock_consensus.valid_after;
+
+  dirvote_recalculate_timing(get_options(), now);
   time_t start_time_of_protocol_run =
     sr_state_get_start_time_of_current_protocol_run(now);
   tt_assert(start_time_of_protocol_run);
@@ -276,7 +330,8 @@ test_get_start_time_functions(void *arg)
   tt_int_op(get_start_time_of_current_round(), OP_EQ,
             start_time_of_protocol_run);
 
- done: ;
+ done:
+  UNMOCK(networkstatus_get_live_consensus);
 }
 
 static void
@@ -296,81 +351,6 @@ test_get_sr_protocol_duration(void *arg)
   tt_int_op(sr_state_get_protocol_run_duration(), OP_EQ, 4*60);
 
  done: ;
-}
-
-/* Mock function to immediately return our local 'mock_consensus'. */
-static networkstatus_t *
-mock_networkstatus_get_live_consensus(time_t now)
-{
-  (void) now;
-  return mock_consensus;
-}
-
-/** Test the dirvote_get_next_valid_after_time() function. */
-static void
-test_get_next_valid_after_time(void *arg)
-{
-  time_t current_time;
-  time_t valid_after_time;
-  char tbuf[ISO_TIME_LEN + 1];
-  int retval;
-
-  (void) arg;
-
-  {
-    /* Setup a fake consensus just to get the times out of it, since
-       dirvote_get_next_valid_after_time() needs them. */
-    mock_consensus = tor_malloc_zero(sizeof(networkstatus_t));
-
-    retval = parse_rfc1123_time("Mon, 13 Jan 2016 16:00:00 UTC",
-                                &mock_consensus->fresh_until);
-    tt_int_op(retval, OP_EQ, 0);
-
-    retval = parse_rfc1123_time("Mon, 13 Jan 2016 15:00:00 UTC",
-                                &mock_consensus->valid_after);
-    tt_int_op(retval, OP_EQ, 0);
-
-    MOCK(networkstatus_get_live_consensus,
-         mock_networkstatus_get_live_consensus);
-  }
-
-  {
-    /* Get the valid after time if called at 00:00:00 */
-    retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
-                                &current_time);
-    tt_int_op(retval, OP_EQ, 0);
-    valid_after_time = dirvote_get_next_valid_after_time();
-
-    /* Compare it with the correct result */
-    format_iso_time(tbuf, valid_after_time);
-    tt_str_op("2015-04-20 01:00:00", OP_EQ, tbuf);
-  }
-
-  {
-    /* Get the valid until time if called at 00:00:01 */
-    retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
-                                &current_time);
-    tt_int_op(retval, OP_EQ, 0);
-    valid_after_time = dirvote_get_next_valid_after_time();
-
-    /* Compare it with the correct result */
-    format_iso_time(tbuf, valid_after_time);
-    tt_str_op("2015-04-20 01:00:00", OP_EQ, tbuf);
- }
-
-  {
-    retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:30:01 UTC",
-                                &current_time);
-    tt_int_op(retval, OP_EQ, 0);
-    valid_after_time = dirvote_get_next_valid_after_time();
-
-    /* Compare it with the correct result */
-    format_iso_time(tbuf, valid_after_time);
-    tt_str_op("2015-04-21 00:00:00", OP_EQ, tbuf);
- }
-
- done:
-  networkstatus_vote_free(mock_consensus);
 }
 
 /* In this test we are going to generate a sr_commit_t object and validate
@@ -1380,8 +1360,6 @@ struct testcase_t sr_tests[] = {
   { "keep_commit", test_keep_commit, TT_FORK,
     NULL, NULL },
   { "encoding", test_encoding, TT_FORK,
-    NULL, NULL },
-  { "get_next_valid_after_time", test_get_next_valid_after_time, TT_FORK,
     NULL, NULL },
   { "get_start_time_of_current_run", test_get_start_time_of_current_run,
     TT_FORK, NULL, NULL },
