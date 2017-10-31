@@ -1145,7 +1145,7 @@ validate_addr_policies(const or_options_t *options, char **msg)
              "to 1 to disable this warning, and for forward compatibility.",
              options->ExitPolicy == NULL ?
                  " with the default exit policy" : "");
-    if (options->ExitPolicy == NULL) {
+    if (options->ExitPolicy == NULL && options->ReducedExitPolicy == 0) {
       log_warn(LD_CONFIG,
                "In a future version of Tor, ExitRelay 0 may become the "
                "default when no ExitPolicy is given.");
