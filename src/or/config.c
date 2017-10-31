@@ -4654,6 +4654,7 @@ options_transition_affects_workers(const or_options_t *old_options,
                                        new_options->ServerDNSSearchDomains ||
       old_options->SafeLogging_ != new_options->SafeLogging_ ||
       old_options->ClientOnly != new_options->ClientOnly ||
+      server_mode(old_options) != server_mode(new_options) ||
       public_server_mode(old_options) != public_server_mode(new_options) ||
       !config_lines_eq(old_options->Logs, new_options->Logs) ||
       old_options->LogMessageDomains != new_options->LogMessageDomains)
