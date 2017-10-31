@@ -4833,7 +4833,7 @@ test_config_include_limit(void *data)
                torrc_path);
   tt_int_op(write_str_to_file(torrc_path, torrc_contents, 0), OP_EQ, 0);
 
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, NULL),
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, NULL, NULL),
             OP_EQ, -1);
 
  done:
@@ -4863,7 +4863,7 @@ test_config_include_does_not_exist(void *data)
   tor_snprintf(torrc_contents, sizeof(torrc_contents), "%%include %s",
                missing_path);
 
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, NULL),
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, NULL, NULL),
             OP_EQ, -1);
 
  done:
@@ -4895,7 +4895,7 @@ test_config_include_error_in_included_file(void *data)
   tor_snprintf(torrc_contents, sizeof(torrc_contents), "%%include %s",
                invalid_path);
 
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, NULL),
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, NULL, NULL),
             OP_EQ, -1);
 
  done:
@@ -4937,8 +4937,8 @@ test_config_include_empty_file_folder(void *data)
                folder_path, file_path);
 
   int include_used;
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
-            OP_EQ, 0);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used,
+            NULL), OP_EQ, 0);
   tt_ptr_op(result, OP_EQ, NULL);
   tt_int_op(include_used, OP_EQ, 1);
 
@@ -4975,7 +4975,8 @@ test_config_include_no_permission(void *data)
                folder_path);
 
   int include_used;
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,
+                                     &include_used, NULL),
             OP_EQ, -1);
   tt_ptr_op(result, OP_EQ, NULL);
 
@@ -5031,8 +5032,8 @@ test_config_include_recursion_before_after(void *data)
   }
 
   int include_used;
-  tt_int_op(config_get_lines_include(file_contents, &result, 0, &include_used),
-            OP_EQ, 0);
+  tt_int_op(config_get_lines_include(file_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
   tt_ptr_op(result, OP_NE, NULL);
   tt_int_op(include_used, OP_EQ, 1);
 
@@ -5096,8 +5097,8 @@ test_config_include_recursion_after_only(void *data)
   }
 
   int include_used;
-  tt_int_op(config_get_lines_include(file_contents, &result, 0, &include_used),
-            OP_EQ, 0);
+  tt_int_op(config_get_lines_include(file_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
   tt_ptr_op(result, OP_NE, NULL);
   tt_int_op(include_used, OP_EQ, 1);
 
@@ -5185,8 +5186,8 @@ test_config_include_folder_order(void *data)
                torrcd);
 
   int include_used;
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
-            OP_EQ, 0);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
   tt_ptr_op(result, OP_NE, NULL);
   tt_int_op(include_used, OP_EQ, 1);
 
@@ -5239,8 +5240,8 @@ test_config_include_path_syntax(void *data)
                esc_dir_with_pathsep);
 
   int include_used;
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
-            OP_EQ, 0);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used,
+            NULL), OP_EQ, 0);
   tt_ptr_op(result, OP_EQ, NULL);
   tt_int_op(include_used, OP_EQ, 1);
 
@@ -5294,14 +5295,14 @@ test_config_include_has_include(void *data)
   char torrc_contents[1000] = "Test 1\n";
   int include_used;
 
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
-            OP_EQ, 0);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used,
+            NULL), OP_EQ, 0);
   tt_int_op(include_used, OP_EQ, 0);
   config_free_lines(result);
 
   tor_snprintf(torrc_contents, sizeof(torrc_contents), "%%include %s\n", dir);
-  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used),
-            OP_EQ, 0);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0,&include_used,
+            NULL), OP_EQ, 0);
   tt_int_op(include_used, OP_EQ, 1);
 
  done:
@@ -5513,6 +5514,85 @@ test_config_check_bridge_distribution_setting_unrecognised(void *arg)
   return;
 }
 
+static void
+test_config_include_opened_file_list(void *data)
+{
+  (void)data;
+
+  config_line_t *result = NULL;
+  smartlist_t *opened_files = smartlist_new();
+  char *dir = tor_strdup(get_fname("test_include_opened_file_list"));
+  tt_ptr_op(dir, OP_NE, NULL);
+
+#ifdef _WIN32
+  tt_int_op(mkdir(dir), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
+#endif
+
+  char torrcd[PATH_MAX+1];
+  tor_snprintf(torrcd, sizeof(torrcd), "%s"PATH_SEPARATOR"%s", dir, "torrc.d");
+
+#ifdef _WIN32
+  tt_int_op(mkdir(torrcd), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(torrcd, 0700), OP_EQ, 0);
+#endif
+
+  char subfolder[PATH_MAX+1];
+  tor_snprintf(subfolder, sizeof(subfolder), "%s"PATH_SEPARATOR"%s", torrcd,
+               "subfolder");
+
+#ifdef _WIN32
+  tt_int_op(mkdir(subfolder), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(subfolder, 0700), OP_EQ, 0);
+#endif
+
+  char path[PATH_MAX+1];
+  tor_snprintf(path, sizeof(path), "%s"PATH_SEPARATOR"%s", subfolder,
+               "01_file_in_subfolder");
+  tt_int_op(write_str_to_file(path, "Test 1\n", 0), OP_EQ, 0);
+
+  char empty[PATH_MAX+1];
+  tor_snprintf(empty, sizeof(empty), "%s"PATH_SEPARATOR"%s", torrcd, "empty");
+  tt_int_op(write_str_to_file(empty, "", 0), OP_EQ, 0);
+
+  char file[PATH_MAX+1];
+  tor_snprintf(file, sizeof(file), "%s"PATH_SEPARATOR"%s", torrcd, "file");
+  tt_int_op(write_str_to_file(file, "Test 2\n", 0), OP_EQ, 0);
+
+  char dot[PATH_MAX+1];
+  tor_snprintf(dot, sizeof(dot), "%s"PATH_SEPARATOR"%s", torrcd, ".dot");
+  tt_int_op(write_str_to_file(dot, "Test 3\n", 0), OP_EQ, 0);
+
+  char torrc_contents[1000];
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s\n",
+               torrcd);
+
+  int include_used;
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            opened_files), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  tt_int_op(smartlist_len(opened_files), OP_EQ, 4);
+  tt_int_op(smartlist_contains_string(opened_files, torrcd), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, subfolder), OP_EQ, 1);
+  // files inside subfolders are not opended, only the subfolder is opened
+  tt_int_op(smartlist_contains_string(opened_files, empty), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, file), OP_EQ, 1);
+  // dot files are not opened as we ignore them when we get their name from
+  // their parent folder
+
+ done:
+  SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
+  smartlist_free(opened_files);
+  config_free_lines(result);
+  tor_free(dir);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5560,6 +5640,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(check_bridge_distribution_setting_valid, 0),
   CONFIG_TEST(check_bridge_distribution_setting_invalid, 0),
   CONFIG_TEST(check_bridge_distribution_setting_unrecognised, 0),
+  CONFIG_TEST(include_opened_file_list, 0),
   END_OF_TESTCASES
 };
 

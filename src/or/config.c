@@ -939,6 +939,10 @@ or_options_free(or_options_t *options)
     SMARTLIST_FOREACH(options->SchedulerTypes_, int *, i, tor_free(i));
     smartlist_free(options->SchedulerTypes_);
   }
+  if (options->FilesOpenedByIncludes) {
+    SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, tor_free(f));
+    smartlist_free(options->FilesOpenedByIncludes);
+  }
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
@@ -5273,13 +5277,16 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   newoptions->command = command;
   newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
 
+  smartlist_t *opened_files = smartlist_new();
   for (int i = 0; i < 2; ++i) {
     const char *body = i==0 ? cf_defaults : cf;
     if (!body)
       continue;
+
     /* get config lines, assign them */
     retval = config_get_lines_include(body, &cl, 1,
-                                      body == cf ? &cf_has_include : NULL);
+                                      body == cf ? &cf_has_include : NULL,
+                                      opened_files);
     if (retval < 0) {
       err = SETOPT_ERR_PARSE;
       goto err;
@@ -5308,6 +5315,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   newoptions->IncludeUsed = cf_has_include;
+  newoptions->FilesOpenedByIncludes = opened_files;
 
   /* If this is a testing network configuration, change defaults
    * for a list of dependent config options, re-initialize newoptions
@@ -5347,13 +5355,16 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
 
     /* Assign all options a second time. */
+    opened_files = smartlist_new();
     for (int i = 0; i < 2; ++i) {
       const char *body = i==0 ? cf_defaults : cf;
       if (!body)
         continue;
+
       /* get config lines, assign them */
       retval = config_get_lines_include(body, &cl, 1,
-                                        body == cf ? &cf_has_include : NULL);
+                                        body == cf ? &cf_has_include : NULL,
+                                        opened_files);
       if (retval < 0) {
         err = SETOPT_ERR_PARSE;
         goto err;
@@ -5378,6 +5389,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
 
   newoptions->IncludeUsed = cf_has_include;
   in_option_validation = 1;
+  newoptions->FilesOpenedByIncludes = opened_files;
 
   /* Validate newoptions */
   if (options_validate(oldoptions, newoptions, newdefaultoptions,
@@ -5404,6 +5416,12 @@ options_init_from_string(const char *cf_defaults, const char *cf,
 
  err:
   in_option_validation = 0;
+  if (opened_files) {
+    SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
+    smartlist_free(opened_files);
+  }
+  // may have been set to opened_files, avoid double free
+  newoptions->FilesOpenedByIncludes = NULL;
   or_options_free(newoptions);
   or_options_free(newdefaultoptions);
   if (*msg) {

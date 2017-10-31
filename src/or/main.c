@@ -3609,6 +3609,10 @@ sandbox_init_filter(void)
     }
   }
 
+  SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, {
+    OPEN(f);
+  });
+
 #define RENAME_SUFFIX(name, suffix)        \
   sandbox_cfg_allow_rename(&cfg,           \
       get_datadir_fname(name suffix),      \

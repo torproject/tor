@@ -12,15 +12,18 @@
 
 static int config_get_lines_aux(const char *string, config_line_t **result,
                                 int extended, int allow_include,
-                                int *has_include, int recursion_level,
-                                config_line_t **last);
-static smartlist_t *config_get_file_list(const char *path);
-static int config_get_included_list(const char *path, int recursion_level,
-                                    int extended, config_line_t **list,
-                                    config_line_t **list_last);
+                                int *has_include, smartlist_t *opened_lst,
+                                int recursion_level, config_line_t **last);
+static smartlist_t *config_get_file_list(const char *path,
+                                         smartlist_t *opened_files);
+static int config_get_included_config(const char *path, int recursion_level,
+                                      int extended, config_line_t **config,
+                                      config_line_t **config_last,
+                                      smartlist_t *opened_lst);
 static int config_process_include(const char *path, int recursion_level,
                                   int extended, config_line_t **list,
-                                  config_line_t **list_last);
+                                  config_line_t **list_last,
+                                  smartlist_t *opened_lst);
 
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
  * append it to *<b>lst</b>. */
@@ -80,11 +83,13 @@ config_line_find(const config_line_t *lines,
 
 /** Auxiliary function that does all the work of config_get_lines.
  * <b>recursion_level</b> is the count of how many nested %includes we have.
+ * <b>opened_lst</b> will have a list of opened files if provided.
  * Returns the a pointer to the last element of the <b>result</b> in
  * <b>last</b>. */
 static int
 config_get_lines_aux(const char *string, config_line_t **result, int extended,
-                     int allow_include, int *has_include, int recursion_level,
+                     int allow_include, int *has_include,
+                     smartlist_t *opened_lst, int recursion_level,
                      config_line_t **last)
 {
   config_line_t *list = NULL, **next, *list_last = NULL;
@@ -134,7 +139,7 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
 
         config_line_t *include_list;
         if (config_process_include(v, recursion_level, extended, &include_list,
-                                   &list_last) < 0) {
+                                   &list_last, opened_lst) < 0) {
           log_warn(LD_CONFIG, "Error reading included configuration "
                    "file or directory: \"%s\".", v);
           config_free_lines(list);
@@ -176,24 +181,27 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
 /** Helper: parse the config string and strdup into key/value
  * strings. Set *result to the list, or NULL if parsing the string
  * failed. Set *has_include to 1 if <b>result</b> has values from
- * %included files.  Return 0 on success, -1 on failure. Warn and ignore any
+ * %included files. <b>opened_lst</b> will have a list of opened files if
+ * provided. Return 0 on success, -1 on failure. Warn and ignore any
  * misformatted lines.
  *
  * If <b>extended</b> is set, then treat keys beginning with / and with + as
  * indicating "clear" and "append" respectively. */
 int
 config_get_lines_include(const char *string, config_line_t **result,
-                         int extended, int *has_include)
+                         int extended, int *has_include,
+                         smartlist_t *opened_lst)
 {
-  return config_get_lines_aux(string, result, extended, 1, has_include, 1,
-                              NULL);
+  return config_get_lines_aux(string, result, extended, 1, has_include,
+                              opened_lst, 1, NULL);
 }
 
 /** Same as config_get_lines_include but does not allow %include */
 int
 config_get_lines(const char *string, config_line_t **result, int extended)
 {
-  return config_get_lines_aux(string, result, extended, 0, NULL, 1, NULL);
+  return config_get_lines_aux(string, result, extended, 0, NULL, NULL, 1,
+                              NULL);
 }
 
 /** Adds a list of configuration files present on <b>path</b> to
@@ -201,12 +209,18 @@ config_get_lines(const char *string, config_line_t **result, int extended)
  * only that file will be added to <b>file_list</b>. If it is a directory,
  * all paths for files on that directory root (no recursion) except for files
  * whose name starts with a dot will be added to <b>file_list</b>.
- * Return 0 on success, -1 on failure. Ignores empty files.
+ * <b>opened_files</b> will have a list of files opened by this function
+ * if provided. Return 0 on success, -1 on failure. Ignores empty files.
  */
 static smartlist_t *
-config_get_file_list(const char *path)
+config_get_file_list(const char *path, smartlist_t *opened_files)
 {
   smartlist_t *file_list = smartlist_new();
+
+  if (opened_files) {
+    smartlist_add_strdup(opened_files, path);
+  }
+
   file_status_t file_type = file_status(path);
   if (file_type == FN_FILE) {
     smartlist_add_strdup(file_list, path);
@@ -228,6 +242,10 @@ config_get_file_list(const char *path)
       tor_asprintf(&fullname, "%s"PATH_SEPARATOR"%s", path, f);
       tor_free(f);
 
+      if (opened_files) {
+        smartlist_add_strdup(opened_files, fullname);
+      }
+
       if (file_status(fullname) != FN_FILE) {
         tor_free(fullname);
         continue;
@@ -245,19 +263,21 @@ config_get_file_list(const char *path)
 }
 
 /** Creates a list of config lines present on included <b>path</b>.
- * Set <b>list</b> to the list and <b>list_last</b> to the last element of
- * <b>list</b>. Return 0 on success, -1 on failure. */
+ * Set <b>config</b> to the list and <b>config_last</b> to the last element of
+ * <b>config</b>. <b>opened_lst</b> will have a list of opened files if
+ * provided. Return 0 on success, -1 on failure. */
 static int
-config_get_included_list(const char *path, int recursion_level, int extended,
-                         config_line_t **list, config_line_t **list_last)
+config_get_included_config(const char *path, int recursion_level, int extended,
+                           config_line_t **config, config_line_t **config_last,
+                           smartlist_t *opened_lst)
 {
   char *included_conf = read_file_to_str(path, 0, NULL);
   if (!included_conf) {
     return -1;
   }
 
-  if (config_get_lines_aux(included_conf, list, extended, 1, NULL,
-                           recursion_level+1, list_last) < 0) {
+  if (config_get_lines_aux(included_conf, config, extended, 1, NULL,
+                           opened_lst, recursion_level+1, config_last) < 0) {
     tor_free(included_conf);
     return -1;
   }
@@ -268,41 +288,31 @@ config_get_included_list(const char *path, int recursion_level, int extended,
 
 /** Process an %include <b>path</b> in a config file. Set <b>list</b> to the
  * list of configuration settings obtained and <b>list_last</b> to the last
- * element of the same list. Return 0 on success, -1 on failure. */
+ * element of the same list. <b>opened_lst</b> will have a list of opened
+ * files if provided. Return 0 on success, -1 on failure. */
 static int
 config_process_include(const char *path, int recursion_level, int extended,
-                       config_line_t **list, config_line_t **list_last)
+                       config_line_t **list, config_line_t **list_last,
+                       smartlist_t *opened_lst)
 {
   config_line_t *ret_list = NULL;
   config_line_t **next = &ret_list;
-#if 0
-  // Disabled -- we already unescape_string() on the result. */
-  char *unquoted_path = get_unquoted_path(path);
-  if (!unquoted_path) {
-    return -1;
-  }
 
-  smartlist_t *config_files = config_get_file_list(unquoted_path);
-  if (!config_files) {
-    tor_free(unquoted_path);
-    return -1;
-  }
-  tor_free(unquoted_path);
-#endif /* 0 */
-  smartlist_t *config_files = config_get_file_list(path);
+  smartlist_t *config_files = config_get_file_list(path, opened_lst);
   if (!config_files) {
     return -1;
   }
 
   int rv = -1;
   SMARTLIST_FOREACH_BEGIN(config_files, const char *, config_file) {
-    config_line_t *included_list = NULL;
-    if (config_get_included_list(config_file, recursion_level, extended,
-                                  &included_list, list_last) < 0) {
+    config_line_t *included_config = NULL;
+    if (config_get_included_config(config_file, recursion_level, extended,
+                                   &included_config, list_last,
+                                   opened_lst) < 0) {
       goto done;
     }
 
-    *next = included_list;
+    *next = included_config;
     if (*list_last)
       next = &(*list_last)->next;
 
