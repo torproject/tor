@@ -267,7 +267,6 @@ MOCK_DECL(STATIC size_t, decrypt_desc_layer,(const hs_descriptor_t *desc,
                                              int is_superencrypted_layer,
                                              char **decrypted_out));
 
-
 #endif /* defined(HS_DESCRIPTOR_PRIVATE) */
 
 #endif /* !defined(TOR_HS_DESCRIPTOR_H) */
