@@ -3674,6 +3674,7 @@ typedef struct {
                                         * interface addresses?
                                         * Includes OutboundBindAddresses and
                                         * configured ports. */
+  int ReducedExitPolicy; /**<Should we use the Reduced Exit Policy? */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
   config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Local address to bind outbound sockets */
