@@ -1303,12 +1303,12 @@ encrypted_data_length_is_valid(size_t len)
  *  generate the right decryption keys; set <b>decrypted_out</b> to the
  *  plaintext. If <b>is_superencrypted_layer</b> is set, this is the outter
  *  encrypted layer of the descriptor. */
-static size_t
-decrypt_desc_layer(const hs_descriptor_t *desc,
-                   const uint8_t *encrypted_blob,
-                   size_t encrypted_blob_size,
-                   int is_superencrypted_layer,
-                   char **decrypted_out)
+MOCK_IMPL(STATIC size_t,
+decrypt_desc_layer,(const hs_descriptor_t *desc,
+                    const uint8_t *encrypted_blob,
+                    size_t encrypted_blob_size,
+                    int is_superencrypted_layer,
+                    char **decrypted_out))
 {
   uint8_t *decrypted = NULL;
   uint8_t secret_key[HS_DESC_ENCRYPTED_KEY_LEN], secret_iv[CIPHER_IV_LEN];
