@@ -2118,12 +2118,11 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
     parser_cfg |= EXIT_POLICY_REJECT_PRIVATE;
   }
 
-  if (!or_options->BridgeRelay && !or_options->ReducedExitPolicy) {
-    parser_cfg |= EXIT_POLICY_ADD_DEFAULT;
-  }
-
-  if (or_options->ReducedExitPolicy) {
-    parser_cfg |= EXIT_POLICY_ADD_REDUCED;
+  if (!or_options->BridgeRelay) {
+    if (or_options->ReducedExitPolicy)
+      parser_cfg |= EXIT_POLICY_ADD_REDUCED;
+    else
+      parser_cfg |= EXIT_POLICY_ADD_DEFAULT;
   }
 
   if (or_options->ExitPolicyRejectLocalInterfaces) {
