@@ -2863,15 +2863,12 @@ dirvote_get_next_valid_after_time(void)
 }
 
 /** Set voting_schedule to hold the timing for the next vote we should be
- * doing. */
+ * doing. All type of tor do that because HS subsystem needs the timing as
+ * well to function properly. */
 void
 dirvote_recalculate_timing(const or_options_t *options, time_t now)
 {
   voting_schedule_t *new_voting_schedule;
-
-  if (!authdir_mode_v3(options)) {
-    return;
-  }
 
   /* get the new voting schedule */
   new_voting_schedule = get_voting_schedule(options, now, LOG_NOTICE);
