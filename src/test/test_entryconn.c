@@ -790,8 +790,9 @@ test_entryconn_rewrite_onion_v3(void *arg)
   retval = connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
   tt_int_op(retval, OP_EQ, 0);
 
-  /* Check connection state after rewrite */
-  tt_int_op(ENTRY_TO_CONN(conn)->state, OP_EQ, AP_CONN_STATE_CIRCUIT_WAIT);
+  /* Check connection state after rewrite. It should be in waiting for
+   * descriptor state. */
+  tt_int_op(ENTRY_TO_CONN(conn)->state, OP_EQ, AP_CONN_STATE_RENDDESC_WAIT);
   /* check that the address got rewritten */
   tt_str_op(conn->socks_request->address, OP_EQ,
             "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
