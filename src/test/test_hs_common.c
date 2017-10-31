@@ -23,6 +23,7 @@
 #include "config.h"
 #include "networkstatus.h"
 #include "directory.h"
+#include "dirvote.h"
 #include "nodelist.h"
 #include "routerlist.h"
 #include "statefile.h"
@@ -808,26 +809,41 @@ test_time_between_tp_and_srv(void *arg)
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 00:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 01:00:00 UTC", &ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+  dirvote_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 11:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC", &ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+  dirvote_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 12:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC", &ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+  dirvote_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 1);
 
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 23:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 27 Oct 1985 00:00:00 UTC", &ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+  dirvote_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 1);
 
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 00:00:00 UTC", &ns.valid_after);
+  ret = parse_rfc1123_time("Sat, 27 Oct 1985 00:00:00 UTC", &ns.valid_after);
   tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 27 Oct 1985 01:00:00 UTC", &ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+  dirvote_recalculate_timing(get_options(), ns.valid_after);
   ret = hs_in_period_between_tp_and_srv(&ns, 0);
   tt_int_op(ret, OP_EQ, 0);
 
@@ -1314,6 +1330,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                       &mock_service_ns->valid_until);
   set_consensus_times(cfg->service_valid_until,
                       &mock_service_ns->fresh_until);
+  dirvote_recalculate_timing(get_options(), mock_service_ns->valid_after);
   /* Set client consensus time. */
   set_consensus_times(cfg->client_valid_after,
                       &mock_client_ns->valid_after);
@@ -1321,6 +1338,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                       &mock_client_ns->valid_until);
   set_consensus_times(cfg->client_valid_until,
                       &mock_client_ns->fresh_until);
+  dirvote_recalculate_timing(get_options(), mock_client_ns->valid_after);
 
   /* New time period checks for this scenario. */
   tt_int_op(hs_in_period_between_tp_and_srv(mock_service_ns, 0), OP_EQ,
@@ -1544,6 +1562,7 @@ helper_set_consensus_and_system_time(networkstatus_t *ns, int position)
   } else {
     tt_assert(0);
   }
+  dirvote_recalculate_timing(get_options(), ns->valid_after);
 
   /* Set system time: pretend to be just 2 minutes before consensus expiry */
   real_time = ns->valid_until - 120;
