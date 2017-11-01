@@ -541,7 +541,7 @@ addressmap_have_mapping(const char *address, int update_expiry)
  * (virtual address mapping) from the controller.)
  *
  * <b>new_address</b> should be a newly dup'ed string, which we'll use or
- * free as appropriate. We will leave address alone.
+ * free as appropriate. We will leave <b>address</b> alone.
  *
  * If <b>wildcard_addr</b> is true, then the mapping will match any address
  * equal to <b>address</b>, or any address ending with a period followed by
@@ -553,7 +553,6 @@ addressmap_have_mapping(const char *address, int update_expiry)
  * <b>address</b> and <b>wildcard_addr</b> is equal to
  * <b>wildcard_new_addr</b>, remove any mappings that exist from
  * <b>address</b>.
- *
  *
  * It is an error to set <b>wildcard_new_addr</b> if <b>wildcard_addr</b> is
  * not set. */
