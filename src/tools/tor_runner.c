@@ -4,6 +4,21 @@
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file tor_runner.c
+ * @brief Experimental module to emulate tor_run_main() API with fork+exec
+ *
+ * The functions here are meant to allow the application developer to
+ * use the tor_run_main() API without having to care whether Tor is
+ * running in-process or out-of-process.  For in-process usage, the
+ * developer can link Tor as a library and call tor_run_main(); for
+ * out-of-process usage, the developer can link this library instead.
+ *
+ * This interface is EXPERIMENTAL; please let us know if you would like
+ * to depend on it.  We don't know yet whether it will be reliable in
+ * practice.
+ */
+
 #include "tor_api.h"
 #include "tor_api_internal.h"
 
