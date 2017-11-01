@@ -2445,7 +2445,7 @@ The following options are used to configure a hidden service.
 
 [[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
     Number of introduction points the hidden service will have. You can't
-    have more than 10. (Default: 3)
+    have more than 10 for v2 service and 20 for v3. (Default: 3)
 
 [[HiddenServiceSingleHopMode]] **HiddenServiceSingleHopMode** **0**|**1**::
     **Experimental - Non Anonymous** Hidden Services on a tor instance in
