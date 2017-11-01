@@ -12,6 +12,19 @@
  * a library, and launch it in a separate thread.  If you have the ability
  * to run Tor as a separate executable, you should probably do that instead
  * of embedding it as a library.
+ *
+ * To use this API, first construct a tor_main_configuration_t object using
+ * tor_main_configuration_new().  Then, you use one or more other function
+ * calls (such as tor_main_configuration_set_command_line() to configure how
+ * Tor should be run.  Finally, you pass the configuration object to
+ * tor_run_main().
+ *
+ * At this point, tor_run_main() will block its thread to run a Tor daemon;
+ * when the Tor daemon exits, it will return.  See notes on bugs and
+ * limitations below.
+ *
+ * There is no other public C API to Tor: calling any C Tor function not
+ * documented in this file is not guaranteed to be stable.
  **/
 
 #ifndef TOR_API_H
@@ -35,6 +48,7 @@ tor_main_configuration_t *tor_main_configuration_new(void);
  */
 int tor_main_configuration_set_command_line(tor_main_configuration_t *cfg,
                                             int argc, char *argv[]);
+
 /**
  * Release all storage held in <b>cfg</b>.
  *
@@ -63,6 +77,12 @@ void tor_main_configuration_free(tor_main_configuration_t *cfg);
  * LIMITATION: You cannot run more than one instance of Tor in the same
  * process at the same time. Concurrent calls will cause undefined behavior.
  * We do not currently have plans to change this.
+ *
+ * LIMITATION: While we will try to fix any problems found here, you
+ * should be aware that Tor was originally written to run as its own
+ * process, and that the functionality of this file was added later.  If
+ * you find any bugs or strange behavior, please report them, and we'll
+ * try to straighten them out.
  */
 int tor_run_main(const tor_main_configuration_t *);
 
