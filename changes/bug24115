@@ -1,0 +1,4 @@
+  o Minor bugfixes (manpage, hidden service):
+    - Mention that the HiddenServiceNumIntroductionPoints option is 0-10 for
+      v2 service and 0-20 for v3 service. Fixes bug 24115; bugfix on
+      0.3.2.1-alpha.
