@@ -1,0 +1,4 @@
+  o Minor features (integration tests):
+    - Test that IPv6-only clients can use microdescriptors when running
+      "make test-network-all". Requires chutney master 61c28b9 or later.
+      Closes ticket 24109.
