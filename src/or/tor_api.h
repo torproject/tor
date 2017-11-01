@@ -90,7 +90,7 @@ int tor_run_main(const tor_main_configuration_t *);
  * Run the tor process, as if from the command line.
  *
  * @deprecated Using this function from outside Tor is deprecated; you should
- * use use tor_run_main() instead.
+ * use tor_run_main() instead.
  *
  * BUGS: This function has all the same bugs as tor_run_main().
  *

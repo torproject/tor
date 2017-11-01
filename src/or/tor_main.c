@@ -14,7 +14,7 @@
 int tor_main(int argc, char *argv[]);
 
 /** We keep main() in a separate file so that our unit tests can use
- * functions from main.c)
+ * functions from main.c.
  */
 int
 main(int argc, char *argv[])

@@ -1777,7 +1777,7 @@ options_act(const or_options_t *old_options)
   if (running_tor && !old_options && options->OwningControllerFD != -1) {
 #ifdef _WIN32
     log_warn(LD_CONFIG, "OwningControllerFD is not supported on Windows. "
-             "If you neeed it, tell the Tor developers.");
+             "If you need it, tell the Tor developers.");
     return -1;
 #else
     const unsigned ctrl_flags =

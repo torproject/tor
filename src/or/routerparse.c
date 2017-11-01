@@ -4027,7 +4027,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 /** Return the common_digests_t that holds the digests of the
  * <b>flavor_name</b>-flavored networkstatus according to the detached
  * signatures document <b>sigs</b>, allocating a new common_digests_t as
- * neeeded. */
+ * needed. */
 static common_digests_t *
 detached_get_digests(ns_detached_signatures_t *sigs, const char *flavor_name)
 {
@@ -4041,7 +4041,7 @@ detached_get_digests(ns_detached_signatures_t *sigs, const char *flavor_name)
 
 /** Return the list of signatures of the <b>flavor_name</b>-flavored
  * networkstatus according to the detached signatures document <b>sigs</b>,
- * allocating a new common_digests_t as neeeded. */
+ * allocating a new common_digests_t as needed. */
 static smartlist_t *
 detached_get_signatures(ns_detached_signatures_t *sigs,
                         const char *flavor_name)
