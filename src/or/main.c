@@ -105,6 +105,8 @@
 #include "shared_random.h"
 #include "statefile.h"
 #include "status.h"
+#include "tor_api.h"
+#include "tor_api_internal.h"
 #include "util_process.h"
 #include "ext_orport.h"
 #ifdef USE_DMALLOC
@@ -3795,13 +3797,15 @@ sandbox_init_filter(void)
   return cfg;
 }
 
-/** Main entry point for the Tor process.  Called from main(). */
-/* This function is distinct from main() only so we can link main.c into
- * the unittest binary without conflicting with the unittests' main. */
+/* Main entry point for the Tor process.  Called from tor_main(), and by
+ * anybody embedding Tor. */
 int
-tor_main(int argc, char *argv[])
+tor_run_main(const tor_main_configuration_t *tor_cfg)
 {
   int result = 0;
+
+  int argc = tor_cfg->argc;
+  char **argv = tor_cfg->argv;
 
 #ifdef _WIN32
 #ifndef HeapEnableTerminationOnCorruption

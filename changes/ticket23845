@@ -1,0 +1,9 @@
+  o Major features (embedding):
+    - There is now a documented stable API for programs that need to
+      embed Tor. See tor_api.h for full documentation and known bugs.
+      Closes ticket 23684.
+
+  o Code simplification and refactoring:
+    - The tor_git_revision[] constant no longer needs to be redeclared
+      by everything that links against the rest of Tor.  Done as part
+      of ticket 23845, to simplify our external API.

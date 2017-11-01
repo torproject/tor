@@ -82,6 +82,7 @@
 #include "dirvote.h"
 #include "dns.h"
 #include "entrynodes.h"
+#include "git_revision.h"
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"
@@ -882,8 +883,6 @@ set_options(or_options_t *new_val, char **msg)
 
   return 0;
 }
-
-extern const char tor_git_revision[]; /* from tor_main.c */
 
 /** The version of this Tor process, as parsed. */
 static char *the_tor_version = NULL;
