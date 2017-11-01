@@ -19,6 +19,10 @@
  * practice.
  */
 
+/* NOTE: This module is supposed to work without the standard Tor utility
+ * functions.  Don't add more dependencies!
+ */
+
 #include "tor_api.h"
 #include "tor_api_internal.h"
 
@@ -73,12 +77,16 @@ tor_run_main(const tor_main_configuration_t *cfg)
   return -999988;
 }
 
+/* circumlocution to avoid getting warned about calling calloc instead of
+ * tor_calloc. */
+#define real_calloc calloc
+
 static void
 child(const tor_main_configuration_t *cfg)
 {
   /* XXXX Close unused file descriptors. */
 
-  char **args = calloc(cfg->argc+1, sizeof(char *));
+  char **args = real_calloc(cfg->argc+1, sizeof(char *));
   memcpy(args, cfg->argv, cfg->argc * sizeof(char *));
   args[cfg->argc] = NULL;
 
