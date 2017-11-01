@@ -27,6 +27,10 @@ void control_ports_write_to_file(void);
 #define LOG_FN_CONN(conn, args)                 \
   CONN_LOG_PROTECT(conn, log_fn args)
 
+#define CC_LOCAL_FD_IS_OWNER (1u<<0)
+#define CC_LOCAL_FD_IS_AUTHENTICATED (1u<<1)
+int control_connection_add_local_fd(tor_socket_t sock, unsigned flags);
+
 int connection_control_finished_flushing(control_connection_t *conn);
 int connection_control_reached_eof(control_connection_t *conn);
 void connection_control_closed(control_connection_t *conn);

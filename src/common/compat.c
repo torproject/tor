@@ -1186,7 +1186,7 @@ mark_socket_open(tor_socket_t s)
   bitarray_set(open_sockets, s);
 }
 #else /* !(defined(DEBUG_SOCKET_COUNTING)) */
-#define mark_socket_open(s) STMT_NIL
+#define mark_socket_open(s) ((void) (s))
 #endif /* defined(DEBUG_SOCKET_COUNTING) */
 /** @} */
 
@@ -1273,11 +1273,22 @@ tor_open_socket_with_extensions(int domain, int type, int protocol,
   goto socket_ok; /* So that socket_ok will not be unused. */
 
  socket_ok:
+  tor_take_socket_ownership(s);
+  return s;
+}
+
+/**
+ * For socket accounting: remember that we are the owner of the socket
+ * <b>s</b>. This will prevent us from overallocating sockets, and prevent us
+ * from asserting later when we close the socket <b>s</b>.
+ */
+void
+tor_take_socket_ownership(tor_socket_t s)
+{
   socket_accounting_lock();
   ++n_sockets_open;
   mark_socket_open(s);
   socket_accounting_unlock();
-  return s;
 }
 
 /** As accept(), but counts the number of open sockets. */
@@ -1358,10 +1369,7 @@ tor_accept_socket_with_extensions(tor_socket_t sockfd, struct sockaddr *addr,
   goto socket_ok; /* So that socket_ok will not be unused. */
 
  socket_ok:
-  socket_accounting_lock();
-  ++n_sockets_open;
-  mark_socket_open(s);
-  socket_accounting_unlock();
+  tor_take_socket_ownership(s);
   return s;
 }
 

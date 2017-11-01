@@ -118,8 +118,6 @@ static connection_t *connection_listener_new(
                                const port_cfg_t *portcfg);
 static void connection_init(time_t now, connection_t *conn, int type,
                             int socket_family);
-static int connection_init_accepted_conn(connection_t *conn,
-                          const listener_connection_t *listener);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_bucket_should_increase(int bucket,
                                              or_connection_t *conn);
@@ -1662,11 +1660,15 @@ connection_handle_listener_read(connection_t *conn, int new_type)
 }
 
 /** Initialize states for newly accepted connection <b>conn</b>.
+ *
  * If conn is an OR, start the TLS handshake.
+ *
  * If conn is a transparent AP, get its original destination
  * and place it in circuit_wait.
+ *
+ * The <b>listener</b> parameter is only used for AP connections.
  */
-static int
+int
 connection_init_accepted_conn(connection_t *conn,
                               const listener_connection_t *listener)
 {

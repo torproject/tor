@@ -549,6 +549,49 @@ decode_escaped_string(const char *start, size_t in_len_max,
   return end+1;
 }
 
+/** Create and add a new controller connection on <b>sock</b>.  If
+ * <b>CC_LOCAL_FD_IS_OWNER</b> is set in <b>flags</b>, this Tor process should
+ * exit when the connection closes.  If <b>CC_LOCAL_FD_IS_AUTHENTICATED</b>
+ * is set, then the connection does not need to authenticate.
+ */
+int
+control_connection_add_local_fd(tor_socket_t sock, unsigned flags)
+{
+  if (BUG(! SOCKET_OK(sock)))
+    return -1;
+  const int is_owner = !!(flags & CC_LOCAL_FD_IS_OWNER);
+  const int is_authenticated = !!(flags & CC_LOCAL_FD_IS_AUTHENTICATED);
+  control_connection_t *control_conn = control_connection_new(AF_UNSPEC);
+  connection_t *conn = TO_CONN(control_conn);
+  conn->s = sock;
+  tor_addr_make_unspec(&conn->addr);
+  conn->port = 1;
+  conn->address = tor_strdup("<local socket>");
+
+  /* We take ownership of this socket so that later, when we close it,
+   * we don't freak out. */
+  tor_take_socket_ownership(sock);
+
+  if (set_socket_nonblocking(sock) < 0 ||
+      connection_add(conn) < 0) {
+    connection_free(conn);
+    return -1;
+  }
+
+  control_conn->is_owning_control_connection = is_owner;
+
+  if (connection_init_accepted_conn(conn, NULL) < 0) {
+    connection_mark_for_close(conn);
+    return -1;
+  }
+
+  if (is_authenticated) {
+    conn->state = CONTROL_CONN_STATE_OPEN;
+  }
+
+  return 0;
+}
+
 /** Acts like sprintf, but writes its formatted string to the end of
  * <b>conn</b>-\>outbuf. */
 static void
