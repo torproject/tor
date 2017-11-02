@@ -9,6 +9,9 @@
 #define SCHEDULER_KIST_PRIVATE
 #include "scheduler.h"
 #include "main.h"
+#include "buffers.h"
+#define TOR_CHANNEL_INTERNAL_
+#include "channeltls.h"
 
 #include <event2/event.h>
 
@@ -604,7 +607,7 @@ scheduler_release_channel,(channel_t *chan))
   }
 
   if (chan->scheduler_state == SCHED_CHAN_PENDING) {
-    if (smartlist_pos(channels_pending, chan) == -1) {
+    if (SCHED_BUG(smartlist_pos(channels_pending, chan) == -1, chan)) {
       log_warn(LD_SCHED, "Scheduler asked to release channel %" PRIu64 " "
                          "but it wasn't in channels_pending",
                chan->global_identifier);
@@ -663,6 +666,43 @@ scheduler_channel_wants_writes(channel_t *chan)
       log_debug(LD_SCHED,
                 "Channel " U64_FORMAT " at %p entered waiting_for_cells",
                 U64_PRINTF_ARG(chan->global_identifier), chan);
+    }
+  }
+}
+
+/* Log warn the given channel and extra scheduler context as well. This is
+ * used by SCHED_BUG() in order to be able to extract as much information as
+ * we can when we hit a bug. Channel chan can be NULL. */
+void
+scheduler_bug_occurred(const channel_t *chan)
+{
+  char buf[128];
+
+  if (chan != NULL) {
+    const size_t outbuf_len =
+      buf_datalen(TO_CONN(BASE_CHAN_TO_TLS((channel_t *) chan)->conn)->outbuf);
+    tor_snprintf(buf, sizeof(buf),
+                 "Channel %" PRIu64 " in state %s and scheduler state %d."
+                 " Num cells on cmux: %d. Connection outbuf len: %lu.",
+                 chan->global_identifier,
+                 channel_state_to_string(chan->state),
+                 chan->scheduler_state, circuitmux_num_cells(chan->cmux),
+                 outbuf_len);
+  }
+
+  {
+    char *msg;
+    /* Rate limit every 60 seconds. If we start seeing this every 60 sec, we
+     * know something is stuck/wrong. It *should* be loud but not too much. */
+    static ratelim_t rlimit = RATELIM_INIT(60);
+    if ((msg = rate_limit_log(&rlimit, approx_time()))) {
+      log_warn(LD_BUG, "%s Num pending channels: %d. "
+                       "Channel in pending list: %s.%s",
+               (chan != NULL) ? buf : "No channel in bug context.",
+               smartlist_len(channels_pending),
+               (smartlist_pos(channels_pending, chan) == -1) ? "no" : "yes",
+               msg);
+      tor_free(msg);
     }
   }
 }

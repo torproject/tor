@@ -143,6 +143,14 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
 /*********************************
  * Defined in scheduler.c
  *********************************/
+
+/* Triggers a BUG() and extra information with chan if available. */
+#define SCHED_BUG(cond, chan) \
+  (PREDICT_UNLIKELY(cond) ? \
+   ((BUG(cond)) ? (scheduler_bug_occurred(chan), 1) : 0) : 0)
+
+void scheduler_bug_occurred(const channel_t *chan);
+
 smartlist_t *get_channels_pending(void);
 MOCK_DECL(int, scheduler_compare_channels,
           (const void *c1_v, const void *c2_v));

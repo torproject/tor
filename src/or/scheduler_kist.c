@@ -116,7 +116,7 @@ channel_outbuf_length(channel_t *chan)
   /* In theory, this can not happen because we can not scheduler a channel
    * without a connection that has its outbuf initialized. Just in case, bug
    * on this so we can understand a bit more why it happened. */
-  if (BUG(BASE_CHAN_TO_TLS(chan)->conn == NULL)) {
+  if (SCHED_BUG(BASE_CHAN_TO_TLS(chan)->conn == NULL, chan)) {
     return 0;
   }
   return buf_datalen(TO_CONN(BASE_CHAN_TO_TLS(chan)->conn)->outbuf);
@@ -371,7 +371,7 @@ socket_can_write(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  IF_BUG_ONCE(!ent) {
+  if (SCHED_BUG(!ent, chan)) {
     return 1; // Just return true, saying that kist wouldn't limit the socket
   }
 
@@ -391,7 +391,7 @@ update_socket_info(socket_table_t *table, const channel_t *chan)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  IF_BUG_ONCE(!ent) {
+  if (SCHED_BUG(!ent, chan)) {
     return; // Whelp. Entry didn't exist for some reason so nothing to do.
   }
   update_socket_info_impl(ent);
@@ -403,7 +403,7 @@ update_socket_written(socket_table_t *table, channel_t *chan, size_t bytes)
 {
   socket_table_ent_t *ent = NULL;
   ent = socket_table_search(table, chan);
-  IF_BUG_ONCE(!ent) {
+  if (SCHED_BUG(!ent, chan)) {
     return; // Whelp. Entry didn't exist so nothing to do.
   }
 
@@ -573,7 +573,7 @@ kist_scheduler_run(void)
     /* get best channel */
     chan = smartlist_pqueue_pop(cp, scheduler_compare_channels,
                                 offsetof(channel_t, sched_heap_idx));
-    IF_BUG_ONCE(!chan) {
+    if (SCHED_BUG(!chan, NULL)) {
       /* Some-freaking-how a NULL got into the channels_pending. That should
        * never happen, but it should be harmless to ignore it and keep looping.
        */
