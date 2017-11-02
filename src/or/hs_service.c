@@ -375,7 +375,14 @@ service_intro_point_free_(void *obj)
 
 /* Return a newly allocated service intro point and fully initialized from the
  * given extend_info_t ei if non NULL. If is_legacy is true, we also generate
- * the legacy key. On error, NULL is returned. */
+ * the legacy key. On error, NULL is returned.
+ *
+ * If ei is NULL, returns a hs_service_intro_point_t with an empty link
+ * specifier list and no onion key. (This is used for testing.)
+ *
+ * ei must be an extend_info_t containing an IPv4 address. (We will add supoort
+ * for IPv6 in a later release.) When calling extend_info_from_node(), pass
+ * 0 in for_direct_connection to make sure ei always has an IPv4 address. */
 STATIC hs_service_intro_point_t *
 service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
 {
@@ -427,8 +434,8 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
     goto done;
   }
 
-  /* We'll try to add all link specifier. Legacy, IPv4 and ed25519 are
-   * mandatory. */
+  /* We'll try to add all link specifiers. Legacy is mandatory.
+   * IPv4 or IPv6 is required, and we always send IPv4. */
   ls = hs_desc_link_specifier_new(ei, LS_IPV4);
   /* It is impossible to have an extend info object without a v4. */
   if (BUG(!ls)) {
@@ -450,11 +457,7 @@ service_intro_point_new(const extend_info_t *ei, unsigned int is_legacy)
     smartlist_add(ip->base.link_specifiers, ls);
   }
 
-  /* IPv6 is optional. */
-  ls = hs_desc_link_specifier_new(ei, LS_IPV6);
-  if (ls) {
-    smartlist_add(ip->base.link_specifiers, ls);
-  }
+  /* IPv6 is not supported in this release. */
 
   /* Finally, copy onion key from the extend_info_t object. */
   memcpy(&ip->onion_key, &ei->curve25519_onion_key, sizeof(ip->onion_key));
@@ -1520,10 +1523,17 @@ build_all_descriptors(time_t now)
 /* Randomly pick a node to become an introduction point but not present in the
  * given exclude_nodes list. The chosen node is put in the exclude list
  * regardless of success or not because in case of failure, the node is simply
- * unsusable from that point on. If direct_conn is set, try to pick a node
- * that our local firewall/policy allows to directly connect to and if not,
- * fallback to a normal 3-hop node. Return a newly allocated service intro
- * point ready to be used for encoding. NULL on error. */
+ * unsusable from that point on.
+ *
+ * If direct_conn is set, try to pick a node that our local firewall/policy
+ * allows us to connect to directly. If we can't find any, return NULL.
+ * This function supports selecting dual-stack nodes for direct single onion
+ * service IPv6 connections. But it does not send IPv6 addresses in link
+ * specifiers. (Current clients don't use IPv6 addresses to extend, and
+ * direct client connections to intro points are not supported.)
+ *
+ * Return a newly allocated service intro point ready to be used for encoding.
+ * Return NULL on error. */
 static hs_service_intro_point_t *
 pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
 {
@@ -1537,12 +1547,9 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
 
   node = router_choose_random_node(exclude_nodes, get_options()->ExcludeNodes,
                                    direct_conn ? direct_flags : flags);
-  if (node == NULL && direct_conn) {
-    /* Unable to find a node for direct connection, let's fall back to a
-     * normal 3-hop node. */
-    node = router_choose_random_node(exclude_nodes,
-                                     get_options()->ExcludeNodes, flags);
-  }
+  /* Unable to find a node. When looking for a node for a direct connection,
+   * we could try a 3-hop path instead. We'll add support for this in a later
+   * release. */
   if (!node) {
     goto err;
   }
@@ -1553,8 +1560,11 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
   smartlist_add(exclude_nodes, (void *) node);
 
   /* We do this to ease our life but also this call makes appropriate checks
-   * of the node object such as validating ntor support for instance. */
-  info = extend_info_from_node(node, direct_conn);
+   * of the node object such as validating ntor support for instance.
+   *
+   * We must provide an extend_info for clients to connect over a 3-hop path,
+   * so we don't pass direct_conn here. */
+  info = extend_info_from_node(node, 0);
   if (BUG(info == NULL)) {
     goto err;
   }
