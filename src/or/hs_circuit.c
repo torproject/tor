@@ -588,7 +588,7 @@ get_lspecs_from_extend_info(const extend_info_t *ei, smartlist_t *lspecs)
   link_specifier_set_ls_len(ls, link_specifier_getlen_un_legacy_id(ls));
   smartlist_add(lspecs, ls);
 
-  /* ed25519 ID is only included if the node has it. */
+  /* ed25519 ID is only included if the extend_info has it. */
   if (!ed25519_public_key_is_zero(&ei->ed_identity)) {
     ls = link_specifier_new();
     link_specifier_set_ls_type(ls, LS_ED25519_ID);
