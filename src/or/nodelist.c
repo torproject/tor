@@ -924,7 +924,10 @@ node_get_ed25519_id(const node_t *node)
     if (ed25519_pubkey_eq(ri_pk, md_pk)) {
       return ri_pk;
     } else {
-      log_warn(LD_GENERAL, "Inconsistent ed25519 identities in the nodelist");
+      /* This can happen if the relay gets flagged NoEdConsensus which will be
+       * triggered on all relays of the network. Thus a protocol warning. */
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Inconsistent ed25519 identities in the nodelist");
       return NULL;
     }
   } else if (ri_pk) {
