@@ -3515,63 +3515,47 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
                            long cache_lifetime)
 {
   char date[RFC1123_TIME_LEN+1];
-  char tmp[1024];
-  char *cp;
   time_t now = time(NULL);
+  buf_t *buf = buf_new_with_capacity(1024);
 
   tor_assert(conn);
 
   format_rfc1123_time(date, now);
-  cp = tmp;
-  tor_snprintf(cp, sizeof(tmp),
-               "HTTP/1.0 200 OK\r\nDate: %s\r\n",
-               date);
-  cp += strlen(tmp);
+
+  buf_add_printf(buf, "HTTP/1.0 200 OK\r\nDate: %s\r\n", date);
   if (type) {
-    tor_snprintf(cp, sizeof(tmp)-(cp-tmp), "Content-Type: %s\r\n", type);
-    cp += strlen(cp);
+    buf_add_printf(buf, "Content-Type: %s\r\n", type);
   }
   if (!is_local_addr(&conn->base_.addr)) {
     /* Don't report the source address for a nearby/private connection.
      * Otherwise we tend to mis-report in cases where incoming ports are
      * being forwarded to a Tor server running behind the firewall. */
-    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
-                 X_ADDRESS_HEADER "%s\r\n", conn->base_.address);
-    cp += strlen(cp);
+    buf_add_printf(buf, X_ADDRESS_HEADER "%s\r\n", conn->base_.address);
   }
   if (encoding) {
-    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
-                 "Content-Encoding: %s\r\n", encoding);
-    cp += strlen(cp);
+    buf_add_printf(buf, "Content-Encoding: %s\r\n", encoding);
   }
   if (length >= 0) {
-    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
-                 "Content-Length: %ld\r\n", (long)length);
-    cp += strlen(cp);
+    buf_add_printf(buf, "Content-Length: %ld\r\n", (long)length);
   }
   if (cache_lifetime > 0) {
     char expbuf[RFC1123_TIME_LEN+1];
     format_rfc1123_time(expbuf, (time_t)(now + cache_lifetime));
     /* We could say 'Cache-control: max-age=%d' here if we start doing
      * http/1.1 */
-    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
-                 "Expires: %s\r\n", expbuf);
-    cp += strlen(cp);
+    buf_add_printf(buf, "Expires: %s\r\n", expbuf);
   } else if (cache_lifetime == 0) {
     /* We could say 'Cache-control: no-cache' here if we start doing
      * http/1.1 */
-    strlcpy(cp, "Pragma: no-cache\r\n", sizeof(tmp)-(cp-tmp));
-    cp += strlen(cp);
+    buf_add_string(buf, "Pragma: no-cache\r\n");
   }
   if (extra_headers) {
-    strlcpy(cp, extra_headers, sizeof(tmp)-(cp-tmp));
-    cp += strlen(cp);
+    buf_add_string(buf, extra_headers);
   }
-  if (sizeof(tmp)-(cp-tmp) > 3)
-    memcpy(cp, "\r\n", 3);
-  else
-    tor_assert(0);
-  connection_buf_add(tmp, strlen(tmp), TO_CONN(conn));
+  buf_add_string(buf, "\r\n");
+
+  connection_buf_add_buf(TO_CONN(conn), buf);
+  buf_free(buf);
 }
 
 /** As write_http_response_header_impl, but sets encoding and content-typed

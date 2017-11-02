@@ -4047,6 +4047,68 @@ connection_flush(connection_t *conn)
   return connection_handle_write(conn, 1);
 }
 
+/** Helper for connection_write_to_buf_impl and connection_write_buf_to_buf:
+ *
+ * Return true iff it is okay to queue bytes on <b>conn</b>'s outbuf for
+ * writing.
+ */
+static int
+connection_may_write_to_buf(connection_t *conn)
+{
+  /* if it's marked for close, only allow write if we mean to flush it */
+  if (conn->marked_for_close && !conn->hold_open_until_flushed)
+    return 0;
+
+  return 1;
+}
+
+/** Helper for connection_write_to_buf_impl and connection_write_buf_to_buf:
+ *
+ * Called when an attempt to add bytes on <b>conn</b>'s outbuf has failed;
+ * mark the connection and warn as appropriate.
+ */
+static void
+connection_write_to_buf_failed(connection_t *conn)
+{
+  if (CONN_IS_EDGE(conn)) {
+    /* if it failed, it means we have our package/delivery windows set
+       wrong compared to our max outbuf size. close the whole circuit. */
+    log_warn(LD_NET,
+             "write_to_buf failed. Closing circuit (fd %d).", (int)conn->s);
+    circuit_mark_for_close(circuit_get_by_edge_conn(TO_EDGE_CONN(conn)),
+                           END_CIRC_REASON_INTERNAL);
+  } else if (conn->type == CONN_TYPE_OR) {
+    or_connection_t *orconn = TO_OR_CONN(conn);
+    log_warn(LD_NET,
+             "write_to_buf failed on an orconn; notifying of error "
+             "(fd %d)", (int)(conn->s));
+    connection_or_close_for_error(orconn, 0);
+  } else {
+    log_warn(LD_NET,
+             "write_to_buf failed. Closing connection (fd %d).",
+             (int)conn->s);
+    connection_mark_for_close(conn);
+  }
+}
+
+/** Helper for connection_write_to_buf_impl and connection_write_buf_to_buf:
+ *
+ * Called when an attempt to add bytes on <b>conn</b>'s outbuf has succeeded:
+ * record the number of bytes added.
+ */
+static void
+connection_write_to_buf_commit(connection_t *conn, size_t len)
+{
+  /* If we receive optimistic data in the EXIT_CONN_STATE_RESOLVING
+   * state, we don't want to try to write it right away, since
+   * conn->write_event won't be set yet.  Otherwise, write data from
+   * this conn as the socket is available. */
+  if (conn->write_event) {
+    connection_start_writing(conn);
+  }
+  conn->outbuf_flushlen += len;
+}
+
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
  * outbuf, and ask it to start writing.
  *
@@ -4061,58 +4123,52 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
 {
   /* XXXX This function really needs to return -1 on failure. */
   int r;
-  size_t old_datalen;
   if (!len && !(zlib<0))
     return;
-  /* if it's marked for close, only allow write if we mean to flush it */
-  if (conn->marked_for_close && !conn->hold_open_until_flushed)
+
+  if (!connection_may_write_to_buf(conn))
     return;
 
-  old_datalen = buf_datalen(conn->outbuf);
+  size_t written;
+
   if (zlib) {
+    size_t old_datalen = buf_datalen(conn->outbuf);
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     int done = zlib < 0;
     CONN_LOG_PROTECT(conn, r = buf_add_compress(conn->outbuf,
-                                                     dir_conn->compress_state,
-                                                     string, len, done));
+                                                dir_conn->compress_state,
+                                                string, len, done));
+    written = buf_datalen(conn->outbuf) - old_datalen;
   } else {
     CONN_LOG_PROTECT(conn, r = buf_add(conn->outbuf, string, len));
+    written = len;
   }
   if (r < 0) {
-    if (CONN_IS_EDGE(conn)) {
-      /* if it failed, it means we have our package/delivery windows set
-         wrong compared to our max outbuf size. close the whole circuit. */
-      log_warn(LD_NET,
-               "write_to_buf failed. Closing circuit (fd %d).", (int)conn->s);
-      circuit_mark_for_close(circuit_get_by_edge_conn(TO_EDGE_CONN(conn)),
-                             END_CIRC_REASON_INTERNAL);
-    } else if (conn->type == CONN_TYPE_OR) {
-      or_connection_t *orconn = TO_OR_CONN(conn);
-      log_warn(LD_NET,
-               "write_to_buf failed on an orconn; notifying of error "
-               "(fd %d)", (int)(conn->s));
-      connection_or_close_for_error(orconn, 0);
-    } else {
-      log_warn(LD_NET,
-               "write_to_buf failed. Closing connection (fd %d).",
-               (int)conn->s);
-      connection_mark_for_close(conn);
-    }
+    connection_write_to_buf_failed(conn);
     return;
   }
+  connection_write_to_buf_commit(conn, written);
+}
 
-  /* If we receive optimistic data in the EXIT_CONN_STATE_RESOLVING
-   * state, we don't want to try to write it right away, since
-   * conn->write_event won't be set yet.  Otherwise, write data from
-   * this conn as the socket is available. */
-  if (conn->write_event) {
-    connection_start_writing(conn);
-  }
-  if (zlib) {
-    conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
-  } else {
-    conn->outbuf_flushlen += len;
-  }
+/**
+ * Add all bytes from <b>buf</b> to <b>conn</b>'s outbuf, draining them
+ * from <b>buf</b>. (If the connection is marked and will soon be closed,
+ * nothing is drained.)
+ */
+void
+connection_buf_add_buf(connection_t *conn, buf_t *buf)
+{
+  tor_assert(conn);
+  tor_assert(buf);
+  size_t len = buf_datalen(buf);
+  if (len == 0)
+    return;
+
+  if (!connection_may_write_to_buf(conn))
+    return;
+
+  buf_move_all(conn->outbuf, buf);
+  connection_write_to_buf_commit(conn, len);
 }
 
 #define CONN_GET_ALL_TEMPLATE(var, test) \

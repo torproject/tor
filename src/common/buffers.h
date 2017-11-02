@@ -43,9 +43,15 @@ int buf_flush_to_socket(buf_t *buf, tor_socket_t s, size_t sz,
                         size_t *buf_flushlen);
 
 int buf_add(buf_t *buf, const char *string, size_t string_len);
+void buf_add_string(buf_t *buf, const char *string);
+void buf_add_printf(buf_t *buf, const char *format, ...)
+  CHECK_PRINTF(2, 3);
+void buf_add_vprintf(buf_t *buf, const char *format, va_list args)
+  CHECK_PRINTF(2, 0);
 int buf_add_compress(buf_t *buf, struct tor_compress_state_t *state,
                           const char *data, size_t data_len, int done);
 int buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
+void buf_move_all(buf_t *buf_out, buf_t *buf_in);
 void buf_peek(const buf_t *buf, char *string, size_t string_len);
 void buf_drain(buf_t *buf, size_t n);
 int buf_get_bytes(buf_t *buf, char *string, size_t string_len);
@@ -62,6 +68,7 @@ void buf_assert_ok(buf_t *buf);
 int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
 void buf_pullup(buf_t *buf, size_t bytes,
                 const char **head_out, size_t *len_out);
+char *buf_extract(buf_t *buf, size_t *sz_out);
 
 #ifdef BUFFERS_PRIVATE
 #ifdef TOR_UNIT_TESTS
