@@ -343,6 +343,17 @@ send_establish_intro(const hs_service_t *service,
   memwipe(payload, 0, sizeof(payload));
 }
 
+/* Return a string constant describing the anonymity of service. */
+static const char *
+get_service_anonymity_string(const hs_service_t *service)
+{
+  if (service->config.is_single_onion) {
+    return "single onion";
+  } else {
+    return "hidden";
+  }
+}
+
 /* For a given service, the ntor onion key and a rendezvous cookie, launch a
  * circuit to the rendezvous point specified by the link specifiers. On
  * success, a circuit identifier is attached to the circuit with the needed
@@ -370,7 +381,15 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
                                         &data->onion_pk,
                                         service->config.is_single_onion);
   if (info == NULL) {
-    /* We are done here, we can't extend to the rendezvous point. */
+    /* We are done here, we can't extend to the rendezvous point.
+     * If you're running an IPv6-only v3 single onion service on 0.3.2 or with
+     * 0.3.2 clients, and somehow disable the option check, it will fail here.
+     */
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Not enough info to open a circuit to a rendezvous point for "
+           "%s service %s.",
+           get_service_anonymity_string(service),
+           safe_str_client(service->onion_address));
     goto end;
   }
 
@@ -392,17 +411,19 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
     }
   }
   if (circ == NULL) {
-    log_warn(LD_REND, "Giving up on launching rendezvous circuit to %s "
-                      "for service %s",
+    log_warn(LD_REND, "Giving up on launching a rendezvous circuit to %s "
+                      "for %s service %s",
              safe_str_client(extend_info_describe(info)),
+             get_service_anonymity_string(service),
              safe_str_client(service->onion_address));
     goto end;
   }
   log_info(LD_REND, "Rendezvous circuit launched to %s with cookie %s "
-                    "for service %s",
+                    "for %s service %s",
            safe_str_client(extend_info_describe(info)),
            safe_str_client(hex_str((const char *) data->rendezvous_cookie,
                                    REND_COOKIE_LEN)),
+           get_service_anonymity_string(service),
            safe_str_client(service->onion_address));
   tor_assert(circ->build_state);
   /* Rendezvous circuit have a specific timeout for the time spent on trying
@@ -533,7 +554,10 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 }
 
 /* Using an extend info object ei, set all possible link specifiers in lspecs.
- * IPv4, legacy ID and ed25519 ID are mandatory thus MUST be present in ei. */
+ * legacy ID is mandatory thus MUST be present in ei. If IPv4 is not present,
+ * logs a BUG() warning, and returns an empty smartlist. Clients never make
+ * direct connections to rendezvous points, so they should always have an
+ * IPv4 address in ei. */
 static void
 get_lspecs_from_extend_info(const extend_info_t *ei, smartlist_t *lspecs)
 {
@@ -542,7 +566,11 @@ get_lspecs_from_extend_info(const extend_info_t *ei, smartlist_t *lspecs)
   tor_assert(ei);
   tor_assert(lspecs);
 
-  /* IPv4 is mandatory. */
+  /* We require IPv4, we will add IPv6 support in a later tor version */
+  if (BUG(!tor_addr_is_v4(&ei->addr))) {
+    return;
+  }
+
   ls = link_specifier_new();
   link_specifier_set_ls_type(ls, LS_IPV4);
   link_specifier_set_un_ipv4_addr(ls, tor_addr_to_ipv4h(&ei->addr));
@@ -560,15 +588,15 @@ get_lspecs_from_extend_info(const extend_info_t *ei, smartlist_t *lspecs)
   link_specifier_set_ls_len(ls, link_specifier_getlen_un_legacy_id(ls));
   smartlist_add(lspecs, ls);
 
-  /* ed25519 ID is mandatory. */
-  ls = link_specifier_new();
-  link_specifier_set_ls_type(ls, LS_ED25519_ID);
-  memcpy(link_specifier_getarray_un_ed25519_id(ls), &ei->ed_identity,
-         link_specifier_getlen_un_ed25519_id(ls));
-  link_specifier_set_ls_len(ls, link_specifier_getlen_un_ed25519_id(ls));
-  smartlist_add(lspecs, ls);
-
-  /* XXX: IPv6 is not clearly a thing in extend_info_t? */
+  /* ed25519 ID is only included if the extend_info has it. */
+  if (!ed25519_public_key_is_zero(&ei->ed_identity)) {
+    ls = link_specifier_new();
+    link_specifier_set_ls_type(ls, LS_ED25519_ID);
+    memcpy(link_specifier_getarray_un_ed25519_id(ls), &ei->ed_identity,
+           link_specifier_getlen_un_ed25519_id(ls));
+    link_specifier_set_ls_len(ls, link_specifier_getlen_un_ed25519_id(ls));
+    smartlist_add(lspecs, ls);
+  }
 }
 
 /* Using the given descriptor intro point ip, the extend information of the
@@ -1053,6 +1081,14 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
    * object which is used to build the content of the cell. */
   setup_introduce1_data(ip, rend_circ->build_state->chosen_exit,
                         subcredential, &intro1_data);
+  /* If we didn't get any link specifiers, it's because our extend info was
+   * bad. */
+  if (BUG(!intro1_data.link_specifiers) ||
+      !smartlist_len(intro1_data.link_specifiers)) {
+    log_warn(LD_REND, "Unable to get link specifiers for INTRODUCE1 cell on "
+             "circuit %u.", TO_CIRCUIT(intro_circ)->n_circ_id);
+    goto done;
+  }
 
   /* Final step before we encode a cell, we setup the circuit identifier which
    * will generate both the rendezvous cookie and client keypair for this
