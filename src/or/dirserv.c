@@ -1519,15 +1519,17 @@ dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil)
         node->ri &&
         node->ri->purpose != ROUTER_PURPOSE_BRIDGE)
       continue;
+
+    routerinfo_t *ri = node->ri;
+    /* resolve spurious clang shallow analysis null pointer errors */
+    tor_assert(ri);
+    node->is_exit = (!router_exit_policy_rejects_all(ri) &&
+                     exit_policy_is_general_exit(ri->exit_policy));
+
     if (router_counts_toward_thresholds(node, now, omit_as_sybil,
                                         require_mbw)) {
-      routerinfo_t *ri = node->ri;
       const char *id = node->identity;
       uint32_t bw_kb;
-      /* resolve spurious clang shallow analysis null pointer errors */
-      tor_assert(ri);
-      node->is_exit = (!router_exit_policy_rejects_all(ri) &&
-                       exit_policy_is_general_exit(ri->exit_policy));
       uptimes[n_active] = (uint32_t)real_uptime(ri, now);
       mtbfs[n_active] = rep_hist_get_stability(id, now);
       tks  [n_active] = rep_hist_get_weighted_time_known(id, now);
