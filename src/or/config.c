@@ -4216,6 +4216,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingLinkKeySlop);
 #undef CHECK_DEFAULT
 
+  if (!options->ClientDNSRejectInternalAddresses &&
+      !(options->DirAuthorities ||
+        (options->AlternateDirAuthority && options->AlternateBridgeAuthority)))
+    REJECT("ClientDNSRejectInternalAddresses used for default network.");
   if (options->SigningKeyLifetime < options->TestingSigningKeySlop*2)
     REJECT("SigningKeyLifetime is too short.");
   if (options->TestingLinkCertLifetime < options->TestingAuthKeySlop*2)

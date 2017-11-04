@@ -1,0 +1,5 @@
+  o New/reanimated features
+   - The ClientDNSRejectInternalAddresses flag can once again be set in
+     non-default tor networks. This also remves a deprecation of this
+     flag in 0.2.9.2-alpha. Closes ticket 21031.
+
