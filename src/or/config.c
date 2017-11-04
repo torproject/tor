@@ -646,7 +646,7 @@ static const config_var_t testing_tor_network_defaults[] = {
     "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
   V(ClientBootstrapConsensusMaxDownloadTries, UINT, "80"),
   V(ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries, UINT, "80"),
-  V(ClientDNSRejectInternalAddresses, BOOL,"0"), // deprecated in 0.2.9.2-alpha
+  V(ClientDNSRejectInternalAddresses, BOOL,"0"),
   V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(CountPrivateBandwidth,       BOOL,     "1"),
   V(ExitPolicyRejectPrivate,     BOOL,     "0"),
@@ -694,8 +694,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
   /* Deprecated since 0.2.9.2-alpha... */
   { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
     "a wide variety of application-level attacks." },
-  { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
-    "easier to fingerprint, and may open you to esoteric attacks." },
   /* End of options deprecated since 0.2.9.2-alpha. */
 
   /* Deprecated since 0.3.2.0-alpha. */
