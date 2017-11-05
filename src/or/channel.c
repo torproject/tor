@@ -4734,7 +4734,17 @@ static void
 channel_rsa_id_group_set_badness(struct channel_list_s *lst, int force)
 {
   /*XXXX This function should really be about channels. 15056 */
-  channel_t *chan;
+  channel_t *chan = TOR_LIST_FIRST(lst);
+
+  if (!chan)
+    return;
+
+  /* if there is only one channel, don't bother looping */
+  if (PREDICT_LIKELY(!TOR_LIST_NEXT(chan, next_with_same_id))) {
+    connection_or_single_set_badness_(
+            time(NULL), BASE_CHAN_TO_TLS(chan)->conn, force);
+    return;
+  }
 
   /* First, get a minimal list of the ed25519 identites */
   smartlist_t *ed_identities = smartlist_new();

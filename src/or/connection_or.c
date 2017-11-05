@@ -965,6 +965,36 @@ connection_or_mark_bad_for_new_circs(or_connection_t *or_conn)
  * too old for new circuits? */
 #define TIME_BEFORE_OR_CONN_IS_TOO_OLD (60*60*24*7)
 
+/** Expire an or_connection if it is too old. Helper for
+ * connection_or_group_set_badness_ and fast path for
+ * channel_rsa_id_group_set_badness.
+ *
+ * Returns 1 if the connection was already expired, else 0.
+ */
+int
+connection_or_single_set_badness_(time_t now,
+                                  or_connection_t *or_conn,
+                                  int force)
+{
+  /* XXXX this function should also be about channels? */
+  if (or_conn->base_.marked_for_close ||
+      connection_or_is_bad_for_new_circs(or_conn))
+    return 1;
+
+  if (force ||
+      or_conn->base_.timestamp_created + TIME_BEFORE_OR_CONN_IS_TOO_OLD
+        < now) {
+    log_info(LD_OR,
+             "Marking OR conn to %s:%d as too old for new circuits "
+             "(fd "TOR_SOCKET_T_FORMAT", %d secs old).",
+             or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+             (int)(now - or_conn->base_.timestamp_created));
+    connection_or_mark_bad_for_new_circs(or_conn);
+  }
+
+  return 0;
+}
+
 /** Given a list of all the or_connections with a given
  * identity, set elements of that list as is_bad_for_new_circs as
  * appropriate. Helper for connection_or_set_bad_connections().
@@ -995,19 +1025,8 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
   /* Pass 1: expire everything that's old, and see what the status of
    * everything else is. */
   SMARTLIST_FOREACH_BEGIN(group, or_connection_t *, or_conn) {
-    if (or_conn->base_.marked_for_close ||
-        connection_or_is_bad_for_new_circs(or_conn))
+    if (connection_or_single_set_badness_(now, or_conn, force))
       continue;
-    if (force ||
-        or_conn->base_.timestamp_created + TIME_BEFORE_OR_CONN_IS_TOO_OLD
-          < now) {
-      log_info(LD_OR,
-               "Marking OR conn to %s:%d as too old for new circuits "
-               "(fd "TOR_SOCKET_T_FORMAT", %d secs old).",
-               or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
-               (int)(now - or_conn->base_.timestamp_created));
-      connection_or_mark_bad_for_new_circs(or_conn);
-    }
 
     if (connection_or_is_bad_for_new_circs(or_conn)) {
       ++n_old;

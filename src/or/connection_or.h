@@ -112,6 +112,9 @@ void var_cell_free(var_cell_t *cell);
 #define MIN_LINK_PROTO_FOR_CHANNEL_PADDING 5
 #define MAX_LINK_PROTO MIN_LINK_PROTO_FOR_CHANNEL_PADDING
 
+int connection_or_single_set_badness_(time_t now,
+                                      or_connection_t *or_conn,
+                                      int force);
 void connection_or_group_set_badness_(smartlist_t *group, int force);
 
 #ifdef TOR_UNIT_TESTS
