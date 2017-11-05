@@ -170,8 +170,6 @@ static config_abbrev_t option_abbrevs_[] = {
   { "BridgeAuthoritativeDirectory", "BridgeAuthoritativeDir", 0, 0},
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "VirtualAddrNetwork", "VirtualAddrNetworkIPv4", 0, 0},
-  { "ClientDNSRejectInternalAddresses",
-    "TestingClientDNSRejectInternalAddresses", 0, 1, },
   { NULL, NULL, 0, 0},
 };
 
@@ -263,7 +261,7 @@ static config_var_t option_vars_[] = {
   V(CircuitsAvailableTimeout,    INTERVAL, "0"),
   V(CircuitStreamTimeout,        INTERVAL, "0"),
   V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
-  V(TestingClientDNSRejectInternalAddresses, BOOL,"1"),
+  V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ClientPreferIPv6ORPort,      AUTOBOOL, "auto"),
   V(ClientPreferIPv6DirPort,     AUTOBOOL, "auto"),
@@ -651,7 +649,7 @@ static const config_var_t testing_tor_network_defaults[] = {
     "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
   V(ClientBootstrapConsensusMaxDownloadTries, UINT, "80"),
   V(ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries, UINT, "80"),
-  V(TestingClientDNSRejectInternalAddresses, BOOL,"0"),
+  V(ClientDNSRejectInternalAddresses, BOOL,"0"),
   V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(CountPrivateBandwidth,       BOOL,     "1"),
   V(ExitPolicyRejectPrivate,     BOOL,     "0"),
@@ -696,7 +694,12 @@ static const config_var_t testing_tor_network_defaults[] = {
 #undef OBSOLETE
 
 static const config_deprecation_t option_deprecation_notes_[] = {
-  /* Deprecated since 0.3.2.1-alpha. */
+  /* Deprecated since 0.2.9.2-alpha... */
+  { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
+    "a wide variety of application-level attacks." },
+  /* End of options deprecated since 0.2.9.2-alpha. */
+
+  /* Deprecated since 0.3.2.0-alpha. */
   { "HTTPProxy", "It only applies to direct unencrypted HTTP connections "
     "to your directory server, which your Tor probably wasn't using." },
   { "HTTPProxyAuthenticator", "HTTPProxy is deprecated in favor of HTTPSProxy "
@@ -4258,9 +4261,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingSigningKeySlop);
   CHECK_DEFAULT(TestingAuthKeySlop);
   CHECK_DEFAULT(TestingLinkKeySlop);
-  CHECK_DEFAULT(TestingClientDNSRejectInternalAddresses);
 #undef CHECK_DEFAULT
 
+  if (!options->ClientDNSRejectInternalAddresses &&
+      !(options->DirAuthorities ||
+        (options->AlternateDirAuthority && options->AlternateBridgeAuthority)))
+    REJECT("ClientDNSRejectInternalAddresses used for default network.");
   if (options->SigningKeyLifetime < options->TestingSigningKeySlop*2)
     REJECT("SigningKeyLifetime is too short.");
   if (options->TestingLinkCertLifetime < options->TestingAuthKeySlop*2)

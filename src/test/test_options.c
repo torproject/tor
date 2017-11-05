@@ -398,11 +398,12 @@ fixed_get_uname(void)
   "V3AuthVoteDelay 20\n"                                                \
   "V3AuthDistDelay 20\n"                                                \
   "V3AuthNIntervalsValid 3\n"                                           \
-  "ClientUseIPv4 1\n"                                                     \
+  "ClientUseIPv4 1\n"                                                   \
   "VirtualAddrNetworkIPv4 127.192.0.0/10\n"                             \
   "VirtualAddrNetworkIPv6 [FE80::]/10\n"                                \
   "UseEntryGuards 1\n"                                                  \
-  "Schedulers Vanilla\n"
+  "Schedulers Vanilla\n"                                                \
+  "ClientDNSRejectInternalAddresses 1\n"
 
 typedef struct {
   or_options_t *old_opt;
