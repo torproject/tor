@@ -50,7 +50,13 @@ mock_decrypt_desc_layer(const hs_descriptor_t *desc,
   *decrypted_out = tor_memdup_nulterm(
                    encrypted_blob + HS_DESC_ENCRYPTED_SALT_LEN,
                    encrypted_blob_size - overhead);
-  return strlen(*decrypted_out);
+  size_t result = strlen(*decrypted_out);
+  if (result) {
+    return result;
+  } else {
+    tor_free(*decrypted_out);
+    return 0;
+  }
 }
 
 int
