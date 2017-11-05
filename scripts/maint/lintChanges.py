@@ -76,13 +76,13 @@ def lintfile(fname):
 
     if isBug and not re.search(r'(\d+)', contents):
         warn("Ticket marked as bugfix, but does not mention a number.")
-    elif isBug and not re.search(r'Fixes ([a-z ]*)bug (\d+)', contents):
+    elif isBug and not re.search(r'Fixes ([a-z ]*)bugs? (\d+)', contents):
         warn("Ticket marked as bugfix, but does not say 'Fixes bug XXX'")
 
     if re.search(r'[bB]ug (\d+)', contents):
         if not re.search(r'[Bb]ugfix on ', contents):
             warn("Bugfix does not say 'bugfix on X.Y.Z'")
-        elif not re.search('[fF]ixes ([a-z ]*)bug (\d+); bugfix on ',
+        elif not re.search('[fF]ixes ([a-z ]*)bugs? (\d+)((, \d+)* and \d+)?; bugfix on ',
                            contents):
             warn("Bugfix does not say 'Fixes bug X; bugfix on Y'")
         elif re.search('tor-([0-9]+)', contents):
