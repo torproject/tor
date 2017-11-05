@@ -949,7 +949,7 @@ connection_ap_process_end_not_open(
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
           }
-          if (get_options()->TestingClientDNSRejectInternalAddresses &&
+          if (get_options()->ClientDNSRejectInternalAddresses &&
               tor_addr_is_internal(&addr, 0)) {
             log_info(LD_APP,"Address '%s' resolved to internal. Closing,",
                      safe_str(conn->socks_request->address));
@@ -1366,7 +1366,7 @@ connection_edge_process_resolved_cell(edge_connection_t *conn,
     goto done;
   }
 
-  if (get_options()->TestingClientDNSRejectInternalAddresses) {
+  if (get_options()->ClientDNSRejectInternalAddresses) {
     int orig_len = smartlist_len(resolved_addresses);
     SMARTLIST_FOREACH_BEGIN(resolved_addresses, address_ttl_t *, addr) {
       if (addr->hostname == NULL && tor_addr_is_internal(&addr->addr, 0)) {
@@ -1459,7 +1459,7 @@ connection_edge_process_relay_cell_not_open(
     if (tor_addr_family(&addr) != AF_UNSPEC) {
       const sa_family_t family = tor_addr_family(&addr);
       if (tor_addr_is_null(&addr) ||
-          (get_options()->TestingClientDNSRejectInternalAddresses &&
+          (get_options()->ClientDNSRejectInternalAddresses &&
            tor_addr_is_internal(&addr, 0))) {
         log_info(LD_APP, "...but it claims the IP address was %s. Closing.",
                  fmt_addr(&addr));
