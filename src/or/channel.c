@@ -4726,6 +4726,16 @@ channel_set_circid_type,(channel_t *chan,
   }
 }
 
+static int
+channel_sort_by_ed25519_identity(const void **a_, const void **b_)
+{
+  const channel_t *a = *a_,
+                  *b = *b_;
+  return fast_memcmp(&a->ed25519_identity.pubkey,
+                     &b->ed25519_identity.pubkey,
+                     sizeof(a->ed25519_identity.pubkey));
+}
+
 /** Helper for channel_update_bad_for_new_circs(): Perform the
  * channel_update_bad_for_new_circs operation on all channels in <b>lst</b>,
  * all of which MUST have the same RSA ID.  (They MAY have different
@@ -4746,42 +4756,40 @@ channel_rsa_id_group_set_badness(struct channel_list_s *lst, int force)
     return;
   }
 
-  /* First, get a minimal list of the ed25519 identites */
-  smartlist_t *ed_identities = smartlist_new();
-  TOR_LIST_FOREACH(chan, lst, next_with_same_id) {
-    uint8_t *id_copy =
-      tor_memdup(&chan->ed25519_identity.pubkey, DIGEST256_LEN);
-    smartlist_add(ed_identities, id_copy);
-  }
-  smartlist_sort_digests256(ed_identities);
-  smartlist_uniq_digests256(ed_identities);
+  smartlist_t *channels = smartlist_new();
 
-  /* Now, for each Ed identity, build a smartlist and find the best entry on
-   * it.  */
+  TOR_LIST_FOREACH(chan, lst, next_with_same_id) {
+    if (BASE_CHAN_TO_TLS(chan)->conn) {
+      smartlist_add(channels, chan);
+    }
+  }
+
+  smartlist_sort(channels, channel_sort_by_ed25519_identity);
+
+  const ed25519_public_key_t *common_ed25519_identity = NULL;
+  /* it would be more efficient to do a slice, but this case is rare */
   smartlist_t *or_conns = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(ed_identities, const uint8_t *, ed_id) {
-    TOR_LIST_FOREACH(chan, lst, next_with_same_id) {
-      channel_tls_t *chantls = BASE_CHAN_TO_TLS(chan);
-      if (tor_memneq(ed_id, &chan->ed25519_identity.pubkey, DIGEST256_LEN))
-        continue;
-      or_connection_t *orconn = chantls->conn;
-      if (orconn) {
-        tor_assert(orconn->chan == chantls);
-        smartlist_add(or_conns, orconn);
-      }
+  SMARTLIST_FOREACH_BEGIN(channels, channel_t *, channel) {
+    if (!common_ed25519_identity)
+      common_ed25519_identity = &channel->ed25519_identity;
+
+    if (! ed25519_pubkey_eq(&channel->ed25519_identity,
+                            common_ed25519_identity)) {
+        connection_or_group_set_badness_(or_conns, force);
+        smartlist_clear(or_conns);
+        common_ed25519_identity = &channel->ed25519_identity;
     }
 
-    connection_or_group_set_badness_(or_conns, force);
-    smartlist_clear(or_conns);
-  } SMARTLIST_FOREACH_END(ed_id);
+    smartlist_add(or_conns, BASE_CHAN_TO_TLS(channel)->conn);
+  } SMARTLIST_FOREACH_END(channel);
+
+  connection_or_group_set_badness_(or_conns, force);
 
   /* XXXX 15056 we may want to do something special with connections that have
    * no set Ed25519 identity! */
 
   smartlist_free(or_conns);
-
-  SMARTLIST_FOREACH(ed_identities, uint8_t *, ed_id, tor_free(ed_id));
-  smartlist_free(ed_identities);
+  smartlist_free(channels);
 }
 
 /** Go through all the channels (or if <b>digest</b> is non-NULL, just
