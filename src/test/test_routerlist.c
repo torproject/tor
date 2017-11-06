@@ -454,7 +454,10 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   (void) arg;
 
   /* Initialize the SRV subsystem */
+  MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
+  mock_cert = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
   sr_init(0);
+  UNMOCK(get_my_v3_authority_cert);
 
   /* Initialize the entry node configuration from the ticket */
   options->UseEntryGuards = 1;
