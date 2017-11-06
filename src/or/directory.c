@@ -464,7 +464,7 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
     log_warn(LD_BUG, "Called when we have UseBridges set.");
 
   if (should_use_directory_guards(options)) {
-    const node_t *node = guards_choose_dirguard(guard_state_out);
+    const node_t *node = guards_choose_dirguard(dir_purpose, guard_state_out);
     if (node)
       rs = node->rs;
   } else {
@@ -598,7 +598,7 @@ directory_get_from_dirserver,(
        * sort of dir fetch we'll be doing, so it won't return a bridge
        * that can't answer our question.
        */
-      const node_t *node = guards_choose_dirguard(&guard_state);
+      const node_t *node = guards_choose_dirguard(dir_purpose, &guard_state);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
         routerinfo_t *ri = node->ri;

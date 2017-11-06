@@ -1460,6 +1460,70 @@ guard_in_node_family(const entry_guard_t *guard, const node_t *node)
   }
 }
 
+/* Allocate and return a new exit guard restriction (where <b>exit_id</b> is of
+ * size DIGEST_LEN) */
+STATIC entry_guard_restriction_t *
+guard_create_exit_restriction(const uint8_t *exit_id)
+{
+  entry_guard_restriction_t *rst = NULL;
+  rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
+  rst->type = RST_EXIT_NODE;
+  memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
+  return rst;
+}
+
+/** Allocate and return an outdated md guard restriction. */
+STATIC entry_guard_restriction_t *
+guard_create_dirserver_md_restriction(void)
+{
+  entry_guard_restriction_t *rst = NULL;
+
+  rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
+  rst->type = RST_OUTDATED_MD_DIRSERVER;
+
+  return rst;
+}
+
+/* Return True if <b>guard</b> obeys the exit restriction <b>rst</b>. */
+static int
+guard_obeys_exit_restriction(const entry_guard_t *guard,
+                             const entry_guard_restriction_t *rst)
+{
+  tor_assert(rst->type == RST_EXIT_NODE);
+
+  // Exclude the exit ID and all of its family.
+  const node_t *node = node_get_by_id((const char*)rst->exclude_id);
+  if (node && guard_in_node_family(guard, node))
+    return 0;
+
+  return tor_memneq(guard->identity, rst->exclude_id, DIGEST_LEN);
+}
+
+/** Return True if <b>guard</b> should be used as a dirserver for fetching
+ *  microdescriptors. */
+static int
+guard_obeys_md_dirserver_restriction(const entry_guard_t *guard)
+{
+  /* Don't enforce dirserver restrictions for bridges since we might not have
+   * many of those. Be willing to try them over and over again for now. */
+  /* XXX: Improvement might be possible here */
+  if (guard->bridge_addr) {
+    return 1;
+  }
+
+  /* If this guard is an outdated dirserver, don't use it. */
+  if (microdesc_relay_is_outdated_dirserver(guard->identity)) {
+    log_info(LD_GENERAL, "Skipping %s dirserver: outdated",
+             hex_str(guard->identity, DIGEST_LEN));
+    return 0;
+  }
+
+  log_debug(LD_GENERAL, "%s dirserver obeys md restrictions",
+            hex_str(guard->identity, DIGEST_LEN));
+
+  return 1;
+}
+
 /**
  * Return true iff <b>guard</b> obeys the restrictions defined in <b>rst</b>.
  * (If <b>rst</b> is NULL, there are no restrictions.)
@@ -1472,13 +1536,14 @@ entry_guard_obeys_restriction(const entry_guard_t *guard,
   if (! rst)
     return 1; // No restriction?  No problem.
 
-  // Only one kind of restriction exists right now: excluding an exit
-  // ID and all of its family.
-  const node_t *node = node_get_by_id((const char*)rst->exclude_id);
-  if (node && guard_in_node_family(guard, node))
-    return 0;
+  if (rst->type == RST_EXIT_NODE) {
+    return guard_obeys_exit_restriction(guard, rst);
+  } else if (rst->type == RST_OUTDATED_MD_DIRSERVER) {
+    return guard_obeys_md_dirserver_restriction(guard);
+  }
 
-  return tor_memneq(guard->identity, rst->exclude_id, DIGEST_LEN);
+  tor_assert_nonfatal_unreached();
+  return 0;
 }
 
 /**
@@ -2105,7 +2170,7 @@ entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b)
 }
 
 /** Release all storage held in <b>restriction</b> */
-static void
+STATIC void
 entry_guard_restriction_free(entry_guard_restriction_t *rst)
 {
   tor_free(rst);
@@ -3358,8 +3423,8 @@ guards_choose_guard(cpath_build_state_t *state,
     /* We're building to a targeted exit node, so that node can't be
      * chosen as our guard for this circuit.  Remember that fact in a
      * restriction. */
-    rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
-    memcpy(rst->exclude_id, exit_id, DIGEST_LEN);
+    rst = guard_create_exit_restriction(exit_id);
+    tor_assert(rst);
   }
   if (entry_guard_pick_for_circuit(get_guard_selection_info(),
                                    GUARD_USAGE_TRAFFIC,
@@ -3411,12 +3476,20 @@ remove_all_entry_guards(void)
 
 /** Helper: pick a directory guard, with whatever algorithm is used. */
 const node_t *
-guards_choose_dirguard(circuit_guard_state_t **guard_state_out)
+guards_choose_dirguard(uint8_t dir_purpose,
+                       circuit_guard_state_t **guard_state_out)
 {
   const node_t *r = NULL;
+  entry_guard_restriction_t *rst = NULL;
+
+  /* If we are fetching microdescs, don't query outdated dirservers. */
+  if (dir_purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+    rst = guard_create_dirserver_md_restriction();
+  }
+
   if (entry_guard_pick_for_circuit(get_guard_selection_info(),
                                    GUARD_USAGE_DIRGUARD,
-                                   NULL,
+                                   rst,
                                    &r,
                                    guard_state_out) < 0) {
     tor_assert(r == NULL);
