@@ -117,7 +117,8 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
 static void dir_microdesc_download_failed(smartlist_t *failed,
-                                          int status_code);
+                                          int status_code,
+                                          const char *dir_id);
 static int client_likes_consensus(const struct consensus_cache_entry_t *ent,
                                   const char *want_url);
 
@@ -2178,8 +2179,6 @@ static int handle_response_fetch_detached_signatures(dir_connection_t *,
                                              const response_handler_args_t *);
 static int handle_response_fetch_desc(dir_connection_t *,
                                              const response_handler_args_t *);
-static int handle_response_fetch_microdesc(dir_connection_t *,
-                                           const response_handler_args_t *);
 static int handle_response_upload_dir(dir_connection_t *,
                                       const response_handler_args_t *);
 static int handle_response_upload_vote(dir_connection_t *,
@@ -2839,7 +2838,7 @@ handle_response_fetch_desc(dir_connection_t *conn,
  * Handler function: processes a response to a request for a group of
  * microdescriptors
  **/
-static int
+STATIC int
 handle_response_fetch_microdesc(dir_connection_t *conn,
                                 const response_handler_args_t *args)
 {
@@ -2856,6 +2855,7 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
            conn->base_.port);
   tor_assert(conn->requested_resource &&
              !strcmpstart(conn->requested_resource, "d/"));
+  tor_assert_nonfatal(!tor_mem_is_zero(conn->identity_digest, DIGEST_LEN));
   which = smartlist_new();
   dir_split_resource_into_fingerprints(conn->requested_resource+2,
                                        which, NULL,
@@ -2866,7 +2866,7 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
              "soon.",
              status_code, escaped(reason), conn->base_.address,
              (int)conn->base_.port, conn->requested_resource);
-    dir_microdesc_download_failed(which, status_code);
+    dir_microdesc_download_failed(which, status_code, conn->identity_digest);
     SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
     smartlist_free(which);
     return 0;
@@ -2878,7 +2878,7 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
                                   now, which);
     if (smartlist_len(which)) {
       /* Mark remaining ones as failed. */
-      dir_microdesc_download_failed(which, status_code);
+      dir_microdesc_download_failed(which, status_code, conn->identity_digest);
     }
     if (mds && smartlist_len(mds)) {
       control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
@@ -5546,13 +5546,14 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
-/** Called when a connection to download microdescriptors has failed in whole
- * or in part. <b>failed</b> is a list of every microdesc digest we didn't
- * get. <b>status_code</b> is the http status code we received. Reschedule the
- * microdesc downloads as appropriate. */
+/** Called when a connection to download microdescriptors from relay with
+ * <b>dir_id</b> has failed in whole or in part. <b>failed</b> is a list
+ * of every microdesc digest we didn't get. <b>status_code</b> is the http
+ * status code we received. Reschedule the microdesc downloads as
+ * appropriate. */
 static void
 dir_microdesc_download_failed(smartlist_t *failed,
-                              int status_code)
+                              int status_code, const char *dir_id)
 {
   networkstatus_t *consensus
     = networkstatus_get_latest_consensus_by_flavor(FLAV_MICRODESC);
@@ -5563,17 +5564,26 @@ dir_microdesc_download_failed(smartlist_t *failed,
 
   if (! consensus)
     return;
+
+  /* We failed to fetch a microdescriptor from 'dir_id', note it down
+   * so that we don't try the same relay next time... */
+  microdesc_note_outdated_dirserver(dir_id);
+
   SMARTLIST_FOREACH_BEGIN(failed, const char *, d) {
     rs = router_get_mutable_consensus_status_by_descriptor_digest(consensus,d);
     if (!rs)
       continue;
     dls = &rs->dl_status;
     if (dls->n_download_failures >=
-        get_options()->TestingMicrodescMaxDownloadTries)
+        get_options()->TestingMicrodescMaxDownloadTries) {
       continue;
-    {
+    }
+
+    { /* Increment the failure count for this md fetch */
       char buf[BASE64_DIGEST256_LEN+1];
       digest256_to_base64(buf, d);
+      log_info(LD_DIR, "Failed to download md %s from %s",
+               buf, hex_str(dir_id, DIGEST_LEN));
       download_status_increment_failure(dls, status_code, buf,
                                         server, now);
     }

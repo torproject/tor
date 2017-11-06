@@ -166,7 +166,12 @@ STATIC char *accept_encoding_header(void);
 STATIC int allowed_anonymous_connection_compression_method(compress_method_t);
 STATIC void warn_disallowed_anonymous_compression_method(compress_method_t);
 
-#endif
+struct response_handler_args_t;
+
+STATIC int handle_response_fetch_microdesc(dir_connection_t *conn,
+                                 const struct response_handler_args_t *args);
+
+#endif /* defined(DIRECTORY_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 /* Used only by test_dir.c */
