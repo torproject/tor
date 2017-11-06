@@ -1763,8 +1763,15 @@ is non-zero):
     write your IPv6 rules using accept6/reject6 \*6, and your IPv4 rules using
     accept/reject \*4. If you want to \_replace_ the default exit policy, end
     your exit policy with either a reject \*:* or an accept \*:*. Otherwise,
-    you're \_augmenting_ (prepending to) the default exit policy. The default
-    exit policy is: +
+    you're \_augmenting_ (prepending to) the default exit policy. +
+ +
+    If you want to use a reduced exit policy rather than the default exit
+    policy, set "ReducedExitPolicy 1". If you want to _replace_ the default
+    exit policy with your custom exit policy, end your exit policy with either
+    a reject *:* or an accept *:*. Otherwise, you’re _augmenting_ (prepending
+    to) the default or reduced exit policy. +
+ +
+    The default exit policy is:
 
        reject *:25
        reject *:119
@@ -1776,15 +1783,9 @@ is non-zero):
        reject *:6346-6429
        reject *:6699
        reject *:6881-6999
-       accept *:* +
- +
-    If you want to use a reduced exit policy rather than the default exit
-    policy, set "ReducedExitPolicy 1". If you want to _replace_ the default
-    exit policy with your custom exit policy, end your exit policy with either
-    a reject *:* or an accept *:*. Otherwise, you’re _augmenting_ (prepending
-    to) the default or reduced exit policy.
+       accept *:*
 
-[[ExitPolicyDefault]]::
+[[ExitPolicyDefault]] **ExitPolicyDefault**::
     Since the default exit policy uses accept/reject *, it applies to both
     IPv4 and IPv6 addresses.
 
@@ -1806,7 +1807,7 @@ is non-zero):
     to disclose.
     (Default: 0)
 
-[[ReducedExitPolicy] **ReducedExitPolicy** **0**|**1**::
+[[ReducedExitPolicy]] **ReducedExitPolicy** **0**|**1**::
     If set, use a reduced exit policy rather than the default one. +
  +
     The reduced exit policy is an alternative to the default exit policy. It
@@ -1895,8 +1896,8 @@ is non-zero):
         accept *:19638
         accept *:50002
         accept *:64738
-        reject *:* +
- +
+        reject *:*
+
     (Default: 0)
 
 [[IPv6Exit]] **IPv6Exit** **0**|**1**::
