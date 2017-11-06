@@ -687,7 +687,7 @@ scheduler_bug_occurred(const channel_t *chan)
                  chan->global_identifier,
                  channel_state_to_string(chan->state),
                  chan->scheduler_state, circuitmux_num_cells(chan->cmux),
-                 outbuf_len);
+                 (unsigned long)outbuf_len);
   }
 
   {
