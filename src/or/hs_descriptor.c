@@ -1302,7 +1302,11 @@ encrypted_data_length_is_valid(size_t len)
  *  <b>encrypted_blob_size</b>. Use the descriptor object <b>desc</b> to
  *  generate the right decryption keys; set <b>decrypted_out</b> to the
  *  plaintext. If <b>is_superencrypted_layer</b> is set, this is the outter
- *  encrypted layer of the descriptor. */
+ *  encrypted layer of the descriptor.
+ *
+ * On any error case, including an empty output, return 0 and set
+ * *<b>decrypted_out</b> to NULL.
+ */
 MOCK_IMPL(STATIC size_t,
 decrypt_desc_layer,(const hs_descriptor_t *desc,
                     const uint8_t *encrypted_blob,
@@ -1380,6 +1384,11 @@ decrypt_desc_layer,(const hs_descriptor_t *desc,
     if (end) {
       result_len = end - decrypted;
     }
+  }
+
+  if (result_len == 0) {
+    /* Treat this as an error, so that somebody will free the output. */
+    goto err;
   }
 
   /* Make sure to NUL terminate the string. */
