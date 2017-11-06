@@ -132,8 +132,13 @@ solidify on is readily available.
    in the `.../tor/src/rust/` directory.
 1. Add your crate to `.../tor/src/rust/Cargo.toml`, in the
    `[workspace.members]` section.
-2. Append your crate's static library to the `rust_ldadd` definition
-   (underneath `if USE_RUST`) in `.../tor/Makefile.am`.
+2. Add your crate's files to src/rust/include.am
+
+If your crate should be available to C (rather than just being included as a
+dependency of other Rust modules):
+0. Declare the crate as a dependency of tor_rust in
+   `src/rust/tor_util/Cargo.toml` and include it in
+   `src/rust/tor_rust/lib.rs`
 
  How to test your Rust code
 ----------------------------
