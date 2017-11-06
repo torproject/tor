@@ -1,0 +1,4 @@
+  o Minor bugfixes (v3 onion services):
+    - Fix a memory leak when decrypting a badly formatted v3 onion
+      service descriptor. Fixes bug 24150; bugfix on 0.3.2.1-alpha.
+      Found by OSS-Fuzz; this is OSS-Fuzz issue 3994.
