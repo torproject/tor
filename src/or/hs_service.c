@@ -2900,6 +2900,31 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* Public API */
 /* ========== */
 
+/* Using the ed25519 public key pk, find a service for that key and return the
+ * current encoded descriptor as a newly allocated string or NULL if not
+ * found. This is used by the control port subsystem. */
+char *
+hs_service_lookup_current_desc(const ed25519_public_key_t *pk)
+{
+  const hs_service_t *service;
+
+  tor_assert(pk);
+
+  service = find_service(hs_service_map, pk);
+  if (service && service->desc_current) {
+    char *encoded_desc = NULL;
+    /* No matter what is the result (which should never be a failure), return
+     * the encoded variable, if success it will contain the right thing else
+     * it will be NULL. */
+    hs_desc_encode_descriptor(service->desc_current->desc,
+                              &service->desc_current->signing_kp,
+                              &encoded_desc);
+    return encoded_desc;
+  }
+
+  return NULL;
+}
+
 /* Return the number of service we have configured and usable. */
 unsigned int
 hs_service_get_num_services(void)
