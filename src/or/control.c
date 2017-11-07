@@ -2057,20 +2057,47 @@ getinfo_helper_dir(control_connection_t *control_conn,
       }
     }
   } else if (!strcmpstart(question, "hs/service/desc/id/")) {
-    rend_cache_entry_t *e = NULL;
+    hostname_type_t addr_type;
 
     question += strlen("hs/service/desc/id/");
-    if (strlen(question) != REND_SERVICE_ID_LEN_BASE32) {
+    if (rend_valid_v2_service_id(question)) {
+      addr_type = ONION_V2_HOSTNAME;
+    } else if (hs_address_is_valid(question)) {
+      addr_type = ONION_V3_HOSTNAME;
+    } else {
       *errmsg = "Invalid address";
       return -1;
     }
+    rend_cache_entry_t *e = NULL;
 
-    if (!rend_cache_lookup_v2_desc_as_service(question, &e)) {
-      /* Descriptor found in cache */
-      *answer = tor_strdup(e->desc);
+    if (addr_type == ONION_V2_HOSTNAME) {
+      if (!rend_cache_lookup_v2_desc_as_service(question, &e)) {
+        /* Descriptor found in cache */
+        *answer = tor_strdup(e->desc);
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     } else {
-      *errmsg = "Not found in cache";
-      return -1;
+      ed25519_public_key_t service_pk;
+      char *desc;
+
+      /* The check before this if/else makes sure of this. */
+      tor_assert(addr_type == ONION_V3_HOSTNAME);
+
+      if (hs_parse_address(question, &service_pk, NULL, NULL) < 0) {
+        *errmsg = "Invalid v3 address";
+        return -1;
+      }
+
+      desc = hs_service_lookup_current_desc(&service_pk);
+      if (desc) {
+        /* Newly allocated string, we have ownership. */
+        *answer = desc;
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     }
   } else if (!strcmpstart(question, "md/id/")) {
     const node_t *node = node_get_by_hex_id(question+strlen("md/id/"), 0);
