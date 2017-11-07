@@ -139,25 +139,18 @@ get_voting_interval(void)
  * the SR protocol. For example, if it's 23:47:08, the current round thus
  * started at 23:47:00 for a voting interval of 10 seconds. */
 STATIC time_t
-get_start_time_of_current_round(time_t now)
+get_start_time_of_current_round(void)
 {
   const or_options_t *options = get_options();
   int voting_interval = get_voting_interval();
-  voting_schedule_t *new_voting_schedule =
-    get_voting_schedule(options, now, LOG_DEBUG);
-  tor_assert(new_voting_schedule);
-
   /* First, get the start time of the next round */
-  time_t next_start = new_voting_schedule->interval_starts;
+  time_t next_start = dirvote_get_next_valid_after_time();
   /* Now roll back next_start by a voting interval to find the start time of
      the current round. */
   time_t curr_start = dirvote_get_start_of_next_interval(
                                      next_start - voting_interval - 1,
                                      voting_interval,
                                      options->TestingV3AuthVotingStartOffset);
-
-  voting_schedule_free(new_voting_schedule);
-
   return curr_start;
 }
 
@@ -170,7 +163,7 @@ sr_state_get_start_time_of_current_protocol_run(time_t now)
   int total_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
   int voting_interval = get_voting_interval();
   /* Find the time the current round started. */
-  time_t beginning_of_current_round = get_start_time_of_current_round(now);
+  time_t beginning_of_current_round = get_start_time_of_current_round();
 
   /* Get current SR protocol round */
   int current_round = (now / voting_interval) % total_rounds;
@@ -208,7 +201,7 @@ get_state_valid_until_time(time_t now)
 
   voting_interval = get_voting_interval();
   /* Find the time the current round started. */
-  beginning_of_current_round = get_start_time_of_current_round(now);
+  beginning_of_current_round = get_start_time_of_current_round();
 
   /* Find how many rounds are left till the end of the protocol run */
   current_round = (now / voting_interval) % total_rounds;
@@ -1370,7 +1363,7 @@ sr_state_init(int save_to_disk, int read_from_disk)
   /* We have a state in memory, let's make sure it's updated for the current
    * and next voting round. */
   {
-    time_t valid_after = get_next_valid_after_time(now);
+    time_t valid_after = dirvote_get_next_valid_after_time();
     sr_state_update(valid_after);
   }
   return 0;
