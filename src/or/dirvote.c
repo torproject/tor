@@ -2859,6 +2859,13 @@ static voting_schedule_t voting_schedule;
 time_t
 dirvote_get_next_valid_after_time(void)
 {
+  /* This is a safe guard in order to make sure that the voting schedule
+   * static object is at least initialized. Using this function with a zeroed
+   * voting schedule can lead to bugs. */
+  if (tor_mem_is_zero((const char *) &voting_schedule,
+                      sizeof(voting_schedule))) {
+    dirvote_recalculate_timing(get_options(), time(NULL));
+  }
   return voting_schedule.interval_starts;
 }
 
