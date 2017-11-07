@@ -706,6 +706,24 @@ cache_clean_v3_as_client(time_t now)
 }
 
 /** Public API: Given the HS ed25519 identity public key in <b>key</b>, return
+ *  its HS encoded descriptor if it's stored in our cache, or NULL if not. */
+const char *
+hs_cache_lookup_encoded_as_client(const ed25519_public_key_t *key)
+{
+  hs_cache_client_descriptor_t *cached_desc = NULL;
+
+  tor_assert(key);
+
+  cached_desc = lookup_v3_desc_as_client(key->pubkey);
+  if (cached_desc) {
+    tor_assert(cached_desc->encoded_desc);
+    return cached_desc->encoded_desc;
+  }
+
+  return NULL;
+}
+
+/** Public API: Given the HS ed25519 identity public key in <b>key</b>, return
  *  its HS descriptor if it's stored in our cache, or NULL if not. */
 const hs_descriptor_t *
 hs_cache_lookup_as_client(const ed25519_public_key_t *key)
