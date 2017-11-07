@@ -58,6 +58,7 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "hs_cache.h"
 #include "hs_common.h"
 #include "main.h"
 #include "microdesc.h"
@@ -2014,20 +2015,46 @@ getinfo_helper_dir(control_connection_t *control_conn,
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
   } else if (!strcmpstart(question, "hs/client/desc/id/")) {
-    rend_cache_entry_t *e = NULL;
+    hostname_type_t addr_type;
 
     question += strlen("hs/client/desc/id/");
-    if (strlen(question) != REND_SERVICE_ID_LEN_BASE32) {
+    if (rend_valid_v2_service_id(question)) {
+      addr_type = ONION_V2_HOSTNAME;
+    } else if (hs_address_is_valid(question)) {
+      addr_type = ONION_V3_HOSTNAME;
+    } else {
       *errmsg = "Invalid address";
       return -1;
     }
 
-    if (!rend_cache_lookup_entry(question, -1, &e)) {
-      /* Descriptor found in cache */
-      *answer = tor_strdup(e->desc);
+    if (addr_type == ONION_V2_HOSTNAME) {
+      rend_cache_entry_t *e = NULL;
+      if (!rend_cache_lookup_entry(question, -1, &e)) {
+        /* Descriptor found in cache */
+        *answer = tor_strdup(e->desc);
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     } else {
-      *errmsg = "Not found in cache";
-      return -1;
+      ed25519_public_key_t service_pk;
+      const char *desc;
+
+      /* The check before this if/else makes sure of this. */
+      tor_assert(addr_type == ONION_V3_HOSTNAME);
+
+      if (hs_parse_address(question, &service_pk, NULL, NULL) < 0) {
+        *errmsg = "Invalid v3 address";
+        return -1;
+      }
+
+      desc = hs_cache_lookup_encoded_as_client(&service_pk);
+      if (desc) {
+        *answer = tor_strdup(desc);
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     }
   } else if (!strcmpstart(question, "hs/service/desc/id/")) {
     rend_cache_entry_t *e = NULL;
