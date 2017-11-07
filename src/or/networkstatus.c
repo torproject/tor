@@ -1939,12 +1939,16 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (is_usable_flavor) {
+    /* The "current" consensus has just been set and it is a usable flavor so
+     * the first thing we need to do is recalculate the voting schedule static
+     * object so we can use the timings in there needed by some subsystems
+     * such as hidden service and shared random. */
+    dirvote_recalculate_timing(options, now);
+
     nodelist_set_consensus(c);
 
     /* XXXXNM Microdescs: needs a non-ns variant. ???? NM*/
     update_consensus_networkstatus_fetch_time(now);
-
-    dirvote_recalculate_timing(options, now);
 
     /* Update ewma and adjust policy if needed; first cache the old value */
     old_ewma_enabled = cell_ewma_enabled();
