@@ -1,0 +1,4 @@
+  o Minor bugfixes (onion services):
+    - Cache some needed onion service client information instead of
+      continuously computing it over and over again. Fixes bug 23623; bugfix
+      on 0.3.2.1-alpha.
