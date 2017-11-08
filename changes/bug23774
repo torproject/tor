@@ -1,4 +1,0 @@
-  o Minor bugfixes (memory leak):
-    - Fix a minor memory-leak-at-exit in the KIST scheduler. This
-      bug should have no user-visible impact. Fixes bug 23774;
-      bugfix on 0.3.2.1-alpha.

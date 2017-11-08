@@ -1,3 +1,87 @@
+Changes in version 0.3.2.4-alpha - 2017-11-08
+  Tor 0.3.2.4-alpha is the fourth alpha release in the 0.3.2.x series.
+  It fixes several bugs introduced in earlier releases, including
+  stability and reliability fixes on earlier versions of Tor.
+
+  o Major bugfixes (Exit nodes):
+    - Fix an issue causing high-bandwidth exit nodes to fail a majority
+      or all of their DNS requests, making them basically unsuitable for
+      regular usage in Tor circuits. The problem is related to
+      libevent's DNS handling, but we can work around it in Tor. Fixes
+      bugs 21394 and 18580; bugfix on 0.1.2.2-alpha which introduced
+      eventdns. Credit goes to Dhalgren for identifying and finding a
+      workaround to this bug and to gamambel, arthuredelstein and arma
+      in helping to track it down and analyze it.
+
+  o Minor features (logging, scheduler):
+    - Introduce a SCHED_BUG() function to log extra information about
+      the scheduler state if we ever catch a bug in the scheduler.
+      Closes ticket 23753.
+
+  o Minor features (removed deprecations):
+    - The ClientDNSRejectInternalAddresses flag can once again be set in
+      non-testing Tor networks, so long as they do not use the default
+      directory authorities. This change also removes the deprecation of
+      this flag in 0.2.9.2-alpha. Closes ticket 21031.
+
+  o Minor features (testing):
+    - Our fuzzing tests now test the encrypted portions of the v3 hidden
+      service descriptors. Implements more of 21509.
+
+  o Minor bugfixes (directory client):
+    - On failure to download directory information, delay retry attempts
+      by a random amount based on the "decorrelated jitter" algorithm.
+      Our previous delay algorithm tended to produce extra-long delays
+      too easily. Fixes bug 23816; bugfix on 0.2.9.1-alpha.
+
+  o Minor bugfixes (IPv6, v3 single onion services):
+    - Remove buggy code for IPv6-only v3 single onion services, and
+      reject attempts to configure them. This release supports IPv4,
+      dual-stack, and IPv6-only v3 hidden services; and IPv4 and dual-
+      stack v3 single onion services. Fixes bug 23820; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (logging, relay):
+    - Downgrade a warning to a protocol warning in the case the ed25519
+      key is not consistent between the descriptor and micro descriptor
+      of a relay. This can happen for instance if the relay has been
+      flagged NoEdConsensus. Fixes bug 24025; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (manpage, hidden service):
+    - Mention that the HiddenServiceNumIntroductionPoints option is 0-10
+      for v2 service and 0-20 for v3 service. Fixes bug 24115; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (memory leak):
+    - Fix a minor memory-leak-at-exit in the KIST scheduler. This bug
+      should have no user-visible impact. Fixes bug 23774; bugfix
+      on 0.3.2.1-alpha.
+    - Fix a memory leak when decrypting a badly formatted v3 onion
+      service descriptor. Fixes bug 24150; bugfix on 0.3.2.1-alpha.
+      Found by OSS-Fuzz; this is OSS-Fuzz issue 3994.
+
+  o Minor bugfixes (onion services):
+    - Cache some needed onion service client information instead of
+      continuously computing it over and over again. Fixes bug 23623;
+      bugfix on 0.3.2.1-alpha.
+    - Properly retry HSv3 descriptor fetches in the case where we were
+      initially missing required directory information. Fixes bug 23762;
+      bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (relay, crash):
+    - Avoid a crash when transitioning from client mode to bridge mode.
+      Previously, we would launch the worker threads whenever our
+      "public server" mode changed, but not when our "server" mode
+      changed. Fixes bug 23693; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (testing):
+    - Fix a spurious fuzzing-only use of an uninitialized value. Found
+      by Brian Carpenter. Fixes bug 24082; bugfix on 0.3.0.3-alpha.
+    - Test that IPv6-only clients can use microdescriptors when running
+      "make test-network-all". Requires chutney master 61c28b9 or later.
+      Closes ticket 24109.
+
+
 Changes in version 0.3.2.3-alpha - 2017-10-27
   Tor 0.3.2.3-alpha is the third release in the 0.3.2 series. It fixes
   numerous small bugs in earlier versions of 0.3.2.x, and adds a new

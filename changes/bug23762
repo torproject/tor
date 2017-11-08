@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Properly retry HSv3 descriptor fetches in the case where we were initially
-      missing required directory information. Fixes bug 23762; bugfix on
-      0.3.2.1-alpha.

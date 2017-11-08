@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging, relay):
-    - Downgrade a warning to a protocol warning in the case the ed25519 key is
-      not consistent between the descriptor and micro descriptor of a relay.
-      This can happen for instance if the relay has been flagged
-      NoEdConsensus. Fixes bug 24025; bugfix on 0.3.2.1-alpha.
