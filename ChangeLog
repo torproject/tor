@@ -1,18 +1,20 @@
 Changes in version 0.3.2.4-alpha - 2017-11-08
   Tor 0.3.2.4-alpha is the fourth alpha release in the 0.3.2.x series.
-  It fixes several bugs introduced in earlier releases, including
-  stability and reliability fixes on earlier versions of Tor.
+  It fixes several stability and reliability bugs, especially including
+  a major reliability issue that has been plaguing fast exit relays in
+  recent months.
 
-  o Major bugfixes (exit nodes, DNS):
+  o Major bugfixes (exit relays, DNS):
     - Fix an issue causing DNS to fail on high-bandwidth exit nodes,
       making them nearly unusable. Fixes bugs 21394 and 18580; bugfix on
       0.1.2.2-alpha, which introduced eventdns. Thanks to Dhalgren for
       identifying and finding a workaround to this bug and to Moritz,
-      Arthur Edelstein and Roger for helping to track it down and
+      Arthur Edelstein, and Roger for helping to track it down and
       analyze it.
 
   o Major bugfixes (scheduler, channel):
-    - Ignore channels that have been closed while flushing cells. This
+    - Stop processing scheduled channels if they closed while flushing
+      cells. This
       can happen if the write on the connection fails leading to the
       channel being closed while in the scheduler loop. Fixes bug 23751;
       bugfix on 0.3.2.1-alpha.
@@ -29,7 +31,7 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
       this flag from 0.2.9.2-alpha. Closes ticket 21031.
 
   o Minor features (testing):
-    - Our fuzzing tests now test the encrypted portions of the v3 hidden
+    - Our fuzzing tests now test the encrypted portions of v3 onion
       service descriptors. Implements more of 21509.
 
   o Minor bugfixes (directory client):
@@ -41,23 +43,23 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
   o Minor bugfixes (IPv6, v3 single onion services):
     - Remove buggy code for IPv6-only v3 single onion services, and
       reject attempts to configure them. This release supports IPv4,
-      dual-stack, and IPv6-only v3 hidden services; and IPv4 and dual-
+      dual-stack, and IPv6-only v3 onion services; and IPv4 and dual-
       stack v3 single onion services. Fixes bug 23820; bugfix
       on 0.3.2.1-alpha.
 
   o Minor bugfixes (logging, relay):
     - Give only a protocol warning when the ed25519 key is not
-      consistent between the descriptor and micro descriptor of a relay.
+      consistent between the descriptor and microdescriptor of a relay.
       This can happen, for instance, if the relay has been flagged
       NoEdConsensus. Fixes bug 24025; bugfix on 0.3.2.1-alpha.
 
-  o Minor bugfixes (manpage, hidden service):
+  o Minor bugfixes (manpage, onion service):
     - Document that the HiddenServiceNumIntroductionPoints option is
-      0-10 for v2 service and 0-20 for v3 service. Fixes bug 24115;
+      0-10 for v2 services and 0-20 for v3 services. Fixes bug 24115;
       bugfix on 0.3.2.1-alpha.
 
-  o Minor bugfixes (memory leak):
-    - Fix a minor memory-leak-at-exit in the KIST scheduler. This bug
+  o Minor bugfixes (memory leaks):
+    - Fix a minor memory leak at exit in the KIST scheduler. This bug
       should have no user-visible impact. Fixes bug 23774; bugfix
       on 0.3.2.1-alpha.
     - Fix a memory leak when decrypting a badly formatted v3 onion
@@ -66,7 +68,7 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
 
   o Minor bugfixes (onion services):
     - Cache some needed onion service client information instead of
-      continuously computing it over and over again. Fixes bug 23623;
+      constantly computing it over and over again. Fixes bug 23623;
       bugfix on 0.3.2.1-alpha.
     - Properly retry HSv3 descriptor fetches when missing required
       directory information. Fixes bug 23762; bugfix on 0.3.2.1-alpha.
@@ -79,7 +81,7 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
       weight adjustments should have given it weight 0, but it got
       weight 1 instead. Fixes bug 23318; bugfix on 0.2.4.3-alpha.
     - When calculating the fraction of nodes that have descriptors, and
-      all all nodes in the network have zero bandwidths, count the
+      all nodes in the network have zero bandwidths, count the
       number of nodes instead. Fixes bug 23318; bugfix on 0.2.4.10-alpha.
     - Actually log the total bandwidth in compute_weighted_bandwidths().
       Fixes bug 24170; bugfix on 0.2.4.3-alpha.
