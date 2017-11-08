@@ -4126,9 +4126,9 @@ download_status_random_backoff_helper(int min_delay, int max_delay)
   int increment = -1;
   int old_increment = -1;
   time_t current_time = time(NULL);
-  const int exponent = DIR_DEFAULT_RANDOM_MULTIPLIER + 1;
 
   /* Check the random backoff cases */
+  int n_attempts = 0;
   do {
     increment = download_status_schedule_get_delay(&dls_random,
                                                    NULL,
@@ -4148,40 +4148,16 @@ download_status_random_backoff_helper(int min_delay, int max_delay)
     /* Test */
     tt_int_op(increment, OP_GE, min_delay);
     tt_int_op(increment, OP_LE, max_delay);
-    if (dls_random.last_backoff_position == 0) {
-      /* regression tests for 17750
-       * Always use the minimum delay for the first increment */
-      tt_int_op(increment, OP_EQ, min_delay);
-    } else {
-      /* It's times like these I'd love a good saturating arithmetic
-       * implementation */
-      int min_inc = INT_MAX;
-      if (old_increment <= INT_MAX - 1) {
-        min_inc = old_increment + 1;
-      }
-
-      int max_inc = INT_MAX;
-      if (old_increment <= (INT_MAX - 1)/exponent) {
-        max_inc = (exponent * old_increment) + 1;
-      }
-
-      /* Regression test for 20534 and friends:
-       * increment must always increase after the first */
-      tt_int_op(increment, OP_GE, min_inc);
-      /* We at most quadruple, and always add one */
-      tt_int_op(increment, OP_LE, max_inc);
-    }
 
     /* Advance */
-    ++(dls_random.n_download_attempts);
-    ++(dls_random.n_download_failures);
+    if (dls_random.n_download_attempts < IMPOSSIBLE_TO_DOWNLOAD - 1) {
+      ++(dls_random.n_download_attempts);
+      ++(dls_random.n_download_failures);
+    }
 
     /* Try another maybe */
     old_increment = increment;
-    if (increment >= max_delay)
-      current_time += increment;
-
-  } while (increment < max_delay);
+  } while (increment < max_delay && ++n_attempts < 1000);
 
  done:
   return;
@@ -4206,6 +4182,38 @@ test_dir_download_status_random_backoff(void *arg)
   download_status_random_backoff_helper(1, 1);
   download_status_random_backoff_helper(0, INT_MAX);
   download_status_random_backoff_helper(INT_MAX/2, INT_MAX);
+}
+
+static void
+test_dir_download_status_random_backoff_ranges(void *arg)
+{
+  (void)arg;
+  int lo, hi;
+  next_random_exponential_delay_range(&lo, &hi, 0, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 11);
+
+  next_random_exponential_delay_range(&lo, &hi, 6, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 6*3);
+
+  next_random_exponential_delay_range(&lo, &hi, 13, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 13 * 3);
+
+  next_random_exponential_delay_range(&lo, &hi, 37, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 111);
+
+  next_random_exponential_delay_range(&lo, &hi, 123, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, 369);
+
+  next_random_exponential_delay_range(&lo, &hi, INT_MAX-5, 10);
+  tt_int_op(lo, OP_EQ, 10);
+  tt_int_op(hi, OP_EQ, INT_MAX);
+ done:
+  ;
 }
 
 static void
@@ -6208,6 +6216,7 @@ struct testcase_t dir_tests[] = {
   DIR(packages, 0),
   DIR(download_status_schedule, 0),
   DIR(download_status_random_backoff, 0),
+  DIR(download_status_random_backoff_ranges, 0),
   DIR(download_status_increment, 0),
   DIR(authdir_type_to_string, 0),
   DIR(conn_purpose_to_string, 0),
