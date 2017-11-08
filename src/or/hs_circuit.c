@@ -13,6 +13,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "relay.h"
 #include "rendservice.h"
@@ -553,76 +554,98 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
   return;
 }
 
-/* Using an extend info object ei, set all possible link specifiers in lspecs.
- * legacy ID is mandatory thus MUST be present in ei. If IPv4 is not present,
- * logs a BUG() warning, and returns an empty smartlist. Clients never make
- * direct connections to rendezvous points, so they should always have an
- * IPv4 address in ei. */
+/* Add all possible link specifiers in node to lspecs.
+ * legacy ID is mandatory thus MUST be present in node. If the primary address
+ * is not IPv4, log a BUG() warning, and return an empty smartlist.
+ * Includes ed25519 id and IPv6 link specifiers if present in the node. */
 static void
-get_lspecs_from_extend_info(const extend_info_t *ei, smartlist_t *lspecs)
+get_lspecs_from_node(const node_t *node, smartlist_t *lspecs)
 {
   link_specifier_t *ls;
+  tor_addr_port_t ap;
 
-  tor_assert(ei);
+  tor_assert(node);
   tor_assert(lspecs);
 
-  /* We require IPv4, we will add IPv6 support in a later tor version */
-  if (BUG(!tor_addr_is_v4(&ei->addr))) {
+  /* Get the relay's IPv4 address. */
+  node_get_prim_orport(node, &ap);
+
+  /* We expect the node's primary address to be a valid IPv4 address.
+   * This conforms to the protocol, which requires either an IPv4 or IPv6
+   * address (or both). */
+  if (BUG(!tor_addr_is_v4(&ap.addr)) ||
+      BUG(!tor_addr_port_is_valid_ap(&ap, 0))) {
     return;
   }
 
   ls = link_specifier_new();
   link_specifier_set_ls_type(ls, LS_IPV4);
-  link_specifier_set_un_ipv4_addr(ls, tor_addr_to_ipv4h(&ei->addr));
-  link_specifier_set_un_ipv4_port(ls, ei->port);
+  link_specifier_set_un_ipv4_addr(ls, tor_addr_to_ipv4h(&ap.addr));
+  link_specifier_set_un_ipv4_port(ls, ap.port);
   /* Four bytes IPv4 and two bytes port. */
-  link_specifier_set_ls_len(ls, sizeof(ei->addr.addr.in_addr) +
-                            sizeof(ei->port));
+  link_specifier_set_ls_len(ls, sizeof(ap.addr.addr.in_addr) +
+                            sizeof(ap.port));
   smartlist_add(lspecs, ls);
 
-  /* Legacy ID is mandatory. */
+  /* Legacy ID is mandatory and will always be present in node. */
   ls = link_specifier_new();
   link_specifier_set_ls_type(ls, LS_LEGACY_ID);
-  memcpy(link_specifier_getarray_un_legacy_id(ls), ei->identity_digest,
+  memcpy(link_specifier_getarray_un_legacy_id(ls), node->identity,
          link_specifier_getlen_un_legacy_id(ls));
   link_specifier_set_ls_len(ls, link_specifier_getlen_un_legacy_id(ls));
   smartlist_add(lspecs, ls);
 
-  /* ed25519 ID is only included if the extend_info has it. */
-  if (!ed25519_public_key_is_zero(&ei->ed_identity)) {
+  /* ed25519 ID is only included if the node has it. */
+  if (!ed25519_public_key_is_zero(&node->ed25519_id)) {
     ls = link_specifier_new();
     link_specifier_set_ls_type(ls, LS_ED25519_ID);
-    memcpy(link_specifier_getarray_un_ed25519_id(ls), &ei->ed_identity,
+    memcpy(link_specifier_getarray_un_ed25519_id(ls), &node->ed25519_id,
            link_specifier_getlen_un_ed25519_id(ls));
     link_specifier_set_ls_len(ls, link_specifier_getlen_un_ed25519_id(ls));
     smartlist_add(lspecs, ls);
   }
+
+  /* Check for IPv6. If so, include it as well. */
+  if (node_has_ipv6_orport(node)) {
+    ls = link_specifier_new();
+    node_get_pref_ipv6_orport(node, &ap);
+    link_specifier_set_ls_type(ls, LS_IPV6);
+    size_t addr_len = link_specifier_getlen_un_ipv6_addr(ls);
+    const uint8_t *in6_addr = tor_addr_to_in6_addr8(&ap.addr);
+    uint8_t *ipv6_array = link_specifier_getarray_un_ipv6_addr(ls);
+    memcpy(ipv6_array, in6_addr, addr_len);
+    link_specifier_set_un_ipv6_port(ls, ap.port);
+    /* Sixteen bytes IPv6 and two bytes port. */
+    link_specifier_set_ls_len(ls, addr_len + sizeof(ap.port));
+  }
 }
 
-/* Using the given descriptor intro point ip, the extend information of the
- * rendezvous point rp_ei and the service's subcredential, populate the
+/* Using the given descriptor intro point ip, the node of the
+ * rendezvous point rp_node and the service's subcredential, populate the
  * already allocated intro1_data object with the needed key material and link
  * specifiers.
  *
- * This can't fail but the ip MUST be a valid object containing the needed
- * keys and authentication method. */
+ * If rp_node has an invalid primary address, intro1_data->link_specifiers
+ * will be an empty list. Otherwise, this function can't fail. The ip
+ * MUST be a valid object containing the needed keys and authentication
+ * method. */
 static void
 setup_introduce1_data(const hs_desc_intro_point_t *ip,
-                      const extend_info_t *rp_ei,
+                      const node_t *rp_node,
                       const uint8_t *subcredential,
                       hs_cell_introduce1_data_t *intro1_data)
 {
   smartlist_t *rp_lspecs;
 
   tor_assert(ip);
-  tor_assert(rp_ei);
+  tor_assert(rp_node);
   tor_assert(subcredential);
   tor_assert(intro1_data);
 
   /* Build the link specifiers from the extend information of the rendezvous
    * circuit that we've picked previously. */
   rp_lspecs = smartlist_new();
-  get_lspecs_from_extend_info(rp_ei, rp_lspecs);
+  get_lspecs_from_node(rp_node, rp_lspecs);
 
   /* Populate the introduce1 data object. */
   memset(intro1_data, 0, sizeof(hs_cell_introduce1_data_t));
@@ -633,7 +656,7 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
   intro1_data->auth_pk = &ip->auth_key_cert->signed_key;
   intro1_data->enc_pk = &ip->enc_key;
   intro1_data->subcredential = subcredential;
-  intro1_data->onion_pk = &rp_ei->curve25519_onion_key;
+  intro1_data->onion_pk = node_get_curve25519_onion_key(rp_node);
   intro1_data->link_specifiers = rp_lspecs;
 }
 
@@ -1079,9 +1102,9 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
 
   /* This takes various objects in order to populate the introduce1 data
    * object which is used to build the content of the cell. */
-  setup_introduce1_data(ip, rend_circ->build_state->chosen_exit,
-                        subcredential, &intro1_data);
-  /* If we didn't get any link specifiers, it's because our extend info was
+  const node_t *exit_node = build_state_get_exit_node(rend_circ->build_state);
+  setup_introduce1_data(ip, exit_node, subcredential, &intro1_data);
+  /* If we didn't get any link specifiers, it's because our node was
    * bad. */
   if (BUG(!intro1_data.link_specifiers) ||
       !smartlist_len(intro1_data.link_specifiers)) {
