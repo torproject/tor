@@ -1729,6 +1729,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   /* Simpler cases: no gaurds are confirmed yet. */
   (void)arg;
   guard_selection_t *gs = guard_selection_new("default", GS_TYPE_NORMAL);
+  entry_guard_restriction_t *rst = NULL;
 
   /* simple starting configuration */
   entry_guards_update_primary(gs);
@@ -1810,7 +1811,6 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   tt_ptr_op(g2, OP_EQ, g);
 
   /* But if we impose a restriction, we don't get the same guard */
-  entry_guard_restriction_t *rst;
   rst = guard_create_exit_restriction((uint8_t*)g->identity);
   g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, rst, &state);
   tt_ptr_op(g2, OP_NE, g);
