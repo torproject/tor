@@ -2547,8 +2547,11 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   double Wg = -1, Wm = -1, We = -1, Wd = -1;
   double Wgb = -1, Wmb = -1, Web = -1, Wdb = -1;
   guardfraction_bandwidth_t guardfraction_bw;
-  double *bandwidths;
+  double *bandwidths = NULL;
   double total_bandwidth = 0.0;
+
+  tor_assert(sl);
+  tor_assert(bandwidths_out);
 
   /* Can't choose exit and guard at same time */
   tor_assert(rule == NO_WEIGHTING ||
@@ -2556,6 +2559,8 @@ compute_weighted_bandwidths(const smartlist_t *sl,
              rule == WEIGHT_FOR_GUARD ||
              rule == WEIGHT_FOR_MID ||
              rule == WEIGHT_FOR_DIR);
+
+  *bandwidths_out = NULL;
 
   if (total_bandwidth_out) {
     *total_bandwidth_out = 0.0;
