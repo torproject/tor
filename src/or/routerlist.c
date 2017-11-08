@@ -2546,7 +2546,6 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   int64_t weight_scale;
   double Wg = -1, Wm = -1, We = -1, Wd = -1;
   double Wgb = -1, Wmb = -1, Web = -1, Wdb = -1;
-  uint64_t weighted_bw = 0;
   guardfraction_bandwidth_t guardfraction_bw;
   double *bandwidths;
   double total_bandwidth = 0.0;
@@ -2728,9 +2727,9 @@ compute_weighted_bandwidths(const smartlist_t *sl,
 
   log_debug(LD_CIRC, "Generated weighted bandwidths for rule %s based "
             "on weights "
-            "Wg=%f Wm=%f We=%f Wd=%f with total bw "U64_FORMAT,
+            "Wg=%f Wm=%f We=%f Wd=%f with total bw %f",
             bandwidth_weight_rule_to_string(rule),
-            Wg, Wm, We, Wd, U64_PRINTF_ARG(weighted_bw));
+            Wg, Wm, We, Wd, total_bandwidth);
 
   *bandwidths_out = bandwidths;
 
