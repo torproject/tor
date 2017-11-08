@@ -2878,7 +2878,7 @@ dirvote_recalculate_timing(const or_options_t *options, time_t now)
   voting_schedule_t *new_voting_schedule;
 
   /* get the new voting schedule */
-  new_voting_schedule = get_voting_schedule(options, now, LOG_NOTICE);
+  new_voting_schedule = get_voting_schedule(options, now, LOG_INFO);
   tor_assert(new_voting_schedule);
 
   /* Fill in the global static struct now */
