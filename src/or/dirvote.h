@@ -168,6 +168,13 @@ typedef struct {
   int have_fetched_missing_signatures;
   /* True iff we have published our consensus. */
   int have_published_consensus;
+
+  /* True iff this voting schedule was set on demand meaning not through the
+   * normal vote operation of a dirauth or when a consensus is set. This only
+   * applies to a directory authority that needs to recalculate the voting
+   * timings only for the first vote even though this object was initilized
+   * prior to voting. */
+  int created_on_demand;
 } voting_schedule_t;
 
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);

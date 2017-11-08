@@ -2865,6 +2865,7 @@ dirvote_get_next_valid_after_time(void)
   if (tor_mem_is_zero((const char *) &voting_schedule,
                       sizeof(voting_schedule))) {
     dirvote_recalculate_timing(get_options(), time(NULL));
+    voting_schedule.created_on_demand = 1;
   }
   return voting_schedule.interval_starts;
 }
@@ -2892,7 +2893,13 @@ dirvote_act(const or_options_t *options, time_t now)
 {
   if (!authdir_mode_v3(options))
     return;
-  if (!voting_schedule.voting_starts) {
+  tor_assert_nonfatal(voting_schedule.voting_starts);
+  /* If we haven't initialized this object through this codeflow, we need to
+   * recalculate the timings to match our vote. The reason to do that is if we
+   * have a voting schedule initialized 1 minute ago, the voting timings might
+   * not be aligned to what we should expect with "now". This is especially
+   * true for TestingTorNetwork using smaller timings.  */
+  if (voting_schedule.created_on_demand) {
     char *keys = list_v3_auth_ids();
     authority_cert_t *c = get_my_v3_authority_cert();
     log_notice(LD_DIR, "Scheduling voting.  Known authority IDs are %s. "
