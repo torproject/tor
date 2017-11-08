@@ -2768,12 +2768,10 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
     return ((double)n_with_descs) / (double)smartlist_len(sl);
   }
 
-  total = present = 0.0;
+  present = 0.0;
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
-    const double bw = bandwidths[node_sl_idx];
-    total += bw;
     if (node_has_descriptor(node))
-      present += bw;
+      present += bandwidths[node_sl_idx];
   } SMARTLIST_FOREACH_END(node);
 
   tor_free(bandwidths);
