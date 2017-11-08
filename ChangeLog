@@ -5,11 +5,11 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
 
   o Major bugfixes (exit nodes, DNS):
     - Fix an issue causing DNS to fail on high-bandwidth exit nodes,
-      making them enarly unusable for regular. Fixes bugs 21394 and
-      18580; bugfix on 0.1.2.2-alpha, which introduced eventdns. Thanks
-      to Dhalgren for identifying and finding a workaround to this bug
-      and to Moritz, Arthur Edelstein and Roger for helping to track it
-      down and analyze it.
+      making them nearly unusable. Fixes bugs 21394 and 18580; bugfix on
+      0.1.2.2-alpha, which introduced eventdns. Thanks to Dhalgren for
+      identifying and finding a workaround to this bug and to Moritz,
+      Arthur Edelstein and Roger for helping to track it down and
+      analyze it.
 
   o Major bugfixes (scheduler, channel):
     - Ignore channels that have been closed while flushing cells. This
