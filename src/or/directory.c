@@ -5403,54 +5403,68 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
     *max = INT_MAX;
 }
 
-/** Advance one delay step.  The algorithm is to use the previous delay to
- * compute an increment, we construct a value uniformly at random between
- * delay+1 and (delay*(DIR_DEFAULT_RANDOM_MULTIPLIER+1))+1 (or
- * DIR_TEST_NET_RANDOM_MULTIPLIER in test networks).
+/** As next_random_exponential_delay() below, but does not compute a random
+ * value. Instead, compute the range of values that
+ * next_random_exponential_delay() should use when computing its random value.
+ * Store the low bound into *<b>low_bound_out</b>, and the high bound into
+ * *<b>high_bound_out</b>.  Guarantees that the low bound is strictly less
+ * than the high bound. */
+STATIC void
+next_random_exponential_delay_range(int *low_bound_out,
+                                    int *high_bound_out,
+                                    int delay,
+                                    int base_delay)
+{
+  // This is the "decorrelated jitter" approach, from
+  //    https://www.awsarchitectureblog.com/2015/03/backoff.html
+  // The formula is
+  //    sleep = min(cap, random_between(base, sleep * 3))
+
+  const int delay_times_3 = delay < INT_MAX/3 ? delay * 3 : INT_MAX;
+  *low_bound_out = base_delay;
+  if (delay_times_3 > base_delay) {
+    *high_bound_out = delay_times_3;
+  } else {
+    *high_bound_out = base_delay+1;
+  }
+}
+
+/** Advance one delay step.  The algorithm will generate a random delay,
+ * such that each failure is possibly (random) longer than the ones before.
+ *
  * We then clamp that value to be no larger than max_delay, and return it.
+ *
+ * The <b>base_delay</b> parameter is lowest possible delay time (can't be
+ * zero); the <b>backoff_position</b> parameter is the number of times we've
+ * generated a delay; and the <b>delay</b> argument is the most recently used
+ * delay.
  *
  * Requires that delay is less than INT_MAX, and delay is in [0,max_delay].
  */
 STATIC int
-next_random_exponential_delay(int delay, int max_delay)
+next_random_exponential_delay(int delay,
+                              int base_delay,
+                              int max_delay)
 {
   /* Check preconditions */
   if (BUG(max_delay < 0))
     max_delay = 0;
   if (BUG(delay > max_delay))
     delay = max_delay;
-  if (delay == INT_MAX)
-    return INT_MAX; /* prevent overflow */
   if (BUG(delay < 0))
     delay = 0;
 
-  /* How much are we willing to add to the delay? */
-  int max_increment;
-  int multiplier = DIR_DEFAULT_RANDOM_MULTIPLIER;
-  if (get_options()->TestingTorNetwork) {
-    /* Decrease the multiplier in testing networks. This reduces the variance,
-     * so that bootstrap is more reliable. */
-    multiplier = DIR_TEST_NET_RANDOM_MULTIPLIER;
-  }
+  if (base_delay < 1)
+    base_delay = 1;
 
-  if (delay && delay < (INT_MAX-1) / multiplier) {
-    max_increment = delay * multiplier;
-  } else if (delay) {
-    max_increment = INT_MAX-1;
-  } else {
-    max_increment = 1;
-  }
+  int low_bound=0, high_bound=max_delay;
 
-  if (BUG(max_increment < 1))
-    max_increment = 1;
+  next_random_exponential_delay_range(&low_bound, &high_bound,
+                                      delay, base_delay);
 
-  /* the + 1 here is so that we always wait longer than last time. */
-  int increment = crypto_rand_int(max_increment)+1;
+  int rand_delay = crypto_rand_int_range(low_bound, high_bound);
 
-  if (increment < max_delay - delay)
-    return delay + increment;
-  else
-    return max_delay;
+  return MIN(rand_delay, max_delay);
 }
 
 /** Find the current delay for dls based on schedule or min_delay/
@@ -5499,7 +5513,7 @@ download_status_schedule_get_delay(download_status_t *dls,
 
       while (dls->last_backoff_position < dls_schedule_position) {
         /* Do one increment step */
-        delay = next_random_exponential_delay(delay, max_delay);
+        delay = next_random_exponential_delay(delay, min_delay, max_delay);
         /* Update our position */
         ++(dls->last_backoff_position);
       }

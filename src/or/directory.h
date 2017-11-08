@@ -229,7 +229,15 @@ STATIC const smartlist_t *find_dl_schedule(const download_status_t *dls,
 STATIC void find_dl_min_and_max_delay(download_status_t *dls,
                                       const or_options_t *options,
                                       int *min, int *max);
-STATIC int next_random_exponential_delay(int delay, int max_delay);
+
+STATIC int next_random_exponential_delay(int delay,
+                                         int base_delay,
+                                         int max_delay);
+
+STATIC void next_random_exponential_delay_range(int *low_bound_out,
+                                                int *high_bound_out,
+                                                int delay,
+                                                int base_delay);
 
 STATIC int parse_hs_version_from_post(const char *url, const char *prefix,
                                       const char **end_pos);

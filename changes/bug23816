@@ -1,0 +1,6 @@
+  o Minor bugfixes (directory client):
+    - On failure to download directory information, delay retry attempts
+      by a random amount based on the "decorrelated jitter" algorithm.
+      Our previous delay algorithm tended to produce extra-long delays too
+      easily. Fixes bug 23816; bugfix on 0.2.9.1-alpha.
+
