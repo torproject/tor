@@ -11,6 +11,12 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
       and to Moritz, Arthur Edelstein and Roger for helping to track it
       down and analyze it.
 
+  o Major bugfixes (scheduler, channel):
+    - Ignore channels that have been closed while flushing cells. This
+      can happen if the write on the connection fails leading to the
+      channel being closed while in the scheduler loop. Fixes bug 23751;
+      bugfix on 0.3.2.1-alpha.
+
   o Minor features (logging, scheduler):
     - Introduce a SCHED_BUG() function to log extra information about
       the scheduler state if we ever catch a bug in the scheduler.
@@ -64,6 +70,19 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
       bugfix on 0.3.2.1-alpha.
     - Properly retry HSv3 descriptor fetches when missing required
       directory information. Fixes bug 23762; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (path selection):
+    - When selecting relays by bandwidth, avoid a rounding error that
+      could sometimes cause load to be imbalanced incorrectly.
+      Previously, we would always round upwards; now, we round towards
+      the nearest integer. This had the biggest effect when a relay's
+      weight adjustments should have given it weight 0, but it got
+      weight 1 instead. Fixes bug 23318; bugfix on 0.2.4.3-alpha.
+    - When calculating the fraction of nodes that have descriptors, and
+      all all nodes in the network have zero bandwidths, count the
+      number of nodes instead. Fixes bug 23318; bugfix on 0.2.4.10-alpha.
+    - Actually log the total bandwidth in compute_weighted_bandwidths().
+      Fixes bug 24170; bugfix on 0.2.4.3-alpha.
 
   o Minor bugfixes (relay, crash):
     - Avoid a crash when transitioning from client mode to bridge mode.
