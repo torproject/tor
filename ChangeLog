@@ -14,10 +14,9 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
 
   o Major bugfixes (scheduler, channel):
     - Stop processing scheduled channels if they closed while flushing
-      cells. This
-      can happen if the write on the connection fails leading to the
-      channel being closed while in the scheduler loop. Fixes bug 23751;
-      bugfix on 0.3.2.1-alpha.
+      cells. This can happen if the write on the connection fails
+      leading to the channel being closed while in the scheduler loop.
+      Fixes bug 23751; bugfix on 0.3.2.1-alpha.
 
   o Minor features (logging, scheduler):
     - Introduce a SCHED_BUG() function to log extra information about
@@ -81,8 +80,8 @@ Changes in version 0.3.2.4-alpha - 2017-11-08
       weight adjustments should have given it weight 0, but it got
       weight 1 instead. Fixes bug 23318; bugfix on 0.2.4.3-alpha.
     - When calculating the fraction of nodes that have descriptors, and
-      all nodes in the network have zero bandwidths, count the
-      number of nodes instead. Fixes bug 23318; bugfix on 0.2.4.10-alpha.
+      all nodes in the network have zero bandwidths, count the number of
+      nodes instead. Fixes bug 23318; bugfix on 0.2.4.10-alpha.
     - Actually log the total bandwidth in compute_weighted_bandwidths().
       Fixes bug 24170; bugfix on 0.2.4.3-alpha.
 
