@@ -1,0 +1,6 @@
+  o Minor bugfixes (scheduler, channel):
+    - Ignore channels that have been closed while flushing cells. This can
+      happen if the write on the connection fails leading to the channel being
+      closed while in the scheduler loop. This is not a complete fix, it is a
+      bandaid until we are able to refactor those interactions. Fixes bug
+      23751; bugfix on 0.3.2.1-alpha.
