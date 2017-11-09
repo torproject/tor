@@ -1471,7 +1471,9 @@ run_scheduled_events(time_t now)
   /* Maybe enough time elapsed for us to reconsider a circuit. */
   circuit_upgrade_circuits_from_guard_wait();
 
-  if (options->UseBridges && !options->DisableNetwork) {
+  if (options->UseBridges && !net_is_disabled()) {
+    /* Note: this check uses net_is_disabled(), not should_delay_dir_fetches()
+     * -- the latter is only for fetching consensus-derived directory info. */
     fetch_bridge_descriptors(options, now);
   }
 
@@ -1577,7 +1579,7 @@ rotate_onion_key_callback(time_t now, const or_options_t *options)
     if (router_rebuild_descriptor(1)<0) {
       log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
     }
-    if (advertised_server_mode() && !options->DisableNetwork)
+    if (advertised_server_mode() && !net_is_disabled())
       router_upload_dir_desc_to_dirservers(0);
     return ONION_KEY_CONSENSUS_CHECK_INTERVAL;
   }
@@ -1942,9 +1944,11 @@ check_descriptor_callback(time_t now, const or_options_t *options)
  * address has changed. */
 #define CHECK_DESCRIPTOR_INTERVAL (60)
 
+  (void)options;
+
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
-  if (!options->DisableNetwork) {
+  if (!net_is_disabled()) {
     check_descriptor_bandwidth_changed(now);
     check_descriptor_ipaddress_changed(now);
     mark_my_descriptor_dirty_if_too_old(now);
@@ -1976,7 +1980,7 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
    * 20 minutes of our uptime. */
   if (server_mode(options) &&
       (have_completed_a_circuit() || !any_predicted_circuits(now)) &&
-      !we_are_hibernating()) {
+      !net_is_disabled()) {
     if (stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
       consider_testing_reachability(1, dirport_reachability_count==0);
       if (++dirport_reachability_count > 5)
@@ -2478,7 +2482,7 @@ do_hup(void)
   /* retry appropriate downloads */
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
-  if (!options->DisableNetwork)
+  if (!net_is_disabled())
     update_networkstatus_downloads(time(NULL));
 
   /* We'll retry routerstatus downloads in about 10 seconds; no need to
