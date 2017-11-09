@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (hibernation, bandwidth accounting, shutdown):
 
     - When hibernating, do not attempt to launch DNS checks. Fixes a
       case of bug 12062; bugfix on 0.1.2.2-alpha.
