@@ -364,12 +364,7 @@ pub fn protover_string_supports_protocol_or_later(
         None => return false,
     };
 
-    for v in supported_versions.iter() {
-        if v >= &vers {
-            return true;
-        }
-    }
-    return false;
+    supported_versions.iter().any(|v| v >= &vers)
 }
 
 /// Fully expand a version range. For example, 1-3 expands to 1,2,3
