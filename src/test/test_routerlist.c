@@ -5,11 +5,12 @@
 #include <math.h>
 #include <time.h>
 
+#define CONNECTION_PRIVATE
+#define DIRECTORY_PRIVATE
 #define DIRVOTE_PRIVATE
 #define ENTRYNODES_PRIVATE
-#define DIRECTORY_PRIVATE
+#define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
-#define CONNECTION_PRIVATE
 #define ROUTERLIST_PRIVATE
 #define TOR_UNIT_TESTING
 #include "or.h"
@@ -20,6 +21,7 @@
 #include "directory.h"
 #include "dirvote.h"
 #include "entrynodes.h"
+#include "hibernate.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -452,6 +454,8 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
   or_options_t *options = get_options_mutable();
 
   (void) arg;
+
+  hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
   /* Initialize the SRV subsystem */
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
