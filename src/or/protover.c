@@ -282,6 +282,42 @@ protocol_list_supports_protocol(const char *list, protocol_type_t tp,
   return contains;
 }
 
+/**
+ * Return true iff "list" encodes a protocol list that includes support for
+ * the indicated protocol and version, or some later version.
+ */
+int
+protocol_list_supports_protocol_or_later(const char *list,
+                                         protocol_type_t tp,
+                                         uint32_t version)
+{
+  /* NOTE: This is a pretty inefficient implementation. If it ever shows
+   * up in profiles, we should memoize it.
+   */
+  smartlist_t *protocols = parse_protocol_list(list);
+  if (!protocols) {
+    return 0;
+  }
+  const char *pr_name = protocol_type_to_str(tp);
+
+  int contains = 0;
+  SMARTLIST_FOREACH_BEGIN(protocols, proto_entry_t *, proto) {
+    if (strcasecmp(proto->name, pr_name))
+      continue;
+    SMARTLIST_FOREACH_BEGIN(proto->ranges, const proto_range_t *, range) {
+      if (range->high >= version) {
+        contains = 1;
+        goto found;
+      }
+    } SMARTLIST_FOREACH_END(range);
+  } SMARTLIST_FOREACH_END(proto);
+
+ found:
+  SMARTLIST_FOREACH(protocols, proto_entry_t *, ent, proto_entry_free(ent));
+  smartlist_free(protocols);
+  return contains;
+}
+
 /** Return the canonical string containing the list of protocols
  * that we support. */
 const char *

@@ -65,7 +65,8 @@ const smartlist_t *node_get_declared_family(const node_t *node);
 const ed25519_public_key_t *node_get_ed25519_id(const node_t *node);
 int node_ed25519_id_matches(const node_t *node,
                             const ed25519_public_key_t *id);
-int node_supports_ed25519_link_authentication(const node_t *node);
+int node_supports_ed25519_link_authentication(const node_t *node,
+                                              int compatible_with_us);
 int node_supports_v3_hsdir(const node_t *node);
 int node_supports_ed25519_hs_intro(const node_t *node);
 int node_supports_v3_rendezvous_point(const node_t *node);

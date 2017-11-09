@@ -1572,7 +1572,7 @@ pick_intro_point(unsigned int direct_conn, smartlist_t *exclude_nodes)
   /* Let's do a basic sanity check here so that we don't end up advertising the
    * ed25519 identity key of relays that don't actually support the link
    * protocol */
-  if (!node_supports_ed25519_link_authentication(node)) {
+  if (!node_supports_ed25519_link_authentication(node, 0)) {
     tor_assert_nonfatal(ed25519_public_key_is_zero(&info->ed_identity));
   } else {
     /* Make sure we *do* have an ed key if we support the link authentication.

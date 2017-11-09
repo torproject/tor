@@ -1290,7 +1290,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     const node_t *node = node_get_by_id((const char*)ec.node_id);
     const ed25519_public_key_t *node_ed_id = NULL;
     if (node &&
-        node_supports_ed25519_link_authentication(node) &&
+        node_supports_ed25519_link_authentication(node, 1) &&
         (node_ed_id = node_get_ed25519_id(node))) {
       ed25519_pubkey_copy(&ec.ed_pubkey, node_ed_id);
     }
@@ -2698,7 +2698,7 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
 
   /* Don't send the ed25519 pubkey unless the target node actually supports
    * authenticating with it. */
-  if (node_supports_ed25519_link_authentication(node)) {
+  if (node_supports_ed25519_link_authentication(node, 0)) {
     log_info(LD_CIRC, "Including Ed25519 ID for %s", node_describe(node));
     ed_pubkey = node_get_ed25519_id(node);
   } else if (node_get_ed25519_id(node)) {

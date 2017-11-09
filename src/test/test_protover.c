@@ -221,6 +221,35 @@ test_protover_list_supports_protocol_for_unsupported_returns_false(void *arg)
   ;
 }
 
+static void
+test_protover_supports_version(void *arg)
+{
+  (void)arg;
+
+  tt_assert(protocol_list_supports_protocol("Link=3-6", PRT_LINK, 3));
+  tt_assert(protocol_list_supports_protocol("Link=3-6", PRT_LINK, 6));
+  tt_assert(!protocol_list_supports_protocol("Link=3-6", PRT_LINK, 7));
+  tt_assert(!protocol_list_supports_protocol("Link=3-6", PRT_LINKAUTH, 3));
+
+  tt_assert(!protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
+                                            PRT_LINKAUTH, 2));
+  tt_assert(protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
+                                            PRT_LINKAUTH, 3));
+  tt_assert(!protocol_list_supports_protocol("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 4));
+  tt_assert(!protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 4));
+  tt_assert(protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 3));
+  tt_assert(protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                             PRT_LINKAUTH, 2));
+
+  tt_assert(!protocol_list_supports_protocol_or_later("Link=4-6 LinkAuth=3",
+                                                      PRT_DESC, 2));
+ done:
+ ;
+}
+
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
 
@@ -231,6 +260,7 @@ struct testcase_t protover_tests[] = {
   PV_TEST(all_supported, 0),
   PV_TEST(list_supports_protocol_for_unsupported_returns_false, 0),
   PV_TEST(list_supports_protocol_returns_true, 0),
+  PV_TEST(supports_version, 0),
   END_OF_TESTCASES
 };
 

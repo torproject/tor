@@ -2701,8 +2701,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     rs->protocols_known = 1;
     rs->supports_extend2_cells =
       protocol_list_supports_protocol(tok->args[0], PRT_RELAY, 2);
-    rs->supports_ed25519_link_handshake =
+    rs->supports_ed25519_link_handshake_compat =
       protocol_list_supports_protocol(tok->args[0], PRT_LINKAUTH, 3);
+    rs->supports_ed25519_link_handshake_any =
+      protocol_list_supports_protocol_or_later(tok->args[0], PRT_LINKAUTH, 3);
     rs->supports_ed25519_hs_intro =
       protocol_list_supports_protocol(tok->args[0], PRT_HSINTRO, 4);
     rs->supports_v3_hsdir =

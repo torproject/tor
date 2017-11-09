@@ -3284,7 +3284,7 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
   ri = node->ri;
 
   if (get_options()->AuthDirTestEd25519LinkKeys &&
-      node_supports_ed25519_link_authentication(node) &&
+      node_supports_ed25519_link_authentication(node, 1) &&
       ri->cache_info.signing_key_cert) {
     /* We allow the node to have an ed25519 key if we haven't been told one in
      * the routerinfo, but if we *HAVE* been told one in the routerinfo, it
@@ -3367,7 +3367,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   tor_assert(node);
 
   if (options->AuthDirTestEd25519LinkKeys &&
-      node_supports_ed25519_link_authentication(node)) {
+      node_supports_ed25519_link_authentication(node, 1)) {
     ed_id_key = &router->cache_info.signing_key_cert->signing_key;
   } else {
     ed_id_key = NULL;
