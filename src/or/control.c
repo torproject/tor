@@ -4447,19 +4447,14 @@ add_onion_helper_add_service(int hs_version, void *pk, smartlist_t *port_cfgs,
 
   switch (hs_version) {
   case HS_VERSION_TWO:
-  {
     ret = rend_service_add_ephemeral(pk, port_cfgs, max_streams,
                                      max_streams_close_circuit, auth_type,
                                      auth_clients, address_out);
     break;
-  }
   case HS_VERSION_THREE:
-  {
-    /* XXX: Not implemented yet. */
-    *address_out = tor_strdup("this is a v3 address");
-    ret = RSAE_OKAY;
+    ret = hs_service_add_ephemeral(pk, port_cfgs, max_streams,
+                                   max_streams_close_circuit, address_out);
     break;
-  }
   default:
     tor_assert_unreached();
   }
@@ -4971,6 +4966,7 @@ handle_control_del_onion(control_connection_t *conn,
                           uint32_t len,
                           const char *body)
 {
+  int hs_version = 0;
   smartlist_t *args;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
   args = getargs_helper("DEL_ONION", conn, body, 1, 1);
@@ -4978,7 +4974,11 @@ handle_control_del_onion(control_connection_t *conn,
     return 0;
 
   const char *service_id = smartlist_get(args, 0);
-  if (!rend_valid_v2_service_id(service_id)) {
+  if (rend_valid_v2_service_id(service_id)) {
+    hs_version = HS_VERSION_TWO;
+  } else if (hs_address_is_valid(service_id)) {
+    hs_version = HS_VERSION_THREE;
+  } else {
     connection_printf_to_buf(conn, "512 Malformed Onion Service id\r\n");
     goto out;
   }
@@ -5005,8 +5005,20 @@ handle_control_del_onion(control_connection_t *conn,
   if (onion_services == NULL) {
     connection_printf_to_buf(conn, "552 Unknown Onion Service id\r\n");
   } else {
-    int ret = rend_service_del_ephemeral(service_id);
-    if (ret) {
+    int ret = -1;
+    switch (hs_version) {
+    case HS_VERSION_TWO:
+      ret = rend_service_del_ephemeral(service_id);
+      break;
+    case HS_VERSION_THREE:
+      ret = hs_service_del_ephemeral(service_id);
+      break;
+    default:
+      /* The ret value will be -1 thus hitting the warning below. This should
+       * never happen because of the check at the start of the function. */
+      break;
+    }
+    if (ret < 0) {
       /* This should *NEVER* fail, since the service is on either the
        * per-control connection list, or the global one.
        */
@@ -5076,9 +5088,16 @@ connection_control_closed(control_connection_t *conn)
    * The list and it's contents are scrubbed/freed in connection_free_.
    */
   if (conn->ephemeral_onion_services) {
-    SMARTLIST_FOREACH(conn->ephemeral_onion_services, char *, cp, {
-      rend_service_del_ephemeral(cp);
-    });
+    SMARTLIST_FOREACH_BEGIN(conn->ephemeral_onion_services, char *, cp) {
+      if (rend_valid_v2_service_id(cp)) {
+        rend_service_del_ephemeral(cp);
+      } else if (hs_address_is_valid(cp)) {
+        hs_service_del_ephemeral(cp);
+      } else {
+        /* An invalid .onion in our list should NEVER happen */
+        tor_fragile_assert();
+      }
+    } SMARTLIST_FOREACH_END(cp);
   }
 
   if (conn->is_owning_control_connection) {

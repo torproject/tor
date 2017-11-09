@@ -2900,6 +2900,132 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* Public API */
 /* ========== */
 
+/* Add the ephemeral service using the secret key sk and ports. Both max
+ * streams parameter will be set in the newly created service.
+ *
+ * Ownership of sk and ports is passed to this routine.  Regardless of
+ * success/failure, callers should not touch these values after calling this
+ * routine, and may assume that correct cleanup has been done on failure.
+ *
+ * Return an appropriate hs_service_add_ephemeral_status_t. */
+hs_service_add_ephemeral_status_t
+hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
+                         int max_streams_per_rdv_circuit,
+                         int max_streams_close_circuit, char **address_out)
+{
+  hs_service_add_ephemeral_status_t ret;
+  hs_service_t *service = NULL;
+
+  tor_assert(sk);
+  tor_assert(ports);
+  tor_assert(address_out);
+
+  service = hs_service_new(get_options());
+
+  /* Setup the service configuration with specifics. A default service is
+   * HS_VERSION_TWO so explicitely set it. */
+  service->config.version = HS_VERSION_THREE;
+  service->config.max_streams_per_rdv_circuit = max_streams_per_rdv_circuit;
+  service->config.max_streams_close_circuit = !!max_streams_close_circuit;
+  service->config.is_ephemeral = 1;
+  smartlist_free(service->config.ports);
+  service->config.ports = ports;
+
+  /* Handle the keys. */
+  memcpy(&service->keys.identity_sk, sk, sizeof(service->keys.identity_sk));
+  if (ed25519_public_key_generate(&service->keys.identity_pk,
+                                  &service->keys.identity_sk) < 0) {
+    log_warn(LD_CONFIG, "Unable to generate ed25519 public key"
+                        "for v3 service.");
+    ret = RSAE_BADPRIVKEY;
+    goto err;
+  }
+
+  /* Make sure we have at least one port. */
+  if (smartlist_len(service->config.ports) == 0) {
+    log_warn(LD_CONFIG, "At least one VIRTPORT/TARGET must be specified "
+                        "for v3 service.");
+    ret = RSAE_BADVIRTPORT;
+    goto err;
+  }
+
+  /* The only way the registration can fail is if the service public key
+   * already exists. */
+  if (BUG(register_service(hs_service_map, service) < 0)) {
+    log_warn(LD_CONFIG, "Onion Service private key collides with an "
+                        "existing v3 service.");
+    ret = RSAE_ADDREXISTS;
+    goto err;
+  }
+
+  /* Last step is to build the onion address. */
+  hs_build_address(&service->keys.identity_pk,
+                   (uint8_t) service->config.version,
+                   service->onion_address);
+  *address_out = tor_strdup(service->onion_address);
+
+  log_info(LD_CONFIG, "Added ephemeral v3 onion service: %s",
+           safe_str_client(service->onion_address));
+  ret = RSAE_OKAY;
+  goto end;
+
+ err:
+  hs_service_free(service);
+
+ end:
+  memwipe(sk, 0, sizeof(ed25519_secret_key_t));
+  tor_free(sk);
+  return ret;
+}
+
+/* For the given onion address, delete the ephemeral service. Return 0 on
+ * success else -1 on error. */
+int
+hs_service_del_ephemeral(const char *address)
+{
+  uint8_t version;
+  ed25519_public_key_t pk;
+  hs_service_t *service = NULL;
+
+  tor_assert(address);
+
+  if (hs_parse_address(address, &pk, NULL, &version) < 0) {
+    log_warn(LD_CONFIG, "Requested malformed v3 onion address for removal.");
+    goto err;
+  }
+
+  if (version != HS_VERSION_THREE) {
+    log_warn(LD_CONFIG, "Requested version of onion address for removal "
+                        "is not supported.");
+    goto err;
+  }
+
+  service = find_service(hs_service_map, &pk);
+  if (service == NULL) {
+    log_warn(LD_CONFIG, "Requested non-existent v3 hidden service for "
+                        "removal.");
+    goto err;
+  }
+
+  if (!service->config.is_ephemeral) {
+    log_warn(LD_CONFIG, "Requested non-ephemeral v3 hidden service for "
+                        "removal.");
+    goto err;
+  }
+
+  /* Close circuits, remove from map and finally free. */
+  close_service_circuits(service);
+  remove_service(hs_service_map, service);
+  hs_service_free(service);
+
+  log_info(LD_CONFIG, "Removed ephemeral v3 hidden service: %s",
+           safe_str_client(address));
+  return 0;
+
+ err:
+  return -1;
+}
+
 /* Using the ed25519 public key pk, find a service for that key and return the
  * current encoded descriptor as a newly allocated string or NULL if not
  * found. This is used by the control port subsystem. */

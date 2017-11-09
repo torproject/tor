@@ -14,7 +14,81 @@
 #include "test_helpers.h"
 
 static void
-test_add_onion_helper_keyarg(void *arg)
+test_add_onion_helper_keyarg_v3(void *arg)
+{
+  int ret, hs_version;
+  void *pk_ptr = NULL;
+  char *key_new_blob = NULL;
+  char *err_msg = NULL;
+  const char *key_new_alg = NULL;
+
+  (void) arg;
+
+  /* Test explicit ED25519-V3 key generation. */
+  ret = add_onion_helper_keyarg("NEW:ED25519-V3", 0, &key_new_alg,
+                                &key_new_blob, &pk_ptr, &hs_version,
+                                &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_THREE);
+  tt_assert(pk_ptr);
+  tt_str_op(key_new_alg, OP_EQ, "ED25519-V3");
+  tt_assert(key_new_blob);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
+  tor_free(pk_ptr); pk_ptr = NULL;
+  tor_free(key_new_blob);
+
+  /* Test discarding the private key. */
+  ret = add_onion_helper_keyarg("NEW:ED25519-V3", 1, &key_new_alg,
+                                &key_new_blob, &pk_ptr, &hs_version,
+                                &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_THREE);
+  tt_assert(pk_ptr);
+  tt_ptr_op(key_new_alg, OP_EQ, NULL);
+  tt_ptr_op(key_new_blob, OP_EQ, NULL);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
+  tor_free(pk_ptr); pk_ptr = NULL;
+  tor_free(key_new_blob);
+
+  /* Test passing a key blob. */
+  {
+    /* The base64 key and hex key are the same. Hex key is 64 bytes long. The
+     * sk has been generated randomly using python3. */
+    const char *base64_sk =
+      "a9bT19PqGC9Y+BmOo1IQvCGjjwxMiaaxEXZ+FKMxpEQW"
+      "6AmSV5roThUGMRCaqQSCnR2jI1vL2QxHORzI4RxMmw==";
+    const char *hex_sk =
+      "\x6b\xd6\xd3\xd7\xd3\xea\x18\x2f\x58\xf8\x19\x8e\xa3\x52\x10\xbc"
+      "\x21\xa3\x8f\x0c\x4c\x89\xa6\xb1\x11\x76\x7e\x14\xa3\x31\xa4\x44"
+      "\x16\xe8\x09\x92\x57\x9a\xe8\x4e\x15\x06\x31\x10\x9a\xa9\x04\x82"
+      "\x9d\x1d\xa3\x23\x5b\xcb\xd9\x0c\x47\x39\x1c\xc8\xe1\x1c\x4c\x9b";
+    char *key_blob = NULL;
+
+    tor_asprintf(&key_blob, "ED25519-V3:%s", base64_sk);
+    tt_assert(key_blob);
+    ret = add_onion_helper_keyarg(key_blob, 1, &key_new_alg,
+                                  &key_new_blob, &pk_ptr, &hs_version,
+                                  &err_msg);
+    tor_free(key_blob);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(hs_version, OP_EQ, HS_VERSION_THREE);
+    tt_assert(pk_ptr);
+    tt_mem_op(pk_ptr, OP_EQ, hex_sk, 64);
+    tt_ptr_op(key_new_alg, OP_EQ, NULL);
+    tt_ptr_op(key_new_blob, OP_EQ, NULL);
+    tt_ptr_op(err_msg, OP_EQ, NULL);
+    tor_free(pk_ptr); pk_ptr = NULL;
+    tor_free(key_new_blob);
+  }
+
+ done:
+  tor_free(pk_ptr);
+  tor_free(key_new_blob);
+  tor_free(err_msg);
+}
+
+static void
+test_add_onion_helper_keyarg_v2(void *arg)
 {
   int ret, hs_version;
   void *pk_ptr = NULL;
@@ -1386,7 +1460,10 @@ test_download_status_bridge(void *arg)
 }
 
 struct testcase_t controller_tests[] = {
-  { "add_onion_helper_keyarg", test_add_onion_helper_keyarg, 0, NULL, NULL },
+  { "add_onion_helper_keyarg_v2", test_add_onion_helper_keyarg_v2, 0,
+    NULL, NULL },
+  { "add_onion_helper_keyarg_v3", test_add_onion_helper_keyarg_v3, 0,
+    NULL, NULL },
   { "getinfo_helper_onion", test_getinfo_helper_onion, 0, NULL, NULL },
   { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
     NULL, NULL },
