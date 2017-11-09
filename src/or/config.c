@@ -691,11 +691,6 @@ static const config_var_t testing_tor_network_defaults[] = {
 #undef OBSOLETE
 
 static const config_deprecation_t option_deprecation_notes_[] = {
-  /* Deprecated since 0.2.9.2-alpha... */
-  { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
-    "a wide variety of application-level attacks." },
-  /* End of options deprecated since 0.2.9.2-alpha. */
-
   /* Deprecated since 0.3.2.0-alpha. */
   { "HTTPProxy", "It only applies to direct unencrypted HTTP connections "
     "to your directory server, which your Tor probably wasn't using." },
