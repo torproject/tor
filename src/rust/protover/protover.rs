@@ -325,6 +325,53 @@ pub fn protover_string_supports_protocol(
     supported_versions.contains(&vers)
 }
 
+/// As protover_string_supports_protocol(), but also returns True if
+/// any later version of the protocol is supported.
+///
+/// # Examples
+/// ```
+/// use protover::*;
+///
+/// let is_supported = protover_string_supports_protocol_or_later(
+///                       "Link=3-4 Cons=5", Proto::Cons, 5);
+///
+/// assert_eq!(true, is_supported);
+///
+/// let is_supported = protover_string_supports_protocol_or_later(
+///                       "Link=3-4 Cons=5", Proto::Cons, 4);
+///
+/// assert_eq!(true, is_supported);
+///
+/// let is_supported = protover_string_supports_protocol_or_later(
+///                       "Link=3-4 Cons=5", Proto::Cons, 6);
+///
+/// assert_eq!(false, is_supported);
+/// ```
+pub fn protover_string_supports_protocol_or_later(
+    list: &str,
+    proto: Proto,
+    vers: u32,
+) -> bool {
+    let supported: HashMap<Proto, HashSet<u32>>;
+
+    match parse_protocols_from_string(list) {
+        Ok(result) => supported = result,
+        Err(_) => return false,
+    }
+
+    let supported_versions = match supported.get(&proto) {
+        Some(n) => n,
+        None => return false,
+    };
+
+    for v in supported_versions.iter() {
+        if v >= &vers {
+            return true;
+        }
+    }
+    return false;
+}
+
 /// Fully expand a version range. For example, 1-3 expands to 1,2,3
 /// Helper for get_versions
 ///

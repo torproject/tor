@@ -101,6 +101,39 @@ pub extern "C" fn protocol_list_supports_protocol(
 }
 
 /// Provide an interface for C to translate arguments and return types for
+/// protover::list_supports_protocol_or_later
+#[no_mangle]
+pub extern "C" fn protocol_list_supports_protocol_or_later(
+    c_protocol_list: *const c_char,
+    c_protocol: uint32_t,
+    version: uint32_t,
+) -> c_int {
+    if c_protocol_list.is_null() {
+        return 1;
+    }
+
+    // Require an unsafe block to read the version from a C string. The pointer
+    // is checked above to ensure it is not null.
+    let c_str: &CStr = unsafe { CStr::from_ptr(c_protocol_list) };
+
+    let protocol_list = match c_str.to_str() {
+        Ok(n) => n,
+        Err(_) => return 1,
+    };
+
+    let protocol = match translate_to_rust(c_protocol) {
+        Ok(n) => n,
+        Err(_) => return 0,
+    };
+
+    let is_supported =
+        protover_string_supports_protocol_or_later(
+            protocol_list, protocol, version);
+
+    return if is_supported { 1 } else { 0 };
+}
+
+/// Provide an interface for C to translate arguments and return types for
 /// protover::get_supported_protocols
 #[no_mangle]
 pub extern "C" fn protover_get_supported_protocols() -> *mut c_char {
