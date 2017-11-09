@@ -4424,6 +4424,49 @@ handle_control_hspost(control_connection_t *conn,
   return 0;
 }
 
+/* Helper function for ADD_ONION that adds an ephemeral service depending on
+ * the given hs_version. The pk's type defers depending on the version so the
+ * caller should make sure those two matches. Both port_cfgs and auth_clients
+ * are now owned by the hidden service subsystem so the caller must stop
+ * accessing them.
+ *
+ * On success (RSAE_OKAY), the address_out points to a newly allocated string
+ * containing the onion address without the .onion part. On error, address_out
+ * is untouched. */
+static rend_service_add_ephemeral_status_t
+add_onion_helper_add_service(int hs_version, void *pk, smartlist_t *port_cfgs,
+                             int max_streams, int max_streams_close_circuit,
+                             int auth_type, smartlist_t *auth_clients,
+                             char **address_out)
+{
+  rend_service_add_ephemeral_status_t ret;
+
+  tor_assert(pk);
+  tor_assert(port_cfgs);
+  tor_assert(address_out);
+
+  switch (hs_version) {
+  case HS_VERSION_TWO:
+  {
+    ret = rend_service_add_ephemeral(pk, port_cfgs, max_streams,
+                                     max_streams_close_circuit, auth_type,
+                                     auth_clients, address_out);
+    break;
+  }
+  case HS_VERSION_THREE:
+  {
+    /* XXX: Not implemented yet. */
+    *address_out = tor_strdup("this is a v3 address");
+    ret = RSAE_OKAY;
+    break;
+  }
+  default:
+    tor_assert_unreached();
+  }
+
+  return ret;
+}
+
 /** Called when we get a ADD_ONION command; parse the body, and set up
  * the new ephemeral Onion Service. */
 static int
@@ -4605,15 +4648,15 @@ handle_control_add_onion(control_connection_t *conn,
   }
 
   /* Parse the "keytype:keyblob" argument. */
-  crypto_pk_t *pk = NULL;
+  int hs_version = 0;
+  void *pk = NULL;
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
   char *err_msg = NULL;
 
-  pk = add_onion_helper_keyarg(smartlist_get(args, 0), discard_pk,
-                               &key_new_alg, &key_new_blob,
-                               &err_msg);
-  if (!pk) {
+  if (add_onion_helper_keyarg(smartlist_get(args, 0), discard_pk,
+                              &key_new_alg, &key_new_blob, &pk, &hs_version,
+                              &err_msg) < 0) {
     if (err_msg) {
       connection_write_str_to_buf(err_msg, conn);
       tor_free(err_msg);
@@ -4622,16 +4665,23 @@ handle_control_add_onion(control_connection_t *conn,
   }
   tor_assert(!err_msg);
 
+  /* Hidden service version 3 don't have client authentication support so if
+   * ClientAuth was given, send back an error. */
+  if (hs_version == HS_VERSION_THREE && auth_clients) {
+    connection_printf_to_buf(conn, "513 ClientAuth not supported\r\n");
+    goto out;
+  }
+
   /* Create the HS, using private key pk, client authentication auth_type,
    * the list of auth_clients, and port config port_cfg.
    * rend_service_add_ephemeral() will take ownership of pk and port_cfg,
    * regardless of success/failure.
    */
   char *service_id = NULL;
-  int ret = rend_service_add_ephemeral(pk, port_cfgs, max_streams,
-                                       max_streams_close_circuit,
-                                       auth_type, auth_clients,
-                                       &service_id);
+  int ret = add_onion_helper_add_service(hs_version, pk, port_cfgs,
+                                         max_streams,
+                                         max_streams_close_circuit, auth_type,
+                                         auth_clients, &service_id);
   port_cfgs = NULL; /* port_cfgs is now owned by the rendservice code. */
   auth_clients = NULL; /* so is auth_clients */
   switch (ret) {
@@ -4724,9 +4774,10 @@ handle_control_add_onion(control_connection_t *conn,
  * Note: The error messages returned are deliberately vague to avoid echoing
  * key material.
  */
-STATIC crypto_pk_t *
+STATIC int
 add_onion_helper_keyarg(const char *arg, int discard_pk,
                         const char **key_new_alg_out, char **key_new_blob_out,
+                        void **decoded_key, int *hs_version,
                         char **err_msg_out)
 {
   smartlist_t *key_args = smartlist_new();
@@ -4734,7 +4785,9 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
   char *err_msg = NULL;
-  int ok = 0;
+  int ret = -1;
+
+  *decoded_key = NULL;
 
   smartlist_split_string(key_args, arg, ":", SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(key_args) != 2) {
@@ -4746,6 +4799,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   static const char *key_type_new = "NEW";
   static const char *key_type_best = "BEST";
   static const char *key_type_rsa1024 = "RSA1024";
+  static const char *key_type_ed25519_v3 = "ED25519-V3";
 
   const char *key_type = smartlist_get(key_args, 0);
   const char *key_blob = smartlist_get(key_args, 1);
@@ -4758,9 +4812,23 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       goto err;
     }
     if (crypto_pk_num_bits(pk) != PK_BYTES*8) {
+      crypto_pk_free(pk);
       err_msg = tor_strdup("512 Invalid RSA key size\r\n");
       goto err;
     }
+    *decoded_key = pk;
+    *hs_version = HS_VERSION_TWO;
+  } else if (!strcasecmp(key_type_ed25519_v3, key_type)) {
+    /* "ED25519-V3:<Base64 Blob>" - Loading a pre-existing ed25519 key. */
+    ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
+    if (base64_decode((char *) sk->seckey, sizeof(sk->seckey), key_blob,
+                      strlen(key_blob)) != sizeof(sk->seckey)) {
+      tor_free(sk);
+      err_msg = tor_strdup("512 Failed to decode ED25519-V3 key\r\n");
+      goto err;
+    }
+    *decoded_key = sk;
+    *hs_version = HS_VERSION_THREE;
   } else if (!strcasecmp(key_type_new, key_type)) {
     /* "NEW:<Algorithm>" - Generating a new key, blob as algorithm. */
     if (!strcasecmp(key_type_rsa1024, key_blob) ||
@@ -4774,12 +4842,38 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       }
       if (!discard_pk) {
         if (crypto_pk_base64_encode(pk, &key_new_blob)) {
+          crypto_pk_free(pk);
           tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
                        key_type_rsa1024);
           goto err;
         }
         key_new_alg = key_type_rsa1024;
       }
+      *decoded_key = pk;
+      *hs_version = HS_VERSION_TWO;
+    } else if (!strcasecmp(key_type_ed25519_v3, key_blob)) {
+      ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
+      if (ed25519_secret_key_generate(sk, 1) < 0) {
+        tor_free(sk);
+        tor_asprintf(&err_msg, "551 Failed to generate %s key\r\n",
+                     key_type_ed25519_v3);
+        goto err;
+      }
+      if (!discard_pk) {
+        ssize_t len = base64_encode_size(sizeof(sk->seckey), 0) + 1;
+        key_new_blob = tor_malloc_zero(len);
+        if (base64_encode(key_new_blob, len, (const char *) sk->seckey,
+                          sizeof(sk->seckey), 0) != (len - 1)) {
+          tor_free(sk);
+          tor_free(key_new_blob);
+          tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
+                       key_type_ed25519_v3);
+          goto err;
+        }
+        key_new_alg = key_type_ed25519_v3;
+      }
+      *decoded_key = sk;
+      *hs_version = HS_VERSION_THREE;
     } else {
       err_msg = tor_strdup("513 Invalid key type\r\n");
       goto err;
@@ -4790,8 +4884,8 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   }
 
   /* Succeded in loading or generating a private key. */
-  tor_assert(pk);
-  ok = 1;
+  tor_assert(*decoded_key);
+  ret = 0;
 
  err:
   SMARTLIST_FOREACH(key_args, char *, cp, {
@@ -4800,10 +4894,6 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   });
   smartlist_free(key_args);
 
-  if (!ok) {
-    crypto_pk_free(pk);
-    pk = NULL;
-  }
   if (err_msg_out) {
     *err_msg_out = err_msg;
   } else {
@@ -4812,7 +4902,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   *key_new_alg_out = key_new_alg;
   *key_new_blob_out = key_new_blob;
 
-  return pk;
+  return ret;
 }
 
 /** Helper function to handle parsing a ClientAuth argument to the
