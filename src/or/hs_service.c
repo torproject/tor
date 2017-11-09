@@ -3079,7 +3079,9 @@ hs_service_intro_circ_has_closed(origin_circuit_t *circ)
 
   get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
   if (service == NULL) {
-    log_warn(LD_REND, "Unable to find any hidden service associated "
+    /* This is possible if the circuits are closed and the service is
+     * immediately deleted. */
+    log_info(LD_REND, "Unable to find any hidden service associated "
                       "identity key %s on intro circuit %u.",
              ed25519_fmt(&circ->hs_ident->identity_pk),
              TO_CIRCUIT(circ)->n_circ_id);
