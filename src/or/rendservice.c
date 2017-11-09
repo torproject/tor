@@ -847,9 +847,9 @@ rend_config_service(const config_line_t *line_,
  * after calling this routine, and may assume that correct cleanup has
  * been done on failure.
  *
- * Return an appropriate rend_service_add_ephemeral_status_t.
+ * Return an appropriate hs_service_add_ephemeral_status_t.
  */
-rend_service_add_ephemeral_status_t
+hs_service_add_ephemeral_status_t
 rend_service_add_ephemeral(crypto_pk_t *pk,
                            smartlist_t *ports,
                            int max_streams_per_circuit,

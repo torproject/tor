@@ -130,6 +130,17 @@ typedef enum {
   HS_AUTH_KEY_TYPE_ED25519 = 2,
 } hs_auth_key_type_t;
 
+/* Return value when adding an ephemeral service through the ADD_ONION
+ * control port command. Both v2 and v3 share these. */
+typedef enum {
+  RSAE_BADAUTH     = -5, /**< Invalid auth_type/auth_clients */
+  RSAE_BADVIRTPORT = -4, /**< Invalid VIRTPORT/TARGET(s) */
+  RSAE_ADDREXISTS  = -3, /**< Onion address collision */
+  RSAE_BADPRIVKEY  = -2, /**< Invalid public key */
+  RSAE_INTERNAL    = -1, /**< Internal error */
+  RSAE_OKAY        = 0   /**< Service added as expected */
+} hs_service_add_ephemeral_status_t;
+
 /* Represents the mapping from a virtual port of a rendezvous service to a
  * real port on some IP. */
 typedef struct rend_service_port_config_t {

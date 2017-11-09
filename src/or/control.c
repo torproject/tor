@@ -4433,13 +4433,13 @@ handle_control_hspost(control_connection_t *conn,
  * On success (RSAE_OKAY), the address_out points to a newly allocated string
  * containing the onion address without the .onion part. On error, address_out
  * is untouched. */
-static rend_service_add_ephemeral_status_t
+static hs_service_add_ephemeral_status_t
 add_onion_helper_add_service(int hs_version, void *pk, smartlist_t *port_cfgs,
                              int max_streams, int max_streams_close_circuit,
                              int auth_type, smartlist_t *auth_clients,
                              char **address_out)
 {
-  rend_service_add_ephemeral_status_t ret;
+  hs_service_add_ephemeral_status_t ret;
 
   tor_assert(pk);
   tor_assert(port_cfgs);
