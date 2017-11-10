@@ -115,14 +115,15 @@ void control_event_transport_launched(const char *mode,
                                       tor_addr_t *addr, uint16_t port);
 const char *rend_auth_type_to_string(rend_auth_type_t auth_type);
 MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
-void control_event_hs_descriptor_requested(const rend_data_t *rend_query,
-                                           const char *desc_id_base32,
-                                           const char *hs_dir);
-void control_event_hs_descriptor_created(const char *service_id,
-                                         const char *desc_id_base32,
+void control_event_hs_descriptor_requested(const char *onion_address,
+                                           rend_auth_type_t auth_type,
+                                           const char *id_digest,
+                                           const char *desc_id);
+void control_event_hs_descriptor_created(const char *onion_address,
+                                         const char *desc_id,
                                          int replica);
-void control_event_hs_descriptor_upload(const char *service_id,
-                                        const char *desc_id_base32,
+void control_event_hs_descriptor_upload(const char *onion_address,
+                                        const char *desc_id,
                                         const char *hs_dir);
 void control_event_hs_descriptor_receive_end(const char *action,
                                              const char *onion_address,

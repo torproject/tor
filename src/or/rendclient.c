@@ -515,7 +515,8 @@ directory_get_from_hs_dir(const char *desc_id,
            (rend_data->auth_type == REND_NO_AUTH ? "[none]" :
             escaped_safe_str_client(descriptor_cookie_base64)),
            routerstatus_describe(hs_dir));
-  control_event_hs_descriptor_requested(rend_query,
+  control_event_hs_descriptor_requested(rend_data->onion_address,
+                                        rend_data->auth_type,
                                         hs_dir->identity_digest,
                                         desc_id_base32);
   return 1;

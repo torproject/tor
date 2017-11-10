@@ -7177,25 +7177,21 @@ rend_hsaddress_str_or_unknown(const char *onion_address)
  * <b>desc_id_base32</b> is the ID of requested hs descriptor.
  */
 void
-control_event_hs_descriptor_requested(const rend_data_t *rend_query,
+control_event_hs_descriptor_requested(const char *onion_address,
+                                      rend_auth_type_t auth_type,
                                       const char *id_digest,
-                                      const char *desc_id_base32)
+                                      const char *desc_id)
 {
-  if (!id_digest || !rend_query || !desc_id_base32) {
-    log_warn(LD_BUG, "Called with rend_query==%p, "
-             "id_digest==%p, desc_id_base32==%p",
-             rend_query, id_digest, desc_id_base32);
+  if (BUG(!id_digest || !desc_id)) {
     return;
   }
 
   send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC REQUESTED %s %s %s %s\r\n",
-                     rend_hsaddress_str_or_unknown(
-                          rend_data_get_address(rend_query)),
-                     rend_auth_type_to_string(
-                          TO_REND_DATA_V2(rend_query)->auth_type),
+                     rend_hsaddress_str_or_unknown(onion_address),
+                     rend_auth_type_to_string(auth_type),
                      node_describe_longname_by_id(id_digest),
-                     desc_id_base32);
+                     desc_id);
 }
 
 /** For an HS descriptor query <b>rend_data</b>, using the
@@ -7244,52 +7240,45 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
 
 /** send HS_DESC CREATED event when a local service generates a descriptor.
  *
- * <b>service_id</b> is the descriptor onion address.
- * <b>desc_id_base32</b> is the descriptor ID.
+ * <b>onion_address</b> is service address.
+ * <b>desc_id</b> is the descriptor ID.
  * <b>replica</b> is the the descriptor replica number.
  */
 void
-control_event_hs_descriptor_created(const char *service_id,
-                                    const char *desc_id_base32,
+control_event_hs_descriptor_created(const char *onion_address,
+                                    const char *desc_id,
                                     int replica)
 {
-  if (!service_id || !desc_id_base32) {
-    log_warn(LD_BUG, "Called with service_digest==%p, "
-             "desc_id_base32==%p", service_id, desc_id_base32);
+  if (BUG(!onion_address || !desc_id)) {
     return;
   }
 
   send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s "
                      "REPLICA=%d\r\n",
-                     service_id,
-                     desc_id_base32,
-                     replica);
+                     onion_address, desc_id, replica);
 }
 
 /** send HS_DESC upload event.
  *
- * <b>service_id</b> is the descriptor onion address.
+ * <b>onion_address</b> is service address.
  * <b>hs_dir</b> is the description of contacting hs directory.
- * <b>desc_id_base32</b> is the ID of requested hs descriptor.
+ * <b>desc_id</b> is the ID of requested hs descriptor.
  */
 void
-control_event_hs_descriptor_upload(const char *service_id,
+control_event_hs_descriptor_upload(const char *onion_address,
                                    const char *id_digest,
-                                   const char *desc_id_base32)
+                                   const char *desc_id)
 {
-  if (!service_id || !id_digest || !desc_id_base32) {
-    log_warn(LD_BUG, "Called with service_digest==%p, "
-             "desc_id_base32==%p, id_digest==%p", service_id,
-             desc_id_base32, id_digest);
+  if (BUG(!onion_address || !id_digest || !desc_id)) {
     return;
   }
 
   send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC UPLOAD %s UNKNOWN %s %s\r\n",
-                     service_id,
+                     onion_address,
                      node_describe_longname_by_id(id_digest),
-                     desc_id_base32);
+                     desc_id);
 }
 
 /** send HS_DESC event after got response from hs directory.
@@ -7362,9 +7351,7 @@ control_event_hs_descriptor_upload_end(const char *action,
 {
   char *reason_field = NULL;
 
-  if (!action || !id_digest) {
-    log_warn(LD_BUG, "Called with action==%p, id_digest==%p", action,
-             id_digest);
+  if (BUG(!action || !id_digest)) {
     return;
   }
 
@@ -7408,9 +7395,7 @@ void
 control_event_hs_descriptor_uploaded(const char *id_digest,
                                      const char *onion_address)
 {
-  if (!id_digest) {
-    log_warn(LD_BUG, "Called with id_digest==%p",
-             id_digest);
+  if (BUG(!id_digest)) {
     return;
   }
 
@@ -7484,9 +7469,7 @@ control_event_hs_descriptor_upload_failed(const char *id_digest,
                                           const char *onion_address,
                                           const char *reason)
 {
-  if (!id_digest) {
-    log_warn(LD_BUG, "Called with id_digest==%p",
-             id_digest);
+  if (BUG(!id_digest)) {
     return;
   }
   control_event_hs_descriptor_upload_end("FAILED", onion_address,
