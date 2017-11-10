@@ -7284,8 +7284,8 @@ control_event_hs_descriptor_upload(const char *onion_address,
 /** send HS_DESC event after got response from hs directory.
  *
  * NOTE: this is an internal function used by following functions:
- * control_event_hs_descriptor_received
- * control_event_hs_descriptor_failed
+ * control_event_hsv2_descriptor_received
+ * control_event_hsv2_descriptor_failed
  *
  * So do not call this function directly.
  */
@@ -7360,9 +7360,9 @@ control_event_hs_descriptor_upload_end(const char *action,
  * called when we successfully received a hidden service descriptor.
  */
 void
-control_event_hs_descriptor_received(const char *onion_address,
-                                     const rend_data_t *rend_data,
-                                     const char *hsdir_id_digest)
+control_event_hsv2_descriptor_received(const char *onion_address,
+                                       const rend_data_t *rend_data,
+                                       const char *hsdir_id_digest)
 {
   char *desc_id_field = NULL;
   const char *desc_id;
@@ -7409,9 +7409,9 @@ control_event_hs_descriptor_uploaded(const char *id_digest,
  * add it to REASON= field.
  */
 void
-control_event_hs_descriptor_failed(const rend_data_t *rend_data,
-                                   const char *hsdir_id_digest,
-                                   const char *reason)
+control_event_hsv2_descriptor_failed(const rend_data_t *rend_data,
+                                     const char *hsdir_id_digest,
+                                     const char *reason)
 {
   char *desc_id_field = NULL;
   const char *desc_id;

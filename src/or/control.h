@@ -129,14 +129,15 @@ void control_event_hs_descriptor_upload_end(const char *action,
                                             const char *onion_address,
                                             const char *hs_dir,
                                             const char *reason);
-void control_event_hs_descriptor_received(const char *onion_address,
-                                          const rend_data_t *rend_data,
-                                          const char *id_digest);
 void control_event_hs_descriptor_uploaded(const char *hs_dir,
                                           const char *onion_address);
-void control_event_hs_descriptor_failed(const rend_data_t *rend_data,
-                                        const char *id_digest,
-                                        const char *reason);
+/* Hidden service v2 HS_DESC specific. */
+void control_event_hsv2_descriptor_failed(const rend_data_t *rend_data,
+                                          const char *id_digest,
+                                          const char *reason);
+void control_event_hsv2_descriptor_received(const char *onion_address,
+                                            const rend_data_t *rend_data,
+                                            const char *id_digest);
 void control_event_hs_descriptor_upload_failed(const char *hs_dir,
                                                const char *onion_address,
                                                const char *reason);

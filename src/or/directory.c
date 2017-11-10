@@ -3136,9 +3136,9 @@ handle_response_fetch_renddesc_v2(dir_connection_t *conn,
   const size_t body_len = args->body_len;
 
 #define SEND_HS_DESC_FAILED_EVENT(reason)                               \
-  (control_event_hs_descriptor_failed(conn->rend_data,                  \
-                                      conn->identity_digest,            \
-                                      reason))
+  (control_event_hsv2_descriptor_failed(conn->rend_data,                \
+                                        conn->identity_digest,          \
+                                        reason))
 #define SEND_HS_DESC_FAILED_CONTENT()                                   \
   (control_event_hs_descriptor_content(                                 \
                                 rend_data_get_address(conn->rend_data), \
@@ -3173,9 +3173,9 @@ handle_response_fetch_renddesc_v2(dir_connection_t *conn,
         /* success. notify pending connections about this. */
         log_info(LD_REND, "Successfully fetched v2 rendezvous "
                  "descriptor.");
-        control_event_hs_descriptor_received(service_id,
-                                             conn->rend_data,
-                                             conn->identity_digest);
+        control_event_hsv2_descriptor_received(service_id,
+                                               conn->rend_data,
+                                               conn->identity_digest);
         control_event_hs_descriptor_content(service_id,
                                             conn->requested_resource,
                                             conn->identity_digest,

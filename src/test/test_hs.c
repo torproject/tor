@@ -269,8 +269,8 @@ test_hs_desc_event(void *arg)
 
   /* test received event */
   rend_query.auth_type = REND_BASIC_AUTH;
-  control_event_hs_descriptor_received(rend_query.onion_address,
-                                       &rend_query.base_, HSDIR_EXIST_ID);
+  control_event_hsv2_descriptor_received(rend_query.onion_address,
+                                         &rend_query.base_, HSDIR_EXIST_ID);
   expected_msg = "650 HS_DESC RECEIVED "STR_HS_ADDR" BASIC_AUTH "\
                   STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32"\r\n";
   tt_assert(received_msg);
@@ -279,7 +279,7 @@ test_hs_desc_event(void *arg)
 
   /* test failed event */
   rend_query.auth_type = REND_STEALTH_AUTH;
-  control_event_hs_descriptor_failed(&rend_query.base_,
+  control_event_hsv2_descriptor_failed(&rend_query.base_,
                                      HSDIR_NONE_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" STEALTH_AUTH "\
@@ -290,7 +290,7 @@ test_hs_desc_event(void *arg)
 
   /* test invalid auth type */
   rend_query.auth_type = 999;
-  control_event_hs_descriptor_failed(&rend_query.base_,
+  control_event_hsv2_descriptor_failed(&rend_query.base_,
                                      HSDIR_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" UNKNOWN "\
@@ -302,7 +302,7 @@ test_hs_desc_event(void *arg)
 
   /* test no HSDir fingerprint type */
   rend_query.auth_type = REND_NO_AUTH;
-  control_event_hs_descriptor_failed(&rend_query.base_, NULL,
+  control_event_hsv2_descriptor_failed(&rend_query.base_, NULL,
                                      "QUERY_NO_HSDIR");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" NO_AUTH " \
                  "UNKNOWN REASON=QUERY_NO_HSDIR\r\n";
