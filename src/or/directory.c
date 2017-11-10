@@ -3314,7 +3314,8 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
            "status 400 (%s) response from dirserver "
            "'%s:%d'. Malformed hidden service descriptor?",
            escaped(reason), conn->base_.address, conn->base_.port);
-    /* XXX: Trigger control event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "UPLOAD_REJECTED");
     break;
   default:
     log_warn(LD_REND, "Uploading hidden service descriptor: http "
@@ -3322,7 +3323,8 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
                       "'%s:%d').",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port);
-    /* XXX: Trigger control event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "UNEXPECTED");
     break;
   }
 
