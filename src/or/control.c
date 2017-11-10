@@ -7289,31 +7289,18 @@ control_event_hs_descriptor_upload(const char *onion_address,
  *
  * So do not call this function directly.
  */
-void
-control_event_hs_descriptor_receive_end(const char *action,
-                                        const char *onion_address,
-                                        const rend_data_t *rend_data,
-                                        const char *id_digest,
-                                        const char *reason)
+static void
+event_hs_descriptor_receive_end(const char *action,
+                                const char *onion_address,
+                                const char *desc_id,
+                                rend_auth_type_t auth_type,
+                                const char *hsdir_id_digest,
+                                const char *reason)
 {
-  char *desc_id_field = NULL;
   char *reason_field = NULL;
-  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  const char *desc_id = NULL;
 
-  if (!action || !rend_data || !onion_address) {
-    log_warn(LD_BUG, "Called with action==%p, rend_data==%p, "
-                     "onion_address==%p", action, rend_data, onion_address);
+  if (BUG(!action || !onion_address)) {
     return;
-  }
-
-  desc_id = get_desc_id_from_query(rend_data, id_digest);
-  if (desc_id != NULL) {
-    /* Set the descriptor ID digest to base32 so we can send it. */
-    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                  DIGEST_LEN);
-    /* Extra whitespace is needed before the value. */
-    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
   }
 
   if (reason) {
@@ -7324,14 +7311,13 @@ control_event_hs_descriptor_receive_end(const char *action,
                      "650 HS_DESC %s %s %s %s%s%s\r\n",
                      action,
                      rend_hsaddress_str_or_unknown(onion_address),
-                     rend_auth_type_to_string(
-                          TO_REND_DATA_V2(rend_data)->auth_type),
-                     id_digest ?
-                        node_describe_longname_by_id(id_digest) : "UNKNOWN",
-                     desc_id_field ? desc_id_field : "",
+                     rend_auth_type_to_string(auth_type),
+                     hsdir_id_digest ?
+                        node_describe_longname_by_id(hsdir_id_digest) :
+                        "UNKNOWN",
+                     desc_id ? desc_id : "",
                      reason_field ? reason_field : "");
 
-  tor_free(desc_id_field);
   tor_free(reason_field);
 }
 
@@ -7376,15 +7362,29 @@ control_event_hs_descriptor_upload_end(const char *action,
 void
 control_event_hs_descriptor_received(const char *onion_address,
                                      const rend_data_t *rend_data,
-                                     const char *id_digest)
+                                     const char *hsdir_id_digest)
 {
-  if (!rend_data || !id_digest || !onion_address) {
-    log_warn(LD_BUG, "Called with rend_data==%p, id_digest==%p, "
-             "onion_address==%p", rend_data, id_digest, onion_address);
+  char *desc_id_field = NULL;
+  const char *desc_id;
+
+  if (BUG(!rend_data || !hsdir_id_digest || !onion_address)) {
     return;
   }
-  control_event_hs_descriptor_receive_end("RECEIVED", onion_address,
-                                          rend_data, id_digest, NULL);
+
+  desc_id = get_desc_id_from_query(rend_data, hsdir_id_digest);
+  if (desc_id != NULL) {
+    char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+    /* Set the descriptor ID digest to base32 so we can send it. */
+    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                  DIGEST_LEN);
+    /* Extra whitespace is needed before the value. */
+    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
+  }
+
+  event_hs_descriptor_receive_end("RECEIVED", onion_address, desc_id_field,
+                                  TO_REND_DATA_V2(rend_data)->auth_type,
+                                  hsdir_id_digest, NULL);
+  tor_free(desc_id_field);
 }
 
 /** send HS_DESC UPLOADED event
@@ -7410,16 +7410,31 @@ control_event_hs_descriptor_uploaded(const char *id_digest,
  */
 void
 control_event_hs_descriptor_failed(const rend_data_t *rend_data,
-                                   const char *id_digest,
+                                   const char *hsdir_id_digest,
                                    const char *reason)
 {
-  if (!rend_data) {
-    log_warn(LD_BUG, "Called with rend_data==%p", rend_data);
+  char *desc_id_field = NULL;
+  const char *desc_id;
+
+  if (BUG(!rend_data)) {
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED",
-                                          rend_data_get_address(rend_data),
-                                          rend_data, id_digest, reason);
+
+  desc_id = get_desc_id_from_query(rend_data, hsdir_id_digest);
+  if (desc_id != NULL) {
+    char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+    /* Set the descriptor ID digest to base32 so we can send it. */
+    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                  DIGEST_LEN);
+    /* Extra whitespace is needed before the value. */
+    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
+  }
+
+  event_hs_descriptor_receive_end("FAILED", rend_data_get_address(rend_data),
+                                  desc_id_field,
+                                  TO_REND_DATA_V2(rend_data)->auth_type,
+                                  hsdir_id_digest, reason);
+  tor_free(desc_id_field);
 }
 
 /** Send HS_DESC_CONTENT event after completion of a successful fetch from hs

@@ -125,11 +125,6 @@ void control_event_hs_descriptor_created(const char *onion_address,
 void control_event_hs_descriptor_upload(const char *onion_address,
                                         const char *desc_id,
                                         const char *hs_dir);
-void control_event_hs_descriptor_receive_end(const char *action,
-                                             const char *onion_address,
-                                             const rend_data_t *rend_data,
-                                             const char *id_digest,
-                                             const char *reason);
 void control_event_hs_descriptor_upload_end(const char *action,
                                             const char *onion_address,
                                             const char *hs_dir,
