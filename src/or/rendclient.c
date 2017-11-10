@@ -519,7 +519,7 @@ directory_get_from_hs_dir(const char *desc_id,
   control_event_hs_descriptor_requested(rend_data->onion_address,
                                         rend_data->auth_type,
                                         hs_dir->identity_digest,
-                                        desc_id_base32);
+                                        desc_id_base32, NULL);
   return 1;
 }
 

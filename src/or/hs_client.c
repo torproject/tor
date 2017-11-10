@@ -21,6 +21,7 @@
 #include "config.h"
 #include "directory.h"
 #include "hs_client.h"
+#include "hs_control.h"
 #include "router.h"
 #include "routerset.h"
 #include "circuitlist.h"
@@ -348,6 +349,10 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
            safe_str_client(ed25519_fmt(onion_identity_pk)),
            safe_str_client(base64_blinded_pubkey),
            safe_str_client(routerstatus_describe(hsdir)));
+
+  /* Fire a REQUESTED event on the control port. */
+  hs_control_desc_event_requested(onion_identity_pk, base64_blinded_pubkey,
+                                  hsdir);
 
   /* Cleanup memory. */
   memwipe(&blinded_pubkey, 0, sizeof(blinded_pubkey));

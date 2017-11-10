@@ -260,7 +260,7 @@ test_hs_desc_event(void *arg)
   /* test request event */
   control_event_hs_descriptor_requested(rend_query.onion_address,
                                         rend_query.auth_type, HSDIR_EXIST_ID,
-                                        STR_DESC_ID_BASE32);
+                                        STR_DESC_ID_BASE32, NULL);
   expected_msg = "650 HS_DESC REQUESTED "STR_HS_ADDR" NO_AUTH "\
                   STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32 "\r\n";
   tt_assert(received_msg);

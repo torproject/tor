@@ -7175,23 +7175,33 @@ rend_hsaddress_str_or_unknown(const char *onion_address)
  * <b>rend_query</b> is used to fetch requested onion address and auth type.
  * <b>hs_dir</b> is the description of contacting hs directory.
  * <b>desc_id_base32</b> is the ID of requested hs descriptor.
+ * <b>hsdir_index</b> is the HSDir fetch index value for v3, an hex string.
  */
 void
 control_event_hs_descriptor_requested(const char *onion_address,
                                       rend_auth_type_t auth_type,
                                       const char *id_digest,
-                                      const char *desc_id)
+                                      const char *desc_id,
+                                      const char *hsdir_index)
 {
+  char *hsdir_index_field = NULL;
+
   if (BUG(!id_digest || !desc_id)) {
     return;
   }
 
+  if (hsdir_index) {
+    tor_asprintf(&hsdir_index_field, " HSDIR_INDEX=%s", hsdir_index);
+  }
+
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC REQUESTED %s %s %s %s\r\n",
+                     "650 HS_DESC REQUESTED %s %s %s %s%s\r\n",
                      rend_hsaddress_str_or_unknown(onion_address),
                      rend_auth_type_to_string(auth_type),
                      node_describe_longname_by_id(id_digest),
-                     desc_id);
+                     desc_id,
+                     hsdir_index_field ? hsdir_index_field : "");
+  tor_free(hsdir_index_field);
 }
 
 /** For an HS descriptor query <b>rend_data</b>, using the

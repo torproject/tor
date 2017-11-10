@@ -118,7 +118,8 @@ MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
 void control_event_hs_descriptor_requested(const char *onion_address,
                                            rend_auth_type_t auth_type,
                                            const char *id_digest,
-                                           const char *desc_id);
+                                           const char *desc_id,
+                                           const char *hsdir_index);
 void control_event_hs_descriptor_created(const char *onion_address,
                                          const char *desc_id,
                                          int replica);
