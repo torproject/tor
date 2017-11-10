@@ -50,3 +50,30 @@ hs_control_desc_event_requested(const ed25519_public_key_t *onion_pk,
   memwipe(onion_address, 0, sizeof(onion_address));
 }
 
+/* Send on the control port the "HS_DESC FAILED [...]" event.
+ *
+ * Using a directory connection identifier, the HSDir identity digest and a
+ * reason for the failure. None can be NULL. */
+void
+hs_control_desc_event_failed(const hs_ident_dir_conn_t *ident,
+                             const char *hsdir_id_digest,
+                             const char *reason)
+{
+  char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+  char base64_blinded_pk[ED25519_BASE64_LEN + 1];
+
+  tor_assert(ident);
+  tor_assert(hsdir_id_digest);
+  tor_assert(reason);
+
+  /* Build onion address and encoded blinded key. */
+  IF_BUG_ONCE(ed25519_public_to_base64(base64_blinded_pk,
+                                       &ident->blinded_pk) < 0) {
+    return;
+  }
+  hs_build_address(&ident->identity_pk, HS_VERSION_THREE, onion_address);
+
+  control_event_hsv3_descriptor_failed(onion_address, base64_blinded_pk,
+                                       hsdir_id_digest, reason);
+}
+

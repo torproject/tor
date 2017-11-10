@@ -25,6 +25,7 @@
 #include "geoip.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_control.h"
 #include "hs_client.h"
 #include "main.h"
 #include "microdesc.h"
@@ -3090,6 +3091,9 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
     /* We got something: Try storing it in the cache. */
     if (hs_cache_store_as_client(body, &conn->hs_ident->identity_pk) < 0) {
       log_warn(LD_REND, "Failed to store hidden service descriptor");
+      /* Fire control port FAILED event. */
+      hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                   "BAD_DESC");
     } else {
       log_info(LD_REND, "Stored hidden service descriptor successfully.");
       TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
@@ -3101,13 +3105,18 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
      * tries to clean this conn up. */
     log_info(LD_REND, "Fetching hidden service v3 descriptor not found: "
                       "Retrying at another directory.");
-    /* TODO: Inform the control port */
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "NOT_FOUND");
     break;
   case 400:
     log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
                       "http status 400 (%s). Dirserver didn't like our "
                       "query? Retrying at another directory.",
              escaped(reason));
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "QUERY_REJECTED");
     break;
   default:
     log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
@@ -3115,6 +3124,9 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
              "'%s:%d'. Retrying at another directory.",
              status_code, escaped(reason), TO_CONN(conn)->address,
              TO_CONN(conn)->port);
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "UNEXPECTED");
     break;
   }
 

@@ -7296,6 +7296,7 @@ control_event_hs_descriptor_upload(const char *onion_address,
  * NOTE: this is an internal function used by following functions:
  * control_event_hsv2_descriptor_received
  * control_event_hsv2_descriptor_failed
+ * control_event_hsv3_descriptor_failed
  *
  * So do not call this function directly.
  */
@@ -7444,6 +7445,32 @@ control_event_hsv2_descriptor_failed(const rend_data_t *rend_data,
                                   desc_id_field,
                                   TO_REND_DATA_V2(rend_data)->auth_type,
                                   hsdir_id_digest, reason);
+  tor_free(desc_id_field);
+}
+
+/** Send HS_DESC event to inform controller that the query to
+ * <b>onion_address</b> failed to retrieve hidden service descriptor
+ * <b>desc_id</b> from directory identified by <b>hsdir_id_digest</b>. If
+ * NULL, "UNKNOWN" is used.  If <b>reason</b> is not NULL, add it to REASON=
+ * field. */
+void
+control_event_hsv3_descriptor_failed(const char *onion_address,
+                                     const char *desc_id,
+                                     const char *hsdir_id_digest,
+                                     const char *reason)
+{
+  char *desc_id_field = NULL;
+
+  if (BUG(!onion_address || !desc_id || !reason)) {
+    return;
+  }
+
+  /* Because DescriptorID is an optional positional value, we need to add a
+   * whitespace before in order to not be next to the HsDir value. */
+  tor_asprintf(&desc_id_field, " %s", desc_id);
+
+  event_hs_descriptor_receive_end("FAILED", onion_address, desc_id_field,
+                                  REND_NO_AUTH, hsdir_id_digest, reason);
   tor_free(desc_id_field);
 }
 
