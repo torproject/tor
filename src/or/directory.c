@@ -3306,7 +3306,7 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
   case 200:
     log_info(LD_REND, "Uploading hidden service descriptor: "
                       "finished with status 200 (%s)", escaped(reason));
-    /* XXX: Trigger control event. */
+    hs_control_desc_event_uploaded(conn->hs_ident, conn->identity_digest);
     break;
   case 400:
     log_fn(LOG_PROTOCOL_WARN, LD_REND,

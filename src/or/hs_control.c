@@ -154,3 +154,21 @@ hs_control_desc_event_upload(const char *onion_address,
                                              DIGEST256_LEN));
 }
 
+/* Send on the control port the "HS_DESC UPLOADED [...]" event.
+ *
+ * Using the directory connection identifier and the HSDir identity digest.
+ * None can be NULL. */
+void
+hs_control_desc_event_uploaded(const hs_ident_dir_conn_t *ident,
+                               const char *hsdir_id_digest)
+{
+  char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+
+  tor_assert(ident);
+  tor_assert(hsdir_id_digest);
+
+  hs_build_address(&ident->identity_pk, HS_VERSION_THREE, onion_address);
+
+  control_event_hs_descriptor_uploaded(hsdir_id_digest, onion_address);
+}
+
