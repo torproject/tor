@@ -7398,6 +7398,29 @@ control_event_hsv2_descriptor_received(const char *onion_address,
   tor_free(desc_id_field);
 }
 
+/* Send HS_DESC RECEIVED event
+ *
+ * Called when we successfully received a hidden service descriptor. */
+void
+control_event_hsv3_descriptor_received(const char *onion_address,
+                                       const char *desc_id,
+                                       const char *hsdir_id_digest)
+{
+  char *desc_id_field = NULL;
+
+  if (BUG(!onion_address || !desc_id || !hsdir_id_digest)) {
+    return;
+  }
+
+  /* Because DescriptorID is an optional positional value, we need to add a
+   * whitespace before in order to not be next to the HsDir value. */
+  tor_asprintf(&desc_id_field, " %s", desc_id);
+
+  event_hs_descriptor_receive_end("RECEIVED", onion_address, desc_id_field,
+                                  REND_NO_AUTH, hsdir_id_digest, NULL);
+  tor_free(desc_id_field);
+}
+
 /** send HS_DESC UPLOADED event
  *
  * called when we successfully uploaded a hidden service descriptor.

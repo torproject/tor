@@ -3098,6 +3098,8 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
       log_info(LD_REND, "Stored hidden service descriptor successfully.");
       TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
       hs_client_desc_has_arrived(conn->hs_ident);
+      /* Fire control port RECEIVED event. */
+      hs_control_desc_event_received(conn->hs_ident, conn->identity_digest);
     }
     break;
   case 404:

@@ -21,5 +21,9 @@ void hs_control_desc_event_failed(const hs_ident_dir_conn_t *ident,
                                   const char *hsdir_id_digest,
                                   const char *reason);
 
+/* Event "HS_DESC RECEIVED [...]" */
+void hs_control_desc_event_received(const hs_ident_dir_conn_t *ident,
+                                    const char *hsdir_id_digest);
+
 #endif /* !defined(TOR_HS_CONTROL_H) */
 

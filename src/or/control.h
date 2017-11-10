@@ -144,6 +144,9 @@ void control_event_hsv3_descriptor_failed(const char *onion_address,
                                           const char *desc_id,
                                           const char *hsdir_id_digest,
                                           const char *reason);
+void control_event_hsv3_descriptor_received(const char *onion_address,
+                                            const char *desc_id,
+                                            const char *hsdir_id_digest);
 void control_event_hs_descriptor_upload_failed(const char *hs_dir,
                                                const char *onion_address,
                                                const char *reason);
