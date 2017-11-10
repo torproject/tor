@@ -2678,9 +2678,16 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     }
   }
 
-  if (circ->rend_data != NULL) {
-    smartlist_add_asprintf(descparts, "REND_QUERY=%s",
-                           rend_data_get_address(circ->rend_data));
+  if (circ->rend_data != NULL || circ->hs_ident != NULL) {
+    char addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+    const char *onion_address;
+    if (circ->rend_data) {
+      onion_address = rend_data_get_address(circ->rend_data);
+    } else {
+      hs_build_address(&circ->hs_ident->identity_pk, HS_VERSION_THREE, addr);
+      onion_address = addr;
+    }
+    smartlist_add_asprintf(descparts, "REND_QUERY=%s", onion_address);
   }
 
   {
