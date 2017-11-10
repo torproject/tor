@@ -30,6 +30,7 @@
 #include "hs_circuit.h"
 #include "hs_common.h"
 #include "hs_config.h"
+#include "hs_control.h"
 #include "hs_circuit.h"
 #include "hs_descriptor.h"
 #include "hs_ident.h"
@@ -1431,6 +1432,9 @@ build_service_descriptor(hs_service_t *service, time_t now,
 
   /* Assign newly built descriptor to the next slot. */
   *desc_out = desc;
+  /* Fire a CREATED control port event. */
+  hs_control_desc_event_created(service->onion_address,
+                                &desc->blinded_kp.pubkey);
   return;
 
  err:

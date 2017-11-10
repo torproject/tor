@@ -102,3 +102,26 @@ hs_control_desc_event_received(const hs_ident_dir_conn_t *ident,
                                          hsdir_id_digest);
 }
 
+/* Send on the control port the "HS_DESC CREATED [...]" event.
+ *
+ * Using the onion address of the descriptor's service and the blinded public
+ * key of the descriptor as a descriptor ID. None can be NULL. */
+void
+hs_control_desc_event_created(const char *onion_address,
+                              const ed25519_public_key_t *blinded_pk)
+{
+  char base64_blinded_pk[ED25519_BASE64_LEN + 1];
+
+  tor_assert(onion_address);
+  tor_assert(blinded_pk);
+
+  /* Build base64 encoded blinded key. */
+  IF_BUG_ONCE(ed25519_public_to_base64(base64_blinded_pk, blinded_pk) < 0) {
+    return;
+  }
+
+  /* Version 3 doesn't use the replica number in its descriptor ID computation
+   * so we pass negative value so the control port subsystem can ignore it. */
+  control_event_hs_descriptor_created(onion_address, base64_blinded_pk, -1);
+}
+

@@ -7252,21 +7252,29 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
  *
  * <b>onion_address</b> is service address.
  * <b>desc_id</b> is the descriptor ID.
- * <b>replica</b> is the the descriptor replica number.
+ * <b>replica</b> is the the descriptor replica number. If it is negative, it
+ * is ignored.
  */
 void
 control_event_hs_descriptor_created(const char *onion_address,
                                     const char *desc_id,
                                     int replica)
 {
+  char *replica_field = NULL;
+
   if (BUG(!onion_address || !desc_id)) {
     return;
   }
 
+  if (replica >= 0) {
+    tor_asprintf(&replica_field, " REPLICA=%d", replica);
+  }
+
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s "
-                     "REPLICA=%d\r\n",
-                     onion_address, desc_id, replica);
+                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s%s\r\n",
+                     onion_address, desc_id,
+                     replica_field ? replica_field : "");
+  tor_free(replica_field);
 }
 
 /** send HS_DESC upload event.

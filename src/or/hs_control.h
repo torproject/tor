@@ -25,5 +25,9 @@ void hs_control_desc_event_failed(const hs_ident_dir_conn_t *ident,
 void hs_control_desc_event_received(const hs_ident_dir_conn_t *ident,
                                     const char *hsdir_id_digest);
 
+/* Event "HS_DESC CREATED [...]" */
+void hs_control_desc_event_created(const char *onion_address,
+                                   const ed25519_public_key_t *blinded_pk);
+
 #endif /* !defined(TOR_HS_CONTROL_H) */
 
