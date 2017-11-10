@@ -125,7 +125,8 @@ void control_event_hs_descriptor_created(const char *onion_address,
                                          int replica);
 void control_event_hs_descriptor_upload(const char *onion_address,
                                         const char *desc_id,
-                                        const char *hs_dir);
+                                        const char *hs_dir,
+                                        const char *hsdir_index);
 void control_event_hs_descriptor_upload_end(const char *action,
                                             const char *onion_address,
                                             const char *hs_dir,

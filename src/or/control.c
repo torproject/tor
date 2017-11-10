@@ -7286,17 +7286,26 @@ control_event_hs_descriptor_created(const char *onion_address,
 void
 control_event_hs_descriptor_upload(const char *onion_address,
                                    const char *id_digest,
-                                   const char *desc_id)
+                                   const char *desc_id,
+                                   const char *hsdir_index)
 {
+  char *hsdir_index_field = NULL;
+
   if (BUG(!onion_address || !id_digest || !desc_id)) {
     return;
   }
 
+  if (hsdir_index) {
+    tor_asprintf(&hsdir_index_field, " HSDIR_INDEX=%s", hsdir_index);
+  }
+
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC UPLOAD %s UNKNOWN %s %s\r\n",
+                     "650 HS_DESC UPLOAD %s UNKNOWN %s %s%s\r\n",
                      onion_address,
                      node_describe_longname_by_id(id_digest),
-                     desc_id);
+                     desc_id,
+                     hsdir_index_field ? hsdir_index_field : "");
+  tor_free(hsdir_index_field);
 }
 
 /** send HS_DESC event after got response from hs directory.

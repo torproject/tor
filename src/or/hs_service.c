@@ -2267,9 +2267,12 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
              desc->desc->plaintext_data.revision_counter,
              safe_str_client(node_describe(hsdir)),
              safe_str_client(hex_str((const char *) index, 32)));
+
+    /* Fire a UPLOAD control port event. */
+    hs_control_desc_event_upload(service->onion_address, hsdir->identity,
+                                 &desc->blinded_kp.pubkey, index);
   }
 
-  /* XXX: Inform control port of the upload event (#20699). */
  end:
   tor_free(encoded_desc);
   return;

@@ -125,3 +125,32 @@ hs_control_desc_event_created(const char *onion_address,
   control_event_hs_descriptor_created(onion_address, base64_blinded_pk, -1);
 }
 
+/* Send on the control port the "HS_DESC UPLOAD [...]" event.
+ *
+ * Using the onion address of the descriptor's service, the HSDir identity
+ * digest, the blinded public key of the descriptor as a descriptor ID and the
+ * HSDir index for this particular request. None can be NULL. */
+void
+hs_control_desc_event_upload(const char *onion_address,
+                             const char *hsdir_id_digest,
+                             const ed25519_public_key_t *blinded_pk,
+                             const uint8_t *hsdir_index)
+{
+  char base64_blinded_pk[ED25519_BASE64_LEN + 1];
+
+  tor_assert(onion_address);
+  tor_assert(hsdir_id_digest);
+  tor_assert(blinded_pk);
+  tor_assert(hsdir_index);
+
+  /* Build base64 encoded blinded key. */
+  IF_BUG_ONCE(ed25519_public_to_base64(base64_blinded_pk, blinded_pk) < 0) {
+    return;
+  }
+
+  control_event_hs_descriptor_upload(onion_address, hsdir_id_digest,
+                                     base64_blinded_pk,
+                                     hex_str((const char *) hsdir_index,
+                                             DIGEST256_LEN));
+}
+

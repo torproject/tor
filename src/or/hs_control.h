@@ -29,5 +29,11 @@ void hs_control_desc_event_received(const hs_ident_dir_conn_t *ident,
 void hs_control_desc_event_created(const char *onion_address,
                                    const ed25519_public_key_t *blinded_pk);
 
+/* Event "HS_DESC UPLOAD [...]" */
+void hs_control_desc_event_upload(const char *onion_address,
+                                  const char *hsdir_id_digest,
+                                  const ed25519_public_key_t *blinded_pk,
+                                  const uint8_t *hsdir_index);
+
 #endif /* !defined(TOR_HS_CONTROL_H) */
 
