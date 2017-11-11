@@ -1162,6 +1162,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   time_t now = time(NULL);
   time_t elapsed;
   int replay;
+  size_t keylen;
 
   /* Do some initial validation and logging before we parse the cell */
   if (circuit->base_.purpose != CIRCUIT_PURPOSE_S_INTRO) {
@@ -1245,9 +1246,10 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   }
 
   /* check for replay of PK-encrypted portion. */
+  keylen = crypto_pk_keysize(intro_key);
   replay = replaycache_add_test_and_elapsed(
     intro_point->accepted_intro_rsa_parts,
-    parsed_req->ciphertext, parsed_req->ciphertext_len,
+    parsed_req->ciphertext, MIN(parsed_req->ciphertext_len, keylen),
     &elapsed);
 
   if (replay) {
