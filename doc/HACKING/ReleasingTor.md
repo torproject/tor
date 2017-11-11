@@ -171,7 +171,7 @@ new Tor release:
        - {mike} at tig dot as
        - {tails-rm} at boum dot org
        - {simon} at sdeziel.info
-       - {yuri} at rawbw.com
+       - {yuri} at freebsd.org
        - {mh+tor} at scrit.ch
 
 4. Add the version number to Trac.  To do this, go to Trac, log in,
