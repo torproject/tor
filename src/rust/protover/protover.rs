@@ -10,13 +10,20 @@ use std::string::String;
 
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
+///
+/// C_RUST_COUPLED:
+///     src/or/protover.h `FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS`
 const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 
 /// The maximum number of subprotocol version numbers we will attempt to expand
 /// before concluding that someone is trying to DoS us
+///
+/// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
 const MAX_PROTOCOLS_TO_EXPAND: u32 = 500;
 
 /// Currently supported protocols and their versions
+///
+/// C_RUST_COUPLED: src/or/protover.c `protover_get_supported_protocols`
 const SUPPORTED_PROTOCOLS: &'static [&'static str] = &[
     "Cons=1-2",
     "Desc=1-2",
@@ -31,6 +38,8 @@ const SUPPORTED_PROTOCOLS: &'static [&'static str] = &[
 ];
 
 /// Known subprotocols in Tor. Indicates which subprotocol a relay supports.
+///
+/// C_RUST_COUPLED: src/or/protover.h `protocol_type_t`
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub enum Proto {
     Cons,
@@ -53,6 +62,8 @@ impl fmt::Display for Proto {
 
 /// Translates a string representation of a protocol into a Proto type.
 /// Error if the string is an unrecognized protocol name.
+///
+/// C_RUST_COUPLED: src/or/protover.c `PROTOCOL_NAMES`
 impl FromStr for Proto {
     type Err = &'static str;
 
@@ -712,6 +723,7 @@ pub fn is_supported_here(proto: Proto, vers: u32) -> bool {
 /// This function returns the protocols that are supported by the version input,
 /// only for tor versions older than FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS.
 ///
+/// C_RUST_COUPLED: src/rust/protover.c `compute_for_old_tor`
 pub fn compute_for_old_tor(version: &str) -> String {
     if c_tor_version_as_new_as(
         version,

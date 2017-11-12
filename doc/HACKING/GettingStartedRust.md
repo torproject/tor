@@ -125,6 +125,14 @@ is on our TODO list to try to cultivate good standing with various distro
 maintainers of `rustc` and `cargo`, in order to ensure that whatever version we
 solidify on is readily available.
 
+If parts of your Rust code needs to stay in sync with C code (such as handling
+enums across the FFI boundary), annonotate these places in a comment structured
+as follows:
+
+  /// C_RUST_COUPLED: <path_to_file> `<name_of_c_object>`
+
+Where <name_of_c_object> can be an enum, struct, constant, etc.
+
  Adding your Rust module to Tor's build system
 -----------------------------------------------
 
