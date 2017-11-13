@@ -34,6 +34,7 @@ static int protocol_list_contains(const smartlist_t *protos,
                                   protocol_type_t pr, uint32_t ver);
 
 /** Mapping between protocol type string and protocol type. */
+/// C_RUST_COUPLED: src/rust/protover/protover.rs `PROTOCOL_NAMES`
 static const struct {
   protocol_type_t protover_type;
   const char *name;
@@ -320,6 +321,7 @@ protocol_list_supports_protocol_or_later(const char *list,
 
 /** Return the canonical string containing the list of protocols
  * that we support. */
+/// C_RUST_COUPLED: src/rust/protover/protover.rs `SUPPORTED_PROTOCOLS`
 const char *
 protover_get_supported_protocols(void)
 {
@@ -403,6 +405,8 @@ encode_protocol_list(const smartlist_t *sl)
 
 /* We treat any protocol list with more than this many subprotocols in it
  * as a DoS attempt. */
+/// C_RUST_COUPLED: src/rust/protover/protover.rs
+///                 `MAX_PROTOCOLS_TO_EXPAND`
 static const int MAX_PROTOCOLS_TO_EXPAND = (1<<16);
 
 /** Voting helper: Given a list of proto_entry_t, return a newly allocated
@@ -729,6 +733,7 @@ protocol_list_contains(const smartlist_t *protos,
  * Note that this is only used to infer protocols for Tor versions that
  * can't declare their own.
  **/
+/// C_RUST_COUPLED: src/rust/protover/protover.rs `compute_for_old_tor`
 const char *
 protover_compute_for_old_tor(const char *version)
 {

@@ -15,6 +15,8 @@
  * descriptors.  Authorities should use this to decide whether to
  * guess proto lines. */
 /* This is a guess. */
+/// C_RUST_COUPLED: src/rust/protover/protover.rs
+///                 `FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS`
 #define FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS "0.2.9.3-alpha"
 
 /** The protover version number that signifies HSDir support for HSv3 */
@@ -25,6 +27,8 @@
 #define PROTOVER_HS_RENDEZVOUS_POINT_V3 2
 
 /** List of recognized subprotocols. */
+/// C_RUST_COUPLED: src/rust/protover/ffi.rs `translate_to_rust`
+/// C_RUST_COUPLED: src/rust/protover/protover.rs `Proto`
 typedef enum protocol_type_t {
   PRT_LINK,
   PRT_LINKAUTH,
