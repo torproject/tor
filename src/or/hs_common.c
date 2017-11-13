@@ -224,7 +224,7 @@ get_time_period_length(void)
     return sr_state_get_protocol_run_duration() / 60;
   }
 
-  int32_t time_period_length = networkstatus_get_param(NULL, "hsdir-interval",
+  int32_t time_period_length = networkstatus_get_param(NULL, "hsdir_interval",
                                              HS_TIME_PERIOD_LENGTH_DEFAULT,
                                              HS_TIME_PERIOD_LENGTH_MIN,
                                              HS_TIME_PERIOD_LENGTH_MAX);
