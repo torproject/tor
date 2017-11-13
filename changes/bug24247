@@ -1,0 +1,6 @@
+  o Minor bugfixes (fuzzing):
+    - Fix a bug in our fuzzing mock replacement for crypto_pk_checksig(), to
+      correctly handle cases where a caller gives it an RSA key of under 160
+      bits. (This is not actually a bug in Tor itself, but wrather in our
+      fuzzing code.)  Fixes bug 24247; bugfix on 0.3.0.3-alpha.
+      Found by OSS-Fuzz as issue 4177.
