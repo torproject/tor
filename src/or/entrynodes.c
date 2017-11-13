@@ -1472,11 +1472,44 @@ guard_create_exit_restriction(const uint8_t *exit_id)
   return rst;
 }
 
-/** Allocate and return an outdated md guard restriction. */
+/** If we have less than these many configured bridges, don't set dirserver
+ *  restrictions because we might blacklist all of them. */
+#define TOO_FEW_BRIDGES_FOR_RESTRICTION 10
+
+/** Return true if we should set md dirserver restrictions. We might not want
+ *  to set those if our network is too restricted, since we don't want to
+ *  blacklist all our nodes. */
+static int
+should_set_md_dirserver_restriction(void)
+{
+  const guard_selection_t *gs = get_guard_selection_info();
+
+  /* Don't set a restriction if we are on a restricted guard selection */
+  if (gs->type == GS_TYPE_RESTRICTED) {
+    return 0;
+  }
+
+  /* Don't set restriction if we are using bridges and have too few of those */
+  if (gs->type == GS_TYPE_BRIDGE && gs->sampled_entry_guards) {
+    int num_sampled_guards = smartlist_len(gs->sampled_entry_guards);
+    if (num_sampled_guards < TOO_FEW_BRIDGES_FOR_RESTRICTION) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+/** Allocate and return an outdated md guard restriction. Return NULL if no
+ *  such restriction is needed. */
 STATIC entry_guard_restriction_t *
 guard_create_dirserver_md_restriction(void)
 {
   entry_guard_restriction_t *rst = NULL;
+
+  if (!should_set_md_dirserver_restriction()) {
+    return NULL;
+  }
 
   rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
   rst->type = RST_OUTDATED_MD_DIRSERVER;
@@ -1504,13 +1537,6 @@ guard_obeys_exit_restriction(const entry_guard_t *guard,
 static int
 guard_obeys_md_dirserver_restriction(const entry_guard_t *guard)
 {
-  /* Don't enforce dirserver restrictions for bridges since we might not have
-   * many of those. Be willing to try them over and over again for now. */
-  /* XXX: Improvement might be possible here */
-  if (guard->bridge_addr) {
-    return 1;
-  }
-
   /* If this guard is an outdated dirserver, don't use it. */
   if (microdesc_relay_is_outdated_dirserver(guard->identity)) {
     log_info(LD_GENERAL, "Skipping %s dirserver: outdated",
