@@ -131,7 +131,9 @@ as follows:
 
   /// C_RUST_COUPLED: <path_to_file> `<name_of_c_object>`
 
-Where <name_of_c_object> can be an enum, struct, constant, etc.
+Where <name_of_c_object> can be an enum, struct, constant, etc.  Then, do the
+same in the C code, to note that rust will need to be changed when the C
+does.
 
  Adding your Rust module to Tor's build system
 -----------------------------------------------
