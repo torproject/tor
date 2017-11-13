@@ -1,5 +1,0 @@
-  o Minor bugfixes (IPv6, v3 single onion services):
-    - Remove buggy code for IPv6-only v3 single onion services, and reject
-      attempts to configure them. This release supports IPv4, dual-stack, and
-      IPv6-only v3 hidden services; and IPv4 and dual-stack v3 single onion
-      services. Fixes bug 23820; bugfix on 0.3.2.1-alpha.

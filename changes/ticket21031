@@ -1,7 +1,0 @@
-  o Minor features (removed deprecations):
-   - The ClientDNSRejectInternalAddresses flag can once again be set in
-     non-testing Tor networks, so long as they do not use the default
-     directory authorities.
-     This change also removes the deprecation of this
-     flag in 0.2.9.2-alpha. Closes ticket 21031.
-

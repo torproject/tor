@@ -1,4 +1,0 @@
-  o Minor features (logging, scheduler):
-    - Introduce a SCHED_BUG() function to log extra information about the
-      scheduler state if we ever catch a bug in the scheduler. Closes ticket
-      23753.

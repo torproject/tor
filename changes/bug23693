@@ -1,6 +1,0 @@
-  o Minor bugfixes (relay, crash):
-    - Avoid a crash when transitioning from client mode to bridge mode.
-      Previously, we would launch the worker threads whenever our "public
-      server" mode changed, but not when our "server" mode changed.
-      Fixes bug 23693; bugfix on 0.2.6.3-alpha.
-
