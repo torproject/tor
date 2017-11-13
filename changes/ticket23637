@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (directory authority):
     - Make the "Exit" flag assignment only depend on whether the exit
       policy allows connections to ports 80 and 443. Previously relays
       would get the Exit flag if they allowed connections to one of
