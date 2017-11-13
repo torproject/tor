@@ -56,7 +56,7 @@ hs_check_service_private_dir(const char *username, const char *path,
 STATIC uint64_t
 get_time_period_length(void)
 {
-  int32_t time_period_length = networkstatus_get_param(NULL, "hsdir-interval",
+  int32_t time_period_length = networkstatus_get_param(NULL, "hsdir_interval",
                                              HS_TIME_PERIOD_LENGTH_DEFAULT,
                                              HS_TIME_PERIOD_LENGTH_MIN,
                                              HS_TIME_PERIOD_LENGTH_MAX);
