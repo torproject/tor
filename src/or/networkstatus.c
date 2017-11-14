@@ -197,7 +197,7 @@ networkstatus_read_cached_consensus_impl(int flav,
     tor_snprintf(buf, sizeof(buf), "%s-%s-consensus", prefix, flavorname);
   }
 
-  char *filename = get_datadir_fname(buf);
+  char *filename = get_cachedir_fname(buf);
   char *result = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   tor_free(filename);
   return result;
@@ -1794,15 +1794,15 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (!strcmp(flavor, "ns")) {
-    consensus_fname = get_datadir_fname("cached-consensus");
-    unverified_fname = get_datadir_fname("unverified-consensus");
+    consensus_fname = get_cachedir_fname("cached-consensus");
+    unverified_fname = get_cachedir_fname("unverified-consensus");
     if (current_ns_consensus) {
       current_digests = &current_ns_consensus->digests;
       current_valid_after = current_ns_consensus->valid_after;
     }
   } else if (!strcmp(flavor, "microdesc")) {
-    consensus_fname = get_datadir_fname("cached-microdesc-consensus");
-    unverified_fname = get_datadir_fname("unverified-microdesc-consensus");
+    consensus_fname = get_cachedir_fname("cached-microdesc-consensus");
+    unverified_fname = get_cachedir_fname("unverified-microdesc-consensus");
     if (current_md_consensus) {
       current_digests = &current_md_consensus->digests;
       current_valid_after = current_md_consensus->valid_after;
@@ -1811,9 +1811,9 @@ networkstatus_set_current_consensus(const char *consensus,
     cached_dir_t *cur;
     char buf[128];
     tor_snprintf(buf, sizeof(buf), "cached-%s-consensus", flavor);
-    consensus_fname = get_datadir_fname(buf);
+    consensus_fname = get_cachedir_fname(buf);
     tor_snprintf(buf, sizeof(buf), "unverified-%s-consensus", flavor);
-    unverified_fname = get_datadir_fname(buf);
+    unverified_fname = get_cachedir_fname(buf);
     cur = dirserv_get_consensus(flavor);
     if (cur) {
       current_digests = &cur->digests;

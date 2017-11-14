@@ -174,7 +174,7 @@ expire_old_onion_keys(void)
 
   tor_mutex_release(key_lock);
 
-  fname = get_datadir_fname2("keys", "secret_onion_key.old");
+  fname = get_keydir_fname("secret_onion_key.old");
   if (file_status(fname) == FN_FILE) {
     if (tor_unlink(fname) != 0) {
       log_warn(LD_FS, "Couldn't unlink old onion key file %s: %s",
@@ -183,7 +183,7 @@ expire_old_onion_keys(void)
   }
   tor_free(fname);
 
-  fname = get_datadir_fname2("keys", "secret_onion_key_ntor.old");
+  fname = get_keydir_fname("secret_onion_key_ntor.old");
   if (file_status(fname) == FN_FILE) {
     if (tor_unlink(fname) != 0) {
       log_warn(LD_FS, "Couldn't unlink old ntor onion key file %s: %s",
@@ -378,8 +378,8 @@ rotate_onion_key(void)
   or_state_t *state = get_or_state();
   curve25519_keypair_t new_curve25519_keypair;
   time_t now;
-  fname = get_datadir_fname2("keys", "secret_onion_key");
-  fname_prev = get_datadir_fname2("keys", "secret_onion_key.old");
+  fname = get_keydir_fname("secret_onion_key");
+  fname_prev = get_keydir_fname("secret_onion_key.old");
   /* There isn't much point replacing an old key with an empty file */
   if (file_status(fname) == FN_FILE) {
     if (replace_file(fname, fname_prev))
@@ -399,8 +399,8 @@ rotate_onion_key(void)
   }
   tor_free(fname);
   tor_free(fname_prev);
-  fname = get_datadir_fname2("keys", "secret_onion_key_ntor");
-  fname_prev = get_datadir_fname2("keys", "secret_onion_key_ntor.old");
+  fname = get_keydir_fname("secret_onion_key_ntor");
+  fname_prev = get_keydir_fname("secret_onion_key_ntor.old");
   if (curve25519_keypair_generate(&new_curve25519_keypair, 1) < 0)
     goto error;
   /* There isn't much point replacing an old key with an empty file */
@@ -624,7 +624,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
   crypto_pk_t *signing_key = NULL;
   authority_cert_t *parsed = NULL;
 
-  fname = get_datadir_fname2("keys",
+  fname = get_keydir_fname(
                  legacy ? "legacy_signing_key" : "authority_signing_key");
   signing_key = init_key_from_file(fname, 0, LOG_ERR, 0);
   if (!signing_key) {
@@ -632,7 +632,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
     goto done;
   }
   tor_free(fname);
-  fname = get_datadir_fname2("keys",
+  fname = get_keydir_fname(
                legacy ? "legacy_certificate" : "authority_certificate");
   cert = read_file_to_str(fname, 0, NULL);
   if (!cert) {
@@ -958,7 +958,7 @@ init_keys(void)
   }
 
   /* 1b. Read identity key. Make it if none is found. */
-  keydir = get_datadir_fname2("keys", "secret_id_key");
+  keydir = get_keydir_fname("secret_id_key");
   log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
   prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
   tor_free(keydir);
@@ -986,7 +986,7 @@ init_keys(void)
     return -1;
 
   /* 2. Read onion key.  Make it if none is found. */
-  keydir = get_datadir_fname2("keys", "secret_onion_key");
+  keydir = get_keydir_fname("secret_onion_key");
   log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
   prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
   tor_free(keydir);
@@ -1011,7 +1011,7 @@ init_keys(void)
     }
   }
 
-  keydir = get_datadir_fname2("keys", "secret_onion_key.old");
+  keydir = get_keydir_fname("secret_onion_key.old");
   if (!lastonionkey && file_status(keydir) == FN_FILE) {
     /* Load keys from non-empty files only.
      * Missing old keys won't be replaced with freshly generated keys. */
@@ -1024,14 +1024,14 @@ init_keys(void)
   {
     /* 2b. Load curve25519 onion keys. */
     int r;
-    keydir = get_datadir_fname2("keys", "secret_onion_key_ntor");
+    keydir = get_keydir_fname("secret_onion_key_ntor");
     r = init_curve25519_keypair_from_file(&curve25519_onion_key,
                                           keydir, 1, LOG_ERR, "onion");
     tor_free(keydir);
     if (r<0)
       return -1;
 
-    keydir = get_datadir_fname2("keys", "secret_onion_key_ntor.old");
+    keydir = get_keydir_fname("secret_onion_key_ntor.old");
     if (tor_mem_is_zero((const char *)
                            last_curve25519_onion_key.pubkey.public_key,
                         CURVE25519_PUBKEY_LEN) &&

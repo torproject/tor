@@ -3550,7 +3550,7 @@ sandbox_init_filter(void)
   int i;
 
   sandbox_cfg_allow_openat_filename(&cfg,
-      get_datadir_fname("cached-status"));
+      get_cachedir_fname("cached-status"));
 
 #define OPEN(name)                              \
   sandbox_cfg_allow_open_filename(&cfg, tor_strdup(name))
@@ -3571,21 +3571,37 @@ sandbox_init_filter(void)
     OPEN_DATADIR2(name, name2 suffix);                  \
   } while (0)
 
+#define OPEN_KEY_DIRECTORY() OPEN_DATADIR("keys")
+#define OPEN_CACHEDIR(name)                      \
+  sandbox_cfg_allow_open_filename(&cfg, get_cachedir_fname(name))
+#define OPEN_CACHEDIR_SUFFIX(name, suffix) do {  \
+    OPEN_CACHEDIR(name);                         \
+    OPEN_CACHEDIR(name suffix);                  \
+  } while (0)
+#define OPEN_KEYDIR(name)                      \
+  sandbox_cfg_allow_open_filename(&cfg, get_keydir_fname(name))
+#define OPEN_KEYDIR_SUFFIX(name, suffix) do {    \
+    OPEN_KEYDIR(name);                           \
+    OPEN_KEYDIR(name suffix);                    \
+  } while (0)
+
   OPEN(options->DataDirectory);
-  OPEN_DATADIR("keys");
-  OPEN_DATADIR_SUFFIX("cached-certs", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("unverified-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("unverified-microdesc-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-microdesc-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-microdescs", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-microdescs.new", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-descriptors", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-descriptors.new", ".tmp");
-  OPEN_DATADIR("cached-descriptors.tmp.tmp");
-  OPEN_DATADIR_SUFFIX("cached-extrainfo", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-extrainfo.new", ".tmp");
-  OPEN_DATADIR("cached-extrainfo.tmp.tmp");
+  OPEN_KEY_DIRECTORY();
+
+  OPEN_CACHEDIR_SUFFIX("cached-certs", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-consensus", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("unverified-consensus", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("unverified-microdesc-consensus", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-microdesc-consensus", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-microdescs", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-microdescs.new", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-descriptors", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-descriptors.new", ".tmp");
+  OPEN_CACHEDIR("cached-descriptors.tmp.tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-extrainfo", ".tmp");
+  OPEN_CACHEDIR_SUFFIX("cached-extrainfo.new", ".tmp");
+  OPEN_CACHEDIR("cached-extrainfo.tmp.tmp");
+
   OPEN_DATADIR_SUFFIX("state", ".tmp");
   OPEN_DATADIR_SUFFIX("sr-state", ".tmp");
   OPEN_DATADIR_SUFFIX("unparseable-desc", ".tmp");
@@ -3629,20 +3645,31 @@ sandbox_init_filter(void)
                            get_datadir_fname2(prefix, name suffix),     \
                            get_datadir_fname2(prefix, name))
 
-  RENAME_SUFFIX("cached-certs", ".tmp");
-  RENAME_SUFFIX("cached-consensus", ".tmp");
-  RENAME_SUFFIX("unverified-consensus", ".tmp");
-  RENAME_SUFFIX("unverified-microdesc-consensus", ".tmp");
-  RENAME_SUFFIX("cached-microdesc-consensus", ".tmp");
-  RENAME_SUFFIX("cached-microdescs", ".tmp");
-  RENAME_SUFFIX("cached-microdescs", ".new");
-  RENAME_SUFFIX("cached-microdescs.new", ".tmp");
-  RENAME_SUFFIX("cached-descriptors", ".tmp");
-  RENAME_SUFFIX("cached-descriptors", ".new");
-  RENAME_SUFFIX("cached-descriptors.new", ".tmp");
-  RENAME_SUFFIX("cached-extrainfo", ".tmp");
-  RENAME_SUFFIX("cached-extrainfo", ".new");
-  RENAME_SUFFIX("cached-extrainfo.new", ".tmp");
+#define RENAME_CACHEDIR_SUFFIX(name, suffix)        \
+  sandbox_cfg_allow_rename(&cfg,           \
+      get_cachedir_fname(name suffix),      \
+      get_cachedir_fname(name))
+
+#define RENAME_KEYDIR_SUFFIX(name, suffix)    \
+  sandbox_cfg_allow_rename(&cfg,           \
+      get_keydir_fname(name suffix),      \
+      get_keydir_fname(name))
+
+  RENAME_CACHEDIR_SUFFIX("cached-certs", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-consensus", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("unverified-consensus", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("unverified-microdesc-consensus", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-microdesc-consensus", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-microdescs", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-microdescs", ".new");
+  RENAME_CACHEDIR_SUFFIX("cached-microdescs.new", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-descriptors", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-descriptors", ".new");
+  RENAME_CACHEDIR_SUFFIX("cached-descriptors.new", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-extrainfo", ".tmp");
+  RENAME_CACHEDIR_SUFFIX("cached-extrainfo", ".new");
+  RENAME_CACHEDIR_SUFFIX("cached-extrainfo.new", ".tmp");
+
   RENAME_SUFFIX("state", ".tmp");
   RENAME_SUFFIX("sr-state", ".tmp");
   RENAME_SUFFIX("unparseable-desc", ".tmp");
@@ -3654,14 +3681,20 @@ sandbox_init_filter(void)
 #define STAT_DATADIR(name)                      \
   sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname(name))
 
+#define STAT_CACHEDIR(name)                                             \
+  sandbox_cfg_allow_stat_filename(&cfg, get_cachedir_fname(name))
+
 #define STAT_DATADIR2(name, name2)                                      \
   sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname2((name), (name2)))
+
+#define STAT_KEY_DIRECTORY() STAT_DATADIR("keys")
 
   STAT_DATADIR(NULL);
   STAT_DATADIR("lock");
   STAT_DATADIR("state");
   STAT_DATADIR("router-stability");
-  STAT_DATADIR("cached-extrainfo.new");
+
+  STAT_CACHEDIR("cached-extrainfo.new");
 
   {
     smartlist_t *files = smartlist_new();
@@ -3726,22 +3759,20 @@ sandbox_init_filter(void)
   // orport
   if (server_mode(get_options())) {
 
-    OPEN_DATADIR2_SUFFIX("keys", "secret_id_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "secret_onion_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "secret_onion_key_ntor", ".tmp");
-    OPEN_DATADIR2("keys", "secret_id_key.old");
-    OPEN_DATADIR2("keys", "secret_onion_key.old");
-    OPEN_DATADIR2("keys", "secret_onion_key_ntor.old");
+    OPEN_KEYDIR_SUFFIX("secret_id_key", ".tmp");
+    OPEN_KEYDIR_SUFFIX("secret_onion_key", ".tmp");
+    OPEN_KEYDIR_SUFFIX("secret_onion_key_ntor", ".tmp");
+    OPEN_KEYDIR("secret_id_key.old");
+    OPEN_KEYDIR("secret_onion_key.old");
+    OPEN_KEYDIR("secret_onion_key_ntor.old");
 
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_secret_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_secret_key_encrypted",
-                         ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_public_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_secret_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_secret_key_encrypted",
-                         ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_public_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_cert", ".tmp");
+    OPEN_KEYDIR_SUFFIX("ed25519_master_id_secret_key", ".tmp");
+    OPEN_KEYDIR_SUFFIX("ed25519_master_id_secret_key_encrypted", ".tmp");
+    OPEN_KEYDIR_SUFFIX("ed25519_master_id_public_key", ".tmp");
+    OPEN_KEYDIR_SUFFIX("ed25519_signing_secret_key", ".tmp");
+    OPEN_KEYDIR_SUFFIX("ed25519_signing_secret_key_encrypted", ".tmp");
+    OPEN_KEYDIR_SUFFIX("ed25519_signing_public_key", ".tmp");
+    OPEN_KEYDIR_SUFFIX("ed25519_signing_cert", ".tmp");
 
     OPEN_DATADIR2_SUFFIX("stats", "bridge-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "dirreq-stats", ".tmp");
@@ -3760,11 +3791,13 @@ sandbox_init_filter(void)
     OPEN("/etc/resolv.conf");
 
     RENAME_SUFFIX("fingerprint", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_onion_key_ntor", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_id_key", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_id_key.old", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_onion_key", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
+    RENAME_KEYDIR_SUFFIX("secret_onion_key_ntor", ".tmp");
+
+    RENAME_KEYDIR_SUFFIX("secret_id_key", ".tmp");
+    RENAME_KEYDIR_SUFFIX("secret_id_key.old", ".tmp");
+    RENAME_KEYDIR_SUFFIX("secret_onion_key", ".tmp");
+    RENAME_KEYDIR_SUFFIX("secret_onion_key.old", ".tmp");
+
     RENAME_SUFFIX2("stats", "bridge-stats", ".tmp");
     RENAME_SUFFIX2("stats", "dirreq-stats", ".tmp");
     RENAME_SUFFIX2("stats", "entry-stats", ".tmp");
@@ -3775,20 +3808,20 @@ sandbox_init_filter(void)
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
     RENAME_SUFFIX("router-stability", ".tmp");
 
-    RENAME_SUFFIX2("keys", "ed25519_master_id_secret_key", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_master_id_secret_key_encrypted", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_master_id_public_key", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_signing_secret_key", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_signing_cert", ".tmp");
+    RENAME_KEYDIR_SUFFIX("ed25519_master_id_secret_key", ".tmp");
+    RENAME_KEYDIR_SUFFIX("ed25519_master_id_secret_key_encrypted", ".tmp");
+    RENAME_KEYDIR_SUFFIX("ed25519_master_id_public_key", ".tmp");
+    RENAME_KEYDIR_SUFFIX("ed25519_signing_secret_key", ".tmp");
+    RENAME_KEYDIR_SUFFIX("ed25519_signing_cert", ".tmp");
 
     sandbox_cfg_allow_rename(&cfg,
-             get_datadir_fname2("keys", "secret_onion_key"),
-             get_datadir_fname2("keys", "secret_onion_key.old"));
+             get_keydir_fname("secret_onion_key"),
+             get_keydir_fname("secret_onion_key.old"));
     sandbox_cfg_allow_rename(&cfg,
-             get_datadir_fname2("keys", "secret_onion_key_ntor"),
-             get_datadir_fname2("keys", "secret_onion_key_ntor.old"));
+             get_keydir_fname("secret_onion_key_ntor"),
+             get_keydir_fname("secret_onion_key_ntor.old"));
 
-    STAT_DATADIR("keys");
+    STAT_KEY_DIRECTORY();
     OPEN_DATADIR("stats");
     STAT_DATADIR("stats");
     STAT_DATADIR2("stats", "dirreq-stats");

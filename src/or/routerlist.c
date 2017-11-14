@@ -473,7 +473,7 @@ trusted_dirs_reload_certs(void)
   char *contents;
   int r;
 
-  filename = get_datadir_fname("cached-certs");
+  filename = get_cachedir_fname("cached-certs");
   contents = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   tor_free(filename);
   if (!contents)
@@ -662,7 +662,7 @@ trusted_dirs_flush_certs_to_disk(void)
           });
   } DIGESTMAP_FOREACH_END;
 
-  filename = get_datadir_fname("cached-certs");
+  filename = get_cachedir_fname("cached-certs");
   if (write_chunks_to_file(filename, chunks, 0, 0)) {
     log_warn(LD_FS, "Error writing certificates to disk.");
   }
@@ -1339,7 +1339,7 @@ static int
 signed_desc_append_to_journal(signed_descriptor_t *desc,
                               desc_store_t *store)
 {
-  char *fname = get_datadir_fname_suffix(store->fname_base, ".new");
+  char *fname = get_cachedir_fname_suffix(store->fname_base, ".new");
   const char *body = signed_descriptor_get_body_impl(desc,1);
   size_t len = desc->signed_descriptor_len + desc->annotations_len;
 
@@ -1410,8 +1410,8 @@ router_rebuild_store(int flags, desc_store_t *store)
 
   log_info(LD_DIR, "Rebuilding %s cache", store->description);
 
-  fname = get_datadir_fname(store->fname_base);
-  fname_tmp = get_datadir_fname_suffix(store->fname_base, ".tmp");
+  fname = get_cachedir_fname(store->fname_base);
+  fname_tmp = get_cachedir_fname_suffix(store->fname_base, ".tmp");
 
   chunk_list = smartlist_new();
 
@@ -1508,7 +1508,7 @@ router_rebuild_store(int flags, desc_store_t *store)
   } SMARTLIST_FOREACH_END(sd);
 
   tor_free(fname);
-  fname = get_datadir_fname_suffix(store->fname_base, ".new");
+  fname = get_cachedir_fname_suffix(store->fname_base, ".new");
   write_str_to_file(fname, "", 1);
 
   r = 0;
@@ -1538,7 +1538,7 @@ router_reload_router_list_impl(desc_store_t *store)
   int extrainfo = (store->type == EXTRAINFO_STORE);
   store->journal_len = store->store_len = 0;
 
-  fname = get_datadir_fname(store->fname_base);
+  fname = get_cachedir_fname(store->fname_base);
 
   if (store->mmap) {
     /* get rid of it first */
@@ -1565,7 +1565,7 @@ router_reload_router_list_impl(desc_store_t *store)
   }
 
   tor_free(fname);
-  fname = get_datadir_fname_suffix(store->fname_base, ".new");
+  fname = get_cachedir_fname_suffix(store->fname_base, ".new");
   /* don't load empty files - we wouldn't get any data, even if we tried */
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);

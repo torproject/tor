@@ -142,8 +142,8 @@ get_microdesc_cache_noload(void)
   if (PREDICT_UNLIKELY(the_microdesc_cache==NULL)) {
     microdesc_cache_t *cache = tor_malloc_zero(sizeof(*cache));
     HT_INIT(microdesc_map, &cache->map);
-    cache->cache_fname = get_datadir_fname("cached-microdescs");
-    cache->journal_fname = get_datadir_fname("cached-microdescs.new");
+    cache->cache_fname = get_cachedir_fname("cached-microdescs");
+    cache->journal_fname = get_cachedir_fname("cached-microdescs.new");
     the_microdesc_cache = cache;
   }
   return the_microdesc_cache;

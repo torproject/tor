@@ -72,6 +72,11 @@ MOCK_DECL(char *,
  * get_datadir_fname2_suffix.  */
 #define get_datadir_fname2(sub1,sub2) \
   get_datadir_fname2_suffix((sub1), (sub2), NULL)
+/** Return a newly allocated string containing datadir/sub1suffix.  See
+ * get_datadir_fname2_suffix. */
+#define get_datadir_fname_suffix(sub1, suffix) \
+  get_datadir_fname2_suffix((sub1), NULL, (suffix))
+
 /** Return a newly allocated string containing datadir/sub1 relative to
  * opts.  See get_datadir_fname2_suffix.  */
 #define options_get_datadir_fname(opts,sub1)                    \
@@ -80,10 +85,18 @@ MOCK_DECL(char *,
  * opts.  See get_datadir_fname2_suffix.  */
 #define options_get_datadir_fname2(opts,sub1,sub2)                      \
   options_get_datadir_fname2_suffix((opts),(sub1), (sub2), NULL)
-/** Return a newly allocated string containing datadir/sub1suffix.  See
- * get_datadir_fname2_suffix. */
-#define get_datadir_fname_suffix(sub1, suffix) \
-  get_datadir_fname2_suffix((sub1), NULL, (suffix))
+
+/** DOCDOC */
+#define get_keydir_fname(sub1)                  \
+  get_datadir_fname2("keys", (sub1))
+#define options_get_keydir_fname(options, sub1)  \
+  options_get_datadir_fname2((options), "keys", (sub1))
+#define get_keydir_fname_suffix(sub1, suffix)   \
+  get_datadir_fname2_suffix("keys", (sub1), (suffix))
+
+#define get_cachedir_fname(sub1) get_datadir_fname((sub1))
+#define get_cachedir_fname_suffix(sub1, suffix) \
+  get_datadir_fname_suffix((sub1), (suffix))
 
 int using_default_dir_authorities(const or_options_t *options);
 

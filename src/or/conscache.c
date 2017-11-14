@@ -79,7 +79,7 @@ consensus_cache_open(const char *subdir, int max_entries)
 {
   int storagedir_max_entries;
   consensus_cache_t *cache = tor_malloc_zero(sizeof(consensus_cache_t));
-  char *directory = get_datadir_fname(subdir);
+  char *directory = get_cachedir_fname(subdir);
   cache->max_entries = max_entries;
 
 #ifdef MUST_UNMAP_TO_UNLINK
