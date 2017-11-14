@@ -7326,7 +7326,7 @@ control_event_hs_descriptor_upload_failed(const char *id_digest,
              id_digest);
     return;
   }
-  control_event_hs_descriptor_upload_end("UPLOAD_FAILED", onion_address,
+  control_event_hs_descriptor_upload_end("FAILED", onion_address,
                                          id_digest, reason);
 }
 

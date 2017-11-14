@@ -1,0 +1,4 @@
+  o Minor bugfixes (control port, hidden service):
+    - Control port was reporting the action "UPLOAD_FAILED" instead of
+      "FAILED" for the HS_DESC event when a service was not able to upload a
+      descriptor. Fixes bug 24230; bugfix on 0.2.7.1-alpha.
