@@ -286,7 +286,7 @@ static config_var_t option_vars_[] = {
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
   V(CountPrivateBandwidth,       BOOL,     "0"),
-  V(DataDirectory,               FILENAME, NULL),
+  VAR("DataDirectory",           FILENAME, DataDirectory_option, NULL),
   V(DataDirectoryGroupReadable,  BOOL,     "0"),
   V(DisableOOSCheck,             BOOL,     "1"),
   V(DisableNetwork,              BOOL,     "0"),
@@ -941,6 +941,7 @@ or_options_free(or_options_t *options)
     SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, tor_free(f));
     smartlist_free(options->FilesOpenedByIncludes);
   }
+  tor_free(options->DataDirectory);
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
@@ -7682,31 +7683,29 @@ port_exists_by_type_addr32h_port(int listener_type, uint32_t addr_ipv4h,
                                        check_wildcard);
 }
 
-/** Adjust the value of options->DataDirectory, or fill it in if it's
- * absent. Return 0 on success, -1 on failure. */
-static int
-normalize_data_directory(or_options_t *options)
+/** Allocate and return a good value for the DataDirectory based on
+ *  <b>val</b>, which may be NULL.  Return NULL on failure. */
+static char *
+get_data_directory(const char *val)
 {
 #ifdef _WIN32
-  char *p;
-  if (options->DataDirectory)
-    return 0; /* all set */
-  p = tor_malloc(MAX_PATH);
-  strlcpy(p,get_windows_conf_root(),MAX_PATH);
-  options->DataDirectory = p;
-  return 0;
+  if (val) {
+    return tor_strdup(val);
+  } else {
+    return tor_strdup(get_windows_conf_root());
+  }
 #else /* !(defined(_WIN32)) */
-  const char *d = options->DataDirectory;
+  const char *d = val;
   if (!d)
     d = "~/.tor";
 
- if (strncmp(d,"~/",2) == 0) {
+  if (!strcmpstart(d, "~/")) {
    char *fn = expand_filename(d);
    if (!fn) {
      log_warn(LD_CONFIG,"Failed to expand filename \"%s\".", d);
-     return -1;
+     return NULL;
    }
-   if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
+   if (!val && !strcmp(fn,"/.tor")) {
      /* If our homedir is /, we probably don't want to use it. */
      /* Default to LOCALSTATEDIR/tor which is probably closer to what we
       * want. */
@@ -7717,10 +7716,9 @@ normalize_data_directory(or_options_t *options)
      tor_free(fn);
      fn = tor_strdup(LOCALSTATEDIR PATH_SEPARATOR "tor");
    }
-   tor_free(options->DataDirectory);
-   options->DataDirectory = fn;
+   return fn;
  }
- return 0;
+ return tor_strdup(d);
 #endif /* defined(_WIN32) */
 }
 
@@ -7729,9 +7727,10 @@ normalize_data_directory(or_options_t *options)
 static int
 validate_data_directory(or_options_t *options)
 {
-  if (normalize_data_directory(options) < 0)
+  tor_free(options->DataDirectory);
+  options->DataDirectory = get_data_directory(options->DataDirectory_option);
+  if (!options->DataDirectory)
     return -1;
-  tor_assert(options->DataDirectory);
   if (strlen(options->DataDirectory) > (512-128)) {
     log_warn(LD_CONFIG, "DataDirectory is too long.");
     return -1;

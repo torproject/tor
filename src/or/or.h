@@ -3641,7 +3641,9 @@ typedef struct {
   char *SyslogIdentityTag; /**< Identity tag to add for syslog logging. */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
-  char *DataDirectory; /**< OR only: where to store long-term data. */
+  char *DataDirectory_option; /**< Where to store long-term data, as
+                               * configured by the user. */
+  char *DataDirectory; /**< Where to store long-term data, as modified. */
   int DataDirectoryGroupReadable; /**< Boolean: Is the DataDirectory g+r? */
   char *Nickname; /**< OR only: nickname of this onion router. */
   char *Address; /**< OR only: configured address for this onion router. */
