@@ -7963,28 +7963,6 @@ write_to_data_subdir(const char* subdir, const char* fname,
   return return_val;
 }
 
-/** Given a file name check to see whether the file exists but has not been
- * modified for a very long time.  If so, remove it. */
-void
-remove_file_if_very_old(const char *fname, time_t now)
-{
-#define VERY_OLD_FILE_AGE (28*24*60*60)
-  struct stat st;
-
-  log_debug(LD_FS, "stat()ing %s", fname);
-  if (stat(sandbox_intern_string(fname), &st)==0 &&
-      st.st_mtime < now-VERY_OLD_FILE_AGE) {
-    char buf[ISO_TIME_LEN+1];
-    format_local_iso_time(buf, st.st_mtime);
-    log_notice(LD_GENERAL, "Obsolete file %s hasn't been modified since %s. "
-               "Removing it.", fname, buf);
-    if (unlink(fname) != 0) {
-      log_warn(LD_FS, "Failed to unlink %s: %s",
-               fname, strerror(errno));
-    }
-  }
-}
-
 /** Return a smartlist of ports that must be forwarded by
  *  tor-fw-helper. The smartlist contains the ports in a string format
  *  that is understandable by tor-fw-helper. */
