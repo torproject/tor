@@ -3571,7 +3571,8 @@ sandbox_init_filter(void)
     OPEN_DATADIR2(name, name2 suffix);                  \
   } while (0)
 
-#define OPEN_KEY_DIRECTORY() OPEN_DATADIR("keys")
+#define OPEN_KEY_DIRECTORY() \
+  sandbox_cfg_allow_open_filename(&cfg, tor_strdup(options->KeyDirectory))
 #define OPEN_CACHEDIR(name)                      \
   sandbox_cfg_allow_open_filename(&cfg, get_cachedir_fname(name))
 #define OPEN_CACHEDIR_SUFFIX(name, suffix) do {  \
@@ -3687,7 +3688,8 @@ sandbox_init_filter(void)
 #define STAT_DATADIR2(name, name2)                                      \
   sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname2((name), (name2)))
 
-#define STAT_KEY_DIRECTORY() STAT_DATADIR("keys")
+#define STAT_KEY_DIRECTORY() \
+  sandbox_cfg_allow_stat_filename(&cfg, tor_strdup(options->KeyDirectory))
 
   STAT_DATADIR(NULL);
   STAT_DATADIR("lock");

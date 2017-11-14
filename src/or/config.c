@@ -253,6 +253,8 @@ static config_var_t option_vars_[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(BridgeDistribution,          STRING,   NULL),
+  VAR("CacheDirectory",          FILENAME, CacheDirectory_option, NULL),
+  V(CacheDirectoryGroupReadable, BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
   V(PaddingStatistics,           BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
@@ -392,6 +394,8 @@ static config_var_t option_vars_[] = {
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
+  VAR("KeyDirectory",            FILENAME, KeyDirectory_option, NULL),
+  V(KeyDirectoryGroupReadable,   BOOL,     "0"),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   V(KeepBindCapabilities,            AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
@@ -733,7 +737,7 @@ static int parse_ports(or_options_t *options, int validate_only,
 static int check_server_ports(const smartlist_t *ports,
                               const or_options_t *options,
                               int *num_low_ports_out);
-static int validate_data_directory(or_options_t *options);
+static int validate_data_directories(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
 static int options_init_logs(const or_options_t *old_options,
@@ -942,6 +946,8 @@ or_options_free(or_options_t *options)
     smartlist_free(options->FilesOpenedByIncludes);
   }
   tor_free(options->DataDirectory);
+  tor_free(options->CacheDirectory);
+  tor_free(options->KeyDirectory);
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
@@ -1305,13 +1311,11 @@ create_keys_directory(const or_options_t *options)
             options->DataDirectory);
     return -1;
   }
+
   /* Check the key directory. */
-  char *keydir = options_get_datadir_fname(options, "keys");
-  if (check_private_dir(keydir, CPD_CREATE, options->User)) {
-    tor_free(keydir);
+  if (check_private_dir(options->KeyDirectory, CPD_CREATE, options->User)) {
     return -1;
   }
-  tor_free(keydir);
   return 0;
 }
 
@@ -1475,6 +1479,20 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (check_and_create_data_directory(running_tor /* create */,
                                       options->DataDirectory,
                                       options->DataDirectoryGroupReadable,
+                                      options->User,
+                                      msg) < 0) {
+    goto done;
+  }
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->KeyDirectory,
+                                      options->KeyDirectoryGroupReadable,
+                                      options->User,
+                                      msg) < 0) {
+    goto done;
+  }
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->CacheDirectory,
+                                      options->CacheDirectoryGroupReadable,
                                       options->User,
                                       msg) < 0) {
     goto done;
@@ -3240,7 +3258,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (parse_outbound_addresses(options, 1, msg) < 0)
     return -1;
 
-  if (validate_data_directory(options)<0)
+  if (validate_data_directories(options)<0)
     REJECT("Invalid DataDirectory");
 
   if (options->Nickname == NULL) {
@@ -4635,6 +4653,22 @@ options_transition_allowed(const or_options_t *old,
                "While Tor is running, changing DataDirectory "
                "(\"%s\"->\"%s\") is not allowed.",
                old->DataDirectory, new_val->DataDirectory);
+    return -1;
+  }
+
+  if (!opt_streq(old->KeyDirectory, new_val->KeyDirectory)) {
+    tor_asprintf(msg,
+               "While Tor is running, changing KeyDirectory "
+               "(\"%s\"->\"%s\") is not allowed.",
+               old->KeyDirectory, new_val->KeyDirectory);
+    return -1;
+  }
+
+  if (!opt_streq(old->CacheDirectory, new_val->CacheDirectory)) {
+    tor_asprintf(msg,
+               "While Tor is running, changing CacheDirectory "
+               "(\"%s\"->\"%s\") is not allowed.",
+               old->CacheDirectory, new_val->CacheDirectory);
     return -1;
   }
 
@@ -7774,10 +7808,10 @@ get_data_directory(const char *val)
 #endif /* defined(_WIN32) */
 }
 
-/** Check and normalize the value of options->DataDirectory; return 0 if it
- * is sane, -1 otherwise. */
+/** Check and normalize the values of options->{Key,Data,Cache}Directory;
+ * return 0 if it is sane, -1 otherwise. */
 static int
-validate_data_directory(or_options_t *options)
+validate_data_directories(or_options_t *options)
 {
   tor_free(options->DataDirectory);
   options->DataDirectory = get_data_directory(options->DataDirectory_option);
@@ -7787,6 +7821,29 @@ validate_data_directory(or_options_t *options)
     log_warn(LD_CONFIG, "DataDirectory is too long.");
     return -1;
   }
+
+  tor_free(options->KeyDirectory);
+  if (options->KeyDirectory_option) {
+    options->KeyDirectory = get_data_directory(options->KeyDirectory_option);
+    if (!options->KeyDirectory)
+      return -1;
+  } else {
+    /* Default to the data directory's keys subdir */
+    tor_asprintf(&options->KeyDirectory, "%s"PATH_SEPARATOR"keys",
+                 options->DataDirectory);
+  }
+
+  tor_free(options->CacheDirectory);
+  if (options->CacheDirectory_option) {
+    options->CacheDirectory = get_data_directory(
+                                             options->CacheDirectory_option);
+    if (!options->CacheDirectory)
+      return -1;
+  } else {
+    /* Default to the data directory. */
+    options->CacheDirectory = tor_strdup(options->DataDirectory);
+  }
+
   return 0;
 }
 
