@@ -1250,6 +1250,45 @@ consider_adding_dir_servers(const or_options_t *options,
   return 0;
 }
 
+/**
+ * Make sure that <b>directory</b> exists, with appropriate ownership and
+ * permissions (as modified by <b>group_readable</b>). If <b>create</b>,
+ * create the directory if it is missing. Return 0 on success.
+ * On failure, return -1 and set *<b>msg_out</b>.
+ */
+static int
+check_and_create_data_directory(int create,
+                                const char *directory,
+                                int group_readable,
+                                const char *owner,
+                                char **msg_out)
+{
+  cpd_check_t cpd_opts = create ? CPD_CREATE : CPD_CHECK;
+  if (group_readable)
+      cpd_opts |= CPD_GROUP_READ;
+  if (check_private_dir(directory,
+                        cpd_opts,
+                        owner) < 0) {
+    tor_asprintf(msg_out,
+                 "Couldn't %s private data directory \"%s\"",
+                 create ? "create" : "access",
+                 directory);
+    return -1;
+  }
+
+#ifndef _WIN32
+  if (group_readable) {
+    /* Only new dirs created get new opts, also enforce group read. */
+    if (chmod(directory, 0750)) {
+      log_warn(LD_FS,"Unable to make %s group-readable: %s",
+               directory, strerror(errno));
+    }
+  }
+#endif /* !defined(_WIN32) */
+
+  return 0;
+}
+
 /* Helps determine flags to pass to switch_id. */
 static int have_low_ports = -1;
 
@@ -1404,29 +1443,16 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   }
 
   /* Ensure data directory is private; create if possible. */
-  cpd_check_t cpd_opts = running_tor ? CPD_CREATE : CPD_CHECK;
-  if (options->DataDirectoryGroupReadable)
-      cpd_opts |= CPD_GROUP_READ;
-  if (check_private_dir(options->DataDirectory,
-                        cpd_opts,
-                        options->User)<0) {
-    tor_asprintf(msg,
-              "Couldn't access/create private data directory \"%s\"",
-              options->DataDirectory);
-
+  /* It's okay to do this in "options_act_reversible()" even though it isn't
+   * actually reversible, since you can't change the DataDirectory while
+   * Tor is running. */
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->DataDirectory,
+                                      options->DataDirectoryGroupReadable,
+                                      options->User,
+                                      msg) < 0) {
     goto done;
-    /* No need to roll back, since you can't change the value. */
   }
-
-#ifndef _WIN32
-  if (options->DataDirectoryGroupReadable) {
-    /* Only new dirs created get new opts, also enforce group read. */
-    if (chmod(options->DataDirectory, 0750)) {
-      log_warn(LD_FS,"Unable to make %s group-readable: %s",
-               options->DataDirectory, strerror(errno));
-    }
-  }
-#endif /* !defined(_WIN32) */
 
   /* Bail out at this point if we're not going to be a client or server:
    * we don't run Tor itself. */
