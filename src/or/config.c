@@ -1289,6 +1289,32 @@ check_and_create_data_directory(int create,
   return 0;
 }
 
+/**
+ * Ensure that our keys directory exists, with appropriate permissions.
+ * Return 0 on success, -1 on failure.
+ */
+int
+create_keys_directory(const or_options_t *options)
+{
+  /* Make sure DataDirectory exists, and is private. */
+  cpd_check_t cpd_opts = CPD_CREATE;
+  if (options->DataDirectoryGroupReadable)
+    cpd_opts |= CPD_GROUP_READ;
+  if (check_private_dir(options->DataDirectory, cpd_opts, options->User)) {
+    log_err(LD_OR, "Can't create/check datadirectory %s",
+            options->DataDirectory);
+    return -1;
+  }
+  /* Check the key directory. */
+  char *keydir = options_get_datadir_fname(options, "keys");
+  if (check_private_dir(keydir, CPD_CREATE, options->User)) {
+    tor_free(keydir);
+    return -1;
+  }
+  tor_free(keydir);
+  return 0;
+}
+
 /* Helps determine flags to pass to switch_id. */
 static int have_low_ports = -1;
 

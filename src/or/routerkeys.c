@@ -813,21 +813,10 @@ load_ed_keys(const or_options_t *options, time_t now)
       flags |= INIT_ED_KEY_TRY_ENCRYPTED;
 
     /* Check/Create the key directory */
-    cpd_check_t cpd_opts = CPD_CREATE;
-    if (options->DataDirectoryGroupReadable)
-      cpd_opts |= CPD_GROUP_READ;
-    if (check_private_dir(options->DataDirectory, cpd_opts, options->User)) {
-      log_err(LD_OR, "Can't create/check datadirectory %s",
-              options->DataDirectory);
-      goto err;
-    }
-    char *fname = get_datadir_fname("keys");
-    if (check_private_dir(fname, CPD_CREATE, options->User) < 0) {
-      log_err(LD_OR, "Problem creating/checking key directory %s", fname);
-      tor_free(fname);
-      goto err;
-    }
-    tor_free(fname);
+    if (create_keys_directory(options) < 0)
+      return -1;
+
+    char *fname;
     if (options->master_key_fname) {
       fname = tor_strdup(options->master_key_fname);
       flags |= INIT_ED_KEY_EXPLICIT_FNAME;

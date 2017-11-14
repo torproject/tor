@@ -932,22 +932,9 @@ init_keys(void)
   }
   if (init_keys_common() < 0)
     return -1;
-  /* Make sure DataDirectory exists, and is private. */
-  cpd_check_t cpd_opts = CPD_CREATE;
-  if (options->DataDirectoryGroupReadable)
-    cpd_opts |= CPD_GROUP_READ;
-  if (check_private_dir(options->DataDirectory, cpd_opts, options->User)) {
-    log_err(LD_OR, "Can't create/check datadirectory %s",
-            options->DataDirectory);
+
+  if (create_keys_directory(options) < 0)
     return -1;
-  }
-  /* Check the key directory. */
-  keydir = get_datadir_fname("keys");
-  if (check_private_dir(keydir, CPD_CREATE, options->User)) {
-    tor_free(keydir);
-    return -1;
-  }
-  tor_free(keydir);
 
   /* 1a. Read v3 directory authority key/cert information. */
   memset(v3_digest, 0, sizeof(v3_digest));
