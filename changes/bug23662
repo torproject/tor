@@ -1,0 +1,4 @@
+  o Minor bugfixes (onion services):
+    - Silence a warning about failed v3 onion descriptor uploads since it can
+      happen naturally under certain edge-cases. Fixes part of bug 23662;
+      bugfix on 0.3.2.1-alpha.
