@@ -2260,7 +2260,6 @@ void
 networkstatus_dump_bridge_status_to_file(time_t now)
 {
   char *status = networkstatus_getinfo_by_purpose("bridge", now);
-  const or_options_t *options = get_options();
   char *fname = NULL;
   char *thresholds = NULL;
   char *published_thresholds_and_status = NULL;
@@ -2282,8 +2281,7 @@ networkstatus_dump_bridge_status_to_file(time_t now)
                "published %s\nflag-thresholds %s\n%s%s",
                published, thresholds, fingerprint_line ? fingerprint_line : "",
                status);
-  tor_asprintf(&fname, "%s"PATH_SEPARATOR"networkstatus-bridges",
-               options->DataDirectory);
+  fname = get_datadir_fname("networkstatus-bridges");
   write_str_to_file(fname,published_thresholds_and_status,0);
   tor_free(thresholds);
   tor_free(published_thresholds_and_status);
