@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Fix unused variable warnings in donna's Curve25519 SSE2 code.
+      Fixes bug 22895; bugfix on 0.2.7.2-alpha.
