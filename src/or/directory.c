@@ -3094,12 +3094,16 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
       /* Fire control port FAILED event. */
       hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
                                    "BAD_DESC");
+      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                    NULL);
     } else {
       log_info(LD_REND, "Stored hidden service descriptor successfully.");
       TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
       hs_client_desc_has_arrived(conn->hs_ident);
       /* Fire control port RECEIVED event. */
       hs_control_desc_event_received(conn->hs_ident, conn->identity_digest);
+      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                    body);
     }
     break;
   case 404:
@@ -3110,6 +3114,8 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
     /* Fire control port FAILED event. */
     hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
                                  "NOT_FOUND");
+    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                  NULL);
     break;
   case 400:
     log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
@@ -3119,6 +3125,8 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
     /* Fire control port FAILED event. */
     hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
                                  "QUERY_REJECTED");
+    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                  NULL);
     break;
   default:
     log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
@@ -3129,6 +3137,8 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
     /* Fire control port FAILED event. */
     hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
                                  "UNEXPECTED");
+    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                  NULL);
     break;
   }
 

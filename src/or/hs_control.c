@@ -172,3 +172,30 @@ hs_control_desc_event_uploaded(const hs_ident_dir_conn_t *ident,
   control_event_hs_descriptor_uploaded(hsdir_id_digest, onion_address);
 }
 
+/* Send on the control port the "HS_DESC_CONTENT [...]" event.
+ *
+ * Using the directory connection identifier, the HSDir identity digest and
+ * the body of the descriptor (as it was received from the directory). None
+ * can be NULL. */
+void
+hs_control_desc_event_content(const hs_ident_dir_conn_t *ident,
+                              const char *hsdir_id_digest,
+                              const char *body)
+{
+  char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+  char base64_blinded_pk[ED25519_BASE64_LEN + 1];
+
+  tor_assert(ident);
+  tor_assert(hsdir_id_digest);
+
+  /* Build onion address and encoded blinded key. */
+  IF_BUG_ONCE(ed25519_public_to_base64(base64_blinded_pk,
+                                       &ident->blinded_pk) < 0) {
+    return;
+  }
+  hs_build_address(&ident->identity_pk, HS_VERSION_THREE, onion_address);
+
+  control_event_hs_descriptor_content(onion_address, base64_blinded_pk,
+                                      hsdir_id_digest, body);
+}
+
