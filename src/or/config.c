@@ -7700,25 +7700,25 @@ get_data_directory(const char *val)
     d = "~/.tor";
 
   if (!strcmpstart(d, "~/")) {
-   char *fn = expand_filename(d);
-   if (!fn) {
-     log_warn(LD_CONFIG,"Failed to expand filename \"%s\".", d);
-     return NULL;
-   }
-   if (!val && !strcmp(fn,"/.tor")) {
-     /* If our homedir is /, we probably don't want to use it. */
-     /* Default to LOCALSTATEDIR/tor which is probably closer to what we
-      * want. */
-     log_warn(LD_CONFIG,
-              "Default DataDirectory is \"~/.tor\".  This expands to "
-              "\"%s\", which is probably not what you want.  Using "
-              "\"%s"PATH_SEPARATOR"tor\" instead", fn, LOCALSTATEDIR);
-     tor_free(fn);
-     fn = tor_strdup(LOCALSTATEDIR PATH_SEPARATOR "tor");
-   }
-   return fn;
- }
- return tor_strdup(d);
+    char *fn = expand_filename(d);
+    if (!fn) {
+      log_warn(LD_CONFIG,"Failed to expand filename \"%s\".", d);
+      return NULL;
+    }
+    if (!val && !strcmp(fn,"/.tor")) {
+      /* If our homedir is /, we probably don't want to use it. */
+      /* Default to LOCALSTATEDIR/tor which is probably closer to what we
+       * want. */
+      log_warn(LD_CONFIG,
+               "Default DataDirectory is \"~/.tor\".  This expands to "
+               "\"%s\", which is probably not what you want.  Using "
+               "\"%s"PATH_SEPARATOR"tor\" instead", fn, LOCALSTATEDIR);
+      tor_free(fn);
+      fn = tor_strdup(LOCALSTATEDIR PATH_SEPARATOR "tor");
+    }
+    return fn;
+  }
+  return tor_strdup(d);
 #endif /* defined(_WIN32) */
 }
 
