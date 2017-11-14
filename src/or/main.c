@@ -3274,7 +3274,7 @@ try_locking(const or_options_t *options, int err_if_locked)
   if (lockfile)
     return 0;
   else {
-    char *fname = options_get_datadir_fname2_suffix(options, "lock",NULL,NULL);
+    char *fname = options_get_datadir_fname(options, "lock");
     int already_locked = 0;
     tor_lockfile_t *lf = tor_lockfile_lock(fname, 0, &already_locked);
     tor_free(fname);
