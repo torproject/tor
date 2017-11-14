@@ -469,6 +469,7 @@ init_mock_options(void)
   memset(mock_options, 0, sizeof(or_options_t));
   mock_options->TestingTorNetwork = 1;
   mock_options->DataDirectory = tor_strdup(get_fname_rnd("datadir_tmp"));
+  mock_options->CacheDirectory = tor_strdup(mock_options->DataDirectory);
   check_private_dir(mock_options->DataDirectory, CPD_CREATE, NULL);
 }
 

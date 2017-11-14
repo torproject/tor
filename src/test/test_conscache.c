@@ -31,8 +31,8 @@ test_conscache_simple_usage(void *arg)
 
   /* Make a temporary datadir for these tests */
   char *ddir_fname = tor_strdup(get_fname_rnd("datadir_cache"));
-  tor_free(get_options_mutable()->DataDirectory);
-  get_options_mutable()->DataDirectory = tor_strdup(ddir_fname);
+  tor_free(get_options_mutable()->CacheDirectory);
+  get_options_mutable()->CacheDirectory = tor_strdup(ddir_fname);
   check_private_dir(ddir_fname, CPD_CREATE, NULL);
   consensus_cache_t *cache = consensus_cache_open("cons", 128);
 
@@ -124,8 +124,8 @@ test_conscache_cleanup(void *arg)
 
   /* Make a temporary datadir for these tests */
   char *ddir_fname = tor_strdup(get_fname_rnd("datadir_cache"));
-  tor_free(get_options_mutable()->DataDirectory);
-  get_options_mutable()->DataDirectory = tor_strdup(ddir_fname);
+  tor_free(get_options_mutable()->CacheDirectory);
+  get_options_mutable()->CacheDirectory = tor_strdup(ddir_fname);
   check_private_dir(ddir_fname, CPD_CREATE, NULL);
   consensus_cache_t *cache = consensus_cache_open("cons", 128);
 
@@ -267,8 +267,8 @@ test_conscache_filter(void *arg)
 
   /* Make a temporary datadir for these tests */
   char *ddir_fname = tor_strdup(get_fname_rnd("datadir_cache"));
-  tor_free(get_options_mutable()->DataDirectory);
-  get_options_mutable()->DataDirectory = tor_strdup(ddir_fname);
+  tor_free(get_options_mutable()->CacheDirectory);
+  get_options_mutable()->CacheDirectory = tor_strdup(ddir_fname);
   check_private_dir(ddir_fname, CPD_CREATE, NULL);
   consensus_cache_t *cache = consensus_cache_open("cons", 128);
 

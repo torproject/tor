@@ -7984,53 +7984,56 @@ init_libevent(const or_options_t *options)
   suppress_libevent_log_msg(NULL);
 }
 
-/** Return a newly allocated string holding a filename relative to the data
- * directory.  If <b>sub1</b> is present, it is the first path component after
+/** Return a newly allocated string holding a filename relative to the
+ * directory in <b>options</b> specified by <b>roottype</b>.
+ * If <b>sub1</b> is present, it is the first path component after
  * the data directory.  If <b>sub2</b> is also present, it is the second path
  * component after the data directory.  If <b>suffix</b> is present, it
  * is appended to the filename.
  *
- * Examples:
- *    get_datadir_fname2_suffix("a", NULL, NULL) -> $DATADIR/a
- *    get_datadir_fname2_suffix("a", NULL, ".tmp") -> $DATADIR/a.tmp
- *    get_datadir_fname2_suffix("a", "b", ".tmp") -> $DATADIR/a/b/.tmp
- *    get_datadir_fname2_suffix("a", "b", NULL) -> $DATADIR/a/b
- *
- * Note: Consider using the get_datadir_fname* macros in or.h.
+ * Note: Consider using macros in config.h that wrap this function;
+ * you should probably never need to call it as-is.
  */
 MOCK_IMPL(char *,
-options_get_datadir_fname2_suffix,(const or_options_t *options,
-                                   const char *sub1, const char *sub2,
-                                   const char *suffix))
+options_get_dir_fname2_suffix,(const or_options_t *options,
+                               directory_root_t roottype,
+                               const char *sub1, const char *sub2,
+                               const char *suffix))
 {
-  char *fname = NULL;
-  size_t len;
   tor_assert(options);
-  tor_assert(options->DataDirectory);
-  tor_assert(sub1 || !sub2); /* If sub2 is present, sub1 must be present. */
-  len = strlen(options->DataDirectory);
-  if (sub1) {
-    len += strlen(sub1)+1;
-    if (sub2)
-      len += strlen(sub2)+1;
+
+  const char *rootdir = NULL;
+  switch (roottype) {
+    case DIRROOT_DATADIR:
+      rootdir = options->DataDirectory;
+      break;
+    case DIRROOT_CACHEDIR:
+      rootdir = options->CacheDirectory;
+      break;
+    case DIRROOT_KEYDIR:
+      rootdir = options->KeyDirectory;
+      break;
+    default:
+      tor_assert_unreached();
+      break;
   }
-  if (suffix)
-    len += strlen(suffix);
-  len++;
-  fname = tor_malloc(len);
-  if (sub1) {
-    if (sub2) {
-      tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s"PATH_SEPARATOR"%s",
-                   options->DataDirectory, sub1, sub2);
-    } else {
-      tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s",
-                   options->DataDirectory, sub1);
-    }
+  tor_assert(rootdir);
+
+  if (!suffix)
+    suffix = "";
+
+  char *fname = NULL;
+
+  if (sub1 == NULL) {
+    tor_asprintf(&fname, "%s%s", rootdir, suffix);
+    tor_assert(!sub2); /* If sub2 is present, sub1 must be present. */
+  } else if (sub2 == NULL) {
+    tor_asprintf(&fname, "%s"PATH_SEPARATOR"%s%s", rootdir, sub1, suffix);
   } else {
-    strlcpy(fname, options->DataDirectory, len);
+    tor_asprintf(&fname, "%s"PATH_SEPARATOR"%s"PATH_SEPARATOR"%s%s",
+                 rootdir, sub1, sub2, suffix);
   }
-  if (suffix)
-    strlcat(fname, suffix, len);
+
   return fname;
 }
 

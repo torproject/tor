@@ -421,6 +421,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
 {
   (void)arg;
   char *dir = tor_strdup(get_fname("test_ed_keys_init_all"));
+  char *keydir = tor_strdup(get_fname("test_ed_keys_init_all/KEYS"));
   or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
   time_t now = time(NULL);
   ed25519_public_key_t id;
@@ -445,13 +446,14 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
 #ifdef _WIN32
   mkdir(dir);
-  mkdir(get_fname("test_ed_keys_init_all/keys"));
+  mkdir(keydir);
 #else
   mkdir(dir, 0700);
-  mkdir(get_fname("test_ed_keys_init_all/keys"), 0700);
+  mkdir(keydir, 0700);
 #endif /* defined(_WIN32) */
 
   options->DataDirectory = dir;
+  options->KeyDirectory = keydir;
 
   tt_int_op(1, OP_EQ, load_ed_keys(options, now));
   tt_int_op(0, OP_EQ, generate_ed_link_cert(options, now, 0));
@@ -521,7 +523,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
   /* Demonstrate that we can start up with no secret identity key */
   routerkeys_free_all();
-  unlink(get_fname("test_ed_keys_init_all/keys/"
+  unlink(get_fname("test_ed_keys_init_all/KEYS/"
                    "ed25519_master_id_secret_key"));
   tt_int_op(1, OP_EQ, load_ed_keys(options, now));
   tt_int_op(0, OP_EQ, generate_ed_link_cert(options, now, 0));
@@ -542,6 +544,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
 
  done:
   tor_free(dir);
+  tor_free(keydir);
   tor_free(options);
   tor_cert_free(link_cert);
   routerkeys_free_all();

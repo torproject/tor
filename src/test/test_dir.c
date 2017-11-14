@@ -4874,9 +4874,11 @@ mock_check_private_dir(const char *dirname, cpd_check_t check,
 
 static char *
 mock_get_datadir_fname(const or_options_t *options,
+                       directory_root_t roottype,
                        const char *sub1, const char *sub2,
                        const char *suffix)
 {
+  (void) roottype;
   char *rv = NULL;
 
   /*
@@ -5033,7 +5035,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   mock_options->MaxUnparseableDescSizeToLog = 1536;
   MOCK(get_options, mock_get_options);
   MOCK(check_private_dir, mock_check_private_dir);
-  MOCK(options_get_datadir_fname2_suffix,
+  MOCK(options_get_dir_fname2_suffix,
        mock_get_datadir_fname);
 
   /*
@@ -5551,7 +5553,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   mock_unlink_reset();
   UNMOCK(write_str_to_file);
   mock_write_str_to_file_reset();
-  UNMOCK(options_get_datadir_fname2_suffix);
+  UNMOCK(options_get_dir_fname2_suffix);
   UNMOCK(check_private_dir);
   UNMOCK(get_options);
   tor_free(mock_options);
