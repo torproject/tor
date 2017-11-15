@@ -4370,11 +4370,6 @@ handle_control_hspost(control_connection_t *conn,
                                    server);
           goto done;
         }
-        if (!node->rs->is_hs_dir) {
-          connection_printf_to_buf(conn, "552 Server \"%s\" is not a HSDir"
-                                         "\r\n", server);
-          goto done;
-        }
         /* Valid server, add it to our local list. */
         if (!hs_dirs)
           hs_dirs = smartlist_new();
