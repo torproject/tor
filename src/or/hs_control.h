@@ -44,5 +44,9 @@ void hs_control_desc_event_content(const hs_ident_dir_conn_t *ident,
                                    const char *hsdir_id_digest,
                                    const char *body);
 
+/* Command "HSPOST [...]" */
+int hs_control_hspost_command(const char *body, const char *onion_address,
+                              const smartlist_t *hsdirs_rs);
+
 #endif /* !defined(TOR_HS_CONTROL_H) */
 

@@ -10,6 +10,8 @@
 #include "control.h"
 #include "hs_common.h"
 #include "hs_control.h"
+#include "hs_descriptor.h"
+#include "hs_service.h"
 #include "nodelist.h"
 
 /* Send on the control port the "HS_DESC REQUESTED [...]" event.
@@ -197,5 +199,58 @@ hs_control_desc_event_content(const hs_ident_dir_conn_t *ident,
 
   control_event_hs_descriptor_content(onion_address, base64_blinded_pk,
                                       hsdir_id_digest, body);
+}
+
+/* Handle the "HSPOST [...]" command. The body is an encoded descriptor for
+ * the given onion_address. The descriptor will be uploaded to each directory
+ * in hsdirs_rs. If NULL, the responsible directories for the current time
+ * period will be selected.
+ *
+ * Return -1 on if the descriptor plaintext section is not decodable. Else, 0
+ * on success. */
+int
+hs_control_hspost_command(const char *body, const char *onion_address,
+                          const smartlist_t *hsdirs_rs)
+{
+  int ret = -1;
+  ed25519_public_key_t identity_pk;
+  hs_desc_plaintext_data_t plaintext;
+  smartlist_t *hsdirs = NULL;
+
+  tor_assert(body);
+  tor_assert(onion_address);
+
+  /* This can't fail because we require the caller to pass us a valid onion
+   * address that has passed hs_address_is_valid(). */
+  hs_parse_address(onion_address, &identity_pk, NULL, NULL);
+
+  /* Only decode the plaintext part which is what the directory will do to
+   * validate before caching. */
+  if (hs_desc_decode_plaintext(body, &plaintext) < 0) {
+    goto done;
+  }
+
+  /* No HSDir(s) given, we'll compute what the current ones should be. */
+  if (hsdirs_rs == NULL) {
+    hsdirs = smartlist_new();
+    hs_get_responsible_hsdirs(&plaintext.blinded_pubkey,
+                              hs_get_time_period_num(0),
+                              0, /* Always the current descriptor which uses
+                                  * the first hsdir index. */
+                              0, /* It is for storing on a directory. */
+                              hsdirs);
+    hsdirs_rs = hsdirs;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(hsdirs_rs, const routerstatus_t *, rs) {
+    hs_service_upload_desc_to_dir(body, plaintext.version, &identity_pk,
+                                  &plaintext.blinded_pubkey, rs);
+  } SMARTLIST_FOREACH_END(rs);
+  ret = 0;
+
+ done:
+  /* We don't have ownership of the objects in this list. */
+  smartlist_free(hsdirs);
+  return ret;
 }
 
