@@ -60,6 +60,7 @@
 #include "hibernate.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_control.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -4338,9 +4339,11 @@ handle_control_hspost(control_connection_t *conn,
                       const char *body)
 {
   static const char *opt_server = "SERVER=";
+  static const char *opt_hsaddress = "HSADDRESS=";
   smartlist_t *hs_dirs = NULL;
   const char *encoded_desc = body;
   size_t encoded_desc_len = len;
+  const char *onion_address = NULL;
 
   char *cp = memchr(body, '\n', len);
   if (cp == NULL) {
@@ -4374,6 +4377,12 @@ handle_control_hspost(control_connection_t *conn,
         if (!hs_dirs)
           hs_dirs = smartlist_new();
         smartlist_add(hs_dirs, node->rs);
+      } else if (!strcasecmpstart(arg, opt_hsaddress)) {
+        if (!hs_address_is_valid(arg)) {
+          connection_printf_to_buf(conn, "512 Malformed onion address\r\n");
+          goto done;
+        }
+        onion_address = arg;
       } else {
         connection_printf_to_buf(conn, "512 Unexpected argument \"%s\"\r\n",
                                  arg);
@@ -4381,6 +4390,19 @@ handle_control_hspost(control_connection_t *conn,
       }
     } SMARTLIST_FOREACH_END(arg);
   }
+
+  /* Handle the v3 case. */
+  if (onion_address) {
+    char *desc_str = NULL;
+    read_escaped_data(encoded_desc, encoded_desc_len, &desc_str);
+    if (hs_control_hspost_command(desc_str, onion_address, hs_dirs) < 0) {
+      connection_printf_to_buf(conn, "554 Invalid descriptor\r\n");
+    }
+    tor_free(desc_str);
+    goto done;
+  }
+
+  /* From this point on, it is only v2. */
 
   /* Read the dot encoded descriptor, and parse it. */
   rend_encoded_v2_service_descriptor_t *desc =
