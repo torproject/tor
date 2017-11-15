@@ -2203,15 +2203,11 @@ static void
 upload_descriptor_to_hsdir(const hs_service_t *service,
                            hs_service_descriptor_t *desc, const node_t *hsdir)
 {
-  char version_str[4] = {0}, *encoded_desc = NULL;
-  directory_request_t *dir_req;
-  hs_ident_dir_conn_t ident;
+  char *encoded_desc = NULL;
 
   tor_assert(service);
   tor_assert(desc);
   tor_assert(hsdir);
-
-  memset(&ident, 0, sizeof(ident));
 
   /* Let's avoid doing that if tor is configured to not publish. */
   if (!get_options()->PublishHidServDescriptors) {
@@ -2228,29 +2224,10 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
     goto end;
   }
 
-  /* Setup the connection identifier. */
-  hs_ident_dir_conn_init(&service->keys.identity_pk, &desc->blinded_kp.pubkey,
-                         &ident);
-
-  /* This is our resource when uploading which is used to construct the URL
-   * with the version number: "/tor/hs/<version>/publish". */
-  tor_snprintf(version_str, sizeof(version_str), "%u",
-               service->config.version);
-
-  /* Build the directory request for this HSDir. */
-  dir_req = directory_request_new(DIR_PURPOSE_UPLOAD_HSDESC);
-  directory_request_set_routerstatus(dir_req, hsdir->rs);
-  directory_request_set_indirection(dir_req, DIRIND_ANONYMOUS);
-  directory_request_set_resource(dir_req, version_str);
-  directory_request_set_payload(dir_req, encoded_desc,
-                                strlen(encoded_desc));
-  /* The ident object is copied over the directory connection object once
-   * the directory request is initiated. */
-  directory_request_upload_set_hs_ident(dir_req, &ident);
-
-  /* Initiate the directory request to the hsdir.*/
-  directory_initiate_request(dir_req);
-  directory_request_free(dir_req);
+  /* Time to upload the descriptor to the directory. */
+  hs_service_upload_desc_to_dir(encoded_desc, service->config.version,
+                                &service->keys.identity_pk,
+                                &desc->blinded_kp.pubkey, hsdir->rs);
 
   /* Add this node to previous_hsdirs list */
   service_desc_note_upload(desc, hsdir);
@@ -2906,6 +2883,54 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* ========== */
 /* Public API */
 /* ========== */
+
+/* Upload an encoded descriptor in encoded_desc of the given version. This
+ * descriptor is for the service identity_pk and blinded_pk used to setup the
+ * directory connection identifier. It is uploaded to the directory hsdir_rs
+ * routerstatus_t object.
+ *
+ * NOTE: This function does NOT check for PublishHidServDescriptors because it
+ * is only used by the control port command HSPOST outside of this subsystem.
+ * Inside this code, upload_descriptor_to_hsdir() should be used. */
+void
+hs_service_upload_desc_to_dir(const char *encoded_desc,
+                              const uint8_t version,
+                              const ed25519_public_key_t *identity_pk,
+                              const ed25519_public_key_t *blinded_pk,
+                              const routerstatus_t *hsdir_rs)
+{
+  char version_str[4] = {0};
+  directory_request_t *dir_req;
+  hs_ident_dir_conn_t ident;
+
+  tor_assert(encoded_desc);
+  tor_assert(identity_pk);
+  tor_assert(blinded_pk);
+  tor_assert(hsdir_rs);
+
+  /* Setup the connection identifier. */
+  memset(&ident, 0, sizeof(ident));
+  hs_ident_dir_conn_init(identity_pk, blinded_pk, &ident);
+
+  /* This is our resource when uploading which is used to construct the URL
+   * with the version number: "/tor/hs/<version>/publish". */
+  tor_snprintf(version_str, sizeof(version_str), "%u", version);
+
+  /* Build the directory request for this HSDir. */
+  dir_req = directory_request_new(DIR_PURPOSE_UPLOAD_HSDESC);
+  directory_request_set_routerstatus(dir_req, hsdir_rs);
+  directory_request_set_indirection(dir_req, DIRIND_ANONYMOUS);
+  directory_request_set_resource(dir_req, version_str);
+  directory_request_set_payload(dir_req, encoded_desc,
+                                strlen(encoded_desc));
+  /* The ident object is copied over the directory connection object once
+   * the directory request is initiated. */
+  directory_request_upload_set_hs_ident(dir_req, &ident);
+
+  /* Initiate the directory request to the hsdir.*/
+  directory_initiate_request(dir_req);
+  directory_request_free(dir_req);
+}
 
 /* Add the ephemeral service using the secret key sk and ports. Both max
  * streams parameter will be set in the newly created service.

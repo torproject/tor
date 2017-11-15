@@ -279,6 +279,13 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
                          int max_streams_close_circuit, char **address_out);
 int hs_service_del_ephemeral(const char *address);
 
+/* Used outside of the HS subsystem by the control port command HSPOST. */
+void hs_service_upload_desc_to_dir(const char *encoded_desc,
+                                   const uint8_t version,
+                                   const ed25519_public_key_t *identity_pk,
+                                   const ed25519_public_key_t *blinded_pk,
+                                   const routerstatus_t *hsdir_rs);
+
 #ifdef HS_SERVICE_PRIVATE
 
 #ifdef TOR_UNIT_TESTS
