@@ -1,0 +1,5 @@
+  o Minor bugfixes (logging, relay):
+    - Suppress a log notice when relay descriptors arrive. We already have a
+      bootstrap progress for this so no need to log notice everytime tor
+      receives relay descriptors. Microdescriptors behave the same. Fixes bug
+      23861; bugfix on 0.2.8.2-alpha.
