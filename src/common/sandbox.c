@@ -56,6 +56,9 @@
 #include <time.h>
 #include <poll.h>
 
+#ifdef HAVE_GNU_LIBC_VERSION_H
+#include <gnu/libc-version.h>
+#endif
 #ifdef HAVE_LINUX_NETFILTER_IPV4_H
 #include <linux/netfilter_ipv4.h>
 #endif
@@ -424,6 +427,37 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif
 
+#ifdef HAVE_GNU_LIBC_VERSION_H
+#ifdef HAVE_GNU_GET_LIBC_VERSION
+#define CHECK_LIBC_VERSION
+#endif
+#endif
+
+/* Return true if we think we're running with a libc that always uses
+ * openat on linux. */
+static int
+libc_uses_openat_for_everything(void)
+{
+#ifdef CHECK_LIBC_VERSION
+  const char *version = gnu_get_libc_version();
+  if (version == NULL)
+    return 0;
+
+  int major = -1;
+  int minor = -1;
+
+  tor_sscanf(version, "%d.%d", &major, &minor);
+  if (major >= 3)
+    return 1;
+  else if (major == 2 && minor >= 26)
+    return 1;
+  else
+    return 0;
+#else
+  return 0;
+#endif
+}
+
 /** Allow a single file to be opened.  If <b>use_openat</b> is true,
  * we're using a libc that remaps all the opens into openats. */
 static int
@@ -449,13 +483,15 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   int rc;
   sandbox_cfg_t *elem = NULL;
 
+  int use_openat = libc_uses_openat_for_everything();
+
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
     smp_param_t *param = elem->param;
 
     if (param != NULL && param->prot == 1 && param->syscall
         == SCMP_SYS(open)) {
-      rc = allow_file_open(ctx, 0 /* XXXX */, param->value);
+      rc = allow_file_open(ctx, use_openat, param->value);
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add open syscall, received "
             "libseccomp error %d", rc);
