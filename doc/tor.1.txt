@@ -801,14 +801,16 @@ GENERAL OPTIONS
  +
     **KIST**: Kernel Informed Socket Transport. Tor will use the kernel tcp
     information stack per-socket to make an informed decision on if it should
-    send or not the data. (Only available on Linux)
+    send or not the data. As implemented, KIST will only work on Linux kernel
+    version 2.6.39 or higher.
  +
     **KISTLite**: Same as KIST but without kernel support which means that tor
     will use all the same mecanics as KIST but without the TCP information the
-    kernel can provide.
+    kernel can provide. KISTLite will work on all kernels and operating
+    systems.
  +
     **Vanilla**: The scheduler that tor has always used that is do as much as
-    possible or AMAP.
+    possible or AMAP. Vanilla will work on all kernels and operating systems.
 
 [[KISTSchedRunInterval]] **KISTSchedRunInterval** __NUM__ **msec**::
     If KIST or KISTLite is used in Schedulers option, this control at which

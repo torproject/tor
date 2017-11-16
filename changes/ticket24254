@@ -1,0 +1,3 @@
+  o Documentation:
+    Add notes in man page regarding OS support for the various scheduler types.
+    Closes ticket 24254.
