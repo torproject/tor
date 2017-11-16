@@ -1472,9 +1472,10 @@ guard_create_exit_restriction(const uint8_t *exit_id)
   return rst;
 }
 
-/** If we have less than these many configured bridges, don't set dirserver
- *  restrictions because we might blacklist all of them. */
-#define TOO_FEW_BRIDGES_FOR_RESTRICTION 10
+/** If we have fewer than this many possible guards, don't set
+ * MD-availability-based restrictions: we might blacklist all of
+ * them. */
+#define MIN_GUARDS_FOR_MD_RESTRICTION 10
 
 /** Return true if we should set md dirserver restrictions. We might not want
  *  to set those if our network is too restricted, since we don't want to
@@ -1484,20 +1485,17 @@ should_set_md_dirserver_restriction(void)
 {
   const guard_selection_t *gs = get_guard_selection_info();
 
-  /* Don't set a restriction if we are on a restricted guard selection */
-  if (gs->type == GS_TYPE_RESTRICTED) {
-    return 0;
-  }
-
-  /* Don't set restriction if we are using bridges and have too few of those */
-  if (gs->type == GS_TYPE_BRIDGE && gs->sampled_entry_guards) {
-    int num_sampled_guards = smartlist_len(gs->sampled_entry_guards);
-    if (num_sampled_guards < TOO_FEW_BRIDGES_FOR_RESTRICTION) {
-      return 0;
+  /* Compute the number of filtered guards */
+  int n_filtered_guards = 0;
+  SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+    if (guard->is_filtered_guard) {
+      ++n_filtered_guards;
     }
-  }
+  } SMARTLIST_FOREACH_END(guard);
 
-  return 1;
+  /* Do we have enough filtered guards that we feel okay about blacklisting
+   * some for MD restriction? */
+  return (n_filtered_guards >= MIN_GUARDS_FOR_MD_RESTRICTION);
 }
 
 /** Allocate and return an outdated md guard restriction. Return NULL if no
@@ -1508,6 +1506,8 @@ guard_create_dirserver_md_restriction(void)
   entry_guard_restriction_t *rst = NULL;
 
   if (!should_set_md_dirserver_restriction()) {
+    log_debug(LD_GUARD, "Not setting md restriction: too few "
+              "filtered guards.");
     return NULL;
   }
 
