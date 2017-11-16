@@ -617,6 +617,7 @@ get_lspecs_from_node(const node_t *node, smartlist_t *lspecs)
     link_specifier_set_un_ipv6_port(ls, ap.port);
     /* Sixteen bytes IPv6 and two bytes port. */
     link_specifier_set_ls_len(ls, addr_len + sizeof(ap.port));
+    smartlist_add(lspecs, ls);
   }
 }
 
