@@ -1109,6 +1109,11 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   /* This takes various objects in order to populate the introduce1 data
    * object which is used to build the content of the cell. */
   const node_t *exit_node = build_state_get_exit_node(rend_circ->build_state);
+  if (exit_node == NULL) {
+    log_info(LD_REND, "Unable to get rendezvous point for circuit %u. "
+             "Failing.", TO_CIRCUIT(intro_circ)->n_circ_id);
+    goto done;
+  }
   setup_introduce1_data(ip, exit_node, subcredential, &intro1_data);
   /* If we didn't get any link specifiers, it's because our node was
    * bad. */
