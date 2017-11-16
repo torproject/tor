@@ -1101,6 +1101,11 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   tor_assert(ip);
   tor_assert(subcredential);
 
+  /* It is undefined behavior in hs_cell_introduce1_data_clear() if intro1_data
+   * has been declared on the stack but not initialized. Here, we set it to 0.
+   */
+  memset(&intro1_data, 0, sizeof(hs_cell_introduce1_data_t));
+
   /* This takes various objects in order to populate the introduce1 data
    * object which is used to build the content of the cell. */
   const node_t *exit_node = build_state_get_exit_node(rend_circ->build_state);
