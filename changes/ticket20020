@@ -1,0 +1,4 @@
+  o Minor features (logging):
+    - Improve a warning message that happens when we fail to re-parse
+      an old router because of an expired certificate. Closes ticket
+      20020.
