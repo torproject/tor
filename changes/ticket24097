@@ -1,0 +1,4 @@
+  o Minor features (logging):
+    - Downgrade a pair of log messages that could occur when an exit's
+      resolver gave us an unusual (but not forbidden) response.
+      Closes ticket 24097.
