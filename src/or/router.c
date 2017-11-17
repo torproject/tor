@@ -3698,6 +3698,7 @@ router_free_all(void)
   crypto_pk_free(lastonionkey);
   crypto_pk_free(server_identitykey);
   crypto_pk_free(client_identitykey);
+
   tor_mutex_free(key_lock);
   routerinfo_free(desc_routerinfo);
   extrainfo_free(desc_extrainfo);

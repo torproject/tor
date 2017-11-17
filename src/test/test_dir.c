@@ -664,7 +664,7 @@ test_dir_extrainfo_parsing(void *arg)
   escaped(NULL);
   extrainfo_free(ei);
   routerinfo_free(ri);
-  digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);
+  digestmap_free_((digestmap_t*)map, routerinfo_free_wrapper_);
 }
 
 static void
@@ -760,7 +760,7 @@ test_dir_parse_router_list(void *arg)
   smartlist_free(chunks);
   routerinfo_free(ri);
   if (map) {
-    digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);
+    digestmap_free_((digestmap_t*)map, routerinfo_free_wrapper_);
     router_get_routerlist()->identity_map =
       (struct digest_ri_map_t*)digestmap_new();
   }

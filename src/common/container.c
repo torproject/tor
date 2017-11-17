@@ -42,7 +42,7 @@ smartlist_new,(void))
  * list's elements.
  */
 MOCK_IMPL(void,
-smartlist_free,(smartlist_t *sl))
+smartlist_free_,(smartlist_t *sl))
 {
   if (!sl)
     return;
@@ -1335,7 +1335,7 @@ digest256map_assign_key(digest256map_entry_t *ent, const uint8_t *key)
    * those entries.  If free_val is provided, invoked it every value in \
    * <b>map</b>. */                                                     \
   MOCK_IMPL(void,                                                       \
-  prefix##_free, (maptype *map, void (*free_val)(void*)))               \
+  prefix##_free_, (maptype *map, void (*free_val)(void*)))              \
   {                                                                     \
     prefix##_entry_t **ent, **next, *this;                              \
     if (!map)                                                           \
@@ -1525,7 +1525,7 @@ digestset_new(int max_elements)
 
 /** Free all storage held in <b>set</b>. */
 void
-digestset_free(digestset_t *set)
+digestset_free_(digestset_t *set)
 {
   if (!set)
     return;

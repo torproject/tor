@@ -2084,28 +2084,28 @@ NS(test_main)(void *arg)
  * Structural test for routerset_free, where the routerset is NULL.
  */
 
-NS_DECL(void, smartlist_free, (smartlist_t *sl));
+NS_DECL(void, smartlist_free_, (smartlist_t *sl));
 
 static void
 NS(test_main)(void *arg)
 {
   (void)arg;
 
-  NS_MOCK(smartlist_free);
+  NS_MOCK(smartlist_free_);
 
   routerset_free(NULL);
 
-  tt_int_op(CALLED(smartlist_free), OP_EQ, 0);
+  tt_int_op(CALLED(smartlist_free_), OP_EQ, 0);
 
   done:
     ;
 }
 
 void
-NS(smartlist_free)(smartlist_t *s)
+NS(smartlist_free_)(smartlist_t *s)
 {
   (void)s;
-  CALLED(smartlist_free)++;
+  CALLED(smartlist_free_)++;
 }
 
 #undef NS_SUBMODULE
@@ -2115,9 +2115,9 @@ NS(smartlist_free)(smartlist_t *s)
  * Structural test for routerset_free.
  */
 
-NS_DECL(void, smartlist_free, (smartlist_t *sl));
-NS_DECL(void, strmap_free,(strmap_t *map, void (*free_val)(void*)));
-NS_DECL(void, digestmap_free, (digestmap_t *map, void (*free_val)(void*)));
+NS_DECL(void, smartlist_free_, (smartlist_t *sl));
+NS_DECL(void, strmap_free_,(strmap_t *map, void (*free_val)(void*)));
+NS_DECL(void, digestmap_free_, (digestmap_t *map, void (*free_val)(void*)));
 
 static void
 NS(test_main)(void *arg)
@@ -2125,39 +2125,39 @@ NS(test_main)(void *arg)
   routerset_t *routerset = routerset_new();
   (void)arg;
 
-  NS_MOCK(smartlist_free);
-  NS_MOCK(strmap_free);
-  NS_MOCK(digestmap_free);
+  NS_MOCK(smartlist_free_);
+  NS_MOCK(strmap_free_);
+  NS_MOCK(digestmap_free_);
 
   routerset_free(routerset);
 
-  tt_int_op(CALLED(smartlist_free), OP_NE, 0);
-  tt_int_op(CALLED(strmap_free), OP_NE, 0);
-  tt_int_op(CALLED(digestmap_free), OP_NE, 0);
+  tt_int_op(CALLED(smartlist_free_), OP_NE, 0);
+  tt_int_op(CALLED(strmap_free_), OP_NE, 0);
+  tt_int_op(CALLED(digestmap_free_), OP_NE, 0);
 
   done:
     ;
 }
 
 void
-NS(smartlist_free)(smartlist_t *s)
+NS(smartlist_free_)(smartlist_t *s)
 {
-  CALLED(smartlist_free)++;
-  smartlist_free__real(s);
+  CALLED(smartlist_free_)++;
+  smartlist_free___real(s);
 }
 
 void
-NS(strmap_free)(strmap_t *map, void (*free_val)(void*))
+NS(strmap_free_)(strmap_t *map, void (*free_val)(void*))
 {
-  CALLED(strmap_free)++;
-  strmap_free__real(map, free_val);
+  CALLED(strmap_free_)++;
+  strmap_free___real(map, free_val);
 }
 
 void
-NS(digestmap_free)(digestmap_t *map, void (*free_val)(void*))
+NS(digestmap_free_)(digestmap_t *map, void (*free_val)(void*))
 {
-  CALLED(digestmap_free)++;
-  digestmap_free__real(map, free_val);
+  CALLED(digestmap_free_)++;
+  digestmap_free___real(map, free_val);
 }
 
 #undef NS_SUBMODULE

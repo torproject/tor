@@ -143,6 +143,10 @@ DECLARE_TYPED_DIGESTMAP_FNS(dsmap_, digest_ds_map_t, download_status_t)
 #define DSMAP_FOREACH(map, keyvar, valvar) \
   DIGESTMAP_FOREACH(dsmap_to_digestmap(map), keyvar, download_status_t *, \
                     valvar)
+#define eimap_free(map, fn) MAP_FREE_AND_NULL(eimap, (map), (fn))
+#define rimap_free(map, fn) MAP_FREE_AND_NULL(rimap, (map), (fn))
+#define dsmap_free(map, fn) MAP_FREE_AND_NULL(dsmap, (map), (fn))
+#define sdmap_free(map, fn) MAP_FREE_AND_NULL(sdmap, (map), (fn))
 
 /* Forward declaration for cert_list_t */
 typedef struct cert_list_t cert_list_t;

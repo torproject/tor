@@ -778,7 +778,7 @@ static or_options_t *global_default_options = NULL;
 /** Name of most recently read torrc file. */
 static char *torrc_fname = NULL;
 /** Name of the most recently read torrc-defaults file.*/
-static char *torrc_defaults_fname;
+static char *torrc_defaults_fname = NULL;
 /** Configuration options set by command line. */
 static config_line_t *global_cmdline_options = NULL;
 /** Non-configuration options set by the command line */
@@ -977,6 +977,8 @@ config_free_all(void)
 
   tor_free(the_short_tor_version);
   tor_free(the_tor_version);
+
+  have_parsed_cmdline = 0;
 }
 
 /** Make <b>address</b> -- a piece of information related to our operation as
