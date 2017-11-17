@@ -193,6 +193,8 @@ STATIC void warn_disallowed_anonymous_compression_method(compress_method_t);
 
 STATIC int handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
                                           const response_handler_args_t *args);
+STATIC int handle_response_fetch_microdesc(dir_connection_t *conn,
+                                 const response_handler_args_t *args);
 
 #endif /* defined(DIRECTORY_PRIVATE) */
 
