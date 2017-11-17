@@ -19,6 +19,7 @@
 #include "torint.h"
 #include "testsupport.h"
 #include "compat.h"
+#include "util.h"
 
 #include <openssl/engine.h>
 #include "keccak-tiny/keccak-tiny.h"
@@ -146,7 +147,8 @@ int crypto_global_cleanup(void);
 
 /* environment setup */
 MOCK_DECL(crypto_pk_t *,crypto_pk_new,(void));
-void crypto_pk_free(crypto_pk_t *env);
+void crypto_pk_free_(crypto_pk_t *env);
+#define crypto_pk_free(pk) FREE_AND_NULL(crypto_pk, (pk))
 
 void crypto_set_tls_dh_prime(void);
 crypto_cipher_t *crypto_cipher_new(const char *key);
@@ -155,7 +157,8 @@ crypto_cipher_t *crypto_cipher_new_with_iv(const char *key, const char *iv);
 crypto_cipher_t *crypto_cipher_new_with_iv_and_bits(const uint8_t *key,
                                                     const uint8_t *iv,
                                                     int bits);
-void crypto_cipher_free(crypto_cipher_t *env);
+void crypto_cipher_free_(crypto_cipher_t *env);
+#define crypto_cipher_free(c) FREE_AND_NULL(crypto_cipher, (c))
 
 /* public key crypto */
 MOCK_DECL(int, crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits));
@@ -258,7 +261,8 @@ int crypto_digest_algorithm_parse_name(const char *name);
 crypto_digest_t *crypto_digest_new(void);
 crypto_digest_t *crypto_digest256_new(digest_algorithm_t algorithm);
 crypto_digest_t *crypto_digest512_new(digest_algorithm_t algorithm);
-void crypto_digest_free(crypto_digest_t *digest);
+void crypto_digest_free_(crypto_digest_t *digest);
+#define crypto_digest_free(d) FREE_AND_NULL(crypto_digest, (d))
 void crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
                              size_t len);
 void crypto_digest_get_digest(crypto_digest_t *digest,
@@ -276,7 +280,8 @@ void crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
 crypto_xof_t *crypto_xof_new(void);
 void crypto_xof_add_bytes(crypto_xof_t *xof, const uint8_t *data, size_t len);
 void crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len);
-void crypto_xof_free(crypto_xof_t *xof);
+void crypto_xof_free_(crypto_xof_t *xof);
+#define crypto_xof_free(xof) FREE_AND_NULL(crypto_xof, (xof))
 
 /* Key negotiation */
 #define DH_TYPE_CIRCUIT 1
@@ -291,7 +296,8 @@ int crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out,
 ssize_t crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
                              const char *pubkey, size_t pubkey_len,
                              char *secret_out, size_t secret_out_len);
-void crypto_dh_free(crypto_dh_t *dh);
+void crypto_dh_free_(crypto_dh_t *dh);
+#define crypto_dh_free(dh) FREE_AND_NULL(crypto_dh, (dh))
 
 int crypto_expand_key_material_TAP(const uint8_t *key_in,
                                    size_t key_in_len,
