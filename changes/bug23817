@@ -1,0 +1,3 @@
+  o Minor bugfixes (descriptors):
+    - Don't try fetching microdescriptors from relays that have failed to
+      deliver them in the past. Fixes bug 23817; bugfix on 0.3.0.1-alpha.
