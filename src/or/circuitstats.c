@@ -431,9 +431,14 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
     if (num > 0) {
       if (num != cbt->liveness.num_recent_circs) {
         int8_t *recent_circs;
-        log_notice(LD_CIRC, "The Tor Directory Consensus has changed how many "
-                   "circuits we must track to detect network failures from %d "
-                   "to %d.", cbt->liveness.num_recent_circs, num);
+        if (cbt->liveness.num_recent_circs > 0) {
+          log_notice(LD_CIRC, "The Tor Directory Consensus has changed how "
+                     "many circuits we must track to detect network failures "
+                     "from %d to %d.", cbt->liveness.num_recent_circs, num);
+        } else {
+          log_notice(LD_CIRC, "Upon receiving a consensus directory, "
+                     "re-enabling circuit-based network failure detection.");
+        }
 
         tor_assert(cbt->liveness.timeouts_after_firsthop ||
                    cbt->liveness.num_recent_circs == 0);
