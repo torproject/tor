@@ -2889,7 +2889,7 @@ handle_response_fetch_desc(dir_connection_t *conn,
                                   conn->router_purpose,
                                   conn->base_.address)) {
         time_t now = approx_time();
-        directory_info_has_arrived(now, 0, 0);
+        directory_info_has_arrived(now, 0, 1);
       }
     }
   }
