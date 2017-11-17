@@ -171,6 +171,8 @@ STATIC smartlist_t *channels_pending = NULL;
  */
 STATIC struct event *run_sched_ev = NULL;
 
+static int have_logged_kist_suddenly_disabled = 0;
+
 /*****************************************************************************
  * Scheduling system static function definitions
  *
@@ -252,13 +254,31 @@ select_scheduler(void)
     case SCHEDULER_KIST:
       if (!scheduler_can_use_kist()) {
 #ifdef HAVE_KIST_SUPPORT
-        log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
-                             "the consensus or no kernel support.");
+        if (!have_logged_kist_suddenly_disabled) {
+          /* We should only log this once in most cases. If it was the kernel
+           * losing support for kist that caused scheduler_can_use_kist() to
+           * return false, then this flag makes sure we only log this message
+           * once. If it was the consensus that switched from "yes use kist" to
+           * "no don't use kist", then we still set the flag so we log once, but
+           * we unset the flag elsewhere if we ever can_use_kist() again.
+           */
+          have_logged_kist_suddenly_disabled = 1;
+          log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
+                               "the consensus or no kernel support.");
+        }
 #else /* !(defined(HAVE_KIST_SUPPORT)) */
         log_info(LD_SCHED, "Scheduler type KIST not built in");
 #endif /* defined(HAVE_KIST_SUPPORT) */
         continue;
       }
+      /* This flag will only get set in one of two cases:
+       * 1 - the kernel lost support for kist. In that case, we don't expect to
+       *     ever end up here
+       * 2 - the consensus went from "yes use kist" to "no don't use kist".
+       * We might end up here if the consensus changes back to "yes", in which
+       * case we might want to warn the user again if it goes back to "no"
+       * yet again. Thus we unset the flag */
+      have_logged_kist_suddenly_disabled = 0;
       new_scheduler = get_kist_scheduler();
       scheduler_kist_set_full_mode();
       goto end;

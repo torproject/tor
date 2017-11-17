@@ -791,27 +791,35 @@ GENERAL OPTIONS
     restarting Tor. (Default: 0)
 
 [[Schedulers]] **Schedulers** **KIST**|**KISTLite**|**Vanilla**::
-    Specify the scheduler type that tor should use to handle outbound data on
-    channels. This is an ordered list by priority which means that the first
-    value will be tried first and if unavailable, the second one is tried and
-    so on. It is possible to change thse values at runtime.
+    Specify the scheduler type that tor should use. The scheduler is
+    responsible for moving data around within a Tor process. This is an ordered
+    list by priority which means that the first value will be tried first and if
+    unavailable, the second one is tried and so on. It is possible to change
+    these values at runtime. This option mostly effects relays, and most
+    operators should leave it set to its default value.
     (Default: KIST,KISTLite,Vanilla)
  +
     The possible scheduler types are:
  +
-    **KIST**: Kernel Informed Socket Transport. Tor will use the kernel tcp
-    information stack per-socket to make an informed decision on if it should
-    send or not the data. (Only available on Linux)
+    **KIST**: Kernel-Informed Socket Transport. Tor will use TCP information
+    from the kernel to make informed decisions regarding how much data to send
+    and when to send it. KIST also handles traffic in batches (see
+    KISTSchedRunInterval) in order to improve traffic prioritization decisions.
+    As implemented, KIST will only work on Linux kernel version 2.6.39 or
+    higher.
  +
-    **KISTLite**: Same as KIST but without kernel support which means that tor
-    will use all the same mecanics as KIST but without the TCP information the
-    kernel can provide.
+    **KISTLite**: Same as KIST but without kernel support. Tor will use all
+    the same mechanics as with KIST, including the batching, but its decisions
+    regarding how much data to send will not be as good. KISTLite will work on
+    all kernels and operating systems, and the majority of the benefits of KIST
+    are still realized with KISTLite.
  +
-    **Vanilla**: The scheduler that tor has always used that is do as much as
-    possible or AMAP.
+    **Vanilla**: The scheduler that Tor used before KIST was implemented. It
+    sends as much data as possible, as soon as possible. Vanilla will work on
+    all kernels and operating systems.
 
 [[KISTSchedRunInterval]] **KISTSchedRunInterval** __NUM__ **msec**::
-    If KIST or KISTLite is used in Schedulers option, this control at which
+    If KIST or KISTLite is used in the Schedulers option, this controls at which
     interval the scheduler tick is. If the value is 0 msec, the value is taken
     from the consensus if possible else it will fallback to the default 10
     msec. Maximum possible value is 100 msec. (Default: 0 msec)
