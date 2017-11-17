@@ -116,7 +116,8 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
 static void dir_microdesc_download_failed(smartlist_t *failed,
-                                          int status_code);
+                                          int status_code,
+                                          const char *dir_id);
 static int client_likes_consensus(const struct consensus_cache_entry_t *ent,
                                   const char *want_url);
 
@@ -469,7 +470,7 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
     log_warn(LD_BUG, "Called when we have UseBridges set.");
 
   if (should_use_directory_guards(options)) {
-    const node_t *node = guards_choose_dirguard(guard_state_out);
+    const node_t *node = guards_choose_dirguard(dir_purpose, guard_state_out);
     if (node)
       rs = node->rs;
   } else {
@@ -603,7 +604,7 @@ directory_get_from_dirserver,(
        * sort of dir fetch we'll be doing, so it won't return a bridge
        * that can't answer our question.
        */
-      const node_t *node = guards_choose_dirguard(&guard_state);
+      const node_t *node = guards_choose_dirguard(dir_purpose, &guard_state);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
         routerinfo_t *ri = node->ri;
@@ -1010,48 +1011,6 @@ directory_must_use_begindir(const or_options_t *options)
    * relays and authorities do not have to */
   return !public_server_mode(options);
 }
-
-struct directory_request_t {
-  /**
-   * These fields specify which directory we're contacting.  Routerstatus,
-   * if present, overrides the other fields.
-   *
-   * @{ */
-  tor_addr_port_t or_addr_port;
-  tor_addr_port_t dir_addr_port;
-  char digest[DIGEST_LEN];
-
-  const routerstatus_t *routerstatus;
-  /** @} */
-  /** One of DIR_PURPOSE_* other than DIR_PURPOSE_SERVER. Describes what
-   * kind of operation we'll be doing (upload/download), and of what kind
-   * of document. */
-  uint8_t dir_purpose;
-  /** One of ROUTER_PURPOSE_*; used for uploads and downloads of routerinfo
-   * and extrainfo docs.  */
-  uint8_t router_purpose;
-  /** Enum: determines whether to anonymize, and whether to use dirport or
-   * orport. */
-  dir_indirection_t indirection;
-  /** Alias to the variable part of the URL for this request */
-  const char *resource;
-  /** Alias to the payload to upload (if any) */
-  const char *payload;
-  /** Number of bytes to upload from payload</b> */
-  size_t payload_len;
-  /** Value to send in an if-modified-since header, or 0 for none. */
-  time_t if_modified_since;
-  /** Hidden-service-specific information v2. */
-  const rend_data_t *rend_query;
-  /** Extra headers to append to the request */
-  config_line_t *additional_headers;
-  /** Hidden-service-specific information for v3+. */
-  const hs_ident_dir_conn_t *hs_ident;
-  /** Used internally to directory.c: gets informed when the attempt to
-   * connect to the directory succeeds or fails, if that attempt bears on the
-   * directory's usability as a directory guard. */
-  circuit_guard_state_t *guard_state;
-};
 
 /** Evaluate the situation and decide if we should use an encrypted
  * "begindir-style" connection for this directory request.
@@ -2247,8 +2206,6 @@ static int handle_response_fetch_detached_signatures(dir_connection_t *,
                                              const response_handler_args_t *);
 static int handle_response_fetch_desc(dir_connection_t *,
                                              const response_handler_args_t *);
-static int handle_response_fetch_microdesc(dir_connection_t *,
-                                           const response_handler_args_t *);
 static int handle_response_upload_dir(dir_connection_t *,
                                       const response_handler_args_t *);
 static int handle_response_upload_vote(dir_connection_t *,
@@ -2916,7 +2873,7 @@ handle_response_fetch_desc(dir_connection_t *conn,
  * Handler function: processes a response to a request for a group of
  * microdescriptors
  **/
-static int
+STATIC int
 handle_response_fetch_microdesc(dir_connection_t *conn,
                                 const response_handler_args_t *args)
 {
@@ -2933,6 +2890,7 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
            conn->base_.port);
   tor_assert(conn->requested_resource &&
              !strcmpstart(conn->requested_resource, "d/"));
+  tor_assert_nonfatal(!tor_mem_is_zero(conn->identity_digest, DIGEST_LEN));
   which = smartlist_new();
   dir_split_resource_into_fingerprints(conn->requested_resource+2,
                                        which, NULL,
@@ -2943,7 +2901,7 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
              "soon.",
              status_code, escaped(reason), conn->base_.address,
              (int)conn->base_.port, conn->requested_resource);
-    dir_microdesc_download_failed(which, status_code);
+    dir_microdesc_download_failed(which, status_code, conn->identity_digest);
     SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
     smartlist_free(which);
     return 0;
@@ -2955,7 +2913,7 @@ handle_response_fetch_microdesc(dir_connection_t *conn,
                                   now, which);
     if (smartlist_len(which)) {
       /* Mark remaining ones as failed. */
-      dir_microdesc_download_failed(which, status_code);
+      dir_microdesc_download_failed(which, status_code, conn->identity_digest);
     }
     if (mds && smartlist_len(mds)) {
       control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
@@ -5812,13 +5770,14 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
-/** Called when a connection to download microdescriptors has failed in whole
- * or in part. <b>failed</b> is a list of every microdesc digest we didn't
- * get. <b>status_code</b> is the http status code we received. Reschedule the
- * microdesc downloads as appropriate. */
+/** Called when a connection to download microdescriptors from relay with
+ * <b>dir_id</b> has failed in whole or in part. <b>failed</b> is a list
+ * of every microdesc digest we didn't get. <b>status_code</b> is the http
+ * status code we received. Reschedule the microdesc downloads as
+ * appropriate. */
 static void
 dir_microdesc_download_failed(smartlist_t *failed,
-                              int status_code)
+                              int status_code, const char *dir_id)
 {
   networkstatus_t *consensus
     = networkstatus_get_latest_consensus_by_flavor(FLAV_MICRODESC);
@@ -5829,17 +5788,26 @@ dir_microdesc_download_failed(smartlist_t *failed,
 
   if (! consensus)
     return;
+
+  /* We failed to fetch a microdescriptor from 'dir_id', note it down
+   * so that we don't try the same relay next time... */
+  microdesc_note_outdated_dirserver(dir_id);
+
   SMARTLIST_FOREACH_BEGIN(failed, const char *, d) {
     rs = router_get_mutable_consensus_status_by_descriptor_digest(consensus,d);
     if (!rs)
       continue;
     dls = &rs->dl_status;
     if (dls->n_download_failures >=
-        get_options()->TestingMicrodescMaxDownloadTries)
+        get_options()->TestingMicrodescMaxDownloadTries) {
       continue;
-    {
+    }
+
+    { /* Increment the failure count for this md fetch */
       char buf[BASE64_DIGEST256_LEN+1];
       digest256_to_base64(buf, d);
+      log_info(LD_DIR, "Failed to download md %s from %s",
+               buf, hex_str(dir_id, DIGEST_LEN));
       download_status_increment_failure(dls, status_code, buf,
                                         server, now);
     }
