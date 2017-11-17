@@ -1578,10 +1578,11 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                 escaped_safe_str(hostname));
       tor_free(escaped_address);
     } else if (count) {
-      log_warn(LD_EXIT, "eventdns returned only non-IPv4 answers for %s.",
+      log_info(LD_EXIT, "eventdns returned only unrecognized answer types "
+               " for %s.",
                escaped_safe_str(string_address));
     } else {
-      log_warn(LD_BUG, "eventdns returned no addresses or error for %s!",
+      log_info(LD_EXIT, "eventdns returned no addresses or error for %s.",
                escaped_safe_str(string_address));
     }
   }
