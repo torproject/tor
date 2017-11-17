@@ -7,6 +7,7 @@
 #define STATEFILE_PRIVATE
 #define ENTRYNODES_PRIVATE
 #define ROUTERLIST_PRIVATE
+#define DIRECTORY_PRIVATE
 
 #include "or.h"
 #include "test.h"
@@ -15,6 +16,7 @@
 #include "circuitlist.h"
 #include "config.h"
 #include "confparse.h"
+#include "directory.h"
 #include "entrynodes.h"
 #include "nodelist.h"
 #include "networkstatus.h"
@@ -128,6 +130,14 @@ big_fake_network_setup(const struct testcase_t *testcase)
     n->rs->is_v2_dir = 1;
     n->rs->has_bandwidth = 1;
     n->rs->bandwidth_kb = 30;
+
+    /* Make a random nickname for each node */
+    {
+      char nickname_binary[8];
+      crypto_rand(nickname_binary, sizeof(nickname_binary));
+      base64_encode(n->rs->nickname, sizeof(n->rs->nickname),
+                    nickname_binary, sizeof(nickname_binary), 0);
+    }
 
     /* Call half of the nodes a possible guard. */
     if (i % 2 == 0) {
@@ -1719,6 +1729,7 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   /* Simpler cases: no gaurds are confirmed yet. */
   (void)arg;
   guard_selection_t *gs = guard_selection_new("default", GS_TYPE_NORMAL);
+  entry_guard_restriction_t *rst = NULL;
 
   /* simple starting configuration */
   entry_guards_update_primary(gs);
@@ -1800,14 +1811,13 @@ test_entry_guard_select_for_circuit_no_confirmed(void *arg)
   tt_ptr_op(g2, OP_EQ, g);
 
   /* But if we impose a restriction, we don't get the same guard */
-  entry_guard_restriction_t rst;
-  memset(&rst, 0, sizeof(rst));
-  memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
-  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, &rst, &state);
+  rst = guard_create_exit_restriction((uint8_t*)g->identity);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, rst, &state);
   tt_ptr_op(g2, OP_NE, g);
 
  done:
   guard_selection_free(gs);
+  entry_guard_restriction_free(rst);
 }
 
 static void
@@ -1817,6 +1827,7 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
      guards, we use a confirmed guard. */
   (void)arg;
   int i;
+  entry_guard_restriction_t *rst = NULL;
   guard_selection_t *gs = guard_selection_new("default", GS_TYPE_NORMAL);
   const int N_CONFIRMED = 10;
 
@@ -1877,10 +1888,8 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   get_options_mutable()->EnforceDistinctSubnets = 0;
   g = smartlist_get(gs->confirmed_entry_guards,
                      smartlist_len(gs->primary_entry_guards)+2);
-  entry_guard_restriction_t rst;
-  memset(&rst, 0, sizeof(rst));
-  memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
-  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, &rst, &state);
+  rst = guard_create_exit_restriction((uint8_t*)g->identity);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, rst, &state);
   tt_ptr_op(g2, OP_NE, NULL);
   tt_ptr_op(g2, OP_NE, g);
   tt_int_op(g2->confirmed_idx, OP_EQ,
@@ -1906,13 +1915,13 @@ test_entry_guard_select_for_circuit_confirmed(void *arg)
   // Regression test for bug 22753/TROVE-2017-006.
   get_options_mutable()->EnforceDistinctSubnets = 1;
   g = smartlist_get(gs->confirmed_entry_guards, 0);
-  memset(&rst, 0, sizeof(rst));
-  memcpy(rst.exclude_id, g->identity, DIGEST_LEN);
-  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, &rst, &state);
+  memcpy(rst->exclude_id, g->identity, DIGEST_LEN);
+  g2 = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, rst, &state);
   tt_ptr_op(g2, OP_EQ, NULL);
 
  done:
   guard_selection_free(gs);
+  entry_guard_restriction_free(rst);
 }
 
 static void
@@ -2493,9 +2502,7 @@ test_entry_guard_upgrade_not_blocked_by_restricted_circ_complete(void *arg)
   /* Once more, let circ1 become complete. But this time, we'll claim
    * that circ2 was restricted to not use the same guard as circ1. */
   data->guard2_state->restrictions =
-    tor_malloc_zero(sizeof(entry_guard_restriction_t));
-  memcpy(data->guard2_state->restrictions->exclude_id,
-         data->guard1->identity, DIGEST_LEN);
+    guard_create_exit_restriction((uint8_t*)data->guard1->identity);
 
   smartlist_t *result = smartlist_new();
   int r;
@@ -2604,9 +2611,7 @@ test_entry_guard_upgrade_not_blocked_by_restricted_circ_pending(void *arg)
   }
 
   data->guard2_state->restrictions =
-    tor_malloc_zero(sizeof(entry_guard_restriction_t));
-  memcpy(data->guard2_state->restrictions->exclude_id,
-         data->guard1->identity, DIGEST_LEN);
+    guard_create_exit_restriction((uint8_t*)data->guard1->identity);
 
   smartlist_t *result = smartlist_new();
   int r;
@@ -2674,6 +2679,112 @@ test_enty_guard_should_expire_waiting(void *arg)
   tor_free(fake_state);
 }
 
+static void
+mock_directory_initiate_request(directory_request_t *req)
+{
+  if (req->guard_state) {
+    circuit_guard_state_free(req->guard_state);
+  }
+}
+
+static networkstatus_t *mock_ns_val = NULL;
+static networkstatus_t *
+mock_ns_get_by_flavor(consensus_flavor_t f)
+{
+  (void)f;
+  return mock_ns_val;
+}
+
+/** Test that when we fetch microdescriptors we skip guards that have
+ *  previously failed to serve us needed microdescriptors. */
+static void
+test_entry_guard_outdated_dirserver_exclusion(void *arg)
+{
+  int retval;
+  response_handler_args_t *args = NULL;
+  dir_connection_t *conn = NULL;
+  (void) arg;
+
+  /* Test prep: Make a new guard selection */
+  guard_selection_t *gs = get_guard_selection_by_name("default",
+                                                      GS_TYPE_NORMAL, 1);
+
+  /* ... we want to use entry guards */
+  or_options_t *options = get_options_mutable();
+  options->UseEntryGuards = 1;
+  options->UseBridges = 0;
+
+  /* ... prepare some md digests we want to download in the future */
+  smartlist_t *digests = smartlist_new();
+  const char *prose = "unhurried and wise, we perceive.";
+  for (int i = 0; i < 20; i++) {
+    smartlist_add(digests, (char*)prose);
+  }
+
+  /* ... now mock some functions */
+  mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
+  MOCK(networkstatus_get_latest_consensus_by_flavor, mock_ns_get_by_flavor);
+  MOCK(directory_initiate_request, mock_directory_initiate_request);
+
+  /* Test logic:
+   *  0. Create a proper guard set and primary guard list.
+   *  1. Pretend to fail microdescriptor fetches from all the primary guards.
+   *  2. Order another microdescriptor fetch and make sure that primary guards
+   *     get skipped since they failed previous fetches.
+   */
+
+  { /* Setup primary guard list */
+    int i;
+    entry_guards_update_primary(gs);
+    for (i = 0; i < DFLT_N_PRIMARY_GUARDS; ++i) {
+      entry_guard_t *guard = smartlist_get(gs->sampled_entry_guards, i);
+      make_guard_confirmed(gs, guard);
+    }
+    entry_guards_update_primary(gs);
+  }
+
+  {
+    /* Fail microdesc fetches with all the primary guards */
+    args = tor_malloc_zero(sizeof(response_handler_args_t));
+    args->status_code = 404;
+    args->reason = NULL;
+    args->body = NULL;
+    args->body_len = 0;
+
+    conn = tor_malloc_zero(sizeof(dir_connection_t));
+    conn->requested_resource = tor_strdup("d/jlinblackorigami");
+    conn->base_.purpose = DIR_PURPOSE_FETCH_MICRODESC;
+
+    /* Pretend to fail fetches with all primary guards */
+    SMARTLIST_FOREACH_BEGIN(gs->primary_entry_guards,const entry_guard_t *,g) {
+      memcpy(conn->identity_digest, g->identity, DIGEST_LEN);
+
+      retval = handle_response_fetch_microdesc(conn, args);
+      tt_int_op(retval, OP_EQ, 0);
+    } SMARTLIST_FOREACH_END(g);
+  }
+
+  {
+    /* Now order the final md download */
+    setup_full_capture_of_logs(LOG_INFO);
+    initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_MICRODESC,
+                                  digests, 3, 7, 0);
+
+    /* ... and check that because we failed to fetch microdescs from all our
+     * primaries, we didnt end up selecting a primary for fetching dir info */
+    expect_log_msg_containing("No primary or confirmed guards available.");
+    teardown_capture_of_logs();
+  }
+
+ done:
+  smartlist_free(digests);
+  tor_free(args);
+  if (conn) {
+    tor_free(conn->requested_resource);
+    tor_free(conn);
+  }
+}
+
 static const struct testcase_setup_t big_fake_network = {
   big_fake_network_setup, big_fake_network_cleanup
 };
@@ -2734,6 +2845,7 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(select_for_circuit_highlevel_primary_retry),
   BFN_TEST(select_and_cancel),
   BFN_TEST(drop_guards),
+  BFN_TEST(outdated_dirserver_exclusion),
 
   UPGRADE_TEST(upgrade_a_circuit, "c1-done c2-done"),
   UPGRADE_TEST(upgrade_blocked_by_live_primary_guards, "c1-done c2-done"),
