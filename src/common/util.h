@@ -109,6 +109,14 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 
 void tor_log_mallinfo(int severity);
 
+/* Helper macro: free a variable of type 'type' using type_free_, and
+ * set the variable to NULL. */
+#define FREE_AND_NULL(type, var)                                \
+  do {                                                          \
+      type ## _free_(var);                                      \
+      (var) = NULL;                                             \
+  } while (0)
+
 /** Macro: yield a pointer to the field at position <b>off</b> within the
  * structure <b>st</b>.  Example:
  * <pre>
