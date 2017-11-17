@@ -763,7 +763,7 @@ test_address_get_if_addrs_list_internal(void *arg)
   tt_assert(!smartlist_contains_ipv6_tor_addr(results));
 
  done:
-  free_interface_address_list(results);
+  interface_address_list_free(results);
   return;
 }
 
@@ -792,7 +792,7 @@ test_address_get_if_addrs_list_no_internal(void *arg)
   tt_assert(!smartlist_contains_ipv6_tor_addr(results));
 
  done:
-  free_interface_address_list(results);
+  interface_address_list_free(results);
   return;
 }
 
@@ -834,7 +834,7 @@ test_address_get_if_addrs6_list_internal(void *arg)
   }
 
  done:
-  free_interface_address6_list(results);
+  interface_address6_list_free(results);
   teardown_capture_of_logs();
   return;
 }
@@ -878,7 +878,7 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
 
  done:
   teardown_capture_of_logs();
-  free_interface_address6_list(results);
+  interface_address6_list_free(results);
   return;
 }
 
@@ -943,8 +943,8 @@ test_address_get_if_addrs_internal_fail(void *arg)
  done:
   UNMOCK(get_interface_addresses_raw);
   UNMOCK(get_interface_address6_via_udp_socket_hack);
-  free_interface_address6_list(results1);
-  free_interface_address6_list(results2);
+  interface_address6_list_free(results1);
+  interface_address6_list_free(results2);
   return;
 }
 
@@ -971,8 +971,8 @@ test_address_get_if_addrs_no_internal_fail(void *arg)
  done:
   UNMOCK(get_interface_addresses_raw);
   UNMOCK(get_interface_address6_via_udp_socket_hack);
-  free_interface_address6_list(results1);
-  free_interface_address6_list(results2);
+  interface_address6_list_free(results1);
+  interface_address6_list_free(results2);
   return;
 }
 

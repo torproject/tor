@@ -8,7 +8,12 @@
 typedef struct memarea_t memarea_t;
 
 memarea_t *memarea_new(void);
-void memarea_drop_all(memarea_t *area);
+void memarea_drop_all_(memarea_t *area);
+#define memarea_drop_all(area) \
+  do {                                          \
+    memarea_drop_all_(area);                    \
+    (area) = NULL;                              \
+  } while (0)
 void memarea_clear(memarea_t *area);
 int memarea_owns_ptr(const memarea_t *area, const void *ptr);
 void *memarea_alloc(memarea_t *area, size_t sz);

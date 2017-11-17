@@ -37,7 +37,12 @@ int safe_mem_is_zero(const void *mem, size_t sz);
 typedef struct di_digest256_map_t di_digest256_map_t;
 typedef void (*dimap_free_fn)(void *);
 
-void dimap_free(di_digest256_map_t *map, dimap_free_fn free_fn);
+void dimap_free_(di_digest256_map_t *map, dimap_free_fn free_fn);
+#define dimap_free(map, free_fn)                \
+  do {                                          \
+    dimap_free_((map), (free_fn));              \
+    (map) = NULL;                               \
+  } while (0)
 void dimap_add_entry(di_digest256_map_t **map,
                      const uint8_t *key, void *val);
 void *dimap_search(const di_digest256_map_t *map, const uint8_t *key,

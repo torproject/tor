@@ -1792,14 +1792,14 @@ policies_parse_exit_policy_reject_private(
     /* Reject public IPv4 addresses on any interface */
     public_addresses = get_interface_address6_list(LOG_INFO, AF_INET, 0);
     addr_policy_append_reject_addr_list_filter(dest, public_addresses, 1, 0);
-    free_interface_address6_list(public_addresses);
+    interface_address6_list_free(public_addresses);
 
     /* Don't look for IPv6 addresses if we're configured as IPv4-only */
     if (ipv6_exit) {
       /* Reject public IPv6 addresses on any interface */
       public_addresses = get_interface_address6_list(LOG_INFO, AF_INET6, 0);
       addr_policy_append_reject_addr_list_filter(dest, public_addresses, 0, 1);
-      free_interface_address6_list(public_addresses);
+      interface_address6_list_free(public_addresses);
     }
   }
 

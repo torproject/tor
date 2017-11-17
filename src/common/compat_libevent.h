@@ -19,7 +19,8 @@ void suppress_libevent_log_msg(const char *msg);
   evdns_add_server_port_with_base(tor_libevent_get_base(), \
   (sock),(tcp),(cb),(data));
 
-void tor_event_free(struct event *ev);
+void tor_event_free_(struct event *ev);
+#define tor_event_free(ev) FREE_AND_NULL(tor_event, (ev))
 
 typedef struct periodic_timer_t periodic_timer_t;
 
@@ -27,7 +28,8 @@ periodic_timer_t *periodic_timer_new(struct event_base *base,
              const struct timeval *tv,
              void (*cb)(periodic_timer_t *timer, void *data),
              void *data);
-void periodic_timer_free(periodic_timer_t *);
+void periodic_timer_free_(periodic_timer_t *);
+#define periodic_timer_free(t) FREE_AND_NULL(periodic_timer, (t))
 
 #define tor_event_base_loopexit event_base_loopexit
 #define tor_event_base_loopbreak event_base_loopbreak

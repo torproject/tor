@@ -719,6 +719,8 @@ int packed_cell_is_destroy(channel_t *chan,
 
 /* Declare the handle helpers */
 HANDLE_DECL(channel, channel_s,)
+#define channel_handle_free(h)    \
+  FREE_AND_NULL(channel_handle, (h))
 
 #endif /* !defined(TOR_CHANNEL_H) */
 

@@ -63,7 +63,9 @@ typedef struct logfile_t {
                                     * log for each log domain? */
 } logfile_t;
 
-static void log_free(logfile_t *victim);
+static void log_free_(logfile_t *victim);
+#define log_free(lg)    \
+  FREE_AND_NULL(log, (lg))
 
 /** Helper: map a log severity to descriptive string. */
 static inline const char *
@@ -721,7 +723,7 @@ log_fn_ratelim_(ratelim_t *ratelim, int severity, log_domain_mask_t domain,
 
 /** Free all storage held by <b>victim</b>. */
 static void
-log_free(logfile_t *victim)
+log_free_(logfile_t *victim)
 {
   if (!victim)
     return;

@@ -59,7 +59,7 @@ storage_dir_new(const char *dirname, int max_files)
  * Drop all in-RAM storage for <b>d</b>.  Does not delete any files.
  */
 void
-storage_dir_free(storage_dir_t *d)
+storage_dir_free_(storage_dir_t *d)
 {
   if (d == NULL)
     return;

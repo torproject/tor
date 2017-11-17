@@ -153,7 +153,7 @@ memarea_new(void)
 /** Free <b>area</b>, invalidating all pointers returned from memarea_alloc()
  * and friends for this area */
 void
-memarea_drop_all(memarea_t *area)
+memarea_drop_all_(memarea_t *area)
 {
   memarea_chunk_t *chunk, *next;
   for (chunk = area->first; chunk; chunk = next) {

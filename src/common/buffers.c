@@ -409,7 +409,7 @@ buf_slack(const buf_t *buf)
 
 /** Release storage held by <b>buf</b>. */
 void
-buf_free(buf_t *buf)
+buf_free_(buf_t *buf)
 {
   if (!buf)
     return;

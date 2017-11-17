@@ -476,6 +476,9 @@ STATIC double get_meaningful_restriction_threshold(void);
 STATIC double get_extreme_restriction_threshold(void);
 
 HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
+#define entry_guard_handle_free(h)    \
+  FREE_AND_NULL(entry_guard_handle, (h))
+
 STATIC guard_selection_type_t guard_selection_infer_type(
                            guard_selection_type_t type_in,
                            const char *name);

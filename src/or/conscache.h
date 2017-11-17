@@ -10,6 +10,8 @@ typedef struct consensus_cache_entry_t consensus_cache_entry_t;
 typedef struct consensus_cache_t consensus_cache_t;
 
 HANDLE_DECL(consensus_cache_entry, consensus_cache_entry_t, )
+#define consensus_cache_entry_handle_free(h)    \
+  FREE_AND_NULL(consensus_cache_entry_handle, (h))
 
 consensus_cache_t *consensus_cache_open(const char *subdir, int max_entries);
 void consensus_cache_free(consensus_cache_t *cache);

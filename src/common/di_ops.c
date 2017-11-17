@@ -148,7 +148,7 @@ struct di_digest256_map_t {
 /** Release all storage held in <b>map</b>, calling free_fn on each value
  * as we go. */
 void
-dimap_free(di_digest256_map_t *map, dimap_free_fn free_fn)
+dimap_free_(di_digest256_map_t *map, dimap_free_fn free_fn)
 {
   while (map) {
     di_digest256_map_t *victim = map;

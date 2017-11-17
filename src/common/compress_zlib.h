@@ -31,7 +31,8 @@ tor_zlib_compress_process(tor_zlib_compress_state_t *state,
                           const char **in, size_t *in_len,
                           int finish);
 
-void tor_zlib_compress_free(tor_zlib_compress_state_t *state);
+void tor_zlib_compress_free_(tor_zlib_compress_state_t *state);
+#define tor_zlib_compress_free(st) FREE_AND_NULL(tor_zlib_compress, (st))
 
 size_t tor_zlib_compress_state_size(const tor_zlib_compress_state_t *state);
 

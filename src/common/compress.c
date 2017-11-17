@@ -598,7 +598,7 @@ tor_compress_process(tor_compress_state_t *state,
 
 /** Deallocate <b>state</b>. */
 void
-tor_compress_free(tor_compress_state_t *state)
+tor_compress_free_(tor_compress_state_t *state)
 {
   if (state == NULL)
     return;

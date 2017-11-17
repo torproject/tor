@@ -330,7 +330,7 @@ config_process_include(const char *path, int recursion_level, int extended,
  * Free all the configuration lines on the linked list <b>front</b>.
  */
 void
-config_free_lines(config_line_t *front)
+config_free_lines_(config_line_t *front)
 {
   config_line_t *tmp;
 

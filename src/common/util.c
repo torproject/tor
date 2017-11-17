@@ -4713,7 +4713,7 @@ environment_variable_names_equal(const char *s1, const char *s2)
 /** Free <b>env</b> (assuming it was produced by
  * process_environment_make). */
 void
-process_environment_free(process_environment_t *env)
+process_environment_free_(process_environment_t *env)
 {
   if (env == NULL) return;
 
