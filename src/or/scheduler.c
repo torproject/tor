@@ -258,9 +258,10 @@ select_scheduler(void)
           /* We should only log this once in most cases. If it was the kernel
            * losing support for kist that caused scheduler_can_use_kist() to
            * return false, then this flag makes sure we only log this message
-           * once. If it was the consensus that switched from "yes use kist" to
-           * "no don't use kist", then we still set the flag so we log once, but
-           * we unset the flag elsewhere if we ever can_use_kist() again.
+           * once. If it was the consensus that switched from "yes use kist"
+           * to "no don't use kist", then we still set the flag so we log
+           * once, but we unset the flag elsewhere if we ever can_use_kist()
+           * again.
            */
           have_logged_kist_suddenly_disabled = 1;
           log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
