@@ -795,6 +795,9 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
   output = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(param_list, const char *, param) {
+    /* resolve spurious clang shallow analysis null pointer errors */
+    tor_assert(param);
+
     const char *next_param;
     int ok=0;
     eq = strchr(param, '=');
@@ -807,8 +810,7 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
       next_param = NULL;
     else
       next_param = smartlist_get(param_list, param_sl_idx+1);
-    /* resolve spurious clang shallow analysis null pointer errors */
-    tor_assert(param);
+
     if (!next_param || strncmp(next_param, param, cur_param_len)) {
       /* We've reached the end of a series. */
       /* Make sure enough authorities voted on this param, unless the
