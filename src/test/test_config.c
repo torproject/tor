@@ -5454,7 +5454,7 @@ test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
   or_options_t* options = get_options_mutable();
   or_options_t* old_options = options;
   or_options_t* default_options = options;
-  char* message = (char*)("");
+  char* message = NULL;
   int ret;
 
   (void)arg;
@@ -5465,8 +5465,11 @@ test_config_check_bridge_distribution_setting_not_a_bridge(void *arg)
   ret = options_validate(old_options, options, default_options, 0, &message);
 
   tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(message, OP_EQ, "You set BridgeDistribution, but you "
+            "didn't set BridgeRelay!");
  done:
-  return;
+  tor_free(message);
+  options->BridgeDistribution = NULL;
 }
 
 /* If the BridgeDistribution setting was valid, 0 should be returned. */
