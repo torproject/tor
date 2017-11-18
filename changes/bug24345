@@ -1,0 +1,3 @@
+  o Minor bugfixes (tests):
+    - Fix a unit test in one of the bridge-distribution test cases.
+      Fixes bug 24345; bugfix on 0.3.2.3-alpha.
