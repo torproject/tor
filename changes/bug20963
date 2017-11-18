@@ -1,4 +1,0 @@
-  o Minor features (logging):
-    - Improve the message we log when re-enabling circuit build timeouts
-      after having received a consensus. Closes ticket 20963.
-

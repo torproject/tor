@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging):
-    Only log about no longer having KIST support once. Fixes bug 24158; bugfix
-    on 0.3.2
