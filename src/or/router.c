@@ -2385,6 +2385,15 @@ router_dump_router_to_string(routerinfo_t *router,
     smartlist_add_asprintf(chunks, "contact %s\n", ci);
   }
 
+  if (options->BridgeRelay) {
+    const char *bd;
+    if (options->PublishServerDescriptor_ & BRIDGE_DIRINFO)
+      bd = "any";
+    else
+      bd = "none";
+    smartlist_add_asprintf(chunks, "bridge-distribution-request %s\n", bd);
+  }
+
 #ifdef CURVE25519_ENABLED
   if (router->onion_curve25519_pkey) {
     char kbuf[128];
