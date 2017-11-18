@@ -2721,6 +2721,8 @@ test_entry_guard_outdated_dirserver_exclusion(void *arg)
     smartlist_add(digests, (char*)prose);
   }
 
+  tt_int_op(smartlist_len(digests), OP_EQ, 20);
+
   /* ... now mock some functions */
   mock_ns_val = tor_malloc_zero(sizeof(networkstatus_t));
   MOCK(networkstatus_get_latest_consensus_by_flavor, mock_ns_get_by_flavor);
