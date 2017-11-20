@@ -525,7 +525,7 @@ STATIC void entry_guard_consider_retry(entry_guard_t *guard);
 STATIC void make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard);
 STATIC void entry_guards_update_confirmed(guard_selection_t *gs);
 STATIC void entry_guards_update_primary(guard_selection_t *gs);
-STATIC int num_reachable_filtered_guards(guard_selection_t *gs,
+STATIC int num_reachable_filtered_guards(const guard_selection_t *gs,
                                          const entry_guard_restriction_t *rst);
 STATIC void sampled_guards_update_from_consensus(guard_selection_t *gs);
 /**
