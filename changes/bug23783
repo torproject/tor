@@ -1,0 +1,5 @@
+  o Minor bugfixes (compilation, windows):
+    - When detecting OpenSSL on Windows from our configure script, make sure
+      to try linking with the ws2_32 library. Fixes bug 23783; bugfix on
+      0.3.2.2-alpha.
+
