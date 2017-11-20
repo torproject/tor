@@ -724,7 +724,7 @@ AC_ARG_WITH(ssl-dir,
   ])
 
 AC_MSG_NOTICE([Now, we'll look for OpenSSL >= 1.0.1])
-TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI],
+TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS32],
     [#include <openssl/ssl.h>],
     [struct ssl_method_st; const struct ssl_method_st *TLSv1_1_method(void);],
     [TLSv1_1_method();], [],
