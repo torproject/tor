@@ -283,6 +283,10 @@ cdm_diff_ht_set_status(consensus_flavor_t flav,
                        int status,
                        consensus_cache_entry_handle_t *handle)
 {
+  if (handle == NULL) {
+    tor_assert_nonfatal(status != CDM_DIFF_PRESENT);
+  }
+
   struct cdm_diff_t search, *ent;
   memset(&search, 0, sizeof(cdm_diff_t));
   search.flavor = flav;
