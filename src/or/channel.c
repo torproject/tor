@@ -112,59 +112,6 @@ HANDLE_IMPL(channel, channel_s,)
 
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
-/*
- * Channel global byte/cell counters, for statistics and for scheduler high
- * /low-water marks.
- */
-
-/*
- * Total number of cells ever given to any channel with the
- * channel_write_*_cell() functions.
- */
-
-static uint64_t n_channel_cells_queued = 0;
-
-/*
- * Total number of cells ever passed to a channel lower layer with the
- * write_*_cell() methods.
- */
-
-static uint64_t n_channel_cells_passed_to_lower_layer = 0;
-
-/*
- * Current number of cells in all channel queues; should be
- * n_channel_cells_queued - n_channel_cells_passed_to_lower_layer.
- */
-
-static uint64_t n_channel_cells_in_queues = 0;
-
-/*
- * Total number of bytes for all cells ever queued to a channel and
- * counted in n_channel_cells_queued.
- */
-
-static uint64_t n_channel_bytes_queued = 0;
-
-/*
- * Total number of bytes for all cells ever passed to a channel lower layer
- * and counted in n_channel_cells_passed_to_lower_layer.
- */
-
-static uint64_t n_channel_bytes_passed_to_lower_layer = 0;
-
-/*
- * Current number of bytes in all channel queues; should be
- * n_channel_bytes_queued - n_channel_bytes_passed_to_lower_layer.
- */
-
-static uint64_t n_channel_bytes_in_queues = 0;
-
-/*
- * Current total estimated queue size *including lower layer queues and
- * transmit overhead*
- */
-
-STATIC uint64_t estimated_total_queue_size = 0;
 
 /* Digest->channel map
  *
@@ -203,8 +150,6 @@ HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
 
 static int is_destroy_cell(channel_t *chan,
                            const cell_queue_entry_t *q, circid_t *circid_out);
-
-static void channel_assert_counter_consistency(void);
 
 /* Functions to maintain the digest map */
 static void channel_add_to_digest_map(channel_t *chan);
@@ -1774,12 +1719,6 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
       /* Update the counter */
       ++(chan->n_cells_xmitted);
       chan->n_bytes_xmitted += cell_bytes;
-      /* Update global counters */
-      ++n_channel_cells_queued;
-      ++n_channel_cells_passed_to_lower_layer;
-      n_channel_bytes_queued += cell_bytes;
-      n_channel_bytes_passed_to_lower_layer += cell_bytes;
-      channel_assert_counter_consistency();
     }
   }
 
@@ -1816,8 +1755,6 @@ channel_write_cell_generic_(channel_t *chan, const char *cell_type,
             cell, chan, U64_PRINTF_ARG(chan->global_identifier));
 
   channel_write_cell_queue_entry(chan, q);
-  /* Update the queue size estimate */
-  channel_update_xmit_queue_size(chan);
 }
 
 /**
@@ -1976,29 +1913,6 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
     scheduler_release_channel(chan);
   } else if (to_state == CHANNEL_STATE_MAINT) {
     scheduler_channel_doesnt_want_writes(chan);
-  }
-
-  /*
-   * If we're closing, this channel no longer counts toward the global
-   * estimated queue size; if we're open, it now does.
-   */
-  if ((to_state == CHANNEL_STATE_CLOSING ||
-       to_state == CHANNEL_STATE_CLOSED ||
-       to_state == CHANNEL_STATE_ERROR) &&
-      (from_state == CHANNEL_STATE_OPEN ||
-       from_state == CHANNEL_STATE_MAINT)) {
-    estimated_total_queue_size -= chan->bytes_in_queue;
-  }
-
-  /*
-   * If we're opening, this channel now does count toward the global
-   * estimated queue size.
-   */
-  if ((to_state == CHANNEL_STATE_OPEN ||
-       to_state == CHANNEL_STATE_MAINT) &&
-      !(from_state == CHANNEL_STATE_OPEN ||
-        from_state == CHANNEL_STATE_MAINT)) {
-    estimated_total_queue_size += chan->bytes_in_queue;
   }
 }
 
@@ -2438,19 +2352,6 @@ packed_cell_is_destroy(channel_t *chan,
   return 0;
 }
 
-/**
- * Assert that the global channel stats counters are internally consistent
- */
-
-static void
-channel_assert_counter_consistency(void)
-{
-  tor_assert(n_channel_cells_queued ==
-      (n_channel_cells_in_queues + n_channel_cells_passed_to_lower_layer));
-  tor_assert(n_channel_bytes_queued ==
-      (n_channel_bytes_in_queues + n_channel_bytes_passed_to_lower_layer));
-}
-
 /* DOCDOC */
 static int
 is_destroy_cell(channel_t *chan,
@@ -2529,19 +2430,6 @@ void
 channel_dumpstats(int severity)
 {
   if (all_channels && smartlist_len(all_channels) > 0) {
-    tor_log(severity, LD_GENERAL,
-        "Channels have queued " U64_FORMAT " bytes in " U64_FORMAT " cells, "
-        "and handed " U64_FORMAT " bytes in " U64_FORMAT " cells to the lower"
-        " layer.",
-        U64_PRINTF_ARG(n_channel_bytes_queued),
-        U64_PRINTF_ARG(n_channel_cells_queued),
-        U64_PRINTF_ARG(n_channel_bytes_passed_to_lower_layer),
-        U64_PRINTF_ARG(n_channel_cells_passed_to_lower_layer));
-    tor_log(severity, LD_GENERAL,
-        "There are currently " U64_FORMAT " bytes in " U64_FORMAT " cells "
-        "in channel queues.",
-        U64_PRINTF_ARG(n_channel_bytes_in_queues),
-        U64_PRINTF_ARG(n_channel_cells_in_queues));
     tor_log(severity, LD_GENERAL,
         "Dumping statistics about %d channels:",
         smartlist_len(all_channels));
@@ -3641,16 +3529,6 @@ channel_mark_outgoing(channel_t *chan)
  ***********************/
 
 /*
- * Get the latest estimate for the total queue size of all open channels
- */
-
-uint64_t
-channel_get_global_queue_estimate(void)
-{
-  return estimated_total_queue_size;
-}
-
-/*
  * Estimate the number of writeable cells
  *
  * Ask the lower layer for an estimate of how many cells it can accept.
@@ -4160,86 +4038,6 @@ channel_update_bad_for_new_circs(const char *digest, int force)
   channel_idmap_entry_t **iter;
   HT_FOREACH(iter, channel_idmap, &channel_identity_map) {
     channel_rsa_id_group_set_badness(&(*iter)->channel_list, force);
-  }
-}
-
-/**
- * Update the estimated number of bytes queued to transmit for this channel,
- * and notify the scheduler.  The estimate includes both the channel queue and
- * the queue size reported by the lower layer, and an overhead estimate
- * optionally provided by the lower layer.
- */
-
-void
-channel_update_xmit_queue_size(channel_t *chan)
-{
-  uint64_t queued, adj;
-  double overhead;
-
-  tor_assert(chan);
-  tor_assert(chan->num_bytes_queued);
-
-  /*
-   * First, get the number of bytes we have queued without factoring in
-   * lower-layer overhead.
-   */
-  queued = chan->num_bytes_queued(chan) + chan->bytes_in_queue;
-  /* Next, adjust by the overhead factor, if any is available */
-  if (chan->get_overhead_estimate) {
-    overhead = chan->get_overhead_estimate(chan);
-    if (overhead >= 1.0) {
-      queued = (uint64_t)(queued * overhead);
-    } else {
-      /* Ignore silly overhead factors */
-      log_notice(LD_CHANNEL, "Ignoring silly overhead factor %f", overhead);
-    }
-  }
-
-  /* Now, compare to the previous estimate */
-  if (queued > chan->bytes_queued_for_xmit) {
-    adj = queued - chan->bytes_queued_for_xmit;
-    log_debug(LD_CHANNEL,
-              "Increasing queue size for channel " U64_FORMAT " by " U64_FORMAT
-              " from " U64_FORMAT " to " U64_FORMAT,
-              U64_PRINTF_ARG(chan->global_identifier),
-              U64_PRINTF_ARG(adj),
-              U64_PRINTF_ARG(chan->bytes_queued_for_xmit),
-              U64_PRINTF_ARG(queued));
-    /* Update the channel's estimate */
-    chan->bytes_queued_for_xmit = queued;
-
-    /* Update the global queue size estimate if appropriate */
-    if (chan->state == CHANNEL_STATE_OPEN ||
-        chan->state == CHANNEL_STATE_MAINT) {
-      estimated_total_queue_size += adj;
-      log_debug(LD_CHANNEL,
-                "Increasing global queue size by " U64_FORMAT " for channel "
-                U64_FORMAT ", new size is " U64_FORMAT,
-                U64_PRINTF_ARG(adj), U64_PRINTF_ARG(chan->global_identifier),
-                U64_PRINTF_ARG(estimated_total_queue_size));
-    }
-  } else if (queued < chan->bytes_queued_for_xmit) {
-    adj = chan->bytes_queued_for_xmit - queued;
-    log_debug(LD_CHANNEL,
-              "Decreasing queue size for channel " U64_FORMAT " by " U64_FORMAT
-              " from " U64_FORMAT " to " U64_FORMAT,
-              U64_PRINTF_ARG(chan->global_identifier),
-              U64_PRINTF_ARG(adj),
-              U64_PRINTF_ARG(chan->bytes_queued_for_xmit),
-              U64_PRINTF_ARG(queued));
-    /* Update the channel's estimate */
-    chan->bytes_queued_for_xmit = queued;
-
-    /* Update the global queue size estimate if appropriate */
-    if (chan->state == CHANNEL_STATE_OPEN ||
-        chan->state == CHANNEL_STATE_MAINT) {
-      estimated_total_queue_size -= adj;
-      log_debug(LD_CHANNEL,
-                "Decreasing global queue size by " U64_FORMAT " for channel "
-                U64_FORMAT ", new size is " U64_FORMAT,
-                U64_PRINTF_ARG(adj), U64_PRINTF_ARG(chan->global_identifier),
-                U64_PRINTF_ARG(estimated_total_queue_size));
-    }
   }
 }
 
