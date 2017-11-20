@@ -1149,7 +1149,7 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
        * These are all transport independent and we pass them up through the
        * channel_t mechanism.  They are ultimately handled in command.c.
        */
-      channel_queue_cell(TLS_CHAN_TO_BASE(chan), cell);
+      channel_process_cell(TLS_CHAN_TO_BASE(chan), cell);
       break;
     default:
       log_fn(LOG_INFO, LD_PROTOCOL,

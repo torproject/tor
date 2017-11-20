@@ -268,12 +268,6 @@ struct channel_s {
    */
   TOR_LIST_ENTRY(channel_s) next_with_same_id;
 
-  /** List of incoming cells to handle */
-  chan_cell_queue_t incoming_queue;
-
-  /** List of queued outgoing cells */
-  chan_cell_queue_t outgoing_queue;
-
   /** Circuit mux for circuits sending on this channel */
   circuitmux_t *cmux;
 
@@ -480,11 +474,6 @@ struct cell_queue_entry_s {
   } u;
 };
 
-/* Cell queue functions for benefit of test suite */
-STATIC int chan_cell_queue_len(const chan_cell_queue_t *queue);
-
-STATIC void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
-
 void channel_write_cell_generic_(channel_t *chan, const char *cell_type,
                                  void *cell, cell_queue_entry_t *q);
 #endif /* defined(CHANNEL_PRIVATE_) */
@@ -556,7 +545,7 @@ void channel_listener_queue_incoming(channel_listener_t *listener,
                                      channel_t *incoming);
 
 /* Incoming cell handling */
-void channel_process_cells(channel_t *chan);
+void channel_process_cell(channel_t *chan, cell_t *cell);
 void channel_queue_cell(channel_t *chan, cell_t *cell);
 void channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell);
 

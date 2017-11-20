@@ -299,10 +299,6 @@ channel_more_to_flush_mock(channel_t *chan)
 
   flush_mock_channel_t *found_mock_ch = NULL;
 
-  /* Check if we have any queued */
-  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
-      return 1;
-
   SMARTLIST_FOREACH_BEGIN(chans_for_flush_mock,
                           flush_mock_channel_t *,
                           flush_mock_ch) {
