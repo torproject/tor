@@ -497,6 +497,7 @@ AC_CHECK_FUNCS(
         getrlimit \
         gettimeofday \
         gmtime_r \
+	gnu_get_libc_version \
 	htonll \
         inet_aton \
         ioctl \
@@ -1215,6 +1216,7 @@ AC_CHECK_HEADERS([assert.h \
                   arpa/inet.h \
                   crt_externs.h \
                   execinfo.h \
+                  gnu/libc-version.h \
                   grp.h \
                   ifaddrs.h \
                   inttypes.h \
