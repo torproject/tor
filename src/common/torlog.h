@@ -189,6 +189,10 @@ void log_fn_ratelim_(struct ratelim_t *ratelim, int severity,
                      const char *format, ...)
   CHECK_PRINTF(5,6);
 
+int log_message_is_interesting(int severity, log_domain_mask_t domain);
+void tor_log_string(int severity, log_domain_mask_t domain,
+                    const char *function, const char *string);
+
 #if defined(__GNUC__) && __GNUC__ <= 3
 
 /* These are the GCC varidaic macros, so that older versions of GCC don't

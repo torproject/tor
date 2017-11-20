@@ -225,6 +225,30 @@ log_set_application_name(const char *name)
   appname = name ? tor_strdup(name) : NULL;
 }
 
+/** Return true if some of the running logs might be interested in a log
+ * message of the given severity in the given domains. If this function
+ * returns true, the log message might be ignored anyway, but if it returns
+ * false, it is definitely_ safe not to log the message. */
+int
+log_message_is_interesting(int severity, log_domain_mask_t domain)
+{
+  (void) domain;
+  return (severity <= log_global_min_severity_);
+}
+
+/**
+ * As tor_log, but takes an optional function name, and does not treat its
+ * <b>string</b> as a printf format.
+ *
+ * For use by Rust integration.
+ */
+void
+tor_log_string(int severity, log_domain_mask_t domain,
+               const char *function, const char *string)
+{
+  log_fn_(severity, domain, function, "%s", string);
+}
+
 /** Log time granularity in milliseconds. */
 static int log_time_granularity = 1;
 
