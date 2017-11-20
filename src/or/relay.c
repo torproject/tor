@@ -2859,7 +2859,12 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 }
 
 /** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>chan</b>
- * transmitting in <b>direction</b>. */
+ * transmitting in <b>direction</b>.
+ *
+ * The given <b>cell</b> is copied over the circuit queue so the caller must
+ * cleanup the memory.
+ *
+ * This function is part of the fast path. */
 void
 append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                              cell_t *cell, cell_direction_t direction,
@@ -2882,11 +2887,14 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     streams_blocked = circ->streams_blocked_on_p_chan;
   }
 
+  /* Very important that we copy to the circuit queue because all calls to
+   * this function use the stack for the cell memory. */
   cell_queue_append_packed_copy(circ, queue, exitward, cell,
                                 chan->wide_circ_ids, 1);
 
+  /* Check and run the OOM if needed. */
   if (PREDICT_UNLIKELY(cell_queues_check_size())) {
-    /* We ran the OOM handler */
+    /* We ran the OOM handler which might have closed this circuit. */
     if (circ->marked_for_close)
       return;
   }
