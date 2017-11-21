@@ -267,7 +267,7 @@ connection_is_moribund(connection_t *conn)
 void connection_check_oos(int n_socks, int failed);
 
 #ifdef CONNECTION_PRIVATE
-STATIC void connection_free_(connection_t *conn);
+STATIC void connection_free_minimal(connection_t *conn);
 
 /* Used only by connection.c and test*.c */
 uint32_t bucket_millis_empty(int tokens_before, uint32_t last_empty_time,

@@ -335,7 +335,7 @@ test_oom_streambuf(void *arg)
   circuit_free(c5);
 
   SMARTLIST_FOREACH(edgeconns, edge_connection_t *, ec,
-                    connection_free_(TO_CONN(ec)));
+                    connection_free_minimal(TO_CONN(ec)));
   smartlist_free(edgeconns);
 
   UNMOCK(circuit_mark_for_close_);

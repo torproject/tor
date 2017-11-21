@@ -520,7 +520,7 @@ test_directory_guard_fetch_with_no_dirinfo(void *arg)
  done:
   tor_free(consensus_text_md);
   tor_free(dummy_state);
-  connection_free_(TO_CONN(conn));
+  connection_free_minimal(TO_CONN(conn));
   entry_guards_free_all();
   teardown_capture_of_logs();
 }

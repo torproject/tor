@@ -499,7 +499,7 @@ conn_listener_type_supports_af_unix(int type)
  * if <b>conn</b> is an OR or OP connection.
  */
 STATIC void
-connection_free_(connection_t *conn)
+connection_free_minimal(connection_t *conn)
 {
   void *mem;
   size_t memlen;
@@ -704,7 +704,7 @@ connection_free,(connection_t *conn))
   }
 #endif /* 1 */
   connection_unregister_events(conn);
-  connection_free_(conn);
+  connection_free_minimal(conn);
 }
 
 /**
@@ -5239,8 +5239,8 @@ proxy_type_to_string(int proxy_type)
   return NULL; /*Unreached*/
 }
 
-/** Call connection_free_() on every connection in our array, and release all
- * storage held by connection.c.
+/** Call connection_free_minimal() on every connection in our array, and
+ * release all storage held by connection.c.
  *
  * Don't do the checks in connection_free(), because they will
  * fail.
@@ -5264,7 +5264,8 @@ connection_free_all(void)
   /* Clear out our list of broken connections */
   clear_broken_connection_map(0);
 
-  SMARTLIST_FOREACH(conns, connection_t *, conn, connection_free_(conn));
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+                    connection_free_minimal(conn));
 
   if (outgoing_addrs) {
     SMARTLIST_FOREACH(outgoing_addrs, tor_addr_t *, addr, tor_free(addr));

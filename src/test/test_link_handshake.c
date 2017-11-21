@@ -302,8 +302,8 @@ test_link_handshake_certs_ok(void *arg)
   mock_own_cert = mock_peer_cert = NULL;
   memset(c1->identity_digest, 0, sizeof(c1->identity_digest));
   memset(c2->identity_digest, 0, sizeof(c2->identity_digest));
-  connection_free_(TO_CONN(c1));
-  connection_free_(TO_CONN(c2));
+  connection_free_minimal(TO_CONN(c1));
+  connection_free_minimal(TO_CONN(c2));
   tor_free(cell1);
   tor_free(cell2);
   certs_cell_free(cc1);
@@ -343,7 +343,7 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
     tor_free(d->cell);
     certs_cell_free(d->ccell);
     connection_or_clear_identity(d->c);
-    connection_free_(TO_CONN(d->c));
+    connection_free_minimal(TO_CONN(d->c));
     circuitmux_free(d->chan->base_.cmux);
     tor_free(d->chan);
     crypto_pk_free(d->key1);
@@ -930,7 +930,7 @@ test_link_handshake_send_authchallenge(void *arg)
 
  done:
   UNMOCK(connection_or_write_var_cell_to_buf);
-  connection_free_(TO_CONN(c1));
+  connection_free_minimal(TO_CONN(c1));
   tor_free(cell1);
   tor_free(cell2);
   crypto_pk_free(rsa0);
@@ -955,7 +955,7 @@ recv_authchallenge_cleanup(const struct testcase_t *test, void *obj)
 
   if (d) {
     tor_free(d->cell);
-    connection_free_(TO_CONN(d->c));
+    connection_free_minimal(TO_CONN(d->c));
     circuitmux_free(d->chan->base_.cmux);
     tor_free(d->chan);
     tor_free(d);
@@ -1158,8 +1158,8 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
     tor_free(d->cell);
     connection_or_clear_identity(d->c1);
     connection_or_clear_identity(d->c2);
-    connection_free_(TO_CONN(d->c1));
-    connection_free_(TO_CONN(d->c2));
+    connection_free_minimal(TO_CONN(d->c1));
+    connection_free_minimal(TO_CONN(d->c2));
     circuitmux_free(d->chan2->base_.cmux);
     tor_free(d->chan2);
     crypto_pk_free(d->key1);
