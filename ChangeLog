@@ -1,5 +1,5 @@
 Changes in version 0.3.2.5-alpha - 2017-11-22
-  Tor 0.3.2.4-alpha is the fifth alpha release in the 0.3.2.x series. It
+  Tor 0.3.2.5-alpha is the fifth alpha release in the 0.3.2.x series. It
   fixes several stability and reliability bugs, including a fix for
   intermittent bootstrapping failures that some people have been seeing
   since the 0.3.0.x series.
@@ -29,7 +29,7 @@ Changes in version 0.3.2.5-alpha - 2017-11-22
     - Improve the message we log when re-enabling circuit build timeouts
       after having received a consensus. Closes ticket 20963.
 
-  o Minor bugfixes (bootstrapping):
+  o Major bugfixes (bootstrapping):
     - Fetch descriptors aggressively whenever we lack enough to build
       circuits, regardless of how many descriptors we are missing.
       Previously, we would delay launching the fetch when we had fewer
@@ -74,7 +74,7 @@ Changes in version 0.3.2.5-alpha - 2017-11-22
 
   o Minor bugfixes (logging):
     - Only log once if we notice that KIST support is gone. Fixes bug
-      24158; bugfix on 0.3.2
+      24158; bugfix on 0.3.2.1-alpha.
     - Suppress a log notice when relay descriptors arrive. We already
       have a bootstrap progress for this so no need to log notice
       everytime tor receives relay descriptors. Microdescriptors behave
@@ -92,11 +92,10 @@ Changes in version 0.3.2.5-alpha - 2017-11-22
       waiting for the rendezvous circuit to complete. Keep the intro
       circuit around longer instead of timing out and reopening new ones
       constantly. Fixes bug 23681; bugfix on 0.2.4.8-alpha.
-    - Fix the consensus parameter "hsdir-interval" to "hsdir_interval"
-      so it matches the dir-spec.txt. Fixes bug 24262; bugfix
-      on 0.3.1.1-alpha.
+    - Rename the consensus parameter "hsdir-interval" to "hsdir_interval"
+      so it matches dir-spec.txt. Fixes bug 24262; bugfix on 0.3.1.1-alpha.
     - Silence a warning about failed v3 onion descriptor uploads that
-      can happen naturally under certain edge-cases. Fixes part of bug
+      can happen naturally under certain edge cases. Fixes part of bug
       23662; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (tests):
@@ -105,7 +104,7 @@ Changes in version 0.3.2.5-alpha - 2017-11-22
     - Fix a bug in our fuzzing mock replacement for crypto_pk_checksig(),
       to correctly handle cases where a caller gives it an RSA key of
       under 160 bits. (This is not actually a bug in Tor itself, but
-      wrather in our fuzzing code.) Fixes bug 24247; bugfix on
+      rather in our fuzzing code.) Fixes bug 24247; bugfix on
       0.3.0.3-alpha. Found by OSS-Fuzz as issue 4177.
 
   o Documentation:
