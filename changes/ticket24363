@@ -1,0 +1,2 @@
+  o Code simplification and refactoring:
+    - Remove /usr/athena from search path in configure.ac. Closes ticket 24363. 

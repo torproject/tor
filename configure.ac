@@ -729,7 +729,7 @@ TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS
     [#include <openssl/ssl.h>],
     [struct ssl_method_st; const struct ssl_method_st *TLSv1_1_method(void);],
     [TLSv1_1_method();], [],
-    [/usr/local/opt/openssl /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /opt/openssl])
+    [/usr/local/opt/openssl /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /opt/openssl])
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
 
