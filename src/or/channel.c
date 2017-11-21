@@ -941,8 +941,6 @@ channel_free(channel_t *chan)
     chan->cmux = NULL;
   }
 
-  /* We're in CLOSED or ERROR, so the cell queue is already empty */
-
   tor_free(chan);
 }
 
@@ -970,11 +968,6 @@ channel_listener_free(channel_listener_t *chan_l)
 
   /* Call a free method if there is one */
   if (chan_l->free_fn) chan_l->free_fn(chan_l);
-
-  /*
-   * We're in CLOSED or ERROR, so the incoming channel queue is already
-   * empty.
-   */
 
   tor_free(chan_l);
 }
@@ -1143,8 +1136,7 @@ channel_get_var_cell_handler(channel_t *chan)
  * Set both cell handlers for a channel
  *
  * This function sets both the fixed-length and variable length cell handlers
- * for a channel and processes any incoming cells that had been blocked in the
- * queue because none were available.
+ * for a channel.
  */
 
 void
@@ -1622,10 +1614,10 @@ channel_set_remote_end(channel_t *chan,
 }
 
 /**
- * Write to a channel based on a cell_queue_entry_t
+ * Write to a channel the given packed cell.
  *
- * Given a cell_queue_entry_t filled out by the caller, try to send the cell
- * and queue it if we can't.
+ * Return 0 on success and the cell is freed so the caller MUST discard any
+ * reference to it. On error, -1 is returned and the cell is untouched.
  */
 static int
 write_packed_cell(channel_t *chan, packed_cell_t *cell)
@@ -1737,15 +1729,6 @@ channel_change_state_(channel_t *chan, channel_state_t to_state)
       to_state == CHANNEL_STATE_ERROR) {
     tor_assert(chan->reason_for_closing != CHANNEL_NOT_CLOSING);
   }
-
-  /*
-   * We need to maintain the queues here for some transitions:
-   * when we enter CHANNEL_STATE_OPEN (especially from CHANNEL_STATE_MAINT)
-   * we may have a backlog of cells to transmit, so drain the queues in
-   * that case, and when going to CHANNEL_STATE_CLOSED the subclass
-   * should have made sure to finish sending things (or gone to
-   * CHANNEL_STATE_ERROR if not possible), so we assert for that here.
-   */
 
   log_debug(LD_CHANNEL,
             "Changing state of channel %p (global ID " U64_FORMAT
@@ -1867,15 +1850,6 @@ channel_listener_change_state(channel_listener_t *chan_l,
     tor_assert(chan_l->reason_for_closing != CHANNEL_LISTENER_NOT_CLOSING);
   }
 
-  /*
-   * We need to maintain the queues here for some transitions:
-   * when we enter CHANNEL_STATE_OPEN (especially from CHANNEL_STATE_MAINT)
-   * we may have a backlog of cells to transmit, so drain the queues in
-   * that case, and when going to CHANNEL_STATE_CLOSED the subclass
-   * should have made sure to finish sending things (or gone to
-   * CHANNEL_STATE_ERROR if not possible), so we assert for that here.
-   */
-
   log_debug(LD_CHANNEL,
             "Changing state of channel listener %p (global ID " U64_FORMAT
             "from \"%s\" to \"%s\"",
@@ -1908,23 +1882,32 @@ channel_listener_change_state(channel_listener_t *chan_l,
 
   if (to_state == CHANNEL_LISTENER_STATE_CLOSED ||
       to_state == CHANNEL_LISTENER_STATE_ERROR) {
-    /* Assert that the queue is empty */
     tor_assert(!(chan_l->incoming_list) ||
                 smartlist_len(chan_l->incoming_list) == 0);
   }
 }
 
-/**
- * Try to flush cells to the lower layer
- *
- * this is called by the lower layer to indicate that it wants more cells;
- * it will try to write up to num_cells cells from the channel's cell queue or
- * from circuits active on that channel, or as many as it has available if
- * num_cells == -1.
- */
-
+/* Maximum number of cells that is allowed to flush at once withing
+ * channel_flush_some_cells(). */
 #define MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED 256
 
+/* Try to flush cells of the given channel chan up to a maximum of num_cells.
+ *
+ * This is called by the scheduler when it wants to flush cells from the
+ * channel's circuit queue(s) to the connection outbuf (not yet on the wire).
+ *
+ * If the channel is not in state CHANNEL_STATE_OPEN, this does nothing and
+ * will return 0 meaning no cells were flushed.
+ *
+ * If num_cells is -1, we'll try to flush up to the maximum cells allowed
+ * defined in MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED.
+ *
+ * On success, the number of flushed cells are returned and it can never be
+ * above num_cells. If 0 is returned, no cells were flushed either because the
+ * channel was not opened or we had no cells on the channel. A negative number
+ * can NOT be sent back.
+ *
+ * This function is part of the fast path. */
 MOCK_IMPL(ssize_t,
 channel_flush_some_cells, (channel_t *chan, ssize_t num_cells))
 {
@@ -1965,16 +1948,14 @@ channel_flush_some_cells, (channel_t *chan, ssize_t num_cells))
 /**
  * Check if any cells are available
  *
- * This gets used from the lower layer to check if any more cells are
- * available.
+ * This is used by the scheduler to know if the channel has more to flush
+ * after a scheduling round.
  */
-
 MOCK_IMPL(int,
 channel_more_to_flush, (channel_t *chan))
 {
   tor_assert(chan);
 
-  /* Check if any circuits would like to queue some */
   if (circuitmux_num_cells(chan->cmux) > 0) return 1;
 
   /* Else no */
@@ -2178,12 +2159,8 @@ channel_listener_queue_incoming(channel_listener_t *listener,
 }
 
 /**
- * Process queued incoming cells
- *
- * Process as many queued cells as we can from the incoming
- * cell queue.
+ * Process a cell from the given channel.
  */
-
 void
 channel_process_cell(channel_t *chan, cell_t *cell)
 {
@@ -2195,15 +2172,6 @@ channel_process_cell(channel_t *chan, cell_t *cell)
   /* Nothing we can do if we have no registered cell handlers */
   if (!chan->cell_handler)
     return;
-
-  /*
-   * Process the given cell
-   *
-   * We must free the cells here after calling the handler, since custody
-   * of the buffer was given to the channel layer when they were queued;
-   * see comments on memory management in channel_queue_cell() and in
-   * channel_queue_var_cell() below.
-   */
 
   /* Timestamp for receiving */
   channel_timestamp_recv(chan);
@@ -3154,13 +3122,10 @@ channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out)
   else return 0;
 }
 
-/**
- * Check if there are outgoing queue writes on this channel
- *
- * Indicate if either we have queued cells, or if not, whether the underlying
- * lower-layer transport thinks it has an output queue.
+/*
+ * Return true iff the channel has any cells on the connection outbuf waiting
+ * to be sent onto the network.
  */
-
 int
 channel_has_queued_writes(channel_t *chan)
 {
