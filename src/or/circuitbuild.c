@@ -2707,12 +2707,16 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
              node_describe(node));
   }
 
+  /* Retrieve the curve25519 pubkey. */
+  const curve25519_public_key_t *curve_pubkey =
+    node_get_curve25519_onion_key(node);
+
   if (valid_addr && node->ri)
     return extend_info_new(node->ri->nickname,
                            node->identity,
                            ed_pubkey,
                            node->ri->onion_pkey,
-                           node->ri->onion_curve25519_pkey,
+                           curve_pubkey,
                            &ap.addr,
                            ap.port);
   else if (valid_addr && node->rs && node->md)
@@ -2720,7 +2724,7 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
                            node->identity,
                            ed_pubkey,
                            node->md->onion_pkey,
-                           node->md->onion_curve25519_pkey,
+                           curve_pubkey,
                            &ap.addr,
                            ap.port);
   else
