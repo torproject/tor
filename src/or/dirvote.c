@@ -519,7 +519,7 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
 
   /* compare_vote_rs_() sorts the items by identity digest (all the same),
    * then by SD digest.  That way, if we have a tie that the published_on
-   * date cannot tie, we use the descriptor with the smaller digest.
+   * date cannot break, we use the descriptor with the smaller digest.
    */
   smartlist_sort(votes, compare_vote_rs_);
   SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
