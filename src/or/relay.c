@@ -2521,6 +2521,17 @@ cell_queue_pop(cell_queue_t *queue)
   return cell;
 }
 
+/** Insert <b>cell</b> as the head of the <b>queue</b>. */
+static void
+cell_insert_head(cell_queue_t *queue, packed_cell_t *cell)
+{
+  tor_assert(queue);
+  tor_assert(cell);
+
+  TOR_SIMPLEQ_INSERT_HEAD(&queue->head, cell, next);
+  ++queue->n;
+}
+
 /** Return the total number of bytes used for each packed_cell in a queue.
  * Approximate. */
 size_t
@@ -2746,7 +2757,10 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
       /* this code is duplicated from some of the logic below. Ugly! XXXX */
       tor_assert(destroy_queue->n > 0);
       cell = cell_queue_pop(destroy_queue);
-      channel_write_packed_cell(chan, cell);
+      if (channel_write_packed_cell(chan, cell) < 0) {
+        cell_insert_head(destroy_queue, cell);
+        continue;
+      }
       /* Update the cmux destroy counter */
       circuitmux_notify_xmit_destroy(cmux);
       cell = NULL;
@@ -2823,7 +2837,12 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
                                 DIRREQ_CIRC_QUEUE_FLUSHED);
 
     /* Now send the cell */
-    channel_write_packed_cell(chan, cell);
+    if (channel_write_packed_cell(chan, cell) < 0) {
+      /* Unable to send the cell, put it back at the start of the circuit
+       * queue so we can retry. */
+      cell_insert_head(queue, cell);
+      continue;
+    }
     cell = NULL;
 
     /*
