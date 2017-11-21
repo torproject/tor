@@ -2176,12 +2176,12 @@ n_cells_in_circ_queues(const circuit_t *c)
 }
 
 /**
- * Return the age of the oldest cell queued on <b>c</b>, in milliseconds.
+ * Return the age of the oldest cell queued on <b>c</b>, in timestamp units.
  * Return 0 if there are no cells queued on c.  Requires that <b>now</b> be
- * the current time in milliseconds since the epoch, truncated.
+ * the current coarse timestamp.
  *
  * This function will return incorrect results if the oldest cell queued on
- * the circuit is older than 2**32 msec (about 49 days) old.
+ * the circuit is older than about 2**32 msec (about 49 days) old.
  */
 STATIC uint32_t
 circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
@@ -2190,12 +2190,12 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
   packed_cell_t *cell;
 
   if (NULL != (cell = TOR_SIMPLEQ_FIRST(&c->n_chan_cells.head)))
-    age = now - cell->inserted_time;
+    age = now - cell->inserted_timestamp;
 
   if (! CIRCUIT_IS_ORIGIN(c)) {
     const or_circuit_t *orcirc = CONST_TO_OR_CIRCUIT(c);
     if (NULL != (cell = TOR_SIMPLEQ_FIRST(&orcirc->p_chan_cells.head))) {
-      uint32_t age2 = now - cell->inserted_time;
+      uint32_t age2 = now - cell->inserted_timestamp;
       if (age2 > age)
         return age2;
     }
@@ -2203,31 +2203,30 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
   return age;
 }
 
-/** Return the age in milliseconds of the oldest buffer chunk on <b>conn</b>,
- * where age is taken in milliseconds before the time <b>now</b> (in truncated
- * absolute monotonic msec).  If the connection has no data, treat
- * it as having age zero.
+/** Return the age of the oldest buffer chunk on <b>conn</b>, where age is
+ * taken in timestamp units before the time <b>now</b>.  If the connection has
+ * no data, treat it as having age zero.
  **/
 static uint32_t
-conn_get_buffer_age(const connection_t *conn, uint32_t now)
+conn_get_buffer_age(const connection_t *conn, uint32_t now_ts)
 {
   uint32_t age = 0, age2;
   if (conn->outbuf) {
-    age2 = buf_get_oldest_chunk_timestamp(conn->outbuf, now);
+    age2 = buf_get_oldest_chunk_timestamp(conn->outbuf, now_ts);
     if (age2 > age)
       age = age2;
   }
   if (conn->inbuf) {
-    age2 = buf_get_oldest_chunk_timestamp(conn->inbuf, now);
+    age2 = buf_get_oldest_chunk_timestamp(conn->inbuf, now_ts);
     if (age2 > age)
       age = age2;
   }
   return age;
 }
 
-/** Return the age in milliseconds of the oldest buffer chunk on any stream in
- * the linked list <b>stream</b>, where age is taken in milliseconds before
- * the time <b>now</b> (in truncated milliseconds since the epoch). */
+/** Return the age in timestamp units of the oldest buffer chunk on any stream
+ * in the linked list <b>stream</b>, where age is taken in timestamp units
+ * before the timestamp <b>now</b>. */
 static uint32_t
 circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
 {
@@ -2246,9 +2245,9 @@ circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
   return age;
 }
 
-/** Return the age in milliseconds of the oldest buffer chunk on any stream
- * attached to the circuit <b>c</b>, where age is taken in milliseconds before
- * the time <b>now</b> (in truncated milliseconds since the epoch). */
+/** Return the age in timestamp units of the oldest buffer chunk on any stream
+ * attached to the circuit <b>c</b>, where age is taken before the timestamp
+ * <b>now</b>. */
 STATIC uint32_t
 circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
 {
@@ -2262,8 +2261,8 @@ circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
 }
 
 /** Return the age of the oldest cell or stream buffer chunk on the circuit
- * <b>c</b>, where age is taken in milliseconds before the time <b>now</b> (in
- * truncated milliseconds since the epoch). */
+ * <b>c</b>, where age is taken in timestamp units before the timestamp
+ * <b>now</b> */
 STATIC uint32_t
 circuit_max_queued_item_age(const circuit_t *c, uint32_t now)
 {
@@ -2293,7 +2292,7 @@ circuits_compare_by_oldest_queued_item_(const void **a_, const void **b_)
     return -1;
 }
 
-static uint32_t now_ms_for_buf_cmp;
+static uint32_t now_ts_for_buf_cmp;
 
 /** Helper to sort a list of circuit_t by age of oldest item, in descending
  * order. */
@@ -2302,8 +2301,8 @@ conns_compare_by_buffer_age_(const void **a_, const void **b_)
 {
   const connection_t *a = *a_;
   const connection_t *b = *b_;
-  time_t age_a = conn_get_buffer_age(a, now_ms_for_buf_cmp);
-  time_t age_b = conn_get_buffer_age(b, now_ms_for_buf_cmp);
+  time_t age_a = conn_get_buffer_age(a, now_ts_for_buf_cmp);
+  time_t age_b = conn_get_buffer_age(b, now_ts_for_buf_cmp);
 
   if (age_a < age_b)
     return 1;
@@ -2328,7 +2327,7 @@ circuits_handle_oom(size_t current_allocation)
   size_t mem_recovered=0;
   int n_circuits_killed=0;
   int n_dirconns_killed=0;
-  uint32_t now_ms;
+  uint32_t now_ts;
   log_notice(LD_GENERAL, "We're low on memory.  Killing circuits with "
              "over-long queues. (This behavior is controlled by "
              "MaxMemInQueues.)");
@@ -2341,11 +2340,11 @@ circuits_handle_oom(size_t current_allocation)
     mem_to_recover = current_allocation - mem_target;
   }
 
-  now_ms = (uint32_t)monotime_coarse_absolute_msec();
+  now_ts = monotime_coarse_get_stamp();
 
   circlist = circuit_get_global_list();
   SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
-    circ->age_tmp = circuit_max_queued_item_age(circ, now_ms);
+    circ->age_tmp = circuit_max_queued_item_age(circ, now_ts);
   } SMARTLIST_FOREACH_END(circ);
 
   /* This is O(n log n); there are faster algorithms we could use instead.
@@ -2358,9 +2357,9 @@ circuits_handle_oom(size_t current_allocation)
   } SMARTLIST_FOREACH_END(circ);
 
   /* Now sort the connection array ... */
-  now_ms_for_buf_cmp = now_ms;
+  now_ts_for_buf_cmp = now_ts;
   smartlist_sort(connection_array, conns_compare_by_buffer_age_);
-  now_ms_for_buf_cmp = 0;
+  now_ts_for_buf_cmp = 0;
 
   /* Fix up the connection array to its new order. */
   SMARTLIST_FOREACH_BEGIN(connection_array, connection_t *, conn) {
@@ -2379,7 +2378,7 @@ circuits_handle_oom(size_t current_allocation)
      * data older than this circuit. */
     while (conn_idx < smartlist_len(connection_array)) {
       connection_t *conn = smartlist_get(connection_array, conn_idx);
-      uint32_t conn_age = conn_get_buffer_age(conn, now_ms);
+      uint32_t conn_age = conn_get_buffer_age(conn, now_ts);
       if (conn_age < circ->age_tmp) {
         break;
       }

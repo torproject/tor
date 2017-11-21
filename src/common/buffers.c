@@ -472,7 +472,7 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
     chunk = chunk_new_with_alloc_size(buf_preferred_chunk_size(capacity));
   }
 
-  chunk->inserted_time = (uint32_t)monotime_coarse_absolute_msec();
+  chunk->inserted_time = monotime_coarse_get_stamp();
 
   if (buf->tail) {
     tor_assert(buf->head);
@@ -487,8 +487,8 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
 }
 
 /** Return the age of the oldest chunk in the buffer <b>buf</b>, in
- * milliseconds.  Requires the current monotonic time, in truncated msec,
- * as its input <b>now</b>.
+ * timestamp units.  Requires the current monotonic timestamp as its
+ * input <b>now</b>.
  */
 uint32_t
 buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now)

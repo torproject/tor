@@ -450,52 +450,54 @@ test_buffer_time_tracking(void *arg)
   tt_assert(buf);
 
   monotime_coarse_set_mock_time_nsec(START_NSEC);
-  const uint32_t START_MSEC = (uint32_t)monotime_coarse_absolute_msec();
+  const uint32_t START_TS = monotime_coarse_get_stamp();
 
   /* Empty buffer means the timestamp is 0. */
-  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC));
-  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+1000));
+  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS));
+  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+1000));
 
   buf_add(buf, "ABCDEFG", 7);
-  tt_int_op(1000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+1000));
+  tt_int_op(1000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+1000));
 
   buf2 = buf_copy(buf);
   tt_assert(buf2);
   tt_int_op(1234, OP_EQ,
-            buf_get_oldest_chunk_timestamp(buf2, START_MSEC+1234));
+            buf_get_oldest_chunk_timestamp(buf2, START_TS+1234));
 
   /* Now add more bytes; enough to overflow the first chunk. */
   monotime_coarse_set_mock_time_nsec(START_NSEC + 123 * (uint64_t)1000000);
+  const uint32_t TS2 = monotime_coarse_get_stamp();
   for (i = 0; i < 600; ++i)
     buf_add(buf, "ABCDEFG", 7);
   tt_int_op(4207, OP_EQ, buf_datalen(buf));
 
   /* The oldest bytes are still in the front. */
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2000));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+2000));
 
   /* Once those bytes are dropped, the chunk is still on the first
    * timestamp. */
   buf_get_bytes(buf, tmp, 100);
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2000));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_TS+2000));
 
   /* But once we discard the whole first chunk, we get the data in the second
    * chunk. */
   buf_get_bytes(buf, tmp, 4000);
   tt_int_op(107, OP_EQ, buf_datalen(buf));
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2123));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS2+2000));
 
   /* This time we'll be grabbing a chunk from the freelist, and making sure
      its time gets updated */
   monotime_coarse_set_mock_time_nsec(START_NSEC + 5617 * (uint64_t)1000000);
+  const uint32_t TS3 = monotime_coarse_get_stamp();
   for (i = 0; i < 600; ++i)
     buf_add(buf, "ABCDEFG", 7);
   tt_int_op(4307, OP_EQ, buf_datalen(buf));
 
-  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2123));
+  tt_int_op(2000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS2+2000));
   buf_get_bytes(buf, tmp, 4000);
   buf_get_bytes(buf, tmp, 306);
-  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+5617));
-  tt_int_op(383, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+6000));
+  tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS3));
+  tt_int_op(383, OP_EQ, buf_get_oldest_chunk_timestamp(buf, TS3+383));
 
  done:
   buf_free(buf);

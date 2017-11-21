@@ -202,7 +202,7 @@ test_oom_streambuf(void *arg)
 {
   or_options_t *options = get_options_mutable();
   circuit_t *c1 = NULL, *c2 = NULL, *c3 = NULL, *c4 = NULL, *c5 = NULL;
-  uint32_t tvms;
+  uint32_t tvts;
   int i;
   smartlist_t *edgeconns = smartlist_new();
   const uint64_t start_ns = 1389641159 * (uint64_t)1000000000;
@@ -222,6 +222,7 @@ test_oom_streambuf(void *arg)
   tt_int_op(buf_get_total_allocation(), OP_EQ, 0);
 
   monotime_coarse_set_mock_time_nsec(start_ns);
+  const uint32_t ts_start = monotime_coarse_get_stamp();
 
   /* Start all circuits with a bit of data queued in cells */
 
@@ -270,22 +271,24 @@ test_oom_streambuf(void *arg)
   now_ns -= now_ns % 1000000000;
   now_ns += 1000000000;
   monotime_coarse_set_mock_time_nsec(now_ns);
-  tvms = (uint32_t) monotime_coarse_absolute_msec();
+  tvts = monotime_coarse_get_stamp();
+  const uint32_t diff = tvts - ts_start;
+  printf("\n!!!! %u\n", (unsigned) diff);
 
-  tt_int_op(circuit_max_queued_cell_age(c1, tvms), OP_EQ, 500);
-  tt_int_op(circuit_max_queued_cell_age(c2, tvms), OP_EQ, 490);
-  tt_int_op(circuit_max_queued_cell_age(c3, tvms), OP_EQ, 480);
-  tt_int_op(circuit_max_queued_cell_age(c4, tvms), OP_EQ, 0);
+  tt_int_op(circuit_max_queued_cell_age(c1, tvts), OP_EQ, 500);
+  tt_int_op(circuit_max_queued_cell_age(c2, tvts), OP_EQ, 490);
+  tt_int_op(circuit_max_queued_cell_age(c3, tvts), OP_EQ, 480);
+  tt_int_op(circuit_max_queued_cell_age(c4, tvts), OP_EQ, 0);
 
-  tt_int_op(circuit_max_queued_data_age(c1, tvms), OP_EQ, 390);
-  tt_int_op(circuit_max_queued_data_age(c2, tvms), OP_EQ, 380);
-  tt_int_op(circuit_max_queued_data_age(c3, tvms), OP_EQ, 0);
-  tt_int_op(circuit_max_queued_data_age(c4, tvms), OP_EQ, 370);
+  tt_int_op(circuit_max_queued_data_age(c1, tvts), OP_EQ, 390);
+  tt_int_op(circuit_max_queued_data_age(c2, tvts), OP_EQ, 380);
+  tt_int_op(circuit_max_queued_data_age(c3, tvts), OP_EQ, 0);
+  tt_int_op(circuit_max_queued_data_age(c4, tvts), OP_EQ, 370);
 
-  tt_int_op(circuit_max_queued_item_age(c1, tvms), OP_EQ, 500);
-  tt_int_op(circuit_max_queued_item_age(c2, tvms), OP_EQ, 490);
-  tt_int_op(circuit_max_queued_item_age(c3, tvms), OP_EQ, 480);
-  tt_int_op(circuit_max_queued_item_age(c4, tvms), OP_EQ, 370);
+  tt_int_op(circuit_max_queued_item_age(c1, tvts), OP_EQ, 500);
+  tt_int_op(circuit_max_queued_item_age(c2, tvts), OP_EQ, 490);
+  tt_int_op(circuit_max_queued_item_age(c3, tvts), OP_EQ, 480);
+  tt_int_op(circuit_max_queued_item_age(c4, tvts), OP_EQ, 370);
 
   tt_int_op(cell_queues_get_total_allocation(), OP_EQ,
             packed_cell_mem_cost() * 80);
@@ -301,7 +304,7 @@ test_oom_streambuf(void *arg)
     smartlist_add(edgeconns, ec);
   }
   tt_int_op(buf_get_total_allocation(), OP_EQ, 4096*17*2);
-  tt_int_op(circuit_max_queued_item_age(c4, tvms), OP_EQ, 1000);
+  tt_int_op(circuit_max_queued_item_age(c4, tvts), OP_EQ, 1000);
 
   tt_int_op(cell_queues_check_size(), OP_EQ, 0);
 

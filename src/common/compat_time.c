@@ -279,6 +279,7 @@ monotime_reset_ratchets_for_testing(void)
  * nanoseconds.
  */
 static struct mach_timebase_info mach_time_info;
+static int monotime_shift = 0;
 
 static void
 monotime_init_internal(void)
@@ -287,6 +288,14 @@ monotime_init_internal(void)
   int r = mach_timebase_info(&mach_time_info);
   tor_assert(r == 0);
   tor_assert(mach_time_info.denom != 0);
+
+  {
+    // approximate only.
+    uint64_t ns_per_tick = mach_time_info.numer / mach_time_info.denom;
+    uint64_t ms_per_tick = ns_per_tick * ONE_MILLION;
+    // requires that tor_log2(0) == 0.
+    monotime_shift = tor_log2(ms_per_tick);
+  }
 }
 
 /**
@@ -319,6 +328,12 @@ monotime_diff_nsec(const monotime_t *start,
   const int64_t diff_nsec =
     (diff_ticks * mach_time_info.numer) / mach_time_info.denom;
   return diff_nsec;
+}
+
+uint32_t
+monotime_coarse_to_stamp(const monotime_coarse_t *t)
+{
+  return (uint32_t)(t->abstime_ >> monotime_shift);
 }
 
 /* end of "__APPLE__" */
@@ -397,6 +412,18 @@ monotime_diff_nsec(const monotime_t *start,
     (end->ts_.tv_nsec - start->ts_.tv_nsec);
 
   return diff_nsec;
+}
+
+/* This value is ONE_BILLION >> 20. */
+const uint32_t STAMP_TICKS_PER_SECOND = 953;
+
+uint32_t
+monotime_coarse_to_stamp(const monotime_coarse_t *t)
+{
+  uint32_t nsec = (uint32_t)t->ts_.tv_nsec;
+  uint32_t sec = (uint32_t)t->ts_.tv_sec;
+
+  return (sec * STAMP_TICKS_PER_SECOND) + (nsec >> 20);
 }
 
 /* end of "HAVE_CLOCK_GETTIME" */
@@ -531,6 +558,14 @@ monotime_coarse_diff_nsec(const monotime_coarse_t *start,
   return monotime_coarse_diff_msec(start, end) * ONE_MILLION;
 }
 
+const uint32_t STAMP_TICKS_PER_SECOND = 1000;
+
+uint32_t
+monotime_coarse_to_stamp(const monotime_coarse_t *t)
+{
+  return (uint32_t) t->tick_count;
+}
+
 /* end of "_WIN32" */
 #elif defined(MONOTIME_USING_GETTIMEOFDAY)
 
@@ -565,6 +600,17 @@ monotime_diff_nsec(const monotime_t *start,
   struct timeval diff;
   timersub(&end->tv_, &start->tv_, &diff);
   return (diff.tv_sec * ONE_BILLION + diff.tv_usec * 1000);
+}
+
+/* This value is ONE_MILLION >> 10. */
+const uint32_t STAMP_TICKS_PER_SECOND = 976;
+
+uint32_t
+monotime_coarse_to_stamp(const monotime_coarse_t *t)
+{
+  const uint32_t usec = (uint32_t)t->tv_.tv_usec;
+  const uint32_t sec = (uint32_t)t->tv_.tv_sec;
+  return (sec * STAMP_TICKS_PER_SECOND) | (nsec >> 10);
 }
 
 /* end of "MONOTIME_USING_GETTIMEOFDAY" */
@@ -653,5 +699,35 @@ monotime_coarse_absolute_msec(void)
 {
   return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
+#else
+#define initalized_at_coarse initialized_at
 #endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
+
+/**
+ * Return the current time "stamp" as described by monotime_coarse_to_stamp.
+ */
+uint32_t
+monotime_coarse_get_stamp(void)
+{
+  monotime_coarse_t now;
+  monotime_coarse_get(&now);
+  return monotime_coarse_to_stamp(&now);
+}
+
+#ifdef __APPLE__
+uint64_t
+monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
+{
+  /* Recover as much precision as we can. */
+  uint64_t abstime_diff = (units << monotime_shift);
+  return (abstime_diff * mach_time_info.numer) /
+    (mach_time_info.denom * ONE_MILLION);
+}
+#else
+uint64_t
+monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
+{
+  return (units * 1000) / STAMP_TICKS_PER_SECOND;
+}
+#endif
 
