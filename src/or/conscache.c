@@ -539,6 +539,10 @@ consensus_cache_rescan(consensus_cache_t *cache)
     map = storage_dir_map_labeled(cache->dir, fname,
                                   &labels, &body, &bodylen);
     if (! map) {
+      /* The ERANGE error might come from tor_mmap_file() -- it means the file
+       * was empty. EINVAL might come from ..map_labeled() -- it means the
+       * file was misformatted. In both cases, we should just delete it.
+       */
       if (errno == ERANGE || errno == EINVAL) {
         log_warn(LD_FS, "Found %s file %s in consensus cache; removing it.",
                  errno == ERANGE ? "empty" : "misformatted",
