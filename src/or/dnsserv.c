@@ -172,7 +172,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   if (connection_add(ENTRY_TO_CONN(entry_conn)) < 0) {
     log_warn(LD_APP, "Couldn't register dummy connection for DNS request");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
-    connection_free(ENTRY_TO_CONN(entry_conn));
+    connection_free_(ENTRY_TO_CONN(entry_conn));
     return;
   }
 
@@ -249,7 +249,7 @@ dnsserv_launch_request(const char *name, int reverse,
 
   if (connection_add(TO_CONN(conn))<0) {
     log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");
-    connection_free(TO_CONN(conn));
+    connection_free_(TO_CONN(conn));
     return -1;
   }
 

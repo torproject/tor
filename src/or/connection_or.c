@@ -1247,7 +1247,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
                fmt_addrport(&TO_CONN(conn)->addr, TO_CONN(conn)->port));
     }
 
-    connection_free(TO_CONN(conn));
+    connection_free_(TO_CONN(conn));
     return NULL;
   }
 
@@ -1260,7 +1260,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
       connection_or_connect_failed(conn,
                                    errno_to_orconn_end_reason(socket_error),
                                    tor_socket_strerror(socket_error));
-      connection_free(TO_CONN(conn));
+      connection_free_(TO_CONN(conn));
       return NULL;
     case 0:
       connection_watch_events(TO_CONN(conn), READ_EVENT | WRITE_EVENT);

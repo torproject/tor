@@ -1,4 +1,4 @@
-/* Copyright (c) 2001 Matej Pfajfar.
+ /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2017, The Tor Project, Inc. */
@@ -675,7 +675,7 @@ connection_free_minimal(connection_t *conn)
 /** Make sure <b>conn</b> isn't in any of the global conn lists; then free it.
  */
 MOCK_IMPL(void,
-connection_free,(connection_t *conn))
+connection_free_,(connection_t *conn))
 {
   if (!conn)
     return;

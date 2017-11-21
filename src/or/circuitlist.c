@@ -1087,7 +1087,7 @@ circuit_free_all(void)
       while (or_circ->resolving_streams) {
         edge_connection_t *next_conn;
         next_conn = or_circ->resolving_streams->next_stream;
-        connection_free(TO_CONN(or_circ->resolving_streams));
+        connection_free_(TO_CONN(or_circ->resolving_streams));
         or_circ->resolving_streams = next_conn;
       }
     }
