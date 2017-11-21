@@ -8,5 +8,5 @@
 
 extern const char tor_git_revision[];
 
-#endif
+#endif /* !defined(TOR_GIT_REVISION_H) */
 

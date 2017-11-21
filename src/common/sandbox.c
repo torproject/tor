@@ -429,9 +429,9 @@ libc_uses_openat_for_everything(void)
     return 1;
   else
     return 0;
-#else
+#else /* !(defined(CHECK_LIBC_VERSION)) */
   return 0;
-#endif
+#endif /* defined(CHECK_LIBC_VERSION) */
 }
 
 /** Allow a single file to be opened.  If <b>use_openat</b> is true,
@@ -1126,7 +1126,7 @@ sb_kill(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
        SCMP_CMP(1, SCMP_CMP_EQ, 0));
 #else
   return 0;
-#endif
+#endif /* defined(__NR_kill) */
 }
 
 /**

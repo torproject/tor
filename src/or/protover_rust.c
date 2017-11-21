@@ -15,5 +15,5 @@
 /* Define for compatibility, used in main.c */
 void protover_free_all(void) {}
 
-#endif
+#endif /* defined(HAVE_RUST) */
 

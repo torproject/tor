@@ -403,5 +403,5 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
   tor_mutex_release(&counter->mutex);
   return oldval;
 }
-#endif
+#endif /* !defined(HAVE_STDATOMIC_H) */
 

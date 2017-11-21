@@ -3207,7 +3207,7 @@ tor_init(int argc, char *argv[])
     log_notice(LD_GENERAL, "%s", rust_str);
   }
   tor_free(rust_str);
-#endif
+#endif /* defined(HAVE_RUST) */
 
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");

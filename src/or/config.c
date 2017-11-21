@@ -1787,7 +1787,7 @@ options_act(const or_options_t *old_options)
                "given FD.");
       return -1;
     }
-#endif
+#endif /* defined(_WIN32) */
   }
 
   /* Load state */

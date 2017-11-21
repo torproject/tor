@@ -778,5 +778,5 @@ protover_free_all(void)
   }
 }
 
-#endif
+#endif /* !defined(HAVE_RUST) */
 

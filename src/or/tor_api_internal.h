@@ -16,5 +16,5 @@ struct tor_main_configuration_t {
   char **argv;
 };
 
-#endif
+#endif /* !defined(TOR_API_INTERNAL_H) */
 
