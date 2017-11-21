@@ -1,5 +1,0 @@
-  o Minor bugfixes (compilation, hardening):
-    - Fix a memory leak warning in one of the libevent-related
-      configuration tests that could occur when manually specifying
-      -fsanitize=address.  Fixes bug 24279; bugfix on 0.3.0.2-alpha.
-      Found and patched by Alex Xu.

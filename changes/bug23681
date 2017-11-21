@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service client):
-    - The introduction circuit was being timed out too quickly while waiting
-      for the rendezvous circuit to complete. Keep the intro circuit around
-      longer instead of timing out and reopening new ones constantly. Fixes
-      bug 23681; bugfix on 0.2.4.8-alpha.

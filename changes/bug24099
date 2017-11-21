@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory cache):
-    - Recover better from empty or corrupt files in the consensus cache
-      directory. Fixes bug 24099; bugfix on 0.3.1.1-alpha.
-
