@@ -1233,6 +1233,7 @@ AC_CHECK_HEADERS([assert.h \
                   pwd.h \
                   readpassphrase.h \
                   stdint.h \
+                  stdatomic.h \
                   sys/eventfd.h \
                   sys/file.h \
                   sys/ioctl.h \
