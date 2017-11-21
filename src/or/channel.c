@@ -599,33 +599,6 @@ channel_remove_from_digest_map(channel_t *chan)
   /* Assert that there is a digest */
   tor_assert(!tor_digest_is_zero(chan->identity_digest));
 
-#if 0
-  /* Make sure we have a map */
-  if (!channel_identity_map) {
-    /*
-     * No identity map, so we can't find it by definition.  This
-     * case is similar to digestmap_get() failing below.
-     */
-    log_warn(LD_BUG,
-             "Trying to remove channel %p (global ID " U64_FORMAT ") "
-             "with digest %s from identity map, but didn't have any identity "
-             "map",
-             chan, U64_PRINTF_ARG(chan->global_identifier),
-             hex_str(chan->identity_digest, DIGEST_LEN));
-    /* Clear out its next/prev pointers */
-    if (chan->next_with_same_id) {
-      chan->next_with_same_id->prev_with_same_id = chan->prev_with_same_id;
-    }
-    if (chan->prev_with_same_id) {
-      chan->prev_with_same_id->next_with_same_id = chan->next_with_same_id;
-    }
-    chan->next_with_same_id = NULL;
-    chan->prev_with_same_id = NULL;
-
-    return;
-  }
-#endif /* 0 */
-
   /* Pull it out of its list, wherever that list is */
   TOR_LIST_REMOVE(chan, next_with_same_id);
 
@@ -1055,24 +1028,6 @@ channel_listener_force_free(channel_listener_t *chan_l)
 }
 
 /**
- * Return the current registered listener for a channel listener
- *
- * This function returns a function pointer to the current registered
- * handler for new incoming channels on a channel listener.
- */
-
-channel_listener_fn_ptr
-channel_listener_get_listener_fn(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l);
-
-  if (chan_l->state == CHANNEL_LISTENER_STATE_LISTENING)
-    return chan_l->listener;
-
-  return NULL;
-}
-
-/**
  * Set the listener for a channel listener
  *
  * This function sets the handler for new incoming channels on a channel
@@ -1284,36 +1239,6 @@ channel_close_from_lower_layer(channel_t *chan)
 }
 
 /**
- * Close a channel listener from the lower layer
- *
- * Notify the channel code that the channel listener is being closed due to a
- * non-error condition in the lower layer.  This does not call the close()
- * method, since the lower layer already knows.
- */
-
-void
-channel_listener_close_from_lower_layer(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l != NULL);
-
-  /* If it's already in CLOSING, CLOSED or ERROR, this is a no-op */
-  if (chan_l->state == CHANNEL_LISTENER_STATE_CLOSING ||
-      chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
-      chan_l->state == CHANNEL_LISTENER_STATE_ERROR) return;
-
-  log_debug(LD_CHANNEL,
-            "Closing channel listener %p (global ID " U64_FORMAT ") "
-            "due to lower-layer event",
-            chan_l, U64_PRINTF_ARG(chan_l->global_identifier));
-
-  /* Note closing by event from below */
-  chan_l->reason_for_closing = CHANNEL_LISTENER_CLOSE_FROM_BELOW;
-
-  /* Change state to CLOSING */
-  channel_listener_change_state(chan_l, CHANNEL_LISTENER_STATE_CLOSING);
-}
-
-/**
  * Notify that the channel is being closed due to an error condition
  *
  * This function is called by the lower layer implementing the transport
@@ -1339,37 +1264,6 @@ channel_close_for_error(channel_t *chan)
 
   /* Change state to CLOSING */
   channel_change_state(chan, CHANNEL_STATE_CLOSING);
-}
-
-/**
- * Notify that the channel listener is being closed due to an error condition
- *
- * This function is called by the lower layer implementing the transport
- * when a channel listener must be closed due to an error condition.  This
- * does not call the channel listener's close method, since the lower layer
- * already knows.
- */
-
-void
-channel_listener_close_for_error(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l != NULL);
-
-  /* If it's already in CLOSING, CLOSED or ERROR, this is a no-op */
-  if (chan_l->state == CHANNEL_LISTENER_STATE_CLOSING ||
-      chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
-      chan_l->state == CHANNEL_LISTENER_STATE_ERROR) return;
-
-  log_debug(LD_CHANNEL,
-            "Closing channel listener %p (global ID " U64_FORMAT ") "
-            "due to lower-layer error",
-            chan_l, U64_PRINTF_ARG(chan_l->global_identifier));
-
-  /* Note closing by event from below */
-  chan_l->reason_for_closing = CHANNEL_LISTENER_CLOSE_FOR_ERROR;
-
-  /* Change state to CLOSING */
-  channel_listener_change_state(chan_l, CHANNEL_LISTENER_STATE_CLOSING);
 }
 
 /**
@@ -1402,33 +1296,6 @@ channel_closed(channel_t *chan)
     channel_change_state(chan, CHANNEL_STATE_CLOSED);
   } else {
     channel_change_state(chan, CHANNEL_STATE_ERROR);
-  }
-}
-
-/**
- * Notify that the lower layer is finished closing the channel listener
- *
- * This function should be called by the lower layer when a channel listener
- * is finished closing and it should be regarded as inactive and
- * freed by the channel code.
- */
-
-void
-channel_listener_closed(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l);
-  tor_assert(chan_l->state == CHANNEL_LISTENER_STATE_CLOSING ||
-             chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
-             chan_l->state == CHANNEL_LISTENER_STATE_ERROR);
-
-  /* No-op if already inactive */
-  if (chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
-      chan_l->state == CHANNEL_LISTENER_STATE_ERROR) return;
-
-  if (chan_l->reason_for_closing != CHANNEL_LISTENER_CLOSE_FOR_ERROR) {
-    channel_listener_change_state(chan_l, CHANNEL_LISTENER_STATE_CLOSED);
-  } else {
-    channel_listener_change_state(chan_l, CHANNEL_LISTENER_STATE_ERROR);
   }
 }
 
@@ -1553,67 +1420,6 @@ channel_clear_remote_end(channel_t *chan)
 }
 
 /**
- * Set the remote end metadata (identity_digest/nickname) of a channel
- *
- * This function sets new remote end info on a channel; this is intended
- * for use by the lower layer.
- */
-
-void
-channel_set_remote_end(channel_t *chan,
-                       const char *identity_digest,
-                       const char *nickname)
-{
-  int was_in_digest_map, should_be_in_digest_map, state_not_in_map;
-
-  tor_assert(chan);
-
-  log_debug(LD_CHANNEL,
-            "Setting remote endpoint identity on channel %p with "
-            "global ID " U64_FORMAT " to nickname %s, digest %s",
-            chan, U64_PRINTF_ARG(chan->global_identifier),
-            nickname ? nickname : "(null)",
-            identity_digest ?
-              hex_str(identity_digest, DIGEST_LEN) : "(null)");
-
-  state_not_in_map = CHANNEL_CONDEMNED(chan);
-
-  was_in_digest_map =
-    !state_not_in_map &&
-    chan->registered &&
-    !tor_digest_is_zero(chan->identity_digest);
-  should_be_in_digest_map =
-    !state_not_in_map &&
-    chan->registered &&
-    (identity_digest &&
-     !tor_digest_is_zero(identity_digest));
-
-  if (was_in_digest_map)
-    /* We should always remove it; we'll add it back if we're writing
-     * in a new digest.
-     */
-    channel_remove_from_digest_map(chan);
-
-  if (identity_digest) {
-    memcpy(chan->identity_digest,
-           identity_digest,
-           sizeof(chan->identity_digest));
-
-  } else {
-    memset(chan->identity_digest, 0,
-           sizeof(chan->identity_digest));
-  }
-
-  tor_free(chan->nickname);
-  if (nickname)
-    chan->nickname = tor_strdup(nickname);
-
-  /* Put it in the digest map if we should */
-  if (should_be_in_digest_map)
-    channel_add_to_digest_map(chan);
-}
-
-/**
  * Write to a channel the given packed cell.
  *
  * Return 0 on success and the cell is freed so the caller MUST discard any
@@ -1652,8 +1458,6 @@ write_packed_cell(channel_t *chan, packed_cell_t *cell)
   }
   /* Timestamp for transmission */
   channel_timestamp_xmit(chan);
-  /* If we're here the queue is empty, so it's drained too */
-  channel_timestamp_drained(chan);
   /* Update the counter */
   ++(chan->n_cells_xmitted);
   chan->n_bytes_xmitted += cell_bytes;
@@ -2874,12 +2678,6 @@ channel_dump_statistics, (channel_t *chan, int severity))
       U64_PRINTF_ARG(chan->timestamp_client),
       U64_PRINTF_ARG(now - chan->timestamp_client));
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " was last drained at "
-      U64_FORMAT " (" U64_FORMAT " seconds ago)",
-      U64_PRINTF_ARG(chan->global_identifier),
-      U64_PRINTF_ARG(chan->timestamp_drained),
-      U64_PRINTF_ARG(now - chan->timestamp_drained));
-  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " last received a cell "
       "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
       U64_PRINTF_ARG(chan->global_identifier),
@@ -3496,25 +3294,6 @@ channel_timestamp_client(channel_t *chan)
 }
 
 /**
- * Update the last drained timestamp
- *
- * This is called whenever we transmit a cell which leaves the outgoing cell
- * queue completely empty.  It also updates the xmit time and the active time.
- */
-
-void
-channel_timestamp_drained(channel_t *chan)
-{
-  time_t now = time(NULL);
-
-  tor_assert(chan);
-
-  chan->timestamp_active = now;
-  chan->timestamp_drained = now;
-  chan->timestamp_xmit = now;
-}
-
-/**
  * Update the recv timestamp
  *
  * This is called whenever we get an incoming cell from the lower layer.
@@ -3573,54 +3352,6 @@ channel_when_created(channel_t *chan)
 }
 
 /**
- * Query created timestamp for a channel listener
- */
-
-time_t
-channel_listener_when_created(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l);
-
-  return chan_l->timestamp_created;
-}
-
-/**
- * Query last active timestamp for a channel
- */
-
-time_t
-channel_when_last_active(channel_t *chan)
-{
-  tor_assert(chan);
-
-  return chan->timestamp_active;
-}
-
-/**
- * Query last active timestamp for a channel listener
- */
-
-time_t
-channel_listener_when_last_active(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l);
-
-  return chan_l->timestamp_active;
-}
-
-/**
- * Query last accepted timestamp for a channel listener
- */
-
-time_t
-channel_listener_when_last_accepted(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l);
-
-  return chan_l->timestamp_accepted;
-}
-
-/**
  * Query client timestamp
  */
 
@@ -3633,30 +3364,6 @@ channel_when_last_client(channel_t *chan)
 }
 
 /**
- * Query drained timestamp
- */
-
-time_t
-channel_when_last_drained(channel_t *chan)
-{
-  tor_assert(chan);
-
-  return chan->timestamp_drained;
-}
-
-/**
- * Query recv timestamp
- */
-
-time_t
-channel_when_last_recv(channel_t *chan)
-{
-  tor_assert(chan);
-
-  return chan->timestamp_recv;
-}
-
-/**
  * Query xmit timestamp
  */
 
@@ -3666,42 +3373,6 @@ channel_when_last_xmit(channel_t *chan)
   tor_assert(chan);
 
   return chan->timestamp_xmit;
-}
-
-/**
- * Query accepted counter
- */
-
-uint64_t
-channel_listener_count_accepted(channel_listener_t *chan_l)
-{
-  tor_assert(chan_l);
-
-  return chan_l->n_accepted;
-}
-
-/**
- * Query received cell counter
- */
-
-uint64_t
-channel_count_recved(channel_t *chan)
-{
-  tor_assert(chan);
-
-  return chan->n_cells_recved;
-}
-
-/**
- * Query transmitted cell counter
- */
-
-uint64_t
-channel_count_xmitted(channel_t *chan)
-{
-  tor_assert(chan);
-
-  return chan->n_cells_xmitted;
 }
 
 /**
