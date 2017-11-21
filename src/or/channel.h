@@ -255,9 +255,6 @@ struct channel_s {
    */
   ed25519_public_key_t ed25519_identity;
 
-  /** Nickname of the OR on the other side, or NULL if none. */
-  char *nickname;
-
   /**
    * Linked list of channels with the same RSA identity digest, for use with
    * the digest->channel map

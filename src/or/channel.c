@@ -1389,7 +1389,7 @@ channel_set_identity_digest(channel_t *chan,
 }
 
 /**
- * Clear the remote end metadata (identity_digest/nickname) of a channel
+ * Clear the remote end metadata (identity_digest) of a channel
  *
  * This function clears all the remote end info from a channel; this is
  * intended for use by the lower layer.
@@ -1416,7 +1416,6 @@ channel_clear_remote_end(channel_t *chan)
 
   memset(chan->identity_digest, 0,
          sizeof(chan->identity_digest));
-  tor_free(chan->nickname);
 }
 
 /**
@@ -2583,35 +2582,18 @@ channel_dump_statistics, (channel_t *chan, int severity))
       U64_PRINTF_ARG(chan->timestamp_active),
       U64_PRINTF_ARG(now - chan->timestamp_active));
 
-  /* Handle digest and nickname */
+  /* Handle digest. */
   if (!tor_digest_is_zero(chan->identity_digest)) {
-    if (chan->nickname) {
-      tor_log(severity, LD_GENERAL,
-          " * Channel " U64_FORMAT " says it is connected "
-          "to an OR with digest %s and nickname %s",
-          U64_PRINTF_ARG(chan->global_identifier),
-          hex_str(chan->identity_digest, DIGEST_LEN),
-          chan->nickname);
-    } else {
-      tor_log(severity, LD_GENERAL,
-          " * Channel " U64_FORMAT " says it is connected "
-          "to an OR with digest %s and no known nickname",
-          U64_PRINTF_ARG(chan->global_identifier),
-          hex_str(chan->identity_digest, DIGEST_LEN));
-    }
+    tor_log(severity, LD_GENERAL,
+        " * Channel " U64_FORMAT " says it is connected "
+        "to an OR with digest %s",
+        U64_PRINTF_ARG(chan->global_identifier),
+        hex_str(chan->identity_digest, DIGEST_LEN));
   } else {
-    if (chan->nickname) {
-      tor_log(severity, LD_GENERAL,
-          " * Channel " U64_FORMAT " does not know the digest"
-          " of the OR it is connected to, but reports its nickname is %s",
-          U64_PRINTF_ARG(chan->global_identifier),
-          chan->nickname);
-    } else {
-      tor_log(severity, LD_GENERAL,
-          " * Channel " U64_FORMAT " does not know the digest"
-          " or the nickname of the OR it is connected to",
-          U64_PRINTF_ARG(chan->global_identifier));
-    }
+    tor_log(severity, LD_GENERAL,
+        " * Channel " U64_FORMAT " does not know the digest"
+        " of the OR it is connected to",
+        U64_PRINTF_ARG(chan->global_identifier));
   }
 
   /* Handle remote address and descriptions */
