@@ -2084,7 +2084,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                "used client functionality lately" :
                "received a consensus with exits",
                options->UseBridges ? "bridges" : "entrynodes");
-      } else if (!options->UseBridges || any_bridge_descriptors_known()) {
+      } else if (!options->UseBridges || num_bridges_usable() > 0) {
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't %s. "
                "Optimistically trying directory fetches again.",

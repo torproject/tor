@@ -1209,7 +1209,7 @@ should_delay_dir_fetches(const or_options_t *options, const char **msg_out)
   }
 
   if (options->UseBridges) {
-    if (!any_bridge_descriptors_known()) {
+    if (num_bridges_usable() == 0) {
       if (msg_out) {
         *msg_out = "No running bridges";
       }

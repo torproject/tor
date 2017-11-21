@@ -1,0 +1,7 @@
+  o Minor bugfixes (bridge clients, bootstrap):
+    - Stop checking for bridge descriptors when we actually want to know if
+      any bridges are usable. This avoids potential bootstrapping issues.
+      Fixes bug 24367; bugfix on 0.2.0.3-alpha.
+    - Stop stalling when bridges are changed at runtime. Stop stalling when
+      old bridge descriptors are cached, but they are not in use.
+      Fixes bug 24367; bugfix on 23347 in 0.3.2.1-alpha.

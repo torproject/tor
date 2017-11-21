@@ -3136,9 +3136,12 @@ entry_list_is_constrained(const or_options_t *options)
 
 /** Return the number of bridges that have descriptors that are marked with
  * purpose 'bridge' and are running.
- */
-int
-num_bridges_usable(void)
+ *
+ * We use this function to decide if we're ready to start building
+ * circuits through our bridges, or if we need to wait until the
+ * directory "server/authority" requests finish. */
+MOCK_IMPL(int,
+num_bridges_usable,(void))
 {
   int n_options = 0;
 

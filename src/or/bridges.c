@@ -835,34 +835,6 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
   }
 }
 
-/** Return the number of bridges that have descriptors that
- * are marked with purpose 'bridge' and are running.
- *
- * We use this function to decide if we're ready to start building
- * circuits through our bridges, or if we need to wait until the
- * directory "server/authority" requests finish. */
-MOCK_IMPL(int,
-any_bridge_descriptors_known, (void))
-{
-  if (BUG(!get_options()->UseBridges)) {
-    return 0;
-  }
-
-  if (!bridge_list)
-    return 0;
-
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
-    const node_t *node;
-    if (!tor_digest_is_zero(bridge->identity) &&
-        (node = node_get_by_id(bridge->identity)) != NULL &&
-        node->ri) {
-      return 1;
-    }
-  } SMARTLIST_FOREACH_END(bridge);
-
-  return 0;
-}
-
 /** Return a smartlist containing all bridge identity digests */
 MOCK_IMPL(smartlist_t *,
 list_bridge_identities, (void))
