@@ -406,9 +406,7 @@ channel_listener_state_to_string(channel_listener_state_t state);
 /* Abstract channel operations */
 
 void channel_mark_for_close(channel_t *chan);
-void channel_write_cell(channel_t *chan, cell_t *cell);
-void channel_write_packed_cell(channel_t *chan, packed_cell_t *cell);
-void channel_write_var_cell(channel_t *chan, var_cell_t *cell);
+int channel_write_packed_cell(channel_t *chan, packed_cell_t *cell);
 
 void channel_listener_mark_for_close(channel_listener_t *chan_l);
 

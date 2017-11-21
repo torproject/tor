@@ -26,7 +26,6 @@ static cell_t * test_chan_last_seen_fixed_cell_ptr = NULL;
 static int test_chan_var_cells_recved = 0;
 static var_cell_t * test_chan_last_seen_var_cell_ptr = NULL;
 static int test_cells_written = 0;
-static int test_destroy_not_pending_calls = 0;
 static int test_doesnt_want_writes_count = 0;
 static int test_dumpstats_calls = 0;
 static int test_has_waiting_cells_count = 0;
@@ -37,8 +36,6 @@ static int dump_statistics_mock_matches = 0;
 
 static void chan_test_channel_dump_statistics_mock(
     channel_t *chan, int severity);
-static void channel_note_destroy_not_pending_mock(channel_t *ch,
-                                                  circid_t circid);
 static void chan_test_cell_handler(channel_t *ch,
                                    cell_t *cell);
 static const char * chan_test_describe_transport(channel_t *ch);
@@ -61,17 +58,6 @@ static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 static void test_channel_dumpstats(void *arg);
 static void test_channel_incoming(void *arg);
 static void test_channel_lifecycle(void *arg);
-static void test_channel_write(void *arg);
-
-static void
-channel_note_destroy_not_pending_mock(channel_t *ch,
-                                      circid_t circid)
-{
-  (void)ch;
-  (void)circid;
-
-  ++test_destroy_not_pending_calls;
-}
 
 static const char *
 chan_test_describe_transport(channel_t *ch)
@@ -447,7 +433,7 @@ static void
 test_channel_dumpstats(void *arg)
 {
   channel_t *ch = NULL;
-  cell_t *cell = NULL;
+  packed_cell_t *p_cell = NULL;
   int old_count;
 
   (void)arg;
@@ -513,12 +499,10 @@ test_channel_dumpstats(void *arg)
   tt_assert(time(NULL) > ch->timestamp_created);
 
   /* Put cells through it both ways to make the counters non-zero */
-  cell = tor_malloc_zero(sizeof(*cell));
-  make_fake_cell(cell);
+  p_cell = packed_cell_new();
   test_chan_accept_cells = 1;
   old_count = test_cells_written;
-  channel_write_cell(ch, cell);
-  cell = NULL;
+  channel_write_packed_cell(ch, p_cell);
   tt_int_op(test_cells_written, OP_EQ, old_count + 1);
   tt_assert(ch->n_bytes_xmitted > 0);
   tt_assert(ch->n_cells_xmitted > 0);
@@ -530,10 +514,8 @@ test_channel_dumpstats(void *arg)
   tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
   tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
             chan_test_var_cell_handler);
-  cell = tor_malloc_zero(sizeof(cell_t));
-  make_fake_cell(cell);
+  p_cell = packed_cell_new();
   old_count = test_chan_fixed_cells_recved;
-  tor_free(cell);
   tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
   tt_assert(ch->n_bytes_recved > 0);
   tt_assert(ch->n_cells_recved > 0);
@@ -555,7 +537,6 @@ test_channel_dumpstats(void *arg)
   ch = NULL;
 
  done:
-  tor_free(cell);
   free_fake_channel(ch);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
@@ -652,7 +633,7 @@ static void
 test_channel_lifecycle(void *arg)
 {
   channel_t *ch1 = NULL, *ch2 = NULL;
-  cell_t *cell = NULL;
+  packed_cell_t *p_cell = NULL;
   int old_count, init_doesnt_want_writes_count;
   int init_releases_count;
 
@@ -685,10 +666,9 @@ test_channel_lifecycle(void *arg)
   tt_assert(ch1->registered);
 
   /* Try to write a cell through (should queue) */
-  cell = tor_malloc_zero(sizeof(cell_t));
-  make_fake_cell(cell);
+  p_cell = packed_cell_new();
   old_count = test_cells_written;
-  channel_write_cell(ch1, cell);
+  channel_write_packed_cell(ch1, p_cell);
   tt_int_op(old_count, OP_EQ, test_cells_written);
 
   /* Move it to OPEN and flush */
@@ -916,122 +896,6 @@ test_channel_lifecycle_2(void *arg)
 }
 
 static void
-test_channel_write(void *arg)
-{
-  channel_t *ch = NULL;
-  cell_t *cell = tor_malloc_zero(sizeof(cell_t));
-  packed_cell_t *packed_cell = NULL;
-  var_cell_t *var_cell =
-    tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
-  int old_count;
-
-  (void)arg;
-
-  packed_cell = packed_cell_new();
-  tt_assert(packed_cell);
-
-  ch = new_fake_channel();
-  tt_assert(ch);
-  make_fake_cell(cell);
-  make_fake_var_cell(var_cell);
-
-  /* Tell it to accept cells */
-  test_chan_accept_cells = 1;
-
-  old_count = test_cells_written;
-  channel_write_cell(ch, cell);
-  cell = NULL;
-  tt_assert(test_cells_written == old_count + 1);
-
-  channel_write_var_cell(ch, var_cell);
-  var_cell = NULL;
-  tt_assert(test_cells_written == old_count + 2);
-
-  channel_write_packed_cell(ch, packed_cell);
-  packed_cell = NULL;
-  tt_assert(test_cells_written == old_count + 3);
-
-  /* Now we test queueing; tell it not to accept cells */
-  test_chan_accept_cells = 0;
-  /* ...and keep it from trying to flush the queue */
-  ch->state = CHANNEL_STATE_MAINT;
-
-  /* Get a fresh cell */
-  cell = tor_malloc_zero(sizeof(cell_t));
-  make_fake_cell(cell);
-
-  old_count = test_cells_written;
-  channel_write_cell(ch, cell);
-  tt_assert(test_cells_written == old_count);
-
-  /*
-   * Now change back to open with channel_change_state() and assert that it
-   * gets drained from the queue.
-   */
-  test_chan_accept_cells = 1;
-  channel_change_state_open(ch);
-  tt_assert(test_cells_written == old_count + 1);
-
-  /*
-   * Check the note destroy case
-   */
-  cell = tor_malloc_zero(sizeof(cell_t));
-  make_fake_cell(cell);
-  cell->command = CELL_DESTROY;
-
-  /* Set up the mock */
-  MOCK(channel_note_destroy_not_pending,
-       channel_note_destroy_not_pending_mock);
-
-  old_count = test_destroy_not_pending_calls;
-  channel_write_cell(ch, cell);
-  tt_assert(test_destroy_not_pending_calls == old_count + 1);
-
-  /* Now send a non-destroy and check we don't call it */
-  cell = tor_malloc_zero(sizeof(cell_t));
-  make_fake_cell(cell);
-  channel_write_cell(ch, cell);
-  tt_assert(test_destroy_not_pending_calls == old_count + 1);
-
-  UNMOCK(channel_note_destroy_not_pending);
-
-  /*
-   * Now switch it to CLOSING so we can test the discard-cells case
-   * in the channel_write_*() functions.
-   */
-  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
-  channel_mark_for_close(ch);
-  UNMOCK(scheduler_release_channel);
-
-  /* Send cells that will drop in the closing state */
-  old_count = test_cells_written;
-
-  cell = tor_malloc_zero(sizeof(cell_t));
-  make_fake_cell(cell);
-  channel_write_cell(ch, cell);
-  cell = NULL;
-  tt_assert(test_cells_written == old_count);
-
-  var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
-  make_fake_var_cell(var_cell);
-  channel_write_var_cell(ch, var_cell);
-  var_cell = NULL;
-  tt_assert(test_cells_written == old_count);
-
-  packed_cell = packed_cell_new();
-  channel_write_packed_cell(ch, packed_cell);
-  packed_cell = NULL;
-  tt_assert(test_cells_written == old_count);
-
- done:
-  free_fake_channel(ch);
-  tor_free(var_cell);
-  tor_free(cell);
-  packed_cell_free(packed_cell);
-  return;
-}
-
-static void
 test_channel_id_map(void *arg)
 {
   (void)arg;
@@ -1142,7 +1006,6 @@ struct testcase_t channel_tests[] = {
   { "incoming", test_channel_incoming, TT_FORK, NULL, NULL },
   { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
   { "lifecycle_2", test_channel_lifecycle_2, TT_FORK, NULL, NULL },
-  { "write", test_channel_write, TT_FORK, NULL, NULL },
   { "id_map", test_channel_id_map, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };

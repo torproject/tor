@@ -148,9 +148,6 @@ HT_PROTOTYPE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
 HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
              channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
 
-static int is_destroy_cell(channel_t *chan,
-                           const cell_queue_entry_t *q, circid_t *circid_out);
-
 /* Functions to maintain the digest map */
 static void channel_add_to_digest_map(channel_t *chan);
 static void channel_remove_from_digest_map(channel_t *chan);
@@ -161,10 +158,6 @@ channel_free_list(smartlist_t *channels, int mark_for_close);
 static void
 channel_listener_free_list(smartlist_t *channels, int mark_for_close);
 static void channel_listener_force_free(channel_listener_t *chan_l);
-static size_t channel_get_cell_queue_entry_size(channel_t *chan,
-                                                cell_queue_entry_t *q);
-static void
-channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q);
 
 /***********************************
  * Channel state utility functions *
@@ -1629,150 +1622,54 @@ channel_set_remote_end(channel_t *chan,
 }
 
 /**
- * Ask how big the cell contained in a cell_queue_entry_t is
- */
-
-static size_t
-channel_get_cell_queue_entry_size(channel_t *chan, cell_queue_entry_t *q)
-{
-  size_t rv = 0;
-
-  tor_assert(chan);
-  tor_assert(q);
-
-  switch (q->type) {
-    case CELL_QUEUE_FIXED:
-      rv = get_cell_network_size(chan->wide_circ_ids);
-      break;
-    case CELL_QUEUE_VAR:
-      rv = get_var_cell_header_size(chan->wide_circ_ids) +
-           (q->u.var.var_cell ? q->u.var.var_cell->payload_len : 0);
-      break;
-    case CELL_QUEUE_PACKED:
-      rv = get_cell_network_size(chan->wide_circ_ids);
-      break;
-    default:
-      tor_assert_nonfatal_unreached_once();
-  }
-
-  return rv;
-}
-
-/**
  * Write to a channel based on a cell_queue_entry_t
  *
  * Given a cell_queue_entry_t filled out by the caller, try to send the cell
  * and queue it if we can't.
  */
-
-static void
-channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
+static int
+write_packed_cell(channel_t *chan, packed_cell_t *cell)
 {
-  int result = 0;
+  int ret = -1;
   size_t cell_bytes;
 
   tor_assert(chan);
-  tor_assert(q);
+  tor_assert(cell);
 
   /* Assert that the state makes sense for a cell write */
   tor_assert(CHANNEL_CAN_HANDLE_CELLS(chan));
 
   {
     circid_t circ_id;
-    if (is_destroy_cell(chan, q, &circ_id)) {
+    if (packed_cell_is_destroy(chan, cell, &circ_id)) {
       channel_note_destroy_not_pending(chan, circ_id);
     }
   }
 
   /* For statistical purposes, figure out how big this cell is */
-  cell_bytes = channel_get_cell_queue_entry_size(chan, q);
+  cell_bytes = get_cell_network_size(chan->wide_circ_ids);
 
   /* Can we send it right out?  If so, try */
-  if (CHANNEL_IS_OPEN(chan)) {
-    /* Pick the right write function for this cell type and save the result */
-    switch (q->type) {
-      case CELL_QUEUE_FIXED:
-        tor_assert(chan->write_cell);
-        tor_assert(q->u.fixed.cell);
-        result = chan->write_cell(chan, q->u.fixed.cell);
-        break;
-      case CELL_QUEUE_PACKED:
-        tor_assert(chan->write_packed_cell);
-        tor_assert(q->u.packed.packed_cell);
-        result = chan->write_packed_cell(chan, q->u.packed.packed_cell);
-        break;
-      case CELL_QUEUE_VAR:
-        tor_assert(chan->write_var_cell);
-        tor_assert(q->u.var.var_cell);
-        result = chan->write_var_cell(chan, q->u.var.var_cell);
-        break;
-      default:
-        tor_assert(1);
-    }
-
-    /* Check if we got it out */
-    if (result > 0) {
-      /* Timestamp for transmission */
-      channel_timestamp_xmit(chan);
-      /* If we're here the queue is empty, so it's drained too */
-      channel_timestamp_drained(chan);
-      /* Update the counter */
-      ++(chan->n_cells_xmitted);
-      chan->n_bytes_xmitted += cell_bytes;
-    }
+  if (!CHANNEL_IS_OPEN(chan)) {
+    goto done;
   }
 
-  /* XXX: If the cell wasn't sent, we need to propagate the error back so we
-   * can put it back in the circuit queue. */
-}
-
-/** Write a generic cell type to a channel
- *
- * Write a generic cell to a channel. It is called by channel_write_cell(),
- * channel_write_var_cell() and channel_write_packed_cell() in order to reduce
- * code duplication. Notice that it takes cell as pointer of type void,
- * this can be dangerous because no type check is performed.
- */
-
-void
-channel_write_cell_generic_(channel_t *chan, const char *cell_type,
-                            void *cell, cell_queue_entry_t *q)
-{
-
-  tor_assert(chan);
-  tor_assert(cell);
-
-  if (CHANNEL_IS_CLOSING(chan)) {
-    log_debug(LD_CHANNEL, "Discarding %c %p on closing channel %p with "
-              "global ID "U64_FORMAT, *cell_type, cell, chan,
-              U64_PRINTF_ARG(chan->global_identifier));
-    tor_free(cell);
-    return;
+  /* Write the cell on the connection's outbuf. */
+  if (chan->write_packed_cell(chan, cell) < 0) {
+    goto done;
   }
-  log_debug(LD_CHANNEL,
-            "Writing %c %p to channel %p with global ID "
-            U64_FORMAT, *cell_type,
-            cell, chan, U64_PRINTF_ARG(chan->global_identifier));
+  /* Timestamp for transmission */
+  channel_timestamp_xmit(chan);
+  /* If we're here the queue is empty, so it's drained too */
+  channel_timestamp_drained(chan);
+  /* Update the counter */
+  ++(chan->n_cells_xmitted);
+  chan->n_bytes_xmitted += cell_bytes;
+  /* Successfully sent the cell. */
+  ret = 0;
 
-  channel_write_cell_queue_entry(chan, q);
-}
-
-/**
- * Write a cell to a channel
- *
- * Write a fixed-length cell to a channel using the write_cell() method.
- * This is equivalent to the pre-channels connection_or_write_cell_to_buf();
- * it is called by the transport-independent code to deliver a cell to a
- * channel for transmission.
- */
-
-void
-channel_write_cell(channel_t *chan, cell_t *cell)
-{
-  cell_queue_entry_t q;
-  q.type = CELL_QUEUE_FIXED;
-  q.u.fixed.cell = cell;
-  channel_write_cell_generic_(chan, "cell_t", cell, &q);
+ done:
+  return ret;
 }
 
 /**
@@ -1782,32 +1679,24 @@ channel_write_cell(channel_t *chan, cell_t *cell)
  * called by the transport-independent code to deliver a packed cell to a
  * channel for transmission.
  */
-
-void
-channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
+int
+channel_write_packed_cell(channel_t *chan, packed_cell_t *cell)
 {
-  cell_queue_entry_t q;
-  q.type = CELL_QUEUE_PACKED;
-  q.u.packed.packed_cell = packed_cell;
-  channel_write_cell_generic_(chan, "packed_cell_t", packed_cell, &q);
-}
+  tor_assert(chan);
+  tor_assert(cell);
 
-/**
- * Write a variable-length cell to a channel
- *
- * Write a variable-length cell to a channel using the write_cell() method.
- * This is equivalent to the pre-channels
- * connection_or_write_var_cell_to_buf(); it's called by the transport-
- * independent code to deliver a var_cell to a channel for transmission.
- */
+  if (CHANNEL_IS_CLOSING(chan)) {
+    log_debug(LD_CHANNEL, "Discarding %p on closing channel %p with "
+              "global ID "U64_FORMAT, cell, chan,
+              U64_PRINTF_ARG(chan->global_identifier));
+    tor_free(cell);
+    return -1;
+  }
+  log_debug(LD_CHANNEL,
+            "Writing %p to channel %p with global ID "
+            U64_FORMAT, cell, chan, U64_PRINTF_ARG(chan->global_identifier));
 
-void
-channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
-{
-  cell_queue_entry_t q;
-  q.type = CELL_QUEUE_VAR;
-  q.u.var.var_cell = var_cell;
-  channel_write_cell_generic_(chan, "var_cell_t", var_cell, &q);
+  return write_packed_cell(chan, cell);
 }
 
 /**
@@ -2348,31 +2237,6 @@ packed_cell_is_destroy(channel_t *chan,
       *circid_out = ntohs(get_uint16(packed_cell->body));
       return 1;
     }
-  }
-  return 0;
-}
-
-/* DOCDOC */
-static int
-is_destroy_cell(channel_t *chan,
-                const cell_queue_entry_t *q, circid_t *circid_out)
-{
-  *circid_out = 0;
-  switch (q->type) {
-    case CELL_QUEUE_FIXED:
-      if (q->u.fixed.cell->command == CELL_DESTROY) {
-        *circid_out = q->u.fixed.cell->circ_id;
-        return 1;
-      }
-      break;
-    case CELL_QUEUE_VAR:
-      if (q->u.var.var_cell->command == CELL_DESTROY) {
-        *circid_out = q->u.var.var_cell->circ_id;
-        return 1;
-      }
-      break;
-    case CELL_QUEUE_PACKED:
-      return packed_cell_is_destroy(chan, q->u.packed.packed_cell, circid_out);
   }
   return 0;
 }
