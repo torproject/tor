@@ -863,7 +863,7 @@ config_reset(const config_format_t *fmt, void *options,
 
 /** Release storage held by <b>options</b>. */
 void
-config_free(const config_format_t *fmt, void *options)
+config_free_(const config_format_t *fmt, void *options)
 {
   int i;
 

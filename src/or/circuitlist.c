@@ -924,7 +924,7 @@ circuit_clear_testing_cell_stats(circuit_t *circ)
 /** Deallocate space associated with circ.
  */
 STATIC void
-circuit_free(circuit_t *circ)
+circuit_free_(circuit_t *circ)
 {
   circid_t n_circ_id = 0;
   void *mem;

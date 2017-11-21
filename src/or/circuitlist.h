@@ -81,7 +81,8 @@ MOCK_DECL(void, channel_note_destroy_not_pending,
 smartlist_t *circuit_find_circuits_to_upgrade_from_guard_wait(void);
 
 #ifdef CIRCUITLIST_PRIVATE
-STATIC void circuit_free(circuit_t *circ);
+STATIC void circuit_free_(circuit_t *circ);
+#define circuit_free(circ) FREE_AND_NULL(circuit, (circ))
 STATIC size_t n_cells_in_circ_queues(const circuit_t *c);
 STATIC uint32_t circuit_max_queued_data_age(const circuit_t *c, uint32_t now);
 STATIC uint32_t circuit_max_queued_cell_age(const circuit_t *c, uint32_t now);

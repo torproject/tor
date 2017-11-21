@@ -516,8 +516,10 @@ void channel_listener_close_for_error(channel_listener_t *chan_l);
 void channel_listener_closed(channel_listener_t *chan_l);
 
 /* Free a channel */
-void channel_free(channel_t *chan);
-void channel_listener_free(channel_listener_t *chan_l);
+void channel_free_(channel_t *chan);
+#define channel_free(chan) FREE_AND_NULL(channel, (chan))
+void channel_listener_free_(channel_listener_t *chan_l);
+#define channel_listener_free(chan_l) FREE_AND_NULL(channel_listener, (chan_l))
 
 /* State/metadata setters */
 

@@ -2372,8 +2372,8 @@ upgrade_circuits_cleanup(const struct testcase_t *testcase, void *ptr)
   // circuit_guard_state_free(data->guard2_state); // held in circ2
   guard_selection_free(data->gs);
   smartlist_free(data->all_origin_circuits);
-  circuit_free(TO_CIRCUIT(data->circ1));
-  circuit_free(TO_CIRCUIT(data->circ2));
+  circuit_free_(TO_CIRCUIT(data->circ1));
+  circuit_free_(TO_CIRCUIT(data->circ2));
   tor_free(data);
   return big_fake_network_cleanup(testcase, NULL);
 }

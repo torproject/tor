@@ -194,7 +194,7 @@ test_establish_intro_wrong_purpose(void *arg)
   tt_int_op(retval, OP_EQ, -1);
 
  done:
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
 /* Prepare a circuit for accepting an ESTABLISH_INTRO cell */
@@ -228,7 +228,7 @@ test_establish_intro_wrong_keytype(void *arg)
   tt_int_op(retval, OP_EQ, -1);
 
  done:
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
 /* Send an ESTABLISH_INTRO cell with an unknown auth key type. Should fail. */
@@ -263,7 +263,7 @@ test_establish_intro_wrong_keytype2(void *arg)
   tt_int_op(retval, OP_EQ, -1);
 
  done:
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
 /* Send a legit ESTABLISH_INTRO cell but with a wrong MAC. Should fail. */
@@ -333,7 +333,7 @@ test_establish_intro_wrong_mac(void *arg)
 
  done:
   trn_cell_establish_intro_free(cell);
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
 /* Send a legit ESTABLISH_INTRO cell but with a wrong auth key length. Should
@@ -378,7 +378,7 @@ test_establish_intro_wrong_auth_key_len(void *arg)
 
  done:
   trn_cell_establish_intro_free(cell);
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
 /* Send a legit ESTABLISH_INTRO cell but with a wrong sig length. Should
@@ -423,7 +423,7 @@ test_establish_intro_wrong_sig_len(void *arg)
 
  done:
   trn_cell_establish_intro_free(cell);
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
 /* Send a legit ESTABLISH_INTRO cell but slightly change the signature. Should
@@ -460,7 +460,7 @@ test_establish_intro_wrong_sig(void *arg)
   tt_int_op(retval, OP_EQ, -1);
 
  done:
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
 }
 
 /* Helper function: Send a well-formed v3 ESTABLISH_INTRO cell to
@@ -629,8 +629,8 @@ test_intro_point_registration(void *arg)
 
  done:
   crypto_pk_free(legacy_auth_key);
-  circuit_free(TO_CIRCUIT(intro_circ));
-  circuit_free(TO_CIRCUIT(legacy_intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(legacy_intro_circ));
   trn_cell_establish_intro_free(establish_intro_cell);
   test_circuitmap_free_all();
 
@@ -650,7 +650,7 @@ test_introduce1_suitable_circuit(void *arg)
     circ = or_circuit_new(0, NULL);
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
     tt_int_op(ret, OP_EQ, 1);
   }
 
@@ -659,7 +659,7 @@ test_introduce1_suitable_circuit(void *arg)
     circ = or_circuit_new(0, NULL);
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
     tt_int_op(ret, OP_EQ, 0);
   }
 
@@ -670,7 +670,7 @@ test_introduce1_suitable_circuit(void *arg)
     /* Bogus pointer, the check is against NULL on n_chan. */
     circ->base_.n_chan = (channel_t *) circ;
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
     tt_int_op(ret, OP_EQ, 0);
   }
 
@@ -681,7 +681,7 @@ test_introduce1_suitable_circuit(void *arg)
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_OR);
     circ->already_received_introduce1 = 1;
     ret = circuit_is_suitable_for_introduce1(circ);
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
     tt_int_op(ret, OP_EQ, 0);
   }
 
@@ -800,7 +800,7 @@ test_received_introduce1_handling(void *arg)
     circ = helper_create_intro_circuit();
     ret = hs_intro_received_introduce1(circ, buf, DIGEST_LEN - 1);
     tt_int_op(ret, OP_EQ, -1);
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
   }
 
   /* We have a unit test only for the suitability of a circuit to receive an
@@ -813,7 +813,7 @@ test_received_introduce1_handling(void *arg)
     memset(test, 0, sizeof(test));
     ret = handle_introduce1(circ, test, sizeof(test));
     tor_free(circ->p_chan);
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
     tt_int_op(ret, OP_EQ, -1);
   }
 
@@ -838,8 +838,8 @@ test_received_introduce1_handling(void *arg)
     memcpy(auth_key.pubkey, cell_auth_key, ED25519_PUBKEY_LEN);
     hs_circuitmap_register_intro_circ_v3_relay_side(service_circ, &auth_key);
     ret = hs_intro_received_introduce1(circ, request, request_len);
-    circuit_free(TO_CIRCUIT(circ));
-    circuit_free(TO_CIRCUIT(service_circ));
+    circuit_free_(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(service_circ));
     tt_int_op(ret, OP_EQ, 0);
   }
 
@@ -867,8 +867,8 @@ test_received_introduce1_handling(void *arg)
     memcpy(token, legacy_key_id, sizeof(token));
     hs_circuitmap_register_intro_circ_v2_relay_side(service_circ, token);
     ret = hs_intro_received_introduce1(circ, request, request_len);
-    circuit_free(TO_CIRCUIT(circ));
-    circuit_free(TO_CIRCUIT(service_circ));
+    circuit_free_(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(service_circ));
     tt_int_op(ret, OP_EQ, 0);
   }
 

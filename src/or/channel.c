@@ -1,3 +1,4 @@
+
 /* * Copyright (c) 2012-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
@@ -979,7 +980,7 @@ channel_init_listener(channel_listener_t *chan_l)
  */
 
 void
-channel_free(channel_t *chan)
+channel_free_(channel_t *chan)
 {
   if (!chan) return;
 
@@ -1034,7 +1035,7 @@ channel_free(channel_t *chan)
  */
 
 void
-channel_listener_free(channel_listener_t *chan_l)
+channel_listener_free_(channel_listener_t *chan_l)
 {
   if (!chan_l) return;
 

@@ -546,7 +546,7 @@ circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux, channel_t *chan)
  */
 
 void
-circuitmux_free(circuitmux_t *cmux)
+circuitmux_free_(circuitmux_t *cmux)
 {
   if (!cmux) return;
 

@@ -230,7 +230,7 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
   connection_free_(conn);
   if (or_circ)
     tor_free(TO_CIRCUIT(or_circ)->n_chan);
-  circuit_free(TO_CIRCUIT(or_circ));
+  circuit_free_(TO_CIRCUIT(or_circ));
 }
 
 /* Test: Ensure that setting up v3 rendezvous circuits works correctly. */
@@ -300,7 +300,7 @@ test_e2e_rend_circuit_setup(void *arg)
   connection_free_(conn);
   if (or_circ)
     tor_free(TO_CIRCUIT(or_circ)->n_chan);
-  circuit_free(TO_CIRCUIT(or_circ));
+  circuit_free_(TO_CIRCUIT(or_circ));
 }
 
 /** Test client logic for picking intro points from a descriptor. Also test how

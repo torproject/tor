@@ -5739,7 +5739,7 @@ validate_transport_socks_arguments(const smartlist_t *args)
 
 /** Deallocate a bridge_line_t structure. */
 /* private */ void
-bridge_line_free(bridge_line_t *bridge_line)
+bridge_line_free_(bridge_line_t *bridge_line)
 {
   if (!bridge_line)
     return;
