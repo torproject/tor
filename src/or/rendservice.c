@@ -3444,6 +3444,10 @@ remove_invalid_intro_points(rend_service_t *service,
       log_info(LD_REND, "Expiring %s as intro point for %s.",
                safe_str_client(extend_info_describe(intro->extend_info)),
                safe_str_client(service->service_id));
+      /* We might have put it in the retry list if so, undo. */
+      if (retry_nodes) {
+        smartlist_remove(retry_nodes, intro);
+      }
       smartlist_add(service->expiring_nodes, intro);
       SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
       /* Intro point is expired, we need a new one thus don't consider it
