@@ -1,0 +1,7 @@
+  o Minor bugfixes (directory cache):
+    - When a consensus diff calculation is only partially successful, only
+      record the successful parts as having succeeded. Partial success
+      can happen if (for example) one compression method fails but
+      the others succeed. Previously we misrecorded all the calculations as
+      having succeeded, which would later cause a nonfatal assertion failure.
+      Fixes bug 24086; bugfix on 0.3.1.1-alpha.
