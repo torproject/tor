@@ -2197,7 +2197,7 @@ entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b)
 
 /** Release all storage held in <b>restriction</b> */
 STATIC void
-entry_guard_restriction_free(entry_guard_restriction_t *rst)
+entry_guard_restriction_free_(entry_guard_restriction_t *rst)
 {
   tor_free(rst);
 }
@@ -3602,7 +3602,7 @@ entry_guards_get_err_str_if_dir_info_missing(int using_mds,
 
 /** Free one guard selection context */
 STATIC void
-guard_selection_free(guard_selection_t *gs)
+guard_selection_free_(guard_selection_t *gs)
 {
   if (!gs) return;
 

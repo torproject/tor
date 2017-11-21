@@ -486,7 +486,8 @@ STATIC guard_selection_t *guard_selection_new(const char *name,
                                               guard_selection_type_t type);
 STATIC guard_selection_t *get_guard_selection_by_name(
           const char *name, guard_selection_type_t type, int create_if_absent);
-STATIC void guard_selection_free(guard_selection_t *gs);
+STATIC void guard_selection_free_(guard_selection_t *gs);
+#define guard_selection_free(gs) FREE_AND_NULL(guard_selection, (gs))
 MOCK_DECL(STATIC int, entry_guard_is_listed,
           (guard_selection_t *gs, const entry_guard_t *guard));
 STATIC const char *choose_guard_selection(const or_options_t *options,
@@ -570,7 +571,9 @@ STATIC entry_guard_restriction_t *guard_create_exit_restriction(
 
 STATIC entry_guard_restriction_t *guard_create_dirserver_md_restriction(void);
 
-STATIC void entry_guard_restriction_free(entry_guard_restriction_t *rst);
+STATIC void entry_guard_restriction_free_(entry_guard_restriction_t *rst);
+#define entry_guard_restriction_free(rst) \
+  FREE_AND_NULL(entry_guard_restriction, (rst))
 
 #endif /* defined(ENTRYNODES_PRIVATE) */
 

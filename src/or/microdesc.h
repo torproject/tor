@@ -38,8 +38,10 @@ smartlist_t *microdesc_list_missing_digest256(networkstatus_t *ns,
                                               digest256map_t *skip);
 
 void microdesc_free_(microdesc_t *md, const char *fname, int line);
-#define microdesc_free(md) \
-  microdesc_free_((md), __FILE__, __LINE__)
+#define microdesc_free(md) do {                 \
+    microdesc_free_((md), __FILE__, __LINE__);  \
+    (md) = NULL;                                \
+  } while (0)
 void microdesc_free_all(void);
 
 void update_microdesc_downloads(time_t now);

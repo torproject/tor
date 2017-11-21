@@ -2794,7 +2794,7 @@ write_short_policy(const short_policy_t *policy)
 
 /** Release all storage held in <b>policy</b>. */
 void
-short_policy_free(short_policy_t *policy)
+short_policy_free_(short_policy_t *policy)
 {
   tor_free(policy);
 }
@@ -3044,7 +3044,7 @@ getinfo_helper_policies(control_connection_t *conn,
 
 /** Release all storage held by <b>p</b>. */
 void
-addr_policy_list_free(smartlist_t *lst)
+addr_policy_list_free_(smartlist_t *lst)
 {
   if (!lst)
     return;
@@ -3054,7 +3054,7 @@ addr_policy_list_free(smartlist_t *lst)
 
 /** Release all storage held by <b>p</b>. */
 void
-addr_policy_free(addr_policy_t *p)
+addr_policy_free_(addr_policy_t *p)
 {
   if (!p)
     return;

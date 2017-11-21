@@ -834,7 +834,7 @@ test_rend_cache_failure_entry_free(void *data)
   (void)data;
 
   // Test that it can deal with a NULL argument
-  rend_cache_failure_entry_free(NULL);
+  rend_cache_failure_entry_free_(NULL);
 
  /* done: */
  /*  (void)0; */
@@ -963,7 +963,7 @@ test_rend_cache_entry_free(void *data)
   rend_cache_entry_t *e;
 
   // Handles NULL correctly
-  rend_cache_entry_free(NULL);
+  rend_cache_entry_free_(NULL);
 
   // Handles NULL descriptor correctly
   e = tor_malloc_zero(sizeof(rend_cache_entry_t));
@@ -1135,7 +1135,7 @@ test_rend_cache_failure_intro_entry_free(void *data)
   rend_cache_failure_intro_t *entry;
 
   // Handles a null argument
-  rend_cache_failure_intro_entry_free(NULL);
+  rend_cache_failure_intro_entry_free_(NULL);
 
   // Handles a non-null argument
   entry = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
@@ -1148,7 +1148,7 @@ test_rend_cache_failure_purge(void *data)
   (void)data;
 
   // Handles a null failure cache
-  strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
+  strmap_free(rend_cache_failure, rend_cache_failure_entry_free_void);
   rend_cache_failure = NULL;
 
   rend_cache_failure_purge();

@@ -68,7 +68,9 @@ int connection_or_client_learned_peer_id(or_connection_t *conn,
                               const ed25519_public_key_t *ed_peer_id);
 time_t connection_or_client_used(or_connection_t *conn);
 MOCK_DECL(int, connection_or_get_num_circuits, (or_connection_t *conn));
-void or_handshake_state_free(or_handshake_state_t *state);
+void or_handshake_state_free_(or_handshake_state_t *state);
+#define or_handshake_state_free(state) \
+  FREE_AND_NULL(or_handshake_state, (state))
 void or_handshake_state_record_cell(or_connection_t *conn,
                                     or_handshake_state_t *state,
                                     const cell_t *cell,
@@ -105,7 +107,8 @@ int var_cell_pack_header(const var_cell_t *cell, char *hdr_out,
                          int wide_circ_ids);
 var_cell_t *var_cell_new(uint16_t payload_len);
 var_cell_t *var_cell_copy(const var_cell_t *src);
-void var_cell_free(var_cell_t *cell);
+void var_cell_free_(var_cell_t *cell);
+#define var_cell_free(cell) FREE_AND_NULL(var_cell, (cell))
 
 /* DOCDOC */
 #define MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS 4

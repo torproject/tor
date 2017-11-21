@@ -249,7 +249,8 @@ void hs_service_free_all(void);
 
 /* Service new/free functions. */
 hs_service_t *hs_service_new(const or_options_t *options);
-void hs_service_free(hs_service_t *service);
+void hs_service_free_(hs_service_t *service);
+#define hs_service_free(s) FREE_AND_NULL(hs_service, (s))
 
 unsigned int hs_service_get_num_services(void);
 void hs_service_stage_services(const smartlist_t *service_list);
@@ -274,12 +275,15 @@ void hs_service_intro_circ_has_closed(origin_circuit_t *circ);
 #ifdef HS_SERVICE_PRIVATE
 
 #ifdef TOR_UNIT_TESTS
-
 /* Useful getters for unit tests. */
 STATIC unsigned int get_hs_service_map_size(void);
 STATIC int get_hs_service_staging_list_size(void);
 STATIC hs_service_ht *get_hs_service_map(void);
 STATIC hs_service_t *get_first_service(void);
+STATIC hs_service_intro_point_t *service_intro_point_find_by_ident(
+                                         const hs_service_t *service,
+                                         const hs_ident_circuit_t *ident);
+#endif
 
 /* Service accessors. */
 STATIC hs_service_t *find_service(hs_service_ht *map,
@@ -290,7 +294,9 @@ STATIC int register_service(hs_service_ht *map, hs_service_t *service);
 STATIC hs_service_intro_point_t *service_intro_point_new(
                                          const extend_info_t *ei,
                                          unsigned int is_legacy);
-STATIC void service_intro_point_free(hs_service_intro_point_t *ip);
+STATIC void service_intro_point_free_(hs_service_intro_point_t *ip);
+#define service_intro_point_free(ip)            \
+  FREE_AND_NULL(service_intro_point, (ip))
 STATIC void service_intro_point_add(digest256map_t *map,
                                     hs_service_intro_point_t *ip);
 STATIC void service_intro_point_remove(const hs_service_t *service,
@@ -298,9 +304,6 @@ STATIC void service_intro_point_remove(const hs_service_t *service,
 STATIC hs_service_intro_point_t *service_intro_point_find(
                                  const hs_service_t *service,
                                  const ed25519_public_key_t *auth_key);
-STATIC hs_service_intro_point_t *service_intro_point_find_by_ident(
-                                         const hs_service_t *service,
-                                         const hs_ident_circuit_t *ident);
 /* Service descriptor functions. */
 STATIC hs_service_descriptor_t *service_descriptor_new(void);
 STATIC hs_service_descriptor_t *service_desc_find_by_intro(
@@ -326,7 +329,8 @@ STATIC void run_upload_descriptor_event(time_t now);
 STATIC char *
 encode_desc_rev_counter_for_state(const hs_service_descriptor_t *desc);
 
-STATIC void service_descriptor_free(hs_service_descriptor_t *desc);
+STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
+#define service_descriptor_free(d) FREE_AND_NULL(service_descriptor, (d))
 
 STATIC uint64_t
 check_state_line_for_service_rev_counter(const char *state_line,
@@ -345,8 +349,6 @@ STATIC void service_desc_schedule_upload(hs_service_descriptor_t *desc,
 
 STATIC int service_desc_hsdirs_changed(const hs_service_t *service,
                                 const hs_service_descriptor_t *desc);
-
-#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(HS_SERVICE_PRIVATE) */
 

@@ -26,7 +26,12 @@ void * fp_pair_map_get(const fp_pair_map_t *map, const fp_pair_t *key);
 void * fp_pair_map_get_by_digests(const fp_pair_map_t *map,
                                   const char *first, const char *second);
 void * fp_pair_map_remove(fp_pair_map_t *map, const fp_pair_t *key);
-void fp_pair_map_free(fp_pair_map_t *map, void (*free_val)(void*));
+void fp_pair_map_free_(fp_pair_map_t *map, void (*free_val)(void*));
+#define fp_pair_map_free(map, free_val) do {            \
+    fp_pair_map_free_((map), (free_val));               \
+    (map) = NULL;                                       \
+  } while (0)
+
 int fp_pair_map_isempty(const fp_pair_map_t *map);
 int fp_pair_map_size(const fp_pair_map_t *map);
 fp_pair_map_iter_t * fp_pair_map_iter_init(fp_pair_map_t *map);

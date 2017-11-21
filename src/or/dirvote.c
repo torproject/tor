@@ -2685,7 +2685,7 @@ get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
 
 /** Release all storage held in <b>s</b>. */
 void
-ns_detached_signatures_free(ns_detached_signatures_t *s)
+ns_detached_signatures_free_(ns_detached_signatures_t *s)
 {
   if (!s)
     return;

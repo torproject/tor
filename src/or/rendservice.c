@@ -157,7 +157,7 @@ rend_num_services(void)
 
 /** Helper: free storage held by a single service authorized client entry. */
 void
-rend_authorized_client_free(rend_authorized_client_t *client)
+rend_authorized_client_free_(rend_authorized_client_t *client)
 {
   if (!client)
     return;
@@ -180,7 +180,7 @@ rend_authorized_client_strmap_item_free(void *authorized_client)
 /** Release the storage held by <b>service</b>.
  */
 STATIC void
-rend_service_free(rend_service_t *service)
+rend_service_free_(rend_service_t *service)
 {
   if (!service)
     return;
@@ -470,7 +470,7 @@ rend_service_parse_port_config(const char *string, const char *sep,
 
 /** Release all storage held in a rend_service_port_config_t. */
 void
-rend_service_port_config_free(rend_service_port_config_t *p)
+rend_service_port_config_free_(rend_service_port_config_t *p)
 {
   tor_free(p);
 }
@@ -2221,7 +2221,7 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
  * rend_service_parse_intro().
  */
 void
-rend_service_free_intro(rend_intro_cell_t *request)
+rend_service_free_intro_(rend_intro_cell_t *request)
 {
   if (!request) {
     return;

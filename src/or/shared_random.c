@@ -897,7 +897,7 @@ sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv)
 
 /* Free a commit object. */
 void
-sr_commit_free(sr_commit_t *commit)
+sr_commit_free_(sr_commit_t *commit)
 {
   if (commit == NULL) {
     return;

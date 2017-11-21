@@ -14,7 +14,8 @@ HANDLE_DECL(consensus_cache_entry, consensus_cache_entry_t, )
   FREE_AND_NULL(consensus_cache_entry_handle, (h))
 
 consensus_cache_t *consensus_cache_open(const char *subdir, int max_entries);
-void consensus_cache_free(consensus_cache_t *cache);
+void consensus_cache_free_(consensus_cache_t *cache);
+#define consensus_cache_free(cache) FREE_AND_NULL(consensus_cache, (cache))
 struct sandbox_cfg_elem;
 int consensus_cache_may_overallocate(consensus_cache_t *cache);
 int consensus_cache_register_with_sandbox(consensus_cache_t *cache,

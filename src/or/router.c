@@ -233,7 +233,7 @@ ntor_key_map_free_helper(void *arg)
 }
 /** Release all storage from a keymap returned by construct_ntor_key_map. */
 void
-ntor_key_map_free(di_digest256_map_t *map)
+ntor_key_map_free_(di_digest256_map_t *map)
 {
   if (!map)
     return;

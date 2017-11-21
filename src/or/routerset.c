@@ -437,7 +437,7 @@ routerset_equal(const routerset_t *old, const routerset_t *new)
 
 /** Free all storage held in <b>routerset</b>. */
 void
-routerset_free(routerset_t *routerset)
+routerset_free_(routerset_t *routerset)
 {
   if (!routerset)
     return;

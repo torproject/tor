@@ -505,7 +505,7 @@ var_cell_copy(const var_cell_t *src)
 
 /** Release all space held by <b>cell</b>. */
 void
-var_cell_free(var_cell_t *cell)
+var_cell_free_(var_cell_t *cell)
 {
   tor_free(cell);
 }
@@ -1854,7 +1854,7 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
 
 /** Free all storage held by <b>state</b>. */
 void
-or_handshake_state_free(or_handshake_state_t *state)
+or_handshake_state_free_(or_handshake_state_t *state)
 {
   if (!state)
     return;

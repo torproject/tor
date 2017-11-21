@@ -158,7 +158,7 @@ dircollator_new(int n_votes, int n_authorities)
 
 /** Release all storage held by <b>dc</b>. */
 void
-dircollator_free(dircollator_t *dc)
+dircollator_free_(dircollator_t *dc)
 {
   if (!dc)
     return;

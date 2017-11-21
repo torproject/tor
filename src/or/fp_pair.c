@@ -196,7 +196,7 @@ fp_pair_map_remove(fp_pair_map_t *map, const fp_pair_t *key)
  */
 
 void
-fp_pair_map_free(fp_pair_map_t *map, void (*free_val)(void*))
+fp_pair_map_free_(fp_pair_map_t *map, void (*free_val)(void*))
 {
   fp_pair_map_entry_t **ent, **next, *this;
 

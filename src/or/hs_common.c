@@ -329,7 +329,7 @@ rend_data_alloc(uint32_t version)
 
 /** Free all storage associated with <b>data</b> */
 void
-rend_data_free(rend_data_t *data)
+rend_data_free_(rend_data_t *data)
 {
   if (!data) {
     return;

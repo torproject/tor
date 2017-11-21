@@ -74,7 +74,7 @@ static void
 test_replaycache_free_null(void *arg)
 {
   (void)arg;
-  replaycache_free(NULL);
+  replaycache_free_(NULL);
   /* Assert that we're here without horrible death */
   tt_assert(1);
 

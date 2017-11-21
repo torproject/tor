@@ -463,7 +463,7 @@ cert_list_free(cert_list_t *cl)
 
 /** Wrapper for cert_list_free so we can pass it to digestmap_free */
 static void
-cert_list_free_(void *cl)
+cert_list_free_void(void *cl)
 {
   cert_list_free(cl);
 }
@@ -3168,7 +3168,7 @@ router_get_routerlist(void)
 
 /** Free all storage held by <b>router</b>. */
 void
-routerinfo_free(routerinfo_t *router)
+routerinfo_free_(routerinfo_t *router)
 {
   if (!router)
     return;
@@ -3198,7 +3198,7 @@ routerinfo_free(routerinfo_t *router)
 
 /** Release all storage held by <b>extrainfo</b> */
 void
-extrainfo_free(extrainfo_t *extrainfo)
+extrainfo_free_(extrainfo_t *extrainfo)
 {
   if (!extrainfo)
     return;
@@ -3266,21 +3266,21 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
 
 /** Helper: free the storage held by the extrainfo_t in <b>e</b>. */
 static void
-extrainfo_free_(void *e)
+extrainfo_free_void(void *e)
 {
   extrainfo_free(e);
 }
 
 /** Free all storage held by a routerlist <b>rl</b>. */
 void
-routerlist_free(routerlist_t *rl)
+routerlist_free_(routerlist_t *rl)
 {
   if (!rl)
     return;
   rimap_free(rl->identity_map, NULL);
   sdmap_free(rl->desc_digest_map, NULL);
   sdmap_free(rl->desc_by_eid_map, NULL);
-  eimap_free(rl->extra_info_map, extrainfo_free_);
+  eimap_free(rl->extra_info_map, extrainfo_free_void);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
@@ -3772,7 +3772,7 @@ routerlist_free_all(void)
   smartlist_free(fallback_dir_servers);
   trusted_dir_servers = fallback_dir_servers = NULL;
   if (trusted_dir_certs) {
-    digestmap_free(trusted_dir_certs, cert_list_free_);
+    digestmap_free(trusted_dir_certs, cert_list_free_void);
     trusted_dir_certs = NULL;
   }
 }
@@ -4740,7 +4740,7 @@ dir_server_add(dir_server_t *ent)
 
 /** Free storage held in <b>cert</b>. */
 void
-authority_cert_free(authority_cert_t *cert)
+authority_cert_free_(authority_cert_t *cert)
 {
   if (!cert)
     return;

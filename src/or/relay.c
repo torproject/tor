@@ -1158,7 +1158,7 @@ connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
 
 /** Drop all storage held by <b>addr</b>. */
 STATIC void
-address_ttl_free(address_ttl_t *addr)
+address_ttl_free_(address_ttl_t *addr)
 {
   if (!addr)
     return;
@@ -2425,7 +2425,7 @@ packed_cell_new(void)
 
 /** Return a packed cell used outside by channel_t lower layer */
 void
-packed_cell_free(packed_cell_t *cell)
+packed_cell_free_(packed_cell_t *cell)
 {
   if (!cell)
     return;

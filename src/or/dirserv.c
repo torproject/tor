@@ -3502,7 +3502,7 @@ spooled_resource_new_from_cache_entry(consensus_cache_entry_t *entry)
 
 /** Release all storage held by <b>spooled</b>. */
 void
-spooled_resource_free(spooled_resource_t *spooled)
+spooled_resource_free_(spooled_resource_t *spooled)
 {
   if (spooled == NULL)
     return;

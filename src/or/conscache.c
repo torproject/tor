@@ -170,7 +170,7 @@ consensus_cache_clear(consensus_cache_t *cache)
  * Drop all storage held by <b>cache</b>.
  */
 void
-consensus_cache_free(consensus_cache_t *cache)
+consensus_cache_free_(consensus_cache_t *cache)
 {
   if (! cache)
     return;

@@ -255,7 +255,7 @@ router_reload_consensus_networkstatus(void)
 
 /** Free all storage held by the vote_routerstatus object <b>rs</b>. */
 void
-vote_routerstatus_free(vote_routerstatus_t *rs)
+vote_routerstatus_free_(vote_routerstatus_t *rs)
 {
   vote_microdesc_hash_t *h, *next;
   if (!rs)
@@ -273,7 +273,7 @@ vote_routerstatus_free(vote_routerstatus_t *rs)
 
 /** Free all storage held by the routerstatus object <b>rs</b>. */
 void
-routerstatus_free(routerstatus_t *rs)
+routerstatus_free_(routerstatus_t *rs)
 {
   if (!rs)
     return;
@@ -283,7 +283,7 @@ routerstatus_free(routerstatus_t *rs)
 
 /** Free all storage held in <b>sig</b> */
 void
-document_signature_free(document_signature_t *sig)
+document_signature_free_(document_signature_t *sig)
 {
   tor_free(sig->signature);
   tor_free(sig);
@@ -301,7 +301,7 @@ document_signature_dup(const document_signature_t *sig)
 
 /** Free all storage held in <b>ns</b>. */
 void
-networkstatus_vote_free(networkstatus_t *ns)
+networkstatus_vote_free_(networkstatus_t *ns)
 {
   if (!ns)
     return;

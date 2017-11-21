@@ -681,7 +681,7 @@ save_transport_to_state(const char *transport,
 }
 
 STATIC void
-or_state_free(or_state_t *state)
+or_state_free_(or_state_t *state)
 {
   if (!state)
     return;

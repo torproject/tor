@@ -2367,7 +2367,7 @@ hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
 
 /* Free the descriptor plaintext data object. */
 void
-hs_desc_plaintext_data_free(hs_desc_plaintext_data_t *desc)
+hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc)
 {
   desc_plaintext_data_free_contents(desc);
   tor_free(desc);
@@ -2375,7 +2375,7 @@ hs_desc_plaintext_data_free(hs_desc_plaintext_data_t *desc)
 
 /* Free the descriptor encrypted data object. */
 void
-hs_desc_encrypted_data_free(hs_desc_encrypted_data_t *desc)
+hs_desc_encrypted_data_free_(hs_desc_encrypted_data_t *desc)
 {
   desc_encrypted_data_free_contents(desc);
   tor_free(desc);
@@ -2383,7 +2383,7 @@ hs_desc_encrypted_data_free(hs_desc_encrypted_data_t *desc)
 
 /* Free the given descriptor object. */
 void
-hs_descriptor_free(hs_descriptor_t *desc)
+hs_descriptor_free_(hs_descriptor_t *desc)
 {
   if (!desc) {
     return;
@@ -2448,7 +2448,7 @@ hs_desc_intro_point_new(void)
 
 /* Free a descriptor intro point object. */
 void
-hs_desc_intro_point_free(hs_desc_intro_point_t *ip)
+hs_desc_intro_point_free_(hs_desc_intro_point_t *ip)
 {
   if (ip == NULL) {
     return;
@@ -2467,7 +2467,7 @@ hs_desc_intro_point_free(hs_desc_intro_point_t *ip)
 
 /* Free the given descriptor link specifier. */
 void
-hs_desc_link_specifier_free(hs_desc_link_specifier_t *ls)
+hs_desc_link_specifier_free_(hs_desc_link_specifier_t *ls)
 {
   if (ls == NULL) {
     return;

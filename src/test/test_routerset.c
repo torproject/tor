@@ -699,7 +699,7 @@ NS(test_main)(void *arg)
 static void
 NS(test_main)(void *arg)
 {
-  const routerset_t *set;
+  routerset_t *set;
   int needs_geoip;
   (void)arg;
 
@@ -709,14 +709,14 @@ NS(test_main)(void *arg)
 
   set = routerset_new();
   needs_geoip = routerset_needs_geoip(set);
-  routerset_free((routerset_t *)set);
+  routerset_free(set);
   tt_int_op(needs_geoip, OP_EQ, 0);
   set = NULL;
 
   set = routerset_new();
   smartlist_add(set->country_names, tor_strndup("xx", 2));
   needs_geoip = routerset_needs_geoip(set);
-  routerset_free((routerset_t *)set);
+  routerset_free(set);
   set = NULL;
   tt_int_op(needs_geoip, OP_NE, 0);
 
@@ -1947,7 +1947,7 @@ NS(test_main)(void *arg)
 
  done:
   tor_free(s);
-  routerset_free((routerset_t *)set);
+  routerset_free(set);
 }
 
 #undef NS_SUBMODULE
@@ -2093,7 +2093,7 @@ NS(test_main)(void *arg)
 
   NS_MOCK(smartlist_free_);
 
-  routerset_free(NULL);
+  routerset_free_(NULL);
 
   tt_int_op(CALLED(smartlist_free_), OP_EQ, 0);
 
