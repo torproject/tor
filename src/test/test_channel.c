@@ -33,16 +33,14 @@ static double test_overhead_estimate = 1.0;
 static int test_releases_count = 0;
 static channel_t *dump_statistics_mock_target = NULL;
 static int dump_statistics_mock_matches = 0;
+static int test_close_called = 0;
 
 static void chan_test_channel_dump_statistics_mock(
     channel_t *chan, int severity);
-static void chan_test_cell_handler(channel_t *ch,
-                                   cell_t *cell);
 static const char * chan_test_describe_transport(channel_t *ch);
 static void chan_test_dumpstats(channel_t *ch, int severity);
 static void chan_test_var_cell_handler(channel_t *ch,
                                        var_cell_t *var_cell);
-static void chan_test_close(channel_t *ch);
 static void chan_test_error(channel_t *ch);
 static void chan_test_finish_close(channel_t *ch);
 static const char * chan_test_get_remote_descr(channel_t *ch, int flags);
@@ -56,7 +54,6 @@ static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
 static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 
 static void test_channel_dumpstats(void *arg);
-static void test_channel_incoming(void *arg);
 static void test_channel_lifecycle(void *arg);
 
 static const char *
@@ -93,10 +90,9 @@ chan_test_channel_dump_statistics_mock(channel_t *chan, int severity)
  */
 
 static void
-chan_test_cell_handler(channel_t *ch,
-                       cell_t *cell)
+chan_test_cell_handler(channel_t *chan, cell_t *cell)
 {
-  tt_assert(ch);
+  tt_assert(chan);
   tt_assert(cell);
 
   test_chan_last_seen_fixed_cell_ptr = cell;
@@ -145,6 +141,8 @@ static void
 chan_test_close(channel_t *ch)
 {
   tt_assert(ch);
+
+  ++test_close_called;
 
  done:
   return;
@@ -348,6 +346,8 @@ new_fake_channel(void)
   chan->write_var_cell = chan_test_write_var_cell;
   chan->state = CHANNEL_STATE_OPEN;
 
+  chan->cmux = circuitmux_alloc();
+
   return chan;
 }
 
@@ -516,6 +516,7 @@ test_channel_dumpstats(void *arg)
             chan_test_var_cell_handler);
   p_cell = packed_cell_new();
   old_count = test_chan_fixed_cells_recved;
+  channel_write_packed_cell(ch, p_cell);
   tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
   tt_assert(ch->n_bytes_recved > 0);
   tt_assert(ch->n_cells_recved > 0);
@@ -545,82 +546,93 @@ test_channel_dumpstats(void *arg)
   return;
 }
 
+/* Test inbound cell. The callstack is:
+ *  channel_process_cell()
+ *    -> chan->cell_handler()
+ *
+ * This test is about checking if we can process an inbound cell down to the
+ * channel handler. */
 static void
-test_channel_incoming(void *arg)
+test_channel_inbound_cell(void *arg)
 {
-  channel_t *ch = NULL;
+  channel_t *chan = NULL;
   cell_t *cell = NULL;
-  var_cell_t *var_cell = NULL;
   int old_count;
 
-  (void)arg;
+  (void) arg;
 
-  /* Mock these for duration of the test */
-  MOCK(scheduler_channel_doesnt_want_writes,
-       scheduler_channel_doesnt_want_writes_mock);
-  MOCK(scheduler_release_channel,
-       scheduler_release_channel_mock);
+  /* The channel will be freed so we need to hijack this so the scheduler
+   * doesn't get confused. */
+  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
 
   /* Accept cells to lower layer */
   test_chan_accept_cells = 1;
   /* Use default overhead factor */
   test_overhead_estimate = 1.0;
 
-  ch = new_fake_channel();
-  tt_assert(ch);
+  chan = new_fake_channel();
+  tt_assert(chan);
   /* Start it off in OPENING */
-  ch->state = CHANNEL_STATE_OPENING;
-  /* We'll need a cmux */
-  ch->cmux = circuitmux_alloc();
-
-  /* Install incoming cell handlers */
-  channel_set_cell_handlers(ch,
-                            chan_test_cell_handler,
-                            chan_test_var_cell_handler);
-  /* Test cell handler getters */
-  tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
-  tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
-            chan_test_var_cell_handler);
+  chan->state = CHANNEL_STATE_OPENING;
 
   /* Try to register it */
-  channel_register(ch);
-  tt_assert(ch->registered);
+  channel_register(chan);
+  tt_int_op(chan->registered, OP_EQ, 1);
 
   /* Open it */
-  channel_change_state_open(ch);
-  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_OPEN);
+  channel_change_state_open(chan);
+  tt_int_op(chan->state, OP_EQ, CHANNEL_STATE_OPEN);
+  tt_int_op(chan->has_been_open, OP_EQ, 1);
 
-  /* Receive a fixed cell */
-  cell = tor_malloc_zero(sizeof(cell_t));
+  /* Receive a cell now. */
+  cell = tor_malloc_zero(sizeof(*cell));
   make_fake_cell(cell);
   old_count = test_chan_fixed_cells_recved;
-  tor_free(cell);
-  tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
+  channel_process_cell(chan, cell);
+  tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count);
+  tt_u64_op(chan->timestamp_xfer_ms, OP_EQ, 0);
+  tt_u64_op(chan->timestamp_active, OP_EQ, 0);
+  tt_u64_op(chan->timestamp_recv, OP_EQ, 0);
 
-  /* Receive a variable-size cell */
-  var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
-  make_fake_var_cell(var_cell);
-  old_count = test_chan_var_cells_recved;
-  tor_free(cell);
-  tt_int_op(test_chan_var_cells_recved, OP_EQ, old_count + 1);
+  /* Setup incoming cell handlers. We don't care about var cell, the channel
+   * layers is not handling those. */
+  channel_set_cell_handlers(chan, chan_test_cell_handler, NULL);
+  tt_ptr_op(chan->cell_handler, OP_EQ, chan_test_cell_handler);
+  /* Now process the cell, we should see it. */
+  old_count = test_chan_fixed_cells_recved;
+  channel_process_cell(chan, cell);
+  tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
+  /* We should have a series of timestamp set. */
+  tt_u64_op(chan->timestamp_xfer_ms, OP_NE, 0);
+  tt_u64_op(chan->timestamp_active, OP_NE, 0);
+  tt_u64_op(chan->timestamp_recv, OP_NE, 0);
+  tt_u64_op(chan->next_padding_time_ms, OP_EQ, 0);
+  tt_u64_op(chan->n_cells_recved, OP_EQ, 1);
+  tt_u64_op(chan->n_bytes_recved, OP_EQ, get_cell_network_size(0));
 
   /* Close it */
-  channel_mark_for_close(ch);
-  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSING);
-  chan_test_finish_close(ch);
-  tt_int_op(ch->state, OP_EQ, CHANNEL_STATE_CLOSED);
+  old_count = test_close_called;
+  channel_mark_for_close(chan);
+  tt_int_op(chan->state, OP_EQ, CHANNEL_STATE_CLOSING);
+  tt_int_op(chan->reason_for_closing, OP_EQ, CHANNEL_CLOSE_REQUESTED);
+  tt_int_op(test_close_called, OP_EQ, old_count + 1);
+
+  /* This closes the channe so it calls in the scheduler, make sure of it. */
+  old_count = test_releases_count;
+  chan_test_finish_close(chan);
+  tt_int_op(test_releases_count, OP_EQ, old_count + 1);
+  tt_int_op(chan->state, OP_EQ, CHANNEL_STATE_CLOSED);
+
+  /* The channel will be free, lets make sure it is not accessible. */
+  uint64_t chan_id = chan->global_identifier;
+  tt_ptr_op(channel_find_by_global_id(chan_id), OP_EQ, chan);
   channel_run_cleanup();
-  ch = NULL;
+  chan = channel_find_by_global_id(chan_id);
+  tt_assert(chan == NULL);
 
  done:
-  free_fake_channel(ch);
   tor_free(cell);
-  tor_free(var_cell);
-
-  UNMOCK(scheduler_channel_doesnt_want_writes);
   UNMOCK(scheduler_release_channel);
-
-  return;
 }
 
 /**
@@ -1002,11 +1014,18 @@ test_channel_id_map(void *arg)
 }
 
 struct testcase_t channel_tests[] = {
-  { "dumpstats", test_channel_dumpstats, TT_FORK, NULL, NULL },
-  { "incoming", test_channel_incoming, TT_FORK, NULL, NULL },
-  { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
-  { "lifecycle_2", test_channel_lifecycle_2, TT_FORK, NULL, NULL },
-  { "id_map", test_channel_id_map, TT_FORK, NULL, NULL },
+  { "inbound_cell", test_channel_inbound_cell, TT_FORK,
+    NULL, NULL },
+  { "id_map", test_channel_id_map, TT_FORK,
+    NULL, NULL },
+
+  /* NOT WORKING TEST. */
+  { "dumpstats", test_channel_dumpstats, TT_FORK,
+    NULL, NULL },
+  { "lifecycle", test_channel_lifecycle, TT_FORK,
+    NULL, NULL },
+  { "lifecycle_2", test_channel_lifecycle_2, TT_FORK,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 
