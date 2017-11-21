@@ -3145,9 +3145,13 @@ num_bridges_usable,(void))
 {
   int n_options = 0;
 
-  tor_assert(get_options()->UseBridges);
+  if (BUG(!get_options()->UseBridges)) {
+    return 0;
+  }
   guard_selection_t *gs  = get_guard_selection_info();
-  tor_assert(gs->type == GS_TYPE_BRIDGE);
+  if (BUG(gs->type != GS_TYPE_BRIDGE)) {
+    return 0;
+  }
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
     if (guard->is_reachable == GUARD_REACHABLE_NO)
