@@ -41,6 +41,8 @@ static int test_close_called = 0;
 static int test_chan_should_be_canonical = 0;
 static int test_chan_should_match_target = 0;
 static int test_chan_canonical_should_be_reliable = 0;
+static int test_chan_listener_close_fn_called = 0;
+static int test_chan_listener_fn_called = 0;
 
 static void chan_test_channel_dump_statistics_mock(
     channel_t *chan, int severity);
@@ -456,6 +458,31 @@ test_chan_matches_target(channel_t *chan, const tor_addr_t *target)
     return 1;
   }
   return 0;
+}
+
+static void
+test_chan_listener_close(channel_listener_t *chan)
+{
+  (void) chan;
+  ++test_chan_listener_close_fn_called;
+  return;
+}
+
+static void
+test_chan_listener_fn(channel_listener_t *listener, channel_t *chan)
+{
+  (void) listener;
+  (void) chan;
+
+  ++test_chan_listener_fn_called;
+  return;
+}
+
+static const char *
+test_chan_listener_describe_transport(channel_listener_t *chan)
+{
+  (void) chan;
+  return "Fake listener channel.";
 }
 
 /**
@@ -1539,6 +1566,62 @@ test_channel_for_extend(void *arg)
   free_fake_channel(chan2);
 }
 
+static void
+test_channel_listener(void *arg)
+{
+  int old_count;
+  time_t now = time(NULL);
+  channel_listener_t *chan = NULL;
+
+  (void) arg;
+
+  chan = tor_malloc_zero(sizeof(*chan));
+  tt_assert(chan);
+  channel_init_listener(chan);
+  tt_u64_op(chan->global_identifier, OP_EQ, 1);
+  tt_int_op(chan->timestamp_created, OP_GE, now);
+  chan->close = test_chan_listener_close;
+
+  /* Register it. At this point, it is not open so it will be put in the
+   * finished list. */
+  channel_listener_register(chan);
+  tt_int_op(chan->registered, OP_EQ, 1);
+  channel_listener_unregister(chan);
+
+  /* Register it as listening now thus active. */
+  chan->state = CHANNEL_LISTENER_STATE_LISTENING;
+  channel_listener_register(chan);
+  tt_int_op(chan->registered, OP_EQ, 1);
+
+  /* Set the listener function. */
+  channel_listener_set_listener_fn(chan, test_chan_listener_fn);
+  tt_ptr_op(chan->listener, OP_EQ, test_chan_listener_fn);
+
+  /* Put a channel in the listener incoming list and queue it.
+   * function. By doing this, the listener() handler will be called. */
+  channel_t *in_chan = new_fake_channel();
+  old_count = test_chan_listener_fn_called;
+  channel_listener_queue_incoming(chan, in_chan);
+  free_fake_channel(in_chan);
+  tt_int_op(test_chan_listener_fn_called, OP_EQ, old_count + 1);
+
+  /* Put listener channel in CLOSING state. */
+  old_count = test_chan_listener_close_fn_called;
+  channel_listener_mark_for_close(chan);
+  tt_int_op(test_chan_listener_close_fn_called, OP_EQ, old_count + 1);
+  channel_listener_change_state(chan, CHANNEL_LISTENER_STATE_CLOSED);
+
+  /* Dump stats so we at least hit the code path. */
+  chan->describe_transport = test_chan_listener_describe_transport;
+  /* There is a check for "now > timestamp_created" when dumping the stats so
+   * make sure we go in. */
+  chan->timestamp_created = now - 10;
+  channel_listener_dump_statistics(chan, LOG_INFO);
+
+ done:
+  channel_free_all();
+}
+
 struct testcase_t channel_tests[] = {
   { "inbound_cell", test_channel_inbound_cell, TT_FORK,
     NULL, NULL },
@@ -1557,6 +1640,8 @@ struct testcase_t channel_tests[] = {
   { "duplicates", test_channel_duplicates, TT_FORK,
     NULL, NULL },
   { "get_channel_for_extend", test_channel_for_extend, TT_FORK,
+    NULL, NULL },
+  { "listener", test_channel_listener, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };
