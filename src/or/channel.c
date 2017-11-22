@@ -5,9 +5,8 @@
  * \file channel.c
  *
  * \brief OR/OP-to-OR channel abstraction layer. A channel's job is to
- * transfer cells from Tor instance to Tor instance.
- * Currently, there is only one implementation of the channel abstraction: in
- * channeltls.c.
+ * transfer cells from Tor instance to Tor instance. Currently, there is only
+ * one implementation of the channel abstraction: in channeltls.c.
  *
  * Channels are a higher-level abstraction than or_connection_t: In general,
  * any means that two Tor relays use to exchange cells, or any means that a
@@ -24,16 +23,28 @@
  * connection.
  *
  * Every channel implementation is responsible for being able to transmit
- * cells that are added to it with channel_write_cell() and related functions,
- * and to receive incoming cells with the channel_queue_cell() and related
- * functions.  See the channel_t documentation for more information.
+ * cells that are passed to it
  *
- * When new cells arrive on a channel, they are passed to cell handler
- * functions, which can be set by channel_set_cell_handlers()
- * functions. (Tor's cell handlers are in command.c.)
+ * For *inbound* cells, the entry point is: channel_process_cell(). It takes a
+ * cell and will pass it to the cell handler set by
+ * channel_set_cell_handlers(). Currently, this is passed back to the command
+ * subsystem which is command_process_cell().
  *
- * Tor flushes cells to channels from relay.c in
- * channel_flush_from_first_active_circuit().
+ * NOTE: For now, the seperation between channels and specialized channels
+ * (like channeltls) is not that well defined. So the channeltls layer calls
+ * channel_process_cell() which originally comes from the connection subsytem.
+ * This should be hopefully be fixed with #23993.
+ *
+ * For *outbound* cells, the entry point is: channel_write_packed_cell().
+ * Only packed cells are dequeued from the circuit queue by the scheduler
+ * which uses channel_flush_from_first_active_circuit() to decide which cells
+ * to flush from which circuit on the channel. They are then passed down to
+ * the channel subsystem. This calls the low layer with the function pointer
+ * .write_packed_cell().
+ *
+ * Each specialized channel (currently only channeltls_t) MUST implement a
+ * series of function found in channel_t. See channel.h for more
+ * documentation.
  **/
 
 /*
