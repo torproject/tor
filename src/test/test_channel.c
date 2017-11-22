@@ -33,7 +33,6 @@ static int test_cells_written = 0;
 static int test_doesnt_want_writes_count = 0;
 static int test_dumpstats_calls = 0;
 static int test_has_waiting_cells_count = 0;
-static double test_overhead_estimate = 1.0;
 static int test_releases_count = 0;
 static channel_t *dump_statistics_mock_target = NULL;
 static int dump_statistics_mock_matches = 0;
@@ -43,27 +42,6 @@ static int test_chan_should_match_target = 0;
 static int test_chan_canonical_should_be_reliable = 0;
 static int test_chan_listener_close_fn_called = 0;
 static int test_chan_listener_fn_called = 0;
-
-static void chan_test_channel_dump_statistics_mock(
-    channel_t *chan, int severity);
-static const char * chan_test_describe_transport(channel_t *ch);
-static void chan_test_dumpstats(channel_t *ch, int severity);
-static void chan_test_var_cell_handler(channel_t *ch,
-                                       var_cell_t *var_cell);
-static void chan_test_error(channel_t *ch);
-static void chan_test_finish_close(channel_t *ch);
-static const char * chan_test_get_remote_descr(channel_t *ch, int flags);
-static int chan_test_is_canonical(channel_t *ch, int req);
-static size_t chan_test_num_bytes_queued(channel_t *ch);
-static int chan_test_num_cells_writeable(channel_t *ch);
-static int chan_test_write_cell(channel_t *ch, cell_t *cell);
-static int chan_test_write_packed_cell(channel_t *ch,
-                                       packed_cell_t *packed_cell);
-static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
-static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
-
-static void test_channel_dumpstats(void *arg);
-static void test_channel_lifecycle(void *arg);
 
 static const char *
 chan_test_describe_transport(channel_t *ch)
@@ -201,35 +179,6 @@ chan_test_get_remote_descr(channel_t *ch, int flags)
   return "Fake channel for unit tests; no real endpoint";
 }
 
-static double
-chan_test_get_overhead_estimate(channel_t *ch)
-{
-  tt_assert(ch);
-
- done:
-  return test_overhead_estimate;
-}
-
-static int
-chan_test_is_canonical(channel_t *ch, int req)
-{
-  tt_ptr_op(ch, OP_NE, NULL);
-  tt_assert(req == 0 || req == 1);
-
- done:
-  /* Fake channels are always canonical */
-  return 1;
-}
-
-static size_t
-chan_test_num_bytes_queued(channel_t *ch)
-{
-  tt_assert(ch);
-
- done:
-  return 0;
-}
-
 static int
 chan_test_num_cells_writeable(channel_t *ch)
 {
@@ -237,26 +186,6 @@ chan_test_num_cells_writeable(channel_t *ch)
 
  done:
   return 32;
-}
-
-static int
-chan_test_write_cell(channel_t *ch, cell_t *cell)
-{
-  int rv = 0;
-
-  tt_assert(ch);
-  tt_assert(cell);
-
-  if (test_chan_accept_cells) {
-    /* Free the cell and bump the counter */
-    tor_free(cell);
-    ++test_cells_written;
-    rv = 1;
-  }
-  /* else return 0, we didn't accept it */
-
- done:
-  return rv;
 }
 
 static int
@@ -346,11 +275,8 @@ new_fake_channel(void)
   channel_init(chan);
 
   chan->close = chan_test_close;
-  chan->get_overhead_estimate = chan_test_get_overhead_estimate;
-  chan->get_remote_descr = chan_test_get_remote_descr;
-  chan->num_bytes_queued = chan_test_num_bytes_queued;
   chan->num_cells_writeable = chan_test_num_cells_writeable;
-  chan->write_cell = chan_test_write_cell;
+  chan->get_remote_descr = chan_test_get_remote_descr;
   chan->write_packed_cell = chan_test_write_packed_cell;
   chan->write_var_cell = chan_test_write_var_cell;
   chan->state = CHANNEL_STATE_OPEN;
@@ -406,16 +332,6 @@ scheduler_channel_doesnt_want_writes_mock(channel_t *ch)
   ++test_doesnt_want_writes_count;
 
   return;
-}
-
-/**
- * Counter query for scheduler_release_channel_mock()
- */
-
-int
-get_mock_scheduler_release_channel_count(void)
-{
-  return test_releases_count;
 }
 
 /**
@@ -584,7 +500,8 @@ test_channel_dumpstats(void *arg)
   /* Test channel_dump_statistics */
   ch->describe_transport = chan_test_describe_transport;
   ch->dumpstats = chan_test_dumpstats;
-  ch->is_canonical = chan_test_is_canonical;
+  test_chan_should_be_canonical = 1;
+  ch->is_canonical = test_chan_is_canonical;
   old_count = test_dumpstats_calls;
   channel_dump_statistics(ch, LOG_DEBUG);
   tt_int_op(test_dumpstats_calls, OP_EQ, old_count + 1);
@@ -633,8 +550,6 @@ test_channel_outbound_cell(void *arg)
 
   /* Accept cells to lower layer */
   test_chan_accept_cells = 1;
-  /* Use default overhead factor */
-  test_overhead_estimate = 1.0;
 
   /* Setup a valid circuit to queue a cell. */
   circ = origin_circuit_new();
@@ -768,8 +683,6 @@ test_channel_inbound_cell(void *arg)
 
   /* Accept cells to lower layer */
   test_chan_accept_cells = 1;
-  /* Use default overhead factor */
-  test_overhead_estimate = 1.0;
 
   chan = new_fake_channel();
   tt_assert(chan);
@@ -864,8 +777,6 @@ test_channel_lifecycle(void *arg)
 
   /* Accept cells to lower layer */
   test_chan_accept_cells = 1;
-  /* Use default overhead factor */
-  test_overhead_estimate = 1.0;
 
   ch1 = new_fake_channel();
   tt_assert(ch1);
@@ -965,8 +876,6 @@ test_channel_lifecycle_2(void *arg)
 
   /* Accept cells to lower layer */
   test_chan_accept_cells = 1;
-  /* Use default overhead factor */
-  test_overhead_estimate = 1.0;
 
   ch = new_fake_channel();
   tt_assert(ch);
