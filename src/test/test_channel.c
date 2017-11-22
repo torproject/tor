@@ -6,8 +6,10 @@
 #include "or.h"
 #include "channel.h"
 /* For channel_note_destroy_not_pending */
+#define CIRCUITLIST_PRIVATE
 #include "circuitlist.h"
 #include "circuitmux.h"
+#include "circuitmux_ewma.h"
 /* For var_cell_free */
 #include "connection_or.h"
 /* For packed_cell stuff */
@@ -546,6 +548,146 @@ test_channel_dumpstats(void *arg)
   return;
 }
 
+/* Test outbound cell. The callstack is:
+ *  channel_flush_some_cells()
+ *   -> channel_flush_from_first_active_circuit()
+ *     -> channel_write_packed_cell()
+ *       -> write_packed_cell()
+ *         -> chan->write_packed_cell() fct ptr.
+ *
+ * This test goes from a cell in a circuit up to the channel write handler
+ * that should put them on the connection outbuf. */
+static void
+test_channel_outbound_cell(void *arg)
+{
+  int old_count;
+  channel_t *chan = NULL;
+  packed_cell_t *p_cell = NULL, *p_cell2 = NULL;
+  origin_circuit_t *circ = NULL;
+  cell_queue_t *queue;
+
+  (void) arg;
+
+  /* The channel will be freed so we need to hijack this so the scheduler
+   * doesn't get confused. */
+  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
+
+  /* Accept cells to lower layer */
+  test_chan_accept_cells = 1;
+  /* Use default overhead factor */
+  test_overhead_estimate = 1.0;
+
+  /* Setup a valid circuit to queue a cell. */
+  circ = origin_circuit_new();
+  tt_assert(circ);
+  /* Circuit needs an origin purpose to be considered origin. */
+  TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  TO_CIRCUIT(circ)->n_circ_id = 42;
+  /* This is the outbound test so use the next channel queue. */
+  queue = &TO_CIRCUIT(circ)->n_chan_cells;
+  /* Setup packed cell to queue on the circuit. */
+  p_cell = packed_cell_new();
+  tt_assert(p_cell);
+  p_cell2 = packed_cell_new();
+  tt_assert(p_cell2);
+  /* Setup a channel to put the circuit on. */
+  chan = new_fake_channel();
+  tt_assert(chan);
+  chan->state = CHANNEL_STATE_OPENING;
+  channel_change_state_open(chan);
+  /* Outbound channel. */
+  channel_mark_outgoing(chan);
+  /* Try to register it so we can clean it through the channel cleanup
+   * process. */
+  channel_register(chan);
+  tt_int_op(chan->registered, OP_EQ, 1);
+  /* Set EWMA policy so we can pick it when flushing. */
+  channel_set_cmux_policy_everywhere(&ewma_policy);
+  tt_ptr_op(circuitmux_get_policy(chan->cmux), OP_EQ, &ewma_policy);
+
+  /* Register circuit to the channel circid map which will attach the circuit
+   * to the channel's cmux as well. */
+  circuit_set_n_circid_chan(TO_CIRCUIT(circ), 42, chan);
+  tt_int_op(channel_num_circuits(chan), OP_EQ, 1);
+  tt_assert(!TO_CIRCUIT(circ)->next_active_on_n_chan);
+  tt_assert(!TO_CIRCUIT(circ)->prev_active_on_n_chan);
+  /* Test the cmux state. */
+  tt_ptr_op(TO_CIRCUIT(circ)->n_mux, OP_EQ, chan->cmux);
+  tt_int_op(circuitmux_is_circuit_attached(chan->cmux, TO_CIRCUIT(circ)),
+            OP_EQ, 1);
+
+  /* Flush the channel without any cell on it. */
+  old_count = test_cells_written;
+  ssize_t flushed = channel_flush_some_cells(chan, 1);
+  tt_i64_op(flushed, OP_EQ, 0);
+  tt_int_op(test_cells_written, OP_EQ, old_count);
+  tt_int_op(channel_more_to_flush(chan), OP_EQ, 0);
+  tt_int_op(circuitmux_num_active_circuits(chan->cmux), OP_EQ, 0);
+  tt_int_op(circuitmux_num_cells(chan->cmux), OP_EQ, 0);
+  tt_int_op(circuitmux_is_circuit_active(chan->cmux, TO_CIRCUIT(circ)),
+            OP_EQ, 0);
+  tt_u64_op(chan->n_cells_xmitted, OP_EQ, 0);
+  tt_u64_op(chan->n_bytes_xmitted, OP_EQ, 0);
+
+  /* Queue cell onto the next queue that is the outbound direction. Than
+   * update its cmux so the circuit can be picked when flushing cells. */
+  cell_queue_append(queue, p_cell);
+  p_cell = NULL;
+  tt_int_op(queue->n, OP_EQ, 1);
+  cell_queue_append(queue, p_cell2);
+  p_cell2 = NULL;
+  tt_int_op(queue->n, OP_EQ, 2);
+
+  update_circuit_on_cmux(TO_CIRCUIT(circ), CELL_DIRECTION_OUT);
+  tt_int_op(circuitmux_num_active_circuits(chan->cmux), OP_EQ, 1);
+  tt_int_op(circuitmux_num_cells(chan->cmux), OP_EQ, 2);
+  tt_int_op(circuitmux_is_circuit_active(chan->cmux, TO_CIRCUIT(circ)),
+            OP_EQ, 1);
+
+  /* From this point on, we have a queued cell on an active circuit attached
+   * to the channel's cmux. */
+
+  /* Flush the first cell. This is going to go down the call stack. */
+  old_count = test_cells_written;
+  flushed = channel_flush_some_cells(chan, 1);
+  tt_i64_op(flushed, OP_EQ, 1);
+  tt_int_op(test_cells_written, OP_EQ, old_count + 1);
+  tt_int_op(circuitmux_num_cells(chan->cmux), OP_EQ, 1);
+  tt_int_op(channel_more_to_flush(chan), OP_EQ, 1);
+  /* Circuit should remain active because there is a second cell queued. */
+  tt_int_op(circuitmux_is_circuit_active(chan->cmux, TO_CIRCUIT(circ)),
+            OP_EQ, 1);
+  /* Should still be attached. */
+  tt_int_op(circuitmux_is_circuit_attached(chan->cmux, TO_CIRCUIT(circ)),
+            OP_EQ, 1);
+  tt_u64_op(chan->n_cells_xmitted, OP_EQ, 1);
+  tt_u64_op(chan->n_bytes_xmitted, OP_EQ, get_cell_network_size(0));
+
+  /* Flush second cell. This is going to go down the call stack. */
+  old_count = test_cells_written;
+  flushed = channel_flush_some_cells(chan, 1);
+  tt_i64_op(flushed, OP_EQ, 1);
+  tt_int_op(test_cells_written, OP_EQ, old_count + 1);
+  tt_int_op(circuitmux_num_cells(chan->cmux), OP_EQ, 0);
+  tt_int_op(channel_more_to_flush(chan), OP_EQ, 0);
+  /* No more cells should make the circuit inactive. */
+  tt_int_op(circuitmux_is_circuit_active(chan->cmux, TO_CIRCUIT(circ)),
+            OP_EQ, 0);
+  /* Should still be attached. */
+  tt_int_op(circuitmux_is_circuit_attached(chan->cmux, TO_CIRCUIT(circ)),
+            OP_EQ, 1);
+  tt_u64_op(chan->n_cells_xmitted, OP_EQ, 2);
+  tt_u64_op(chan->n_bytes_xmitted, OP_EQ, get_cell_network_size(0) * 2);
+
+ done:
+  if (circ) {
+    circuit_free(TO_CIRCUIT(circ));
+  }
+  tor_free(p_cell);
+  channel_free_all();
+  UNMOCK(scheduler_release_channel);
+}
+
 /* Test inbound cell. The callstack is:
  *  channel_process_cell()
  *    -> chan->cell_handler()
@@ -1015,6 +1157,8 @@ test_channel_id_map(void *arg)
 
 struct testcase_t channel_tests[] = {
   { "inbound_cell", test_channel_inbound_cell, TT_FORK,
+    NULL, NULL },
+  { "outbound_cell", test_channel_outbound_cell, TT_FORK,
     NULL, NULL },
   { "id_map", test_channel_id_map, TT_FORK,
     NULL, NULL },
