@@ -8,6 +8,19 @@ Changes in version 0.3.2.5-alpha - 2017-11-22
   backported to stable Tor versions if no additional bugs are found
   in them.
 
+  o Major bugfixes (bootstrapping):
+    - Fetch descriptors aggressively whenever we lack enough to build
+      circuits, regardless of how many descriptors we are missing.
+      Previously, we would delay launching the fetch when we had fewer
+      than 15 missing descriptors, even if some of those descriptors
+      were blocking circuits from building. Fixes bug 23985; bugfix on
+      0.1.1.11-alpha. The effects of this bug became worse in
+      0.3.0.3-alpha, when we began treating missing descriptors from our
+      primary guards as a reason to delay circuits.
+    - Don't try fetching microdescriptors from relays that have failed
+      to deliver them in the past. Fixes bug 23817; bugfix
+      on 0.3.0.1-alpha.
+
   o Minor features (directory authority):
     - Make the "Exit" flag assignment only depend on whether the exit
       policy allows connections to ports 80 and 443. Previously relays
@@ -28,19 +41,6 @@ Changes in version 0.3.2.5-alpha - 2017-11-22
       ticket 24097.
     - Improve the message we log when re-enabling circuit build timeouts
       after having received a consensus. Closes ticket 20963.
-
-  o Major bugfixes (bootstrapping):
-    - Fetch descriptors aggressively whenever we lack enough to build
-      circuits, regardless of how many descriptors we are missing.
-      Previously, we would delay launching the fetch when we had fewer
-      than 15 missing descriptors, even if some of those descriptors
-      were blocking circuits from building. Fixes bug 23985; bugfix on
-      0.1.1.11-alpha. The effects of this bug became worse in
-      0.3.0.3-alpha, when we began treating missing descriptors from our
-      primary guards as a reason to delay circuits.
-    - Don't try fetching microdescriptors from relays that have failed
-      to deliver them in the past. Fixes bug 23817; bugfix
-      on 0.3.0.1-alpha.
 
   o Minor bugfixes (compilation):
     - Fix a memory leak warning in one of the libevent-related
@@ -93,7 +93,8 @@ Changes in version 0.3.2.5-alpha - 2017-11-22
       circuit around longer instead of timing out and reopening new ones
       constantly. Fixes bug 23681; bugfix on 0.2.4.8-alpha.
     - Rename the consensus parameter "hsdir-interval" to "hsdir_interval"
-      so it matches dir-spec.txt. Fixes bug 24262; bugfix on 0.3.1.1-alpha.
+      so it matches dir-spec.txt. Fixes bug 24262; bugfix
+      on 0.3.1.1-alpha.
     - Silence a warning about failed v3 onion descriptor uploads that
       can happen naturally under certain edge cases. Fixes part of bug
       23662; bugfix on 0.3.2.1-alpha.
