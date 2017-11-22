@@ -440,8 +440,6 @@ perform_channel_state_tests(int KISTSchedRunInterval, int sched_type)
 
   /* Start it off in OPENING */
   ch1->state = CHANNEL_STATE_OPENING;
-  /* We'll need a cmux */
-  ch1->cmux = circuitmux_alloc();
   /* Try to register it */
   channel_register(ch1);
   tt_assert(ch1->registered);
@@ -453,7 +451,6 @@ perform_channel_state_tests(int KISTSchedRunInterval, int sched_type)
   ch2 = new_fake_channel();
   tt_assert(ch2);
   ch2->state = CHANNEL_STATE_OPENING;
-  ch2->cmux = circuitmux_alloc();
   channel_register(ch2);
   tt_assert(ch2->registered);
 
@@ -652,8 +649,6 @@ test_scheduler_loop_vanilla(void *arg)
 
   /* Start it off in OPENING */
   ch1->state = CHANNEL_STATE_OPENING;
-  /* We'll need a cmux */
-  ch1->cmux = circuitmux_alloc();
   /* Try to register it */
   channel_register(ch1);
   tt_assert(ch1->registered);
@@ -668,7 +663,6 @@ test_scheduler_loop_vanilla(void *arg)
   ch2->magic = TLS_CHAN_MAGIC;
   tt_assert(ch2);
   ch2->state = CHANNEL_STATE_OPENING;
-  ch2->cmux = circuitmux_alloc();
   channel_register(ch2);
   tt_assert(ch2->registered);
   /*
@@ -819,7 +813,6 @@ test_scheduler_loop_kist(void *arg)
   tt_assert(ch1);
   ch1->magic = TLS_CHAN_MAGIC;
   ch1->state = CHANNEL_STATE_OPENING;
-  ch1->cmux = circuitmux_alloc();
   channel_register(ch1);
   tt_assert(ch1->registered);
   channel_change_state_open(ch1);
@@ -830,7 +823,6 @@ test_scheduler_loop_kist(void *arg)
   tt_assert(ch2);
   ch2->magic = TLS_CHAN_MAGIC;
   ch2->state = CHANNEL_STATE_OPENING;
-  ch2->cmux = circuitmux_alloc();
   channel_register(ch2);
   tt_assert(ch2->registered);
   channel_change_state_open(ch2);
