@@ -812,8 +812,6 @@ test_channel_lifecycle(void *arg)
   tt_assert(ch1);
   /* Start it off in OPENING */
   ch1->state = CHANNEL_STATE_OPENING;
-  /* We'll need a cmux */
-  ch1->cmux = circuitmux_alloc();
 
   /* Try to register it */
   channel_register(ch1);
@@ -828,14 +826,10 @@ test_channel_lifecycle(void *arg)
   /* Move it to OPEN and flush */
   channel_change_state_open(ch1);
 
-  /* Queue should drain */
-  tt_int_op(old_count + 1, OP_EQ, test_cells_written);
-
-  /* Get another one */
+/* Get another one */
   ch2 = new_fake_channel();
   tt_assert(ch2);
   ch2->state = CHANNEL_STATE_OPENING;
-  ch2->cmux = circuitmux_alloc();
 
   /* Register */
   channel_register(ch2);
@@ -882,11 +876,10 @@ test_channel_lifecycle(void *arg)
  done:
   free_fake_channel(ch1);
   free_fake_channel(ch2);
+  tor_free(p_cell);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
   UNMOCK(scheduler_release_channel);
-
-  return;
 }
 
 /**
@@ -920,8 +913,6 @@ test_channel_lifecycle_2(void *arg)
   tt_assert(ch);
   /* Start it off in OPENING */
   ch->state = CHANNEL_STATE_OPENING;
-  /* The full lifecycle test needs a cmux */
-  ch->cmux = circuitmux_alloc();
 
   /* Try to register it */
   channel_register(ch);
@@ -941,7 +932,6 @@ test_channel_lifecycle_2(void *arg)
   ch = new_fake_channel();
   tt_assert(ch);
   ch->state = CHANNEL_STATE_OPENING;
-  ch->cmux = circuitmux_alloc();
   channel_register(ch);
   tt_assert(ch->registered);
 
@@ -960,7 +950,6 @@ test_channel_lifecycle_2(void *arg)
   ch = new_fake_channel();
   tt_assert(ch);
   ch->state = CHANNEL_STATE_OPENING;
-  ch->cmux = circuitmux_alloc();
   channel_register(ch);
   tt_assert(ch->registered);
 
@@ -989,7 +978,6 @@ test_channel_lifecycle_2(void *arg)
   ch = new_fake_channel();
   tt_assert(ch);
   ch->state = CHANNEL_STATE_OPENING;
-  ch->cmux = circuitmux_alloc();
   channel_register(ch);
   tt_assert(ch->registered);
 
@@ -1015,7 +1003,6 @@ test_channel_lifecycle_2(void *arg)
   ch = new_fake_channel();
   tt_assert(ch);
   ch->state = CHANNEL_STATE_OPENING;
-  ch->cmux = circuitmux_alloc();
   channel_register(ch);
   tt_assert(ch->registered);
 
@@ -1162,13 +1149,13 @@ struct testcase_t channel_tests[] = {
     NULL, NULL },
   { "id_map", test_channel_id_map, TT_FORK,
     NULL, NULL },
-
-  /* NOT WORKING TEST. */
-  { "dumpstats", test_channel_dumpstats, TT_FORK,
-    NULL, NULL },
   { "lifecycle", test_channel_lifecycle, TT_FORK,
     NULL, NULL },
   { "lifecycle_2", test_channel_lifecycle_2, TT_FORK,
+    NULL, NULL },
+
+  /* NOT WORKING TEST. */
+  { "dumpstats", test_channel_dumpstats, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };
