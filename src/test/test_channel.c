@@ -17,8 +17,10 @@
 #include "relay.h"
 /* For init/free stuff */
 #include "scheduler.h"
+#include "networkstatus.h"
 
 /* Test suite stuff */
+#include "log_test_helpers.h"
 #include "test.h"
 #include "fakechans.h"
 
@@ -36,6 +38,7 @@ static int test_releases_count = 0;
 static channel_t *dump_statistics_mock_target = NULL;
 static int dump_statistics_mock_matches = 0;
 static int test_close_called = 0;
+static int test_chan_should_be_canonical = 0;
 
 static void chan_test_channel_dump_statistics_mock(
     channel_t *chan, int severity);
@@ -424,6 +427,18 @@ scheduler_release_channel_mock(channel_t *ch)
   ++test_releases_count;
 
   return;
+}
+
+static int
+test_chan_is_canonical(channel_t *chan, int req)
+{
+  tor_assert(chan);
+  (void) req;
+
+  if (test_chan_should_be_canonical) {
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -1279,6 +1294,90 @@ test_channel_state(void *arg)
   ;
 }
 
+static networkstatus_t *mock_ns = NULL;
+
+static networkstatus_t *
+mock_networkstatus_get_latest_consensus(void)
+{
+  return mock_ns;
+}
+
+static void
+test_channel_duplicates(void *arg)
+{
+  channel_t *chan = NULL;
+  routerstatus_t rs;
+
+  (void) arg;
+
+  setup_full_capture_of_logs(LOG_INFO);
+  /* Try a flat call with channel nor connections. */
+  channel_check_for_duplicates();
+  expect_log_msg_containing(
+    "Found 0 connections to 0 relays. Found 0 current canonical "
+    "connections, in 0 of which we were a non-canonical peer. "
+    "0 relays had more than 1 connection, 0 had more than 2, and "
+    "0 had more than 4 connections.");
+
+  mock_ns = tor_malloc_zero(sizeof(*mock_ns));
+  mock_ns->routerstatus_list = smartlist_new();
+  MOCK(networkstatus_get_latest_consensus,
+       mock_networkstatus_get_latest_consensus);
+
+  chan = new_fake_channel();
+  tt_assert(chan);
+  chan->is_canonical = test_chan_is_canonical;
+  memset(chan->identity_digest, 'A', sizeof(chan->identity_digest));
+  channel_add_to_digest_map(chan);
+  tt_ptr_op(channel_find_by_remote_identity(chan->identity_digest, NULL),
+            OP_EQ, chan);
+
+  /* No relay has been associated with this channel. */
+  channel_check_for_duplicates();
+  expect_log_msg_containing(
+    "Found 0 connections to 0 relays. Found 0 current canonical "
+    "connections, in 0 of which we were a non-canonical peer. "
+    "0 relays had more than 1 connection, 0 had more than 2, and "
+    "0 had more than 4 connections.");
+
+  /* Associate relay to this connection in the consensus. */
+  memset(&rs, 0, sizeof(rs));
+  memset(rs.identity_digest, 'A', sizeof(rs.identity_digest));
+  smartlist_add(mock_ns->routerstatus_list, &rs);
+
+  /* Non opened channel. */
+  chan->state = CHANNEL_STATE_CLOSING;
+  channel_check_for_duplicates();
+  expect_log_msg_containing(
+    "Found 0 connections to 0 relays. Found 0 current canonical "
+    "connections, in 0 of which we were a non-canonical peer. "
+    "0 relays had more than 1 connection, 0 had more than 2, and "
+    "0 had more than 4 connections.");
+  chan->state = CHANNEL_STATE_OPEN;
+
+  channel_check_for_duplicates();
+  expect_log_msg_containing(
+    "Found 1 connections to 1 relays. Found 0 current canonical "
+    "connections, in 0 of which we were a non-canonical peer. "
+    "0 relays had more than 1 connection, 0 had more than 2, and "
+    "0 had more than 4 connections.");
+
+  test_chan_should_be_canonical = 1;
+  channel_check_for_duplicates();
+  expect_log_msg_containing(
+    "Found 1 connections to 1 relays. Found 1 current canonical "
+    "connections, in 1 of which we were a non-canonical peer. "
+    "0 relays had more than 1 connection, 0 had more than 2, and "
+    "0 had more than 4 connections.");
+  teardown_capture_of_logs();
+
+ done:
+  free_fake_channel(chan);
+  smartlist_clear(mock_ns->routerstatus_list);
+  networkstatus_vote_free(mock_ns);
+  UNMOCK(networkstatus_get_latest_consensus);
+}
+
 struct testcase_t channel_tests[] = {
   { "inbound_cell", test_channel_inbound_cell, TT_FORK,
     NULL, NULL },
@@ -1293,6 +1392,8 @@ struct testcase_t channel_tests[] = {
   { "dumpstats", test_channel_dumpstats, TT_FORK,
     NULL, NULL },
   { "state", test_channel_state, TT_FORK,
+    NULL, NULL },
+  { "duplicates", test_channel_duplicates, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };

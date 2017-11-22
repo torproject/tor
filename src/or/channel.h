@@ -431,6 +431,8 @@ void channel_set_cmux_policy_everywhere(circuitmux_policy_t *pol);
 
 #ifdef CHANNEL_PRIVATE_
 
+STATIC void channel_add_to_digest_map(channel_t *chan);
+
 #endif /* defined(CHANNEL_PRIVATE_) */
 
 /* Channel operations for subclasses and internal use only */

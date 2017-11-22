@@ -149,7 +149,6 @@ HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
              channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
 
 /* Functions to maintain the digest map */
-static void channel_add_to_digest_map(channel_t *chan);
 static void channel_remove_from_digest_map(channel_t *chan);
 
 static void channel_force_free(channel_t *chan);
@@ -551,7 +550,7 @@ channel_listener_unregister(channel_listener_t *chan_l)
  * already exist.
  */
 
-static void
+STATIC void
 channel_add_to_digest_map(channel_t *chan)
 {
   channel_idmap_entry_t *ent, search;
