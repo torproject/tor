@@ -435,6 +435,7 @@ static void
 test_channel_dumpstats(void *arg)
 {
   channel_t *ch = NULL;
+  cell_t *cell = NULL;
   packed_cell_t *p_cell = NULL;
   int old_count;
 
@@ -449,7 +450,6 @@ test_channel_dumpstats(void *arg)
   /* Set up a new fake channel */
   ch = new_fake_channel();
   tt_assert(ch);
-  ch->cmux = circuitmux_alloc();
 
   /* Try to register it */
   channel_register(ch);
@@ -492,13 +492,12 @@ test_channel_dumpstats(void *arg)
   /* Now make another channel */
   ch = new_fake_channel();
   tt_assert(ch);
-  ch->cmux = circuitmux_alloc();
   channel_register(ch);
-  tt_assert(ch->registered);
+  tt_int_op(ch->registered, OP_EQ, 1);
   /* Lie about its age so dumpstats gets coverage for rate calculations */
   ch->timestamp_created = time(NULL) - 30;
-  tt_assert(ch->timestamp_created > 0);
-  tt_assert(time(NULL) > ch->timestamp_created);
+  tt_int_op(ch->timestamp_created, OP_GT, 0);
+  tt_int_op(time(NULL), OP_GT, ch->timestamp_created);
 
   /* Put cells through it both ways to make the counters non-zero */
   p_cell = packed_cell_new();
@@ -506,8 +505,8 @@ test_channel_dumpstats(void *arg)
   old_count = test_cells_written;
   channel_write_packed_cell(ch, p_cell);
   tt_int_op(test_cells_written, OP_EQ, old_count + 1);
-  tt_assert(ch->n_bytes_xmitted > 0);
-  tt_assert(ch->n_cells_xmitted > 0);
+  tt_u64_op(ch->n_bytes_xmitted, OP_GT, 0);
+  tt_u64_op(ch->n_cells_xmitted, OP_GT, 0);
 
   /* Receive path */
   channel_set_cell_handlers(ch,
@@ -516,12 +515,12 @@ test_channel_dumpstats(void *arg)
   tt_ptr_op(channel_get_cell_handler(ch), OP_EQ, chan_test_cell_handler);
   tt_ptr_op(channel_get_var_cell_handler(ch), OP_EQ,
             chan_test_var_cell_handler);
-  p_cell = packed_cell_new();
+  cell = tor_malloc_zero(sizeof(*cell));
   old_count = test_chan_fixed_cells_recved;
-  channel_write_packed_cell(ch, p_cell);
+  channel_process_cell(ch, cell);
   tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
-  tt_assert(ch->n_bytes_recved > 0);
-  tt_assert(ch->n_cells_recved > 0);
+  tt_u64_op(ch->n_bytes_recved, OP_GT, 0);
+  tt_u64_op(ch->n_cells_recved, OP_GT, 0);
 
   /* Test channel_dump_statistics */
   ch->describe_transport = chan_test_describe_transport;
@@ -541,6 +540,7 @@ test_channel_dumpstats(void *arg)
 
  done:
   free_fake_channel(ch);
+  tor_free(cell);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
   UNMOCK(scheduler_release_channel);
@@ -1153,8 +1153,6 @@ struct testcase_t channel_tests[] = {
     NULL, NULL },
   { "lifecycle_2", test_channel_lifecycle_2, TT_FORK,
     NULL, NULL },
-
-  /* NOT WORKING TEST. */
   { "dumpstats", test_channel_dumpstats, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
