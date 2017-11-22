@@ -1142,6 +1142,143 @@ test_channel_id_map(void *arg)
 #undef N_CHAN
 }
 
+static void
+test_channel_state(void *arg)
+{
+  (void) arg;
+
+  /* Test state validity. */
+  tt_int_op(channel_state_is_valid(CHANNEL_STATE_CLOSED), OP_EQ, 1);
+  tt_int_op(channel_state_is_valid(CHANNEL_STATE_CLOSING), OP_EQ, 1);
+  tt_int_op(channel_state_is_valid(CHANNEL_STATE_ERROR), OP_EQ, 1);
+  tt_int_op(channel_state_is_valid(CHANNEL_STATE_OPEN), OP_EQ, 1);
+  tt_int_op(channel_state_is_valid(CHANNEL_STATE_OPENING), OP_EQ, 1);
+  tt_int_op(channel_state_is_valid(CHANNEL_STATE_MAINT), OP_EQ, 1);
+  tt_int_op(channel_state_is_valid(CHANNEL_STATE_LAST), OP_EQ, 0);
+  tt_int_op(channel_state_is_valid(INT_MAX), OP_EQ, 0);
+
+  /* Test listener state validity. */
+  tt_int_op(channel_listener_state_is_valid(CHANNEL_LISTENER_STATE_CLOSED),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_is_valid(CHANNEL_LISTENER_STATE_LISTENING),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_is_valid(CHANNEL_LISTENER_STATE_CLOSING),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_is_valid(CHANNEL_LISTENER_STATE_ERROR),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_is_valid(CHANNEL_LISTENER_STATE_LAST),
+            OP_EQ, 0);
+  tt_int_op(channel_listener_state_is_valid(INT_MAX), OP_EQ, 0);
+
+  /* Test state transition. */
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_CLOSED,
+                                         CHANNEL_STATE_OPENING), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_CLOSED,
+                                         CHANNEL_STATE_ERROR), OP_EQ, 0);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_CLOSING,
+                                         CHANNEL_STATE_ERROR), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_CLOSING,
+                                         CHANNEL_STATE_CLOSED), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_CLOSING,
+                                         CHANNEL_STATE_OPEN), OP_EQ, 0);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_MAINT,
+                                         CHANNEL_STATE_CLOSING), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_MAINT,
+                                         CHANNEL_STATE_ERROR), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_MAINT,
+                                         CHANNEL_STATE_OPEN), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_MAINT,
+                                         CHANNEL_STATE_OPENING), OP_EQ, 0);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_OPENING,
+                                         CHANNEL_STATE_OPEN), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_OPENING,
+                                         CHANNEL_STATE_CLOSING), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_OPENING,
+                                         CHANNEL_STATE_ERROR), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_OPEN,
+                                         CHANNEL_STATE_ERROR), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_OPEN,
+                                         CHANNEL_STATE_CLOSING), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_OPEN,
+                                         CHANNEL_STATE_ERROR), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_OPEN,
+                                         CHANNEL_STATE_MAINT), OP_EQ, 1);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_LAST,
+                                         CHANNEL_STATE_MAINT), OP_EQ, 0);
+  tt_int_op(channel_state_can_transition(CHANNEL_STATE_LAST, INT_MAX),
+            OP_EQ, 0);
+
+  /* Test listener state transition. */
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_CLOSED,
+                                       CHANNEL_LISTENER_STATE_LISTENING),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_CLOSED,
+                                       CHANNEL_LISTENER_STATE_ERROR),
+            OP_EQ, 0);
+
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_CLOSING,
+                                       CHANNEL_LISTENER_STATE_CLOSED),
+            OP_EQ, 1);
+
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_CLOSING,
+                                       CHANNEL_LISTENER_STATE_ERROR),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_ERROR,
+                                       CHANNEL_LISTENER_STATE_CLOSING),
+            OP_EQ, 0);
+
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_LISTENING,
+                                       CHANNEL_LISTENER_STATE_CLOSING),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_LISTENING,
+                                       CHANNEL_LISTENER_STATE_ERROR),
+            OP_EQ, 1);
+  tt_int_op(channel_listener_state_can_transition(
+                                       CHANNEL_LISTENER_STATE_LAST,
+                                       INT_MAX),
+            OP_EQ, 0);
+
+  /* Test state string. */
+  tt_str_op(channel_state_to_string(CHANNEL_STATE_CLOSING), OP_EQ,
+            "closing");
+  tt_str_op(channel_state_to_string(CHANNEL_STATE_ERROR), OP_EQ,
+            "channel error");
+  tt_str_op(channel_state_to_string(CHANNEL_STATE_CLOSED), OP_EQ,
+            "closed");
+  tt_str_op(channel_state_to_string(CHANNEL_STATE_OPEN), OP_EQ,
+            "open");
+  tt_str_op(channel_state_to_string(CHANNEL_STATE_OPENING), OP_EQ,
+            "opening");
+  tt_str_op(channel_state_to_string(CHANNEL_STATE_MAINT), OP_EQ,
+            "temporarily suspended for maintenance");
+  tt_str_op(channel_state_to_string(CHANNEL_STATE_LAST), OP_EQ,
+            "unknown or invalid channel state");
+  tt_str_op(channel_state_to_string(INT_MAX), OP_EQ,
+            "unknown or invalid channel state");
+
+  /* Test listener state string. */
+  tt_str_op(channel_listener_state_to_string(CHANNEL_LISTENER_STATE_CLOSING),
+            OP_EQ, "closing");
+  tt_str_op(channel_listener_state_to_string(CHANNEL_LISTENER_STATE_ERROR),
+            OP_EQ, "channel listener error");
+  tt_str_op(channel_listener_state_to_string(CHANNEL_LISTENER_STATE_LISTENING),
+            OP_EQ, "listening");
+  tt_str_op(channel_listener_state_to_string(CHANNEL_LISTENER_STATE_LAST),
+            OP_EQ, "unknown or invalid channel listener state");
+  tt_str_op(channel_listener_state_to_string(INT_MAX),
+            OP_EQ, "unknown or invalid channel listener state");
+
+ done:
+  ;
+}
+
 struct testcase_t channel_tests[] = {
   { "inbound_cell", test_channel_inbound_cell, TT_FORK,
     NULL, NULL },
@@ -1154,6 +1291,8 @@ struct testcase_t channel_tests[] = {
   { "lifecycle_2", test_channel_lifecycle_2, TT_FORK,
     NULL, NULL },
   { "dumpstats", test_channel_dumpstats, TT_FORK,
+    NULL, NULL },
+  { "state", test_channel_state, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };
