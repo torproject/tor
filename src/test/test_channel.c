@@ -39,6 +39,8 @@ static channel_t *dump_statistics_mock_target = NULL;
 static int dump_statistics_mock_matches = 0;
 static int test_close_called = 0;
 static int test_chan_should_be_canonical = 0;
+static int test_chan_should_match_target = 0;
+static int test_chan_canonical_should_be_reliable = 0;
 
 static void chan_test_channel_dump_statistics_mock(
     channel_t *chan, int severity);
@@ -433,9 +435,24 @@ static int
 test_chan_is_canonical(channel_t *chan, int req)
 {
   tor_assert(chan);
-  (void) req;
+
+  if (req && test_chan_canonical_should_be_reliable) {
+    return 1;
+  }
 
   if (test_chan_should_be_canonical) {
+    return 1;
+  }
+  return 0;
+}
+
+static int
+test_chan_matches_target(channel_t *chan, const tor_addr_t *target)
+{
+  (void) chan;
+  (void) target;
+
+  if (test_chan_should_match_target) {
     return 1;
   }
   return 0;
@@ -1378,6 +1395,150 @@ test_channel_duplicates(void *arg)
   UNMOCK(networkstatus_get_latest_consensus);
 }
 
+static void
+test_channel_for_extend(void *arg)
+{
+  channel_t *chan1 = NULL, *chan2 = NULL;
+  channel_t *ret_chan = NULL;
+  char digest[DIGEST_LEN];
+  ed25519_public_key_t ed_id;
+  tor_addr_t addr;
+  const char *msg;
+  int launch;
+  time_t now = time(NULL);
+
+  (void) arg;
+
+  memset(digest, 'A', sizeof(digest));
+  memset(&ed_id, 'B', sizeof(ed_id));
+
+  chan1 = new_fake_channel();
+  tt_assert(chan1);
+  /* Need to be registered to get added to the id map. */
+  channel_register(chan1);
+  tt_int_op(chan1->registered, OP_EQ, 1);
+  /* We need those for the test. */
+  chan1->is_canonical = test_chan_is_canonical;
+  chan1->matches_target = test_chan_matches_target;
+  chan1->timestamp_created = now - 9;
+
+  chan2 = new_fake_channel();
+  tt_assert(chan2);
+  /* Need to be registered to get added to the id map. */
+  channel_register(chan2);
+  tt_int_op(chan2->registered, OP_EQ, 1);
+  /* We need those for the test. */
+  chan2->is_canonical = test_chan_is_canonical;
+  chan2->matches_target = test_chan_matches_target;
+  /* Make it older than chan1. */
+  chan2->timestamp_created = chan1->timestamp_created - 1;
+
+  /* Set channel identities and add it to the channel map. The last one to be
+   * added is made the first one in the list so the lookup will always return
+   * that one first. */
+  channel_set_identity_digest(chan2, digest, &ed_id);
+  channel_set_identity_digest(chan1, digest, &ed_id);
+  tt_ptr_op(channel_find_by_remote_identity(digest, NULL), OP_EQ, chan1);
+  tt_ptr_op(channel_find_by_remote_identity(digest, &ed_id), OP_EQ, chan1);
+
+  /* The expected result is chan2 because it is older than chan1. */
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(ret_chan);
+  tt_ptr_op(ret_chan, OP_EQ, chan2);
+  tt_int_op(launch, OP_EQ, 0);
+  tt_str_op(msg, OP_EQ, "Connection is fine; using it.");
+
+  /* Switch that around from previous test. */
+  chan2->timestamp_created = chan1->timestamp_created + 1;
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(ret_chan);
+  tt_ptr_op(ret_chan, OP_EQ, chan1);
+  tt_int_op(launch, OP_EQ, 0);
+  tt_str_op(msg, OP_EQ, "Connection is fine; using it.");
+
+  /* Same creation time, num circuits will be used and they both have 0 so the
+   * channel 2 should be picked due to how channel_is_better() work. */
+  chan2->timestamp_created = chan1->timestamp_created;
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(ret_chan);
+  tt_ptr_op(ret_chan, OP_EQ, chan1);
+  tt_int_op(launch, OP_EQ, 0);
+  tt_str_op(msg, OP_EQ, "Connection is fine; using it.");
+
+  /* For the rest of the tests, we need channel 1 to be the older. */
+  chan2->timestamp_created = chan1->timestamp_created + 1;
+
+  /* Condemned the older channel. */
+  chan1->state = CHANNEL_STATE_CLOSING;
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(ret_chan);
+  tt_ptr_op(ret_chan, OP_EQ, chan2);
+  tt_int_op(launch, OP_EQ, 0);
+  tt_str_op(msg, OP_EQ, "Connection is fine; using it.");
+  chan1->state = CHANNEL_STATE_OPEN;
+
+  /* Make the older channel a client one. */
+  channel_mark_client(chan1);
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(ret_chan);
+  tt_ptr_op(ret_chan, OP_EQ, chan2);
+  tt_int_op(launch, OP_EQ, 0);
+  tt_str_op(msg, OP_EQ, "Connection is fine; using it.");
+  channel_clear_client(chan1);
+
+  /* Non matching ed identity with valid digest. */
+  ed25519_public_key_t dumb_ed_id = {0};
+  ret_chan = channel_get_for_extend(digest, &dumb_ed_id, &addr, &msg,
+                                    &launch);
+  tt_assert(!ret_chan);
+  tt_str_op(msg, OP_EQ, "Not connected. Connecting.");
+  tt_int_op(launch, OP_EQ, 1);
+
+  /* Opening channel, we'll check if the target address matches. */
+  test_chan_should_match_target = 1;
+  chan1->state = CHANNEL_STATE_OPENING;
+  chan2->state = CHANNEL_STATE_OPENING;
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(!ret_chan);
+  tt_str_op(msg, OP_EQ, "Connection in progress; waiting.");
+  tt_int_op(launch, OP_EQ, 0);
+  chan1->state = CHANNEL_STATE_OPEN;
+  chan2->state = CHANNEL_STATE_OPEN;
+
+  /* Mark channel 1 as bad for circuits. */
+  channel_mark_bad_for_new_circs(chan1);
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(ret_chan);
+  tt_ptr_op(ret_chan, OP_EQ, chan2);
+  tt_int_op(launch, OP_EQ, 0);
+  tt_str_op(msg, OP_EQ, "Connection is fine; using it.");
+  chan1->is_bad_for_new_circs = 0;
+
+  /* Mark both channels as unusable. */
+  channel_mark_bad_for_new_circs(chan1);
+  channel_mark_bad_for_new_circs(chan2);
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(!ret_chan);
+  tt_str_op(msg, OP_EQ, "Connections all too old, or too non-canonical. "
+                        " Launching a new one.");
+  tt_int_op(launch, OP_EQ, 1);
+  chan1->is_bad_for_new_circs = 0;
+  chan2->is_bad_for_new_circs = 0;
+
+  /* Non canonical channels. */
+  test_chan_should_match_target = 0;
+  test_chan_canonical_should_be_reliable = 1;
+  ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
+  tt_assert(!ret_chan);
+  tt_str_op(msg, OP_EQ, "Connections all too old, or too non-canonical. "
+                        " Launching a new one.");
+  tt_int_op(launch, OP_EQ, 1);
+
+ done:
+  free_fake_channel(chan1);
+  free_fake_channel(chan2);
+}
+
 struct testcase_t channel_tests[] = {
   { "inbound_cell", test_channel_inbound_cell, TT_FORK,
     NULL, NULL },
@@ -1394,6 +1555,8 @@ struct testcase_t channel_tests[] = {
   { "state", test_channel_state, TT_FORK,
     NULL, NULL },
   { "duplicates", test_channel_duplicates, TT_FORK,
+    NULL, NULL },
+  { "get_channel_for_extend", test_channel_for_extend, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };
