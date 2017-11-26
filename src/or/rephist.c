@@ -1811,7 +1811,7 @@ static time_t last_prediction_add_time=0;
 int
 predicted_ports_prediction_time_remaining(time_t now)
 {
-  time_t idle_delta = now - last_prediction_add_time;
+  time_t idle_delta;
 
   /* Protect against overflow of return value. This can happen if the clock
    * jumps backwards in time. Update the last prediction time (aka last
@@ -1821,6 +1821,8 @@ predicted_ports_prediction_time_remaining(time_t now)
   if (last_prediction_add_time > now) {
     last_prediction_add_time = now;
     idle_delta = 0;
+  } else {
+    idle_delta = now - last_prediction_add_time;
   }
 
   /* Protect against underflow of the return value. This can happen for very
