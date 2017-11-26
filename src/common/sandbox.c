@@ -1393,10 +1393,6 @@ sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)
   sandbox_cfg_t *elem = NULL;
 
   elem = new_element(SCMP_stat, file);
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
 
   elem->next = *cfg;
   *cfg = elem;
@@ -1410,10 +1406,6 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
   sandbox_cfg_t *elem = NULL;
 
   elem = new_element(SCMP_SYS(open), file);
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
 
   elem->next = *cfg;
   *cfg = elem;
@@ -1427,10 +1419,6 @@ sandbox_cfg_allow_chmod_filename(sandbox_cfg_t **cfg, char *file)
   sandbox_cfg_t *elem = NULL;
 
   elem = new_element(SCMP_SYS(chmod), file);
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
 
   elem->next = *cfg;
   *cfg = elem;
@@ -1444,10 +1432,6 @@ sandbox_cfg_allow_chown_filename(sandbox_cfg_t **cfg, char *file)
   sandbox_cfg_t *elem = NULL;
 
   elem = new_element(SCMP_SYS(chown), file);
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
 
   elem->next = *cfg;
   *cfg = elem;
@@ -1462,11 +1446,6 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
 
   elem = new_element2(SCMP_SYS(rename), file1, file2);
 
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
-
   elem->next = *cfg;
   *cfg = elem;
 
@@ -1479,10 +1458,6 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
   sandbox_cfg_t *elem = NULL;
 
   elem = new_element(SCMP_SYS(openat), file);
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
 
   elem->next = *cfg;
   *cfg = elem;
