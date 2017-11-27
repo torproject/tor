@@ -1,0 +1,4 @@
+  o Minor features (directory authority):
+    - Add an IPv6 address for the "bastet" directory authority.
+      Closes ticket 24394.
+
