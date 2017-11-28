@@ -4,6 +4,7 @@ version = "0.0.1"
 dependencies = [
  "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "tor_allocate 0.0.1",
+ "tor_log 0.1.0",
 ]
 
 [[package]]
@@ -26,6 +27,7 @@ dependencies = [
  "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "smartlist 0.0.1",
  "tor_allocate 0.0.1",
+ "tor_log 0.1.0",
  "tor_util 0.0.1",
 ]
 
@@ -41,6 +43,14 @@ name = "tor_allocate"
 version = "0.0.1"
 dependencies = [
  "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "tor_log"
+version = "0.1.0"
+dependencies = [
+ "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tor_allocate 0.0.1",
 ]
 
 [[package]]

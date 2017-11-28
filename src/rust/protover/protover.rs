@@ -1,12 +1,13 @@
 // Copyright (c) 2016-2017, The Tor Project, Inc. */
 // See LICENSE for licensing information */
 
-use external::c_tor_version_as_new_as;
-
 use std::str::FromStr;
 use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::string::String;
+
+use tor_log::*;
+use external::c_tor_version_as_new_as;
 
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
@@ -186,7 +187,6 @@ fn get_versions(version_string: &str) -> Result<HashSet<u32>, &'static str> {
     Ok(versions)
 }
 
-
 /// Parse the subprotocol type and its version numbers.
 ///
 /// # Inputs
@@ -240,6 +240,20 @@ fn get_proto_and_vers<'a>(
 fn contains_only_supported_protocols(proto_entry: &str) -> bool {
     let (name, mut vers) = match get_proto_and_vers(proto_entry) {
         Ok(n) => n,
+        Err("Too many versions to expand") => {
+            tor_log_msg!(
+                LogSeverity::Warn,
+                LogDomain::LdNet,
+                "get_versions",
+                "When expanding a protocol list from an authority, I
+                got too many protocols. This is possibly an attack or a bug,
+                unless the Tor network truly has expanded to support over {}
+                different subprotocol versions. The offending string was: {}",
+                MAX_PROTOCOLS_TO_EXPAND,
+                proto_entry
+            );
+            return false;
+        }
         Err(_) => return false,
     };
 

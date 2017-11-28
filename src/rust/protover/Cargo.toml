@@ -18,6 +18,9 @@ path = "../tor_util"
 [dependencies.tor_allocate]
 path = "../tor_allocate"
 
+[dependencies.tor_log]
+path = "../tor_log"
+
 [lib]
 name = "protover"
 path = "lib.rs"

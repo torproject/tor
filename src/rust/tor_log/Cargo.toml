@@ -1,0 +1,18 @@
+[package]
+name = "tor_log"
+version = "0.1.0"
+authors = ["The Tor Project"]
+
+[lib]
+name = "tor_log"
+path = "lib.rs"
+crate_type = ["rlib", "staticlib"]
+
+[features]
+testing = []
+
+[dependencies]
+libc = "0.2.22"
+
+[dependencies.tor_allocate]
+path = "../tor_allocate"
