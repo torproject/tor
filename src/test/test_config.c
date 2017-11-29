@@ -4118,7 +4118,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.dns_request, OP_EQ, 1);
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 1);
   tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
-  tt_int_op(port_cfg->entry_cfg.cache_ipv4_answers, OP_EQ, 1);
+  tt_int_op(port_cfg->entry_cfg.cache_ipv4_answers, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.prefer_ipv6_virtaddr, OP_EQ, 1);
 #endif
 
@@ -4454,7 +4454,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
-  tt_int_op(port_cfg->entry_cfg.cache_ipv4_answers, OP_EQ, 1);
+  tt_int_op(port_cfg->entry_cfg.cache_ipv4_answers, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.cache_ipv6_answers, OP_EQ, 1);
 
   // Test success with no cache ipv4 DNS
