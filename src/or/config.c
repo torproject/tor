@@ -6498,7 +6498,6 @@ port_cfg_new(size_t namelen)
   cfg->entry_cfg.ipv6_traffic = 1;
   cfg->entry_cfg.dns_request = 1;
   cfg->entry_cfg.onion_traffic = 1;
-  cfg->entry_cfg.cache_ipv4_answers = 1;
   cfg->entry_cfg.prefer_ipv6_virtaddr = 1;
   return cfg;
 }
@@ -6814,7 +6813,7 @@ parse_port_config(smartlist_t *out,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
       ipv4_traffic = 1, ipv6_traffic = 1, prefer_ipv6 = 0, dns_request = 1,
       onion_traffic = 1,
-      cache_ipv4 = 1, use_cached_ipv4 = 0,
+      cache_ipv4 = 0, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0,
       prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0,
       relax_dirmode_check = 0,

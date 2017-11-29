@@ -1,0 +1,5 @@
+  o Minor bugfixes (client):
+    - By default, do not enable storage of client-side DNS values.
+      These values were unused by default previously, but they should
+      not have been cached at all.  Fixes bug 24050; bugfix on
+      0.2.6.3-alpha.
