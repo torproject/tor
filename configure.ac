@@ -2017,7 +2017,7 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wnon-literal-null-conversion
      -Wnon-pod-varargs
      -Wnonportable-cfstrings
-     -Wnormalized=id
+     -Wnormalized=nfkc
      -Wnull-arithmetic
      -Wnull-character
      -Wnull-conversion
