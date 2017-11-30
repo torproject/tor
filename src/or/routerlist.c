@@ -5199,8 +5199,19 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         }
         r = router_add_to_routerlist(ri, &msg, 1, 0);
         if (WRA_WAS_OUTDATED(r)) {
-          log_warn(LD_DIR, "Couldn't add re-parsed router: %s",
+          log_warn(LD_DIR, "Couldn't add re-parsed router: %s. This isn't "
+                   "usually a big deal, but you should make sure that your "
+                   "clock and timezone are set correctly.",
                    msg?msg:"???");
+          if (r == ROUTER_CERTS_EXPIRED) {
+            char time_cons[ISO_TIME_LEN+1];
+            char time_cert[ISO_TIME_LEN+1];
+            format_iso_time(time_cons, consensus->valid_after);
+            format_iso_time(time_cert, ri->cert_expiration_time);
+            log_warn(LD_DIR, "  (I'm looking at a consensus from %s; This "
+                     "router's certificates began expiring at %s.)",
+                     time_cons, time_cert);
+          }
         }
     } SMARTLIST_FOREACH_END(sd);
     routerlist_assert_ok(rl);
