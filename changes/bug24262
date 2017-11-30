@@ -1,3 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - Fix the consensus parameter "hsdir-interval" to "hsdir_interval" so it
-      matches the dir-spec.txt. Fixes bug 24262; bugfix on 0.3.1.1-alpha.
