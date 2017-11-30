@@ -7,17 +7,18 @@ Changes in version 0.3.2.6-alpha - 2017-12-01
   o Major bugfixes (security):
     - Fix a denial of service bug where an attacker could use a
       malformed directory object to cause a Tor instance to pause while
-      OpenSSL would try to read a passphrase from the terminal. (If the
-      terminal was not available, tor would continue running.) Fixes bug
+      OpenSSL would try to read a passphrase from the terminal. (Tor
+      instances run without a terminal, which is the case for most Tor
+      packages, are not impacted.) Fixes bug
       24246; bugfix on every version of Tor. Also tracked as TROVE-2017-
       011 and CVE-2017-8821. Found by OSS-Fuzz as
       testcase 6360145429790720.
-    - Fix a denial-of-service issue where an attacker could crash a
+    - Fix a denial of service issue where an attacker could crash a
       directory authority using a malformed router descriptor. Fixes bug
       24245; bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2017-010
       and CVE-2017-8820.
     - When checking for replays in the INTRODUCE1 cell data for a
-      (legacy) hiddden service, correctly detect replays in the RSA-
+      (legacy) onion service, correctly detect replays in the RSA-
       encrypted part of the cell. We were previously checking for
       replays on the entire cell, but those can be circumvented due to
       the malleability of Tor's legacy hybrid encryption. This fix helps
@@ -25,9 +26,9 @@ Changes in version 0.3.2.6-alpha - 2017-12-01
       0.2.4.1-alpha. This issue is also tracked as TROVE-2017-009
       and CVE-2017-8819.
 
-  o Major bugfixes (security, hidden service v2):
-    - Fix a use-after-free error that could crash v2 Tor hidden services
-      when it failed to open circuits while expiring introductions
+  o Major bugfixes (security, onion service v2):
+    - Fix a use-after-free error that could crash v2 Tor onion services
+      when they failed to open circuits while expiring introduction
       points. Fixes bug 24313; bugfix on 0.2.7.2-alpha. This issue is
       also tracked as TROVE-2017-013 and CVE-2017-8823.
 
@@ -37,8 +38,8 @@ Changes in version 0.3.2.6-alpha - 2017-12-01
       version of our descriptor appearing in the consensus. Fixes part
       of bug 21534; bugfix on 0.2.0.1-alpha. This issue is also tracked
       as TROVE-2017-012 and CVE-2017-8822.
-    - When running as a relay, make sure that we never ever choose
-      ourselves as a guard. Previously, this was possible. Fixes part of
+    - When running as a relay, make sure that we never choose
+      ourselves as a guard. Fixes part of
       bug 21534; bugfix on 0.3.0.1-alpha. This issue is also tracked as
       TROVE-2017-012 and CVE-2017-8822.
 
