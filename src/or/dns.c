@@ -1426,13 +1426,30 @@ configure_nameservers(int force)
 
 #define SET(k,v)  evdns_base_set_option(the_evdns_base, (k), (v))
 
+  // If we only have one nameserver, it does not make sense to back off
+  // from it for a timeout. Unfortunately, the value for max-timeouts is
+  // currently clamped by libevent to 255, but it does not hurt to set
+  // it higher in case libevent gets a patch for this.
+  // Reducing attempts in the case of just one name server too, because
+  // it is very likely to be a local one where a network connectivity
+  // issue should not cause an attempt to fail.
   if (evdns_base_count_nameservers(the_evdns_base) == 1) {
-    SET("max-timeouts:", "16");
-    SET("timeout:", "10");
+    SET("max-timeouts:", "1000000");
+    SET("attempts:", "1");
   } else {
     SET("max-timeouts:", "3");
-    SET("timeout:", "5");
   }
+
+  // Elongate the queue of maximum inflight dns requests, so if a bunch
+  // time out at the resolver (happens commonly with unbound) we won't
+  // stall every other DNS request. This potentially means some wasted
+  // CPU as there's a walk over a linear queue involved, but this is a
+  // much better tradeoff compared to just failing DNS requests because
+  // of a full queue.
+  SET("max-inflight:", "8192");
+
+  // Time out after 5 seconds if no reply.
+  SET("timeout:", "5");
 
   if (options->ServerDNSRandomizeCase)
     SET("randomize-case:", "1");
