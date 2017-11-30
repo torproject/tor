@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Rewrite channel_rsa_id_group_set_badness to reduce temporary memory
+      allocations with large numbers of OR connections (e.g. relays). Closes
+      ticket 24119.
