@@ -1946,6 +1946,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   time_t now = time(NULL);
   time_t elapsed;
   int replay;
+  size_t keylen;
 
   /* Do some initial validation and logging before we parse the cell */
   if (circuit->base_.purpose != CIRCUIT_PURPOSE_S_INTRO) {
@@ -2020,9 +2021,10 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   }
 
   /* check for replay of PK-encrypted portion. */
+  keylen = crypto_pk_keysize(intro_key);
   replay = replaycache_add_test_and_elapsed(
     intro_point->accepted_intro_rsa_parts,
-    parsed_req->ciphertext, parsed_req->ciphertext_len,
+    parsed_req->ciphertext, MIN(parsed_req->ciphertext_len, keylen),
     &elapsed);
 
   if (replay) {
@@ -4051,6 +4053,10 @@ remove_invalid_intro_points(rend_service_t *service,
       log_info(LD_REND, "Expiring %s as intro point for %s.",
                safe_str_client(extend_info_describe(intro->extend_info)),
                safe_str_client(service->service_id));
+      /* We might have put it in the retry list if so, undo. */
+      if (retry_nodes) {
+        smartlist_remove(retry_nodes, intro);
+      }
       smartlist_add(service->expiring_nodes, intro);
       SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
       /* Intro point is expired, we need a new one thus don't consider it
