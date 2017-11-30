@@ -740,7 +740,8 @@ node_is_possible_guard(const node_t *node)
           node->is_stable &&
           node->is_fast &&
           node->is_valid &&
-          node_is_dir(node));
+          node_is_dir(node) &&
+          !router_digest_is_me(node->identity));
 }
 
 /**

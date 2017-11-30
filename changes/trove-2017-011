@@ -1,0 +1,8 @@
+  o Major bugfixes (security):
+    - Fix a denial of service bug where an attacker could use a malformed
+      directory object to cause a Tor instance to pause while OpenSSL would
+      try to read a passphrase from the terminal. (If the terminal was not
+      available, tor would continue running.)  Fixes bug 24246; bugfix on
+      every version of Tor.  Also tracked as TROVE-2017-011 and
+      CVE-2017-8821.  Found by OSS-Fuzz as testcase 6360145429790720.
+
