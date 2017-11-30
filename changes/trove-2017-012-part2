@@ -1,0 +1,5 @@
+  o Major bugfixes (security, relay):
+    - When running as a relay, make sure that we never ever choose ourselves
+      as a guard. Previously, this was possible. Fixes part of bug 21534;
+      bugfix on 0.3.0.1-alpha. This issue is also tracked as TROVE-2017-012
+      and CVE-2017-8822.
