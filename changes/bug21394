@@ -1,9 +1,0 @@
-  o Major bugfixes (Exit nodes):
-    - Fix an issue causing high-bandwidth exit nodes to fail a majority
-      or all of their DNS requests, making them basically unsuitable for
-      regular usage in Tor circuits. The problem is related to
-      libevent's DNS handling, but we can work around it in Tor. Fixes
-      bugs 21394 and 18580; bugfix on 0.1.2.2-alpha which introduced
-      eventdns. Credit goes to Dhalgren for identifying and finding a
-      workaround to this bug and to gamambel, arthuredelstein and
-      arma in helping to track it down and analyze it.
