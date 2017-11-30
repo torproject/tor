@@ -1,3 +1,62 @@
+Changes in version 0.2.8.17 - 2017-12-01
+  Tor 0.2.8.17 backports important security and stability bugfixes from
+  later Tor releases. All Tor users should upgrade to this release, or
+  to another of the releases coming out today.
+
+  Note: the Tor 0.2.8 series will no longer be supported after 1 Jan
+  2018. If you need a release with long-term support, please stick with
+  the 0.2.9 series. Otherwise, please upgrade to 0.3.1 or later.
+
+  o Major bugfixes (security, backport from 0.3.2.6-alpha):
+    - Fix a denial of service bug where an attacker could use a
+      malformed directory object to cause a Tor instance to pause while
+      OpenSSL would try to read a passphrase from the terminal. (Tor
+      instances run without a terminal, which is the case for most Tor
+      packages, are not impacted.) Fixes bug 24246; bugfix on every
+      version of Tor. Also tracked as TROVE-2017-011 and CVE-2017-8821.
+      Found by OSS-Fuzz as testcase 6360145429790720.
+    - When checking for replays in the INTRODUCE1 cell data for a
+      (legacy) onion service, correctly detect replays in the RSA-
+      encrypted part of the cell. We were previously checking for
+      replays on the entire cell, but those can be circumvented due to
+      the malleability of Tor's legacy hybrid encryption. This fix helps
+      prevent a traffic confirmation attack. Fixes bug 24244; bugfix on
+      0.2.4.1-alpha. This issue is also tracked as TROVE-2017-009
+      and CVE-2017-8819.
+
+  o Major bugfixes (security, onion service v2, backport from 0.3.2.6-alpha):
+    - Fix a use-after-free error that could crash v2 Tor onion services
+      when they failed to open circuits while expiring introduction
+      points. Fixes bug 24313; bugfix on 0.2.7.2-alpha. This issue is
+      also tracked as TROVE-2017-013 and CVE-2017-8823.
+
+  o Major bugfixes (security, relay, backport from 0.3.2.6-alpha):
+    - When running as a relay, make sure that we never build a path through
+      ourselves, even in the case where we have somehow lost the version of
+      our descriptor appearing in the consensus. Fixes part of bug 21534;
+      bugfix on 0.2.0.1-alpha. This issue is also tracked as TROVE-2017-012
+      and CVE-2017-8822.
+
+  o Minor features (bridge, backport from 0.3.1.9):
+    - Bridges now include notice in their descriptors that they are
+      bridges, and notice of their distribution status, based on their
+      publication settings. Implements ticket 18329. For more fine-
+      grained control of how a bridge is distributed, upgrade to 0.3.2.x
+      or later.
+
+  o Minor features (directory authority, backport from 0.3.2.6-alpha):
+    - Add an IPv6 address for the "bastet" directory authority. Closes
+      ticket 24394.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the November 6 2017 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (testing, backport from 0.3.1.6-rc):
+    - Fix an undersized buffer in test-memwipe.c. Fixes bug 23291;
+      bugfix on 0.2.7.2-alpha. Found and patched by Ties Stuij.
+
+
 Changes in version 0.2.8.16 - 2017-10-25
   Tor 0.2.8.16 backports a collection of bugfixes from later Tor release
   series, including a bugfix for a crash issue that had affected relays
