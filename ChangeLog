@@ -9,10 +9,9 @@ Changes in version 0.3.2.6-alpha - 2017-12-01
       malformed directory object to cause a Tor instance to pause while
       OpenSSL would try to read a passphrase from the terminal. (Tor
       instances run without a terminal, which is the case for most Tor
-      packages, are not impacted.) Fixes bug
-      24246; bugfix on every version of Tor. Also tracked as TROVE-2017-
-      011 and CVE-2017-8821. Found by OSS-Fuzz as
-      testcase 6360145429790720.
+      packages, are not impacted.) Fixes bug 24246; bugfix on every
+      version of Tor. Also tracked as TROVE-2017-011 and CVE-2017-8821.
+      Found by OSS-Fuzz as testcase 6360145429790720.
     - Fix a denial of service issue where an attacker could crash a
       directory authority using a malformed router descriptor. Fixes bug
       24245; bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2017-010
@@ -38,10 +37,9 @@ Changes in version 0.3.2.6-alpha - 2017-12-01
       version of our descriptor appearing in the consensus. Fixes part
       of bug 21534; bugfix on 0.2.0.1-alpha. This issue is also tracked
       as TROVE-2017-012 and CVE-2017-8822.
-    - When running as a relay, make sure that we never choose
-      ourselves as a guard. Fixes part of
-      bug 21534; bugfix on 0.3.0.1-alpha. This issue is also tracked as
-      TROVE-2017-012 and CVE-2017-8822.
+    - When running as a relay, make sure that we never choose ourselves
+      as a guard. Fixes part of bug 21534; bugfix on 0.3.0.1-alpha. This
+      issue is also tracked as TROVE-2017-012 and CVE-2017-8822.
 
   o Minor feature (relay statistics):
     - Change relay bandwidth reporting stats interval from 4 hours to 24
