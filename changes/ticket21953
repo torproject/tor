@@ -1,6 +1,0 @@
-  o Minor features:
-    - Enable a couple of pieces of Windows hardening: one
-      (HeapEnableTerminationOnCorruption) that has been on-by-default since
-      Windows 8, and unavailable before Windows 7, and one
-      (PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION) which we believe doesn't
-      affect us, but shouldn't do any harm. Closes ticket 21953.
