@@ -1,3 +1,62 @@
+Changes in version 0.3.2.6-alpha - 2017-12-01
+  This version of Tor is the latest in the 0.3.2 alpha series. It
+  includes fixes for several important security issues. All Tor users
+  should upgrade to this release, or to one of the other releases coming
+  out today.
+
+  o Major bugfixes (security):
+    - Fix a denial of service bug where an attacker could use a
+      malformed directory object to cause a Tor instance to pause while
+      OpenSSL would try to read a passphrase from the terminal. (If the
+      terminal was not available, tor would continue running.) Fixes bug
+      24246; bugfix on every version of Tor. Also tracked as TROVE-2017-
+      011 and CVE-2017-8821. Found by OSS-Fuzz as
+      testcase 6360145429790720.
+    - Fix a denial-of-service issue where an attacker could crash a
+      directory authority using a malformed router descriptor. Fixes bug
+      24245; bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2017-010
+      and CVE-2017-8820.
+    - When checking for replays in the INTRODUCE1 cell data for a
+      (legacy) hiddden service, correctly detect replays in the RSA-
+      encrypted part of the cell. We were previously checking for
+      replays on the entire cell, but those can be circumvented due to
+      the malleability of Tor's legacy hybrid encryption. This fix helps
+      prevent a traffic confirmation attack. Fixes bug 24244; bugfix on
+      0.2.4.1-alpha. This issue is also tracked as TROVE-2017-009
+      and CVE-2017-8819.
+
+  o Major bugfixes (security, hidden service v2):
+    - Fix a use-after-free error that could crash v2 Tor hidden services
+      when it failed to open circuits while expiring introductions
+      points. Fixes bug 24313; bugfix on 0.2.7.2-alpha. This issue is
+      also tracked as TROVE-2017-013 and CVE-2017-8823.
+
+  o Major bugfixes (security, relay):
+    - When running as a relay, make sure that we never build a path
+      through ourselves, even in the case where we have somehow lost the
+      version of our descriptor appearing in the consensus. Fixes part
+      of bug 21534; bugfix on 0.2.0.1-alpha. This issue is also tracked
+      as TROVE-2017-012 and CVE-2017-8822.
+    - When running as a relay, make sure that we never ever choose
+      ourselves as a guard. Previously, this was possible. Fixes part of
+      bug 21534; bugfix on 0.3.0.1-alpha. This issue is also tracked as
+      TROVE-2017-012 and CVE-2017-8822.
+
+  o Minor feature (relay statistics):
+    - Change relay bandwidth reporting stats interval from 4 hours to 24
+      hours in order to reduce the efficiency of guard discovery
+      attacks. Fixes ticket 23856.
+
+  o Minor features (directory authority):
+    - Add an IPv6 address for the "bastet" directory authority. Closes
+      ticket 24394.
+
+  o Minor bugfixes (client):
+    - By default, do not enable storage of client-side DNS values. These
+      values were unused by default previously, but they should not have
+      been cached at all. Fixes bug 24050; bugfix on 0.2.6.3-alpha.
+
+
 Changes in version 0.3.2.5-alpha - 2017-11-22
   Tor 0.3.2.5-alpha is the fifth alpha release in the 0.3.2.x series. It
   fixes several stability and reliability bugs, including a fix for
