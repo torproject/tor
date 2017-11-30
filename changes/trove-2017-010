@@ -1,0 +1,6 @@
+  o Major bugfixes (security):
+    - Fix a denial-of-service issue where an attacker could crash
+      a directory authority using a malformed router descriptor.
+      Fixes bug 24245; bugfix on 0.2.9.4-alpha. Also tracked
+      as TROVE-2017-010 and CVE-2017-8820.
+
