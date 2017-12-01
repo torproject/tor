@@ -3,6 +3,10 @@ Changes in version 0.3.0.13 - 2017-12-01
   later Tor releases. All Tor users should upgrade to this release, or
   to another of the releases coming out today.
 
+  Note: the Tor 0.3.0 series will no longer be supported after 26 Jan
+  2018. If you need a release with long-term support, please stick with
+  the 0.2.9 series. Otherwise, please upgrade to 0.3.1 or later.
+
   o Major bugfixes (security, backport from 0.3.2.6-alpha):
     - Fix a denial of service bug where an attacker could use a
       malformed directory object to cause a Tor instance to pause while
