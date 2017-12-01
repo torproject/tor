@@ -6218,7 +6218,7 @@ struct testcase_t dir_tests[] = {
   DIR(download_status_schedule, 0),
   DIR(download_status_random_backoff, 0),
   DIR(download_status_random_backoff_ranges, 0),
-  DIR(download_status_increment, 0),
+  DIR(download_status_increment, TT_FORK),
   DIR(authdir_type_to_string, 0),
   DIR(conn_purpose_to_string, 0),
   DIR(should_use_directory_guards, 0),
