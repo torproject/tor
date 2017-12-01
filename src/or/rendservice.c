@@ -1162,7 +1162,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   time_t now = time(NULL);
   time_t elapsed;
   int replay;
-  size_t keylen;
+  ssize_t keylen;
 
   /* Do some initial validation and logging before we parse the cell */
   if (circuit->base_.purpose != CIRCUIT_PURPOSE_S_INTRO) {
