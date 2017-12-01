@@ -4,7 +4,7 @@ Changes in version 0.2.8.17 - 2017-12-01
   to another of the releases coming out today.
 
   Note: the Tor 0.2.8 series will no longer be supported after 1 Jan
-  2018. If you need a release with long-term support, please stick with
+  2018. If you need a release with long-term support, please upgrade with
   the 0.2.9 series. Otherwise, please upgrade to 0.3.1 or later.
 
   o Major bugfixes (security, backport from 0.3.2.6-alpha):
