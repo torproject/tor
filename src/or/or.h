@@ -506,6 +506,7 @@ typedef enum {
  */
 /** Client-side circuit purpose: Normal circuit, with cpath. */
 #define CIRCUIT_PURPOSE_C_GENERAL 5
+#define CIRCUIT_PURPOSE_C_HS_MIN_ 6
 /** Client-side circuit purpose: at the client, connecting to intro point. */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 6
 /** Client-side circuit purpose: at the client, sent INTRODUCE1 to intro point,
@@ -523,28 +524,36 @@ typedef enum {
 #define CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED 11
 /** Client-side circuit purpose: at the client, rendezvous established. */
 #define CIRCUIT_PURPOSE_C_REND_JOINED 12
+/** This circuit is used for getting hsdirs */
+#define CIRCUIT_PURPOSE_C_HSDIR_GET 13
+#define CIRCUIT_PURPOSE_C_HS_MAX_ 13
 /** This circuit is used for build time measurement only */
-#define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 13
-#define CIRCUIT_PURPOSE_C_MAX_ 13
+#define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 14
+#define CIRCUIT_PURPOSE_C_MAX_ 14
+
+#define CIRCUIT_PURPOSE_S_HS_MIN_ 15
 /** Hidden-service-side circuit purpose: at the service, waiting for
  * introductions. */
-#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 14
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 15
 /** Hidden-service-side circuit purpose: at the service, successfully
  * established intro. */
-#define CIRCUIT_PURPOSE_S_INTRO 15
+#define CIRCUIT_PURPOSE_S_INTRO 16
 /** Hidden-service-side circuit purpose: at the service, connecting to rend
  * point. */
-#define CIRCUIT_PURPOSE_S_CONNECT_REND 16
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 17
 /** Hidden-service-side circuit purpose: at the service, rendezvous
  * established. */
-#define CIRCUIT_PURPOSE_S_REND_JOINED 17
+#define CIRCUIT_PURPOSE_S_REND_JOINED 18
+/** This circuit is used for uploading hsdirs */
+#define CIRCUIT_PURPOSE_S_HSDIR_POST 19
+#define CIRCUIT_PURPOSE_S_HS_MAX_ 19
 /** A testing circuit; not meant to be used for actual traffic. */
-#define CIRCUIT_PURPOSE_TESTING 18
+#define CIRCUIT_PURPOSE_TESTING 20
 /** A controller made this circuit and Tor should not use it. */
-#define CIRCUIT_PURPOSE_CONTROLLER 19
+#define CIRCUIT_PURPOSE_CONTROLLER 21
 /** This circuit is used for path bias probing only */
-#define CIRCUIT_PURPOSE_PATH_BIAS_TESTING 20
-#define CIRCUIT_PURPOSE_MAX_ 20
+#define CIRCUIT_PURPOSE_PATH_BIAS_TESTING 22
+#define CIRCUIT_PURPOSE_MAX_ 22
 /** A catch-all for unrecognized purposes. Currently we don't expect
  * to make or see any circuits with this purpose. */
 #define CIRCUIT_PURPOSE_UNKNOWN 255

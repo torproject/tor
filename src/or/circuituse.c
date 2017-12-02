@@ -156,7 +156,9 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
   if (need_internal != build_state->is_internal)
     return 0;
 
-  if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+  if (purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+      purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
+      purpose == CIRCUIT_PURPOSE_C_HSDIR_GET) {
     tor_addr_t addr;
     const int family = tor_addr_parse(&addr, conn->socks_request->address);
     if (!exitnode && !build_state->onehop_tunnel) {
@@ -238,6 +240,8 @@ circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
     return 1; /* oa is better. It's not relaxed. */
 
   switch (purpose) {
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* if it's used but less dirty it's best;
        * else if it's more recently created it's best
@@ -323,6 +327,8 @@ circuit_get_best(const entry_connection_t *conn,
   tor_assert(conn);
 
   tor_assert(purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+             purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
+             purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
              purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT ||
              purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
@@ -1458,6 +1464,8 @@ circuit_expire_old_circuits_clientside(void)
     } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
       if (timercmp(&circ->timestamp_began, &cutoff, OP_LT)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+                circ->purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
+                circ->purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
                 circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
                 circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
                 circ->purpose == CIRCUIT_PURPOSE_TESTING ||
@@ -1650,6 +1658,8 @@ circuit_has_opened(origin_circuit_t *circ)
       hs_client_circuit_has_opened(circ);
       break;
     case CIRCUIT_PURPOSE_C_GENERAL:
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
       circuit_try_attaching_streams(circ);
@@ -1786,6 +1796,8 @@ circuit_build_failed(origin_circuit_t *circ)
   }
 
   switch (circ->base_.purpose) {
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* If we never built the circuit, note it as a failure. */
       circuit_increment_failure_count();
@@ -1877,14 +1889,14 @@ int
 circuit_purpose_is_hidden_service(uint8_t purpose)
 {
    /* Client-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
-       purpose <= CIRCUIT_PURPOSE_C_REND_JOINED) {
+   if (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
+       purpose <= CIRCUIT_PURPOSE_C_HS_MAX_) {
      return 1;
    }
 
    /* Service-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_S_ESTABLISH_INTRO &&
-       purpose <= CIRCUIT_PURPOSE_S_REND_JOINED) {
+   if (purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
+       purpose <= CIRCUIT_PURPOSE_S_HS_MAX_) {
      return 1;
    }
 
@@ -2009,6 +2021,8 @@ circuit_launch_by_extend_info(uint8_t purpose,
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
         case CIRCUIT_PURPOSE_C_GENERAL:
+        case CIRCUIT_PURPOSE_S_HSDIR_POST:
+        case CIRCUIT_PURPOSE_C_HSDIR_GET:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
           /* need to add a new hop */
           tor_assert(extend_info);
@@ -2273,7 +2287,9 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     /* If we have specified a particular exit node for our
      * connection, then be sure to open a circuit to that exit node.
      */
-    if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+        desired_circuit_purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
+        desired_circuit_purpose == CIRCUIT_PURPOSE_C_HSDIR_GET) {
       if (conn->chosen_exit_name) {
         const node_t *r;
         int opt = conn->chosen_exit_optional;
@@ -2381,7 +2397,9 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
 
     /* Now trigger things that need to happen when we launch circuits */
 
-    if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+        desired_circuit_purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
+        desired_circuit_purpose == CIRCUIT_PURPOSE_S_HSDIR_POST) {
       /* We just caused a circuit to get built because of this stream.
        * If this stream has caused a _lot_ of circuits to be built, that's
        * a bad sign: we should tell the user. */
@@ -2510,6 +2528,8 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   /* See if we can use optimistic data on this circuit */
   if (optimistic_data_enabled() &&
       (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+       circ->base_.purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
+       circ->base_.purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
        circ->base_.purpose == CIRCUIT_PURPOSE_C_REND_JOINED))
     apconn->may_use_optimistic_data = 1;
   else
@@ -2630,6 +2650,39 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
   return 1;
 }
 
+/**
+ * Return an appropriate circuit purpose for non-rend streams.
+ * We don't handle rends here because a rend stream triggers two
+ * circuit builds with different purposes, so it is handled elsewhere.
+ *
+ * This function just figures out what type of hsdir activity this is,
+ * and tells us. Everything else is general.
+ */
+static int
+connection_ap_get_nonrend_circ_purpose(const entry_connection_t *conn)
+{
+  const connection_t *base_conn = ENTRY_TO_CONN(conn);
+  tor_assert_nonfatal(!connection_edge_is_rendezvous_stream(
+                      ENTRY_TO_EDGE_CONN(conn)));
+
+  if (base_conn->linked_conn &&
+      base_conn->linked_conn->type == CONN_TYPE_DIR) {
+    /* Set a custom purpose for hsdir activity */
+    if (base_conn->linked_conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2 ||
+       base_conn->linked_conn->purpose == DIR_PURPOSE_UPLOAD_HSDESC) {
+      return CIRCUIT_PURPOSE_S_HSDIR_POST;
+    } else if (base_conn->linked_conn->purpose
+                 == DIR_PURPOSE_FETCH_RENDDESC_V2 ||
+               base_conn->linked_conn->purpose
+                 == DIR_PURPOSE_FETCH_HSDESC) {
+      return CIRCUIT_PURPOSE_C_HSDIR_GET;
+    }
+  }
+
+  /* All other purposes are general for now */
+  return CIRCUIT_PURPOSE_C_GENERAL;
+}
+
 /** Try to find a safe live circuit for stream <b>conn</b>.  If we find one,
  * attach the stream, send appropriate cells, and return 1.  Otherwise,
  * try to launch new circuit(s) for the stream.  If we can launch
@@ -2728,9 +2781,12 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     }
 
     /* Find the circuit that we should use, if there is one. Otherwise
-     * launch it. */
-    retval = circuit_get_open_circ_or_launch(
-        conn, CIRCUIT_PURPOSE_C_GENERAL, &circ);
+     * launch it
+     */
+    retval = circuit_get_open_circ_or_launch(conn,
+            connection_ap_get_nonrend_circ_purpose(conn),
+            &circ);
+
     if (retval < 1) {
       /* We were either told "-1" (complete failure) or 0 (circuit in
        * progress); we can't attach this stream yet. */

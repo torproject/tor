@@ -689,6 +689,10 @@ circuit_purpose_to_controller_string(uint8_t purpose)
 
     case CIRCUIT_PURPOSE_C_GENERAL:
       return "GENERAL";
+
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
+      return "HS_CLIENT_HSDIR";
+
     case CIRCUIT_PURPOSE_C_INTRODUCING:
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACKED:
@@ -699,6 +703,9 @@ circuit_purpose_to_controller_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
     case CIRCUIT_PURPOSE_C_REND_JOINED:
       return "HS_CLIENT_REND";
+
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
+      return "HS_SERVICE_HSDIR";
 
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
     case CIRCUIT_PURPOSE_S_INTRO:
@@ -753,6 +760,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_REND_ESTABLISHED:
       return "OR_HS_R_JOINED";
 
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       return "HSCI_CONNECTING";
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
@@ -769,6 +777,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_C_REND_JOINED:
       return "HSCR_JOINED";
 
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       return "HSSI_CONNECTING";
     case CIRCUIT_PURPOSE_S_INTRO:
@@ -813,6 +822,9 @@ circuit_purpose_to_string(uint8_t purpose)
       return "Hidden service client: Pending rendezvous point (ack received)";
     case CIRCUIT_PURPOSE_C_REND_JOINED:
       return "Hidden service client: Active rendezvous point";
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
+      return "Hidden service client: Fetching HS descriptor";
+
     case CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT:
       return "Measuring circuit timeout";
 
@@ -824,6 +836,8 @@ circuit_purpose_to_string(uint8_t purpose)
       return "Hidden service: Connecting to rendezvous point";
     case CIRCUIT_PURPOSE_S_REND_JOINED:
       return "Hidden service: Active rendezvous point";
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
+      return "Hidden service: Uploading HS descriptor";
 
     case CIRCUIT_PURPOSE_TESTING:
       return "Testing circuit";

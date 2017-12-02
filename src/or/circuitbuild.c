@@ -1662,11 +1662,14 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
   if (circuit_should_use_vanguards(purpose)) {
     /* Clients want an extra hop for rends to avoid linkability.
      * Services want it for intro points to avoid publishing their
-     * layer3 guards.
+     * layer3 guards. They want it for hsdir posts to use
+     * their full layer3 guard set for those connections.
      * Ex: C - G - L2 - L3 - R
+     *     S - G - L2 - L3 - HSDIR
      *     S - G - L2 - L3 - I
      */
     if (purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
+        purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
         purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
       return routelen+1;
 
@@ -1683,9 +1686,11 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
      * Same goes for intro points. Note that the route len
      * includes the intro point or hsdir, hence the +2.
      * Ex: C - G - L2 - L3 - M - I
+     *     C - G - L2 - L3 - M - HSDIR
      *     S - G - L2 - L3 - M - R
      */
     if (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
+        purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
         purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
       return routelen+2;
   }
@@ -1706,6 +1711,8 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
     /* These three purposes connect to a router that someone else
      * might have chosen, so add an extra hop to protect anonymity. */
   case CIRCUIT_PURPOSE_C_GENERAL:
+  case CIRCUIT_PURPOSE_C_HSDIR_GET:
+  case CIRCUIT_PURPOSE_S_HSDIR_POST:
     /* connecting to hidden service directory */
   case CIRCUIT_PURPOSE_C_INTRODUCING:
     /* client connecting to introduction point */
@@ -2271,6 +2278,8 @@ choose_good_exit_server(uint8_t purpose,
     flags |= CRN_RENDEZVOUS_V3;
 
   switch (purpose) {
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
@@ -2315,6 +2324,8 @@ warn_if_last_router_excluded(origin_circuit_t *circ,
                (int)purpose,
                circuit_purpose_to_string(purpose));
       return;
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (circ->build_state->is_internal)
         return;
