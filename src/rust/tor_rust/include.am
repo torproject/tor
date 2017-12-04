@@ -2,17 +2,19 @@ EXTRA_DIST +=\
 	src/rust/tor_rust/Cargo.toml \
 	src/rust/tor_rust/lib.rs
 
+EXTRA_CARGO_OPTIONS=
+
 src/rust/target/release/@TOR_RUST_STATIC_NAME@: FORCE
 	( cd "$(abs_top_srcdir)/src/rust/tor_rust" ; \
 		CARGO_TARGET_DIR="$(abs_top_builddir)/src/rust/target" \
 		CARGO_HOME="$(abs_top_builddir)/src/rust" \
-		$(CARGO) build --release --quiet $(CARGO_ONLINE) )
+		$(CARGO) build --release $(EXTRA_CARGO_OPTIONS) $(CARGO_ONLINE) )
 
 distclean-rust:
 	( cd "$(abs_top_srcdir)/src/rust/tor_rust" ; \
 		CARGO_TARGET_DIR="$(abs_top_builddir)/src/rust/target" \
 		CARGO_HOME="$(abs_top_builddir)/src/rust" \
-		$(CARGO) clean --quiet $(CARGO_ONLINE) )
+		$(CARGO) clean $(EXTRA_CARGO_OPTIONS) $(CARGO_ONLINE) )
 	rm -rf "$(abs_top_builddir)/src/rust/registry"
 
 if USE_RUST
