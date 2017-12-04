@@ -1,0 +1,4 @@
+  o Minor bugfixes (build, rust):
+    - Don't pass the --quiet option to cargo: it seems to suppress some
+      errors, which is not what we want to do when building.
+      Fixes bug 24518; bugfix on 0.3.1.7.
