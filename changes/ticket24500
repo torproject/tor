@@ -1,0 +1,3 @@
+  o Code simplification and refactoring: 
+    - Making more useful log messages for errno errors on getrandom() call.
+      Closes ticket 24500.
