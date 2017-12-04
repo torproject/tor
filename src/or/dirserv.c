@@ -1903,21 +1903,28 @@ version_from_platform(const char *platform)
 /** Helper: write the router-status information in <b>rs</b> into a newly
  * allocated character buffer.  Use the same format as in network-status
  * documents.  If <b>version</b> is non-NULL, add a "v" line for the platform.
+ *
+ * consensus_method is the current consensus method when format is
+ * NS_V3_CONSENSUS or NS_V3_CONSENSUS_MICRODESC. It is ignored for other
+ * formats: pass ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD.
+ *
  * Return 0 on success, -1 on failure.
  *
  * The format argument has one of the following values:
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
+ *        for consensus_method.
  *   NS_V3_CONSENSUS_MICRODESC - Output the first portion of a V3 microdesc
- *        consensus entry.
+ *        consensus entry for consensus_method.
  *   NS_V3_VOTE - Output a complete V3 NS vote. If <b>vrs</b> is present,
  *        it contains additional information for the vote.
- *   NS_CONTROL_PORT - Output a NS document for the control port
+ *   NS_CONTROL_PORT - Output a NS document for the control port.
  */
 char *
 routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                           const char *protocols,
                           routerstatus_format_type_t format,
+                          int consensus_method,
                           const vote_routerstatus_t *vrs)
 {
   char *summary;
@@ -1948,8 +1955,10 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
 
-  /* V3 microdesc consensuses don't have "a" lines. */
-  if (format == NS_V3_CONSENSUS_MICRODESC)
+  /* V3 microdesc consensuses only have "a" lines in later consensus methods
+   */
+  if (format == NS_V3_CONSENSUS_MICRODESC &&
+      consensus_method < MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS)
     goto done;
 
   /* Possible "a" line. At most one for now. */
@@ -1958,7 +1967,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                            fmt_addrport(&rs->ipv6_addr, rs->ipv6_orport));
   }
 
-  if (format == NS_V3_CONSENSUS)
+  if (format == NS_V3_CONSENSUS || format == NS_V3_CONSENSUS_MICRODESC)
     goto done;
 
   smartlist_add_asprintf(chunks,

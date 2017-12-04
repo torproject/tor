@@ -1,0 +1,14 @@
+  o Major features (IPv6, directory documents):
+    - Add consensus method 27, which adds IPv6 ORPorts to the microdesc
+      consensus. This makes it easier for IPv6 clients to bootstrap and
+      choose reachable entry guards.
+      Implements 23826.
+    - Add consensus method 28, which removes IPv6 ORPorts from
+      microdescriptors. Now that there are IPv6 ORPorts in the microdesc
+      consensus, they are redundant in microdescs. This change is compatible
+      with tor clients on 0.2.8.x and later. (0.2.8.x introduced client IPv6
+      bootstrap and guard support.)
+      Implements 23828.
+    - Expand the documentation for AuthDirHasIPv6Connectivity when it is set
+      by different numbers of authorities.
+      Fixes 23870 on 0.2.4.1-alpha.

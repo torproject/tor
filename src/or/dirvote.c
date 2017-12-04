@@ -278,7 +278,9 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     vote_microdesc_hash_t *h;
     rsf = routerstatus_format_entry(&vrs->status,
                                     vrs->version, vrs->protocols,
-                                    NS_V3_VOTE, vrs);
+                                    NS_V3_VOTE,
+                                    ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD,
+                                    vrs);
     if (rsf)
       smartlist_add(chunks, rsf);
 
@@ -1317,8 +1319,9 @@ compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
- * voting quorum, generate the text of a new v3 consensus vote, and return the
- * value in a newly allocated string.
+ * voting quorum, generate the text of a new v3 consensus or microdescriptor
+ * consensus (depending on <b>flavor</b>), and return the value in a newly
+ * allocated string.
  *
  * Note: this function DOES NOT check whether the votes are from
  * recognized authorities.   (dirvote_add_vote does that.)
@@ -2101,7 +2104,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         char *buf;
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
-        buf = routerstatus_format_entry(&rs_out, NULL, NULL, rs_format, NULL);
+        buf = routerstatus_format_entry(&rs_out, NULL, NULL,
+                                        rs_format, consensus_method, NULL);
         if (buf)
           smartlist_add(chunks, buf);
       }
@@ -3831,7 +3835,10 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     smartlist_add_asprintf(chunks, "ntor-onion-key %s", kbuf);
   }
 
+  /* We originally put a lines in the micrdescriptors, but then we worked out
+   * that we needed them in the microdesc consensus. See #20916. */
   if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
+      consensus_method < MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC &&
       !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
     smartlist_add_asprintf(chunks, "a %s\n",
                            fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
@@ -3940,7 +3947,9 @@ static const struct consensus_method_range_t {
   {MIN_METHOD_FOR_P6_LINES, MIN_METHOD_FOR_NTOR_KEY - 1},
   {MIN_METHOD_FOR_NTOR_KEY, MIN_METHOD_FOR_ID_HASH_IN_MD - 1},
   {MIN_METHOD_FOR_ID_HASH_IN_MD, MIN_METHOD_FOR_ED25519_ID_IN_MD - 1},
-  {MIN_METHOD_FOR_ED25519_ID_IN_MD, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {MIN_METHOD_FOR_ED25519_ID_IN_MD,
+    MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC - 1},
+  {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC, MAX_SUPPORTED_CONSENSUS_METHOD},
   {-1, -1}
 };
 
