@@ -1988,7 +1988,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Winvalid-source-encoding
      -Winvalid-token-paste
      -Wknr-promoted-parameter
-     -Wlanguage-extension-token
      -Wlarge-by-value-copy
      -Wliteral-conversion
      -Wliteral-range

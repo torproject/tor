@@ -80,12 +80,22 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
  * This is a macro.  If you need a function pointer to release memory from
  * tor_malloc(), use tor_free_().
  */
+#ifdef __GNUC__
+#define tor_free(p) STMT_BEGIN                                 \
+    typeof(&(p)) tor_free__tmpvar = &(p);                      \
+    if (PREDICT_LIKELY((*tor_free__tmpvar)!=NULL)) {           \
+      raw_free(*tor_free__tmpvar);                             \
+      *tor_free__tmpvar=NULL;                                  \
+    }                                                          \
+  STMT_END
+#else
 #define tor_free(p) STMT_BEGIN                                 \
     if (PREDICT_LIKELY((p)!=NULL)) {                           \
       raw_free(p);                                             \
       (p)=NULL;                                                \
     }                                                          \
   STMT_END
+#endif
 #endif /* defined(USE_DMALLOC) */
 
 #define tor_malloc(size)       tor_malloc_(size DMALLOC_ARGS)
