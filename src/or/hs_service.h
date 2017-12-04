@@ -295,8 +295,9 @@ STATIC hs_service_intro_point_t *service_intro_point_new(
                                          const extend_info_t *ei,
                                          unsigned int is_legacy);
 STATIC void service_intro_point_free_(hs_service_intro_point_t *ip);
-#define service_intro_point_free(ip)            \
-  FREE_AND_NULL(service_intro_point, (ip))
+#define service_intro_point_free(ip)                            \
+  FREE_AND_NULL_UNMATCHED(hs_service_intro_point_t,             \
+                          service_intro_point_free_, (ip))
 STATIC void service_intro_point_add(digest256map_t *map,
                                     hs_service_intro_point_t *ip);
 STATIC void service_intro_point_remove(const hs_service_t *service,
@@ -330,7 +331,9 @@ STATIC char *
 encode_desc_rev_counter_for_state(const hs_service_descriptor_t *desc);
 
 STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
-#define service_descriptor_free(d) FREE_AND_NULL(service_descriptor, (d))
+#define service_descriptor_free(d) \
+  FREE_AND_NULL_UNMATCHED(hs_service_descriptor_t, \
+                           service_descriptor_free_, (d))
 
 STATIC uint64_t
 check_state_line_for_service_rev_counter(const char *state_line,

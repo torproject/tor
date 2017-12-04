@@ -20,7 +20,8 @@ void suppress_libevent_log_msg(const char *msg);
   (sock),(tcp),(cb),(data));
 
 void tor_event_free_(struct event *ev);
-#define tor_event_free(ev) FREE_AND_NULL(tor_event, (ev))
+#define tor_event_free(ev) \
+  FREE_AND_NULL_UNMATCHED(struct event, tor_event_free_, (ev))
 
 typedef struct periodic_timer_t periodic_timer_t;
 

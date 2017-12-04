@@ -116,7 +116,8 @@ int policy_write_item(char *buf, size_t buflen, const addr_policy_t *item,
                       int format_for_desc);
 
 void addr_policy_list_free_(smartlist_t *p);
-#define addr_policy_list_free(lst) FREE_AND_NULL(addr_policy_list, (lst))
+#define addr_policy_list_free(lst) \
+  FREE_AND_NULL_UNMATCHED(smartlist_t, addr_policy_list_free_, (lst))
 void addr_policy_free_(addr_policy_t *p);
 #define addr_policy_free(p) FREE_AND_NULL(addr_policy, (p))
 void policies_free_all(void);

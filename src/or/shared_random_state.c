@@ -271,7 +271,7 @@ commit_add_to_state(sr_commit_t *commit, sr_state_t *state)
 static void
 commit_free_(void *p)
 {
-  sr_commit_free(p);
+  sr_commit_free_(p);
 }
 
 /* Free a state that was allocated with state_new(). */

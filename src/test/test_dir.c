@@ -567,7 +567,7 @@ test_dir_routerinfo_parsing(void *arg)
 static void
 routerinfo_free_wrapper_(void *arg)
 {
-  routerinfo_free(arg);
+  routerinfo_free_(arg);
 }
 
 static void

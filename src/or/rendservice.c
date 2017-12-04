@@ -174,7 +174,7 @@ rend_authorized_client_free_(rend_authorized_client_t *client)
 static void
 rend_authorized_client_strmap_item_free(void *authorized_client)
 {
-  rend_authorized_client_free(authorized_client);
+  rend_authorized_client_free_(authorized_client);
 }
 
 /** Release the storage held by <b>service</b>.
@@ -3726,7 +3726,7 @@ upload_service_descriptor(rend_service_t *service)
       }
       /* Free memory for descriptors. */
       for (i = 0; i < smartlist_len(descs); i++)
-        rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+        rend_encoded_v2_service_descriptor_free_(smartlist_get(descs, i));
       smartlist_clear(descs);
       /* Update next upload time. */
       if (seconds_valid - REND_TIME_PERIOD_OVERLAPPING_V2_DESCS
@@ -3757,7 +3757,7 @@ upload_service_descriptor(rend_service_t *service)
         }
         /* Free memory for descriptors. */
         for (i = 0; i < smartlist_len(descs); i++)
-          rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+          rend_encoded_v2_service_descriptor_free_(smartlist_get(descs, i));
         smartlist_clear(descs);
       }
     }

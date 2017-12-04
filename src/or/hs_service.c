@@ -370,7 +370,7 @@ service_intro_point_free_(hs_service_intro_point_t *ip)
 static void
 service_intro_point_free_void(void *obj)
 {
-  service_intro_point_free(obj);
+  service_intro_point_free_(obj);
 }
 
 /* Return a newly allocated service intro point and fully initialized from the

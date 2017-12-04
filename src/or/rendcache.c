@@ -131,7 +131,7 @@ rend_cache_failure_intro_entry_free_(rend_cache_failure_intro_t *entry)
 static void
 rend_cache_failure_intro_entry_free_void(void *entry)
 {
-  rend_cache_failure_intro_entry_free(entry);
+  rend_cache_failure_intro_entry_free_(entry);
 }
 
 /** Allocate a rend cache failure intro object and return it. <b>failure</b>
@@ -165,7 +165,7 @@ rend_cache_failure_entry_free_(rend_cache_failure_t *entry)
 STATIC void
 rend_cache_failure_entry_free_void(void *entry)
 {
-  rend_cache_failure_entry_free(entry);
+  rend_cache_failure_entry_free_(entry);
 }
 
 /** Allocate a rend cache failure object and return it. This function can
@@ -219,7 +219,7 @@ rend_cache_entry_free_(rend_cache_entry_t *e)
 static void
 rend_cache_entry_free_void(void *p)
 {
-  rend_cache_entry_free(p);
+  rend_cache_entry_free_(p);
 }
 
 /** Free all storage held by the service descriptor cache. */

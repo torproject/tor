@@ -109,13 +109,24 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 
 void tor_log_mallinfo(int severity);
 
+/* Helper macro: free a variable of type 'typename' using freefn, and
+ * set the variable to NULL.
+ *
+ * We use this for legacy cases when freefn and typename don't line up
+ * perfectly.
+ */
+#define FREE_AND_NULL_UNMATCHED(typename, freefn, var)                  \
+  do {                                                                  \
+    /* only evaluate (var) once. */                                     \
+    typename **tmp__free__ptr ## freefn = &(var);                       \
+    freefn(*tmp__free__ptr ## freefn);                                  \
+    (*tmp__free__ptr ## freefn) = NULL;                                 \
+  } while (0)
+
 /* Helper macro: free a variable of type 'type' using type_free_, and
  * set the variable to NULL. */
-#define FREE_AND_NULL(type, var)                                \
-  do {                                                          \
-      type ## _free_(var);                                      \
-      (var) = NULL;                                             \
-  } while (0)
+#define FREE_AND_NULL(type, var)                                        \
+  FREE_AND_NULL_UNMATCHED(type ## _t, type ## _free_, (var))
 
 /** Macro: yield a pointer to the field at position <b>off</b> within the
  * structure <b>st</b>.  Example:

@@ -3268,7 +3268,7 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
 static void
 extrainfo_free_void(void *e)
 {
-  extrainfo_free(e);
+  extrainfo_free_(e);
 }
 
 /** Free all storage held by a routerlist <b>rl</b>. */

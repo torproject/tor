@@ -21,7 +21,8 @@ int router_reload_consensus_networkstatus(void);
 void routerstatus_free_(routerstatus_t *rs);
 #define routerstatus_free(rs) FREE_AND_NULL(routerstatus, (rs))
 void networkstatus_vote_free_(networkstatus_t *ns);
-#define networkstatus_vote_free(ns) FREE_AND_NULL(networkstatus_vote, (ns))
+#define networkstatus_vote_free(ns) \
+  FREE_AND_NULL_UNMATCHED(networkstatus_t, networkstatus_vote_free_, (ns))
 networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        networkstatus_t *vote,
                                        const char *identity);

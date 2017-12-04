@@ -616,7 +616,7 @@ test_rend_fns(void *arg)
  done:
   if (descs) {
     for (i = 0; i < smartlist_len(descs); i++)
-      rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+      rend_encoded_v2_service_descriptor_free_(smartlist_get(descs, i));
     smartlist_free(descs);
   }
   if (parsed)

@@ -32,7 +32,9 @@ tor_zstd_compress_process(tor_zstd_compress_state_t *state,
                           int finish);
 
 void tor_zstd_compress_free_(tor_zstd_compress_state_t *state);
-#define tor_zstd_compress_free(st) FREE_AND_NULL(tor_zstd_compress, (st))
+#define tor_zstd_compress_free(st)                      \
+  FREE_AND_NULL_UNMATCHED(tor_zstd_compress_state_t,   \
+                           tor_zstd_compress_free_, (st))
 
 size_t tor_zstd_compress_state_size(const tor_zstd_compress_state_t *state);
 
