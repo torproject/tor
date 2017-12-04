@@ -67,7 +67,6 @@
 #include "main.h"
 #include "hs_circuit.h"
 #include "hs_circuitmap.h"
-#include "hs_common.h"
 #include "hs_ident.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -938,6 +937,12 @@ circuit_free(circuit_t *circ)
 
   circuit_clear_testing_cell_stats(circ);
 
+  /* Cleanup circuit from anything HS v3 related. We also do this when the
+   * circuit is closed. This is to avoid any code path that free registered
+   * circuits without closing them before. This needs to be done before the
+   * hs identifier is freed. */
+  hs_circ_cleanup(circ);
+
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     mem = ocirc;
@@ -963,7 +968,11 @@ circuit_free(circuit_t *circ)
 
     crypto_pk_free(ocirc->intro_key);
     rend_data_free(ocirc->rend_data);
+
+    /* Finally, free the identifier of the circuit and nullify it so multiple
+     * cleanup will work. */
     hs_ident_circuit_free(ocirc->hs_ident);
+    ocirc->hs_ident = NULL;
 
     tor_free(ocirc->dest_address);
     if (ocirc->socks_username) {
@@ -1021,11 +1030,6 @@ circuit_free(circuit_t *circ)
 
   /* Remove from map. */
   circuit_set_n_circid_chan(circ, 0, NULL);
-
-  /* Clear HS circuitmap token from this circ (if any) */
-  if (circ->hs_token) {
-    hs_circuitmap_remove_circuit(circ);
-  }
 
   /* Clear cell queue _after_ removing it from the map.  Otherwise our
    * "active" checks will be violated. */
@@ -1917,6 +1921,9 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
     }
   }
 
+  /* Notify the HS subsystem that this circuit is closing. */
+  hs_circ_cleanup(circ);
+
   if (circuits_pending_close == NULL)
     circuits_pending_close = smartlist_new();
 
@@ -1995,13 +2002,6 @@ circuit_about_to_free(circuit_t *circ)
       circ->state == CIRCUIT_STATE_GUARD_WAIT) ?
                                  CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED,
      orig_reason);
-  }
-
-  /* Notify the HS subsystem for any intro point circuit closing so it can be
-   * dealt with cleanly. */
-  if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-      circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
-    hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
   }
 
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
