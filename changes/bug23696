@@ -1,5 +1,5 @@
   o Minor bugfix (KIST scheduler):
     - Downgrade a warning to log info when the monotonic time diff is
       negative. This can happen on platform not supporting monotonic time. The
-      scheduler recovers from this without any problem. Fixes ticket 23969;
+      scheduler recovers from this without any problem. Fixes bug 23696;
       bugfix on 0.3.2.1-alpha.
