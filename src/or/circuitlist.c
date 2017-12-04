@@ -2481,8 +2481,8 @@ assert_cpath_ok(const crypt_path_t *cp)
 /** Verify that circuit <b>c</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.
  */
-void
-assert_circuit_ok(const circuit_t *c)
+MOCK_IMPL(void,
+assert_circuit_ok,(const circuit_t *c))
 {
   edge_connection_t *conn;
   const or_circuit_t *or_circ = NULL;
