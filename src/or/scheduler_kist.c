@@ -525,9 +525,13 @@ kist_scheduler_schedule(void)
   monotime_get(&now);
 
   /* If time is really monotonic, we can never have now being smaller than the
-   * last scheduler run. The scheduler_last_run at first is set to 0. */
+   * last scheduler run. The scheduler_last_run at first is set to 0.
+   * Unfortunately, not all platforms guarantee monotonic time so we log at
+   * info level but don't make it more noisy. */
   diff = monotime_diff_msec(&scheduler_last_run, &now);
-  IF_BUG_ONCE(diff < 0) {
+  if (diff < 0) {
+    log_info(LD_SCHED, "Monotonic time between now and last run of scheduler "
+                       "is negative: %" PRId64 ". Setting diff to 0.", diff);
     diff = 0;
   }
   if (diff < sched_run_interval) {
