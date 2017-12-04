@@ -56,6 +56,7 @@ env:
     - MAKEFLAGS="-j 2"
   matrix:
     - RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    - RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
     - RUST_OPTIONS=""
 
 matrix:
@@ -87,6 +88,10 @@ install:
   - if [[ "$RUST_OPTIONS" != "" ]]; then which cargo; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
+  ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
+  - if [[ "$RUST_OPTIONS" == "--enable-rust" ]]; then git submodule init  ; fi
+  - if [[ "$RUST_OPTIONS" == "--enable-rust" ]]; then git submodule update; fi
+  - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
 
 script:
   - ./autogen.sh

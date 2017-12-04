@@ -60,30 +60,28 @@ or specifying a local directory.
 
 **Using a local dependency cache**
 
-**NOTE**: local dependency caches which were not *originally* created via
-  `--enable-cargo-online-mode` are broken. See https://bugs.torproject.org/22907
-
-To specify a local directory:
-
-    RUST_DEPENDENCIES='path_to_dependencies_directory' ./configure --enable-rust
-
-(Note that RUST_DEPENDENCIES must be the full path to the directory; it cannot
-be relative.)
-
 You'll need the following Rust dependencies (as of this writing):
 
     libc==0.2.22
 
-To get them, do:
+We vendor our Rust dependencies in a separate repo using
+[cargo-vendor](https://github.com/alexcrichton/cargo-vendor).  To use them, do:
 
-    mkdir path_to_dependencies_directory
-    cd path_to_dependencies_directory
-    git clone https://github.com/rust-lang/libc
-    cd libc
-    git checkout 0.2.22
-    cargo package
-    cd ..
-    ln -s libc/target/package/libc-0.2.22 libc-0.2.22
+    git submodule init
+    git submodule update
+
+To specify the local directory containing the dependencies, (assuming you are in
+the top level of the repository) configure tor with:
+
+    TOR_RUST_DEPENDENCIES='path_to_dependencies_directory' ./configure --enable-rust
+
+(Note that RUST_DEPENDENCIES must be the full path to the directory; it cannot
+be relative.)
+
+Assuming you used the above `git submodule` commands and you're in the topmost
+directory of the repository, this would be:
+
+    TOR_RUST_DEPENDENCIES=`pwd`/src/ext/rust/crates ./configure --enable-rust
 
 
  Identifying which modules to rewrite
