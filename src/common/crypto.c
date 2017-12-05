@@ -2875,8 +2875,17 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
       tor_assert(errno != EAGAIN);
       tor_assert(errno != EINTR);
 
-      /* Probably ENOSYS. */
-      log_warn(LD_CRYPTO, "Can't get entropy from getrandom().");
+      /* Useful log message for errno. */
+      if (errno == ENOSYS) {
+        log_warn(LD_CRYPTO, "Can't get entropy from getrandom(). "
+                 " You are running a version of Tor built to support"
+                 " getrandom(), but the kernel doesn't implement this"
+                 " implement this function--probably because it is too old?");
+      } else {
+        log_warn(LD_CRYPTO, "Can't get entropy from getrandom(): %s.",
+                 strerror(errno));
+      }
+
       getrandom_works = 0; /* Don't bother trying again. */
       return -1;
       /* LCOV_EXCL_STOP */
