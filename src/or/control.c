@@ -4458,10 +4458,11 @@ handle_control_hspost(control_connection_t *conn,
  * containing the onion address without the .onion part. On error, address_out
  * is untouched. */
 static hs_service_add_ephemeral_status_t
-add_onion_helper_add_service(int hs_version, void *pk, smartlist_t *port_cfgs,
-                             int max_streams, int max_streams_close_circuit,
-                             int auth_type, smartlist_t *auth_clients,
-                             char **address_out)
+add_onion_helper_add_service(int hs_version,
+                             add_onion_secret_key_t *pk,
+                             smartlist_t *port_cfgs, int max_streams,
+                             int max_streams_close_circuit, int auth_type,
+                             smartlist_t *auth_clients, char **address_out)
 {
   hs_service_add_ephemeral_status_t ret;
 
@@ -4471,12 +4472,12 @@ add_onion_helper_add_service(int hs_version, void *pk, smartlist_t *port_cfgs,
 
   switch (hs_version) {
   case HS_VERSION_TWO:
-    ret = rend_service_add_ephemeral(pk, port_cfgs, max_streams,
+    ret = rend_service_add_ephemeral(pk->v2, port_cfgs, max_streams,
                                      max_streams_close_circuit, auth_type,
                                      auth_clients, address_out);
     break;
   case HS_VERSION_THREE:
-    ret = hs_service_add_ephemeral(pk, port_cfgs, max_streams,
+    ret = hs_service_add_ephemeral(pk->v3, port_cfgs, max_streams,
                                    max_streams_close_circuit, address_out);
     break;
   default:
@@ -4668,7 +4669,7 @@ handle_control_add_onion(control_connection_t *conn,
 
   /* Parse the "keytype:keyblob" argument. */
   int hs_version = 0;
-  void *pk = NULL;
+  add_onion_secret_key_t pk;
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
   char *err_msg = NULL;
@@ -4697,7 +4698,7 @@ handle_control_add_onion(control_connection_t *conn,
    * regardless of success/failure.
    */
   char *service_id = NULL;
-  int ret = add_onion_helper_add_service(hs_version, pk, port_cfgs,
+  int ret = add_onion_helper_add_service(hs_version, &pk, port_cfgs,
                                          max_streams,
                                          max_streams_close_circuit, auth_type,
                                          auth_clients, &service_id);
@@ -4796,7 +4797,7 @@ handle_control_add_onion(control_connection_t *conn,
 STATIC int
 add_onion_helper_keyarg(const char *arg, int discard_pk,
                         const char **key_new_alg_out, char **key_new_blob_out,
-                        void **decoded_key, int *hs_version,
+                        add_onion_secret_key_t *decoded_key, int *hs_version,
                         char **err_msg_out)
 {
   smartlist_t *key_args = smartlist_new();
@@ -4805,8 +4806,6 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   char *key_new_blob = NULL;
   char *err_msg = NULL;
   int ret = -1;
-
-  *decoded_key = NULL;
 
   smartlist_split_string(key_args, arg, ":", SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(key_args) != 2) {
@@ -4835,7 +4834,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       err_msg = tor_strdup("512 Invalid RSA key size\r\n");
       goto err;
     }
-    *decoded_key = pk;
+    decoded_key->v2 = pk;
     *hs_version = HS_VERSION_TWO;
   } else if (!strcasecmp(key_type_ed25519_v3, key_type)) {
     /* "ED25519-V3:<Base64 Blob>" - Loading a pre-existing ed25519 key. */
@@ -4846,7 +4845,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       err_msg = tor_strdup("512 Failed to decode ED25519-V3 key\r\n");
       goto err;
     }
-    *decoded_key = sk;
+    decoded_key->v3 = sk;
     *hs_version = HS_VERSION_THREE;
   } else if (!strcasecmp(key_type_new, key_type)) {
     /* "NEW:<Algorithm>" - Generating a new key, blob as algorithm. */
@@ -4868,7 +4867,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
         }
         key_new_alg = key_type_rsa1024;
       }
-      *decoded_key = pk;
+      decoded_key->v2 = pk;
       *hs_version = HS_VERSION_TWO;
     } else if (!strcasecmp(key_type_ed25519_v3, key_blob)) {
       ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
@@ -4891,7 +4890,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
         }
         key_new_alg = key_type_ed25519_v3;
       }
-      *decoded_key = sk;
+      decoded_key->v3 = sk;
       *hs_version = HS_VERSION_THREE;
     } else {
       err_msg = tor_strdup("513 Invalid key type\r\n");
@@ -4903,7 +4902,6 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   }
 
   /* Succeded in loading or generating a private key. */
-  tor_assert(*decoded_key);
   ret = 0;
 
  err:

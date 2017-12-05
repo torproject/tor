@@ -263,9 +263,20 @@ void format_cell_stats(char **event_string, circuit_t *circ,
                        cell_stats_t *cell_stats);
 STATIC char *get_bw_samples(void);
 
+/* ADD_ONION secret key to create an ephemeral service. The command supports
+ * multiple versions so this union stores the key and passes it to the HS
+ * subsystem depending on the requested version. */
+typedef union add_onion_secret_key_t {
+  /* Hidden service v2 secret key. */
+  crypto_pk_t *v2;
+  /* Hidden service v3 secret key. */
+  ed25519_secret_key_t *v3;
+} add_onion_secret_key_t;
+
 STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
                                    const char **key_new_alg_out,
-                                   char **key_new_blob_out, void **decoded_key,
+                                   char **key_new_blob_out,
+                                   add_onion_secret_key_t *decoded_key,
                                    int *hs_version, char **err_msg_out);
 
 STATIC rend_authorized_client_t *
