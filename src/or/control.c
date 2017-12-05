@@ -4449,10 +4449,17 @@ handle_control_hspost(control_connection_t *conn,
 }
 
 /* Helper function for ADD_ONION that adds an ephemeral service depending on
- * the given hs_version. The pk's type defers depending on the version so the
- * caller should make sure those two matches. Both port_cfgs and auth_clients
- * are now owned by the hidden service subsystem so the caller must stop
- * accessing them.
+ * the given hs_version.
+ *
+ * The secret key in pk depends on the hs_version. The ownership of the key
+ * used in pk is given to the HS subsystem so the caller must stop accessing
+ * it after.
+ *
+ * The port_cfgs is a list of service port. Ownership transfered to service.
+ * The max_streams refers to the MaxStreams= key.
+ * The max_streams_close_circuit refers to the MaxStreamsCloseCircuit key.
+ * The auth_type is the authentication type of the clients in auth_clients.
+ * The ownership of that list is transfered to the service.
  *
  * On success (RSAE_OKAY), the address_out points to a newly allocated string
  * containing the onion address without the .onion part. On error, address_out
