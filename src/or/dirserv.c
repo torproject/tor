@@ -2228,7 +2228,8 @@ routers_make_ed_keys_unique(smartlist_t *routers)
 }
 
 /** Extract status information from <b>ri</b> and from other authority
- * functions and store it in <b>rs</b>>.
+ * functions and store it in <b>rs</b>. <b>rs</b> is zeroed out before it is
+ * set.
  *
  * We assume that ri-\>is_running has already been set, e.g. by
  *   dirserv_set_router_is_running(ri, now);
@@ -2294,6 +2295,9 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
        OR port and it's reachable so copy it to the routerstatus.  */
     tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
     rs->ipv6_orport = ri->ipv6_orport;
+  } else {
+    tor_addr_make_null(&rs->ipv6_addr, AF_INET6);
+    rs->ipv6_orport = 0;
   }
 
   if (options->TestingTorNetwork) {
