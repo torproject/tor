@@ -807,6 +807,7 @@ test_scheduler_loop_kist(void *arg)
 #endif
 
   channel_t *ch1 = new_fake_channel(), *ch2 = new_fake_channel();
+  channel_t *ch3 = new_fake_channel();
 
   /* setup options so we're sure about what sched we are running */
   MOCK(get_options, mock_get_options);
@@ -857,14 +858,35 @@ test_scheduler_loop_kist(void *arg)
   the_scheduler->run();
 
   channel_flush_some_cells_mock_free_all();
-  tt_int_op(1,==,1);
+
+  /* We'll try to run this closed channel threw the scheduler loop and make
+   * sure it ends up in the right state. */
+  tt_assert(ch3);
+  ch3->magic = TLS_CHAN_MAGIC;
+  ch3->state = CHANNEL_STATE_OPEN;
+  ch3->cmux = circuitmux_alloc();
+  channel_register(ch3);
+  tt_assert(ch3->registered);
+
+  ch3->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
+  scheduler_channel_has_waiting_cells(ch3);
+  /* Should be in the pending list now waiting to be handled. */
+  tt_int_op(ch3->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+  /* By running the scheduler on a closed channel, it should end up in the
+   * IDLE state and not in the pending channel list. */
+  ch3->state = CHANNEL_STATE_CLOSED;
+  the_scheduler->run();
+  tt_int_op(ch3->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
 
  done:
   /* Prep the channel so the free() function doesn't explode. */
-  ch1->state = ch2->state = CHANNEL_STATE_CLOSED;
-  ch1->registered = ch2->registered = 0;
+  ch1->state = ch2->state = ch3->state = CHANNEL_STATE_CLOSED;
+  ch1->registered = ch2->registered = ch3->registered = 0;
   channel_free(ch1);
   channel_free(ch2);
+  channel_free(ch3);
   UNMOCK(update_socket_info_impl);
   UNMOCK(channel_should_write_to_kernel);
   UNMOCK(channel_write_to_kernel);
