@@ -222,7 +222,9 @@ hs_control_hspost_command(const char *body, const char *onion_address,
 
   /* This can't fail because we require the caller to pass us a valid onion
    * address that has passed hs_address_is_valid(). */
-  hs_parse_address(onion_address, &identity_pk, NULL, NULL);
+  if (BUG(hs_parse_address(onion_address, &identity_pk, NULL, NULL) < 0)) {
+    goto done; // LCOV_EXCL_LINE
+  }
 
   /* Only decode the plaintext part which is what the directory will do to
    * validate before caching. */
