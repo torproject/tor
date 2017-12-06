@@ -96,6 +96,16 @@ struct circuit_build_times_s {
   double timeout_ms;
   /** How long we wait before actually closing the circuit. */
   double close_ms;
+  /** Total succeeded counts. Old measurements may be scaled downward if
+   * we've seen a lot of circuits. */
+  uint32_t num_circ_succeeded;
+  /** Total timeout counts.  Old measurements may be scaled downward if
+   * we've seen a lot of circuits. */
+  uint32_t num_circ_timeouts;
+  /** Total closed counts.  Old measurements may be scaled downward if
+   * we've seen a lot of circuits.*/
+  uint32_t num_circ_closed;
+
 };
 #endif /* defined(CIRCUITSTATS_PRIVATE) */
 

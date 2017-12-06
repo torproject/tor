@@ -45,6 +45,7 @@
 static void cbt_control_event_buildtimeout_set(
                                   const circuit_build_times_t *cbt,
                                   buildtimeout_set_event_t type);
+static void circuit_build_times_scale_circ_counts(circuit_build_times_t *cbt);
 
 #define CBT_BIN_TO_MS(bin) ((bin)*CBT_BIN_WIDTH + (CBT_BIN_WIDTH/2))
 
@@ -537,6 +538,11 @@ circuit_build_times_reset(circuit_build_times_t *cbt)
   cbt->total_build_times = 0;
   cbt->build_times_idx = 0;
   cbt->have_computed_timeout = 0;
+
+  // Reset timeout and close counts
+  cbt->num_circ_succeeded = 0;
+  cbt->num_circ_closed = 0;
+  cbt->num_circ_timeouts = 0;
 }
 
 /**
@@ -1404,6 +1410,24 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 }
 
 /**
+ * Non-destructively scale all of our circuit success, timeout, and close
+ * counts down by a factor of two. Scaling in this way preserves the
+ * ratios between succeeded vs timed out vs closed circuits, so that
+ * our statistics don't change when we scale.
+ *
+ * This is used only in the rare event that we build more than
+ * INT32_MAX circuits.  Since the num_circ_* variables are
+ * uint32_t, we won't even be close to overflowing them.
+ */
+void
+circuit_build_times_scale_circ_counts(circuit_build_times_t *cbt)
+{
+  cbt->num_circ_succeeded /= 2;
+  cbt->num_circ_timeouts /= 2;
+  cbt->num_circ_closed /= 2;
+}
+
+/**
  * Called to indicate that we "completed" a circuit. Because this circuit
  * succeeded, it doesn't count as a timeout-after-the-first-hop.
  *
@@ -1419,6 +1443,14 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 void
 circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
 {
+  // Count circuit success
+  cbt->num_circ_succeeded++;
+
+  // If we're going to wrap int32, scale everything
+  if (cbt->num_circ_succeeded >= INT32_MAX) {
+    circuit_build_times_scale_circ_counts(cbt);
+  }
+
   /* Check for NULLness because we might not be using adaptive timeouts */
   if (cbt->liveness.timeouts_after_firsthop &&
       cbt->liveness.num_recent_circs > 0) {
@@ -1441,6 +1473,14 @@ static void
 circuit_build_times_network_timeout(circuit_build_times_t *cbt,
                                     int did_onehop)
 {
+  // Count circuit timeout
+  cbt->num_circ_timeouts++;
+
+  // If we're going to wrap int32, scale everything
+  if (cbt->num_circ_timeouts >= INT32_MAX) {
+    circuit_build_times_scale_circ_counts(cbt);
+  }
+
   /* Check for NULLness because we might not be using adaptive timeouts */
   if (cbt->liveness.timeouts_after_firsthop &&
       cbt->liveness.num_recent_circs > 0) {
@@ -1466,6 +1506,15 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
                                     int did_onehop, time_t start_time)
 {
   time_t now = time(NULL);
+
+  // Count circuit close
+  cbt->num_circ_closed++;
+
+  // If we're going to wrap int32, scale everything
+  if (cbt->num_circ_closed >= INT32_MAX) {
+    circuit_build_times_scale_circ_counts(cbt);
+  }
+
   /*
    * Check if this is a timeout that was for a circuit that spent its
    * entire existence during a time where we have had no network activity.
@@ -1820,6 +1869,8 @@ cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
 {
   char *args = NULL;
   double qnt;
+  double timeout_rate = 0.0;
+  double close_rate = 0.0;
 
   switch (type) {
     case BUILDTIMEOUT_SET_EVENT_RESET:
@@ -1834,15 +1885,29 @@ cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
       break;
   }
 
+  /* The timeout rate is the ratio of the timeout count over
+   * the total number of circuits attempted. The total number of
+   * circuits is (timeouts+succeeded+closed), since a circuit can
+   * either timeout, close, or succeed. We cast the denominator
+   * to promote it to double before the addition, to avoid int32
+   * overflow. */
+  const double total_circuits =
+    ((double)cbt->num_circ_timeouts) + cbt->num_circ_succeeded
+       + cbt->num_circ_closed;
+  if (total_circuits >= 1.0) {
+    timeout_rate = cbt->num_circ_timeouts / total_circuits;
+    close_rate = cbt->num_circ_closed / total_circuits;
+  }
+
   tor_asprintf(&args, "TOTAL_TIMES=%lu "
                "TIMEOUT_MS=%lu XM=%lu ALPHA=%f CUTOFF_QUANTILE=%f "
                "TIMEOUT_RATE=%f CLOSE_MS=%lu CLOSE_RATE=%f",
                (unsigned long)cbt->total_build_times,
                (unsigned long)cbt->timeout_ms,
                (unsigned long)cbt->Xm, cbt->alpha, qnt,
-               circuit_build_times_timeout_rate(cbt),
+               timeout_rate,
                (unsigned long)cbt->close_ms,
-               circuit_build_times_close_rate(cbt));
+               close_rate);
 
   control_event_buildtimeout_set(type, args);
 
