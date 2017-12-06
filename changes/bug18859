@@ -1,0 +1,5 @@
+  o Minor bugfixes (circuit prediction):
+    - Fix circuit_stream_is_being_handled so it correctly reports on circuits
+      with isolation settings. Ports must not be said to be "handled" by
+      already-isolated circuits, and a stream can only be handled by a circuit
+      if their isolation settings are compatible. Fixes bug 18859.

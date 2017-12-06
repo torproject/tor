@@ -973,7 +973,7 @@ circuit_remove_handled_ports(smartlist_t *needed_ports)
     tor_assert(*port);
     if (circuit_stream_is_being_handled(NULL, *port,
                                         MIN_CIRCUITS_HANDLING_STREAM)) {
-//      log_debug(LD_CIRC,"Port %d is already being handled; removing.", port);
+      log_debug(LD_CIRC,"Port %d is already being handled; removing.", *port);
       smartlist_del(needed_ports, i--);
       tor_free(port);
     } else {
@@ -1009,6 +1009,10 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
       if (build_state->is_internal || build_state->onehop_tunnel)
         continue;
       if (origin_circ->unusable_for_new_conns)
+        continue;
+      if (origin_circ->isolation_values_set &&
+          (conn == NULL ||
+           !connection_edge_compatible_with_circuit(conn, origin_circ)))
         continue;
 
       exitnode = build_state_get_exit_node(build_state);
