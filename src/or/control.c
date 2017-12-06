@@ -4676,7 +4676,7 @@ handle_control_add_onion(control_connection_t *conn,
 
   /* Parse the "keytype:keyblob" argument. */
   int hs_version = 0;
-  add_onion_secret_key_t pk;
+  add_onion_secret_key_t pk = { NULL };
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
   char *err_msg = NULL;
