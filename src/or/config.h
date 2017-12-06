@@ -58,30 +58,76 @@ config_line_t *option_get_assignment(const or_options_t *options,
                                      const char *key);
 int options_save_current(void);
 const char *get_torrc_fname(int defaults_fname);
+typedef enum {
+  DIRROOT_DATADIR,
+  DIRROOT_CACHEDIR,
+  DIRROOT_KEYDIR
+} directory_root_t;
+
 MOCK_DECL(char *,
-          options_get_datadir_fname2_suffix,
+          options_get_dir_fname2_suffix,
           (const or_options_t *options,
+           directory_root_t roottype,
            const char *sub1, const char *sub2,
            const char *suffix));
-#define get_datadir_fname2_suffix(sub1, sub2, suffix) \
-  options_get_datadir_fname2_suffix(get_options(), (sub1), (sub2), (suffix))
-/** Return a newly allocated string containing datadir/sub1.  See
- * get_datadir_fname2_suffix.  */
-#define get_datadir_fname(sub1) get_datadir_fname2_suffix((sub1), NULL, NULL)
-/** Return a newly allocated string containing datadir/sub1/sub2.  See
- * get_datadir_fname2_suffix.  */
-#define get_datadir_fname2(sub1,sub2) \
-  get_datadir_fname2_suffix((sub1), (sub2), NULL)
-/** Return a newly allocated string containing datadir/sub1/sub2 relative to
- * opts.  See get_datadir_fname2_suffix.  */
+
+/* These macros wrap options_get_dir_fname2_suffix to provide a more
+ * convenient API for finding filenames that Tor uses inside its storage
+ * They are named according to a pattern:
+ *    (options_)?get_(cache|key|data)dir_fname(2)?(_suffix)?
+ *
+ * Macros that begin with options_ take an options argument; the others
+ * work with respect to the global options.
+ *
+ * Each macro works relative to the data directory, the key directory,
+ * or the cache directory, as determined by which one is mentioned.
+ *
+ * Macro variants with "2" in their name take two path components; others
+ * take one.
+ *
+ * Macro variants with "_suffix" at the end take an additional suffix
+ * that gets appended to the end of the file
+ */
+#define options_get_datadir_fname2_suffix(options, sub1, sub2, suffix) \
+  options_get_dir_fname2_suffix((options), DIRROOT_DATADIR, \
+                                (sub1), (sub2), (suffix))
+#define options_get_cachedir_fname2_suffix(options, sub1, sub2, suffix) \
+  options_get_dir_fname2_suffix((options), DIRROOT_CACHEDIR, \
+                                (sub1), (sub2), (suffix))
+#define options_get_keydir_fname2_suffix(options, sub1, sub2, suffix) \
+  options_get_dir_fname2_suffix((options), DIRROOT_KEYDIR, \
+                                (sub1), (sub2), (suffix))
+
+#define options_get_datadir_fname(opts,sub1)                    \
+  options_get_datadir_fname2_suffix((opts),(sub1), NULL, NULL)
 #define options_get_datadir_fname2(opts,sub1,sub2)                      \
   options_get_datadir_fname2_suffix((opts),(sub1), (sub2), NULL)
-/** Return a newly allocated string containing datadir/sub1suffix.  See
- * get_datadir_fname2_suffix. */
+
+#define get_datadir_fname2_suffix(sub1, sub2, suffix) \
+  options_get_datadir_fname2_suffix(get_options(), (sub1), (sub2), (suffix))
+#define get_datadir_fname(sub1)                 \
+  get_datadir_fname2_suffix((sub1), NULL, NULL)
+#define get_datadir_fname2(sub1,sub2) \
+  get_datadir_fname2_suffix((sub1), (sub2), NULL)
 #define get_datadir_fname_suffix(sub1, suffix) \
   get_datadir_fname2_suffix((sub1), NULL, (suffix))
 
+/** DOCDOC */
+#define options_get_keydir_fname(options, sub1)  \
+  options_get_keydir_fname2_suffix((options), (sub1), NULL, NULL)
+#define get_keydir_fname_suffix(sub1, suffix)   \
+  options_get_keydir_fname2_suffix(get_options(), (sub1), NULL, suffix)
+#define get_keydir_fname(sub1)                  \
+  options_get_keydir_fname2_suffix(get_options(), (sub1), NULL, NULL)
+
+#define get_cachedir_fname(sub1) \
+  options_get_cachedir_fname2_suffix(get_options(), (sub1), NULL, NULL)
+#define get_cachedir_fname_suffix(sub1, suffix) \
+  options_get_cachedir_fname2_suffix(get_options(), (sub1), NULL, (suffix))
+
 int using_default_dir_authorities(const or_options_t *options);
+
+int create_keys_directory(const or_options_t *options);
 
 int check_or_create_data_subdir(const char *subdir);
 int write_to_data_subdir(const char* subdir, const char* fname,

@@ -3641,8 +3641,21 @@ typedef struct {
   char *SyslogIdentityTag; /**< Identity tag to add for syslog logging. */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
-  char *DataDirectory; /**< OR only: where to store long-term data. */
+  char *DataDirectory_option; /**< Where to store long-term data, as
+                               * configured by the user. */
+  char *DataDirectory; /**< Where to store long-term data, as modified. */
   int DataDirectoryGroupReadable; /**< Boolean: Is the DataDirectory g+r? */
+
+  char *KeyDirectory_option; /**< Where to store keys, as
+                               * configured by the user. */
+  char *KeyDirectory; /**< Where to store keys data, as modified. */
+  int KeyDirectoryGroupReadable; /**< Boolean: Is the KeyDirectory g+r? */
+
+  char *CacheDirectory_option; /**< Where to store cached data, as
+                               * configured by the user. */
+  char *CacheDirectory; /**< Where to store cached data, as modified. */
+  int CacheDirectoryGroupReadable; /**< Boolean: Is the CacheDirectory g+r? */
+
   char *Nickname; /**< OR only: nickname of this onion router. */
   char *Address; /**< OR only: configured address for this onion router. */
   char *PidFile; /**< Where to store PID of Tor process. */

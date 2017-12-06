@@ -2170,7 +2170,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
         *answer = tor_strdup(consensus->dir);
     }
     if (!*answer) { /* try loading it from disk */
-      char *filename = get_datadir_fname("cached-consensus");
+      char *filename = get_cachedir_fname("cached-consensus");
       *answer = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
       tor_free(filename);
       if (!*answer) { /* generate an error */

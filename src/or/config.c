@@ -253,6 +253,8 @@ static config_var_t option_vars_[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(BridgeDistribution,          STRING,   NULL),
+  VAR("CacheDirectory",          FILENAME, CacheDirectory_option, NULL),
+  V(CacheDirectoryGroupReadable, BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
   V(PaddingStatistics,           BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
@@ -286,7 +288,7 @@ static config_var_t option_vars_[] = {
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
   V(CountPrivateBandwidth,       BOOL,     "0"),
-  V(DataDirectory,               FILENAME, NULL),
+  VAR("DataDirectory",           FILENAME, DataDirectory_option, NULL),
   V(DataDirectoryGroupReadable,  BOOL,     "0"),
   V(DisableOOSCheck,             BOOL,     "1"),
   V(DisableNetwork,              BOOL,     "0"),
@@ -392,6 +394,8 @@ static config_var_t option_vars_[] = {
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
+  VAR("KeyDirectory",            FILENAME, KeyDirectory_option, NULL),
+  V(KeyDirectoryGroupReadable,   BOOL,     "0"),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   V(KeepBindCapabilities,            AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
@@ -733,7 +737,7 @@ static int parse_ports(or_options_t *options, int validate_only,
 static int check_server_ports(const smartlist_t *ports,
                               const or_options_t *options,
                               int *num_low_ports_out);
-static int validate_data_directory(or_options_t *options);
+static int validate_data_directories(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
 static int options_init_logs(const or_options_t *old_options,
@@ -941,6 +945,9 @@ or_options_free(or_options_t *options)
     SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, tor_free(f));
     smartlist_free(options->FilesOpenedByIncludes);
   }
+  tor_free(options->DataDirectory);
+  tor_free(options->CacheDirectory);
+  tor_free(options->KeyDirectory);
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
   tor_free(options->master_key_fname);
@@ -1250,6 +1257,69 @@ consider_adding_dir_servers(const or_options_t *options,
   return 0;
 }
 
+/**
+ * Make sure that <b>directory</b> exists, with appropriate ownership and
+ * permissions (as modified by <b>group_readable</b>). If <b>create</b>,
+ * create the directory if it is missing. Return 0 on success.
+ * On failure, return -1 and set *<b>msg_out</b>.
+ */
+static int
+check_and_create_data_directory(int create,
+                                const char *directory,
+                                int group_readable,
+                                const char *owner,
+                                char **msg_out)
+{
+  cpd_check_t cpd_opts = create ? CPD_CREATE : CPD_CHECK;
+  if (group_readable)
+      cpd_opts |= CPD_GROUP_READ;
+  if (check_private_dir(directory,
+                        cpd_opts,
+                        owner) < 0) {
+    tor_asprintf(msg_out,
+                 "Couldn't %s private data directory \"%s\"",
+                 create ? "create" : "access",
+                 directory);
+    return -1;
+  }
+
+#ifndef _WIN32
+  if (group_readable) {
+    /* Only new dirs created get new opts, also enforce group read. */
+    if (chmod(directory, 0750)) {
+      log_warn(LD_FS,"Unable to make %s group-readable: %s",
+               directory, strerror(errno));
+    }
+  }
+#endif /* !defined(_WIN32) */
+
+  return 0;
+}
+
+/**
+ * Ensure that our keys directory exists, with appropriate permissions.
+ * Return 0 on success, -1 on failure.
+ */
+int
+create_keys_directory(const or_options_t *options)
+{
+  /* Make sure DataDirectory exists, and is private. */
+  cpd_check_t cpd_opts = CPD_CREATE;
+  if (options->DataDirectoryGroupReadable)
+    cpd_opts |= CPD_GROUP_READ;
+  if (check_private_dir(options->DataDirectory, cpd_opts, options->User)) {
+    log_err(LD_OR, "Can't create/check datadirectory %s",
+            options->DataDirectory);
+    return -1;
+  }
+
+  /* Check the key directory. */
+  if (check_private_dir(options->KeyDirectory, CPD_CREATE, options->User)) {
+    return -1;
+  }
+  return 0;
+}
+
 /* Helps determine flags to pass to switch_id. */
 static int have_low_ports = -1;
 
@@ -1404,29 +1474,30 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   }
 
   /* Ensure data directory is private; create if possible. */
-  cpd_check_t cpd_opts = running_tor ? CPD_CREATE : CPD_CHECK;
-  if (options->DataDirectoryGroupReadable)
-      cpd_opts |= CPD_GROUP_READ;
-  if (check_private_dir(options->DataDirectory,
-                        cpd_opts,
-                        options->User)<0) {
-    tor_asprintf(msg,
-              "Couldn't access/create private data directory \"%s\"",
-              options->DataDirectory);
-
+  /* It's okay to do this in "options_act_reversible()" even though it isn't
+   * actually reversible, since you can't change the DataDirectory while
+   * Tor is running. */
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->DataDirectory,
+                                      options->DataDirectoryGroupReadable,
+                                      options->User,
+                                      msg) < 0) {
     goto done;
-    /* No need to roll back, since you can't change the value. */
   }
-
-#ifndef _WIN32
-  if (options->DataDirectoryGroupReadable) {
-    /* Only new dirs created get new opts, also enforce group read. */
-    if (chmod(options->DataDirectory, 0750)) {
-      log_warn(LD_FS,"Unable to make %s group-readable: %s",
-               options->DataDirectory, strerror(errno));
-    }
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->KeyDirectory,
+                                      options->KeyDirectoryGroupReadable,
+                                      options->User,
+                                      msg) < 0) {
+    goto done;
   }
-#endif /* !defined(_WIN32) */
+  if (check_and_create_data_directory(running_tor /* create */,
+                                      options->CacheDirectory,
+                                      options->CacheDirectoryGroupReadable,
+                                      options->User,
+                                      msg) < 0) {
+    goto done;
+  }
 
   /* Bail out at this point if we're not going to be a client or server:
    * we don't run Tor itself. */
@@ -3188,7 +3259,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (parse_outbound_addresses(options, 1, msg) < 0)
     return -1;
 
-  if (validate_data_directory(options)<0)
+  if (validate_data_directories(options)<0)
     REJECT("Invalid DataDirectory");
 
   if (options->Nickname == NULL) {
@@ -4583,6 +4654,22 @@ options_transition_allowed(const or_options_t *old,
                "While Tor is running, changing DataDirectory "
                "(\"%s\"->\"%s\") is not allowed.",
                old->DataDirectory, new_val->DataDirectory);
+    return -1;
+  }
+
+  if (!opt_streq(old->KeyDirectory, new_val->KeyDirectory)) {
+    tor_asprintf(msg,
+               "While Tor is running, changing KeyDirectory "
+               "(\"%s\"->\"%s\") is not allowed.",
+               old->KeyDirectory, new_val->KeyDirectory);
+    return -1;
+  }
+
+  if (!opt_streq(old->CacheDirectory, new_val->CacheDirectory)) {
+    tor_asprintf(msg,
+               "While Tor is running, changing CacheDirectory "
+               "(\"%s\"->\"%s\") is not allowed.",
+               old->CacheDirectory, new_val->CacheDirectory);
     return -1;
   }
 
@@ -7682,60 +7769,81 @@ port_exists_by_type_addr32h_port(int listener_type, uint32_t addr_ipv4h,
                                        check_wildcard);
 }
 
-/** Adjust the value of options->DataDirectory, or fill it in if it's
- * absent. Return 0 on success, -1 on failure. */
-static int
-normalize_data_directory(or_options_t *options)
+/** Allocate and return a good value for the DataDirectory based on
+ *  <b>val</b>, which may be NULL.  Return NULL on failure. */
+static char *
+get_data_directory(const char *val)
 {
 #ifdef _WIN32
-  char *p;
-  if (options->DataDirectory)
-    return 0; /* all set */
-  p = tor_malloc(MAX_PATH);
-  strlcpy(p,get_windows_conf_root(),MAX_PATH);
-  options->DataDirectory = p;
-  return 0;
+  if (val) {
+    return tor_strdup(val);
+  } else {
+    return tor_strdup(get_windows_conf_root());
+  }
 #else /* !(defined(_WIN32)) */
-  const char *d = options->DataDirectory;
+  const char *d = val;
   if (!d)
     d = "~/.tor";
 
- if (strncmp(d,"~/",2) == 0) {
-   char *fn = expand_filename(d);
-   if (!fn) {
-     log_warn(LD_CONFIG,"Failed to expand filename \"%s\".", d);
-     return -1;
-   }
-   if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
-     /* If our homedir is /, we probably don't want to use it. */
-     /* Default to LOCALSTATEDIR/tor which is probably closer to what we
-      * want. */
-     log_warn(LD_CONFIG,
-              "Default DataDirectory is \"~/.tor\".  This expands to "
-              "\"%s\", which is probably not what you want.  Using "
-              "\"%s"PATH_SEPARATOR"tor\" instead", fn, LOCALSTATEDIR);
-     tor_free(fn);
-     fn = tor_strdup(LOCALSTATEDIR PATH_SEPARATOR "tor");
-   }
-   tor_free(options->DataDirectory);
-   options->DataDirectory = fn;
- }
- return 0;
+  if (!strcmpstart(d, "~/")) {
+    char *fn = expand_filename(d);
+    if (!fn) {
+      log_warn(LD_CONFIG,"Failed to expand filename \"%s\".", d);
+      return NULL;
+    }
+    if (!val && !strcmp(fn,"/.tor")) {
+      /* If our homedir is /, we probably don't want to use it. */
+      /* Default to LOCALSTATEDIR/tor which is probably closer to what we
+       * want. */
+      log_warn(LD_CONFIG,
+               "Default DataDirectory is \"~/.tor\".  This expands to "
+               "\"%s\", which is probably not what you want.  Using "
+               "\"%s"PATH_SEPARATOR"tor\" instead", fn, LOCALSTATEDIR);
+      tor_free(fn);
+      fn = tor_strdup(LOCALSTATEDIR PATH_SEPARATOR "tor");
+    }
+    return fn;
+  }
+  return tor_strdup(d);
 #endif /* defined(_WIN32) */
 }
 
-/** Check and normalize the value of options->DataDirectory; return 0 if it
- * is sane, -1 otherwise. */
+/** Check and normalize the values of options->{Key,Data,Cache}Directory;
+ * return 0 if it is sane, -1 otherwise. */
 static int
-validate_data_directory(or_options_t *options)
+validate_data_directories(or_options_t *options)
 {
-  if (normalize_data_directory(options) < 0)
+  tor_free(options->DataDirectory);
+  options->DataDirectory = get_data_directory(options->DataDirectory_option);
+  if (!options->DataDirectory)
     return -1;
-  tor_assert(options->DataDirectory);
   if (strlen(options->DataDirectory) > (512-128)) {
     log_warn(LD_CONFIG, "DataDirectory is too long.");
     return -1;
   }
+
+  tor_free(options->KeyDirectory);
+  if (options->KeyDirectory_option) {
+    options->KeyDirectory = get_data_directory(options->KeyDirectory_option);
+    if (!options->KeyDirectory)
+      return -1;
+  } else {
+    /* Default to the data directory's keys subdir */
+    tor_asprintf(&options->KeyDirectory, "%s"PATH_SEPARATOR"keys",
+                 options->DataDirectory);
+  }
+
+  tor_free(options->CacheDirectory);
+  if (options->CacheDirectory_option) {
+    options->CacheDirectory = get_data_directory(
+                                             options->CacheDirectory_option);
+    if (!options->CacheDirectory)
+      return -1;
+  } else {
+    /* Default to the data directory. */
+    options->CacheDirectory = tor_strdup(options->DataDirectory);
+  }
+
   return 0;
 }
 
@@ -7876,53 +7984,56 @@ init_libevent(const or_options_t *options)
   suppress_libevent_log_msg(NULL);
 }
 
-/** Return a newly allocated string holding a filename relative to the data
- * directory.  If <b>sub1</b> is present, it is the first path component after
+/** Return a newly allocated string holding a filename relative to the
+ * directory in <b>options</b> specified by <b>roottype</b>.
+ * If <b>sub1</b> is present, it is the first path component after
  * the data directory.  If <b>sub2</b> is also present, it is the second path
  * component after the data directory.  If <b>suffix</b> is present, it
  * is appended to the filename.
  *
- * Examples:
- *    get_datadir_fname2_suffix("a", NULL, NULL) -> $DATADIR/a
- *    get_datadir_fname2_suffix("a", NULL, ".tmp") -> $DATADIR/a.tmp
- *    get_datadir_fname2_suffix("a", "b", ".tmp") -> $DATADIR/a/b/.tmp
- *    get_datadir_fname2_suffix("a", "b", NULL) -> $DATADIR/a/b
- *
- * Note: Consider using the get_datadir_fname* macros in or.h.
+ * Note: Consider using macros in config.h that wrap this function;
+ * you should probably never need to call it as-is.
  */
 MOCK_IMPL(char *,
-options_get_datadir_fname2_suffix,(const or_options_t *options,
-                                   const char *sub1, const char *sub2,
-                                   const char *suffix))
+options_get_dir_fname2_suffix,(const or_options_t *options,
+                               directory_root_t roottype,
+                               const char *sub1, const char *sub2,
+                               const char *suffix))
 {
-  char *fname = NULL;
-  size_t len;
   tor_assert(options);
-  tor_assert(options->DataDirectory);
-  tor_assert(sub1 || !sub2); /* If sub2 is present, sub1 must be present. */
-  len = strlen(options->DataDirectory);
-  if (sub1) {
-    len += strlen(sub1)+1;
-    if (sub2)
-      len += strlen(sub2)+1;
+
+  const char *rootdir = NULL;
+  switch (roottype) {
+    case DIRROOT_DATADIR:
+      rootdir = options->DataDirectory;
+      break;
+    case DIRROOT_CACHEDIR:
+      rootdir = options->CacheDirectory;
+      break;
+    case DIRROOT_KEYDIR:
+      rootdir = options->KeyDirectory;
+      break;
+    default:
+      tor_assert_unreached();
+      break;
   }
-  if (suffix)
-    len += strlen(suffix);
-  len++;
-  fname = tor_malloc(len);
-  if (sub1) {
-    if (sub2) {
-      tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s"PATH_SEPARATOR"%s",
-                   options->DataDirectory, sub1, sub2);
-    } else {
-      tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s",
-                   options->DataDirectory, sub1);
-    }
+  tor_assert(rootdir);
+
+  if (!suffix)
+    suffix = "";
+
+  char *fname = NULL;
+
+  if (sub1 == NULL) {
+    tor_asprintf(&fname, "%s%s", rootdir, suffix);
+    tor_assert(!sub2); /* If sub2 is present, sub1 must be present. */
+  } else if (sub2 == NULL) {
+    tor_asprintf(&fname, "%s"PATH_SEPARATOR"%s%s", rootdir, sub1, suffix);
   } else {
-    strlcpy(fname, options->DataDirectory, len);
+    tor_asprintf(&fname, "%s"PATH_SEPARATOR"%s"PATH_SEPARATOR"%s%s",
+                 rootdir, sub1, sub2, suffix);
   }
-  if (suffix)
-    strlcat(fname, suffix, len);
+
   return fname;
 }
 

@@ -718,7 +718,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   /* First try to get the signing key to see how it is. */
   {
     char *fname =
-      options_get_datadir_fname2(options, "keys", "ed25519_signing");
+      options_get_keydir_fname(options, "ed25519_signing");
     sign = ed_key_init_from_file(
                fname,
                INIT_ED_KEY_NEEDCERT|
@@ -813,26 +813,15 @@ load_ed_keys(const or_options_t *options, time_t now)
       flags |= INIT_ED_KEY_TRY_ENCRYPTED;
 
     /* Check/Create the key directory */
-    cpd_check_t cpd_opts = CPD_CREATE;
-    if (options->DataDirectoryGroupReadable)
-      cpd_opts |= CPD_GROUP_READ;
-    if (check_private_dir(options->DataDirectory, cpd_opts, options->User)) {
-      log_err(LD_OR, "Can't create/check datadirectory %s",
-              options->DataDirectory);
-      goto err;
-    }
-    char *fname = get_datadir_fname("keys");
-    if (check_private_dir(fname, CPD_CREATE, options->User) < 0) {
-      log_err(LD_OR, "Problem creating/checking key directory %s", fname);
-      tor_free(fname);
-      goto err;
-    }
-    tor_free(fname);
+    if (create_keys_directory(options) < 0)
+      return -1;
+
+    char *fname;
     if (options->master_key_fname) {
       fname = tor_strdup(options->master_key_fname);
       flags |= INIT_ED_KEY_EXPLICIT_FNAME;
     } else {
-      fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
+      fname = options_get_keydir_fname(options, "ed25519_master_id");
     }
     id = ed_key_init_from_file(
              fname,
@@ -852,8 +841,8 @@ load_ed_keys(const or_options_t *options, time_t now)
         id = tor_malloc_zero(sizeof(*id));
         memcpy(&id->pubkey, &check_signing_cert->signing_key,
                sizeof(ed25519_public_key_t));
-        fname = options_get_datadir_fname2(options, "keys",
-                                           "ed25519_master_id_public_key");
+        fname = options_get_keydir_fname(options,
+                                         "ed25519_master_id_public_key");
         if (ed25519_pubkey_write_to_file(&id->pubkey, fname, "type0") < 0) {
           log_warn(LD_OR, "Error while attempting to write master public key "
                    "to disk");
@@ -894,7 +883,7 @@ load_ed_keys(const or_options_t *options, time_t now)
                       INIT_ED_KEY_NEEDCERT|
                       INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT);
     char *fname =
-      options_get_datadir_fname2(options, "keys", "ed25519_signing");
+      options_get_keydir_fname(options, "ed25519_signing");
     ed25519_keypair_free(sign);
     tor_cert_free(sign_cert);
     sign = ed_key_init_from_file(fname,
@@ -1185,7 +1174,7 @@ log_master_signing_key_cert_expiration(const or_options_t *options)
   int failed = 0;
   time_t now = approx_time();
 
-  fn = options_get_datadir_fname2(options, "keys", "ed25519_signing_cert");
+  fn = options_get_keydir_fname(options, "ed25519_signing_cert");
 
   /* Try to grab our cached copy of the key. */
   signing_key = get_master_signing_key_cert();
