@@ -2224,13 +2224,13 @@ networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 char *
 networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
 {
-  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  const time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   char *answer;
   routerlist_t *rl = router_get_routerlist();
   smartlist_t *statuses;
-  uint8_t purpose = router_purpose_from_string(purpose_string);
+  const uint8_t purpose = router_purpose_from_string(purpose_string);
   routerstatus_t rs;
-  int bridge_auth = authdir_mode_bridge(get_options());
+  const int bridge_auth = authdir_mode_bridge(get_options());
 
   if (purpose == ROUTER_PURPOSE_UNKNOWN) {
     log_info(LD_DIR, "Unrecognized purpose '%s' when listing router statuses.",
@@ -2247,6 +2247,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
       continue;
     if (ri->purpose != purpose)
       continue;
+    /* TODO: modifying the running flag in a getinfo is a bad idea */
     if (bridge_auth && ri->purpose == ROUTER_PURPOSE_BRIDGE)
       dirserv_set_router_is_running(ri, now);
     /* then generate and write out status lines for each of them */

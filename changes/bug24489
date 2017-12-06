@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (controller):
+    - Make most of the variables in networkstatus_getinfo_by_purpose() const.
+      Implements ticket 24489.
