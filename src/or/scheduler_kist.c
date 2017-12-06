@@ -606,9 +606,12 @@ kist_scheduler_run(void)
        * fails leading to the channel to be closed which triggers a release
        * and free its entry in the socket table. And because of a engineering
        * design issue, the error is not propagated back so we don't get an
-       * error at this poin. So before we continue, make sure the channel is
+       * error at this point. So before we continue, make sure the channel is
        * open and if not just ignore it. See #23751. */
       if (!CHANNEL_IS_OPEN(chan)) {
+        /* Channel isn't open so we put it back in IDLE mode. It is either
+         * renegotiating its TLS session or about to be released. */
+        chan->scheduler_state = SCHED_CHAN_IDLE;
         continue;
       }
       /* flush_result has the # cells flushed */
