@@ -81,6 +81,8 @@ int hs_cache_lookup_as_dir(uint32_t version, const char *query,
 
 const hs_descriptor_t *
 hs_cache_lookup_as_client(const ed25519_public_key_t *key);
+const char *
+hs_cache_lookup_encoded_as_client(const ed25519_public_key_t *key);
 int hs_cache_store_as_client(const char *desc_str,
                              const ed25519_public_key_t *identity_pk);
 void hs_cache_clean_as_client(time_t now);

@@ -6,6 +6,7 @@
 #include "bridges.h"
 #include "control.h"
 #include "entrynodes.h"
+#include "hs_common.h"
 #include "networkstatus.h"
 #include "rendservice.h"
 #include "routerlist.h"
@@ -13,10 +14,87 @@
 #include "test_helpers.h"
 
 static void
-test_add_onion_helper_keyarg(void *arg)
+test_add_onion_helper_keyarg_v3(void *arg)
 {
-  crypto_pk_t *pk = NULL;
-  crypto_pk_t *pk2 = NULL;
+  int ret, hs_version;
+  add_onion_secret_key_t pk;
+  char *key_new_blob = NULL;
+  char *err_msg = NULL;
+  const char *key_new_alg = NULL;
+
+  (void) arg;
+
+  memset(&pk, 0, sizeof(pk));
+
+  /* Test explicit ED25519-V3 key generation. */
+  ret = add_onion_helper_keyarg("NEW:ED25519-V3", 0, &key_new_alg,
+                                &key_new_blob, &pk, &hs_version,
+                                &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_THREE);
+  tt_assert(pk.v3);
+  tt_str_op(key_new_alg, OP_EQ, "ED25519-V3");
+  tt_assert(key_new_blob);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
+  tor_free(pk.v3); pk.v3 = NULL;
+  tor_free(key_new_blob);
+
+  /* Test discarding the private key. */
+  ret = add_onion_helper_keyarg("NEW:ED25519-V3", 1, &key_new_alg,
+                                &key_new_blob, &pk, &hs_version,
+                                &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_THREE);
+  tt_assert(pk.v3);
+  tt_ptr_op(key_new_alg, OP_EQ, NULL);
+  tt_ptr_op(key_new_blob, OP_EQ, NULL);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
+  tor_free(pk.v3); pk.v3 = NULL;
+  tor_free(key_new_blob);
+
+  /* Test passing a key blob. */
+  {
+    /* The base64 key and hex key are the same. Hex key is 64 bytes long. The
+     * sk has been generated randomly using python3. */
+    const char *base64_sk =
+      "a9bT19PqGC9Y+BmOo1IQvCGjjwxMiaaxEXZ+FKMxpEQW"
+      "6AmSV5roThUGMRCaqQSCnR2jI1vL2QxHORzI4RxMmw==";
+    const char *hex_sk =
+      "\x6b\xd6\xd3\xd7\xd3\xea\x18\x2f\x58\xf8\x19\x8e\xa3\x52\x10\xbc"
+      "\x21\xa3\x8f\x0c\x4c\x89\xa6\xb1\x11\x76\x7e\x14\xa3\x31\xa4\x44"
+      "\x16\xe8\x09\x92\x57\x9a\xe8\x4e\x15\x06\x31\x10\x9a\xa9\x04\x82"
+      "\x9d\x1d\xa3\x23\x5b\xcb\xd9\x0c\x47\x39\x1c\xc8\xe1\x1c\x4c\x9b";
+    char *key_blob = NULL;
+
+    tor_asprintf(&key_blob, "ED25519-V3:%s", base64_sk);
+    tt_assert(key_blob);
+    ret = add_onion_helper_keyarg(key_blob, 1, &key_new_alg,
+                                  &key_new_blob, &pk, &hs_version,
+                                  &err_msg);
+    tor_free(key_blob);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(hs_version, OP_EQ, HS_VERSION_THREE);
+    tt_assert(pk.v3);
+    tt_mem_op(pk.v3, OP_EQ, hex_sk, 64);
+    tt_ptr_op(key_new_alg, OP_EQ, NULL);
+    tt_ptr_op(key_new_blob, OP_EQ, NULL);
+    tt_ptr_op(err_msg, OP_EQ, NULL);
+    tor_free(pk.v3); pk.v3 = NULL;
+    tor_free(key_new_blob);
+  }
+
+ done:
+  tor_free(pk.v3);
+  tor_free(key_new_blob);
+  tor_free(err_msg);
+}
+
+static void
+test_add_onion_helper_keyarg_v2(void *arg)
+{
+  int ret, hs_version;
+  add_onion_secret_key_t pk;
+  crypto_pk_t *pk1 = NULL;
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
   char *err_msg = NULL;
@@ -25,83 +103,100 @@ test_add_onion_helper_keyarg(void *arg)
 
   (void) arg;
 
+  memset(&pk, 0, sizeof(pk));
+
   /* Test explicit RSA1024 key generation. */
-  pk = add_onion_helper_keyarg("NEW:RSA1024", 0, &key_new_alg, &key_new_blob,
-                               &err_msg);
-  tt_assert(pk);
+  ret = add_onion_helper_keyarg("NEW:RSA1024", 0, &key_new_alg, &key_new_blob,
+                                &pk, &hs_version, &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
+  tt_assert(pk.v2);
   tt_str_op(key_new_alg, OP_EQ, "RSA1024");
   tt_assert(key_new_blob);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test "BEST" key generation (Assumes BEST = RSA1024). */
-  crypto_pk_free(pk);
+  crypto_pk_free(pk.v2); pk.v2 = NULL;
   tor_free(key_new_blob);
-  pk = add_onion_helper_keyarg("NEW:BEST", 0, &key_new_alg, &key_new_blob,
-                               &err_msg);
-  tt_assert(pk);
+  ret = add_onion_helper_keyarg("NEW:BEST", 0, &key_new_alg, &key_new_blob,
+                                &pk, &hs_version, &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
+  tt_assert(pk.v2);
   tt_str_op(key_new_alg, OP_EQ, "RSA1024");
   tt_assert(key_new_blob);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test discarding the private key. */
-  crypto_pk_free(pk);
+  crypto_pk_free(pk.v2); pk.v2 = NULL;
   tor_free(key_new_blob);
-  pk = add_onion_helper_keyarg("NEW:BEST", 1, &key_new_alg, &key_new_blob,
-                               &err_msg);
-  tt_assert(pk);
+  ret = add_onion_helper_keyarg("NEW:BEST", 1, &key_new_alg, &key_new_blob,
+                               &pk, &hs_version, &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
+  tt_assert(pk.v2);
   tt_ptr_op(key_new_alg, OP_EQ, NULL);
   tt_ptr_op(key_new_blob, OP_EQ, NULL);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test generating a invalid key type. */
-  crypto_pk_free(pk);
-  pk = add_onion_helper_keyarg("NEW:RSA512", 0, &key_new_alg, &key_new_blob,
-                               &err_msg);
-  tt_ptr_op(pk, OP_EQ, NULL);
+  crypto_pk_free(pk.v2); pk.v2 = NULL;
+  ret = add_onion_helper_keyarg("NEW:RSA512", 0, &key_new_alg, &key_new_blob,
+                               &pk, &hs_version, &err_msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
+  tt_assert(!pk.v2);
   tt_ptr_op(key_new_alg, OP_EQ, NULL);
   tt_ptr_op(key_new_blob, OP_EQ, NULL);
   tt_assert(err_msg);
 
   /* Test loading a RSA1024 key. */
   tor_free(err_msg);
-  pk = pk_generate(0);
-  tt_int_op(0, OP_EQ, crypto_pk_base64_encode(pk, &encoded));
+  pk1 = pk_generate(0);
+  tt_int_op(0, OP_EQ, crypto_pk_base64_encode(pk1, &encoded));
   tor_asprintf(&arg_str, "RSA1024:%s", encoded);
-  pk2 = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
-                                &err_msg);
-  tt_assert(pk2);
+  ret = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
+                                &pk, &hs_version, &err_msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
+  tt_assert(pk.v2);
   tt_ptr_op(key_new_alg, OP_EQ, NULL);
   tt_ptr_op(key_new_blob, OP_EQ, NULL);
   tt_ptr_op(err_msg, OP_EQ, NULL);
-  tt_int_op(crypto_pk_cmp_keys(pk, pk2), OP_EQ, 0);
+  tt_int_op(crypto_pk_cmp_keys(pk1, pk.v2), OP_EQ, 0);
 
   /* Test loading a invalid key type. */
   tor_free(arg_str);
-  crypto_pk_free(pk); pk = NULL;
+  crypto_pk_free(pk1); pk1 = NULL;
+  crypto_pk_free(pk.v2); pk.v2 = NULL;
   tor_asprintf(&arg_str, "RSA512:%s", encoded);
-  pk = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
-                               &err_msg);
-  tt_ptr_op(pk, OP_EQ, NULL);
+  ret = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
+                                &pk, &hs_version, &err_msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
+  tt_assert(!pk.v2);
   tt_ptr_op(key_new_alg, OP_EQ, NULL);
   tt_ptr_op(key_new_blob, OP_EQ, NULL);
   tt_assert(err_msg);
 
   /* Test loading a invalid key. */
   tor_free(arg_str);
-  crypto_pk_free(pk); pk = NULL;
+  crypto_pk_free(pk.v2); pk.v2 = NULL;
   tor_free(err_msg);
   encoded[strlen(encoded)/2] = '\0';
   tor_asprintf(&arg_str, "RSA1024:%s", encoded);
-  pk = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
-                               &err_msg);
-  tt_ptr_op(pk, OP_EQ, NULL);
+  ret = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
+                               &pk, &hs_version, &err_msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(hs_version, OP_EQ, HS_VERSION_TWO);
+  tt_assert(!pk.v2);
   tt_ptr_op(key_new_alg, OP_EQ, NULL);
   tt_ptr_op(key_new_blob, OP_EQ, NULL);
   tt_assert(err_msg);
 
  done:
-  crypto_pk_free(pk);
-  crypto_pk_free(pk2);
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk.v2);
   tor_free(key_new_blob);
   tor_free(err_msg);
   tor_free(encoded);
@@ -1370,7 +1465,10 @@ test_download_status_bridge(void *arg)
 }
 
 struct testcase_t controller_tests[] = {
-  { "add_onion_helper_keyarg", test_add_onion_helper_keyarg, 0, NULL, NULL },
+  { "add_onion_helper_keyarg_v2", test_add_onion_helper_keyarg_v2, 0,
+    NULL, NULL },
+  { "add_onion_helper_keyarg_v3", test_add_onion_helper_keyarg_v3, 0,
+    NULL, NULL },
   { "getinfo_helper_onion", test_getinfo_helper_onion, 0, NULL, NULL },
   { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
     NULL, NULL },

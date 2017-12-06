@@ -847,9 +847,9 @@ rend_config_service(const config_line_t *line_,
  * after calling this routine, and may assume that correct cleanup has
  * been done on failure.
  *
- * Return an appropriate rend_service_add_ephemeral_status_t.
+ * Return an appropriate hs_service_add_ephemeral_status_t.
  */
-rend_service_add_ephemeral_status_t
+hs_service_add_ephemeral_status_t
 rend_service_add_ephemeral(crypto_pk_t *pk,
                            smartlist_t *ports,
                            int max_streams_per_circuit,
@@ -3576,7 +3576,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                           "directories to post descriptors to.");
         control_event_hs_descriptor_upload(service_id,
                                            "UNKNOWN",
-                                           "UNKNOWN");
+                                           "UNKNOWN", NULL);
         goto done;
       }
     }
@@ -3631,7 +3631,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                hs_dir->or_port);
       control_event_hs_descriptor_upload(service_id,
                                          hs_dir->identity_digest,
-                                         desc_id_base32);
+                                         desc_id_base32, NULL);
       tor_free(hs_dir_ip);
       /* Remember successful upload to this router for next time. */
       if (!smartlist_contains_digest(successful_uploads,

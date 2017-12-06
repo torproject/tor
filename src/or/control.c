@@ -58,7 +58,9 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_control.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -2014,36 +2016,89 @@ getinfo_helper_dir(control_connection_t *control_conn,
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
   } else if (!strcmpstart(question, "hs/client/desc/id/")) {
-    rend_cache_entry_t *e = NULL;
+    hostname_type_t addr_type;
 
     question += strlen("hs/client/desc/id/");
-    if (strlen(question) != REND_SERVICE_ID_LEN_BASE32) {
+    if (rend_valid_v2_service_id(question)) {
+      addr_type = ONION_V2_HOSTNAME;
+    } else if (hs_address_is_valid(question)) {
+      addr_type = ONION_V3_HOSTNAME;
+    } else {
       *errmsg = "Invalid address";
       return -1;
     }
 
-    if (!rend_cache_lookup_entry(question, -1, &e)) {
-      /* Descriptor found in cache */
-      *answer = tor_strdup(e->desc);
+    if (addr_type == ONION_V2_HOSTNAME) {
+      rend_cache_entry_t *e = NULL;
+      if (!rend_cache_lookup_entry(question, -1, &e)) {
+        /* Descriptor found in cache */
+        *answer = tor_strdup(e->desc);
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     } else {
-      *errmsg = "Not found in cache";
-      return -1;
+      ed25519_public_key_t service_pk;
+      const char *desc;
+
+      /* The check before this if/else makes sure of this. */
+      tor_assert(addr_type == ONION_V3_HOSTNAME);
+
+      if (hs_parse_address(question, &service_pk, NULL, NULL) < 0) {
+        *errmsg = "Invalid v3 address";
+        return -1;
+      }
+
+      desc = hs_cache_lookup_encoded_as_client(&service_pk);
+      if (desc) {
+        *answer = tor_strdup(desc);
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     }
   } else if (!strcmpstart(question, "hs/service/desc/id/")) {
-    rend_cache_entry_t *e = NULL;
+    hostname_type_t addr_type;
 
     question += strlen("hs/service/desc/id/");
-    if (strlen(question) != REND_SERVICE_ID_LEN_BASE32) {
+    if (rend_valid_v2_service_id(question)) {
+      addr_type = ONION_V2_HOSTNAME;
+    } else if (hs_address_is_valid(question)) {
+      addr_type = ONION_V3_HOSTNAME;
+    } else {
       *errmsg = "Invalid address";
       return -1;
     }
+    rend_cache_entry_t *e = NULL;
 
-    if (!rend_cache_lookup_v2_desc_as_service(question, &e)) {
-      /* Descriptor found in cache */
-      *answer = tor_strdup(e->desc);
+    if (addr_type == ONION_V2_HOSTNAME) {
+      if (!rend_cache_lookup_v2_desc_as_service(question, &e)) {
+        /* Descriptor found in cache */
+        *answer = tor_strdup(e->desc);
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     } else {
-      *errmsg = "Not found in cache";
-      return -1;
+      ed25519_public_key_t service_pk;
+      char *desc;
+
+      /* The check before this if/else makes sure of this. */
+      tor_assert(addr_type == ONION_V3_HOSTNAME);
+
+      if (hs_parse_address(question, &service_pk, NULL, NULL) < 0) {
+        *errmsg = "Invalid v3 address";
+        return -1;
+      }
+
+      desc = hs_service_lookup_current_desc(&service_pk);
+      if (desc) {
+        /* Newly allocated string, we have ownership. */
+        *answer = desc;
+      } else {
+        *errmsg = "Not found in cache";
+        return -1;
+      }
     }
   } else if (!strcmpstart(question, "md/id/")) {
     const node_t *node = node_get_by_hex_id(question+strlen("md/id/"), 0);
@@ -2624,9 +2679,16 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     }
   }
 
-  if (circ->rend_data != NULL) {
-    smartlist_add_asprintf(descparts, "REND_QUERY=%s",
-                           rend_data_get_address(circ->rend_data));
+  if (circ->rend_data != NULL || circ->hs_ident != NULL) {
+    char addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
+    const char *onion_address;
+    if (circ->rend_data) {
+      onion_address = rend_data_get_address(circ->rend_data);
+    } else {
+      hs_build_address(&circ->hs_ident->identity_pk, HS_VERSION_THREE, addr);
+      onion_address = addr;
+    }
+    smartlist_add_asprintf(descparts, "REND_QUERY=%s", onion_address);
   }
 
   {
@@ -4277,9 +4339,11 @@ handle_control_hspost(control_connection_t *conn,
                       const char *body)
 {
   static const char *opt_server = "SERVER=";
+  static const char *opt_hsaddress = "HSADDRESS=";
   smartlist_t *hs_dirs = NULL;
   const char *encoded_desc = body;
   size_t encoded_desc_len = len;
+  const char *onion_address = NULL;
 
   char *cp = memchr(body, '\n', len);
   if (cp == NULL) {
@@ -4309,15 +4373,16 @@ handle_control_hspost(control_connection_t *conn,
                                    server);
           goto done;
         }
-        if (!node->rs->is_hs_dir) {
-          connection_printf_to_buf(conn, "552 Server \"%s\" is not a HSDir"
-                                         "\r\n", server);
-          goto done;
-        }
         /* Valid server, add it to our local list. */
         if (!hs_dirs)
           hs_dirs = smartlist_new();
         smartlist_add(hs_dirs, node->rs);
+      } else if (!strcasecmpstart(arg, opt_hsaddress)) {
+        if (!hs_address_is_valid(arg)) {
+          connection_printf_to_buf(conn, "512 Malformed onion address\r\n");
+          goto done;
+        }
+        onion_address = arg;
       } else {
         connection_printf_to_buf(conn, "512 Unexpected argument \"%s\"\r\n",
                                  arg);
@@ -4325,6 +4390,19 @@ handle_control_hspost(control_connection_t *conn,
       }
     } SMARTLIST_FOREACH_END(arg);
   }
+
+  /* Handle the v3 case. */
+  if (onion_address) {
+    char *desc_str = NULL;
+    read_escaped_data(encoded_desc, encoded_desc_len, &desc_str);
+    if (hs_control_hspost_command(desc_str, onion_address, hs_dirs) < 0) {
+      connection_printf_to_buf(conn, "554 Invalid descriptor\r\n");
+    }
+    tor_free(desc_str);
+    goto done;
+  }
+
+  /* From this point on, it is only v2. */
 
   /* Read the dot encoded descriptor, and parse it. */
   rend_encoded_v2_service_descriptor_t *desc =
@@ -4368,6 +4446,52 @@ handle_control_hspost(control_connection_t *conn,
   SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
   smartlist_free(args);
   return 0;
+}
+
+/* Helper function for ADD_ONION that adds an ephemeral service depending on
+ * the given hs_version.
+ *
+ * The secret key in pk depends on the hs_version. The ownership of the key
+ * used in pk is given to the HS subsystem so the caller must stop accessing
+ * it after.
+ *
+ * The port_cfgs is a list of service port. Ownership transfered to service.
+ * The max_streams refers to the MaxStreams= key.
+ * The max_streams_close_circuit refers to the MaxStreamsCloseCircuit key.
+ * The auth_type is the authentication type of the clients in auth_clients.
+ * The ownership of that list is transfered to the service.
+ *
+ * On success (RSAE_OKAY), the address_out points to a newly allocated string
+ * containing the onion address without the .onion part. On error, address_out
+ * is untouched. */
+static hs_service_add_ephemeral_status_t
+add_onion_helper_add_service(int hs_version,
+                             add_onion_secret_key_t *pk,
+                             smartlist_t *port_cfgs, int max_streams,
+                             int max_streams_close_circuit, int auth_type,
+                             smartlist_t *auth_clients, char **address_out)
+{
+  hs_service_add_ephemeral_status_t ret;
+
+  tor_assert(pk);
+  tor_assert(port_cfgs);
+  tor_assert(address_out);
+
+  switch (hs_version) {
+  case HS_VERSION_TWO:
+    ret = rend_service_add_ephemeral(pk->v2, port_cfgs, max_streams,
+                                     max_streams_close_circuit, auth_type,
+                                     auth_clients, address_out);
+    break;
+  case HS_VERSION_THREE:
+    ret = hs_service_add_ephemeral(pk->v3, port_cfgs, max_streams,
+                                   max_streams_close_circuit, address_out);
+    break;
+  default:
+    tor_assert_unreached();
+  }
+
+  return ret;
 }
 
 /** Called when we get a ADD_ONION command; parse the body, and set up
@@ -4551,15 +4675,15 @@ handle_control_add_onion(control_connection_t *conn,
   }
 
   /* Parse the "keytype:keyblob" argument. */
-  crypto_pk_t *pk = NULL;
+  int hs_version = 0;
+  add_onion_secret_key_t pk;
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
   char *err_msg = NULL;
 
-  pk = add_onion_helper_keyarg(smartlist_get(args, 0), discard_pk,
-                               &key_new_alg, &key_new_blob,
-                               &err_msg);
-  if (!pk) {
+  if (add_onion_helper_keyarg(smartlist_get(args, 0), discard_pk,
+                              &key_new_alg, &key_new_blob, &pk, &hs_version,
+                              &err_msg) < 0) {
     if (err_msg) {
       connection_write_str_to_buf(err_msg, conn);
       tor_free(err_msg);
@@ -4568,16 +4692,23 @@ handle_control_add_onion(control_connection_t *conn,
   }
   tor_assert(!err_msg);
 
+  /* Hidden service version 3 don't have client authentication support so if
+   * ClientAuth was given, send back an error. */
+  if (hs_version == HS_VERSION_THREE && auth_clients) {
+    connection_printf_to_buf(conn, "513 ClientAuth not supported\r\n");
+    goto out;
+  }
+
   /* Create the HS, using private key pk, client authentication auth_type,
    * the list of auth_clients, and port config port_cfg.
    * rend_service_add_ephemeral() will take ownership of pk and port_cfg,
    * regardless of success/failure.
    */
   char *service_id = NULL;
-  int ret = rend_service_add_ephemeral(pk, port_cfgs, max_streams,
-                                       max_streams_close_circuit,
-                                       auth_type, auth_clients,
-                                       &service_id);
+  int ret = add_onion_helper_add_service(hs_version, &pk, port_cfgs,
+                                         max_streams,
+                                         max_streams_close_circuit, auth_type,
+                                         auth_clients, &service_id);
   port_cfgs = NULL; /* port_cfgs is now owned by the rendservice code. */
   auth_clients = NULL; /* so is auth_clients */
   switch (ret) {
@@ -4670,9 +4801,10 @@ handle_control_add_onion(control_connection_t *conn,
  * Note: The error messages returned are deliberately vague to avoid echoing
  * key material.
  */
-STATIC crypto_pk_t *
+STATIC int
 add_onion_helper_keyarg(const char *arg, int discard_pk,
                         const char **key_new_alg_out, char **key_new_blob_out,
+                        add_onion_secret_key_t *decoded_key, int *hs_version,
                         char **err_msg_out)
 {
   smartlist_t *key_args = smartlist_new();
@@ -4680,7 +4812,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   const char *key_new_alg = NULL;
   char *key_new_blob = NULL;
   char *err_msg = NULL;
-  int ok = 0;
+  int ret = -1;
 
   smartlist_split_string(key_args, arg, ":", SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(key_args) != 2) {
@@ -4692,6 +4824,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   static const char *key_type_new = "NEW";
   static const char *key_type_best = "BEST";
   static const char *key_type_rsa1024 = "RSA1024";
+  static const char *key_type_ed25519_v3 = "ED25519-V3";
 
   const char *key_type = smartlist_get(key_args, 0);
   const char *key_blob = smartlist_get(key_args, 1);
@@ -4704,9 +4837,23 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       goto err;
     }
     if (crypto_pk_num_bits(pk) != PK_BYTES*8) {
+      crypto_pk_free(pk);
       err_msg = tor_strdup("512 Invalid RSA key size\r\n");
       goto err;
     }
+    decoded_key->v2 = pk;
+    *hs_version = HS_VERSION_TWO;
+  } else if (!strcasecmp(key_type_ed25519_v3, key_type)) {
+    /* "ED25519-V3:<Base64 Blob>" - Loading a pre-existing ed25519 key. */
+    ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
+    if (base64_decode((char *) sk->seckey, sizeof(sk->seckey), key_blob,
+                      strlen(key_blob)) != sizeof(sk->seckey)) {
+      tor_free(sk);
+      err_msg = tor_strdup("512 Failed to decode ED25519-V3 key\r\n");
+      goto err;
+    }
+    decoded_key->v3 = sk;
+    *hs_version = HS_VERSION_THREE;
   } else if (!strcasecmp(key_type_new, key_type)) {
     /* "NEW:<Algorithm>" - Generating a new key, blob as algorithm. */
     if (!strcasecmp(key_type_rsa1024, key_blob) ||
@@ -4720,12 +4867,38 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
       }
       if (!discard_pk) {
         if (crypto_pk_base64_encode(pk, &key_new_blob)) {
+          crypto_pk_free(pk);
           tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
                        key_type_rsa1024);
           goto err;
         }
         key_new_alg = key_type_rsa1024;
       }
+      decoded_key->v2 = pk;
+      *hs_version = HS_VERSION_TWO;
+    } else if (!strcasecmp(key_type_ed25519_v3, key_blob)) {
+      ed25519_secret_key_t *sk = tor_malloc_zero(sizeof(*sk));
+      if (ed25519_secret_key_generate(sk, 1) < 0) {
+        tor_free(sk);
+        tor_asprintf(&err_msg, "551 Failed to generate %s key\r\n",
+                     key_type_ed25519_v3);
+        goto err;
+      }
+      if (!discard_pk) {
+        ssize_t len = base64_encode_size(sizeof(sk->seckey), 0) + 1;
+        key_new_blob = tor_malloc_zero(len);
+        if (base64_encode(key_new_blob, len, (const char *) sk->seckey,
+                          sizeof(sk->seckey), 0) != (len - 1)) {
+          tor_free(sk);
+          tor_free(key_new_blob);
+          tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
+                       key_type_ed25519_v3);
+          goto err;
+        }
+        key_new_alg = key_type_ed25519_v3;
+      }
+      decoded_key->v3 = sk;
+      *hs_version = HS_VERSION_THREE;
     } else {
       err_msg = tor_strdup("513 Invalid key type\r\n");
       goto err;
@@ -4736,8 +4909,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   }
 
   /* Succeded in loading or generating a private key. */
-  tor_assert(pk);
-  ok = 1;
+  ret = 0;
 
  err:
   SMARTLIST_FOREACH(key_args, char *, cp, {
@@ -4746,10 +4918,6 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   });
   smartlist_free(key_args);
 
-  if (!ok) {
-    crypto_pk_free(pk);
-    pk = NULL;
-  }
   if (err_msg_out) {
     *err_msg_out = err_msg;
   } else {
@@ -4758,7 +4926,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
   *key_new_alg_out = key_new_alg;
   *key_new_blob_out = key_new_blob;
 
-  return pk;
+  return ret;
 }
 
 /** Helper function to handle parsing a ClientAuth argument to the
@@ -4827,6 +4995,7 @@ handle_control_del_onion(control_connection_t *conn,
                           uint32_t len,
                           const char *body)
 {
+  int hs_version = 0;
   smartlist_t *args;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
   args = getargs_helper("DEL_ONION", conn, body, 1, 1);
@@ -4834,7 +5003,11 @@ handle_control_del_onion(control_connection_t *conn,
     return 0;
 
   const char *service_id = smartlist_get(args, 0);
-  if (!rend_valid_v2_service_id(service_id)) {
+  if (rend_valid_v2_service_id(service_id)) {
+    hs_version = HS_VERSION_TWO;
+  } else if (hs_address_is_valid(service_id)) {
+    hs_version = HS_VERSION_THREE;
+  } else {
     connection_printf_to_buf(conn, "512 Malformed Onion Service id\r\n");
     goto out;
   }
@@ -4861,8 +5034,20 @@ handle_control_del_onion(control_connection_t *conn,
   if (onion_services == NULL) {
     connection_printf_to_buf(conn, "552 Unknown Onion Service id\r\n");
   } else {
-    int ret = rend_service_del_ephemeral(service_id);
-    if (ret) {
+    int ret = -1;
+    switch (hs_version) {
+    case HS_VERSION_TWO:
+      ret = rend_service_del_ephemeral(service_id);
+      break;
+    case HS_VERSION_THREE:
+      ret = hs_service_del_ephemeral(service_id);
+      break;
+    default:
+      /* The ret value will be -1 thus hitting the warning below. This should
+       * never happen because of the check at the start of the function. */
+      break;
+    }
+    if (ret < 0) {
       /* This should *NEVER* fail, since the service is on either the
        * per-control connection list, or the global one.
        */
@@ -4932,9 +5117,16 @@ connection_control_closed(control_connection_t *conn)
    * The list and it's contents are scrubbed/freed in connection_free_.
    */
   if (conn->ephemeral_onion_services) {
-    SMARTLIST_FOREACH(conn->ephemeral_onion_services, char *, cp, {
-      rend_service_del_ephemeral(cp);
-    });
+    SMARTLIST_FOREACH_BEGIN(conn->ephemeral_onion_services, char *, cp) {
+      if (rend_valid_v2_service_id(cp)) {
+        rend_service_del_ephemeral(cp);
+      } else if (hs_address_is_valid(cp)) {
+        hs_service_del_ephemeral(cp);
+      } else {
+        /* An invalid .onion in our list should NEVER happen */
+        tor_fragile_assert();
+      }
+    } SMARTLIST_FOREACH_END(cp);
   }
 
   if (conn->is_owning_control_connection) {
@@ -7012,27 +7204,33 @@ rend_hsaddress_str_or_unknown(const char *onion_address)
  * <b>rend_query</b> is used to fetch requested onion address and auth type.
  * <b>hs_dir</b> is the description of contacting hs directory.
  * <b>desc_id_base32</b> is the ID of requested hs descriptor.
+ * <b>hsdir_index</b> is the HSDir fetch index value for v3, an hex string.
  */
 void
-control_event_hs_descriptor_requested(const rend_data_t *rend_query,
+control_event_hs_descriptor_requested(const char *onion_address,
+                                      rend_auth_type_t auth_type,
                                       const char *id_digest,
-                                      const char *desc_id_base32)
+                                      const char *desc_id,
+                                      const char *hsdir_index)
 {
-  if (!id_digest || !rend_query || !desc_id_base32) {
-    log_warn(LD_BUG, "Called with rend_query==%p, "
-             "id_digest==%p, desc_id_base32==%p",
-             rend_query, id_digest, desc_id_base32);
+  char *hsdir_index_field = NULL;
+
+  if (BUG(!id_digest || !desc_id)) {
     return;
   }
 
+  if (hsdir_index) {
+    tor_asprintf(&hsdir_index_field, " HSDIR_INDEX=%s", hsdir_index);
+  }
+
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC REQUESTED %s %s %s %s\r\n",
-                     rend_hsaddress_str_or_unknown(
-                          rend_data_get_address(rend_query)),
-                     rend_auth_type_to_string(
-                          TO_REND_DATA_V2(rend_query)->auth_type),
+                     "650 HS_DESC REQUESTED %s %s %s %s%s\r\n",
+                     rend_hsaddress_str_or_unknown(onion_address),
+                     rend_auth_type_to_string(auth_type),
                      node_describe_longname_by_id(id_digest),
-                     desc_id_base32);
+                     desc_id,
+                     hsdir_index_field ? hsdir_index_field : "");
+  tor_free(hsdir_index_field);
 }
 
 /** For an HS descriptor query <b>rend_data</b>, using the
@@ -7081,87 +7279,85 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
 
 /** send HS_DESC CREATED event when a local service generates a descriptor.
  *
- * <b>service_id</b> is the descriptor onion address.
- * <b>desc_id_base32</b> is the descriptor ID.
- * <b>replica</b> is the the descriptor replica number.
+ * <b>onion_address</b> is service address.
+ * <b>desc_id</b> is the descriptor ID.
+ * <b>replica</b> is the the descriptor replica number. If it is negative, it
+ * is ignored.
  */
 void
-control_event_hs_descriptor_created(const char *service_id,
-                                    const char *desc_id_base32,
+control_event_hs_descriptor_created(const char *onion_address,
+                                    const char *desc_id,
                                     int replica)
 {
-  if (!service_id || !desc_id_base32) {
-    log_warn(LD_BUG, "Called with service_digest==%p, "
-             "desc_id_base32==%p", service_id, desc_id_base32);
+  char *replica_field = NULL;
+
+  if (BUG(!onion_address || !desc_id)) {
     return;
   }
 
+  if (replica >= 0) {
+    tor_asprintf(&replica_field, " REPLICA=%d", replica);
+  }
+
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s "
-                     "REPLICA=%d\r\n",
-                     service_id,
-                     desc_id_base32,
-                     replica);
+                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s%s\r\n",
+                     onion_address, desc_id,
+                     replica_field ? replica_field : "");
+  tor_free(replica_field);
 }
 
 /** send HS_DESC upload event.
  *
- * <b>service_id</b> is the descriptor onion address.
+ * <b>onion_address</b> is service address.
  * <b>hs_dir</b> is the description of contacting hs directory.
- * <b>desc_id_base32</b> is the ID of requested hs descriptor.
+ * <b>desc_id</b> is the ID of requested hs descriptor.
  */
 void
-control_event_hs_descriptor_upload(const char *service_id,
+control_event_hs_descriptor_upload(const char *onion_address,
                                    const char *id_digest,
-                                   const char *desc_id_base32)
+                                   const char *desc_id,
+                                   const char *hsdir_index)
 {
-  if (!service_id || !id_digest || !desc_id_base32) {
-    log_warn(LD_BUG, "Called with service_digest==%p, "
-             "desc_id_base32==%p, id_digest==%p", service_id,
-             desc_id_base32, id_digest);
+  char *hsdir_index_field = NULL;
+
+  if (BUG(!onion_address || !id_digest || !desc_id)) {
     return;
   }
 
+  if (hsdir_index) {
+    tor_asprintf(&hsdir_index_field, " HSDIR_INDEX=%s", hsdir_index);
+  }
+
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC UPLOAD %s UNKNOWN %s %s\r\n",
-                     service_id,
+                     "650 HS_DESC UPLOAD %s UNKNOWN %s %s%s\r\n",
+                     onion_address,
                      node_describe_longname_by_id(id_digest),
-                     desc_id_base32);
+                     desc_id,
+                     hsdir_index_field ? hsdir_index_field : "");
+  tor_free(hsdir_index_field);
 }
 
 /** send HS_DESC event after got response from hs directory.
  *
  * NOTE: this is an internal function used by following functions:
- * control_event_hs_descriptor_received
- * control_event_hs_descriptor_failed
+ * control_event_hsv2_descriptor_received
+ * control_event_hsv2_descriptor_failed
+ * control_event_hsv3_descriptor_failed
  *
  * So do not call this function directly.
  */
-void
-control_event_hs_descriptor_receive_end(const char *action,
-                                        const char *onion_address,
-                                        const rend_data_t *rend_data,
-                                        const char *id_digest,
-                                        const char *reason)
+static void
+event_hs_descriptor_receive_end(const char *action,
+                                const char *onion_address,
+                                const char *desc_id,
+                                rend_auth_type_t auth_type,
+                                const char *hsdir_id_digest,
+                                const char *reason)
 {
-  char *desc_id_field = NULL;
   char *reason_field = NULL;
-  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  const char *desc_id = NULL;
 
-  if (!action || !rend_data || !onion_address) {
-    log_warn(LD_BUG, "Called with action==%p, rend_data==%p, "
-                     "onion_address==%p", action, rend_data, onion_address);
+  if (BUG(!action || !onion_address)) {
     return;
-  }
-
-  desc_id = get_desc_id_from_query(rend_data, id_digest);
-  if (desc_id != NULL) {
-    /* Set the descriptor ID digest to base32 so we can send it. */
-    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                  DIGEST_LEN);
-    /* Extra whitespace is needed before the value. */
-    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
   }
 
   if (reason) {
@@ -7172,14 +7368,13 @@ control_event_hs_descriptor_receive_end(const char *action,
                      "650 HS_DESC %s %s %s %s%s%s\r\n",
                      action,
                      rend_hsaddress_str_or_unknown(onion_address),
-                     rend_auth_type_to_string(
-                          TO_REND_DATA_V2(rend_data)->auth_type),
-                     id_digest ?
-                        node_describe_longname_by_id(id_digest) : "UNKNOWN",
-                     desc_id_field ? desc_id_field : "",
+                     rend_auth_type_to_string(auth_type),
+                     hsdir_id_digest ?
+                        node_describe_longname_by_id(hsdir_id_digest) :
+                        "UNKNOWN",
+                     desc_id ? desc_id : "",
                      reason_field ? reason_field : "");
 
-  tor_free(desc_id_field);
   tor_free(reason_field);
 }
 
@@ -7199,9 +7394,7 @@ control_event_hs_descriptor_upload_end(const char *action,
 {
   char *reason_field = NULL;
 
-  if (!action || !id_digest) {
-    log_warn(LD_BUG, "Called with action==%p, id_digest==%p", action,
-             id_digest);
+  if (BUG(!action || !id_digest)) {
     return;
   }
 
@@ -7224,17 +7417,54 @@ control_event_hs_descriptor_upload_end(const char *action,
  * called when we successfully received a hidden service descriptor.
  */
 void
-control_event_hs_descriptor_received(const char *onion_address,
-                                     const rend_data_t *rend_data,
-                                     const char *id_digest)
+control_event_hsv2_descriptor_received(const char *onion_address,
+                                       const rend_data_t *rend_data,
+                                       const char *hsdir_id_digest)
 {
-  if (!rend_data || !id_digest || !onion_address) {
-    log_warn(LD_BUG, "Called with rend_data==%p, id_digest==%p, "
-             "onion_address==%p", rend_data, id_digest, onion_address);
+  char *desc_id_field = NULL;
+  const char *desc_id;
+
+  if (BUG(!rend_data || !hsdir_id_digest || !onion_address)) {
     return;
   }
-  control_event_hs_descriptor_receive_end("RECEIVED", onion_address,
-                                          rend_data, id_digest, NULL);
+
+  desc_id = get_desc_id_from_query(rend_data, hsdir_id_digest);
+  if (desc_id != NULL) {
+    char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+    /* Set the descriptor ID digest to base32 so we can send it. */
+    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                  DIGEST_LEN);
+    /* Extra whitespace is needed before the value. */
+    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
+  }
+
+  event_hs_descriptor_receive_end("RECEIVED", onion_address, desc_id_field,
+                                  TO_REND_DATA_V2(rend_data)->auth_type,
+                                  hsdir_id_digest, NULL);
+  tor_free(desc_id_field);
+}
+
+/* Send HS_DESC RECEIVED event
+ *
+ * Called when we successfully received a hidden service descriptor. */
+void
+control_event_hsv3_descriptor_received(const char *onion_address,
+                                       const char *desc_id,
+                                       const char *hsdir_id_digest)
+{
+  char *desc_id_field = NULL;
+
+  if (BUG(!onion_address || !desc_id || !hsdir_id_digest)) {
+    return;
+  }
+
+  /* Because DescriptorID is an optional positional value, we need to add a
+   * whitespace before in order to not be next to the HsDir value. */
+  tor_asprintf(&desc_id_field, " %s", desc_id);
+
+  event_hs_descriptor_receive_end("RECEIVED", onion_address, desc_id_field,
+                                  REND_NO_AUTH, hsdir_id_digest, NULL);
+  tor_free(desc_id_field);
 }
 
 /** send HS_DESC UPLOADED event
@@ -7245,9 +7475,7 @@ void
 control_event_hs_descriptor_uploaded(const char *id_digest,
                                      const char *onion_address)
 {
-  if (!id_digest) {
-    log_warn(LD_BUG, "Called with id_digest==%p",
-             id_digest);
+  if (BUG(!id_digest)) {
     return;
   }
 
@@ -7261,17 +7489,58 @@ control_event_hs_descriptor_uploaded(const char *id_digest,
  * add it to REASON= field.
  */
 void
-control_event_hs_descriptor_failed(const rend_data_t *rend_data,
-                                   const char *id_digest,
-                                   const char *reason)
+control_event_hsv2_descriptor_failed(const rend_data_t *rend_data,
+                                     const char *hsdir_id_digest,
+                                     const char *reason)
 {
-  if (!rend_data) {
-    log_warn(LD_BUG, "Called with rend_data==%p", rend_data);
+  char *desc_id_field = NULL;
+  const char *desc_id;
+
+  if (BUG(!rend_data)) {
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED",
-                                          rend_data_get_address(rend_data),
-                                          rend_data, id_digest, reason);
+
+  desc_id = get_desc_id_from_query(rend_data, hsdir_id_digest);
+  if (desc_id != NULL) {
+    char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+    /* Set the descriptor ID digest to base32 so we can send it. */
+    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                  DIGEST_LEN);
+    /* Extra whitespace is needed before the value. */
+    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
+  }
+
+  event_hs_descriptor_receive_end("FAILED", rend_data_get_address(rend_data),
+                                  desc_id_field,
+                                  TO_REND_DATA_V2(rend_data)->auth_type,
+                                  hsdir_id_digest, reason);
+  tor_free(desc_id_field);
+}
+
+/** Send HS_DESC event to inform controller that the query to
+ * <b>onion_address</b> failed to retrieve hidden service descriptor
+ * <b>desc_id</b> from directory identified by <b>hsdir_id_digest</b>. If
+ * NULL, "UNKNOWN" is used.  If <b>reason</b> is not NULL, add it to REASON=
+ * field. */
+void
+control_event_hsv3_descriptor_failed(const char *onion_address,
+                                     const char *desc_id,
+                                     const char *hsdir_id_digest,
+                                     const char *reason)
+{
+  char *desc_id_field = NULL;
+
+  if (BUG(!onion_address || !desc_id || !reason)) {
+    return;
+  }
+
+  /* Because DescriptorID is an optional positional value, we need to add a
+   * whitespace before in order to not be next to the HsDir value. */
+  tor_asprintf(&desc_id_field, " %s", desc_id);
+
+  event_hs_descriptor_receive_end("FAILED", onion_address, desc_id_field,
+                                  REND_NO_AUTH, hsdir_id_digest, reason);
+  tor_free(desc_id_field);
 }
 
 /** Send HS_DESC_CONTENT event after completion of a successful fetch from hs
@@ -7321,9 +7590,7 @@ control_event_hs_descriptor_upload_failed(const char *id_digest,
                                           const char *onion_address,
                                           const char *reason)
 {
-  if (!id_digest) {
-    log_warn(LD_BUG, "Called with id_digest==%p",
-             id_digest);
+  if (BUG(!id_digest)) {
     return;
   }
   control_event_hs_descriptor_upload_end("FAILED", onion_address,

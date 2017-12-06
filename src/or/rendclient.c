@@ -459,7 +459,8 @@ directory_get_from_hs_dir(const char *desc_id,
     hs_dir = hs_pick_hsdir(responsible_dirs, desc_id_base32);
     if (!hs_dir) {
       /* No suitable hs dir can be found, stop right now. */
-      control_event_hs_descriptor_failed(rend_query, NULL, "QUERY_NO_HSDIR");
+      control_event_hsv2_descriptor_failed(rend_query, NULL,
+                                           "QUERY_NO_HSDIR");
       control_event_hs_descriptor_content(rend_data_get_address(rend_query),
                                           desc_id_base32, NULL, NULL);
       return 0;
@@ -482,7 +483,7 @@ directory_get_from_hs_dir(const char *desc_id,
                       REND_DESC_COOKIE_LEN,
                       0)<0) {
       log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
-      control_event_hs_descriptor_failed(rend_query, hsdir_fp, "BAD_DESC");
+      control_event_hsv2_descriptor_failed(rend_query, hsdir_fp, "BAD_DESC");
       control_event_hs_descriptor_content(rend_data_get_address(rend_query),
                                           desc_id_base32, hsdir_fp, NULL);
       return 0;
@@ -515,9 +516,10 @@ directory_get_from_hs_dir(const char *desc_id,
            (rend_data->auth_type == REND_NO_AUTH ? "[none]" :
             escaped_safe_str_client(descriptor_cookie_base64)),
            routerstatus_describe(hs_dir));
-  control_event_hs_descriptor_requested(rend_query,
+  control_event_hs_descriptor_requested(rend_data->onion_address,
+                                        rend_data->auth_type,
                                         hs_dir->identity_digest,
-                                        desc_id_base32);
+                                        desc_id_base32, NULL);
   return 1;
 }
 

@@ -30,6 +30,7 @@
 #include "hs_circuit.h"
 #include "hs_common.h"
 #include "hs_config.h"
+#include "hs_control.h"
 #include "hs_circuit.h"
 #include "hs_descriptor.h"
 #include "hs_ident.h"
@@ -1431,6 +1432,9 @@ build_service_descriptor(hs_service_t *service, time_t now,
 
   /* Assign newly built descriptor to the next slot. */
   *desc_out = desc;
+  /* Fire a CREATED control port event. */
+  hs_control_desc_event_created(service->onion_address,
+                                &desc->blinded_kp.pubkey);
   return;
 
  err:
@@ -2199,15 +2203,11 @@ static void
 upload_descriptor_to_hsdir(const hs_service_t *service,
                            hs_service_descriptor_t *desc, const node_t *hsdir)
 {
-  char version_str[4] = {0}, *encoded_desc = NULL;
-  directory_request_t *dir_req;
-  hs_ident_dir_conn_t ident;
+  char *encoded_desc = NULL;
 
   tor_assert(service);
   tor_assert(desc);
   tor_assert(hsdir);
-
-  memset(&ident, 0, sizeof(ident));
 
   /* Let's avoid doing that if tor is configured to not publish. */
   if (!get_options()->PublishHidServDescriptors) {
@@ -2224,29 +2224,10 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
     goto end;
   }
 
-  /* Setup the connection identifier. */
-  hs_ident_dir_conn_init(&service->keys.identity_pk, &desc->blinded_kp.pubkey,
-                         &ident);
-
-  /* This is our resource when uploading which is used to construct the URL
-   * with the version number: "/tor/hs/<version>/publish". */
-  tor_snprintf(version_str, sizeof(version_str), "%u",
-               service->config.version);
-
-  /* Build the directory request for this HSDir. */
-  dir_req = directory_request_new(DIR_PURPOSE_UPLOAD_HSDESC);
-  directory_request_set_routerstatus(dir_req, hsdir->rs);
-  directory_request_set_indirection(dir_req, DIRIND_ANONYMOUS);
-  directory_request_set_resource(dir_req, version_str);
-  directory_request_set_payload(dir_req, encoded_desc,
-                                strlen(encoded_desc));
-  /* The ident object is copied over the directory connection object once
-   * the directory request is initiated. */
-  directory_request_upload_set_hs_ident(dir_req, &ident);
-
-  /* Initiate the directory request to the hsdir.*/
-  directory_initiate_request(dir_req);
-  directory_request_free(dir_req);
+  /* Time to upload the descriptor to the directory. */
+  hs_service_upload_desc_to_dir(encoded_desc, service->config.version,
+                                &service->keys.identity_pk,
+                                &desc->blinded_kp.pubkey, hsdir->rs);
 
   /* Add this node to previous_hsdirs list */
   service_desc_note_upload(desc, hsdir);
@@ -2263,9 +2244,12 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
              desc->desc->plaintext_data.revision_counter,
              safe_str_client(node_describe(hsdir)),
              safe_str_client(hex_str((const char *) index, 32)));
+
+    /* Fire a UPLOAD control port event. */
+    hs_control_desc_event_upload(service->onion_address, hsdir->identity,
+                                 &desc->blinded_kp.pubkey, index);
   }
 
-  /* XXX: Inform control port of the upload event (#20699). */
  end:
   tor_free(encoded_desc);
   return;
@@ -2900,6 +2884,205 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
 /* Public API */
 /* ========== */
 
+/* Upload an encoded descriptor in encoded_desc of the given version. This
+ * descriptor is for the service identity_pk and blinded_pk used to setup the
+ * directory connection identifier. It is uploaded to the directory hsdir_rs
+ * routerstatus_t object.
+ *
+ * NOTE: This function does NOT check for PublishHidServDescriptors because it
+ * is only used by the control port command HSPOST outside of this subsystem.
+ * Inside this code, upload_descriptor_to_hsdir() should be used. */
+void
+hs_service_upload_desc_to_dir(const char *encoded_desc,
+                              const uint8_t version,
+                              const ed25519_public_key_t *identity_pk,
+                              const ed25519_public_key_t *blinded_pk,
+                              const routerstatus_t *hsdir_rs)
+{
+  char version_str[4] = {0};
+  directory_request_t *dir_req;
+  hs_ident_dir_conn_t ident;
+
+  tor_assert(encoded_desc);
+  tor_assert(identity_pk);
+  tor_assert(blinded_pk);
+  tor_assert(hsdir_rs);
+
+  /* Setup the connection identifier. */
+  memset(&ident, 0, sizeof(ident));
+  hs_ident_dir_conn_init(identity_pk, blinded_pk, &ident);
+
+  /* This is our resource when uploading which is used to construct the URL
+   * with the version number: "/tor/hs/<version>/publish". */
+  tor_snprintf(version_str, sizeof(version_str), "%u", version);
+
+  /* Build the directory request for this HSDir. */
+  dir_req = directory_request_new(DIR_PURPOSE_UPLOAD_HSDESC);
+  directory_request_set_routerstatus(dir_req, hsdir_rs);
+  directory_request_set_indirection(dir_req, DIRIND_ANONYMOUS);
+  directory_request_set_resource(dir_req, version_str);
+  directory_request_set_payload(dir_req, encoded_desc,
+                                strlen(encoded_desc));
+  /* The ident object is copied over the directory connection object once
+   * the directory request is initiated. */
+  directory_request_upload_set_hs_ident(dir_req, &ident);
+
+  /* Initiate the directory request to the hsdir.*/
+  directory_initiate_request(dir_req);
+  directory_request_free(dir_req);
+}
+
+/* Add the ephemeral service using the secret key sk and ports. Both max
+ * streams parameter will be set in the newly created service.
+ *
+ * Ownership of sk and ports is passed to this routine.  Regardless of
+ * success/failure, callers should not touch these values after calling this
+ * routine, and may assume that correct cleanup has been done on failure.
+ *
+ * Return an appropriate hs_service_add_ephemeral_status_t. */
+hs_service_add_ephemeral_status_t
+hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
+                         int max_streams_per_rdv_circuit,
+                         int max_streams_close_circuit, char **address_out)
+{
+  hs_service_add_ephemeral_status_t ret;
+  hs_service_t *service = NULL;
+
+  tor_assert(sk);
+  tor_assert(ports);
+  tor_assert(address_out);
+
+  service = hs_service_new(get_options());
+
+  /* Setup the service configuration with specifics. A default service is
+   * HS_VERSION_TWO so explicitely set it. */
+  service->config.version = HS_VERSION_THREE;
+  service->config.max_streams_per_rdv_circuit = max_streams_per_rdv_circuit;
+  service->config.max_streams_close_circuit = !!max_streams_close_circuit;
+  service->config.is_ephemeral = 1;
+  smartlist_free(service->config.ports);
+  service->config.ports = ports;
+
+  /* Handle the keys. */
+  memcpy(&service->keys.identity_sk, sk, sizeof(service->keys.identity_sk));
+  if (ed25519_public_key_generate(&service->keys.identity_pk,
+                                  &service->keys.identity_sk) < 0) {
+    log_warn(LD_CONFIG, "Unable to generate ed25519 public key"
+                        "for v3 service.");
+    ret = RSAE_BADPRIVKEY;
+    goto err;
+  }
+
+  /* Make sure we have at least one port. */
+  if (smartlist_len(service->config.ports) == 0) {
+    log_warn(LD_CONFIG, "At least one VIRTPORT/TARGET must be specified "
+                        "for v3 service.");
+    ret = RSAE_BADVIRTPORT;
+    goto err;
+  }
+
+  /* The only way the registration can fail is if the service public key
+   * already exists. */
+  if (BUG(register_service(hs_service_map, service) < 0)) {
+    log_warn(LD_CONFIG, "Onion Service private key collides with an "
+                        "existing v3 service.");
+    ret = RSAE_ADDREXISTS;
+    goto err;
+  }
+
+  /* Last step is to build the onion address. */
+  hs_build_address(&service->keys.identity_pk,
+                   (uint8_t) service->config.version,
+                   service->onion_address);
+  *address_out = tor_strdup(service->onion_address);
+
+  log_info(LD_CONFIG, "Added ephemeral v3 onion service: %s",
+           safe_str_client(service->onion_address));
+  ret = RSAE_OKAY;
+  goto end;
+
+ err:
+  hs_service_free(service);
+
+ end:
+  memwipe(sk, 0, sizeof(ed25519_secret_key_t));
+  tor_free(sk);
+  return ret;
+}
+
+/* For the given onion address, delete the ephemeral service. Return 0 on
+ * success else -1 on error. */
+int
+hs_service_del_ephemeral(const char *address)
+{
+  uint8_t version;
+  ed25519_public_key_t pk;
+  hs_service_t *service = NULL;
+
+  tor_assert(address);
+
+  if (hs_parse_address(address, &pk, NULL, &version) < 0) {
+    log_warn(LD_CONFIG, "Requested malformed v3 onion address for removal.");
+    goto err;
+  }
+
+  if (version != HS_VERSION_THREE) {
+    log_warn(LD_CONFIG, "Requested version of onion address for removal "
+                        "is not supported.");
+    goto err;
+  }
+
+  service = find_service(hs_service_map, &pk);
+  if (service == NULL) {
+    log_warn(LD_CONFIG, "Requested non-existent v3 hidden service for "
+                        "removal.");
+    goto err;
+  }
+
+  if (!service->config.is_ephemeral) {
+    log_warn(LD_CONFIG, "Requested non-ephemeral v3 hidden service for "
+                        "removal.");
+    goto err;
+  }
+
+  /* Close circuits, remove from map and finally free. */
+  close_service_circuits(service);
+  remove_service(hs_service_map, service);
+  hs_service_free(service);
+
+  log_info(LD_CONFIG, "Removed ephemeral v3 hidden service: %s",
+           safe_str_client(address));
+  return 0;
+
+ err:
+  return -1;
+}
+
+/* Using the ed25519 public key pk, find a service for that key and return the
+ * current encoded descriptor as a newly allocated string or NULL if not
+ * found. This is used by the control port subsystem. */
+char *
+hs_service_lookup_current_desc(const ed25519_public_key_t *pk)
+{
+  const hs_service_t *service;
+
+  tor_assert(pk);
+
+  service = find_service(hs_service_map, pk);
+  if (service && service->desc_current) {
+    char *encoded_desc = NULL;
+    /* No matter what is the result (which should never be a failure), return
+     * the encoded variable, if success it will contain the right thing else
+     * it will be NULL. */
+    hs_desc_encode_descriptor(service->desc_current->desc,
+                              &service->desc_current->signing_kp,
+                              &encoded_desc);
+    return encoded_desc;
+  }
+
+  return NULL;
+}
+
 /* Return the number of service we have configured and usable. */
 unsigned int
 hs_service_get_num_services(void)
@@ -2928,7 +3111,9 @@ hs_service_intro_circ_has_closed(origin_circuit_t *circ)
 
   get_objects_from_ident(circ->hs_ident, &service, &ip, &desc);
   if (service == NULL) {
-    log_warn(LD_REND, "Unable to find any hidden service associated "
+    /* This is possible if the circuits are closed and the service is
+     * immediately deleted. */
+    log_info(LD_REND, "Unable to find any hidden service associated "
                       "identity key %s on intro circuit %u.",
              ed25519_fmt(&circ->hs_ident->identity_pk),
              TO_CIRCUIT(circ)->n_circ_id);

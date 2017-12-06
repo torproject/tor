@@ -25,6 +25,7 @@
 #include "geoip.h"
 #include "hs_cache.h"
 #include "hs_common.h"
+#include "hs_control.h"
 #include "hs_client.h"
 #include "main.h"
 #include "microdesc.h"
@@ -3090,10 +3091,19 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
     /* We got something: Try storing it in the cache. */
     if (hs_cache_store_as_client(body, &conn->hs_ident->identity_pk) < 0) {
       log_warn(LD_REND, "Failed to store hidden service descriptor");
+      /* Fire control port FAILED event. */
+      hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                   "BAD_DESC");
+      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                    NULL);
     } else {
       log_info(LD_REND, "Stored hidden service descriptor successfully.");
       TO_CONN(conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
       hs_client_desc_has_arrived(conn->hs_ident);
+      /* Fire control port RECEIVED event. */
+      hs_control_desc_event_received(conn->hs_ident, conn->identity_digest);
+      hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                    body);
     }
     break;
   case 404:
@@ -3101,13 +3111,22 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
      * tries to clean this conn up. */
     log_info(LD_REND, "Fetching hidden service v3 descriptor not found: "
                       "Retrying at another directory.");
-    /* TODO: Inform the control port */
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "NOT_FOUND");
+    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                  NULL);
     break;
   case 400:
     log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
                       "http status 400 (%s). Dirserver didn't like our "
                       "query? Retrying at another directory.",
              escaped(reason));
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "QUERY_REJECTED");
+    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                  NULL);
     break;
   default:
     log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
@@ -3115,6 +3134,11 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
              "'%s:%d'. Retrying at another directory.",
              status_code, escaped(reason), TO_CONN(conn)->address,
              TO_CONN(conn)->port);
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "UNEXPECTED");
+    hs_control_desc_event_content(conn->hs_ident, conn->identity_digest,
+                                  NULL);
     break;
   }
 
@@ -3136,9 +3160,9 @@ handle_response_fetch_renddesc_v2(dir_connection_t *conn,
   const size_t body_len = args->body_len;
 
 #define SEND_HS_DESC_FAILED_EVENT(reason)                               \
-  (control_event_hs_descriptor_failed(conn->rend_data,                  \
-                                      conn->identity_digest,            \
-                                      reason))
+  (control_event_hsv2_descriptor_failed(conn->rend_data,                \
+                                        conn->identity_digest,          \
+                                        reason))
 #define SEND_HS_DESC_FAILED_CONTENT()                                   \
   (control_event_hs_descriptor_content(                                 \
                                 rend_data_get_address(conn->rend_data), \
@@ -3173,9 +3197,9 @@ handle_response_fetch_renddesc_v2(dir_connection_t *conn,
         /* success. notify pending connections about this. */
         log_info(LD_REND, "Successfully fetched v2 rendezvous "
                  "descriptor.");
-        control_event_hs_descriptor_received(service_id,
-                                             conn->rend_data,
-                                             conn->identity_digest);
+        control_event_hsv2_descriptor_received(service_id,
+                                               conn->rend_data,
+                                               conn->identity_digest);
         control_event_hs_descriptor_content(service_id,
                                             conn->requested_resource,
                                             conn->identity_digest,
@@ -3292,7 +3316,7 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
   case 200:
     log_info(LD_REND, "Uploading hidden service descriptor: "
                       "finished with status 200 (%s)", escaped(reason));
-    /* XXX: Trigger control event. */
+    hs_control_desc_event_uploaded(conn->hs_ident, conn->identity_digest);
     break;
   case 400:
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
@@ -3300,7 +3324,8 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
            "status 400 (%s) response from dirserver "
            "'%s:%d'. Malformed hidden service descriptor?",
            escaped(reason), conn->base_.address, conn->base_.port);
-    /* XXX: Trigger control event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "UPLOAD_REJECTED");
     break;
   default:
     log_warn(LD_REND, "Uploading hidden service descriptor: http "
@@ -3308,7 +3333,8 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
                       "'%s:%d').",
              status_code, escaped(reason), conn->base_.address,
              conn->base_.port);
-    /* XXX: Trigger control event. */
+    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
+                                 "UNEXPECTED");
     break;
   }
 

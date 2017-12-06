@@ -60,6 +60,7 @@ LIBTOR_A_SOURCES = \
 	src/or/hs_client.c				\
 	src/or/hs_common.c				\
 	src/or/hs_config.c				\
+	src/or/hs_control.c				\
 	src/or/hs_descriptor.c				\
 	src/or/hs_ident.c				\
 	src/or/hs_intropoint.c				\
@@ -196,11 +197,12 @@ ORHEADERS = \
 	src/or/hibernate.h				\
 	src/or/hs_cache.h				\
 	src/or/hs_cell.h				\
-	src/or/hs_config.h				\
 	src/or/hs_circuit.h				\
 	src/or/hs_circuitmap.h				\
 	src/or/hs_client.h				\
 	src/or/hs_common.h				\
+	src/or/hs_config.h				\
+	src/or/hs_control.h				\
 	src/or/hs_descriptor.h				\
 	src/or/hs_ident.h				\
 	src/or/hs_intropoint.h				\
