@@ -2482,7 +2482,7 @@ cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
   (void)exitward;
   (void)use_stats;
 
-  copy->inserted_time = (uint32_t) monotime_coarse_absolute_msec();
+  copy->inserted_timestamp = monotime_coarse_get_stamp();
 
   cell_queue_append(queue, copy);
 }
@@ -2789,9 +2789,10 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
     /* Calculate the exact time that this cell has spent in the queue. */
     if (get_options()->CellStatistics ||
         get_options()->TestingEnableCellStatsEvent) {
-      uint32_t msec_waiting;
-      uint32_t msec_now = (uint32_t)monotime_coarse_absolute_msec();
-      msec_waiting = msec_now - cell->inserted_time;
+      uint32_t timestamp_now = monotime_coarse_get_stamp();
+      uint32_t msec_waiting =
+        (uint32_t) monotime_coarse_stamp_units_to_approx_msec(
+                         timestamp_now - cell->inserted_timestamp);
 
       if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
         or_circ = TO_OR_CIRCUIT(circ);

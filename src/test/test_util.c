@@ -5801,6 +5801,7 @@ test_util_monotonic_time(void *arg)
   monotime_coarse_t mtc1, mtc2;
   uint64_t nsec1, nsec2, usec1, msec1;
   uint64_t nsecc1, nsecc2, usecc1, msecc1;
+  uint32_t stamp1, stamp2;
 
   monotime_init();
 
@@ -5812,6 +5813,7 @@ test_util_monotonic_time(void *arg)
   nsecc1 = monotime_coarse_absolute_nsec();
   usecc1 = monotime_coarse_absolute_usec();
   msecc1 = monotime_coarse_absolute_msec();
+  stamp1 = monotime_coarse_to_stamp(&mtc1);
 
   tor_sleep_msec(200);
 
@@ -5819,6 +5821,7 @@ test_util_monotonic_time(void *arg)
   monotime_coarse_get(&mtc2);
   nsec2 = monotime_absolute_nsec();
   nsecc2 = monotime_coarse_absolute_nsec();
+  stamp2 = monotime_coarse_to_stamp(&mtc2);
 
   /* We need to be a little careful here since we don't know the system load.
    */
@@ -5839,6 +5842,11 @@ test_util_monotonic_time(void *arg)
   tt_u64_op(usec1, OP_LE, nsec1 / 1000 + 1000);
   tt_u64_op(msecc1, OP_LE, nsecc1 / 1000000 + 1);
   tt_u64_op(usecc1, OP_LE, nsecc1 / 1000 + 1000);
+
+  uint64_t coarse_stamp_diff =
+    monotime_coarse_stamp_units_to_approx_msec(stamp2-stamp1);
+  tt_u64_op(coarse_stamp_diff, OP_GE, 120);
+  tt_u64_op(coarse_stamp_diff, OP_LE, 1200);
 
  done:
   ;

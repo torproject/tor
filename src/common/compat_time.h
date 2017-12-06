@@ -117,6 +117,23 @@ uint64_t monotime_coarse_absolute_msec(void);
 #define monotime_coarse_absolute_msec monotime_absolute_msec
 #endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 
+/**
+ * Return a "timestamp" approximation for a coarse monotonic timer.
+ * This timestamp is meant to be fast to calculate and easy to
+ * compare, and have a unit of something roughly around 1 msec.
+ *
+ * It will wrap over from time to time.
+ *
+ * It has no defined zero point.
+ */
+uint32_t monotime_coarse_to_stamp(const monotime_coarse_t *t);
+/**
+ * Convert a difference, expressed in the units of monotime_coarse_to_stamp,
+ * into an approximate number of milliseconds.
+ */
+uint64_t monotime_coarse_stamp_units_to_approx_msec(uint64_t units);
+uint32_t monotime_coarse_get_stamp(void);
+
 #if defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT)
 int64_t monotime_coarse_diff_nsec(const monotime_coarse_t *start,
     const monotime_coarse_t *end);

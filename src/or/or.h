@@ -1166,8 +1166,8 @@ typedef struct packed_cell_t {
   /** Next cell queued on this circuit. */
   TOR_SIMPLEQ_ENTRY(packed_cell_t) next;
   char body[CELL_MAX_NETWORK_SIZE]; /**< Cell as packed for network. */
-  uint32_t inserted_time; /**< Time (in milliseconds since epoch, with high
-                           * bits truncated) when this cell was inserted. */
+  uint32_t inserted_timestamp; /**< Time (in timestamp units) when this cell
+                                * was inserted */
 } packed_cell_t;
 
 /** A queue of cells on a circuit, waiting to be added to the

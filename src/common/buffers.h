@@ -86,8 +86,7 @@ typedef struct chunk_t {
   size_t DBG_alloc;
 #endif
   char *data; /**< A pointer to the first byte of data stored in <b>mem</b>. */
-  uint32_t inserted_time; /**< Timestamp in truncated ms since epoch
-                           * when this chunk was inserted. */
+  uint32_t inserted_time; /**< Timestamp when this chunk was inserted. */
   char mem[FLEXIBLE_ARRAY_MEMBER]; /**< The actual memory used for storage in
                 * this chunk. */
 } chunk_t;
