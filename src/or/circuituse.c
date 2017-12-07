@@ -1038,9 +1038,6 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
         continue;
       if (origin_circ->unusable_for_new_conns)
         continue;
-      if (origin_circ->isolation_values_set &&
-          !connection_edge_compatible_with_circuit(conn, origin_circ))
-        continue;
 
       exitnode = build_state_get_exit_node(build_state);
       if (exitnode && (!need_uptime || build_state->need_uptime)) {
