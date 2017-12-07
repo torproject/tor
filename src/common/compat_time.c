@@ -563,7 +563,7 @@ static const uint32_t STAMP_TICKS_PER_SECOND = 1000;
 uint32_t
 monotime_coarse_to_stamp(const monotime_coarse_t *t)
 {
-  return (uint32_t) t->tick_count;
+  return (uint32_t) t->tick_count_;
 }
 
 /* end of "_WIN32" */
