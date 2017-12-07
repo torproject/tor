@@ -1421,7 +1421,8 @@ test_channel_for_extend(void *arg)
   channel_clear_client(chan1);
 
   /* Non matching ed identity with valid digest. */
-  ed25519_public_key_t dumb_ed_id = {0};
+  ed25519_public_key_t dumb_ed_id;
+  memset(&dumb_ed_id, 0, sizeof(dumb_ed_id));
   ret_chan = channel_get_for_extend(digest, &dumb_ed_id, &addr, &msg,
                                     &launch);
   tt_assert(!ret_chan);
