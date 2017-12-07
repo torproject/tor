@@ -1,0 +1,6 @@
+  o Minor bugfixes (Performance):
+    - Consider circuits for timeout as soon as they complete a hop. This
+      is more accurate than applying the timeout in circuit_expire_building()
+      because that function is only called once per second, which is now
+      too slow for typical timeouts on the current network. Fixes bug 23114;
+      bugfix on 0.2.2.2-alpha.

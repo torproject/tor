@@ -45,6 +45,7 @@ double circuit_build_times_timeout_rate(const circuit_build_times_t *cbt);
 double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 
 void circuit_build_times_update_last_circ(circuit_build_times_t *cbt);
+void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
 
 #ifdef CIRCUITSTATS_PRIVATE
 STATIC double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
