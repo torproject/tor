@@ -26,14 +26,17 @@ void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
 
 void rend_service_descriptor_free_(rend_service_descriptor_t *desc);
 #define rend_service_descriptor_free(desc) \
-  FREE_AND_NULL(rend_service_descriptor_t, rend_service_descriptor_free_, (desc))
+  FREE_AND_NULL(rend_service_descriptor_t, rend_service_descriptor_free_, \
+                (desc))
 int rend_get_service_id(crypto_pk_t *pk, char *out);
 void rend_encoded_v2_service_descriptor_free_(
                                rend_encoded_v2_service_descriptor_t *desc);
 #define rend_encoded_v2_service_descriptor_free(desc) \
-  FREE_AND_NULL(rend_encoded_v2_service_descriptor_t, rend_encoded_v2_service_descriptor_free_, (desc))
+  FREE_AND_NULL(rend_encoded_v2_service_descriptor_t, \
+                rend_encoded_v2_service_descriptor_free_, (desc))
 void rend_intro_point_free_(rend_intro_point_t *intro);
-#define rend_intro_point_free(intro) FREE_AND_NULL(rend_intro_point_t, rend_intro_point_free_, (intro))
+#define rend_intro_point_free(intro) \
+  FREE_AND_NULL(rend_intro_point_t, rend_intro_point_free_, (intro))
 
 int rend_valid_v2_service_id(const char *query);
 int rend_valid_descriptor_id(const char *query);

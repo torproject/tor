@@ -30,7 +30,8 @@ int connection_init_accepted_conn(connection_t *conn,
                                   const listener_connection_t *listener);
 void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
 MOCK_DECL(void,connection_free_,(connection_t *conn));
-#define connection_free(conn) FREE_AND_NULL(connection_t, connection_free_, (conn))
+#define connection_free(conn) \
+  FREE_AND_NULL(connection_t, connection_free_, (conn))
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);

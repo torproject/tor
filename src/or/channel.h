@@ -519,7 +519,8 @@ void channel_listener_closed(channel_listener_t *chan_l);
 void channel_free_(channel_t *chan);
 #define channel_free(chan) FREE_AND_NULL(channel_t, channel_free_, (chan))
 void channel_listener_free_(channel_listener_t *chan_l);
-#define channel_listener_free(chan_l) FREE_AND_NULL(channel_listener_t, channel_listener_free_, (chan_l))
+#define channel_listener_free(chan_l) \
+  FREE_AND_NULL(channel_listener_t, channel_listener_free_, (chan_l))
 
 /* State/metadata setters */
 

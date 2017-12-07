@@ -91,7 +91,8 @@ void rend_cache_increment_allocation(size_t n);
 
 STATIC size_t rend_cache_entry_allocation(const rend_cache_entry_t *e);
 STATIC void rend_cache_entry_free_(rend_cache_entry_t *e);
-#define rend_cache_entry_free(e) FREE_AND_NULL(rend_cache_entry_t, rend_cache_entry_free_, (e))
+#define rend_cache_entry_free(e) \
+  FREE_AND_NULL(rend_cache_entry_t, rend_cache_entry_free_, (e))
 STATIC void rend_cache_failure_intro_entry_free_(rend_cache_failure_intro_t
                                                  *entry);
 #define rend_cache_failure_intro_entry_free(e)                          \

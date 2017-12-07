@@ -59,7 +59,8 @@ extend_info_t *extend_info_new(const char *nickname,
 extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free_(extend_info_t *info);
-#define extend_info_free(info) FREE_AND_NULL(extend_info_t, extend_info_free_, (info))
+#define extend_info_free(info) \
+  FREE_AND_NULL(extend_info_t, extend_info_free_, (info))
 int extend_info_addr_is_allowed(const tor_addr_t *addr);
 int extend_info_supports_tap(const extend_info_t* ei);
 int extend_info_supports_ntor(const extend_info_t* ei);

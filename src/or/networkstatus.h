@@ -19,7 +19,8 @@ void networkstatus_reset_download_failures(void);
 char *networkstatus_read_cached_consensus(const char *flavorname);
 int router_reload_consensus_networkstatus(void);
 void routerstatus_free_(routerstatus_t *rs);
-#define routerstatus_free(rs) FREE_AND_NULL(routerstatus_t, routerstatus_free_, (rs))
+#define routerstatus_free(rs) \
+  FREE_AND_NULL(routerstatus_t, routerstatus_free_, (rs))
 void networkstatus_vote_free_(networkstatus_t *ns);
 #define networkstatus_vote_free(ns) \
   FREE_AND_NULL(networkstatus_t, networkstatus_vote_free_, (ns))
@@ -128,13 +129,15 @@ int32_t networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight,
 const char *networkstatus_get_flavor_name(consensus_flavor_t flav);
 int networkstatus_parse_flavor_name(const char *flavname);
 void document_signature_free_(document_signature_t *sig);
-#define document_signature_free(sig) FREE_AND_NULL(document_signature_t, document_signature_free_, (sig))
+#define document_signature_free(sig) \
+  FREE_AND_NULL(document_signature_t, document_signature_free_, (sig))
 document_signature_t *document_signature_dup(const document_signature_t *sig);
 void networkstatus_free_all(void);
 int networkstatus_get_weight_scale_param(networkstatus_t *ns);
 
 void vote_routerstatus_free_(vote_routerstatus_t *rs);
-#define vote_routerstatus_free(rs) FREE_AND_NULL(vote_routerstatus_t, vote_routerstatus_free_, (rs))
+#define vote_routerstatus_free(rs) \
+  FREE_AND_NULL(vote_routerstatus_t, vote_routerstatus_free_, (rs))
 
 #ifdef NETWORKSTATUS_PRIVATE
 #ifdef TOR_UNIT_TESTS

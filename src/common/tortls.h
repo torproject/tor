@@ -265,7 +265,8 @@ void tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                            int severity, int domain, const char *doing);
 
 void tor_x509_cert_free_(tor_x509_cert_t *cert);
-#define tor_x509_cert_free(c) FREE_AND_NULL(tor_x509_cert_t, tor_x509_cert_free_, (c))
+#define tor_x509_cert_free(c) \
+  FREE_AND_NULL(tor_x509_cert_t, tor_x509_cert_free_, (c))
 tor_x509_cert_t *tor_x509_cert_decode(const uint8_t *certificate,
                             size_t certificate_len);
 void tor_x509_cert_get_der(const tor_x509_cert_t *cert,

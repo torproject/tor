@@ -153,7 +153,8 @@ typedef struct bridge_line_t {
 } bridge_line_t;
 
 void bridge_line_free_(bridge_line_t *bridge_line);
-#define bridge_line_free(line) FREE_AND_NULL(bridge_line_t, bridge_line_free_, (line))
+#define bridge_line_free(line) \
+  FREE_AND_NULL(bridge_line_t, bridge_line_free_, (line))
 bridge_line_t *parse_bridge_line(const char *line);
 smartlist_t *get_options_from_transport_options_line(const char *line,
                                                      const char *transport);

@@ -119,7 +119,8 @@ void addr_policy_list_free_(smartlist_t *p);
 #define addr_policy_list_free(lst) \
   FREE_AND_NULL(smartlist_t, addr_policy_list_free_, (lst))
 void addr_policy_free_(addr_policy_t *p);
-#define addr_policy_free(p) FREE_AND_NULL(addr_policy_t, addr_policy_free_, (p))
+#define addr_policy_free(p) \
+  FREE_AND_NULL(addr_policy_t, addr_policy_free_, (p))
 void policies_free_all(void);
 
 char *policy_summarize(smartlist_t *policy, sa_family_t family);
@@ -127,7 +128,8 @@ char *policy_summarize(smartlist_t *policy, sa_family_t family);
 short_policy_t *parse_short_policy(const char *summary);
 char *write_short_policy(const short_policy_t *policy);
 void short_policy_free_(short_policy_t *policy);
-#define short_policy_free(p) FREE_AND_NULL(short_policy_t, short_policy_free_, (p))
+#define short_policy_free(p) \
+  FREE_AND_NULL(short_policy_t, short_policy_free_, (p))
 int short_policy_is_reject_star(const short_policy_t *policy);
 addr_policy_result_t compare_tor_addr_to_short_policy(
                           const tor_addr_t *addr, uint16_t port,

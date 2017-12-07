@@ -97,7 +97,8 @@ const char *signed_descriptor_get_body(const signed_descriptor_t *desc);
 const char *signed_descriptor_get_annotations(const signed_descriptor_t *desc);
 routerlist_t *router_get_routerlist(void);
 void routerinfo_free_(routerinfo_t *router);
-#define routerinfo_free(router) FREE_AND_NULL(routerinfo_t, routerinfo_free_, (router))
+#define routerinfo_free(router) \
+  FREE_AND_NULL(routerinfo_t, routerinfo_free_, (router))
 void extrainfo_free_(extrainfo_t *extrainfo);
 #define extrainfo_free(ei) FREE_AND_NULL(extrainfo_t, extrainfo_free_, (ei))
 void routerlist_free_(routerlist_t *rl);
@@ -195,7 +196,8 @@ dir_server_t *fallback_dir_server_new(const tor_addr_t *addr,
 void dir_server_add(dir_server_t *ent);
 
 void authority_cert_free_(authority_cert_t *cert);
-#define authority_cert_free(cert) FREE_AND_NULL(authority_cert_t, authority_cert_free_, (cert))
+#define authority_cert_free(cert) \
+  FREE_AND_NULL(authority_cert_t, authority_cert_free_, (cert))
 void clear_dir_servers(void);
 void update_consensus_router_descriptor_downloads(time_t now, int is_vote,
                                                   networkstatus_t *consensus);

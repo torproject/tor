@@ -105,7 +105,8 @@ circuitmux_t * circuitmux_alloc(void);
 void circuitmux_detach_all_circuits(circuitmux_t *cmux,
                                     smartlist_t *detached_out);
 void circuitmux_free_(circuitmux_t *cmux);
-#define circuitmux_free(cmux) FREE_AND_NULL(circuitmux_t, circuitmux_free_, (cmux))
+#define circuitmux_free(cmux) \
+  FREE_AND_NULL(circuitmux_t, circuitmux_free_, (cmux))
 
 /* Policy control */
 void circuitmux_clear_policy(circuitmux_t *cmux);
