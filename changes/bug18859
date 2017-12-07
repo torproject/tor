@@ -1,5 +1,7 @@
-  o Minor bugfixes (circuit prediction):
-    - Fix circuit_stream_is_being_handled so it correctly reports on circuits
-      with isolation settings. Ports must not be said to be "handled" by
-      already-isolated circuits, and a stream can only be handled by a circuit
-      if their isolation settings are compatible. Fixes bug 18859.
+  o Major bugfixes (circuit prediction):
+    - Fix circuit prediction logic so that a client doesn't treat a stream as
+      being "handled" by a circuit if that circuit already has isolation
+      settings on it that might make it incompatible with the stream. This
+      change should make Tor clients more responsive by improving their
+      chances of having a pre-created circuit ready for use when a new client
+      request arrives.  Fixes bug 18859; bugfix on 0.2.3.3-alpha.
