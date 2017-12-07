@@ -1431,8 +1431,11 @@ channel_clear_remote_end(channel_t *chan)
 /**
  * Write to a channel the given packed cell.
  *
- * Return 0 on success and the cell is freed so the caller MUST discard any
- * reference to it. On error, -1 is returned and the cell is untouched.
+ * Return 0 on success or -1 on error.
+ *
+ * Two possible errors can happen. Either the channel is not opened or the
+ * lower layer (specialized channel) failed to write it. In both cases, it is
+ * the caller responsability to free the cell.
  */
 static int
 write_packed_cell(channel_t *chan, packed_cell_t *cell)
@@ -1483,10 +1486,15 @@ write_packed_cell(channel_t *chan, packed_cell_t *cell)
  * Write a packed cell to a channel using the write_cell() method.  This is
  * called by the transport-independent code to deliver a packed cell to a
  * channel for transmission.
+ *
+ * Return 0 on success else a negative value. In both cases, the caller should
+ * not access the cell anymore, it is freed both on success and error.
  */
 int
 channel_write_packed_cell(channel_t *chan, packed_cell_t *cell)
 {
+  int ret = -1;
+
   tor_assert(chan);
   tor_assert(cell);
 
@@ -1494,14 +1502,20 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *cell)
     log_debug(LD_CHANNEL, "Discarding %p on closing channel %p with "
               "global ID "U64_FORMAT, cell, chan,
               U64_PRINTF_ARG(chan->global_identifier));
-    tor_free(cell);
-    return -1;
+    goto end;
   }
   log_debug(LD_CHANNEL,
             "Writing %p to channel %p with global ID "
             U64_FORMAT, cell, chan, U64_PRINTF_ARG(chan->global_identifier));
 
-  return write_packed_cell(chan, cell);
+  ret = write_packed_cell(chan, cell);
+
+ end:
+  /* Whatever happens, we free the cell. Either an error occured or the cell
+   * was put on the connection outbuf, both cases we have ownership of the
+   * cell and we free it. */
+  packed_cell_free(cell);
+  return ret;
 }
 
 /**

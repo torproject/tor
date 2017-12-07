@@ -832,6 +832,9 @@ channel_tls_write_cell_method(channel_t *chan, cell_t *cell)
  *
  * This implements the write_packed_cell method for channel_tls_t; given a
  * channel_tls_t and a packed_cell_t, transmit the packed_cell_t.
+ *
+ * Return 0 on success or negative value on error. The caller must free the
+ * packed cell.
  */
 
 static int
@@ -841,7 +844,6 @@ channel_tls_write_packed_cell_method(channel_t *chan,
   tor_assert(chan);
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
   size_t cell_network_size = get_cell_network_size(chan->wide_circ_ids);
-  int written = 0;
 
   tor_assert(tlschan);
   tor_assert(packed_cell);
@@ -849,18 +851,15 @@ channel_tls_write_packed_cell_method(channel_t *chan,
   if (tlschan->conn) {
     connection_buf_add(packed_cell->body, cell_network_size,
                             TO_CONN(tlschan->conn));
-
-    /* This is where the cell is finished; used to be done from relay.c */
-    packed_cell_free(packed_cell);
-    ++written;
   } else {
     log_info(LD_CHANNEL,
              "something called write_packed_cell on a tlschan "
              "(%p with ID " U64_FORMAT " but no conn",
              chan, U64_PRINTF_ARG(chan->global_identifier));
+    return -1;
   }
 
-  return written;
+  return 0;
 }
 
 /**

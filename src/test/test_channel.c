@@ -199,7 +199,6 @@ chan_test_write_packed_cell(channel_t *ch,
 
   if (test_chan_accept_cells) {
     /* Free the cell and bump the counter */
-    packed_cell_free(packed_cell);
     ++test_cells_written;
     rv = 1;
   }
@@ -846,7 +845,6 @@ test_channel_lifecycle(void *arg)
  done:
   free_fake_channel(ch1);
   free_fake_channel(ch2);
-  tor_free(p_cell);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
   UNMOCK(scheduler_release_channel);

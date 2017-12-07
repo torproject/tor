@@ -2521,17 +2521,6 @@ cell_queue_pop(cell_queue_t *queue)
   return cell;
 }
 
-/** Insert <b>cell</b> as the head of the <b>queue</b>. */
-static void
-cell_insert_head(cell_queue_t *queue, packed_cell_t *cell)
-{
-  tor_assert(queue);
-  tor_assert(cell);
-
-  TOR_SIMPLEQ_INSERT_HEAD(&queue->head, cell, next);
-  ++queue->n;
-}
-
 /** Return the total number of bytes used for each packed_cell in a queue.
  * Approximate. */
 size_t
@@ -2757,8 +2746,11 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
       /* this code is duplicated from some of the logic below. Ugly! XXXX */
       tor_assert(destroy_queue->n > 0);
       cell = cell_queue_pop(destroy_queue);
+      /* Send the DESTROY cell. It is very unlikely that this fails but just
+       * in case, get rid of the channel. */
       if (channel_write_packed_cell(chan, cell) < 0) {
-        cell_insert_head(destroy_queue, cell);
+        /* The cell has been freed. */
+        channel_mark_for_close(chan);
         continue;
       }
       /* Update the cmux destroy counter */
@@ -2836,11 +2828,11 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
                                 DIRREQ_TUNNELED,
                                 DIRREQ_CIRC_QUEUE_FLUSHED);
 
-    /* Now send the cell */
+    /* Now send the cell. It is very unlikely that this fails but just in
+     * case, get rid of the channel. */
     if (channel_write_packed_cell(chan, cell) < 0) {
-      /* Unable to send the cell, put it back at the start of the circuit
-       * queue so we can retry. */
-      cell_insert_head(queue, cell);
+      /* The cell has been freed at this point. */
+      channel_mark_for_close(chan);
       continue;
     }
     cell = NULL;
