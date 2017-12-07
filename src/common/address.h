@@ -208,7 +208,7 @@ MOCK_DECL(int,get_interface_address6,(int severity, sa_family_t family,
 tor_addr_t *addr));
 void interface_address6_list_free_(smartlist_t * addrs);// XXXX
 #define interface_address6_list_free(addrs) \
-  FREE_AND_NULL_UNMATCHED(smartlist_t, interface_address6_list_free_, (addrs))
+  FREE_AND_NULL(smartlist_t, interface_address6_list_free_, (addrs))
 MOCK_DECL(smartlist_t *,get_interface_address6_list,(int severity,
                                                      sa_family_t family,
                                                      int include_internal));

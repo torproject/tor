@@ -32,7 +32,7 @@ typedef struct server_onion_keys_t {
 
 server_onion_keys_t *server_onion_keys_new(void);
 void server_onion_keys_free_(server_onion_keys_t *keys);
-#define server_onion_keys_free(keys) FREE_AND_NULL(server_onion_keys, (keys))
+#define server_onion_keys_free(keys) FREE_AND_NULL(server_onion_keys_t, server_onion_keys_free_, (keys))
 
 void onion_handshake_state_release(onion_handshake_state_t *state);
 

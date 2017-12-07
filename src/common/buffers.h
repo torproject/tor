@@ -25,7 +25,7 @@ buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
 size_t buf_get_default_chunk_size(const buf_t *buf);
 void buf_free_(buf_t *buf);
-#define buf_free(b) FREE_AND_NULL(buf, (b))
+#define buf_free(b) FREE_AND_NULL(buf_t, buf_free_, (b))
 void buf_clear(buf_t *buf);
 buf_t *buf_copy(const buf_t *buf);
 

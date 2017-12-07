@@ -250,7 +250,7 @@ void hs_service_free_all(void);
 /* Service new/free functions. */
 hs_service_t *hs_service_new(const or_options_t *options);
 void hs_service_free_(hs_service_t *service);
-#define hs_service_free(s) FREE_AND_NULL(hs_service, (s))
+#define hs_service_free(s) FREE_AND_NULL(hs_service_t, hs_service_free_, (s))
 
 unsigned int hs_service_get_num_services(void);
 void hs_service_stage_services(const smartlist_t *service_list);
@@ -296,7 +296,7 @@ STATIC hs_service_intro_point_t *service_intro_point_new(
                                          unsigned int is_legacy);
 STATIC void service_intro_point_free_(hs_service_intro_point_t *ip);
 #define service_intro_point_free(ip)                            \
-  FREE_AND_NULL_UNMATCHED(hs_service_intro_point_t,             \
+  FREE_AND_NULL(hs_service_intro_point_t,             \
                           service_intro_point_free_, (ip))
 STATIC void service_intro_point_add(digest256map_t *map,
                                     hs_service_intro_point_t *ip);
@@ -332,7 +332,7 @@ encode_desc_rev_counter_for_state(const hs_service_descriptor_t *desc);
 
 STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
 #define service_descriptor_free(d) \
-  FREE_AND_NULL_UNMATCHED(hs_service_descriptor_t, \
+  FREE_AND_NULL(hs_service_descriptor_t, \
                            service_descriptor_free_, (d))
 
 STATIC uint64_t

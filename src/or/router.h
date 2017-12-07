@@ -38,7 +38,7 @@ int get_onion_key_grace_period(void);
 di_digest256_map_t *construct_ntor_key_map(void);
 void ntor_key_map_free_(di_digest256_map_t *map);
 #define ntor_key_map_free(map) \
-  FREE_AND_NULL_UNMATCHED(di_digest256_map_t, ntor_key_map_free_, (map))
+  FREE_AND_NULL(di_digest256_map_t, ntor_key_map_free_, (map))
 
 int router_initialize_tls_context(void);
 int init_keys(void);

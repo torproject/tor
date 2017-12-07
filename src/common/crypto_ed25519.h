@@ -119,7 +119,7 @@ int ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
                                   const char *filename);
 
 void ed25519_keypair_free_(ed25519_keypair_t *kp);
-#define ed25519_keypair_free(kp) FREE_AND_NULL(ed25519_keypair, (kp))
+#define ed25519_keypair_free(kp) FREE_AND_NULL(ed25519_keypair_t, ed25519_keypair_free_, (kp))
 
 int ed25519_pubkey_eq(const ed25519_public_key_t *key1,
                       const ed25519_public_key_t *key2);

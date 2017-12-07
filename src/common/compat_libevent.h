@@ -21,7 +21,7 @@ void suppress_libevent_log_msg(const char *msg);
 
 void tor_event_free_(struct event *ev);
 #define tor_event_free(ev) \
-  FREE_AND_NULL_UNMATCHED(struct event, tor_event_free_, (ev))
+  FREE_AND_NULL(struct event, tor_event_free_, (ev))
 
 typedef struct periodic_timer_t periodic_timer_t;
 
@@ -30,7 +30,7 @@ periodic_timer_t *periodic_timer_new(struct event_base *base,
              void (*cb)(periodic_timer_t *timer, void *data),
              void *data);
 void periodic_timer_free_(periodic_timer_t *);
-#define periodic_timer_free(t) FREE_AND_NULL(periodic_timer, (t))
+#define periodic_timer_free(t) FREE_AND_NULL(periodic_timer_t, periodic_timer_free_, (t))
 
 #define tor_event_base_loopexit event_base_loopexit
 #define tor_event_base_loopbreak event_base_loopbreak

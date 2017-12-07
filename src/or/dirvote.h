@@ -138,7 +138,7 @@ int networkstatus_add_detached_signatures(networkstatus_t *target,
 char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 void ns_detached_signatures_free_(ns_detached_signatures_t *s);
 #define ns_detached_signatures_free(s) \
-  FREE_AND_NULL(ns_detached_signatures, (s))
+  FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
 
 /* cert manipulation */
 authority_cert_t *authority_cert_dup(authority_cert_t *cert);

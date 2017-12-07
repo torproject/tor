@@ -19,7 +19,7 @@ typedef struct ntor_handshake_state_t ntor_handshake_state_t;
 
 void ntor_handshake_state_free_(ntor_handshake_state_t *state);
 #define ntor_handshake_state_free(state) \
-  FREE_AND_NULL(ntor_handshake_state, (state))
+  FREE_AND_NULL(ntor_handshake_state_t, ntor_handshake_state_free_, (state))
 
 int onion_skin_ntor_create(const uint8_t *router_id,
                            const curve25519_public_key_t *router_key,

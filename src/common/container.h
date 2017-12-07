@@ -29,7 +29,7 @@ typedef struct smartlist_t {
 
 MOCK_DECL(smartlist_t *, smartlist_new, (void));
 MOCK_DECL(void, smartlist_free_, (smartlist_t *sl));
-#define smartlist_free(sl) FREE_AND_NULL(smartlist, (sl))
+#define smartlist_free(sl) FREE_AND_NULL(smartlist_t, smartlist_free_, (sl))
 
 void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
@@ -630,7 +630,7 @@ bitarray_free_(bitarray_t *ba)
 {
   tor_free(ba);
 }
-#define bitarray_free(ba) FREE_AND_NULL(bitarray, (ba))
+#define bitarray_free(ba) FREE_AND_NULL(bitarray_t, bitarray_free_, (ba))
 
 /** Set the <b>bit</b>th bit in <b>b</b> to 1. */
 static inline void
@@ -694,7 +694,7 @@ digestset_contains(const digestset_t *set, const char *digest)
 
 digestset_t *digestset_new(int max_elements);
 void digestset_free_(digestset_t* set);
-#define digestset_free(set) FREE_AND_NULL(digestset, (set))
+#define digestset_free(set) FREE_AND_NULL(digestset_t, digestset_free_, (set))
 
 /* These functions, given an <b>array</b> of <b>n_elements</b>, return the
  * <b>nth</b> lowest element. <b>nth</b>=0 gives the lowest element;

@@ -29,7 +29,7 @@ tor_process_monitor_t *tor_process_monitor_new(struct event_base *base,
                                                const char **msg);
 void tor_process_monitor_free_(tor_process_monitor_t *procmon);
 #define tor_process_monitor_free(procmon) \
-  FREE_AND_NULL(tor_process_monitor, (procmon))
+  FREE_AND_NULL(tor_process_monitor_t, tor_process_monitor_free_, (procmon))
 
 #endif /* !defined(TOR_PROCMON_H) */
 

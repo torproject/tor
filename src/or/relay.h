@@ -52,7 +52,7 @@ int have_been_under_memory_pressure(void);
 
 /* For channeltls.c */
 void packed_cell_free_(packed_cell_t *cell);
-#define packed_cell_free(cell) FREE_AND_NULL(packed_cell, (cell))
+#define packed_cell_free(cell) FREE_AND_NULL(packed_cell_t, packed_cell_free_, (cell))
 
 void cell_queue_init(cell_queue_t *queue);
 void cell_queue_clear(cell_queue_t *queue);
@@ -96,7 +96,7 @@ typedef struct address_ttl_s {
   int ttl;
 } address_ttl_t;
 STATIC void address_ttl_free_(address_ttl_t *addr);
-#define address_ttl_free(addr) FREE_AND_NULL(address_ttl, (addr))
+#define address_ttl_free(addr) FREE_AND_NULL(address_ttl_t, address_ttl_free_, (addr))
 STATIC int resolved_cell_parse(const cell_t *cell, const relay_header_t *rh,
                                smartlist_t *addresses_out, int *errcode_out);
 STATIC int connection_edge_process_resolved_cell(edge_connection_t *conn,

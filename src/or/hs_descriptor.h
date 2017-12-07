@@ -209,17 +209,17 @@ hs_desc_is_supported_version(uint32_t version)
 /* Public API. */
 
 void hs_descriptor_free_(hs_descriptor_t *desc);
-#define hs_descriptor_free(desc) FREE_AND_NULL(hs_descriptor, (desc))
+#define hs_descriptor_free(desc) FREE_AND_NULL(hs_descriptor_t, hs_descriptor_free_, (desc))
 void hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc);
 #define hs_desc_plaintext_data_free(desc) \
-  FREE_AND_NULL(hs_desc_plaintext_data, (desc))
+  FREE_AND_NULL(hs_desc_plaintext_data_t, hs_desc_plaintext_data_free_, (desc))
 void hs_desc_encrypted_data_free_(hs_desc_encrypted_data_t *desc);
 #define hs_desc_encrypted_data_free(desc) \
-  FREE_AND_NULL(hs_desc_encrypted_data, (desc))
+  FREE_AND_NULL(hs_desc_encrypted_data_t, hs_desc_encrypted_data_free_, (desc))
 
 void hs_desc_link_specifier_free_(hs_desc_link_specifier_t *ls);
 #define hs_desc_link_specifier_free(ls) \
-  FREE_AND_NULL(hs_desc_link_specifier, (ls))
+  FREE_AND_NULL(hs_desc_link_specifier_t, hs_desc_link_specifier_free_, (ls))
 
 hs_desc_link_specifier_t *hs_desc_link_specifier_new(
                                   const extend_info_t *info, uint8_t type);
@@ -243,7 +243,7 @@ size_t hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data);
 
 hs_desc_intro_point_t *hs_desc_intro_point_new(void);
 void hs_desc_intro_point_free_(hs_desc_intro_point_t *ip);
-#define hs_desc_intro_point_free(ip) FREE_AND_NULL(hs_desc_intro_point, (ip))
+#define hs_desc_intro_point_free(ip) FREE_AND_NULL(hs_desc_intro_point_t, hs_desc_intro_point_free_, (ip))
 
 link_specifier_t *hs_desc_lspec_to_trunnel(
                                    const hs_desc_link_specifier_t *spec);

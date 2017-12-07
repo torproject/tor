@@ -10,7 +10,7 @@ struct sandbox_cfg_elem;
 
 storage_dir_t * storage_dir_new(const char *dirname, int n_files);
 void storage_dir_free_(storage_dir_t *d);
-#define storage_dir_free(d) FREE_AND_NULL(storage_dir, (d))
+#define storage_dir_free(d) FREE_AND_NULL(storage_dir_t, storage_dir_free_, (d))
 
 int storage_dir_register_with_sandbox(storage_dir_t *d,
                                       struct sandbox_cfg_elem **cfg);

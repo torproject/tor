@@ -65,7 +65,7 @@ typedef struct logfile_t {
 
 static void log_free_(logfile_t *victim);
 #define log_free(lg)    \
-  FREE_AND_NULL_UNMATCHED(logfile_t, log_free_, (lg))
+  FREE_AND_NULL(logfile_t, log_free_, (lg))
 
 /** Helper: map a log severity to descriptive string. */
 static inline const char *

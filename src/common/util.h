@@ -446,7 +446,7 @@ struct process_environment_t {
 process_environment_t *process_environment_make(struct smartlist_t *env_vars);
 void process_environment_free_(process_environment_t *env);
 #define process_environment_free(env) \
-  FREE_AND_NULL(process_environment, (env))
+  FREE_AND_NULL(process_environment_t, process_environment_free_, (env))
 
 struct smartlist_t *get_current_process_environment_variables(void);
 

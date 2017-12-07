@@ -118,7 +118,7 @@ typedef struct rend_service_t {
 } rend_service_t;
 
 STATIC void rend_service_free_(rend_service_t *service);
-#define rend_service_free(s) FREE_AND_NULL(rend_service, (s))
+#define rend_service_free(s) FREE_AND_NULL(rend_service_t, rend_service_free_, (s))
 STATIC char *rend_service_sos_poison_path(const rend_service_t *service);
 STATIC int rend_service_verify_single_onion_poison(
                                                   const rend_service_t *s,
@@ -190,11 +190,11 @@ rend_service_port_config_t *rend_service_parse_port_config(const char *string,
                                                            char **err_msg_out);
 void rend_service_port_config_free_(rend_service_port_config_t *p);
 #define rend_service_port_config_free(p) \
-  FREE_AND_NULL(rend_service_port_config, (p))
+  FREE_AND_NULL(rend_service_port_config_t, rend_service_port_config_free_, (p))
 
 void rend_authorized_client_free_(rend_authorized_client_t *client);
 #define rend_authorized_client_free(client) \
-  FREE_AND_NULL(rend_authorized_client, (client))
+  FREE_AND_NULL(rend_authorized_client_t, rend_authorized_client_free_, (client))
 
 /** Return value from rend_service_add_ephemeral. */
 typedef enum {

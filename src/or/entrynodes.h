@@ -477,7 +477,7 @@ STATIC double get_extreme_restriction_threshold(void);
 
 HANDLE_DECL(entry_guard, entry_guard_t, STATIC)
 #define entry_guard_handle_free(h)    \
-  FREE_AND_NULL(entry_guard_handle, (h))
+  FREE_AND_NULL(entry_guard_handle_t, entry_guard_handle_free_, (h))
 
 STATIC guard_selection_type_t guard_selection_infer_type(
                            guard_selection_type_t type_in,
@@ -487,7 +487,7 @@ STATIC guard_selection_t *guard_selection_new(const char *name,
 STATIC guard_selection_t *get_guard_selection_by_name(
           const char *name, guard_selection_type_t type, int create_if_absent);
 STATIC void guard_selection_free_(guard_selection_t *gs);
-#define guard_selection_free(gs) FREE_AND_NULL(guard_selection, (gs))
+#define guard_selection_free(gs) FREE_AND_NULL(guard_selection_t, guard_selection_free_, (gs))
 MOCK_DECL(STATIC int, entry_guard_is_listed,
           (guard_selection_t *gs, const entry_guard_t *guard));
 STATIC const char *choose_guard_selection(const or_options_t *options,
@@ -573,7 +573,7 @@ STATIC entry_guard_restriction_t *guard_create_dirserver_md_restriction(void);
 
 STATIC void entry_guard_restriction_free_(entry_guard_restriction_t *rst);
 #define entry_guard_restriction_free(rst) \
-  FREE_AND_NULL(entry_guard_restriction, (rst))
+  FREE_AND_NULL(entry_guard_restriction_t, entry_guard_restriction_free_, (rst))
 
 #endif /* defined(ENTRYNODES_PRIVATE) */
 
