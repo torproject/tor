@@ -83,10 +83,10 @@ STATIC char *encode_protocol_list(const smartlist_t *sl);
 STATIC const char *protocol_type_to_str(protocol_type_t pr);
 STATIC int str_to_protocol_type(const char *s, protocol_type_t *pr_out);
 STATIC void proto_entry_free_(proto_entry_t *entry);
+#endif /* !defined(HAVE_RUST) && defined(TOR_UNIT_TESTS) */
+
 #define proto_entry_free(entry) \
   FREE_AND_NULL(proto_entry_t, proto_entry_free_, (entry))
-
-#endif /* !defined(HAVE_RUST) && defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(PROTOVER_PRIVATE) */
 
