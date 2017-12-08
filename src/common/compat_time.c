@@ -314,6 +314,21 @@ monotime_get(monotime_t *out)
   out->abstime_ = mach_absolute_time();
 }
 
+#if defined(HAVE_MACH_APPROXIMATE_TIME)
+void
+monotime_coarse_get(monotime_coarse_t *out)
+{
+#ifdef TOR_UNIT_TESTS
+  if (monotime_mocking_enabled) {
+    out->abstime_ = (mock_time_nsec_coarse * mach_time_info.denom)
+      / mach_time_info.numer;
+    return;
+  }
+#endif /* defined(TOR_UNIT_TESTS) */
+  out->abstime_ = mach_approximate_time();
+}
+#endif
+
 /**
  * Return the number of nanoseconds between <b>start</b> and <b>end</b>.
  */
