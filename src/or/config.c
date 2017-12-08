@@ -782,7 +782,7 @@ static or_options_t *global_default_options = NULL;
 /** Name of most recently read torrc file. */
 static char *torrc_fname = NULL;
 /** Name of the most recently read torrc-defaults file.*/
-static char *torrc_defaults_fname;
+static char *torrc_defaults_fname = NULL;
 /** Configuration options set by command line. */
 static config_line_t *global_cmdline_options = NULL;
 /** Non-configuration options set by the command line */
@@ -926,7 +926,7 @@ get_short_version(void)
 /** Release additional memory allocated in options
  */
 STATIC void
-or_options_free(or_options_t *options)
+or_options_free_(or_options_t *options)
 {
   if (!options)
     return;
@@ -984,6 +984,8 @@ config_free_all(void)
 
   tor_free(the_short_tor_version);
   tor_free(the_tor_version);
+
+  have_parsed_cmdline = 0;
 }
 
 /** Make <b>address</b> -- a piece of information related to our operation as
@@ -5825,7 +5827,7 @@ validate_transport_socks_arguments(const smartlist_t *args)
 
 /** Deallocate a bridge_line_t structure. */
 /* private */ void
-bridge_line_free(bridge_line_t *bridge_line)
+bridge_line_free_(bridge_line_t *bridge_line)
 {
   if (!bridge_line)
     return;
@@ -6591,7 +6593,7 @@ port_cfg_new(size_t namelen)
 
 /** Free all storage held in <b>port</b> */
 STATIC void
-port_cfg_free(port_cfg_t *port)
+port_cfg_free_(port_cfg_t *port)
 {
   tor_free(port);
 }

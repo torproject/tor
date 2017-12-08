@@ -457,7 +457,7 @@ purge_expired_resolves(time_t now)
         if (!pendconn->base_.marked_for_close) {
           connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT);
           circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
-          connection_free(TO_CONN(pendconn));
+          connection_free_(TO_CONN(pendconn));
         }
         tor_free(pend);
       }
@@ -670,7 +670,7 @@ dns_resolve(edge_connection_t *exitconn)
         /* If we made the connection pending, then we freed it already in
          * dns_cancel_pending_resolve().  If we marked it for close, it'll
          * get freed from the main loop.  Otherwise, can free it now. */
-        connection_free(TO_CONN(exitconn));
+        connection_free_(TO_CONN(exitconn));
       }
       break;
     default:
@@ -1101,7 +1101,7 @@ dns_cancel_pending_resolve,(const char *address))
     if (circ)
       circuit_detach_stream(circ, pendconn);
     if (!pendconn->base_.marked_for_close)
-      connection_free(TO_CONN(pendconn));
+      connection_free_(TO_CONN(pendconn));
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }
@@ -1230,7 +1230,7 @@ inform_pending_connections(cached_resolve_t *resolve)
         /* This detach must happen after we send the resolved cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       }
-      connection_free(TO_CONN(pendconn));
+      connection_free_(TO_CONN(pendconn));
     } else {
       circuit_t *circ;
       if (pendconn->base_.purpose == EXIT_PURPOSE_CONNECT) {
@@ -1259,7 +1259,7 @@ inform_pending_connections(cached_resolve_t *resolve)
         circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
-        connection_free(TO_CONN(pendconn));
+        connection_free_(TO_CONN(pendconn));
       }
     }
     resolve->pending_connections = pend->next;

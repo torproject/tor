@@ -59,7 +59,7 @@
 #define HANDLE_DECL(name, structname, linkage)                          \
   typedef struct name ## _handle_t name ## _handle_t;                   \
   linkage  name ## _handle_t *name ## _handle_new(struct structname *object); \
-  linkage void name ## _handle_free(name ## _handle_t *);               \
+  linkage void name ## _handle_free_(name ## _handle_t *);              \
   linkage struct structname *name ## _handle_get(name ## _handle_t *);  \
   linkage void name ## _handles_clear(struct structname *object);
 
@@ -113,7 +113,7 @@
   }                                                                     \
                                                                         \
   linkage void                                                          \
-  name ## _handle_free(struct name ## _handle_t *ref)                   \
+  name ## _handle_free_(struct name ## _handle_t *ref)                   \
   {                                                                     \
     if (! ref) return;                                                  \
     name ## _handle_head_t *head = ref->head;                           \

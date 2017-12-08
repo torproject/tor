@@ -1,3 +1,4 @@
+
 /* * Copyright (c) 2012-2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
@@ -162,12 +163,12 @@ HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
 /* Functions to maintain the digest map */
 static void channel_remove_from_digest_map(channel_t *chan);
 
-static void channel_force_free(channel_t *chan);
-static void
-channel_free_list(smartlist_t *channels, int mark_for_close);
-static void
-channel_listener_free_list(smartlist_t *channels, int mark_for_close);
-static void channel_listener_force_free(channel_listener_t *chan_l);
+static void channel_force_xfree(channel_t *chan);
+static void channel_free_list(smartlist_t *channels,
+                               int mark_for_close);
+static void channel_listener_free_list(smartlist_t *channels,
+                                        int mark_for_close);
+static void channel_listener_force_xfree(channel_listener_t *chan_l);
 
 /***********************************
  * Channel state utility functions *
@@ -881,7 +882,7 @@ channel_init_listener(channel_listener_t *chan_l)
  */
 
 void
-channel_free(channel_t *chan)
+channel_free_(channel_t *chan)
 {
   if (!chan) return;
 
@@ -934,7 +935,7 @@ channel_free(channel_t *chan)
  */
 
 void
-channel_listener_free(channel_listener_t *chan_l)
+channel_listener_free_(channel_listener_t *chan_l)
 {
   if (!chan_l) return;
 
@@ -962,7 +963,7 @@ channel_listener_free(channel_listener_t *chan_l)
  */
 
 static void
-channel_force_free(channel_t *chan)
+channel_force_xfree(channel_t *chan)
 {
   tor_assert(chan);
 
@@ -1007,7 +1008,7 @@ channel_force_free(channel_t *chan)
  */
 
 static void
-channel_listener_force_free(channel_listener_t *chan_l)
+channel_listener_force_xfree(channel_listener_t *chan_l)
 {
   tor_assert(chan_l);
 
@@ -1431,7 +1432,6 @@ channel_clear_remote_end(channel_t *chan)
 /**
  * Write to a channel the given packed cell.
  *
- * Return 0 on success or -1 on error.
  *
  * Two possible errors can happen. Either the channel is not opened or the
  * lower layer (specialized channel) failed to write it. In both cases, it is
@@ -2239,7 +2239,7 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
       if (!CHANNEL_CONDEMNED(curr)) {
         channel_mark_for_close(curr);
       }
-      channel_force_free(curr);
+      channel_force_xfree(curr);
     } else channel_free(curr);
   } SMARTLIST_FOREACH_END(curr);
 }
@@ -2268,7 +2268,7 @@ channel_listener_free_list(smartlist_t *listeners, int mark_for_close)
             curr->state == CHANNEL_LISTENER_STATE_ERROR)) {
         channel_listener_mark_for_close(curr);
       }
-      channel_listener_force_free(curr);
+      channel_listener_force_xfree(curr);
     } else channel_listener_free(curr);
   } SMARTLIST_FOREACH_END(curr);
 }

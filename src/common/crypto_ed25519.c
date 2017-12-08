@@ -622,7 +622,7 @@ ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
 
 /** Release all storage held for <b>kp</b>. */
 void
-ed25519_keypair_free(ed25519_keypair_t *kp)
+ed25519_keypair_free_(ed25519_keypair_t *kp)
 {
   if (! kp)
     return;

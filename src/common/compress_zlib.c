@@ -265,7 +265,7 @@ tor_zlib_compress_process(tor_zlib_compress_state_t *state,
 
 /** Deallocate <b>state</b>. */
 void
-tor_zlib_compress_free(tor_zlib_compress_state_t *state)
+tor_zlib_compress_free_(tor_zlib_compress_state_t *state)
 {
   if (state == NULL)
     return;

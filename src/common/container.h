@@ -28,7 +28,9 @@ typedef struct smartlist_t {
 } smartlist_t;
 
 MOCK_DECL(smartlist_t *, smartlist_new, (void));
-MOCK_DECL(void, smartlist_free, (smartlist_t *sl));
+MOCK_DECL(void, smartlist_free_, (smartlist_t *sl));
+#define smartlist_free(sl) FREE_AND_NULL(smartlist_t, smartlist_free_, (sl))
+
 void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
@@ -350,7 +352,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   void* prefix##set(maptype *map, keytype key, void *val);              \
   void* prefix##get(const maptype *map, keytype key);                   \
   void* prefix##remove(maptype *map, keytype key);                      \
-  MOCK_DECL(void, prefix##free, (maptype *map, void (*free_val)(void*))); \
+  MOCK_DECL(void, prefix##free_, (maptype *map, void (*free_val)(void*))); \
   int prefix##isempty(const maptype *map);                              \
   int prefix##size(const maptype *map);                                 \
   prefix##iter_t *prefix##iter_init(maptype *map);                      \
@@ -367,6 +369,16 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 /* Map from const uint8_t[DIGEST256_LEN] to void *. Implemented with a hash
  * table. */
 DECLARE_MAP_FNS(digest256map_t, const uint8_t *, digest256map_);
+
+#define MAP_FREE_AND_NULL(maptype, map, fn)     \
+  do {                                          \
+    maptype ## _free_((map), (fn));             \
+    (map) = NULL;                               \
+  } while (0)
+
+#define strmap_free(map, fn) MAP_FREE_AND_NULL(strmap, (map), (fn))
+#define digestmap_free(map, fn) MAP_FREE_AND_NULL(digestmap, (map), (fn))
+#define digest256map_free(map, fn) MAP_FREE_AND_NULL(digest256map, (map), (fn))
 
 #undef DECLARE_MAP_FNS
 
@@ -528,9 +540,9 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
     return (valtype*)digestmap_remove((digestmap_t*)map, key);          \
   }                                                                     \
   ATTR_UNUSED static inline void                                        \
-  prefix##f##ree(maptype *map, void (*free_val)(void*))                 \
+  prefix##f##ree_(maptype *map, void (*free_val)(void*))                \
   {                                                                     \
-    digestmap_free((digestmap_t*)map, free_val);                        \
+    digestmap_free_((digestmap_t*)map, free_val);                       \
   }                                                                     \
   ATTR_UNUSED static inline int                                         \
   prefix##isempty(maptype *map)                                         \
@@ -614,10 +626,12 @@ bitarray_expand(bitarray_t *ba,
 }
 /** Free the bit array <b>ba</b>. */
 static inline void
-bitarray_free(bitarray_t *ba)
+bitarray_free_(bitarray_t *ba)
 {
   tor_free(ba);
 }
+#define bitarray_free(ba) FREE_AND_NULL(bitarray_t, bitarray_free_, (ba))
+
 /** Set the <b>bit</b>th bit in <b>b</b> to 1. */
 static inline void
 bitarray_set(bitarray_t *b, int bit)
@@ -679,7 +693,8 @@ digestset_contains(const digestset_t *set, const char *digest)
 #undef BIT
 
 digestset_t *digestset_new(int max_elements);
-void digestset_free(digestset_t* set);
+void digestset_free_(digestset_t* set);
+#define digestset_free(set) FREE_AND_NULL(digestset_t, digestset_free_, (set))
 
 /* These functions, given an <b>array</b> of <b>n_elements</b>, return the
  * <b>nth</b> lowest element. <b>nth</b>=0 gives the lowest element;

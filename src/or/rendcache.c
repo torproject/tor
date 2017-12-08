@@ -120,7 +120,7 @@ rend_cache_increment_allocation(size_t n)
 
 /** Helper: free a rend cache failure intro object. */
 STATIC void
-rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t *entry)
+rend_cache_failure_intro_entry_free_(rend_cache_failure_intro_t *entry)
 {
   if (entry == NULL) {
     return;
@@ -129,9 +129,9 @@ rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t *entry)
 }
 
 static void
-rend_cache_failure_intro_entry_free_(void *entry)
+rend_cache_failure_intro_entry_free_void(void *entry)
 {
-  rend_cache_failure_intro_entry_free(entry);
+  rend_cache_failure_intro_entry_free_(entry);
 }
 
 /** Allocate a rend cache failure intro object and return it. <b>failure</b>
@@ -147,7 +147,7 @@ rend_cache_failure_intro_entry_new(rend_intro_point_failure_t failure)
 
 /** Helper: free a rend cache failure object. */
 STATIC void
-rend_cache_failure_entry_free(rend_cache_failure_t *entry)
+rend_cache_failure_entry_free_(rend_cache_failure_t *entry)
 {
   if (entry == NULL) {
     return;
@@ -155,7 +155,7 @@ rend_cache_failure_entry_free(rend_cache_failure_t *entry)
 
   /* Free and remove every intro failure object. */
   digestmap_free(entry->intro_failures,
-                 rend_cache_failure_intro_entry_free_);
+                 rend_cache_failure_intro_entry_free_void);
 
   tor_free(entry);
 }
@@ -163,9 +163,9 @@ rend_cache_failure_entry_free(rend_cache_failure_t *entry)
 /** Helper: deallocate a rend_cache_failure_t. (Used with strmap_free(),
  * which requires a function pointer whose argument is void*). */
 STATIC void
-rend_cache_failure_entry_free_(void *entry)
+rend_cache_failure_entry_free_void(void *entry)
 {
-  rend_cache_failure_entry_free(entry);
+  rend_cache_failure_entry_free_(entry);
 }
 
 /** Allocate a rend cache failure object and return it. This function can
@@ -201,7 +201,7 @@ rend_cache_failure_remove(rend_service_descriptor_t *desc)
 
 /** Helper: free storage held by a single service descriptor cache entry. */
 STATIC void
-rend_cache_entry_free(rend_cache_entry_t *e)
+rend_cache_entry_free_(rend_cache_entry_t *e)
 {
   if (!e)
     return;
@@ -217,19 +217,19 @@ rend_cache_entry_free(rend_cache_entry_t *e)
 /** Helper: deallocate a rend_cache_entry_t.  (Used with strmap_free(), which
  * requires a function pointer whose argument is void*). */
 static void
-rend_cache_entry_free_(void *p)
+rend_cache_entry_free_void(void *p)
 {
-  rend_cache_entry_free(p);
+  rend_cache_entry_free_(p);
 }
 
 /** Free all storage held by the service descriptor cache. */
 void
 rend_cache_free_all(void)
 {
-  strmap_free(rend_cache, rend_cache_entry_free_);
-  digestmap_free(rend_cache_v2_dir, rend_cache_entry_free_);
-  strmap_free(rend_cache_local_service, rend_cache_entry_free_);
-  strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
+  strmap_free(rend_cache, rend_cache_entry_free_void);
+  digestmap_free(rend_cache_v2_dir, rend_cache_entry_free_void);
+  strmap_free(rend_cache_local_service, rend_cache_entry_free_void);
+  strmap_free(rend_cache_failure, rend_cache_failure_entry_free_void);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
   rend_cache_local_service = NULL;
@@ -304,7 +304,7 @@ rend_cache_purge(void)
 {
   if (rend_cache) {
     log_info(LD_REND, "Purging HS v2 descriptor cache");
-    strmap_free(rend_cache, rend_cache_entry_free_);
+    strmap_free(rend_cache, rend_cache_entry_free_void);
   }
   rend_cache = strmap_new();
 }
@@ -316,7 +316,7 @@ rend_cache_failure_purge(void)
 {
   if (rend_cache_failure) {
     log_info(LD_REND, "Purging HS v2 failure cache");
-    strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
+    strmap_free(rend_cache_failure, rend_cache_failure_entry_free_void);
   }
   rend_cache_failure = strmap_new();
 }

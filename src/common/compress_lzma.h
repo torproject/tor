@@ -31,7 +31,10 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
                           const char **in, size_t *in_len,
                           int finish);
 
-void tor_lzma_compress_free(tor_lzma_compress_state_t *state);
+void tor_lzma_compress_free_(tor_lzma_compress_state_t *state);
+#define tor_lzma_compress_free(st)                      \
+  FREE_AND_NULL(tor_lzma_compress_state_t,   \
+                           tor_lzma_compress_free_, (st))
 
 size_t tor_lzma_compress_state_size(const tor_lzma_compress_state_t *state);
 

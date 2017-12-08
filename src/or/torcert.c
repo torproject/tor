@@ -137,7 +137,7 @@ tor_cert_create(const ed25519_keypair_t *signing_key,
 
 /** Release all storage held for <b>cert</b>. */
 void
-tor_cert_free(tor_cert_t *cert)
+tor_cert_free_(tor_cert_t *cert)
 {
   if (! cert)
     return;
@@ -453,7 +453,7 @@ or_handshake_certs_new(void)
 
 /** Release all storage held in <b>certs</b> */
 void
-or_handshake_certs_free(or_handshake_certs_t *certs)
+or_handshake_certs_free_(or_handshake_certs_t *certs)
 {
   if (!certs)
     return;

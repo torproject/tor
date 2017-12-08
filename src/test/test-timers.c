@@ -133,7 +133,7 @@ main(int argc, char **argv)
     ret = 0;
   }
 
-  timer_free(NULL);
+  timer_free_(NULL);
 
   for (i = 0; i < N_TIMERS; ++i) {
     timer_free(timers[i]);

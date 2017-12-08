@@ -259,7 +259,7 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
  done:
   tor_free(hsdir_query_str);
   if (conn)
-    connection_free_(TO_CONN(conn));
+    connection_free_minimal(TO_CONN(conn));
 
   return received_desc;
 }

@@ -458,8 +458,11 @@ void channel_close_for_error(channel_t *chan);
 void channel_closed(channel_t *chan);
 
 /* Free a channel */
-void channel_free(channel_t *chan);
-void channel_listener_free(channel_listener_t *chan_l);
+void channel_free_(channel_t *chan);
+#define channel_free(chan) FREE_AND_NULL(channel_t, channel_free_, (chan))
+void channel_listener_free_(channel_listener_t *chan_l);
+#define channel_listener_free(chan_l) \
+  FREE_AND_NULL(channel_listener_t, channel_listener_free_, (chan_l))
 
 /* State/metadata setters */
 
@@ -634,6 +637,8 @@ int packed_cell_is_destroy(channel_t *chan,
 
 /* Declare the handle helpers */
 HANDLE_DECL(channel, channel_s,)
+#define channel_handle_free(h)    \
+  FREE_AND_NULL(channel_handle_t, channel_handle_free_, (h))
 
 #endif /* !defined(TOR_CHANNEL_H) */
 

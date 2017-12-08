@@ -3331,7 +3331,7 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
     relay_send_end_cell_from_edge(conn->stream_id, circ,
                                   END_STREAM_REASON_DONE,
                                   origin_circ->cpath->prev);
-    connection_free(TO_CONN(conn));
+    connection_free_(TO_CONN(conn));
 
     /* Drop the circuit here since it might be someone deliberately
      * scanning the hidden service ports. Note that this mitigates port
@@ -3523,7 +3523,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   if (we_are_hibernating()) {
     relay_send_end_cell_from_edge(rh.stream_id, circ,
                                   END_STREAM_REASON_HIBERNATING, NULL);
-    connection_free(TO_CONN(n_stream));
+    connection_free_(TO_CONN(n_stream));
     return 0;
   }
 
@@ -3601,7 +3601,7 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
       return 0;
     case 1: /* The result was cached; a resolved cell was sent. */
       if (!dummy_conn->base_.marked_for_close)
-        connection_free(TO_CONN(dummy_conn));
+        connection_free_(TO_CONN(dummy_conn));
       return 0;
     case 0: /* resolve added to pending list */
       assert_circuit_ok(TO_CIRCUIT(circ));
@@ -3774,8 +3774,8 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   if (connection_add(TO_CONN(exitconn))<0) {
     connection_edge_end(exitconn, END_STREAM_REASON_RESOURCELIMIT);
-    connection_free(TO_CONN(exitconn));
-    connection_free(TO_CONN(dirconn));
+    connection_free_(TO_CONN(exitconn));
+    connection_free_(TO_CONN(dirconn));
     return 0;
   }
 
@@ -3787,7 +3787,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
     connection_edge_end(exitconn, END_STREAM_REASON_RESOURCELIMIT);
     connection_close_immediate(TO_CONN(exitconn));
     connection_mark_for_close(TO_CONN(exitconn));
-    connection_free(TO_CONN(dirconn));
+    connection_free_(TO_CONN(dirconn));
     return 0;
   }
 

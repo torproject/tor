@@ -154,7 +154,7 @@ transport_new(const tor_addr_t *addr, uint16_t port,
 
 /** Free the pluggable transport struct <b>transport</b>. */
 void
-transport_free(transport_t *transport)
+transport_free_(transport_t *transport)
 {
   if (!transport)
     return;

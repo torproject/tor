@@ -69,7 +69,7 @@ suppress_libevent_log_msg(const char *msg)
 
 /* Wrapper for event_free() that tolerates tor_event_free(NULL) */
 void
-tor_event_free(struct event *ev)
+tor_event_free_(struct event *ev)
 {
   if (ev == NULL)
     return;
@@ -213,7 +213,7 @@ periodic_timer_new(struct event_base *base,
 
 /** Stop and free a periodic timer */
 void
-periodic_timer_free(periodic_timer_t *timer)
+periodic_timer_free_(periodic_timer_t *timer)
 {
   if (!timer)
     return;

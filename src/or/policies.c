@@ -1792,14 +1792,14 @@ policies_parse_exit_policy_reject_private(
     /* Reject public IPv4 addresses on any interface */
     public_addresses = get_interface_address6_list(LOG_INFO, AF_INET, 0);
     addr_policy_append_reject_addr_list_filter(dest, public_addresses, 1, 0);
-    free_interface_address6_list(public_addresses);
+    interface_address6_list_free(public_addresses);
 
     /* Don't look for IPv6 addresses if we're configured as IPv4-only */
     if (ipv6_exit) {
       /* Reject public IPv6 addresses on any interface */
       public_addresses = get_interface_address6_list(LOG_INFO, AF_INET6, 0);
       addr_policy_append_reject_addr_list_filter(dest, public_addresses, 0, 1);
-      free_interface_address6_list(public_addresses);
+      interface_address6_list_free(public_addresses);
     }
   }
 
@@ -2794,7 +2794,7 @@ write_short_policy(const short_policy_t *policy)
 
 /** Release all storage held in <b>policy</b>. */
 void
-short_policy_free(short_policy_t *policy)
+short_policy_free_(short_policy_t *policy)
 {
   tor_free(policy);
 }
@@ -3044,7 +3044,7 @@ getinfo_helper_policies(control_connection_t *conn,
 
 /** Release all storage held by <b>p</b>. */
 void
-addr_policy_list_free(smartlist_t *lst)
+addr_policy_list_free_(smartlist_t *lst)
 {
   if (!lst)
     return;
@@ -3054,7 +3054,7 @@ addr_policy_list_free(smartlist_t *lst)
 
 /** Release all storage held by <b>p</b>. */
 void
-addr_policy_free(addr_policy_t *p)
+addr_policy_free_(addr_policy_t *p)
 {
   if (!p)
     return;

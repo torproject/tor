@@ -33,7 +33,9 @@ struct replaycache_s {
 
 /* replaycache_t free/new */
 
-void replaycache_free(replaycache_t *r);
+void replaycache_free_(replaycache_t *r);
+#define replaycache_free(r) \
+  FREE_AND_NULL(replaycache_t, replaycache_free_, (r))
 replaycache_t * replaycache_new(time_t horizon, time_t interval);
 
 #ifdef REPLAYCACHE_PRIVATE

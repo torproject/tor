@@ -325,7 +325,7 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
 
 /** Free the process-termination monitor <b>procmon</b>. */
 void
-tor_process_monitor_free(tor_process_monitor_t *procmon)
+tor_process_monitor_free_(tor_process_monitor_t *procmon)
 {
   if (procmon == NULL)
     return;

@@ -1759,14 +1759,14 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
       break;
   } SMARTLIST_FOREACH_END(a);
 
-  free_interface_address6_list(addrs);
+  interface_address6_list_free(addrs);
   return rv;
 }
 
 /** Free a smartlist of IP addresses returned by get_interface_address6_list.
  */
 void
-free_interface_address6_list(smartlist_t *addrs)
+interface_address6_list_free_(smartlist_t *addrs)
 {
   if (addrs != NULL) {
     SMARTLIST_FOREACH(addrs, tor_addr_t *, a, tor_free(a));
@@ -1781,7 +1781,7 @@ free_interface_address6_list(smartlist_t *addrs)
  * An empty smartlist means that there are no addresses of the selected type
  * matching these criteria.
  * Returns NULL on failure.
- * Use free_interface_address6_list to free the returned list.
+ * Use interface_address6_list_free to free the returned list.
  */
 MOCK_IMPL(smartlist_t *,
 get_interface_address6_list,(int severity,

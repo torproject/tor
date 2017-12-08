@@ -17,7 +17,9 @@ typedef struct aes_cnt_cipher aes_cnt_cipher_t;
 
 aes_cnt_cipher_t* aes_new_cipher(const uint8_t *key, const uint8_t *iv,
                                  int key_bits);
-void aes_cipher_free(aes_cnt_cipher_t *cipher);
+void aes_cipher_free_(aes_cnt_cipher_t *cipher);
+#define aes_cipher_free(cipher) \
+  FREE_AND_NULL(aes_cnt_cipher_t, aes_cipher_free_, (cipher))
 void aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len);
 
 int evaluate_evp_for_aes(int force_value);

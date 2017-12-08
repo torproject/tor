@@ -66,7 +66,7 @@ socks_request_new(void)
 
 /** Free all storage held in the socks_request_t <b>req</b>. */
 void
-socks_request_free(socks_request_t *req)
+socks_request_free_(socks_request_t *req)
 {
   if (!req)
     return;

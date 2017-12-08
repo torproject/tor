@@ -1521,8 +1521,12 @@ cached_getaddrinfo_items_eq(const cached_getaddrinfo_item_t *a,
   return (a->family == b->family) && 0 == strcmp(a->name, b->name);
 }
 
+#define cached_getaddrinfo_item_free(item)              \
+  FREE_AND_NULL(cached_getaddrinfo_item_t,              \
+                cached_getaddrinfo_item_free_, (item))
+
 static void
-cached_getaddrinfo_item_free(cached_getaddrinfo_item_t *item)
+cached_getaddrinfo_item_free_(cached_getaddrinfo_item_t *item)
 {
   if (item == NULL)
     return;

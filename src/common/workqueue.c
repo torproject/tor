@@ -148,12 +148,15 @@ workqueue_entry_new(workqueue_reply_t (*fn)(void*, void*),
   return ent;
 }
 
+#define workqueue_entry_free(ent) \
+  FREE_AND_NULL(workqueue_entry_t, workqueue_entry_free_, (ent))
+
 /**
  * Release all storage held in <b>ent</b>. Call only when <b>ent</b> is not on
  * any queue.
  */
 static void
-workqueue_entry_free(workqueue_entry_t *ent)
+workqueue_entry_free_(workqueue_entry_t *ent)
 {
   if (!ent)
     return;

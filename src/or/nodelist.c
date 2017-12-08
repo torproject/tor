@@ -65,7 +65,9 @@
 #include <string.h>
 
 static void nodelist_drop_node(node_t *node, int remove_from_ht);
-static void node_free(node_t *node);
+#define node_free(val) \
+  FREE_AND_NULL(node_t, node_free_, (val))
+static void node_free_(node_t *node);
 
 /** count_usable_descriptors counts descriptors with these flag(s)
  */
@@ -656,7 +658,7 @@ nodelist_find_nodes_with_microdesc(const microdesc_t *md)
 
 /** Release storage held by <b>node</b>  */
 static void
-node_free(node_t *node)
+node_free_(node_t *node)
 {
   if (!node)
     return;

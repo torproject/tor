@@ -42,7 +42,7 @@ smartlist_new,(void))
  * list's elements.
  */
 MOCK_IMPL(void,
-smartlist_free,(smartlist_t *sl))
+smartlist_free_,(smartlist_t *sl))
 {
   if (!sl)
     return;
@@ -1163,19 +1163,26 @@ HT_GENERATE2(digest256map_impl, digest256map_entry_t, node,
              digest256map_entry_hash,
              digest256map_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
+#define strmap_entry_free(ent) \
+  FREE_AND_NULL(strmap_entry_t, strmap_entry_free_, (ent))
+#define digestmap_entry_free(ent) \
+  FREE_AND_NULL(digestmap_entry_t, digestmap_entry_free_, (ent))
+#define digest256map_entry_free(ent) \
+  FREE_AND_NULL(digest256map_entry_t, digest256map_entry_free_, (ent))
+
 static inline void
-strmap_entry_free(strmap_entry_t *ent)
+strmap_entry_free_(strmap_entry_t *ent)
 {
   tor_free(ent->key);
   tor_free(ent);
 }
 static inline void
-digestmap_entry_free(digestmap_entry_t *ent)
+digestmap_entry_free_(digestmap_entry_t *ent)
 {
   tor_free(ent);
 }
 static inline void
-digest256map_entry_free(digest256map_entry_t *ent)
+digest256map_entry_free_(digest256map_entry_t *ent)
 {
   tor_free(ent);
 }
@@ -1335,7 +1342,7 @@ digest256map_assign_key(digest256map_entry_t *ent, const uint8_t *key)
    * those entries.  If free_val is provided, invoked it every value in \
    * <b>map</b>. */                                                     \
   MOCK_IMPL(void,                                                       \
-  prefix##_free, (maptype *map, void (*free_val)(void*)))               \
+  prefix##_free_, (maptype *map, void (*free_val)(void*)))              \
   {                                                                     \
     prefix##_entry_t **ent, **next, *this;                              \
     if (!map)                                                           \
@@ -1525,7 +1532,7 @@ digestset_new(int max_elements)
 
 /** Free all storage held in <b>set</b>. */
 void
-digestset_free(digestset_t *set)
+digestset_free_(digestset_t *set)
 {
   if (!set)
     return;

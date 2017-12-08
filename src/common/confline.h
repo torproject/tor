@@ -48,7 +48,12 @@ int config_get_lines(const char *string, config_line_t **result, int extended);
 int config_get_lines_include(const char *string, config_line_t **result,
                              int extended, int *has_include,
                              smartlist_t *opened_lst);
-void config_free_lines(config_line_t *front);
+void config_free_lines_(config_line_t *front);
+#define config_free_lines(front) \
+  do {                           \
+    config_free_lines_(front);   \
+    (front) = NULL;              \
+  } while (0)
 const char *parse_config_line_from_str_verbose(const char *line,
                                        char **key_out, char **value_out,
                                        const char **err_out);

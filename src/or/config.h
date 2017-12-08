@@ -198,7 +198,9 @@ typedef struct bridge_line_t {
                                transport proxy. */
 } bridge_line_t;
 
-void bridge_line_free(bridge_line_t *bridge_line);
+void bridge_line_free_(bridge_line_t *bridge_line);
+#define bridge_line_free(line) \
+  FREE_AND_NULL(bridge_line_t, bridge_line_free_, (line))
 bridge_line_t *parse_bridge_line(const char *line);
 smartlist_t *get_options_from_transport_options_line(const char *line,
                                                      const char *transport);
@@ -221,8 +223,12 @@ extern struct config_format_t options_format;
 #endif
 
 STATIC port_cfg_t *port_cfg_new(size_t namelen);
-STATIC void port_cfg_free(port_cfg_t *port);
-STATIC void or_options_free(or_options_t *options);
+#define port_cfg_free(port) \
+  FREE_AND_NULL(port_cfg_t, port_cfg_free_, (port))
+STATIC void port_cfg_free_(port_cfg_t *port);
+#define or_options_free(opt) \
+  FREE_AND_NULL(or_options_t, or_options_free_, (opt))
+STATIC void or_options_free_(or_options_t *options);
 STATIC int options_validate_single_onion(or_options_t *options,
                                          char **msg);
 STATIC int options_validate(or_options_t *old_options,

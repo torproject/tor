@@ -54,7 +54,8 @@ void tor_mutex_init(tor_mutex_t *m);
 void tor_mutex_init_nonrecursive(tor_mutex_t *m);
 void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
-void tor_mutex_free(tor_mutex_t *m);
+void tor_mutex_free_(tor_mutex_t *m);
+#define tor_mutex_free(m) FREE_AND_NULL(tor_mutex_t, tor_mutex_free_, (m))
 void tor_mutex_uninit(tor_mutex_t *m);
 unsigned long tor_get_thread_id(void);
 void tor_threads_init(void);
@@ -81,7 +82,8 @@ typedef struct tor_cond_t {
 } tor_cond_t;
 
 tor_cond_t *tor_cond_new(void);
-void tor_cond_free(tor_cond_t *cond);
+void tor_cond_free_(tor_cond_t *cond);
+#define tor_cond_free(c) FREE_AND_NULL(tor_cond_t, tor_cond_free_, (c))
 int tor_cond_init(tor_cond_t *cond);
 void tor_cond_uninit(tor_cond_t *cond);
 int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex,

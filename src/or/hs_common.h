@@ -192,7 +192,9 @@ void hs_build_blinded_keypair(const ed25519_keypair_t *kp,
                               ed25519_keypair_t *kp_out);
 int hs_service_requires_uptime_circ(const smartlist_t *ports);
 
-void rend_data_free(rend_data_t *data);
+void rend_data_free_(rend_data_t *data);
+#define rend_data_free(data) \
+  FREE_AND_NULL(rend_data_t, rend_data_free_, (data))
 rend_data_t *rend_data_dup(const rend_data_t *data);
 rend_data_t *rend_data_client_create(const char *onion_address,
                                      const char *desc_id,

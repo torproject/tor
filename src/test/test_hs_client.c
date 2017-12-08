@@ -227,10 +227,10 @@ test_e2e_rend_circuit_setup_legacy(void *arg)
   tt_ptr_op(TO_EDGE_CONN(conn)->on_circuit, OP_EQ, TO_CIRCUIT(or_circ));
 
  done:
-  connection_free_(conn);
+  connection_free_minimal(conn);
   if (or_circ)
     tor_free(TO_CIRCUIT(or_circ)->n_chan);
-  circuit_free(TO_CIRCUIT(or_circ));
+  circuit_free_(TO_CIRCUIT(or_circ));
 }
 
 /* Test: Ensure that setting up v3 rendezvous circuits works correctly. */
@@ -297,10 +297,10 @@ test_e2e_rend_circuit_setup(void *arg)
   tt_ptr_op(TO_EDGE_CONN(conn)->on_circuit, OP_EQ, TO_CIRCUIT(or_circ));
 
  done:
-  connection_free_(conn);
+  connection_free_minimal(conn);
   if (or_circ)
     tor_free(TO_CIRCUIT(or_circ)->n_chan);
-  circuit_free(TO_CIRCUIT(or_circ));
+  circuit_free_(TO_CIRCUIT(or_circ));
 }
 
 /** Test client logic for picking intro points from a descriptor. Also test how
@@ -560,7 +560,7 @@ test_descriptor_fetch(void *arg)
     smartlist_add(get_connection_array(), TO_CONN(dir_conn));
     ret = hs_client_refetch_hsdesc(&service_pk);
     smartlist_remove(get_connection_array(), TO_CONN(dir_conn));
-    connection_free_(TO_CONN(dir_conn));
+    connection_free_minimal(TO_CONN(dir_conn));
     tt_int_op(ret, OP_EQ, HS_CLIENT_FETCH_PENDING);
   }
 
@@ -579,7 +579,7 @@ test_descriptor_fetch(void *arg)
   tt_int_op(ec->edge_.end_reason, OP_EQ, END_STREAM_REASON_RESOLVEFAILED);
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec));
+  connection_free_minimal(ENTRY_TO_CONN(ec));
   UNMOCK(networkstatus_get_live_consensus);
   UNMOCK(router_have_minimum_dir_info);
   hs_free_all();

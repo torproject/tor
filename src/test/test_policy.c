@@ -1318,7 +1318,7 @@ mock_get_interface_address6_list(int severity,
   return clone_list;
 
  done:
-  free_interface_address6_list(clone_list);
+  interface_address6_list_free(clone_list);
   return NULL;
 }
 
@@ -1393,11 +1393,11 @@ test_policies_reject_interface_address(void *arg)
 
  done:
   addr_policy_list_free(policy);
-  free_interface_address6_list(public_ipv4_addrs);
-  free_interface_address6_list(public_ipv6_addrs);
+  interface_address6_list_free(public_ipv4_addrs);
+  interface_address6_list_free(public_ipv6_addrs);
 
   UNMOCK(get_interface_address6_list);
-  /* we don't use free_interface_address6_list on these lists because their
+  /* we don't use interface_address6_list_free on these lists because their
    * address pointers are stack-based */
   smartlist_free(mock_ipv4_addrs);
   smartlist_free(mock_ipv6_addrs);

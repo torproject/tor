@@ -18,7 +18,9 @@
 typedef struct dircollator_s dircollator_t;
 
 dircollator_t *dircollator_new(int n_votes, int n_authorities);
-void dircollator_free(dircollator_t *obj);
+void dircollator_free_(dircollator_t *obj);
+#define dircollator_free(c) \
+  FREE_AND_NULL(dircollator_t, dircollator_free_, (c))
 void dircollator_add_vote(dircollator_t *dc, networkstatus_t *v);
 
 void dircollator_collate(dircollator_t *dc, int consensus_method);

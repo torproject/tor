@@ -345,8 +345,8 @@ test_onion_queues(void *arg)
   tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
 
  done:
-  circuit_free(TO_CIRCUIT(circ1));
-  circuit_free(TO_CIRCUIT(circ2));
+  circuit_free_(TO_CIRCUIT(circ1));
+  circuit_free_(TO_CIRCUIT(circ2));
   tor_free(create1);
   tor_free(create2);
   tor_free(onionskin);
@@ -616,7 +616,7 @@ test_rend_fns(void *arg)
  done:
   if (descs) {
     for (i = 0; i < smartlist_len(descs); i++)
-      rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+      rend_encoded_v2_service_descriptor_free_(smartlist_get(descs, i));
     smartlist_free(descs);
   }
   if (parsed)

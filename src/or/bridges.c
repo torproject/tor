@@ -53,7 +53,10 @@ struct bridge_info_t {
   smartlist_t *socks_args;
 };
 
-static void bridge_free(bridge_info_t *bridge);
+#define bridge_free(bridge) \
+  FREE_AND_NULL(bridge_info_t, bridge_free_, (bridge))
+
+static void bridge_free_(bridge_info_t *bridge);
 static void rewrite_node_address_for_bridge(const bridge_info_t *bridge,
                                             node_t *node);
 
@@ -101,7 +104,7 @@ clear_bridge_list(void)
 
 /** Free the bridge <b>bridge</b>. */
 static void
-bridge_free(bridge_info_t *bridge)
+bridge_free_(bridge_info_t *bridge)
 {
   if (!bridge)
     return;

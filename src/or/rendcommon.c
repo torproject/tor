@@ -37,7 +37,7 @@ rend_cmp_service_ids(const char *one, const char *two)
 /** Free the storage held by the service descriptor <b>desc</b>.
  */
 void
-rend_service_descriptor_free(rend_service_descriptor_t *desc)
+rend_service_descriptor_free_(rend_service_descriptor_t *desc)
 {
   if (!desc)
     return;
@@ -419,7 +419,7 @@ rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc)
 
 /** Free the storage held by an encoded v2 service descriptor. */
 void
-rend_encoded_v2_service_descriptor_free(
+rend_encoded_v2_service_descriptor_free_(
   rend_encoded_v2_service_descriptor_t *desc)
 {
   if (!desc)
@@ -430,7 +430,7 @@ rend_encoded_v2_service_descriptor_free(
 
 /** Free the storage held by an introduction point info. */
 void
-rend_intro_point_free(rend_intro_point_t *intro)
+rend_intro_point_free_(rend_intro_point_t *intro)
 {
   if (!intro)
     return;

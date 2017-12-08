@@ -41,9 +41,12 @@ typedef struct ddmap_entry_s {
   vote_routerstatus_t *vrs_lst[FLEXIBLE_ARRAY_MEMBER];
 } ddmap_entry_t;
 
+#define ddmap_entry_free(e) \
+  FREE_AND_NULL(ddmap_entry_t, ddmap_entry_free_, (e))
+
 /** Release all storage held by e. */
 static void
-ddmap_entry_free(ddmap_entry_t *e)
+ddmap_entry_free_(ddmap_entry_t *e)
 {
   tor_free(e);
 }
@@ -158,7 +161,7 @@ dircollator_new(int n_votes, int n_authorities)
 
 /** Release all storage held by <b>dc</b>. */
 void
-dircollator_free(dircollator_t *dc)
+dircollator_free_(dircollator_t *dc)
 {
   if (!dc)
     return;

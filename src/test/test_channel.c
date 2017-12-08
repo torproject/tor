@@ -654,7 +654,7 @@ test_channel_outbound_cell(void *arg)
 
  done:
   if (circ) {
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
   }
   tor_free(p_cell);
   channel_free_all();

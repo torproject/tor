@@ -7,6 +7,7 @@
 #include "testsupport.h"
 #include "torint.h"
 #include "crypto_curve25519.h"
+#include "util.h"
 
 #define ED25519_PUBKEY_LEN 32
 #define ED25519_SECKEY_LEN 64
@@ -117,7 +118,9 @@ int ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
                                   char **tag_out,
                                   const char *filename);
 
-void ed25519_keypair_free(ed25519_keypair_t *kp);
+void ed25519_keypair_free_(ed25519_keypair_t *kp);
+#define ed25519_keypair_free(kp) \
+  FREE_AND_NULL(ed25519_keypair_t, ed25519_keypair_free_, (kp))
 
 int ed25519_pubkey_eq(const ed25519_public_key_t *key1,
                       const ed25519_public_key_t *key2);

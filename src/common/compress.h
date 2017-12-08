@@ -80,7 +80,9 @@ tor_compress_output_t tor_compress_process(tor_compress_state_t *state,
                                            char **out, size_t *out_len,
                                            const char **in, size_t *in_len,
                                            int finish);
-void tor_compress_free(tor_compress_state_t *state);
+void tor_compress_free_(tor_compress_state_t *state);
+#define tor_compress_free(st) \
+  FREE_AND_NULL(tor_compress_state_t, tor_compress_free_, (st))
 
 size_t tor_compress_state_size(const tor_compress_state_t *state);
 

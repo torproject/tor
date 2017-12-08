@@ -40,7 +40,8 @@ void routerset_subtract_nodes(smartlist_t *out,
 
 char *routerset_to_string(const routerset_t *routerset);
 int routerset_equal(const routerset_t *old, const routerset_t *new);
-void routerset_free(routerset_t *routerset);
+void routerset_free_(routerset_t *routerset);
+#define routerset_free(rs) FREE_AND_NULL(routerset_t, routerset_free_, (rs))
 int routerset_len(const routerset_t *set);
 
 #ifdef ROUTERSET_PRIVATE

@@ -143,6 +143,10 @@ DECLARE_TYPED_DIGESTMAP_FNS(dsmap_, digest_ds_map_t, download_status_t)
 #define DSMAP_FOREACH(map, keyvar, valvar) \
   DIGESTMAP_FOREACH(dsmap_to_digestmap(map), keyvar, download_status_t *, \
                     valvar)
+#define eimap_free(map, fn) MAP_FREE_AND_NULL(eimap, (map), (fn))
+#define rimap_free(map, fn) MAP_FREE_AND_NULL(rimap, (map), (fn))
+#define dsmap_free(map, fn) MAP_FREE_AND_NULL(dsmap, (map), (fn))
+#define sdmap_free(map, fn) MAP_FREE_AND_NULL(sdmap, (map), (fn))
 
 /* Forward declaration for cert_list_t */
 typedef struct cert_list_t cert_list_t;
@@ -159,7 +163,6 @@ static const routerstatus_t *router_pick_dirserver_generic(
                               smartlist_t *sourcelist,
                               dirinfo_type_t type, int flags);
 static void mark_all_dirservers_up(smartlist_t *server_list);
-static void dir_server_free(dir_server_t *ds);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
@@ -443,9 +446,12 @@ download_status_for_authority_id_and_sk,(const char *id_digest,
   return dl;
 }
 
+#define cert_list_free(val) \
+  FREE_AND_NULL(cert_list_t, cert_list_free_, (val))
+
 /** Release all space held by a cert_list_t */
 static void
-cert_list_free(cert_list_t *cl)
+cert_list_free_(cert_list_t *cl)
 {
   if (!cl)
     return;
@@ -459,9 +465,9 @@ cert_list_free(cert_list_t *cl)
 
 /** Wrapper for cert_list_free so we can pass it to digestmap_free */
 static void
-cert_list_free_(void *cl)
+cert_list_free_void(void *cl)
 {
-  cert_list_free(cl);
+  cert_list_free_(cl);
 }
 
 /** Reload the cached v3 key certificates from the cached-certs file in
@@ -3167,7 +3173,7 @@ router_get_routerlist(void)
 
 /** Free all storage held by <b>router</b>. */
 void
-routerinfo_free(routerinfo_t *router)
+routerinfo_free_(routerinfo_t *router)
 {
   if (!router)
     return;
@@ -3197,7 +3203,7 @@ routerinfo_free(routerinfo_t *router)
 
 /** Release all storage held by <b>extrainfo</b> */
 void
-extrainfo_free(extrainfo_t *extrainfo)
+extrainfo_free_(extrainfo_t *extrainfo)
 {
   if (!extrainfo)
     return;
@@ -3209,9 +3215,12 @@ extrainfo_free(extrainfo_t *extrainfo)
   tor_free(extrainfo);
 }
 
+#define signed_descriptor_free(val) \
+  FREE_AND_NULL(signed_descriptor_t, signed_descriptor_free_, (val))
+
 /** Release storage held by <b>sd</b>. */
 static void
-signed_descriptor_free(signed_descriptor_t *sd)
+signed_descriptor_free_(signed_descriptor_t *sd)
 {
   if (!sd)
     return;
@@ -3265,21 +3274,21 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
 
 /** Helper: free the storage held by the extrainfo_t in <b>e</b>. */
 static void
-extrainfo_free_(void *e)
+extrainfo_free_void(void *e)
 {
-  extrainfo_free(e);
+  extrainfo_free_(e);
 }
 
 /** Free all storage held by a routerlist <b>rl</b>. */
 void
-routerlist_free(routerlist_t *rl)
+routerlist_free_(routerlist_t *rl)
 {
   if (!rl)
     return;
   rimap_free(rl->identity_map, NULL);
   sdmap_free(rl->desc_digest_map, NULL);
   sdmap_free(rl->desc_by_eid_map, NULL);
-  eimap_free(rl->extra_info_map, extrainfo_free_);
+  eimap_free(rl->extra_info_map, extrainfo_free_void);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
@@ -3771,7 +3780,7 @@ routerlist_free_all(void)
   smartlist_free(fallback_dir_servers);
   trusted_dir_servers = fallback_dir_servers = NULL;
   if (trusted_dir_certs) {
-    digestmap_free(trusted_dir_certs, cert_list_free_);
+    digestmap_free(trusted_dir_certs, cert_list_free_void);
     trusted_dir_certs = NULL;
   }
 }
@@ -4739,7 +4748,7 @@ dir_server_add(dir_server_t *ent)
 
 /** Free storage held in <b>cert</b>. */
 void
-authority_cert_free(authority_cert_t *cert)
+authority_cert_free_(authority_cert_t *cert)
 {
   if (!cert)
     return;
@@ -4751,9 +4760,12 @@ authority_cert_free(authority_cert_t *cert)
   tor_free(cert);
 }
 
+#define dir_server_free(val) \
+  FREE_AND_NULL(dir_server_t, dir_server_free_, (val))
+
 /** Free storage held in <b>ds</b>. */
 static void
-dir_server_free(dir_server_t *ds)
+dir_server_free_(dir_server_t *ds)
 {
   if (!ds)
     return;

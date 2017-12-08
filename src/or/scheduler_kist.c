@@ -461,7 +461,7 @@ kist_free_all(void)
 
 /* Function of the scheduler interface: on_channel_free() */
 static void
-kist_on_channel_free(const channel_t *chan)
+kist_on_channel_free_fn(const channel_t *chan)
 {
   free_socket_info_by_chan(&socket_table, chan);
 }
@@ -731,7 +731,7 @@ kist_scheduler_run(void)
 static scheduler_t kist_scheduler = {
   .type = SCHEDULER_KIST,
   .free_all = kist_free_all,
-  .on_channel_free = kist_on_channel_free,
+  .on_channel_free = kist_on_channel_free_fn,
   .init = kist_scheduler_init,
   .on_new_consensus = kist_scheduler_on_new_consensus,
   .schedule = kist_scheduler_schedule,

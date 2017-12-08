@@ -119,12 +119,16 @@ typedef struct hs_ident_edge_conn_t {
 hs_ident_circuit_t *hs_ident_circuit_new(
                              const ed25519_public_key_t *identity_pk,
                              hs_ident_circuit_type_t circuit_type);
-void hs_ident_circuit_free(hs_ident_circuit_t *ident);
+void hs_ident_circuit_free_(hs_ident_circuit_t *ident);
+#define hs_ident_circuit_free(id) \
+  FREE_AND_NULL(hs_ident_circuit_t, hs_ident_circuit_free_, (id))
 hs_ident_circuit_t *hs_ident_circuit_dup(const hs_ident_circuit_t *src);
 
 /* Directory connection identifier API. */
 hs_ident_dir_conn_t *hs_ident_dir_conn_dup(const hs_ident_dir_conn_t *src);
-void hs_ident_dir_conn_free(hs_ident_dir_conn_t *ident);
+void hs_ident_dir_conn_free_(hs_ident_dir_conn_t *ident);
+#define hs_ident_dir_conn_free(id) \
+  FREE_AND_NULL(hs_ident_dir_conn_t, hs_ident_dir_conn_free_, (id))
 void hs_ident_dir_conn_init(const ed25519_public_key_t *identity_pk,
                             const ed25519_public_key_t *blinded_pk,
                             hs_ident_dir_conn_t *ident);
@@ -132,7 +136,9 @@ void hs_ident_dir_conn_init(const ed25519_public_key_t *identity_pk,
 /* Edge connection identifier API. */
 hs_ident_edge_conn_t *hs_ident_edge_conn_new(
                                     const ed25519_public_key_t *identity_pk);
-void hs_ident_edge_conn_free(hs_ident_edge_conn_t *ident);
+void hs_ident_edge_conn_free_(hs_ident_edge_conn_t *ident);
+#define hs_ident_edge_conn_free(id) \
+  FREE_AND_NULL(hs_ident_edge_conn_t, hs_ident_edge_conn_free_, (id))
 
 /* Validators */
 int hs_ident_intro_circ_is_valid(const hs_ident_circuit_t *ident);

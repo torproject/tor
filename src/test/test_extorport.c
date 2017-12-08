@@ -58,11 +58,11 @@ test_ext_or_id_map(void *arg)
 
  done:
   if (c1)
-    connection_free_(TO_CONN(c1));
+    connection_free_minimal(TO_CONN(c1));
   if (c2)
-    connection_free_(TO_CONN(c2));
+    connection_free_minimal(TO_CONN(c2));
   if (c3)
-    connection_free_(TO_CONN(c3));
+    connection_free_minimal(TO_CONN(c3));
   tor_free(idp);
   tor_free(idp2);
   connection_or_clear_ext_or_id_map();
@@ -145,7 +145,7 @@ test_ext_or_write_command(void *arg)
 
  done:
   if (c1)
-    connection_free_(TO_CONN(c1));
+    connection_free_minimal(TO_CONN(c1));
   tor_free(cp);
   tor_free(buf);
   UNMOCK(connection_write_to_buf_impl_);
@@ -591,7 +591,7 @@ test_ext_or_handshake(void *arg)
   UNMOCK(connection_write_to_buf_impl_);
   UNMOCK(crypto_rand);
   if (conn)
-    connection_free_(TO_CONN(conn));
+    connection_free_minimal(TO_CONN(conn));
 #undef CONTAINS
 #undef WRITE
 }

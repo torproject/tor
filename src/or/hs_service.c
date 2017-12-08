@@ -353,7 +353,7 @@ service_free_all(void)
 
 /* Free a given service intro point object. */
 STATIC void
-service_intro_point_free(hs_service_intro_point_t *ip)
+service_intro_point_free_(hs_service_intro_point_t *ip)
 {
   if (!ip) {
     return;
@@ -369,9 +369,9 @@ service_intro_point_free(hs_service_intro_point_t *ip)
 /* Helper: free an hs_service_intro_point_t object. This function is used by
  * digest256map_free() which requires a void * pointer. */
 static void
-service_intro_point_free_(void *obj)
+service_intro_point_free_void(void *obj)
 {
-  service_intro_point_free(obj);
+  service_intro_point_free_(obj);
 }
 
 /* Return a newly allocated service intro point and fully initialized from the
@@ -1028,7 +1028,7 @@ load_service_keys(hs_service_t *service)
 
 /* Free a given service descriptor object and all key material is wiped. */
 STATIC void
-service_descriptor_free(hs_service_descriptor_t *desc)
+service_descriptor_free_(hs_service_descriptor_t *desc)
 {
   if (!desc) {
     return;
@@ -1037,7 +1037,7 @@ service_descriptor_free(hs_service_descriptor_t *desc)
   memwipe(&desc->signing_kp, 0, sizeof(desc->signing_kp));
   memwipe(&desc->blinded_kp, 0, sizeof(desc->blinded_kp));
   /* Cleanup all intro points. */
-  digest256map_free(desc->intro_points.map, service_intro_point_free_);
+  digest256map_free(desc->intro_points.map, service_intro_point_free_void);
   digestmap_free(desc->intro_points.failed_id, tor_free_);
   if (desc->previous_hsdirs) {
     SMARTLIST_FOREACH(desc->previous_hsdirs, char *, s, tor_free(s));
@@ -3441,7 +3441,7 @@ hs_service_new(const or_options_t *options)
  * also takes care of wiping service keys from memory. It is safe to pass a
  * NULL pointer. */
 void
-hs_service_free(hs_service_t *service)
+hs_service_free_(hs_service_t *service)
 {
   if (service == NULL) {
     return;

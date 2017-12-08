@@ -157,7 +157,7 @@ rend_num_services(void)
 
 /** Helper: free storage held by a single service authorized client entry. */
 void
-rend_authorized_client_free(rend_authorized_client_t *client)
+rend_authorized_client_free_(rend_authorized_client_t *client)
 {
   if (!client)
     return;
@@ -172,15 +172,15 @@ rend_authorized_client_free(rend_authorized_client_t *client)
 
 /** Helper for strmap_free. */
 static void
-rend_authorized_client_strmap_item_free(void *authorized_client)
+rend_authorized_client_free_void(void *authorized_client)
 {
-  rend_authorized_client_free(authorized_client);
+  rend_authorized_client_free_(authorized_client);
 }
 
 /** Release the storage held by <b>service</b>.
  */
 STATIC void
-rend_service_free(rend_service_t *service)
+rend_service_free_(rend_service_t *service)
 {
   if (!service)
     return;
@@ -470,7 +470,7 @@ rend_service_parse_port_config(const char *string, const char *sep,
 
 /** Release all storage held in a rend_service_port_config_t. */
 void
-rend_service_port_config_free(rend_service_port_config_t *p)
+rend_service_port_config_free_(rend_service_port_config_t *p)
 {
   tor_free(p);
 }
@@ -1675,7 +1675,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
     memwipe(client_keys_str, 0, strlen(client_keys_str));
     tor_free(client_keys_str);
   }
-  strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
+  strmap_free(parsed_clients, rend_authorized_client_free_void);
 
   if (cfname) {
     memwipe(cfname, 0, strlen(cfname));
@@ -2223,7 +2223,7 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
  * rend_service_parse_intro().
  */
 void
-rend_service_free_intro(rend_intro_cell_t *request)
+rend_service_free_intro_(rend_intro_cell_t *request)
 {
   if (!request) {
     return;
@@ -3728,7 +3728,7 @@ upload_service_descriptor(rend_service_t *service)
       }
       /* Free memory for descriptors. */
       for (i = 0; i < smartlist_len(descs); i++)
-        rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+        rend_encoded_v2_service_descriptor_free_(smartlist_get(descs, i));
       smartlist_clear(descs);
       /* Update next upload time. */
       if (seconds_valid - REND_TIME_PERIOD_OVERLAPPING_V2_DESCS
@@ -3759,7 +3759,7 @@ upload_service_descriptor(rend_service_t *service)
         }
         /* Free memory for descriptors. */
         for (i = 0; i < smartlist_len(descs); i++)
-          rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+          rend_encoded_v2_service_descriptor_free_(smartlist_get(descs, i));
         smartlist_clear(descs);
       }
     }

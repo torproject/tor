@@ -182,7 +182,7 @@ test_e2e_rend_circuit_setup(void *arg)
   tt_int_op(or_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_S_REND_JOINED);
 
  done:
-  circuit_free(TO_CIRCUIT(or_circ));
+  circuit_free_(TO_CIRCUIT(or_circ));
 }
 
 /* Helper: Return a newly allocated and initialized origin circuit with
@@ -655,7 +655,7 @@ test_intro_circuit_opened(void *arg)
   teardown_capture_of_logs();
 
  done:
-  circuit_free(TO_CIRCUIT(circ));
+  circuit_free_(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
   UNMOCK(relay_send_command_from_edge_);
@@ -730,7 +730,7 @@ test_intro_established(void *arg)
 
  done:
   if (circ)
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }
@@ -772,7 +772,7 @@ test_rdv_circuit_opened(void *arg)
   tt_int_op(TO_CIRCUIT(circ)->purpose, OP_EQ, CIRCUIT_PURPOSE_S_REND_JOINED);
 
  done:
-  circuit_free(TO_CIRCUIT(circ));
+  circuit_free_(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
   UNMOCK(relay_send_command_from_edge_);
@@ -852,7 +852,7 @@ test_introduce2(void *arg)
   or_state_free(dummy_state);
   dummy_state = NULL;
   if (circ)
-    circuit_free(TO_CIRCUIT(circ));
+    circuit_free_(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }
@@ -936,7 +936,7 @@ test_service_event(void *arg)
 
  done:
   hs_circuitmap_remove_circuit(TO_CIRCUIT(circ));
-  circuit_free(TO_CIRCUIT(circ));
+  circuit_free_(TO_CIRCUIT(circ));
   hs_free_all();
   UNMOCK(circuit_mark_for_close_);
 }
@@ -1490,8 +1490,8 @@ test_rendezvous1_parsing(void *arg)
    * would need an extra circuit and some more stuff but it's doable. */
 
  done:
-  circuit_free(TO_CIRCUIT(service_circ));
-  circuit_free(TO_CIRCUIT(client_circ));
+  circuit_free_(TO_CIRCUIT(service_circ));
+  circuit_free_(TO_CIRCUIT(client_circ));
   hs_service_free(service);
   hs_free_all();
   UNMOCK(relay_send_command_from_edge_);

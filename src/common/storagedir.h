@@ -9,7 +9,10 @@ struct config_line_t;
 struct sandbox_cfg_elem;
 
 storage_dir_t * storage_dir_new(const char *dirname, int n_files);
-void storage_dir_free(storage_dir_t *d);
+void storage_dir_free_(storage_dir_t *d);
+#define storage_dir_free(d) \
+  FREE_AND_NULL(storage_dir_t, storage_dir_free_, (d))
+
 int storage_dir_register_with_sandbox(storage_dir_t *d,
                                       struct sandbox_cfg_elem **cfg);
 const smartlist_t *storage_dir_list(storage_dir_t *d);

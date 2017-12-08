@@ -529,7 +529,7 @@ crypto_pk_new,(void))
  * are released, free the key.
  */
 void
-crypto_pk_free(crypto_pk_t *env)
+crypto_pk_free_(crypto_pk_t *env)
 {
   if (!env)
     return;
@@ -592,7 +592,7 @@ crypto_cipher_new(const char *key)
 /** Free a symmetric cipher.
  */
 void
-crypto_cipher_free(crypto_cipher_t *env)
+crypto_cipher_free_(crypto_cipher_t *env)
 {
   if (!env)
     return;
@@ -1977,7 +1977,7 @@ crypto_digest512_new(digest_algorithm_t algorithm)
 /** Deallocate a digest object.
  */
 void
-crypto_digest_free(crypto_digest_t *digest)
+crypto_digest_free_(crypto_digest_t *digest)
 {
   if (!digest)
     return;
@@ -2224,7 +2224,7 @@ crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len)
 
 /** Cleanse and deallocate a XOF object. */
 void
-crypto_xof_free(crypto_xof_t *xof)
+crypto_xof_free_(crypto_xof_t *xof)
 {
   if (!xof)
     return;
@@ -2777,7 +2777,7 @@ crypto_expand_key_material_rfc5869_sha256(
 /** Free a DH key exchange object.
  */
 void
-crypto_dh_free(crypto_dh_t *dh)
+crypto_dh_free_(crypto_dh_t *dh)
 {
   if (!dh)
     return;

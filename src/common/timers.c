@@ -245,7 +245,7 @@ timer_new(timer_cb_fn_t cb, void *arg)
  * scheduled.
  */
 void
-timer_free(tor_timer_t *t)
+timer_free_(tor_timer_t *t)
 {
   if (! t)
     return;

@@ -28,7 +28,7 @@
 
 /** Free storage held in an ntor handshake state. */
 void
-ntor_handshake_state_free(ntor_handshake_state_t *state)
+ntor_handshake_state_free_(ntor_handshake_state_t *state)
 {
   if (!state)
     return;

@@ -35,7 +35,8 @@ void sweep_transport_list(void);
 MOCK_DECL(int, transport_add_from_config,
           (const tor_addr_t *addr, uint16_t port,
            const char *name, int socks_ver));
-void transport_free(transport_t *transport);
+void transport_free_(transport_t *transport);
+#define transport_free(tr) FREE_AND_NULL(transport_t, transport_free_, (tr))
 
 transport_t *transport_get_by_name(const char *name);
 

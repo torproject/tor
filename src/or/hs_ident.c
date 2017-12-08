@@ -25,7 +25,7 @@ hs_ident_circuit_new(const ed25519_public_key_t *identity_pk,
 
 /* Free the given circuit identifier. */
 void
-hs_ident_circuit_free(hs_ident_circuit_t *ident)
+hs_ident_circuit_free_(hs_ident_circuit_t *ident)
 {
   if (ident == NULL) {
     return;
@@ -56,7 +56,7 @@ hs_ident_dir_conn_dup(const hs_ident_dir_conn_t *src)
 
 /* Free the given directory connection identifier. */
 void
-hs_ident_dir_conn_free(hs_ident_dir_conn_t *ident)
+hs_ident_dir_conn_free_(hs_ident_dir_conn_t *ident)
 {
   if (ident == NULL) {
     return;
@@ -93,7 +93,7 @@ hs_ident_edge_conn_new(const ed25519_public_key_t *identity_pk)
 
 /* Free the given edge connection identifier. */
 void
-hs_ident_edge_conn_free(hs_ident_edge_conn_t *ident)
+hs_ident_edge_conn_free_(hs_ident_edge_conn_t *ident)
 {
   if (ident == NULL) {
     return;

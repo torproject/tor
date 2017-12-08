@@ -177,7 +177,12 @@ typedef struct config_format_t {
 #define CAL_WARN_DEPRECATIONS (1u<<2)
 
 void *config_new(const config_format_t *fmt);
-void config_free(const config_format_t *fmt, void *options);
+void config_free_(const config_format_t *fmt, void *options);
+#define config_free(fmt, options) do {                \
+    config_free_((fmt), (options));                   \
+    (options) = NULL;                                 \
+  } while (0)
+
 config_line_t *config_get_assigned_option(const config_format_t *fmt,
                                           const void *options, const char *key,
                                           int escape_val);

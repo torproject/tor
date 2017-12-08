@@ -130,8 +130,8 @@ test_circuit_n_cells(void *arg)
   tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), OP_EQ, 2);
 
  done:
-  circuit_free(TO_CIRCUIT(or_c));
-  circuit_free(TO_CIRCUIT(origin_c));
+  circuit_free_(TO_CIRCUIT(or_c));
+  circuit_free_(TO_CIRCUIT(origin_c));
 }
 
 struct testcase_t cell_queue_tests[] = {

@@ -323,7 +323,7 @@ tor_lzma_compress_process(tor_lzma_compress_state_t *state,
 
 /** Deallocate <b>state</b>. */
 void
-tor_lzma_compress_free(tor_lzma_compress_state_t *state)
+tor_lzma_compress_free_(tor_lzma_compress_state_t *state)
 {
   if (state == NULL)
     return;

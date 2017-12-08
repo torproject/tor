@@ -785,9 +785,12 @@ queue_control_event_string,(uint16_t event, char *msg))
   }
 }
 
+#define queued_event_free(ev) \
+  FREE_AND_NULL(queued_event_t, queued_event_free_, (ev))
+
 /** Release all storage held by <b>ev</b>. */
 static void
-queued_event_free(queued_event_t *ev)
+queued_event_free_(queued_event_t *ev)
 {
   if (ev == NULL)
     return;

@@ -2691,7 +2691,7 @@ get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
 
 /** Release all storage held in <b>s</b>. */
 void
-ns_detached_signatures_free(ns_detached_signatures_t *s)
+ns_detached_signatures_free_(ns_detached_signatures_t *s)
 {
   if (!s)
     return;
@@ -2849,10 +2849,13 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
   return new_voting_schedule;
 }
 
+#define voting_schedule_free(s) \
+  FREE_AND_NULL(voting_schedule_t, voting_schedule_free_, (s))
+
 /** Frees a voting_schedule_t. This should be used instead of the generic
  * tor_free. */
 static void
-voting_schedule_free(voting_schedule_t *voting_schedule_to_free)
+voting_schedule_free_(voting_schedule_t *voting_schedule_to_free)
 {
   if (!voting_schedule_to_free)
     return;

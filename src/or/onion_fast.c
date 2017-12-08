@@ -32,7 +32,7 @@
 
 /** Release all state held in <b>victim</b>. */
 void
-fast_handshake_state_free(fast_handshake_state_t *victim)
+fast_handshake_state_free_(fast_handshake_state_t *victim)
 {
   if (! victim)
     return;

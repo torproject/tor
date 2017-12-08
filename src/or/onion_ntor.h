@@ -17,7 +17,9 @@ typedef struct ntor_handshake_state_t ntor_handshake_state_t;
 /** Length of an ntor reply, as sent from server to client. */
 #define NTOR_REPLY_LEN 64
 
-void ntor_handshake_state_free(ntor_handshake_state_t *state);
+void ntor_handshake_state_free_(ntor_handshake_state_t *state);
+#define ntor_handshake_state_free(state) \
+  FREE_AND_NULL(ntor_handshake_state_t, ntor_handshake_state_free_, (state))
 
 int onion_skin_ntor_create(const uint8_t *router_id,
                            const curve25519_public_key_t *router_key,

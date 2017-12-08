@@ -423,7 +423,7 @@ server_onion_keys_new(void)
 
 /** Release all storage held in <b>keys</b>. */
 void
-server_onion_keys_free(server_onion_keys_t *keys)
+server_onion_keys_free_(server_onion_keys_t *keys)
 {
   if (! keys)
     return;

@@ -1102,7 +1102,7 @@ directory_request_new(uint8_t dir_purpose)
  * Release all resources held by <b>req</b>.
  */
 void
-directory_request_free(directory_request_t *req)
+directory_request_free_(directory_request_t *req)
 {
   if (req == NULL)
     return;

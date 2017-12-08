@@ -34,7 +34,7 @@ entryconn_rewrite_teardown(const struct testcase_t *tc, void *arg)
   (void)tc;
   entry_connection_t *ec = arg;
   if (ec)
-    connection_free_(ENTRY_TO_CONN(ec));
+    connection_free_minimal(ENTRY_TO_CONN(ec));
   addressmap_free_all();
   return 1;
 }
@@ -156,8 +156,8 @@ test_entryconn_rewrite_automap_ipv4(void *arg)
             ec->socks_request->address);
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec2));
-  connection_free_(ENTRY_TO_CONN(ec3));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec3));
 }
 
 /* Automap on resolve, connect to automapped address, resolve again and get
@@ -230,9 +230,9 @@ test_entryconn_rewrite_automap_ipv6(void *arg)
             ec->socks_request->address);
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec));
-  connection_free_(ENTRY_TO_CONN(ec2));
-  connection_free_(ENTRY_TO_CONN(ec3));
+  connection_free_minimal(ENTRY_TO_CONN(ec));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec3));
 }
 
 #if 0
@@ -283,7 +283,7 @@ test_entryconn_rewrite_automap_reverse(void *arg)
   tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 #endif /* 0 */
 
@@ -333,7 +333,7 @@ test_entryconn_rewrite_cached_dns_ipv4(void *arg)
   tt_str_op(ec2->socks_request->address, OP_EQ, "240.240.241.241");
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 
 /* Rewrite because of cached DNS entry. */
@@ -385,8 +385,8 @@ test_entryconn_rewrite_cached_dns_ipv6(void *arg)
   tt_str_op(ec2->socks_request->address, OP_EQ, "[::f00f]");
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec));
-  connection_free_(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 
 /* Fail to connect to unmapped address in virtual range. */
@@ -426,7 +426,7 @@ test_entryconn_rewrite_unmapped_virtual(void *arg)
   tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 
 /* Rewrite because of mapaddress option */
@@ -507,7 +507,7 @@ test_entryconn_rewrite_automap_exit(void *arg)
   tt_int_op(rr.end_reason, OP_EQ, END_STREAM_REASON_TORPROTOCOL);
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
 }
 
 /* Rewrite into .exit because of mapaddress */
@@ -618,9 +618,9 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   */
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec2));
-  connection_free_(ENTRY_TO_CONN(ec3));
-  connection_free_(ENTRY_TO_CONN(ec4));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec3));
+  connection_free_minimal(ENTRY_TO_CONN(ec4));
 }
 
 static void
@@ -678,8 +678,8 @@ test_entryconn_rewrite_mapaddress_automap_onion_common(entry_connection_t *ec,
                            "abcdefghijklmnop.onion"));
 
  done:
-  connection_free_(ENTRY_TO_CONN(ec2));
-  connection_free_(ENTRY_TO_CONN(ec3));
+  connection_free_minimal(ENTRY_TO_CONN(ec2));
+  connection_free_minimal(ENTRY_TO_CONN(ec3));
 }
 
 /* This time is the same, but we start with a mapping from a non-onion

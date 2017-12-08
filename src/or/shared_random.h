@@ -113,7 +113,8 @@ sr_srv_t *sr_parse_srv(const smartlist_t *args);
 char *sr_get_string_for_vote(void);
 char *sr_get_string_for_consensus(const smartlist_t *votes,
                                   int32_t num_srv_agreements);
-void sr_commit_free(sr_commit_t *commit);
+void sr_commit_free_(sr_commit_t *commit);
+#define sr_commit_free(sr) FREE_AND_NULL(sr_commit_t, sr_commit_free_, (sr))
 void sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv);
 
 /* Private methods (only used by shared_random_state.c): */

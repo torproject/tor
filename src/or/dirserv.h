@@ -196,7 +196,9 @@ spooled_resource_t *spooled_resource_new(dir_spool_source_t source,
                                          size_t digestlen);
 spooled_resource_t *spooled_resource_new_from_cache_entry(
                                       struct consensus_cache_entry_t *entry);
-void spooled_resource_free(spooled_resource_t *spooled);
+void spooled_resource_free_(spooled_resource_t *spooled);
+#define spooled_resource_free(sp) \
+  FREE_AND_NULL(spooled_resource_t, spooled_resource_free_, (sp))
 void dirserv_spool_remove_missing_and_guess_size(dir_connection_t *conn,
                                                  time_t cutoff,
                                                  int compression,

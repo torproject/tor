@@ -48,7 +48,7 @@ tor_mutex_new_nonrecursive(void)
 }
 /** Release all storage and system resources held by <b>m</b>. */
 void
-tor_mutex_free(tor_mutex_t *m)
+tor_mutex_free_(tor_mutex_t *m)
 {
   if (!m)
     return;
@@ -68,7 +68,7 @@ tor_cond_new(void)
 
 /** Free all storage held in <b>c</b>. */
 void
-tor_cond_free(tor_cond_t *c)
+tor_cond_free_(tor_cond_t *c)
 {
   if (!c)
     return;

@@ -644,7 +644,7 @@ static const char CLIENT_CIPHER_LIST[] =
 
 /** Free all storage held in <b>cert</b> */
 void
-tor_x509_cert_free(tor_x509_cert_t *cert)
+tor_x509_cert_free_(tor_x509_cert_t *cert)
 {
   if (! cert)
     return;
@@ -1792,7 +1792,7 @@ tor_tls_is_server(tor_tls_t *tls)
  * underlying file descriptor.
  */
 void
-tor_tls_free(tor_tls_t *tls)
+tor_tls_free_(tor_tls_t *tls)
 {
   if (!tls)
     return;

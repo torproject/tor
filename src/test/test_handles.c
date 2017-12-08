@@ -13,6 +13,8 @@ typedef struct demo_t {
 } demo_t;
 
 HANDLE_DECL(demo, demo_t, static)
+#define demo_handle_free(h)    \
+  FREE_AND_NULL(demo_handle_t, demo_handle_free_, (h))
 HANDLE_IMPL(demo, demo_t, static)
 
 static demo_t *

@@ -233,7 +233,7 @@ ntor_key_map_free_helper(void *arg)
 }
 /** Release all storage from a keymap returned by construct_ntor_key_map. */
 void
-ntor_key_map_free(di_digest256_map_t *map)
+ntor_key_map_free_(di_digest256_map_t *map)
 {
   if (!map)
     return;
@@ -3685,6 +3685,7 @@ router_free_all(void)
   crypto_pk_free(lastonionkey);
   crypto_pk_free(server_identitykey);
   crypto_pk_free(client_identitykey);
+
   tor_mutex_free(key_lock);
   routerinfo_free(desc_routerinfo);
   extrainfo_free(desc_extrainfo);

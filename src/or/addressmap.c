@@ -90,32 +90,45 @@ addressmap_init(void)
   virtaddress_reversemap = strmap_new();
 }
 
+#define addressmap_ent_free(ent)                                        \
+  FREE_AND_NULL(addressmap_entry_t, addressmap_ent_free_, (ent))
+
 /** Free the memory associated with the addressmap entry <b>_ent</b>. */
 static void
-addressmap_ent_free(void *_ent)
+addressmap_ent_free_(addressmap_entry_t *ent)
 {
-  addressmap_entry_t *ent;
-  if (!_ent)
+  if (!ent)
     return;
 
-  ent = _ent;
   tor_free(ent->new_address);
   tor_free(ent);
 }
 
+static void
+addressmap_ent_free_void(void *ent)
+{
+  addressmap_ent_free_(ent);
+}
+
+#define addressmap_virtaddress_ent_free(ent)                            \
+  FREE_AND_NULL(virtaddress_entry_t, addressmap_virtaddress_ent_free_, (ent))
+
 /** Free storage held by a virtaddress_entry_t* entry in <b>_ent</b>. */
 static void
-addressmap_virtaddress_ent_free(void *_ent)
+addressmap_virtaddress_ent_free_(virtaddress_entry_t *ent)
 {
-  virtaddress_entry_t *ent;
-  if (!_ent)
+  if (!ent)
     return;
-
-  ent = _ent;
   tor_free(ent->ipv4_address);
   tor_free(ent->ipv6_address);
   tor_free(ent->hostname_address);
   tor_free(ent);
+}
+
+static void
+addressmap_virtaddress_ent_free_void(void *ent)
+{
+  addressmap_virtaddress_ent_free_(ent);
 }
 
 /** Remove <b>address</b> (which must map to <b>ent</b>) from the
@@ -311,10 +324,10 @@ addressmap_clean(time_t now)
 void
 addressmap_free_all(void)
 {
-  strmap_free(addressmap, addressmap_ent_free);
+  strmap_free(addressmap, addressmap_ent_free_void);
   addressmap = NULL;
 
-  strmap_free(virtaddress_reversemap, addressmap_virtaddress_ent_free);
+  strmap_free(virtaddress_reversemap, addressmap_virtaddress_ent_free_void);
   virtaddress_reversemap = NULL;
 }
 

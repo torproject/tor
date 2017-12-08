@@ -19,7 +19,9 @@ typedef struct fast_handshake_state_t {
   uint8_t state[DIGEST_LEN];
 } fast_handshake_state_t;
 
-void fast_handshake_state_free(fast_handshake_state_t *victim);
+void fast_handshake_state_free_(fast_handshake_state_t *victim);
+#define fast_handshake_state_free(st) \
+  FREE_AND_NULL(fast_handshake_state_t, fast_handshake_state_free_, (st))
 
 int fast_onionskin_create(fast_handshake_state_t **handshake_state_out,
                           uint8_t *handshake_out);

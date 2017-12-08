@@ -2732,7 +2732,7 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
 
 /** Release storage held by an extend_info_t struct. */
 void
-extend_info_free(extend_info_t *info)
+extend_info_free_(extend_info_t *info)
 {
   if (!info)
     return;

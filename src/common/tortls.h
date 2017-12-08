@@ -216,7 +216,8 @@ void tor_tls_set_renegotiate_callback(tor_tls_t *tls,
                                       void (*cb)(tor_tls_t *, void *arg),
                                       void *arg);
 int tor_tls_is_server(tor_tls_t *tls);
-void tor_tls_free(tor_tls_t *tls);
+void tor_tls_free_(tor_tls_t *tls);
+#define tor_tls_free(tls) FREE_AND_NULL(tor_tls_t, tor_tls_free_, (tls))
 int tor_tls_peer_has_cert(tor_tls_t *tls);
 MOCK_DECL(tor_x509_cert_t *,tor_tls_get_peer_cert,(tor_tls_t *tls));
 MOCK_DECL(tor_x509_cert_t *,tor_tls_get_own_cert,(tor_tls_t *tls));
@@ -263,7 +264,9 @@ void check_no_tls_errors_(const char *fname, int line);
 void tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                            int severity, int domain, const char *doing);
 
-void tor_x509_cert_free(tor_x509_cert_t *cert);
+void tor_x509_cert_free_(tor_x509_cert_t *cert);
+#define tor_x509_cert_free(c) \
+  FREE_AND_NULL(tor_x509_cert_t, tor_x509_cert_free_, (c))
 tor_x509_cert_t *tor_x509_cert_decode(const uint8_t *certificate,
                             size_t certificate_len);
 void tor_x509_cert_get_der(const tor_x509_cert_t *cert,

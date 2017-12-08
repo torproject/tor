@@ -96,7 +96,7 @@ str_to_protocol_type(const char *s, protocol_type_t *pr_out)
  * Release all space held by a single proto_entry_t structure
  */
 STATIC void
-proto_entry_free(proto_entry_t *entry)
+proto_entry_free_(proto_entry_t *entry)
 {
   if (!entry)
     return;

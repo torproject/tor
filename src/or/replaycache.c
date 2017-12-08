@@ -28,7 +28,7 @@
  */
 
 void
-replaycache_free(replaycache_t *r)
+replaycache_free_(replaycache_t *r)
 {
   if (!r) {
     log_info(LD_BUG, "replaycache_free() called on NULL");

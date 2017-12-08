@@ -1905,9 +1905,12 @@ tor_passwd_dup(const struct passwd *pw)
   return new_pw;
 }
 
+#define tor_passwd_free(pw) \
+  FREE_AND_NULL(struct passwd, tor_passwd_free_, (pw))
+
 /** Helper: free one of our cached 'struct passwd' values. */
 static void
-tor_passwd_free(struct passwd *pw)
+tor_passwd_free_(struct passwd *pw)
 {
   if (!pw)
     return;

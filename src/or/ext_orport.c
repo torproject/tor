@@ -40,7 +40,7 @@ ext_or_cmd_new(uint16_t len)
 
 /** Deallocate the Extended ORPort message in <b>cmd</b>. */
 void
-ext_or_cmd_free(ext_or_cmd_t *cmd)
+ext_or_cmd_free_(ext_or_cmd_t *cmd)
 {
   tor_free(cmd);
 }
