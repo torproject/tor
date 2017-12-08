@@ -2843,10 +2843,13 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
   return new_voting_schedule;
 }
 
+#define voting_schedule_free(s) \
+  FREE_AND_NULL(voting_schedule_t, voting_schedule_free_, (s))
+
 /** Frees a voting_schedule_t. This should be used instead of the generic
  * tor_free. */
 static void
-voting_schedule_free(voting_schedule_t *voting_schedule_to_free)
+voting_schedule_free_(voting_schedule_t *voting_schedule_to_free)
 {
   if (!voting_schedule_to_free)
     return;

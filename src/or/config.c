@@ -922,7 +922,7 @@ get_short_version(void)
 /** Release additional memory allocated in options
  */
 STATIC void
-or_options_free(or_options_t *options)
+or_options_free_(or_options_t *options)
 {
   if (!options)
     return;
@@ -6506,7 +6506,7 @@ port_cfg_new(size_t namelen)
 
 /** Free all storage held in <b>port</b> */
 STATIC void
-port_cfg_free(port_cfg_t *port)
+port_cfg_free_(port_cfg_t *port)
 {
   tor_free(port);
 }

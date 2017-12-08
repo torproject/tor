@@ -1351,7 +1351,7 @@ test_state_update(void *arg)
   tt_assert(state->current_srv);
 
  done:
-  sr_state_free();
+  sr_state_free_all();
   UNMOCK(get_my_v3_authority_cert);
 }
 

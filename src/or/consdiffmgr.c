@@ -207,9 +207,12 @@ HT_PROTOTYPE(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq)
 HT_GENERATE2(cdm_diff_ht, cdm_diff_t, node, cdm_diff_hash, cdm_diff_eq,
              0.6, tor_reallocarray, tor_free_)
 
+#define cdm_diff_free(diff) \
+  FREE_AND_NULL(cdm_diff_t, cdm_diff_free_, (diff))
+
 /** Release all storage held in <b>diff</b>. */
 static void
-cdm_diff_free(cdm_diff_t *diff)
+cdm_diff_free_(cdm_diff_t *diff)
 {
   if (!diff)
     return;
@@ -1502,11 +1505,15 @@ consensus_diff_worker_threadfn(void *state_, void *work_)
   return WQ_RPL_REPLY;
 }
 
+#define consensus_diff_worker_job_free(job)             \
+  FREE_AND_NULL(consensus_diff_worker_job_t,            \
+                consensus_diff_worker_job_free_, (job))
+
 /**
  * Helper: release all storage held in <b>job</b>.
  */
 static void
-consensus_diff_worker_job_free(consensus_diff_worker_job_t *job)
+consensus_diff_worker_job_free_(consensus_diff_worker_job_t *job)
 {
   if (!job)
     return;
@@ -1649,11 +1656,15 @@ typedef struct consensus_compress_worker_job_t {
   compressed_result_t out[ARRAY_LENGTH(compress_consensus_with)];
 } consensus_compress_worker_job_t;
 
+#define consensus_compress_worker_job_free(job) \
+  FREE_AND_NULL(consensus_compress_worker_job_t, \
+                consensus_compress_worker_job_free_, (job))
+
 /**
  * Free all resources held in <b>job</b>
  */
 static void
-consensus_compress_worker_job_free(consensus_compress_worker_job_t *job)
+consensus_compress_worker_job_free_(consensus_compress_worker_job_t *job)
 {
   if (!job)
     return;

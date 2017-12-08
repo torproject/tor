@@ -52,9 +52,12 @@ lookup_v3_desc_as_dir(const uint8_t *key)
   return digest256map_get(hs_cache_v3_dir, key);
 }
 
+#define cache_dir_desc_free(val) \
+  FREE_AND_NULL(hs_cache_dir_descriptor_t, cache_dir_desc_free_, (val))
+
 /* Free a directory descriptor object. */
 static void
-cache_dir_desc_free(hs_cache_dir_descriptor_t *desc)
+cache_dir_desc_free_(hs_cache_dir_descriptor_t *desc)
 {
   if (desc == NULL) {
     return;
@@ -67,10 +70,9 @@ cache_dir_desc_free(hs_cache_dir_descriptor_t *desc)
 /* Helper function: Use by the free all function using the digest256map
  * interface to cache entries. */
 static void
-cache_dir_desc_free_(void *ptr)
+cache_dir_desc_free_void(void *ptr)
 {
-  hs_cache_dir_descriptor_t *desc = ptr;
-  cache_dir_desc_free(desc);
+  cache_dir_desc_free_(ptr);
 }
 
 /* Create a new directory cache descriptor object from a encoded descriptor.
@@ -417,9 +419,12 @@ cache_client_desc_new(const char *desc_str,
   return client_desc;
 }
 
+#define cache_client_desc_free(val) \
+  FREE_AND_NULL(hs_cache_client_descriptor_t, cache_client_desc_free_, (val))
+
 /** Free memory allocated by <b>desc</b>. */
 static void
-cache_client_desc_free(hs_cache_client_descriptor_t *desc)
+cache_client_desc_free_(hs_cache_client_descriptor_t *desc)
 {
   if (desc == NULL) {
     return;
@@ -433,7 +438,7 @@ cache_client_desc_free(hs_cache_client_descriptor_t *desc)
 
 /** Helper function: Use by the free all function to clear the client cache */
 static void
-cache_client_desc_free_(void *ptr)
+cache_client_desc_free_void(void *ptr)
 {
   hs_cache_client_descriptor_t *desc = ptr;
   cache_client_desc_free(desc);
@@ -448,18 +453,21 @@ cache_intro_state_new(void)
   return state;
 }
 
+#define cache_intro_state_free(val) \
+  FREE_AND_NULL(hs_cache_intro_state_t, cache_intro_state_free_, (val))
+
 /* Free an hs_cache_intro_state_t object. */
 static void
-cache_intro_state_free(hs_cache_intro_state_t *state)
+cache_intro_state_free_(hs_cache_intro_state_t *state)
 {
   tor_free(state);
 }
 
 /* Helper function: use by the free all function. */
 static void
-cache_intro_state_free_(void *state)
+cache_intro_state_free_void(void *state)
 {
-  cache_intro_state_free(state);
+  cache_intro_state_free_(state);
 }
 
 /* Return a newly allocated and initialized hs_cache_client_intro_state_t
@@ -472,22 +480,26 @@ cache_client_intro_state_new(void)
   return cache;
 }
 
+#define cache_client_intro_state_free(val)              \
+  FREE_AND_NULL(hs_cache_client_intro_state_t,          \
+                cache_client_intro_state_free_, (val))
+
 /* Free a cache client intro state object. */
 static void
-cache_client_intro_state_free(hs_cache_client_intro_state_t *cache)
+cache_client_intro_state_free_(hs_cache_client_intro_state_t *cache)
 {
   if (cache == NULL) {
     return;
   }
-  digest256map_free(cache->intro_points, cache_intro_state_free_);
+  digest256map_free(cache->intro_points, cache_intro_state_free_void);
   tor_free(cache);
 }
 
 /* Helper function: use by the free all function. */
 static void
-cache_client_intro_state_free_(void *entry)
+cache_client_intro_state_free_void(void *entry)
 {
-  cache_client_intro_state_free(entry);
+  cache_client_intro_state_free_(entry);
 }
 
 /* For the given service identity key service_pk and an introduction
@@ -933,14 +945,14 @@ hs_cache_init(void)
 void
 hs_cache_free_all(void)
 {
-  digest256map_free(hs_cache_v3_dir, cache_dir_desc_free_);
+  digest256map_free(hs_cache_v3_dir, cache_dir_desc_free_void);
   hs_cache_v3_dir = NULL;
 
-  digest256map_free(hs_cache_v3_client, cache_client_desc_free_);
+  digest256map_free(hs_cache_v3_client, cache_client_desc_free_void);
   hs_cache_v3_client = NULL;
 
   digest256map_free(hs_cache_client_intro_state,
-                    cache_client_intro_state_free_);
+                    cache_client_intro_state_free_void);
   hs_cache_client_intro_state = NULL;
 }
 

@@ -2206,7 +2206,7 @@ entry_guard_restriction_free_(entry_guard_restriction_t *rst)
  * Release all storage held in <b>state</b>.
  */
 void
-circuit_guard_state_free(circuit_guard_state_t *state)
+circuit_guard_state_free_(circuit_guard_state_t *state)
 {
   if (!state)
     return;
@@ -3109,7 +3109,7 @@ get_guard_state_for_bridge_desc_fetch(const char *digest)
 
 /** Release all storage held by <b>e</b>. */
 STATIC void
-entry_guard_free(entry_guard_t *e)
+entry_guard_free_(entry_guard_t *e)
 {
   if (!e)
     return;

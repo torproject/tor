@@ -443,10 +443,10 @@ free_fake_channel(channel_t *chan)
     circuitmux_free(chan->cmux);
 
   TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->incoming_queue, next, cell_tmp) {
-      cell_queue_entry_free(cell, 0);
+      cell_queue_entry_xfree(cell, 0);
   }
   TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->outgoing_queue, next, cell_tmp) {
-      cell_queue_entry_free(cell, 0);
+      cell_queue_entry_xfree(cell, 0);
   }
 
   tor_free(chan);

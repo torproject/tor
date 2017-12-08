@@ -384,7 +384,7 @@ commit_encode(const sr_commit_t *commit, char *dst, size_t len)
 static void
 sr_cleanup(void)
 {
-  sr_state_free();
+  sr_state_free_all();
 }
 
 /* Using <b>commit</b>, return a newly allocated string containing the commit

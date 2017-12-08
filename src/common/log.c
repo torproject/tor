@@ -387,9 +387,12 @@ pending_log_message_new(int severity, log_domain_mask_t domain,
   return m;
 }
 
+#define pending_log_message_free(msg) \
+  FREE_AND_NULL(pending_log_message_t, pending_log_message_free_, (msg))
+
 /** Release all storage held by <b>msg</b>. */
 static void
-pending_log_message_free(pending_log_message_t *msg)
+pending_log_message_free_(pending_log_message_t *msg)
 {
   if (!msg)
     return;

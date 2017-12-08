@@ -1358,9 +1358,12 @@ bw_array_new(void)
   return b;
 }
 
+#define bw_array_free(val) \
+  FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
+
 /** Free storage held by bandwidth array <b>b</b>. */
 static void
-bw_array_free(bw_array_t *b)
+bw_array_free_(bw_array_t *b)
 {
   if (!b) {
     return;
@@ -1883,7 +1886,7 @@ predicted_ports_init(void)
  * be used.
  */
 static void
-predicted_ports_free(void)
+predicted_ports_free_all(void)
 {
   rephist_total_alloc -=
     smartlist_len(predicted_ports_list)*sizeof(predicted_port_t);
@@ -2828,7 +2831,7 @@ HT_GENERATE2(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
 
 /* DOCDOC bidi_map_free */
 static void
-bidi_map_free(void)
+bidi_map_free_all(void)
 {
   bidi_map_entry_t **ptr, **next, *ent;
   for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
@@ -2848,7 +2851,7 @@ rep_hist_reset_conn_stats(time_t now)
   mostly_read = 0;
   mostly_written = 0;
   both_read_and_written = 0;
-  bidi_map_free();
+  bidi_map_free_all();
 }
 
 /** Stop collecting connection stats in a way that we can re-start doing
@@ -3037,9 +3040,12 @@ hs_stats_new(void)
   return new_hs_stats;
 }
 
+#define hs_stats_free(val) \
+  FREE_AND_NULL(hs_stats_t, hs_stats_free_, (val))
+
 /** Free an hs_stats_t structure. */
 static void
-hs_stats_free(hs_stats_t *victim_hs_stats)
+hs_stats_free_(hs_stats_t *victim_hs_stats)
 {
   if (!victim_hs_stats) {
     return;
@@ -3451,8 +3457,8 @@ rep_hist_free_all(void)
   tor_free(exit_bytes_read);
   tor_free(exit_bytes_written);
   tor_free(exit_streams);
-  predicted_ports_free();
-  bidi_map_free();
+  predicted_ports_free_all();
+  bidi_map_free_all();
 
   if (circuits_for_buffer_stats) {
     SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *, s,

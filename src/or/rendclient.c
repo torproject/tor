@@ -1102,18 +1102,22 @@ rend_client_lookup_service_authorization(const char *onion_address)
   return strmap_get(auth_hid_servs, onion_address);
 }
 
+#define rend_service_authorization_free(val)                    \
+  FREE_AND_NULL(rend_service_authorization_t,                   \
+                rend_service_authorization_free_, (val))
+
 /** Helper: Free storage held by rend_service_authorization_t. */
 static void
-rend_service_authorization_free(rend_service_authorization_t *auth)
+rend_service_authorization_free_(rend_service_authorization_t *auth)
 {
   tor_free(auth);
 }
 
 /** Helper for strmap_free. */
 static void
-rend_service_authorization_strmap_item_free(void *service_auth)
+rend_service_authorization_free_void(void *service_auth)
 {
-  rend_service_authorization_free(service_auth);
+  rend_service_authorization_free_(service_auth);
 }
 
 /** Release all the storage held in auth_hid_servs.
@@ -1124,7 +1128,7 @@ rend_service_authorization_free_all(void)
   if (!auth_hid_servs) {
     return;
   }
-  strmap_free(auth_hid_servs, rend_service_authorization_strmap_item_free);
+  strmap_free(auth_hid_servs, rend_service_authorization_free_void);
   auth_hid_servs = NULL;
 }
 
@@ -1199,7 +1203,7 @@ rend_parse_service_authorization(const or_options_t *options,
     rend_service_authorization_free_all();
     auth_hid_servs = parsed;
   } else {
-    strmap_free(parsed, rend_service_authorization_strmap_item_free);
+    strmap_free(parsed, rend_service_authorization_free_void);
   }
   return res;
 }

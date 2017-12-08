@@ -226,12 +226,11 @@ static void channel_remove_from_digest_map(channel_t *chan);
 static ssize_t
 channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                                              ssize_t num_cells);
-static void channel_force_free(channel_t *chan);
-static void
-channel_free_list(smartlist_t *channels, int mark_for_close);
-static void
-channel_listener_free_list(smartlist_t *channels, int mark_for_close);
-static void channel_listener_force_free(channel_listener_t *chan_l);
+static void channel_force_xfree(channel_t *chan);
+static void channel_free_list(smartlist_t *channels, int mark_for_close);
+static void channel_listener_free_list(smartlist_t *channels,
+                                       int mark_for_close);
+static void channel_listener_force_xfree(channel_listener_t *chan_l);
 static size_t channel_get_cell_queue_entry_size(channel_t *chan,
                                                 cell_queue_entry_t *q);
 static void
@@ -1068,7 +1067,7 @@ channel_listener_free_(channel_listener_t *chan_l)
  */
 
 static void
-channel_force_free(channel_t *chan)
+channel_force_xfree(channel_t *chan)
 {
   cell_queue_entry_t *cell, *cell_tmp;
   tor_assert(chan);
@@ -1106,13 +1105,13 @@ channel_force_free(channel_t *chan)
 
   /* We might still have a cell queue; kill it */
   TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->incoming_queue, next, cell_tmp) {
-      cell_queue_entry_free(cell, 0);
+      cell_queue_entry_xfree(cell, 0);
   }
   TOR_SIMPLEQ_INIT(&chan->incoming_queue);
 
   /* Outgoing cell queue is similar, but we can have to free packed cells */
   TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->outgoing_queue, next, cell_tmp) {
-    cell_queue_entry_free(cell, 0);
+    cell_queue_entry_xfree(cell, 0);
   }
   TOR_SIMPLEQ_INIT(&chan->outgoing_queue);
 
@@ -1126,7 +1125,7 @@ channel_force_free(channel_t *chan)
  */
 
 static void
-channel_listener_force_free(channel_listener_t *chan_l)
+channel_listener_force_xfree(channel_listener_t *chan_l)
 {
   tor_assert(chan_l);
 
@@ -1755,7 +1754,7 @@ cell_queue_entry_dup(cell_queue_entry_t *q)
  */
 
 STATIC void
-cell_queue_entry_free(cell_queue_entry_t *q, int handed_off)
+cell_queue_entry_xfree(cell_queue_entry_t *q, int handed_off)
 {
   if (!q) return;
 
@@ -2563,7 +2562,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
         /* Update the channel's queue size too */
         chan->bytes_in_queue -= cell_size;
         /* Finally, free q */
-        cell_queue_entry_free(q, handed_off);
+        cell_queue_entry_xfree(q, handed_off);
         q = NULL;
       } else {
         /* No cell removed from list, so we can't go on any further */
@@ -3297,7 +3296,7 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
       if (!CHANNEL_CONDEMNED(curr)) {
         channel_mark_for_close(curr);
       }
-      channel_force_free(curr);
+      channel_force_xfree(curr);
     } else channel_free(curr);
   } SMARTLIST_FOREACH_END(curr);
 }
@@ -3326,7 +3325,7 @@ channel_listener_free_list(smartlist_t *listeners, int mark_for_close)
             curr->state == CHANNEL_LISTENER_STATE_ERROR)) {
         channel_listener_mark_for_close(curr);
       }
-      channel_listener_force_free(curr);
+      channel_listener_force_xfree(curr);
     } else channel_listener_free(curr);
   } SMARTLIST_FOREACH_END(curr);
 }

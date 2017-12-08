@@ -527,9 +527,12 @@ HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
 HT_GENERATE2(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
              clientmap_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
+#define clientmap_entry_free(ent) \
+  FREE_AND_NULL(clientmap_entry_t, clientmap_entry_free_, ent)
+
 /** Free all storage held by <b>ent</b>. */
 static void
-clientmap_entry_free(clientmap_entry_t *ent)
+clientmap_entry_free_(clientmap_entry_t *ent)
 {
   if (!ent)
     return;

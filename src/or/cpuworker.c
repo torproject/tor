@@ -48,12 +48,23 @@ worker_state_new(void *arg)
   ws->onion_keys = server_onion_keys_new();
   return ws;
 }
+
+#define worker_state_free(ws) \
+  FREE_AND_NULL(worker_state_t, worker_state_free_, (ws))
+
 static void
-worker_state_free(void *arg)
+worker_state_free_(worker_state_t *ws)
 {
-  worker_state_t *ws = arg;
+  if (!ws)
+    return;
   server_onion_keys_free(ws->onion_keys);
   tor_free(ws);
+}
+
+static void
+worker_state_free_void(void *arg)
+{
+  worker_state_free_(arg);
 }
 
 static replyqueue_t *replyqueue = NULL;
@@ -102,7 +113,7 @@ cpu_init(void)
     threadpool = threadpool_new(n_threads,
                                 replyqueue,
                                 worker_state_new,
-                                worker_state_free,
+                                worker_state_free_void,
                                 NULL);
   }
   /* Total voodoo. Can we make this more sensible? */
@@ -198,7 +209,7 @@ cpuworkers_rotate_keyinfo(void)
   if (threadpool_queue_update(threadpool,
                               worker_state_new,
                               update_state_threadfn,
-                              worker_state_free,
+                              worker_state_free_void,
                               NULL)) {
     log_warn(LD_OR, "Failed to queue key update for worker threads.");
   }

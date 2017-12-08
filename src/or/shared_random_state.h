@@ -119,7 +119,7 @@ void sr_state_unset_fresh_srv(void);
 int sr_state_init(int save_to_disk, int read_from_disk);
 int sr_state_is_initialized(void);
 void sr_state_save(void);
-void sr_state_free(void);
+void sr_state_free_all(void);
 
 time_t sr_state_get_start_time_of_current_protocol_run(time_t now);
 unsigned int sr_state_get_phase_duration(void);

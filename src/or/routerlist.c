@@ -163,7 +163,6 @@ static const routerstatus_t *router_pick_dirserver_generic(
                               smartlist_t *sourcelist,
                               dirinfo_type_t type, int flags);
 static void mark_all_dirservers_up(smartlist_t *server_list);
-static void dir_server_free(dir_server_t *ds);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
@@ -447,9 +446,12 @@ download_status_for_authority_id_and_sk,(const char *id_digest,
   return dl;
 }
 
+#define cert_list_free(val) \
+  FREE_AND_NULL(cert_list_t, cert_list_free_, (val))
+
 /** Release all space held by a cert_list_t */
 static void
-cert_list_free(cert_list_t *cl)
+cert_list_free_(cert_list_t *cl)
 {
   if (!cl)
     return;
@@ -465,7 +467,7 @@ cert_list_free(cert_list_t *cl)
 static void
 cert_list_free_void(void *cl)
 {
-  cert_list_free(cl);
+  cert_list_free_(cl);
 }
 
 /** Reload the cached v3 key certificates from the cached-certs file in
@@ -3210,9 +3212,12 @@ extrainfo_free_(extrainfo_t *extrainfo)
   tor_free(extrainfo);
 }
 
+#define signed_descriptor_free(val) \
+  FREE_AND_NULL(signed_descriptor_t, signed_descriptor_free_, (val))
+
 /** Release storage held by <b>sd</b>. */
 static void
-signed_descriptor_free(signed_descriptor_t *sd)
+signed_descriptor_free_(signed_descriptor_t *sd)
 {
   if (!sd)
     return;
@@ -4752,9 +4757,12 @@ authority_cert_free_(authority_cert_t *cert)
   tor_free(cert);
 }
 
+#define dir_server_free(val) \
+  FREE_AND_NULL(dir_server_t, dir_server_free_, (val))
+
 /** Free storage held in <b>ds</b>. */
 static void
-dir_server_free(dir_server_t *ds)
+dir_server_free_(dir_server_t *ds)
 {
   if (!ds)
     return;

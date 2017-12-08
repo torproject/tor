@@ -172,7 +172,7 @@ rend_authorized_client_free_(rend_authorized_client_t *client)
 
 /** Helper for strmap_free. */
 static void
-rend_authorized_client_strmap_item_free(void *authorized_client)
+rend_authorized_client_free_void(void *authorized_client)
 {
   rend_authorized_client_free_(authorized_client);
 }
@@ -1675,7 +1675,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
     memwipe(client_keys_str, 0, strlen(client_keys_str));
     tor_free(client_keys_str);
   }
-  strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
+  strmap_free(parsed_clients, rend_authorized_client_free_void);
 
   if (cfname) {
     memwipe(cfname, 0, strlen(cfname));

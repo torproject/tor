@@ -106,9 +106,12 @@ hs_token_new(hs_token_type_t type, size_t token_len,
   return hs_token;
 }
 
+#define hs_token_free(val) \
+  FREE_AND_NULL(hs_token_t, hs_token_free_, (val))
+
 /** Free memory allocated by this <b>hs_token</b>. */
 static void
-hs_token_free(hs_token_t *hs_token)
+hs_token_free_(hs_token_t *hs_token)
 {
   if (!hs_token) {
     return;

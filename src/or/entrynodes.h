@@ -356,7 +356,10 @@ typedef enum {
   GUARD_USAGE_DIRGUARD = 1
 } guard_usage_t;
 
-void circuit_guard_state_free(circuit_guard_state_t *state);
+#define circuit_guard_state_free(val) \
+  FREE_AND_NULL(circuit_guard_state_t, circuit_guard_state_free_, (val))
+
+void circuit_guard_state_free_(circuit_guard_state_t *state);
 int entry_guard_pick_for_circuit(guard_selection_t *gs,
                                  guard_usage_t usage,
                                  entry_guard_restriction_t *rst,
@@ -509,7 +512,9 @@ STATIC entry_guard_t *entry_guard_add_to_sample(guard_selection_t *gs,
 STATIC entry_guard_t *entry_guards_expand_sample(guard_selection_t *gs);
 STATIC char *entry_guard_encode_for_state(entry_guard_t *guard);
 STATIC entry_guard_t *entry_guard_parse_from_state(const char *s);
-STATIC void entry_guard_free(entry_guard_t *e);
+#define entry_guard_free(e) \
+  FREE_AND_NULL(entry_guard_t, entry_guard_free_, (e))
+STATIC void entry_guard_free_(entry_guard_t *e);
 STATIC void entry_guards_update_filtered_sets(guard_selection_t *gs);
 STATIC int entry_guards_all_primary_guards_are_down(guard_selection_t *gs);
 /**
