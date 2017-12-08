@@ -19,10 +19,6 @@ typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
 typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
 typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
 
-struct cell_queue_entry_s;
-TOR_SIMPLEQ_HEAD(chan_cell_queue, cell_queue_entry_s);
-typedef struct chan_cell_queue chan_cell_queue_t;
-
 /**
  * This enum is used by channelpadding to decide when to pad channels.
  * Don't add values to it without updating the checks in
@@ -259,20 +255,11 @@ struct channel_s {
    */
   ed25519_public_key_t ed25519_identity;
 
-  /** Nickname of the OR on the other side, or NULL if none. */
-  char *nickname;
-
   /**
    * Linked list of channels with the same RSA identity digest, for use with
    * the digest->channel map
    */
   TOR_LIST_ENTRY(channel_s) next_with_same_id;
-
-  /** List of incoming cells to handle */
-  chan_cell_queue_t incoming_queue;
-
-  /** List of queued outgoing cells */
-  chan_cell_queue_t outgoing_queue;
 
   /** Circuit mux for circuits sending on this channel */
   circuitmux_t *cmux;
@@ -320,7 +307,6 @@ struct channel_s {
 
   /** Channel timestamps for cell channels */
   time_t timestamp_client; /* Client used this, according to relay.c */
-  time_t timestamp_drained; /* Output queue empty */
   time_t timestamp_recv; /* Cell received from lower layer */
   time_t timestamp_xmit; /* Cell sent to lower layer */
 
@@ -337,14 +323,6 @@ struct channel_s {
   /** Channel counters for cell channels */
   uint64_t n_cells_recved, n_bytes_recved;
   uint64_t n_cells_xmitted, n_bytes_xmitted;
-
-  /** Our current contribution to the scheduler's total xmit queue */
-  uint64_t bytes_queued_for_xmit;
-
-  /** Number of bytes in this channel's cell queue; does not include
-   * lower-layer queueing.
-   */
-  uint64_t bytes_in_queue;
 };
 
 struct channel_listener_s {
@@ -412,18 +390,13 @@ channel_listener_state_to_string(channel_listener_state_t state);
 /* Abstract channel operations */
 
 void channel_mark_for_close(channel_t *chan);
-void channel_write_cell(channel_t *chan, cell_t *cell);
-void channel_write_packed_cell(channel_t *chan, packed_cell_t *cell);
-void channel_write_var_cell(channel_t *chan, var_cell_t *cell);
+int channel_write_packed_cell(channel_t *chan, packed_cell_t *cell);
 
 void channel_listener_mark_for_close(channel_listener_t *chan_l);
 
 /* Channel callback registrations */
 
 /* Listener callback */
-channel_listener_fn_ptr
-channel_listener_get_listener_fn(channel_listener_t *chan);
-
 void channel_listener_set_listener_fn(channel_listener_t *chan,
                                       channel_listener_fn_ptr listener);
 
@@ -457,36 +430,9 @@ void channel_set_cmux_policy_everywhere(circuitmux_policy_t *pol);
 #ifdef TOR_CHANNEL_INTERNAL_
 
 #ifdef CHANNEL_PRIVATE_
-/* Cell queue structure (here rather than channel.c for test suite use) */
 
-typedef struct cell_queue_entry_s cell_queue_entry_t;
-struct cell_queue_entry_s {
-  TOR_SIMPLEQ_ENTRY(cell_queue_entry_s) next;
-  enum {
-    CELL_QUEUE_FIXED,
-    CELL_QUEUE_VAR,
-    CELL_QUEUE_PACKED
-  } type;
-  union {
-    struct {
-      cell_t *cell;
-    } fixed;
-    struct {
-      var_cell_t *var_cell;
-    } var;
-    struct {
-      packed_cell_t *packed_cell;
-    } packed;
-  } u;
-};
+STATIC void channel_add_to_digest_map(channel_t *chan);
 
-/* Cell queue functions for benefit of test suite */
-STATIC int chan_cell_queue_len(const chan_cell_queue_t *queue);
-
-STATIC void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
-
-void channel_write_cell_generic_(channel_t *chan, const char *cell_type,
-                                 void *cell, cell_queue_entry_t *q);
 #endif /* defined(CHANNEL_PRIVATE_) */
 
 /* Channel operations for subclasses and internal use only */
@@ -511,10 +457,6 @@ void channel_close_from_lower_layer(channel_t *chan);
 void channel_close_for_error(channel_t *chan);
 void channel_closed(channel_t *chan);
 
-void channel_listener_close_from_lower_layer(channel_listener_t *chan_l);
-void channel_listener_close_for_error(channel_listener_t *chan_l);
-void channel_listener_closed(channel_listener_t *chan_l);
-
 /* Free a channel */
 void channel_free(channel_t *chan);
 void channel_listener_free(channel_listener_t *chan_l);
@@ -532,9 +474,6 @@ void channel_mark_remote(channel_t *chan);
 void channel_set_identity_digest(channel_t *chan,
                                  const char *identity_digest,
                                  const ed25519_public_key_t *ed_identity);
-void channel_set_remote_end(channel_t *chan,
-                            const char *identity_digest,
-                            const char *nickname);
 
 void channel_listener_change_state(channel_listener_t *chan_l,
                                    channel_listener_state_t to_state);
@@ -542,7 +481,6 @@ void channel_listener_change_state(channel_listener_t *chan_l,
 /* Timestamp updates */
 void channel_timestamp_created(channel_t *chan);
 void channel_timestamp_active(channel_t *chan);
-void channel_timestamp_drained(channel_t *chan);
 void channel_timestamp_recv(channel_t *chan);
 void channel_timestamp_xmit(channel_t *chan);
 
@@ -556,12 +494,7 @@ void channel_listener_queue_incoming(channel_listener_t *listener,
                                      channel_t *incoming);
 
 /* Incoming cell handling */
-void channel_process_cells(channel_t *chan);
-void channel_queue_cell(channel_t *chan, cell_t *cell);
-void channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell);
-
-/* Outgoing cell handling */
-void channel_flush_cells(channel_t *chan);
+void channel_process_cell(channel_t *chan, cell_t *cell);
 
 /* Request from lower layer for more cells if available */
 MOCK_DECL(ssize_t, channel_flush_some_cells,
@@ -575,10 +508,6 @@ void channel_notify_flushed(channel_t *chan);
 
 /* Handle stuff we need to do on open like notifying circuits */
 void channel_do_open_actions(channel_t *chan);
-
-#ifdef TOR_UNIT_TESTS
-extern uint64_t estimated_total_queue_size;
-#endif
 
 #endif /* defined(TOR_CHANNEL_INTERNAL_) */
 
@@ -680,7 +609,6 @@ MOCK_DECL(void,channel_set_circid_type,(channel_t *chan,
                                         crypto_pk_t *identity_rcvd,
                                         int consider_identity));
 void channel_timestamp_client(channel_t *chan);
-void channel_update_xmit_queue_size(channel_t *chan);
 
 const char * channel_listener_describe_transport(channel_listener_t *chan_l);
 void channel_listener_dump_statistics(channel_listener_t *chan_l,
@@ -692,27 +620,14 @@ void channel_check_for_duplicates(void);
 void channel_update_bad_for_new_circs(const char *digest, int force);
 
 /* Flow control queries */
-uint64_t channel_get_global_queue_estimate(void);
 int channel_num_cells_writeable(channel_t *chan);
 
 /* Timestamp queries */
 time_t channel_when_created(channel_t *chan);
-time_t channel_when_last_active(channel_t *chan);
 time_t channel_when_last_client(channel_t *chan);
-time_t channel_when_last_drained(channel_t *chan);
-time_t channel_when_last_recv(channel_t *chan);
 time_t channel_when_last_xmit(channel_t *chan);
 
-time_t channel_listener_when_created(channel_listener_t *chan_l);
-time_t channel_listener_when_last_active(channel_listener_t *chan_l);
-time_t channel_listener_when_last_accepted(channel_listener_t *chan_l);
-
 /* Counter queries */
-uint64_t channel_count_recved(channel_t *chan);
-uint64_t channel_count_xmitted(channel_t *chan);
-
-uint64_t channel_listener_count_accepted(channel_listener_t *chan_l);
-
 int packed_cell_is_destroy(channel_t *chan,
                            const packed_cell_t *packed_cell,
                            circid_t *circid_out);

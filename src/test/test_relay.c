@@ -67,10 +67,6 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   pchan = new_fake_channel();
   tt_assert(pchan);
 
-  /* We'll need chans with working cmuxes */
-  nchan->cmux = circuitmux_alloc();
-  pchan->cmux = circuitmux_alloc();
-
   /* Make a fake orcirc */
   orcirc = new_fake_orcirc(nchan, pchan);
   tt_assert(orcirc);

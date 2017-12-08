@@ -631,8 +631,7 @@ circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits)
 
   tor_assert(chan);
 
-  log_debug(LD_CIRC,"chan to %s/%s, status=%d",
-            chan->nickname ? chan->nickname : "NULL",
+  log_debug(LD_CIRC,"chan to %s, status=%d",
             channel_get_canonical_remote_descr(chan), status);
 
   pending_circs = smartlist_new();
