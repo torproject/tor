@@ -3,6 +3,7 @@
 
 #define CIRCUITBUILD_PRIVATE
 #define CIRCUITSTATS_PRIVATE
+#define CIRCUITLIST_PRIVATE
 #define CHANNEL_PRIVATE_
 
 #include "or.h"
@@ -22,7 +23,6 @@ origin_circuit_t *subtest_fourhop_circuit(struct timeval, int);
 origin_circuit_t *add_opened_threehop(void);
 origin_circuit_t *build_unopened_fourhop(struct timeval);
 
-void circuit_free(circuit_t *circ);
 int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static int marked_for_close;
@@ -153,7 +153,7 @@ test_circuitstats_hoplen(void *arg)
   tt_int_op(get_circuit_build_times()->total_build_times, OP_EQ, 1);
   tt_int_op(marked_for_close, OP_EQ, 1);
 
-  circuit_free(TO_CIRCUIT(fourhop));
+  circuit_free_(TO_CIRCUIT(fourhop));
   circuit_build_times_reset(get_circuit_build_times_mutable());
 
   // Test 2: Add a threehop circuit for non-relaxed timeouts
@@ -168,7 +168,7 @@ test_circuitstats_hoplen(void *arg)
   tt_int_op(TO_CIRCUIT(fourhop)->purpose, OP_NE,
             CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT);
 
-  circuit_free((circuit_t *)fourhop);
+  circuit_free_((circuit_t *)fourhop);
   circuit_build_times_reset(get_circuit_build_times_mutable());
 
   /* Test 3: This circuit should now time out and get marked as a
@@ -184,8 +184,8 @@ test_circuitstats_hoplen(void *arg)
 
  done:
   UNMOCK(circuit_mark_for_close_);
-  circuit_free(TO_CIRCUIT(threehop));
-  circuit_free(TO_CIRCUIT(fourhop));
+  circuit_free_(TO_CIRCUIT(threehop));
+  circuit_free_(TO_CIRCUIT(fourhop));
   circuit_build_times_free_timeouts(get_circuit_build_times_mutable());
 }
 
