@@ -1,0 +1,4 @@
+  o Code simplification and refactoring (circuit rendezvous):
+    - Split get rendezvous circuit on client side on two different functions.
+      One that returns only established circuits and another that returns all
+      kinds of circuits. Closes ticket 23459.
