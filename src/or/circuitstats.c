@@ -36,6 +36,8 @@
 #include "rendclient.h"
 #include "rendservice.h"
 #include "statefile.h"
+#include "circuitlist.h"
+#include "circuituse.h"
 
 #undef log
 #include <math.h>
@@ -43,6 +45,7 @@
 static void cbt_control_event_buildtimeout_set(
                                   const circuit_build_times_t *cbt,
                                   buildtimeout_set_event_t type);
+static void circuit_build_times_scale_circ_counts(circuit_build_times_t *cbt);
 
 #define CBT_BIN_TO_MS(bin) ((bin)*CBT_BIN_WIDTH + (CBT_BIN_WIDTH/2))
 
@@ -540,6 +543,11 @@ circuit_build_times_reset(circuit_build_times_t *cbt)
   cbt->total_build_times = 0;
   cbt->build_times_idx = 0;
   cbt->have_computed_timeout = 0;
+
+  // Reset timeout and close counts
+  cbt->num_circ_succeeded = 0;
+  cbt->num_circ_closed = 0;
+  cbt->num_circ_timeouts = 0;
 }
 
 /**
@@ -614,6 +622,123 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
           "Total: %d", n, cbt->build_times_idx, cbt->total_build_times);
 }
 #endif /* 0 */
+
+/**
+ * Mark this circuit as timed out, but change its purpose
+ * so that it continues to build, allowing us to measure
+ * its full build time.
+ */
+void
+circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ)
+{
+  control_event_circuit_status(circ,
+                               CIRC_EVENT_FAILED,
+                               END_CIRC_REASON_TIMEOUT);
+  circuit_change_purpose(TO_CIRCUIT(circ),
+                         CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT);
+  /* Record this event to check for too many timeouts
+   * in a row. This function does not record a time value yet
+   * (we do that later); it only counts the fact that we did
+   * have a timeout. We also want to avoid double-counting
+   * already "relaxed" circuits, which are counted in
+   * circuit_expire_building(). */
+  if (!circ->relaxed_timeout) {
+    int first_hop_succeeded = circ->cpath &&
+          circ->cpath->state == CPATH_STATE_OPEN;
+
+    circuit_build_times_count_timeout(
+                                 get_circuit_build_times_mutable(),
+                                 first_hop_succeeded);
+  }
+}
+
+/**
+ * Perform the build time work that needs to be done when a circuit
+ * completes a hop.
+ *
+ * This function decides if we should record a circuit's build time
+ * in our histogram data and other statistics, and if so, records it.
+ * It also will mark circuits that have already timed out as
+ * measurement-only circuits, so they can continue to build but
+ * not get used.
+ *
+ * For this, we want to consider circuits that will eventually make
+ * it to the third hop. For circuits longer than 3 hops, we want to
+ * record their build time when they reach the third hop, but let
+ * them continue (and not count them later). For circuits that are
+ * exactly 3 hops, this will count them when they are completed. We
+ * do this so that CBT is always gathering statistics on circuits
+ * of the same length, regardless of their type.
+ */
+void
+circuit_build_times_handle_completed_hop(origin_circuit_t *circ)
+{
+  struct timeval end;
+  long timediff;
+
+  /* If circuit build times are disabled, let circuit_expire_building()
+   * handle it.. */
+  if (circuit_build_times_disabled(get_options())) {
+    return;
+  }
+
+  /* Is this a circuit for which the timeout applies in a straight-forward
+   * way? If so, handle it below. If not, just return (and let
+   * circuit_expire_building() eventually take care of it).
+   */
+  if (!circuit_timeout_want_to_count_circ(circ)) {
+    return;
+  }
+
+  tor_gettimeofday(&end);
+  timediff = tv_mdiff(&circ->base_.timestamp_began, &end);
+
+  /* Check if we would have timed out already. If so, change the
+   * purpose here. But don't do any timeout handling here if there
+   * are no circuits opened yet. Save it for circuit_expire_building()
+   * (to allow it to handle timeout "relaxing" over there). */
+  if (timediff > get_circuit_build_timeout_ms() &&
+      circuit_any_opened_circuits_cached()) {
+
+    /* Circuits are allowed to last longer for measurement.
+     * Switch their purpose and wait. */
+    if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+      log_info(LD_CIRC,
+               "Deciding to timeout circuit "U64_FORMAT"\n",
+               U64_PRINTF_ARG(circ->global_identifier));
+      circuit_build_times_mark_circ_as_measurement_only(circ);
+    }
+  }
+
+  /* If the circuit is built to exactly the DEFAULT_ROUTE_LEN,
+   * add it to our buildtimes. */
+  if (circuit_get_cpath_opened_len(circ) == DEFAULT_ROUTE_LEN) {
+    /* If the circuit build time is much greater than we would have cut
+     * it off at, we probably had a suspend event along this codepath,
+     * and we should discard the value.
+     */
+    if (timediff < 0 ||
+        timediff > 2*get_circuit_build_close_time_ms()+1000) {
+      log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
+                 "Assuming clock jump. Purpose %d (%s)", timediff,
+                 circ->base_.purpose,
+                 circuit_purpose_to_string(circ->base_.purpose));
+    } else {
+      /* Only count circuit times if the network is live */
+      if (circuit_build_times_network_check_live(
+                            get_circuit_build_times())) {
+        circuit_build_times_add_time(get_circuit_build_times_mutable(),
+                                     (build_time_t)timediff);
+        circuit_build_times_set_timeout(get_circuit_build_times_mutable());
+      }
+
+      if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+        circuit_build_times_network_circ_success(
+                                      get_circuit_build_times_mutable());
+      }
+    }
+  }
+}
 
 /**
  * Add a new build time value <b>time</b> to the set of build times. Time
@@ -1290,8 +1415,31 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 }
 
 /**
- * Called to indicate that we completed a circuit. Because this circuit
+ * Non-destructively scale all of our circuit success, timeout, and close
+ * counts down by a factor of two. Scaling in this way preserves the
+ * ratios between succeeded vs timed out vs closed circuits, so that
+ * our statistics don't change when we scale.
+ *
+ * This is used only in the rare event that we build more than
+ * INT32_MAX circuits.  Since the num_circ_* variables are
+ * uint32_t, we won't even be close to overflowing them.
+ */
+void
+circuit_build_times_scale_circ_counts(circuit_build_times_t *cbt)
+{
+  cbt->num_circ_succeeded /= 2;
+  cbt->num_circ_timeouts /= 2;
+  cbt->num_circ_closed /= 2;
+}
+
+/**
+ * Called to indicate that we "completed" a circuit. Because this circuit
  * succeeded, it doesn't count as a timeout-after-the-first-hop.
+ *
+ * (For the purposes of the cbt code, we consider a circuit "completed" if
+ * it has 3 hops, regardless of its final hop count. We do this because
+ * we're trying to answer the question, "how long should a circuit take to
+ * reach the 3-hop count".)
  *
  * This is used by circuit_build_times_network_check_changed() to determine
  * if we had too many recent timeouts and need to reset our learned timeout
@@ -1300,6 +1448,14 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 void
 circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
 {
+  // Count circuit success
+  cbt->num_circ_succeeded++;
+
+  // If we're going to wrap int32, scale everything
+  if (cbt->num_circ_succeeded >= INT32_MAX) {
+    circuit_build_times_scale_circ_counts(cbt);
+  }
+
   /* Check for NULLness because we might not be using adaptive timeouts */
   if (cbt->liveness.timeouts_after_firsthop &&
       cbt->liveness.num_recent_circs > 0) {
@@ -1322,6 +1478,14 @@ static void
 circuit_build_times_network_timeout(circuit_build_times_t *cbt,
                                     int did_onehop)
 {
+  // Count circuit timeout
+  cbt->num_circ_timeouts++;
+
+  // If we're going to wrap int32, scale everything
+  if (cbt->num_circ_timeouts >= INT32_MAX) {
+    circuit_build_times_scale_circ_counts(cbt);
+  }
+
   /* Check for NULLness because we might not be using adaptive timeouts */
   if (cbt->liveness.timeouts_after_firsthop &&
       cbt->liveness.num_recent_circs > 0) {
@@ -1347,6 +1511,15 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
                                     int did_onehop, time_t start_time)
 {
   time_t now = time(NULL);
+
+  // Count circuit close
+  cbt->num_circ_closed++;
+
+  // If we're going to wrap int32, scale everything
+  if (cbt->num_circ_closed >= INT32_MAX) {
+    circuit_build_times_scale_circ_counts(cbt);
+  }
+
   /*
    * Check if this is a timeout that was for a circuit that spent its
    * entire existence during a time where we have had no network activity.
@@ -1701,6 +1874,8 @@ cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
 {
   char *args = NULL;
   double qnt;
+  double timeout_rate = 0.0;
+  double close_rate = 0.0;
 
   switch (type) {
     case BUILDTIMEOUT_SET_EVENT_RESET:
@@ -1715,15 +1890,29 @@ cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
       break;
   }
 
+  /* The timeout rate is the ratio of the timeout count over
+   * the total number of circuits attempted. The total number of
+   * circuits is (timeouts+succeeded+closed), since a circuit can
+   * either timeout, close, or succeed. We cast the denominator
+   * to promote it to double before the addition, to avoid int32
+   * overflow. */
+  const double total_circuits =
+    ((double)cbt->num_circ_timeouts) + cbt->num_circ_succeeded
+       + cbt->num_circ_closed;
+  if (total_circuits >= 1.0) {
+    timeout_rate = cbt->num_circ_timeouts / total_circuits;
+    close_rate = cbt->num_circ_closed / total_circuits;
+  }
+
   tor_asprintf(&args, "TOTAL_TIMES=%lu "
                "TIMEOUT_MS=%lu XM=%lu ALPHA=%f CUTOFF_QUANTILE=%f "
                "TIMEOUT_RATE=%f CLOSE_MS=%lu CLOSE_RATE=%f",
                (unsigned long)cbt->total_build_times,
                (unsigned long)cbt->timeout_ms,
                (unsigned long)cbt->Xm, cbt->alpha, qnt,
-               circuit_build_times_timeout_rate(cbt),
+               timeout_rate,
                (unsigned long)cbt->close_ms,
-               circuit_build_times_close_rate(cbt));
+               close_rate);
 
   control_event_buildtimeout_set(type, args);
 

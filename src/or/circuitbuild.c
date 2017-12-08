@@ -75,7 +75,7 @@ static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit,
                                  int is_hs_v3_rp_circuit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
-static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
+STATIC int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
 static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
@@ -824,16 +824,25 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
   return networkstatus_get_param(NULL, "usecreatefast", 0, 0, 1);
 }
 
-/** Return true if <b>circ</b> is the type of circuit we want to count
- * timeouts from. In particular, we want it to have not completed yet
- * (already completing indicates we cannibalized it), and we want it to
- * have exactly three hops.
+/**
+ * Return true if <b>circ</b> is the type of circuit we want to count
+ * timeouts from.
+ *
+ * In particular, we want to consider any circuit that plans to build
+ * at least 3 hops (but maybe more), but has 3 or fewer hops built
+ * so far.
+ *
+ * We still want to consider circuits before 3 hops, because we need
+ * to decide if we should convert them to a measurement circuit in
+ * circuit_build_times_handle_completed_hop(), rather than letting
+ * slow circuits get killed right away.
  */
 int
-circuit_timeout_want_to_count_circ(origin_circuit_t *circ)
+circuit_timeout_want_to_count_circ(const origin_circuit_t *circ)
 {
   return !circ->has_opened
-          && circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN;
+          && circ->build_state->desired_path_len >= DEFAULT_ROUTE_LEN
+          && circuit_get_cpath_opened_len(circ) <= DEFAULT_ROUTE_LEN;
 }
 
 /** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
@@ -937,7 +946,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
 
   tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
   tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
+
   crypt_path_t *hop = onion_next_hop_in_cpath(circ->cpath);
+  circuit_build_times_handle_completed_hop(circ);
 
   if (hop) {
     /* Case two: we're on a hop after the first. */
@@ -1052,38 +1063,6 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
    * I think I got them right, but more checking would be wise. -NM
    */
 
-  if (circuit_timeout_want_to_count_circ(circ)) {
-    struct timeval end;
-    long timediff;
-    tor_gettimeofday(&end);
-    timediff = tv_mdiff(&circ->base_.timestamp_began, &end);
-
-    /*
-     * If the circuit build time is much greater than we would have cut
-     * it off at, we probably had a suspend event along this codepath,
-     * and we should discard the value.
-     */
-    if (timediff < 0 ||
-        timediff > 2*get_circuit_build_close_time_ms()+1000) {
-      log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
-                 "Assuming clock jump. Purpose %d (%s)", timediff,
-                 circ->base_.purpose,
-                 circuit_purpose_to_string(circ->base_.purpose));
-    } else if (!circuit_build_times_disabled(get_options())) {
-      /* Only count circuit times if the network is live */
-      if (circuit_build_times_network_check_live(
-                                                 get_circuit_build_times())) {
-        circuit_build_times_add_time(get_circuit_build_times_mutable(),
-                                     (build_time_t)timediff);
-        circuit_build_times_set_timeout(get_circuit_build_times_mutable());
-      }
-
-      if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
-        circuit_build_times_network_circ_success(
-                                      get_circuit_build_times_mutable());
-      }
-    }
-  }
   log_info(LD_CIRC,"circuit built!");
   circuit_reset_failure_count(0);
 
@@ -2606,7 +2585,7 @@ onion_extend_cpath(origin_circuit_t *circ)
 /** Create a new hop, annotate it with information about its
  * corresponding router <b>choice</b>, and append it to the
  * end of the cpath <b>head_ptr</b>. */
-static int
+STATIC int
 onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 {
   crypt_path_t *hop = tor_malloc_zero(sizeof(crypt_path_t));

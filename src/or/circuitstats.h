@@ -34,6 +34,7 @@ void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
                                  build_time_t time);
 int circuit_build_times_needs_circuits(const circuit_build_times_t *cbt);
+void circuit_build_times_handle_completed_hop(origin_circuit_t *circ);
 
 int circuit_build_times_needs_circuits_now(const circuit_build_times_t *cbt);
 void circuit_build_times_init(circuit_build_times_t *cbt);
@@ -44,6 +45,7 @@ double circuit_build_times_timeout_rate(const circuit_build_times_t *cbt);
 double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 
 void circuit_build_times_update_last_circ(circuit_build_times_t *cbt);
+void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
 
 #ifdef CIRCUITSTATS_PRIVATE
 STATIC double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
@@ -94,6 +96,16 @@ struct circuit_build_times_s {
   double timeout_ms;
   /** How long we wait before actually closing the circuit. */
   double close_ms;
+  /** Total succeeded counts. Old measurements may be scaled downward if
+   * we've seen a lot of circuits. */
+  uint32_t num_circ_succeeded;
+  /** Total timeout counts.  Old measurements may be scaled downward if
+   * we've seen a lot of circuits. */
+  uint32_t num_circ_timeouts;
+  /** Total closed counts.  Old measurements may be scaled downward if
+   * we've seen a lot of circuits.*/
+  uint32_t num_circ_closed;
+
 };
 #endif /* defined(CIRCUITSTATS_PRIVATE) */
 

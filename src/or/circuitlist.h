@@ -17,6 +17,10 @@
 
 MOCK_DECL(smartlist_t *, circuit_get_global_list, (void));
 smartlist_t *circuit_get_global_origin_circuit_list(void);
+int circuit_any_opened_circuits(void);
+int circuit_any_opened_circuits_cached(void);
+void circuit_cache_opened_circuit_state(int circuits_are_opened);
+
 const char *circuit_state_to_string(int state);
 const char *circuit_purpose_to_controller_string(uint8_t purpose);
 const char *circuit_purpose_to_controller_hs_state_string(uint8_t purpose);
@@ -58,6 +62,7 @@ void circuit_mark_all_dirty_circs_as_unusable(void);
 MOCK_DECL(void, circuit_mark_for_close_, (circuit_t *circ, int reason,
                                           int line, const char *file));
 int circuit_get_cpath_len(origin_circuit_t *circ);
+int circuit_get_cpath_opened_len(const origin_circuit_t *);
 void circuit_clear_cpath(origin_circuit_t *circ);
 crypt_path_t *circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum);
 void circuit_get_all_pending_on_channel(smartlist_t *out,

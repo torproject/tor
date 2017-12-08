@@ -18,6 +18,7 @@ TEST_OBJECTS = test.obj test_addr.obj test_channel.obj test_channeltls.obj \
         test_config.obj test_connection.obj \
 	test_cell_formats.obj test_relay.obj test_replay.obj \
 	test_channelpadding.obj \
+	test_circuitstats.obj \
 	test_scheduler.obj test_introduce.obj test_hs.obj tinytest.obj
 
 tinytest.obj: ..\ext\tinytest.c

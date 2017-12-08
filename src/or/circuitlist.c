@@ -109,6 +109,14 @@ static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
 static void circuit_about_to_free_atexit(circuit_t *circ);
 static void circuit_about_to_free(circuit_t *circ);
 
+/**
+ * A cached value of the current state of the origin circuit list.  Has the
+ * value 1 if we saw any opened circuits recently (since the last call to
+ * circuit_any_opened_circuits(), which gets called around once a second by
+ * circuit_expire_building). 0 otherwise.
+ */
+static int any_opened_circs_cached_val = 0;
+
 /********* END VARIABLES ************/
 
 /** A map from channel and circuit ID to circuit.  (Lookup performance is
@@ -594,6 +602,56 @@ circuit_get_global_origin_circuit_list(void)
   if (NULL == global_origin_circuit_list)
     global_origin_circuit_list = smartlist_new();
   return global_origin_circuit_list;
+}
+
+/**
+ * Return true if we have any opened general-purpose 3 hop
+ * origin circuits.
+ *
+ * The result from this function is cached for use by
+ * circuit_any_opened_circuits_cached().
+ */
+int
+circuit_any_opened_circuits(void)
+{
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_origin_circuit_list(),
+          const origin_circuit_t *, next_circ) {
+    if (!TO_CIRCUIT(next_circ)->marked_for_close &&
+        next_circ->has_opened &&
+        TO_CIRCUIT(next_circ)->state == CIRCUIT_STATE_OPEN &&
+        TO_CIRCUIT(next_circ)->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT &&
+        next_circ->build_state &&
+        next_circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN) {
+      circuit_cache_opened_circuit_state(1);
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(next_circ);
+
+  circuit_cache_opened_circuit_state(0);
+  return 0;
+}
+
+/**
+ * Cache the "any circuits opened" state, as specified in param
+ * circuits_are_opened. This is a helper function to update
+ * the circuit opened status whenever we happen to look at the
+ * circuit list.
+ */
+void
+circuit_cache_opened_circuit_state(int circuits_are_opened)
+{
+  any_opened_circs_cached_val = circuits_are_opened;
+}
+
+/**
+ * Return true if there were any opened circuits since the last call to
+ * circuit_any_opened_circuits(), or since circuit_expire_building() last
+ * ran (it runs roughly once per second).
+ */
+int
+circuit_any_opened_circuits_cached(void)
+{
+  return any_opened_circs_cached_val;
 }
 
 /** Function to make circ-\>state human-readable */
@@ -1781,6 +1839,25 @@ circuit_get_cpath_len(origin_circuit_t *circ)
   if (circ && circ->cpath) {
     crypt_path_t *cpath, *cpath_next = NULL;
     for (cpath = circ->cpath; cpath_next != circ->cpath; cpath = cpath_next) {
+      cpath_next = cpath->next;
+      ++n;
+    }
+  }
+  return n;
+}
+
+/** Return the number of opened hops in circuit's path.
+ * If circ has no entries, or is NULL, returns 0. */
+int
+circuit_get_cpath_opened_len(const origin_circuit_t *circ)
+{
+  int n = 0;
+  if (circ && circ->cpath) {
+    crypt_path_t *cpath, *cpath_next = NULL;
+    for (cpath = circ->cpath;
+         cpath->state == CPATH_STATE_OPEN
+           && cpath_next != circ->cpath;
+         cpath = cpath_next) {
       cpath_next = cpath->next;
       ++n;
     }

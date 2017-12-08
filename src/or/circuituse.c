@@ -412,8 +412,17 @@ circuit_conforms_to_options(const origin_circuit_t *circ,
 }
 #endif /* 0 */
 
-/** Close all circuits that start at us, aren't open, and were born
+/**
+ * Close all circuits that start at us, aren't open, and were born
  * at least CircuitBuildTimeout seconds ago.
+ *
+ * TODO: This function is now partially redundant to
+ * circuit_build_times_handle_completed_hop(), but that function only
+ * covers circuits up to and including 3 hops that are still actually
+ * completing hops. However, circuit_expire_building() also handles longer
+ * circuits, as well as circuits that are completely stalled.
+ * In the future (after prop247/other path selection revamping), we probably
+ * want to eliminate this rats nest in favor of a simpler approach.
  */
 void
 circuit_expire_building(void)
@@ -435,21 +444,7 @@ circuit_expire_building(void)
    * we want to be more lenient with timeouts, in case the
    * user has relocated and/or changed network connections.
    * See bug #3443. */
-  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, next_circ) {
-    if (!CIRCUIT_IS_ORIGIN(next_circ) || /* didn't originate here */
-        next_circ->marked_for_close) { /* don't mess with marked circs */
-      continue;
-    }
-
-    if (TO_ORIGIN_CIRCUIT(next_circ)->has_opened &&
-        next_circ->state == CIRCUIT_STATE_OPEN &&
-        TO_ORIGIN_CIRCUIT(next_circ)->build_state &&
-        TO_ORIGIN_CIRCUIT(next_circ)->build_state->desired_path_len
-          == DEFAULT_ROUTE_LEN) {
-      any_opened_circs = 1;
-      break;
-    }
-  } SMARTLIST_FOREACH_END(next_circ);
+  any_opened_circs = circuit_any_opened_circuits();
 
 #define SET_CUTOFF(target, msec) do {                       \
     long ms = tor_lround(msec);                             \
@@ -492,6 +487,10 @@ circuit_expire_building(void)
    */
   SET_CUTOFF(general_cutoff, get_circuit_build_timeout_ms());
   SET_CUTOFF(begindir_cutoff, get_circuit_build_timeout_ms());
+
+  // TODO: We should probably use route_len_for_purpose() here instead,
+  // except that does not count the extra round trip for things like server
+  // intros and rends.
 
   /* > 3hop circs seem to have a 1.0 second delay on their cannibalized
    * 4th hop. */
@@ -585,7 +584,8 @@ circuit_expire_building(void)
                    TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
                    -1,
                  circuit_state_to_string(victim->state),
-                 channel_state_to_string(victim->n_chan->state));
+                 victim->n_chan ?
+                    channel_state_to_string(victim->n_chan->state) : "none");
 
           /* We count the timeout here for CBT, because technically this
            * was a timeout, and the timeout value needs to reset if we
@@ -610,7 +610,8 @@ circuit_expire_building(void)
                    TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
                    -1,
                  circuit_state_to_string(victim->state),
-                 channel_state_to_string(victim->n_chan->state),
+                 victim->n_chan ?
+                    channel_state_to_string(victim->n_chan->state) : "none",
                  (long)build_close_ms);
       }
     }
@@ -694,23 +695,17 @@ circuit_expire_building(void)
 
       if (circuit_timeout_want_to_count_circ(TO_ORIGIN_CIRCUIT(victim)) &&
           circuit_build_times_enough_to_compute(get_circuit_build_times())) {
+
+        log_info(LD_CIRC,
+                   "Deciding to count the timeout for circuit "U64_FORMAT"\n",
+                   U64_PRINTF_ARG(
+                       TO_ORIGIN_CIRCUIT(victim)->global_identifier));
+
         /* Circuits are allowed to last longer for measurement.
          * Switch their purpose and wait. */
         if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
-          control_event_circuit_status(TO_ORIGIN_CIRCUIT(victim),
-                                       CIRC_EVENT_FAILED,
-                                       END_CIRC_REASON_TIMEOUT);
-          circuit_change_purpose(victim, CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT);
-          /* Record this failure to check for too many timeouts
-           * in a row. This function does not record a time value yet
-           * (we do that later); it only counts the fact that we did
-           * have a timeout. We also want to avoid double-counting
-           * already "relaxed" circuits, which are counted above. */
-          if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
-            circuit_build_times_count_timeout(
-                                         get_circuit_build_times_mutable(),
-                                         first_hop_succeeded);
-          }
+          circuit_build_times_mark_circ_as_measurement_only(TO_ORIGIN_CIRCUIT(
+                                                            victim));
           continue;
         }
 

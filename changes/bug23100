@@ -1,0 +1,7 @@
+  o Minor bugfixes (Performance):
+    - Use hidden service circuits (and other circuits longer than 3 hops)
+      to calculate a circuit build timeout. Previously, Tor only calculated
+      its build timeout based on circuits that planned to be exactly 3 hops
+      long. With this change, we include measurements from all circuits at
+      the point where they complete their third hop.  Fixes bug 23100;
+      bugfix on 0.2.2.2-alpha.
