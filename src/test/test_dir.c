@@ -6228,25 +6228,30 @@ test_dir_networkstatus_consensus_has_ipv6(void *arg)
   /* Test the bounds for A lines in the microdesc consensus */
   mock_options->UseMicrodescriptors = 1;
 
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
+  mock_networkstatus->consensus_method =
+      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
 
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS + 1;
+  mock_networkstatus->consensus_method =
+      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS + 1;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
 
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS + 20;
+  mock_networkstatus->consensus_method =
+      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS + 20;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
 
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS - 1;
+  mock_networkstatus->consensus_method =
+      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS - 1;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(!has_ipv6);
 
   /* Test the edge cases */
   mock_options->UseMicrodescriptors = 1;
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
+  mock_networkstatus->consensus_method =
+      MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
 
   /* Reasonably live */
   mock_networkstatus->valid_until = time(NULL) - 60;
