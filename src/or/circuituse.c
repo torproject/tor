@@ -2075,8 +2075,12 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
       int severity = LOG_NOTICE;
       /* Retry some stuff that might help the connection work. */
-      if (entry_list_is_constrained(options) &&
-          guards_retry_optimistic(options)) {
+      /* If we are configured with EntryNodes or UseBridges */
+      if (entry_list_is_constrained(options)) {
+        /* Retry all our guards / bridges.
+         * guards_retry_optimistic() always returns true here. */
+        int rv = guards_retry_optimistic(options);
+        tor_assert_nonfatal_once(rv);
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't %s. "
                "Optimistically trying known %s again.",
@@ -2084,7 +2088,12 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                "used client functionality lately" :
                "received a consensus with exits",
                options->UseBridges ? "bridges" : "entrynodes");
-      } else if (!options->UseBridges || num_bridges_usable() > 0) {
+      } else {
+        /* Getting directory documents doesn't help much if we have a limited
+         * number of guards */
+        tor_assert_nonfatal(!options->UseBridges);
+        tor_assert_nonfatal(!options->EntryNodes);
+        /* Retry our directory fetches, so we have a fresh set of guard info */
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't %s. "
                "Optimistically trying directory fetches again.",
