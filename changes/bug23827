@@ -5,4 +5,4 @@
     - Make IPv6-only clients wait for microdescs for relays, even if we were
       previously using descriptors (or were using them as a bridge) and have
       a cached descriptor for them.
-      Implements #23827.
+      Implements 23827.
