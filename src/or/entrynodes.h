@@ -383,7 +383,7 @@ void entry_guards_note_internet_connectivity(guard_selection_t *gs);
 
 int update_guard_selection_choice(const or_options_t *options);
 
-MOCK_DECL(int,num_bridges_usable,(void));
+MOCK_DECL(int,num_bridges_usable,(int use_maybe_reachable));
 
 #ifdef ENTRYNODES_PRIVATE
 /**

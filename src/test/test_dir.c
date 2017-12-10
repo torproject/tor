@@ -5877,8 +5877,9 @@ mock_networkstatus_consensus_can_use_extra_fallbacks(
 
 static int mock_num_bridges_usable_value = 0;
 static int
-mock_num_bridges_usable(void)
+mock_num_bridges_usable(int use_maybe_reachable)
 {
+  (void)use_maybe_reachable;
   return mock_num_bridges_usable_value;
 }
 
@@ -6031,7 +6032,7 @@ test_dir_find_dl_schedule(void* data)
   /* client */
   mock_options->ClientOnly = 1;
   mock_options->UseBridges = 1;
-  if (num_bridges_usable() > 0) {
+  if (num_bridges_usable(0) > 0) {
     tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
   } else {
     tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge_bootstrap);

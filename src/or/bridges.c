@@ -796,7 +796,11 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
   tor_assert(ri);
   tor_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
   if (get_options()->UseBridges) {
-    int first = num_bridges_usable() <= 1;
+    /* Retry directory downloads whenever we get a bridge descriptor:
+     * - when bootstrapping, and
+     * - when we aren't sure if any of our bridges are reachable.
+     * Keep on retrying until we have at least one reachable bridge. */
+    int first = num_bridges_usable(0) < 1;
     bridge_info_t *bridge = get_configured_bridge_by_routerinfo(ri);
     time_t now = time(NULL);
     router_set_status(ri->cache_info.identity_digest, 1);
@@ -826,8 +830,8 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
-      /* set entry->made_contact so if it goes down we don't drop it from
-       * our entry node list */
+      /* If we didn't have a reachable bridge before this one, try directory
+       * documents again. */
       if (first) {
         routerlist_retry_directory_downloads(now);
       }

@@ -1,7 +1,13 @@
   o Minor bugfixes (bridge clients, bootstrap):
-    - Stop checking for bridge descriptors when we actually want to know if
-      any bridges are usable. This avoids potential bootstrapping issues.
+    - Retry directory downloads when we get our first bridge descriptor
+      during bootstrap or while reconnecting to the network. Keep retrying
+      every time we get a bridge descriptor, until we have a reachable bridge.
       Fixes bug 24367; bugfix on 0.2.0.3-alpha.
-    - Stop stalling when bridges are changed at runtime. Stop stalling when
-      old bridge descriptors are cached, but they are not in use.
-      Fixes bug 24367; bugfix on 23347 in 0.3.2.1-alpha.
+    - Stop delaying bridge descriptor fetches when we have cached bridge
+      descriptors. Instead, only delay bridge descriptor fetches when we
+      have at least one reachable bridge.
+      Fixes bug 24367; bugfix on 0.2.0.3-alpha.
+    - Stop delaying directory fetches when we have cached bridge descriptors.
+      Instead, only delay bridge descriptor fetches when all our bridges are
+      definitely unreachable.
+      Fixes bug 24367; bugfix on 0.2.0.3-alpha.

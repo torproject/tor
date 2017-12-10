@@ -3135,13 +3135,16 @@ entry_list_is_constrained(const or_options_t *options)
 }
 
 /** Return the number of bridges that have descriptors that are marked with
- * purpose 'bridge' and are running.
+ * purpose 'bridge' and are running. If use_maybe_reachable is
+ * true, include bridges that might be reachable in the count.
+ * Otherwise, if it is false, only include bridges that have recently been
+ * found running in the count.
  *
  * We use this function to decide if we're ready to start building
  * circuits through our bridges, or if we need to wait until the
  * directory "server/authority" requests finish. */
 MOCK_IMPL(int,
-num_bridges_usable,(void))
+num_bridges_usable,(int use_maybe_reachable))
 {
   int n_options = 0;
 
@@ -3154,7 +3157,11 @@ num_bridges_usable,(void))
   }
 
   SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
+    /* Definitely not usable */
     if (guard->is_reachable == GUARD_REACHABLE_NO)
+      continue;
+    /* If we want to be really sure the bridges will work, skip maybes */
+    if (!use_maybe_reachable && guard->is_reachable == GUARD_REACHABLE_MAYBE)
       continue;
     if (tor_digest_is_zero(guard->identity))
       continue;
