@@ -1,0 +1,7 @@
+  o Minor bugfixes (hidden service v3):
+    - Fix a race between the circuit close and free where the service would
+      launch a new intro circuit after the close, and then fail to register it
+      before the free of the previously closed circuit. This was making the
+      service unable to find the established intro circuit and thus not upload
+      its descriptor. It can make a service unavailable for up to 24 hours.
+      Fixes bug 23603; bugfix on 0.3.2.1-alpha.
