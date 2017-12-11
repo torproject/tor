@@ -187,14 +187,19 @@ storage_dir_get_usage(storage_dir_t *d)
   return d->usage;
 }
 
-/** Mmap a specified file within <b>d</b>. */
+/** Mmap a specified file within <b>d</b>.
+ *
+ * On failure, return NULL and set errno as for tor_mmap_file(). */
 tor_mmap_t *
 storage_dir_map(storage_dir_t *d, const char *fname)
 {
   char *path = NULL;
   tor_asprintf(&path, "%s/%s", d->directory, fname);
   tor_mmap_t *result = tor_mmap_file(path);
+  int errval = errno;
   tor_free(path);
+  if (result == NULL)
+    errno = errval;
   return result;
 }
 
@@ -364,6 +369,10 @@ storage_dir_save_labeled_to_file(storage_dir_t *d,
  * the data's size into *<b>sz_out</b>. On success, also return a tor_mmap_t
  * object whose contents should not be used -- it needs to be kept around,
  * though, for as long as <b>data_out</b> is going to be valid.
+ *
+ * On failure, set errno as for tor_mmap_file() if the file was missing or
+ * empty, and set errno to EINVAL if the file was not in the labeled
+ * format expected.
  */
 tor_mmap_t *
 storage_dir_map_labeled(storage_dir_t *dir,
@@ -373,13 +382,20 @@ storage_dir_map_labeled(storage_dir_t *dir,
                          size_t *sz_out)
 {
   tor_mmap_t *m = storage_dir_map(dir, fname);
-  if (! m)
+  int errval;
+  if (! m) {
+    errval = errno;
     goto err;
+  }
   const char *nulp = memchr(m->data, '\0', m->size);
-  if (! nulp)
+  if (! nulp) {
+    errval = EINVAL;
     goto err;
-  if (labels_out && config_get_lines(m->data, labels_out, 0) < 0)
+  }
+  if (labels_out && config_get_lines(m->data, labels_out, 0) < 0) {
+    errval = EINVAL;
     goto err;
+  }
   size_t offset = nulp - m->data + 1;
   tor_assert(offset <= m->size);
   *data_out = (const uint8_t *)(m->data + offset);
@@ -388,6 +404,7 @@ storage_dir_map_labeled(storage_dir_t *dir,
   return m;
  err:
   tor_munmap_file(m);
+  errno = errval;
   return NULL;
 }
 
