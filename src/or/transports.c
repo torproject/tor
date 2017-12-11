@@ -1094,8 +1094,6 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
 
   transport = transport_new(&tor_addr, port, method_name,
                             PROXY_NONE, args_string);
-  if (!transport)
-    goto err;
 
   smartlist_add(mp->transports, transport);
 
@@ -1186,8 +1184,6 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   }
 
   transport = transport_new(&tor_addr, port, method_name, socks_ver, NULL);
-  if (!transport)
-    goto err;
 
   smartlist_add(mp->transports, transport);
 
