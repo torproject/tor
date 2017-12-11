@@ -825,7 +825,7 @@ test_closing_intro_circs(void *arg)
   /* Now pretend we are freeing this intro circuit. We want to see that our
    * destructor is not gonna kill our intro point structure since that's the
    * job of the cleanup routine. */
-  circuit_free(TO_CIRCUIT(intro_circ));
+  circuit_free_(TO_CIRCUIT(intro_circ));
   intro_circ = NULL;
   entry = service_intro_point_find(service, &ip->auth_key_kp.pubkey);
   tt_assert(entry);
@@ -857,7 +857,7 @@ test_closing_intro_circs(void *arg)
 
  done:
   if (intro_circ) {
-    circuit_free(TO_CIRCUIT(intro_circ));
+    circuit_free_(TO_CIRCUIT(intro_circ));
   }
   /* Frees the service object. */
   hs_free_all();
