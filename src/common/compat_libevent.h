@@ -52,6 +52,7 @@ const char *tor_libevent_get_method(void);
 void tor_check_libevent_header_compatibility(void);
 const char *tor_libevent_get_version_str(void);
 const char *tor_libevent_get_header_version_str(void);
+void tor_libevent_free_all(void);
 
 int tor_init_libevent_rng(void);
 

@@ -237,6 +237,16 @@ tor_init_libevent_rng(void)
   return rv;
 }
 
+/**
+ * Un-initialize libevent in preparation for an exit
+ */
+void
+tor_libevent_free_all(void)
+{
+  event_base_free(the_event_base);
+  the_event_base = NULL;
+}
+
 #if defined(LIBEVENT_VERSION_NUMBER) &&         \
   LIBEVENT_VERSION_NUMBER >= V(2,1,1) &&        \
   !defined(TOR_UNIT_TESTS)
