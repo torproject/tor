@@ -1,0 +1,7 @@
+  o Minor bugfixes (network layer):
+    - When closing a connection via close_connection_immediately(), we
+      mark it as "not blocked on bandwidth", to prevent later calls
+      from trying to unblock it, and give it permission to read. This
+      fixes a backtrace warning that can happen on relays under various
+      circumstances. Fixes bug 24167; bugfix on 0.1.0.1-rc.
+
