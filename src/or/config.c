@@ -403,6 +403,7 @@ static config_var_t option_vars_[] = {
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
   V(TruncateLogFile,             BOOL,     "0"),
   V(SyslogIdentityTag,           STRING,   NULL),
+  V(AndroidIdentityTag,          STRING,   NULL),
   V(LongLivedPorts,              CSV,
         "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
@@ -4692,6 +4693,12 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
+  if (!opt_streq(old->AndroidIdentityTag, new_val->AndroidIdentityTag)) {
+    *msg = tor_strdup("While Tor is running, changing "
+                      "AndroidIdentityTag is not allowed.");
+    return -1;
+  }
+
   if ((old->HardwareAccel != new_val->HardwareAccel)
       || !opt_streq(old->AccelName, new_val->AccelName)
       || !opt_streq(old->AccelDir, new_val->AccelDir)) {
@@ -5741,6 +5748,18 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
 #else
         log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
 #endif /* defined(HAVE_SYSLOG_H) */
+        goto cleanup;
+      }
+
+      if (!strcasecmp(smartlist_get(elts, 0), "android")) {
+#ifdef HAVE_ANDROID_LOG_H
+        if (!validate_only) {
+          add_android_log(severity, options->AndroidIdentityTag);
+        }
+#else
+        log_warn(LD_CONFIG, "Android logging is not supported"
+                            " on this system. Sorry.");
+#endif // HAVE_ANDROID_LOG_H.
         goto cleanup;
       }
     }

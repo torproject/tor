@@ -204,6 +204,20 @@ if test x$enable_event_tracing_debug = xyes; then
   AC_DEFINE([TOR_EVENT_TRACING_ENABLED], [1], [Compile the event tracing instrumentation])
 fi
 
+dnl Enable Android only features.
+AC_ARG_ENABLE(android,
+     AS_HELP_STRING(--enable-android, [build with Android features enabled]))
+AM_CONDITIONAL([USE_ANDROID], [test "x$enable_android" = "xyes"])
+
+if test "x$enable_android" = "xyes"; then
+  AC_DEFINE([USE_ANDROID], [1], [Compile with Android specific features enabled])
+
+  dnl Check if the Android log library is available.
+  AC_CHECK_HEADERS([android/log.h])
+  AC_SEARCH_LIBS(__android_log_write, [log])
+
+fi
+
 dnl check for the correct "ar" when cross-compiling.
 dnl   (AM_PROG_AR was new in automake 1.11.2, which we do not yet require,
 dnl    so kludge up a replacement for the case where it isn't there yet.)
