@@ -5038,6 +5038,11 @@ launch_descriptor_downloads(int purpose,
       log_debug(LD_DIR,
                 "There are enough downloadable %ss to launch requests.",
                 descname);
+    } else if (! router_have_minimum_dir_info()) {
+      log_debug(LD_DIR,
+                "We are only missing %d %ss, but we'll fetch anyway, since "
+                "we don't yet have enough directory info.",
+                n_downloadable, descname);
     } else {
 
       /* should delay */

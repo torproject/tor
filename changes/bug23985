@@ -1,0 +1,9 @@
+  o Minor bugfixes (bootstrapping):
+    - Fetch descriptors aggressively whenever we lack enough
+      to build circuits, regardless of how many descriptors we are missing.
+      Previously, we would delay launching the fetch when we had fewer than
+      15 missing descriptors, even if some of those descriptors were
+      blocking circuits from building. Fixes bug 23985; bugfix on
+      0.1.1.11-alpha. The effects of this bug became worse in 0.3.0.3-alpha,
+      when we began treating missing descriptors from our primary guards
+      as a reason to delay circuits.
