@@ -2437,7 +2437,7 @@ mark_my_descriptor_dirty(const char *reason)
 /** How frequently will we republish our descriptor because of large (factor
  * of 2) shifts in estimated bandwidth? Note: We don't use this constant
  * if our previous bandwidth estimate was exactly 0. */
-#define MAX_BANDWIDTH_CHANGE_FREQ (20*60)
+#define MAX_BANDWIDTH_CHANGE_FREQ (3*60*60)
 
 /** Check whether bandwidth has changed a lot since the last time we announced
  * bandwidth. If so, mark our descriptor dirty. */
