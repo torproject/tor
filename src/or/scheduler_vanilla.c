@@ -90,11 +90,6 @@ vanilla_scheduler_run(void)
       if (flushed < n_cells) {
         /* We ran out of cells to flush */
         scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-        log_debug(LD_SCHED,
-                  "Channel " U64_FORMAT " at %p "
-                  "entered waiting_for_cells from pending",
-                  U64_PRINTF_ARG(chan->global_identifier),
-                  chan);
       } else {
         /* The channel may still have some cells */
         if (channel_more_to_flush(chan)) {
@@ -111,11 +106,6 @@ vanilla_scheduler_run(void)
           } else {
             /* It's waiting to be able to write more */
             scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
-            log_debug(LD_SCHED,
-                      "Channel " U64_FORMAT " at %p "
-                      "entered waiting_to_write from pending",
-                      U64_PRINTF_ARG(chan->global_identifier),
-                      chan);
           }
         } else {
           /* No cells left; it can go to idle or waiting_for_cells */
@@ -125,22 +115,12 @@ vanilla_scheduler_run(void)
              * waiting_for_cells
              */
             scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-            log_debug(LD_SCHED,
-                      "Channel " U64_FORMAT " at %p "
-                      "entered waiting_for_cells from pending",
-                      U64_PRINTF_ARG(chan->global_identifier),
-                      chan);
           } else {
             /*
              * We exactly filled up the output queue with all available
              * cells; go to idle.
              */
             scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
-            log_debug(LD_SCHED,
-                      "Channel " U64_FORMAT " at %p "
-                      "become idle from pending",
-                      U64_PRINTF_ARG(chan->global_identifier),
-                      chan);
           }
         }
       }

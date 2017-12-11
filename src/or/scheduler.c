@@ -528,10 +528,6 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
                             offsetof(channel_t, sched_heap_idx),
                             chan);
     scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
-    log_debug(LD_SCHED,
-              "Channel " U64_FORMAT " at %p went from pending "
-              "to waiting_to_write",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
   } else {
     /*
      * It's not in pending, so it can't become waiting_to_write; it's
@@ -540,9 +536,6 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
      */
     if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
       scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
-      log_debug(LD_SCHED,
-                "Channel " U64_FORMAT " at %p left waiting_for_cells",
-                U64_PRINTF_ARG(chan->global_identifier), chan);
     }
   }
 }
@@ -570,10 +563,6 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
                          scheduler_compare_channels,
                          offsetof(channel_t, sched_heap_idx),
                          chan);
-    log_debug(LD_SCHED,
-              "Channel " U64_FORMAT " at %p went from waiting_for_cells "
-              "to pending",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
     /* If we made a channel pending, we potentially have scheduling work to
      * do. */
     the_scheduler->schedule();
@@ -586,9 +575,6 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
     if (!(chan->scheduler_state == SCHED_CHAN_WAITING_TO_WRITE ||
           chan->scheduler_state == SCHED_CHAN_PENDING)) {
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
-      log_debug(LD_SCHED,
-                "Channel " U64_FORMAT " at %p entered waiting_to_write",
-                U64_PRINTF_ARG(chan->global_identifier), chan);
     }
   }
 }
@@ -691,17 +677,11 @@ scheduler_channel_wants_writes(channel_t *chan)
     /*
      * It can write now, so it goes to channels_pending.
      */
-    log_debug(LD_SCHED, "chan=%" PRIu64 " became pending",
-        chan->global_identifier);
     smartlist_pqueue_add(channels_pending,
                          scheduler_compare_channels,
                          offsetof(channel_t, sched_heap_idx),
                          chan);
     scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
-    log_debug(LD_SCHED,
-              "Channel " U64_FORMAT " at %p went from waiting_to_write "
-              "to pending",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
     /* We just made a channel pending, we have scheduling work to do. */
     the_scheduler->schedule();
   } else {
@@ -712,9 +692,6 @@ scheduler_channel_wants_writes(channel_t *chan)
     if (!(chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS ||
           chan->scheduler_state == SCHED_CHAN_PENDING)) {
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-      log_debug(LD_SCHED,
-                "Channel " U64_FORMAT " at %p entered waiting_for_cells",
-                U64_PRINTF_ARG(chan->global_identifier), chan);
     }
   }
 }

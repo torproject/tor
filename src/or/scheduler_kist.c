@@ -660,15 +660,11 @@ kist_scheduler_run(void)
        * starts having serious throughput issues. Best done in shadow/chutney.
        */
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-      log_debug(LD_SCHED, "chan=%" PRIu64 " now waiting_for_cells",
-                chan->global_identifier);
     } else if (!channel_more_to_flush(chan)) {
 
       /* Case 2: no more cells to send, but still open for writes */
 
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
-      log_debug(LD_SCHED, "chan=%" PRIu64 " now waiting_for_cells",
-                chan->global_identifier);
     } else if (!socket_can_write(&socket_table, chan)) {
 
       /* Case 3: cells to send, but cannot write */
@@ -685,8 +681,6 @@ kist_scheduler_run(void)
         to_readd = smartlist_new();
       }
       smartlist_add(to_readd, chan);
-      log_debug(LD_SCHED, "chan=%" PRIu64 " now waiting_to_write",
-                chan->global_identifier);
     } else {
 
       /* Case 4: cells to send, and still open for writes */
