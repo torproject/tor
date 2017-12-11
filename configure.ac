@@ -506,6 +506,7 @@ AC_CHECK_FUNCS(
         llround \
         localtime_r \
         lround \
+	mach_approximate_time \
         memmem \
         memset_s \
 	pipe \

@@ -65,6 +65,9 @@ typedef struct monotime_t {
 typedef struct monotime_coarse_t {
   uint64_t tick_count_;
 } monotime_coarse_t;
+#elif defined(__APPLE__) && defined(HAVE_MACH_APPROXIMATE_TIME)
+#define MONOTIME_COARSE_FN_IS_DIFFERENT
+#define monotime_coarse_t monotime_t
 #else
 #define monotime_coarse_t monotime_t
 #endif /* defined(CLOCK_MONOTONIC_COARSE) && ... || ... */

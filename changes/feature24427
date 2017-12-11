@@ -1,0 +1,5 @@
+  o Minor features (OSX, iOS, performance):
+    - Use the mach_approximate_time() function (when available) to
+      implement coarse monotonic time. Having a coarse time function
+      should avoid a large number of system calls, and improve
+      performance slightly, especially under load. Closes ticket 24427.
