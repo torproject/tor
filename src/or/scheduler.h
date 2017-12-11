@@ -145,6 +145,7 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
  *********************************/
 
 void scheduler_set_channel_state(channel_t *chan, int new_state);
+const char *get_scheduler_state_string(int scheduler_state);
 
 /* Triggers a BUG() and extra information with chan if available. */
 #define SCHED_BUG(cond, chan) \

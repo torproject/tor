@@ -627,11 +627,11 @@ kist_scheduler_run(void)
         log_debug(LD_SCHED,
                  "We didn't flush anything on a chan that we think "
                  "can write and wants to write. The channel's state is '%s' "
-                 "and in scheduler state %d. We're going to mark it as "
+                 "and in scheduler state '%s'. We're going to mark it as "
                  "waiting_for_cells (as that's most likely the issue) and "
                  "stop scheduling it this round.",
                  channel_state_to_string(chan->state),
-                 chan->scheduler_state);
+                 get_scheduler_state_string(chan->scheduler_state));
         scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
         continue;
       }
