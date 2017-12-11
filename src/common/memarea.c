@@ -322,7 +322,7 @@ memarea_new(void)
   return ma;
 }
 void
-memarea_drop_all(memarea_t *area)
+memarea_drop_all_(memarea_t *area)
 {
   memarea_clear(area);
   smartlist_free(area->pieces);
