@@ -264,10 +264,13 @@ update_socket_info_impl, (socket_table_ent_t *ent))
    *                                         ^ ((cwnd * mss) * factor) bytes
    */
 
-   /* Assuming all these values from the kernel are uint32_t still, they will
-   * always fit into a int64_t tcp_space variable. */
-  tcp_space = (ent->cwnd - ent->unacked) * (int64_t)ent->mss;
-  if (tcp_space < 0) {
+  /* These values from the kernel are uint32_t, they will always fit into a
+   * int64_t tcp_space variable but if the congestion window cwnd is smaller
+   * than the unacked packets, the remaining TCP space is set to 0 so we don't
+   * write more on this channel. */
+  if (ent->cwnd >= ent->unacked) {
+    tcp_space = (ent->cwnd - ent->unacked) * (int64_t)(ent->mss);
+  } else {
     tcp_space = 0;
   }
 
