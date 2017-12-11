@@ -2592,11 +2592,11 @@ handle_response_fetch_consensus(dir_connection_t *conn,
   /* If we launched other fetches for this consensus, cancel them. */
   connection_dir_close_consensus_fetches(conn, flavname);
 
-  /* launches router downloads as needed */
+  /* update the list of routers and directory guards */
   routers_update_all_from_networkstatus(now, 3);
   update_microdescs_from_networkstatus(now);
-  update_microdesc_downloads(now);
   directory_info_has_arrived(now, 0, 0);
+
   if (authdir_mode_v3(get_options())) {
     sr_act_post_consensus(
                      networkstatus_get_latest_consensus_by_flavor(FLAV_NS));
