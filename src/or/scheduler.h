@@ -143,9 +143,8 @@ MOCK_DECL(void, scheduler_channel_has_waiting_cells, (channel_t *chan));
 /*********************************
  * Defined in scheduler.c
  *********************************/
-/* Function to log and change all the old and new states*/
 
-void scheduler_set_channel_state(channel_t *chan,int new_state);
+void scheduler_set_channel_state(channel_t *chan, int new_state);
 
 /* Triggers a BUG() and extra information with chan if available. */
 #define SCHED_BUG(cond, chan) \

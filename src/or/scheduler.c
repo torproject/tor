@@ -361,12 +361,15 @@ set_scheduler(void)
  *
  * Functions that can only be accessed from scheduler*.c
  *****************************************************************************/
-/* Function to log and change all the old and new states*/
 
-void scheduler_set_channel_state(channel_t *chan,int new_state){
-  log_debug(LD_SCHED, "chan %s changed from scheduler state %d to %d",chan->global_identifier, chan->scheduler_state, new_state);
+/** Helper that logs channel scheduler_state changes. Use this instead of
+ * setting scheduler_state directly. */
+void scheduler_set_channel_state(channel_t *chan, int new_state){
+  log_debug(LD_SCHED, "chan %s changed from scheduler state %d to %d",
+      chan->global_identifier, chan->scheduler_state, new_state);
   chan->scheduler_state = new_state;
 }
+
 /** Return the pending channel list. */
 smartlist_t *
 get_channels_pending(void)
@@ -494,7 +497,7 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
   }
 
   /* If it's already in pending, we can put it in waiting_to_write */
-  if (chan->scheduler_state == SCHED_CHAN_PENDING){
+  if (chan->scheduler_state == SCHED_CHAN_PENDING) {
     /*
      * It's in channels_pending, so it shouldn't be in any of
      * the other lists.  It can't write any more, so it goes to
@@ -504,7 +507,7 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
                             scheduler_compare_channels,
                             offsetof(channel_t, sched_heap_idx),
                             chan);
-    scheduler_set_channel_state(chan,SCHED_CHAN_WAITING_TO_WRITE);
+    scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from pending "
               "to waiting_to_write",
@@ -515,8 +518,8 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
      * either not in any of the lists (nothing to do) or it's already in
      * waiting_for_cells (remove it, can't write any more).
      */
-    if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS){
-      scheduler_set_channel_state(chan,SCHED_CHAN_IDLE);
+    if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
+      scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
       log_debug(LD_SCHED,
                 "Channel " U64_FORMAT " at %p left waiting_for_cells",
                 U64_PRINTF_ARG(chan->global_identifier), chan);
@@ -536,13 +539,13 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
   }
 
   /* First, check if it's also writeable */
-  if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS){
+  if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
     /*
      * It's in channels_waiting_for_cells, so it shouldn't be in any of
      * the other lists.  It has waiting cells now, so it goes to
      * channels_pending.
      */
-    scheduler_set_channel_state(chan,SCHED_CHAN_PENDING);
+    scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
     smartlist_pqueue_add(channels_pending,
                          scheduler_compare_channels,
                          offsetof(channel_t, sched_heap_idx),
@@ -561,7 +564,7 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
      * or it's already in waiting_to_write or pending (we do nothing)
      */
     if (!(chan->scheduler_state == SCHED_CHAN_WAITING_TO_WRITE ||
-          chan->scheduler_state== SCHED_CHAN_PENDING)) {
+          chan->scheduler_state == SCHED_CHAN_PENDING)) {
       scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
       log_debug(LD_SCHED,
                 "Channel " U64_FORMAT " at %p entered waiting_to_write",
@@ -648,7 +651,7 @@ scheduler_release_channel,(channel_t *chan))
   if (the_scheduler->on_channel_free) {
     the_scheduler->on_channel_free(chan);
   }
-  scheduler_set_channel_state(chan,SCHED_CHAN_IDLE);
+  scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
 }
 
 /** Mark a channel as ready to accept writes */
@@ -674,7 +677,7 @@ scheduler_channel_wants_writes(channel_t *chan)
                          scheduler_compare_channels,
                          offsetof(channel_t, sched_heap_idx),
                          chan);
-    scheduler_set_channel_state(chan,SCHED_CHAN_PENDING);
+    scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_to_write "
               "to pending",
@@ -705,7 +708,6 @@ scheduler_bug_occurred(const channel_t *chan)
   char buf[128];
 
   if (chan != NULL) {
-    int new_state=0;
     const size_t outbuf_len =
       buf_datalen(TO_CONN(BASE_CHAN_TO_TLS((channel_t *) chan)->conn)->outbuf);
     tor_snprintf(buf, sizeof(buf),
