@@ -347,7 +347,6 @@ main(int argc, char **argv)
   int n_args;
   tor_addr_t result;
   char *result_hostname = NULL;
-  log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
 
   init_logging(1);
   sandbox_disable_getaddrinfo_cache();
@@ -398,11 +397,14 @@ main(int argc, char **argv)
     usage();
   }
 
+  log_severity_list_t *severities =
+    tor_malloc_zero(sizeof(log_severity_list_t));
   if (isVerbose)
-    set_log_severity_config(LOG_DEBUG, LOG_ERR, s);
+    set_log_severity_config(LOG_DEBUG, LOG_ERR, severities);
   else
-    set_log_severity_config(LOG_WARN, LOG_ERR, s);
-  add_stream_log(s, "<stderr>", fileno(stderr));
+    set_log_severity_config(LOG_WARN, LOG_ERR, severities);
+  add_stream_log(severities, "<stderr>", fileno(stderr));
+  tor_free(severities);
 
   if (n_args == 1) {
     log_debug(LD_CONFIG, "defaulting to localhost");
