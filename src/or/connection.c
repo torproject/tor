@@ -752,6 +752,10 @@ connection_close_immediate(connection_t *conn)
 
   connection_unregister_events(conn);
 
+  /* Prevent the event from getting unblocked. */
+  conn->read_blocked_on_bw =
+    conn->write_blocked_on_bw = 0;
+
   if (SOCKET_OK(conn->s))
     tor_close_socket(conn->s);
   conn->s = TOR_INVALID_SOCKET;
