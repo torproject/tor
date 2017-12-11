@@ -5732,16 +5732,17 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
       }
       goto cleanup;
     }
-    if (smartlist_len(elts) == 1 &&
-        !strcasecmp(smartlist_get(elts,0), "syslog")) {
+    if (smartlist_len(elts) == 1) {
+      if (!strcasecmp(smartlist_get(elts,0), "syslog")) {
 #ifdef HAVE_SYSLOG_H
-      if (!validate_only) {
-        add_syslog_log(severity, options->SyslogIdentityTag);
-      }
+        if (!validate_only) {
+          add_syslog_log(severity, options->SyslogIdentityTag);
+        }
 #else
-      log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
+        log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
 #endif /* defined(HAVE_SYSLOG_H) */
-      goto cleanup;
+        goto cleanup;
+      }
     }
 
     if (smartlist_len(elts) == 2 &&
