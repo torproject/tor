@@ -1178,3 +1178,31 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
   return -1;
 }
 
+/* We are about to close or free this <b>circ</b>. Clean it up from any
+ * related HS data structures. This function can be called multiple times
+ * safely for the same circuit. */
+void
+hs_circ_cleanup(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* If it's a service-side intro circ, notify the HS subsystem for the intro
+   * point circuit closing so it can be dealt with cleanly. */
+  if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+      circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
+    hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
+  }
+
+  /* Clear HS circuitmap token for this circ (if any). Very important to be
+   * done after the HS subsystem has been notified of the close else the
+   * circuit will not be found.
+   *
+   * We do this at the close if possible because from that point on, the
+   * circuit is good as dead. We can't rely on removing it in the circuit
+   * free() function because we open a race window between the close and free
+   * where we can't register a new circuit for the same intro point. */
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
+}
+
