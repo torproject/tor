@@ -283,6 +283,10 @@ cdm_diff_ht_set_status(consensus_flavor_t flav,
                        int status,
                        consensus_cache_entry_handle_t *handle)
 {
+  if (handle == NULL) {
+    tor_assert_nonfatal(status != CDM_DIFF_PRESENT);
+  }
+
   struct cdm_diff_t search, *ent;
   memset(&search, 0, sizeof(cdm_diff_t));
   search.flavor = flav;
@@ -1589,8 +1593,13 @@ consensus_diff_worker_replyfn(void *work_)
   for (u = 0; u < ARRAY_LENGTH(handles); ++u) {
     compress_method_t method = compress_diffs_with[u];
     if (cache) {
-      cdm_diff_ht_set_status(flav, from_sha3, to_sha3, method, status,
-                             handles[u]);
+      consensus_cache_entry_handle_t *h = handles[u];
+      int this_status = status;
+      if (h == NULL) {
+        this_status = CDM_DIFF_ERROR;
+      }
+      tor_assert_nonfatal(h != NULL || this_status == CDM_DIFF_ERROR);
+      cdm_diff_ht_set_status(flav, from_sha3, to_sha3, method, this_status, h);
     } else {
       consensus_cache_entry_handle_free(handles[u]);
     }
