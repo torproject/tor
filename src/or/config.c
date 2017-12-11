@@ -796,6 +796,8 @@ static smartlist_t *configured_ports = NULL;
 /** True iff we're currently validating options, and any calls to
  * get_options() are likely to be bugs. */
 static int in_option_validation = 0;
+/* True iff we've initialized libevent */
+static int libevent_initialized = 0;
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
 MOCK_IMPL(const char*,
@@ -986,6 +988,7 @@ config_free_all(void)
   tor_free(the_tor_version);
 
   have_parsed_cmdline = 0;
+  libevent_initialized = 0;
 }
 
 /** Make <b>address</b> -- a piece of information related to our operation as
@@ -1336,7 +1339,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 {
   smartlist_t *new_listeners = smartlist_new();
   smartlist_t *replaced_listeners = smartlist_new();
-  static int libevent_initialized = 0;
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
   int set_conn_limit = 0;
