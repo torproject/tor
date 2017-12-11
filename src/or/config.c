@@ -1685,7 +1685,7 @@ options_transition_affects_guards(const or_options_t *old,
                                   const or_options_t *new)
 {
   /* NOTE: Make sure this function stays in sync with
-   * entry_guards_set_filtered_flags */
+   * node_passes_guard_filter */
 
   tor_assert(old);
   tor_assert(new);
