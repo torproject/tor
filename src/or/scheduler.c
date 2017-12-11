@@ -382,7 +382,9 @@ get_scheduler_state_string(int scheduler_state)
 
 /** Helper that logs channel scheduler_state changes. Use this instead of
  * setting scheduler_state directly. */
-void scheduler_set_channel_state(channel_t *chan, int new_state){
+void
+scheduler_set_channel_state(channel_t *chan, int new_state)
+{
   log_debug(LD_SCHED, "chan %" PRIu64 " changed from scheduler state %s to %s",
       chan->global_identifier,
       get_scheduler_state_string(chan->scheduler_state),
