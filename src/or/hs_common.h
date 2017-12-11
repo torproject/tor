@@ -172,6 +172,8 @@ typedef struct hsdir_index_t {
 void hs_init(void);
 void hs_free_all(void);
 
+void hs_cleanup_circ(circuit_t *circ);
+
 int hs_check_service_private_dir(const char *username, const char *path,
                                  unsigned int dir_group_readable,
                                  unsigned int create);

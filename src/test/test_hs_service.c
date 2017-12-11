@@ -778,6 +778,92 @@ test_rdv_circuit_opened(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
+static void
+mock_assert_circuit_ok(const circuit_t *c)
+{
+  (void) c;
+  return;
+}
+
+/** Test for the general mechanism for closing intro circs.
+ *  Also a way to identify that #23603 has been fixed. */
+static void
+test_closing_intro_circs(void *arg)
+{
+  hs_service_t *service = NULL;
+  hs_service_intro_point_t *ip = NULL, *entry = NULL;
+  origin_circuit_t *intro_circ = NULL, *tmp_circ;
+  int flags = CIRCLAUNCH_NEED_UPTIME | CIRCLAUNCH_IS_INTERNAL;
+
+  (void) arg;
+
+  MOCK(assert_circuit_ok, mock_assert_circuit_ok);
+
+  hs_init();
+
+  /* Initialize service */
+  service = helper_create_service();
+  /* Initialize intro point */
+  ip = helper_create_service_ip();
+  tt_assert(ip);
+  service_intro_point_add(service->desc_current->intro_points.map, ip);
+
+  /* Initialize intro circuit */
+  intro_circ = origin_circuit_init(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, flags);
+  intro_circ->hs_ident = hs_ident_circuit_new(&service->keys.identity_pk,
+                                              HS_IDENT_CIRCUIT_INTRO);
+  /* Register circuit in the circuitmap . */
+  hs_circuitmap_register_intro_circ_v3_service_side(intro_circ,
+                                                    &ip->auth_key_kp.pubkey);
+  tmp_circ =
+    hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
+  tt_ptr_op(tmp_circ, OP_EQ, intro_circ);
+
+  /* Pretend that intro point has failed too much */
+  ip->circuit_retries = MAX_INTRO_POINT_CIRCUIT_RETRIES+1;
+
+  /* Now pretend we are freeing this intro circuit. We want to see that our
+   * destructor is not gonna kill our intro point structure since that's the
+   * job of the cleanup routine. */
+  circuit_free(TO_CIRCUIT(intro_circ));
+  intro_circ = NULL;
+  entry = service_intro_point_find(service, &ip->auth_key_kp.pubkey);
+  tt_assert(entry);
+  /* The free should also remove the circuit from the circuitmap. */
+  tmp_circ =
+    hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
+  tt_assert(!tmp_circ);
+
+  /* Now pretend that a new intro point circ was launched and opened. Check
+   * that the intro point will be established correctly. */
+  intro_circ = origin_circuit_init(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, flags);
+  intro_circ->hs_ident = hs_ident_circuit_new(&service->keys.identity_pk,
+                                              HS_IDENT_CIRCUIT_INTRO);
+  ed25519_pubkey_copy(&intro_circ->hs_ident->intro_auth_pk,
+                      &ip->auth_key_kp.pubkey);
+  /* Register circuit in the circuitmap . */
+  hs_circuitmap_register_intro_circ_v3_service_side(intro_circ,
+                                                    &ip->auth_key_kp.pubkey);
+  tmp_circ =
+    hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
+  tt_ptr_op(tmp_circ, OP_EQ, intro_circ);
+  tt_int_op(TO_CIRCUIT(intro_circ)->marked_for_close, OP_EQ, 0);
+  circuit_mark_for_close(TO_CIRCUIT(intro_circ), END_CIRC_REASON_INTERNAL);
+  tt_int_op(TO_CIRCUIT(intro_circ)->marked_for_close, OP_NE, 0);
+  /* At this point, we should not be able to find it in the circuitmap. */
+  tmp_circ =
+    hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
+  tt_assert(!tmp_circ);
+
+ done:
+  if (intro_circ) {
+    circuit_free(TO_CIRCUIT(intro_circ));
+  }
+  /* Frees the service object. */
+  hs_free_all();
+  UNMOCK(assert_circuit_ok);
+}
+
 /** Test sending and receiving introduce2 cells */
 static void
 test_introduce2(void *arg)
@@ -1511,6 +1597,8 @@ struct testcase_t hs_service_tests[] = {
   { "intro_circuit_opened", test_intro_circuit_opened, TT_FORK,
     NULL, NULL },
   { "intro_established", test_intro_established, TT_FORK,
+    NULL, NULL },
+  { "closing_intro_circs", test_closing_intro_circs, TT_FORK,
     NULL, NULL },
   { "rdv_circuit_opened", test_rdv_circuit_opened, TT_FORK,
     NULL, NULL },

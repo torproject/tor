@@ -1843,6 +1843,12 @@ cleanup_intro_points(hs_service_t *service, time_t now)
                     (node == NULL) ?  " fell off the consensus" : "",
                  ip->circuit_retries);
 
+        /* We've retried too many times, remember it as a failed intro point
+         * so we don't pick it up again for INTRO_CIRC_RETRY_PERIOD sec. */
+        if (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
+          remember_failing_intro_point(ip, desc, approx_time());
+        }
+
         /* Remove intro point from descriptor map. We'll add it to the failed
          * map if we retried it too many times. */
         MAP_DEL_CURRENT(key);
@@ -3130,15 +3136,6 @@ hs_service_intro_circ_has_closed(origin_circuit_t *circ)
   /* Circuit disappeared so make sure the intro point is updated. By
    * keeping the object in the descriptor, we'll be able to retry. */
   ip->circuit_established = 0;
-
-  /* We've retried too many times, remember it as a failed intro point so we
-   * don't pick it up again. It will be retried in INTRO_CIRC_RETRY_PERIOD
-   * seconds. */
-  if (ip->circuit_retries > MAX_INTRO_POINT_CIRCUIT_RETRIES) {
-    remember_failing_intro_point(ip, desc, approx_time());
-    service_intro_point_remove(service, ip);
-    service_intro_point_free(ip);
-  }
 
  end:
   return;

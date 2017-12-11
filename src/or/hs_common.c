@@ -22,6 +22,7 @@
 #include "hs_client.h"
 #include "hs_ident.h"
 #include "hs_service.h"
+#include "hs_circuitmap.h"
 #include "policies.h"
 #include "rendcommon.h"
 #include "rendservice.h"
