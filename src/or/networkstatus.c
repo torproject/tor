@@ -2041,6 +2041,9 @@ networkstatus_set_current_consensus(const char *consensus,
                     "CLOCK_SKEW MIN_SKEW=%ld SOURCE=CONSENSUS", delta);
   }
 
+  /* We got a new consesus. Reset our md fetch fail cache */
+  microdesc_reset_outdated_dirservers_list();
+
   router_dir_info_changed();
 
   result = 0;

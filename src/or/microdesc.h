@@ -50,5 +50,9 @@ int we_fetch_microdescriptors(const or_options_t *options);
 int we_fetch_router_descriptors(const or_options_t *options);
 int we_use_microdescriptors_for_circuits(const or_options_t *options);
 
-#endif
+void microdesc_note_outdated_dirserver(const char *relay_digest);
+int microdesc_relay_is_outdated_dirserver(const char *relay_digest);
+void microdesc_reset_outdated_dirservers_list(void);
+
+#endif /* !defined(TOR_MICRODESC_H) */
 
