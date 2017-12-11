@@ -59,6 +59,8 @@ AC_ARG_ENABLE(rust,
    AS_HELP_STRING(--enable-rust, [enable rust integration]))
 AC_ARG_ENABLE(cargo-online-mode,
    AS_HELP_STRING(--enable-cargo-online-mode, [Allow cargo to make network requests to fetch crates. For builds with rust only.]))
+AC_ARG_ENABLE(restart-debugging,
+   AS_HELP_STRING(--enable-restart-debugging, [Build Tor with support for debugging in-process restart. Developers only.]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -107,6 +109,10 @@ AC_ARG_ENABLE(systemd,
         * ) AC_MSG_ERROR(bad value for --enable-systemd) ;;
       esac], [systemd=auto])
 
+if test "$enable_restart_debugging" = "yes"; then
+  AC_DEFINE(ENABLE_RESTART_DEBUGGING, 1,
+            [Defined if we're building with support for in-process restart debugging.])
+fi
 
 
 # systemd support
