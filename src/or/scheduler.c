@@ -198,6 +198,24 @@ get_scheduler_type_string(scheduler_types_t type)
   }
 }
 
+/** Returns human readable string for the given channel scheduler state. */
+static const char *
+get_scheduler_state_string(int scheduler_state)
+{
+  switch (scheduler_state) {
+  case SCHED_CHAN_IDLE:
+    return "IDLE";
+  case SCHED_CHAN_WAITING_FOR_CELLS:
+    return "WAITING_FOR_CELLS";
+  case SCHED_CHAN_WAITING_TO_WRITE:
+    return "WAITING_TO_WRITE";
+  case SCHED_CHAN_PENDING:
+    return "PENDING";
+  default:
+    return "(invalid)";
+  }
+}
+
 /**
  * Scheduler event callback; this should get triggered once per event loop
  * if any scheduling work was created during the event loop.
@@ -365,8 +383,10 @@ set_scheduler(void)
 /** Helper that logs channel scheduler_state changes. Use this instead of
  * setting scheduler_state directly. */
 void scheduler_set_channel_state(channel_t *chan, int new_state){
-  log_debug(LD_SCHED, "chan %s changed from scheduler state %d to %d",
-      chan->global_identifier, chan->scheduler_state, new_state);
+  log_debug(LD_SCHED, "chan %" PRIu64 " changed from scheduler state %s to %s",
+      chan->global_identifier,
+      get_scheduler_state_string(chan->scheduler_state),
+      get_scheduler_state_string(new_state));
   chan->scheduler_state = new_state;
 }
 
