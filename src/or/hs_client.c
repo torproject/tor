@@ -945,7 +945,8 @@ handle_introduce_ack_success(origin_circuit_t *intro_circ)
 
   /* Get the rendezvous circuit for this rendezvous cookie. */
   uint8_t *rendezvous_cookie = intro_circ->hs_ident->rendezvous_cookie;
-  rend_circ = hs_circuitmap_get_rend_circ_client_side(rendezvous_cookie);
+  rend_circ =
+  hs_circuitmap_get_established_rend_circ_client_side(rendezvous_cookie);
   if (rend_circ == NULL) {
     log_warn(LD_REND, "Can't find any rendezvous circuit. Stopping");
     goto end;
