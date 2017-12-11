@@ -708,11 +708,12 @@ scheduler_bug_occurred(const channel_t *chan)
     const size_t outbuf_len =
       buf_datalen(TO_CONN(BASE_CHAN_TO_TLS((channel_t *) chan)->conn)->outbuf);
     tor_snprintf(buf, sizeof(buf),
-                 "Channel %" PRIu64 " in state %s and scheduler state %d."
+                 "Channel %" PRIu64 " in state %s and scheduler state %s."
                  " Num cells on cmux: %d. Connection outbuf len: %lu.",
                  chan->global_identifier,
                  channel_state_to_string(chan->state),
-                 chan->scheduler_state, circuitmux_num_cells(chan->cmux),
+                 get_scheduler_state_string(chan->scheduler_state),
+                 circuitmux_num_cells(chan->cmux),
                  (unsigned long)outbuf_len);
   }
 
