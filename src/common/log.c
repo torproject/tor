@@ -433,6 +433,16 @@ pending_log_message_free_(pending_log_message_t *msg)
   tor_free(msg);
 }
 
+/** Helper function: returns true iff the log file, given in <b>lf</b>, is
+ * handled externally via the system log API, the Android logging API, or is an
+ * external callback function. */
+static inline int
+logfile_is_external(logfile_t *lf)
+{
+  raw_assert(lf);
+  return lf->is_syslog || lf->is_android || lf->callback;
+}
+
 /** Return true iff <b>lf</b> would like to receive a message with the
  * specified <b>severity</b> in the specified <b>domain</b>.
  */
@@ -443,7 +453,7 @@ logfile_wants_message(const logfile_t *lf, int severity,
   if (! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
     return 0;
   }
-  if (! (lf->fd >= 0 || lf->is_syslog || lf->is_android || lf->callback)) {
+  if (! (lf->fd >= 0 || logfile_is_external(lf))) {
     return 0;
   }
   if (lf->seems_dead) {
@@ -683,8 +693,8 @@ tor_log_update_sigsafe_err_fds(void)
      /* Don't try callback to the control port, or syslogs: We can't
       * do them from a signal handler. Don't try stdout: we always do stderr.
       */
-    if (lf->is_temporary || lf->is_syslog || lf->is_android ||
-        lf->callback || lf->seems_dead || lf->fd < 0)
+    if (lf->is_temporary || logfile_is_external(lf)
+        || lf->seems_dead || lf->fd < 0)
       continue;
     if (lf->severities->masks[SEVERITY_MASK_IDX(LOG_ERR)] &
         (LD_BUG|LD_GENERAL)) {
@@ -720,7 +730,7 @@ tor_log_get_logfile_names(smartlist_t *out)
   LOCK_LOGS();
 
   for (lf = logfiles; lf; lf = lf->next) {
-    if (lf->is_temporary || lf->is_syslog || lf->is_android || lf->callback)
+    if (lf->is_temporary || logfile_is_external(lf))
       continue;
     if (lf->filename == NULL)
       continue;
