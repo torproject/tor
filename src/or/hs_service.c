@@ -1815,6 +1815,15 @@ intro_point_should_expire(const hs_service_intro_point_t *ip,
 static void
 cleanup_intro_points(hs_service_t *service, time_t now)
 {
+  /* List of intro points to close. We can't mark the intro circuits for close
+   * in the modify loop because doing so calls
+   * hs_service_intro_circ_has_closed() which does a digest256map_get() on the
+   * intro points map (that we are iterating over). This can't be done in a
+   * single iteration after a MAP_DEL_CURRENT, the object will still be
+   * returned leading to a use-after-free. So, we close the circuits and free
+   * the intro points after the loop if any. */
+  smartlist_t *ips_to_free = smartlist_new();
+
   tor_assert(service);
 
   /* For both descriptors, cleanup the intro points. */
@@ -1824,7 +1833,6 @@ cleanup_intro_points(hs_service_t *service, time_t now)
     DIGEST256MAP_FOREACH_MODIFY(desc->intro_points.map, key,
                                 hs_service_intro_point_t *, ip) {
       const node_t *node = get_node_from_intro_point(ip);
-      origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
       int has_expired = intro_point_should_expire(ip, now);
 
       /* We cleanup an intro point if it has expired or if we do not know the
@@ -1845,26 +1853,34 @@ cleanup_intro_points(hs_service_t *service, time_t now)
           remember_failing_intro_point(ip, desc, approx_time());
         }
 
-        /* Remove intro point from descriptor map. We'll add it to the failed
-         * map if we retried it too many times. */
+        /* Remove intro point from descriptor map and add it to the list of
+         * ips to free for which we'll also try to close the intro circuit. */
         MAP_DEL_CURRENT(key);
-        service_intro_point_free(ip);
-
-        /* XXX: Legacy code does NOT do that, it keeps the circuit open until
-         * a new descriptor is uploaded and then closed all expiring intro
-         * point circuit. Here, we close immediately and because we just
-         * discarded the intro point, a new one will be selected, a new
-         * descriptor created and uploaded. There is no difference to an
-         * attacker between the timing of a new consensus and intro point
-         * rotation (possibly?). */
-        if (ocirc && !TO_CIRCUIT(ocirc)->marked_for_close) {
-          /* After this, no new cells will be handled on the circuit. */
-          circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
-        }
-        continue;
+        smartlist_add(ips_to_free, ip);
       }
     } DIGEST256MAP_FOREACH_END;
   } FOR_EACH_DESCRIPTOR_END;
+
+  /* Go over the intro points to free and close their circuit if any. */
+  SMARTLIST_FOREACH_BEGIN(ips_to_free, hs_service_intro_point_t *, ip) {
+    /* See if we need to close the intro point circuit as well */
+
+    /* XXX: Legacy code does NOT close circuits like this: it keeps the circuit
+     * open until a new descriptor is uploaded and then closed all expiring
+     * intro point circuit. Here, we close immediately and because we just
+     * discarded the intro point, a new one will be selected, a new descriptor
+     * created and uploaded. There is no difference to an attacker between the
+     * timing of a new consensus and intro point rotation (possibly?). */
+    origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
+    if (ocirc && !TO_CIRCUIT(ocirc)->marked_for_close) {
+      circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
+    }
+
+    /* Cleanup the intro point */
+    service_intro_point_free(ip);
+  } SMARTLIST_FOREACH_END(ip);
+
+  smartlist_free(ips_to_free);
 }
 
 /* Set the next rotation time of the descriptors for the given service for the
