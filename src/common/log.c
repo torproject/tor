@@ -437,7 +437,7 @@ pending_log_message_free_(pending_log_message_t *msg)
  * handled externally via the system log API, the Android logging API, or is an
  * external callback function. */
 static inline int
-logfile_is_external(logfile_t *lf)
+logfile_is_external(const logfile_t *lf)
 {
   raw_assert(lf);
   return lf->is_syslog || lf->is_android || lf->callback;
