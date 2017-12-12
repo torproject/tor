@@ -35,6 +35,9 @@
 #define LOG_PRIVATE
 #include "torlog.h"
 #include "container.h"
+#ifdef HAVE_ANDROID_LOG_H
+#include <android/log.h>
+#endif // HAVE_ANDROID_LOG_H.
 
 /** Given a severity, yields an index into log_severity_list_t.masks to use
  * for that severity. */
@@ -58,6 +61,8 @@ typedef struct logfile_t {
   int needs_close; /**< Boolean: true if the stream gets closed on shutdown. */
   int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
   int is_syslog; /**< Boolean: send messages to syslog. */
+  int is_android; /**< Boolean: send messages to Android's log subsystem. */
+  char *android_tag; /**< Identity Tag used in Android's log subsystem. */
   log_callback callback; /**< If not NULL, send messages to this function. */
   log_severity_list_t *severities; /**< Which severity of messages should we
                                     * log for each log domain? */
@@ -102,6 +107,33 @@ should_log_function_name(log_domain_mask_t domain, int severity)
       raw_assert(0); return 0; // LCOV_EXCL_LINE
   }
 }
+
+#ifdef HAVE_ANDROID_LOG_H
+/** Helper function to convert Tor's log severity into the matching
+ * Android log priority.
+ */
+static int
+severity_to_android_log_priority(int severity)
+{
+  switch (severity) {
+    case LOG_DEBUG:
+      return ANDROID_LOG_VERBOSE;
+    case LOG_INFO:
+      return ANDROID_LOG_DEBUG;
+    case LOG_NOTICE:
+      return ANDROID_LOG_INFO;
+    case LOG_WARN:
+      return ANDROID_LOG_WARN;
+    case LOG_ERR:
+      return ANDROID_LOG_ERROR;
+    default:
+      // LCOV_EXCL_START
+      raw_assert(0);
+      return 0;
+      // LCOV_EXCL_STOP
+  }
+}
+#endif // HAVE_ANDROID_LOG_H.
 
 /** A mutex to guard changes to logfiles and logging. */
 static tor_mutex_t log_mutex;
@@ -401,6 +433,16 @@ pending_log_message_free_(pending_log_message_t *msg)
   tor_free(msg);
 }
 
+/** Helper function: returns true iff the log file, given in <b>lf</b>, is
+ * handled externally via the system log API, the Android logging API, or is an
+ * external callback function. */
+static inline int
+logfile_is_external(logfile_t *lf)
+{
+  raw_assert(lf);
+  return lf->is_syslog || lf->is_android || lf->callback;
+}
+
 /** Return true iff <b>lf</b> would like to receive a message with the
  * specified <b>severity</b> in the specified <b>domain</b>.
  */
@@ -411,7 +453,7 @@ logfile_wants_message(const logfile_t *lf, int severity,
   if (! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
     return 0;
   }
-  if (! (lf->fd >= 0 || lf->is_syslog || lf->callback)) {
+  if (! (lf->fd >= 0 || logfile_is_external(lf))) {
     return 0;
   }
   if (lf->seems_dead) {
@@ -454,6 +496,11 @@ logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
     syslog(severity, "%s", msg_after_prefix);
 #endif /* defined(MAXLINE) */
 #endif /* defined(HAVE_SYSLOG_H) */
+  } else if (lf->is_android) {
+#ifdef HAVE_ANDROID_LOG_H
+    int priority = severity_to_android_log_priority(severity);
+    __android_log_write(priority, lf->android_tag, msg_after_prefix);
+#endif // HAVE_ANDROID_LOG_H.
   } else if (lf->callback) {
     if (domain & LD_NOCB) {
       if (!*callbacks_deferred && pending_cb_messages) {
@@ -646,8 +693,8 @@ tor_log_update_sigsafe_err_fds(void)
      /* Don't try callback to the control port, or syslogs: We can't
       * do them from a signal handler. Don't try stdout: we always do stderr.
       */
-    if (lf->is_temporary || lf->is_syslog ||
-        lf->callback || lf->seems_dead || lf->fd < 0)
+    if (lf->is_temporary || logfile_is_external(lf)
+        || lf->seems_dead || lf->fd < 0)
       continue;
     if (lf->severities->masks[SEVERITY_MASK_IDX(LOG_ERR)] &
         (LD_BUG|LD_GENERAL)) {
@@ -683,7 +730,7 @@ tor_log_get_logfile_names(smartlist_t *out)
   LOCK_LOGS();
 
   for (lf = logfiles; lf; lf = lf->next) {
-    if (lf->is_temporary || lf->is_syslog || lf->callback)
+    if (lf->is_temporary || logfile_is_external(lf))
       continue;
     if (lf->filename == NULL)
       continue;
@@ -732,6 +779,7 @@ log_free_(logfile_t *victim)
     return;
   tor_free(victim->severities);
   tor_free(victim->filename);
+  tor_free(victim->android_tag);
   tor_free(victim);
 }
 
@@ -1151,6 +1199,39 @@ add_syslog_log(const log_severity_list_t *severity,
 }
 #endif /* defined(HAVE_SYSLOG_H) */
 
+#ifdef HAVE_ANDROID_LOG_H
+/**
+ * Add a log handler to send messages to the Android platform log facility.
+ */
+int
+add_android_log(const log_severity_list_t *severity,
+                const char *android_tag)
+{
+  logfile_t *lf = NULL;
+
+  lf = tor_malloc_zero(sizeof(logfile_t));
+  lf->fd = -1;
+  lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
+  lf->filename = tor_strdup("<android>");
+  lf->is_android = 1;
+
+  if (android_tag == NULL)
+    lf->android_tag = tor_strdup("Tor");
+  else {
+    char buf[256];
+    tor_snprintf(buf, sizeof(buf), "Tor-%s", android_tag);
+    lf->android_tag = tor_strdup(buf);
+  }
+
+  LOCK_LOGS();
+  lf->next = logfiles;
+  logfiles = lf;
+  log_global_min_severity_ = get_min_log_level();
+  UNLOCK_LOGS();
+  return 0;
+}
+#endif // HAVE_ANDROID_LOG_H.
+
 /** If <b>level</b> is a valid log severity, return the corresponding
  * numeric value.  Otherwise, return -1. */
 int
@@ -1318,7 +1399,8 @@ parse_log_severity_config(const char **cfg_ptr,
     if (!strcasecmpstart(cfg, "file") ||
         !strcasecmpstart(cfg, "stderr") ||
         !strcasecmpstart(cfg, "stdout") ||
-        !strcasecmpstart(cfg, "syslog")) {
+        !strcasecmpstart(cfg, "syslog") ||
+        !strcasecmpstart(cfg, "android")) {
       goto done;
     }
     if (got_an_unqualified_range > 1)

@@ -146,7 +146,11 @@ int add_file_log(const log_severity_list_t *severity, const char *filename,
 #ifdef HAVE_SYSLOG_H
 int add_syslog_log(const log_severity_list_t *severity,
                    const char* syslog_identity_tag);
-#endif
+#endif // HAVE_SYSLOG_H.
+#ifdef HAVE_ANDROID_LOG_H
+int add_android_log(const log_severity_list_t *severity,
+                    const char *android_identity_tag);
+#endif // HAVE_ANDROID_LOG_H.
 int add_callback_log(const log_severity_list_t *severity, log_callback cb);
 void logs_set_domain_logging(int enabled);
 int get_min_log_level(void);
