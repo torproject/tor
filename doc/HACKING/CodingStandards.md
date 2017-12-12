@@ -358,7 +358,7 @@ Don't call this `abc_free_()` function directly -- instead, wrap it in a
 macro called `abc_free()`, using the `FREE_AND_NULL` macro:
 
     void abc_free_(abc_t *obj);
-    #define abc_free(obj) FREE_AND_NULL(abc_t, abc_free_, (abc))
+    #define abc_free(obj) FREE_AND_NULL(abc_t, abc_free_, (obj))
 
 This macro will free the underlying `abc_t` object, and will also set
 the object pointer to NULL.
