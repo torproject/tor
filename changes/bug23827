@@ -1,0 +1,8 @@
+  o Minor feature (IPv6):
+    - When a consensus has IPv6 ORPorts, make IPv6-only clients use them,
+      rather than waiting to download microdescriptors.
+      Implements 23827.
+    - Make IPv6-only clients wait for microdescs for relays, even if we were
+      previously using descriptors (or were using them as a bridge) and have
+      a cached descriptor for them.
+      Implements 23827.
