@@ -351,6 +351,12 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   return (uint32_t)(t->abstime_ >> monotime_shift);
 }
 
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->abstime_ == 0;
+}
+
 /* end of "__APPLE__" */
 #elif defined(HAVE_CLOCK_GETTIME)
 
@@ -439,6 +445,12 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   uint32_t sec = (uint32_t)t->ts_.tv_sec;
 
   return (sec * STAMP_TICKS_PER_SECOND) + (nsec >> 20);
+}
+
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->ts_.tv_sec == 0 && val->ts_.tv_nsec == 0;
 }
 
 /* end of "HAVE_CLOCK_GETTIME" */
@@ -581,6 +593,18 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   return (uint32_t) t->tick_count_;
 }
 
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->pcount_ == 0;
+}
+
+int
+monotime_coarse_is_zero(const monotime_coarse_t *val)
+{
+  return val->tick_count_ == 0;
+}
+
 /* end of "_WIN32" */
 #elif defined(MONOTIME_USING_GETTIMEOFDAY)
 
@@ -628,6 +652,12 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   return (sec * STAMP_TICKS_PER_SECOND) | (nsec >> 10);
 }
 
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->tv_.tv_sec == 0 && val->tv_.tv_usec == 0;
+}
+
 /* end of "MONOTIME_USING_GETTIMEOFDAY" */
 #else
 #error "No way to implement monotonic timers."
@@ -649,6 +679,19 @@ monotime_init(void)
 #endif
   }
 }
+
+void
+monotime_zero(monotime_t *out)
+{
+  memset(out, 0, sizeof(*out));
+}
+#ifdef MONOTIME_COARSE_TYPE_IS_DIFFERENT
+void
+monotime_coarse_zero(monotime_coarse_t *out)
+{
+  memset(out, 0, sizeof(*out));
+}
+#endif
 
 int64_t
 monotime_diff_usec(const monotime_t *start,
