@@ -3,6 +3,7 @@
 .#*
 *~
 *.swp
+*.swo
 # C stuff
 *.o
 *.obj
