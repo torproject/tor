@@ -5948,6 +5948,33 @@ test_util_monotonic_time_zero(void *arg)
 }
 
 static void
+test_util_monotonic_time_add_msec(void *arg)
+{
+  (void) arg;
+  monotime_t t1, t2;
+  monotime_coarse_t ct1, ct2;
+  monotime_init();
+
+  monotime_get(&t1);
+  monotime_coarse_get(&ct1);
+
+  /* adding zero does nothing */
+  monotime_add_msec(&t2, &t1, 0);
+  monotime_coarse_add_msec(&ct2, &ct1, 0);
+  tt_i64_op(monotime_diff_msec(&t1, &t2), OP_EQ, 0);
+  tt_i64_op(monotime_coarse_diff_msec(&ct1, &ct2), OP_EQ, 0);
+
+  /* Add 1337 msec; see if the diff function agree */
+  monotime_add_msec(&t2, &t1, 1337);
+  monotime_coarse_add_msec(&ct2, &ct1, 1337);
+  tt_i64_op(monotime_diff_msec(&t1, &t2), OP_EQ, 1337);
+  tt_i64_op(monotime_coarse_diff_msec(&ct1, &ct2), OP_EQ, 1337);
+
+ done:
+  ;
+}
+
+static void
 test_util_htonll(void *arg)
 {
   (void)arg;
@@ -6181,6 +6208,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(monotonic_time, 0),
   UTIL_TEST(monotonic_time_ratchet, TT_FORK),
   UTIL_TEST(monotonic_time_zero, 0),
+  UTIL_TEST(monotonic_time_add_msec, 0),
   UTIL_TEST(htonll, 0),
   UTIL_TEST(get_unquoted_path, 0),
   END_OF_TESTCASES
