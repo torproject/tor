@@ -1,3 +1,79 @@
+Changes in version 0.3.2.7-rc - 2017-12-1?
+  Tor 0.3.2.7-rc fixes various bugs in earlier versions of Tor, including
+  some that could affect reliability or correctness.
+
+  This is the first release candidate in the 0.3.2 series.  If we find no
+  new bugs or regression here, then the first stable 0.3.2. release will be
+  nearly identical to this.
+
+  o Major bugfixes (circuit prediction):
+    - Fix circuit prediction logic so that a client doesn't treat a stream as
+      being "handled" by a circuit if that circuit already has isolation
+      settings on it that might make it incompatible with the stream. This
+      change should make Tor clients more responsive by improving their
+      chances of having a pre-created circuit ready for use when a new client
+      request arrives.  Fixes bug 18859; bugfix on 0.2.3.3-alpha.
+
+  o Minor features (logging):
+    - Provide better warnings when the getrandom() syscall fails.
+      Closes ticket 24500.
+
+  o Minor features (portability):
+    - Tor now compiles correctly on arm64 with libseccomp-dev installed.
+      (It doesn't yet work with the sandbox enabled.) Closes ticket 24424.
+
+  o Minor bugfix (KIST scheduler):
+    - Downgrade a warning to log info when the monotonic time diff is
+      negative. This can happen on platform not supporting monotonic time. The
+      scheduler recovers from this without any problem. Fixes bug 23696;
+      bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (bridge clients, bootstrap):
+    - Retry directory downloads when we get our first bridge descriptor
+      during bootstrap or while reconnecting to the network. Keep retrying
+      every time we get a bridge descriptor, until we have a reachable bridge.
+      Fixes bug 24367; bugfix on 0.2.0.3-alpha.
+    - Stop delaying bridge descriptor fetches when we have cached bridge
+      descriptors. Instead, only delay bridge descriptor fetches when we
+      have at least one reachable bridge.
+      Fixes bug 24367; bugfix on 0.2.0.3-alpha.
+    - Stop delaying directory fetches when we have cached bridge descriptors.
+      Instead, only delay bridge descriptor fetches when all our bridges are
+      definitely unreachable.
+      Fixes bug 24367; bugfix on 0.2.0.3-alpha.
+
+  o Minor bugfixes (compilation):
+    - Fix a signed/unsigned comparison warning introduced by our
+      fix to TROVE-2017-009. Fixes bug 24480; bugfix on 0.2.5.16.
+
+  o Minor bugfixes (correctness):
+    - Fix several places in our codebase where a C compiler would be likely
+      to eliminate a check, based on assuming that undefined behavior had not
+      happened elsewhere in the code.  These cases are usually a sign of
+      redundant checking, or dubious arithmetic. Found by Georg Koppen using
+      the "STACK" tool from Wang, Zeldovich, Kaashoek, and
+      Solar-Lezama. Fixes bug 24423; bugfix on various Tor versions.
+
+  o Minor bugfixes (hidden service v3):
+    - Fix a race between the circuit close and free where the service would
+      launch a new intro circuit after the close, and then fail to register it
+      before the free of the previously closed circuit. This was making the
+      service unable to find the established intro circuit and thus not upload
+      its descriptor. It can make a service unavailable for up to 24 hours.
+      Fixes bug 23603; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (scheduler):
+    - Properly set the scheduler state of an unopened channel in the KIST
+      scheduler main loop. This prevents a harmless but annoying log warning.
+      Fixes bug 24502; bugfix on 0.3.2.4-alpha.
+
+  o Minor bugfixes (scheduler, KIST):
+    - Avoid a possible integer overflow when computing the available space on
+      the TCP buffer of a channel. This has no security implications but can
+      make KIST not behave properly by allowing more cells on a already
+      saturated connection. Fixes bug 24590; bugfix on 0.3.2.1-alpha.
+
+
 Changes in version 0.3.2.6-alpha - 2017-12-01
   This version of Tor is the latest in the 0.3.2 alpha series. It
   includes fixes for several important security issues. All Tor users

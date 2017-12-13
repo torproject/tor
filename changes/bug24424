@@ -1,3 +1,0 @@
-  o Minor features (portability):
-    - Tor now compiles correctly on arm64 with libseccomp-dev installed.
-      (It doesn't yet work with the sandbox enabled.) Closes ticket 24424.
