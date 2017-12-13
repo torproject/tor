@@ -703,7 +703,7 @@ test_channel_inbound_cell(void *arg)
   old_count = test_chan_fixed_cells_recved;
   channel_process_cell(chan, cell);
   tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count);
-  tt_u64_op(chan->timestamp_xfer_ms, OP_EQ, 0);
+  tt_assert(monotime_coarse_is_zero(&chan->timestamp_xfer));
   tt_u64_op(chan->timestamp_active, OP_EQ, 0);
   tt_u64_op(chan->timestamp_recv, OP_EQ, 0);
 
@@ -716,10 +716,10 @@ test_channel_inbound_cell(void *arg)
   channel_process_cell(chan, cell);
   tt_int_op(test_chan_fixed_cells_recved, OP_EQ, old_count + 1);
   /* We should have a series of timestamp set. */
-  tt_u64_op(chan->timestamp_xfer_ms, OP_NE, 0);
+  tt_assert(!monotime_coarse_is_zero(&chan->timestamp_xfer));
   tt_u64_op(chan->timestamp_active, OP_NE, 0);
   tt_u64_op(chan->timestamp_recv, OP_NE, 0);
-  tt_u64_op(chan->next_padding_time_ms, OP_EQ, 0);
+  tt_assert(monotime_is_zero(&chan->next_padding_time));
   tt_u64_op(chan->n_cells_recved, OP_EQ, 1);
   tt_u64_op(chan->n_bytes_recved, OP_EQ, get_cell_network_size(0));
 
