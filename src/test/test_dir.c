@@ -5875,11 +5875,12 @@ mock_networkstatus_consensus_can_use_extra_fallbacks(
   return mock_networkstatus_consensus_can_use_extra_fallbacks_value;
 }
 
-static int mock_any_bridge_descriptors_known_value = 0;
+static int mock_num_bridges_usable_value = 0;
 static int
-mock_any_bridge_descriptors_known(void)
+mock_num_bridges_usable(int use_maybe_reachable)
 {
-  return mock_any_bridge_descriptors_known_value;
+  (void)use_maybe_reachable;
+  return mock_num_bridges_usable_value;
 }
 
 /* data is a 3 character nul-terminated string.
@@ -5908,17 +5909,18 @@ test_dir_find_dl_schedule(void* data)
   }
 
   if (str[2] == 'r') {
-    mock_any_bridge_descriptors_known_value = 1;
+    /* Any positive, non-zero value should work */
+    mock_num_bridges_usable_value = 2;
   } else {
-    mock_any_bridge_descriptors_known_value = 0;
+    mock_num_bridges_usable_value = 0;
   }
 
   MOCK(networkstatus_consensus_is_bootstrapping,
        mock_networkstatus_consensus_is_bootstrapping);
   MOCK(networkstatus_consensus_can_use_extra_fallbacks,
        mock_networkstatus_consensus_can_use_extra_fallbacks);
-  MOCK(any_bridge_descriptors_known,
-       mock_any_bridge_descriptors_known);
+  MOCK(num_bridges_usable,
+       mock_num_bridges_usable);
 
   download_status_t dls;
   smartlist_t server, client, server_cons, client_cons;
@@ -6030,7 +6032,7 @@ test_dir_find_dl_schedule(void* data)
   /* client */
   mock_options->ClientOnly = 1;
   mock_options->UseBridges = 1;
-  if (any_bridge_descriptors_known()) {
+  if (num_bridges_usable(0) > 0) {
     tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
   } else {
     tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge_bootstrap);
@@ -6039,7 +6041,7 @@ test_dir_find_dl_schedule(void* data)
  done:
   UNMOCK(networkstatus_consensus_is_bootstrapping);
   UNMOCK(networkstatus_consensus_can_use_extra_fallbacks);
-  UNMOCK(any_bridge_descriptors_known);
+  UNMOCK(num_bridges_usable);
   UNMOCK(get_options);
   tor_free(mock_options);
   mock_options = NULL;
@@ -6217,7 +6219,7 @@ struct testcase_t dir_tests[] = {
   DIR(download_status_schedule, 0),
   DIR(download_status_random_backoff, 0),
   DIR(download_status_random_backoff_ranges, 0),
-  DIR(download_status_increment, 0),
+  DIR(download_status_increment, TT_FORK),
   DIR(authdir_type_to_string, 0),
   DIR(conn_purpose_to_string, 0),
   DIR(should_use_directory_guards, 0),
