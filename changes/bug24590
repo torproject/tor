@@ -1,5 +1,0 @@
-  o Minor bugfixes (scheduler, KIST):
-    - Avoid a possible integer overflow when computing the available space on
-      the TCP buffer of a channel. This has no security implications but can
-      make KIST not behave properly by allowing more cells on a already
-      saturated connection. Fixes bug 24590; bugfix on 0.3.2.1-alpha.

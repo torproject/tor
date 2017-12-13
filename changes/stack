@@ -1,7 +1,0 @@
-  o Minor bugfixes (correctness):
-    - Fix several places in our codebase where a C compiler would be likely
-      to eliminate a check, based on assuming that undefined behavior had not
-      happened elsewhere in the code.  These cases are usually a sign of
-      redundant checking, or dubious arithmetic. Found by Georg Koppen using
-      the "STACK" tool from Wang, Zeldovich, Kaashoek, and
-      Solar-Lezama. Fixes bug 24423; bugfix on various Tor versions.

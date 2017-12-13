@@ -1,3 +1,0 @@
-  o Minor features (logging):
-    - Provide better warnings when the getrandom() syscall fails.
-      Closes ticket 24500.

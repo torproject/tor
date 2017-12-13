@@ -1,4 +1,0 @@
-  o Minor bugfixes (scheduler):
-    - Properly set the scheduler state of an unopened channel in the KIST
-      scheduler main loop. This prevents a harmless but annoying log warning.
-      Fixes bug 24502; bugfix on 0.3.2.4-alpha.
