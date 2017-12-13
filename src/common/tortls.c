@@ -491,11 +491,14 @@ tor_tls_create_certificate,(crypto_pk_t *rsa,
    * the past. */
   const time_t min_real_lifetime = 24*3600;
   const time_t start_granularity = 24*3600;
-  time_t earliest_start_time = now - cert_lifetime + min_real_lifetime
-    + start_granularity;
+  time_t earliest_start_time;
   /* Don't actually start in the future! */
-  if (earliest_start_time >= now)
+  if (cert_lifetime <= min_real_lifetime + start_granularity) {
     earliest_start_time = now - 1;
+  } else {
+    earliest_start_time = now + min_real_lifetime + start_granularity
+      - cert_lifetime;
+  }
   start_time = crypto_rand_time_range(earliest_start_time, now);
   /* Round the start time back to the start of a day. */
   start_time -= start_time % start_granularity;
