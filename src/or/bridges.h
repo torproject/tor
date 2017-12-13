@@ -45,7 +45,6 @@ void bridge_add_from_config(struct bridge_line_t *bridge_line);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
 void fetch_bridge_descriptors(const or_options_t *options, time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);
-MOCK_DECL(int, any_bridge_descriptors_known, (void));
 const smartlist_t *get_socks_args_by_bridge_addrport(const tor_addr_t *addr,
                                                      uint16_t port);
 

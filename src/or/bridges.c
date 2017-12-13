@@ -796,7 +796,11 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
   tor_assert(ri);
   tor_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
   if (get_options()->UseBridges) {
-    int first = num_bridges_usable() <= 1;
+    /* Retry directory downloads whenever we get a bridge descriptor:
+     * - when bootstrapping, and
+     * - when we aren't sure if any of our bridges are reachable.
+     * Keep on retrying until we have at least one reachable bridge. */
+    int first = num_bridges_usable(0) < 1;
     bridge_info_t *bridge = get_configured_bridge_by_routerinfo(ri);
     time_t now = time(NULL);
     router_set_status(ri->cache_info.identity_digest, 1);
@@ -826,41 +830,13 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
-      /* set entry->made_contact so if it goes down we don't drop it from
-       * our entry node list */
+      /* If we didn't have a reachable bridge before this one, try directory
+       * documents again. */
       if (first) {
         routerlist_retry_directory_downloads(now);
       }
     }
   }
-}
-
-/** Return the number of bridges that have descriptors that
- * are marked with purpose 'bridge' and are running.
- *
- * We use this function to decide if we're ready to start building
- * circuits through our bridges, or if we need to wait until the
- * directory "server/authority" requests finish. */
-MOCK_IMPL(int,
-any_bridge_descriptors_known, (void))
-{
-  if (BUG(!get_options()->UseBridges)) {
-    return 0;
-  }
-
-  if (!bridge_list)
-    return 0;
-
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
-    const node_t *node;
-    if (!tor_digest_is_zero(bridge->identity) &&
-        (node = node_get_by_id(bridge->identity)) != NULL &&
-        node->ri) {
-      return 1;
-    }
-  } SMARTLIST_FOREACH_END(bridge);
-
-  return 0;
 }
 
 /** Return a smartlist containing all bridge identity digests */
