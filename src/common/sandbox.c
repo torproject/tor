@@ -106,6 +106,11 @@
 
 #define M_SYSCALL arm_r7
 
+#elif defined(__aarch64__) && defined(__LP64__)
+
+#define REG_SYSCALL 8
+#define M_SYSCALL regs[REG_SYSCALL]
+
 #endif /* defined(__i386__) || ... */
 
 /**Determines if at least one sandbox is active.*/
