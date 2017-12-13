@@ -1218,7 +1218,9 @@ should_delay_dir_fetches(const or_options_t *options, const char **msg_out)
   }
 
   if (options->UseBridges) {
-    if (!any_bridge_descriptors_known()) {
+    /* If we know that none of our bridges can possibly work, avoid fetching
+     * directory documents. But if some of them might work, try again. */
+    if (num_bridges_usable(1) == 0) {
       if (msg_out) {
         *msg_out = "No running bridges";
       }

@@ -5345,12 +5345,13 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
         }
       }
     case DL_SCHED_BRIDGE:
-      /* A bridge client downloading bridge descriptors */
-      if (options->UseBridges && any_bridge_descriptors_known()) {
-        /* A bridge client with one or more running bridges */
+      if (options->UseBridges && num_bridges_usable(0) > 0) {
+        /* A bridge client that is sure that one or more of its bridges are
+         * running can afford to wait longer to update bridge descriptors. */
         return options->TestingBridgeDownloadSchedule;
       } else {
-        /* A bridge client with no running bridges */
+        /* A bridge client which might have no running bridges, must try to
+         * get bridge descriptors straight away. */
         return options->TestingBridgeBootstrapDownloadSchedule;
       }
     default:
