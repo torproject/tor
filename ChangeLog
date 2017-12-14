@@ -1,4 +1,4 @@
-Changes in version 0.3.2.7-rc - 2017-12-1?
+Changes in version 0.3.2.7-rc - 2017-12-14
   Tor 0.3.2.7-rc fixes various bugs in earlier versions of Tor,
   including some that could affect reliability or correctness.
 
