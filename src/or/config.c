@@ -1957,7 +1957,6 @@ options_act(const or_options_t *old_options)
       if (guards_update_all()) {
         abandon_circuits = 1;
       }
-      router_dir_info_changed();
     }
 
     if (abandon_circuits) {
