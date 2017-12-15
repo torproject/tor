@@ -208,5 +208,13 @@ const char *config_expand_abbrev(const config_format_t *fmt,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
 
+/* Helper macros to compare an option across two configuration objects */
+#define CFG_EQ_BOOL(a,b,opt) ((a)->opt == (b)->opt)
+#define CFG_EQ_INT(a,b,opt) ((a)->opt == (b)->opt)
+#define CFG_EQ_STRING(a,b,opt) (!strcmp_opt((a)->opt, (b)->opt))
+#define CFG_EQ_SMARTLIST(a,b,opt) smartlist_strings_eq((a)->opt, (b)->opt)
+#define CFG_EQ_LINELIST(a,b,opt) config_lines_eq((a)->opt, (b)->opt)
+#define CFG_EQ_ROUTERSET(a,b,opt) routerset_equal((a)->opt, (b)->opt)
+
 #endif /* !defined(TOR_CONFPARSE_H) */
 

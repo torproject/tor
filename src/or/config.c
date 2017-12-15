@@ -4635,153 +4635,60 @@ options_transition_allowed(const or_options_t *old,
   if (!old)
     return 0;
 
-  if (!opt_streq(old->PidFile, new_val->PidFile)) {
-    *msg = tor_strdup("PidFile is not allowed to change.");
-    return -1;
-  }
+#define BAD_CHANGE_TO(opt, how) do {                                    \
+    *msg = tor_strdup("While Tor is running"how", changing " #opt       \
+                      " is not allowed");                               \
+    return -1;                                                          \
+  } while (0)
 
-  if (old->RunAsDaemon != new_val->RunAsDaemon) {
-    *msg = tor_strdup("While Tor is running, changing RunAsDaemon "
-                      "is not allowed.");
-    return -1;
-  }
+#define NO_CHANGE_BOOL(opt) \
+  if (! CFG_EQ_BOOL(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
+#define NO_CHANGE_INT(opt) \
+  if (! CFG_EQ_INT(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
+#define NO_CHANGE_STRING(opt) \
+  if (! CFG_EQ_STRING(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
 
-  if (old->Sandbox != new_val->Sandbox) {
-    *msg = tor_strdup("While Tor is running, changing Sandbox "
-                      "is not allowed.");
-    return -1;
-  }
-
-  if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    tor_asprintf(msg,
-               "While Tor is running, changing DataDirectory "
-               "(\"%s\"->\"%s\") is not allowed.",
-               old->DataDirectory, new_val->DataDirectory);
-    return -1;
-  }
-
-  if (!opt_streq(old->KeyDirectory, new_val->KeyDirectory)) {
-    tor_asprintf(msg,
-               "While Tor is running, changing KeyDirectory "
-               "(\"%s\"->\"%s\") is not allowed.",
-               old->KeyDirectory, new_val->KeyDirectory);
-    return -1;
-  }
-
-  if (!opt_streq(old->CacheDirectory, new_val->CacheDirectory)) {
-    tor_asprintf(msg,
-               "While Tor is running, changing CacheDirectory "
-               "(\"%s\"->\"%s\") is not allowed.",
-               old->CacheDirectory, new_val->CacheDirectory);
-    return -1;
-  }
-
-  if (!opt_streq(old->User, new_val->User)) {
-    *msg = tor_strdup("While Tor is running, changing User is not allowed.");
-    return -1;
-  }
-
-  if (old->KeepBindCapabilities != new_val->KeepBindCapabilities) {
-    *msg = tor_strdup("While Tor is running, changing KeepBindCapabilities is "
-                      "not allowed.");
-    return -1;
-  }
-
-  if (!opt_streq(old->SyslogIdentityTag, new_val->SyslogIdentityTag)) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "SyslogIdentityTag is not allowed.");
-    return -1;
-  }
-
-  if (!opt_streq(old->AndroidIdentityTag, new_val->AndroidIdentityTag)) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "AndroidIdentityTag is not allowed.");
-    return -1;
-  }
-
-  if ((old->HardwareAccel != new_val->HardwareAccel)
-      || !opt_streq(old->AccelName, new_val->AccelName)
-      || !opt_streq(old->AccelDir, new_val->AccelDir)) {
-    *msg = tor_strdup("While Tor is running, changing OpenSSL hardware "
-                      "acceleration engine is not allowed.");
-    return -1;
-  }
-
-  if (old->TestingTorNetwork != new_val->TestingTorNetwork) {
-    *msg = tor_strdup("While Tor is running, changing TestingTorNetwork "
-                      "is not allowed.");
-    return -1;
-  }
-
-  if (old->DisableAllSwap != new_val->DisableAllSwap) {
-    *msg = tor_strdup("While Tor is running, changing DisableAllSwap "
-                      "is not allowed.");
-    return -1;
-  }
-
-  if (old->TokenBucketRefillInterval != new_val->TokenBucketRefillInterval) {
-    *msg = tor_strdup("While Tor is running, changing TokenBucketRefill"
-                      "Interval is not allowed");
-    return -1;
-  }
-
-  if (old->HiddenServiceSingleHopMode != new_val->HiddenServiceSingleHopMode) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "HiddenServiceSingleHopMode is not allowed.");
-    return -1;
-  }
-
-  if (old->HiddenServiceNonAnonymousMode !=
-      new_val->HiddenServiceNonAnonymousMode) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "HiddenServiceNonAnonymousMode is not allowed.");
-    return -1;
-  }
-
-  if (old->DisableDebuggerAttachment &&
-      !new_val->DisableDebuggerAttachment) {
-    *msg = tor_strdup("While Tor is running, disabling "
-                      "DisableDebuggerAttachment is not allowed.");
-    return -1;
-  }
-
-  if (old->NoExec && !new_val->NoExec) {
-    *msg = tor_strdup("While Tor is running, disabling "
-                      "NoExec is not allowed.");
-    return -1;
-  }
-
-  if (old->OwningControllerFD != new_val->OwningControllerFD) {
-    *msg = tor_strdup("While Tor is running, changing OwningControllerFD "
-                      "is not allowed.");
-    return -1;
-  }
+  NO_CHANGE_STRING(PidFile);
+  NO_CHANGE_BOOL(RunAsDaemon);
+  NO_CHANGE_BOOL(Sandbox);
+  NO_CHANGE_STRING(DataDirectory);
+  NO_CHANGE_STRING(KeyDirectory);
+  NO_CHANGE_STRING(CacheDirectory);
+  NO_CHANGE_STRING(User);
+  NO_CHANGE_BOOL(KeepBindCapabilities);
+  NO_CHANGE_STRING(SyslogIdentityTag);
+  NO_CHANGE_STRING(AndroidIdentityTag);
+  NO_CHANGE_BOOL(HardwareAccel);
+  NO_CHANGE_STRING(AccelName);
+  NO_CHANGE_STRING(AccelDir);
+  NO_CHANGE_BOOL(TestingTorNetwork);
+  NO_CHANGE_BOOL(DisableAllSwap);
+  NO_CHANGE_INT(TokenBucketRefillInterval);
+  NO_CHANGE_BOOL(HiddenServiceSingleHopMode);
+  NO_CHANGE_BOOL(HiddenServiceNonAnonymousMode);
+  NO_CHANGE_BOOL(DisableDebuggerAttachment);
+  NO_CHANGE_BOOL(NoExec);
+  NO_CHANGE_INT(OwningControllerFD);
 
   if (sandbox_is_active()) {
-#define SB_NOCHANGE_STR(opt)                                            \
-    do {                                                                \
-      if (! opt_streq(old->opt, new_val->opt)) {                        \
-        *msg = tor_strdup("Can't change " #opt " while Sandbox is active"); \
-        return -1;                                                      \
-      }                                                                 \
-    } while (0)
+#define SB_NOCHANGE_STR(opt)                      \
+    if (! CFG_EQ_STRING(old, new_val, opt))       \
+      BAD_CHANGE_TO(opt," with Sandbox active")
+#define SB_NOCHANGE_LINELIST(opt)                  \
+    if (! CFG_EQ_LINELIST(old, new_val, opt))      \
+      BAD_CHANGE_TO(opt," with Sandbox active")
+#define SB_NOCHANGE_INT(opt)                       \
+    if (! CFG_EQ_INT(old, new_val, opt))           \
+      BAD_CHANGE_TO(opt," with Sandbox active")
 
     SB_NOCHANGE_STR(Address);
     SB_NOCHANGE_STR(ServerDNSResolvConfFile);
     SB_NOCHANGE_STR(DirPortFrontPage);
     SB_NOCHANGE_STR(CookieAuthFile);
     SB_NOCHANGE_STR(ExtORPortCookieAuthFile);
+    SB_NOCHANGE_LINELIST(Logs);
+    SB_NOCHANGE_INT(ConnLimit);
 
-#undef SB_NOCHANGE_STR
-
-    if (! config_lines_eq(old->Logs, new_val->Logs)) {
-      *msg = tor_strdup("Can't change Logs while Sandbox is active");
-      return -1;
-    }
-    if (old->ConnLimit != new_val->ConnLimit) {
-      *msg = tor_strdup("Can't change ConnLimit while Sandbox is active");
-      return -1;
-    }
     if (server_mode(old) != server_mode(new_val)) {
       *msg = tor_strdup("Can't start/stop being a server while "
                         "Sandbox is active");
@@ -4789,6 +4696,13 @@ options_transition_allowed(const or_options_t *old,
     }
   }
 
+#undef SB_NOCHANGE_LINELIST
+#undef SB_NOCHANGE_STR
+#undef SB_NOCHANGE_INT
+#undef BAD_CHANGE_TO
+#undef NO_CHANGE_BOOL
+#undef NO_CHANGE_INT
+#undef NO_CHANGE_STRING
   return 0;
 }
 
