@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Separate the function that deletes ephemeral files when Tor stops
+      gracefully.
+  o Minor features (cleanup):
+    - Tor now deletes the CookieAuthFile and ExtORPortCookieAuthFile when it
+      stops. Closes ticket 23271.

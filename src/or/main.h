@@ -71,6 +71,8 @@ int try_locking(const or_options_t *options, int err_if_locked);
 int have_lockfile(void);
 void release_lockfile(void);
 
+void tor_remove_file(const char *filename);
+
 void tor_cleanup(void);
 void tor_free_all(int postfork);
 
