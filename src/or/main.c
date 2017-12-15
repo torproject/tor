@@ -2530,7 +2530,7 @@ do_main_loop(void)
     }
   }
 
-  handle_signals(1);
+  handle_signals();
   monotime_init();
   timers_initialize();
 
@@ -3052,46 +3052,28 @@ static struct {
   { -1, -1, NULL }
 };
 
-/** Set up the signal handlers for either parent or child process */
+/** Set up the signal handlers for this process. */
 void
-handle_signals(int is_parent)
+handle_signals(void)
 {
   int i;
-  if (is_parent) {
-    for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
-      if (signal_handlers[i].try_to_register) {
-        signal_handlers[i].signal_event =
-          tor_evsignal_new(tor_libevent_get_base(),
-                           signal_handlers[i].signal_value,
-                           signal_callback,
-                           &signal_handlers[i].signal_value);
-        if (event_add(signal_handlers[i].signal_event, NULL))
-          log_warn(LD_BUG, "Error from libevent when adding "
-                   "event for signal %d",
-                   signal_handlers[i].signal_value);
-      } else {
-        signal_handlers[i].signal_event =
-          tor_event_new(tor_libevent_get_base(), -1,
-                        EV_SIGNAL, signal_callback,
-                        &signal_handlers[i].signal_value);
-      }
+  for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
+    if (signal_handlers[i].try_to_register) {
+      signal_handlers[i].signal_event =
+        tor_evsignal_new(tor_libevent_get_base(),
+                         signal_handlers[i].signal_value,
+                         signal_callback,
+                         &signal_handlers[i].signal_value);
+      if (event_add(signal_handlers[i].signal_event, NULL))
+        log_warn(LD_BUG, "Error from libevent when adding "
+                 "event for signal %d",
+                 signal_handlers[i].signal_value);
+    } else {
+      signal_handlers[i].signal_event =
+        tor_event_new(tor_libevent_get_base(), -1,
+                      EV_SIGNAL, signal_callback,
+                      &signal_handlers[i].signal_value);
     }
-  } else {
-#ifndef _WIN32
-    struct sigaction action;
-    action.sa_flags = 0;
-    sigemptyset(&action.sa_mask);
-    action.sa_handler = SIG_IGN;
-    sigaction(SIGINT,  &action, NULL);
-    sigaction(SIGTERM, &action, NULL);
-    sigaction(SIGPIPE, &action, NULL);
-    sigaction(SIGUSR1, &action, NULL);
-    sigaction(SIGUSR2, &action, NULL);
-    sigaction(SIGHUP,  &action, NULL);
-#ifdef SIGXFSZ
-    sigaction(SIGXFSZ, &action, NULL);
-#endif
-#endif /* !defined(_WIN32) */
   }
 }
 

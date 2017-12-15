@@ -66,7 +66,7 @@ MOCK_DECL(long,get_uptime,(void));
 
 unsigned get_signewnym_epoch(void);
 
-void handle_signals(int is_parent);
+void handle_signals(void);
 void activate_signal(int signal_num);
 
 int try_locking(const or_options_t *options, int err_if_locked);
