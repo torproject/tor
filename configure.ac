@@ -439,15 +439,20 @@ if test "x$enable_rust" = "xyes"; then
     fi
     if test ! -d "$TOR_RUST_DEPENDENCIES"; then
       AC_MSG_ERROR([Rust dependency directory $TOR_RUST_DEPENDENCIES does not exist. Specify a dependency directory using the TOR_RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
+      ERRORED=1
     fi
     for dep in $rust_crates; do
       if test ! -d "$TOR_RUST_DEPENDENCIES"/"$dep"; then
         AC_MSG_ERROR([Failure to find rust dependency $TOR_RUST_DEPENDENCIES/$dep. Specify a dependency directory using the TOR_RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
+        ERRORED=1
       fi
     done
     if test "x$NEED_MOD" = "x1"; then
       dnl When looking for dependencies from cargo, pick right directory
       TOR_RUST_DEPENDENCIES="../../src/ext/rust"
+    fi
+    if test "x$ERRORED" = "x"; then
+      AC_MSG_RESULT([yes])
     fi
   fi
 
@@ -465,6 +470,7 @@ if test "x$enable_rust" = "xyes"; then
 
   dnl Let's check the rustc version, too
   AC_MSG_CHECKING([rust version])
+  RUSTC_VERSION=`$RUSTC --version`
   RUSTC_VERSION_MAJOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 1`
   RUSTC_VERSION_MINOR=`$RUSTC --version | cut -d ' ' -f 2 | cut -d '.' -f 2`
   if test "x$RUSTC_VERSION_MAJOR" = "x" -o "x$RUSTC_VERSION_MINOR" = "x"; then
@@ -473,6 +479,7 @@ if test "x$enable_rust" = "xyes"; then
   if test "$RUSTC_VERSION_MAJOR" -lt 2 -a "$RUSTC_VERSION_MINOR" -lt 14; then
     AC_MSG_ERROR([rustc must be at least version 1.14])
   fi
+  AC_MSG_RESULT([$RUSTC_VERSION])
 fi
 
 AC_SEARCH_LIBS(socket, [socket network])
