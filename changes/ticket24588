@@ -1,0 +1,5 @@
+  o Minor features (embedding, mobile):
+    - Applications that want to embed Tor can now tell Tor not to register
+      any of its own POSIX signal handlers, using the __DisableSignalHandlers
+      option. This option is not meant for general use. Closes ticket 24588.
+

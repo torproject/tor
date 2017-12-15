@@ -4651,6 +4651,11 @@ typedef struct {
 
   /** List of files that were opened by %include in torrc and torrc-defaults */
   smartlist_t *FilesOpenedByIncludes;
+
+  /** If true, Tor shouldn't install any posix signal handlers, since it is
+   * running embedded inside another process.
+   */
+  int DisableSignalHandlers;
 } or_options_t;
 
 #define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())

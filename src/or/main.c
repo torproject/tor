@@ -3057,8 +3057,10 @@ void
 handle_signals(void)
 {
   int i;
+  const int enabled = !get_options()->DisableSignalHandlers;
+
   for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
-    if (signal_handlers[i].try_to_register) {
+    if (enabled && signal_handlers[i].try_to_register) {
       signal_handlers[i].signal_event =
         tor_evsignal_new(tor_libevent_get_base(),
                          signal_handlers[i].signal_value,

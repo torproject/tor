@@ -564,6 +564,7 @@ static config_var_t option_vars_[] = {
   VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
+  VAR("__DisableSignalHandlers", BOOL,  DisableSignalHandlers,    "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
@@ -4648,6 +4649,12 @@ options_transition_allowed(const or_options_t *old,
 
   if (old->Sandbox != new_val->Sandbox) {
     *msg = tor_strdup("While Tor is running, changing Sandbox "
+                      "is not allowed.");
+    return -1;
+  }
+
+  if (old->DisableSignalHandlers != new_val->DisableSignalHandlers) {
+    *msg = tor_strdup("While Tor is running, changing DisableSignalHandlers "
                       "is not allowed.");
     return -1;
   }
