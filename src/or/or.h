@@ -4650,7 +4650,7 @@ typedef struct {
   smartlist_t *SchedulerTypes_;
 
   /** List of files that were opened by %include in torrc and torrc-defaults */
-   smartlist_t *FilesOpenedByIncludes;
+  smartlist_t *FilesOpenedByIncludes;
 } or_options_t;
 
 #define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())
