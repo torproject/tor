@@ -43,11 +43,11 @@ macro_rules! tor_log_msg {
 
             /// Default function name to log in case of errors when converting
             /// a function name to a CString
-            const ERR_LOG_FUNCTION: &'static str = "tor_log_msg";
+            const ERR_LOG_FUNCTION: &str = "tor_log_msg";
 
             /// Default message to log in case of errors when converting a log
             /// message to a CString
-            const ERR_LOG_MSG: &'static str = "Unable to log message from Rust
+            const ERR_LOG_MSG: &str = "Unable to log message from Rust
             module due to error when converting to CString";
 
             let func = match CString::new($function) {
@@ -63,11 +63,11 @@ macro_rules! tor_log_msg {
             let func_ptr = func.as_ptr();
             let msg_ptr = msg.as_ptr();
 
+            let c_severity = unsafe { translate_severity($severity) };
+            let c_domain = unsafe { translate_domain($domain) };
+
             unsafe {
-                tor_log_string(translate_severity($severity),
-                translate_domain($domain),
-                func_ptr, msg_ptr
-                )
+                $crate::tor_log_string(c_severity, c_domain, func_ptr, msg_ptr )
             }
         }
     };
@@ -134,27 +134,20 @@ pub mod log {
 
     /// Translate Rust defintions of log domain levels to C. This exposes a 1:1
     /// mapping between types.
-    ///
-    /// Allow for default cases in case Rust and C log types get out of sync
-    #[allow(unreachable_patterns)]
     pub unsafe fn translate_domain(domain: LogDomain) -> u32 {
         match domain {
             LogDomain::LdNet => _LD_NET,
             LogDomain::LdGeneral => _LD_GENERAL,
-            _ => _LD_GENERAL,
         }
     }
 
     /// Translate Rust defintions of log severity levels to C. This exposes a
     /// 1:1 mapping between types.
-    ///
-    /// Allow for default cases in case Rust and C log types get out of sync
     #[allow(unreachable_patterns)]
     pub unsafe fn translate_severity(severity: LogSeverity) -> c_int {
         match severity {
             LogSeverity::Warn => _LOG_WARN,
             LogSeverity::Notice => _LOG_NOTICE,
-            _ => _LOG_NOTICE,
         }
     }
 
