@@ -3972,6 +3972,8 @@ typedef struct {
 
   int HeartbeatPeriod; /**< Log heartbeat messages after this many seconds
                         * have passed. */
+  int MainloopStats; /**< Log main loop statistics as part of the
+                      * heartbeat messages. */
 
   char *HTTPProxy; /**< hostname[:port] to use as http proxy, if any. */
   tor_addr_t HTTPProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */

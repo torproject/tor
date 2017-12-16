@@ -360,6 +360,7 @@ static config_var_t option_vars_[] = {
   V(GuardLifetime,               INTERVAL, "0 minutes"),
   V(HardwareAccel,               BOOL,     "0"),
   V(HeartbeatPeriod,             INTERVAL, "6 hours"),
+  V(MainloopStats,               BOOL,     "0"),
   V(AccelName,                   STRING,   NULL),
   V(AccelDir,                    FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
@@ -2157,6 +2158,10 @@ options_act(const or_options_t *old_options)
     if (options->PerConnBWRate != old_options->PerConnBWRate ||
         options->PerConnBWBurst != old_options->PerConnBWBurst)
       connection_or_update_token_buckets(get_connection_array(), options);
+
+    if (options->MainloopStats != old_options->MainloopStats) {
+      reset_main_loop_counters();
+    }
   }
 
   /* Only collect directory-request statistics on relays and bridges. */

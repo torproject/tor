@@ -79,6 +79,11 @@ void tor_free_all(int postfork);
 int do_main_loop(void);
 int tor_init(int argc, char **argv);
 
+void reset_main_loop_counters(void);
+uint64_t get_main_loop_success_count(void);
+uint64_t get_main_loop_error_count(void);
+uint64_t get_main_loop_idle_count(void);
+
 extern time_t time_of_process_start;
 extern long stats_n_seconds_working;
 extern int quiet_level;
