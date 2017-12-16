@@ -18,7 +18,7 @@
  * inspecting values that are calculated as a result of the
  * configured options.
  *
- * <h3>How to add  new options</h3>
+ * <h3>How to add new options</h3>
  *
  * To add new items to the torrc, there are a minimum of three places to edit:
  * <ul>
