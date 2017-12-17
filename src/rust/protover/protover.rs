@@ -6,7 +6,7 @@ use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::string::String;
 
-use tor_log::*;
+use tor_log::{LogSeverity, LogDomain};
 use external::c_tor_version_as_new_as;
 
 /// The first version of Tor that included "proto" entries in its descriptors.

@@ -1,6 +1,8 @@
 // Copyright (c) 2016-2017, The Tor Project, Inc. */
 // See LICENSE for licensing information */
 
+// Note that these functions are untested due to the fact that there are no
+// return variables to test and they are calling into a C API.
 
 /// The related domain which the logging message is relevant. For example,
 /// log messages relevant to networking would use LogDomain::LdNet, whereas
@@ -39,64 +41,65 @@ macro_rules! tor_log_msg {
      $($message:tt)*) =>
     {
         {
-            use std::ffi::CString;
-
-            /// Default function name to log in case of errors when converting
-            /// a function name to a CString
-            const ERR_LOG_FUNCTION: &str = "tor_log_msg";
-
-            /// Default message to log in case of errors when converting a log
-            /// message to a CString
-            const ERR_LOG_MSG: &str = "Unable to log message from Rust
-            module due to error when converting to CString";
-
-            let func = match CString::new($function) {
-                Ok(n) => n,
-                Err(_) => CString::new(ERR_LOG_FUNCTION).unwrap(),
-            };
-
-            let msg = match CString::new(format!($($message)*)) {
-                Ok(n) => n,
-                Err(_) => CString::new(ERR_LOG_MSG).unwrap(),
-            };
-
-            let func_ptr = func.as_ptr();
-            let msg_ptr = msg.as_ptr();
-
-            let c_severity = unsafe { translate_severity($severity) };
-            let c_domain = unsafe { translate_domain($domain) };
-
-            unsafe {
-                $crate::tor_log_string(c_severity, c_domain, func_ptr, msg_ptr )
-            }
+            let msg = format!($($message)*);
+            $crate::tor_log_msg_impl($severity, $domain, $function, msg)
         }
     };
 }
 
-/// This module exposes no-op functionality purely for the purpose of testing
-/// Rust at the module level.
+#[inline]
+pub fn tor_log_msg_impl(
+    severity: LogSeverity,
+    domain: LogDomain,
+    function: &str,
+    message: String,
+) {
+    use std::ffi::CString;
+
+    /// Default function name to log in case of errors when converting
+    /// a function name to a CString
+    const ERR_LOG_FUNCTION: &str = "tor_log_msg";
+
+    /// Default message to log in case of errors when converting a log
+    /// message to a CString
+    const ERR_LOG_MSG: &str = "Unable to log message from Rust
+            module due to error when converting to CString";
+
+    let func = match CString::new(function) {
+        Ok(n) => n,
+        Err(_) => CString::new(ERR_LOG_FUNCTION).unwrap(),
+    };
+
+    let msg = match CString::new(message) {
+        Ok(n) => n,
+        Err(_) => CString::new(ERR_LOG_MSG).unwrap(),
+    };
+
+    // Bind to a local variable to preserve ownership. This is essential so
+    // that ownership is guaranteed until these local variables go out of scope
+    let func_ptr = func.as_ptr();
+    let msg_ptr = msg.as_ptr();
+
+    let c_severity = unsafe { log::translate_severity(severity) };
+    let c_domain = unsafe { log::translate_domain(domain) };
+
+    unsafe { log::tor_log_string(c_severity, c_domain, func_ptr, msg_ptr) }
+}
+
+/// This module exposes no-op functionality for testing other Rust modules
+/// without linking to C.
 #[cfg(any(test, feature = "testing"))]
 pub mod log {
     use libc::{c_char, c_int};
     use super::LogDomain;
     use super::LogSeverity;
 
-    /// Expose a no-op logging interface purely for testing Rust modules at the
-    /// module level.
-    pub fn tor_log_string<'a>(
-        severity: c_int,
-        domain: u32,
-        function: *const c_char,
-        message: *const c_char,
-    ) -> (c_int, u32, String, String) {
-        use std::ffi::CStr;
-
-        let func = unsafe { CStr::from_ptr(function) }.to_str().unwrap();
-        let func_allocated = String::from(func);
-
-        let msg = unsafe { CStr::from_ptr(message) }.to_str().unwrap();
-        let msg_allocated = String::from(msg);
-        (severity, domain, func_allocated, msg_allocated)
+    pub unsafe fn tor_log_string<'a>(
+        _severity: c_int,
+        _domain: u32,
+        _function: *const c_char,
+        _message: *const c_char,
+    ) {
     }
 
     pub unsafe fn translate_domain(_domain: LogDomain) -> u32 {
@@ -143,7 +146,6 @@ pub mod log {
 
     /// Translate Rust defintions of log severity levels to C. This exposes a
     /// 1:1 mapping between types.
-    #[allow(unreachable_patterns)]
     pub unsafe fn translate_severity(severity: LogSeverity) -> c_int {
         match severity {
             LogSeverity::Warn => _LOG_WARN,
@@ -160,70 +162,5 @@ pub mod log {
             function: *const c_char,
             string: *const c_char,
         );
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use tor_log::*;
-    use tor_log::log::*;
-
-    use libc::c_int;
-
-    #[test]
-    fn test_get_log_message() {
-
-        fn test_macro<'a>() -> (c_int, u32, String, String) {
-            let (x, y, z, a) =
-                tor_log_msg!(
-                    LogSeverity::Warn,
-                    LogDomain::LdNet,
-                    "test_macro",
-                    "test log message {}",
-                    "a",
-                    );
-            (x, y, z, a)
-        }
-
-        let (severity, domain, function_name, log_msg) = test_macro();
-
-        let expected_severity =
-            unsafe { translate_severity(LogSeverity::Warn) };
-        assert_eq!(severity, expected_severity);
-
-        let expected_domain = unsafe { translate_domain(LogDomain::LdNet) };
-        assert_eq!(domain, expected_domain);
-
-        assert_eq!("test_macro", function_name);
-        assert_eq!("test log message a", log_msg);
-    }
-
-    #[test]
-    fn test_get_log_message_multiple_values() {
-        fn test_macro<'a>() -> (c_int, u32, String, String) {
-            let (x, y, z, a) = tor_log_msg!(
-                LogSeverity::Warn,
-                LogDomain::LdNet,
-                "test_macro 2",
-                "test log message {} {} {} {}",
-                10,
-                9,
-                8,
-                7
-            );
-            (x, y, z, a)
-        }
-
-        let (severity, domain, function_name, log_msg) = test_macro();
-
-        let expected_severity =
-            unsafe { translate_severity(LogSeverity::Warn) };
-        assert_eq!(severity, expected_severity);
-
-        let expected_domain = unsafe { translate_domain(LogDomain::LdNet) };
-        assert_eq!(domain, expected_domain);
-
-        assert_eq!("test_macro 2", function_name);
-        assert_eq!("test log message 10 9 8 7", log_msg);
     }
 }

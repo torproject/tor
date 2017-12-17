@@ -5,7 +5,7 @@
 //! called from C.
 //!
 
-use tor_log::*;
+use tor_log::{LogSeverity, LogDomain};
 
 /// Returns a short string to announce Rust support during startup.
 ///
