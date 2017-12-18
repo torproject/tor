@@ -1094,7 +1094,11 @@ select_and_add_guard_item_for_sample(guard_selection_t *gs,
   return added_guard;
 }
 
-/** Return true iff we need a consensus to maintain our  */
+/**
+ * Return true iff we need a consensus to update our guards, but we don't
+ * have one. (We can return 0 here either if the consensus is _not_ missing,
+ * or if we don't need a consensus because we're using bridges.)
+ */
 static int
 live_consensus_is_missing(const guard_selection_t *gs)
 {
