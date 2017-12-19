@@ -102,7 +102,7 @@ DOWNLOAD_MICRODESC_CONSENSUS = True
 # 0.3.0.0-alpha-dev and later deliver stale consensuses, but typically recover
 # after ~12 hours.
 # We should make this lower when #20909 is fixed, see #20942.
-CONSENSUS_EXPIRY_TOLERANCE = 24*60*60
+CONSENSUS_EXPIRY_TOLERANCE = 0 
 
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
