@@ -1,0 +1,6 @@
+  o Major bugfixes (KIST, scheduler):
+    - The KIST scheduler did not correctly account for data already enqueued
+      in each connection's send socket buffer, particularly in cases when the
+      TCP/IP congestion window was reduced between scheduler calls. This
+      situation lead to excessive per-connection buffering in the kernel, and
+      a potential memory DoS. Fixes bug 24665; bugfix on 0.3.2.1-alpha.
