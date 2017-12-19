@@ -1121,6 +1121,21 @@ typedef struct cell_queue_t {
   int n; /**< The number of cells in the queue. */
 } cell_queue_t;
 
+/** A single queued destroy cell. */
+typedef struct destroy_cell_t {
+  TOR_SIMPLEQ_ENTRY(destroy_cell_t) next;
+  circid_t circid;
+  uint32_t inserted_time; /** Timestamp when this was queued. */
+  uint8_t reason;
+} destroy_cell_t;
+
+/** A queue of destroy cells on a channel. */
+typedef struct destroy_cell_queue_t {
+  /** Linked list of packed_cell_t */
+  TOR_SIMPLEQ_HEAD(dcell_simpleq, destroy_cell_t) head;
+  int n; /**< The number of cells in the queue. */
+} destroy_cell_queue_t;
+
 /** Beginning of a RELAY cell payload. */
 typedef struct {
   uint8_t command; /**< The end-to-end relay command. */
