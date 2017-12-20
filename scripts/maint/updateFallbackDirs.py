@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
 # Usage:
+<<<<<<< Updated upstream
 #
 # Regenerate the list:
-# scripts/maint/updateFallbackDirs.py > src/or/fallback_dirs.inc
+# scripts/maint/updateFallbackDirs.py > src/or/fallback_dirs.inc 2> fallback_dirs.log
 #
 # Check the existing list:
-# scripts/maint/updateFallbackDirs.py check_existing > fallback_dirs.inc.ok
+# scripts/maint/updateFallbackDirs.py check_existing > fallback_dirs.inc.ok 2> fallback_dirs.log
 # mv fallback_dirs.inc.ok src/or/fallback_dirs.inc
 #
 # This script should be run from a stable, reliable network connection,
