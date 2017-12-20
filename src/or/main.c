@@ -3401,11 +3401,9 @@ tor_free_all(int postfork)
 void
 tor_remove_file(const char *filename)
 {
-  if (file_status(filename) == FN_FILE) {
-    if (tor_unlink(filename) != 0) {
-      log_warn(LD_FS, "Couldn't unlink %s: %s",
+  if (tor_unlink(filename) != 0 && errno != ENOENT) {
+    log_warn(LD_FS, "Couldn't unlink %s: %s",
                filename, strerror(errno));
-    }
   }
 }
 
