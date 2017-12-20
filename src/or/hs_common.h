@@ -114,7 +114,7 @@
 /* Default value of number of hsdir replicas (hsdir_n_replicas). */
 #define HS_DEFAULT_HSDIR_N_REPLICAS 2
 /* Default value of hsdir spread store (hsdir_spread_store). */
-#define HS_DEFAULT_HSDIR_SPREAD_STORE 3
+#define HS_DEFAULT_HSDIR_SPREAD_STORE 4
 /* Default value of hsdir spread fetch (hsdir_spread_fetch). */
 #define HS_DEFAULT_HSDIR_SPREAD_FETCH 3
 
