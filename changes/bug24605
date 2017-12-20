@@ -1,0 +1,4 @@
+  o Minor features (instrumentation):
+    - Add the MainloopStats option to Tor that allows developers to get
+      instrumentation information from the main event loop via the heartbeat
+      messages. Closes ticket 24605.

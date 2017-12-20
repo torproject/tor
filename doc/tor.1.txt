@@ -2032,6 +2032,11 @@ is non-zero):
     to 0 will disable the heartbeat. Otherwise, it must be at least 30
     minutes. (Default: 6 hours)
 
+[[MainloopStats]] **MainloopStats** **0**|**1**::
+    Log main loop statistics every **HeartbeatPeriod** seconds. This is a log
+    level __notice__ message designed to help developers instrumenting Tor's
+    main event loop. (Default: 0)
+
 [[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Limits the max number of bytes sent and received within a set time period
     using a given calculation rule (see: AccountingStart, AccountingRule).

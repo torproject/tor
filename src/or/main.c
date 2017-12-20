@@ -179,6 +179,12 @@ static uint64_t stats_n_bytes_written = 0;
 time_t time_of_process_start = 0;
 /** How many seconds have we been running? */
 long stats_n_seconds_working = 0;
+/** How many times have we returned from the main loop successfully? */
+static uint64_t stats_n_main_loop_successes = 0;
+/** How many times have we received an error from the main loop? */
+static uint64_t stats_n_main_loop_errors = 0;
+/** How many times have we returned from the main loop with no events. */
+static uint64_t stats_n_main_loop_idle = 0;
 
 /** How often will we honor SIGNEWNYM requests? */
 #define MAX_SIGNEWNYM_RATE 10
@@ -491,6 +497,57 @@ connection_is_reading(connection_t *conn)
 
   return conn->reading_from_linked_conn ||
     (conn->read_event && event_pending(conn->read_event, EV_READ, NULL));
+}
+
+/** Reset our main loop counters. */
+void
+reset_main_loop_counters(void)
+{
+  stats_n_main_loop_successes = 0;
+  stats_n_main_loop_errors = 0;
+  stats_n_main_loop_idle = 0;
+}
+
+/** Increment the main loop success counter. */
+static void
+increment_main_loop_success_count(void)
+{
+  ++stats_n_main_loop_successes;
+}
+
+/** Get the main loop success counter. */
+uint64_t
+get_main_loop_success_count(void)
+{
+  return stats_n_main_loop_successes;
+}
+
+/** Increment the main loop error counter. */
+static void
+increment_main_loop_error_count(void)
+{
+  ++stats_n_main_loop_errors;
+}
+
+/** Get the main loop error counter. */
+uint64_t
+get_main_loop_error_count(void)
+{
+  return stats_n_main_loop_errors;
+}
+
+/** Increment the main loop idle counter. */
+static void
+increment_main_loop_idle_count(void)
+{
+  ++stats_n_main_loop_idle;
+}
+
+/** Get the main loop idle counter. */
+uint64_t
+get_main_loop_idle_count(void)
+{
+  return stats_n_main_loop_idle;
 }
 
 /** Check whether <b>conn</b> is correct in having (or not having) a
@@ -2693,6 +2750,8 @@ run_main_loop_once(void)
   if (main_loop_should_exit)
     return 0;
 
+  const or_options_t *options = get_options();
+
 #ifndef _WIN32
   /* Make it easier to tell whether libevent failure is our fault or not. */
   errno = 0;
@@ -2702,7 +2761,14 @@ run_main_loop_once(void)
    * so that libevent knows to run their callbacks. */
   SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
                     event_active(conn->read_event, EV_READ, 1));
-  called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+
+  if (options->MainloopStats) {
+    /* We always enforce that EVLOOP_ONCE is passed to event_base_loop() if we
+     * are collecting main loop statistics. */
+    called_loop_once = 1;
+  } else {
+    called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+  }
 
   /* Make sure we know (about) what time it is. */
   update_approx_time(time(NULL));
@@ -2713,6 +2779,21 @@ run_main_loop_once(void)
    * of these happens, then run all the appropriate callbacks. */
   loop_result = event_base_loop(tor_libevent_get_base(),
                                 called_loop_once ? EVLOOP_ONCE : 0);
+
+  if (options->MainloopStats) {
+    /* Update our main loop counters. */
+    if (loop_result == 0) {
+      // The call was succesful.
+      increment_main_loop_success_count();
+    } else if (loop_result == -1) {
+      // The call was erroneous.
+      increment_main_loop_error_count();
+    } else if (loop_result == 1) {
+      // The call didn't have any active or pending events
+      // to handle.
+      increment_main_loop_idle_count();
+    }
+  }
 
   /* Oh, the loop failed.  That might be an error that we need to
    * catch, but more likely, it's just an interrupted poll() call or something,

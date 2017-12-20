@@ -157,6 +157,20 @@ log_heartbeat(time_t now)
     tor_free(msg);
   }
 
+  if (options->MainloopStats) {
+    const uint64_t main_loop_success_count = get_main_loop_success_count();
+    const uint64_t main_loop_error_count = get_main_loop_error_count();
+    const uint64_t main_loop_idle_count = get_main_loop_idle_count();
+
+    log_fn(LOG_NOTICE, LD_HEARTBEAT, "Main event loop statistics: "
+         U64_FORMAT " succesful returns, "
+         U64_FORMAT " erroneous returns, and "
+         U64_FORMAT " idle returns.",
+         U64_PRINTF_ARG(main_loop_success_count),
+         U64_PRINTF_ARG(main_loop_error_count),
+         U64_PRINTF_ARG(main_loop_idle_count));
+  }
+
   tor_free(uptime);
   tor_free(bw_sent);
   tor_free(bw_rcvd);
