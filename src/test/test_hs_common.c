@@ -1053,7 +1053,7 @@ are_responsible_hsdirs_equal(void)
 {
   int count = 0;
   tt_int_op(smartlist_len(client_responsible_hsdirs), OP_EQ, 6);
-  tt_int_op(smartlist_len(service_responsible_hsdirs), OP_EQ, 6);
+  tt_int_op(smartlist_len(service_responsible_hsdirs), OP_EQ, 8);
 
   SMARTLIST_FOREACH_BEGIN(client_responsible_hsdirs,
                           const routerstatus_t *, c_rs) {
@@ -1415,7 +1415,7 @@ run_reachability_scenario(const reachability_cfg_t *cfg, int num_scenario)
                             cfg->client_fetch_next_desc, 0,
                             service_responsible_hsdirs);
   cleanup_nodelist();
-  tt_int_op(smartlist_len(service_responsible_hsdirs), OP_EQ, 6);
+  tt_int_op(smartlist_len(service_responsible_hsdirs), OP_EQ, 8);
 
   UNMOCK(networkstatus_get_latest_consensus);
   UNMOCK(networkstatus_get_live_consensus);
@@ -1605,7 +1605,7 @@ helper_test_hsdir_sync(networkstatus_t *ns,
   /* Cleanup right now so we don't memleak on error. */
   cleanup_nodelist();
   /* Check that previous hsdirs were populated */
-  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 6);
+  tt_int_op(smartlist_len(desc->previous_hsdirs), OP_EQ, 8);
 
   /* 3) Initialize client time */
   helper_set_consensus_and_system_time(ns, client_position);
