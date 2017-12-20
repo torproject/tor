@@ -3397,7 +3397,10 @@ tor_free_all(int postfork)
   }
 }
 
-/** Remove the specified file. */
+/**
+ * Remove the specified file, and log a warning if the operation fails for
+ * any reason other than the file not existing.
+ */
 void
 tor_remove_file(const char *filename)
 {
