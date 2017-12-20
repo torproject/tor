@@ -88,10 +88,9 @@ struct channel_s {
    * Used to decide what channels to pad, and when. */
   channel_usage_info_t channel_usage;
 
-  /** When should we send a cell for netflow padding, in absolute
-   *  milliseconds since monotime system start. 0 means no padding
-   *  is scheduled. */
-  uint64_t next_padding_time_ms;
+  /** When should we send a cell for netflow padding? 0 means no padding is
+   *  scheduled. */
+  monotime_coarse_t next_padding_time;
 
   /** The callback pointer for the padding callbacks */
   tor_timer_t *padding_timer;
@@ -158,7 +157,7 @@ struct channel_s {
   time_t timestamp_active; /* Any activity */
 
   /**
-   * This is a high-resolution monotonic timestamp that marks when we
+   * This is a monotonic timestamp that marks when we
    * believe the channel has actually sent or received data to/from
    * the wire. Right now, it is used to determine when we should send
    * a padding cell for channelpadding.
@@ -167,7 +166,7 @@ struct channel_s {
    * accurately reflect actual network data transfer? Or might this be
    * very wrong wrt when bytes actually go on the wire?
    */
-  uint64_t timestamp_xfer_ms;
+  monotime_coarse_t timestamp_xfer;
 
   /* Methods implemented by the lower layer */
 

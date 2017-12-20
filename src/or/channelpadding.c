@@ -23,7 +23,8 @@
 #include <event2/event.h>
 #include "rendservice.h"
 
-STATIC int channelpadding_get_netflow_inactive_timeout_ms(const channel_t *);
+STATIC int32_t channelpadding_get_netflow_inactive_timeout_ms(
+                                                           const channel_t *);
 STATIC int channelpadding_send_disable_command(channel_t *);
 STATIC int64_t channelpadding_compute_time_until_pad_for_netflow(channel_t *);
 
@@ -165,7 +166,7 @@ channelpadding_new_consensus_params(networkstatus_t *ns)
  * Returns the next timeout period (in milliseconds) after which we should
  * send a padding packet, or 0 if padding is disabled.
  */
-STATIC int
+STATIC int32_t
 channelpadding_get_netflow_inactive_timeout_ms(const channel_t *chan)
 {
   int low_timeout = consensus_nf_ito_low;
@@ -377,15 +378,16 @@ channelpadding_send_padding_cell_for_callback(channel_t *chan)
 
   chan->pending_padding_callback = 0;
 
-  if (!chan->next_padding_time_ms ||
+  if (monotime_coarse_is_zero(&chan->next_padding_time) ||
       chan->has_queued_writes(chan)) {
     /* We must have been active before the timer fired */
-    chan->next_padding_time_ms = 0;
+    monotime_coarse_zero(&chan->next_padding_time);
     return;
   }
 
   {
-    uint64_t now = monotime_coarse_absolute_msec();
+    monotime_coarse_t now;
+    monotime_coarse_get(&now);
 
     log_fn(LOG_INFO,LD_OR,
         "Sending netflow keepalive on "U64_FORMAT" to %s (%s) after "
@@ -393,12 +395,13 @@ channelpadding_send_padding_cell_for_callback(channel_t *chan)
         U64_PRINTF_ARG(chan->global_identifier),
         safe_str_client(chan->get_remote_descr(chan, 0)),
         safe_str_client(hex_str(chan->identity_digest, DIGEST_LEN)),
-        U64_PRINTF_ARG(now - chan->timestamp_xfer_ms),
-        U64_PRINTF_ARG(now - chan->next_padding_time_ms));
+        I64_PRINTF_ARG(monotime_coarse_diff_msec(&chan->timestamp_xfer,&now)),
+        I64_PRINTF_ARG(
+                   monotime_coarse_diff_msec(&chan->next_padding_time,&now)));
   }
 
   /* Clear the timer */
-  chan->next_padding_time_ms = 0;
+  monotime_coarse_zero(&chan->next_padding_time);
 
   /* Send the padding cell. This will cause the channel to get a
    * fresh timestamp_active */
@@ -500,24 +503,29 @@ channelpadding_schedule_padding(channel_t *chan, int in_ms)
 STATIC int64_t
 channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
 {
-  uint64_t long_now = monotime_coarse_absolute_msec();
+  monotime_coarse_t now;
+  monotime_coarse_get(&now);
 
-  if (!chan->next_padding_time_ms) {
+  if (monotime_coarse_is_zero(&chan->next_padding_time)) {
     /* If the below line or crypto_rand_int() shows up on a profile,
      * we can avoid getting a timeout until we're at least nf_ito_lo
      * from a timeout window. That will prevent us from setting timers
      * on connections that were active up to 1.5 seconds ago.
      * Idle connections should only call this once every 5.5s on average
      * though, so that might be a micro-optimization for little gain. */
-    int64_t padding_timeout =
+    int32_t padding_timeout =
         channelpadding_get_netflow_inactive_timeout_ms(chan);
 
     if (!padding_timeout)
       return CHANNELPADDING_TIME_DISABLED;
 
-    chan->next_padding_time_ms = padding_timeout
-                                 + chan->timestamp_xfer_ms;
+    monotime_coarse_add_msec(&chan->next_padding_time,
+                             &chan->timestamp_xfer,
+                             padding_timeout);
   }
+
+  const int64_t ms_till_pad =
+    monotime_coarse_diff_msec(&now, &chan->next_padding_time);
 
   /* If the next padding time is beyond the maximum possible consensus value,
    * then this indicates a clock jump, so just send padding now. This is
@@ -525,13 +533,12 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
    * where we wait around forever for monotonic time to move forward after
    * a clock jump far into the past.
    */
-  if (chan->next_padding_time_ms > long_now +
-      DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX) {
+  if (ms_till_pad > DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX) {
     tor_fragile_assert();
     log_warn(LD_BUG,
         "Channel padding timeout scheduled "I64_FORMAT"ms in the future. "
         "Did the monotonic clock just jump?",
-        I64_PRINTF_ARG(chan->next_padding_time_ms - long_now));
+        I64_PRINTF_ARG(ms_till_pad));
     return 0; /* Clock jumped: Send padding now */
   }
 
@@ -540,11 +547,8 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
      from now which we should send padding, so we can schedule a callback
      then.
    */
-  if (long_now +
-      (TOR_HOUSEKEEPING_CALLBACK_MSEC + TOR_HOUSEKEEPING_CALLBACK_SLACK_MSEC)
-      >= chan->next_padding_time_ms) {
-    int64_t ms_until_pad_for_netflow = chan->next_padding_time_ms -
-                                       long_now;
+  if (ms_till_pad < (TOR_HOUSEKEEPING_CALLBACK_MSEC +
+                       TOR_HOUSEKEEPING_CALLBACK_SLACK_MSEC)) {
     /* If the padding time is in the past, that means that libevent delayed
      * calling the once-per-second callback due to other work taking too long.
      * See https://bugs.torproject.org/22212 and
@@ -554,16 +558,16 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
      * and allowed a router to emit a netflow frame, just so we don't forget
      * about it entirely.. */
 #define NETFLOW_MISSED_WINDOW (150000 - DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH)
-    if (ms_until_pad_for_netflow < 0) {
-      int severity = (ms_until_pad_for_netflow < -NETFLOW_MISSED_WINDOW)
+    if (ms_till_pad < 0) {
+      int severity = (ms_till_pad < -NETFLOW_MISSED_WINDOW)
                       ? LOG_NOTICE : LOG_INFO;
       log_fn(severity, LD_OR,
               "Channel padding timeout scheduled "I64_FORMAT"ms in the past. ",
-              I64_PRINTF_ARG(-ms_until_pad_for_netflow));
+             I64_PRINTF_ARG(-ms_till_pad));
       return 0; /* Clock jumped: Send padding now */
     }
 
-    return ms_until_pad_for_netflow;
+    return ms_till_pad;
   }
   return CHANNELPADDING_TIME_LATER;
 }

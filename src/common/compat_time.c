@@ -351,6 +351,20 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   return (uint32_t)(t->abstime_ >> monotime_shift);
 }
 
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->abstime_ == 0;
+}
+
+void
+monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
+{
+  const uint64_t nsec = msec * ONE_MILLION;
+  const uint64_t ticks = (nsec * mach_time_info.denom) / mach_time_info.numer;
+  out->abstime_ = val->abstime_ + ticks;
+}
+
 /* end of "__APPLE__" */
 #elif defined(HAVE_CLOCK_GETTIME)
 
@@ -439,6 +453,25 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   uint32_t sec = (uint32_t)t->ts_.tv_sec;
 
   return (sec * STAMP_TICKS_PER_SECOND) + (nsec >> 20);
+}
+
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->ts_.tv_sec == 0 && val->ts_.tv_nsec == 0;
+}
+
+void
+monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
+{
+  const uint32_t sec = msec / 1000;
+  const uint32_t msec_remainder = msec % 1000;
+  out->ts_.tv_sec = val->ts_.tv_sec + sec;
+  out->ts_.tv_nsec = val->ts_.tv_nsec + (msec_remainder * ONE_MILLION);
+  if (out->ts_.tv_nsec > ONE_BILLION) {
+    out->ts_.tv_nsec -= ONE_BILLION;
+    out->ts_.tv_sec += 1;
+  }
 }
 
 /* end of "HAVE_CLOCK_GETTIME" */
@@ -581,6 +614,32 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   return (uint32_t) t->tick_count_;
 }
 
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->pcount_ == 0;
+}
+
+int
+monotime_coarse_is_zero(const monotime_coarse_t *val)
+{
+  return val->tick_count_ == 0;
+}
+
+void
+monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
+{
+  const uint64_t nsec = msec * ONE_MILLION;
+  const uint64_t ticks = (nsec * nsec_per_tick_denom) / nsec_per_tick_numer;
+  out->pcount_ = val->pcount_ + ticks;
+}
+
+void
+monotime_coarse_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
+{
+  out->tick_count_ = val->tick_count_ + msec;
+}
+
 /* end of "_WIN32" */
 #elif defined(MONOTIME_USING_GETTIMEOFDAY)
 
@@ -628,6 +687,25 @@ monotime_coarse_to_stamp(const monotime_coarse_t *t)
   return (sec * STAMP_TICKS_PER_SECOND) | (nsec >> 10);
 }
 
+int
+monotime_is_zero(const monotime_t *val)
+{
+  return val->tv_.tv_sec == 0 && val->tv_.tv_usec == 0;
+}
+
+void
+monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
+{
+  const uint32_t sec = msec / 1000;
+  const uint32_t msec_remainder = msec % 1000;
+  out->tv_.tv_sec = val->tv_.tv_sec + sec;
+  out->tv_.tv_usec = val->tv_.tv_nsec + (msec_remainder * 1000);
+  if (out->tv_.tv_usec > ONE_MILLION) {
+    out->tv_.tv_usec -= ONE_MILLION;
+    out->tv_.tv_sec += 1;
+  }
+}
+
 /* end of "MONOTIME_USING_GETTIMEOFDAY" */
 #else
 #error "No way to implement monotonic timers."
@@ -649,6 +727,19 @@ monotime_init(void)
 #endif
   }
 }
+
+void
+monotime_zero(monotime_t *out)
+{
+  memset(out, 0, sizeof(*out));
+}
+#ifdef MONOTIME_COARSE_TYPE_IS_DIFFERENT
+void
+monotime_coarse_zero(monotime_coarse_t *out)
+{
+  memset(out, 0, sizeof(*out));
+}
+#endif
 
 int64_t
 monotime_diff_usec(const monotime_t *start,

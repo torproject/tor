@@ -3241,12 +3241,12 @@ channel_timestamp_active(channel_t *chan)
   time_t now = time(NULL);
 
   tor_assert(chan);
-  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
+  monotime_coarse_get(&chan->timestamp_xfer);
 
   chan->timestamp_active = now;
 
   /* Clear any potential netflow padding timer. We're active */
-  chan->next_padding_time_ms = 0;
+  monotime_coarse_zero(&chan->next_padding_time);
 }
 
 /**
@@ -3311,13 +3311,13 @@ channel_timestamp_recv(channel_t *chan)
 {
   time_t now = time(NULL);
   tor_assert(chan);
-  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
+  monotime_coarse_get(&chan->timestamp_xfer);
 
   chan->timestamp_active = now;
   chan->timestamp_recv = now;
 
   /* Clear any potential netflow padding timer. We're active */
-  chan->next_padding_time_ms = 0;
+  monotime_coarse_zero(&chan->next_padding_time);
 }
 
 /**
@@ -3332,13 +3332,13 @@ channel_timestamp_xmit(channel_t *chan)
   time_t now = time(NULL);
   tor_assert(chan);
 
-  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
+  monotime_coarse_get(&chan->timestamp_xfer);
 
   chan->timestamp_active = now;
   chan->timestamp_xmit = now;
 
   /* Clear any potential netflow padding timer. We're active */
-  chan->next_padding_time_ms = 0;
+  monotime_coarse_zero(&chan->next_padding_time);
 }
 
 /***************************************************************

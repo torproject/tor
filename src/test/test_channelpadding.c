@@ -279,7 +279,6 @@ test_channelpadding_timers(void *arg)
 {
   channelpadding_decision_t decision;
   channel_t *chans[CHANNELS_TO_TEST];
-  int64_t new_time;
   (void)arg;
 
   tor_libevent_postfork();
@@ -289,8 +288,9 @@ test_channelpadding_timers(void *arg)
 
   monotime_init();
   monotime_enable_test_mocking();
-  monotime_set_mock_time_nsec(1);
-  monotime_coarse_set_mock_time_nsec(1);
+  uint64_t nsec_mock = 1;
+  monotime_set_mock_time_nsec(nsec_mock);
+  monotime_coarse_set_mock_time_nsec(nsec_mock);
 
   timers_initialize();
   channelpadding_new_consensus_params(NULL);
@@ -304,11 +304,14 @@ test_channelpadding_timers(void *arg)
     tried_to_write_cell = 0;
     int i = 0;
 
+    monotime_coarse_t now;
+    monotime_coarse_get(&now);
+
     /* This loop fills our timerslot array with timers of increasing time
      * until they fire */
     for (; i < CHANNELPADDING_MAX_TIMERS; i++) {
-      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec()
-                                        + 10 + i*4;
+      monotime_coarse_add_msec(&chans[i]->next_padding_time,
+                        &now, 10 + i*4);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -318,7 +321,8 @@ test_channelpadding_timers(void *arg)
     /* This loop should add timers to the first position in the timerslot
      * array, since its timeout is before all other timers. */
     for (; i < CHANNELS_TO_TEST/3; i++) {
-      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec() + 1;
+      monotime_coarse_add_msec(&chans[i]->next_padding_time,
+                        &now, 1);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -329,8 +333,8 @@ test_channelpadding_timers(void *arg)
      * pseudorandom pattern.  It ensures that the lists can grow with multiple
      * timers in them. */
     for (; i < CHANNELS_TO_TEST/2; i++) {
-      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec() + 10 +
-          i*3 % CHANNELPADDING_MAX_TIMERS;
+      monotime_coarse_add_msec(&chans[i]->next_padding_time,
+                        &now, 10 + i*3 % CHANNELPADDING_MAX_TIMERS);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -340,8 +344,8 @@ test_channelpadding_timers(void *arg)
     /* This loop should add timers to the last position in the timerslot
      * array, since its timeout is after all other timers. */
     for (; i < CHANNELS_TO_TEST; i++) {
-      chans[i]->next_padding_time_ms = monotime_coarse_absolute_msec() + 500 +
-          i % CHANNELPADDING_MAX_TIMERS;
+      monotime_coarse_add_msec(&chans[i]->next_padding_time,
+                               &now, 500 + i % CHANNELPADDING_MAX_TIMERS);
       decision = channelpadding_decide_to_pad_channel(chans[i]);
       tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
       tt_assert(chans[i]->pending_padding_callback);
@@ -349,9 +353,9 @@ test_channelpadding_timers(void *arg)
     }
 
     // Wait for the timers and then kill the event loop.
-    new_time = (monotime_coarse_absolute_msec()+1001)*NSEC_PER_MSEC;
-    monotime_coarse_set_mock_time_nsec(new_time);
-    monotime_set_mock_time_nsec(new_time);
+    nsec_mock += 1001 * NSEC_PER_MSEC;
+    monotime_coarse_set_mock_time_nsec(nsec_mock);
+    monotime_set_mock_time_nsec(nsec_mock);
     timers_run_pending();
 
     tt_int_op(tried_to_write_cell, OP_EQ, CHANNELS_TO_TEST);
@@ -388,6 +392,7 @@ test_channelpadding_killonehop(void *arg)
   monotime_enable_test_mocking();
   monotime_set_mock_time_nsec(1);
   monotime_coarse_set_mock_time_nsec(1);
+  new_time = 1;
 
   timers_initialize();
   setup_mock_consensus();
@@ -401,9 +406,12 @@ test_channelpadding_killonehop(void *arg)
   smartlist_clear(current_md_consensus->net_params);
   channelpadding_new_consensus_params(current_md_consensus);
 
+  monotime_coarse_t now;
+  monotime_coarse_get(&now);
+
   tried_to_write_cell = 0;
   get_options_mutable()->Tor2webMode = 1;
-  client_relay3->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&client_relay3->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(client_relay3);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(client_relay3->pending_padding_callback);
@@ -413,9 +421,10 @@ test_channelpadding_killonehop(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
@@ -427,7 +436,7 @@ test_channelpadding_killonehop(void *arg)
 
   // Before the client tries to pad, the relay will still pad:
   tried_to_write_cell = 0;
-  relay3_client->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&relay3_client->next_padding_time, &now, 100);
   get_options_mutable()->ORPort_set = 1;
   get_options_mutable()->Tor2webMode = 0;
   decision = channelpadding_decide_to_pad_channel(relay3_client);
@@ -435,9 +444,10 @@ test_channelpadding_killonehop(void *arg)
   tt_assert(relay3_client->pending_padding_callback);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
@@ -474,7 +484,8 @@ test_channelpadding_killonehop(void *arg)
   get_options_mutable()->ORPort_set = 0;
   get_options_mutable()->HiddenServiceSingleHopMode = 1;
   get_options_mutable()->HiddenServiceNonAnonymousMode = 1;
-  client_relay3->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+
+  monotime_coarse_add_msec(&client_relay3->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(client_relay3);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(client_relay3->pending_padding_callback);
@@ -484,9 +495,10 @@ test_channelpadding_killonehop(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
@@ -498,7 +510,7 @@ test_channelpadding_killonehop(void *arg)
 
   // Before the client tries to pad, the relay will still pad:
   tried_to_write_cell = 0;
-  relay3_client->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&relay3_client->next_padding_time, &now, 100);
   get_options_mutable()->ORPort_set = 1;
   get_options_mutable()->HiddenServiceSingleHopMode = 0;
   get_options_mutable()->HiddenServiceNonAnonymousMode = 0;
@@ -507,9 +519,10 @@ test_channelpadding_killonehop(void *arg)
   tt_assert(relay3_client->pending_padding_callback);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101 * NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!client_relay3->pending_padding_callback);
@@ -573,6 +586,9 @@ test_channelpadding_consensus(void *arg)
   monotime_enable_test_mocking();
   monotime_set_mock_time_nsec(1);
   monotime_coarse_set_mock_time_nsec(1);
+  new_time = 1;
+  monotime_coarse_t now;
+  monotime_coarse_get(&now);
   timers_initialize();
 
   if (!connection_array)
@@ -586,7 +602,7 @@ test_channelpadding_consensus(void *arg)
 
   /* Test 1: Padding can be completely disabled via consensus */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(chan->pending_padding_callback);
@@ -596,9 +612,10 @@ test_channelpadding_consensus(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!chan->pending_padding_callback);
@@ -628,7 +645,7 @@ test_channelpadding_consensus(void *arg)
   tt_i64_op(val, OP_EQ, 0);
   val = channelpadding_compute_time_until_pad_for_netflow(chan);
   tt_i64_op(val, OP_EQ, -2);
-  tt_assert(!chan->next_padding_time_ms);
+  tt_assert(monotime_coarse_is_zero(&chan->next_padding_time));
 
   smartlist_clear(current_md_consensus->net_params);
 
@@ -641,7 +658,7 @@ test_channelpadding_consensus(void *arg)
   channelpadding_new_consensus_params(current_md_consensus);
 
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(chan->pending_padding_callback);
@@ -653,9 +670,10 @@ test_channelpadding_consensus(void *arg)
   tt_i64_op(val, OP_LE, 200);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+201)*NSEC_PER_MSEC;
+  new_time += 201*NSEC_PER_MSEC;
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!chan->pending_padding_callback);
@@ -944,6 +962,9 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   monotime_enable_test_mocking();
   monotime_set_mock_time_nsec(1);
   monotime_coarse_set_mock_time_nsec(1);
+  new_time = 1;
+  monotime_coarse_t now;
+  monotime_coarse_get(&now);
   timers_initialize();
   setup_full_capture_of_logs(LOG_WARN);
   channelpadding_new_consensus_params(NULL);
@@ -960,7 +981,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   /* Test case #2a: > 1.1s until timeout */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 1200;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 1200);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADLATER);
   tt_assert(!chan->pending_padding_callback);
@@ -968,23 +989,27 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   /* Test case #2b: >= 1.0s until timeout */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 1000;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 1000);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(chan->pending_padding_callback);
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
 
+  // Set up a timer for the <0 case below.
+  monotime_coarse_t now_minus_100s;
+  monotime_coarse_add_msec(&now_minus_100s, &now, 900);
   // Wait for the timer from case #2b
-  new_time = (monotime_coarse_absolute_msec() + 1000)*NSEC_PER_MSEC;
+  new_time += 1000*NSEC_PER_MSEC;
   monotime_set_mock_time_nsec(new_time);
   monotime_coarse_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!chan->pending_padding_callback);
 
   /* Test case #2c: > 0.1s until timeout */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(chan->pending_padding_callback);
@@ -995,16 +1020,17 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_ALREADY_SCHEDULED);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
   tt_assert(!chan->pending_padding_callback);
 
   /* Test case #2e: 0s until timeout */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec();
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 0);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SENT);
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
@@ -1012,7 +1038,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   /* Test case #2f: <0s until timeout */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() - 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now_minus_100s, 0);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SENT);
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
@@ -1020,7 +1046,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   /* Test case #3: Channel that sends a packet while timeout is scheduled */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
@@ -1031,9 +1057,10 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   // We don't expect any timer callbacks here. Make a dummy one to be sure.
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
 
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
@@ -1041,7 +1068,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   /* Test case #4: Channel that closes while a timeout is scheduled */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
@@ -1051,9 +1078,10 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   chan->state = CHANNEL_STATE_MAINT;
 
   // We don't expect any timer callbacks here. Make a dummy one to be sure.
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
 
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
@@ -1062,16 +1090,17 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   /* Test case #5: Make sure previous test case didn't break everything */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_assert(chan->pending_padding_callback);
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
 
   // Wait for the timer
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time += 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
 
   tt_int_op(tried_to_write_cell, OP_EQ, 1);
@@ -1090,7 +1119,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
    * It must be last.
    */
   tried_to_write_cell = 0;
-  chan->next_padding_time_ms = monotime_coarse_absolute_msec() + 100;
+  monotime_coarse_add_msec(&chan->next_padding_time, &now, 100);
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADDING_SCHEDULED);
   tt_int_op(tried_to_write_cell, OP_EQ, 0);
@@ -1100,9 +1129,10 @@ test_channelpadding_decide_to_pad_channel(void *arg)
   free_fake_channeltls((channel_tls_t*)chan);
 
   // We don't expect any timer callbacks here. Make a dummy one to be sure.
-  new_time = (monotime_coarse_absolute_msec()+101)*NSEC_PER_MSEC;
+  new_time = 101*NSEC_PER_MSEC;
   monotime_coarse_set_mock_time_nsec(new_time);
   monotime_set_mock_time_nsec(new_time);
+  monotime_coarse_get(&now);
   timers_run_pending();
 
   tt_int_op(tried_to_write_cell, OP_EQ, 0);

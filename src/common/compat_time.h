@@ -105,6 +105,21 @@ uint64_t monotime_absolute_usec(void);
  */
 uint64_t monotime_absolute_msec(void);
 
+/**
+ * Set <b>out</b> to zero.
+ */
+void monotime_zero(monotime_t *out);
+/**
+ * Return true iff <b>out</b> is zero
+ */
+int monotime_is_zero(const monotime_t *out);
+
+/**
+ * Set <b>out</b> to N milliseconds after <b>val</b>.
+ */
+/* XXXX We should add a more generic function here if we ever need to */
+void monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec);
+
 #if defined(MONOTIME_COARSE_FN_IS_DIFFERENT)
 /**
  * Set <b>out</b> to the current coarse time.
@@ -144,10 +159,17 @@ int64_t monotime_coarse_diff_usec(const monotime_coarse_t *start,
     const monotime_coarse_t *end);
 int64_t monotime_coarse_diff_msec(const monotime_coarse_t *start,
     const monotime_coarse_t *end);
+void monotime_coarse_zero(monotime_coarse_t *out);
+int monotime_coarse_is_zero(const monotime_coarse_t *val);
+void monotime_coarse_add_msec(monotime_coarse_t *out,
+                              const monotime_coarse_t *val, uint32_t msec);
 #else /* !(defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT)) */
 #define monotime_coarse_diff_nsec monotime_diff_nsec
 #define monotime_coarse_diff_usec monotime_diff_usec
 #define monotime_coarse_diff_msec monotime_diff_msec
+#define monotime_coarse_zero monotime_zero
+#define monotime_coarse_is_zero monotime_is_zero
+#define monotime_coarse_add_msec monotime_add_msec
 #endif /* defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT) */
 
 void tor_gettimeofday(struct timeval *timeval);
