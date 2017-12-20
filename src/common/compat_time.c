@@ -635,7 +635,8 @@ monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
 }
 
 void
-monotime_coarse_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
+monotime_coarse_add_msec(monotime_coarse_t *out, const monotime_coarse_t *val,
+                         uint32_t msec)
 {
   out->tick_count_ = val->tick_count_ + msec;
 }
