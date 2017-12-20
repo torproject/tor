@@ -298,13 +298,18 @@ update_socket_info_impl, (socket_table_ent_t *ent))
 
  fallback:
   /* If all of a sudden we don't have kist support, we just zero out all the
-   * variables for this socket since we don't know what they should be.
-   * We also effectively allow the socket write as much as it wants to the
-   * kernel, effectively returning it to vanilla scheduler behavior. Writes
-   * are still limited by the lower layers of Tor: socket blocking, full
-   * outbuf, etc. */
+   * variables for this socket since we don't know what they should be. We
+   * also allow the socket to write as much as it can from the estimated
+   * number of cells the lower layer can accept, effectively returning it to
+   * Vanilla scheduler behavior. */
   ent->cwnd = ent->unacked = ent->mss = ent->notsent = 0;
-  ent->limit = INT_MAX;
+  /* This function calls the specialized channel object (currently channeltls)
+   * and ask how many cells it can write on the outbuf which we then multiply
+   * by the size of the cells for this channel. The cast is because this
+   * function requires a non-const channel object, meh. */
+  ent->limit = channel_num_cells_writeable((channel_t *) ent->chan) *
+               (get_cell_network_size(ent->chan->wide_circ_ids) +
+                TLS_PER_CELL_OVERHEAD);
 }
 
 /* Given a socket that isn't in the table, add it.
@@ -398,6 +403,11 @@ update_socket_info(socket_table_t *table, const channel_t *chan)
     return; // Whelp. Entry didn't exist for some reason so nothing to do.
   }
   update_socket_info_impl(ent);
+  log_debug(LD_SCHED, "chan=%" PRIu64 " updated socket info, limit: %" PRIu64
+                      ", cwnd: %" PRIu32 ", unacked: %" PRIu32
+                      ", notsent: %" PRIu32 ", mss: %" PRIu32,
+            ent->chan->global_identifier, ent->limit, ent->cwnd, ent->unacked,
+            ent->notsent, ent->mss);
 }
 
 /* Increment the channel's socket written value by the number of bytes. */
