@@ -3397,6 +3397,18 @@ tor_free_all(int postfork)
   }
 }
 
+/** Remove the specified file. */
+void
+tor_remove_file(const char *filename)
+{
+  if (file_status(filename) == FN_FILE) {
+    if (tor_unlink(filename) != 0) {
+      log_warn(LD_FS, "Couldn't unlink %s: %s",
+               filename, strerror(errno));
+    }
+  }
+}
+
 /** Do whatever cleanup is necessary before shutting Tor down. */
 void
 tor_cleanup(void)
@@ -3406,19 +3418,14 @@ tor_cleanup(void)
     time_t now = time(NULL);
     /* Remove our pid file. We don't care if there was an error when we
      * unlink, nothing we could do about it anyways. */
-    if (options->PidFile) {
-      if (unlink(options->PidFile) != 0) {
-        log_warn(LD_FS, "Couldn't unlink pid file %s: %s",
-                 options->PidFile, strerror(errno));
-      }
-    }
-    if (options->ControlPortWriteToFile) {
-      if (unlink(options->ControlPortWriteToFile) != 0) {
-        log_warn(LD_FS, "Couldn't unlink control port file %s: %s",
-                 options->ControlPortWriteToFile,
-                 strerror(errno));
-      }
-    }
+    tor_remove_file(options->PidFile);
+    /* Remove control port file */
+    tor_remove_file(options->ControlPortWriteToFile);
+    /* Remove cookie authentication file */
+    tor_remove_file(get_controller_cookie_file_name());
+    /* Remove Extended ORPort cookie authentication file */
+    tor_remove_file(get_ext_or_auth_cookie_file_name());
+
     if (accounting_is_enabled(options))
       accounting_record_bandwidth_usage(now, get_or_state());
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
