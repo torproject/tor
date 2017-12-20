@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 # Usage:
-<<<<<<< Updated upstream
 #
 # Regenerate the list:
 # scripts/maint/updateFallbackDirs.py > src/or/fallback_dirs.inc 2> fallback_dirs.log
