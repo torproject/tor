@@ -132,6 +132,9 @@
 ## spammers might also collect them. You may want to obscure the fact that
 ## it's an email address and/or generate a new address for this purpose.
 ## Notice that "<" and ">" are recommended.
+##
+## If you are running multiple relays, you MUST set this option.
+##
 #ContactInfo Random Person <nobody AT example dot com>
 ## You might also include your PGP or GPG fingerprint if you have one.
 ## Use the full fingerprint, not just a (short) KeyID: KeyIDs are easy
@@ -161,6 +164,9 @@
 ## See https://www.torproject.org/docs/faq#MultipleRelays
 ## However, you should never include a bridge's fingerprint here, as it would
 ## break its concealability and potentially reveal its IP/TCP address.
+##
+## If you are running multiple relays, you MUST set this option.
+##
 #MyFamily $keyid,$keyid,...
 
 ## Uncomment this if you want your relay to allow IPv6 exit traffic.

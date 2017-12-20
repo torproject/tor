@@ -1,0 +1,4 @@
+  o Documentation:
+    - Document that operators who run more than one relay or bridge are
+      expected to set MyFamily and ContactInfo correctly. Closes ticket
+      24526.
