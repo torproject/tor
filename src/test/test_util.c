@@ -5979,7 +5979,6 @@ test_util_monotonic_time_add_msec(void *arg)
   tt_i64_op(monotime_diff_msec(&t1, &t2), OP_EQ, 1337*3);
   tt_i64_op(monotime_coarse_diff_msec(&ct1, &ct2), OP_EQ, 1337*3);
 
-  
  done:
   ;
 }
