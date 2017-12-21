@@ -286,8 +286,8 @@ update_socket_info_impl, (socket_table_ent_t *ent))
      * more in the kernel for now. */
     ent->limit = 0;
   } else {
-    /* Adding two positive int64_t together will always fit in an uint64_t.
-     * And we know this will always be positive. */
+    /* The positive sum of two int64_t will always fit into an uint64_t.
+     * And we know this will always be positive, since we checked above. */
     ent->limit = (uint64_t)tcp_space + (uint64_t)extra_space;
   }
   return;
