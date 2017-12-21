@@ -194,7 +194,7 @@ helper_create_origin_circuit(int purpose, int flags)
   origin_circuit_t *circ = NULL;
 
   circ = origin_circuit_init(purpose, flags);
-  tt_assert(circ);
+  tor_assert(circ);
   circ->cpath = tor_malloc_zero(sizeof(crypt_path_t));
   circ->cpath->magic = CRYPT_PATH_MAGIC;
   circ->cpath->state = CPATH_STATE_OPEN;
@@ -206,7 +206,6 @@ helper_create_origin_circuit(int purpose, int flags)
   /* Create a default HS identifier. */
   circ->hs_ident = tor_malloc_zero(sizeof(hs_ident_circuit_t));
 
- done:
   return circ;
 }
 
@@ -219,7 +218,7 @@ helper_create_service(void)
 {
   /* Set a service for this circuit. */
   hs_service_t *service = hs_service_new(get_options());
-  tt_assert(service);
+  tor_assert(service);
   service->config.version = HS_VERSION_THREE;
   ed25519_secret_key_generate(&service->keys.identity_sk, 0);
   ed25519_public_key_generate(&service->keys.identity_pk,
@@ -241,7 +240,7 @@ helper_create_service_ip(void)
 {
   hs_desc_link_specifier_t *ls;
   hs_service_intro_point_t *ip = service_intro_point_new(NULL, 0);
-  tt_assert(ip);
+  tor_assert(ip);
   /* Add a first unused link specifier. */
   ls = tor_malloc_zero(sizeof(*ls));
   ls->type = LS_IPV4;
@@ -252,7 +251,6 @@ helper_create_service_ip(void)
   memset(ls->u.legacy_id, 'A', sizeof(ls->u.legacy_id));
   smartlist_add(ip->base.link_specifiers, ls);
 
- done:
   return ip;
 }
 
