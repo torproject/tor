@@ -3504,10 +3504,17 @@ tor_cleanup(void)
     /* Remove control port file */
     tor_remove_file(options->ControlPortWriteToFile);
     /* Remove cookie authentication file */
-    tor_remove_file(get_controller_cookie_file_name());
+    {
+      char *cookie_fname = get_controller_cookie_file_name();
+      tor_remove_file(cookie_fname);
+      tor_free(cookie_fname);
+    }
     /* Remove Extended ORPort cookie authentication file */
-    tor_remove_file(get_ext_or_auth_cookie_file_name());
-
+    {
+      char *cookie_fname = get_ext_or_auth_cookie_file_name();
+      tor_remove_file(cookie_fname);
+      tor_free(cookie_fname);
+    }
     if (accounting_is_enabled(options))
       accounting_record_bandwidth_usage(now, get_or_state());
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
