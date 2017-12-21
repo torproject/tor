@@ -266,8 +266,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
 
   /* These values from the kernel are uint32_t, they will always fit into a
    * int64_t tcp_space variable but if the congestion window cwnd is smaller
-   * than the unacked packets, the remaining TCP space is set to 0 so we don't
-   * write more on this channel. */
+   * than the unacked packets, the remaining TCP space is set to 0. */
   if (ent->cwnd >= ent->unacked) {
     tcp_space = (ent->cwnd - ent->unacked) * (int64_t)(ent->mss);
   } else {
@@ -276,20 +275,21 @@ update_socket_info_impl, (socket_table_ent_t *ent))
 
   /* The clamp_double_to_int64 makes sure the first part fits into an int64_t.
    * In fact, if sock_buf_size_factor is still forced to be >= 0 in config.c,
-   * then it will be positive for sure. Then we subtract a uint32_t. At worst
-   * we end up negative, but then we just set extra_space to 0 in the sanity
-   * check.*/
+   * then it will be positive for sure. Then we subtract a uint32_t. Getting a
+   * negative value is OK, see after how it is being handled. */
   extra_space =
     clamp_double_to_int64(
                  (ent->cwnd * (int64_t)ent->mss) * sock_buf_size_factor) -
     ent->notsent;
-  if (extra_space < 0) {
-    extra_space = 0;
+  if ((tcp_space + extra_space) < 0) {
+    /* This means that the "notsent" queue is just too big so we shouldn't put
+     * more in the kernel for now. */
+    ent->limit = 0;
+  } else {
+    /* Adding two positive int64_t together will always fit in an uint64_t.
+     * And we know this will always be positive. */
+    ent->limit = (uint64_t)tcp_space + (uint64_t)extra_space;
   }
-
-  /* Finally we set the limit. Adding two positive int64_t together will always
-   * fit in an uint64_t. */
-  ent->limit = (uint64_t)tcp_space + (uint64_t)extra_space;
   return;
 
 #else /* !(defined(HAVE_KIST_SUPPORT)) */
