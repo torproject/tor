@@ -1,45 +1,45 @@
 Changes in version 0.3.2.8-rc - 2017-12-21
-  Tor 0.3.2.8-rc fixes a pair of bugs in the KIST and KISTLite schedulers
-  that had led servers under heavy load to overload their outgoing
-  connections. All relay operators running earlier 0.3.2.x versions should
-  upgrade. This version also includes a mitigation for over-full DESTROY
-  queues leading to out-of-memory conditions: if it works, we will soon
-  backport it to earlier release series.
+  Tor 0.3.2.8-rc fixes a pair of bugs in the KIST and KISTLite
+  schedulers that had led servers under heavy load to overload their
+  outgoing connections. All relay operators running earlier 0.3.2.x
+  versions should upgrade. This version also includes a mitigation for
+  over-full DESTROY queues leading to out-of-memory conditions: if it
+  works, we will soon backport it to earlier release series.
 
-  This is the second release candidate in the 0.3.2 series. If we find no
-  new bugs or regression here, then the first stable 0.3.2 release will
-  be nearly identical to this.
+  This is the second release candidate in the 0.3.2 series. If we find
+  no new bugs or regression here, then the first stable 0.3.2 release
+  will be nearly identical to this.
 
   o Major bugfixes (KIST, scheduler):
-    - The KIST scheduler did not correctly account for data already enqueued
-      in each connection's send socket buffer, particularly in cases when the
-      TCP/IP congestion window was reduced between scheduler calls. This
-      situation lead to excessive per-connection buffering in the kernel, and
-      a potential memory DoS. Fixes bug 24665; bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (scheduler, KIST):
-    - Use a sane write limit for KISTLite when writing onto a connection
-      buffer instead of using INT_MAX and shoving as much as it can. Because
-      the OOM handler cleans up circuit queues, we are better off at keeping
-      them in that queue instead of the connection's buffer. Fixes bug 24671;
-      bugfix on 0.3.2.1-alpha.
+    - The KIST scheduler did not correctly account for data already
+      enqueued in each connection's send socket buffer, particularly in
+      cases when the TCP/IP congestion window was reduced between
+      scheduler calls. This situation lead to excessive per-connection
+      buffering in the kernel, and a potential memory DoS. Fixes bug
+      24665; bugfix on 0.3.2.1-alpha.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the December 6 2017 Maxmind GeoLite2
       Country database.
 
   o Minor bugfixes (hidden service v3):
-    - Bump hsdir_spread_store parameter from 3 to 4 in order to increase the
-      probability of reaching a service for a client missing microdescriptors.
-      Fixes bug 24425; bugfix on 0.3.2.1-alpha.
+    - Bump hsdir_spread_store parameter from 3 to 4 in order to increase
+      the probability of reaching a service for a client missing
+      microdescriptors. Fixes bug 24425; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (memory usage):
-    - When queuing DESTROY cells on a channel, only queue the
-      circuit-id and reason fields: not the entire 514-byte
-      cell. This fix should help mitigate any bugs or attacks that
-      fill up these queues, and free more RAM for other uses. Fixes
-      bug 24666; bugfix on 0.2.5.1-alpha.
+    - When queuing DESTROY cells on a channel, only queue the circuit-id
+      and reason fields: not the entire 514-byte cell. This fix should
+      help mitigate any bugs or attacks that fill up these queues, and
+      free more RAM for other uses. Fixes bug 24666; bugfix
+      on 0.2.5.1-alpha.
 
+  o Minor bugfixes (scheduler, KIST):
+    - Use a sane write limit for KISTLite when writing onto a connection
+      buffer instead of using INT_MAX and shoving as much as it can.
+      Because the OOM handler cleans up circuit queues, we are better
+      off at keeping them in that queue instead of the connection's
+      buffer. Fixes bug 24671; bugfix on 0.3.2.1-alpha.
 
 
 Changes in version 0.3.2.7-rc - 2017-12-14
