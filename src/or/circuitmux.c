@@ -117,7 +117,7 @@ struct circuitmux_s {
   struct circuit_t *active_circuits_head, *active_circuits_tail;
 
   /** List of queued destroy cells */
-  cell_queue_t destroy_cell_queue;
+  destroy_cell_queue_t destroy_cell_queue;
   /** Boolean: True iff the last cell to circuitmux_get_first_active_circuit
    * returned the destroy queue. Used to force alternation between
    * destroy/non-destroy cells.
@@ -383,7 +383,7 @@ circuitmux_alloc(void)
   rv = tor_malloc_zero(sizeof(*rv));
   rv->chanid_circid_map = tor_malloc_zero(sizeof(*( rv->chanid_circid_map)));
   HT_INIT(chanid_circid_muxinfo_map, rv->chanid_circid_map);
-  cell_queue_init(&rv->destroy_cell_queue);
+  destroy_cell_queue_init(&rv->destroy_cell_queue);
 
   return rv;
 }
@@ -522,19 +522,10 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
 void
 circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux, channel_t *chan)
 {
-  packed_cell_t *cell;
-  int n_bad = 0;
+  destroy_cell_t *cell;
   TOR_SIMPLEQ_FOREACH(cell, &cmux->destroy_cell_queue.head, next) {
-    circid_t circid = 0;
-    if (packed_cell_is_destroy(chan, cell, &circid)) {
-      channel_mark_circid_usable(chan, circid);
-    } else {
-      ++n_bad;
-    }
+    channel_mark_circid_usable(chan, cell->circid);
   }
-  if (n_bad)
-    log_warn(LD_BUG, "%d cell(s) on destroy queue did not look like a "
-             "DESTROY cell.", n_bad);
 }
 
 /**
@@ -591,7 +582,7 @@ circuitmux_free(circuitmux_t *cmux)
               I64_PRINTF_ARG(global_destroy_ctr));
   }
 
-  cell_queue_clear(&cmux->destroy_cell_queue);
+  destroy_cell_queue_clear(&cmux->destroy_cell_queue);
 
   tor_free(cmux);
 }
@@ -1469,7 +1460,7 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
 
 circuit_t *
 circuitmux_get_first_active_circuit(circuitmux_t *cmux,
-                                    cell_queue_t **destroy_queue_out)
+                                    destroy_cell_queue_t **destroy_queue_out)
 {
   circuit_t *circ = NULL;
 
@@ -1885,14 +1876,7 @@ circuitmux_append_destroy_cell(channel_t *chan,
                                circid_t circ_id,
                                uint8_t reason)
 {
-  cell_t cell;
-  memset(&cell, 0, sizeof(cell_t));
-  cell.circ_id = circ_id;
-  cell.command = CELL_DESTROY;
-  cell.payload[0] = (uint8_t) reason;
-
-  cell_queue_append_packed_copy(NULL, &cmux->destroy_cell_queue, 0, &cell,
-                                chan->wide_circ_ids, 0);
+  destroy_cell_queue_append(&cmux->destroy_cell_queue, circ_id, reason);
 
   /* Destroy entering the queue, update counters */
   ++(cmux->destroy_ctr);
@@ -1925,13 +1909,13 @@ circuitmux_count_queued_destroy_cells(const channel_t *chan,
 
   int64_t manual_total = 0;
   int64_t manual_total_in_map = 0;
-  packed_cell_t *cell;
+  destroy_cell_t *cell;
 
   TOR_SIMPLEQ_FOREACH(cell, &cmux->destroy_cell_queue.head, next) {
     circid_t id;
     ++manual_total;
 
-    id = packed_cell_get_circid(cell, chan->wide_circ_ids);
+    id = cell->circid;
     if (circuit_id_in_use_on_channel(id, (channel_t*)chan))
       ++manual_total_in_map;
   }
