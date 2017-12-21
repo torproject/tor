@@ -14,4 +14,3 @@ extern crate tor_allocate;
 mod tor_log;
 
 pub use tor_log::*;
-pub use tor_log::log::*;

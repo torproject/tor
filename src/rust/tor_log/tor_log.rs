@@ -86,31 +86,6 @@ pub fn tor_log_msg_impl(
     unsafe { log::tor_log_string(c_severity, c_domain, func_ptr, msg_ptr) }
 }
 
-/// This module exposes no-op functionality for testing other Rust modules
-/// without linking to C.
-#[cfg(any(test, feature = "testing"))]
-pub mod log {
-    use libc::{c_char, c_int};
-    use super::LogDomain;
-    use super::LogSeverity;
-
-    pub unsafe fn tor_log_string<'a>(
-        _severity: c_int,
-        _domain: u32,
-        _function: *const c_char,
-        _message: *const c_char,
-    ) {
-    }
-
-    pub unsafe fn translate_domain(_domain: LogDomain) -> u32 {
-        1
-    }
-
-    pub unsafe fn translate_severity(_severity: LogSeverity) -> c_int {
-        1
-    }
-}
-
 /// This implementation is used when compiling for actual use, as opposed to
 /// testing.
 #[cfg(all(not(test), not(feature = "testing")))]
@@ -162,5 +137,101 @@ pub mod log {
             function: *const c_char,
             string: *const c_char,
         );
+    }
+}
+
+/// This module exposes no-op functionality for testing other Rust modules
+/// without linking to C.
+#[cfg(any(test, feature = "testing"))]
+pub mod log {
+    use libc::{c_char, c_int};
+    use super::LogDomain;
+    use super::LogSeverity;
+
+    pub static mut LAST_LOGGED_FUNCTION: *mut String = 0 as *mut String;
+    pub static mut LAST_LOGGED_MESSAGE: *mut String = 0 as *mut String;
+
+    pub unsafe fn tor_log_string<'a>(
+        _severity: c_int,
+        _domain: u32,
+        function: *const c_char,
+        message: *const c_char,
+    ) {
+        use std::ffi::CStr;
+
+        let f = CStr::from_ptr(function);
+        let fct = match f.to_str() {
+            Ok(n) => n,
+            Err(_) => "",
+        };
+        LAST_LOGGED_FUNCTION = Box::into_raw(Box::new(String::from(fct)));
+
+        let m = CStr::from_ptr(message);
+        let msg = match m.to_str() {
+            Ok(n) => n,
+            Err(_) => "",
+        };
+        LAST_LOGGED_MESSAGE = Box::into_raw(Box::new(String::from(msg)));
+    }
+
+    pub unsafe fn translate_domain(_domain: LogDomain) -> u32 {
+        1
+    }
+
+    pub unsafe fn translate_severity(_severity: LogSeverity) -> c_int {
+        1
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tor_log::*;
+    use tor_log::log::{LAST_LOGGED_FUNCTION, LAST_LOGGED_MESSAGE};
+
+    #[test]
+    fn test_get_log_message() {
+        {
+            fn test_macro() {
+                tor_log_msg!(
+                    LogSeverity::Warn,
+                    LogDomain::LdNet,
+                    "test_macro",
+                    "test log message {}",
+                    "a",
+                    );
+            }
+
+            test_macro();
+
+            let function = unsafe { Box::from_raw(LAST_LOGGED_FUNCTION) };
+            assert_eq!("test_macro", *function);
+
+            let message = unsafe { Box::from_raw(LAST_LOGGED_MESSAGE) };
+            assert_eq!("test log message a", *message);
+        }
+
+        {
+            fn test_macro() {
+                tor_log_msg!(
+                    LogSeverity::Warn,
+                    LogDomain::LdNet,
+                    "next_test_macro",
+                    "test log message {} {} {} {} {}",
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                );
+            }
+
+            test_macro();
+
+            let function = unsafe { Box::from_raw(LAST_LOGGED_FUNCTION) };
+            assert_eq!("next_test_macro", *function);
+
+            let message = unsafe { Box::from_raw(LAST_LOGGED_MESSAGE) };
+            assert_eq!("test log message 1 2 3 4 5", *message);
+        }
     }
 }
