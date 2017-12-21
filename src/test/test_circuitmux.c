@@ -67,7 +67,6 @@ test_cmux_destroy_cell_queue(void *arg)
   dc = destroy_cell_queue_pop(cq);
   tt_assert(dc);
   tt_uint_op(dc->circid, ==, 100);
-  tor_free(dc);
 
   tt_int_op(circuitmux_num_cells(cmux), ==, 2);
 
@@ -75,6 +74,7 @@ test_cmux_destroy_cell_queue(void *arg)
   circuitmux_free(cmux);
   channel_free(ch);
   packed_cell_free(pc);
+  tor_free(dc);
 
 #ifdef ENABLE_MEMPOOLS
   free_cell_pool();
