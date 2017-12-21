@@ -2417,14 +2417,11 @@ destroy_cell_queue_append(destroy_cell_queue_t *queue,
                           circid_t circid,
                           uint8_t reason)
 {
-  struct timeval now;
-
   destroy_cell_t *cell = tor_malloc_zero(sizeof(destroy_cell_t));
   cell->circid = circid;
   cell->reason = reason;
-  tor_gettimeofday_cached_monotonic(&now);
   /* Not yet used, but will be required for OOM handling. */
-  cell->inserted_time = (uint32_t)tv_to_msec(&now);
+  cell->inserted_time = (uint32_t) monotime_coarse_absolute_msec();
 
   TOR_SIMPLEQ_INSERT_TAIL(&queue->head, cell, next);
   ++queue->n;
