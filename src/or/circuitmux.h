@@ -131,7 +131,7 @@ int64_t circuitmux_count_queued_destroy_cells(const channel_t *chan,
 
 /* Channel interface */
 circuit_t * circuitmux_get_first_active_circuit(circuitmux_t *cmux,
-                                           cell_queue_t **destroy_queue_out);
+                                    destroy_cell_queue_t **destroy_queue_out);
 void circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
                                   unsigned int n_cells);
 void circuitmux_notify_xmit_destroy(circuitmux_t *cmux);

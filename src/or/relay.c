@@ -2526,6 +2526,72 @@ cell_queue_pop(cell_queue_t *queue)
   return cell;
 }
 
+/** Initialize <b>queue</b> as an empty cell queue. */
+void
+destroy_cell_queue_init(destroy_cell_queue_t *queue)
+{
+  memset(queue, 0, sizeof(destroy_cell_queue_t));
+  TOR_SIMPLEQ_INIT(&queue->head);
+}
+
+/** Remove and free every cell in <b>queue</b>. */
+void
+destroy_cell_queue_clear(destroy_cell_queue_t *queue)
+{
+  destroy_cell_t *cell;
+  while ((cell = TOR_SIMPLEQ_FIRST(&queue->head))) {
+    TOR_SIMPLEQ_REMOVE_HEAD(&queue->head, next);
+    tor_free(cell);
+  }
+  TOR_SIMPLEQ_INIT(&queue->head);
+  queue->n = 0;
+}
+
+/** Extract and return the cell at the head of <b>queue</b>; return NULL if
+ * <b>queue</b> is empty. */
+STATIC destroy_cell_t *
+destroy_cell_queue_pop(destroy_cell_queue_t *queue)
+{
+  destroy_cell_t *cell = TOR_SIMPLEQ_FIRST(&queue->head);
+  if (!cell)
+    return NULL;
+  TOR_SIMPLEQ_REMOVE_HEAD(&queue->head, next);
+  --queue->n;
+  return cell;
+}
+
+/** Append a destroy cell for <b>circid</b> to <b>queue</b>. */
+void
+destroy_cell_queue_append(destroy_cell_queue_t *queue,
+                          circid_t circid,
+                          uint8_t reason)
+{
+  destroy_cell_t *cell = tor_malloc_zero(sizeof(destroy_cell_t));
+  cell->circid = circid;
+  cell->reason = reason;
+  /* Not yet used, but will be required for OOM handling. */
+  cell->inserted_time = (uint32_t) monotime_coarse_absolute_msec();
+
+  TOR_SIMPLEQ_INSERT_TAIL(&queue->head, cell, next);
+  ++queue->n;
+}
+
+/** Convert a destroy_cell_t to a newly allocated cell_t. Frees its input. */
+static packed_cell_t *
+destroy_cell_to_packed_cell(destroy_cell_t *inp, int wide_circ_ids)
+{
+  packed_cell_t *packed = packed_cell_new();
+  cell_t cell;
+  memset(&cell, 0, sizeof(cell));
+  cell.circ_id = inp->circid;
+  cell.command = CELL_DESTROY;
+  cell.payload[0] = inp->reason;
+  cell_pack(packed, &cell, wide_circ_ids);
+
+  tor_free(inp);
+  return packed;
+}
+
 /** Return the total number of bytes used for each packed_cell in a queue.
  * Approximate. */
 size_t
@@ -2733,7 +2799,8 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 {
   circuitmux_t *cmux = NULL;
   int n_flushed = 0;
-  cell_queue_t *queue, *destroy_queue=NULL;
+  cell_queue_t *queue;
+  destroy_cell_queue_t *destroy_queue=NULL;
   circuit_t *circ;
   or_circuit_t *or_circ;
   int streams_blocked;
@@ -2748,9 +2815,17 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
   while (n_flushed < max) {
     circ = circuitmux_get_first_active_circuit(cmux, &destroy_queue);
     if (destroy_queue) {
+      destroy_cell_t *dcell;
       /* this code is duplicated from some of the logic below. Ugly! XXXX */
+      /* If we are given a destroy_queue here, then it is required to be
+       * nonempty... */
       tor_assert(destroy_queue->n > 0);
-      cell = cell_queue_pop(destroy_queue);
+      dcell = destroy_cell_queue_pop(destroy_queue);
+      /* ...and pop() will always yield a cell from a nonempty queue. */
+      tor_assert(dcell);
+      /* frees dcell */
+      cell = destroy_cell_to_packed_cell(dcell, chan->wide_circ_ids);
+      /* frees cell */
       channel_write_packed_cell(chan, cell);
       /* Update the cmux destroy counter */
       circuitmux_notify_xmit_destroy(cmux);
