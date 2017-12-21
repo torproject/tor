@@ -1,0 +1,6 @@
+  o Minor bugfixes (scheduler, KIST):
+    - Use a sane write limit for KISTLite when writing onto a connection
+      buffer instead of using INT_MAX and shoving as much as it can. Because
+      the OOM handler cleans up circuit queues, we are better off at keeping
+      them in that queue instead of the connection's buffer. Fixes bug 24671;
+      bugfix on 0.3.2.1-alpha.
