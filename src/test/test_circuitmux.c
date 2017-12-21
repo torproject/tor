@@ -34,8 +34,9 @@ test_cmux_destroy_cell_queue(void *arg)
   circuitmux_t *cmux = NULL;
   channel_t *ch = NULL;
   circuit_t *circ = NULL;
-  cell_queue_t *cq = NULL;
+  destroy_cell_queue_t *cq = NULL;
   packed_cell_t *pc = NULL;
+  destroy_cell_t *dc = NULL;
 
   scheduler_init();
 
@@ -63,11 +64,9 @@ test_cmux_destroy_cell_queue(void *arg)
 
   tt_int_op(cq->n, OP_EQ, 3);
 
-  pc = cell_queue_pop(cq);
-  tt_assert(pc);
-  tt_mem_op(pc->body, OP_EQ, "\x00\x00\x00\x64\x04\x0a\x00\x00\x00", 9);
-  packed_cell_free(pc);
-  pc = NULL;
+  dc = destroy_cell_queue_pop(cq);
+  tt_assert(dc);
+  tt_uint_op(dc->circid, OP_EQ, 100);
 
   tt_int_op(circuitmux_num_cells(cmux), OP_EQ, 2);
 
@@ -75,6 +74,7 @@ test_cmux_destroy_cell_queue(void *arg)
   circuitmux_free(cmux);
   channel_free(ch);
   packed_cell_free(pc);
+  tor_free(dc);
 }
 
 struct testcase_t circuitmux_tests[] = {
