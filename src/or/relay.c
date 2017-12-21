@@ -2565,7 +2565,7 @@ destroy_cell_queue_append(destroy_cell_queue_t *queue,
   cell->circid = circid;
   cell->reason = reason;
   /* Not yet used, but will be required for OOM handling. */
-  cell->inserted_time = (uint32_t) monotime_coarse_absolute_msec();
+  cell->inserted_timestamp = monotime_coarse_get_stamp();
 
   TOR_SIMPLEQ_INSERT_TAIL(&queue->head, cell, next);
   ++queue->n;

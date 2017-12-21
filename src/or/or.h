@@ -1182,7 +1182,8 @@ typedef struct cell_queue_t {
 typedef struct destroy_cell_t {
   TOR_SIMPLEQ_ENTRY(destroy_cell_t) next;
   circid_t circid;
-  uint32_t inserted_time; /** Timestamp when this was queued. */
+  uint32_t inserted_timestamp; /**< Time (in timestamp units) when this cell
+                                * was inserted */
   uint8_t reason;
 } destroy_cell_t;
 
