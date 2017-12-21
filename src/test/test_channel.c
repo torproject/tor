@@ -719,7 +719,7 @@ test_channel_inbound_cell(void *arg)
   tt_assert(!monotime_coarse_is_zero(&chan->timestamp_xfer));
   tt_u64_op(chan->timestamp_active, OP_NE, 0);
   tt_u64_op(chan->timestamp_recv, OP_NE, 0);
-  tt_assert(monotime_is_zero(&chan->next_padding_time));
+  tt_assert(monotime_coarse_is_zero(&chan->next_padding_time));
   tt_u64_op(chan->n_cells_recved, OP_EQ, 1);
   tt_u64_op(chan->n_bytes_recved, OP_EQ, get_cell_network_size(0));
 
