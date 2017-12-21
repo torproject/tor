@@ -65,6 +65,13 @@ void cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
 void append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                                   cell_t *cell, cell_direction_t direction,
                                   streamid_t fromstream);
+
+void destroy_cell_queue_init(destroy_cell_queue_t *queue);
+void destroy_cell_queue_clear(destroy_cell_queue_t *queue);
+void destroy_cell_queue_append(destroy_cell_queue_t *queue,
+                               circid_t circid,
+                               uint8_t reason);
+
 void channel_unlink_all_circuits(channel_t *chan, smartlist_t *detached_out);
 MOCK_DECL(int, channel_flush_from_first_active_circuit,
           (channel_t *chan, int max));
@@ -106,6 +113,7 @@ STATIC int connection_edge_process_resolved_cell(edge_connection_t *conn,
                                                  const relay_header_t *rh);
 STATIC packed_cell_t *packed_cell_new(void);
 STATIC packed_cell_t *cell_queue_pop(cell_queue_t *queue);
+STATIC destroy_cell_t *destroy_cell_queue_pop(destroy_cell_queue_t *queue);
 STATIC size_t cell_queues_get_total_allocation(void);
 STATIC int cell_queues_check_size(void);
 #endif /* defined(RELAY_PRIVATE) */
