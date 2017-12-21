@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Bump hsdir_spread_store parameter from 3 to 4 in order to increase the
-      probability of reaching a service for a client missing microdescriptors.
-      Fixes bug 24425; bugfix on 0.3.2.1-alpha.
