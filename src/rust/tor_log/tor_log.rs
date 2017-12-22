@@ -151,7 +151,7 @@ pub mod log {
     pub static mut LAST_LOGGED_FUNCTION: *mut String = 0 as *mut String;
     pub static mut LAST_LOGGED_MESSAGE: *mut String = 0 as *mut String;
 
-    pub unsafe fn tor_log_string<'a>(
+    pub unsafe fn tor_log_string(
         _severity: c_int,
         _domain: u32,
         function: *const c_char,
