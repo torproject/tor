@@ -266,6 +266,9 @@ id=9C8A123081EFBE022EF795630F447839DDFDDDEC
 # Email sent directly to teor, verified using relay contact info
 5.35.251.247:9030 orport=9001 id=9B1F5187DFBA89DC24B37EA7BF896C12B43A27AE
 
-#​https://lists.torproject.org/pipermail/tor-relays/2017-May/012281.html
+#https://lists.torproject.org/pipermail/tor-relays/2017-May/012281.html
 62.210.124.124:9030 orport=9001 id=86E78DD3720C78DA8673182EF96C54B162CD660C ipv6=[2001:bc8:3f23:100::1]:9001
 62.210.124.124:9130 orport=9101 id=2EBD117806EE43C3CC885A8F1E4DC60F207E7D3E ipv6=[2001:bc8:3f23:100::1]:9101
+
+# Email sent directly to teor
+212.51.156.193:995 orport=110 id=32E7AAF1F602814D699BEF6761AD03E387758D49 ipv6=[2a02:168:4a01::49]:110
