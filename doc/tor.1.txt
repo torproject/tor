@@ -432,7 +432,8 @@ GENERAL OPTIONS
     When configured to use both directory authorities and fallback
     directories, the directory authorities also work as fallbacks. They are
     chosen with their regular weights, multiplied by this number, which
-    should be 1.0 or less. (Default: 1.0)
+    should be 1.0 or less. The default is less than 1, to reduce load on
+    authorities. (Default: 0.1)
 
 [[AlternateDirAuthority]] **AlternateDirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
 
