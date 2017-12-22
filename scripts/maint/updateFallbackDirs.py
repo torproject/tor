@@ -245,21 +245,6 @@ CONSENSUS_DOWNLOAD_SPEED_MAX = 15.0
 # This avoids delisting a relay due to transient network conditions
 CONSENSUS_DOWNLOAD_RETRY = True
 
-## Fallback Weights for Client Selection
-
-# All fallback weights are equal, and set to the value below
-# Authorities are weighted 1.0 by default
-# Clients use these weights to select fallbacks and authorities at random
-# If there are 100 fallbacks and 9 authorities:
-#  - each fallback is chosen with probability 10.0/(10.0*100 + 1.0*9) ~= 0.99%
-#  - each authority is chosen with probability 1.0/(10.0*100 + 1.0*9) ~= 0.09%
-# A client choosing a bootstrap directory server will choose a fallback for
-# 10.0/(10.0*100 + 1.0*9) * 100 = 99.1% of attempts, and an authority for
-# 1.0/(10.0*100 + 1.0*9) * 9 = 0.9% of attempts.
-# (This disregards the bootstrap schedules, where clients start by choosing
-# from fallbacks & authoritites, then later choose from only authorities.)
-FALLBACK_OUTPUT_WEIGHT = 10.0
-
 ## Parsing Functions
 
 def parse_ts(t):
@@ -1346,7 +1331,7 @@ class Candidate(object):
   def fallbackdir_info(self, dl_speed_ok):
     # "address:dirport orport=port id=fingerprint"
     # "[ipv6=addr:orport]"
-    # "weight=FALLBACK_OUTPUT_WEIGHT",
+    # ,
     #
     # Do we want a C string, or a commented-out string?
     c_string = dl_speed_ok
@@ -1370,7 +1355,7 @@ class Candidate(object):
     if self.has_ipv6():
       s += '" ipv6=%s:%d"'%(cleanse_c_string(self.ipv6addr), self.ipv6orport)
       s += '\n'
-    s += '" weight=%d",'%(FALLBACK_OUTPUT_WEIGHT)
+    s += ','
     if comment_string:
       s += '\n'
       s += '*/'
