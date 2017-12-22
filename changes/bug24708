@@ -1,0 +1,4 @@
+  o Minor bugfixes (fallback directory mirrors):
+    - Make updateFallbackDirs.py search harder for python.
+      (Some OSs don't put it in /usr/bin.)
+      Fixes bug 24708; bugfix on 0.2.8.1-alpha.
