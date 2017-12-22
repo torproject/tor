@@ -1,0 +1,6 @@
+  o Minor features (fallback directory mirrors):
+    - Add the generateFallbackDirLine.py script for automatically generating
+      fallback directory mirror lines from relay fingerprints. No more typos!
+      Add the lookupFallbackDirContact.py script for automatically looking up
+      operator contact info from relay fingerprints.
+      Implements ticket 24706.

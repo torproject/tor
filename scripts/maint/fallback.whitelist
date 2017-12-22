@@ -2,6 +2,8 @@
 #
 # Format:
 # IPv4:DirPort orport=<ORPort> id=<ID> [ ipv6=<IPv6>:<IPv6 ORPort> ]
+# or use:
+# scripts/maint/generateFallbackDirLine.py fingerprint ...
 #
 # All attributes must match for the directory mirror to be included.
 # If the fallback has an ipv6 key, the whitelist line must also have

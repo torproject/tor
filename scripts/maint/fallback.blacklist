@@ -3,6 +3,8 @@
 # Format:
 # [ IPv4[:DirPort] ] [ orport=<ORPort> ] [ id=<ID> ] ...
 #   [ ipv6=<IPv6>[:<IPv6 ORPort>] ]
+# or use:
+# scripts/maint/generateFallbackDirLine.py fingerprint ...
 #
 # If a sufficiently specific group of attributes matches, the directory mirror
 # will be excluded: (each group is listed on its own line)
