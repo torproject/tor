@@ -1331,6 +1331,7 @@ class Candidate(object):
   def fallbackdir_info(self, dl_speed_ok):
     # "address:dirport orport=port id=fingerprint"
     # "[ipv6=addr:orport]"
+    # /* nickname=name */
     # ,
     #
     # Do we want a C string, or a commented-out string?
@@ -1355,6 +1356,12 @@ class Candidate(object):
     if self.has_ipv6():
       s += '" ipv6=%s:%d"'%(cleanse_c_string(self.ipv6addr), self.ipv6orport)
       s += '\n'
+    if not comment_string:
+      s += '/* '
+    s += 'nickname=%s'%(cleanse_c_string(self._data['nickname']))
+    if not comment_string:
+      s += ' */'
+    s += '\n'
     s += ','
     if comment_string:
       s += '\n'

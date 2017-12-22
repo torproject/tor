@@ -1,0 +1,5 @@
+  o Minor features (fallback directory mirrors):
+    - Add a nickname to each fallback in a C comment. This makes it easier for
+      operators to find their relays, and allows stem to use nicknames to
+      identify fallbacks.
+      Implements ticket 24600.
