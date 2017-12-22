@@ -1,0 +1,4 @@
+  o Major features (Onion Services):
+    - Provide torrc options to pin the second and third hops of onion service
+      circuits to a list of nodes. The option HSLayer2Guards pins the second hop,
+      and the option HSLayer3Guards pins the third hop. Closes ticket 13837.

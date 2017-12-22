@@ -3876,6 +3876,14 @@ typedef struct {
   /** A routerset that should be used when picking RPs for HS circuits. */
   routerset_t *Tor2webRendezvousPoints;
 
+  /** A routerset that should be used when picking middle nodes for HS
+   *  circuits. */
+  routerset_t *HSLayer2Nodes;
+
+  /** A routerset that should be used when picking third-hop nodes for HS
+   *  circuits. */
+  routerset_t *HSLayer3Nodes;
+
   /** Onion Services in HiddenServiceSingleHopMode make one-hop (direct)
    * circuits between the onion service server, and the introduction and
    * rendezvous points. (Onion service descriptors are still posted using

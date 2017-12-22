@@ -1762,8 +1762,22 @@ circuit_build_failed(origin_circuit_t *circ)
                TO_CIRCUIT(circ)->n_circ_id, circ->global_identifier);
     }
     if (n_chan_id && !already_marked) {
-      /* New guard API: we failed. */
-      if (circ->guard_state)
+      /*
+       * If we have guard state (new guard API) and our path selection
+       * code actually chose a full path, then blame the failure of this
+       * circuit on the guard.
+       *
+       * Note that we deliberately use circuit_get_cpath_len() (and not
+       * circuit_get_cpath_opened_len()) because we only want to ensure
+       * that a full path is *chosen*. This is different than a full path
+       * being *built*. We only want to blame *build* failures on this
+       * guard. Path selection failures can happen spuriously for a number
+       * of reasons (such as aggressive/invalid user-specified path
+       * restrictions in the torrc, as well as non-user reasons like
+       * exitpolicy issues), and so should not be counted here.
+       */
+      if (circ->guard_state &&
+          circuit_get_cpath_len(circ) >= circ->build_state->desired_path_len)
         entry_guard_failed(&circ->guard_state);
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
@@ -1856,6 +1870,53 @@ have_enough_path_info(int need_exit)
     return router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN;
 }
 
+/**
+ * Tell us if a circuit is a hidden service circuit.
+ */
+int
+circuit_purpose_is_hidden_service(uint8_t purpose)
+{
+   /* Client-side purpose */
+   if (purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
+       purpose <= CIRCUIT_PURPOSE_C_REND_JOINED) {
+     return 1;
+   }
+
+   /* Service-side purpose */
+   if (purpose >= CIRCUIT_PURPOSE_S_ESTABLISH_INTRO &&
+       purpose <= CIRCUIT_PURPOSE_S_REND_JOINED) {
+     return 1;
+   }
+
+   return 0;
+}
+
+/**
+ * Return true if this circuit purpose should use vanguards
+ * or pinned Layer2 or Layer3 guards.
+ *
+ * This function takes both the circuit purpose and the
+ * torrc options for pinned middles/vanguards into account
+ * (ie: the circuit must be a hidden service circuit and
+ * vanguards/pinned middles must be enabled for it to return
+ * true).
+ */
+int
+circuit_should_use_vanguards(uint8_t purpose)
+{
+  const or_options_t *options = get_options();
+
+  /* Only hidden service circuits use vanguards */
+  if (!circuit_purpose_is_hidden_service(purpose))
+    return 0;
+
+  /* Pinned middles are effectively vanguards */
+  if (options->HSLayer2Nodes || options->HSLayer3Nodes)
+    return 1;
+
+  return 0;
+}
+
 /** Launch a new circuit with purpose <b>purpose</b> and exit node
  * <b>extend_info</b> (or NULL to select a random exit node).  If flags
  * contains CIRCLAUNCH_NEED_UPTIME, choose among routers with high uptime.  If
@@ -1892,6 +1953,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
 
   if ((extend_info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
       purpose != CIRCUIT_PURPOSE_TESTING &&
+      !circuit_should_use_vanguards(purpose) &&
       !onehop_tunnel && !need_specific_rp) {
     /* see if there are appropriate circs available to cannibalize. */
     /* XXX if we're planning to add a hop, perhaps we want to look for
