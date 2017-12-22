@@ -98,10 +98,11 @@ DOWNLOAD_MICRODESC_CONSENSUS = True
 # reject consensuses that are older than REASONABLY_LIVE_TIME.
 # For the consensus expiry check to be accurate, the machine running this
 # script needs an accurate clock.
-# We use 24 hours to compensate for #20909, where relays on 0.2.9.5-alpha and
-# 0.3.0.0-alpha-dev and later deliver stale consensuses, but typically recover
-# after ~12 hours.
-# We should make this lower when #20909 is fixed, see #20942.
+#
+# Relays on 0.3.0 and later return a 404 when they are about to serve an
+# expired consensus. This makes them fail the download check.
+# We use a tolerance of 0, so that 0.2.x series relays also fail the download
+# check if they serve an expired consensus.
 CONSENSUS_EXPIRY_TOLERANCE = 0 
 
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?

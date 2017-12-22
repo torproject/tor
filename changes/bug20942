@@ -1,0 +1,3 @@
+  o Minor features (fallback directory mirrors):
+    - Reject any fallback directory mirror that serves an expired consensus.
+      Implements ticket 20942, patch by "minik".
