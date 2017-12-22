@@ -14,14 +14,12 @@
 # If this is not possible, please disable:
 # PERFORM_IPV4_DIRPORT_CHECKS and PERFORM_IPV6_DIRPORT_CHECKS
 #
-# Needs dateutil (and potentially other python packages)
-# Needs stem available in your PYTHONPATH, or just ln -s ../stem/stem .
+# Needs dateutil, stem, and potentially other python packages.
 # Optionally uses ipaddress (python 3 builtin) or py2-ipaddress (package)
-# for netblock analysis, in PYTHONPATH, or just
-# ln -s ../py2-ipaddress-3.4.1/ipaddress.py .
+# for netblock analysis.
 #
 # Then read the logs to make sure the fallbacks aren't dominated by a single
-# netblock or port
+# netblock or port.
 
 # Script by weasel, April 2015
 # Portions by gsathya & karsten, 2013
