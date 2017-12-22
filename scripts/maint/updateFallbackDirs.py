@@ -47,7 +47,7 @@ import copy
 import re
 
 from stem.descriptor import DocumentHandler
-from stem.descriptor.remote import get_consensus
+from stem.descriptor.remote import get_consensus, get_server_descriptors, MAX_FINGERPRINTS
 
 import logging
 logging.root.name = ''
@@ -565,6 +565,7 @@ class Candidate(object):
     if not self.has_ipv6():
       logging.debug("Failed to get an ipv6 address for %s."%(self._fpr,))
     self._compute_version()
+    self._extra_info_cache = None
 
   def _stable_sort_or_addresses(self):
     # replace self._data['or_addresses'] with a stable ordering,
@@ -1332,6 +1333,7 @@ class Candidate(object):
     # "address:dirport orport=port id=fingerprint"
     # "[ipv6=addr:orport]"
     # /* nickname=name */
+    # /* extrainfo={0,1} */
     # ,
     #
     # Do we want a C string, or a commented-out string?
@@ -1359,6 +1361,14 @@ class Candidate(object):
     if not comment_string:
       s += '/* '
     s += 'nickname=%s'%(cleanse_c_string(self._data['nickname']))
+    if not comment_string:
+      s += ' */'
+    s += '\n'
+    # if we know that the fallback is an extrainfo cache, flag it
+    # and if we don't know, assume it is not
+    if not comment_string:
+      s += '/* '
+    s += 'extrainfo=%d'%(1 if self._extra_info_cache else 0)
     if not comment_string:
       s += ' */'
     s += '\n'
@@ -1747,6 +1757,53 @@ class CandidateList(dict):
     self.fallbacks = family_limit_fallbacks
     return original_count - len(self.fallbacks)
 
+  # try once to get the descriptors for fingerprint_list using stem
+  # returns an empty list on exception
+  @staticmethod
+  def get_fallback_descriptors_once(fingerprint_list):
+    desc_list = get_server_descriptors(fingerprints=fingerprint_list).run(suppress=True)
+    return desc_list
+
+  # try up to max_retries times to get the descriptors for fingerprint_list
+  # using stem. Stops retrying when all descriptors have been retrieved.
+  # returns a list containing the descriptors that were retrieved
+  @staticmethod
+  def get_fallback_descriptors(fingerprint_list, max_retries=5):
+    # we can't use stem's retries=, because we want to support more than 96
+    # descriptors
+    #
+    # add an attempt for every MAX_FINGERPRINTS (or part thereof) in the list
+    max_retries += (len(fingerprint_list) + MAX_FINGERPRINTS - 1) / MAX_FINGERPRINTS
+    remaining_list = fingerprint_list
+    desc_list = []
+    for _ in xrange(max_retries):
+      if len(remaining_list) == 0:
+        break
+      new_desc_list = CandidateList.get_fallback_descriptors_once(remaining_list[0:MAX_FINGERPRINTS])
+      for d in new_desc_list:
+        try:
+          remaining_list.remove(d.fingerprint)
+        except ValueError:
+          # warn and ignore if a directory mirror returned a bad descriptor
+          logging.warning("Directory mirror returned unwanted descriptor %s, ignoring",
+                          d.fingerprint)
+          continue
+        desc_list.append(d)
+    return desc_list
+
+  # find the fallbacks that cache extra-info documents
+  # Onionoo doesn't know this, so we have to use stem
+  def mark_extra_info_caches(self):
+    fingerprint_list = [ f._fpr for f in self.fallbacks ]
+    logging.info("Downloading fallback descriptors to find extra-info caches")
+    desc_list = CandidateList.get_fallback_descriptors(fingerprint_list)
+    for d in desc_list:
+      self[d.fingerprint]._extra_info_cache = d.extra_info_cache
+    missing_descriptor_list = [ f._fpr for f in self.fallbacks
+                                if f._extra_info_cache is None ]
+    for f in missing_descriptor_list:
+      logging.warning("No descriptor for {}. Assuming extrainfo=0.".format(f))
+
   # try a download check on each fallback candidate in order
   # stop after max_count successful downloads
   # but don't remove any candidates from the array
@@ -1994,6 +2051,18 @@ class CandidateList(dict):
                     CandidateList.describe_percentage(dir_count,
                                                       fallback_count)))
 
+  # return a list of fallbacks which cache extra-info documents
+  def fallbacks_with_extra_info_cache(self):
+    return filter(lambda x: x._extra_info_cache, self.fallbacks)
+
+  # log a message about the proportion of fallbacks that cache extra-info docs
+  def describe_fallback_extra_info_caches(self):
+    extra_info_falback_count = len(self.fallbacks_with_extra_info_cache())
+    fallback_count = len(self.fallbacks)
+    logging.warning('%s of fallbacks cache extra-info documents'%(
+                    CandidateList.describe_percentage(extra_info_falback_count,
+                                                      fallback_count)))
+
   # return a list of fallbacks which have the Exit flag
   def fallbacks_with_exit(self):
     return filter(lambda x: x.is_exit(), self.fallbacks)
@@ -2193,6 +2262,9 @@ def list_fallbacks(whitelist, blacklist):
                     'This may take some time.')
   failed_count = candidates.perform_download_consensus_checks(max_count)
 
+  # work out which fallbacks cache extra-infos
+  candidates.mark_extra_info_caches()
+
   # analyse and log interesting diversity metrics
   # like netblock, ports, exit, IPv4-only
   # (we can't easily analyse AS, and it's hard to accurately analyse country)
@@ -2201,6 +2273,7 @@ def list_fallbacks(whitelist, blacklist):
   if HAVE_IPADDRESS:
     candidates.describe_fallback_netblocks()
   candidates.describe_fallback_ports()
+  candidates.describe_fallback_extra_info_caches()
   candidates.describe_fallback_exit_flag()
 
   # output C comments summarising the fallback selection process
