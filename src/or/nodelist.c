@@ -916,9 +916,12 @@ node_get_ed25519_id(const node_t *node)
     }
   }
 
+/* Checking whether microdesc_ed25519() is all zero*/
   if (node->md) {
     if (node->md->ed25519_identity_pkey) {
       md_pk = node->md->ed25519_identity_pkey;
+      if (BUG(ed25519_public_key_is_zero(md_pk)))
+        md_pk = NULL;
     }
   }
 
