@@ -80,6 +80,10 @@ static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
 static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                                 crypt_path_t *hop);
+static const node_t *choose_good_middle_server(uint8_t purpose,
+                          cpath_build_state_t *state,
+                          crypt_path_t *head,
+                          int cur_len);
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -1653,7 +1657,7 @@ onionskin_answer(or_circuit_t *circ,
  * new_route_len()) in the one-hop tunnel case, so we don't need to
  * handle that.
  */
-static int
+int
 route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
 {
   int routelen = DEFAULT_ROUTE_LEN;
@@ -1670,6 +1674,7 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
      */
     if (purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
         purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
+        purpose == CIRCUIT_PURPOSE_HS_VANGUARDS ||
         purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
       return routelen+1;
 
@@ -2264,9 +2269,8 @@ pick_restricted_middle_node(router_crn_flags_t flags,
  * toward the preferences in 'options'.
  */
 static const node_t *
-choose_good_exit_server(uint8_t purpose,
-                        int need_uptime, int need_capacity, int is_internal,
-                        int need_hs_v3)
+choose_good_exit_server(origin_circuit_t *circ, int need_uptime,
+                        int need_capacity, int is_internal, int need_hs_v3)
 {
   const or_options_t *options = get_options();
   router_crn_flags_t flags = CRN_NEED_DESC;
@@ -2277,9 +2281,13 @@ choose_good_exit_server(uint8_t purpose,
   if (need_hs_v3)
     flags |= CRN_RENDEZVOUS_V3;
 
-  switch (purpose) {
+  switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_HSDIR_GET:
     case CIRCUIT_PURPOSE_S_HSDIR_POST:
+    case CIRCUIT_PURPOSE_HS_VANGUARDS:
+      /* For these three, we want to pick the exit like a middle hop,
+       * since it should be random. */
+      tor_assert_nonfatal(is_internal);
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
@@ -2294,7 +2302,7 @@ choose_good_exit_server(uint8_t purpose,
         return rendezvous_node;
       }
   }
-  log_warn(LD_BUG,"Unhandled purpose %d", purpose);
+  log_warn(LD_BUG,"Unhandled purpose %d", TO_CIRCUIT(circ)->purpose);
   tor_fragile_assert();
   return NULL;
 }
@@ -2410,7 +2418,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
     exit_ei = extend_info_dup(exit_ei);
   } else { /* we have to decide one */
     const node_t *node =
-      choose_good_exit_server(circ->base_.purpose, state->need_uptime,
+      choose_good_exit_server(circ, state->need_uptime,
                               state->need_capacity, state->is_internal,
                               is_hs_v3_rp_circuit);
     if (!node) {

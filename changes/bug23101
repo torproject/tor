@@ -1,0 +1,3 @@
+  o Minor features (Performance):
+    - Support predictive circuit building for onion service circuits with
+      multiple layers of guards. Closes ticket 23101.

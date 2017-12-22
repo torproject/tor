@@ -547,13 +547,23 @@ typedef enum {
 /** This circuit is used for uploading hsdirs */
 #define CIRCUIT_PURPOSE_S_HSDIR_POST 19
 #define CIRCUIT_PURPOSE_S_HS_MAX_ 19
+
 /** A testing circuit; not meant to be used for actual traffic. */
 #define CIRCUIT_PURPOSE_TESTING 20
 /** A controller made this circuit and Tor should not use it. */
 #define CIRCUIT_PURPOSE_CONTROLLER 21
 /** This circuit is used for path bias probing only */
 #define CIRCUIT_PURPOSE_PATH_BIAS_TESTING 22
-#define CIRCUIT_PURPOSE_MAX_ 22
+
+/** This circuit is used for vanguards/restricted paths.
+ *
+ *  This type of circuit is *only* created preemptively and never
+ *  on-demand. When an HS operation needs to take place (e.g. connect to an
+ *  intro point), these circuits are then cannibalized and repurposed to the
+ *  actual needed HS purpose. */
+#define CIRCUIT_PURPOSE_HS_VANGUARDS 23
+
+#define CIRCUIT_PURPOSE_MAX_ 23
 /** A catch-all for unrecognized purposes. Currently we don't expect
  * to make or see any circuits with this purpose. */
 #define CIRCUIT_PURPOSE_UNKNOWN 255
