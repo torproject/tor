@@ -76,6 +76,8 @@ except ImportError:
 # * patch changes include changing header comments or other unstructured
 #   content
 FALLBACK_FORMAT_VERSION = '2.0.0'
+SECTION_SEPARATOR_BASE = '====='
+SECTION_SEPARATOR_COMMENT = '/* ' + SECTION_SEPARATOR_BASE + ' */'
 
 # Output all candidate fallbacks, or only output selected fallbacks?
 OUTPUT_CANDIDATES = False
@@ -1339,9 +1341,13 @@ class Candidate(object):
   # comment-out the returned string
   def fallbackdir_info(self, dl_speed_ok):
     # "address:dirport orport=port id=fingerprint"
+    # (insert additional madatory fields here)
     # "[ipv6=addr:orport]"
+    # (insert additional optional fields here)
     # /* nickname=name */
     # /* extrainfo={0,1} */
+    # (insert additional comment fields here)
+    # /* ===== */
     # ,
     #
     # Do we want a C string, or a commented-out string?
@@ -1363,9 +1369,11 @@ class Candidate(object):
             self.orport,
             cleanse_c_string(self._fpr))
     s += '\n'
+    # (insert additional madatory fields here)
     if self.has_ipv6():
       s += '" ipv6=%s:%d"'%(cleanse_c_string(self.ipv6addr), self.ipv6orport)
       s += '\n'
+    # (insert additional optional fields here)
     if not comment_string:
       s += '/* '
     s += 'nickname=%s'%(cleanse_c_string(self._data['nickname']))
@@ -1377,6 +1385,14 @@ class Candidate(object):
     if not comment_string:
       s += '/* '
     s += 'extrainfo=%d'%(1 if self._extra_info_cache else 0)
+    if not comment_string:
+      s += ' */'
+    s += '\n'
+    # (insert additional comment fields here)
+    # The terminator and comma must be the last line in each fallback entry
+    if not comment_string:
+      s += '/* '
+    s += SECTION_SEPARATOR_BASE
     if not comment_string:
       s += ' */'
     s += '\n'
@@ -2205,6 +2221,9 @@ def list_fallbacks(whitelist, blacklist):
   print "/* type=fallback */"
   print ("/* version={} */"
          .format(cleanse_c_multiline_comment(FALLBACK_FORMAT_VERSION)))
+  # end the header with a separator, to make it easier for parsers
+  print SECTION_SEPARATOR_COMMENT
+
   logging.warning('Downloading and parsing Onionoo data. ' +
                   'This may take some time.')
   # find relays that could be fallbacks
@@ -2295,6 +2314,9 @@ def list_fallbacks(whitelist, blacklist):
   # output C comments specifying the OnionOO data used to create the list
   for s in fetch_source_list():
     print describe_fetch_source(s)
+
+  # start the list with a separator, to make it easy for parsers
+  print SECTION_SEPARATOR_COMMENT
 
   # sort the list differently depending on why we've created it:
   # if we're outputting the final fallback list, sort by fingerprint
