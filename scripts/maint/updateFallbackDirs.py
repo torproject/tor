@@ -284,6 +284,10 @@ def cleanse_c_multiline_comment(raw_string):
   bad_char_list = '*/'
   # Prevent a malicious string from using C nulls
   bad_char_list += '\0'
+  # Avoid confusing parsers by making sure there is only one comma per fallback
+  bad_char_list += ','
+  # Avoid confusing parsers by making sure there is only one equals per field
+  bad_char_list += '='
   # Be safer by removing bad characters entirely
   cleansed_string = remove_bad_chars(cleansed_string, bad_char_list)
   # Some compilers may further process the content of comments
@@ -304,6 +308,10 @@ def cleanse_c_string(raw_string):
   bad_char_list += '\\'
   # Prevent a malicious string from using C nulls
   bad_char_list += '\0'
+  # Avoid confusing parsers by making sure there is only one comma per fallback
+  bad_char_list += ','
+  # Avoid confusing parsers by making sure there is only one equals per field
+  bad_char_list += '='
   # Be safer by removing bad characters entirely
   cleansed_string = remove_bad_chars(cleansed_string, bad_char_list)
   # Some compilers may further process the content of strings
