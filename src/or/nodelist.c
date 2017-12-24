@@ -908,18 +908,22 @@ node_get_ed25519_id(const node_t *node)
 {
   const ed25519_public_key_t *ri_pk = NULL;
   const ed25519_public_key_t *md_pk = NULL;
+
   if (node->ri) {
     if (node->ri->cache_info.signing_key_cert) {
       ri_pk = &node->ri->cache_info.signing_key_cert->signing_key;
+      /* Checking whether routerinfo ed25519 is all zero.
+       * Our descriptor parser should make sure this never happens. */
       if (BUG(ed25519_public_key_is_zero(ri_pk)))
         ri_pk = NULL;
     }
   }
 
-/* Checking whether microdesc_ed25519() is all zero*/
   if (node->md) {
     if (node->md->ed25519_identity_pkey) {
       md_pk = node->md->ed25519_identity_pkey;
+      /* Checking whether microdesc ed25519 is all zero.
+       * Our descriptor parser should make sure this never happens. */
       if (BUG(ed25519_public_key_is_zero(md_pk)))
         md_pk = NULL;
     }
