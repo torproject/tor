@@ -1601,7 +1601,11 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
  done:
   if (fd >= 0)
     close(fd);
-  tor_free(ifc.ifc_buf);
+  /* On macOS, tor_free() loads ifc.ifc_buf, which leads to undefined
+   * behaviour, because it is always aligned at 8-bytes (ifc) plus 4 bytes
+   * (ifc_len and pragma pack(4)). So we use raw_free() instead. */
+  raw_free(ifc.ifc_buf);
+  ifc.ifc_buf = NULL;
   return result;
 }
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
