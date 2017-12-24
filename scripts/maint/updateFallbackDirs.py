@@ -68,6 +68,15 @@ except ImportError:
 
 ## Top-Level Configuration
 
+# We use semantic versioning: https://semver.org
+# In particular:
+# * major changes include removing a mandatory field, or anything else that
+#   would break an appropriately tolerant parser,
+# * minor changes include adding a field,
+# * patch changes include changing header comments or other unstructured
+#   content
+FALLBACK_FORMAT_VERSION = '2.0.0'
+
 # Output all candidate fallbacks, or only output selected fallbacks?
 OUTPUT_CANDIDATES = False
 
@@ -2124,6 +2133,9 @@ def list_fallbacks(whitelist, blacklist):
   """ Fetches required onionoo documents and evaluates the
       fallback directory criteria for each of the relays """
 
+  print "/* type=fallback */"
+  print ("/* version={} */"
+         .format(cleanse_c_multiline_comment(FALLBACK_FORMAT_VERSION)))
   logging.warning('Downloading and parsing Onionoo data. ' +
                   'This may take some time.')
   # find relays that could be fallbacks
