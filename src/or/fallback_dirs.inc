@@ -2,7 +2,6 @@
 /* version=2.0.0 */
 /* ===== */
 /* Whitelist & blacklist excluded 1326 of 1513 candidates. */
-/* To comment-out entries in this file, use C comments, and add * to the start of each line. (stem finds fallback entries using " at the start of a line.) */
 /* Checked IPv4 DirPorts served a consensus within 15.0s. */
 /*
 Final Count: 151 (Eligible 187, Target 392 (1963 * 0.20), Max 200)
