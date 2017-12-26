@@ -2114,10 +2114,6 @@ class CandidateList(dict):
   def summarise_fallbacks(self, eligible_count, operator_count, failed_count,
                           guard_count, target_count):
     s = ''
-    s += '/* To comment-out entries in this file, use C comments, and add *'
-    s += ' to the start of each line. (stem finds fallback entries using "'
-    s += ' at the start of a line.) */'
-    s += '\n'
     # Report:
     #  whether we checked consensus download times
     #  the number of fallback directories (and limits/exclusions, if relevant)
