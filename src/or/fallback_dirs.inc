@@ -1,5 +1,6 @@
 /* type=fallback */
 /* version=2.0.0 */
+/* timestamp=20170526090242 */
 /* ===== */
 /* Whitelist & blacklist excluded 1326 of 1513 candidates. */
 /* Checked IPv4 DirPorts served a consensus within 15.0s. */
