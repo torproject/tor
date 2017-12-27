@@ -7,35 +7,32 @@
 # generateFallbackDirLine.py fingerprint ...
 
 import sys
+import urllib2
 
-import stem.descriptor.remote as remote
+import stem.descriptor.remote
+import stem.util.tor_tools
 
 if len(sys.argv) <= 1:
-  print "Usage: {} fingerprint ...".format(sys.argv[0])
-  sys.exit(-1)
-
-# we need the full consensus, because it has IPv6 ORPorts
-# and we want a fingerprint to router mapping in routers
-#
-# stem returns document_handler='DOCUMENT' as a list of consensuses
-# with one entry
-consensus = remote.get_consensus(document_handler='DOCUMENT').run()[0]
+  print('Usage: %s fingerprint ...' % sys.argv[0])
+  sys.exit(1)
 
 for fingerprint in sys.argv[1:]:
-  if fingerprint in consensus.routers:
-    r = consensus.routers[fingerprint]
-    # Tor clients don't use DirPorts, but old code requires one for fallbacks
-    if r.dir_port is not None:
-      # IPv4:DirPort orport=ORPort id=Fingerprint ipv6=[IPv6]:IPv6ORPort # nick
-      ipv6_or_ap_list = [ apv for apv in r.or_addresses if apv[2] ]
-      ipv6_str = ""
-      if len(ipv6_or_ap_list) > 0:
-        ipv6_or_ap = ipv6_or_ap_list[0]
-        ipv6_str = " ipv6=[{}]:{}".format(ipv6_or_ap[0], ipv6_or_ap[1])
-      print ("{}:{} orport={} id={}{} # {}"
-             .format(r.address, r.dir_port, r.or_port, r.fingerprint,
-                     ipv6_str, r.nickname))
+  if not stem.util.tor_tools.is_valid_fingerprint(fingerprint):
+    print("'%s' isn't a valid relay fingerprint" % fingerprint)
+    sys.exit(1)
+
+  try:
+    desc = stem.descriptor.remote.get_server_descriptors(fingerprint).run()[0]
+  except urllib2.HTTPError as exc:
+    if exc.code == 404:
+      print('# %s not found in recent descriptors' % fingerprint)
+      continue
     else:
-      print "# {} needs a DirPort".format(fingerprint)    
+      raise
+
+  if not desc.dir_port:
+    print("# %s needs a DirPort" % fingerprint)
   else:
-    print "# {} not found in current consensus".format(fingerprint)
+    ipv6_addresses = [(address, port) for address, port, is_ipv6 in desc.or_addresses if is_ipv6]
+    ipv6_field = ' ipv6=[%s]:%s' % ipv6_addresses[0] if ipv6_addresses else ''
+    print('%s:%s orport=%s id=%s%s # %s' % (desc.address, desc.dir_port, desc.or_port, fingerprint, ipv6_field, desc.nickname))

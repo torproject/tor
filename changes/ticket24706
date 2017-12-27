@@ -3,4 +3,4 @@
       fallback directory mirror lines from relay fingerprints. No more typos!
       Add the lookupFallbackDirContact.py script for automatically looking up
       operator contact info from relay fingerprints.
-      Implements ticket 24706.
+      Implements ticket 24706, patch by teor and atagar.
