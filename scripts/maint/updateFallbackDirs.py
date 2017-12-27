@@ -2217,6 +2217,10 @@ def list_fallbacks(whitelist, blacklist):
   print "/* type=fallback */"
   print ("/* version={} */"
          .format(cleanse_c_multiline_comment(FALLBACK_FORMAT_VERSION)))
+  now = datetime.datetime.utcnow()
+  timestamp = now.strftime('%Y%m%d%H%M%S')
+  print ("/* timestamp={} */"
+         .format(cleanse_c_multiline_comment(timestamp)))
   # end the header with a separator, to make it easier for parsers
   print SECTION_SEPARATOR_COMMENT
 
