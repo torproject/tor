@@ -1630,24 +1630,18 @@ microdesc_has_curve25519_onion_key(const microdesc_t *md)
 int
 node_has_curve25519_onion_key(const node_t *node)
 {
-  if (!node)
-    return 0;
-
-  if (node->ri)
-    return routerinfo_has_curve25519_onion_key(node->ri);
-  else if (node->md)
-    return microdesc_has_curve25519_onion_key(node->md);
-  else
-    return 0;
+  return(node_get_curve25519_onion_key(node)!=NULL);
 }
 
 /** Return the curve25519 key of <b>node</b>, or NULL if none. */
 const curve25519_public_key_t *
 node_get_curve25519_onion_key(const node_t *node)
 {
-  if (node->ri)
+  if (!node)
+    return NULL;
+  if (routerinfo_has_curve25519_onion_key(node->ri))
     return node->ri->onion_curve25519_pkey;
-  else if (node->md)
+  else if (microdesc_has_curve25519_onion_key(node->md))
     return node->md->onion_curve25519_pkey;
   else
     return NULL;
