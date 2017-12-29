@@ -99,13 +99,17 @@ pub fn get_supported_protocols() -> String {
 }
 
 /// Translates a vector representation of a protocol list into a HashMap
-fn parse_protocols<'a, P: Iterator<Item = &'a str>>(
+fn parse_protocols<P, S>(
     protocols: P,
-) -> Result<HashMap<Proto, HashSet<u32>>, &'static str> {
+) -> Result<HashMap<Proto, HashSet<u32>>, &'static str>
+where
+    P: Iterator<Item = S>,
+    S: AsRef<str>,
+{
     let mut parsed = HashMap::new();
 
     for subproto in protocols {
-        let (name, version) = get_proto_and_vers(subproto)?;
+        let (name, version) = get_proto_and_vers(subproto.as_ref())?;
         parsed.insert(name, version);
     }
     Ok(parsed)
@@ -130,7 +134,7 @@ fn parse_protocols_from_string<'a>(
 /// of the error.
 ///
 fn tor_supported() -> Result<HashMap<Proto, HashSet<u32>>, &'static str> {
-    parse_protocols(SUPPORTED_PROTOCOLS.iter().map(|n| *n))
+    parse_protocols(SUPPORTED_PROTOCOLS.iter())
 }
 
 /// Get the unique version numbers supported by a subprotocol.
