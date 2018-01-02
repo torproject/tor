@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 22 September 2015 for Tor 0.2.7.3-alpha.
+## Last updated 22 December 2017 for Tor 0.3.2.8-rc.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -96,7 +96,8 @@
 ## If you have multiple network interfaces, you can specify one for
 ## outgoing traffic to use.
 ## OutboundBindAddressExit will be used for all exit traffic, while
-## OutboundBindAddressOR will be used for all other connections.
+## OutboundBindAddressOR will be used for all OR and Dir connections
+## (DNS connections ignore OutboundBindAddress).
 ## If you do not wish to differentiate, use OutboundBindAddress to
 ## specify the same address for both in a single line.
 #OutboundBindAddressExit 10.0.0.4
@@ -162,6 +163,14 @@
 ## However, you should never include a bridge's fingerprint here, as it would
 ## break its concealability and potentially reveal its IP/TCP address.
 #MyFamily $keyid,$keyid,...
+
+## Uncomment this if you do *not* want your relay to allow any exit traffic.
+## (Relays allow exit traffic by default.)
+#ExitRelay 0
+
+## Uncomment this if you want your relay to allow IPv6 exit traffic.
+## (Relays only allow IPv4 exit traffic by default.)
+#IPv6Exit 1
 
 ## A comma-separated list of exit policies. They're considered first
 ## to last, and the first match wins.
