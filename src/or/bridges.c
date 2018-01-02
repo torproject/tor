@@ -716,7 +716,6 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
   if (node->ri) {
     routerinfo_t *ri = node->ri;
     tor_addr_from_ipv4h(&addr, ri->addr);
-
     if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
          bridge->port == ri->or_port) ||
         (!tor_addr_compare(&bridge->addr, &ri->ipv6_addr, CMP_EXACT) &&
@@ -774,16 +773,58 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     routerstatus_t *rs = node->rs;
     tor_addr_from_ipv4h(&addr, rs->addr);
 
-    if (!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
-        bridge->port == rs->or_port) {
+    if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+        bridge->port == rs->or_port) ||
+       (!tor_addr_compare(&bridge->addr, &rs->ipv6_addr, CMP_EXACT) &&
+        bridge->port == rs->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
-      rs->addr = tor_addr_to_ipv4h(&bridge->addr);
-      rs->or_port = bridge->port;
-      log_info(LD_DIR,
-               "Adjusted bridge routerstatus for '%s' to match "
-               "configured address %s.",
-               rs->nickname, fmt_addrport(&bridge->addr, rs->or_port));
+      if (tor_addr_family(&bridge->addr) == AF_INET) {
+        rs->addr = tor_addr_to_ipv4h(&bridge->addr);
+        rs->or_port = bridge->port;
+        log_info(LD_DIR,
+                 "Adjusted bridge routerstatus for '%s' to match "
+                 "configured address %s.",
+                 rs->nickname, fmt_addrport(&bridge->addr, rs->or_port));
+      /* set IPv6 preferences even if there is no ri */
+      } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
+        tor_addr_copy(&rs->ipv6_addr, &bridge->addr);
+        rs->ipv6_orport = bridge->port;
+        log_info(LD_DIR,
+                 "Adjusted bridge routerstatus for '%s' to match configured"
+                 " address %s.",
+                 rs->nickname, fmt_addrport(&rs->ipv6_addr, rs->ipv6_orport));
+      } else {
+        log_err(LD_BUG, "Address family not supported: %d.",
+                tor_addr_family(&bridge->addr));
+        return;
+      }
+    }
+
+    if (options->ClientPreferIPv6ORPort == -1) {
+      /* Mark which address to use based on which bridge_t we got. */
+      node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
+                              !tor_addr_is_null(&node->rs->ipv6_addr));
+    } else {
+      /* Mark which address to use based on user preference */
+      node->ipv6_preferred = (fascist_firewall_prefer_ipv6_orport(options) &&
+                              !tor_addr_is_null(&node->rs->ipv6_addr));
+    }
+
+    /* XXXipv6 we lack support for falling back to another address for
+    the same relay, warn the user */
+    if (!tor_addr_is_null(&rs->ipv6_addr)) {
+      tor_addr_port_t ap;
+      node_get_pref_orport(node, &ap);
+      log_notice(LD_CONFIG,
+                 "Bridge '%s' has both an IPv4 and an IPv6 address.  "
+                 "Will prefer using its %s address (%s) based on %s.",
+                 rs->nickname,
+                 node->ipv6_preferred ? "IPv6" : "IPv4",
+                 fmt_addrport(&ap.addr, ap.port),
+                 options->ClientPreferIPv6ORPort == -1 ?
+                 "the configured Bridge address" :
+                 "ClientPreferIPv6ORPort");
     }
   }
 }

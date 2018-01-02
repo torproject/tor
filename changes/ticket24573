@@ -1,0 +1,7 @@
+  o Minor bugfixes (IPv6 preferences on bridges):
+    - Tor now always sets IPv6 preferences for bridges, even if there is only
+      router information or router status and warns about them. Fixes bug
+      24573; bugfix on c213f277cde in 0.2.8.2-alpha.
+    - Tor now sets IPv6 address in rs as well as it's set the one in ri. Closes
+      ticket 24572; bugfix on 9e9edf71f7d in 0.2.4.5-alpha.
+      Patch by "ffmancera".
