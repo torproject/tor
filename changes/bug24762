@@ -1,3 +1,0 @@
-  o Minor bugfixes (shutdown, file handling):
-    - Stop trying to remove NULL filenames on shutdown.
-      Fixes bug 24762; bugfix on master.
