@@ -854,6 +854,8 @@ fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
     ap->port = result->port;
     return 1;
   } else {
+    tor_addr_make_null(&ap->addr, AF_UNSPEC);
+    ap->port = 0;
     return 0;
   }
 }
