@@ -1190,9 +1190,9 @@ setup_desc_intro_point(const ed25519_keypair_t *signing_kp,
   /* Copy link specifier(s). */
   SMARTLIST_FOREACH_BEGIN(ip->base.link_specifiers,
                           const hs_desc_link_specifier_t *, ls) {
-    hs_desc_link_specifier_t *dup = tor_malloc_zero(sizeof(*dup));
-    link_specifier_copy(dup, ls);
-    smartlist_add(desc_ip->link_specifiers, dup);
+    hs_desc_link_specifier_t *copy = tor_malloc_zero(sizeof(*copy));
+    link_specifier_copy(copy, ls);
+    smartlist_add(desc_ip->link_specifiers, copy);
   } SMARTLIST_FOREACH_END(ls);
 
   /* For a legacy intro point, we'll use an RSA/ed cross certificate. */
@@ -2276,15 +2276,15 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
   /* Logging so we know where it was sent. */
   {
     int is_next_desc = (service->desc_next == desc);
-    const uint8_t *index = (is_next_desc) ? hsdir->hsdir_index->store_second:
-                                            hsdir->hsdir_index->store_first;
+    const uint8_t *idx = (is_next_desc) ? hsdir->hsdir_index->store_second:
+                                          hsdir->hsdir_index->store_first;
     log_info(LD_REND, "Service %s %s descriptor of revision %" PRIu64
                       " initiated upload request to %s with index %s",
              safe_str_client(service->onion_address),
              (is_next_desc) ? "next" : "current",
              desc->desc->plaintext_data.revision_counter,
              safe_str_client(node_describe(hsdir)),
-             safe_str_client(hex_str((const char *) index, 32)));
+             safe_str_client(hex_str((const char *) idx, 32)));
   }
 
   /* XXX: Inform control port of the upload event (#20699). */
