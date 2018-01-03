@@ -6256,13 +6256,13 @@ test_dir_networkstatus_consensus_has_ipv6(void *arg)
       MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
 
   /* Reasonably live */
-  mock_networkstatus->valid_until = time(NULL) - 60;
+  mock_networkstatus->valid_until = approx_time() - 60;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
 
   /* Not reasonably live */
-  mock_networkstatus->valid_after = time(NULL) - 24*60*60 - 3600;
-  mock_networkstatus->valid_until = time(NULL) - 24*60*60 - 60;
+  mock_networkstatus->valid_after = approx_time() - 24*60*60 - 3600;
+  mock_networkstatus->valid_until = approx_time() - 24*60*60 - 60;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(!has_ipv6);
 
@@ -6343,7 +6343,7 @@ struct testcase_t dir_tests[] = {
   DIR(assumed_flags, 0),
   DIR(networkstatus_compute_bw_weights_v10, 0),
   DIR(platform_str, 0),
-  DIR(networkstatus_consensus_has_ipv6, 0),
+  DIR(networkstatus_consensus_has_ipv6, TT_FORK),
   END_OF_TESTCASES
 };
 
