@@ -971,12 +971,12 @@ helper_init_service(time_t now)
 
 /* Helper function to set the RFC 1123 time string into t. */
 static void
-set_consensus_times(const char *time, time_t *t)
+set_consensus_times(const char *timestr, time_t *t)
 {
-  tt_assert(time);
+  tt_assert(timestr);
   tt_assert(t);
 
-  int ret = parse_rfc1123_time(time, t);
+  int ret = parse_rfc1123_time(timestr, t);
   tt_int_op(ret, OP_EQ, 0);
 
  done:
