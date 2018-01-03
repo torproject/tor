@@ -984,18 +984,18 @@ hs_build_address(const ed25519_public_key_t *key, uint8_t version,
 link_specifier_t *
 hs_link_specifier_dup(const link_specifier_t *lspec)
 {
-  link_specifier_t *dup = link_specifier_new();
-  memcpy(dup, lspec, sizeof(*dup));
+  link_specifier_t *result = link_specifier_new();
+  memcpy(result, lspec, sizeof(*result));
   /* The unrecognized field is a dynamic array so make sure to copy its
    * content and not the pointer. */
   link_specifier_setlen_un_unrecognized(
-                        dup, link_specifier_getlen_un_unrecognized(lspec));
-  if (link_specifier_getlen_un_unrecognized(dup)) {
-    memcpy(link_specifier_getarray_un_unrecognized(dup),
+                  result, link_specifier_getlen_un_unrecognized(lspec));
+  if (link_specifier_getlen_un_unrecognized(result)) {
+    memcpy(link_specifier_getarray_un_unrecognized(result),
            link_specifier_getconstarray_un_unrecognized(lspec),
-           link_specifier_getlen_un_unrecognized(dup));
+           link_specifier_getlen_un_unrecognized(result));
   }
-  return dup;
+  return result;
 }
 
 /* From a given ed25519 public key pk and an optional secret, compute a
