@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    Add a function to log channels' scheduler state changes to aide debugging 
+    efforts. Closes ticket 24531.

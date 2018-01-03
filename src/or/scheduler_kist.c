@@ -624,7 +624,7 @@ kist_scheduler_run(void)
       if (!CHANNEL_IS_OPEN(chan)) {
         /* Channel isn't open so we put it back in IDLE mode. It is either
          * renegotiating its TLS session or about to be released. */
-        chan->scheduler_state = SCHED_CHAN_IDLE;
+        scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
         continue;
       }
       /* flush_result has the # cells flushed */
@@ -640,12 +640,12 @@ kist_scheduler_run(void)
         log_debug(LD_SCHED,
                  "We didn't flush anything on a chan that we think "
                  "can write and wants to write. The channel's state is '%s' "
-                 "and in scheduler state %d. We're going to mark it as "
+                 "and in scheduler state '%s'. We're going to mark it as "
                  "waiting_for_cells (as that's most likely the issue) and "
                  "stop scheduling it this round.",
                  channel_state_to_string(chan->state),
-                 chan->scheduler_state);
-        chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
+                 get_scheduler_state_string(chan->scheduler_state));
+        scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
         continue;
       }
     }
@@ -672,16 +672,12 @@ kist_scheduler_run(void)
        * SCHED_CHAN_WAITING_FOR_CELLS to SCHED_CHAN_IDLE and seeing if Tor
        * starts having serious throughput issues. Best done in shadow/chutney.
        */
-      chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
-      log_debug(LD_SCHED, "chan=%" PRIu64 " now waiting_for_cells",
-                chan->global_identifier);
+      scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
     } else if (!channel_more_to_flush(chan)) {
 
       /* Case 2: no more cells to send, but still open for writes */
 
-      chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
-      log_debug(LD_SCHED, "chan=%" PRIu64 " now waiting_for_cells",
-                chan->global_identifier);
+      scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
     } else if (!socket_can_write(&socket_table, chan)) {
 
       /* Case 3: cells to send, but cannot write */
@@ -693,18 +689,16 @@ kist_scheduler_run(void)
        * after the scheduling loop is over. They can hopefully be taken care of
        * in the next scheduling round.
        */
-      chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
+      scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
       if (!to_readd) {
         to_readd = smartlist_new();
       }
       smartlist_add(to_readd, chan);
-      log_debug(LD_SCHED, "chan=%" PRIu64 " now waiting_to_write",
-                chan->global_identifier);
     } else {
 
       /* Case 4: cells to send, and still open for writes */
 
-      chan->scheduler_state = SCHED_CHAN_PENDING;
+      scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
       smartlist_pqueue_add(cp, scheduler_compare_channels,
                            offsetof(channel_t, sched_heap_idx), chan);
     }
@@ -724,7 +718,7 @@ kist_scheduler_run(void)
   /* Re-add any channels we need to */
   if (to_readd) {
     SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
-      readd_chan->scheduler_state = SCHED_CHAN_PENDING;
+      scheduler_set_channel_state(readd_chan, SCHED_CHAN_PENDING);
       if (!smartlist_contains(cp, readd_chan)) {
         smartlist_pqueue_add(cp, scheduler_compare_channels,
                              offsetof(channel_t, sched_heap_idx), readd_chan);

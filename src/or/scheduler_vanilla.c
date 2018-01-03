@@ -89,12 +89,7 @@ vanilla_scheduler_run(void)
 
       if (flushed < n_cells) {
         /* We ran out of cells to flush */
-        chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
-        log_debug(LD_SCHED,
-                  "Channel " U64_FORMAT " at %p "
-                  "entered waiting_for_cells from pending",
-                  U64_PRINTF_ARG(chan->global_identifier),
-                  chan);
+        scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
       } else {
         /* The channel may still have some cells */
         if (channel_more_to_flush(chan)) {
@@ -110,12 +105,7 @@ vanilla_scheduler_run(void)
                       chan);
           } else {
             /* It's waiting to be able to write more */
-            chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
-            log_debug(LD_SCHED,
-                      "Channel " U64_FORMAT " at %p "
-                      "entered waiting_to_write from pending",
-                      U64_PRINTF_ARG(chan->global_identifier),
-                      chan);
+            scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
           }
         } else {
           /* No cells left; it can go to idle or waiting_for_cells */
@@ -124,23 +114,13 @@ vanilla_scheduler_run(void)
              * It can still accept writes, so it goes to
              * waiting_for_cells
              */
-            chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
-            log_debug(LD_SCHED,
-                      "Channel " U64_FORMAT " at %p "
-                      "entered waiting_for_cells from pending",
-                      U64_PRINTF_ARG(chan->global_identifier),
-                      chan);
+            scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_FOR_CELLS);
           } else {
             /*
              * We exactly filled up the output queue with all available
              * cells; go to idle.
              */
-            chan->scheduler_state = SCHED_CHAN_IDLE;
-            log_debug(LD_SCHED,
-                      "Channel " U64_FORMAT " at %p "
-                      "become idle from pending",
-                      U64_PRINTF_ARG(chan->global_identifier),
-                      chan);
+            scheduler_set_channel_state(chan, SCHED_CHAN_IDLE);
           }
         }
       }
@@ -156,14 +136,14 @@ vanilla_scheduler_run(void)
                "no cells writeable",
                U64_PRINTF_ARG(chan->global_identifier), chan);
       /* Put it back to WAITING_TO_WRITE */
-      chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
+      scheduler_set_channel_state(chan, SCHED_CHAN_WAITING_TO_WRITE);
     }
   }
 
   /* Readd any channels we need to */
   if (to_readd) {
     SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
-      readd_chan->scheduler_state = SCHED_CHAN_PENDING;
+      scheduler_set_channel_state(readd_chan, SCHED_CHAN_PENDING);
       smartlist_pqueue_add(cp,
                            scheduler_compare_channels,
                            offsetof(channel_t, sched_heap_idx),
