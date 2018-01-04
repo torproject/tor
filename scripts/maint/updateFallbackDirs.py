@@ -170,25 +170,30 @@ MAX_LIST_FILE_SIZE = 1024 * 1024
 
 # Require fallbacks to have the same address and port for a set amount of time
 # We used to have this at 1 week, but that caused many fallback failures, which
-# meant that we had to rebuild the list more often.
+# meant that we had to rebuild the list more often. We want fallbacks to be
+# stable for 2 years, so we set it to a few months.
 #
 # There was a bug in Tor 0.2.8.1-alpha and earlier where a relay temporarily
 # submits a 0 DirPort when restarted.
 # This causes OnionOO to (correctly) reset its stability timer.
-# Affected relays should upgrade to Tor 0.2.8.7 or later, which has a fix
+# Affected relays should upgrade to Tor 0.2.9 or later, which has a fix
 # for this issue.
-ADDRESS_AND_PORT_STABLE_DAYS = 30
+#
+# If a relay changes address or port, that's it, it's not useful any more,
+# because clients can't find it
+ADDRESS_AND_PORT_STABLE_DAYS = 90
 # We ignore relays that have been down for more than this period
 MAX_DOWNTIME_DAYS = 0 if MUST_BE_RUNNING_NOW else 7
-# What time-weighted-fraction of these flags must FallbackDirs
-# Equal or Exceed?
-CUTOFF_RUNNING = .90
-CUTOFF_V2DIR = .90
-# Tolerate lower guard flag averages, as guard flags are removed for some time
-# after a relay restarts
-CUTOFF_GUARD = .80
-# What time-weighted-fraction of these flags must FallbackDirs
-# Equal or Fall Under?
+# FallbackDirs must have a time-weighted-fraction that is greater than or
+# equal to:
+# Mirrors that are down half the time are still useful half the time
+CUTOFF_RUNNING = .50
+CUTOFF_V2DIR = .50
+# Guard flags are removed for some time after a relay restarts, so we ignore
+# the guard flag.
+CUTOFF_GUARD = .00
+# FallbackDirs must have a time-weighted-fraction that is less than or equal
+# to:
 # .00 means no bad exits
 PERMITTED_BADEXIT = .00
 
@@ -211,13 +216,19 @@ MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 200
 MIN_FALLBACK_COUNT = 0 if OUTPUT_CANDIDATES else MAX_FALLBACK_COUNT*0.5
 
 # The maximum number of fallbacks on the same address, contact, or family
-# With 200 fallbacks, this means each operator can see 1% of client bootstraps
-# (The directory authorities used to see ~12% of client bootstraps each.)
+#
+# With 150 fallbacks, this means each operator sees 5% of client bootstraps.
+# For comparison:
+#  - We try to limit guard and exit operators to 5% of the network
+#  - The directory authorities used to see 11% of client bootstraps each
+#
+# We also don't want too much of the list to go down if a single operator
+# has to move all their relays.
 MAX_FALLBACKS_PER_IP = 1
 MAX_FALLBACKS_PER_IPV4 = MAX_FALLBACKS_PER_IP
 MAX_FALLBACKS_PER_IPV6 = MAX_FALLBACKS_PER_IP
-MAX_FALLBACKS_PER_CONTACT = 3
-MAX_FALLBACKS_PER_FAMILY = 3
+MAX_FALLBACKS_PER_CONTACT = 7
+MAX_FALLBACKS_PER_FAMILY = 7
 
 ## Fallback Bandwidth Requirements
 
@@ -229,11 +240,11 @@ EXIT_BANDWIDTH_FRACTION = 1.0
 
 # If a single fallback's bandwidth is too low, it's pointless adding it
 # We expect fallbacks to handle an extra 10 kilobytes per second of traffic
-# Make sure they can support a hundred times the expected extra load
-# (Use 102.4 to make it come out nicely in MByte/s)
+# Make sure they can support fifty times the expected extra load
+#
 # We convert this to a consensus weight before applying the filter,
 # because all the bandwidth amounts are specified by the relay
-MIN_BANDWIDTH = 102.4 * 10.0 * 1024.0
+MIN_BANDWIDTH = 50.0 * 10.0 * 1024.0
 
 # Clients will time out after 30 seconds trying to download a consensus
 # So allow fallback directories half that to deliver a consensus
