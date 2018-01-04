@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (fallbacks):
+    - Stop logging excessive information about fallback netblocks.
+      Implements ticket 24791.

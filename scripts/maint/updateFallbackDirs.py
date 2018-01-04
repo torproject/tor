@@ -1996,7 +1996,7 @@ class CandidateList(dict):
    # this doesn't actually tell us anything useful
    #self.describe_fallback_ipv4_netblock_mask(8)
    self.describe_fallback_ipv4_netblock_mask(16)
-   self.describe_fallback_ipv4_netblock_mask(24)
+   #self.describe_fallback_ipv4_netblock_mask(24)
 
   # log a message about the proportion of fallbacks in each IPv6 /12 (RIR),
   # /23 (smaller RIR blocks), /32 (LIR), /48 (Customer), and /64 (Host)
@@ -2006,7 +2006,7 @@ class CandidateList(dict):
     #self.describe_fallback_ipv6_netblock_mask(12)
     #self.describe_fallback_ipv6_netblock_mask(23)
     self.describe_fallback_ipv6_netblock_mask(32)
-    self.describe_fallback_ipv6_netblock_mask(48)
+    #self.describe_fallback_ipv6_netblock_mask(48)
     self.describe_fallback_ipv6_netblock_mask(64)
 
   # log a message about the proportion of fallbacks in each IPv4 and IPv6
