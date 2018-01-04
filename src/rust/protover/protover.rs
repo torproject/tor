@@ -6,6 +6,7 @@ use external::c_tor_version_as_new_as;
 use std::str::FromStr;
 use std::fmt;
 use std::collections::{HashMap, HashSet};
+use std::ops::Range;
 use std::string::String;
 
 /// The first version of Tor that included "proto" entries in its descriptors.
@@ -98,13 +99,17 @@ pub fn get_supported_protocols() -> String {
 }
 
 /// Translates a vector representation of a protocol list into a HashMap
-fn parse_protocols(
-    protocols: &[&str],
-) -> Result<HashMap<Proto, HashSet<u32>>, &'static str> {
+fn parse_protocols<P, S>(
+    protocols: P,
+) -> Result<HashMap<Proto, HashSet<u32>>, &'static str>
+where
+    P: Iterator<Item = S>,
+    S: AsRef<str>,
+{
     let mut parsed = HashMap::new();
 
     for subproto in protocols {
-        let (name, version) = get_proto_and_vers(subproto)?;
+        let (name, version) = get_proto_and_vers(subproto.as_ref())?;
         parsed.insert(name, version);
     }
     Ok(parsed)
@@ -114,10 +119,7 @@ fn parse_protocols(
 fn parse_protocols_from_string<'a>(
     protocol_string: &'a str,
 ) -> Result<HashMap<Proto, HashSet<u32>>, &'static str> {
-    let protocols: &[&'a str] =
-        &protocol_string.split(" ").collect::<Vec<&'a str>>()[..];
-
-    parse_protocols(protocols)
+    parse_protocols(protocol_string.split(" "))
 }
 
 /// Translates supported tor versions from  a string into a HashMap, which is
@@ -132,7 +134,7 @@ fn parse_protocols_from_string<'a>(
 /// of the error.
 ///
 fn tor_supported() -> Result<HashMap<Proto, HashSet<u32>>, &'static str> {
-    parse_protocols(&SUPPORTED_PROTOCOLS)
+    parse_protocols(SUPPORTED_PROTOCOLS.iter())
 }
 
 /// Get the unique version numbers supported by a subprotocol.
@@ -398,7 +400,7 @@ pub fn protover_string_supports_protocol_or_later(
 /// * the specified range is empty
 /// * the version range does not contain both a valid lower and upper bound.
 ///
-fn expand_version_range(range: &str) -> Result<Vec<u32>, &'static str> {
+fn expand_version_range(range: &str) -> Result<Range<u32>, &'static str> {
     if range.is_empty() {
         return Err("version string empty");
     }
@@ -422,7 +424,7 @@ fn expand_version_range(range: &str) -> Result<Vec<u32>, &'static str> {
     ))?;
 
     // We can use inclusive range syntax when it becomes stable.
-    Ok((lower..higher + 1).collect())
+    Ok(lower..higher + 1)
 }
 
 /// Checks to see if there is a continuous range of integers, starting at the
@@ -537,11 +539,9 @@ fn contract_protocol_list<'a>(supported_set: &'a HashSet<u32>) -> String {
 fn parse_protocols_from_string_with_no_validation<'a>(
     protocol_string: &'a str,
 ) -> Result<HashMap<String, HashSet<u32>>, &'static str> {
-    let protocols = &protocol_string.split(" ").collect::<Vec<&'a str>>()[..];
-
     let mut parsed: HashMap<String, HashSet<u32>> = HashMap::new();
 
-    for subproto in protocols {
+    for subproto in protocol_string.split(" ") {
         let mut parts = subproto.splitn(2, "=");
 
         let name = match parts.next() {
@@ -834,8 +834,8 @@ mod test {
         use super::expand_version_range;
 
         assert_eq!(Err("version string empty"), expand_version_range(""));
-        assert_eq!(Ok(vec![1, 2]), expand_version_range("1-2"));
-        assert_eq!(Ok(vec![1, 2, 3, 4]), expand_version_range("1-4"));
+        assert_eq!(Ok(1..3), expand_version_range("1-2"));
+        assert_eq!(Ok(1..5), expand_version_range("1-4"));
         assert_eq!(
             Err("cannot parse protocol range lower bound"),
             expand_version_range("a")
