@@ -112,8 +112,12 @@
 46.28.109.231:9030 orport=9001 id=F70B7C5CD72D74C7F9F2DC84FA9D20D51BA13610 ipv6=[2a02:2b88:2:1::4205:1]:9001
 
 # Email sent directly to teor, verified using relay contact info
-85.235.250.88:80 orport=443 id=72B2B12A3F60408BDBC98C6DF53988D3A0B3F0EE
-185.96.180.29:80 orport=443 id=F93D8F37E35C390BCAD9F9069E13085B745EC216
+85.235.250.88:80 orport=443 id=72B2B12A3F60408BDBC98C6DF53988D3A0B3F0EE # TykRelay01
+185.96.88.29:80 orport=443 id=86C281AD135058238D7A337D546C902BE8505DDE # TykRelay051
+# This fallback opted-in in previous releases, then changed its details,
+# and so we blacklisted it. Now we want to whitelist changes.
+# Assume details update is permanent
+185.96.180.29:80 orport=443 id=F93D8F37E35C390BCAD9F9069E13085B745EC216 # TykRelay06
 
 # Email sent directly to teor, verified using relay contact info
 185.11.180.67:80 orport=9001 id=794D8EA8343A4E820320265D05D4FA83AB6D1778
@@ -979,6 +983,12 @@
 
 # https://lists.torproject.org/pipermail/tor-relays/2018-January/014020.html
 37.120.174.249:80 orport=443 id=11DF0017A43AF1F08825CD5D973297F81AB00FF3 ipv6=[2a03:4000:6:724c:df98:15f9:b34d:443]:443 # gGDHjdcC6zAlM8k08lX
+
+# These fallbacks opted-in in previous releases, then changed their details,
+# and so we blacklisted them. Now we want to whitelist changes.
+# Assume details update is permanent
+85.230.184.93:9030 orport=443 id=855BC2DABE24C861CD887DB9B2E950424B49FC34 # Logforme
+176.31.180.157:143 orport=22 id=E781F4EC69671B3F1864AE2753E0890351506329 ipv6=[2001:41d0:8:eb9d::1]:22 # armbrust
 
 # https://lists.torproject.org/pipermail/tor-relays/2018-January/014024.html
 82.161.212.209:9030 orport=9001 id=4E8CE6F5651E7342C1E7E5ED031E82078134FB0D ipv6=[2001:980:d7ed:1:ff:b0ff:fe00:d0b]:9001 # ymkeo
