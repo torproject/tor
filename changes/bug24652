@@ -1,0 +1,6 @@
+  o Minor bugfixes (build, compatibility, rust, OSX):
+
+    - When building with Rust on OSX, link against libresolv, to
+      work around the issue at
+      https://github.com/rust-lang/rust/issues/46797. Fixes bug
+      24652; bugfix on 0.3.1.1-alpha.
