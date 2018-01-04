@@ -33,7 +33,7 @@ impl Smartlist<String> for Stringlist {
 
         // unsafe, as we need to extract the smartlist list into a vector of
         // pointers, and then transform each element into a Rust string.
-        let elems: &[*const i8] =
+        let elems: &[*const c_char] =
             unsafe { slice::from_raw_parts(self.list, self.num_used as usize) };
 
         for elem in elems.iter() {
