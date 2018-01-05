@@ -230,8 +230,8 @@ static config_var_t option_vars_[] = {
    * fallbacks are down. (We rebuild the list when 25% of fallbacks are down).
    *
    * We want to reduce load on authorities, but keep these two figures within
-   * an order of magnitude, so there isn't too much load shifting to authorities
-   * when fallbacks go down. */
+   * an order of magnitude, so there isn't too much load shifting to
+   * authorities when fallbacks go down. */
   V(DirAuthorityFallbackRate,    DOUBLE,   "0.1"),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
