@@ -2750,8 +2750,6 @@ run_main_loop_once(void)
   if (main_loop_should_exit)
     return 0;
 
-  const or_options_t *options = get_options();
-
 #ifndef _WIN32
   /* Make it easier to tell whether libevent failure is our fault or not. */
   errno = 0;
@@ -2762,7 +2760,7 @@ run_main_loop_once(void)
   SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
                     event_active(conn->read_event, EV_READ, 1));
 
-  if (options->MainloopStats) {
+  if (get_options()->MainloopStats) {
     /* We always enforce that EVLOOP_ONCE is passed to event_base_loop() if we
      * are collecting main loop statistics. */
     called_loop_once = 1;
@@ -2780,7 +2778,7 @@ run_main_loop_once(void)
   loop_result = event_base_loop(tor_libevent_get_base(),
                                 called_loop_once ? EVLOOP_ONCE : 0);
 
-  if (options->MainloopStats) {
+  if (get_options()->MainloopStats) {
     /* Update our main loop counters. */
     if (loop_result == 0) {
       // The call was succesful.
