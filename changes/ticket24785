@@ -1,0 +1,6 @@
+  o Minor features (fallbacks):
+    - Avoid selecting fallbacks that change their IP addresses too often.
+      Select more fallbacks by ignoring the Guard flag, and allowing lower
+      cutoffs for the Running and V2Dir flags. Also allow a lower bandwidth,
+      and a higher number of fallbacks per operator (5% of the list).
+      Implements ticket 24785.

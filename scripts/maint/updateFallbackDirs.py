@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Usage:
 #
@@ -14,14 +14,12 @@
 # If this is not possible, please disable:
 # PERFORM_IPV4_DIRPORT_CHECKS and PERFORM_IPV6_DIRPORT_CHECKS
 #
-# Needs dateutil (and potentially other python packages)
-# Needs stem available in your PYTHONPATH, or just ln -s ../stem/stem .
+# Needs dateutil, stem, and potentially other python packages.
 # Optionally uses ipaddress (python 3 builtin) or py2-ipaddress (package)
-# for netblock analysis, in PYTHONPATH, or just
-# ln -s ../py2-ipaddress-3.4.1/ipaddress.py .
+# for netblock analysis.
 #
 # Then read the logs to make sure the fallbacks aren't dominated by a single
-# netblock or port
+# netblock or port.
 
 # Script by weasel, April 2015
 # Portions by gsathya & karsten, 2013
@@ -47,7 +45,7 @@ import copy
 import re
 
 from stem.descriptor import DocumentHandler
-from stem.descriptor.remote import get_consensus
+from stem.descriptor.remote import get_consensus, get_server_descriptors, MAX_FINGERPRINTS
 
 import logging
 logging.root.name = ''
@@ -67,6 +65,17 @@ except ImportError:
                   ' analysis will not be performed.')
 
 ## Top-Level Configuration
+
+# We use semantic versioning: https://semver.org
+# In particular:
+# * major changes include removing a mandatory field, or anything else that
+#   would break an appropriately tolerant parser,
+# * minor changes include adding a field,
+# * patch changes include changing header comments or other unstructured
+#   content
+FALLBACK_FORMAT_VERSION = '2.0.0'
+SECTION_SEPARATOR_BASE = '====='
+SECTION_SEPARATOR_COMMENT = '/* ' + SECTION_SEPARATOR_BASE + ' */'
 
 # Output all candidate fallbacks, or only output selected fallbacks?
 OUTPUT_CANDIDATES = False
@@ -98,11 +107,12 @@ DOWNLOAD_MICRODESC_CONSENSUS = True
 # reject consensuses that are older than REASONABLY_LIVE_TIME.
 # For the consensus expiry check to be accurate, the machine running this
 # script needs an accurate clock.
-# We use 24 hours to compensate for #20909, where relays on 0.2.9.5-alpha and
-# 0.3.0.0-alpha-dev and later deliver stale consensuses, but typically recover
-# after ~12 hours.
-# We should make this lower when #20909 is fixed, see #20942.
-CONSENSUS_EXPIRY_TOLERANCE = 24*60*60
+#
+# Relays on 0.3.0 and later return a 404 when they are about to serve an
+# expired consensus. This makes them fail the download check.
+# We use a tolerance of 0, so that 0.2.x series relays also fail the download
+# check if they serve an expired consensus.
+CONSENSUS_EXPIRY_TOLERANCE = 0 
 
 # Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
@@ -160,25 +170,30 @@ MAX_LIST_FILE_SIZE = 1024 * 1024
 
 # Require fallbacks to have the same address and port for a set amount of time
 # We used to have this at 1 week, but that caused many fallback failures, which
-# meant that we had to rebuild the list more often.
+# meant that we had to rebuild the list more often. We want fallbacks to be
+# stable for 2 years, so we set it to a few months.
 #
 # There was a bug in Tor 0.2.8.1-alpha and earlier where a relay temporarily
 # submits a 0 DirPort when restarted.
 # This causes OnionOO to (correctly) reset its stability timer.
-# Affected relays should upgrade to Tor 0.2.8.7 or later, which has a fix
+# Affected relays should upgrade to Tor 0.2.9 or later, which has a fix
 # for this issue.
-ADDRESS_AND_PORT_STABLE_DAYS = 30
+#
+# If a relay changes address or port, that's it, it's not useful any more,
+# because clients can't find it
+ADDRESS_AND_PORT_STABLE_DAYS = 90
 # We ignore relays that have been down for more than this period
 MAX_DOWNTIME_DAYS = 0 if MUST_BE_RUNNING_NOW else 7
-# What time-weighted-fraction of these flags must FallbackDirs
-# Equal or Exceed?
-CUTOFF_RUNNING = .90
-CUTOFF_V2DIR = .90
-# Tolerate lower guard flag averages, as guard flags are removed for some time
-# after a relay restarts
-CUTOFF_GUARD = .80
-# What time-weighted-fraction of these flags must FallbackDirs
-# Equal or Fall Under?
+# FallbackDirs must have a time-weighted-fraction that is greater than or
+# equal to:
+# Mirrors that are down half the time are still useful half the time
+CUTOFF_RUNNING = .50
+CUTOFF_V2DIR = .50
+# Guard flags are removed for some time after a relay restarts, so we ignore
+# the guard flag.
+CUTOFF_GUARD = .00
+# FallbackDirs must have a time-weighted-fraction that is less than or equal
+# to:
 # .00 means no bad exits
 PERMITTED_BADEXIT = .00
 
@@ -201,13 +216,19 @@ MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 200
 MIN_FALLBACK_COUNT = 0 if OUTPUT_CANDIDATES else MAX_FALLBACK_COUNT*0.5
 
 # The maximum number of fallbacks on the same address, contact, or family
-# With 200 fallbacks, this means each operator can see 1% of client bootstraps
-# (The directory authorities used to see ~12% of client bootstraps each.)
+#
+# With 150 fallbacks, this means each operator sees 5% of client bootstraps.
+# For comparison:
+#  - We try to limit guard and exit operators to 5% of the network
+#  - The directory authorities used to see 11% of client bootstraps each
+#
+# We also don't want too much of the list to go down if a single operator
+# has to move all their relays.
 MAX_FALLBACKS_PER_IP = 1
 MAX_FALLBACKS_PER_IPV4 = MAX_FALLBACKS_PER_IP
 MAX_FALLBACKS_PER_IPV6 = MAX_FALLBACKS_PER_IP
-MAX_FALLBACKS_PER_CONTACT = 3
-MAX_FALLBACKS_PER_FAMILY = 3
+MAX_FALLBACKS_PER_CONTACT = 7
+MAX_FALLBACKS_PER_FAMILY = 7
 
 ## Fallback Bandwidth Requirements
 
@@ -219,11 +240,11 @@ EXIT_BANDWIDTH_FRACTION = 1.0
 
 # If a single fallback's bandwidth is too low, it's pointless adding it
 # We expect fallbacks to handle an extra 10 kilobytes per second of traffic
-# Make sure they can support a hundred times the expected extra load
-# (Use 102.4 to make it come out nicely in MByte/s)
+# Make sure they can support fifty times the expected extra load
+#
 # We convert this to a consensus weight before applying the filter,
 # because all the bandwidth amounts are specified by the relay
-MIN_BANDWIDTH = 102.4 * 10.0 * 1024.0
+MIN_BANDWIDTH = 50.0 * 10.0 * 1024.0
 
 # Clients will time out after 30 seconds trying to download a consensus
 # So allow fallback directories half that to deliver a consensus
@@ -234,21 +255,6 @@ CONSENSUS_DOWNLOAD_SPEED_MAX = 15.0
 # If the relay fails a consensus check, retry the download
 # This avoids delisting a relay due to transient network conditions
 CONSENSUS_DOWNLOAD_RETRY = True
-
-## Fallback Weights for Client Selection
-
-# All fallback weights are equal, and set to the value below
-# Authorities are weighted 1.0 by default
-# Clients use these weights to select fallbacks and authorities at random
-# If there are 100 fallbacks and 9 authorities:
-#  - each fallback is chosen with probability 10.0/(10.0*100 + 1.0*9) ~= 0.99%
-#  - each authority is chosen with probability 1.0/(10.0*100 + 1.0*9) ~= 0.09%
-# A client choosing a bootstrap directory server will choose a fallback for
-# 10.0/(10.0*100 + 1.0*9) * 100 = 99.1% of attempts, and an authority for
-# 1.0/(10.0*100 + 1.0*9) * 9 = 0.9% of attempts.
-# (This disregards the bootstrap schedules, where clients start by choosing
-# from fallbacks & authoritites, then later choose from only authorities.)
-FALLBACK_OUTPUT_WEIGHT = 10.0
 
 ## Parsing Functions
 
@@ -289,6 +295,10 @@ def cleanse_c_multiline_comment(raw_string):
   bad_char_list = '*/'
   # Prevent a malicious string from using C nulls
   bad_char_list += '\0'
+  # Avoid confusing parsers by making sure there is only one comma per fallback
+  bad_char_list += ','
+  # Avoid confusing parsers by making sure there is only one equals per field
+  bad_char_list += '='
   # Be safer by removing bad characters entirely
   cleansed_string = remove_bad_chars(cleansed_string, bad_char_list)
   # Some compilers may further process the content of comments
@@ -309,6 +319,10 @@ def cleanse_c_string(raw_string):
   bad_char_list += '\\'
   # Prevent a malicious string from using C nulls
   bad_char_list += '\0'
+  # Avoid confusing parsers by making sure there is only one comma per fallback
+  bad_char_list += ','
+  # Avoid confusing parsers by making sure there is only one equals per field
+  bad_char_list += '='
   # Be safer by removing bad characters entirely
   cleansed_string = remove_bad_chars(cleansed_string, bad_char_list)
   # Some compilers may further process the content of strings
@@ -570,6 +584,7 @@ class Candidate(object):
     if not self.has_ipv6():
       logging.debug("Failed to get an ipv6 address for %s."%(self._fpr,))
     self._compute_version()
+    self._extra_info_cache = None
 
   def _stable_sort_or_addresses(self):
     # replace self._data['or_addresses'] with a stable ordering,
@@ -1335,8 +1350,14 @@ class Candidate(object):
   # comment-out the returned string
   def fallbackdir_info(self, dl_speed_ok):
     # "address:dirport orport=port id=fingerprint"
+    # (insert additional madatory fields here)
     # "[ipv6=addr:orport]"
-    # "weight=FALLBACK_OUTPUT_WEIGHT",
+    # (insert additional optional fields here)
+    # /* nickname=name */
+    # /* extrainfo={0,1} */
+    # (insert additional comment fields here)
+    # /* ===== */
+    # ,
     #
     # Do we want a C string, or a commented-out string?
     c_string = dl_speed_ok
@@ -1357,10 +1378,34 @@ class Candidate(object):
             self.orport,
             cleanse_c_string(self._fpr))
     s += '\n'
+    # (insert additional madatory fields here)
     if self.has_ipv6():
       s += '" ipv6=%s:%d"'%(cleanse_c_string(self.ipv6addr), self.ipv6orport)
       s += '\n'
-    s += '" weight=%d",'%(FALLBACK_OUTPUT_WEIGHT)
+    # (insert additional optional fields here)
+    if not comment_string:
+      s += '/* '
+    s += 'nickname=%s'%(cleanse_c_string(self._data['nickname']))
+    if not comment_string:
+      s += ' */'
+    s += '\n'
+    # if we know that the fallback is an extrainfo cache, flag it
+    # and if we don't know, assume it is not
+    if not comment_string:
+      s += '/* '
+    s += 'extrainfo=%d'%(1 if self._extra_info_cache else 0)
+    if not comment_string:
+      s += ' */'
+    s += '\n'
+    # (insert additional comment fields here)
+    # The terminator and comma must be the last line in each fallback entry
+    if not comment_string:
+      s += '/* '
+    s += SECTION_SEPARATOR_BASE
+    if not comment_string:
+      s += ' */'
+    s += '\n'
+    s += ','
     if comment_string:
       s += '\n'
       s += '*/'
@@ -1745,6 +1790,53 @@ class CandidateList(dict):
     self.fallbacks = family_limit_fallbacks
     return original_count - len(self.fallbacks)
 
+  # try once to get the descriptors for fingerprint_list using stem
+  # returns an empty list on exception
+  @staticmethod
+  def get_fallback_descriptors_once(fingerprint_list):
+    desc_list = get_server_descriptors(fingerprints=fingerprint_list).run(suppress=True)
+    return desc_list
+
+  # try up to max_retries times to get the descriptors for fingerprint_list
+  # using stem. Stops retrying when all descriptors have been retrieved.
+  # returns a list containing the descriptors that were retrieved
+  @staticmethod
+  def get_fallback_descriptors(fingerprint_list, max_retries=5):
+    # we can't use stem's retries=, because we want to support more than 96
+    # descriptors
+    #
+    # add an attempt for every MAX_FINGERPRINTS (or part thereof) in the list
+    max_retries += (len(fingerprint_list) + MAX_FINGERPRINTS - 1) / MAX_FINGERPRINTS
+    remaining_list = fingerprint_list
+    desc_list = []
+    for _ in xrange(max_retries):
+      if len(remaining_list) == 0:
+        break
+      new_desc_list = CandidateList.get_fallback_descriptors_once(remaining_list[0:MAX_FINGERPRINTS])
+      for d in new_desc_list:
+        try:
+          remaining_list.remove(d.fingerprint)
+        except ValueError:
+          # warn and ignore if a directory mirror returned a bad descriptor
+          logging.warning("Directory mirror returned unwanted descriptor %s, ignoring",
+                          d.fingerprint)
+          continue
+        desc_list.append(d)
+    return desc_list
+
+  # find the fallbacks that cache extra-info documents
+  # Onionoo doesn't know this, so we have to use stem
+  def mark_extra_info_caches(self):
+    fingerprint_list = [ f._fpr for f in self.fallbacks ]
+    logging.info("Downloading fallback descriptors to find extra-info caches")
+    desc_list = CandidateList.get_fallback_descriptors(fingerprint_list)
+    for d in desc_list:
+      self[d.fingerprint]._extra_info_cache = d.extra_info_cache
+    missing_descriptor_list = [ f._fpr for f in self.fallbacks
+                                if f._extra_info_cache is None ]
+    for f in missing_descriptor_list:
+      logging.warning("No descriptor for {}. Assuming extrainfo=0.".format(f))
+
   # try a download check on each fallback candidate in order
   # stop after max_count successful downloads
   # but don't remove any candidates from the array
@@ -1904,7 +1996,7 @@ class CandidateList(dict):
    # this doesn't actually tell us anything useful
    #self.describe_fallback_ipv4_netblock_mask(8)
    self.describe_fallback_ipv4_netblock_mask(16)
-   self.describe_fallback_ipv4_netblock_mask(24)
+   #self.describe_fallback_ipv4_netblock_mask(24)
 
   # log a message about the proportion of fallbacks in each IPv6 /12 (RIR),
   # /23 (smaller RIR blocks), /32 (LIR), /48 (Customer), and /64 (Host)
@@ -1914,7 +2006,7 @@ class CandidateList(dict):
     #self.describe_fallback_ipv6_netblock_mask(12)
     #self.describe_fallback_ipv6_netblock_mask(23)
     self.describe_fallback_ipv6_netblock_mask(32)
-    self.describe_fallback_ipv6_netblock_mask(48)
+    #self.describe_fallback_ipv6_netblock_mask(48)
     self.describe_fallback_ipv6_netblock_mask(64)
 
   # log a message about the proportion of fallbacks in each IPv4 and IPv6
@@ -1992,6 +2084,18 @@ class CandidateList(dict):
                     CandidateList.describe_percentage(dir_count,
                                                       fallback_count)))
 
+  # return a list of fallbacks which cache extra-info documents
+  def fallbacks_with_extra_info_cache(self):
+    return filter(lambda x: x._extra_info_cache, self.fallbacks)
+
+  # log a message about the proportion of fallbacks that cache extra-info docs
+  def describe_fallback_extra_info_caches(self):
+    extra_info_falback_count = len(self.fallbacks_with_extra_info_cache())
+    fallback_count = len(self.fallbacks)
+    logging.warning('%s of fallbacks cache extra-info documents'%(
+                    CandidateList.describe_percentage(extra_info_falback_count,
+                                                      fallback_count)))
+
   # return a list of fallbacks which have the Exit flag
   def fallbacks_with_exit(self):
     return filter(lambda x: x.is_exit(), self.fallbacks)
@@ -2019,10 +2123,6 @@ class CandidateList(dict):
   def summarise_fallbacks(self, eligible_count, operator_count, failed_count,
                           guard_count, target_count):
     s = ''
-    s += '/* To comment-out entries in this file, use C comments, and add *'
-    s += ' to the start of each line. (stem finds fallback entries using "'
-    s += ' at the start of a line.) */'
-    s += '\n'
     # Report:
     #  whether we checked consensus download times
     #  the number of fallback directories (and limits/exclusions, if relevant)
@@ -2123,6 +2223,16 @@ def list_fallbacks(whitelist, blacklist):
   """ Fetches required onionoo documents and evaluates the
       fallback directory criteria for each of the relays """
 
+  print "/* type=fallback */"
+  print ("/* version={} */"
+         .format(cleanse_c_multiline_comment(FALLBACK_FORMAT_VERSION)))
+  now = datetime.datetime.utcnow()
+  timestamp = now.strftime('%Y%m%d%H%M%S')
+  print ("/* timestamp={} */"
+         .format(cleanse_c_multiline_comment(timestamp)))
+  # end the header with a separator, to make it easier for parsers
+  print SECTION_SEPARATOR_COMMENT
+
   logging.warning('Downloading and parsing Onionoo data. ' +
                   'This may take some time.')
   # find relays that could be fallbacks
@@ -2188,6 +2298,9 @@ def list_fallbacks(whitelist, blacklist):
                     'This may take some time.')
   failed_count = candidates.perform_download_consensus_checks(max_count)
 
+  # work out which fallbacks cache extra-infos
+  candidates.mark_extra_info_caches()
+
   # analyse and log interesting diversity metrics
   # like netblock, ports, exit, IPv4-only
   # (we can't easily analyse AS, and it's hard to accurately analyse country)
@@ -2196,6 +2309,7 @@ def list_fallbacks(whitelist, blacklist):
   if HAVE_IPADDRESS:
     candidates.describe_fallback_netblocks()
   candidates.describe_fallback_ports()
+  candidates.describe_fallback_extra_info_caches()
   candidates.describe_fallback_exit_flag()
 
   # output C comments summarising the fallback selection process
@@ -2209,6 +2323,9 @@ def list_fallbacks(whitelist, blacklist):
   # output C comments specifying the OnionOO data used to create the list
   for s in fetch_source_list():
     print describe_fetch_source(s)
+
+  # start the list with a separator, to make it easy for parsers
+  print SECTION_SEPARATOR_COMMENT
 
   # sort the list differently depending on why we've created it:
   # if we're outputting the final fallback list, sort by fingerprint

@@ -1,0 +1,5 @@
+  o Minor features (fallback directory mirrors):
+    - Add an extrainfo cache flag for each fallback in a C comment.
+      This allows stem to use fallbacks to fetch extra-info documents,
+      rather than using authorities.
+      Implements ticket 22759.

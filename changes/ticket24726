@@ -1,0 +1,4 @@
+  o Minor features (fallback directory mirrors):
+    - Remove commas and equals signs from external string inputs to the
+      fallback list. This avoids format confusion attacks.
+      Implements ticket 24726.

@@ -1,0 +1,5 @@
+  o Minor features (fallback directory mirrors):
+    - Add a type and version header to the fallback directory mirror file.
+      Also add a delimiter to the end of each fallback entry.
+      This helps external parsers like stem and Relay Search.
+      Implements ticket 24725.
