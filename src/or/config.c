@@ -285,7 +285,14 @@ static config_var_t option_vars_[] = {
   VAR("DirReqStatistics",        BOOL,     DirReqStatistics_option, "1"),
   VAR("DirAuthority",            LINELIST, DirAuthorities, NULL),
   V(DirCache,                    BOOL,     "1"),
-  V(DirAuthorityFallbackRate,    DOUBLE,   "1.0"),
+  /* A DirAuthorityFallbackRate of 0.1 means that 0.5% of clients try an
+   * authority when all fallbacks are up, and 2% try an authority when 25% of
+   * fallbacks are down. (We rebuild the list when 25% of fallbacks are down).
+   *
+   * We want to reduce load on authorities, but keep these two figures within
+   * an order of magnitude, so there isn't too much load shifting to
+   * authorities when fallbacks go down. */
+  V(DirAuthorityFallbackRate,    DOUBLE,   "0.1"),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   OBSOLETE("DisableIOCP"),
