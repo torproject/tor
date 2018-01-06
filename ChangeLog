@@ -5347,7 +5347,7 @@ Changes in version 0.2.9.2-alpha - 2016-08-24
   o Deprecated features:
     - A number of DNS-cache-related sub-options for client ports are now
       deprecated for security reasons, and may be removed in a future
-      version of Tor. (We believe that client-side DNS cacheing is a bad
+      version of Tor. (We believe that client-side DNS caching is a bad
       idea for anonymity, and you should not turn it on.) The options
       are: CacheDNS, CacheIPv4DNS, CacheIPv6DNS, UseDNSCache,
       UseIPv4Cache, and UseIPv6Cache.
@@ -11347,7 +11347,7 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
       0.2.0.10-alpha. Reported pseudonymously.
     - Make the format and order of STREAM events for DNS lookups
       consistent among the various ways to launch DNS lookups. Fixes
-      bug 8203; bugfix on 0.2.0.24-rc. Patch by "Desoxy."
+      bug 8203; bugfix on 0.2.0.24-rc. Patch by "Desoxy".
     - Correct our check for which versions of Tor support the EXTEND2
       cell. We had been willing to send it to Tor 0.2.4.7-alpha and
       later, when support was really added in version 0.2.4.8-alpha.

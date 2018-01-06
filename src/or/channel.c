@@ -1917,7 +1917,7 @@ channel_do_open_actions(channel_t *chan)
                                         CHANNELPADDING_SOS_PARAM,
                                         CHANNELPADDING_SOS_DEFAULT, 0, 1)) {
       /* Disable if we're using RSOS and the consensus disabled padding
-       * for RSOS*/
+       * for RSOS */
       channelpadding_disable_padding_on_channel(chan);
     } else if (get_options()->ReducedConnectionPadding) {
       /* Padding can be forced and/or reduced by clients, regardless of if

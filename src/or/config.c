@@ -3279,7 +3279,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
-        options->Nickname = tor_strdup(UNNAMED_ROUTER_NICKNAME);
+      options->Nickname = tor_strdup(UNNAMED_ROUTER_NICKNAME);
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
@@ -3299,9 +3299,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   /* Special case on first boot if no Log options are given. */
   if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
     if (quiet_level == 0)
-        config_line_append(&options->Logs, "Log", "notice stdout");
+      config_line_append(&options->Logs, "Log", "notice stdout");
     else if (quiet_level == 1)
-        config_line_append(&options->Logs, "Log", "warn stdout");
+      config_line_append(&options->Logs, "Log", "warn stdout");
   }
 
   /* Validate the tor_log(s) */
