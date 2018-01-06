@@ -1178,7 +1178,7 @@ run_connection_housekeeping(int i, time_t now)
   if (!connection_speaks_cells(conn))
     return; /* we're all done here, the rest is just for OR conns */
 
-  /* If we haven't written to an OR connection for a while, then either nuke
+  /* If we haven't flushed to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
 
   or_conn = TO_OR_CONN(conn);
