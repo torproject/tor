@@ -7,10 +7,6 @@ Changes in version 0.3.2.9 - 2018-01-09
 
   BLURB GOES HERE
 
-  [LINK TO ONION SERVICES POST.]
-
-  [LINK TO KIST POST.]
-
   Per our stable release policy, we plan to support each stable release
   series for at least the next nine months, or for three months after
   the first stable release of the next series: whichever is longer. If
@@ -71,7 +67,8 @@ Changes in version 0.3.2.9 - 2018-01-09
       tested and hardened. Service operators who want to experiment with
       the new system can use the 'HiddenServiceVersion 3' torrc
       directive along with the regular onion service configuration
-      options. Enjoy!
+      options. For more information, see our blog post at
+      "https://blog.torproject.org/fall-harvest". Enjoy!
 
   o Major feature (scheduler, channel):
     - Tor now uses new schedulers to decide which circuits should
@@ -91,7 +88,8 @@ Changes in version 0.3.2.9 - 2018-01-09
       more information, see the design paper at
       http://www.robgjansen.com/publications/kist-sec2014.pdf and the
       followup implementation paper at https://arxiv.org/abs/1709.01044.
-      Closes ticket 12541.
+      Closes ticket 12541. For more information, see our blog post at
+      "https://blog.torproject.org/kist-and-tell".
 
   o Major bugfixes (security, general):
     - Fix a denial of service bug where an attacker could use a
