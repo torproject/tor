@@ -20,40 +20,7 @@
 #include "testsupport.h"
 #include "compat.h"
 
-#include <openssl/engine.h>
 #include "keccak-tiny/keccak-tiny.h"
-
-/*
-  Macro to create an arbitrary OpenSSL version number as used by
-  OPENSSL_VERSION_NUMBER or SSLeay(), since the actual numbers are a bit hard
-  to read.
-
-  Don't use this directly, instead use one of the other OPENSSL_V macros
-  below.
-
-  The format is: 4 bits major, 8 bits minor, 8 bits fix, 8 bits patch, 4 bit
-  status.
- */
-#define OPENSSL_VER(a,b,c,d,e)                                \
-  (((a)<<28) |                                                \
-   ((b)<<20) |                                                \
-   ((c)<<12) |                                                \
-   ((d)<< 4) |                                                \
-    (e))
-/** An openssl release number.  For example, OPENSSL_V(0,9,8,'j') is the
- * version for the released version of 0.9.8j */
-#define OPENSSL_V(a,b,c,d) \
-  OPENSSL_VER((a),(b),(c),(d)-'a'+1,0xf)
-/** An openssl release number for the first release in the series.  For
- * example, OPENSSL_V_NOPATCH(1,0,0) is the first released version of OpenSSL
- * 1.0.0. */
-#define OPENSSL_V_NOPATCH(a,b,c) \
-  OPENSSL_VER((a),(b),(c),0,0xf)
-/** The first version that would occur for any alpha or beta in an openssl
- * series. For example, OPENSSL_V_SERIES(0,9,8) is greater than any released
- * 0.9.7, and less than any released 0.9.8. */
-#define OPENSSL_V_SERIES(a,b,c) \
-  OPENSSL_VER((a),(b),(c),0,0)
 
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
@@ -131,8 +98,6 @@ typedef struct crypto_xof_t crypto_xof_t;
 typedef struct crypto_dh_t crypto_dh_t;
 
 /* global state */
-const char * crypto_openssl_get_version_str(void);
-const char * crypto_openssl_get_header_version_str(void);
 int crypto_early_init(void) ATTR_WUR;
 int crypto_global_init(int hardwareAccel,
                        const char *accelName,

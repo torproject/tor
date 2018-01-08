@@ -29,21 +29,6 @@
 #include "crypto_ed25519.h"
 #include "crypto_format.h"
 
-DISABLE_GCC_WARNING(redundant-decls)
-
-#include <openssl/err.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/evp.h>
-#include <openssl/engine.h>
-#include <openssl/rand.h>
-#include <openssl/bn.h>
-#include <openssl/dh.h>
-#include <openssl/conf.h>
-#include <openssl/hmac.h>
-
-ENABLE_GCC_WARNING(redundant-decls)
-
 #if __GNUC__ && GCC_VERSION >= 402
 #if GCC_VERSION >= 406
 #pragma GCC diagnostic pop
@@ -82,39 +67,11 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 #include "keccak-tiny/keccak-tiny.h"
 
-#ifdef ANDROID
-/* Android's OpenSSL seems to have removed all of its Engine support. */
-#define DISABLE_ENGINES
-#endif
-
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && \
-  !defined(LIBRESSL_VERSION_NUMBER)
-/* OpenSSL as of 1.1.0pre4 has an "new" thread API, which doesn't require
- * seting up various callbacks.
- *
- * OpenSSL 1.1.0pre4 has a messed up `ERR_remove_thread_state()` prototype,
- * while the previous one was restored in pre5, and the function made a no-op
- * (along with a deprecated annotation, which produces a compiler warning).
- *
- * While it is possible to support all three versions of the thread API,
- * a version that existed only for one snapshot pre-release is kind of
- * pointless, so let's not.
- */
-#define NEW_THREAD_API
-#endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && ... */
-
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
 
 /** Largest strong entropy request */
 #define MAX_STRONGEST_RAND_SIZE 256
-
-#ifndef NEW_THREAD_API
-/** A number of preallocated mutexes for use by OpenSSL. */
-static tor_mutex_t **openssl_mutexes_ = NULL;
-/** How many mutexes have we allocated for use by OpenSSL? */
-static int n_openssl_mutexes_ = 0;
-#endif /* !defined(NEW_THREAD_API) */
 
 /** A public key, or a public/private key-pair. */
 struct crypto_pk_t
@@ -129,7 +86,6 @@ struct crypto_dh_t {
   DH *dh; /**< The openssl DH object */
 };
 
-static int setup_openssl_threading(void);
 static int tor_check_dh_key(int severity, const BIGNUM *bn);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
@@ -219,52 +175,6 @@ try_load_engine(const char *path, const char *engine)
   return e;
 }
 #endif /* !defined(DISABLE_ENGINES) */
-
-/* Returns a trimmed and human-readable version of an openssl version string
-* <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10
-* May 2012' and this will parse them into a form similar to '1.0.0b' */
-static char *
-parse_openssl_version_str(const char *raw_version)
-{
-  const char *end_of_version = NULL;
-  /* The output should be something like "OpenSSL 1.0.0b 10 May 2012. Let's
-     trim that down. */
-  if (!strcmpstart(raw_version, "OpenSSL ")) {
-    raw_version += strlen("OpenSSL ");
-    end_of_version = strchr(raw_version, ' ');
-  }
-
-  if (end_of_version)
-    return tor_strndup(raw_version,
-                      end_of_version-raw_version);
-  else
-    return tor_strdup(raw_version);
-}
-
-static char *crypto_openssl_version_str = NULL;
-/* Return a human-readable version of the run-time openssl version number. */
-const char *
-crypto_openssl_get_version_str(void)
-{
-  if (crypto_openssl_version_str == NULL) {
-    const char *raw_version = OpenSSL_version(OPENSSL_VERSION);
-    crypto_openssl_version_str = parse_openssl_version_str(raw_version);
-  }
-  return crypto_openssl_version_str;
-}
-
-static char *crypto_openssl_header_version_str = NULL;
-/* Return a human-readable version of the compile-time openssl version
-* number. */
-const char *
-crypto_openssl_get_header_version_str(void)
-{
-  if (crypto_openssl_header_version_str == NULL) {
-    crypto_openssl_header_version_str =
-                        parse_openssl_version_str(OPENSSL_VERSION_TEXT);
-  }
-  return crypto_openssl_header_version_str;
-}
 
 /** Make sure that openssl is using its default PRNG. Return 1 if we had to
  * adjust it; 0 otherwise. */
@@ -3347,36 +3257,6 @@ memwipe(void *mem, uint8_t byte, size_t sz)
   memset(mem, byte, sz);
 }
 
-#ifndef OPENSSL_THREADS
-#error OpenSSL has been built without thread support. Tor requires an \
- OpenSSL library with thread support enabled.
-#endif
-
-#ifndef NEW_THREAD_API
-/** Helper: OpenSSL uses this callback to manipulate mutexes. */
-static void
-openssl_locking_cb_(int mode, int n, const char *file, int line)
-{
-  (void)file;
-  (void)line;
-  if (!openssl_mutexes_)
-    /* This is not a really good fix for the
-     * "release-freed-lock-from-separate-thread-on-shutdown" problem, but
-     * it can't hurt. */
-    return;
-  if (mode & CRYPTO_LOCK)
-    tor_mutex_acquire(openssl_mutexes_[n]);
-  else
-    tor_mutex_release(openssl_mutexes_[n]);
-}
-
-static void
-tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
-{
-  CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
-}
-#endif /* !defined(NEW_THREAD_API) */
-
 #if 0
 /* This code is disabled, because OpenSSL never actually uses these callbacks.
  */
@@ -3428,29 +3308,6 @@ openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
 #endif /* 0 */
 
 /** @{ */
-/** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
- * multithreaded. Returns 0. */
-static int
-setup_openssl_threading(void)
-{
-#ifndef NEW_THREAD_API
-  int i;
-  int n = CRYPTO_num_locks();
-  n_openssl_mutexes_ = n;
-  openssl_mutexes_ = tor_calloc(n, sizeof(tor_mutex_t *));
-  for (i=0; i < n; ++i)
-    openssl_mutexes_[i] = tor_mutex_new();
-  CRYPTO_set_locking_callback(openssl_locking_cb_);
-  CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
-#endif /* !defined(NEW_THREAD_API) */
-#if 0
-  CRYPTO_set_dynlock_create_callback(openssl_dynlock_create_cb_);
-  CRYPTO_set_dynlock_lock_callback(openssl_dynlock_lock_cb_);
-  CRYPTO_set_dynlock_destroy_callback(openssl_dynlock_destroy_cb_);
-#endif
-  return 0;
-}
-
 /** Uninitialize the crypto library. Return 0 on success. Does not detect
  * failure.
  */
