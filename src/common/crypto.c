@@ -3348,8 +3348,7 @@ crypto_global_cleanup(void)
   }
 #endif /* !defined(NEW_THREAD_API) */
 
-  tor_free(crypto_openssl_version_str);
-  tor_free(crypto_openssl_header_version_str);
+  free_openssl();
   return 0;
 }
 

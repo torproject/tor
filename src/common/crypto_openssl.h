@@ -101,5 +101,8 @@ void tor_set_openssl_thread_id(CRYPTO_THREADID *threadid);
 /* OpenSSL threading setup function */
 int setup_openssl_threading(void);
 
+/* Tor OpenSSL utility functions */
+void free_openssl(void);
+
 #endif /* !defined(TOR_CRYPTO_OPENSSL_H) */
 

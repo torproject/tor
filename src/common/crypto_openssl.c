@@ -113,3 +113,11 @@ setup_openssl_threading(void)
   return 0;
 }
 
+/** free OpenSSL variables */
+void
+free_openssl(void)
+{
+  tor_free(crypto_openssl_version_str);
+  tor_free(crypto_openssl_header_version_str);
+}
+
