@@ -5,7 +5,12 @@ each development snapshot, see the ChangeLog file.
 Changes in version 0.3.2.9 - 2018-01-09
   Tor 0.3.2.9 is the first stable release in the 0.3.2 series.
 
-  BLURB GOES HERE
+  The 0.3.2 series includes our long-anticipated new onion service
+  design, with numerous security features. (For more information, see
+  our blog post at https://blog.torproject.org/fall-harvest.) We also
+  have a new circuit scheduler algorithm for improved performance on
+  relays everywhere (see https://blog.torproject.org/kist-and-tell),
+  along with many smaller features and bugfixes.
 
   Per our stable release policy, we plan to support each stable release
   series for at least the next nine months, or for three months after
