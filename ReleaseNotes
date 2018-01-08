@@ -150,32 +150,10 @@ Changes in version 0.3.2.9 - 2018-01-09
       Arthur Edelstein, and Roger for helping to track it down and
       analyze it.
 
-  o Major bugfixes (KIST, scheduler):
-    - The KIST scheduler did not correctly account for data already
-      enqueued in each connection's send socket buffer, particularly in
-      cases when the TCP/IP congestion window was reduced between
-      scheduler calls. This situation lead to excessive per-connection
-      buffering in the kernel, and a potential memory DoS. Fixes bug
-      24665; bugfix on 0.3.2.1-alpha.
-
   o Major bugfixes (relay, crash, assertion failure):
     - Fix a timing-based assertion failure that could occur when the
       circuit out-of-memory handler freed a connection's output buffer.
       Fixes bug 23690; bugfix on 0.2.6.1-alpha.
-
-  o Major bugfixes (scheduler):
-    - If a channel is put into the scheduler's pending list, then it
-      starts closing, and then if the scheduler runs before it finishes
-      closing, the scheduler will get stuck trying to flush its cells
-      while the lower layers refuse to cooperate. Fix that race
-      condition by giving the scheduler an escape method. Fixes bug
-      23676; bugfix on 0.3.2.1-alpha.
-
-  o Major bugfixes (scheduler, channel):
-    - Stop processing scheduled channels if they closed while flushing
-      cells. This can happen if the write on the connection fails
-      leading to the channel being closed while in the scheduler loop.
-      Fixes bug 23751; bugfix on 0.3.2.1-alpha.
 
   o Major bugfixes (usability, control port):
     - Report trusted clock skew indications as bootstrap errors, so
@@ -413,9 +391,6 @@ Changes in version 0.3.2.9 - 2018-01-09
     - When warning about state file clock skew, report the correct
       direction for the detected skew. Fixes bug 23606; bugfix
       on 0.2.8.1-alpha.
-    - Avoid an assertion failure when logging a state file clock skew
-      very early in bootstrapping. Fixes bug 23607; bugfix
-      on 0.3.2.1-alpha.
 
   o Minor bugfixes (bridge clients, bootstrap):
     - Retry directory downloads when we get our first bridge descriptor
@@ -475,17 +450,12 @@ Changes in version 0.3.2.9 - 2018-01-09
       on 0.1.1.1-alpha. Reported by Guido Vranken.
 
   o Minor bugfixes (compilation):
-    - Resolve a few shadowed-variable warnings in the onion service
-      code. Fixes bug 24634; bugfix on 0.3.2.1-alpha.
     - Fix a signed/unsigned comparison warning introduced by our fix to
       TROVE-2017-009. Fixes bug 24480; bugfix on 0.2.5.16.
     - Fix a memory leak warning in one of the libevent-related
       configuration tests that could occur when manually specifying
       -fsanitize=address. Fixes bug 24279; bugfix on 0.3.0.2-alpha.
       Found and patched by Alex Xu.
-    - When detecting OpenSSL on Windows from our configure script, make
-      sure to try linking with the ws2_32 library. Fixes bug 23783;
-      bugfix on 0.3.2.2-alpha.
     - Fix unused-variable warnings in donna's Curve25519 SSE2 code.
       Fixes bug 22895; bugfix on 0.2.7.2-alpha.
 
@@ -582,31 +552,6 @@ Changes in version 0.3.2.9 - 2018-01-09
   o Minor bugfixes (hidden service client):
     - When handling multiple SOCKS request for the same .onion address,
       only fetch the service descriptor once.
-    - When a descriptor fetch fails with a non-recoverable error, close
-      all pending SOCKS requests for that .onion. Fixes bug 23653;
-      bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (hidden service v3):
-    - Bump hsdir_spread_store parameter from 3 to 4 in order to increase
-      the probability of reaching a service for a client missing
-      microdescriptors. Fixes bug 24425; bugfix on 0.3.2.1-alpha.
-    - Don't log an assertion failure when we can't find the right
-      information to extend to an introduction point. In rare cases,
-      this could happen, causing a warning, even though tor would
-      recover gracefully. Fixes bug 23159; bugfix on 0.3.2.1-alpha.
-    - Pad RENDEZVOUS cell up to the size of the legacy cell which is
-      much bigger so the rendezvous point can't distinguish which hidden
-      service protocol is being used. Fixes bug 23420; bugfix
-      on 0.3.2.1-alpha.
-
-  o Minor bugfixes (hidden service):
-    - Always regenerate missing hidden service public key files. Prior
-      to this, if the public key was deleted from disk, it wouldn't get
-      recreated. Fixes bug 23748; bugfix on 0.3.2.2-alpha. Patch
-      from "cathugger".
-    - Make sure that we have a usable ed25519 key when the intro point
-      relay supports ed25519 link authentication. Fixes bug 24002;
-      bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (hidden service, relay):
     - Avoid a possible double close of a circuit by the intro point on
@@ -619,20 +564,11 @@ Changes in version 0.3.2.9 - 2018-01-09
       causing delays in descriptor upload, and other bugs. Fixes bug
       23790; bugfix on 0.2.1.9-alpha.
 
-  o Minor bugfixes (IPv6, v3 single onion services):
-    - Remove buggy code for IPv6-only v3 single onion services, and
-      reject attempts to configure them. This release supports IPv4,
-      dual-stack, and IPv6-only v3 onion services; and IPv4 and dual-
-      stack v3 single onion services. Fixes bug 23820; bugfix
-      on 0.3.2.1-alpha.
-
   o Minor bugfixes (linux seccomp2 sandbox, logging):
     - Fix some messages on unexpected errors from the seccomp2 library.
       Fixes bug 22750; bugfix on 0.2.5.1-alpha. Patch from "cypherpunks".
 
   o Minor bugfixes (logging):
-    - Only log once if we notice that KIST support is gone. Fixes bug
-      24158; bugfix on 0.3.2.1-alpha.
     - Suppress a log notice when relay descriptors arrive. We already
       have a bootstrap progress for this so no need to log notice
       everytime tor receives relay descriptors. Microdescriptors behave
@@ -663,25 +599,6 @@ Changes in version 0.3.2.9 - 2018-01-09
       circuit had no attached channel, and log an annoying message.
       Fixes bug 8185; bugfix on 0.2.5.4-alpha.
 
-  o Minor bugfixes (logging, relay):
-    - Give only a protocol warning when the ed25519 key is not
-      consistent between the descriptor and microdescriptor of a relay.
-      This can happen, for instance, if the relay has been flagged
-      NoEdConsensus. Fixes bug 24025; bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (manpage, onion service):
-    - Document that the HiddenServiceNumIntroductionPoints option is
-      0-10 for v2 services and 0-20 for v3 services. Fixes bug 24115;
-      bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (memory leaks):
-    - Fix a minor memory leak at exit in the KIST scheduler. This bug
-      should have no user-visible impact. Fixes bug 23774; bugfix
-      on 0.3.2.1-alpha.
-    - Fix a memory leak when decrypting a badly formatted v3 onion
-      service descriptor. Fixes bug 24150; bugfix on 0.3.2.1-alpha.
-      Found by OSS-Fuzz; this is OSS-Fuzz issue 3994.
-
   o Minor bugfixes (memory safety, defensive programming):
     - Clear the target address when node_get_prim_orport() returns
       early. Fixes bug 23874; bugfix on 0.2.8.2-alpha.
@@ -700,14 +617,6 @@ Changes in version 0.3.2.9 - 2018-01-09
       backtrace warning that can happen on relays under various
       circumstances. Fixes bug 24167; bugfix on 0.1.0.1-rc.
 
-  o Minor bugfixes (onion service v3):
-    - Fix a race where an onion service would launch a new intro circuit
-      after closing an old one, but fail to register it before freeing
-      the previously closed circuit. This bug was making the service
-      unable to find the established intro circuit and thus not upload
-      its descriptor, thus making a service unavailable for up to 24
-      hours. Fixes bug 23603; bugfix on 0.3.2.1-alpha.
-
   o Minor bugfixes (onion services):
     - The introduction circuit was being timed out too quickly while
       waiting for the rendezvous circuit to complete. Keep the intro
@@ -716,14 +625,6 @@ Changes in version 0.3.2.9 - 2018-01-09
     - Rename the consensus parameter "hsdir-interval" to "hsdir_interval"
       so it matches dir-spec.txt. Fixes bug 24262; bugfix
       on 0.3.1.1-alpha.
-    - Silence a warning about failed v3 onion descriptor uploads that
-      can happen naturally under certain edge cases. Fixes part of bug
-      23662; bugfix on 0.3.2.1-alpha.
-    - Cache some needed onion service client information instead of
-      constantly computing it over and over again. Fixes bug 23623;
-      bugfix on 0.3.2.1-alpha.
-    - Properly retry HSv3 descriptor fetches when missing required
-      directory information. Fixes bug 23762; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (path selection):
     - When selecting relays by bandwidth, avoid a rounding error that
@@ -749,9 +650,6 @@ Changes in version 0.3.2.9 - 2018-01-09
       on 0.2.9.1-alpha.
 
   o Minor bugfixes (relay):
-    - Avoid a BUG warning when receiving a dubious CREATE cell while an
-      option transition is in progress. Fixes bug 23952; bugfix
-      on 0.3.2.1-alpha.
     - When uploading our descriptor for the first time after startup,
       report the reason for uploading as "Tor just started" rather than
       leaving it blank. Fixes bug 22885; bugfix on 0.2.3.4-alpha.
@@ -766,75 +664,22 @@ Changes in version 0.3.2.9 - 2018-01-09
       "public server" mode changed, but not when our "server" mode
       changed. Fixes bug 23693; bugfix on 0.2.6.3-alpha.
 
-  o Minor bugfixes (scheduler):
-    - When switching schedulers due to a consensus change, we didn't
-      give the new scheduler a chance to react to the consensus. Fix
-      that. Fixes bug 23537; bugfix on 0.3.2.1-alpha.
-    - Make the KISTSchedRunInterval option a non negative value. With
-      this, the way to disable KIST through the consensus is to set it
-      to 0. Fixes bug 23539; bugfix on 0.3.2.1-alpha.
-    - Only notice log the selected scheduler when we switch scheduler
-      types. Fixes bug 23552; bugfix on 0.3.2.1-alpha.
-    - Avoid a compilation warning on macOS in scheduler_ev_add() caused
-      by a different tv_usec data type. Fixes bug 23575; bugfix
-      on 0.3.2.1-alpha.
-    - Make a hard exit if tor is unable to pick a scheduler which can
-      happen if the user specifies a scheduler type that is not
-      supported and not other types in Schedulers. Fixes bug 23581;
-      bugfix on 0.3.2.1-alpha.
-    - Properly initialize the scheduler last run time counter so it is
-      not 0 at the first tick. Fixes bug 23696; bugfix on 0.3.2.1-alpha.
-
-  o Minor bugfixes (scheduler, KIST):
-    - Use a sane write limit for KISTLite when writing onto a connection
-      buffer instead of using INT_MAX and shoving as much as it can.
-      Because the OOM handler cleans up circuit queues, we are better
-      off at keeping them in that queue instead of the connection's
-      buffer. Fixes bug 24671; bugfix on 0.3.2.1-alpha.
-    - Properly set the scheduler state of an unopened channel in the
-      KIST scheduler main loop. This prevents a harmless but annoying
-      log warning. Fixes bug 24502; bugfix on 0.3.2.4-alpha.
-    - Avoid a possible integer overflow when computing the available
-      space on the TCP buffer of a channel. This had no security
-      implications; but could make KIST allow too many cells on a
-      saturated connection. Fixes bug 24590; bugfix on 0.3.2.1-alpha.
-    - Downgrade to "info" a harmless warning about the monotonic time
-      moving backwards: This can happen on platform not supporting
-      monotonic time. Fixes bug 23696; bugfix on 0.3.2.1-alpha.
-
   o Minor bugfixes (testing):
     - Fix a spurious fuzzing-only use of an uninitialized value. Found
       by Brian Carpenter. Fixes bug 24082; bugfix on 0.3.0.3-alpha.
     - Test that IPv6-only clients can use microdescriptors when running
       "make test-network-all". Requires chutney master 61c28b9 or later.
       Closes ticket 24109.
-    - Adjust the GitLab CI configuration to more closely match that of
-      Travis CI. Fixes bug 23757; bugfix on 0.3.2.2-alpha.
     - Prevent scripts/test/coverage from attempting to move gcov output
       to the root directory. Fixes bug 23741; bugfix on 0.2.5.1-alpha.
-    - When running unit tests as root, skip a test that would fail
-      because it expects a permissions error. This affects some
-      continuous integration setups. Fixes bug 23758; bugfix
-      on 0.3.2.2-alpha.
-    - Stop unconditionally mirroring the tor repository in GitLab CI.
-      This prevented developers from enabling GitLab CI on master. Fixes
-      bug 23755; bugfix on 0.3.2.2-alpha.
-    - Fix the hidden service v3 descriptor decoding fuzzing to use the
-      latest decoding API correctly. Fixes bug 21509; bugfix
-      on 0.3.2.1-alpha.
     - Capture and detect several "Result does not fit" warnings in unit
       tests on platforms with 32-bit time_t. Fixes bug 21800; bugfix
       on 0.2.9.3-alpha.
     - Fix additional channelpadding unit test failures by using mocked
       time instead of actual time for all tests. Fixes bug 23608; bugfix
       on 0.3.1.1-alpha.
-    - The removal of some old scheduler options caused some tests to
-      fail on BSD systems. Assume current behavior is correct and make
-      the tests pass again. Fixes bug 23566; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (tests):
-    - Fix a memory leak in one of the bridge-distribution test cases.
-      Fixes bug 24345; bugfix on 0.3.2.3-alpha.
     - Fix a bug in our fuzzing mock replacement for crypto_pk_checksig(),
       to correctly handle cases where a caller gives it an RSA key of
       under 160 bits. (This is not actually a bug in Tor itself, but
@@ -851,13 +696,6 @@ Changes in version 0.3.2.9 - 2018-01-09
     - Stop making an unnecessary routerlist check in NETINFO clock skew
       detection; this was preventing clients from reporting NETINFO clock
       skew to controllers. Fixes bug 23532; bugfix on 0.2.4.4-alpha.
-
-  o Minor bugfixes (warnings):
-    - When we get an HTTP request on a SOCKS port, tell the user about
-      the new HTTPTunnelPort option. Previously, we would give a "Tor is
-      not an HTTP Proxy" message, which stopped being true when
-      HTTPTunnelPort was introduced. Fixes bug 23678; bugfix
-      on 0.3.2.1-alpha.
 
   o Code simplification and refactoring:
     - Remove various ways of testing circuits and connections for
@@ -903,8 +741,6 @@ Changes in version 0.3.2.9 - 2018-01-09
     - Add notes in man page regarding OS support for the various
       scheduler types. Attempt to use less jargon in the scheduler
       section. Closes ticket 24254.
-    - HiddenServiceVersion man page entry wasn't mentioning the now
-      supported version 3. Fixes ticket 23580; bugfix on 0.3.2.1-alpha.
     - Clarify that the Address option is entirely about setting an
       advertised IPv4 address. Closes ticket 18891.
     - Clarify the manpage's use of the term "address" to clarify what
