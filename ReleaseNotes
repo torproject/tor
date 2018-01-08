@@ -270,12 +270,6 @@ Changes in version 0.3.2.9 - 2018-01-09
     - Update geoip and geoip6 to the January 5 2018 Maxmind GeoLite2
       Country database.
 
-  o Minor features (hidden service, circuit, logging):
-    - Improve logging of many callsite in the circuit subsystem to print
-      the circuit identifier(s).
-    - Log when we cleanup an intro point from a service so we know when
-      and for what reason it happened. Closes ticket 23604.
-
   o Minor features (integration, hardening):
     - Add a new NoExec option to prevent Tor from running other
       programs. When this option is set to 1, Tor will never try to run
@@ -307,6 +301,12 @@ Changes in version 0.3.2.9 - 2018-01-09
       ticket 20488.
     - If the sandbox filter fails to load, suggest to the user that
       their kernel might not support seccomp2. Closes ticket 23090.
+
+  o Minor features (onion service, circuit, logging):
+    - Improve logging of many callsite in the circuit subsystem to print
+      the circuit identifier(s).
+    - Log when we cleanup an intro point from a service so we know when
+      and for what reason it happened. Closes ticket 23604.
 
   o Minor features (portability):
     - Tor now compiles correctly on arm64 with libseccomp-dev installed.
@@ -359,9 +359,9 @@ Changes in version 0.3.2.9 - 2018-01-09
       string will be accepted by directory authorities. Closes
       ticket 22109.
     - The default chutney network tests now include tests for the v3
-      hidden service design. Make sure you have the latest version of
+      onion service design. Make sure you have the latest version of
       chutney if you want to run these. Closes ticket 22437.
-    - Add a unit test to verify that we can parse a hardcoded v2 hidden
+    - Add a unit test to verify that we can parse a hardcoded v2 onion
       service descriptor. Closes ticket 15554.
 
   o Minor bugfixes (address selection):
@@ -593,7 +593,7 @@ Changes in version 0.3.2.9 - 2018-01-09
     - Avoid a possible double close of a circuit by the intro point on
       error of sending the INTRO_ESTABLISHED cell. Fixes bug 23610;
       bugfix on 0.3.0.1-alpha.
-    - When reloading configured hidden services, copy all information
+    - When reloading configured onion services, copy all information
       from the old service object. Previously, some data was omitted,
       causing delays in descriptor upload, and other bugs. Fixes bug
       23790; bugfix on 0.2.1.9-alpha.
