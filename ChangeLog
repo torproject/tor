@@ -1,3 +1,54 @@
+Changes in version 0.3.2.9 - 2018-01-09
+  Tor 0.3.2.9 is the first stable release in the 0.3.2 series.
+
+  The 0.3.2 series includes our long-anticipated new onion service
+  design, with numerous security features. (For more information, see
+  our blog post at https://blog.torproject.org/fall-harvest.) We also
+  have a new circuit scheduler algorithm for improved performance on
+  relays everywhere (see https://blog.torproject.org/kist-and-tell),
+  along with many smaller features and bugfixes.
+
+  Per our stable release policy, we plan to support each stable release
+  series for at least the next nine months, or for three months after
+  the first stable release of the next series: whichever is longer. If
+  you need a release with long-term support, we recommend that you stay
+  with the 0.2.9 series.
+
+  Below is a list of the changes since 0.3.2.8-rc. For a list of all
+  changes since 0.3.1, see the ReleaseNotes file.
+
+  o Minor features (fallback directory mirrors):
+    - The fallback directory list has been re-generated based on the
+      current status of the network. Tor uses fallback directories to
+      bootstrap when it doesn't yet have up-to-date directory
+      information. Closes ticket 24801.
+    - Make the default DirAuthorityFallbackRate 0.1, so that clients
+      prefer to bootstrap from fallback directory mirrors. This is a
+      follow-up to 24679, which removed weights from the default
+      fallbacks. Implements ticket 24681.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the January 5 2018 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (address selection):
+    - When the fascist_firewall_choose_address_ functions don't find a
+      reachable address, set the returned address to the null address
+      and port. This is a precautionary measure, because some callers do
+      not check the return value. Fixes bug 24736; bugfix
+      on 0.2.8.2-alpha.
+
+  o Minor bugfixes (compilation):
+    - Resolve a few shadowed-variable warnings in the onion service
+      code. Fixes bug 24634; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (portability, msvc):
+    - Fix a bug in the bit-counting parts of our timing-wheel code on
+      MSVC. (Note that MSVC is still not a supported build platform, due
+      to cyptographic timing channel risks.) Fixes bug 24633; bugfix
+      on 0.2.9.1-alpha.
+
+
 Changes in version 0.3.2.8-rc - 2017-12-21
   Tor 0.3.2.8-rc fixes a pair of bugs in the KIST and KISTLite
   schedulers that had led servers under heavy load to overload their
