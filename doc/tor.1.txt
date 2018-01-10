@@ -676,7 +676,7 @@ GENERAL OPTIONS
     be used twice, once with an IPv4 address and once with an IPv6 address.
     IPv6 addresses should be wrapped in square brackets.
     This setting will be ignored for connections to the loopback addresses
-    (127.0.0.0/8 and ::1).
+    (127.0.0.0/8 and ::1), and is not used for DNS requests as well.
 
 [[OutboundBindAddressOR]] **OutboundBindAddressOR** __IP__::
     Make all outbound non-exit (relay and other) connections
