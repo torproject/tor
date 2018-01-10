@@ -1515,6 +1515,18 @@ get_interface_addresses_win32(int severity, sa_family_t family)
 #define _SIZEOF_ADDR_IFREQ sizeof
 #endif
 
+/* Free ifc->ifc_buf safely. */
+static void
+ifconf_free_ifc_buf(struct ifconf *ifc)
+{
+  /* On macOS, tor_free() takes the address of ifc.ifc_buf, which leads to
+   * undefined behaviour, because pointer-to-pointers are expected to be
+   * aligned at 8-bytes, but the ifconf structure is packed.  So we use
+   * raw_free() instead. */
+  raw_free(ifc->ifc_buf);
+  ifc->ifc_buf = NULL;
+}
+
 /** Convert <b>*buf</b>, an ifreq structure array of size <b>buflen</b>,
  * into smartlist of <b>tor_addr_t</b> structures.
  */
@@ -1601,11 +1613,7 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
  done:
   if (fd >= 0)
     close(fd);
-  /* On macOS, tor_free() loads ifc.ifc_buf, which leads to undefined
-   * behaviour, because it is always aligned at 8-bytes (ifc) plus 4 bytes
-   * (ifc_len and pragma pack(4)). So we use raw_free() instead. */
-  raw_free(ifc.ifc_buf);
-  ifc.ifc_buf = NULL;
+  ifconf_free_ifc_buf(&ifc);
   return result;
 }
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
