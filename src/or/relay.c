@@ -2596,7 +2596,7 @@ packed_cell_mem_cost(void)
 }
 
 /* DOCDOC */
-STATIC size_t
+size_t
 cell_queues_get_total_allocation(void)
 {
   return total_cells_allocated * packed_cell_mem_cost();

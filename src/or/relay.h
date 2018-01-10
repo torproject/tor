@@ -17,6 +17,7 @@ extern uint64_t stats_n_relay_cells_delivered;
 
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                cell_direction_t cell_direction);
+size_t cell_queues_get_total_allocation(void);
 
 void relay_header_pack(uint8_t *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const uint8_t *src);
@@ -114,7 +115,6 @@ STATIC int connection_edge_process_resolved_cell(edge_connection_t *conn,
 STATIC packed_cell_t *packed_cell_new(void);
 STATIC packed_cell_t *cell_queue_pop(cell_queue_t *queue);
 STATIC destroy_cell_t *destroy_cell_queue_pop(destroy_cell_queue_t *queue);
-STATIC size_t cell_queues_get_total_allocation(void);
 STATIC int cell_queues_check_size(void);
 #endif /* defined(RELAY_PRIVATE) */
 
