@@ -1,0 +1,6 @@
+  o Minor bugfixes (code correctness):
+    - Stop invoking undefined behaviour by using tor_free() on an unaligned
+      pointer in get_interface_addresses_ioctl(). This pointer alignment issue
+      exists on x86_64 macOS, but is unlikely to exist elsewhere.
+      Fixes bug 24733; bugfix on 0.3.0.0-alpha-dev;
+      not in any released version of tor.
