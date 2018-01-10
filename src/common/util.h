@@ -79,6 +79,11 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
  *
  * This is a macro.  If you need a function pointer to release memory from
  * tor_malloc(), use tor_free_().
+ *
+ * Note that this macro takes the address of the pointer it is going to
+ * free and clear.  If that pointer is stored with a nonstandard
+ * alignment (eg because of a "packed" pragma) it is not correct to use
+ * tor_free().
  */
 #ifdef __GNUC__
 #define tor_free(p) STMT_BEGIN                                 \
