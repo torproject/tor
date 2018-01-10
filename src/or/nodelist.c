@@ -1637,7 +1637,7 @@ microdesc_has_curve25519_onion_key(const microdesc_t *md)
 int
 node_has_curve25519_onion_key(const node_t *node)
 {
-  return(node_get_curve25519_onion_key(node)!=NULL);
+  return node_get_curve25519_onion_key(node) != NULL;
 }
 
 /** Return the curve25519 key of <b>node</b>, or NULL if none. */
