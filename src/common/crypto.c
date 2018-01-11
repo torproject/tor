@@ -3470,6 +3470,8 @@ crypto_global_cleanup(void)
   if (dh_param_g)
     BN_clear_free(dh_param_g);
 
+  dh_param_p = dh_param_p_tls = dh_param_g = NULL;
+
 #ifndef DISABLE_ENGINES
   ENGINE_cleanup();
 #endif
