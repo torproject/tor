@@ -1685,32 +1685,46 @@ get_effective_bwburst(const or_options_t *options)
   return (uint32_t)bw;
 }
 
+/* Used in the various options_transition_affects* functions. */
+#define YES_IF_CHANGED_BOOL(opt) \
+  if (!CFG_EQ_BOOL(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_INT(opt) \
+  if (!CFG_EQ_INT(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_STRING(opt) \
+  if (!CFG_EQ_STRING(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_LINELIST(opt) \
+  if (!CFG_EQ_LINELIST(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_SMARTLIST(opt) \
+  if (!CFG_EQ_SMARTLIST(old_options, new_options, opt)) return 1;
+#define YES_IF_CHANGED_ROUTERSET(opt) \
+  if (!CFG_EQ_ROUTERSET(old_options, new_options, opt)) return 1;
+
 /**
  * Return true if changing the configuration from <b>old</b> to <b>new</b>
- * affects the guard susbsystem.
+ * affects the guard subsystem.
  */
 static int
-options_transition_affects_guards(const or_options_t *old,
-                                  const or_options_t *new)
+options_transition_affects_guards(const or_options_t *old_options,
+                                  const or_options_t *new_options)
 {
   /* NOTE: Make sure this function stays in sync with
    * node_passes_guard_filter */
+  tor_assert(old_options);
+  tor_assert(new_options);
 
-  tor_assert(old);
-  tor_assert(new);
+  YES_IF_CHANGED_BOOL(UseEntryGuards);
+  YES_IF_CHANGED_BOOL(UseBridges);
+  YES_IF_CHANGED_BOOL(ClientUseIPv4);
+  YES_IF_CHANGED_BOOL(ClientUseIPv6);
+  YES_IF_CHANGED_BOOL(FascistFirewall);
+  YES_IF_CHANGED_ROUTERSET(ExcludeNodes);
+  YES_IF_CHANGED_ROUTERSET(EntryNodes);
+  YES_IF_CHANGED_SMARTLIST(FirewallPorts);
+  YES_IF_CHANGED_LINELIST(Bridges);
+  YES_IF_CHANGED_LINELIST(ReachableORAddresses);
+  YES_IF_CHANGED_LINELIST(ReachableDirAddresses);
 
-  return
-    (old->UseEntryGuards != new->UseEntryGuards ||
-     old->UseBridges != new->UseBridges ||
-     old->ClientUseIPv4 != new->ClientUseIPv4 ||
-     old->ClientUseIPv6 != new->ClientUseIPv6 ||
-     old->FascistFirewall != new->FascistFirewall ||
-     !routerset_equal(old->ExcludeNodes, new->ExcludeNodes) ||
-     !routerset_equal(old->EntryNodes, new->EntryNodes) ||
-     !smartlist_strings_eq(old->FirewallPorts, new->FirewallPorts) ||
-     !config_lines_eq(old->Bridges, new->Bridges) ||
-     !config_lines_eq(old->ReachableORAddresses, new->ReachableORAddresses) ||
-     !config_lines_eq(old->ReachableDirAddresses, new->ReachableDirAddresses));
+  return 0;
 }
 
 /** Fetch the active option list, and take actions based on it. All of the
@@ -4647,153 +4661,60 @@ options_transition_allowed(const or_options_t *old,
   if (!old)
     return 0;
 
-  if (!opt_streq(old->PidFile, new_val->PidFile)) {
-    *msg = tor_strdup("PidFile is not allowed to change.");
-    return -1;
-  }
+#define BAD_CHANGE_TO(opt, how) do {                                    \
+    *msg = tor_strdup("While Tor is running"how", changing " #opt       \
+                      " is not allowed");                               \
+    return -1;                                                          \
+  } while (0)
 
-  if (old->RunAsDaemon != new_val->RunAsDaemon) {
-    *msg = tor_strdup("While Tor is running, changing RunAsDaemon "
-                      "is not allowed.");
-    return -1;
-  }
+#define NO_CHANGE_BOOL(opt) \
+  if (! CFG_EQ_BOOL(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
+#define NO_CHANGE_INT(opt) \
+  if (! CFG_EQ_INT(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
+#define NO_CHANGE_STRING(opt) \
+  if (! CFG_EQ_STRING(old, new_val, opt)) BAD_CHANGE_TO(opt,"")
 
-  if (old->Sandbox != new_val->Sandbox) {
-    *msg = tor_strdup("While Tor is running, changing Sandbox "
-                      "is not allowed.");
-    return -1;
-  }
-
-  if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    tor_asprintf(msg,
-               "While Tor is running, changing DataDirectory "
-               "(\"%s\"->\"%s\") is not allowed.",
-               old->DataDirectory, new_val->DataDirectory);
-    return -1;
-  }
-
-  if (!opt_streq(old->KeyDirectory, new_val->KeyDirectory)) {
-    tor_asprintf(msg,
-               "While Tor is running, changing KeyDirectory "
-               "(\"%s\"->\"%s\") is not allowed.",
-               old->KeyDirectory, new_val->KeyDirectory);
-    return -1;
-  }
-
-  if (!opt_streq(old->CacheDirectory, new_val->CacheDirectory)) {
-    tor_asprintf(msg,
-               "While Tor is running, changing CacheDirectory "
-               "(\"%s\"->\"%s\") is not allowed.",
-               old->CacheDirectory, new_val->CacheDirectory);
-    return -1;
-  }
-
-  if (!opt_streq(old->User, new_val->User)) {
-    *msg = tor_strdup("While Tor is running, changing User is not allowed.");
-    return -1;
-  }
-
-  if (old->KeepBindCapabilities != new_val->KeepBindCapabilities) {
-    *msg = tor_strdup("While Tor is running, changing KeepBindCapabilities is "
-                      "not allowed.");
-    return -1;
-  }
-
-  if (!opt_streq(old->SyslogIdentityTag, new_val->SyslogIdentityTag)) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "SyslogIdentityTag is not allowed.");
-    return -1;
-  }
-
-  if (!opt_streq(old->AndroidIdentityTag, new_val->AndroidIdentityTag)) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "AndroidIdentityTag is not allowed.");
-    return -1;
-  }
-
-  if ((old->HardwareAccel != new_val->HardwareAccel)
-      || !opt_streq(old->AccelName, new_val->AccelName)
-      || !opt_streq(old->AccelDir, new_val->AccelDir)) {
-    *msg = tor_strdup("While Tor is running, changing OpenSSL hardware "
-                      "acceleration engine is not allowed.");
-    return -1;
-  }
-
-  if (old->TestingTorNetwork != new_val->TestingTorNetwork) {
-    *msg = tor_strdup("While Tor is running, changing TestingTorNetwork "
-                      "is not allowed.");
-    return -1;
-  }
-
-  if (old->DisableAllSwap != new_val->DisableAllSwap) {
-    *msg = tor_strdup("While Tor is running, changing DisableAllSwap "
-                      "is not allowed.");
-    return -1;
-  }
-
-  if (old->TokenBucketRefillInterval != new_val->TokenBucketRefillInterval) {
-    *msg = tor_strdup("While Tor is running, changing TokenBucketRefill"
-                      "Interval is not allowed");
-    return -1;
-  }
-
-  if (old->HiddenServiceSingleHopMode != new_val->HiddenServiceSingleHopMode) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "HiddenServiceSingleHopMode is not allowed.");
-    return -1;
-  }
-
-  if (old->HiddenServiceNonAnonymousMode !=
-      new_val->HiddenServiceNonAnonymousMode) {
-    *msg = tor_strdup("While Tor is running, changing "
-                      "HiddenServiceNonAnonymousMode is not allowed.");
-    return -1;
-  }
-
-  if (old->DisableDebuggerAttachment &&
-      !new_val->DisableDebuggerAttachment) {
-    *msg = tor_strdup("While Tor is running, disabling "
-                      "DisableDebuggerAttachment is not allowed.");
-    return -1;
-  }
-
-  if (old->NoExec && !new_val->NoExec) {
-    *msg = tor_strdup("While Tor is running, disabling "
-                      "NoExec is not allowed.");
-    return -1;
-  }
-
-  if (old->OwningControllerFD != new_val->OwningControllerFD) {
-    *msg = tor_strdup("While Tor is running, changing OwningControllerFD "
-                      "is not allowed.");
-    return -1;
-  }
+  NO_CHANGE_STRING(PidFile);
+  NO_CHANGE_BOOL(RunAsDaemon);
+  NO_CHANGE_BOOL(Sandbox);
+  NO_CHANGE_STRING(DataDirectory);
+  NO_CHANGE_STRING(KeyDirectory);
+  NO_CHANGE_STRING(CacheDirectory);
+  NO_CHANGE_STRING(User);
+  NO_CHANGE_BOOL(KeepBindCapabilities);
+  NO_CHANGE_STRING(SyslogIdentityTag);
+  NO_CHANGE_STRING(AndroidIdentityTag);
+  NO_CHANGE_BOOL(HardwareAccel);
+  NO_CHANGE_STRING(AccelName);
+  NO_CHANGE_STRING(AccelDir);
+  NO_CHANGE_BOOL(TestingTorNetwork);
+  NO_CHANGE_BOOL(DisableAllSwap);
+  NO_CHANGE_INT(TokenBucketRefillInterval);
+  NO_CHANGE_BOOL(HiddenServiceSingleHopMode);
+  NO_CHANGE_BOOL(HiddenServiceNonAnonymousMode);
+  NO_CHANGE_BOOL(DisableDebuggerAttachment);
+  NO_CHANGE_BOOL(NoExec);
+  NO_CHANGE_INT(OwningControllerFD);
 
   if (sandbox_is_active()) {
-#define SB_NOCHANGE_STR(opt)                                            \
-    do {                                                                \
-      if (! opt_streq(old->opt, new_val->opt)) {                        \
-        *msg = tor_strdup("Can't change " #opt " while Sandbox is active"); \
-        return -1;                                                      \
-      }                                                                 \
-    } while (0)
+#define SB_NOCHANGE_STR(opt)                      \
+    if (! CFG_EQ_STRING(old, new_val, opt))       \
+      BAD_CHANGE_TO(opt," with Sandbox active")
+#define SB_NOCHANGE_LINELIST(opt)                  \
+    if (! CFG_EQ_LINELIST(old, new_val, opt))      \
+      BAD_CHANGE_TO(opt," with Sandbox active")
+#define SB_NOCHANGE_INT(opt)                       \
+    if (! CFG_EQ_INT(old, new_val, opt))           \
+      BAD_CHANGE_TO(opt," with Sandbox active")
 
     SB_NOCHANGE_STR(Address);
     SB_NOCHANGE_STR(ServerDNSResolvConfFile);
     SB_NOCHANGE_STR(DirPortFrontPage);
     SB_NOCHANGE_STR(CookieAuthFile);
     SB_NOCHANGE_STR(ExtORPortCookieAuthFile);
+    SB_NOCHANGE_LINELIST(Logs);
+    SB_NOCHANGE_INT(ConnLimit);
 
-#undef SB_NOCHANGE_STR
-
-    if (! config_lines_eq(old->Logs, new_val->Logs)) {
-      *msg = tor_strdup("Can't change Logs while Sandbox is active");
-      return -1;
-    }
-    if (old->ConnLimit != new_val->ConnLimit) {
-      *msg = tor_strdup("Can't change ConnLimit while Sandbox is active");
-      return -1;
-    }
     if (server_mode(old) != server_mode(new_val)) {
       *msg = tor_strdup("Can't start/stop being a server while "
                         "Sandbox is active");
@@ -4801,6 +4722,13 @@ options_transition_allowed(const or_options_t *old,
     }
   }
 
+#undef SB_NOCHANGE_LINELIST
+#undef SB_NOCHANGE_STR
+#undef SB_NOCHANGE_INT
+#undef BAD_CHANGE_TO
+#undef NO_CHANGE_BOOL
+#undef NO_CHANGE_INT
+#undef NO_CHANGE_STRING
   return 0;
 }
 
@@ -4810,20 +4738,18 @@ static int
 options_transition_affects_workers(const or_options_t *old_options,
                                    const or_options_t *new_options)
 {
-  if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
-      old_options->NumCPUs != new_options->NumCPUs ||
-      !config_lines_eq(old_options->ORPort_lines, new_options->ORPort_lines) ||
-      old_options->ServerDNSSearchDomains !=
-                                       new_options->ServerDNSSearchDomains ||
-      old_options->SafeLogging_ != new_options->SafeLogging_ ||
-      old_options->ClientOnly != new_options->ClientOnly ||
-      server_mode(old_options) != server_mode(new_options) ||
-      public_server_mode(old_options) != public_server_mode(new_options) ||
-      !config_lines_eq(old_options->Logs, new_options->Logs) ||
-      old_options->LogMessageDomains != new_options->LogMessageDomains)
-    return 1;
+  YES_IF_CHANGED_STRING(DataDirectory);
+  YES_IF_CHANGED_INT(NumCPUs);
+  YES_IF_CHANGED_LINELIST(ORPort_lines);
+  YES_IF_CHANGED_BOOL(ServerDNSSearchDomains);
+  YES_IF_CHANGED_BOOL(SafeLogging_);
+  YES_IF_CHANGED_BOOL(ClientOnly);
+  YES_IF_CHANGED_BOOL(LogMessageDomains);
+  YES_IF_CHANGED_LINELIST(Logs);
 
-  /* Check whether log options match. */
+  if (server_mode(old_options) != server_mode(new_options) ||
+      public_server_mode(old_options) != public_server_mode(new_options))
+    return 1;
 
   /* Nothing that changed matters. */
   return 0;
@@ -4837,37 +4763,34 @@ options_transition_affects_descriptor(const or_options_t *old_options,
 {
   /* XXX We can be smarter here. If your DirPort isn't being
    * published and you just turned it off, no need to republish. Etc. */
-  if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
-      !opt_streq(old_options->Nickname,new_options->Nickname) ||
-      !opt_streq(old_options->Address,new_options->Address) ||
-      !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
-      old_options->ExitRelay != new_options->ExitRelay ||
-      old_options->ExitPolicyRejectPrivate !=
-        new_options->ExitPolicyRejectPrivate ||
-      old_options->ExitPolicyRejectLocalInterfaces !=
-        new_options->ExitPolicyRejectLocalInterfaces ||
-      old_options->IPv6Exit != new_options->IPv6Exit ||
-      !config_lines_eq(old_options->ORPort_lines,
-                       new_options->ORPort_lines) ||
-      !config_lines_eq(old_options->DirPort_lines,
-                       new_options->DirPort_lines) ||
-      old_options->ClientOnly != new_options->ClientOnly ||
-      old_options->DisableNetwork != new_options->DisableNetwork ||
-      old_options->PublishServerDescriptor_ !=
-        new_options->PublishServerDescriptor_ ||
-      get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
+
+  YES_IF_CHANGED_STRING(DataDirectory);
+  YES_IF_CHANGED_STRING(Nickname);
+  YES_IF_CHANGED_STRING(Address);
+  YES_IF_CHANGED_LINELIST(ExitPolicy);
+  YES_IF_CHANGED_BOOL(ExitRelay);
+  YES_IF_CHANGED_BOOL(ExitPolicyRejectPrivate);
+  YES_IF_CHANGED_BOOL(ExitPolicyRejectLocalInterfaces);
+  YES_IF_CHANGED_BOOL(IPv6Exit);
+  YES_IF_CHANGED_LINELIST(ORPort_lines);
+  YES_IF_CHANGED_LINELIST(DirPort_lines);
+  YES_IF_CHANGED_LINELIST(DirPort_lines);
+  YES_IF_CHANGED_BOOL(ClientOnly);
+  YES_IF_CHANGED_BOOL(DisableNetwork);
+  YES_IF_CHANGED_BOOL(PublishServerDescriptor_);
+  YES_IF_CHANGED_STRING(ContactInfo);
+  YES_IF_CHANGED_STRING(BridgeDistribution);
+  YES_IF_CHANGED_LINELIST(MyFamily);
+  YES_IF_CHANGED_STRING(AccountingStart);
+  YES_IF_CHANGED_INT(AccountingMax);
+  YES_IF_CHANGED_INT(AccountingRule);
+  YES_IF_CHANGED_BOOL(DirCache);
+  YES_IF_CHANGED_BOOL(AssumeReachable);
+
+  if (get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
       get_effective_bwburst(old_options) !=
         get_effective_bwburst(new_options) ||
-      !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
-      !opt_streq(old_options->BridgeDistribution,
-                 new_options->BridgeDistribution) ||
-      !config_lines_eq(old_options->MyFamily, new_options->MyFamily) ||
-      !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
-      old_options->AccountingMax != new_options->AccountingMax ||
-      old_options->AccountingRule != new_options->AccountingRule ||
-      public_server_mode(old_options) != public_server_mode(new_options) ||
-      old_options->DirCache != new_options->DirCache ||
-      old_options->AssumeReachable != new_options->AssumeReachable)
+      public_server_mode(old_options) != public_server_mode(new_options))
     return 1;
 
   return 0;
