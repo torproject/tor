@@ -283,11 +283,12 @@ crypto_force_rand_ssleay(void)
   return 0;
 }
 
+static int have_seeded_siphash = 0;
+
 /** Set up the siphash key if we haven't already done so. */
 int
 crypto_init_siphash_key(void)
 {
-  static int have_seeded_siphash = 0;
   struct sipkey key;
   if (have_seeded_siphash)
     return 0;
@@ -3495,6 +3496,12 @@ crypto_global_cleanup(void)
 
   tor_free(crypto_openssl_version_str);
   tor_free(crypto_openssl_header_version_str);
+
+  crypto_early_initialized_ = 0;
+  crypto_global_initialized_ = 0;
+  have_seeded_siphash = 0;
+  siphash_unset_global_key();
+
   return 0;
 }
 

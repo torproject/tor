@@ -123,3 +123,9 @@ void siphash_set_global_key(const struct sipkey *key)
 	the_siphash_key.k1 = key->k1;
 	the_siphash_key_is_set = 1;
 }
+
+void siphash_unset_global_key(void)
+{
+	the_siphash_key_is_set = 0;
+	memset(&the_siphash_key, 0, sizeof(the_siphash_key));
+}
