@@ -1404,6 +1404,7 @@ find_periodic_event(const char *name)
 
 /** Event to run initialize_periodic_events_cb */
 static struct event *initialize_periodic_events_event = NULL;
+
 /** Helper, run one second after setup:
  * Initializes all members of periodic_events and starts them running.
  *
