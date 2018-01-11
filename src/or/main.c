@@ -723,6 +723,9 @@ tell_event_loop_to_run_external_code(void)
   }
 }
 
+/** Event to run 'shutdown did not work callback'. */
+static struct event *shutdown_did_not_work_event = NULL;
+
 /** Failsafe measure that should never actually be necessary: If
  * tor_shutdown_event_loop_and_exit() somehow doesn't successfully exit the
  * event loop, then this callback will kill Tor with an assertion failure
@@ -756,9 +759,10 @@ tor_shutdown_event_loop_and_exit(int exitcode)
    * exit normally. */
   /* XXXX We should consider this code if it's never used. */
   struct timeval ten_seconds = { 10, 0 };
-  event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT,
-                  shutdown_did_not_work_callback, NULL,
-                  &ten_seconds);
+  shutdown_did_not_work_event = tor_evtimer_new(
+                  tor_libevent_get_base(),
+                  shutdown_did_not_work_callback, NULL);
+  event_add(shutdown_did_not_work_event, &ten_seconds);
 
   /* Unlike loopexit, loopbreak prevents other callbacks from running. */
   tor_event_base_loopbreak(tor_libevent_get_base());
@@ -1398,6 +1402,8 @@ find_periodic_event(const char *name)
   return NULL;
 }
 
+/** Event to run initialize_periodic_events_cb */
+static struct event *initialize_periodic_events_event = NULL;
 /** Helper, run one second after setup:
  * Initializes all members of periodic_events and starts them running.
  *
@@ -1409,6 +1415,7 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   (void) fd;
   (void) events;
   (void) data;
+  tor_event_free(initialize_periodic_events_event);
   int i;
   for (i = 0; periodic_events[i].name; ++i) {
     periodic_event_launch(&periodic_events[i]);
@@ -1437,9 +1444,10 @@ initialize_periodic_events(void)
   NAMED_CALLBACK(check_dns_honesty);
 
   struct timeval one_second = { 1, 0 };
-  event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT,
-                  initialize_periodic_events_cb, NULL,
-                  &one_second);
+  initialize_periodic_events_event = tor_evtimer_new(
+                  tor_libevent_get_base(),
+                  initialize_periodic_events_cb, NULL);
+  event_add(initialize_periodic_events_event, &one_second);
 }
 
 STATIC void
@@ -3463,6 +3471,8 @@ tor_free_all(int postfork)
   periodic_timer_free(second_timer);
   teardown_periodic_events();
   periodic_timer_free(refill_timer);
+  tor_event_free(shutdown_did_not_work_event);
+  tor_event_free(initialize_periodic_events_event);
 
   if (!postfork) {
     release_lockfile();
