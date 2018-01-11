@@ -72,8 +72,8 @@ void tor_main_configuration_free(tor_main_configuration_t *cfg);
  *
  * BUG 23847: You can only call tor_main() once in a single process; if it
  * returns and you call it again, you may crash, or you may encounter other
- * unexpected behavior.  This is not intended long-term behavior; we are
- * trying to fix it.
+ * unexpected behavior, including possible security issues.  This is not
+ * intended long-term behavior; we are trying to fix it.
  *
  * LIMITATION: You cannot run more than one instance of Tor in the same
  * process at the same time. Concurrent calls will cause undefined behavior.

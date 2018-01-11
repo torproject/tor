@@ -3,5 +3,6 @@
       Controllers that run Tor using the "tor_api.h" interface can now
       restart Tor after Tor has exited. This support is incomplete, however:
       we have fixed the crash bugs that prevented it from working at all
-      before, but many bugs probably remain. Implements ticket 24581.
+      before, but many bugs probably remain, including the possibility of
+      security issues. Implements ticket 24581.
 
