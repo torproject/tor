@@ -1956,9 +1956,8 @@ is non-zero):
     When listing a node, it's better to list it by fingerprint than by
     nickname: fingerprints are more reliable. +
  +
-    MyFamily **must** be set correctly if you run more than one relay or
-    bridge. (That is, every relay should list all the others as described
-    above.)
+    If you run more than one relay, the MyFamily option on each relay
+    **must** list all other relays, as described above.
 
 [[Nickname]] **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
