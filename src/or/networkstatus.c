@@ -2077,6 +2077,7 @@ networkstatus_note_certs_arrived(const char *source_dir)
 {
   int i;
   for (i=0; i<N_CONSENSUS_FLAVORS; ++i) {
+    const char *flavor_name = networkstatus_get_flavor_name(i);
     consensus_waiting_for_certs_t *waiting = &consensus_waiting_for_certs[i];
     if (!waiting->consensus)
       continue;
@@ -2084,7 +2085,7 @@ networkstatus_note_certs_arrived(const char *source_dir)
       char *waiting_body = waiting->body;
       if (!networkstatus_set_current_consensus(
                                  waiting_body,
-                                 networkstatus_get_flavor_name(i),
+                                 flavor_name,
                                  NSSET_WAS_WAITING_FOR_CERTS,
                                  source_dir)) {
         tor_free(waiting_body);
