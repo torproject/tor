@@ -1703,7 +1703,12 @@ is non-zero):
     descriptors containing these lines and that Google indexes them, so
     spammers might also collect them. You may want to obscure the fact
     that it's an email address and/or generate a new address for this
-    purpose.
+    purpose. +
+ +
+    ContactInfo **must** be set to a working address if you run more than one
+    relay or bridge.  (Really, everybody running a relay or bridge should set
+    it.)
+
 
 [[ExitRelay]] **ExitRelay** **0**|**1**|**auto**::
     Tells Tor whether to run as an exit relay.  If Tor is running as a
@@ -1831,7 +1836,10 @@ is non-zero):
     compromise its concealment. +
  +
     When listing a node, it's better to list it by fingerprint than by
-    nickname: fingerprints are more reliable.
+    nickname: fingerprints are more reliable. +
+ +
+    If you run more than one relay, the MyFamily option on each relay
+    **must** list all other relays, as described above.
 
 [[Nickname]] **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
