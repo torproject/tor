@@ -1,0 +1,5 @@
+  o Minor bugfix (zu format specifier on minGW):
+    - Fix minGW compatibility issue. Define TOR_PRIuSZ as minGW compiler
+      doesn't support zu format specifier for size_t type. Fixes bug 24861;
+      bugfix on ac9eebd6363.
+      Patch by "ffmancera".

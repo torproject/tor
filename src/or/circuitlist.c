@@ -51,6 +51,8 @@
  * logic, which was originally circuit-focused.
  **/
 #define CIRCUITLIST_PRIVATE
+#include "torint.h"  /* TOR_PRIuSZ */
+
 #include "or.h"
 #include "channel.h"
 #include "circpathbias.h"
@@ -2404,10 +2406,11 @@ circuits_handle_oom(size_t current_allocation)
   int n_circuits_killed=0;
   int n_dirconns_killed=0;
   uint32_t now_ts;
-  log_notice(LD_GENERAL, "We're low on memory (cell queues total alloc: %zu,"
-             " buffer total alloc: %zu, tor compress total alloc: %zu,"
-             " rendezvous cache total alloc: %zu). Killing circuits with"
-             " over-long queues. (This behavior is controlled by"
+  log_notice(LD_GENERAL, "We're low on memory (cell queues total alloc:"
+             " %"TOR_PRIuSZ" buffer total alloc: %" TOR_PRIuSZ ","
+             " tor compress total alloc: %" TOR_PRIuSZ
+             " rendezvous cache total alloc: %" TOR_PRIuSZ "). Killing"
+             " circuits withover-long queues. (This behavior is controlled by"
              " MaxMemInQueues.)",
              cell_queues_get_total_allocation(),
              buf_get_total_allocation(),

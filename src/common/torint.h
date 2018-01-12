@@ -348,6 +348,16 @@ typedef uint32_t uintptr_t;
 #endif /* (SIZEOF_SIZE_T == 4) || ... */
 #endif /* !defined(SIZE_MAX) */
 
+#ifdef _WIN32
+#  ifdef _WIN64
+#    define TOR_PRIuSZ PRIu64
+#  else
+#    define TOR_PRIuSZ PRIu32
+#  endif
+#else
+#  define TOR_PRIuSZ "zu"
+#endif
+
 #ifndef SSIZE_MAX
 #if (SIZEOF_SIZE_T == 4)
 #define SSIZE_MAX INT32_MAX
