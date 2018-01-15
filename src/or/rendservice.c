@@ -2930,8 +2930,11 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   }
   oldcirc->hs_service_side_rend_circ_has_been_relaunched = 1;
 
+  /* We check failure_count >= MAX_REND_FAILURES-1 below rather than
+   * failure_count >= MAX_REND_FAILURES, because we increment the failure
+   * count for our current failure *after* this clause. */
   if (!oldcirc->build_state ||
-      oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
+      oldcirc->build_state->failure_count >= MAX_REND_FAILURES-1 ||
       oldcirc->build_state->expiry_time < time(NULL)) {
     log_info(LD_REND,
              "Attempt to build circuit to %s for rendezvous has failed "
