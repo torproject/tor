@@ -26,9 +26,9 @@ CHECKERS="\
     -enable-checker alpha.unix.Stream \
     -enable-checker alpha.unix.cstring.BufferOverlap \
     -enable-checker alpha.unix.cstring.NotNullTerminated \
-    -enable-checker alpha.valist.CopyToSelf \
-    -enable-checker alpha.valist.Uninitialized \
-    -enable-checker alpha.valist.Unterminated \
+    -enable-checker valist.CopyToSelf \
+    -enable-checker valist.Uninitialized \
+    -enable-checker valist.Unterminated \
     -enable-checker security.FloatLoopCounter \
     -enable-checker security.insecureAPI.strcpy \
 "
