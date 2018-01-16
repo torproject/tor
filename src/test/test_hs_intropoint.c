@@ -725,6 +725,7 @@ test_introduce1_validation(void *arg)
   /* Create our decoy cell that we'll modify as we go to test the validation
    * function of that parsed cell. */
   cell = helper_create_introduce1_cell();
+  tt_assert(cell);
 
   /* It should NOT be a legacy cell which will trigger a BUG(). */
   memset(cell->legacy_key_id, 'a', sizeof(cell->legacy_key_id));
