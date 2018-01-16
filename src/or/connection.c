@@ -3694,14 +3694,20 @@ connection_outbuf_too_full(connection_t *conn)
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
-/** Fix slow upload for Windows Vista and Windows 7 systems (bug #22798).
- * This achieved by tuning socket send buffer size according to hint,
- * returned by SIO_IDEAL_SEND_BACKLOG_QUERY ioctl command.
+/**
+ * On Windows Vista and Windows 7, tune the send buffer size according to a
+ * hint from the OS.
+ *
+ * This should help fix slow upload rates.
  */
 static void
+
 update_send_buffer_size(tor_socket_t sock)
 {
 #ifdef _WIN32
+  /* We only do this on Vista and 7, because earlier versions of Windows
+   * don't have the SIO_IDEAL_SEND_BACKLOG_QUERY functionality, and on
+   * later versions it isn't necessary. */
   static int isVistaOr7 = -1;
   if (isVistaOr7 == -1) {
     isVistaOr7 = 0;
@@ -3721,6 +3727,8 @@ update_send_buffer_size(tor_socket_t sock)
       &isb, sizeof(isb), &bytesReturned, NULL, NULL)) {
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&isb, sizeof(isb));
   }
+#else
+  (void) sock;
 #endif
 }
 
