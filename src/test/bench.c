@@ -718,6 +718,8 @@ main(int argc, const char **argv)
   init_logging(1);
   options->command = CMD_RUN_UNITTESTS;
   options->DataDirectory = tor_strdup("");
+  options->KeyDirectory = tor_strdup("");
+  options->CacheDirectory = tor_strdup("");
   options_init(options);
   if (set_options(options, &errmsg) < 0) {
     printf("Failed to set initial options: %s\n", errmsg);
