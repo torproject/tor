@@ -3694,6 +3694,36 @@ connection_outbuf_too_full(connection_t *conn)
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
+/** Fix slow upload for Windows Vista and Windows 7 systems (bug #22798).
+ * This achieved by tuning socket send buffer size according to hint,
+ * returned by SIO_IDEAL_SEND_BACKLOG_QUERY ioctl command.
+ */
+static void
+update_send_buffer_size(tor_socket_t sock)
+{
+#ifdef _WIN32
+  static int isVistaOr7 = -1;
+  if (isVistaOr7 == -1) {
+    isVistaOr7 = 0;
+    OSVERSIONINFO osvi = { 0 };
+    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    GetVersionEx(&osvi);
+    if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion < 2)
+      isVistaOr7 = 1;
+  }
+  if (!isVistaOr7)
+    return;
+  if (get_options()->ConstrainedSockets)
+    return;
+  ULONG isb = 0;
+  DWORD bytesReturned = 0;
+  if (!WSAIoctl(sock, SIO_IDEAL_SEND_BACKLOG_QUERY, NULL, 0,
+      &isb, sizeof(isb), &bytesReturned, NULL, NULL)) {
+    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&isb, sizeof(isb));
+  }
+#endif
+}
+
 /** Try to flush more bytes onto <b>conn</b>-\>s.
  *
  * This function gets called either from conn_write_callback() in main.c
@@ -3812,6 +3842,9 @@ connection_handle_write_impl(connection_t *conn, int force)
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
 
+    if (result >= 0)
+      update_send_buffer_size(conn->s);
+
     /* If we just flushed the last bytes, tell the channel on the
      * or_conn to check if it needs to geoip_change_dirreq_state() */
     /* XXXX move this to flushed_some or finished_flushing -NM */
@@ -3886,6 +3919,7 @@ connection_handle_write_impl(connection_t *conn, int force)
       connection_mark_for_close(conn);
       return -1;
     }
+    update_send_buffer_size(conn->s);
     n_written = (size_t) result;
   }
 
