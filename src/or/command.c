@@ -328,12 +328,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
 
   if (connection_or_digest_is_known_relay(chan->identity_digest)) {
     rep_hist_note_circuit_handshake_requested(create_cell->handshake_type);
-    // Needed for chutney: Sometimes relays aren't in the consensus yet, and
-    // get marked as clients. This resets their channels once they appear.
-    // Probably useful for normal operation wrt relay flapping, too.
-    chan->is_client = 0;
-  } else {
-    channel_mark_client(chan);
   }
 
   if (create_cell->handshake_type != ONION_HANDSHAKE_TYPE_FAST) {
