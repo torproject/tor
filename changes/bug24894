@@ -1,0 +1,5 @@
+  o Major bugfixes (v3 onion services):
+    - New-style (v3) onion services now obey the "max rendezvous circuit
+      attempts" logic. Previously they would make as many rendezvous
+      circuit attempts as they could fit in the MAX_REND_TIMEOUT second
+      window before giving up. Fixes bug 24894; bugfix on 0.3.2.1-alpha.

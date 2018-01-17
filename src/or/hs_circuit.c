@@ -546,7 +546,7 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
 
   /* Transfer build state information to the new circuit state in part to
    * catch any other failures. */
-  new_circ->build_state->failure_count = bstate->failure_count++;
+  new_circ->build_state->failure_count = bstate->failure_count+1;
   new_circ->build_state->expiry_time = bstate->expiry_time;
   new_circ->hs_ident = hs_ident_circuit_dup(circ->hs_ident);
 
