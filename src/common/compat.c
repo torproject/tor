@@ -1723,7 +1723,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     if (errno == EINVAL && try_limit < (uint64_t) rlim.rlim_cur) {
       /* On some platforms, OPEN_MAX is the real limit, and getrlimit() is
        * full of nasty lies.  I'm looking at you, OSX 10.5.... */
-      rlim.rlim_cur = MIN(try_limit, rlim.rlim_cur);
+      rlim.rlim_cur = MIN((rlim_t) try_limit, rlim.rlim_cur);
       if (setrlimit(RLIMIT_NOFILE, &rlim) == 0) {
         if (rlim.rlim_cur < (rlim_t)limit) {
           log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
