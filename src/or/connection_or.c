@@ -1954,6 +1954,12 @@ connection_or_set_state_open(or_connection_t *conn)
   connection_or_change_state(conn, OR_CONN_STATE_OPEN);
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED, 0);
 
+  /* Link protocol 3 appeared in Tor 0.2.3.6-alpha, so any connection
+   * that uses an earlier link protocol should not be treated as a relay. */
+  if (conn->link_proto < 3) {
+    channel_mark_client(TLS_CHAN_TO_BASE(conn->chan));
+  }
+
   or_handshake_state_free(conn->handshake_state);
   conn->handshake_state = NULL;
   connection_start_reading(TO_CONN(conn));
