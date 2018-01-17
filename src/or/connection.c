@@ -3761,6 +3761,44 @@ connection_outbuf_too_full(connection_t *conn)
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
+/**
+ * On Windows Vista and Windows 7, tune the send buffer size according to a
+ * hint from the OS.
+ *
+ * This should help fix slow upload rates.
+ */
+static void
+
+update_send_buffer_size(tor_socket_t sock)
+{
+#ifdef _WIN32
+  /* We only do this on Vista and 7, because earlier versions of Windows
+   * don't have the SIO_IDEAL_SEND_BACKLOG_QUERY functionality, and on
+   * later versions it isn't necessary. */
+  static int isVistaOr7 = -1;
+  if (isVistaOr7 == -1) {
+    isVistaOr7 = 0;
+    OSVERSIONINFO osvi = { 0 };
+    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    GetVersionEx(&osvi);
+    if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion < 2)
+      isVistaOr7 = 1;
+  }
+  if (!isVistaOr7)
+    return;
+  if (get_options()->ConstrainedSockets)
+    return;
+  ULONG isb = 0;
+  DWORD bytesReturned = 0;
+  if (!WSAIoctl(sock, SIO_IDEAL_SEND_BACKLOG_QUERY, NULL, 0,
+      &isb, sizeof(isb), &bytesReturned, NULL, NULL)) {
+    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&isb, sizeof(isb));
+  }
+#else
+  (void) sock;
+#endif
+}
+
 /** Try to flush more bytes onto <b>conn</b>-\>s.
  *
  * This function gets called either from conn_write_callback() in main.c
@@ -3879,6 +3917,9 @@ connection_handle_write_impl(connection_t *conn, int force)
     result = buf_flush_to_tls(conn->outbuf, or_conn->tls,
                            max_to_write, &conn->outbuf_flushlen);
 
+    if (result >= 0)
+      update_send_buffer_size(conn->s);
+
     /* If we just flushed the last bytes, tell the channel on the
      * or_conn to check if it needs to geoip_change_dirreq_state() */
     /* XXXX move this to flushed_some or finished_flushing -NM */
@@ -3953,6 +3994,7 @@ connection_handle_write_impl(connection_t *conn, int force)
       connection_mark_for_close(conn);
       return -1;
     }
+    update_send_buffer_size(conn->s);
     n_written = (size_t) result;
   }
 
