@@ -1285,8 +1285,11 @@ consdiff_apply_diff(const smartlist_t *cons1,
 STATIC int
 consensus_split_lines(smartlist_t *out, const char *s, memarea_t *area)
 {
+  const char *end_of_str = s + strlen(s);
+  tor_assert(*end_of_str == '\0');
+
   while (*s) {
-    const char *eol = strchr(s, '\n');
+    const char *eol = memchr(s, '\n', end_of_str - s);
     if (!eol) {
       /* File doesn't end with newline. */
       return -1;
