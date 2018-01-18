@@ -10,7 +10,7 @@
  * \brief Block of functions related to operations from OpenSSL.
  **/
 
-#include "crypto_openssl.h"
+#include "crypto_openssl_mgt.h"
 
 #ifndef NEW_THREAD_API
 /** A number of preallocated mutexes for use by OpenSSL. */
