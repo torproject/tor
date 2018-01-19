@@ -243,7 +243,8 @@ tor_init_libevent_rng(void)
 void
 tor_libevent_free_all(void)
 {
-  event_base_free(the_event_base);
+  if (the_event_base)
+    event_base_free(the_event_base);
   the_event_base = NULL;
 }
 
