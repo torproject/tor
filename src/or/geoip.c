@@ -33,6 +33,7 @@
 #include "config.h"
 #include "control.h"
 #include "dnsserv.h"
+#include "dos.h"
 #include "geoip.h"
 #include "routerlist.h"
 
@@ -549,10 +550,14 @@ geoip_note_client_seen(geoip_client_action_t action,
   clientmap_entry_t *ent;
 
   if (action == GEOIP_CLIENT_CONNECT) {
-    /* Only remember statistics as entry guard or as bridge. */
-    if (!options->EntryStatistics &&
-        (!(options->BridgeRelay && options->BridgeRecordUsageByCountry)))
-      return;
+    /* Only remember statistics if the DoS mitigation subsystem is enabled. If
+     * not, only if as entry guard or as bridge. */
+    if (!dos_enabled()) {
+      if (!options->EntryStatistics &&
+          (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))) {
+        return;
+      }
+    }
   } else {
     /* Only gather directory-request statistics if configured, and
      * forcibly disable them on bridge authorities. */
