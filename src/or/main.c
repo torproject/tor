@@ -742,6 +742,20 @@ shutdown_did_not_work_callback(evutil_socket_t fd, short event, void *arg)
   // LCOV_EXCL_STOP
 }
 
+#ifdef ENABLE_RESTART_DEBUGGING
+static struct event *tor_shutdown_event_loop_for_restart_event = NULL;
+static void
+tor_shutdown_event_loop_for_restart_cb(
+                      evutil_socket_t fd, short event, void *arg)
+{
+  (void)fd;
+  (void)event;
+  (void)arg;
+  tor_event_free(tor_shutdown_event_loop_for_restart_event);
+  tor_shutdown_event_loop_and_exit(0);
+}
+#endif
+
 /**
  * After finishing the current callback (if any), shut down the main loop,
  * clean up the process, and exit with <b>exitcode</b>.
@@ -2740,6 +2754,31 @@ do_main_loop(void)
 
   main_loop_should_exit = 0;
   main_loop_exit_value = 0;
+
+#ifdef ENABLE_RESTART_DEBUGGING
+  {
+    static int first_time = 1;
+
+    if (first_time && getenv("TOR_DEBUG_RESTART")) {
+      first_time = 0;
+      const char *sec_str = getenv("TOR_DEBUG_RESTART_AFTER_SECONDS");
+      long sec;
+      int sec_ok=0;
+      if (sec_str &&
+          (sec = tor_parse_long(sec_str, 10, 0, INT_MAX, &sec_ok, NULL)) &&
+          sec_ok) {
+        /* Okay, we parsed the seconds. */
+      } else {
+        sec = 5;
+      }
+      struct timeval restart_after = { (time_t) sec, 0 };
+      tor_shutdown_event_loop_for_restart_event =
+        tor_evtimer_new(tor_libevent_get_base(),
+                        tor_shutdown_event_loop_for_restart_cb, NULL);
+      event_add(tor_shutdown_event_loop_for_restart_event, &restart_after);
+    }
+  }
+#endif
 
   return run_main_loop_until_done();
 }
