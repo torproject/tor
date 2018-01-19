@@ -1,0 +1,8 @@
+  o Major bugfixes (onion services):
+    - Fix an "off by 2" error in counting rendezvous failures on the onion
+      service side. While we thought we would stop the rendezvous attempt
+      after one failed circuit, we were actually making three circuit attempts
+      before giving up. Now switch to a default of 2, and allow the consensus
+      parameter "hs_service_max_rdv_failures" to override. Fixes bug 24895;
+      bugfix on 0.0.6.
+

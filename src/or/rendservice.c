@@ -2042,7 +2042,8 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
 
   /* Launch a circuit to the client's chosen rendezvous point.
    */
-  for (i=0;i<MAX_REND_FAILURES;i++) {
+  int max_rend_failures=hs_get_service_max_rend_failures();
+  for (i=0;i<max_rend_failures;i++) {
     int flags = CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_IS_INTERNAL;
     if (circ_needs_uptime) flags |= CIRCLAUNCH_NEED_UPTIME;
     /* A Single Onion Service only uses a direct connection if its
@@ -2938,7 +2939,6 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   cpath_build_state_t *newstate, *oldstate;
 
   tor_assert(oldcirc->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
-
   oldstate = oldcirc->build_state;
   tor_assert(oldstate);
 
