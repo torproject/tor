@@ -572,6 +572,7 @@ static config_var_t option_vars_[] = {
   VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
+  VAR("__DisableSignalHandlers", BOOL,  DisableSignalHandlers,    "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
@@ -4697,6 +4698,7 @@ options_transition_allowed(const or_options_t *old,
   NO_CHANGE_BOOL(DisableDebuggerAttachment);
   NO_CHANGE_BOOL(NoExec);
   NO_CHANGE_INT(OwningControllerFD);
+  NO_CHANGE_BOOL(DisableSignalHandlers);
 
   if (sandbox_is_active()) {
 #define SB_NOCHANGE_STR(opt)                      \

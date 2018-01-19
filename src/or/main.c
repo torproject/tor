@@ -2610,7 +2610,7 @@ do_main_loop(void)
     }
   }
 
-  handle_signals(1);
+  handle_signals();
   monotime_init();
   timers_initialize();
 
@@ -3143,9 +3143,15 @@ exit_function(void)
 #else
 #define UNIX_ONLY 1
 #endif
+
 static struct {
+  /** A numeric code for this signal. Must match the signal value if
+   * try_to_register is true. */
   int signal_value;
+  /** True if we should try to register this signal with libevent and catch
+   * corresponding posix signals. False otherwise. */
   int try_to_register;
+  /** Pointer to hold the event object constructed for this signal. */
   struct event *signal_event;
 } signal_handlers[] = {
 #ifdef SIGINT
@@ -3179,50 +3185,40 @@ static struct {
   { -1, -1, NULL }
 };
 
-/** Set up the signal handlers for either parent or child process */
+/** Set up the signal handler events for this process, and register them
+ * with libevent if appropriate. */
 void
-handle_signals(int is_parent)
+handle_signals(void)
 {
   int i;
-  if (is_parent) {
-    for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
-      if (signal_handlers[i].try_to_register) {
-        signal_handlers[i].signal_event =
-          tor_evsignal_new(tor_libevent_get_base(),
-                           signal_handlers[i].signal_value,
-                           signal_callback,
-                           &signal_handlers[i].signal_value);
-        if (event_add(signal_handlers[i].signal_event, NULL))
-          log_warn(LD_BUG, "Error from libevent when adding "
-                   "event for signal %d",
-                   signal_handlers[i].signal_value);
-      } else {
-        signal_handlers[i].signal_event =
-          tor_event_new(tor_libevent_get_base(), -1,
-                        EV_SIGNAL, signal_callback,
-                        &signal_handlers[i].signal_value);
-      }
+  const int enabled = !get_options()->DisableSignalHandlers;
+
+  for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
+    /* Signal handlers are only registered with libevent if they need to catch
+     * real POSIX signals.  We construct these signal handler events in either
+     * case, though, so that controllers can activate them with the SIGNAL
+     * command.
+     */
+    if (enabled && signal_handlers[i].try_to_register) {
+      signal_handlers[i].signal_event =
+        tor_evsignal_new(tor_libevent_get_base(),
+                         signal_handlers[i].signal_value,
+                         signal_callback,
+                         &signal_handlers[i].signal_value);
+      if (event_add(signal_handlers[i].signal_event, NULL))
+        log_warn(LD_BUG, "Error from libevent when adding "
+                 "event for signal %d",
+                 signal_handlers[i].signal_value);
+    } else {
+      signal_handlers[i].signal_event =
+        tor_event_new(tor_libevent_get_base(), -1,
+                      EV_SIGNAL, signal_callback,
+                      &signal_handlers[i].signal_value);
     }
-  } else {
-#ifndef _WIN32
-    struct sigaction action;
-    action.sa_flags = 0;
-    sigemptyset(&action.sa_mask);
-    action.sa_handler = SIG_IGN;
-    sigaction(SIGINT,  &action, NULL);
-    sigaction(SIGTERM, &action, NULL);
-    sigaction(SIGPIPE, &action, NULL);
-    sigaction(SIGUSR1, &action, NULL);
-    sigaction(SIGUSR2, &action, NULL);
-    sigaction(SIGHUP,  &action, NULL);
-#ifdef SIGXFSZ
-    sigaction(SIGXFSZ, &action, NULL);
-#endif
-#endif /* !defined(_WIN32) */
   }
 }
 
-/* Make sure the signal handler for signal_num will be called. */
+/* Cause the signal handler for signal_num to be called in the event loop. */
 void
 activate_signal(int signal_num)
 {
