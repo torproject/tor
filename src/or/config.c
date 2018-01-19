@@ -404,6 +404,8 @@ static config_var_t option_vars_[] = {
   V(Socks5ProxyPassword,         STRING,   NULL),
   VAR("KeyDirectory",            FILENAME, KeyDirectory_option, NULL),
   V(KeyDirectoryGroupReadable,   BOOL,     "0"),
+  VAR("_HSLayer2Nodes",          ROUTERSET,  HSLayer2Nodes,  NULL),
+  VAR("_HSLayer3Nodes",          ROUTERSET,  HSLayer3Nodes,  NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   V(KeepBindCapabilities,            AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
@@ -1648,6 +1650,8 @@ options_need_geoip_info(const or_options_t *options, const char **reason_out)
     routerset_needs_geoip(options->ExitNodes) ||
     routerset_needs_geoip(options->ExcludeExitNodes) ||
     routerset_needs_geoip(options->ExcludeNodes) ||
+    routerset_needs_geoip(options->HSLayer2Nodes) ||
+    routerset_needs_geoip(options->HSLayer3Nodes) ||
     routerset_needs_geoip(options->Tor2webRendezvousPoints);
 
   if (routerset_usage && reason_out) {
@@ -2089,6 +2093,10 @@ options_act(const or_options_t *old_options)
                          options->ExcludeExitNodes) ||
         !routerset_equal(old_options->EntryNodes, options->EntryNodes) ||
         !routerset_equal(old_options->ExitNodes, options->ExitNodes) ||
+        !routerset_equal(old_options->HSLayer2Nodes,
+                         options->HSLayer2Nodes) ||
+        !routerset_equal(old_options->HSLayer3Nodes,
+                         options->HSLayer3Nodes) ||
         !routerset_equal(old_options->Tor2webRendezvousPoints,
                          options->Tor2webRendezvousPoints) ||
         options->StrictNodes != old_options->StrictNodes) {

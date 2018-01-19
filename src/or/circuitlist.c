@@ -689,6 +689,10 @@ circuit_purpose_to_controller_string(uint8_t purpose)
 
     case CIRCUIT_PURPOSE_C_GENERAL:
       return "GENERAL";
+
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
+      return "HS_CLIENT_HSDIR";
+
     case CIRCUIT_PURPOSE_C_INTRODUCING:
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACKED:
@@ -699,6 +703,9 @@ circuit_purpose_to_controller_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
     case CIRCUIT_PURPOSE_C_REND_JOINED:
       return "HS_CLIENT_REND";
+
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
+      return "HS_SERVICE_HSDIR";
 
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
     case CIRCUIT_PURPOSE_S_INTRO:
@@ -716,6 +723,8 @@ circuit_purpose_to_controller_string(uint8_t purpose)
       return "CONTROLLER";
     case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
       return "PATH_BIAS_TESTING";
+    case CIRCUIT_PURPOSE_HS_VANGUARDS:
+      return "HS_VANGUARDS";
 
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
@@ -744,6 +753,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_TESTING:
     case CIRCUIT_PURPOSE_CONTROLLER:
     case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
+    case CIRCUIT_PURPOSE_HS_VANGUARDS:
       return NULL;
 
     case CIRCUIT_PURPOSE_INTRO_POINT:
@@ -753,6 +763,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_REND_ESTABLISHED:
       return "OR_HS_R_JOINED";
 
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       return "HSCI_CONNECTING";
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
@@ -769,6 +780,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_C_REND_JOINED:
       return "HSCR_JOINED";
 
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       return "HSSI_CONNECTING";
     case CIRCUIT_PURPOSE_S_INTRO:
@@ -813,6 +825,9 @@ circuit_purpose_to_string(uint8_t purpose)
       return "Hidden service client: Pending rendezvous point (ack received)";
     case CIRCUIT_PURPOSE_C_REND_JOINED:
       return "Hidden service client: Active rendezvous point";
+    case CIRCUIT_PURPOSE_C_HSDIR_GET:
+      return "Hidden service client: Fetching HS descriptor";
+
     case CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT:
       return "Measuring circuit timeout";
 
@@ -824,6 +839,8 @@ circuit_purpose_to_string(uint8_t purpose)
       return "Hidden service: Connecting to rendezvous point";
     case CIRCUIT_PURPOSE_S_REND_JOINED:
       return "Hidden service: Active rendezvous point";
+    case CIRCUIT_PURPOSE_S_HSDIR_POST:
+      return "Hidden service: Uploading HS descriptor";
 
     case CIRCUIT_PURPOSE_TESTING:
       return "Testing circuit";
@@ -833,6 +850,9 @@ circuit_purpose_to_string(uint8_t purpose)
 
     case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
       return "Path-bias testing circuit";
+
+    case CIRCUIT_PURPOSE_HS_VANGUARDS:
+      return "Hidden service: Pre-built vanguard circuit";
 
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
@@ -1705,14 +1725,29 @@ circuit_can_be_cannibalized_for_v3_rp(const origin_circuit_t *circ)
   return 0;
 }
 
+/** We are trying to create a circuit of purpose <b>purpose</b> and we are
+ *  looking for cannibalizable circuits. Return the circuit purpose we would be
+ *  willing to cannibalize. */
+static uint8_t
+get_circuit_purpose_needed_to_cannibalize(uint8_t purpose)
+{
+  if (circuit_should_use_vanguards(purpose)) {
+    /* If we are using vanguards, then we should only cannibalize vanguard
+     * circuits so that we get the same path construction logic. */
+    return CIRCUIT_PURPOSE_HS_VANGUARDS;
+  } else {
+    /* If no vanguards are used just get a general circuit! */
+    return CIRCUIT_PURPOSE_C_GENERAL;
+  }
+}
+
 /** Return a circuit that is open, is CIRCUIT_PURPOSE_C_GENERAL,
  * has a timestamp_dirty value of 0, has flags matching the CIRCLAUNCH_*
  * flags in <b>flags</b>, and if info is defined, does not already use info
  * as any of its hops; or NULL if no circuit fits this description.
  *
- * The <b>purpose</b> argument (currently ignored) refers to the purpose of
- * the circuit we want to create, not the purpose of the circuit we want to
- * cannibalize.
+ * The <b>purpose</b> argument refers to the purpose of the circuit we want to
+ * create, not the purpose of the circuit we want to cannibalize.
  *
  * If !CIRCLAUNCH_NEED_UPTIME, prefer returning non-uptime circuits.
  *
@@ -1725,7 +1760,7 @@ circuit_can_be_cannibalized_for_v3_rp(const origin_circuit_t *circ)
  * a new circuit.)
  */
 origin_circuit_t *
-circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
+circuit_find_to_cannibalize(uint8_t purpose_to_produce, extend_info_t *info,
                             int flags)
 {
   origin_circuit_t *best=NULL;
@@ -1733,29 +1768,46 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   int need_capacity = (flags & CIRCLAUNCH_NEED_CAPACITY) != 0;
   int internal = (flags & CIRCLAUNCH_IS_INTERNAL) != 0;
   const or_options_t *options = get_options();
+  /* We want the circuit we are trying to cannibalize to have this purpose */
+  int purpose_to_search_for;
 
   /* Make sure we're not trying to create a onehop circ by
    * cannibalization. */
   tor_assert(!(flags & CIRCLAUNCH_ONEHOP_TUNNEL));
 
+  purpose_to_search_for = get_circuit_purpose_needed_to_cannibalize(
+                                                  purpose_to_produce);
+
+  tor_assert_nonfatal(purpose_to_search_for == CIRCUIT_PURPOSE_C_GENERAL ||
+                      purpose_to_search_for == CIRCUIT_PURPOSE_HS_VANGUARDS);
+
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
             "capacity %d, internal %d",
-            purpose, need_uptime, need_capacity, internal);
+            purpose_to_produce, need_uptime, need_capacity, internal);
 
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ_) {
     if (CIRCUIT_IS_ORIGIN(circ_) &&
         circ_->state == CIRCUIT_STATE_OPEN &&
         !circ_->marked_for_close &&
-        circ_->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+        circ_->purpose == purpose_to_search_for &&
         !circ_->timestamp_dirty) {
       origin_circuit_t *circ = TO_ORIGIN_CIRCUIT(circ_);
+
+      /* Only cannibalize from reasonable length circuits. If we
+       * want C_GENERAL, then only choose 3 hop circs. If we want
+       * HS_VANGUARDS, only choose 4 hop circs.
+       */
+      if (circ->build_state->desired_path_len !=
+          route_len_for_purpose(purpose_to_search_for, NULL)) {
+        goto next;
+      }
+
       if ((!need_uptime || circ->build_state->need_uptime) &&
           (!need_capacity || circ->build_state->need_capacity) &&
           (internal == circ->build_state->is_internal) &&
           !circ->unusable_for_new_conns &&
           circ->remaining_relay_early_cells &&
-          circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN &&
           !circ->build_state->onehop_tunnel &&
           !circ->isolation_values_set) {
         if (info) {

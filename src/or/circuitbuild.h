@@ -12,6 +12,7 @@
 #ifndef TOR_CIRCUITBUILD_H
 #define TOR_CIRCUITBUILD_H
 
+int route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei);
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
 char *circuit_list_path_for_controller(origin_circuit_t *circ);
 void circuit_log_path(int severity, unsigned int domain,

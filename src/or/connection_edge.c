@@ -2592,6 +2592,8 @@ connection_ap_supports_optimistic_data(const entry_connection_t *conn)
   if (edge_conn->on_circuit == NULL ||
       edge_conn->on_circuit->state != CIRCUIT_STATE_OPEN ||
       (edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL &&
+       edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_HSDIR_GET &&
+       edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_S_HSDIR_POST &&
        edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_REND_JOINED))
     return 0;
 
