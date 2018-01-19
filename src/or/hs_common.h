@@ -166,6 +166,8 @@ void hs_cleanup_circ(circuit_t *circ);
 int hs_check_service_private_dir(const char *username, const char *path,
                                  unsigned int dir_group_readable,
                                  unsigned int create);
+int hs_get_service_max_rend_failures(void);
+
 char *hs_path_from_filename(const char *directory, const char *filename);
 void hs_build_address(const ed25519_public_key_t *key, uint8_t version,
                       char *addr_out);
