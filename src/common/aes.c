@@ -18,6 +18,7 @@
 
 #include <openssl/opensslv.h>
 #include "crypto.h"
+#include "crypto_openssl_mgt.h"
 
 #if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
 #error "We require OpenSSL >= 1.0.0"

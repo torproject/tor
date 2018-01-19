@@ -8,7 +8,7 @@
 #define TOR_COMPAT_OPENSSL_H
 
 #include <openssl/opensslv.h>
-
+#include "crypto_openssl_mgt.h"
 /**
  * \file compat_openssl.h
  *
