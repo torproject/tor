@@ -111,13 +111,21 @@ struct rend_service_port_config_s {
 /** How many seconds should we spend trying to connect to a requested
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
+/* Default, minimum and maximum values for the maximum rendezvous failures
+ * consensus parameter. */
+#define MAX_REND_FAILURES_DEFAULT 2
+#define MAX_REND_FAILURES_MIN 1
+#define MAX_REND_FAILURES_MAX 10
 
 /** How many times will a hidden service operator attempt to connect to
  * a requested rendezvous point before giving up? */
 static int
 get_max_rend_failures(void)
 {
-  return 1;
+  return networkstatus_get_param(NULL, "hs_service_max_rdv_failures",
+                                 MAX_REND_FAILURES_DEFAULT,
+                                 MAX_REND_FAILURES_MIN,
+                                 MAX_REND_FAILURES_MAX);
 }
 
 /* Hidden service directory file names:
