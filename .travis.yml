@@ -1,8 +1,10 @@
 language: c
 
-compiler:
-  - gcc
-  - clang
+## Comment out the compiler list for now to allow an explicit build
+## matrix.
+# compiler:
+#   - gcc
+#   - clang
 
 notifications:
   irc:
@@ -28,6 +30,10 @@ dist: trusty
 
 ## We don't need sudo. (The "apt:" stanza after this allows us to not need sudo;
 ## otherwise, we would need it for getting dependencies.)
+##
+## We override this in the explicit build matrix to work around a
+## Travis CI environment regression
+## https://github.com/travis-ci/travis-ci/issues/9033
 sudo: false
 
 ## (Linux only) Download our dependencies
@@ -60,6 +66,18 @@ matrix:
   ## fails, but building with Rust and GCC is still going), then cancel the
   ## entire job early and call the whole thing a failure.
   fast_finish: true
+
+  ## Create explicit matrix entries to work around a Travis CI
+  ## environment issue.  Missing keys inherit from the first list
+  ## entry under that key outside the "include" clause.
+  include:
+    - compiler: gcc
+    ## The "sudo: required" forces non-containerized builds, working
+    ## around a Travis CI environment issue: clang LeakAnalyzer fails
+    ## because it requires ptrace and the containerized environment no
+    ## longer allows ptrace.
+    - compiler: clang
+      sudo: required
 
 before_install:
   ## If we're on OSX, homebrew usually needs to updated first
