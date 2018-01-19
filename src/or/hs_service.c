@@ -11,6 +11,7 @@
 #include "rendservice.h"
 #include "circuitlist.h"
 #include "circpathbias.h"
+#include "networkstatus.h"
 
 #include "hs_intropoint.h"
 #include "hs_service.h"
