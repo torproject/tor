@@ -3016,9 +3016,15 @@ exit_function(void)
 #else
 #define UNIX_ONLY 1
 #endif
+
 static struct {
+  /** A numeric code for this signal. Must match the signal value if
+   * try_to_register is true. */
   int signal_value;
+  /** True if we should try to register this signal with libevent and catch
+   * corresponding posix signals. False otherwise. */
   int try_to_register;
+  /** Pointer to hold the event object constructed for this signal. */
   struct event *signal_event;
 } signal_handlers[] = {
 #ifdef SIGINT
@@ -3052,7 +3058,8 @@ static struct {
   { -1, -1, NULL }
 };
 
-/** Set up the signal handlers for this process. */
+/** Set up the signal handler events for this process, and register them
+ * with libevent if appropriate. */
 void
 handle_signals(void)
 {
@@ -3060,6 +3067,11 @@ handle_signals(void)
   const int enabled = !get_options()->DisableSignalHandlers;
 
   for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
+    /* Signal handlers are only registered with libevent if they need to catch
+     * real POSIX signals.  We construct these signal handler events in either
+     * case, though, so that controllers can activate them with the SIGNAL
+     * command.
+     */
     if (enabled && signal_handlers[i].try_to_register) {
       signal_handlers[i].signal_event =
         tor_evsignal_new(tor_libevent_get_base(),
@@ -3079,7 +3091,7 @@ handle_signals(void)
   }
 }
 
-/* Make sure the signal handler for signal_num will be called. */
+/* Cause the signal handler for signal_num to be called in the event loop. */
 void
 activate_signal(int signal_num)
 {
