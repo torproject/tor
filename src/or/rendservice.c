@@ -2159,7 +2159,8 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
 
   /* Launch a circuit to the client's chosen rendezvous point.
    */
-  for (i=0;i<MAX_REND_FAILURES;i++) {
+  int max_rend_failures=hs_get_service_max_rend_failures();
+  for (i=0;i<max_rend_failures;i++) {
     int flags = CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_IS_INTERNAL;
     if (circ_needs_uptime) flags |= CIRCLAUNCH_NEED_UPTIME;
     /* A Single Onion Service only uses a direct connection if its
@@ -3067,8 +3068,13 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   }
   oldcirc->hs_service_side_rend_circ_has_been_relaunched = 1;
 
+  /* We check failure_count >= hs_get_service_max_rend_failures()-1 below, and
+   * the -1 is because we increment the failure count for our current failure
+   * *after* this clause. */
+  int max_rend_failures = hs_get_service_max_rend_failures() - 1;
+
   if (!oldcirc->build_state ||
-      oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
+      oldcirc->build_state->failure_count >= max_rend_failures ||
       oldcirc->build_state->expiry_time < time(NULL)) {
     log_info(LD_REND,
              "Attempt to build circuit to %s for rendezvous has failed "
