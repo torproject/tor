@@ -3348,7 +3348,7 @@ crypto_global_cleanup(void)
   }
 #endif /* !defined(NEW_THREAD_API) */
 
-  free_openssl();
+  crypto_openssl_free_all();
   return 0;
 }
 

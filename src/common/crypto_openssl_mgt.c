@@ -14,15 +14,22 @@
 
 #ifndef NEW_THREAD_API
 /** A number of preallocated mutexes for use by OpenSSL. */
-tor_mutex_t **openssl_mutexes_ = NULL;
+static tor_mutex_t **openssl_mutexes_ = NULL;
 /** How many mutexes have we allocated for use by OpenSSL? */
-int n_openssl_mutexes_ = 0;
+static int n_openssl_mutexes_ = 0;
 #endif /* !defined(NEW_THREAD_API) */
+
+/** Declare STATIC functions */
+STATIC char * parse_openssl_version_str(const char *raw_version);
+#ifndef NEW_THREAD_API
+STATIC void openssl_locking_cb_(int mode, int n, const char *file, int line);
+STATIC void tor_set_openssl_thread_id(CRYPTO_THREADID *threadid);
+#endif
 
 /* Returns a trimmed and human-readable version of an openssl version string
 * <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10
 * May 2012' and this will parse them into a form similar to '1.0.0b' */
-char *
+STATIC char *
 parse_openssl_version_str(const char *raw_version)
 {
   const char *end_of_version = NULL;
@@ -72,7 +79,7 @@ crypto_openssl_get_header_version_str(void)
 
 #ifndef NEW_THREAD_API
 /** Helper: OpenSSL uses this callback to manipulate mutexes. */
-void
+STATIC void
 openssl_locking_cb_(int mode, int n, const char *file, int line)
 {
   (void)file;
@@ -88,7 +95,7 @@ openssl_locking_cb_(int mode, int n, const char *file, int line)
     tor_mutex_release(openssl_mutexes_[n]);
 }
 
-void
+STATIC void
 tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
 {
   CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
@@ -115,7 +122,7 @@ setup_openssl_threading(void)
 
 /** free OpenSSL variables */
 void
-free_openssl(void)
+crypto_openssl_free_all(void)
 {
   tor_free(crypto_openssl_version_str);
   tor_free(crypto_openssl_header_version_str);

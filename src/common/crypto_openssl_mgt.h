@@ -86,23 +86,15 @@ ENABLE_GCC_WARNING(redundant-decls)
 #define NEW_THREAD_API
 #endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && ... */
 
-tor_mutex_t **openssl_mutexes_;
-int n_openssl_mutexes_;
-
 /* global openssl state */
 const char * crypto_openssl_get_version_str(void);
 const char * crypto_openssl_get_header_version_str(void);
-
-/* generics OpenSSL functions */
-char * parse_openssl_version_str(const char *raw_version);
-void openssl_locking_cb_(int mode, int n, const char *file, int line);
-void tor_set_openssl_thread_id(CRYPTO_THREADID *threadid);
 
 /* OpenSSL threading setup function */
 int setup_openssl_threading(void);
 
 /* Tor OpenSSL utility functions */
-void free_openssl(void);
+void crypto_openssl_free_all(void);
 
 #endif /* !defined(TOR_CRYPTO_OPENSSL_H) */
 
