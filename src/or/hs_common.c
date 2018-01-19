@@ -210,7 +210,7 @@ hs_check_service_private_dir(const char *username, const char *path,
   return 0;
 }
 
-/* Default, minimum and maximum values for the maximum rendezvous failures
+/* Default, minimum, and maximum values for the maximum rendezvous failures
  * consensus parameter. */
 #define MAX_REND_FAILURES_DEFAULT 2
 #define MAX_REND_FAILURES_MIN 1
