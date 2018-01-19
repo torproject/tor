@@ -210,6 +210,23 @@ hs_check_service_private_dir(const char *username, const char *path,
   return 0;
 }
 
+/* Default, minimum and maximum values for the maximum rendezvous failures
+ * consensus parameter. */
+#define MAX_REND_FAILURES_DEFAULT 2
+#define MAX_REND_FAILURES_MIN 1
+#define MAX_REND_FAILURES_MAX 10
+
+/** How many times will a hidden service operator attempt to connect to
+ * a requested rendezvous point before giving up? */
+int
+hs_get_service_max_rend_failures(void)
+{
+  return networkstatus_get_param(NULL, "hs_service_max_rdv_failures",
+                                 MAX_REND_FAILURES_DEFAULT,
+                                 MAX_REND_FAILURES_MIN,
+                                 MAX_REND_FAILURES_MAX);
+}
+
 /** Get the default HS time period length in minutes from the consensus. */
 STATIC uint64_t
 get_time_period_length(void)
