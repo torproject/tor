@@ -3222,7 +3222,12 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
                "circuit, but we already have enough. Redefining purpose to "
                "general; leaving as internal.");
 
-      circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_C_GENERAL);
+      if (circuit_should_use_vanguards(TO_CIRCUIT(circuit)->purpose)) {
+        circuit_change_purpose(TO_CIRCUIT(circuit),
+                CIRCUIT_PURPOSE_HS_VANGUARDS);
+      } else {
+        circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_C_GENERAL);
+      }
 
       {
         rend_data_free(circuit->rend_data);

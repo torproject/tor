@@ -134,6 +134,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
   }
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+      purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
+      purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
       purpose == CIRCUIT_PURPOSE_HS_VANGUARDS ||
       purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
     if (circ->timestamp_dirty &&
