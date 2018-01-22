@@ -29,6 +29,21 @@
 #include "crypto_ed25519.h"
 #include "crypto_format.h"
 
+DISABLE_GCC_WARNING(redundant-decls)
+
+#include <openssl/err.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/evp.h>
+#include <openssl/engine.h>
+#include <openssl/rand.h>
+#include <openssl/bn.h>
+#include <openssl/dh.h>
+#include <openssl/conf.h>
+#include <openssl/hmac.h>
+
+ENABLE_GCC_WARNING(redundant-decls)
+
 #if __GNUC__ && GCC_VERSION >= 402
 #if GCC_VERSION >= 406
 #pragma GCC diagnostic pop

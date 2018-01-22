@@ -18,21 +18,6 @@
 
 #include <openssl/engine.h>
 
-DISABLE_GCC_WARNING(redundant-decls)
-
-#include <openssl/err.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/evp.h>
-#include <openssl/engine.h>
-#include <openssl/rand.h>
-#include <openssl/bn.h>
-#include <openssl/dh.h>
-#include <openssl/conf.h>
-#include <openssl/hmac.h>
-
-ENABLE_GCC_WARNING(redundant-decls)
-
 /*
   Macro to create an arbitrary OpenSSL version number as used by
   OPENSSL_VERSION_NUMBER or SSLeay(), since the actual numbers are a bit hard

@@ -12,6 +12,21 @@
 
 #include "crypto_openssl_mgt.h"
 
+DISABLE_GCC_WARNING(redundant-decls)
+
+#include <openssl/err.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/evp.h>
+#include <openssl/engine.h>
+#include <openssl/rand.h>
+#include <openssl/bn.h>
+#include <openssl/dh.h>
+#include <openssl/conf.h>
+#include <openssl/hmac.h>
+
+ENABLE_GCC_WARNING(redundant-decls)
+
 #ifndef NEW_THREAD_API
 /** A number of preallocated mutexes for use by OpenSSL. */
 static tor_mutex_t **openssl_mutexes_ = NULL;
