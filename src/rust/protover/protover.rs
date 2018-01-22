@@ -243,11 +243,11 @@ fn contains_only_supported_protocols(proto_entry: &str) -> bool {
         Err("Too many versions to expand") => {
             tor_log_msg!(
                 LogSeverity::Warn,
-                LogDomain::LdNet,
+                LogDomain::Net,
                 "get_versions",
-                "When expanding a protocol list from an authority, I
-                got too many protocols. This is possibly an attack or a bug,
-                unless the Tor network truly has expanded to support over {}
+                "When expanding a protocol list from an authority, I \
+                got too many protocols. This is possibly an attack or a bug, \
+                unless the Tor network truly has expanded to support over {} \
                 different subprotocol versions. The offending string was: {}",
                 MAX_PROTOCOLS_TO_EXPAND,
                 proto_entry

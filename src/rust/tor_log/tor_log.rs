@@ -9,8 +9,8 @@
 /// general messages can use LdGeneral.
 #[derive(Eq, PartialEq)]
 pub enum LogDomain {
-    LdNet,
-    LdGeneral,
+    Net,
+    General,
 }
 
 /// The severity level at which to log messages.
@@ -98,33 +98,35 @@ pub mod log {
     /// C_RUST_COUPLED: src/common/log.c, log domain types
     extern "C" {
         #[no_mangle]
-        static _LOG_WARN: c_int;
-        static _LOG_NOTICE: c_int;
+        static LOG_WARN_: c_int;
+        static LOG_NOTICE_: c_int;
     }
 
     /// Domain log types. These mirror definitions in /src/common/torlog.h
     /// C_RUST_COUPLED: src/common/log.c, log severity types
     extern "C" {
         #[no_mangle]
-        static _LD_NET: u32;
-        static _LD_GENERAL: u32;
+        static LD_NET_: u32;
+        static LD_GENERAL_: u32;
     }
 
     /// Translate Rust defintions of log domain levels to C. This exposes a 1:1
     /// mapping between types.
+    #[inline]
     pub unsafe fn translate_domain(domain: LogDomain) -> u32 {
         match domain {
-            LogDomain::LdNet => _LD_NET,
-            LogDomain::LdGeneral => _LD_GENERAL,
+            LogDomain::Net => LD_NET_,
+            LogDomain::General => LD_GENERAL_,
         }
     }
 
     /// Translate Rust defintions of log severity levels to C. This exposes a
     /// 1:1 mapping between types.
+    #[inline]
     pub unsafe fn translate_severity(severity: LogSeverity) -> c_int {
         match severity {
-            LogSeverity::Warn => _LOG_WARN,
-            LogSeverity::Notice => _LOG_NOTICE,
+            LogSeverity::Warn => LOG_WARN_,
+            LogSeverity::Notice => LOG_NOTICE_,
         }
     }
 
@@ -194,7 +196,7 @@ mod test {
             fn test_macro() {
                 tor_log_msg!(
                     LogSeverity::Warn,
-                    LogDomain::LdNet,
+                    LogDomain::Net,
                     "test_macro",
                     "test log message {}",
                     "a",
@@ -210,11 +212,12 @@ mod test {
             assert_eq!("test log message a", *message);
         }
 
+        // test multiple inputs into the log message
         {
             fn test_macro() {
                 tor_log_msg!(
                     LogSeverity::Warn,
-                    LogDomain::LdNet,
+                    LogDomain::Net,
                     "next_test_macro",
                     "test log message {} {} {} {} {}",
                     1,
@@ -232,6 +235,38 @@ mod test {
 
             let message = unsafe { Box::from_raw(LAST_LOGGED_MESSAGE) };
             assert_eq!("test log message 1 2 3 4 5", *message);
+        }
+
+        // test how a long log message will be formatted
+        {
+            fn test_macro() {
+                tor_log_msg!(
+                    LogSeverity::Warn,
+                    LogDomain::Net,
+                    "test_macro",
+                    "{}",
+                    "All the world's a stage, and all the men and women \
+                    merely players: they have their exits and their \
+                    entrances; and one man in his time plays many parts, his \
+                    acts being seven ages."
+                );
+            }
+
+            test_macro();
+
+            let expected_string = "All the world's a \
+                stage, and all the men \
+                and women merely players: \
+                they have their exits and \
+                their entrances; and one man \
+                in his time plays many parts, \
+                his acts being seven ages.";
+
+            let function = unsafe { Box::from_raw(LAST_LOGGED_FUNCTION) };
+            assert_eq!("test_macro", *function);
+
+            let message = unsafe { Box::from_raw(LAST_LOGGED_MESSAGE) };
+            assert_eq!(expected_string, *message);
         }
     }
 }

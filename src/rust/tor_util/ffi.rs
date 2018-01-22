@@ -16,10 +16,10 @@ use tor_log::{LogSeverity, LogDomain};
 /// tor_free(rust_str);
 /// ```
 #[no_mangle]
-pub extern "C" fn rust_welcome_string() {
+pub extern "C" fn rust_log_welcome_string() {
     tor_log_msg!(
         LogSeverity::Notice,
-        LogDomain::LdGeneral,
+        LogDomain::General,
         "rust_welcome_string",
         "Tor is running with Rust integration. Please report \
         any bugs you encounter."

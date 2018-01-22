@@ -36,10 +36,10 @@
  *
  * C_RUST_COUPLED src/rust/tor_log LogSeverity, LogDomain
  */
-extern const int _LOG_WARN;
-extern const int _LOG_NOTICE;
-extern const log_domain_mask_t _LD_NET;
-extern const log_domain_mask_t _LD_GENERAL;
+extern const int LOG_WARN_;
+extern const int LOG_NOTICE_;
+extern const log_domain_mask_t LD_NET_;
+extern const log_domain_mask_t LD_GENERAL_;
 
 /** Debug-level severity: for hyper-verbose messages of no interest to
  * anybody but developers. */

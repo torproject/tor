@@ -54,10 +54,10 @@
 
 /** Defining compile-time constants for Tor log levels (used by the Rust
  * log wrapper at src/rust/tor_log) */
-const int _LOG_WARN = LOG_WARN;
-const int _LOG_NOTICE = LOG_NOTICE;
-const log_domain_mask_t _LD_GENERAL = LD_GENERAL;
-const log_domain_mask_t _LD_NET = LD_NET;
+const int LOG_WARN_ = LOG_WARN;
+const int LOG_NOTICE_ = LOG_NOTICE;
+const log_domain_mask_t LD_GENERAL_ = LD_GENERAL;
+const log_domain_mask_t LD_NET_ = LD_NET;
 
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
