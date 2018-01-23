@@ -27,6 +27,8 @@
 #include "hibernate.h"
 #include "rephist.h"
 #include "statefile.h"
+#include "hs_stats.h"
+#include "hs_service.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
 #include "geoip.h"
@@ -83,6 +85,26 @@ bytes_to_usage(uint64_t bytes)
   }
 
   return bw_string;
+}
+
+/** Log some usage info about our hidden service */
+static void
+log_onion_service_stats(void)
+{
+  unsigned int num_services = hs_service_get_num_services();
+
+  /* If there are no active hidden services, no need to print logs */
+  if (num_services == 0) {
+    return;
+  }
+
+  log_notice(LD_HEARTBEAT,
+             "Our hidden service%s received %u v2 and %u v3 INTRODUCE2 cells "
+             "and attempted to launch %d rendezvous circuits.",
+             num_services == 1 ? "" : "s",
+             hs_stats_get_n_introduce2_v2_cells(),
+             hs_stats_get_n_introduce2_v3_cells(),
+             hs_stats_get_n_rendezvous_launches());
 }
 
 /** Log a "heartbeat" message describing Tor's status and history so that the
@@ -170,6 +192,9 @@ log_heartbeat(time_t now)
          U64_PRINTF_ARG(main_loop_error_count),
          U64_PRINTF_ARG(main_loop_idle_count));
   }
+
+  /** Now, if we are an HS service, log some stats about our usage */
+  log_onion_service_stats();
 
   tor_free(uptime);
   tor_free(bw_sent);
