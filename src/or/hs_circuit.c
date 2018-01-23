@@ -824,7 +824,11 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
     /* Cleaning up the hidden service identifier and repurpose. */
     hs_ident_circuit_free(circ->hs_ident);
     circ->hs_ident = NULL;
-    circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_GENERAL);
+    if (circuit_should_use_vanguards(TO_CIRCUIT(circ)->purpose))
+      circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_HS_VANGUARDS);
+    else
+      circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_GENERAL);
+
     /* Inform that this circuit just opened for this new purpose. */
     circuit_has_opened(circ);
     /* This return value indicate to the caller that the IP object should be
