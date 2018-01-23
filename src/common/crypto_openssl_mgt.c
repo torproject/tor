@@ -64,7 +64,7 @@ parse_openssl_version_str(const char *raw_version)
     return tor_strdup(raw_version);
 }
 
-char *crypto_openssl_version_str = NULL;
+static char *crypto_openssl_version_str = NULL;
 /* Return a human-readable version of the run-time openssl version number. */
 const char *
 crypto_openssl_get_version_str(void)
@@ -76,7 +76,7 @@ crypto_openssl_get_version_str(void)
   return crypto_openssl_version_str;
 }
 
-char *crypto_openssl_header_version_str = NULL;
+static char *crypto_openssl_header_version_str = NULL;
 /* Return a human-readable version of the compile-time openssl version
 * number. */
 const char *
