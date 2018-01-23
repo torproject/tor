@@ -45,6 +45,7 @@
 #include "hs_client.h"
 #include "hs_circuit.h"
 #include "hs_ident.h"
+#include "hs_stats.h"
 #include "nodelist.h"
 #include "networkstatus.h"
 #include "policies.h"
@@ -2025,6 +2026,11 @@ circuit_launch_by_extend_info(uint8_t purpose,
   int onehop_tunnel = (flags & CIRCLAUNCH_ONEHOP_TUNNEL) != 0;
   int have_path = have_enough_path_info(! (flags & CIRCLAUNCH_IS_INTERNAL) );
   int need_specific_rp = 0;
+
+  /* Keep some stats about our attempts to launch HS rendezvous circuits */
+  if (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
+    hs_stats_note_service_rendezvous_launch();
+  }
 
   if (!onehop_tunnel && (!router_have_minimum_dir_info() || !have_path)) {
     log_debug(LD_CIRC,"Haven't %s yet; canceling "

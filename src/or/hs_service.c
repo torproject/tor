@@ -36,6 +36,7 @@
 #include "hs_ident.h"
 #include "hs_intropoint.h"
 #include "hs_service.h"
+#include "hs_stats.h"
 
 /* Trunnel */
 #include "ed25519_cert.h"
@@ -3304,8 +3305,10 @@ hs_service_receive_introduce2(origin_circuit_t *circ, const uint8_t *payload,
 
   if (circ->hs_ident) {
     ret = service_handle_introduce2(circ, payload, payload_len);
+    hs_stats_note_introduce2_cell(1);
   } else {
     ret = rend_service_receive_introduction(circ, payload, payload_len);
+    hs_stats_note_introduce2_cell(0);
   }
 
  done:
