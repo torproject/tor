@@ -143,5 +143,19 @@ crypto_openssl_free_all(void)
 {
   tor_free(crypto_openssl_version_str);
   tor_free(crypto_openssl_header_version_str);
+
+#ifndef NEW_THREAD_API
+  if (n_openssl_mutexes_) {
+    int n = n_openssl_mutexes_;
+    tor_mutex_t **ms = openssl_mutexes_;
+    int i;
+    openssl_mutexes_ = NULL;
+    n_openssl_mutexes_ = 0;
+    for (i=0;i<n;++i) {
+      tor_mutex_free(ms[i]);
+    }
+    tor_free(ms);
+  }
+#endif /* !defined(NEW_THREAD_API) */
 }
 

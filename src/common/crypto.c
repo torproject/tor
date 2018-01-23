@@ -3352,20 +3352,6 @@ crypto_global_cleanup(void)
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
 
-#ifndef NEW_THREAD_API
-  if (n_openssl_mutexes_) {
-    int n = n_openssl_mutexes_;
-    tor_mutex_t **ms = openssl_mutexes_;
-    int i;
-    openssl_mutexes_ = NULL;
-    n_openssl_mutexes_ = 0;
-    for (i=0;i<n;++i) {
-      tor_mutex_free(ms[i]);
-    }
-    tor_free(ms);
-  }
-#endif /* !defined(NEW_THREAD_API) */
-
   crypto_openssl_free_all();
 
   crypto_early_initialized_ = 0;
