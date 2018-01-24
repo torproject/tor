@@ -2299,6 +2299,9 @@ typedef struct {
    * this routerinfo. Used only during voting. */
   unsigned int omit_from_vote:1;
 
+  /** Flags to summarize the protocol versions for this routerinfo_t. */
+  protover_summary_flags_t pv;
+
 /** Tor can use this router for general positions in circuits; we got it
  * from a directory server as usual, or we're an authority and a server
  * uploaded it. */

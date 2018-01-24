@@ -379,6 +379,10 @@ static int check_signature_token(const char *digest,
                                  int flags,
                                  const char *doctype);
 
+static void summarize_protover_flags(protover_summary_flags_t *out,
+                                     const char *protocols,
+                                     const char *version);
+
 #undef DEBUG_AREA_ALLOC
 
 #ifdef DEBUG_AREA_ALLOC
@@ -1895,12 +1899,19 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if ((tok = find_opt_by_keyword(tokens, K_PLATFORM))) {
-    router->platform = tor_strdup(tok->args[0]);
-  }
+  {
+    const char *version = NULL, *protocols = NULL;
+    if ((tok = find_opt_by_keyword(tokens, K_PLATFORM))) {
+      router->platform = tor_strdup(tok->args[0]);
+      version = tok->args[0];
+    }
 
-  if ((tok = find_opt_by_keyword(tokens, K_PROTO))) {
-    router->protocol_list = tor_strdup(tok->args[0]);
+    if ((tok = find_opt_by_keyword(tokens, K_PROTO))) {
+      router->protocol_list = tor_strdup(tok->args[0]);
+      protocols = tok->args[0];
+    }
+
+    summarize_protover_flags(&router->pv, protocols, version);
   }
 
   if ((tok = find_opt_by_keyword(tokens, K_CONTACT))) {
