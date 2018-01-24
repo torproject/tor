@@ -98,6 +98,13 @@ typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
 typedef struct crypto_dh_t crypto_dh_t;
 
+#define DIGEST_CHECKPOINT_BYTES (SIZEOF_VOID_P + SIZEOF_SHA_CTX)
+/** Structure used to temporarily save the a digest object. Only implemented
+ * for SHA1 digest for now. */
+typedef struct crypto_digest_checkpoint_t {
+  uint8_t mem[DIGEST_CHECKPOINT_BYTES];
+} crypto_digest_checkpoint_t;
+
 /* global state */
 int crypto_early_init(void) ATTR_WUR;
 int crypto_global_init(int hardwareAccel,
@@ -235,6 +242,10 @@ void crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
 void crypto_digest_get_digest(crypto_digest_t *digest,
                               char *out, size_t out_len);
 crypto_digest_t *crypto_digest_dup(const crypto_digest_t *digest);
+void crypto_digest_checkpoint(crypto_digest_checkpoint_t *checkpoint,
+                              const crypto_digest_t *digest);
+void crypto_digest_restore(crypto_digest_t *digest,
+                           const crypto_digest_checkpoint_t *checkpoint);
 void crypto_digest_assign(crypto_digest_t *into,
                           const crypto_digest_t *from);
 void crypto_hmac_sha256(char *hmac_out,

@@ -834,6 +834,10 @@ AC_CHECK_MEMBERS([SSL.state], , ,
 [#include <openssl/ssl.h>
 ])
 
+AC_CHECK_SIZEOF(SHA_CTX, , [AC_INCLUDES_DEFAULT()
+#include <openssl/sha.h>
+])
+
 dnl Define the set of checks for KIST scheduler support.
 AC_DEFUN([CHECK_KIST_SUPPORT],[
   dnl KIST needs struct tcp_info and for certain members to exist.

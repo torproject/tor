@@ -1822,6 +1822,7 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
   /* Gives the length of crypto_digest_t through the end of the field 'd' */
 #define END_OF_FIELD(f) (offsetof(crypto_digest_t, f) + \
                          STRUCT_FIELD_SIZE(crypto_digest_t, f))
+
   switch (alg) {
     case DIGEST_SHA1:
       return END_OF_FIELD(d.sha1);
@@ -2005,6 +2006,33 @@ crypto_digest_dup(const crypto_digest_t *digest)
   tor_assert(digest);
   const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
   return tor_memdup(digest, alloc_bytes);
+}
+
+/** Temporarily save the state of <b>digest</b> in <b>checkpoint</b>.
+ * Asserts that <b>digest</b> is a SHA1 digest object.
+ */
+void
+crypto_digest_checkpoint(crypto_digest_checkpoint_t *checkpoint,
+                         const crypto_digest_t *digest)
+{
+  tor_assert(digest->algorithm == DIGEST_SHA1);
+  /* The optimizer should turn this into a constant... */
+  const size_t bytes = crypto_digest_alloc_bytes(DIGEST_SHA1);
+  /* ... and remove this assertion entirely. */
+  tor_assert(bytes <= sizeof(checkpoint->mem));
+  memcpy(checkpoint->mem, digest, bytes);
+}
+
+/** Restore the state of  <b>digest</b> from <b>checkpoint</b>.
+ * Asserts that <b>digest</b> is a SHA1 digest object. Requires that the
+ * state was previously stored with crypto_digest_checkpoint() */
+void
+crypto_digest_restore(crypto_digest_t *digest,
+                      const crypto_digest_checkpoint_t *checkpoint)
+{
+  tor_assert(digest->algorithm == DIGEST_SHA1);
+  const size_t bytes = crypto_digest_alloc_bytes(DIGEST_SHA1);
+  memcpy(digest, checkpoint->mem, bytes);
 }
 
 /** Replace the state of the digest object <b>into</b> with the state
