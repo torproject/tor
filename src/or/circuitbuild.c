@@ -1095,7 +1095,7 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
     clear_broken_connection_map(1);
     if (server_mode(options) && !check_whether_orport_reachable(options)) {
       inform_testing_reachability();
-      consider_testing_reachability(1, 1);
+      router_do_reachability_checks(1, 1);
     }
   }
 
@@ -1651,7 +1651,7 @@ onionskin_answer(or_circuit_t *circ,
  *     rend_service_launch_establish_intro())
  *
  *   - We are a router testing its own reachabiity
- *     (CIRCUIT_PURPOSE_TESTING, via consider_testing_reachability())
+ *     (CIRCUIT_PURPOSE_TESTING, via router_do_reachability_checks())
  *
  * onion_pick_cpath_exit() bypasses us (by not calling
  * new_route_len()) in the one-hop tunnel case, so we don't need to

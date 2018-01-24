@@ -1142,7 +1142,7 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 
   if (server_mode(options) && !net_is_disabled() && !from_cache &&
       (have_completed_a_circuit() || !any_predicted_circuits(now)))
-    consider_testing_reachability(1, 1);
+   router_do_reachability_checks(1, 1);
 }
 
 /** Perform regular maintenance tasks for a single connection.  This
@@ -2062,7 +2062,7 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
       (have_completed_a_circuit() || !any_predicted_circuits(now)) &&
       !net_is_disabled()) {
     if (stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
-      consider_testing_reachability(1, dirport_reachability_count==0);
+      router_do_reachability_checks(1, dirport_reachability_count==0);
       if (++dirport_reachability_count > 5)
         dirport_reachability_count = 0;
       return 1;
