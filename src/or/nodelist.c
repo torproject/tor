@@ -959,6 +959,30 @@ node_ed25519_id_matches(const node_t *node, const ed25519_public_key_t *id)
   }
 }
 
+/** Dummy object that should be unreturnable.  Used to ensure that
+ * node_get_protover_summary_flags() always returns non-NULL. */
+static const protover_summary_flags_t zero_protover_flags = {
+  0,0,0,0,0,0,0
+};
+
+/** Return the protover_summary_flags for a given node. */
+static const protover_summary_flags_t *
+node_get_protover_summary_flags(const node_t *node)
+{
+  if (node->rs) {
+    return &node->rs->pv;
+  } else if (node->ri) {
+    return &node->ri->pv;
+  } else {
+    /* This should be impossible: every node should have a routerstatus or a
+     * router descriptor or both. But just in case we've messed up somehow,
+     * return a nice empty set of flags to indicate "this node supports
+     * nothing." */
+    tor_assert_nonfatal_unreached_once();
+    return &zero_protover_flags;
+  }
+}
+
 /** Return true iff <b>node</b> supports authenticating itself
  * by ed25519 ID during the link handshake.  If <b>compatible_with_us</b>,
  * it needs to be using a link authentication method that we understand.
@@ -969,23 +993,13 @@ node_supports_ed25519_link_authentication(const node_t *node,
 {
   if (! node_get_ed25519_id(node))
     return 0;
-  if (node->ri) {
-    const char *protos = node->ri->protocol_list;
-    if (protos == NULL)
-      return 0;
-    if (compatible_with_us)
-      return protocol_list_supports_protocol(protos, PRT_LINKAUTH, 3);
-    else
-      return protocol_list_supports_protocol_or_later(protos, PRT_LINKAUTH, 3);
-  }
-  if (node->rs) {
-    if (compatible_with_us)
-      return node->rs->pv.supports_ed25519_link_handshake_compat;
-    else
-      return node->rs->pv.supports_ed25519_link_handshake_any;
-  }
-  tor_assert_nonfatal_unreached_once();
-  return 0;
+
+  const protover_summary_flags_t *pv = node_get_protover_summary_flags(node);
+
+  if (compatible_with_us)
+    return pv->supports_ed25519_link_handshake_compat;
+  else
+    return pv->supports_ed25519_link_handshake_any;
 }
 
 /** Return true iff <b>node</b> supports the hidden service directory version
@@ -995,27 +1009,7 @@ node_supports_v3_hsdir(const node_t *node)
 {
   tor_assert(node);
 
-  if (node->rs) {
-    return node->rs->pv.supports_v3_hsdir;
-  }
-  if (node->ri) {
-    if (node->ri->protocol_list == NULL) {
-      return 0;
-    }
-    /* Bug #22447 forces us to filter on tor version:
-     * If platform is a Tor version, and older than 0.3.0.8, return False.
-     * Else, obey the protocol list. */
-    if (node->ri->platform) {
-      if (!strcmpstart(node->ri->platform, "Tor ") &&
-          !tor_version_as_new_as(node->ri->platform, "0.3.0.8")) {
-        return 0;
-      }
-    }
-    return protocol_list_supports_protocol(node->ri->protocol_list,
-                                           PRT_HSDIR, PROTOVER_HSDIR_V3);
-  }
-  tor_assert_nonfatal_unreached_once();
-  return 0;
+  return node_get_protover_summary_flags(node)->supports_v3_hsdir;
 }
 
 /** Return true iff <b>node</b> supports ed25519 authentication as an hidden
@@ -1025,18 +1019,7 @@ node_supports_ed25519_hs_intro(const node_t *node)
 {
   tor_assert(node);
 
-  if (node->rs) {
-    return node->rs->pv.supports_ed25519_hs_intro;
-  }
-  if (node->ri) {
-    if (node->ri->protocol_list == NULL) {
-      return 0;
-    }
-    return protocol_list_supports_protocol(node->ri->protocol_list,
-                                           PRT_HSINTRO, PROTOVER_HS_INTRO_V3);
-  }
-  tor_assert_nonfatal_unreached_once();
-  return 0;
+  return node_get_protover_summary_flags(node)->supports_ed25519_hs_intro;
 }
 
 /** Return true iff <b>node</b> supports to be a rendezvous point for hidden
@@ -1046,19 +1029,7 @@ node_supports_v3_rendezvous_point(const node_t *node)
 {
   tor_assert(node);
 
-  if (node->rs) {
-    return node->rs->pv.supports_v3_rendezvous_point;
-  }
-  if (node->ri) {
-    if (node->ri->protocol_list == NULL) {
-      return 0;
-    }
-    return protocol_list_supports_protocol(node->ri->protocol_list,
-                                           PRT_HSREND,
-                                           PROTOVER_HS_RENDEZVOUS_POINT_V3);
-  }
-  tor_assert_nonfatal_unreached_once();
-  return 0;
+  return node_get_protover_summary_flags(node)->supports_v3_rendezvous_point;
 }
 
 /** Return the RSA ID key's SHA1 digest for the provided node. */
