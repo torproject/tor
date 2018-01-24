@@ -766,6 +766,8 @@ static int options_validate_cb(void *old_options, void *options,
                                int from_setconf, char **msg);
 static uint64_t compute_real_max_mem_in_queues(const uint64_t val,
                                                int log_guess);
+static void cleanup_protocol_warning_severity_level(void);
+static void set_protocol_warning_severity_level(int warning_severity);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -999,6 +1001,8 @@ config_free_all(void)
   tor_free(the_short_tor_version);
   tor_free(the_tor_version);
 
+  cleanup_protocol_warning_severity_level();
+
   have_parsed_cmdline = 0;
   libevent_initialized = 0;
 }
@@ -1064,17 +1068,46 @@ escaped_safe_str(const char *address)
  * The severity level that should be used for warnings of severity
  * LOG_PROTOCOL_WARN.
  *
- * We keep this outside the options, in case somebody needs to use
- * LOG_PROTOCOL_WARN while an option transition is happening.
+ * We keep this outside the options, and we use an atomic_counter_t, in case
+ * one thread needs to use LOG_PROTOCOL_WARN while an option transition is
+ * happening in the main thread.
  */
-static int protocol_warning_severity_level = LOG_WARN;
+static atomic_counter_t protocol_warning_severity_level;
 
 /** Return the severity level that should be used for warnings of severity
  * LOG_PROTOCOL_WARN. */
 int
 get_protocol_warning_severity_level(void)
 {
-  return protocol_warning_severity_level;
+  return (int) atomic_counter_get(&protocol_warning_severity_level);
+}
+
+/** Set the protocol warning severity level to <b>severity</b>. */
+static void
+set_protocol_warning_severity_level(int warning_severity)
+{
+  atomic_counter_exchange(&protocol_warning_severity_level,
+                          warning_severity);
+}
+
+/**
+ * Initialize the log warning severity level for protocol warnings. Call
+ * only once at startup.
+ */
+void
+init_protocol_warning_severity_level(void)
+{
+  atomic_counter_init(&protocol_warning_severity_level);
+  set_protocol_warning_severity_level(LOG_WARN);
+}
+
+/**
+ * Tear down protocol_warning_severity_level.
+ */
+static void
+cleanup_protocol_warning_severity_level(void)
+{
+   atomic_counter_destroy(&protocol_warning_severity_level);
 }
 
 /** List of default directory authorities */
@@ -1794,10 +1827,10 @@ options_act(const or_options_t *old_options)
       return -1;
   }
 
-  if (options->ProtocolWarnings)
-    protocol_warning_severity_level = LOG_WARN;
-  else
-    protocol_warning_severity_level = LOG_INFO;
+  {
+    int warning_severity = options->ProtocolWarnings ? LOG_WARN : LOG_INFO;
+    set_protocol_warning_severity_level(warning_severity);
+  }
 
   if (consider_adding_dir_servers(options, old_options) < 0) {
     // XXXX This should get validated earlier, and committed here, to

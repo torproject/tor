@@ -4009,6 +4009,7 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
 #endif /* defined(_WIN32) */
 
   configure_backtrace_handler(get_version());
+  init_protocol_warning_severity_level();
 
   update_approx_time(time(NULL));
   tor_threads_init();
