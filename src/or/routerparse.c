@@ -2698,19 +2698,19 @@ routerstatus_parse_entry_from_string(memarea_t *area,
   int found_protocol_list = 0;
   if ((tok = find_opt_by_keyword(tokens, K_PROTO))) {
     found_protocol_list = 1;
-    rs->protocols_known = 1;
-    rs->supports_extend2_cells =
+    rs->pv.protocols_known = 1;
+    rs->pv.supports_extend2_cells =
       protocol_list_supports_protocol(tok->args[0], PRT_RELAY, 2);
-    rs->supports_ed25519_link_handshake_compat =
+    rs->pv.supports_ed25519_link_handshake_compat =
       protocol_list_supports_protocol(tok->args[0], PRT_LINKAUTH, 3);
-    rs->supports_ed25519_link_handshake_any =
+    rs->pv.supports_ed25519_link_handshake_any =
       protocol_list_supports_protocol_or_later(tok->args[0], PRT_LINKAUTH, 3);
-    rs->supports_ed25519_hs_intro =
+    rs->pv.supports_ed25519_hs_intro =
       protocol_list_supports_protocol(tok->args[0], PRT_HSINTRO, 4);
-    rs->supports_v3_hsdir =
+    rs->pv.supports_v3_hsdir =
       protocol_list_supports_protocol(tok->args[0], PRT_HSDIR,
                                       PROTOVER_HSDIR_V3);
-    rs->supports_v3_rendezvous_point =
+    rs->pv.supports_v3_rendezvous_point =
       protocol_list_supports_protocol(tok->args[0], PRT_HSDIR,
                                       PROTOVER_HS_RENDEZVOUS_POINT_V3);
   }
@@ -2720,14 +2720,14 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       /* We only do version checks like this in the case where
        * the version is a "Tor" version, and where there is no
        * list of protocol versions that we should be looking at instead. */
-      rs->supports_extend2_cells =
+      rs->pv.supports_extend2_cells =
         tor_version_as_new_as(tok->args[0], "0.2.4.8-alpha");
-      rs->protocols_known = 1;
+      rs->pv.protocols_known = 1;
     }
     if (!strcmpstart(tok->args[0], "Tor ") && found_protocol_list) {
       /* Bug #22447 forces us to filter on this version. */
       if (!tor_version_as_new_as(tok->args[0], "0.3.0.8")) {
-        rs->supports_v3_hsdir = 0;
+        rs->pv.supports_v3_hsdir = 0;
       }
     }
     if (vote_rs) {

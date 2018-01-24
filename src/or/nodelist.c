@@ -447,7 +447,7 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
   /* Setting the HSDir index requires the ed25519 identity key which can
    * only be found either in the ri or md. This is why this is called here.
    * Only nodes supporting HSDir=2 protocol version needs this index. */
-  if (node->rs && node->rs->supports_v3_hsdir) {
+  if (node->rs && node->rs->pv.supports_v3_hsdir) {
     node_set_hsdir_index(node,
                          networkstatus_get_latest_consensus());
   }
@@ -487,7 +487,7 @@ nodelist_add_microdesc(microdesc_t *md)
     /* Setting the HSDir index requires the ed25519 identity key which can
      * only be found either in the ri or md. This is why this is called here.
      * Only nodes supporting HSDir=2 protocol version needs this index. */
-    if (rs->supports_v3_hsdir) {
+    if (rs->pv.supports_v3_hsdir) {
       node_set_hsdir_index(node, ns);
     }
     node_add_to_ed25519_map(node);
@@ -531,7 +531,7 @@ nodelist_set_consensus(networkstatus_t *ns)
       }
     }
 
-    if (rs->supports_v3_hsdir) {
+    if (rs->pv.supports_v3_hsdir) {
       node_set_hsdir_index(node, ns);
     }
     node_set_country(node);
@@ -980,9 +980,9 @@ node_supports_ed25519_link_authentication(const node_t *node,
   }
   if (node->rs) {
     if (compatible_with_us)
-      return node->rs->supports_ed25519_link_handshake_compat;
+      return node->rs->pv.supports_ed25519_link_handshake_compat;
     else
-      return node->rs->supports_ed25519_link_handshake_any;
+      return node->rs->pv.supports_ed25519_link_handshake_any;
   }
   tor_assert_nonfatal_unreached_once();
   return 0;
@@ -996,7 +996,7 @@ node_supports_v3_hsdir(const node_t *node)
   tor_assert(node);
 
   if (node->rs) {
-    return node->rs->supports_v3_hsdir;
+    return node->rs->pv.supports_v3_hsdir;
   }
   if (node->ri) {
     if (node->ri->protocol_list == NULL) {
@@ -1026,7 +1026,7 @@ node_supports_ed25519_hs_intro(const node_t *node)
   tor_assert(node);
 
   if (node->rs) {
-    return node->rs->supports_ed25519_hs_intro;
+    return node->rs->pv.supports_ed25519_hs_intro;
   }
   if (node->ri) {
     if (node->ri->protocol_list == NULL) {
@@ -1047,7 +1047,7 @@ node_supports_v3_rendezvous_point(const node_t *node)
   tor_assert(node);
 
   if (node->rs) {
-    return node->rs->supports_v3_rendezvous_point;
+    return node->rs->pv.supports_v3_rendezvous_point;
   }
   if (node->ri) {
     if (node->ri->protocol_list == NULL) {
