@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Resolve a few shadowed-variable warnings in the onion service code.
-      Fixes bug 24634; bugfix on 0.3.2.1-alpha.
