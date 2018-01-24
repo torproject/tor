@@ -1,3 +1,0 @@
-  o Documentation:
-    - Add documentation on how to build tor with Rust dependencies without
-      requiring being online.  Closes ticket 22907; bugfix on tor-0.3.0.3-alpha.

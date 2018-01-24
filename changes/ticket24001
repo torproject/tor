@@ -1,4 +1,0 @@
-  o Minor features (code correctness, descriptors):
-    - Check that microdesc ed25519 ids are non-zero in node_get_ed25519_id(),
-      before returning them.
-      Implements 24001, patch by "aruna1234".

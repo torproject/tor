@@ -1,5 +1,0 @@
-  o Major features (relay):
-    - Implement an option, ReducedExitPolicy, to allow an Tor exit relay
-      operator to use a more reasonable ("reduced") exit policy, rather 
-      than the default one. Closes ticket 13605.  Patch from Neel Chauhan.
-      

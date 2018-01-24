@@ -1,7 +1,0 @@
-  o Minor features (API, embedding):
-    - Tor can now start with a preauthenticated control connection
-      created by the process that launched it. This feature is meant
-      for use by programs that want to launch and manage a Tor process
-      without allowing other programs to manage it as well.
-      For more information, see the __OwningControllerFD option
-      documented in control-spec.txt. Closes ticket 23900.

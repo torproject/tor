@@ -1,2 +1,0 @@
-  o Minor features (logging, android):
-    - Added support for the Android logging subsystem. Closes ticket 24362.

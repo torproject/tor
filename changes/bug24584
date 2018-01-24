@@ -1,5 +1,0 @@
-  o Minor bugfixes (memory cleanup):
-    - Avoid possible at-exit memory leaks related to use of Libevent's
-      event_base_once() function. (This function tends to leak memory
-      if the event_base is closed before the event fires.) Fixes bug 24584;
-      bugfix on 0.2.8.1-alpha.

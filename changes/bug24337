@@ -1,8 +1,0 @@
-  o Minor features (defensive programming):
-    - Most of the functions in Tor that free objects have been replaced
-      with macros that free the objects and set the corresponding pointers
-      to NULL. This change should help prevent a large class of dangling
-      pointer bugs. Closes ticket 24337.
-
-    - Where possible, the tor_free() macro now only evaluates its input once.
-      Part of ticket 24337.

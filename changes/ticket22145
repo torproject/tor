@@ -1,3 +1,0 @@
-  o Documentation:
-    - Document that OutboundBindAddress doesn't apply to DNS requests.
-      Closes ticket 22145. Patch from Aruna Maurya.

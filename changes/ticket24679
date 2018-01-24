@@ -1,5 +1,0 @@
-  o Minor features (fallback directory mirrors):
-    - Remove the "weight=10" line from fallback directory mirror entries.
-      Ticket 24681 will maintain the current fallback weights by changing
-      Tor's default fallback weight to 10.
-      Implements ticket 24679.

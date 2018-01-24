@@ -1,8 +1,0 @@
-  o Major bugfixes (relays):
-    - Fix a set of false positives where relays would consider connections
-      to other relays as being client-only connections (and thus e.g.
-      deserving different link padding schemes) if those relays fell out
-      of the consensus briefly. Now we look only at the initial handshake
-      and whether the connection authenticated as a relay. Fixes bug
-      24898; bugfix on 0.3.1.1-alpha.
-

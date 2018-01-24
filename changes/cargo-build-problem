@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation, rust):
-    - Build correctly when building from outside Tor's source tree with the
-      TOR_RUST_DEPENDENCIES option set. Fixes bug 22768; bugfix on 0.3.1.7.

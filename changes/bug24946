@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden services):
-    - Fix a warning caused by differentiating hsdir circuits from general
-      circuits. Also address three similar checks in the codebase that
-      were related to reuse and rate limiting of circuits. Fixes bug 24946;
-      bugfix on 0.3.3.0-alpha-dev; not in any released version of tor.

@@ -1,4 +1,0 @@
-  o Minor bugfix (network IPv6 test):
-    - Tor test now checks if "ping -6 ::1" works when the user runs "make
-      test-network-all". Fixes bug 24677; bugfix on 0.2.9.3-alpha.
-      Patch by "ffmancera".

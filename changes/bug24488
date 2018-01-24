@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory authorities, IPv6):
-    - When creating a routerstatus (vote) from a routerinfo (descriptor),
-      set the IPv6 address to the unspecified IPv6 address, and explicitly
-      initialise the port to zero. Fixes bug 24488; bugfix on 0.2.4.1-alpha.

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Switch -Wnormalized=id to -Wnormalized=nfkc in configure.ac to avoid
-      source code identifier confusion. Closes ticket 24467.

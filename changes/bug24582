@@ -1,4 +1,0 @@
-  o Minor bugfixes (debugging, memory leaks):
-    - Fix a harmless memory leak in tor-resolve. Fixes bug 24582;
-      bugfix on 0.2.1.1-alpha.
-

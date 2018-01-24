@@ -1,8 +1,0 @@
-  o Minor features (embedding):
-    - On most errors that would cause Tor to exit, it now tries to return
-      from the tor_main() function, rather than calling the system exit()
-      function.  Most users won't notice a difference here, but it should
-      make a significant difference on platforms that try to run Tor inside
-      a separate thread: they should now be able to survive Tor's exit
-      conditions rather than having Tor shut down the entire process.
-      Closes ticket 23848.

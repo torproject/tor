@@ -1,3 +1,0 @@
-  o Minor features (heartbeat):
-    - Add onion service information to our heartbeat logs, displaying stats
-      about the activity of configured onion services. Closes ticket 24896.

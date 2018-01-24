@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Small changes to Tor's buf_t API to make it suitable for use as
-      a general-purpose safe string constructor. Closes ticket 22342.

@@ -1,3 +1,0 @@
-  o Documentation:
-    - Clarify the behavior of RelayBandwidth{Rate,Burst} with client traffic.
-      Closes ticket 24318.

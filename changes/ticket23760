@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - We make extend_info_from_node() use node_get_curve25519_onion_key()
-      introduced in ticket 23577 to access the curve25519 public keys rather
-      than accessing it directly. Closes ticket 23760. Patch by Neel Chauhan.

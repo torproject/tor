@@ -1,3 +1,0 @@
-  o Minor bugfixes (Private Networks):
-   - Give out Exit flags in bootstrapping networks. Fixes bug 24137;
-     bugfix on 0.2.3.1-alpha.

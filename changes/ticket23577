@@ -1,7 +1,0 @@
-  o Major features (v3 onion services):
-    - When v3 onion service clients send introduce cells, include the IPv6
-      address of the rendezvous point, if it has one. v3 onion services running
-      0.3.2 ignore IPv6 addresses. In future Tor versions, IPv6-only v3 single
-      onion services can use IPv6 addresses to connect directly to the
-      rendezvous point. Closes ticket 23577. Patch by Neel Chauhan.
-

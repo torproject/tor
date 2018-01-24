@@ -1,6 +1,0 @@
-  o Major features (storage):
-    - Users can choose to store cached directory documents somewhere other
-      than the DataDirectory by using the CacheDirectory option.
-      Similarly, the storage location for relay's keys can be overridden
-      with the KeyDirectory option.
-      Closes ticket 22703.

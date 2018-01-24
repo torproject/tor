@@ -1,4 +1,0 @@
-  o Minor features (performance, 32-bit):
-    - Improve performance on 32-bit systems by avoiding 64-bit division
-      to calculate the current timestamp in milliseconds for channel
-      padding computations. Implements ticket 24613.

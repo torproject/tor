@@ -1,9 +1,0 @@
-  o Minor features (testing, debugging):
-    - For development purposes, Tor now has a mode in which it runs
-      for a few seconds, then stops, and starts again without exiting
-      the process. This mode is meant to help us debug various issues
-      with ticket 23847. To use this feature, compile with
-      --enable-restart-degbugging, and set the TOR_DEBUG_RESTART
-      environment variable. This is expected to crash a lot, and is
-      really meant for developers only. It will likely be removed in a future
-      release. Implements ticket 24583.

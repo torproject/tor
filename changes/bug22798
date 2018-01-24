@@ -1,4 +1,0 @@
-  o Minor features (windows, performance):
-    - Improve performance on Windows Vista and Windows 7 by adjusting TCP send
-      window size according to the recommendation from
-      SIO_IDEAL_SEND_BACKLOG_QUERY.  Closes ticket 22798. Patch from Vort.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox):
-    - When running with the sandbox enabled, reload configuration files
-      correctly even when %include was used. Previously we
-      would crash. Fixes bug 22605; bugfix on 0.3.1.
-      Patch from Daniel Pinto.

@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove duplicate code in node_has_curve25519_onion_key() and
-      node_get_curve25519_onion_key(), and add a check for a zero microdesc
-      curve25519 onion key. Closes ticket 23966, patch by "aruna1234" and
-      "teor".

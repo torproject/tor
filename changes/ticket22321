@@ -1,3 +1,0 @@
-  o Minor features (fallbacks):
-    - Update the fallback whitelist and blacklist based on opt-ins and relay
-      changes. Closes tickets 22321, 24678, 22527, 24135, and 24695.

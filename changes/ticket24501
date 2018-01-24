@@ -1,3 +1,0 @@
-  o Minor features (logging): 
-    - Make the log more quantitative when we hit MaxMemInQueues threshold
-      exposing some values. Closes ticket 24501.
