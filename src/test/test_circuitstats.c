@@ -82,6 +82,8 @@ build_unopened_fourhop(struct timeval circ_start_time)
   onion_append_hop(&or_circ->cpath, fakehop);
   onion_append_hop(&or_circ->cpath, fakehop);
 
+  tor_free(fakehop);
+
   return or_circ;
 }
 
