@@ -852,6 +852,7 @@ test_scheduler_loop_kist(void *arg)
   tt_assert(ch3);
   ch3->magic = TLS_CHAN_MAGIC;
   ch3->state = CHANNEL_STATE_OPEN;
+  circuitmux_free(ch3->cmux);
   ch3->cmux = circuitmux_alloc();
   channel_register(ch3);
   tt_assert(ch3->registered);
