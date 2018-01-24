@@ -167,7 +167,7 @@ circuit_build_times_disabled_(const or_options_t *options,
 }
 
 /**
- * Retrieve and bounds-check the cbtmaxtimeouts consensus paramter.
+ * Retrieve and bounds-check the cbtmaxtimeouts consensus parameter.
  *
  * Effect: When this many timeouts happen in the last 'cbtrecentcount'
  * circuit attempts, the client should discard all of its history and
@@ -194,7 +194,7 @@ circuit_build_times_max_timeouts(void)
 }
 
 /**
- * Retrieve and bounds-check the cbtnummodes consensus paramter.
+ * Retrieve and bounds-check the cbtnummodes consensus parameter.
  *
  * Effect: This value governs how many modes to use in the weighted
  * average calculation of Pareto parameter Xm. A value of 3 introduces
@@ -221,7 +221,7 @@ circuit_build_times_default_num_xm_modes(void)
 }
 
 /**
- * Retrieve and bounds-check the cbtmincircs consensus paramter.
+ * Retrieve and bounds-check the cbtmincircs consensus parameter.
  *
  * Effect: This is the minimum number of circuits to build before
  * computing a timeout.
@@ -253,7 +253,7 @@ circuit_build_times_enough_to_compute(const circuit_build_times_t *cbt)
 }
 
 /**
- * Retrieve and bounds-check the cbtquantile consensus paramter.
+ * Retrieve and bounds-check the cbtquantile consensus parameter.
  *
  * Effect: This is the position on the quantile curve to use to set the
  * timeout value. It is a percent (10-99).
@@ -277,7 +277,7 @@ circuit_build_times_quantile_cutoff(void)
 }
 
 /**
- * Retrieve and bounds-check the cbtclosequantile consensus paramter.
+ * Retrieve and bounds-check the cbtclosequantile consensus parameter.
  *
  * Effect: This is the position on the quantile curve to use to set the
  * timeout value to use to actually close circuits. It is a percent
@@ -309,7 +309,7 @@ circuit_build_times_close_quantile(void)
 }
 
 /**
- * Retrieve and bounds-check the cbttestfreq consensus paramter.
+ * Retrieve and bounds-check the cbttestfreq consensus parameter.
  *
  * Effect: Describes how often in seconds to build a test circuit to
  * gather timeout values. Only applies if less than 'cbtmincircs'
@@ -356,7 +356,7 @@ circuit_build_times_min_timeout(void)
 }
 
 /**
- * Retrieve and bounds-check the cbtinitialtimeout consensus paramter.
+ * Retrieve and bounds-check the cbtinitialtimeout consensus parameter.
  *
  * Effect: This is the timeout value to use before computing a timeout,
  * in milliseconds.
@@ -386,7 +386,7 @@ circuit_build_times_initial_timeout(void)
 }
 
 /**
- * Retrieve and bounds-check the cbtrecentcount consensus paramter.
+ * Retrieve and bounds-check the cbtrecentcount consensus parameter.
  *
  * Effect: This is the number of circuit build times to keep track of
  * for deciding if we hit cbtmaxtimeouts and need to reset our state

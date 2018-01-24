@@ -1942,7 +1942,7 @@ tor_tls_handshake(tor_tls_t *tls)
   return r;
 }
 
-/** Perform the final part of the intial TLS handshake on <b>tls</b>.  This
+/** Perform the final part of the initial TLS handshake on <b>tls</b>.  This
  * should be called for the first handshake only: it determines whether the v1
  * or the v2 handshake was used, and adjusts things for the renegotiation
  * handshake as appropriate.

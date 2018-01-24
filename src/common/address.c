@@ -1125,7 +1125,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
       case AF_UNIX:
         /* HACKHACKHACKHACKHACK:
          * tor_addr_t doesn't contain a copy of sun_path, so it's not
-         * possible to comapre this at all.
+         * possible to compare this at all.
          *
          * Since the only time we currently actually should be comparing
          * 2 AF_UNIX addresses is when dealing with ISO_CLIENTADDR (which

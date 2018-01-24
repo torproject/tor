@@ -139,7 +139,7 @@ helper_create_introduce1_cell(void)
     memcpy(auth_key_ptr, auth_key_kp.pubkey.pubkey, auth_key_len);
   }
 
-  /* Set the cell extentions to none. */
+  /* Set the cell extensions to none. */
   {
     trn_cell_extension_t *ext = trn_cell_extension_new();
     trn_cell_extension_set_num(ext, 0);
@@ -552,7 +552,7 @@ test_circuitmap_free_all(void)
   ;
 }
 
-/** Successfuly register a v2 intro point and a v3 intro point. Ensure that HS
+/** Successfully register a v2 intro point and a v3 intro point. Ensure that HS
  *  circuitmap is maintained properly. */
 static void
 test_intro_point_registration(void *arg)

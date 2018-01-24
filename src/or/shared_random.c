@@ -1071,7 +1071,7 @@ sr_parse_srv(const smartlist_t *args)
 
   srv = tor_malloc_zero(sizeof(*srv));
   srv->num_reveals = num_reveals;
-  /* We substract one byte from the srclen because the function ignores the
+  /* We subtract one byte from the srclen because the function ignores the
    * '=' character in the given buffer. This is broken but it's a documented
    * behavior of the implementation. */
   ret = base64_decode((char *) srv->value, sizeof(srv->value), value,

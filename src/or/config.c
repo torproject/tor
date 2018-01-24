@@ -3146,7 +3146,7 @@ warn_if_option_path_is_relative(const char *option,
   return 0;
 }
 
-/** Scan <b>options</b> for occurances of relative file/directory
+/** Scan <b>options</b> for occurrences of relative file/directory
  * path and log a warning whenever it is found.
  *
  * Return 1 if there were relative paths; 0 otherwise.

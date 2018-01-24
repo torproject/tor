@@ -14,7 +14,7 @@ const TRUNNEL_REND_COOKIE_LEN = 20;
 
 /* INTRODUCE1 payload. See details in section 3.2.1. */
 struct trn_cell_introduce1 {
-  /* Always zeroed. MUST be checked explicitely by the caller. */
+  /* Always zeroed. MUST be checked explicitly by the caller. */
   u8 legacy_key_id[TRUNNEL_SHA1_LEN];
 
   /* Authentication key material. */

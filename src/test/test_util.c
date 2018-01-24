@@ -703,7 +703,7 @@ test_util_time(void *arg)
      * a "correct" retrospective gregorian negative year value,
      * which I'm pretty sure is:
      * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
-     * 730485 is the number of days in two millenia, including leap days */
+     * 730485 is the number of days in two millennia, including leap days */
     a_time.tm_year = -292277022657-1900;
     CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
@@ -739,7 +739,7 @@ test_util_time(void *arg)
      * a "correct" proleptic gregorian year value,
      * which I'm pretty sure is:
      * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
-     * 730485 is the number of days in two millenia, including leap days */
+     * 730485 is the number of days in two millennia, including leap days */
     a_time.tm_year = 292277026596-1900;
     CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
@@ -875,7 +875,7 @@ test_util_time(void *arg)
      * a "correct" retrospective gregorian negative year value,
      * which I'm pretty sure is:
      * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
-     * 730485 is the number of days in two millenia, including leap days
+     * 730485 is the number of days in two millennia, including leap days
      * (int64_t)b_time.tm_year == (-292277022657LL-1900LL) without clamping */
     t_res = INT64_MIN;
     CAPTURE();
@@ -921,7 +921,7 @@ test_util_time(void *arg)
      * a "correct" proleptic gregorian year value,
      * which I'm pretty sure is:
      * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
-     * 730485 is the number of days in two millenia, including leap days
+     * 730485 is the number of days in two millennia, including leap days
      * (int64_t)b_time.tm_year == (292277026596L-1900L) without clamping */
     t_res = INT64_MAX;
     CAPTURE();
@@ -5465,7 +5465,7 @@ is_there_a_localhost(int family)
 #endif /* 0 */
 
 /* Test for socketpair and ersatz_socketpair().  We test them both, since
- * the latter is a tolerably good way to exersize tor_accept_socket(). */
+ * the latter is a tolerably good way to exercise tor_accept_socket(). */
 static void
 test_util_socketpair(void *arg)
 {

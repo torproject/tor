@@ -1010,7 +1010,7 @@ test_prune_services_on_reload(void *arg)
     set_rend_service_list(old);
     set_rend_rend_service_staging_list(new);
     rend_service_prune_list_impl_();
-    /* Check if they've all been transfered. */
+    /* Check if they've all been transferred. */
     tt_int_op(smartlist_len(old), OP_EQ, 0);
     tt_int_op(smartlist_len(new), OP_EQ, 2);
   }

@@ -6476,7 +6476,7 @@ Changes in version 0.2.6.6 - 2015-03-24
   o Major bugfixes (pluggable transports):
     - Initialize the extended OR Port authentication cookie before
       launching pluggable transports. This prevents a race condition
-      that occured when server-side pluggable transports would cache the
+      that occurred when server-side pluggable transports would cache the
       authentication cookie before it has been (re)generated. Fixes bug
       15240; bugfix on 0.2.5.1-alpha.
 
@@ -6949,7 +6949,7 @@ Changes in version 0.2.6.6 - 2015-03-24
       some bugs where we would look at (but fortunately, not reveal)
       uninitialized memory on the stack. Fixes bug 14013; bugfix on all
       versions of Tor.
-    - Clear all memory targetted by tor_addr_{to,from}_sockaddr(), not
+    - Clear all memory targeted by tor_addr_{to,from}_sockaddr(), not
       just the part that's used. This makes it harder for data leak bugs
       to occur in the event of other programming failures. Resolves
       ticket 14041.
@@ -8126,7 +8126,7 @@ Changes in version 0.2.5.10 - 2014-10-24
       from Arlo Breault.
     - Remove instances of strcpy() from the unit tests. They weren't
       hurting anything, since they were only in the unit tests, but it's
-      embarassing to have strcpy() in the code at all, and some analysis
+      embarrassing to have strcpy() in the code at all, and some analysis
       tools don't like it. Fixes bug 8790; bugfix on 0.2.3.6-alpha and
       0.2.3.8-alpha. Patch from Arlo Breault.
     - Remove is_internal_IP() function. Resolves ticket 4645.
@@ -8150,7 +8150,7 @@ Changes in version 0.2.5.10 - 2014-10-24
       directory authority options, remove the documentation for a
       V2-directory fetching option that no longer exists. Resolves
       ticket 11634.
-    - Correct the documenation so that it lists the correct directory
+    - Correct the documentation so that it lists the correct directory
       for the stats files. (They are in a subdirectory called "stats",
       not "status".)
     - In the manpage, move more authority-only options into the
@@ -10293,7 +10293,7 @@ Changes in version 0.2.3.25 - 2012-11-19
       bugfix on 0.2.0.3-alpha.
     - The "--quiet" and "--hush" options now apply not only to Tor's
       behavior before logs are configured, but also to Tor's behavior in
-      the absense of configured logs. Fixes bug 3550; bugfix on
+      the absence of configured logs. Fixes bug 3550; bugfix on
       0.2.0.10-alpha.
     - Change the AllowDotExit rules so they should actually work.
       We now enforce AllowDotExit only immediately after receiving an
@@ -11406,7 +11406,7 @@ Changes in version 0.2.2.32 - 2011-08-27
       algorithms for signatures and resource selection. Newer formats
       are signed with SHA256, with a possibility for moving to a better
       hash algorithm in the future.
-    - Directory authorities can now vote on arbitary integer values as
+    - Directory authorities can now vote on arbitrary integer values as
       part of the consensus process. This is designed to help set
       network-wide parameters. Implements proposal 167.
 
@@ -16595,7 +16595,7 @@ Changes in version 0.1.0.10 - 2005-06-14
     - Use correct errno on win32 if libevent fails.
     - Check and warn about known-bad/slow libevent versions.
     - Stop warning about sigpipes in the logs. We're going to
-      pretend that getting these occassionally is normal and fine.
+      pretend that getting these occasionally is normal and fine.
 
   o New contrib scripts:
     - New experimental script tor/contrib/exitlist: a simple python
@@ -16714,7 +16714,7 @@ Changes in version 0.0.9.7 - 2005-04-01
 
 Changes in version 0.0.9.6 - 2005-03-24
   o Bugfixes on 0.0.9.x (crashes and asserts):
-    - Add new end stream reasons to maintainance branch. Fix bug where
+    - Add new end stream reasons to maintenance branch. Fix bug where
       reason (8) could trigger an assert.  Prevent bug from recurring.
     - Apparently win32 stat wants paths to not end with a slash.
     - Fix assert triggers in assert_cpath_layer_ok(), where we were

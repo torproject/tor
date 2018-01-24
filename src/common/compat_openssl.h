@@ -12,7 +12,7 @@
 /**
  * \file compat_openssl.h
  *
- * \brief compatability definitions for working with different openssl forks
+ * \brief compatibility definitions for working with different openssl forks
  **/
 
 #if !defined(LIBRESSL_VERSION_NUMBER) && \

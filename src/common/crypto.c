@@ -1917,7 +1917,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 #elif defined(__linux__) && defined(SYS_getrandom)
   static int getrandom_works = 1; /* Be optimitic about our chances... */
 
-  /* getrandom() isn't as straight foward as getentropy(), and has
+  /* getrandom() isn't as straightforward as getentropy(), and has
    * no glibc wrapper.
    *
    * As far as I can tell from getrandom(2) and the source code, the
@@ -1930,7 +1930,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
    *
    * We optimistically assume that getrandom() is available and functional
    * because it is the way of the future, and 2 branch mispredicts pale in
-   * comparision to the overheads involved with failing to open
+   * comparison to the overheads involved with failing to open
    * /dev/srandom followed by opening and reading from /dev/urandom.
    */
   if (PREDICT_LIKELY(getrandom_works)) {

@@ -413,7 +413,7 @@ test_decode_invalid_intro_point(void *arg)
 
   (void) arg;
 
-  /* Seperate pieces of a valid encoded introduction point. */
+  /* Separate pieces of a valid encoded introduction point. */
   const char *intro_point =
     "introduction-point AQIUMDI5OUYyNjhGQ0E5RDU1Q0QxNTc=";
   const char *auth_key =

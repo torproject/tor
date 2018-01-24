@@ -3142,7 +3142,7 @@ typedef struct circuit_t {
 
   /** When the circuit was first used, or 0 if the circuit is clean.
    *
-   * XXXX Note that some code will artifically adjust this value backward
+   * XXXX Note that some code will artificially adjust this value backward
    * in time in order to indicate that a circuit shouldn't be used for new
    * streams, but that it can stay alive as long as it has streams on it.
    * That's a kludge we should fix.
@@ -3400,7 +3400,7 @@ typedef struct origin_circuit_t {
   uint32_t global_identifier;
 
   /** True if we have associated one stream to this circuit, thereby setting
-   * the isolation paramaters for this circuit.  Note that this doesn't
+   * the isolation parameters for this circuit.  Note that this doesn't
    * necessarily mean that we've <em>attached</em> any streams to the circuit:
    * we may only have marked up this circuit during the launch process.
    */
@@ -4182,7 +4182,7 @@ typedef struct {
   int UseEntryGuards_option;
   /** Internal variable to remember whether we're actually acting on
    * UseEntryGuards_option -- when we're a non-anonymous Tor2web client or
-   * Single Onion Service, it is alwasy false, otherwise we use the value of
+   * Single Onion Service, it is always false, otherwise we use the value of
    * UseEntryGuards_option. */
   int UseEntryGuards;
 

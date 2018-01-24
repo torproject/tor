@@ -19,7 +19,7 @@
  *      dns_seems_to_be_broken().
  *    <li>When a client has asked the relay, in a RELAY_BEGIN cell, to connect
  *      to a given server by hostname.  This happens via dns_resolve().
- *    <li>When a client has asked the rela, in a RELAY_RESOLVE cell, to look
+ *    <li>When a client has asked the relay, in a RELAY_RESOLVE cell, to look
  *      up a given server's IP address(es) by hostname. This also happens via
  *      dns_resolve().
  *   </ol>

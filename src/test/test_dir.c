@@ -1270,7 +1270,7 @@ test_dir_versions(void *arg)
   tt_int_op(0,OP_EQ, tor_version_as_new_as(
                                            "Tor 0.2.9.9 (git-00)",
                                            "Tor 0.2.9.9 (git-01)"));
-  /* In #21278, we comapre without integer overflows.
+  /* In #21278, we compare without integer overflows.
    * But since #21450 limits version components to [0, INT32_MAX], it is no
    * longer possible to cause an integer overflow in tor_version_compare() */
   tt_int_op(0,OP_EQ, tor_version_as_new_as(

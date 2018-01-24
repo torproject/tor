@@ -23,7 +23,7 @@
  * [*]Actually, it's possible that TAP _was_ a little better than TLS with
  * RSA1024 certificates and EDH1024 for forward secrecy, if you
  * hypothesize an adversary who can compute discrete logarithms on a
- * small number of targetted DH1024 fields, but who can't break all that
+ * small number of targeted DH1024 fields, but who can't break all that
  * many RSA1024 keys.
  **/
 

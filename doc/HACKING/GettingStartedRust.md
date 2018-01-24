@@ -117,7 +117,7 @@ the module calls.  Modules which call fewer other modules are better targets.
 
 Strive to change the C API as little as possible.
 
-We are currently targetting Rust nightly, *for now*. We expect this to change
+We are currently targeting Rust nightly, *for now*. We expect this to change
 moving forward, as we understand more about which nightly features we need. It
 is on our TODO list to try to cultivate good standing with various distro
 maintainers of `rustc` and `cargo`, in order to ensure that whatever version we

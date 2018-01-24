@@ -43,12 +43,12 @@ STATIC digestmap_t *rend_cache_v2_dir = NULL;
  * ID, that were NOT present in the descriptor are removed from this cache.
  * Which means that if at least one IP was not in this cache, thus usuable,
  * it's considered a new descriptor so we keep it. Else, if all IPs were in
- * this cache, we discard the descriptor as it's considered unsuable.
+ * this cache, we discard the descriptor as it's considered unusable.
  *
  * Once a descriptor is removed from the rend cache or expires, the entry
  * in this cache is also removed for the service ID.
  *
- * This scheme allows us to not realy on the descriptor's timestamp (which
+ * This scheme allows us to not relay on the descriptor's timestamp (which
  * is rounded down to the hour) to know if we have a newer descriptor. We
  * only rely on the usability of intro points from an internal state. */
 STATIC strmap_t *rend_cache_failure = NULL;

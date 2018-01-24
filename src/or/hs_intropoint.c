@@ -424,7 +424,7 @@ validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell)
 
 /* We just received a non legacy INTRODUCE1 cell on <b>client_circ</b> with
  * the payload in <b>request</b> of size <b>request_len</b>. Return 0 if
- * everything went well, or -1 if an error occured. This function is in charge
+ * everything went well, or -1 if an error occurred. This function is in charge
  * of sending back an INTRODUCE_ACK cell and will close client_circ on error.
  */
 STATIC int

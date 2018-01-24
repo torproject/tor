@@ -477,7 +477,7 @@ test_cfmt_create_cells(void *arg)
   cell.command = CELL_CREATED;
   tt_int_op(-1, OP_EQ, create_cell_parse(&cc, &cell));
 
-  /* You can't acutally make an unparseable CREATE or CREATE_FAST cell. */
+  /* You can't actually make an unparseable CREATE or CREATE_FAST cell. */
 
   /* Try some CREATE2 cells.  First with a bad type. */
   cell.command = CELL_CREATE2;

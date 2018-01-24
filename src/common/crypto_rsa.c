@@ -852,7 +852,7 @@ crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out)
 /** Given a crypto_pk_t <b>pk</b>, allocate a new buffer containing the
  * Base64 encoding of the DER representation of the private key as a NUL
  * terminated string, and return it via <b>priv_out</b>.  Return 0 on
- * sucess, -1 on failure.
+ * success, -1 on failure.
  *
  * It is the caller's responsibility to sanitize and free the resulting buffer.
  */

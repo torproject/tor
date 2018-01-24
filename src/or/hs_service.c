@@ -72,7 +72,7 @@ static const char address_tld[] = "onion";
 
 /* Staging list of service object. When configuring service, we add them to
  * this list considered a staging area and they will get added to our global
- * map once the keys have been loaded. These two steps are seperated because
+ * map once the keys have been loaded. These two steps are separated because
  * loading keys requires that we are an actual running tor process. */
 static smartlist_t *hs_service_staging_list;
 
@@ -139,7 +139,7 @@ find_service(hs_service_ht *map, const ed25519_public_key_t *pk)
 
 /* Register the given service in the given map. If the service already exists
  * in the map, -1 is returned. On success, 0 is returned and the service
- * ownership has been transfered to the global map. */
+ * ownership has been transferred to the global map. */
 STATIC int
 register_service(hs_service_ht *map, hs_service_t *service)
 {
@@ -253,7 +253,7 @@ describe_intro_point(const hs_service_intro_point_t *ip)
 static int32_t
 get_intro_point_min_introduce2(void)
 {
-  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+  /* The [0, 2147483647] range is quite large to accommodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_min_introduce2",
                                  INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS,
@@ -266,7 +266,7 @@ get_intro_point_min_introduce2(void)
 static int32_t
 get_intro_point_max_introduce2(void)
 {
-  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+  /* The [0, 2147483647] range is quite large to accommodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_max_introduce2",
                                  INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS,
@@ -283,7 +283,7 @@ get_intro_point_min_lifetime(void)
     return MIN_INTRO_POINT_LIFETIME_TESTING;
   }
 
-  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+  /* The [0, 2147483647] range is quite large to accommodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_min_lifetime",
                                  INTRO_POINT_LIFETIME_MIN_SECONDS,
@@ -300,7 +300,7 @@ get_intro_point_max_lifetime(void)
     return MAX_INTRO_POINT_LIFETIME_TESTING;
   }
 
-  /* The [0, 2147483647] range is quite large to accomodate anything we decide
+  /* The [0, 2147483647] range is quite large to accommodate anything we decide
    * in the future. */
   return networkstatus_get_param(NULL, "hs_intro_max_lifetime",
                                  INTRO_POINT_LIFETIME_MAX_SECONDS,
@@ -1272,7 +1272,7 @@ build_desc_intro_points(const hs_service_t *service,
   } DIGEST256MAP_FOREACH_END;
 }
 
-/* Populate the descriptor encrypted section fomr the given service object.
+/* Populate the descriptor encrypted section from the given service object.
  * This will generate a valid list of introduction points that can be used
  * after for circuit creation. Return 0 on success else -1 on error. */
 static int
@@ -1302,7 +1302,7 @@ build_service_desc_encrypted(const hs_service_t *service,
   return 0;
 }
 
-/* Populare the descriptor plaintext section from the given service object.
+/* Populate the descriptor plaintext section from the given service object.
  * The caller must make sure that the keys in the descriptors are valid that
  * is are non-zero. Return 0 on success else -1 on error. */
 static int
@@ -2978,7 +2978,7 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
   service = hs_service_new(get_options());
 
   /* Setup the service configuration with specifics. A default service is
-   * HS_VERSION_TWO so explicitely set it. */
+   * HS_VERSION_TWO so explicitly set it. */
   service->config.version = HS_VERSION_THREE;
   service->config.max_streams_per_rdv_circuit = max_streams_per_rdv_circuit;
   service->config.max_streams_close_circuit = !!max_streams_close_circuit;
@@ -3218,7 +3218,7 @@ hs_service_set_conn_addr_port(const origin_circuit_t *circ,
   }
 
   /* Find a virtual port of that service mathcing the one in the connection if
-   * succesful, set the address in the connection. */
+   * successful, set the address in the connection. */
   if (hs_set_conn_addr_port(service->config.ports, conn) < 0) {
     log_info(LD_REND, "No virtual port mapping exists for port %d for "
                       "hidden service %s.",

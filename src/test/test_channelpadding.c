@@ -457,7 +457,7 @@ test_channelpadding_killonehop(void *arg)
   tt_assert(relay3_client->padding_enabled);
   tt_assert(client_relay3->padding_enabled);
   get_options_mutable()->Tor2webMode = 1;
-  /* For the relay to recieve the negotiate: */
+  /* For the relay to receive the negotiate: */
   get_options_mutable()->ORPort_set = 1;
   decision = channelpadding_decide_to_pad_channel(client_relay3);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
@@ -530,7 +530,7 @@ test_channelpadding_killonehop(void *arg)
   // Test client side (it should stop immediately)
   get_options_mutable()->HiddenServiceSingleHopMode = 1;
   get_options_mutable()->HiddenServiceNonAnonymousMode = 1;
-  /* For the relay to recieve the negotiate: */
+  /* For the relay to receive the negotiate: */
   get_options_mutable()->ORPort_set = 1;
   decision = channelpadding_decide_to_pad_channel(client_relay3);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
@@ -835,7 +835,7 @@ test_channelpadding_negotiation(void *arg)
   get_options_mutable()->ORPort_set = 0;
 
   /* Test case #2: Torrc options */
-  /* ConnectionPadding auto; Relay doesn't suport us */
+  /* ConnectionPadding auto; Relay doesn't support us */
   ((channel_tls_t*)relay3_client)->conn->link_proto = 4;
   relay3_client->padding_enabled = 0;
   tried_to_write_cell = 0;
@@ -846,7 +846,7 @@ test_channelpadding_negotiation(void *arg)
   ((channel_tls_t*)relay3_client)->conn->link_proto = 5;
   relay3_client->padding_enabled = 1;
 
-  /* ConnectionPadding 1; Relay doesn't suport us */
+  /* ConnectionPadding 1; Relay doesn't support us */
   get_options_mutable()->ConnectionPadding = 1;
   tried_to_write_cell = 0;
   decision = channelpadding_decide_to_pad_channel(client_relay3);

@@ -101,7 +101,7 @@ def read():
 
 def findline(lines, lineno, ident):
     """Given a list of all the lines in the file (adjusted so 1-indexing works),
-       a line number that ident is alledgedly on, and ident, I figure out
+       a line number that ident is allegedly on, and ident, I figure out
        the line where ident was really declared."""
     lno = lineno
     for lineno in xrange(lineno, 0, -1):

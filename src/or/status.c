@@ -187,7 +187,7 @@ log_heartbeat(time_t now)
     const uint64_t main_loop_idle_count = get_main_loop_idle_count();
 
     log_fn(LOG_NOTICE, LD_HEARTBEAT, "Main event loop statistics: "
-         U64_FORMAT " succesful returns, "
+         U64_FORMAT " successful returns, "
          U64_FORMAT " erroneous returns, and "
          U64_FORMAT " idle returns.",
          U64_PRINTF_ARG(main_loop_success_count),

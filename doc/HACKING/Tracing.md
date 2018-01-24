@@ -6,7 +6,7 @@ tracing framework.
 
 ## Basics ###
 
-Event tracing is seperated in two concepts, trace events and a tracer. The
+Event tracing is separated in two concepts, trace events and a tracer. The
 tracing subsystem can be found in `src/trace`. The `events.h` header file is
 the main file that maps the different tracers to trace events.
 

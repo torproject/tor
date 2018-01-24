@@ -2455,7 +2455,7 @@ get_environment(void)
 
 /** Get name of current host and write it to <b>name</b> array, whose
  * length is specified by <b>namelen</b> argument. Return 0 upon
- * successfull completion; otherwise return return -1. (Currently,
+ * successful completion; otherwise return return -1. (Currently,
  * this function is merely a mockable wrapper for POSIX gethostname().)
  */
 MOCK_IMPL(int,

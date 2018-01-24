@@ -8267,7 +8267,7 @@ Changes in version 0.2.6.5-rc - 2015-03-18
   o Major bugfixes (pluggable transports):
     - Initialize the extended OR Port authentication cookie before
       launching pluggable transports. This prevents a race condition
-      that occured when server-side pluggable transports would cache the
+      that occurred when server-side pluggable transports would cache the
       authentication cookie before it has been (re)generated. Fixes bug
       15240; bugfix on 0.2.5.1-alpha.
 
@@ -9010,7 +9010,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       some bugs where we would look at (but fortunately, not reveal)
       uninitialized memory on the stack. Fixes bug 14013; bugfix on all
       versions of Tor.
-    - Clear all memory targetted by tor_addr_{to,from}_sockaddr(), not
+    - Clear all memory targeted by tor_addr_{to,from}_sockaddr(), not
       just the part that's used. This makes it harder for data leak bugs
       to occur in the event of other programming failures. Resolves
       ticket 14041.
@@ -10153,7 +10153,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-18
       directory authority options, remove the documentation for a
       V2-directory fetching option that no longer exists. Resolves
       ticket 11634.
-    - Correct the documenation so that it lists the correct directory
+    - Correct the documentation so that it lists the correct directory
       for the stats files. (They are in a subdirectory called "stats",
       not "status".)
     - In the manpage, move more authority-only options into the
@@ -11438,7 +11438,7 @@ Changes in version 0.2.5.1-alpha - 2013-10-02
       from Arlo Breault.
     - Remove instances of strcpy() from the unit tests. They weren't
       hurting anything, since they were only in the unit tests, but it's
-      embarassing to have strcpy() in the code at all, and some analysis
+      embarrassing to have strcpy() in the code at all, and some analysis
       tools don't like it. Fixes bug 8790; bugfix on 0.2.3.6-alpha and
       0.2.3.8-alpha. Patch from Arlo Breault.
 
@@ -11539,7 +11539,7 @@ Changes in version 0.2.4.16-rc - 2013-08-10
       0.2.4.15-rc. Found by stem integration tests.
 
   o Minor bugfixes:
-    - Fix an invalid memory read that occured when a pluggable
+    - Fix an invalid memory read that occurred when a pluggable
       transport proxy failed its configuration protocol.
       Fixes bug 9288; bugfix on 0.2.4.1-alpha.
     - When evaluating whether to use a connection that we haven't
@@ -14330,7 +14330,7 @@ Changes in version 0.2.3.11-alpha - 2012-01-22
       CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Fixes the
       remaining part of bug 1297; bugfix on 0.2.2.2-alpha.
     - Make sure we never mark the wrong rendezvous circuit as having
-      had its introduction cell acknowleged by the introduction-point
+      had its introduction cell acknowledged by the introduction-point
       relay. Previously, when we received an INTRODUCE_ACK cell on a
       client-side hidden-service introduction circuit, we might have
       marked a rendezvous circuit other than the one we specified in
@@ -15637,7 +15637,7 @@ Changes in version 0.2.3.3-alpha - 2011-09-01
       raised by bug 3898.
     - The "--quiet" and "--hush" options now apply not only to Tor's
       behavior before logs are configured, but also to Tor's behavior in
-      the absense of configured logs. Fixes bug 3550; bugfix on
+      the absence of configured logs. Fixes bug 3550; bugfix on
       0.2.0.10-alpha.
 
   o Minor bugfixes (also part of 0.2.2.31-rc):
@@ -18138,7 +18138,7 @@ Changes in version 0.2.2.8-alpha - 2010-01-26
   please upgrade.
 
   o Major bugfixes:
-    - Fix a memory corruption bug on bridges that occured during the
+    - Fix a memory corruption bug on bridges that occurred during the
       inclusion of stats data in extra-info descriptors. Also fix the
       interface for geoip_get_bridge_stats* to prevent similar bugs in
       the future. Diagnosis by Tas, patch by Karsten and Sebastian.
@@ -18552,7 +18552,7 @@ Changes in version 0.2.2.2-alpha - 2009-09-21
       to EDGE and find out if the build-time data in the .tor/state gets
       reset without loss of Tor usability. You should also see a notice
       log message telling you that Tor has reset its timeout.
-    - Directory authorities can now vote on arbitary integer values as
+    - Directory authorities can now vote on arbitrary integer values as
       part of the consensus process. This is designed to help set
       network-wide parameters. Implements proposal 167.
     - Tor now reads the "circwindow" parameter out of the consensus,
@@ -21580,7 +21580,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
     - Distinguish between detached signatures for the wrong period, and
       detached signatures for a divergent vote.
     - Fix a small memory leak when computing a consensus.
-    - When there's no concensus, we were forming a vote every 30
+    - When there's no consensus, we were forming a vote every 30
       minutes, but writing the "valid-after" line in our vote based
       on our configured V3AuthVotingInterval: so unless the intervals
       matched up, we immediately rejected our own vote because it didn't
@@ -24967,7 +24967,7 @@ Changes in version 0.1.0.9-rc - 2005-06-09
       KeepalivePeriod, ClientOnly, NoPublish, HttpProxy, HttpsProxy,
       HttpProxyAuthenticator
     - Stop warning about sigpipes in the logs. We're going to
-      pretend that getting these occassionally is normal and fine.
+      pretend that getting these occasionally is normal and fine.
     - Resolve OS X installer bugs: stop claiming to be 0.0.9.2 in
       certain
       installer screens; and don't put stuff into StartupItems unless
@@ -25432,7 +25432,7 @@ Changes in version 0.1.0.1-rc - 2005-03-28
 
 Changes in version 0.0.9.6 - 2005-03-24
   o Bugfixes on 0.0.9.x (crashes and asserts):
-    - Add new end stream reasons to maintainance branch. Fix bug where
+    - Add new end stream reasons to maintenance branch. Fix bug where
       reason (8) could trigger an assert. Prevent bug from recurring.
     - Apparently win32 stat wants paths to not end with a slash.
     - Fix assert triggers in assert_cpath_layer_ok(), where we were

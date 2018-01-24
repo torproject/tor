@@ -661,7 +661,7 @@ test_intro_circuit_opened(void *arg)
   UNMOCK(relay_send_command_from_edge_);
 }
 
-/** Test the operations we do on a circuit after we learn that we successfuly
+/** Test the operations we do on a circuit after we learn that we successfully
  *  established an intro point on it */
 static void
 test_intro_established(void *arg)

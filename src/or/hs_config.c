@@ -558,7 +558,7 @@ hs_config_service_all(const or_options_t *options, int validate_only)
   }
 
   /* In non validation mode, we'll stage those services we just successfully
-   * configured. Service ownership is transfered from the list to the global
+   * configured. Service ownership is transferred from the list to the global
    * state. If any service is invalid, it will be removed from the list and
    * freed. All versions are handled in that function. */
   if (!validate_only) {

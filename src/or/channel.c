@@ -31,7 +31,7 @@
  * channel_set_cell_handlers(). Currently, this is passed back to the command
  * subsystem which is command_process_cell().
  *
- * NOTE: For now, the seperation between channels and specialized channels
+ * NOTE: For now, the separation between channels and specialized channels
  * (like channeltls) is not that well defined. So the channeltls layer calls
  * channel_process_cell() which originally comes from the connection subsytem.
  * This should be hopefully be fixed with #23993.
@@ -1438,7 +1438,7 @@ channel_clear_remote_end(channel_t *chan)
  *
  * Two possible errors can happen. Either the channel is not opened or the
  * lower layer (specialized channel) failed to write it. In both cases, it is
- * the caller responsability to free the cell.
+ * the caller responsibility to free the cell.
  */
 static int
 write_packed_cell(channel_t *chan, packed_cell_t *cell)
@@ -1514,7 +1514,7 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *cell)
   ret = write_packed_cell(chan, cell);
 
  end:
-  /* Whatever happens, we free the cell. Either an error occured or the cell
+  /* Whatever happens, we free the cell. Either an error occurred or the cell
    * was put on the connection outbuf, both cases we have ownership of the
    * cell and we free it. */
   packed_cell_free(cell);
@@ -1717,7 +1717,7 @@ channel_listener_change_state(channel_listener_t *chan_l,
   }
 }
 
-/* Maximum number of cells that is allowed to flush at once withing
+/* Maximum number of cells that is allowed to flush at once within
  * channel_flush_some_cells(). */
 #define MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED 256
 

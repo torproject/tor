@@ -323,7 +323,7 @@ test_config_write_to_data_subdir(void *arg)
   tt_int_op(mkdir(options->DataDirectory, 0700), OP_EQ, 0);
 #endif
 
-  // Write attempt shoudl fail, if subdirectory doesn't exist.
+  // Write attempt should fail, if subdirectory doesn't exist.
   tt_assert(write_to_data_subdir(subdir, fname, str, NULL));
   tt_assert(! check_or_create_data_subdir(subdir));
 
@@ -1391,7 +1391,7 @@ test_config_resolve_my_address(void *arg)
    *      if running on.
    *   3. Hostname from previous step cannot be converted to
    *      address by using tor_inet_aton() function.
-   *   4. However, tor_lookup_hostname() succeds in resolving the
+   *   4. However, tor_lookup_hostname() succeeds in resolving the
    *      hostname from step 2.
    *   5. Unfortunately, tor_addr_is_internal() deems this address
    *      to be internal.

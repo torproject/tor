@@ -2736,7 +2736,7 @@ rep_hist_desc_stats_write(time_t now)
 }
 
 /** Called to note that we've served a given descriptor (by
- * digest). Incrememnts the count of descriptors served, and the number
+ * digest). Increments the count of descriptors served, and the number
  * of times we've served this descriptor. */
 void
 rep_hist_note_desc_served(const char * desc)

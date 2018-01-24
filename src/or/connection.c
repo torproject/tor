@@ -4250,7 +4250,7 @@ connection_buf_add_buf(connection_t *conn, buf_t *buf)
 
 /* Return a list of connections that aren't close and matches the given type
  * and state. The returned list can be empty and must be freed using
- * smartlist_free(). The caller does NOT have owernship of the objects in the
+ * smartlist_free(). The caller does NOT have ownership of the objects in the
  * list so it must not free them nor reference them as they can disappear. */
 smartlist_t *
 connection_list_by_type_state(int type, int state)
@@ -4260,7 +4260,7 @@ connection_list_by_type_state(int type, int state)
 
 /* Return a list of connections that aren't close and matches the given type
  * and purpose. The returned list can be empty and must be freed using
- * smartlist_free(). The caller does NOT have owernship of the objects in the
+ * smartlist_free(). The caller does NOT have ownership of the objects in the
  * list so it must not free them nor reference them as they can disappear. */
 smartlist_t *
 connection_list_by_type_purpose(int type, int purpose)

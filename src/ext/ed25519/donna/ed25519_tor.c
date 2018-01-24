@@ -132,7 +132,7 @@ ED25519_FN(curved25519_scalarmult_basepoint) (curved25519_key pk, const curved25
 }
 
 /*
-   Tor has a specific idea of how an Ed25519 implementaion should behave.
+   Tor has a specific idea of how an Ed25519 implementation should behave.
    Implement such a beast using the ed25519-donna primitives/internals.
 
     * Private key generation using Tor's CSPRNG.

@@ -571,7 +571,7 @@ fetch_v2_desc_by_descid(const char *desc_id,
 
 /** Fetch a v2 descriptor using the onion address in the given query object.
  * This will compute the descriptor id for each replicas and fetch it on the
- * given hsdir(s) if any or the responsible ones that are choosen
+ * given hsdir(s) if any or the responsible ones that are chosen
  * automatically.
  *
  * On success, 1 is returned. If no hidden service is left to ask, return 0.

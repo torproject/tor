@@ -1360,7 +1360,7 @@ rend_services_add_filenames_to_lists(smartlist_t *open_lst,
 }
 
 /** Derive all rend_service_t internal material based on the service's key.
- * Returns 0 on sucess, -1 on failure.
+ * Returns 0 on success, -1 on failure.
  */
 static int
 rend_service_derive_key_digests(struct rend_service_t *s)
@@ -3196,7 +3196,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit or close it, depending.
-   * Substract the amount of expiring nodes here because the circuits are
+   * Subtract the amount of expiring nodes here because the circuits are
    * still opened. */
   if (valid_ip_circuits > service->n_intro_points_wanted) {
     const or_options_t *options = get_options();
@@ -4121,7 +4121,7 @@ rend_consider_services_intro_points(time_t now)
                  n_intro_points_to_open);
         break;
       }
-      /* Add the choosen node to the exclusion list in order to avoid picking
+      /* Add the chosen node to the exclusion list in order to avoid picking
        * it again in the next iteration. */
       smartlist_add(exclude_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));

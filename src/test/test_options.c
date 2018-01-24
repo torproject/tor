@@ -906,7 +906,7 @@ test_options_validate__authdir(void *ignored)
                                 "Address 100.200.10.1\n"
                                 "BridgeAuthoritativeDir 1\n"
                                 "ContactInfo hello@hello.com\n"
-                                "V3BandwidthsFile non-existant-file\n");
+                                "V3BandwidthsFile non-existent-file\n");
   mock_clean_saved_logs();
   options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_str_op(msg, OP_EQ,
@@ -918,7 +918,7 @@ test_options_validate__authdir(void *ignored)
                                 "Address 100.200.10.1\n"
                                 "BridgeAuthoritativeDir 1\n"
                                 "ContactInfo hello@hello.com\n"
-                                "V3BandwidthsFile non-existant-file\n");
+                                "V3BandwidthsFile non-existent-file\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, tdata->def_opt, 0, &msg);
   tt_str_op(msg, OP_EQ,
@@ -930,7 +930,7 @@ test_options_validate__authdir(void *ignored)
                                 "Address 100.200.10.1\n"
                                 "BridgeAuthoritativeDir 1\n"
                                 "ContactInfo hello@hello.com\n"
-                                "GuardfractionFile non-existant-file\n");
+                                "GuardfractionFile non-existent-file\n");
   mock_clean_saved_logs();
   options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_str_op(msg, OP_EQ,
@@ -942,7 +942,7 @@ test_options_validate__authdir(void *ignored)
                                 "Address 100.200.10.1\n"
                                 "BridgeAuthoritativeDir 1\n"
                                 "ContactInfo hello@hello.com\n"
-                                "GuardfractionFile non-existant-file\n");
+                                "GuardfractionFile non-existent-file\n");
   mock_clean_saved_logs();
   options_validate(NULL, tdata->opt, tdata->def_opt, 0, &msg);
   tt_str_op(msg, OP_EQ,
@@ -1112,7 +1112,7 @@ test_options_validate__transproxy(void *ignored)
 
   // Test unknown trans proxy
   free_options_test_data(tdata);
-  tdata = get_options_test_data("TransProxyType non-existant\n");
+  tdata = get_options_test_data("TransProxyType non-existent\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "Unrecognized value for TransProxyType");

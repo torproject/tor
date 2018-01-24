@@ -232,7 +232,7 @@ MAX_FALLBACKS_PER_FAMILY = 7
 
 ## Fallback Bandwidth Requirements
 
-# Any fallback with the Exit flag has its bandwidth multipled by this fraction
+# Any fallback with the Exit flag has its bandwidth multiplied by this fraction
 # to make sure we aren't further overloading exits
 # (Set to 1.0, because we asked that only lightly loaded exits opt-in,
 # and the extra load really isn't that much for large relays.)
@@ -561,7 +561,7 @@ class Candidate(object):
       details['flags'] = []
     if (not 'advertised_bandwidth' in details
         or details['advertised_bandwidth'] is None):
-      # relays without advertised bandwdith have it calculated from their
+      # relays without advertised bandwidth have it calculated from their
       # consensus weight
       details['advertised_bandwidth'] = 0
     if (not 'effective_family' in details
@@ -1595,7 +1595,7 @@ class CandidateList(dict):
                                                 excluded_count, initial_count)
 
   # calculate each fallback's measured bandwidth based on the median
-  # consensus weight to advertised bandwdith ratio
+  # consensus weight to advertised bandwidth ratio
   def calculate_measured_bandwidth(self):
     self.sort_fallbacks_by_cw_to_bw_factor()
     median_fallback = self.fallback_median(True)

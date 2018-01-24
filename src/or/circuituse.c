@@ -674,7 +674,7 @@ circuit_expire_building(void)
           break;
         case CIRCUIT_PURPOSE_C_INTRODUCING:
           /* That purpose means that the intro point circuit has been opened
-           * succesfully but the INTRODUCE1 cell hasn't been sent yet because
+           * successfully but the INTRODUCE1 cell hasn't been sent yet because
            * the client is waiting for the rendezvous point circuit to open.
            * Keep this circuit open while waiting for the rendezvous circuit.
            * We let the circuit idle timeout take care of cleaning this

@@ -2830,7 +2830,7 @@ run_main_loop_once(void)
   if (get_options()->MainloopStats) {
     /* Update our main loop counters. */
     if (loop_result == 0) {
-      // The call was succesful.
+      // The call was successful.
       increment_main_loop_success_count();
     } else if (loop_result == -1) {
       // The call was erroneous.

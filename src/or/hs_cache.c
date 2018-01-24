@@ -702,7 +702,7 @@ cache_clean_v3_as_client(time_t now)
     /* Entry is not in the cache anymore, destroy it. */
     cache_client_desc_free(entry);
     /* Update our OOM. We didn't use the remove() function because we are in
-     * a loop so we have to explicitely decrement. */
+     * a loop so we have to explicitey decrement. */
     rend_cache_decrement_allocation(entry_size);
     /* Logging. */
     {
@@ -805,7 +805,7 @@ hs_cache_purge_as_client(void)
     MAP_DEL_CURRENT(key);
     cache_client_desc_free(entry);
     /* Update our OOM. We didn't use the remove() function because we are in
-     * a loop so we have to explicitely decrement. */
+     * a loop so we have to explicitly decrement. */
     rend_cache_decrement_allocation(entry_size);
   } DIGEST256MAP_FOREACH_END;
 

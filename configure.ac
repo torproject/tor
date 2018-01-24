@@ -573,7 +573,7 @@ AC_CHECK_FUNCS(
 # Apple messed up when they added two functions functions in Sierra: they
 # forgot to decorate them with appropriate AVAILABLE_MAC_OS_VERSION
 # checks. So we should only probe for those functions if we are sure that we
-# are not targetting OSX 10.11 or earlier.
+# are not targeting OSX 10.11 or earlier.
 AC_MSG_CHECKING([for a pre-Sierra OSX build target])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #ifdef __APPLE__

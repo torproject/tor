@@ -2024,7 +2024,7 @@ test_entry_guard_select_for_circuit_highlevel_primary(void *arg)
   tt_mem_op(g->identity, OP_NE, g_prev->identity, DIGEST_LEN);
   tt_int_op(g->is_primary, OP_EQ, 1);
   tt_i64_op(g->last_tried_to_connect, OP_EQ, start+60);
-  tt_int_op(g->confirmed_idx, OP_EQ, -1); // not confirmd now.
+  tt_int_op(g->confirmed_idx, OP_EQ, -1); // not confirmed now.
 
   /* Call this one up; watch it get confirmed. */
   update_approx_time(start+90);

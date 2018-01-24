@@ -43,7 +43,7 @@
  * the directory authority functionality.  The directory.c module delegates
  * here in order to handle incoming requests from clients, via
  * connection_dirserv_flushed_some() and its kin.  In order to save RAM, this
- * module is reponsible for spooling directory objects (in whole or in part)
+ * module is responsible for spooling directory objects (in whole or in part)
  * onto buf_t instances, and then closing the dir_connection_t once the
  * objects are totally flushed.
  *
@@ -1086,7 +1086,7 @@ router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
   if (!node->is_running || !node->is_valid || ri->is_hibernating) {
     return 0;
   }
-  /* Only require bandwith capacity in non-test networks, or
+  /* Only require bandwidth capacity in non-test networks, or
    * if TestingTorNetwork, and TestingMinExitFlagThreshold is non-zero */
   if (!ri->bandwidthcapacity) {
     if (get_options()->TestingTorNetwork) {

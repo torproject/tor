@@ -806,9 +806,9 @@ circuit_purpose_to_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_INTRO_POINT:
       return "Acting as intro point";
     case CIRCUIT_PURPOSE_REND_POINT_WAITING:
-      return "Acting as rendevous (pending)";
+      return "Acting as rendezvous (pending)";
     case CIRCUIT_PURPOSE_REND_ESTABLISHED:
-      return "Acting as rendevous (established)";
+      return "Acting as rendezvous (established)";
     case CIRCUIT_PURPOSE_C_GENERAL:
       return "General-purpose client";
     case CIRCUIT_PURPOSE_C_INTRODUCING:

@@ -807,7 +807,7 @@ monotime_coarse_absolute_msec(void)
   return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
 #else
-#define initalized_at_coarse initialized_at
+#define initialized_at_coarse initialized_at
 #endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 
 /**

@@ -1101,7 +1101,7 @@ sr_state_get_previous_srv(void)
 }
 
 /* Set the current SRV value from our state. Value CAN be NULL. The srv
- * object ownership is transfered to the state object. */
+ * object ownership is transferred to the state object. */
 void
 sr_state_set_previous_srv(const sr_srv_t *srv)
 {
@@ -1120,7 +1120,7 @@ sr_state_get_current_srv(void)
 }
 
 /* Set the current SRV value from our state. Value CAN be NULL. The srv
- * object ownership is transfered to the state object. */
+ * object ownership is transferred to the state object. */
 void
 sr_state_set_current_srv(const sr_srv_t *srv)
 {
@@ -1225,7 +1225,7 @@ sr_state_get_commit(const char *rsa_identity)
 }
 
 /* Add <b>commit</b> to the permanent state. The commit object ownership is
- * transfered to the state so the caller MUST not free it. */
+ * transferred to the state so the caller MUST not free it. */
 void
 sr_state_add_commit(sr_commit_t *commit)
 {

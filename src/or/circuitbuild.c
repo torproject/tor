@@ -2223,7 +2223,7 @@ pick_restricted_middle_node(router_crn_flags_t flags,
    * Max number of restricted nodes before we alert the user and try
    * to load balance for them.
    *
-   * The most agressive vanguard design had 16 nodes at layer3.
+   * The most aggressive vanguard design had 16 nodes at layer3.
    * Let's give a small ceiling above that. */
 #define MAX_SANE_RESTRICTED_NODES 20
   /* If the user (or associated tor controller) selected only a few nodes,

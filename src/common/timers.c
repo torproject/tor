@@ -63,7 +63,7 @@ struct timeout_cb {
 #define TIMEOUT_CB_OVERRIDE
 /* We're going to support timers that are pretty far out in advance. Making
  * this big can be inefficient, but having a significant number of timers
- * above TIMEOUT_MAX can also be super-inefficent. Choosing 5 here sets
+ * above TIMEOUT_MAX can also be super-inefficient. Choosing 5 here sets
  * timeout_max to 2^30 ticks, or 29 hours with our value for USEC_PER_TICK */
 #define WHEEL_NUM 5
 #include "src/ext/timeouts/timeout.c"

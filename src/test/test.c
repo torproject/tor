@@ -174,7 +174,7 @@ test_bad_onion_handshake(void *arg)
                                             s_buf, s_keys, 40));
   c_buf[64] ^= 33;
 
-  /* (Let the server procede) */
+  /* (Let the server proceed) */
   tt_int_op(0, OP_EQ,
             onion_skin_TAP_server_handshake(c_buf, pk, NULL,
                                             s_buf, s_keys, 40));

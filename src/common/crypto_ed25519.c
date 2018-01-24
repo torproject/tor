@@ -225,7 +225,7 @@ ed25519_public_key_is_zero(const ed25519_public_key_t *pubkey)
 
 /* Return a heap-allocated array that contains <b>msg</b> prefixed by the
  * string <b>prefix_str</b>. Set <b>final_msg_len_out</b> to the size of the
- * final array. If an error occured, return NULL. It's the resonsibility of the
+ * final array. If an error occurred, return NULL. It's the resonsibility of the
  * caller to free the returned array. */
 static uint8_t *
 get_prefixed_msg(const uint8_t *msg, size_t msg_len,
@@ -259,7 +259,7 @@ get_prefixed_msg(const uint8_t *msg, size_t msg_len,
  * Set <b>signature_out</b> to a signature of the <b>len</b>-byte message
  * <b>msg</b>, using the secret and public key in <b>keypair</b>.
  *
- * Return 0 if we successfuly signed the message, otherwise return -1.
+ * Return 0 if we successfully signed the message, otherwise return -1.
  */
 int
 ed25519_sign(ed25519_signature_t *signature_out,
@@ -529,7 +529,7 @@ ed25519_keypair_blind(ed25519_keypair_t *out,
 /**
  * Given an ed25519 public key in <b>inp</b>, generate a corresponding blinded
  * public key in <b>out</b>, blinded with the 32-byte parameter in
- * <b>param</b>.  Return 0 on sucess, -1 on railure.
+ * <b>param</b>.  Return 0 on success, -1 on railure.
  */
 int
 ed25519_public_blind(ed25519_public_key_t *out,
@@ -719,7 +719,7 @@ ed25519_impl_spot_check,(void))
     return -1;
 
   /* XXX/yawning: Someone that's more paranoid than I am, can write "Assume
-   * ref0 is cannonical, and fuzz impl against it" if they want, but I doubt
+   * ref0 is canonical, and fuzz impl against it" if they want, but I doubt
    * that will catch anything that the known answer tests won't.
    */
   goto end;
@@ -762,7 +762,7 @@ pick_ed25519_impl(void)
   /* LCOV_EXCL_STOP */
 }
 
-/* Initialize the Ed25519 implementation. This is neccessary if you're
+/* Initialize the Ed25519 implementation. This is necessary if you're
  * going to use them in a multithreaded setting, and not otherwise. */
 void
 ed25519_init(void)

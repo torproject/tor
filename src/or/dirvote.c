@@ -665,7 +665,7 @@ static int
 consensus_method_is_supported(int method)
 {
   if (method == MIN_METHOD_FOR_ED25519_ID_IN_MD) {
-    /* This method was broken due to buggy code accidently left in
+    /* This method was broken due to buggy code accidentally left in
      * dircollate.c; do not actually use it.
      */
     return 0;

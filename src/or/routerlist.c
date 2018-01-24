@@ -367,7 +367,7 @@ list_authority_ids_with_downloads, (void))
       smartlist_add(ids, tmp);
     }
   }
-  /* else definitely no downlaods going since nothing even has a cert list */
+  /* else definitely no downloads going since nothing even has a cert list */
 
   return ids;
 }
@@ -2652,7 +2652,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
     is_dir = node_is_dir(node);
     if (node->rs) {
       if (!node->rs->has_bandwidth) {
-        /* This should never happen, unless all the authorites downgrade
+        /* This should never happen, unless all the authorities downgrade
          * to 0.2.0 or rogue routerstatuses get inserted into our consensus. */
         if (! warned_missing_bw) {
           log_warn(LD_BUG,

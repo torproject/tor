@@ -2407,7 +2407,7 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
 #define REJECT_CUTOFF_SCALE_IPV6 (64)
 /* Ports are rejected in an IPv6 summary if they are rejected in more than one
  * IPv6 /16 address block.
- * This is rougly equivalent to the IPv4 cutoff, as only five IPv6 /12s (and
+ * This is roughly equivalent to the IPv4 cutoff, as only five IPv6 /12s (and
  * some scattered smaller blocks) have been allocated to the RIRs.
  * Network providers are typically allocated one or more IPv6 /32s.
  */

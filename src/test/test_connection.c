@@ -779,7 +779,7 @@ test_conn_download_status(void *arg)
 #define CONNECTION_TESTCASE(name, fork, setup)                           \
   { #name, test_conn_##name, fork, &setup, NULL }
 
-/* where arg is an expression (constant, varaible, compound expression) */
+/* where arg is an expression (constant, variable, compound expression) */
 #define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)                  \
   { #name "_" #arg, test_conn_##name, fork, &setup, (void *)arg }
 

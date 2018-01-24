@@ -428,7 +428,7 @@ socks5_response_code_to_string(uint8_t code)
   }
 }
 
-/** Return a string corresponding to a bandwidht_weight_rule_t */
+/** Return a string corresponding to a bandwidth_weight_rule_t */
 const char *
 bandwidth_weight_rule_to_string(bandwidth_weight_rule_t rule)
 {

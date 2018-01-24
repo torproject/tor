@@ -745,7 +745,7 @@ get_fake_auth_client_lines(void)
 
 /* Create the inner layer of the descriptor (which includes the intro points,
  * etc.). Return a newly-allocated string with the layer plaintext, or NULL if
- * an error occured. It's the responsibility of the caller to free the returned
+ * an error occurred. It's the responsibility of the caller to free the returned
  * string. */
 static char *
 get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
@@ -802,7 +802,7 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
 /* Create the middle layer of the descriptor, which includes the client auth
  * data and the encrypted inner layer (provided as a base64 string at
  * <b>layer2_b64_ciphertext</b>). Return a newly-allocated string with the
- * layer plaintext, or NULL if an error occured. It's the responsibility of the
+ * layer plaintext, or NULL if an error occurred. It's the responsibility of the
  * caller to free the returned string. */
 static char *
 get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
@@ -1609,7 +1609,7 @@ decode_intro_legacy_key(const directory_token_t *tok,
   /* The check on the expiration date is for the entire lifetime of a
    * certificate which is 24 hours. However, a descriptor has a maximum
    * lifetime of 12 hours meaning we have a 12h difference between the two
-   * which ultimately accomodate the clock skewed client. */
+   * which ultimately accommodate the clock skewed client. */
   if (rsa_ed25519_crosscert_check(ip->legacy.cert.encoded,
                                   ip->legacy.cert.len, ip->legacy.key,
                                   &desc->plaintext_data.signing_pubkey,

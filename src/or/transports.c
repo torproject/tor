@@ -590,7 +590,7 @@ pt_configure_remaining_proxies(void)
     }
 
     /* If the proxy is not fully configured, try to configure it
-       futher. */
+       further. */
     if (!proxy_configuration_finished(mp))
       if (configure_proxy(mp) == 1)
         at_least_a_proxy_config_finished = 1;

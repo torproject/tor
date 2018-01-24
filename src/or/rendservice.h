@@ -108,7 +108,7 @@ typedef struct rend_service_t {
   /** If true, we don't close circuits for making requests to unsupported
    * ports. */
   int allow_unknown_ports;
-  /** The maximum number of simultanious streams-per-circuit that are allowed
+  /** The maximum number of simultaneous streams-per-circuit that are allowed
    * to be established, or 0 if no limit is set.
    */
   int max_streams_per_circuit;

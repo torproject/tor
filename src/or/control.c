@@ -4458,11 +4458,11 @@ handle_control_hspost(control_connection_t *conn,
  * used in pk is given to the HS subsystem so the caller must stop accessing
  * it after.
  *
- * The port_cfgs is a list of service port. Ownership transfered to service.
+ * The port_cfgs is a list of service port. Ownership transferred to service.
  * The max_streams refers to the MaxStreams= key.
  * The max_streams_close_circuit refers to the MaxStreamsCloseCircuit key.
  * The auth_type is the authentication type of the clients in auth_clients.
- * The ownership of that list is transfered to the service.
+ * The ownership of that list is transferred to the service.
  *
  * On success (RSAE_OKAY), the address_out points to a newly allocated string
  * containing the onion address without the .onion part. On error, address_out
@@ -4911,7 +4911,7 @@ add_onion_helper_keyarg(const char *arg, int discard_pk,
     goto err;
   }
 
-  /* Succeded in loading or generating a private key. */
+  /* Succeeded in loading or generating a private key. */
   ret = 0;
 
  err:

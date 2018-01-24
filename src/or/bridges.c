@@ -356,7 +356,7 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
 {
   /* Iterate the already-registered bridge list:
 
-     If you find a bridge with the same adress and port, mark it for
+     If you find a bridge with the same address and port, mark it for
      removal. It doesn't make sense to have two active bridges with
      the same IP:PORT. If the bridge in question has a different
      digest or transport than <b>digest</b>/<b>transport_name</b>,

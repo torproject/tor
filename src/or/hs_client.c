@@ -716,7 +716,7 @@ desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip)
     smartlist_add(lspecs, lspec);
   } SMARTLIST_FOREACH_END(desc_lspec);
 
-  /* Explicitely put the direct connection option to 0 because this is client
+  /* Explicitly put the direct connection option to 0 because this is client
    * side and there is no such thing as a non anonymous client. */
   ei = hs_get_extend_info_from_lspecs(lspecs, &ip->onion_key, 0);
 

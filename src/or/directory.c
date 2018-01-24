@@ -1112,7 +1112,7 @@ directory_request_free_(directory_request_t *req)
 /**
  * Set the address and OR port to use for this directory request.  If there is
  * no OR port, we'll have to connect over the dirport.  (If there are both,
- * the indirection setting determins which to use.)
+ * the indirection setting determines which to use.)
  */
 void
 directory_request_set_or_addr_port(directory_request_t *req,
@@ -1123,7 +1123,7 @@ directory_request_set_or_addr_port(directory_request_t *req,
 /**
  * Set the address and dirport to use for this directory request.  If there
  * is no dirport, we'll have to connect over the OR port.  (If there are both,
- * the indirection setting determins which to use.)
+ * the indirection setting determines which to use.)
  */
 void
 directory_request_set_dir_addr_port(directory_request_t *req,
@@ -3413,7 +3413,7 @@ connection_dir_process_inbuf(dir_connection_t *conn)
 }
 
 /** We are closing a dir connection: If <b>dir_conn</b> is a dir connection
- *  that tried to fetch an HS descriptor, check if it successfuly fetched it,
+ *  that tried to fetch an HS descriptor, check if it successfully fetched it,
  *  or if we need to try again. */
 static void
 refetch_hsdesc_if_needed(dir_connection_t *dir_conn)
@@ -4036,7 +4036,7 @@ find_best_diff(const smartlist_t *digests, int flav,
 }
 
 /** Lookup the cached consensus document by the flavor found in <b>flav</b>.
- * The prefered set of compression methods should be listed in the
+ * The preferred set of compression methods should be listed in the
  * <b>compression_methods</b> bitfield. The compression method chosen (if any)
  * is stored in <b>compression_used_out</b>. */
 static struct consensus_cache_entry_t *
@@ -4948,7 +4948,7 @@ handle_get_robots(dir_connection_t *conn, const get_handler_args_t *args)
 
 /* Given the <b>url</b> from a POST request, try to extract the version number
  * using the provided <b>prefix</b>. The version should be after the prefix and
- * ending with the seperator "/". For instance:
+ * ending with the separator "/". For instance:
  *      /tor/hs/3/publish
  *
  * On success, <b>end_pos</b> points to the position right after the version

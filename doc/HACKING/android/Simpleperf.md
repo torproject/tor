@@ -18,7 +18,7 @@ the Android Software Development Kit (SDK) and Native Development Kit
    repository and build an Orbot APK (Android Package) file with
    debugging enabled. Make sure that when you build the native content of
    the Orbot application that you run the `make -C external` command with
-   an additional `DEBUG=1` as paramter to ensure that the Orbot build
+   an additional `DEBUG=1` as parameter to ensure that the Orbot build
    process does not strip the debug symbols from the Tor binary.
 
 2. (Optional) Uninstall and clean-up your old Orbot installation that
