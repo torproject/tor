@@ -1,0 +1,4 @@
+  o Minor bugfixes (unit tests):
+    - Fix a memory leak in the scheduler/loop_kist unit test. Fixes bug
+      25005; bugfix on 0.3.2.7-rc.
+
