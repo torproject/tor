@@ -458,7 +458,6 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   if (bridge_line->transport_name)
     b->transport_name = bridge_line->transport_name;
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
-  b->fetch_status.backoff = DL_SCHED_RANDOM_EXPONENTIAL;
   b->fetch_status.increment_on = DL_SCHED_INCREMENT_ATTEMPT;
   /* We can't reset the bridge's download status here, because UseBridges
    * might be 0 now, and it might be changed to 1 much later. */

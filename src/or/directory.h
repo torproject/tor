@@ -142,19 +142,13 @@ static inline int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
 {
+  (void) max_failures; // 23814 REMOVE
+
   /* dls wasn't reset before it was used */
   if (dls->next_attempt_at == 0) {
     download_status_reset(dls);
   }
 
-  if (dls->backoff == DL_SCHED_DETERMINISTIC) {
-    /* Deterministic schedules can hit an endpoint; exponential backoff
-     * schedules just wait longer and longer. */
-    int under_failure_limit = (dls->n_download_failures <= max_failures
-                               && dls->n_download_attempts <= max_failures);
-    if (!under_failure_limit)
-      return 0;
-  }
   return download_status_get_next_attempt_at(dls) <= now;
 }
 
@@ -260,7 +254,6 @@ MOCK_DECL(STATIC int, directory_handle_command_post,(dir_connection_t *conn,
                                                      const char *body,
                                                      size_t body_len));
 STATIC int download_status_schedule_get_delay(download_status_t *dls,
-                                              const smartlist_t *schedule,
                                               int min_delay, int max_delay,
                                               time_t now);
 

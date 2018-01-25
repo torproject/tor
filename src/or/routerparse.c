@@ -3781,7 +3781,6 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                                                      ns->consensus_method,
                                                      flav))) {
         /* Use exponential-backoff scheduling when downloading microdescs */
-        rs->dl_status.backoff = DL_SCHED_RANDOM_EXPONENTIAL;
         smartlist_add(ns->routerstatus_list, rs);
       }
     }

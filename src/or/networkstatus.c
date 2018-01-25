@@ -106,9 +106,9 @@ static time_t time_to_download_next_consensus[N_CONSENSUS_FLAVORS];
 static download_status_t consensus_dl_status[N_CONSENSUS_FLAVORS] =
   {
     { 0, 0, 0, DL_SCHED_CONSENSUS, DL_WANT_ANY_DIRSERVER,
-      DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 },
+      DL_SCHED_INCREMENT_FAILURE, 0, 0 },
     { 0, 0, 0, DL_SCHED_CONSENSUS, DL_WANT_ANY_DIRSERVER,
-      DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 },
+      DL_SCHED_INCREMENT_FAILURE, 0, 0 },
   };
 
 #define N_CONSENSUS_BOOTSTRAP_SCHEDULES 2
@@ -125,10 +125,10 @@ static download_status_t
               consensus_bootstrap_dl_status[N_CONSENSUS_BOOTSTRAP_SCHEDULES] =
   {
     { 0, 0, 0, DL_SCHED_CONSENSUS, DL_WANT_AUTHORITY,
-      DL_SCHED_INCREMENT_ATTEMPT, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 },
+      DL_SCHED_INCREMENT_ATTEMPT, 0, 0 },
     /* During bootstrap, DL_WANT_ANY_DIRSERVER means "use fallbacks". */
     { 0, 0, 0, DL_SCHED_CONSENSUS, DL_WANT_ANY_DIRSERVER,
-      DL_SCHED_INCREMENT_ATTEMPT, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 },
+      DL_SCHED_INCREMENT_ATTEMPT, 0, 0 },
   };
 
 /** True iff we have logged a warning about this OR's version being older than
