@@ -53,6 +53,9 @@ static unsigned int dos_conn_enabled = 0;
 static uint32_t dos_conn_max_concurrent_count;
 static dos_conn_defense_type_t dos_conn_defense_type;
 
+/* Keep some stats for the heartbeat so we can report out. */
+static uint64_t conn_num_addr_rejected;
+
 /*
  * General interface of the denial of service mitigation subsystem.
  */
@@ -487,6 +490,37 @@ dos_cc_get_defense_type(channel_t *chan)
 }
 
 /* Concurrent connection detection public API. */
+
+/* Return true iff the given address is permitted to open another connection.
+ * A defense value is returned for the caller to take appropriate actions. */
+dos_conn_defense_type_t
+dos_conn_addr_get_defense_type(const tor_addr_t *addr)
+{
+  clientmap_entry_t *entry;
+
+  tor_assert(addr);
+
+  /* Skip everything if not enabled. */
+  if (!dos_conn_enabled) {
+    goto end;
+  }
+
+  /* We are only interested in client connection from the geoip cache. */
+  entry = geoip_lookup_client(addr, NULL, GEOIP_CLIENT_CONNECT);
+  if (entry == NULL) {
+    goto end;
+  }
+
+  /* Need to be above the maximum concurrent connection count to trigger a
+   * defense. */
+  if (entry->dos_stats.concurrent_count > dos_conn_max_concurrent_count) {
+    conn_num_addr_rejected++;
+    return dos_conn_defense_type;
+  }
+
+ end:
+  return DOS_CONN_DEFENSE_NONE;
+}
 
 /* General API */
 

@@ -1600,6 +1600,14 @@ connection_handle_listener_read(connection_t *conn, int new_type)
         return 0;
       }
     }
+    if (new_type == CONN_TYPE_OR) {
+      /* Assess with the connection DoS mitigation subsystem if this address
+       * can open a new connection. */
+      if (dos_conn_addr_get_defense_type(&addr) == DOS_CONN_DEFENSE_CLOSE) {
+        tor_close_socket(news);
+        return 0;
+      }
+    }
 
     newconn = connection_new(new_type, conn->socket_family);
     newconn->s = news;

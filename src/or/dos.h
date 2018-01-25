@@ -107,6 +107,8 @@ typedef enum dos_conn_defense_type_t {
   DOS_CONN_DEFENSE_MAX              = 2,
 } dos_conn_defense_type_t;
 
+dos_conn_defense_type_t dos_conn_addr_get_defense_type(const tor_addr_t *addr);
+
 #ifdef DOS_PRIVATE
 
 STATIC uint32_t get_param_conn_max_concurrent_count(
