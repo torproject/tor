@@ -34,6 +34,7 @@
 #include "dirvote.h"
 #include "dns.h"
 #include "dnsserv.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
@@ -2989,6 +2990,7 @@ tor_free_all(int postfork)
   control_free_all();
   sandbox_free_getaddrinfo_cache();
   protover_free_all();
+  dos_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

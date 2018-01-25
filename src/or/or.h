@@ -4510,6 +4510,36 @@ typedef struct {
 
   /** If 1, we skip all OOS checks. */
   int DisableOOSCheck;
+
+  /** Autobool: Is the circuit creation DoS mitigation subsystem enabled? */
+  int DoSCircuitCreationEnabled;
+  /** Minimum concurrent connection needed from one single address before any
+   * defense is used. */
+  int DoSCircuitCreationMinConnections;
+  /** Circuit rate, in tenths of a second, that is used to refill the token
+   * bucket at this given rate. */
+  int DoSCircuitCreationRateTenths;
+  /** Maximum allowed burst of circuits. Reaching that value, the address is
+   * detected as malicious and a defense might be used. */
+  int DoSCircuitCreationBurst;
+  /** When an address is marked as malicous, what defense should be used
+   * against it. See the dos_cc_defense_type_t enum. */
+  int DoSCircuitCreationDefenseType;
+  /** For how much time (in seconds) the defense is applicable for a malicious
+   * address. A random time delta is added to the defense time of an address
+   * which will be between 1 second and half of this value. */
+  int DoSCircuitCreationDefenseTimePeriod;
+
+  /** Autobool: Is the DoS connection mitigation subsystem enabled? */
+  int DoSConnectionEnabled;
+  /** Maximum concurrent connection allowed per address. */
+  int DoSConnectionMaxConcurrentCount;
+  /** When an address is reaches the maximum count, what defense should be
+   * used against it. See the dos_conn_defense_type_t enum. */
+  int DoSConnectionDefenseType;
+
+  /** Autobool: Do we refuse single hop client rendezvous? */
+  int DoSRefuseSingleHopClientRendezvous;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
