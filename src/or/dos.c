@@ -555,6 +555,51 @@ dos_should_refuse_single_hop_client(void)
                                        0 /* default */, 0, 1);
 }
 
+/* Log a heartbeat message with some statistics. */
+void
+dos_log_heartbeat(void)
+{
+  char *conn_msg = NULL;
+  char *cc_msg = NULL;
+  char *single_hop_client_msg = NULL;
+
+  if (!dos_is_enabled()) {
+    goto end;
+  }
+
+  if (dos_cc_enabled) {
+    tor_asprintf(&cc_msg,
+                 " %" PRIu64 " circuits rejected,"
+                 " %" PRIu32 " marked addresses.",
+                 cc_num_rejected_cells, cc_num_marked_addrs);
+  }
+
+  if (dos_conn_enabled) {
+    tor_asprintf(&conn_msg,
+                 " %" PRIu64 " connections closed.",
+                 conn_num_addr_rejected);
+  }
+
+  if (dos_should_refuse_single_hop_client()) {
+    tor_asprintf(&single_hop_client_msg,
+                 " %" PRIu64 " single hop clients refused.",
+                 num_single_hop_client_refused);
+  }
+
+  log_notice(LD_HEARTBEAT,
+             "DoS mitigation since startup:%s%s%s",
+             (cc_msg != NULL) ? cc_msg : " [cc not enabled]",
+             (conn_msg != NULL) ? conn_msg : " [conn not enabled]",
+             (single_hop_client_msg != NULL) ? single_hop_client_msg : "");
+
+  tor_free(conn_msg);
+  tor_free(cc_msg);
+  tor_free(single_hop_client_msg);
+
+ end:
+  return;
+}
+
 /* Called when a new client connection has been established on the given
  * address. */
 void

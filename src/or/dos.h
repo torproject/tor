@@ -47,6 +47,7 @@ void dos_init(void);
 void dos_free_all(void);
 void dos_consensus_has_changed(const networkstatus_t *ns);
 int dos_enabled(void);
+void dos_log_heartbeat(void);
 
 void dos_new_client_conn(or_connection_t *or_conn);
 void dos_close_client_conn(const or_connection_t *or_conn);
