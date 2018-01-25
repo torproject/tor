@@ -2670,7 +2670,7 @@ The following options are used to configure a hidden service.
     you're using a Tor controller that handles hidserv publishing for you.
     (Default: 1)
 
-[[HiddenServiceVersion]] **HiddenServiceVersion** __version__,__version__,__...__::
+[[HiddenServiceVersion]] **HiddenServiceVersion** **2**|**3**::
     A list of rendezvous service descriptor versions to publish for the hidden
     service. Currently, versions 2 and 3 are supported. (Default: 2)
 
