@@ -51,6 +51,9 @@ int dos_enabled(void);
 void dos_new_client_conn(or_connection_t *or_conn);
 void dos_close_client_conn(const or_connection_t *or_conn);
 
+int dos_should_refuse_single_hop_client(void);
+void dos_note_refuse_single_hop_client(void);
+
 /*
  * Circuit creation DoS mitigation subsystemn interface.
  */

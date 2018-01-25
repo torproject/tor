@@ -14,6 +14,7 @@
 #include "geoip.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "router.h"
 
 #include "dos.h"
 
@@ -59,6 +60,9 @@ static uint64_t conn_num_addr_rejected;
 /*
  * General interface of the denial of service mitigation subsystem.
  */
+
+/* Keep stats for the heartbeat. */
+static uint64_t num_single_hop_client_refused;
 
 /* Return true iff the circuit creation mitigation is enabled. We look at the
  * consensus for this else a default value is returned. */
@@ -523,6 +527,33 @@ dos_conn_addr_get_defense_type(const tor_addr_t *addr)
 }
 
 /* General API */
+
+/* Note down that we've just refused a single hop client. This increments a
+ * counter later used for the heartbeat. */
+void
+dos_note_refuse_single_hop_client(void)
+{
+  num_single_hop_client_refused++;
+}
+
+/* Return true iff single hop client connection (ESTABLISH_RENDEZVOUS) should
+ * be refused. */
+int
+dos_should_refuse_single_hop_client(void)
+{
+  /* If we aren't a public relay, this shouldn't apply to anything. */
+  if (!public_server_mode(get_options())) {
+    return 0;
+  }
+
+  if (get_options()->DoSRefuseSingleHopClientRendezvous != -1) {
+    return get_options()->DoSRefuseSingleHopClientRendezvous;
+  }
+
+  return (int) networkstatus_get_param(NULL,
+                                       "DoSRefuseSingleHopClientRendezvous",
+                                       0 /* default */, 0, 1);
+}
 
 /* Called when a new client connection has been established on the given
  * address. */
