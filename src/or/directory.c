@@ -5471,36 +5471,33 @@ download_status_schedule_get_delay(download_status_t *dls,
                                    ? dls->n_download_attempts
                                    : dls->n_download_failures);
 
-  { // XXXX 23814 unindent.
-
-    /* Check if we missed a reset somehow */
-    IF_BUG_ONCE(dls->last_backoff_position > dls_schedule_position) {
-      dls->last_backoff_position = 0;
-      dls->last_delay_used = 0;
-    }
-
-    if (dls_schedule_position > 0) {
-      delay = dls->last_delay_used;
-
-      while (dls->last_backoff_position < dls_schedule_position) {
-        /* Do one increment step */
-        delay = next_random_exponential_delay(delay, min_delay, max_delay);
-        /* Update our position */
-        ++(dls->last_backoff_position);
-      }
-    } else {
-      /* If we're just starting out, use the minimum delay */
-      delay = min_delay;
-    }
-
-    /* Clamp it within min/max if we have them */
-    if (min_delay >= 0 && delay < min_delay) delay = min_delay;
-    if (max_delay != INT_MAX && delay > max_delay) delay = max_delay;
-
-    /* Store it for next time */
-    dls->last_backoff_position = dls_schedule_position;
-    dls->last_delay_used = delay;
+  /* Check if we missed a reset somehow */
+  IF_BUG_ONCE(dls->last_backoff_position > dls_schedule_position) {
+    dls->last_backoff_position = 0;
+    dls->last_delay_used = 0;
   }
+
+  if (dls_schedule_position > 0) {
+    delay = dls->last_delay_used;
+
+    while (dls->last_backoff_position < dls_schedule_position) {
+      /* Do one increment step */
+      delay = next_random_exponential_delay(delay, min_delay, max_delay);
+      /* Update our position */
+      ++(dls->last_backoff_position);
+    }
+  } else {
+    /* If we're just starting out, use the minimum delay */
+    delay = min_delay;
+  }
+
+  /* Clamp it within min/max if we have them */
+  if (min_delay >= 0 && delay < min_delay) delay = min_delay;
+  if (max_delay != INT_MAX && delay > max_delay) delay = max_delay;
+
+  /* Store it for next time */
+  dls->last_backoff_position = dls_schedule_position;
+  dls->last_delay_used = delay;
 
   /* A negative delay makes no sense. Knowing that delay is
    * non-negative allows us to safely do the wrapping check below. */
