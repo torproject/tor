@@ -36,6 +36,7 @@ static dos_cc_defense_type_t dos_cc_defense_type;
 static int32_t dos_cc_defense_time_period;
 
 /* Keep some stats for the heartbeat so we can report out. */
+static uint64_t cc_num_rejected_cells;
 static uint32_t cc_num_marked_addrs;
 
 /*
@@ -323,6 +324,44 @@ cc_mark_client(cc_client_stats_t *stats)
     crypto_rand_int_range(1, dos_cc_defense_time_period / 2);
 }
 
+/* Return true iff the given channel address is marked as malicious. This is
+ * called a lot and part of the fast path of handling cells. It has to remain
+ * as fast as we can. */
+static int
+cc_channel_addr_is_marked(channel_t *chan)
+{
+  time_t now;
+  tor_addr_t addr;
+  clientmap_entry_t *entry;
+  cc_client_stats_t *stats = NULL;
+
+  if (chan == NULL) {
+    goto end;
+  }
+  /* Must be a client connection else we ignore. */
+  if (!channel_is_client(chan)) {
+    goto end;
+  }
+  /* Without an IP address, nothing can work. */
+  if (!channel_get_addr_if_possible(chan, &addr)) {
+    goto end;
+  }
+
+  /* We are only interested in client connection from the geoip cache. */
+  entry = geoip_lookup_client(&addr, NULL, GEOIP_CLIENT_CONNECT);
+  if (entry == NULL) {
+    /* We can have a connection creating circuits but not tracked by the geoip
+     * cache. Once this DoS subsystem is enabled, we can end up here with no
+     * entry for the channel. */
+    goto end;
+  }
+  now = approx_time();
+  stats = &entry->dos_stats.cc_stats;
+
+ end:
+  return stats && stats->marked_until_ts >= now;
+}
+
 /* Concurrent connection private API. */
 
 /* Free everything for the connection DoS mitigation subsystem. */
@@ -419,6 +458,32 @@ dos_cc_new_create_cell(channel_t *chan)
 
  end:
   return;
+}
+
+/* Return the defense type that should be used for this circuit.
+ *
+ * This is part of the fast path and called a lot. */
+dos_cc_defense_type_t
+dos_cc_get_defense_type(channel_t *chan)
+{
+  tor_assert(chan);
+
+  /* Skip everything if not enabled. */
+  if (!dos_cc_enabled) {
+    goto end;
+  }
+
+  /* On an OR circuit, we'll check if the previous channel is a marked client
+   * connection detected by our DoS circuit creation mitigation subsystem. */
+  if (cc_channel_addr_is_marked(chan)) {
+    /* We've just assess that this circuit should trigger a defense for the
+     * cell it just seen. Note it down. */
+    cc_num_rejected_cells++;
+    return dos_cc_defense_type;
+  }
+
+ end:
+  return DOS_CC_DEFENSE_NONE;
 }
 
 /* Concurrent connection detection public API. */

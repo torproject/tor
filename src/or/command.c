@@ -290,6 +290,13 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     return;
   }
 
+  /* Check if we should apply a defense for this channel. */
+  if (dos_cc_get_defense_type(chan) == DOS_CC_DEFENSE_REFUSE_CELL) {
+    channel_send_destroy(cell->circ_id, chan,
+                         END_CIRC_REASON_RESOURCELIMIT);
+    return;
+  }
+
   if (!server_mode(options) ||
       (!public_server_mode(options) && channel_is_outgoing(chan))) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,

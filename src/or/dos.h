@@ -81,6 +81,7 @@ typedef enum dos_cc_defense_type_t {
 } dos_cc_defense_type_t;
 
 void dos_cc_new_create_cell(channel_t *channel);
+dos_cc_defense_type_t dos_cc_get_defense_type(channel_t *chan);
 
 /*
  * Concurrent connection DoS mitigation interface.
