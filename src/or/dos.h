@@ -80,6 +80,8 @@ typedef enum dos_cc_defense_type_t {
   DOS_CC_DEFENSE_MAX              = 2,
 } dos_cc_defense_type_t;
 
+void dos_cc_new_create_cell(channel_t *channel);
+
 /*
  * Concurrent connection DoS mitigation interface.
  */
@@ -111,6 +113,10 @@ STATIC uint32_t get_param_conn_max_concurrent_count(
 STATIC uint32_t get_param_cc_circuit_burst(const networkstatus_t *ns);
 STATIC uint32_t get_param_cc_min_concurrent_connection(
                                             const networkstatus_t *ns);
+
+STATIC uint32_t get_circuit_rate_per_second(void);
+STATIC void cc_stats_refill_bucket(cc_client_stats_t *stats,
+                                   const tor_addr_t *addr);
 
 MOCK_DECL(STATIC unsigned int, get_param_cc_enabled,
           (const networkstatus_t *ns));

@@ -46,6 +46,7 @@
 #include "config.h"
 #include "control.h"
 #include "cpuworker.h"
+#include "dos.h"
 #include "hibernate.h"
 #include "nodelist.h"
 #include "onion.h"
@@ -246,6 +247,11 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
             " (%p)",
             (unsigned)cell->circ_id,
             U64_PRINTF_ARG(chan->global_identifier), chan);
+
+  /* First thing we do, even though the cell might be invalid, is inform the
+   * DoS mitigation subsystem layer of this event. Validation is done by this
+   * function. */
+  dos_cc_new_create_cell(chan);
 
   /* We check for the conditions that would make us drop the cell before
    * we check for the conditions that would make us send a DESTROY back,

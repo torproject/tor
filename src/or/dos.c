@@ -35,6 +35,9 @@ static uint32_t dos_cc_circuit_burst;
 static dos_cc_defense_type_t dos_cc_defense_type;
 static int32_t dos_cc_defense_time_period;
 
+/* Keep some stats for the heartbeat so we can report out. */
+static uint32_t cc_num_marked_addrs;
+
 /*
  * Concurrent connection denial of service mitigation.
  *
@@ -209,6 +212,117 @@ cc_consensus_has_changed(const networkstatus_t *ns)
   }
 }
 
+/** Return the number of circuits we allow per second under the current
+ *  configuration. */
+STATIC uint32_t
+get_circuit_rate_per_second(void)
+{
+  int64_t circ_rate;
+
+  /* We take the burst divided by the rate which is in tenths of a second so
+   * convert to get a circuit rate per second. */
+  circ_rate = dos_cc_circuit_rate_tenths / 10;
+  if (circ_rate < 0) {
+    /* Safety check, never allow it to go below 0 else the bucket will always
+     * be empty resulting in every address to be detected. */
+    circ_rate = 1;
+  }
+
+  /* Clamp it down to a 32 bit value because a rate of 2^32 circuits per
+   * second is just too much in any circumstances. */
+  if (circ_rate > UINT32_MAX) {
+    circ_rate = UINT32_MAX;
+  }
+  return (uint32_t) circ_rate;
+}
+
+/* Given the circuit creation client statistics object, refill the circuit
+ * bucket if needed. This also works if the bucket was never filled in the
+ * first place. The addr is only used for logging purposes. */
+STATIC void
+cc_stats_refill_bucket(cc_client_stats_t *stats, const tor_addr_t *addr)
+{
+  uint32_t new_circuit_bucket_count, circuit_rate = 0, num_token;
+  time_t now, elapsed_time_last_refill;
+
+  tor_assert(stats);
+  tor_assert(addr);
+
+  now = approx_time();
+
+  /* We've never filled the bucket so fill it with the maximum being the burst
+   * and we are done. */
+  if (stats->last_circ_bucket_refill_ts == 0) {
+    num_token = dos_cc_circuit_burst;
+    goto end;
+  }
+
+  /* At this point, we know we might need to add token to the bucket. We'll
+   * first compute the circuit rate that is how many circuit are we allowed to
+   * do per second. */
+  circuit_rate = get_circuit_rate_per_second();
+
+  /* How many seconds have elapsed between now and the last refill? */
+  elapsed_time_last_refill = now - stats->last_circ_bucket_refill_ts;
+
+  /* If the elapsed time is below 0 it means our clock jumped backward so in
+   * that case, lets be safe and fill it up to the maximum. Not filling it
+   * could trigger a detection for a valid client. Also, if the clock jumped
+   * negative but we didn't notice until the elapsed time became positive
+   * again, then we potentially spent many seconds not refilling the bucket
+   * when we should have been refilling it. But the fact that we didn't notice
+   * until now means that no circuit creation requests came in during that
+   * time, so the client doesn't end up punished that much from this hopefully
+   * rare situation.*/
+  if (elapsed_time_last_refill < 0) {
+    /* Dividing the burst by the circuit rate gives us the time span that will
+     * give us the maximum allowed value of token. */
+    elapsed_time_last_refill = (dos_cc_circuit_burst / circuit_rate);
+  }
+
+  /* Compute how many circuits we are allowed in that time frame which we'll
+   * add to the bucket. This can be big but it is cap to a maximum after. */
+  num_token = elapsed_time_last_refill * circuit_rate;
+
+ end:
+  /* We cap the bucket to the burst value else this could grow to infinity
+   * over time. */
+  new_circuit_bucket_count = MIN(stats->circuit_bucket + num_token,
+                                 dos_cc_circuit_burst);
+  log_debug(LD_DOS, "DoS address %s has its circuit bucket value: %" PRIu32
+                    ". Filling it to %" PRIu32 ". Circuit rate is %" PRIu32,
+            fmt_addr(addr), stats->circuit_bucket, new_circuit_bucket_count,
+            circuit_rate);
+
+  stats->circuit_bucket = new_circuit_bucket_count;
+  stats->last_circ_bucket_refill_ts = now;
+  return;
+}
+
+/* Return true iff the circuit bucket is down to 0 and the number of
+ * concurrent connections is greater or equal the minimum threshold set the
+ * consensus parameter. */
+static int
+cc_has_exhausted_circuits(const dos_client_stats_t *stats)
+{
+  tor_assert(stats);
+  return stats->cc_stats.circuit_bucket == 0 &&
+         stats->concurrent_count >= dos_cc_min_concurrent_conn;
+}
+
+/* Mark client address by setting a timestamp in the stats object which tells
+ * us until when it is marked as positively detected. */
+static void
+cc_mark_client(cc_client_stats_t *stats)
+{
+  tor_assert(stats);
+  /* We add a random offset of a maximum of half the defense time so it is
+   * less predictable. */
+  stats->marked_until_ts =
+    approx_time() + dos_cc_defense_time_period +
+    crypto_rand_int_range(1, dos_cc_defense_time_period / 2);
+}
+
 /* Concurrent connection private API. */
 
 /* Free everything for the connection DoS mitigation subsystem. */
@@ -241,6 +355,71 @@ dos_is_enabled(void)
 }
 
 /* Circuit creation public API. */
+
+/* Called when a CREATE cell is received from the given channel. */
+void
+dos_cc_new_create_cell(channel_t *chan)
+{
+  tor_addr_t addr;
+  clientmap_entry_t *entry;
+
+  tor_assert(chan);
+
+  /* Skip everything if not enabled. */
+  if (!dos_cc_enabled) {
+    goto end;
+  }
+
+  /* Must be a client connection else we ignore. */
+  if (!channel_is_client(chan)) {
+    goto end;
+  }
+  /* Without an IP address, nothing can work. */
+  if (!channel_get_addr_if_possible(chan, &addr)) {
+    goto end;
+  }
+
+  /* We are only interested in client connection from the geoip cache. */
+  entry = geoip_lookup_client(&addr, NULL, GEOIP_CLIENT_CONNECT);
+  if (entry == NULL) {
+    /* We can have a connection creating circuits but not tracked by the geoip
+     * cache. Once this DoS subsystem is enabled, we can end up here with no
+     * entry for the channel. */
+    goto end;
+  }
+
+  /* General comment. Even though the client can already be marked as
+   * malicious, we continue to track statistics. If it keeps going above
+   * threshold while marked, the defense period time will grow longer. There
+   * is really no point at unmarking a client that keeps DoSing us. */
+
+  /* First of all, we'll try to refill the circuit bucket opportunistically
+   * before we assess. */
+  cc_stats_refill_bucket(&entry->dos_stats.cc_stats, &addr);
+
+  /* Take a token out of the circuit bucket if we are above 0 so we don't
+   * underflow the bucket. */
+  if (entry->dos_stats.cc_stats.circuit_bucket > 0) {
+    entry->dos_stats.cc_stats.circuit_bucket--;
+  }
+
+  /* This is the detection. Assess at every CREATE cell if the client should
+   * get marked as malicious. This should be kept as fast as possible. */
+  if (cc_has_exhausted_circuits(&entry->dos_stats)) {
+    /* If this is the first time we mark this entry, log it a info level.
+     * Under heavy DDoS, logging each time we mark would results in lots and
+     * lots of logs. */
+    if (entry->dos_stats.cc_stats.marked_until_ts == 0) {
+      log_debug(LD_DOS, "Detected circuit creation DoS by address: %s",
+                fmt_addr(&addr));
+      cc_num_marked_addrs++;
+    }
+    cc_mark_client(&entry->dos_stats.cc_stats);
+  }
+
+ end:
+  return;
+}
 
 /* Concurrent connection detection public API. */
 
