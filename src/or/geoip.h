@@ -13,6 +13,7 @@
 #define TOR_GEOIP_H
 
 #include "testsupport.h"
+#include "dos.h"
 
 #ifdef GEOIP_PRIVATE
 STATIC int geoip_parse_entry(const char *line, sa_family_t family);
@@ -37,6 +38,10 @@ typedef struct clientmap_entry_t {
    * 4000 CE, please remember to add more bits to last_seen_in_minutes.) */
   unsigned int last_seen_in_minutes:30;
   unsigned int action:2;
+
+  /* This object is used to keep some statistics per client address for the
+   * DoS mitigation subsystem. */
+  dos_client_stats_t dos_stats;
 } clientmap_entry_t;
 
 int should_record_bridge_info(const or_options_t *options);

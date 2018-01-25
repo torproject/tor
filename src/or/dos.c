@@ -246,6 +246,81 @@ dos_is_enabled(void)
 
 /* General API */
 
+/* Called when a new client connection has been established on the given
+ * address. */
+void
+dos_new_client_conn(or_connection_t *or_conn)
+{
+  clientmap_entry_t *entry;
+
+  tor_assert(or_conn);
+
+  /* Past that point, we know we have at least one DoS detection subsystem
+   * enabled so we'll start allocating stuff. */
+  if (!dos_is_enabled()) {
+    goto end;
+  }
+
+  /* We are only interested in client connection from the geoip cache. */
+  entry = geoip_lookup_client(&or_conn->real_addr, NULL,
+                              GEOIP_CLIENT_CONNECT);
+  if (BUG(entry == NULL)) {
+    /* Should never happen because we note down the address in the geoip
+     * cache before this is called. */
+    goto end;
+  }
+
+  entry->dos_stats.concurrent_count++;
+  or_conn->tracked_for_dos_mitigation = 1;
+  log_debug(LD_DOS, "Client address %s has now %u concurrent connections.",
+            fmt_addr(&or_conn->real_addr),
+            entry->dos_stats.concurrent_count);
+
+ end:
+  return;
+}
+
+/* Called when a client connection for the given IP address has been closed. */
+void
+dos_close_client_conn(const or_connection_t *or_conn)
+{
+  clientmap_entry_t *entry;
+
+  tor_assert(or_conn);
+
+  /* We have to decrement the count on tracked connection only even if the
+   * subsystem has been disabled at runtime because it might be re-enabled
+   * after and we need to keep a synchronized counter at all time. */
+  if (!or_conn->tracked_for_dos_mitigation) {
+    goto end;
+  }
+
+  /* We are only interested in client connection from the geoip cache. */
+  entry = geoip_lookup_client(&or_conn->real_addr, NULL,
+                              GEOIP_CLIENT_CONNECT);
+  if (entry == NULL) {
+    /* This can happen because we can close a connection before the channel
+     * got to be noted down in the geoip cache. */
+    goto end;
+  }
+
+  /* Extra super duper safety. Going below 0 means an underflow which could
+   * lead to most likely a false positive. In theory, this should never happen
+   * but lets be extra safe. */
+  if (BUG(entry->dos_stats.concurrent_count == 0)) {
+    goto end;
+  }
+
+  entry->dos_stats.concurrent_count--;
+  log_debug(LD_DOS, "Client address %s has lost a connection. Concurrent "
+                    "connections are now at %u",
+            fmt_addr(&or_conn->real_addr),
+            entry->dos_stats.concurrent_count);
+
+ end:
+  return;
+}
+
 /* Called when the consensus has changed. We might have new consensus
  * parameters to look at. */
 void

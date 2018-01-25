@@ -78,6 +78,7 @@
 #include "dirserv.h"
 #include "dns.h"
 #include "dnsserv.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "ext_orport.h"
 #include "geoip.h"
@@ -687,6 +688,13 @@ connection_free,(connection_t *conn))
                                                   "connection_free");
   }
 #endif
+
+  /* Notify the circuit creation DoS mitigation subsystem that an OR client
+   * connection has been closed. And only do that if we track it. */
+  if (conn->type == CONN_TYPE_OR) {
+    dos_close_client_conn(TO_OR_CONN(conn));
+  }
+
   connection_unregister_events(conn);
   connection_free_(conn);
 }

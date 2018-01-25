@@ -1500,6 +1500,10 @@ typedef struct or_connection_t {
   /** True iff this connection has had its bootstrap failure logged with
    * control_event_bootstrap_problem. */
   unsigned int have_noted_bootstrap_problem:1;
+  /** True iff this is a client connection and its address has been put in the
+   * geoip cache and handled by the DoS mitigation subsystem. We use this to
+   * insure we have a coherent count of concurrent connection. */
+  unsigned int tracked_for_dos_mitigation : 1;
 
   uint16_t link_proto; /**< What protocol version are we using? 0 for
                         * "none negotiated yet." */
