@@ -22,11 +22,10 @@ Changes in version 0.3.3.1-alpha - 2018-01-25
       consensus. This information makes it easier for IPv6 clients to
       bootstrap and choose reachable entry guards. Implements 23826.
     - Add consensus method 28, which removes IPv6 ORPorts from
-      microdescriptors. Now that the consensus contains IPv6
-      ORPorts, they are redundant in microdescs. This change will be
-      used by Tor clients on 0.2.8.x and later. (That is to say, with
-      all Tor clients having IPv6 bootstrap and guard support.)
-      Implements 23828.
+      microdescriptors. Now that the consensus contains IPv6 ORPorts,
+      they are redundant in microdescs. This change will be used by Tor
+      clients on 0.2.8.x and later. (That is to say, with all Tor
+      clients having IPv6 bootstrap and guard support.) Implements 23828.
     - Expand the documentation for AuthDirHasIPv6Connectivity when it is
       set by different numbers of authorities. Fixes 23870
       on 0.2.4.1-alpha.
@@ -44,8 +43,8 @@ Changes in version 0.3.3.1-alpha - 2018-01-25
       service circuits to a list of nodes. The option HSLayer2Guards
       pins the second hop, and the option HSLayer3Guards pins the third
       hop. These options are for use in conjunction with experiments
-      with "vanguards" for preventing guard enumeration attacks.
-      Closes ticket 13837.
+      with "vanguards" for preventing guard enumeration attacks. Closes
+      ticket 13837.
 
   o Major features (rust, portability, experimental):
     - Tor now ships with an optional implementation of one of its
@@ -384,9 +383,9 @@ Changes in version 0.3.3.1-alpha - 2018-01-25
     - The majority of the channel unit tests have been rewritten and the
       code coverage has now been raised to 83.6% for channel.c. Closes
       ticket 23709.
-    - Remove other dead code from the channel subsystem: All
-      together, this cleanup has removed more than 1500 lines of code
-      overall and adding very little except for unit test.
+    - Remove other dead code from the channel subsystem: All together,
+      this cleanup has removed more than 1500 lines of code overall and
+      adding very little except for unit test.
 
   o Code simplification and refactoring (circuit rendezvous):
     - Split the client-size rendezvous circuit lookup into two
