@@ -528,6 +528,41 @@ dos_conn_addr_get_defense_type(const tor_addr_t *addr)
 
 /* General API */
 
+/* Take any appropriate actions for the given geoip entry that is about to get
+ * freed. This is called for every entry that is being freed.
+ *
+ * This function will clear out the connection tracked flag if the concurrent
+ * count of the entry is above 0 so if those connections end up being seen by
+ * this subsystem, we won't try to decrement the counter for a new geoip entry
+ * that might have been added after this call for the same address. */
+void
+dos_geoip_entry_about_to_free(const clientmap_entry_t *geoip_ent)
+{
+  tor_assert(geoip_ent);
+
+  /* The count is down to 0 meaning no connections right now, we can safely
+   * clear the geoip entry from the cache. */
+  if (geoip_ent->dos_stats.concurrent_count == 0) {
+    goto end;
+  }
+
+  /* For each connection matching the geoip entry address, we'll clear the
+   * tracked flag because the entry is about to get removed from the geoip
+   * cache. We do not try to decrement if the flag is not set. */
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+    if (conn->type == CONN_TYPE_OR) {
+      or_connection_t *or_conn = TO_OR_CONN(conn);
+      if (!tor_addr_compare(&geoip_ent->addr, &or_conn->real_addr,
+                            CMP_EXACT)) {
+        or_conn->tracked_for_dos_mitigation = 0;
+      }
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+ end:
+  return;
+}
+
 /* Note down that we've just refused a single hop client. This increments a
  * counter later used for the heartbeat. */
 void

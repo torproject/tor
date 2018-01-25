@@ -516,6 +516,10 @@ clientmap_entry_free(clientmap_entry_t *ent)
   if (!ent)
     return;
 
+  /* This entry is about to be freed so pass it to the DoS subsystem to see if
+   * any actions can be taken about it. */
+  dos_geoip_entry_about_to_free(ent);
+
   tor_free(ent->transport_name);
   tor_free(ent);
 }
