@@ -472,24 +472,6 @@ geoip_db_digest(sa_family_t family)
     return hex_str(geoip6_digest, DIGEST_LEN);
 }
 
-/** Entry in a map from IP address to the last time we've seen an incoming
- * connection from that IP address. Used by bridges only, to track which
- * countries have them blocked. */
-typedef struct clientmap_entry_t {
-  HT_ENTRY(clientmap_entry_t) node;
-  tor_addr_t addr;
- /* Name of pluggable transport used by this client. NULL if no
-    pluggable transport was used. */
-  char *transport_name;
-
-  /** Time when we last saw this IP address, in MINUTES since the epoch.
-   *
-   * (This will run out of space around 4011 CE.  If Tor is still in use around
-   * 4000 CE, please remember to add more bits to last_seen_in_minutes.) */
-  unsigned int last_seen_in_minutes:30;
-  unsigned int action:2;
-} clientmap_entry_t;
-
 /** Largest allowable value for last_seen_in_minutes.  (It's a 30-bit field,
  * so it can hold up to (1u<<30)-1, or 0x3fffffffu.
  */
@@ -564,8 +546,7 @@ geoip_note_client_seen(geoip_client_action_t action,
                        time_t now)
 {
   const or_options_t *options = get_options();
-  clientmap_entry_t lookup, *ent;
-  memset(&lookup, 0, sizeof(clientmap_entry_t));
+  clientmap_entry_t *ent;
 
   if (action == GEOIP_CLIENT_CONNECT) {
     /* Only remember statistics as entry guard or as bridge. */
@@ -583,11 +564,7 @@ geoip_note_client_seen(geoip_client_action_t action,
             safe_str_client(fmt_addr((addr))),
             transport_name ? transport_name : "<no transport>");
 
-  tor_addr_copy(&lookup.addr, addr);
-  lookup.action = (int)action;
-  lookup.transport_name = (char*) transport_name;
-  ent = HT_FIND(clientmap, &client_history, &lookup);
-
+  ent = geoip_lookup_client(addr, transport_name, action);
   if (! ent) {
     ent = tor_malloc_zero(sizeof(clientmap_entry_t));
     tor_addr_copy(&ent->addr, addr);
@@ -633,6 +610,25 @@ geoip_remove_old_clients(time_t cutoff)
   clientmap_HT_FOREACH_FN(&client_history,
                           remove_old_client_helper_,
                           &cutoff);
+}
+
+/* Return a client entry object matching the given address, transport name and
+ * geoip action from the clientmap. NULL if not found. The transport_name can
+ * be NULL. */
+clientmap_entry_t *
+geoip_lookup_client(const tor_addr_t *addr, const char *transport_name,
+                    geoip_client_action_t action)
+{
+  clientmap_entry_t lookup;
+
+  tor_assert(addr);
+
+  /* We always look for a client connection with no transport. */
+  tor_addr_copy(&lookup.addr, addr);
+  lookup.action = action;
+  lookup.transport_name = (char *) transport_name;
+
+  return HT_FIND(clientmap, &client_history, &lookup);
 }
 
 /** How many responses are we giving to clients requesting v3 network
