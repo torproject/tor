@@ -1,0 +1,4 @@
+  o Documentation:
+    - HiddenServiceVersion only accepts one version to be specified. This
+      version can either be version 2 or 3.  Closes ticket 25026; bugfix on
+      0.3.2.2-alpha.
