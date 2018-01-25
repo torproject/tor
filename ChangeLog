@@ -1,5 +1,10 @@
 Changes in version 0.3.3.1-alpha - 2018-01-25:
-  Tor 0.3.3.1-alpha is the first release
+  Tor 0.3.3.1-alpha is the first release in the 0.3.3.x series. It adds
+  several new features to Tor, including several improvements to
+  bootstrapping, and support for an experimental "vanguards" feature to
+  resist guard discovery attacks. This series also includes better
+  support for applications that need to embed Tor or manage v3
+  onion services.
 
   o Major features (embedding):
     - There is now a documented stable API for programs that need to
