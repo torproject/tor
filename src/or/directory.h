@@ -254,7 +254,7 @@ MOCK_DECL(STATIC int, directory_handle_command_post,(dir_connection_t *conn,
                                                      const char *body,
                                                      size_t body_len));
 STATIC int download_status_schedule_get_delay(download_status_t *dls,
-                                              int min_delay, int max_delay,
+                                              int min_delay,
                                               time_t now);
 
 STATIC int handle_post_hs_descriptor(const char *url, const char *body);
@@ -265,13 +265,11 @@ STATIC int should_use_directory_guards(const or_options_t *options);
 STATIC compression_level_t choose_compression_level(ssize_t n_bytes);
 STATIC const smartlist_t *find_dl_schedule(const download_status_t *dls,
                                            const or_options_t *options);
-STATIC void find_dl_min_and_max_delay(download_status_t *dls,
-                                      const or_options_t *options,
-                                      int *min, int *max);
+STATIC int find_dl_min_delay(download_status_t *dls,
+                             const or_options_t *options);
 
 STATIC int next_random_exponential_delay(int delay,
-                                         int base_delay,
-                                         int max_delay);
+                                         int base_delay);
 
 STATIC void next_random_exponential_delay_range(int *low_bound_out,
                                                 int *high_bound_out,

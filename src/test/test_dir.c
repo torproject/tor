@@ -3965,7 +3965,7 @@ test_dir_packages(void *arg)
 }
 
 static void
-download_status_random_backoff_helper(int min_delay, int max_delay)
+download_status_random_backoff_helper(int min_delay)
 {
   download_status_t dls_random =
     { 0, 0, 0, DL_SCHED_GENERIC, DL_WANT_AUTHORITY,
@@ -3978,22 +3978,21 @@ download_status_random_backoff_helper(int min_delay, int max_delay)
   int n_attempts = 0;
   do {
     increment = download_status_schedule_get_delay(&dls_random,
-                                                   min_delay, max_delay,
+                                                   min_delay,
                                                    current_time);
 
-    log_debug(LD_DIR, "Min: %d, Max: %d, Inc: %d, Old Inc: %d",
-              min_delay, max_delay, increment, old_increment);
+    log_debug(LD_DIR, "Min: %d, Inc: %d, Old Inc: %d",
+              min_delay, increment, old_increment);
 
     /* Regression test for 20534 and friends
      * increment must always increase after the first */
-    if (dls_random.last_backoff_position > 0 && max_delay > 0) {
+    if (dls_random.last_backoff_position > 0) {
       /* Always increment the exponential backoff */
       tt_int_op(increment, OP_GE, 1);
     }
 
     /* Test */
     tt_int_op(increment, OP_GE, min_delay);
-    tt_int_op(increment, OP_LE, max_delay);
 
     /* Advance */
     if (dls_random.n_download_attempts < IMPOSSIBLE_TO_DOWNLOAD - 1) {
@@ -4003,7 +4002,7 @@ download_status_random_backoff_helper(int min_delay, int max_delay)
 
     /* Try another maybe */
     old_increment = increment;
-  } while (increment < max_delay && ++n_attempts < 1000);
+  } while (++n_attempts < 1000);
 
  done:
   return;
@@ -4015,19 +4014,13 @@ test_dir_download_status_random_backoff(void *arg)
   (void)arg;
 
   /* Do a standard test */
-  download_status_random_backoff_helper(0, 1000000);
-  /* Regression test for 20534 and friends:
-   * try tighter bounds */
-  download_status_random_backoff_helper(0, 100);
+  download_status_random_backoff_helper(0);
   /* regression tests for 17750: initial delay */
-  download_status_random_backoff_helper(10, 1000);
-  download_status_random_backoff_helper(20, 30);
+  download_status_random_backoff_helper(10);
+  download_status_random_backoff_helper(20);
 
   /* Pathological cases */
-  download_status_random_backoff_helper(0, 0);
-  download_status_random_backoff_helper(1, 1);
-  download_status_random_backoff_helper(0, INT_MAX);
-  download_status_random_backoff_helper(INT_MAX/2, INT_MAX);
+  download_status_random_backoff_helper(INT_MAX/2);
 }
 
 static void
