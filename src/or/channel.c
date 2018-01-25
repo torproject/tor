@@ -3845,8 +3845,8 @@ channel_get_canonical_remote_descr(channel_t *chan)
  * supports this operation, and return 1.  Return 0 if the underlying transport
  * doesn't let us do this.
  */
-int
-channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out)
+MOCK_IMPL(int,
+channel_get_addr_if_possible,(channel_t *chan, tor_addr_t *addr_out))
 {
   tor_assert(chan);
   tor_assert(addr_out);
