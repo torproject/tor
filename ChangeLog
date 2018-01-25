@@ -1,18 +1,11 @@
 Changes in version 0.3.3.1-alpha - 2018-01-??:
   Blurb goes here
 
-  o Code simplification and refactoring  (channels):
-    - Remove the incoming and outgoing channel queues. The reason to do
-      so was due to the fact that they were always empty meaning never
-      used but still looked at in our fast path. Bottom line, it was an
-      unused code path.
-    - The majority ot the channel unit tests have been rewritten and the
-      code coverage has now been raised to 83.6% for channel.c. Closes
-      ticket 23709.
-    - We've simplify a lot the channel subsystem by removing those
-      queues but also by removing a lot of unused code or dead code
-      around it. Overall this is a cleanup removing more than 1500 lines
-      of code overall and adding very little except for unit test.
+  o Major features (onion services, security):
+    - Provide torrc options to pin the second and third hops of onion
+      service circuits to a list of nodes. The option HSLayer2Guards
+      pins the second hop, and the option HSLayer3Guards pins the third
+      hop. Closes ticket 13837.
 
   o Major features (embedding):
     - There is now a documented stable API for programs that need to
@@ -50,19 +43,6 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
       HS_DESC_CONTENT, CIRC and CIRC_MINOR) and commands (GETINFO,
       HSPOST, ADD_ONION and DEL_ONION) have been extended to support v3
       onion services. Closes ticket 20699.
-
-  o Major features (onion services, security):
-    - Provide torrc options to pin the second and third hops of onion
-      service circuits to a list of nodes. The option HSLayer2Guards
-      pins the second hop, and the option HSLayer3Guards pins the third
-      hop. Closes ticket 13837.
-
-  o Minor features (relay):
-    - Implement an option, ReducedExitPolicy, to allow an Tor exit relay
-      operator to use a more reasonable ("reduced") exit policy, rather than
-      the default one.  If you want to run an exit node without thinking too
-      hard about which ports to allow, this one is for you. Closes ticket
-      13605. Patch from Neel Chauhan.
 
   o Major features (rust, portability, experimental):
     - Tor now ships with an optional implementation of one of its
@@ -115,25 +95,6 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
       them, rather than waiting to download microdescriptors.
       Implements 23827.
 
-  o Minor features (embedding):
-    - Tor can now start with a preauthenticated control connection
-      created by the process that launched it. This feature is meant for
-      use by programs that want to launch and manage a Tor process
-      without allowing other programs to manage it as well. For more
-      information, see the __OwningControllerFD option documented in
-      control-spec.txt. Closes ticket 23900.
-    - On most errors that would cause Tor to exit, it now tries to
-      return from the tor_main() function, rather than calling the
-      system exit() function. Most users won't notice a difference here,
-      but it should make a significant difference on platforms that try
-      to run Tor inside a separate thread: they should now be able to
-      survive Tor's exit conditions rather than having Tor shut down the
-      entire process. Closes ticket 23848.
-    - Applications that want to embed Tor can now tell Tor not to
-      register any of its own POSIX signal handlers, using the
-      __DisableSignalHandlers option. This option is not meant for
-      general use. Closes ticket 24588.
-
   o Minor features (cleanup):
     - Tor now deletes the CookieAuthFile and ExtORPortCookieAuthFile
       when it stops. Closes ticket 23271.
@@ -156,6 +117,35 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
       policy allows connections to ports 80 and 443. Previously relays
       would get the Exit flag if they allowed connections to one of
       these ports and also port 6667. Resolves ticket 23637.
+
+  o Minor features (embedding):
+    - Tor can now start with a preauthenticated control connection
+      created by the process that launched it. This feature is meant for
+      use by programs that want to launch and manage a Tor process
+      without allowing other programs to manage it as well. For more
+      information, see the __OwningControllerFD option documented in
+      control-spec.txt. Closes ticket 23900.
+    - On most errors that would cause Tor to exit, it now tries to
+      return from the tor_main() function, rather than calling the
+      system exit() function. Most users won't notice a difference here,
+      but it should make a significant difference on platforms that try
+      to run Tor inside a separate thread: they should now be able to
+      survive Tor's exit conditions rather than having Tor shut down the
+      entire process. Closes ticket 23848.
+    - Applications that want to embed Tor can now tell Tor not to
+      register any of its own POSIX signal handlers, using the
+      __DisableSignalHandlers option. This option is not meant for
+      general use. Closes ticket 24588.
+
+  o Minor features (fallback directory list):
+    - Avoid selecting fallbacks that change their IP addresses too
+      often. Select more fallbacks by ignoring the Guard flag, and
+      allowing lower cutoffs for the Running and V2Dir flags. Also allow
+      a lower bandwidth, and a higher number of fallbacks per operator
+      (5% of the list). Implements ticket 24785.
+    - Update the fallback whitelist and blacklist based on opt-ins and
+      relay changes. Closes tickets 22321, 24678, 22527, 24135,
+      and 24695.
 
   o Minor features (fallback directory mirror configuration):
     - Add a nickname to each fallback in a C comment. This makes it
@@ -183,16 +173,6 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
       by changing Tor's default fallback weight to 10. Implements
       ticket 24679.
 
-  o Minor features (fallback directory list):
-    - Avoid selecting fallbacks that change their IP addresses too
-      often. Select more fallbacks by ignoring the Guard flag, and
-      allowing lower cutoffs for the Running and V2Dir flags. Also allow
-      a lower bandwidth, and a higher number of fallbacks per operator
-      (5% of the list). Implements ticket 24785.
-    - Update the fallback whitelist and blacklist based on opt-ins and
-      relay changes. Closes tickets 22321, 24678, 22527, 24135,
-      and 24695.
-
   o Minor features (forward-compatibility):
     - If a relay supports some link authentication protocol that we do
       not recognize, then include that relay's ed25519 key when telling
@@ -208,8 +188,8 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
   o Minor features (instrumentation, development):
     - Add the MainloopStats option to allow developers to get
       instrumentation information from the main event loop via the
-      heartbeat messages. We hope to use this to improve Tor's behavior when
-      it's trying to sleep. Closes ticket 24605.
+      heartbeat messages. We hope to use this to improve Tor's behavior
+      when it's trying to sleep. Closes ticket 24605.
 
   o Minor features (log messages):
     - Improve a warning message that happens when we fail to re-parse an
@@ -235,8 +215,8 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
 
   o Minor features (performance, 32-bit):
     - Improve performance on 32-bit systems by avoiding 64-bit division
-      when calculating the timestamp in milliseconds for channel
-      padding computations. Implements ticket 24613.
+      when calculating the timestamp in milliseconds for channel padding
+      computations. Implements ticket 24613.
     - Improve performance on 32-bit systems by avoiding 64-bit division
       when timestamping cells and buffer chunks for OOM calculations.
       Implements ticket 24374.
@@ -246,6 +226,13 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
       TCP send window size according to the recommendation from
       SIO_IDEAL_SEND_BACKLOG_QUERY. Closes ticket 22798. Patch
       from Vort.
+
+  o Minor features (relay):
+    - Implement an option, ReducedExitPolicy, to allow an Tor exit relay
+      operator to use a more reasonable ("reduced") exit policy, rather
+      than the default one. If you want to run an exit node without
+      thinking too hard about which ports to allow, this one is for you.
+      Closes ticket 13605. Patch from Neel Chauhan.
 
   o Minor features (testing, debugging, embedding):
     - For development purposes, Tor now has a mode in which it runs for
@@ -258,9 +245,9 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
       future release. Implements ticket 24583.
 
   o Minor bugfix (network IPv6 test):
-    - Tor's test scripts now check if "ping -6 ::1" works when the user runs
-      "make test-network-all". Fixes bug 24677; bugfix on 0.2.9.3-alpha.
-      Patch by "ffmancera".
+    - Tor's test scripts now check if "ping -6 ::1" works when the user
+      runs "make test-network-all". Fixes bug 24677; bugfix on
+      0.2.9.3-alpha. Patch by "ffmancera".
 
   o Minor bugfixes (build, rust):
     - Fix output of autoconf checks to display success messages for Rust
@@ -397,6 +384,19 @@ Changes in version 0.3.3.1-alpha - 2018-01-??:
     - Document that operators who run more than one relay or bridge are
       expected to set MyFamily and ContactInfo correctly. Closes
       ticket 24526.
+
+  o Code simplification and refactoring  (channels):
+    - Remove the incoming and outgoing channel queues. The reason to do
+      so was due to the fact that they were always empty meaning never
+      used but still looked at in our fast path. Bottom line, it was an
+      unused code path.
+    - The majority ot the channel unit tests have been rewritten and the
+      code coverage has now been raised to 83.6% for channel.c. Closes
+      ticket 23709.
+    - We've simplify a lot the channel subsystem by removing those
+      queues but also by removing a lot of unused code or dead code
+      around it. Overall this is a cleanup removing more than 1500 lines
+      of code overall and adding very little except for unit test.
 
   o Code simplification and refactoring (circuit rendezvous):
     - Split get rendezvous circuit on client side on two different
