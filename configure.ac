@@ -615,6 +615,21 @@ fi
 AM_CONDITIONAL(BUILD_READPASSPHRASE_C,
   test "x$ac_cv_func_readpassphrase" = "xno" && test "$bwin32" = "false")
 
+AC_MSG_CHECKING([whether free(NULL) works])
+AC_RUN_IFELSE([AC_LANG_PROGRAM([
+  #include <stdlib.h>
+], [
+char *p = NULL;
+free(p);
+])],
+[free_null_ok=true; AC_MSG_RESULT(yes)],
+[free_null_ok=false; AC_MSG_RESULT(no)],
+[free_null_ok=cross; AC_MSG_RESULT(cross)])
+
+if test "$free_null_ok" = "false"; then
+   AC_MSG_ERROR([Your libc implementation doesn't allow free(NULL), as required by C99.])
+fi
+
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 

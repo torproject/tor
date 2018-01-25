@@ -73,9 +73,9 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
     }                                               \
   STMT_END
 #else /* !(defined(USE_DMALLOC)) */
-/** Release memory allocated by tor_malloc, tor_realloc, tor_strdup, etc.
- * Unlike the free() function, tor_free() will still work on NULL pointers,
- * and it sets the pointer value to NULL after freeing it.
+/** Release memory allocated by tor_malloc, tor_realloc, tor_strdup,
+ * etc.  Unlike the free() function, the tor_free() macro sets the
+ * pointer value to NULL after freeing it.
  *
  * This is a macro.  If you need a function pointer to release memory from
  * tor_malloc(), use tor_free_().
@@ -88,17 +88,13 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #ifdef __GNUC__
 #define tor_free(p) STMT_BEGIN                                 \
     typeof(&(p)) tor_free__tmpvar = &(p);                      \
-    if (PREDICT_LIKELY((*tor_free__tmpvar)!=NULL)) {           \
-      raw_free(*tor_free__tmpvar);                             \
-      *tor_free__tmpvar=NULL;                                  \
-    }                                                          \
+    raw_free(*tor_free__tmpvar);                               \
+    *tor_free__tmpvar=NULL;                                    \
   STMT_END
 #else
 #define tor_free(p) STMT_BEGIN                                 \
-    if (PREDICT_LIKELY((p)!=NULL)) {                           \
-      raw_free(p);                                             \
-      (p)=NULL;                                                \
-    }                                                          \
+  raw_free(p);                                                 \
+  (p)=NULL;                                                    \
   STMT_END
 #endif
 #endif /* defined(USE_DMALLOC) */
