@@ -16,6 +16,7 @@ TRUNNELINPUTS = \
 
 TRUNNELSOURCES = \
 	src/ext/trunnel/trunnel.c \
+	src/trunnel/cell_created2v.c \
 	src/trunnel/ed25519_cert.c \
 	src/trunnel/link_handshake.c \
 	src/trunnel/pwbox.c			\
@@ -29,6 +30,7 @@ TRUNNELHEADERS = \
 	src/ext/trunnel/trunnel.h		\
 	src/ext/trunnel/trunnel-impl.h		\
 	src/trunnel/trunnel-local.h		\
+	src/trunnel/cell_created2v.h		\
 	src/trunnel/ed25519_cert.h		\
 	src/trunnel/link_handshake.h		\
 	src/trunnel/pwbox.h			\

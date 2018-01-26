@@ -1,0 +1,24 @@
+/* 
+ * Variable-width large CREATE2V and CREATED2V cells.  The following
+ * format is specified in proposal 249 section 2.
+ */
+
+struct create2v_cell_body {
+  /* Handshake type */
+  u16 htype;
+  /* Length of handshake data */
+  u16 hlen;
+  /* Handshake data */
+  u8 hdata[hlen];
+  /* Padding data to be ignored */
+  u8 ignored[];
+};
+
+struct created2v_cell_body {
+  /* Handshake reply length */
+  u16 hlen;
+  /* Handshake reply data */
+  u8 hdata[hlen];
+  /* Padding data to be ignored */
+  u8 ignored[];
+};
