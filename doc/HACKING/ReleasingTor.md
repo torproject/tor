@@ -14,6 +14,9 @@ new Tor release:
 2. If this is going to be an important security release, give the packagers
    some advance warning: See this list of packagers in IV.3 below.
 
+3. Given the release date for Tor, ask the TB team about the likely release
+   date of a TB that contains it.  See note below in "commit, upload,
+   announce".
 
 === I. Make sure it works
 
@@ -22,6 +25,7 @@ new Tor release:
    resolve those.
 
    As applicable, merge the `maint-X` branch into the `release-X` branch.
+   But you've been doing that all along, right?
 
 2. Are all of the jenkins builders happy?  See jenkins.torproject.org.
 
@@ -134,6 +138,9 @@ new Tor release:
    either `make`, or `perl scripts/maint/updateVersions.pl`, depending on
    your version.)
 
+   When you merge the maint branch forward to the next maint branch, or into
+   master, merge it with "-s ours" to avoid a needless version bump.
+
 2. Make distcheck, put the tarball up in somewhere (how about your
    homedir on your homedir on people.torproject.org?) , and tell `#tor`
    about it. Wait a while to see if anybody has problems building it.
@@ -146,6 +153,9 @@ new Tor release:
         gpg -ba <the_tarball>
         git tag -u <keyid> tor-0.3.x.y-status
         git push origin tag tor-0.3.x.y-status
+
+   (You must do this before you update the website: it relies on finding
+   the version by tag.)
 
 2. scp the tarball and its sig to the dist website, i.e.
    `/srv/dist-master.torproject.org/htdocs/` on dist-master. When you want
@@ -173,6 +183,8 @@ new Tor release:
        - {simon} at sdeziel.info
        - {yuri} at freebsd.org
        - {mh+tor} at scrit.ch
+
+   Also, email tor-packagers@lists.torproject.org.
 
 4. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
