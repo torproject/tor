@@ -510,6 +510,8 @@ int get_n_open_sockets(void);
 MOCK_DECL(int,
 tor_getsockname,(tor_socket_t socket, struct sockaddr *address,
                  socklen_t *address_len));
+struct tor_addr_t;
+int tor_addr_from_getsockname(struct tor_addr_t *addr_out, tor_socket_t sock);
 
 #define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
 #define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)
