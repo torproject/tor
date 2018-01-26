@@ -181,7 +181,11 @@ new Tor release:
     0.2.2.23-alpha" (or whatever the version is), and we select the date as
     the date in the ChangeLog.
 
-5. Mail the release blurb and ChangeLog to tor-talk (development release) or
+5. Double-check: did the version get recommended in the consensus yet?  Is
+   the website updated?  If not, don't announce until they have the
+   up-to-date versions, or people will get confused.
+
+6. Mail the release blurb and ChangeLog to tor-talk (development release) or
    tor-announce (stable).
 
    Post the changelog on the blog as well. You can generate a
