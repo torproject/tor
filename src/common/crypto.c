@@ -28,6 +28,7 @@
 #include "crypto_curve25519.h"
 #include "crypto_ed25519.h"
 #include "crypto_format.h"
+#include "crypto_rsa.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -611,18 +612,24 @@ crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env,
 int
 crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
 {
-  unsigned char *buf = NULL;
+  char *buf;
+  size_t buflen;
   int len;
+  int rv = -1;
 
-  len = i2d_RSAPublicKey((RSA*)pk->key, &buf);
-  if (len < 0 || buf == NULL)
-    return -1;
-  if (crypto_digest(digest_out, (char*)buf, len) < 0) {
-    OPENSSL_free(buf);
-    return -1;
-  }
-  OPENSSL_free(buf);
-  return 0;
+  buflen = crypto_pk_keysize(pk)*2;
+  buf = tor_malloc(buflen);
+  len = crypto_pk_asn1_encode(pk, buf, buflen);
+  if (len < 0)
+    goto done;
+
+  if (crypto_digest(digest_out, buf, len) < 0)
+    goto done;
+
+  rv = 0;
+  done:
+  tor_free(buf);
+  return rv;
 }
 
 /** Compute all digests of the DER encoding of <b>pk</b>, and store them
@@ -630,18 +637,24 @@ crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
 int
 crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out)
 {
-  unsigned char *buf = NULL;
+  char *buf;
+  size_t buflen;
   int len;
+  int rv = -1;
 
-  len = i2d_RSAPublicKey(pk->key, &buf);
-  if (len < 0 || buf == NULL)
-    return -1;
-  if (crypto_common_digests(digests_out, (char*)buf, len) < 0) {
-    OPENSSL_free(buf);
-    return -1;
-  }
-  OPENSSL_free(buf);
-  return 0;
+  buflen = crypto_pk_keysize(pk)*2;
+  buf = tor_malloc(buflen);
+  len = crypto_pk_asn1_encode(pk, buf, buflen);
+  if (len < 0)
+    goto done;
+
+  if (crypto_common_digests(digests_out, (char*)buf, len) < 0)
+    goto done;
+
+  rv = 0;
+ done:
+  tor_free(buf);
+  return rv;
 }
 
 /** Copy <b>in</b> to the <b>outlen</b>-byte buffer <b>out</b>, adding spaces

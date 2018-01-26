@@ -20,6 +20,8 @@
 #include "testsupport.h"
 #include "compat.h"
 #include "util.h"
+#include "torlog.h"
+#include "crypto_curve25519.h"
 
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)
@@ -30,12 +32,15 @@
 /** Number of bytes added for PKCS1-OAEP padding. */
 #define PKCS1_OAEP_PADDING_OVERHEAD 42
 
+/** A public key, or a public/private key-pair. */
 typedef struct crypto_pk_t crypto_pk_t;
 
 /* RSA enviroment setup */
 MOCK_DECL(crypto_pk_t *,crypto_pk_new,(void));
 void crypto_pk_free_(crypto_pk_t *env);
 #define crypto_pk_free(pk) FREE_AND_NULL(crypto_pk_t, crypto_pk_free_, (pk))
+int crypto_get_rsa_padding_overhead(int padding);
+int crypto_get_rsa_padding(int padding);
 
 /* public key crypto */
 MOCK_DECL(int, crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits));
@@ -64,7 +69,6 @@ crypto_pk_t *crypto_pk_dup_key(crypto_pk_t *orig);
 crypto_pk_t *crypto_pk_copy_full(crypto_pk_t *orig);
 int crypto_pk_key_is_private(const crypto_pk_t *key);
 int crypto_pk_public_exponent_ok(crypto_pk_t *env);
-
 int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
                              const char *from, size_t fromlen, int padding);
 int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,
@@ -75,7 +79,7 @@ MOCK_DECL(int, crypto_pk_public_checksig,(const crypto_pk_t *env,
                                           const char *from, size_t fromlen));
 int crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                            const char *from, size_t fromlen);
-int crypto_pk_asn1_encode(crypto_pk_t *pk, char *dest, size_t dest_len);
+int crypto_pk_asn1_encode(const crypto_pk_t *pk, char *dest, size_t dest_len);
 crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
