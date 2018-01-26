@@ -536,7 +536,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     bad_cert = 1;
   } else if (signing_key &&
              tor_cert_checksig(cert, &signing_key->pubkey, now) < 0) {
-    tor_log(severity, LD_OR, "Can't check certificate");
+    tor_log(severity, LD_OR, "Can't check certificate: %s",
+            tor_cert_describe_signature_status(cert));
     bad_cert = 1;
   } else if (cert->cert_expired) {
     tor_log(severity, LD_OR, "Certificate is expired");
@@ -883,8 +884,12 @@ load_ed_keys(const or_options_t *options, time_t now)
     if (! ed25519_pubkey_eq(&sign_cert->signing_key, &id->pubkey))
       FAIL("The signing cert we have was not signed with the master key "
            "we loaded!");
-    if (tor_cert_checksig(sign_cert, &id->pubkey, 0) < 0)
-      FAIL("The signing cert we loaded was not signed correctly!");
+    if (tor_cert_checksig(sign_cert, &id->pubkey, 0) < 0) {
+      log_warn(LD_OR, "The signing cert we loaded was not signed "
+               "correctly: %s!",
+               tor_cert_describe_signature_status(sign_cert));
+      goto err;
+    }
   }
 
   if (want_new_signing_key && sign_signing_key_with_id) {

@@ -1229,10 +1229,12 @@ hs_client_decode_descriptor(const char *desc_str,
   /* Make sure the descriptor signing key cross certifies with the computed
    * blinded key. Without this validation, anyone knowing the subcredential
    * and onion address can forge a descriptor. */
-  if (tor_cert_checksig((*desc)->plaintext_data.signing_key_cert,
+  tor_cert_t *cert = (*desc)->plaintext_data.signing_key_cert;
+  if (tor_cert_checksig(cert,
                         &blinded_pubkey, approx_time()) < 0) {
     log_warn(LD_GENERAL, "Descriptor signing key certificate signature "
-                         "doesn't validate with computed blinded key.");
+             "doesn't validate with computed blinded key: %s",
+             tor_cert_describe_signature_status(cert));
     goto err;
   }
 
