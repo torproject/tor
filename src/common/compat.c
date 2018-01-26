@@ -1402,7 +1402,7 @@ tor_addr_from_getsockname(tor_addr_t *addr_out, tor_socket_t sock)
 {
   struct sockaddr_storage ss;
   socklen_t ss_len = sizeof(ss);
-  memset(ss, 0, sizeof(ss));
+  memset(&ss, 0, sizeof(ss));
 
   if (tor_getsockname(sock, (struct sockaddr *) &ss, &ss_len) < 0)
     return -1;
