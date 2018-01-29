@@ -245,7 +245,7 @@ static config_var_t option_vars_[] = {
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
   V(DoSCircuitCreationMinConnections,      UINT, "0"),
-  V(DoSCircuitCreationRateTenths,          UINT, "0"),
+  V(DoSCircuitCreationRate,      UINT,     "0"),
   V(DoSCircuitCreationBurst,     UINT,     "0"),
   V(DoSCircuitCreationDefenseType,         INT,  "0"),
   V(DoSCircuitCreationDefenseTimePeriod,   INTERVAL, "0"),

@@ -70,7 +70,7 @@ void dos_note_refuse_single_hop_client(void);
 /* DoSCircuitCreationMinConnections default */
 #define DOS_CC_MIN_CONCURRENT_CONN_DEFAULT 3
 /* DoSCircuitCreationRateTenths is 3 per seconds. */
-#define DOS_CC_CIRCUIT_RATE_TENTHS_DEFAULT (3 * 10)
+#define DOS_CC_CIRCUIT_RATE_DEFAULT 3
 /* DoSCircuitCreationBurst default. */
 #define DOS_CC_CIRCUIT_BURST_DEFAULT 90
 /* DoSCircuitCreationDefenseTimePeriod in seconds. */

@@ -2466,12 +2466,10 @@ Denial of Service mitigation subsystem.
     parameter.
     (Default: 0)
 
-[[DoSCircuitCreationRateTenths]] **DoSCircuitCreationRateTenths** __NUM__::
+[[DoSCircuitCreationRate]] **DoSCircuitCreationRate** __NUM__::
 
-    The allowed circuit creation rate in tenths of circuit per second applied
-    per client IP address. For example, if you want to set a rate of 5
-    circuits per second allowed per IP address, this value should be set to
-    50. If this option is 0, it obeys a consensus parameter. (Default: 0)
+    The allowed circuit creation rate per second applied per client IP
+    address. If this option is 0, it obeys a consensus parameter. (Default: 0)
 
 [[DoSCircuitCreationBurst]] **DoSCircuitCreationBurst** __NUM__::
 

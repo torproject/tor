@@ -31,7 +31,7 @@ static unsigned int dos_cc_enabled = 0;
 /* Consensus parameters. They can be changed when a new consensus arrives.
  * They are initialized with the hardcoded default values. */
 static uint32_t dos_cc_min_concurrent_conn;
-static uint32_t dos_cc_circuit_rate_tenths;
+static uint32_t dos_cc_circuit_rate;
 static uint32_t dos_cc_circuit_burst;
 static dos_cc_defense_type_t dos_cc_defense_type;
 static int32_t dos_cc_defense_time_period;
@@ -93,14 +93,14 @@ get_param_cc_min_concurrent_connection(const networkstatus_t *ns)
 /* Return the parameter for the time rate that is how many circuits over this
  * time span. */
 static uint32_t
-get_param_cc_circuit_rate_tenths(const networkstatus_t *ns)
+get_param_cc_circuit_rate(const networkstatus_t *ns)
 {
   /* This is in seconds. */
-  if (get_options()->DoSCircuitCreationRateTenths) {
-    return get_options()->DoSCircuitCreationRateTenths;
+  if (get_options()->DoSCircuitCreationRate) {
+    return get_options()->DoSCircuitCreationRate;
   }
-  return networkstatus_get_param(ns, "DoSCircuitCreationRateTenths",
-                                 DOS_CC_CIRCUIT_RATE_TENTHS_DEFAULT,
+  return networkstatus_get_param(ns, "DoSCircuitCreationRate",
+                                 DOS_CC_CIRCUIT_RATE_DEFAULT,
                                  1, INT32_MAX);
 }
 
@@ -189,7 +189,7 @@ set_dos_parameters(const networkstatus_t *ns)
   /* Get the default consensus param values. */
   dos_cc_enabled = get_param_cc_enabled(ns);
   dos_cc_min_concurrent_conn = get_param_cc_min_concurrent_connection(ns);
-  dos_cc_circuit_rate_tenths = get_param_cc_circuit_rate_tenths(ns);
+  dos_cc_circuit_rate = get_param_cc_circuit_rate(ns);
   dos_cc_circuit_burst = get_param_cc_circuit_burst(ns);
   dos_cc_defense_time_period = get_param_cc_defense_time_period(ns);
   dos_cc_defense_type = get_param_cc_defense_type(ns);
@@ -225,23 +225,7 @@ cc_consensus_has_changed(const networkstatus_t *ns)
 STATIC uint32_t
 get_circuit_rate_per_second(void)
 {
-  int64_t circ_rate;
-
-  /* We take the burst divided by the rate which is in tenths of a second so
-   * convert to get a circuit rate per second. */
-  circ_rate = dos_cc_circuit_rate_tenths / 10;
-  if (circ_rate < 0) {
-    /* Safety check, never allow it to go below 0 else the bucket will always
-     * be empty resulting in every address to be detected. */
-    circ_rate = 1;
-  }
-
-  /* Clamp it down to a 32 bit value because a rate of 2^32 circuits per
-   * second is just too much in any circumstances. */
-  if (circ_rate > UINT32_MAX) {
-    circ_rate = UINT32_MAX;
-  }
-  return (uint32_t) circ_rate;
+  return dos_cc_circuit_rate;
 }
 
 /* Given the circuit creation client statistics object, refill the circuit

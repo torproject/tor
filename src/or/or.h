@@ -4520,9 +4520,8 @@ typedef struct {
   /** Minimum concurrent connection needed from one single address before any
    * defense is used. */
   int DoSCircuitCreationMinConnections;
-  /** Circuit rate, in tenths of a second, that is used to refill the token
-   * bucket at this given rate. */
-  int DoSCircuitCreationRateTenths;
+  /** Circuit rate used to refill the token bucket. */
+  int DoSCircuitCreationRate;
   /** Maximum allowed burst of circuits. Reaching that value, the address is
    * detected as malicious and a defense might be used. */
   int DoSCircuitCreationBurst;
