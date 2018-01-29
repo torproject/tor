@@ -32,7 +32,7 @@ const SUPPORTED_PROTOCOLS: &'static [&'static str] = &[
     "HSDir=1-2",
     "HSIntro=3-4",
     "HSRend=1-2",
-    "Link=1-4",
+    "Link=1-5",
     "LinkAuth=1,3",
     "Microdesc=1-2",
     "Relay=1-2",
@@ -684,7 +684,7 @@ fn write_vote_to_string(vote: &HashMap<String, String>) -> String {
 /// ```
 /// use protover::*;
 ///
-/// let is_supported = is_supported_here(Proto::Link, 5);
+/// let is_supported = is_supported_here(Proto::Link, 10);
 /// assert_eq!(false, is_supported);
 ///
 /// let is_supported = is_supported_here(Proto::Link, 1);
