@@ -29,6 +29,7 @@
 #include "statefile.h"
 #include "hs_stats.h"
 #include "hs_service.h"
+#include "dos.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
 #include "geoip.h"
@@ -167,6 +168,7 @@ log_heartbeat(time_t now)
   if (public_server_mode(options)) {
     rep_hist_log_circuit_handshake_stats(now);
     rep_hist_log_link_protocol_counts();
+    dos_log_heartbeat();
   }
 
   circuit_log_ancient_one_hop_circuits(1800);

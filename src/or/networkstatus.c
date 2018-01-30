@@ -51,6 +51,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "hibernate.h"
 #include "main.h"
@@ -1606,6 +1607,7 @@ notify_networkstatus_changed(const networkstatus_t *old_c,
 {
   notify_control_networkstatus_changed(old_c, new_c);
   scheduler_notify_networkstatus_changed(old_c, new_c);
+  dos_consensus_has_changed(new_c);
 }
 
 /** Copy all the ancillary information (like router download status and so on)

@@ -75,6 +75,7 @@
 #include "dirvote.h"
 #include "dns.h"
 #include "dnsserv.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
@@ -3486,6 +3487,7 @@ tor_free_all(int postfork)
   bridges_free_all();
   consdiffmgr_free_all();
   hs_free_all();
+  dos_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

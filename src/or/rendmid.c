@@ -8,10 +8,12 @@
  **/
 
 #include "or.h"
+#include "channel.h"
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
 #include "crypto.h"
+#include "dos.h"
 #include "relay.h"
 #include "rendmid.h"
 #include "rephist.h"
@@ -229,6 +231,16 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
              "Tried to establish rendezvous on non-OR circuit with purpose %s",
              circuit_purpose_to_string(circ->base_.purpose));
     goto err;
+  }
+
+  /* Check if we are configured to accept established rendezvous cells from
+   * client or in other words tor2web clients. */
+  if (channel_is_client(circ->p_chan) &&
+      dos_should_refuse_single_hop_client()) {
+    /* Note it down for the heartbeat log purposes. */
+    dos_note_refuse_single_hop_client();
+    /* Silent drop so the client has to time out before moving on. */
+    return 0;
   }
 
   if (circ->base_.n_chan) {
