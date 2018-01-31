@@ -234,6 +234,152 @@ test_dos_bucket_refill(void *arg)
   current_circ_count += max_circuit_count;
   tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
 
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now use a very large time, and check that the token bucket does not have
+   * more than max_circs allowance, even tho we let it simmer for so long. */
+  now = INT32_MAX; /* 2038? */
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  current_circ_count += max_circuit_count;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now use a very small time, and check that the token bucket has exactly
+   * the max_circs allowance, because backward clock jumps are rare. */
+  now = INT32_MIN; /* 19?? */
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  current_circ_count += max_circuit_count;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Progress time forward one sec again, refill the bucket and check that the
+   * refill happened correctly. */
+  now += 1;
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  /* check refill */
+  current_circ_count += circ_rate;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now use a very large time (again), and check that the token bucket does
+   * not have more than max_circs allowance, even tho we let it simmer for so
+   * long. */
+  now = INT32_MAX; /* 2038? */
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  current_circ_count += max_circuit_count;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* This code resets the time to zero with 32-bit time_t, which triggers the
+   * code that initialises the bucket. */
+#if SIZEOF_TIME_T == 8
+  /* Now use a very very small time, and check that the token bucket has
+   * exactly the max_circs allowance, because backward clock jumps are rare.
+   */
+  now = (time_t)INT64_MIN; /* ???? */
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  current_circ_count += max_circuit_count;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Progress time forward one sec again, refill the bucket and check that the
+   * refill happened correctly. */
+  now += 1;
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  /* check refill */
+  current_circ_count += circ_rate;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now use a very very small time, and check that the token bucket has
+   * exactly the max_circs allowance, because backward clock jumps are rare.
+   */
+  now = (time_t)INT64_MIN; /* ???? */
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  current_circ_count += max_circuit_count;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now use a very very large time, and check that the token bucket does not
+   * have more than max_circs allowance, even tho we let it simmer for so
+   * long. */
+  now = (time_t)INT64_MAX; /* ???? */
+  update_approx_time(now);
+  cc_stats_refill_bucket(&dos_stats->cc_stats, addr);
+  current_circ_count += max_circuit_count;
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+
+  /* Now send as many CREATE cells as needed to deplete our token bucket
+   * completely */
+  for (; current_circ_count != 0; current_circ_count--) {
+    dos_cc_new_create_cell(chan);
+  }
+  tt_uint_op(current_circ_count, OP_EQ, 0);
+  tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
+#endif
+
  done:
   tor_free(chan);
   dos_free_all();
