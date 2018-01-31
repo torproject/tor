@@ -2204,15 +2204,17 @@ typedef struct protover_summary_flags_t {
   unsigned int protocols_known:1;
 
   /** True iff this router has a version or protocol list that allows it to
-   * accept EXTEND2 cells */
+   * accept EXTEND2 cells. This requires Relay=2. */
   unsigned int supports_extend2_cells:1;
 
   /** True iff this router has a protocol list that allows it to negotiate
-   * ed25519 identity keys on a link handshake with us. */
+   * ed25519 identity keys on a link handshake with us. This
+   * requires LinkAuth=3. */
   unsigned int supports_ed25519_link_handshake_compat:1;
 
   /** True iff this router has a protocol list that allows it to negotiate
-   * ed25519 identity keys on a link handshake, at all. */
+   * ed25519 identity keys on a link handshake, at all. This requires some
+   * LinkAuth=X for X >= 3. */
   unsigned int supports_ed25519_link_handshake_any:1;
 
   /** True iff this router has a protocol list that allows it to be an
