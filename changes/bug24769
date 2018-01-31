@@ -1,0 +1,7 @@
+  o Minor bugfixes (performance):
+    - Reduce the number of circuits that can be opened at once during the
+      circuit build timeout phase. This is done by increasing the idle timeout
+      to 3 minutes, and lowering the maximum number of concurrent learning
+      circuits to 10. Fixes Bug 24769; bugfix on 0.3.1.1-alpha.
+
+
