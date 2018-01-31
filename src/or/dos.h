@@ -125,7 +125,7 @@ STATIC uint32_t get_param_cc_circuit_burst(const networkstatus_t *ns);
 STATIC uint32_t get_param_cc_min_concurrent_connection(
                                             const networkstatus_t *ns);
 
-STATIC uint32_t get_circuit_rate_per_second(void);
+STATIC uint64_t get_circuit_rate_per_second(void);
 STATIC void cc_stats_refill_bucket(cc_client_stats_t *stats,
                                    const tor_addr_t *addr);
 

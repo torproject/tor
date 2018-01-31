@@ -222,7 +222,7 @@ cc_consensus_has_changed(const networkstatus_t *ns)
 
 /** Return the number of circuits we allow per second under the current
  *  configuration. */
-STATIC uint32_t
+STATIC uint64_t
 get_circuit_rate_per_second(void)
 {
   return dos_cc_circuit_rate;
@@ -234,31 +234,40 @@ get_circuit_rate_per_second(void)
 STATIC void
 cc_stats_refill_bucket(cc_client_stats_t *stats, const tor_addr_t *addr)
 {
-  uint32_t new_circuit_bucket_count, circuit_rate = 0, num_token;
-  time_t now, elapsed_time_last_refill;
+  uint32_t new_circuit_bucket_count;
+  uint64_t num_token, elapsed_time_last_refill = 0, circuit_rate = 0;
+  time_t now;
+  int64_t last_refill_ts;
 
   tor_assert(stats);
   tor_assert(addr);
 
   now = approx_time();
+  last_refill_ts = (int64_t)stats->last_circ_bucket_refill_ts;
+
+  /* If less than a second has elapsed, don't add any tokens.
+   * Note: If a relay's clock is ever 0, any new clients won't get a refill
+   * until the next second. But a relay that thinks it is 1970 will never
+   * validate the public consensus. */
+  if ((int64_t)now == last_refill_ts) {
+    goto done;
+  }
+
+  /* At this point, we know we might need to add token to the bucket. We'll
+   * first get the circuit rate that is how many circuit are we allowed to do
+   * per second. */
+  circuit_rate = get_circuit_rate_per_second();
 
   /* We've never filled the bucket so fill it with the maximum being the burst
-   * and we are done. */
-  if (stats->last_circ_bucket_refill_ts == 0) {
+   * and we are done.
+   * Note: If a relay's clock is ever 0, all clients that were last refilled
+   * in that zero second will get a full refill here. */
+  if (last_refill_ts == 0) {
     num_token = dos_cc_circuit_burst;
     goto end;
   }
 
-  /* At this point, we know we might need to add token to the bucket. We'll
-   * first compute the circuit rate that is how many circuit are we allowed to
-   * do per second. */
-  circuit_rate = get_circuit_rate_per_second();
-
-  /* How many seconds have elapsed between now and the last refill? */
-  elapsed_time_last_refill = now - stats->last_circ_bucket_refill_ts;
-
-  /* If the elapsed time is below 0 it means our clock jumped backward so in
-   * that case, lets be safe and fill it up to the maximum. Not filling it
+  /* Our clock jumped backward so fill it up to the maximum. Not filling it
    * could trigger a detection for a valid client. Also, if the clock jumped
    * negative but we didn't notice until the elapsed time became positive
    * again, then we potentially spent many seconds not refilling the bucket
@@ -266,28 +275,51 @@ cc_stats_refill_bucket(cc_client_stats_t *stats, const tor_addr_t *addr)
    * until now means that no circuit creation requests came in during that
    * time, so the client doesn't end up punished that much from this hopefully
    * rare situation.*/
-  if (elapsed_time_last_refill < 0) {
-    /* Dividing the burst by the circuit rate gives us the time span that will
-     * give us the maximum allowed value of token. */
-    elapsed_time_last_refill = (dos_cc_circuit_burst / circuit_rate);
+  if ((int64_t)now < last_refill_ts) {
+    /* Use the maximum allowed value of token. */
+    num_token = dos_cc_circuit_burst;
+    goto end;
+  }
+
+  /* How many seconds have elapsed between now and the last refill?
+   * This subtraction can't underflow, because now >= last_refill_ts.
+   * And it can't overflow, because INT64_MAX - (-INT64_MIN) == UINT64_MAX. */
+  elapsed_time_last_refill = (uint64_t)now - last_refill_ts;
+
+  /* If the elapsed time is very large, it means our clock jumped forward.
+   * If the multiplication would overflow, use the maximum allowed value. */
+  if (elapsed_time_last_refill > UINT32_MAX) {
+    num_token = dos_cc_circuit_burst;
+    goto end;
   }
 
   /* Compute how many circuits we are allowed in that time frame which we'll
-   * add to the bucket. This can be big but it is cap to a maximum after. */
+   * add to the bucket. This can't overflow, because both multiplicands
+   * are less than or equal to UINT32_MAX, and num_token is uint64_t. */
   num_token = elapsed_time_last_refill * circuit_rate;
 
  end:
-  /* We cap the bucket to the burst value else this could grow to infinity
-   * over time. */
-  new_circuit_bucket_count = MIN(stats->circuit_bucket + num_token,
-                                 dos_cc_circuit_burst);
+  /* If the sum would overflow, use the maximum allowed value. */
+  if (num_token > UINT32_MAX - stats->circuit_bucket) {
+    new_circuit_bucket_count = dos_cc_circuit_burst;
+  } else {
+    /* We cap the bucket to the burst value else this could overflow uint32_t
+     * over time. */
+    new_circuit_bucket_count = MIN(stats->circuit_bucket + (uint32_t)num_token,
+                                   dos_cc_circuit_burst);
+  }
+  /* This function is not allowed to make the bucket count smaller */
+  tor_assert_nonfatal(new_circuit_bucket_count >= stats->circuit_bucket);
   log_debug(LD_DOS, "DoS address %s has its circuit bucket value: %" PRIu32
-                    ". Filling it to %" PRIu32 ". Circuit rate is %" PRIu32,
+                    ". Filling it to %" PRIu32 ". Circuit rate is %" PRIu64
+                    ". Elapsed time is %" PRIi64,
             fmt_addr(addr), stats->circuit_bucket, new_circuit_bucket_count,
-            circuit_rate);
+            circuit_rate, (int64_t)elapsed_time_last_refill);
 
   stats->circuit_bucket = new_circuit_bucket_count;
   stats->last_circ_bucket_refill_ts = now;
+
+ done:
   return;
 }
 
