@@ -379,10 +379,6 @@ static int check_signature_token(const char *digest,
                                  int flags,
                                  const char *doctype);
 
-static void summarize_protover_flags(protover_summary_flags_t *out,
-                                     const char *protocols,
-                                     const char *version);
-
 #undef DEBUG_AREA_ALLOC
 
 #ifdef DEBUG_AREA_ALLOC
@@ -2544,7 +2540,7 @@ routerstatus_parse_guardfraction(const char *guardfraction_str,
 /** Summarize the protocols listed in <b>protocols</b> into <b>out</b>,
  * falling back or correcting them based on <b>version</b> as appropriate.
  */
-static void
+STATIC void
 summarize_protover_flags(protover_summary_flags_t *out,
                          const char *protocols,
                          const char *version)

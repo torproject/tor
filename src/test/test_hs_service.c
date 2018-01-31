@@ -20,6 +20,7 @@
 #define STATEFILE_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
 #define HS_CLIENT_PRIVATE
+#define ROUTERPARSE_PRIVATE
 
 #include "test.h"
 #include "test_helpers.h"
@@ -37,6 +38,7 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "relay.h"
+#include "routerparse.h"
 
 #include "hs_common.h"
 #include "hs_config.h"
@@ -1210,6 +1212,7 @@ test_build_update_descriptors(void *arg)
     /* Ugly yes but we never free the "ri" object so this just makes things
      * easier. */
     ri.protocol_list = (char *) "HSDir=1-2 LinkAuth=3";
+    summarize_protover_flags(&ri.pv, ri.protocol_list, NULL);
     ret = curve25519_secret_key_generate(&curve25519_secret_key, 0);
     tt_int_op(ret, OP_EQ, 0);
     ri.onion_curve25519_pkey =
