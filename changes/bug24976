@@ -1,0 +1,5 @@
+  o Minor bugfixes (hidden service v3 client):
+    - Remove a BUG() statement which can be triggered in normal circumstances
+      where a client fetches a descriptor that has a lower revision counter
+      than the one in its cache. This can happen due to HSDir desync. Fixes
+      bug 24976; bugfix on 0.3.2.1-alpha.
