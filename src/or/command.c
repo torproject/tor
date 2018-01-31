@@ -344,10 +344,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     int len;
     created_cell_t created_cell;
 
-    /* Make sure we never try to use the OR connection on which we
-     * received this cell to satisfy an EXTEND request,  */
-    channel_mark_client(chan);
-
     memset(&created_cell, 0, sizeof(created_cell));
     len = onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_FAST,
                                        create_cell->onionskin,
