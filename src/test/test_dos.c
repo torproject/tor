@@ -176,7 +176,7 @@ test_dos_bucket_refill(void *arg)
   /* Initialize DoS subsystem and get relevant limits */
   dos_init();
   uint32_t max_circuit_count = get_param_cc_circuit_burst(NULL);
-  int circ_rate = get_circuit_rate_per_second();
+  uint64_t circ_rate = get_circuit_rate_per_second();
   /* Check that the circuit rate is a positive number and smaller than the max
    * circuit count */
   tt_int_op(circ_rate, OP_GT, 1);
