@@ -1564,11 +1564,7 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   smartlist_free(changed);
 }
 
-/* Called when the consensus has changed from old_c to new_c.
- *
- * IMPORTANT: This is called _after_ the new consensus has been set in the
- * global state so this is safe for anything getting the latest consensus from
- * that state. */
+/* Called when the consensus has changed from old_c to new_c. */
 static void
 notify_networkstatus_changed(const networkstatus_t *old_c,
                              const networkstatus_t *new_c)
@@ -1901,6 +1897,9 @@ networkstatus_set_current_consensus(const char *consensus,
 
   const int is_usable_flavor = flav == usable_consensus_flavor();
 
+  if (is_usable_flavor) {
+    notify_networkstatus_changed(networkstatus_get_latest_consensus(), c);
+  }
   if (flav == FLAV_NS) {
     if (current_ns_consensus) {
       networkstatus_copy_old_consensus_info(c, current_ns_consensus);
@@ -1921,13 +1920,6 @@ networkstatus_set_current_consensus(const char *consensus,
     }
     current_md_consensus = c;
     free_consensus = 0; /* avoid free */
-  }
-
-  /* Called _after_ the consensus is set in its global variable so any
-   * functions called from this notification can safely get the latest
-   * consensus being the new one. */
-  if (is_usable_flavor) {
-    notify_networkstatus_changed(networkstatus_get_latest_consensus(), c);
   }
 
   waiting = &consensus_waiting_for_certs[flav];
