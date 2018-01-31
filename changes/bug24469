@@ -1,0 +1,4 @@
+  o Minor bugfixes (circuit, cannibalization):
+    - Don't cannibalize circuits for which we don't know the first hop which
+      can happen if our Guard relay went off the consensus after the circuit
+      was created preemptively. Fixes bug 24469; bugfix on 0.0.6.

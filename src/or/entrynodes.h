@@ -386,6 +386,8 @@ void entry_guards_note_internet_connectivity(guard_selection_t *gs);
 
 int update_guard_selection_choice(const or_options_t *options);
 
+int entry_guard_could_succeed(const circuit_guard_state_t *guard_state);
+
 MOCK_DECL(int,num_bridges_usable,(int use_maybe_reachable));
 
 #ifdef ENTRYNODES_PRIVATE
