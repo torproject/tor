@@ -132,18 +132,14 @@ time_t download_status_increment_attempt(download_status_t *dls,
                                     time(NULL))
 
 void download_status_reset(download_status_t *dls);
-static int download_status_is_ready(download_status_t *dls, time_t now,
-                                    int max_failures);
+static int download_status_is_ready(download_status_t *dls, time_t now);
 time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
 /** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
  * ready to get its download reattempted. */
 static inline int
-download_status_is_ready(download_status_t *dls, time_t now,
-                         int max_failures)
+download_status_is_ready(download_status_t *dls, time_t now)
 {
-  (void) max_failures; // 23814 REMOVE
-
   /* dls wasn't reset before it was used */
   if (dls->next_attempt_at == 0) {
     download_status_reset(dls);

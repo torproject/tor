@@ -942,14 +942,11 @@ update_consensus_networkstatus_downloads(time_t now)
       update_consensus_bootstrap_multiple_downloads(now, options);
     } else {
       /* Check if we failed downloading a consensus too recently */
-      int max_dl_tries = options->TestingConsensusMaxDownloadTries;
 
       /* Let's make sure we remembered to update consensus_dl_status */
       tor_assert(consensus_dl_status[i].schedule == DL_SCHED_CONSENSUS);
 
-      if (!download_status_is_ready(&consensus_dl_status[i],
-                                    now,
-                                    max_dl_tries)) {
+      if (!download_status_is_ready(&consensus_dl_status[i], now)) {
         continue;
       }
 
@@ -976,17 +973,9 @@ update_consensus_networkstatus_downloads(time_t now)
 static void
 update_consensus_bootstrap_attempt_downloads(
                                       time_t now,
-                                      const or_options_t *options,
                                       download_status_t *dls,
                                       download_want_authority_t want_authority)
 {
-  int use_fallbacks = networkstatus_consensus_can_use_extra_fallbacks(options);
-  int max_dl_tries = options->ClientBootstrapConsensusMaxDownloadTries;
-  if (!use_fallbacks) {
-    max_dl_tries =
-              options->ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries;
-  }
-
   const char *resource = networkstatus_get_flavor_name(
                                                   usable_consensus_flavor());
 
@@ -995,7 +984,7 @@ update_consensus_bootstrap_attempt_downloads(
 
   /* Allow for multiple connections in the same second, if the schedule value
    * is 0. */
-  while (download_status_is_ready(dls, now, max_dl_tries)) {
+  while (download_status_is_ready(dls, now)) {
     log_info(LD_DIR, "Launching %s bootstrap %s networkstatus consensus "
              "download.", resource, (want_authority == DL_WANT_AUTHORITY
                                      ? "authority"
@@ -1046,7 +1035,7 @@ update_consensus_bootstrap_multiple_downloads(time_t now,
 
     if (!check_consensus_waiting_for_certs(usable_flavor, now, dls_f)) {
       /* During bootstrap, DL_WANT_ANY_DIRSERVER means "use fallbacks". */
-      update_consensus_bootstrap_attempt_downloads(now, options, dls_f,
+      update_consensus_bootstrap_attempt_downloads(now, dls_f,
                                                    DL_WANT_ANY_DIRSERVER);
     }
   }
@@ -1056,7 +1045,7 @@ update_consensus_bootstrap_multiple_downloads(time_t now,
     &consensus_bootstrap_dl_status[CONSENSUS_BOOTSTRAP_SOURCE_AUTHORITY];
 
   if (!check_consensus_waiting_for_certs(usable_flavor, now, dls_a)) {
-    update_consensus_bootstrap_attempt_downloads(now, options, dls_a,
+    update_consensus_bootstrap_attempt_downloads(now, dls_a,
                                                  DL_WANT_AUTHORITY);
   }
 }

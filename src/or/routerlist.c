@@ -177,7 +177,7 @@ static void download_status_reset_by_sk_in_cl(cert_list_t *cl,
                                               const char *digest);
 static int download_status_is_ready_by_sk_in_cl(cert_list_t *cl,
                                                 const char *digest,
-                                                time_t now, int max_failures);
+                                                time_t now);
 
 /****************************************************************************/
 
@@ -287,7 +287,7 @@ download_status_reset_by_sk_in_cl(cert_list_t *cl, const char *digest)
 static int
 download_status_is_ready_by_sk_in_cl(cert_list_t *cl,
                                      const char *digest,
-                                     time_t now, int max_failures)
+                                     time_t now)
 {
   int rv = 0;
   download_status_t *dlstatus = NULL;
@@ -304,7 +304,7 @@ download_status_is_ready_by_sk_in_cl(cert_list_t *cl,
   /* Got one? */
   if (dlstatus) {
     /* Use download_status_is_ready() */
-    rv = download_status_is_ready(dlstatus, now, max_failures);
+    rv = download_status_is_ready(dlstatus, now);
   } else {
     /*
      * If we don't know anything about it, return 1, since we haven't
@@ -1067,8 +1067,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
       }
     } SMARTLIST_FOREACH_END(cert);
     if (!found &&
-        download_status_is_ready(&(cl->dl_status_by_id), now,
-                                 options->TestingCertMaxDownloadTries) &&
+        download_status_is_ready(&(cl->dl_status_by_id), now) &&
         !digestmap_get(pending_id, ds->v3_identity_digest)) {
       log_info(LD_DIR,
                "No current certificate known for authority %s "
@@ -1131,8 +1130,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
           continue;
         }
         if (download_status_is_ready_by_sk_in_cl(
-              cl, sig->signing_key_digest,
-              now, options->TestingCertMaxDownloadTries) &&
+              cl, sig->signing_key_digest, now) &&
             !fp_pair_map_get_by_digests(pending_cert,
                                         voter->identity_digest,
                                         sig->signing_key_digest)) {
@@ -5166,8 +5164,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         ++n_inprogress;
         continue; /* We have an in-progress download. */
       }
-      if (!download_status_is_ready(&rs->dl_status, now,
-                          options->TestingDescriptorMaxDownloadTries)) {
+      if (!download_status_is_ready(&rs->dl_status, now)) {
         ++n_delayed; /* Not ready for retry. */
         continue;
       }
@@ -5343,8 +5340,7 @@ update_extrainfo_downloads(time_t now)
         ++n_have;
         continue;
       }
-      if (!download_status_is_ready(&sd->ei_dl_status, now,
-                          options->TestingDescriptorMaxDownloadTries)) {
+      if (!download_status_is_ready(&sd->ei_dl_status, now)) {
         ++n_delay;
         continue;
       }

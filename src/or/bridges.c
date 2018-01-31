@@ -636,8 +636,7 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
       /* This resets the download status on first use */
-      if (!download_status_is_ready(&bridge->fetch_status, now,
-                                    IMPOSSIBLE_TO_DOWNLOAD))
+      if (!download_status_is_ready(&bridge->fetch_status, now))
         continue; /* don't bother, no need to retry yet */
       if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
         download_status_mark_impossible(&bridge->fetch_status);
