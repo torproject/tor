@@ -866,7 +866,7 @@ hibernate_end(hibernate_state_t new_state)
 
   hibernate_state = new_state;
   hibernate_end_time = 0; /* no longer hibernating */
-  stats_n_seconds_working = 0; /* reset published uptime */
+  reset_uptime(); /* reset published uptime */
 }
 
 /** A wrapper around hibernate_begin, for when we get SIGINT. */
