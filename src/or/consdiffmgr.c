@@ -1313,8 +1313,11 @@ store_multiple(consensus_cache_entry_handle_t **handles_out,
                             labels,
                             body_out,
                             bodylen_out);
-      if (BUG(ent == NULL))
+      if (ent == NULL) {
+        log_warn(LD_FS, "Unable to store object %s compressed with %s.",
+                 description, methodname);
         continue;
+      }
 
       status = CDM_DIFF_PRESENT;
       handles_out[i] = consensus_cache_entry_handle_new(ent);
