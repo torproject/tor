@@ -2709,7 +2709,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       protocol_list_supports_protocol(tok->args[0], PRT_HSDIR,
                                       PROTOVER_HSDIR_V3);
     rs->supports_v3_rendezvous_point =
-      protocol_list_supports_protocol(tok->args[0], PRT_HSDIR,
+      protocol_list_supports_protocol(tok->args[0], PRT_HSREND,
                                       PROTOVER_HS_RENDEZVOUS_POINT_V3);
   }
   if ((tok = find_opt_by_keyword(tokens, K_V))) {
