@@ -4397,36 +4397,10 @@ typedef struct {
    * it?  Only altered on testing networks. */
   int TestingDirConnectionMaxStall;
 
-  /** How many times will we try to fetch a consensus before we give
-   * up?  Only altered on testing networks. */
-  int TestingConsensusMaxDownloadTries;
-
-  /** How many times will a client try to fetch a consensus while
-   * bootstrapping using a list of fallback directories, before it gives up?
-   * Only altered on testing networks. */
-  int ClientBootstrapConsensusMaxDownloadTries;
-
-  /** How many times will a client try to fetch a consensus while
-   * bootstrapping using only a list of authorities, before it gives up?
-   * Only altered on testing networks. */
-  int ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries;
-
   /** How many simultaneous in-progress connections will we make when trying
    * to fetch a consensus before we wait for one to complete, timeout, or
    * error out?  Only altered on testing networks. */
   int ClientBootstrapConsensusMaxInProgressTries;
-
-  /** How many times will we try to download a router's descriptor before
-   * giving up?  Only altered on testing networks. */
-  int TestingDescriptorMaxDownloadTries;
-
-  /** How many times will we try to download a microdescriptor before
-   * giving up?  Only altered on testing networks. */
-  int TestingMicrodescMaxDownloadTries;
-
-  /** How many times will we try to fetch a certificate before giving
-   * up?  Only altered on testing networks. */
-  int TestingCertMaxDownloadTries;
 
   /** If true, we take part in a testing network. Change the defaults of a
    * couple of other configuration options and allow to change the values
