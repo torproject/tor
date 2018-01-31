@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Don't treat inability to store a cached consensus object as a
+      bug: it can happen normally when we are out of disk space.
+      Fixes bug 24859; bugfix on 0.3.1.1-alpha.
