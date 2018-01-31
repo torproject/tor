@@ -1179,15 +1179,11 @@ needs_hs_client_circuits(time_t now, int *needs_uptime, int *needs_capacity,
           router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN);
 }
 
-/* The minimum number of open slots we should keep in order to preemptively
- * build circuits. */
-#define CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS 2
-
-/* Check to see if we need more circuits to have a good build timeout. However,
- * leave a couple slots open so that we can still build circuits preemptively
- * as needed. */
-#define CBT_MAX_UNUSED_OPEN_CIRCUITS (MAX_UNUSED_OPEN_CIRCUITS - \
-                                      CBT_MIN_REMAINING_PREEMPTIVE_CIRCUITS)
+/* This is how many circuits can be opened concurrently during the cbt learning
+ * phase. This number cannot exceed the tor-wide MAX_UNUSED_OPEN_CIRCUITS. */
+#define DFLT_CBT_UNUSED_OPEN_CIRCS (10)
+#define MIN_CBT_UNUSED_OPEN_CIRCS 0
+#define MAX_CBT_UNUSED_OPEN_CIRCS MAX_UNUSED_OPEN_CIRCUITS
 
 /* Return true if we need more circuits for a good build timeout.
  * XXXX make the assumption that build timeout streams should be
@@ -1196,7 +1192,10 @@ STATIC int
 needs_circuits_for_build(int num)
 {
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
-    if (num < CBT_MAX_UNUSED_OPEN_CIRCUITS &&
+    if (num < networkstatus_get_param(NULL, "cbtmaxopencircs",
+                              DFLT_CBT_UNUSED_OPEN_CIRCS,
+                              MIN_CBT_UNUSED_OPEN_CIRCS,
+                              MAX_CBT_UNUSED_OPEN_CIRCS) &&
         !circuit_build_times_disabled(get_options()) &&
         circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
       return 1;
