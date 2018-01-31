@@ -1314,7 +1314,7 @@ store_multiple(consensus_cache_entry_handle_t **handles_out,
                             body_out,
                             bodylen_out);
       if (ent == NULL) {
-        static ratelim_t cant_store_ratelim = RATELIM_INIT(5*70);
+        static ratelim_t cant_store_ratelim = RATELIM_INIT(5*60);
         log_fn_ratelim(&cant_store_ratelim, LOG_WARN, LD_FS,
                        "Unable to store object %s compressed with %s.",
                        description, methodname);
