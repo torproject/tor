@@ -591,6 +591,10 @@ connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen;
 
+  /* Update the channel's active timestamp if there is one */
+  if (conn->chan)
+    channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
+
   /* The channel will want to update its estimated queue size */
   channel_update_xmit_queue_size(TLS_CHAN_TO_BASE(conn->chan));
 
@@ -654,6 +658,11 @@ connection_or_finished_flushing(or_connection_t *conn)
       tor_fragile_assert();
       return -1;
   }
+
+  /* Update the channel's active timestamp if there is one */
+  if (conn->chan)
+    channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
+
   return 0;
 }
 

@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - Stop adding unneeded channel padding right after we finish flushing
+      to a connection that has been trying to flush for many seconds.
+      Instead, treat all partial or complete flushes as activity on the
+      channel, which will defer the time until we need to add padding.
+      This fix should resolve confusing and scary log messages like
+      "Channel padding timeout scheduled 221453ms in the past." Fixes
+      bug 22212; bugfix on 0.3.1.1-alpha.
