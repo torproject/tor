@@ -522,7 +522,7 @@ channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out)
   tor_assert(addr_out);
 
   if (tlschan->conn) {
-    tor_addr_copy(addr_out, &(TO_CONN(tlschan->conn)->addr));
+    tor_addr_copy(addr_out, &(tlschan->conn->real_addr));
     rv = 1;
   } else tor_addr_make_unspec(addr_out);
 
