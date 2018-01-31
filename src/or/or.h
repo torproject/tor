@@ -2200,6 +2200,43 @@ typedef struct signed_descriptor_t {
 /** A signed integer representing a country code. */
 typedef int16_t country_t;
 
+/** Flags used to summarize the declared protocol versions of a relay,
+ * so we don't need to parse them again and again. */
+typedef struct protover_summary_flags_t {
+  /** True iff we have a proto line for this router, or a versions line
+   * from which we could infer the protocols. */
+  unsigned int protocols_known:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * accept EXTEND2 cells. This requires Relay=2. */
+  unsigned int supports_extend2_cells:1;
+
+  /** True iff this router has a protocol list that allows it to negotiate
+   * ed25519 identity keys on a link handshake with us. This
+   * requires LinkAuth=3. */
+  unsigned int supports_ed25519_link_handshake_compat:1;
+
+  /** True iff this router has a protocol list that allows it to negotiate
+   * ed25519 identity keys on a link handshake, at all. This requires some
+   * LinkAuth=X for X >= 3. */
+  unsigned int supports_ed25519_link_handshake_any:1;
+
+  /** True iff this router has a protocol list that allows it to be an
+   * introduction point supporting ed25519 authentication key which is part of
+   * the v3 protocol detailed in proposal 224. This requires HSIntro=4. */
+  unsigned int supports_ed25519_hs_intro : 1;
+
+  /** True iff this router has a protocol list that allows it to be an hidden
+   * service directory supporting version 3 as seen in proposal 224. This
+   * requires HSDir=2. */
+  unsigned int supports_v3_hsdir : 1;
+
+  /** True iff this router has a protocol list that allows it to be an hidden
+   * service rendezvous point supporting version 3 as seen in proposal 224.
+   * This requires HSRend=2. */
+  unsigned int supports_v3_rendezvous_point: 1;
+} protover_summary_flags_t;
+
 /** Information about another onion router in the network. */
 typedef struct {
   signed_descriptor_t cache_info;
@@ -2267,6 +2304,9 @@ typedef struct {
   /** Used during voting to indicate that we should not include an entry for
    * this routerinfo. Used only during voting. */
   unsigned int omit_from_vote:1;
+
+  /** Flags to summarize the protocol versions for this routerinfo_t. */
+  protover_summary_flags_t pv;
 
 /** Tor can use this router for general positions in circuits; we got it
  * from a directory server as usual, or we're an authority and a server
@@ -2346,41 +2386,14 @@ typedef struct routerstatus_t {
   unsigned int is_v2_dir:1; /** True iff this router publishes an open DirPort
                              * or it claims to accept tunnelled dir requests.
                              */
-  /** True iff we have a proto line for this router, or a versions line
-   * from which we could infer the protocols. */
-  unsigned int protocols_known:1;
-
-  /** True iff this router has a version or protocol list that allows it to
-   * accept EXTEND2 cells */
-  unsigned int supports_extend2_cells:1;
-
-  /** True iff this router has a protocol list that allows it to negotiate
-   * ed25519 identity keys on a link handshake with us. */
-  unsigned int supports_ed25519_link_handshake_compat:1;
-
-  /** True iff this router has a protocol list that allows it to negotiate
-   * ed25519 identity keys on a link handshake, at all. */
-  unsigned int supports_ed25519_link_handshake_any:1;
-
-  /** True iff this router has a protocol list that allows it to be an
-   * introduction point supporting ed25519 authentication key which is part of
-   * the v3 protocol detailed in proposal 224. This requires HSIntro=4. */
-  unsigned int supports_ed25519_hs_intro : 1;
-
-  /** True iff this router has a protocol list that allows it to be an hidden
-   * service directory supporting version 3 as seen in proposal 224. This
-   * requires HSDir=2. */
-  unsigned int supports_v3_hsdir : 1;
-
-  /** True iff this router has a protocol list that allows it to be an hidden
-   * service rendezvous point supporting version 3 as seen in proposal 224.
-   * This requires HSRend=2. */
-  unsigned int supports_v3_rendezvous_point: 1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
   unsigned int bw_is_unmeasured:1; /**< This is a consensus entry, with
                                     * the Unmeasured flag set. */
+
+  /** Flags to summarize the protocol versions for this routerstatus_t. */
+  protover_summary_flags_t pv;
 
   uint32_t bandwidth_kb; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */

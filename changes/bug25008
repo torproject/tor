@@ -1,0 +1,9 @@
+  o Minor bugfixes (performance):
+    - Avoid calling protocol_list_supports_protocol() from inside tight loops
+      when running with cached routerinfo_t objects.  Instead,
+      summarize the relevant protocols as flags in the routerinfo_t, as we do
+      for routerstatus_t objects.  This change simplifies our code a little,
+      and saves a large amount of short-term memory allocation operations.
+      Fixes bug 25008; bugfix on 0.2.9.4-alpha.
+
+

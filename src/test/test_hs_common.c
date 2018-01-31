@@ -289,7 +289,7 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
 
   memcpy(rs->identity_digest, identity, DIGEST_LEN);
   rs->is_hs_dir = is_hsdir;
-  rs->supports_v3_hsdir = 1;
+  rs->pv.supports_v3_hsdir = 1;
   strlcpy(rs->nickname, nickname, sizeof(rs->nickname));
   tor_addr_parse(&ipv4_addr, "1.2.3.4");
   ri->addr = tor_addr_to_ipv4h(&ipv4_addr);

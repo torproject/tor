@@ -5665,11 +5665,11 @@ routerstatus_version_supports_extend2_cells(const routerstatus_t *rs,
     return allow_unknown_versions;
   }
 
-  if (!rs->protocols_known) {
+  if (!rs->pv.protocols_known) {
     return allow_unknown_versions;
   }
 
-  return rs->supports_extend2_cells;
+  return rs->pv.supports_extend2_cells;
 }
 
 /** Assert that the internal representation of <b>rl</b> is
