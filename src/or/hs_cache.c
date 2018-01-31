@@ -624,8 +624,8 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
   if (cache_entry != NULL) {
     /* If we have an entry in our cache that has a revision counter greater
      * than the one we just fetched, discard the one we fetched. */
-    if (BUG(cache_entry->desc->plaintext_data.revision_counter >
-            client_desc->desc->plaintext_data.revision_counter)) {
+    if (cache_entry->desc->plaintext_data.revision_counter >
+        client_desc->desc->plaintext_data.revision_counter) {
       cache_client_desc_free(client_desc);
       goto done;
     }
