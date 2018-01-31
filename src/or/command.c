@@ -347,16 +347,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     int len;
     created_cell_t created_cell;
 
-    /* If the client used CREATE_FAST, it's probably a tor client or bridge
-     * relay, and we must not use it for EXTEND requests (in most cases, we
-     * won't have an authenticated peer ID for the extend).
-     * Public relays on 0.2.9 and later will use CREATE_FAST if they have no
-     * ntor onion key for this relay, but that should be a rare occurrence.
-     * Clients on 0.3.1 and later avoid using CREATE_FAST as much as they can,
-     * even during bootstrap, so the CREATE_FAST check is most accurate for
-     * earlier tor client versions. */
-    channel_mark_client(chan);
-
     memset(&created_cell, 0, sizeof(created_cell));
     len = onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_FAST,
                                        create_cell->onionskin,
