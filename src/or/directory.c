@@ -5730,8 +5730,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
     } else {
       dls = router_get_dl_status_by_descriptor_digest(digest);
     }
-    if (!dls || dls->n_download_failures >=
-                get_options()->TestingDescriptorMaxDownloadTries)
+    if (!dls)
       continue;
     download_status_increment_failure(dls, status_code, cp, server, now);
   } SMARTLIST_FOREACH_END(cp);
@@ -5768,10 +5767,6 @@ dir_microdesc_download_failed(smartlist_t *failed,
     if (!rs)
       continue;
     dls = &rs->dl_status;
-    if (dls->n_download_failures >=
-        get_options()->TestingMicrodescMaxDownloadTries) {
-      continue;
-    }
 
     { /* Increment the failure count for this md fetch */
       char buf[BASE64_DIGEST256_LEN+1];
