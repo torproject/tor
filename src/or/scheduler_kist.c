@@ -693,7 +693,6 @@ kist_scheduler_run(void)
        * after the scheduling loop is over. They can hopefully be taken care of
        * in the next scheduling round.
        */
-      chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
       if (!to_readd) {
         to_readd = smartlist_new();
       }
