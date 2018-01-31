@@ -93,7 +93,8 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
 
   if (tor_cert_checksig(torcert, &signing_key->pubkey, now) < 0) {
     /* LCOV_EXCL_START */
-    log_warn(LD_BUG, "Generated a certificate whose signature we can't check");
+    log_warn(LD_BUG, "Generated a certificate whose signature we can't "
+             "check: %s", tor_cert_describe_signature_status(torcert));
     goto err;
     /* LCOV_EXCL_STOP */
   }
@@ -264,6 +265,24 @@ tor_cert_checksig(tor_cert_t *cert,
     }
     cert->cert_valid = 1;
     return 0;
+  }
+}
+
+/** Return a string describing the status of the signature on <b>cert</b>
+ *
+ * Will always be "unchecked" unless tor_cert_checksig has been called.
+ */
+const char *
+tor_cert_describe_signature_status(const tor_cert_t *cert)
+{
+  if (cert->cert_expired) {
+    return "expired";
+  } else if (cert->sig_bad) {
+    return "mis-signed";
+  } else if (cert->sig_ok) {
+    return "okay";
+  } else {
+    return "unchecked";
   }
 }
 

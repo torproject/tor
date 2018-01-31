@@ -1233,7 +1233,8 @@ cert_is_valid(tor_cert_t *cert, uint8_t type, const char *log_obj_type)
   /* The following will not only check if the signature matches but also the
    * expiration date and overall validity. */
   if (tor_cert_checksig(cert, &cert->signing_key, approx_time()) < 0) {
-    log_warn(LD_REND, "Invalid signature for %s.", log_obj_type);
+    log_warn(LD_REND, "Invalid signature for %s: %s", log_obj_type,
+             tor_cert_describe_signature_status(cert));
     goto err;
   }
 
@@ -1728,7 +1729,8 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   /* Validate authentication certificate with descriptor signing key. */
   if (tor_cert_checksig(ip->auth_key_cert,
                         &desc->plaintext_data.signing_pubkey, 0) < 0) {
-    log_warn(LD_REND, "Invalid authentication key signature");
+    log_warn(LD_REND, "Invalid authentication key signature: %s",
+             tor_cert_describe_signature_status(ip->auth_key_cert));
     goto err;
   }
 
@@ -1765,7 +1767,8 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
   }
   if (tor_cert_checksig(ip->enc_key_cert,
                         &desc->plaintext_data.signing_pubkey, 0) < 0) {
-    log_warn(LD_REND, "Invalid encryption key signature");
+    log_warn(LD_REND, "Invalid encryption key signature: %s",
+             tor_cert_describe_signature_status(ip->enc_key_cert));
     goto err;
   }
   /* It is successfully cross certified. Flag the object. */
