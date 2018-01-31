@@ -278,6 +278,7 @@ main(int c, const char **v)
     s.masks[LOG_WARN-LOG_ERR] |= LD_BUG;
     add_stream_log(&s, "", fileno(stdout));
   }
+  init_protocol_warning_severity_level();
 
   options->command = CMD_RUN_UNITTESTS;
   if (crypto_global_init(accel_crypto, NULL, NULL)) {

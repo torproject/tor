@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging, race conditions):
+    - Fix a (mostly harmless) race condition when invoking
+      LOG_PROTOCOL_WARN message from a subthread while the options are
+      changing. Fixes bug 23954; bugfix on 0.1.1.9-alpha.

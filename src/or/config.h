@@ -31,6 +31,7 @@ const char *safe_str_client(const char *address);
 const char *safe_str(const char *address);
 const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
+void init_protocol_warning_severity_level(void);
 int get_protocol_warning_severity_level(void);
 const char *get_version(void);
 const char *get_short_version(void);

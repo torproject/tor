@@ -152,6 +152,8 @@ main(int argc, char **argv)
     }
   }
 
+  init_protocol_warning_severity_level();
+
   {
     log_severity_list_t s;
     memset(&s, 0, sizeof(s));
