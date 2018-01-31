@@ -1773,7 +1773,8 @@ circuit_build_failed(origin_circuit_t *circ)
     /* We failed at the first hop for some reason other than a DESTROY cell.
      * If there's an OR connection to blame, blame it. Also, avoid this relay
      * for a while, and fail any one-hop directory fetches destined for it. */
-    const char *n_chan_id = circ->cpath->extend_info->identity_digest;
+    const char *n_chan_ident = circ->cpath->extend_info->identity_digest;
+    tor_assert(n_chan_ident);
     int already_marked = 0;
     if (circ->base_.n_chan) {
       n_chan = circ->base_.n_chan;
@@ -1801,7 +1802,7 @@ circuit_build_failed(origin_circuit_t *circ)
                "with no connection",
                TO_CIRCUIT(circ)->n_circ_id, circ->global_identifier);
     }
-    if (n_chan_id && !already_marked) {
+    if (!already_marked) {
       /*
        * If we have guard state (new guard API) and our path selection
        * code actually chose a full path, then blame the failure of this
@@ -1821,7 +1822,7 @@ circuit_build_failed(origin_circuit_t *circ)
         entry_guard_failed(&circ->guard_state);
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
-      connection_ap_fail_onehop(n_chan_id, circ->build_state);
+      connection_ap_fail_onehop(n_chan_ident, circ->build_state);
     }
   }
 

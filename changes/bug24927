@@ -1,0 +1,4 @@
+  o Minor bugfixes (correctness):
+    - Remove nonworking, unnecessary check to see whether a circuit hop's
+      identity was set when the circuit failed. Fixes bug 24927; bugfix on
+      0.2.4.4-alpha.
