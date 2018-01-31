@@ -1,0 +1,6 @@
+  o Major bugfixes (scheduler, consensus):
+    - A logic in the code was preventing the scheduler subystem to properly
+      make a decision based on the latest consensus when it arrives. This lead
+      to the scheduler failing to notice any consensus parameters that might
+      change from one consensus to another. Fixes bug 24975; bugfix on
+      0.3.2.1-alpha.
