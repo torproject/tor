@@ -3560,7 +3560,13 @@ dirvote_add_signatures_to_pending_consensus(
   }
   r = networkstatus_add_detached_signatures(pc->consensus, sigs,
                                             source, severity, msg_out);
-  log_info(LD_DIR,"Added %d signatures to consensus.", r);
+  if (r >= 0) {
+    log_info(LD_DIR,"Added %d signatures to consensus.", r);
+  } else {
+    log_fn(LOG_PROTOCOL_WARN, LD_DIR,
+           "Unable to add signatures to consensus: %s",
+           *msg_out ? *msg_out : "(unknown)");
+  }
 
   if (r >= 1) {
     char *new_signatures =
