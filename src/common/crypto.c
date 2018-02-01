@@ -1903,13 +1903,13 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
                              CRYPT_VERIFYCONTEXT)) {
-      log_warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
+      log_warn(LD_CRYPTO, "Unable to set Windows CryptoAPI provider [1].");
       return -1;
     }
     provider_set = 1;
   }
   if (!CryptGenRandom(provider, out_len, out)) {
-    log_warn(LD_CRYPTO, "Can't get entropy from CryptoAPI.");
+    log_warn(LD_CRYPTO, "Unable get entropy from the Windows CryptoAPI.");
     return -1;
   }
 
@@ -1954,9 +1954,11 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
         log_warn(LD_CRYPTO, "Can't get entropy from getrandom()."
                  " You are running a version of Tor built to support"
                  " getrandom(), but the kernel doesn't implement this"
-                 " function--probably because it is too old?");
+                 " function--probably because it is too old?"
+                 " Trying fallback method instead.");
       } else {
         log_warn(LD_CRYPTO, "Can't get entropy from getrandom(): %s.",
+                            " Trying fallback method instead."
                  strerror(errno));
       }
 
@@ -2009,7 +2011,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
   size_t n;
 
   for (i = 0; filenames[i]; ++i) {
-    log_debug(LD_FS, "Considering %s for entropy", filenames[i]);
+    log_debug(LD_FS, "Considering %s as entropy source", filenames[i]);
     fd = open(sandbox_intern_string(filenames[i]), O_RDONLY, 0);
     if (fd<0) continue;
     log_info(LD_CRYPTO, "Reading entropy from \"%s\"", filenames[i]);
@@ -2019,7 +2021,8 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
       /* LCOV_EXCL_START
        * We can't make /dev/foorandom actually fail. */
       log_warn(LD_CRYPTO,
-               "Error reading from entropy source (read only %lu bytes).",
+               "Error reading from entropy source %s (read only %lu bytes).",
+               filenames[i],
                (unsigned long)n);
       return -1;
       /* LCOV_EXCL_STOP */
