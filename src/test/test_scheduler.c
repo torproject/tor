@@ -1059,6 +1059,271 @@ test_scheduler_ns_changed(void *arg)
   return;
 }
 
+/*
+ * Mocked functions for the kist_pending_list test.
+ */
+
+static int mock_flush_some_cells_num = 1;
+static int mock_more_to_flush = 0;
+static int mock_update_socket_info_limit = 0;
+
+static ssize_t
+channel_flush_some_cells_mock_var(channel_t *chan, ssize_t num_cells)
+{
+  (void) chan;
+  (void) num_cells;
+  return mock_flush_some_cells_num;
+}
+
+/* Because when we flush cells, it is possible that the connection outbuf gets
+ * fully drained, the wants to write scheduler event is fired back while we
+ * are in the scheduler loop so this mock function does it for us.
+ * Furthermore, the socket limit is set to 0 so once this is triggered, it
+ * informs the scheduler that it can't write on the socket anymore. */
+static void
+channel_write_to_kernel_mock_trigger_24700(channel_t *chan)
+{
+  static int chan_id_seen[2] = {0};
+  if (++chan_id_seen[chan->global_identifier - 1] > 1) {
+    tt_assert(0);
+  }
+
+  scheduler_channel_wants_writes(chan);
+
+ done:
+  return;
+}
+
+static int
+channel_more_to_flush_mock_var(channel_t *chan)
+{
+  (void) chan;
+  return mock_more_to_flush;
+}
+
+static void
+update_socket_info_impl_mock_var(socket_table_ent_t *ent)
+{
+  ent->cwnd = ent->unacked = ent->mss = ent->notsent = 0;
+  ent->limit = mock_update_socket_info_limit;
+}
+
+static void
+test_scheduler_kist_pending_list(void *arg)
+{
+  (void) arg;
+
+#ifndef HAVE_KIST_SUPPORT
+  return;
+#endif
+
+  /* This is for testing the channel flow with the pending list that is
+   * depending on the channel state, what will be the expected behavior of the
+   * scheduler with that list.
+   *
+   * For instance, we want to catch double channel add or removing a channel
+   * that doesn't exists, or putting a channel in the list in a wrong state.
+   * Essentially, this will articifically test cases of the KIST main loop and
+   * entry point in the channel subsystem.
+   *
+   * In part, this is to also catch things like #24700 and provide a test bed
+   * for more testing in the future like so. */
+
+  /* Mocking a series of scheduler function to control the flow of the
+   * scheduler loop to test every use cases and assess the pending list. */
+  MOCK(get_options, mock_get_options);
+  MOCK(channel_flush_some_cells, channel_flush_some_cells_mock_var);
+  MOCK(channel_more_to_flush, channel_more_to_flush_mock_var);
+  MOCK(update_socket_info_impl, update_socket_info_impl_mock_var);
+  MOCK(channel_write_to_kernel, channel_write_to_kernel_mock);
+  MOCK(channel_should_write_to_kernel, channel_should_write_to_kernel_mock);
+
+  /* Setup options so we're sure about what sched we are running */
+  mocked_options.KISTSchedRunInterval = 10;
+  set_scheduler_options(SCHEDULER_KIST);
+
+  /* Init scheduler. */
+  scheduler_init();
+
+  /* Initialize a channel. We'll need a second channel for the #24700 bug
+   * test. */
+  channel_t *chan1 = new_fake_channel();
+  channel_t *chan2 = new_fake_channel();
+  tt_assert(chan1);
+  tt_assert(chan2);
+  chan1->magic = chan2->magic = TLS_CHAN_MAGIC;
+  channel_register(chan1);
+  channel_register(chan2);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+  tt_int_op(chan1->sched_heap_idx, OP_EQ, -1);
+  tt_int_op(chan2->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+  tt_int_op(chan2->sched_heap_idx, OP_EQ, -1);
+
+  /* Once a channel becomes OPEN, it always have at least one cell in it so
+   * the scheduler is notified that the channel wants to write so this is the
+   * first step. Might not make sense to you but it is the way it is. */
+  scheduler_channel_wants_writes(chan1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_FOR_CELLS);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+
+  /* Signal the scheduler that it has waiting cells which means the channel
+   * will get scheduled. */
+  scheduler_channel_has_waiting_cells(chan1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+  /* Subsequent call should not add it more times. It is possible we add many
+   * cells in rapid succession before the channel is scheduled. */
+  scheduler_channel_has_waiting_cells(chan1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+  scheduler_channel_has_waiting_cells(chan1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+
+  /* We'll flush one cell and make it that the socket can write but no more to
+   * flush else we end up in an infinite loop. We expect the channel to be put
+   * in waiting for cells state and the pending list empty. */
+  mock_update_socket_info_limit = INT_MAX;
+  mock_more_to_flush = 0;
+  the_scheduler->run();
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_FOR_CELLS);
+
+  /* Lets make believe that a cell is now in the channel but this time the
+   * channel can't write so obviously it has more to flush. We expect the
+   * channel to be back in the pending list. */
+  scheduler_channel_has_waiting_cells(chan1);
+  mock_update_socket_info_limit = 0;
+  mock_more_to_flush = 1;
+  the_scheduler->run();
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+
+  /* Channel is in the pending list now, during that time, we'll trigger a
+   * wants to write event because maybe the channel buffers were emptied in
+   * the meantime. This is possible because once the connection outbuf is
+   * flushed down the low watermark, the scheduler is notified.
+   *
+   * We expect the channel to NOT be added in the pending list again and stay
+   * in PENDING state. */
+  scheduler_channel_wants_writes(chan1);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+
+  /* Make it that the channel can write now but has nothing else to flush. We
+   * expect that it is removed from the pending list and waiting for cells. */
+  mock_update_socket_info_limit = INT_MAX;
+  mock_more_to_flush = 0;
+  the_scheduler->run();
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_FOR_CELLS);
+
+  /* While waiting for cells, lets say we were able to write more things on
+   * the connection outbuf (unlikely that this can happen but let say it
+   * does). We expect the channel to stay in waiting for cells. */
+  scheduler_channel_wants_writes(chan1);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_FOR_CELLS);
+
+  /* We'll not put it in the pending list and make the flush cell fail with 0
+   * cell flushed. We expect that it is put back in waiting for cells. */
+  scheduler_channel_has_waiting_cells(chan1);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+  mock_flush_some_cells_num = 0;
+  the_scheduler->run();
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_FOR_CELLS);
+
+  /* Set the channel to a state where it doesn't want to write more. We expect
+   * that the channel becomes idle. */
+  scheduler_channel_doesnt_want_writes(chan1);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+
+  /* Some cells arrive on the channel now. We expect it to go back in waiting
+   * to write. You might wonder why it is not put in the pending list? Because
+   * once the channel becomes OPEN again (the doesn't want to write event only
+   * occurs if the channel goes in MAINT mode), if there are cells in the
+   * channel, the wants to write event is triggered thus putting the channel
+   * in pending mode.
+   *
+   * Else, if no cells, it stays IDLE and then once a cell comes in, it should
+   * go in waiting to write which is a BUG itself because the channel can't be
+   * scheduled until a second cell comes in. Hopefully, #24554 will fix that
+   * for KIST. */
+  scheduler_channel_has_waiting_cells(chan1);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_TO_WRITE);
+
+  /* Second cell comes in, unfortunately, it won't get scheduled until a wants
+   * to write event occurs like described above. */
+  scheduler_channel_has_waiting_cells(chan1);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 0);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_WAITING_TO_WRITE);
+
+  /* Unblock everything putting the channel in the pending list. */
+  scheduler_channel_wants_writes(chan1);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 1);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+
+  /* Testing bug #24700 which is the situation where we have at least two
+   * different channels in the pending list. The first one gets flushed and
+   * bytes are written on the wire which triggers a wants to write event
+   * because the outbuf is below the low watermark. The bug was that this
+   * exact channel was added back in the pending list because its state wasn't
+   * PENDING.
+   *
+   * The following does some ninja-tsu to try to make it happen. We need two
+   * different channels so we create a second one and add it to the pending
+   * list. Then, we have a custom function when we write to kernel that does
+   * two important things:
+   *
+   *  1) Calls scheduler_channel_wants_writes(chan) on the channel.
+   *  2) Keeps track of how many times it sees the channel going through. If
+   *     that limit goes > 1, it means we've added the channel twice in the
+   *     pending list.
+   *
+   * In the end, we expect both channels to be in the pending list after this
+   * scheduler run. */
+
+  /* Put the second channel in the pending list. */
+  scheduler_channel_wants_writes(chan2);
+  scheduler_channel_has_waiting_cells(chan2);
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 2);
+  tt_int_op(chan2->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+
+  /* This makes it that the first pass on socket_can_write() will be true but
+   * then when a single cell is flushed (514 + 29 bytes), the second call to
+   * socket_can_write() will be false. If it wasn't sending back false on the
+   * second run, we end up in an infinite loop of the scheduler. */
+  mock_update_socket_info_limit = 600;
+  /* We want to hit "Case 3:" of the scheduler so channel_more_to_flush() is
+   * true but socket_can_write() has to be false on the second check on the
+   * channel. */
+  mock_more_to_flush = 1;
+  mock_flush_some_cells_num = 1;
+  MOCK(channel_write_to_kernel, channel_write_to_kernel_mock_trigger_24700);
+  the_scheduler->run();
+  tt_int_op(smartlist_len(get_channels_pending()), OP_EQ, 2);
+  tt_int_op(chan1->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+  tt_int_op(chan2->scheduler_state, OP_EQ, SCHED_CHAN_PENDING);
+
+ done:
+  chan1->state = chan2->state = CHANNEL_STATE_CLOSED;
+  chan1->registered = chan2->registered = 0;
+  channel_free(chan1);
+  channel_free(chan2);
+  scheduler_free_all();
+
+  UNMOCK(get_options);
+  UNMOCK(channel_flush_some_cells);
+  UNMOCK(channel_more_to_flush);
+  UNMOCK(update_socket_info_impl);
+  UNMOCK(channel_write_to_kernel);
+  UNMOCK(channel_should_write_to_kernel);
+}
+
 struct testcase_t scheduler_tests[] = {
   { "compare_channels", test_scheduler_compare_channels,
     TT_FORK, NULL, NULL },
@@ -1068,6 +1333,8 @@ struct testcase_t scheduler_tests[] = {
   { "loop_kist", test_scheduler_loop_kist, TT_FORK, NULL, NULL },
   { "ns_changed", test_scheduler_ns_changed, TT_FORK, NULL, NULL},
   { "should_use_kist", test_scheduler_can_use_kist, TT_FORK, NULL, NULL },
+  { "kist_pending_list", test_scheduler_kist_pending_list, TT_FORK,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 
