@@ -951,6 +951,9 @@ channel_init(channel_t *chan)
 
   /* Scheduler state is idle */
   chan->scheduler_state = SCHED_CHAN_IDLE;
+
+  /* Channel is not in the scheduler heap. */
+  chan->sched_heap_idx = -1;
 }
 
 /**
