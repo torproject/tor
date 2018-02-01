@@ -1439,8 +1439,8 @@ hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
      * connection is considered "fresh" and can continue without being closed
      * too early. */
     base_conn->timestamp_created = now;
-    base_conn->timestamp_lastread = now;
-    base_conn->timestamp_lastwritten = now;
+    base_conn->timestamp_last_read_allowed = now;
+    base_conn->timestamp_last_write_allowed = now;
     /* Change connection's state into waiting for a circuit. */
     base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
 

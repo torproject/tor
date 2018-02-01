@@ -2437,7 +2437,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      * and the date header.  (We used to check now-date_header, but that's
      * inaccurate if we spend a lot of time downloading.)
      */
-    apparent_skew = conn->base_.timestamp_lastwritten - date_header;
+    apparent_skew = conn->base_.timestamp_last_write_allowed - date_header;
     if (labs(apparent_skew)>ALLOW_DIRECTORY_TIME_SKEW) {
       int trusted = router_digest_is_trusted_dir(conn->identity_digest);
       clock_skew_warning(TO_CONN(conn), apparent_skew, trusted, LD_HTTP,

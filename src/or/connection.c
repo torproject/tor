@@ -462,8 +462,8 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
   }
 
   conn->timestamp_created = now;
-  conn->timestamp_lastread = now;
-  conn->timestamp_lastwritten = now;
+  conn->timestamp_last_read_allowed = now;
+  conn->timestamp_last_write_allowed = now;
 }
 
 /** Create a link between <b>conn_a</b> and <b>conn_b</b>. */
@@ -861,7 +861,7 @@ connection_mark_for_close_internal_, (connection_t *conn,
   /* in case we're going to be held-open-til-flushed, reset
    * the number of seconds since last successful write, so
    * we get our whole 15 seconds */
-  conn->timestamp_lastwritten = time(NULL);
+  conn->timestamp_last_write_allowed = time(NULL);
 }
 
 /** Find each connection that has hold_open_until_flushed set to
@@ -883,7 +883,7 @@ connection_expire_held_open(void)
      */
     if (conn->hold_open_until_flushed) {
       tor_assert(conn->marked_for_close);
-      if (now - conn->timestamp_lastwritten >= 15) {
+      if (now - conn->timestamp_last_write_allowed >= 15) {
         int severity;
         if (conn->type == CONN_TYPE_EXIT ||
             (conn->type == CONN_TYPE_DIR &&
@@ -3420,7 +3420,7 @@ connection_handle_read_impl(connection_t *conn)
   if (conn->marked_for_close)
     return 0; /* do nothing */
 
-  conn->timestamp_lastread = approx_time();
+  conn->timestamp_last_read_allowed = approx_time();
 
   switch (conn->type) {
     case CONN_TYPE_OR_LISTENER:
@@ -3821,7 +3821,7 @@ update_send_buffer_size(tor_socket_t sock)
  * when libevent tells us that conn wants to write, or below
  * from connection_buf_add() when an entire TLS record is ready.
  *
- * Update <b>conn</b>-\>timestamp_lastwritten to now, and call flush_buf
+ * Update <b>conn</b>-\>timestamp_last_write_allowed to now, and call flush_buf
  * or flush_buf_tls appropriately. If it succeeds and there are no more
  * more bytes on <b>conn</b>-\>outbuf, then call connection_finished_flushing
  * on it too.
@@ -3854,7 +3854,7 @@ connection_handle_write_impl(connection_t *conn, int force)
     return 0;
   }
 
-  conn->timestamp_lastwritten = now;
+  conn->timestamp_last_write_allowed = now;
 
   /* Sometimes, "writable" means "connected". */
   if (connection_state_is_connecting(conn)) {

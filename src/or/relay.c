@@ -1449,7 +1449,7 @@ connection_edge_process_relay_cell_not_open(
              "after %d seconds.",
              (unsigned)circ->n_circ_id,
              rh->stream_id,
-             (int)(time(NULL) - conn->base_.timestamp_lastread));
+             (int)(time(NULL) - conn->base_.timestamp_last_read_allowed));
     if (connected_cell_parse(rh, cell, &addr, &ttl) < 0) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP,
              "Got a badly formatted connected cell. Closing.");

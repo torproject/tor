@@ -1361,10 +1361,10 @@ typedef struct connection_t {
                          * connection. */
   size_t outbuf_flushlen; /**< How much data should we try to flush from the
                            * outbuf? */
-  time_t timestamp_lastread; /**< When was the last time libevent said we could
-                              * read? */
-  time_t timestamp_lastwritten; /**< When was the last time libevent said we
-                                 * could write? */
+  time_t timestamp_last_read_allowed; /**< When was the last time libevent said
+                                       * we could read? */
+  time_t timestamp_last_write_allowed; /**< When was the last time libevent
+                                        * said we could write? */
 
   time_t timestamp_created; /**< When was this connection_t created? */
 

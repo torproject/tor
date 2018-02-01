@@ -1008,7 +1008,8 @@ conn_close_if_marked(int i)
         LOG_FN_CONN(conn, (LOG_INFO,LD_NET,
                            "Holding conn (fd %d) open for more flushing.",
                            (int)conn->s));
-        conn->timestamp_lastwritten = now; /* reset so we can flush more */
+        conn->timestamp_last_write_allowed = now; /* reset so we can flush
+                                                   * more */
       } else if (sz == 0) {
         /* Also, retval==0.  If we get here, we didn't want to write anything
          * (because of rate-limiting) and we didn't. */
@@ -1159,7 +1160,7 @@ run_connection_housekeeping(int i, time_t now)
   channel_t *chan = NULL;
   int have_any_circuits;
   int past_keepalive =
-    now >= conn->timestamp_lastwritten + options->KeepalivePeriod;
+    now >= conn->timestamp_last_write_allowed + options->KeepalivePeriod;
 
   if (conn->outbuf && !connection_get_outbuf_len(conn) &&
       conn->type == CONN_TYPE_OR)
@@ -1174,10 +1175,10 @@ run_connection_housekeeping(int i, time_t now)
    * if a server or received if a client) for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
       ((DIR_CONN_IS_SERVER(conn) &&
-        conn->timestamp_lastwritten
+        conn->timestamp_last_write_allowed
             + options->TestingDirConnectionMaxStall < now) ||
        (!DIR_CONN_IS_SERVER(conn) &&
-        conn->timestamp_lastread
+        conn->timestamp_last_read_allowed
             + options->TestingDirConnectionMaxStall < now))) {
     log_info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
              (int)conn->s, conn->purpose);
@@ -1253,13 +1254,14 @@ run_connection_housekeeping(int i, time_t now)
     connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (
       now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
-      now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
+      now >=
+          conn->timestamp_last_write_allowed + options->KeepalivePeriod*10) {
     log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
            "Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to "
            "flush; %d seconds since last write)",
            (int)conn->s, conn->address, conn->port,
            (int)connection_get_outbuf_len(conn),
-           (int)(now-conn->timestamp_lastwritten));
+           (int)(now-conn->timestamp_last_write_allowed));
     connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (past_keepalive && !connection_get_outbuf_len(conn)) {
     /* send a padding cell */
@@ -3047,13 +3049,13 @@ dumpstats(int severity)
           i,
           (int)connection_get_inbuf_len(conn),
           (int)buf_allocation(conn->inbuf),
-          (int)(now - conn->timestamp_lastread));
+          (int)(now - conn->timestamp_last_read_allowed));
       tor_log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on outbuf "
           "(len %d, last written %d secs ago)",i,
           (int)connection_get_outbuf_len(conn),
           (int)buf_allocation(conn->outbuf),
-          (int)(now - conn->timestamp_lastwritten));
+          (int)(now - conn->timestamp_last_write_allowed));
       if (conn->type == CONN_TYPE_OR) {
         or_connection_t *or_conn = TO_OR_CONN(conn);
         if (or_conn->tls) {
