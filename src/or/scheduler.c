@@ -560,10 +560,12 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
      * channels_pending.
      */
     scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
-    smartlist_pqueue_add(channels_pending,
-                         scheduler_compare_channels,
-                         offsetof(channel_t, sched_heap_idx),
-                         chan);
+    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+      smartlist_pqueue_add(channels_pending,
+                           scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx),
+                           chan);
+    }
     /* If we made a channel pending, we potentially have scheduling work to
      * do. */
     the_scheduler->schedule();
@@ -678,11 +680,13 @@ scheduler_channel_wants_writes(channel_t *chan)
     /*
      * It can write now, so it goes to channels_pending.
      */
-    smartlist_pqueue_add(channels_pending,
-                         scheduler_compare_channels,
-                         offsetof(channel_t, sched_heap_idx),
-                         chan);
     scheduler_set_channel_state(chan, SCHED_CHAN_PENDING);
+    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+      smartlist_pqueue_add(channels_pending,
+                           scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx),
+                           chan);
+    }
     /* We just made a channel pending, we have scheduling work to do. */
     the_scheduler->schedule();
   } else {
