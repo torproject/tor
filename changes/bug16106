@@ -1,6 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox):
-    - Cause a wider variety of unpermitted open() calls to fail with the
-      EACCES error when the sandbox is running. This won't enable any
-      previously non-working functionality, but it should turn several cases
-      from crashes into sandbox warnings. Fixes bug 16106; bugfix on
-      0.2.5.1-alpha.

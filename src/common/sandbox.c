@@ -481,14 +481,18 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     }
   }
 
-  rc = seccomp_rule_add_0(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(open));
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(open),
+                SCMP_CMP_MASKED(1, O_CLOEXEC|O_NONBLOCK|O_NOCTTY|O_NOFOLLOW,
+                                O_RDONLY));
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
         "error %d", rc);
     return rc;
   }
 
-  rc = seccomp_rule_add_0(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(openat));
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(openat),
+                SCMP_CMP_MASKED(2, O_CLOEXEC|O_NONBLOCK|O_NOCTTY|O_NOFOLLOW,
+                                O_RDONLY));
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received "
             "libseccomp error %d", rc);
