@@ -1,0 +1,4 @@
+  o Minor bugfixes (scheduler, KIST):
+    - Avoid adding the same channel twice in the KIST scheduler pending list
+      wasting CPU cycles at handling the same channel twice. Fixes bug 24700;
+      bugfix on 0.3.2.1-alpha.
