@@ -1,0 +1,104 @@
+/* Copyright (c) 2001, Matej Pfajfar.
+ * Copyright (c) 2001-2004, Roger Dingledine.
+ * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+ * Copyright (c) 2007-2017, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/**
+ * \file crypto_rsa.h
+ *
+ * \brief Headers for crypto_rsa.c
+ **/
+
+#ifndef TOR_CRYPTO_RSA_H
+#define TOR_CRYPTO_RSA_H
+
+#include "orconfig.h"
+
+#include <stdio.h>
+#include "torint.h"
+#include "testsupport.h"
+#include "compat.h"
+#include "util.h"
+#include "torlog.h"
+#include "crypto_curve25519.h"
+
+/** Length of our public keys. */
+#define PK_BYTES (1024/8)
+
+/** Constant used to indicate OAEP padding for public-key encryption */
+#define PK_PKCS1_OAEP_PADDING 60002
+
+/** Number of bytes added for PKCS1-OAEP padding. */
+#define PKCS1_OAEP_PADDING_OVERHEAD 42
+
+/** A public key, or a public/private key-pair. */
+typedef struct crypto_pk_t crypto_pk_t;
+
+/* RSA enviroment setup */
+MOCK_DECL(crypto_pk_t *,crypto_pk_new,(void));
+void crypto_pk_free_(crypto_pk_t *env);
+#define crypto_pk_free(pk) FREE_AND_NULL(crypto_pk_t, crypto_pk_free_, (pk))
+int crypto_get_rsa_padding_overhead(int padding);
+int crypto_get_rsa_padding(int padding);
+
+/* public key crypto */
+MOCK_DECL(int, crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits));
+#define crypto_pk_generate_key(env)                     \
+  crypto_pk_generate_key_with_bits((env), (PK_BYTES*8))
+
+int crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
+                                             const char *keyfile);
+int crypto_pk_write_public_key_to_string(crypto_pk_t *env,
+                                         char **dest, size_t *len);
+int crypto_pk_write_private_key_to_string(crypto_pk_t *env,
+                                          char **dest, size_t *len);
+int crypto_pk_read_public_key_from_string(crypto_pk_t *env,
+                                          const char *src, size_t len);
+int crypto_pk_read_private_key_from_string(crypto_pk_t *env,
+                                           const char *s, ssize_t len);
+int crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
+                                            const char *fname);
+
+int crypto_pk_check_key(crypto_pk_t *env);
+int crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b);
+int crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b);
+size_t crypto_pk_keysize(const crypto_pk_t *env);
+int crypto_pk_num_bits(crypto_pk_t *env);
+crypto_pk_t *crypto_pk_dup_key(crypto_pk_t *orig);
+crypto_pk_t *crypto_pk_copy_full(crypto_pk_t *orig);
+int crypto_pk_key_is_private(const crypto_pk_t *key);
+int crypto_pk_public_exponent_ok(crypto_pk_t *env);
+int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
+                             const char *from, size_t fromlen, int padding);
+int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,
+                              const char *from, size_t fromlen,
+                              int padding, int warnOnFailure);
+MOCK_DECL(int, crypto_pk_public_checksig,(const crypto_pk_t *env,
+                                          char *to, size_t tolen,
+                                          const char *from, size_t fromlen));
+int crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
+                           const char *from, size_t fromlen);
+int crypto_pk_asn1_encode(const crypto_pk_t *pk, char *dest, size_t dest_len);
+crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
+int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
+int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
+
+int crypto_pk_base64_encode(const crypto_pk_t *pk, char **priv_out);
+crypto_pk_t *crypto_pk_base64_decode(const char *str, size_t len);
+
+/* Prototypes for private functions only used by tortls.c, crypto.c, and the
+ * unit tests. */
+struct rsa_st;
+struct rsa_st *crypto_pk_get_rsa_(crypto_pk_t *env);
+crypto_pk_t *crypto_new_pk_from_rsa_(struct rsa_st *rsa);
+MOCK_DECL(struct evp_pkey_st *, crypto_pk_get_evp_pkey_,(crypto_pk_t *env,
+                                                         int private));
+struct evp_pkey_st;
+
+#ifdef TOR_UNIT_TESTS
+void crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src);
+#endif
+
+#endif
+

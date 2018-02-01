@@ -20,6 +20,7 @@
 #include "testsupport.h"
 #include "compat.h"
 #include "util.h"
+#include "crypto_rsa.h"
 
 #include "keccak-tiny/keccak-tiny.h"
 
@@ -36,8 +37,6 @@
 #define CIPHER_IV_LEN 16
 /** Length of our symmetric cipher's keys of 256-bit. */
 #define CIPHER256_KEY_LEN 32
-/** Length of our public keys. */
-#define PK_BYTES (1024/8)
 /** Length of our DH keys. */
 #define DH_BYTES (1024/8)
 
@@ -53,12 +52,6 @@
 /** Length of a sha512 message digest when encoded in base64 with trailing =
  * signs removed. */
 #define BASE64_DIGEST512_LEN 86
-
-/** Constant used to indicate OAEP padding for public-key encryption */
-#define PK_PKCS1_OAEP_PADDING 60002
-
-/** Number of bytes added for PKCS1-OAEP padding. */
-#define PKCS1_OAEP_PADDING_OVERHEAD 42
 
 /** Length of encoded public key fingerprints, including space; but not
  * including terminating NUL. */
@@ -92,7 +85,6 @@ typedef struct {
   char d[N_COMMON_DIGEST_ALGORITHMS][DIGEST256_LEN];
 } common_digests_t;
 
-typedef struct crypto_pk_t crypto_pk_t;
 typedef struct aes_cnt_cipher crypto_cipher_t;
 typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
@@ -111,10 +103,6 @@ void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
 
 /* environment setup */
-MOCK_DECL(crypto_pk_t *,crypto_pk_new,(void));
-void crypto_pk_free_(crypto_pk_t *env);
-#define crypto_pk_free(pk) FREE_AND_NULL(crypto_pk_t, crypto_pk_free_, (pk))
-
 void crypto_set_tls_dh_prime(void);
 crypto_cipher_t *crypto_cipher_new(const char *key);
 crypto_cipher_t *crypto_cipher_new_with_bits(const char *key, int bits);
@@ -126,47 +114,10 @@ void crypto_cipher_free_(crypto_cipher_t *env);
 #define crypto_cipher_free(c) \
   FREE_AND_NULL(crypto_cipher_t, crypto_cipher_free_, (c))
 
-/* public key crypto */
-MOCK_DECL(int, crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits));
-#define crypto_pk_generate_key(env)                     \
-  crypto_pk_generate_key_with_bits((env), (PK_BYTES*8))
-
-int crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
-                                             const char *keyfile);
-int crypto_pk_write_public_key_to_string(crypto_pk_t *env,
-                                         char **dest, size_t *len);
-int crypto_pk_write_private_key_to_string(crypto_pk_t *env,
-                                          char **dest, size_t *len);
-int crypto_pk_read_public_key_from_string(crypto_pk_t *env,
-                                          const char *src, size_t len);
-int crypto_pk_read_private_key_from_string(crypto_pk_t *env,
-                                           const char *s, ssize_t len);
-int crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
-                                            const char *fname);
-
-int crypto_pk_check_key(crypto_pk_t *env);
-int crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b);
-int crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b);
-size_t crypto_pk_keysize(const crypto_pk_t *env);
-int crypto_pk_num_bits(crypto_pk_t *env);
-crypto_pk_t *crypto_pk_dup_key(crypto_pk_t *orig);
-crypto_pk_t *crypto_pk_copy_full(crypto_pk_t *orig);
-int crypto_pk_key_is_private(const crypto_pk_t *key);
-int crypto_pk_public_exponent_ok(crypto_pk_t *env);
-
-int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
-                             const char *from, size_t fromlen, int padding);
-int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,
-                              const char *from, size_t fromlen,
-                              int padding, int warnOnFailure);
-MOCK_DECL(int, crypto_pk_public_checksig,(const crypto_pk_t *env,
-                                          char *to, size_t tolen,
-                                          const char *from, size_t fromlen));
+/* public key crypto  */
 MOCK_DECL(int, crypto_pk_public_checksig_digest,(crypto_pk_t *env,
                                          const char *data, size_t datalen,
                                          const char *sig, size_t siglen));
-int crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
-                           const char *from, size_t fromlen);
 int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 int crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env, char *to,
@@ -177,17 +128,9 @@ int crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env, char *to,
                                      size_t tolen,
                                      const char *from, size_t fromlen,
                                      int padding, int warnOnFailure);
-
-int crypto_pk_asn1_encode(crypto_pk_t *pk, char *dest, size_t dest_len);
-crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out);
 int crypto_pk_get_common_digests(crypto_pk_t *pk,
                                  common_digests_t *digests_out);
-int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
-int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
-
-int crypto_pk_base64_encode(const crypto_pk_t *pk, char **priv_out);
-crypto_pk_t *crypto_pk_base64_decode(const char *str, size_t len);
 
 /* symmetric crypto */
 const char *crypto_cipher_get_key(crypto_cipher_t *env);
@@ -303,13 +246,7 @@ void memwipe(void *mem, uint8_t byte, size_t sz);
 
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */
-struct rsa_st;
-struct evp_pkey_st;
 struct dh_st;
-struct rsa_st *crypto_pk_get_rsa_(crypto_pk_t *env);
-crypto_pk_t *crypto_new_pk_from_rsa_(struct rsa_st *rsa);
-MOCK_DECL(struct evp_pkey_st *, crypto_pk_get_evp_pkey_,(crypto_pk_t *env,
-                                                         int private));
 struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
 
 void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
@@ -326,7 +263,6 @@ extern int break_strongest_rng_fallback;
 #endif /* defined(CRYPTO_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
-void crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src);
 digest_algorithm_t crypto_digest_get_algorithm(crypto_digest_t *digest);
 #endif
 
