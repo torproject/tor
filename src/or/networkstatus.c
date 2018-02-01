@@ -1600,18 +1600,21 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   smartlist_free(changed);
 }
 
-/* Called when the consensus has changed from old_c to new_c.
- *
- * IMPORTANT: This is called _after_ the new consensus has been set in the
- * global state so this is safe for anything getting the latest consensus from
- * that state. */
+/* Called before the consensus changes from old_c to new_c. */
 static void
-notify_networkstatus_changed(const networkstatus_t *old_c,
-                             const networkstatus_t *new_c)
+notify_before_networkstatus_changes(const networkstatus_t *old_c,
+                                    const networkstatus_t *new_c)
 {
   notify_control_networkstatus_changed(old_c, new_c);
-  scheduler_notify_networkstatus_changed(old_c, new_c);
   dos_consensus_has_changed(new_c);
+}
+
+/* Called after a new consensus has been put in the global state. It is safe
+ * to use the consensus getters in this function. */
+static void
+notify_after_networkstatus_changes(void)
+{
+  scheduler_notify_networkstatus_changed();
 }
 
 /** Copy all the ancillary information (like router download status and so on)
@@ -1938,6 +1941,12 @@ networkstatus_set_current_consensus(const char *consensus,
 
   const int is_usable_flavor = flav == usable_consensus_flavor();
 
+  /* Before we switch to the new consensus, notify that we are about to change
+   * it using the old consensus and the new one. */
+  if (is_usable_flavor) {
+    notify_before_networkstatus_changes(networkstatus_get_latest_consensus(),
+                                        c);
+  }
   if (flav == FLAV_NS) {
     if (current_ns_consensus) {
       networkstatus_copy_old_consensus_info(c, current_ns_consensus);
@@ -1960,13 +1969,6 @@ networkstatus_set_current_consensus(const char *consensus,
     free_consensus = 0; /* avoid free */
   }
 
-  /* Called _after_ the consensus is set in its global variable so any
-   * functions called from this notification can safely get the latest
-   * consensus being the new one. */
-  if (is_usable_flavor) {
-    notify_networkstatus_changed(networkstatus_get_latest_consensus(), c);
-  }
-
   waiting = &consensus_waiting_for_certs[flav];
   if (waiting->consensus &&
       waiting->consensus->valid_after <= c->valid_after) {
@@ -1986,6 +1988,10 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (is_usable_flavor) {
+    /* Notify that we just changed the consensus so the current global value
+     * can be looked at. */
+    notify_after_networkstatus_changes();
+
     /* The "current" consensus has just been set and it is a usable flavor so
      * the first thing we need to do is recalculate the voting schedule static
      * object so we can use the timings in there needed by some subsystems
