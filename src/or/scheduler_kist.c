@@ -704,8 +704,10 @@ kist_scheduler_run(void)
       /* Case 4: cells to send, and still open for writes */
 
       chan->scheduler_state = SCHED_CHAN_PENDING;
-      smartlist_pqueue_add(cp, scheduler_compare_channels,
-                           offsetof(channel_t, sched_heap_idx), chan);
+      if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+        smartlist_pqueue_add(cp, scheduler_compare_channels,
+                             offsetof(channel_t, sched_heap_idx), chan);
+      }
     }
   } /* End of main scheduling loop */
 
@@ -725,8 +727,13 @@ kist_scheduler_run(void)
     SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
       readd_chan->scheduler_state = SCHED_CHAN_PENDING;
       if (!smartlist_contains(cp, readd_chan)) {
-        smartlist_pqueue_add(cp, scheduler_compare_channels,
+        if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+          /* XXXX Note that the check above is in theory redundant with
+           * the smartlist_contains check.  But let's make sure we're
+           * not messing anything up, and leave them both for now. */
+          smartlist_pqueue_add(cp, scheduler_compare_channels,
                              offsetof(channel_t, sched_heap_idx), readd_chan);
+        }
       }
     } SMARTLIST_FOREACH_END(readd_chan);
     smartlist_free(to_readd);

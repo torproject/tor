@@ -538,10 +538,12 @@ scheduler_channel_has_waiting_cells,(channel_t *chan))
      * channels_pending.
      */
     chan->scheduler_state = SCHED_CHAN_PENDING;
-    smartlist_pqueue_add(channels_pending,
-                         scheduler_compare_channels,
-                         offsetof(channel_t, sched_heap_idx),
-                         chan);
+    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+      smartlist_pqueue_add(channels_pending,
+                           scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx),
+                           chan);
+    }
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_for_cells "
               "to pending",
@@ -665,10 +667,12 @@ scheduler_channel_wants_writes(channel_t *chan)
      */
     log_debug(LD_SCHED, "chan=%" PRIu64 " became pending",
         chan->global_identifier);
-    smartlist_pqueue_add(channels_pending,
-                         scheduler_compare_channels,
-                         offsetof(channel_t, sched_heap_idx),
-                         chan);
+    if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+      smartlist_pqueue_add(channels_pending,
+                           scheduler_compare_channels,
+                           offsetof(channel_t, sched_heap_idx),
+                           chan);
+    }
     chan->scheduler_state = SCHED_CHAN_PENDING;
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_to_write "
