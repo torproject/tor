@@ -3307,6 +3307,22 @@ entry_guards_update_state(or_state_t *state)
   entry_guards_dirty = 0;
 }
 
+/** Return true iff the circuit's guard can succeed that is can be used. */
+int
+entry_guard_could_succeed(const circuit_guard_state_t *guard_state)
+{
+  if (!guard_state) {
+    return 0;
+  }
+
+  entry_guard_t *guard = entry_guard_handle_get(guard_state->guard);
+  if (!guard || BUG(guard->in_selection == NULL)) {
+    return 0;
+  }
+
+  return 1;
+}
+
 /**
  * Format a single entry guard in the format expected by the controller.
  * Return a newly allocated string.
