@@ -554,6 +554,12 @@ protover_compute_vote(const smartlist_t *list_of_proto_strings,
   // First, parse the inputs and break them into singleton entries.
   SMARTLIST_FOREACH_BEGIN(list_of_proto_strings, const char *, vote) {
     smartlist_t *unexpanded = parse_protocol_list(vote);
+    if (! unexpanded) {
+      log_warn(LD_NET, "I failed with parsing a protocol list from "
+               "an authority. The offending string was: %s",
+               escaped(vote));
+      continue;
+    }
     smartlist_t *this_vote = expand_protocol_list(unexpanded);
     if (this_vote == NULL) {
       log_warn(LD_NET, "When expanding a protocol list from an authority, I "
