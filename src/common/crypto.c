@@ -3273,56 +3273,6 @@ memwipe(void *mem, uint8_t byte, size_t sz)
   memset(mem, byte, sz);
 }
 
-#if 0
-/* This code is disabled, because OpenSSL never actually uses these callbacks.
- */
-
-/** OpenSSL helper type: wraps a Tor mutex so that OpenSSL can use it
- * as a lock. */
-struct CRYPTO_dynlock_value {
-  tor_mutex_t *lock;
-};
-
-/** OpenSSL callback function to allocate a lock: see CRYPTO_set_dynlock_*
- * documentation in OpenSSL's docs for more info. */
-static struct CRYPTO_dynlock_value *
-openssl_dynlock_create_cb_(const char *file, int line)
-{
-  struct CRYPTO_dynlock_value *v;
-  (void)file;
-  (void)line;
-  v = tor_malloc(sizeof(struct CRYPTO_dynlock_value));
-  v->lock = tor_mutex_new();
-  return v;
-}
-
-/** OpenSSL callback function to acquire or release a lock: see
- * CRYPTO_set_dynlock_* documentation in OpenSSL's docs for more info. */
-static void
-openssl_dynlock_lock_cb_(int mode, struct CRYPTO_dynlock_value *v,
-                         const char *file, int line)
-{
-  (void)file;
-  (void)line;
-  if (mode & CRYPTO_LOCK)
-    tor_mutex_acquire(v->lock);
-  else
-    tor_mutex_release(v->lock);
-}
-
-/** OpenSSL callback function to free a lock: see CRYPTO_set_dynlock_*
- * documentation in OpenSSL's docs for more info. */
-static void
-openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
-                            const char *file, int line)
-{
-  (void)file;
-  (void)line;
-  tor_mutex_free(v->lock);
-  tor_free(v);
-}
-#endif /* 0 */
-
 /** @{ */
 /** Uninitialize the crypto library. Return 0 on success. Does not detect
  * failure.
