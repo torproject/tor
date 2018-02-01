@@ -332,7 +332,7 @@ protover_get_supported_protocols(void)
     "HSDir=1-2 "
     "HSIntro=3-4 "
     "HSRend=1-2 "
-    "Link=1-4 "
+    "Link=1-5 "
     "LinkAuth=1,3 "
     "Microdesc=1-2 "
     "Relay=1-2";
