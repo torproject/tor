@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Remove the unused nodelist_recompute_all_hsdir_indices(). Closes ticket
+      25108.

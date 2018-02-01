@@ -373,27 +373,6 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
   return;
 }
 
-/** Recompute all node hsdir indices. */
-void
-nodelist_recompute_all_hsdir_indices(void)
-{
-  networkstatus_t *consensus;
-  if (!the_nodelist) {
-    return;
-  }
-
-  /* Get a live consensus. Abort if not found */
-  consensus = networkstatus_get_live_consensus(approx_time());
-  if (!consensus) {
-    return;
-  }
-
-  /* Recompute all hsdir indices */
-  SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
-    node_set_hsdir_index(node, consensus);
-  } SMARTLIST_FOREACH_END(node);
-}
-
 /** Called when a node's address changes. */
 static void
 node_addrs_changed(node_t *node)

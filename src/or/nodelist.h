@@ -35,8 +35,6 @@ void nodelist_remove_routerinfo(routerinfo_t *ri);
 void nodelist_purge(void);
 smartlist_t *nodelist_find_nodes_with_microdesc(const microdesc_t *md);
 
-void nodelist_recompute_all_hsdir_indices(void);
-
 void nodelist_free_all(void);
 void nodelist_assert_ok(void);
 
