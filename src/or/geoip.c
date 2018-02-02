@@ -580,6 +580,31 @@ clientmap_entry_free(clientmap_entry_t *ent)
   tor_free(ent);
 }
 
+/* Return a newly allocated clientmap entry with the given action and address
+ * that are mandatory. The transport_name can be optional. This can't fail. */
+static clientmap_entry_t *
+clientmap_entry_new(geoip_client_action_t action, const tor_addr_t *addr,
+                    const char *transport_name)
+{
+  clientmap_entry_t *entry;
+
+  tor_assert(action == GEOIP_CLIENT_CONNECT ||
+             action == GEOIP_CLIENT_NETWORKSTATUS);
+  tor_assert(addr);
+
+  entry = tor_malloc_zero(sizeof(clientmap_entry_t));
+  entry->action = action;
+  tor_addr_copy(&entry->addr, addr);
+  if (transport_name) {
+    entry->transport_name = tor_strdup(transport_name);
+  }
+
+  /* Allocated and initialized, note down its size for the OOM handler. */
+  geoip_increment_client_history_cache_size(clientmap_entry_size(entry));
+
+  return entry;
+}
+
 /** Clear history of connecting clients used by entry and bridge stats. */
 static void
 client_history_clear(void)
@@ -632,13 +657,8 @@ geoip_note_client_seen(geoip_client_action_t action,
   ent = HT_FIND(clientmap, &client_history, &lookup);
 
   if (! ent) {
-    ent = tor_malloc_zero(sizeof(clientmap_entry_t));
-    tor_addr_copy(&ent->addr, addr);
-    if (transport_name)
-      ent->transport_name = tor_strdup(transport_name);
-    ent->action = (int)action;
+    ent = clientmap_entry_new(action, addr, transport_name);
     HT_INSERT(clientmap, &client_history, ent);
-    geoip_increment_client_history_cache_size(clientmap_entry_size(ent));
   }
   if (now / 60 <= (int)MAX_LAST_SEEN_IN_MINUTES && now >= 0)
     ent->last_seen_in_minutes = (unsigned)(now/60);
