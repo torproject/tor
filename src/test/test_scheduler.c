@@ -495,6 +495,18 @@ perform_channel_state_tests(int KISTSchedRunInterval, int sched_type)
   scheduler_touch_channel(ch1);
   tt_assert(scheduler_compare_channels_mock_ctr > old_count);
 
+  /* Release the ch2 and then do it another time to make sure it doesn't blow
+   * up and we are still in a quiescent state. */
+  scheduler_release_channel(ch2);
+  tt_int_op(ch2->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+  tt_int_op(smartlist_len(channels_pending), OP_EQ, 1);
+  /* Cheat a bit so make the release more confused but also will tells us if
+   * the release did put the channel in the right state. */
+  ch2->scheduler_state = SCHED_CHAN_PENDING;
+  scheduler_release_channel(ch2);
+  tt_int_op(ch2->scheduler_state, OP_EQ, SCHED_CHAN_IDLE);
+  tt_int_op(smartlist_len(channels_pending), OP_EQ, 1);
+
   /* Close */
   channel_mark_for_close(ch1);
   tt_int_op(ch1->state, OP_EQ, CHANNEL_STATE_CLOSING);
