@@ -110,6 +110,9 @@ global_init(void)
 
   /* Make BUG() and nonfatal asserts crash */
   tor_set_failed_assertion_callback(abort);
+
+  /* Make protocol warnings handled correctly. */
+  init_protocol_warning_severity_level();
 }
 
 #ifdef LLVM_FUZZ
@@ -151,8 +154,6 @@ main(int argc, char **argv)
       loglevel = LOG_DEBUG;
     }
   }
-
-  init_protocol_warning_severity_level();
 
   {
     log_severity_list_t s;
