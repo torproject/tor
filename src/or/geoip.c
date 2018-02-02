@@ -76,6 +76,34 @@ static char geoip6_digest[DIGEST_LEN];
  * handler. */
 static size_t geoip_client_history_cache_size;
 
+/* Increment the geoip client history cache size counter with the given bytes.
+ * This prevents an overflow and set it to its maximum in that case. */
+static inline void
+geoip_increment_client_history_cache_size(size_t bytes)
+{
+  /* This is shockingly high, lets log it so it can be reported. */
+  IF_BUG_ONCE(geoip_client_history_cache_size > (SIZE_MAX - bytes)) {
+    geoip_client_history_cache_size = SIZE_MAX;
+    return;
+  }
+  geoip_client_history_cache_size += bytes;
+}
+
+/* Decrement the geoip client history cache size counter with the given bytes.
+ * This prevents an underflow and set it to 0 in that case. */
+static inline void
+geoip_decrement_client_history_cache_size(size_t bytes)
+{
+  /* Going below 0 means that we either allocated an entry without
+   * incrementing the counter or we have different sizes when allocating and
+   * freeing. It shouldn't happened so log it. */
+  IF_BUG_ONCE(geoip_client_history_cache_size < bytes) {
+    geoip_client_history_cache_size = 0;
+    return;
+  }
+  geoip_client_history_cache_size -= bytes;
+}
+
 /** Return the index of the <b>country</b>'s entry in the GeoIP
  * country list if it is a valid 2-letter country code, otherwise
  * return -1. */
@@ -546,7 +574,7 @@ clientmap_entry_free(clientmap_entry_t *ent)
   if (!ent)
     return;
 
-  geoip_client_history_cache_size -= clientmap_entry_size(ent);
+  geoip_decrement_client_history_cache_size(clientmap_entry_size(ent));
 
   tor_free(ent->transport_name);
   tor_free(ent);
@@ -610,7 +638,7 @@ geoip_note_client_seen(geoip_client_action_t action,
       ent->transport_name = tor_strdup(transport_name);
     ent->action = (int)action;
     HT_INSERT(clientmap, &client_history, ent);
-    geoip_client_history_cache_size += clientmap_entry_size(ent);
+    geoip_increment_client_history_cache_size(clientmap_entry_size(ent));
   }
   if (now / 60 <= (int)MAX_LAST_SEEN_IN_MINUTES && now >= 0)
     ent->last_seen_in_minutes = (unsigned)(now/60);
