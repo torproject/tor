@@ -60,6 +60,8 @@ void geoip_remove_old_clients(time_t cutoff);
 clientmap_entry_t *geoip_lookup_client(const tor_addr_t *addr,
                                        const char *transport_name,
                                        geoip_client_action_t action);
+size_t geoip_client_cache_total_allocation(void);
+size_t geoip_client_cache_handle_oom(time_t now, size_t min_remove_bytes);
 
 void geoip_note_ns_response(geoip_ns_response_t response);
 char *geoip_get_transport_history(void);
