@@ -1,0 +1,4 @@
+  o Minor feature (geoip cache):
+    - Make our OOM handler aware of the geoip client history cache so it
+      doesn't fill up the memory which is especially important for IPv6 and
+      our DoS mitigation subsystem. Closes ticket 25122.
