@@ -179,8 +179,8 @@ test_dos_bucket_refill(void *arg)
   uint64_t circ_rate = get_circuit_rate_per_second();
   /* Check that the circuit rate is a positive number and smaller than the max
    * circuit count */
-  tt_int_op(circ_rate, OP_GT, 1);
-  tt_int_op(circ_rate, OP_LT, max_circuit_count);
+  tt_u64_op(circ_rate, OP_GT, 1);
+  tt_u64_op(circ_rate, OP_LT, max_circuit_count);
 
   /* Register this client */
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, addr, NULL, now);
