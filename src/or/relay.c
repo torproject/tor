@@ -2469,23 +2469,33 @@ static time_t last_time_under_memory_pressure = 0;
 STATIC int
 cell_queues_check_size(void)
 {
+  time_t now = time(NULL);
   size_t alloc = cell_queues_get_total_allocation();
   alloc += buf_get_total_allocation();
   alloc += tor_zlib_get_total_allocation();
   const size_t rend_cache_total = rend_cache_get_total_allocation();
   alloc += rend_cache_total;
+  const size_t geoip_client_cache_total =
+    geoip_client_cache_total_allocation();
+  alloc += geoip_client_cache_total;
   if (alloc >= get_options()->MaxMemInQueues_low_threshold) {
     last_time_under_memory_pressure = approx_time();
     if (alloc >= get_options()->MaxMemInQueues) {
       /* If we're spending over 20% of the memory limit on hidden service
-       * descriptors, free them until we're down to 10%.
-       */
+       * descriptors, free them until we're down to 10%. Do the same for geoip
+       * client cache. */
       if (rend_cache_total > get_options()->MaxMemInQueues / 5) {
         const size_t bytes_to_remove =
           rend_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
-        rend_cache_clean_v2_descs_as_dir(time(NULL), bytes_to_remove);
+        rend_cache_clean_v2_descs_as_dir(now, bytes_to_remove);
         alloc -= rend_cache_total;
         alloc += rend_cache_get_total_allocation();
+      }
+      if (geoip_client_cache_total > get_options()->MaxMemInQueues / 5) {
+        const size_t bytes_to_remove =
+          geoip_client_cache_total -
+          (size_t)(get_options()->MaxMemInQueues / 10);
+        alloc -= geoip_client_cache_handle_oom(now, bytes_to_remove);
       }
       circuits_handle_oom(alloc);
       return 1;

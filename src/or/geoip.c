@@ -72,6 +72,10 @@ static smartlist_t *geoip_ipv4_entries = NULL, *geoip_ipv6_entries = NULL;
 static char geoip_digest[DIGEST_LEN];
 static char geoip6_digest[DIGEST_LEN];
 
+/* Total size in bytes of the geoip client history cache. Used by the OOM
+ * handler. */
+static size_t geoip_client_history_cache_size;
+
 /** Return the index of the <b>country</b>'s entry in the GeoIP
  * country list if it is a valid 2-letter country code, otherwise
  * return -1. */
@@ -526,12 +530,23 @@ HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
 HT_GENERATE2(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
              clientmap_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
+/** Return the size of a client map entry. */
+static inline size_t
+clientmap_entry_size(const clientmap_entry_t *ent)
+{
+  tor_assert(ent);
+  return (sizeof(clientmap_entry_t) +
+          (ent->transport_name ? strlen(ent->transport_name) : 0));
+}
+
 /** Free all storage held by <b>ent</b>. */
 static void
 clientmap_entry_free(clientmap_entry_t *ent)
 {
   if (!ent)
     return;
+
+  geoip_client_history_cache_size -= clientmap_entry_size(ent);
 
   tor_free(ent->transport_name);
   tor_free(ent);
@@ -595,6 +610,7 @@ geoip_note_client_seen(geoip_client_action_t action,
       ent->transport_name = tor_strdup(transport_name);
     ent->action = (int)action;
     HT_INSERT(clientmap, &client_history, ent);
+    geoip_client_history_cache_size += clientmap_entry_size(ent);
   }
   if (now / 60 <= (int)MAX_LAST_SEEN_IN_MINUTES && now >= 0)
     ent->last_seen_in_minutes = (unsigned)(now/60);
@@ -633,6 +649,81 @@ geoip_remove_old_clients(time_t cutoff)
   clientmap_HT_FOREACH_FN(&client_history,
                           remove_old_client_helper_,
                           &cutoff);
+}
+
+/* Cleanup client entries older than the cutoff. Used for the OOM. Return the
+ * number of bytes freed. If 0 is returned, nothing was freed. */
+static size_t
+oom_clean_client_entries(time_t cutoff)
+{
+  size_t bytes = 0;
+  clientmap_entry_t **ent, **ent_next;
+
+  for (ent = HT_START(clientmap, &client_history); ent; ent = ent_next) {
+    clientmap_entry_t *entry = *ent;
+    if (entry->last_seen_in_minutes < (cutoff / 60)) {
+      ent_next = HT_NEXT_RMV(clientmap, &client_history, ent);
+      bytes += clientmap_entry_size(entry);
+      clientmap_entry_free(entry);
+    } else {
+      ent_next = HT_NEXT(clientmap, &client_history, ent);
+    }
+  }
+  return bytes;
+}
+
+/* Below this minimum lifetime, the OOM won't cleanup any entries. */
+#define GEOIP_CLIENT_CACHE_OOM_MIN_CUTOFF (4 * 60 * 60)
+/* The OOM moves the cutoff by that much every run. */
+#define GEOIP_CLIENT_CACHE_OOM_STEP (15 * 50)
+
+/* Cleanup the geoip client history cache called from the OOM handler. Return
+ * the amount of bytes removed. This can return a value below or above
+ * min_remove_bytes but will stop as oon as the min_remove_bytes has been
+ * reached. */
+size_t
+geoip_client_cache_handle_oom(time_t now, size_t min_remove_bytes)
+{
+  time_t k;
+  size_t bytes_removed = 0;
+
+  /* Our OOM handler called with 0 bytes to remove is a code flow error. */
+  tor_assert(min_remove_bytes != 0);
+
+  /* Set k to the initial cutoff of an entry. We then going to move it by step
+   * to try to remove as much as we can. */
+  k = WRITE_STATS_INTERVAL;
+
+  do {
+    time_t cutoff;
+
+    /* If k has reached the minimum lifetime, we have to stop else we might
+     * remove every single entries which would be pretty bad for the DoS
+     * mitigation subsystem if by just filling the geoip cache, it was enough
+     * to trigger the OOM and clean every single entries. */
+    if (k <= GEOIP_CLIENT_CACHE_OOM_MIN_CUTOFF) {
+      break;
+    }
+
+    cutoff = now - k;
+    bytes_removed += oom_clean_client_entries(cutoff);
+    k -= GEOIP_CLIENT_CACHE_OOM_STEP;
+  } while (bytes_removed < min_remove_bytes);
+
+  return bytes_removed;
+}
+
+/* Return the total size in bytes of the client history cache. */
+size_t
+geoip_client_cache_total_allocation(void)
+{
+  size_t bytes = 0;
+  clientmap_entry_t **ent;
+
+  HT_FOREACH(ent, clientmap, &client_history) {
+    bytes += clientmap_entry_size(*ent);
+  }
+  return bytes;
 }
 
 /** How many responses are we giving to clients requesting v3 network
