@@ -1172,21 +1172,33 @@ typedef struct channel_tls_s channel_tls_t;
 
 typedef struct circuitmux_s circuitmux_t;
 
+/**
+ * Headers common to all cells, be they fixed-width <b>cell_t</b>s or
+ * variable-width <b>var_cell_t</b>s.
+ */
+typedef struct cell_header_t {
+  /** Circuit which received the cell. */
+  circid_t circ_id;
+  /** Type of the cell: one of CELL_PADDING, CELL_CREATE, CELL_DESTROY, etc. */
+  uint8_t command;
+} cell_header_t;
+
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
 typedef struct cell_t {
-  circid_t circ_id; /**< Circuit which received the cell. */
-  uint8_t command; /**< Type of the cell: one of CELL_PADDING, CELL_CREATE,
-                    * CELL_DESTROY, etc */
+  /** The <b>headers</b> contain <b>circ_id</b>, the id of the circuit that has
+   * received this cell, and the <b>command</b>, which denotes which type of
+   * cell this is. */
+  cell_header_t headers;
   uint8_t payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 } cell_t;
 
 /** Parsed variable-length onion routing cell. */
 typedef struct var_cell_t {
-  /** Type of the cell: CELL_VERSIONS, etc. */
-  uint8_t command;
-  /** Circuit thich received the cell */
-  circid_t circ_id;
+  /** The <b>headers</b> contain <b>circ_id</b>, the id of the circuit that has
+   * received this cell, and the <b>command</b>, which denotes which type of
+   * cell this is. */
+  cell_header_t headers;
   /** Number of bytes actually stored in <b>payload</b> */
   uint16_t payload_len;
   /** Payload of this cell */
