@@ -38,8 +38,6 @@
 #define FINGERPRINT_LEN 49
 
 typedef struct aes_cnt_cipher crypto_cipher_t;
-typedef struct crypto_digest_t crypto_digest_t;
-typedef struct crypto_xof_t crypto_xof_t;
 typedef struct crypto_dh_t crypto_dh_t;
 
 /* global state */
@@ -91,13 +89,6 @@ int crypto_cipher_encrypt_with_iv(const char *key,
 int crypto_cipher_decrypt_with_iv(const char *key,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
-
-crypto_xof_t *crypto_xof_new(void);
-void crypto_xof_add_bytes(crypto_xof_t *xof, const uint8_t *data, size_t len);
-void crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len);
-void crypto_xof_free_(crypto_xof_t *xof);
-#define crypto_xof_free(xof) \
-  FREE_AND_NULL(crypto_xof_t, crypto_xof_free_, (xof))
 
 /* Key negotiation */
 #define DH_TYPE_CIRCUIT 1

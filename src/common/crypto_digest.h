@@ -67,6 +67,7 @@ typedef struct {
 } common_digests_t;
 
 typedef struct crypto_digest_t crypto_digest_t;
+typedef struct crypto_xof_t crypto_xof_t;
 
 /* public key crypto digest */
 MOCK_DECL(int, crypto_pk_public_checksig_digest,(crypto_pk_t *env,
@@ -115,6 +116,14 @@ void crypto_hmac_sha256(char *hmac_out,
 void crypto_mac_sha3_256(uint8_t *mac_out, size_t len_out,
                          const uint8_t *key, size_t key_len,
                          const uint8_t *msg, size_t msg_len);
+
+/* xof functions*/
+crypto_xof_t *crypto_xof_new(void);
+void crypto_xof_add_bytes(crypto_xof_t *xof, const uint8_t *data, size_t len);
+void crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len);
+void crypto_xof_free_(crypto_xof_t *xof);
+#define crypto_xof_free(xof) \
+  FREE_AND_NULL(crypto_xof_t, crypto_xof_free_, (xof))
 
 #ifdef TOR_UNIT_TESTS
 digest_algorithm_t crypto_digest_get_algorithm(crypto_digest_t *digest);
