@@ -16,6 +16,7 @@
 #include "util.h"
 #include "compat.h"
 #include "crypto_s2k.h"
+#include "crypto_digest.h"
 
 #include <openssl/evp.h>
 

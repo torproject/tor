@@ -40,6 +40,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include "util.h"
 #include "torlog.h"
 #include "crypto.h"
+#include "crypto_digest.h"
 #include "address.h"
 #include "util_format.h"
 

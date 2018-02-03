@@ -16,7 +16,7 @@
 #define UTIL_PRIVATE
 #include "util.h"
 #include "torlog.h"
-#include "crypto.h"
+#include "crypto_digest.h"
 #include "torint.h"
 #include "container.h"
 #include "address.h"

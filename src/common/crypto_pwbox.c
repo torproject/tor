@@ -11,6 +11,7 @@
 #include "crypto.h"
 #include "crypto_s2k.h"
 #include "crypto_pwbox.h"
+#include "crypto_digest.h"
 #include "di_ops.h"
 #include "util.h"
 #include "pwbox.h"

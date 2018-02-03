@@ -12,7 +12,7 @@
 
 #include "orconfig.h"
 #include "compat.h"
-#include "crypto.h"
+#include "crypto_digest.h"
 #include "crypto_format.h"
 #include "di_ops.h"
 #include "ht.h"

@@ -15,7 +15,7 @@
 #include "util.h"
 #include "torlog.h"
 #include "container.h"
-#include "crypto.h"
+#include "crypto_digest.h"
 
 #include <stdlib.h>
 #include <string.h>
