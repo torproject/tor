@@ -57,8 +57,8 @@ make_relay_cell(cell_t *out, uint8_t command,
   rh.command = command;
   rh.length = bodylen;
 
-  out->command = CELL_RELAY;
-  out->circ_id = 10;
+  out->headers.command = CELL_RELAY;
+  out->headers.circ_id = 10;
   relay_header_pack(out->payload, &rh);
 
   memcpy(out->payload + RELAY_HEADER_SIZE, body, bodylen);
@@ -397,7 +397,7 @@ test_cfmt_create_cells(void *arg)
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, TAP_ONIONSKIN_CHALLENGE_LEN);
-  cell.command = CELL_CREATE;
+  cell.headers.command = CELL_CREATE;
   memcpy(cell.payload, b, TAP_ONIONSKIN_CHALLENGE_LEN);
   tt_int_op(0, OP_EQ, create_cell_parse(&cc, &cell));
   tt_int_op(CELL_CREATE, OP_EQ, cc.cell_type);
@@ -405,14 +405,14 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(TAP_ONIONSKIN_CHALLENGE_LEN, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.onionskin,OP_EQ, b, TAP_ONIONSKIN_CHALLENGE_LEN + 10);
   tt_int_op(0, OP_EQ, create_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* A valid create_fast cell. */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, CREATE_FAST_LEN);
-  cell.command = CELL_CREATE_FAST;
+  cell.headers.command = CELL_CREATE_FAST;
   memcpy(cell.payload, b, CREATE_FAST_LEN);
   tt_int_op(0, OP_EQ, create_cell_parse(&cc, &cell));
   tt_int_op(CELL_CREATE_FAST, OP_EQ, cc.cell_type);
@@ -420,14 +420,14 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(CREATE_FAST_LEN, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.onionskin,OP_EQ, b, CREATE_FAST_LEN + 10);
   tt_int_op(0, OP_EQ, create_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* A valid create2 cell with a TAP payload */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, TAP_ONIONSKIN_CHALLENGE_LEN);
-  cell.command = CELL_CREATE2;
+  cell.headers.command = CELL_CREATE2;
   memcpy(cell.payload, "\x00\x00\x00\xBA", 4); /* TAP, 186 bytes long */
   memcpy(cell.payload+4, b, TAP_ONIONSKIN_CHALLENGE_LEN);
   tt_int_op(0, OP_EQ, create_cell_parse(&cc, &cell));
@@ -436,14 +436,14 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(TAP_ONIONSKIN_CHALLENGE_LEN, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.onionskin,OP_EQ, b, TAP_ONIONSKIN_CHALLENGE_LEN + 10);
   tt_int_op(0, OP_EQ, create_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* A valid create2 cell with an ntor payload */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, NTOR_ONIONSKIN_LEN);
-  cell.command = CELL_CREATE2;
+  cell.headers.command = CELL_CREATE2;
   memcpy(cell.payload, "\x00\x02\x00\x54", 4); /* ntor, 84 bytes long */
   memcpy(cell.payload+4, b, NTOR_ONIONSKIN_LEN);
   tt_int_op(0, OP_EQ, create_cell_parse(&cc, &cell));
@@ -452,14 +452,14 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(NTOR_ONIONSKIN_LEN, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.onionskin,OP_EQ, b, NTOR_ONIONSKIN_LEN + 10);
   tt_int_op(0, OP_EQ, create_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* A valid create cell with an ntor payload, in legacy format. */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, NTOR_ONIONSKIN_LEN);
-  cell.command = CELL_CREATE;
+  cell.headers.command = CELL_CREATE;
   memcpy(cell.payload, "ntorNTORntorNTOR", 16);
   memcpy(cell.payload+16, b, NTOR_ONIONSKIN_LEN);
   tt_int_op(0, OP_EQ, create_cell_parse(&cc, &cell));
@@ -468,19 +468,19 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(NTOR_ONIONSKIN_LEN, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.onionskin,OP_EQ, b, NTOR_ONIONSKIN_LEN + 10);
   tt_int_op(0, OP_EQ, create_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* == Okay, now let's try to parse some impossible stuff. */
 
   /* It has to be some kind of a create cell! */
-  cell.command = CELL_CREATED;
+  cell.headers.command = CELL_CREATED;
   tt_int_op(-1, OP_EQ, create_cell_parse(&cc, &cell));
 
   /* You can't actually make an unparseable CREATE or CREATE_FAST cell. */
 
   /* Try some CREATE2 cells.  First with a bad type. */
-  cell.command = CELL_CREATE2;
+  cell.headers.command = CELL_CREATE2;
   memcpy(cell.payload, "\x00\x50\x00\x99", 4); /* Type 0x50???? */
   tt_int_op(-1, OP_EQ, create_cell_parse(&cc, &cell));
   /* Now a good type with an incorrect length. */
@@ -515,35 +515,35 @@ test_cfmt_created_cells(void *arg)
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, TAP_ONIONSKIN_REPLY_LEN);
-  cell.command = CELL_CREATED;
+  cell.headers.command = CELL_CREATED;
   memcpy(cell.payload, b, TAP_ONIONSKIN_REPLY_LEN);
   tt_int_op(0, OP_EQ, created_cell_parse(&cc, &cell));
   tt_int_op(CELL_CREATED, OP_EQ, cc.cell_type);
   tt_int_op(TAP_ONIONSKIN_REPLY_LEN, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.reply,OP_EQ, b, TAP_ONIONSKIN_REPLY_LEN + 10);
   tt_int_op(0, OP_EQ, created_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* A good CREATED_FAST cell */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, CREATED_FAST_LEN);
-  cell.command = CELL_CREATED_FAST;
+  cell.headers.command = CELL_CREATED_FAST;
   memcpy(cell.payload, b, CREATED_FAST_LEN);
   tt_int_op(0, OP_EQ, created_cell_parse(&cc, &cell));
   tt_int_op(CELL_CREATED_FAST, OP_EQ, cc.cell_type);
   tt_int_op(CREATED_FAST_LEN, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.reply,OP_EQ, b, CREATED_FAST_LEN + 10);
   tt_int_op(0, OP_EQ, created_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* A good CREATED2 cell with short reply */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, 64);
-  cell.command = CELL_CREATED2;
+  cell.headers.command = CELL_CREATED2;
   memcpy(cell.payload, "\x00\x40", 2);
   memcpy(cell.payload+2, b, 64);
   tt_int_op(0, OP_EQ, created_cell_parse(&cc, &cell));
@@ -551,14 +551,14 @@ test_cfmt_created_cells(void *arg)
   tt_int_op(64, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.reply,OP_EQ, b, 80);
   tt_int_op(0, OP_EQ, created_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* A good CREATED2 cell with maximal reply */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, 496);
-  cell.command = CELL_CREATED2;
+  cell.headers.command = CELL_CREATED2;
   memcpy(cell.payload, "\x01\xF0", 2);
   memcpy(cell.payload+2, b, 496);
   tt_int_op(0, OP_EQ, created_cell_parse(&cc, &cell));
@@ -566,14 +566,14 @@ test_cfmt_created_cells(void *arg)
   tt_int_op(496, OP_EQ, cc.handshake_len);
   tt_mem_op(cc.reply,OP_EQ, b, 496);
   tt_int_op(0, OP_EQ, created_cell_format(&cell2, &cc));
-  tt_int_op(cell.command, OP_EQ, cell2.command);
+  tt_int_op(cell.headers.command, OP_EQ, cell2.headers.command);
   tt_mem_op(cell.payload,OP_EQ, cell2.payload, CELL_PAYLOAD_SIZE);
 
   /* Bogus CREATED2 cell: too long! */
   memset(&cell, 0, sizeof(cell));
   memset(b, 0, sizeof(b));
   crypto_rand((char*)b, 496);
-  cell.command = CELL_CREATED2;
+  cell.headers.command = CELL_CREATED2;
   memcpy(cell.payload, "\x01\xF1", 2);
   tt_int_op(-1, OP_EQ, created_cell_parse(&cc, &cell));
 
@@ -1252,8 +1252,8 @@ test_cfmt_is_destroy(void *arg)
   chan = tor_malloc_zero(sizeof(channel_t));
 
   memset(&cell, 0xff, sizeof(cell));
-  cell.circ_id = 3003;
-  cell.command = CELL_RELAY;
+  cell.headers.circ_id = 3003;
+  cell.headers.command = CELL_RELAY;
 
   cell_pack(&packed, &cell, 0);
   chan->wide_circ_ids = 0;
@@ -1265,7 +1265,7 @@ test_cfmt_is_destroy(void *arg)
   tt_assert(! packed_cell_is_destroy(chan, &packed, &circid));
   tt_int_op(circid, OP_EQ, 0);
 
-  cell.command = CELL_DESTROY;
+  cell.headers.command = CELL_DESTROY;
 
   cell_pack(&packed, &cell, 0);
   chan->wide_circ_ids = 0;

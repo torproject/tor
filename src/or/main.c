@@ -1286,7 +1286,7 @@ run_connection_housekeeping(int i, time_t now)
     log_fn(LOG_DEBUG,LD_OR,"Sending keepalive to (%s:%d)",
            conn->address, conn->port);
     memset(&cell,0,sizeof(cell_t));
-    cell.command = CELL_PADDING;
+    cell.headers.command = CELL_PADDING;
     connection_or_write_cell_to_buf(&cell, or_conn);
   } else {
     channelpadding_decide_to_pad_channel(chan);

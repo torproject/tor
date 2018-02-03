@@ -168,7 +168,7 @@ circuit_update_channel_usage(circuit_t *circ, cell_t *cell)
       return;
 
     if (circ->n_chan->channel_usage == CHANNEL_USED_FOR_FULL_CIRCS &&
-        cell->command == CELL_RELAY) {
+        cell->headers.command == CELL_RELAY) {
       circ->n_chan->channel_usage = CHANNEL_USED_FOR_USER_TRAFFIC;
     }
   } else {
@@ -188,11 +188,11 @@ circuit_update_channel_usage(circuit_t *circ, cell_t *cell)
 
     if (!channel_is_client(or_circ->p_chan) ||
         (channel_is_client(or_circ->p_chan) && circ->n_chan)) {
-      if (cell->command == CELL_RELAY_EARLY) {
+      if (cell->headers.command == CELL_RELAY_EARLY) {
         if (or_circ->p_chan->channel_usage < CHANNEL_USED_FOR_FULL_CIRCS) {
           or_circ->p_chan->channel_usage = CHANNEL_USED_FOR_FULL_CIRCS;
         }
-      } else if (cell->command == CELL_RELAY) {
+      } else if (cell->headers.command == CELL_RELAY) {
         or_circ->p_chan->channel_usage = CHANNEL_USED_FOR_USER_TRAFFIC;
       }
     }
@@ -279,10 +279,10 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 
   /* not recognized. pass it on. */
   if (cell_direction == CELL_DIRECTION_OUT) {
-    cell->circ_id = circ->n_circ_id; /* switch it */
+    cell->headers.circ_id = circ->n_circ_id; /* switch it */
     chan = circ->n_chan;
   } else if (! CIRCUIT_IS_ORIGIN(circ)) {
-    cell->circ_id = TO_OR_CIRCUIT(circ)->p_circ_id; /* switch it */
+    cell->headers.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id; /* switch it */
     chan = TO_OR_CIRCUIT(circ)->p_chan;
   } else {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
@@ -306,8 +306,8 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
       or_circuit_t *splice_ = TO_OR_CIRCUIT(circ)->rend_splice;
       tor_assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
       tor_assert(splice_->base_.purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
-      cell->circ_id = splice_->p_circ_id;
-      cell->command = CELL_RELAY; /* can't be relay_early anyway */
+      cell->headers.circ_id = splice_->p_circ_id;
+      cell->headers.command = CELL_RELAY; /* can't be relay_early anyway */
       if ((reason = circuit_receive_relay_cell(cell, TO_CIRCUIT(splice_),
                                                CELL_DIRECTION_IN)) < 0) {
         log_warn(LD_REND, "Error relaying cell across rendezvous; closing "
@@ -539,14 +539,14 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
 
   memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_RELAY;
+  cell.headers.command = CELL_RELAY;
   if (CIRCUIT_IS_ORIGIN(circ)) {
     tor_assert(cpath_layer);
-    cell.circ_id = circ->n_circ_id;
+    cell.headers.circ_id = circ->n_circ_id;
     cell_direction = CELL_DIRECTION_OUT;
   } else {
     tor_assert(! cpath_layer);
-    cell.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
+    cell.headers.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
     cell_direction = CELL_DIRECTION_IN;
   }
 
@@ -585,7 +585,7 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
        * an extend cell or we're not talking to the first hop), use
        * one of them.  Don't worry about the conn protocol version:
        * append_cell_to_circuit_queue will fix it up. */
-      cell.command = CELL_RELAY_EARLY;
+      cell.headers.command = CELL_RELAY_EARLY;
       --origin_circ->remaining_relay_early_cells;
       log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",
                 (int)origin_circ->remaining_relay_early_cells);
@@ -1595,13 +1595,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "'extend' cell received for non-zero stream. Dropping.");
         return 0;
       }
-      if (cell->command != CELL_RELAY_EARLY &&
+      if (cell->headers.command != CELL_RELAY_EARLY &&
           !networkstatus_get_param(NULL,"AllowNonearlyExtend",0,0,1)) {
 #define EARLY_WARNING_INTERVAL 3600
         static ratelim_t early_warning_limit =
           RATELIM_INIT(EARLY_WARNING_INTERVAL);
         char *m;
-        if (cell->command == CELL_RELAY) {
+        if (cell->headers.command == CELL_RELAY) {
           ++total_nonearly;
           if ((m = rate_limit_log(&early_warning_limit, approx_time()))) {
             double percentage = ((double)total_nonearly)/total_n_extend;
@@ -1615,7 +1615,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         } else {
           log_fn(LOG_WARN, domain,
                  "EXTEND cell received, in a cell with type %d! Dropping.",
-                 cell->command);
+                 cell->headers.command);
         }
         return 0;
       }
@@ -2412,8 +2412,8 @@ destroy_cell_to_packed_cell(destroy_cell_t *inp, int wide_circ_ids)
   packed_cell_t *packed = packed_cell_new();
   cell_t cell;
   memset(&cell, 0, sizeof(cell));
-  cell.circ_id = inp->circid;
-  cell.command = CELL_DESTROY;
+  cell.headers.circ_id = inp->circid;
+  cell.headers.command = CELL_DESTROY;
   cell.payload[0] = inp->reason;
   cell_pack(packed, &cell, wide_circ_ids);
 

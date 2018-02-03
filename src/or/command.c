@@ -178,7 +178,7 @@ command_process_cell(channel_t *chan, cell_t *cell)
 #define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
 #endif /* defined(KEEP_TIMING_STATS) */
 
-  switch (cell->command) {
+  switch (cell->headers.command) {
     case CELL_CREATE:
     case CELL_CREATE_FAST:
     case CELL_CREATE2:
@@ -204,7 +204,7 @@ command_process_cell(channel_t *chan, cell_t *cell)
       log_fn(LOG_INFO, LD_PROTOCOL,
              "Cell of unknown or unexpected type (%d) received.  "
              "Dropping.",
-             cell->command);
+             cell->headers.command);
       break;
   }
 }
@@ -223,7 +223,7 @@ command_process_var_cell(channel_t *chan, var_cell_t *var_cell)
   log_info(LD_PROTOCOL,
            "Received unexpected var_cell above the channel layer of type %d"
            "; dropping it.",
-           var_cell->command);
+           var_cell->headers.command);
 }
 
 /** Process a 'create' <b>cell</b> that just arrived from <b>chan</b>. Make a
@@ -245,7 +245,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   log_debug(LD_OR,
             "Got a CREATE cell for circ_id %u on channel " U64_FORMAT
             " (%p)",
-            (unsigned)cell->circ_id,
+            (unsigned)cell->headers.circ_id,
             U64_PRINTF_ARG(chan->global_identifier), chan);
 
   /* First thing we do, even though the cell might be invalid, is inform the
@@ -256,20 +256,20 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   /* We check for the conditions that would make us drop the cell before
    * we check for the conditions that would make us send a DESTROY back,
    * since those conditions would make a DESTROY nonsensical. */
-  if (cell->circ_id == 0) {
+  if (cell->headers.circ_id == 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received a create cell (type %d) from %s with zero circID; "
-           " ignoring.", (int)cell->command,
+           " ignoring.", (int)cell->headers.command,
            channel_get_actual_remote_descr(chan));
     return;
   }
 
-  if (circuit_id_in_use_on_channel(cell->circ_id, chan)) {
+  if (circuit_id_in_use_on_channel(cell->headers.circ_id, chan)) {
     const node_t *node = node_get_by_id(chan->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received CREATE cell (circID %u) for known circ. "
            "Dropping (age %d).",
-           (unsigned)cell->circ_id,
+           (unsigned)cell->headers.circ_id,
            (int)(time(NULL) - channel_when_created(chan)));
     if (node) {
       char *p = esc_for_log(node_get_platform(node));
@@ -285,14 +285,14 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     log_info(LD_OR,
              "Received create cell but we're shutting down. Sending back "
              "destroy.");
-    channel_send_destroy(cell->circ_id, chan,
+    channel_send_destroy(cell->headers.circ_id, chan,
                          END_CIRC_REASON_HIBERNATING);
     return;
   }
 
   /* Check if we should apply a defense for this channel. */
   if (dos_cc_get_defense_type(chan) == DOS_CC_DEFENSE_REFUSE_CELL) {
-    channel_send_destroy(cell->circ_id, chan,
+    channel_send_destroy(cell->headers.circ_id, chan,
                          END_CIRC_REASON_RESOURCELIMIT);
     return;
   }
@@ -303,8 +303,9 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
            "Received create cell (type %d) from %s, but we're connected "
            "to it as a client. "
            "Sending back a destroy.",
-           (int)cell->command, channel_get_canonical_remote_descr(chan));
-    channel_send_destroy(cell->circ_id, chan,
+           (int)cell->headers.command,
+           channel_get_canonical_remote_descr(chan));
+    channel_send_destroy(cell->headers.circ_id, chan,
                          END_CIRC_REASON_TORPROTOCOL);
     return;
   }
@@ -312,22 +313,22 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   /* If the high bit of the circuit ID is not as expected, close the
    * circ. */
   if (chan->wide_circ_ids)
-    id_is_high = cell->circ_id & (1u<<31);
+    id_is_high = cell->headers.circ_id & (1u<<31);
   else
-    id_is_high = cell->circ_id & (1u<<15);
+    id_is_high = cell->headers.circ_id & (1u<<15);
   if ((id_is_high &&
        chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ||
       (!id_is_high &&
        chan->circ_id_type == CIRC_ID_TYPE_LOWER)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received create cell with unexpected circ_id %u. Closing.",
-           (unsigned)cell->circ_id);
-    channel_send_destroy(cell->circ_id, chan,
+           (unsigned)cell->headers.circ_id);
+    channel_send_destroy(cell->headers.circ_id, chan,
                          END_CIRC_REASON_TORPROTOCOL);
     return;
   }
 
-  circ = or_circuit_new(cell->circ_id, chan);
+  circ = or_circuit_new(cell->headers.circ_id, chan);
   circ->base_.purpose = CIRCUIT_PURPOSE_OR;
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_ONIONSKIN_PENDING);
   create_cell = tor_malloc_zero(sizeof(create_cell_t));
@@ -404,16 +405,16 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
   circuit_t *circ;
   extended_cell_t extended_cell;
 
-  circ = circuit_get_by_circid_channel(cell->circ_id, chan);
+  circ = circuit_get_by_circid_channel(cell->headers.circ_id, chan);
 
   if (!circ) {
     log_info(LD_OR,
              "(circID %u) unknown circ (probably got a destroy earlier). "
-             "Dropping.", (unsigned)cell->circ_id);
+             "Dropping.", (unsigned)cell->headers.circ_id);
     return;
   }
 
-  if (circ->n_circ_id != cell->circ_id || circ->n_chan != chan) {
+  if (circ->n_circ_id != cell->headers.circ_id || circ->n_chan != chan) {
     log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
            "got created cell from Tor client? Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
@@ -475,12 +476,12 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
   circuit_t *circ;
   int reason, direction;
 
-  circ = circuit_get_by_circid_channel(cell->circ_id, chan);
+  circ = circuit_get_by_circid_channel(cell->headers.circ_id, chan);
 
   if (!circ) {
     log_debug(LD_OR,
               "unknown circuit %u on connection from %s. Dropping.",
-              (unsigned)cell->circ_id,
+              (unsigned)cell->headers.circ_id,
               channel_get_canonical_remote_descr(chan));
     return;
   }
@@ -510,14 +511,14 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
       chan == TO_OR_CIRCUIT(circ)->p_chan &&
-      cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id)
+      cell->headers.circ_id == TO_OR_CIRCUIT(circ)->p_circ_id)
     direction = CELL_DIRECTION_OUT;
   else
     direction = CELL_DIRECTION_IN;
 
   /* If we have a relay_early cell, make sure that it's outbound, and we've
    * gotten no more than MAX_RELAY_EARLY_CELLS_PER_CIRCUIT of them. */
-  if (cell->command == CELL_RELAY_EARLY) {
+  if (cell->headers.command == CELL_RELAY_EARLY) {
     if (direction == CELL_DIRECTION_IN) {
       /* Inbound early cells could once be encountered as a result of
        * bug 1038; but relays running versions before 0.2.1.19 are long
@@ -526,7 +527,7 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
                "Received an inbound RELAY_EARLY cell on circuit %u."
                " Closing circuit. Please report this event,"
                " along with the following message.",
-               (unsigned)cell->circ_id);
+               (unsigned)cell->headers.circ_id);
       if (CIRCUIT_IS_ORIGIN(circ)) {
         circuit_log_path(LOG_WARN, LD_OR, TO_ORIGIN_CIRCUIT(circ));
       } else if (circ->n_chan) {
@@ -541,7 +542,7 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
         log_fn(LOG_PROTOCOL_WARN, LD_OR,
                "Received too many RELAY_EARLY cells on circ %u from %s."
                "  Closing circuit.",
-               (unsigned)cell->circ_id,
+               (unsigned)cell->headers.circ_id,
                safe_str(channel_get_canonical_remote_descr(chan)));
         circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
         return;
@@ -585,21 +586,21 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
   circuit_t *circ;
   int reason;
 
-  circ = circuit_get_by_circid_channel(cell->circ_id, chan);
+  circ = circuit_get_by_circid_channel(cell->headers.circ_id, chan);
   if (!circ) {
     log_info(LD_OR,"unknown circuit %u on connection from %s. Dropping.",
-             (unsigned)cell->circ_id,
+             (unsigned)cell->headers.circ_id,
              channel_get_canonical_remote_descr(chan));
     return;
   }
-  log_debug(LD_OR,"Received for circID %u.",(unsigned)cell->circ_id);
+  log_debug(LD_OR,"Received for circID %u.",(unsigned)cell->headers.circ_id);
 
   reason = (uint8_t)cell->payload[0];
   circ->received_destroy = 1;
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
       chan == TO_OR_CIRCUIT(circ)->p_chan &&
-      cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
+      cell->headers.circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
     /* the destroy came from behind */
     circuit_set_p_circid_chan(TO_OR_CIRCUIT(circ), 0, NULL);
     circuit_mark_for_close(circ, reason|END_CIRC_REASON_FLAG_REMOTE);

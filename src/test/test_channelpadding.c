@@ -861,7 +861,7 @@ test_channelpadding_negotiation(void *arg)
   relay3_client->padding_enabled = 1;
   memset(&cell, 0, sizeof(cell_t));
   memset(&disable, 0, sizeof(channelpadding_negotiate_t));
-  cell.command = CELL_PADDING_NEGOTIATE;
+  cell.headers.command = CELL_PADDING_NEGOTIATE;
 
   channelpadding_negotiate_set_command(&disable, CHANNELPADDING_COMMAND_STOP);
   disable.version = 1;

@@ -170,10 +170,10 @@ test_link_handshake_certs_ok(void *arg)
   tt_assert(mock_got_var_cell);
   cell2 = mock_got_var_cell;
 
-  tt_int_op(cell1->command, OP_EQ, CELL_CERTS);
+  tt_int_op(cell1->headers.command, OP_EQ, CELL_CERTS);
   tt_int_op(cell1->payload_len, OP_GT, 1);
 
-  tt_int_op(cell2->command, OP_EQ, CELL_CERTS);
+  tt_int_op(cell2->headers.command, OP_EQ, CELL_CERTS);
   tt_int_op(cell2->payload_len, OP_GT, 1);
 
   tt_int_op(cell1->payload_len, OP_EQ,
@@ -449,7 +449,7 @@ recv_certs_setup(const struct testcase_t *test)
   }
 
   d->cell = var_cell_new(4096);
-  d->cell->command = CELL_CERTS;
+  d->cell->headers.command = CELL_CERTS;
 
   n = certs_cell_encode(d->cell->payload, 4096, d->ccell);
   tt_int_op(n, OP_GT, 0);
@@ -572,7 +572,7 @@ CERTS_FAIL(empty,
            d->cell->payload_len = 0)
 CERTS_FAIL(bad_circid,
            require_failure_message = "It had a nonzero circuit ID";
-           d->cell->circ_id = 1)
+           d->cell->headers.circ_id = 1)
 CERTS_FAIL(truncated_1,
            require_failure_message = "It couldn't be parsed";
            d->cell->payload[0] = 5)
@@ -919,10 +919,10 @@ test_link_handshake_send_authchallenge(void *arg)
   cell2 = mock_got_var_cell;
   tt_int_op(38, OP_EQ, cell1->payload_len);
   tt_int_op(38, OP_EQ, cell2->payload_len);
-  tt_int_op(0, OP_EQ, cell1->circ_id);
-  tt_int_op(0, OP_EQ, cell2->circ_id);
-  tt_int_op(CELL_AUTH_CHALLENGE, OP_EQ, cell1->command);
-  tt_int_op(CELL_AUTH_CHALLENGE, OP_EQ, cell2->command);
+  tt_int_op(0, OP_EQ, cell1->headers.circ_id);
+  tt_int_op(0, OP_EQ, cell2->headers.circ_id);
+  tt_int_op(CELL_AUTH_CHALLENGE, OP_EQ, cell1->headers.command);
+  tt_int_op(CELL_AUTH_CHALLENGE, OP_EQ, cell2->headers.command);
 
   tt_mem_op("\x00\x02\x00\x01\x00\x03", OP_EQ, cell1->payload + 32, 6);
   tt_mem_op("\x00\x02\x00\x01\x00\x03", OP_EQ, cell2->payload + 32, 6);
@@ -982,7 +982,7 @@ recv_authchallenge_setup(const struct testcase_t *test)
   d->cell->payload[33] = 2; /* 2 methods */
   d->cell->payload[35] = 7; /* This one isn't real */
   d->cell->payload[37] = 1; /* This is the old RSA one. */
-  d->cell->command = CELL_AUTH_CHALLENGE;
+  d->cell->headers.command = CELL_AUTH_CHALLENGE;
 
   get_options_mutable()->ORPort_set = 1;
 
@@ -1114,7 +1114,7 @@ AUTHCHALLENGE_FAIL(truncated,
                    d->cell->payload_len = 34)
 AUTHCHALLENGE_FAIL(nonzero_circid,
                    require_failure_message = "It had a nonzero circuit ID";
-                   d->cell->circ_id = 1337)
+                   d->cell->headers.circ_id = 1337)
 
 static int
 mock_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
@@ -1209,7 +1209,7 @@ authenticate_data_setup(const struct testcase_t *test)
   d->c2->link_proto = 3;
   tt_int_op(connection_init_or_handshake_state(d->c2, 0), OP_EQ, 0);
   var_cell_t *cell = var_cell_new(16);
-  cell->command = CELL_CERTS;
+  cell->headers.command = CELL_CERTS;
   or_handshake_state_record_var_cell(d->c1, d->c1->handshake_state, cell, 1);
   or_handshake_state_record_var_cell(d->c2, d->c2->handshake_state, cell, 0);
   memset(cell->payload, 0xf0, 16);
@@ -1285,7 +1285,7 @@ test_link_handshake_auth_cell(void *arg)
   crypto_pk_t *auth_pubkey = NULL;
 
   /* Is the cell well-formed on the outer layer? */
-  tt_int_op(d->cell->command, OP_EQ, CELL_AUTHENTICATE);
+  tt_int_op(d->cell->headers.command, OP_EQ, CELL_AUTHENTICATE);
   tt_int_op(d->cell->payload[0], OP_EQ, 0);
   if (d->is_ed)
     tt_int_op(d->cell->payload[1], OP_EQ, 3);

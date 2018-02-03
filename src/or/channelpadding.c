@@ -303,7 +303,7 @@ channelpadding_send_disable_command(channel_t *chan)
 
   memset(&cell, 0, sizeof(cell_t));
   memset(&disable, 0, sizeof(channelpadding_negotiate_t));
-  cell.command = CELL_PADDING_NEGOTIATE;
+  cell.headers.command = CELL_PADDING_NEGOTIATE;
 
   channelpadding_negotiate_set_command(&disable, CHANNELPADDING_COMMAND_STOP);
 
@@ -335,7 +335,7 @@ channelpadding_send_enable_command(channel_t *chan, uint16_t low_timeout,
 
   memset(&cell, 0, sizeof(cell_t));
   memset(&enable, 0, sizeof(channelpadding_negotiate_t));
-  cell.command = CELL_PADDING_NEGOTIATE;
+  cell.headers.command = CELL_PADDING_NEGOTIATE;
 
   channelpadding_negotiate_set_command(&enable, CHANNELPADDING_COMMAND_START);
   channelpadding_negotiate_set_ito_low_ms(&enable, low_timeout);
@@ -405,7 +405,7 @@ channelpadding_send_padding_cell_for_callback(channel_t *chan)
   /* Send the padding cell. This will cause the channel to get a
    * fresh timestamp_active */
   memset(&cell, 0, sizeof(cell));
-  cell.command = CELL_PADDING;
+  cell.headers.command = CELL_PADDING;
   chan->write_cell(chan, &cell);
 }
 

@@ -49,15 +49,15 @@ test_cq_manip(void *arg)
   /* Try a packed copy (wide, then narrow, which is a bit of a cheat, since a
    * real cell queue has only one type.) */
   memset(&cell, 0, sizeof(cell));
-  cell.circ_id = 0x12345678;
-  cell.command = 10;
+  cell.headers.circ_id = 0x12345678;
+  cell.headers.command = 10;
   strlcpy((char*)cell.payload, "Lorax ipsum gruvvulus thneed amet, snergelly "
           "once-ler lerkim, sed do barbaloot tempor gluppitus ut labore et "
           "truffula magna aliqua.",
           sizeof(cell.payload));
   cell_queue_append_packed_copy(NULL /*circ*/, &cq, 0 /*exitward*/, &cell,
                                 1 /*wide*/, 0 /*stats*/);
-  cell.circ_id = 0x2013;
+  cell.headers.circ_id = 0x2013;
   cell_queue_append_packed_copy(NULL /*circ*/, &cq, 0 /*exitward*/, &cell,
                                 0 /*wide*/, 0 /*stats*/);
   tt_int_op(cq.n, OP_EQ, 2);

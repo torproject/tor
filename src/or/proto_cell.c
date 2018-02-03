@@ -68,11 +68,11 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     return 1;
 
   result = var_cell_new(length);
-  result->command = command;
+  result->headers.command = command;
   if (wide_circ_ids)
-    result->circ_id = ntohl(get_uint32(hdr));
+    result->headers.circ_id = ntohl(get_uint32(hdr));
   else
-    result->circ_id = ntohs(get_uint16(hdr));
+    result->headers.circ_id = ntohs(get_uint16(hdr));
 
   buf_drain(buf, header_len);
   buf_peek(buf, (char*) result->payload, length);

@@ -1063,12 +1063,12 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
 
   /* Reject all but VERSIONS and NETINFO when handshaking. */
   /* (VERSIONS should actually be impossible; it's variable-length.) */
-  if (handshaking && cell->command != CELL_VERSIONS &&
-      cell->command != CELL_NETINFO) {
+  if (handshaking && cell->headers.command != CELL_VERSIONS &&
+      cell->headers.command != CELL_NETINFO) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received unexpected cell command %d in chan state %s / "
            "conn state %s; closing the connection.",
-           (int)cell->command,
+           (int)cell->headers.command,
            channel_state_to_string(TLS_CHAN_TO_BASE(chan)->state),
            conn_state_to_string(CONN_TYPE_OR, TO_CONN(conn)->state));
     connection_or_close_for_error(conn, 0);
@@ -1086,7 +1086,7 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   if (TLS_CHAN_TO_BASE(chan)->currently_padding)
     rep_hist_padding_count_read(PADDING_TYPE_ENABLED_TOTAL);
 
-  switch (cell->command) {
+  switch (cell->headers.command) {
     case CELL_PADDING:
       rep_hist_padding_count_read(PADDING_TYPE_CELL);
       if (TLS_CHAN_TO_BASE(chan)->currently_padding)
@@ -1124,7 +1124,7 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
       log_fn(LOG_INFO, LD_PROTOCOL,
              "Cell of unknown type (%d) received in channeltls.c.  "
              "Dropping.",
-             cell->command);
+             cell->headers.command);
              break;
   }
 }
@@ -1190,12 +1190,12 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
 
   switch (TO_CONN(conn)->state) {
     case OR_CONN_STATE_OR_HANDSHAKING_V2:
-      if (var_cell->command != CELL_VERSIONS) {
+      if (var_cell->headers.command != CELL_VERSIONS) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "Received a cell with command %d in unexpected "
                "orconn state \"%s\" [%d], channel state \"%s\" [%d]; "
                "closing the connection.",
-               (int)(var_cell->command),
+               (int)(var_cell->headers.command),
                conn_state_to_string(CONN_TYPE_OR, TO_CONN(conn)->state),
                TO_CONN(conn)->state,
                channel_state_to_string(TLS_CHAN_TO_BASE(chan)->state),
@@ -1219,12 +1219,12 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
 
       /* fall through */
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
-      if (!(command_allowed_before_handshake(var_cell->command))) {
+      if (!(command_allowed_before_handshake(var_cell->headers.command))) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "Received a cell with command %d in unexpected "
                "orconn state \"%s\" [%d], channel state \"%s\" [%d]; "
                "closing the connection.",
-               (int)(var_cell->command),
+               (int)(var_cell->headers.command),
                conn_state_to_string(CONN_TYPE_OR, TO_CONN(conn)->state),
                (int)(TO_CONN(conn)->state),
                channel_state_to_string(TLS_CHAN_TO_BASE(chan)->state),
@@ -1238,7 +1238,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
       }
       break;
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
-      if (var_cell->command != CELL_AUTHENTICATE)
+      if (var_cell->headers.command != CELL_AUTHENTICATE)
         or_handshake_state_record_var_cell(conn, conn->handshake_state,
                                            var_cell, 1);
       break; /* Everything is allowed */
@@ -1248,7 +1248,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
                "Received a variable-length cell with command %d in orconn "
                "state %s [%d], channel state %s [%d] with link protocol %d; "
                "ignoring it.",
-               (int)(var_cell->command),
+               (int)(var_cell->headers.command),
                conn_state_to_string(CONN_TYPE_OR, TO_CONN(conn)->state),
                (int)(TO_CONN(conn)->state),
                channel_state_to_string(TLS_CHAN_TO_BASE(chan)->state),
@@ -1262,7 +1262,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
              "Received var-length cell with command %d in unexpected "
              "orconn state \"%s\" [%d], channel state \"%s\" [%d]; "
              "ignoring it.",
-             (int)(var_cell->command),
+             (int)(var_cell->headers.command),
              conn_state_to_string(CONN_TYPE_OR, TO_CONN(conn)->state),
              (int)(TO_CONN(conn)->state),
              channel_state_to_string(TLS_CHAN_TO_BASE(chan)->state),
@@ -1276,7 +1276,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
 
   /* Now handle the cell */
 
-  switch (var_cell->command) {
+  switch (var_cell->headers.command) {
     case CELL_VERSIONS:
       ++stats_n_versions_cells_processed;
       PROCESS_CELL(versions, var_cell, chan);
@@ -1304,7 +1304,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
     default:
       log_fn(LOG_INFO, LD_PROTOCOL,
              "Variable-length cell of unknown type (%d) received.",
-             (int)(var_cell->command));
+             (int)(var_cell->headers.command));
       break;
   }
 }
@@ -1930,7 +1930,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   }
   if (cell->payload_len < 1)
     ERR("It had no body");
-  if (cell->circ_id)
+  if (cell->headers.circ_id)
     ERR("It had a nonzero circuit ID");
 
   if (certs_cell_parse(&cc, cell->payload, cell->payload_len) < 0)
@@ -2170,7 +2170,7 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
     ERR("We already received one");
   if (!(chan->conn->handshake_state->received_certs_cell))
     ERR("We haven't gotten a CERTS cell yet");
-  if (cell->circ_id)
+  if (cell->headers.circ_id)
     ERR("It had a nonzero circuit ID");
 
   if (auth_challenge_cell_parse(&ac, cell->payload, cell->payload_len) < 0)

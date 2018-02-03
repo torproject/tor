@@ -54,8 +54,8 @@ test_proto_var_cell(void *arg)
   buf_add(buf, "\x09\x00\x25\ff", 4);
   tt_int_op(1, OP_EQ, fetch_var_cell_from_buf(buf, &cell, 4));
   tt_ptr_op(cell, OP_NE, NULL);
-  tt_int_op(cell->command, OP_EQ, CELL_VERSIONS);
-  tt_uint_op(cell->circ_id, OP_EQ, 0x01020304);
+  tt_int_op(cell->headers.command, OP_EQ, CELL_VERSIONS);
+  tt_uint_op(cell->headers.circ_id, OP_EQ, 0x01020304);
   tt_int_op(cell->payload_len, OP_EQ, 4);
   test_mem_op_hex(cell->payload, OP_EQ, "00090025");
   var_cell_free(cell);
@@ -70,8 +70,8 @@ test_proto_var_cell(void *arg)
           "coraje", 11);
   tt_int_op(1, OP_EQ, fetch_var_cell_from_buf(buf, &cell, 3));
   tt_ptr_op(cell, OP_NE, NULL);
-  tt_int_op(cell->command, OP_EQ, 129);
-  tt_uint_op(cell->circ_id, OP_EQ, 0x2345);
+  tt_int_op(cell->headers.command, OP_EQ, 129);
+  tt_uint_op(cell->headers.circ_id, OP_EQ, 0x2345);
   tt_int_op(cell->payload_len, OP_EQ, 6);
   tt_mem_op(cell->payload, OP_EQ, "coraje", 6);
   var_cell_free(cell);
@@ -89,8 +89,8 @@ test_proto_var_cell(void *arg)
           "futuro", 11);
   tt_int_op(1, OP_EQ, fetch_var_cell_from_buf(buf, &cell, 2));
   tt_ptr_op(cell, OP_NE, NULL);
-  tt_int_op(cell->command, OP_EQ, 7);
-  tt_uint_op(cell->circ_id, OP_EQ, 0x2345);
+  tt_int_op(cell->headers.command, OP_EQ, 7);
+  tt_uint_op(cell->headers.circ_id, OP_EQ, 0x2345);
   tt_int_op(cell->payload_len, OP_EQ, 6);
   tt_mem_op(cell->payload, OP_EQ, "futuro", 6);
   var_cell_free(cell);

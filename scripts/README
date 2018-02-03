@@ -61,3 +61,6 @@ Code transformation scripts
 
 coccinelle/calloc.cocci -- Transform code to replace variants of
 malloc(a*b) with calloc(a,b)
+
+coccinelle/cell_header_t.cocci -- Transfrom code to replace variations of
+{var_}cell->{circ_id,command} with {var_}cell->header.{circ_id,command}.

@@ -419,16 +419,16 @@ cell_pack(packed_cell_t *dst, const cell_t *src, int wide_circ_ids)
 {
   char *dest = dst->body;
   if (wide_circ_ids) {
-    set_uint32(dest, htonl(src->circ_id));
+    set_uint32(dest, htonl(src->headers.circ_id));
     dest += 4;
   } else {
     /* Clear the last two bytes of dest, in case we can accidentally
      * send them to the network somehow. */
     memset(dest+CELL_MAX_NETWORK_SIZE-2, 0, 2);
-    set_uint16(dest, htons(src->circ_id));
+    set_uint16(dest, htons(src->headers.circ_id));
     dest += 2;
   }
-  set_uint8(dest, src->command);
+  set_uint8(dest, src->headers.command);
   memcpy(dest+1, src->payload, CELL_PAYLOAD_SIZE);
 }
 
@@ -439,13 +439,13 @@ static void
 cell_unpack(cell_t *dest, const char *src, int wide_circ_ids)
 {
   if (wide_circ_ids) {
-    dest->circ_id = ntohl(get_uint32(src));
+    dest->headers.circ_id = ntohl(get_uint32(src));
     src += 4;
   } else {
-    dest->circ_id = ntohs(get_uint16(src));
+    dest->headers.circ_id = ntohs(get_uint16(src));
     src += 2;
   }
-  dest->command = get_uint8(src);
+  dest->headers.command = get_uint8(src);
   memcpy(dest->payload, src+1, CELL_PAYLOAD_SIZE);
 }
 
@@ -456,15 +456,15 @@ var_cell_pack_header(const var_cell_t *cell, char *hdr_out, int wide_circ_ids)
 {
   int r;
   if (wide_circ_ids) {
-    set_uint32(hdr_out, htonl(cell->circ_id));
+    set_uint32(hdr_out, htonl(cell->headers.circ_id));
     hdr_out += 4;
     r = VAR_CELL_MAX_HEADER_SIZE;
   } else {
-    set_uint16(hdr_out, htons(cell->circ_id));
+    set_uint16(hdr_out, htons(cell->headers.circ_id));
     hdr_out += 2;
     r = VAR_CELL_MAX_HEADER_SIZE - 2;
   }
-  set_uint8(hdr_out, cell->command);
+  set_uint8(hdr_out, cell->headers.command);
   set_uint16(hdr_out+1, htons(cell->payload_len));
   return r;
 }
@@ -477,8 +477,8 @@ var_cell_new(uint16_t payload_len)
   size_t size = offsetof(var_cell_t, payload) + payload_len;
   var_cell_t *cell = tor_malloc_zero(size);
   cell->payload_len = payload_len;
-  cell->command = 0;
-  cell->circ_id = 0;
+  cell->headers.command = 0;
+  cell->headers.circ_id = 0;
   return cell;
 }
 
@@ -496,8 +496,8 @@ var_cell_copy(const var_cell_t *src)
     size = offsetof(var_cell_t, payload) + src->payload_len;
     copy = tor_malloc_zero(size);
     copy->payload_len = src->payload_len;
-    copy->command = src->command;
-    copy->circ_id = src->circ_id;
+    copy->headers.command = src->headers.command;
+    copy->headers.circ_id = src->headers.circ_id;
     memcpy(copy->payload, src->payload, copy->payload_len);
   }
 
@@ -2132,7 +2132,7 @@ or_handshake_state_record_cell(or_connection_t *conn,
   if (!incoming) {
     log_warn(LD_BUG, "We shouldn't be sending any non-variable-length cells "
              "while making a handshake digest.  But we think we are sending "
-             "one with type %d.", (int)cell->command);
+             "one with type %d.", (int)cell->headers.command);
   }
   dptr = incoming ? &state->digest_received : &state->digest_sent;
   if (! *dptr)
@@ -2221,7 +2221,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   cell_pack(&networkcell, cell, conn->wide_circ_ids);
 
   rep_hist_padding_count_write(PADDING_TYPE_TOTAL);
-  if (cell->command == CELL_PADDING)
+  if (cell->headers.command == CELL_PADDING)
     rep_hist_padding_count_write(PADDING_TYPE_CELL);
 
   connection_buf_add(networkcell.body, cell_network_size, TO_CONN(conn));
@@ -2232,7 +2232,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 
     if (TLS_CHAN_TO_BASE(conn->chan)->currently_padding) {
       rep_hist_padding_count_write(PADDING_TYPE_ENABLED_TOTAL);
-      if (cell->command == CELL_PADDING)
+      if (cell->headers.command == CELL_PADDING)
         rep_hist_padding_count_write(PADDING_TYPE_ENABLED_CELL);
     }
   }
@@ -2379,7 +2379,7 @@ connection_or_send_versions(or_connection_t *conn, int v3_plus)
   tor_assert(conn->handshake_state &&
              !conn->handshake_state->sent_versions_at);
   cell = var_cell_new(n_or_protocol_versions * 2);
-  cell->command = CELL_VERSIONS;
+  cell->headers.command = CELL_VERSIONS;
   for (i = 0; i < n_or_protocol_versions; ++i) {
     uint16_t v = or_protocol_versions[i];
     if (v < min_version || v > max_version)
@@ -2416,7 +2416,7 @@ connection_or_send_netinfo,(or_connection_t *conn))
   }
 
   memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_NETINFO;
+  cell.headers.command = CELL_NETINFO;
 
   /* Timestamp, if we're a relay. */
   if (public_server_mode(get_options()) || ! conn->is_outgoing)
@@ -2599,7 +2599,7 @@ connection_or_send_certs_cell(or_connection_t *conn)
   ssize_t alloc_len = certs_cell_encoded_len(certs_cell);
   tor_assert(alloc_len >= 0 && alloc_len <= UINT16_MAX);
   cell = var_cell_new(alloc_len);
-  cell->command = CELL_CERTS;
+  cell->headers.command = CELL_CERTS;
   ssize_t enc_len = certs_cell_encode(cell->payload, alloc_len, certs_cell);
   tor_assert(enc_len > 0 && enc_len <= alloc_len);
   cell->payload_len = enc_len;
@@ -2678,7 +2678,7 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
     goto done;
     /* LCOV_EXCL_STOP */
   }
-  cell->command = CELL_AUTH_CHALLENGE;
+  cell->headers.command = CELL_AUTH_CHALLENGE;
 
   connection_or_write_var_cell_to_buf(cell, conn);
   r = 0;
@@ -2854,7 +2854,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   const size_t outlen = maxlen;
   ssize_t len;
 
-  result->command = CELL_AUTHENTICATE;
+  result->headers.command = CELL_AUTHENTICATE;
   set_uint16(result->payload, htons(authtype));
 
   if ((len = auth1_encode(out, outlen, auth, ctx)) < 0) {

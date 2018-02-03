@@ -237,8 +237,8 @@ make_fake_cell(cell_t *c)
 {
   tt_ptr_op(c, OP_NE, NULL);
 
-  c->circ_id = 1;
-  c->command = CELL_RELAY;
+  c->headers.circ_id = 1;
+  c->headers.command = CELL_RELAY;
   memset(c->payload, 0, CELL_PAYLOAD_SIZE);
 
  done:
@@ -254,8 +254,8 @@ make_fake_var_cell(var_cell_t *c)
 {
   tt_ptr_op(c, OP_NE, NULL);
 
-  c->circ_id = 1;
-  c->command = CELL_VERSIONS;
+  c->headers.circ_id = 1;
+  c->headers.command = CELL_VERSIONS;
   c->payload_len = CELL_PAYLOAD_SIZE / 2;
   memset(c->payload, 0, c->payload_len);
 

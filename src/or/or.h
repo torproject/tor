@@ -1181,7 +1181,7 @@ typedef struct cell_header_t {
   circid_t circ_id;
   /** Type of the cell: one of CELL_PADDING, CELL_CREATE, CELL_DESTROY, etc. */
   uint8_t command;
-} cell_header_t;
+} cell_headers_t;
 
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
@@ -1189,7 +1189,7 @@ typedef struct cell_t {
   /** The <b>headers</b> contain <b>circ_id</b>, the id of the circuit that has
    * received this cell, and the <b>command</b>, which denotes which type of
    * cell this is. */
-  cell_header_t headers;
+  cell_headers_t headers;
   uint8_t payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 } cell_t;
 
@@ -1198,7 +1198,7 @@ typedef struct var_cell_t {
   /** The <b>headers</b> contain <b>circ_id</b>, the id of the circuit that has
    * received this cell, and the <b>command</b>, which denotes which type of
    * cell this is. */
-  cell_header_t headers;
+  cell_headers_t headers;
   /** Number of bytes actually stored in <b>payload</b> */
   uint16_t payload_len;
   /** Payload of this cell */
