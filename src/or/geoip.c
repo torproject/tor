@@ -769,13 +769,7 @@ geoip_client_cache_handle_oom(time_t now, size_t min_remove_bytes)
 size_t
 geoip_client_cache_total_allocation(void)
 {
-  size_t bytes = 0;
-  clientmap_entry_t **ent;
-
-  HT_FOREACH(ent, clientmap, &client_history) {
-    bytes += clientmap_entry_size(*ent);
-  }
-  return bytes;
+  return geoip_client_history_cache_size;
 }
 
 /** How many responses are we giving to clients requesting v3 network
