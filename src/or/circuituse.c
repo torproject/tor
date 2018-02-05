@@ -808,10 +808,10 @@ circuit_log_ancient_one_hop_circuits(int age)
     if (circ->timestamp_created.tv_sec >= cutoff)
       continue;
     /* Single Onion Services deliberately make long term one-hop intro
-     * connections. We only ignore active intro point connections, if we take
-     * a long time establishing, that's worth logging. */
+     * and rendezvous connections. Don't log the established ones. */
     if (rend_service_allow_non_anonymous_connection(options) &&
-        circ->purpose == CIRCUIT_PURPOSE_S_INTRO)
+        (circ->purpose == CIRCUIT_PURPOSE_S_INTRO ||
+         circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED))
       continue;
     /* Tor2web deliberately makes long term one-hop rend connections,
      * particularly when Tor2webRendezvousPoints is used. We only ignore
