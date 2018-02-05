@@ -308,8 +308,6 @@ cc_stats_refill_bucket(cc_client_stats_t *stats, const tor_addr_t *addr)
     new_circuit_bucket_count = MIN(stats->circuit_bucket + (uint32_t)num_token,
                                    dos_cc_circuit_burst);
   }
-  /* This function is not allowed to make the bucket count smaller */
-  tor_assert_nonfatal(new_circuit_bucket_count >= stats->circuit_bucket);
   log_debug(LD_DOS, "DoS address %s has its circuit bucket value: %" PRIu32
                     ". Filling it to %" PRIu32 ". Circuit rate is %" PRIu64
                     ". Elapsed time is %" PRIi64,
