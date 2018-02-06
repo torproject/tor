@@ -592,6 +592,10 @@ connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen;
 
+  /* Update the channel's active timestamp if there is one */
+  if (conn->chan)
+    channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
+
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   datalen = connection_get_outbuf_len(TO_CONN(conn));
@@ -652,6 +656,11 @@ connection_or_finished_flushing(or_connection_t *conn)
       tor_fragile_assert();
       return -1;
   }
+
+  /* Update the channel's active timestamp if there is one */
+  if (conn->chan)
+    channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
+
   return 0;
 }
 
