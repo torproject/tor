@@ -1986,8 +1986,7 @@ circuit_mark_all_dirty_circs_as_unusable(void)
  *   - If state is onionskin_pending, remove circ from the onion_pending
  *     list.
  *   - If circ isn't open yet: call circuit_build_failed() if we're
- *     the origin, and in either case call circuit_rep_hist_note_result()
- *     to note stats.
+ *     the origin.
  *   - If purpose is C_INTRODUCE_ACK_WAIT, report the intro point
  *     failure we just had to the hidden service client module.
  *   - If purpose is C_INTRODUCING and <b>reason</b> isn't TIMEOUT,
@@ -2123,7 +2122,6 @@ circuit_about_to_free(circuit_t *circ)
     if (CIRCUIT_IS_ORIGIN(circ)) {
       origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
       circuit_build_failed(ocirc); /* take actions if necessary */
-      circuit_rep_hist_note_result(ocirc);
     }
   }
   if (circ->state == CIRCUIT_STATE_CHAN_WAIT) {

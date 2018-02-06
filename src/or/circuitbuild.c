@@ -347,45 +347,6 @@ circuit_log_path(int severity, unsigned int domain, origin_circuit_t *circ)
   tor_free(s);
 }
 
-/** Tell the rep(utation)hist(ory) module about the status of the links
- * in <b>circ</b>.  Hops that have become OPEN are marked as successfully
- * extended; the _first_ hop that isn't open (if any) is marked as
- * unable to extend.
- */
-/* XXXX Someday we should learn from OR circuits too. */
-void
-circuit_rep_hist_note_result(origin_circuit_t *circ)
-{
-  crypt_path_t *hop;
-  const char *prev_digest = NULL;
-  hop = circ->cpath;
-  if (!hop) /* circuit hasn't started building yet. */
-    return;
-  if (server_mode(get_options())) {
-    const routerinfo_t *me = router_get_my_routerinfo();
-    if (!me)
-      return;
-    prev_digest = me->cache_info.identity_digest;
-  }
-  do {
-    const node_t *node = node_get_by_id(hop->extend_info->identity_digest);
-    if (node) { /* Why do we check this?  We know the identity. -NM XXXX */
-      if (prev_digest) {
-        if (hop->state == CPATH_STATE_OPEN)
-          rep_hist_note_extend_succeeded(prev_digest, node->identity);
-        else {
-          rep_hist_note_extend_failed(prev_digest, node->identity);
-          break;
-        }
-      }
-      prev_digest = node->identity;
-    } else {
-      prev_digest = NULL;
-    }
-    hop=hop->next;
-  } while (hop!=circ->cpath);
-}
-
 /** Return 1 iff every node in circ's cpath definitely supports ntor. */
 static int
 circuit_cpath_supports_ntor(const origin_circuit_t *circ)
@@ -1075,7 +1036,6 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
   }
 
   pathbias_count_build_success(circ);
-  circuit_rep_hist_note_result(circ);
   if (is_usable_for_streams)
     circuit_has_opened(circ); /* do other actions as necessary */
 

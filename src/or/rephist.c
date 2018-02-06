@@ -110,18 +110,6 @@ uint32_t rephist_total_num=0;
  * 20X as much as one that ended a month ago, and routers that have had no
  * uptime data for about half a year will get forgotten.) */
 
-/** History of an OR-\>OR link. */
-typedef struct link_history_t {
-  /** When did we start tracking this list? */
-  time_t since;
-  /** When did we most recently note a change to this link */
-  time_t changed;
-  /** How many times did extending from OR1 to OR2 succeed? */
-  unsigned long n_extend_ok;
-  /** How many times did extending from OR1 to OR2 fail? */
-  unsigned long n_extend_fail;
-} link_history_t;
-
 /** History of an OR. */
 typedef struct or_history_t {
   /** When did we start tracking this OR? */
@@ -163,10 +151,6 @@ typedef struct or_history_t {
   time_t start_of_downtime;
   unsigned long weighted_uptime;
   unsigned long total_weighted_time;
-
-  /** Map from hex OR2 identity digest to a link_history_t for the link
-   * from this OR to OR2. */
-  digestmap_t *link_history_map;
 } or_history_t;
 
 /**
@@ -232,7 +216,6 @@ get_or_history(const char* id)
     hist = tor_malloc_zero(sizeof(or_history_t));
     rephist_total_alloc += sizeof(or_history_t);
     rephist_total_num++;
-    hist->link_history_map = digestmap_new();
     hist->since = hist->changed = time(NULL);
     tor_addr_make_unspec(&hist->last_reached_addr);
     digestmap_set(history_map, id, hist);
@@ -240,44 +223,11 @@ get_or_history(const char* id)
   return hist;
 }
 
-/** Return the link_history_t for the link from the first named OR to
- * the second, creating it if necessary. (ORs are identified by
- * identity digest.)
- */
-static link_history_t *
-get_link_history(const char *from_id, const char *to_id)
-{
-  or_history_t *orhist;
-  link_history_t *lhist;
-  orhist = get_or_history(from_id);
-  if (!orhist)
-    return NULL;
-  if (tor_digest_is_zero(to_id))
-    return NULL;
-  lhist = digestmap_get(orhist->link_history_map, to_id);
-  if (!lhist) {
-    lhist = tor_malloc_zero(sizeof(link_history_t));
-    rephist_total_alloc += sizeof(link_history_t);
-    lhist->since = lhist->changed = time(NULL);
-    digestmap_set(orhist->link_history_map, to_id, lhist);
-  }
-  return lhist;
-}
-
-/** Helper: free storage held by a single link history entry. */
-static void
-free_link_history_(void *val)
-{
-  rephist_total_alloc -= sizeof(link_history_t);
-  tor_free(val);
-}
-
 /** Helper: free storage held by a single OR history entry. */
 static void
 free_or_history(void *_hist)
 {
   or_history_t *hist = _hist;
-  digestmap_free(hist->link_history_map, free_link_history_);
   rephist_total_alloc -= sizeof(or_history_t);
   rephist_total_num--;
   tor_free(hist);
@@ -715,56 +665,18 @@ rep_hist_have_measured_enough_stability(void)
   return started_tracking_stability < time(NULL) - 4*60*60;
 }
 
-/** Remember that we successfully extended from the OR with identity
- * digest <b>from_id</b> to the OR with identity digest
- * <b>to_name</b>.
- */
-void
-rep_hist_note_extend_succeeded(const char *from_id, const char *to_id)
-{
-  link_history_t *hist;
-  /* log_fn(LOG_WARN, "EXTEND SUCCEEDED: %s->%s",from_name,to_name); */
-  hist = get_link_history(from_id, to_id);
-  if (!hist)
-    return;
-  ++hist->n_extend_ok;
-  hist->changed = time(NULL);
-}
-
-/** Remember that we tried to extend from the OR with identity digest
- * <b>from_id</b> to the OR with identity digest <b>to_name</b>, but
- * failed.
- */
-void
-rep_hist_note_extend_failed(const char *from_id, const char *to_id)
-{
-  link_history_t *hist;
-  /* log_fn(LOG_WARN, "EXTEND FAILED: %s->%s",from_name,to_name); */
-  hist = get_link_history(from_id, to_id);
-  if (!hist)
-    return;
-  ++hist->n_extend_fail;
-  hist->changed = time(NULL);
-}
-
 /** Log all the reliability data we have remembered, with the chosen
  * severity.
  */
 void
 rep_hist_dump_stats(time_t now, int severity)
 {
-  digestmap_iter_t *lhist_it;
   digestmap_iter_t *orhist_it;
-  const char *name1, *name2, *digest1, *digest2;
+  const char *name1, *digest1;
   char hexdigest1[HEX_DIGEST_LEN+1];
-  char hexdigest2[HEX_DIGEST_LEN+1];
   or_history_t *or_history;
-  link_history_t *link_history;
-  void *or_history_p, *link_history_p;
+  void *or_history_p;
   double uptime;
-  char buffer[2048];
-  size_t len;
-  int ret;
   unsigned long upt, downt;
   const node_t *node;
 
@@ -802,35 +714,6 @@ rep_hist_dump_stats(time_t now, int severity)
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
         upt, upt+downt, uptime*100.0,
         stability/3600, (stability/60)%60, stability%60);
-
-    if (!digestmap_isempty(or_history->link_history_map)) {
-      strlcpy(buffer, "    Extend attempts: ", sizeof(buffer));
-      len = strlen(buffer);
-      for (lhist_it = digestmap_iter_init(or_history->link_history_map);
-           !digestmap_iter_done(lhist_it);
-           lhist_it = digestmap_iter_next(or_history->link_history_map,
-                                          lhist_it)) {
-        digestmap_iter_get(lhist_it, &digest2, &link_history_p);
-        if ((node = node_get_by_id(digest2)) && node_get_nickname(node))
-          name2 = node_get_nickname(node);
-        else
-          name2 = "(unknown)";
-
-        link_history = (link_history_t*) link_history_p;
-
-        base16_encode(hexdigest2, sizeof(hexdigest2), digest2, DIGEST_LEN);
-        ret = tor_snprintf(buffer+len, 2048-len, "%s [%s](%ld/%ld); ",
-                        name2,
-                        hexdigest2,
-                        link_history->n_extend_ok,
-                        link_history->n_extend_ok+link_history->n_extend_fail);
-        if (ret<0)
-          break;
-        else
-          len += ret;
-      }
-      tor_log(severity, LD_HIST, "%s", buffer);
-    }
   }
 }
 
@@ -842,10 +725,9 @@ rep_history_clean(time_t before)
 {
   int authority = authdir_mode(get_options());
   or_history_t *or_history;
-  link_history_t *link_history;
-  void *or_history_p, *link_history_p;
-  digestmap_iter_t *orhist_it, *lhist_it;
-  const char *d1, *d2;
+  void *or_history_p;
+  digestmap_iter_t *orhist_it;
+  const char *d1;
 
   orhist_it = digestmap_iter_init(history_map);
   while (!digestmap_iter_done(orhist_it)) {
@@ -861,19 +743,6 @@ rep_history_clean(time_t before)
       orhist_it = digestmap_iter_next_rmv(history_map, orhist_it);
       free_or_history(or_history);
       continue;
-    }
-    for (lhist_it = digestmap_iter_init(or_history->link_history_map);
-         !digestmap_iter_done(lhist_it); ) {
-      digestmap_iter_get(lhist_it, &d2, &link_history_p);
-      link_history = link_history_p;
-      if (link_history->changed < before) {
-        lhist_it = digestmap_iter_next_rmv(or_history->link_history_map,
-                                           lhist_it);
-        rephist_total_alloc -= sizeof(link_history_t);
-        tor_free(link_history);
-        continue;
-      }
-      lhist_it = digestmap_iter_next(or_history->link_history_map,lhist_it);
     }
     orhist_it = digestmap_iter_next(history_map, orhist_it);
   }
