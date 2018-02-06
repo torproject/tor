@@ -1456,9 +1456,11 @@ node_ipv6_or_preferred(const node_t *node)
   /* XX/teor - node->ipv6_preferred is set from
    * fascist_firewall_prefer_ipv6_orport() each time the consensus is loaded.
    */
+  node_get_prim_orport(node, &ipv4_addr);
   if (!fascist_firewall_use_ipv6(options)) {
     return 0;
-  } else if (node->ipv6_preferred || node_get_prim_orport(node, &ipv4_addr)) {
+  } else if (node->ipv6_preferred ||
+             !tor_addr_port_is_valid_ap(&ipv4_addr, 0)) {
     return node_has_ipv6_orport(node);
   }
   return 0;
@@ -1469,14 +1471,12 @@ node_ipv6_or_preferred(const node_t *node)
     if (r && tor_addr_port_is_valid_ipv4h((r)->addr, (r)->port_field, 0)) { \
       tor_addr_from_ipv4h(&(ap_out)->addr, (r)->addr); \
       (ap_out)->port = (r)->port_field; \
-      return 0; \
     } \
   STMT_END
 
-/** Copy the primary (IPv4) OR port (IP address and TCP port) for
- * <b>node</b> into *<b>ap_out</b>. Return 0 if a valid address and
- * port was copied, else return non-zero.*/
-int
+/** Copy the primary (IPv4) OR port (IP address and TCP port) for <b>node</b>
+ * into *<b>ap_out</b>. */
+void
 node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   node_assert_ok(node);
@@ -1493,8 +1493,6 @@ node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
   RETURN_IPV4_AP(node->ri, or_port, ap_out);
   RETURN_IPV4_AP(node->rs, or_port, ap_out);
   /* Microdescriptors only have an IPv6 address */
-
-  return -1;
 }
 
 /** Copy the preferred OR port (IP address and TCP port) for
@@ -1566,19 +1564,19 @@ node_ipv6_dir_preferred(const node_t *node)
    * so we can't use it to determine DirPort IPv6 preference.
    * This means that bridge clients will use IPv4 DirPorts by default.
    */
+  node_get_prim_dirport(node, &ipv4_addr);
   if (!fascist_firewall_use_ipv6(options)) {
     return 0;
-  } else if (node_get_prim_dirport(node, &ipv4_addr)
+  } else if (!tor_addr_port_is_valid_ap(&ipv4_addr, 0)
       || fascist_firewall_prefer_ipv6_dirport(get_options())) {
     return node_has_ipv6_dirport(node);
   }
   return 0;
 }
 
-/** Copy the primary (IPv4) Dir port (IP address and TCP port) for
- * <b>node</b> into *<b>ap_out</b>. Return 0 if a valid address and
- * port was copied, else return non-zero.*/
-int
+/** Copy the primary (IPv4) Dir port (IP address and TCP port) for <b>node</b>
+ * into *<b>ap_out</b>. */
+void
 node_get_prim_dirport(const node_t *node, tor_addr_port_t *ap_out)
 {
   node_assert_ok(node);
@@ -1590,8 +1588,6 @@ node_get_prim_dirport(const node_t *node, tor_addr_port_t *ap_out)
   RETURN_IPV4_AP(node->ri, dir_port, ap_out);
   RETURN_IPV4_AP(node->rs, dir_port, ap_out);
   /* Microdescriptors only have an IPv6 address */
-
-  return -1;
 }
 
 #undef RETURN_IPV4_AP

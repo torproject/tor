@@ -2866,8 +2866,10 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
     valid_addr = fascist_firewall_choose_address_node(node,
                                                       FIREWALL_OR_CONNECTION,
                                                       0, &ap);
-  else
-    valid_addr = !node_get_prim_orport(node, &ap);
+  else {
+    node_get_prim_orport(node, &ap);
+    valid_addr = tor_addr_port_is_valid_ap(&ap, 0);
+  }
 
   if (valid_addr)
     log_debug(LD_CIRC, "using %s for %s",
