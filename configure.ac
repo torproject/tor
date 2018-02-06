@@ -61,6 +61,8 @@ AC_ARG_ENABLE(cargo-online-mode,
    AS_HELP_STRING(--enable-cargo-online-mode, [Allow cargo to make network requests to fetch crates. For builds with rust only.]))
 AC_ARG_ENABLE(restart-debugging,
    AS_HELP_STRING(--enable-restart-debugging, [Build Tor with support for debugging in-process restart. Developers only.]))
+AC_ARG_ENABLE(zstd-advanced-apis,
+   AS_HELP_STRING(--disable-zstd-advanced-apis, [Build without support for zstd's "static-only" APIs.]))
 
 if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
@@ -114,6 +116,10 @@ if test "$enable_restart_debugging" = "yes"; then
             [Defined if we're building with support for in-process restart debugging.])
 fi
 
+if test "$enable_zstd_advanced_apis" != "no"; then
+   AC_DEFINE(ENABLE_ZSTD_ADVANCED_APIS, 1,
+             [Defined if we're going to try to use zstd's "static-only" APIs.])
+fi
 
 # systemd support
 if test "x$enable_systemd" = "xno"; then

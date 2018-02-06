@@ -18,12 +18,12 @@
 #include "compress.h"
 #include "compress_zstd.h"
 
+#ifdef ENABLE_ZSTD_ADVANCED_APIS
 /* This is a lie, but we make sure it doesn't get us in trouble by wrapping
  * all invocations of zstd's static-only functions in a check to make sure
- * that the compile-time version matches the run-time version.
- *
- * Note: Make sure that this file still builds with this macro disabled. */
+ * that the compile-time version matches the run-time version. */
 #define ZSTD_STATIC_LINKING_ONLY
+#endif
 
 #ifdef HAVE_ZSTD
 #include <zstd.h>
@@ -499,7 +499,7 @@ tor_zstd_init(void)
 void
 tor_zstd_warn_if_version_mismatched(void)
 {
-#ifdef HAVE_ZSTD
+#if defined(HAVE_ZSTD) && defined(ENABLE_ZSTD_ADVANCED_APIS)
   if (! tor_zstd_can_use_static_apis()) {
     char header_version[VERSION_STR_MAX_LEN];
     char runtime_version[VERSION_STR_MAX_LEN];
