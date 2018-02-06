@@ -3,11 +3,13 @@
 
 use external::c_tor_version_as_new_as;
 
+use std::str;
 use std::str::FromStr;
 use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::string::String;
+
 
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
@@ -22,21 +24,29 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
 const MAX_PROTOCOLS_TO_EXPAND: u32 = 500;
 
-/// Currently supported protocols and their versions
+/// Currently supported protocols and their versions, as a byte-slice.
+///
+/// # Warning
+///
+/// This byte-slice ends in a NUL byte.  This is so that we can directly convert
+/// it to an `&'static CStr` in the FFI code, in order to hand the static string
+/// to C in a way that is compatible with C static strings.
+///
+/// Rust code which wishes to accesses this string should use
+/// `protover::get_supported_protocols()` instead.
 ///
 /// C_RUST_COUPLED: src/or/protover.c `protover_get_supported_protocols`
-const SUPPORTED_PROTOCOLS: &'static [&'static str] = &[
-    "Cons=1-2",
-    "Desc=1-2",
-    "DirCache=1-2",
-    "HSDir=1-2",
-    "HSIntro=3-4",
-    "HSRend=1-2",
-    "Link=1-5",
-    "LinkAuth=1,3",
-    "Microdesc=1-2",
-    "Relay=1-2",
-];
+pub(crate) const SUPPORTED_PROTOCOLS: &'static [u8] =
+    b"Cons=1-2 \
+    Desc=1-2 \
+    DirCache=1-2 \
+    HSDir=1-2 \
+    HSIntro=3-4 \
+    HSRend=1-2 \
+    Link=1-5 \
+    LinkAuth=1,3 \
+    Microdesc=1-2 \
+    Relay=1-2\0";
 
 /// Known subprotocols in Tor. Indicates which subprotocol a relay supports.
 ///
@@ -94,8 +104,11 @@ impl FromStr for Proto {
 ///
 /// "HSDir=1-1 LinkAuth=1"
 ///
-pub fn get_supported_protocols() -> String {
-    SUPPORTED_PROTOCOLS.join(" ")
+pub fn get_supported_protocols() -> &'static str {
+    unsafe {
+        // The `len() - 1` is to remove the NUL byte.
+        str::from_utf8_unchecked(&SUPPORTED_PROTOCOLS[..SUPPORTED_PROTOCOLS.len() - 1])
+    }
 }
 
 /// Translates a vector representation of a protocol list into a HashMap
@@ -134,7 +147,7 @@ fn parse_protocols_from_string<'a>(
 /// of the error.
 ///
 fn tor_supported() -> Result<HashMap<Proto, HashSet<u32>>, &'static str> {
-    parse_protocols(SUPPORTED_PROTOCOLS.iter())
+    parse_protocols(get_supported_protocols().split(" "))
 }
 
 /// Get the unique version numbers supported by a subprotocol.
@@ -625,7 +638,7 @@ pub fn compute_vote(
     }
 
     let mut final_output: HashMap<String, String> =
-        HashMap::with_capacity(SUPPORTED_PROTOCOLS.len());
+        HashMap::with_capacity(get_supported_protocols().split(" ").count());
 
     // Go through and remove verstions that are less than the threshold
     for (protocol, versions) in all_count {

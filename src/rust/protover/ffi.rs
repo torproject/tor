@@ -137,18 +137,25 @@ pub extern "C" fn protocol_list_supports_protocol_or_later(
 /// Provide an interface for C to translate arguments and return types for
 /// protover::get_supported_protocols
 #[no_mangle]
-pub extern "C" fn protover_get_supported_protocols() -> *mut c_char {
-    // Not handling errors when unwrapping as the content is controlled
-    // and is an empty string
-    let empty = CString::new("").unwrap();
+pub extern "C" fn protover_get_supported_protocols() -> *const c_char {
+    let supported: &'static CStr;
 
-    let supported = get_supported_protocols();
-    let c_supported = match CString::new(supported) {
-        Ok(n) => n,
-        Err(_) => return empty.into_raw(),
-    };
+    // If we're going to pass it to C, there cannot be any intermediate NUL
+    // bytes.  An assert is okay here, since changing the const byte slice
+    // in protover.rs to contain a NUL byte somewhere in the middle would be a
+    // programming error.
+    assert!(!SUPPORTED_PROTOCOLS[..SUPPORTED_PROTOCOLS.len() - 1].contains(&0x00));
+    assert!(SUPPORTED_PROTOCOLS[SUPPORTED_PROTOCOLS.len() - 1] == 0x00);
 
-    c_supported.into_raw()
+    // It's okay to call the "unchecked" version of the function because
+    // we can see that the bytes we're passing into it 1) are valid UTF-8,
+    // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
+    // byte.
+    unsafe {
+        supported = CStr::from_bytes_with_nul_unchecked(SUPPORTED_PROTOCOLS);
+    }
+
+    supported.as_ptr()
 }
 
 /// Provide an interface for C to translate arguments and return types for
