@@ -139,9 +139,11 @@ struct tor_zstd_compress_state_t {
 
 #ifdef HAVE_ZSTD
 /** Return an approximate number of bytes stored in memory to hold the
- * Zstandard compression/decompression state. */
+ * Zstandard compression/decompression state. This is a fake estimate
+ * based on inspecting the zstd source: tor_zstd_state_size_precalc() is
+ * more accurate when it's allowed to use "static-only" functions */
 static size_t
-tor_zstd_state_size_precalc(int compress, int preset)
+tor_zstd_state_size_precalc_fake(int compress, int preset)
 {
   tor_assert(preset > 0);
 
@@ -197,6 +199,24 @@ tor_zstd_state_size_precalc(int compress, int preset)
   }
 
   return memory_usage;
+}
+
+/** Return an approximate number of bytes stored in memory to hold the
+ * Zstandard compression/decompression state. */
+static size_t
+tor_zstd_state_size_precalc(int compress, int preset)
+{
+#ifdef ZSTD_STATIC_LINKING_ONLY
+  if (tor_zstd_can_use_static_apis()) {
+    if (compress) {
+      return ZSTD_estimateCStreamSize(preset);
+    } else {
+      /* Could use DStream, but that takes a windowSize. */
+      return ZSTD_estimateDCtxSize();
+    }
+  }
+#endif
+  return tor_zstd_state_size_precalc_fake(compress, preset);
 }
 #endif /* defined(HAVE_ZSTD) */
 
