@@ -705,7 +705,6 @@ connection_or_finished_connecting(or_connection_t *or_conn)
 void
 connection_or_about_to_close(or_connection_t *or_conn)
 {
-  time_t now = time(NULL);
   connection_t *conn = TO_CONN(or_conn);
 
   /* Tell the controlling channel we're closed */
@@ -725,7 +724,6 @@ connection_or_about_to_close(or_connection_t *or_conn)
     if (connection_or_nonopen_was_started_here(or_conn)) {
       const or_options_t *options = get_options();
       connection_or_note_state_when_broken(or_conn);
-      rep_hist_note_connect_failed(or_conn->identity_digest, now);
       /* Tell the new guard API about the channel failure */
       entry_guard_chan_failed(TLS_CHAN_TO_BASE(or_conn->chan));
       if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
@@ -741,11 +739,9 @@ connection_or_about_to_close(or_connection_t *or_conn)
   } else if (conn->hold_open_until_flushed) {
     /* We only set hold_open_until_flushed when we're intentionally
      * closing a connection. */
-    rep_hist_note_disconnect(or_conn->identity_digest, now);
     control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
                 tls_error_to_orconn_end_reason(or_conn->tls_error));
   } else if (!tor_digest_is_zero(or_conn->identity_digest)) {
-    rep_hist_note_connection_died(or_conn->identity_digest, now);
     control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
                 tls_error_to_orconn_end_reason(or_conn->tls_error));
   }

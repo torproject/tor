@@ -116,20 +116,6 @@ typedef struct or_history_t {
   time_t since;
   /** When did we most recently note a change to this OR? */
   time_t changed;
-  /** How many times did we successfully connect? */
-  unsigned long n_conn_ok;
-  /** How many times did we try to connect and fail?*/
-  unsigned long n_conn_fail;
-  /** How many seconds have we been connected to this OR before
-   * 'up_since'? */
-  unsigned long uptime;
-  /** How many seconds have we been unable to connect to this OR before
-   * 'down_since'? */
-  unsigned long downtime;
-  /** If nonzero, we have been connected since this time. */
-  time_t up_since;
-  /** If nonzero, we have been unable to connect since this time. */
-  time_t down_since;
 
   /** The address at which we most recently connected to this OR
    * successfully. */
@@ -233,23 +219,6 @@ free_or_history(void *_hist)
   tor_free(hist);
 }
 
-/** Update an or_history_t object <b>hist</b> so that its uptime/downtime
- * count is up-to-date as of <b>when</b>.
- */
-static void
-update_or_history(or_history_t *hist, time_t when)
-{
-  tor_assert(hist);
-  if (hist->up_since) {
-    tor_assert(!hist->down_since);
-    hist->uptime += (when - hist->up_since);
-    hist->up_since = when;
-  } else if (hist->down_since) {
-    hist->downtime += (when - hist->down_since);
-    hist->down_since = when;
-  }
-}
-
 /** Initialize the static data structures for tracking history. */
 void
 rep_hist_init(void)
@@ -257,99 +226,6 @@ rep_hist_init(void)
   history_map = digestmap_new();
   bw_arrays_init();
   predicted_ports_alloc();
-}
-
-/** Helper: note that we are no longer connected to the router with history
- * <b>hist</b>.  If <b>failed</b>, the connection failed; otherwise, it was
- * closed correctly. */
-static void
-mark_or_down(or_history_t *hist, time_t when, int failed)
-{
-  if (hist->up_since) {
-    hist->uptime += (when - hist->up_since);
-    hist->up_since = 0;
-  }
-  if (failed && !hist->down_since) {
-    hist->down_since = when;
-  }
-}
-
-/** Helper: note that we are connected to the router with history
- * <b>hist</b>. */
-static void
-mark_or_up(or_history_t *hist, time_t when)
-{
-  if (hist->down_since) {
-    hist->downtime += (when - hist->down_since);
-    hist->down_since = 0;
-  }
-  if (!hist->up_since) {
-    hist->up_since = when;
-  }
-}
-
-/** Remember that an attempt to connect to the OR with identity digest
- * <b>id</b> failed at <b>when</b>.
- */
-void
-rep_hist_note_connect_failed(const char* id, time_t when)
-{
-  or_history_t *hist;
-  hist = get_or_history(id);
-  if (!hist)
-    return;
-  ++hist->n_conn_fail;
-  mark_or_down(hist, when, 1);
-  hist->changed = when;
-}
-
-/** Remember that an attempt to connect to the OR with identity digest
- * <b>id</b> succeeded at <b>when</b>.
- */
-void
-rep_hist_note_connect_succeeded(const char* id, time_t when)
-{
-  or_history_t *hist;
-  hist = get_or_history(id);
-  if (!hist)
-    return;
-  ++hist->n_conn_ok;
-  mark_or_up(hist, when);
-  hist->changed = when;
-}
-
-/** Remember that we intentionally closed our connection to the OR
- * with identity digest <b>id</b> at <b>when</b>.
- */
-void
-rep_hist_note_disconnect(const char* id, time_t when)
-{
-  or_history_t *hist;
-  hist = get_or_history(id);
-  if (!hist)
-    return;
-  mark_or_down(hist, when, 0);
-  hist->changed = when;
-}
-
-/** Remember that our connection to the OR with identity digest
- * <b>id</b> had an error and stopped working at <b>when</b>.
- */
-void
-rep_hist_note_connection_died(const char* id, time_t when)
-{
-  or_history_t *hist;
-  if (!id) {
-    /* If conn has no identity, it didn't complete its handshake, or something
-     * went wrong.  Ignore it.
-     */
-    return;
-  }
-  hist = get_or_history(id);
-  if (!hist)
-    return;
-  mark_or_down(hist, when, 1);
-  hist->changed = when;
 }
 
 /** We have just decided that this router with identity digest <b>id</b> is
@@ -488,7 +364,6 @@ rep_hist_make_router_pessimal(const char *id, time_t when)
   tor_assert(hist);
 
   rep_hist_note_router_unreachable(id, when);
-  mark_or_down(hist, when, 1);
 
   hist->weighted_run_length = 0;
   hist->weighted_uptime = 0;
@@ -676,8 +551,6 @@ rep_hist_dump_stats(time_t now, int severity)
   char hexdigest1[HEX_DIGEST_LEN+1];
   or_history_t *or_history;
   void *or_history_p;
-  double uptime;
-  unsigned long upt, downt;
   const node_t *node;
 
   rep_history_clean(now - get_options()->RephistTrackTime);
@@ -697,22 +570,11 @@ rep_hist_dump_stats(time_t now, int severity)
     else
       name1 = "(unknown)";
     base16_encode(hexdigest1, sizeof(hexdigest1), digest1, DIGEST_LEN);
-    update_or_history(or_history, now);
-    upt = or_history->uptime;
-    downt = or_history->downtime;
     s = get_stability(or_history, now);
     stability = (long)s;
-    if (upt+downt) {
-      uptime = ((double)upt) / (upt+downt);
-    } else {
-      uptime=1.0;
-    }
     tor_log(severity, LD_HIST,
-        "OR %s [%s]: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%); "
-        "wmtbf %lu:%02lu:%02lu",
+        "OR %s [%s]: wmtbf %lu:%02lu:%02lu",
         name1, hexdigest1,
-        or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
-        upt, upt+downt, uptime*100.0,
         stability/3600, (stability/60)%60, stability%60);
   }
 }
