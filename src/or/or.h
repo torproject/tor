@@ -2579,6 +2579,12 @@ typedef struct node_t {
    * in order to know what's the hs directory index for this node at the time
    * the consensus is set. */
   struct hsdir_index_t *hsdir_index;
+
+  /* Timestamp indicating when was the last time we tried to connect and
+   * failed. This is used to track if we were able to connect or not to that
+   * node in order to prevent us to retry. A value of 0 means that we haven't
+   * experienced a connection refuse so we can use it. */
+  time_t unable_connect_since_ts;
 } node_t;
 
 /** Linked list of microdesc hash lines for a single router in a directory
