@@ -16,6 +16,7 @@
 #include "memarea.h"
 #include "util_process.h"
 #include "log_test_helpers.h"
+#include "compress_zstd.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -2395,6 +2396,37 @@ test_util_compress_stream_impl(compress_method_t method,
   tor_free(buf2);
   tor_free(buf3);
 }
+
+/** Setup function for compression tests: handles x-zstd:nostatic
+ */
+static void *
+compression_test_setup(const struct testcase_t *testcase)
+{
+  tor_assert(testcase->setup_data);
+  tor_assert(testcase->setup_data != (void*)TT_SKIP);
+  const char *methodname = testcase->setup_data;
+
+  if (!strcmp(methodname, "x-zstd:nostatic")) {
+    methodname = "x-zstd";
+    tor_zstd_set_static_apis_disabled_for_testing(1);
+  }
+
+  return (void *)methodname;
+}
+
+/** Cleanup for compression tests: disables nostatic */
+static int
+compression_test_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)testcase;
+  (void)ptr;
+  tor_zstd_set_static_apis_disabled_for_testing(0);
+  return 1;
+}
+
+static const struct testcase_setup_t compress_setup = {
+  compression_test_setup, compression_test_cleanup
+};
 
 /** Run unit tests for compression functions */
 static void
@@ -6095,22 +6127,22 @@ test_util_get_unquoted_path(void *arg)
   { #name, test_util_ ## name, flags, NULL, NULL }
 
 #define COMPRESS(name, identifier)              \
-  { "compress/" #name, test_util_compress, 0, &passthrough_setup,       \
+  { "compress/" #name, test_util_compress, 0, &compress_setup,          \
     (char*)(identifier) }
 
 #define COMPRESS_CONCAT(name, identifier)                               \
   { "compress_concat/" #name, test_util_decompress_concatenated, 0,     \
-    &passthrough_setup,                                                 \
+    &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_JUNK(name, identifier)                                 \
   { "compress_junk/" #name, test_util_decompress_junk, 0,               \
-    &passthrough_setup,                                                 \
+    &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_DOS(name, identifier)                                  \
   { "compress_dos/" #name, test_util_decompress_dos, 0,                 \
-    &passthrough_setup,                                                 \
+    &compress_setup,                                                    \
     (char*)(identifier) }
 
 #ifdef _WIN32
@@ -6141,11 +6173,13 @@ struct testcase_t util_tests[] = {
   COMPRESS(gzip, "gzip"),
   COMPRESS(lzma, "x-tor-lzma"),
   COMPRESS(zstd, "x-zstd"),
+  COMPRESS(zstd_nostatic, "x-zstd:nostatic"),
   COMPRESS(none, "identity"),
   COMPRESS_CONCAT(zlib, "deflate"),
   COMPRESS_CONCAT(gzip, "gzip"),
   COMPRESS_CONCAT(lzma, "x-tor-lzma"),
   COMPRESS_CONCAT(zstd, "x-zstd"),
+  COMPRESS_CONCAT(zstd_nostatic, "x-zstd:nostatic"),
   COMPRESS_CONCAT(none, "identity"),
   COMPRESS_JUNK(zlib, "deflate"),
   COMPRESS_JUNK(gzip, "gzip"),
@@ -6154,6 +6188,7 @@ struct testcase_t util_tests[] = {
   COMPRESS_DOS(gzip, "gzip"),
   COMPRESS_DOS(lzma, "x-tor-lzma"),
   COMPRESS_DOS(zstd, "x-zstd"),
+  COMPRESS_DOS(zstd_nostatic, "x-zstd:nostatic"),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),
