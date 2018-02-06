@@ -1,4 +1,4 @@
-  o Major bugfixes:
+  o Major bugfixes (netflow padding):
     - Stop adding unneeded channel padding right after we finish flushing
       to a connection that has been trying to flush for many seconds.
       Instead, treat all partial or complete flushes as activity on the
