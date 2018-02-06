@@ -18,6 +18,13 @@
 #include "compress.h"
 #include "compress_zstd.h"
 
+/* This is a lie, but we make sure it doesn't get us in trouble by wrapping
+ * all invocations of zstd's static-only functions in a check to make sure
+ * that the compile-time version matches the run-time version.
+ *
+ * Note: Make sure that this file still builds with this macro disabled. */
+#define ZSTD_STATIC_LINKING_ONLY
+
 #ifdef HAVE_ZSTD
 #include <zstd.h>
 #endif
@@ -82,6 +89,26 @@ tor_zstd_get_header_version_str(void)
   return ZSTD_VERSION_STRING;
 #else
   return NULL;
+#endif
+}
+
+#ifdef TOR_UNIT_TESTS
+static int static_apis_disable_for_testing = 0;
+#endif
+
+/** Return true iff we can use the "static-only" APIs. */
+int
+tor_zstd_can_use_static_apis(void)
+{
+#if defined(ZSTD_STATIC_LINKING_ONLY) && defined(HAVE_ZSTD)
+#ifdef TOR_UNIT_TESTS
+  if (static_apis_disable_for_testing) {
+    return 0;
+  }
+#endif
+  return (ZSTD_VERSION_NUMBER == ZSTD_versionNumber());
+#else
+  return 0;
 #endif
 }
 
@@ -440,3 +467,12 @@ tor_zstd_init(void)
   atomic_counter_init(&total_zstd_allocation);
 }
 
+#ifdef TOR_UNIT_TESTS
+/** Testing only: disable usage of static-only APIs, so we can make sure that
+ * we still work without them. */
+void
+tor_zstd_set_static_apis_disabled_for_testing(int disabled)
+{
+  static_apis_disable_for_testing = disabled;
+}
+#endif
