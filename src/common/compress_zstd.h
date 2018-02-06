@@ -43,6 +43,7 @@ size_t tor_zstd_compress_state_size(const tor_zstd_compress_state_t *state);
 size_t tor_zstd_get_total_allocation(void);
 
 void tor_zstd_init(void);
+void tor_zstd_warn_if_version_mismatched(void);
 
 #ifdef TOR_UNIT_TESTS
 void tor_zstd_set_static_apis_disabled_for_testing(int disabled);
