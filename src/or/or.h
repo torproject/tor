@@ -1818,9 +1818,6 @@ typedef struct entry_connection_t {
    * the exit has sent a CONNECTED cell) and we have chosen to use it.
    */
   unsigned int may_use_optimistic_data : 1;
-
-  /** Are we a socks SocksSocket listener? */
-  unsigned int is_socks_socket:1;
 } entry_connection_t;
 
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
@@ -3794,7 +3791,7 @@ typedef struct {
                                  * for control connections. */
 
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
-  int SocksSocketsGroupWritable; /**< Boolean: Are SOCKS sockets g+rw? */
+  int UnixSocksGroupWritable; /**< Boolean: Are SOCKS Unix sockets g+rw? */
   /** Ports to listen on for directory connections. */
   config_line_t *DirPort_lines;
   config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */

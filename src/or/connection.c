@@ -336,8 +336,6 @@ entry_connection_new(int type, int socket_family)
     entry_conn->entry_cfg.ipv4_traffic = 1;
   else if (socket_family == AF_INET6)
     entry_conn->entry_cfg.ipv6_traffic = 1;
-  else if (socket_family == AF_UNIX)
-    entry_conn->is_socks_socket = 1;
   return entry_conn;
 }
 

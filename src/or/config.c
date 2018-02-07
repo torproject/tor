@@ -171,6 +171,7 @@ static config_abbrev_t option_abbrevs_[] = {
   { "BridgeAuthoritativeDirectory", "BridgeAuthoritativeDir", 0, 0},
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "VirtualAddrNetwork", "VirtualAddrNetworkIPv4", 0, 0},
+  { "SocksSocketsGroupWritable", "UnixSocksGroupWritable", 0, 1},
   { NULL, NULL, 0, 0},
 };
 
@@ -284,7 +285,7 @@ static config_var_t option_vars_[] = {
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
   V(ControlSocketsGroupWritable, BOOL,     "0"),
-  V(SocksSocketsGroupWritable,   BOOL,     "0"),
+  V(UnixSocksGroupWritable,    BOOL,     "0"),
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
@@ -7356,7 +7357,7 @@ parse_ports(or_options_t *options, int validate_only,
 
   *n_ports_out = 0;
 
-  const unsigned gw_flag = options->SocksSocketsGroupWritable ?
+  const unsigned gw_flag = options->UnixSocksGroupWritable ?
     CL_PORT_DFLT_GROUP_WRITABLE : 0;
   if (parse_port_config(ports,
              options->SocksPort_lines,

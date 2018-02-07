@@ -238,7 +238,7 @@ GENERAL OPTIONS
 [[RelayBandwidthBurst]] **RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If not 0, limit the maximum token bucket size (also known as the burst) for
     \_relayed traffic_ to the given number of bytes in each direction.
-    They do not include directory fetches by the relay (from authority 
+    They do not include directory fetches by the relay (from authority
     or other relays), because that is considered "client" activity. (Default: 0)
 
 [[PerConnBWRate]] **PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
@@ -608,10 +608,10 @@ GENERAL OPTIONS
     in accordance to RFC 1929. Both username and password must be between 1 and
     255 characters.
 
-[[SocksSocketsGroupWritable]] **SocksSocketsGroupWritable** **0**|**1**::
+[[UnixSocksGroupWritable]] **UnixSocksGroupWritable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read and
-    write unix sockets (e.g. SocksSocket). If the option is set to 1, make
-    the SocksSocket socket readable and writable by the default GID. (Default: 0)
+    write unix sockets (e.g. SocksPort unix:). If the option is set to 1, make
+    the Unix socket readable and writable by the default GID. (Default: 0)
 
 [[KeepalivePeriod]] **KeepalivePeriod** __NUM__::
     To keep firewalls from expiring connections, send a padding keepalive cell
