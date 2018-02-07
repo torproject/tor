@@ -13,13 +13,6 @@
 #define TOR_REPHIST_H
 
 void rep_hist_init(void);
-void rep_hist_note_connect_failed(const char* nickname, time_t when);
-void rep_hist_note_connect_succeeded(const char* nickname, time_t when);
-void rep_hist_note_disconnect(const char* nickname, time_t when);
-void rep_hist_note_connection_died(const char* nickname, time_t when);
-void rep_hist_note_extend_succeeded(const char *from_name,
-                                    const char *to_name);
-void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_bytes_written(size_t num_bytes, time_t when);

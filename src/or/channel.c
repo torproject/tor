@@ -1882,7 +1882,6 @@ channel_do_open_actions(channel_t *chan)
 
   if (started_here) {
     circuit_build_times_network_is_live(get_circuit_build_times_mutable());
-    rep_hist_note_connect_succeeded(chan->identity_digest, now);
     router_set_status(chan->identity_digest, 1);
   } else {
     /* only report it to the geoip module if it's not a known router */
