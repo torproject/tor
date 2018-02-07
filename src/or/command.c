@@ -286,7 +286,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
              "Received create cell but we're shutting down. Sending back "
              "destroy.");
     channel_send_destroy(cell->circ_id, chan,
-                               END_CIRC_REASON_HIBERNATING);
+                         END_CIRC_REASON_HIBERNATING);
     return;
   }
 

@@ -69,7 +69,7 @@ static int consensus_nf_pad_single_onion;
 /**
  * This macro tells us if either end of the channel is connected to a client.
  * (If we're not a server, we're definitely a client. If the channel thinks
- *  its a client, use that. Then finally verify in the consensus).
+ *  it's a client, use that. Then finally verify in the consensus).
  */
 #define CHANNEL_IS_CLIENT(chan, options) \
   (!public_server_mode((options)) || channel_is_client(chan) || \

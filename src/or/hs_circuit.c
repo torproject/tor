@@ -699,12 +699,12 @@ hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
  *
  * We currently relaunch connections to rendezvous points if:
  * - A rendezvous circuit timed out before connecting to RP.
- * - The redenzvous circuit failed to connect to the RP.
+ * - The rendezvous circuit failed to connect to the RP.
  *
  * We avoid relaunching a connection to this rendezvous point if:
- * - We have already tried MAX_REND_FAILURES times to connect to this RP.
+ * - We have already tried MAX_REND_FAILURES times to connect to this RP,
  * - We've been trying to connect to this RP for more than MAX_REND_TIMEOUT
- *   seconds
+ *   seconds, or
  * - We've already retried this specific rendezvous circuit.
  */
 void
@@ -718,11 +718,11 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
     goto done;
   }
 
-  /* Flag the circuit that we are relaunching so to avoid to relaunch twice a
+  /* Flag the circuit that we are relaunching, to avoid to relaunch twice a
    * circuit to the same rendezvous point at the same time. */
   circ->hs_service_side_rend_circ_has_been_relaunched = 1;
 
-  /* Legacy service don't have an hidden service ident. */
+  /* Legacy service don't have a hidden service ident. */
   if (circ->hs_ident) {
     retry_service_rendezvous_point(circ);
   } else {

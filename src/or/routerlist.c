@@ -235,7 +235,7 @@ get_n_authorities(dirinfo_type_t type)
   return n;
 }
 
-/** Initialise schedule, want_authority, and increment on in the download
+/** Initialise schedule, want_authority, and increment_on in the download
  * status dlstatus, then call download_status_reset() on it.
  * It is safe to call this function or download_status_reset() multiple times
  * on a new dlstatus. But it should *not* be called after a dlstatus has been
@@ -1170,7 +1170,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
     } SMARTLIST_FOREACH_END(voter);
   }
 
-  /* Bridge clients look up the node for the dir_hint  */
+  /* Bridge clients look up the node for the dir_hint */
   const node_t *node = NULL;
   /* All clients, including bridge clients, look up the routerstatus for the
    * dir_hint */

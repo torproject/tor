@@ -373,7 +373,7 @@ set_scheduler_run_interval(void)
   }
 }
 
-/* Return true iff the channel hasn’t hit its kist-imposed write limit yet */
+/* Return true iff the channel hasn't hit its kist-imposed write limit yet */
 static int
 socket_can_write(socket_table_t *table, const channel_t *chan)
 {

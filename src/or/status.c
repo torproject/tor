@@ -42,7 +42,7 @@ count_circuits(void)
 }
 
 /** Take seconds <b>secs</b> and return a newly allocated human-readable
- * uptime string */
+ * uptime string. */
 STATIC char *
 secs_to_uptime(long secs)
 {

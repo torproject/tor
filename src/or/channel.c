@@ -1435,7 +1435,6 @@ channel_clear_remote_end(channel_t *chan)
 /**
  * Write to a channel the given packed cell.
  *
- *
  * Two possible errors can happen. Either the channel is not opened or the
  * lower layer (specialized channel) failed to write it. In both cases, it is
  * the caller responsibility to free the cell.
@@ -1864,12 +1863,11 @@ channel_listener_process_incoming(channel_listener_t *listener)
  * this comes from the old connection_or_set_state_open() of connection_or.c.
  *
  * Because of this mechanism, future channel_t subclasses should take care
- * not to change a channel to from CHANNEL_STATE_OPENING to CHANNEL_STATE_OPEN
+ * not to change a channel from CHANNEL_STATE_OPENING to CHANNEL_STATE_OPEN
  * until there is positive confirmation that the network is operational.
  * In particular, anything UDP-based should not make this transition until a
  * packet is received from the other side.
  */
-
 void
 channel_do_open_actions(channel_t *chan)
 {
@@ -3199,7 +3197,7 @@ channel_num_cells_writeable(channel_t *chan)
  ********************/
 
 /**
- * Update the created timestamp for a channel
+ * Update the created timestamp for a channel.
  *
  * This updates the channel's created timestamp and should only be called
  * from channel_init().
@@ -3216,7 +3214,7 @@ channel_timestamp_created(channel_t *chan)
 }
 
 /**
- * Update the created timestamp for a channel listener
+ * Update the created timestamp for a channel listener.
  *
  * This updates the channel listener's created timestamp and should only be
  * called from channel_init_listener().
@@ -3233,7 +3231,7 @@ channel_listener_timestamp_created(channel_listener_t *chan_l)
 }
 
 /**
- * Update the last active timestamp for a channel
+ * Update the last active timestamp for a channel.
  *
  * This function updates the channel's last active timestamp; it should be
  * called by the lower layer whenever there is activity on the channel which
@@ -3258,9 +3256,8 @@ channel_timestamp_active(channel_t *chan)
 }
 
 /**
- * Update the last active timestamp for a channel listener
+ * Update the last active timestamp for a channel listener.
  */
-
 void
 channel_listener_timestamp_active(channel_listener_t *chan_l)
 {
@@ -3278,7 +3275,6 @@ channel_listener_timestamp_active(channel_listener_t *chan_l)
  * should be called whenever a new incoming channel is accepted on a
  * listener.
  */
-
 void
 channel_listener_timestamp_accepted(channel_listener_t *chan_l)
 {
@@ -3308,7 +3304,7 @@ channel_timestamp_client(channel_t *chan)
 }
 
 /**
- * Update the recv timestamp
+ * Update the recv timestamp.
  *
  * This is called whenever we get an incoming cell from the lower layer.
  * This also updates the active timestamp.
@@ -3329,7 +3325,8 @@ channel_timestamp_recv(channel_t *chan)
 }
 
 /**
- * Update the xmit timestamp
+ * Update the xmit timestamp.
+ *
  * This is called whenever we pass an outgoing cell to the lower layer.  This
  * also updates the active timestamp.
  */

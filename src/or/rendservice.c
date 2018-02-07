@@ -4286,7 +4286,7 @@ rend_service_dump_stats(int severity)
 }
 
 /** Given <b>conn</b>, a rendezvous exit stream, look up the hidden service for
- * 'circ', and look up the port and address based on conn-\>port.
+ * <b>circ</b>, and look up the port and address based on conn-\>port.
  * Assign the actual conn-\>addr and conn-\>port. Return -2 on failure
  * for which the circuit should be closed, -1 on other failure,
  * or 0 for success.

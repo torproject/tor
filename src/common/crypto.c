@@ -1915,7 +1915,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 
   return 0;
 #elif defined(__linux__) && defined(SYS_getrandom)
-  static int getrandom_works = 1; /* Be optimitic about our chances... */
+  static int getrandom_works = 1; /* Be optimistic about our chances... */
 
   /* getrandom() isn't as straightforward as getentropy(), and has
    * no glibc wrapper.

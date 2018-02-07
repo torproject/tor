@@ -2890,7 +2890,7 @@ compute_num_cpus(void)
 /** Helper: Deal with confused or out-of-bounds values from localtime_r and
  * friends.  (On some platforms, they can give out-of-bounds values or can
  * return NULL.)  If <b>islocal</b>, this is a localtime result; otherwise
- * it's from gmtime.  The function returned <b>r</b>, when given <b>timep</b>
+ * it's from gmtime.  The function returns <b>r</b>, when given <b>timep</b>
  * as its input. If we need to store new results, store them in
  * <b>resultbuf</b>. */
 static struct tm *

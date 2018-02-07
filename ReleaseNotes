@@ -621,7 +621,7 @@ Changes in version 0.3.2.9 - 2018-01-09
       Hurd. Fixes bug 23098; bugfix on 0.3.1.1-alpha.
     - Fix a bug in the bit-counting parts of our timing-wheel code on
       MSVC. (Note that MSVC is still not a supported build platform, due
-      to cyptographic timing channel risks.) Fixes bug 24633; bugfix
+      to cryptographic timing channel risks.) Fixes bug 24633; bugfix
       on 0.2.9.1-alpha.
 
   o Minor bugfixes (relay):

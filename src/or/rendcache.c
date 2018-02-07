@@ -48,7 +48,7 @@ STATIC digestmap_t *rend_cache_v2_dir = NULL;
  * Once a descriptor is removed from the rend cache or expires, the entry
  * in this cache is also removed for the service ID.
  *
- * This scheme allows us to not relay on the descriptor's timestamp (which
+ * This scheme allows us to not rely on the descriptor's timestamp (which
  * is rounded down to the hour) to know if we have a newer descriptor. We
  * only rely on the usability of intro points from an internal state. */
 STATIC strmap_t *rend_cache_failure = NULL;

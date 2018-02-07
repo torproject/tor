@@ -1588,7 +1588,7 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
       }
     }
 
-    /* We set this after sending the verions cell. */
+    /* We set this after sending the versions cell. */
     /*XXXXX symbolic const.*/
     TLS_CHAN_TO_BASE(chan)->wide_circ_ids =
       chan->conn->link_proto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;

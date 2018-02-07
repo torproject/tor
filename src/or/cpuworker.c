@@ -250,7 +250,7 @@ should_time_request(uint16_t onionskin_type)
 }
 
 /** Return an estimate of how many microseconds we will need for a single
- * cpuworker to to process <b>n_requests</b> onionskins of type
+ * cpuworker to process <b>n_requests</b> onionskins of type
  * <b>onionskin_type</b>. */
 uint64_t
 estimated_usec_for_onionskins(uint32_t n_requests, uint16_t onionskin_type)

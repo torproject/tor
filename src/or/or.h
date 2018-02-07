@@ -5380,7 +5380,7 @@ typedef struct rend_intro_point_t {
    */
   int accepted_introduce2_count;
 
-  /** (Service side only) Number of maximum INTRODUCE2 cells that this IP
+  /** (Service side only) Maximum number of INTRODUCE2 cells that this IP
    * will accept. This is a random value between
    * INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS and
    * INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS. */
