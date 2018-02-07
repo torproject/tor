@@ -220,9 +220,10 @@ struct guard_selection_s {
   guard_selection_type_t type;
 
   /**
-   * A value of 1 means that primary_entry_guards is up-to-date; 0
-   * means we need to recalculate it before using primary_entry_guards
-   * or the is_primary flag on any guard.
+   * A value of 1 means that primary_entry_guards is up-to-date with respect to
+   * the consensus and status info that we currently have; 0 means we need to
+   * recalculate it before using primary_entry_guards or the is_primary flag on
+   * any guard.
    */
   int primary_guards_up_to_date;
 
