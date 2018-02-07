@@ -38,7 +38,6 @@ typedef enum {
  * to a particular node, and once constructed support the abstract operations
  * defined below.
  */
-
 struct channel_s {
   /** Magic number for type-checking cast macros */
   uint32_t magic;
