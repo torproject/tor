@@ -5541,10 +5541,10 @@ test_util_monotonic_time(void *arg)
   tt_u64_op(usec1, OP_GE, nsec1 / 1000);
   tt_u64_op(msecc1, OP_GE, nsecc1 / 1000000);
   tt_u64_op(usecc1, OP_GE, nsecc1 / 1000);
-  tt_u64_op(msec1, OP_LE, nsec1 / 1000000 + 1);
-  tt_u64_op(usec1, OP_LE, nsec1 / 1000 + 1000);
-  tt_u64_op(msecc1, OP_LE, nsecc1 / 1000000 + 1);
-  tt_u64_op(usecc1, OP_LE, nsecc1 / 1000 + 1000);
+  tt_u64_op(msec1, OP_LE, nsec1 / 1000000 + 10);
+  tt_u64_op(usec1, OP_LE, nsec1 / 1000 + 10000);
+  tt_u64_op(msecc1, OP_LE, nsecc1 / 1000000 + 10);
+  tt_u64_op(usecc1, OP_LE, nsecc1 / 1000 + 10000);
 
  done:
   ;
