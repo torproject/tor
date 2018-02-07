@@ -745,8 +745,8 @@ get_fake_auth_client_lines(void)
 
 /* Create the inner layer of the descriptor (which includes the intro points,
  * etc.). Return a newly-allocated string with the layer plaintext, or NULL if
- * an error occurred. It's the responsibility of the caller to free the returned
- * string. */
+ * an error occurred. It's the responsibility of the caller to free the
+ * returned string. */
 static char *
 get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
 {
@@ -802,8 +802,8 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
 /* Create the middle layer of the descriptor, which includes the client auth
  * data and the encrypted inner layer (provided as a base64 string at
  * <b>layer2_b64_ciphertext</b>). Return a newly-allocated string with the
- * layer plaintext, or NULL if an error occurred. It's the responsibility of the
- * caller to free the returned string. */
+ * layer plaintext, or NULL if an error occurred. It's the responsibility of
+ * the caller to free the returned string. */
 static char *
 get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
                                     const char *layer2_b64_ciphertext)

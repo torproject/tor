@@ -225,8 +225,8 @@ ed25519_public_key_is_zero(const ed25519_public_key_t *pubkey)
 
 /* Return a heap-allocated array that contains <b>msg</b> prefixed by the
  * string <b>prefix_str</b>. Set <b>final_msg_len_out</b> to the size of the
- * final array. If an error occurred, return NULL. It's the resonsibility of the
- * caller to free the returned array. */
+ * final array. If an error occurred, return NULL. It's the responsibility of
+ * the caller to free the returned array. */
 static uint8_t *
 get_prefixed_msg(const uint8_t *msg, size_t msg_len,
                  const char *prefix_str,
