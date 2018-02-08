@@ -275,6 +275,17 @@ nodelist_add_microdesc(microdesc_t *md)
   return node;
 }
 
+/* Default value. */
+#define ESTIMATED_ADDRESS_PER_NODE 2
+
+/* Return the estimated number of address per node_t. This is used for the
+ * size of the bloom filter in the nodelist (node_addrs). */
+MOCK_IMPL(int,
+get_estimated_address_per_node, (void))
+{
+  return ESTIMATED_ADDRESS_PER_NODE;
+}
+
 /** Tell the nodelist that the current usable consensus is <b>ns</b>.
  * This makes the nodelist change all of the routerstatus entries for
  * the nodes, drop nodes that no longer have enough info to get used,
@@ -294,7 +305,8 @@ nodelist_set_consensus(networkstatus_t *ns)
                     node->rs = NULL);
 
   /* Conservatively estimate that every node will have 2 addresses. */
-  const int estimated_addresses = smartlist_len(ns->routerstatus_list) * 2;
+  const int estimated_addresses = smartlist_len(ns->routerstatus_list) *
+                                  get_estimated_address_per_node();
   address_set_free(the_nodelist->node_addrs);
   the_nodelist->node_addrs = address_set_new(estimated_addresses);
 

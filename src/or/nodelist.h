@@ -125,5 +125,7 @@ void router_dir_info_changed(void);
 const char *get_dir_info_status_string(void);
 int count_loading_descriptors_progress(void);
 
+MOCK_DECL(int, get_estimated_address_per_node, (void));
+
 #endif
 

@@ -1182,6 +1182,7 @@ struct testgroup_t testgroups[] = {
   { "accounting/", accounting_tests },
   { "addr/", addr_tests },
   { "address/", address_tests },
+  { "address_set/", address_set_tests },
   { "buffer/", buffer_tests },
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
