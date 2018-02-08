@@ -149,13 +149,11 @@ pub extern "C" fn protover_get_supported_protocols() -> *const c_char {
     // programming error.
     assert!(byte_slice_is_c_like(SUPPORTED_PROTOCOLS));
 
-    // It's okay to call the "unchecked" version of the function because
+    // It's okay to unwrap the result of this function because
     // we can see that the bytes we're passing into it 1) are valid UTF-8,
     // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
     // byte.
-    unsafe {
-        supported = CStr::from_bytes_with_nul_unchecked(SUPPORTED_PROTOCOLS);
-    }
+    supported = CStr::from_bytes_with_nul(SUPPORTED_PROTOCOLS).unwrap();
 
     supported.as_ptr()
 }
@@ -230,13 +228,11 @@ pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const
     // programming error.
     assert!(byte_slice_is_c_like(elder_protocols));
 
-    // It's okay to call the "unchecked" version of the function because
+    // It's okay to unwrap the result of this function because
     // we can see that the bytes we're passing into it 1) are valid UTF-8,
     // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
     // byte.
-    unsafe {
-        supported = CStr::from_bytes_with_nul_unchecked(elder_protocols);
-    }
+    supported = CStr::from_bytes_with_nul(elder_protocols).unwrap();
 
     supported.as_ptr()
 }

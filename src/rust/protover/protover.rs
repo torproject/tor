@@ -106,10 +106,11 @@ impl FromStr for Proto {
 /// "HSDir=1-1 LinkAuth=1"
 ///
 pub fn get_supported_protocols() -> &'static str {
-    unsafe {
-        // The `len() - 1` is to remove the NUL byte.
-        str::from_utf8_unchecked(&SUPPORTED_PROTOCOLS[..SUPPORTED_PROTOCOLS.len() - 1])
-    }
+    // The `len() - 1` is to remove the NUL byte.
+    // The `unwrap` is safe becauase we SUPPORTED_PROTOCOLS is under
+    // our control.
+    str::from_utf8(&SUPPORTED_PROTOCOLS[..SUPPORTED_PROTOCOLS.len() - 1])
+        .unwrap()
 }
 
 /// Translates a vector representation of a protocol list into a HashMap
