@@ -22,6 +22,7 @@ const node_t *node_get_by_hex_id(const char *identity_digest);
 node_t *nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out);
 node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(networkstatus_t *ns);
+int nodelist_probably_contains_address(const tor_addr_t *addr);
 
 void nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md);
 void nodelist_remove_routerinfo(routerinfo_t *ri);
@@ -123,6 +124,8 @@ consensus_path_type_t router_have_consensus_path(void);
 void router_dir_info_changed(void);
 const char *get_dir_info_status_string(void);
 int count_loading_descriptors_progress(void);
+
+MOCK_DECL(int, get_estimated_address_per_node, (void));
 
 #endif
 

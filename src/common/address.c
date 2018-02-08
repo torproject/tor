@@ -1200,6 +1200,28 @@ tor_addr_hash(const tor_addr_t *addr)
   }
 }
 
+/** As tor_addr_hash, but use a particular siphash key. */
+uint64_t
+tor_addr_keyed_hash(const struct sipkey *key, const tor_addr_t *addr)
+{
+  /* This is duplicate code with tor_addr_hash, since this function needs to
+   * be backportable all the way to 0.2.9. */
+
+  switch (tor_addr_family(addr)) {
+  case AF_INET:
+    return siphash24(&addr->addr.in_addr.s_addr, 4, key);
+  case AF_UNSPEC:
+    return 0x4e4d5342;
+  case AF_INET6:
+    return siphash24(&addr->addr.in6_addr.s6_addr, 16, key);
+  default:
+    /* LCOV_EXCL_START */
+    tor_fragile_assert();
+    return 0;
+    /* LCOV_EXCL_END */
+  }
+}
+
 /** Return a newly allocated string with a representation of <b>addr</b>. */
 char *
 tor_addr_to_str_dup(const tor_addr_t *addr)
