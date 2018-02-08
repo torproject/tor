@@ -12,6 +12,9 @@ use std::ffi::CString;
 use protover::*;
 use smartlist::*;
 use tor_allocate::allocate_and_copy_string;
+use tor_util::strings::byte_slice_is_c_like;
+use tor_util::strings::empty_static_cstr;
+
 
 /// Translate C enums to Rust Proto enums, using the integer value of the C
 /// enum to map to its associated Rust enum
@@ -137,18 +140,24 @@ pub extern "C" fn protocol_list_supports_protocol_or_later(
 /// Provide an interface for C to translate arguments and return types for
 /// protover::get_supported_protocols
 #[no_mangle]
-pub extern "C" fn protover_get_supported_protocols() -> *mut c_char {
-    // Not handling errors when unwrapping as the content is controlled
-    // and is an empty string
-    let empty = CString::new("").unwrap();
+pub extern "C" fn protover_get_supported_protocols() -> *const c_char {
+    let supported: &'static CStr;
 
-    let supported = get_supported_protocols();
-    let c_supported = match CString::new(supported) {
-        Ok(n) => n,
-        Err(_) => return empty.into_raw(),
-    };
+    // If we're going to pass it to C, there cannot be any intermediate NUL
+    // bytes.  An assert is okay here, since changing the const byte slice
+    // in protover.rs to contain a NUL byte somewhere in the middle would be a
+    // programming error.
+    assert!(byte_slice_is_c_like(SUPPORTED_PROTOCOLS));
 
-    c_supported.into_raw()
+    // It's okay to call the "unchecked" version of the function because
+    // we can see that the bytes we're passing into it 1) are valid UTF-8,
+    // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
+    // byte.
+    unsafe {
+        supported = CStr::from_bytes_with_nul_unchecked(SUPPORTED_PROTOCOLS);
+    }
+
+    supported.as_ptr()
 }
 
 /// Provide an interface for C to translate arguments and return types for
@@ -193,15 +202,15 @@ pub extern "C" fn protover_is_supported_here(
 /// Provide an interface for C to translate arguments and return types for
 /// protover::compute_for_old_tor
 #[no_mangle]
-pub extern "C" fn protover_compute_for_old_tor(
-    version: *const c_char,
-) -> *mut c_char {
-    // Not handling errors when unwrapping as the content is controlled
-    // and is an empty string
-    let empty = String::new();
+pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const c_char {
+    let supported: &'static CStr;
+    let elder_protocols: &'static [u8];
+    let empty: &'static CStr;
+
+    empty = empty_static_cstr();
 
     if version.is_null() {
-        return allocate_and_copy_string(&empty);
+        return empty.as_ptr();
     }
 
     // Require an unsafe block to read the version from a C string. The pointer
@@ -210,10 +219,24 @@ pub extern "C" fn protover_compute_for_old_tor(
 
     let version = match c_str.to_str() {
         Ok(n) => n,
-        Err(_) => return allocate_and_copy_string(&empty),
+        Err(_) => return empty.as_ptr(),
     };
 
-    let supported = compute_for_old_tor(&version);
+    elder_protocols = compute_for_old_tor(&version);
 
-    allocate_and_copy_string(&supported)
+    // If we're going to pass it to C, there cannot be any intermediate NUL
+    // bytes.  An assert is okay here, since changing the const byte slice
+    // in protover.rs to contain a NUL byte somewhere in the middle would be a
+    // programming error.
+    assert!(byte_slice_is_c_like(elder_protocols));
+
+    // It's okay to call the "unchecked" version of the function because
+    // we can see that the bytes we're passing into it 1) are valid UTF-8,
+    // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
+    // byte.
+    unsafe {
+        supported = CStr::from_bytes_with_nul_unchecked(elder_protocols);
+    }
+
+    supported.as_ptr()
 }
