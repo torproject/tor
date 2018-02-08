@@ -730,8 +730,8 @@ pub fn is_supported_here(proto: Proto, vers: u32) -> bool {
 ///
 /// # Returns
 ///
-/// A `&'static [u8]` whose value is series of pairs, comprising of the protocol name
-/// and versions that it supports. The string takes the following format:
+/// A `&'static [u8]` encoding a list of protocol names and supported
+/// versions. The string takes the following format:
 ///
 /// "HSDir=1-1 LinkAuth=1"
 ///
