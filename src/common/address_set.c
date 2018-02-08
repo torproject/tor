@@ -97,6 +97,15 @@ address_set_add(address_set_t *set, const struct tor_addr_t *addr)
   }
 }
 
+/** As address_set_add(), but take an ipv4 address in host order. */
+void
+address_set_add_ipv4h(address_set_t *set, uint32_t addr)
+{
+  tor_addr_t a;
+  tor_addr_from_ipv4h(&a, addr);
+  address_set_add(set, &a);
+}
+
 /**
  * Return true if <b>addr</b> if a member of <b>set</b>.  (And probably,
  * return false if <b>addr</b> is not a member of set.)
