@@ -5,6 +5,7 @@ use external::c_tor_version_as_new_as;
 
 use std::str;
 use std::str::FromStr;
+use std::ffi::CStr;
 use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::ops::Range;
@@ -24,30 +25,6 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 ///
 /// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
 const MAX_PROTOCOLS_TO_EXPAND: u32 = 500;
-
-/// Currently supported protocols and their versions, as a byte-slice.
-///
-/// # Warning
-///
-/// This byte-slice ends in a NUL byte.  This is so that we can directly convert
-/// it to an `&'static CStr` in the FFI code, in order to hand the static string
-/// to C in a way that is compatible with C static strings.
-///
-/// Rust code which wishes to accesses this string should use
-/// `protover::get_supported_protocols()` instead.
-///
-/// C_RUST_COUPLED: src/or/protover.c `protover_get_supported_protocols`
-pub(crate) const SUPPORTED_PROTOCOLS: &'static [u8] =
-    b"Cons=1-2 \
-    Desc=1-2 \
-    DirCache=1-2 \
-    HSDir=1-2 \
-    HSIntro=3-4 \
-    HSRend=1-2 \
-    Link=1-5 \
-    LinkAuth=1,3 \
-    Microdesc=1-2 \
-    Relay=1-2\0";
 
 /// Known subprotocols in Tor. Indicates which subprotocol a relay supports.
 ///
@@ -96,21 +73,51 @@ impl FromStr for Proto {
     }
 }
 
-/// Get the string representation of current supported protocols
+/// Get a CStr representation of current supported protocols, for
+/// passing to C, or for converting to a `&str` for Rust.
 ///
 /// # Returns
 ///
-/// A `String` whose value is the existing protocols supported by tor.
+/// An `&'static CStr` whose value is the existing protocols supported by tor.
 /// Returned data is in the format as follows:
 ///
 /// "HSDir=1-1 LinkAuth=1"
 ///
-pub fn get_supported_protocols() -> &'static str {
-    // The `len() - 1` is to remove the NUL byte.
-    // The `unwrap` is safe becauase we SUPPORTED_PROTOCOLS is under
-    // our control.
-    str::from_utf8(&SUPPORTED_PROTOCOLS[..SUPPORTED_PROTOCOLS.len() - 1])
-        .unwrap_or("")
+/// # Note
+///
+/// Rust code can use the `&'static CStr` as a normal `&'a str` by
+/// calling `protover::get_supported_protocols`.
+///
+//  C_RUST_COUPLED: src/or/protover.c `protover_get_supported_protocols`
+pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
+    cstr!("Cons=1-2 \
+           Desc=1-2 \
+           DirCache=1-2 \
+           HSDir=1-2 \
+           HSIntro=3-4 \
+           HSRend=1-2 \
+           Link=1-5 \
+           LinkAuth=1,3 \
+           Microdesc=1-2 \
+           Relay=1-2")
+}
+
+/// Get a string representation of current supported protocols.
+///
+/// # Returns
+///
+/// An `&'a str` whose value is the existing protocols supported by tor.
+/// Returned data is in the format as follows:
+///
+/// "HSDir=1-1 LinkAuth=1"
+pub fn get_supported_protocols<'a>() -> &'a str {
+    let supported_cstr: &'static CStr = get_supported_protocols_cstr();
+    let supported: &str = match supported_cstr.to_str() {
+        Ok(x)  => x,
+        Err(_) => "",
+    };
+
+    supported
 }
 
 pub struct SupportedProtocols(HashMap<Proto, Versions>);
