@@ -33,19 +33,18 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
       bug 25070; bugfix on 0.3.1.1-alpha.
 
   o Major bugfixes (scheduler, consensus):
-    - The scheduler subsystem was failing to promptly notice changes
-      in consensus parameters, making it harder to switch schedulers
+    - The scheduler subsystem was failing to promptly notice changes in
+      consensus parameters, making it harder to switch schedulers
       network-wide. Fixes bug 24975; bugfix on 0.3.2.1-alpha.
 
   o Minor features (denial-of-service avoidance):
     - Make our OOM handler aware of the geoip client history cache so it
-      doesn't fill up the memory. This check is important for IPv6
-      and our DoS mitigation subsystem. Closes ticket 25122.
+      doesn't fill up the memory. This check is important for IPv6 and
+      our DoS mitigation subsystem. Closes ticket 25122.
 
   o Minor features (directory authority):
     - When directory authorities are unable to add signatures to a
-      pending consensus, log the
-      reason why. Closes ticket 24849.
+      pending consensus, log the reason why. Closes ticket 24849.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the February 7 2018 Maxmind GeoLite2
@@ -59,14 +58,14 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
   o Minor bugfix (channel connection):
     - Use the actual observed address of an incoming relay connection,
       not the canonical address of the relay from its descriptor, when
-      making decisions about how to handle the incoming connection. Fixes
-      bug 24952; bugfix on 0.2.4.11-alpha. Patch by "ffmancera".
+      making decisions about how to handle the incoming connection.
+      Fixes bug 24952; bugfix on 0.2.4.11-alpha. Patch by "ffmancera".
 
   o Minor bugfix (directory authority):
     - Directory authorities, when refusing a descriptor from a rejected
-      relay, now explicitly tell the relay (in its logs) to set a
-      valid ContactInfo address and contact the bad-relays@ mailing
-      list. Fixes bug 25170; bugfix on 0.2.9.1.
+      relay, now explicitly tell the relay (in its logs) to set a valid
+      ContactInfo address and contact the bad-relays@ mailing list.
+      Fixes bug 25170; bugfix on 0.2.9.1.
 
   o Minor bugfixes (all versions of Tor):
     - Use the "misspell" tool to detect and fix typos throughout the
@@ -81,16 +80,16 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
 
   o Minor bugfixes (correctness):
     - Remove a nonworking, unnecessary check to see whether a circuit
-      hop's identity digest was set when the circuit failed. Fixes bug 24927;
-      bugfix on 0.2.4.4-alpha.
+      hop's identity digest was set when the circuit failed. Fixes bug
+      24927; bugfix on 0.2.4.4-alpha.
 
   o Minor bugfixes (logging):
     - Don't treat inability to store a cached consensus object as a bug:
       it can happen normally when we are out of disk space. Fixes bug
       24859; bugfix on 0.3.1.1-alpha.
     - Fix a (mostly harmless) race condition when invoking
-      LOG_PROTOCOL_WARN message from a subthread while the torrc options are
-      changing. Fixes bug 23954; bugfix on 0.1.1.9-alpha.
+      LOG_PROTOCOL_WARN message from a subthread while the torrc options
+      are changing. Fixes bug 23954; bugfix on 0.1.1.9-alpha.
 
   o Minor bugfixes (onion services):
     - Remove a BUG() statement when a client fetches an onion descriptor
@@ -120,25 +119,21 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
 
   o Minor bugfixes (scheduler, KIST):
     - Avoid adding the same channel twice in the KIST scheduler pending
-      list, which would waste CPU cycles.
-      Fixes bug 24700; bugfix on 0.3.2.1-alpha.
+      list, which would waste CPU cycles. Fixes bug 24700; bugfix
+      on 0.3.2.1-alpha.
 
   o Minor bugfixes (unit test, monotonic time):
-    - Increase a constant (1msec to 10msec) in the monotonic time test that
-      makes sure the nsec/usec/msec times read are synchronized. This
-      change was needed to accommodate slow systems like armel or when
-      the clock_gettime() is not a VDSO on the running kernel. Fixes bug
-      25113; bugfix on 0.2.9.1.
+    - Increase a constant (1msec to 10msec) in the monotonic time test
+      that makes sure the nsec/usec/msec times read are synchronized.
+      This change was needed to accommodate slow systems like armel or
+      when the clock_gettime() is not a VDSO on the running kernel.
+      Fixes bug 25113; bugfix on 0.2.9.1.
 
   o Minor bugfixes (v3 onion services):
     - Look at the "HSRend" protocol version, not the "HSDir" protocol
       version, when deciding whether a consensus entry can support the
       v3 onion service protocol as a rendezvous point. Fixes bug 25105;
       bugfix on 0.3.2.1-alpha.
-
-  o Documentation (man page):
-    - The HiddenServiceVersion torrc option accepts only one number:
-      either version 2 or 3. Closes ticket 25026; bugfix on 0.3.2.2-alpha.
 
   o Code simplification and refactoring:
     - Remove the unused nodelist_recompute_all_hsdir_indices(). Closes
@@ -147,6 +142,11 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
       and connection status but that in reality we aren't using for
       anything other than stats logged by a SIGUSR1 signal. Closes
       ticket 25163.
+
+  o Documentation (man page):
+    - The HiddenServiceVersion torrc option accepts only one number:
+      either version 2 or 3. Closes ticket 25026; bugfix
+      on 0.3.2.2-alpha.
 
 
 Changes in version 0.3.3.1-alpha - 2018-01-25
