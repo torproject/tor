@@ -34,7 +34,7 @@
  * independent siphashes rather than messing around with bit-shifts.  The
  * approach here is probably more sound, and we should prefer it if&when we
  * unify the implementations.
- **/
+ */
 
 struct address_set_t {
   /** siphash keys to make N_HASHES independent hashes for each address. */
@@ -63,7 +63,7 @@ address_set_new(int max_addresses_guess)
 }
 
 /**
- * Release all storage associated with <b>set</b>
+ * Release all storage associated with <b>set</b>.
  */
 void
 address_set_free(address_set_t *set)
@@ -107,7 +107,7 @@ address_set_add_ipv4h(address_set_t *set, uint32_t addr)
 }
 
 /**
- * Return true if <b>addr</b> if a member of <b>set</b>.  (And probably,
+ * Return true if <b>addr</b> is a member of <b>set</b>.  (And probably,
  * return false if <b>addr</b> is not a member of set.)
  */
 int

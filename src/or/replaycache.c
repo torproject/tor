@@ -26,7 +26,6 @@
 
 /** Free the replaycache r and all of its entries.
  */
-
 void
 replaycache_free_(replaycache_t *r)
 {
@@ -44,7 +43,6 @@ replaycache_free_(replaycache_t *r)
  * for entries to age out and interval is the time after which the cache
  * should be scrubbed for old entries.
  */
-
 replaycache_t *
 replaycache_new(time_t horizon, time_t interval)
 {
@@ -72,9 +70,8 @@ replaycache_new(time_t horizon, time_t interval)
   return r;
 }
 
-/** See documentation for replaycache_add_and_test()
+/** See documentation for replaycache_add_and_test().
  */
-
 STATIC int
 replaycache_add_and_test_internal(
     time_t present, replaycache_t *r, const void *data, size_t len,
@@ -136,9 +133,8 @@ replaycache_add_and_test_internal(
   return rv;
 }
 
-/** See documentation for replaycache_scrub_if_needed()
+/** See documentation for replaycache_scrub_if_needed().
  */
-
 STATIC void
 replaycache_scrub_if_needed_internal(time_t present, replaycache_t *r)
 {
@@ -186,7 +182,6 @@ replaycache_scrub_if_needed_internal(time_t present, replaycache_t *r)
  * and the function will return 1 if it was already seen within the cache's
  * horizon, or 0 otherwise.
  */
-
 int
 replaycache_add_and_test(replaycache_t *r, const void *data, size_t len)
 {
@@ -196,7 +191,6 @@ replaycache_add_and_test(replaycache_t *r, const void *data, size_t len)
 /** Like replaycache_add_and_test(), but if it's a hit also return the time
  * elapsed since this digest was last seen.
  */
-
 int
 replaycache_add_test_and_elapsed(
     replaycache_t *r, const void *data, size_t len, time_t *elapsed)
@@ -207,7 +201,6 @@ replaycache_add_test_and_elapsed(
 /** Scrub aged entries out of r if sufficiently long has elapsed since r was
  * last scrubbed.
  */
-
 void
 replaycache_scrub_if_needed(replaycache_t *r)
 {

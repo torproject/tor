@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file addressset.h
+ * \file address_set.h
  * \brief Types to handle sets of addresses.
  *
  * This module was first written on a semi-emergency basis to improve the
