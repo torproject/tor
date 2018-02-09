@@ -57,10 +57,10 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
       ticket 24972.
 
   o Minor bugfix (channel connection):
-    - The accurate address of a connection is real_addr, not the addr
-      member. TLS Channel remote address is now real_addr content
-      instead of addr member. Fixes bug 24952; bugfix on
-      0.2.4.11-alpha. Patch by "ffmancera".
+    - Use the actual observed address of an incoming relay connection,
+      not the canonical address of the relay from its descriptor, when
+      making decisions about how to handle the incoming connection. Fixes
+      bug 24952; bugfix on 0.2.4.11-alpha. Patch by "ffmancera".
 
   o Minor bugfix (directory authority):
     - Directory authorities, when refusing a descriptor from a rejected
@@ -120,11 +120,11 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
 
   o Minor bugfixes (scheduler, KIST):
     - Avoid adding the same channel twice in the KIST scheduler pending
-      list, which would waste CPU cycles handling the same channel twice.
+      list, which would waste CPU cycles.
       Fixes bug 24700; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (unit test, monotonic time):
-    - Bump a gap of 1msec to 10msec in the monotonic time test that
+    - Increase a constant (1msec to 10msec) in the monotonic time test that
       makes sure the nsec/usec/msec times read are synchronized. This
       change was needed to accommodate slow systems like armel or when
       the clock_gettime() is not a VDSO on the running kernel. Fixes bug
