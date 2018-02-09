@@ -137,9 +137,8 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
       bugfix on 0.3.2.1-alpha.
 
   o Documentation (man page):
-    - HiddenServiceVersion only accepts one version to be specified.
-      This version can either be version 2 or 3. Closes ticket 25026;
-      bugfix on 0.3.2.2-alpha.
+    - The HiddenServiceVersion torrc option accepts only one number:
+      either version 2 or 3. Closes ticket 25026; bugfix on 0.3.2.2-alpha.
 
   o Code simplification and refactoring:
     - Remove the unused nodelist_recompute_all_hsdir_indices(). Closes
