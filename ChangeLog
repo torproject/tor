@@ -1,5 +1,9 @@
 Changes in version 0.3.3.2-alpha - 2018-02-09
-  Blurb here.
+  Tor 0.3.3.2-alpha is the second alpha in the 0.3.3.x series.  It
+  introduces a mechanism to handle the high loads that many relays
+  operators have been reporting recently. It also fixes several bugs in
+  older releases.  If this new code proves reliable, we plan to backport
+  it to older supported release series.
 
   o Major features (denial-of-service mitigation):
     - Give relays some defenses against the recent network overload. We
