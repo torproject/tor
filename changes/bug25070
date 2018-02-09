@@ -1,3 +1,0 @@
-  o Major bugfixes (protocol versions):
-    - Add Link protocol version 5 to the supported protocols list.
-      Fixes bug 25070; bugfix on 0.3.1.1-alpha.

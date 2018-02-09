@@ -1,4 +1,0 @@
-  o Code simplification and refactoring (rephist):
-    - Remove a series of counters used to track circuit extend attemps and
-      connection status but that in reality we aren't using for anything other
-      than stats logged by a SIGUSR1 signal. Closes ticket 25163.

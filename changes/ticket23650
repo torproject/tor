@@ -1,4 +1,0 @@
-  o Minor bugfixes (all versions of Tor):
-    - Use the "misspell" tool to detect and fix typos throughout the source
-      code. Fixes bug 23650; bugfix on various versions of Tor. Patch
-      from Deepesh Pathak.

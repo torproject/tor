@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service, heartbeat):
-    - Don't log in the heartbeat any long term established one hop rendezvous
-      points if tor is a single onion service. Fixes bug 25116; bugfix on
-      0.2.9.6-rc;

@@ -1,3 +1,0 @@
-  o Minor features (directory authority):
-    - When unable to add signatures to a pending consensus, log the reason
-      why. Closes ticket 24849.

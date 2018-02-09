@@ -1,3 +1,154 @@
+Changes in version 0.3.3.2-alpha - 2018-02-09
+  Blurb here.
+
+  o Major features (denial-of-service mitigation):
+    - Give relays some defenses against the recent network overload. We
+      start with three defenses (default parameters in parentheses).
+      First: if a single client address makes too many concurrent
+      connections (>100), hang up on further connections. Second: if a
+      single client address makes circuits too quickly (more than 3 per
+      second, with an allowed burst of 90) while also having too many
+      connections open (3), refuse new create cells for the next while
+      (1-2 hours). Third: if a client asks to establish a rendezvous
+      point to you directly, ignore the request. These defenses can be
+      manually controlled by new torrc options, but relays will also
+      take guidance from consensus parameters, so there's no need to
+      configure anything manually. Implements ticket 24902.
+
+  o Major bugfixes (netflow padding):
+    - Stop adding unneeded channel padding right after we finish
+      flushing to a connection that has been trying to flush for many
+      seconds. Instead, treat all partial or complete flushes as
+      activity on the channel, which will defer the time until we need
+      to add padding. This fix should resolve confusing and scary log
+      messages like "Channel padding timeout scheduled 221453ms in the
+      past." Fixes bug 22212; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (protocol versions):
+    - Add Link protocol version 5 to the supported protocols list. Fixes
+      bug 25070; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (scheduler, consensus):
+    - A logic in the code was preventing the scheduler subystem to
+      properly make a decision based on the latest consensus when it
+      arrives. This lead to the scheduler failing to notice any
+      consensus parameters that might have changed between consensuses.
+      Fixes bug 24975; bugfix on 0.3.2.1-alpha.
+
+  o Minor features (denial-of-service avoidance):
+    - Make our OOM handler aware of the geoip client history cache so it
+      doesn't fill up the memory which is especially important for IPv6
+      and our DoS mitigation subsystem. Closes ticket 25122.
+
+  o Minor features (directory authority):
+    - When unable to add signatures to a pending consensus, log the
+      reason why. Closes ticket 24849.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 7 2018 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (logging, diagnostic):
+    - When logging a failure to check a onion service's certificate,
+      also log what the problem with the certificate was. Diagnostic for
+      ticket 24972.
+
+  o Minor bugfix (channel connection):
+    - The accurate address of a connection is real_addr, not the addr
+      member. TLS Channel remote address is now real_addr content
+      instead of addr member. Fixes bug 24952; bugfix on 707c1e2e26 in
+      0.2.4.11-alpha. Patch by "ffmancera".
+
+  o Minor bugfix (directory authority, documentation):
+    - When a fingerprint or network address is marked as rejected, the
+      returned message by the authority now explicitly mention to set a
+      valid ContactInfo address and contact the bad-relays@ mailing
+      list. Fixes bug 25170; bugfix on 0.2.9.1.
+
+  o Minor bugfixes (all versions of Tor):
+    - Use the "misspell" tool to detect and fix typos throughout the
+      source code. Fixes bug 23650; bugfix on various versions of Tor.
+      Patch from Deepesh Pathak.
+
+  o Minor bugfixes (circuit, cannibalization):
+    - Don't cannibalize circuits for which we don't know the first hop
+      which can happen if our Guard relay went off the consensus after
+      the circuit was created preemptively. Fixes bug 24469; bugfix
+      on 0.0.6.
+
+  o Minor bugfixes (correctness):
+    - Remove a nonworking, unnecessary check to see whether a circuit
+      hop's identity was set when the circuit failed. Fixes bug 24927;
+      bugfix on 0.2.4.4-alpha.
+
+  o Minor bugfixes (onion services):
+    - Remove a BUG() statement which can be triggered in normal
+      circumstances where a client fetches a descriptor that has a lower
+      revision counter than the one in its cache. This can happen due to
+      HSDir desync. Fixes bug 24976; bugfix on 0.3.2.1-alpha.
+    - Don't log in the heartbeat any long term established one hop
+      rendezvous points if tor is a single onion service. Fixes bug
+      25116; bugfix on 0.2.9.6-rc;
+
+  o Minor bugfixes (logging):
+    - Don't treat inability to store a cached consensus object as a bug:
+      it can happen normally when we are out of disk space. Fixes bug
+      24859; bugfix on 0.3.1.1-alpha.
+    - Fix a (mostly harmless) race condition when invoking
+      LOG_PROTOCOL_WARN message from a subthread while the options are
+      changing. Fixes bug 23954; bugfix on 0.1.1.9-alpha.
+
+  o Minor bugfixes (performance):
+    - Avoid calling protocol_list_supports_protocol() from inside tight
+      loops when running with cached routerinfo_t objects. Instead,
+      summarize the relevant protocols as flags in the routerinfo_t, as
+      we do for routerstatus_t objects. This change simplifies our code
+      a little, and saves a large amount of short-term memory allocation
+      operations. Fixes bug 25008; bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (Rust FFI):
+    - Fix a minor memory leak which would happen whenever the C code
+      would call the Rust implementation of
+      protover_get_supported_protocols(). This was due to the C version
+      returning a static string, whereas the Rust version newly allocated
+      a CString to pass accross the FFI boundary. Consequently, the C
+      code was not expecting to need to free() what it was given. Fixes
+      bug 25127; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (scheduler, KIST):
+    - Avoid adding the same channel twice in the KIST scheduler pending
+      list wasting CPU cycles at handling the same channel twice. Fixes
+      bug 24700; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (unit test, monotonic time):
+    - Bump a gap of 1msec to 10msec used in the monotonic time test that
+      makes sure the nsec/usec/msec time read are synchronized. This
+      change was needed to accommodate slow system like armel or when
+      the clock_gettime() is not a VDSO on the running kernel. Fixes bug
+      25113; bugfix on 0.2.9.1.
+
+  o Minor bugfixes (v3 onion services):
+    - Look at the "HSRend" protocol version, not the "HSDir" protocol
+      version, when deciding whether a consensus entry can support the
+      v3 onion service protocol as a rendezvous point. Fixes bug 25105;
+      bugfix on 0.3.2.1-alpha.
+
+  o Code simplification and refactoring:
+    - Remove the unused nodelist_recompute_all_hsdir_indices(). Closes
+      ticket 25108.
+
+  o Documentation:
+    - HiddenServiceVersion only accepts one version to be specified.
+      This version can either be version 2 or 3. Closes ticket 25026;
+      bugfix on 0.3.2.2-alpha.
+
+  o Code simplification and refactoring (rephist):
+    - Remove a series of counters used to track circuit extend attemps
+      and connection status but that in reality we aren't using for
+      anything other than stats logged by a SIGUSR1 signal. Closes
+      ticket 25163.
+
+
 Changes in version 0.3.3.1-alpha - 2018-01-25
   Tor 0.3.3.1-alpha is the first release in the 0.3.3.x series. It adds
   several new features to Tor, including several improvements to
