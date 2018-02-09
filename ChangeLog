@@ -1,8 +1,8 @@
 Changes in version 0.3.3.2-alpha - 2018-02-09
-  Tor 0.3.3.2-alpha is the second alpha in the 0.3.3.x series.  It
+  Tor 0.3.3.2-alpha is the second alpha in the 0.3.3.x series. It
   introduces a mechanism to handle the high loads that many relays
   operators have been reporting recently. It also fixes several bugs in
-  older releases.  If this new code proves reliable, we plan to backport
+  older releases. If this new code proves reliable, we plan to backport
   it to older supported release series.
 
   o Major features (denial-of-service mitigation):
@@ -85,6 +85,14 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
       hop's identity was set when the circuit failed. Fixes bug 24927;
       bugfix on 0.2.4.4-alpha.
 
+  o Minor bugfixes (logging):
+    - Don't treat inability to store a cached consensus object as a bug:
+      it can happen normally when we are out of disk space. Fixes bug
+      24859; bugfix on 0.3.1.1-alpha.
+    - Fix a (mostly harmless) race condition when invoking
+      LOG_PROTOCOL_WARN message from a subthread while the options are
+      changing. Fixes bug 23954; bugfix on 0.1.1.9-alpha.
+
   o Minor bugfixes (onion services):
     - Remove a BUG() statement which can be triggered in normal
       circumstances where a client fetches a descriptor that has a lower
@@ -93,14 +101,6 @@ Changes in version 0.3.3.2-alpha - 2018-02-09
     - Don't log in the heartbeat any long term established one hop
       rendezvous points if tor is a single onion service. Fixes bug
       25116; bugfix on 0.2.9.6-rc;
-
-  o Minor bugfixes (logging):
-    - Don't treat inability to store a cached consensus object as a bug:
-      it can happen normally when we are out of disk space. Fixes bug
-      24859; bugfix on 0.3.1.1-alpha.
-    - Fix a (mostly harmless) race condition when invoking
-      LOG_PROTOCOL_WARN message from a subthread while the options are
-      changing. Fixes bug 23954; bugfix on 0.1.1.9-alpha.
 
   o Minor bugfixes (performance):
     - Avoid calling protocol_list_supports_protocol() from inside tight
