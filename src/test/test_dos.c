@@ -10,8 +10,35 @@
 #include "circuitlist.h"
 #include "geoip.h"
 #include "channel.h"
+#include "microdesc.h"
+#include "networkstatus.h"
+#include "nodelist.h"
+#include "routerlist.h"
 #include "test.h"
 #include "log_test_helpers.h"
+
+static networkstatus_t *dummy_ns = NULL;
+static networkstatus_t *
+mock_networkstatus_get_latest_consensus(void)
+{
+  return dummy_ns;
+}
+
+static networkstatus_t *
+mock_networkstatus_get_latest_consensus_by_flavor(consensus_flavor_t f)
+{
+  tor_assert(f == FLAV_MICRODESC);
+  return dummy_ns;
+}
+
+/* Number of address a single node_t can have. Default to the production
+ * value. This is to control the size of the bloom filter. */
+static int addr_per_node = 2;
+static int
+mock_get_estimated_address_per_node(void)
+{
+  return addr_per_node;
+}
 
 static unsigned int
 mock_enable_dos_protection(const networkstatus_t *ns)
@@ -385,10 +412,86 @@ test_dos_bucket_refill(void *arg)
   dos_free_all();
 }
 
+/* Test if we avoid counting a known relay. */
+static void
+test_known_relay(void *arg)
+{
+  clientmap_entry_t *entry = NULL;
+  routerstatus_t *rs = NULL; microdesc_t *md = NULL; routerinfo_t *ri = NULL;
+
+  (void) arg;
+
+  MOCK(networkstatus_get_latest_consensus,
+       mock_networkstatus_get_latest_consensus);
+  MOCK(networkstatus_get_latest_consensus_by_flavor,
+       mock_networkstatus_get_latest_consensus_by_flavor);
+  MOCK(get_estimated_address_per_node,
+       mock_get_estimated_address_per_node);
+  MOCK(get_param_cc_enabled, mock_enable_dos_protection);
+
+  dos_init();
+
+  dummy_ns = tor_malloc_zero(sizeof(*dummy_ns));
+  dummy_ns->flavor = FLAV_MICRODESC;
+  dummy_ns->routerstatus_list = smartlist_new();
+
+  /* Setup an OR conn so we can pass it to the DoS subsystem. */
+  or_connection_t or_conn;
+  tor_addr_parse(&or_conn.real_addr, "42.42.42.42");
+
+  rs = tor_malloc_zero(sizeof(*rs));
+  rs->addr = tor_addr_to_ipv4h(&or_conn.real_addr);
+  crypto_rand(rs->identity_digest, sizeof(rs->identity_digest));
+  smartlist_add(dummy_ns->routerstatus_list, rs);
+
+  /* This will make the nodelist bloom filter very large
+   * (the_nodelist->node_addrs) so we will fail the contain test rarely. */
+  addr_per_node = 1024;
+  nodelist_set_consensus(dummy_ns);
+
+  /* We have now a node in our list so we'll make sure we don't count it as a
+   * client connection. */
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &or_conn.real_addr, NULL, 0);
+  /* Suppose we have 5 connections in rapid succession, the counter should
+   * always be 0 because we should ignore this. */
+  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn);
+  entry = geoip_lookup_client(&or_conn.real_addr, NULL, GEOIP_CLIENT_CONNECT);
+  tt_assert(entry);
+  /* We should have a count of 0. */
+  tt_uint_op(entry->dos_stats.concurrent_count, OP_EQ, 0);
+
+  /* To make sure that his is working properly, make a unknown client
+   * connection and see if we do get it. */
+  tor_addr_parse(&or_conn.real_addr, "42.42.42.43");
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &or_conn.real_addr, NULL, 0);
+  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn);
+  entry = geoip_lookup_client(&or_conn.real_addr, NULL, GEOIP_CLIENT_CONNECT);
+  tt_assert(entry);
+  /* We should have a count of 2. */
+  tt_uint_op(entry->dos_stats.concurrent_count, OP_EQ, 2);
+
+ done:
+  routerstatus_free(rs); routerinfo_free(ri); microdesc_free(md);
+  smartlist_clear(dummy_ns->routerstatus_list);
+  networkstatus_vote_free(dummy_ns);
+  dos_free_all();
+  UNMOCK(networkstatus_get_latest_consensus);
+  UNMOCK(networkstatus_get_latest_consensus_by_flavor);
+  UNMOCK(get_estimated_address_per_node);
+  UNMOCK(get_param_cc_enabled);
+}
+
 struct testcase_t dos_tests[] = {
   { "conn_creation", test_dos_conn_creation, TT_FORK, NULL, NULL },
   { "circuit_creation", test_dos_circuit_creation, TT_FORK, NULL, NULL },
   { "bucket_refill", test_dos_bucket_refill, TT_FORK, NULL, NULL },
+  { "known_relay" , test_known_relay, TT_FORK,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 

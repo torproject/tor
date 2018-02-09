@@ -14,6 +14,7 @@
 #include "geoip.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "router.h"
 
 #include "dos.h"
@@ -661,6 +662,14 @@ dos_new_client_conn(or_connection_t *or_conn)
   /* Past that point, we know we have at least one DoS detection subsystem
    * enabled so we'll start allocating stuff. */
   if (!dos_is_enabled()) {
+    goto end;
+  }
+
+  /* We ignore any known address meaning an address of a known relay. The
+   * reason to do so is because network reentry is possible where a client
+   * connection comes from an Exit node. Even when we'll fix reentry, this is
+   * a robust defense to keep in place. */
+  if (nodelist_probably_contains_address(&or_conn->real_addr)) {
     goto end;
   }
 

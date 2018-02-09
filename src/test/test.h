@@ -177,6 +177,7 @@ extern const struct testcase_setup_t ed25519_test_setup;
 extern struct testcase_t accounting_tests[];
 extern struct testcase_t addr_tests[];
 extern struct testcase_t address_tests[];
+extern struct testcase_t address_set_tests[];
 extern struct testcase_t buffer_tests[];
 extern struct testcase_t cell_format_tests[];
 extern struct testcase_t cell_queue_tests[];
