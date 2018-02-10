@@ -11,8 +11,6 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::string::String;
 
-use tor_util::strings::NUL_BYTE;
-
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
 ///
@@ -744,7 +742,7 @@ pub fn is_supported_here(proto: Proto, vers: Version) -> bool {
 ///
 /// # Returns
 ///
-/// A `&'static [u8]` encoding a list of protocol names and supported
+/// A `&'static CStr` encoding a list of protocol names and supported
 /// versions. The string takes the following format:
 ///
 /// "HSDir=1-1 LinkAuth=1"
@@ -753,27 +751,29 @@ pub fn is_supported_here(proto: Proto, vers: Version) -> bool {
 /// only for tor versions older than FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS.
 ///
 /// C_RUST_COUPLED: src/rust/protover.c `compute_for_old_tor`
-pub fn compute_for_old_tor(version: &str) -> &'static [u8] {
+pub fn compute_for_old_tor(version: &str) -> &'static CStr {
+    let empty: &'static CStr = cstr!("");
+
     if c_tor_version_as_new_as(version, FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS) {
-        return NUL_BYTE;
+        return empty;
     }
 
     if c_tor_version_as_new_as(version, "0.2.9.1-alpha") {
-        return b"Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 \
-                 Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2\0";
+        return cstr!("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 \
+                      Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2");
     }
 
     if c_tor_version_as_new_as(version, "0.2.7.5") {
-        return b"Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
-                 Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2\0";
+        return cstr!("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
+                      Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2");
     }
 
     if c_tor_version_as_new_as(version, "0.2.4.19") {
-        return b"Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
-                 Link=1-4 LinkAuth=1 Microdesc=1 Relay=1-2\0";
+        return cstr!("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
+                      Link=1-4 LinkAuth=1 Microdesc=1 Relay=1-2");
     }
 
-    NUL_BYTE
+    empty
 }
 
 #[cfg(test)]
