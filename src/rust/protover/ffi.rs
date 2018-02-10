@@ -13,7 +13,6 @@ use protover::*;
 use smartlist::*;
 use tor_allocate::allocate_and_copy_string;
 use tor_util::strings::byte_slice_is_c_like;
-use tor_util::strings::empty_static_cstr;
 
 /// Translate C enums to Rust Proto enums, using the integer value of the C
 /// enum to map to its associated Rust enum
@@ -192,7 +191,7 @@ pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const
     let supported: &'static CStr;
     let empty: &'static CStr;
 
-    empty = empty_static_cstr();
+    empty = cstr!("");
 
     if version.is_null() {
         return empty.as_ptr();

@@ -3,8 +3,6 @@
 
 //! Utilities for working with static strings.
 
-use std::ffi::CStr;
-
 /// A byte-array containing a single NUL byte (`b"\0"`).
 pub const NUL_BYTE: &'static [u8] = b"\0";
 
@@ -42,43 +40,6 @@ pub fn byte_slice_is_c_like(bytes: &[u8]) -> bool {
         return true;
     }
     false
-}
-
-/// Get a static `CStr` containing a single `NUL_BYTE`.
-///
-/// # Examples
-///
-/// When used as follows in a Rust FFI function, which could be called
-/// from C:
-///
-/// ```
-/// # extern crate libc;
-/// # extern crate tor_util;
-/// #
-/// # use tor_util::strings::empty_static_cstr;
-/// use libc::c_char;
-/// use std::ffi::CStr;
-///
-/// pub extern "C" fn give_c_code_an_empty_static_string() -> *const c_char {
-///     let empty: &'static CStr = empty_static_cstr();
-///
-///     empty.as_ptr()
-/// }
-///
-/// # fn main() {
-/// #     give_c_code_an_empty_static_string();
-/// # }
-/// ```
-///
-/// This equates to an "empty" `const char*` static string in C.
-pub fn empty_static_cstr() -> &'static CStr {
-    let empty: &'static CStr;
-
-    unsafe {
-        empty = CStr::from_bytes_with_nul_unchecked(NUL_BYTE);
-    }
-
-    empty
 }
 
 /// Create a `CStr` from a literal byte slice, appending a NUL byte to it first.
