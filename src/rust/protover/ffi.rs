@@ -12,7 +12,6 @@ use std::ffi::CString;
 use protover::*;
 use smartlist::*;
 use tor_allocate::allocate_and_copy_string;
-use tor_util::strings::byte_slice_is_c_like;
 
 /// Translate C enums to Rust Proto enums, using the integer value of the C
 /// enum to map to its associated Rust enum

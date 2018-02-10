@@ -3,45 +3,6 @@
 
 //! Utilities for working with static strings.
 
-/// A byte-array containing a single NUL byte (`b"\0"`).
-pub const NUL_BYTE: &'static [u8] = b"\0";
-
-/// Determine if a byte slice is a C-like string.
-///
-/// These checks guarantee that:
-///
-/// 1. there are no intermediate NUL bytes
-/// 2. the last byte *is* a NUL byte
-///
-/// # Warning
-///
-/// This function does _not_ guarantee that the bytes represent any valid
-/// encoding such as ASCII or UTF-8.
-///
-/// # Examples
-///
-/// ```
-/// # use tor_util::strings::byte_slice_is_c_like;
-/// #
-/// let bytes: &[u8] = b"foo bar baz";
-///
-/// assert!(byte_slice_is_c_like(&bytes) == false);
-///
-/// let bytes: &[u8] = b"foo\0bar baz";
-///
-/// assert!(byte_slice_is_c_like(&bytes) == false);
-///
-/// let bytes: &[u8] = b"foo bar baz\0";
-///
-/// assert!(byte_slice_is_c_like(&bytes) == true);
-/// ```
-pub fn byte_slice_is_c_like(bytes: &[u8]) -> bool {
-    if !bytes[..bytes.len() - 1].contains(&0x00) && bytes[bytes.len() - 1] == 0x00 {
-        return true;
-    }
-    false
-}
-
 /// Create a `CStr` from a literal byte slice, appending a NUL byte to it first.
 ///
 /// # Warning
