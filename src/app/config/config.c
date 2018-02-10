@@ -4714,8 +4714,7 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
   } else {
     if (total_mem >= DIRCACHE_MIN_MEM_BYTES) {
       *msg = tor_strdup("DirCache is disabled and we are configured as a "
-               "relay. This may disqualify us from becoming a guard in the "
-               "future.");
+               "relay. Many client versions will not choose us as a guard. ");
     }
   }
   return *msg == NULL ? 0 : -1;
