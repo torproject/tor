@@ -1,0 +1,4 @@
+  o Minor features (logging):
+    - Clarify the log messages produced when getrandom() or a related
+      entropy-generation mechanism gives an error. Closes ticket
+      25120.
