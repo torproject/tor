@@ -1963,9 +1963,9 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
                    " function--probably because it is too old?"
                    " Trying fallback method instead.");
       } else {
-        log_notice(LD_CRYPTO, "Can't get entropy from getrandom(): %s.",
-                              " Trying fallback method instead."
-                 strerror(errno));
+        log_notice(LD_CRYPTO, "Can't get entropy from getrandom(): %s."
+                              " Trying fallback method instead.",
+                   strerror(errno));
       }
 
       getrandom_works = 0; /* Don't bother trying again. */
