@@ -1071,6 +1071,17 @@ string_is_valid_ipv6_address(const char *string)
   return (tor_inet_pton(AF_INET6,string,&addr) == 1);
 }
 
+/** Return true iff <b>string</b> is a valid destination address,
+ * i.e. either a DNS hostname or IPv4/IPv6 address string.
+ */
+int
+string_is_valid_dest(const char *string)
+{
+  return string_is_valid_ipv4_address(string) ||
+    string_is_valid_ipv6_address(string) ||
+    string_is_valid_hostname(string);
+}
+
 /** Return true iff <b>string</b> matches a pattern of DNS names
  * that we allow Tor clients to connect to.
  *
