@@ -232,7 +232,7 @@ pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const
     // we can see that the bytes we're passing into it 1) are valid UTF-8,
     // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
     // byte.
-    supported = CStr::from_bytes_with_nul(elder_protocols).unwrap();
+    supported = CStr::from_bytes_with_nul(elder_protocols).unwrap_or(empty);
 
     supported.as_ptr()
 }

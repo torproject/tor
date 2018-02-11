@@ -110,7 +110,7 @@ pub fn get_supported_protocols() -> &'static str {
     // The `unwrap` is safe becauase we SUPPORTED_PROTOCOLS is under
     // our control.
     str::from_utf8(&SUPPORTED_PROTOCOLS[..SUPPORTED_PROTOCOLS.len() - 1])
-        .unwrap()
+        .unwrap_or("")
 }
 
 pub struct SupportedProtocols(HashMap<Proto, Versions>);
