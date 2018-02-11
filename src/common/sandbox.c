@@ -1112,6 +1112,19 @@ sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif
 
+static int
+sb_kill(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  (void) filter;
+#ifdef __NR_kill
+  /* Allow killing anything with signal 0 -- it isn't really a kill. */
+  return seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(kill),
+       SCMP_CMP(1, SCMP_CMP_EQ, 0));
+#else
+  return 0;
+#endif
+}
+
 /**
  * Array of function pointers responsible for filtering different syscalls at
  * a parameter level.
@@ -1150,7 +1163,8 @@ static sandbox_filter_func_t filter_func[] = {
     sb_socket,
     sb_setsockopt,
     sb_getsockopt,
-    sb_socketpair
+    sb_socketpair,
+    sb_kill
 };
 
 const char *
