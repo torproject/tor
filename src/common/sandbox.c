@@ -56,6 +56,9 @@
 #include <time.h>
 #include <poll.h>
 
+#ifdef HAVE_GNU_LIBC_VERSION_H
+#include <gnu/libc-version.h>
+#endif
 #ifdef HAVE_LINUX_NETFILTER_IPV4_H
 #include <linux/netfilter_ipv4.h>
 #endif
@@ -127,6 +130,9 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(clone),
     SCMP_SYS(epoll_create),
     SCMP_SYS(epoll_wait),
+#ifdef __NR_epoll_pwait
+    SCMP_SYS(epoll_pwait),
+#endif
 #ifdef HAVE_EVENTFD
     SCMP_SYS(eventfd2),
 #endif
@@ -421,6 +427,52 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif
 
+#ifdef HAVE_GNU_LIBC_VERSION_H
+#ifdef HAVE_GNU_GET_LIBC_VERSION
+#define CHECK_LIBC_VERSION
+#endif
+#endif
+
+/* Return true if we think we're running with a libc that always uses
+ * openat on linux. */
+static int
+libc_uses_openat_for_everything(void)
+{
+#ifdef CHECK_LIBC_VERSION
+  const char *version = gnu_get_libc_version();
+  if (version == NULL)
+    return 0;
+
+  int major = -1;
+  int minor = -1;
+
+  tor_sscanf(version, "%d.%d", &major, &minor);
+  if (major >= 3)
+    return 1;
+  else if (major == 2 && minor >= 26)
+    return 1;
+  else
+    return 0;
+#else
+  return 0;
+#endif
+}
+
+/** Allow a single file to be opened.  If <b>use_openat</b> is true,
+ * we're using a libc that remaps all the opens into openats. */
+static int
+allow_file_open(scmp_filter_ctx ctx, int use_openat, const char *file)
+{
+  if (use_openat) {
+    return seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat),
+                              SCMP_CMP_STR(0, SCMP_CMP_EQ, AT_FDCWD),
+                              SCMP_CMP_STR(1, SCMP_CMP_EQ, file));
+  } else {
+    return seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open),
+                              SCMP_CMP_STR(0, SCMP_CMP_EQ, file));
+  }
+}
+
 /**
  * Function responsible for setting up the open syscall for
  * the seccomp filter sandbox.
@@ -431,14 +483,15 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   int rc;
   sandbox_cfg_t *elem = NULL;
 
+  int use_openat = libc_uses_openat_for_everything();
+
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
     smp_param_t *param = elem->param;
 
     if (param != NULL && param->prot == 1 && param->syscall
         == SCMP_SYS(open)) {
-      rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open),
-            SCMP_CMP_STR(0, SCMP_CMP_EQ, param->value));
+      rc = allow_file_open(ctx, use_openat, param->value);
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add open syscall, received "
             "libseccomp error %d", rc);
@@ -453,6 +506,15 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
         "error %d", rc);
+    return rc;
+  }
+
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(openat),
+                SCMP_CMP_MASKED(2, O_CLOEXEC|O_NONBLOCK|O_NOCTTY|O_NOFOLLOW,
+                                O_RDONLY));
+  if (rc != 0) {
+    log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received "
+            "libseccomp error %d", rc);
     return rc;
   }
 
@@ -645,7 +707,7 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
       SCMP_CMP(0, SCMP_CMP_EQ, PF_NETLINK),
-      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_RAW),
+      SCMP_CMP_MASKED(1, SOCK_CLOEXEC, SOCK_RAW),
       SCMP_CMP(2, SCMP_CMP_EQ, 0));
   if (rc)
     return rc;
@@ -1616,7 +1678,8 @@ add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 
   // function pointer
   for (i = 0; i < ARRAY_LENGTH(filter_func); i++) {
-    if ((filter_func[i])(ctx, cfg)) {
+    rc = filter_func[i](ctx, cfg);
+    if (rc) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall %d, received libseccomp "
           "error %d", i, rc);
       return rc;
