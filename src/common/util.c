@@ -100,6 +100,8 @@
 #undef MALLOC_ZERO_WORKS
 #endif
 
+#include <ctype.h>
+
 /* =====
  * Memory management
  * ===== */
@@ -1110,16 +1112,21 @@ string_is_valid_hostname(const char *string)
       continue;
     }
 
-    do {
-      if ((*c >= 'a' && *c <= 'z') ||
-          (*c >= 'A' && *c <= 'Z') ||
-          (*c >= '0' && *c <= '9') ||
-          (*c == '-') || (*c == '_'))
+    if (c_sl_idx == c_sl_len - 1) {
+      do {
+        result = isalpha(*c);
         c++;
-      else
-        result = 0;
-    } while (result && *c);
+      } while (result && *c);
+    } else {
+      do {
+        result = (isalnum(*c) || (*c == '-') || (*c == '_'));
+        c++;
+      } while (result > 0 && *c);
+    }
 
+    if (result == 0) {
+      break;
+    }
   } SMARTLIST_FOREACH_END(c);
 
   SMARTLIST_FOREACH_BEGIN(components, char *, c) {

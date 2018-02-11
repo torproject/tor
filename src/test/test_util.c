@@ -5584,6 +5584,11 @@ test_util_hostname_validation(void *arg)
   tt_assert(!string_is_valid_hostname("."));
   tt_assert(!string_is_valid_hostname(".."));
 
+  // IP address strings are not hostnames.
+  tt_assert(!string_is_valid_hostname("8.8.8.8"));
+  tt_assert(!string_is_valid_hostname("[2a00:1450:401b:800::200e]"));
+  tt_assert(!string_is_valid_hostname("2a00:1450:401b:800::200e"));
+
   done:
   return;
 }
