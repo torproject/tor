@@ -138,6 +138,7 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
       if (allow_include && !strcmp(k, "%include") && handle_include) {
         tor_free(k);
         include_used = 1;
+        log_notice(LD_CONFIG, "Including configuration files from \"%s\".", v);
 
         config_line_t *include_list;
         if (handle_include(v, recursion_level, extended, &include_list,
