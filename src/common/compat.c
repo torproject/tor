@@ -1667,7 +1667,7 @@ get_max_sockets(void)
  * fail by returning -1 and <b>max_out</b> is untouched.
  *
  * If we are unable to set the limit value because of setrlimit() failing,
- * return -1 and <b>max_out</b> is set to the current maximum value returned
+ * return 0 and <b>max_out</b> is set to the current maximum value returned
  * by getrlimit().
  *
  * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>
@@ -1732,13 +1732,14 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   rlim.rlim_cur = rlim.rlim_max;
 
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
-    int bad = 1;
+    int couldnt_set = 1;
+    const int setrlimit_errno = errno;
 #ifdef OPEN_MAX
     uint64_t try_limit = OPEN_MAX - ULIMIT_BUFFER;
     if (errno == EINVAL && try_limit < (uint64_t) rlim.rlim_cur) {
       /* On some platforms, OPEN_MAX is the real limit, and getrlimit() is
        * full of nasty lies.  I'm looking at you, OSX 10.5.... */
-      rlim.rlim_cur = try_limit;
+      rlim.rlim_cur = MIN((rlim_t) try_limit, rlim.rlim_cur);
       if (setrlimit(RLIMIT_NOFILE, &rlim) == 0) {
         if (rlim.rlim_cur < (rlim_t)limit) {
           log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
@@ -1753,14 +1754,13 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
                    (unsigned long)try_limit, (unsigned long)OPEN_MAX,
                    (unsigned long)rlim.rlim_max);
         }
-        bad = 0;
+        couldnt_set = 0;
       }
     }
 #endif /* defined(OPEN_MAX) */
-    if (bad) {
+    if (couldnt_set) {
       log_warn(LD_CONFIG,"Couldn't set maximum number of file descriptors: %s",
-               strerror(errno));
-      return -1;
+               strerror(setrlimit_errno));
     }
   }
   /* leave some overhead for logs, etc, */
