@@ -1106,22 +1106,31 @@ int
 string_is_valid_hostname(const char *string)
 {
   int result = 1;
+  int has_trailing_dot;
+  char *last_label;
   smartlist_t *components;
+
+  if (!string || strlen(string) == 0)
+    return 0;
 
   components = smartlist_new();
 
   smartlist_split_string(components,string,".",0,0);
 
+  /* Allow a single terminating '.' used rarely to indicate domains
+   * are FQDNs rather than relative. */
+  last_label = (char *)smartlist_get(components, smartlist_len(components) - 1);
+  has_trailing_dot = (last_label[0] == '\0');
+  if (has_trailing_dot) {
+    smartlist_pop_last(components);
+    tor_free(last_label);
+    last_label = NULL;
+  }
+
   SMARTLIST_FOREACH_BEGIN(components, char *, c) {
     if ((c[0] == '-') || (*c == '_')) {
       result = 0;
       break;
-    }
-
-    /* Allow a single terminating '.' used rarely to indicate domains
-     * are FQDNs rather than relative. */
-    if ((c_sl_idx > 0) && (c_sl_idx + 1 == c_sl_len) && !*c) {
-      continue;
     }
 
     if (c_sl_idx == c_sl_len - 1) {
