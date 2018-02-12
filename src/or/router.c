@@ -1302,7 +1302,7 @@ router_should_be_dirserver(const or_options_t *options, int dir_port)
     } else {
       tor_assert(reason);
       log_notice(LD_DIR, "Not advertising Dir%s (Reason: %s)",
-                 dir_port ? "Port" : "Directory Service support", reason);
+                 dir_port ? "Port" : "ectory Service support", reason);
     }
     advertising = new_choice;
   }
