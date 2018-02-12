@@ -371,6 +371,15 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     }
 
     relay_encrypt_cell_outbound(cell, TO_ORIGIN_CIRCUIT(circ), layer_hint);
+
+    /* Update circ written totals for control port */
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    if (PREDICT_LIKELY(UINT32_MAX - ocirc->n_written_circ_bw
+          > CELL_PAYLOAD_SIZE))
+      ocirc->n_written_circ_bw += (int)CELL_PAYLOAD_SIZE;
+    else
+      ocirc->n_written_circ_bw = UINT32_MAX;
+
   } else { /* incoming cell */
     if (CIRCUIT_IS_ORIGIN(circ)) {
       /* We should never package an _incoming_ cell from the circuit

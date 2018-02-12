@@ -3479,25 +3479,15 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
      /* change *max_to_read */
     *max_to_read = at_most - n_read;
 
-    /* Update edge_conn->n_read and ocirc->n_read_circ_bw */
+    /* Update edge_conn->n_read */
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      circuit_t *circ = circuit_get_by_edge_conn(edge_conn);
-      origin_circuit_t *ocirc;
 
       /* Check for overflow: */
       if (PREDICT_LIKELY(UINT32_MAX - edge_conn->n_read > n_read))
         edge_conn->n_read += (int)n_read;
       else
         edge_conn->n_read = UINT32_MAX;
-
-      if (circ && CIRCUIT_IS_ORIGIN(circ)) {
-        ocirc = TO_ORIGIN_CIRCUIT(circ);
-        if (PREDICT_LIKELY(UINT32_MAX - ocirc->n_read_circ_bw > n_read))
-          ocirc->n_read_circ_bw += (int)n_read;
-        else
-          ocirc->n_read_circ_bw = UINT32_MAX;
-      }
     }
 
     /* If CONN_BW events are enabled, update conn->n_read_conn_bw for
@@ -3815,22 +3805,12 @@ connection_handle_write_impl(connection_t *conn, int force)
 
   if (n_written && conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    circuit_t *circ = circuit_get_by_edge_conn(edge_conn);
-    origin_circuit_t *ocirc;
 
     /* Check for overflow: */
     if (PREDICT_LIKELY(UINT32_MAX - edge_conn->n_written > n_written))
       edge_conn->n_written += (int)n_written;
     else
       edge_conn->n_written = UINT32_MAX;
-
-    if (circ && CIRCUIT_IS_ORIGIN(circ)) {
-      ocirc = TO_ORIGIN_CIRCUIT(circ);
-      if (PREDICT_LIKELY(UINT32_MAX - ocirc->n_written_circ_bw > n_written))
-        ocirc->n_written_circ_bw += (int)n_written;
-      else
-        ocirc->n_written_circ_bw = UINT32_MAX;
-    }
   }
 
   /* If CONN_BW events are enabled, update conn->n_written_conn_bw for
