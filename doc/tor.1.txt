@@ -311,7 +311,9 @@ GENERAL OPTIONS
     other than controller connections, and we close (and don't reattempt)
     any outbound
     connections.  Controllers sometimes use this option to avoid using
-    the network until Tor is fully configured. (Default: 0)
+    the network until Tor is fully configured.  Tor will make still certain
+    network-related calls (like DNS lookups) as a part of its configuration
+    process, even if DisableNetwork is set. (Default: 0)
 
 [[ConstrainedSockets]] **ConstrainedSockets** **0**|**1**::
     If set, Tor will tell the kernel to attempt to shrink the buffers for all
