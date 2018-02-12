@@ -100,8 +100,6 @@
 #undef MALLOC_ZERO_WORKS
 #endif
 
-#include <ctype.h>
-
 /* =====
  * Memory management
  * ===== */
@@ -1128,12 +1126,12 @@ string_is_valid_hostname(const char *string)
 
     if (c_sl_idx == c_sl_len - 1) {
       do {
-        result = isalpha(*c);
+        result = TOR_ISALPHA(*c);
         c++;
       } while (result && *c);
     } else {
       do {
-        result = (isalnum(*c) || (*c == '-') || (*c == '_'));
+        result = (TOR_ISALNUM(*c) || (*c == '-') || (*c == '_'));
         c++;
       } while (result > 0 && *c);
     }
