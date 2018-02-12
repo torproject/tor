@@ -5589,6 +5589,12 @@ test_util_hostname_validation(void *arg)
   tt_assert(!string_is_valid_hostname("[2a00:1450:401b:800::200e]"));
   tt_assert(!string_is_valid_hostname("2a00:1450:401b:800::200e"));
 
+  // Last label of a hostname is required to be alphabetic according to
+  // RFC 1123 Section 2.1.
+  tt_assert(!string_is_valid_hostname("lucky.13"));
+  tt_assert(!string_is_valid_hostname("luck.y13"));
+  tt_assert(!string_is_valid_hostname("luck.y13."));
+
   done:
   return;
 }
