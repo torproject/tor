@@ -1079,9 +1079,22 @@ string_is_valid_ipv6_address(const char *string)
 int
 string_is_valid_dest(const char *string)
 {
-  return string_is_valid_ipv4_address(string) ||
+  char *tmp = NULL;
+  int retval;
+
+  tor_assert(string);
+  tor_assert(strlen(string) > 0);
+
+  if (string[0] == '[' && string[strlen(string) - 1] == ']')
+    string = tmp = tor_strndup(string + 1, strlen(string) - 2);
+
+  retval = string_is_valid_ipv4_address(string) ||
     string_is_valid_ipv6_address(string) ||
     string_is_valid_hostname(string);
+
+  tor_free(tmp);
+
+  return retval;
 }
 
 /** Return true iff <b>string</b> matches a pattern of DNS names
