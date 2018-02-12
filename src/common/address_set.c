@@ -22,7 +22,7 @@
 /** How many 64-bit siphash values to extract per address */
 #define N_HASHES 2
 /** How many bloom-filter bits we set per address. This is twice the N_HASHES
- * value, since we split the siphash outcome two 32-bit values. */
+ * value, since we split the siphash output into two 32-bit values. */
 #define N_BITS_PER_ITEM (N_HASHES * 2)
 
 /* XXXX This code is largely duplicated with digestset_t.  We should merge
