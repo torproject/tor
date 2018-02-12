@@ -150,7 +150,8 @@ typedef struct cert_list_t cert_list_t;
 /* static function prototypes */
 static int compute_weighted_bandwidths(const smartlist_t *sl,
                                        bandwidth_weight_rule_t rule,
-                                       double **bandwidths_out);
+                                       double **bandwidths_out,
+                                       double *total_bandwidth_out);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
                 const smartlist_t *sourcelist, dirinfo_type_t auth,
                 int flags, int *n_busy_out);
@@ -2506,7 +2507,7 @@ smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
   double *bandwidths_dbl=NULL;
   uint64_t *bandwidths_u64=NULL;
 
-  if (compute_weighted_bandwidths(sl, rule, &bandwidths_dbl) < 0)
+  if (compute_weighted_bandwidths(sl, rule, &bandwidths_dbl, NULL) < 0)
     return NULL;
 
   bandwidths_u64 = tor_calloc(smartlist_len(sl), sizeof(uint64_t));
@@ -2526,18 +2527,24 @@ smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
  * smartlist_choose_node_by_bandwidth_weights, compute weighted bandwidth
  * values for each node and store them in a freshly allocated
  * *<b>bandwidths_out</b> of the same length as <b>sl</b>, and holding results
- * as doubles. Return 0 on success, -1 on failure. */
+ * as doubles. If <b>total_bandwidth_out</b> is non-NULL, set it to the total
+ * of all the bandwidths.
+ * Return 0 on success, -1 on failure. */
 static int
 compute_weighted_bandwidths(const smartlist_t *sl,
                             bandwidth_weight_rule_t rule,
-                            double **bandwidths_out)
+                            double **bandwidths_out,
+                            double *total_bandwidth_out)
 {
   int64_t weight_scale;
   double Wg = -1, Wm = -1, We = -1, Wd = -1;
   double Wgb = -1, Wmb = -1, Web = -1, Wdb = -1;
-  uint64_t weighted_bw = 0;
   guardfraction_bandwidth_t guardfraction_bw;
-  double *bandwidths;
+  double *bandwidths = NULL;
+  double total_bandwidth = 0.0;
+
+  tor_assert(sl);
+  tor_assert(bandwidths_out);
 
   /* Can't choose exit and guard at same time */
   tor_assert(rule == NO_WEIGHTING ||
@@ -2545,6 +2552,12 @@ compute_weighted_bandwidths(const smartlist_t *sl,
              rule == WEIGHT_FOR_GUARD ||
              rule == WEIGHT_FOR_MID ||
              rule == WEIGHT_FOR_DIR);
+
+  *bandwidths_out = NULL;
+
+  if (total_bandwidth_out) {
+    *total_bandwidth_out = 0.0;
+  }
 
   if (smartlist_len(sl) == 0) {
     log_info(LD_CIRC,
@@ -2706,16 +2719,21 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       final_weight = weight*this_bw;
     }
 
-    bandwidths[node_sl_idx] = final_weight + 0.5;
+    bandwidths[node_sl_idx] = final_weight;
+    total_bandwidth += final_weight;
   } SMARTLIST_FOREACH_END(node);
 
   log_debug(LD_CIRC, "Generated weighted bandwidths for rule %s based "
             "on weights "
-            "Wg=%f Wm=%f We=%f Wd=%f with total bw "U64_FORMAT,
+            "Wg=%f Wm=%f We=%f Wd=%f with total bw %f",
             bandwidth_weight_rule_to_string(rule),
-            Wg, Wm, We, Wd, U64_PRINTF_ARG(weighted_bw));
+            Wg, Wm, We, Wd, total_bandwidth);
 
   *bandwidths_out = bandwidths;
+
+  if (total_bandwidth_out) {
+    *total_bandwidth_out = total_bandwidth;
+  }
 
   return 0;
 }
@@ -2733,7 +2751,8 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
   if (smartlist_len(sl) == 0)
     return 0.0;
 
-  if (compute_weighted_bandwidths(sl, rule, &bandwidths) < 0) {
+  if (compute_weighted_bandwidths(sl, rule, &bandwidths, &total) < 0 ||
+      total <= 0.0) {
     int n_with_descs = 0;
     SMARTLIST_FOREACH(sl, const node_t *, node, {
       if (node_has_descriptor(node))
@@ -2742,18 +2761,13 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
     return ((double)n_with_descs) / (double)smartlist_len(sl);
   }
 
-  total = present = 0.0;
+  present = 0.0;
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
-    const double bw = bandwidths[node_sl_idx];
-    total += bw;
     if (node_has_descriptor(node))
-      present += bw;
+      present += bandwidths[node_sl_idx];
   } SMARTLIST_FOREACH_END(node);
 
   tor_free(bandwidths);
-
-  if (total < 1.0)
-    return 0;
 
   return present / total;
 }
