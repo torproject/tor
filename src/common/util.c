@@ -1081,12 +1081,13 @@ string_is_valid_dest(const char *string)
 {
   char *tmp = NULL;
   int retval;
+  size_t len = strlen(string);
 
   tor_assert(string);
-  tor_assert(strlen(string) > 0);
+  tor_assert(len > 0);
 
-  if (string[0] == '[' && string[strlen(string) - 1] == ']')
-    string = tmp = tor_strndup(string + 1, strlen(string) - 2);
+  if (string[0] == '[' && string[len - 1] == ']')
+    string = tmp = tor_strndup(string + 1, len - 2);
 
   retval = string_is_valid_ipv4_address(string) ||
     string_is_valid_ipv6_address(string) ||
