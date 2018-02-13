@@ -748,6 +748,14 @@ dos_close_client_conn(const or_connection_t *or_conn)
 void
 dos_consensus_has_changed(const networkstatus_t *ns)
 {
+  /* There are two ways to configure this subsystem, one at startup through
+   * dos_init() which is called when the options are parsed. And this one
+   * through the consensus. We don't want to enable any DoS mitigation if we
+   * aren't a public relay. */
+  if (!public_server_mode(get_options())) {
+    return;
+  }
+
   cc_consensus_has_changed(ns);
   conn_consensus_has_changed(ns);
 
