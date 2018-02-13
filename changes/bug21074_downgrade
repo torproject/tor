@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (portability):
     - Don't exit the Tor process if setrlimit() fails to change the file
       limit (which can happen sometimes on some versions of OSX). Fixes
       bug 21074; bugfix on 0.0.9pre5.
