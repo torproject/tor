@@ -1,0 +1,3 @@
+  o Minor bugfixes (DoS mitigation):
+    - Make sure we don't modify consensus parameters if we aren't a public
+      relay when a new consensus arrives. Fixes bug 25223.
