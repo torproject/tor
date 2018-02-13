@@ -417,7 +417,10 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
 
   if (result & FP_REJECT) {
     if (msg)
-      *msg = "Fingerprint is marked rejected -- please contact us?";
+      *msg = "Fingerprint is marked rejected -- if you think this is a "
+             "mistake please set a valid email address in ContactInfo and "
+             "send an email to bad-relays@lists.torproject.org mentioning "
+             "your fingerprint(s)?";
     return FP_REJECT;
   } else if (result & FP_INVALID) {
     if (msg)
@@ -435,7 +438,10 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     log_fn(severity, LD_DIRSERV, "Rejecting '%s' because of address '%s'",
                nickname, fmt_addr32(addr));
     if (msg)
-      *msg = "Suspicious relay address range -- please contact us?";
+      *msg = "Suspicious relay address range -- if you think this is a "
+             "mistake please set a valid email address in ContactInfo and "
+             "send an email to bad-relays@lists.torproject.org mentioning "
+             "your address(es) and fingerprint(s)?";
     return FP_REJECT;
   }
   if (!authdir_policy_valid_address(addr, or_port)) {
