@@ -1,4 +1,4 @@
   o Minor bugfixes (DoS mitigation):
     - Add extra safety checks when refilling the circuit creation bucket to
       ensure we never set a value that is above the allowed burst. Fixes
-      ticket 25202.
+      bug 25202; bugfix on 0.3.3.2-alpha.
