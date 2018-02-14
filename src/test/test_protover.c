@@ -139,6 +139,80 @@ test_protover_vote(void *arg)
   tt_str_op(result, OP_EQ, "Bar=3-6,8 Foo=9");
   tor_free(result);
 
+  /* High threshold */
+  result = protover_compute_vote(lst, 3);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
+  /* Bad votes: the result must be empty */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Faux=10-5");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
+  /* This fails in Rust, but not in C */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Faux=-0");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Faux=0");
+  tor_free(result);
+
+  /* Vote large protover lists that are just below the threshold */
+
+  /* Just below the threshold: Rust */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=1-500");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=1-500");
+  tor_free(result);
+
+  /* Just below the threshold: C */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=1-65536");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=1-65536");
+  tor_free(result);
+
+  /* Large protover lists that exceed the threshold */
+
+  /* By adding two votes: Rust */
+#if 0 // XXXXX
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=1-500");
+  smartlist_add(lst, (void*) "Sleen=1000");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+#endif
+
+  /* By adding two votes, C allows us to exceed the limit */
+  smartlist_add(lst, (void*) "Sleen=1-65536");
+  smartlist_add(lst, (void*) "Sleen=100000");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=1-65536,100000");
+  tor_free(result);
+
+  /* Large integers */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=4294967294");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=4294967294");
+  tor_free(result);
+
+  /* This parses, but fails at the vote stage */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=4294967295");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, ""); // XXXX "Sleen=4294967295");
+  tor_free(result);
+
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=4294967296");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
  done:
   tor_free(result);
   smartlist_free(lst);
@@ -176,6 +250,16 @@ test_protover_all_supported(void *arg)
   tor_free(msg);
   tt_assert(! protover_all_supported("Link=3-999", &msg));
   tt_str_op(msg, OP_EQ, "Link=3-999");
+  tor_free(msg);
+
+  /* CPU/RAM DoS loop: Rust only */
+  tt_assert(! protover_all_supported("Sleen=0-2147483648", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
+  tor_free(msg);
+
+  /* Rust seems to experience an internal error here */
+  tt_assert(! protover_all_supported("Sleen=0-4294967295", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=0-4294967295");
   tor_free(msg);
 
  done:
