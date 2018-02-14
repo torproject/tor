@@ -624,6 +624,11 @@ protover_all_supported(const char *s, char **missing_out)
   }
 
   smartlist_t *entries = parse_protocol_list(s);
+  if (BUG(entries == NULL)) {
+    log_warn(LD_NET, "Received an unparseable protocol list %s"
+             " from the consensus", escaped(s));
+    return 1;
+  }
 
   missing = smartlist_new();
 
