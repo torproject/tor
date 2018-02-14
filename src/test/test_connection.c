@@ -5,6 +5,7 @@
 
 #define CONNECTION_PRIVATE
 #define MAIN_PRIVATE
+#define CONNECTION_OR_PRIVATE
 
 #include "or.h"
 #include "test.h"
@@ -13,9 +14,11 @@
 #include "hs_common.h"
 #include "main.h"
 #include "microdesc.h"
+#include "nodelist.h"
 #include "networkstatus.h"
 #include "rendcache.h"
 #include "directory.h"
+#include "connection_or.h"
 
 #include "test_connection.h"
 #include "test_helpers.h"
@@ -776,6 +779,99 @@ test_conn_download_status(void *arg)
   /* the teardown function removes all the connections in the global list*/;
 }
 
+static node_t test_node;
+
+static node_t *
+mock_node_get_mutable_by_id(const char *digest)
+{
+  (void) digest;
+  static routerinfo_t node_ri;
+  memset(&node_ri, 0, sizeof(node_ri));
+
+  test_node.ri = &node_ri;
+  memset(test_node.identity, 'c', sizeof(test_node.identity));
+
+  tor_addr_t ipv4_addr;
+  tor_addr_parse(&ipv4_addr, "18.0.0.1");
+  node_ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
+  node_ri.or_port = 1;
+
+  return &test_node;
+}
+
+static const node_t *
+mock_node_get_by_id(const char *digest)
+{
+  (void) digest;
+  memset(test_node.identity, 'c', sizeof(test_node.identity));
+  return &test_node;
+}
+
+/* Test whether we correctly track failed connections between relays. */
+static void
+test_failed_orconn_tracker(void *arg)
+{
+  (void) arg;
+
+  int can_connect;
+  time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
+  (void) now;
+
+  update_approx_time(now);
+
+  /* Prepare the OR connection that will be used in this test */
+  or_connection_t or_conn;
+  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr, "18.0.0.1"));
+  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.base_.addr, "18.0.0.1"));
+  or_conn.base_.port = 1;
+  memset(or_conn.identity_digest, 'c', sizeof(or_conn.identity_digest));
+
+  /* Check whether we can connect with an empty failure cache:
+   * this should succeed */
+  can_connect = should_connect_to_relay(&or_conn);
+  tt_int_op(can_connect, OP_EQ, 1);
+
+  /* Now add the destination to the failure cache */
+  note_or_connect_failed(&or_conn);
+
+  /* Check again: now it shouldn't connect */
+  can_connect = should_connect_to_relay(&or_conn);
+  tt_int_op(can_connect, OP_EQ, 0);
+
+  /* Move time forward and check again: the cache should have been cleared and
+   * now it should connect */
+  now += 3600;
+  update_approx_time(now);
+  can_connect = should_connect_to_relay(&or_conn);
+  tt_int_op(can_connect, OP_EQ, 1);
+
+  /* Now mock the node_get_*by_id() functions to start using the node subsystem
+   * optimization. */
+  MOCK(node_get_by_id, mock_node_get_by_id);
+  MOCK(node_get_mutable_by_id, mock_node_get_mutable_by_id);
+
+  /* Since we just started using the node subsystem it will allow connections
+   * now */
+  can_connect = should_connect_to_relay(&or_conn);
+  tt_int_op(can_connect, OP_EQ, 1);
+
+  /* Mark it as failed */
+  note_or_connect_failed(&or_conn);
+
+  /* Check that it shouldn't connect now */
+  can_connect = should_connect_to_relay(&or_conn);
+  tt_int_op(can_connect, OP_EQ, 0);
+
+  /* Move time forward and check again: now it should connect  */
+  now += 3600;
+  update_approx_time(now);
+  can_connect = should_connect_to_relay(&or_conn);
+  tt_int_op(can_connect, OP_EQ, 1);
+
+ done:
+  ;
+}
+
 #define CONNECTION_TESTCASE(name, fork, setup)                           \
   { #name, test_conn_##name, fork, &setup, NULL }
 
@@ -792,6 +888,7 @@ struct testcase_t connection_tests[] = {
   CONNECTION_TESTCASE_ARG(download_status,  TT_FORK,
                           test_conn_download_status_st, FLAV_NS),
 //CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
+  { "failed_orconn_tracker", test_failed_orconn_tracker, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

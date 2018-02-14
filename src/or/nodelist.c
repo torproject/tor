@@ -161,8 +161,8 @@ init_nodelist(void)
 }
 
 /** As node_get_by_id, but returns a non-const pointer */
-node_t *
-node_get_mutable_by_id(const char *identity_digest)
+MOCK_IMPL(node_t *,
+node_get_mutable_by_id,(const char *identity_digest))
 {
   node_t search, *node;
   if (PREDICT_UNLIKELY(the_nodelist == NULL))
