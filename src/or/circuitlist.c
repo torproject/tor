@@ -897,8 +897,10 @@ init_circuit_base(circuit_t *circ)
 
 /** If we haven't yet decided on a good timeout value for circuit
  * building, we close idle circuits aggressively so we can get more
- * data points. */
-#define IDLE_TIMEOUT_WHILE_LEARNING (1*60)
+ * data points. These are the default, min, and max consensus values */
+#define DFLT_IDLE_TIMEOUT_WHILE_LEARNING (3*60)
+#define MIN_IDLE_TIMEOUT_WHILE_LEARNING (10)
+#define MAX_IDLE_TIMEOUT_WHILE_LEARNING (1000*60)
 
 /** Allocate space for a new circuit, initializing with <b>p_circ_id</b>
  * and <b>p_conn</b>. Add it to the global circuit list.
@@ -931,7 +933,11 @@ origin_circuit_new(void)
       circuit_build_times_needs_circuits(get_circuit_build_times())) {
     /* Circuits should be shorter lived if we need more of them
      * for learning a good build timeout */
-    circ->circuit_idle_timeout = IDLE_TIMEOUT_WHILE_LEARNING;
+    circ->circuit_idle_timeout =
+      networkstatus_get_param(NULL, "cbtlearntimeout",
+                              DFLT_IDLE_TIMEOUT_WHILE_LEARNING,
+                              MIN_IDLE_TIMEOUT_WHILE_LEARNING,
+                              MAX_IDLE_TIMEOUT_WHILE_LEARNING);
   } else {
     // This should always be larger than the current port prediction time
     // remaining, or else we'll end up with the case where a circuit times out
@@ -951,7 +957,11 @@ origin_circuit_new(void)
                "%d seconds of predictive building remaining.",
                circ->circuit_idle_timeout,
                prediction_time_remaining);
-      circ->circuit_idle_timeout = IDLE_TIMEOUT_WHILE_LEARNING;
+      circ->circuit_idle_timeout =
+          networkstatus_get_param(NULL, "cbtlearntimeout",
+                  DFLT_IDLE_TIMEOUT_WHILE_LEARNING,
+                  MIN_IDLE_TIMEOUT_WHILE_LEARNING,
+                  MAX_IDLE_TIMEOUT_WHILE_LEARNING);
     }
 
     log_info(LD_CIRC,
