@@ -182,6 +182,81 @@ test_protover_all_supported(void *arg)
   tor_free(msg);
 }
 
+static void
+test_protover_vote_roundtrip(void *args)
+{
+  (void) args;
+  static const struct {
+    const char *input;
+    const char *expected_output;
+  } examples[] = {
+    { "Fkrkljdsf", NULL },
+    { "Zn=4294967295", NULL },
+    { "Zn=4294967295-1", NULL },
+    { "Zn=4294967293-4294967295", NULL },
+    /* Will fail because of 4294967295. */
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967295",
+       NULL },
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967294",
+      "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=0,4294967294" },
+    { "Zu16=0,65536", "Zu16=0,65536" },
+    { "N-1=1,2", "N-1=1-2" },
+    { "-1=4294967295", NULL },
+    { "-1=3", "-1=3" },
+    /* junk. */
+    { "!!3@*", NULL },
+    /* Missing equals sign */
+    { "Link=4 Haprauxymatyve Desc=9", NULL },
+    { "Link=4 Haprauxymatyve=7 Desc=9",
+      "Desc=9 Haprauxymatyve=7 Link=4" },
+    { "=10-11", NULL },
+    { "X=10-11", "X=10-11" },
+    { "Link=4 =3 Desc=9", NULL },
+    { "Link=4 Z=3 Desc=9", "Desc=9 Link=4 Z=3" },
+    { "Link=fred", NULL },
+    { "Link=1,fred", NULL },
+    { "Link=1,fred,3", NULL },
+    { "Link=1,9-8,3", NULL },
+    // "These fail at the splitting stage in Rust, but the number parsing
+    // stage in C."
+    { "Faux=-1", NULL },
+    { "Faux=-1-3", NULL },
+    { "Faux=1--1", NULL },
+    /* Large integers */
+    { "Link=4294967296", NULL },
+    /* Large range */
+    { "Sleen=1-501", "Sleen=1-501" },
+    { "Sleen=1-65537", NULL },
+    /* CPU/RAM DoS Loop: Rust only. */
+    { "Sleen=0-2147483648", NULL },
+    /* Rust seems to experience an internal error here. */
+    { "Sleen=0-4294967295", NULL },
+  };
+  unsigned u;
+  smartlist_t *votes = smartlist_new();
+  char *result = NULL;
+
+  for (u = 0; u < ARRAY_LENGTH(examples); ++u) {
+    const char *input = examples[u].input;
+    const char *expected_output = examples[u].expected_output;
+
+    smartlist_add(votes, (void*)input);
+    result = protover_compute_vote(votes, 1);
+    if (expected_output != NULL) {
+      tt_str_op(result, OP_EQ, expected_output);
+    } else {
+      tt_str_op(result, OP_EQ, "");
+    }
+
+    smartlist_clear(votes);
+    tor_free(result);
+  }
+
+ done:
+  smartlist_free(votes);
+  tor_free(result);
+}
+
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
 
@@ -190,6 +265,7 @@ struct testcase_t protover_tests[] = {
   PV_TEST(parse_fail, 0),
   PV_TEST(vote, 0),
   PV_TEST(all_supported, 0),
+  PV_TEST(vote_roundtrip, 0),
   END_OF_TESTCASES
 };
 
