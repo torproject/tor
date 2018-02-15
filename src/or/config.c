@@ -263,7 +263,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("CircuitIdleTimeout"),
   V(CircuitsAvailableTimeout,    INTERVAL, "0"),
   V(CircuitStreamTimeout,        INTERVAL, "0"),
-  V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
+  V(CircuitPriorityHalflife,     DOUBLE,  "-1.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ClientPreferIPv6ORPort,      AUTOBOOL, "auto"),

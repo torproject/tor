@@ -238,7 +238,7 @@ GENERAL OPTIONS
 [[RelayBandwidthBurst]] **RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If not 0, limit the maximum token bucket size (also known as the burst) for
     \_relayed traffic_ to the given number of bytes in each direction.
-    They do not include directory fetches by the relay (from authority 
+    They do not include directory fetches by the relay (from authority
     or other relays), because that is considered "client" activity. (Default: 0)
 
 [[PerConnBWRate]] **PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
@@ -777,17 +777,15 @@ GENERAL OPTIONS
     This is useful when running on flash memory or other media that support
     only a limited number of writes. (Default: 0)
 
-[[CircuitPriorityHalflife]] **CircuitPriorityHalflife** __NUM1__::
+[[CircuitPriorityHalflife]] **CircuitPriorityHalflife** __NUM__::
     If this value is set, we override the default algorithm for choosing which
-    circuit's cell to deliver or relay next. When the value is 0, we
-    round-robin between the active circuits on a connection, delivering one
-    cell from each in turn. When the value is positive, we prefer delivering
-    cells from whichever connection has the lowest weighted cell count, where
-    cells are weighted exponentially according to the supplied
-    CircuitPriorityHalflife value (in seconds). If this option is not set at
-    all, we use the behavior recommended in the current consensus
-    networkstatus. This is an advanced option; you generally shouldn't have
-    to mess with it. (Default: not set)
+    circuit's cell to deliver or relay next. It is delivered first to the
+    circuit that has the lowest weighted cell count, where cells are weighted
+    exponentially according to this value (in seconds). If the value is -1, it
+    is taken from the consensus if possible else it will fallback to the
+    default value of 30. Minimum: 1, Maximum: 2147483647. This can be defined
+    as a float value. This is an advanced option; you generally shouldn't have
+    to mess with it. (Default: -1)
 
 [[CountPrivateBandwidth]] **CountPrivateBandwidth** **0**|**1**::
     If this option is set, then Tor's rate-limiting applies not only to
