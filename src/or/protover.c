@@ -158,6 +158,9 @@ parse_version_range(const char *s, const char *end_of_range,
   if (next != end_of_range)
     goto error;
 
+  if (low > high)
+    goto error;
+
  done:
   *high_out = high;
   *low_out = low;
@@ -205,10 +208,6 @@ parse_single_entry(const char *s, const char *end_of_entry)
 
     smartlist_add(out->ranges, range);
     if (parse_version_range(s, comma, &range->low, &range->high) < 0) {
-      goto error;
-    }
-
-    if (range->low > range->high) {
       goto error;
     }
 
