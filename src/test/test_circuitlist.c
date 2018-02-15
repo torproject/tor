@@ -9,6 +9,7 @@
 #include "channel.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "circuitmux_ewma.h"
 #include "hs_circuitmap.h"
 #include "test.h"
 #include "log_test_helpers.h"

@@ -458,9 +458,7 @@ circuitmux_clear_policy(circuitmux_t *cmux)
   tor_assert(cmux);
 
   /* Internally, this is just setting policy to NULL */
-  if (cmux->policy) {
-    circuitmux_set_policy(cmux, NULL);
-  }
+  circuitmux_set_policy(cmux, NULL);
 }
 
 /**
@@ -884,7 +882,7 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
     hashent->muxinfo.cell_count = cell_count;
     hashent->muxinfo.direction = direction;
     /* Allocate policy specific circuit data if we need it */
-    if (cmux->policy && cmux->policy->alloc_circ_data) {
+    if (cmux->policy->alloc_circ_data) {
       /* Assert that we have the means to free policy-specific data */
       tor_assert(cmux->policy->free_circ_data);
       /* Allocate it */
@@ -1085,7 +1083,7 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
   cmux->n_cells += n_cells;
 
   /* Do we need to notify a cmux policy? */
-  if (cmux->policy && cmux->policy->notify_set_n_cells) {
+  if (cmux->policy->notify_set_n_cells) {
     /* Call notify_set_n_cells */
     cmux->policy->notify_set_n_cells(cmux,
                                      cmux->policy_data,
@@ -1210,7 +1208,7 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
    * We call notify_xmit_cells() before making the circuit inactive if needed,
    * so the policy can always count on this coming in on an active circuit.
    */
-  if (cmux->policy && cmux->policy->notify_xmit_cells) {
+  if (cmux->policy->notify_xmit_cells) {
     cmux->policy->notify_xmit_cells(cmux, cmux->policy_data, circ,
                                     hashent->muxinfo.policy_data,
                                     n_cells);
