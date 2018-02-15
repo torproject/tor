@@ -281,6 +281,7 @@ new_fake_channel(void)
   chan->state = CHANNEL_STATE_OPEN;
 
   chan->cmux = circuitmux_alloc();
+  circuitmux_set_policy(chan->cmux, &ewma_policy);
 
   return chan;
 }
@@ -582,8 +583,6 @@ test_channel_outbound_cell(void *arg)
    * to the channel's cmux as well. */
   circuit_set_n_circid_chan(TO_CIRCUIT(circ), 42, chan);
   tt_int_op(channel_num_circuits(chan), OP_EQ, 1);
-  tt_assert(!TO_CIRCUIT(circ)->next_active_on_n_chan);
-  tt_assert(!TO_CIRCUIT(circ)->prev_active_on_n_chan);
   /* Test the cmux state. */
   tt_ptr_op(TO_CIRCUIT(circ)->n_mux, OP_EQ, chan->cmux);
   tt_int_op(circuitmux_is_circuit_attached(chan->cmux, TO_CIRCUIT(circ)),

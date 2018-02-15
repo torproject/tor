@@ -114,13 +114,6 @@ struct circuitmux_s {
    */
   chanid_circid_muxinfo_map_t *chanid_circid_map;
 
-  /*
-   * Double-linked ring of circuits with queued cells waiting for room to
-   * free up on this connection's outbuf.  Every time we pull cells from
-   * a circuit, we advance this pointer to the next circuit in the ring.
-   */
-  struct circuit_t *active_circuits_head, *active_circuits_tail;
-
   /** List of queued destroy cells */
   destroy_cell_queue_t destroy_cell_queue;
   /** Boolean: True iff the last cell to circuitmux_get_first_active_circuit
@@ -188,18 +181,9 @@ chanid_circid_entry_hash(chanid_circid_muxinfo_t *a);
 static chanid_circid_muxinfo_t *
 circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ);
 static void
-circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
-                               cell_direction_t direction);
+circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ);
 static void
-circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
-                                 cell_direction_t direction);
-static inline void
-circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
-                                    cell_direction_t direction);
-static inline circuit_t **
-circuitmux_next_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
-static inline circuit_t **
-circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
+circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ);
 
 /* Static global variables */
 
@@ -207,115 +191,6 @@ circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
 static int64_t global_destroy_ctr = 0;
 
 /* Function definitions */
-
-/**
- * Linked list helpers
- */
-
-/**
- * Move an active circuit to the tail of the cmux's active circuits list;
- * used by circuitmux_notify_xmit_cells().
- */
-
-static inline void
-circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
-                                    cell_direction_t direction)
-{
-  circuit_t **next_p = NULL, **prev_p = NULL;
-  circuit_t **next_prev = NULL, **prev_next = NULL;
-  circuit_t **tail_next = NULL;
-  or_circuit_t *or_circ = NULL;
-
-  tor_assert(cmux);
-  tor_assert(circ);
-
-  /* Figure out our next_p and prev_p for this cmux/direction */
-  if (direction) {
-    if (direction == CELL_DIRECTION_OUT) {
-      tor_assert(circ->n_mux == cmux);
-      next_p = &(circ->next_active_on_n_chan);
-      prev_p = &(circ->prev_active_on_n_chan);
-    } else {
-      or_circ = TO_OR_CIRCUIT(circ);
-      tor_assert(or_circ->p_mux == cmux);
-      next_p = &(or_circ->next_active_on_p_chan);
-      prev_p = &(or_circ->prev_active_on_p_chan);
-    }
-  } else {
-    if (circ->n_mux == cmux) {
-      next_p = &(circ->next_active_on_n_chan);
-      prev_p = &(circ->prev_active_on_n_chan);
-    } else {
-      or_circ = TO_OR_CIRCUIT(circ);
-      tor_assert(or_circ->p_mux == cmux);
-      next_p = &(or_circ->next_active_on_p_chan);
-      prev_p = &(or_circ->prev_active_on_p_chan);
-    }
-  }
-  tor_assert(next_p);
-  tor_assert(prev_p);
-
-  /* Check if this really is an active circuit */
-  if ((*next_p == NULL && *prev_p == NULL) &&
-      !(circ == cmux->active_circuits_head ||
-        circ == cmux->active_circuits_tail)) {
-    /* Not active, no-op */
-    return;
-  }
-
-  /* Check if this is already the tail */
-  if (circ == cmux->active_circuits_tail) return;
-
-  /* Okay, we have to move it; figure out next_prev and prev_next */
-  if (*next_p) next_prev = circuitmux_prev_active_circ_p(cmux, *next_p);
-  if (*prev_p) prev_next = circuitmux_next_active_circ_p(cmux, *prev_p);
-  /* Adjust the previous node's next pointer, if any */
-  if (prev_next) *prev_next = *next_p;
-  /* Otherwise, we were the head */
-  else cmux->active_circuits_head = *next_p;
-  /* Adjust the next node's previous pointer, if any */
-  if (next_prev) *next_prev = *prev_p;
-  /* We're out of the list; now re-attach at the tail */
-  /* Adjust our next and prev pointers */
-  *next_p = NULL;
-  *prev_p = cmux->active_circuits_tail;
-  /* Set the next pointer of the tail, or the head if none */
-  if (cmux->active_circuits_tail) {
-    tail_next = circuitmux_next_active_circ_p(cmux,
-                                              cmux->active_circuits_tail);
-    *tail_next = circ;
-  } else {
-    cmux->active_circuits_head = circ;
-  }
-  /* Set the tail to this circuit */
-  cmux->active_circuits_tail = circ;
-}
-
-static inline circuit_t **
-circuitmux_next_active_circ_p(circuitmux_t *cmux, circuit_t *circ)
-{
-  tor_assert(cmux);
-  tor_assert(circ);
-
-  if (circ->n_mux == cmux) return &(circ->next_active_on_n_chan);
-  else {
-    tor_assert(TO_OR_CIRCUIT(circ)->p_mux == cmux);
-    return &(TO_OR_CIRCUIT(circ)->next_active_on_p_chan);
-  }
-}
-
-static inline circuit_t **
-circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ)
-{
-  tor_assert(cmux);
-  tor_assert(circ);
-
-  if (circ->n_mux == cmux) return &(circ->prev_active_on_n_chan);
-  else {
-    tor_assert(TO_OR_CIRCUIT(circ)->p_mux == cmux);
-    return &(TO_OR_CIRCUIT(circ)->prev_active_on_p_chan);
-  }
-}
 
 /**
  * Helper for chanid_circid_cell_count_map_t hash table: compare the channel
@@ -412,7 +287,7 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
              */
 
             if (to_remove->muxinfo.cell_count > 0) {
-              circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_OUT);
+              circuitmux_make_circuit_inactive(cmux, circ);
             }
 
             /* Clear n_mux */
@@ -427,7 +302,7 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
              */
 
             if (to_remove->muxinfo.cell_count > 0) {
-              circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_IN);
+              circuitmux_make_circuit_inactive(cmux, circ);
             }
 
             /*
@@ -978,10 +853,10 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
      */
     if (hashent->muxinfo.cell_count > 0 && cell_count == 0) {
       --(cmux->n_active_circuits);
-      circuitmux_make_circuit_inactive(cmux, circ, direction);
+      circuitmux_make_circuit_inactive(cmux, circ);
     } else if (hashent->muxinfo.cell_count == 0 && cell_count > 0) {
       ++(cmux->n_active_circuits);
-      circuitmux_make_circuit_active(cmux, circ, direction);
+      circuitmux_make_circuit_active(cmux, circ);
     }
     cmux->n_cells -= hashent->muxinfo.cell_count;
     cmux->n_cells += cell_count;
@@ -1029,20 +904,11 @@ circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
     if (direction == CELL_DIRECTION_OUT) circ->n_mux = cmux;
     else TO_OR_CIRCUIT(circ)->p_mux = cmux;
 
-    /* Make sure the next/prev pointers are NULL */
-    if (direction == CELL_DIRECTION_OUT) {
-      circ->next_active_on_n_chan = NULL;
-      circ->prev_active_on_n_chan = NULL;
-    } else {
-      TO_OR_CIRCUIT(circ)->next_active_on_p_chan = NULL;
-      TO_OR_CIRCUIT(circ)->prev_active_on_p_chan = NULL;
-    }
-
     /* Update counters */
     ++(cmux->n_circuits);
     if (cell_count > 0) {
       ++(cmux->n_active_circuits);
-      circuitmux_make_circuit_active(cmux, circ, direction);
+      circuitmux_make_circuit_active(cmux, circ);
     }
     cmux->n_cells += cell_count;
   }
@@ -1106,7 +972,7 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
     if (hashent->muxinfo.cell_count > 0) {
       --(cmux->n_active_circuits);
       /* This does policy notifies, so comes before freeing policy data */
-      circuitmux_make_circuit_inactive(cmux, circ, last_searched_direction);
+      circuitmux_make_circuit_inactive(cmux, circ);
     }
     cmux->n_cells -= hashent->muxinfo.cell_count;
 
@@ -1143,81 +1009,16 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
  */
 
 static void
-circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
-                               cell_direction_t direction)
+circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ)
 {
-  circuit_t **next_active = NULL, **prev_active = NULL, **next_prev = NULL;
-  circuitmux_t *circuit_cmux = NULL;
-  chanid_circid_muxinfo_t *hashent = NULL;
-  channel_t *chan = NULL;
-  circid_t circ_id;
-  int already_active;
-
   tor_assert(cmux);
+  tor_assert(cmux->policy);
   tor_assert(circ);
-  tor_assert(direction == CELL_DIRECTION_OUT ||
-             direction == CELL_DIRECTION_IN);
-
-  /* Get the right set of active list links for this direction */
-  if (direction == CELL_DIRECTION_OUT) {
-    next_active = &(circ->next_active_on_n_chan);
-    prev_active = &(circ->prev_active_on_n_chan);
-    circuit_cmux = circ->n_mux;
-    chan = circ->n_chan;
-    circ_id = circ->n_circ_id;
-  } else {
-    next_active = &(TO_OR_CIRCUIT(circ)->next_active_on_p_chan);
-    prev_active = &(TO_OR_CIRCUIT(circ)->prev_active_on_p_chan);
-    circuit_cmux = TO_OR_CIRCUIT(circ)->p_mux;
-    chan = TO_OR_CIRCUIT(circ)->p_chan;
-    circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
-  }
-
-  /* Assert that it is attached to this mux and a channel */
-  tor_assert(cmux == circuit_cmux);
-  tor_assert(chan != NULL);
-
-  /*
-   * Check if the circuit really was inactive; if it's active, at least one
-   * of the next_active and prev_active pointers will not be NULL, or this
-   * circuit will be either the head or tail of the list for this cmux.
-   */
-  already_active = (*prev_active != NULL || *next_active != NULL ||
-                    cmux->active_circuits_head == circ ||
-                    cmux->active_circuits_tail == circ);
-
-  /* If we're already active, log a warning and finish */
-  if (already_active) {
-    log_warn(LD_CIRC,
-             "Circuit %u on channel " U64_FORMAT " was already active",
-             (unsigned)circ_id, U64_PRINTF_ARG(chan->global_identifier));
-    return;
-  }
-
-  /*
-   * This is going at the head of the list; if the old head is not NULL,
-   * then its prev pointer should point to this.
-   */
-  *next_active = cmux->active_circuits_head; /* Next is old head */
-  *prev_active = NULL; /* Prev is NULL (this will be the head) */
-  if (cmux->active_circuits_head) {
-    /* The list had an old head; update its prev pointer */
-    next_prev =
-      circuitmux_prev_active_circ_p(cmux, cmux->active_circuits_head);
-    tor_assert(next_prev);
-    *next_prev = circ;
-  } else {
-    /* The list was empty; this becomes the tail as well */
-    cmux->active_circuits_tail = circ;
-  }
-  /* This becomes the new head of the list */
-  cmux->active_circuits_head = circ;
 
   /* Policy-specific notification */
-  if (cmux->policy &&
-      cmux->policy->notify_circ_active) {
+  if (cmux->policy->notify_circ_active) {
     /* Okay, we need to check the circuit for policy data now */
-    hashent = circuitmux_find_map_entry(cmux, circ);
+    chanid_circid_muxinfo_t *hashent = circuitmux_find_map_entry(cmux, circ);
     /* We should have found something */
     tor_assert(hashent);
     /* Notify */
@@ -1232,99 +1033,16 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
  */
 
 static void
-circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
-                                 cell_direction_t direction)
+circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ)
 {
-  circuit_t **next_active = NULL, **prev_active = NULL;
-  circuit_t **next_prev = NULL, **prev_next = NULL;
-  circuitmux_t *circuit_cmux = NULL;
-  chanid_circid_muxinfo_t *hashent = NULL;
-  channel_t *chan = NULL;
-  circid_t circ_id;
-  int already_inactive;
-
   tor_assert(cmux);
+  tor_assert(cmux->policy);
   tor_assert(circ);
-  tor_assert(direction == CELL_DIRECTION_OUT ||
-             direction == CELL_DIRECTION_IN);
-
-  /* Get the right set of active list links for this direction */
-  if (direction == CELL_DIRECTION_OUT) {
-    next_active = &(circ->next_active_on_n_chan);
-    prev_active = &(circ->prev_active_on_n_chan);
-    circuit_cmux = circ->n_mux;
-    chan = circ->n_chan;
-    circ_id = circ->n_circ_id;
-  } else {
-    next_active = &(TO_OR_CIRCUIT(circ)->next_active_on_p_chan);
-    prev_active = &(TO_OR_CIRCUIT(circ)->prev_active_on_p_chan);
-    circuit_cmux = TO_OR_CIRCUIT(circ)->p_mux;
-    chan = TO_OR_CIRCUIT(circ)->p_chan;
-    circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
-  }
-
-  /* Assert that it is attached to this mux and a channel */
-  tor_assert(cmux == circuit_cmux);
-  tor_assert(chan != NULL);
-
-  /*
-   * Check if the circuit really was active; if it's inactive, the
-   * next_active and prev_active pointers will be NULL and this circuit
-   * will not be the head or tail of the list for this cmux.
-   */
-  already_inactive = (*prev_active == NULL && *next_active == NULL &&
-                      cmux->active_circuits_head != circ &&
-                      cmux->active_circuits_tail != circ);
-
-  /* If we're already inactive, log a warning and finish */
-  if (already_inactive) {
-    log_warn(LD_CIRC,
-             "Circuit %d on channel " U64_FORMAT " was already inactive",
-             (unsigned)circ_id, U64_PRINTF_ARG(chan->global_identifier));
-    return;
-  }
-
-  /* Remove from the list; first get next_prev and prev_next */
-  if (*next_active) {
-    /*
-     * If there's a next circuit, its previous circuit becomes this
-     * circuit's previous circuit.
-     */
-    next_prev = circuitmux_prev_active_circ_p(cmux, *next_active);
-  } else {
-    /* Else, the tail becomes this circuit's previous circuit */
-    next_prev = &(cmux->active_circuits_tail);
-  }
-
-  /* Got next_prev, now prev_next */
-  if (*prev_active) {
-    /*
-     * If there's a previous circuit, its next circuit becomes this circuit's
-     * next circuit.
-     */
-    prev_next = circuitmux_next_active_circ_p(cmux, *prev_active);
-  } else {
-    /* Else, the head becomes this circuit's next circuit */
-    prev_next = &(cmux->active_circuits_head);
-  }
-
-  /* Assert that we got sensible values for the next/prev pointers */
-  tor_assert(next_prev != NULL);
-  tor_assert(prev_next != NULL);
-
-  /* Update the next/prev pointers - this removes circ from the list */
-  *next_prev = *prev_active;
-  *prev_next = *next_active;
-
-  /* Now null out prev_active/next_active */
-  *prev_active = NULL;
-  *next_active = NULL;
 
   /* Policy-specific notification */
-  if (cmux->policy &&
-      cmux->policy->notify_circ_inactive) {
+  if (cmux->policy->notify_circ_inactive) {
     /* Okay, we need to check the circuit for policy data now */
-    hashent = circuitmux_find_map_entry(cmux, circ);
+    chanid_circid_muxinfo_t *hashent = circuitmux_find_map_entry(cmux, circ);
     /* We should have found something */
     tor_assert(hashent);
     /* Notify */
@@ -1383,12 +1101,12 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
   if (hashent->muxinfo.cell_count > 0 && n_cells == 0) {
     --(cmux->n_active_circuits);
     hashent->muxinfo.cell_count = n_cells;
-    circuitmux_make_circuit_inactive(cmux, circ, hashent->muxinfo.direction);
+    circuitmux_make_circuit_inactive(cmux, circ);
   /* Is the old cell count == 0 and the new cell count > 0 ? */
   } else if (hashent->muxinfo.cell_count == 0 && n_cells > 0) {
     ++(cmux->n_active_circuits);
     hashent->muxinfo.cell_count = n_cells;
-    circuitmux_make_circuit_active(cmux, circ, hashent->muxinfo.direction);
+    circuitmux_make_circuit_active(cmux, circ);
   } else {
     hashent->muxinfo.cell_count = n_cells;
   }
@@ -1417,6 +1135,9 @@ circuitmux_get_first_active_circuit(circuitmux_t *cmux,
   circuit_t *circ = NULL;
 
   tor_assert(cmux);
+  tor_assert(cmux->policy);
+  /* This callback is mandatory. */
+  tor_assert(cmux->policy->pick_active_circuit);
   tor_assert(destroy_queue_out);
 
   *destroy_queue_out = NULL;
@@ -1435,14 +1156,7 @@ circuitmux_get_first_active_circuit(circuitmux_t *cmux,
     /* We also must have a cell available for this to be the case */
     tor_assert(cmux->n_cells > 0);
     /* Do we have a policy-provided circuit selector? */
-    if (cmux->policy && cmux->policy->pick_active_circuit) {
-      circ = cmux->policy->pick_active_circuit(cmux, cmux->policy_data);
-    }
-    /* Fall back on the head of the active circuits list */
-    if (!circ) {
-      tor_assert(cmux->active_circuits_head);
-      circ = cmux->active_circuits_head;
-    }
+    circ = cmux->policy->pick_active_circuit(cmux, cmux->policy_data);
     cmux->last_cell_was_destroy = 0;
   } else {
     tor_assert(cmux->n_cells == 0);
@@ -1492,12 +1206,6 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
   /* Adjust the mux cell counter */
   cmux->n_cells -= n_cells;
 
-  /* If we aren't making it inactive later, move it to the tail of the list */
-  if (!becomes_inactive) {
-    circuitmux_move_active_circ_to_tail(cmux, circ,
-                                        hashent->muxinfo.direction);
-  }
-
   /*
    * We call notify_xmit_cells() before making the circuit inactive if needed,
    * so the policy can always count on this coming in on an active circuit.
@@ -1514,7 +1222,7 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
    */
   if (becomes_inactive) {
     --(cmux->n_active_circuits);
-    circuitmux_make_circuit_inactive(cmux, circ, hashent->muxinfo.direction);
+    circuitmux_make_circuit_inactive(cmux, circ);
   }
 }
 

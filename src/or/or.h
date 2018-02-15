@@ -3179,15 +3179,6 @@ typedef struct circuit_t {
   /** Index in smartlist of all circuits (global_circuitlist). */
   int global_circuitlist_idx;
 
-  /** Next circuit in the doubly-linked ring of circuits waiting to add
-   * cells to n_conn.  NULL if we have no cells pending, or if we're not
-   * linked to an OR connection. */
-  struct circuit_t *next_active_on_n_chan;
-  /** Previous circuit in the doubly-linked ring of circuits waiting to add
-   * cells to n_conn.  NULL if we have no cells pending, or if we're not
-   * linked to an OR connection. */
-  struct circuit_t *prev_active_on_n_chan;
-
   /** Various statistics about cells being added to or removed from this
    * circuit's queues; used only if CELL_STATS events are enabled and
    * cleared after being sent to control port. */
@@ -3467,14 +3458,6 @@ struct onion_queue_t;
 typedef struct or_circuit_t {
   circuit_t base_;
 
-  /** Next circuit in the doubly-linked ring of circuits waiting to add
-   * cells to p_chan.  NULL if we have no cells pending, or if we're not
-   * linked to an OR connection. */
-  struct circuit_t *next_active_on_p_chan;
-  /** Previous circuit in the doubly-linked ring of circuits waiting to add
-   * cells to p_chan.  NULL if we have no cells pending, or if we're not
-   * linked to an OR connection. */
-  struct circuit_t *prev_active_on_p_chan;
   /** Pointer to an entry on the onion queue, if this circuit is waiting for a
    * chance to give an onionskin to a cpuworker. Used only in onion.c */
   struct onion_queue_t *onionqueue_entry;

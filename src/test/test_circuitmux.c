@@ -7,6 +7,7 @@
 #include "or.h"
 #include "channel.h"
 #include "circuitmux.h"
+#include "circuitmux_ewma.h"
 #include "relay.h"
 #include "scheduler.h"
 #include "test.h"
@@ -45,6 +46,7 @@ test_cmux_destroy_cell_queue(void *arg)
   cmux = circuitmux_alloc();
   tt_assert(cmux);
   ch = new_fake_channel();
+  circuitmux_set_policy(cmux, &ewma_policy);
   ch->has_queued_writes = has_queued_writes;
   ch->wide_circ_ids = 1;
 
