@@ -257,12 +257,27 @@ test_protover_all_supported(void *arg)
   tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
   tor_free(msg);
 
-  /* Rust seems to experience an internal error here */
-  tt_assert(! protover_all_supported("Sleen=0-4294967295", &msg));
-  tt_str_op(msg, OP_EQ, "Sleen=0-4294967295");
+  /* This case is allowed. */
+  tt_assert(! protover_all_supported("Sleen=0-4294967294", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=0-4294967294");
   tor_free(msg);
 
+  /* If we get an unparseable list, we say "yes, that's supported." */
+  tor_capture_bugs_(1);
+  tt_assert(protover_all_supported("Fribble", &msg));
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tor_end_capture_bugs_();
+
+  /* This case is forbidden. Since it came from a protover_all_supported,
+   * it can trigger a bug message.  */
+  tor_capture_bugs_(1);
+  tt_assert(protover_all_supported("Sleen=0-4294967295", &msg));
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tor_free(msg);
+  tor_end_capture_bugs_();
+
  done:
+  tor_end_capture_bugs_();
   tor_free(msg);
 }
 

@@ -103,6 +103,9 @@ proto_entry_free(proto_entry_t *entry)
   tor_free(entry);
 }
 
+/** The largest possible protocol version. */
+#define MAX_PROTOCOL_VERSION (UINT32_MAX-1)
+
 /**
  * Given a string <b>s</b> and optional end-of-string pointer
  * <b>end_of_range</b>, parse the protocol range and store it in
@@ -130,7 +133,7 @@ parse_version_range(const char *s, const char *end_of_range,
 
   /* Note that this wouldn't be safe if we didn't know that eventually,
    * we'd hit a NUL */
-  low = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
+  low = (uint32_t) tor_parse_ulong(s, 10, 0, MAX_PROTOCOL_VERSION, &ok, &next);
   if (!ok)
     goto error;
   if (next > end_of_range)
@@ -148,7 +151,8 @@ parse_version_range(const char *s, const char *end_of_range,
   if (!TOR_ISDIGIT(*s)) {
     goto error;
   }
-  high = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
+  high = (uint32_t) tor_parse_ulong(s, 10, 0,
+                                    MAX_PROTOCOL_VERSION, &ok, &next);
   if (!ok)
     goto error;
   if (next != end_of_range)
