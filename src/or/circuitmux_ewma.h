@@ -15,7 +15,6 @@
 extern circuitmux_policy_t ewma_policy;
 
 /* Externally visible EWMA functions */
-int cell_ewma_enabled(void);
 unsigned int cell_ewma_get_tick(void);
 void cell_ewma_set_scale_factor(const or_options_t *options,
                                 const networkstatus_t *consensus);

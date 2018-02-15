@@ -575,7 +575,7 @@ test_channel_outbound_cell(void *arg)
   channel_register(chan);
   tt_int_op(chan->registered, OP_EQ, 1);
   /* Set EWMA policy so we can pick it when flushing. */
-  channel_set_cmux_policy_everywhere(&ewma_policy);
+  circuitmux_set_policy(chan->cmux, &ewma_policy);
   tt_ptr_op(circuitmux_get_policy(chan->cmux), OP_EQ, &ewma_policy);
 
   /* Register circuit to the channel circid map which will attach the circuit
