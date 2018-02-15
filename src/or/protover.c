@@ -123,6 +123,11 @@ parse_version_range(const char *s, const char *end_of_range,
   if (BUG(!end_of_range))
     end_of_range = s + strlen(s); // LCOV_EXCL_LINE
 
+  /* A range must start with a digit. */
+  if (!TOR_ISDIGIT(*s)) {
+    goto error;
+  }
+
   /* Note that this wouldn't be safe if we didn't know that eventually,
    * we'd hit a NUL */
   low = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
@@ -138,7 +143,11 @@ parse_version_range(const char *s, const char *end_of_range,
   if (*next != '-')
     goto error;
   s = next+1;
+
   /* ibid */
+  if (!TOR_ISDIGIT(*s)) {
+    goto error;
+  }
   high = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
   if (!ok)
     goto error;

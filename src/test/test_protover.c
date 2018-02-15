@@ -151,11 +151,11 @@ test_protover_vote(void *arg)
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
-  /* This fails in Rust, but not in C */
+  /* This fails, since "-0" is not valid. */
   smartlist_clear(lst);
   smartlist_add(lst, (void*) "Faux=-0");
   result = protover_compute_vote(lst, 1);
-  tt_str_op(result, OP_EQ, "Faux=0");
+  tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
   /* Vote large protover lists that are just below the threshold */
@@ -301,6 +301,8 @@ test_protover_vote_roundtrip(void *args)
     { "Link=1,fred", NULL },
     { "Link=1,fred,3", NULL },
     { "Link=1,9-8,3", NULL },
+    { "Faux=-0", NULL },
+    { "Faux=0--0", NULL },
     // "These fail at the splitting stage in Rust, but the number parsing
     // stage in C."
     { "Faux=-1", NULL },
