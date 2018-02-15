@@ -241,6 +241,13 @@ circuitmux_policy_t ewma_policy = {
 
 /*** EWMA method implementations using the below EWMA helper functions ***/
 
+/** Compute and return the current cell_ewma tick. */
+static inline unsigned int
+cell_ewma_get_tick(void)
+{
+  return ((unsigned)approx_time() / EWMA_TICK_LEN);
+}
+
 /**
  * Allocate an ewma_policy_data_t and upcast it to a circuitmux_policy_data_t;
  * this is called when setting the policy on a circuitmux_t to ewma_policy.
@@ -610,13 +617,6 @@ cell_ewma_tick_from_timeval(const struct timeval *now,
   return res;
 }
 
-/** Compute and return the current cell_ewma tick. */
-unsigned int
-cell_ewma_get_tick(void)
-{
-  return ((unsigned)approx_time() / EWMA_TICK_LEN);
-}
-
 /* Default value for the CircuitPriorityHalflifeMsec consensus parameter in
  * msec. */
 #define CMUX_PRIORITY_HALFLIFE_MSEC_DEFAULT 30000
@@ -672,8 +672,8 @@ get_circuit_priority_halflife(const or_options_t *options,
 
 /** Adjust the global cell scale factor based on <b>options</b> */
 void
-cell_ewma_set_scale_factor(const or_options_t *options,
-                           const networkstatus_t *consensus)
+cmux_ewma_set_options(const or_options_t *options,
+                      const networkstatus_t *consensus)
 {
   double halflife;
   const char *source;

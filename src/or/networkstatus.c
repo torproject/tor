@@ -2003,7 +2003,7 @@ networkstatus_set_current_consensus(const char *consensus,
     update_consensus_networkstatus_fetch_time(now);
 
     /* Change the cell EWMA settings */
-    cell_ewma_set_scale_factor(options, c);
+    cmux_ewma_set_options(options, c);
 
     /* XXXX this call might be unnecessary here: can changing the
      * current consensus really alter our view of any OR's rate limits? */

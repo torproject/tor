@@ -2073,7 +2073,7 @@ options_act(const or_options_t *old_options)
     configure_accounting(time(NULL));
 
   /* Change the cell EWMA settings */
-  cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
+  cmux_ewma_set_options(options, networkstatus_get_latest_consensus());
 
   /* Update the BridgePassword's hashed version as needed.  We store this as a
    * digest so that we can do side-channel-proof comparisons on it.

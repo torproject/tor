@@ -12,12 +12,12 @@
 #include "or.h"
 #include "circuitmux.h"
 
+/* The public EWMA policy callbacks object. */
 extern circuitmux_policy_t ewma_policy;
 
 /* Externally visible EWMA functions */
-unsigned int cell_ewma_get_tick(void);
-void cell_ewma_set_scale_factor(const or_options_t *options,
-                                const networkstatus_t *consensus);
+void cmux_ewma_set_options(const or_options_t *options,
+                           const networkstatus_t *consensus);
 
 #endif /* !defined(TOR_CIRCUITMUX_EWMA_H) */
 
