@@ -2397,13 +2397,6 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
   }
 }
 
-#ifdef ACTIVE_CIRCUITS_PARANOIA
-#define assert_cmux_ok_paranoid(chan) \
-     assert_circuit_mux_okay(chan)
-#else
-#define assert_cmux_ok_paranoid(chan)
-#endif /* defined(ACTIVE_CIRCUITS_PARANOIA) */
-
 /** The total number of cells we have allocated. */
 static size_t total_cells_allocated = 0;
 
@@ -2691,16 +2684,12 @@ update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
   }
   tor_assert(circuitmux_attached_circuit_direction(cmux, circ) == direction);
 
-  assert_cmux_ok_paranoid(chan);
-
   /* Update the number of cells we have for the circuit mux */
   if (direction == CELL_DIRECTION_OUT) {
     circuitmux_set_num_cells(cmux, circ, circ->n_chan_cells.n);
   } else {
     circuitmux_set_num_cells(cmux, circ, or_circ->p_chan_cells.n);
   }
-
-  assert_cmux_ok_paranoid(chan);
 }
 
 /** Remove all circuits from the cmux on <b>chan</b>.
@@ -2845,7 +2834,6 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
     }
     /* If it returns NULL, no cells left to send */
     if (!circ) break;
-    assert_cmux_ok_paranoid(chan);
 
     if (circ->n_chan == chan) {
       queue = &circ->n_chan_cells;
@@ -2949,8 +2937,6 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
   }
 
   /* Okay, we're done sending now */
-  assert_cmux_ok_paranoid(chan);
-
   return n_flushed;
 }
 
@@ -3099,17 +3085,6 @@ circuit_clear_cell_queue(circuit_t *circ, channel_t *chan)
   /* Update the cell counter in the cmux */
   if (chan->cmux && circuitmux_is_circuit_attached(chan->cmux, circ))
     update_circuit_on_cmux(circ, direction);
-}
-
-/** Fail with an assert if the circuit mux on chan is corrupt
- */
-void
-assert_circuit_mux_okay(channel_t *chan)
-{
-  tor_assert(chan);
-  tor_assert(chan->cmux);
-
-  circuitmux_assert_okay(chan->cmux);
 }
 
 /** Return 1 if we shouldn't restart reading on this circuit, even if
