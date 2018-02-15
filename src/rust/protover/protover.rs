@@ -23,7 +23,7 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// before concluding that someone is trying to DoS us
 ///
 /// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
-const MAX_PROTOCOLS_TO_EXPAND: u32 = 500;
+const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
 
 /// Currently supported protocols and their versions, as a byte-slice.
 ///
@@ -209,7 +209,7 @@ impl Versions {
                 )?);
             }
 
-            if versions.len() > MAX_PROTOCOLS_TO_EXPAND as usize {
+            if versions.len() > MAX_PROTOCOLS_TO_EXPAND {
                 return Err("Too many versions to expand");
             }
         }
@@ -448,7 +448,13 @@ fn expand_version_range(range: &str) -> Result<Range<u32>, &'static str> {
     ))?;
 
     // We can use inclusive range syntax when it becomes stable.
-    Ok(lower..higher + 1)
+    let result = lower..higher + 1;
+
+    if result.len() > MAX_PROTOCOLS_TO_EXPAND {
+        Err("Too many protocols in expanded range")
+    } else {
+        Ok(result)
+    }
 }
 
 /// Checks to see if there is a continuous range of integers, starting at the
@@ -862,6 +868,9 @@ mod test {
             Err("cannot parse protocol range upper bound"),
             expand_version_range("1-a")
         );
+        assert_eq!(Ok(1000..66536), expand_version_range("1000-66535"));
+        assert_eq!(Err("Too many protocols in expanded range"),
+                   expand_version_range("1000-66536"));
     }
 
     #[test]
