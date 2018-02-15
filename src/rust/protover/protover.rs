@@ -193,10 +193,6 @@ impl Versions {
     fn from_version_string(
         version_string: &str,
     ) -> Result<Self, &'static str> {
-        if version_string.is_empty() {
-            return Err("version string is empty");
-        }
-
         let mut versions = HashSet::<Version>::new();
 
         for piece in version_string.split(",") {
@@ -204,6 +200,8 @@ impl Versions {
                 for p in expand_version_range(piece)? {
                     versions.insert(p);
                 }
+            } else if piece == "" {
+                continue;
             } else {
                 let v = u32::from_str(piece).or(
                     Err("invalid protocol entry"),
@@ -456,6 +454,10 @@ fn expand_version_range(range: &str) -> Result<Range<u32>, &'static str> {
         return Err("protocol range value out of range");
     }
 
+    if lower > higher {
+        return Err("protocol range is badly formed");
+    }
+
     // We can use inclusive range syntax when it becomes stable.
     let result = lower..higher + 1;
 
@@ -583,6 +585,7 @@ fn parse_protocols_from_string_with_no_validation<'a>(
         let mut parts = subproto.splitn(2, "=");
 
         let name = match parts.next() {
+            Some("") => return Err("invalid protover entry"),
             Some(n) => n,
             None => return Err("invalid protover entry"),
         };
@@ -650,7 +653,6 @@ pub fn compute_vote(
                 Ok(result) => result,
                 Err(_) => continue,
             };
-
         for (protocol, versions) in this_vote {
             let supported_vers: &mut HashMap<Version, usize> =
                 all_count.entry(protocol).or_insert(HashMap::new());
@@ -794,7 +796,6 @@ mod test {
 
         use super::Versions;
 
-        assert_eq!(Err("version string is empty"), Versions::from_version_string(""));
         assert_eq!(Err("invalid protocol entry"), Versions::from_version_string("a,b"));
         assert_eq!(Err("invalid protocol entry"), Versions::from_version_string("1,!"));
 
@@ -838,7 +839,7 @@ mod test {
         use super::contains_only_supported_protocols;
 
         assert_eq!(false, contains_only_supported_protocols(""));
-        assert_eq!(false, contains_only_supported_protocols("Cons="));
+        assert_eq!(true, contains_only_supported_protocols("Cons="));
         assert_eq!(true, contains_only_supported_protocols("Cons=1"));
         assert_eq!(false, contains_only_supported_protocols("Cons=0"));
         assert_eq!(false, contains_only_supported_protocols("Cons=0-1"));
