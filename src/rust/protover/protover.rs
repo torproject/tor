@@ -9,6 +9,7 @@ use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::string::String;
+use std::u32;
 
 use tor_util::strings::NUL_BYTE;
 
@@ -204,9 +205,13 @@ impl Versions {
                     versions.insert(p);
                 }
             } else {
-                versions.insert(u32::from_str(piece).or(
+                let v = u32::from_str(piece).or(
                     Err("invalid protocol entry"),
-                )?);
+                )?;
+                if v == u32::MAX {
+                    return Err("invalid protocol entry");
+                }
+                versions.insert(v);
             }
 
             if versions.len() > MAX_PROTOCOLS_TO_EXPAND {
@@ -446,6 +451,10 @@ fn expand_version_range(range: &str) -> Result<Range<u32>, &'static str> {
     let higher = u32::from_str_radix(higher_string, 10).or(Err(
         "cannot parse protocol range upper bound",
     ))?;
+
+    if lower == u32::MAX || higher == u32::MAX {
+        return Err("protocol range value out of range");
+    }
 
     // We can use inclusive range syntax when it becomes stable.
     let result = lower..higher + 1;
