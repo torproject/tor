@@ -63,6 +63,7 @@ void reschedule_descriptor_update_check(void);
 void reschedule_directory_downloads(void);
 
 MOCK_DECL(long,get_uptime,(void));
+MOCK_DECL(void,reset_uptime,(void));
 
 unsigned get_signewnym_epoch(void);
 
@@ -87,7 +88,6 @@ uint64_t get_main_loop_error_count(void);
 uint64_t get_main_loop_idle_count(void);
 
 extern time_t time_of_process_start;
-extern long stats_n_seconds_working;
 extern int quiet_level;
 extern int global_read_bucket;
 extern int global_write_bucket;

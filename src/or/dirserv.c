@@ -1423,7 +1423,7 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
    * tests aren't instant. If we haven't been running long enough,
    * trust the relay. */
 
-  if (stats_n_seconds_working >
+  if (get_uptime() >
       get_options()->MinUptimeHidServDirectoryV2 * 1.1)
     uptime = MIN(rep_hist_get_uptime(router->cache_info.identity_digest, now),
                  real_uptime(router, now));

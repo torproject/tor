@@ -1095,7 +1095,7 @@ directory_all_unreachable(time_t now)
 {
   (void)now;
 
-  stats_n_seconds_working=0; /* reset it */
+  reset_uptime(); /* reset it */
 
   if (!directory_all_unreachable_cb_event) {
     directory_all_unreachable_cb_event =
@@ -2064,7 +2064,7 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
   if (server_mode(options) &&
       (have_completed_a_circuit() || !any_predicted_circuits(now)) &&
       !net_is_disabled()) {
-    if (stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
+    if (get_uptime() < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
       consider_testing_reachability(1, dirport_reachability_count==0);
       if (++dirport_reachability_count > 5)
         dirport_reachability_count = 0;
@@ -2321,8 +2321,8 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
       !net_is_disabled() &&
       seconds_elapsed > 0 &&
       have_completed_a_circuit() &&
-      stats_n_seconds_working / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
-      (stats_n_seconds_working+seconds_elapsed) /
+      get_uptime() / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
+      (get_uptime()+seconds_elapsed) /
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
     /* every 20 minutes, check and complain if necessary */
     const routerinfo_t *me = router_get_my_routerinfo();
@@ -2466,9 +2466,9 @@ ip_address_changed(int at_interface)
     }
   } else {
     if (server) {
-      if (stats_n_seconds_working > UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST)
+      if (get_uptime() > UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST)
         reset_bandwidth_test();
-      stats_n_seconds_working = 0;
+      reset_uptime();
       router_reset_reachability();
     }
   }
@@ -3004,6 +3004,13 @@ MOCK_IMPL(long,
 get_uptime,(void))
 {
   return stats_n_seconds_working;
+}
+
+/** Reset Tor's uptime. */
+MOCK_IMPL(void,
+reset_uptime,(void))
+{
+  stats_n_seconds_working = 0;
 }
 
 /**
