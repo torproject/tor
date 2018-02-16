@@ -289,8 +289,7 @@ static int keypin_journal_fd = -1;
 int
 keypin_open_journal(const char *fname)
 {
-  /* O_SYNC ??*/
-  int fd = tor_open_cloexec(fname, O_WRONLY|O_CREAT|O_BINARY, 0600);
+  int fd = tor_open_cloexec(fname, O_WRONLY|O_CREAT|O_BINARY|O_SYNC, 0600);
   if (fd < 0)
     goto err;
 
@@ -417,10 +416,11 @@ keypin_load_journal_impl(const char *data, size_t size)
     ++n_entries;
   }
 
-  int severity = (n_corrupt_lines || n_duplicates) ? LOG_WARN : LOG_INFO;
+  int severity = (n_corrupt_lines || n_duplicates) ? LOG_NOTICE : LOG_INFO;
   tor_log(severity, LD_DIRSERV,
           "Loaded %d entries from keypin journal. "
-          "Found %d corrupt lines, %d duplicates, and %d conflicts.",
+          "Found %d corrupt lines (ignored), %d duplicates (harmless), "
+          "and %d conflicts (resolved in favor or more recent entry).",
           n_entries, n_corrupt_lines, n_duplicates, n_conflicts);
 
   return 0;

@@ -1,0 +1,4 @@
+  o Minor features (directory authority):
+    - Directory authorities now open their key-pinning files as O_SYNC,
+      to prevent themselves from accidentally writing partial lines.
+      Closes ticket 23909.
