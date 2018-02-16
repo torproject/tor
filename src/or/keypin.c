@@ -289,6 +289,9 @@ static int keypin_journal_fd = -1;
 int
 keypin_open_journal(const char *fname)
 {
+#ifndef O_SYNC
+#define O_SYNC 0
+#endif
   int fd = tor_open_cloexec(fname, O_WRONLY|O_CREAT|O_BINARY|O_SYNC, 0600);
   if (fd < 0)
     goto err;
