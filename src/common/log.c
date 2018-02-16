@@ -1177,7 +1177,7 @@ static const char *domain_list[] = {
   "GENERAL", "CRYPTO", "NET", "CONFIG", "FS", "PROTOCOL", "MM",
   "HTTP", "APP", "CONTROL", "CIRC", "REND", "BUG", "DIR", "DIRSERV",
   "OR", "EDGE", "ACCT", "HIST", "HANDSHAKE", "HEARTBEAT", "CHANNEL",
-  "SCHED", "GUARD", "CONSDIFF", NULL
+  "SCHED", "GUARD", "CONSDIFF", "DOS", NULL
 };
 
 /** Return a bitmask for the log domain for which <b>domain</b> is the name,

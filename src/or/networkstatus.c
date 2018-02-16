@@ -51,6 +51,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "main.h"
 #include "microdesc.h"
@@ -1603,6 +1604,15 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   smartlist_free(changed);
 }
 
+/* Called when the consensus has changed from old_c to new_c. */
+static void
+notify_networkstatus_changed(const networkstatus_t *old_c,
+                             const networkstatus_t *new_c)
+{
+  notify_control_networkstatus_changed(old_c, new_c);
+  dos_consensus_has_changed(new_c);
+}
+
 /** Copy all the ancillary information (like router download status and so on)
  * from <b>old_c</b> to <b>new_c</b>. */
 static void
@@ -1927,8 +1937,7 @@ networkstatus_set_current_consensus(const char *consensus,
   const int is_usable_flavor = flav == usable_consensus_flavor();
 
   if (is_usable_flavor) {
-    notify_control_networkstatus_changed(
-                         networkstatus_get_latest_consensus(), c);
+    notify_networkstatus_changed(networkstatus_get_latest_consensus(), c);
   }
   if (flav == FLAV_NS) {
     if (current_ns_consensus) {
