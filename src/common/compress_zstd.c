@@ -58,6 +58,7 @@ tor_zstd_method_supported(void)
 #endif
 }
 
+#ifdef HAVE_ZSTD
 /** Format a zstd version number as a string in <b>buf</b>. */
 static void
 tor_zstd_format_version(char *buf, size_t buflen, unsigned version_number)
@@ -68,6 +69,7 @@ tor_zstd_format_version(char *buf, size_t buflen, unsigned version_number)
                version_number / 100 % 100,
                version_number % 100);
 }
+#endif
 
 #define VERSION_STR_MAX_LEN 16 /* more than enough space for 99.99.99 */
 
