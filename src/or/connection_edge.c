@@ -739,7 +739,7 @@ connection_ap_expire_beginning(void)
     /* if it's an internal linked connection, don't yell its status. */
     severity = (tor_addr_is_null(&base_conn->addr) && !base_conn->port)
       ? LOG_INFO : LOG_NOTICE;
-    seconds_idle = (int)( now - base_conn->timestamp_lastread );
+    seconds_idle = (int)( now - base_conn->timestamp_last_read_allowed );
     seconds_since_born = (int)( now - base_conn->timestamp_created );
 
     if (base_conn->state == AP_CONN_STATE_OPEN)
@@ -825,7 +825,7 @@ connection_ap_expire_beginning(void)
     mark_circuit_unusable_for_new_conns(TO_ORIGIN_CIRCUIT(circ));
 
     /* give our stream another 'cutoff' seconds to try */
-    conn->base_.timestamp_lastread += cutoff;
+    conn->base_.timestamp_last_read_allowed += cutoff;
     if (entry_conn->num_socks_retries < 250) /* avoid overflow */
       entry_conn->num_socks_retries++;
     /* move it back into 'pending' state, and try to attach. */
@@ -1135,7 +1135,7 @@ connection_ap_detach_retriable(entry_connection_t *conn,
                                int reason)
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE, reason);
-  ENTRY_TO_CONN(conn)->timestamp_lastread = time(NULL);
+  ENTRY_TO_CONN(conn)->timestamp_last_read_allowed = time(NULL);
 
   /* Roll back path bias use state so that we probe the circuit
    * if nothing else succeeds on it */

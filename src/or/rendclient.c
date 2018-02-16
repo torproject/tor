@@ -915,8 +915,8 @@ rend_client_desc_trynow(const char *query)
       /* restart their timeout values, so they get a fair shake at
        * connecting to the hidden service. */
       base_conn->timestamp_created = now;
-      base_conn->timestamp_lastread = now;
-      base_conn->timestamp_lastwritten = now;
+      base_conn->timestamp_last_read_allowed = now;
+      base_conn->timestamp_last_write_allowed = now;
 
       connection_ap_mark_as_pending_circuit(conn);
     } else { /* 404, or fetch didn't get that far */

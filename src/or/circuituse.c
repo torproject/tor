@@ -2584,7 +2584,7 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %u.",
             (unsigned)circ->base_.n_circ_id);
   /* reset it, so we can measure circ timeouts */
-  ENTRY_TO_CONN(apconn)->timestamp_lastread = time(NULL);
+  ENTRY_TO_CONN(apconn)->timestamp_last_read_allowed = time(NULL);
   ENTRY_TO_EDGE_CONN(apconn)->next_stream = circ->p_streams;
   ENTRY_TO_EDGE_CONN(apconn)->on_circuit = TO_CIRCUIT(circ);
   /* assert_connection_ok(conn, time(NULL)); */
