@@ -2441,6 +2441,101 @@ The following options are used to configure a hidden service.
     including setting SOCKSPort to "0".
     (Default: 0)
 
+DENIAL OF SERVICE MITIGATION OPTIONS
+------------------------------------
+
+The following options are useful only for a public relay. They control the
+Denial of Service mitigation subsystem.
+
+[[DoSCircuitCreationEnabled]] **DoSCircuitCreationEnabled** **0**|**1**|**auto**::
+
+    Enable circuit creation DoS mitigation. If enabled, tor will cache client
+    IPs along with statistics in order to detect circuit DoS attacks. If an
+    address is positively identified, tor will activate defenses against the
+    address. See the DoSCircuitCreationDefenseType option for more details.
+    This is a client to relay detection only. "auto" means use the consensus
+    parameter. If not defined in the consensus, the value is 0.
+    (Default: auto)
+
+[[DoSCircuitCreationMinConnections]] **DoSCircuitCreationMinConnections** __NUM__::
+
+    Minimum threshold of concurrent connections before a client address can be
+    flagged as executing a circuit creation DoS. In other words, once a client
+    address reaches the circuit rate and has a minimum of NUM concurrent
+    connections, a detection is positive. "0" means use the consensus
+    parameter. If not defined in the consensus, the value is 3.
+    (Default: 0)
+
+[[DoSCircuitCreationRate]] **DoSCircuitCreationRate** __NUM__::
+
+    The allowed circuit creation rate per second applied per client IP
+    address. If this option is 0, it obeys a consensus parameter. If not
+    defined in the consensus, the value is 3.
+    (Default: 0)
+
+[[DoSCircuitCreationBurst]] **DoSCircuitCreationBurst** __NUM__::
+
+    The allowed circuit creation burst per client IP address. If the circuit
+    rate and the burst are reached, a client is marked as executing a circuit
+    creation DoS. "0" means use the consensus parameter. If not defined in the
+    consensus, the value is 90.
+    (Default: 0)
+
+[[DoSCircuitCreationDefenseType]] **DoSCircuitCreationDefenseType** __NUM__::
+
+    This is the type of defense applied to a detected client address. The
+    possible values are:
+
+      1: No defense.
+      2: Refuse circuit creation for the DoSCircuitCreationDefenseTimePeriod period of time.
++
+    "0" means use the consensus parameter. If not defined in the consensus,
+    the value is 2.
+    (Default: 0)
+
+[[DoSCircuitCreationDefenseTimePeriod]] **DoSCircuitCreationDefenseTimePeriod** __N__ **seconds**|**minutes**|**hours**::
+
+    The base time period in seconds that the DoS defense is activated for. The
+    actual value is selected randomly for each activation from N+1 to 3/2 * N.
+    "0" means use the consensus parameter. If not defined in the consensus,
+    the value is 3600 seconds (1 hour).  (Default: 0)
+
+[[DoSConnectionEnabled]] **DoSConnectionEnabled** **0**|**1**|**auto**::
+
+    Enable the connection DoS mitigation. For client address only, this allows
+    tor to mitigate against large number of concurrent connections made by a
+    single IP address. "auto" means use the consensus parameter. If not
+    defined in the consensus, the value is 0.
+    (Default: auto)
+
+[[DoSConnectionMaxConcurrentCount]] **DoSConnectionMaxConcurrentCount** __NUM__::
+
+    The maximum threshold of concurrent connection from a client IP address.
+    Above this limit, a defense selected by DoSConnectionDefenseType is
+    applied. "0" means use the consensus parameter. If not defined in the
+    consensus, the value is 100.
+    (Default: 0)
+
+[[DoSConnectionDefenseType]] **DoSConnectionDefenseType** __NUM__::
+
+    This is the type of defense applied to a detected client address for the
+    connection mitigation. The possible values are:
+
+      1: No defense.
+      2: Immediately close new connections.
++
+    "0" means use the consensus parameter. If not defined in the consensus,
+    the value is 2.
+    (Default: 0)
+
+[[DoSRefuseSingleHopClientRendezvous]] **DoSRefuseSingleHopClientRendezvous** **0**|**1**|**auto**::
+
+    Refuse establishment of rendezvous points for single hop clients. In other
+    words, if a client directly connects to the relay and sends an
+    ESTABLISH_RENDEZVOUS cell, it is silently dropped. "auto" means use the
+    consensus parameter. If not defined in the consensus, the value is 0.
+    (Default: auto)
+
 TESTING NETWORK OPTIONS
 -----------------------
 
