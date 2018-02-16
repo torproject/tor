@@ -83,10 +83,10 @@
 /// # Note
 ///
 /// An unfortunate limitation of the rustc compiler (as of 1.25.0-nightly), is
-/// that the above code compiles, however if we were to change the assignment of
-/// `tuesday` as follows, it will fail to compile, because Rust macros are
-/// expanded at parse time, and at parse time there is no symbols table
-/// available.
+/// that the first example above compiles, but if we were to change the
+/// assignment of `tuesday` as follows, it will fail to compile, because Rust
+/// macros are expanded at parse time, and at parse time there is no symbol
+/// table available.
 ///
 /// ```ignore
 /// tuesday = cstr!(message);
