@@ -850,6 +850,122 @@ crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out)
   return 0;
 }
 
+/** Check a siglen-byte long signature at <b>sig</b> against
+ * <b>datalen</b> bytes of data at <b>data</b>, using the public key
+ * in <b>env</b>. Return 0 if <b>sig</b> is a correct signature for
+ * SHA1(data).  Else return -1.
+ */
+MOCK_IMPL(int,
+crypto_pk_public_checksig_digest,(crypto_pk_t *env, const char *data,
+                                  size_t datalen, const char *sig,
+                                  size_t siglen))
+{
+  char digest[DIGEST_LEN];
+  char *buf;
+  size_t buflen;
+  int r;
+
+  tor_assert(env);
+  tor_assert(data);
+  tor_assert(sig);
+  tor_assert(datalen < SIZE_T_CEILING);
+  tor_assert(siglen < SIZE_T_CEILING);
+
+  if (crypto_digest(digest,data,datalen)<0) {
+    log_warn(LD_BUG, "couldn't compute digest");
+    return -1;
+  }
+  buflen = crypto_pk_keysize(env);
+  buf = tor_malloc(buflen);
+  r = crypto_pk_public_checksig(env,buf,buflen,sig,siglen);
+  if (r != DIGEST_LEN) {
+    log_warn(LD_CRYPTO, "Invalid signature");
+    tor_free(buf);
+    return -1;
+  }
+  if (tor_memneq(buf, digest, DIGEST_LEN)) {
+    log_warn(LD_CRYPTO, "Signature mismatched with digest.");
+    tor_free(buf);
+    return -1;
+  }
+  tor_free(buf);
+
+  return 0;
+}
+
+/** Compute a SHA1 digest of <b>fromlen</b> bytes of data stored at
+ * <b>from</b>; sign the data with the private key in <b>env</b>, and
+ * store it in <b>to</b>.  Return the number of bytes written on
+ * success, and -1 on failure.
+ *
+ * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
+ * at least the length of the modulus of <b>env</b>.
+ */
+int
+crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
+                              const char *from, size_t fromlen)
+{
+  int r;
+  char digest[DIGEST_LEN];
+  if (crypto_digest(digest,from,fromlen)<0)
+    return -1;
+  r = crypto_pk_private_sign(env,to,tolen,digest,DIGEST_LEN);
+  memwipe(digest, 0, sizeof(digest));
+  return r;
+}
+
+/** Given a private or public key <b>pk</b>, put a SHA1 hash of the
+ * public key into <b>digest_out</b> (must have DIGEST_LEN bytes of space).
+ * Return 0 on success, -1 on failure.
+ */
+int
+crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
+{
+  char *buf;
+  size_t buflen;
+  int len;
+  int rv = -1;
+
+  buflen = crypto_pk_keysize(pk)*2;
+  buf = tor_malloc(buflen);
+  len = crypto_pk_asn1_encode(pk, buf, buflen);
+  if (len < 0)
+    goto done;
+
+  if (crypto_digest(digest_out, buf, len) < 0)
+    goto done;
+
+  rv = 0;
+  done:
+  tor_free(buf);
+  return rv;
+}
+
+/** Compute all digests of the DER encoding of <b>pk</b>, and store them
+ * in <b>digests_out</b>.  Return 0 on success, -1 on failure. */
+int
+crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out)
+{
+  char *buf;
+  size_t buflen;
+  int len;
+  int rv = -1;
+
+  buflen = crypto_pk_keysize(pk)*2;
+  buf = tor_malloc(buflen);
+  len = crypto_pk_asn1_encode(pk, buf, buflen);
+  if (len < 0)
+    goto done;
+
+  if (crypto_common_digests(digests_out, (char*)buf, len) < 0)
+    goto done;
+
+  rv = 0;
+ done:
+  tor_free(buf);
+  return rv;
+}
+
 /** Given a crypto_pk_t <b>pk</b>, allocate a new buffer containing the
  * Base64 encoding of the DER representation of the private key as a NUL
  * terminated string, and return it via <b>priv_out</b>.  Return 0 on

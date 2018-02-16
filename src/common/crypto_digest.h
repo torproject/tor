@@ -14,7 +14,8 @@
 #define TOR_CRYPTO_DIGEST_H
 
 #include <stdio.h>
-#include "crypto_rsa.h"
+
+#include "crypto_curve25519.h"
 
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
@@ -68,16 +69,6 @@ typedef struct {
 
 typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
-
-/* public key crypto digest */
-MOCK_DECL(int, crypto_pk_public_checksig_digest,(crypto_pk_t *env,
-                                         const char *data, size_t datalen,
-                                         const char *sig, size_t siglen));
-int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
-                                  const char *from, size_t fromlen);
-int crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out);
-int crypto_pk_get_common_digests(crypto_pk_t *pk,
-                                 common_digests_t *digests_out);
 
 /* SHA-1 and other digests */
 int crypto_digest(char *digest, const char *m, size_t len);
