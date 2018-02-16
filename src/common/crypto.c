@@ -1163,10 +1163,7 @@ void
 crypto_digest_checkpoint(crypto_digest_checkpoint_t *checkpoint,
                          const crypto_digest_t *digest)
 {
-  tor_assert(digest->algorithm == DIGEST_SHA1);
-  /* The optimizer should turn this into a constant... */
-  const size_t bytes = crypto_digest_alloc_bytes(DIGEST_SHA1);
-  /* ... and remove this assertion entirely. */
+  const size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
   tor_assert(bytes <= sizeof(checkpoint->mem));
   memcpy(checkpoint->mem, digest, bytes);
 }
@@ -1178,8 +1175,7 @@ void
 crypto_digest_restore(crypto_digest_t *digest,
                       const crypto_digest_checkpoint_t *checkpoint)
 {
-  tor_assert(digest->algorithm == DIGEST_SHA1);
-  const size_t bytes = crypto_digest_alloc_bytes(DIGEST_SHA1);
+  const size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
   memcpy(digest, checkpoint->mem, bytes);
 }
 
