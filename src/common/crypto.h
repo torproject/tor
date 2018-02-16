@@ -90,7 +90,7 @@ typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
 typedef struct crypto_dh_t crypto_dh_t;
 
-#define DIGEST_CHECKPOINT_BYTES (SIZEOF_VOID_P + 256)
+#define DIGEST_CHECKPOINT_BYTES (SIZEOF_VOID_P + 512)
 /** Structure used to temporarily save the a digest object. Only implemented
  * for SHA1 digest for now. */
 typedef struct crypto_digest_checkpoint_t {
