@@ -69,6 +69,14 @@ crypto_pk_t *crypto_pk_dup_key(crypto_pk_t *orig);
 crypto_pk_t *crypto_pk_copy_full(crypto_pk_t *orig);
 int crypto_pk_key_is_private(const crypto_pk_t *key);
 int crypto_pk_public_exponent_ok(crypto_pk_t *env);
+int crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env, char *to,
+                                    size_t tolen,
+                                    const char *from, size_t fromlen,
+                                    int padding, int force);
+int crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env, char *to,
+                                     size_t tolen,
+                                     const char *from, size_t fromlen,
+                                     int padding, int warnOnFailure);
 int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
                              const char *from, size_t fromlen, int padding);
 int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,

@@ -64,16 +64,6 @@ void crypto_cipher_free_(crypto_cipher_t *env);
 #define crypto_cipher_free(c) \
   FREE_AND_NULL(crypto_cipher_t, crypto_cipher_free_, (c))
 
-/* public key crypto  */
-int crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env, char *to,
-                                    size_t tolen,
-                                    const char *from, size_t fromlen,
-                                    int padding, int force);
-int crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env, char *to,
-                                     size_t tolen,
-                                     const char *from, size_t fromlen,
-                                     int padding, int warnOnFailure);
-
 /* symmetric crypto */
 const char *crypto_cipher_get_key(crypto_cipher_t *env);
 

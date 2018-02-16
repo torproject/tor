@@ -627,6 +627,148 @@ crypto_pk_copy_full(crypto_pk_t *env)
   return crypto_new_pk_from_rsa_(new_key);
 }
 
+/** Perform a hybrid (public/secret) encryption on <b>fromlen</b>
+ * bytes of data from <b>from</b>, with padding type 'padding',
+ * storing the results on <b>to</b>.
+ *
+ * Returns the number of bytes written on success, -1 on failure.
+ *
+ * The encrypted data consists of:
+ *   - The source data, padded and encrypted with the public key, if the
+ *     padded source data is no longer than the public key, and <b>force</b>
+ *     is false, OR
+ *   - The beginning of the source data prefixed with a 16-byte symmetric key,
+ *     padded and encrypted with the public key; followed by the rest of
+ *     the source data encrypted in AES-CTR mode with the symmetric key.
+ *
+ * NOTE that this format does not authenticate the symmetrically encrypted
+ * part of the data, and SHOULD NOT BE USED for new protocols.
+ */
+int
+crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env,
+                                char *to, size_t tolen,
+                                const char *from,
+                                size_t fromlen,
+                                int padding, int force)
+{
+  int overhead, outlen, r;
+  size_t pkeylen, symlen;
+  crypto_cipher_t *cipher = NULL;
+  char *buf = NULL;
+
+  tor_assert(env);
+  tor_assert(from);
+  tor_assert(to);
+  tor_assert(fromlen < SIZE_T_CEILING);
+
+  overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
+  pkeylen = crypto_pk_keysize(env);
+
+  if (!force && fromlen+overhead <= pkeylen) {
+    /* It all fits in a single encrypt. */
+    return crypto_pk_public_encrypt(env,to,
+                                    tolen,
+                                    from,fromlen,padding);
+  }
+  tor_assert(tolen >= fromlen + overhead + CIPHER_KEY_LEN);
+  tor_assert(tolen >= pkeylen);
+
+  char key[CIPHER_KEY_LEN];
+  crypto_rand(key, sizeof(key)); /* generate a new key. */
+  cipher = crypto_cipher_new(key);
+
+  buf = tor_malloc(pkeylen+1);
+  memcpy(buf, key, CIPHER_KEY_LEN);
+  memcpy(buf+CIPHER_KEY_LEN, from, pkeylen-overhead-CIPHER_KEY_LEN);
+
+  /* Length of symmetrically encrypted data. */
+  symlen = fromlen-(pkeylen-overhead-CIPHER_KEY_LEN);
+
+  outlen = crypto_pk_public_encrypt(env,to,tolen,buf,pkeylen-overhead,padding);
+  if (outlen!=(int)pkeylen) {
+    goto err;
+  }
+  r = crypto_cipher_encrypt(cipher, to+outlen,
+                            from+pkeylen-overhead-CIPHER_KEY_LEN, symlen);
+
+  if (r<0) goto err;
+  memwipe(buf, 0, pkeylen);
+  memwipe(key, 0, sizeof(key));
+  tor_free(buf);
+  crypto_cipher_free(cipher);
+  tor_assert(outlen+symlen < INT_MAX);
+  return (int)(outlen + symlen);
+ err:
+
+  memwipe(buf, 0, pkeylen);
+  memwipe(key, 0, sizeof(key));
+  tor_free(buf);
+  crypto_cipher_free(cipher);
+  return -1;
+}
+
+/** Invert crypto_pk_obsolete_public_hybrid_encrypt. Returns the number of
+ * bytes written on success, -1 on failure.
+ *
+ * NOTE that this format does not authenticate the symmetrically encrypted
+ * part of the data, and SHOULD NOT BE USED for new protocols.
+ */
+int
+crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env,
+                                 char *to,
+                                 size_t tolen,
+                                 const char *from,
+                                 size_t fromlen,
+                                 int padding, int warnOnFailure)
+{
+  int outlen, r;
+  size_t pkeylen;
+  crypto_cipher_t *cipher = NULL;
+  char *buf = NULL;
+
+  tor_assert(fromlen < SIZE_T_CEILING);
+  pkeylen = crypto_pk_keysize(env);
+
+  if (fromlen <= pkeylen) {
+    return crypto_pk_private_decrypt(env,to,tolen,from,fromlen,padding,
+                                     warnOnFailure);
+  }
+
+  buf = tor_malloc(pkeylen);
+  outlen = crypto_pk_private_decrypt(env,buf,pkeylen,from,pkeylen,padding,
+                                     warnOnFailure);
+  if (outlen<0) {
+    log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, LD_CRYPTO,
+           "Error decrypting public-key data");
+    goto err;
+  }
+  if (outlen < CIPHER_KEY_LEN) {
+    log_fn(warnOnFailure?LOG_WARN:LOG_INFO, LD_CRYPTO,
+           "No room for a symmetric key");
+    goto err;
+  }
+  cipher = crypto_cipher_new(buf);
+  if (!cipher) {
+    goto err;
+  }
+  memcpy(to,buf+CIPHER_KEY_LEN,outlen-CIPHER_KEY_LEN);
+  outlen -= CIPHER_KEY_LEN;
+  tor_assert(tolen - outlen >= fromlen - pkeylen);
+  r = crypto_cipher_decrypt(cipher, to+outlen, from+pkeylen, fromlen-pkeylen);
+  if (r<0)
+    goto err;
+  memwipe(buf,0,pkeylen);
+  tor_free(buf);
+  crypto_cipher_free(cipher);
+  tor_assert(outlen + fromlen < INT_MAX);
+  return (int)(outlen + (fromlen-pkeylen));
+ err:
+  memwipe(buf,0,pkeylen);
+  tor_free(buf);
+  crypto_cipher_free(cipher);
+  return -1;
+}
+
 /** Encrypt <b>fromlen</b> bytes from <b>from</b> with the public key
  * in <b>env</b>, using the padding method <b>padding</b>.  On success,
  * write the result to <b>to</b>, and return the number of bytes
