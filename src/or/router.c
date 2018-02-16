@@ -1227,7 +1227,8 @@ check_whether_dirport_reachable(const or_options_t *options)
 /* XXX Should this be increased? */
 #define MIN_BW_TO_ADVERTISE_DIRSERVER 51200
 
-/** Return true iff we have enough configured bandwidth to cache directory
+/** Return true iff we have enough configured bandwidth to advertise or
+ * automatically provide directory services from cache directory
  * information. */
 static int
 router_has_bandwidth_to_be_dirserver(const or_options_t *options)
@@ -1250,7 +1251,7 @@ router_has_bandwidth_to_be_dirserver(const or_options_t *options)
  * MIN_BW_TO_ADVERTISE_DIRSERVER, don't bother trying to serve requests.
  */
 static int
-router_should_be_directory_server(const or_options_t *options, int dir_port)
+router_should_be_dirserver(const or_options_t *options, int dir_port)
 {
   static int advertising=1; /* start out assuming we will advertise */
   int new_choice=1;
@@ -1355,7 +1356,7 @@ decide_to_advertise_dir_impl(const or_options_t *options,
 
   /* Part two: consider config options that could make us choose to
    * publish or not publish that the user might find surprising. */
-  return router_should_be_directory_server(options, dir_port);
+  return router_should_be_dirserver(options, dir_port);
 }
 
 /** Front-end to decide_to_advertise_dir_impl(): return 0 if we don't want to
@@ -1363,7 +1364,7 @@ decide_to_advertise_dir_impl(const or_options_t *options,
  * DirPort we want to advertise.
  */
 static int
-decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
+router_should_advertise_dirport(const or_options_t *options, uint16_t dir_port)
 {
   /* supports_tunnelled_dir_requests is not relevant, pass 0 */
   return decide_to_advertise_dir_impl(options, dir_port, 0) ? dir_port : 0;
@@ -1373,7 +1374,7 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
  * advertise the fact that we support begindir requests, else return 1.
  */
 static int
-decide_to_advertise_begindir(const or_options_t *options,
+router_should_advertise_begindir(const or_options_t *options,
                              int supports_tunnelled_dir_requests)
 {
   /* dir_port is not relevant, pass 0 */
@@ -1406,26 +1407,17 @@ extend_info_from_router(const routerinfo_t *r)
                          &ap.addr, ap.port);
 }
 
-/** Some time has passed, or we just got new directory information.
- * See if we currently believe our ORPort or DirPort to be
- * unreachable. If so, launch a new test for it.
- *
- * For ORPort, we simply try making a circuit that ends at ourselves.
- * Success is noticed in onionskin_answer().
- *
- * For DirPort, we make a connection via Tor to our DirPort and ask
- * for our own server descriptor.
- * Success is noticed in connection_dir_client_reached_eof().
+/**See if we currently believe our ORPort or DirPort to be
+ * unreachable. If so, return 1 else return 0.
  */
-void
-consider_testing_reachability(int test_or, int test_dir)
+static int
+router_should_check_reachability(int test_or, int test_dir)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
-  int orport_reachable = check_whether_orport_reachable(options);
-  tor_addr_t addr;
+
   if (!me)
-    return;
+    return 0;
 
   if (routerset_contains_router(options->ExcludeNodes, me, -1) &&
       options->StrictNodes) {
@@ -1440,43 +1432,66 @@ consider_testing_reachability(int test_or, int test_dir)
                  "We cannot learn whether we are usable, and will not "
                  "be able to advertise ourself.");
     }
-    return;
+    return 0;
   }
+  return 1;
+}
 
-  if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-    extend_info_t *ei = extend_info_from_router(me);
+/** Some time has passed, or we just got new directory information.
+ * See if we currently believe our ORPort or DirPort to be
+ * unreachable. If so, launch a new test for it.
+ *
+ * For ORPort, we simply try making a circuit that ends at ourselves.
+ * Success is noticed in onionskin_answer().
+ *
+ * For DirPort, we make a connection via Tor to our DirPort and ask
+ * for our own server descriptor.
+ * Success is noticed in connection_dir_client_reached_eof().
+ */
+void
+router_do_reachability_checks(int test_or, int test_dir)
+{
+  const routerinfo_t *me = router_get_my_routerinfo();
+  const or_options_t *options = get_options();
+  int orport_reachable = check_whether_orport_reachable(options);
+  tor_addr_t addr;
+
+  if (router_should_check_reachability(test_or, test_dir)) {
+    if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
+      extend_info_t *ei = extend_info_from_router(me);
+      /* XXX IPv6 self testing */
+      log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
+               !orport_reachable ? "reachability" : "bandwidth",
+               fmt_addr32(me->addr), me->or_port);
+      circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
+                              CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+      extend_info_free(ei);
+    }
+
     /* XXX IPv6 self testing */
-    log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
-             !orport_reachable ? "reachability" : "bandwidth",
-             fmt_addr32(me->addr), me->or_port);
-    circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
-                            CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
-    extend_info_free(ei);
-  }
-
-  /* XXX IPv6 self testing */
-  tor_addr_from_ipv4h(&addr, me->addr);
-  if (test_dir && !check_whether_dirport_reachable(options) &&
-      !connection_get_by_type_addr_port_purpose(
-                CONN_TYPE_DIR, &addr, me->dir_port,
-                DIR_PURPOSE_FETCH_SERVERDESC)) {
-    tor_addr_port_t my_orport, my_dirport;
-    memcpy(&my_orport.addr, &addr, sizeof(addr));
-    memcpy(&my_dirport.addr, &addr, sizeof(addr));
-    my_orport.port = me->or_port;
-    my_dirport.port = me->dir_port;
-    /* ask myself, via tor, for my server descriptor. */
-    directory_request_t *req =
-      directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
-    directory_request_set_or_addr_port(req, &my_orport);
-    directory_request_set_dir_addr_port(req, &my_dirport);
-    directory_request_set_directory_id_digest(req,
+    tor_addr_from_ipv4h(&addr, me->addr);
+    if (test_dir && !check_whether_dirport_reachable(options) &&
+        !connection_get_by_type_addr_port_purpose(
+                  CONN_TYPE_DIR, &addr, me->dir_port,
+                  DIR_PURPOSE_FETCH_SERVERDESC)) {
+      tor_addr_port_t my_orport, my_dirport;
+      memcpy(&my_orport.addr, &addr, sizeof(addr));
+      memcpy(&my_dirport.addr, &addr, sizeof(addr));
+      my_orport.port = me->or_port;
+      my_dirport.port = me->dir_port;
+      /* ask myself, via tor, for my server descriptor. */
+      directory_request_t *req =
+        directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
+      directory_request_set_or_addr_port(req, &my_orport);
+      directory_request_set_dir_addr_port(req, &my_dirport);
+      directory_request_set_directory_id_digest(req,
                                               me->cache_info.identity_digest);
-    // ask via an anon circuit, connecting to our dirport.
-    directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
-    directory_request_set_resource(req, "authority.z");
-    directory_initiate_request(req);
-    directory_request_free(req);
+      // ask via an anon circuit, connecting to our dirport.
+      directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
+      directory_request_set_resource(req, "authority.z");
+      directory_initiate_request(req);
+      directory_request_free(req);
+    }
   }
 }
 
@@ -1521,7 +1536,7 @@ router_dirport_found_reachable(void)
                && check_whether_orport_reachable(options) ?
                " Publishing server descriptor." : "");
     can_reach_dir_port = 1;
-    if (decide_to_advertise_dirport(options, me->dir_port)) {
+    if (router_should_advertise_dirport(options, me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
       /* This is a significant enough change to upload immediately,
        * at least in a test network */
@@ -2915,7 +2930,7 @@ router_dump_router_to_string(routerinfo_t *router,
     router->nickname,
     address,
     router->or_port,
-    decide_to_advertise_dirport(options, router->dir_port),
+    router_should_advertise_dirport(options, router->dir_port),
     ed_cert_line ? ed_cert_line : "",
     extra_or_address ? extra_or_address : "",
     router->platform,
@@ -2989,7 +3004,7 @@ router_dump_router_to_string(routerinfo_t *router,
     tor_free(p6);
   }
 
-  if (decide_to_advertise_begindir(options,
+  if (router_should_advertise_begindir(options,
                                    router->supports_tunnelled_dir_requests)) {
     smartlist_add_strdup(chunks, "tunnelled-dir-server\n");
   }

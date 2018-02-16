@@ -47,7 +47,7 @@ int init_keys_client(void);
 int check_whether_orport_reachable(const or_options_t *options);
 int check_whether_dirport_reachable(const or_options_t *options);
 int dir_server_mode(const or_options_t *options);
-void consider_testing_reachability(int test_or, int test_dir);
+void router_do_reachability_checks(int test_or, int test_dir);
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
 void router_perform_bandwidth_test(int num_circs, time_t now);
