@@ -42,6 +42,7 @@
 
 #include "or.h"
 #include "address.h"
+#include "address_set.h"
 #include "config.h"
 #include "control.h"
 #include "dirserv.h"
@@ -85,6 +86,7 @@ static void count_usable_descriptors(int *num_present,
 static void update_router_have_minimum_dir_info(void);
 static double get_frac_paths_needed_for_circs(const or_options_t *options,
                                               const networkstatus_t *ns);
+static void node_add_to_address_set(const node_t *node);
 
 /** A nodelist_t holds a node_t object for every router we're "willing to use
  * for something".  Specifically, it should hold a node_t for every node that
@@ -103,6 +105,8 @@ typedef struct nodelist_t {
    * you should add it to this map with node_add_to_ed25519_map().
    */
   HT_HEAD(nodelist_ed_map, node_t) nodes_by_ed_id;
+  /* Set of addresses that belong to nodes we believe in. */
+  address_set_t *node_addrs;
 } nodelist_t;
 
 static inline unsigned int
@@ -400,6 +404,50 @@ node_addrs_changed(node_t *node)
   node->country = -1;
 }
 
+/** Add all address information about <b>node</b> to the current address
+ * set (if there is one).
+ */
+static void
+node_add_to_address_set(const node_t *node)
+{
+  if (!the_nodelist || !the_nodelist->node_addrs)
+    return;
+
+  /* These various address sources can be redundant, but it's likely faster
+   * to add them all than to compare them all for equality. */
+
+  if (node->rs) {
+    if (node->rs->addr)
+      address_set_add_ipv4h(the_nodelist->node_addrs, node->rs->addr);
+    if (!tor_addr_is_null(&node->rs->ipv6_addr))
+      address_set_add(the_nodelist->node_addrs, &node->rs->ipv6_addr);
+  }
+  if (node->ri) {
+    if (node->ri->addr)
+      address_set_add_ipv4h(the_nodelist->node_addrs, node->ri->addr);
+    if (!tor_addr_is_null(&node->ri->ipv6_addr))
+      address_set_add(the_nodelist->node_addrs, &node->ri->ipv6_addr);
+  }
+  if (node->md) {
+    if (!tor_addr_is_null(&node->md->ipv6_addr))
+      address_set_add(the_nodelist->node_addrs, &node->md->ipv6_addr);
+  }
+}
+
+/** Return true if <b>addr</b> is the address of some node in the nodelist.
+ * If not, probably return false. */
+int
+nodelist_probably_contains_address(const tor_addr_t *addr)
+{
+  if (BUG(!addr))
+    return 0;
+
+  if (!the_nodelist || !the_nodelist->node_addrs)
+    return 0;
+
+  return address_set_probably_contains(the_nodelist->node_addrs, addr);
+}
+
 /** Add <b>ri</b> to an appropriate node in the nodelist.  If we replace an
  * old routerinfo, and <b>ri_old_out</b> is not NULL, set *<b>ri_old_out</b>
  * to the previous routerinfo.
@@ -450,6 +498,8 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
                          networkstatus_get_latest_consensus());
   }
 
+  node_add_to_address_set(node);
+
   return node;
 }
 
@@ -491,7 +541,20 @@ nodelist_add_microdesc(microdesc_t *md)
     node_add_to_ed25519_map(node);
   }
 
+  node_add_to_address_set(node);
+
   return node;
+}
+
+/* Default value. */
+#define ESTIMATED_ADDRESS_PER_NODE 2
+
+/* Return the estimated number of address per node_t. This is used for the
+ * size of the bloom filter in the nodelist (node_addrs). */
+MOCK_IMPL(int,
+get_estimated_address_per_node, (void))
+{
+  return ESTIMATED_ADDRESS_PER_NODE;
 }
 
 /** Tell the nodelist that the current usable consensus is <b>ns</b>.
@@ -511,6 +574,12 @@ nodelist_set_consensus(networkstatus_t *ns)
 
   SMARTLIST_FOREACH(the_nodelist->nodes, node_t *, node,
                     node->rs = NULL);
+
+  /* Conservatively estimate that every node will have 2 addresses. */
+  const int estimated_addresses = smartlist_len(ns->routerstatus_list) *
+                                  get_estimated_address_per_node();
+  address_set_free(the_nodelist->node_addrs);
+  the_nodelist->node_addrs = address_set_new(estimated_addresses);
 
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
     node_t *node = node_get_or_create(rs->identity_digest);
@@ -554,6 +623,11 @@ nodelist_set_consensus(networkstatus_t *ns)
   } SMARTLIST_FOREACH_END(rs);
 
   nodelist_purge();
+
+  /* Now add all the nodes we have to the address set. */
+  SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
+    node_add_to_address_set(node);
+  } SMARTLIST_FOREACH_END(node);
 
   if (! authdir) {
     SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
@@ -712,6 +786,9 @@ nodelist_free_all(void)
   } SMARTLIST_FOREACH_END(node);
 
   smartlist_free(the_nodelist->nodes);
+
+  address_set_free(the_nodelist->node_addrs);
+  the_nodelist->node_addrs = NULL;
 
   tor_free(the_nodelist);
 }

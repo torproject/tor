@@ -81,6 +81,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "dns.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
@@ -313,6 +314,19 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort),
   OBSOLETE("DNSListenAddress"),
+  /* DoS circuit creation options. */
+  V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
+  V(DoSCircuitCreationMinConnections,      UINT, "0"),
+  V(DoSCircuitCreationRate,      UINT,     "0"),
+  V(DoSCircuitCreationBurst,     UINT,     "0"),
+  V(DoSCircuitCreationDefenseType,         INT,  "0"),
+  V(DoSCircuitCreationDefenseTimePeriod,   INTERVAL, "0"),
+  /* DoS connection options. */
+  V(DoSConnectionEnabled,        AUTOBOOL, "auto"),
+  V(DoSConnectionMaxConcurrentCount,       UINT, "0"),
+  V(DoSConnectionDefenseType,    INT,      "0"),
+  /* DoS single hop client options. */
+  V(DoSRefuseSingleHopClientRendezvous,    AUTOBOOL, "auto"),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(TestingEnableConnBwEvent,    BOOL,     "0"),
   V(TestingEnableCellStatsEvent, BOOL,     "0"),
@@ -2170,6 +2184,17 @@ options_act(const or_options_t *old_options)
        * we had expected. */
       update_consensus_networkstatus_fetch_time(time(NULL));
     }
+  }
+
+  /* DoS mitigation subsystem only applies to public relay. */
+  if (public_server_mode(options)) {
+    /* If we are configured as a relay, initialize the subsystem. Even on HUP,
+     * this is safe to call as it will load data from the current options
+     * or/and the consensus. */
+    dos_init();
+  } else if (old_options && public_server_mode(old_options)) {
+    /* Going from relay to non relay, clean it up. */
+    dos_free_all();
   }
 
   /* Load the webpage we're going to serve every time someone asks for '/' on

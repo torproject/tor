@@ -80,6 +80,7 @@ src_common_libor_ctime_testing_a_CFLAGS = @CFLAGS_CONSTTIME@ $(TEST_CFLAGS)
 
 LIBOR_A_SRC = \
   src/common/address.c					\
+  src/common/address_set.c				\
   src/common/backtrace.c				\
   src/common/buffers.c					\
   src/common/compat.c					\
@@ -148,6 +149,7 @@ src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 COMMONHEADERS = \
   src/common/address.h				\
+  src/common/address_set.h			\
   src/common/backtrace.h			\
   src/common/buffers.h				\
   src/common/buffers_tls.h			\

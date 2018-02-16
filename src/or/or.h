@@ -1616,6 +1616,10 @@ typedef struct or_connection_t {
   /** True iff this connection has had its bootstrap failure logged with
    * control_event_bootstrap_problem. */
   unsigned int have_noted_bootstrap_problem:1;
+  /** True iff this is a client connection and its address has been put in the
+   * geoip cache and handled by the DoS mitigation subsystem. We use this to
+   * insure we have a coherent count of concurrent connection. */
+  unsigned int tracked_for_dos_mitigation : 1;
 
   uint16_t link_proto; /**< What protocol version are we using? 0 for
                         * "none negotiated yet." */
@@ -4642,6 +4646,35 @@ typedef struct {
   smartlist_t *Schedulers;
   /* An ordered list of scheduler_types mapped from Schedulers. */
   smartlist_t *SchedulerTypes_;
+
+  /** Autobool: Is the circuit creation DoS mitigation subsystem enabled? */
+  int DoSCircuitCreationEnabled;
+  /** Minimum concurrent connection needed from one single address before any
+   * defense is used. */
+  int DoSCircuitCreationMinConnections;
+  /** Circuit rate used to refill the token bucket. */
+  int DoSCircuitCreationRate;
+  /** Maximum allowed burst of circuits. Reaching that value, the address is
+   * detected as malicious and a defense might be used. */
+  int DoSCircuitCreationBurst;
+  /** When an address is marked as malicous, what defense should be used
+   * against it. See the dos_cc_defense_type_t enum. */
+  int DoSCircuitCreationDefenseType;
+  /** For how much time (in seconds) the defense is applicable for a malicious
+   * address. A random time delta is added to the defense time of an address
+   * which will be between 1 second and half of this value. */
+  int DoSCircuitCreationDefenseTimePeriod;
+
+  /** Autobool: Is the DoS connection mitigation subsystem enabled? */
+  int DoSConnectionEnabled;
+  /** Maximum concurrent connection allowed per address. */
+  int DoSConnectionMaxConcurrentCount;
+  /** When an address is reaches the maximum count, what defense should be
+   * used against it. See the dos_conn_defense_type_t enum. */
+  int DoSConnectionDefenseType;
+
+  /** Autobool: Do we refuse single hop client rendezvous? */
+  int DoSRefuseSingleHopClientRendezvous;
 } or_options_t;
 
 #define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())

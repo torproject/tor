@@ -659,7 +659,8 @@ MOCK_DECL(void, channel_dump_statistics, (channel_t *chan, int severity));
 void channel_dump_transport_statistics(channel_t *chan, int severity);
 const char * channel_get_actual_remote_descr(channel_t *chan);
 const char * channel_get_actual_remote_address(channel_t *chan);
-int channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out);
+MOCK_DECL(int, channel_get_addr_if_possible, (channel_t *chan,
+                                              tor_addr_t *addr_out));
 const char * channel_get_canonical_remote_descr(channel_t *chan);
 int channel_has_queued_writes(channel_t *chan);
 int channel_is_bad_for_new_circs(channel_t *chan);

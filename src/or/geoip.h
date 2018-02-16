@@ -13,6 +13,7 @@
 #define TOR_GEOIP_H
 
 #include "testsupport.h"
+#include "dos.h"
 
 #ifdef GEOIP_PRIVATE
 STATIC int geoip_parse_entry(const char *line, sa_family_t family);
@@ -20,6 +21,29 @@ STATIC int geoip_get_country_by_ipv4(uint32_t ipaddr);
 STATIC int geoip_get_country_by_ipv6(const struct in6_addr *addr);
 STATIC void clear_geoip_db(void);
 #endif /* defined(GEOIP_PRIVATE) */
+
+/** Entry in a map from IP address to the last time we've seen an incoming
+ * connection from that IP address. Used by bridges only to track which
+ * countries have them blocked, or the DoS mitigation subsystem if enabled. */
+typedef struct clientmap_entry_t {
+  HT_ENTRY(clientmap_entry_t) node;
+  tor_addr_t addr;
+  /* Name of pluggable transport used by this client. NULL if no
+     pluggable transport was used. */
+  char *transport_name;
+
+  /** Time when we last saw this IP address, in MINUTES since the epoch.
+   *
+   * (This will run out of space around 4011 CE.  If Tor is still in use around
+   * 4000 CE, please remember to add more bits to last_seen_in_minutes.) */
+  unsigned int last_seen_in_minutes:30;
+  unsigned int action:2;
+
+  /* This object is used to keep some statistics per client address for the
+   * DoS mitigation subsystem. */
+  dos_client_stats_t dos_stats;
+} clientmap_entry_t;
+
 int should_record_bridge_info(const or_options_t *options);
 int geoip_load_file(sa_family_t family, const char *filename);
 MOCK_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
@@ -33,6 +57,11 @@ void geoip_note_client_seen(geoip_client_action_t action,
                             const tor_addr_t *addr, const char *transport_name,
                             time_t now);
 void geoip_remove_old_clients(time_t cutoff);
+clientmap_entry_t *geoip_lookup_client(const tor_addr_t *addr,
+                                       const char *transport_name,
+                                       geoip_client_action_t action);
+size_t geoip_client_cache_total_allocation(void);
+size_t geoip_client_cache_handle_oom(time_t now, size_t min_remove_bytes);
 
 void geoip_note_ns_response(geoip_ns_response_t response);
 char *geoip_get_transport_history(void);

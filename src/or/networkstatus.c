@@ -51,6 +51,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "main.h"
 #include "microdesc.h"
@@ -1570,6 +1571,7 @@ notify_before_networkstatus_changes(const networkstatus_t *old_c,
                                     const networkstatus_t *new_c)
 {
   notify_control_networkstatus_changed(old_c, new_c);
+  dos_consensus_has_changed(new_c);
 }
 
 /* Called after a new consensus has been put in the global state. It is safe
