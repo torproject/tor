@@ -2583,6 +2583,7 @@ channel_do_open_actions(channel_t *chan)
     if (!router_get_by_id_digest(chan->identity_digest)) {
       if (channel_get_addr_if_possible(chan, &remote_addr)) {
         char *transport_name = NULL;
+        channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
         if (chan->get_transport_name(chan, &transport_name) < 0)
           transport_name = NULL;
 
@@ -2590,6 +2591,10 @@ channel_do_open_actions(channel_t *chan)
                                &remote_addr, transport_name,
                                now);
         tor_free(transport_name);
+        /* Notify the DoS subsystem of a new client. */
+        if (tlschan && tlschan->conn) {
+          dos_new_client_conn(tlschan->conn);
+        }
       }
       /* Otherwise the underlying transport can't tell us this, so skip it */
     }
@@ -3840,8 +3845,8 @@ channel_get_canonical_remote_descr(channel_t *chan)
  * supports this operation, and return 1.  Return 0 if the underlying transport
  * doesn't let us do this.
  */
-int
-channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out)
+MOCK_IMPL(int,
+channel_get_addr_if_possible,(channel_t *chan, tor_addr_t *addr_out))
 {
   tor_assert(chan);
   tor_assert(addr_out);
