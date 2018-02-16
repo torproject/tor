@@ -1392,6 +1392,24 @@ tor_getsockname,(tor_socket_t sock, struct sockaddr *address,
    return getsockname(sock, address, address_len);
 }
 
+/**
+ * Find the local address associated with the socket <b>sock</b>, and
+ * place it in *<b>addr_out</b>.  Return 0 on success, -1 on failure.
+ *
+ * (As tor_getsockname, but instead places the result in a tor_addr_t.) */
+int
+tor_addr_from_getsockname(tor_addr_t *addr_out, tor_socket_t sock)
+{
+  struct sockaddr_storage ss;
+  socklen_t ss_len = sizeof(ss);
+  memset(&ss, 0, sizeof(ss));
+
+  if (tor_getsockname(sock, (struct sockaddr *) &ss, &ss_len) < 0)
+    return -1;
+
+  return tor_addr_from_sockaddr(addr_out, (struct sockaddr *)&ss, NULL);
+}
+
 /** Turn <b>socket</b> into a nonblocking socket. Return 0 on success, -1
  * on failure.
  */

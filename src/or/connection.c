@@ -1261,15 +1261,12 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       gotPort = usePort;
     } else {
       tor_addr_t addr2;
-      struct sockaddr_storage ss;
-      socklen_t ss_len=sizeof(ss);
-      if (getsockname(s, (struct sockaddr*)&ss, &ss_len)<0) {
+      if (tor_addr_from_getsockname(&addr2, s)<0) {
         log_warn(LD_NET, "getsockname() couldn't learn address for %s: %s",
                  conn_type_to_string(type),
                  tor_socket_strerror(tor_socket_errno(s)));
         gotPort = 0;
       }
-      tor_addr_from_sockaddr(&addr2, (struct sockaddr*)&ss, &gotPort);
     }
 #ifdef HAVE_SYS_UN_H
   /*
@@ -4530,8 +4527,6 @@ alloc_http_authenticator(const char *authenticator)
 static void
 client_check_address_changed(tor_socket_t sock)
 {
-  struct sockaddr_storage out_sockaddr;
-  socklen_t out_addr_len = (socklen_t) sizeof(out_sockaddr);
   tor_addr_t out_addr, iface_addr;
   tor_addr_t **last_interface_ip_ptr;
   sa_family_t family;
@@ -4539,13 +4534,12 @@ client_check_address_changed(tor_socket_t sock)
   if (!outgoing_addrs)
     outgoing_addrs = smartlist_new();
 
-  if (getsockname(sock, (struct sockaddr*)&out_sockaddr, &out_addr_len)<0) {
+  if (tor_addr_from_getsockname(&out_addr, sock) < 0) {
     int e = tor_socket_errno(sock);
     log_warn(LD_NET, "getsockname() to check for address change failed: %s",
              tor_socket_strerror(e));
     return;
   }
-  tor_addr_from_sockaddr(&out_addr, (struct sockaddr*)&out_sockaddr, NULL);
   family = tor_addr_family(&out_addr);
 
   if (family == AF_INET)
