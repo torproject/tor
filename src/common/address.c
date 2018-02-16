@@ -1185,6 +1185,9 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
   }
 }
 
+/** Input for siphash, to produce some output for an unspec value. */
+static const uint32_t unspec_hash_input[] = { 0x4e4df09f, 0x92985342 };
+
 /** Return a hash code based on the address addr. DOCDOC extra */
 uint64_t
 tor_addr_hash(const tor_addr_t *addr)
@@ -1193,7 +1196,7 @@ tor_addr_hash(const tor_addr_t *addr)
   case AF_INET:
     return siphash24g(&addr->addr.in_addr.s_addr, 4);
   case AF_UNSPEC:
-    return 0x4e4d5342;
+    return siphash24g(unspec_hash_input, sizeof(unspec_hash_input));
   case AF_INET6:
     return siphash24g(&addr->addr.in6_addr.s6_addr, 16);
     /* LCOV_EXCL_START */
@@ -1201,6 +1204,28 @@ tor_addr_hash(const tor_addr_t *addr)
     tor_fragile_assert();
     return 0;
     /* LCOV_EXCL_STOP */
+  }
+}
+
+/** As tor_addr_hash, but use a particular siphash key. */
+uint64_t
+tor_addr_keyed_hash(const struct sipkey *key, const tor_addr_t *addr)
+{
+  /* This is duplicate code with tor_addr_hash, since this function needs to
+   * be backportable all the way to 0.2.9. */
+
+  switch (tor_addr_family(addr)) {
+  case AF_INET:
+    return siphash24(&addr->addr.in_addr.s_addr, 4, key);
+  case AF_UNSPEC:
+    return siphash24(unspec_hash_input, sizeof(unspec_hash_input), key);
+  case AF_INET6:
+    return siphash24(&addr->addr.in6_addr.s6_addr, 16, key);
+  default:
+    /* LCOV_EXCL_START */
+    tor_fragile_assert();
+    return 0;
+    /* LCOV_EXCL_END */
   }
 }
 

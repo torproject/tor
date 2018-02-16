@@ -87,6 +87,7 @@ src_test_test_SOURCES = \
 	src/test/test_accounting.c \
 	src/test/test_addr.c \
 	src/test/test_address.c \
+	src/test/test_address_set.c \
 	src/test/test_buffers.c \
 	src/test/test_cell_formats.c \
 	src/test/test_cell_queue.c \
@@ -109,6 +110,7 @@ src_test_test_SOURCES = \
 	src/test/test_controller_events.c \
 	src/test/test_crypto.c \
 	src/test/test_crypto_openssl.c \
+	src/test/test_dos.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
 	src/test/test_dir_common.c \

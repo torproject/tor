@@ -33,6 +33,7 @@
 #include "config.h"
 #include "control.h"
 #include "dnsserv.h"
+#include "dos.h"
 #include "geoip.h"
 #include "routerlist.h"
 
@@ -71,6 +72,38 @@ static smartlist_t *geoip_ipv4_entries = NULL, *geoip_ipv6_entries = NULL;
 /** SHA1 digest of the GeoIP files to include in extra-info descriptors. */
 static char geoip_digest[DIGEST_LEN];
 static char geoip6_digest[DIGEST_LEN];
+
+/* Total size in bytes of the geoip client history cache. Used by the OOM
+ * handler. */
+static size_t geoip_client_history_cache_size;
+
+/* Increment the geoip client history cache size counter with the given bytes.
+ * This prevents an overflow and set it to its maximum in that case. */
+static inline void
+geoip_increment_client_history_cache_size(size_t bytes)
+{
+  /* This is shockingly high, lets log it so it can be reported. */
+  IF_BUG_ONCE(geoip_client_history_cache_size > (SIZE_MAX - bytes)) {
+    geoip_client_history_cache_size = SIZE_MAX;
+    return;
+  }
+  geoip_client_history_cache_size += bytes;
+}
+
+/* Decrement the geoip client history cache size counter with the given bytes.
+ * This prevents an underflow and set it to 0 in that case. */
+static inline void
+geoip_decrement_client_history_cache_size(size_t bytes)
+{
+  /* Going below 0 means that we either allocated an entry without
+   * incrementing the counter or we have different sizes when allocating and
+   * freeing. It shouldn't happened so log it. */
+  IF_BUG_ONCE(geoip_client_history_cache_size < bytes) {
+    geoip_client_history_cache_size = 0;
+    return;
+  }
+  geoip_client_history_cache_size -= bytes;
+}
 
 /** Return the index of the <b>country</b>'s entry in the GeoIP
  * country list if it is a valid 2-letter country code, otherwise
@@ -472,24 +505,6 @@ geoip_db_digest(sa_family_t family)
     return hex_str(geoip6_digest, DIGEST_LEN);
 }
 
-/** Entry in a map from IP address to the last time we've seen an incoming
- * connection from that IP address. Used by bridges only, to track which
- * countries have them blocked. */
-typedef struct clientmap_entry_t {
-  HT_ENTRY(clientmap_entry_t) node;
-  tor_addr_t addr;
- /* Name of pluggable transport used by this client. NULL if no
-    pluggable transport was used. */
-  char *transport_name;
-
-  /** Time when we last saw this IP address, in MINUTES since the epoch.
-   *
-   * (This will run out of space around 4011 CE.  If Tor is still in use around
-   * 4000 CE, please remember to add more bits to last_seen_in_minutes.) */
-  unsigned int last_seen_in_minutes:30;
-  unsigned int action:2;
-} clientmap_entry_t;
-
 /** Largest allowable value for last_seen_in_minutes.  (It's a 30-bit field,
  * so it can hold up to (1u<<30)-1, or 0x3fffffffu.
  */
@@ -526,6 +541,15 @@ HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
 HT_GENERATE2(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
              clientmap_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
+/** Return the size of a client map entry. */
+static inline size_t
+clientmap_entry_size(const clientmap_entry_t *ent)
+{
+  tor_assert(ent);
+  return (sizeof(clientmap_entry_t) +
+          (ent->transport_name ? strlen(ent->transport_name) : 0));
+}
+
 /** Free all storage held by <b>ent</b>. */
 static void
 clientmap_entry_free(clientmap_entry_t *ent)
@@ -533,8 +557,38 @@ clientmap_entry_free(clientmap_entry_t *ent)
   if (!ent)
     return;
 
+  /* This entry is about to be freed so pass it to the DoS subsystem to see if
+   * any actions can be taken about it. */
+  dos_geoip_entry_about_to_free(ent);
+  geoip_decrement_client_history_cache_size(clientmap_entry_size(ent));
+
   tor_free(ent->transport_name);
   tor_free(ent);
+}
+
+/* Return a newly allocated clientmap entry with the given action and address
+ * that are mandatory. The transport_name can be optional. This can't fail. */
+static clientmap_entry_t *
+clientmap_entry_new(geoip_client_action_t action, const tor_addr_t *addr,
+                    const char *transport_name)
+{
+  clientmap_entry_t *entry;
+
+  tor_assert(action == GEOIP_CLIENT_CONNECT ||
+             action == GEOIP_CLIENT_NETWORKSTATUS);
+  tor_assert(addr);
+
+  entry = tor_malloc_zero(sizeof(clientmap_entry_t));
+  entry->action = action;
+  tor_addr_copy(&entry->addr, addr);
+  if (transport_name) {
+    entry->transport_name = tor_strdup(transport_name);
+  }
+
+  /* Allocated and initialized, note down its size for the OOM handler. */
+  geoip_increment_client_history_cache_size(clientmap_entry_size(entry));
+
+  return entry;
 }
 
 /** Clear history of connecting clients used by entry and bridge stats. */
@@ -564,14 +618,17 @@ geoip_note_client_seen(geoip_client_action_t action,
                        time_t now)
 {
   const or_options_t *options = get_options();
-  clientmap_entry_t lookup, *ent;
-  memset(&lookup, 0, sizeof(clientmap_entry_t));
+  clientmap_entry_t *ent;
 
   if (action == GEOIP_CLIENT_CONNECT) {
-    /* Only remember statistics as entry guard or as bridge. */
-    if (!options->EntryStatistics &&
-        (!(options->BridgeRelay && options->BridgeRecordUsageByCountry)))
-      return;
+    /* Only remember statistics if the DoS mitigation subsystem is enabled. If
+     * not, only if as entry guard or as bridge. */
+    if (!dos_enabled()) {
+      if (!options->EntryStatistics &&
+          (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))) {
+        return;
+      }
+    }
   } else {
     /* Only gather directory-request statistics if configured, and
      * forcibly disable them on bridge authorities. */
@@ -583,17 +640,9 @@ geoip_note_client_seen(geoip_client_action_t action,
             safe_str_client(fmt_addr((addr))),
             transport_name ? transport_name : "<no transport>");
 
-  tor_addr_copy(&lookup.addr, addr);
-  lookup.action = (int)action;
-  lookup.transport_name = (char*) transport_name;
-  ent = HT_FIND(clientmap, &client_history, &lookup);
-
+  ent = geoip_lookup_client(addr, transport_name, action);
   if (! ent) {
-    ent = tor_malloc_zero(sizeof(clientmap_entry_t));
-    tor_addr_copy(&ent->addr, addr);
-    if (transport_name)
-      ent->transport_name = tor_strdup(transport_name);
-    ent->action = (int)action;
+    ent = clientmap_entry_new(action, addr, transport_name);
     HT_INSERT(clientmap, &client_history, ent);
   }
   if (now / 60 <= (int)MAX_LAST_SEEN_IN_MINUTES && now >= 0)
@@ -633,6 +682,94 @@ geoip_remove_old_clients(time_t cutoff)
   clientmap_HT_FOREACH_FN(&client_history,
                           remove_old_client_helper_,
                           &cutoff);
+}
+
+/* Return a client entry object matching the given address, transport name and
+ * geoip action from the clientmap. NULL if not found. The transport_name can
+ * be NULL. */
+clientmap_entry_t *
+geoip_lookup_client(const tor_addr_t *addr, const char *transport_name,
+                    geoip_client_action_t action)
+{
+  clientmap_entry_t lookup;
+
+  tor_assert(addr);
+
+  /* We always look for a client connection with no transport. */
+  tor_addr_copy(&lookup.addr, addr);
+  lookup.action = action;
+  lookup.transport_name = (char *) transport_name;
+
+  return HT_FIND(clientmap, &client_history, &lookup);
+}
+
+/* Cleanup client entries older than the cutoff. Used for the OOM. Return the
+ * number of bytes freed. If 0 is returned, nothing was freed. */
+static size_t
+oom_clean_client_entries(time_t cutoff)
+{
+  size_t bytes = 0;
+  clientmap_entry_t **ent, **ent_next;
+
+  for (ent = HT_START(clientmap, &client_history); ent; ent = ent_next) {
+    clientmap_entry_t *entry = *ent;
+    if (entry->last_seen_in_minutes < (cutoff / 60)) {
+      ent_next = HT_NEXT_RMV(clientmap, &client_history, ent);
+      bytes += clientmap_entry_size(entry);
+      clientmap_entry_free(entry);
+    } else {
+      ent_next = HT_NEXT(clientmap, &client_history, ent);
+    }
+  }
+  return bytes;
+}
+
+/* Below this minimum lifetime, the OOM won't cleanup any entries. */
+#define GEOIP_CLIENT_CACHE_OOM_MIN_CUTOFF (4 * 60 * 60)
+/* The OOM moves the cutoff by that much every run. */
+#define GEOIP_CLIENT_CACHE_OOM_STEP (15 * 50)
+
+/* Cleanup the geoip client history cache called from the OOM handler. Return
+ * the amount of bytes removed. This can return a value below or above
+ * min_remove_bytes but will stop as oon as the min_remove_bytes has been
+ * reached. */
+size_t
+geoip_client_cache_handle_oom(time_t now, size_t min_remove_bytes)
+{
+  time_t k;
+  size_t bytes_removed = 0;
+
+  /* Our OOM handler called with 0 bytes to remove is a code flow error. */
+  tor_assert(min_remove_bytes != 0);
+
+  /* Set k to the initial cutoff of an entry. We then going to move it by step
+   * to try to remove as much as we can. */
+  k = WRITE_STATS_INTERVAL;
+
+  do {
+    time_t cutoff;
+
+    /* If k has reached the minimum lifetime, we have to stop else we might
+     * remove every single entries which would be pretty bad for the DoS
+     * mitigation subsystem if by just filling the geoip cache, it was enough
+     * to trigger the OOM and clean every single entries. */
+    if (k <= GEOIP_CLIENT_CACHE_OOM_MIN_CUTOFF) {
+      break;
+    }
+
+    cutoff = now - k;
+    bytes_removed += oom_clean_client_entries(cutoff);
+    k -= GEOIP_CLIENT_CACHE_OOM_STEP;
+  } while (bytes_removed < min_remove_bytes);
+
+  return bytes_removed;
+}
+
+/* Return the total size in bytes of the client history cache. */
+size_t
+geoip_client_cache_total_allocation(void)
+{
+  return geoip_client_history_cache_size;
 }
 
 /** How many responses are we giving to clients requesting v3 network

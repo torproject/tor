@@ -897,6 +897,24 @@ test_geoip(void *arg)
   tt_str_op(entry_stats_2,OP_EQ, s);
   tor_free(s);
 
+  /* Test the OOM handler. Add a client, run the OOM. */
+  geoip_entry_stats_init(now);
+  SET_TEST_ADDRESS(100);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL,
+                         now - (12 * 60 * 60));
+  /* We've seen this 12 hours ago. Run the OOM, it should clean the entry
+   * because it is above the minimum cutoff of 4 hours. */
+  size_t bytes_removed = geoip_client_cache_handle_oom(now, 1000);
+  tt_size_op(bytes_removed, OP_GT, 0);
+
+  /* Do it again but this time with an entry with a lower cutoff. */
+  geoip_entry_stats_init(now);
+  SET_TEST_ADDRESS(100);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL,
+                         now - (3 * 60 * 60));
+  bytes_removed = geoip_client_cache_handle_oom(now, 1000);
+  tt_size_op(bytes_removed, OP_EQ, 0);
+
   /* Stop collecting entry statistics. */
   geoip_entry_stats_term();
   get_options_mutable()->EntryStatistics = 0;
@@ -1167,6 +1185,7 @@ struct testgroup_t testgroups[] = {
   { "accounting/", accounting_tests },
   { "addr/", addr_tests },
   { "address/", address_tests },
+  { "address_set/", address_set_tests },
   { "buffer/", buffer_tests },
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
@@ -1189,6 +1208,7 @@ struct testgroup_t testgroups[] = {
   { "control/event/", controller_event_tests },
   { "crypto/", crypto_tests },
   { "crypto/openssl/", crypto_openssl_tests },
+  { "dos/", dos_tests },
   { "dir/", dir_tests },
   { "dir_handle_get/", dir_handle_get_tests },
   { "dir/md/", microdesc_tests },

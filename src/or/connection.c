@@ -80,6 +80,7 @@
 #include "dirserv.h"
 #include "dns.h"
 #include "dnsserv.h"
+#include "dos.h"
 #include "entrynodes.h"
 #include "ext_orport.h"
 #include "geoip.h"
@@ -705,6 +706,13 @@ connection_free,(connection_t *conn))
                                                   "connection_free");
   }
 #endif /* 1 */
+
+  /* Notify the circuit creation DoS mitigation subsystem that an OR client
+   * connection has been closed. And only do that if we track it. */
+  if (conn->type == CONN_TYPE_OR) {
+    dos_close_client_conn(TO_OR_CONN(conn));
+  }
+
   connection_unregister_events(conn);
   connection_free_(conn);
 }
@@ -1606,6 +1614,14 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       if (dir_policy_permits_address(&addr) == 0) {
         log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
                    fmt_and_decorate_addr(&addr));
+        tor_close_socket(news);
+        return 0;
+      }
+    }
+    if (new_type == CONN_TYPE_OR) {
+      /* Assess with the connection DoS mitigation subsystem if this address
+       * can open a new connection. */
+      if (dos_conn_addr_get_defense_type(&addr) == DOS_CONN_DEFENSE_CLOSE) {
         tor_close_socket(news);
         return 0;
       }

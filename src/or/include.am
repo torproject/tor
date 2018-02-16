@@ -47,6 +47,7 @@ LIBTOR_A_SOURCES = \
 	src/or/dirvote.c				\
 	src/or/dns.c					\
 	src/or/dnsserv.c				\
+	src/or/dos.c					\
 	src/or/fp_pair.c				\
 	src/or/geoip.c					\
 	src/or/entrynodes.c				\
@@ -184,6 +185,7 @@ ORHEADERS = \
 	src/or/dns.h					\
 	src/or/dns_structs.h				\
 	src/or/dnsserv.h				\
+	src/or/dos.h					\
 	src/or/ext_orport.h				\
 	src/or/fallback_dirs.inc			\
 	src/or/fp_pair.h				\
