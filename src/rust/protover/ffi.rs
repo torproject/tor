@@ -12,9 +12,6 @@ use std::ffi::CString;
 use protover::*;
 use smartlist::*;
 use tor_allocate::allocate_and_copy_string;
-use tor_util::strings::byte_slice_is_c_like;
-use tor_util::strings::empty_static_cstr;
-
 
 /// Translate C enums to Rust Proto enums, using the integer value of the C
 /// enum to map to its associated Rust enum
@@ -143,18 +140,7 @@ pub extern "C" fn protocol_list_supports_protocol_or_later(
 pub extern "C" fn protover_get_supported_protocols() -> *const c_char {
     let supported: &'static CStr;
 
-    // If we're going to pass it to C, there cannot be any intermediate NUL
-    // bytes.  An assert is okay here, since changing the const byte slice
-    // in protover.rs to contain a NUL byte somewhere in the middle would be a
-    // programming error.
-    assert!(byte_slice_is_c_like(SUPPORTED_PROTOCOLS));
-
-    // It's okay to unwrap the result of this function because
-    // we can see that the bytes we're passing into it 1) are valid UTF-8,
-    // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
-    // byte.
-    supported = CStr::from_bytes_with_nul(SUPPORTED_PROTOCOLS).unwrap();
-
+    supported = get_supported_protocols_cstr();
     supported.as_ptr()
 }
 
@@ -202,10 +188,9 @@ pub extern "C" fn protover_is_supported_here(
 #[no_mangle]
 pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const c_char {
     let supported: &'static CStr;
-    let elder_protocols: &'static [u8];
     let empty: &'static CStr;
 
-    empty = empty_static_cstr();
+    empty = cstr!("");
 
     if version.is_null() {
         return empty.as_ptr();
@@ -220,19 +205,6 @@ pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const
         Err(_) => return empty.as_ptr(),
     };
 
-    elder_protocols = compute_for_old_tor(&version);
-
-    // If we're going to pass it to C, there cannot be any intermediate NUL
-    // bytes.  An assert is okay here, since changing the const byte slice
-    // in protover.rs to contain a NUL byte somewhere in the middle would be a
-    // programming error.
-    assert!(byte_slice_is_c_like(elder_protocols));
-
-    // It's okay to unwrap the result of this function because
-    // we can see that the bytes we're passing into it 1) are valid UTF-8,
-    // 2) have no intermediate NUL bytes, and 3) are terminated with a NUL
-    // byte.
-    supported = CStr::from_bytes_with_nul(elder_protocols).unwrap_or(empty);
-
+    supported = compute_for_old_tor(&version);
     supported.as_ptr()
 }
