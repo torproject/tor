@@ -179,7 +179,7 @@ static uint64_t stats_n_bytes_written = 0;
 /** What time did this process start up? */
 time_t time_of_process_start = 0;
 /** How many seconds have we been running? */
-long stats_n_seconds_working = 0;
+static long stats_n_seconds_working = 0;
 /** How many times have we returned from the main loop successfully? */
 static uint64_t stats_n_main_loop_successes = 0;
 /** How many times have we received an error from the main loop? */
