@@ -9,6 +9,7 @@ use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::string::String;
+use std::u32;
 
 use tor_util::strings::NUL_BYTE;
 
@@ -23,7 +24,7 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// before concluding that someone is trying to DoS us
 ///
 /// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
-const MAX_PROTOCOLS_TO_EXPAND: u32 = 500;
+const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
 
 /// Currently supported protocols and their versions, as a byte-slice.
 ///
@@ -192,10 +193,6 @@ impl Versions {
     fn from_version_string(
         version_string: &str,
     ) -> Result<Self, &'static str> {
-        if version_string.is_empty() {
-            return Err("version string is empty");
-        }
-
         let mut versions = HashSet::<Version>::new();
 
         for piece in version_string.split(",") {
@@ -203,13 +200,19 @@ impl Versions {
                 for p in expand_version_range(piece)? {
                     versions.insert(p);
                 }
+            } else if piece == "" {
+                continue;
             } else {
-                versions.insert(u32::from_str(piece).or(
+                let v = u32::from_str(piece).or(
                     Err("invalid protocol entry"),
-                )?);
+                )?;
+                if v == u32::MAX {
+                    return Err("invalid protocol entry");
+                }
+                versions.insert(v);
             }
 
-            if versions.len() > MAX_PROTOCOLS_TO_EXPAND as usize {
+            if versions.len() > MAX_PROTOCOLS_TO_EXPAND {
                 return Err("Too many versions to expand");
             }
         }
@@ -447,8 +450,22 @@ fn expand_version_range(range: &str) -> Result<Range<u32>, &'static str> {
         "cannot parse protocol range upper bound",
     ))?;
 
+    if lower == u32::MAX || higher == u32::MAX {
+        return Err("protocol range value out of range");
+    }
+
+    if lower > higher {
+        return Err("protocol range is badly formed");
+    }
+
     // We can use inclusive range syntax when it becomes stable.
-    Ok(lower..higher + 1)
+    let result = lower..higher + 1;
+
+    if result.len() > MAX_PROTOCOLS_TO_EXPAND {
+        Err("Too many protocols in expanded range")
+    } else {
+        Ok(result)
+    }
 }
 
 /// Checks to see if there is a continuous range of integers, starting at the
@@ -568,6 +585,7 @@ fn parse_protocols_from_string_with_no_validation<'a>(
         let mut parts = subproto.splitn(2, "=");
 
         let name = match parts.next() {
+            Some("") => return Err("invalid protover entry"),
             Some(n) => n,
             None => return Err("invalid protover entry"),
         };
@@ -635,7 +653,6 @@ pub fn compute_vote(
                 Ok(result) => result,
                 Err(_) => continue,
             };
-
         for (protocol, versions) in this_vote {
             let supported_vers: &mut HashMap<Version, usize> =
                 all_count.entry(protocol).or_insert(HashMap::new());
@@ -779,7 +796,6 @@ mod test {
 
         use super::Versions;
 
-        assert_eq!(Err("version string is empty"), Versions::from_version_string(""));
         assert_eq!(Err("invalid protocol entry"), Versions::from_version_string("a,b"));
         assert_eq!(Err("invalid protocol entry"), Versions::from_version_string("1,!"));
 
@@ -823,7 +839,7 @@ mod test {
         use super::contains_only_supported_protocols;
 
         assert_eq!(false, contains_only_supported_protocols(""));
-        assert_eq!(false, contains_only_supported_protocols("Cons="));
+        assert_eq!(true, contains_only_supported_protocols("Cons="));
         assert_eq!(true, contains_only_supported_protocols("Cons=1"));
         assert_eq!(false, contains_only_supported_protocols("Cons=0"));
         assert_eq!(false, contains_only_supported_protocols("Cons=0-1"));
@@ -862,6 +878,9 @@ mod test {
             Err("cannot parse protocol range upper bound"),
             expand_version_range("1-a")
         );
+        assert_eq!(Ok(1000..66536), expand_version_range("1000-66535"));
+        assert_eq!(Err("Too many protocols in expanded range"),
+                   expand_version_range("1000-66536"));
     }
 
     #[test]
