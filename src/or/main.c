@@ -3332,6 +3332,8 @@ tor_init(int argc, char *argv[])
     if (strstr(version, "alpha") || strstr(version, "beta"))
       log_notice(LD_GENERAL, "This version is not a stable Tor release. "
                  "Expect more bugs than usual.");
+
+    tor_compress_log_init_warnings();
   }
 
 #ifdef HAVE_RUST

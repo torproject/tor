@@ -18,6 +18,13 @@
 #include "compress.h"
 #include "compress_zstd.h"
 
+#ifdef ENABLE_ZSTD_ADVANCED_APIS
+/* This is a lie, but we make sure it doesn't get us in trouble by wrapping
+ * all invocations of zstd's static-only functions in a check to make sure
+ * that the compile-time version matches the run-time version. */
+#define ZSTD_STATIC_LINKING_ONLY
+#endif
+
 #ifdef HAVE_ZSTD
 #include <zstd.h>
 #endif
@@ -51,21 +58,29 @@ tor_zstd_method_supported(void)
 #endif
 }
 
+/** Format a zstd version number as a string in <b>buf</b>. */
+static void
+tor_zstd_format_version(char *buf, size_t buflen, unsigned version_number)
+{
+  tor_snprintf(buf, buflen,
+               "%u.%u.%u",
+               version_number / 10000 % 100,
+               version_number / 100 % 100,
+               version_number % 100);
+}
+
+#define VERSION_STR_MAX_LEN 16 /* more than enough space for 99.99.99 */
+
 /** Return a string representation of the version of the currently running
  * version of libzstd. Returns NULL if Zstandard is unsupported. */
 const char *
 tor_zstd_get_version_str(void)
 {
 #ifdef HAVE_ZSTD
-  static char version_str[16];
-  size_t version_number;
+  static char version_str[VERSION_STR_MAX_LEN];
 
-  version_number = ZSTD_versionNumber();
-  tor_snprintf(version_str, sizeof(version_str),
-               "%d.%d.%d",
-               (int) version_number / 10000 % 100,
-               (int) version_number / 100 % 100,
-               (int) version_number % 100);
+  tor_zstd_format_version(version_str, sizeof(version_str),
+                          ZSTD_versionNumber());
 
   return version_str;
 #else /* !(defined(HAVE_ZSTD)) */
@@ -82,6 +97,26 @@ tor_zstd_get_header_version_str(void)
   return ZSTD_VERSION_STRING;
 #else
   return NULL;
+#endif
+}
+
+#ifdef TOR_UNIT_TESTS
+static int static_apis_disable_for_testing = 0;
+#endif
+
+/** Return true iff we can use the "static-only" APIs. */
+int
+tor_zstd_can_use_static_apis(void)
+{
+#if defined(ZSTD_STATIC_LINKING_ONLY) && defined(HAVE_ZSTD)
+#ifdef TOR_UNIT_TESTS
+  if (static_apis_disable_for_testing) {
+    return 0;
+  }
+#endif
+  return (ZSTD_VERSION_NUMBER == ZSTD_versionNumber());
+#else
+  return 0;
 #endif
 }
 
@@ -112,9 +147,11 @@ struct tor_zstd_compress_state_t {
 
 #ifdef HAVE_ZSTD
 /** Return an approximate number of bytes stored in memory to hold the
- * Zstandard compression/decompression state. */
+ * Zstandard compression/decompression state. This is a fake estimate
+ * based on inspecting the zstd source: tor_zstd_state_size_precalc() is
+ * more accurate when it's allowed to use "static-only" functions */
 static size_t
-tor_zstd_state_size_precalc(int compress, int preset)
+tor_zstd_state_size_precalc_fake(int compress, int preset)
 {
   tor_assert(preset > 0);
 
@@ -170,6 +207,24 @@ tor_zstd_state_size_precalc(int compress, int preset)
   }
 
   return memory_usage;
+}
+
+/** Return an approximate number of bytes stored in memory to hold the
+ * Zstandard compression/decompression state. */
+static size_t
+tor_zstd_state_size_precalc(int compress, int preset)
+{
+#ifdef ZSTD_STATIC_LINKING_ONLY
+  if (tor_zstd_can_use_static_apis()) {
+    if (compress) {
+      return ZSTD_estimateCStreamSize(preset);
+    } else {
+      /* Could use DStream, but that takes a windowSize. */
+      return ZSTD_estimateDCtxSize();
+    }
+  }
+#endif
+  return tor_zstd_state_size_precalc_fake(compress, preset);
 }
 #endif /* defined(HAVE_ZSTD) */
 
@@ -439,4 +494,35 @@ tor_zstd_init(void)
 {
   atomic_counter_init(&total_zstd_allocation);
 }
+
+/** Warn if the header and library versions don't match. */
+void
+tor_zstd_warn_if_version_mismatched(void)
+{
+#if defined(HAVE_ZSTD) && defined(ENABLE_ZSTD_ADVANCED_APIS)
+  if (! tor_zstd_can_use_static_apis()) {
+    char header_version[VERSION_STR_MAX_LEN];
+    char runtime_version[VERSION_STR_MAX_LEN];
+    tor_zstd_format_version(header_version, sizeof(header_version),
+                            ZSTD_VERSION_NUMBER);
+    tor_zstd_format_version(runtime_version, sizeof(runtime_version),
+                            ZSTD_versionNumber());
+
+    log_warn(LD_GENERAL,
+             "Tor was compiled with zstd %s, but is running with zstd %s. "
+             "For safety, we'll avoid using advanced zstd functionality.",
+             header_version, runtime_version);
+  }
+#endif
+}
+
+#ifdef TOR_UNIT_TESTS
+/** Testing only: disable usage of static-only APIs, so we can make sure that
+ * we still work without them. */
+void
+tor_zstd_set_static_apis_disabled_for_testing(int disabled)
+{
+  static_apis_disable_for_testing = disabled;
+}
+#endif
 

@@ -663,3 +663,13 @@ tor_compress_init(void)
   tor_zstd_init();
 }
 
+/** Warn if we had any problems while setting up our compression libraries.
+ *
+ * (This isn't part of tor_compress_init, since the logs aren't set up yet.)
+ */
+void
+tor_compress_log_init_warnings(void)
+{
+  tor_zstd_warn_if_version_mismatched();
+}
+
