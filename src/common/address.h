@@ -229,6 +229,8 @@ int tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
 #define tor_addr_eq(a,b) (0==tor_addr_compare((a),(b),CMP_EXACT))
 
 uint64_t tor_addr_hash(const tor_addr_t *addr);
+struct sipkey;
+uint64_t tor_addr_keyed_hash(const struct sipkey *key, const tor_addr_t *addr);
 int tor_addr_is_v4(const tor_addr_t *addr);
 int tor_addr_is_internal_(const tor_addr_t *ip, int for_listening,
                           const char *filename, int lineno);
