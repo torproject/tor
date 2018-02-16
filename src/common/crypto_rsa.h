@@ -22,7 +22,6 @@
 #include "compat.h"
 #include "util.h"
 #include "torlog.h"
-#include "crypto_curve25519.h"
 
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)
