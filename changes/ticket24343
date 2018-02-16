@@ -1,0 +1,6 @@
+  o Minor bugfixes (man page, SocksPort):
+    - Remove dead code about the old "SocksSockets" option. To do so, the
+      SocksSocketsGroupWritable option has been renamed to
+      UnixSockssGroupWritable which does the same exact thing. The old option
+      is still usable but will warn that it is deprecated. Fixes bug 24343;
+      bugfix on 0.2.6.3.
