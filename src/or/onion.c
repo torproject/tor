@@ -563,20 +563,19 @@ onion_skin_server_handshake(int type,
       return -1;
     {
       size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
-      uint8_t *keys_tmp = tor_malloc(keys_out_len + DIGEST_LEN);
+      uint8_t keys_tmp[keys_tmp_len];
 
       if (onion_skin_ntor_server_handshake(
                                    onion_skin, keys->curve25519_key_map,
                                    keys->junk_keypair,
                                    keys->my_identity,
                                    reply_out, keys_tmp, keys_tmp_len)<0) {
-        tor_free(keys_tmp);
+        /* no need to memwipe here, since the output will never be used */
         return -1;
       }
       memcpy(keys_out, keys_tmp, keys_out_len);
       memcpy(rend_nonce_out, keys_tmp+keys_out_len, DIGEST_LEN);
       memwipe(keys_tmp, 0, keys_tmp_len);
-      tor_free(keys_tmp);
       r = NTOR_REPLY_LEN;
     }
     break;
