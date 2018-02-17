@@ -1119,7 +1119,8 @@ string_is_valid_hostname(const char *string)
 
   /* Allow a single terminating '.' used rarely to indicate domains
    * are FQDNs rather than relative. */
-  last_label = (char *)smartlist_get(components, smartlist_len(components) - 1);
+  last_label = (char *)smartlist_get(components,
+                                     smartlist_len(components) - 1);
   has_trailing_dot = (last_label[0] == '\0');
   if (has_trailing_dot) {
     smartlist_pop_last(components);
@@ -1133,12 +1134,20 @@ string_is_valid_hostname(const char *string)
       break;
     }
 
-    if (c_sl_idx == c_sl_len - 1) {
+    if (c_sl_idx == c_sl_len - 1) { // TLD validation.
+      int is_punycode = (strlen(c) > 4 &&
+                         (c[0] == 'X' || c[0] == 'x') &&
+                         (c[1] == 'N' || c[1] == 'n') &&
+                          c[2] == '-' && c[3] == '-');
+
+      if (is_punycode)
+        c += 4;
+
       do {
-        result = TOR_ISALPHA(*c);
+        result = is_punycode ? TOR_ISALNUM(*c) : TOR_ISALPHA(*c);
         c++;
       } while (result && *c);
-    } else {
+    } else { // Regular hostname label validation.
       do {
         result = (TOR_ISALNUM(*c) || (*c == '-') || (*c == '_'));
         c++;
