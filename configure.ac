@@ -977,6 +977,16 @@ if test "x$have_zstd" = "xyes"; then
     AC_DEFINE(HAVE_ZSTD,1,[Have Zstd])
     TOR_ZSTD_CFLAGS="${ZSTD_CFLAGS}"
     TOR_ZSTD_LIBS="${ZSTD_LIBS}"
+
+    dnl now check for zstd functions
+    save_LIBS="$LIBS"
+    save_CFLAGS="$CFLAGS"
+    LIBS="$LIBS $ZSTD_LIBS"
+    CFLAGS="$CFLAGS $ZSTD_CFLAGS"
+    AC_CHECK_FUNCS(ZSTD_estimateCStreamSize \
+                   ZSTD_estimateDCtxSize)
+    LIBS="$save_LIBS"
+    CFLAGS="$save_CFLAGS"
 fi
 AC_SUBST(TOR_ZSTD_CFLAGS)
 AC_SUBST(TOR_ZSTD_LIBS)

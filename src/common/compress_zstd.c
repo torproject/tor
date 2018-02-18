@@ -219,10 +219,14 @@ tor_zstd_state_size_precalc(int compress, int preset)
 #ifdef ZSTD_STATIC_LINKING_ONLY
   if (tor_zstd_can_use_static_apis()) {
     if (compress) {
+#ifdef HAVE_ZSTD_ESTIMATECSTREAMSIZE
       return ZSTD_estimateCStreamSize(preset);
+#endif
     } else {
+#ifdef HAVE_ZSTD_ESTIMATEDCTXSIZE
       /* Could use DStream, but that takes a windowSize. */
       return ZSTD_estimateDCtxSize();
+#endif
     }
   }
 #endif
