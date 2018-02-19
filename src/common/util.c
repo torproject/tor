@@ -1113,6 +1113,9 @@ string_is_valid_hostname(const char *string)
   if (!string || strlen(string) == 0)
     return 0;
 
+  if (string_is_valid_ipv4_address(string))
+    return 0;
+
   components = smartlist_new();
 
   smartlist_split_string(components,string,".",0,0);
@@ -1134,25 +1137,10 @@ string_is_valid_hostname(const char *string)
       break;
     }
 
-    if (c_sl_idx == c_sl_len - 1) { // TLD validation.
-      int is_punycode = (strlen(c) > 4 &&
-                         (c[0] == 'X' || c[0] == 'x') &&
-                         (c[1] == 'N' || c[1] == 'n') &&
-                          c[2] == '-' && c[3] == '-');
-
-      if (is_punycode)
-        c += 4;
-
-      do {
-        result = is_punycode ? TOR_ISALNUM(*c) : TOR_ISALPHA(*c);
-        c++;
-      } while (result && *c);
-    } else { // Regular hostname label validation.
-      do {
-        result = (TOR_ISALNUM(*c) || (*c == '-') || (*c == '_'));
-        c++;
-      } while (result > 0 && *c);
-    }
+    do {
+      result = (TOR_ISALNUM(*c) || (*c == '-') || (*c == '_'));
+      c++;
+    } while (result > 0 && *c);
 
     if (result == 0) {
       break;
