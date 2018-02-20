@@ -13,7 +13,7 @@
 #include "crypto_digest.h"
 
 #include "crypto.h" /* common functions */
-#include "crypto_rsa.h"
+#include "crypto_openssl_mgt.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
