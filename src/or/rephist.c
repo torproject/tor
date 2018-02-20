@@ -86,7 +86,6 @@
 #include "ht.h"
 #include "channelpadding.h"
 
-#include "channelpadding.h"
 #include "connection_or.h"
 
 static void bw_arrays_init(void);

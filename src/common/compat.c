@@ -100,7 +100,6 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 /* Only use the linux prctl;  the IRIX prctl is totally different */
 #include <sys/prctl.h>
 #elif defined(__APPLE__)
-#include <sys/types.h>
 #include <sys/ptrace.h>
 #endif /* defined(HAVE_SYS_PRCTL_H) && defined(__linux__) || ... */
 

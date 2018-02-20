@@ -25,7 +25,6 @@
 #include "main.h"
 #include "rephist.h"
 #include "hibernate.h"
-#include "rephist.h"
 #include "statefile.h"
 #include "hs_stats.h"
 #include "hs_service.h"

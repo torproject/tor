@@ -28,7 +28,6 @@
 #include "rendservice.h"
 #include "routerset.h"
 #include "router.h"
-#include "routerset.h"
 #include "shared_random.h"
 #include "shared_random_state.h"
 

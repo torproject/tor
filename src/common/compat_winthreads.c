@@ -18,7 +18,6 @@
 #include "util.h"
 #include "container.h"
 #include "torlog.h"
-#include <process.h>
 
 /* This value is more or less total cargo-cult */
 #define SPIN_COUNT 2000

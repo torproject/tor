@@ -20,7 +20,6 @@
 #include "connection_edge.h"
 #include "test.h"
 #include "util.h"
-#include "address.h"
 #include "connection_or.h"
 #include "control.h"
 #include "cpuworker.h"
@@ -42,9 +41,6 @@
 #include "routerlist.h"
 #include "routerset.h"
 #include "statefile.h"
-#include "test.h"
-#include "transports.h"
-#include "util.h"
 
 #include "test_helpers.h"
 

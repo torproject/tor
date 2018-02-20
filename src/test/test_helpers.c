@@ -33,7 +33,6 @@ DISABLE_GCC_WARNING(overlength-strings)
  * at large. */
 #endif
 #include "test_descriptors.inc"
-#include "or.h"
 #include "circuitlist.h"
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 ENABLE_GCC_WARNING(overlength-strings)

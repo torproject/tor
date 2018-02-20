@@ -31,7 +31,6 @@
 #include "hs_common.h"
 #include "hs_config.h"
 #include "hs_control.h"
-#include "hs_circuit.h"
 #include "hs_descriptor.h"
 #include "hs_ident.h"
 #include "hs_intropoint.h"

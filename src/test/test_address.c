@@ -11,8 +11,11 @@
 #include <iphlpapi.h>
 #endif
 
-#ifdef HAVE_IFADDRS_TO_SMARTLIST
+#ifdef HAVE_NET_IF_H
 #include <net/if.h>
+#endif
+
+#ifdef HAVE_IFADDRS_TO_SMARTLIST
 #include <ifaddrs.h>
 #endif
 
@@ -20,7 +23,6 @@
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-#include <net/if.h>
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */
 
 #include "or.h"

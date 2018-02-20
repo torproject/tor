@@ -13,7 +13,6 @@
 #define TOR_BUFFERS_H
 
 #include "compat.h"
-#include "compat.h"
 #include "torint.h"
 #include "testsupport.h"
 

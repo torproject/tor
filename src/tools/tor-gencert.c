@@ -36,7 +36,6 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <assert.h>
 #endif
 
-#include "compat.h"
 #include "util.h"
 #include "torlog.h"
 #include "crypto.h"

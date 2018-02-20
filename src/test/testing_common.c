@@ -29,8 +29,6 @@
 #include <dirent.h>
 #endif /* defined(_WIN32) */
 
-#include "or.h"
-
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include "main.h"

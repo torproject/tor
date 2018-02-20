@@ -12,7 +12,6 @@
 #include "config.h"
 #include "circuitlist.h"
 #include "circuituse.h"
-#include "config.h"
 #include "relay.h"
 #include "rendmid.h"
 #include "rephist.h"

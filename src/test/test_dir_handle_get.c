@@ -16,7 +16,6 @@
 #include "directory.h"
 #include "test.h"
 #include "compress.h"
-#include "connection.h"
 #include "rendcommon.h"
 #include "rendcache.h"
 #include "router.h"
