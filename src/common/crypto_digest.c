@@ -18,6 +18,7 @@
 DISABLE_GCC_WARNING(redundant-decls)
 
 #include <openssl/hmac.h>
+#include <openssl/sha.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
 

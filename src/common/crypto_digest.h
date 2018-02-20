@@ -15,7 +15,8 @@
 
 #include <stdio.h>
 
-#include "crypto_curve25519.h"
+#include "container.h"
+#include "torint.h"
 
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20

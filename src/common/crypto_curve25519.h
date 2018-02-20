@@ -6,6 +6,7 @@
 
 #include "testsupport.h"
 #include "torint.h"
+#include "crypto_digest.h"
 #include "crypto_openssl_mgt.h"
 
 /** Length of a curve25519 public key when encoded. */
