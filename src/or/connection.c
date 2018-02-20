@@ -101,7 +101,6 @@
 #include "transports.h"
 #include "routerparse.h"
 #include "sandbox.h"
-#include "transports.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
