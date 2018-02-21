@@ -79,7 +79,7 @@ you are in the top level of the repository) configure tor with:
 
     TOR_RUST_DEPENDENCIES='path_to_dependencies_directory' ./configure --enable-rust
 
-(Note that RUST_DEPENDENCIES must be the full path to the directory; it
+(Note that TOR_RUST_DEPENDENCIES must be the full path to the directory; it
 cannot be relative.)
 
 Assuming you used the above `git submodule` commands and you're in the
