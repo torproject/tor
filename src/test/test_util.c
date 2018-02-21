@@ -5542,6 +5542,18 @@ test_util_max_mem(void *arg)
 }
 
 static void
+test_util_dest_validation_edgecase(void *arg)
+{
+  (void)arg;
+
+  tt_assert(!string_is_valid_dest(NULL));
+  tt_assert(!string_is_valid_dest(""));
+
+  done:
+  return;
+}
+
+static void
 test_util_hostname_validation(void *arg)
 {
   (void)arg;
@@ -6222,6 +6234,7 @@ struct testcase_t util_tests[] = {
     &passthrough_setup, (void*)"1" },
   UTIL_TEST(max_mem, 0),
   UTIL_TEST(hostname_validation, 0),
+  UTIL_TEST(dest_validation_edgecase, 0),
   UTIL_TEST(ipv4_validation, 0),
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),

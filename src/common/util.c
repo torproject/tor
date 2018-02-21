@@ -1081,8 +1081,13 @@ string_is_valid_dest(const char *string)
   int retval;
   size_t len = strlen(string);
 
-  tor_assert(string);
-  tor_assert(len > 0);
+  if (string == NULL)
+    return 0;
+
+  len = strlen(string);
+
+  if (len == 0)
+    return 0;
 
   if (string[0] == '[' && string[len - 1] == ']')
     string = tmp = tor_strndup(string + 1, len - 2);
