@@ -1145,7 +1145,7 @@ string_is_valid_hostname(const char *string)
     do {
       result = (TOR_ISALNUM(*c) || (*c == '-') || (*c == '_'));
       c++;
-    } while (result > 0 && *c);
+    } while (result && *c);
 
     if (result == 0) {
       break;
