@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Update the "rust dependencies" submodule to be an project-level
+      repository, rather than a user repository. Closes ticket 25323.
+
