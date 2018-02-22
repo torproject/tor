@@ -1,4 +1,0 @@
-  o Minor features (testing):
-    - Add a "make test-rust" target to run the rust tests only.
-      Closes ticket 25071.
-
