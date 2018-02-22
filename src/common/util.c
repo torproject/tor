@@ -1079,7 +1079,7 @@ string_is_valid_dest(const char *string)
 {
   char *tmp = NULL;
   int retval;
-  size_t len = strlen(string);
+  size_t len;
 
   if (string == NULL)
     return 0;
