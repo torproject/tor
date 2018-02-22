@@ -23,18 +23,17 @@ Changes in version 0.3.3.3-alpha - 2018-02-2?
 
   o Minor bugfixes (DoS mitigation):
     - Add extra safety checks when refilling the circuit creation bucket
-      to ensure we never set a value that is above the allowed burst.
+      to ensure we never set a value above the allowed maximum burst.
       Fixes bug 25202; bugfix on 0.3.3.2-alpha.
-    - Make sure we don't modify consensus parameters if we aren't a
-      public relay when a new consensus arrives. Fixes bug 25223; bugfix
+    - When a new consensus arrives, don't update our DoS-mitigation
+      parameters if we aren't a public relay. Fixes bug 25223; bugfix
       on 0.3.3.2-alpha.
 
   o Minor bugfixes (man page, SocksPort):
-    - Remove dead code about the old "SocksSockets" option. To do so,
-      the SocksSocketsGroupWritable option has been renamed to
-      UnixSockssGroupWritable which does the same exact thing. The old
-      option is still usable but will warn that it is deprecated. Fixes
-      bug 24343; bugfix on 0.2.6.3.
+    - Remove dead code about the old "SocksSockets" option, and rename
+      SocksSocketsGroupWritable to UnixSockssGroupWritable which does
+      the same exact thing. The old option still works, but is
+      deprecated. Fixes bug 24343; bugfix on 0.2.6.3.
 
   o Minor bugfixes (performance):
     - Reduce the number of circuits that can be opened at once during
@@ -44,7 +43,7 @@ Changes in version 0.3.3.3-alpha - 2018-02-2?
       on 0.3.1.1-alpha.
 
   o Code simplification and refactoring:
-    - Update the "rust dependencies" submodule to be an project-level
+    - Update the "rust dependencies" submodule to be a project-level
       repository, rather than a user repository. Closes ticket 25323.
 
 
