@@ -468,15 +468,6 @@ if test "x$enable_rust" = "xyes"; then
     fi
   fi
 
-  dnl This is a workaround for #46797
-  dnl (a.k.a https://github.com/rust-lang/rust/issues/46797 ).  Once the
-  dnl upstream bug is fixed, we can remove this workaround.
-  case "$host_os" in
-      darwin*)
-        TOR_RUST_EXTRA_LIBS="-lresolv"
-	;;
-  esac
-
   dnl For now both MSVC and MinGW rust libraries will output static libs with
   dnl the MSVC naming convention.
   if test "$bwin32" = "true"; then
@@ -502,8 +493,6 @@ if test "x$enable_rust" = "xyes"; then
   fi
   AC_MSG_RESULT([$RUSTC_VERSION])
 fi
-
-AC_SUBST(TOR_RUST_EXTRA_LIBS)
 
 AC_SEARCH_LIBS(socket, [socket network])
 AC_SEARCH_LIBS(gethostbyname, [nsl])

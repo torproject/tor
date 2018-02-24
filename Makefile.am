@@ -26,8 +26,7 @@ TESTING_TOR_BINARY=$(top_builddir)/src/or/tor$(EXEEXT)
 endif
 
 if USE_RUST
-rust_ldadd=$(top_builddir)/src/rust/target/release/@TOR_RUST_STATIC_NAME@ \
-	@TOR_RUST_EXTRA_LIBS@
+rust_ldadd=$(top_builddir)/src/rust/target/release/@TOR_RUST_UTIL_STATIC_NAME@
 else
 rust_ldadd=
 endif
