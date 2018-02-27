@@ -10,7 +10,7 @@ Changes in version 0.3.3.3-alpha - 2018-02-2?
     - Tor will now support TLS1.3 once OpenSSL 1.1.1 is released.
       Previous versions of Tor would not have worked with OpenSSL 1.1.1,
       since they neither disabled TLS 1.3 nor enabled any of the
-      ciphersuites it requires. Here we enable the TLS 1.3 ciphersuites.
+      ciphersuites it requires. Now we enable the TLS 1.3 ciphersuites.
       Closes ticket 24978.
 
   o Minor features (logging):
@@ -30,13 +30,12 @@ Changes in version 0.3.3.3-alpha - 2018-02-2?
       on 0.3.3.2-alpha.
 
   o Minor bugfixes (man page, SocksPort):
-    - Remove dead code about the old "SocksSockets" option, and rename
-      SocksSocketsGroupWritable to UnixSockssGroupWritable which does
-      the same exact thing. The old option still works, but is
-      deprecated. Fixes bug 24343; bugfix on 0.2.6.3.
+    - Remove dead code from the old "SocksSocket" option, and rename
+      SocksSocketsGroupWritable to UnixSocksGroupWritable. The old option
+      still works, but is deprecated. Fixes bug 24343; bugfix on 0.2.6.3.
 
   o Minor bugfixes (performance):
-    - Reduce the number of circuits that can be opened at once during
+    - Reduce the number of circuits that will be opened at once during
       the circuit build timeout phase. This is done by increasing the
       idle timeout to 3 minutes, and lowering the maximum number of
       concurrent learning circuits to 10. Fixes bug 24769; bugfix
