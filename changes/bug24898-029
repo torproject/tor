@@ -1,6 +1,0 @@
-  o Minor bugfixes (relay):
-    - Make the internal channel_is_client() function look at what sort
-      of connection handshake the other side used, rather than whether
-      the other side ever sent a create_fast cell to us. Backports part
-      of the fixes from bugs 22805 and 24898.
-

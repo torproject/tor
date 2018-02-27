@@ -3,7 +3,7 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.9.14 - 2017-12-01
-  Tor 0.3.0.13 backports important security and stability bugfixes from
+  Tor 0.2.9.14 backports important security and stability bugfixes from
   later Tor releases. All Tor users should upgrade to this release, or
   to another of the releases coming out today.
 

@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix a signed/unsigned comparison warning introduced by our
-      fix to TROVE-2017-009. Fixes bug 24480; bugfix on 0.2.5.16.
