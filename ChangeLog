@@ -57,7 +57,7 @@ Changes in version 0.3.2.10 - 2018-03-??
     - Tor will now support TLS1.3 once OpenSSL 1.1.1 is released.
       Previous versions of Tor would not have worked with OpenSSL 1.1.1,
       since they neither disabled TLS 1.3 nor enabled any of the
-      ciphersuites it requires. Here we enable the TLS 1.3 ciphersuites.
+      ciphersuites it requires. Now we enable the TLS 1.3 ciphersuites.
       Closes ticket 24978.
 
   o Minor features (geoip):
