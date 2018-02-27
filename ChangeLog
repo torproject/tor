@@ -1,3 +1,148 @@
+Changes in version 0.3.2.10 - 2018-03-??
+  Tor 0.3.2.10 is the second stable release in the 0.3.2 series. It
+  backports a number of bugfixes, including important fixes for security
+  issues.
+
+  BLURB HERE.
+
+  o Major features (denial-of-service mitigation, backport from 0.3.3.2-alpha):
+    - Give relays some defenses against the recent network overload. We
+      start with three defenses (default parameters in parentheses).
+      First: if a single client address makes too many concurrent
+      connections (>100), hang up on further connections. Second: if a
+      single client address makes circuits too quickly (more than 3 per
+      second, with an allowed burst of 90) while also having too many
+      connections open (3), refuse new create cells for the next while
+      (1-2 hours). Third: if a client asks to establish a rendezvous
+      point to you directly, ignore the request. These defenses can be
+      manually controlled by new torrc options, but relays will also
+      take guidance from consensus parameters, so there's no need to
+      configure anything manually. Implements ticket 24902.
+
+  o Major bugfixes (onion services, retry behavior, backport from 0.3.3.1-alpha):
+    - Fix an "off by 2" error in counting rendezvous failures on the
+      onion service side. While we thought we would stop the rendezvous
+      attempt after one failed circuit, we were actually making three
+      circuit attempts before giving up. Now switch to a default of 2,
+      and allow the consensus parameter "hs_service_max_rdv_failures" to
+      override. Fixes bug 24895; bugfix on 0.0.6.
+    - New-style (v3) onion services now obey the "max rendezvous circuit
+      attempts" logic. Previously they would make as many rendezvous
+      circuit attempts as they could fit in the MAX_REND_TIMEOUT second
+      window before giving up. Fixes bug 24894; bugfix on 0.3.2.1-alpha.
+
+  o Major bugfixes (protocol versions, backport from 0.3.3.2-alpha):
+    - Add Link protocol version 5 to the supported protocols list. Fixes
+      bug 25070; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (relay, backport from 0.3.3.1-alpha):
+    - Fix a set of false positives where relays would consider
+      connections to other relays as being client-only connections (and
+      thus e.g. deserving different link padding schemes) if those
+      relays fell out of the consensus briefly. Now we look only at the
+      initial handshake and whether the connection authenticated as a
+      relay. Fixes bug 24898; bugfix on 0.3.1.1-alpha.
+
+  o Major bugfixes (scheduler, consensus, backport from 0.3.3.2-alpha):
+    - The scheduler subsystem was failing to promptly notice changes in
+      consensus parameters, making it harder to switch schedulers
+      network-wide. Fixes bug 24975; bugfix on 0.3.2.1-alpha.
+
+  o Minor features (denial-of-service avoidance, backport from 0.3.3.2-alpha):
+    - Make our OOM handler aware of the geoip client history cache so it
+      doesn't fill up the memory. This check is important for IPv6 and
+      our DoS mitigation subsystem. Closes ticket 25122.
+
+  o Minor features (compatibility, OpenSSL, backport from 0.3.3.3-alpha):
+    - Tor will now support TLS1.3 once OpenSSL 1.1.1 is released.
+      Previous versions of Tor would not have worked with OpenSSL 1.1.1,
+      since they neither disabled TLS 1.3 nor enabled any of the
+      ciphersuites it requires. Here we enable the TLS 1.3 ciphersuites.
+      Closes ticket 24978.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the February 7 2018 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (logging, diagnostic, backport from 0.3.3.2-alpha):
+    - When logging a failure to check a hidden service's certificate,
+      also log what the problem with the certificate was. Diagnostic
+      for ticket 24972.
+
+  o Minor bugfix (channel connection, backport from 0.3.3.2-alpha):
+    - Use the actual observed address of an incoming relay connection,
+      not the canonical address of the relay from its descriptor, when
+      making decisions about how to handle the incoming connection.
+      Fixes bug 24952; bugfix on 0.2.4.11-alpha. Patch by "ffmancera".
+
+  o Minor bugfix (directory authority, backport from 0.3.3.2-alpha):
+    - Directory authorities, when refusing a descriptor from a rejected
+      relay, now explicitly tell the relay (in its logs) to set a valid
+      ContactInfo address and contact the bad-relays@ mailing list.
+      Fixes bug 25170; bugfix on 0.2.9.1.
+
+  o Minor bugfixes (build, rust, backport from 0.3.3.1-alpha):
+    - When building with Rust on OSX, link against libresolv, to work
+      around the issue at https://github.com/rust-lang/rust/issues/46797.
+      Fixes bug 24652; bugfix on 0.3.1.1-alpha.
+
+
+ [[[[ OMIT
+  o Minor bugfixes (DoS mitigation):
+    - Add extra safety checks when refilling the circuit creation bucket to
+      ensure we never set a value that is above the allowed burst. Fixes
+      bug 25202; bugfix on 0.3.3.2-alpha.
+    - Make sure we don't modify consensus parameters if we aren't a public
+      relay when a new consensus arrives. Fixes bug 25223; bugfix on
+      0.3.3.2-alpha.
+ OMIT]]]] 
+
+  o Minor bugfixes (onion services, backport from 0.3.3.2-alpha):
+    - Remove a BUG() statement when a client fetches an onion descriptor
+      that has a lower revision counter than the one in its cache. This
+      can happen in normal circumstances due to HSDir desync. Fixes bug
+      24976; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (logging, backport from 0.3.3.2-alpha):
+    - Don't treat inability to store a cached consensus object as a bug:
+      it can happen normally when we are out of disk space. Fixes bug
+      24859; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (performance, fragile-hardening, backport from 0.3.3.1-alpha):
+    - Improve the performance of our consensus-diff application code
+      when Tor is built with the --enable-fragile-hardening option set.
+      Fixes bug 24826; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (OSX, backport from 0.3.3.1-alpha):
+    - Don't exit the Tor process if setrlimit() fails to change the file
+      limit (which can happen sometimes on some versions of OSX). Fixes
+      bug 21074; bugfix on 0.0.9pre5.
+
+  o Minor bugfixes (scheduler, KIST, backport from 0.3.3.2-alpha):
+    - Avoid adding the same channel twice in the KIST scheduler pending
+      list, which would waste CPU cycles. Fixes bug 24700; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.3.3.1-alpha):
+    - Fix a memory leak in the scheduler/loop_kist unit test. Fixes bug
+      25005; bugfix on 0.3.2.7-rc.
+
+  o Minor bugfixes (v3 onion services, backport from 0.3.3.2-alpha):
+    - Look at the "HSRend" protocol version, not the "HSDir" protocol
+      version, when deciding whether a consensus entry can support the
+      v3 onion service protocol as a rendezvous point. Fixes bug 25105;
+      bugfix on 0.3.2.1-alpha.
+
+  o Code simplification and refactoring (backport from 0.3.3.3-alpha):
+    - Update the "rust dependencies" submodule to be a project-level
+      repository, rather than a user repository. Closes ticket 25323.
+
+  o Documentation (backport from 0.3.3.1-alpha)
+    - Document that operators who run more than one relay or bridge are
+      expected to set MyFamily and ContactInfo correctly. Closes
+      ticket 24526.
+
+
 Changes in version 0.3.2.9 - 2018-01-09
   Tor 0.3.2.9 is the first stable release in the 0.3.2 series.
 

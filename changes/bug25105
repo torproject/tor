@@ -1,5 +1,0 @@
-  o Minor bugfixes (v3 onion services):
-    - Look at the "HSRend" protocol version, not the "HSDir" protocol
-      version, when deciding whether a consensus entry can support
-      the v3 onion service protocol as a rendezvous point.
-      Fixes bug 25105; bugfix on 0.3.2.1-alpha.

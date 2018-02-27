@@ -1,4 +1,0 @@
-  o Minor features (logging, diagnostic):
-    - When logging a failure to check a hidden service's certificate,
-      also log what the problem with the certificate was. Diagnostic
-      for ticket 24972.
