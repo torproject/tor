@@ -97,7 +97,6 @@ pub mod log {
     /// Severity log types. These mirror definitions in /src/common/torlog.h
     /// C_RUST_COUPLED: src/common/log.c, log domain types
     extern "C" {
-        #[no_mangle]
         static LOG_WARN_: c_int;
         static LOG_NOTICE_: c_int;
     }
@@ -105,7 +104,6 @@ pub mod log {
     /// Domain log types. These mirror definitions in /src/common/torlog.h
     /// C_RUST_COUPLED: src/common/log.c, log severity types
     extern "C" {
-        #[no_mangle]
         static LD_NET_: u32;
         static LD_GENERAL_: u32;
     }
