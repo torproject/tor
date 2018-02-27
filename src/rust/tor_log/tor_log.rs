@@ -62,7 +62,7 @@ pub fn tor_log_msg_impl(
 
     /// Default message to log in case of errors when converting a log
     /// message to a CString
-    const ERR_LOG_MSG: &str = "Unable to log message from Rust
+    const ERR_LOG_MSG: &str = "Unable to log message from Rust \
             module due to error when converting to CString";
 
     let func = match CString::new(function) {
