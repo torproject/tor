@@ -1,3 +1,0 @@
-  o Major features (linux seccomp2 sandbox):
-    - Update the sandbox rules so that they should now work correctly with
-      Glibc 2.26.  Closes  ticket 24315.

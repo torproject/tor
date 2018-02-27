@@ -1,5 +1,0 @@
-  o Minor bugfixes (portability, msvc):
-    - Fix a bug in the bit-counting parts of our timing-wheel code on
-      MSVC. (Note that MSVC is still not a supported build platform,
-      due to cyptographic timing channel risks.) Fixes bug 24633;
-      bugfix on 0.2.9.1-alpha.

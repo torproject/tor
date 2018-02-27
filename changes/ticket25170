@@ -1,5 +1,0 @@
-  o Minor bugfix (directory authority, documentation):
-    - When a fingerprint or network address is marked as rejected, the
-      returned message by the authority now explicitly mention to set a valid
-      ContactInfo address and contact the bad-relays@ mailing list. Fixes bug
-      25170; bugfix on 0.2.9.1.

@@ -1,3 +1,0 @@
-  o Minor bugfixes (path selection):
-    - Actually log the total bandwidth in compute_weighted_bandwidths().
-      Fixes bug 24170; bugfix on 0.2.4.3-alpha.
