@@ -1177,10 +1177,18 @@ or_connect_failure_ht_eq(const or_connect_failure_entry_t *a,
 static unsigned int
 or_connect_failure_ht_hash(const or_connect_failure_entry_t *entry)
 {
-  unsigned int hash = tor_addr_hash(&entry->addr);
-  hash += siphash24g(entry->identity_digest, sizeof(entry->identity_digest));
-  hash += entry->port;
-  return hash;
+  size_t offset = 0;
+  uint8_t data[sizeof(tor_addr_t) + sizeof(uint16_t) + DIGEST_LEN];
+
+  memcpy(data, &entry->addr, sizeof(tor_addr_t));
+  offset += sizeof(tor_addr_t);
+  memcpy(data + offset, entry->identity_digest, DIGEST_LEN);
+  offset += DIGEST_LEN;
+  set_uint16(data + offset, entry->port);
+  offset += sizeof(uint16_t);
+  tor_assert(offset == sizeof(data));
+
+  return siphash24g(data, sizeof(data));
 }
 
 HT_PROTOTYPE(or_connect_failure_ht, or_connect_failure_entry_t, node,
