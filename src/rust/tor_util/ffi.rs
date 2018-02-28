@@ -20,7 +20,7 @@ pub extern "C" fn rust_log_welcome_string() {
     tor_log_msg!(
         LogSeverity::Notice,
         LogDomain::General,
-        "rust_welcome_string",
+        "rust_log_welcome_string",
         "Tor is running with Rust integration. Please report \
         any bugs you encounter."
     );
