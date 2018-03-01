@@ -139,6 +139,70 @@ test_protover_vote(void *arg)
   tt_str_op(result, OP_EQ, "Bar=3-6,8 Foo=9");
   tor_free(result);
 
+  /* High threshold */
+  result = protover_compute_vote(lst, 3);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
+  /* Bad votes: the result must be empty */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Faux=10-5");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
+  /* This fails, since "-0" is not valid. */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Faux=-0");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
+  /* Vote large protover lists that are just below the threshold */
+
+  /* Just below the threshold: Rust */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=1-500");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=1-500");
+  tor_free(result);
+
+  /* Just below the threshold: C */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=1-65536");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=1-65536");
+  tor_free(result);
+
+  /* Large protover lists that exceed the threshold */
+
+  /* By adding two votes, C allows us to exceed the limit */
+  smartlist_add(lst, (void*) "Sleen=1-65536");
+  smartlist_add(lst, (void*) "Sleen=100000");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=1-65536,100000");
+  tor_free(result);
+
+  /* Large integers */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=4294967294");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Sleen=4294967294");
+  tor_free(result);
+
+  /* This parses, but fails at the vote stage */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=4294967295");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "Sleen=4294967296");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
  done:
   tor_free(result);
   smartlist_free(lst);
@@ -178,8 +242,114 @@ test_protover_all_supported(void *arg)
   tt_str_op(msg, OP_EQ, "Link=3-999");
   tor_free(msg);
 
- done:
+  /* CPU/RAM DoS loop: Rust only */
+  tt_assert(! protover_all_supported("Sleen=0-2147483648", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
   tor_free(msg);
+
+  /* This case is allowed. */
+  tt_assert(! protover_all_supported("Sleen=0-4294967294", &msg));
+  tt_str_op(msg, OP_EQ, "Sleen=0-4294967294");
+  tor_free(msg);
+
+  /* If we get an unparseable list, we say "yes, that's supported." */
+#ifndef HAVE_RUST
+  // XXXX let's make this section unconditional: rust should behave the
+  // XXXX same as C here!
+  tor_capture_bugs_(1);
+  tt_assert(protover_all_supported("Fribble", &msg));
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tor_end_capture_bugs_();
+
+  /* This case is forbidden. Since it came from a protover_all_supported,
+   * it can trigger a bug message.  */
+  tor_capture_bugs_(1);
+  tt_assert(protover_all_supported("Sleen=0-4294967295", &msg));
+  tt_ptr_op(msg, OP_EQ, NULL);
+  tor_free(msg);
+  tor_end_capture_bugs_();
+#endif
+
+ done:
+  tor_end_capture_bugs_();
+  tor_free(msg);
+}
+
+static void
+test_protover_vote_roundtrip(void *args)
+{
+  (void) args;
+  static const struct {
+    const char *input;
+    const char *expected_output;
+  } examples[] = {
+    { "Fkrkljdsf", NULL },
+    { "Zn=4294967295", NULL },
+    { "Zn=4294967295-1", NULL },
+    { "Zn=4294967293-4294967295", NULL },
+    /* Will fail because of 4294967295. */
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967295",
+       NULL },
+    { "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16,900 Zn=0,4294967294",
+      "Bar=3 Foo=1,3 Quux=9-12,14-16,900 Zn=0,4294967294" },
+    { "Zu16=0,65536", "Zu16=0,65536" },
+    { "N-1=1,2", "N-1=1-2" },
+    { "-1=4294967295", NULL },
+    { "-1=3", "-1=3" },
+    /* junk. */
+    { "!!3@*", NULL },
+    /* Missing equals sign */
+    { "Link=4 Haprauxymatyve Desc=9", NULL },
+    { "Link=4 Haprauxymatyve=7 Desc=9",
+      "Desc=9 Haprauxymatyve=7 Link=4" },
+    { "=10-11", NULL },
+    { "X=10-11", "X=10-11" },
+    { "Link=4 =3 Desc=9", NULL },
+    { "Link=4 Z=3 Desc=9", "Desc=9 Link=4 Z=3" },
+    { "Link=fred", NULL },
+    { "Link=1,fred", NULL },
+    { "Link=1,fred,3", NULL },
+    { "Link=1,9-8,3", NULL },
+    { "Faux=-0", NULL },
+    { "Faux=0--0", NULL },
+    // "These fail at the splitting stage in Rust, but the number parsing
+    // stage in C."
+    { "Faux=-1", NULL },
+    { "Faux=-1-3", NULL },
+    { "Faux=1--1", NULL },
+    /* Large integers */
+    { "Link=4294967296", NULL },
+    /* Large range */
+    { "Sleen=1-501", "Sleen=1-501" },
+    { "Sleen=1-65537", NULL },
+    /* CPU/RAM DoS Loop: Rust only. */
+    { "Sleen=0-2147483648", NULL },
+    /* Rust seems to experience an internal error here. */
+    { "Sleen=0-4294967295", NULL },
+  };
+  unsigned u;
+  smartlist_t *votes = smartlist_new();
+  char *result = NULL;
+
+  for (u = 0; u < ARRAY_LENGTH(examples); ++u) {
+    const char *input = examples[u].input;
+    const char *expected_output = examples[u].expected_output;
+
+    smartlist_add(votes, (void*)input);
+    result = protover_compute_vote(votes, 1);
+    if (expected_output != NULL) {
+      tt_str_op(result, OP_EQ, expected_output);
+    } else {
+      tt_str_op(result, OP_EQ, "");
+    }
+
+    smartlist_clear(votes);
+    tor_free(result);
+  }
+
+ done:
+  smartlist_free(votes);
+  tor_free(result);
 }
 
 #define PV_TEST(name, flags)                       \
@@ -190,6 +360,7 @@ struct testcase_t protover_tests[] = {
   PV_TEST(parse_fail, 0),
   PV_TEST(vote, 0),
   PV_TEST(all_supported, 0),
+  PV_TEST(vote_roundtrip, 0),
   END_OF_TESTCASES
 };
 
