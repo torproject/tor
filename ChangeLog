@@ -72,6 +72,11 @@ Changes in version 0.3.3.3-alpha - 2018-03-??
     - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
       bugfix on 0.2.9.4-alpha.
 
+  o Minor bugfixes (spec conformance, rust):
+    - Resolve a denial-of-service issue caused by an infinite loop in
+      the rust protover code. Fixes bug 25250, bugfix on 0.3.3.1-alpha.
+      Also tracked as TROVE-2018-003.
+
   o Code simplification and refactoring:
     - Update the "rust dependencies" submodule to be a project-level
       repository, rather than a user repository. Closes ticket 25323.
