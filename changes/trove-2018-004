@@ -1,8 +1,0 @@
-  o Minor bugfixes (denial-of-service):
-    - Fix a possible crash on malformed consensus. If a consensus had
-      contained an unparseable protocol line, it could have made clients
-      and relays crash with a null-pointer exception. To exploit this
-      issue, however, an attacker would need to be able to subvert the
-      directory-authority system. Fixes bug 25251; bugfix on
-      0.2.9.4-alpha. Also tracked as TROVE-2018-004.
-
