@@ -106,6 +106,9 @@ proto_entry_free_(proto_entry_t *entry)
   tor_free(entry);
 }
 
+/** The largest possible protocol version. */
+#define MAX_PROTOCOL_VERSION (UINT32_MAX-1)
+
 /**
  * Given a string <b>s</b> and optional end-of-string pointer
  * <b>end_of_range</b>, parse the protocol range and store it in
@@ -126,9 +129,14 @@ parse_version_range(const char *s, const char *end_of_range,
   if (BUG(!end_of_range))
     end_of_range = s + strlen(s); // LCOV_EXCL_LINE
 
+  /* A range must start with a digit. */
+  if (!TOR_ISDIGIT(*s)) {
+    goto error;
+  }
+
   /* Note that this wouldn't be safe if we didn't know that eventually,
    * we'd hit a NUL */
-  low = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
+  low = (uint32_t) tor_parse_ulong(s, 10, 0, MAX_PROTOCOL_VERSION, &ok, &next);
   if (!ok)
     goto error;
   if (next > end_of_range)
@@ -141,11 +149,19 @@ parse_version_range(const char *s, const char *end_of_range,
   if (*next != '-')
     goto error;
   s = next+1;
+
   /* ibid */
-  high = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
+  if (!TOR_ISDIGIT(*s)) {
+    goto error;
+  }
+  high = (uint32_t) tor_parse_ulong(s, 10, 0,
+                                    MAX_PROTOCOL_VERSION, &ok, &next);
   if (!ok)
     goto error;
   if (next != end_of_range)
+    goto error;
+
+  if (low > high)
     goto error;
 
  done:
@@ -195,10 +211,6 @@ parse_single_entry(const char *s, const char *end_of_entry)
 
     smartlist_add(out->ranges, range);
     if (parse_version_range(s, comma, &range->low, &range->high) < 0) {
-      goto error;
-    }
-
-    if (range->low > range->high) {
       goto error;
     }
 
@@ -596,6 +608,12 @@ protover_compute_vote(const smartlist_t *list_of_proto_strings,
   // First, parse the inputs and break them into singleton entries.
   SMARTLIST_FOREACH_BEGIN(list_of_proto_strings, const char *, vote) {
     smartlist_t *unexpanded = parse_protocol_list(vote);
+    if (! unexpanded) {
+      log_warn(LD_NET, "I failed with parsing a protocol list from "
+               "an authority. The offending string was: %s",
+               escaped(vote));
+      continue;
+    }
     smartlist_t *this_vote = expand_protocol_list(unexpanded);
     if (this_vote == NULL) {
       log_warn(LD_NET, "When expanding a protocol list from an authority, I "
@@ -660,6 +678,11 @@ protover_all_supported(const char *s, char **missing_out)
   }
 
   smartlist_t *entries = parse_protocol_list(s);
+  if (BUG(entries == NULL)) {
+    log_warn(LD_NET, "Received an unparseable protocol list %s"
+             " from the consensus", escaped(s));
+    return 1;
+  }
 
   missing = smartlist_new();
 
