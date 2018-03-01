@@ -1,7 +1,25 @@
  Changes in version 0.2.9.15 - 2018-03-xx
   Tor 0.2.9.15 backports important security and stability bugfixes from
-  later Tor releases. All Tor users should upgrade to this release, or
-  to another of the releases coming out today.
+  later Tor releases.
+
+  It includes an important security fix for a remote crash attack
+  against directory authorities, tracked as TROVE-2018-001.
+
+  This release also backports our new system for improved resistance to
+  denial-of-service attacks against relays.
+
+  This release also fixes several minor bugs and annoyances from
+  earlier releases.
+
+  All directory authorities should upgrade to one of the versions
+  released today.  All relays not already running Tor 0.3.3.2-alpha or
+  later should upgrade to one of the versions released today.
+
+  o Major bugfixes (denial-of-service, directory authority, backport from 0.3.3.3-alpha):
+    - Fix a protocol-list handling bug that could be used to remotely crash
+      directory authorities with a null-pointer exception. Fixes bug 25074;
+      bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2018-001 and
+      CVE-2018-0490.
 
   o Major features (denial-of-service mitigation):
     - Give relays some defenses against the recent network overload. We
@@ -98,6 +116,14 @@
       with the OwningControllerProcess feature. Fixes bug 24198; bugfix
       on 0.2.5.1-alpha.
 
+  o Minor bugfixes (denial-of-service, backport from 0.3.3.3-alpha):
+    - Fix a possible crash on malformed consensus. If a consensus had
+      contained an unparseable protocol line, it could have made clients
+      and relays crash with a null-pointer exception. To exploit this
+      issue, however, an attacker would need to be able to subvert the
+      directory authority system. Fixes bug 25251; bugfix on
+      0.2.9.4-alpha. Also tracked as TROVE-2018-004.
+
   o Minor bugfixes (memory usage):
     - When queuing DESTROY cells on a channel, only queue the circuit-id
       and reason fields: not the entire 514-byte cell. This fix should
@@ -141,6 +167,12 @@
       of connection handshake the other side used, rather than whether
       the other side ever sent a create_fast cell to us. Backports part
       of the fixes from bugs 22805 and 24898.
+
+  o Minor bugfixes (spec conformance, backport from 0.3.3.3-alpha):
+    - Forbid "-0" as a protocol version. Fixes part of bug 25249; bugfix on
+      0.2.9.4-alpha.
+    - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
+      bugfix on 0.2.9.4-alpha.
 
 
 Changes in version 0.2.9.14 - 2017-12-01
