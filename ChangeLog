@@ -2,7 +2,30 @@ Changes in version 0.3.1.10 - 2018-03-??
   Tor 0.3.1.10 backports a number of bugfixes, including important fixes for
   security issues.
 
-  BLURB HERE.
+  It includes an important security fix for a remote crash attack
+  against directory authorities, tracked as TROVE-2018-001.
+
+  This release also backports our new system for improved resistance to
+  denial-of-service attacks against relays.
+
+  This release also fixes several minor bugs and annoyances from
+  earlier releases.
+
+  All directory authorities should upgrade to one of the versions
+  released today.  All relays not already running Tor 0.3.3.2-alpha or
+  later should upgrade to one of the versions released today.
+
+  Please note: according to our release calendar, Tor 0.3.1 will no
+  longer be supported after 1 July 2018.  If you will be running Tor
+  after that date, you should make sure to plan to upgrade to the latest
+  stable version, or downgrade to 0.2.9 (which will receive long-term
+  support).
+
+  o Major bugfixes (denial-of-service, directory authority, backport from 0.3.3.3-alpha):
+    - Fix a protocol-list handling bug that could be used to remotely crash
+      directory authorities with a null-pointer exception. Fixes bug 25074;
+      bugfix on 0.2.9.4-alpha. Also tracked as TROVE-2018-001 and
+      CVE-2018-0490.
 
   o Major features (denial-of-service mitigation, backport from 0.3.3.2-alpha):
     - Give relays some defenses against the recent network overload. We
@@ -114,6 +137,14 @@ Changes in version 0.3.1.10 - 2018-03-??
       with the OwningControllerProcess feature. Fixes bug 24198; bugfix
       on 0.2.5.1-alpha.
 
+  o Minor bugfixes (denial-of-service, backport from 0.3.3.3-alpha):
+    - Fix a possible crash on malformed consensus. If a consensus had
+      contained an unparseable protocol line, it could have made clients
+      and relays crash with a null-pointer exception. To exploit this
+      issue, however, an attacker would need to be able to subvert the
+      directory authority system. Fixes bug 25251; bugfix on
+      0.2.9.4-alpha. Also tracked as TROVE-2018-004.
+
   o Minor bugfixes (directory cache, backport from 0.3.2.5-alpha):
     - Recover better from empty or corrupt files in the consensus cache
       directory. Fixes bug 24099; bugfix on 0.3.1.1-alpha.
@@ -186,12 +217,15 @@ Changes in version 0.3.1.10 - 2018-03-??
       the other side ever sent a create_fast cell to us. Backports part
       of the fixes from bugs 22805 and 24898.
 
+  o Minor bugfixes (spec conformance, backport from 0.3.3.3-alpha):
+    - Forbid "-0" as a protocol version. Fixes part of bug 25249; bugfix on
+      0.2.9.4-alpha.
+    - Forbid UINT32_MAX as a protocol version.  Fixes part of bug 25249;
+      bugfix on 0.2.9.4-alpha.
+
   o Code simplification and refactoring (backport from 0.3.3.3-alpha):
     - Update the "rust dependencies" submodule to be a project-level
       repository, rather than a user repository. Closes ticket 25323.
-
-
-
 
 
 Changes in version 0.3.1.9 - 2017-12-01:
