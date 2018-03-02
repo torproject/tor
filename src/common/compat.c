@@ -417,40 +417,8 @@ tor_munmap_file(tor_mmap_t *handle)
   return 0;
 }
 #else
-tor_mmap_t *
-tor_mmap_file(const char *filename)
-{
-  struct stat st;
-  char *res = read_file_to_str(filename, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  tor_mmap_t *handle;
-  if (! res)
-    return NULL;
-  handle = tor_malloc_zero(sizeof(tor_mmap_t));
-  handle->data = res;
-  handle->size = st.st_size;
-  return handle;
-}
-
-/** Unmap the file mapped with tor_mmap_file(), and return 0 for success
- * or -1 for failure.
- */
-
-int
-tor_munmap_file(tor_mmap_t *handle)
-{
-  char *d = NULL;
-  if (handle == NULL)
-    return 0;
-
-  d = (char*)handle->data;
-  tor_free(d);
-  memwipe(handle, 0, sizeof(tor_mmap_t));
-  tor_free(handle);
-
-  /* Can't fail in this mmap()/munmap()-free case */
-  return 0;
-}
-#endif /* defined(COMPAT_HAS_MMAN_AND_PAGESIZE) || ... || ... */
+#error "cannot implement tor_mmap_file"
+#endif /* defined(HAVE_MMAP) || ... || ... */
 
 /** Replacement for snprintf.  Differs from platform snprintf in two
  * ways: First, always NUL-terminates its output.  Second, always
