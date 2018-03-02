@@ -1395,7 +1395,7 @@ The following options are useful only for clients (that is, if
 
 [[HTTPTunnelPort]] **HTTPTunnelPort**  \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for proxy connections using the "HTTP CONNECT"
-    protocol instead of SOCKS. Set this to 0
+    protocol instead of SOCKS. Set this to
     0 if you don't want to allow "HTTP CONNECT" connections. Set the port
     to "auto" to have Tor pick a port for you. This directive can be
     specified multiple times to bind to multiple addresses/ports.  See
