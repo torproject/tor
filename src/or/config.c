@@ -645,15 +645,12 @@ static config_var_t option_vars_[] = {
     "0, 30, 90, 600, 3600, 10800, 25200, 54000, 111600, 262800"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "10 minutes"),
   V(TestingDirConnectionMaxStall, INTERVAL, "5 minutes"),
-  V(TestingConsensusMaxDownloadTries, UINT, "8"),
-  /* Since we try connections rapidly and simultaneously, we can afford
-   * to give up earlier. (This protects against overloading directories.) */
-  V(ClientBootstrapConsensusMaxDownloadTries, UINT, "7"),
-  /* We want to give up much earlier if we're only using authorities. */
-  V(ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries, UINT, "4"),
-  V(TestingDescriptorMaxDownloadTries, UINT, "8"),
-  V(TestingMicrodescMaxDownloadTries, UINT, "8"),
-  V(TestingCertMaxDownloadTries, UINT, "8"),
+  OBSOLETE("TestingConsensusMaxDownloadTries"),
+  OBSOLETE("ClientBootstrapConsensusMaxDownloadTries"),
+  OBSOLETE("ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries"),
+  OBSOLETE("TestingDescriptorMaxDownloadTries"),
+  OBSOLETE("TestingMicrodescMaxDownloadTries"),
+  OBSOLETE("TestingCertMaxDownloadTries"),
   V(TestingDirAuthVoteExit, ROUTERSET, NULL),
   V(TestingDirAuthVoteExitIsStrict,  BOOL,     "0"),
   V(TestingDirAuthVoteGuard, ROUTERSET, NULL),
@@ -678,8 +675,6 @@ static const config_var_t testing_tor_network_defaults[] = {
     "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
   V(ClientBootstrapConsensusAuthorityOnlyDownloadSchedule, CSV_INTERVAL,
     "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
-  V(ClientBootstrapConsensusMaxDownloadTries, UINT, "80"),
-  V(ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries, UINT, "80"),
   V(ClientDNSRejectInternalAddresses, BOOL,"0"),
   V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(CountPrivateBandwidth,       BOOL,     "1"),
@@ -707,10 +702,6 @@ static const config_var_t testing_tor_network_defaults[] = {
                                  "15, 20, 30, 60"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "5 seconds"),
   V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
-  V(TestingConsensusMaxDownloadTries, UINT, "80"),
-  V(TestingDescriptorMaxDownloadTries, UINT, "80"),
-  V(TestingMicrodescMaxDownloadTries, UINT, "80"),
-  V(TestingCertMaxDownloadTries, UINT, "80"),
   V(TestingEnableConnBwEvent,    BOOL,     "1"),
   V(TestingEnableCellStatsEvent, BOOL,     "1"),
   V(TestingEnableTbEmptyEvent,   BOOL,     "1"),
@@ -4418,10 +4409,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingBridgeBootstrapDownloadSchedule);
   CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
   CHECK_DEFAULT(TestingDirConnectionMaxStall);
-  CHECK_DEFAULT(TestingConsensusMaxDownloadTries);
-  CHECK_DEFAULT(TestingDescriptorMaxDownloadTries);
-  CHECK_DEFAULT(TestingMicrodescMaxDownloadTries);
-  CHECK_DEFAULT(TestingCertMaxDownloadTries);
   CHECK_DEFAULT(TestingAuthKeyLifetime);
   CHECK_DEFAULT(TestingLinkCertLifetime);
   CHECK_DEFAULT(TestingSigningKeySlop);
@@ -4496,33 +4483,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     COMPLAIN("TestingDirConnectionMaxStall is insanely high.");
   }
 
-  if (options->TestingConsensusMaxDownloadTries < 2) {
-    REJECT("TestingConsensusMaxDownloadTries must be greater than 2.");
-  } else if (options->TestingConsensusMaxDownloadTries > 800) {
-    COMPLAIN("TestingConsensusMaxDownloadTries is insanely high.");
-  }
-
-  if (options->ClientBootstrapConsensusMaxDownloadTries < 2) {
-    REJECT("ClientBootstrapConsensusMaxDownloadTries must be greater "
-           "than 2."
-           );
-  } else if (options->ClientBootstrapConsensusMaxDownloadTries > 800) {
-    COMPLAIN("ClientBootstrapConsensusMaxDownloadTries is insanely "
-             "high.");
-  }
-
-  if (options->ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries
-      < 2) {
-    REJECT("ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries must "
-           "be greater than 2."
-           );
-  } else if (
-        options->ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries
-        > 800) {
-    COMPLAIN("ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries is "
-             "insanely high.");
-  }
-
   if (options->ClientBootstrapConsensusMaxInProgressTries < 1) {
     REJECT("ClientBootstrapConsensusMaxInProgressTries must be greater "
            "than 0.");
@@ -4530,24 +4490,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
              > 100) {
     COMPLAIN("ClientBootstrapConsensusMaxInProgressTries is insanely "
              "high.");
-  }
-
-  if (options->TestingDescriptorMaxDownloadTries < 2) {
-    REJECT("TestingDescriptorMaxDownloadTries must be greater than 1.");
-  } else if (options->TestingDescriptorMaxDownloadTries > 800) {
-    COMPLAIN("TestingDescriptorMaxDownloadTries is insanely high.");
-  }
-
-  if (options->TestingMicrodescMaxDownloadTries < 2) {
-    REJECT("TestingMicrodescMaxDownloadTries must be greater than 1.");
-  } else if (options->TestingMicrodescMaxDownloadTries > 800) {
-    COMPLAIN("TestingMicrodescMaxDownloadTries is insanely high.");
-  }
-
-  if (options->TestingCertMaxDownloadTries < 2) {
-    REJECT("TestingCertMaxDownloadTries must be greater than 1.");
-  } else if (options->TestingCertMaxDownloadTries > 800) {
-    COMPLAIN("TestingCertMaxDownloadTries is insanely high.");
   }
 
   if (options->TestingEnableConnBwEvent &&

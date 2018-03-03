@@ -2070,15 +2070,6 @@ typedef enum {
 #define download_schedule_increment_bitfield_t \
                                         ENUM_BF(download_schedule_increment_t)
 
-/** Enumeration: do we want to use the random exponential backoff
- * mechanism? */
-typedef enum {
-  DL_SCHED_DETERMINISTIC = 0,
-  DL_SCHED_RANDOM_EXPONENTIAL = 1,
-} download_schedule_backoff_t;
-#define download_schedule_backoff_bitfield_t \
-                                        ENUM_BF(download_schedule_backoff_t)
-
 /** Information about our plans for retrying downloads for a downloadable
  * directory object.
  * Each type of downloadable directory object has a corresponding retry
@@ -2125,11 +2116,6 @@ typedef struct download_status_t {
   download_schedule_increment_bitfield_t increment_on : 1; /**< does this
                                         * schedule increment on each attempt,
                                         * or after each failure? */
-  download_schedule_backoff_bitfield_t backoff : 1; /**< do we use the
-                                        * deterministic schedule, or random
-                                        * exponential backoffs?
-                                        * Increment on failure schedules
-                                        * always use exponential backoff. */
   uint8_t last_backoff_position; /**< number of attempts/failures, depending
                                   * on increment_on, when we last recalculated
                                   * the delay.  Only updated if backoff
@@ -4425,36 +4411,10 @@ typedef struct {
    * it?  Only altered on testing networks. */
   int TestingDirConnectionMaxStall;
 
-  /** How many times will we try to fetch a consensus before we give
-   * up?  Only altered on testing networks. */
-  int TestingConsensusMaxDownloadTries;
-
-  /** How many times will a client try to fetch a consensus while
-   * bootstrapping using a list of fallback directories, before it gives up?
-   * Only altered on testing networks. */
-  int ClientBootstrapConsensusMaxDownloadTries;
-
-  /** How many times will a client try to fetch a consensus while
-   * bootstrapping using only a list of authorities, before it gives up?
-   * Only altered on testing networks. */
-  int ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries;
-
   /** How many simultaneous in-progress connections will we make when trying
    * to fetch a consensus before we wait for one to complete, timeout, or
    * error out?  Only altered on testing networks. */
   int ClientBootstrapConsensusMaxInProgressTries;
-
-  /** How many times will we try to download a router's descriptor before
-   * giving up?  Only altered on testing networks. */
-  int TestingDescriptorMaxDownloadTries;
-
-  /** How many times will we try to download a microdescriptor before
-   * giving up?  Only altered on testing networks. */
-  int TestingMicrodescMaxDownloadTries;
-
-  /** How many times will we try to fetch a certificate before giving
-   * up?  Only altered on testing networks. */
-  int TestingCertMaxDownloadTries;
 
   /** If true, we take part in a testing network. Change the defaults of a
    * couple of other configuration options and allow to change the values

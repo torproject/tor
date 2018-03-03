@@ -2252,7 +2252,7 @@ digest_list_to_string(const smartlist_t *sl)
 static char *
 download_status_to_string(const download_status_t *dl)
 {
-  char *rv = NULL, *tmp;
+  char *rv = NULL;
   char tbuf[ISO_TIME_LEN+1];
   const char *schedule_str, *want_authority_str;
   const char *increment_on_str, *backoff_str;
@@ -2300,49 +2300,28 @@ download_status_to_string(const download_status_t *dl)
         break;
     }
 
-    switch (dl->backoff) {
-      case DL_SCHED_DETERMINISTIC:
-        backoff_str = "DL_SCHED_DETERMINISTIC";
-        break;
-      case DL_SCHED_RANDOM_EXPONENTIAL:
-        backoff_str = "DL_SCHED_RANDOM_EXPONENTIAL";
-        break;
-      default:
-        backoff_str = "unknown";
-        break;
-    }
+    backoff_str = "DL_SCHED_RANDOM_EXPONENTIAL";
 
     /* Now assemble them */
-    tor_asprintf(&tmp,
+    tor_asprintf(&rv,
                  "next-attempt-at %s\n"
                  "n-download-failures %u\n"
                  "n-download-attempts %u\n"
                  "schedule %s\n"
                  "want-authority %s\n"
                  "increment-on %s\n"
-                 "backoff %s\n",
+                 "backoff %s\n"
+                 "last-backoff-position %u\n"
+                 "last-delay-used %d\n",
                  tbuf,
                  dl->n_download_failures,
                  dl->n_download_attempts,
                  schedule_str,
                  want_authority_str,
                  increment_on_str,
-                 backoff_str);
-
-    if (dl->backoff == DL_SCHED_RANDOM_EXPONENTIAL) {
-      /* Additional fields become relevant in random-exponential mode */
-      tor_asprintf(&rv,
-                   "%s"
-                   "last-backoff-position %u\n"
-                   "last-delay-used %d\n",
-                   tmp,
-                   dl->last_backoff_position,
-                   dl->last_delay_used);
-      tor_free(tmp);
-    } else {
-      /* That was it */
-      rv = tmp;
-    }
+                 backoff_str,
+                 dl->last_backoff_position,
+                 dl->last_delay_used);
   }
 
   return rv;

@@ -132,29 +132,19 @@ time_t download_status_increment_attempt(download_status_t *dls,
                                     time(NULL))
 
 void download_status_reset(download_status_t *dls);
-static int download_status_is_ready(download_status_t *dls, time_t now,
-                                    int max_failures);
+static int download_status_is_ready(download_status_t *dls, time_t now);
 time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
 /** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
  * ready to get its download reattempted. */
 static inline int
-download_status_is_ready(download_status_t *dls, time_t now,
-                         int max_failures)
+download_status_is_ready(download_status_t *dls, time_t now)
 {
   /* dls wasn't reset before it was used */
   if (dls->next_attempt_at == 0) {
     download_status_reset(dls);
   }
 
-  if (dls->backoff == DL_SCHED_DETERMINISTIC) {
-    /* Deterministic schedules can hit an endpoint; exponential backoff
-     * schedules just wait longer and longer. */
-    int under_failure_limit = (dls->n_download_failures <= max_failures
-                               && dls->n_download_attempts <= max_failures);
-    if (!under_failure_limit)
-      return 0;
-  }
   return download_status_get_next_attempt_at(dls) <= now;
 }
 
@@ -260,8 +250,7 @@ MOCK_DECL(STATIC int, directory_handle_command_post,(dir_connection_t *conn,
                                                      const char *body,
                                                      size_t body_len));
 STATIC int download_status_schedule_get_delay(download_status_t *dls,
-                                              const smartlist_t *schedule,
-                                              int min_delay, int max_delay,
+                                              int min_delay,
                                               time_t now);
 
 STATIC int handle_post_hs_descriptor(const char *url, const char *body);
@@ -272,13 +261,11 @@ STATIC int should_use_directory_guards(const or_options_t *options);
 STATIC compression_level_t choose_compression_level(ssize_t n_bytes);
 STATIC const smartlist_t *find_dl_schedule(const download_status_t *dls,
                                            const or_options_t *options);
-STATIC void find_dl_min_and_max_delay(download_status_t *dls,
-                                      const or_options_t *options,
-                                      int *min, int *max);
+STATIC int find_dl_min_delay(download_status_t *dls,
+                             const or_options_t *options);
 
 STATIC int next_random_exponential_delay(int delay,
-                                         int base_delay,
-                                         int max_delay);
+                                         int base_delay);
 
 STATIC void next_random_exponential_delay_range(int *low_bound_out,
                                                 int *high_bound_out,

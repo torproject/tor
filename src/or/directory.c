@@ -5362,17 +5362,14 @@ find_dl_schedule(const download_status_t *dls, const or_options_t *options)
   return NULL;
 }
 
-/** Decide which minimum and maximum delay step we want to use based on
+/** Decide which minimum delay step we want to use based on
  * descriptor type in <b>dls</b> and <b>options</b>.
  * Helper function for download_status_schedule_get_delay(). */
-STATIC void
-find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
-                          int *min, int *max)
+STATIC int
+find_dl_min_delay(download_status_t *dls, const or_options_t *options)
 {
   tor_assert(dls);
   tor_assert(options);
-  tor_assert(min);
-  tor_assert(max);
 
   /*
    * For now, just use the existing schedule config stuff and pick the
@@ -5380,13 +5377,7 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
    */
   const smartlist_t *schedule = find_dl_schedule(dls, options);
   tor_assert(schedule != NULL && smartlist_len(schedule) >= 2);
-  *min = *((int *)(smartlist_get(schedule, 0)));
-  /* Increment on failure schedules always use exponential backoff, but they
-   * have a smaller limit when they're deterministic */
-  if (dls->backoff == DL_SCHED_DETERMINISTIC)
-    *max = *((int *)((smartlist_get(schedule, smartlist_len(schedule) - 1))));
-  else
-    *max = INT_MAX;
+  return *(int *)(smartlist_get(schedule, 0));
 }
 
 /** As next_random_exponential_delay() below, but does not compute a random
@@ -5424,55 +5415,39 @@ next_random_exponential_delay_range(int *low_bound_out,
  * zero); the <b>backoff_position</b> parameter is the number of times we've
  * generated a delay; and the <b>delay</b> argument is the most recently used
  * delay.
- *
- * Requires that delay is less than INT_MAX, and delay is in [0,max_delay].
  */
 STATIC int
 next_random_exponential_delay(int delay,
-                              int base_delay,
-                              int max_delay)
+                              int base_delay)
 {
   /* Check preconditions */
-  if (BUG(max_delay < 0))
-    max_delay = 0;
-  if (BUG(delay > max_delay))
-    delay = max_delay;
   if (BUG(delay < 0))
     delay = 0;
 
   if (base_delay < 1)
     base_delay = 1;
 
-  int low_bound=0, high_bound=max_delay;
+  int low_bound=0, high_bound=INT_MAX;
 
   next_random_exponential_delay_range(&low_bound, &high_bound,
                                       delay, base_delay);
 
-  int rand_delay = crypto_rand_int_range(low_bound, high_bound);
-
-  return MIN(rand_delay, max_delay);
+  return crypto_rand_int_range(low_bound, high_bound);
 }
 
-/** Find the current delay for dls based on schedule or min_delay/
- * max_delay if we're using exponential backoff.  If dls->backoff is
- * DL_SCHED_RANDOM_EXPONENTIAL, we must have 0 <= min_delay <= max_delay <=
- * INT_MAX, but schedule may be set to NULL; otherwise schedule is required.
+/** Find the current delay for dls based on min_delay.
+ *
  * This function sets dls->next_attempt_at based on now, and returns the delay.
  * Helper for download_status_increment_failure and
  * download_status_increment_attempt. */
 STATIC int
 download_status_schedule_get_delay(download_status_t *dls,
-                                   const smartlist_t *schedule,
-                                   int min_delay, int max_delay,
+                                   int min_delay,
                                    time_t now)
 {
   tor_assert(dls);
-  /* We don't need a schedule if we're using random exponential backoff */
-  tor_assert(dls->backoff == DL_SCHED_RANDOM_EXPONENTIAL ||
-             schedule != NULL);
   /* If we're using random exponential backoff, we do need min/max delay */
-  tor_assert(dls->backoff != DL_SCHED_RANDOM_EXPONENTIAL ||
-             (min_delay >= 0 && max_delay >= min_delay));
+  tor_assert(min_delay >= 0);
 
   int delay = INT_MAX;
   uint8_t dls_schedule_position = (dls->increment_on
@@ -5480,42 +5455,32 @@ download_status_schedule_get_delay(download_status_t *dls,
                                    ? dls->n_download_attempts
                                    : dls->n_download_failures);
 
-  if (dls->backoff == DL_SCHED_DETERMINISTIC) {
-    if (dls_schedule_position < smartlist_len(schedule))
-      delay = *(int *)smartlist_get(schedule, dls_schedule_position);
-    else if (dls_schedule_position == IMPOSSIBLE_TO_DOWNLOAD)
-      delay = INT_MAX;
-    else
-      delay = *(int *)smartlist_get(schedule, smartlist_len(schedule) - 1);
-  } else if (dls->backoff == DL_SCHED_RANDOM_EXPONENTIAL) {
-    /* Check if we missed a reset somehow */
-    IF_BUG_ONCE(dls->last_backoff_position > dls_schedule_position) {
-      dls->last_backoff_position = 0;
-      dls->last_delay_used = 0;
-    }
-
-    if (dls_schedule_position > 0) {
-      delay = dls->last_delay_used;
-
-      while (dls->last_backoff_position < dls_schedule_position) {
-        /* Do one increment step */
-        delay = next_random_exponential_delay(delay, min_delay, max_delay);
-        /* Update our position */
-        ++(dls->last_backoff_position);
-      }
-    } else {
-      /* If we're just starting out, use the minimum delay */
-      delay = min_delay;
-    }
-
-    /* Clamp it within min/max if we have them */
-    if (min_delay >= 0 && delay < min_delay) delay = min_delay;
-    if (max_delay != INT_MAX && delay > max_delay) delay = max_delay;
-
-    /* Store it for next time */
-    dls->last_backoff_position = dls_schedule_position;
-    dls->last_delay_used = delay;
+  /* Check if we missed a reset somehow */
+  IF_BUG_ONCE(dls->last_backoff_position > dls_schedule_position) {
+    dls->last_backoff_position = 0;
+    dls->last_delay_used = 0;
   }
+
+  if (dls_schedule_position > 0) {
+    delay = dls->last_delay_used;
+
+    while (dls->last_backoff_position < dls_schedule_position) {
+      /* Do one increment step */
+      delay = next_random_exponential_delay(delay, min_delay);
+      /* Update our position */
+      ++(dls->last_backoff_position);
+    }
+  } else {
+    /* If we're just starting out, use the minimum delay */
+    delay = min_delay;
+  }
+
+  /* Clamp it within min/max if we have them */
+  if (min_delay >= 0 && delay < min_delay) delay = min_delay;
+
+  /* Store it for next time */
+  dls->last_backoff_position = dls_schedule_position;
+  dls->last_delay_used = delay;
 
   /* A negative delay makes no sense. Knowing that delay is
    * non-negative allows us to safely do the wrapping check below. */
@@ -5578,7 +5543,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
   (void) status_code; // XXXX no longer used.
   (void) server; // XXXX no longer used.
   int increment = -1;
-  int min_delay = 0, max_delay = INT_MAX;
+  int min_delay = 0;
 
   tor_assert(dls);
 
@@ -5603,10 +5568,8 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
     /* only return a failure retry time if this schedule increments on failures
      */
-    const smartlist_t *schedule = find_dl_schedule(dls, get_options());
-    find_dl_min_and_max_delay(dls, get_options(), &min_delay, &max_delay);
-    increment = download_status_schedule_get_delay(dls, schedule,
-                                                   min_delay, max_delay, now);
+    min_delay = find_dl_min_delay(dls, get_options());
+    increment = download_status_schedule_get_delay(dls, min_delay, now);
   }
 
   download_status_log_helper(item, !dls->increment_on, "failed",
@@ -5637,7 +5600,7 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
                                   time_t now)
 {
   int delay = -1;
-  int min_delay = 0, max_delay = INT_MAX;
+  int min_delay = 0;
 
   tor_assert(dls);
 
@@ -5657,10 +5620,8 @@ download_status_increment_attempt(download_status_t *dls, const char *item,
   if (dls->n_download_attempts < IMPOSSIBLE_TO_DOWNLOAD-1)
     ++dls->n_download_attempts;
 
-  const smartlist_t *schedule = find_dl_schedule(dls, get_options());
-  find_dl_min_and_max_delay(dls, get_options(), &min_delay, &max_delay);
-  delay = download_status_schedule_get_delay(dls, schedule,
-                                             min_delay, max_delay, now);
+  min_delay = find_dl_min_delay(dls, get_options());
+  delay = download_status_schedule_get_delay(dls, min_delay, now);
 
   download_status_log_helper(item, dls->increment_on, "attempted",
                              "on failure", dls->n_download_attempts,
@@ -5769,8 +5730,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
     } else {
       dls = router_get_dl_status_by_descriptor_digest(digest);
     }
-    if (!dls || dls->n_download_failures >=
-                get_options()->TestingDescriptorMaxDownloadTries)
+    if (!dls)
       continue;
     download_status_increment_failure(dls, status_code, cp, server, now);
   } SMARTLIST_FOREACH_END(cp);
@@ -5807,10 +5767,6 @@ dir_microdesc_download_failed(smartlist_t *failed,
     if (!rs)
       continue;
     dls = &rs->dl_status;
-    if (dls->n_download_failures >=
-        get_options()->TestingMicrodescMaxDownloadTries) {
-      continue;
-    }
 
     { /* Increment the failure count for this md fetch */
       char buf[BASE64_DIGEST256_LEN+1];
