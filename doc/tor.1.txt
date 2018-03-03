@@ -1435,7 +1435,7 @@ The following options are useful only for clients (that is, if
     Set this to "default", or leave it unconfigured, to use regular IPTables
     on Linux, or to use pf +rdr-to+ rules on *BSD systems. +
  +
-    (Default: "default".)
+    (Default: "default")
 
 [[NATDPort]] **NATDPort** \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for connections from old versions of ipfw (as
@@ -1728,7 +1728,7 @@ The following options are useful only for clients (that is, if
     prevent your Tor client from bootstrapping.  If this option is negative,
     Tor will use a default value chosen by the directory authorities. If the
     directory authorities do not choose a value, Tor will default to 0.6.
-    (Default: -1.)
+    (Default: -1)
 
 [[ClientBootstrapConsensusAuthorityDownloadSchedule]] **ClientBootstrapConsensusAuthorityDownloadSchedule** __N__,__N__,__...__::
     Schedule for when clients should download consensuses from authorities
