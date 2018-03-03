@@ -377,17 +377,11 @@ fixed_get_uname(void)
 }
 
 #define TEST_OPTIONS_OLD_VALUES   "TestingV3AuthInitialVotingInterval 1800\n" \
-  "ClientBootstrapConsensusMaxDownloadTries 7\n" \
-  "ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries 4\n" \
   "ClientBootstrapConsensusMaxInProgressTries 3\n" \
   "TestingV3AuthInitialVoteDelay 300\n"   \
   "TestingV3AuthInitialDistDelay 300\n" \
   "TestingClientMaxIntervalWithoutRequest 600\n" \
   "TestingDirConnectionMaxStall 600\n" \
-  "TestingConsensusMaxDownloadTries 8\n" \
-  "TestingDescriptorMaxDownloadTries 8\n" \
-  "TestingMicrodescMaxDownloadTries 8\n" \
-  "TestingCertMaxDownloadTries 8\n"
 
 #define TEST_OPTIONS_DEFAULT_VALUES TEST_OPTIONS_OLD_VALUES \
   "MaxClientCircuitsPending 1\n"                                        \
@@ -2081,10 +2075,6 @@ test_options_validate__testing(void *ignored)
   ENSURE_DEFAULT(TestingBridgeBootstrapDownloadSchedule, 3000);
   ENSURE_DEFAULT(TestingClientMaxIntervalWithoutRequest, 3000);
   ENSURE_DEFAULT(TestingDirConnectionMaxStall, 3000);
-  ENSURE_DEFAULT(TestingConsensusMaxDownloadTries, 3000);
-  ENSURE_DEFAULT(TestingDescriptorMaxDownloadTries, 3000);
-  ENSURE_DEFAULT(TestingMicrodescMaxDownloadTries, 3000);
-  ENSURE_DEFAULT(TestingCertMaxDownloadTries, 3000);
   ENSURE_DEFAULT(TestingAuthKeyLifetime, 3000);
   ENSURE_DEFAULT(TestingLinkCertLifetime, 3000);
   ENSURE_DEFAULT(TestingSigningKeySlop, 3000);
@@ -4069,15 +4059,6 @@ test_options_validate__testing_options(void *ignored)
                       "is way too low.");
   TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
                       "is way too low.");
-  // TODO: I think this points to a bug/regression in options_validate
-  TEST_TESTING_OPTION(TestingConsensusMaxDownloadTries, 1, 801,
-                      "must be greater than 2.");
-  TEST_TESTING_OPTION(TestingDescriptorMaxDownloadTries, 1, 801,
-                      "must be greater than 1.");
-  TEST_TESTING_OPTION(TestingMicrodescMaxDownloadTries, 1, 801,
-                      "must be greater than 1.");
-  TEST_TESTING_OPTION(TestingCertMaxDownloadTries, 1, 801,
-                      "must be greater than 1.");
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES

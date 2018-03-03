@@ -920,8 +920,7 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
     if (microdesc_cache_lookup_by_digest256(cache, rs->descriptor_digest))
       continue;
     if (downloadable_only &&
-        !download_status_is_ready(&rs->dl_status, now,
-                  get_options()->TestingMicrodescMaxDownloadTries))
+        !download_status_is_ready(&rs->dl_status, now))
       continue;
     if (skip && digest256map_get(skip, (const uint8_t*)rs->descriptor_digest))
       continue;

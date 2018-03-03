@@ -396,7 +396,7 @@ test_add_onion_helper_clientauth(void *arg)
 
 static const download_status_t dl_status_default =
   { 0, 0, 0, DL_SCHED_CONSENSUS, DL_WANT_ANY_DIRSERVER,
-    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 };
+    DL_SCHED_INCREMENT_FAILURE, 0, 0 };
 static download_status_t ns_dl_status[N_CONSENSUS_FLAVORS];
 static download_status_t ns_dl_status_bootstrap[N_CONSENSUS_FLAVORS];
 static download_status_t ns_dl_status_running[N_CONSENSUS_FLAVORS];
@@ -407,7 +407,7 @@ static download_status_t ns_dl_status_running[N_CONSENSUS_FLAVORS];
  */
 static const download_status_t dls_sample_1 =
   { 1467163900, 0, 0, DL_SCHED_GENERIC, DL_WANT_ANY_DIRSERVER,
-    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_DETERMINISTIC, 0, 0 };
+    DL_SCHED_INCREMENT_FAILURE, 0, 0 };
 static const char * dls_sample_1_str =
     "next-attempt-at 2016-06-29 01:31:40\n"
     "n-download-failures 0\n"
@@ -415,10 +415,12 @@ static const char * dls_sample_1_str =
     "schedule DL_SCHED_GENERIC\n"
     "want-authority DL_WANT_ANY_DIRSERVER\n"
     "increment-on DL_SCHED_INCREMENT_FAILURE\n"
-    "backoff DL_SCHED_DETERMINISTIC\n";
+    "backoff DL_SCHED_RANDOM_EXPONENTIAL\n"
+    "last-backoff-position 0\n"
+    "last-delay-used 0\n";
 static const download_status_t dls_sample_2 =
   { 1467164400, 1, 2, DL_SCHED_CONSENSUS, DL_WANT_AUTHORITY,
-    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_DETERMINISTIC, 0, 0 };
+    DL_SCHED_INCREMENT_FAILURE, 0, 0 };
 static const char * dls_sample_2_str =
     "next-attempt-at 2016-06-29 01:40:00\n"
     "n-download-failures 1\n"
@@ -426,10 +428,12 @@ static const char * dls_sample_2_str =
     "schedule DL_SCHED_CONSENSUS\n"
     "want-authority DL_WANT_AUTHORITY\n"
     "increment-on DL_SCHED_INCREMENT_FAILURE\n"
-    "backoff DL_SCHED_DETERMINISTIC\n";
+    "backoff DL_SCHED_RANDOM_EXPONENTIAL\n"
+    "last-backoff-position 0\n"
+    "last-delay-used 0\n";
 static const download_status_t dls_sample_3 =
   { 1467154400, 12, 25, DL_SCHED_BRIDGE, DL_WANT_ANY_DIRSERVER,
-    DL_SCHED_INCREMENT_ATTEMPT, DL_SCHED_DETERMINISTIC, 0, 0 };
+    DL_SCHED_INCREMENT_ATTEMPT, 0, 0 };
 static const char * dls_sample_3_str =
     "next-attempt-at 2016-06-28 22:53:20\n"
     "n-download-failures 12\n"
@@ -437,10 +441,12 @@ static const char * dls_sample_3_str =
     "schedule DL_SCHED_BRIDGE\n"
     "want-authority DL_WANT_ANY_DIRSERVER\n"
     "increment-on DL_SCHED_INCREMENT_ATTEMPT\n"
-    "backoff DL_SCHED_DETERMINISTIC\n";
+    "backoff DL_SCHED_RANDOM_EXPONENTIAL\n"
+    "last-backoff-position 0\n"
+    "last-delay-used 0\n";
 static const download_status_t dls_sample_4 =
   { 1467166600, 3, 0, DL_SCHED_GENERIC, DL_WANT_ANY_DIRSERVER,
-    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 };
+    DL_SCHED_INCREMENT_FAILURE, 0, 0 };
 static const char * dls_sample_4_str =
     "next-attempt-at 2016-06-29 02:16:40\n"
     "n-download-failures 3\n"
@@ -453,7 +459,7 @@ static const char * dls_sample_4_str =
     "last-delay-used 0\n";
 static const download_status_t dls_sample_5 =
   { 1467164600, 3, 7, DL_SCHED_CONSENSUS, DL_WANT_ANY_DIRSERVER,
-    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 1, 2112, };
+    DL_SCHED_INCREMENT_FAILURE, 1, 2112, };
 static const char * dls_sample_5_str =
     "next-attempt-at 2016-06-29 01:43:20\n"
     "n-download-failures 3\n"
@@ -466,7 +472,7 @@ static const char * dls_sample_5_str =
     "last-delay-used 2112\n";
 static const download_status_t dls_sample_6 =
   { 1467164200, 4, 9, DL_SCHED_CONSENSUS, DL_WANT_AUTHORITY,
-    DL_SCHED_INCREMENT_ATTEMPT, DL_SCHED_RANDOM_EXPONENTIAL, 3, 432 };
+    DL_SCHED_INCREMENT_ATTEMPT, 3, 432 };
 static const char * dls_sample_6_str =
     "next-attempt-at 2016-06-29 01:36:40\n"
     "n-download-failures 4\n"

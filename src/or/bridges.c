@@ -458,7 +458,6 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   if (bridge_line->transport_name)
     b->transport_name = bridge_line->transport_name;
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
-  b->fetch_status.backoff = DL_SCHED_RANDOM_EXPONENTIAL;
   b->fetch_status.increment_on = DL_SCHED_INCREMENT_ATTEMPT;
   /* We can't reset the bridge's download status here, because UseBridges
    * might be 0 now, and it might be changed to 1 much later. */
@@ -637,8 +636,7 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
       /* This resets the download status on first use */
-      if (!download_status_is_ready(&bridge->fetch_status, now,
-                                    IMPOSSIBLE_TO_DOWNLOAD))
+      if (!download_status_is_ready(&bridge->fetch_status, now))
         continue; /* don't bother, no need to retry yet */
       if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
         download_status_mark_impossible(&bridge->fetch_status);
