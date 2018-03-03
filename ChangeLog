@@ -1,4 +1,4 @@
- Changes in version 0.2.9.15 - 2018-03-xx
+ Changes in version 0.2.9.15 - 2018-03-03
   Tor 0.2.9.15 backports important security and stability bugfixes from
   later Tor releases.
 
@@ -12,8 +12,8 @@
   earlier releases.
 
   All directory authorities should upgrade to one of the versions
-  released today.  All relays not already running Tor 0.3.3.2-alpha or
-  later should upgrade to one of the versions released today.
+  released today.  Relays running 0.2.9.x may wish to update to one of
+  the versions released today, for the DoS mitigations.
 
   o Major bugfixes (denial-of-service, directory authority, backport from 0.3.3.3-alpha):
     - Fix a protocol-list handling bug that could be used to remotely crash
