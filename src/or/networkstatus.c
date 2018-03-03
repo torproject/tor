@@ -237,7 +237,7 @@ router_reload_consensus_networkstatus(void)
     s = networkstatus_read_cached_consensus_impl(flav, flavor, 1);
     if (s) {
       if (networkstatus_set_current_consensus(s, flavor,
-                                     flags|NSSET_WAS_WAITING_FOR_CERTS,
+                                     flags | NSSET_WAS_WAITING_FOR_CERTS,
                                      NULL)) {
         log_info(LD_FS, "Couldn't load unverified consensus %s networkstatus "
                  "from cache", flavor);
@@ -1915,6 +1915,15 @@ networkstatus_set_current_consensus(const char *consensus,
       }
       goto done;
     }
+  }
+
+  /* Signatures from the consensus are verified */
+  if (from_cache && was_waiting_for_certs) {
+    /* We check if the consensus is loaded from disk cache and that it
+     * it is an unverified consensus. If it is unverified, rename it to
+     * cached-*-consensus since it has been verified. */
+    log_info(LD_DIR, "Unverified consensus signatures verified.");
+    tor_rename(unverified_fname, consensus_fname);
   }
 
   if (!from_cache && flav == usable_consensus_flavor())

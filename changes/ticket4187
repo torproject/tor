@@ -1,0 +1,3 @@
+  o Minor bugfix (rename verfied unverified consensus):
+    - Rename a verified unverfied consensus to cached-consenus on the disk.
+      Fixes bug 4187; bugfix on 0.3.3.0-alpha
