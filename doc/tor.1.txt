@@ -1757,14 +1757,6 @@ The following options are useful only for clients (that is, if
     which are advanced by connection failures. (Default: 0, 3, 7, 3600,
     10800, 25200, 54000, 111600, 262800)
 
-[[ClientBootstrapConsensusMaxDownloadTries]] **ClientBootstrapConsensusMaxDownloadTries** __NUM__::
-    Try this many times to download a consensus while bootstrapping using
-    fallback directory mirrors before giving up. (Default: 7)
-
-[[ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries]] **ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries** __NUM__::
-    Try this many times to download a consensus while bootstrapping using
-    authorities before giving up. (Default: 4)
-
 [[ClientBootstrapConsensusMaxInProgressTries]] **ClientBootstrapConsensusMaxInProgressTries** __NUM__::
     Try this many simultaneous connections to download a consensus before
     waiting for one to complete, timeout, or error out. (Default: 3)
@@ -2871,8 +2863,6 @@ The following options are used for running a testing Tor network.
           4 (for 40 seconds), 8, 16, 32, 60
        ClientBootstrapConsensusAuthorityOnlyDownloadSchedule 0, 1,
           4 (for 40 seconds), 8, 16, 32, 60
-       ClientBootstrapConsensusMaxDownloadTries 80
-       ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries 80
        ClientDNSRejectInternalAddresses 0
        ClientRejectInternalAddresses 0
        CountPrivateBandwidth 1
@@ -2895,10 +2885,6 @@ The following options are used for running a testing Tor network.
        TestingBridgeBootstrapDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
        TestingClientMaxIntervalWithoutRequest 5 seconds
        TestingDirConnectionMaxStall 30 seconds
-       TestingConsensusMaxDownloadTries 80
-       TestingDescriptorMaxDownloadTries 80
-       TestingMicrodescMaxDownloadTries 80
-       TestingCertMaxDownloadTries 80
        TestingEnableConnBwEvent 1
        TestingEnableCellStatsEvent 1
        TestingEnableTbEmptyEvent 1
@@ -2978,22 +2964,6 @@ The following options are used for running a testing Tor network.
     Let a directory connection stall this long before expiring it.
     Changing this requires that **TestingTorNetwork** is set. (Default:
     5 minutes)
-
-[[TestingConsensusMaxDownloadTries]] **TestingConsensusMaxDownloadTries** __NUM__::
-    Try this many times to download a consensus before giving up. Changing
-    this requires that **TestingTorNetwork** is set. (Default: 8)
-
-[[TestingDescriptorMaxDownloadTries]] **TestingDescriptorMaxDownloadTries** __NUM__::
-    Try this often to download a server descriptor before giving up.
-    Changing this requires that **TestingTorNetwork** is set. (Default: 8)
-
-[[TestingMicrodescMaxDownloadTries]] **TestingMicrodescMaxDownloadTries** __NUM__::
-    Try this often to download a microdesc descriptor before giving up.
-    Changing this requires that **TestingTorNetwork** is set. (Default: 8)
-
-[[TestingCertMaxDownloadTries]] **TestingCertMaxDownloadTries** __NUM__::
-    Try this often to download a v3 authority certificate before giving up.
-    Changing this requires that **TestingTorNetwork** is set. (Default: 8)
 
 [[TestingDirAuthVoteExit]] **TestingDirAuthVoteExit** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and
