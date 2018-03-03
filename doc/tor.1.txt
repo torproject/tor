@@ -1894,7 +1894,7 @@ is non-zero):
     If you want to use a reduced exit policy rather than the default exit
     policy, set "ReducedExitPolicy 1". If you want to _replace_ the default
     exit policy with your custom exit policy, end your exit policy with either
-    a reject *:* or an accept *:*. Otherwise, you’re _augmenting_ (prepending
+    a reject *:* or an accept *:*. Otherwise, you're _augmenting_ (prepending
     to) the default or reduced exit policy. +
  +
     The default exit policy is:
