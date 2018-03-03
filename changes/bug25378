@@ -1,0 +1,4 @@
+  o Documentation:
+    - Update the documentation for "Log" to include the current list
+      of logging domains. Closes ticket 25378.
+
