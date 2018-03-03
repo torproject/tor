@@ -1,4 +1,4 @@
-Changes in version 0.3.2.10 - 2018-03-??
+Changes in version 0.3.2.10 - 2018-03-03
   Tor 0.3.2.10 is the second stable release in the 0.3.2 series. It
   backports a number of bugfixes, including important fixes for security
   issues.
@@ -20,9 +20,10 @@ Changes in version 0.3.2.10 - 2018-03-??
   This release also fixes several minor bugs and annoyances from
   earlier releases.
 
-  All directory authorities should upgrade to one of the versions
-  released today.  All relays not already running Tor 0.3.3.2-alpha or
-  later should upgrade to this release.
+  Relays running 0.3.2.x SHOULD upgrade to one of the versions released
+  today, for the fix to TROVE-2018-002.  Directory authorities should
+  also upgrade. (Relays on earlier versions might want to update too for
+  the DoS mitigations.)
 
   o Major bugfixes (denial-of-service, directory authority, backport from 0.3.3.3-alpha):
     - Fix a protocol-list handling bug that could be used to remotely crash
