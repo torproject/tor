@@ -3392,7 +3392,8 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   tor_assert(node);
 
   if (options->AuthDirTestEd25519LinkKeys &&
-      node_supports_ed25519_link_authentication(node, 1)) {
+      node_supports_ed25519_link_authentication(node, 1) &&
+      router->cache_info.signing_key_cert) {
     ed_id_key = &router->cache_info.signing_key_cert->signing_key;
   } else {
     ed_id_key = NULL;
