@@ -38,7 +38,7 @@ MOCK_DECL(int, transport_add_from_config,
 void transport_free_(transport_t *transport);
 #define transport_free(tr) FREE_AND_NULL(transport_t, transport_free_, (tr))
 
-transport_t *transport_get_by_name(const char *name);
+MOCK_DECL(transport_t*, transport_get_by_name, (const char *name));
 
 MOCK_DECL(void, pt_kickstart_proxy,
           (const smartlist_t *transport_list, char **proxy_argv,
@@ -113,6 +113,9 @@ typedef struct {
   smartlist_t *transports;
 } managed_proxy_t;
 
+STATIC transport_t *transport_new(const tor_addr_t *addr, uint16_t port,
+                                  const char *name, int socks_ver,
+                                  const char *extra_info_args);
 STATIC int parse_cmethod_line(const char *line, managed_proxy_t *mp);
 STATIC int parse_smethod_line(const char *line, managed_proxy_t *mp);
 
