@@ -788,9 +788,18 @@ AC_ARG_WITH(ssl-dir,
 
 AC_MSG_NOTICE([Now, we'll look for OpenSSL >= 1.0.1])
 TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS32],
-    [#include <openssl/ssl.h>],
-    [struct ssl_method_st; const struct ssl_method_st *TLSv1_1_method(void);],
-    [TLSv1_1_method();], [],
+    [#include <openssl/ssl.h>
+     char *getenv(const char *);],
+    [struct ssl_cipher_st;
+     unsigned SSL_CIPHER_get_id(const struct ssl_cipher_st *);
+     char *getenv(const char *);],
+    dnl This funny-looking test program calls getenv, so that the compiler
+    dnl will neither make code that call SSL_CIPHER_get_id(NULL) [producing
+    dnl a crash], nor optimize out the call to SSL_CIPHER_get_id().
+    dnl We look for SSL_cipher_get_id() because it is present in
+    dnl OpenSSL >=1.0.1, because it is not deprecated, and because Tor
+    dnl depends on it.
+    [if (getenv("THIS_SHOULDNT_BE_SET_X201803")) SSL_CIPHER_get_id((void *)0);], [],
     [/usr/local/opt/openssl /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /opt/openssl])
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
