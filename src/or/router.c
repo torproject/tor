@@ -103,6 +103,13 @@ static authority_cert_t *legacy_key_certificate = NULL;
  * used by tor-gencert to sign new signing keys and make new key
  * certificates. */
 
+const char *format_node_description(char *buf,
+                                    const char *id_digest,
+                                    int is_named,
+                                    const char *nickname,
+                                    const tor_addr_t *addr,
+                                    uint32_t addr32h);
+
 /** Replace the current onion key with <b>k</b>.  Does not affect
  * lastonionkey; to update lastonionkey correctly, call rotate_onion_key().
  */
@@ -3453,6 +3460,15 @@ is_legal_hexdigest(const char *s)
           strspn(s,HEX_CHARACTERS)==HEX_DIGEST_LEN);
 }
 
+/**
+ * Longest allowed output of format_node_description, plus 1 character for
+ * NUL.  This allows space for:
+ * "$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF~xxxxxxxxxxxxxxxxxxx at"
+ * " [ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]"
+ * plus a terminating NUL.
+ */
+#define NODE_DESC_BUF_LEN (MAX_VERBOSE_NICKNAME_LEN+4+TOR_ADDR_BUF_LEN)
+
 /** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
  * hold a human-readable description of a node with identity digest
  * <b>id_digest</b>, named-status <b>is_named</b>, nickname <b>nickname</b>,
@@ -3498,15 +3514,16 @@ format_node_description(char *buf,
   return buf;
 }
 
-/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
- * hold a human-readable description of <b>ri</b>.
+/** Return a human-readable description of the routerinfo_t <b>ri</b>.
  *
- *
- * Return a pointer to the front of <b>buf</b>.
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
  */
 const char *
-router_get_description(char *buf, const routerinfo_t *ri)
+router_describe(const routerinfo_t *ri)
 {
+  static char buf[NODE_DESC_BUF_LEN];
+
   if (!ri)
     return "<null>";
   return format_node_description(buf,
@@ -3517,14 +3534,15 @@ router_get_description(char *buf, const routerinfo_t *ri)
                                  ri->addr);
 }
 
-/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
- * hold a human-readable description of <b>node</b>.
+/** Return a human-readable description of the node_t <b>node</b>.
  *
- * Return a pointer to the front of <b>buf</b>.
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
  */
 const char *
-node_get_description(char *buf, const node_t *node)
+node_describe(const node_t *node)
 {
+  static char buf[NODE_DESC_BUF_LEN];
   const char *nickname = NULL;
   uint32_t addr32h = 0;
   int is_named = 0;
@@ -3549,66 +3567,6 @@ node_get_description(char *buf, const node_t *node)
                                  addr32h);
 }
 
-/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
- * hold a human-readable description of <b>rs</b>.
- *
- * Return a pointer to the front of <b>buf</b>.
- */
-const char *
-routerstatus_get_description(char *buf, const routerstatus_t *rs)
-{
-  if (!rs)
-    return "<null>";
-  return format_node_description(buf,
-                                 rs->identity_digest,
-                                 rs->is_named,
-                                 rs->nickname,
-                                 NULL,
-                                 rs->addr);
-}
-
-/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
- * hold a human-readable description of <b>ei</b>.
- *
- * Return a pointer to the front of <b>buf</b>.
- */
-const char *
-extend_info_get_description(char *buf, const extend_info_t *ei)
-{
-  if (!ei)
-    return "<null>";
-  return format_node_description(buf,
-                                 ei->identity_digest,
-                                 0,
-                                 ei->nickname,
-                                 &ei->addr,
-                                 0);
-}
-
-/** Return a human-readable description of the routerinfo_t <b>ri</b>.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-const char *
-router_describe(const routerinfo_t *ri)
-{
-  static char buf[NODE_DESC_BUF_LEN];
-  return router_get_description(buf, ri);
-}
-
-/** Return a human-readable description of the node_t <b>node</b>.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-const char *
-node_describe(const node_t *node)
-{
-  static char buf[NODE_DESC_BUF_LEN];
-  return node_get_description(buf, node);
-}
-
 /** Return a human-readable description of the routerstatus_t <b>rs</b>.
  *
  * This function is not thread-safe.  Each call to this function invalidates
@@ -3618,7 +3576,15 @@ const char *
 routerstatus_describe(const routerstatus_t *rs)
 {
   static char buf[NODE_DESC_BUF_LEN];
-  return routerstatus_get_description(buf, rs);
+
+  if (!rs)
+    return "<null>";
+  return format_node_description(buf,
+                                 rs->identity_digest,
+                                 rs->is_named,
+                                 rs->nickname,
+                                 NULL,
+                                 rs->addr);
 }
 
 /** Return a human-readable description of the extend_info_t <b>ei</b>.
@@ -3630,7 +3596,15 @@ const char *
 extend_info_describe(const extend_info_t *ei)
 {
   static char buf[NODE_DESC_BUF_LEN];
-  return extend_info_get_description(buf, ei);
+
+  if (!ei)
+    return "<null>";
+  return format_node_description(buf,
+                                 ei->identity_digest,
+                                 0,
+                                 ei->nickname,
+                                 &ei->addr,
+                                 0);
 }
 
 /** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the
