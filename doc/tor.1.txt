@@ -2257,7 +2257,8 @@ is non-zero):
     When this option is enabled, Tor collects statistics for padding cells
     sent and received by this relay, in addition to total cell counts.
     These statistics are rounded, and omitted if traffic is low. This
-    information is important for load balancing decisions related to padding. If ExtraInfoStatistics is enabled, it will be published
+    information is important for load balancing decisions related to padding.
+    If ExtraInfoStatistics is enabled, it will be published
     as a part of extra-info document. (Default: 1)
 
 [[DirReqStatistics]] **DirReqStatistics** **0**|**1**::
