@@ -5,5 +5,4 @@
       still result in intermittent failures (e.g. if the system doing the
       testing enters sleep/hibernation or experiences some other clock jump).
       However, this should elliminate test failures currently happening on
-      developer and CI systems.  Fixes bug 25450 (shoddily); bugfix on
-      0.3.1.3-alpha.
+      developer and CI systems.  Fixes bug 25450; bugfix on 0.3.1.3-alpha.
