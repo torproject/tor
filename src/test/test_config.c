@@ -5489,6 +5489,147 @@ test_config_include_flag_defaults_only(void *data)
 }
 
 static void
+test_config_include_wildcards(void *data)
+{
+  (void)data;
+
+  char *temp = NULL, *folder = NULL;
+  config_line_t *result = NULL;
+  char *dir = tor_strdup(get_fname("test_include_wildcards"));
+  tt_ptr_op(dir, OP_NE, NULL);
+
+#ifdef _WIN32
+  tt_int_op(mkdir(dir), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(dir, 0700), OP_EQ, 0);
+#endif
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", dir, "01_one.conf");
+  tt_int_op(write_str_to_file(temp, "Test 1\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", dir, "02_two.conf");
+  tt_int_op(write_str_to_file(temp, "Test 2\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", dir, "aa_three.conf");
+  tt_int_op(write_str_to_file(temp, "Test 3\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", dir, "foo");
+  tt_int_op(write_str_to_file(temp, "Test 6\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  tor_asprintf(&folder, "%s"PATH_SEPARATOR"%s", dir, "folder");
+
+#ifdef _WIN32
+  tt_int_op(mkdir(folder), OP_EQ, 0);
+#else
+  tt_int_op(mkdir(folder, 0700), OP_EQ, 0);
+#endif
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", folder, "04_four.conf");
+  tt_int_op(write_str_to_file(temp, "Test 4\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  tor_asprintf(&temp, "%s"PATH_SEPARATOR"%s", folder, "05_five.conf");
+  tt_int_op(write_str_to_file(temp, "Test 5\n", 0), OP_EQ, 0);
+  tor_free(temp);
+
+  char torrc_contents[1000];
+  int include_used;
+
+  // test pattern that matches no file
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"not-exist*\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_EQ, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+  tor_free(result);
+
+#ifndef _WIN32
+  // test wildcard escaping
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"\\*\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, -1);
+  tt_ptr_op(result, OP_EQ, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+  tor_free(result);
+#endif
+
+  // test pattern *.conf
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"*.conf\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  int len = 0;
+  config_line_t *next;
+  char expected[10];
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 1);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+  tt_int_op(len, OP_EQ, 3);
+
+  // test pattern that matches folder and files
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"*\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  len = 0;
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 1);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+  tt_int_op(len, OP_EQ, 6);
+
+  // test pattern ending in PATH_SEPARATOR
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"f*"PATH_SEPARATOR"\n",
+               dir);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            NULL), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+  len = 0;
+  for (next = result; next != NULL; next = next->next) {
+    tor_snprintf(expected, sizeof(expected), "%d", len + 1 + 3);
+    tt_str_op(next->key, OP_EQ, "Test");
+    tt_str_op(next->value, OP_EQ, expected);
+    len++;
+  }
+#ifdef _WIN32
+  // the path separator at the end is ignored on Windows, so foo matches
+  tt_int_op(len, OP_EQ, 3);
+#else
+  tt_int_op(len, OP_EQ, 2);
+#endif
+
+ done:
+  config_free_lines(result);
+  tor_free(folder);
+  tor_free(temp);
+  tor_free(dir);
+}
+
+static void
 test_config_dup_and_filter(void *arg)
 {
   (void)arg;
@@ -5602,7 +5743,7 @@ test_config_include_opened_file_list(void *data)
   smartlist_t *opened_files = smartlist_new();
   char *torrcd = NULL;
   char *subfolder = NULL;
-  char *path = NULL;
+  char *in_subfolder = NULL;
   char *empty = NULL;
   char *file = NULL;
   char *dot = NULL;
@@ -5631,9 +5772,9 @@ test_config_include_opened_file_list(void *data)
   tt_int_op(mkdir(subfolder, 0700), OP_EQ, 0);
 #endif
 
-  tor_asprintf(&path, "%s"PATH_SEPARATOR"%s", subfolder,
+  tor_asprintf(&in_subfolder, "%s"PATH_SEPARATOR"%s", subfolder,
                "01_file_in_subfolder");
-  tt_int_op(write_str_to_file(path, "Test 1\n", 0), OP_EQ, 0);
+  tt_int_op(write_str_to_file(in_subfolder, "Test 1\n", 0), OP_EQ, 0);
 
   tor_asprintf(&empty, "%s"PATH_SEPARATOR"%s", torrcd, "empty");
   tt_int_op(write_str_to_file(empty, "", 0), OP_EQ, 0);
@@ -5664,13 +5805,40 @@ test_config_include_opened_file_list(void *data)
   // dot files are not opened as we ignore them when we get their name from
   // their parent folder
 
+  // test with wildcards
+  SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
+  smartlist_clear(opened_files);
+  tor_snprintf(torrc_contents, sizeof(torrc_contents),
+               "%%include %s"PATH_SEPARATOR"*\n",
+               torrcd);
+  tt_int_op(config_get_lines_include(torrc_contents, &result, 0, &include_used,
+            opened_files), OP_EQ, 0);
+  tt_ptr_op(result, OP_NE, NULL);
+  tt_int_op(include_used, OP_EQ, 1);
+
+#ifdef _WIN32
+  tt_int_op(smartlist_len(opened_files), OP_EQ, 6);
+#else
+  tt_int_op(smartlist_len(opened_files), OP_EQ, 5);
+#endif
+  tt_int_op(smartlist_contains_string(opened_files, torrcd), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, subfolder), OP_EQ, 1);
+  // * will match the subfolder inside torrc.d, so it will be included
+  tt_int_op(smartlist_contains_string(opened_files, in_subfolder), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, empty), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(opened_files, file), OP_EQ, 1);
+#ifdef _WIN32
+  // * matches the dot file on Windows
+  tt_int_op(smartlist_contains_string(opened_files, dot), OP_EQ, 1);
+#endif
+
  done:
   SMARTLIST_FOREACH(opened_files, char *, f, tor_free(f));
   smartlist_free(opened_files);
   config_free_lines(result);
   tor_free(torrcd);
   tor_free(subfolder);
-  tor_free(path);
+  tor_free(in_subfolder);
   tor_free(empty);
   tor_free(file);
   tor_free(dot);
@@ -5854,6 +6022,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(include_flag_both_without, TT_FORK),
   CONFIG_TEST(include_flag_torrc_only, TT_FORK),
   CONFIG_TEST(include_flag_defaults_only, TT_FORK),
+  CONFIG_TEST(include_wildcards, 0),
   CONFIG_TEST(dup_and_filter, 0),
   CONFIG_TEST(check_bridge_distribution_setting_not_a_bridge, TT_FORK),
   CONFIG_TEST(check_bridge_distribution_setting_valid, 0),
