@@ -1501,7 +1501,8 @@ AC_CHECK_HEADERS([errno.h \
 		  sys/utime.h \
 		  sys/wait.h \
 		  syslog.h \
-		  utime.h])
+		  utime.h \
+		  glob.h])
 
 AC_CHECK_HEADERS(sys/param.h)
 

@@ -13,14 +13,31 @@
 #include "lib/malloc/malloc.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
+#include "lib/log/win32err.h"
+#include "lib/container/smartlist.h"
+#include "lib/sandbox/sandbox.h"
 #include "lib/string/printf.h"
 #include "lib/string/util_string.h"
+#include "lib/string/compat_string.h"
 #include "lib/string/compat_ctype.h"
 #include "lib/fs/userdb.h"
 
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+#ifdef _WIN32
+#include <windows.h>
+#else /* !(defined(_WIN32)) */
+#include <dirent.h>
+#include <glob.h>
+#endif /* defined(_WIN32) */
 
 #include <errno.h>
 #include <string.h>
@@ -292,4 +309,123 @@ make_path_absolute(char *fname)
   }
   return absfname;
 #endif /* defined(_WIN32) */
+}
+
+#ifndef _WIN32
+/** Same as opendir but calls sandbox_intern_string before */
+static DIR *
+prot_opendir(const char *name)
+{
+  return opendir(sandbox_intern_string(name));
+}
+
+/** Same as stat but calls sandbox_intern_string before */
+static int
+prot_stat(const char *pathname, struct stat *buf)
+{
+  return stat(sandbox_intern_string(pathname), buf);
+}
+
+/** Same as lstat but calls sandbox_intern_string before */
+static int
+prot_lstat(const char *pathname, struct stat *buf)
+{
+  return lstat(sandbox_intern_string(pathname), buf);
+}
+#endif /* !(defined(_WIN32)) */
+
+/** Return a new list containing the paths that match the pattern
+ * <b>pattern</b>. Return NULL on error.
+ */
+struct smartlist_t *
+tor_glob(const char *pattern)
+{
+  smartlist_t *result;
+#ifdef _WIN32
+  TCHAR tpattern[MAX_PATH] = {0};
+  char name[MAX_PATH*2+1] = {0};
+  HANDLE handle;
+  WIN32_FIND_DATA findData;
+#ifdef UNICODE
+  mbstowcs(tpattern,pattern,MAX_PATH);
+#else
+  strlcpy(tpattern, pattern, MAX_PATH);
+#endif
+  clean_fname_for_stat(tpattern);  // remove trailing backslash
+  if (file_status(tpattern) == FN_DIR) {
+    // special case: we want to return the directory and not the files inside
+    result = smartlist_new();
+    smartlist_add_strdup(result, tpattern);
+    return result;
+  }
+  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(tpattern, &findData))) {
+    return GetLastError() == ERROR_FILE_NOT_FOUND ? smartlist_new() : NULL;
+  }
+  // remove file name and last path separator from tpattern
+  // used later to create the full path
+  char *lastSep = strrchr(tpattern, *PATH_SEPARATOR);
+  char *lastSepUnix = strrchr(tpattern, '/');
+  lastSep = lastSep == NULL ? tpattern : lastSep;
+  lastSepUnix = lastSepUnix == NULL ? tpattern : lastSepUnix;
+  lastSep = lastSep > lastSepUnix ? lastSep : lastSepUnix;
+  *lastSep = '\0';
+  result = smartlist_new();
+  while (1) {
+#ifdef UNICODE
+    wcstombs(name,findData.cFileName,MAX_PATH);
+    name[sizeof(name)-1] = '\0';
+#else
+    strlcpy(name,findData.cFileName,sizeof(name));
+#endif /* defined(UNICODE) */
+    if (strcmp(name, ".") && strcmp(name, "..")) {
+      char *fullpath;
+      tor_asprintf(&fullpath, "%s"PATH_SEPARATOR"%s", tpattern, name);
+      smartlist_add(result, fullpath);
+    }
+    if (!FindNextFile(handle, &findData)) {
+      DWORD err;
+      if ((err = GetLastError()) != ERROR_NO_MORE_FILES) {
+        char *errstr = format_win32_error(err);
+        log_warn(LD_FS, "Error reading directory '%s': %s", pattern, errstr);
+        tor_free(errstr);
+      }
+      break;
+    }
+  }
+  FindClose(handle);
+#else /* !(defined(_WIN32)) */
+  glob_t matches;
+  int flags = GLOB_ERR | GLOB_NOSORT;
+#ifdef GLOB_ALTDIRFUNC
+  /* use functions that call sandbox_intern_string */
+  flags |= GLOB_ALTDIRFUNC;
+  typedef void *(*gl_opendir)(const char * name);
+  typedef struct dirent *(*gl_readdir)(void *);
+  typedef void (*gl_closedir)(void *);
+  matches.gl_opendir = (gl_opendir) &prot_opendir;
+  matches.gl_readdir = (gl_readdir) &readdir;
+  matches.gl_closedir = (gl_closedir) &closedir;
+  matches.gl_stat = &prot_stat;
+  matches.gl_lstat = &prot_lstat;
+#endif /* defined(GLOB_ALTDIRFUNC) */
+  int ret = glob(pattern, flags, NULL, &matches);
+  if (ret == GLOB_NOMATCH) {
+    return smartlist_new();
+  } else if (ret != 0) {
+    return NULL;
+  }
+
+  result = smartlist_new();
+  size_t i;
+  for (i = 0; i < matches.gl_pathc; i++) {
+    char *match = tor_strdup(matches.gl_pathv[i]);
+    size_t len = strlen(match);
+    if (len > 0 && match[len-1] == *PATH_SEPARATOR) {
+      match[len-1] = '\0';
+    }
+    smartlist_add(result, match);
+  }
+  globfree(&matches);
+#endif /* defined(_WIN32) */
+  return result;
 }
