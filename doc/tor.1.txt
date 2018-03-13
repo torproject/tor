@@ -2163,15 +2163,16 @@ is non-zero):
     (Default: max)
 
 [[AccountingStart]] **AccountingStart** **day**|**week**|**month** [__day__] __HH:MM__::
-    Specify how long accounting periods last. If **month** is given, each
-    accounting period runs from the time __HH:MM__ on the __dayth__ day of one
-    month to the same day and time of the next. (The day must be between 1 and
-    28.) If **week** is given, each accounting period runs from the time __HH:MM__
-    of the __dayth__ day of one week to the same day and time of the next week,
-    with Monday as day 1 and Sunday as day 7. If **day** is given, each
-    accounting period runs from the time __HH:MM__ each day to the same time on
-    the next day. All times are local, and given in 24-hour time. (Default:
-    "month 1 0:00")
+    Specify how long accounting periods last. If **month** is given,
+    each accounting period runs from the time __HH:MM__ on the __dayth__ day of one
+    month to the same day and time of the next. The relay will go at full speed,
+    use all the quota you specify, then hibernate for the rest of the period. (The
+    day must be between 1 and 28.) If **week** is given, each accounting period
+    runs from the time __HH:MM__ of the __dayth__ day of one week to the same day
+    and time of the next week, with Monday as day 1 and Sunday as day 7. If **day**
+    is given, each accounting period runs from the time __HH:MM__ each day to the
+    same time on the next day. All times are local, and given in 24-hour time.
+    (Default: "month 1 0:00")
 
 [[RefuseUnknownExits]] **RefuseUnknownExits** **0**|**1**|**auto**::
     Prevent nodes that don't appear in the consensus from exiting using this
