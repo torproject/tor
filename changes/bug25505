@@ -1,0 +1,3 @@
+  o Minor bugfixes (netflow padding):
+    - Ensure circuitmux queues are empty before scheduling or sending padding.
+      Fixes bug 25505; bugfix on 0.3.1.1-alpha.
