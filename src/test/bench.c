@@ -713,6 +713,8 @@ main(int argc, const char **argv)
     printf("Couldn't seed RNG; exiting.\n");
     return 1;
   }
+
+  init_protocol_warning_severity_level();
   crypto_init_siphash_key();
   options = options_new();
   init_logging(1);
