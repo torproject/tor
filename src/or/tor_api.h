@@ -66,14 +66,12 @@ void tor_main_configuration_free(tor_main_configuration_t *cfg);
  * This function will not return until Tor is done running.  It returns zero
  * on success, and nonzero on failure.
  *
- * BUG 23848: In many cases, tor_main will call exit() or abort() instead of
- * returning.  This is not the intended long-term behavior; we are trying to
- * fix it.
+ * If you want to control when Tor exits, make sure to configure a control
+ * socket. The OwningControllerFD option may be helpful there.
  *
- * BUG 23847: You can only call tor_main() once in a single process; if it
- * returns and you call it again, you may crash, or you may encounter other
- * unexpected behavior, including possible security issues.  This is not
- * intended long-term behavior; we are trying to fix it.
+ * BUG 23847: Sometimes, if you call tor_main a second time (after it has
+ * returned), Tor may crash or behave strangely.  We have fixed all issues of
+ * this type that we could find, but more may remain.
  *
  * LIMITATION: You cannot run more than one instance of Tor in the same
  * process at the same time. Concurrent calls will cause undefined behavior.
