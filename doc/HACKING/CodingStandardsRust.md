@@ -284,12 +284,26 @@ Here are some additional bits of advice and rules:
             }
         }
 
-3. Pass only integer types and bytes over the boundary
+3. Pass only C-compatible primitive types and bytes over the boundary
 
-   The only non-integer type which may cross the FFI boundary is
+   Rust's C-compatible primitive types are integers and floats.
+   These types are declared in the [libc crate](https://doc.rust-lang.org/libc/x86_64-unknown-linux-gnu/libc/index.html#types).
+   Most Rust objects have different [representations](https://doc.rust-lang.org/libc/x86_64-unknown-linux-gnu/libc/index.html#types)
+   in C and Rust, so they can't be passed using FFI.
+
+   Tor currently uses the following Rust primitive types from libc for FFI:
+   * defined-size integers: `uint32_t`
+   * native-sized integers: `c_int`
+   * native-sized floats: `c_double`
+   * native-sized raw pointers: `* c_void`, `* c_char`, `** c_char`
+
+   TODO: C smartlist to Stringlist conversion using FFI
+
+   The only non-primitive type which may cross the FFI boundary is
    bytes, e.g. `&[u8]`.  This SHOULD be done on the Rust side by
-   passing a pointer (`*mut libc::c_char`) and a length
-   (`libc::size_t`).
+   passing a pointer (`*mut libc::c_char`). The length can be passed
+   explicitly (`libc::size_t`), or the string can be NUL-byte terminated
+   C string.
 
    One might be tempted to do this via doing
    `CString::new("blah").unwrap().into_raw()`. This has several problems:
