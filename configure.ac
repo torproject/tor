@@ -681,7 +681,8 @@ TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $T
 #include <winsock2.h>
 #endif
 struct event_base;
-struct event_base *event_base_new(void);],
+struct event_base *event_base_new(void);
+void event_base_free(struct event_base *);],
     [
 #ifdef _WIN32
 {WSADATA d; WSAStartup(0x101,&d); }
