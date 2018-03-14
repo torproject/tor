@@ -7599,6 +7599,9 @@ control_free_all(void)
     tor_event_free(flush_queued_events_event);
     flush_queued_events_event = NULL;
   }
+  bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
+  notice_bootstrap_percent = 0;
+  bootstrap_problems = 0;
 }
 
 #ifdef TOR_UNIT_TESTS

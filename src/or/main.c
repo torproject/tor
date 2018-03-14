@@ -1475,6 +1475,7 @@ teardown_periodic_events(void)
   for (i = 0; periodic_events[i].name; ++i) {
     periodic_event_destroy(&periodic_events[i]);
   }
+  periodic_events_initialized = 0;
 }
 
 /**
@@ -1942,14 +1943,14 @@ reset_padding_counts_callback(time_t now, const or_options_t *options)
   return REPHIST_CELL_PADDING_COUNTS_INTERVAL;
 }
 
+static int should_init_bridge_stats = 1;
+
 /**
  * Periodic callback: Write bridge statistics to disk if appropriate.
  */
 static int
 record_bridge_stats_callback(time_t now, const or_options_t *options)
 {
-  static int should_init_bridge_stats = 1;
-
   /* 1h. Check whether we should write bridge statistics to disk.
    */
   if (should_record_bridge_info(options)) {
@@ -2142,6 +2143,8 @@ expire_old_ciruits_serverside_callback(time_t now, const or_options_t *options)
   return 11;
 }
 
+static int dns_honesty_first_time = 1;
+
 /**
  * Periodic event: if we're an exit, see if our DNS server is telling us
  * obvious lies.
@@ -2157,10 +2160,9 @@ check_dns_honesty_callback(time_t now, const or_options_t *options)
       router_my_exit_policy_is_reject_star())
     return PERIODIC_EVENT_NO_UPDATE;
 
-  static int first_time = 1;
-  if (first_time) {
+  if (dns_honesty_first_time) {
     /* Don't launch right when we start */
-    first_time = 0;
+    dns_honesty_first_time = 0;
     return crypto_rand_int_range(60, 180);
   }
 
@@ -2211,6 +2213,8 @@ check_fw_helper_app_callback(time_t now, const or_options_t *options)
   return PORT_FORWARDING_CHECK_INTERVAL;
 }
 
+static int heartbeat_callback_first_time = 1;
+
 /**
  * Periodic callback: write the heartbeat message in the logs.
  *
@@ -2220,16 +2224,14 @@ check_fw_helper_app_callback(time_t now, const or_options_t *options)
 static int
 heartbeat_callback(time_t now, const or_options_t *options)
 {
-  static int first = 1;
-
   /* Check if heartbeat is disabled */
   if (!options->HeartbeatPeriod) {
     return PERIODIC_EVENT_NO_UPDATE;
   }
 
   /* Skip the first one. */
-  if (first) {
-    first = 0;
+  if (heartbeat_callback_first_time) {
+    heartbeat_callback_first_time = 0;
     return options->HeartbeatPeriod;
   }
 
@@ -2281,6 +2283,8 @@ hs_service_callback(time_t now, const or_options_t *options)
 static periodic_timer_t *second_timer = NULL;
 /** Number of libevent errors in the last second: we die if we get too many. */
 static int n_libevent_errors = 0;
+/** Last time that second_elapsed_callback was called. */
+static time_t current_second = 0;
 
 /** Libevent callback: invoked once every second. */
 static void
@@ -2289,7 +2293,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   /* XXXX This could be sensibly refactored into multiple callbacks, and we
    * could use Libevent's timers for this rather than checking the current
    * time against a bunch of timeouts every second. */
-  static time_t current_second = 0;
   time_t now;
   size_t bytes_written;
   size_t bytes_read;
@@ -2384,12 +2387,14 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 /** Timer: used to invoke refill_callback(). */
 static periodic_timer_t *refill_timer = NULL;
 
+/** Millisecond when refall_callback was last invoked. */
+static struct timeval refill_timer_current_millisecond;
+
 /** Libevent callback: invoked periodically to refill token buckets
  * and count r/w bytes. */
 static void
 refill_callback(periodic_timer_t *timer, void *arg)
 {
-  static struct timeval current_millisecond;
   struct timeval now;
 
   size_t bytes_written;
@@ -2405,12 +2410,13 @@ refill_callback(periodic_timer_t *timer, void *arg)
   tor_gettimeofday(&now);
 
   /* If this is our first time, no time has passed. */
-  if (current_millisecond.tv_sec) {
-    long mdiff = tv_mdiff(&current_millisecond, &now);
+  if (refill_timer_current_millisecond.tv_sec) {
+    long mdiff = tv_mdiff(&refill_timer_current_millisecond, &now);
     if (mdiff > INT_MAX)
       mdiff = INT_MAX;
     milliseconds_elapsed = (int)mdiff;
-    seconds_rolled_over = (int)(now.tv_sec - current_millisecond.tv_sec);
+    seconds_rolled_over = (int)(now.tv_sec -
+                                refill_timer_current_millisecond.tv_sec);
   }
 
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
@@ -2427,7 +2433,8 @@ refill_callback(periodic_timer_t *timer, void *arg)
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
-  current_millisecond = now; /* remember what time it is, for next time */
+  /* remember what time it is, for next time */
+  refill_timer_current_millisecond = now;
 }
 
 #ifndef _WIN32
@@ -3522,6 +3529,31 @@ tor_free_all(int postfork)
   periodic_timer_free(refill_timer);
   tor_event_free(shutdown_did_not_work_event);
   tor_event_free(initialize_periodic_events_event);
+
+#ifdef HAVE_SYSTEMD_209
+  periodic_timer_free(systemd_watchdog_timer);
+#endif
+
+  global_read_bucket = global_write_bucket = 0;
+  global_relayed_read_bucket = global_relayed_write_bucket = 0;
+  stats_prev_global_read_bucket = stats_prev_global_write_bucket = 0;
+  stats_prev_n_read = stats_prev_n_written = 0;
+  stats_n_bytes_read = stats_n_bytes_written = 0;
+  time_of_process_start = 0;
+  time_of_last_signewnym = 0;
+  signewnym_is_pending = 0;
+  newnym_epoch = 0;
+  called_loop_once = 0;
+  main_loop_should_exit = 0;
+  main_loop_exit_value = 0;
+  can_complete_circuits = 0;
+  quiet_level = 0;
+  should_init_bridge_stats = 1;
+  dns_honesty_first_time = 1;
+  heartbeat_callback_first_time = 1;
+  n_libevent_errors = 0;
+  current_second = 0;
+  memset(&refill_timer_current_millisecond, 0, sizeof(struct timeval));
 
   if (!postfork) {
     release_lockfile();
