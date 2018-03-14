@@ -12,5 +12,5 @@ crate_type = ["rlib", "staticlib"]
 path = "../tor_allocate"
 
 [dependencies]
-libc = "0.2.22"
+libc = "=0.2.39"
 
