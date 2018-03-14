@@ -81,6 +81,26 @@ Currently, Tor requires that you use the latest stable Rust version. At
 some point in the future, we will freeze on a given stable Rust version,
 to ensure backward compatibility with stable distributions that ship it.
 
+ Updating/Adding Dependencies
+------------------------------
+
+To add/remove/update dependencies, first add your dependencies,
+exactly specifying their versions, into the appropriate *crate-level*
+`Cargo.toml` in `src/rust/` (i.e. *not* `/src/rust/Cargo.toml`, but
+instead the one for your crate).  Also, investigate whether your
+dependency has any optional dependencies which are unnecessary but are
+enabled by default.  If so, you'll likely be able to enable/disable
+them via some feature, e.g.:
+
+```toml
+[dependencies]
+foo = { version = "1.0.0", default-features = false }
+```
+
+Next, run `/scripts/maint/updateRustDependencies.sh`.  Then, go into
+`src/ext/rust` and commit the changes to the `tor-rust-dependencies`
+repo.
+
  Documentation
 ---------------
 
