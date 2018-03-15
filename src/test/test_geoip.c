@@ -383,6 +383,63 @@ test_geoip_with_pt(void *arg)
 #undef SET_TEST_IPV6
 #undef CHECK_COUNTRY
 
+static void
+test_geoip_load_file(void *arg)
+{
+  (void)arg;
+  char *contents = NULL;
+  char *dhex = NULL;
+
+  /* A nonexistant filename should fail. */
+  tt_int_op(-1, OP_EQ,
+            geoip_load_file(AF_INET, "/you/did/not/put/a/file/here/I/hope"));
+
+  /* We start out with only "Ningunpartia" in the database. */
+  tt_int_op(1, OP_EQ, geoip_get_n_countries());
+  tt_str_op("??", OP_EQ, geoip_get_country_name(0));
+  /* Any lookup attempt should say "-1" because we have no info */
+  tt_int_op(-1, OP_EQ, geoip_get_country_by_ipv4(0x01020304));
+  /* There should be no 'digest' for a nonexistant file */
+  tt_str_op("0000000000000000000000000000000000000000", OP_EQ,
+            geoip_db_digest(AF_INET));
+
+  const char FNAME[] = SRCDIR "/src/config/geoip";
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME));
+
+  /* Check that we loaded some countries; this will fail if there are ever
+   * fewer than 50 countries in the world. */
+  tt_int_op(geoip_get_n_countries(), OP_GE, 50);
+
+  /* Let's see where 8.8.8.8 is. */
+  int country = geoip_get_country_by_ipv4(0x08080808);
+  tt_int_op(country, OP_GE, 1); /* It shouldn't be 'unknown' or 'nowhere' */
+  const char *cc = geoip_get_country_name(country);
+  tt_int_op(strlen(cc), OP_EQ, 2);
+
+  /* The digest should be set.... */
+  tt_str_op("0000000000000000000000000000000000000000", OP_NE,
+            geoip_db_digest(AF_INET));
+
+  /* And it should be set correctly */
+  contents = read_file_to_str(FNAME, RFTS_BIN, NULL);
+  uint8_t d[DIGEST_LEN];
+  crypto_digest((char*)d, contents, strlen(contents));
+  dhex = tor_strdup(hex_str((char*)d, DIGEST_LEN));
+  tt_str_op(dhex, OP_EQ, geoip_db_digest(AF_INET));
+
+  /* Make sure geoip_free_all() works. */
+  geoip_free_all();
+  tt_int_op(1, OP_EQ, geoip_get_n_countries());
+  tt_str_op("??", OP_EQ, geoip_get_country_name(0));
+  tt_int_op(-1, OP_EQ, geoip_get_country_by_ipv4(0x01020304));
+  tt_str_op("0000000000000000000000000000000000000000", OP_EQ,
+            geoip_db_digest(AF_INET)); // <--- nick bets this will fail.
+
+ done:
+  tor_free(contents);
+  tor_free(dhex);
+}
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -391,6 +448,7 @@ test_geoip_with_pt(void *arg)
 struct testcase_t geoip_tests[] = {
   { "geoip", test_geoip, TT_FORK, NULL, NULL },
   { "geoip_with_pt", test_geoip_with_pt, TT_FORK, NULL, NULL },
+  { "load_file", test_geoip_load_file, TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };
