@@ -173,6 +173,7 @@ uptime-*.json
 /src/or/tor-cov
 /src/or/tor-cov.exe
 /src/or/libtor.la
+/src/or/libtor_api.la
 /src/or/libtor-testing.la
 /src/or/libtor.lib
 

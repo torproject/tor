@@ -133,6 +133,19 @@ src_or_libtor_testing_la_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 # This seems to matter nowhere but on windows, but I assure you that it
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
+noinst_LTLIBRARIES += src/or/libtor_api.la
+src_or_libtor_api_la_SOURCES = # empty
+src_or_libtor_api_la_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
+src_or_libtor_api_la_LIBADD = src/or/libtor.la src/common/libor.la src/common/libor-ctime.la \
+	src/common/libor-crypto.la $(LIBKECCAK_TINY) $(LIBDONNA) \
+	src/common/libor-event.la src/trunnel/libor-trunnel.la \
+	src/trace/libor-trace.la \
+	$(rust_ldadd) \
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	@CURVE25519_LIBS@ @TOR_SYSTEMD_LIBS@ \
+	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@
+
 src_or_tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
 src_or_tor_LDADD = src/or/libtor.la src/common/libor.la src/common/libor-ctime.la \
 	src/common/libor-crypto.la $(LIBKECCAK_TINY) $(LIBDONNA) \
