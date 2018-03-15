@@ -2,9 +2,9 @@
 # any file in that directory.
 AM_CPPFLAGS += -I$(srcdir)/src
 
-noinst_LIBRARIES += \
-	src/trace/libor-trace.a
-LIBOR_TRACE_A_SOURCES = \
+noinst_LTLIBRARIES += \
+	src/trace/libor-trace.la
+LIBOR_TRACE_LA_SOURCES = \
 	src/trace/trace.c
 
 TRACEHEADERS = \
@@ -17,6 +17,6 @@ TRACEHEADERS += \
 endif
 
 # Library source files.
-src_trace_libor_trace_a_SOURCES = $(LIBOR_TRACE_A_SOURCES)
+src_trace_libor_trace_la_SOURCES = $(LIBOR_TRACE_LA_SOURCES)
 
 noinst_HEADERS+= $(TRACEHEADERS)

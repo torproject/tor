@@ -1,16 +1,16 @@
 
-noinst_LIBRARIES += \
-	src/common/libor.a \
-	src/common/libor-ctime.a \
-	src/common/libor-crypto.a \
-	src/common/libor-event.a
+noinst_LTLIBRARIES += \
+	src/common/libor.la \
+	src/common/libor-ctime.la \
+	src/common/libor-crypto.la \
+	src/common/libor-event.la
 
 if UNITTESTS_ENABLED
-noinst_LIBRARIES += \
-	src/common/libor-testing.a \
-	src/common/libor-ctime-testing.a \
-	src/common/libor-crypto-testing.a \
-	src/common/libor-event-testing.a
+noinst_LTLIBRARIES += \
+	src/common/libor-testing.la \
+	src/common/libor-ctime-testing.la \
+	src/common/libor-crypto-testing.la \
+	src/common/libor-event-testing.la
 endif
 
 EXTRA_DIST += src/common/Makefile.nmake
@@ -24,23 +24,23 @@ else
 libor_extra_source=
 endif
 
-src_common_libcurve25519_donna_a_CFLAGS=
+src_common_libcurve25519_donna_la_CFLAGS=
 
 if BUILD_CURVE25519_DONNA
-src_common_libcurve25519_donna_a_SOURCES=\
+src_common_libcurve25519_donna_la_SOURCES=\
 	src/ext/curve25519_donna/curve25519-donna.c
 # See bug 13538 -- this code is known to have signed overflow issues.
-src_common_libcurve25519_donna_a_CFLAGS+=\
+src_common_libcurve25519_donna_la_CFLAGS+=\
 	@F_OMIT_FRAME_POINTER@ @CFLAGS_CONSTTIME@
-noinst_LIBRARIES+=src/common/libcurve25519_donna.a
-LIBDONNA=src/common/libcurve25519_donna.a
+noinst_LTLIBRARIES+=src/common/libcurve25519_donna.la
+LIBDONNA=src/common/libcurve25519_donna.la
 else
 if BUILD_CURVE25519_DONNA_C64
-src_common_libcurve25519_donna_a_CFLAGS+=@CFLAGS_CONSTTIME@
-src_common_libcurve25519_donna_a_SOURCES=\
+src_common_libcurve25519_donna_la_CFLAGS+=@CFLAGS_CONSTTIME@
+src_common_libcurve25519_donna_la_SOURCES=\
 	src/ext/curve25519_donna/curve25519-donna-c64.c
-noinst_LIBRARIES+=src/common/libcurve25519_donna.a
-LIBDONNA=src/common/libcurve25519_donna.a
+noinst_LTLIBRARIES+=src/common/libcurve25519_donna.la
+LIBDONNA=src/common/libcurve25519_donna.la
 else
 LIBDONNA=
 endif
@@ -68,17 +68,17 @@ else
 mulodi4_source=
 endif
 
-LIBOR_CTIME_A_SRC = \
+LIBOR_CTIME_LA_SRC = \
    $(mulodi4_source) \
    src/ext/csiphash.c   \
    src/common/di_ops.c
 
-src_common_libor_ctime_a_SOURCES = $(LIBOR_CTIME_A_SRC)
-src_common_libor_ctime_testing_a_SOURCES = $(LIBOR_CTIME_A_SRC)
-src_common_libor_ctime_a_CFLAGS = @CFLAGS_CONSTTIME@
-src_common_libor_ctime_testing_a_CFLAGS = @CFLAGS_CONSTTIME@ $(TEST_CFLAGS)
+src_common_libor_ctime_la_SOURCES = $(LIBOR_CTIME_LA_SRC)
+src_common_libor_ctime_testing_la_SOURCES = $(LIBOR_CTIME_LA_SRC)
+src_common_libor_ctime_la_CFLAGS = @CFLAGS_CONSTTIME@
+src_common_libor_ctime_testing_la_CFLAGS = @CFLAGS_CONSTTIME@ $(TEST_CFLAGS)
 
-LIBOR_A_SRC = \
+LIBOR_LA_SRC = \
   src/common/address.c					\
   src/common/address_set.c				\
   src/common/backtrace.c				\
@@ -105,7 +105,7 @@ LIBOR_A_SRC = \
 src/common/src_common_libor_testing_a-log.$(OBJEXT) \
   src/common/log.$(OBJEXT): micro-revision.i
 
-LIBOR_CRYPTO_A_SRC = \
+LIBOR_CRYPTO_LA_SRC = \
   src/common/aes.c		\
   src/common/buffers_tls.c	\
   src/common/compress.c	\
@@ -124,26 +124,26 @@ LIBOR_CRYPTO_A_SRC = \
   src/common/crypto_curve25519.c \
   src/common/crypto_ed25519.c
 
-LIBOR_EVENT_A_SRC = \
+LIBOR_EVENT_LA_SRC = \
 	src/common/compat_libevent.c \
 	src/common/procmon.c         \
 	src/common/timers.c          \
 	src/ext/timeouts/timeout.c
 
-src_common_libor_a_SOURCES = $(LIBOR_A_SRC)
-src_common_libor_crypto_a_SOURCES = $(LIBOR_CRYPTO_A_SRC)
-src_common_libor_event_a_SOURCES = $(LIBOR_EVENT_A_SRC)
+src_common_libor_la_SOURCES = $(LIBOR_LA_SRC)
+src_common_libor_crypto_la_SOURCES = $(LIBOR_CRYPTO_LA_SRC)
+src_common_libor_event_la_SOURCES = $(LIBOR_EVENT_LA_SRC)
 
-src_common_libor_testing_a_SOURCES = $(LIBOR_A_SRC)
-src_common_libor_crypto_testing_a_SOURCES = $(LIBOR_CRYPTO_A_SRC)
-src_common_libor_event_testing_a_SOURCES = $(LIBOR_EVENT_A_SRC)
+src_common_libor_testing_la_SOURCES = $(LIBOR_LA_SRC)
+src_common_libor_crypto_testing_la_SOURCES = $(LIBOR_CRYPTO_LA_SRC)
+src_common_libor_event_testing_la_SOURCES = $(LIBOR_EVENT_LA_SRC)
 
-src_common_libor_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
-src_common_libor_crypto_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
-src_common_libor_event_testing_a_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
-src_common_libor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
-src_common_libor_crypto_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
-src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_common_libor_testing_la_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
+src_common_libor_crypto_testing_la_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
+src_common_libor_event_testing_la_CPPFLAGS = $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
+src_common_libor_testing_la_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_common_libor_crypto_testing_la_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_common_libor_event_testing_la_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 COMMONHEADERS = \
   src/common/address.h				\
