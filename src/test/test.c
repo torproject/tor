@@ -1242,6 +1242,7 @@ struct testgroup_t testgroups[] = {
   { "pt/", pt_tests },
   { "relay/" , relay_tests },
   { "relaycell/", relaycell_tests },
+  { "relaycrypt/", relaycrypt_tests },
   { "rend_cache/", rend_cache_tests },
   { "replaycache/", replaycache_tests },
   { "router/", router_tests },
