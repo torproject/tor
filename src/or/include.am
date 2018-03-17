@@ -91,6 +91,7 @@ LIBTOR_A_SOURCES = \
 	src/or/policies.c				\
 	src/or/reasons.c				\
 	src/or/relay.c					\
+	src/or/relay_crypto.c				\
 	src/or/rendcache.c				\
 	src/or/rendclient.c				\
 	src/or/rendcommon.c				\
@@ -237,6 +238,7 @@ ORHEADERS = \
 	src/or/proto_socks.h				\
 	src/or/reasons.h				\
 	src/or/relay.h					\
+	src/or/relay_crypto.h				\
 	src/or/rendcache.h				\
 	src/or/rendclient.h				\
 	src/or/rendcommon.h				\

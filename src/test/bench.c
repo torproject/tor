@@ -12,7 +12,7 @@
 
 #include "or.h"
 #include "onion_tap.h"
-#include "relay.h"
+#include "relay_crypto.h"
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>

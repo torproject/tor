@@ -90,13 +90,6 @@ void circuit_clear_cell_queue(circuit_t *circ, channel_t *chan);
 
 void stream_choice_seed_weak_rng(void);
 
-int relay_decrypt_cell(circuit_t *circ, cell_t *cell,
-                       cell_direction_t cell_direction,
-                       crypt_path_t **layer_hint, char *recognized);
-void relay_encrypt_cell_outbound(cell_t *cell, origin_circuit_t *or_circ,
-                            crypt_path_t *layer_hint);
-void relay_encrypt_cell_inbound(cell_t *cell, or_circuit_t *or_circ);
-
 circid_t packed_cell_get_circid(const packed_cell_t *cell, int wide_circ_ids);
 
 #ifdef RELAY_PRIVATE
