@@ -299,7 +299,8 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   if (circ->marked_for_close)
     return 0;
 
-  if (relay_crypt(circ, cell, cell_direction, &layer_hint, &recognized) < 0) {
+  if (relay_decrypt_cell(circ, cell, cell_direction, &layer_hint, &recognized)
+      < 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "relay crypt failed. Dropping connection.");
     return -END_CIRC_REASON_INTERNAL;
@@ -422,8 +423,9 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
  * else return 0.
  */
 int
-relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
-            crypt_path_t **layer_hint, char *recognized)
+relay_decrypt_cell(circuit_t *circ, cell_t *cell,
+                   cell_direction_t cell_direction,
+                   crypt_path_t **layer_hint, char *recognized)
 {
   relay_header_t rh;
 
