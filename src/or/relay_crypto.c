@@ -6,6 +6,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "hs_ntor.h" // for HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN
 #include "relay_crypto.h"
 #include "relay.h"
 
@@ -126,12 +127,12 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
         tor_assert(thishop);
 
         /* decrypt one layer */
-        relay_crypt_one_payload(thishop->b_crypto, cell->payload);
+        relay_crypt_one_payload(thishop->crypto.b_crypto, cell->payload);
 
         relay_header_unpack(&rh, cell->payload);
         if (rh.recognized == 0) {
           /* it's possibly recognized. have to check digest to be sure. */
-          if (relay_digest_matches(thishop->b_digest, cell)) {
+          if (relay_digest_matches(thishop->crypto.b_digest, cell)) {
             *recognized = 1;
             *layer_hint = thishop;
             return 0;
@@ -144,18 +145,20 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
              "Incoming cell at client not recognized. Closing.");
       return -1;
     } else {
+      relay_crypto_t *crypto = &TO_OR_CIRCUIT(circ)->crypto;
       /* We're in the middle. Encrypt one layer. */
-      relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->p_crypto, cell->payload);
+      relay_crypt_one_payload(crypto->b_crypto, cell->payload);
     }
   } else /* cell_direction == CELL_DIRECTION_OUT */ {
     /* We're in the middle. Decrypt one layer. */
+    relay_crypto_t *crypto = &TO_OR_CIRCUIT(circ)->crypto;
 
-    relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->n_crypto, cell->payload);
+    relay_crypt_one_payload(crypto->f_crypto, cell->payload);
 
     relay_header_unpack(&rh, cell->payload);
     if (rh.recognized == 0) {
       /* it's possibly recognized. have to check digest to be sure. */
-      if (relay_digest_matches(TO_OR_CIRCUIT(circ)->n_digest, cell)) {
+      if (relay_digest_matches(crypto->f_digest, cell)) {
         *recognized = 1;
         return 0;
       }
@@ -174,14 +177,14 @@ relay_encrypt_cell_outbound(cell_t *cell,
                             crypt_path_t *layer_hint)
 {
   crypt_path_t *thishop; /* counter for repeated crypts */
-  relay_set_digest(layer_hint->f_digest, cell);
+  relay_set_digest(layer_hint->crypto.f_digest, cell);
 
   thishop = layer_hint;
   /* moving from farthest to nearest hop */
   do {
     tor_assert(thishop);
     log_debug(LD_OR,"encrypting a layer of the relay cell.");
-    relay_crypt_one_payload(thishop->f_crypto, cell->payload);
+    relay_crypt_one_payload(thishop->crypto.f_crypto, cell->payload);
 
     thishop = thishop->prev;
   } while (thishop != circ->cpath->prev);
@@ -195,8 +198,123 @@ void
 relay_encrypt_cell_inbound(cell_t *cell,
                            or_circuit_t *or_circ)
 {
-  relay_set_digest(or_circ->p_digest, cell);
+  relay_set_digest(or_circ->crypto.b_digest, cell);
   /* encrypt one layer */
-  relay_crypt_one_payload(or_circ->p_crypto, cell->payload);
+  relay_crypt_one_payload(or_circ->crypto.b_crypto, cell->payload);
+}
+
+/**
+ * Release all storage held inside <b>crypto</b>, but do not free
+ * <b>crypto</b> itself: it lives inside another object.
+ */
+void
+relay_crypto_clear(relay_crypto_t *crypto)
+{
+  if (BUG(!crypto))
+    return;
+  crypto_cipher_free(crypto->f_crypto);
+  crypto_cipher_free(crypto->b_crypto);
+  crypto_digest_free(crypto->f_digest);
+  crypto_digest_free(crypto->b_digest);
+}
+
+/** Initialize <b>crypto</b> from the key material in key_data.
+ *
+ * If <b>is_hs_v3</b> is set, this cpath will be used for next gen hidden
+ * service circuits and <b>key_data</b> must be at least
+ * HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN bytes in length.
+ *
+ * If <b>is_hs_v3</b> is not set, key_data must contain CPATH_KEY_MATERIAL_LEN
+ * bytes, which are used as follows:
+ *   - 20 to initialize f_digest
+ *   - 20 to initialize b_digest
+ *   - 16 to key f_crypto
+ *   - 16 to key b_crypto
+ *
+ * (If 'reverse' is true, then f_XX and b_XX are swapped.)
+ *
+ * Return 0 if init was successful, else -1 if it failed.
+ */
+int
+relay_crypto_init(relay_crypto_t *crypto,
+                  const char *key_data, size_t key_data_len,
+                  int reverse, int is_hs_v3)
+{
+  crypto_digest_t *tmp_digest;
+  crypto_cipher_t *tmp_crypto;
+  size_t digest_len = 0;
+  size_t cipher_key_len = 0;
+
+  tor_assert(crypto);
+  tor_assert(key_data);
+  tor_assert(!(crypto->f_crypto || crypto->b_crypto ||
+             crypto->f_digest || crypto->b_digest));
+
+  /* Basic key size validation */
+  if (is_hs_v3 && BUG(key_data_len != HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN)) {
+    goto err;
+  } else if (!is_hs_v3 && BUG(key_data_len != CPATH_KEY_MATERIAL_LEN)) {
+    goto err;
+  }
+
+  /* If we are using this crypto for next gen onion services use SHA3-256,
+     otherwise use good ol' SHA1 */
+  if (is_hs_v3) {
+    digest_len = DIGEST256_LEN;
+    cipher_key_len = CIPHER256_KEY_LEN;
+    crypto->f_digest = crypto_digest256_new(DIGEST_SHA3_256);
+    crypto->b_digest = crypto_digest256_new(DIGEST_SHA3_256);
+  } else {
+    digest_len = DIGEST_LEN;
+    cipher_key_len = CIPHER_KEY_LEN;
+    crypto->f_digest = crypto_digest_new();
+    crypto->b_digest = crypto_digest_new();
+  }
+
+  tor_assert(digest_len != 0);
+  tor_assert(cipher_key_len != 0);
+  const int cipher_key_bits = (int) cipher_key_len * 8;
+
+  crypto_digest_add_bytes(crypto->f_digest, key_data, digest_len);
+  crypto_digest_add_bytes(crypto->b_digest, key_data+digest_len, digest_len);
+
+  crypto->f_crypto = crypto_cipher_new_with_bits(key_data+(2*digest_len),
+                                                cipher_key_bits);
+  if (!crypto->f_crypto) {
+    log_warn(LD_BUG,"Forward cipher initialization failed.");
+    goto err;
+  }
+
+  crypto->b_crypto = crypto_cipher_new_with_bits(
+                                        key_data+(2*digest_len)+cipher_key_len,
+                                        cipher_key_bits);
+  if (!crypto->b_crypto) {
+    log_warn(LD_BUG,"Backward cipher initialization failed.");
+    goto err;
+  }
+
+  if (reverse) {
+    tmp_digest = crypto->f_digest;
+    crypto->f_digest = crypto->b_digest;
+    crypto->b_digest = tmp_digest;
+    tmp_crypto = crypto->f_crypto;
+    crypto->f_crypto = crypto->b_crypto;
+    crypto->b_crypto = tmp_crypto;
+  }
+
+  return 0;
+ err:
+  relay_crypto_clear(crypto);
+  return -1;
+}
+
+/** Assert that <b>crypto</b> is valid and set. */
+void
+relay_crypto_assert_ok(const relay_crypto_t *crypto)
+{
+  tor_assert(crypto->f_crypto);
+  tor_assert(crypto->b_crypto);
+  tor_assert(crypto->f_digest);
+  tor_assert(crypto->b_digest);
 }
 

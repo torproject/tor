@@ -505,10 +505,10 @@ bench_cell_ops(void)
   char key1[CIPHER_KEY_LEN], key2[CIPHER_KEY_LEN];
   crypto_rand(key1, sizeof(key1));
   crypto_rand(key2, sizeof(key2));
-  or_circ->p_crypto = crypto_cipher_new(key1);
-  or_circ->n_crypto = crypto_cipher_new(key2);
-  or_circ->p_digest = crypto_digest_new();
-  or_circ->n_digest = crypto_digest_new();
+  or_circ->crypto.f_crypto = crypto_cipher_new(key1);
+  or_circ->crypto.b_crypto = crypto_cipher_new(key2);
+  or_circ->crypto.f_digest = crypto_digest_new();
+  or_circ->crypto.b_digest = crypto_digest_new();
 
   reset_perftime();
 
@@ -528,10 +528,7 @@ bench_cell_ops(void)
            NANOCOUNT(start,end,iters*CELL_PAYLOAD_SIZE));
   }
 
-  crypto_digest_free(or_circ->p_digest);
-  crypto_digest_free(or_circ->n_digest);
-  crypto_cipher_free(or_circ->p_crypto);
-  crypto_cipher_free(or_circ->n_crypto);
+  relay_crypto_clear(&or_circ->crypto);
   tor_free(or_circ);
   tor_free(cell);
 }
