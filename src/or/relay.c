@@ -487,6 +487,42 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
   return 0;
 }
 
+/**
+ * Encrypt a cell <b>cell</b> that we are creating, and sending outbound on
+ * <b>circ</b> until the hop corresponding to <b>layer_hint</b>.
+ */
+void
+relay_encrypt_cell_outbound(cell_t *cell,
+                            origin_circuit_t *circ,
+                            crypt_path_t *layer_hint)
+{
+  crypt_path_t *thishop; /* counter for repeated crypts */
+  relay_set_digest(layer_hint->f_digest, cell);
+
+  thishop = layer_hint;
+  /* moving from farthest to nearest hop */
+  do {
+    tor_assert(thishop);
+    log_debug(LD_OR,"encrypting a layer of the relay cell.");
+    relay_crypt_one_payload(thishop->f_crypto, cell->payload);
+
+    thishop = thishop->prev;
+  } while (thishop != circ->cpath->prev);
+}
+
+/**
+ * Encrypt a cell <b>cell</b> that we are creating, and sending on
+ * <b>circuit</b> to the origin.
+ */
+void
+relay_encrypt_cell_inbound(cell_t *cell,
+                           or_circuit_t *or_circ)
+{
+  relay_set_digest(or_circ->p_digest, cell);
+  /* encrypt one layer */
+  relay_crypt_one_payload(or_circ->p_crypto, cell->payload);
+}
+
 /** Package a relay cell from an edge:
  *  - Encrypt it to the right layer
  *  - Append it to the appropriate cell_queue on <b>circ</b>.
@@ -505,7 +541,6 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   if (cell_direction == CELL_DIRECTION_OUT) {
-    crypt_path_t *thishop; /* counter for repeated crypts */
     chan = circ->n_chan;
     if (!chan) {
       log_warn(LD_BUG,"outgoing relay cell sent from %s:%d has n_chan==NULL."
@@ -528,20 +563,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
       return 0; /* just drop it */
     }
 
-    relay_set_digest(layer_hint->f_digest, cell);
-
-    thishop = layer_hint;
-    /* moving from farthest to nearest hop */
-    do {
-      tor_assert(thishop);
-      log_debug(LD_OR,"encrypting a layer of the relay cell.");
-      relay_crypt_one_payload(thishop->f_crypto, cell->payload);
-
-      thishop = thishop->prev;
-    } while (thishop != TO_ORIGIN_CIRCUIT(circ)->cpath->prev);
-
+    relay_encrypt_cell_outbound(cell, TO_ORIGIN_CIRCUIT(circ), layer_hint);
   } else { /* incoming cell */
-    or_circuit_t *or_circ;
     if (CIRCUIT_IS_ORIGIN(circ)) {
       /* We should never package an _incoming_ cell from the circuit
        * origin; that means we messed up somewhere. */
@@ -549,11 +572,9 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
       assert_circuit_ok(circ);
       return 0; /* just drop it */
     }
-    or_circ = TO_OR_CIRCUIT(circ);
+    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+    relay_encrypt_cell_inbound(cell, or_circ);
     chan = or_circ->p_chan;
-    relay_set_digest(or_circ->p_digest, cell);
-    /* encrypt one layer */
-    relay_crypt_one_payload(or_circ->p_crypto, cell->payload);
   }
   ++stats_n_relay_cells_relayed;
 
