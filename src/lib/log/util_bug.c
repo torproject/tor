@@ -70,14 +70,25 @@ tor_set_failed_assertion_callback(void (*fn)(void))
 /** Helper for tor_assert: report the assertion failure. */
 void
 tor_assertion_failed_(const char *fname, unsigned int line,
-                      const char *func, const char *expr)
+                      const char *func, const char *expr,
+                      const char *fmt, ...)
 {
   char buf[256];
+  char *extra = NULL;
+  va_list ap;
+
+  if (fmt) {
+    va_start(ap,fmt);
+    tor_vasprintf(&extra, fmt, ap);
+    va_end(ap);
+  }
+
   log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.",
           fname, line, func, expr);
   tor_snprintf(buf, sizeof(buf),
-               "Assertion %s failed in %s at %s:%u",
-               expr, func, fname, line);
+               "Assertion %s failed in %s at %s:%u: %s",
+               expr, func, fname, line, extra ? extra : "");
+  tor_free(extra);
   log_backtrace(LOG_ERR, LD_BUG, buf);
 }
 

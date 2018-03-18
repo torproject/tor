@@ -92,13 +92,20 @@
 #define tor_assert(a) STMT_BEGIN                                        \
   (void)(a);                                                            \
   STMT_END
+#define tor_assertf(a, fmt, ...) STMT_BEGIN                             \
+  (void)(a);                                                            \
+  (void)(fmt);                                                          \
+  STMT_END
 #else
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
-#define tor_assert(expr) STMT_BEGIN                                     \
+#define tor_assert(expr) tor_assertf(expr, NULL)
+
+#define tor_assertf(expr, fmt, ...) STMT_BEGIN                          \
   if (ASSERT_PREDICT_LIKELY_(expr)) {                                   \
   } else {                                                              \
-    tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr);     \
+    tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr,      \
+                          fmt, ##__VA_ARGS__);                          \
     abort();                                                            \
   } STMT_END
 #endif /* defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS) */
@@ -106,7 +113,7 @@
 #define tor_assert_unreached()                                  \
   STMT_BEGIN {                                                  \
     tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__,     \
-                          "line should be unreached");          \
+                          "line should be unreached", NULL);    \
     abort();                                                    \
   } STMT_END
 
@@ -221,7 +228,8 @@
 #define tor_fragile_assert() tor_assert_nonfatal_unreached_once()
 
 void tor_assertion_failed_(const char *fname, unsigned int line,
-                           const char *func, const char *expr);
+                           const char *func, const char *expr,
+                           const char *fmt, ...);
 void tor_bug_occurred_(const char *fname, unsigned int line,
                        const char *func, const char *expr,
                        int once);
