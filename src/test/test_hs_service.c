@@ -419,8 +419,10 @@ test_service_intro_point(void *arg)
      * surprisingly slow... */
     tt_u64_op(ip->time_to_expire, OP_GE,
               now + INTRO_POINT_LIFETIME_MIN_SECONDS - 500);
+    /* We add 500 seconds, because this time we're testing against the
+     * maximum allowed time. */
     tt_u64_op(ip->time_to_expire, OP_LE,
-              now + INTRO_POINT_LIFETIME_MAX_SECONDS - 500);
+              now + INTRO_POINT_LIFETIME_MAX_SECONDS + 500);
     tt_assert(ip->replay_cache);
     tt_assert(ip->base.link_specifiers);
     /* By default, this is NOT a legacy object. */
