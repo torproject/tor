@@ -69,10 +69,26 @@ env:
     # - RUST_OPTIONS=""
 
 matrix:
-  ## If one build in the matrix fails (e.g. if building withour Rust and Clang
-  ## fails, but building with Rust and GCC is still going), then cancel the
-  ## entire job early and call the whole thing a failure.
-  fast_finish: true
+  ## Uncomment to allow the build to report success (with non-required
+  ## sub-builds continuing to run) if all required sub-builds have
+  ## succeeded.  This is somewhat buggy currently: it can cause
+  ## duplicate notifications and prematurely report success if a
+  ## single sub-build has succeeded.  See
+  ## https://github.com/travis-ci/travis-ci/issues/1696
+  # fast_finish: true
+
+  ## Uncomment the appropriate lines below to allow the build to
+  ## report success even if some less-critical sub-builds fail and it
+  ## seems likely to take a while for someone to fix it.  Currently
+  ## Travis CI doesn't distinguish "all builds succeeded" from "some
+  ## non-required sub-builds failed" except on the individual build's
+  ## page, which makes it somewhat annoying to detect from the
+  ## branches and build history pages.  See
+  ## https://github.com/travis-ci/travis-ci/issues/8716
+  allow_failures:
+    # - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
+    # - env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode
+    # - compiler: clang
 
   ## Create explicit matrix entries to work around a Travis CI
   ## environment issue.  Missing keys inherit from the first list
