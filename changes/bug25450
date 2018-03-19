@@ -1,0 +1,8 @@
+  o Minor bugfixes (testing):
+    - Avoid intermittent test failures due to relying on hidden service
+      introductory point creation within 5 seconds of real clock time.  The
+      time limit for the test has been increased to 500 seconds, which may
+      still result in intermittent failures (e.g. if the system doing the
+      testing enters sleep/hibernation or experiences some other clock jump).
+      However, this should elliminate test failures currently happening on
+      developer and CI systems.  Fixes bug 25450; bugfix on 0.3.1.3-alpha.
