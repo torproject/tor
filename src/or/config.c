@@ -4625,15 +4625,14 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
   if (options->DirCache) {
     if (total_mem < DIRCACHE_MIN_MEM_BYTES) {
       if (options->BridgeRelay) {
-        *msg = tor_strdup("Running a Bridge with less than "
-                      STRINGIFY(DIRCACHE_MIN_MEM_MB) " MB of memory is not "
-                      "recommended.");
+        tor_asprintf(msg, "Running a Bridge with less than %d MB of memory "
+                       "is not recommended.", DIRCACHE_MIN_MEM_MB);
       } else {
-        *msg = tor_strdup("Being a directory cache (default) with less than "
-                      STRINGIFY(DIRCACHE_MIN_MEM_MB) " MB of memory is not "
-                      "recommended and may consume most of the available "
-                      "resources, consider disabling this functionality by "
-                      "setting the DirCache option to 0.");
+        tor_asprintf(msg, "Being a directory cache (default) with less than "
+                       "%d MB of memory is not recommended and may consume "
+                       "most of the available resources. Consider disabling "
+                       "this functionality by setting the DirCache option "
+                       "to 0.", DIRCACHE_MIN_MEM_MB);
       }
     }
   } else {
