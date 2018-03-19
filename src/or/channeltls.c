@@ -160,9 +160,8 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->write_var_cell = channel_tls_write_var_cell_method;
 
   chan->cmux = circuitmux_alloc();
-  if (cell_ewma_enabled()) {
-    circuitmux_set_policy(chan->cmux, &ewma_policy);
-  }
+  /* We only have one policy for now so always set it to EWMA. */
+  circuitmux_set_policy(chan->cmux, &ewma_policy);
 }
 
 /**

@@ -422,9 +422,6 @@ void channel_free_all(void);
 void channel_dumpstats(int severity);
 void channel_listener_dumpstats(int severity);
 
-/* Set the cmux policy on all active channels */
-void channel_set_cmux_policy_everywhere(circuitmux_policy_t *pol);
-
 #ifdef TOR_CHANNEL_INTERNAL_
 
 #ifdef CHANNEL_PRIVATE_

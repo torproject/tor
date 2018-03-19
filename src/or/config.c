@@ -264,7 +264,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("CircuitIdleTimeout"),
   V(CircuitsAvailableTimeout,    INTERVAL, "0"),
   V(CircuitStreamTimeout,        INTERVAL, "0"),
-  V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
+  V(CircuitPriorityHalflife,     DOUBLE,  "-1.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ClientPreferIPv6ORPort,      AUTOBOOL, "auto"),
@@ -1791,7 +1791,6 @@ options_act(const or_options_t *old_options)
   char *msg=NULL;
   const int transition_affects_workers =
     old_options && options_transition_affects_workers(old_options, options);
-  int old_ewma_enabled;
   const int transition_affects_guards =
     old_options && options_transition_affects_guards(old_options, options);
 
@@ -2065,16 +2064,8 @@ options_act(const or_options_t *old_options)
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
-  old_ewma_enabled = cell_ewma_enabled();
   /* Change the cell EWMA settings */
-  cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
-  /* If we just enabled ewma, set the cmux policy on all active channels */
-  if (cell_ewma_enabled() && !old_ewma_enabled) {
-    channel_set_cmux_policy_everywhere(&ewma_policy);
-  } else if (!cell_ewma_enabled() && old_ewma_enabled) {
-    /* Turn it off everywhere */
-    channel_set_cmux_policy_everywhere(NULL);
-  }
+  cmux_ewma_set_options(options, networkstatus_get_latest_consensus());
 
   /* Update the BridgePassword's hashed version as needed.  We store this as a
    * digest so that we can do side-channel-proof comparisons on it.

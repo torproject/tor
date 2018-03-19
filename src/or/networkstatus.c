@@ -1768,7 +1768,6 @@ networkstatus_set_current_consensus(const char *consensus,
   consensus_waiting_for_certs_t *waiting = NULL;
   time_t current_valid_after = 0;
   int free_consensus = 1; /* Free 'c' at the end of the function */
-  int old_ewma_enabled;
   int checked_protocols_already = 0;
 
   if (flav < 0) {
@@ -2001,17 +2000,8 @@ networkstatus_set_current_consensus(const char *consensus,
     /* XXXXNM Microdescs: needs a non-ns variant. ???? NM*/
     update_consensus_networkstatus_fetch_time(now);
 
-    /* Update ewma and adjust policy if needed; first cache the old value */
-    old_ewma_enabled = cell_ewma_enabled();
     /* Change the cell EWMA settings */
-    cell_ewma_set_scale_factor(options, c);
-    /* If we just enabled ewma, set the cmux policy on all active channels */
-    if (cell_ewma_enabled() && !old_ewma_enabled) {
-      channel_set_cmux_policy_everywhere(&ewma_policy);
-    } else if (!cell_ewma_enabled() && old_ewma_enabled) {
-      /* Turn it off everywhere */
-      channel_set_cmux_policy_everywhere(NULL);
-    }
+    cmux_ewma_set_options(options, c);
 
     /* XXXX this call might be unnecessary here: can changing the
      * current consensus really alter our view of any OR's rate limits? */

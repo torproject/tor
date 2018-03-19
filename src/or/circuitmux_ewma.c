@@ -223,8 +223,6 @@ ewma_cmp_cmux(circuitmux_t *cmux_1, circuitmux_policy_data_t *pol_data_1,
  * has value ewma_scale_factor ** N.)
  */
 static double ewma_scale_factor = 0.1;
-/* DOCDOC ewma_enabled */
-static int ewma_enabled = 0;
 
 /*** EWMA circuitmux_policy_t method table ***/
 
@@ -242,6 +240,13 @@ circuitmux_policy_t ewma_policy = {
 };
 
 /*** EWMA method implementations using the below EWMA helper functions ***/
+
+/** Compute and return the current cell_ewma tick. */
+static inline unsigned int
+cell_ewma_get_tick(void)
+{
+  return ((unsigned)approx_time() / EWMA_TICK_LEN);
+}
 
 /**
  * Allocate an ewma_policy_data_t and upcast it to a circuitmux_policy_data_t;
@@ -612,59 +617,79 @@ cell_ewma_tick_from_timeval(const struct timeval *now,
   return res;
 }
 
-/** Tell the caller whether ewma_enabled is set */
-int
-cell_ewma_enabled(void)
-{
-  return ewma_enabled;
-}
+/* Default value for the CircuitPriorityHalflifeMsec consensus parameter in
+ * msec. */
+#define CMUX_PRIORITY_HALFLIFE_MSEC_DEFAULT 30000
+/* Minimum and maximum value for the CircuitPriorityHalflifeMsec consensus
+ * parameter. */
+#define CMUX_PRIORITY_HALFLIFE_MSEC_MIN 1
+#define CMUX_PRIORITY_HALFLIFE_MSEC_MAX INT32_MAX
 
-/** Compute and return the current cell_ewma tick. */
-unsigned int
-cell_ewma_get_tick(void)
+/* Return the value of the circuit priority halflife from the options if
+ * available or else from the consensus (in that order). If none can be found,
+ * a default value is returned.
+ *
+ * The source_msg points to a string describing from where the value was
+ * picked so it can be used for logging. */
+static double
+get_circuit_priority_halflife(const or_options_t *options,
+                              const networkstatus_t *consensus,
+                              const char **source_msg)
 {
-  return ((unsigned)approx_time() / EWMA_TICK_LEN);
+  int32_t halflife_ms;
+  double halflife;
+  /* Compute the default value now. We might need it. */
+  double halflife_default =
+    ((double) CMUX_PRIORITY_HALFLIFE_MSEC_DEFAULT) / 1000.0;
+
+  /* Try to get it from configuration file first. */
+  if (options && options->CircuitPriorityHalflife < EPSILON) {
+    halflife = options->CircuitPriorityHalflife;
+    *source_msg = "CircuitPriorityHalflife in configuration";
+    goto end;
+  }
+
+  /* Try to get the msec value from the consensus. */
+  halflife_ms = networkstatus_get_param(consensus,
+                                        "CircuitPriorityHalflifeMsec",
+                                        CMUX_PRIORITY_HALFLIFE_MSEC_DEFAULT,
+                                        CMUX_PRIORITY_HALFLIFE_MSEC_MIN,
+                                        CMUX_PRIORITY_HALFLIFE_MSEC_MAX);
+  halflife = ((double) halflife_ms) / 1000.0;
+  *source_msg = "CircuitPriorityHalflifeMsec in consensus";
+
+ end:
+  /* We should never go below the EPSILON else we would consider it disabled
+   * and we can't have that. */
+  if (halflife < EPSILON) {
+    log_warn(LD_CONFIG, "CircuitPriorityHalflife is too small (%f). "
+                        "Adjusting to the smallest value allowed: %f.",
+             halflife, halflife_default);
+    halflife = halflife_default;
+  }
+  return halflife;
 }
 
 /** Adjust the global cell scale factor based on <b>options</b> */
 void
-cell_ewma_set_scale_factor(const or_options_t *options,
-                           const networkstatus_t *consensus)
+cmux_ewma_set_options(const or_options_t *options,
+                      const networkstatus_t *consensus)
 {
-  int32_t halflife_ms;
   double halflife;
   const char *source;
-  if (options && options->CircuitPriorityHalflife >= -EPSILON) {
-    halflife = options->CircuitPriorityHalflife;
-    source = "CircuitPriorityHalflife in configuration";
-  } else if (consensus && (halflife_ms = networkstatus_get_param(
-                 consensus, "CircuitPriorityHalflifeMsec",
-                 -1, -1, INT32_MAX)) >= 0) {
-    halflife = ((double)halflife_ms)/1000.0;
-    source = "CircuitPriorityHalflifeMsec in consensus";
-  } else {
-    halflife = EWMA_DEFAULT_HALFLIFE;
-    source = "Default value";
-  }
 
-  if (halflife <= EPSILON) {
-    /* The cell EWMA algorithm is disabled. */
-    ewma_scale_factor = 0.1;
-    ewma_enabled = 0;
-    log_info(LD_OR,
-             "Disabled cell_ewma algorithm because of value in %s",
-             source);
-  } else {
-    /* convert halflife into halflife-per-tick. */
-    halflife /= EWMA_TICK_LEN;
-    /* compute per-tick scale factor. */
-    ewma_scale_factor = exp( LOG_ONEHALF / halflife );
-    ewma_enabled = 1;
-    log_info(LD_OR,
-             "Enabled cell_ewma algorithm because of value in %s; "
-             "scale factor is %f per %d seconds",
-             source, ewma_scale_factor, EWMA_TICK_LEN);
-  }
+  /* Both options and consensus can be NULL. This assures us to either get a
+   * valid configured value or the default one. */
+  halflife = get_circuit_priority_halflife(options, consensus, &source);
+
+  /* convert halflife into halflife-per-tick. */
+  halflife /= EWMA_TICK_LEN;
+  /* compute per-tick scale factor. */
+  ewma_scale_factor = exp( LOG_ONEHALF / halflife );
+  log_info(LD_OR,
+           "Enabled cell_ewma algorithm because of value in %s; "
+           "scale factor is %f per %d seconds",
+           source, ewma_scale_factor, EWMA_TICK_LEN);
 }
 
 /** Return the multiplier necessary to convert the value of a cell sent in
