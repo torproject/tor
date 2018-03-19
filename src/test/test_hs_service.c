@@ -413,13 +413,14 @@ test_service_intro_point(void *arg)
               INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS);
     tt_u64_op(ip->introduce2_max, OP_LE,
               INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
-    /* Time to expire MUST also be in that range. We add 5 seconds because
-     * there could be a gap between setting now and the time taken in
-     * service_intro_point_new. On ARM, it can be surprisingly slow... */
+    /* Time to expire MUST also be in that range. We subtract 500 seconds
+     * because there could be a gap between setting now and the time taken in
+     * service_intro_point_new. On ARM and other older CPUs, it can be
+     * surprisingly slow... */
     tt_u64_op(ip->time_to_expire, OP_GE,
-              now + INTRO_POINT_LIFETIME_MIN_SECONDS + 5);
+              now + INTRO_POINT_LIFETIME_MIN_SECONDS - 500);
     tt_u64_op(ip->time_to_expire, OP_LE,
-              now + INTRO_POINT_LIFETIME_MAX_SECONDS + 5);
+              now + INTRO_POINT_LIFETIME_MAX_SECONDS - 500);
     tt_assert(ip->replay_cache);
     tt_assert(ip->base.link_specifiers);
     /* By default, this is NOT a legacy object. */
