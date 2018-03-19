@@ -31,16 +31,6 @@
  * "maximum severity" read "most severe" and "numerically *lowest* severity".
  */
 
-/** This defines log levels that are linked in the Rust log module, rather
- * than re-defining these in both Rust and C.
- *
- * C_RUST_COUPLED src/rust/tor_log LogSeverity, LogDomain
- */
-extern const int LOG_WARN_;
-extern const int LOG_NOTICE_;
-extern const log_domain_mask_t LD_NET_;
-extern const log_domain_mask_t LD_GENERAL_;
-
 /** Debug-level severity: for hyper-verbose messages of no interest to
  * anybody but developers. */
 #define LOG_DEBUG   7
@@ -261,6 +251,16 @@ void tor_log_string(int severity, log_domain_mask_t domain,
   log_fn_ratelim_(ratelim, severity, domain, __FUNCTION__, \
                   args, ##__VA_ARGS__)
 #endif /* defined(__GNUC__) && __GNUC__ <= 3 */
+
+/** This defines log levels that are linked in the Rust log module, rather
+ * than re-defining these in both Rust and C.
+ *
+ * C_RUST_COUPLED src/rust/tor_log LogSeverity, LogDomain
+ */
+extern const int LOG_WARN_;
+extern const int LOG_NOTICE_;
+extern const log_domain_mask_t LD_NET_;
+extern const log_domain_mask_t LD_GENERAL_;
 
 #ifdef LOG_PRIVATE
 MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
