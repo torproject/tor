@@ -31,6 +31,16 @@
  * "maximum severity" read "most severe" and "numerically *lowest* severity".
  */
 
+/** This defines log levels that are linked in the Rust log module, rather
+ * than re-defining these in both Rust and C.
+ *
+ * C_RUST_COUPLED src/rust/tor_log LogSeverity, LogDomain
+ */
+extern const int LOG_WARN_;
+extern const int LOG_NOTICE_;
+extern const log_domain_mask_t LD_NET_;
+extern const log_domain_mask_t LD_GENERAL_;
+
 /** Debug-level severity: for hyper-verbose messages of no interest to
  * anybody but developers. */
 #define LOG_DEBUG   7
@@ -190,6 +200,10 @@ void log_fn_ratelim_(struct ratelim_t *ratelim, int severity,
                      log_domain_mask_t domain, const char *funcname,
                      const char *format, ...)
   CHECK_PRINTF(5,6);
+
+int log_message_is_interesting(int severity, log_domain_mask_t domain);
+void tor_log_string(int severity, log_domain_mask_t domain,
+                    const char *function, const char *string);
 
 #if defined(__GNUC__) && __GNUC__ <= 3
 

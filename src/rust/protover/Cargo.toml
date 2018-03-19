@@ -3,6 +3,9 @@ authors = ["The Tor Project"]
 version = "0.0.1"
 name = "protover"
 
+[features]
+testing = ["tor_log/testing"]
+
 [dependencies]
 libc = "0.2.22"
 
@@ -17,6 +20,9 @@ path = "../tor_util"
 
 [dependencies.tor_allocate]
 path = "../tor_allocate"
+
+[dependencies.tor_log]
+path = "../tor_log"
 
 [lib]
 name = "protover"

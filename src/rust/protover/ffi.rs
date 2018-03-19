@@ -127,9 +127,11 @@ pub extern "C" fn protocol_list_supports_protocol_or_later(
         Err(_) => return 0,
     };
 
-    let is_supported =
-        protover_string_supports_protocol_or_later(
-            protocol_list, protocol, version);
+    let is_supported = protover_string_supports_protocol_or_later(
+        protocol_list,
+        protocol,
+        version,
+    );
 
     return if is_supported { 1 } else { 0 };
 }

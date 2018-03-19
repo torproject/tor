@@ -133,7 +133,7 @@ void evdns_shutdown(int);
 #ifdef HAVE_RUST
 // helper function defined in Rust to output a log message indicating if tor is
 // running with Rust enabled. See src/rust/tor_util
-char *rust_welcome_string(void);
+void rust_log_welcome_string(void);
 #endif
 
 /********* PROTOTYPES **********/
@@ -3344,11 +3344,7 @@ tor_init(int argc, char *argv[])
   }
 
 #ifdef HAVE_RUST
-  char *rust_str = rust_welcome_string();
-  if (rust_str != NULL && strlen(rust_str) > 0) {
-    log_notice(LD_GENERAL, "%s", rust_str);
-  }
-  tor_free(rust_str);
+  rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
 
   if (network_init()<0) {

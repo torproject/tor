@@ -7,5 +7,8 @@
 extern crate libc;
 extern crate tor_allocate;
 
+#[macro_use]
+extern crate tor_log;
+
 pub mod ffi;
 pub mod strings;

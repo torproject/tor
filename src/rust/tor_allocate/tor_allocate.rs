@@ -1,12 +1,17 @@
 // Copyright (c) 2016-2017, The Tor Project, Inc. */
 // See LICENSE for licensing information */
+// No-op defined purely for testing at the module level
+use libc::c_char;
 
-use libc::{c_char, c_void};
+#[cfg(not(feature = "testing"))]
 use std::{ptr, slice, mem};
+use libc::c_void;
 
-#[cfg(not(test))]
-extern "C" {
-    fn tor_malloc_(size: usize) -> *mut c_void;
+// Define a no-op implementation for testing Rust modules without linking to C
+#[cfg(feature = "testing")]
+pub fn allocate_and_copy_string(s: &String) -> *mut c_char {
+    use std::ffi::CString;
+    CString::new(s.as_str()).unwrap().into_raw()
 }
 
 // Defined only for tests, used for testing purposes, so that we don't need
@@ -15,6 +20,11 @@ extern "C" {
 unsafe extern "C" fn tor_malloc_(size: usize) -> *mut c_void {
     use libc::malloc;
     malloc(size)
+}
+
+#[cfg(all(not(test), not(feature = "testing")))]
+extern "C" {
+    fn tor_malloc_(size: usize) -> *mut c_void;
 }
 
 /// Allocate memory using tor_malloc_ and copy an existing string into the
@@ -28,6 +38,7 @@ unsafe extern "C" fn tor_malloc_(size: usize) -> *mut c_void {
 ///
 /// A `*mut c_char` that should be freed by tor_free in C
 ///
+#[cfg(not(feature = "testing"))]
 pub fn allocate_and_copy_string(src: &String) -> *mut c_char {
     let bytes: &[u8] = src.as_bytes();
 

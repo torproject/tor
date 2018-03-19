@@ -52,6 +52,13 @@
 
 #define raw_assert(x) assert(x) // assert OK
 
+/** Defining compile-time constants for Tor log levels (used by the Rust
+ * log wrapper at src/rust/tor_log) */
+const int LOG_WARN_ = LOG_WARN;
+const int LOG_NOTICE_ = LOG_NOTICE;
+const log_domain_mask_t LD_GENERAL_ = LD_GENERAL;
+const log_domain_mask_t LD_NET_ = LD_NET;
+
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
   struct logfile_t *next; /**< Next logfile_t in the linked list. */
@@ -223,6 +230,30 @@ log_set_application_name(const char *name)
 {
   tor_free(appname);
   appname = name ? tor_strdup(name) : NULL;
+}
+
+/** Return true if some of the running logs might be interested in a log
+ * message of the given severity in the given domains. If this function
+ * returns true, the log message might be ignored anyway, but if it returns
+ * false, it is definitely_ safe not to log the message. */
+int
+log_message_is_interesting(int severity, log_domain_mask_t domain)
+{
+  (void) domain;
+  return (severity <= log_global_min_severity_);
+}
+
+/**
+ * As tor_log, but takes an optional function name, and does not treat its
+ * <b>string</b> as a printf format.
+ *
+ * For use by Rust integration.
+ */
+void
+tor_log_string(int severity, log_domain_mask_t domain,
+               const char *function, const char *string)
+{
+  log_fn_(severity, domain, function, "%s", string);
 }
 
 /** Log time granularity in milliseconds. */
