@@ -1,0 +1,5 @@
+  o Minor bugfixes (documentation):
+    - Document that the PerConnBW{Rate,Burst} options will fall back to their
+      corresponding consensus parameters only if those parameters are
+      set. Previously we had claimed that these values would always be
+      set in the consensus. Fixes bug 25296; bugfix on 0.2.2.7-alpha.
