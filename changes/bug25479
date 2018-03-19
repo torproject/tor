@@ -1,0 +1,4 @@
+  o Major bugfixes (benchmarks):
+    - Fix a crash when running benchmark tests on win32 systems which
+      was due to an uninitialised mutex before logging and options
+      were initialised.  Fixes bug 25479; bugfix on 0.3.3.3-alpha.
