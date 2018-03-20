@@ -414,11 +414,6 @@ void start_daemon(void);
 void finish_daemon(const char *desired_cwd);
 int write_pidfile(const char *filename);
 
-/* Port forwarding */
-void tor_check_port_forwarding(const char *filename,
-                               struct smartlist_t *ports_to_forward,
-                               time_t now);
-
 void tor_disable_spawning_background_processes(void);
 
 typedef struct process_handle_t process_handle_t;
@@ -457,9 +452,7 @@ void set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
                                            void (*free_old)(void*),
                                            int free_p);
 
-/* Values of process_handle_t.status. PROCESS_STATUS_NOTRUNNING must be
- * 0 because tor_check_port_forwarding depends on this being the initial
- * statue of the static instance of process_handle_t */
+/* Values of process_handle_t.status. */
 #define PROCESS_STATUS_NOTRUNNING 0
 #define PROCESS_STATUS_RUNNING 1
 #define PROCESS_STATUS_ERROR -1

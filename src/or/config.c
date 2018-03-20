@@ -492,8 +492,6 @@ static config_var_t option_vars_[] = {
   V(TestingSigningKeySlop,           INTERVAL, "1 day"),
 
   V(OptimisticData,              AUTOBOOL, "auto"),
-  V(PortForwarding,              BOOL,     "0"),
-  V(PortForwardingHelper,        FILENAME, "tor-fw-helper"),
   OBSOLETE("PreferTunneledDirConns"),
   V(ProtocolWarnings,            BOOL,     "0"),
   V(PublishServerDescriptor,     CSV,      "1"),
@@ -3906,15 +3904,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");
-
-  if (options->PortForwarding && options->Sandbox) {
-    REJECT("PortForwarding is not compatible with Sandbox; at most one can "
-           "be set");
-  }
-  if (options->PortForwarding && options->NoExec) {
-    COMPLAIN("Both PortForwarding and NoExec are set; PortForwarding will "
-             "be ignored.");
-  }
 
   if (ensure_bandwidth_cap(&options->BandwidthRate,
                            "BandwidthRate", msg) < 0)
