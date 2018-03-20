@@ -54,12 +54,16 @@ If you have any external modules as dependencies (e.g. `extern crate
 libc;`), you MUST declare them in your crate's `lib.rs` and NOT in any
 other module.
 
- Dependencies
---------------
+ Dependencies and versions
+---------------------------
 
 In general, we use modules from only the Rust standard library
 whenever possible. We will review including external crates on a
 case-by-case basis.
+
+Currently, Tor requires that you use the latest stable Rust version. At
+some point in the future, we will freeze on a given stable Rust version,
+to ensure backward compatibility with stable distributions that ship it.
 
  Documentation
 ---------------
