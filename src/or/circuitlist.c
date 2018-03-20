@@ -82,6 +82,9 @@
 #include "routerlist.h"
 #include "routerset.h"
 #include "channelpadding.h"
+#include "compress_lzma.h"
+#include "compress_zlib.h"
+#include "compress_zstd.h"
 
 #include "ht.h"
 
@@ -2476,12 +2479,17 @@ circuits_handle_oom(size_t current_allocation)
   log_notice(LD_GENERAL, "We're low on memory (cell queues total alloc:"
              " %"TOR_PRIuSZ" buffer total alloc: %" TOR_PRIuSZ ","
              " tor compress total alloc: %" TOR_PRIuSZ
+             " (zlib: %" TOR_PRIuSZ ", zstd: %" TOR_PRIuSZ ","
+             " lzma: %" TOR_PRIuSZ "),"
              " rendezvous cache total alloc: %" TOR_PRIuSZ "). Killing"
              " circuits withover-long queues. (This behavior is controlled by"
              " MaxMemInQueues.)",
              cell_queues_get_total_allocation(),
              buf_get_total_allocation(),
              tor_compress_get_total_allocation(),
+             tor_zlib_get_total_allocation(),
+             tor_zstd_get_total_allocation(),
+             tor_lzma_get_total_allocation(),
              rend_cache_get_total_allocation());
 
   {
