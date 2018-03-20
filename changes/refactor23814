@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove the old (deterministic) directory retry logic entirely:
-      We've used exponential backoff exclusively for some time.
-      Closes ticket 23814.
