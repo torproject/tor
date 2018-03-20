@@ -99,9 +99,6 @@ static void adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
                                                   entry_connection_t *conn,
                                                   node_t *node,
                                                   const tor_addr_t *addr);
-#if 0
-static int get_max_middle_cells(void);
-#endif
 
 /** Stop reading on edge connections when we have this many cells
  * waiting on the appropriate queue. */
