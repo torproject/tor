@@ -1513,7 +1513,9 @@ build_all_descriptors(time_t now)
      * empty, we'll try to build it for the next time period. This only
      * happens when we rotate meaning that we are guaranteed to have a new SRV
      * at that point for the next time period. */
-    tor_assert(service->desc_current);
+    if (BUG(service->desc_current == NULL)) {
+      continue;
+    }
 
     if (service->desc_next == NULL) {
       build_service_descriptor(service, now, hs_get_next_time_period_num(0),
@@ -1930,6 +1932,31 @@ should_rotate_descriptors(hs_service_t *service, time_t now)
   }
 
   if (ns->valid_after >= service->state.next_rotation_time) {
+    /* In theory, we should never get here with no descriptors. We can never
+     * have a NULL current descriptor except when tor starts up. The next
+     * descriptor can be NULL after a rotation but we build a new one right
+     * after.
+     *
+     * So, when tor starts, the next rotation time is set to the start of the
+     * next SRV period using the consensus valid after time so it should
+     * always be set to a future time value. This means that we should never
+     * reach this point at bootup that is this check safeguards tor in never
+     * allowing a rotation if the valid after time is smaller than the next
+     * rotation time.
+     *
+     * This is all good in theory but we've had a NULL descriptor issue here
+     * so this is why we BUG() on both with extra logging to try to understand
+     * how this can possibly happens. We'll simply ignore and tor should
+     * recover from this by skipping rotation and building the missing
+     * descriptors just after this. */
+    if (BUG(service->desc_current == NULL || service->desc_next == NULL)) {
+      log_warn(LD_BUG, "Service descriptor is NULL (%p/%p). Next rotation "
+                       "time is %ld (now: %ld). Valid after time from "
+                       "consensus is %ld",
+               service->desc_current, service->desc_next,
+               service->state.next_rotation_time, now, ns->valid_after);
+      goto no_rotation;
+    }
     goto rotation;
   }
 
@@ -1981,9 +2008,6 @@ rotate_all_descriptors(time_t now)
     if (!should_rotate_descriptors(service, now)) {
       continue;
     }
-
-    tor_assert(service->desc_current);
-    tor_assert(service->desc_next);
 
     log_info(LD_REND, "Time to rotate our descriptors (%p / %p) for %s",
              service->desc_current, service->desc_next,
