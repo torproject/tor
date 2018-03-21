@@ -1177,18 +1177,34 @@ or_connect_failure_ht_eq(const or_connect_failure_entry_t *a,
 static unsigned int
 or_connect_failure_ht_hash(const or_connect_failure_entry_t *entry)
 {
-  size_t offset = 0;
-  uint8_t data[sizeof(tor_addr_t) + sizeof(uint16_t) + DIGEST_LEN];
+  size_t offset = 0, addr_size;
+  const void *addr_ptr;
+  /* Largest size is IPv6 and IPv4 is smaller so it is fine. */
+  uint8_t data[16 + sizeof(uint16_t) + DIGEST_LEN];
 
-  memcpy(data, &entry->addr, sizeof(tor_addr_t));
-  offset += sizeof(tor_addr_t);
+  /* Get the right address bytes depending on the family. */
+  switch (tor_addr_family(&entry->addr)) {
+  case AF_INET:
+    addr_size = 4;
+    addr_ptr = &entry->addr.addr.in_addr.s_addr;
+    break;
+  case AF_INET6:
+    addr_size = 16;
+    addr_ptr = &entry->addr.addr.in6_addr.s6_addr;
+    break;
+  default:
+    tor_assert_nonfatal_unreached();
+    return 0;
+  }
+
+  memcpy(data, addr_ptr, addr_size);
+  offset += addr_size;
   memcpy(data + offset, entry->identity_digest, DIGEST_LEN);
   offset += DIGEST_LEN;
   set_uint16(data + offset, entry->port);
   offset += sizeof(uint16_t);
-  tor_assert(offset == sizeof(data));
 
-  return siphash24g(data, sizeof(data));
+  return siphash24g(data, offset);
 }
 
 HT_PROTOTYPE(or_connect_failure_ht, or_connect_failure_entry_t, node,
