@@ -7,7 +7,7 @@ name = "protover"
 testing = ["tor_log/testing"]
 
 [dependencies]
-libc = "0.2.22"
+libc = "=0.2.39"
 
 [dependencies.smartlist]
 path = "../smartlist"

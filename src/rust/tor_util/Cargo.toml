@@ -15,5 +15,5 @@ path = "../tor_allocate"
 path = "../tor_log"
 
 [dependencies]
-libc = "0.2.22"
+libc = "=0.2.39"
 
