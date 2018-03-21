@@ -175,6 +175,8 @@ pub extern "C" fn protover_get_supported_protocols() -> *const c_char {
 
 /// Provide an interface for C to translate arguments and return types for
 /// protover::compute_vote
+//
+// Why is the threshold a signed integer? —isis
 #[no_mangle]
 pub extern "C" fn protover_compute_vote(
     list: *const Stringlist,
@@ -189,10 +191,19 @@ pub extern "C" fn protover_compute_vote(
     // Dereference of raw pointer requires an unsafe block. The pointer is
     // checked above to ensure it is not null.
     let data: Vec<String> = unsafe { (*list).get_list() };
+    let hold: usize = threshold as usize;
+    let mut proto_entries: Vec<UnvalidatedProtoEntry> = Vec::new();
 
-    let vote = compute_vote(data, threshold);
+    for datum in data {
+        let entry: UnvalidatedProtoEntry = match datum.parse() {
+            Ok(x)  => x,
+            Err(_) => continue,
+        };
+        proto_entries.push(entry);
+    }
+    let vote: UnvalidatedProtoEntry = ProtoverVote::compute(&proto_entries, &hold);
 
-    allocate_and_copy_string(&vote)
+    allocate_and_copy_string(&vote.to_string())
 }
 
 /// Provide an interface for C to translate arguments and return types for
