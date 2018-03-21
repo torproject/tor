@@ -14,6 +14,7 @@ use std::u32;
 use tor_util::strings::NUL_BYTE;
 
 use errors::ProtoverError;
+use protoset::Version;
 
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
@@ -26,7 +27,7 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// before concluding that someone is trying to DoS us
 ///
 /// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
-const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
+pub(crate) const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
 
 /// Currently supported protocols and their versions, as a byte-slice.
 ///
@@ -158,70 +159,6 @@ impl SupportedProtocols {
         Self::from_proto_entries_string(get_supported_protocols())
     }
 }
-
-type Version = u32;
-
-/// Set of versions for a protocol.
-#[derive(Debug, PartialEq, Eq)]
-pub struct Versions(HashSet<Version>);
-
-impl Versions {
-    /// Get the unique version numbers supported by a subprotocol.
-    ///
-    /// # Inputs
-    ///
-    /// * `version_string`, a string comprised of "[0-9,-]"
-    ///
-    /// # Returns
-    ///
-    /// A `Result` whose `Ok` value is a `HashSet<u32>` holding all of the unique
-    /// version numbers.  If there were ranges in the `version_string`, then these
-    /// are expanded, i.e. `"1-3"` would expand to `HashSet<u32>::new([1, 2, 3])`.
-    /// The returned HashSet is *unordered*.
-    ///
-    /// The returned `Result`'s `Err` value is an `&'static str` with a description
-    /// of the error.
-    ///
-    /// # Errors
-    ///
-    /// This function will error if:
-    ///
-    /// * the `version_string` is empty or contains an equals (`"="`) sign,
-    /// * the expansion of a version range produces an error (see
-    ///  `expand_version_range`),
-    /// * any single version number is not parseable as an `u32` in radix 10, or
-    /// * there are greater than 2^16 version numbers to expand.
-    ///
-    fn from_version_string(
-        version_string: &str,
-    ) -> Result<Self, &'static str> {
-        let mut versions = HashSet::<Version>::new();
-
-        for piece in version_string.split(",") {
-            if piece.contains("-") {
-                for p in expand_version_range(piece)? {
-                    versions.insert(p);
-                }
-            } else if piece == "" {
-                continue;
-            } else {
-                let v = u32::from_str(piece).or(
-                    Err("invalid protocol entry"),
-                )?;
-                if v == u32::MAX {
-                    return Err("invalid protocol entry");
-                }
-                versions.insert(v);
-            }
-
-            if versions.len() > MAX_PROTOCOLS_TO_EXPAND {
-                return Err("Too many versions to expand");
-            }
-        }
-        Ok(Versions(versions))
-    }
-}
-
 
 /// Parse the subprotocol type and its version numbers.
 ///
@@ -407,149 +344,6 @@ pub fn protover_string_supports_protocol_or_later(
     };
 
     supported_versions.0.iter().any(|v| v >= &vers)
-}
-
-/// Fully expand a version range. For example, 1-3 expands to 1,2,3
-/// Helper for Versions::from_version_string
-///
-/// # Inputs
-///
-/// `range`, a string comprised of "[0-9,-]"
-///
-/// # Returns
-///
-/// A `Result` whose `Ok` value a vector of unsigned integers representing the
-/// expanded range of supported versions by a single protocol.
-/// Otherwise, the `Err` value of this `Result` is a description of the error
-///
-/// # Errors
-///
-/// This function will error if:
-///
-/// * the specified range is empty
-/// * the version range does not contain both a valid lower and upper bound.
-///
-fn expand_version_range(range: &str) -> Result<Range<u32>, &'static str> {
-    if range.is_empty() {
-        return Err("version string empty");
-    }
-
-    let mut parts = range.split("-");
-
-    let lower_string = parts.next().ok_or(
-        "cannot parse protocol range lower bound",
-    )?;
-
-    let lower = u32::from_str_radix(lower_string, 10).or(Err(
-        "cannot parse protocol range lower bound",
-    ))?;
-
-    let higher_string = parts.next().ok_or(
-        "cannot parse protocol range upper bound",
-    )?;
-
-    let higher = u32::from_str_radix(higher_string, 10).or(Err(
-        "cannot parse protocol range upper bound",
-    ))?;
-
-    if lower == u32::MAX || higher == u32::MAX {
-        return Err("protocol range value out of range");
-    }
-
-    if lower > higher {
-        return Err("protocol range is badly formed");
-    }
-
-    // We can use inclusive range syntax when it becomes stable.
-    let result = lower..higher + 1;
-
-    if result.len() > MAX_PROTOCOLS_TO_EXPAND {
-        Err("Too many protocols in expanded range")
-    } else {
-        Ok(result)
-    }
-}
-
-/// Checks to see if there is a continuous range of integers, starting at the
-/// first in the list. Returns the last integer in the range if a range exists.
-/// Helper for compute_vote
-///
-/// # Inputs
-///
-/// `list`, an ordered  vector of `u32` integers of "[0-9,-]" representing the
-/// supported versions for a single protocol.
-///
-/// # Returns
-///
-/// A `bool` indicating whether the list contains a range, starting at the
-/// first in the list, and an `u32` of the last integer in the range.
-///
-/// For example, if given vec![1, 2, 3, 5], find_range will return true,
-/// as there is a continuous range, and 3, which is the last number in the
-/// continuous range.
-///
-fn find_range(list: &Vec<u32>) -> (bool, u32) {
-    if list.len() == 0 {
-        return (false, 0);
-    }
-
-    let mut iterable = list.iter().peekable();
-    let mut range_end = match iterable.next() {
-        Some(n) => *n,
-        None => return (false, 0),
-    };
-
-    let mut has_range = false;
-
-    while iterable.peek().is_some() {
-        let n = *iterable.next().unwrap();
-        if n != range_end + 1 {
-            break;
-        }
-
-        has_range = true;
-        range_end = n;
-    }
-
-    (has_range, range_end)
-}
-
-/// Contracts a HashSet representation of supported versions into a string.
-/// Helper for compute_vote
-///
-/// # Inputs
-///
-/// `supported_set`, a set of integers of "[0-9,-]" representing the
-/// supported versions for a single protocol.
-///
-/// # Returns
-///
-/// A `String` representation of this set in ascending order.
-///
-fn contract_protocol_list<'a>(supported_set: &'a HashSet<Version>) -> String {
-    let mut supported: Vec<Version> =
-        supported_set.iter().map(|x| *x).collect();
-    supported.sort();
-
-    let mut final_output: Vec<String> = Vec::new();
-
-    while supported.len() != 0 {
-        let (has_range, end) = find_range(&supported);
-        let current = supported.remove(0);
-
-        if has_range {
-            final_output.push(format!(
-                "{}-{}",
-                current.to_string(),
-                &end.to_string(),
-            ));
-            supported.retain(|&x| x > end);
-        } else {
-            final_output.push(current.to_string());
-        }
-    }
-
-    final_output.join(",")
 }
 
 /// Parses a protocol list without validating the protocol names
@@ -790,7 +584,10 @@ pub fn compute_for_old_tor(version: &str) -> &'static [u8] {
 
 #[cfg(test)]
 mod test {
-    use super::Version;
+    use std::str::FromStr;
+    use std::string::ToString;
+
+    use super::*;
 
     #[test]
     fn test_versions_from_version_string() {

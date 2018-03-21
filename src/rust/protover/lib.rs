@@ -31,6 +31,7 @@ extern crate tor_allocate;
 extern crate tor_util;
 
 pub mod errors;
+pub mod protoset;
 mod protover;
 pub mod ffi;
 
