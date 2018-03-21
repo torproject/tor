@@ -9,27 +9,29 @@ use libc::{c_char, c_int, uint32_t};
 use std::ffi::CStr;
 use std::ffi::CString;
 
-use protover::*;
 use smartlist::*;
 use tor_allocate::allocate_and_copy_string;
 
+use errors::ProtoverError;
+use protover::*;
+
 /// Translate C enums to Rust Proto enums, using the integer value of the C
-/// enum to map to its associated Rust enum
+/// enum to map to its associated Rust enum.
 ///
 /// C_RUST_COUPLED: src/or/protover.h `protocol_type_t`
-fn translate_to_rust(c_proto: uint32_t) -> Result<Proto, &'static str> {
+fn translate_to_rust(c_proto: uint32_t) -> Result<Protocol, ProtoverError> {
     match c_proto {
-        0 => Ok(Proto::Link),
-        1 => Ok(Proto::LinkAuth),
-        2 => Ok(Proto::Relay),
-        3 => Ok(Proto::DirCache),
-        4 => Ok(Proto::HSDir),
-        5 => Ok(Proto::HSIntro),
-        6 => Ok(Proto::HSRend),
-        7 => Ok(Proto::Desc),
-        8 => Ok(Proto::Microdesc),
-        9 => Ok(Proto::Cons),
-        _ => Err("Invalid protocol type"),
+        0 => Ok(Protocol::Link),
+        1 => Ok(Protocol::LinkAuth),
+        2 => Ok(Protocol::Relay),
+        3 => Ok(Protocol::DirCache),
+        4 => Ok(Protocol::HSDir),
+        5 => Ok(Protocol::HSIntro),
+        6 => Ok(Protocol::HSRend),
+        7 => Ok(Protocol::Desc),
+        8 => Ok(Protocol::Microdesc),
+        9 => Ok(Protocol::Cons),
+        _ => Err(ProtoverError::UnknownProtocol),
     }
 }
 
