@@ -1,20 +1,20 @@
 // Copyright (c) 2016-2017, The Tor Project, Inc. */
 // See LICENSE for licensing information */
 
-use std::str;
-use std::str::FromStr;
+use std::collections::HashMap;
+use std::collections::hash_map;
 use std::ffi::CStr;
 use std::fmt;
-use std::collections::{HashMap, HashSet};
-use std::ops::Range;
+use std::str;
+use std::str::FromStr;
 use std::string::String;
-use std::u32;
 
 use tor_log::{LogSeverity, LogDomain};
 use external::c_tor_version_as_new_as;
 
 use errors::ProtoverError;
 use protoset::Version;
+use protoset::ProtoSet;
 
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
@@ -130,100 +130,90 @@ pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
            Relay=1-2")
 }
 
-/// Get a string representation of current supported protocols.
-///
-/// # Returns
-///
-/// An `&'a str` whose value is the existing protocols supported by tor.
-/// Returned data is in the format as follows:
-///
-/// "HSDir=1-1 LinkAuth=1"
-pub fn get_supported_protocols<'a>() -> &'a str {
-    let supported_cstr: &'static CStr = get_supported_protocols_cstr();
-    let supported: &str = match supported_cstr.to_str() {
-        Ok(x)  => x,
-        Err(_) => "",
-    };
+/// A map of protocol names to the versions of them which are supported.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProtoEntry(HashMap<Protocol, ProtoSet>);
 
-    supported
+impl Default for ProtoEntry {
+    fn default() -> ProtoEntry {
+        ProtoEntry( HashMap::new() )
+    }
 }
 
-pub struct SupportedProtocols(HashMap<Proto, Versions>);
-
-impl SupportedProtocols {
-    pub fn from_proto_entries<I, S>(protocol_strs: I) -> Result<Self, &'static str>
-    where
-        I: Iterator<Item = S>,
-        S: AsRef<str>,
-    {
-        let mut parsed = HashMap::new();
-        for subproto in protocol_strs {
-            let (name, version) = get_proto_and_vers(subproto.as_ref())?;
-            parsed.insert(name, version);
-        }
-        Ok(SupportedProtocols(parsed))
-    }
-
-    /// Translates a string representation of a protocol list to a
-    /// SupportedProtocols instance.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use protover::SupportedProtocols;
-    ///
-    /// let supported_protocols = SupportedProtocols::from_proto_entries_string(
-    ///     "HSDir=1-2 HSIntro=3-4"
-    /// );
-    /// ```
-    pub fn from_proto_entries_string(
-        proto_entries: &str,
-    ) -> Result<Self, &'static str> {
-        Self::from_proto_entries(proto_entries.split(" "))
+impl ProtoEntry {
+    /// Get an iterator over the `Protocol`s and their `ProtoSet`s in this `ProtoEntry`.
+    pub fn iter(&self) -> hash_map::Iter<Protocol, ProtoSet> {
+        self.0.iter()
     }
 
     /// Translate the supported tor versions from a string into a
-    /// HashMap, which is useful when looking up a specific
+    /// ProtoEntry, which is useful when looking up a specific
     /// subprotocol.
-    ///
-    fn tor_supported() -> Result<Self, &'static str> {
-        Self::from_proto_entries_string(get_supported_protocols())
+    pub fn supported() -> Result<Self, ProtoverError> {
+        let supported_cstr: &'static CStr = get_supported_protocols_cstr();
+        let supported: &str = supported_cstr.to_str().unwrap_or("");
+
+        supported.parse()
+    }
+
+    pub fn get(&self, protocol: &Protocol) -> Option<&ProtoSet> {
+        self.0.get(protocol)
+    }
+
+    pub fn insert(&mut self, key: Protocol, value: ProtoSet) {
+        self.0.insert(key, value);
+    }
+
+    pub fn remove(&mut self, key: &Protocol) -> Option<ProtoSet> {
+        self.0.remove(key)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
-/// Parse the subprotocol type and its version numbers.
-///
-/// # Inputs
-///
-/// * A `protocol_entry` string, comprised of a keyword, an "=" sign, and one
-/// or more version numbers.
-///
-/// # Returns
-///
-/// A `Result` whose `Ok` value is a tuple of `(Proto, HashSet<u32>)`, where the
-/// first element is the subprotocol type (see `protover::Proto`) and the last
-/// element is a(n unordered) set of unique version numbers which are supported.
-/// Otherwise, the `Err` value of this `Result` is a description of the error
-///
-fn get_proto_and_vers<'a>(
-    protocol_entry: &'a str,
-) -> Result<(Proto, Versions), &'static str> {
-    let mut parts = protocol_entry.splitn(2, "=");
+impl FromStr for ProtoEntry {
+    type Err = ProtoverError;
 
-    let proto = match parts.next() {
-        Some(n) => n,
-        None => return Err("invalid protover entry"),
-    };
+    /// Parse a string of subprotocol types and their version numbers.
+    ///
+    /// # Inputs
+    ///
+    /// * A `protocol_entry` string, comprised of a keywords, an "=" sign, and
+    /// one or more version numbers, each separated by a space.  For example,
+    /// `"Cons=3-4 HSDir=1"`.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` whose `Ok` value is a `ProtoEntry`, where the
+    /// first element is the subprotocol type (see `protover::Protocol`) and the last
+    /// element is an ordered set of `(low, high)` unique version numbers which are supported.
+    /// Otherwise, the `Err` value of this `Result` is a `ProtoverError`.
+    fn from_str(protocol_entry: &str) -> Result<ProtoEntry, ProtoverError> {
+        let mut proto_entry: ProtoEntry = ProtoEntry::default();
+        let entries = protocol_entry.split(' ');
 
-    let vers = match parts.next() {
-        Some(n) => n,
-        None => return Err("invalid protover entry"),
-    };
+        for entry in entries {
+            let mut parts = entry.splitn(2, '=');
 
-    let versions = Versions::from_version_string(vers)?;
-    let proto_name = proto.parse()?;
+            let proto = match parts.next() {
+                Some(n) => n,
+                None => return Err(ProtoverError::Unparseable),
+            };
 
-    Ok((proto_name, versions))
+            let vers = match parts.next() {
+                Some(n) => n,
+                None => return Err(ProtoverError::Unparseable),
+            };
+            let versions: ProtoSet = vers.parse()?;
+            let proto_name: Protocol = proto.parse()?;
+
+            proto_entry.insert(proto_name, versions);
+        }
+
+        Ok(proto_entry)
+    }
 }
 
 /// Parses a single subprotocol entry string into subprotocol and version
