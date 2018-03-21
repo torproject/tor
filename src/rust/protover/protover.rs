@@ -270,6 +270,15 @@ impl UnvalidatedProtoEntry {
         self.0.is_empty()
     }
 
+    pub fn len(&self) -> usize {
+        let mut total: usize = 0;
+
+        for (_, versions) in self.iter() {
+            total += versions.len();
+        }
+        total
+    }
+
     /// Determine if we support every protocol a client supports, and if not,
     /// determine which protocols we do not have support for.
     ///
@@ -467,120 +476,102 @@ impl From<ProtoEntry> for UnvalidatedProtoEntry {
     }
 }
 
-/// Protocol voting implementation.
+/// A mapping of protocols to a count of how many times each of their `Version`s
+/// were voted for or supported.
 ///
-/// Given a list of strings describing protocol versions, return a new
-/// string encoding all of the protocols that are listed by at
-/// least threshold of the inputs.
+/// # Warning
 ///
-/// The string is sorted according to the following conventions:
-///   - Protocols names are alphabetized
-///   - Protocols are in order low to high
-///   - Individual and ranges are listed together. For example,
-///     "3, 5-10,13"
-///   - All entries are unique
-///
-/// # Examples
-/// ```
-/// use protover::compute_vote;
-///
-/// let protos = vec![String::from("Link=3-4"), String::from("Link=3")];
-/// let vote = compute_vote(protos, 2);
-/// assert_eq!("Link=3", vote)
-/// ```
-pub fn compute_vote(
-    list_of_proto_strings: Vec<String>,
-    threshold: i32,
-) -> String {
-    let empty = String::from("");
+/// The "protocols" are *not* guaranteed to be known/supported `Protocol`s, in
+/// order to allow new subprotocols to be introduced even if Directory
+/// Authorities don't yet know of them.
+pub struct ProtoverVote( HashMap<UnknownProtocol, HashMap<Version, usize>> );
 
-    if list_of_proto_strings.is_empty() {
-        return empty;
+impl Default for ProtoverVote {
+    fn default() -> ProtoverVote {
+        ProtoverVote( HashMap::new() )
     }
-
-    // all_count is a structure to represent the count of the number of
-    // supported versions for a specific protocol. For example, in JSON format:
-    // {
-    //  "FirstSupportedProtocol": {
-    //      "1": "3",
-    //      "2": "1"
-    //  }
-    // }
-    // means that FirstSupportedProtocol has three votes which support version
-    // 1, and one vote that supports version 2
-    let mut all_count: HashMap<String, HashMap<Version, usize>> =
-        HashMap::new();
-
-    // parse and collect all of the protos and their versions and collect them
-    for vote in list_of_proto_strings {
-        let this_vote: HashMap<String, Versions> =
-            match parse_protocols_from_string_with_no_validation(&vote) {
-                Ok(result) => result,
-                Err(_) => continue,
-            };
-        for (protocol, versions) in this_vote {
-            let supported_vers: &mut HashMap<Version, usize> =
-                all_count.entry(protocol).or_insert(HashMap::new());
-
-            for version in versions.0 {
-                let counter: &mut usize =
-                    supported_vers.entry(version).or_insert(0);
-                *counter += 1;
-            }
-        }
-    }
-
-    let mut final_output: HashMap<String, String> =
-        HashMap::with_capacity(get_supported_protocols().split(" ").count());
-
-    // Go through and remove verstions that are less than the threshold
-    for (protocol, versions) in all_count {
-        let mut meets_threshold = HashSet::new();
-        for (version, count) in versions {
-            if count >= threshold as usize {
-                meets_threshold.insert(version);
-            }
-        }
-
-        // For each protocol, compress its version list into the expected
-        // protocol version string format
-        let contracted = contract_protocol_list(&meets_threshold);
-        if !contracted.is_empty() {
-            final_output.insert(protocol, contracted);
-        }
-    }
-
-    write_vote_to_string(&final_output)
 }
 
-/// Return a String comprised of protocol entries in alphabetical order
-///
-/// # Inputs
-///
-/// * `vote`, a `HashMap` comprised of keys and values, both which are strings.
-/// The keys are the protocol names while values are a string representation of
-/// the supported versions.
-///
-/// # Returns
-///
-/// A `String` whose value is series of pairs, comprising of the protocol name
-/// and versions that it supports. The string takes the following format:
-///
-/// "first_protocol_name=1,2-5, second_protocol_name=4,5"
-///
-/// Sorts the keys in alphabetical order and creates the expected subprotocol
-/// entry format.
-///
-fn write_vote_to_string(vote: &HashMap<String, String>) -> String {
-    let mut keys: Vec<&String> = vote.keys().collect();
-    keys.sort();
+impl IntoIterator for ProtoverVote {
+    type Item = (UnknownProtocol, HashMap<Version, usize>);
+    type IntoIter = hash_map::IntoIter<UnknownProtocol, HashMap<Version, usize>>;
 
-    let mut output = Vec::new();
-    for key in keys {
-        // TODO error in indexing here?
-        output.push(format!("{}={}", key, vote[key]));
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
-    output.join(" ")
+}
+
+impl ProtoverVote {
+    pub fn entry(&mut self, key: UnknownProtocol)
+        -> hash_map::Entry<UnknownProtocol, HashMap<Version, usize>>
+    {
+        self.0.entry(key)
+    }
+
+    /// Protocol voting implementation.
+    ///
+    /// Given a slice of `UnvalidatedProtoEntry`s and a vote `threshold`, return
+    /// a new `UnvalidatedProtoEntry` encoding all of the protocols that are
+    /// listed by at least `threshold` of the inputs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use protover::ProtoverVote;
+    /// use protover::UnvalidatedProtoEntry;
+    ///
+    /// let protos: &[UnvalidatedProtoEntry] = &["Link=3-4".parse().unwrap(),
+    ///                                          "Link=3".parse().unwrap()];
+    /// let vote = ProtoverVote::compute(protos, &2);
+    /// assert_eq!("Link=3", vote.to_string());
+    /// ```
+    // C_RUST_COUPLED: /src/or/protover.c protover_compute_vote
+    pub fn compute(proto_entries: &[UnvalidatedProtoEntry], threshold: &usize) -> UnvalidatedProtoEntry {
+        let mut all_count: ProtoverVote = ProtoverVote::default();
+        let mut final_output: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
+
+        if proto_entries.is_empty() {
+            return final_output;
+        }
+
+        // parse and collect all of the protos and their versions and collect them
+        for vote in proto_entries {
+            // C_RUST_DIFFERS: This doesn't actually differ, bu this check on
+            // the total is here to make it match.  Because the C version calls
+            // expand_protocol_list() which checks if there would be too many
+            // subprotocols *or* individual version numbers, i.e. more than
+            // MAX_PROTOCOLS_TO_EXPAND, and does this *per vote*, we need to
+            // match it's behaviour and ensure we're not allowing more than it
+            // would.
+            if vote.len() > MAX_PROTOCOLS_TO_EXPAND {
+                continue;
+            }
+
+            for (protocol, versions) in vote.iter() {
+                let supported_vers: &mut HashMap<Version, usize> =
+                    all_count.entry(protocol.clone()).or_insert(HashMap::new());
+
+                for version in versions.clone().expand() {
+                    let counter: &mut usize =
+                        supported_vers.entry(version).or_insert(0);
+                    *counter += 1;
+                }
+            }
+        }
+
+        for (protocol, mut versions) in all_count {
+            // Go through and remove versions that are less than the threshold
+            versions.retain(|_, count| *count as usize >= *threshold);
+
+            if versions.len() > 0 {
+                let voted_versions: Vec<Version> = versions.keys().cloned().collect();
+                let voted_protoset: ProtoSet = ProtoSet::from(voted_versions);
+
+                final_output.insert(protocol, voted_protoset);
+            }
+        }
+        final_output
+    }
 }
 
 /// Returns a boolean indicating whether the given protocol and version is
