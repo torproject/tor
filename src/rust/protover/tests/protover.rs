@@ -3,289 +3,326 @@
 
 extern crate protover;
 
+use protover::ProtoEntry;
+use protover::ProtoverVote;
+use protover::UnvalidatedProtoEntry;
+
 #[test]
-fn parse_protocol_list_with_single_proto_and_single_version() {
-    let protocol = "Cons=1";
-    let (is_supported, unsupported) = protover::all_supported(protocol);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn parse_protocol_with_single_proto_and_single_version() {
+    let _: ProtoEntry = "Cons=1".parse().unwrap();
 }
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_multiple_versions() {
-    let protocol = "Cons=1-2";
-    let (is_supported, unsupported) = protover::all_supported(protocol);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn parse_protocol_with_single_protocol_and_multiple_versions() {
+    let _: ProtoEntry = "Cons=1-2".parse().unwrap();
 }
 
 #[test]
-fn parse_protocol_list_with_different_single_protocol_and_single_version() {
-    let protocol = "HSDir=1";
-    let (is_supported, unsupported) = protover::all_supported(protocol);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn parse_protocol_with_different_single_protocol_and_single_version() {
+    let _: ProtoEntry = "HSDir=1".parse().unwrap();
 }
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_supported_version() {
-    let protocol = "Desc=2";
-    let (is_supported, unsupported) = protover::all_supported(protocol);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn parse_protocol_with_single_protocol_and_supported_version() {
+    let _: ProtoEntry = "Desc=2".parse().unwrap();
 }
 
 #[test]
-fn parse_protocol_list_with_two_protocols_and_single_version() {
-    let protocols = "Cons=1 HSDir=1";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
-}
-
-
-#[test]
-fn parse_protocol_list_with_single_protocol_and_two_nonsequential_versions() {
-    let protocol = "Desc=1,2";
-    let (is_supported, unsupported) = protover::all_supported(protocol);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
-}
-
-
-#[test]
-fn parse_protocol_list_with_single_protocol_and_two_sequential_versions() {
-    let protocol = "Desc=1-2";
-    let (is_supported, unsupported) = protover::all_supported(protocol);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn parse_protocol_with_two_protocols_and_single_version() {
+    let _: ProtoEntry = "Cons=1 HSDir=1".parse().unwrap();
 }
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_protocol_range_returns_set() {
-    let protocol = "Link=1-4";
-    let (is_supported, unsupported) = protover::all_supported(protocol);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn parse_protocol_with_single_protocol_and_two_sequential_versions() {
+    let _: ProtoEntry = "Desc=1-2".parse().unwrap();
 }
 
 #[test]
-fn parse_protocol_list_with_single_protocol_and_protocol_set() {
-    let protocols = "Link=3-4 Desc=2";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn parse_protocol_with_single_protocol_and_protocol_range() {
+    let _: ProtoEntry = "Link=1-4".parse().unwrap();
 }
 
 #[test]
-fn protover_all_supported_with_two_values() {
-    let protocols = "Microdesc=1-2 Relay=2";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!("", &unsupported);
-    assert_eq!(true, is_supported);
+fn parse_protocol_with_single_protocol_and_protocol_set() {
+    let _: ProtoEntry = "Link=3-4 Desc=2".parse().unwrap();
 }
 
 #[test]
-fn protover_all_supported_with_one_value() {
-    let protocols = "Microdesc=1-2";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!("", &unsupported);
-    assert_eq!(true, is_supported);
+fn protocol_all_supported_with_single_protocol_and_protocol_set() {
+    let protocols: UnvalidatedProtoEntry = "Link=3-4 Desc=2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_none());
 }
 
 #[test]
-fn protover_all_supported_with_empty() {
-    let protocols = "";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(true, is_supported);
-    assert_eq!("", &unsupported);
+fn protocol_all_supported_with_two_values() {
+    let protocols: UnvalidatedProtoEntry = "Microdesc=1-2 Relay=2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_none());
 }
 
 #[test]
-fn protover_all_supported_with_three_values() {
-    let protocols = "LinkAuth=1 Microdesc=1-2 Relay=2";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!("", &unsupported);
-    assert_eq!(true, is_supported);
+fn protocol_all_supported_with_one_value() {
+    let protocols: UnvalidatedProtoEntry = "Microdesc=1-2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_none());
 }
 
 #[test]
-fn protover_all_supported_with_unsupported_protocol() {
-    let protocols = "Wombat=9";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(false, is_supported);
-    assert_eq!("Wombat=9", &unsupported);
+#[should_panic]
+fn parse_protocol_unvalidated_with_empty() {
+    let _: UnvalidatedProtoEntry = "".parse().unwrap();
 }
 
 #[test]
-fn protover_all_supported_with_unsupported_versions() {
-    let protocols = "Link=3-999";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(false, is_supported);
-    assert_eq!("Link=3-999", &unsupported);
+#[should_panic]
+fn parse_protocol_validated_with_empty() {
+    let _: UnvalidatedProtoEntry = "".parse().unwrap();
 }
 
 #[test]
-fn protover_all_supported_with_unsupported_low_version() {
-    let protocols = "Cons=0-1";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(false, is_supported);
-    assert_eq!("Cons=0-1", &unsupported);
+fn protocol_all_supported_with_three_values() {
+    let protocols: UnvalidatedProtoEntry = "LinkAuth=1 Microdesc=1-2 Relay=2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_none());
 }
 
 #[test]
-fn protover_all_supported_with_unsupported_high_version() {
-    let protocols = "Cons=1-3";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(false, is_supported);
-    assert_eq!("Cons=1-3", &unsupported);
+fn protocol_all_supported_with_unsupported_protocol() {
+    let protocols: UnvalidatedProtoEntry = "Wombat=9".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_some());
+    assert_eq!("Wombat=9", &unsupported.unwrap().to_string());
 }
 
 #[test]
-fn protover_all_supported_with_mix_of_supported_and_unsupproted() {
-    let protocols = "Link=3-4 Wombat=9";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(false, is_supported);
-    assert_eq!("Wombat=9", &unsupported);
+fn protocol_all_supported_with_unsupported_versions() {
+    let protocols: UnvalidatedProtoEntry = "Link=3-999".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_some());
+    assert_eq!("Link=6-999", &unsupported.unwrap().to_string());
+}
+
+#[test]
+fn protocol_all_supported_with_unsupported_low_version() {
+    let protocols: UnvalidatedProtoEntry = "Cons=0-1".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_some());
+    assert_eq!("Cons=0", &unsupported.unwrap().to_string());
+}
+
+#[test]
+fn protocol_all_supported_with_unsupported_high_version() {
+    let protocols: UnvalidatedProtoEntry = "Cons=1-2,999".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_some());
+    assert_eq!("Cons=999", &unsupported.unwrap().to_string());
+}
+
+#[test]
+fn protocol_all_supported_with_mix_of_supported_and_unsupproted() {
+    let protocols: UnvalidatedProtoEntry = "Link=3-4 Wombat=9".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_some());
+    assert_eq!("Wombat=9", &unsupported.unwrap().to_string());
 }
 
 #[test]
 fn protover_string_supports_protocol_returns_true_for_single_supported() {
-    let protocols = "Link=3-4 Cons=1";
-    let is_supported = protover::protover_string_supports_protocol(
-        protocols,
-        protover::Proto::Cons,
-        1,
-    );
+    let protocols: UnvalidatedProtoEntry = "Link=3-4 Cons=1".parse().unwrap();
+    let is_supported = protocols.supports_protocol(&protover::Protocol::Cons.into(), &1);
     assert_eq!(true, is_supported);
 }
 
 #[test]
 fn protover_string_supports_protocol_returns_false_for_single_unsupported() {
-    let protocols = "Link=3-4 Cons=1";
-    let is_supported = protover::protover_string_supports_protocol(
-        protocols,
-        protover::Proto::Cons,
-        2,
-    );
+    let protocols: UnvalidatedProtoEntry = "Link=3-4 Cons=1".parse().unwrap();
+    let is_supported = protocols.supports_protocol(&protover::Protocol::Cons.into(), &2);
     assert_eq!(false, is_supported);
 }
 
 #[test]
 fn protover_string_supports_protocol_returns_false_for_unsupported() {
-    let protocols = "Link=3-4";
-    let is_supported = protover::protover_string_supports_protocol(
-        protocols,
-        protover::Proto::Cons,
-        2,
-    );
+    let protocols: UnvalidatedProtoEntry = "Link=3-4".parse().unwrap();
+    let is_supported = protocols.supports_protocol(&protover::Protocol::Cons.into(), &2);
     assert_eq!(false, is_supported);
 }
 
 #[test]
-fn protover_all_supported_with_unexpected_characters() {
-    let protocols = "Cons=*-%";
-    let (is_supported, unsupported) = protover::all_supported(protocols);
-    assert_eq!(false, is_supported);
-    assert_eq!("Cons=*-%", &unsupported);
+#[should_panic]
+fn parse_protocol_with_unexpected_characters() {
+    let _: UnvalidatedProtoEntry = "Cons=*-%".parse().unwrap();
 }
 
 #[test]
+#[should_panic]
 fn protover_compute_vote_returns_empty_for_empty_string() {
-    let protocols = vec![String::from("")];
-    let listed = protover::compute_vote(protocols, 1);
-    assert_eq!("", listed);
+    let protocols: &[UnvalidatedProtoEntry] = &["".parse().unwrap()];
+    let listed = ProtoverVote::compute(protocols, &1);
+    assert_eq!("", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_single_protocol_for_matching() {
-    let protocols = vec![String::from("Cons=1")];
-    let listed = protover::compute_vote(protocols, 1);
-    assert_eq!("Cons=1", listed);
+    let protocols: &[UnvalidatedProtoEntry] = &["Cons=1".parse().unwrap()];
+    let listed = ProtoverVote::compute(protocols, &1);
+    assert_eq!("Cons=1", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_two_protocols_for_two_matching() {
-    let protocols = vec![String::from("Link=1 Cons=1")];
-    let listed = protover::compute_vote(protocols, 1);
-    assert_eq!("Cons=1 Link=1", listed);
+    let protocols: &[UnvalidatedProtoEntry] = &["Link=1 Cons=1".parse().unwrap()];
+    let listed = ProtoverVote::compute(protocols, &1);
+    assert_eq!("Cons=1 Link=1", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_one_protocol_when_one_out_of_two_matches() {
-    let protocols = vec![String::from("Cons=1 Link=2"), String::from("Cons=1")];
-    let listed = protover::compute_vote(protocols, 2);
-    assert_eq!("Cons=1", listed);
+    let protocols: &[UnvalidatedProtoEntry] = &["Cons=1 Link=2".parse().unwrap(), "Cons=1".parse().unwrap()];
+    let listed = ProtoverVote::compute(protocols, &2);
+    assert_eq!("Cons=1", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_protocols_that_it_doesnt_currently_support() {
-    let protocols = vec![String::from("Foo=1 Cons=2"), String::from("Bar=1")];
-    let listed = protover::compute_vote(protocols, 1);
-    assert_eq!("Bar=1 Cons=2 Foo=1", listed);
+    let protocols: &[UnvalidatedProtoEntry] = &["Foo=1 Cons=2".parse().unwrap(), "Bar=1".parse().unwrap()];
+    let listed = ProtoverVote::compute(protocols, &1);
+    assert_eq!("Bar=1 Cons=2 Foo=1", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_matching_for_mix() {
-    let protocols = vec![String::from("Link=1-10,500 Cons=1,3-7,8")];
-    let listed = protover::compute_vote(protocols, 1);
-    assert_eq!("Cons=1,3-8 Link=1-10,500", listed);
+    let protocols: &[UnvalidatedProtoEntry] = &["Link=1-10,500 Cons=1,3-7,8".parse().unwrap()];
+    let listed = ProtoverVote::compute(protocols, &1);
+    assert_eq!("Cons=1,3-8 Link=1-10,500", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_matching_for_longer_mix() {
-    let protocols = vec![
-        String::from("Desc=1-10,500 Cons=1,3-7,8"),
-        String::from("Link=123-456,78 Cons=2-6,8 Desc=9"),
+    let protocols: &[UnvalidatedProtoEntry] = &[
+        "Desc=1-10,500 Cons=1,3-7,8".parse().unwrap(),
+        "Link=123-456,78 Cons=2-6,8 Desc=9".parse().unwrap(),
     ];
 
-    let listed = protover::compute_vote(protocols, 1);
-    assert_eq!("Cons=1-8 Desc=1-10,500 Link=78,123-456", listed);
+    let listed = ProtoverVote::compute(protocols, &1);
+    assert_eq!("Cons=1-8 Desc=1-10,500 Link=78,123-456", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_matching_for_longer_mix_with_threshold_two() {
-    let protocols = vec![
-        String::from("Desc=1-10,500 Cons=1,3-7,8"),
-        String::from("Link=123-456,78 Cons=2-6,8 Desc=9"),
+    let protocols: &[UnvalidatedProtoEntry] = &[
+        "Desc=1-10,500 Cons=1,3-7,8".parse().unwrap(),
+        "Link=123-456,78 Cons=2-6,8 Desc=9".parse().unwrap(),
     ];
 
-    let listed = protover::compute_vote(protocols, 2);
-    assert_eq!("Cons=3-6,8 Desc=9", listed);
+    let listed = ProtoverVote::compute(protocols, &2);
+    assert_eq!("Cons=3-6,8 Desc=9", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_handles_duplicated_versions() {
-    let protocols = vec![String::from("Cons=1"), String::from("Cons=1")];
-    assert_eq!("Cons=1", protover::compute_vote(protocols, 2));
+    let protocols: &[UnvalidatedProtoEntry] = &["Cons=1".parse().unwrap(), "Cons=1".parse().unwrap()];
+    assert_eq!("Cons=1", ProtoverVote::compute(protocols, &2).to_string());
 
-    let protocols = vec![String::from("Cons=1-2"), String::from("Cons=1-2")];
-    assert_eq!("Cons=1-2", protover::compute_vote(protocols, 2));
+    let protocols: &[UnvalidatedProtoEntry] = &["Cons=1-2".parse().unwrap(), "Cons=1-2".parse().unwrap()];
+    assert_eq!("Cons=1-2", ProtoverVote::compute(protocols, &2).to_string());
 }
 
 #[test]
 fn protover_compute_vote_handles_invalid_proto_entries() {
-    let protocols = vec![
-        String::from("Cons=1"),
-        String::from("Cons=1"),
-        String::from("Link=a"),
+    let protocols: &[UnvalidatedProtoEntry] = &[
+        "Cons=1".parse().unwrap(),
+        "Cons=1".parse().unwrap(),
+        "Dinosaur=1".parse().unwrap(),
     ];
-    assert_eq!("Cons=1", protover::compute_vote(protocols, 2));
+    assert_eq!("Cons=1", ProtoverVote::compute(protocols, &2).to_string());
+}
 
-    let protocols = vec![
-        String::from("Cons=1"),
-        String::from("Cons=1"),
-        String::from("Link=1-%"),
-    ];
-    assert_eq!("Cons=1", protover::compute_vote(protocols, 2));
+#[test]
+fn parse_protocol_with_single_protocol_and_two_nonsequential_versions() {
+    let _: ProtoEntry = "Desc=1,2".parse().unwrap();
 }
 
 #[test]
 fn protover_is_supported_here_returns_true_for_supported_protocol() {
-    assert_eq!(true, protover::is_supported_here(protover::Proto::Cons, 1));
+    assert_eq!(true, protover::is_supported_here(&protover::Protocol::Cons, &1));
 }
 
 #[test]
 fn protover_is_supported_here_returns_false_for_unsupported_protocol() {
-    assert_eq!(false, protover::is_supported_here(protover::Proto::Cons, 5));
+    assert_eq!(false, protover::is_supported_here(&protover::Protocol::Cons, &5));
+}
+
+#[test]
+fn protocol_all_supported_with_single_proto_and_single_version() {
+    let protocol: UnvalidatedProtoEntry = "Cons=1".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+#[test]
+fn protocol_all_supported_with_single_protocol_and_multiple_versions() {
+    let protocol: UnvalidatedProtoEntry = "Cons=1-2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+#[test]
+fn protocol_all_supported_with_different_single_protocol_and_single_version() {
+    let protocol: UnvalidatedProtoEntry = "HSDir=1".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+#[test]
+fn protocol_all_supported_with_single_protocol_and_supported_version() {
+    let protocol: UnvalidatedProtoEntry = "Desc=2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+#[test]
+fn protocol_all_supported_with_two_protocols_and_single_version() {
+    let protocols: UnvalidatedProtoEntry = "Cons=1 HSDir=1".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+#[test]
+fn protocol_all_supported_with_single_protocol_and_two_nonsequential_versions() {
+    let protocol: UnvalidatedProtoEntry = "Desc=1,2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+#[test]
+fn protocol_all_supported_with_single_protocol_and_two_sequential_versions() {
+    let protocol: UnvalidatedProtoEntry = "Desc=1-2".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+#[test]
+fn protocol_all_supported_with_single_protocol_and_protocol_range() {
+    let protocol: UnvalidatedProtoEntry = "Link=1-4".parse().unwrap();
+    let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+    assert_eq!(true, unsupported.is_none());
+}
+
+// By allowing us to add to votes, the C implementation allows us to
+// exceed the limit.
+#[test]
+fn protover_compute_vote_may_exceed_limit() {
+    let proto1: UnvalidatedProtoEntry = "Sleen=1-65535".parse().unwrap();
+    let proto2: UnvalidatedProtoEntry = "Sleen=100000".parse().unwrap();
+
+    let result: UnvalidatedProtoEntry = ProtoverVote::compute(&[proto1, proto2], &1);
+}
+
+#[test]
+fn protover_all_supported_should_include_version_we_actually_do_support() {
+    let proto: UnvalidatedProtoEntry = "Link=3-999".parse().unwrap();
+    let _result: String = proto.all_supported().unwrap().to_string();
+
+    assert_eq!(_result, "Link=3-999".to_string());
 }

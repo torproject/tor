@@ -626,154 +626,118 @@ mod test {
 
     use super::*;
 
-    #[test]
-    fn test_versions_from_version_string() {
-        use std::collections::HashSet;
+    macro_rules! assert_protoentry_is_parseable {
+        ($e:expr) => (
+            let protoentry: Result<ProtoEntry, ProtoverError> = $e.parse();
 
-        use super::Versions;
+            assert!(protoentry.is_ok(), format!("{:?}", protoentry.err()));
+        )
+    }
 
-        assert_eq!(Err("invalid protocol entry"), Versions::from_version_string("a,b"));
-        assert_eq!(Err("invalid protocol entry"), Versions::from_version_string("1,!"));
+    macro_rules! assert_protoentry_is_unparseable {
+        ($e:expr) => (
+            let protoentry: Result<ProtoEntry, ProtoverError> = $e.parse();
 
-        {
-            let mut versions: HashSet<Version> = HashSet::new();
-            versions.insert(1);
-            assert_eq!(versions, Versions::from_version_string("1").unwrap().0);
-        }
-        {
-            let mut versions: HashSet<Version> = HashSet::new();
-            versions.insert(1);
-            versions.insert(2);
-            assert_eq!(versions, Versions::from_version_string("1,2").unwrap().0);
-        }
-        {
-            let mut versions: HashSet<Version> = HashSet::new();
-            versions.insert(1);
-            versions.insert(2);
-            versions.insert(3);
-            assert_eq!(versions, Versions::from_version_string("1-3").unwrap().0);
-        }
-        {
-            let mut versions: HashSet<Version> = HashSet::new();
-            versions.insert(1);
-            versions.insert(2);
-            versions.insert(5);
-            assert_eq!(versions, Versions::from_version_string("1-2,5").unwrap().0);
-        }
-        {
-            let mut versions: HashSet<Version> = HashSet::new();
-            versions.insert(1);
-            versions.insert(3);
-            versions.insert(4);
-            versions.insert(5);
-            assert_eq!(versions, Versions::from_version_string("1,3-5").unwrap().0);
-        }
+            assert!(protoentry.is_err());
+        )
     }
 
     #[test]
-    fn test_contains_only_supported_protocols() {
-        use super::contains_only_supported_protocols;
-
-        assert_eq!(false, contains_only_supported_protocols(""));
-        assert_eq!(true, contains_only_supported_protocols("Cons="));
-        assert_eq!(true, contains_only_supported_protocols("Cons=1"));
-        assert_eq!(false, contains_only_supported_protocols("Cons=0"));
-        assert_eq!(false, contains_only_supported_protocols("Cons=0-1"));
-        assert_eq!(false, contains_only_supported_protocols("Cons=5"));
-        assert_eq!(false, contains_only_supported_protocols("Cons=1-5"));
-        assert_eq!(false, contains_only_supported_protocols("Cons=1,5"));
-        assert_eq!(false, contains_only_supported_protocols("Cons=5,6"));
-        assert_eq!(false, contains_only_supported_protocols("Cons=1,5,6"));
-        assert_eq!(true, contains_only_supported_protocols("Cons=1,2"));
-        assert_eq!(true, contains_only_supported_protocols("Cons=1-2"));
+    fn test_protoentry_from_str_multiple_protocols_multiple_versions() {
+        assert_protoentry_is_parseable!("Cons=3-4 Link=1,3-5");
     }
 
     #[test]
-    fn test_find_range() {
-        use super::find_range;
-
-        assert_eq!((false, 0), find_range(&vec![]));
-        assert_eq!((false, 1), find_range(&vec![1]));
-        assert_eq!((true, 2), find_range(&vec![1, 2]));
-        assert_eq!((true, 3), find_range(&vec![1, 2, 3]));
-        assert_eq!((true, 3), find_range(&vec![1, 2, 3, 5]));
+    fn test_protoentry_from_str_empty() {
+        assert_protoentry_is_unparseable!("");
     }
 
     #[test]
-    fn test_expand_version_range() {
-        use super::expand_version_range;
+    fn test_protoentry_from_str_single_protocol_single_version() {
+        assert_protoentry_is_parseable!("HSDir=1");
+    }
 
-        assert_eq!(Err("version string empty"), expand_version_range(""));
-        assert_eq!(Ok(1..3), expand_version_range("1-2"));
-        assert_eq!(Ok(1..5), expand_version_range("1-4"));
-        assert_eq!(
-            Err("cannot parse protocol range lower bound"),
-            expand_version_range("a")
-        );
-        assert_eq!(
-            Err("cannot parse protocol range upper bound"),
-            expand_version_range("1-a")
-        );
-        assert_eq!(Ok(1000..66536), expand_version_range("1000-66535"));
-        assert_eq!(Err("Too many protocols in expanded range"),
-                   expand_version_range("1000-66536"));
+    #[test]
+    fn test_protoentry_from_str_unknown_protocol() {
+        assert_protoentry_is_unparseable!("Ducks=5-7,8");
+    }
+
+    #[test]
+    fn test_protoentry_from_str_too_many_versions() {
+        assert_protoentry_is_unparseable!("Desc=1-65537");
+    }
+
+    #[test]
+    fn test_protoentry_from_str_() {
+        assert_protoentry_is_unparseable!("");
+    }
+
+    #[test]
+    fn test_protoentry_all_supported_single_protocol_single_version() {
+        let protocol: UnvalidatedProtoEntry = "Cons=1".parse().unwrap();
+        let unsupported: Option<UnvalidatedProtoEntry> = protocol.all_supported();
+        assert_eq!(true, unsupported.is_none());
+    }
+
+    #[test]
+    fn test_protoentry_all_supported_multiple_protocol_multiple_versions() {
+        let protocols: UnvalidatedProtoEntry = "Link=3-4 Desc=2".parse().unwrap();
+        let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+        assert_eq!(true, unsupported.is_none());
+    }
+
+    #[test]
+    fn test_protoentry_all_supported_three_values() {
+        let protocols: UnvalidatedProtoEntry = "LinkAuth=1 Microdesc=1-2 Relay=2".parse().unwrap();
+        let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+        assert_eq!(true, unsupported.is_none());
+    }
+
+    #[test]
+    fn test_protoentry_all_supported_unknown_protocol() {
+        let protocols: UnvalidatedProtoEntry = "Wombat=9".parse().unwrap();
+        let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+        assert_eq!(true, unsupported.is_some());
+        assert_eq!("Wombat=9", &unsupported.unwrap().to_string());
+    }
+
+    #[test]
+    fn test_protoentry_all_supported_unsupported_high_version() {
+        let protocols: UnvalidatedProtoEntry = "HSDir=12-100".parse().unwrap();
+        let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+        assert_eq!(true, unsupported.is_some());
+        assert_eq!("HSDir=12-100", &unsupported.unwrap().to_string());
+    }
+
+    #[test]
+    fn test_protoentry_all_supported_unsupported_low_version() {
+        let protocols: UnvalidatedProtoEntry = "Cons=0-1".parse().unwrap();
+        let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+        assert_eq!(true, unsupported.is_some());
+        assert_eq!("Cons=0", &unsupported.unwrap().to_string());
     }
 
     #[test]
     fn test_contract_protocol_list() {
-        use std::collections::HashSet;
-        use super::contract_protocol_list;
+        let mut versions = "";
+        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
 
-        {
-            let mut versions = HashSet::<Version>::new();
-            assert_eq!(String::from(""), contract_protocol_list(&versions));
+        versions = "1";
+        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
 
-            versions.insert(1);
-            assert_eq!(String::from("1"), contract_protocol_list(&versions));
+        versions = "1-2";
+        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
 
-            versions.insert(2);
-            assert_eq!(String::from("1-2"), contract_protocol_list(&versions));
-        }
+        versions = "1,3";
+        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
 
-        {
-            let mut versions = HashSet::<Version>::new();
-            versions.insert(1);
-            versions.insert(3);
-            assert_eq!(String::from("1,3"), contract_protocol_list(&versions));
-        }
+        versions = "1-4";
+        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
 
-        {
-            let mut versions = HashSet::<Version>::new();
-            versions.insert(1);
-            versions.insert(2);
-            versions.insert(3);
-            versions.insert(4);
-            assert_eq!(String::from("1-4"), contract_protocol_list(&versions));
-        }
+        versions = "1,3,5-7";
+        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
 
-        {
-            let mut versions = HashSet::<Version>::new();
-            versions.insert(1);
-            versions.insert(3);
-            versions.insert(5);
-            versions.insert(6);
-            versions.insert(7);
-            assert_eq!(
-                String::from("1,3,5-7"),
-                contract_protocol_list(&versions)
-            );
-        }
-
-        {
-            let mut versions = HashSet::<Version>::new();
-            versions.insert(1);
-            versions.insert(2);
-            versions.insert(3);
-            versions.insert(500);
-            assert_eq!(
-                String::from("1-3,500"),
-                contract_protocol_list(&versions)
-            );
-        }
+        versions = "1-3,500";
+        assert_eq!(String::from(versions), ProtoSet::from_str(&versions).unwrap().to_string());
     }
 }
