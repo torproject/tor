@@ -218,7 +218,7 @@ pub extern "C" fn protover_is_supported_here(
         Err(_) => return 0,
     };
 
-    let is_supported = is_supported_here(protocol, version);
+    let is_supported = is_supported_here(&protocol, &version);
 
     return if is_supported { 1 } else { 0 };
 }
