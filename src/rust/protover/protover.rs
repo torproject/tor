@@ -32,8 +32,8 @@ pub(crate) const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
 /// Known subprotocols in Tor. Indicates which subprotocol a relay supports.
 ///
 /// C_RUST_COUPLED: src/or/protover.h `protocol_type_t`
-#[derive(Hash, Eq, PartialEq, Debug)]
-pub enum Proto {
+#[derive(Clone, Hash, Eq, PartialEq, Debug)]
+pub enum Protocol {
     Cons,
     Desc,
     DirCache,
@@ -46,7 +46,7 @@ pub enum Proto {
     Relay,
 }
 
-impl fmt::Display for Proto {
+impl fmt::Display for Protocol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
@@ -56,23 +56,48 @@ impl fmt::Display for Proto {
 /// Error if the string is an unrecognized protocol name.
 ///
 /// C_RUST_COUPLED: src/or/protover.c `PROTOCOL_NAMES`
-impl FromStr for Proto {
+impl FromStr for Protocol {
     type Err = ProtoverError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Cons" => Ok(Proto::Cons),
-            "Desc" => Ok(Proto::Desc),
-            "DirCache" => Ok(Proto::DirCache),
-            "HSDir" => Ok(Proto::HSDir),
-            "HSIntro" => Ok(Proto::HSIntro),
-            "HSRend" => Ok(Proto::HSRend),
-            "Link" => Ok(Proto::Link),
-            "LinkAuth" => Ok(Proto::LinkAuth),
-            "Microdesc" => Ok(Proto::Microdesc),
-            "Relay" => Ok(Proto::Relay),
+            "Cons" => Ok(Protocol::Cons),
+            "Desc" => Ok(Protocol::Desc),
+            "DirCache" => Ok(Protocol::DirCache),
+            "HSDir" => Ok(Protocol::HSDir),
+            "HSIntro" => Ok(Protocol::HSIntro),
+            "HSRend" => Ok(Protocol::HSRend),
+            "Link" => Ok(Protocol::Link),
+            "LinkAuth" => Ok(Protocol::LinkAuth),
+            "Microdesc" => Ok(Protocol::Microdesc),
+            "Relay" => Ok(Protocol::Relay),
             _ => Err(ProtoverError::UnknownProtocol),
         }
+    }
+}
+
+/// A protocol string which is not one of the `Protocols` we currently know
+/// about.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct UnknownProtocol(String);
+
+impl fmt::Display for UnknownProtocol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for UnknownProtocol {
+    type Err = ProtoverError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(UnknownProtocol(s.to_string()))
+    }
+}
+
+impl From<Protocol> for UnknownProtocol {
+    fn from(p: Protocol) -> UnknownProtocol {
+        UnknownProtocol(p.to_string())
     }
 }
 
