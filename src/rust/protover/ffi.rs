@@ -101,16 +101,18 @@ pub extern "C" fn protocol_list_supports_protocol(
         Ok(n) => n,
         Err(_) => return 1,
     };
-
-    let protocol = match translate_to_rust(c_protocol) {
-        Ok(n) => n,
+    let proto_entry: UnvalidatedProtoEntry = match protocol_list.parse() {
+        Ok(n)  => n,
         Err(_) => return 0,
     };
-
-    let is_supported =
-        protover_string_supports_protocol(protocol_list, protocol, version);
-
-    return if is_supported { 1 } else { 0 };
+    let protocol: UnknownProtocol = match translate_to_rust(c_protocol) {
+        Ok(n) => n.into(),
+        Err(_) => return 0,
+    };
+    match proto_entry.supports_protocol(&protocol, &version) {
+        false => return 0,
+        true  => return 1,
+    }
 }
 
 /// Provide an interface for C to translate arguments and return types for
