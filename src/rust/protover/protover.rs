@@ -218,6 +218,27 @@ impl FromStr for ProtoEntry {
     }
 }
 
+/// Generate an implementation of `ToString` for either a `ProtoEntry` or an
+/// `UnvalidatedProtoEntry`.
+macro_rules! impl_to_string_for_proto_entry {
+    ($t:ty) => (
+        impl ToString for $t {
+            fn to_string(&self) -> String {
+                let mut parts: Vec<String> = Vec::new();
+
+                for (protocol, versions) in self.iter() {
+                    parts.push(format!("{}={}", protocol.to_string(), versions.to_string()));
+                }
+                parts.sort_unstable();
+                parts.join(" ")
+            }
+        }
+    )
+}
+
+impl_to_string_for_proto_entry!(ProtoEntry);
+impl_to_string_for_proto_entry!(UnvalidatedProtoEntry);
+
 /// A `ProtoEntry`, but whose `Protocols` can be any `UnknownProtocol`, not just
 /// the supported ones enumerated in `Protocols`.  The protocol versions are
 /// validated, however.
