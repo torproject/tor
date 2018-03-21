@@ -22,6 +22,8 @@
 //! protocols to develop independently, without having to claim compatibility
 //! with specific versions of Tor.
 
+#[deny(missing_docs)]
+
 extern crate libc;
 extern crate smartlist;
 extern crate external;
@@ -32,6 +34,7 @@ extern crate tor_util;
 #[macro_use]
 extern crate tor_log;
 
+pub mod errors;
 mod protover;
 pub mod ffi;
 
