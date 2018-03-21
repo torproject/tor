@@ -61,9 +61,45 @@ In general, we use modules from only the Rust standard library
 whenever possible. We will review including external crates on a
 case-by-case basis.
 
+If a crate only contains traits meant for compatibility between Rust
+crates, such as [the digest crate](https://crates.io/crates/digest) or
+[the failure crate](https://crates.io/crates/failure), it is very likely
+permissible to add it as a dependency.  However, a brief review should
+be conducted as to the usefulness of implementing external traits
+(i.e. how widespread is the usage, how many other crates either
+implement the traits or have trait bounds based upon them), as well as
+the stability of the traits (i.e. if the trait is going to change, we'll
+potentially have to re-do all our implementations of it).
+
+For large external libraries, especially which implement features which
+would be labour-intensive to reproduce/maintain ourselves, such as
+cryptographic or mathematical/statistics libraries, only crates which
+have stabilised to 1.0.0 should be considered, however, again, we may
+make exceptions on a case-by-case basis.
+
 Currently, Tor requires that you use the latest stable Rust version. At
 some point in the future, we will freeze on a given stable Rust version,
 to ensure backward compatibility with stable distributions that ship it.
+
+ Updating/Adding Dependencies
+------------------------------
+
+To add/remove/update dependencies, first add your dependencies,
+exactly specifying their versions, into the appropriate *crate-level*
+`Cargo.toml` in `src/rust/` (i.e. *not* `/src/rust/Cargo.toml`, but
+instead the one for your crate).  Also, investigate whether your
+dependency has any optional dependencies which are unnecessary but are
+enabled by default.  If so, you'll likely be able to enable/disable
+them via some feature, e.g.:
+
+```toml
+[dependencies]
+foo = { version = "1.0.0", default-features = false }
+```
+
+Next, run `/scripts/maint/updateRustDependencies.sh`.  Then, go into
+`src/ext/rust` and commit the changes to the `tor-rust-dependencies`
+repo.
 
  Documentation
 ---------------
