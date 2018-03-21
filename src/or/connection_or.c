@@ -28,6 +28,7 @@
  * part of a subclass (channel_tls_t).
  */
 #define TOR_CHANNEL_INTERNAL_
+#define CONNECTION_OR_PRIVATE
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitbuild.h"
@@ -1122,6 +1123,264 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
   } SMARTLIST_FOREACH_END(or_conn);
 }
 
+/* Lifetime of a connection failure. After that, we'll retry. This is in
+ * seconds. */
+#define OR_CONNECT_FAILURE_LIFETIME 60
+/* The interval to use with when to clean up the failure cache. */
+#define OR_CONNECT_FAILURE_CLEANUP_INTERVAL 60
+
+/* When is the next time we have to cleanup the failure map. We keep this
+ * because we clean it opportunistically. */
+static time_t or_connect_failure_map_next_cleanup_ts = 0;
+
+/* OR connection failure entry data structure. It is kept in the connection
+ * failure map defined below and indexed by OR identity digest, address and
+ * port.
+ *
+ * We need to identify a connection failure with these three values because we
+ * want to avoid to wrongfully blacklist a relay if someone is trying to
+ * extend to a known identity digest but with the wrong IP/port. For instance,
+ * it can happen if a relay changed its port but the client still has an old
+ * descriptor with the old port. We want to stop connecting to that
+ * IP/port/identity all together, not only the relay identity. */
+typedef struct or_connect_failure_entry_t {
+  HT_ENTRY(or_connect_failure_entry_t) node;
+  /* Identity digest of the connection where it is connecting to. */
+  uint8_t identity_digest[DIGEST_LEN];
+  /* This is the connection address from the base connection_t. After the
+   * connection is checked for canonicity, the base address should represent
+   * what we know instead of where we are connecting to. This is what we need
+   * so we can correlate known relays within the consensus. */
+  tor_addr_t addr;
+  uint16_t port;
+  /* Last time we were unable to connect. */
+  time_t unable_connect_since_ts;
+} or_connect_failure_entry_t;
+
+/* Map where we keep connection failure entries. They are indexed by addr,
+ * port and identity digest. */
+static HT_HEAD(or_connect_failure_ht, or_connect_failure_entry_t)
+       or_connect_failures_map = HT_INITIALIZER();
+
+/* Helper: Hashtable equal function. Return 1 if equal else 0. */
+static int
+or_connect_failure_ht_eq(const or_connect_failure_entry_t *a,
+                         const or_connect_failure_entry_t *b)
+{
+  return fast_memeq(a->identity_digest, b->identity_digest, DIGEST_LEN) &&
+         tor_addr_eq(&a->addr, &b->addr) &&
+         a->port == b->port;
+}
+
+/* Helper: Return the hash for the hashtable of the given entry. For this
+ * table, it is a combination of address, port and identity digest. */
+static unsigned int
+or_connect_failure_ht_hash(const or_connect_failure_entry_t *entry)
+{
+  size_t offset = 0, addr_size;
+  const void *addr_ptr;
+  /* Largest size is IPv6 and IPv4 is smaller so it is fine. */
+  uint8_t data[16 + sizeof(uint16_t) + DIGEST_LEN];
+
+  /* Get the right address bytes depending on the family. */
+  switch (tor_addr_family(&entry->addr)) {
+  case AF_INET:
+    addr_size = 4;
+    addr_ptr = &entry->addr.addr.in_addr.s_addr;
+    break;
+  case AF_INET6:
+    addr_size = 16;
+    addr_ptr = &entry->addr.addr.in6_addr.s6_addr;
+    break;
+  default:
+    tor_assert_nonfatal_unreached();
+    return 0;
+  }
+
+  memcpy(data, addr_ptr, addr_size);
+  offset += addr_size;
+  memcpy(data + offset, entry->identity_digest, DIGEST_LEN);
+  offset += DIGEST_LEN;
+  set_uint16(data + offset, entry->port);
+  offset += sizeof(uint16_t);
+
+  return siphash24g(data, offset);
+}
+
+HT_PROTOTYPE(or_connect_failure_ht, or_connect_failure_entry_t, node,
+             or_connect_failure_ht_hash, or_connect_failure_ht_eq)
+
+HT_GENERATE2(or_connect_failure_ht, or_connect_failure_entry_t, node,
+             or_connect_failure_ht_hash, or_connect_failure_ht_eq,
+             0.6, tor_reallocarray_, tor_free_)
+
+/* Initialize a given connect failure entry with the given identity_digest,
+ * addr and port. All field are optional except ocf. */
+static void
+or_connect_failure_init(const char *identity_digest, const tor_addr_t *addr,
+                        uint16_t port, or_connect_failure_entry_t *ocf)
+{
+  tor_assert(ocf);
+  if (identity_digest) {
+    memcpy(ocf->identity_digest, identity_digest,
+           sizeof(ocf->identity_digest));
+  }
+  if (addr) {
+    tor_addr_copy(&ocf->addr, addr);
+  }
+  ocf->port = port;
+}
+
+/* Return a newly allocated connection failure entry. It is initialized with
+ * the given or_conn data. This can't fail. */
+static or_connect_failure_entry_t *
+or_connect_failure_new(const or_connection_t *or_conn)
+{
+  or_connect_failure_entry_t *ocf = tor_malloc_zero(sizeof(*ocf));
+  or_connect_failure_init(or_conn->identity_digest, &or_conn->real_addr,
+                          TO_CONN(or_conn)->port, ocf);
+  return ocf;
+}
+
+/* Return a connection failure entry matching the given or_conn. NULL is
+ * returned if not found. */
+static or_connect_failure_entry_t *
+or_connect_failure_find(const or_connection_t *or_conn)
+{
+  or_connect_failure_entry_t lookup;
+  tor_assert(or_conn);
+  or_connect_failure_init(or_conn->identity_digest, &TO_CONN(or_conn)->addr,
+                          TO_CONN(or_conn)->port, &lookup);
+  return HT_FIND(or_connect_failure_ht, &or_connect_failures_map, &lookup);
+}
+
+/* Note down in the connection failure cache that a failure occurred on the
+ * given or_conn but for which we don't know the relay meaning we can't find
+ * its node_t or because the IP/port doesn't match the node_t. */
+static void
+note_unknown_or_connect_failure(const or_connection_t *or_conn)
+{
+  or_connect_failure_entry_t *ocf = NULL;
+
+  tor_assert(or_conn);
+
+  ocf = or_connect_failure_find(or_conn);
+  if (ocf == NULL) {
+    ocf = or_connect_failure_new(or_conn);
+    HT_INSERT(or_connect_failure_ht, &or_connect_failures_map, ocf);
+  }
+  ocf->unable_connect_since_ts = approx_time();
+}
+
+/* Note down in the connection failure cache that a failure occurred on the
+ * given or_conn. */
+STATIC void
+note_or_connect_failed(const or_connection_t *or_conn)
+{
+  node_t *node;
+  tor_addr_port_t node_addr_port;
+
+  tor_assert(or_conn);
+
+  node = node_get_mutable_by_id(or_conn->identity_digest);
+  if (node == NULL) {
+    goto unknown;
+  }
+
+  /* We do know this relay. Now, if the address and port of the connection
+   * matches the one we know from the descriptor, we note down that we've had
+   * a failure inside the node_t. This is for performance reason to avoid
+   * allocating and storing information about a known node_t.
+   *
+   * If they do not match, we note it as an unknown. This is to avoid someone
+   * sending extend requests for a known relay identity digest but with the
+   * wrong IP/Port. */
+  node_get_pref_orport(node, &node_addr_port);
+  if (tor_addr_eq(&TO_CONN(or_conn)->addr, &node_addr_port.addr) &&
+      TO_CONN(or_conn)->port == node_addr_port.port) {
+    node->unable_connect_since_ts = approx_time();
+    goto end;
+  }
+  /* Fall through, the IP or port don't match the identity digest of the
+   * connection, we consider it unknown. */
+
+ unknown:
+  note_unknown_or_connect_failure(or_conn);
+ end:
+  return;
+}
+
+/* Cleanup the connection failure cache and remove all entries below the
+ * given cutoff. */
+static void
+or_connect_failure_map_cleanup(time_t cutoff)
+{
+  or_connect_failure_entry_t **ptr, **next, *entry;
+
+  for (ptr = HT_START(or_connect_failure_ht, &or_connect_failures_map);
+       ptr != NULL; ptr = next) {
+    entry = *ptr;
+    if (entry->unable_connect_since_ts <= cutoff) {
+      next = HT_NEXT_RMV(or_connect_failure_ht, &or_connect_failures_map, ptr);
+      tor_free(entry);
+    } else {
+      next = HT_NEXT(or_connect_failure_ht, &or_connect_failures_map, ptr);
+    }
+  }
+}
+
+/* Return true iff the given OR connection can connect to its destination that
+ * is the triplet identity_digest, address and port.
+ *
+ * The or_conn MUST have gone through connection_or_check_canonicity() so the
+ * base address is properly set to what we know or doesn't know. */
+STATIC int
+should_connect_to_relay(const or_connection_t *or_conn)
+{
+  time_t now, cutoff;
+  time_t connect_failed_since_ts = 0;
+  or_connect_failure_entry_t *ocf;
+
+  tor_assert(or_conn);
+
+  now = approx_time();
+  cutoff = now - OR_CONNECT_FAILURE_LIFETIME;
+
+  /* Opportunistically try to cleanup the failure cache. We do that at regular
+   * interval so it doesn't grow too big. */
+  if (or_connect_failure_map_next_cleanup_ts <= now) {
+    or_connect_failure_map_cleanup(cutoff);
+    or_connect_failure_map_next_cleanup_ts =
+      now + OR_CONNECT_FAILURE_CLEANUP_INTERVAL;
+  }
+
+  /* We first have to look at the unknown relays because we could have a
+   * node_t for this connection's identity digest but the IP/port might not
+   * match. In that case if they didn't match, an entry was added. */
+  ocf = or_connect_failure_find(or_conn);
+  if (ocf) {
+    connect_failed_since_ts = ocf->unable_connect_since_ts;
+  } else {
+    /* We have no failure noted down for this connection. Lets look at the
+     * node_t object now that keeps a timestamp for failures. */
+    const node_t *node = node_get_by_id(or_conn->identity_digest);
+    if (node) {
+      connect_failed_since_ts = node->unable_connect_since_ts;
+    }
+  }
+  /* If we do have an unable to connect timestamp and it is below cutoff, we
+   * can connect. Or we have an unknown relay that we have never failed to so
+   * let it connect. */
+  if (connect_failed_since_ts > cutoff) {
+    goto no_connect;
+  }
+
+  /* Ok we can connect! */
+  return 1;
+ no_connect:
+  return 0;
+}
+
 /** <b>conn</b> is in the 'connecting' state, and it failed to complete
  * a TCP connection. Send notifications appropriately.
  *
@@ -1135,6 +1394,7 @@ connection_or_connect_failed(or_connection_t *conn,
   control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED, reason);
   if (!authdir_mode_tests_reachability(get_options()))
     control_event_bootstrap_prob_or(msg, reason, conn);
+  note_or_connect_failed(conn);
 }
 
 /** <b>conn</b> got an error in connection_handle_read_impl() or
@@ -1225,6 +1485,19 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
   conn->chan = chan;
   chan->conn = conn;
   connection_or_init_conn_from_address(conn, &addr, port, id_digest, ed_id, 1);
+
+  /* We have a proper OR connection setup, now check if we can connect to it
+   * that is we haven't had a failure earlier. This is to avoid to try to
+   * constantly connect to relays that we think are not reachable. */
+  if (!should_connect_to_relay(conn)) {
+    log_info(LD_GENERAL, "Can't connect to identity %s at %s:%u because we "
+                         "failed earlier. Refusing.",
+             hex_str(id_digest, DIGEST_LEN), fmt_addr(&TO_CONN(conn)->addr),
+             TO_CONN(conn)->port);
+    connection_free_(TO_CONN(conn));
+    return NULL;
+  }
+
   connection_or_change_state(conn, OR_CONN_STATE_CONNECTING);
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
