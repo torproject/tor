@@ -56,19 +56,26 @@ pub extern "C" fn protover_all_supported(
         Err(_) => return 1,
     };
 
-    let (is_supported, unsupported) = all_supported(relay_version);
+    let relay_proto_entry: UnvalidatedProtoEntry = match relay_version.parse() {
+        Ok(n)  => n,
+        Err(_) => return 1,
+    };
+    let maybe_unsupported: Option<UnvalidatedProtoEntry> = relay_proto_entry.all_supported();
 
-    if unsupported.len() > 0 {
-        let c_unsupported = match CString::new(unsupported) {
+    if maybe_unsupported.is_some() {
+        let unsupported: UnvalidatedProtoEntry = maybe_unsupported.unwrap();
+        let c_unsupported: CString = match CString::new(unsupported.to_string()) {
             Ok(n) => n,
             Err(_) => return 1,
         };
 
         let ptr = c_unsupported.into_raw();
         unsafe { *missing_out = ptr };
+
+        return 0;
     }
 
-    return if is_supported { 1 } else { 0 };
+    1
 }
 
 /// Provide an interface for C to translate arguments and return types for
