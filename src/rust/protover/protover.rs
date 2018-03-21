@@ -579,26 +579,25 @@ impl ProtoverVote {
 ///
 /// # Examples
 /// ```
-/// use protover::*;
+/// use protover::is_supported_here;
+/// use protover::Protocol;
 ///
-/// let is_supported = is_supported_here(Proto::Link, 10);
+/// let is_supported = is_supported_here(&Protocol::Link, &10);
 /// assert_eq!(false, is_supported);
 ///
-/// let is_supported = is_supported_here(Proto::Link, 1);
+/// let is_supported = is_supported_here(&Protocol::Link, &1);
 /// assert_eq!(true, is_supported);
 /// ```
-pub fn is_supported_here(proto: Proto, vers: Version) -> bool {
-    let currently_supported = match SupportedProtocols::tor_supported() {
-        Ok(result) => result.0,
+pub fn is_supported_here(proto: &Protocol, vers: &Version) -> bool {
+    let currently_supported: ProtoEntry = match ProtoEntry::supported() {
+        Ok(result) => result,
         Err(_) => return false,
     };
-
-    let supported_versions = match currently_supported.get(&proto) {
+    let supported_versions = match currently_supported.get(proto) {
         Some(n) => n,
         None => return false,
     };
-
-    supported_versions.0.contains(&vers)
+    supported_versions.contains(vers)
 }
 
 /// Older versions of Tor cannot infer their own subprotocols
