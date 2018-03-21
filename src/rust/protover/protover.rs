@@ -226,207 +226,235 @@ impl FromStr for ProtoEntry {
     }
 }
 
-/// Parses a single subprotocol entry string into subprotocol and version
-/// parts, and then checks whether any of those versions are unsupported.
-/// Helper for protover::all_supported
-///
-/// # Inputs
-///
-/// Accepted data is in the string format as follows:
-///
-/// "HSDir=1-1"
-///
-/// # Returns
-///
-/// Returns `true` if the protocol entry is well-formatted and only contains
-/// versions that are also supported in tor. Otherwise, returns false
-///
-fn contains_only_supported_protocols(proto_entry: &str) -> bool {
-    let (name, mut vers) = match get_proto_and_vers(proto_entry) {
-        Ok(n) => n,
-        Err(_) => return false,
-    };
+/// A `ProtoEntry`, but whose `Protocols` can be any `UnknownProtocol`, not just
+/// the supported ones enumerated in `Protocols`.  The protocol versions are
+/// validated, however.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnvalidatedProtoEntry(HashMap<UnknownProtocol, ProtoSet>);
 
-    let currently_supported = match SupportedProtocols::tor_supported() {
-        Ok(n) => n.0,
-        Err(_) => return false,
-    };
-
-    let supported_versions = match currently_supported.get(&name) {
-        Some(n) => n,
-        None => return false,
-    };
-
-    vers.0.retain(|x| !supported_versions.0.contains(x));
-    vers.0.is_empty()
-}
-
-/// Determine if we support every protocol a client supports, and if not,
-/// determine which protocols we do not have support for.
-///
-/// # Inputs
-///
-/// Accepted data is in the string format as follows:
-///
-/// "HSDir=1-1 LinkAuth=1-2"
-///
-/// # Returns
-///
-/// Return `true` if every protocol version is one that we support.
-/// Otherwise, return `false`.
-/// Optionally, return parameters which the client supports but which we do not
-///
-/// # Examples
-/// ```
-/// use protover::all_supported;
-///
-/// let (is_supported, unsupported)  = all_supported("Link=1");
-/// assert_eq!(true, is_supported);
-///
-/// let (is_supported, unsupported)  = all_supported("Link=5-6");
-/// assert_eq!(false, is_supported);
-/// assert_eq!("Link=5-6", unsupported);
-///
-pub fn all_supported(protocols: &str) -> (bool, String) {
-    let unsupported = protocols
-        .split_whitespace()
-        .filter(|v| !contains_only_supported_protocols(v))
-        .collect::<Vec<&str>>();
-
-    (unsupported.is_empty(), unsupported.join(" "))
-}
-
-/// Return true iff the provided protocol list includes support for the
-/// indicated protocol and version.
-/// Otherwise, return false
-///
-/// # Inputs
-///
-/// * `list`, a string representation of a list of protocol entries.
-/// * `proto`, a `Proto` to test support for
-/// * `vers`, a `Version` version which we will go on to determine whether the
-/// specified protocol supports.
-///
-/// # Examples
-/// ```
-/// use protover::*;
-///
-/// let is_supported = protover_string_supports_protocol("Link=3-4 Cons=1",
-///                                                      Proto::Cons,1);
-/// assert_eq!(true, is_supported);
-///
-/// let is_not_supported = protover_string_supports_protocol("Link=3-4 Cons=1",
-///                                                           Proto::Cons,5);
-/// assert_eq!(false, is_not_supported)
-/// ```
-pub fn protover_string_supports_protocol(
-    list: &str,
-    proto: Proto,
-    vers: Version,
-) -> bool {
-    let supported = match SupportedProtocols::from_proto_entries_string(list) {
-        Ok(result) => result.0,
-        Err(_) => return false,
-    };
-
-    let supported_versions = match supported.get(&proto) {
-        Some(n) => n,
-        None => return false,
-    };
-
-    supported_versions.0.contains(&vers)
-}
-
-/// As protover_string_supports_protocol(), but also returns True if
-/// any later version of the protocol is supported.
-///
-/// # Examples
-/// ```
-/// use protover::*;
-///
-/// let is_supported = protover_string_supports_protocol_or_later(
-///                       "Link=3-4 Cons=5", Proto::Cons, 5);
-///
-/// assert_eq!(true, is_supported);
-///
-/// let is_supported = protover_string_supports_protocol_or_later(
-///                       "Link=3-4 Cons=5", Proto::Cons, 4);
-///
-/// assert_eq!(true, is_supported);
-///
-/// let is_supported = protover_string_supports_protocol_or_later(
-///                       "Link=3-4 Cons=5", Proto::Cons, 6);
-///
-/// assert_eq!(false, is_supported);
-/// ```
-pub fn protover_string_supports_protocol_or_later(
-    list: &str,
-    proto: Proto,
-    vers: u32,
-) -> bool {
-    let supported = match SupportedProtocols::from_proto_entries_string(list) {
-        Ok(result) => result.0,
-        Err(_) => return false,
-    };
-
-    let supported_versions = match supported.get(&proto) {
-        Some(n) => n,
-        None => return false,
-    };
-
-    supported_versions.0.iter().any(|v| v >= &vers)
-}
-
-/// Parses a protocol list without validating the protocol names
-///
-/// # Inputs
-///
-/// * `protocol_string`, a string comprised of keys and values, both which are
-/// strings. The keys are the protocol names while values are a string
-/// representation of the supported versions.
-///
-/// The input is _not_ expected to be a subset of the Proto types
-///
-/// # Returns
-///
-/// A `Result` whose `Ok` value is a `HashSet<Version>` holding all of the
-/// unique version numbers.
-///
-/// The returned `Result`'s `Err` value is an `&'static str` with a description
-/// of the error.
-///
-/// # Errors
-///
-/// This function will error if:
-///
-/// * The protocol string does not follow the "protocol_name=version_list"
-/// expected format
-/// * If the version string is malformed. See `Versions::from_version_string`.
-///
-fn parse_protocols_from_string_with_no_validation<'a>(
-    protocol_string: &'a str,
-) -> Result<HashMap<String, Versions>, &'static str> {
-    let mut parsed: HashMap<String, Versions> = HashMap::new();
-
-    for subproto in protocol_string.split(" ") {
-        let mut parts = subproto.splitn(2, "=");
-
-        let name = match parts.next() {
-            Some("") => return Err("invalid protover entry"),
-            Some(n) => n,
-            None => return Err("invalid protover entry"),
-        };
-
-        let vers = match parts.next() {
-            Some(n) => n,
-            None => return Err("invalid protover entry"),
-        };
-
-        let versions = Versions::from_version_string(vers)?;
-
-        parsed.insert(String::from(name), versions);
+impl Default for UnvalidatedProtoEntry {
+    fn default() -> UnvalidatedProtoEntry {
+        UnvalidatedProtoEntry( HashMap::new() )
     }
-    Ok(parsed)
+}
+
+impl UnvalidatedProtoEntry {
+    /// Get an iterator over the `Protocol`s and their `ProtoSet`s in this `ProtoEntry`.
+    pub fn iter(&self) -> hash_map::Iter<UnknownProtocol, ProtoSet> {
+        self.0.iter()
+    }
+
+    pub fn get(&self, protocol: &UnknownProtocol) -> Option<&ProtoSet> {
+        self.0.get(protocol)
+    }
+
+    pub fn insert(&mut self, key: UnknownProtocol, value: ProtoSet) {
+        self.0.insert(key, value);
+    }
+
+    pub fn remove(&mut self, key: &UnknownProtocol) -> Option<ProtoSet> {
+        self.0.remove(key)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Determine if we support every protocol a client supports, and if not,
+    /// determine which protocols we do not have support for.
+    ///
+    /// # Returns
+    ///
+    /// Optionally, return parameters which the client supports but which we do not.
+    ///
+    /// # Examples
+    /// ```
+    /// use protover::UnvalidatedProtoEntry;
+    ///
+    /// let protocols: UnvalidatedProtoEntry = "LinkAuth=1 Microdesc=1-2 Relay=2".parse().unwrap();
+    /// let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    /// assert_eq!(true, unsupported.is_none());
+    ///
+    /// let protocols: UnvalidatedProtoEntry = "Link=1-2 Wombat=9".parse().unwrap();
+    /// let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
+    /// assert_eq!(true, unsupported.is_some());
+    /// assert_eq!("Wombat=9", &unsupported.unwrap().to_string());
+    /// ```
+    pub fn all_supported(&self) -> Option<UnvalidatedProtoEntry> {
+        let mut unsupported: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
+        let supported: ProtoEntry = match ProtoEntry::supported() {
+            Ok(x)  => x,
+            Err(_) => return None,
+        };
+
+        for (protocol, versions) in self.iter() {
+            let is_supported: Result<Protocol, ProtoverError> = protocol.0.parse();
+            let supported_protocol: Protocol;
+
+            // If the protocol wasn't even in the enum, then we definitely don't
+            // know about it and don't support any of its versions.
+            if is_supported.is_err() {
+                if !versions.is_empty() {
+                    unsupported.insert(protocol.clone(), versions.clone());
+                }
+                continue;
+            } else {
+                supported_protocol = is_supported.unwrap();
+            }
+
+            let maybe_supported_versions: Option<&ProtoSet> = supported.get(&supported_protocol);
+            let supported_versions: &ProtoSet;
+            let mut unsupported_versions: ProtoSet;
+
+            // If the protocol wasn't in the map, then we don't know about it
+            // and don't support any of its versions.  Add its versions to the
+            // map (if it has versions).
+            if maybe_supported_versions.is_none() {
+                if !versions.is_empty() {
+                    unsupported.insert(protocol.clone(), versions.clone());
+                }
+                continue;
+            } else {
+                supported_versions = maybe_supported_versions.unwrap();
+            }
+            unsupported_versions = versions.clone();
+            unsupported_versions.retain(|x| !supported_versions.contains(x));
+
+            if !unsupported_versions.is_empty() {
+                unsupported.insert(protocol.clone(), unsupported_versions);
+            }
+        }
+
+        if unsupported.is_empty() {
+            return None;
+        }
+        Some(unsupported)
+    }
+
+    /// Determine if we have support for some protocol and version.
+    ///
+    /// # Inputs
+    ///
+    /// * `proto`, an `UnknownProtocol` to test support for
+    /// * `vers`, a `Version` which we will go on to determine whether the
+    /// specified protocol supports.
+    ///
+    /// # Return
+    ///
+    /// Returns `true` iff this `UnvalidatedProtoEntry` includes support for the
+    /// indicated protocol and version, and `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::str::FromStr;
+    /// use protover::*;
+    /// # use protover::errors::ProtoverError;
+    ///
+    /// # fn do_test () -> Result<UnvalidatedProtoEntry, ProtoverError> {
+    /// let proto: UnvalidatedProtoEntry = "Link=3-4 Cons=1 Doggo=3-5".parse()?;
+    /// assert_eq!(true, proto.supports_protocol(&Protocol::Cons.into(), &1));
+    /// assert_eq!(false, proto.supports_protocol(&Protocol::Cons.into(), &5));
+    /// assert_eq!(true, proto.supports_protocol(&UnknownProtocol::from_str("Doggo")?, &4));
+    /// # Ok(proto)
+    /// # } fn main () { do_test(); }
+    /// ```
+    pub fn supports_protocol(&self, proto: &UnknownProtocol, vers: &Version) -> bool {
+        let supported_versions: &ProtoSet = match self.get(proto) {
+            Some(n) => n,
+            None => return false,
+        };
+        supported_versions.contains(&vers)
+    }
+
+    /// As `UnvalidatedProtoEntry::supports_protocol()`, but also returns `true`
+    /// if any later version of the protocol is supported.
+    ///
+    /// # Examples
+    /// ```
+    /// use protover::*;
+    /// # use protover::errors::ProtoverError;
+    ///
+    /// # fn do_test () -> Result<UnvalidatedProtoEntry, ProtoverError> {
+    /// let proto: UnvalidatedProtoEntry = "Link=3-4 Cons=5".parse()?;
+    ///
+    /// assert_eq!(true, proto.supports_protocol_or_later(&Protocol::Cons.into(), &5));
+    /// assert_eq!(true, proto.supports_protocol_or_later(&Protocol::Cons.into(), &4));
+    /// assert_eq!(false, proto.supports_protocol_or_later(&Protocol::Cons.into(), &6));
+    /// # Ok(proto)
+    /// # } fn main () { do_test(); }
+    /// ```
+    pub fn supports_protocol_or_later(&self, proto: &UnknownProtocol, vers: &Version) -> bool {
+        let supported_versions: &ProtoSet = match self.get(&proto) {
+            Some(n) => n,
+            None => return false,
+        };
+        supported_versions.iter().any(|v| v.1 >= *vers)
+    }
+}
+
+impl FromStr for UnvalidatedProtoEntry {
+    type Err = ProtoverError;
+
+    /// Parses a protocol list without validating the protocol names.
+    ///
+    /// # Inputs
+    ///
+    /// * `protocol_string`, a string comprised of keys and values, both which are
+    /// strings. The keys are the protocol names while values are a string
+    /// representation of the supported versions.
+    ///
+    /// The input is _not_ expected to be a subset of the Protocol types
+    ///
+    /// # Returns
+    ///
+    /// A `Result` whose `Ok` value is a `ProtoSet` holding all of the
+    /// unique version numbers.
+    ///
+    /// The returned `Result`'s `Err` value is an `ProtoverError` whose `Display`
+    /// impl has a description of the error.
+    ///
+    /// # Errors
+    ///
+    /// This function will error if:
+    ///
+    /// * The protocol string does not follow the "protocol_name=version_list"
+    ///   expected format, or
+    /// * If the version string is malformed. See `impl FromStr for ProtoSet`.
+    fn from_str(protocol_string: &str) -> Result<UnvalidatedProtoEntry, ProtoverError> {
+        let mut parsed: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
+
+        for subproto in protocol_string.split(' ') {
+            let mut parts = subproto.splitn(2, '=');
+
+            let name = match parts.next() {
+                Some("") => return Err(ProtoverError::Unparseable),
+                Some(n) => n,
+                None => return Err(ProtoverError::Unparseable),
+            };
+            let vers = match parts.next() {
+                Some(n) => n,
+                None => return Err(ProtoverError::Unparseable),
+            };
+            let versions = ProtoSet::from_str(vers)?;
+            let protocol = UnknownProtocol::from_str(name)?;
+
+            parsed.insert(protocol, versions);
+        }
+        Ok(parsed)
+    }
+}
+
+/// Pretend a `ProtoEntry` is actually an `UnvalidatedProtoEntry`.
+impl From<ProtoEntry> for UnvalidatedProtoEntry {
+    fn from(proto_entry: ProtoEntry) -> UnvalidatedProtoEntry {
+        let mut unvalidated: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
+
+        for (protocol, versions) in proto_entry.iter() {
+            unvalidated.insert(UnknownProtocol::from(protocol.clone()), versions.clone());
+        }
+        unvalidated
+    }
 }
 
 /// Protocol voting implementation.
