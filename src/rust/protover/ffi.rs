@@ -138,13 +138,15 @@ pub extern "C" fn protocol_list_supports_protocol_or_later(
         Err(_) => return 0,
     };
 
-    let is_supported = protover_string_supports_protocol_or_later(
-        protocol_list,
-        protocol,
-        version,
-    );
+    let proto_entry: UnvalidatedProtoEntry = match protocol_list.parse() {
+        Ok(n)  => n,
+        Err(_) => return 1,
+    };
 
-    return if is_supported { 1 } else { 0 };
+    if proto_entry.supports_protocol_or_later(&protocol.into(), &version) {
+        return 1;
+    }
+    0
 }
 
 /// Provide an interface for C to translate arguments and return types for
