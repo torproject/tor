@@ -13,6 +13,8 @@ use std::u32;
 
 use tor_util::strings::NUL_BYTE;
 
+use errors::ProtoverError;
+
 /// The first version of Tor that included "proto" entries in its descriptors.
 /// Authorities should use this to decide whether to guess proto lines.
 ///
@@ -78,7 +80,7 @@ impl fmt::Display for Proto {
 ///
 /// C_RUST_COUPLED: src/or/protover.c `PROTOCOL_NAMES`
 impl FromStr for Proto {
-    type Err = &'static str;
+    type Err = ProtoverError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -92,7 +94,7 @@ impl FromStr for Proto {
             "LinkAuth" => Ok(Proto::LinkAuth),
             "Microdesc" => Ok(Proto::Microdesc),
             "Relay" => Ok(Proto::Relay),
-            _ => Err("Not a valid protocol type"),
+            _ => Err(ProtoverError::UnknownProtocol),
         }
     }
 }
