@@ -1881,5 +1881,8 @@ geoip_free_all(void)
 
   clear_geoip_db();
   tor_free(bridge_stats_extrainfo);
+
+  memset(geoip_digest, 0, sizeof(geoip_digest));
+  memset(geoip6_digest, 0, sizeof(geoip6_digest));
 }
 

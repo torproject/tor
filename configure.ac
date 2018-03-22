@@ -1885,6 +1885,12 @@ AC_SUBST(BUILDDIR)
 AH_TEMPLATE([BUILDDIR],[tor's build directory])
 AC_DEFINE_UNQUOTED(BUILDDIR,"$BUILDDIR")
 
+if test "x$SRCDIR" = "x"; then
+  SRCDIR=`pwd`
+fi
+AH_TEMPLATE([SRCDIR],[tor's sourcedir directory])
+AC_DEFINE_UNQUOTED(SRCDIR,"$SRCDIR")
+
 if test "x$CONFDIR" = "x"; then
   CONFDIR=`eval echo $sysconfdir/tor`
 fi
