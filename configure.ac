@@ -553,6 +553,7 @@ AC_CHECK_FUNCS(
 	mach_approximate_time \
         memmem \
         memset_s \
+        mmap \
 	pipe \
 	pipe2 \
         prctl \
@@ -1738,14 +1739,6 @@ AC_CHECK_FUNCS(mlockall)
 AC_CHECK_DECLS([mlockall], , , [
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
-#endif])
-
-# Some MinGW environments don't have getpagesize in unistd.h. We don't use
-# AC_CHECK_FUNCS(getpagesize), because other environments rename getpagesize
-# using macros
-AC_CHECK_DECLS([getpagesize], , , [
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
 #endif])
 
 # Allow user to specify an alternate syslog facility
