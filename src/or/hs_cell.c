@@ -369,7 +369,7 @@ introduce1_encrypt_and_encode(trn_cell_introduce1_t *cell,
   crypto_cipher_free(cipher);
   offset += encoded_enc_cell_len;
   /* Compute MAC from the above and put it in the buffer. This function will
-   * make the adjustment to the encryptled_len to ommit the MAC length. */
+   * make the adjustment to the encrypted_len to omit the MAC length. */
   compute_introduce_mac(encoded_cell, encoded_cell_len,
                         encrypted, encrypted_len,
                         keys.mac_key, sizeof(keys.mac_key),
