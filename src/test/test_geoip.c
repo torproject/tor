@@ -404,7 +404,11 @@ test_geoip_load_file(void *arg)
             geoip_db_digest(AF_INET));
 
   const char FNAME[] = SRCDIR "/src/config/geoip";
-  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME));
+  int rv = geoip_load_file(AF_INET, FNAME);
+  if (rv != 0) {
+    TT_GRIPE(("Unable to load geoip from %s", escaped(FNAME)));
+  }
+  tt_int_op(0, OP_EQ, rv);
 
   /* Check that we loaded some countries; this will fail if there are ever
    * fewer than 50 countries in the world. */
