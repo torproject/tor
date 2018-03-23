@@ -1954,7 +1954,9 @@ should_rotate_descriptors(hs_service_t *service, time_t now)
                        "time is %ld (now: %ld). Valid after time from "
                        "consensus is %ld",
                service->desc_current, service->desc_next,
-               service->state.next_rotation_time, now, ns->valid_after);
+               (long)service->state.next_rotation_time,
+               (long)now,
+               (long)ns->valid_after);
       goto no_rotation;
     }
     goto rotation;
