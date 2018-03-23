@@ -951,9 +951,12 @@ update_consensus_networkstatus_downloads(time_t now)
         continue;
       }
 
-      /* Check if we're waiting for certificates to download */
-      if (check_consensus_waiting_for_certs(i, now, &consensus_dl_status[i]))
+      /** Check if we're waiting for certificates to download. If we are,
+       * launch download for missing directory authority certificates. */
+      if (check_consensus_waiting_for_certs(i, now, &consensus_dl_status[i])) {
+        update_certificate_downloads(now);
         continue;
+      }
 
       /* Try the requested attempt */
       log_info(LD_DIR, "Launching %s standard networkstatus consensus "
@@ -1230,16 +1233,20 @@ should_delay_dir_fetches(const or_options_t *options, const char **msg_out)
   return 0;
 }
 
-/** Launch requests for networkstatus documents and authority certificates as
- * appropriate. */
+/** Launch requests for networkstatus documents as appropriate. This is called
+ * when we retry all the connections on a SIGHUP and periodically by a Periodic
+ * event which checks whether we want to download any networkstatus documents.
+ */
 void
 update_networkstatus_downloads(time_t now)
 {
   const or_options_t *options = get_options();
   if (should_delay_dir_fetches(options, NULL))
     return;
+  /** Launch a consensus download request, we will wait for the consensus to
+   * download and when it completes we will launch a certificate download
+   * request. */
   update_consensus_networkstatus_downloads(now);
-  update_certificate_downloads(now);
 }
 
 /** Launch requests as appropriate for missing directory authority

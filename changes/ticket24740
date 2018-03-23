@@ -1,0 +1,5 @@
+  o Minor bugfixes (directory server cert fetch):
+    - Fixed launching a certificate fetch always during the scheduled
+      periodic consensus fetch by fetching only in those cases when
+      consensus are waiting for certs.
+      Fixes bug 24740; bugfix on 0.2.9.1-alpha.
