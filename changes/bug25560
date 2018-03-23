@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing, rust):
+    - Some of our Rust crates were not having their tests run with `make
+      test-rust` due to a static string in the `src/test/test_rust.sh` script
+      specifying which crates to test.  Rust crates are not automatically
+      detected and tested.  Fixes bug 25560; bugfix on 0.3.3.3-alpha.
