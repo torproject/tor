@@ -1879,7 +1879,7 @@ AH_TEMPLATE([BUILDDIR],[tor's build directory])
 AC_DEFINE_UNQUOTED(BUILDDIR,"$BUILDDIR")
 
 if test "x$SRCDIR" = "x"; then
-  SRCDIR=`pwd`
+  SRCDIR=$(cd "$srcdir"; pwd)
 fi
 AH_TEMPLATE([SRCDIR],[tor's sourcedir directory])
 AC_DEFINE_UNQUOTED(SRCDIR,"$SRCDIR")
