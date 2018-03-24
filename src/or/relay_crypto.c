@@ -170,6 +170,9 @@ relay_decrypt_cell(circuit_t *circ, cell_t *cell,
 /**
  * Encrypt a cell <b>cell</b> that we are creating, and sending outbound on
  * <b>circ</b> until the hop corresponding to <b>layer_hint</b>.
+ *
+ * The integrity field and recognized field of <b>cell</b>'s relay headers
+ * must be set to zero.
  */
 void
 relay_encrypt_cell_outbound(cell_t *cell,
@@ -193,6 +196,9 @@ relay_encrypt_cell_outbound(cell_t *cell,
 /**
  * Encrypt a cell <b>cell</b> that we are creating, and sending on
  * <b>circuit</b> to the origin.
+ *
+ * The integrity field and recognized field of <b>cell</b>'s relay headers
+ * must be set to zero.
  */
 void
 relay_encrypt_cell_inbound(cell_t *cell,
