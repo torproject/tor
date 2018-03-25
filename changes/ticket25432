@@ -1,6 +1,6 @@
   o Code simplification and refactoring:
     - Merge functions used for describing nodes and suppress the functions
       that do not allocate memory for the output buffer string.
-    - NODE_DESC_BUF_LEN constant and format_node_description() function
+      NODE_DESC_BUF_LEN constant and format_node_description() function
       cannot be used externally from router.c module anymore.
-    - Closes ticket 25432. Patch by valentecaio.
+      Closes ticket 25432. Patch by valentecaio.
