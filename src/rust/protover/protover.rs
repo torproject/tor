@@ -151,10 +151,8 @@ impl ProtoEntry {
     /// subprotocol.
     pub fn supported() -> Result<Self, ProtoverError> {
         let supported_cstr: &'static CStr = get_supported_protocols_cstr();
-        let supported: &str = match supported_cstr.to_str() {
-            Ok(x)  => x,
-            Err(_) => "",
-        };
+        let supported: &str = supported_cstr.to_str().unwrap_or("");
+
         supported.parse()
     }
 
