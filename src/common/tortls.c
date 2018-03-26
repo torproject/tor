@@ -25,6 +25,7 @@
   #include <ws2tcpip.h>
 #endif
 
+#include "crypto.h"
 #include "compat.h"
 
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
@@ -32,7 +33,6 @@
 DISABLE_GCC_WARNING(redundant-decls)
 
 #include <openssl/opensslv.h>
-#include "crypto.h"
 
 #ifdef OPENSSL_NO_EC
 #error "We require OpenSSL with ECC support"

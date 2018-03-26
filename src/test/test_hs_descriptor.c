@@ -9,6 +9,7 @@
 #define HS_DESCRIPTOR_PRIVATE
 
 #include "crypto_ed25519.h"
+#include "crypto_digest.h"
 #include "ed25519_cert.h"
 #include "or.h"
 #include "hs_descriptor.h"

@@ -15,13 +15,13 @@
 
 #include "orconfig.h"
 
+#include "crypto_digest.h"
 #include <stdio.h>
 #include "torint.h"
 #include "testsupport.h"
 #include "compat.h"
 #include "util.h"
 #include "torlog.h"
-#include "crypto_curve25519.h"
 
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)
@@ -69,6 +69,14 @@ crypto_pk_t *crypto_pk_dup_key(crypto_pk_t *orig);
 crypto_pk_t *crypto_pk_copy_full(crypto_pk_t *orig);
 int crypto_pk_key_is_private(const crypto_pk_t *key);
 int crypto_pk_public_exponent_ok(crypto_pk_t *env);
+int crypto_pk_obsolete_public_hybrid_encrypt(crypto_pk_t *env, char *to,
+                                    size_t tolen,
+                                    const char *from, size_t fromlen,
+                                    int padding, int force);
+int crypto_pk_obsolete_private_hybrid_decrypt(crypto_pk_t *env, char *to,
+                                     size_t tolen,
+                                     const char *from, size_t fromlen,
+                                     int padding, int warnOnFailure);
 int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
                              const char *from, size_t fromlen, int padding);
 int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,
@@ -84,6 +92,13 @@ crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
 
+MOCK_DECL(int, crypto_pk_public_checksig_digest,(crypto_pk_t *env,
+          const char *data, size_t datalen, const char *sig, size_t siglen));
+int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
+                                  const char *from, size_t fromlen);
+int crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out);
+int crypto_pk_get_common_digests(crypto_pk_t *pk,
+                                 common_digests_t *digests_out);
 int crypto_pk_base64_encode(const crypto_pk_t *pk, char **priv_out);
 crypto_pk_t *crypto_pk_base64_decode(const char *str, size_t len);
 

@@ -9,7 +9,7 @@
 	void ed25519_hash(uint8_t *hash, const uint8_t *in, size_t inlen);
 */
 
-#include "crypto.h"
+#include "crypto_digest.h"
 
 typedef struct ed25519_hash_context {
   crypto_digest_t *ctx;

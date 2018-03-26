@@ -24,6 +24,7 @@
 #include "crypto.h"
 #include "crypto_curve25519.h"
 #include "crypto_format.h"
+#include "crypto_digest.h"
 #include "util.h"
 #include "torlog.h"
 
