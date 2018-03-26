@@ -1,0 +1,4 @@
+  o Minor bugfix (channel, client):
+    - Better identify client connection when reporting to the geoip client
+      cache. Fixes bug 24904; bugfix on 0.3.1.7.
+
