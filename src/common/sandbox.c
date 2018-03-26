@@ -247,7 +247,8 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(recvmsg),
     SCMP_SYS(recvfrom),
     SCMP_SYS(sendto),
-    SCMP_SYS(unlink)
+    SCMP_SYS(unlink),
+    SCMP_SYS(poll)
 };
 
 /* These macros help avoid the error where the number of filters we add on a
@@ -1062,25 +1063,6 @@ sb_mremap(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
-/**
- * Function responsible for setting up the poll syscall for
- * the seccomp filter sandbox.
- */
-static int
-sb_poll(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
-{
-  int rc = 0;
-  (void) filter;
-
-  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(poll),
-      SCMP_CMP(1, SCMP_CMP_EQ, 1),
-      SCMP_CMP(2, SCMP_CMP_EQ, 10));
-  if (rc)
-    return rc;
-
-  return 0;
-}
-
 #ifdef __NR_stat64
 /**
  * Function responsible for setting up the stat64 syscall for
@@ -1155,7 +1137,6 @@ static sandbox_filter_func_t filter_func[] = {
     sb_flock,
     sb_futex,
     sb_mremap,
-    sb_poll,
 #ifdef __NR_stat64
     sb_stat64,
 #endif
