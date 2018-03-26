@@ -263,13 +263,12 @@ nodelist_add_microdesc(microdesc_t *md)
   if (rs == NULL)
     return NULL;
   node = node_get_mutable_by_id(rs->identity_digest);
-  if (node) {
-    if (node->md)
-      node->md->held_by_nodes--;
-    node->md = md;
-    md->held_by_nodes++;
-  }
-
+  if (node == NULL)
+    return NULL;
+  if (node->md)
+    node->md->held_by_nodes--;
+  node->md = md;
+  md->held_by_nodes++;
   node_add_to_address_set(node);
 
   return node;
