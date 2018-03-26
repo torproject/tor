@@ -1849,8 +1849,8 @@ channel_do_open_actions(channel_t *chan)
     circuit_build_times_network_is_live(get_circuit_build_times_mutable());
     router_set_status(chan->identity_digest, 1);
   } else {
-    /* only report it to the geoip module if it's not a known router */
-    if (!connection_or_digest_is_known_relay(chan->identity_digest)) {
+    /* only report it to the geoip module if it's a client */
+    if (channel_is_client(chan)) {
       if (channel_get_addr_if_possible(chan, &remote_addr)) {
         char *transport_name = NULL;
         channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
