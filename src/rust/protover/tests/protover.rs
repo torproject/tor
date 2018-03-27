@@ -353,13 +353,6 @@ fn protover_all_supported_should_exclude_some_versions_and_entire_protocols() {
 }
 
 #[test]
-#[should_panic(expected = "called `Result::unwrap()` on an `Err` value: ExceedsMax")]
-// C_RUST_DIFFERS: This test fails in Rust (but not in C) because an
-// UnvalidatedProtoEntry is defined as a Hashmap<UnknownProtocol, ProtoSet>.
-// Because it contains the ProtoSet part, there's still *some* validation
-// happening, so in this case the DoS protections in the Rust code are kicking
-// in because the range here is exceeds the maximum, so it returns an
-// Err(ProtoverError::ExceedsMax).  The C, however seems to parse it anyway.
 fn protover_all_supported_should_not_dos_anyones_computer() {
     let proto: UnvalidatedProtoEntry = "Sleen=0-2147483648".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
@@ -368,13 +361,6 @@ fn protover_all_supported_should_not_dos_anyones_computer() {
 }
 
 #[test]
-#[should_panic(expected = "called `Result::unwrap()` on an `Err` value: ExceedsMax")]
-// C_RUST_DIFFERS: This test fails in Rust (but not in C) because an
-// UnvalidatedProtoEntry is defined as a Hashmap<UnknownProtocol, ProtoSet>.
-// Because it contains the ProtoSet part, there's still *some* validation
-// happening, so in this case the DoS protections in the Rust code are kicking
-// in because the range here is exceeds the maximum, so it returns an
-// Err(ProtoverError::ExceedsMax).  The C, however seems to parse it anyway.
 fn protover_all_supported_should_not_dos_anyones_computer_max_versions() {
     let proto: UnvalidatedProtoEntry = "Sleen=0-4294967294".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();

@@ -8,7 +8,6 @@ use std::slice;
 use std::str::FromStr;
 use std::u32;
 
-use protover::MAX_PROTOCOLS_TO_EXPAND;
 use errors::ProtoverError;
 
 /// A single version number.
@@ -178,10 +177,6 @@ impl ProtoSet {
             last_high = high;
         }
 
-        if self.length > MAX_PROTOCOLS_TO_EXPAND {
-            return Err(ProtoverError::ExceedsMax);
-        }
-
         if self.length != length {
             return Err(ProtoverError::Overlap); // XXX maybe different error?
         }
@@ -316,8 +311,14 @@ impl FromStr for ProtoSet {
     /// assert!(protoset.contains(&5));
     /// assert!(!protoset.contains(&10));
     ///
-    /// // We can also equivalently call `ProtoSet::from_str` by doing:
+    /// // We can also equivalently call `ProtoSet::from_str` by doing (all
+    /// // implementations of `FromStr` can be called this way, this one isn't
+    /// // special):
     /// let protoset: ProtoSet = "4-6,12".parse()?;
+    ///
+    /// // Calling it (either way) can take really large ranges (up to `u32::MAX`):
+    /// let protoset: ProtoSet = "1-70000".parse()?;
+    /// let protoset: ProtoSet = "1-4294967296".parse()?;
     ///
     /// // There are lots of ways to get an `Err` from this function.  Here are
     /// // a few:
@@ -326,7 +327,6 @@ impl FromStr for ProtoSet {
     /// assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("not_an_int"));
     /// assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("3-"));
     /// assert_eq!(Err(ProtoverError::Unparseable), ProtoSet::from_str("1-,4"));
-    /// assert_eq!(Err(ProtoverError::ExceedsMax), ProtoSet::from_str("1-70000"));
     ///
     /// // Things which would get parsed into an _empty_ `ProtoSet` are,
     /// // however, legal, and result in an empty `ProtoSet`:
