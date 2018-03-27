@@ -273,7 +273,7 @@ test_protover_all_supported(void *arg)
   tt_str_op(msg, OP_EQ, "Link=6-12 Quokka=9000-9001");
   tor_free(msg);
 
-  /* CPU/RAM DoS loop: Rust only */
+  /* We shouldn't be able to DoS ourselves parsing a large range. */
   tt_assert(! protover_all_supported("Sleen=0-2147483648", &msg));
   tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
   tor_free(msg);
