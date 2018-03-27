@@ -2857,8 +2857,18 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
   tor_addr_port_t ap;
   int valid_addr = 0;
 
-  if (node->ri == NULL && (node->rs == NULL || node->md == NULL))
-    return NULL;
+  const int is_bridge = node_is_a_configured_bridge(node);
+  const int we_use_mds = we_use_microdescriptors_for_circuits(get_options());
+
+  if (is_bridge || !we_use_mds) {
+    /* We need an ri in this case. */
+    if (!node->ri)
+      return NULL;
+  } else {
+    /* Otherwise we need an md. */
+    if (node->rs == NULL || node->md == NULL)
+      return NULL;
+  }
 
   /* Choose a preferred address first, but fall back to an allowed address.
    * choose_address returns 1 on success, but get_prim_orport returns 0. */
