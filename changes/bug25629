@@ -1,0 +1,3 @@
+  o Minor bugfixes (C correctness):
+    - Fix a very unlikely null pointer dereference.  Fixes bug 25629;
+      bugfix on 0.2.9.15.  Found by Coverity; this is CID 1430932.
