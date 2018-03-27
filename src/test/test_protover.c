@@ -254,8 +254,23 @@ test_protover_all_supported(void *arg)
   tt_assert(! protover_all_supported("Link=3-4 Wombat=9", &msg));
   tt_str_op(msg, OP_EQ, "Wombat=9");
   tor_free(msg);
+
+  /* Mix of things we support and don't support within a single protocol
+   * which we do support */
   tt_assert(! protover_all_supported("Link=3-999", &msg));
-  tt_str_op(msg, OP_EQ, "Link=3-999");
+  tt_str_op(msg, OP_EQ, "Link=6-999");
+  tor_free(msg);
+  tt_assert(! protover_all_supported("Link=1-3,345-666", &msg));
+  tt_str_op(msg, OP_EQ, "Link=345-666");
+  tor_free(msg);
+  tt_assert(! protover_all_supported("Link=1-3,5-12", &msg));
+  tt_str_op(msg, OP_EQ, "Link=6-12");
+  tor_free(msg);
+
+  /* Mix of protocols we do support and some we don't, where the protocols
+   * we do support have some versions we don't support. */
+  tt_assert(! protover_all_supported("Link=1-3,5-12 Quokka=9000-9001", &msg));
+  tt_str_op(msg, OP_EQ, "Link=6-12 Quokka=9000-9001");
   tor_free(msg);
 
   /* CPU/RAM DoS loop: Rust only */

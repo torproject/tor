@@ -671,7 +671,9 @@ int
 protover_all_supported(const char *s, char **missing_out)
 {
   int all_supported = 1;
-  smartlist_t *missing;
+  smartlist_t *missing_some;
+  smartlist_t *missing_completely;
+  smartlist_t *missing_all;
 
   if (!s) {
     return 1;
@@ -684,7 +686,8 @@ protover_all_supported(const char *s, char **missing_out)
     return 1;
   }
 
-  missing = smartlist_new();
+  missing_some = smartlist_new();
+  missing_completely = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(entries, const proto_entry_t *, ent) {
     protocol_type_t tp;
@@ -696,11 +699,61 @@ protover_all_supported(const char *s, char **missing_out)
     }
 
     SMARTLIST_FOREACH_BEGIN(ent->ranges, const proto_range_t *, range) {
+      proto_entry_t *unsupported = tor_malloc_zero(sizeof(proto_entry_t));
+      proto_range_t *versions = tor_malloc_zero(sizeof(proto_range_t));
       uint32_t i;
+
+      unsupported->name = tor_strdup(ent->name);
+      unsupported->ranges = smartlist_new();
+
       for (i = range->low; i <= range->high; ++i) {
         if (!protover_is_supported_here(tp, i)) {
-          goto unsupported;
+          if (versions->low == 0 && versions->high == 0) {
+            versions->low = i;
+            /* Pre-emptively add the high now, just in case we're in a single
+             * version range (e.g. "Link=999"). */
+            versions->high = i;
+          }
+          /* If the last one to be unsupported is one less than the current
+           * one, we're in a continous range, so set the high field. */
+          if ((versions->high && versions->high == i - 1) ||
+              /* Similarly, if the last high wasn't set and we're currently
+               * one higher than the low, add current index as the highest
+               * known high. */
+              (!versions->high && versions->low == i - 1)) {
+            versions->high = i;
+            continue;
+          }
+        } else {
+          /* If we hit a supported version, and we previously had a range,
+           * we've hit a non-continuity. Copy the previous range and add it to
+           * the unsupported->ranges list and zero-out the previous range for
+           * the next iteration. */
+          if (versions->low != 0 && versions->high != 0) {
+            proto_range_t *versions_to_add = tor_malloc(sizeof(proto_range_t));
+
+            versions_to_add->low = versions->low;
+            versions_to_add->high = versions->high;
+            smartlist_add(unsupported->ranges, versions_to_add);
+
+            versions->low = 0;
+            versions->high = 0;
+          }
         }
+      }
+      /* Once we've run out of versions to check, see if we had any unsupported
+       * ones and, if so, add them to unsupported->ranges. */
+      if (versions->low != 0 && versions->high != 0) {
+        smartlist_add(unsupported->ranges, versions);
+      }
+      /* Finally, if we had something unsupported, add it to the list of
+       * missing_some things and mark that there was something missing. */
+      if (smartlist_len(unsupported->ranges) != 0) {
+        smartlist_add(missing_some, (void*) unsupported);
+        all_supported = 0;
+      } else {
+        proto_entry_free(unsupported);
+        tor_free(versions);
       }
     } SMARTLIST_FOREACH_END(range);
 
@@ -708,14 +761,24 @@ protover_all_supported(const char *s, char **missing_out)
 
   unsupported:
     all_supported = 0;
-    smartlist_add(missing, (void*) ent);
+    smartlist_add(missing_completely, (void*) ent);
   } SMARTLIST_FOREACH_END(ent);
 
+  /* We keep the two smartlists separate so that we can free the proto_entry_t
+   * we created and put in missing_some, so here we add them together to build
+   * the string. */
+  missing_all = smartlist_new();
+  smartlist_add_all(missing_all, missing_some);
+  smartlist_add_all(missing_all, missing_completely);
+
   if (missing_out && !all_supported) {
-    tor_assert(0 != smartlist_len(missing));
-    *missing_out = encode_protocol_list(missing);
+    tor_assert(smartlist_len(missing_all) != 0);
+    *missing_out = encode_protocol_list(missing_all);
   }
-  smartlist_free(missing);
+  SMARTLIST_FOREACH(missing_some, proto_entry_t *, ent, proto_entry_free(ent));
+  smartlist_free(missing_some);
+  smartlist_free(missing_completely);
+  smartlist_free(missing_all);
 
   SMARTLIST_FOREACH(entries, proto_entry_t *, ent, proto_entry_free(ent));
   smartlist_free(entries);
