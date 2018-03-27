@@ -246,7 +246,7 @@ pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const
         Err(_) => return empty.as_ptr(),
     };
 
-    elder_protocols = compute_for_old_tor(&version);
+    elder_protocols = compute_for_old_tor_cstr(&version);
 
     // If we're going to pass it to C, there cannot be any intermediate NUL
     // bytes.  An assert is okay here, since changing the const byte slice
