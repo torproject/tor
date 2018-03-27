@@ -1237,6 +1237,10 @@ test_build_update_descriptors(void *arg)
     node->is_running = node->is_valid = node->is_fast = node->is_stable = 1;
   }
 
+  /* We have to set thise, or the lack of microdescriptors for these
+   * nodes will make them unusable. */
+  get_options_mutable()->UseMicrodescriptors = 0;
+
   /* We expect to pick only one intro point from the node above. */
   setup_full_capture_of_logs(LOG_INFO);
   update_all_descriptors(now);

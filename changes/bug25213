@@ -1,0 +1,5 @@
+  o Minor bugfixes (warnings, ipv6):
+    - Avoid a bug warning that could occur when trying to connect to
+      a relay over IPv6 on a Tor instance that downloads router descriptors,
+      but prefers to use microdescriptors. Fixes bug 25213; bugfix on
+      0.3.3.1-alpha.
