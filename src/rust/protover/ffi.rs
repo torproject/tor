@@ -231,6 +231,6 @@ pub extern "C" fn protover_compute_for_old_tor(version: *const c_char) -> *const
         Err(_) => return empty.as_ptr(),
     };
 
-    supported = compute_for_old_tor(&version);
+    supported = compute_for_old_tor_cstr(&version);
     supported.as_ptr()
 }

@@ -574,8 +574,8 @@ pub fn is_supported_here(proto: &Protocol, vers: &Version) -> bool {
     supported_versions.contains(vers)
 }
 
-/// Older versions of Tor cannot infer their own subprotocols
-/// Used to determine which subprotocols are supported by older Tor versions.
+/// Since older versions of Tor cannot infer their own subprotocols,
+/// determine which subprotocols are supported by older Tor versions.
 ///
 /// # Inputs
 ///
@@ -589,32 +589,68 @@ pub fn is_supported_here(proto: &Protocol, vers: &Version) -> bool {
 /// "HSDir=1-1 LinkAuth=1"
 ///
 /// This function returns the protocols that are supported by the version input,
-/// only for tor versions older than FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS.
+/// only for tor versions older than `FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS`
+/// (but not older than 0.2.4.19).  For newer tors (or older than 0.2.4.19), it
+/// returns an empty string.
 ///
-/// C_RUST_COUPLED: src/rust/protover.c `compute_for_old_tor`
-pub fn compute_for_old_tor(version: &str) -> &'static CStr {
+/// # Note
+///
+/// This function is meant to be called for/within FFI code.  If you'd
+/// like to use this code in Rust, please see `compute_for_old_tor()`.
+//
+// C_RUST_COUPLED: src/rust/protover.c `compute_for_old_tor`
+pub(crate) fn compute_for_old_tor_cstr(version: &str) -> &'static CStr {
     let empty: &'static CStr = cstr!("");
 
     if c_tor_version_as_new_as(version, FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS) {
         return empty;
     }
-
     if c_tor_version_as_new_as(version, "0.2.9.1-alpha") {
         return cstr!("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 \
                       Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2");
     }
-
     if c_tor_version_as_new_as(version, "0.2.7.5") {
         return cstr!("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
                       Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2");
     }
-
     if c_tor_version_as_new_as(version, "0.2.4.19") {
         return cstr!("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 \
                       Link=1-4 LinkAuth=1 Microdesc=1 Relay=1-2");
     }
-
     empty
+}
+
+/// Since older versions of Tor cannot infer their own subprotocols,
+/// determine which subprotocols are supported by older Tor versions.
+///
+/// # Inputs
+///
+/// * `version`, a string comprised of "[0-9a-z.-]"
+///
+/// # Returns
+///
+/// A `Result` whose `Ok` value is an `&'static str` encoding a list of protocol
+/// names and supported versions. The string takes the following format:
+///
+/// "HSDir=1-1 LinkAuth=1"
+///
+/// This function returns the protocols that are supported by the version input,
+/// only for tor versions older than `FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS`.
+/// (but not older than 0.2.4.19).  For newer tors (or older than 0.2.4.19), its
+/// `Ok` `Result` contains an empty string.
+///
+/// Otherwise, its `Err` contains a `ProtoverError::Unparseable` if the
+/// `version` string was invalid utf-8.
+///
+/// # Note
+///
+/// This function is meant to be called for/within non-FFI Rust code.
+//
+// C_RUST_COUPLED: src/rust/protover.c `compute_for_old_tor`
+pub fn compute_for_old_tor(version: &str) -> Result<&'static str, ProtoverError> {
+    // .to_str() fails with a Utf8Error if it couldn't validate the
+    // utf-8, so convert that here into an Unparseable ProtoverError.
+    compute_for_old_tor_cstr(version).to_str().or(Err(ProtoverError::Unparseable))
 }
 
 #[cfg(test)]
