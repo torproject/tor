@@ -507,22 +507,22 @@ nodelist_add_microdesc(microdesc_t *md)
   if (rs == NULL)
     return NULL;
   node = node_get_mutable_by_id(rs->identity_digest);
-  if (node) {
-    node_remove_from_ed25519_map(node);
-    if (node->md)
-      node->md->held_by_nodes--;
+  if (node == NULL)
+    return NULL;
 
-    node->md = md;
-    md->held_by_nodes++;
-    /* Setting the HSDir index requires the ed25519 identity key which can
-     * only be found either in the ri or md. This is why this is called here.
-     * Only nodes supporting HSDir=2 protocol version needs this index. */
-    if (rs->pv.supports_v3_hsdir) {
-      node_set_hsdir_index(node, ns);
-    }
-    node_add_to_ed25519_map(node);
+  node_remove_from_ed25519_map(node);
+  if (node->md)
+    node->md->held_by_nodes--;
+
+  node->md = md;
+  md->held_by_nodes++;
+  /* Setting the HSDir index requires the ed25519 identity key which can
+   * only be found either in the ri or md. This is why this is called here.
+   * Only nodes supporting HSDir=2 protocol version needs this index. */
+  if (rs->pv.supports_v3_hsdir) {
+    node_set_hsdir_index(node, ns);
   }
-
+  node_add_to_ed25519_map(node);
   node_add_to_address_set(node);
 
   return node;
