@@ -6,6 +6,7 @@ extern crate protover;
 use protover::ProtoEntry;
 use protover::ProtoverVote;
 use protover::UnvalidatedProtoEntry;
+use protover::errors::ProtoverError;
 
 #[test]
 fn parse_protocol_with_single_proto_and_single_version() {
@@ -320,9 +321,88 @@ fn protover_compute_vote_may_exceed_limit() {
 }
 
 #[test]
-fn protover_all_supported_should_include_version_we_actually_do_support() {
+fn protover_all_supported_should_exclude_versions_we_actually_do_support() {
     let proto: UnvalidatedProtoEntry = "Link=3-999".parse().unwrap();
-    let _result: String = proto.all_supported().unwrap().to_string();
+    let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(_result, "Link=3-999".to_string());
+    assert_eq!(result, "Link=6-999".to_string());
+}
+
+#[test]
+fn protover_all_supported_should_exclude_versions_we_actually_do_support_complex1() {
+    let proto: UnvalidatedProtoEntry = "Link=1-3,345-666".parse().unwrap();
+    let result: String = proto.all_supported().unwrap().to_string();
+
+    assert_eq!(result, "Link=345-666".to_string());
+}
+
+#[test]
+fn protover_all_supported_should_exclude_versions_we_actually_do_support_complex2() {
+    let proto: UnvalidatedProtoEntry = "Link=1-3,5-12".parse().unwrap();
+    let result: String = proto.all_supported().unwrap().to_string();
+
+    assert_eq!(result, "Link=6-12".to_string());
+}
+
+#[test]
+fn protover_all_supported_should_exclude_some_versions_and_entire_protocols() {
+    let proto: UnvalidatedProtoEntry = "Link=1-3,5-12 Quokka=9000-9001".parse().unwrap();
+    let result: String = proto.all_supported().unwrap().to_string();
+
+    assert_eq!(result, "Link=6-12 Quokka=9000-9001".to_string());
+}
+
+#[test]
+#[should_panic(expected = "called `Result::unwrap()` on an `Err` value: ExceedsMax")]
+// C_RUST_DIFFERS: This test fails in Rust (but not in C) because an
+// UnvalidatedProtoEntry is defined as a Hashmap<UnknownProtocol, ProtoSet>.
+// Because it contains the ProtoSet part, there's still *some* validation
+// happening, so in this case the DoS protections in the Rust code are kicking
+// in because the range here is exceeds the maximum, so it returns an
+// Err(ProtoverError::ExceedsMax).  The C, however seems to parse it anyway.
+fn protover_all_supported_should_not_dos_anyones_computer() {
+    let proto: UnvalidatedProtoEntry = "Sleen=0-2147483648".parse().unwrap();
+    let result: String = proto.all_supported().unwrap().to_string();
+
+    assert_eq!(result, "Sleen=0-2147483648".to_string());
+}
+
+#[test]
+#[should_panic(expected = "called `Result::unwrap()` on an `Err` value: ExceedsMax")]
+// C_RUST_DIFFERS: This test fails in Rust (but not in C) because an
+// UnvalidatedProtoEntry is defined as a Hashmap<UnknownProtocol, ProtoSet>.
+// Because it contains the ProtoSet part, there's still *some* validation
+// happening, so in this case the DoS protections in the Rust code are kicking
+// in because the range here is exceeds the maximum, so it returns an
+// Err(ProtoverError::ExceedsMax).  The C, however seems to parse it anyway.
+fn protover_all_supported_should_not_dos_anyones_computer_max_versions() {
+    let proto: UnvalidatedProtoEntry = "Sleen=0-4294967294".parse().unwrap();
+    let result: String = proto.all_supported().unwrap().to_string();
+
+    assert_eq!(result, "Sleen=0-4294967294".to_string());
+}
+
+#[test]
+// C_RUST_DIFFERS: The C will return true (e.g. saying "yes, that's supported")
+// but set the msg to NULL (??? seems maybe potentially bad).  The Rust will
+// simply return a None.
+fn protover_all_supported_should_return_empty_string_for_weird_thing() {
+    let proto: UnvalidatedProtoEntry = "Fribble=".parse().unwrap();
+    let result: Option<UnvalidatedProtoEntry> = proto.all_supported();
+
+    assert!(result.is_none());
+}
+
+#[test]
+fn protover_unvalidatedprotoentry_should_err_entirely_unparseable_things() {
+    let proto: Result<UnvalidatedProtoEntry, ProtoverError> = "Fribble".parse();
+
+    assert_eq!(Err(ProtoverError::Unparseable), proto);
+}
+
+#[test]
+fn protover_all_supported_over_maximum_limit() {
+    let proto: Result<UnvalidatedProtoEntry, ProtoverError> = "Sleen=0-4294967295".parse();
+
+    assert_eq!(Err(ProtoverError::ExceedsMax), proto);
 }
