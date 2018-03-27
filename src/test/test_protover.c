@@ -273,7 +273,7 @@ test_protover_all_supported(void *arg)
   tt_str_op(msg, OP_EQ, "Link=6-12 Quokka=9000-9001");
   tor_free(msg);
 
-  /* CPU/RAM DoS loop: Rust only */
+  /* We shouldn't be able to DoS ourselves parsing a large range. */
   tt_assert(! protover_all_supported("Sleen=0-2147483648", &msg));
   tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
   tor_free(msg);
@@ -546,8 +546,6 @@ test_protover_vote_roundtrip(void *args)
     { "Link=1,9-8,3", NULL },
     { "Faux=-0", NULL },
     { "Faux=0--0", NULL },
-    // "These fail at the splitting stage in Rust, but the number parsing
-    // stage in C."
     { "Faux=-1", NULL },
     { "Faux=-1-3", NULL },
     { "Faux=1--1", NULL },
@@ -556,9 +554,9 @@ test_protover_vote_roundtrip(void *args)
     /* Large range */
     { "Sleen=1-501", "Sleen=1-501" },
     { "Sleen=1-65537", NULL },
-    /* CPU/RAM DoS Loop: Rust only. */
+    /* Both C/Rust implementations should be able to handle this mild DoS. */
     { "Sleen=0-2147483648", NULL },
-    /* Rust seems to experience an internal error here. */
+    /* Rust tests are built in debug mode, so ints are bounds-checked. */
     { "Sleen=0-4294967295", NULL },
   };
   unsigned u;
