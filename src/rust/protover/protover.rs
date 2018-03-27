@@ -9,7 +9,6 @@ use std::str;
 use std::str::FromStr;
 use std::string::String;
 
-use tor_log::{LogSeverity, LogDomain};
 use external::c_tor_version_as_new_as;
 
 use errors::ProtoverError;

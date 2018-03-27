@@ -31,9 +31,6 @@ extern crate tor_allocate;
 #[macro_use]
 extern crate tor_util;
 
-#[macro_use]
-extern crate tor_log;
-
 pub mod errors;
 pub mod protoset;
 mod protover;
