@@ -316,7 +316,7 @@ fn protover_compute_vote_may_exceed_limit() {
     let proto1: UnvalidatedProtoEntry = "Sleen=1-65535".parse().unwrap();
     let proto2: UnvalidatedProtoEntry = "Sleen=100000".parse().unwrap();
 
-    let result: UnvalidatedProtoEntry = ProtoverVote::compute(&[proto1, proto2], &1);
+    let _result: UnvalidatedProtoEntry = ProtoverVote::compute(&[proto1, proto2], &1);
 }
 
 #[test]
