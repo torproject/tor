@@ -240,6 +240,7 @@ impl_to_string_for_proto_entry!(UnvalidatedProtoEntry);
 /// A `ProtoEntry`, but whose `Protocols` can be any `UnknownProtocol`, not just
 /// the supported ones enumerated in `Protocols`.  The protocol versions are
 /// validated, however.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UnvalidatedProtoEntry(HashMap<UnknownProtocol, ProtoSet>);
 
 impl Default for UnvalidatedProtoEntry {
