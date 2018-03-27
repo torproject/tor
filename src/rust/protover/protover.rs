@@ -26,7 +26,7 @@ const FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS: &'static str = "0.2.9.3-alpha";
 /// before concluding that someone is trying to DoS us
 ///
 /// C_RUST_COUPLED: src/or/protover.c `MAX_PROTOCOLS_TO_EXPAND`
-pub(crate) const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
+const MAX_PROTOCOLS_TO_EXPAND: usize = (1<<16);
 
 /// Known subprotocols in Tor. Indicates which subprotocol a relay supports.
 ///
@@ -155,6 +155,10 @@ impl ProtoEntry {
         supported.parse()
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn get(&self, protocol: &Protocol) -> Option<&ProtoSet> {
         self.0.get(protocol)
     }
@@ -209,8 +213,11 @@ impl FromStr for ProtoEntry {
             let proto_name: Protocol = proto.parse()?;
 
             proto_entry.insert(proto_name, versions);
-        }
 
+            if proto_entry.len() > MAX_PROTOCOLS_TO_EXPAND {
+                return Err(ProtoverError::ExceedsMax);
+            }
+        }
         Ok(proto_entry)
     }
 }
@@ -723,8 +730,13 @@ mod test {
     }
 
     #[test]
+    fn test_protoentry_from_str_allowed_number_of_versions() {
+        assert_protoentry_is_parseable!("Desc=1-4294967294");
+    }
+
+    #[test]
     fn test_protoentry_from_str_too_many_versions() {
-        assert_protoentry_is_unparseable!("Desc=1-65537");
+        assert_protoentry_is_unparseable!("Desc=1-4294967295");
     }
 
     #[test]
