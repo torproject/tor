@@ -320,7 +320,9 @@ impl UnvalidatedProtoEntry {
             // If the protocol wasn't even in the enum, then we definitely don't
             // know about it and don't support any of its versions.
             if is_supported.is_err() {
-                unsupported.insert(protocol.clone(), versions.clone());
+                if !versions.is_empty() {
+                    unsupported.insert(protocol.clone(), versions.clone());
+                }
                 continue;
             } else {
                 supported_protocol = is_supported.unwrap();
@@ -331,9 +333,12 @@ impl UnvalidatedProtoEntry {
             let mut unsupported_versions: ProtoSet;
 
             // If the protocol wasn't in the map, then we don't know about it
-            // and don't support any of its versions.
+            // and don't support any of its versions.  Add its versions to the
+            // map (if it has versions).
             if maybe_supported_versions.is_none() {
-                unsupported.insert(protocol.clone(), versions.clone());
+                if !versions.is_empty() {
+                    unsupported.insert(protocol.clone(), versions.clone());
+                }
                 continue;
             } else {
                 supported_versions = maybe_supported_versions.unwrap();
