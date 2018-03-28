@@ -858,13 +858,13 @@ directory_remove_invalid(void)
 
   SMARTLIST_FOREACH_BEGIN(nodes, node_t *, node) {
     const char *msg = NULL;
+    const char *description;
     routerinfo_t *ent = node->ri;
-    char description[NODE_DESC_BUF_LEN];
     uint32_t r;
     if (!ent)
       continue;
     r = dirserv_router_get_status(ent, &msg, LOG_INFO);
-    router_get_description(description, ent);
+    description = router_describe(ent);
     if (r & FP_REJECT) {
       log_info(LD_DIRSERV, "Router %s is now rejected: %s",
                description, msg?msg:"");
