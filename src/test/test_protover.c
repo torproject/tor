@@ -554,9 +554,9 @@ test_protover_vote_roundtrip(void *args)
     /* Large range */
     { "Sleen=1-501", "Sleen=1-501" },
     { "Sleen=1-65537", NULL },
-    /* CPU/RAM DoS Loop: Rust only. */
+    /* Both C/Rust implementations should be able to handle this mild DoS. */
     { "Sleen=0-2147483648", NULL },
-    /* Rust seems to experience an internal error here. */
+    /* Rust tests are built in debug mode, so ints are bounds-checked. */
     { "Sleen=0-4294967295", NULL },
   };
   unsigned u;
