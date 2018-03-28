@@ -120,6 +120,11 @@ int connection_or_single_set_badness_(time_t now,
                                       int force);
 void connection_or_group_set_badness_(smartlist_t *group, int force);
 
+#ifdef CONNECTION_OR_PRIVATE
+STATIC int should_connect_to_relay(const or_connection_t *or_conn);
+STATIC void note_or_connect_failed(const or_connection_t *or_conn);
+#endif
+
 #ifdef TOR_UNIT_TESTS
 extern int certs_cell_ed25519_disabled_for_testing;
 #endif
