@@ -546,8 +546,6 @@ test_protover_vote_roundtrip(void *args)
     { "Link=1,9-8,3", NULL },
     { "Faux=-0", NULL },
     { "Faux=0--0", NULL },
-    // "These fail at the splitting stage in Rust, but the number parsing
-    // stage in C."
     { "Faux=-1", NULL },
     { "Faux=-1-3", NULL },
     { "Faux=1--1", NULL },
