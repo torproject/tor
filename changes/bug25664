@@ -1,0 +1,3 @@
+  o New system requirements:
+    - When built with Rust, Tor now depends on version 0.2.39 of the libc
+      crate. Closes tickets 25310 and 25664.
