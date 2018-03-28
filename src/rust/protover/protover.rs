@@ -277,6 +277,15 @@ impl UnvalidatedProtoEntry {
         self.0.is_empty()
     }
 
+    pub fn len(&self) -> usize {
+        let mut total: usize = 0;
+
+        for (_, versions) in self.iter() {
+            total += versions.len();
+        }
+        total
+    }
+
     /// Determine if we support every protocol a client supports, and if not,
     /// determine which protocols we do not have support for.
     ///
@@ -518,6 +527,7 @@ impl ProtoverVote {
     /// let vote = ProtoverVote::compute(protos, &2);
     /// assert_eq!("Link=3", vote.to_string());
     /// ```
+    // C_RUST_COUPLED: /src/or/protover.c protover_compute_vote
     pub fn compute(proto_entries: &[UnvalidatedProtoEntry], threshold: &usize) -> UnvalidatedProtoEntry {
         let mut all_count: ProtoverVote = ProtoverVote::default();
         let mut final_output: UnvalidatedProtoEntry = UnvalidatedProtoEntry::default();
@@ -528,6 +538,18 @@ impl ProtoverVote {
 
         // parse and collect all of the protos and their versions and collect them
         for vote in proto_entries {
+            // C_RUST_DIFFERS: This doesn't actually differ, bu this check on
+            // the total is here to make it match.  Because the C version calls
+            // expand_protocol_list() which checks if there would be too many
+            // subprotocols *or* individual version numbers, i.e. more than
+            // MAX_PROTOCOLS_TO_EXPAND, and does this *per vote*, we need to
+            // match it's behaviour and ensure we're not allowing more than it
+            // would.
+            if vote.len() > MAX_PROTOCOLS_TO_EXPAND {
+                println!("skipping this vote; too large");
+                continue;
+            }
+
             for (protocol, versions) in vote.iter() {
                 let supported_vers: &mut HashMap<Version, usize> =
                     all_count.entry(protocol.clone()).or_insert(HashMap::new());
