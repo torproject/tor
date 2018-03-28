@@ -347,17 +347,35 @@ test_socks_5_supported_commands(void *ptr)
 
   socks_request_clear(socks);
 
-  /* SOCKS 5 should NOT reject RESOLVE [F0] reject for IPv6 address
+  /* SOCKS 5 should NOT reject RESOLVE [F0] request for IPv6 address
    * string if SafeSocks is enabled. */
+
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\xF0\x00\x03\x29");
+  ADD_DATA(buf, "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]");
+  ADD_DATA(buf, "\x01\x02");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, 1),
+            OP_EQ, 1);
+
+  tt_str_op("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]", OP_EQ,
+    socks->address);
+  tt_int_op(258, OP_EQ, socks->port);
+
+  tt_int_op(0, OP_EQ, buf_datalen(buf));
+
+  socks_request_clear(socks);
+
+  /* Also allow bracket-less form. */
 
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\xF0\x00\x03\x27");
   ADD_DATA(buf, "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
   ADD_DATA(buf, "\x01\x02");
   tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, 1),
-            OP_EQ, -1);
+            OP_EQ, 1);
 
-  tt_str_op("2001:0db8:85a3:0000:0000:8a2e:0370:7334", OP_EQ, socks->address);
+  tt_str_op("2001:0db8:85a3:0000:0000:8a2e:0370:7334", OP_EQ,
+    socks->address);
   tt_int_op(258, OP_EQ, socks->port);
 
   tt_int_op(0, OP_EQ, buf_datalen(buf));
