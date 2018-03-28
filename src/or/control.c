@@ -7605,6 +7605,11 @@ control_free_all(void)
   bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
   notice_bootstrap_percent = 0;
   bootstrap_problems = 0;
+  authentication_cookie_is_set = 0;
+  global_event_mask = 0;
+  disable_log_messages = 0;
+  memset(last_sent_bootstrap_message, 0, sizeof(last_sent_bootstrap_message));
+  flush_queued_event_pending = 0;
 }
 
 #ifdef TOR_UNIT_TESTS
