@@ -369,6 +369,17 @@ fn protover_all_supported_should_not_dos_anyones_computer_max_versions() {
 }
 
 #[test]
+// C_RUST_DIFFERS: The C will return true (e.g. saying "yes, that's supported")
+// but set the msg to NULL (??? seems maybe potentially bad).  The Rust will
+// simply return a None.
+fn protover_all_supported_should_return_empty_string_for_weird_thing() {
+    let proto: UnvalidatedProtoEntry = "Fribble=".parse().unwrap();
+    let result: Option<UnvalidatedProtoEntry> = proto.all_supported();
+
+    assert!(result.is_none());
+}
+
+#[test]
 fn protover_unvalidatedprotoentry_should_err_entirely_unparseable_things() {
     let proto: Result<UnvalidatedProtoEntry, ProtoverError> = "Fribble".parse();
 
