@@ -1,0 +1,2 @@
+  o Minor bugfixes (portability):
+    - Remove uncompilable tor_mmap_file fallback. Fixes bug 25398.
