@@ -47,15 +47,13 @@ pub type Version = u32;
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ProtoSet {
     pub(crate) pairs: Vec<(Version, Version)>,
-    length: usize,
 }
 
 impl Default for ProtoSet {
     fn default() -> Self {
         let pairs: Vec<(Version, Version)> = Vec::new();
-        let length: usize = 0;
 
-        ProtoSet{ pairs, length }
+        ProtoSet{ pairs }
     }
 }
 
@@ -67,17 +65,15 @@ impl<'a> ProtoSet {
     /// We do not assume the input pairs are deduplicated or ordered.
     pub fn from_slice(low_high_pairs: &'a [(Version, Version)]) -> Result<Self, ProtoverError> {
         let mut pairs: Vec<(Version, Version)> = Vec::with_capacity(low_high_pairs.len());
-        let mut length: usize = 0;
 
         for &(low, high) in low_high_pairs {
             pairs.push((low, high));
-            length += (high as usize - low as usize) + 1;
         }
         // Sort the pairs without reallocation and remove all duplicate pairs.
         pairs.sort_unstable();
         pairs.dedup();
 
-        ProtoSet{ pairs, length }.is_ok()
+        ProtoSet{ pairs }.is_ok()
     }
 }
 
@@ -143,6 +139,16 @@ impl ProtoSet {
         self.into()
     }
 
+    pub fn len(&self) -> usize {
+        let mut length: usize = 0;
+
+        for &(low, high) in self.iter() {
+            length += (high as usize - low as usize) + 1;
+        }
+
+        length
+    }
+
     /// Check that this `ProtoSet` is well-formed.
     ///
     /// This is automatically called in `ProtoSet::from_str()`.
@@ -156,7 +162,6 @@ impl ProtoSet {
     ///   overlapping,
     /// * `ProtoverError::ExceedsMax`: if the number of versions when expanded
     ///   would exceed `MAX_PROTOCOLS_TO_EXPAND`, and
-    /// * `ProtoverError::Overlap`: if the `length` field is inaccurate.
     ///
     /// # Returns
     ///
@@ -164,11 +169,8 @@ impl ProtoSet {
     /// errors enumerated in the Errors section above.
     fn is_ok(self) -> Result<ProtoSet, ProtoverError> {
         let mut last_high: Version = 0;
-        let mut length: usize = 0;
 
         for &(low, high) in self.iter() {
-            length += (high as usize - low as usize) + 1;
-
             if last_high !=0 && (low < last_high) {
                 return Err(ProtoverError::Overlap);
             } else if low > high {
@@ -176,11 +178,6 @@ impl ProtoSet {
             }
             last_high = high;
         }
-
-        if self.length != length {
-            return Err(ProtoverError::Overlap); // XXX maybe different error?
-        }
-
         Ok(self)
     }
 
