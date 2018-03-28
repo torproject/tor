@@ -234,7 +234,7 @@ const char *find_str_at_start_of_line(const char *haystack,
 int string_is_C_identifier(const char *string);
 int string_is_key_value(int severity, const char *string);
 int string_is_valid_dest(const char *string);
-int string_is_valid_hostname(const char *string);
+int string_is_valid_nonrfc_hostname(const char *string);
 int string_is_valid_ipv4_address(const char *string);
 int string_is_valid_ipv6_address(const char *string);
 

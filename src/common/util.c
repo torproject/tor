@@ -1094,7 +1094,7 @@ string_is_valid_dest(const char *string)
 
   retval = string_is_valid_ipv4_address(string) ||
     string_is_valid_ipv6_address(string) ||
-    string_is_valid_hostname(string);
+    string_is_valid_nonrfc_hostname(string);
 
   tor_free(tmp);
 
@@ -1108,7 +1108,7 @@ string_is_valid_dest(const char *string)
  * with misconfigured zones that have been encountered in the wild.
  */
 int
-string_is_valid_hostname(const char *string)
+string_is_valid_nonrfc_hostname(const char *string)
 {
   int result = 1;
   int has_trailing_dot;
