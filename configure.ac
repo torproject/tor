@@ -275,7 +275,7 @@ fi
 AM_CONDITIONAL(USEPYTHON, [test "x$PYTHON" != "x"])
 
 dnl List all external rust crates we depend on here. Include the version
-rust_crates="libc-0.2.22"
+rust_crates="libc-0.2.39"
 AC_SUBST(rust_crates)
 
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
