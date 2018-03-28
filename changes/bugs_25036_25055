@@ -1,0 +1,7 @@
+  o Minor bugfixes (networking):
+    - Tor will not reject IPv6 address strings from TorBrowser when they
+      are passed as hostnames in SOCKS5 requests. Fixes bug 25036,
+      bugfix on Tor 0.3.1.2.
+    - string_is_valid_hostname() will not consider IP strings to be valid
+      hostnames. Fixes bug 25055; bugfix on Tor 0.2.5.5.
+

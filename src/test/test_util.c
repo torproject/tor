@@ -5574,47 +5574,74 @@ test_util_max_mem(void *arg)
 }
 
 static void
+test_util_dest_validation_edgecase(void *arg)
+{
+  (void)arg;
+
+  tt_assert(!string_is_valid_dest(NULL));
+  tt_assert(!string_is_valid_dest(""));
+
+  done:
+  return;
+}
+
+static void
 test_util_hostname_validation(void *arg)
 {
   (void)arg;
 
   // Lets try valid hostnames first.
-  tt_assert(string_is_valid_hostname("torproject.org"));
-  tt_assert(string_is_valid_hostname("ocw.mit.edu"));
-  tt_assert(string_is_valid_hostname("i.4cdn.org"));
-  tt_assert(string_is_valid_hostname("stanford.edu"));
-  tt_assert(string_is_valid_hostname("multiple-words-with-hypens.jp"));
+  tt_assert(string_is_valid_nonrfc_hostname("torproject.org"));
+  tt_assert(string_is_valid_nonrfc_hostname("ocw.mit.edu"));
+  tt_assert(string_is_valid_nonrfc_hostname("i.4cdn.org"));
+  tt_assert(string_is_valid_nonrfc_hostname("stanford.edu"));
+  tt_assert(string_is_valid_nonrfc_hostname("multiple-words-with-hypens.jp"));
 
   // Subdomain name cannot start with '-' or '_'.
-  tt_assert(!string_is_valid_hostname("-torproject.org"));
-  tt_assert(!string_is_valid_hostname("subdomain.-domain.org"));
-  tt_assert(!string_is_valid_hostname("-subdomain.domain.org"));
-  tt_assert(!string_is_valid_hostname("___abc.org"));
+  tt_assert(!string_is_valid_nonrfc_hostname("-torproject.org"));
+  tt_assert(!string_is_valid_nonrfc_hostname("subdomain.-domain.org"));
+  tt_assert(!string_is_valid_nonrfc_hostname("-subdomain.domain.org"));
+  tt_assert(!string_is_valid_nonrfc_hostname("___abc.org"));
 
   // Hostnames cannot contain non-alphanumeric characters.
-  tt_assert(!string_is_valid_hostname("%%domain.\\org."));
-  tt_assert(!string_is_valid_hostname("***x.net"));
-  tt_assert(!string_is_valid_hostname("\xff\xffxyz.org"));
-  tt_assert(!string_is_valid_hostname("word1 word2.net"));
+  tt_assert(!string_is_valid_nonrfc_hostname("%%domain.\\org."));
+  tt_assert(!string_is_valid_nonrfc_hostname("***x.net"));
+  tt_assert(!string_is_valid_nonrfc_hostname("\xff\xffxyz.org"));
+  tt_assert(!string_is_valid_nonrfc_hostname("word1 word2.net"));
 
   // Test workaround for nytimes.com stupidity, technically invalid,
   // but we allow it since they are big, even though they are failing to
   // comply with a ~30 year old standard.
-  tt_assert(string_is_valid_hostname("core3_euw1.fabrik.nytimes.com"));
+  tt_assert(string_is_valid_nonrfc_hostname("core3_euw1.fabrik.nytimes.com"));
 
   // Firefox passes FQDNs with trailing '.'s  directly to the SOCKS proxy,
   // which is redundant since the spec states DOMAINNAME addresses are fully
   // qualified.  While unusual, this should be tollerated.
-  tt_assert(string_is_valid_hostname("core9_euw1.fabrik.nytimes.com."));
-  tt_assert(!string_is_valid_hostname("..washingtonpost.is.better.com"));
-  tt_assert(!string_is_valid_hostname("so.is..ft.com"));
-  tt_assert(!string_is_valid_hostname("..."));
+  tt_assert(string_is_valid_nonrfc_hostname("core9_euw1.fabrik.nytimes.com."));
+  tt_assert(!string_is_valid_nonrfc_hostname(
+                                         "..washingtonpost.is.better.com"));
+  tt_assert(!string_is_valid_nonrfc_hostname("so.is..ft.com"));
+  tt_assert(!string_is_valid_nonrfc_hostname("..."));
 
   // XXX: do we allow single-label DNS names?
   // We shouldn't for SOCKS (spec says "contains a fully-qualified domain name"
   // but only test pathologically malformed traling '.' cases for now.
-  tt_assert(!string_is_valid_hostname("."));
-  tt_assert(!string_is_valid_hostname(".."));
+  tt_assert(!string_is_valid_nonrfc_hostname("."));
+  tt_assert(!string_is_valid_nonrfc_hostname(".."));
+
+  // IP address strings are not hostnames.
+  tt_assert(!string_is_valid_nonrfc_hostname("8.8.8.8"));
+  tt_assert(!string_is_valid_nonrfc_hostname("[2a00:1450:401b:800::200e]"));
+  tt_assert(!string_is_valid_nonrfc_hostname("2a00:1450:401b:800::200e"));
+
+  // We allow alphanumeric TLDs. For discussion, see ticket #25055.
+  tt_assert(string_is_valid_nonrfc_hostname("lucky.13"));
+  tt_assert(string_is_valid_nonrfc_hostname("luck.y13"));
+  tt_assert(string_is_valid_nonrfc_hostname("luck.y13."));
+
+  // We allow punycode TLDs. For examples, see
+  // http://data.iana.org/TLD/tlds-alpha-by-domain.txt
+  tt_assert(string_is_valid_nonrfc_hostname("example.xn--l1acc"));
 
   done:
   return;
@@ -6243,6 +6270,7 @@ struct testcase_t util_tests[] = {
     &passthrough_setup, (void*)"1" },
   UTIL_TEST(max_mem, 0),
   UTIL_TEST(hostname_validation, 0),
+  UTIL_TEST(dest_validation_edgecase, 0),
   UTIL_TEST(ipv4_validation, 0),
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),
