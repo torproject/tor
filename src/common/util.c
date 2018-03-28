@@ -1125,6 +1125,9 @@ string_is_valid_nonrfc_hostname(const char *string)
 
   smartlist_split_string(components,string,".",0,0);
 
+  if (BUG(smartlist_len(components) == 0))
+    return 0; // LCOV_EXCL_LINE should be impossible given the earlier checks.
+
   /* Allow a single terminating '.' used rarely to indicate domains
    * are FQDNs rather than relative. */
   last_label = (char *)smartlist_get(components,
