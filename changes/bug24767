@@ -1,5 +1,0 @@
-  o Major bugfixes (relay, connection):
-    - Refuse to connect again to a relay from which we failed previously with
-      a connection refused, timeout or error (at the TCP level). The relay
-      won't be retried for 60 seconds after the failure occured. Fixes bug
-      24767; bugfix on 0.0.6.
