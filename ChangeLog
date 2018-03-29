@@ -1,3 +1,98 @@
+Changes in version 0.3.3.4-alpha - 2018-03-29
+  Tor 0.3.3.4-alpha includes various bugfixes for issues found during
+  the alpha testing of earlier releases in its series. We are
+  approaching a stable 0.3.3.4-alpha release: more testing is welcome!
+
+  o New system requirements:
+    - When built with Rust, Tor now depends on version 0.2.39 of the
+      libc crate. Closes tickets 25310 and 25664.
+
+  o Major bugfixes (relay, connection):
+    - If we have failed to connect to a relay and received a connection
+      refused, timeout, or similar error (at the TCP level), do not try
+      that same address/port again for 60 seconds after the failure has
+      occurred. Fixes bug 24767; bugfix on 0.0.6.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the March 8 2018 Maxmind GeoLite2
+      Country database. Closes ticket 25469.
+
+  o Minor features (log messages):
+    - Improve log message in the out-of-memory handler to include
+      information about memory usage from the different compression
+      backends. Closes ticket 25372.
+
+  o Minor features (sandbox):
+    - Explicitly permit the poll() system call when the Linux
+      seccomp2-based sandbox is enabled: apparently, some versions of
+      libc use poll() when calling getpwnam(). Closes ticket 25313.
+
+  o Minor bugfixes (C correctness):
+    - Fix a very unlikely (impossible, we believe) null pointer
+      dereference. Fixes bug 25629; bugfix on 0.2.9.15. Found by
+      Coverity; this is CID 1430932.
+
+  o Minor bugfixes (channel, client):
+    - Better identify client connection when reporting to the geoip
+      client cache. Fixes bug 24904; bugfix on 0.3.1.7.
+
+  o Minor bugfixes (compilation):
+    - Fix a C99 compliance issue in our configuration script that caused
+      compilation issues when compiling Tor with certain versions of
+      xtools. Fixes bug 25474; bugfix on 0.3.2.5-alpha.
+
+  o Minor bugfixes (controller, reliability):
+    - Avoid a (nonfatal) assertion failure when extending a one-hop
+      circuit from the controller to become a multihop circuit. Fixes
+      bug 24903; bugfix on 0.2.5.2-alpha.
+
+  o Minor bugfixes (networking):
+    - Tor will no longer reject IPv6 address strings from TorBrowser
+      when they are passed as hostnames in SOCKS5 requests. Fixes bug
+      25036, bugfix on Tor 0.3.1.2.
+    - string_is_valid_hostname() will not consider IP strings to be
+      valid hostnames. Fixes bug 25055; bugfix on Tor 0.2.5.5.
+
+  o Minor bugfixes (onion service v3):
+    - Avoid an assertion failure when the next the next onion service
+      descriptor rotation type is out of sync with the consensus's
+      valid-after time. Instead, log a warning message with extra
+      information, so we can better hunt down the cause of this
+      assertion. Fixes bug 25306; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Avoid intermittent test failures due to a test that had relied on
+      onion service introduction point creation finishing within 5
+      seconds of real clock time. Fixes bug 25450; bugfix
+      on 0.3.1.3-alpha.
+    - Rust crates are now automatically detected and tested. Previously,
+      some crates were not tested by `make test-rust` due to a static
+      string in the `src/test/test_rust.sh` script specifying which
+      crates to test. Fixes bug 25560; bugfix on 0.3.3.3-alpha.
+
+  o Minor bugfixes (testing, benchmarks):
+    - Fix a crash when running benchmark tests on win32 systems. The
+      crash was due to a mutex that wasn't initialized before logging
+      and options were initialized. Fixes bug 25479; bugfix
+      on 0.3.3.3-alpha.
+
+  o Minor bugfixes (warnings, ipv6):
+    - Avoid a bug warning that could occur when trying to connect to a
+      relay over IPv6. This warning would occur on a Tor instance that
+      downloads router descriptors, but prefers to use microdescriptors.
+      Fixes bug 25213; bugfix on 0.3.3.1-alpha.
+
+  o Code simplification and refactoring:
+    - Remove the old (deterministic) directory retry logic entirely:
+      We've used exponential backoff exclusively for some time. Closes
+      ticket 23814.
+
+  o Documentation:
+    - Improved the documentation of AccountingStart parameter. Closes
+      ticket 23635.
+    - Update the documentation for "Log" to include the current list of
+      logging domains. Closes ticket 25378.
+
 
 Changes in version 0.3.3.3-alpha - 2018-03-03
   Tor 0.3.3.3-alpha is the third alpha release for the 0.3.3.x series.
