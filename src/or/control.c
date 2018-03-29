@@ -7586,17 +7586,26 @@ control_event_hs_descriptor_upload_failed(const char *id_digest,
 void
 control_free_all(void)
 {
+  smartlist_t *queued_events = NULL;
+
   if (authentication_cookie) /* Free the auth cookie */
     tor_free(authentication_cookie);
   if (detached_onion_services) { /* Free the detached onion services */
     SMARTLIST_FOREACH(detached_onion_services, char *, cp, tor_free(cp));
     smartlist_free(detached_onion_services);
   }
-  if (queued_control_events) {
-    SMARTLIST_FOREACH(queued_control_events, queued_event_t *, ev,
-                      queued_event_free(ev));
-    smartlist_free(queued_control_events);
+
+  if (queued_control_events_lock) {
+    tor_mutex_acquire(queued_control_events_lock);
+    flush_queued_event_pending = 0;
+    queued_events = queued_control_events;
     queued_control_events = NULL;
+    tor_mutex_release(queued_control_events_lock);
+  }
+  if (queued_events) {
+    SMARTLIST_FOREACH(queued_events, queued_event_t *, ev,
+                      queued_event_free(ev));
+    smartlist_free(queued_events);
   }
   if (flush_queued_events_event) {
     tor_event_free(flush_queued_events_event);
@@ -7609,7 +7618,6 @@ control_free_all(void)
   global_event_mask = 0;
   disable_log_messages = 0;
   memset(last_sent_bootstrap_message, 0, sizeof(last_sent_bootstrap_message));
-  flush_queued_event_pending = 0;
 }
 
 #ifdef TOR_UNIT_TESTS
