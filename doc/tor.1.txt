@@ -2679,7 +2679,8 @@ The following options are used to configure a hidden service.
     spaces). If this option is set, the hidden service is not accessible for
     clients without authorization any more. Generated authorization data can be
     found in the hostname file. Clients need to put this authorization data in
-    their configuration file using **HidServAuth**.
+    their configuration file using **HidServAuth**. This option is only for v2
+    services.
 
 [[HiddenServiceAllowUnknownPorts]] **HiddenServiceAllowUnknownPorts** **0**|**1**::
    If set to 1, then connections to unrecognized ports do not cause the
@@ -2701,7 +2702,8 @@ The following options are used to configure a hidden service.
     Every time the specified period elapses, Tor uploads any rendezvous
     service descriptors to the directory servers. This information is also
     uploaded whenever it changes. Minimum value allowed is 10 minutes and
-    maximum is 3.5 days. (Default: 1 hour)
+    maximum is 3.5 days. This option is only for v2 services.
+    (Default: 1 hour)
 
 [[HiddenServiceDirGroupReadable]] **HiddenServiceDirGroupReadable** **0**|**1**::
     If this option is set to 1, allow the filesystem group to read the
