@@ -1,3 +1,5 @@
   o New system requirements:
-    - Tor no longer compiles on systems without mmap() or some local
-      equivalent. Closes ticket 25398.
+    - Tor no longer tries to support systems without mmap() or some local
+      equivalent. Apparently, compilation on such systems has been broken for
+      some time, without anybody noticing or complaining. Closes ticket
+      25398.
