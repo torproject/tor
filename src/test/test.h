@@ -72,6 +72,14 @@
     I64_PRINTF_TYPE, I64_FORMAT,                                       \
     {print_ = (I64_PRINTF_TYPE) value_;}, {}, TT_EXIT_TEST_FUNCTION)
 
+/**
+ * Declare that the test is done, even though no tt___op() calls were made.
+ *
+ * For use when you only want to test calling something, but not check
+ * any values/pointers/etc afterwards.
+ */
+#define tt_finished() TT_EXIT_TEST_FUNCTION
+
 const char *get_fname(const char *name);
 const char *get_fname_rnd(const char *name);
 struct crypto_pk_t *pk_generate(int idx);

@@ -107,7 +107,7 @@ static void
 test_bridges_helper_func_add_bridges_to_bridgelist(void *arg)
 {
   helper_add_bridges_to_bridgelist(arg);
-  tt_int_op(0, OP_EQ, 0);
+  tt_finished();
 
  done:
   mark_bridge_list();
