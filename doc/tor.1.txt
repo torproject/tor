@@ -1904,7 +1904,7 @@ is non-zero):
        reject *:6881-6999
        accept *:*
 
-[[ExitPolicyDefault]] **ExitPolicyDefault**::
+[[ExitPolicyDefault]]::
     Since the default exit policy uses accept/reject *, it applies to both
     IPv4 and IPv6 addresses.
 
