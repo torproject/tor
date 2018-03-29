@@ -50,6 +50,11 @@ static const struct {
 
 #define N_PROTOCOL_NAMES ARRAY_LENGTH(PROTOCOL_NAMES)
 
+/* Maximum allowed length of any single subprotocol name. */
+// C_RUST_COUPLED: src/rust/protover/protover.rs
+//                 `MAX_PROTOCOL_NAME_LENGTH`
+static const uint MAX_PROTOCOL_NAME_LENGTH = 100;
+
 /**
  * Given a protocol_type_t, return the corresponding string used in
  * descriptors.
@@ -195,6 +200,15 @@ parse_single_entry(const char *s, const char *end_of_entry)
   if (equals == s)
     goto error;
 
+  /* The name must not be longer than MAX_PROTOCOL_NAME_LENGTH. */
+  if (equals - s > MAX_PROTOCOL_NAME_LENGTH) {
+    log_warn(LD_NET, "When parsing a protocol entry, I got a very large "
+             "protocol name. This is possibly an attack or a bug, unless "
+             "the Tor network truly supports protocol names larger than "
+             "%ud characters. The offending string was: %s",
+             MAX_PROTOCOL_NAME_LENGTH, escaped(out->name));
+    goto error;
+  }
   out->name = tor_strndup(s, equals-s);
 
   tor_assert(equals < end_of_entry);
@@ -397,6 +411,14 @@ expand_protocol_list(const smartlist_t *protos)
 
   SMARTLIST_FOREACH_BEGIN(protos, const proto_entry_t *, ent) {
     const char *name = ent->name;
+    if (strlen(name) > MAX_PROTOCOL_NAME_LENGTH) {
+      log_warn(LD_NET, "When expanding a protocol entry, I got a very large "
+               "protocol name. This is possibly an attack or a bug, unless "
+               "the Tor network truly supports protocol names larger than "
+               "%ud characters. The offending string was: %s",
+               MAX_PROTOCOL_NAME_LENGTH, escaped(name));
+      continue;
+    }
     SMARTLIST_FOREACH_BEGIN(ent->ranges, const proto_range_t *, range) {
       uint32_t u;
       for (u = range->low; u <= range->high; ++u) {

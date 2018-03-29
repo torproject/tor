@@ -110,6 +110,12 @@ test_protover_parse_fail(void *arg)
   elts = parse_protocol_list("Link=1,9-8,3");
   tt_ptr_op(elts, OP_EQ, NULL);
 
+  /* Protocol name too long */
+  elts = parse_protocol_list("DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  tt_ptr_op(elts, OP_EQ, NULL);
+
  done:
   ;
 }
@@ -203,6 +209,15 @@ test_protover_vote(void *arg)
   tt_str_op(result, OP_EQ, "");
   tor_free(result);
 
+  /* Protocol name too long */
+  smartlist_clear(lst);
+  smartlist_add(lst, (void*) "DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  result = protover_compute_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
  done:
   tor_free(result);
   smartlist_free(lst);
@@ -269,6 +284,15 @@ test_protover_all_supported(void *arg)
   tor_free(msg);
   tor_end_capture_bugs_();
 #endif
+
+  /* Protocol name too long */
+  tor_capture_bugs_(1);
+  tt_assert(protover_all_supported(
+                               "DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                               "aaaaaaaaaaaa=1-65536", &msg));
+  tor_end_capture_bugs_();
 
  done:
   tor_end_capture_bugs_();
