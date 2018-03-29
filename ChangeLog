@@ -10,7 +10,7 @@ Changes in version 0.3.3.4-alpha - 2018-03-29
   o Major bugfixes (relay, connection):
     - If we have failed to connect to a relay and received a connection
       refused, timeout, or similar error (at the TCP level), do not try
-      that same address again for 60 seconds after the failure has
+      that same address/port again for 60 seconds after the failure has
       occurred. Fixes bug 24767; bugfix on 0.0.6.
 
   o Minor features (geoip):
