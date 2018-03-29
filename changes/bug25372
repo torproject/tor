@@ -1,3 +1,0 @@
-  o Minor features (log messages):
-    - Improve log message in the out of memory handler to include information
-      about memory usage from the different compression backends. Closes ticket 25372.

@@ -1,6 +1,0 @@
-  o Minor bugfixes (hidden service v3):
-    - Avoid asserting when building descriptors in the next rotation time is
-      out of sync with the consensus valid after time. Instead, log a bug
-      warning with extra information to hunt down the cause of this assert.
-      Fixes bug 25306; bugfix on 0.3.2.1-alpha.
-
