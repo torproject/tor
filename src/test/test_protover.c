@@ -287,7 +287,6 @@ test_protover_all_supported(void *arg)
    * supported." */
   tt_assert(protover_all_supported("Fribble=", &msg));
   tt_ptr_op(msg, OP_EQ, NULL);
-  tor_free(msg);
 
   /* If we get a completely unparseable list, protover_all_supported should
    * hit a fatal assertion for BUG(entries == NULL). */
@@ -303,7 +302,8 @@ test_protover_all_supported(void *arg)
 
  done:
   tor_end_capture_bugs_();
-  tor_free(msg);
+  if (msg)
+    tor_free(msg);
 }
 
 static void
