@@ -34,7 +34,7 @@ new Tor release:
 
    What about Coverity Scan?
 
-   What about clan scan-build?
+   What about clang scan-build?
 
    Does 'make distcheck' complain?
 
