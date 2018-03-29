@@ -196,6 +196,7 @@ dnsserv_launch_request(const char *name, int reverse,
 
   /* Make a new dummy AP connection, and attach the request to it. */
   entry_conn = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  entry_conn->entry_cfg.dns_request = 1;
   conn = ENTRY_TO_EDGE_CONN(entry_conn);
   CONNECTION_AP_EXPECT_NONPENDING(entry_conn);
   conn->base_.state = AP_CONN_STATE_RESOLVE_WAIT;

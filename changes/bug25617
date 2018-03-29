@@ -1,0 +1,5 @@
+  o Minor bugfixes (controller):
+    - Restore the correct operation of the RESOLVE command, which had
+      been broken since we added the ability to enable/disable DNS
+      on specific listener ports. Fixes bug 25617; bugfix on 0.2.9.3-alpha.
+
