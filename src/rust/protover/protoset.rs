@@ -171,6 +171,9 @@ impl ProtoSet {
         let mut last_high: Version = 0;
 
         for &(low, high) in self.iter() {
+            if low == u32::MAX || high == u32::MAX {
+                return Err(ProtoverError::ExceedsMax);
+            }
             if last_high !=0 && (low < last_high) {
                 return Err(ProtoverError::Overlap);
             } else if low > high {
