@@ -545,6 +545,16 @@ mod test {
     }
 
     #[test]
+    fn test_versions_from_str_overlap() {
+        assert_eq!(Err(ProtoverError::Overlap), ProtoSet::from_str("1-3,2-4"));
+    }
+
+    #[test]
+    fn test_versions_from_slice_overlap() {
+        assert_eq!(Err(ProtoverError::Overlap), ProtoSet::from_slice(&[(1, 3), (2, 4)]));
+    }
+
+    #[test]
     fn test_protoset_contains() {
         let protoset: ProtoSet = ProtoSet::from_slice(&[(0, 5), (7, 9), (13, 14)]).unwrap();
 
