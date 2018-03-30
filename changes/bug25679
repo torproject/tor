@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation, rust):
+    - Build correctly when the rust dependencies submodule is loaded,
+      but the TOR_RUST_DEPENDENCIES environment variable is not set.
+      Fixes bug 25679; bugfix on 0.3.3.1-alpha.
