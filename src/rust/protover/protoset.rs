@@ -555,6 +555,16 @@ mod test {
     }
 
     #[test]
+    fn test_versions_from_str_max() {
+        assert_eq!(Err(ProtoverError::ExceedsMax), ProtoSet::from_str("4294967295"));
+    }
+
+    #[test]
+    fn test_versions_from_slice_max() {
+        assert_eq!(Err(ProtoverError::ExceedsMax), ProtoSet::from_slice(&[(4294967295, 4294967295)]));
+    }
+
+    #[test]
     fn test_protoset_contains() {
         let protoset: ProtoSet = ProtoSet::from_slice(&[(0, 5), (7, 9), (13, 14)]).unwrap();
 
@@ -597,6 +607,20 @@ mod test {
 
     #[test]
     fn test_protoset_from_vec_unordered() {
+        let v: Vec<Version> = vec!(2, 3, 8, 4, 3, 9, 7, 2);
+        let ps: ProtoSet = v.into();
+
+        assert_eq!(ps.to_string(), "2-4,7-9");
+    }
+
+    #[test]
+    fn test_protoset_into_vec() {
+        let ps: ProtoSet = "1-13,42,9001,4294967294".parse().unwrap();
+        let v: Vec<Version> = ps.into();
+
+        assert!(v.contains(&7));
+        assert!(v.contains(&9001));
+        assert!(v.contains(&4294967294));
     }
 }
 
