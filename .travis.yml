@@ -59,7 +59,7 @@ addons:
 env:
   global:
     ## The Travis CI environment allows us two cores, so let's use both.
-    - MAKEFLAGS="-j 2"
+    - MAKEFLAGS="-j 2 V=0"
   matrix:
     ## Leave at least one entry here or Travis seems to generate a
     ## matrix entry with empty matrix environment variables.  Leaving
