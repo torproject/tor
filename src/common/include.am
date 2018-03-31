@@ -102,8 +102,8 @@ LIBOR_LA_SRC = \
   $(threads_impl_source)				\
   $(readpassphrase_source)
 
-src/common/src_common_libor_testing_a-log.$(OBJEXT) \
-  src/common/log.$(OBJEXT): micro-revision.i
+src/common/src_common_libor_testing_a-log.lo \
+  src/common/log.lo: micro-revision.i
 
 LIBOR_CRYPTO_LA_SRC = \
   src/common/aes.c		\
