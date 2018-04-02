@@ -6050,6 +6050,23 @@ test_util_monotonic_time_add_msec(void *arg)
 }
 
 static void
+test_util_nowrap_math(void *arg)
+{
+  (void)arg;
+
+  tt_u64_op(0, OP_EQ, tor_add_u32_nowrap(0, 0));
+  tt_u64_op(1, OP_EQ, tor_add_u32_nowrap(0, 1));
+  tt_u64_op(1, OP_EQ, tor_add_u32_nowrap(1, 0));
+  tt_u64_op(4, OP_EQ, tor_add_u32_nowrap(2, 2));
+  tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(UINT32_MAX-1, 2));
+  tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(2, UINT32_MAX-1));
+  tt_u64_op(UINT32_MAX, OP_EQ, tor_add_u32_nowrap(UINT32_MAX, UINT32_MAX));
+
+ done:
+  ;
+}
+
+static void
 test_util_htonll(void *arg)
 {
   (void)arg;
@@ -6243,6 +6260,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(listdir, 0),
   UTIL_TEST(parent_dir, 0),
   UTIL_TEST(ftruncate, 0),
+  UTIL_TEST(nowrap_math, 0),
   UTIL_TEST(num_cpus, 0),
   UTIL_TEST_WIN_ONLY(load_win_lib, 0),
   UTIL_TEST_NO_WIN(exit_status, 0),

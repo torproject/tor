@@ -572,6 +572,19 @@ add_laplace_noise(int64_t signal_, double random_, double delta_f,
     return signal_ + noise;
 }
 
+/* Helper: safely add two uint32_t's, capping at UINT32_MAX rather
+ * than overflow */
+uint32_t
+tor_add_u32_nowrap(uint32_t a, uint32_t b)
+{
+  /* a+b > UINT32_MAX check, without overflow */
+  if (PREDICT_UNLIKELY(a > UINT32_MAX - b)) {
+    return UINT32_MAX;
+  } else {
+    return a+b;
+  }
+}
+
 /* Helper: return greatest common divisor of a,b */
 static uint64_t
 gcd64(uint64_t a, uint64_t b)
