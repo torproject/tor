@@ -339,7 +339,9 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     return;
   }
 
-  if (connection_or_digest_is_known_relay(chan->identity_digest)) {
+  if (!channel_is_client(chan)) {
+    /* remember create types we've seen, but don't remember them from
+     * clients, to be extra conservative about client statistics. */
     rep_hist_note_circuit_handshake_requested(create_cell->handshake_type);
   }
 

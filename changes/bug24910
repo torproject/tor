@@ -1,0 +1,7 @@
+  o Minor bugfixes (relay statistics):
+    - When a relay is collecting internal statistics about how many
+      create cell requests it has seen of each type, accurately count the
+      requests from relays that temporarily fall out of the consensus. (To
+      be extra conservative, we were already ignoring requests from
+      clients in our counts, and we continue ignoring them here.) Fixes
+      bug 24910; bugfix on 0.2.4.17-rc.

@@ -547,7 +547,7 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
     return 0;
   }
 
-  if (connection_or_digest_is_known_relay(circ->p_chan->identity_digest))
+  if (!channel_is_client(circ->p_chan))
     rep_hist_note_circuit_handshake_assigned(onionskin->handshake_type);
 
   should_time = should_time_request(onionskin->handshake_type);
