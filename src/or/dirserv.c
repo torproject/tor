@@ -2266,6 +2266,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_valid = node->is_valid;
 
   if (node->is_fast && node->is_stable &&
+      ri->supports_tunnelled_dir_requests &&
       ((options->AuthDirGuardBWGuarantee &&
         routerbw_kb >= options->AuthDirGuardBWGuarantee/1000) ||
        routerbw_kb >= MIN(guard_bandwidth_including_exits_kb,
