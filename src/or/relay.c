@@ -374,11 +374,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
 
     /* Update circ written totals for control port */
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    if (PREDICT_LIKELY(UINT32_MAX - ocirc->n_written_circ_bw
-          > CELL_PAYLOAD_SIZE))
-      ocirc->n_written_circ_bw += (int)CELL_PAYLOAD_SIZE;
-    else
-      ocirc->n_written_circ_bw = UINT32_MAX;
+    ocirc->n_written_circ_bw = tor_add_u32_nowrap(ocirc->n_written_circ_bw,
+                                                  CELL_PAYLOAD_SIZE);
 
   } else { /* incoming cell */
     if (CIRCUIT_IS_ORIGIN(circ)) {

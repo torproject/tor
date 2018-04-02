@@ -504,11 +504,8 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
 
     /* Count the payload bytes only. We don't care about cell headers */
-    if (PREDICT_LIKELY(UINT32_MAX - ocirc->n_read_circ_bw >
-                CELL_PAYLOAD_SIZE))
-      ocirc->n_read_circ_bw += (int)CELL_PAYLOAD_SIZE;
-    else
-      ocirc->n_read_circ_bw = UINT32_MAX;
+    ocirc->n_read_circ_bw = tor_add_u32_nowrap(ocirc->n_read_circ_bw,
+                                               CELL_PAYLOAD_SIZE);
   }
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
