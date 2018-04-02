@@ -302,8 +302,7 @@ test_protover_all_supported(void *arg)
 
  done:
   tor_end_capture_bugs_();
-  if (msg)
-    tor_free(msg);
+  tor_free(msg);
 }
 
 static void
