@@ -410,6 +410,27 @@ connection_unlink(connection_t *conn)
   connection_free(conn);
 }
 
+/**
+ * Callback: used to activate read events for all linked connections, so
+ * libevent knows to call their read callbacks.  This callback run as a
+ * postloop event, so that the events _it_ activates don't happen until
+ * Libevent has a chance to check for other events.
+ */
+static void
+schedule_active_linked_connections_cb(mainloop_event_t *event, void *arg)
+{
+  (void)event;
+  (void)arg;
+
+  /* All active linked conns should get their read events activated,
+   * so that libevent knows to run their callbacks. */
+  SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
+                    event_active(conn->read_event, EV_READ, 1));
+}
+
+/** Event that invokes schedule_active_linked_connections_cb. */
+static mainloop_event_t *schedule_active_linked_connections_event = NULL;
+
 /** Initialize the global connection list, closeable connection list,
  * and active connection list. */
 STATIC void
@@ -803,10 +824,7 @@ connection_start_reading_from_linked_conn(connection_t *conn)
   if (!conn->active_on_link) {
     conn->active_on_link = 1;
     smartlist_add(active_linked_connection_lst, conn);
-    /* make sure that the event_base_loop() function exits at
-     * the end of its run through the current connections, so we can
-     * activate read events for linked connections. */
-    tell_event_loop_to_run_external_code();
+    mainloop_event_activate(schedule_active_linked_connections_event);
   } else {
     tor_assert(smartlist_contains(active_linked_connection_lst, conn));
   }
@@ -2579,6 +2597,11 @@ do_main_loop(void)
     initialize_periodic_events();
   }
 
+  if (!schedule_active_linked_connections_event) {
+    schedule_active_linked_connections_event =
+      mainloop_event_postloop_new(schedule_active_linked_connections_cb, NULL);
+  }
+
   /* initialize dns resolve map, spawn workers if needed */
   if (dns_init() < 0) {
     if (get_options()->ServerDNSAllowBrokenConfig)
@@ -2783,17 +2806,12 @@ run_main_loop_once(void)
   errno = 0;
 #endif
 
-  /* All active linked conns should get their read events activated,
-   * so that libevent knows to run their callbacks. */
-  SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
-                    event_active(conn->read_event, EV_READ, 1));
-
   if (get_options()->MainloopStats) {
     /* We always enforce that EVLOOP_ONCE is passed to event_base_loop() if we
      * are collecting main loop statistics. */
     called_loop_once = 1;
   } else {
-    called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+    called_loop_once = 0;
   }
 
   /* Make sure we know (about) what time it is. */
@@ -3496,6 +3514,7 @@ tor_free_all(int postfork)
   tor_event_free(shutdown_did_not_work_event);
   tor_event_free(initialize_periodic_events_event);
   mainloop_event_free(directory_all_unreachable_cb_event);
+  mainloop_event_free(schedule_active_linked_connections_event);
 
 #ifdef HAVE_SYSTEMD_209
   periodic_timer_free(systemd_watchdog_timer);
