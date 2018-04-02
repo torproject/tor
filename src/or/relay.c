@@ -2945,7 +2945,7 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 /** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>chan</b>
  * transmitting in <b>direction</b>.
  *
- * The given <b>cell</b> is copied over the circuit queue so the caller must
+ * The given <b>cell</b> is copied onto the circuit queue so the caller must
  * cleanup the memory.
  *
  * This function is part of the fast path. */

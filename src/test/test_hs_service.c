@@ -1237,7 +1237,7 @@ test_build_update_descriptors(void *arg)
     node->is_running = node->is_valid = node->is_fast = node->is_stable = 1;
   }
 
-  /* We have to set thise, or the lack of microdescriptors for these
+  /* We have to set this, or the lack of microdescriptors for these
    * nodes will make them unusable. */
   get_options_mutable()->UseMicrodescriptors = 0;
 
