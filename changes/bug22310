@@ -1,0 +1,8 @@
+  o Major bugfixes (performance, load balancing):
+    - Directory authorities no longer vote in favor of the Guard flag
+      for relays that don't advertise directory support. Starting in Tor
+      0.3.0.1-alpha, Tor clients have been avoiding using such relays in
+      the Guard position, leading to increasingly broken load balancing
+      for the 5%-or-so of Guards that don't advertise directory support.
+      Fixes bug 22310; bugfix on 0.3.0.6.
+
