@@ -2867,19 +2867,6 @@ run_main_loop_once(void)
   if (main_loop_should_exit)
     return 0;
 
-  /* And here is where we put callbacks that happen "every time the event loop
-   * runs."  They must be very fast, or else the whole Tor process will get
-   * slowed down.
-   *
-   * Note that this gets called once per libevent loop, which will make it
-   * happen once per group of events that fire, or once per second. */
-
-  /* If there are any pending client connections, try attaching them to
-   * circuits (if we can.)  This will be pretty fast if nothing new is
-   * pending.
-   */
-  connection_ap_attach_pending(0);
-
   return 1;
 }
 

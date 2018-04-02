@@ -611,6 +611,12 @@ static smartlist_t *pending_entry_connections = NULL;
 
 static int untried_pending_connections = 0;
 
+/**
+ * Mainloop event to tell us to scan for pending connections that can
+ * be attached.
+ */
+static mainloop_event_t *attach_pending_entry_connections_ev = NULL;
+
 /** Common code to connection_(ap|exit)_about_to_close. */
 static void
 connection_edge_about_to_close(edge_connection_t *edge_conn)
@@ -956,6 +962,14 @@ connection_ap_attach_pending(int retry)
   untried_pending_connections = 0;
 }
 
+static void
+attach_pending_entry_connections_cb(mainloop_event_t *ev, void *arg)
+{
+  (void)ev;
+  (void)arg;
+  connection_ap_attach_pending(0);
+}
+
 /** Mark <b>entry_conn</b> as needing to get attached to a circuit.
  *
  * And <b>entry_conn</b> must be in AP_CONN_STATE_CIRCUIT_WAIT,
@@ -973,9 +987,13 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
   if (conn->marked_for_close)
     return;
 
-  if (PREDICT_UNLIKELY(NULL == pending_entry_connections))
+  if (PREDICT_UNLIKELY(NULL == pending_entry_connections)) {
     pending_entry_connections = smartlist_new();
-
+  }
+  if (PREDICT_UNLIKELY(NULL == attach_pending_entry_connections_ev)) {
+    attach_pending_entry_connections_ev = mainloop_event_postloop_new(
+                                  attach_pending_entry_connections_cb, NULL);
+  }
   if (PREDICT_UNLIKELY(smartlist_contains(pending_entry_connections,
                                           entry_conn))) {
     log_warn(LD_BUG, "What?? pending_entry_connections already contains %p! "
@@ -999,14 +1017,7 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
   untried_pending_connections = 1;
   smartlist_add(pending_entry_connections, entry_conn);
 
-  /* Work-around for bug 19969: we handle pending_entry_connections at
-   * the end of run_main_loop_once(), but in many cases that function will
-   * take a very long time, if ever, to finish its call to event_base_loop().
-   *
-   * So the fix is to tell it right now that it ought to finish its loop at
-   * its next available opportunity.
-   */
-  tell_event_loop_to_run_external_code();
+  mainloop_event_activate(attach_pending_entry_connections_ev);
 }
 
 /** Mark <b>entry_conn</b> as no longer waiting for a circuit. */
@@ -4165,5 +4176,6 @@ connection_edge_free_all(void)
   untried_pending_connections = 0;
   smartlist_free(pending_entry_connections);
   pending_entry_connections = NULL;
+  mainloop_event_free(attach_pending_entry_connections_ev);
 }
 
