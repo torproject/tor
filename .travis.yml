@@ -58,8 +58,10 @@ addons:
 ##  * with Clang, without Rust
 env:
   global:
-    ## The Travis CI environment allows us two cores, so let's use both.
-    - MAKEFLAGS="-j 2 V=0"
+    ## The Travis CI environment allows us two cores, so let's use both. Teach
+    ## libtool to be silent because Travis will kill the job if we emit too
+    ## many log lines.
+    - MAKEFLAGS="-j 2 LIBTOOLFLAGS=--silent"
   matrix:
     ## Leave at least one entry here or Travis seems to generate a
     ## matrix entry with empty matrix environment variables.  Leaving
