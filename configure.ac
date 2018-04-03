@@ -230,6 +230,19 @@ if test "x$enable_android" = "xyes"; then
 
 fi
 
+dnl ---
+dnl Tor modules options. These options are namespaced with --disable-module-XXX
+dnl ---
+
+dnl Directory Authority module.
+AC_ARG_ENABLE([module-dirauth],
+              AS_HELP_STRING([--disable-module-dirauth],
+                             [Do not build tor with the dirauth module]),
+              [], dnl Action if-given
+              AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
+                        [Compile with Directory Authority feature support]))
+AM_CONDITIONAL(BUILD_MODULE_DIRAUTH, [test "x$enable_module_dirauth" != "xno"])
+
 dnl check for the correct "ar" when cross-compiling.
 dnl   (AM_PROG_AR was new in automake 1.11.2, which we do not yet require,
 dnl    so kludge up a replacement for the case where it isn't there yet.)
