@@ -254,11 +254,26 @@ test_protover_all_supported(void *arg)
   tt_assert(! protover_all_supported("Link=3-4 Wombat=9", &msg));
   tt_str_op(msg, OP_EQ, "Wombat=9");
   tor_free(msg);
+
+  /* Mix of things we support and don't support within a single protocol
+   * which we do support */
   tt_assert(! protover_all_supported("Link=3-999", &msg));
-  tt_str_op(msg, OP_EQ, "Link=3-999");
+  tt_str_op(msg, OP_EQ, "Link=6-999");
+  tor_free(msg);
+  tt_assert(! protover_all_supported("Link=1-3,345-666", &msg));
+  tt_str_op(msg, OP_EQ, "Link=345-666");
+  tor_free(msg);
+  tt_assert(! protover_all_supported("Link=1-3,5-12", &msg));
+  tt_str_op(msg, OP_EQ, "Link=6-12");
   tor_free(msg);
 
-  /* CPU/RAM DoS loop: Rust only */
+  /* Mix of protocols we do support and some we don't, where the protocols
+   * we do support have some versions we don't support. */
+  tt_assert(! protover_all_supported("Link=1-3,5-12 Quokka=9000-9001", &msg));
+  tt_str_op(msg, OP_EQ, "Link=6-12 Quokka=9000-9001");
+  tor_free(msg);
+
+  /* We shouldn't be able to DoS ourselves parsing a large range. */
   tt_assert(! protover_all_supported("Sleen=0-2147483648", &msg));
   tt_str_op(msg, OP_EQ, "Sleen=0-2147483648");
   tor_free(msg);
@@ -268,23 +283,22 @@ test_protover_all_supported(void *arg)
   tt_str_op(msg, OP_EQ, "Sleen=0-4294967294");
   tor_free(msg);
 
-  /* If we get an unparseable list, we say "yes, that's supported." */
-#ifndef HAVE_RUST
-  // XXXX let's make this section unconditional: rust should behave the
-  // XXXX same as C here!
+  /* If we get a (barely) valid (but unsupported list, we say "yes, that's
+   * supported." */
+  tt_assert(protover_all_supported("Fribble=", &msg));
+  tt_ptr_op(msg, OP_EQ, NULL);
+
+  /* If we get a completely unparseable list, protover_all_supported should
+   * hit a fatal assertion for BUG(entries == NULL). */
   tor_capture_bugs_(1);
   tt_assert(protover_all_supported("Fribble", &msg));
-  tt_ptr_op(msg, OP_EQ, NULL);
   tor_end_capture_bugs_();
 
-  /* This case is forbidden. Since it came from a protover_all_supported,
-   * it can trigger a bug message.  */
+  /* If we get a completely unparseable list, protover_all_supported should
+   * hit a fatal assertion for BUG(entries == NULL). */
   tor_capture_bugs_(1);
   tt_assert(protover_all_supported("Sleen=0-4294967295", &msg));
-  tt_ptr_op(msg, OP_EQ, NULL);
-  tor_free(msg);
   tor_end_capture_bugs_();
-#endif
 
  done:
   tor_end_capture_bugs_();
@@ -531,8 +545,6 @@ test_protover_vote_roundtrip(void *args)
     { "Link=1,9-8,3", NULL },
     { "Faux=-0", NULL },
     { "Faux=0--0", NULL },
-    // "These fail at the splitting stage in Rust, but the number parsing
-    // stage in C."
     { "Faux=-1", NULL },
     { "Faux=-1-3", NULL },
     { "Faux=1--1", NULL },
@@ -541,9 +553,9 @@ test_protover_vote_roundtrip(void *args)
     /* Large range */
     { "Sleen=1-501", "Sleen=1-501" },
     { "Sleen=1-65537", NULL },
-    /* CPU/RAM DoS Loop: Rust only. */
+    /* Both C/Rust implementations should be able to handle this mild DoS. */
     { "Sleen=0-2147483648", NULL },
-    /* Rust seems to experience an internal error here. */
+    /* Rust tests are built in debug mode, so ints are bounds-checked. */
     { "Sleen=0-4294967295", NULL },
   };
   unsigned u;
