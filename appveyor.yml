@@ -1,0 +1,55 @@
+version: 1.0.{build}
+environment:
+  compiler: mingw
+
+  matrix:
+  - target: i686-w64-mingw32
+    compiler_path: mingw32
+
+#  - target: x86_64-w64-mingw32
+#    compiler_path: mingw64
+
+install:
+- ps: >-
+    Function Execute-Command ($commandPath)
+    {
+        & $commandPath $args 2>&1
+        if ( $LastExitCode -ne 0 ) {
+            $host.SetShouldExit( $LastExitCode )
+        }
+    }
+    Function Execute-Bash ()
+    {
+        Execute-Command 'c:\msys64\usr\bin\bash' '-e' '-c' $args
+    }
+    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --noconfirm libevent-devel libevent mingw-w64-i686-libevent mingw-w64-x86_64-libevent 
+
+
+build_script:
+- ps: >-
+    if ($env:compiler -eq "mingw") {
+            $oldpath = ${env:Path} -split ';'
+            $buildpath = @("C:\msys64\${env:compiler_path}\bin", "C:\msys64\usr\bin") + $oldpath
+            $env:Path = $buildpath -join ';'
+            $env:build = @("${env:APPVEYOR_BUILD_FOLDER}", $env:target) -join '\'
+            Execute-Bash 'autoreconf -i'
+            mkdir "${env:build}"
+            Set-Location "${env:build}"
+            Execute-Bash "../configure --prefix=/${env:compiler_path} --build=${env:target} --host=${env:target}"
+            Execute-Bash "V=1 make"
+            Execute-Bash "V=1 make install"
+     }
+
+test_script:
+- ps: >-
+    if ($env:compiler -eq "mingw") {
+            Set-Location "${env:build}"
+            Execute-Bash "make check"
+    }
+
+artifacts:
+- path: /${env:compiler_path}
+
+# Uncomment to solve problems
+on_finish:
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
