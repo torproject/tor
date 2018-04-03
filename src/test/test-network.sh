@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. "${top_srcdir}${top_srcdir+/}directories.sh"
+
 # This script calls the equivalent script in chutney/tools
 
 # If we already know CHUTNEY_PATH, don't bother with argument parsing

@@ -1,0 +1,6 @@
+#ifndef BUILDDIR
+#define BUILDDIR "@builddir@"
+#endif
+#ifndef SRCDIR
+#define SRCDIR "@srcdir@"
+#endif

@@ -1908,19 +1908,6 @@ if test "x$exec_prefix" = "xNONE"; then
   exec_prefix=$prefix
 fi
 
-if test "x$BUILDDIR" = "x"; then
-  BUILDDIR=`pwd`
-fi
-AC_SUBST(BUILDDIR)
-AH_TEMPLATE([BUILDDIR],[tor's build directory])
-AC_DEFINE_UNQUOTED(BUILDDIR,"$BUILDDIR")
-
-if test "x$SRCDIR" = "x"; then
-  SRCDIR=$(cd "$srcdir"; pwd)
-fi
-AH_TEMPLATE([SRCDIR],[tor's sourcedir directory])
-AC_DEFINE_UNQUOTED(SRCDIR,"$SRCDIR")
-
 if test "x$CONFDIR" = "x"; then
   CONFDIR=`eval echo $sysconfdir/tor`
 fi
@@ -2260,6 +2247,8 @@ CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_z
 AC_CONFIG_FILES([
         Doxyfile
         Makefile
+        directories.h
+        directories.sh
         contrib/dist/suse/tor.sh
         contrib/operator-tools/tor.logrotate
         contrib/dist/tor.sh
