@@ -10,4 +10,4 @@
       in outside crates and avoid mistakenly passing an internal error string to
       C over the FFI boundary.  Many tests were added, and some previous
       differences between the C and Rust implementations have been
-      remedied. Fixes 24031; bugfix on 0.3.3.1-alpha.
+      remedied. Fixes bug 24031; bugfix on 0.3.3.1-alpha.
