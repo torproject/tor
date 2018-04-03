@@ -1,0 +1,13 @@
+  o Major bugfixes (protover, voting):
+    - Revise Rust implementation of protover to use a more memory-efficient
+      voting algorithm and corresponding data structures, thus avoiding a
+      potential (but small impact) DoS attack where specially crafted protocol
+      strings would expand to several potential megabytes in memory.  In the
+      process, several portions of code were revised to be methods on new,
+      custom types, rather than functions taking interchangeable types, thus
+      increasing type safety of the module.  Custom error types and handling
+      were added as well, in order to facilitate better error dismissal/handling
+      in outside crates and avoid mistakenly passing an internal error string to
+      C over the FFI boundary.  Many tests were added, and some previous
+      differences between the C and Rust implementations have been
+      remedied. Fixes 24031; bugfix on 0.3.3.1-alpha.
