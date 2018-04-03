@@ -2387,7 +2387,7 @@ channel_get_for_extend(const char *rsa_id_digest,
 {
   channel_t *chan, *best = NULL;
   int n_inprogress_goodaddr = 0, n_old = 0;
-  int n_noncanonical = 0, n_possible = 0;
+  int n_noncanonical = 0;
 
   tor_assert(msg_out);
   tor_assert(launch_out);
@@ -2449,8 +2449,6 @@ channel_get_for_extend(const char *rsa_id_digest,
       ++n_noncanonical;
       continue;
     }
-
-    ++n_possible;
 
     if (!best) {
       best = chan; /* If we have no 'best' so far, this one is good enough. */
