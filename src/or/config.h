@@ -22,6 +22,13 @@
  * expose more information than we're comfortable with. */
 #define MIN_HEARTBEAT_PERIOD (30*60)
 
+/** Maximum default value for MaxMemInQueues, in gigabytes. */
+#if SIZEOF_VOID_P >= 8
+#define MAX_DEFAULT_MEMORY_QUEUE_SIZE (U64_LITERAL(8) << 30)
+#else
+#define MAX_DEFAULT_MEMORY_QUEUE_SIZE (U64_LITERAL(2) << 30)
+#endif
+
 MOCK_DECL(const char*, get_dirportfrontpage, (void));
 MOCK_DECL(const or_options_t *, get_options, (void));
 MOCK_DECL(or_options_t *, get_options_mutable, (void));
