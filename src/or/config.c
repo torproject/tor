@@ -770,8 +770,6 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
-static uint64_t compute_real_max_mem_in_queues(const uint64_t val,
-                                               int log_guess);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 
@@ -4542,7 +4540,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 /* Given the value that the user has set for MaxMemInQueues, compute the
  * actual maximum value.  We clip this value if it's too low, and autodetect
  * it if it's set to 0. */
-static uint64_t
+STATIC uint64_t
 compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
 {
   uint64_t result;

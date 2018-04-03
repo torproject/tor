@@ -258,6 +258,10 @@ STATIC int parse_port_config(smartlist_t *out,
                   const unsigned flags);
 
 STATIC int check_bridge_distribution_setting(const char *bd);
+
+STATIC uint64_t compute_real_max_mem_in_queues(const uint64_t val,
+                                               int log_guess);
+
 #endif /* defined(CONFIG_PRIVATE) */
 
 #endif /* !defined(TOR_CONFIG_H) */
