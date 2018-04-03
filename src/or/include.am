@@ -114,6 +114,16 @@ LIBTOR_A_SOURCES = \
 	src/or/onion_ntor.c				\
 	$(tor_platform_source)
 
+#
+# Modules are conditionnally compiled in tor starting here. We add the C files
+# only if the modules has been enabled at configure time.
+#
+
+# The Directory Authority module.
+if BUILD_MODULE_DIRAUTH
+#LIBTOR_A_SOURCES +=
+endif
+
 src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)
 src_or_libtor_testing_a_SOURCES = $(LIBTOR_A_SOURCES)
 
@@ -258,6 +268,12 @@ ORHEADERS = \
 	src/or/status.h					\
 	src/or/torcert.h				\
 	src/or/tor_api_internal.h
+
+# We add the headers of the modules even though they are disabled so we can
+# properly compiled the entry points replacedment.
+
+# The Directory Authority module headers.
+#ORHEADERS +=
 
 # This may someday want to be an installed file?
 noinst_HEADERS += src/or/tor_api.h
