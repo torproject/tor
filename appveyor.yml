@@ -22,7 +22,7 @@ install:
     {
         Execute-Command 'c:\msys64\usr\bin\bash' '-e' '-c' $args
     }
-    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --noconfirm libevent-devel libevent mingw-w64-i686-libevent mingw-w64-x86_64-libevent 
+    Execute-Command "C:\msys64\usr\bin\pacman" -Sy --noconfirm openssl-devel openssl libevent-devel libevent mingw-w64-i686-libevent mingw-w64-x86_64-libevent 
 
 
 build_script:
