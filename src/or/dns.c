@@ -1441,27 +1441,30 @@ configure_nameservers(int force)
   // If we only have one nameserver, it does not make sense to back off
   // from it for a timeout. Unfortunately, the value for max-timeouts is
   // currently clamped by libevent to 255, but it does not hurt to set
-  // it higher in case libevent gets a patch for this.
-  // Reducing attempts in the case of just one name server too, because
-  // it is very likely to be a local one where a network connectivity
-  // issue should not cause an attempt to fail.
+  // it higher in case libevent gets a patch for this.  Higher-than-
+  // default maximum of 3 with multiple nameservers to avoid spuriously
+  // marking one down on bursts of timeouts resulting from scans/attacks
+  // against non-responding authoritative DNS servers.
   if (evdns_base_count_nameservers(the_evdns_base) == 1) {
     SET("max-timeouts:", "1000000");
-    SET("attempts:", "1");
   } else {
-    SET("max-timeouts:", "3");
+    SET("max-timeouts:", "10");
   }
 
   // Elongate the queue of maximum inflight dns requests, so if a bunch
-  // time out at the resolver (happens commonly with unbound) we won't
+  // remain pending at the resolver (happens commonly with Unbound) we won't
   // stall every other DNS request. This potentially means some wasted
   // CPU as there's a walk over a linear queue involved, but this is a
   // much better tradeoff compared to just failing DNS requests because
   // of a full queue.
   SET("max-inflight:", "8192");
 
-  // Time out after 5 seconds if no reply.
+  // Two retries at 5 and 10 seconds for bind9/named which relies on
+  // clients to handle retries.  Second retry for retried circuits with
+  // extended 15 second timeout.  Superfluous with local-system Unbound
+  // instance--has its own elaborate retry scheme.
   SET("timeout:", "5");
+  SET("attempts:","3");
 
   if (options->ServerDNSRandomizeCase)
     SET("randomize-case:", "1");
