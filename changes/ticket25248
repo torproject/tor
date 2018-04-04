@@ -1,0 +1,4 @@
+  o Documentation (manpage, denial of service):
+    - Better detail the denial of service options by listing the different
+      mitigation in place. Closes ticket 25248.
+
