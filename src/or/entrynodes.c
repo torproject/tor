@@ -2334,7 +2334,7 @@ entry_guard_cancel(circuit_guard_state_t **guard_state_p)
 }
 
 /**
- * Called by the circuit building module when a circuit has succeeded:
+ * Called by the circuit building module when a circuit has failed:
  * informs the guards code that the guard in *<b>guard_state_p</b> is
  * not working, and advances the state of the guard module.
  */
