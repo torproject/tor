@@ -35,6 +35,7 @@
 #include "networkstatus.h"
 #include "rendclient.h"
 #include "rendservice.h"
+#include "router.h"
 #include "statefile.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -125,7 +126,7 @@ circuit_build_times_disabled_(const or_options_t *options,
       ignore_consensus ? 0 : networkstatus_get_param(NULL, "cbtdisabled",
                                                      0, 0, 1);
     int config_disabled = !options->LearnCircuitBuildTimeout;
-    int dirauth_disabled = options->AuthoritativeDir;
+    int dirauth_disabled = authdir_mode(options);
     int state_disabled = did_last_state_file_write_fail() ? 1 : 0;
     /* LearnCircuitBuildTimeout and Tor2web/Single Onion Services are
      * incompatible in two ways:
