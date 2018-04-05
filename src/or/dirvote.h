@@ -12,8 +12,6 @@
 #ifndef TOR_DIRVOTE_H
 #define TOR_DIRVOTE_H
 
-#include "testsupport.h"
-
 /*
  * Ideally, assuming synced clocks, we should only need 1 second for each of:
  *  - Vote
@@ -86,41 +84,53 @@
  * get confused with the above macros.) */
 #define DEFAULT_MAX_UNMEASURED_BW_KB 20
 
+/* Directory Get Vote (DGV) flags for dirvote_get_vote(). */
+#define DGV_BY_ID 1
+#define DGV_INCLUDE_PENDING 2
+#define DGV_INCLUDE_PREVIOUS 4
+
+/*
+ * Public API. Used outside of the dirauth subsystem.
+ */
+
 void dirvote_free_all(void);
 
-/* vote manipulation */
+/* Vote manipulation */
 void ns_detached_signatures_free_(ns_detached_signatures_t *s);
 #define ns_detached_signatures_free(s) \
   FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
 
-/* cert manipulation */
-authority_cert_t *authority_cert_dup(authority_cert_t *cert);
-
-void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
-time_t dirvote_get_start_of_next_interval(time_t now,
-                                          int interval,
-                                          int offset);
 void dirvote_recalculate_timing(const or_options_t *options, time_t now);
 void dirvote_act(const or_options_t *options, time_t now);
-time_t dirvote_get_next_valid_after_time(void);
-
-/* invoked on timers and by outside triggers. */
+/* Invoked on timers and by outside triggers. */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out,
                                          int *status_out);
 int dirvote_add_signatures(const char *detached_signatures_body,
                            const char *source,
                            const char **msg_out);
-
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));
 MOCK_DECL(const char*, dirvote_get_pending_detached_signatures, (void));
-
-#define DGV_BY_ID 1
-#define DGV_INCLUDE_PENDING 2
-#define DGV_INCLUDE_PREVIOUS 4
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
+document_signature_t *voter_get_sig_by_algorithm(
+                           const networkstatus_voter_info_t *voter,
+                           digest_algorithm_t alg);
+
+/*
+ * API used _only_ by the dirauth subsystem.
+ */
+
+/* Cert manipulation */
+authority_cert_t *authority_cert_dup(authority_cert_t *cert);
+
+void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
+time_t dirvote_get_start_of_next_interval(time_t now,
+                                          int interval,
+                                          int offset);
+time_t dirvote_get_next_valid_after_time(void);
+
 void set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                       node_t *node,
                                       routerinfo_t *ri, time_t now,
@@ -134,11 +144,11 @@ vote_microdesc_hash_t *dirvote_format_all_microdesc_vote_lines(
                                         time_t now,
                                         smartlist_t *microdescriptors_out);
 
-document_signature_t *voter_get_sig_by_algorithm(
-                           const networkstatus_voter_info_t *voter,
-                           digest_algorithm_t alg);
-
+/*
+ * Exposed functions for unit tests.
+ */
 #ifdef DIRVOTE_PRIVATE
+
 STATIC int32_t dirvote_get_intermediate_param_value(
                                    const smartlist_t *param_list,
                                    const char *keyword,
