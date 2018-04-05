@@ -242,14 +242,14 @@ GENERAL OPTIONS
     or other relays), because that is considered "client" activity. (Default: 0)
 
 [[PerConnBWRate]] **PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    If set, do separate rate limiting for each connection from a non-relay.
-    You should never need to change this value, since a network-wide value is
-    published in the consensus and your relay will use that value. (Default: 0)
+    If this option is set manually, or via the "perconnbwrate" consensus
+    field, Tor will use it for separate rate limiting for each connection
+    from a non-relay. (Default: 0)
 
 [[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
-    If set, do separate rate limiting for each connection from a non-relay.
-    You should never need to change this value, since a network-wide value is
-    published in the consensus and your relay will use that value. (Default: 0)
+    If this option is set manually, or via the "perconnbwburst" consensus
+    field, Tor will use it for separate rate limiting for each connection
+    from a non-relay. (Default: 0)
 
 [[ClientTransportPlugin]] **ClientTransportPlugin** __transport__ socks4|socks5 __IP__:__PORT__::
 **ClientTransportPlugin** __transport__ exec __path-to-binary__ [options]::
