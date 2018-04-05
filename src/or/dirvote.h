@@ -89,19 +89,6 @@
 void dirvote_free_all(void);
 
 /* vote manipulation */
-char *networkstatus_compute_consensus(smartlist_t *votes,
-                                      int total_authorities,
-                                      crypto_pk_t *identity_key,
-                                      crypto_pk_t *signing_key,
-                                      const char *legacy_identity_key_digest,
-                                      crypto_pk_t *legacy_signing_key,
-                                      consensus_flavor_t flavor);
-int networkstatus_add_detached_signatures(networkstatus_t *target,
-                                          ns_detached_signatures_t *sigs,
-                                          const char *source,
-                                          int severity,
-                                          const char **msg_out);
-char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 void ns_detached_signatures_free_(ns_detached_signatures_t *s);
 #define ns_detached_signatures_free(s) \
   FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
@@ -178,21 +165,11 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert);
 
-microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
-                                            int consensus_method);
-ssize_t dirvote_format_microdesc_vote_line(char *out, size_t out_len,
-                                           const microdesc_t *md,
-                                           int consensus_method_low,
-                                           int consensus_method_high);
 vote_microdesc_hash_t *dirvote_format_all_microdesc_vote_lines(
                                         const routerinfo_t *ri,
                                         time_t now,
                                         smartlist_t *microdescriptors_out);
 
-int vote_routerstatus_find_microdesc_hash(char *digest256_out,
-                                          const vote_routerstatus_t *vrs,
-                                          int method,
-                                          digest_algorithm_t alg);
 document_signature_t *voter_get_sig_by_algorithm(
                            const networkstatus_voter_info_t *voter,
                            digest_algorithm_t alg);
@@ -212,6 +189,25 @@ STATIC int
 networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
                                      int64_t M, int64_t E, int64_t D,
                                      int64_t T, int64_t weight_scale);
+STATIC
+char *networkstatus_compute_consensus(smartlist_t *votes,
+                                      int total_authorities,
+                                      crypto_pk_t *identity_key,
+                                      crypto_pk_t *signing_key,
+                                      const char *legacy_identity_key_digest,
+                                      crypto_pk_t *legacy_signing_key,
+                                      consensus_flavor_t flavor);
+STATIC
+int networkstatus_add_detached_signatures(networkstatus_t *target,
+                                          ns_detached_signatures_t *sigs,
+                                          const char *source,
+                                          int severity,
+                                          const char **msg_out);
+STATIC
+char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
+STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
+                                                   int consensus_method);
+
 #endif /* defined(DIRVOTE_PRIVATE) */
 
 #endif /* !defined(TOR_DIRVOTE_H) */

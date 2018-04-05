@@ -351,6 +351,53 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
  * Consensus generation
  * ===== */
 
+/** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
+ * the digest algorithm <b>alg</b>, decode it and copy it into
+ * <b>digest256_out</b> and return 0.  Otherwise return -1. */
+static int
+vote_routerstatus_find_microdesc_hash(char *digest256_out,
+                                      const vote_routerstatus_t *vrs,
+                                      int method,
+                                      digest_algorithm_t alg)
+{
+  /* XXXX only returns the sha256 method. */
+  const vote_microdesc_hash_t *h;
+  char mstr[64];
+  size_t mlen;
+  char dstr[64];
+
+  tor_snprintf(mstr, sizeof(mstr), "%d", method);
+  mlen = strlen(mstr);
+  tor_snprintf(dstr, sizeof(dstr), " %s=",
+               crypto_digest_algorithm_get_name(alg));
+
+  for (h = vrs->microdesc; h; h = h->next) {
+    const char *cp = h->microdesc_hash_line;
+    size_t num_len;
+    /* cp looks like \d+(,\d+)* (digesttype=val )+ .  Let's hunt for mstr in
+     * the first part. */
+    while (1) {
+      num_len = strspn(cp, "1234567890");
+      if (num_len == mlen && fast_memeq(mstr, cp, mlen)) {
+        /* This is the line. */
+        char buf[BASE64_DIGEST256_LEN+1];
+        /* XXXX ignores extraneous stuff if the digest is too long.  This
+         * seems harmless enough, right? */
+        cp = strstr(cp, dstr);
+        if (!cp)
+          return -1;
+        cp += strlen(dstr);
+        strlcpy(buf, cp, sizeof(buf));
+        return digest256_from_base64(digest256_out, buf);
+      }
+      if (num_len == 0 || cp[num_len] != ',')
+        break;
+      cp += num_len + 1;
+    }
+  }
+  return -1;
+}
+
 /** Given a vote <b>vote</b> (not a consensus!), return its associated
  * networkstatus_voter_info_t. */
 static networkstatus_voter_info_t *
@@ -1328,7 +1375,7 @@ compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
  * behavior, and make the new behavior conditional on a new-enough
  * consensus_method.
  **/
-char *
+STATIC char *
 networkstatus_compute_consensus(smartlist_t *votes,
                                 int total_authorities,
                                 crypto_pk_t *identity_key,
@@ -2372,7 +2419,7 @@ compute_consensus_package_lines(smartlist_t *votes)
  * new signature is verifiable.)  Return the number of signatures added or
  * changed, or -1 if the document signed by <b>sigs</b> isn't the same
  * document as <b>target</b>. */
-int
+STATIC int
 networkstatus_add_detached_signatures(networkstatus_t *target,
                                       ns_detached_signatures_t *sigs,
                                       const char *source,
@@ -2564,7 +2611,7 @@ networkstatus_format_signatures(networkstatus_t *consensus,
  * corresponding to the signatures on <b>consensuses</b>, which must contain
  * exactly one FLAV_NS consensus, and no more than one consensus for each
  * other flavor. */
-char *
+STATIC char *
 networkstatus_get_detached_signatures(smartlist_t *consensuses)
 {
   smartlist_t *elements;
@@ -3798,7 +3845,7 @@ dirvote_get_vote(const char *fp, int flags)
 /** Construct and return a new microdescriptor from a routerinfo <b>ri</b>
  * according to <b>consensus_method</b>.
  **/
-microdesc_t *
+STATIC microdesc_t *
 dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 {
   microdesc_t *result = NULL;
@@ -3893,7 +3940,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
  * in a consensus vote document.  Write it into the <b>out_len</b>-byte buffer
  * in <b>out</b>.  Return -1 on failure and the number of characters written
  * on success. */
-ssize_t
+static ssize_t
 dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
                                    const microdesc_t *md,
                                    int consensus_method_low,
@@ -3999,52 +4046,5 @@ dirvote_format_all_microdesc_vote_lines(const routerinfo_t *ri, time_t now,
   }
 
   return result;
-}
-
-/** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
- * the digest algorithm <b>alg</b>, decode it and copy it into
- * <b>digest256_out</b> and return 0.  Otherwise return -1. */
-int
-vote_routerstatus_find_microdesc_hash(char *digest256_out,
-                                      const vote_routerstatus_t *vrs,
-                                      int method,
-                                      digest_algorithm_t alg)
-{
-  /* XXXX only returns the sha256 method. */
-  const vote_microdesc_hash_t *h;
-  char mstr[64];
-  size_t mlen;
-  char dstr[64];
-
-  tor_snprintf(mstr, sizeof(mstr), "%d", method);
-  mlen = strlen(mstr);
-  tor_snprintf(dstr, sizeof(dstr), " %s=",
-               crypto_digest_algorithm_get_name(alg));
-
-  for (h = vrs->microdesc; h; h = h->next) {
-    const char *cp = h->microdesc_hash_line;
-    size_t num_len;
-    /* cp looks like \d+(,\d+)* (digesttype=val )+ .  Let's hunt for mstr in
-     * the first part. */
-    while (1) {
-      num_len = strspn(cp, "1234567890");
-      if (num_len == mlen && fast_memeq(mstr, cp, mlen)) {
-        /* This is the line. */
-        char buf[BASE64_DIGEST256_LEN+1];
-        /* XXXX ignores extraneous stuff if the digest is too long.  This
-         * seems harmless enough, right? */
-        cp = strstr(cp, dstr);
-        if (!cp)
-          return -1;
-        cp += strlen(dstr);
-        strlcpy(buf, cp, sizeof(buf));
-        return digest256_from_base64(digest256_out, buf);
-      }
-      if (num_len == 0 || cp[num_len] != ',')
-        break;
-      cp += num_len + 1;
-    }
-  }
-  return -1;
 }
 

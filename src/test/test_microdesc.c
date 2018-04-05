@@ -5,6 +5,7 @@
 #include "or.h"
 
 #include "config.h"
+#define DIRVOTE_PRIVATE
 #include "dirvote.h"
 #include "microdesc.h"
 #include "networkstatus.h"
