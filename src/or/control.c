@@ -1936,6 +1936,31 @@ getinfo_helper_listeners(control_connection_t *control_conn,
   return 0;
 }
 
+/** Implementation helper for GETINFO: answers requests for information about
+ * the current time in both local and UTF forms. */
+STATIC int
+getinfo_helper_current_time(control_connection_t *control_conn,
+                         const char *question,
+                         char **answer, const char **errmsg)
+{
+  (void)control_conn;
+  (void)errmsg;
+
+  struct timeval now;
+  tor_gettimeofday(&now);
+  char timebuf[ISO_TIME_LEN+1];
+
+  if (!strcmp(question, "current-time/local"))
+    format_local_iso_time_nospace(timebuf, (time_t)now.tv_sec);
+  else if (!strcmp(question, "current-time/utc"))
+    format_iso_time_nospace(timebuf, (time_t)now.tv_sec);
+  else
+    return 0;
+
+  *answer = tor_strdup(timebuf);
+  return 0;
+}
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
 STATIC int
@@ -3078,6 +3103,9 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("config/defaults",
       "List of default values for configuration options. "
       "See also config/names"),
+  PREFIX("current-time/", current_time, "Current time."),
+  DOC("current-time/local", "Current time on the local system."),
+  DOC("current-time/utc", "Current UTC time."),
   PREFIX("downloads/networkstatus/", downloads,
          "Download statuses for networkstatus objects"),
   DOC("downloads/networkstatus/ns",

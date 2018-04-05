@@ -1470,6 +1470,50 @@ test_download_status_bridge(void *arg)
   return;
 }
 
+static void
+test_current_time(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  /* We need these for storing the time. */
+  struct timeval now;
+  tor_gettimeofday(&now);
+  char timebuf[ISO_TIME_LEN+1];
+
+  (void)arg;
+
+  /* Case 1 - local time */
+  format_local_iso_time_nospace(timebuf, (time_t)now.tv_sec);
+  getinfo_helper_current_time(&dummy,
+                              "current-time/local",
+                              &answer, &errmsg);
+  tt_ptr_op(answer, OP_NE, NULL);
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tt_str_op(answer, OP_EQ, timebuf);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 2 - UTC time */
+  format_iso_time_nospace(timebuf, (time_t)now.tv_sec);
+  getinfo_helper_current_time(&dummy,
+                              "current-time/utc",
+                              &answer, &errmsg);
+  tt_ptr_op(answer, OP_NE, NULL);
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tt_str_op(answer, OP_EQ, timebuf);
+  tor_free(answer);
+  errmsg = NULL;
+
+ done:
+  tor_free(answer);
+
+  return;
+}
+
 struct testcase_t controller_tests[] = {
   { "add_onion_helper_keyarg_v2", test_add_onion_helper_keyarg_v2, 0,
     NULL, NULL },
@@ -1486,6 +1530,7 @@ struct testcase_t controller_tests[] = {
     NULL },
   { "download_status_desc", test_download_status_desc, 0, NULL, NULL },
   { "download_status_bridge", test_download_status_bridge, 0, NULL, NULL },
+  { "current_time", test_current_time, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
