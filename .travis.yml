@@ -128,8 +128,8 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated xz         || brew upgrade xz;         }; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated libscrypt  || brew upgrade libscrypt;  }; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then { brew outdated zstd       || brew upgrade zstd;       }; fi
-  ## Install the nightly channels of rustc and cargo and setup our toolchain environment
-  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain nightly; fi
+  ## Install the stable channels of rustc and cargo and setup our toolchain environment
+  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain stable; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ## Get some info about rustc and cargo
   - if [[ "$RUST_OPTIONS" != "" ]]; then which rustc; fi
