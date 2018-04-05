@@ -259,11 +259,12 @@ dirserv_load_fingerprint_file(void)
  * identity to stop doing so.  This is going to be essential for good identity
  * security: otherwise anybody who can attack RSA-1024 but not Ed25519 could
  * just sign fake descriptors missing the Ed25519 key.  But we won't actually
- * be able to prevent that kind of thing until we're confident that there
- * isn't actually a legit reason to downgrade to 0.2.5.  So for now, we have
- * to leave this #undef.
+ * be able to prevent that kind of thing until we're confident that there isn't
+ * actually a legit reason to downgrade to 0.2.5.  Now we are not recommending
+ * 0.2.5 anymore so there is no reason to keep the #undef.
  */
-#undef DISABLE_DISABLING_ED25519
+
+#define DISABLE_DISABLING_ED25519
 
 /** Check whether <b>router</b> has a nickname/identity key combination that
  * we recognize from the fingerprint list, or an IP we automatically act on
