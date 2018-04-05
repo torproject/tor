@@ -6,7 +6,7 @@
 
 #include "config.h"
 #define DIRVOTE_PRIVATE
-#include "dirvote.h"
+#include "dirauth/dirvote.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "routerlist.h"

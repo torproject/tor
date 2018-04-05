@@ -41,10 +41,8 @@ LIBTOR_A_SOURCES = \
 	src/or/consdiffmgr.c				\
 	src/or/control.c				\
 	src/or/cpuworker.c				\
-	src/or/dircollate.c				\
 	src/or/directory.c				\
 	src/or/dirserv.c				\
-	src/or/dirvote.c				\
 	src/or/dns.c					\
 	src/or/dnsserv.c				\
 	src/or/dos.c					\
@@ -76,8 +74,6 @@ LIBTOR_A_SOURCES = \
 	src/or/onion.c					\
 	src/or/onion_fast.c				\
 	src/or/onion_tap.c				\
-	src/or/shared_random.c			\
-	src/or/shared_random_state.c		\
 	src/or/transports.c				\
 	src/or/parsecommon.c			\
 	src/or/periodic.c				\
@@ -121,7 +117,11 @@ LIBTOR_A_SOURCES = \
 
 # The Directory Authority module.
 if BUILD_MODULE_DIRAUTH
-#LIBTOR_A_SOURCES +=
+LIBTOR_A_SOURCES += \
+	src/or/dirauth/dircollate.c				\
+	src/or/dirauth/dirvote.c				\
+	src/or/dirauth/shared_random.c				\
+	src/or/dirauth/shared_random_state.c
 endif
 
 src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)
@@ -195,10 +195,8 @@ ORHEADERS = \
 	src/or/consdiffmgr.h				\
 	src/or/control.h				\
 	src/or/cpuworker.h				\
-	src/or/dircollate.h				\
 	src/or/directory.h				\
 	src/or/dirserv.h				\
-	src/or/dirvote.h				\
 	src/or/dns.h					\
 	src/or/dns_structs.h				\
 	src/or/dnsserv.h				\
@@ -235,8 +233,6 @@ ORHEADERS = \
 	src/or/onion_ntor.h				\
 	src/or/onion_tap.h				\
 	src/or/or.h					\
-	src/or/shared_random.h			\
-	src/or/shared_random_state.h		\
 	src/or/transports.h				\
 	src/or/parsecommon.h			\
 	src/or/periodic.h				\
@@ -273,7 +269,11 @@ ORHEADERS = \
 # properly compiled the entry points replacedment.
 
 # The Directory Authority module headers.
-#ORHEADERS +=
+ORHEADERS += \
+	src/or/dirauth/dircollate.h				\
+	src/or/dirauth/dirvote.h				\
+	src/or/dirauth/shared_random.h				\
+	src/or/dirauth/shared_random_state.h
 
 # This may someday want to be an installed file?
 noinst_HEADERS += src/or/tor_api.h

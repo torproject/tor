@@ -91,13 +91,14 @@
 #include "shared_random.h"
 #include "config.h"
 #include "confparse.h"
-#include "dirvote.h"
 #include "networkstatus.h"
 #include "routerkeys.h"
 #include "router.h"
 #include "routerlist.h"
 #include "shared_random_state.h"
 #include "util.h"
+
+#include "dirauth/dirvote.h"
 
 /* String prefix of shared random values in votes/consensuses. */
 static const char previous_srv_str[] = "shared-rand-previous-value";

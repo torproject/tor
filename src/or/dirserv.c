@@ -18,7 +18,6 @@
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "hibernate.h"
 #include "keypin.h"
 #include "main.h"
@@ -33,6 +32,8 @@
 #include "routerparse.h"
 #include "routerset.h"
 #include "torcert.h"
+
+#include "dirauth/dirvote.h"
 
 /**
  * \file dirserv.c

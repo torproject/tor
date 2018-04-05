@@ -24,7 +24,7 @@
 #include "control.h"
 #include "cpuworker.h"
 #include "dirserv.h"
-#include "dirvote.h"
+#include "dirauth/dirvote.h"
 #include "dns.h"
 #include "entrynodes.h"
 #include "transports.h"

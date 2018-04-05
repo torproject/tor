@@ -59,7 +59,6 @@
 #include "config.h"
 #include "circuitstats.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "parsecommon.h"
 #include "policies.h"
 #include "protover.h"
@@ -75,10 +74,12 @@
 #include "entrynodes.h"
 #include "torcert.h"
 #include "sandbox.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 
 #undef log
 #include <math.h>
+
+#include "dirauth/dirvote.h"
 
 /****************************************************************************/
 

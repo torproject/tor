@@ -9,7 +9,7 @@
 #include "test.h"
 #include "container.h"
 #include "or.h"
-#include "dirvote.h"
+#include "dirauth/dirvote.h"
 #include "nodelist.h"
 #include "routerlist.h"
 #include "test_dir_common.h"

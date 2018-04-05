@@ -20,7 +20,6 @@
 #include "compat.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hs_cache.h"
@@ -41,13 +40,15 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #if !defined(OpenBSD)
 #include <malloc.h>
 #endif
 #endif
+
+#include "dirauth/dirvote.h"
 
 /**
  * \file directory.c
