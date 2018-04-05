@@ -1,0 +1,4 @@
+  o Minor feature (continuous integration):
+    - Update the Travis CI configuration to use the stable Rust
+      channel, now that we have decided to require that.  Closes
+      ticket 25714.
