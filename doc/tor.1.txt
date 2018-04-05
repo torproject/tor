@@ -2362,6 +2362,11 @@ is non-zero):
     KeywDirectory. If the option is set to 1, make the KeyDirectory readable
     by the default GID. (Default: 0)
 
+[[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    Tells an authority, or other node tracking node reliability and history,
+    that fine-grained information about nodes can be discarded when it hasn't
+    changed for a given amount of time.  (Default: 24 hours)
+
 
 DIRECTORY SERVER OPTIONS
 ------------------------
@@ -2598,11 +2603,6 @@ on the public Tor network.
     own signing key, but also with a "legacy" key and certificate with a
     different identity.  This feature is used to migrate directory authority
     keys in the event of a compromise.  (Default: 0)
-
-[[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Tells an authority, or other node tracking node reliability and history,
-    that fine-grained information about nodes can be discarded when it hasn't
-    changed for a given amount of time.  (Default: 24 hours)
 
 [[AuthDirHasIPv6Connectivity]] **AuthDirHasIPv6Connectivity** **0**|**1**::
     Authoritative directories only. When set to 0, OR ports with an
