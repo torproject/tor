@@ -1682,8 +1682,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 int
 options_need_geoip_info(const or_options_t *options, const char **reason_out)
 {
-  int bridge_usage =
-    options->BridgeRelay && options->BridgeRecordUsageByCountry;
+  int bridge_usage = should_record_bridge_info(options);
   int routerset_usage =
     routerset_needs_geoip(options->EntryNodes) ||
     routerset_needs_geoip(options->ExitNodes) ||

@@ -628,8 +628,7 @@ geoip_note_client_seen(geoip_client_action_t action,
     /* Only remember statistics if the DoS mitigation subsystem is enabled. If
      * not, only if as entry guard or as bridge. */
     if (!dos_enabled()) {
-      if (!options->EntryStatistics &&
-          (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))) {
+      if (!options->EntryStatistics && !should_record_bridge_info(options)) {
         return;
       }
     }
