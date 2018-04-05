@@ -76,7 +76,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 
 #ifndef _WIN32
 #include <pwd.h>

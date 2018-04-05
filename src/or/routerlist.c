@@ -101,7 +101,6 @@
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "entrynodes.h"
 #include "fp_pair.h"
 #include "geoip.h"
@@ -121,6 +120,8 @@
 #include "routerset.h"
 #include "sandbox.h"
 #include "torcert.h"
+
+#include "dirauth/dirvote.h"
 
 // #define DEBUG_ROUTERLIST
 

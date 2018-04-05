@@ -50,7 +50,6 @@
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
-#include "dirvote.h"
 #include "dos.h"
 #include "entrynodes.h"
 #include "hibernate.h"
@@ -64,10 +63,12 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
-#include "shared_random.h"
+#include "dirauth/shared_random.h"
 #include "transports.h"
 #include "torcert.h"
 #include "channelpadding.h"
+
+#include "dirauth/dirvote.h"
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
