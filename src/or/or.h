@@ -2899,11 +2899,7 @@ typedef struct {
   } u;
 } onion_handshake_state_t;
 
-/** Holds accounting information for a single step in the layered encryption
- * performed by a circuit.  Used only at the client edge of a circuit. */
-typedef struct crypt_path_t {
-  uint32_t magic;
-
+typedef struct relay_crypto_t {
   /* crypto environments */
   /** Encryption key and counter for cells heading towards the OR at this
    * step. */
@@ -2916,6 +2912,17 @@ typedef struct crypt_path_t {
   crypto_digest_t *f_digest; /* for integrity checking */
   /** Digest state for cells heading away from the OR at this step. */
   crypto_digest_t *b_digest;
+
+} relay_crypto_t;
+
+/** Holds accounting information for a single step in the layered encryption
+ * performed by a circuit.  Used only at the client edge of a circuit. */
+typedef struct crypt_path_t {
+  uint32_t magic;
+
+  /** Cryptographic state used for encrypting and authenticating relay
+   * cells to and from this hop. */
+  relay_crypto_t crypto;
 
   /** Current state of the handshake as performed with the OR at this
    * step. */
@@ -3465,21 +3472,10 @@ typedef struct or_circuit_t {
   /** Linked list of Exit streams associated with this circuit that are
    * still being resolved. */
   edge_connection_t *resolving_streams;
-  /** The cipher used by intermediate hops for cells heading toward the
-   * OP. */
-  crypto_cipher_t *p_crypto;
-  /** The cipher used by intermediate hops for cells heading away from
-   * the OP. */
-  crypto_cipher_t *n_crypto;
 
-  /** The integrity-checking digest used by intermediate hops, for
-   * cells packaged here and heading towards the OP.
-   */
-  crypto_digest_t *p_digest;
-  /** The integrity-checking digest used by intermediate hops, for
-   * cells packaged at the OP and arriving here.
-   */
-  crypto_digest_t *n_digest;
+  /** Cryptographic state used for encrypting and authenticating relay
+   * cells to and from this hop. */
+  relay_crypto_t crypto;
 
   /** Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
    * is not marked for close. */

@@ -56,6 +56,7 @@
 #include "onion_fast.h"
 #include "policies.h"
 #include "relay.h"
+#include "relay_crypto.h"
 #include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
@@ -1336,69 +1337,10 @@ circuit_init_cpath_crypto(crypt_path_t *cpath,
                           const char *key_data, size_t key_data_len,
                           int reverse, int is_hs_v3)
 {
-  crypto_digest_t *tmp_digest;
-  crypto_cipher_t *tmp_crypto;
-  size_t digest_len = 0;
-  size_t cipher_key_len = 0;
 
   tor_assert(cpath);
-  tor_assert(key_data);
-  tor_assert(!(cpath->f_crypto || cpath->b_crypto ||
-             cpath->f_digest || cpath->b_digest));
-
-  /* Basic key size validation */
-  if (is_hs_v3 && BUG(key_data_len != HS_NTOR_KEY_EXPANSION_KDF_OUT_LEN)) {
-    return -1;
-  } else if (!is_hs_v3 && BUG(key_data_len != CPATH_KEY_MATERIAL_LEN)) {
-    return -1;
-  }
-
-  /* If we are using this cpath for next gen onion services use SHA3-256,
-     otherwise use good ol' SHA1 */
-  if (is_hs_v3) {
-    digest_len = DIGEST256_LEN;
-    cipher_key_len = CIPHER256_KEY_LEN;
-    cpath->f_digest = crypto_digest256_new(DIGEST_SHA3_256);
-    cpath->b_digest = crypto_digest256_new(DIGEST_SHA3_256);
-  } else {
-    digest_len = DIGEST_LEN;
-    cipher_key_len = CIPHER_KEY_LEN;
-    cpath->f_digest = crypto_digest_new();
-    cpath->b_digest = crypto_digest_new();
-  }
-
-  tor_assert(digest_len != 0);
-  tor_assert(cipher_key_len != 0);
-  const int cipher_key_bits = (int) cipher_key_len * 8;
-
-  crypto_digest_add_bytes(cpath->f_digest, key_data, digest_len);
-  crypto_digest_add_bytes(cpath->b_digest, key_data+digest_len, digest_len);
-
-  cpath->f_crypto = crypto_cipher_new_with_bits(key_data+(2*digest_len),
-                                                cipher_key_bits);
-  if (!cpath->f_crypto) {
-    log_warn(LD_BUG,"Forward cipher initialization failed.");
-    return -1;
-  }
-
-  cpath->b_crypto = crypto_cipher_new_with_bits(
-                                        key_data+(2*digest_len)+cipher_key_len,
-                                        cipher_key_bits);
-  if (!cpath->b_crypto) {
-    log_warn(LD_BUG,"Backward cipher initialization failed.");
-    return -1;
-  }
-
-  if (reverse) {
-    tmp_digest = cpath->f_digest;
-    cpath->f_digest = cpath->b_digest;
-    cpath->b_digest = tmp_digest;
-    tmp_crypto = cpath->f_crypto;
-    cpath->f_crypto = cpath->b_crypto;
-    cpath->b_crypto = tmp_crypto;
-  }
-
-  return 0;
+  return relay_crypto_init(&cpath->crypto, key_data, key_data_len, reverse,
+                           is_hs_v3);
 }
 
 /** A "created" cell <b>reply</b> came back to us on circuit <b>circ</b>.
@@ -1521,7 +1463,6 @@ onionskin_answer(or_circuit_t *circ,
                  const uint8_t *rend_circ_nonce)
 {
   cell_t cell;
-  crypt_path_t *tmp_cpath;
 
   tor_assert(keys_len == CPATH_KEY_MATERIAL_LEN);
 
@@ -1532,25 +1473,15 @@ onionskin_answer(or_circuit_t *circ,
   }
   cell.circ_id = circ->p_circ_id;
 
-  tmp_cpath = tor_malloc_zero(sizeof(crypt_path_t));
-  tmp_cpath->magic = CRYPT_PATH_MAGIC;
-
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
 
   log_debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
             (unsigned int)get_uint32(keys),
             (unsigned int)get_uint32(keys+20));
-  if (circuit_init_cpath_crypto(tmp_cpath, keys, keys_len, 0, 0)<0) {
+  if (relay_crypto_init(&circ->crypto, keys, keys_len, 0, 0)<0) {
     log_warn(LD_BUG,"Circuit initialization failed");
-    tor_free(tmp_cpath);
     return -1;
   }
-  circ->n_digest = tmp_cpath->f_digest;
-  circ->n_crypto = tmp_cpath->f_crypto;
-  circ->p_digest = tmp_cpath->b_digest;
-  circ->p_crypto = tmp_cpath->b_crypto;
-  tmp_cpath->magic = 0;
-  tor_free(tmp_cpath);
 
   memcpy(circ->rend_circ_nonce, rend_circ_nonce, DIGEST_LEN);
 

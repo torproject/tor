@@ -12,7 +12,7 @@
 
 #include "or.h"
 #include "onion_tap.h"
-#include "relay.h"
+#include "relay_crypto.h"
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
@@ -505,10 +505,10 @@ bench_cell_ops(void)
   char key1[CIPHER_KEY_LEN], key2[CIPHER_KEY_LEN];
   crypto_rand(key1, sizeof(key1));
   crypto_rand(key2, sizeof(key2));
-  or_circ->p_crypto = crypto_cipher_new(key1);
-  or_circ->n_crypto = crypto_cipher_new(key2);
-  or_circ->p_digest = crypto_digest_new();
-  or_circ->n_digest = crypto_digest_new();
+  or_circ->crypto.f_crypto = crypto_cipher_new(key1);
+  or_circ->crypto.b_crypto = crypto_cipher_new(key2);
+  or_circ->crypto.f_digest = crypto_digest_new();
+  or_circ->crypto.b_digest = crypto_digest_new();
 
   reset_perftime();
 
@@ -518,7 +518,8 @@ bench_cell_ops(void)
     for (i = 0; i < iters; ++i) {
       char recognized = 0;
       crypt_path_t *layer_hint = NULL;
-      relay_crypt(TO_CIRCUIT(or_circ), cell, d, &layer_hint, &recognized);
+      relay_decrypt_cell(TO_CIRCUIT(or_circ), cell, d,
+                         &layer_hint, &recognized);
     }
     end = perftime();
     printf("%sbound cells: %.2f ns per cell. (%.2f ns per byte of payload)\n",
@@ -527,10 +528,7 @@ bench_cell_ops(void)
            NANOCOUNT(start,end,iters*CELL_PAYLOAD_SIZE));
   }
 
-  crypto_digest_free(or_circ->p_digest);
-  crypto_digest_free(or_circ->n_digest);
-  crypto_cipher_free(or_circ->p_crypto);
-  crypto_cipher_free(or_circ->n_crypto);
+  relay_crypto_clear(&or_circ->crypto);
   tor_free(or_circ);
   tor_free(cell);
 }

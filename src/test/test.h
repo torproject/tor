@@ -238,6 +238,7 @@ extern struct testcase_t pubsub_tests[];
 extern struct testcase_t pt_tests[];
 extern struct testcase_t relay_tests[];
 extern struct testcase_t relaycell_tests[];
+extern struct testcase_t relaycrypt_tests[];
 extern struct testcase_t rend_cache_tests[];
 extern struct testcase_t replaycache_tests[];
 extern struct testcase_t router_tests[];
