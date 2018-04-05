@@ -446,23 +446,23 @@ if test "x$enable_rust" = "xyes"; then
     AC_MSG_CHECKING([rust crate dependencies])
     AC_ARG_VAR([TOR_RUST_DEPENDENCIES], [path to directory with local crate mirror])
     if test "x$TOR_RUST_DEPENDENCIES" = "x"; then
-      TOR_RUST_DEPENDENCIES="$srcdir/src/ext/rust/"
-      NEED_MOD=1
+      TOR_RUST_DEPENDENCIES="${srcdir}/src/ext/rust/crates"
     fi
+    dnl Check whether the path exists before we try to cd into it.
     if test ! -d "$TOR_RUST_DEPENDENCIES"; then
       AC_MSG_ERROR([Rust dependency directory $TOR_RUST_DEPENDENCIES does not exist. Specify a dependency directory using the TOR_RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
       ERRORED=1
     fi
+    dnl Make the path absolute, since we'll be using it from within a
+    dnl subdirectory.
+    TOR_RUST_DEPENDENCIES=$(cd "$TOR_RUST_DEPENDENCIES" ; pwd)
+
     for dep in $rust_crates; do
       if test ! -d "$TOR_RUST_DEPENDENCIES"/"$dep"; then
         AC_MSG_ERROR([Failure to find rust dependency $TOR_RUST_DEPENDENCIES/$dep. Specify a dependency directory using the TOR_RUST_DEPENDENCIES variable or allow cargo to fetch crates using --enable-cargo-online-mode.])
         ERRORED=1
       fi
     done
-    if test "x$NEED_MOD" = "x1"; then
-      dnl When looking for dependencies from cargo, pick right directory
-      TOR_RUST_DEPENDENCIES="../../src/ext/rust"
-    fi
     if test "x$ERRORED" = "x"; then
       AC_MSG_RESULT([yes])
     fi

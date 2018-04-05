@@ -1203,6 +1203,7 @@ The following options are useful only for clients (that is, if
         on different SocksPorts, TransPorts, etc are always isolated from one
         another. This option overrides that behavior.)
 
+// Anchor only for formatting, not visible in the man page.
 [[OtherSocksPortFlags]]::
     Other recognized __flags__ for a SocksPort are:
     **NoIPv4Traffic**;;
@@ -1267,6 +1268,7 @@ The following options are useful only for clients (that is, if
         authentication" when IsolateSOCKSAuth is disabled, or when this
         option is set.
 
+// Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::
     Flags are processed left to right. If flags conflict, the last flag on the
     line is used, and all earlier flags are ignored. No error is issued for
@@ -1904,7 +1906,8 @@ is non-zero):
        reject *:6881-6999
        accept *:*
 
-[[ExitPolicyDefault]] **ExitPolicyDefault**::
+// Anchor only for formatting, not visible in the man page.
+[[ExitPolicyDefault]]::
     Since the default exit policy uses accept/reject *, it applies to both
     IPv4 and IPv6 addresses.
 
@@ -2079,6 +2082,7 @@ is non-zero):
         If the address is absent, or resolves to both an IPv4 and an IPv6
         address, only listen to the IPv6 address.
 
+// Anchor only for formatting, not visible in the man page.
 [[ORPortFlagsExclusive]]::
     For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
     IPv4Only and IPv6Only are mutually exclusive.
