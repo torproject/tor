@@ -17,12 +17,9 @@
 
 #include <stdio.h>
 #include "torint.h"
-#include "testsupport.h"
 #include "compat.h"
 #include "util.h"
 #include "crypto_rsa.h"
-
-#include "keccak-tiny/keccak-tiny.h"
 
 /** Length of our symmetric cipher's keys of 128-bit. */
 #define CIPHER_KEY_LEN 16

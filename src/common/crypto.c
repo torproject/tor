@@ -36,14 +36,11 @@
 DISABLE_GCC_WARNING(redundant-decls)
 
 #include <openssl/err.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/bn.h>
 #include <openssl/dh.h>
 #include <openssl/conf.h>
-#include <openssl/hmac.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
 
