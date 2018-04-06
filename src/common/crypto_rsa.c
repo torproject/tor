@@ -9,13 +9,13 @@
  * \brief Block of functions related with RSA utilities and operations.
  **/
 
-#include "crypto_rsa.h"
 #include "crypto.h"
-#include "compat_openssl.h"
 #include "crypto_curve25519.h"
-#include "crypto_format.h"
 #include "crypto_digest.h"
+#include "crypto_format.h"
+#include "compat_openssl.h"
 #include "crypto_rand.h"
+#include "crypto_rsa.h"
 #include "crypto_util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)

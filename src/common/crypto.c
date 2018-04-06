@@ -23,14 +23,14 @@
 #endif /* defined(_WIN32) */
 
 #define CRYPTO_PRIVATE
-#include "crypto.h"
 #include "compat_openssl.h"
+#include "crypto.h"
 #include "crypto_curve25519.h"
+#include "crypto_digest.h"
 #include "crypto_ed25519.h"
 #include "crypto_format.h"
 #include "crypto_rand.h"
 #include "crypto_rsa.h"
-#include "crypto_digest.h"
 #include "crypto_util.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
