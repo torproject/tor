@@ -1,0 +1,4 @@
+  o Minor bugfixes (distribution, compilation):
+    - Actually include all of our Rust source in our source
+      distributions. (Previously, a few of the files were accidentally
+      omitted.) Fixes bug 25732; bugfix on 0.3.3.2-alpha.
