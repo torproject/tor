@@ -23,8 +23,8 @@
 #include "control.h"
 #include "crypto_rand.h"
 #include "dns.h"
-#include "routerset.h"
 #include "nodelist.h"
+#include "routerset.h"
 
 /** A client-side struct to remember requests to rewrite addresses
  * to new addresses. These structs are stored in the hash table

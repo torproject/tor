@@ -15,12 +15,13 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "control.h"
 #include "crypto_rand.h"
 #include "crypto_util.h"
 #include "directory.h"
-#include "hs_common.h"
 #include "hs_circuit.h"
 #include "hs_client.h"
+#include "hs_common.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -31,7 +32,6 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerset.h"
-#include "control.h"
 
 static extend_info_t *rend_client_get_random_intro_impl(
                           const rend_cache_entry_t *rend_query,
