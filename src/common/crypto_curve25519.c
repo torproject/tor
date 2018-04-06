@@ -21,7 +21,6 @@
 #include <sys/stat.h>
 #endif
 #include "container.h"
-#include "crypto.h"
 #include "crypto_curve25519.h"
 #include "crypto_digest.h"
 #include "crypto_format.h"

@@ -5,7 +5,6 @@
 
 #include "orconfig.h"
 #define DIRVOTE_PRIVATE
-#include "crypto.h"
 #include "test.h"
 #include "container.h"
 #include "or.h"

@@ -11,7 +11,6 @@
 
 #include <stdint.h>
 
-#include "crypto.h"
 #include "crypto_ed25519.h"
 #include "hs_common.h"
 #include "hs_descriptor.h"
