@@ -7,8 +7,8 @@
 #include "compat_threads.h"
 #include "onion.h"
 #include "workqueue.h"
-#include "crypto.h"
 #include "crypto_curve25519.h"
+#include "crypto_rand.h"
 #include "compat_libevent.h"
 
 #include <stdio.h>

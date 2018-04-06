@@ -14,6 +14,8 @@
 #include "circuitbuild.h"
 #include "config.h"
 #include "control.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "hs_common.h"
 #include "rendclient.h"
 #include "rendcommon.h"

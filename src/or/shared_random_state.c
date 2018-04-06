@@ -14,6 +14,7 @@
 #include "shared_random.h"
 #include "config.h"
 #include "confparse.h"
+#include "crypto_util.h"
 #include "dirvote.h"
 #include "networkstatus.h"
 #include "router.h"

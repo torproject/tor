@@ -30,6 +30,7 @@
 #include "circuitstats.h"
 #include "connection_edge.h"
 #include "config.h"
+#include "crypto_rand.h"
 #include "entrynodes.h"
 #include "networkstatus.h"
 #include "relay.h"

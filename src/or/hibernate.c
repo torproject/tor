@@ -36,6 +36,7 @@ hibernating, phase 2:
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "crypto_rand.h"
 #include "hibernate.h"
 #include "main.h"
 #include "router.h"

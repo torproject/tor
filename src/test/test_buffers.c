@@ -8,6 +8,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "buffers_tls.h"
+#include "crypto_rand.h"
 #include "proto_http.h"
 #include "proto_socks.h"
 #include "test.h"

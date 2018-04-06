@@ -29,6 +29,8 @@
 
 #include "or.h"
 #include "config.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "onion_tap.h"
 #include "rephist.h"
 

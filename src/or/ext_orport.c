@@ -23,6 +23,8 @@
 #include "ext_orport.h"
 #include "control.h"
 #include "config.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "main.h"
 #include "proto_ext_or.h"
 #include "util.h"

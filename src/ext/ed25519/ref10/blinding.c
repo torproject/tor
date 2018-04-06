@@ -7,7 +7,7 @@
 #include "ed25519_ref10.h"
 
 #include <string.h>
-#include "crypto.h"
+#include "crypto_util.h"
 
 static void
 ed25519_ref10_gettweak(unsigned char *out, const unsigned char *param)

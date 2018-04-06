@@ -15,6 +15,8 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "directory.h"
 #include "hs_common.h"
 #include "hs_circuit.h"

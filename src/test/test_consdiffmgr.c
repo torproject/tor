@@ -9,6 +9,7 @@
 #include "consdiff.h"
 #include "consdiffmgr.h"
 #include "cpuworker.h"
+#include "crypto_rand.h"
 #include "networkstatus.h"
 #include "routerparse.h"
 #include "workqueue.h"

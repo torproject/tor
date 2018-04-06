@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #include "or.h"
+#include "crypto_rand.h"
 #include "fp_pair.h"
 #include "test.h"
 

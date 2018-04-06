@@ -10,10 +10,13 @@
  * operations.
  **/
 
+#include "container.h"
 #include "crypto_digest.h"
-
-#include "crypto.h" /* common functions */
 #include "crypto_openssl_mgt.h"
+#include "crypto_util.h"
+#include "torlog.h"
+
+#include "keccak-tiny/keccak-tiny.h"
 
 DISABLE_GCC_WARNING(redundant-decls)
 
@@ -21,8 +24,6 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/sha.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
-
-#include "container.h"
 
 /* Crypto digest functions */
 

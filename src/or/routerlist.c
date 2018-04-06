@@ -99,6 +99,7 @@
 #include "config.h"
 #include "connection.h"
 #include "control.h"
+#include "crypto_rand.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"

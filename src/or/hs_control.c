@@ -8,6 +8,7 @@
 
 #include "or.h"
 #include "control.h"
+#include "crypto_util.h"
 #include "hs_common.h"
 #include "hs_control.h"
 #include "hs_descriptor.h"

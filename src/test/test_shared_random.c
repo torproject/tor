@@ -9,6 +9,7 @@
 #include "or.h"
 #include "test.h"
 #include "config.h"
+#include "crypto_rand.h"
 #include "dirvote.h"
 #include "shared_random.h"
 #include "shared_random_state.h"

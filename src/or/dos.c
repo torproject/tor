@@ -11,6 +11,7 @@
 #include "or.h"
 #include "channel.h"
 #include "config.h"
+#include "crypto_rand.h"
 #include "geoip.h"
 #include "main.h"
 #include "networkstatus.h"

@@ -9,7 +9,7 @@
 #include "keccak-tiny.h"
 
 #include <string.h>
-#include "crypto.h"
+#include "crypto_util.h"
 #include "byteorder.h"
 
 /******** Endianness conversion helpers ********/

@@ -13,6 +13,8 @@
 #include "config.h"
 #include "connection.h"
 #include "control.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "crypto_curve25519.h"
 #include "directory.h"
 #include "dirserv.h"

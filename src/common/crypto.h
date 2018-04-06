@@ -105,48 +105,12 @@ int crypto_expand_key_material_rfc5869_sha256(
                                     const uint8_t *info_in, size_t info_in_len,
                                     uint8_t *key_out, size_t key_out_len);
 
-/* random numbers */
-int crypto_seed_rng(void) ATTR_WUR;
-MOCK_DECL(void,crypto_rand,(char *to, size_t n));
-void crypto_rand_unmocked(char *to, size_t n);
-void crypto_strongest_rand(uint8_t *out, size_t out_len);
-int crypto_rand_int(unsigned int max);
-int crypto_rand_int_range(unsigned int min, unsigned int max);
-uint64_t crypto_rand_uint64_range(uint64_t min, uint64_t max);
-time_t crypto_rand_time_range(time_t min, time_t max);
-uint64_t crypto_rand_uint64(uint64_t max);
-double crypto_rand_double(void);
-struct tor_weak_rng_t;
-void crypto_seed_weak_rng(struct tor_weak_rng_t *rng);
-int crypto_init_siphash_key(void);
-
-char *crypto_random_hostname(int min_rand_len, int max_rand_len,
-                             const char *prefix, const char *suffix);
-
-struct smartlist_t;
-void *smartlist_choose(const struct smartlist_t *sl);
-void smartlist_shuffle(struct smartlist_t *sl);
-
-/** OpenSSL-based utility functions. */
-void memwipe(void *mem, uint8_t byte, size_t sz);
-
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */
 struct dh_st;
 struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
 
 void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
-
-#ifdef CRYPTO_PRIVATE
-
-STATIC int crypto_force_rand_ssleay(void);
-STATIC int crypto_strongest_rand_raw(uint8_t *out, size_t out_len);
-
-#ifdef TOR_UNIT_TESTS
-extern int break_strongest_rng_syscall;
-extern int break_strongest_rng_fallback;
-#endif
-#endif /* defined(CRYPTO_PRIVATE) */
 
 #endif /* !defined(TOR_CRYPTO_H) */
 

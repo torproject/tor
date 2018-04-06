@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "crypto_rand.h"
 #include "storagedir.h"
 #include "test.h"
 

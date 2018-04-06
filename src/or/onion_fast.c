@@ -29,6 +29,8 @@
 
 #include "or.h"
 #include "onion_fast.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 
 /** Release all state held in <b>victim</b>. */
 void

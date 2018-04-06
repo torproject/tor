@@ -18,6 +18,7 @@
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
+#include "crypto_rand.h"
 #include "main.h"
 #include "nodelist.h"
 #include "relay.h"

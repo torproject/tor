@@ -61,6 +61,8 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "geoip.h"
 #include "hs_cache.h"
 #include "main.h"

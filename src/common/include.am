@@ -118,8 +118,10 @@ LIBOR_CRYPTO_A_SRC = \
   src/common/crypto_rsa.c     \
   src/common/crypto_openssl_mgt.c    \
   src/common/crypto_pwbox.c     \
+  src/common/crypto_rand.c     \
   src/common/crypto_s2k.c	\
   src/common/crypto_format.c	\
+  src/common/crypto_util.c	\
   src/common/tortls.c		\
   src/common/crypto_curve25519.c \
   src/common/crypto_ed25519.c
@@ -173,7 +175,9 @@ COMMONHEADERS = \
   src/common/crypto_openssl_mgt.h         \
   src/common/crypto_rsa.h           \
   src/common/crypto_pwbox.h			\
+  src/common/crypto_rand.h          \
   src/common/crypto_s2k.h			\
+  src/common/crypto_util.h			\
   src/common/di_ops.h				\
   src/common/handles.h				\
   src/common/memarea.h				\

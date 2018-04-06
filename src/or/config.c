@@ -78,6 +78,8 @@
 #include "control.h"
 #include "confparse.h"
 #include "cpuworker.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "dirserv.h"
 #include "dirvote.h"
 #include "dns.h"

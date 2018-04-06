@@ -15,6 +15,8 @@
 
 #include "config.h"
 #include "circuitbuild.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "hs_cache.h"

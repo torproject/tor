@@ -16,6 +16,7 @@
 #include "circuitlist.h"
 #include "config.h"
 #include "confparse.h"
+#include "crypto_rand.h"
 #include "directory.h"
 #include "entrynodes.h"
 #include "nodelist.h"

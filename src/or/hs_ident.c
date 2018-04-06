@@ -7,6 +7,7 @@
  *        subsytem.
  **/
 
+#include "crypto_util.h"
 #include "hs_ident.h"
 
 /* Return a newly allocated circuit identifier. The given public key is copied

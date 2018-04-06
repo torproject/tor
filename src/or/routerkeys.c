@@ -16,6 +16,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "crypto_util.h"
 #include "router.h"
 #include "crypto_pwbox.h"
 #include "routerkeys.h"

@@ -13,6 +13,8 @@
 #include "hs_ident.h"
 #include "connection_edge.h"
 #include "container.h"
+#include "crypto_rand.h"
+#include "crypto_util.h"
 #include "rendclient.h"
 #include "hs_descriptor.h"
 #include "hs_cache.h"

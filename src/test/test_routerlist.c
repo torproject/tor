@@ -18,6 +18,7 @@
 #include "connection.h"
 #include "container.h"
 #include "control.h"
+#include "crypto_rand.h"
 #include "directory.h"
 #include "dirvote.h"
 #include "entrynodes.h"

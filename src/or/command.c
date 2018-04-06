@@ -46,6 +46,7 @@
 #include "config.h"
 #include "control.h"
 #include "cpuworker.h"
+#include "crypto_util.h"
 #include "dos.h"
 #include "hibernate.h"
 #include "nodelist.h"

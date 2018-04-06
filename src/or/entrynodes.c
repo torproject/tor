@@ -123,6 +123,7 @@
 #include "confparse.h"
 #include "connection.h"
 #include "control.h"
+#include "crypto_rand.h"
 #include "directory.h"
 #include "entrynodes.h"
 #include "main.h"

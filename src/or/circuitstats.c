@@ -31,6 +31,7 @@
 #include "config.h"
 #include "confparse.h"
 #include "control.h"
+#include "crypto_rand.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "rendclient.h"

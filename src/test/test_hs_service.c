@@ -33,7 +33,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
-#include "crypto.h"
+#include "crypto_rand.h"
 #include "dirvote.h"
 #include "networkstatus.h"
 #include "nodelist.h"

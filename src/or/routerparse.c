@@ -58,6 +58,7 @@
 #include "or.h"
 #include "config.h"
 #include "circuitstats.h"
+#include "crypto_util.h"
 #include "dirserv.h"
 #include "dirvote.h"
 #include "parsecommon.h"

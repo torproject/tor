@@ -6,6 +6,9 @@
 #include "crypto_hash_sha512.h"
 #include "ge.h"
 
+#include "crypto_rand.h"
+#include "crypto_util.h"
+
 int
 crypto_sign_seckey(unsigned char *sk)
 {

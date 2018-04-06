@@ -12,6 +12,7 @@
 #include "or.h"
 #include "control.h"
 #include "config.h"
+#include "crypto_rand.h"
 #include "rephist.h"
 #include "backtrace.h"
 #include "test.h"

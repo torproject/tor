@@ -16,6 +16,7 @@
 #include "container.h"
 #include "crypto.h"
 #include "crypto_ed25519.h"
+#include "ed25519_cert.h" /* needed for trunnel */
 #include "torcert.h"
 
 /* Trunnel */
