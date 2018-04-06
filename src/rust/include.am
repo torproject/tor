@@ -8,6 +8,8 @@ EXTRA_DIST +=\
 	src/rust/external/external.rs \
 	src/rust/external/lib.rs \
 	src/rust/protover/Cargo.toml \
+	src/rust/protover/errors.rs \
+	src/rust/protover/protoset.rs \
 	src/rust/protover/ffi.rs \
 	src/rust/protover/lib.rs \
 	src/rust/protover/protover.rs \
@@ -23,4 +25,5 @@ EXTRA_DIST +=\
 	src/rust/tor_rust/lib.rs \
 	src/rust/tor_util/Cargo.toml \
 	src/rust/tor_util/ffi.rs \
-	src/rust/tor_util/lib.rs
+	src/rust/tor_util/lib.rs \
+	src/rust/tor_util/strings.rs
