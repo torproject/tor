@@ -4566,9 +4566,11 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
       uint64_t avail = 0;
 
       if (ram >= (8 * ONE_GIGABYTE)) {
-        /* If we have more than, or equal to, 8 GB of RAM available, we set the
-         * MaxMemInQueues to 0.4 * RAM, since the relay operator should
-         * probably be running multiple relays on this host.
+        /* If we have 8 GB, or more, RAM available, we set the MaxMemInQueues
+         * to 0.4 * RAM. The idea behind this value is that the amount of RAM
+         * is more than enough for a single relay and should allow the relay
+         * operator to run two relays if they have additional bandwidth
+         * available.
          */
         avail = (ram / 5) * 2;
       } else {
