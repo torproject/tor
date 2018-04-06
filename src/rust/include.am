@@ -20,6 +20,9 @@ EXTRA_DIST +=\
 	src/rust/tor_allocate/Cargo.toml \
 	src/rust/tor_allocate/lib.rs \
 	src/rust/tor_allocate/tor_allocate.rs \
+	src/rust/tor_log/Cargo.toml \
+	src/rust/tor_log/lib.rs \
+	src/rust/tor_log/tor_log.rs \
 	src/rust/tor_rust/Cargo.toml \
 	src/rust/tor_rust/include.am \
 	src/rust/tor_rust/lib.rs \
