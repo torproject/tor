@@ -221,6 +221,121 @@ periodic_timer_free_(periodic_timer_t *timer)
   tor_free(timer);
 }
 
+/**
+ * Type used to represent events that run directly from the main loop,
+ * either because they are activated from elsewhere in the code, or
+ * because they have a simple timeout.
+ *
+ * We use this type to avoid exposing Libevent's API throughout the rest
+ * of the codebase.
+ *
+ * This type can't be used for all events: it doesn't handle events that
+ * are triggered by signals or by sockets.
+ */
+struct mainloop_event_t {
+  struct event *ev;
+  void (*cb)(mainloop_event_t *, void *);
+  void *userdata;
+};
+
+/**
+ * Internal: Implements mainloop event using a libevent event.
+ */
+static void
+mainloop_event_cb(evutil_socket_t fd, short what, void *arg)
+{
+  (void)fd;
+  (void)what;
+  mainloop_event_t *mev = arg;
+  mev->cb(mev, mev->userdata);
+}
+
+/**
+ * Create and return a new mainloop_event_t to run the function <b>cb</b>.
+ *
+ * When run, the callback function will be passed the mainloop_event_t
+ * and <b>userdata</b> as its arguments.  The <b>userdata</b> pointer
+ * must remain valid for as long as the mainloop_event_t event exists:
+ * it is your responsibility to free it.
+ *
+ * The event is not scheduled by default: Use mainloop_event_activate()
+ * or mainloop_event_schedule() to make it run.
+ */
+mainloop_event_t *
+mainloop_event_new(void (*cb)(mainloop_event_t *, void *),
+                   void *userdata)
+{
+  tor_assert(cb);
+
+  struct event_base *base = tor_libevent_get_base();
+  mainloop_event_t *mev = tor_malloc_zero(sizeof(mainloop_event_t));
+  mev->ev = tor_event_new(base, -1, 0, mainloop_event_cb, mev);
+  tor_assert(mev->ev);
+  mev->cb = cb;
+  mev->userdata = userdata;
+  return mev;
+}
+
+/**
+ * Schedule <b>event</b> to run in the main loop, immediately.  If it is
+ * not scheduled, it will run anyway. If it is already scheduled to run
+ * later, it will run now instead.  This function will have no effect if
+ * the event is already scheduled to run.
+ *
+ * This function may only be called from the main thread.
+ */
+void
+mainloop_event_activate(mainloop_event_t *event)
+{
+  tor_assert(event);
+  event_active(event->ev, EV_READ, 1);
+}
+
+/** Schedule <b>event</b> to run in the main loop, after a delay of <b>tv</b>.
+ *
+ * If the event is scheduled for a different time, cancel it and run
+ * after this delay instead.  If the event is currently pending to run
+ * <em>now</b>, has no effect.
+ *
+ * Do not call this function with <b>tv</b> == NULL -- use
+ * mainloop_event_activate() instead.
+ *
+ * This function may only be called from the main thread.
+ */
+int
+mainloop_event_schedule(mainloop_event_t *event, const struct timeval *tv)
+{
+  tor_assert(event);
+  if (BUG(tv == NULL)) {
+    // LCOV_EXCL_START
+    mainloop_event_activate(event);
+    return 0;
+    // LCOV_EXCL_STOP
+  }
+  return event_add(event->ev, tv);
+}
+
+/** Cancel <b>event</b> if it is currently active or pending. (Do nothing if
+ * the event is not currently active or pending.) */
+void
+mainloop_event_cancel(mainloop_event_t *event)
+{
+  if (!event)
+    return;
+  event_del(event->ev);
+}
+
+/** Cancel <b>event</b> and release all storage associated with it. */
+void
+mainloop_event_free_(mainloop_event_t *event)
+{
+  if (!event)
+    return;
+  tor_event_free(event->ev);
+  memset(event, 0xb8, sizeof(*event));
+  tor_free(event);
+}
+
 int
 tor_init_libevent_rng(void)
 {
@@ -246,6 +361,38 @@ tor_libevent_free_all(void)
   if (the_event_base)
     event_base_free(the_event_base);
   the_event_base = NULL;
+}
+
+/**
+ * Run the event loop for the provided event_base, handling events until
+ * something stops it.  If <b>once</b> is set, then just poll-and-run
+ * once, then exit.  Return 0 on success, -1 if an error occurred, or 1
+ * if we exited because no events were pending or active.
+ *
+ * This isn't reentrant or multithreaded.
+ */
+int
+tor_libevent_run_event_loop(struct event_base *base, int once)
+{
+  const int flags = once ? EVLOOP_ONCE : 0;
+  return event_base_loop(base, flags);
+}
+
+/** Tell the event loop to exit after <b>delay</b>.  If <b>delay</b> is NULL,
+ * instead exit after we're done running the currently active events. */
+void
+tor_libevent_exit_loop_after_delay(struct event_base *base,
+                                   const struct timeval *delay)
+{
+  event_base_loopexit(base, delay);
+}
+
+/** Tell the event loop to exit after running whichever callback is currently
+ * active. */
+void
+tor_libevent_exit_loop_after_callback(struct event_base *base)
+{
+  event_base_loopbreak(base);
 }
 
 #if defined(LIBEVENT_VERSION_NUMBER) &&         \

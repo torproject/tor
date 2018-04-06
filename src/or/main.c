@@ -719,7 +719,7 @@ tell_event_loop_to_run_external_code(void)
 {
   if (!called_loop_once) {
     struct timeval tv = { 0, 0 };
-    tor_event_base_loopexit(tor_libevent_get_base(), &tv);
+    tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &tv);
     called_loop_once = 1; /* hack to avoid adding more exit events */
   }
 }
@@ -779,8 +779,9 @@ tor_shutdown_event_loop_and_exit(int exitcode)
                   shutdown_did_not_work_callback, NULL);
   event_add(shutdown_did_not_work_event, &ten_seconds);
 
-  /* Unlike loopexit, loopbreak prevents other callbacks from running. */
-  tor_event_base_loopbreak(tor_libevent_get_base());
+  /* Unlike exit_loop_after_delay(), exit_loop_after_callback
+   * prevents other callbacks from running. */
+  tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
 }
 
 /** Return true iff tor_shutdown_event_loop_and_exit() has been called. */
@@ -1060,9 +1061,8 @@ conn_close_if_marked(int i)
  * reason.
  */
 static void
-directory_all_unreachable_cb(evutil_socket_t fd, short event, void *arg)
+directory_all_unreachable_cb(mainloop_event_t *event, void *arg)
 {
-  (void)fd;
   (void)event;
   (void)arg;
 
@@ -1082,7 +1082,7 @@ directory_all_unreachable_cb(evutil_socket_t fd, short event, void *arg)
   control_event_general_error("DIR_ALL_UNREACHABLE");
 }
 
-static struct event *directory_all_unreachable_cb_event = NULL;
+static mainloop_event_t *directory_all_unreachable_cb_event = NULL;
 
 /** We've just tried every dirserver we know about, and none of
  * them were reachable. Assume the network is down. Change state
@@ -1099,12 +1099,11 @@ directory_all_unreachable(time_t now)
 
   if (!directory_all_unreachable_cb_event) {
     directory_all_unreachable_cb_event =
-      tor_event_new(tor_libevent_get_base(),
-                    -1, EV_READ, directory_all_unreachable_cb, NULL);
+      mainloop_event_new(directory_all_unreachable_cb, NULL);
     tor_assert(directory_all_unreachable_cb_event);
   }
 
-  event_active(directory_all_unreachable_cb_event, EV_READ, 1);
+  mainloop_event_activate(directory_all_unreachable_cb_event);
 }
 
 /** This function is called whenever we successfully pull down some new
@@ -2833,8 +2832,8 @@ run_main_loop_once(void)
    * an event, or the second ends, or until we have some active linked
    * connections to trigger events for.  Libevent will wait till one
    * of these happens, then run all the appropriate callbacks. */
-  loop_result = event_base_loop(tor_libevent_get_base(),
-                                called_loop_once ? EVLOOP_ONCE : 0);
+  loop_result = tor_libevent_run_event_loop(tor_libevent_get_base(),
+                                            called_loop_once);
 
   if (get_options()->MainloopStats) {
     /* Update our main loop counters. */
@@ -3525,6 +3524,7 @@ tor_free_all(int postfork)
   periodic_timer_free(refill_timer);
   tor_event_free(shutdown_did_not_work_event);
   tor_event_free(initialize_periodic_events_event);
+  mainloop_event_free(directory_all_unreachable_cb_event);
 
 #ifdef HAVE_SYSTEMD_209
   periodic_timer_free(systemd_watchdog_timer);

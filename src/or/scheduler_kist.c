@@ -3,8 +3,6 @@
 
 #define SCHEDULER_KIST_PRIVATE
 
-#include <event2/event.h>
-
 #include "or.h"
 #include "buffers.h"
 #include "config.h"
@@ -553,7 +551,7 @@ kist_scheduler_schedule(void)
     /* Re-adding an event reschedules it. It does not duplicate it. */
     scheduler_ev_add(&next_run);
   } else {
-    scheduler_ev_active(EV_TIMEOUT);
+    scheduler_ev_active();
   }
 }
 

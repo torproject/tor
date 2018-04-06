@@ -1,8 +1,6 @@
 /* Copyright (c) 2017, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include <event2/event.h>
-
 #include "or.h"
 #include "config.h"
 #define TOR_CHANNEL_INTERNAL_
@@ -42,7 +40,7 @@ vanilla_scheduler_schedule(void)
   }
 
   /* Activate our event so it can process channels. */
-  scheduler_ev_active(EV_TIMEOUT);
+  scheduler_ev_active();
 }
 
 static void

@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <event2/event.h>
-
 #include "compat.h"
 #include "compat_libevent.h"
 #include "crypto.h"
@@ -50,7 +48,7 @@ timer_cb(tor_timer_t *t, void *arg, const monotime_t *now_mono)
 
   // printf("%d / %d\n",n_fired, N_TIMERS);
   if (n_fired == n_active_timers) {
-    event_base_loopbreak(tor_libevent_get_base());
+    tor_libevent_exit_loop_after_callback(tor_libevent_get_base());
   }
 }
 
@@ -90,7 +88,7 @@ main(int argc, char **argv)
     --n_active_timers;
   }
 
-  event_base_loop(tor_libevent_get_base(), 0);
+  tor_libevent_run_event_loop(tor_libevent_get_base(), 0);
 
   int64_t total_difference = 0;
   uint64_t total_square_difference = 0;

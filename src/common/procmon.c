@@ -10,8 +10,6 @@
 
 #include "util.h"
 
-#include <event2/event.h>
-
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif
@@ -44,7 +42,7 @@ typedef int pid_t;
 /* Currently we need to poll in some way on all systems. */
 
 #ifdef PROCMON_POLLS
-static void tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
+static void tor_process_monitor_poll_cb(periodic_timer_t *ev,
                                         void *procmon_);
 #endif
 
@@ -136,7 +134,7 @@ struct tor_process_monitor_t {
 
   /** A Libevent event structure, to either poll for the process's
    * existence or receive a notification when the process ends. */
-  struct event *e;
+  periodic_timer_t *e;
 
   /** A callback to be called when the process ends. */
   tor_procmon_callback_t cb;
@@ -158,9 +156,6 @@ tor_validate_process_specifier(const char *process_spec,
 
   return parse_process_specifier(process_spec, &ppspec, msg);
 }
-
-/* XXXX we should use periodic_timer_new() for this stuff */
-#define PERIODIC_TIMER_FLAGS EV_PERSIST
 
 /* DOCDOC poll_interval_tv */
 static const struct timeval poll_interval_tv = {15, 0};
@@ -225,13 +220,9 @@ tor_process_monitor_new(struct event_base *base,
   procmon->cb_arg = cb_arg;
 
 #ifdef PROCMON_POLLS
-  procmon->e = tor_event_new(base, -1 /* no FD */, PERIODIC_TIMER_FLAGS,
-                             tor_process_monitor_poll_cb, procmon);
-  /* Note: If you port this file to plain Libevent 2, check that
-   * procmon->e is non-NULL.  We don't need to here because
-   * tor_evtimer_new never returns NULL. */
-
-  evtimer_add(procmon->e, &poll_interval_tv);
+  procmon->e = periodic_timer_new(base,
+                                  &poll_interval_tv,
+                                  tor_process_monitor_poll_cb, procmon);
 #else /* !(defined(PROCMON_POLLS)) */
 #error OOPS?
 #endif /* defined(PROCMON_POLLS) */
@@ -246,13 +237,11 @@ tor_process_monitor_new(struct event_base *base,
 /** Libevent callback to poll for the existence of the process
  * monitored by <b>procmon_</b>. */
 static void
-tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
-                            void *procmon_)
+tor_process_monitor_poll_cb(periodic_timer_t *event, void *procmon_)
 {
+  (void)event;
   tor_process_monitor_t *procmon = (tor_process_monitor_t *)(procmon_);
   int its_dead_jim;
-
-  (void)unused1; (void)unused2;
 
   tor_assert(procmon != NULL);
 
@@ -336,7 +325,7 @@ tor_process_monitor_free_(tor_process_monitor_t *procmon)
 #endif
 
   if (procmon->e != NULL)
-    tor_event_free(procmon->e);
+    periodic_timer_free(procmon->e);
 
   tor_free(procmon);
 }

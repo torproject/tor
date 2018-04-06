@@ -14,13 +14,14 @@
 typedef int (*periodic_event_helper_t)(time_t now,
                                       const or_options_t *options);
 
-struct event;
+struct mainloop_event_t;
 
 /** A single item for the periodic-events-function table. */
 typedef struct periodic_event_item_t {
   periodic_event_helper_t fn; /**< The function to run the event */
   time_t last_action_time; /**< The last time the function did something */
-  struct event *ev; /**< Libevent callback we're using to implement this */
+  struct mainloop_event_t *ev; /**< Libevent callback we're using to implement
+                                * this */
   const char *name; /**< Name of the function -- for debug */
 } periodic_event_item_t;
 

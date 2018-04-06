@@ -12,7 +12,6 @@
 #include "compat_libevent.h"
 
 #include <stdio.h>
-#include <event2/event.h>
 
 #define MAX_INFLIGHT (1<<16)
 
@@ -159,6 +158,7 @@ static tor_weak_rng_t weak_rng;
 static int n_sent = 0;
 static int rsa_sent = 0;
 static int ecdh_sent = 0;
+static int n_received_previously = 0;
 static int n_received = 0;
 static int no_shutdown = 0;
 
@@ -230,7 +230,7 @@ add_n_work_items(threadpool_t *tp, int n)
     ent = add_work(tp);
     if (! ent) {
       puts("Z");
-      tor_event_base_loopexit(tor_libevent_get_base(), NULL);
+      tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), NULL);
       return -1;
     }
     if (n_try_cancel < opt_n_cancel &&
@@ -256,18 +256,12 @@ add_n_work_items(threadpool_t *tp, int n)
 static int shutting_down = 0;
 
 static void
-replysock_readable_cb(tor_socket_t sock, short what, void *arg)
+replysock_readable_cb(threadpool_t *tp)
 {
-  threadpool_t *tp = arg;
-  replyqueue_t *rq = threadpool_get_replyqueue(tp);
-
-  int old_r = n_received;
-  (void) sock;
-  (void) what;
-
-  replyqueue_process(rq);
-  if (old_r == n_received)
+  if (n_received_previously == n_received)
     return;
+
+  n_received_previously = n_received;
 
   if (opt_verbose) {
     printf("%d / %d", n_received, n_sent);
@@ -308,7 +302,7 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
                           handle_reply_shutdown, NULL);
     {
       struct timeval limit = { 2, 0 };
-      tor_event_base_loopexit(tor_libevent_get_base(), &limit);
+      tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &limit);
     }
   }
 }
@@ -337,7 +331,6 @@ main(int argc, char **argv)
   threadpool_t *tp;
   int i;
   tor_libevent_cfg evcfg;
-  struct event *ev;
   uint32_t as_flags = 0;
 
   for (i = 1; i < argc; ++i) {
@@ -411,11 +404,11 @@ main(int argc, char **argv)
   memset(&evcfg, 0, sizeof(evcfg));
   tor_libevent_initialize(&evcfg);
 
-  ev = tor_event_new(tor_libevent_get_base(),
-                     replyqueue_get_socket(rq), EV_READ|EV_PERSIST,
-                     replysock_readable_cb, tp);
-
-  event_add(ev, NULL);
+  {
+    int r = threadpool_register_reply_event(tp,
+                                            replysock_readable_cb);
+    tor_assert(r == 0);
+  }
 
 #ifdef TRACK_RESPONSES
   handled = bitarray_init_zero(opt_n_items);
@@ -433,10 +426,10 @@ main(int argc, char **argv)
 
   {
     struct timeval limit = { 180, 0 };
-    tor_event_base_loopexit(tor_libevent_get_base(), &limit);
+    tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &limit);
   }
 
-  event_base_loop(tor_libevent_get_base(), 0);
+  tor_libevent_run_event_loop(tor_libevent_get_base(), 0);
 
   if (n_sent != opt_n_items || n_received+n_successful_cancel != n_sent) {
     printf("%d vs %d\n", n_sent, opt_n_items);

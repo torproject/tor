@@ -16,8 +16,6 @@
 #include "config.h"
 #include "periodic.h"
 
-#include <event2/event.h>
-
 /** We disable any interval greater than this number of seconds, on the
  * grounds that it is probably an absolute time mistakenly passed in as a
  * relative time.
@@ -34,17 +32,16 @@ periodic_event_set_interval(periodic_event_item_t *event,
   struct timeval tv;
   tv.tv_sec = next_interval;
   tv.tv_usec = 0;
-  event_add(event->ev, &tv);
+  mainloop_event_schedule(event->ev, &tv);
 }
 
 /** Wraps dispatches for periodic events, <b>data</b> will be a pointer to the
  * event that needs to be called */
 static void
-periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
+periodic_event_dispatch(mainloop_event_t *ev, void *data)
 {
-  (void)fd;
-  (void)what;
   periodic_event_item_t *event = data;
+  tor_assert(ev == event->ev);
 
   time_t now = time(NULL);
   const or_options_t *options = get_options();
@@ -74,7 +71,7 @@ periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
 //  log_debug(LD_GENERAL, "Scheduling %s for %d seconds", event->name,
 //           next_interval);
   struct timeval tv = { next_interval , 0 };
-  event_add(event->ev, &tv);
+  mainloop_event_schedule(ev, &tv);
 }
 
 /** Schedules <b>event</b> to run as soon as possible from now. */
@@ -93,10 +90,8 @@ periodic_event_setup(periodic_event_item_t *event)
     tor_assert(0);
   }
 
-  event->ev = tor_event_new(tor_libevent_get_base(),
-                            -1, 0,
-                            periodic_event_dispatch,
-                            event);
+  event->ev = mainloop_event_new(periodic_event_dispatch,
+                                 event);
   tor_assert(event->ev);
 }
 
@@ -111,7 +106,7 @@ periodic_event_launch(periodic_event_item_t *event)
   }
 
   // Initial dispatch
-  periodic_event_dispatch(-1, EV_TIMEOUT, event);
+  periodic_event_dispatch(event->ev, event);
 }
 
 /** Release all storage associated with <b>event</b> */
@@ -120,7 +115,7 @@ periodic_event_destroy(periodic_event_item_t *event)
 {
   if (!event)
     return;
-  tor_event_free(event->ev);
+  mainloop_event_free(event->ev);
   event->last_action_time = 0;
 }
 
