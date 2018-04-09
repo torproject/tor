@@ -506,6 +506,33 @@ test_geoip6_load_file(void *arg)
   tor_free(dhex);
 }
 
+static void
+test_geoip_load_2nd_file(void *arg)
+{
+  (void)arg;
+
+  /* Load 1nd geoip file */
+  const char FNAME[] = SRCDIR "/src/config/geoip";
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME));
+
+  int num_countries_geoip = geoip_get_n_countries();
+
+  /* Load 2st geoip (empty) file */
+  const char FNAME2[] = SRCDIR "/src/test/geoip_dummy";
+  tt_int_op(0, OP_EQ, geoip_load_file(AF_INET, FNAME2));
+
+  int num_countries_geoip2 = geoip_get_n_countries();
+  /* FIXME: should not this be different? */
+  /* tt_int_op(num_countries_geoip, OP_NE, num_countries_geoip2); */
+
+  /* Check that there is no geoip information for 8.8.8.8, */
+  /* since loading the empty 2nd file should have delete it. */
+  int country = geoip_get_country_by_ipv4(0x08080808);
+  tt_int_op(country, OP_EQ, 0);
+
+  done: ;
+}
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -522,6 +549,7 @@ struct testcase_t geoip_tests[] = {
   { "geoip_with_pt", test_geoip_with_pt, TT_FORK, NULL, NULL },
   { "load_file", test_geoip_load_file, TT_FORK|SKIP_ON_WINDOWS, NULL, NULL },
   { "load_file6", test_geoip6_load_file, TT_FORK, NULL, NULL },
+  { "load_2nd_file", test_geoip_load_2nd_file, TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
 };
