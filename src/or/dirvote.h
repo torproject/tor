@@ -56,7 +56,7 @@
 #define ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD 0
 
 /** The lowest consensus method that we currently support. */
-#define MIN_SUPPORTED_CONSENSUS_METHOD 13
+#define MIN_SUPPORTED_CONSENSUS_METHOD 25
 
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 28
