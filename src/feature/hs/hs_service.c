@@ -1559,6 +1559,78 @@ build_service_desc_encrypted(const hs_service_t *service,
   return 0;
 }
 
+/* Populate the descriptor superencrypted section from the given service
+ * object. This will generate a valid list of hs_desc_authorized_client_t
+ * of clients that are authorized to use the service. Return 0 on success
+ * else -1 on error. */
+static int
+build_service_desc_superencrypted(const hs_service_t *service,
+                                  hs_service_descriptor_t *desc)
+{
+  const hs_service_config_t *config;
+  int i;
+  hs_desc_superencrypted_data_t *superencrypted;
+
+  tor_assert(service);
+  tor_assert(desc);
+
+  superencrypted = &desc->desc->superencrypted_data;
+  config = &service->config;
+
+  /* The ephemeral key pair is already generated, so this should not give
+   * an error. */
+  memcpy(&superencrypted->auth_ephemeral_pubkey,
+         &desc->auth_ephemeral_kp.pubkey,
+         sizeof(curve25519_public_key_t));
+
+  /* Create a smartlist to store clients */
+  superencrypted->clients = smartlist_new();
+
+  /* We do not need to build the desc authorized client if the client
+   * authorization is disabled */
+  if (config->is_client_auth_enabled) {
+    SMARTLIST_FOREACH_BEGIN(config->clients,
+                            hs_service_authorized_client_t *, client) {
+      hs_desc_authorized_client_t *desc_client;
+      desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+      /* Prepare the client for descriptor and then add to the list in the
+       * superencrypted part of the descriptor */
+      hs_desc_build_authorized_client(&client->client_pk,
+                                      &desc->auth_ephemeral_kp.seckey,
+                                      desc->descriptor_cookie, desc_client);
+      smartlist_add(superencrypted->clients, desc_client);
+
+    } SMARTLIST_FOREACH_END(client);
+  }
+
+  /* We cannot let the number of auth-clients to be zero, so we need to
+   * make it be 16. If it is already a multiple of 16, we do not need to
+   * do anything. Otherwise, add the additional ones to make it a
+   * multiple of 16. */
+  int num_clients = smartlist_len(superencrypted->clients);
+  int num_clients_to_add;
+  if (num_clients == 0) {
+    num_clients_to_add = HS_DESC_AUTH_CLIENT_MULTIPLE;
+  } else if (num_clients % HS_DESC_AUTH_CLIENT_MULTIPLE == 0) {
+    num_clients_to_add = 0;
+  } else {
+    num_clients_to_add =
+      HS_DESC_AUTH_CLIENT_MULTIPLE
+      - (num_clients % HS_DESC_AUTH_CLIENT_MULTIPLE);
+  }
+
+  for (i = 0; i < num_clients_to_add; i++) {
+    hs_desc_authorized_client_t *desc_client;
+    desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+    hs_desc_build_fake_authorized_client(desc_client);
+    smartlist_add(superencrypted->clients, desc_client);
+  }
+
+  return 0;
+}
+
 /* Populate the descriptor plaintext section from the given service object.
  * The caller must make sure that the keys in the descriptors are valid that
  * is are non-zero. Return 0 on success else -1 on error. */
@@ -1624,13 +1696,14 @@ generate_ope_cipher_for_desc(const hs_service_descriptor_t *hs_desc)
 }
 
 /* For the given service and descriptor object, create the key material which
- * is the blinded keypair and the descriptor signing keypair. Return 0 on
- * success else -1 on error where the generated keys MUST be ignored. */
+ * is the blinded keypair, the descriptor signing keypair, the ephemeral
+ * keypair, and the descriptor cookie. Return 0 on success else -1 on error
+ * where the generated keys MUST be ignored. */
 static int
 build_service_desc_keys(const hs_service_t *service,
                         hs_service_descriptor_t *desc)
 {
-  int ret = 0;
+  int ret = -1;
   ed25519_keypair_t kp;
 
   tor_assert(desc);
@@ -1661,9 +1734,28 @@ build_service_desc_keys(const hs_service_t *service,
     log_warn(LD_REND, "Can't generate descriptor signing keypair for "
                       "service %s",
              safe_str_client(service->onion_address));
-    ret = -1;
+    goto end;
   }
 
+  /* No need for extra strong, this is a temporary key only for this
+   * descriptor. Nothing long term. */
+  if (curve25519_keypair_generate(&desc->auth_ephemeral_kp, 0) < 0) {
+    log_warn(LD_REND, "Can't generate auth ephemeral keypair for "
+                      "service %s",
+             safe_str_client(service->onion_address));
+    goto end;
+  }
+
+  /* Random a descriptor cookie to be used as a part of a key to encrypt the
+   * descriptor, if the client auth is enabled. */
+  if (service->config.is_client_auth_enabled) {
+    crypto_strongest_rand(desc->descriptor_cookie,
+                          sizeof(desc->descriptor_cookie));
+  }
+
+  /* Success. */
+  ret = 0;
+ end:
   return ret;
 }
 
@@ -1695,6 +1787,10 @@ build_service_descriptor(hs_service_t *service, time_t now,
   }
   /* Setup plaintext descriptor content. */
   if (build_service_desc_plaintext(service, desc, now) < 0) {
+    goto err;
+  }
+  /* Setup superencrypted descriptor content. */
+  if (build_service_desc_superencrypted(service, desc) < 0) {
     goto err;
   }
   /* Setup encrypted descriptor content. */
