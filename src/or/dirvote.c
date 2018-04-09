@@ -664,13 +664,6 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  if (method == MIN_METHOD_FOR_ED25519_ID_IN_MD) {
-    /* This method was broken due to buggy code accidentally left in
-     * dircollate.c; do not actually use it.
-     */
-    return 0;
-  }
-
   return (method >= MIN_SUPPORTED_CONSENSUS_METHOD) &&
     (method <= MAX_SUPPORTED_CONSENSUS_METHOD);
 }
@@ -1455,11 +1448,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                                       n_versioning_servers);
     client_versions = compute_consensus_versions_list(combined_client_versions,
                                                       n_versioning_clients);
-    if (consensus_method >= MIN_METHOD_FOR_PACKAGE_LINES) {
-      packages = compute_consensus_package_lines(votes);
-    } else {
-      packages = tor_strdup("");
-    }
+    packages = compute_consensus_package_lines(votes);
 
     SMARTLIST_FOREACH(combined_server_versions, char *, cp, tor_free(cp));
     SMARTLIST_FOREACH(combined_client_versions, char *, cp, tor_free(cp));
@@ -1971,8 +1960,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* If it's a guard and we have enough guardfraction votes,
          calculate its consensus guardfraction value. */
-      if (is_guard && num_guardfraction_inputs > 2 &&
-          consensus_method >= MIN_METHOD_FOR_GUARDFRACTION) {
+      if (is_guard && num_guardfraction_inputs > 2) {
         rs_out.has_guardfraction = 1;
         rs_out.guardfraction_percentage = median_uint32(measured_guardfraction,
                                                      num_guardfraction_inputs);
@@ -3865,8 +3853,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   {
     char idbuf[ED25519_BASE64_LEN+1];
     const char *keytype;
-    if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_IN_MD &&
-        ri->cache_info.signing_key_cert &&
+    if (ri->cache_info.signing_key_cert &&
         ri->cache_info.signing_key_cert->signing_key_included) {
       keytype = "ed25519";
       ed25519_public_to_base64(idbuf,
