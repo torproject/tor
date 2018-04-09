@@ -61,14 +61,6 @@
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 28
 
-/** Lowest consensus method where authorities may include a shared random
- * value(s). */
-#define MIN_METHOD_FOR_SHARED_RANDOM 23
-
-/** Lowest consensus method where authorities drop all nodes that don't get
- * the Valid flag. */
-#define MIN_METHOD_FOR_EXCLUDING_INVALID_NODES 24
-
 /** Lowest consensus method where authorities vote on required/recommended
  * protocols. */
 #define MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS 25

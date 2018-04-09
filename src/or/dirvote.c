@@ -1524,7 +1524,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_add_strdup(chunks, "\n");
   }
 
-  if (consensus_method >= MIN_METHOD_FOR_SHARED_RANDOM) {
+  {
     int num_dirauth = get_n_authorities(V3_DIRINFO);
     /* Default value of this is 2/3 of the total number of authorities. For
      * instance, if we have 9 dirauth, the default value is 6. The following
@@ -1935,8 +1935,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Starting with consensus method 24, we don't list servers
        * that are not valid in a consensus.  See Proposal 272 */
-      if (!is_valid &&
-          consensus_method >= MIN_METHOD_FOR_EXCLUDING_INVALID_NODES)
+      if (!is_valid)
         continue;
 
       /* Pick the version. */
