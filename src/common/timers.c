@@ -64,6 +64,11 @@ struct timeout_cb {
  * above TIMEOUT_MAX can also be super-inefficient. Choosing 5 here sets
  * timeout_max to 2^30 ticks, or 29 hours with our value for USEC_PER_TICK */
 #define WHEEL_NUM 5
+#if SIZEOF_VOID_P == 4
+/* On 32-bit platforms, we want to override wheel_bit, so that timeout.c will
+ * use 32-bit math. */
+#define WHEEL_BIT 5
+#endif
 #include "src/ext/timeouts/timeout.c"
 
 static struct timeouts *global_timeouts = NULL;
