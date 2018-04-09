@@ -322,7 +322,7 @@ mainloop_event_cancel(mainloop_event_t *event)
 {
   if (!event)
     return;
-  event_del(event->ev);
+  (void) event_del(event->ev);
 }
 
 /** Cancel <b>event</b> and release all storage associated with it. */
