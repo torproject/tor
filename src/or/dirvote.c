@@ -1455,8 +1455,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(combined_server_versions);
     smartlist_free(combined_client_versions);
 
-    if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING)
-      smartlist_add_strdup(flags, "NoEdConsensus");
+    smartlist_add_strdup(flags, "NoEdConsensus");
 
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
@@ -1852,7 +1851,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
         continue;
 
       if (ed_consensus > 0) {
-        tor_assert(consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING);
         if (ed_consensus <= total_authorities / 2) {
           log_warn(LD_BUG, "Not enough entries had ed_consensus set; how "
                    "can we have a consensus of %d?", ed_consensus);
@@ -1910,8 +1908,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         } else if (!strcmp(fl, "Unnamed")) {
           if (is_unnamed)
             smartlist_add(chosen_flags, (char*)fl);
-        } else if (!strcmp(fl, "NoEdConsensus") &&
-                   consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING) {
+        } else if (!strcmp(fl, "NoEdConsensus")) {
           if (ed_consensus <= total_authorities/2)
             smartlist_add(chosen_flags, (char*)fl);
         } else {
