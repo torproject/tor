@@ -5617,9 +5617,8 @@ test_dir_assumed_flags(void *arg)
   memarea_t *area = memarea_new();
   routerstatus_t *rs = NULL;
 
-  /* First, we should always assume that the Running flag is set, even
-   * when it isn't listed, since the consensus method is always
-   * higher than 4. */
+  /* We can assume that consensus method is higher than 24, so Running and
+   * Valid are always implicitly set */
   const char *str1 =
     "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
        "192.168.0.1 9001 0\n"
@@ -5627,17 +5626,6 @@ test_dir_assumed_flags(void *arg)
     "s Fast Guard Stable\n";
 
   const char *cp = str1;
-  rs = routerstatus_parse_entry_from_string(area, &cp, tokens, NULL, NULL,
-                                            23, FLAV_MICRODESC);
-  tt_assert(rs);
-  tt_assert(rs->is_flagged_running);
-  tt_assert(! rs->is_valid);
-  tt_assert(! rs->is_exit);
-  tt_assert(rs->is_fast);
-  routerstatus_free(rs);
-
-  /* With method 24 or later, we can assume "valid" is set. */
-  cp = str1;
   rs = routerstatus_parse_entry_from_string(area, &cp, tokens, NULL, NULL,
                                             24, FLAV_MICRODESC);
   tt_assert(rs);
