@@ -549,12 +549,12 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
 
   tor_assert(most);
 
-  /* If we're producing "a" lines, vote on potential alternative (sets
-   * of) OR port(s) in the winning routerstatuses.
+  /* Vote on potential alternative (sets of) OR port(s) in the winning
+   * routerstatuses.
    *
    * XXX prop186 There's at most one alternative OR port (_the_ IPv6
    * port) for now. */
-  if (consensus_method >= MIN_METHOD_FOR_A_LINES && best_alt_orport_out) {
+  if (best_alt_orport_out) {
     smartlist_t *alt_orports = smartlist_new();
     const tor_addr_port_t *most_alt_orport = NULL;
 
@@ -1890,10 +1890,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       rs_out.published_on = rs->status.published_on;
       rs_out.dir_port = rs->status.dir_port;
       rs_out.or_port = rs->status.or_port;
-      if (consensus_method >= MIN_METHOD_FOR_A_LINES) {
-        tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
-        rs_out.ipv6_orport = alt_orport.port;
-      }
+      tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
+      rs_out.ipv6_orport = alt_orport.port;
       rs_out.has_bandwidth = 0;
       rs_out.has_exitsummary = 0;
 
@@ -3846,8 +3844,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   /* We originally put a lines in the micrdescriptors, but then we worked out
    * that we needed them in the microdesc consensus. See #20916. */
-  if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
-      consensus_method < MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC &&
+  if (consensus_method < MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC &&
       !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
     smartlist_add_asprintf(chunks, "a %s\n",
                            fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
