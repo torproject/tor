@@ -2269,6 +2269,11 @@ options_act(const or_options_t *old_options)
     }
     if ((!old_options || !old_options->EntryStatistics) &&
         options->EntryStatistics && !should_record_bridge_info(options)) {
+      /* If we get here, we've started recording bridge info when we didn't
+       * do so before.  Note that "should_record_bridge_info()" will
+       * always be false at this point, because of the earlier block
+       * that cleared EntryStatistics when public_server_mode() was false.
+       * We're leaving it in as defensive programming. */
       if (geoip_is_loaded(AF_INET) || geoip_is_loaded(AF_INET6)) {
         geoip_entry_stats_init(now);
         print_notice = 1;
