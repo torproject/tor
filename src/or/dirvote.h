@@ -61,18 +61,6 @@
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 28
 
-/** Lowest consensus method where we include "package" lines*/
-#define MIN_METHOD_FOR_PACKAGE_LINES 19
-
-/** Lowest consensus method where authorities may include
- * GuardFraction information in microdescriptors. */
-#define MIN_METHOD_FOR_GUARDFRACTION 20
-
-/** Lowest consensus method where authorities may include an "id" line for
- * ed25519 identities in microdescriptors. (Broken; see
- * consensus_method_is_supported() for more info.) */
-#define MIN_METHOD_FOR_ED25519_ID_IN_MD 21
-
 /** Lowest consensus method where authorities vote on ed25519 ids and ensure
  * ed25519 id consistency. */
 #define MIN_METHOD_FOR_ED25519_ID_VOTING 22
