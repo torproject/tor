@@ -61,10 +61,6 @@
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 28
 
-/** Lowest consensus method where authorities may include an "id" line in
- * microdescriptors. */
-#define MIN_METHOD_FOR_ID_HASH_IN_MD 18
-
 /** Lowest consensus method where we include "package" lines*/
 #define MIN_METHOD_FOR_PACKAGE_LINES 19
 

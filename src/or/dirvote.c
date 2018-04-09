@@ -3862,7 +3862,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     tor_free(p6);
   }
 
-  if (consensus_method >= MIN_METHOD_FOR_ID_HASH_IN_MD) {
+  {
     char idbuf[ED25519_BASE64_LEN+1];
     const char *keytype;
     if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_IN_MD &&
