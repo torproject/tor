@@ -1528,7 +1528,7 @@ networkstatus_consensus_has_ipv6(const or_options_t* options)
     return
        cons->consensus_method >= MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS;
   } else {
-    return cons->consensus_method >= MIN_METHOD_FOR_A_LINES;
+    return 1;
   }
 }
 

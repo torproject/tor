@@ -5771,21 +5771,9 @@ test_dir_networkstatus_consensus_has_ipv6(void *arg)
   /* Test the bounds for A lines in the NS consensus */
   mock_options->UseMicrodescriptors = 0;
 
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES;
+  mock_networkstatus->consensus_method = MIN_SUPPORTED_CONSENSUS_METHOD;
   has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
   tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES + 1;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES + 20;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(has_ipv6);
-
-  mock_networkstatus->consensus_method = MIN_METHOD_FOR_A_LINES - 1;
-  has_ipv6 = networkstatus_consensus_has_ipv6(get_options());
-  tt_assert(!has_ipv6);
 
   /* Test the bounds for A lines in the microdesc consensus */
   mock_options->UseMicrodescriptors = 1;

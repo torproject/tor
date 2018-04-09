@@ -61,13 +61,6 @@
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 28
 
-/** Lowest consensus method where microdesc consensuses omit any entry
- * with no microdesc. */
-#define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
-
-/** Lowest consensus method that contains "a" lines. */
-#define MIN_METHOD_FOR_A_LINES 14
-
 /** Lowest consensus method where microdescs may include a "p6" line. */
 #define MIN_METHOD_FOR_P6_LINES 15
 
