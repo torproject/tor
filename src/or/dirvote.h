@@ -61,10 +61,6 @@
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 28
 
-/** Lowest consensus method where authorities vote on ed25519 ids and ensure
- * ed25519 id consistency. */
-#define MIN_METHOD_FOR_ED25519_ID_VOTING 22
-
 /** Lowest consensus method where authorities may include a shared random
  * value(s). */
 #define MIN_METHOD_FOR_SHARED_RANDOM 23
