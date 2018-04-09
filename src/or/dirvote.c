@@ -1601,7 +1601,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(dir_sources);
   }
 
-  if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
+  {
     char *max_unmeasured_param = NULL;
     /* XXXX Extract this code into a common function.  Or don't!  see #19011 */
     if (params) {
@@ -1989,8 +1989,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         rs_out.has_bandwidth = 1;
         rs_out.bw_is_unmeasured = 1;
         rs_out.bandwidth_kb = median_uint32(bandwidths_kb, num_bandwidths);
-        if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW &&
-            n_authorities_measuring_bandwidth > 2) {
+        if (n_authorities_measuring_bandwidth > 2) {
           /* Cap non-measured bandwidths. */
           if (rs_out.bandwidth_kb > max_unmeasured_bw_kb) {
             rs_out.bandwidth_kb = max_unmeasured_bw_kb;
@@ -2130,8 +2129,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
         char *guardfraction_str = NULL;
-        int unmeasured = rs_out.bw_is_unmeasured &&
-          consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
+        int unmeasured = rs_out.bw_is_unmeasured;
 
         /* If we have guardfraction info, include it in the 'w' line. */
         if (rs_out.has_guardfraction) {
@@ -3833,8 +3831,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   smartlist_add_asprintf(chunks, "onion-key\n%s", key);
 
-  if (consensus_method >= MIN_METHOD_FOR_NTOR_KEY &&
-      ri->onion_curve25519_pkey) {
+  if (ri->onion_curve25519_pkey) {
     char kbuf[128];
     base64_encode(kbuf, sizeof(kbuf),
                   (const char*)ri->onion_curve25519_pkey->public_key,
@@ -3855,8 +3852,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   if (summary && strcmp(summary, "reject 1-65535"))
     smartlist_add_asprintf(chunks, "p %s\n", summary);
 
-  if (consensus_method >= MIN_METHOD_FOR_P6_LINES &&
-      ri->ipv6_exit_policy) {
+  if (ri->ipv6_exit_policy) {
     /* XXXX+++ This doesn't match proposal 208, which says these should
      * be taken unchanged from the routerinfo.  That's bogosity, IMO:
      * the proposal should have said to do this instead.*/
