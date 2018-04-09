@@ -168,6 +168,26 @@ desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
   memwipe(desc, 0, sizeof(*desc));
 }
 
+/* Free the content of the superencrypted section of a descriptor. */
+static void
+desc_superencrypted_data_free_contents(hs_desc_superencrypted_data_t *desc)
+{
+  if (!desc) {
+    return;
+  }
+
+  if (desc->encrypted_blob) {
+    tor_free(desc->encrypted_blob);
+  }
+  if (desc->clients) {
+    SMARTLIST_FOREACH(desc->clients, hs_desc_authorized_client_t *, client,
+                      hs_desc_authorized_client_free(client));
+    smartlist_free(desc->clients);
+  }
+
+  memwipe(desc, 0, sizeof(*desc));
+}
+
 /* Free the content of the encrypted section of a descriptor. */
 static void
 desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
@@ -2383,6 +2403,14 @@ hs_desc_plaintext_data_free_(hs_desc_plaintext_data_t *desc)
   tor_free(desc);
 }
 
+/* Free the descriptor plaintext data object. */
+void
+hs_desc_superencrypted_data_free_(hs_desc_superencrypted_data_t *desc)
+{
+  desc_superencrypted_data_free_contents(desc);
+  tor_free(desc);
+}
+
 /* Free the descriptor encrypted data object. */
 void
 hs_desc_encrypted_data_free_(hs_desc_encrypted_data_t *desc)
@@ -2400,6 +2428,7 @@ hs_descriptor_free_(hs_descriptor_t *desc)
   }
 
   desc_plaintext_data_free_contents(&desc->plaintext_data);
+  desc_superencrypted_data_free_contents(&desc->superencrypted_data);
   desc_encrypted_data_free_contents(&desc->encrypted_data);
   tor_free(desc);
 }
@@ -2473,6 +2502,84 @@ hs_desc_intro_point_free_(hs_desc_intro_point_t *ip)
   crypto_pk_free(ip->legacy.key);
   tor_free(ip->legacy.cert.encoded);
   tor_free(ip);
+}
+
+/* Build a fake client info for the descriptor */
+void
+hs_desc_build_fake_authorized_client(hs_desc_authorized_client_t *client_out)
+{
+  tor_assert(client_out);
+
+  crypto_rand((char *) client_out->client_id,
+              sizeof(client_out->client_id));
+  crypto_rand((char *) client_out->iv,
+              sizeof(client_out->iv));
+  crypto_rand((char *) client_out->encrypted_cookie,
+              sizeof(client_out->encrypted_cookie));
+}
+
+/* Using the client public key, auth ephemeral secret key, and descriptor
+ * cookie, build the auth client so we can then encode the descriptor for
+ * publication. client_out must be already allocated. */
+void
+hs_desc_build_authorized_client(const curve25519_public_key_t *client_pk,
+                                const curve25519_secret_key_t *
+                                auth_ephemeral_sk,
+                                const uint8_t *descriptor_cookie,
+                                hs_desc_authorized_client_t *client_out)
+{
+  uint8_t secret_seed[CURVE25519_OUTPUT_LEN];
+  uint8_t keystream[HS_DESC_CLIENT_ID_LEN + HS_DESC_COOKIE_KEY_LEN];
+  uint8_t *cookie_key;
+  crypto_cipher_t *cipher;
+  crypto_xof_t *xof;
+
+  tor_assert(client_pk);
+  tor_assert(auth_ephemeral_sk);
+  tor_assert(descriptor_cookie);
+  tor_assert(client_out);
+  tor_assert(!tor_mem_is_zero((char *) auth_ephemeral_sk,
+                              sizeof(*auth_ephemeral_sk)));
+  tor_assert(!tor_mem_is_zero((char *) client_pk, sizeof(*client_pk)));
+  tor_assert(!tor_mem_is_zero((char *) descriptor_cookie,
+                              HS_DESC_DESCRIPTOR_COOKIE_LEN));
+
+  /* Calculate x25519(hs_y, client_X) */
+  curve25519_handshake(secret_seed,
+                       auth_ephemeral_sk,
+                       client_pk);
+
+  /* Calculate KEYS = KDF(SECRET_SEED, 40) */
+  xof = crypto_xof_new();
+  crypto_xof_add_bytes(xof, secret_seed, sizeof(secret_seed));
+  crypto_xof_squeeze_bytes(xof, keystream, sizeof(keystream));
+  crypto_xof_free(xof);
+
+  memcpy(client_out->client_id, keystream, HS_DESC_CLIENT_ID_LEN);
+  cookie_key = keystream + HS_DESC_CLIENT_ID_LEN;
+
+  /* Random IV */
+  crypto_strongest_rand(client_out->iv, sizeof(client_out->iv));
+
+  /* This creates a cipher for AES. It can't fail. */
+  cipher = crypto_cipher_new_with_iv_and_bits(cookie_key, client_out->iv,
+                                              HS_DESC_COOKIE_KEY_BIT_SIZE);
+  /* This can't fail. */
+  crypto_cipher_encrypt(cipher, (char *) client_out->encrypted_cookie,
+                        (const char *) descriptor_cookie,
+                        HS_DESC_DESCRIPTOR_COOKIE_LEN);
+
+  memwipe(secret_seed, 0, sizeof(secret_seed));
+  memwipe(keystream, 0, sizeof(keystream));
+
+  crypto_cipher_free(cipher);
+}
+
+/* Free an authoriezd client object. */
+void
+hs_desc_authorized_client_free_(hs_desc_authorized_client_t *client)
+{
+  tor_free(client);
 }
 
 /* Free the given descriptor link specifier. */

@@ -105,6 +105,13 @@ typedef struct hs_service_descriptor_t {
    * publishes the descriptor. */
   hs_descriptor_t *desc;
 
+  /* Client authorization ephemeral keypair. */
+  curve25519_keypair_t auth_ephemeral_kp;
+
+  /* Descriptor cookie used to encrypt the descriptor, when the client
+   * authorization is enabled */
+  uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+
   /* Descriptor signing keypair. */
   ed25519_keypair_t signing_kp;
 
