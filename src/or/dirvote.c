@@ -1504,7 +1504,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(flaglist);
   }
 
-  if (consensus_method >= MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS) {
+  {
     int num_dirauth = get_n_authorities(V3_DIRINFO);
     int idx;
     for (idx = 0; idx < 4; ++idx) {
