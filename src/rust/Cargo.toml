@@ -1,6 +1,8 @@
 [workspace]
 members = ["tor_util", "protover", "smartlist", "external", "tor_allocate",
-"tor_rust", "tor_log"]
+"tor_rust", "tor_log",
+    "rand",
+]
 
 [profile.release]
 debug = true

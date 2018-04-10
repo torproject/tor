@@ -1,0 +1,24 @@
+# TODO: Note that this package should be merged into the "crypto" crate after #24659 is merged.
+
+[package]
+authors = ["The Tor Project"]
+version = "0.0.1"
+name = "rand"
+publish = false
+
+[features]
+testing = ["tor_log/testing"]
+
+[dependencies]
+libc = "=0.2.39"
+rand_core = "=0.1.0"
+
+external = { path = "../external" }
+tor_allocate = { path = "../tor_allocate" }
+tor_log = { path = "../tor_log" }
+tor_util = { path = "../tor_util" }
+
+[lib]
+name = "rand"
+path = "lib.rs"
+crate_type = ["rlib", "staticlib"]
