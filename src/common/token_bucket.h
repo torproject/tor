@@ -43,6 +43,9 @@ int token_bucket_dec_read(token_bucket_t *bucket,
 int token_bucket_dec_write(token_bucket_t *bucket,
                            ssize_t n);
 
+void token_bucket_dec(token_bucket_t *bucket,
+                      ssize_t n_read, ssize_t n_written);
+
 static inline size_t token_bucket_get_read(const token_bucket_t *bucket);
 static inline size_t
 token_bucket_get_read(const token_bucket_t *bucket)
