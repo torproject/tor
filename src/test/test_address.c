@@ -377,6 +377,7 @@ test_address_ip_adapter_addresses_to_smartlist(void *arg)
   addrs1->Next = addrs2 =
   tor_malloc_zero(sizeof(IP_ADAPTER_ADDRESSES));
 
+  addrs2->IfType = IF_TYPE_SOFTWARE_LOOPBACK;
   addrs2->FirstUnicastAddress =
   unicast21 = tor_malloc_zero(sizeof(IP_ADAPTER_UNICAST_ADDRESS));
   sockaddr_localhost = sockaddr_in_from_string("127.0.0.1", NULL);
@@ -385,7 +386,7 @@ test_address_ip_adapter_addresses_to_smartlist(void *arg)
   result = ip_adapter_addresses_to_smartlist(addrs1, 0);
 
   tt_assert(result);
-  tt_int_op(smartlist_len(result), OP_EQ, 3);
+  tt_int_op(smartlist_len(result), OP_EQ, 2);
 
   tor_addr = smartlist_get(result,0);
 
@@ -401,7 +402,12 @@ test_address_ip_adapter_addresses_to_smartlist(void *arg)
 
   tt_assert(sockaddr_in_are_equal(sockaddr_test2,sockaddr_to_check));
 
-  tor_addr = smartlist_get(result,2);
+  result2 = ip_adapter_addresses_to_smartlist(addrs1, 1);
+
+  tt_assert(result2);
+  tt_int_op(smartlist_len(result2), OP_EQ, 1);
+
+  tor_addr = smartlist_get(result2,0);
 
   tor_addr_to_sockaddr(tor_addr,0,(struct sockaddr *)sockaddr_to_check,
                        sizeof(struct sockaddr_in));
@@ -411,6 +417,8 @@ test_address_ip_adapter_addresses_to_smartlist(void *arg)
   done:
   SMARTLIST_FOREACH(result, tor_addr_t *, t, tor_free(t));
   smartlist_free(result);
+  SMARTLIST_FOREACH(result2, tor_addr_t *, t, tor_free(t));
+  smartlist_free(result2);
   tor_free(addrs1);
   tor_free(addrs2);
   tor_free(unicast11->Address.lpSockaddr);
