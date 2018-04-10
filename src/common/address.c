@@ -1510,6 +1510,7 @@ get_interface_addresses_win32(int severity, sa_family_t family,
 
 #define FLAGS (GAA_FLAG_SKIP_ANYCAST | \
                GAA_FLAG_SKIP_MULTICAST | \
+               GAA_FLAG_SKIP_FRIENDLY_NAME | \
                GAA_FLAG_SKIP_DNS_SERVER)
 
   if (!lib) {
