@@ -135,7 +135,7 @@ static smartlist_t *transport_list = NULL;
 /** Returns a transport_t struct for a transport proxy supporting the
     protocol <b>name</b> listening at <b>addr</b>:<b>port</b> using
     SOCKS version <b>socks_ver</b>. */
-static transport_t *
+STATIC transport_t *
 transport_new(const tor_addr_t *addr, uint16_t port,
               const char *name, int socks_ver,
               const char *extra_info_args)
@@ -222,8 +222,8 @@ transport_copy(const transport_t *transport)
 
 /** Returns the transport in our transport list that has the name <b>name</b>.
  *  Else returns NULL. */
-transport_t *
-transport_get_by_name(const char *name)
+MOCK_IMPL(transport_t *,
+transport_get_by_name,(const char *name))
 {
   tor_assert(name);
 

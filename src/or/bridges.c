@@ -11,6 +11,8 @@
  * Bridges are fixed entry nodes, used for censorship circumvention.
  **/
 
+#define TOR_BRIDGES_PRIVATE
+
 #include "or.h"
 #include "bridges.h"
 #include "circuitbuild.h"
@@ -93,7 +95,7 @@ sweep_bridge_list(void)
 }
 
 /** Initialize the bridge list to empty, creating it if needed. */
-static void
+STATIC void
 clear_bridge_list(void)
 {
   if (!bridge_list)
@@ -156,7 +158,7 @@ bridge_get_addr_port(const bridge_info_t *bridge)
  * bridge with no known digest whose address matches any of the
  * tor_addr_port_t's in <b>orports</b>, return that bridge.  Else return
  * NULL. */
-static bridge_info_t *
+STATIC bridge_info_t *
 get_configured_bridge_by_orports_digest(const char *digest,
                                         const smartlist_t *orports)
 {
@@ -350,7 +352,7 @@ bridge_has_digest(const bridge_info_t *bridge, const char *digest)
  * existing bridge with the same address and port, and warn the user as
  * appropriate.
  */
-static void
+STATIC void
 bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
                          const char *digest, const char *transport_name)
 {
@@ -471,7 +473,7 @@ bridge_add_from_config(bridge_line_t *bridge_line)
 }
 
 /** If <b>digest</b> is one of our known bridges, return it. */
-bridge_info_t *
+STATIC bridge_info_t *
 find_bridge_by_digest(const char *digest)
 {
   if (! bridge_list)

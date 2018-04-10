@@ -20,7 +20,6 @@ typedef struct bridge_info_t bridge_info_t;
 void mark_bridge_list(void);
 void sweep_bridge_list(void);
 const smartlist_t *bridge_list_get(void);
-bridge_info_t *find_bridge_by_digest(const char *digest);
 const uint8_t *bridge_get_rsa_id_digest(const bridge_info_t *bridge);
 const tor_addr_port_t * bridge_get_addr_port(const bridge_info_t *bridge);
 bridge_info_t *get_configured_bridge_by_addr_port_digest(
@@ -64,6 +63,18 @@ MOCK_DECL(download_status_t *, get_bridge_dl_status_by_id,
           (const char *digest));
 
 void bridges_free_all(void);
+
+#ifdef TOR_BRIDGES_PRIVATE
+STATIC void clear_bridge_list(void);
+STATIC bridge_info_t *find_bridge_by_digest(const char *digest);
+STATIC bridge_info_t *get_configured_bridge_by_orports_digest(
+                                                  const char *digest,
+                                                  const smartlist_t *orports);
+STATIC void bridge_resolve_conflicts(const tor_addr_t *addr,
+                                     uint16_t port,
+                                     const char *digest,
+                                     const char *transport_name);
+#endif /* defined(TOR_BRIDGES_PRIVATE) */
 
 #endif /* !defined(TOR_BRIDGES_H) */
 
