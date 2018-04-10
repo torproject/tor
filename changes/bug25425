@@ -1,0 +1,4 @@
+  o Minor features (testing):
+    - A new unittests module specifically for testing the functions in the
+      (new-ish) bridges.c module has been created with new unittests, raising
+      the code coverage percentages.  Closes 25425.
