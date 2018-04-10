@@ -2879,8 +2879,8 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
 {
   int base = RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
-  int conn_bucket = -1;
-  int global_bucket_val = (int) token_bucket_get_read(&global_bucket);
+  ssize_t conn_bucket = -1;
+  size_t global_bucket_val = token_bucket_get_read(&global_bucket);
 
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
@@ -2895,7 +2895,7 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
   }
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
-    int relayed = token_bucket_get_read(&global_relayed_bucket);
+    size_t relayed = token_bucket_get_read(&global_relayed_bucket);
     global_bucket_val = MIN(global_bucket_val, relayed);
   }
 
@@ -2909,8 +2909,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
 {
   int base = RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
-  int conn_bucket = (int)conn->outbuf_flushlen;
-  int global_bucket_val = (int) token_bucket_get_write(&global_bucket);
+  size_t conn_bucket = conn->outbuf_flushlen;
+  size_t global_bucket_val = token_bucket_get_write(&global_bucket);
 
   if (!connection_is_rate_limited(conn)) {
     /* be willing to write to local conns even if our buckets are empty */
@@ -2926,7 +2926,7 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   }
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
-    int relayed = token_bucket_get_write(&global_relayed_bucket);
+    size_t relayed = token_bucket_get_write(&global_relayed_bucket);
     global_bucket_val = MIN(global_bucket_val, relayed);
   }
 
@@ -2956,15 +2956,15 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
 int
 global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
 {
-  int smaller_bucket = MIN(token_bucket_get_write(&global_bucket),
-                           token_bucket_get_write(&global_relayed_bucket));
+  size_t smaller_bucket = MIN(token_bucket_get_write(&global_bucket),
+                              token_bucket_get_write(&global_relayed_bucket));
   if (authdir_mode(get_options()) && priority>1)
     return 0; /* there's always room to answer v2 if we're an auth dir */
 
   if (!connection_is_rate_limited(conn))
     return 0; /* local conns don't get limited */
 
-  if (smaller_bucket < (int)attempt)
+  if (smaller_bucket < attempt)
     return 1; /* not enough space no matter the priority */
 
   if (write_buckets_empty_last_second)
@@ -2973,10 +2973,10 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
     const or_options_t *options = get_options();
-    int64_t can_write = (int64_t)smaller_bucket
+    size_t can_write = smaller_bucket
       + 2*(options->RelayBandwidthRate ? options->RelayBandwidthRate :
                                          options->BandwidthRate);
-    if (can_write < 2*(int64_t)attempt)
+    if (can_write < 2*attempt)
       return 1;
   } else { /* v2 query */
     /* no further constraints yet */
