@@ -3104,7 +3104,8 @@ connection_consider_empty_write_buckets(connection_t *conn)
   connection_stop_writing(conn);
 }
 
-/** Initialize the global read bucket to options-\>BandwidthBurst. */
+/** Initialize the global buckets to the values configured in the
+ * options */
 void
 connection_bucket_init(void)
 {
@@ -3124,6 +3125,24 @@ connection_bucket_init(void)
                       (int32_t)options->BandwidthRate,
                       (int32_t)options->BandwidthBurst,
                       now_ts);
+  }
+}
+
+/** Update the global connection bucket settings to a new value. */
+void
+connection_bucket_adjust(const or_options_t *options)
+{
+  token_bucket_adjust(&global_bucket,
+                      (int32_t)options->BandwidthRate,
+                      (int32_t)options->BandwidthBurst);
+  if (options->RelayBandwidthRate) {
+    token_bucket_adjust(&global_relayed_bucket,
+                        (int32_t)options->RelayBandwidthRate,
+                        (int32_t)options->RelayBandwidthBurst);
+  } else {
+    token_bucket_adjust(&global_relayed_bucket,
+                        (int32_t)options->BandwidthRate,
+                        (int32_t)options->BandwidthBurst);
   }
 }
 

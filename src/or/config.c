@@ -2219,6 +2219,12 @@ options_act(const or_options_t *old_options)
         options->PerConnBWBurst != old_options->PerConnBWBurst)
       connection_or_update_token_buckets(get_connection_array(), options);
 
+    if (options->BandwidthRate != old_options->BandwidthRate ||
+        options->BandwidthBurst != old_options->BandwidthBurst ||
+        options->BandwidthRate != old_options->BandwidthRate ||
+        options->RelayBandwidthBurst != old_options->RelayBandwidthBurst)
+      connection_bucket_adjust(options);
+
     if (options->MainloopStats != old_options->MainloopStats) {
       reset_main_loop_counters();
     }
