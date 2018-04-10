@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Move the list of default directory authorities to their own file for
+      inclusion using the C preprocessor. Closes ticket 24854. Patch by "beastr0".
