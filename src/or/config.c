@@ -492,6 +492,8 @@ static config_var_t option_vars_[] = {
   V(TestingSigningKeySlop,           INTERVAL, "1 day"),
 
   V(OptimisticData,              AUTOBOOL, "auto"),
+  OBSOLETE("PortForwarding"),
+  OBSOLETE("PortForwardingHelper"),
   OBSOLETE("PreferTunneledDirConns"),
   V(ProtocolWarnings,            BOOL,     "0"),
   V(PublishServerDescriptor,     CSV,      "1"),
