@@ -830,11 +830,24 @@ monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
   return (abstime_diff * mach_time_info.numer) /
     (mach_time_info.denom * ONE_MILLION);
 }
+uint64_t
+monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
+{
+  uint64_t abstime_val =
+    (((uint64_t)msec) * ONE_MILLION * mach_time_info.denom) /
+    mach_time_info.numer;
+  return abstime_val >> monotime_shift;
+}
 #else
 uint64_t
 monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
 {
   return (units * 1000) / STAMP_TICKS_PER_SECOND;
+}
+uint64_t
+monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
+{
+  return (msec * STAMP_TICKS_PER_SECOND) / 1000;
 }
 #endif
 
