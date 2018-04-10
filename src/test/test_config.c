@@ -581,6 +581,22 @@ test_config_parse_transport_options_line(void *arg)
   }
 }
 
+/* Mocks needed for the compute_max_mem_in_queues test */
+static int get_total_system_memory_mock(size_t *mem_out);
+
+static size_t total_system_memory_output = 0;
+static int total_system_memory_return = 0;
+
+static int
+get_total_system_memory_mock(size_t *mem_out)
+{
+  if (! mem_out)
+    return -1;
+
+  *mem_out = total_system_memory_output;
+  return total_system_memory_return;
+}
+
 /* Mocks needed for the transport plugin line test */
 
 static void pt_kickstart_proxy_mock(const smartlist_t *transport_list,
@@ -5592,6 +5608,72 @@ test_config_include_opened_file_list(void *data)
   tor_free(dir);
 }
 
+static void
+test_config_compute_max_mem_in_queues(void *data)
+{
+#define GIGABYTE(x) (U64_LITERAL(x) << 30)
+#define MEGABYTE(x) (U64_LITERAL(x) << 20)
+  (void)data;
+  MOCK(get_total_system_memory, get_total_system_memory_mock);
+
+  /* We are unable to detect the amount of memory on the system. Tor will try
+   * to use some sensible default values for 64-bit and 32-bit systems. */
+  total_system_memory_return = -1;
+
+#if SIZEOF_VOID_P >= 8
+  /* We are on a 64-bit system. */
+  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(8));
+#else
+  /* We are on a 32-bit system. */
+  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(1));
+#endif
+
+  /* We are able to detect the amount of RAM on the system. */
+  total_system_memory_return = 0;
+
+  /* We are running on a system with one gigabyte of RAM. */
+  total_system_memory_output = GIGABYTE(1);
+
+  /* We have 0.75 * RAM available. */
+  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+            3 * (GIGABYTE(1) / 4));
+
+  /* We are running on a tiny machine with 256 MB of RAM. */
+  total_system_memory_output = MEGABYTE(256);
+
+  /* We will now enforce a minimum of 256 MB of RAM available for the
+   * MaxMemInQueues here, even though we should only have had 0.75 * 256 = 192
+   * MB available. */
+  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, MEGABYTE(256));
+
+  /* We are running on a machine with 8 GB of RAM. */
+  total_system_memory_output = GIGABYTE(8);
+
+  /* We will have 0.4 * RAM available. */
+  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+            2 * (GIGABYTE(8) / 5));
+
+  /* We are running on a machine with 16 GB of RAM. */
+  total_system_memory_output = GIGABYTE(16);
+
+  /* We will have 0.4 * RAM available. */
+  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+            2 * (GIGABYTE(16) / 5));
+
+  /* We are running on a machine with 32 GB of RAM. */
+  total_system_memory_output = GIGABYTE(32);
+
+  /* We will at maximum get MAX_DEFAULT_MEMORY_QUEUE_SIZE here. */
+  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+            MAX_DEFAULT_MEMORY_QUEUE_SIZE);
+
+ done:
+  UNMOCK(get_total_system_memory);
+
+#undef GIGABYTE
+#undef MEGABYTE
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -5640,6 +5722,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(check_bridge_distribution_setting_invalid, 0),
   CONFIG_TEST(check_bridge_distribution_setting_unrecognised, 0),
   CONFIG_TEST(include_opened_file_list, 0),
+  CONFIG_TEST(compute_max_mem_in_queues, 0),
   END_OF_TESTCASES
 };
 

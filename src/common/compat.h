@@ -701,7 +701,7 @@ char *make_path_absolute(char *fname);
 
 char **get_environment(void);
 
-int get_total_system_memory(size_t *mem_out);
+MOCK_DECL(int, get_total_system_memory, (size_t *mem_out));
 
 int compute_num_cpus(void);
 
