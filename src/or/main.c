@@ -161,10 +161,10 @@ token_bucket_t global_relayed_bucket;
 
 /** What was the read/write bucket before the last second_elapsed_callback()
  * call?  (used to determine how many bytes we've read). */
-static int stats_prev_global_read_bucket;
+static size_t stats_prev_global_read_bucket;
 /** What was the write bucket before the last second_elapsed_callback() call?
  * (used to determine how many bytes we've written). */
-static int stats_prev_global_write_bucket;
+static size_t stats_prev_global_write_bucket;
 
 /* DOCDOC stats_prev_n_read */
 static uint64_t stats_prev_n_read = 0;
