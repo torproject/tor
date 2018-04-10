@@ -805,10 +805,9 @@ GENERAL OPTIONS
 
 [[NoExec]] **NoExec** **0**|**1**::
     If this option is set to 1, then Tor will never launch another
-    executable, regardless of the settings of PortForwardingHelper,
-    ClientTransportPlugin, or ServerTransportPlugin.  Once this
-    option has been set to 1, it cannot be set back to 0 without
-    restarting Tor. (Default: 0)
+    executable, regardless of the settings of ClientTransportPlugin
+    or ServerTransportPlugin.  Once this option has been set to 1,
+    it cannot be set back to 0 without restarting Tor. (Default: 0)
 
 [[Schedulers]] **Schedulers** **KIST**|**KISTLite**|**Vanilla**::
     Specify the scheduler type that tor should use. The scheduler is
@@ -2086,18 +2085,6 @@ is non-zero):
 [[ORPortFlagsExclusive]]::
     For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
     IPv4Only and IPv6Only are mutually exclusive.
-
-[[PortForwarding]] **PortForwarding** **0**|**1**::
-    Attempt to automatically forward the DirPort and ORPort on a NAT router
-    connecting this Tor server to the Internet. If set, Tor will try both
-    NAT-PMP (common on Apple routers) and UPnP (common on routers from other
-    manufacturers). (Default: 0)
-
-[[PortForwardingHelper]] **PortForwardingHelper** __filename__|__pathname__::
-    If PortForwarding is set, use this executable to configure the forwarding.
-    If set to a filename, the system path will be searched for the executable.
-    If set to a path, only the specified path will be executed.
-    (Default: tor-fw-helper)
 
 [[PublishServerDescriptor]] **PublishServerDescriptor** **0**|**1**|**v3**|**bridge**,**...**::
     This option specifies which descriptors Tor will publish when acting as

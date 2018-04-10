@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+      We remove the PortForwsrding and PortForwardingHelper options, related
+      functions, and the port_forwarding tests. These options were used by
+      the now-deprecated Vidalia to help ordinary users become Tor relays or
+      bridges. Closes ticket 25409. Patch by Neel Chauhan.
+

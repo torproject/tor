@@ -1335,7 +1335,6 @@ CALLBACK(retry_listeners);
 CALLBACK(expire_old_ciruits_serverside);
 CALLBACK(check_dns_honesty);
 CALLBACK(write_bridge_ns);
-CALLBACK(check_fw_helper_app);
 CALLBACK(heartbeat);
 CALLBACK(clean_consdiffmgr);
 CALLBACK(reset_padding_counts);
@@ -1371,7 +1370,6 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(expire_old_ciruits_serverside),
   CALLBACK(check_dns_honesty),
   CALLBACK(write_bridge_ns),
-  CALLBACK(check_fw_helper_app),
   CALLBACK(heartbeat),
   CALLBACK(clean_consdiffmgr),
   CALLBACK(reset_padding_counts),
@@ -2183,33 +2181,6 @@ write_bridge_ns_callback(time_t now, const or_options_t *options)
      return BRIDGE_STATUSFILE_INTERVAL;
   }
   return PERIODIC_EVENT_NO_UPDATE;
-}
-
-/**
- * Periodic callback: poke the tor-fw-helper app if we're using one.
- */
-static int
-check_fw_helper_app_callback(time_t now, const or_options_t *options)
-{
-  if (net_is_disabled() ||
-      ! server_mode(options) ||
-      ! options->PortForwarding ||
-      options->NoExec) {
-    return PERIODIC_EVENT_NO_UPDATE;
-  }
-  /* 11. check the port forwarding app */
-
-#define PORT_FORWARDING_CHECK_INTERVAL 5
-  smartlist_t *ports_to_forward = get_list_of_ports_to_forward();
-  if (ports_to_forward) {
-    tor_check_port_forwarding(options->PortForwardingHelper,
-                              ports_to_forward,
-                              now);
-
-    SMARTLIST_FOREACH(ports_to_forward, char *, cp, tor_free(cp));
-    smartlist_free(ports_to_forward);
-  }
-  return PORT_FORWARDING_CHECK_INTERVAL;
 }
 
 static int heartbeat_callback_first_time = 1;

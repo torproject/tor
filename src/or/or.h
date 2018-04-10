@@ -4200,10 +4200,6 @@ typedef struct {
                                         * testing our DNS server. */
   int EnforceDistinctSubnets; /**< If true, don't allow multiple routers in the
                                * same network zone in the same circuit. */
-  int PortForwarding; /**< If true, use NAT-PMP or UPnP to automatically
-                       * forward the DirPort and ORPort on the NAT device */
-  char *PortForwardingHelper; /** < Filename or full path of the port
-                                  forwarding helper executable */
   int AllowNonRFC953Hostnames; /**< If true, we allow connections to hostnames
                                 * with weird characters. */
   /** If true, we try resolving hostnames with weird characters. */
