@@ -845,6 +845,9 @@ fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
   tor_assert(ipv6_addr);
   tor_assert(ap);
 
+  tor_addr_make_null(&ap->addr, AF_UNSPEC);
+  ap->port = 0;
+
   tor_addr_port_t ipv4_ap;
   tor_addr_copy(&ipv4_ap.addr, ipv4_addr);
   ipv4_ap.port = (fw_connection == FIREWALL_OR_CONNECTION
@@ -867,8 +870,6 @@ fascist_firewall_choose_address_base(const tor_addr_t *ipv4_addr,
     ap->port = result->port;
     return 1;
   } else {
-    tor_addr_make_null(&ap->addr, AF_UNSPEC);
-    ap->port = 0;
     return 0;
   }
 }
@@ -889,6 +890,11 @@ fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
 {
   tor_addr_t ipv4_addr;
   tor_addr_from_ipv4h(&ipv4_addr, ipv4h_addr);
+  tor_assert(ap);
+
+  tor_addr_make_null(&ap->addr, AF_UNSPEC);
+  ap->port = 0;
+
   return fascist_firewall_choose_address_base(&ipv4_addr, ipv4_orport,
                                               ipv4_dirport, ipv6_addr,
                                               ipv6_orport, ipv6_dirport,
@@ -955,6 +961,9 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
 
   tor_assert(ap);
 
+  tor_addr_make_null(&ap->addr, AF_UNSPEC);
+  ap->port = 0;
+
   const or_options_t *options = get_options();
   const node_t *node = node_get_by_id(rs->identity_digest);
 
@@ -996,6 +1005,10 @@ fascist_firewall_choose_address_node(const node_t *node,
   }
 
   node_assert_ok(node);
+  tor_assert(ap);
+
+  tor_addr_make_null(&ap->addr, AF_UNSPEC);
+  ap->port = 0;
 
   /* Calling fascist_firewall_choose_address_node() when the node is missing
    * IPv6 information breaks IPv6-only clients.
@@ -1046,6 +1059,11 @@ fascist_firewall_choose_address_dir_server(const dir_server_t *ds,
   if (!ds) {
     return 0;
   }
+
+  tor_assert(ap);
+
+  tor_addr_make_null(&ap->addr, AF_UNSPEC);
+  ap->port = 0;
 
   /* A dir_server_t always has a fake_status. As long as it has the same
    * addresses/ports in both fake_status and dir_server_t, this works fine.
