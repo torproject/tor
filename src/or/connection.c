@@ -119,8 +119,6 @@ static connection_t *connection_listener_new(
 static void connection_init(time_t now, connection_t *conn, int type,
                             int socket_family);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
-static int connection_bucket_should_increase(int bucket,
-                                             or_connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
@@ -2887,7 +2885,7 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_OPEN)
-      conn_bucket = or_conn->read_bucket;
+      conn_bucket = token_bucket_get_read(&or_conn->bucket);
     base = get_cell_network_size(or_conn->wide_circ_ids);
   }
 
@@ -2919,13 +2917,10 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   }
 
   if (connection_speaks_cells(conn)) {
-    /* use the per-conn write limit if it's lower, but if it's less
-     * than zero just use zero */
+    /* use the per-conn write limit if it's lower */
     or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_OPEN)
-      if (or_conn->write_bucket < conn_bucket)
-        conn_bucket = or_conn->write_bucket >= 0 ?
-                        or_conn->write_bucket : 0;
+      conn_bucket = MIN(conn_bucket, token_bucket_get_write(&or_conn->bucket));
     base = get_cell_network_size(or_conn->wide_circ_ids);
   }
 
@@ -3050,8 +3045,8 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   global_read_bucket -= (int)num_read;
   global_write_bucket -= (int)num_written;
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
-    TO_OR_CONN(conn)->read_bucket -= (int)num_read;
-    TO_OR_CONN(conn)->write_bucket -= (int)num_written;
+    or_connection_t *or_conn = TO_OR_CONN(conn);
+    token_bucket_dec(&or_conn->bucket, num_read, num_written);
   }
 }
 
@@ -3072,7 +3067,7 @@ connection_consider_empty_read_buckets(connection_t *conn)
     reason = "global relayed read bucket exhausted. Pausing.";
   } else if (connection_speaks_cells(conn) &&
              conn->state == OR_CONN_STATE_OPEN &&
-             TO_OR_CONN(conn)->read_bucket <= 0) {
+             token_bucket_get_read(&TO_OR_CONN(conn)->bucket) <= 0) {
     reason = "connection read bucket exhausted. Pausing.";
   } else
     return; /* all good, no need to stop it */
@@ -3099,7 +3094,7 @@ connection_consider_empty_write_buckets(connection_t *conn)
     reason = "global relayed write bucket exhausted. Pausing.";
   } else if (connection_speaks_cells(conn) &&
              conn->state == OR_CONN_STATE_OPEN &&
-             TO_OR_CONN(conn)->write_bucket <= 0) {
+             token_bucket_get_write(&TO_OR_CONN(conn)->bucket) <= 0) {
     reason = "connection write bucket exhausted. Pausing.";
   } else
     return; /* all good, no need to stop it */
@@ -3157,7 +3152,7 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
 
 /** Time has passed; increment buckets appropriately. */
 void
-connection_bucket_refill(int milliseconds_elapsed, time_t now)
+connection_bucket_refill(int milliseconds_elapsed, time_t now, uint32_t now_ts)
 {
   const or_options_t *options = get_options();
   smartlist_t *conns = get_connection_array();
@@ -3201,22 +3196,9 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
-      int orbandwidthrate = or_conn->bandwidthrate;
-      int orbandwidthburst = or_conn->bandwidthburst;
 
-      if (connection_bucket_should_increase(or_conn->read_bucket, or_conn)) {
-        connection_bucket_refill_helper(&or_conn->read_bucket,
-                                        orbandwidthrate,
-                                        orbandwidthburst,
-                                        milliseconds_elapsed,
-                                        "or_conn->read_bucket");
-      }
-      if (connection_bucket_should_increase(or_conn->write_bucket, or_conn)) {
-        connection_bucket_refill_helper(&or_conn->write_bucket,
-                                        orbandwidthrate,
-                                        orbandwidthburst,
-                                        milliseconds_elapsed,
-                                        "or_conn->write_bucket");
+      if (conn->state == OR_CONN_STATE_OPEN) {
+        token_bucket_refill(&or_conn->bucket, now_ts);
       }
     }
 
@@ -3226,7 +3208,7 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
             global_relayed_read_bucket > 0) /* even if we're relayed traffic */
         && (!connection_speaks_cells(conn) ||
             conn->state != OR_CONN_STATE_OPEN ||
-            TO_OR_CONN(conn)->read_bucket > 0)) {
+            token_bucket_get_read(&TO_OR_CONN(conn)->bucket) > 0)) {
         /* and either a non-cell conn or a cell conn with non-empty bucket */
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
                          "waking up conn (fd %d) for read", (int)conn->s));
@@ -3240,29 +3222,13 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
             global_relayed_write_bucket > 0) /* even if it's relayed traffic */
         && (!connection_speaks_cells(conn) ||
             conn->state != OR_CONN_STATE_OPEN ||
-            TO_OR_CONN(conn)->write_bucket > 0)) {
+            token_bucket_get_write(&TO_OR_CONN(conn)->bucket) > 0)) {
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
                          "waking up conn (fd %d) for write", (int)conn->s));
       conn->write_blocked_on_bw = 0;
       connection_start_writing(conn);
     }
   } SMARTLIST_FOREACH_END(conn);
-}
-
-/** Is the <b>bucket</b> for connection <b>conn</b> low enough that we
- * should add another pile of tokens to it?
- */
-static int
-connection_bucket_should_increase(int bucket, or_connection_t *conn)
-{
-  tor_assert(conn);
-
-  if (conn->base_.state != OR_CONN_STATE_OPEN)
-    return 0; /* only open connections play the rate limiting game */
-  if (bucket >= conn->bandwidthburst)
-    return 0;
-
-  return 1;
 }
 
 /** Read bytes from conn-\>s and process them.

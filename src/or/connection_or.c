@@ -793,18 +793,10 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
                                 (int)options->BandwidthBurst, 1, INT32_MAX);
   }
 
-  conn->bandwidthrate = rate;
-  conn->bandwidthburst = burst;
-  if (reset) { /* set up the token buckets to be full */
-    conn->read_bucket = conn->write_bucket = burst;
-    return;
+  token_bucket_adjust(&conn->bucket, rate, burst);
+  if (reset) {
+    token_bucket_reset(&conn->bucket, monotime_coarse_get_stamp());
   }
-  /* If the new token bucket is smaller, take out the extra tokens.
-   * (If it's larger, don't -- the buckets can grow to reach the cap.) */
-  if (conn->read_bucket > burst)
-    conn->read_bucket = burst;
-  if (conn->write_bucket > burst)
-    conn->write_bucket = burst;
 }
 
 /** Either our set of relays or our per-conn rate limits have changed.

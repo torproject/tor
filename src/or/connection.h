@@ -122,7 +122,8 @@ void connection_mark_all_noncontrol_connections(void);
 ssize_t connection_bucket_write_limit(connection_t *conn, time_t now);
 int global_write_bucket_low(connection_t *conn, size_t attempt, int priority);
 void connection_bucket_init(void);
-void connection_bucket_refill(int seconds_elapsed, time_t now);
+void connection_bucket_refill(int seconds_elapsed, time_t now,
+                              uint32_t now_ts);
 
 int connection_handle_read(connection_t *conn);
 
