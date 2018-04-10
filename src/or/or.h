@@ -1660,13 +1660,6 @@ typedef struct or_connection_t {
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
 
-  /** Last emptied read token bucket in msec since midnight; only used if
-   * TB_EMPTY events are enabled. */
-  uint32_t read_emptied_time;
-  /** Last emptied write token bucket in msec since midnight; only used if
-   * TB_EMPTY events are enabled. */
-  uint32_t write_emptied_time;
-
   /*
    * Count the number of bytes flushed out on this orconn, and the number of
    * bytes TLS actually sent - used for overhead estimation for scheduling.
@@ -4426,9 +4419,6 @@ typedef struct {
 
   /** Enable CELL_STATS events.  Only altered on testing networks. */
   int TestingEnableCellStatsEvent;
-
-  /** Enable TB_EMPTY events.  Only altered on testing networks. */
-  int TestingEnableTbEmptyEvent;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help

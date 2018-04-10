@@ -1214,7 +1214,6 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
   { EVENT_CONN_BW, "CONN_BW" },
   { EVENT_CELL_STATS, "CELL_STATS" },
-  { EVENT_TB_EMPTY, "TB_EMPTY" },
   { EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW" },
   { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { EVENT_HS_DESC, "HS_DESC" },
@@ -6074,28 +6073,6 @@ control_event_circuit_cell_stats(void)
   }
   SMARTLIST_FOREACH_END(circ);
   tor_free(cell_stats);
-  return 0;
-}
-
-/** Tokens in <b>bucket</b> have been refilled: the read bucket was empty
- * for <b>read_empty_time</b> millis, the write bucket was empty for
- * <b>write_empty_time</b> millis, and buckets were last refilled
- * <b>milliseconds_elapsed</b> millis ago.  Only emit TB_EMPTY event if
- * either read or write bucket have been empty before. */
-int
-control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
-                       uint32_t write_empty_time,
-                       int milliseconds_elapsed)
-{
-  if (get_options()->TestingEnableTbEmptyEvent &&
-      EVENT_IS_INTERESTING(EVENT_TB_EMPTY) &&
-      (read_empty_time > 0 || write_empty_time > 0)) {
-    send_control_event(EVENT_TB_EMPTY,
-                       "650 TB_EMPTY %s READ=%d WRITTEN=%d "
-                       "LAST=%d\r\n",
-                       bucket, read_empty_time, write_empty_time,
-                       milliseconds_elapsed);
-  }
   return 0;
 }
 
