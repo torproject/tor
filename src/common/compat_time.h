@@ -135,6 +135,8 @@ uint64_t monotime_coarse_absolute_msec(void);
 #define monotime_coarse_absolute_msec monotime_absolute_msec
 #endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 
+extern const uint32_t STAMP_TICKS_PER_SECOND;
+
 /**
  * Return a "timestamp" approximation for a coarse monotonic timer.
  * This timestamp is meant to be fast to calculate and easy to

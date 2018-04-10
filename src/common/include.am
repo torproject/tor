@@ -97,6 +97,7 @@ LIBOR_A_SRC = \
   src/common/util_process.c				\
   src/common/sandbox.c					\
   src/common/storagedir.c				\
+  src/common/token_bucket.c				\
   src/common/workqueue.c				\
   $(libor_extra_source)					\
   $(threads_impl_source)				\
@@ -184,6 +185,7 @@ COMMONHEADERS = \
   src/common/storagedir.h			\
   src/common/testsupport.h			\
   src/common/timers.h				\
+  src/common/token_bucket.h			\
   src/common/torint.h				\
   src/common/torlog.h				\
   src/common/tortls.h				\
