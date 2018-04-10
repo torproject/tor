@@ -2846,7 +2846,7 @@ connection_counts_as_relayed_traffic(connection_t *conn, time_t now)
  * non-negative) provides an upper limit for our answer. */
 static ssize_t
 connection_bucket_round_robin(int base, int priority,
-                              ssize_t global_bucket, ssize_t conn_bucket)
+                              ssize_t global_bucket_val, ssize_t conn_bucket)
 {
   ssize_t at_most;
   ssize_t num_bytes_high = (priority ? 32 : 16) * base;
@@ -2855,15 +2855,15 @@ connection_bucket_round_robin(int base, int priority,
   /* Do a rudimentary round-robin so one circuit can't hog a connection.
    * Pick at most 32 cells, at least 4 cells if possible, and if we're in
    * the middle pick 1/8 of the available bandwidth. */
-  at_most = global_bucket / 8;
+  at_most = global_bucket_val / 8;
   at_most -= (at_most % base); /* round down */
   if (at_most > num_bytes_high) /* 16 KB, or 8 KB for low-priority */
     at_most = num_bytes_high;
   else if (at_most < num_bytes_low) /* 2 KB, or 1 KB for low-priority */
     at_most = num_bytes_low;
 
-  if (at_most > global_bucket)
-    at_most = global_bucket;
+  if (at_most > global_bucket_val)
+    at_most = global_bucket_val;
 
   if (conn_bucket >= 0 && at_most > conn_bucket)
     at_most = conn_bucket;
@@ -2880,7 +2880,7 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
   int base = RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
   int conn_bucket = -1;
-  int global_bucket = global_read_bucket;
+  int global_bucket_val = (int) token_bucket_get_read(&global_bucket);
 
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
@@ -2894,12 +2894,13 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
     return conn_bucket>=0 ? conn_bucket : 1<<14;
   }
 
-  if (connection_counts_as_relayed_traffic(conn, now) &&
-      global_relayed_read_bucket <= global_read_bucket)
-    global_bucket = global_relayed_read_bucket;
+  if (connection_counts_as_relayed_traffic(conn, now)) {
+    int relayed = token_bucket_get_read(&global_relayed_bucket);
+    global_bucket_val = MIN(global_bucket_val, relayed);
+  }
 
   return connection_bucket_round_robin(base, priority,
-                                       global_bucket, conn_bucket);
+                                       global_bucket_val, conn_bucket);
 }
 
 /** How many bytes at most can we write onto this connection? */
@@ -2909,7 +2910,7 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   int base = RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
   int conn_bucket = (int)conn->outbuf_flushlen;
-  int global_bucket = global_write_bucket;
+  int global_bucket_val = (int) token_bucket_get_write(&global_bucket);
 
   if (!connection_is_rate_limited(conn)) {
     /* be willing to write to local conns even if our buckets are empty */
@@ -2924,12 +2925,13 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
     base = get_cell_network_size(or_conn->wide_circ_ids);
   }
 
-  if (connection_counts_as_relayed_traffic(conn, now) &&
-      global_relayed_write_bucket <= global_write_bucket)
-    global_bucket = global_relayed_write_bucket;
+  if (connection_counts_as_relayed_traffic(conn, now)) {
+    int relayed = token_bucket_get_write(&global_relayed_bucket);
+    global_bucket_val = MIN(global_bucket_val, relayed);
+  }
 
   return connection_bucket_round_robin(base, priority,
-                                       global_bucket, conn_bucket);
+                                       global_bucket_val, conn_bucket);
 }
 
 /** Return 1 if the global write buckets are low enough that we
@@ -2954,8 +2956,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
 int
 global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
 {
-  int smaller_bucket = global_write_bucket < global_relayed_write_bucket ?
-                       global_write_bucket : global_relayed_write_bucket;
+  int smaller_bucket = MIN(token_bucket_get_write(&global_bucket),
+                           token_bucket_get_write(&global_relayed_bucket));
   if (authdir_mode(get_options()) && priority>1)
     return 0; /* there's always room to answer v2 if we're an auth dir */
 
@@ -3039,11 +3041,9 @@ connection_buckets_decrement(connection_t *conn, time_t now,
     return; /* local IPs are free */
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
-    global_relayed_read_bucket -= (int)num_read;
-    global_relayed_write_bucket -= (int)num_written;
+    token_bucket_dec(&global_relayed_bucket, num_read, num_written);
   }
-  global_read_bucket -= (int)num_read;
-  global_write_bucket -= (int)num_written;
+  token_bucket_dec(&global_bucket, num_read, num_written);
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
     token_bucket_dec(&or_conn->bucket, num_read, num_written);
@@ -3060,10 +3060,10 @@ connection_consider_empty_read_buckets(connection_t *conn)
   if (!connection_is_rate_limited(conn))
     return; /* Always okay. */
 
-  if (global_read_bucket <= 0) {
+  if (token_bucket_get_read(&global_bucket) <= 0) {
     reason = "global read bucket exhausted. Pausing.";
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
-             global_relayed_read_bucket <= 0) {
+             token_bucket_get_read(&global_relayed_bucket) <= 0) {
     reason = "global relayed read bucket exhausted. Pausing.";
   } else if (connection_speaks_cells(conn) &&
              conn->state == OR_CONN_STATE_OPEN &&
@@ -3087,10 +3087,10 @@ connection_consider_empty_write_buckets(connection_t *conn)
   if (!connection_is_rate_limited(conn))
     return; /* Always okay. */
 
-  if (global_write_bucket <= 0) {
+  if (token_bucket_get_write(&global_bucket) <= 0) {
     reason = "global write bucket exhausted. Pausing.";
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
-             global_relayed_write_bucket <= 0) {
+             token_bucket_get_write(&global_relayed_bucket) <= 0) {
     reason = "global relayed write bucket exhausted. Pausing.";
   } else if (connection_speaks_cells(conn) &&
              conn->state == OR_CONN_STATE_OPEN &&
@@ -3109,88 +3109,37 @@ void
 connection_bucket_init(void)
 {
   const or_options_t *options = get_options();
-  /* start it at max traffic */
-  global_read_bucket = (int)options->BandwidthBurst;
-  global_write_bucket = (int)options->BandwidthBurst;
+  const uint32_t now_ts = monotime_coarse_get_stamp();
+  token_bucket_init(&global_bucket,
+                    (int32_t)options->BandwidthRate,
+                    (int32_t)options->BandwidthBurst,
+                    now_ts);
   if (options->RelayBandwidthRate) {
-    global_relayed_read_bucket = (int)options->RelayBandwidthBurst;
-    global_relayed_write_bucket = (int)options->RelayBandwidthBurst;
+    token_bucket_init(&global_relayed_bucket,
+                      (int32_t)options->RelayBandwidthRate,
+                      (int32_t)options->RelayBandwidthBurst,
+                      now_ts);
   } else {
-    global_relayed_read_bucket = (int)options->BandwidthBurst;
-    global_relayed_write_bucket = (int)options->BandwidthBurst;
-  }
-}
-
-/** Refill a single <b>bucket</b> called <b>name</b> with bandwidth rate per
- * second <b>rate</b> and bandwidth burst <b>burst</b>, assuming that
- * <b>milliseconds_elapsed</b> milliseconds have passed since the last
- * call. */
-static void
-connection_bucket_refill_helper(int *bucket, int rate, int burst,
-                                int milliseconds_elapsed,
-                                const char *name)
-{
-  int starting_bucket = *bucket;
-  if (starting_bucket < burst && milliseconds_elapsed > 0) {
-    int64_t incr = (((int64_t)rate) * milliseconds_elapsed) / 1000;
-    if ((burst - starting_bucket) < incr) {
-      *bucket = burst;  /* We would overflow the bucket; just set it to
-                         * the maximum. */
-    } else {
-      *bucket += (int)incr;
-      if (*bucket > burst || *bucket < starting_bucket) {
-        /* If we overflow the burst, or underflow our starting bucket,
-         * cap the bucket value to burst. */
-        /* XXXX this might be redundant now, but it doesn't show up
-         * in profiles.  Remove it after analysis. */
-        *bucket = burst;
-      }
-    }
-    log_debug(LD_NET,"%s now %d.", name, *bucket);
+    token_bucket_init(&global_relayed_bucket,
+                      (int32_t)options->BandwidthRate,
+                      (int32_t)options->BandwidthBurst,
+                      now_ts);
   }
 }
 
 /** Time has passed; increment buckets appropriately. */
 void
-connection_bucket_refill(int milliseconds_elapsed, time_t now, uint32_t now_ts)
+connection_bucket_refill(time_t now, uint32_t now_ts)
 {
-  const or_options_t *options = get_options();
   smartlist_t *conns = get_connection_array();
-  int bandwidthrate, bandwidthburst, relayrate, relayburst;
-
-  bandwidthrate = (int)options->BandwidthRate;
-  bandwidthburst = (int)options->BandwidthBurst;
-
-  if (options->RelayBandwidthRate) {
-    relayrate = (int)options->RelayBandwidthRate;
-    relayburst = (int)options->RelayBandwidthBurst;
-  } else {
-    relayrate = bandwidthrate;
-    relayburst = bandwidthburst;
-  }
-
-  tor_assert(milliseconds_elapsed >= 0);
 
   write_buckets_empty_last_second =
-    global_relayed_write_bucket <= 0 || global_write_bucket <= 0;
+    token_bucket_get_write(&global_bucket) <= 0 ||
+    token_bucket_get_write(&global_relayed_bucket) <= 0;
 
   /* refill the global buckets */
-  connection_bucket_refill_helper(&global_read_bucket,
-                                  bandwidthrate, bandwidthburst,
-                                  milliseconds_elapsed,
-                                  "global_read_bucket");
-  connection_bucket_refill_helper(&global_write_bucket,
-                                  bandwidthrate, bandwidthburst,
-                                  milliseconds_elapsed,
-                                  "global_write_bucket");
-  connection_bucket_refill_helper(&global_relayed_read_bucket,
-                                  relayrate, relayburst,
-                                  milliseconds_elapsed,
-                                  "global_relayed_read_bucket");
-  connection_bucket_refill_helper(&global_relayed_write_bucket,
-                                  relayrate, relayburst,
-                                  milliseconds_elapsed,
-                                  "global_relayed_write_bucket");
+  token_bucket_refill(&global_bucket, now_ts);
+  token_bucket_refill(&global_relayed_bucket, now_ts);
 
   /* refill the per-connection buckets */
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
@@ -3203,9 +3152,9 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now, uint32_t now_ts)
     }
 
     if (conn->read_blocked_on_bw == 1 /* marked to turn reading back on now */
-        && global_read_bucket > 0 /* and we're allowed to read */
+        && token_bucket_get_read(&global_bucket) > 0 /* and we can read */
         && (!connection_counts_as_relayed_traffic(conn, now) ||
-            global_relayed_read_bucket > 0) /* even if we're relayed traffic */
+            token_bucket_get_read(&global_relayed_bucket) > 0)
         && (!connection_speaks_cells(conn) ||
             conn->state != OR_CONN_STATE_OPEN ||
             token_bucket_get_read(&TO_OR_CONN(conn)->bucket) > 0)) {
@@ -3217,9 +3166,9 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now, uint32_t now_ts)
     }
 
     if (conn->write_blocked_on_bw == 1
-        && global_write_bucket > 0 /* and we're allowed to write */
+        && token_bucket_get_write(&global_bucket) > 0 /* and we can write */
         && (!connection_counts_as_relayed_traffic(conn, now) ||
-            global_relayed_write_bucket > 0) /* even if it's relayed traffic */
+            token_bucket_get_write(&global_relayed_bucket) > 0)
         && (!connection_speaks_cells(conn) ||
             conn->state != OR_CONN_STATE_OPEN ||
             token_bucket_get_write(&TO_OR_CONN(conn)->bucket) > 0)) {
