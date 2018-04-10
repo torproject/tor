@@ -1,0 +1,12 @@
+  o Removed features:
+    - The PortForwarding and PortForwardingHelper features have been
+      removed. The reasoning is, given that implementations of NAT traversal
+      protocols within common consumer grade routers are frequently buggy, and
+      that the target audience for a NAT punching feature is a perhaps
+      less-technically-inclined relay operator, when the helper fails to setup
+      traversal the problems are usually deep, ugly, and very router specific,
+      making them horrendously impossible for technical support to reliable
+      assist with, and thus resulting in frustration all around.  Unfortunately,
+      relay operators who would like to run relays behind NATs will need to
+      become more familiar with the port forwarding configurations on their
+      local router.  Closes 25409.
