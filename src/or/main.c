@@ -152,15 +152,15 @@ static void shutdown_did_not_work_callback(evutil_socket_t fd, short event,
                                            void *arg) ATTR_NORETURN;
 
 /********* START VARIABLES **********/
-int global_read_bucket; /**< Max number of bytes I can read this second. */
-int global_write_bucket; /**< Max number of bytes I can write this second. */
 
-/** Max number of relayed (bandwidth class 1) bytes I can read this second. */
-int global_relayed_read_bucket;
-/** Max number of relayed (bandwidth class 1) bytes I can write this second. */
-int global_relayed_write_bucket;
-/** What was the read bucket before the last second_elapsed_callback() call?
- * (used to determine how many bytes we've read). */
+/* Token bucket for all traffic. */
+token_bucket_t global_bucket;
+
+/* Token bucket for relayed traffic. */
+token_bucket_t global_relayed_bucket;
+
+/** What was the read/write bucket before the last second_elapsed_callback()
+ * call?  (used to determine how many bytes we've read). */
 static int stats_prev_global_read_bucket;
 /** What was the write bucket before the last second_elapsed_callback() call?
  * (used to determine how many bytes we've written). */
@@ -2418,8 +2418,10 @@ refill_callback(periodic_timer_t *timer, void *arg)
                                 refill_timer_current_millisecond.tv_sec);
   }
 
-  bytes_written = stats_prev_global_write_bucket - global_write_bucket;
-  bytes_read = stats_prev_global_read_bucket - global_read_bucket;
+  bytes_written = stats_prev_global_write_bucket -
+    token_bucket_get_write(&global_bucket);
+  bytes_read = stats_prev_global_read_bucket -
+    token_bucket_get_read(&global_bucket);
 
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
@@ -2427,12 +2429,12 @@ refill_callback(periodic_timer_t *timer, void *arg)
     accounting_add_bytes(bytes_read, bytes_written, seconds_rolled_over);
 
   if (milliseconds_elapsed > 0) {
-    connection_bucket_refill(milliseconds_elapsed, (time_t)now.tv_sec,
+    connection_bucket_refill((time_t)now.tv_sec,
                              monotime_coarse_get_stamp());
   }
 
-  stats_prev_global_read_bucket = global_read_bucket;
-  stats_prev_global_write_bucket = global_write_bucket;
+  stats_prev_global_read_bucket = token_bucket_get_read(&global_bucket);
+  stats_prev_global_write_bucket = token_bucket_get_write(&global_bucket);
 
   /* remember what time it is, for next time */
   refill_timer_current_millisecond = now;
@@ -2636,8 +2638,8 @@ do_main_loop(void)
 
   /* Set up our buckets */
   connection_bucket_init();
-  stats_prev_global_read_bucket = global_read_bucket;
-  stats_prev_global_write_bucket = global_write_bucket;
+  stats_prev_global_read_bucket = token_bucket_get_read(&global_bucket);
+  stats_prev_global_write_bucket = token_bucket_get_write(&global_bucket);
 
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
@@ -3532,8 +3534,8 @@ tor_free_all(int postfork)
   periodic_timer_free(systemd_watchdog_timer);
 #endif
 
-  global_read_bucket = global_write_bucket = 0;
-  global_relayed_read_bucket = global_relayed_write_bucket = 0;
+  memset(&global_bucket, 0, sizeof(global_bucket));
+  memset(&global_relayed_bucket, 0, sizeof(global_relayed_bucket));
   stats_prev_global_read_bucket = stats_prev_global_write_bucket = 0;
   stats_prev_n_read = stats_prev_n_written = 0;
   stats_n_bytes_read = stats_n_bytes_written = 0;
