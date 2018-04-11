@@ -2412,7 +2412,8 @@ DENIAL OF SERVICE MITIGATION OPTIONS
 Tor has three built-in mitigation options that can be individually
 enabled/disabled and fine-tuned, but by default Tor directory authorities will
 define reasonable values for relays and no explicit configuration is required
-to make use of these protections.  The mitigations are:
+to make use of these protections. The mitigations take place at relays,
+and are as follows:
 
   1. If a single client address makes too many concurrent connections (this is
      configurable via DoSConnectionMaxConcurrentCount), hang up on further
@@ -2429,13 +2430,13 @@ to make use of these protections.  The mitigations are:
      Tor2Web client), ignore the request.
 
 These defenses can be manually controlled by torrc options, but relays will
-also take guidance from consensus parameters, so there's no need to configure
-anything manually. In doubt, do not change those values.
+also take guidance from consensus parameters using these same names, so there's
+no need to configure anything manually. In doubt, do not change those values.
 
 The values set by the consensus, if any, can be found here:
 https://consensus-health.torproject.org/#consensusparams
 
-If any of the DoS mitigations are enabled, an heartbeat message will appear in
+If any of the DoS mitigations are enabled, a heartbeat message will appear in
 your log at NOTICE level which looks like:
 
     DoS mitigation since startup: 429042 circuits rejected, 17 marked addresses.
