@@ -172,6 +172,9 @@ static config_abbrev_t option_abbrevs_[] = {
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "VirtualAddrNetwork", "VirtualAddrNetworkIPv4", 0, 0},
   { "SocksSocketsGroupWritable", "UnixSocksGroupWritable", 0, 1},
+  { "_HSLayer2Nodes", "HSLayer2Nodes", 0, 1 },
+  { "_HSLayer3Nodes", "HSLayer3Nodes", 0, 1 },
+
   { NULL, NULL, 0, 0},
 };
 
@@ -419,8 +422,8 @@ static config_var_t option_vars_[] = {
   V(Socks5ProxyPassword,         STRING,   NULL),
   VAR("KeyDirectory",            FILENAME, KeyDirectory_option, NULL),
   V(KeyDirectoryGroupReadable,   BOOL,     "0"),
-  VAR("_HSLayer2Nodes",          ROUTERSET,  HSLayer2Nodes,  NULL),
-  VAR("_HSLayer3Nodes",          ROUTERSET,  HSLayer3Nodes,  NULL),
+  VAR("HSLayer2Nodes",           ROUTERSET,  HSLayer2Nodes,  NULL),
+  VAR("HSLayer3Nodes",           ROUTERSET,  HSLayer3Nodes,  NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   V(KeepBindCapabilities,            AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
