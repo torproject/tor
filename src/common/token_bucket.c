@@ -84,7 +84,12 @@ refill_single_bucket(int32_t *bucketptr,
                      const uint32_t elapsed_steps)
 {
   const int was_empty = (*bucketptr <= 0);
-  /* The casts here prevent an underflow. */
+  /* The casts here prevent an underflow.
+   *
+   * Note that even if the bucket value is negative, subtracting it from
+   * "burst" will still produce a correct result.  If this result is
+   * ridiculously high, then the "elapsed_steps > gap / rate" check below
+   * should catch it. */
   const size_t gap = ((size_t)burst) - ((size_t)*bucketptr);
 
   if (elapsed_steps > gap / rate) {
