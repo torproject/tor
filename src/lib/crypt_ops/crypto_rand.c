@@ -319,8 +319,8 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
  * Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
  * storing it into <b>out</b>.
  **/
-void
-crypto_strongest_rand(uint8_t *out, size_t out_len)
+MOCK_IMPL(void,
+crypto_strongest_rand,(uint8_t *out, size_t out_len))
 {
 #define DLEN SHA512_DIGEST_LENGTH
   /* We're going to hash DLEN bytes from the system RNG together with some

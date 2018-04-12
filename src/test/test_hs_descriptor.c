@@ -30,6 +30,13 @@ DISABLE_GCC_WARNING(overlength-strings)
 #include "test_hs_descriptor.inc"
 ENABLE_GCC_WARNING(overlength-strings)
 
+/* Mock function to fill all bytes with 1 */
+static void
+mock_crypto_strongest_rand(uint8_t *out, size_t out_len)
+{
+  memset(out, 1, out_len);
+}
+
 /* Test certificate encoding put in a descriptor. */
 static void
 test_cert_encoding(void *arg)
@@ -764,6 +771,67 @@ test_desc_signature(void *arg)
   tor_free(data);
 }
 
+static void
+test_build_authorized_client(void *arg)
+{
+  int ret;
+  hs_desc_authorized_client_t *desc_client = NULL;
+  uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+  curve25519_secret_key_t auth_ephemeral_sk;
+  curve25519_secret_key_t client_sk;
+  curve25519_public_key_t client_pk;
+  const char ephemeral_sk_b16[] =
+    "d023b674d993a5c8446bd2ca97e9961149b3c0e88c7dc14e8777744dd3468d6a";
+  const char descriptor_cookie_b16[] =
+    "07d087f1d8c68393721f6e70316d3b29";
+  const char client_pubkey_b16[] =
+    "8c1298fa6050e372f8598f6deca32e27b0ad457741422c2629ebb132cf7fae37";
+  char *mem_op_hex_tmp=NULL;
+
+  (void) arg;
+
+  ret = curve25519_secret_key_generate(&auth_ephemeral_sk, 0);
+  tt_int_op(ret, OP_EQ, 0);
+
+  ret = curve25519_secret_key_generate(&client_sk, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  curve25519_public_key_generate(&client_pk, &client_sk);
+
+  desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+  base16_decode((char *) &auth_ephemeral_sk,
+                sizeof(auth_ephemeral_sk),
+                ephemeral_sk_b16,
+                strlen(ephemeral_sk_b16));
+
+  base16_decode((char *) descriptor_cookie,
+                sizeof(descriptor_cookie),
+                descriptor_cookie_b16,
+                strlen(descriptor_cookie_b16));
+
+  base16_decode((char *) &client_pk,
+                sizeof(client_pk),
+                client_pubkey_b16,
+                strlen(client_pubkey_b16));
+
+  MOCK(crypto_strongest_rand, mock_crypto_strongest_rand);
+
+  hs_desc_build_authorized_client(&client_pk, &auth_ephemeral_sk,
+                               descriptor_cookie, desc_client);
+
+  test_memeq_hex((char *) desc_client->client_id,
+                 "b514ef67192cad5f");
+  test_memeq_hex((char *) desc_client->iv,
+                "01010101010101010101010101010101");
+  test_memeq_hex((char *) desc_client->encrypted_cookie,
+                "46860a9df37b9f6d708E0D7E730C10C1");
+
+ done:
+  tor_free(desc_client);
+  tor_free(mem_op_hex_tmp);
+  UNMOCK(crypto_strongest_rand);
+}
+
 /* bad desc auth type */
 static const char bad_superencrypted_text1[] = "desc-auth-type scoobysnack\n"
   "desc-auth-ephemeral-key A/O8DVtnUheb3r1JqoB8uJB7wxXL1XJX3eny4yB+eFA=\n"
@@ -890,6 +958,8 @@ struct testcase_t hs_descriptor[] = {
   { "validate_cert", test_validate_cert, TT_FORK,
     NULL, NULL },
   { "desc_signature", test_desc_signature, TT_FORK,
+    NULL, NULL },
+  { "build_authorized_client", test_build_authorized_client, TT_FORK,
     NULL, NULL },
 
   { "parse_hs_desc_superencrypted", test_parse_hs_desc_superencrypted,
