@@ -2860,7 +2860,7 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
   const int is_bridge = node_is_a_configured_bridge(node);
   const int we_use_mds = we_use_microdescriptors_for_circuits(get_options());
 
-  if (is_bridge || !we_use_mds) {
+  if ((is_bridge && for_direct_connect) || !we_use_mds) {
     /* We need an ri in this case. */
     if (!node->ri)
       return NULL;
