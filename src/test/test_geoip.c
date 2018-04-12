@@ -449,10 +449,16 @@ test_geoip_load_file(void *arg)
 #define FORK(name)                                                      \
   { #name, test_ ## name , TT_FORK, NULL, NULL }
 
+#ifdef _WIN32
+#define SKIP_ON_WINDOWS TT_SKIP
+#else
+#define SKIP_ON_WINDOWS 0
+#endif
+
 struct testcase_t geoip_tests[] = {
   { "geoip", test_geoip, TT_FORK, NULL, NULL },
   { "geoip_with_pt", test_geoip_with_pt, TT_FORK, NULL, NULL },
-  { "load_file", test_geoip_load_file, TT_FORK, NULL, NULL },
+  { "load_file", test_geoip_load_file, TT_FORK|SKIP_ON_WINDOWS, NULL, NULL },
 
   END_OF_TESTCASES
 };
