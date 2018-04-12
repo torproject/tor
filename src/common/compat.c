@@ -3409,8 +3409,8 @@ get_total_system_memory_impl(void)
  * Try to find out how much physical memory the system has. On success,
  * return 0 and set *<b>mem_out</b> to that value. On failure, return -1.
  */
-int
-get_total_system_memory(size_t *mem_out)
+MOCK_IMPL(int,
+get_total_system_memory, (size_t *mem_out))
 {
   static size_t mem_cached=0;
   uint64_t m = get_total_system_memory_impl();

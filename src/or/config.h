@@ -22,6 +22,13 @@
  * expose more information than we're comfortable with. */
 #define MIN_HEARTBEAT_PERIOD (30*60)
 
+/** Maximum default value for MaxMemInQueues, in bytes. */
+#if SIZEOF_VOID_P >= 8
+#define MAX_DEFAULT_MEMORY_QUEUE_SIZE (U64_LITERAL(8) << 30)
+#else
+#define MAX_DEFAULT_MEMORY_QUEUE_SIZE (U64_LITERAL(2) << 30)
+#endif
+
 MOCK_DECL(const char*, get_dirportfrontpage, (void));
 MOCK_DECL(const or_options_t *, get_options, (void));
 MOCK_DECL(or_options_t *, get_options_mutable, (void));
@@ -258,6 +265,10 @@ STATIC int parse_port_config(smartlist_t *out,
                   const unsigned flags);
 
 STATIC int check_bridge_distribution_setting(const char *bd);
+
+STATIC uint64_t compute_real_max_mem_in_queues(const uint64_t val,
+                                               int log_guess);
+
 #endif /* defined(CONFIG_PRIVATE) */
 
 #endif /* !defined(TOR_CONFIG_H) */

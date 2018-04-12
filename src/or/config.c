@@ -773,8 +773,6 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
-static uint64_t compute_real_max_mem_in_queues(const uint64_t val,
-                                               int log_guess);
 static void cleanup_protocol_warning_severity_level(void);
 static void set_protocol_warning_severity_level(int warning_severity);
 
@@ -4522,7 +4520,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 /* Given the value that the user has set for MaxMemInQueues, compute the
  * actual maximum value.  We clip this value if it's too low, and autodetect
  * it if it's set to 0. */
-static uint64_t
+STATIC uint64_t
 compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
 {
   uint64_t result;
@@ -4530,11 +4528,6 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
   if (val == 0) {
 #define ONE_GIGABYTE (U64_LITERAL(1) << 30)
 #define ONE_MEGABYTE (U64_LITERAL(1) << 20)
-#if SIZEOF_VOID_P >= 8
-#define MAX_DEFAULT_MAXMEM (8*ONE_GIGABYTE)
-#else
-#define MAX_DEFAULT_MAXMEM (2*ONE_GIGABYTE)
-#endif
     /* The user didn't pick a memory limit.  Choose a very large one
      * that is still smaller than the system memory */
     static int notice_sent = 0;
@@ -4549,14 +4542,30 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
       result = ONE_GIGABYTE;
 #endif /* SIZEOF_VOID_P >= 8 */
     } else {
-      /* We detected it, so let's pick 3/4 of the total RAM as our limit. */
-      const uint64_t avail = (ram / 4) * 3;
+      /* We detected the amount of memory available. */
+      uint64_t avail = 0;
 
-      /* Make sure it's in range from 0.25 GB to 8 GB. */
-      if (avail > MAX_DEFAULT_MAXMEM) {
+      if (ram >= (8 * ONE_GIGABYTE)) {
+        /* If we have 8 GB, or more, RAM available, we set the MaxMemInQueues
+         * to 0.4 * RAM. The idea behind this value is that the amount of RAM
+         * is more than enough for a single relay and should allow the relay
+         * operator to run two relays if they have additional bandwidth
+         * available.
+         */
+        avail = (ram / 5) * 2;
+      } else {
+        /* If we have less than 8 GB of RAM available, we use the "old" default
+         * for MaxMemInQueues of 0.75 * RAM.
+         */
+        avail = (ram / 4) * 3;
+      }
+
+      /* Make sure it's in range from 0.25 GB to 8 GB for 64-bit and 0.25 to 2
+       * GB for 32-bit. */
+      if (avail > MAX_DEFAULT_MEMORY_QUEUE_SIZE) {
         /* If you want to use more than this much RAM, you need to configure
            it yourself */
-        result = MAX_DEFAULT_MAXMEM;
+        result = MAX_DEFAULT_MEMORY_QUEUE_SIZE;
       } else if (avail < ONE_GIGABYTE / 4) {
         result = ONE_GIGABYTE / 4;
       } else {
