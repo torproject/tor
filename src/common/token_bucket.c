@@ -1,10 +1,8 @@
-/* Copyright (c) 2003-2004, Roger Dingledine
- * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2017, The Tor Project, Inc. */
+/* Copyright (c) 2018, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
- * \file address.c
+ * \file token_bucket.c
  * \brief Functions to use and manipulate token buckets, used for
  *    rate-limiting on connections and globally.
  *
