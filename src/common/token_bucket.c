@@ -60,10 +60,8 @@ token_bucket_adjust(token_bucket_t *bucket,
 
   bucket->rate = rate_per_sec_to_rate_per_step(rate);
   bucket->burst = burst;
-  if (bucket->read_bucket > (int32_t)burst)
-    bucket->read_bucket = burst;
-  if (bucket->write_bucket > (int32_t)burst)
-    bucket->write_bucket = burst;
+  bucket->read_bucket = MIN(bucket->read_bucket, (int32_t)burst);
+  bucket->read_bucket = MIN(bucket->write_bucket, (int32_t)burst);
 }
 
 /**
