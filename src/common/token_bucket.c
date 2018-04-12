@@ -83,7 +83,7 @@ refill_single_bucket(int32_t *bucketptr,
                      const int32_t burst,
                      const uint32_t elapsed_steps)
 {
-  const int was_empty = *bucketptr <= 0;
+  const int was_empty = (*bucketptr <= 0);
   /* The casts here prevent an underflow. */
   const size_t gap = ((size_t)burst) - ((size_t)*bucketptr);
 
