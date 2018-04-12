@@ -5622,10 +5622,10 @@ test_config_compute_max_mem_in_queues(void *data)
 
 #if SIZEOF_VOID_P >= 8
   /* We are on a 64-bit system. */
-  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(8));
+  tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(8));
 #else
   /* We are on a 32-bit system. */
-  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(1));
+  tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, GIGABYTE(1));
 #endif
 
   /* We are able to detect the amount of RAM on the system. */
@@ -5635,7 +5635,7 @@ test_config_compute_max_mem_in_queues(void *data)
   total_system_memory_output = GIGABYTE(1);
 
   /* We have 0.75 * RAM available. */
-  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+  tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
             3 * (GIGABYTE(1) / 4));
 
   /* We are running on a tiny machine with 256 MB of RAM. */
@@ -5644,28 +5644,30 @@ test_config_compute_max_mem_in_queues(void *data)
   /* We will now enforce a minimum of 256 MB of RAM available for the
    * MaxMemInQueues here, even though we should only have had 0.75 * 256 = 192
    * MB available. */
-  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, MEGABYTE(256));
+  tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ, MEGABYTE(256));
 
+#if SIZEOF_SIZE_T > 4
   /* We are running on a machine with 8 GB of RAM. */
   total_system_memory_output = GIGABYTE(8);
 
   /* We will have 0.4 * RAM available. */
-  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+  tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
             2 * (GIGABYTE(8) / 5));
 
   /* We are running on a machine with 16 GB of RAM. */
   total_system_memory_output = GIGABYTE(16);
 
   /* We will have 0.4 * RAM available. */
-  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+  tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
             2 * (GIGABYTE(16) / 5));
 
   /* We are running on a machine with 32 GB of RAM. */
   total_system_memory_output = GIGABYTE(32);
 
   /* We will at maximum get MAX_DEFAULT_MEMORY_QUEUE_SIZE here. */
-  tt_int_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
+  tt_u64_op(compute_real_max_mem_in_queues(0, 0), OP_EQ,
             MAX_DEFAULT_MEMORY_QUEUE_SIZE);
+#endif
 
  done:
   UNMOCK(get_total_system_memory);
