@@ -28,7 +28,10 @@ test_bwmgt_token_buf_init(void *arg)
   tt_uint_op(b.burst, OP_EQ, 64*KB);
   // Rate is correct, within 1 percent.
   {
-    uint32_t rate_per_sec = b.rate * (STAMP_TICKS_PER_SECOND / TICKS_PER_STEP);
+    uint32_t ticks_per_sec =
+      (uint32_t) monotime_msec_to_approx_coarse_stamp_units(1000);
+    uint32_t rate_per_sec = (b.rate * ticks_per_sec / TICKS_PER_STEP);
+
     tt_uint_op(rate_per_sec, OP_GT, 16*KB-160);
     tt_uint_op(rate_per_sec, OP_LT, 16*KB+160);
   }
@@ -120,7 +123,8 @@ test_bwmgt_token_buf_refill(void *arg)
 {
   (void)arg;
   token_bucket_t b;
-  const uint32_t SEC = STAMP_TICKS_PER_SECOND;
+  const uint32_t SEC =
+    (uint32_t)monotime_msec_to_approx_coarse_stamp_units(1000);
   token_bucket_init(&b, 16*KB, 64*KB, START_TS);
 
   /* Make the buffer much emptier, then let one second elapse. */
