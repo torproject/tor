@@ -113,6 +113,14 @@ token_bucket_refill(token_bucket_t *bucket,
                     uint32_t now_ts)
 {
   const uint32_t elapsed_ticks = (now_ts - bucket->last_refilled_at_ts);
+  if (elapsed_ticks > UINT32_MAX-(300*1000)) {
+    /* Either about 48 days have passed since the last refill, or the
+     * monotonic clock has somehow moved backwards. (We're looking at you,
+     * Windows.).  We accept up to a 5 minute jump backwards as
+     * "unremarkable".
+     */
+    return 0;
+  }
   const uint32_t elapsed_steps = elapsed_ticks / TICKS_PER_STEP;
 
   if (!elapsed_steps) {
