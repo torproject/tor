@@ -178,8 +178,13 @@ test_bwmgt_token_buf_refill(void *arg)
   tt_int_op(b.read_bucket, OP_GT, 8*KB-200);
   tt_int_op(b.read_bucket, OP_LT, 8*KB+200);
 
-  // a ridiculous amount of time passes
+  // We step a second backwards, and nothing happens.
   tt_int_op(0, OP_EQ, token_bucket_refill(&b, START_TS + SEC*64));
+  tt_int_op(b.read_bucket, OP_GT, 8*KB-200);
+  tt_int_op(b.read_bucket, OP_LT, 8*KB+200);
+
+  // A ridiculous amount of time passes.
+  tt_int_op(0, OP_EQ, token_bucket_refill(&b, INT32_MAX));
   tt_int_op(b.read_bucket, OP_EQ, b.burst);
 
  done:
