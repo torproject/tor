@@ -228,6 +228,24 @@ helper_create_origin_circuit(int purpose, int flags)
   return circ;
 }
 
+/* Helper: Return a newly allocated authorized client object with
+ * and a newly generated public key. */
+static hs_service_authorized_client_t *
+helper_create_authorized_client(void)
+{
+  int ret;
+  hs_service_authorized_client_t *client;
+  curve25519_secret_key_t seckey;
+  client = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+
+  ret = curve25519_secret_key_generate(&seckey, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  curve25519_public_key_generate(&client->client_pk, &seckey);
+
+ done:
+  return client;
+}
+
 /* Helper: Return a newly allocated service object with the identity keypair
  * sets and the current descriptor. Then register it to the global map.
  * Caller should us hs_free_all() to free this service or remove it from the
@@ -247,6 +265,26 @@ helper_create_service(void)
   /* Register service to global map. */
   int ret = register_service(get_hs_service_map(), service);
   tt_int_op(ret, OP_EQ, 0);
+
+ done:
+  return service;
+}
+
+/* Helper: Return a newly allocated service object with clients. */
+static hs_service_t *
+helper_create_service_with_clients(int num_clients)
+{
+  int i;
+  hs_service_t *service = helper_create_service();
+  tt_assert(service);
+  service->config.is_client_auth_enabled = 1;
+  service->config.clients = smartlist_new();
+
+  for (i = 0; i < num_clients; i++) {
+    hs_service_authorized_client_t *client;
+    client = helper_create_authorized_client();
+    smartlist_add(service->config.clients, client);
+  }
 
  done:
   return service;
@@ -1562,6 +1600,90 @@ test_build_update_descriptors(void *arg)
   nodelist_free_all();
 }
 
+/** Test building descriptors. We use this separate function instead of
+ *  using test_build_update_descriptors because that function is too complex
+ *  and also too interactive. */
+static void
+test_build_descriptors(void *arg)
+{
+  int ret;
+  time_t now = time(NULL);
+
+  (void) arg;
+
+  hs_init();
+
+  MOCK(get_or_state,
+       get_or_state_replacement);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 03:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+
+  /* Generate a valid number of fake auth clients when a client authorization
+   * is disabled. */
+  {
+    hs_service_t *service = helper_create_service();
+    service_descriptor_free(service->desc_current);
+    service->desc_current = NULL;
+
+    build_all_descriptors(now);
+    hs_desc_superencrypted_data_t *superencrypted;
+    superencrypted = &service->desc_current->desc->superencrypted_data;
+    tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
+  }
+
+  /* Generate a valid number of fake auth clients when the number of
+   * clients is zero. */
+  {
+    hs_service_t *service = helper_create_service_with_clients(0);
+    service_descriptor_free(service->desc_current);
+    service->desc_current = NULL;
+
+    build_all_descriptors(now);
+    hs_desc_superencrypted_data_t *superencrypted;
+    superencrypted = &service->desc_current->desc->superencrypted_data;
+    tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 16);
+  }
+
+  /* Generate a valid number of fake auth clients when the number of
+   * clients is not a multiple of 16. */
+  {
+    hs_service_t *service = helper_create_service_with_clients(20);
+    service_descriptor_free(service->desc_current);
+    service->desc_current = NULL;
+
+    build_all_descriptors(now);
+    hs_desc_superencrypted_data_t *superencrypted;
+    superencrypted = &service->desc_current->desc->superencrypted_data;
+    tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 32);
+  }
+
+  /* Do not generate any fake desc client when the number of clients is
+   * a multiple of 16 but not zero. */
+  {
+    hs_service_t *service = helper_create_service_with_clients(32);
+    service_descriptor_free(service->desc_current);
+    service->desc_current = NULL;
+
+    build_all_descriptors(now);
+    hs_desc_superencrypted_data_t *superencrypted;
+    superencrypted = &service->desc_current->desc->superencrypted_data;
+    tt_int_op(smartlist_len(superencrypted->clients), OP_EQ, 32);
+  }
+
+ done:
+  hs_free_all();
+}
+
 static void
 test_upload_descriptors(void *arg)
 {
@@ -1779,6 +1901,8 @@ struct testcase_t hs_service_tests[] = {
   { "rotate_descriptors", test_rotate_descriptors, TT_FORK,
     NULL, NULL },
   { "build_update_descriptors", test_build_update_descriptors, TT_FORK,
+    NULL, NULL },
+  { "build_descriptors", test_build_descriptors, TT_FORK,
     NULL, NULL },
   { "upload_descriptors", test_upload_descriptors, TT_FORK,
     NULL, NULL },
