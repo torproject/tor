@@ -67,7 +67,7 @@ token_bucket_get_write(const token_bucket_t *bucket)
 /* To avoid making the rates too small, we consider units of "steps",
  * where a "step" is defined as this many timestamp ticks.  Keep this
  * a power of two if you can. */
-#define TICKS_PER_STEP 8
+#define TICKS_PER_STEP 16
 
 #endif
 
