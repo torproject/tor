@@ -4531,7 +4531,15 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
       /* We detected the amount of memory available. */
       uint64_t avail = 0;
 
-      if (ram >= (8 * ONE_GIGABYTE)) {
+#if SIZEOF_SIZE_T > 4
+/* On a 64-bit platform, we consider 8GB "very large". */
+#define RAM_IS_VERY_LARGE(x) ((x) >= (8 * ONE_GIGABYTE))
+#else
+/* On a 32-bit platform, we can't have 8GB of ram. */
+#define RAM_IS_VERY_LARGE(x) (0)
+#endif
+
+      if (RAM_IS_VERY_LARGE(ram)) {
         /* If we have 8 GB, or more, RAM available, we set the MaxMemInQueues
          * to 0.4 * RAM. The idea behind this value is that the amount of RAM
          * is more than enough for a single relay and should allow the relay
