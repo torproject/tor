@@ -48,12 +48,9 @@ token_bucket_cfg_init(token_bucket_cfg_t *cfg,
  */
 void
 token_bucket_raw_reset(token_bucket_raw_t *bucket,
-                       token_bucket_timestamp_t *stamp,
-                       const token_bucket_cfg_t *cfg,
-                       uint32_t now)
+                       const token_bucket_cfg_t *cfg)
 {
   bucket->bucket = cfg->burst;
-  stamp->last_refilled_at = now;
 }
 
 /**
@@ -165,10 +162,9 @@ void
 token_bucket_rw_reset(token_bucket_rw_t *bucket,
                       uint32_t now_ts)
 {
-  token_bucket_raw_reset(&bucket->read_bucket, &bucket->stamp,
-                         &bucket->cfg, now_ts);
-  token_bucket_raw_reset(&bucket->write_bucket, &bucket->stamp,
-                         &bucket->cfg, now_ts);
+  token_bucket_raw_reset(&bucket->read_bucket, &bucket->cfg);
+  token_bucket_raw_reset(&bucket->write_bucket, &bucket->cfg);
+  bucket->last_refilled_at_timestamp = now_ts;
 }
 
 /**
@@ -180,9 +176,10 @@ token_bucket_rw_reset(token_bucket_rw_t *bucket,
  */
 int
 token_bucket_rw_refill(token_bucket_rw_t *bucket,
-                    uint32_t now_ts)
+                       uint32_t now_ts)
 {
-  const uint32_t elapsed_ticks = (now_ts - bucket->stamp.last_refilled_at);
+  const uint32_t elapsed_ticks =
+    (now_ts - bucket->last_refilled_at_timestamp);
   if (elapsed_ticks > UINT32_MAX-(300*1000)) {
     /* Either about 48 days have passed since the last refill, or the
      * monotonic clock has somehow moved backwards. (We're looking at you,
@@ -208,7 +205,7 @@ token_bucket_rw_refill(token_bucket_rw_t *bucket,
                                     &bucket->cfg, elapsed_steps))
     flags |= TB_WRITE;
 
-  bucket->stamp.last_refilled_at = now_ts;
+  bucket->last_refilled_at_timestamp = now_ts;
   return flags;
 }
 
