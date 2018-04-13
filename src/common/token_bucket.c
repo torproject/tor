@@ -41,14 +41,14 @@ rate_per_sec_to_rate_per_step(uint32_t rate)
  * starts out full.
  */
 void
-token_bucket_init(token_bucket_t *bucket,
+token_bucket_rw_init(token_bucket_rw_t *bucket,
                   uint32_t rate,
                   uint32_t burst,
                   uint32_t now_ts)
 {
-  memset(bucket, 0, sizeof(token_bucket_t));
-  token_bucket_adjust(bucket, rate, burst);
-  token_bucket_reset(bucket, now_ts);
+  memset(bucket, 0, sizeof(token_bucket_rw_t));
+  token_bucket_rw_adjust(bucket, rate, burst);
+  token_bucket_rw_reset(bucket, now_ts);
 }
 
 /**
@@ -56,14 +56,14 @@ token_bucket_init(token_bucket_t *bucket,
  * for the token bucket in *<b>bucket</b>.
  */
 void
-token_bucket_adjust(token_bucket_t *bucket,
+token_bucket_rw_adjust(token_bucket_rw_t *bucket,
                     uint32_t rate,
                     uint32_t burst)
 {
   tor_assert_nonfatal(rate > 0);
   tor_assert_nonfatal(burst > 0);
-  if (burst > TOKEN_BUCKET_MAX_BURST)
-    burst = TOKEN_BUCKET_MAX_BURST;
+  if (burst > TOKEN_BUCKET_RW_MAX_BURST)
+    burst = TOKEN_BUCKET_RW_MAX_BURST;
 
   bucket->rate = rate_per_sec_to_rate_per_step(rate);
   bucket->burst = burst;
@@ -75,7 +75,7 @@ token_bucket_adjust(token_bucket_t *bucket,
  * Reset <b>bucket</b> to be full, as of timestamp <b>now_ts</b>.
  */
 void
-token_bucket_reset(token_bucket_t *bucket,
+token_bucket_rw_reset(token_bucket_rw_t *bucket,
                    uint32_t now_ts)
 {
   bucket->read_bucket = bucket->burst;
@@ -83,7 +83,7 @@ token_bucket_reset(token_bucket_t *bucket,
   bucket->last_refilled_at_ts = now_ts;
 }
 
-/* Helper: see token_bucket_refill */
+/* Helper: see token_bucket_rw_refill */
 static int
 refill_single_bucket(int32_t *bucketptr,
                      const uint32_t rate,
@@ -116,7 +116,7 @@ refill_single_bucket(int32_t *bucketptr,
  * nonempty, and TB_WRITE iff the write bucket was empty and became nonempty.
  */
 int
-token_bucket_refill(token_bucket_t *bucket,
+token_bucket_rw_refill(token_bucket_rw_t *bucket,
                     uint32_t now_ts)
 {
   const uint32_t elapsed_ticks = (now_ts - bucket->last_refilled_at_ts);
@@ -167,7 +167,7 @@ decrement_single_bucket(int32_t *bucketptr,
  * otherwise.
  */
 int
-token_bucket_dec_read(token_bucket_t *bucket,
+token_bucket_rw_dec_read(token_bucket_rw_t *bucket,
                       ssize_t n)
 {
   return decrement_single_bucket(&bucket->read_bucket, n);
@@ -180,20 +180,21 @@ token_bucket_dec_read(token_bucket_t *bucket,
  * otherwise.
  */
 int
-token_bucket_dec_write(token_bucket_t *bucket,
+token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
                        ssize_t n)
 {
   return decrement_single_bucket(&bucket->write_bucket, n);
 }
 
 /**
- * As token_bucket_dec_read and token_bucket_dec_write, in a single operation.
+ * As token_bucket_rw_dec_read and token_bucket_rw_dec_write, in a single
+ * operation.
  */
 void
-token_bucket_dec(token_bucket_t *bucket,
+token_bucket_rw_dec(token_bucket_rw_t *bucket,
                  ssize_t n_read, ssize_t n_written)
 {
-  token_bucket_dec_read(bucket, n_read);
-  token_bucket_dec_read(bucket, n_written);
+  token_bucket_rw_dec_read(bucket, n_read);
+  token_bucket_rw_dec_read(bucket, n_written);
 }
 

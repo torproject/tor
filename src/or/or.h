@@ -1661,7 +1661,7 @@ typedef struct or_connection_t {
 
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
-  token_bucket_t bucket; /**< Used for rate limiting when the connection is
+  token_bucket_rw_t bucket; /**< Used for rate limiting when the connection is
                           * in state CONN_OPEN. */
 
   /*
