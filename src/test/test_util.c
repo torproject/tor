@@ -5910,8 +5910,8 @@ test_util_monotonic_time(void *arg)
   {
     uint64_t units = monotime_msec_to_approx_coarse_stamp_units(5000);
     uint64_t ms = monotime_coarse_stamp_units_to_approx_msec(units);
-    tt_int_op(ms, OP_GE, 4950);
-    tt_int_op(ms, OP_LT, 5050);
+    tt_u64_op(ms, OP_GE, 4950);
+    tt_u64_op(ms, OP_LT, 5050);
   }
 
  done:

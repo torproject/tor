@@ -2975,9 +2975,9 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
     const or_options_t *options = get_options();
-    size_t can_write = smaller_bucket
+    size_t can_write = (size_t) (smaller_bucket
       + 2*(options->RelayBandwidthRate ? options->RelayBandwidthRate :
-                                         options->BandwidthRate);
+           options->BandwidthRate));
     if (can_write < 2*attempt)
       return 1;
   } else { /* v2 query */
