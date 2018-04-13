@@ -12,79 +12,6 @@
 #include "test.h"
 
 static void
-help_test_bucket_note_empty(uint32_t expected_msec_since_midnight,
-                            int tokens_before, size_t tokens_removed,
-                            uint32_t msec_since_epoch)
-{
-  uint32_t timestamp_var = 0;
-  struct timeval tvnow;
-  tvnow.tv_sec = msec_since_epoch / 1000;
-  tvnow.tv_usec = (msec_since_epoch % 1000) * 1000;
-  connection_buckets_note_empty_ts(&timestamp_var, tokens_before,
-                                   tokens_removed, &tvnow);
-  tt_int_op(expected_msec_since_midnight, OP_EQ, timestamp_var);
-
- done:
-  ;
-}
-
-static void
-test_cntev_bucket_note_empty(void *arg)
-{
-  (void)arg;
-
-  /* Two cases with nothing to note, because bucket was empty before;
-   * 86442200 == 1970-01-02 00:00:42.200000 */
-  help_test_bucket_note_empty(0, 0, 0, 86442200);
-  help_test_bucket_note_empty(0, -100, 100, 86442200);
-
-  /* Nothing to note, because bucket has not been emptied. */
-  help_test_bucket_note_empty(0, 101, 100, 86442200);
-
-  /* Bucket was emptied, note 42200 msec since midnight. */
-  help_test_bucket_note_empty(42200, 101, 101, 86442200);
-  help_test_bucket_note_empty(42200, 101, 102, 86442200);
-}
-
-static void
-test_cntev_bucket_millis_empty(void *arg)
-{
-  struct timeval tvnow;
-  (void)arg;
-
-  /* 1970-01-02 00:00:42.200000 */
-  tvnow.tv_sec = 86400 + 42;
-  tvnow.tv_usec = 200000;
-
-  /* Bucket has not been refilled. */
-  tt_int_op(0, OP_EQ, bucket_millis_empty(0, 42120, 0, 100, &tvnow));
-  tt_int_op(0, OP_EQ, bucket_millis_empty(-10, 42120, -10, 100, &tvnow));
-
-  /* Bucket was not empty. */
-  tt_int_op(0, OP_EQ, bucket_millis_empty(10, 42120, 20, 100, &tvnow));
-
-  /* Bucket has been emptied 80 msec ago and has just been refilled. */
-  tt_int_op(80, OP_EQ, bucket_millis_empty(-20, 42120, -10, 100, &tvnow));
-  tt_int_op(80, OP_EQ, bucket_millis_empty(-10, 42120, 0, 100, &tvnow));
-  tt_int_op(80, OP_EQ, bucket_millis_empty(0, 42120, 10, 100, &tvnow));
-
-  /* Bucket has been emptied 180 msec ago, last refill was 100 msec ago
-   * which was insufficient to make it positive, so cap msec at 100. */
-  tt_int_op(100, OP_EQ, bucket_millis_empty(0, 42020, 1, 100, &tvnow));
-
-  /* 1970-01-02 00:00:00:050000 */
-  tvnow.tv_sec = 86400;
-  tvnow.tv_usec = 50000;
-
-  /* Last emptied 30 msec before midnight, tvnow is 50 msec after
-   * midnight, that's 80 msec in total. */
-  tt_int_op(80, OP_EQ, bucket_millis_empty(0, 86400000 - 30, 1, 100, &tvnow));
-
- done:
-  ;
-}
-
-static void
 add_testing_cell_stats_entry(circuit_t *circ, uint8_t command,
                              unsigned int waiting_time,
                              unsigned int removed, unsigned int exitward)
@@ -395,8 +322,6 @@ test_cntev_event_mask(void *arg)
   { #name, test_cntev_ ## name, flags, 0, NULL }
 
 struct testcase_t controller_event_tests[] = {
-  TEST(bucket_note_empty, TT_FORK),
-  TEST(bucket_millis_empty, TT_FORK),
   TEST(sum_up_cell_stats, TT_FORK),
   TEST(append_cell_stats, TT_FORK),
   TEST(format_cell_stats, TT_FORK),

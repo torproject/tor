@@ -59,9 +59,6 @@ int control_event_circ_bandwidth_used(void);
 int control_event_conn_bandwidth(connection_t *conn);
 int control_event_conn_bandwidth_used(void);
 int control_event_circuit_cell_stats(void);
-int control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
-                           uint32_t write_empty_time,
-                           int milliseconds_elapsed);
 void control_event_logmsg(int severity, uint32_t domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,
@@ -194,7 +191,7 @@ void control_free_all(void);
 #define EVENT_CONF_CHANGED            0x0019
 #define EVENT_CONN_BW                 0x001A
 #define EVENT_CELL_STATS              0x001B
-#define EVENT_TB_EMPTY                0x001C
+/* UNUSED :                           0x001C */
 #define EVENT_CIRC_BANDWIDTH_USED     0x001D
 #define EVENT_TRANSPORT_LAUNCHED      0x0020
 #define EVENT_HS_DESC                 0x0021

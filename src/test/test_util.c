@@ -5907,6 +5907,13 @@ test_util_monotonic_time(void *arg)
   tt_u64_op(coarse_stamp_diff, OP_GE, 120);
   tt_u64_op(coarse_stamp_diff, OP_LE, 1200);
 
+  {
+    uint64_t units = monotime_msec_to_approx_coarse_stamp_units(5000);
+    uint64_t ms = monotime_coarse_stamp_units_to_approx_msec(units);
+    tt_int_op(ms, OP_GE, 4950);
+    tt_int_op(ms, OP_LT, 5050);
+  }
+
  done:
   ;
 }

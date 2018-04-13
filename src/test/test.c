@@ -813,6 +813,7 @@ struct testgroup_t testgroups[] = {
   { "address_set/", address_set_tests },
   { "bridges/", bridges_tests },
   { "buffer/", buffer_tests },
+  { "bwmgt/", bwmgt_tests },
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
   { "channel/", channel_tests },

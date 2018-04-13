@@ -150,6 +150,7 @@ uint32_t monotime_coarse_to_stamp(const monotime_coarse_t *t);
  * into an approximate number of milliseconds.
  */
 uint64_t monotime_coarse_stamp_units_to_approx_msec(uint64_t units);
+uint64_t monotime_msec_to_approx_coarse_stamp_units(uint64_t msec);
 uint32_t monotime_coarse_get_stamp(void);
 
 #if defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT)

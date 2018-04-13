@@ -80,6 +80,7 @@
 #include "crypto_curve25519.h"
 #include "crypto_ed25519.h"
 #include "tor_queue.h"
+#include "token_bucket.h"
 #include "util_format.h"
 #include "hs_circuitmap.h"
 
@@ -1660,20 +1661,8 @@ typedef struct or_connection_t {
 
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
-  /* bandwidth* and *_bucket only used by ORs in OPEN state: */
-  int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
-  int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
-  int read_bucket; /**< When this hits 0, stop receiving. Every second we
-                    * add 'bandwidthrate' to this, capping it at
-                    * bandwidthburst. (OPEN ORs only) */
-  int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
-
-  /** Last emptied read token bucket in msec since midnight; only used if
-   * TB_EMPTY events are enabled. */
-  uint32_t read_emptied_time;
-  /** Last emptied write token bucket in msec since midnight; only used if
-   * TB_EMPTY events are enabled. */
-  uint32_t write_emptied_time;
+  token_bucket_t bucket; /**< Used for rate limiting when the connection is
+                          * in state CONN_OPEN. */
 
   /*
    * Count the number of bytes flushed out on this orconn, and the number of
@@ -4430,9 +4419,6 @@ typedef struct {
 
   /** Enable CELL_STATS events.  Only altered on testing networks. */
   int TestingEnableCellStatsEvent;
-
-  /** Enable TB_EMPTY events.  Only altered on testing networks. */
-  int TestingEnableTbEmptyEvent;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help

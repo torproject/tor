@@ -4104,16 +4104,6 @@ test_options_validate__testing_options(void *ignored)
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "TestingEnableTbEmptyEvent 1\n"
-                                );
-  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "TestingEnableTbEmptyEvent may only be changed "
-            "in testing Tor networks!");
-  tor_free(msg);
-
-  free_options_test_data(tdata);
-  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                                "TestingEnableTbEmptyEvent 1\n"
                                 VALID_DIR_AUTH
                                 "TestingTorNetwork 1\n"
                                 "___UsingTestNetworkDefaults 0\n"

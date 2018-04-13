@@ -1,0 +1,5 @@
+  o Removed features:
+    - The TestingEnableTbEmptyEvent option has been removed.  It was used
+      in testing simulations to measure how often connection buckets were
+      emptied, in order to improve our scheduling, but it has not
+      been actively used in years. Closes ticket 25760.

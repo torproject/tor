@@ -122,7 +122,9 @@ void connection_mark_all_noncontrol_connections(void);
 ssize_t connection_bucket_write_limit(connection_t *conn, time_t now);
 int global_write_bucket_low(connection_t *conn, size_t attempt, int priority);
 void connection_bucket_init(void);
-void connection_bucket_refill(int seconds_elapsed, time_t now);
+void connection_bucket_adjust(const or_options_t *options);
+void connection_bucket_refill(time_t now,
+                              uint32_t now_ts);
 
 int connection_handle_read(connection_t *conn);
 
@@ -272,13 +274,6 @@ void connection_check_oos(int n_socks, int failed);
 STATIC void connection_free_minimal(connection_t *conn);
 
 /* Used only by connection.c and test*.c */
-uint32_t bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
-                             int tokens_after, int milliseconds_elapsed,
-                             const struct timeval *tvnow);
-void connection_buckets_note_empty_ts(uint32_t *timestamp_var,
-                                      int tokens_before,
-                                      size_t tokens_removed,
-                                      const struct timeval *tvnow);
 MOCK_DECL(STATIC int,connection_connect_sockaddr,
                                             (connection_t *conn,
                                              const struct sockaddr *sa,
