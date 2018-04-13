@@ -152,7 +152,7 @@ token_bucket_rw_adjust(token_bucket_rw_t *bucket,
                         rate_per_sec_to_rate_per_step(rate),
                         burst);
   token_bucket_raw_adjust(&bucket->read_bucket, &bucket->cfg);
-  token_bucket_raw_adjust(&bucket->read_bucket, &bucket->cfg);
+  token_bucket_raw_adjust(&bucket->write_bucket, &bucket->cfg);
 }
 
 /**
@@ -241,9 +241,9 @@ token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
  */
 void
 token_bucket_rw_dec(token_bucket_rw_t *bucket,
-                 ssize_t n_read, ssize_t n_written)
+                    ssize_t n_read, ssize_t n_written)
 {
   token_bucket_rw_dec_read(bucket, n_read);
-  token_bucket_rw_dec_read(bucket, n_written);
+  token_bucket_rw_dec_write(bucket, n_written);
 }
 
