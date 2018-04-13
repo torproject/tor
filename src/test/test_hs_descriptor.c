@@ -300,7 +300,7 @@ test_encode_descriptor(void *arg)
   ret = ed25519_keypair_generate(&signing_kp, 0);
   tt_int_op(ret, OP_EQ, 0);
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
-  ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
+  ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(encoded);
 
@@ -333,7 +333,7 @@ test_decode_descriptor(void *arg)
   ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential, &decoded);
   tt_int_op(ret, OP_EQ, -1);
 
-  ret = hs_desc_encode_descriptor(desc, &signing_kp, &encoded);
+  ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
   tt_int_op(ret, OP_EQ, 0);
   tt_assert(encoded);
 
@@ -353,7 +353,8 @@ test_decode_descriptor(void *arg)
     desc_no_ip = hs_helper_build_hs_desc_no_ip(&signing_kp_no_ip);
     tt_assert(desc_no_ip);
     tor_free(encoded);
-    ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip, &encoded);
+    ret = hs_desc_encode_descriptor(desc_no_ip, &signing_kp_no_ip,
+                                    NULL, &encoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
     hs_descriptor_free(decoded);
