@@ -167,7 +167,8 @@ test_bwmgt_token_buf_refill(void *arg)
   tt_int_op(b.read_bucket.bucket, OP_LT, 32*KB+400);
 
   /* Underflow the bucket, make sure we detect when it has tokens again. */
-  tt_int_op(1, OP_EQ, token_bucket_rw_dec_read(&b, b.read_bucket.bucket+16*KB));
+  tt_int_op(1, OP_EQ,
+            token_bucket_rw_dec_read(&b, b.read_bucket.bucket+16*KB));
   tt_int_op(-16*KB, OP_EQ, b.read_bucket.bucket);
   // half a second passes...
   tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*64));
