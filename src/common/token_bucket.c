@@ -76,8 +76,9 @@ rate_per_sec_to_rate_per_step(uint32_t rate)
     (rate / 1000) * to_approximate_msec(TICKS_PER_STEP).  But to minimize
     rounding error, we do it this way instead, and divide last.
   */
-  return (uint32_t)
+  uint32_t val = (uint32_t)
     monotime_coarse_stamp_units_to_approx_msec(rate*TICKS_PER_STEP)/1000;
+  return val ? val : 1;
 }
 
 /**
