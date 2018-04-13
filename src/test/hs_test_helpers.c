@@ -98,8 +98,11 @@ static hs_descriptor_t *
 hs_helper_build_hs_desc_impl(unsigned int no_ip,
                              const ed25519_keypair_t *signing_kp)
 {
+  int ret;
+  int i;
   time_t now = approx_time();
   ed25519_keypair_t blinded_kp;
+  curve25519_keypair_t auth_ephemeral_kp;
   hs_descriptor_t *descp = NULL, *desc = tor_malloc_zero(sizeof(*desc));
 
   desc->plaintext_data.version = HS_DESC_SUPPORTED_FORMAT_VERSION_MAX;
@@ -125,6 +128,22 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
 
   hs_get_subcredential(&signing_kp->pubkey, &blinded_kp.pubkey,
                     desc->subcredential);
+
+  /* Setup superencrypted data section. */
+  ret = curve25519_keypair_generate(&auth_ephemeral_kp, 0);
+  tt_int_op(ret, ==, 0);
+  memcpy(&desc->superencrypted_data.auth_ephemeral_pubkey,
+         &auth_ephemeral_kp.pubkey,
+         sizeof(curve25519_public_key_t));
+
+  desc->superencrypted_data.clients = smartlist_new();
+  for (i = 0; i < HS_DESC_AUTH_CLIENT_MULTIPLE; i++) {
+    hs_desc_authorized_client_t *desc_client;
+    desc_client = tor_malloc_zero(sizeof(hs_desc_authorized_client_t));
+
+    hs_desc_build_fake_authorized_client(desc_client);
+    smartlist_add(desc->superencrypted_data.clients, desc_client);
+  }
 
   /* Setup encrypted data section. */
   desc->encrypted_data.create2_ntor = 1;

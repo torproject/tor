@@ -108,6 +108,10 @@ static int load_client_keys(hs_service_t *service);
 static void set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc,
                                             time_t now, bool is_current);
 static void move_descriptors(hs_service_t *src, hs_service_t *dst);
+static int service_encode_descriptor(const hs_service_t *service,
+                                     const hs_service_descriptor_t *desc,
+                                     const ed25519_keypair_t *signing_kp,
+                                     char **encoded_out);
 
 /* Helper: Function to compare two objects in the service map. Return 1 if the
  * two service have the same master public identity key. */
@@ -1801,7 +1805,7 @@ build_service_descriptor(hs_service_t *service, time_t now,
   /* Let's make sure that we've created a descriptor that can actually be
    * encoded properly. This function also checks if the encoded output is
    * decodable after. */
-  if (BUG(hs_desc_encode_descriptor(desc->desc, &desc->signing_kp,
+  if (BUG(service_encode_descriptor(service, desc, &desc->signing_kp,
                                     &encoded_desc) < 0)) {
     goto err;
   }
@@ -2640,7 +2644,7 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
 
   /* First of all, we'll encode the descriptor. This should NEVER fail but
    * just in case, let's make sure we have an actual usable descriptor. */
-  if (BUG(hs_desc_encode_descriptor(desc->desc, &desc->signing_kp,
+  if (BUG(service_encode_descriptor(service, desc, &desc->signing_kp,
                                     &encoded_desc) < 0)) {
     goto end;
   }
@@ -3206,6 +3210,34 @@ service_key_on_disk(const char *directory_path)
 
   ed25519_keypair_free(kp);
   tor_free(fname);
+
+  return ret;
+}
+
+/* This is a proxy function before actually calling hs_desc_encode_descriptor
+ * because we need some preprocessing here */
+static int
+service_encode_descriptor(const hs_service_t *service,
+                          const hs_service_descriptor_t *desc,
+                          const ed25519_keypair_t *signing_kp,
+                          char **encoded_out)
+{
+  int ret;
+  const uint8_t *descriptor_cookie = NULL;
+
+  tor_assert(service);
+  tor_assert(desc);
+  tor_assert(encoded_out);
+
+  /* If the client authorization is enabled, send the descriptor cookie to
+   * hs_desc_encode_descriptor. Otherwise, send NULL */
+  if (service->config.is_client_auth_enabled) {
+    descriptor_cookie = desc->descriptor_cookie;
+  }
+
+  ret = hs_desc_encode_descriptor(desc->desc, signing_kp,
+                                  descriptor_cookie, encoded_out);
+
   return ret;
 }
 
@@ -3416,7 +3448,8 @@ hs_service_lookup_current_desc(const ed25519_public_key_t *pk)
     /* No matter what is the result (which should never be a failure), return
      * the encoded variable, if success it will contain the right thing else
      * it will be NULL. */
-    hs_desc_encode_descriptor(service->desc_current->desc,
+    service_encode_descriptor(service,
+                              service->desc_current,
                               &service->desc_current->signing_kp,
                               &encoded_desc);
     return encoded_desc;

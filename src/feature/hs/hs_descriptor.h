@@ -37,12 +37,6 @@ struct link_specifier_t;
 #define HS_DESC_CERT_LIFETIME (54 * 60 * 60)
 /* Length of the salt needed for the encrypted section of a descriptor. */
 #define HS_DESC_ENCRYPTED_SALT_LEN 16
-/* Length of the secret input needed for the KDF construction which derives
- * the encryption key for the encrypted data section of the descriptor. This
- * adds up to 68 bytes being the blinded key, hashed subcredential and
- * revision counter. */
-#define HS_DESC_ENCRYPTED_SECRET_INPUT_LEN \
-  ED25519_PUBKEY_LEN + DIGEST256_LEN + sizeof(uint64_t)
 /* Length of the KDF output value which is the length of the secret key,
  * the secret IV and MAC key length which is the length of H() output. */
 #define HS_DESC_ENCRYPTED_KDF_OUTPUT_LEN \
@@ -278,6 +272,7 @@ void hs_descriptor_clear_intro_points(hs_descriptor_t *desc);
 MOCK_DECL(int,
           hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
                                      const ed25519_keypair_t *signing_kp,
+                                     const uint8_t *descriptor_cookie,
                                      char **encoded_out));
 
 int hs_desc_decode_descriptor(const char *encoded,

@@ -366,7 +366,7 @@ test_client_pick_intro(void *arg)
   {
     char *encoded = NULL;
     desc = hs_helper_build_hs_desc_with_ip(&service_kp);
-    ret = hs_desc_encode_descriptor(desc, &service_kp, &encoded);
+    ret = hs_desc_encode_descriptor(desc, &service_kp, NULL, &encoded);
     tt_int_op(ret, OP_EQ, 0);
     tt_assert(encoded);
 
