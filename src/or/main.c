@@ -731,20 +731,6 @@ connection_should_read_from_linked_conn(connection_t *conn)
   return 0;
 }
 
-/** If we called event_base_loop() and told it to never stop until it
- * runs out of events, now we've changed our mind: tell it we want it to
- * exit once the current round of callbacks is done, so that we can
- * run external code, and then return to the main loop. */
-void
-tell_event_loop_to_run_external_code(void)
-{
-  if (!called_loop_once) {
-    struct timeval tv = { 0, 0 };
-    tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &tv);
-    called_loop_once = 1; /* hack to avoid adding more exit events */
-  }
-}
-
 /** Event to run 'shutdown did not work callback'. */
 static struct event *shutdown_did_not_work_event = NULL;
 
