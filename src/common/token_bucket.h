@@ -11,15 +11,64 @@
 
 #include "torint.h"
 
-typedef struct token_bucket_rw_t {
+/** Largest allowable burst value for a token buffer. */
+#define TOKEN_BUCKET_MAX_BURST INT32_MAX
+
+/** A generic token buffer configuration: determines the number of tokens
+ * added to the bucket in each time unit (the "rate"), and the maximum number
+ * of tokens in the bucket (the "burst") */
+typedef struct token_bucket_cfg_t {
   uint32_t rate;
   int32_t burst;
-  int32_t read_bucket;
-  int32_t write_bucket;
-  uint32_t last_refilled_at_ts;
-} token_bucket_rw_t;
+} token_bucket_cfg_t;
 
-#define TOKEN_BUCKET_RW_MAX_BURST INT32_MAX
+/** A raw token bucket, decoupled from its configuration and timestamp. */
+typedef struct token_bucket_raw_t {
+  int32_t bucket;
+} token_bucket_raw_t;
+
+/** A timestamp for a token bucket. The units of this timestamp are
+ * unspecified, but must match with the rate set in the token_bucket_cfg_t. */
+typedef struct token_bucket_timestamp_t {
+  uint32_t last_refilled_at;
+} token_bucket_timestamp_t;
+
+void token_bucket_cfg_init(token_bucket_cfg_t *cfg,
+                           uint32_t rate,
+                           uint32_t burst);
+
+void token_bucket_raw_adjust(token_bucket_raw_t *bucket,
+                             const token_bucket_cfg_t *cfg);
+
+void token_bucket_raw_reset(token_bucket_raw_t *bucket,
+                            token_bucket_timestamp_t *stamp,
+                            const token_bucket_cfg_t *cfg,
+                            uint32_t now);
+
+int token_bucket_raw_dec(token_bucket_raw_t *bucket,
+                         ssize_t n);
+
+int token_bucket_raw_refill_steps(token_bucket_raw_t *bucket,
+                                  const token_bucket_cfg_t *cfg,
+                                  const uint32_t elapsed_steps);
+
+static inline size_t token_bucket_raw_get(const token_bucket_raw_t *bucket);
+/** Return the current number of bytes set in a token bucket. */
+static inline size_t
+token_bucket_raw_get(const token_bucket_raw_t *bucket)
+{
+  return bucket->bucket >= 0 ? bucket->bucket : 0;
+}
+
+/** A convenience type containing all the pieces needed for a coupled
+ * read-bucket and write-bucket that have the same rate limit, and which use
+ * "timestamp units" (see compat_time.h) for their time. */
+typedef struct token_bucket_rw_t {
+  token_bucket_cfg_t cfg;
+  token_bucket_raw_t read_bucket;
+  token_bucket_raw_t write_bucket;
+  token_bucket_timestamp_t stamp;
+} token_bucket_rw_t;
 
 void token_bucket_rw_init(token_bucket_rw_t *bucket,
                        uint32_t rate,
@@ -50,8 +99,7 @@ static inline size_t token_bucket_rw_get_read(const token_bucket_rw_t *bucket);
 static inline size_t
 token_bucket_rw_get_read(const token_bucket_rw_t *bucket)
 {
-  const ssize_t b = bucket->read_bucket;
-  return b >= 0 ? b : 0;
+  return token_bucket_raw_get(&bucket->read_bucket);
 }
 
 static inline size_t token_bucket_rw_get_write(
@@ -59,8 +107,7 @@ static inline size_t token_bucket_rw_get_write(
 static inline size_t
 token_bucket_rw_get_write(const token_bucket_rw_t *bucket)
 {
-  const ssize_t b = bucket->write_bucket;
-  return b >= 0 ? b : 0;
+  return token_bucket_raw_get(&bucket->write_bucket);
 }
 
 #ifdef TOKEN_BUCKET_PRIVATE
