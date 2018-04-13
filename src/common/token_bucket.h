@@ -27,12 +27,6 @@ typedef struct token_bucket_raw_t {
   int32_t bucket;
 } token_bucket_raw_t;
 
-/** A timestamp for a token bucket. The units of this timestamp are
- * unspecified, but must match with the rate set in the token_bucket_cfg_t. */
-typedef struct token_bucket_timestamp_t {
-  uint32_t last_refilled_at;
-} token_bucket_timestamp_t;
-
 void token_bucket_cfg_init(token_bucket_cfg_t *cfg,
                            uint32_t rate,
                            uint32_t burst);
@@ -41,9 +35,7 @@ void token_bucket_raw_adjust(token_bucket_raw_t *bucket,
                              const token_bucket_cfg_t *cfg);
 
 void token_bucket_raw_reset(token_bucket_raw_t *bucket,
-                            token_bucket_timestamp_t *stamp,
-                            const token_bucket_cfg_t *cfg,
-                            uint32_t now);
+                            const token_bucket_cfg_t *cfg);
 
 int token_bucket_raw_dec(token_bucket_raw_t *bucket,
                          ssize_t n);
@@ -67,7 +59,7 @@ typedef struct token_bucket_rw_t {
   token_bucket_cfg_t cfg;
   token_bucket_raw_t read_bucket;
   token_bucket_raw_t write_bucket;
-  token_bucket_timestamp_t stamp;
+  uint32_t last_refilled_at_timestamp;
 } token_bucket_rw_t;
 
 void token_bucket_rw_init(token_bucket_rw_t *bucket,

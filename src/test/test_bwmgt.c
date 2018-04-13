@@ -36,7 +36,7 @@ test_bwmgt_token_buf_init(void *arg)
     tt_uint_op(rate_per_sec, OP_LT, 16*KB+160);
   }
   // Bucket starts out full:
-  tt_uint_op(b.stamp.last_refilled_at, OP_EQ, START_TS);
+  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS);
   tt_int_op(b.read_bucket.bucket, OP_EQ, 64*KB);
 
  done:
@@ -138,7 +138,7 @@ test_bwmgt_token_buf_refill(void *arg)
   tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2));
   tt_int_op(b.read_bucket.bucket, OP_GT, 40*KB - 400);
   tt_int_op(b.read_bucket.bucket, OP_LT, 40*KB + 400);
-  tt_uint_op(b.stamp.last_refilled_at, OP_EQ, START_TS + SEC*3/2);
+  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS + SEC*3/2);
 
   /* No time: nothing happens. */
   {
@@ -150,12 +150,12 @@ test_bwmgt_token_buf_refill(void *arg)
   /* Another 30 seconds: fill the bucket. */
   tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2 + SEC*30));
   tt_int_op(b.read_bucket.bucket, OP_EQ, b.cfg.burst);
-  tt_uint_op(b.stamp.last_refilled_at, OP_EQ, START_TS + SEC*3/2 + SEC*30);
+  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS + SEC*3/2 + SEC*30);
 
   /* Another 30 seconds: nothing happens. */
   tt_int_op(0, OP_EQ, token_bucket_rw_refill(&b, START_TS + SEC*3/2 + SEC*60));
   tt_int_op(b.read_bucket.bucket, OP_EQ, b.cfg.burst);
-  tt_uint_op(b.stamp.last_refilled_at, OP_EQ, START_TS + SEC*3/2 + SEC*60);
+  tt_uint_op(b.last_refilled_at_timestamp, OP_EQ, START_TS + SEC*3/2 + SEC*60);
 
   /* Empty the bucket, let two seconds pass, and make sure that a refill is
    * noticed. */
