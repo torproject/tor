@@ -1,0 +1,3 @@
+  o Minor feature (wildcard support on %include):
+    - Allow the using wildcards (* and ?) with the %include option on 
+      configuration files. Closes ticket 25140.
