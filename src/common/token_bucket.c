@@ -130,9 +130,9 @@ rate_per_sec_to_rate_per_step(uint32_t rate)
  */
 void
 token_bucket_rw_init(token_bucket_rw_t *bucket,
-                  uint32_t rate,
-                  uint32_t burst,
-                  uint32_t now_ts)
+                     uint32_t rate,
+                     uint32_t burst,
+                     uint32_t now_ts)
 {
   memset(bucket, 0, sizeof(token_bucket_rw_t));
   token_bucket_rw_adjust(bucket, rate, burst);
@@ -217,7 +217,7 @@ token_bucket_rw_refill(token_bucket_rw_t *bucket,
  */
 int
 token_bucket_rw_dec_read(token_bucket_rw_t *bucket,
-                      ssize_t n)
+                         ssize_t n)
 {
   return token_bucket_raw_dec(&bucket->read_bucket, n);
 }
@@ -230,7 +230,7 @@ token_bucket_rw_dec_read(token_bucket_rw_t *bucket,
  */
 int
 token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
-                       ssize_t n)
+                          ssize_t n)
 {
   return token_bucket_raw_dec(&bucket->write_bucket, n);
 }

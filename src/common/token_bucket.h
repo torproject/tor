@@ -63,29 +63,29 @@ typedef struct token_bucket_rw_t {
 } token_bucket_rw_t;
 
 void token_bucket_rw_init(token_bucket_rw_t *bucket,
-                       uint32_t rate,
-                       uint32_t burst,
-                       uint32_t now_ts);
+                          uint32_t rate,
+                          uint32_t burst,
+                          uint32_t now_ts);
 
 void token_bucket_rw_adjust(token_bucket_rw_t *bucket,
-                         uint32_t rate, uint32_t burst);
+                            uint32_t rate, uint32_t burst);
 
 void token_bucket_rw_reset(token_bucket_rw_t *bucket,
-                        uint32_t now_ts);
+                           uint32_t now_ts);
 
 #define TB_READ 1
 #define TB_WRITE 2
 
 int token_bucket_rw_refill(token_bucket_rw_t *bucket,
-                        uint32_t now_ts);
+                           uint32_t now_ts);
 
 int token_bucket_rw_dec_read(token_bucket_rw_t *bucket,
-                          ssize_t n);
+                             ssize_t n);
 int token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
-                           ssize_t n);
+                              ssize_t n);
 
 void token_bucket_rw_dec(token_bucket_rw_t *bucket,
-                      ssize_t n_read, ssize_t n_written);
+                         ssize_t n_read, ssize_t n_written);
 
 static inline size_t token_bucket_rw_get_read(const token_bucket_rw_t *bucket);
 static inline size_t
