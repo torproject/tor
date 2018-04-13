@@ -125,6 +125,7 @@ test_bwmgt_token_buf_refill(void *arg)
   token_bucket_t b;
   const uint32_t SEC =
     (uint32_t)monotime_msec_to_approx_coarse_stamp_units(1000);
+  printf("%d\n", (int)SEC);
   token_bucket_init(&b, 16*KB, 64*KB, START_TS);
 
   /* Make the buffer much emptier, then let one second elapse. */
@@ -163,25 +164,25 @@ test_bwmgt_token_buf_refill(void *arg)
   tt_int_op(0, OP_EQ, b.read_bucket);
   tt_int_op(1, OP_EQ, token_bucket_refill(&b, START_TS + SEC*3/2 + SEC*61));
   tt_int_op(0, OP_EQ, token_bucket_refill(&b, START_TS + SEC*3/2 + SEC*62));
-  tt_int_op(b.read_bucket, OP_GT, 32*KB-300);
-  tt_int_op(b.read_bucket, OP_LT, 32*KB+300);
+  tt_int_op(b.read_bucket, OP_GT, 32*KB-400);
+  tt_int_op(b.read_bucket, OP_LT, 32*KB+400);
 
   /* Underflow the bucket, make sure we detect when it has tokens again. */
   tt_int_op(1, OP_EQ, token_bucket_dec_read(&b, b.read_bucket+16*KB));
   tt_int_op(-16*KB, OP_EQ, b.read_bucket);
   // half a second passes...
   tt_int_op(0, OP_EQ, token_bucket_refill(&b, START_TS + SEC*64));
-  tt_int_op(b.read_bucket, OP_GT, -8*KB-200);
-  tt_int_op(b.read_bucket, OP_LT, -8*KB+200);
+  tt_int_op(b.read_bucket, OP_GT, -8*KB-300);
+  tt_int_op(b.read_bucket, OP_LT, -8*KB+300);
   // a second passes
   tt_int_op(1, OP_EQ, token_bucket_refill(&b, START_TS + SEC*65));
-  tt_int_op(b.read_bucket, OP_GT, 8*KB-200);
-  tt_int_op(b.read_bucket, OP_LT, 8*KB+200);
+  tt_int_op(b.read_bucket, OP_GT, 8*KB-400);
+  tt_int_op(b.read_bucket, OP_LT, 8*KB+400);
 
   // We step a second backwards, and nothing happens.
   tt_int_op(0, OP_EQ, token_bucket_refill(&b, START_TS + SEC*64));
-  tt_int_op(b.read_bucket, OP_GT, 8*KB-200);
-  tt_int_op(b.read_bucket, OP_LT, 8*KB+200);
+  tt_int_op(b.read_bucket, OP_GT, 8*KB-400);
+  tt_int_op(b.read_bucket, OP_LT, 8*KB+400);
 
   // A ridiculous amount of time passes.
   tt_int_op(0, OP_EQ, token_bucket_refill(&b, INT32_MAX));
