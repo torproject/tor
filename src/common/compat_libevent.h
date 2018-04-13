@@ -37,6 +37,9 @@ void periodic_timer_free_(periodic_timer_t *);
 typedef struct mainloop_event_t mainloop_event_t;
 mainloop_event_t *mainloop_event_new(void (*cb)(mainloop_event_t *, void *),
                                      void *userdata);
+mainloop_event_t * mainloop_event_postloop_new(
+                                     void (*cb)(mainloop_event_t *, void *),
+                                     void *userdata);
 void mainloop_event_activate(mainloop_event_t *event);
 int mainloop_event_schedule(mainloop_event_t *event,
                             const struct timeval *delay);

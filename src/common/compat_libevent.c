@@ -79,6 +79,43 @@ tor_event_free_(struct event *ev)
 /** Global event base for use by the main thread. */
 static struct event_base *the_event_base = NULL;
 
+/**
+ * @defgroup postloop post-loop event helpers
+ *
+ * If we're not careful, Libevent can susceptible to infinite event chains:
+ * one event can activate another, whose callback activates another, whose
+ * callback activates another, ad infinitum.  While this is happening,
+ * Libevent won't be checking timeouts, socket-based events, signals, and so
+ * on.
+ *
+ * We solve this problem by marking some events as "post-loop".  A post-loop
+ * event behaves like any ordinary event, but any events that _it_ activates
+ * cannot run until Libevent has checked for other events at least once.
+ *
+ * @{ */
+
+/**
+ * An event that stops Libevent from running any more events on the current
+ * iteration of its loop, until it has re-checked for socket events, signal
+ * events, timeouts, etc.
+ */
+static struct event *rescan_mainloop_ev = NULL;
+
+/**
+ * Callback to implement rescan_mainloop_ev: it simply exits the mainloop,
+ * and relies on Tor to re-enter the mainloop since no error has occurred.
+ */
+static void
+rescan_mainloop_cb(evutil_socket_t fd, short events, void *arg)
+{
+  (void)fd;
+  (void)events;
+  struct event_base *the_base = arg;
+  event_base_loopbreak(the_base);
+}
+
+/** @} */
+
 /* This is what passes for version detection on OSX.  We set
  * MACOSX_KQUEUE_IS_BROKEN to true iff we're on a version of OSX before
  * 10.4.0 (aka 1040). */
@@ -126,6 +163,15 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
   if (!the_event_base) {
     /* LCOV_EXCL_START */
     log_err(LD_GENERAL, "Unable to initialize Libevent: cannot continue.");
+    exit(1); // exit ok: libevent is broken.
+    /* LCOV_EXCL_STOP */
+  }
+
+  rescan_mainloop_ev = event_new(the_event_base, -1, 0,
+                                 rescan_mainloop_cb, the_event_base);
+  if (!rescan_mainloop_ev) {
+    /* LCOV_EXCL_START */
+    log_err(LD_GENERAL, "Unable to create rescan event: cannot continue.");
     exit(1); // exit ok: libevent is broken.
     /* LCOV_EXCL_STOP */
   }
@@ -251,6 +297,52 @@ mainloop_event_cb(evutil_socket_t fd, short what, void *arg)
 }
 
 /**
+ * As mainloop_event_cb, but implements a post-loop event.
+ */
+static void
+mainloop_event_postloop_cb(evutil_socket_t fd, short what, void *arg)
+{
+  (void)fd;
+  (void)what;
+
+  /* Note that if rescan_mainloop_ev is already activated,
+   * event_active() will do nothing: only the first post-loop event that
+   * happens each time through the event loop will cause it to be
+   * activated.
+   *
+   * Because event_active() puts events on a FIFO queue, every event
+   * that is made active _after_ rescan_mainloop_ev will get its
+   * callback run after rescan_mainloop_cb is called -- that is, on the
+   * next iteration of the loop.
+   */
+  event_active(rescan_mainloop_ev, EV_READ, 1);
+
+  mainloop_event_t *mev = arg;
+  mev->cb(mev, mev->userdata);
+}
+
+/**
+ * Helper for mainloop_event_new() and mainloop_event_postloop_new().
+ */
+static mainloop_event_t *
+mainloop_event_new_impl(int postloop,
+                        void (*cb)(mainloop_event_t *, void *),
+                        void *userdata)
+{
+  tor_assert(cb);
+
+  struct event_base *base = tor_libevent_get_base();
+  mainloop_event_t *mev = tor_malloc_zero(sizeof(mainloop_event_t));
+  mev->ev = tor_event_new(base, -1, 0,
+                  postloop ? mainloop_event_postloop_cb : mainloop_event_cb,
+                  mev);
+  tor_assert(mev->ev);
+  mev->cb = cb;
+  mev->userdata = userdata;
+  return mev;
+}
+
+/**
  * Create and return a new mainloop_event_t to run the function <b>cb</b>.
  *
  * When run, the callback function will be passed the mainloop_event_t
@@ -265,15 +357,21 @@ mainloop_event_t *
 mainloop_event_new(void (*cb)(mainloop_event_t *, void *),
                    void *userdata)
 {
-  tor_assert(cb);
+  return mainloop_event_new_impl(0, cb, userdata);
+}
 
-  struct event_base *base = tor_libevent_get_base();
-  mainloop_event_t *mev = tor_malloc_zero(sizeof(mainloop_event_t));
-  mev->ev = tor_event_new(base, -1, 0, mainloop_event_cb, mev);
-  tor_assert(mev->ev);
-  mev->cb = cb;
-  mev->userdata = userdata;
-  return mev;
+/**
+ * As mainloop_event_new(), but create a post-loop event.
+ *
+ * A post-loop event behaves like any ordinary event, but any events
+ * that _it_ activates cannot run until Libevent has checked for other
+ * events at least once.
+ */
+mainloop_event_t *
+mainloop_event_postloop_new(void (*cb)(mainloop_event_t *, void *),
+                            void *userdata)
+{
+  return mainloop_event_new_impl(1, cb, userdata);
 }
 
 /**
@@ -358,6 +456,7 @@ tor_init_libevent_rng(void)
 void
 tor_libevent_free_all(void)
 {
+  tor_event_free(rescan_mainloop_ev);
   if (the_event_base)
     event_base_free(the_event_base);
   the_event_base = NULL;
