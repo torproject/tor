@@ -22,7 +22,7 @@
 #include "util_bug.h"
 
 /**
- *Set the <b>rate</b> and <b>burst</b> value in a token_bucket_cfg.
+ * Set the <b>rate</b> and <b>burst</b> value in a token_bucket_cfg.
  *
  * Note that the <b>rate</b> value is in arbitrary units, but those units will
  * determine the units of token_bucket_raw_dec(), token_bucket_raw_refill, and
