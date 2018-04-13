@@ -154,10 +154,10 @@ static void shutdown_did_not_work_callback(evutil_socket_t fd, short event,
 /********* START VARIABLES **********/
 
 /* Token bucket for all traffic. */
-token_bucket_t global_bucket;
+token_bucket_rw_t global_bucket;
 
 /* Token bucket for relayed traffic. */
-token_bucket_t global_relayed_bucket;
+token_bucket_rw_t global_relayed_bucket;
 
 /** What was the read/write bucket before the last second_elapsed_callback()
  * call?  (used to determine how many bytes we've read). */
@@ -2394,9 +2394,9 @@ refill_callback(periodic_timer_t *timer, void *arg)
   }
 
   bytes_written = stats_prev_global_write_bucket -
-    token_bucket_get_write(&global_bucket);
+    token_bucket_rw_get_write(&global_bucket);
   bytes_read = stats_prev_global_read_bucket -
-    token_bucket_get_read(&global_bucket);
+    token_bucket_rw_get_read(&global_bucket);
 
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
@@ -2408,8 +2408,8 @@ refill_callback(periodic_timer_t *timer, void *arg)
                              monotime_coarse_get_stamp());
   }
 
-  stats_prev_global_read_bucket = token_bucket_get_read(&global_bucket);
-  stats_prev_global_write_bucket = token_bucket_get_write(&global_bucket);
+  stats_prev_global_read_bucket = token_bucket_rw_get_read(&global_bucket);
+  stats_prev_global_write_bucket = token_bucket_rw_get_write(&global_bucket);
 
   /* remember what time it is, for next time */
   refill_timer_current_millisecond = now;
@@ -2618,8 +2618,8 @@ do_main_loop(void)
 
   /* Set up our buckets */
   connection_bucket_init();
-  stats_prev_global_read_bucket = token_bucket_get_read(&global_bucket);
-  stats_prev_global_write_bucket = token_bucket_get_write(&global_bucket);
+  stats_prev_global_read_bucket = token_bucket_rw_get_read(&global_bucket);
+  stats_prev_global_write_bucket = token_bucket_rw_get_write(&global_bucket);
 
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);

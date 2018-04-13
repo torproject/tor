@@ -88,8 +88,8 @@ uint64_t get_main_loop_idle_count(void);
 
 extern time_t time_of_process_start;
 extern int quiet_level;
-extern token_bucket_t global_bucket;
-extern token_bucket_t global_relayed_bucket;
+extern token_bucket_rw_t global_bucket;
+extern token_bucket_rw_t global_relayed_bucket;
 
 #ifdef MAIN_PRIVATE
 STATIC void init_connection_lists(void);

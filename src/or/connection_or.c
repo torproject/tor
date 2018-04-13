@@ -793,9 +793,9 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
                                 (int)options->BandwidthBurst, 1, INT32_MAX);
   }
 
-  token_bucket_adjust(&conn->bucket, rate, burst);
+  token_bucket_rw_adjust(&conn->bucket, rate, burst);
   if (reset) {
-    token_bucket_reset(&conn->bucket, monotime_coarse_get_stamp());
+    token_bucket_rw_reset(&conn->bucket, monotime_coarse_get_stamp());
   }
 }
 

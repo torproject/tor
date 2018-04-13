@@ -2,8 +2,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file token_bucket.h
- * \brief Headers for token_bucket.c
+ * \file token_bucket_rw.h
+ * \brief Headers for token_bucket_rw.c
  **/
 
 #ifndef TOR_TOKEN_BUCKET_H
@@ -11,55 +11,95 @@
 
 #include "torint.h"
 
-typedef struct token_bucket_t {
-  uint32_t rate;
-  int32_t burst;
-  int32_t read_bucket;
-  int32_t write_bucket;
-  uint32_t last_refilled_at_ts;
-} token_bucket_t;
-
+/** Largest allowable burst value for a token buffer. */
 #define TOKEN_BUCKET_MAX_BURST INT32_MAX
 
-void token_bucket_init(token_bucket_t *bucket,
+/** A generic token buffer configuration: determines the number of tokens
+ * added to the bucket in each time unit (the "rate"), and the maximum number
+ * of tokens in the bucket (the "burst") */
+typedef struct token_bucket_cfg_t {
+  uint32_t rate;
+  int32_t burst;
+} token_bucket_cfg_t;
+
+/** A raw token bucket, decoupled from its configuration and timestamp. */
+typedef struct token_bucket_raw_t {
+  int32_t bucket;
+} token_bucket_raw_t;
+
+void token_bucket_cfg_init(token_bucket_cfg_t *cfg,
+                           uint32_t rate,
+                           uint32_t burst);
+
+void token_bucket_raw_adjust(token_bucket_raw_t *bucket,
+                             const token_bucket_cfg_t *cfg);
+
+void token_bucket_raw_reset(token_bucket_raw_t *bucket,
+                            const token_bucket_cfg_t *cfg);
+
+int token_bucket_raw_dec(token_bucket_raw_t *bucket,
+                         ssize_t n);
+
+int token_bucket_raw_refill_steps(token_bucket_raw_t *bucket,
+                                  const token_bucket_cfg_t *cfg,
+                                  const uint32_t elapsed_steps);
+
+static inline size_t token_bucket_raw_get(const token_bucket_raw_t *bucket);
+/** Return the current number of bytes set in a token bucket. */
+static inline size_t
+token_bucket_raw_get(const token_bucket_raw_t *bucket)
+{
+  return bucket->bucket >= 0 ? bucket->bucket : 0;
+}
+
+/** A convenience type containing all the pieces needed for a coupled
+ * read-bucket and write-bucket that have the same rate limit, and which use
+ * "timestamp units" (see compat_time.h) for their time. */
+typedef struct token_bucket_rw_t {
+  token_bucket_cfg_t cfg;
+  token_bucket_raw_t read_bucket;
+  token_bucket_raw_t write_bucket;
+  uint32_t last_refilled_at_timestamp;
+} token_bucket_rw_t;
+
+void token_bucket_rw_init(token_bucket_rw_t *bucket,
                        uint32_t rate,
                        uint32_t burst,
                        uint32_t now_ts);
 
-void token_bucket_adjust(token_bucket_t *bucket,
+void token_bucket_rw_adjust(token_bucket_rw_t *bucket,
                          uint32_t rate, uint32_t burst);
 
-void token_bucket_reset(token_bucket_t *bucket,
+void token_bucket_rw_reset(token_bucket_rw_t *bucket,
                         uint32_t now_ts);
 
 #define TB_READ 1
 #define TB_WRITE 2
 
-int token_bucket_refill(token_bucket_t *bucket,
+int token_bucket_rw_refill(token_bucket_rw_t *bucket,
                         uint32_t now_ts);
 
-int token_bucket_dec_read(token_bucket_t *bucket,
+int token_bucket_rw_dec_read(token_bucket_rw_t *bucket,
                           ssize_t n);
-int token_bucket_dec_write(token_bucket_t *bucket,
+int token_bucket_rw_dec_write(token_bucket_rw_t *bucket,
                            ssize_t n);
 
-void token_bucket_dec(token_bucket_t *bucket,
+void token_bucket_rw_dec(token_bucket_rw_t *bucket,
                       ssize_t n_read, ssize_t n_written);
 
-static inline size_t token_bucket_get_read(const token_bucket_t *bucket);
+static inline size_t token_bucket_rw_get_read(const token_bucket_rw_t *bucket);
 static inline size_t
-token_bucket_get_read(const token_bucket_t *bucket)
+token_bucket_rw_get_read(const token_bucket_rw_t *bucket)
 {
-  const ssize_t b = bucket->read_bucket;
-  return b >= 0 ? b : 0;
+  return token_bucket_raw_get(&bucket->read_bucket);
 }
 
-static inline size_t token_bucket_get_write(const token_bucket_t *bucket);
+static inline size_t token_bucket_rw_get_write(
+                                            const token_bucket_rw_t *bucket);
 static inline size_t
-token_bucket_get_write(const token_bucket_t *bucket)
+token_bucket_rw_get_write(const token_bucket_rw_t *bucket)
 {
-  const ssize_t b = bucket->write_bucket;
-  return b >= 0 ? b : 0;
+  return token_bucket_raw_get(&bucket->write_bucket);
 }
 
 #ifdef TOKEN_BUCKET_PRIVATE
