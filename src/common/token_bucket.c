@@ -66,6 +66,50 @@ token_bucket_raw_adjust(token_bucket_raw_t *bucket,
   bucket->bucket = MIN(bucket->bucket, cfg->burst);
 }
 
+/**
+ * Given an amount of <b>elapsed</b> time units, and a bucket configuration
+ * <b>cfg</b>, refill the level of <b>bucket</b> accordingly.  Note that the
+ * units of time in <b>elapsed</b> must correspond to those used to set the
+ * rate in <b>cfg</b>, or the result will be illogical.
+ */
+int
+token_bucket_raw_refill_steps(token_bucket_raw_t *bucket,
+                              const token_bucket_cfg_t *cfg,
+                              const uint32_t elapsed)
+{
+  const int was_empty = (bucket->bucket <= 0);
+  /* The casts here prevent an underflow.
+   *
+   * Note that even if the bucket value is negative, subtracting it from
+   * "burst" will still produce a correct result.  If this result is
+   * ridiculously high, then the "elapsed > gap / rate" check below
+   * should catch it. */
+  const size_t gap = ((size_t)cfg->burst) - ((size_t)bucket->bucket);
+
+  if (elapsed > gap / cfg->rate) {
+    bucket->bucket = cfg->burst;
+  } else {
+    bucket->bucket += cfg->rate * elapsed;
+  }
+
+  return was_empty && bucket->bucket > 0;
+}
+
+/**
+ * Decrement a provided bucket by <b>n</b> units.  Note that <b>n</b>
+ * must be nonnegative.
+ */
+int
+token_bucket_raw_dec(token_bucket_raw_t *bucket,
+                     ssize_t n)
+{
+  if (BUG(n < 0))
+    return 0;
+  const int becomes_empty = bucket->bucket > 0 && n >= bucket->bucket;
+  bucket->bucket -= n;
+  return becomes_empty;
+}
+
 /** Convert a rate in bytes per second to a rate in bytes per step */
 static uint32_t
 rate_per_sec_to_rate_per_step(uint32_t rate)
@@ -128,35 +172,6 @@ token_bucket_rw_reset(token_bucket_rw_t *bucket,
 }
 
 /**
- * Given an amount of <b>elapsed</b> time units, and a bucket configuration
- * <b>cfg</b>, refill the level of <b>bucket</b> accordingly.  Note that the
- * units of time in <b>elapsed</b> must correspond to those used to set the
- * rate in <b>cfg</b>, or the result will be illogical.
- */
-int
-token_bucket_raw_refill_steps(token_bucket_raw_t *bucket,
-                              const token_bucket_cfg_t *cfg,
-                              const uint32_t elapsed)
-{
-  const int was_empty = (bucket->bucket <= 0);
-  /* The casts here prevent an underflow.
-   *
-   * Note that even if the bucket value is negative, subtracting it from
-   * "burst" will still produce a correct result.  If this result is
-   * ridiculously high, then the "elapsed > gap / rate" check below
-   * should catch it. */
-  const size_t gap = ((size_t)cfg->burst) - ((size_t)bucket->bucket);
-
-  if (elapsed > gap / cfg->rate) {
-    bucket->bucket = cfg->burst;
-  } else {
-    bucket->bucket += cfg->rate * elapsed;
-  }
-
-  return was_empty && bucket->bucket > 0;
-}
-
-/**
  * Refill <b>bucket</b> as appropriate, given that the current timestamp
  * is <b>now_ts</b>.
  *
@@ -195,21 +210,6 @@ token_bucket_rw_refill(token_bucket_rw_t *bucket,
 
   bucket->stamp.last_refilled_at = now_ts;
   return flags;
-}
-
-/**
- * Decrement a provided bucket by <b>n</b> units.  Note that <b>n</b>
- * must be nonnegative.
- */
-int
-token_bucket_raw_dec(token_bucket_raw_t *bucket,
-                     ssize_t n)
-{
-  if (BUG(n < 0))
-    return 0;
-  const int becomes_empty = bucket->bucket > 0 && n >= bucket->bucket;
-  bucket->bucket -= n;
-  return becomes_empty;
 }
 
 /**
