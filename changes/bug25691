@@ -1,6 +1,0 @@
-  o Minor bugfixes (client):
-    - When using a listed relay as a bridge, and also using
-      microdescriptors, and considering that relay as a non-bridge in
-      a circuit, consider its microdescriptor as a valid source of information
-      about that relay. Fixes bug 25691; bugfix on 0.3.3.4-alpha.
-

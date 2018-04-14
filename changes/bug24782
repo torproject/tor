@@ -1,4 +1,0 @@
-  o Minor features (config options):
-    - Change the way the default value for MaxMemInQueues is calculated. We now
-      use 0.4 * RAM if the system have 8 GB RAM or more, otherwise we use the
-      former value of 0.75 * RAM. Closes ticket 24782.
