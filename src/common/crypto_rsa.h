@@ -35,7 +35,7 @@
 /** A public key, or a public/private key-pair. */
 typedef struct crypto_pk_t crypto_pk_t;
 
-/* RSA enviroment setup */
+/* RSA environment setup */
 MOCK_DECL(crypto_pk_t *,crypto_pk_new,(void));
 void crypto_pk_free_(crypto_pk_t *env);
 #define crypto_pk_free(pk) FREE_AND_NULL(crypto_pk_t, crypto_pk_free_, (pk))

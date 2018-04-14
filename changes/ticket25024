@@ -1,0 +1,3 @@
+  o Minor features (code quality):
+    - Add spell checking using misspell in Makefile.
+      Closes ticket 25024.

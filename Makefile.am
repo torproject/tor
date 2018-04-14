@@ -97,7 +97,7 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
-check-local: check-spaces check-changes check-typos
+check-local: check-spaces check-changes
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -221,8 +221,8 @@ check-logs:
 check-typos:
 	@if test -x "`which misspell 2>&1;true`"; then \
 		echo "Checking for Typos ..."; \
-		(`which misspell` \
-			$(top_srcdir)/src/**/*.[ch] \
+		(misspell \
+			$(top_srcdir)/src/[^e]*/*.[ch] \
 			$(top_srcdir)/doc \
 			$(top_srcdir)/contrib \
 			$(top_srcdir)/scripts \
