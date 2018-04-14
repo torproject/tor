@@ -291,7 +291,6 @@ static void
 test_encode_descriptor(void *arg)
 {
   int ret;
-  char *encoded = NULL;
   ed25519_keypair_t signing_kp;
   hs_descriptor_t *desc = NULL;
 
@@ -300,13 +299,31 @@ test_encode_descriptor(void *arg)
   ret = ed25519_keypair_generate(&signing_kp, 0);
   tt_int_op(ret, OP_EQ, 0);
   desc = hs_helper_build_hs_desc_with_ip(&signing_kp);
-  ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_assert(encoded);
 
+  {
+    char *encoded = NULL;
+    ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    tor_free(encoded);
+  }
+
+  {
+    char *encoded = NULL;
+    uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+
+    crypto_strongest_rand(descriptor_cookie, sizeof(descriptor_cookie));
+
+    ret = hs_desc_encode_descriptor(desc, &signing_kp,
+                                   descriptor_cookie, &encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    tor_free(encoded);
+  }
  done:
   hs_descriptor_free(desc);
-  tor_free(encoded);
 }
 
 static void
