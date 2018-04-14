@@ -1,4 +1,0 @@
-  o Minor bugfixes (configuration):
-    - Remove undescores from the _HSLayer{2,3}Nodes options. This expert-user
-      configuration can now be enabled as HSLayer{2,3}Nodes. Fixes bug 25581;
-      bugfix on 0.3.3.1-alpha

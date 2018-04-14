@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden services):
-    - Re-instate counting pending client HSDir fetch circuits against the
-      MaxClientCircuitsPending rate limit. Fixes bug 24989; bugfix on
-      0.3.3.0-alpha-dev.

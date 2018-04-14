@@ -1,3 +1,0 @@
-  o Minor bugfixes (documentation):
-    - Revert a misformatting issue in the ExitPolicy
-      documentation. Fixes bug 25582; bugfix on 0.3.3.1-alpha.
