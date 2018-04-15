@@ -16,9 +16,9 @@ Changes in version 0.3.3.5-rc - 2018-04-15
   o Major bugfixes (performance, load balancing):
     - Directory authorities no longer vote in favor of the Guard flag
       for relays without directory support. Starting in Tor
-      0.3.0.1-alpha, Tor clients have been avoiding using such relays in
-      the Guard position, leading to increasingly broken load balancing
-      for the 5%-or-so of Guards that don't advertise directory support.
+      0.3.0.1-alpha, clients have been avoiding using such relays in the
+      Guard position, leading to increasingly broken load balancing for
+      the 5%-or-so of Guards that don't advertise directory support.
       Fixes bug 22310; bugfix on 0.3.0.6.
 
   o Minor feature (continuous integration):
@@ -63,12 +63,11 @@ Changes in version 0.3.3.5-rc - 2018-04-15
     - Revert a misformatting issue in the ExitPolicy documentation.
       Fixes bug 25582; bugfix on 0.3.3.1-alpha.
 
-  o Minor bugfixes (Exit node DNS retries):
+  o Minor bugfixes (exit node DNS retries):
     - Re-attempt timed-out DNS queries 3 times before failure, since our
       timeout is 5 seconds for them, but clients wait 10-15. Also allow
-      slightly more timeouts per resolver before giving up on it in the
-      case where an exit has multiple resolvers configured. Fixes bug
-      21394; bugfix on 0.3.1.9.
+      slightly more timeouts per resolver when an exit has multiple
+      resolvers configured. Fixes bug 21394; bugfix on 0.3.1.9.
 
   o Minor bugfixes (onion services):
     - Re-instate counting the client HSDir fetch circuits against the
