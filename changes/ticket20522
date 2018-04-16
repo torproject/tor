@@ -1,0 +1,6 @@
+  o Deprecated features:
+    - As we are not recommending 0.2.5 anymore we require relays that once had
+      an ed25519 key associated with their RSA key to always have that key
+      instead of allowing them to drop back to a version that didn't support
+      ed25519. This means they need to use a new RSA key if the want to
+      downgrade to an older version of tor without ed25519. Closes ticket 20522.
